@@ -1,3 +1,5 @@
+use crate::M31_PACK_SIZE;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolynomialCommitmentType {
     Raw,
@@ -12,8 +14,6 @@ pub enum FieldType {
     BabyBear,
     BN254,
 }
-
-const M31_PACK_SIZE: usize = 8; // TODO: update to load from static function of M31
 
 #[derive(Debug, Clone)]
 pub enum FiatShamirHashType {

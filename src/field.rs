@@ -4,7 +4,16 @@ use std::{
 };
 
 pub trait Field:
-    Copy + Clone + Debug + Default + PartialEq + From<usize> + Mul<Output = Self> + AddAssign
+    Copy
+    + Clone
+    + Debug
+    + Default
+    + PartialEq
+    + From<usize>
+    + Mul<Output = Self>
+    + for<'a> Mul<&'a Self, Output = Self>
+    + AddAssign
+    + for<'a> AddAssign<&'a Self>
 {
     fn zero() -> Self;
     fn one() -> Self;
