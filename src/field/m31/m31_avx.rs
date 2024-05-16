@@ -3,7 +3,7 @@ use std::{
     ops::{AddAssign, Mul},
 };
 
-use crate::M31_MOD;
+use crate::{Field, M31_MOD};
 use lazy_static::lazy_static;
 
 pub const M31_PACK_SIZE: usize = 8;
@@ -32,8 +32,43 @@ unsafe fn mod_reduce_epi32(x: __m256i) -> __m256i {
 
 use mod_reduce_epi64 as mod_reduce;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct M31 {}
+
+impl Field for M31 {
+    fn zero() -> Self {
+        M31 {} // TODO
+    }
+
+    fn one() -> Self {
+        M31 {} // TODO
+    }
+
+    fn random() -> Self {
+        M31 {} // TODO
+    }
+
+    fn random_bool() -> Self {
+        todo!()
+    }
+
+    fn inv(&self) -> Self {
+        M31 {} // TODO
+    }
+}
+
+impl Mul for M31 {
+    type Output = M31;
+    fn mul(self, rhs: M31) -> Self::Output {
+        M31 {} // TODO
+    }
+}
+
+impl AddAssign for M31 {
+    fn add_assign(&mut self, rhs: Self) {
+        // TODO
+    }
+}
 
 impl From<usize> for M31 {
     fn from(x: usize) -> Self {

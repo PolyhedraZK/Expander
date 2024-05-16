@@ -1,4 +1,4 @@
-use crate::{MultiLinearPoly, VectorizedM31, M31};
+use crate::{Field, MultiLinearPoly, VectorizedM31, M31};
 use std::{cmp::max, fs};
 
 type FPrimitive = M31;
