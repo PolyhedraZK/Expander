@@ -14,10 +14,12 @@ Cargo.lock
 *.pdb
 
 # Added by cargo
-
 /target
 
 # Project data
 /data/Extracted*
 /data/circuit8.txt
 notes.md
+
+# Programming env
+.vscode/
