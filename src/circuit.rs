@@ -4,8 +4,8 @@ use std::{cmp::max, fs};
 type F = M31;
 
 #[derive(Debug, Clone)]
-pub struct Gate<const InputNum: usize> {
-    i_ids: [usize; InputNum],
+pub struct Gate<const INPUT_NUM: usize> {
+    i_ids: [usize; INPUT_NUM],
     o_id: usize,
     coef: F,
 }
@@ -19,10 +19,28 @@ pub struct CircuitLayer {
     output_var_num: usize,
 
     input_vals: MultiLinearPoly,
-    output_vals: MultiLinearPoly,
+    output_vals: MultiLinearPoly, // empty most time, unless in the last layer
 
     mul: Vec<GateMul>,
     add: Vec<GateAdd>,
+}
+
+impl CircuitLayer {
+    pub fn evaluate(&self) -> Vec<F> {
+        let mut res = vec![F::zero(); 1 << self.output_var_num];
+        for gate in &self.mul {
+            let i0 = &self.input_vals.evals[gate.i_ids[0]];
+            let i1 = &self.input_vals.evals[gate.i_ids[1]];
+            let o = &mut res[gate.o_id];
+            *o += *i0 * i1 * gate.coef;
+        }
+        for gate in &self.add {
+            let i0 = &self.input_vals.evals[gate.i_ids[0]];
+            let o = &mut res[gate.o_id];
+            *o += *i0 * gate.coef;
+        }
+        res
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -102,12 +120,24 @@ impl Circuit {
             layer.input_var_num = max_i.next_power_of_two().trailing_zeros() as usize;
             layer.output_var_num = max_o.next_power_of_two().trailing_zeros() as usize;
             layer.input_vals.var_num = layer.input_var_num;
-            println!(
-                "layer {} input_var_num: {} output_var_num: {}",
-                i, layer.input_var_num, layer.output_var_num
-            );
+            // println!(
+            //     "layer {} input_var_num: {} output_var_num: {}",
+            //     i, layer.input_var_num, layer.output_var_num
+            // );
         }
     }
-    pub fn set_random_boolean_input(&mut self) {}
-    pub fn evaluate(&mut self) {}
+    pub fn log_input_size(&self) -> usize {
+        self.layers[0].input_var_num
+    }
+    pub fn set_random_bool_input(&mut self) {
+        self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
+            .map(|_| F::random_bool())
+            .collect();
+    }
+    pub fn evaluate(&mut self) {
+        for i in 0..self.layers.len() - 1 {
+            self.layers[i + 1].input_vals.evals = self.layers[i].evaluate();
+        }
+        self.layers.last_mut().unwrap().output_vals.evals = self.layers.last().unwrap().evaluate();
+    }
 }

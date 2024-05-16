@@ -5,5 +5,5 @@ type F = M31;
 #[derive(Debug, Clone, Default)]
 pub struct MultiLinearPoly {
     pub var_num: usize,
-    evals: Vec<F>,
+    pub evals: Vec<F>,
 }
