@@ -1,3 +1,5 @@
+#![cfg_attr(target_arch = "x86_64", feature(stdarch_x86_avx512))]
+
 pub mod circuit;
 pub use self::circuit::*;
 

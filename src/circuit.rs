@@ -1,13 +1,14 @@
-use crate::{MultiLinearPoly, M31};
+use crate::{MultiLinearPoly, VectorizedM31, M31};
 use std::{cmp::max, fs};
 
-type F = M31;
+type FPrimitive = M31;
+type F = VectorizedM31;
 
 #[derive(Debug, Clone)]
 pub struct Gate<const INPUT_NUM: usize> {
     i_ids: [usize; INPUT_NUM],
     o_id: usize,
-    coef: F,
+    coef: FPrimitive,
 }
 
 pub type GateMul = Gate<2>;
@@ -75,7 +76,7 @@ impl Circuit {
                 let gate = GateMul {
                     i_ids: [mul_input[i * 4 + 1], mul_input[i * 4 + 2]],
                     o_id: mul_input[i * 4 + 3],
-                    coef: F::from(mul_input[i * 4 + 4]),
+                    coef: FPrimitive::from(mul_input[i * 4 + 4]),
                 };
                 layer.mul.push(gate);
             }
@@ -94,7 +95,7 @@ impl Circuit {
                 let gate = GateAdd {
                     i_ids: [add_input[i * 3 + 1]],
                     o_id: add_input[i * 3 + 2],
-                    coef: F::from(add_input[i * 3 + 3]),
+                    coef: FPrimitive::from(add_input[i * 3 + 3]),
                 };
                 layer.add.push(gate);
             }
