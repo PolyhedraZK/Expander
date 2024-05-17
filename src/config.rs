@@ -15,7 +15,7 @@ pub enum FieldType {
     BN254,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FiatShamirHashType {
     SHA256,
     Keccak256,
@@ -24,19 +24,19 @@ pub enum FiatShamirHashType {
     MIMC7,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Config {
-    num_repetitions: usize,
-    vectorize_size: usize,
+    pub num_repetitions: usize,
+    pub vectorize_size: usize,
 
-    field_size: usize,
-    security_bits: usize,
-    grinding_bits: usize,
-    num_parallel: usize, // nb_parallel
+    pub field_size: usize,
+    pub security_bits: usize,
+    pub grinding_bits: usize,
+    pub num_parallel: usize, // nb_parallel
 
-    polynomial_commitment_type: PolynomialCommitmentType,
-    field_type: FieldType, // LATER: consider infer this from trait
-    fs_hash: FiatShamirHashType,
+    pub polynomial_commitment_type: PolynomialCommitmentType,
+    pub field_type: FieldType, // LATER: consider infer this from trait
+    pub fs_hash: FiatShamirHashType,
 }
 
 impl Config {

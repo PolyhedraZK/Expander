@@ -119,7 +119,7 @@ impl Debug for PackedM31 {
 
 impl Default for PackedM31 {
     fn default() -> Self {
-        todo!();
+        PackedM31::zero()
     }
 }
 

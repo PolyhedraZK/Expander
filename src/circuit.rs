@@ -16,8 +16,8 @@ pub type GateAdd = Gate<1>;
 
 #[derive(Debug, Clone, Default)]
 pub struct CircuitLayer {
-    input_var_num: usize,
-    output_var_num: usize,
+    pub input_var_num: usize,
+    pub output_var_num: usize,
 
     input_vals: MultiLinearPoly,
     output_vals: MultiLinearPoly, // empty most time, unless in the last layer
@@ -46,7 +46,7 @@ impl CircuitLayer {
 
 #[derive(Debug, Clone, Default)]
 pub struct Circuit {
-    layers: Vec<CircuitLayer>,
+    pub layers: Vec<CircuitLayer>,
 }
 
 impl Circuit {
