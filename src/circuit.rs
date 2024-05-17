@@ -138,7 +138,29 @@ impl Circuit {
     pub fn evaluate(&mut self) {
         for i in 0..self.layers.len() - 1 {
             self.layers[i + 1].input_vals.evals = self.layers[i].evaluate();
+            // println!("layer {} evaluated", i);
+            // println!(
+            //     "First ten values: {:?}",
+            //     self.layers[i + 1]
+            //         .input_vals
+            //         .evals
+            //         .iter()
+            //         .take(10)
+            //         .collect::<Vec<_>>()
+            // );
         }
         self.layers.last_mut().unwrap().output_vals.evals = self.layers.last().unwrap().evaluate();
+        // println!("output evaluated");
+        // println!(
+        //     "First ten values: {:?}",
+        //     self.layers
+        //         .last()
+        //         .unwrap()
+        //         .output_vals
+        //         .evals
+        //         .iter()
+        //         .take(10)
+        //         .collect::<Vec<_>>()
+        // );
     }
 }

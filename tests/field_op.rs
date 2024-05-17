@@ -31,3 +31,11 @@ fn test_packed_m31_basic_field_op() {
 fn test_vectorize_m31_basic_field_op() {
     test_basic_field_op::<VectorizedM31>();
 }
+
+#[test]
+fn test_sanity_check_vectorize_m31() {
+    let mut a = VectorizedM31::from(1);
+    let b = VectorizedM31::from(2);
+    a += b;
+    assert_eq!(a, VectorizedM31::from(3));
+}

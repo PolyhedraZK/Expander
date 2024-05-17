@@ -1,5 +1,6 @@
 use std::{
     arch::x86_64::*,
+    fmt::Debug,
     ops::{Add, AddAssign, Mul},
 };
 
@@ -34,7 +35,7 @@ unsafe fn mod_reduce_epi32(x: __m256i) -> __m256i {
 use mod_reduce_epi64 as mod_reduce;
 use rand::Rng;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct PackedM31 {
     v: PackedDataType,
 }
@@ -103,6 +104,16 @@ impl Field for PackedM31 {
 
     fn inv(&self) -> Self {
         todo!();
+    }
+}
+
+impl Debug for PackedM31 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut data = [0; M31_PACK_SIZE];
+        unsafe {
+            _mm256_storeu_si256(data.as_mut_ptr() as *mut PackedDataType, self.v);
+        }
+        write!(f, "mm256i<{:?}>", data)
     }
 }
 
