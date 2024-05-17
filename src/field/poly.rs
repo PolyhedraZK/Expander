@@ -8,3 +8,7 @@ pub struct MultiLinearPoly {
     pub var_num: usize,
     pub evals: Vec<F>,
 }
+
+pub fn eval_multilinear(evals: &[F], x: &[FPrimitive]) -> F {
+    todo!()
+}

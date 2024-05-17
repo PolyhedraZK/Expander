@@ -19,8 +19,8 @@ pub struct CircuitLayer {
     pub input_var_num: usize,
     pub output_var_num: usize,
 
-    input_vals: MultiLinearPoly,
-    output_vals: MultiLinearPoly, // empty most time, unless in the last layer
+    pub input_vals: MultiLinearPoly,
+    pub output_vals: MultiLinearPoly, // empty most time, unless in the last layer
 
     mul: Vec<GateMul>,
     add: Vec<GateAdd>,

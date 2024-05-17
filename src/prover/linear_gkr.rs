@@ -1,4 +1,7 @@
-use crate::{Circuit, Config, GkrScratchpad};
+use crate::{Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript, VectorizedM31, M31};
+
+type FPrimitive = M31;
+type F = VectorizedM31;
 
 pub struct Prover {
     config: Config,
@@ -37,7 +40,20 @@ impl Prover {
             .collect();
     }
 
-    pub fn prove(&mut self, c: &Circuit) {
-        std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
+    pub fn prove(&mut self, c: &Circuit) -> (Vec<F>, Proof) {
+        // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
+
+        // PC commit
+        let commitment = RawCommitment::new(c.layers[0].input_vals.evals.clone());
+        let buffer_v = vec![F::default(); commitment.size() / F::SIZE];
+        let buffer = unsafe {
+            std::slice::from_raw_parts_mut(buffer_v.as_ptr() as *mut u8, commitment.size())
+        };
+        commitment.serialize_into(buffer);
+        let transcript = Transcript::new();
+        transcript.append_u8_slice(buffer, commitment.size());
+
+        // grinding
+        todo!()
     }
 }

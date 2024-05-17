@@ -1,6 +1,7 @@
 use std::{
     arch::x86_64::*,
     fmt::Debug,
+    mem::size_of,
     ops::{Add, AddAssign, Mul},
 };
 
@@ -41,6 +42,7 @@ pub struct PackedM31 {
 }
 
 impl PackedM31 {
+    pub const SIZE: usize = size_of::<PackedDataType>();
     pub fn pack_full(x: M31) -> PackedM31 {
         PackedM31 {
             v: unsafe { _mm256_set1_epi32(x.v as i32) },

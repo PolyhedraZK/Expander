@@ -39,3 +39,19 @@ fn test_sanity_check_vectorize_m31() {
     a += b;
     assert_eq!(a, VectorizedM31::from(3));
 }
+
+#[test]
+fn test_custom_serde_vectorize_m31() {
+    let a = VectorizedM31::from(256 + 2);
+    let mut buffer = vec![PackedM31::default(); 1];
+    let buffer_slice: &mut [u8] = unsafe {
+        std::slice::from_raw_parts_mut(
+            buffer.as_mut_ptr() as *mut u8,
+            buffer.len() * std::mem::size_of::<PackedM31>(),
+        )
+    };
+    a.serialize_into(buffer_slice);
+    println!("{:?}", buffer_slice);
+    let b = VectorizedM31::deserialize_from(&buffer_slice);
+    assert_eq!(a, b);
+}

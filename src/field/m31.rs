@@ -1,5 +1,8 @@
 use crate::Field;
-use std::ops::{AddAssign, Mul};
+use std::{
+    mem::size_of,
+    ops::{AddAssign, Mul},
+};
 
 pub const M31_MOD: i32 = 2147483647;
 
@@ -83,6 +86,25 @@ pub use m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct VectorizedM31 {
     v: [PackedM31; M31_VECTORIZE_SIZE],
+}
+
+impl VectorizedM31 {
+    pub const SIZE: usize = size_of::<[PackedM31; M31_VECTORIZE_SIZE]>();
+    pub fn serialize_into(&self, buffer: &mut [u8]) {
+        buffer.copy_from_slice(unsafe {
+            std::slice::from_raw_parts(
+                self.v.as_ptr() as *const u8,
+                M31_VECTORIZE_SIZE * PackedM31::SIZE,
+            )
+        });
+    }
+    pub fn deserialize_from(buffer: &[u8]) -> Self {
+        let mut v = [PackedM31::zero(); M31_VECTORIZE_SIZE];
+        v.copy_from_slice(unsafe {
+            std::slice::from_raw_parts(buffer.as_ptr() as *const PackedM31, M31_VECTORIZE_SIZE)
+        });
+        VectorizedM31 { v }
+    }
 }
 
 impl Field for VectorizedM31 {
