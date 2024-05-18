@@ -1,7 +1,24 @@
-use crate::{Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript, VectorizedM31, M31};
+use crate::{
+    gkr_prove, scratchpad, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript,
+    VectorizedM31, M31,
+};
 
 type FPrimitive = M31;
 type F = VectorizedM31;
+
+fn grind(transcript: &mut Transcript, config: &Config) {
+    let initial_hash = transcript.challenge_fs(256 / config.field_size);
+    let mut hash_bytes = [0u8; 256 / 8];
+    let mut offset = 0;
+    for i in 0..initial_hash.len() {
+        initial_hash[i].serialize_into(&mut hash_bytes[offset..]);
+        offset += (config.field_size + 7) / 8;
+    }
+    for i in 0..(1 << config.grinding_bits) {
+        transcript.hasher.hash_inplace(&mut hash_bytes, 256 / 8);
+    }
+    transcript.append_u8_slice(&hash_bytes, 256 / 8);
+}
 
 pub struct Prover {
     config: Config,
@@ -50,10 +67,20 @@ impl Prover {
             std::slice::from_raw_parts_mut(buffer_v.as_ptr() as *mut u8, commitment.size())
         };
         commitment.serialize_into(buffer);
-        let transcript = Transcript::new();
+        let mut transcript = Transcript::new();
         transcript.append_u8_slice(buffer, commitment.size());
 
-        // grinding
-        todo!()
+        grind(&mut transcript, &self.config);
+
+        let (claimed_v, rz1s, rz2s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
+
+        // open
+        match self.config.polynomial_commitment_type {
+            crate::config::PolynomialCommitmentType::Raw => {
+                // no need to update transcript
+            }
+            _ => todo!(),
+        }
+        (claimed_v, transcript.proof)
     }
 }

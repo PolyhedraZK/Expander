@@ -12,6 +12,9 @@ pub use self::config::*;
 pub mod field;
 pub use self::field::*;
 
+pub mod hash;
+pub use self::hash::*;
+
 pub mod poly_commit;
 pub use self::poly_commit::*;
 

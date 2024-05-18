@@ -11,6 +11,19 @@ pub struct M31 {
     v: usize,
 }
 
+impl M31 {
+    pub const SIZE: usize = size_of::<usize>();
+    pub fn serialize_into(&self, buffer: &mut [u8]) {
+        buffer.copy_from_slice(unsafe {
+            std::slice::from_raw_parts(&self.v as *const usize as *const u8, M31::SIZE)
+        });
+    }
+    pub fn deserialize_from(buffer: &[u8]) -> Self {
+        let v = unsafe { *(buffer.as_ptr() as *const usize) };
+        M31 { v }
+    }
+}
+
 impl Field for M31 {
     fn zero() -> Self {
         todo!()
