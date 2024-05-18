@@ -2,6 +2,7 @@ use crate::{Proof, SHA256hasher, VectorizedM31, M31};
 
 pub struct Transcript {
     pub hasher: SHA256hasher,
+    hash_start_idx: usize,
     digest: [u8; Self::DIGEST_SIZE],
     pub proof: Proof,
 }
@@ -13,15 +14,31 @@ impl Transcript {
     pub const DIGEST_SIZE: usize = 32;
 
     fn hash_to_digest(&mut self) {
-        todo!()
+        let hash_end_idx = self.proof.bytes.len();
+        if hash_end_idx > self.hash_start_idx {
+            self.hasher.hash(
+                &mut self.digest,
+                &self.proof.bytes[self.hash_start_idx..],
+                hash_end_idx - self.hash_start_idx,
+            );
+            self.hash_start_idx = hash_end_idx;
+        } else {
+            self.hasher
+                .hash_inplace(&mut self.digest, Self::DIGEST_SIZE)
+        }
     }
 
     pub fn new() -> Self {
-        todo!()
+        Transcript {
+            hasher: SHA256hasher::default(),
+            hash_start_idx: 0,
+            digest: [0u8; Self::DIGEST_SIZE],
+            proof: Proof::default(),
+        }
     }
 
-    pub fn append_u8_slice(&self, buffer: &[u8], size: usize) {
-        todo!()
+    pub fn append_u8_slice(&mut self, buffer: &[u8], size: usize) {
+        self.proof.append_u8_slice(buffer, size);
     }
 
     pub fn challenge_f(&mut self) -> FPrimitive {

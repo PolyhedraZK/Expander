@@ -187,8 +187,8 @@ impl AddAssign for PackedM31 {
     }
 }
 
-impl From<usize> for PackedM31 {
-    fn from(x: usize) -> Self {
+impl From<u32> for PackedM31 {
+    fn from(x: u32) -> Self {
         PackedM31::pack_full(M31::from(x))
     }
 }

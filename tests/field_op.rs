@@ -4,7 +4,7 @@ use rand::prelude::*;
 fn test_basic_field_op<F: Field>() {
     let f = F::random();
     let mut rng = rand::thread_rng();
-    let rhs = rng.gen::<usize>() % 100;
+    let rhs = rng.gen::<u32>() % 100;
 
     let prod_0 = f * F::from(rhs);
     let mut prod_1 = F::zero();

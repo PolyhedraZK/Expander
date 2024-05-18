@@ -5,21 +5,24 @@ use std::{
 };
 
 pub const M31_MOD: i32 = 2147483647;
+fn mod_reduce_int(x: i64) -> i64 {
+    (x & M31_MOD as i64) + (x >> 31)
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct M31 {
-    v: usize,
+    v: u32,
 }
 
 impl M31 {
-    pub const SIZE: usize = size_of::<usize>();
+    pub const SIZE: usize = size_of::<u32>();
     pub fn serialize_into(&self, buffer: &mut [u8]) {
-        buffer.copy_from_slice(unsafe {
-            std::slice::from_raw_parts(&self.v as *const usize as *const u8, M31::SIZE)
+        buffer[..M31::SIZE].copy_from_slice(unsafe {
+            std::slice::from_raw_parts(&self.v as *const u32 as *const u8, M31::SIZE)
         });
     }
     pub fn deserialize_from(buffer: &[u8]) -> Self {
-        let v = unsafe { *(buffer.as_ptr() as *const usize) };
+        let v = unsafe { *(buffer.as_ptr() as *const u32) };
         M31 { v }
     }
 }
@@ -46,19 +49,22 @@ impl Field for M31 {
     }
 }
 
-impl Mul for M31 {
-    type Output = M31;
-    fn mul(self, rhs: M31) -> Self::Output {
-        todo!()
-    }
-}
-
 impl Mul<&M31> for M31 {
     type Output = M31;
     fn mul(self, rhs: &M31) -> Self::Output {
-        M31 {
-            v: (self.v * rhs.v) % M31_MOD as usize,
+        let mut vv = self.v as i64 * rhs.v as i64;
+        vv = mod_reduce_int(vv);
+        if vv >= M31_MOD as i64 {
+            vv -= M31_MOD as i64;
         }
+        M31 { v: vv as u32 }
+    }
+}
+
+impl Mul for M31 {
+    type Output = M31;
+    fn mul(self, rhs: M31) -> Self::Output {
+        self * &rhs
     }
 }
 
@@ -74,13 +80,13 @@ impl AddAssign for M31 {
     }
 }
 
-impl From<usize> for M31 {
-    fn from(x: usize) -> Self {
+impl From<u32> for M31 {
+    fn from(x: u32) -> Self {
         M31 {
-            v: if x < M31_MOD as usize {
+            v: if x < M31_MOD as u32 {
                 x
             } else {
-                x % M31_MOD as usize
+                x % M31_MOD as u32
             },
         }
     }
@@ -209,8 +215,8 @@ impl AddAssign for VectorizedM31 {
     }
 }
 
-impl From<usize> for VectorizedM31 {
-    fn from(x: usize) -> Self {
+impl From<u32> for VectorizedM31 {
+    fn from(x: u32) -> Self {
         VectorizedM31 {
             v: [PackedM31::from(x); M31_VECTORIZE_SIZE],
         }

@@ -9,7 +9,7 @@ pub trait Field:
     + Debug
     + Default
     + PartialEq
-    + From<usize>
+    + From<u32>
     + Mul<Output = Self>
     + for<'a> Mul<&'a Self, Output = Self>
     + AddAssign
