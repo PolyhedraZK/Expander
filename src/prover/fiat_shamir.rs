@@ -37,6 +37,12 @@ impl Transcript {
         }
     }
 
+    pub fn append_f(&mut self, f: F) {
+        let cur_size = self.proof.bytes.len();
+        self.proof.bytes.resize(cur_size + F::SIZE, 0);
+        f.serialize_into(&mut self.proof.bytes[cur_size..]);
+    }
+
     pub fn append_u8_slice(&mut self, buffer: &[u8], size: usize) {
         self.proof.append_u8_slice(buffer, size);
     }

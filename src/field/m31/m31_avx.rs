@@ -2,7 +2,7 @@ use std::{
     arch::x86_64::*,
     fmt::Debug,
     mem::size_of,
-    ops::{Add, AddAssign, Mul},
+    ops::{Add, AddAssign, Mul, Sub},
 };
 
 use crate::{Field, M31, M31_MOD};
@@ -58,7 +58,9 @@ impl Field for PackedM31 {
     }
 
     fn one() -> Self {
-        todo!();
+        PackedM31 {
+            v: unsafe { _mm256_set1_epi32(1) },
+        }
     }
 
     fn random() -> Self {
@@ -158,6 +160,23 @@ impl Mul for PackedM31 {
     }
 }
 
+impl Mul<&M31> for PackedM31 {
+    type Output = PackedM31;
+    fn mul(self, rhs: &M31) -> Self::Output {
+        unsafe {
+            let rhs_p = _mm256_set1_epi32(rhs.v as i32);
+            self * &PackedM31 { v: rhs_p }
+        }
+    }
+}
+
+impl Mul<M31> for PackedM31 {
+    type Output = PackedM31;
+    fn mul(self, rhs: M31) -> Self::Output {
+        self * &rhs
+    }
+}
+
 impl Add<&PackedM31> for PackedM31 {
     type Output = PackedM31;
     fn add(self, rhs: &PackedM31) -> Self::Output {
@@ -172,6 +191,13 @@ impl Add<&PackedM31> for PackedM31 {
                 ),
             }
         }
+    }
+}
+
+impl Add for PackedM31 {
+    type Output = PackedM31;
+    fn add(self, rhs: PackedM31) -> Self::Output {
+        self + &rhs
     }
 }
 
@@ -190,5 +216,24 @@ impl AddAssign for PackedM31 {
 impl From<u32> for PackedM31 {
     fn from(x: u32) -> Self {
         PackedM31::pack_full(M31::from(x))
+    }
+}
+
+impl Sub<&PackedM31> for PackedM31 {
+    type Output = PackedM31;
+    fn sub(self, rhs: &PackedM31) -> Self::Output {
+        PackedM31 {
+            v: unsafe {
+                let t = _mm256_sub_epi32(self.v, rhs.v);
+                _mm256_mask_add_epi32(t, _mm256_cmpge_epu32_mask(t, *PACKED_MOD), t, *PACKED_MOD)
+            },
+        }
+    }
+}
+
+impl Sub for PackedM31 {
+    type Output = PackedM31;
+    fn sub(self, rhs: PackedM31) -> Self::Output {
+        self - &rhs
     }
 }

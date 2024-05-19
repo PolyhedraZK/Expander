@@ -1,7 +1,7 @@
 use crate::Field;
 use std::{
     mem::size_of,
-    ops::{AddAssign, Mul},
+    ops::{Add, AddAssign, Mul, Neg, Sub},
 };
 
 pub const M31_MOD: i32 = 2147483647;
@@ -11,7 +11,7 @@ fn mod_reduce_int(x: i64) -> i64 {
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct M31 {
-    v: u32,
+    pub v: u32,
 }
 
 impl M31 {
@@ -22,18 +22,22 @@ impl M31 {
         });
     }
     pub fn deserialize_from(buffer: &[u8]) -> Self {
-        let v = unsafe { *(buffer.as_ptr() as *const u32) };
-        M31 { v }
+        let mut v = unsafe { *(buffer.as_ptr() as *const u32) } as i64;
+        v = mod_reduce_int(v);
+        if v >= M31_MOD as i64 {
+            v -= M31_MOD as i64;
+        }
+        M31 { v: v as u32 }
     }
 }
 
 impl Field for M31 {
     fn zero() -> Self {
-        todo!()
+        M31 { v: 0 }
     }
 
     fn one() -> Self {
-        todo!()
+        M31 { v: 1 }
     }
 
     fn random() -> Self {
@@ -68,9 +72,54 @@ impl Mul for M31 {
     }
 }
 
+impl Add<&M31> for M31 {
+    type Output = M31;
+    fn add(self, rhs: &M31) -> Self::Output {
+        let mut vv = self.v + rhs.v;
+        if vv >= M31_MOD as u32 {
+            vv -= M31_MOD as u32;
+        }
+        M31 { v: vv }
+    }
+}
+
+impl Add for M31 {
+    type Output = M31;
+    fn add(self, rhs: M31) -> Self::Output {
+        self + &rhs
+    }
+}
+
+impl Neg for M31 {
+    type Output = M31;
+    fn neg(self) -> Self::Output {
+        M31 {
+            v: if self.v == 0 {
+                0
+            } else {
+                M31_MOD as u32 - self.v
+            },
+        }
+    }
+}
+
+impl Sub<&M31> for M31 {
+    type Output = M31;
+    fn sub(self, rhs: &M31) -> Self::Output {
+        self + &(-*rhs)
+    }
+}
+
+impl Sub for M31 {
+    type Output = M31;
+    fn sub(self, rhs: M31) -> Self::Output {
+        self - &rhs
+    }
+}
+
 impl AddAssign<&M31> for M31 {
     fn add_assign(&mut self, rhs: &M31) {
-        todo!()
+        *self = *self + rhs;
     }
 }
 
@@ -104,7 +153,7 @@ pub use m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct VectorizedM31 {
-    v: [PackedM31; M31_VECTORIZE_SIZE],
+    pub v: [PackedM31; M31_VECTORIZE_SIZE],
 }
 
 impl VectorizedM31 {
@@ -134,7 +183,9 @@ impl Field for VectorizedM31 {
     }
 
     fn one() -> Self {
-        todo!()
+        VectorizedM31 {
+            v: [PackedM31::one(); M31_VECTORIZE_SIZE],
+        }
     }
 
     fn random() -> Self {
@@ -185,18 +236,48 @@ impl Mul for VectorizedM31 {
     }
 }
 
-impl Mul<M31> for VectorizedM31 {
+impl Mul<&M31> for VectorizedM31 {
     type Output = VectorizedM31;
-    fn mul(self, rhs: M31) -> Self::Output {
+    fn mul(self, rhs: &M31) -> Self::Output {
         VectorizedM31 {
             v: self
                 .v
                 .iter()
-                .map(|x| *x * PackedM31::pack_full(rhs))
+                .map(|x| *x * PackedM31::pack_full(*rhs))
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
         }
+    }
+}
+
+impl Mul<M31> for VectorizedM31 {
+    type Output = VectorizedM31;
+    fn mul(self, rhs: M31) -> Self::Output {
+        self * &rhs
+    }
+}
+
+impl Add<&VectorizedM31> for VectorizedM31 {
+    type Output = VectorizedM31;
+    fn add(self, rhs: &VectorizedM31) -> Self::Output {
+        VectorizedM31 {
+            v: self
+                .v
+                .iter()
+                .zip(rhs.v.iter())
+                .map(|(a, b)| *a + b)
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
+        }
+    }
+}
+
+impl Add for VectorizedM31 {
+    type Output = VectorizedM31;
+    fn add(self, rhs: VectorizedM31) -> Self::Output {
+        self + &rhs
     }
 }
 
@@ -212,6 +293,36 @@ impl AddAssign<&VectorizedM31> for VectorizedM31 {
 impl AddAssign for VectorizedM31 {
     fn add_assign(&mut self, rhs: Self) {
         *self += &rhs;
+    }
+}
+
+impl AddAssign<&M31> for VectorizedM31 {
+    fn add_assign(&mut self, rhs: &M31) {
+        self.v
+            .iter_mut()
+            .for_each(|x| *x += PackedM31::pack_full(*rhs));
+    }
+}
+
+impl AddAssign<M31> for VectorizedM31 {
+    fn add_assign(&mut self, rhs: M31) {
+        *self += &rhs;
+    }
+}
+
+impl Sub for VectorizedM31 {
+    type Output = VectorizedM31;
+    fn sub(self, rhs: VectorizedM31) -> Self::Output {
+        VectorizedM31 {
+            v: self
+                .v
+                .iter()
+                .zip(rhs.v.iter())
+                .map(|(a, b)| *a - b)
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
+        }
     }
 }
 

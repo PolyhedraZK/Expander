@@ -6,9 +6,9 @@ type F = VectorizedM31;
 
 #[derive(Debug, Clone)]
 pub struct Gate<const INPUT_NUM: usize> {
-    i_ids: [usize; INPUT_NUM],
-    o_id: usize,
-    coef: FPrimitive,
+    pub i_ids: [usize; INPUT_NUM],
+    pub o_id: usize,
+    pub coef: FPrimitive,
 }
 
 pub type GateMul = Gate<2>;
@@ -22,8 +22,8 @@ pub struct CircuitLayer {
     pub input_vals: MultiLinearPoly,
     pub output_vals: MultiLinearPoly, // empty most time, unless in the last layer
 
-    mul: Vec<GateMul>,
-    add: Vec<GateAdd>,
+    pub mul: Vec<GateMul>,
+    pub add: Vec<GateAdd>,
 }
 
 impl CircuitLayer {
