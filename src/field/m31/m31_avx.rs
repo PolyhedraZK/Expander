@@ -43,6 +43,7 @@ pub struct PackedM31 {
 
 impl PackedM31 {
     pub const SIZE: usize = size_of::<PackedDataType>();
+    #[inline(always)]
     pub fn pack_full(x: M31) -> PackedM31 {
         PackedM31 {
             v: unsafe { _mm256_set1_epi32(x.v as i32) },
@@ -51,18 +52,21 @@ impl PackedM31 {
 }
 
 impl Field for PackedM31 {
+    #[inline(always)]
     fn zero() -> Self {
         PackedM31 {
             v: unsafe { _mm256_set1_epi32(0) },
         }
     }
 
+    #[inline(always)]
     fn one() -> Self {
         PackedM31 {
             v: unsafe { _mm256_set1_epi32(1) },
         }
     }
 
+    #[inline(always)]
     fn random() -> Self {
         unsafe {
             let mut rng = rand::thread_rng();
@@ -88,6 +92,7 @@ impl Field for PackedM31 {
         }
     }
 
+    #[inline(always)]
     fn random_bool() -> Self {
         let mut rng = rand::thread_rng();
         PackedM31 {
@@ -106,6 +111,7 @@ impl Field for PackedM31 {
         }
     }
 
+    #[inline(always)]
     fn inv(&self) -> Self {
         todo!();
     }
@@ -138,6 +144,7 @@ impl PartialEq for PackedM31 {
 
 impl Mul<&PackedM31> for PackedM31 {
     type Output = PackedM31;
+    #[inline(always)]
     fn mul(self, rhs: &PackedM31) -> Self::Output {
         unsafe {
             let x_shifted = _mm256_srli_epi64::<32>(self.v);
@@ -155,6 +162,7 @@ impl Mul<&PackedM31> for PackedM31 {
 
 impl Mul for PackedM31 {
     type Output = PackedM31;
+    #[inline(always)]
     fn mul(self, rhs: PackedM31) -> Self::Output {
         self * &rhs
     }
@@ -162,6 +170,7 @@ impl Mul for PackedM31 {
 
 impl Mul<&M31> for PackedM31 {
     type Output = PackedM31;
+    #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
         unsafe {
             let rhs_p = _mm256_set1_epi32(rhs.v as i32);
@@ -172,6 +181,7 @@ impl Mul<&M31> for PackedM31 {
 
 impl Mul<M31> for PackedM31 {
     type Output = PackedM31;
+    #[inline(always)]
     fn mul(self, rhs: M31) -> Self::Output {
         self * &rhs
     }
@@ -179,6 +189,7 @@ impl Mul<M31> for PackedM31 {
 
 impl Add<&PackedM31> for PackedM31 {
     type Output = PackedM31;
+    #[inline(always)]
     fn add(self, rhs: &PackedM31) -> Self::Output {
         unsafe {
             let result = _mm256_add_epi32(self.v, rhs.v);
@@ -196,24 +207,28 @@ impl Add<&PackedM31> for PackedM31 {
 
 impl Add for PackedM31 {
     type Output = PackedM31;
+    #[inline(always)]
     fn add(self, rhs: PackedM31) -> Self::Output {
         self + &rhs
     }
 }
 
 impl AddAssign<&PackedM31> for PackedM31 {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: &PackedM31) {
         *self = *self + rhs;
     }
 }
 
 impl AddAssign for PackedM31 {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self += &rhs;
     }
 }
 
 impl From<u32> for PackedM31 {
+    #[inline(always)]
     fn from(x: u32) -> Self {
         PackedM31::pack_full(M31::from(x))
     }
@@ -221,6 +236,7 @@ impl From<u32> for PackedM31 {
 
 impl Sub<&PackedM31> for PackedM31 {
     type Output = PackedM31;
+    #[inline(always)]
     fn sub(self, rhs: &PackedM31) -> Self::Output {
         PackedM31 {
             v: unsafe {
@@ -233,6 +249,7 @@ impl Sub<&PackedM31> for PackedM31 {
 
 impl Sub for PackedM31 {
     type Output = PackedM31;
+    #[inline(always)]
     fn sub(self, rhs: PackedM31) -> Self::Output {
         self - &rhs
     }

@@ -44,16 +44,18 @@ wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
 
 ## Benchmarks
 
+**Make sure you include `RUSTFLAGS="-C target-cpu=native" to allow platform specific accelerations.`**
+
 Command template:
 
 ```sh
-cargo run -- <NUMBER_OF_THREAD>
+RUSTFLAGS="-C target-cpu=native" cargo run -- <NUMBER_OF_THREAD>
 ```
 
 Concretely if you are running on a 16 physical core CPU:
 
 ```sh
-cargo run -- 16
+RUSTFLAGS="-C target-cpu=native" cargo run -- 16
 ```
 
 ## How to contribute?

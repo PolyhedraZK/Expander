@@ -1,6 +1,5 @@
 use crate::{
-    gkr_prove, scratchpad, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript,
-    VectorizedM31, M31,
+    gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript, VectorizedM31, M31,
 };
 
 type FPrimitive = M31;

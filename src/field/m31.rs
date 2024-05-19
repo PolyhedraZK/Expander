@@ -16,11 +16,13 @@ pub struct M31 {
 
 impl M31 {
     pub const SIZE: usize = size_of::<u32>();
+    #[inline(always)]
     pub fn serialize_into(&self, buffer: &mut [u8]) {
         buffer[..M31::SIZE].copy_from_slice(unsafe {
             std::slice::from_raw_parts(&self.v as *const u32 as *const u8, M31::SIZE)
         });
     }
+    #[inline(always)]
     pub fn deserialize_from(buffer: &[u8]) -> Self {
         let mut v = unsafe { *(buffer.as_ptr() as *const u32) } as i64;
         v = mod_reduce_int(v);
@@ -32,10 +34,12 @@ impl M31 {
 }
 
 impl Field for M31 {
+    #[inline(always)]
     fn zero() -> Self {
         M31 { v: 0 }
     }
 
+    #[inline(always)]
     fn one() -> Self {
         M31 { v: 1 }
     }
@@ -55,6 +59,7 @@ impl Field for M31 {
 
 impl Mul<&M31> for M31 {
     type Output = M31;
+    #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
         let mut vv = self.v as i64 * rhs.v as i64;
         vv = mod_reduce_int(vv);
@@ -67,6 +72,7 @@ impl Mul<&M31> for M31 {
 
 impl Mul for M31 {
     type Output = M31;
+    #[inline(always)]
     fn mul(self, rhs: M31) -> Self::Output {
         self * &rhs
     }
@@ -74,6 +80,7 @@ impl Mul for M31 {
 
 impl Add<&M31> for M31 {
     type Output = M31;
+    #[inline(always)]
     fn add(self, rhs: &M31) -> Self::Output {
         let mut vv = self.v + rhs.v;
         if vv >= M31_MOD as u32 {
@@ -85,6 +92,7 @@ impl Add<&M31> for M31 {
 
 impl Add for M31 {
     type Output = M31;
+    #[inline(always)]
     fn add(self, rhs: M31) -> Self::Output {
         self + &rhs
     }
@@ -92,6 +100,7 @@ impl Add for M31 {
 
 impl Neg for M31 {
     type Output = M31;
+    #[inline(always)]
     fn neg(self) -> Self::Output {
         M31 {
             v: if self.v == 0 {
@@ -105,6 +114,7 @@ impl Neg for M31 {
 
 impl Sub<&M31> for M31 {
     type Output = M31;
+    #[inline(always)]
     fn sub(self, rhs: &M31) -> Self::Output {
         self + &(-*rhs)
     }
@@ -112,24 +122,28 @@ impl Sub<&M31> for M31 {
 
 impl Sub for M31 {
     type Output = M31;
+    #[inline(always)]
     fn sub(self, rhs: M31) -> Self::Output {
         self - &rhs
     }
 }
 
 impl AddAssign<&M31> for M31 {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: &M31) {
         *self = *self + rhs;
     }
 }
 
 impl AddAssign for M31 {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self += &rhs;
     }
 }
 
 impl From<u32> for M31 {
+    #[inline(always)]
     fn from(x: u32) -> Self {
         M31 {
             v: if x < M31_MOD as u32 {
@@ -158,6 +172,7 @@ pub struct VectorizedM31 {
 
 impl VectorizedM31 {
     pub const SIZE: usize = size_of::<[PackedM31; M31_VECTORIZE_SIZE]>();
+    #[inline(always)]
     pub fn serialize_into(&self, buffer: &mut [u8]) {
         buffer.copy_from_slice(unsafe {
             std::slice::from_raw_parts(
@@ -166,6 +181,7 @@ impl VectorizedM31 {
             )
         });
     }
+    #[inline(always)]
     pub fn deserialize_from(buffer: &[u8]) -> Self {
         let mut v = [PackedM31::zero(); M31_VECTORIZE_SIZE];
         v.copy_from_slice(unsafe {
@@ -176,18 +192,21 @@ impl VectorizedM31 {
 }
 
 impl Field for VectorizedM31 {
+    #[inline(always)]
     fn zero() -> Self {
         VectorizedM31 {
             v: [PackedM31::zero(); M31_VECTORIZE_SIZE],
         }
     }
 
+    #[inline(always)]
     fn one() -> Self {
         VectorizedM31 {
             v: [PackedM31::one(); M31_VECTORIZE_SIZE],
         }
     }
 
+    #[inline(always)]
     fn random() -> Self {
         VectorizedM31 {
             v: (0..M31_VECTORIZE_SIZE)
@@ -198,6 +217,7 @@ impl Field for VectorizedM31 {
         }
     }
 
+    #[inline(always)]
     fn random_bool() -> Self {
         VectorizedM31 {
             v: (0..M31_VECTORIZE_SIZE)
@@ -215,6 +235,7 @@ impl Field for VectorizedM31 {
 
 impl Mul<&VectorizedM31> for VectorizedM31 {
     type Output = VectorizedM31;
+    #[inline(always)]
     fn mul(self, rhs: &VectorizedM31) -> Self::Output {
         VectorizedM31 {
             v: self
@@ -231,6 +252,7 @@ impl Mul<&VectorizedM31> for VectorizedM31 {
 
 impl Mul for VectorizedM31 {
     type Output = VectorizedM31;
+    #[inline(always)]
     fn mul(self, rhs: VectorizedM31) -> Self::Output {
         self * &rhs
     }
@@ -238,21 +260,20 @@ impl Mul for VectorizedM31 {
 
 impl Mul<&M31> for VectorizedM31 {
     type Output = VectorizedM31;
+    #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
-        VectorizedM31 {
-            v: self
-                .v
-                .iter()
-                .map(|x| *x * PackedM31::pack_full(*rhs))
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap(),
+        let mut v = [PackedM31::zero(); M31_VECTORIZE_SIZE];
+        let packed_rhs = PackedM31::pack_full(*rhs);
+        for i in 0..M31_VECTORIZE_SIZE {
+            v[i] = self.v[i] * packed_rhs;
         }
+        VectorizedM31 { v }
     }
 }
 
 impl Mul<M31> for VectorizedM31 {
     type Output = VectorizedM31;
+    #[inline(always)]
     fn mul(self, rhs: M31) -> Self::Output {
         self * &rhs
     }
@@ -260,6 +281,7 @@ impl Mul<M31> for VectorizedM31 {
 
 impl Add<&VectorizedM31> for VectorizedM31 {
     type Output = VectorizedM31;
+    #[inline(always)]
     fn add(self, rhs: &VectorizedM31) -> Self::Output {
         VectorizedM31 {
             v: self
@@ -276,12 +298,14 @@ impl Add<&VectorizedM31> for VectorizedM31 {
 
 impl Add for VectorizedM31 {
     type Output = VectorizedM31;
+    #[inline(always)]
     fn add(self, rhs: VectorizedM31) -> Self::Output {
         self + &rhs
     }
 }
 
 impl AddAssign<&VectorizedM31> for VectorizedM31 {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: &VectorizedM31) {
         self.v
             .iter_mut()
@@ -291,12 +315,14 @@ impl AddAssign<&VectorizedM31> for VectorizedM31 {
 }
 
 impl AddAssign for VectorizedM31 {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self += &rhs;
     }
 }
 
 impl AddAssign<&M31> for VectorizedM31 {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: &M31) {
         self.v
             .iter_mut()
@@ -305,6 +331,7 @@ impl AddAssign<&M31> for VectorizedM31 {
 }
 
 impl AddAssign<M31> for VectorizedM31 {
+    #[inline(always)]
     fn add_assign(&mut self, rhs: M31) {
         *self += &rhs;
     }
@@ -312,6 +339,7 @@ impl AddAssign<M31> for VectorizedM31 {
 
 impl Sub for VectorizedM31 {
     type Output = VectorizedM31;
+    #[inline(always)]
     fn sub(self, rhs: VectorizedM31) -> Self::Output {
         VectorizedM31 {
             v: self
@@ -327,6 +355,7 @@ impl Sub for VectorizedM31 {
 }
 
 impl From<u32> for VectorizedM31 {
+    #[inline(always)]
     fn from(x: u32) -> Self {
         VectorizedM31 {
             v: [PackedM31::from(x); M31_VECTORIZE_SIZE],
