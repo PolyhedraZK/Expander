@@ -1,4 +1,5 @@
 use crate::Field;
+use lazy_static::lazy_static;
 use std::{
     mem::size_of,
     ops::{Add, AddAssign, Mul, Neg, Sub},
@@ -16,6 +17,7 @@ pub struct M31 {
 
 impl M31 {
     pub const SIZE: usize = size_of::<u32>();
+    pub const INV_2: M31 = M31 { v: 1 << 30 };
     #[inline(always)]
     pub fn serialize_into(&self, buffer: &mut [u8]) {
         buffer[..M31::SIZE].copy_from_slice(unsafe {
@@ -24,7 +26,9 @@ impl M31 {
     }
     #[inline(always)]
     pub fn deserialize_from(buffer: &[u8]) -> Self {
-        let mut v = unsafe { *(buffer.as_ptr() as *const u32) } as i64;
+        let ptr = buffer.as_ptr() as *const u32;
+
+        let mut v = unsafe { ptr.read_unaligned() } as i64;
         v = mod_reduce_int(v);
         if v >= M31_MOD as i64 {
             v -= M31_MOD as i64;
@@ -170,6 +174,12 @@ pub struct VectorizedM31 {
     pub v: [PackedM31; M31_VECTORIZE_SIZE],
 }
 
+lazy_static! {
+    pub static ref VECTORIZEDM31_INV_2: VectorizedM31 = VectorizedM31 {
+        v: [PackedM31::from(1 << 30); M31_VECTORIZE_SIZE],
+    };
+}
+
 impl VectorizedM31 {
     pub const SIZE: usize = size_of::<[PackedM31; M31_VECTORIZE_SIZE]>();
     #[inline(always)]
@@ -183,11 +193,12 @@ impl VectorizedM31 {
     }
     #[inline(always)]
     pub fn deserialize_from(buffer: &[u8]) -> Self {
-        let mut v = [PackedM31::zero(); M31_VECTORIZE_SIZE];
-        v.copy_from_slice(unsafe {
-            std::slice::from_raw_parts(buffer.as_ptr() as *const PackedM31, M31_VECTORIZE_SIZE)
-        });
-        VectorizedM31 { v }
+        let ptr = buffer.as_ptr() as *const [PackedM31; M31_VECTORIZE_SIZE];
+        unsafe {
+            VectorizedM31 {
+                v: ptr.read_unaligned(),
+            }
+        }
     }
 }
 

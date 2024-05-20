@@ -10,7 +10,11 @@ pub fn _eq(x: &FPrimitive, y: &FPrimitive) -> FPrimitive {
     xy + xy - x - y + FPrimitive::from(1)
 }
 
-fn _eq_evals_at_primitive(r: &[FPrimitive], mul_factor: &FPrimitive, eq_evals: &mut [FPrimitive]) {
+pub fn _eq_evals_at_primitive(
+    r: &[FPrimitive],
+    mul_factor: &FPrimitive,
+    eq_evals: &mut [FPrimitive],
+) {
     eq_evals[0] = *mul_factor;
     let mut cur_eval_num = 1;
     for i in 0..r.len() {
@@ -25,7 +29,7 @@ fn _eq_evals_at_primitive(r: &[FPrimitive], mul_factor: &FPrimitive, eq_evals: &
     }
 }
 
-fn _eq_eval_at(
+pub fn _eq_eval_at(
     r: &[FPrimitive],
     mul_factor: &FPrimitive,
     eq_evals: &mut [FPrimitive],
@@ -72,8 +76,12 @@ impl SumcheckMultilinearProdHelper {
         let mut p0 = F::zero();
         let mut p1 = F::zero();
         let mut p2 = F::zero();
+        // println!("bk_f: {:?}", &bk_f[..4]);
+        // println!("bk_hg: {:?}", &bk_hg[..4]);
+        // println!("init_v: {:?}", &init_v[..4]);
         let src_v = if var_idx == 0 { init_v } else { bk_f };
         let eval_size = 1 << (self.var_num - var_idx - 1);
+        // println!("Eval size: {}", eval_size);
         for i in 0..eval_size {
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 continue;
@@ -84,6 +92,13 @@ impl SumcheckMultilinearProdHelper {
                 let hg_v_0 = bk_hg[i * 2].v[j];
                 let hg_v_1 = bk_hg[i * 2 + 1].v[j];
                 p0.v[j] += f_v_0 * hg_v_0;
+                // println!(
+                //     "p0.v[{}]+= {:?} * {:?} =  {:?}",
+                //     j,
+                //     f_v_0,
+                //     hg_v_0,
+                //     f_v_0 * hg_v_0 + p1.v[j]
+                // );
                 p1.v[j] += f_v_1 * hg_v_1;
                 p2.v[j] += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
             }
@@ -103,7 +118,7 @@ impl SumcheckMultilinearProdHelper {
     ) {
         assert_eq!(var_idx, self.sumcheck_var_idx);
         assert!(var_idx < self.var_num);
-
+        // println!("challenge eval size: {}", self.cur_eval_size);
         for i in 0..self.cur_eval_size >> 1 {
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 gate_exists[i] = false;
@@ -146,8 +161,8 @@ pub struct SumcheckGkrHelper<'a> {
     sp: &'a mut GkrScratchpad,
     rz0: &'a [FPrimitive],
     rz1: &'a [FPrimitive],
-    alpha: &'a FPrimitive,
-    beta: &'a FPrimitive,
+    alpha: FPrimitive,
+    beta: FPrimitive,
 
     input_var_num: usize,
     output_var_num: usize,
@@ -173,8 +188,8 @@ impl<'a> SumcheckGkrHelper<'a> {
             sp,
             rz0,
             rz1,
-            alpha,
-            beta,
+            alpha: alpha.clone(),
+            beta: beta.clone(),
 
             input_var_num: layer.input_var_num,
             output_var_num: layer.output_var_num,
@@ -216,6 +231,7 @@ impl<'a> SumcheckGkrHelper<'a> {
                 &self.layer.input_vals.evals,
                 &mut self.sp.gate_exists,
             );
+            // println!("v_eval[0]:= {:?}", self.sp.v_evals[0]);
             self.rx.push(r);
         } else {
             self.y_helper.receive_challenge(

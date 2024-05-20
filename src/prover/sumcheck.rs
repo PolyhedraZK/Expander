@@ -32,17 +32,22 @@ pub fn sumcheck_prove_gkr_layer(
                 helpers[j].prepare_h_y_vals(vx_claim)
             }
             let evals = helpers[j].poly_evals_at(i_var, 2);
+            // if j == 0 {
+            //     println!("i_var={} j={} evals: {:?}", i_var, j, evals);
+            // }
             transcript.append_f(evals[0]);
             transcript.append_f(evals[1]);
             transcript.append_f(evals[2]);
             let r = transcript.challenge_f();
             helpers[j].receive_challenge(i_var, r);
             if i_var == layer.input_var_num - 1 {
+                // println!("vx claim: {:?}", helpers[j].vx_claim());
                 transcript.append_f(helpers[j].vx_claim());
             }
         }
     }
     for j in 0..config.get_num_repetitions() {
+        // println!("claimed vy[{}] = {:?}", j, helpers[j].vy_claim());
         transcript.append_f(helpers[j].vy_claim());
     }
 

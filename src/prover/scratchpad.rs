@@ -3,6 +3,7 @@ use crate::{VectorizedM31, M31};
 type FPrimitive = M31;
 type F = VectorizedM31;
 
+#[derive(Clone, Debug)]
 pub struct GkrScratchpad {
     pub v_evals: Vec<F>,
     pub hg_evals: Vec<F>,

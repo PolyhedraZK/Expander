@@ -20,3 +20,6 @@ pub use self::poly_commit::*;
 
 pub mod prover;
 pub use self::prover::*;
+
+pub mod verifier;
+pub use self::verifier::*;

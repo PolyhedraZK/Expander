@@ -5,7 +5,7 @@ use crate::{
 type FPrimitive = M31;
 type F = VectorizedM31;
 
-fn grind(transcript: &mut Transcript, config: &Config) {
+pub fn grind(transcript: &mut Transcript, config: &Config) {
     let initial_hash = transcript.challenge_fs(256 / config.field_size);
     let mut hash_bytes = [0u8; 256 / 8];
     let mut offset = 0;

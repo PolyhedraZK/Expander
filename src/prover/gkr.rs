@@ -25,7 +25,6 @@ pub fn gkr_prove(
     }
     let mut alpha = FPrimitive::one();
     let mut beta = FPrimitive::zero();
-
     let mut claimed_v = vec![];
 
     for j in 0..config.get_num_repetitions() {
@@ -48,6 +47,7 @@ pub fn gkr_prove(
         );
         alpha = transcript.challenge_f();
         beta = transcript.challenge_f();
+        // println!("Layer {} proved with alpha={:?}, beta={:?}", i, alpha, beta);
     }
 
     (claimed_v, rz0, rz1)

@@ -6,7 +6,7 @@ type F = VectorizedM31;
 pub struct RawOpening {}
 
 pub struct RawCommitment {
-    poly_vals: Vec<F>,
+    pub poly_vals: Vec<F>,
 }
 
 impl RawCommitment {
@@ -32,7 +32,7 @@ impl RawCommitment {
     pub fn new(poly_vals: Vec<F>) -> Self {
         RawCommitment { poly_vals }
     }
-    pub fn verify(&self, x: Vec<FPrimitive>, y: F) -> bool {
+    pub fn verify(&self, x: &[FPrimitive], y: F) -> bool {
         y == eval_multilinear(&self.poly_vals, &x)
     }
 }

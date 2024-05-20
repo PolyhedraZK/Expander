@@ -123,7 +123,20 @@ impl Debug for PackedM31 {
         unsafe {
             _mm256_storeu_si256(data.as_mut_ptr() as *mut PackedDataType, self.v);
         }
-        write!(f, "mm256i<{:?}>", data)
+        // if all data is the same, print only one
+        if data.iter().all(|&x| x == data[0]) {
+            write!(
+                f,
+                "mm256i<8 x {}>",
+                if M31_MOD - data[0] > 1024 {
+                    format!("{}", data[0])
+                } else {
+                    format!("-{}", M31_MOD - data[0])
+                }
+            )
+        } else {
+            write!(f, "mm256i<{:?}>", data)
+        }
     }
 }
 
