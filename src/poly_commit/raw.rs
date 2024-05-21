@@ -33,6 +33,6 @@ impl RawCommitment {
         RawCommitment { poly_vals }
     }
     pub fn verify(&self, x: &[FPrimitive], y: F) -> bool {
-        y == eval_multilinear(&self.poly_vals, &x)
+        y == eval_multilinear(&self.poly_vals, x)
     }
 }

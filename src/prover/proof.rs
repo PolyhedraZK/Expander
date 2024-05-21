@@ -1,13 +1,10 @@
-use crate::{VectorizedM31, M31};
+use crate::VectorizedM31;
 
-type FPrimitive = M31;
 type F = VectorizedM31;
 
 #[derive(Debug, Clone, Default)]
 pub struct Proof {
     idx: usize,
-    commitment_byte_num: usize,
-    opening_byte_num: usize,
     pub bytes: Vec<u8>,
 }
 
