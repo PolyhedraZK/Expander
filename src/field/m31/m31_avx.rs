@@ -1,36 +1,33 @@
 use std::{
     arch::x86_64::*,
     fmt::Debug,
-    mem::size_of,
+    mem::{size_of, transmute},
     ops::{Add, AddAssign, Mul, Sub},
 };
 
 use crate::{Field, M31, M31_MOD};
-use lazy_static::lazy_static;
 
 pub type PackedDataType = __m256i;
 pub const M31_PACK_SIZE: usize = 8;
 pub const M31_VECTORIZE_SIZE: usize = 1;
-lazy_static! {
-    pub static ref PACKED_MOD: __m256i = unsafe { _mm256_set1_epi32(M31_MOD) };
-    pub static ref PACKED_0: __m256i = unsafe { _mm256_setzero_si256() };
-    pub static ref PACKED_MOD_EPI64: __m256i = unsafe { _mm256_set1_epi64x(M31_MOD as i64) };
-    pub static ref PACKED_MOD_SQUARE: __m256i =
-        unsafe { _mm256_set1_epi64x((M31_MOD as i64) * (M31_MOD as i64)) };
-    pub static ref PACKED_MOD_512: __m512i = unsafe { _mm512_set1_epi64(M31_MOD as i64) };
-}
+
+pub const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; 8]) };
+pub const PACKED_0: __m256i = unsafe { transmute([0; 8]) };
+pub const PACKED_MOD_EPI64: __m256i = unsafe { transmute([M31_MOD as u64; 4]) };
+pub const PACKED_MOD_SQUARE: __m256 = unsafe { transmute([(M31_MOD as u64 * M31_MOD as u64); 4]) };
+pub const PACKED_MOD_512: __m512i = unsafe { transmute([M31_MOD as i64; 8]) };
 
 #[inline(always)]
 unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
     _mm256_add_epi64(
-        _mm256_and_si256(x, *PACKED_MOD_EPI64),
+        _mm256_and_si256(x, PACKED_MOD_EPI64),
         _mm256_srli_epi64(x, 31),
     )
 }
 
 #[inline(always)]
 unsafe fn mod_reduce_epi32(x: __m256i) -> __m256i {
-    _mm256_add_epi32(_mm256_and_si256(x, *PACKED_MOD), _mm256_srli_epi32(x, 31))
+    _mm256_add_epi32(_mm256_and_si256(x, PACKED_MOD), _mm256_srli_epi32(x, 31))
 }
 
 use mod_reduce_epi64 as mod_reduce;
@@ -82,12 +79,7 @@ impl Field for PackedM31 {
             );
             v = mod_reduce_epi32(v);
             PackedM31 {
-                v: _mm256_mask_sub_epi32(
-                    v,
-                    _mm256_cmpge_epu32_mask(v, *PACKED_MOD),
-                    v,
-                    *PACKED_MOD,
-                ),
+                v: _mm256_mask_sub_epi32(v, _mm256_cmpge_epu32_mask(v, PACKED_MOD), v, PACKED_MOD),
             }
         }
     }
@@ -209,9 +201,9 @@ impl Add<&PackedM31> for PackedM31 {
             PackedM31 {
                 v: _mm256_mask_sub_epi32(
                     result,
-                    _mm256_cmpge_epu32_mask(result, *PACKED_MOD),
+                    _mm256_cmpge_epu32_mask(result, PACKED_MOD),
                     result,
-                    *PACKED_MOD,
+                    PACKED_MOD,
                 ),
             }
         }
@@ -254,7 +246,7 @@ impl Sub<&PackedM31> for PackedM31 {
         PackedM31 {
             v: unsafe {
                 let t = _mm256_sub_epi32(self.v, rhs.v);
-                _mm256_mask_add_epi32(t, _mm256_cmpge_epu32_mask(t, *PACKED_MOD), t, *PACKED_MOD)
+                _mm256_mask_add_epi32(t, _mm256_cmpge_epu32_mask(t, PACKED_MOD), t, PACKED_MOD)
             },
         }
     }
