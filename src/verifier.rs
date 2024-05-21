@@ -10,7 +10,7 @@ type F = VectorizedM31;
 
 fn degree_2_eval(p0: F, p1: F, p2: F, x: FPrimitive) -> F {
     let c0 = &p0;
-    let c2 = *VECTORIZEDM31_INV_2 * (p2 - p1 - p1 + p0);
+    let c2 = VECTORIZEDM31_INV_2 * (p2 - p1 - p1 + p0);
     let c1 = p1 - p0 - c2;
     *c0 + (c2 * x + c1) * x
 }

@@ -1,32 +1,30 @@
 use std::{
     arch::aarch64::*,
     fmt::Debug,
-    mem::size_of,
+    mem::{size_of, transmute},
     ops::{Add, AddAssign, Mul, Sub},
 };
 
 use crate::{Field, M31, M31_MOD};
-use lazy_static::lazy_static;
 
 pub type PackedDataType = uint32x4_t;
 pub const M31_PACK_SIZE: usize = 4;
 pub const M31_VECTORIZE_SIZE: usize = 2;
-lazy_static! {
-    pub static ref PACKED_MOD: uint32x4_t = unsafe { vdupq_n_u32(M31_MOD as u32) };
-    pub static ref PACKED_0: uint32x4_t = unsafe { vdupq_n_u32(0) };
-}
+
+pub const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD as u32; 4]) };
+pub const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
 
 use rand::Rng;
 
 #[inline(always)]
 fn reduce_sum(x: uint32x4_t) -> uint32x4_t {
     //aarch64 only
-    unsafe { vminq_u32(x, vsubq_u32(x, *PACKED_MOD)) }
+    unsafe { vminq_u32(x, vsubq_u32(x, PACKED_MOD)) }
 }
 
 #[derive(Clone, Copy)]
 pub struct PackedM31 {
-    v: PackedDataType,
+    pub v: PackedDataType,
 }
 
 impl PackedM31 {
@@ -146,9 +144,12 @@ impl Mul<&PackedM31> for PackedM31 {
     #[inline(always)]
     fn mul(self, rhs: &PackedM31) -> Self::Output {
         unsafe {
-            let prod_hi = vqdmulhq_s32(vreinterpretq_s32_u32(self.v), vreinterpretq_s32_u32(rhs.v));
+            let prod_hi = vreinterpretq_u32_s32(vqdmulhq_s32(
+                vreinterpretq_s32_u32(self.v),
+                vreinterpretq_s32_u32(rhs.v),
+            ));
             let prod_lo = vmulq_u32(self.v, rhs.v);
-            let t = vmlsq_u32(prod_lo, vreinterpretq_u32_s32(prod_hi), *PACKED_MOD);
+            let t = vmlsq_u32(prod_lo, prod_hi, PACKED_MOD);
             PackedM31 { v: reduce_sum(t) }
         }
     }
@@ -227,7 +228,7 @@ impl Sub<&PackedM31> for PackedM31 {
         PackedM31 {
             v: unsafe {
                 let diff = vsubq_u32(self.v, rhs.v);
-                let u = vaddq_u32(diff, *PACKED_MOD);
+                let u = vaddq_u32(diff, PACKED_MOD);
                 vminq_u32(diff, u)
             },
         }

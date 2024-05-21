@@ -38,8 +38,8 @@ fn test_sanity_check_vectorize_m31() {
     let b = VectorizedM31::from(2);
     a += b;
     assert_eq!(a, VectorizedM31::from(3));
-    assert_eq!(b * *VECTORIZEDM31_INV_2, VectorizedM31::from(1));
-    assert_eq!(b * b * *VECTORIZEDM31_INV_2, b);
+    assert_eq!(b * VECTORIZEDM31_INV_2, VectorizedM31::from(1));
+    assert_eq!(b * b * VECTORIZEDM31_INV_2, b);
 }
 
 #[test]

@@ -1,7 +1,6 @@
 use crate::Field;
-use lazy_static::lazy_static;
 use std::{
-    mem::size_of,
+    mem::{size_of, transmute},
     ops::{Add, AddAssign, Mul, Neg, Sub},
 };
 
@@ -174,11 +173,11 @@ pub struct VectorizedM31 {
     pub v: [PackedM31; M31_VECTORIZE_SIZE],
 }
 
-lazy_static! {
-    pub static ref VECTORIZEDM31_INV_2: VectorizedM31 = VectorizedM31 {
-        v: [PackedM31::from(1 << 30); M31_VECTORIZE_SIZE],
-    };
-}
+pub const VECTORIZEDM31_INV_2: VectorizedM31 = VectorizedM31 {
+    v: [PackedM31 {
+        v: unsafe { transmute([1 << 30; 4]) },
+    }; M31_VECTORIZE_SIZE],
+};
 
 impl VectorizedM31 {
     pub const SIZE: usize = size_of::<[PackedM31; M31_VECTORIZE_SIZE]>();

@@ -35,7 +35,7 @@ use rand::Rng;
 
 #[derive(Clone, Copy)]
 pub struct PackedM31 {
-    v: PackedDataType,
+    pub v: PackedDataType,
 }
 
 impl PackedM31 {
