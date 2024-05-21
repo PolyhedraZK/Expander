@@ -8,39 +8,18 @@ This is the *rust version* of the "core" repo and more on "demo" purpose, we wil
 
 For more technical introduction, visit our markdown files [here](https://github.com/PolyhedraZK/Expander/tree/master/docs/doc.md).
 
-And [here](https://github.com/PolyhedraZK/Expander-rs/tree/master/docs/example.md) [TODO] for an example on how to use the gkr lib.
+And [here](./tests/gkr_correctness.rs) for an example on how to use the gkr lib.
 
 For more information, see the cpp version of the repo [here](https://github.com/PolyhedraZK/Expander).
 
 ## Environment Setup
 
-[TODO] need to double check the setup
-
 Before executing setup, please make sure you read through the system requirements, and make sure your CPU is in the list.
 
-If you are running a Linux:
-
 ```sh
-sudo apt update
-sudo apt install cmake g++ libssl-dev
-cmake .
-make
 wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
 ```
 
-If you are running a Mac:
-
-```sh
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-(echo; echo 'eval "$(/opt/homebrew/bin/brew shellenv)"') >> ~/.zprofile
-eval "$(/opt/homebrew/bin/brew shellenv)"
-brew install cmake
-brew install openssl
-brew install wget
-cmake .
-make
-wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
-```
 
 ## Benchmarks
 
@@ -56,6 +35,15 @@ Concretely if you are running on a 16 physical core CPU:
 
 ```sh
 RUSTFLAGS="-C target-cpu=native" cargo run -- 16
+```
+
+## Correctness test
+
+[Here](./tests/gkr_correctness.rs) we provide a test case for end-to-end proof generation and verification. 
+To check the correctness, run the follow standard Rust test command:
+
+```sh
+RUSTFLAGS="-C target-cpu=native" cargo test --release -- --nocapture
 ```
 
 ## How to contribute?
