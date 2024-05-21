@@ -13,6 +13,7 @@ pub const M31_VECTORIZE_SIZE: usize = 2;
 
 pub const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD as u32; 4]) };
 pub const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
+pub const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
 
 use rand::Rng;
 

@@ -168,15 +168,15 @@ pub mod m31_neon;
 #[cfg(target_arch = "aarch64")]
 pub use m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
 
+use self::m31_avx::PACKED_INV_2;
+
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct VectorizedM31 {
     pub v: [PackedM31; M31_VECTORIZE_SIZE],
 }
 
 pub const VECTORIZEDM31_INV_2: VectorizedM31 = VectorizedM31 {
-    v: [PackedM31 {
-        v: unsafe { transmute([1 << 30; 4]) },
-    }; M31_VECTORIZE_SIZE],
+    v: [PackedM31 { v: PACKED_INV_2 }; M31_VECTORIZE_SIZE],
 };
 
 impl VectorizedM31 {

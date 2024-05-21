@@ -16,6 +16,7 @@ pub const PACKED_0: __m256i = unsafe { transmute([0; 8]) };
 pub const PACKED_MOD_EPI64: __m256i = unsafe { transmute([M31_MOD as u64; 4]) };
 pub const PACKED_MOD_SQUARE: __m256 = unsafe { transmute([(M31_MOD as u64 * M31_MOD as u64); 4]) };
 pub const PACKED_MOD_512: __m512i = unsafe { transmute([M31_MOD as i64; 8]) };
+pub const PACKED_INV_2: __m256i = unsafe { transmute([1 << 30; 8]) };
 
 #[inline(always)]
 unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
