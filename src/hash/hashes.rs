@@ -1,6 +1,4 @@
 use sha2::{Digest, Sha256};
-use std::usize;
-
 #[derive(Debug, Clone, Default)]
 pub struct SHA256hasher;
 

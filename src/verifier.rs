@@ -41,7 +41,7 @@ fn eval_sparse_circuit_connect_poly<const INPUT_NUM: usize>(
         for i in 0..INPUT_NUM {
             prod = prod * eq_evals_at_ris[i][g.i_ids[i]];
         }
-        v = v + prod * g.coef;
+        v += prod * g.coef;
     }
     v
 }
@@ -114,7 +114,7 @@ fn sumcheck_verify_gkr_layer(
                             &rz1[j],
                             alpha,
                             beta,
-                            &vec![rx[j].clone()],
+                            &[rx[j].clone()],
                         );
                 transcript.append_f(vx_claim[j]);
             }
@@ -132,7 +132,7 @@ fn sumcheck_verify_gkr_layer(
                     &rz1[j],
                     alpha,
                     beta,
-                    &vec![rx[j].clone(), ry[j].clone()],
+                    &[rx[j].clone(), ry[j].clone()],
                 );
         // assert!(verified, "Sumcheck verification failed at j = {}", j);
         transcript.append_f(vy_claim[j]);
@@ -217,8 +217,8 @@ impl Verifier {
         proof.step(commitment.size() + 256 / 8);
 
         let (mut verified, rz0, rz1, claimed_v0, claimed_v1) = gkr_verify(
-            &circuit,
-            &claimed_v,
+            circuit,
+            claimed_v,
             &mut transcript,
             &mut proof,
             &self.config,

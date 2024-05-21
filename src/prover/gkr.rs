@@ -43,7 +43,7 @@ pub fn gkr_prove(
             &beta,
             transcript,
             sp,
-            &config,
+            config,
         );
         alpha = transcript.challenge_f();
         beta = transcript.challenge_f();

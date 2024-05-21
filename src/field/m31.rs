@@ -1,6 +1,6 @@
 use crate::Field;
 use std::{
-    mem::{size_of, transmute},
+    mem::size_of,
     ops::{Add, AddAssign, Mul, Neg, Sub},
 };
 

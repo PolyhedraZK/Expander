@@ -19,8 +19,10 @@ pub fn _eq_evals_at_primitive(
     let mut cur_eval_num = 1;
     for i in 0..r.len() {
         assert!(r[i].v < M31_MOD as u32, "r[i] = {}", r[i].v);
-        let eq_z_i_zero = _eq(&r[i], &FPrimitive::zero()); // FIXME: expanding this function might be better?
-        let eq_z_i_one = _eq(&r[i], &FPrimitive::one());
+        // let eq_z_i_zero = _eq(&r[i], &FPrimitive::zero()); // FIXED: expanding this function might be better?
+        let eq_z_i_zero = FPrimitive::one() - r[i];
+        // let eq_z_i_one = _eq(&r[i], &FPrimitive::one());
+        let eq_z_i_one = r[i];
         for j in 0..cur_eval_num {
             eq_evals[j + cur_eval_num] = eq_evals[j] * eq_z_i_one;
             eq_evals[j] = eq_evals[j] * eq_z_i_zero;
@@ -188,8 +190,8 @@ impl<'a> SumcheckGkrHelper<'a> {
             sp,
             rz0,
             rz1,
-            alpha: alpha.clone(),
-            beta: beta.clone(),
+            alpha: *alpha,
+            beta: *beta,
 
             input_var_num: layer.input_var_num,
             output_var_num: layer.output_var_num,
@@ -262,18 +264,23 @@ impl<'a> SumcheckGkrHelper<'a> {
         let eq_evals_at_rz1 = &mut self.sp.eq_evals_at_rz1;
         let gate_exists = &mut self.sp.gate_exists;
         let hg_vals = &mut self.sp.hg_evals;
-        hg_vals[0..vals.evals.len()].fill(F::zero()); // FIXME: consider memset unsafe?
-        gate_exists[0..vals.evals.len()].fill(false); // FIXME: consider memset unsafe?
-
+        // hg_vals[0..vals.evals.len()].fill(F::zero()); // FIXED: consider memset unsafe?
+        unsafe {
+            std::ptr::write_bytes(hg_vals.as_mut_ptr(), 0, vals.evals.len());
+        }
+        // gate_exists[0..vals.evals.len()].fill(false); // FIXED: consider memset unsafe?
+        unsafe {
+            std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, vals.evals.len());
+        }
         _eq_eval_at(
-            &self.rz0,
+            self.rz0,
             &self.alpha,
             eq_evals_at_rz0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
         _eq_eval_at(
-            &self.rz1,
+            self.rz1,
             &self.beta,
             eq_evals_at_rz1,
             &mut self.sp.eq_evals_first_half,
@@ -300,8 +307,14 @@ impl<'a> SumcheckGkrHelper<'a> {
         let gate_exists = &mut self.sp.gate_exists;
         let hg_vals = &mut self.sp.hg_evals;
         let fill_len = 1 << self.rx.len();
-        hg_vals[0..fill_len].fill(F::zero()); // FIXME: consider memset unsafe?
-        gate_exists[0..fill_len].fill(false); // FIXME: consider memset unsafe?
+        // hg_vals[0..fill_len].fill(F::zero()); // FIXED: consider memset unsafe?
+        unsafe {
+            std::ptr::write_bytes(hg_vals.as_mut_ptr(), 0, fill_len);
+        }
+        // gate_exists[0..fill_len].fill(false); // FIXED: consider memset unsafe?
+        unsafe {
+            std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, fill_len);
+        }
 
         _eq_eval_at(
             &self.rx,

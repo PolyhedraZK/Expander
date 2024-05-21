@@ -19,7 +19,7 @@ pub fn sumcheck_prove_gkr_layer(
     assert_eq!(config.get_num_repetitions(), sp.len());
     for (j, sp_) in sp.iter_mut().enumerate() {
         helpers.push(SumcheckGkrHelper::new(
-            &layer, &rz0[j], &rz1[j], alpha, beta, sp_,
+            layer, &rz0[j], &rz1[j], alpha, beta, sp_,
         ));
     }
     for i_var in 0..layer.input_var_num * 2 {

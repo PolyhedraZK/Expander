@@ -2,7 +2,6 @@ use crate::{
     gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript, VectorizedM31, M31,
 };
 
-type FPrimitive = M31;
 type F = VectorizedM31;
 
 pub fn grind(transcript: &mut Transcript, config: &Config) {
@@ -13,7 +12,7 @@ pub fn grind(transcript: &mut Transcript, config: &Config) {
         initial_hash[i].serialize_into(&mut hash_bytes[offset..]);
         offset += (config.field_size + 7) / 8;
     }
-    for i in 0..(1 << config.grinding_bits) {
+    for _ in 0..(1 << config.grinding_bits) {
         transcript.hasher.hash_inplace(&mut hash_bytes, 256 / 8);
     }
     transcript.append_u8_slice(&hash_bytes, 256 / 8);
@@ -71,7 +70,7 @@ impl Prover {
 
         grind(&mut transcript, &self.config);
 
-        let (claimed_v, rz0s, rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
+        let (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
 
         // open
         match self.config.polynomial_commitment_type {
