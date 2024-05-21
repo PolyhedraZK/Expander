@@ -2,7 +2,7 @@ use sha2::{Digest, Sha256};
 use std::usize;
 
 #[derive(Debug, Clone, Default)]
-pub struct SHA256hasher {}
+pub struct SHA256hasher;
 
 impl SHA256hasher {
     pub fn hash(&self, output: &mut [u8], input: &[u8], input_len: usize) {

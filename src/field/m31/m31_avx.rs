@@ -65,6 +65,9 @@ impl Field for PackedM31 {
     }
 
     #[inline(always)]
+    // this function is for internal testing only. it is not
+    // a source for uniformly random field elements and
+    // should not be used in production.
     fn random() -> Self {
         unsafe {
             let mut rng = rand::thread_rng();
