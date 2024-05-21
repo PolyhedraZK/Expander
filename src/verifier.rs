@@ -77,20 +77,15 @@ fn sumcheck_verify_gkr_layer(
             let p0 = proof.get_next_and_step();
             let p1 = proof.get_next_and_step();
             let p2 = proof.get_next_and_step();
-            // println!("p0 = {:?} p1 = {:?} p2 = {:?}", p0, p1, p2);
-            // println!(
-            //     "claimed_v0[{}] = {:?} claimed_v1[{}] = {:?}",
-            //     j, claimed_v0[j], j, claimed_v1[j]
-            // );
             transcript.append_f(p0);
             transcript.append_f(p1);
             transcript.append_f(p2);
-            if j == 0 {
-                println!(
-                    "i_var={} j={} p0 p1 p2: {:?} {:?} {:?}",
-                    i_var, j, p0, p1, p2
-                );
-            }
+            // if j == 0 {
+            //     println!(
+            //         "i_var={} j={} p0 p1 p2: {:?} {:?} {:?}",
+            //         i_var, j, p0, p1, p2
+            //     );
+            // }
             let r = transcript.challenge_f();
 
             if i_var < var_num {
@@ -99,14 +94,14 @@ fn sumcheck_verify_gkr_layer(
                 ry[j].push(r);
             }
             verified &= (p0 + p1) == sum[j];
-            assert!(
-                verified,
-                "Sumcheck verification failed at i_var={}, j={}, left = {:?}, right = {:?}",
-                i_var,
-                j,
-                p0 + p1,
-                sum[j]
-            );
+            // assert!(
+            //     verified,
+            //     "Sumcheck verification failed at i_var={}, j={}, left = {:?}, right = {:?}",
+            //     i_var,
+            //     j,
+            //     p0 + p1,
+            //     sum[j]
+            // );
             sum[j] = degree_2_eval(p0, p1, p2, r);
 
             if i_var == var_num - 1 {
@@ -139,7 +134,7 @@ fn sumcheck_verify_gkr_layer(
                     beta,
                     &vec![rx[j].clone(), ry[j].clone()],
                 );
-        assert!(verified, "Sumcheck verification failed at j = {}", j);
+        // assert!(verified, "Sumcheck verification failed at j = {}", j);
         transcript.append_f(vy_claim[j]);
     }
     (verified, rx, ry, vx_claim, vy_claim)
@@ -187,14 +182,14 @@ pub fn gkr_verify(
             transcript,
             config,
         );
-        assert!(cur_verified, "Sumcheck verification failed at layer {}", i);
+        // assert!(cur_verified, "Sumcheck verification failed at layer {}", i);
         verified &= cur_verified;
         alpha = transcript.challenge_f();
         beta = transcript.challenge_f();
-        println!(
-            "Layer {} verified with alpha={:?} and beta={:?}, claimed_v0={:?}, claimed_v1={:?}",
-            i, alpha, beta, claimed_v0, claimed_v1
-        );
+        // println!(
+        //     "Layer {} verified with alpha={:?} and beta={:?}, claimed_v0={:?}, claimed_v1={:?}",
+        //     i, alpha, beta, claimed_v0, claimed_v1
+        // );
     }
     (verified, rz0, rz1, claimed_v0, claimed_v1)
 }
@@ -229,7 +224,7 @@ impl Verifier {
             &self.config,
         );
 
-        assert!(verified, "GKR verification failed");
+        // assert!(verified, "GKR verification failed");
 
         match self.config.polynomial_commitment_type {
             crate::PolynomialCommitmentType::Raw => {

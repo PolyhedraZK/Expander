@@ -48,6 +48,12 @@ pub fn gkr_prove(
         alpha = transcript.challenge_f();
         beta = transcript.challenge_f();
         // println!("Layer {} proved with alpha={:?}, beta={:?}", i, alpha, beta);
+        // println!("rz0.0: {:?}", rz0[0]);
+        // println!("rz0.1: {:?}", rz0[1]);
+        // println!("rz0.2: {:?}", rz0[2]);
+        // println!("rz1.0: {:?}", rz1[0]);
+        // println!("rz1.1: {:?}", rz1[1]);
+        // println!("rz1.2: {:?}", rz1[2]);
     }
 
     (claimed_v, rz0, rz1)

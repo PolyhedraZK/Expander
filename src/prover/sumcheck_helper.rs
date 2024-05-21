@@ -279,7 +279,7 @@ impl<'a> SumcheckGkrHelper<'a> {
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
-        for i in 0..self.rz0.len() {
+        for i in 0..1 << self.rz0.len() {
             eq_evals_at_rz0[i] += eq_evals_at_rz1[i];
         }
 
