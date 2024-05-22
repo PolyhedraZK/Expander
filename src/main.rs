@@ -1,3 +1,4 @@
+// TODO: move this to `bench` repo and refactor with criterion
 use std::{
     env,
     sync::{Arc, Mutex},

@@ -212,6 +212,8 @@ impl Verifier {
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(&proof.bytes, commitment.size());
 
+        // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
+        // (and also be recursion friendly)
         grind(&mut transcript, &self.config);
         let mut proof = proof.clone(); // FIXME: consider separating pointers to make proof always immutable?
         proof.step(commitment.size() + 256 / 8);

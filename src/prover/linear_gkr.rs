@@ -8,10 +8,13 @@ pub fn grind(transcript: &mut Transcript, config: &Config) {
     let initial_hash = transcript.challenge_fs(256 / config.field_size);
     let mut hash_bytes = [0u8; 256 / 8];
     let mut offset = 0;
-    for i in 0..initial_hash.len() {
-        initial_hash[i].serialize_into(&mut hash_bytes[offset..]);
-        offset += (config.field_size + 7) / 8;
+    let step = (config.field_size + 7) / 8;
+
+    for h in initial_hash.iter() {
+        h.serialize_into(&mut hash_bytes[offset..]);
+        offset += step;
     }
+
     for _ in 0..(1 << config.grinding_bits) {
         transcript.hasher.hash_inplace(&mut hash_bytes, 256 / 8);
     }

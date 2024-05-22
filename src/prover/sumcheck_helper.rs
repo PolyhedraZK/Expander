@@ -1,3 +1,5 @@
+use std::mem::transmute;
+
 use crate::{CircuitLayer, Field, GkrScratchpad, VectorizedM31, M31, M31_MOD, M31_VECTORIZE_SIZE};
 
 type FPrimitive = M31;
@@ -155,9 +157,9 @@ impl SumcheckMultilinearProdHelper {
     }
 }
 
-pub struct SumcheckGkrHelper<'a> {
-    pub rx: Vec<FPrimitive>,
-    pub ry: Vec<FPrimitive>,
+pub(crate) struct SumcheckGkrHelper<'a> {
+    pub(crate) rx: Vec<FPrimitive>,
+    pub(crate) ry: Vec<FPrimitive>,
 
     layer: &'a CircuitLayer,
     sp: &'a mut GkrScratchpad,

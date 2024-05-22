@@ -183,7 +183,9 @@ pub const VECTORIZEDM31_INV_2: VectorizedM31 = VectorizedM31 {
 };
 
 impl VectorizedM31 {
+    
     pub const SIZE: usize = size_of::<[PackedM31; M31_VECTORIZE_SIZE]>();
+
     #[inline(always)]
     pub fn serialize_into(&self, buffer: &mut [u8]) {
         buffer.copy_from_slice(unsafe {
@@ -193,6 +195,7 @@ impl VectorizedM31 {
             )
         });
     }
+    
     #[inline(always)]
     pub fn deserialize_from(buffer: &[u8]) -> Self {
         let ptr = buffer.as_ptr() as *const [PackedM31; M31_VECTORIZE_SIZE];
