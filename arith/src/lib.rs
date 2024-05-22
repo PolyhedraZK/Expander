@@ -5,3 +5,6 @@ pub use field::*;
 
 mod poly;
 pub use poly::*;
+
+#[cfg(test)]
+mod tests;
