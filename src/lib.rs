@@ -9,9 +9,6 @@ pub use self::circuit::*;
 pub mod config;
 pub use self::config::*;
 
-// pub mod field;
-// pub use self::field::*;
-
 pub mod hash;
 pub use self::hash::*;
 
