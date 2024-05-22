@@ -1,6 +1,8 @@
 use std::mem::transmute;
 
-use crate::{CircuitLayer, Field, GkrScratchpad, VectorizedM31, M31, M31_MOD, M31_VECTORIZE_SIZE};
+use arith::{Field, VectorizedM31, M31, M31_MOD, M31_VECTORIZE_SIZE};
+
+use crate::{CircuitLayer, GkrScratchpad};
 
 type FPrimitive = M31;
 type F = VectorizedM31;

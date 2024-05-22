@@ -1,6 +1,5 @@
-use expander_rs::{
-    Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, VectorizedM31, Verifier, M31,
-};
+use arith::{VectorizedM31, M31};
+use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier};
 use rand::Rng;
 use sha2::Digest;
 

@@ -1,3 +1,18 @@
+#[cfg(target_arch = "x86_64")]
+pub mod m31_avx;
+#[cfg(target_arch = "x86_64")]
+pub use m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
+
+#[cfg(target_arch = "aarch64")]
+pub mod m31_neon;
+#[cfg(target_arch = "aarch64")]
+pub use m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
+
+#[cfg(target_arch = "x86_64")]
+use self::m31_avx::PACKED_INV_2;
+#[cfg(target_arch = "aarch64")]
+use self::m31_neon::PACKED_INV_2;
+
 use crate::Field;
 use std::{
     mem::size_of,
@@ -37,6 +52,8 @@ impl M31 {
 }
 
 impl Field for M31 {
+    const NAME: &'static str = "Mersenne 31";
+
     #[inline(always)]
     fn zero() -> Self {
         M31 { v: 0 }
@@ -158,21 +175,6 @@ impl From<u32> for M31 {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
-pub mod m31_avx;
-#[cfg(target_arch = "x86_64")]
-pub use m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
-
-#[cfg(target_arch = "aarch64")]
-pub mod m31_neon;
-#[cfg(target_arch = "aarch64")]
-pub use m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
-
-#[cfg(target_arch = "x86_64")]
-use self::m31_avx::PACKED_INV_2;
-#[cfg(target_arch = "aarch64")]
-use self::m31_neon::PACKED_INV_2;
-
 /// A VectorizedM31 stores 256 bits of data.
 /// With AVX it stores a single __m256i element.
 /// With NEON it stores two uint32x4_t elements.
@@ -213,6 +215,8 @@ impl VectorizedM31 {
 }
 
 impl Field for VectorizedM31 {
+    const NAME: &'static str = "Vectorized Mersenne 31";
+
     #[inline(always)]
     fn zero() -> Self {
         VectorizedM31 {

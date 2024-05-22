@@ -1,4 +1,4 @@
-use expander_rs::{Field, PackedM31, VectorizedM31, M31_VECTORIZE_SIZE, VECTORIZEDM31_INV_2};
+use arith::{Field, PackedM31, VectorizedM31, M31_VECTORIZE_SIZE, VECTORIZEDM31_INV_2};
 use rand::prelude::*;
 
 fn test_basic_field_op<F: Field>() {

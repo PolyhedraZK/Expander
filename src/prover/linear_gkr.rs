@@ -1,6 +1,6 @@
-use crate::{
-    gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript, VectorizedM31, M31,
-};
+use arith::VectorizedM31;
+
+use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
 
 type F = VectorizedM31;
 

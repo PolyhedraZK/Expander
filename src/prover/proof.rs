@@ -1,7 +1,6 @@
-use crate::VectorizedM31;
+use arith::VectorizedM31;
 
 type F = VectorizedM31;
-
 
 /// Proof. In the serialized mode.
 #[derive(Debug, Clone, Default)]
@@ -22,7 +21,7 @@ impl Proof {
     pub fn step(&mut self, size: usize) {
         self.idx += size;
     }
-    
+
     #[inline(always)]
     pub fn get_next_and_step(&mut self) -> F {
         let ret = F::deserialize_from(&self.bytes[self.idx..]);

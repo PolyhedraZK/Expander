@@ -1,4 +1,4 @@
-use crate::M31_PACK_SIZE;
+use arith::M31_PACK_SIZE;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolynomialCommitmentType {
@@ -78,6 +78,8 @@ impl Config {
             fs_hash,
         }
     }
+
+    ///
     pub fn get_num_repetitions(&self) -> usize {
         self.num_repetitions
     }

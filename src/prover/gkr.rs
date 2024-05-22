@@ -1,7 +1,6 @@
-use crate::{
-    eval_multilinear, sumcheck_prove_gkr_layer, Circuit, Config, Field, GkrScratchpad, Transcript,
-    VectorizedM31, M31,
-};
+use arith::{eval_multilinear, Field, VectorizedM31, M31};
+
+use crate::{sumcheck_prove_gkr_layer, Circuit, Config, GkrScratchpad, Transcript};
 
 type FPrimitive = M31;
 type F = VectorizedM31;

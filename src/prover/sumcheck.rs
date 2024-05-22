@@ -1,6 +1,6 @@
-use crate::{
-    CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, Transcript, VectorizedM31, M31,
-};
+use arith::{VectorizedM31, M31};
+
+use crate::{CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, Transcript};
 
 type FPrimitive = M31;
 type F = VectorizedM31;

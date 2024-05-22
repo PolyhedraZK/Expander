@@ -1,4 +1,4 @@
-use crate::{eval_multilinear, VectorizedM31, M31};
+use arith::{eval_multilinear, VectorizedM31, M31};
 
 type FPrimitive = M31;
 type F = VectorizedM31;

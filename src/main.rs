@@ -5,10 +5,8 @@ use std::{
     thread,
 };
 
-use expander_rs::{
-    m31::{M31_PACK_SIZE, M31_VECTORIZE_SIZE},
-    Circuit, Config, Prover,
-};
+use arith::{M31_PACK_SIZE, M31_VECTORIZE_SIZE};
+use expander_rs::{Circuit, Config, Prover};
 
 const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
 const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";

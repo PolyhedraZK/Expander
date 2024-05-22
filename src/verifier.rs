@@ -1,8 +1,10 @@
 use std::vec;
 
+use arith::{Field, VectorizedM31, M31, VECTORIZEDM31_INV_2};
+
 use crate::{
-    grind, Circuit, CircuitLayer, Config, Field, Gate, Proof, RawCommitment, Transcript,
-    VectorizedM31, _eq_evals_at_primitive, M31, VECTORIZEDM31_INV_2,
+    grind, Circuit, CircuitLayer, Config, Gate, Proof, RawCommitment, Transcript,
+    _eq_evals_at_primitive,
 };
 
 type FPrimitive = M31;

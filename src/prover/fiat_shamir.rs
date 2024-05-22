@@ -1,4 +1,6 @@
-use crate::{Proof, SHA256hasher, VectorizedM31, M31};
+use arith::{VectorizedM31, M31};
+
+use crate::{Proof, SHA256hasher};
 
 pub struct Transcript {
     pub hasher: SHA256hasher,
