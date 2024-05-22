@@ -39,8 +39,6 @@ impl PackedM31 {
 }
 
 impl Field for PackedM31 {
-    const MODULUS_U64: u64 = 2147483647;
-
     const NAME: &'static str = "Neon Packed Mersenne 31";
 
     #[inline(always)]
