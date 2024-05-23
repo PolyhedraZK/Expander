@@ -99,12 +99,14 @@ impl Field for VectorizedM31 {
         todo!()
     }
 
-    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        let mut res = *self;
-        res += rhs;
-        res
+
+    #[inline(always)]
+    fn add_base_elem(&mut self, rhs: &Self::BaseField)  {
+        *self += rhs;
     }
 
+
+    #[inline(always)]
     fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
     }
@@ -113,10 +115,14 @@ impl Field for VectorizedM31 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
 
+
+    #[inline(always)]
     fn as_packed_slices(&self) -> &[PackedM31] {
         &self.v
     }
 
+
+    #[inline(always)]
     fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
         &mut self.v
     }
