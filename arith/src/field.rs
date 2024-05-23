@@ -111,7 +111,7 @@ pub trait Field:
 /// A vector of Field elements.
 pub trait VectorizedField: Field {
     /// type of the packed based field, if applicable
-    type PackedBaseField;
+    type PackedBaseField: Default + Clone;
 
     /// expose the internal elements
     fn as_packed_slices(&self) -> &[Self::PackedBaseField];

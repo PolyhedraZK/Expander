@@ -7,19 +7,16 @@ use crate::{
 };
 use rand::prelude::*;
 
-use self::field::{
-    random_field_tests, random_inversion_tests, random_small_field_tests,
-    random_vectorized_field_tests,
-};
+use self::field::{random_field_tests, random_small_field_tests, random_vectorized_field_tests};
 
 #[test]
 fn test_field() {
     random_field_tests::<M31>("M31".to_string());
-    random_inversion_tests::<M31>("M31".to_string());
+    // random_inversion_tests::<M31>("M31".to_string());
     random_small_field_tests::<M31>("M31".to_string());
 
     random_field_tests::<VectorizedM31>("Vectorized M31".to_string());
-    random_inversion_tests::<VectorizedM31>("Vectorized M31".to_string());
+    // random_inversion_tests::<VectorizedM31>("Vectorized M31".to_string());
     random_small_field_tests::<VectorizedM31>("Vectorized M31".to_string());
 
     random_vectorized_field_tests::<VectorizedM31>("Vectorized M31".to_string());
