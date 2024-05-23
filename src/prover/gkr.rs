@@ -1,4 +1,5 @@
 use arith::{Field, FieldSerde, MultiLinearPoly};
+use ark_std::{end_timer, start_timer};
 
 use crate::{sumcheck_prove_gkr_layer, Circuit, Config, GkrScratchpad, Transcript};
 
@@ -11,6 +12,7 @@ pub fn gkr_prove<F: Field + FieldSerde>(
 where
     F::PackedBaseField: Field<BaseField = F::BaseField>,
 {
+    let timer = start_timer!(|| "gkr prove");
     let layer_num = circuit.layers.len();
 
     let mut rz0 = vec![vec![]; config.get_num_repetitions()];
@@ -46,14 +48,15 @@ where
         );
         alpha = transcript.challenge_f::<F>();
         beta = transcript.challenge_f::<F>();
-        // println!("Layer {} proved with alpha={:?}, beta={:?}", i, alpha, beta);
-        // println!("rz0.0: {:?}", rz0[0]);
-        // println!("rz0.1: {:?}", rz0[1]);
-        // println!("rz0.2: {:?}", rz0[2]);
-        // println!("rz1.0: {:?}", rz1[0]);
-        // println!("rz1.1: {:?}", rz1[1]);
-        // println!("rz1.2: {:?}", rz1[2]);
-    }
 
+        log::trace!("Layer {} proved with alpha={:?}, beta={:?}", i, alpha, beta);
+        log::trace!("rz0.0: {:?}", rz0[0]);
+        log::trace!("rz0.1: {:?}", rz0[1]);
+        log::trace!("rz0.2: {:?}", rz0[2]);
+        log::trace!("rz1.0: {:?}", rz1[0]);
+        log::trace!("rz1.1: {:?}", rz1[1]);
+        log::trace!("rz1.2: {:?}", rz1[2]);
+    }
+    end_timer!(timer);
     (claimed_v, rz0, rz1)
 }

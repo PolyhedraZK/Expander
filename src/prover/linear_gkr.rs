@@ -1,8 +1,11 @@
 use arith::{Field, FieldSerde};
+use ark_std::{end_timer, start_timer};
 
 use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
 
 pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
+    let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
+
     let initial_hash = transcript.challenge_fs::<F>(256 / config.field_size);
     let mut hash_bytes = [0u8; 256 / 8];
     let mut offset = 0;
@@ -17,6 +20,7 @@ pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
         transcript.hasher.hash_inplace(&mut hash_bytes, 256 / 8);
     }
     transcript.append_u8_slice(&hash_bytes, 256 / 8);
+    end_timer!(timer);
 }
 
 pub struct Prover<F: Field> {
@@ -60,6 +64,7 @@ impl<F: Field + FieldSerde> Prover<F> {
     where
         F::PackedBaseField: Field<BaseField = F::BaseField>,
     {
+        let timer = start_timer!(|| "prove");
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
         // PC commit
@@ -83,6 +88,8 @@ impl<F: Field + FieldSerde> Prover<F> {
             }
             _ => todo!(),
         }
+
+        end_timer!(timer);
         (claimed_v, transcript.proof)
     }
 }

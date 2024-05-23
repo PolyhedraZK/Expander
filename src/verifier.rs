@@ -1,6 +1,7 @@
 use std::vec;
 
 use arith::{Field, FieldSerde};
+use ark_std::{end_timer, start_timer};
 
 use crate::{
     grind, Circuit, CircuitLayer, Config, Gate, Proof, RawCommitment, Transcript,
@@ -208,6 +209,8 @@ impl Verifier {
         claimed_v: &[F],
         proof: &Proof,
     ) -> bool {
+        let timer = start_timer!(|| "verify");
+
         let poly_size = circuit.layers.first().unwrap().input_vals.evals.len();
         let commitment = RawCommitment::deserialize_from(&proof.bytes, poly_size);
 
@@ -228,20 +231,29 @@ impl Verifier {
             &self.config,
         );
 
-        // assert!(verified, "GKR verification failed");
+        log::info!("GKR verification: {}", verified);
 
         match self.config.polynomial_commitment_type {
             crate::PolynomialCommitmentType::Raw => {
                 // for Raw, no need to load from proof
                 for i in 0..self.config.get_num_repetitions() {
-                    println!("rz0[{}].size() = {}", i, rz0[i].len());
-                    println!("Poly_vals.size() = {}", commitment.poly_vals.len());
-                    verified &= commitment.verify(&rz0[i], claimed_v0[i]);
-                    verified &= commitment.verify(&rz1[i], claimed_v1[i]);
+                    log::trace!("rz0[{}].size() = {}", i, rz0[i].len());
+                    log::trace!("Poly_vals.size() = {}", commitment.poly_vals.len());
+
+                    let v1 = commitment.verify(&rz0[i], claimed_v0[i]);
+                    let v2 = commitment.verify(&rz1[i], claimed_v1[i]);
+
+                    log::info!("first commitment verification: {}", v1);
+                    log::info!("second commitment verification: {}", v2);
+
+                    verified &= v1;
+                    verified &= v2;
                 }
             }
             _ => todo!(),
         }
+
+        end_timer!(timer);
 
         verified
     }

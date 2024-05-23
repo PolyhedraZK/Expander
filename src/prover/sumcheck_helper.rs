@@ -83,12 +83,12 @@ impl SumcheckMultilinearProdHelper {
         let mut p0 = F::zero();
         let mut p1 = F::zero();
         let mut p2 = F::zero();
-        // println!("bk_f: {:?}", &bk_f[..4]);
-        // println!("bk_hg: {:?}", &bk_hg[..4]);
-        // println!("init_v: {:?}", &init_v[..4]);
+        log::trace!("bk_f: {:?}", &bk_f[..4]);
+        log::trace!("bk_hg: {:?}", &bk_hg[..4]);
+        log::trace!("init_v: {:?}", &init_v[..4]);
         let src_v = if var_idx == 0 { init_v } else { bk_f };
         let eval_size = 1 << (self.var_num - var_idx - 1);
-        // println!("Eval size: {}", eval_size);
+        log::trace!("Eval size: {}", eval_size);
         for i in 0..eval_size {
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 continue;
@@ -99,13 +99,13 @@ impl SumcheckMultilinearProdHelper {
                 let hg_v_0 = bk_hg[i * 2].as_packed_slices()[j];
                 let hg_v_1 = bk_hg[i * 2 + 1].as_packed_slices()[j];
                 p0.mut_packed_slices()[j] += f_v_0 * hg_v_0;
-                // println!(
-                //     "p0.v[{}]+= {:?} * {:?} =  {:?}",
-                //     j,
-                //     f_v_0,
-                //     hg_v_0,
-                //     f_v_0 * hg_v_0 + p1.v[j]
-                // );
+                log::trace!(
+                    "p0.v[{}]+= {:?} * {:?} =  {:?}",
+                    j,
+                    f_v_0,
+                    hg_v_0,
+                    f_v_0 * hg_v_0 + p1.as_packed_slices()[j]
+                );
                 p1.mut_packed_slices()[j] += f_v_1 * hg_v_1;
                 p2.mut_packed_slices()[j] += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
             }
