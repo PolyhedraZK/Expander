@@ -2,17 +2,14 @@ use arith::{Field, M31_MOD, M31_VECTORIZE_SIZE};
 
 use crate::{CircuitLayer, GkrScratchpad};
 
-// type FPrimitive = M31;
-// type F = VectorizedM31;
-
 #[inline(always)]
-pub fn _eq<F: Field>(x: &F, y: &F) -> F {
+fn _eq<F: Field>(x: &F, y: &F) -> F {
     // x * y + (1 - x) * (1 - y)
     let xy = *x * y;
     xy + xy - x - y + F::from(1)
 }
 
-pub fn _eq_evals_at_primitive<F: Field>(r: &[F], mul_factor: &F, eq_evals: &mut [F]) {
+pub(crate) fn eq_evals_at_primitive<F: Field>(r: &[F], mul_factor: &F, eq_evals: &mut [F]) {
     eq_evals[0] = *mul_factor;
     let mut cur_eval_num = 1;
 
@@ -34,7 +31,7 @@ pub fn _eq_evals_at_primitive<F: Field>(r: &[F], mul_factor: &F, eq_evals: &mut 
     }
 }
 
-pub fn _eq_eval_at<F: Field>(
+fn eq_eval_at<F: Field>(
     r: &[F],
     mul_factor: &F,
     eq_evals: &mut [F],
@@ -43,8 +40,8 @@ pub fn _eq_eval_at<F: Field>(
 ) {
     let first_half_bits = r.len() / 2;
     let first_half_mask = (1 << first_half_bits) - 1;
-    _eq_evals_at_primitive(&r[0..first_half_bits], mul_factor, sqrt_n_1st);
-    _eq_evals_at_primitive(&r[first_half_bits..], &F::one(), sqrt_n_2nd);
+    eq_evals_at_primitive(&r[0..first_half_bits], mul_factor, sqrt_n_1st);
+    eq_evals_at_primitive(&r[first_half_bits..], &F::one(), sqrt_n_2nd);
 
     for (i, eq_eval) in eq_evals.iter_mut().enumerate().take(1 << r.len()) {
         let first_half = i & first_half_mask;
@@ -297,14 +294,14 @@ where
         unsafe {
             std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, vals.evals.len());
         }
-        _eq_eval_at(
+        eq_eval_at(
             self.rz0,
             &self.alpha,
             eq_evals_at_rz0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
-        _eq_eval_at(
+        eq_eval_at(
             self.rz1,
             &self.beta,
             eq_evals_at_rz1,
@@ -342,7 +339,7 @@ where
             std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, fill_len);
         }
 
-        _eq_eval_at(
+        eq_eval_at(
             &self.rx,
             &F::BaseField::one(),
             eq_evals_at_rx,

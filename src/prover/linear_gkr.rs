@@ -1,3 +1,5 @@
+//! This module implements the whole GKR prover, including the IOP and PCS.
+
 use arith::{Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 

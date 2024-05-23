@@ -1,3 +1,5 @@
+//! This module implements the core GKR IOP.
+
 use arith::{Field, FieldSerde, MultiLinearPoly};
 use ark_std::{end_timer, start_timer};
 

@@ -4,8 +4,8 @@ use arith::{Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
-    grind, Circuit, CircuitLayer, Config, Gate, Proof, RawCommitment, Transcript,
-    _eq_evals_at_primitive,
+    eq_evals_at_primitive, grind, Circuit, CircuitLayer, Config, Gate, Proof, RawCommitment,
+    Transcript,
 };
 
 fn degree_2_eval<F: Field>(p0: F, p1: F, p2: F, x: F::BaseField) -> F {
@@ -26,13 +26,13 @@ fn eval_sparse_circuit_connect_poly<F: Field, const INPUT_NUM: usize>(
     let mut eq_evals_at_rz0 = vec![F::BaseField::zero(); 1 << rz0.len()];
     let mut eq_evals_at_rz1 = vec![F::BaseField::zero(); 1 << rz1.len()];
 
-    _eq_evals_at_primitive(rz0, &alpha, &mut eq_evals_at_rz0);
-    _eq_evals_at_primitive(rz1, &beta, &mut eq_evals_at_rz1);
+    eq_evals_at_primitive(rz0, &alpha, &mut eq_evals_at_rz0);
+    eq_evals_at_primitive(rz1, &beta, &mut eq_evals_at_rz1);
 
     let mut eq_evals_at_ris = vec![vec![]; INPUT_NUM];
     for i in 0..INPUT_NUM {
         eq_evals_at_ris[i] = vec![F::BaseField::zero(); 1 << ris[i].len()];
-        _eq_evals_at_primitive(&ris[i], &F::BaseField::one(), &mut eq_evals_at_ris[i])
+        eq_evals_at_primitive(&ris[i], &F::BaseField::one(), &mut eq_evals_at_ris[i])
     }
 
     let mut v = F::BaseField::zero();
