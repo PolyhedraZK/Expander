@@ -33,7 +33,7 @@ unsafe fn mod_reduce_epi32(x: __m256i) -> __m256i {
 }
 
 use mod_reduce_epi64 as mod_reduce;
-use rand::Rng;
+use rand::{Rng, RngCore};
 
 #[derive(Clone, Copy)]
 pub struct PackedM31 {
@@ -77,10 +77,9 @@ impl Field for PackedM31 {
     // this function is for internal testing only. it is not
     // a source for uniformly random field elements and
     // should not be used in production.
-    fn random() -> Self {
+    fn random_unsafe(mut rng: impl RngCore) -> Self {
         // Caution: this may not produce uniformly random elements
         unsafe {
-            let mut rng = rand::thread_rng();
             let mut v = _mm256_setr_epi32(
                 rng.gen::<i32>(),
                 rng.gen::<i32>(),
@@ -99,8 +98,7 @@ impl Field for PackedM31 {
     }
 
     #[inline(always)]
-    fn random_bool() -> Self {
-        let mut rng = rand::thread_rng();
+    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
         PackedM31 {
             v: unsafe {
                 _mm256_setr_epi32(
@@ -117,19 +115,33 @@ impl Field for PackedM31 {
         }
     }
 
+    fn exp(&self) -> Self {
+        todo!()
+    }
+
     #[inline(always)]
-    fn inv(&self) -> Self {
+    fn inv(&self) -> Option<Self> {
         todo!();
     }
 
     #[inline(always)]
-    fn add_base_elem(&mut self, _rhs: &Self::BaseField) {
+    fn add_base_elem(&self, _rhs: &Self::BaseField) -> Self {
+        unimplemented!()
+    }
+
+    #[inline(always)]
+    fn add_assign_base_elem(&mut self, _rhs: &Self::BaseField) {
         unimplemented!()
     }
 
     #[inline(always)]
     fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
+    }
+
+    #[inline(always)]
+    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
+        *self = *self * rhs;
     }
 
     fn as_u32_unchecked(&self) -> u32 {

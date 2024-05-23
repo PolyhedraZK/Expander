@@ -1,3 +1,5 @@
+use rand::RngCore;
+
 #[cfg(target_arch = "x86_64")]
 use super::m31_avx::PACKED_INV_2;
 #[cfg(target_arch = "aarch64")]
@@ -72,10 +74,10 @@ impl Field for VectorizedM31 {
     }
 
     #[inline(always)]
-    fn random() -> Self {
+    fn random_unsafe(mut rng: impl RngCore) -> Self {
         VectorizedM31 {
             v: (0..M31_VECTORIZE_SIZE)
-                .map(|_| PackedM31::random())
+                .map(|_| PackedM31::random_unsafe(&mut rng))
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
@@ -83,28 +85,42 @@ impl Field for VectorizedM31 {
     }
 
     #[inline(always)]
-    fn random_bool() -> Self {
+    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
         VectorizedM31 {
             v: (0..M31_VECTORIZE_SIZE)
-                .map(|_| PackedM31::random_bool())
+                .map(|_| PackedM31::random_bool_unsafe(&mut rng))
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
         }
     }
 
-    fn inv(&self) -> Self {
+    fn exp(&self) -> Self {
+        todo!()
+    }
+
+    fn inv(&self) -> Option<Self> {
         todo!()
     }
 
     #[inline(always)]
-    fn add_base_elem(&mut self, rhs: &Self::BaseField) {
+    fn add_base_elem(&self, _rhs: &Self::BaseField) -> Self {
+        unimplemented!()
+    }
+
+    #[inline(always)]
+    fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {
         *self += rhs;
     }
 
     #[inline(always)]
     fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
+    }
+
+    #[inline(always)]
+    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
+        *self = *self * rhs;
     }
 
     fn as_u32_unchecked(&self) -> u32 {

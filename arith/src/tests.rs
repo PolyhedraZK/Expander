@@ -1,7 +1,29 @@
 // TODO: add more tests
 
-use crate::{Field, FieldSerde, PackedM31, VectorizedM31, M31_VECTORIZE_SIZE, VECTORIZEDM31_INV_2};
+mod field;
+
+use crate::{
+    Field, FieldSerde, PackedM31, VectorizedM31, M31, M31_VECTORIZE_SIZE, VECTORIZEDM31_INV_2,
+};
 use rand::prelude::*;
+
+use self::field::{
+    random_field_tests, random_inversion_tests, random_small_field_tests,
+    random_vectorized_field_tests,
+};
+
+#[test]
+fn test_field() {
+    random_field_tests::<M31>("M31".to_string());
+    random_inversion_tests::<M31>("M31".to_string());
+    random_small_field_tests::<M31>("M31".to_string());
+
+    random_field_tests::<VectorizedM31>("Vectorized M31".to_string());
+    random_inversion_tests::<VectorizedM31>("Vectorized M31".to_string());
+    random_small_field_tests::<VectorizedM31>("Vectorized M31".to_string());
+
+    random_vectorized_field_tests::<VectorizedM31>("Vectorized M31".to_string());
+}
 
 #[cfg(target_arch = "x86_64")]
 #[test]
@@ -16,8 +38,10 @@ fn test_mm256_const_init() {
 }
 
 fn test_basic_field_op<F: Field>() {
-    let f = F::random();
     let mut rng = rand::thread_rng();
+
+    let f = F::random_unsafe(&mut rng);
+
     let rhs = rng.gen::<u32>() % 100;
 
     let prod_0 = f * F::from(rhs);

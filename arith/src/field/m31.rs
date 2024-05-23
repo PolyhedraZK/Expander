@@ -7,6 +7,7 @@ pub use m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
 pub mod m31_neon;
 #[cfg(target_arch = "aarch64")]
 pub use m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
+use rand::RngCore;
 
 use crate::{Field, FieldSerde};
 use std::{
@@ -68,26 +69,40 @@ impl Field for M31 {
         M31 { v: 1 }
     }
 
-    fn random() -> Self {
+    fn random_unsafe(mut rng: impl RngCore) -> Self {
+        rng.next_u32().into()
+    }
+
+    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
+        (rng.next_u32() & 1).into()
+    }
+
+    fn exp(&self) -> Self {
         todo!()
     }
 
-    fn random_bool() -> Self {
-        todo!()
-    }
-
-    fn inv(&self) -> Self {
+    fn inv(&self) -> Option<Self> {
         todo!()
     }
 
     #[inline(always)]
-    fn add_base_elem(&mut self, rhs: &Self::BaseField) {
+    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
+        *self + *rhs
+    }
+
+    #[inline(always)]
+    fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {
         *self += rhs
     }
 
     #[inline(always)]
     fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
+    }
+
+    #[inline(always)]
+    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
+        *self *= rhs;
     }
 
     #[inline(always)]

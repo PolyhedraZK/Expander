@@ -3,6 +3,8 @@ pub use m31::*;
 mod vectorized_m31;
 pub use vectorized_m31::*;
 
+use rand::RngCore;
+
 use std::{
     fmt::Debug,
     iter::{Product, Sum},
@@ -47,26 +49,60 @@ pub trait Field:
     /// type of the base field, can be itself
     type BaseField: Field + FieldSerde;
 
+    // ====================================
+    // constants
+    // ====================================
     /// Zero element
     fn zero() -> Self;
+
+    /// Is zero
+    fn is_zero(&self) -> bool {
+        *self == Self::zero()
+    }
 
     /// Identity element
     fn one() -> Self;
 
-    /// create a random element from rng
-    fn random() -> Self;
+    // ====================================
+    // generators
+    // ====================================
+    /// create a random element from rng.
+    /// test only -- the output may not be uniformly random.
+    fn random_unsafe(rng: impl RngCore) -> Self;
 
     /// create a random boolean element from rng
-    fn random_bool() -> Self;
+    fn random_bool_unsafe(rng: impl RngCore) -> Self;
 
-    /// find the inverse of the element
-    fn inv(&self) -> Self;
+    // ====================================
+    // arithmetics
+    // ====================================
+    /// Squaring
+    fn square(&self) -> Self {
+        *self * *self
+    }
+
+    /// Doubling
+    fn double(&self) -> Self {
+        *self + *self
+    }
+
+    /// Exp
+    fn exp(&self) -> Self;
+
+    /// find the inverse of the element; return None if not exist
+    fn inv(&self) -> Option<Self>;
 
     /// Add the field element with its base field element
-    fn add_base_elem(&mut self, rhs: &Self::BaseField);
+    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self;
+
+    /// Add the field element with its base field element
+    fn add_assign_base_elem(&mut self, rhs: &Self::BaseField);
 
     /// multiply the field element with its base field element
     fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self;
+
+    /// multiply the field element with its base field element
+    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField);
 
     /// expose the element as u32.
     fn as_u32_unchecked(&self) -> u32;
