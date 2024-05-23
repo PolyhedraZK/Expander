@@ -16,7 +16,7 @@ const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD as u32; 4]) };
 const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
 pub(crate) const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
 
-use rand::Rng;
+use rand::{Rng, RngCore};
 
 #[inline(always)]
 fn reduce_sum(x: uint32x4_t) -> uint32x4_t {
@@ -62,10 +62,9 @@ impl Field for PackedM31 {
     }
 
     #[inline(always)]
-    fn random() -> Self {
+    fn random_unsafe(mut rng: impl RngCore) -> Self {
         // Caution: this may not produce uniformly random elements
         unsafe {
-            let mut rng = rand::thread_rng();
             PackedM31 {
                 v: vld1q_u32(
                     [
@@ -81,9 +80,8 @@ impl Field for PackedM31 {
     }
 
     #[inline(always)]
-    fn random_bool() -> Self {
+    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
         unsafe {
-            let mut rng = rand::thread_rng();
             PackedM31 {
                 v: vld1q_u32(
                     [

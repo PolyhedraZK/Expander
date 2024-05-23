@@ -318,7 +318,7 @@ where
             gate_exists[g.i_ids[0]] = true;
         }
         for g in add.iter() {
-            hg_vals[g.i_ids[0]].add_base_elem(&(g.coef * eq_evals_at_rz0[g.o_id]));
+            hg_vals[g.i_ids[0]].add_assign_base_elem(&(g.coef * eq_evals_at_rz0[g.o_id]));
             gate_exists[g.i_ids[0]] = true;
         }
     }
