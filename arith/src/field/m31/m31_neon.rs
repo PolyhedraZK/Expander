@@ -1,8 +1,9 @@
 use std::{
     arch::aarch64::*,
     fmt::Debug,
+    iter::{Product, Sum},
     mem::{size_of, transmute},
-    ops::{Add, AddAssign, Mul, Sub},
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 use crate::{Field, M31, M31_MOD};
@@ -98,6 +99,11 @@ impl Field for PackedM31 {
     fn inv(&self) -> Self {
         todo!();
     }
+
+    #[inline(always)]
+    fn mul_by_base(&self, rhs: &Self::BaseField) -> Self {
+        *self * rhs
+    }
 }
 
 impl Debug for PackedM31 {
@@ -186,6 +192,26 @@ impl Mul<M31> for PackedM31 {
     }
 }
 
+impl MulAssign<&PackedM31> for PackedM31 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: &PackedM31) {
+        *self = *self * rhs;
+    }
+}
+
+impl MulAssign for PackedM31 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: Self) {
+        *self *= &rhs;
+    }
+}
+
+impl<T: ::core::borrow::Borrow<PackedM31>> Product<T> for PackedM31 {
+    fn product<I: Iterator<Item = T>>(iter: I) -> Self {
+        iter.fold(Self::one(), |acc, item| acc * item.borrow())
+    }
+}
+
 impl Add<&PackedM31> for PackedM31 {
     type Output = PackedM31;
     #[inline(always)]
@@ -220,10 +246,24 @@ impl AddAssign for PackedM31 {
     }
 }
 
+impl<T: ::core::borrow::Borrow<PackedM31>> Sum<T> for PackedM31 {
+    fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |acc, item| acc + item.borrow())
+    }
+}
+
 impl From<u32> for PackedM31 {
     #[inline(always)]
     fn from(x: u32) -> Self {
         PackedM31::pack_full(M31::from(x))
+    }
+}
+
+impl Neg for PackedM31 {
+    type Output = PackedM31;
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        PackedM31 { v: PACKED_0 } - self
     }
 }
 
@@ -246,5 +286,19 @@ impl Sub for PackedM31 {
     #[inline(always)]
     fn sub(self, rhs: PackedM31) -> Self::Output {
         self - &rhs
+    }
+}
+
+impl SubAssign<&PackedM31> for PackedM31 {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: &PackedM31) {
+        *self = *self - rhs;
+    }
+}
+
+impl SubAssign for PackedM31 {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self -= &rhs;
     }
 }

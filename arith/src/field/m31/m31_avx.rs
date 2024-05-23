@@ -118,6 +118,7 @@ impl Field for PackedM31 {
         todo!();
     }
 
+    #[inline(always)]
     fn mul_by_base(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
     }
