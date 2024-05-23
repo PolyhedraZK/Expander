@@ -128,6 +128,7 @@ impl Mul<&M31> for M31 {
 impl Mul for M31 {
     type Output = M31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: M31) -> Self::Output {
         self * &rhs
     }
@@ -210,6 +211,7 @@ impl Neg for M31 {
 impl Sub<&M31> for M31 {
     type Output = M31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn sub(self, rhs: &M31) -> Self::Output {
         self + &(-*rhs)
     }
@@ -218,6 +220,7 @@ impl Sub<&M31> for M31 {
 impl Sub for M31 {
     type Output = M31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn sub(self, rhs: M31) -> Self::Output {
         self - &rhs
     }

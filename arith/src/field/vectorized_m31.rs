@@ -144,6 +144,7 @@ impl Mul<&VectorizedM31> for VectorizedM31 {
 impl Mul for VectorizedM31 {
     type Output = VectorizedM31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: VectorizedM31) -> Self::Output {
         self * &rhs
     }
@@ -211,6 +212,7 @@ impl Add<&VectorizedM31> for VectorizedM31 {
 impl Add for VectorizedM31 {
     type Output = VectorizedM31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn add(self, rhs: VectorizedM31) -> Self::Output {
         self + &rhs
     }
@@ -291,6 +293,7 @@ impl Sub<&VectorizedM31> for VectorizedM31 {
 impl Sub for VectorizedM31 {
     type Output = VectorizedM31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn sub(self, rhs: VectorizedM31) -> Self::Output {
         self - &rhs
     }
