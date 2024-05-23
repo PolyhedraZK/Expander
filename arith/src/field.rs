@@ -9,6 +9,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
+/// Field definitions.
 pub trait Field:
     Copy
     + Clone
@@ -46,12 +47,6 @@ pub trait Field:
     /// type of the base field, can be itself
     type BaseField: Field + FieldSerde;
 
-    /// type of the packed based field, if applicable
-    ///
-    /// We do not enforce PackedBaseField to derive Field as
-    /// PackedBaseField can be () in some case.
-    type PackedBaseField;
-
     /// Zero element
     fn zero() -> Self;
 
@@ -75,9 +70,13 @@ pub trait Field:
 
     /// expose the element as u32.
     fn as_u32_unchecked(&self) -> u32;
+}
 
-    // FIXME: seems that the following two API is only useful for VectorizedM31
-    // Consider move them into a separate trait
+/// A vector of Field elements.
+pub trait VectorizedField: Field {
+    /// type of the packed based field, if applicable
+    type PackedBaseField;
+
     /// expose the internal elements
     fn as_packed_slices(&self) -> &[Self::PackedBaseField];
 
@@ -85,6 +84,7 @@ pub trait Field:
     fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField];
 }
 
+/// Serde for Fields
 pub trait FieldSerde {
     /// serialize self into bytes
     fn serialize_into(&self, buffer: &mut [u8]);

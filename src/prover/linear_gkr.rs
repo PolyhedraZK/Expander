@@ -1,6 +1,6 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::{Field, FieldSerde};
+use arith::{Field, FieldSerde, VectorizedField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
@@ -30,7 +30,7 @@ pub struct Prover<F: Field> {
     sp: Vec<GkrScratchpad<F>>,
 }
 
-impl<F: Field + FieldSerde> Prover<F> {
+impl<F: VectorizedField + FieldSerde> Prover<F> {
     pub fn new(config: &Config) -> Self {
         assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);

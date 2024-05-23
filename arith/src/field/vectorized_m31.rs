@@ -3,7 +3,7 @@ use super::m31_avx::PACKED_INV_2;
 #[cfg(target_arch = "aarch64")]
 use super::m31_neon::PACKED_INV_2;
 
-use crate::{Field, FieldSerde, M31};
+use crate::{Field, FieldSerde, VectorizedField, M31};
 use crate::{PackedM31, M31_VECTORIZE_SIZE};
 use std::{
     iter::{Product, Sum},
@@ -56,8 +56,6 @@ impl Field for VectorizedM31 {
     const INV_2: Self = VECTORIZEDM31_INV_2;
 
     type BaseField = M31;
-
-    type PackedBaseField = PackedM31;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -112,6 +110,10 @@ impl Field for VectorizedM31 {
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
+}
+
+impl VectorizedField for VectorizedM31 {
+    type PackedBaseField = PackedM31;
 
     #[inline(always)]
     fn as_packed_slices(&self) -> &[PackedM31] {

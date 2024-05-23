@@ -58,8 +58,6 @@ impl Field for M31 {
 
     type BaseField = M31;
 
-    type PackedBaseField = ();
-
     #[inline(always)]
     fn zero() -> Self {
         M31 { v: 0 }
@@ -95,14 +93,6 @@ impl Field for M31 {
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
         self.v
-    }
-
-    fn as_packed_slices(&self) -> &[Self::PackedBaseField] {
-        unimplemented!("use as_u32_unchecked instead")
-    }
-
-    fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
-        unimplemented!("use as_u32_unchecked instead")
     }
 }
 

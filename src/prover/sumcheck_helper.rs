@@ -1,4 +1,4 @@
-use arith::{Field, M31_MOD, M31_VECTORIZE_SIZE};
+use arith::{Field, VectorizedField, M31_MOD, M31_VECTORIZE_SIZE};
 
 use crate::{CircuitLayer, GkrScratchpad};
 
@@ -65,7 +65,7 @@ impl SumcheckMultilinearProdHelper {
         }
     }
 
-    fn poly_eval_at<F: Field>(
+    fn poly_eval_at<F: VectorizedField>(
         &self,
         var_idx: usize,
         degree: usize,
@@ -112,7 +112,7 @@ impl SumcheckMultilinearProdHelper {
         [p0, p1, p2]
     }
 
-    fn receive_challenge<F: Field>(
+    fn receive_challenge<F: VectorizedField>(
         &mut self,
         var_idx: usize,
         r: F::BaseField,
@@ -189,7 +189,7 @@ pub(crate) struct SumcheckGkrHelper<'a, F: Field> {
     y_helper: SumcheckMultilinearProdHelper,
 }
 
-impl<'a, F: Field> SumcheckGkrHelper<'a, F>
+impl<'a, F: VectorizedField> SumcheckGkrHelper<'a, F>
 where
     F::PackedBaseField: Field,
 {
