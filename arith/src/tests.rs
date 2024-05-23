@@ -13,7 +13,6 @@ fn test_mm256_const_init() {
     println!("{:?}", Y);
 }
 
-
 fn test_basic_field_op<F: Field>() {
     let f = F::random();
     let mut rng = rand::thread_rng();

@@ -39,6 +39,8 @@ impl PackedM31 {
 }
 
 impl Field for PackedM31 {
+    type BaseField = M31;
+
     const NAME: &'static str = "Neon Packed Mersenne 31";
 
     #[inline(always)]

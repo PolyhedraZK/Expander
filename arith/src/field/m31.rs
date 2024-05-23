@@ -8,15 +8,11 @@ pub mod m31_neon;
 #[cfg(target_arch = "aarch64")]
 pub use m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
 
-#[cfg(target_arch = "x86_64")]
-use self::m31_avx::PACKED_INV_2;
-#[cfg(target_arch = "aarch64")]
-use self::m31_neon::PACKED_INV_2;
-
 use crate::Field;
 use std::{
+    iter::{Product, Sum},
     mem::size_of,
-    ops::{Add, AddAssign, Mul, Neg, Sub},
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 pub const M31_MOD: i32 = 2147483647;
@@ -54,6 +50,8 @@ impl M31 {
 impl Field for M31 {
     const NAME: &'static str = "Mersenne 31";
 
+    type BaseField = M31;
+
     #[inline(always)]
     fn zero() -> Self {
         M31 { v: 0 }
@@ -75,7 +73,15 @@ impl Field for M31 {
     fn inv(&self) -> Self {
         todo!()
     }
+
+    fn mul_by_base(&self, _: &Self::BaseField) -> Self {
+        unimplemented!("use direct MUL instead!")
+    }
 }
+
+// ====================================
+// Arithmetics for M31
+// ====================================
 
 impl Mul<&M31> for M31 {
     type Output = M31;
@@ -98,6 +104,26 @@ impl Mul for M31 {
     }
 }
 
+impl MulAssign<&M31> for M31 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: &M31) {
+        *self = *self * rhs;
+    }
+}
+
+impl MulAssign for M31 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: Self) {
+        *self *= &rhs;
+    }
+}
+
+impl<T: ::core::borrow::Borrow<M31>> Product<T> for M31 {
+    fn product<I: Iterator<Item = T>>(iter: I) -> Self {
+        iter.fold(Self::one(), |acc, item| acc * item.borrow())
+    }
+}
+
 impl Add<&M31> for M31 {
     type Output = M31;
     #[inline(always)]
@@ -115,6 +141,26 @@ impl Add for M31 {
     #[inline(always)]
     fn add(self, rhs: M31) -> Self::Output {
         self + &rhs
+    }
+}
+
+impl AddAssign<&M31> for M31 {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: &M31) {
+        *self = *self + rhs;
+    }
+}
+
+impl AddAssign for M31 {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        *self += &rhs;
+    }
+}
+
+impl<T: ::core::borrow::Borrow<M31>> Sum<T> for M31 {
+    fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |acc, item| acc + item.borrow())
     }
 }
 
@@ -148,17 +194,17 @@ impl Sub for M31 {
     }
 }
 
-impl AddAssign<&M31> for M31 {
+impl SubAssign<&M31> for M31 {
     #[inline(always)]
-    fn add_assign(&mut self, rhs: &M31) {
-        *self = *self + rhs;
+    fn sub_assign(&mut self, rhs: &M31) {
+        *self = *self - rhs;
     }
 }
 
-impl AddAssign for M31 {
+impl SubAssign for M31 {
     #[inline(always)]
-    fn add_assign(&mut self, rhs: Self) {
-        *self += &rhs;
+    fn sub_assign(&mut self, rhs: Self) {
+        *self -= &rhs;
     }
 }
 
@@ -171,219 +217,6 @@ impl From<u32> for M31 {
             } else {
                 x % M31_MOD as u32
             },
-        }
-    }
-}
-
-/// A VectorizedM31 stores 256 bits of data.
-/// With AVX it stores a single __m256i element.
-/// With NEON it stores two uint32x4_t elements.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
-pub struct VectorizedM31 {
-    pub v: [PackedM31; M31_VECTORIZE_SIZE],
-}
-
-pub const VECTORIZEDM31_INV_2: VectorizedM31 = VectorizedM31 {
-    v: [PackedM31 { v: PACKED_INV_2 }; M31_VECTORIZE_SIZE],
-};
-
-impl VectorizedM31 {
-    // todo: turn serialization functions into a trait
-    // perhaps derive from Serde or ark-serde
-
-    pub const SIZE: usize = size_of::<[PackedM31; M31_VECTORIZE_SIZE]>();
-
-    #[inline(always)]
-    pub fn serialize_into(&self, buffer: &mut [u8]) {
-        buffer.copy_from_slice(unsafe {
-            std::slice::from_raw_parts(
-                self.v.as_ptr() as *const u8,
-                M31_VECTORIZE_SIZE * PackedM31::SIZE,
-            )
-        });
-    }
-
-    #[inline(always)]
-    pub fn deserialize_from(buffer: &[u8]) -> Self {
-        let ptr = buffer.as_ptr() as *const [PackedM31; M31_VECTORIZE_SIZE];
-        unsafe {
-            VectorizedM31 {
-                v: ptr.read_unaligned(),
-            }
-        }
-    }
-}
-
-impl Field for VectorizedM31 {
-    const NAME: &'static str = "Vectorized Mersenne 31";
-
-    #[inline(always)]
-    fn zero() -> Self {
-        VectorizedM31 {
-            v: [PackedM31::zero(); M31_VECTORIZE_SIZE],
-        }
-    }
-
-    #[inline(always)]
-    fn one() -> Self {
-        VectorizedM31 {
-            v: [PackedM31::one(); M31_VECTORIZE_SIZE],
-        }
-    }
-
-    #[inline(always)]
-    fn random() -> Self {
-        VectorizedM31 {
-            v: (0..M31_VECTORIZE_SIZE)
-                .map(|_| PackedM31::random())
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap(),
-        }
-    }
-
-    #[inline(always)]
-    fn random_bool() -> Self {
-        VectorizedM31 {
-            v: (0..M31_VECTORIZE_SIZE)
-                .map(|_| PackedM31::random_bool())
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap(),
-        }
-    }
-
-    fn inv(&self) -> Self {
-        todo!()
-    }
-}
-
-impl Mul<&VectorizedM31> for VectorizedM31 {
-    type Output = VectorizedM31;
-    #[inline(always)]
-    fn mul(self, rhs: &VectorizedM31) -> Self::Output {
-        VectorizedM31 {
-            v: self
-                .v
-                .iter()
-                .zip(rhs.v.iter())
-                .map(|(a, b)| *a * b)
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap(),
-        }
-    }
-}
-
-impl Mul for VectorizedM31 {
-    type Output = VectorizedM31;
-    #[inline(always)]
-    fn mul(self, rhs: VectorizedM31) -> Self::Output {
-        self * &rhs
-    }
-}
-
-impl Mul<&M31> for VectorizedM31 {
-    type Output = VectorizedM31;
-    #[inline(always)]
-    fn mul(self, rhs: &M31) -> Self::Output {
-        let mut v = [PackedM31::zero(); M31_VECTORIZE_SIZE];
-        let packed_rhs = PackedM31::pack_full(*rhs);
-        for i in 0..M31_VECTORIZE_SIZE {
-            v[i] = self.v[i] * packed_rhs;
-        }
-        VectorizedM31 { v }
-    }
-}
-
-impl Mul<M31> for VectorizedM31 {
-    type Output = VectorizedM31;
-    #[inline(always)]
-    fn mul(self, rhs: M31) -> Self::Output {
-        self * &rhs
-    }
-}
-
-impl Add<&VectorizedM31> for VectorizedM31 {
-    type Output = VectorizedM31;
-    #[inline(always)]
-    fn add(self, rhs: &VectorizedM31) -> Self::Output {
-        VectorizedM31 {
-            v: self
-                .v
-                .iter()
-                .zip(rhs.v.iter())
-                .map(|(a, b)| *a + b)
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap(),
-        }
-    }
-}
-
-impl Add for VectorizedM31 {
-    type Output = VectorizedM31;
-    #[inline(always)]
-    fn add(self, rhs: VectorizedM31) -> Self::Output {
-        self + &rhs
-    }
-}
-
-impl AddAssign<&VectorizedM31> for VectorizedM31 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: &VectorizedM31) {
-        self.v
-            .iter_mut()
-            .zip(rhs.v.iter())
-            .for_each(|(a, b)| *a += b);
-    }
-}
-
-impl AddAssign for VectorizedM31 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: Self) {
-        *self += &rhs;
-    }
-}
-
-impl AddAssign<&M31> for VectorizedM31 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: &M31) {
-        self.v
-            .iter_mut()
-            .for_each(|x| *x += PackedM31::pack_full(*rhs));
-    }
-}
-
-impl AddAssign<M31> for VectorizedM31 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: M31) {
-        *self += &rhs;
-    }
-}
-
-impl Sub for VectorizedM31 {
-    type Output = VectorizedM31;
-    #[inline(always)]
-    fn sub(self, rhs: VectorizedM31) -> Self::Output {
-        VectorizedM31 {
-            v: self
-                .v
-                .iter()
-                .zip(rhs.v.iter())
-                .map(|(a, b)| *a - b)
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap(),
-        }
-    }
-}
-
-impl From<u32> for VectorizedM31 {
-    #[inline(always)]
-    fn from(x: u32) -> Self {
-        VectorizedM31 {
-            v: [PackedM31::from(x); M31_VECTORIZE_SIZE],
         }
     }
 }
