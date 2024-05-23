@@ -1,4 +1,4 @@
-use arith::{VectorizedM31, M31};
+use arith::{Field, FieldSerde, VectorizedM31, M31};
 
 use crate::{Proof, SHA256hasher};
 

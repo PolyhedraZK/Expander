@@ -1,4 +1,4 @@
-use arith::VectorizedM31;
+use arith::{Field, FieldSerde, VectorizedM31};
 
 use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
 

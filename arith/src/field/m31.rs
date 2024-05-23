@@ -1,14 +1,12 @@
 #[cfg(target_arch = "x86_64")]
 pub mod m31_avx;
 #[cfg(target_arch = "x86_64")]
-pub(crate) use m31_avx::PackedM31;
-#[cfg(target_arch = "x86_64")]
-pub use m31_avx::M31_VECTORIZE_SIZE;
+pub use m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
 
 #[cfg(target_arch = "aarch64")]
 pub mod m31_neon;
 #[cfg(target_arch = "aarch64")]
-pub(crate) use m31_neon::{PackedM31, M31_VECTORIZE_SIZE};
+pub use m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
 
 use crate::{Field, FieldSerde};
 use std::{
@@ -85,9 +83,8 @@ impl Field for M31 {
         *self * rhs
     }
 
-
-    fn as_u32_unchecked(&self)-> u32{
-       self.v
+    fn as_u32_unchecked(&self) -> u32 {
+        self.v
     }
 }
 

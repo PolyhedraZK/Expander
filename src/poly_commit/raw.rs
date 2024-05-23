@@ -1,4 +1,4 @@
-use arith::{MultiLinearPoly, VectorizedM31, M31};
+use arith::{Field, FieldSerde, MultiLinearPoly, VectorizedM31, M31};
 
 type FPrimitive = M31;
 type F = VectorizedM31;

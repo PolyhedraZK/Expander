@@ -62,8 +62,8 @@ pub trait Field:
     /// multiply the field element with its base field element
     fn mul_by_base(&self, rhs: &Self::BaseField) -> Self;
 
-    /// expose the element as u32. 
-    fn as_u32_unchecked(&self)-> u32;
+    /// expose the element as u32.
+    fn as_u32_unchecked(&self) -> u32;
 }
 
 pub trait FieldSerde {

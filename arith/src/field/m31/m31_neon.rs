@@ -106,8 +106,7 @@ impl Field for PackedM31 {
         *self * rhs
     }
 
-
-    fn as_u32_unchecked(&self)-> u32{
+    fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
 }
