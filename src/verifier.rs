@@ -99,14 +99,6 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
             }
             verified &= (p0 + p1) == sum[j];
 
-            assert!(
-                verified,
-                "Sumcheck verification failed at i_var={}, j={}, left = {:?}, right = {:?}",
-                i_var,
-                j,
-                p0 + p1,
-                sum[j]
-            );
             sum[j] = degree_2_eval(p0, p1, p2, r);
 
             if i_var == var_num - 1 {
@@ -137,7 +129,6 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
                     beta,
                     &[rx[j].clone(), ry[j].clone()],
                 ));
-        assert!(verified, "Sumcheck verification failed at j = {}", j);
         transcript.append_f(vy_claim[j]);
     }
     (verified, rx, ry, vx_claim, vy_claim)
@@ -186,7 +177,6 @@ pub fn gkr_verify<F: Field + FieldSerde>(
             transcript,
             config,
         );
-        assert!(cur_verified, "Sumcheck verification failed at layer {}", i);
         verified &= cur_verified;
         alpha = transcript.challenge_f::<F>();
         beta = transcript.challenge_f::<F>();

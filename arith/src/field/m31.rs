@@ -17,7 +17,13 @@ use std::{
 
 pub const M31_MOD: i32 = 2147483647;
 
-fn mod_reduce_int(x: i64) -> i64 {
+#[inline]
+fn mod_reduce_i32(x: i32) -> i32 {
+    (x & M31_MOD) + (x >> 31)
+}
+
+#[inline]
+fn mod_reduce_i64(x: i64) -> i64 {
     (x & M31_MOD as i64) + (x >> 31)
 }
 
@@ -37,10 +43,11 @@ impl FieldSerde for M31 {
     fn deserialize_from(buffer: &[u8]) -> Self {
         let ptr = buffer.as_ptr() as *const u32;
 
-        let mut v = unsafe { ptr.read_unaligned() } as i64;
-        v = mod_reduce_int(v);
-        if v >= M31_MOD as i64 {
-            v -= M31_MOD as i64;
+        let mut v = unsafe { ptr.read_unaligned() } as i32;
+        v = mod_reduce_i32(v);
+        // ZZ: this seems unnecessary since it is already reduced?
+        if v >= M31_MOD {
+            v -= M31_MOD;
         }
         M31 { v: v as u32 }
     }
@@ -112,7 +119,7 @@ impl Mul<&M31> for M31 {
     #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
         let mut vv = self.v as i64 * rhs.v as i64;
-        vv = mod_reduce_int(vv);
+        vv = mod_reduce_i64(vv);
         if vv >= M31_MOD as i64 {
             vv -= M31_MOD as i64;
         }

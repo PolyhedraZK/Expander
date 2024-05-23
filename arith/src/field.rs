@@ -9,7 +9,6 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-// TODO: we may want to enrich this trait definition, and allow for more complicated derivations, such as Serde.
 pub trait Field:
     Copy
     + Clone
@@ -48,6 +47,9 @@ pub trait Field:
     type BaseField: Field + FieldSerde;
 
     /// type of the packed based field, if applicable
+    ///
+    /// We do not enforce PackedBaseField to derive Field as
+    /// PackedBaseField can be () in some case.
     type PackedBaseField;
 
     /// Zero element
