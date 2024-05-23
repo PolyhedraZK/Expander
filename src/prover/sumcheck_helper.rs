@@ -1,6 +1,4 @@
-use std::mem::transmute;
-
-use arith::{Field, VectorizedM31, M31, M31_MOD, M31_VECTORIZE_SIZE};
+use arith::{Field, M31_MOD, M31_VECTORIZE_SIZE};
 
 use crate::{CircuitLayer, GkrScratchpad};
 
@@ -14,15 +12,15 @@ pub fn _eq<F: Field>(x: &F, y: &F) -> F {
     xy + xy - x - y + F::from(1)
 }
 
-pub fn _eq_evals_at_primitive<F: Field>(
-    r: &[F],
-    mul_factor: &F,
-    eq_evals: &mut [F],
-) {
+pub fn _eq_evals_at_primitive<F: Field>(r: &[F], mul_factor: &F, eq_evals: &mut [F]) {
     eq_evals[0] = *mul_factor;
     let mut cur_eval_num = 1;
     for i in 0..r.len() {
-        assert!(r[i].as_u32_unchecked() < M31_MOD as u32, "r[i] = {}", r[i].as_u32_unchecked());
+        assert!(
+            r[i].as_u32_unchecked() < M31_MOD as u32,
+            "r[i] = {}",
+            r[i].as_u32_unchecked()
+        );
         // let eq_z_i_zero = _eq(&r[i], &FPrimitive::zero()); // FIXED: expanding this function might be better?
         let eq_z_i_zero = F::one() - r[i];
         // let eq_z_i_one = _eq(&r[i], &FPrimitive::one());
@@ -69,7 +67,7 @@ impl SumcheckMultilinearProdHelper {
         }
     }
 
-    fn poly_eval_at<F:Field>(
+    fn poly_eval_at<F: Field>(
         &self,
         var_idx: usize,
         degree: usize,
@@ -77,7 +75,10 @@ impl SumcheckMultilinearProdHelper {
         bk_hg: &mut [F],
         init_v: &[F],
         gate_exists: &[bool],
-    ) -> [F; 3] where F::PackedBaseField: Field{
+    ) -> [F; 3]
+    where
+        F::PackedBaseField: Field,
+    {
         assert_eq!(degree, 2);
         let mut p0 = F::zero();
         let mut p1 = F::zero();
@@ -113,7 +114,7 @@ impl SumcheckMultilinearProdHelper {
         [p0, p1, p2]
     }
 
-    fn receive_challenge<F:Field>(
+    fn receive_challenge<F: Field>(
         &mut self,
         var_idx: usize,
         r: F::BaseField,
@@ -121,7 +122,9 @@ impl SumcheckMultilinearProdHelper {
         bk_hg: &mut [F],
         init_v: &[F],
         gate_exists: &mut [bool],
-    ) where F::PackedBaseField: Field<BaseField = F::BaseField>{
+    ) where
+        F::PackedBaseField: Field<BaseField = F::BaseField>,
+    {
         assert_eq!(var_idx, self.sumcheck_var_idx);
         assert!(var_idx < self.var_num);
         // println!("challenge eval size: {}", self.cur_eval_size);
@@ -130,11 +133,15 @@ impl SumcheckMultilinearProdHelper {
                 gate_exists[i] = false;
                 for j in 0..M31_VECTORIZE_SIZE {
                     if var_idx == 0 {
-                        bk_f[i].mut_packed_slices()[j] =
-                            init_v[2 * i].as_packed_slices()[j] + (init_v[2 * i + 1].as_packed_slices()[j] - init_v[2 * i].as_packed_slices()[j]) .mul_base_elem(&r);
+                        bk_f[i].mut_packed_slices()[j] = init_v[2 * i].as_packed_slices()[j]
+                            + (init_v[2 * i + 1].as_packed_slices()[j]
+                                - init_v[2 * i].as_packed_slices()[j])
+                                .mul_base_elem(&r);
                     } else {
-                        bk_f[i].mut_packed_slices()[j] =
-                            bk_f[2 * i].as_packed_slices()[j] + (bk_f[2 * i + 1].as_packed_slices()[j] - bk_f[2 * i].as_packed_slices()[j]) .mul_base_elem(&r);
+                        bk_f[i].mut_packed_slices()[j] = bk_f[2 * i].as_packed_slices()[j]
+                            + (bk_f[2 * i + 1].as_packed_slices()[j]
+                                - bk_f[2 * i].as_packed_slices()[j])
+                                .mul_base_elem(&r);
                     }
                 }
                 bk_hg[i] = F::zero();
@@ -142,14 +149,20 @@ impl SumcheckMultilinearProdHelper {
                 gate_exists[i] = true;
                 for j in 0..M31_VECTORIZE_SIZE {
                     if var_idx == 0 {
-                        bk_f[i].mut_packed_slices()[j] =
-                            init_v[2 * i].as_packed_slices()[j] + (init_v[2 * i + 1].as_packed_slices()[j] - init_v[2 * i].as_packed_slices()[j]) .mul_base_elem(&r);
+                        bk_f[i].mut_packed_slices()[j] = init_v[2 * i].as_packed_slices()[j]
+                            + (init_v[2 * i + 1].as_packed_slices()[j]
+                                - init_v[2 * i].as_packed_slices()[j])
+                                .mul_base_elem(&r);
                     } else {
-                        bk_f[i].mut_packed_slices()[j] =
-                            bk_f[2 * i].as_packed_slices()[j] + (bk_f[2 * i + 1].as_packed_slices()[j] - bk_f[2 * i].as_packed_slices()[j]) .mul_base_elem(&r);
+                        bk_f[i].mut_packed_slices()[j] = bk_f[2 * i].as_packed_slices()[j]
+                            + (bk_f[2 * i + 1].as_packed_slices()[j]
+                                - bk_f[2 * i].as_packed_slices()[j])
+                                .mul_base_elem(&r);
                     }
-                    bk_hg[i].mut_packed_slices()[j] =
-                        bk_hg[2 * i].as_packed_slices()[j] + (bk_hg[2 * i + 1].as_packed_slices()[j] - bk_hg[2 * i].as_packed_slices()[j]) .mul_base_elem(&r);
+                    bk_hg[i].mut_packed_slices()[j] = bk_hg[2 * i].as_packed_slices()[j]
+                        + (bk_hg[2 * i + 1].as_packed_slices()[j]
+                            - bk_hg[2 * i].as_packed_slices()[j])
+                            .mul_base_elem(&r);
                 }
             }
         }
@@ -159,7 +172,8 @@ impl SumcheckMultilinearProdHelper {
     }
 }
 
-pub(crate) struct SumcheckGkrHelper<'a, F:Field> {
+#[allow(dead_code)]
+pub(crate) struct SumcheckGkrHelper<'a, F: Field> {
     pub(crate) rx: Vec<F::BaseField>,
     pub(crate) ry: Vec<F::BaseField>,
 
@@ -177,7 +191,10 @@ pub(crate) struct SumcheckGkrHelper<'a, F:Field> {
     y_helper: SumcheckMultilinearProdHelper,
 }
 
-impl<'a, F: Field> SumcheckGkrHelper<'a, F> where F::PackedBaseField: Field{
+impl<'a, F: Field> SumcheckGkrHelper<'a, F>
+where
+    F::PackedBaseField: Field,
+{
     pub fn new(
         layer: &'a CircuitLayer<F>,
         rz0: &'a [F::BaseField],
@@ -227,7 +244,10 @@ impl<'a, F: Field> SumcheckGkrHelper<'a, F> where F::PackedBaseField: Field{
         }
     }
 
-    pub fn receive_challenge(&mut self, var_idx: usize, r: F::BaseField) where F::PackedBaseField: Field<BaseField = F::BaseField>{
+    pub fn receive_challenge(&mut self, var_idx: usize, r: F::BaseField)
+    where
+        F::PackedBaseField: Field<BaseField = F::BaseField>,
+    {
         if var_idx < self.input_var_num {
             self.x_helper.receive_challenge(
                 var_idx,
@@ -295,11 +315,12 @@ impl<'a, F: Field> SumcheckGkrHelper<'a, F> where F::PackedBaseField: Field{
         }
 
         for g in mul.iter() {
-            hg_vals[g.i_ids[0]] += vals.evals[g.i_ids[1]] .mul_base_elem(& (g.coef * eq_evals_at_rz0[g.o_id]));
+            hg_vals[g.i_ids[0]] +=
+                vals.evals[g.i_ids[1]].mul_base_elem(&(g.coef * eq_evals_at_rz0[g.o_id]));
             gate_exists[g.i_ids[0]] = true;
         }
         for g in add.iter() {
-            hg_vals[g.i_ids[0]] .add_base_elem(&( g.coef * eq_evals_at_rz0[g.o_id]));
+            hg_vals[g.i_ids[0]].add_base_elem(&(g.coef * eq_evals_at_rz0[g.o_id]));
             gate_exists[g.i_ids[0]] = true;
         }
     }
@@ -329,8 +350,8 @@ impl<'a, F: Field> SumcheckGkrHelper<'a, F> where F::PackedBaseField: Field{
         );
 
         for g in mul.iter() {
-            hg_vals[g.i_ids[1]] +=
-                v_rx .mul_base_elem(& (eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]] * g.coef));
+            hg_vals[g.i_ids[1]] += v_rx
+                .mul_base_elem(&(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]] * g.coef));
             gate_exists[g.i_ids[1]] = true;
         }
     }

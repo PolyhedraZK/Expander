@@ -35,7 +35,8 @@ fn main() {
     let start_time = std::time::Instant::now();
 
     // load circuit
-    let circuit_template = Circuit::<VectorizedM31>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
+    let circuit_template =
+        Circuit::<VectorizedM31>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
     let circuits = (0..num_thread)
         .map(|_| {
             let mut c = circuit_template.clone();

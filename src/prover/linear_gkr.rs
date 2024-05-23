@@ -1,8 +1,6 @@
-use arith::{Field, FieldSerde, VectorizedM31};
+use arith::{Field, FieldSerde};
 
 use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
-
-// type F = VectorizedM31;
 
 pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
     let initial_hash = transcript.challenge_fs::<F>(256 / config.field_size);
@@ -26,7 +24,7 @@ pub struct Prover<F: Field> {
     sp: Vec<GkrScratchpad<F>>,
 }
 
-impl<F: Field + FieldSerde>  Prover<F> {
+impl<F: Field + FieldSerde> Prover<F> {
     pub fn new(config: &Config) -> Self {
         assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
@@ -58,7 +56,10 @@ impl<F: Field + FieldSerde>  Prover<F> {
             .collect();
     }
 
-    pub fn prove(&mut self, c: &Circuit<F>) -> (Vec<F>, Proof) where F::PackedBaseField: Field<BaseField = F::BaseField>{
+    pub fn prove(&mut self, c: &Circuit<F>) -> (Vec<F>, Proof)
+    where
+        F::PackedBaseField: Field<BaseField = F::BaseField>,
+    {
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
         // PC commit

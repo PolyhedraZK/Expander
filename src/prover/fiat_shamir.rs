@@ -1,4 +1,4 @@
-use arith::{Field, FieldSerde, VectorizedM31, M31};
+use arith::{Field, FieldSerde};
 
 use crate::{Proof, SHA256hasher};
 
@@ -8,9 +8,6 @@ pub struct Transcript {
     digest: [u8; Self::DIGEST_SIZE],
     pub proof: Proof,
 }
-
-// type FPrimitive = M31;
-// type F = VectorizedM31;
 
 impl Transcript {
     pub const DIGEST_SIZE: usize = 32;
