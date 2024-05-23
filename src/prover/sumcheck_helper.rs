@@ -15,19 +15,20 @@ pub fn _eq<F: Field>(x: &F, y: &F) -> F {
 pub fn _eq_evals_at_primitive<F: Field>(r: &[F], mul_factor: &F, eq_evals: &mut [F]) {
     eq_evals[0] = *mul_factor;
     let mut cur_eval_num = 1;
-    for i in 0..r.len() {
+
+    for r_i in r.iter() {
         assert!(
-            r[i].as_u32_unchecked() < M31_MOD as u32,
+            r_i.as_u32_unchecked() < M31_MOD as u32,
             "r[i] = {}",
-            r[i].as_u32_unchecked()
+            r_i.as_u32_unchecked()
         );
         // let eq_z_i_zero = _eq(&r[i], &FPrimitive::zero()); // FIXED: expanding this function might be better?
-        let eq_z_i_zero = F::one() - r[i];
+        let eq_z_i_zero = F::one() - r_i;
         // let eq_z_i_one = _eq(&r[i], &FPrimitive::one());
-        let eq_z_i_one = r[i];
+        let eq_z_i_one = r_i;
         for j in 0..cur_eval_num {
             eq_evals[j + cur_eval_num] = eq_evals[j] * eq_z_i_one;
-            eq_evals[j] = eq_evals[j] * eq_z_i_zero;
+            eq_evals[j] *= eq_z_i_zero;
         }
         cur_eval_num <<= 1;
     }
@@ -45,10 +46,10 @@ pub fn _eq_eval_at<F: Field>(
     _eq_evals_at_primitive(&r[0..first_half_bits], mul_factor, sqrt_n_1st);
     _eq_evals_at_primitive(&r[first_half_bits..], &F::one(), sqrt_n_2nd);
 
-    for i in 0..1 << r.len() {
+    for (i, eq_eval) in eq_evals.iter_mut().enumerate().take(1 << r.len()) {
         let first_half = i & first_half_mask;
         let second_half = i >> first_half_bits;
-        eq_evals[i] = sqrt_n_1st[first_half] * sqrt_n_2nd[second_half];
+        *eq_eval = sqrt_n_1st[first_half] * sqrt_n_2nd[second_half];
     }
 }
 

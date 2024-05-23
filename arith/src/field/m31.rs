@@ -45,10 +45,6 @@ impl FieldSerde for M31 {
 
         let mut v = unsafe { ptr.read_unaligned() } as i32;
         v = mod_reduce_i32(v);
-        // ZZ: this seems unnecessary since it is already reduced?
-        if v >= M31_MOD {
-            v -= M31_MOD;
-        }
         M31 { v: v as u32 }
     }
 }
@@ -120,6 +116,8 @@ impl Mul<&M31> for M31 {
     fn mul(self, rhs: &M31) -> Self::Output {
         let mut vv = self.v as i64 * rhs.v as i64;
         vv = mod_reduce_i64(vv);
+
+        // ZZ: this seems unnecessary since it is already reduced?
         if vv >= M31_MOD as i64 {
             vv -= M31_MOD as i64;
         }
@@ -159,11 +157,7 @@ impl Add<&M31> for M31 {
     type Output = M31;
     #[inline(always)]
     fn add(self, rhs: &M31) -> Self::Output {
-        let mut vv = self.v + rhs.v;
-        if vv >= M31_MOD as u32 {
-            vv -= M31_MOD as u32;
-        }
-        M31 { v: vv }
+        self + *rhs
     }
 }
 
@@ -171,7 +165,11 @@ impl Add for M31 {
     type Output = M31;
     #[inline(always)]
     fn add(self, rhs: M31) -> Self::Output {
-        self + &rhs
+        let mut vv = self.v + rhs.v;
+        if vv >= M31_MOD as u32 {
+            vv -= M31_MOD as u32;
+        }
+        M31 { v: vv }
     }
 }
 

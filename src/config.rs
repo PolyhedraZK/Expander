@@ -39,6 +39,12 @@ pub struct Config {
     pub fs_hash: FiatShamirHashType,
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Config {
     pub fn new() -> Self {
         let mut vectorize_size = 0;
@@ -79,7 +85,7 @@ impl Config {
         }
     }
 
-    ///
+    /// return the number of repetitions we will need to achieve security
     pub fn get_num_repetitions(&self) -> usize {
         self.num_repetitions
     }

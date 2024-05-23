@@ -9,6 +9,12 @@ pub struct Transcript {
     pub proof: Proof,
 }
 
+impl Default for Transcript {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Transcript {
     pub const DIGEST_SIZE: usize = 32;
 
@@ -27,9 +33,10 @@ impl Transcript {
         }
     }
 
+    #[inline]
     pub fn new() -> Self {
         Transcript {
-            hasher: SHA256hasher::default(),
+            hasher: SHA256hasher,
             hash_start_idx: 0,
             digest: [0u8; Self::DIGEST_SIZE],
             proof: Proof::default(),

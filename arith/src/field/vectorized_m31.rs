@@ -155,9 +155,10 @@ impl Mul<&M31> for VectorizedM31 {
     fn mul(self, rhs: &M31) -> Self::Output {
         let mut v = [PackedM31::zero(); M31_VECTORIZE_SIZE];
         let packed_rhs = PackedM31::pack_full(*rhs);
-        for i in 0..M31_VECTORIZE_SIZE {
-            v[i] = self.v[i] * packed_rhs;
-        }
+        v.iter_mut()
+            .zip(self.v.iter())
+            .for_each(|(v, sv)| *v = *sv * packed_rhs);
+
         VectorizedM31 { v }
     }
 }

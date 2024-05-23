@@ -3,13 +3,16 @@ use ark_std::{end_timer, start_timer};
 
 use crate::{sumcheck_prove_gkr_layer, Circuit, Config, GkrScratchpad, Transcript};
 
-pub fn gkr_prove<F: Field + FieldSerde>(
+// FIXME
+#[allow(clippy::type_complexity)]
+pub fn gkr_prove<F>(
     circuit: &Circuit<F>,
     sp: &mut [GkrScratchpad<F>],
     transcript: &mut Transcript,
     config: &Config,
 ) -> (Vec<F>, Vec<Vec<F::BaseField>>, Vec<Vec<F::BaseField>>)
 where
+    F: Field + FieldSerde,
     F::PackedBaseField: Field<BaseField = F::BaseField>,
 {
     let timer = start_timer!(|| "gkr prove");
@@ -28,10 +31,10 @@ where
     let mut beta = F::BaseField::zero();
     let mut claimed_v = vec![];
 
-    for j in 0..config.get_num_repetitions() {
+    for t in rz0.iter().take(config.get_num_repetitions()) {
         claimed_v.push(MultiLinearPoly::<F>::eval_multilinear(
             &circuit.layers.last().unwrap().output_vals.evals,
-            &rz0[j],
+            t,
         ))
     }
 

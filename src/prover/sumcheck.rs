@@ -2,7 +2,10 @@ use arith::{Field, FieldSerde};
 
 use crate::{CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, Transcript};
 
-pub fn sumcheck_prove_gkr_layer<F: Field + FieldSerde>(
+// FIXME
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::type_complexity)]
+pub fn sumcheck_prove_gkr_layer<F>(
     layer: &CircuitLayer<F>,
     rz0: &[Vec<F::BaseField>],
     rz1: &[Vec<F::BaseField>],
@@ -13,6 +16,7 @@ pub fn sumcheck_prove_gkr_layer<F: Field + FieldSerde>(
     config: &Config,
 ) -> (Vec<Vec<F::BaseField>>, Vec<Vec<F::BaseField>>)
 where
+    F: Field + FieldSerde,
     F::PackedBaseField: Field<BaseField = F::BaseField>,
 {
     let mut helpers = vec![];
@@ -23,15 +27,19 @@ where
         ));
     }
     for i_var in 0..layer.input_var_num * 2 {
-        for j in 0..config.get_num_repetitions() {
+        for (j, helper) in helpers
+            .iter_mut()
+            .enumerate()
+            .take(config.get_num_repetitions())
+        {
             if i_var == 0 {
-                helpers[j].prepare_g_x_vals()
+                helper.prepare_g_x_vals()
             }
             if i_var == layer.input_var_num {
-                let vx_claim = helpers[j].vx_claim();
-                helpers[j].prepare_h_y_vals(vx_claim)
+                let vx_claim = helper.vx_claim();
+                helper.prepare_h_y_vals(vx_claim)
             }
-            let evals = helpers[j].poly_evals_at(i_var, 2);
+            let evals = helper.poly_evals_at(i_var, 2);
             transcript.append_f(evals[0]);
             transcript.append_f(evals[1]);
             transcript.append_f(evals[2]);
@@ -40,16 +48,21 @@ where
             if j == 0 {
                 log::trace!("i_var={} j={} evals: {:?} r: {:?}", i_var, j, evals, r);
             }
-            helpers[j].receive_challenge(i_var, r);
+            helper.receive_challenge(i_var, r);
             if i_var == layer.input_var_num - 1 {
-                log::trace!("vx claim: {:?}", helpers[j].vx_claim());
-                transcript.append_f(helpers[j].vx_claim());
+                log::trace!("vx claim: {:?}", helper.vx_claim());
+                transcript.append_f(helper.vx_claim());
             }
         }
     }
-    for j in 0..config.get_num_repetitions() {
-        log::trace!("claimed vy[{}] = {:?}", j, helpers[j].vy_claim());
-        transcript.append_f(helpers[j].vy_claim());
+
+    for (j, helper) in helpers
+        .iter()
+        .enumerate()
+        .take(config.get_num_repetitions())
+    {
+        log::trace!("claimed vy[{}] = {:?}", j, helper.vy_claim());
+        transcript.append_f(helper.vy_claim());
     }
 
     let rz0s = (0..config.get_num_repetitions())

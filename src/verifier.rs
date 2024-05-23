@@ -38,14 +38,18 @@ fn eval_sparse_circuit_connect_poly<F: Field, const INPUT_NUM: usize>(
     let mut v = F::BaseField::zero();
     for g in gates {
         let mut prod = eq_evals_at_rz0[g.o_id] + eq_evals_at_rz1[g.o_id];
-        for i in 0..INPUT_NUM {
-            prod = prod * eq_evals_at_ris[i][g.i_ids[i]];
+
+        for (i, eq_evals_at_ri) in eq_evals_at_ris.iter().enumerate().take(INPUT_NUM) {
+            prod *= eq_evals_at_ri[g.i_ids[i]];
         }
         v += prod * g.coef;
     }
     v
 }
 
+// todo: FIXME
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::type_complexity)]
 fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
     layer: &CircuitLayer<F>,
     rz0: &[Vec<F::BaseField>],
@@ -103,15 +107,14 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
 
             if i_var == var_num - 1 {
                 vx_claim[j] = proof.get_next_and_step();
-                sum[j] = sum[j]
-                    - vx_claim[j].mul_base_elem(&eval_sparse_circuit_connect_poly(
-                        &layer.add,
-                        &rz0[j],
-                        &rz1[j],
-                        alpha,
-                        beta,
-                        &[rx[j].clone()],
-                    ));
+                sum[j] -= vx_claim[j].mul_base_elem(&eval_sparse_circuit_connect_poly(
+                    &layer.add,
+                    &rz0[j],
+                    &rz1[j],
+                    alpha,
+                    beta,
+                    &[rx[j].clone()],
+                ));
                 transcript.append_f(vx_claim[j]);
             }
         }
@@ -134,6 +137,8 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
     (verified, rx, ry, vx_claim, vy_claim)
 }
 
+// todo: FIXME
+#[allow(clippy::type_complexity)]
 pub fn gkr_verify<F: Field + FieldSerde>(
     circuit: &Circuit<F>,
     claimed_v: &[F],

@@ -217,7 +217,7 @@ impl Mul<&M31> for PackedM31 {
     fn mul(self, rhs: &M31) -> Self::Output {
         unsafe {
             let rhs_p = _mm256_set1_epi32(rhs.v as i32);
-            self * &PackedM31 { v: rhs_p }
+            self * PackedM31 { v: rhs_p }
         }
     }
 }
