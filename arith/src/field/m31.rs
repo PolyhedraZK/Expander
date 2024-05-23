@@ -79,14 +79,17 @@ impl Field for M31 {
         todo!()
     }
 
-    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        *self + rhs
+    #[inline(always)]
+    fn add_base_elem(&mut self, rhs: &Self::BaseField)  {
+        *self += rhs
     }
 
+    #[inline(always)]
     fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
     }
 
+    #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
         self.v
     }

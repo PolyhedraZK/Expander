@@ -125,7 +125,7 @@ impl Field for PackedM31 {
     }
 
     #[inline(always)]
-    fn add_base_elem(&self, _rhs: &Self::BaseField) -> Self {
+    fn add_base_elem(&mut self, _rhs: &Self::BaseField) {
         unimplemented!()
     }
 
