@@ -1,11 +1,11 @@
-use arith::VectorizedM31;
+use arith::{Field, FieldSerde, VectorizedM31};
 
 use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
 
-type F = VectorizedM31;
+// type F = VectorizedM31;
 
-pub fn grind(transcript: &mut Transcript, config: &Config) {
-    let initial_hash = transcript.challenge_fs(256 / config.field_size);
+pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
+    let initial_hash = transcript.challenge_fs::<F>(256 / config.field_size);
     let mut hash_bytes = [0u8; 256 / 8];
     let mut offset = 0;
     let step = (config.field_size + 7) / 8;
@@ -21,12 +21,12 @@ pub fn grind(transcript: &mut Transcript, config: &Config) {
     transcript.append_u8_slice(&hash_bytes, 256 / 8);
 }
 
-pub struct Prover {
+pub struct Prover<F: Field> {
     config: Config,
-    sp: Vec<GkrScratchpad>,
+    sp: Vec<GkrScratchpad<F>>,
 }
 
-impl Prover {
+impl<F: Field + FieldSerde>  Prover<F> {
     pub fn new(config: &Config) -> Self {
         assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
@@ -40,7 +40,7 @@ impl Prover {
         }
     }
 
-    pub fn prepare_mem(&mut self, c: &Circuit) {
+    pub fn prepare_mem(&mut self, c: &Circuit<F>) {
         let max_num_input_var = c
             .layers
             .iter()
@@ -58,7 +58,7 @@ impl Prover {
             .collect();
     }
 
-    pub fn prove(&mut self, c: &Circuit) -> (Vec<F>, Proof) {
+    pub fn prove(&mut self, c: &Circuit<F>) -> (Vec<F>, Proof) where F::PackedBaseField: Field<BaseField = F::BaseField>{
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
         // PC commit
@@ -71,7 +71,7 @@ impl Prover {
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(buffer, commitment.size());
 
-        grind(&mut transcript, &self.config);
+        grind::<F>(&mut transcript, &self.config);
 
         let (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
 

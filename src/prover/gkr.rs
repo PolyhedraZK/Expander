@@ -1,16 +1,16 @@
-use arith::{Field, MultiLinearPoly, VectorizedM31, M31};
+use arith::{Field, FieldSerde, MultiLinearPoly, VectorizedM31, M31};
 
 use crate::{sumcheck_prove_gkr_layer, Circuit, Config, GkrScratchpad, Transcript};
 
-type FPrimitive = M31;
-type F = VectorizedM31;
+// type FPrimitive = M31;
+// type F = VectorizedM31;
 
-pub fn gkr_prove(
-    circuit: &Circuit,
-    sp: &mut [GkrScratchpad],
+pub fn gkr_prove<F: Field + FieldSerde>(
+    circuit: &Circuit<F>,
+    sp: &mut [GkrScratchpad<F>],
     transcript: &mut Transcript,
     config: &Config,
-) -> (Vec<F>, Vec<Vec<FPrimitive>>, Vec<Vec<FPrimitive>>) {
+) -> (Vec<F>, Vec<Vec<F::BaseField>>, Vec<Vec<F::BaseField>>) where F::PackedBaseField: Field<BaseField = F::BaseField> {
     let layer_num = circuit.layers.len();
 
     let mut rz0 = vec![vec![]; config.get_num_repetitions()];
@@ -18,12 +18,12 @@ pub fn gkr_prove(
 
     for i in 0..circuit.layers.last().unwrap().output_var_num {
         for j in 0..config.get_num_repetitions() {
-            rz0[j].push(transcript.challenge_f());
-            rz1[j].push(FPrimitive::zero());
+            rz0[j].push(transcript.challenge_f::<F>());
+            rz1[j].push(F::BaseField::zero());
         }
     }
-    let mut alpha = FPrimitive::one();
-    let mut beta = FPrimitive::zero();
+    let mut alpha = F::BaseField::one();
+    let mut beta = F::BaseField::zero();
     let mut claimed_v = vec![];
 
     for j in 0..config.get_num_repetitions() {
@@ -44,8 +44,8 @@ pub fn gkr_prove(
             sp,
             config,
         );
-        alpha = transcript.challenge_f();
-        beta = transcript.challenge_f();
+        alpha = transcript.challenge_f::<F>();
+        beta = transcript.challenge_f::<F>();
         // println!("Layer {} proved with alpha={:?}, beta={:?}", i, alpha, beta);
         // println!("rz0.0: {:?}", rz0[0]);
         // println!("rz0.1: {:?}", rz0[1]);

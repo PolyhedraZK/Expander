@@ -1,6 +1,6 @@
-use arith::VectorizedM31;
+use arith::{Field, FieldSerde, VectorizedM31};
 
-type F = VectorizedM31;
+// type F = VectorizedM31;
 
 /// Proof. In the serialized mode.
 #[derive(Debug, Clone, Default)]
@@ -23,7 +23,7 @@ impl Proof {
     }
 
     #[inline(always)]
-    pub fn get_next_and_step(&mut self) -> F {
+    pub fn get_next_and_step<F: Field + FieldSerde>(&mut self) -> F {
         let ret = F::deserialize_from(&self.bytes[self.idx..]);
         self.step(F::SIZE);
         ret

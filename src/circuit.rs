@@ -1,55 +1,55 @@
 use arith::{Field, MultiLinearPoly, VectorizedM31, M31};
 use std::{cmp::max, fs};
 
-type FPrimitive = M31;
-type F = VectorizedM31;
+// type FPrimitive = M31;
+// type F = VectorizedM31;
 
 #[derive(Debug, Clone)]
-pub struct Gate<const INPUT_NUM: usize> {
+pub struct Gate<F: Field, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
     pub o_id: usize,
-    pub coef: FPrimitive,
+    pub coef: F::BaseField,
 }
 
-pub type GateMul = Gate<2>;
-pub type GateAdd = Gate<1>;
+pub type GateMul<F: Field> = Gate<F, 2>;
+pub type GateAdd<F: Field> = Gate<F, 1>;
 
 #[derive(Debug, Clone, Default)]
-pub struct CircuitLayer {
+pub struct CircuitLayer<F: Field> {
     pub input_var_num: usize,
     pub output_var_num: usize,
 
     pub input_vals: MultiLinearPoly<F>,
     pub output_vals: MultiLinearPoly<F>, // empty most time, unless in the last layer
 
-    pub mul: Vec<GateMul>,
-    pub add: Vec<GateAdd>,
+    pub mul: Vec<GateMul<F>>,
+    pub add: Vec<GateAdd<F>>,
 }
 
-impl CircuitLayer {
+impl<F:Field> CircuitLayer<F> {
     pub fn evaluate(&self) -> Vec<F> {
         let mut res = vec![F::zero(); 1 << self.output_var_num];
         for gate in &self.mul {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let i1 = &self.input_vals.evals[gate.i_ids[1]];
             let o = &mut res[gate.o_id];
-            *o += *i0 * i1 * gate.coef;
+            *o += (*i0 * i1).mul_base_elem( &gate.coef);
         }
         for gate in &self.add {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
-            *o += *i0 * gate.coef;
+            *o += i0 .mul_base_elem( & gate.coef);
         }
         res
     }
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Circuit {
-    pub layers: Vec<CircuitLayer>,
+pub struct Circuit<F: Field> {
+    pub layers: Vec<CircuitLayer<F>>,
 }
 
-impl Circuit {
+impl<F: Field> Circuit<F> {
     pub fn load_extracted_gates(filename_mul: &str, filename_add: &str) -> Self {
         let mut circuit = Circuit::default();
         let mul_file = fs::read_to_string(filename_mul).unwrap();
@@ -76,7 +76,7 @@ impl Circuit {
                 let gate = GateMul {
                     i_ids: [mul_input[i * 4 + 1], mul_input[i * 4 + 2]],
                     o_id: mul_input[i * 4 + 3],
-                    coef: FPrimitive::from(mul_input[i * 4 + 4] as u32),
+                    coef: F::BaseField::from(mul_input[i * 4 + 4] as u32),
                 };
                 layer.mul.push(gate);
             }
@@ -95,7 +95,7 @@ impl Circuit {
                 let gate = GateAdd {
                     i_ids: [add_input[i * 3 + 1]],
                     o_id: add_input[i * 3 + 2],
-                    coef: FPrimitive::from(add_input[i * 3 + 3] as u32),
+                    coef: F::BaseField::from(add_input[i * 3 + 3] as u32),
                 };
                 layer.add.push(gate);
             }

@@ -1,15 +1,18 @@
-use arith::{MultiLinearPoly, VectorizedM31, M31};
+//! RAW commitment refers to the case where the prover does not commit to the witness at all.
+//! The prover will send the whole witnesses to the verifier.
 
-type FPrimitive = M31;
-type F = VectorizedM31;
+use arith::{Field, FieldSerde, MultiLinearPoly, VectorizedM31, M31};
+
+// type FPrimitive = M31;
+// type F = VectorizedM31;
 
 pub struct RawOpening {}
 
-pub struct RawCommitment {
+pub struct RawCommitment<F> {
     pub poly_vals: Vec<F>,
 }
 
-impl RawCommitment {
+impl<F: Field + FieldSerde> RawCommitment<F> {
     pub fn size(&self) -> usize {
         self.poly_vals.len() * F::SIZE
     }
@@ -28,11 +31,11 @@ impl RawCommitment {
     }
 }
 
-impl RawCommitment {
+impl<F: Field + FieldSerde> RawCommitment<F> {
     pub fn new(poly_vals: Vec<F>) -> Self {
         RawCommitment { poly_vals }
     }
-    pub fn verify(&self, x: &[FPrimitive], y: F) -> bool {
+    pub fn verify(&self, x: &[F::BaseField], y: F) -> bool {
         y == MultiLinearPoly::<F>::eval_multilinear(&self.poly_vals, x)
     }
 }

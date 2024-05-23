@@ -10,7 +10,7 @@ type FPrimitive = M31;
 type F = VectorizedM31;
 
 #[allow(dead_code)]
-fn gen_simple_circuit() -> Circuit {
+fn gen_simple_circuit() -> Circuit<VectorizedM31> {
     let mut circuit = Circuit::default();
     let mut l0 = CircuitLayer::default();
     l0.input_var_num = 2;
@@ -43,7 +43,7 @@ fn gen_simple_circuit() -> Circuit {
 fn test_gkr_correctness() {
     let config = Config::new();
     println!("Config created.");
-    let mut circuit = Circuit::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
+    let mut circuit = Circuit::<VectorizedM31>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
     // let mut circuit = gen_simple_circuit(); // for custom circuit
     println!("Circuit loaded.");

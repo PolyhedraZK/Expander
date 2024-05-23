@@ -1,20 +1,20 @@
-use arith::{VectorizedM31, M31};
+use arith::{Field, FieldSerde, VectorizedM31, M31};
 
 use crate::{CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, Transcript};
 
-type FPrimitive = M31;
-type F = VectorizedM31;
+// type FPrimitive = M31;
+// type F = VectorizedM31;
 
-pub fn sumcheck_prove_gkr_layer(
-    layer: &CircuitLayer,
-    rz0: &[Vec<FPrimitive>],
-    rz1: &[Vec<FPrimitive>],
-    alpha: &FPrimitive,
-    beta: &FPrimitive,
+pub fn sumcheck_prove_gkr_layer<F: Field+FieldSerde>(
+    layer: &CircuitLayer<F>,
+    rz0: &[Vec<F::BaseField>],
+    rz1: &[Vec<F::BaseField>],
+    alpha: &F::BaseField,
+    beta: &F::BaseField,
     transcript: &mut Transcript,
-    sp: &mut [GkrScratchpad],
+    sp: &mut [GkrScratchpad<F>],
     config: &Config,
-) -> (Vec<Vec<FPrimitive>>, Vec<Vec<FPrimitive>>) {
+) -> (Vec<Vec<F::BaseField>>, Vec<Vec<F::BaseField>>)where F::PackedBaseField: Field<BaseField = F::BaseField> {
     let mut helpers = vec![];
     assert_eq!(config.get_num_repetitions(), sp.len());
     for (j, sp_) in sp.iter_mut().enumerate() {
@@ -35,7 +35,7 @@ pub fn sumcheck_prove_gkr_layer(
             transcript.append_f(evals[0]);
             transcript.append_f(evals[1]);
             transcript.append_f(evals[2]);
-            let r = transcript.challenge_f();
+            let r = transcript.challenge_f::<F>();
 
             // if j == 0 {
             //     println!("i_var={} j={} evals: {:?} r: {:?}", i_var, j, evals, r);
