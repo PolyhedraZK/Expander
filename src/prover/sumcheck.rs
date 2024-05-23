@@ -37,18 +37,18 @@ where
             transcript.append_f(evals[2]);
             let r = transcript.challenge_f::<F>();
 
-            // if j == 0 {
-            //     println!("i_var={} j={} evals: {:?} r: {:?}", i_var, j, evals, r);
-            // }
+            if j == 0 {
+                log::trace!("i_var={} j={} evals: {:?} r: {:?}", i_var, j, evals, r);
+            }
             helpers[j].receive_challenge(i_var, r);
             if i_var == layer.input_var_num - 1 {
-                // println!("vx claim: {:?}", helpers[j].vx_claim());
+                log::trace!("vx claim: {:?}", helpers[j].vx_claim());
                 transcript.append_f(helpers[j].vx_claim());
             }
         }
     }
     for j in 0..config.get_num_repetitions() {
-        // println!("claimed vy[{}] = {:?}", j, helpers[j].vy_claim());
+        log::trace!("claimed vy[{}] = {:?}", j, helpers[j].vy_claim());
         transcript.append_f(helpers[j].vy_claim());
     }
 

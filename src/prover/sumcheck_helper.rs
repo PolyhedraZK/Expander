@@ -127,7 +127,7 @@ impl SumcheckMultilinearProdHelper {
     {
         assert_eq!(var_idx, self.sumcheck_var_idx);
         assert!(var_idx < self.var_num);
-        // println!("challenge eval size: {}", self.cur_eval_size);
+        log::trace!("challenge eval size: {}", self.cur_eval_size);
         for i in 0..self.cur_eval_size >> 1 {
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 gate_exists[i] = false;
@@ -257,7 +257,7 @@ where
                 &self.layer.input_vals.evals,
                 &mut self.sp.gate_exists,
             );
-            // println!("v_eval[0]:= {:?}", self.sp.v_evals[0]);
+            log::trace!("v_eval[0]:= {:?}", self.sp.v_evals[0]);
             self.rx.push(r);
         } else {
             self.y_helper.receive_challenge(

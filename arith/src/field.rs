@@ -66,8 +66,8 @@ pub trait Field:
     fn inv(&self) -> Self;
 
     /// Add the field element with its base field element
-    fn add_base_elem(&mut self, rhs: &Self::BaseField) ;
-    
+    fn add_base_elem(&mut self, rhs: &Self::BaseField);
+
     /// multiply the field element with its base field element
     fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self;
 

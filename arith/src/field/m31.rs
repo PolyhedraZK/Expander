@@ -80,7 +80,7 @@ impl Field for M31 {
     }
 
     #[inline(always)]
-    fn add_base_elem(&mut self, rhs: &Self::BaseField)  {
+    fn add_base_elem(&mut self, rhs: &Self::BaseField) {
         *self += rhs
     }
 

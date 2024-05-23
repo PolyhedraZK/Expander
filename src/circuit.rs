@@ -100,8 +100,9 @@ impl<F: Field> Circuit<F> {
         circuit.compute_var_num();
         circuit
     }
+
     fn compute_var_num(&mut self) {
-        for (_i, layer) in self.layers.iter_mut().enumerate() {
+        for (i, layer) in self.layers.iter_mut().enumerate() {
             let max_i = max(
                 layer
                     .mul
@@ -118,12 +119,15 @@ impl<F: Field> Circuit<F> {
             layer.input_var_num = max_i.next_power_of_two().trailing_zeros() as usize;
             layer.output_var_num = max_o.next_power_of_two().trailing_zeros() as usize;
             layer.input_vals.var_num = layer.input_var_num;
-            // println!(
-            //     "layer {} input_var_num: {} output_var_num: {}",
-            //     i, layer.input_var_num, layer.output_var_num
-            // );
+            log::trace!(
+                "layer {} input_var_num: {} output_var_num: {}",
+                i,
+                layer.input_var_num,
+                layer.output_var_num
+            );
         }
     }
+
     pub fn log_input_size(&self) -> usize {
         self.layers[0].input_var_num
     }
@@ -135,29 +139,29 @@ impl<F: Field> Circuit<F> {
     pub fn evaluate(&mut self) {
         for i in 0..self.layers.len() - 1 {
             self.layers[i + 1].input_vals.evals = self.layers[i].evaluate();
-            // println!("layer {} evaluated", i);
-            // println!(
-            //     "First ten values: {:?}",
-            //     self.layers[i + 1]
-            //         .input_vals
-            //         .evals
-            //         .iter()
-            //         .take(10)
-            //         .collect::<Vec<_>>()
-            // );
+            log::trace!("layer {} evaluated", i);
+            log::trace!(
+                "First ten values: {:?}",
+                self.layers[i + 1]
+                    .input_vals
+                    .evals
+                    .iter()
+                    .take(10)
+                    .collect::<Vec<_>>()
+            );
         }
         self.layers.last_mut().unwrap().output_vals.evals = self.layers.last().unwrap().evaluate();
-        // println!("output evaluated");
-        // println!(
-        //     "First ten values: {:?}",
-        //     self.layers
-        //         .last()
-        //         .unwrap()
-        //         .output_vals
-        //         .evals
-        //         .iter()
-        //         .take(10)
-        //         .collect::<Vec<_>>()
-        // );
+        log::trace!("output evaluated");
+        log::trace!(
+            "First ten values: {:?}",
+            self.layers
+                .last()
+                .unwrap()
+                .output_vals
+                .evals
+                .iter()
+                .take(10)
+                .collect::<Vec<_>>()
+        );
     }
 }
