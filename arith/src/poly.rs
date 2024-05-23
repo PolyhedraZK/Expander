@@ -17,7 +17,8 @@ impl<F: Field> MultiLinearPoly<F> {
         for r in x.iter() {
             // println!("scratch: {:?}", scratch);
             for i in 0..cur_eval_size {
-                scratch[i] = scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]).mul_by_base(r);
+                scratch[i] =
+                    scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]).mul_base_elem(r);
             }
             cur_eval_size >>= 1;
         }

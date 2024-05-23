@@ -53,7 +53,11 @@ impl Field for VectorizedM31 {
 
     const SIZE: usize = size_of::<[PackedM31; M31_VECTORIZE_SIZE]>();
 
+    const INV_2: Self = VECTORIZEDM31_INV_2;
+
     type BaseField = M31;
+
+    type PackedBaseField = PackedM31;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -95,12 +99,26 @@ impl Field for VectorizedM31 {
         todo!()
     }
 
-    fn mul_by_base(&self, rhs: &Self::BaseField) -> Self {
+    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
+        let mut res = *self;
+        res += rhs;
+        res
+    }
+
+    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
     }
 
-    fn as_u32_unchecked(&self)-> u32{
+    fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
+    }
+
+    fn as_packed_slices(&self) -> &[PackedM31] {
+        self.v.as_slice()
+    }
+
+    fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
+        self.v.as_mut_slice()
     }
 }
 

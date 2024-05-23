@@ -55,7 +55,11 @@ impl Field for PackedM31 {
 
     const SIZE: usize = size_of::<PackedDataType>();
 
+    const INV_2: Self = Self { v: PACKED_INV_2 };
+
     type BaseField = M31;
+
+    type PackedBaseField = Self;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -121,12 +125,25 @@ impl Field for PackedM31 {
     }
 
     #[inline(always)]
-    fn mul_by_base(&self, rhs: &Self::BaseField) -> Self {
+    fn add_base_elem(&self, _rhs: &Self::BaseField) -> Self {
+        unimplemented!()
+    }
+
+    #[inline(always)]
+    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
     }
 
-    fn as_u32_unchecked(&self)-> u32{
+    fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
+    }
+
+    fn as_packed_slices(&self) -> &[Self::PackedBaseField] {
+        unimplemented!()
+    }
+
+    fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
+        unimplemented!("use as_u32_unchecked instead")
     }
 }
 

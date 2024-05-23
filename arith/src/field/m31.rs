@@ -1,14 +1,12 @@
 #[cfg(target_arch = "x86_64")]
 pub mod m31_avx;
 #[cfg(target_arch = "x86_64")]
-pub(crate) use m31_avx::PackedM31;
-#[cfg(target_arch = "x86_64")]
-pub use m31_avx::M31_VECTORIZE_SIZE;
+pub use m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
 
 #[cfg(target_arch = "aarch64")]
 pub mod m31_neon;
 #[cfg(target_arch = "aarch64")]
-pub(crate) use m31_neon::{PackedM31, M31_VECTORIZE_SIZE};
+pub(crate) use m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
 
 use crate::{Field, FieldSerde};
 use std::{
@@ -26,10 +24,6 @@ fn mod_reduce_int(x: i64) -> i64 {
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct M31 {
     pub v: u32,
-}
-
-impl M31 {
-    pub const INV_2: M31 = M31 { v: 1 << 30 };
 }
 
 impl FieldSerde for M31 {
@@ -57,7 +51,11 @@ impl Field for M31 {
 
     const SIZE: usize = size_of::<u32>();
 
+    const INV_2: M31 = M31 { v: 1 << 30 };
+
     type BaseField = M31;
+
+    type PackedBaseField = ();
 
     #[inline(always)]
     fn zero() -> Self {
@@ -81,13 +79,24 @@ impl Field for M31 {
         todo!()
     }
 
-    fn mul_by_base(&self, rhs: &Self::BaseField) -> Self {
+    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
+        *self + rhs
+    }
+
+    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
     }
 
+    fn as_u32_unchecked(&self) -> u32 {
+        self.v
+    }
 
-    fn as_u32_unchecked(&self)-> u32{
-       self.v
+    fn as_packed_slices(&self) -> &[Self::PackedBaseField] {
+        unimplemented!("use as_u32_unchecked instead")
+    }
+
+    fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
+        unimplemented!("use as_u32_unchecked instead")
     }
 }
 
