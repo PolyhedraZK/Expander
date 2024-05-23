@@ -114,11 +114,11 @@ impl Field for VectorizedM31 {
     }
 
     fn as_packed_slices(&self) -> &[PackedM31] {
-        self.v.as_slice()
+        &self.v
     }
 
     fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
-        self.v.as_mut_slice()
+        &mut self.v
     }
 }
 
