@@ -89,7 +89,6 @@ impl Field for M31 {
 
     fn as_u32_unchecked(&self) -> u32 {
         self.v
-<<<<<<< HEAD
     }
 
     fn as_packed_slices(&self) -> &[Self::PackedBaseField] {
@@ -98,8 +97,6 @@ impl Field for M31 {
 
     fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
         unimplemented!("use as_u32_unchecked instead")
-=======
->>>>>>> 22767dd6d9e6e4b55b1f9109b774bd4caa3f8004
     }
 }
 

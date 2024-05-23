@@ -1,6 +1,4 @@
-// use arith::M31_PACK_SIZE;
-
-use arith::m31_avx::M31_PACK_SIZE;
+use arith::M31_PACK_SIZE;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolynomialCommitmentType {
