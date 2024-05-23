@@ -6,7 +6,7 @@ pub use m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
 #[cfg(target_arch = "aarch64")]
 pub mod m31_neon;
 #[cfg(target_arch = "aarch64")]
-pub(crate) use m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
+pub use m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
 
 use crate::{Field, FieldSerde};
 use std::{
@@ -89,6 +89,7 @@ impl Field for M31 {
 
     fn as_u32_unchecked(&self) -> u32 {
         self.v
+<<<<<<< HEAD
     }
 
     fn as_packed_slices(&self) -> &[Self::PackedBaseField] {
@@ -97,6 +98,8 @@ impl Field for M31 {
 
     fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
         unimplemented!("use as_u32_unchecked instead")
+=======
+>>>>>>> 22767dd6d9e6e4b55b1f9109b774bd4caa3f8004
     }
 }
 
