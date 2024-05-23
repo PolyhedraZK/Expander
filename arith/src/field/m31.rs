@@ -158,19 +158,20 @@ impl Add<&M31> for M31 {
     type Output = M31;
     #[inline(always)]
     fn add(self, rhs: &M31) -> Self::Output {
-        self + *rhs
+        let mut vv = self.v + rhs.v;
+        if vv >= M31_MOD as u32 {
+            vv -= M31_MOD as u32;
+        }
+        M31 { v: vv }
     }
 }
 
 impl Add for M31 {
     type Output = M31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn add(self, rhs: M31) -> Self::Output {
-        let mut vv = self.v + rhs.v;
-        if vv >= M31_MOD as u32 {
-            vv -= M31_MOD as u32;
-        }
-        M31 { v: vv }
+        self + &rhs
     }
 }
 
