@@ -1,20 +1,17 @@
 use std::vec;
 
-use arith::{Field, FieldSerde, VectorizedM31, M31, VECTORIZEDM31_INV_2};
+use arith::{Field, FieldSerde};
 
 use crate::{
     grind, Circuit, CircuitLayer, Config, Gate, Proof, RawCommitment, Transcript,
     _eq_evals_at_primitive,
 };
 
-// type FPrimitive = M31;
-// type F = VectorizedM31;
-
 fn degree_2_eval<F: Field>(p0: F, p1: F, p2: F, x: F::BaseField) -> F {
     let c0 = &p0;
     let c2 = F::INV_2 * (p2 - p1 - p1 + p0);
     let c1 = p1 - p0 - c2;
-    *c0 + (c2 .mul_base_elem(& x) + c1) .mul_base_elem(& x)
+    *c0 + (c2.mul_base_elem(&x) + c1).mul_base_elem(&x)
 }
 
 fn eval_sparse_circuit_connect_poly<F: Field, const INPUT_NUM: usize>(
@@ -48,7 +45,7 @@ fn eval_sparse_circuit_connect_poly<F: Field, const INPUT_NUM: usize>(
     v
 }
 
-fn sumcheck_verify_gkr_layer<F:Field+FieldSerde>(
+fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
     layer: &CircuitLayer<F>,
     rz0: &[Vec<F::BaseField>],
     rz1: &[Vec<F::BaseField>],
@@ -68,7 +65,7 @@ fn sumcheck_verify_gkr_layer<F:Field+FieldSerde>(
 ) {
     let var_num = layer.input_var_num;
     let mut sum = (0..config.get_num_repetitions())
-        .map(|i| claimed_v0[i] .mul_base_elem(&alpha) + claimed_v1[i].mul_base_elem(& beta))
+        .map(|i| claimed_v0[i].mul_base_elem(&alpha) + claimed_v1[i].mul_base_elem(&beta))
         .collect::<Vec<_>>();
     let mut rx = vec![vec![]; config.get_num_repetitions()];
     let mut ry = vec![vec![]; config.get_num_repetitions()];
@@ -109,26 +106,24 @@ fn sumcheck_verify_gkr_layer<F:Field+FieldSerde>(
             if i_var == var_num - 1 {
                 vx_claim[j] = proof.get_next_and_step();
                 sum[j] = sum[j]
-                    - vx_claim[j]
-                        .mul_base_elem(& eval_sparse_circuit_connect_poly(
-                            &layer.add,
-                            &rz0[j],
-                            &rz1[j],
-                            alpha,
-                            beta,
-                            &[rx[j].clone()],
-                        ));
+                    - vx_claim[j].mul_base_elem(&eval_sparse_circuit_connect_poly(
+                        &layer.add,
+                        &rz0[j],
+                        &rz1[j],
+                        alpha,
+                        beta,
+                        &[rx[j].clone()],
+                    ));
                 transcript.append_f(vx_claim[j]);
             }
         }
     }
-    let mut vy_claim:Vec<F> = vec![];
+    let mut vy_claim: Vec<F> = vec![];
     for j in 0..config.get_num_repetitions() {
         vy_claim.push(proof.get_next_and_step());
         verified &= sum[j]
             == vx_claim[j]
-                * vy_claim[j]
-                .mul_base_elem(& eval_sparse_circuit_connect_poly(
+                * vy_claim[j].mul_base_elem(&eval_sparse_circuit_connect_poly(
                     &layer.mul,
                     &rz0[j],
                     &rz1[j],
@@ -142,7 +137,7 @@ fn sumcheck_verify_gkr_layer<F:Field+FieldSerde>(
     (verified, rx, ry, vx_claim, vy_claim)
 }
 
-pub fn gkr_verify<F:Field+FieldSerde>(
+pub fn gkr_verify<F: Field + FieldSerde>(
     circuit: &Circuit<F>,
     claimed_v: &[F],
     transcript: &mut Transcript,
@@ -207,7 +202,12 @@ impl Verifier {
         }
     }
 
-    pub fn verify<F:Field+FieldSerde>(&self, circuit: &Circuit<F>, claimed_v: &[F], proof: &Proof) -> bool {
+    pub fn verify<F: Field + FieldSerde>(
+        &self,
+        circuit: &Circuit<F>,
+        claimed_v: &[F],
+        proof: &Proof,
+    ) -> bool {
         let poly_size = circuit.layers.first().unwrap().input_vals.evals.len();
         let commitment = RawCommitment::deserialize_from(&proof.bytes, poly_size);
 

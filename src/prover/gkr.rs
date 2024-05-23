@@ -1,22 +1,22 @@
-use arith::{Field, FieldSerde, MultiLinearPoly, VectorizedM31, M31};
+use arith::{Field, FieldSerde, MultiLinearPoly};
 
 use crate::{sumcheck_prove_gkr_layer, Circuit, Config, GkrScratchpad, Transcript};
-
-// type FPrimitive = M31;
-// type F = VectorizedM31;
 
 pub fn gkr_prove<F: Field + FieldSerde>(
     circuit: &Circuit<F>,
     sp: &mut [GkrScratchpad<F>],
     transcript: &mut Transcript,
     config: &Config,
-) -> (Vec<F>, Vec<Vec<F::BaseField>>, Vec<Vec<F::BaseField>>) where F::PackedBaseField: Field<BaseField = F::BaseField> {
+) -> (Vec<F>, Vec<Vec<F::BaseField>>, Vec<Vec<F::BaseField>>)
+where
+    F::PackedBaseField: Field<BaseField = F::BaseField>,
+{
     let layer_num = circuit.layers.len();
 
     let mut rz0 = vec![vec![]; config.get_num_repetitions()];
     let mut rz1 = vec![vec![]; config.get_num_repetitions()];
 
-    for i in 0..circuit.layers.last().unwrap().output_var_num {
+    for _i in 0..circuit.layers.last().unwrap().output_var_num {
         for j in 0..config.get_num_repetitions() {
             rz0[j].push(transcript.challenge_f::<F>());
             rz1[j].push(F::BaseField::zero());

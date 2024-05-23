@@ -1,10 +1,7 @@
 //! RAW commitment refers to the case where the prover does not commit to the witness at all.
 //! The prover will send the whole witnesses to the verifier.
 
-use arith::{Field, FieldSerde, MultiLinearPoly, VectorizedM31, M31};
-
-// type FPrimitive = M31;
-// type F = VectorizedM31;
+use arith::{Field, FieldSerde, MultiLinearPoly};
 
 pub struct RawOpening {}
 

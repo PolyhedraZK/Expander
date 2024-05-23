@@ -1,11 +1,8 @@
-use arith::{Field, FieldSerde, VectorizedM31, M31};
+use arith::{Field, FieldSerde};
 
 use crate::{CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, Transcript};
 
-// type FPrimitive = M31;
-// type F = VectorizedM31;
-
-pub fn sumcheck_prove_gkr_layer<F: Field+FieldSerde>(
+pub fn sumcheck_prove_gkr_layer<F: Field + FieldSerde>(
     layer: &CircuitLayer<F>,
     rz0: &[Vec<F::BaseField>],
     rz1: &[Vec<F::BaseField>],
@@ -14,7 +11,10 @@ pub fn sumcheck_prove_gkr_layer<F: Field+FieldSerde>(
     transcript: &mut Transcript,
     sp: &mut [GkrScratchpad<F>],
     config: &Config,
-) -> (Vec<Vec<F::BaseField>>, Vec<Vec<F::BaseField>>)where F::PackedBaseField: Field<BaseField = F::BaseField> {
+) -> (Vec<Vec<F::BaseField>>, Vec<Vec<F::BaseField>>)
+where
+    F::PackedBaseField: Field<BaseField = F::BaseField>,
+{
     let mut helpers = vec![];
     assert_eq!(config.get_num_repetitions(), sp.len());
     for (j, sp_) in sp.iter_mut().enumerate() {

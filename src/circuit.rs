@@ -1,8 +1,5 @@
-use arith::{Field, MultiLinearPoly, VectorizedM31, M31};
+use arith::{Field, MultiLinearPoly};
 use std::{cmp::max, fs};
-
-// type FPrimitive = M31;
-// type F = VectorizedM31;
 
 #[derive(Debug, Clone)]
 pub struct Gate<F: Field, const INPUT_NUM: usize> {
@@ -11,8 +8,8 @@ pub struct Gate<F: Field, const INPUT_NUM: usize> {
     pub coef: F::BaseField,
 }
 
-pub type GateMul<F: Field> = Gate<F, 2>;
-pub type GateAdd<F: Field> = Gate<F, 1>;
+pub type GateMul<F> = Gate<F, 2>;
+pub type GateAdd<F> = Gate<F, 1>;
 
 #[derive(Debug, Clone, Default)]
 pub struct CircuitLayer<F: Field> {
@@ -26,19 +23,19 @@ pub struct CircuitLayer<F: Field> {
     pub add: Vec<GateAdd<F>>,
 }
 
-impl<F:Field> CircuitLayer<F> {
+impl<F: Field> CircuitLayer<F> {
     pub fn evaluate(&self) -> Vec<F> {
         let mut res = vec![F::zero(); 1 << self.output_var_num];
         for gate in &self.mul {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let i1 = &self.input_vals.evals[gate.i_ids[1]];
             let o = &mut res[gate.o_id];
-            *o += (*i0 * i1).mul_base_elem( &gate.coef);
+            *o += (*i0 * i1).mul_base_elem(&gate.coef);
         }
         for gate in &self.add {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
-            *o += i0 .mul_base_elem( & gate.coef);
+            *o += i0.mul_base_elem(&gate.coef);
         }
         res
     }
@@ -104,7 +101,7 @@ impl<F: Field> Circuit<F> {
         circuit
     }
     fn compute_var_num(&mut self) {
-        for (i, layer) in self.layers.iter_mut().enumerate() {
+        for (_i, layer) in self.layers.iter_mut().enumerate() {
             let max_i = max(
                 layer
                     .mul

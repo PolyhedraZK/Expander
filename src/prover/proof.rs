@@ -1,6 +1,4 @@
-use arith::{Field, FieldSerde, VectorizedM31};
-
-// type F = VectorizedM31;
+use arith::{Field, FieldSerde};
 
 /// Proof. In the serialized mode.
 #[derive(Debug, Clone, Default)]
