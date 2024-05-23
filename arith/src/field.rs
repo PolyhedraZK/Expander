@@ -38,8 +38,11 @@ pub trait Field:
     /// name
     const NAME: &'static str;
 
+    /// size required to store the data
+    const SIZE: usize;
+
     /// type of the base field, can be itself
-    type BaseField: Field;
+    type BaseField: Field + FieldSerde;
 
     /// Zero element
     fn zero() -> Self;
@@ -58,4 +61,15 @@ pub trait Field:
 
     /// multiply the field element with its base field element
     fn mul_by_base(&self, rhs: &Self::BaseField) -> Self;
+
+    /// expose the element as u32. 
+    fn as_u32_unchecked(&self)-> u32;
+}
+
+pub trait FieldSerde {
+    /// serialize self into bytes
+    fn serialize_into(&self, buffer: &mut [u8]);
+
+    /// deserialize bytes into field
+    fn deserialize_from(buffer: &[u8]) -> Self;
 }

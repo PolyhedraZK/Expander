@@ -8,16 +8,16 @@ use std::{
 
 use crate::{Field, M31, M31_MOD};
 
-pub type PackedDataType = __m256i;
+type PackedDataType = __m256i;
 pub const M31_PACK_SIZE: usize = 8;
 pub const M31_VECTORIZE_SIZE: usize = 1;
 
-pub const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; 8]) };
-pub const PACKED_0: __m256i = unsafe { transmute([0; 8]) };
-pub const PACKED_MOD_EPI64: __m256i = unsafe { transmute([M31_MOD as u64; 4]) };
-pub const PACKED_MOD_SQUARE: __m256 = unsafe { transmute([(M31_MOD as u64 * M31_MOD as u64); 4]) };
-pub const PACKED_MOD_512: __m512i = unsafe { transmute([M31_MOD as i64; 8]) };
-pub const PACKED_INV_2: __m256i = unsafe { transmute([1 << 30; 8]) };
+const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; 8]) };
+const PACKED_0: __m256i = unsafe { transmute([0; 8]) };
+const PACKED_MOD_EPI64: __m256i = unsafe { transmute([M31_MOD as u64; 4]) };
+const _PACKED_MOD_SQUARE: __m256 = unsafe { transmute([(M31_MOD as u64 * M31_MOD as u64); 4]) };
+const _PACKED_MOD_512: __m512i = unsafe { transmute([M31_MOD as i64; 8]) };
+pub(crate) const PACKED_INV_2: __m256i = unsafe { transmute([1 << 30; 8]) };
 
 #[inline(always)]
 unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
@@ -51,9 +51,11 @@ impl PackedM31 {
 }
 
 impl Field for PackedM31 {
-    type BaseField = M31;
-
     const NAME: &'static str = "AVX Packed Mersenne 31";
+
+    const SIZE: usize = size_of::<PackedDataType>();
+
+    type BaseField = M31;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -121,6 +123,10 @@ impl Field for PackedM31 {
     #[inline(always)]
     fn mul_by_base(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
+    }
+
+    fn as_u32_unchecked(&self)-> u32{
+        unimplemented!("self is a vector, cannot convert to u32")
     }
 }
 

@@ -1,14 +1,16 @@
 #[cfg(target_arch = "x86_64")]
 pub mod m31_avx;
 #[cfg(target_arch = "x86_64")]
-pub use m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
+pub(crate) use m31_avx::PackedM31;
+#[cfg(target_arch = "x86_64")]
+pub use m31_avx::M31_VECTORIZE_SIZE;
 
 #[cfg(target_arch = "aarch64")]
 pub mod m31_neon;
 #[cfg(target_arch = "aarch64")]
-pub use m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
+pub(crate) use m31_neon::{PackedM31, M31_VECTORIZE_SIZE};
 
-use crate::Field;
+use crate::{Field, FieldSerde};
 use std::{
     iter::{Product, Sum},
     mem::size_of,
@@ -16,6 +18,7 @@ use std::{
 };
 
 pub const M31_MOD: i32 = 2147483647;
+
 fn mod_reduce_int(x: i64) -> i64 {
     (x & M31_MOD as i64) + (x >> 31)
 }
@@ -26,16 +29,18 @@ pub struct M31 {
 }
 
 impl M31 {
-    pub const SIZE: usize = size_of::<u32>();
     pub const INV_2: M31 = M31 { v: 1 << 30 };
+}
+
+impl FieldSerde for M31 {
     #[inline(always)]
-    pub fn serialize_into(&self, buffer: &mut [u8]) {
+    fn serialize_into(&self, buffer: &mut [u8]) {
         buffer[..M31::SIZE].copy_from_slice(unsafe {
             std::slice::from_raw_parts(&self.v as *const u32 as *const u8, M31::SIZE)
         });
     }
     #[inline(always)]
-    pub fn deserialize_from(buffer: &[u8]) -> Self {
+    fn deserialize_from(buffer: &[u8]) -> Self {
         let ptr = buffer.as_ptr() as *const u32;
 
         let mut v = unsafe { ptr.read_unaligned() } as i64;
@@ -49,6 +54,8 @@ impl M31 {
 
 impl Field for M31 {
     const NAME: &'static str = "Mersenne 31";
+
+    const SIZE: usize = size_of::<u32>();
 
     type BaseField = M31;
 
@@ -76,6 +83,11 @@ impl Field for M31 {
 
     fn mul_by_base(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
+    }
+
+
+    fn as_u32_unchecked(&self)-> u32{
+       self.v
     }
 }
 

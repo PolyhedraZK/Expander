@@ -8,13 +8,13 @@ use std::{
 
 use crate::{Field, M31, M31_MOD};
 
-pub type PackedDataType = uint32x4_t;
+type PackedDataType = uint32x4_t;
 pub const M31_PACK_SIZE: usize = 4;
 pub const M31_VECTORIZE_SIZE: usize = 2;
 
-pub const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD as u32; 4]) };
-pub const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
-pub const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
+const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD as u32; 4]) };
+const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
+pub(crate) const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
 
 use rand::Rng;
 
@@ -30,7 +30,6 @@ pub struct PackedM31 {
 }
 
 impl PackedM31 {
-    pub const SIZE: usize = size_of::<PackedDataType>();
     #[inline(always)]
     pub fn pack_full(x: M31) -> PackedM31 {
         PackedM31 {
@@ -40,9 +39,11 @@ impl PackedM31 {
 }
 
 impl Field for PackedM31 {
-    type BaseField = M31;
-
     const NAME: &'static str = "Neon Packed Mersenne 31";
+
+    const SIZE: usize = size_of::<PackedDataType>();
+
+    type BaseField = M31;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -103,6 +104,11 @@ impl Field for PackedM31 {
     #[inline(always)]
     fn mul_by_base(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
+    }
+
+
+    fn as_u32_unchecked(&self)-> u32{
+        unimplemented!("self is a vector, cannot convert to u32")
     }
 }
 

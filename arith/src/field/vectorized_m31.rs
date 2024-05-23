@@ -3,7 +3,7 @@ use super::m31_avx::PACKED_INV_2;
 #[cfg(target_arch = "aarch64")]
 use super::m31_neon::PACKED_INV_2;
 
-use crate::{Field, M31};
+use crate::{Field, FieldSerde, M31};
 use crate::{PackedM31, M31_VECTORIZE_SIZE};
 use std::{
     iter::{Product, Sum},
@@ -23,14 +23,12 @@ pub const VECTORIZEDM31_INV_2: VectorizedM31 = VectorizedM31 {
     v: [PackedM31 { v: PACKED_INV_2 }; M31_VECTORIZE_SIZE],
 };
 
-impl VectorizedM31 {
+impl FieldSerde for VectorizedM31 {
     // todo: turn serialization functions into a trait
     // perhaps derive from Serde or ark-serde
 
-    pub const SIZE: usize = size_of::<[PackedM31; M31_VECTORIZE_SIZE]>();
-
     #[inline(always)]
-    pub fn serialize_into(&self, buffer: &mut [u8]) {
+    fn serialize_into(&self, buffer: &mut [u8]) {
         buffer.copy_from_slice(unsafe {
             std::slice::from_raw_parts(
                 self.v.as_ptr() as *const u8,
@@ -40,7 +38,7 @@ impl VectorizedM31 {
     }
 
     #[inline(always)]
-    pub fn deserialize_from(buffer: &[u8]) -> Self {
+    fn deserialize_from(buffer: &[u8]) -> Self {
         let ptr = buffer.as_ptr() as *const [PackedM31; M31_VECTORIZE_SIZE];
         unsafe {
             VectorizedM31 {
@@ -52,6 +50,8 @@ impl VectorizedM31 {
 
 impl Field for VectorizedM31 {
     const NAME: &'static str = "Vectorized Mersenne 31";
+
+    const SIZE: usize = size_of::<[PackedM31; M31_VECTORIZE_SIZE]>();
 
     type BaseField = M31;
 
@@ -97,6 +97,10 @@ impl Field for VectorizedM31 {
 
     fn mul_by_base(&self, rhs: &Self::BaseField) -> Self {
         *self * rhs
+    }
+
+    fn as_u32_unchecked(&self)-> u32{
+        unimplemented!("self is a vector, cannot convert to u32")
     }
 }
 
