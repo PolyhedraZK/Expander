@@ -156,7 +156,7 @@ pub fn gkr_verify<F: Field + FieldSerde>(
     Vec<F>,
     Vec<F>,
 ) {
-    let timer = start_timer!(||"gkr verify");
+    let timer = start_timer!(|| "gkr verify");
     let layer_num = circuit.layers.len();
     let mut rz0 = vec![vec![]; config.get_num_repetitions()];
     let mut rz1 = vec![vec![]; config.get_num_repetitions()];
@@ -192,7 +192,11 @@ pub fn gkr_verify<F: Field + FieldSerde>(
         beta = transcript.challenge_f::<F>();
         log::trace!(
             "Layer {} verified with alpha={:?} and beta={:?}, claimed_v0={:?}, claimed_v1={:?}",
-            i, alpha, beta, claimed_v0, claimed_v1
+            i,
+            alpha,
+            beta,
+            claimed_v0,
+            claimed_v1
         );
     }
     end_timer!(timer);
