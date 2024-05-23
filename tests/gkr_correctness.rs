@@ -48,7 +48,7 @@ fn test_gkr_correctness() {
     // let mut circuit = gen_simple_circuit(); // for custom circuit
     println!("Circuit loaded.");
 
-    circuit.set_random_bool_input();
+    circuit.set_random_bool_input_for_test();
 
     // for fixed input
     // for i in 0..(1 << circuit.log_input_size()) {

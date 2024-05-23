@@ -18,7 +18,7 @@ fn main() {
         4
     } else {
         let v = args[1].parse::<usize>().unwrap();
-        assert_ne!(v, 0, "Argumemt #1 number_of_threads is incorrect.");
+        assert_ne!(v, 0, "Argument #1 number_of_threads is incorrect.");
         v
     };
     println!("Benchmarking with {} threads", num_thread);
@@ -40,7 +40,7 @@ fn main() {
     let circuits = (0..num_thread)
         .map(|_| {
             let mut c = circuit_template.clone();
-            c.set_random_bool_input();
+            c.set_random_bool_input_for_test();
             c.evaluate();
             c
         })

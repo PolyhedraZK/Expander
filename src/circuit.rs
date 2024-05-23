@@ -1,4 +1,5 @@
 use arith::{Field, MultiLinearPoly};
+use ark_std::test_rng;
 use std::{cmp::max, fs};
 
 #[derive(Debug, Clone)]
@@ -131,11 +132,16 @@ impl<F: Field> Circuit<F> {
     pub fn log_input_size(&self) -> usize {
         self.layers[0].input_var_num
     }
-    pub fn set_random_bool_input(&mut self) {
+
+    // Build a random mock circuit with binary inputs
+    pub fn set_random_bool_input_for_test(&mut self) {
+        let mut rng = test_rng();
         self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
-            .map(|_| F::random_bool())
+            .map(|_| F::random_bool_unsafe(&mut rng))
             .collect();
     }
+
+
     pub fn evaluate(&mut self) {
         for i in 0..self.layers.len() - 1 {
             self.layers[i + 1].input_vals.evals = self.layers[i].evaluate();
