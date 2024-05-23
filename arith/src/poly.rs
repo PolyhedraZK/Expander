@@ -1,7 +1,7 @@
 use crate::Field;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-/// Definition for an MLE
+/// Definition for an MLE, with an associated type F.
 pub struct MultiLinearPoly<F: Field> {
     /// Number of variables in an MLE
     pub var_num: usize,

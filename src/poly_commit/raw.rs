@@ -1,4 +1,4 @@
-use arith::{eval_multilinear, VectorizedM31, M31};
+use arith::{MultiLinearPoly, VectorizedM31, M31};
 
 type FPrimitive = M31;
 type F = VectorizedM31;
@@ -33,6 +33,6 @@ impl RawCommitment {
         RawCommitment { poly_vals }
     }
     pub fn verify(&self, x: &[FPrimitive], y: F) -> bool {
-        y == eval_multilinear(&self.poly_vals, x)
+        y == MultiLinearPoly::<F>::eval_multilinear(&self.poly_vals, x)
     }
 }

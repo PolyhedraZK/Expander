@@ -74,8 +74,8 @@ impl Field for M31 {
         todo!()
     }
 
-    fn mul_by_base(&self, _: &Self::BaseField) -> Self {
-        unimplemented!("use direct MUL instead!")
+    fn mul_by_base(&self, rhs: &Self::BaseField) -> Self {
+        *self * rhs
     }
 }
 

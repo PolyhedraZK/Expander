@@ -1,4 +1,4 @@
-use arith::{eval_multilinear, Field, VectorizedM31, M31};
+use arith::{Field, MultiLinearPoly, VectorizedM31, M31};
 
 use crate::{sumcheck_prove_gkr_layer, Circuit, Config, GkrScratchpad, Transcript};
 
@@ -27,7 +27,7 @@ pub fn gkr_prove(
     let mut claimed_v = vec![];
 
     for j in 0..config.get_num_repetitions() {
-        claimed_v.push(eval_multilinear(
+        claimed_v.push(MultiLinearPoly::<F>::eval_multilinear(
             &circuit.layers.last().unwrap().output_vals.evals,
             &rz0[j],
         ))
