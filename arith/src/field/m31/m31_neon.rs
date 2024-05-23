@@ -192,6 +192,7 @@ impl Mul<&PackedM31> for PackedM31 {
 impl Mul for PackedM31 {
     type Output = PackedM31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: PackedM31) -> Self::Output {
         self * &rhs
     }
@@ -249,6 +250,7 @@ impl Add<&PackedM31> for PackedM31 {
 impl Add for PackedM31 {
     type Output = PackedM31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn add(self, rhs: PackedM31) -> Self::Output {
         self + &rhs
     }
@@ -306,6 +308,7 @@ impl Sub<&PackedM31> for PackedM31 {
 impl Sub for PackedM31 {
     type Output = PackedM31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn sub(self, rhs: PackedM31) -> Self::Output {
         self - &rhs
     }
