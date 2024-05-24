@@ -30,13 +30,13 @@ wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
 Command template:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" cargo run -- <NUMBER_OF_THREAD>
+RUSTFLAGS="-C target-cpu=native" cargo run --release -- <NUMBER_OF_THREAD>
 ```
 
 Concretely if you are running on a 16 physical core CPU:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" cargo run -- 16
+RUSTFLAGS="-C target-cpu=native" cargo run --release -- 16
 ```
 
 ## Correctness test
