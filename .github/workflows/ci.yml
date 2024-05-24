@@ -48,13 +48,11 @@ jobs:
       - run: wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitMul.txt
       - run: wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitAdd.txt
       - run: wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
-      - run: cargo test -p arith
+      - run: cargo test -p arith --release
       - run: cargo test --no-default-features --release
       - run: cargo test --all-features --release
       - run: cargo run --release 4 2
 
-  # linux tests failed due to "signal: 4, SIGILL: illegal instruction"
-  # 
   # test-linux:
   #   name: Test-linux
   #   runs-on: ubuntu-latest
@@ -68,7 +66,7 @@ jobs:
   #     - run: wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitMul.txt
   #     - run: wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitAdd.txt
   #     - run: wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
-  #     - run: RUSTFLAGS="-C target-feature=+avx2" cargo test -p arith
-  #     - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --no-default-features --release
-  #     - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --all-features --release
+  #     - run: RUSTFLAGS="-C target-feature=+avx512f,+avx512vl" cargo test -p arith --release
+  #     - run: RUSTFLAGS="-C target-feature=+avx512f,+avx512vl" cargo test --no-default-features --release
+  #     - run: RUSTFLAGS="-C target-feature=+avx512f,+avx512vl" cargo test --all-features --release
   #     - run: cargo run --release 4
