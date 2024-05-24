@@ -1,21 +1,22 @@
 use std::{
     arch::aarch64::*,
     fmt::Debug,
+    iter::{Product, Sum},
     mem::{size_of, transmute},
-    ops::{Add, AddAssign, Mul, Sub},
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 use crate::{Field, M31, M31_MOD};
 
-pub type PackedDataType = uint32x4_t;
+type PackedDataType = uint32x4_t;
 pub const M31_PACK_SIZE: usize = 4;
 pub const M31_VECTORIZE_SIZE: usize = 2;
 
-pub const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD as u32; 4]) };
-pub const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
-pub const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
+const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD as u32; 4]) };
+const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
+pub(crate) const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
 
-use rand::Rng;
+use rand::{Rng, RngCore};
 
 #[inline(always)]
 fn reduce_sum(x: uint32x4_t) -> uint32x4_t {
@@ -29,7 +30,6 @@ pub struct PackedM31 {
 }
 
 impl PackedM31 {
-    pub const SIZE: usize = size_of::<PackedDataType>();
     #[inline(always)]
     pub fn pack_full(x: M31) -> PackedM31 {
         PackedM31 {
@@ -39,6 +39,14 @@ impl PackedM31 {
 }
 
 impl Field for PackedM31 {
+    const NAME: &'static str = "Neon Packed Mersenne 31";
+
+    const SIZE: usize = size_of::<PackedDataType>();
+
+    const INV_2: Self = Self { v: PACKED_INV_2 };
+
+    type BaseField = M31;
+
     #[inline(always)]
     fn zero() -> Self {
         PackedM31 {
@@ -54,9 +62,9 @@ impl Field for PackedM31 {
     }
 
     #[inline(always)]
-    fn random() -> Self {
+    fn random_unsafe(mut rng: impl RngCore) -> Self {
+        // Caution: this may not produce uniformly random elements
         unsafe {
-            let mut rng = rand::thread_rng();
             PackedM31 {
                 v: vld1q_u32(
                     [
@@ -72,9 +80,8 @@ impl Field for PackedM31 {
     }
 
     #[inline(always)]
-    fn random_bool() -> Self {
+    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
         unsafe {
-            let mut rng = rand::thread_rng();
             PackedM31 {
                 v: vld1q_u32(
                     [
@@ -89,9 +96,37 @@ impl Field for PackedM31 {
         }
     }
 
+    fn exp(&self) -> Self {
+        todo!()
+    }
+
     #[inline(always)]
-    fn inv(&self) -> Self {
+    fn inv(&self) -> Option<Self> {
         todo!();
+    }
+
+    #[inline(always)]
+    fn add_base_elem(&self, _rhs: &Self::BaseField) -> Self {
+        unimplemented!()
+    }
+
+    #[inline(always)]
+    fn add_assign_base_elem(&mut self, _rhs: &Self::BaseField) {
+        unimplemented!()
+    }
+
+    #[inline(always)]
+    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
+        *self * rhs
+    }
+
+    #[inline(always)]
+    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
+        *self = *self * rhs;
+    }
+
+    fn as_u32_unchecked(&self) -> u32 {
+        unimplemented!("self is a vector, cannot convert to u32")
     }
 }
 
@@ -159,6 +194,7 @@ impl Mul<&PackedM31> for PackedM31 {
 impl Mul for PackedM31 {
     type Output = PackedM31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: PackedM31) -> Self::Output {
         self * &rhs
     }
@@ -181,6 +217,26 @@ impl Mul<M31> for PackedM31 {
     }
 }
 
+impl MulAssign<&PackedM31> for PackedM31 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: &PackedM31) {
+        *self = *self * rhs;
+    }
+}
+
+impl MulAssign for PackedM31 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: Self) {
+        *self *= &rhs;
+    }
+}
+
+impl<T: ::core::borrow::Borrow<PackedM31>> Product<T> for PackedM31 {
+    fn product<I: Iterator<Item = T>>(iter: I) -> Self {
+        iter.fold(Self::one(), |acc, item| acc * item.borrow())
+    }
+}
+
 impl Add<&PackedM31> for PackedM31 {
     type Output = PackedM31;
     #[inline(always)]
@@ -196,6 +252,7 @@ impl Add<&PackedM31> for PackedM31 {
 impl Add for PackedM31 {
     type Output = PackedM31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn add(self, rhs: PackedM31) -> Self::Output {
         self + &rhs
     }
@@ -215,10 +272,24 @@ impl AddAssign for PackedM31 {
     }
 }
 
+impl<T: ::core::borrow::Borrow<PackedM31>> Sum<T> for PackedM31 {
+    fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |acc, item| acc + item.borrow())
+    }
+}
+
 impl From<u32> for PackedM31 {
     #[inline(always)]
     fn from(x: u32) -> Self {
         PackedM31::pack_full(M31::from(x))
+    }
+}
+
+impl Neg for PackedM31 {
+    type Output = PackedM31;
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        PackedM31 { v: PACKED_0 } - self
     }
 }
 
@@ -239,7 +310,22 @@ impl Sub<&PackedM31> for PackedM31 {
 impl Sub for PackedM31 {
     type Output = PackedM31;
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn sub(self, rhs: PackedM31) -> Self::Output {
         self - &rhs
+    }
+}
+
+impl SubAssign<&PackedM31> for PackedM31 {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: &PackedM31) {
+        *self = *self - rhs;
+    }
+}
+
+impl SubAssign for PackedM31 {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self -= &rhs;
     }
 }

@@ -1,13 +1,12 @@
+// TODO: move this to `bench` repo and refactor with criterion
 use std::{
     env,
     sync::{Arc, Mutex},
     thread,
 };
 
-use expander_rs::{
-    m31::{M31_PACK_SIZE, M31_VECTORIZE_SIZE},
-    Circuit, Config, Prover,
-};
+use arith::{VectorizedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
+use expander_rs::{Circuit, Config, Prover};
 
 const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
 const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
@@ -19,7 +18,7 @@ fn main() {
         4
     } else {
         let v = args[1].parse::<usize>().unwrap();
-        assert_ne!(v, 0, "Argumemt #1 number_of_threads is incorrect.");
+        assert_ne!(v, 0, "Argument #1 number_of_threads is incorrect.");
         v
     };
     println!("Benchmarking with {} threads", num_thread);
@@ -36,11 +35,12 @@ fn main() {
     let start_time = std::time::Instant::now();
 
     // load circuit
-    let circuit_template = Circuit::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
+    let circuit_template =
+        Circuit::<VectorizedM31>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
     let circuits = (0..num_thread)
         .map(|_| {
             let mut c = circuit_template.clone();
-            c.set_random_bool_input();
+            c.set_random_bool_input_for_test();
             c.evaluate();
             c
         })

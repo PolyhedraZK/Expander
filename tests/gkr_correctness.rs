@@ -1,6 +1,5 @@
-use expander_rs::{
-    Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, VectorizedM31, Verifier, M31,
-};
+use arith::{VectorizedM31, M31};
+use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier};
 use rand::Rng;
 use sha2::Digest;
 
@@ -11,7 +10,7 @@ type FPrimitive = M31;
 type F = VectorizedM31;
 
 #[allow(dead_code)]
-fn gen_simple_circuit() -> Circuit {
+fn gen_simple_circuit() -> Circuit<F> {
     let mut circuit = Circuit::default();
     let mut l0 = CircuitLayer::default();
     l0.input_var_num = 2;
@@ -44,12 +43,12 @@ fn gen_simple_circuit() -> Circuit {
 fn test_gkr_correctness() {
     let config = Config::new();
     println!("Config created.");
-    let mut circuit = Circuit::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
+    let mut circuit = Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
     // let mut circuit = gen_simple_circuit(); // for custom circuit
     println!("Circuit loaded.");
 
-    circuit.set_random_bool_input();
+    circuit.set_random_bool_input_for_test();
 
     // for fixed input
     // for i in 0..(1 << circuit.log_input_size()) {

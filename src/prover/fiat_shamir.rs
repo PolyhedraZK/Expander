@@ -1,4 +1,6 @@
-use crate::{Proof, SHA256hasher, VectorizedM31, M31};
+use arith::{Field, FieldSerde};
+
+use crate::{Proof, SHA256hasher};
 
 pub struct Transcript {
     pub hasher: SHA256hasher,
@@ -7,8 +9,11 @@ pub struct Transcript {
     pub proof: Proof,
 }
 
-type FPrimitive = M31;
-type F = VectorizedM31;
+impl Default for Transcript {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Transcript {
     pub const DIGEST_SIZE: usize = 32;
@@ -28,16 +33,17 @@ impl Transcript {
         }
     }
 
+    #[inline]
     pub fn new() -> Self {
         Transcript {
-            hasher: SHA256hasher::default(),
+            hasher: SHA256hasher,
             hash_start_idx: 0,
             digest: [0u8; Self::DIGEST_SIZE],
             proof: Proof::default(),
         }
     }
 
-    pub fn append_f(&mut self, f: F) {
+    pub fn append_f<F: Field + FieldSerde>(&mut self, f: F) {
         let cur_size = self.proof.bytes.len();
         self.proof.bytes.resize(cur_size + F::SIZE, 0);
         f.serialize_into(&mut self.proof.bytes[cur_size..]);
@@ -47,13 +53,13 @@ impl Transcript {
         self.proof.append_u8_slice(buffer, size);
     }
 
-    pub fn challenge_f(&mut self) -> FPrimitive {
+    pub fn challenge_f<F: Field>(&mut self) -> F::BaseField {
         self.hash_to_digest();
-        assert!(FPrimitive::SIZE <= Self::DIGEST_SIZE);
-        FPrimitive::deserialize_from(&self.digest)
+        assert!(F::BaseField::SIZE <= Self::DIGEST_SIZE);
+        F::BaseField::deserialize_from(&self.digest)
     }
 
-    pub fn challenge_fs(&mut self, size: usize) -> Vec<FPrimitive> {
-        (0..size).map(|_| self.challenge_f()).collect()
+    pub fn challenge_fs<F: Field>(&mut self, size: usize) -> Vec<F::BaseField> {
+        (0..size).map(|_| self.challenge_f::<F>()).collect()
     }
 }

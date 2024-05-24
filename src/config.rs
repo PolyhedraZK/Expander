@@ -1,4 +1,4 @@
-use crate::M31_PACK_SIZE;
+use arith::M31_PACK_SIZE;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolynomialCommitmentType {
@@ -37,6 +37,12 @@ pub struct Config {
     pub polynomial_commitment_type: PolynomialCommitmentType,
     pub field_type: FieldType, // LATER: consider infer this from trait
     pub fs_hash: FiatShamirHashType,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Config {
@@ -78,6 +84,8 @@ impl Config {
             fs_hash,
         }
     }
+
+    /// return the number of repetitions we will need to achieve security
     pub fn get_num_repetitions(&self) -> usize {
         self.num_repetitions
     }

@@ -1,29 +1,36 @@
-use crate::{
-    gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript, VectorizedM31, M31,
-};
+//! This module implements the whole GKR prover, including the IOP and PCS.
 
-type F = VectorizedM31;
+use arith::{Field, FieldSerde, VectorizedField};
+use ark_std::{end_timer, start_timer};
 
-pub fn grind(transcript: &mut Transcript, config: &Config) {
-    let initial_hash = transcript.challenge_fs(256 / config.field_size);
+use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
+
+pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
+    let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
+
+    let initial_hash = transcript.challenge_fs::<F>(256 / config.field_size);
     let mut hash_bytes = [0u8; 256 / 8];
     let mut offset = 0;
-    for i in 0..initial_hash.len() {
-        initial_hash[i].serialize_into(&mut hash_bytes[offset..]);
-        offset += (config.field_size + 7) / 8;
+    let step = (config.field_size + 7) / 8;
+
+    for h in initial_hash.iter() {
+        h.serialize_into(&mut hash_bytes[offset..]);
+        offset += step;
     }
+
     for _ in 0..(1 << config.grinding_bits) {
         transcript.hasher.hash_inplace(&mut hash_bytes, 256 / 8);
     }
     transcript.append_u8_slice(&hash_bytes, 256 / 8);
+    end_timer!(timer);
 }
 
-pub struct Prover {
+pub struct Prover<F: Field> {
     config: Config,
-    sp: Vec<GkrScratchpad>,
+    sp: Vec<GkrScratchpad<F>>,
 }
 
-impl Prover {
+impl<F: VectorizedField + FieldSerde> Prover<F> {
     pub fn new(config: &Config) -> Self {
         assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
@@ -37,7 +44,7 @@ impl Prover {
         }
     }
 
-    pub fn prepare_mem(&mut self, c: &Circuit) {
+    pub fn prepare_mem(&mut self, c: &Circuit<F>) {
         let max_num_input_var = c
             .layers
             .iter()
@@ -55,7 +62,11 @@ impl Prover {
             .collect();
     }
 
-    pub fn prove(&mut self, c: &Circuit) -> (Vec<F>, Proof) {
+    pub fn prove(&mut self, c: &Circuit<F>) -> (Vec<F>, Proof)
+    where
+        F::PackedBaseField: Field<BaseField = F::BaseField>,
+    {
+        let timer = start_timer!(|| "prove");
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
         // PC commit
@@ -68,7 +79,7 @@ impl Prover {
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(buffer, commitment.size());
 
-        grind(&mut transcript, &self.config);
+        grind::<F>(&mut transcript, &self.config);
 
         let (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
 
@@ -79,6 +90,8 @@ impl Prover {
             }
             _ => todo!(),
         }
+
+        end_timer!(timer);
         (claimed_v, transcript.proof)
     }
 }
