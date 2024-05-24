@@ -1,0 +1,74 @@
+name: expander-rs CI
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+env:
+  RUSTFLAGS: "-Dwarnings"
+  RUST_BACKTRACE: 1
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy
+
+  build:
+    name: Build
+    runs-on: macos-latest
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          all_but_latest: true
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --all-features --examples --benches --workspace
+      - run: cargo build --no-default-features --release
+      - run: cargo build --all-features --release
+
+  test-mac:
+    name: Test-mac
+    runs-on: macos-latest
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          all_but_latest: true
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitMul.txt
+      - run: wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitAdd.txt
+      - run: wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
+      - run: cargo test -p arith
+      - run: cargo test --no-default-features --release
+      - run: cargo test --all-features --release
+      - run: cargo run --release 4 2
+
+  # linux tests failed due to "signal: 4, SIGILL: illegal instruction"
+  # 
+  # test-linux:
+  #   name: Test-linux
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: styfle/cancel-workflow-action@0.11.0
+  #       with:
+  #         all_but_latest: true
+  #     - uses: actions/checkout@v3
+  #     - uses: dtolnay/rust-toolchain@stable
+  #     - uses: Swatinem/rust-cache@v2
+  #     - run: wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitMul.txt
+  #     - run: wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitAdd.txt
+  #     - run: wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
+  #     - run: RUSTFLAGS="-C target-feature=+avx2" cargo test -p arith
+  #     - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --no-default-features --release
+  #     - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --all-features --release
+  #     - run: cargo run --release 4

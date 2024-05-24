@@ -23,6 +23,15 @@ fn main() {
     };
     println!("Benchmarking with {} threads", num_thread);
 
+    let num_loops = if args.len() == 3 {
+        let v = args[2].parse::<usize>().unwrap();
+        assert_ne!(v, 0, "Argument #2 number_of_loops is incorrect.");
+        v
+    } else {
+        4
+    };
+    println!("Loop for {} times", num_loops);
+
     let local_config = Config::new();
     println!(
         "Default parallel repetition config {}",
@@ -71,7 +80,7 @@ fn main() {
         .collect::<Vec<_>>();
 
     println!("We are now calculating average throughput, please wait for 1 minutes");
-    loop {
+    for _ in 0..num_loops {
         thread::sleep(std::time::Duration::from_secs(60));
         let stop_time = std::time::Instant::now();
         let duration = stop_time.duration_since(start_time);
