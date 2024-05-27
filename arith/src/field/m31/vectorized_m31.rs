@@ -95,7 +95,7 @@ impl Field for VectorizedM31 {
         }
     }
 
-    fn exp(&self) -> Self {
+    fn exp(&self, _exponent: &Self) -> Self {
         todo!()
     }
 

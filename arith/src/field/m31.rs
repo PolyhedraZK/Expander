@@ -1,3 +1,6 @@
+mod vectorized_m31;
+pub use vectorized_m31::*;
+
 #[cfg(target_arch = "x86_64")]
 pub mod m31_avx;
 #[cfg(target_arch = "x86_64")]
@@ -77,7 +80,7 @@ impl Field for M31 {
         (rng.next_u32() & 1).into()
     }
 
-    fn exp(&self) -> Self {
+    fn exp(&self, _exponent: &Self) -> Self {
         todo!()
     }
 

@@ -1,7 +1,7 @@
 mod m31;
 pub use m31::*;
-mod vectorized_m31;
-pub use vectorized_m31::*;
+mod bn254;
+pub use bn254::*;
 
 use rand::RngCore;
 
@@ -87,7 +87,7 @@ pub trait Field:
     }
 
     /// Exp
-    fn exp(&self) -> Self;
+    fn exp(&self, exponent: &Self) -> Self;
 
     /// find the inverse of the element; return None if not exist
     fn inv(&self) -> Option<Self>;
