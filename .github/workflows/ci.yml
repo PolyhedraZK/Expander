@@ -53,20 +53,20 @@ jobs:
       - run: cargo test --all-features --release
       - run: cargo run --release 4 2
 
-  # test-linux:
-  #   name: Test-linux
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: styfle/cancel-workflow-action@0.11.0
-  #       with:
-  #         all_but_latest: true
-  #     - uses: actions/checkout@v3
-  #     - uses: dtolnay/rust-toolchain@stable
-  #     - uses: Swatinem/rust-cache@v2
-  #     - run: wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitMul.txt
-  #     - run: wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitAdd.txt
-  #     - run: wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
-  #     - run: RUSTFLAGS="-C target-feature=+avx512f,+avx512vl" cargo test -p arith --release
-  #     - run: RUSTFLAGS="-C target-feature=+avx512f,+avx512vl" cargo test --no-default-features --release
-  #     - run: RUSTFLAGS="-C target-feature=+avx512f,+avx512vl" cargo test --all-features --release
-  #     - run: cargo run --release 4
+  test-linux:
+    name: Test-linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          all_but_latest: true
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitMul.txt
+      - run: wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitAdd.txt
+      - run: wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo test -p arith --release
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --no-default-features --release
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --all-features --release
+      - run: cargo run --release 4
