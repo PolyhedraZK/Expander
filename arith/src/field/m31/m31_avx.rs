@@ -91,9 +91,8 @@ impl Field for PackedM31 {
                 rng.gen::<i32>(),
             );
             v = mod_reduce_epi32(v);
-            PackedM31 {
-                v: _mm256_mask_sub_epi32(v, _mm256_cmpge_epu32_mask(v, PACKED_MOD), v, PACKED_MOD),
-            }
+            v = mod_reduce_epi32(v);
+            PackedM31 { v }
         }
     }
 
@@ -258,15 +257,11 @@ impl Add<&PackedM31> for PackedM31 {
     #[inline(always)]
     fn add(self, rhs: &PackedM31) -> Self::Output {
         unsafe {
-            let result = _mm256_add_epi32(self.v, rhs.v);
-            PackedM31 {
-                v: _mm256_mask_sub_epi32(
-                    result,
-                    _mm256_cmpge_epu32_mask(result, PACKED_MOD),
-                    result,
-                    PACKED_MOD,
-                ),
-            }
+            let mut result = _mm256_add_epi32(self.v, rhs.v);
+            let subx = _mm256_sub_epi32(result, PACKED_MOD);
+            result = _mm256_min_epu32(result, subx);
+
+            PackedM31 { v: result }
         }
     }
 }
@@ -311,7 +306,13 @@ impl Neg for PackedM31 {
     type Output = PackedM31;
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        PackedM31 { v: PACKED_0 } - self
+        unsafe {
+            let subx = _mm256_sub_epi32(PACKED_MOD, self.v);
+            let zero_cmp = _mm256_cmpeq_epi32(self.v, PACKED_0);
+            PackedM31 {
+                v: _mm256_andnot_si256(zero_cmp, subx),
+            }
+        }
     }
 }
 
@@ -322,7 +323,8 @@ impl Sub<&PackedM31> for PackedM31 {
         PackedM31 {
             v: unsafe {
                 let t = _mm256_sub_epi32(self.v, rhs.v);
-                _mm256_mask_add_epi32(t, _mm256_cmpge_epu32_mask(t, PACKED_MOD), t, PACKED_MOD)
+                let subx = _mm256_add_epi32(t, PACKED_MOD);
+                _mm256_min_epu32(t, subx)
             },
         }
     }

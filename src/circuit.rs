@@ -141,7 +141,6 @@ impl<F: Field> Circuit<F> {
             .collect();
     }
 
-
     pub fn evaluate(&mut self) {
         for i in 0..self.layers.len() - 1 {
             self.layers[i + 1].input_vals.evals = self.layers[i].evaluate();
