@@ -306,7 +306,13 @@ impl Neg for PackedM31 {
     type Output = PackedM31;
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        PackedM31 { v: PACKED_0 } - self
+        unsafe {
+            let subx = _mm256_sub_epi32(PACKED_MOD, self.v);
+            let zero_cmp = _mm256_cmpeq_epi32(self.v, PACKED_0);
+            PackedM31 {
+                v: _mm256_andnot_si256(zero_cmp, subx),
+            }
+        }
     }
 }
 
