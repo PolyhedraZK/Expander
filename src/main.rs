@@ -32,7 +32,7 @@ fn main() {
     };
     println!("Loop for {} times", num_loops);
 
-    let local_config = Config::new();
+    let local_config = Config::m31_config();
     println!(
         "Default parallel repetition config {}",
         local_config.get_num_repetitions()

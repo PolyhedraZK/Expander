@@ -32,7 +32,7 @@ pub struct Prover<F: Field> {
 
 impl<F: VectorizedField + FieldSerde> Prover<F> {
     pub fn new(config: &Config) -> Self {
-        assert_eq!(config.field_type, crate::config::FieldType::M31);
+        // assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
         assert_eq!(
             config.polynomial_commitment_type,
@@ -81,6 +81,7 @@ impl<F: VectorizedField + FieldSerde> Prover<F> {
 
         grind::<F>(&mut transcript, &self.config);
 
+        println!("gkr prove");
         let (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
 
         // open

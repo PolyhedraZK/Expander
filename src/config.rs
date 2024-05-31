@@ -41,12 +41,12 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Self::new()
+        Self::m31_config()
     }
 }
 
 impl Config {
-    pub fn new() -> Self {
+    pub fn m31_config() -> Self {
         let mut vectorize_size = 0;
 
         let security_bits = 100;
@@ -84,6 +84,39 @@ impl Config {
             fs_hash,
         }
     }
+
+    pub fn bn254_config() -> Self {
+        let vectorize_size = 1;
+
+        let security_bits = 128;
+        let grinding_bits = 0;
+        let num_parallel = 16;
+
+        let field_size = 254;
+
+        let num_repetitions = 1;
+
+        let polynomial_commitment_type = PolynomialCommitmentType::Raw;
+        let field_type = FieldType::BN254;
+        let fs_hash = FiatShamirHashType::SHA256;
+
+        if polynomial_commitment_type == PolynomialCommitmentType::KZG {
+            assert_eq!(field_type, FieldType::BN254);
+        }
+
+        Config {
+            num_repetitions, // update later
+            vectorize_size,  // update later
+            field_size,      // update later
+            security_bits,
+            grinding_bits,
+            num_parallel,
+            polynomial_commitment_type,
+            field_type,
+            fs_hash,
+        }
+    }
+
 
     /// return the number of repetitions we will need to achieve security
     pub fn get_num_repetitions(&self) -> usize {

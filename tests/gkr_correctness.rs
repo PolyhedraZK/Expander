@@ -38,16 +38,17 @@ fn gen_simple_circuit<F: VectorizedField>() -> Circuit<F> {
 
 #[test]
 fn test_gkr_correctness() {
-    test_gkr_correctness_helper::<VectorizedM31>();
-    test_gkr_correctness_helper::<VectorizedFr>();
+    let config = Config::m31_config();
+    test_gkr_correctness_helper::<VectorizedM31>(&config);
+    let config = Config::bn254_config();
+    test_gkr_correctness_helper::<VectorizedFr>(&config);
 }
 
-fn test_gkr_correctness_helper<F>()
+fn test_gkr_correctness_helper<F>(config: &Config)
 where
     F: VectorizedField + FieldSerde,
     F::PackedBaseField: Field<BaseField = F::BaseField>,
 {
-    let config = Config::new();
     println!("Config created.");
     let mut circuit = Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
