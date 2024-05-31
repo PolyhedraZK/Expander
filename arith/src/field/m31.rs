@@ -1,4 +1,5 @@
 mod vectorized_m31;
+use ark_std::Zero;
 pub use vectorized_m31::*;
 
 #[cfg(target_arch = "x86_64")]
@@ -80,12 +81,23 @@ impl Field for M31 {
         (rng.next_u32() & 1).into()
     }
 
-    fn exp(&self, _exponent: &Self) -> Self {
-        todo!()
+    fn exp(&self, exponent: &Self) -> Self {
+        let mut e = exponent.v;
+        let mut res = Self::one();
+        let mut t = *self;
+        while !e.is_zero() {
+            let b = e & 1;
+            if b == 1 {
+                res *= self;
+            }
+            t = t * t;
+            e = e >> 1;
+        }
+        return res;
     }
 
     fn inv(&self) -> Option<Self> {
-        todo!()
+        self.try_inverse()
     }
 
     #[inline(always)]
@@ -259,5 +271,39 @@ impl From<u32> for M31 {
                 x % M31_MOD as u32
             },
         }
+    }
+}
+
+impl M31 {
+    fn exp_power_of_2(&self, power_log: usize) -> Self {
+        let mut res = self.clone();
+        for _ in 0..power_log {
+            res = res.square();
+        }
+        res
+    }
+
+    /// credit: https://github.com/Plonky3/Plonky3/blob/ed21a5e11cb20effadaab606598ccad4e70e1a3e/mersenne-31/src/mersenne_31.rs#L235
+
+    fn try_inverse(&self) -> Option<Self> {
+        if self.is_zero() {
+            return None;
+        }
+
+        // From Fermat's little theorem, in a prime field `F_p`, the inverse of `a` is `a^(p-2)`.
+        // Here p-2 = 2147483646 = 1111111111111111111111111111101_2.
+        // Uses 30 Squares + 7 Multiplications => 37 Operations total.
+
+        let p1 = *self;
+        let p101 = p1.exp_power_of_2(2) * p1;
+        let p1111 = p101.square() * p101;
+        let p11111111 = p1111.exp_power_of_2(4) * p1111;
+        let p111111110000 = p11111111.exp_power_of_2(4);
+        let p111111111111 = p111111110000 * p1111;
+        let p1111111111111111 = p111111110000.exp_power_of_2(4) * p11111111;
+        let p1111111111111111111111111111 = p1111111111111111.exp_power_of_2(12) * p111111111111;
+        let p1111111111111111111111111111101 =
+            p1111111111111111111111111111.exp_power_of_2(3) * p101;
+        Some(p1111111111111111111111111111101)
     }
 }

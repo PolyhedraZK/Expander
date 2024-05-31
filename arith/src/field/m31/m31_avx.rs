@@ -120,7 +120,7 @@ impl Field for PackedM31 {
 
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
-        todo!();
+        unimplemented!()
     }
 
     #[inline(always)]

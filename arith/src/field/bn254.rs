@@ -6,6 +6,8 @@ use rand::RngCore;
 
 use crate::{Field, FieldSerde};
 
+// mod vectorized_bn254;
+
 impl Field for Fr {
     /// name
     const NAME: &'static str = "bn254 scalar field";

@@ -96,11 +96,11 @@ impl Field for VectorizedM31 {
     }
 
     fn exp(&self, _exponent: &Self) -> Self {
-        todo!()
+        unimplemented!()
     }
 
     fn inv(&self) -> Option<Self> {
-        todo!()
+        unimplemented!()
     }
 
     #[inline(always)]

@@ -44,7 +44,7 @@ pub fn random_field_tests<F: Field>(type_name: String) {
     random_doubling_tests::<F, _>(&mut rng, type_name.clone());
     random_squaring_tests::<F, _>(&mut rng, type_name.clone());
     // random_inversion_tests::<F, _>(&mut rng, type_name.clone());
-    // random_expansion_tests::<F, _>(&mut rng, type_name);
+    random_expansion_tests::<F, _>(&mut rng, type_name);
 
     assert_eq!(F::zero().is_zero(), true);
     {
