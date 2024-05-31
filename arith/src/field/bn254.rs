@@ -1,12 +1,14 @@
 use std::mem::size_of;
 
-use halo2curves::bn256::Fr;
 use halo2curves::ff::Field as Halo2Field;
+use halo2curves::{bn256::Fr, ff::PrimeField};
 use rand::RngCore;
 
 use crate::{Field, FieldSerde};
 
-// mod vectorized_bn254;
+mod vectorized_bn254;
+
+pub use vectorized_bn254::VectorizedFr;
 
 impl Field for Fr {
     /// name
@@ -16,7 +18,7 @@ impl Field for Fr {
     const SIZE: usize = size_of::<Fr>();
 
     /// Inverse of 2
-    const INV_2: Self = todo!();
+    const INV_2: Self = Fr::TWO_INV;
 
     /// type of the base field, can be itself
     type BaseField = Self;
@@ -62,8 +64,8 @@ impl Field for Fr {
     }
 
     /// Exp
-    fn exp(&self, exponent: &Self) -> Self {
-        todo!()
+    fn exp(&self, _exponent: &Self) -> Self {
+        unimplemented!()
     }
 
     /// find the inverse of the element; return None if not exist
@@ -99,10 +101,10 @@ impl Field for Fr {
 
 impl FieldSerde for Fr {
     fn serialize_into(&self, buffer: &mut [u8]) {
-        todo!()
+        buffer.copy_from_slice(self.to_bytes().as_slice())
     }
 
     fn deserialize_from(buffer: &[u8]) -> Self {
-        todo!()
+        Fr::from_bytes(buffer[..Fr::SIZE].try_into().unwrap()).unwrap()
     }
 }

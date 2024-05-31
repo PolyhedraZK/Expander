@@ -91,9 +91,9 @@ impl Field for M31 {
                 res *= self;
             }
             t = t * t;
-            e = e >> 1;
+            e >>= 1;
         }
-        return res;
+        res
     }
 
     fn inv(&self) -> Option<Self> {
@@ -276,7 +276,7 @@ impl From<u32> for M31 {
 
 impl M31 {
     fn exp_power_of_2(&self, power_log: usize) -> Self {
-        let mut res = self.clone();
+        let mut res = *self;
         for _ in 0..power_log {
             res = res.square();
         }

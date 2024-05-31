@@ -1,10 +1,22 @@
-// FIXME
-#![allow(dead_code)]
-
 use ark_std::{end_timer, start_timer, test_rng};
-use rand::RngCore;
+use rand::{Rng, RngCore};
 
 use crate::{Field, FieldSerde, VectorizedField, M31_VECTORIZE_SIZE};
+
+pub(crate) fn test_basic_field_op<F: Field>() {
+    let mut rng = rand::thread_rng();
+
+    let f = F::random_unsafe(&mut rng);
+
+    let rhs = rng.gen::<u32>() % 100;
+
+    let prod_0 = f * F::from(rhs);
+    let mut prod_1 = F::zero();
+    for _ in 0..rhs {
+        prod_1 += f;
+    }
+    assert_eq!(prod_0, prod_1);
+}
 
 pub(crate) fn random_small_field_tests<F: Field>(type_name: String) {
     let mut rng = test_rng();

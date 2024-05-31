@@ -1,11 +1,8 @@
-use crate::{
-    Field, FieldSerde, PackedM31, VectorizedM31, M31, M31_VECTORIZE_SIZE, VECTORIZEDM31_INV_2,
-};
-use rand::prelude::*;
+use crate::{FieldSerde, PackedM31, VectorizedM31, M31, M31_VECTORIZE_SIZE, VECTORIZEDM31_INV_2};
 
 use super::field::{
     random_field_tests, random_inversion_tests, random_small_field_tests,
-    random_vectorized_field_tests,
+    random_vectorized_field_tests, test_basic_field_op,
 };
 
 #[test]
@@ -18,33 +15,6 @@ fn test_field() {
     random_small_field_tests::<VectorizedM31>("Vectorized M31".to_string());
 
     random_vectorized_field_tests::<VectorizedM31>("Vectorized M31".to_string());
-}
-
-#[cfg(target_arch = "x86_64")]
-#[test]
-fn test_mm256_const_init() {
-    use std::arch::x86_64::*;
-    use std::mem::transmute;
-
-    let x = unsafe { _mm256_set1_epi32(1) };
-    println!("{:?}", x);
-    pub const Y: __m256i = unsafe { transmute([1, 1, 1, 1, 1, 1, 1, 1]) };
-    println!("{:?}", Y);
-}
-
-fn test_basic_field_op<F: Field>() {
-    let mut rng = rand::thread_rng();
-
-    let f = F::random_unsafe(&mut rng);
-
-    let rhs = rng.gen::<u32>() % 100;
-
-    let prod_0 = f * F::from(rhs);
-    let mut prod_1 = F::zero();
-    for _ in 0..rhs {
-        prod_1 += f;
-    }
-    assert_eq!(prod_0, prod_1);
 }
 
 #[test]
