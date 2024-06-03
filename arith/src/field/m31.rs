@@ -10,7 +10,7 @@ pub use m31_avx::PackedM31;
 #[cfg(target_arch = "aarch64")]
 pub mod m31_neon;
 #[cfg(target_arch = "aarch64")]
-pub use m31_neon::{PackedM31, M31_PACK_SIZE};
+pub use m31_neon::PackedM31;
 use rand::RngCore;
 
 use crate::{Field, FieldSerde};
