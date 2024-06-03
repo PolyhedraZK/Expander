@@ -102,6 +102,8 @@ impl Field for VectorizedFr {
 }
 
 impl VectorizedField for VectorizedFr {
+    const VECTORIZE_SIZE: usize = 1;
+
     type PackedBaseField = Fr;
 
     #[inline(always)]

@@ -10,7 +10,7 @@ use crate::{Field, M31, M31_MOD};
 
 type PackedDataType = uint32x4_t;
 pub const M31_PACK_SIZE: usize = 4;
-pub const M31_VECTORIZE_SIZE: usize = 2;
+pub(super) const M31_VECTORIZE_SIZE: usize = 2;
 
 const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD as u32; 4]) };
 const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
@@ -127,6 +127,9 @@ impl Field for PackedM31 {
 
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
+    }
+    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
+        unimplemented!(" cannot convert 32 bytes into a vectorized M31")
     }
 }
 

@@ -1,7 +1,7 @@
 use ark_std::{end_timer, start_timer, test_rng};
 use rand::{Rng, RngCore};
 
-use crate::{Field, FieldSerde, VectorizedField, M31_VECTORIZE_SIZE};
+use crate::{Field, FieldSerde, VectorizedField};
 
 pub(crate) fn test_basic_field_op<F: Field>() {
     let mut rng = rand::thread_rng();
@@ -264,7 +264,7 @@ fn random_serdes_tests<F: VectorizedField + FieldSerde, R: RngCore>(
         // convert a into and from bytes
 
         let a = F::random_unsafe(&mut rng);
-        let mut buffer = vec![F::PackedBaseField::default(); M31_VECTORIZE_SIZE];
+        let mut buffer = vec![F::PackedBaseField::default(); F::VECTORIZE_SIZE];
         let buffer_slice: &mut [u8] = unsafe {
             std::slice::from_raw_parts_mut(
                 buffer.as_mut_ptr() as *mut u8,

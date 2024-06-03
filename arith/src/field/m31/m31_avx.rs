@@ -10,7 +10,7 @@ use crate::{Field, M31, M31_MOD};
 
 type PackedDataType = __m256i;
 pub const M31_PACK_SIZE: usize = 8;
-pub const M31_VECTORIZE_SIZE: usize = 1;
+pub(super) const M31_VECTORIZE_SIZE: usize = 1;
 
 const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; 8]) };
 const PACKED_0: __m256i = unsafe { transmute([0; 8]) };

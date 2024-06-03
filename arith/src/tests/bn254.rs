@@ -41,7 +41,6 @@ fn test_custom_serde_vectorize_bn254() {
         )
     };
     a.serialize_into(buffer_slice);
-    println!("{:?}", buffer_slice);
     let b = VectorizedFr::deserialize_from(&buffer_slice);
     assert_eq!(a, b);
 }

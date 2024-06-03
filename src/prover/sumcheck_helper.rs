@@ -1,4 +1,4 @@
-use arith::{Field, VectorizedField, M31_VECTORIZE_SIZE};
+use arith::{Field, VectorizedField};
 
 use crate::{CircuitLayer, GkrScratchpad};
 
@@ -89,12 +89,10 @@ impl SumcheckMultilinearProdHelper {
         let eval_size = 1 << (self.var_num - var_idx - 1);
         log::trace!("Eval size: {}", eval_size);
         for i in 0..eval_size {
-            println!("here here: {i}");
-
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 continue;
             }
-            for j in 0..M31_VECTORIZE_SIZE {
+            for j in 0..F::VECTORIZE_SIZE {
                 let f_v_0 = src_v[i * 2].as_packed_slices()[j];
                 let f_v_1 = src_v[i * 2 + 1].as_packed_slices()[j];
                 let hg_v_0 = bk_hg[i * 2].as_packed_slices()[j];
@@ -132,7 +130,7 @@ impl SumcheckMultilinearProdHelper {
         for i in 0..self.cur_eval_size >> 1 {
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 gate_exists[i] = false;
-                for j in 0..M31_VECTORIZE_SIZE {
+                for j in 0..F::VECTORIZE_SIZE {
                     if var_idx == 0 {
                         bk_f[i].mut_packed_slices()[j] = init_v[2 * i].as_packed_slices()[j]
                             + (init_v[2 * i + 1].as_packed_slices()[j]
@@ -148,7 +146,7 @@ impl SumcheckMultilinearProdHelper {
                 bk_hg[i] = F::zero();
             } else {
                 gate_exists[i] = true;
-                for j in 0..M31_VECTORIZE_SIZE {
+                for j in 0..F::VECTORIZE_SIZE {
                     if var_idx == 0 {
                         bk_f[i].mut_packed_slices()[j] = init_v[2 * i].as_packed_slices()[j]
                             + (init_v[2 * i + 1].as_packed_slices()[j]

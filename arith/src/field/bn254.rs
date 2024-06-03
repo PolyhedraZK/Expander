@@ -115,7 +115,6 @@ impl FieldSerde for Fr {
     }
 
     fn deserialize_from(buffer: &[u8]) -> Self {
-        println!("buffer_len: {}", buffer[..Fr::SIZE].len());
         Fr::from_bytes(buffer[..Fr::SIZE].try_into().unwrap()).unwrap()
     }
 }

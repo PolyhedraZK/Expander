@@ -81,9 +81,8 @@ impl<F: VectorizedField + FieldSerde> Prover<F> {
 
         grind::<F>(&mut transcript, &self.config);
 
-        println!("gkr prove");
         let (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
-        println!("gkr open");
+        
         // open
         match self.config.polynomial_commitment_type {
             crate::config::PolynomialCommitmentType::Raw => {

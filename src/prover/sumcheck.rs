@@ -19,7 +19,6 @@ where
     F: VectorizedField + FieldSerde,
     F::PackedBaseField: Field<BaseField = F::BaseField>,
 {
-    println!("sumcheck 1");
     let mut helpers = vec![];
     assert_eq!(config.get_num_repetitions(), sp.len());
     for (j, sp_) in sp.iter_mut().enumerate() {
@@ -28,7 +27,6 @@ where
         ));
     }
 
-    println!("sumcheck 2");
     for i_var in 0..layer.input_var_num * 2 {
         for (j, helper) in helpers
             .iter_mut()
@@ -43,17 +41,13 @@ where
                 helper.prepare_h_y_vals(vx_claim)
             }
 
-            println!("sumcheck 2.1");
             let evals = helper.poly_evals_at(i_var, 2);
 
-            println!("sumcheck 2.2");
             transcript.append_f(evals[0]);
             transcript.append_f(evals[1]);
             transcript.append_f(evals[2]);
-            println!("sumcheck 2.3");
+
             let r = transcript.challenge_f::<F>();
-            println!("sumcheck 2.4");
-            println!("i_var={} j={} evals: {:?} r: {:?}", i_var, j, evals, r);
             if j == 0 {
                 log::trace!("i_var={} j={} evals: {:?} r: {:?}", i_var, j, evals, r);
             }
@@ -65,7 +59,6 @@ where
         }
     }
 
-    println!("sumcheck 3");
     for (j, helper) in helpers
         .iter()
         .enumerate()
@@ -75,7 +68,6 @@ where
         transcript.append_f(helper.vy_claim());
     }
 
-    println!("sumcheck 4");
     let rz0s = (0..config.get_num_repetitions())
         .map(|j| helpers[j].rx.clone()) // FIXME: clone might be avoided
         .collect();
