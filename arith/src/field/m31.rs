@@ -44,6 +44,9 @@ impl FieldSerde for M31 {
             std::slice::from_raw_parts(&self.v as *const u32 as *const u8, M31::SIZE)
         });
     }
+
+    // FIXME: this deserialization function auto corrects invalid inputs.
+    // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
     fn deserialize_from(buffer: &[u8]) -> Self {
         let ptr = buffer.as_ptr() as *const u32;
@@ -123,6 +126,14 @@ impl Field for M31 {
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
         self.v
+    }
+
+    #[inline(always)]
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+        let ptr = bytes.as_ptr() as *const u32;
+        let mut v = unsafe { ptr.read_unaligned() } as i32;
+        v = mod_reduce_i32(v);
+        M31 { v: v as u32 }
     }
 }
 

@@ -1,4 +1,4 @@
-use arith::{Field, VectorizedField, M31_MOD, M31_VECTORIZE_SIZE};
+use arith::{Field, VectorizedField, M31_VECTORIZE_SIZE};
 
 use crate::{CircuitLayer, GkrScratchpad};
 
@@ -14,11 +14,12 @@ pub(crate) fn eq_evals_at_primitive<F: Field>(r: &[F], mul_factor: &F, eq_evals:
     let mut cur_eval_num = 1;
 
     for r_i in r.iter() {
-        assert!(
-            r_i.as_u32_unchecked() < M31_MOD as u32,
-            "r[i] = {}",
-            r_i.as_u32_unchecked()
-        );
+        // disabling this check: should only be used for M31
+        // assert!(
+        //     r_i.as_u32_unchecked() < M31_MOD as u32,
+        //     "r[i] = {}",
+        //     r_i.as_u32_unchecked()
+        // );
         // let eq_z_i_zero = _eq(&r[i], &FPrimitive::zero()); // FIXED: expanding this function might be better?
         let eq_z_i_zero = F::one() - r_i;
         // let eq_z_i_one = _eq(&r[i], &FPrimitive::one());
@@ -88,6 +89,8 @@ impl SumcheckMultilinearProdHelper {
         let eval_size = 1 << (self.var_num - var_idx - 1);
         log::trace!("Eval size: {}", eval_size);
         for i in 0..eval_size {
+            println!("here here: {i}");
+
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 continue;
             }

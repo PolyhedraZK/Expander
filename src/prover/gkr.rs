@@ -22,13 +22,15 @@ where
 
     let mut rz0 = vec![vec![]; config.get_num_repetitions()];
     let mut rz1 = vec![vec![]; config.get_num_repetitions()];
-
+    log::trace!("repetition: {}", config.get_num_repetitions());
     for _i in 0..circuit.layers.last().unwrap().output_var_num {
         for j in 0..config.get_num_repetitions() {
             rz0[j].push(transcript.challenge_f::<F>());
             rz1[j].push(F::BaseField::zero());
         }
     }
+
+    println!("here1");
     let mut alpha = F::BaseField::one();
     let mut beta = F::BaseField::zero();
     let mut claimed_v = vec![];
@@ -40,6 +42,7 @@ where
         ))
     }
 
+    println!("here2");
     for i in (0..layer_num).rev() {
         (rz0, rz1) = sumcheck_prove_gkr_layer(
             &circuit.layers[i],
@@ -54,7 +57,7 @@ where
         alpha = transcript.challenge_f::<F>();
         beta = transcript.challenge_f::<F>();
 
-        log::trace!("Layer {} proved with alpha={:?}, beta={:?}", i, alpha, beta);
+        println!("Layer {} proved with alpha={:?}, beta={:?}", i, alpha, beta);
         log::trace!("rz0.0: {:?}", rz0[0]);
         log::trace!("rz0.1: {:?}", rz0[1]);
         log::trace!("rz0.2: {:?}", rz0[2]);
@@ -62,6 +65,8 @@ where
         log::trace!("rz1.1: {:?}", rz1[1]);
         log::trace!("rz1.2: {:?}", rz1[2]);
     }
+
+    println!("here3");
     end_timer!(timer);
     (claimed_v, rz0, rz1)
 }

@@ -1,6 +1,6 @@
 use std::mem::size_of;
 
-use halo2curves::ff::Field as Halo2Field;
+use halo2curves::ff::{Field as Halo2Field, FromUniformBytes};
 use halo2curves::{bn256::Fr, ff::PrimeField};
 use rand::RngCore;
 
@@ -97,6 +97,16 @@ impl Field for Fr {
     fn as_u32_unchecked(&self) -> u32 {
         todo!()
     }
+
+    // TODO: better implementation
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+        <Fr as FromUniformBytes<64>>::from_uniform_bytes(
+            &[bytes.as_slice(), [0u8; 32].as_slice()]
+                .concat()
+                .try_into()
+                .unwrap(),
+        )
+    }
 }
 
 impl FieldSerde for Fr {
@@ -105,6 +115,7 @@ impl FieldSerde for Fr {
     }
 
     fn deserialize_from(buffer: &[u8]) -> Self {
+        println!("buffer_len: {}", buffer[..Fr::SIZE].len());
         Fr::from_bytes(buffer[..Fr::SIZE].try_into().unwrap()).unwrap()
     }
 }

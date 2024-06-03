@@ -55,8 +55,9 @@ impl Transcript {
 
     pub fn challenge_f<F: Field>(&mut self) -> F::BaseField {
         self.hash_to_digest();
+        println!("digest len: {}", self.digest.len());
         assert!(F::BaseField::SIZE <= Self::DIGEST_SIZE);
-        F::BaseField::deserialize_from(&self.digest)
+        F::BaseField::from_uniform_bytes(&self.digest)
     }
 
     pub fn challenge_fs<F: Field>(&mut self, size: usize) -> Vec<F::BaseField> {

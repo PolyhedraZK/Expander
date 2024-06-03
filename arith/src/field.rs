@@ -106,6 +106,9 @@ pub trait Field:
 
     /// expose the element as u32.
     fn as_u32_unchecked(&self) -> u32;
+
+    /// sample from a 32 bytes
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;
 }
 
 /// A vector of Field elements.

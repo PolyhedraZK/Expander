@@ -117,7 +117,7 @@ impl Config {
         }
     }
 
-
+    #[inline(always)]
     /// return the number of repetitions we will need to achieve security
     pub fn get_num_repetitions(&self) -> usize {
         self.num_repetitions
