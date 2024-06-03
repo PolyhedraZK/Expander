@@ -5,7 +5,7 @@ use std::{
     thread,
 };
 
-use arith::{VectorizedField, VectorizedM31, M31_PACK_SIZE};
+use arith::{VectorizedField, VectorizedM31};
 use expander_rs::{Circuit, Config, Prover};
 
 const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
@@ -71,8 +71,9 @@ fn main() {
                     // update cnt
                     let mut cnt = partial_proof_cnt.lock().unwrap();
                     const CIRCUIT_COPY_SIZE: usize = 8;
-                    let proof_cnt_this_round =
-                        CIRCUIT_COPY_SIZE * M31_PACK_SIZE * VectorizedM31::VECTORIZE_SIZE;
+                    let proof_cnt_this_round = CIRCUIT_COPY_SIZE
+                        * VectorizedM31::PACK_SIZE
+                        * VectorizedM31::VECTORIZE_SIZE;
                     *cnt += proof_cnt_this_round;
                 }
             })

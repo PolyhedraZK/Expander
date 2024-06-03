@@ -1,4 +1,4 @@
-use arith::M31_PACK_SIZE;
+use arith::{VectorizedField, VectorizedM31};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolynomialCommitmentType {
@@ -55,7 +55,7 @@ impl Config {
 
         let field_size = match FieldType::M31 {
             FieldType::M31 => {
-                vectorize_size = num_parallel / M31_PACK_SIZE;
+                vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
                 31
             }
             FieldType::BabyBear => 31,

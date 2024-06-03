@@ -5,7 +5,7 @@ pub use vectorized_m31::*;
 #[cfg(target_arch = "x86_64")]
 pub mod m31_avx;
 #[cfg(target_arch = "x86_64")]
-pub use m31_avx::{PackedM31, M31_PACK_SIZE};
+pub use m31_avx::PackedM31;
 
 #[cfg(target_arch = "aarch64")]
 pub mod m31_neon;

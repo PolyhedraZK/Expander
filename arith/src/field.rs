@@ -113,6 +113,10 @@ pub trait Field:
 
 /// A vector of Field elements.
 pub trait VectorizedField: Field {
+    /// pack size, size for each packed PackedBaseField
+    const PACK_SIZE: usize;
+
+    /// size of the vector
     const VECTORIZE_SIZE: usize;
 
     /// type of the packed based field, if applicable

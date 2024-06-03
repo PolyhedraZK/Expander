@@ -1,9 +1,9 @@
 use rand::RngCore;
 
 #[cfg(target_arch = "x86_64")]
-use super::m31_avx::{PackedM31, M31_VECTORIZE_SIZE, PACKED_INV_2};
+use super::m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE, PACKED_INV_2};
 #[cfg(target_arch = "aarch64")]
-use super::m31_avx::{PackedM31, M31_VECTORIZE_SIZE, PACKED_INV_2};
+use super::m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE, PACKED_INV_2};
 
 use crate::{Field, FieldSerde, VectorizedField, M31};
 use std::{
@@ -132,7 +132,10 @@ impl Field for VectorizedM31 {
 }
 
 impl VectorizedField for VectorizedM31 {
+    const PACK_SIZE: usize = M31_PACK_SIZE;
+
     const VECTORIZE_SIZE: usize = M31_VECTORIZE_SIZE;
+
     type PackedBaseField = PackedM31;
 
     #[inline(always)]

@@ -9,7 +9,7 @@ use std::{
 use crate::{Field, M31, M31_MOD};
 
 type PackedDataType = uint32x4_t;
-pub const M31_PACK_SIZE: usize = 4;
+pub(super) const M31_PACK_SIZE: usize = 4;
 pub(super) const M31_VECTORIZE_SIZE: usize = 2;
 
 const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD as u32; 4]) };
