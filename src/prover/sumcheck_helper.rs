@@ -5,8 +5,8 @@ use crate::{CircuitLayer, GkrScratchpad};
 #[inline(always)]
 fn _eq<F: Field>(x: &F, y: &F) -> F {
     // x * y + (1 - x) * (1 - y)
-    let xy = *x * y;
-    xy + xy - x - y + F::from(1)
+    let xy = *x * *y;
+    xy + xy - *x - *y + F::from_u32(1)
 }
 
 pub(crate) fn eq_evals_at_primitive<F: Field>(r: &[F], mul_factor: &F, eq_evals: &mut [F]) {
@@ -21,11 +21,11 @@ pub(crate) fn eq_evals_at_primitive<F: Field>(r: &[F], mul_factor: &F, eq_evals:
         //     r_i.as_u32_unchecked()
         // );
         // let eq_z_i_zero = _eq(&r[i], &FPrimitive::zero()); // FIXED: expanding this function might be better?
-        let eq_z_i_zero = F::one() - r_i;
+        let eq_z_i_zero = F::one() - *r_i;
         // let eq_z_i_one = _eq(&r[i], &FPrimitive::one());
         let eq_z_i_one = r_i;
         for j in 0..cur_eval_num {
-            eq_evals[j + cur_eval_num] = eq_evals[j] * eq_z_i_one;
+            eq_evals[j + cur_eval_num] = eq_evals[j] * *eq_z_i_one;
             eq_evals[j] *= eq_z_i_zero;
         }
         cur_eval_num <<= 1;
@@ -109,7 +109,7 @@ impl SumcheckMultilinearProdHelper {
                 p2.mut_packed_slices()[j] += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
             }
         }
-        p2 = p1 * F::from(6) + p0 * F::from(3) - p2 * F::from(2);
+        p2 = p1 * F::from_u32(6) + p0 * F::from_u32(3) - p2 * F::from_u32(2);
         [p0, p1, p2]
     }
 

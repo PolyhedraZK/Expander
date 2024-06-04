@@ -116,8 +116,10 @@ impl Field for Fr {
     }
 
     // TODO: better implementation
-    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
-        todo!()
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+        let mut tmp = bytes.clone();
+        tmp[31] &= 0b0000_0111;
+        Self::deserialize_from(&tmp)
     }
 }
 
@@ -128,7 +130,7 @@ impl FieldSerde for Fr {
 
     fn deserialize_from(buffer: &[u8]) -> Self {
         let mut repr = FFBn254FrRepr::default();
-        repr.as_mut().copy_from_slice(buffer);
+        repr.as_mut().copy_from_slice(buffer[..32].as_ref());
 
         Self {
             value: FFBn254Fr::from_repr(repr).unwrap(),

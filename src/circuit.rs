@@ -31,7 +31,7 @@ impl<F: Field> CircuitLayer<F> {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let i1 = &self.input_vals.evals[gate.i_ids[1]];
             let o = &mut res[gate.o_id];
-            *o += (*i0 * i1).mul_base_elem(&gate.coef);
+            *o += (*i0 * *i1).mul_base_elem(&gate.coef);
         }
         for gate in &self.add {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
@@ -74,7 +74,7 @@ impl<F: Field> Circuit<F> {
                 let gate = GateMul {
                     i_ids: [mul_input[i * 4 + 1], mul_input[i * 4 + 2]],
                     o_id: mul_input[i * 4 + 3],
-                    coef: F::BaseField::from(mul_input[i * 4 + 4] as u32),
+                    coef: F::BaseField::from_u32(mul_input[i * 4 + 4] as u32),
                 };
                 layer.mul.push(gate);
             }
@@ -93,7 +93,7 @@ impl<F: Field> Circuit<F> {
                 let gate = GateAdd {
                     i_ids: [add_input[i * 3 + 1]],
                     o_id: add_input[i * 3 + 2],
-                    coef: F::BaseField::from(add_input[i * 3 + 3] as u32),
+                    coef: F::BaseField::from_u32(add_input[i * 3 + 3] as u32),
                 };
                 layer.add.push(gate);
             }

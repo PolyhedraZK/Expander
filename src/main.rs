@@ -7,7 +7,9 @@ use std::{
 use arith::{Field, VectorizedField, VectorizedFr, VectorizedM31, M31};
 use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
-use halo2curves::bn256::Fr;
+// use halo2curves::bn256::Fr;
+
+use p3_bn254_fr::Bn254Fr as Fr;
 
 const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
 const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
@@ -105,7 +107,7 @@ fn run_keccak_bench_m31(args: &Args) {
 
 fn run_keccak_bench_fr(args: &Args) {
     let config = Config::bn254_config();
-    println!("benchmarking keccak over {}", Fr::NAME);
+    println!("benchmarking keccak over {}", <Fr as Field>::NAME);
     println!(
         "Default parallel repetition config {}",
         config.get_num_repetitions()
