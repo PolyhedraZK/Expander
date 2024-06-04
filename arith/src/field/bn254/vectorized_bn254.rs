@@ -102,7 +102,7 @@ impl Field for VectorizedFr {
 }
 
 impl VectorizedField for VectorizedFr {
-    const PACK_SIZE: usize = Fr::SIZE;
+    const PACK_SIZE: usize = 1;
 
     const VECTORIZE_SIZE: usize = 1;
 
