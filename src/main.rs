@@ -88,7 +88,7 @@ fn run_keccak_bench<F: Field>(args: &Args, config: &Config) {
         .collect::<Vec<_>>();
 
     println!("We are now calculating average throughput, please wait for 1 minutes");
-    for _ in 0..args.repeats {
+    for i in 0..args.repeats {
         thread::sleep(std::time::Duration::from_secs(60));
         let stop_time = std::time::Instant::now();
         let duration = stop_time.duration_since(start_time);
@@ -97,7 +97,7 @@ fn run_keccak_bench<F: Field>(args: &Args, config: &Config) {
             total_proof_cnt += *cnt.lock().unwrap();
         }
         let throughput = total_proof_cnt as f64 / duration.as_secs_f64();
-        println!("Throughput: {} keccaks/s", throughput.round());
+        println!("{}-bench: throughput: {} keccaks/s", i, throughput.round());
     }
 }
 
