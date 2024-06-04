@@ -32,7 +32,7 @@ pub struct Prover<F: Field> {
 
 impl<F: VectorizedField + FieldSerde> Prover<F> {
     pub fn new(config: &Config) -> Self {
-        assert_eq!(config.field_type, crate::config::FieldType::M31);
+        // assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
         assert_eq!(
             config.polynomial_commitment_type,

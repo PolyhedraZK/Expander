@@ -9,8 +9,8 @@ use std::{
 use crate::{Field, M31, M31_MOD};
 
 type PackedDataType = __m256i;
-pub const M31_PACK_SIZE: usize = 8;
-pub const M31_VECTORIZE_SIZE: usize = 1;
+pub(super) const M31_PACK_SIZE: usize = 8;
+pub(super) const M31_VECTORIZE_SIZE: usize = 1;
 
 const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; 8]) };
 const PACKED_0: __m256i = unsafe { transmute([0; 8]) };
@@ -114,13 +114,13 @@ impl Field for PackedM31 {
         }
     }
 
-    fn exp(&self) -> Self {
+    fn exp(&self, _exponent: &Self) -> Self {
         todo!()
     }
 
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
-        todo!();
+        unimplemented!()
     }
 
     #[inline(always)]
@@ -145,6 +145,9 @@ impl Field for PackedM31 {
 
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
+    }
+    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
+        unimplemented!(" cannot convert 32 bytes into a vectorized M31")
     }
 }
 

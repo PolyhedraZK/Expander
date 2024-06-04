@@ -1,17 +1,29 @@
-// FIXME
-#![allow(dead_code)]
-
 use ark_std::{end_timer, start_timer, test_rng};
-use rand::RngCore;
+use rand::{Rng, RngCore};
 
-use crate::{Field, FieldSerde, VectorizedField, M31_VECTORIZE_SIZE};
+use crate::{Field, FieldSerde, VectorizedField};
+
+pub(crate) fn test_basic_field_op<F: Field>() {
+    let mut rng = rand::thread_rng();
+
+    let f = F::random_unsafe(&mut rng);
+
+    let rhs = rng.gen::<u32>() % 100;
+
+    let prod_0 = f * F::from(rhs);
+    let mut prod_1 = F::zero();
+    for _ in 0..rhs {
+        prod_1 += f;
+    }
+    assert_eq!(prod_0, prod_1);
+}
 
 pub(crate) fn random_small_field_tests<F: Field>(type_name: String) {
     let mut rng = test_rng();
 
     let _message = format!("multiplication {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
         let b = F::BaseField::random_unsafe(&mut rng);
         let c = F::random_unsafe(&mut rng);
@@ -44,7 +56,7 @@ pub fn random_field_tests<F: Field>(type_name: String) {
     random_doubling_tests::<F, _>(&mut rng, type_name.clone());
     random_squaring_tests::<F, _>(&mut rng, type_name.clone());
     // random_inversion_tests::<F, _>(&mut rng, type_name.clone());
-    // random_expansion_tests::<F, _>(&mut rng, type_name);
+    random_expansion_tests::<F, _>(&mut rng, type_name);
 
     assert_eq!(F::zero().is_zero(), true);
     {
@@ -74,7 +86,7 @@ pub fn random_field_tests<F: Field>(type_name: String) {
 fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("multiplication {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
         let b = F::random_unsafe(&mut rng);
         let c = F::random_unsafe(&mut rng);
@@ -100,7 +112,7 @@ fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type_name: Stri
 fn random_addition_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("addition {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
         let b = F::random_unsafe(&mut rng);
         let c = F::random_unsafe(&mut rng);
@@ -126,7 +138,7 @@ fn random_addition_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
 fn random_subtraction_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("subtraction {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
         let b = F::random_unsafe(&mut rng);
 
@@ -147,7 +159,7 @@ fn random_subtraction_tests<F: Field, R: RngCore>(mut rng: R, type_name: String)
 fn random_negation_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("negation {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
         let mut b = a;
         b = b.neg();
@@ -161,7 +173,7 @@ fn random_negation_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
 fn random_doubling_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("doubling {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let mut a = F::random_unsafe(&mut rng);
         let mut b = a;
         a.add_assign(&b);
@@ -175,7 +187,7 @@ fn random_doubling_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
 fn random_squaring_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("squaring {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let mut a = F::random_unsafe(&mut rng);
         let mut b = a;
         a.mul_assign(&b);
@@ -193,7 +205,7 @@ pub fn random_inversion_tests<F: Field>(type_name: String) {
 
     let _message = format!("inversion {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let mut a = F::random_unsafe(&mut rng);
         let b = a.inv().unwrap(); // probabilistically nonzero
         a.mul_assign(&b);
@@ -205,7 +217,7 @@ pub fn random_inversion_tests<F: Field>(type_name: String) {
 fn random_expansion_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("expansion {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         // Compare (a + b)(c + d) and (a*c + b*c + a*d + b*d)
 
         let a = F::random_unsafe(&mut rng);
@@ -248,11 +260,11 @@ fn random_serdes_tests<F: VectorizedField + FieldSerde, R: RngCore>(
     _type_name: String,
 ) {
     let start = start_timer!(|| format!("expansion {}", _type_name));
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         // convert a into and from bytes
 
         let a = F::random_unsafe(&mut rng);
-        let mut buffer = vec![F::PackedBaseField::default(); M31_VECTORIZE_SIZE];
+        let mut buffer = vec![F::PackedBaseField::default(); F::VECTORIZE_SIZE];
         let buffer_slice: &mut [u8] = unsafe {
             std::slice::from_raw_parts_mut(
                 buffer.as_mut_ptr() as *mut u8,

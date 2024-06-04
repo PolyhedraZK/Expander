@@ -22,13 +22,14 @@ where
 
     let mut rz0 = vec![vec![]; config.get_num_repetitions()];
     let mut rz1 = vec![vec![]; config.get_num_repetitions()];
-
+    log::trace!("repetition: {}", config.get_num_repetitions());
     for _i in 0..circuit.layers.last().unwrap().output_var_num {
         for j in 0..config.get_num_repetitions() {
             rz0[j].push(transcript.challenge_f::<F>());
             rz1[j].push(F::BaseField::zero());
         }
     }
+
     let mut alpha = F::BaseField::one();
     let mut beta = F::BaseField::zero();
     let mut claimed_v = vec![];
@@ -62,6 +63,7 @@ where
         log::trace!("rz1.1: {:?}", rz1[1]);
         log::trace!("rz1.2: {:?}", rz1[2]);
     }
+
     end_timer!(timer);
     (claimed_v, rz0, rz1)
 }

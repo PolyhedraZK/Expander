@@ -1,12 +1,11 @@
 use rand::RngCore;
 
 #[cfg(target_arch = "x86_64")]
-use super::m31_avx::PACKED_INV_2;
+use super::m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE, PACKED_INV_2};
 #[cfg(target_arch = "aarch64")]
-use super::m31_neon::PACKED_INV_2;
+use super::m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE, PACKED_INV_2};
 
 use crate::{Field, FieldSerde, VectorizedField, M31};
-use crate::{PackedM31, M31_VECTORIZE_SIZE};
 use std::{
     iter::{Product, Sum},
     mem::size_of,
@@ -18,11 +17,11 @@ use std::{
 /// With NEON it stores two uint32x4_t elements.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct VectorizedM31 {
-    pub v: [PackedM31; M31_VECTORIZE_SIZE],
+    pub v: [PackedM31; VectorizedM31::VECTORIZE_SIZE],
 }
 
 pub const VECTORIZEDM31_INV_2: VectorizedM31 = VectorizedM31 {
-    v: [PackedM31 { v: PACKED_INV_2 }; M31_VECTORIZE_SIZE],
+    v: [PackedM31 { v: PACKED_INV_2 }; VectorizedM31::VECTORIZE_SIZE],
 };
 
 impl FieldSerde for VectorizedM31 {
@@ -34,14 +33,14 @@ impl FieldSerde for VectorizedM31 {
         buffer.copy_from_slice(unsafe {
             std::slice::from_raw_parts(
                 self.v.as_ptr() as *const u8,
-                M31_VECTORIZE_SIZE * PackedM31::SIZE,
+                Self::VECTORIZE_SIZE * PackedM31::SIZE,
             )
         });
     }
 
     #[inline(always)]
     fn deserialize_from(buffer: &[u8]) -> Self {
-        let ptr = buffer.as_ptr() as *const [PackedM31; M31_VECTORIZE_SIZE];
+        let ptr = buffer.as_ptr() as *const [PackedM31; Self::VECTORIZE_SIZE];
         unsafe {
             VectorizedM31 {
                 v: ptr.read_unaligned(),
@@ -53,7 +52,7 @@ impl FieldSerde for VectorizedM31 {
 impl Field for VectorizedM31 {
     const NAME: &'static str = "Vectorized Mersenne 31";
 
-    const SIZE: usize = size_of::<[PackedM31; M31_VECTORIZE_SIZE]>();
+    const SIZE: usize = size_of::<[PackedM31; Self::VECTORIZE_SIZE]>();
 
     const INV_2: Self = VECTORIZEDM31_INV_2;
 
@@ -62,21 +61,21 @@ impl Field for VectorizedM31 {
     #[inline(always)]
     fn zero() -> Self {
         VectorizedM31 {
-            v: [PackedM31::zero(); M31_VECTORIZE_SIZE],
+            v: [PackedM31::zero(); Self::VECTORIZE_SIZE],
         }
     }
 
     #[inline(always)]
     fn one() -> Self {
         VectorizedM31 {
-            v: [PackedM31::one(); M31_VECTORIZE_SIZE],
+            v: [PackedM31::one(); Self::VECTORIZE_SIZE],
         }
     }
 
     #[inline(always)]
     fn random_unsafe(mut rng: impl RngCore) -> Self {
         VectorizedM31 {
-            v: (0..M31_VECTORIZE_SIZE)
+            v: (0..Self::VECTORIZE_SIZE)
                 .map(|_| PackedM31::random_unsafe(&mut rng))
                 .collect::<Vec<_>>()
                 .try_into()
@@ -87,7 +86,7 @@ impl Field for VectorizedM31 {
     #[inline(always)]
     fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
         VectorizedM31 {
-            v: (0..M31_VECTORIZE_SIZE)
+            v: (0..Self::VECTORIZE_SIZE)
                 .map(|_| PackedM31::random_bool_unsafe(&mut rng))
                 .collect::<Vec<_>>()
                 .try_into()
@@ -95,12 +94,12 @@ impl Field for VectorizedM31 {
         }
     }
 
-    fn exp(&self) -> Self {
-        todo!()
+    fn exp(&self, _exponent: &Self) -> Self {
+        unimplemented!()
     }
 
     fn inv(&self) -> Option<Self> {
-        todo!()
+        unimplemented!()
     }
 
     #[inline(always)]
@@ -126,9 +125,17 @@ impl Field for VectorizedM31 {
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
+
+    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
+        unimplemented!(" cannot convert 32 bytes into a vectorized M31")
+    }
 }
 
 impl VectorizedField for VectorizedM31 {
+    const PACK_SIZE: usize = M31_PACK_SIZE;
+
+    const VECTORIZE_SIZE: usize = M31_VECTORIZE_SIZE;
+
     type PackedBaseField = PackedM31;
 
     #[inline(always)]
@@ -172,7 +179,7 @@ impl Mul<&M31> for VectorizedM31 {
     type Output = VectorizedM31;
     #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
-        let mut v = [PackedM31::zero(); M31_VECTORIZE_SIZE];
+        let mut v = [PackedM31::zero(); Self::VECTORIZE_SIZE];
         let packed_rhs = PackedM31::pack_full(*rhs);
         v.iter_mut()
             .zip(self.v.iter())
@@ -335,7 +342,7 @@ impl From<u32> for VectorizedM31 {
     #[inline(always)]
     fn from(x: u32) -> Self {
         VectorizedM31 {
-            v: [PackedM31::from(x); M31_VECTORIZE_SIZE],
+            v: [PackedM31::from(x); Self::VECTORIZE_SIZE],
         }
     }
 }

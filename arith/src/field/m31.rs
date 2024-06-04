@@ -1,12 +1,16 @@
+mod vectorized_m31;
+use ark_std::Zero;
+pub use vectorized_m31::*;
+
 #[cfg(target_arch = "x86_64")]
 pub mod m31_avx;
 #[cfg(target_arch = "x86_64")]
-pub use m31_avx::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
+pub use m31_avx::PackedM31;
 
 #[cfg(target_arch = "aarch64")]
 pub mod m31_neon;
 #[cfg(target_arch = "aarch64")]
-pub use m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE};
+pub use m31_neon::PackedM31;
 use rand::RngCore;
 
 use crate::{Field, FieldSerde};
@@ -40,6 +44,9 @@ impl FieldSerde for M31 {
             std::slice::from_raw_parts(&self.v as *const u32 as *const u8, M31::SIZE)
         });
     }
+
+    // FIXME: this deserialization function auto corrects invalid inputs.
+    // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
     fn deserialize_from(buffer: &[u8]) -> Self {
         let ptr = buffer.as_ptr() as *const u32;
@@ -77,12 +84,23 @@ impl Field for M31 {
         (rng.next_u32() & 1).into()
     }
 
-    fn exp(&self) -> Self {
-        todo!()
+    fn exp(&self, exponent: &Self) -> Self {
+        let mut e = exponent.v;
+        let mut res = Self::one();
+        let mut t = *self;
+        while !e.is_zero() {
+            let b = e & 1;
+            if b == 1 {
+                res *= self;
+            }
+            t = t * t;
+            e >>= 1;
+        }
+        res
     }
 
     fn inv(&self) -> Option<Self> {
-        todo!()
+        self.try_inverse()
     }
 
     #[inline(always)]
@@ -108,6 +126,14 @@ impl Field for M31 {
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
         self.v
+    }
+
+    #[inline(always)]
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+        let ptr = bytes.as_ptr() as *const u32;
+        let mut v = unsafe { ptr.read_unaligned() } as i32;
+        v = mod_reduce_i32(v);
+        M31 { v: v as u32 }
     }
 }
 
@@ -256,5 +282,39 @@ impl From<u32> for M31 {
                 x % M31_MOD as u32
             },
         }
+    }
+}
+
+impl M31 {
+    fn exp_power_of_2(&self, power_log: usize) -> Self {
+        let mut res = *self;
+        for _ in 0..power_log {
+            res = res.square();
+        }
+        res
+    }
+
+    /// credit: https://github.com/Plonky3/Plonky3/blob/ed21a5e11cb20effadaab606598ccad4e70e1a3e/mersenne-31/src/mersenne_31.rs#L235
+
+    fn try_inverse(&self) -> Option<Self> {
+        if self.is_zero() {
+            return None;
+        }
+
+        // From Fermat's little theorem, in a prime field `F_p`, the inverse of `a` is `a^(p-2)`.
+        // Here p-2 = 2147483646 = 1111111111111111111111111111101_2.
+        // Uses 30 Squares + 7 Multiplications => 37 Operations total.
+
+        let p1 = *self;
+        let p101 = p1.exp_power_of_2(2) * p1;
+        let p1111 = p101.square() * p101;
+        let p11111111 = p1111.exp_power_of_2(4) * p1111;
+        let p111111110000 = p11111111.exp_power_of_2(4);
+        let p111111111111 = p111111110000 * p1111;
+        let p1111111111111111 = p111111110000.exp_power_of_2(4) * p11111111;
+        let p1111111111111111111111111111 = p1111111111111111.exp_power_of_2(12) * p111111111111;
+        let p1111111111111111111111111111101 =
+            p1111111111111111111111111111.exp_power_of_2(3) * p101;
+        Some(p1111111111111111111111111111101)
     }
 }
