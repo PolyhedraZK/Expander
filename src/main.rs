@@ -40,6 +40,7 @@ fn main() {
 }
 
 fn run_keccak_bench<F: Field>(args: &Args, config: &Config) {
+    println!("benchmarking keccak over {}", F::NAME);
     println!(
         "Default parallel repetition config {}",
         config.get_num_repetitions()
