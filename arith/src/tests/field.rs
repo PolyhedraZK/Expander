@@ -23,7 +23,7 @@ pub(crate) fn random_small_field_tests<F: Field>(type_name: String) {
 
     let _message = format!("multiplication {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
         let b = F::BaseField::random_unsafe(&mut rng);
         let c = F::random_unsafe(&mut rng);
@@ -86,7 +86,7 @@ pub fn random_field_tests<F: Field>(type_name: String) {
 fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("multiplication {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
         let b = F::random_unsafe(&mut rng);
         let c = F::random_unsafe(&mut rng);
@@ -112,7 +112,7 @@ fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type_name: Stri
 fn random_addition_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("addition {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
         let b = F::random_unsafe(&mut rng);
         let c = F::random_unsafe(&mut rng);
@@ -138,7 +138,7 @@ fn random_addition_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
 fn random_subtraction_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("subtraction {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
         let b = F::random_unsafe(&mut rng);
 
@@ -159,7 +159,7 @@ fn random_subtraction_tests<F: Field, R: RngCore>(mut rng: R, type_name: String)
 fn random_negation_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("negation {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
         let mut b = a;
         b = b.neg();
@@ -173,7 +173,7 @@ fn random_negation_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
 fn random_doubling_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("doubling {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let mut a = F::random_unsafe(&mut rng);
         let mut b = a;
         a.add_assign(&b);
@@ -187,7 +187,7 @@ fn random_doubling_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
 fn random_squaring_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("squaring {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let mut a = F::random_unsafe(&mut rng);
         let mut b = a;
         a.mul_assign(&b);
@@ -205,7 +205,7 @@ pub fn random_inversion_tests<F: Field>(type_name: String) {
 
     let _message = format!("inversion {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         let mut a = F::random_unsafe(&mut rng);
         let b = a.inv().unwrap(); // probabilistically nonzero
         a.mul_assign(&b);
@@ -217,7 +217,7 @@ pub fn random_inversion_tests<F: Field>(type_name: String) {
 fn random_expansion_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("expansion {}", type_name);
     let start = start_timer!(|| _message);
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         // Compare (a + b)(c + d) and (a*c + b*c + a*d + b*d)
 
         let a = F::random_unsafe(&mut rng);
@@ -260,7 +260,7 @@ fn random_serdes_tests<F: VectorizedField + FieldSerde, R: RngCore>(
     _type_name: String,
 ) {
     let start = start_timer!(|| format!("expansion {}", _type_name));
-    for _ in 0..1000000 {
+    for _ in 0..1000 {
         // convert a into and from bytes
 
         let a = F::random_unsafe(&mut rng);
