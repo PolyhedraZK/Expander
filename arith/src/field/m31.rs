@@ -123,6 +123,10 @@ impl Field for M31 {
         *self *= rhs;
     }
 
+    fn from_u32(u: u32) -> Self {
+        u.into()
+    }
+
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
         self.v

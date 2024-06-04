@@ -4,7 +4,9 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use halo2curves::bn256::Fr;
+// use halo2curves::bn256::Fr;
+
+use p3_bn254_fr::Bn254Fr as Fr;
 use rand::RngCore;
 
 use crate::{Field, FieldSerde, VectorizedField};
@@ -93,6 +95,12 @@ impl Field for VectorizedFr {
         *self = *self * rhs;
     }
 
+    fn from_u32(v: u32) -> Self {
+        Self {
+            v: [Fr::from_u32(v); 1],
+        }
+    }
+
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
@@ -128,7 +136,7 @@ impl Mul<&VectorizedFr> for VectorizedFr {
                 .v
                 .iter()
                 .zip(rhs.v.iter())
-                .map(|(a, b)| *a * b)
+                .map(|(a, b)| *a * *b)
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
@@ -150,7 +158,7 @@ impl Mul<&Fr> for VectorizedFr {
     #[inline(always)]
     fn mul(self, rhs: &Fr) -> Self::Output {
         VectorizedFr {
-            v: [self.v[0] * rhs],
+            v: [self.v[0] * *rhs],
         }
     }
 }
@@ -193,7 +201,7 @@ impl Add<&VectorizedFr> for VectorizedFr {
                 .v
                 .iter()
                 .zip(rhs.v.iter())
-                .map(|(a, b)| *a + b)
+                .map(|(a, b)| *a + *b)
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
@@ -216,7 +224,7 @@ impl AddAssign<&VectorizedFr> for VectorizedFr {
         self.v
             .iter_mut()
             .zip(rhs.v.iter())
-            .for_each(|(a, b)| *a += b);
+            .for_each(|(a, b)| *a += *b);
     }
 }
 
@@ -236,7 +244,7 @@ impl<T: ::core::borrow::Borrow<VectorizedFr>> Sum<T> for VectorizedFr {
 impl AddAssign<&Fr> for VectorizedFr {
     #[inline(always)]
     fn add_assign(&mut self, rhs: &Fr) {
-        self.v[0] += rhs;
+        self.v[0] += *rhs;
     }
 }
 
@@ -264,7 +272,7 @@ impl Sub<&VectorizedFr> for VectorizedFr {
                 .v
                 .iter()
                 .zip(rhs.v.iter())
-                .map(|(a, b)| *a - b)
+                .map(|(a, b)| *a - *b)
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
@@ -299,7 +307,7 @@ impl From<u32> for VectorizedFr {
     #[inline(always)]
     fn from(x: u32) -> Self {
         VectorizedFr {
-            v: [Fr::from(x); 1],
+            v: [Fr::from_u32(x); 1],
         }
     }
 }

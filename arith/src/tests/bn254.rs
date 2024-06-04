@@ -1,5 +1,6 @@
 use crate::{FieldSerde, VectorizedFr};
-use halo2curves::bn256::Fr;
+// use halo2curves::bn256::Fr;
+use p3_bn254_fr::Bn254Fr as Fr;
 
 use super::field::{
     random_field_tests, random_inversion_tests, random_small_field_tests,

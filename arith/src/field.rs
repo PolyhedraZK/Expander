@@ -18,24 +18,24 @@ pub trait Field:
     + Debug
     + Default
     + PartialEq
-    + From<u32>
+    // + From<u32>
     + Neg<Output = Self>
     + Add<Output = Self>
     + Sub<Output = Self>
     + Mul<Output = Self>
     + Sum
     + Product
-    + for<'a> Add<&'a Self, Output = Self>
-    + for<'a> Sub<&'a Self, Output = Self>
-    + for<'a> Mul<&'a Self, Output = Self>
-    + for<'a> Sum<&'a Self>
-    + for<'a> Product<&'a Self>
+    // + for<'a> Add<&'a Self, Output = Self>
+    // + for<'a> Sub<&'a Self, Output = Self>
+    // + for<'a> Mul<&'a Self, Output = Self>
+    // + for<'a> Sum<&'a Self>
+    // + for<'a> Product<&'a Self>
     + AddAssign
     + SubAssign
     + MulAssign
-    + for<'a> AddAssign<&'a Self>
-    + for<'a> SubAssign<&'a Self>
-    + for<'a> MulAssign<&'a Self>
+    // + for<'a> AddAssign<&'a Self>
+    // + for<'a> SubAssign<&'a Self>
+    // + for<'a> MulAssign<&'a Self>
 {
     /// name
     const NAME: &'static str;
@@ -106,6 +106,8 @@ pub trait Field:
 
     /// expose the element as u32.
     fn as_u32_unchecked(&self) -> u32;
+
+    fn from_u32(value: u32) -> Self;
 
     /// sample from a 32 bytes
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;

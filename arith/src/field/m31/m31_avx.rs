@@ -146,6 +146,11 @@ impl Field for PackedM31 {
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
+
+    fn from_u32(value: u32) -> Self {
+        value.into()
+    }
+
     fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
         unimplemented!(" cannot convert 32 bytes into a vectorized M31")
     }
