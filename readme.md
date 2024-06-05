@@ -36,7 +36,7 @@ RUSTFLAGS="-C target-cpu=native" RUSTFLAGS="-C target-feature=+avx2" cargo run -
 Concretely if you are running on a 16 physical core CPU for Bn256 scalar field:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" cargo run cargo run --release -- -f 254 -t 16
+RUSTFLAGS="-C target-cpu=native" cargo run --release -- -f 254 -t 16
 ```
 
 ## Correctness test
