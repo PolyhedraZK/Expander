@@ -48,6 +48,22 @@ To check the correctness, run the follow standard Rust test command:
 RUSTFLAGS="-C target-cpu=native" cargo test --release -- --nocapture
 ```
 
+## CLI
+
+Usage:
+
+```sh
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- prove <input:circuit_file> <input:witness_file> <output:proof>
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- verify <input:circuit_file> <input:witness_file> <input:proof>
+```
+
+Example:
+
+```sh
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- prove ./data/compiler_out/circuit.txt ./data/compiler_out/witness.txt ./data/compiler_out/out.bin
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- verify ./data/compiler_out/circuit.txt ./data/compiler_out/witness.txt ./data/compiler_out/out.bin
+```
+
 ## How to contribute?
 
 Thank you for your interest in contributing to our project! We seek contributors with a robust background in cryptography and programming, aiming to improve and expand the capabilities of our proof generation system.

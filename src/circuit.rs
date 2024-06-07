@@ -2,6 +2,8 @@ use arith::{Field, MultiLinearPoly};
 use ark_std::test_rng;
 use std::{cmp::max, collections::HashMap, fs};
 
+use crate::Transcript;
+
 #[derive(Debug, Clone)]
 pub struct Gate<F: Field, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
@@ -320,10 +322,11 @@ impl<F: Field> Segment<F> {
         let rand_coef_idx_num =
             u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
         *cur += 8;
+        let mut t = Transcript::new(); // FIXME LATER: use an empty transcript to align the randomness
         for _ in 0..rand_coef_idx_num {
             let idx = u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
             *cur += 8;
-            let rand_coef: <F as Field>::BaseField = F::BaseField::random_unsafe(&mut test_rng());
+            let rand_coef = t.challenge_f::<F>();
             if idx < ret.gate_muls.len() {
                 ret.gate_muls[idx].coef = rand_coef;
             } else if idx < ret.gate_muls.len() + ret.gate_adds.len() {

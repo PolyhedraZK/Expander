@@ -1,9 +1,12 @@
+use std::fs;
+
 use arith::{Field, VectorizedM31};
 use expander_rs::{Circuit, Config, Prover, Verifier};
 use rand::Rng;
 
 const FILENAME_CIRCUIT: &str = "data/compiler_out/circuit.txt";
 const FILENAME_WITNESS: &str = "data/compiler_out/witness.txt";
+const FILENAME_PROOF: &str = "data/compiler_out/proof.bin";
 
 type F = VectorizedM31;
 
@@ -26,6 +29,8 @@ fn test_compiler_format_integration() {
     prover.prepare_mem(&circuit);
     let (claimed_v, proof) = prover.prove(&circuit);
     println!("Proof generated. Size: {} bytes", proof.bytes.len());
+    // write proof to file
+    fs::write(FILENAME_PROOF, &proof.bytes).expect("Unable to write proof to file.");
 
     let verifier = Verifier::new(&config);
     println!("Verifier created.");
