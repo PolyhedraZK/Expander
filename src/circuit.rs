@@ -201,8 +201,8 @@ pub struct Segment<F: Field> {
 fn read_f_u32_val(file_bytes: &[u8]) -> u32 {
     // hard-coded to read 32 bytes for now
     let val: [u8; 32] = file_bytes[0..32].try_into().unwrap();
-    for i in 4..32 {
-        assert_eq!(val[i], 0, "non-zero byte found in witness at {}'th byte", i);
+    for (i, v) in val.iter().enumerate().skip(4).take(28) {
+        assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
     }
     u32::from_le_bytes(val[..4].try_into().unwrap())
 }
@@ -352,9 +352,7 @@ impl<F: Field> Segment<F> {
         for (child_seg_id, child_allocs) in &self.child_segs {
             let leaves = rc.segments[*child_seg_id].scan_leaf_segments(rc, *child_seg_id);
             for (leaf_seg_id, leaf_allocs) in leaves {
-                if !ret.contains_key(&leaf_seg_id) {
-                    ret.insert(leaf_seg_id, Vec::new());
-                }
+                ret.entry(leaf_seg_id).or_insert_with(Vec::new);
                 for child_alloc in child_allocs {
                     for leaf_alloc in &leaf_allocs {
                         ret.get_mut(&leaf_seg_id).unwrap().push(Allocation {
