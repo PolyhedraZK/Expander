@@ -14,8 +14,10 @@ pub struct BiKZGSRS<E: Engine> {
     pub powers_of_g: Vec<E::G1Affine>,
     /// The generator of G2.
     pub h: E::G2Affine,
-    /// \beta times the above generator of G2.
-    pub beta_h: E::G2Affine,
+    /// tau_0 times the above generator of G2.
+    pub tau_0_h: E::G2Affine,
+    /// tau_1 times the above generator of G2.
+    pub tau_1_h: E::G2Affine,
 }
 
 /// `BiKZGProverParam` is used to generate a proof
@@ -33,8 +35,10 @@ pub struct BiKZGVerifierParam<E: Engine> {
     pub g: E::G1Affine,
     /// The generator of G2.
     pub h: E::G2Affine,
-    /// \beta times the above generator of G2.
-    pub beta_h: E::G2Affine,
+    /// tau_0 times the above generator of G2.
+    pub tau_0_h: E::G2Affine,
+    /// tau_1 times the above generator of G2.
+    pub tau_1_h: E::G2Affine,
 }
 
 /// Commitment Bi-KZG polynomial commitment scheme.

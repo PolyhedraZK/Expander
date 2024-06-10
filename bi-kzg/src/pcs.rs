@@ -1,7 +1,7 @@
 use std::{borrow::Borrow, fmt::Debug, hash::Hash};
 
 use halo2curves::{ff::Field, pairing::Engine, serde::SerdeObject};
-use rand::Rng;
+use rand::{Rng, RngCore};
 
 /// This trait defines APIs for polynomial commitment schemes.
 /// Note that for our usage of PCS, we do not require the hiding property.
@@ -35,23 +35,23 @@ pub trait PolynomialCommitmentScheme {
     ///
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    fn gen_srs_for_testing<R: Rng>(rng: &mut R, supported_size: usize) -> Self::SRS;
+    fn gen_srs_for_testing(rng: impl RngCore, supported_n: usize, supported_m: usize) -> Self::SRS;
 
-    /// Trim the universal parameters to specialize the public parameters.
-    /// Input both `supported_degree` for univariate and
-    /// `supported_num_vars` for multilinear.
-    /// ## Note on function signature
-    /// Usually, data structure like SRS and ProverParam are huge and users
-    /// might wish to keep them in heap using different kinds of smart pointers
-    /// (instead of only in stack) therefore our `impl Borrow<_>` interface
-    /// allows for passing in any pointer type, e.g.: `trim(srs: &Self::SRS,
-    /// ..)` or `trim(srs: Box<Self::SRS>, ..)` or `trim(srs: Arc<Self::SRS>,
-    /// ..)` etc.
-    fn trim(
-        srs: impl Borrow<Self::SRS>,
-        supported_degree: Option<usize>,
-        supported_num_vars: Option<usize>,
-    ) -> (Self::ProverParam, Self::VerifierParam);
+    // /// Trim the universal parameters to specialize the public parameters.
+    // /// Input both `supported_degree` for univariate and
+    // /// `supported_num_vars` for multilinear.
+    // /// ## Note on function signature
+    // /// Usually, data structure like SRS and ProverParam are huge and users
+    // /// might wish to keep them in heap using different kinds of smart pointers
+    // /// (instead of only in stack) therefore our `impl Borrow<_>` interface
+    // /// allows for passing in any pointer type, e.g.: `trim(srs: &Self::SRS,
+    // /// ..)` or `trim(srs: Box<Self::SRS>, ..)` or `trim(srs: Arc<Self::SRS>,
+    // /// ..)` etc.
+    // fn trim(
+    //     srs: impl Borrow<Self::SRS>,
+    //     supported_degree: Option<usize>,
+    //     supported_num_vars: Option<usize>,
+    // ) -> (Self::ProverParam, Self::VerifierParam);
 
     /// Generate a commitment for a polynomial
     /// ## Note on function signature
