@@ -1,13 +1,12 @@
 [package]
-name = "arith"
+name = "bi-kzg"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 ark-std.workspace = true
+clap.workspace = true
 halo2curves.workspace = true
 log.workspace = true
 rand.workspace = true
 sha2.workspace = true
-
-[features]
