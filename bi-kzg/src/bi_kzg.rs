@@ -9,7 +9,7 @@ use halo2curves::group::Curve;
 use halo2curves::group::Group;
 
 // use halo2curves::msm::best_multiexp;
-use halo2curves::pairing::Engine;
+use halo2curves::pairing::{MillerLoopResult, MultiMillerLoop};
 use halo2curves::CurveAffine;
 use rand::Rng;
 use rand::RngCore;
@@ -24,11 +24,11 @@ use crate::{
     BiKZGCommitment, BiKZGProof, BiKZGSRS, BiKZGVerifierParam,
 };
 
-pub struct BiKZG<E: Engine> {
-    _engine: PhantomData<E>,
+pub struct BiKZG<E: MultiMillerLoop> {
+    _MultiMillerLoop: PhantomData<E>,
 }
 
-impl<E: Engine> PolynomialCommitmentScheme for BiKZG<E>
+impl<E: MultiMillerLoop> PolynomialCommitmentScheme for BiKZG<E>
 where
     E::G1Affine: Add<Output = E::G1>,
 {
@@ -77,11 +77,11 @@ where
         println!("start to compute the scalars");
         // computes the vector of L_i^N(tau_0) * L_j^M(tau_1) for i in 0..supported_n and j in 0..supported_m
         let scalars = {
-            let powers_of_omega_0 = powers_of_field_elements(omega_0, supported_n);
-            let powers_of_tau_0 = powers_of_field_elements(tau_0, supported_n);
+            let powers_of_omega_0 = powers_of_field_elements(&omega_0, supported_n);
+            let powers_of_tau_0 = powers_of_field_elements(&tau_0, supported_n);
             let lagrange_tau_0 = lagrange_coefficients(&powers_of_omega_0, &powers_of_tau_0);
-            let powers_of_omega_1 = powers_of_field_elements(omega_1, supported_m);
-            let powers_of_tau_1 = powers_of_field_elements(tau_1, supported_m);
+            let powers_of_omega_1 = powers_of_field_elements(&omega_1, supported_m);
+            let powers_of_tau_1 = powers_of_field_elements(&tau_1, supported_m);
             let lagrange_tau_1 = lagrange_coefficients(&powers_of_omega_1, &powers_of_tau_1);
             tensor_product_parallel(&lagrange_tau_0, &lagrange_tau_1)
         };
@@ -161,8 +161,27 @@ where
         point: &Self::Point,
         value: &Self::Evaluation,
         proof: &Self::Proof,
-    ) -> bool {
-        unimplemented!()
+    ) -> bool
+    where
+        E: MultiMillerLoop,
+    {
+        let pi0_a_pi1_b_g1_cmu = best_multiexp(
+            &[point.0, point.1, E::Fr::ONE, -*value],
+            &[
+                proof.pi0,
+                proof.pi1,
+                commitment.com.into(),
+                verifier_param.g.into(),
+            ],
+        );
+        let pi0_a_pi1_b_g1_cmu = (-pi0_a_pi1_b_g1_cmu).to_affine();
+        let res = E::multi_miller_loop(&[
+            (&proof.pi0, &verifier_param.tau_0_h.into()),
+            (&proof.pi1, &verifier_param.tau_1_h.into()),
+            (&pi0_a_pi1_b_g1_cmu, &verifier_param.h.into()),
+        ]);
+
+        res.final_exponentiation().is_identity().into()
     }
 
     fn multi_open(
