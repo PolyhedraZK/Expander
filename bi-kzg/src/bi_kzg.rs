@@ -1,3 +1,5 @@
+use std::ops::{Add, AddAssign};
+use std::process::Output;
 use std::{borrow::Borrow, marker::PhantomData, slice::ChunkBy};
 
 use halo2curves::ff::Field;
@@ -6,25 +8,31 @@ use halo2curves::group::prime::PrimeCurveAffine;
 use halo2curves::group::Curve;
 use halo2curves::group::Group;
 
+// use halo2curves::msm::best_multiexp;
 use halo2curves::pairing::Engine;
+use halo2curves::CurveAffine;
 use rand::Rng;
 use rand::RngCore;
 
+use crate::msm::best_multiexp;
 use crate::util::lagrange_coefficients;
 use crate::util::parallelize;
 use crate::{
     pcs::PolynomialCommitmentScheme,
     util::{powers_of_field_elements, tensor_product_parallel},
-    BiKZGCommitment, BiKZGProof, BiKZGProverParam, BiKZGSRS, BiKZGVerifierParam,
+    BiKZGCommitment, BiKZGProof, BiKZGSRS, BiKZGVerifierParam,
 };
 
 pub struct BiKZG<E: Engine> {
     _engine: PhantomData<E>,
 }
 
-impl<E: Engine> PolynomialCommitmentScheme for BiKZG<E> {
+impl<E: Engine> PolynomialCommitmentScheme for BiKZG<E>
+where
+    E::G1Affine: Add<Output=E::G1>,
+{
     type SRS = BiKZGSRS<E>;
-    type ProverParam = BiKZGProverParam<E>;
+    type ProverParam = BiKZGSRS<E>;
     type VerifierParam = BiKZGVerifierParam<E>;
     type Polynomial = Vec<E::Fr>;
     type Commitment = BiKZGCommitment<E>;
@@ -118,7 +126,9 @@ impl<E: Engine> PolynomialCommitmentScheme for BiKZG<E> {
         prover_param: impl Borrow<Self::ProverParam>,
         poly: &Self::Polynomial,
     ) -> Self::Commitment {
-        unimplemented!()
+        Self::Commitment {
+            com: best_multiexp(poly, prover_param.borrow().powers_of_g.as_slice()).into(),
+        }
     }
 
     fn open(

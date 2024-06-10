@@ -20,12 +20,12 @@ pub struct BiKZGSRS<E: Engine> {
     pub tau_1_h: E::G2Affine,
 }
 
-/// `BiKZGProverParam` is used to generate a proof
-#[derive(Clone, Debug, Eq, PartialEq, Default)]
-pub struct BiKZGProverParam<E: Engine> {
-    /// Parameters
-    pub powers_of_g: Vec<E::G1Affine>,
-}
+// /// `BiKZGProverParam` is used to generate a proof
+// #[derive(Clone, Debug, Eq, PartialEq, Default)]
+// pub struct BiKZGProverParam<E: Engine> {
+//     /// Parameters
+//     pub powers_of_g: Vec<E::G1Affine>,
+// }
 
 /// `UnivariateVerifierParam` is used to check evaluation proofs for a given
 /// commitment.
@@ -54,6 +54,17 @@ pub struct BiKZGProof<E: Engine> {
     /// the actual proof is a pair of affine points.
     pub pi0: E::G1Affine,
     pub pi1: E::G1Affine,
+}
+
+impl<E: Engine> From<BiKZGSRS<E>> for BiKZGVerifierParam<E> {
+    fn from(srs: BiKZGSRS<E>) -> Self {
+        Self {
+            g: srs.powers_of_g[0],
+            h: srs.h,
+            tau_0_h: srs.tau_0_h,
+            tau_1_h: srs.tau_1_h,
+        }
+    }
 }
 
 impl<E: Engine> SerdeObject for BiKZGCommitment<E> {
