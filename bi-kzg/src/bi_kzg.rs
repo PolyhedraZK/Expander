@@ -148,6 +148,7 @@ where
         let tau_1 = prover_param.borrow().tau_1;
         let a = point.0;
         let b = point.1;
+        let c = polynomial.evaluate(&tau_0, &tau_1);
 
         let u = polynomial.evaluate(&a, &b);
         let u_prime = polynomial.evaluate(&tau_0, &b);
@@ -156,14 +157,13 @@ where
         let f_a_tau1 = polynomial.evaluate(&a, &tau_1);
 
         let q_0 = (f_tau0_b - u) * ((tau_0 - a).invert().unwrap());
-        let q_1 = (f_a_tau1 - u_prime) * ((tau_1 - b).invert().unwrap());
+        let q_1 = (c - u_prime) * ((tau_1 - b).invert().unwrap());
 
         let proof = BiKZGProof {
             pi0: (prover_param.borrow().powers_of_g[0] * q_0).into(),
             pi1: (prover_param.borrow().powers_of_g[0] * q_1).into(),
         };
 
-        let c = polynomial.evaluate(&tau_0, &tau_1);
 
         let t0 = q_0 * (tau_0 - a);
         let t1 = q_1 * (tau_1 - b);
