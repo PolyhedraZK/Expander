@@ -2,9 +2,20 @@ use std::io::{self, Read, Write};
 
 use halo2curves::{pairing::Engine, serde::SerdeObject};
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct BivaraitePolynomial<F> {
+    pub coefficients: Vec<F>,
+    pub degree_0: usize,
+    pub degree_1: usize,
+}
+
 /// Structured reference string for Bi-KZG polynomial commitment scheme.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct BiKZGSRS<E: Engine> {
+    // FIXME: remove me
+    pub tau_0: E::Fr,
+    pub tau_1: E::Fr,
+
     /// (g_1^{\tau_0^i\tau_1^j})_{i\in [0,N], j\in [0, M]} = \\
     /// (
     ///  g_1, g_1^{\tau_0}, g_1^{\tau_0^2}, ..., g_1^{\tau_0^N},

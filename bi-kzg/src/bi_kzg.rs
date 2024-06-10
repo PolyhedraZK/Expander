@@ -15,6 +15,7 @@ use rand::Rng;
 use rand::RngCore;
 
 use crate::msm::best_multiexp;
+use crate::structs::BivaraitePolynomial;
 use crate::util::lagrange_coefficients;
 use crate::util::parallelize;
 use crate::{
@@ -29,16 +30,16 @@ pub struct BiKZG<E: Engine> {
 
 impl<E: Engine> PolynomialCommitmentScheme for BiKZG<E>
 where
-    E::G1Affine: Add<Output=E::G1>,
+    E::G1Affine: Add<Output = E::G1>,
 {
     type SRS = BiKZGSRS<E>;
     type ProverParam = BiKZGSRS<E>;
     type VerifierParam = BiKZGVerifierParam<E>;
-    type Polynomial = Vec<E::Fr>;
+    type Polynomial = BivaraitePolynomial<E::Fr>;
     type Commitment = BiKZGCommitment<E>;
     type Proof = BiKZGProof<E>;
     type Evaluation = E::Fr;
-    type Point = E::Fr;
+    type Point = (E::Fr, E::Fr);
     type BatchProof = Vec<Self::Proof>;
 
     fn gen_srs_for_testing(
@@ -107,6 +108,8 @@ where
         };
 
         BiKZGSRS {
+            tau_0,
+            tau_1,
             powers_of_g: affine_bases,
             h: E::G2Affine::generator(),
             tau_0_h: (E::G2Affine::generator() * tau_0).into(),
@@ -127,7 +130,11 @@ where
         poly: &Self::Polynomial,
     ) -> Self::Commitment {
         Self::Commitment {
-            com: best_multiexp(poly, prover_param.borrow().powers_of_g.as_slice()).into(),
+            com: best_multiexp(
+                &poly.coefficients,
+                prover_param.borrow().powers_of_g.as_slice(),
+            )
+            .into(),
         }
     }
 
@@ -136,7 +143,16 @@ where
         polynomial: &Self::Polynomial,
         point: &Self::Point,
     ) -> (Self::Proof, Self::Evaluation) {
-        unimplemented!()
+        // fixme
+        let eval = polynomial.evaluate(&point.0, &point.1);
+        let q_0 = polynomial.evaluate(&prover_param.borrow().tau_0, &point.1);
+        let q_1 = polynomial.evaluate(&point.0, &prover_param.borrow().tau_1);
+        let proof = BiKZGProof {
+            pi0: (prover_param.borrow().powers_of_g[0] * q_0).into(),
+            pi1: (prover_param.borrow().powers_of_g[0] * q_1).into(),
+        };
+
+        (proof, eval)
     }
 
     fn verify(

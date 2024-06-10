@@ -4,7 +4,8 @@
 use std::ops::{Add, Neg};
 
 use halo2curves::ff::PrimeField;
-use halo2curves::pairing::PairingCurveAffine;use halo2curves::group::Group;
+use halo2curves::group::Group;
+use halo2curves::pairing::PairingCurveAffine;
 
 fn get_booth_index(window_index: usize, window_size: usize, el: &[u8]) -> i32 {
     // Booth encoding:
@@ -55,7 +56,10 @@ fn get_booth_index(window_index: usize, window_size: usize, el: &[u8]) -> i32 {
 /// This function will panic if coeffs and bases have a different length.
 ///
 /// This will use multithreading if beneficial.
-pub fn best_multiexp<C: PairingCurveAffine+ Add<Output=C::Curve>>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
+pub fn best_multiexp<C: PairingCurveAffine + Add<Output = C::Curve>>(
+    coeffs: &[C::Scalar],
+    bases: &[C],
+) -> C::Curve {
     assert_eq!(coeffs.len(), bases.len());
 
     let num_threads = rayon::current_num_threads();
@@ -84,7 +88,11 @@ pub fn best_multiexp<C: PairingCurveAffine+ Add<Output=C::Curve>>(coeffs: &[C::S
     }
 }
 
-pub fn multiexp_serial<C: PairingCurveAffine+ Add<Output=C::Curve>>(coeffs: &[C::Scalar], bases: &[C], acc: &mut C::Curve) {
+pub fn multiexp_serial<C: PairingCurveAffine + Add<Output = C::Curve>>(
+    coeffs: &[C::Scalar],
+    bases: &[C],
+    acc: &mut C::Curve,
+) {
     let coeffs: Vec<_> = coeffs.iter().map(|a| a.to_repr()).collect();
 
     let c = if bases.len() < 4 {
@@ -109,7 +117,7 @@ pub fn multiexp_serial<C: PairingCurveAffine+ Add<Output=C::Curve>>(coeffs: &[C:
             Projective(C::Curve),
         }
 
-        impl<C: PairingCurveAffine + Add<Output=C::Curve>> Bucket<C> {
+        impl<C: PairingCurveAffine + Add<Output = C::Curve>> Bucket<C> {
             fn add_assign(&mut self, other: &C) {
                 *self = match *self {
                     Bucket::None => Bucket::Affine(*other),
