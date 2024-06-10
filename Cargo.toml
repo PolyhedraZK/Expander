@@ -29,6 +29,7 @@ ark-std = "0.4"
 clap = { version = "4.1", features = ["derive"] }
 log = "0.4"
 rand = "0.8.5"
+rayon = "1.10"
 sha2 = "0.10.8"
 
 halo2curves = { git = "https://github.com/zhenfeizhang/halo2curves", default-features = false, features = [ "bits", "asm", "bn256-table" ] }
