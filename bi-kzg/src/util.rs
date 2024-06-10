@@ -12,8 +12,8 @@ pub(crate) fn powers_of_field_elements<F: Field>(x: &F, n: usize) -> Vec<F> {
 }
 
 pub(crate) fn tensor_product_parallel<F: Field>(vec1: &[F], vec2: &[F]) -> Vec<F> {
-    vec1.par_iter()
-        .flat_map(|&i| vec2.iter().map(|&j| i * j).collect::<Vec<_>>())
+    vec2.par_iter()
+        .flat_map(|&i| vec1.iter().map(|&j| i * j).collect::<Vec<_>>())
         .collect()
 }
 
@@ -82,3 +82,23 @@ fn test_lagrange_eval() {
     assert_eq!(result[1], -Fr::from(8u64));
     assert_eq!(result[2], Fr::from(10u64));
 }
+
+
+#[test]
+fn test_tensor_product(){
+    use halo2curves::bn256::Fr;
+    let vec1 = vec![Fr::from(1u64), Fr::from(2u64), Fr::from(3u64)];
+    let vec2 = vec![Fr::from(4u64), Fr::from(5u64), Fr::from(6u64)];
+    let result = tensor_product_parallel(&vec1, &vec2);
+    assert_eq!(result[0], Fr::from(4u64));
+    assert_eq!(result[1], Fr::from(2u64)*Fr::from(4u64));
+    assert_eq!(result[2], Fr::from(3u64)*Fr::from(4u64));
+    assert_eq!(result[3], Fr::from(5u64));
+    assert_eq!(result[4], Fr::from(2u64)*Fr::from(5u64));
+    assert_eq!(result[5], Fr::from(3u64)*Fr::from(5u64));
+    assert_eq!(result[6], Fr::from(6u64));
+    assert_eq!(result[7], Fr::from(2u64)*Fr::from(6u64));
+    assert_eq!(result[8], Fr::from(3u64)*Fr::from(6u64));
+}
+
+    

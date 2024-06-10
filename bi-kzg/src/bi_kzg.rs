@@ -10,6 +10,7 @@ use halo2curves::group::Group;
 
 // use halo2curves::msm::best_multiexp;
 use halo2curves::pairing::{MillerLoopResult, MultiMillerLoop};
+use halo2curves::pasta::pallas::Scalar;
 use halo2curves::CurveAffine;
 use rand::Rng;
 use rand::RngCore;
@@ -76,23 +77,47 @@ where
 
         println!("start to compute the scalars");
         // computes the vector of L_i^N(tau_0) * L_j^M(tau_1) for i in 0..supported_n and j in 0..supported_m
-        let scalars = {
+        let (scalars, lagrange_scalars) = {
             let powers_of_omega_0 = powers_of_field_elements(&omega_0, supported_n);
             let powers_of_tau_0 = powers_of_field_elements(&tau_0, supported_n);
             let lagrange_tau_0 = lagrange_coefficients(&powers_of_omega_0, &powers_of_tau_0);
             let powers_of_omega_1 = powers_of_field_elements(&omega_1, supported_m);
             let powers_of_tau_1 = powers_of_field_elements(&tau_1, supported_m);
             let lagrange_tau_1 = lagrange_coefficients(&powers_of_omega_1, &powers_of_tau_1);
-            tensor_product_parallel(&lagrange_tau_0, &lagrange_tau_1)
+            let scalars = tensor_product_parallel(&powers_of_tau_0, &powers_of_tau_1);
+            let largrange_scalars = tensor_product_parallel(&lagrange_tau_0, &lagrange_tau_1);
+            (scalars, largrange_scalars)
         };
 
         println!("start to compute the affine bases");
-        let affine_bases = {
+        let coeff_bases = {
             let mut proj_bases = vec![E::G1::identity(); supported_n * supported_m];
             parallelize(&mut proj_bases, |g, start| {
                 for (idx, g) in g.iter_mut().enumerate() {
                     let offset = start + idx;
                     *g = g1 * scalars[offset];
+                }
+            });
+
+            let mut g_bases = vec![E::G1Affine::identity(); supported_n * supported_m];
+            parallelize(&mut g_bases, |g, starts| {
+                E::G1::batch_normalize(
+                    &proj_bases[starts..(starts + g.len())],
+                    g,
+                );
+            });
+            drop(proj_bases);
+            g_bases
+        };
+
+
+        println!("start to compute the lagrange bases");
+        let largrange_bases = {
+            let mut proj_bases = vec![E::G1::identity(); supported_n * supported_m];
+            parallelize(&mut proj_bases, |g, start| {
+                for (idx, g) in g.iter_mut().enumerate() {
+                    let offset = start + idx;
+                    *g = g1 * lagrange_scalars[offset];
                 }
             });
 
@@ -110,7 +135,8 @@ where
         BiKZGSRS {
             tau_0,
             tau_1,
-            powers_of_g: affine_bases,
+            powers_of_g: coeff_bases,
+            powers_of_g_largrange: largrange_bases,
             h: E::G2Affine::generator(),
             tau_0_h: (E::G2Affine::generator() * tau_0).into(),
             tau_1_h: (E::G2Affine::generator() * tau_1).into(),
@@ -129,13 +155,21 @@ where
         prover_param: impl Borrow<Self::ProverParam>,
         poly: &Self::Polynomial,
     ) -> Self::Commitment {
-        Self::Commitment {
-            com: best_multiexp(
-                &poly.coefficients,
-                prover_param.borrow().powers_of_g.as_slice(),
-            )
+        let com = best_multiexp(
+            &poly.coefficients,
+            prover_param.borrow().powers_of_g.as_slice(),
+        )
+        .into();
+
+        assert_eq!(
+            com,
+            (prover_param.borrow().powers_of_g[0]
+                * poly.evaluate(&prover_param.borrow().tau_0, &prover_param.borrow().tau_1))
             .into(),
-        }
+            "commitment is not equal to evaluation"
+        );
+
+        Self::Commitment { com }
     }
 
     fn open(
@@ -163,7 +197,6 @@ where
             pi0: (prover_param.borrow().powers_of_g[0] * q_0).into(),
             pi1: (prover_param.borrow().powers_of_g[0] * q_1).into(),
         };
-
 
         let t0 = q_0 * (tau_0 - a);
         let t1 = q_1 * (tau_1 - b);
@@ -199,8 +232,10 @@ where
             (&proof.pi1, &verifier_param.tau_1_h.into()),
             (&pi0_a_pi1_b_g1_cmu, &verifier_param.h.into()),
         ]);
+        let res = res.final_exponentiation().is_identity().into();
 
-        res.final_exponentiation().is_identity().into()
+        println!("res: {:?}", res);
+        res
     }
 
     fn multi_open(
