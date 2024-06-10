@@ -14,7 +14,7 @@ impl<F: Field> BivaraitePolynomial<F> {
             degree_1,
         }
     }
-    
+
     pub fn random(mut rng: impl RngCore, degree_0: usize, degree_1: usize) -> Self {
         let coefficients = (0..degree_0 * degree_1)
             .map(|_| F::random(&mut rng))
@@ -37,8 +37,6 @@ impl<F: Field> BivaraitePolynomial<F> {
                     * y_i
             })
     }
-
-
 }
 
 #[cfg(test)]
