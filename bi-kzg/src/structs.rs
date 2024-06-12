@@ -3,7 +3,14 @@ use std::io::{self, Read, Write};
 use halo2curves::{pairing::Engine, serde::SerdeObject};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct BivaraitePolynomial<F> {
+pub struct BivariatePolynomial<F> {
+    pub coefficients: Vec<F>,
+    pub degree_0: usize,
+    pub degree_1: usize,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct BivariateLagrangePolynomial<F> {
     pub coefficients: Vec<F>,
     pub degree_0: usize,
     pub degree_1: usize,
@@ -24,7 +31,7 @@ pub struct BiKZGSRS<E: Engine> {
     /// )
     pub powers_of_g: Vec<E::G1Affine>,
     /// g in lagrange form
-    pub powers_of_g_largrange: Vec<E::G1Affine>,
+    pub powers_of_g_lagrange: Vec<E::G1Affine>,
     /// The generator of G2.
     pub h: E::G2Affine,
     /// tau_0 times the above generator of G2.

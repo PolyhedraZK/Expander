@@ -29,9 +29,6 @@ pub trait PolynomialCommitmentScheme {
 
     /// Build SRS for testing.
     ///
-    /// - For univariate polynomials, `supported_size` is the maximum degree.
-    /// - For multilinear polynomials, `supported_size` is the number of
-    ///   variables.
     ///
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
@@ -113,39 +110,3 @@ pub trait PolynomialCommitmentScheme {
         unimplemented!()
     }
 }
-
-// /// API definitions for structured reference string
-// ///
-// /// Credit: https://github.com/EspressoSystems/hyperplonk/blob/8698369edfe82bd6617a9609602380f21cabd1da/subroutines/src/pcs/mod.rs#L135
-// pub trait StructuredReferenceString<E: Engine>: Sized {
-//     /// Prover parameters
-//     type ProverParam;
-//     /// Verifier parameters
-//     type VerifierParam;
-
-//     /// Extract the prover parameters from the public parameters.
-//     fn extract_prover_param(&self, supported_size: usize) -> Self::ProverParam;
-//     /// Extract the verifier parameters from the public parameters.
-//     fn extract_verifier_param(&self, supported_size: usize) -> Self::VerifierParam;
-
-//     /// Trim the universal parameters to specialize the public parameters
-//     /// for polynomials to the given `supported_size`, and
-//     /// returns committer key and verifier key.
-//     ///
-//     /// - For univariate polynomials, `supported_size` is the maximum degree.
-//     /// - For multilinear polynomials, `supported_size` is 2 to the number of
-//     ///   variables.
-//     ///
-//     /// `supported_log_size` should be in range `1..=params.log_size`
-//     fn trim(&self, supported_size: usize) -> (Self::ProverParam, Self::VerifierParam);
-
-//     /// Build SRS for testing.
-//     ///
-//     /// - For univariate polynomials, `supported_size` is the maximum degree.
-//     /// - For multilinear polynomials, `supported_size` is the number of
-//     ///   variables.
-//     ///
-//     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
-//     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-//     fn gen_srs_for_testing<R: Rng>(rng: &mut R, supported_size: usize) -> Self;
-// }

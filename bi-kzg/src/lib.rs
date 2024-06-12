@@ -7,5 +7,6 @@ mod structs;
 mod tests;
 mod util;
 
-pub use structs::BivaraitePolynomial;
+pub use pcs::PolynomialCommitmentScheme;
+pub use structs::BivariatePolynomial;
 pub use structs::{BiKZGCommitment, BiKZGProof, BiKZGSRS, BiKZGVerifierParam};

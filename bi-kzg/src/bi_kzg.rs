@@ -16,8 +16,8 @@ use rand::Rng;
 use rand::RngCore;
 
 use crate::msm::best_multiexp;
-use crate::structs::BivaraitePolynomial;
-use crate::util::lagrange_coefficients;
+use crate::poly::lagrange_coefficients;
+use crate::structs::BivariatePolynomial;
 use crate::util::parallelize;
 use crate::{
     pcs::PolynomialCommitmentScheme,
@@ -26,7 +26,7 @@ use crate::{
 };
 
 pub struct BiKZG<E: MultiMillerLoop> {
-    _MultiMillerLoop: PhantomData<E>,
+    _phantom: PhantomData<E>,
 }
 
 impl<E: MultiMillerLoop> PolynomialCommitmentScheme for BiKZG<E>
@@ -36,7 +36,7 @@ where
     type SRS = BiKZGSRS<E>;
     type ProverParam = BiKZGSRS<E>;
     type VerifierParam = BiKZGVerifierParam<E>;
-    type Polynomial = BivaraitePolynomial<E::Fr>;
+    type Polynomial = BivariatePolynomial<E::Fr>;
     type Commitment = BiKZGCommitment<E>;
     type Proof = BiKZGProof<E>;
     type Evaluation = E::Fr;
@@ -63,6 +63,9 @@ where
             let omega = E::Fr::ROOT_OF_UNITY;
             let omega_0 = omega.pow_vartime(&[(1 << E::Fr::S) / supported_n as u64]);
             let omega_1 = omega.pow_vartime(&[(1 << E::Fr::S) / supported_m as u64]);
+
+            println!("omega 0: {:?}", omega_0);
+            println!("omega 1: {:?}", omega_1);
 
             assert!(
                 omega_0.pow_vartime(&[supported_n as u64]) == E::Fr::ONE,
@@ -101,18 +104,15 @@ where
 
             let mut g_bases = vec![E::G1Affine::identity(); supported_n * supported_m];
             parallelize(&mut g_bases, |g, starts| {
-                E::G1::batch_normalize(
-                    &proj_bases[starts..(starts + g.len())],
-                    g,
-                );
+                E::G1::batch_normalize(&proj_bases[starts..(starts + g.len())], g);
             });
             drop(proj_bases);
             g_bases
         };
 
-
         println!("start to compute the lagrange bases");
-        let largrange_bases = {
+        println!("lagrange scalars: {:?} ", lagrange_scalars);
+        let lagrange_bases = {
             let mut proj_bases = vec![E::G1::identity(); supported_n * supported_m];
             parallelize(&mut proj_bases, |g, start| {
                 for (idx, g) in g.iter_mut().enumerate() {
@@ -136,7 +136,7 @@ where
             tau_0,
             tau_1,
             powers_of_g: coeff_bases,
-            powers_of_g_largrange: largrange_bases,
+            powers_of_g_lagrange: lagrange_bases,
             h: E::G2Affine::generator(),
             tau_0_h: (E::G2Affine::generator() * tau_0).into(),
             tau_1_h: (E::G2Affine::generator() * tau_1).into(),
@@ -167,6 +167,17 @@ where
                 * poly.evaluate(&prover_param.borrow().tau_0, &prover_param.borrow().tau_1))
             .into(),
             "commitment is not equal to evaluation"
+        );
+
+        let lag_coeff = poly.lagrange_coeffs();
+        let com_lag = best_multiexp(
+            &lag_coeff,
+            prover_param.borrow().powers_of_g_lagrange.as_slice(),
+        )
+        .into();
+        assert_eq!(
+            com, com_lag,
+            "commitment is not equal to lagrange commitment"
         );
 
         Self::Commitment { com }
