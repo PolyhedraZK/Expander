@@ -60,7 +60,7 @@ fn main() {
     let output_file = &args[4];
     match command.as_str() {
         "prove" => {
-            let config = Config::new();
+            let config = Config::m31_config();
             let mut circuit = Circuit::<F>::load_circuit(circuit_file);
             circuit.load_witness(witness_file);
             circuit.evaluate();
@@ -71,7 +71,7 @@ fn main() {
             fs::write(output_file, bytes).expect("Unable to write proof to file.");
         }
         "verify" => {
-            let config = Config::new();
+            let config = Config::m31_config();
             let mut circuit = Circuit::<F>::load_circuit(circuit_file);
             circuit.load_witness(witness_file);
             let bytes = fs::read(output_file).expect("Unable to read proof from file.");

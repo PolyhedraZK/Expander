@@ -12,7 +12,7 @@ type F = VectorizedM31;
 
 #[test]
 fn test_compiler_format_integration() {
-    let config = Config::new();
+    let config = Config::m31_config();
     println!("Config created.");
     let mut circuit = Circuit::<F>::load_circuit(FILENAME_CIRCUIT);
     println!("Circuit loaded.");

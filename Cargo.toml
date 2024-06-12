@@ -2,6 +2,7 @@
 name = "expander-rs"
 version = "0.1.0"
 edition = "2021"
+default-run = "expander-rs"  # default
 
 [dependencies]
 arith = { path = "arith" }
