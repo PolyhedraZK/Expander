@@ -26,6 +26,7 @@ where
             layer, &rz0[j], &rz1[j], alpha, beta, sp_,
         ));
     }
+
     for i_var in 0..layer.input_var_num * 2 {
         for (j, helper) in helpers
             .iter_mut()
@@ -39,12 +40,14 @@ where
                 let vx_claim = helper.vx_claim();
                 helper.prepare_h_y_vals(vx_claim)
             }
+
             let evals = helper.poly_evals_at(i_var, 2);
+
             transcript.append_f(evals[0]);
             transcript.append_f(evals[1]);
             transcript.append_f(evals[2]);
-            let r = transcript.challenge_f::<F>();
 
+            let r = transcript.challenge_f::<F>();
             if j == 0 {
                 log::trace!("i_var={} j={} evals: {:?} r: {:?}", i_var, j, evals, r);
             }

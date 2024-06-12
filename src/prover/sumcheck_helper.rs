@@ -1,4 +1,4 @@
-use arith::{Field, VectorizedField, M31_MOD, M31_VECTORIZE_SIZE};
+use arith::{Field, VectorizedField};
 
 use crate::{CircuitLayer, GkrScratchpad};
 
@@ -14,11 +14,12 @@ pub(crate) fn eq_evals_at_primitive<F: Field>(r: &[F], mul_factor: &F, eq_evals:
     let mut cur_eval_num = 1;
 
     for r_i in r.iter() {
-        assert!(
-            r_i.as_u32_unchecked() < M31_MOD as u32,
-            "r[i] = {}",
-            r_i.as_u32_unchecked()
-        );
+        // disabling this check: should only be used for M31
+        // assert!(
+        //     r_i.as_u32_unchecked() < M31_MOD as u32,
+        //     "r[i] = {}",
+        //     r_i.as_u32_unchecked()
+        // );
         // let eq_z_i_zero = _eq(&r[i], &FPrimitive::zero()); // FIXED: expanding this function might be better?
         let eq_z_i_zero = F::one() - r_i;
         // let eq_z_i_one = _eq(&r[i], &FPrimitive::one());
@@ -91,7 +92,7 @@ impl SumcheckMultilinearProdHelper {
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 continue;
             }
-            for j in 0..M31_VECTORIZE_SIZE {
+            for j in 0..F::VECTORIZE_SIZE {
                 let f_v_0 = src_v[i * 2].as_packed_slices()[j];
                 let f_v_1 = src_v[i * 2 + 1].as_packed_slices()[j];
                 let hg_v_0 = bk_hg[i * 2].as_packed_slices()[j];
@@ -129,7 +130,7 @@ impl SumcheckMultilinearProdHelper {
         for i in 0..self.cur_eval_size >> 1 {
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 gate_exists[i] = false;
-                for j in 0..M31_VECTORIZE_SIZE {
+                for j in 0..F::VECTORIZE_SIZE {
                     if var_idx == 0 {
                         bk_f[i].mut_packed_slices()[j] = init_v[2 * i].as_packed_slices()[j]
                             + (init_v[2 * i + 1].as_packed_slices()[j]
@@ -145,7 +146,7 @@ impl SumcheckMultilinearProdHelper {
                 bk_hg[i] = F::zero();
             } else {
                 gate_exists[i] = true;
-                for j in 0..M31_VECTORIZE_SIZE {
+                for j in 0..F::VECTORIZE_SIZE {
                     if var_idx == 0 {
                         bk_f[i].mut_packed_slices()[j] = init_v[2 * i].as_packed_slices()[j]
                             + (init_v[2 * i + 1].as_packed_slices()[j]

@@ -1,4 +1,4 @@
-use arith::{VectorizedM31, M31};
+use arith::{Field, FieldSerde, VectorizedField, VectorizedFr, VectorizedM31};
 use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier};
 use rand::Rng;
 use sha2::Digest;
@@ -6,11 +6,8 @@ use sha2::Digest;
 const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
 const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
 
-type FPrimitive = M31;
-type F = VectorizedM31;
-
 #[allow(dead_code)]
-fn gen_simple_circuit() -> Circuit<F> {
+fn gen_simple_circuit<F: VectorizedField>() -> Circuit<F> {
     let mut circuit = Circuit::default();
     let mut l0 = CircuitLayer::default();
     l0.input_var_num = 2;
@@ -18,22 +15,22 @@ fn gen_simple_circuit() -> Circuit<F> {
     l0.add.push(GateAdd {
         i_ids: [0],
         o_id: 0,
-        coef: FPrimitive::from(1),
+        coef: F::BaseField::from(1),
     });
     l0.add.push(GateAdd {
         i_ids: [0],
         o_id: 1,
-        coef: FPrimitive::from(1),
+        coef: F::BaseField::from(1),
     });
     l0.add.push(GateAdd {
         i_ids: [1],
         o_id: 1,
-        coef: FPrimitive::from(1),
+        coef: F::BaseField::from(1),
     });
     l0.mul.push(GateMul {
         i_ids: [0, 2],
         o_id: 2,
-        coef: FPrimitive::from(1),
+        coef: F::BaseField::from(1),
     });
     circuit.layers.push(l0.clone());
     circuit
@@ -41,7 +38,17 @@ fn gen_simple_circuit() -> Circuit<F> {
 
 #[test]
 fn test_gkr_correctness() {
-    let config = Config::new();
+    let config = Config::m31_config();
+    test_gkr_correctness_helper::<VectorizedM31>(&config);
+    let config = Config::bn254_config();
+    test_gkr_correctness_helper::<VectorizedFr>(&config);
+}
+
+fn test_gkr_correctness_helper<F>(config: &Config)
+where
+    F: VectorizedField + FieldSerde,
+    F::PackedBaseField: Field<BaseField = F::BaseField>,
+{
     println!("Config created.");
     let mut circuit = Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer

@@ -30,13 +30,13 @@ wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
 Command template:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" cargo run --release -- <NUMBER_OF_THREAD>
+RUSTFLAGS="-C target-cpu=native" RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -f [254|31] -t [#threads]
 ```
 
-Concretely if you are running on a 16 physical core CPU:
+Concretely if you are running on a 16 physical core CPU for Bn256 scalar field:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" cargo run --release -- 16
+RUSTFLAGS="-C target-cpu=native" cargo run --release -- -f 254 -t 16
 ```
 
 ## Correctness test

@@ -51,7 +51,8 @@ jobs:
       - run: cargo test -p arith --release
       - run: cargo test --no-default-features --release
       - run: cargo test --all-features --release
-      - run: cargo run --release 4 2
+      - run: cargo run --release -- -t 4 -f 31 
+      - run: cargo run --release -- -t 4 -f 254 
 
   test-linux:
     name: Test-linux
@@ -69,4 +70,5 @@ jobs:
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test -p arith --release
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --no-default-features --release
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --all-features --release
-      - run: cargo run --release 4
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f 31 
+      - run: RUSTFLAGS="-C target-feature=+avx2"  cargo run --release -- -t 4 -f 254 

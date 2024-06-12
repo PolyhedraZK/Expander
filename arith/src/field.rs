@@ -1,7 +1,7 @@
 mod m31;
 pub use m31::*;
-mod vectorized_m31;
-pub use vectorized_m31::*;
+mod bn254;
+pub use bn254::*;
 
 use rand::RngCore;
 
@@ -87,7 +87,7 @@ pub trait Field:
     }
 
     /// Exp
-    fn exp(&self) -> Self;
+    fn exp(&self, exponent: &Self) -> Self;
 
     /// find the inverse of the element; return None if not exist
     fn inv(&self) -> Option<Self>;
@@ -106,10 +106,19 @@ pub trait Field:
 
     /// expose the element as u32.
     fn as_u32_unchecked(&self) -> u32;
+
+    /// sample from a 32 bytes
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;
 }
 
 /// A vector of Field elements.
 pub trait VectorizedField: Field {
+    /// pack size, size for each packed PackedBaseField
+    const PACK_SIZE: usize;
+
+    /// size of the vector
+    const VECTORIZE_SIZE: usize;
+
     /// type of the packed based field, if applicable
     type PackedBaseField: Default + Clone;
 
