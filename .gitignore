@@ -19,6 +19,7 @@ Cargo.lock
 # Project data
 /data/Extracted*
 /data/circuit8.txt
+/data/compiler_out
 notes.md
 
 # Programming env
@@ -27,3 +28,4 @@ perf.data
 perf.data.old
 flamegraph.svg
 output.txt
+.DS_Store

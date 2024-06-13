@@ -70,7 +70,17 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
 ) {
     let var_num = layer.input_var_num;
     let mut sum = (0..config.get_num_repetitions())
-        .map(|i| claimed_v0[i].mul_base_elem(&alpha) + claimed_v1[i].mul_base_elem(&beta))
+        .map(|i| {
+            claimed_v0[i].mul_base_elem(&alpha) + claimed_v1[i].mul_base_elem(&beta)
+                - F::one().mul_base_elem(&eval_sparse_circuit_connect_poly(
+                    &layer.const_,
+                    &rz0[i],
+                    &rz1[i],
+                    alpha,
+                    beta,
+                    &[],
+                ))
+        })
         .collect::<Vec<_>>();
     let mut rx = vec![vec![]; config.get_num_repetitions()];
     let mut ry = vec![vec![]; config.get_num_repetitions()];

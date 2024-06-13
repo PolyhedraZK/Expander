@@ -20,12 +20,14 @@ Before executing setup, please make sure you read through the system requirement
 wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitMul.txt
 wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitAdd.txt
 wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
+wget -P data/compiler_out https://storage.googleapis.com/keccak8/circuit.txt
+wget -P data/compiler_out https://storage.googleapis.com/keccak8/witness.txt
 ```
 
 
 ## Benchmarks
 
-**Make sure you include `RUSTFLAGS="-C target-cpu=native" to allow platform specific accelerations.`**
+**Make sure you include `RUSTFLAGS="-C target-cpu=native"` to allow platform specific accelerations.**
 
 Command template:
 
@@ -46,6 +48,22 @@ To check the correctness, run the follow standard Rust test command:
 
 ```sh
 RUSTFLAGS="-C target-cpu=native" cargo test --release -- --nocapture
+```
+
+## CLI
+
+Usage:
+
+```sh
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- prove <input:circuit_file> <input:witness_file> <output:proof>
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- verify <input:circuit_file> <input:witness_file> <input:proof>
+```
+
+Example:
+
+```sh
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- prove ./data/compiler_out/circuit.txt ./data/compiler_out/witness.txt ./data/compiler_out/out.bin
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- verify ./data/compiler_out/circuit.txt ./data/compiler_out/witness.txt ./data/compiler_out/out.bin
 ```
 
 ## How to contribute?
