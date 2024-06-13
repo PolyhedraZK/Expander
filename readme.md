@@ -20,12 +20,14 @@ Before executing setup, please make sure you read through the system requirement
 wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitMul.txt
 wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitAdd.txt
 wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
+wget -P data/compiler_out https://storage.googleapis.com/keccak8/circuit.txt
+wget -P data/compiler_out https://storage.googleapis.com/keccak8/witness.txt
 ```
 
 
 ## Benchmarks
 
-**Make sure you include `RUSTFLAGS="-C target-cpu=native" to allow platform specific accelerations.`**
+**Make sure you include `RUSTFLAGS="-C target-cpu=native"` to allow platform specific accelerations.**
 
 Command template:
 
