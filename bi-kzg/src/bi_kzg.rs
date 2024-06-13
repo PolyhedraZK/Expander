@@ -16,7 +16,7 @@ use rand::Rng;
 use rand::RngCore;
 
 use crate::msm::best_multiexp;
-use crate::poly::lagrange_coefficients;
+use crate::poly::{lagrange_coefficients, lagrange_coefficients_a};
 use crate::structs::BivariatePolynomial;
 use crate::util::parallelize;
 use crate::{
@@ -51,10 +51,10 @@ where
         assert!(supported_n.is_power_of_two());
         assert!(supported_m.is_power_of_two());
 
-        let tau_0 = E::Fr::random(&mut rng);
-        let tau_1 = E::Fr::random(&mut rng);
-        // let tau_0 = E::Fr::from(5);
-        // let tau_1 = E::Fr::from(7);
+        // let tau_0 = E::Fr::random(&mut rng);
+        // let tau_1 = E::Fr::random(&mut rng);
+        let tau_0 = E::Fr::from(5);
+        let tau_1 = E::Fr::from(7);
 
         let g1 = E::G1Affine::generator();
 
@@ -66,6 +66,9 @@ where
 
             println!("omega 0: {:?}", omega_0);
             println!("omega 1: {:?}", omega_1);
+
+            println!("n: {}", supported_n);
+            println!("m: {}", supported_m);
 
             assert!(
                 omega_0.pow_vartime(&[supported_n as u64]) == E::Fr::ONE,
@@ -83,14 +86,20 @@ where
         let (scalars, lagrange_scalars) = {
             let powers_of_omega_0 = powers_of_field_elements(&omega_0, supported_n);
             let powers_of_tau_0 = powers_of_field_elements(&tau_0, supported_n);
-            let lagrange_tau_0 = lagrange_coefficients(&powers_of_omega_0, &powers_of_tau_0);
+            let lagrange_tau_0 = lagrange_coefficients_a(&powers_of_omega_0, &tau_0);
             let powers_of_omega_1 = powers_of_field_elements(&omega_1, supported_m);
             let powers_of_tau_1 = powers_of_field_elements(&tau_1, supported_m);
-            let lagrange_tau_1 = lagrange_coefficients(&powers_of_omega_1, &powers_of_tau_1);
+            let lagrange_tau_1 = lagrange_coefficients_a(&powers_of_omega_1, &tau_1);
             let scalars = tensor_product_parallel(&powers_of_tau_0, &powers_of_tau_1);
-            let largrange_scalars = tensor_product_parallel(&lagrange_tau_0, &lagrange_tau_1);
-            (scalars, largrange_scalars)
+            let lagrange_scalars = tensor_product_parallel(&lagrange_tau_0, &lagrange_tau_1);
+
+
+            println!("lagrange_tau_0: {:?}", lagrange_tau_0);
+            println!("lagrange_tau_1: {:?}", lagrange_tau_1);
+            (scalars, lagrange_scalars)
         };
+
+        println!("lagrange scalars: {:?} ", lagrange_scalars);
 
         println!("start to compute the affine bases");
         let coeff_bases = {
@@ -179,7 +188,7 @@ where
             com, com_lag,
             "commitment is not equal to lagrange commitment"
         );
-
+        println!("finished commit");
         Self::Commitment { com }
     }
 
@@ -201,9 +210,11 @@ where
         let f_tau0_b = polynomial.evaluate(&tau_0, &b);
         let f_a_tau1 = polynomial.evaluate(&a, &tau_1);
 
+        println!("here {:?} {:?} {:?} {:?}", tau_0, tau_1, a, b);
         let q_0 = (f_tau0_b - u) * ((tau_0 - a).invert().unwrap());
         let q_1 = (c - u_prime) * ((tau_1 - b).invert().unwrap());
 
+        println!("here2");
         let proof = BiKZGProof {
             pi0: (prover_param.borrow().powers_of_g[0] * q_0).into(),
             pi1: (prover_param.borrow().powers_of_g[0] * q_1).into(),

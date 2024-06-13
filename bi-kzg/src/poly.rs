@@ -83,6 +83,28 @@ impl<F: PrimeField> BivariatePolynomial<F> {
     // }
 }
 
+
+/// For x in points, compute the Lagrange coefficients at x given the roots.
+/// `L_{i}(x) = \prod_{j \neq i} \frac{x - r_j}{r_i - r_j}``
+pub(crate) fn lagrange_coefficients_a<F: Field + Send + Sync>(roots: &[F], points: &F) -> Vec<F> {
+    roots
+        .par_iter()
+        .enumerate()
+        .map(|(i, _)| {
+            let mut numerator = F::ONE;
+            let mut denominator = F::ONE;
+            for j in 0..roots.len() {
+                if i == j {
+                    continue;
+                }
+                numerator *= roots[j] - points;
+                denominator *= roots[j] - roots[i];
+            }
+            numerator * denominator.invert().unwrap()
+        })
+        .collect()
+}
+
 /// For x in points, compute the Lagrange coefficients at x given the roots.
 /// `L_{i}(x) = \prod_{j \neq i} \frac{x - r_j}{r_i - r_j}``
 pub(crate) fn lagrange_coefficients<F: Field + Send + Sync>(roots: &[F], points: &[F]) -> Vec<F> {

@@ -49,8 +49,13 @@ fn test_bi_kzg_e2e() {
     );
     // let poly = BivariatePolynomial::random(&mut rng, n, m);
 
-    let x = Fr::from(5u64);
-    let y = Fr::from(6u64);
+    let x = Fr::from(9u64);
+    let y = Fr::from(10u64);
+
+    assert_eq!(poly.evaluate(&x, &y), Fr::from(85309u64));
+
+    println!("poly lag coeff: {:?}", poly.lagrange_coeffs());
+
 
     let commit = BiKZG::<Bn256>::commit(&srs, &poly);
     let (proof, eval) = BiKZG::<Bn256>::open(&srs, &poly, &(x, y));
