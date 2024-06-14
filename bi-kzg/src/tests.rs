@@ -1,9 +1,12 @@
 use ark_std::test_rng;
-use halo2curves::bn256::{Bn256, Fr};
+use halo2curves::{
+    bn256::{Bn256, Fr},
+    ff::Field,
+};
 
 use crate::{
     bi_kzg::BiKZG, pcs::PolynomialCommitmentScheme, poly::lagrange_coefficients,
-    util::tensor_product_parallel, BivariatePolynomial,
+    util::tensor_product_parallel, BiKZGVerifierParam, BivariatePolynomial,
 };
 
 #[test]
@@ -12,7 +15,7 @@ fn test_bi_kzg_e2e() {
     let n = 2;
     let m = 4;
     let srs = BiKZG::<Bn256>::gen_srs_for_testing(&mut rng, n, m);
-
+    let vk = BiKZGVerifierParam::<Bn256>::from(&srs);
     let poly = BivariatePolynomial::new(
         vec![
             Fr::from(1u64),
@@ -39,15 +42,25 @@ fn test_bi_kzg_e2e() {
     let commit = BiKZG::<Bn256>::commit(&srs, &poly);
     let (proof, eval) = BiKZG::<Bn256>::open(&srs, &poly, &(x, y));
 
-    assert!(BiKZG::<Bn256>::verify(
-        &srs.into(),
-        &commit,
-        &(x, y),
-        &eval,
-        &proof
-    ));
+    assert!(BiKZG::<Bn256>::verify(&vk, &commit, &(x, y), &eval, &proof));
 
-    assert!(false)
+    for n in [2, 4, 8, 16] {
+        for m in [2, 4, 8, 16] {
+            println!("m: {}, n: {}", m, n);
+            let srs = BiKZG::<Bn256>::gen_srs_for_testing(&mut rng, n, m);
+            let vk = BiKZGVerifierParam::<Bn256>::from(&srs);
+            for _ in 0..10 {
+                let poly = BivariatePolynomial::<Fr>::random(&mut rng, n, m);
+
+                let x = Fr::random(&mut rng);
+                let y = Fr::random(&mut rng);
+
+                let commit = BiKZG::<Bn256>::commit(&srs, &poly);
+                let (proof, eval) = BiKZG::<Bn256>::open(&srs, &poly, &(x, y));
+                assert!(BiKZG::<Bn256>::verify(&vk, &commit, &(x, y), &eval, &proof));
+            }
+        }
+    }
 }
 
 #[test]

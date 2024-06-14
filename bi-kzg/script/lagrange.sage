@@ -61,3 +61,52 @@ print(res - f)
 print()
 for t in bases:
     print(t(5, 7))
+
+
+
+#P.<x, y> = PolynomialRing(ZZ)
+f = P((x+1)*(y^3+1))
+
+f_lag = []
+for o1 in omega1_powers:
+    for o0 in omega0_powers:
+        print(o0, o1)
+        f_lag.append(f(o0, o1))
+print(f)
+print(f_lag)
+
+g = f/P(y+1)
+g_lag = []
+for o1 in omega1_powers:
+    for o0 in omega0_powers:
+        print(o0, o1)
+        g_lag.append(g(o0, o1))
+print(g)
+print(g_lag)
+
+t = P(y+1)
+t_lag = []
+for o1 in omega1_powers:
+    for o0 in omega0_powers:
+        print(o0, o1)
+        t_lag.append(t(o0, o1))
+print(t)
+print(t_lag)
+
+for i in range(8):
+    print(f_lag[i] - g_lag[i] *t_lag[i])
+
+g_rec = P(0)
+for i in range(8):
+    g_rec += bases[i] * g_lag[i]
+print(g_rec)
+
+f_rec = P(0)
+for i in range(8):
+    f_rec += bases[i] * f_lag[i]
+print(f_rec)
+
+t_rec = P(0)
+for i in range(8):
+    t_rec += bases[i] * t_lag[i]
+print(t_rec)

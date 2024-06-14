@@ -30,8 +30,8 @@ pub struct BiKZGSRS<E: Engine> {
     ///  ..., g_1^{\tau_0^N\tau_1^M}
     /// )
     pub powers_of_g: Vec<E::G1Affine>,
-    // /// g in lagrange form over omega_0
-    // pub powers_of_tau_0: Vec<E::G1Affine>,
+    /// g in lagrange form over omega_0
+    pub f_x_b_scalars: Vec<E::G1Affine>,
     /// g in lagrange form over omega_0 and omega_1
     pub powers_of_g_lagrange_over_both_roots: Vec<E::G1Affine>,
     /// The generator of G2.
@@ -78,8 +78,8 @@ pub struct BiKZGProof<E: Engine> {
     pub pi1: E::G1Affine,
 }
 
-impl<E: Engine> From<BiKZGSRS<E>> for BiKZGVerifierParam<E> {
-    fn from(srs: BiKZGSRS<E>) -> Self {
+impl<E: Engine> From<&BiKZGSRS<E>> for BiKZGVerifierParam<E> {
+    fn from(srs: &BiKZGSRS<E>) -> Self {
         Self {
             g: srs.powers_of_g[0],
             h: srs.h,

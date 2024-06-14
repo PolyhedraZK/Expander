@@ -78,11 +78,11 @@ impl<F: PrimeField> BivariatePolynomial<F> {
         };
         let powers_of_omega_0 = powers_of_field_elements(&omega_0, self.degree_0);
         let powers_of_omega_1 = powers_of_field_elements(&omega_1, self.degree_1);
-        println!(
-            "omega len {} {}",
-            powers_of_omega_0.len(),
-            powers_of_omega_1.len()
-        );
+        // println!(
+        //     "omega len {} {}",
+        //     powers_of_omega_0.len(),
+        //     powers_of_omega_1.len()
+        // );
 
         // Todo! Optimize me. This is not efficient.
         let mut res = vec![];
@@ -91,8 +91,8 @@ impl<F: PrimeField> BivariatePolynomial<F> {
                 res.push(self.evaluate(omega_0_power, omega_1_power));
             }
         }
-
-        println!("res: {:?}", res);
+        // println!("powers_of_omega_1: {:?}", powers_of_omega_1);
+        // println!("res: {:?}", res);
         res
     }
 
@@ -155,6 +155,20 @@ pub(crate) fn univariate_quotient<F: PrimeField>(poly: &[F], point: &F) -> Vec<F
 
     coefficients
 }
+
+// // fixme
+// pub(crate) fn fft_slow<F: PrimeField>(coeffs: &[F], omega: &F) -> Vec<F> {
+//     let n = coeffs.len();
+//     let mut res = vec![F::ZERO; n];
+//     for i in 0..n {
+//         let mut omega_i = F::ONE;
+//         for j in 0..n {
+//             res[i] += omega_i * coeffs[j];
+//             omega_i *= omega;
+//         }
+//     }
+//     res
+// }
 
 // /// For x in points, compute the Lagrange coefficients at x given the roots.
 // /// `L_{i}(x) = \prod_{j \neq i} \frac{x - r_j}{r_i - r_j}``
@@ -305,6 +319,22 @@ mod tests {
         );
         let eval_at_y = poly.evaluate_y(&Fr::from(10u64));
         assert_eq!(eval_at_y, vec![Fr::from(7531u64), Fr::from(8642u64)]);
+
+        let poly = BivariatePolynomial::new(
+            vec![
+                Fr::from(1u64),
+                Fr::from(0u64),
+                Fr::from(1u64),
+                Fr::from(0u64),
+                Fr::from(0u64),
+                Fr::from(0u64),
+                Fr::from(0u64),
+                Fr::from(0u64),
+            ],
+            2,
+            4,
+        );
+        println!("poly: {:?}", poly.lagrange_coeffs());
     }
 
     #[test]
@@ -351,29 +381,68 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn test_lagrange_coeffs() {
-    //     let poly = BivariatePolynomial::new(
-    //         vec![
-    //             Fr::from(1u64),
-    //             Fr::from(2u64),
-    //             Fr::from(3u64),
-    //             Fr::from(4u64),
-    //             Fr::from(5u64),
-    //             Fr::from(10u64),
-    //             Fr::from(15u64),
-    //             Fr::from(20u64),
-    //         ],
-    //         4,
-    //         2,
-    //     );
+    #[test]
+    fn test_lagrange_coeffs() {
+        let poly = BivariatePolynomial::new(
+            vec![
+                Fr::from(1u64),
+                Fr::from(2u64),
+                Fr::from(3u64),
+                Fr::from(4u64),
+                Fr::from(5u64),
+                Fr::from(6u64),
+                Fr::from(7u64),
+                Fr::from(8u64),
+            ],
+            2,
+            4,
+        );
 
-    //     let lagrange_coeffs = poly.lagrange_coeffs();
-    //     println!("lag: {:?}", lagrange_coeffs);
-    //     assert_eq!(lagrange_coeffs.len(), 8);
-    //     assert_eq!(lagrange_coeffs[0], Fr::from(1u64));
-    //     assert_eq!(lagrange_coeffs[1], Fr::from(2u64));
-    //     assert_eq!(lagrange_coeffs[2], Fr::from(3u64));
-    //     assert_eq!(lagrange_coeffs[3], Fr::from(4u64));
-    // }
+        let lagrange_coeffs = poly.lagrange_coeffs();
+
+        // From sage script
+        // poly_lag_coeff = [
+        // 0x0000000000000000000000000000000000000000000000000000000000000024,
+        // 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593effffffd,
+        // 0x00000000000000059e26bcea0d48bac65a4e1a8be2302529067f891b047e4e50,
+        // 0x0000000000000000000000000000000000000000000000000000000000000000,
+        // 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593effffff9,
+        // 0x0000000000000000000000000000000000000000000000000000000000000000,
+        // 0x30644e72e131a0241a2988cc74389d96cde5cdbc97894b683d626c78eb81b1a1,
+        // 0x0000000000000000000000000000000000000000000000000000000000000000]
+        println!("lag: {:?}", lagrange_coeffs);
+        assert_eq!(lagrange_coeffs.len(), 8);
+        assert_eq!(
+            format!("{:?}", lagrange_coeffs[0]),
+            "0x0000000000000000000000000000000000000000000000000000000000000024"
+        );
+        assert_eq!(
+            format!("{:?}", lagrange_coeffs[1]),
+            "0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593effffffd"
+        );
+        assert_eq!(
+            format!("{:?}", lagrange_coeffs[2]),
+            "0x00000000000000059e26bcea0d48bac65a4e1a8be2302529067f891b047e4e50"
+        );
+        assert_eq!(
+            format!("{:?}", lagrange_coeffs[3]),
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        );
+        assert_eq!(
+            format!("{:?}", lagrange_coeffs[4]),
+            "0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593effffff9"
+        );
+        assert_eq!(
+            format!("{:?}", lagrange_coeffs[5]),
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        );
+        assert_eq!(
+            format!("{:?}", lagrange_coeffs[6]),
+            "0x30644e72e131a0241a2988cc74389d96cde5cdbc97894b683d626c78eb81b1a1"
+        );
+        assert_eq!(
+            format!("{:?}", lagrange_coeffs[7]),
+            "0x0000000000000000000000000000000000000000000000000000000000000000"
+        );
+    }
 }

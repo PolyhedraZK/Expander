@@ -14,6 +14,7 @@ use halo2curves::group::Group;
 use halo2curves::pairing::{MillerLoopResult, MultiMillerLoop};
 use halo2curves::pasta::pallas::Scalar;
 use halo2curves::CurveAffine;
+use itertools::Itertools;
 use rand::Rng;
 use rand::RngCore;
 
@@ -85,7 +86,7 @@ where
 
         println!("start to compute the scalars");
         // computes the vector of L_i^N(tau_0) * L_j^M(tau_1) for i in 0..supported_n and j in 0..supported_m
-        let (scalars, powers_of_tau_0, lagrange_scalars) = {
+        let (scalars, f_x_b_scalars, lagrange_scalars) = {
             let powers_of_omega_0 = powers_of_field_elements(&omega_0, supported_n);
             let powers_of_tau_0 = powers_of_field_elements(&tau_0, supported_n);
             let lagrange_tau_0 = lagrange_coefficients(&powers_of_omega_0, &tau_0);
@@ -95,16 +96,18 @@ where
             let scalars = tensor_product_parallel(&powers_of_tau_0, &powers_of_tau_1);
             let lagrange_scalars = tensor_product_parallel(&lagrange_tau_0, &lagrange_tau_1);
 
-            // let mut f_x_b_scalars = lagrange_tau_0.clone();
-            // powers_of_tau_1.iter().skip(1).for_each(|bi| {
-            //     f_x_b_scalars
-            //         .iter_mut()
-            //         .zip(lagrange_tau_0.iter())
-            //         .for_each(|(fi, li)| *fi += *bi * *li);
-            // });
+            let mut f_x_b_scalars = lagrange_tau_0.clone();
+            powers_of_tau_1.iter().skip(1).for_each(|bi| {
+                f_x_b_scalars
+                    .iter_mut()
+                    .zip(lagrange_tau_0.iter())
+                    .for_each(|(fi, li)| *fi += *bi * *li);
+            });
 
-            // (scalars, f_x_b_scalars, lagrange_scalars)
-            (scalars, powers_of_tau_0, lagrange_scalars)
+            println!("f_x_b_scalars: {:?}", f_x_b_scalars);
+
+            (scalars, f_x_b_scalars, lagrange_scalars)
+            // (scalars, powers_of_tau_0, lagrange_scalars)
         };
 
         println!("lagrange scalars: {:?} ", lagrange_scalars);
@@ -129,12 +132,12 @@ where
 
         println!("start to compute the lagrange bases");
 
-        let powers_of_tau_0 = {
+        let f_x_b_scalars = {
             let mut proj_bases = vec![E::G1::identity(); supported_n];
             parallelize(&mut proj_bases, |g, start| {
                 for (idx, g) in g.iter_mut().enumerate() {
                     let offset = start + idx;
-                    *g = g1 * powers_of_tau_0[offset];
+                    *g = g1 * f_x_b_scalars[offset];
                 }
             });
 
@@ -170,13 +173,13 @@ where
             affine_bases
         };
 
-        assert_eq!(coeff_bases[..supported_n], powers_of_tau_0);
+        // assert_eq!(coeff_bases[..supported_n], f_x_b_scalars);
 
         BiKZGSRS {
             tau_0,
             tau_1,
             powers_of_g: coeff_bases,
-            // powers_of_tau_0: powers_of_tau_0,
+            f_x_b_scalars: f_x_b_scalars,
             powers_of_g_lagrange_over_both_roots: lagrange_bases,
             h: E::G2Affine::generator(),
             tau_0_h: (E::G2Affine::generator() * tau_0).into(),
@@ -247,18 +250,85 @@ where
         polynomial: &Self::Polynomial,
         point: &Self::Point,
     ) -> (Self::Proof, Self::Evaluation) {
-        let pi_0 = {
+        let (pi_0, f_x_b) = {
             let f_x_b = polynomial.evaluate_y(&point.1);
             let q_0_x_b = univariate_quotient(&f_x_b, &point.1);
-            best_multiexp(
+            let pi_0 = best_multiexp(
                 &q_0_x_b,
+                // prover_param.borrow().f_x_b_scalars.as_ref(),
                 prover_param.borrow().powers_of_g[..polynomial.degree_0].as_ref(),
             )
-            .to_affine()
+            .to_affine();
+            (pi_0, f_x_b)
         };
 
+        // fixme
+        let tau_0 = prover_param.borrow().tau_0;
+        let tau_1 = prover_param.borrow().tau_1;
+        let a = point.0;
+        let b = point.1;
+        let c = polynomial.evaluate(&tau_0, &tau_1);
+        let u = polynomial.evaluate(&a, &b);
+        // let u_prime = polynomial.evaluate(&tau_0, &b);
         let pi_1 = {
+            let mut t = polynomial.clone();
+            // t.coefficients[0] -= u_prime;
+            t.coefficients
+                .iter_mut()
+                .take(polynomial.degree_0)
+                .zip_eq(f_x_b.iter())
+                .for_each(|(c, f)| *c -= f);
+            let coeffs = t.lagrange_coeffs();
 
+            let mut divisor = vec![E::Fr::from(0); polynomial.degree_0 * polynomial.degree_1];
+            divisor[0] = -point.1;
+            divisor[polynomial.degree_0] = E::Fr::ONE;
+            let divisor =
+                BivariatePolynomial::new(divisor, polynomial.degree_0, polynomial.degree_1);
+
+            //             let omega = E::Fr::ROOT_OF_UNITY;
+            // let omega_1 = omega.pow_vartime(&[(1 << E::Fr::S) / polynomial.degree_1 as u64]);
+            // let divisor = fft_slow(divisor.as_ref(), &omega_1);
+            let divisor = divisor.lagrange_coeffs();
+
+            // let omega = E::Fr::ROOT_OF_UNITY;
+            // let omega_1 = omega.pow_vartime(&[(1 << E::Fr::S) / polynomial.degree_1 as u64]);
+            // let powers_of_omega_1 = powers_of_field_elements(&omega_1, polynomial.degree_1);
+
+            // todo: batch invert
+            let y_minus_a_inv_lag = divisor
+                .iter()
+                .map(|o| {
+                    if o.is_zero_vartime() {
+                        // E::Fr::ZERO
+                        panic!("not invertible")
+                    } else {
+                        o.invert().unwrap()
+                    }
+                })
+                .collect::<Vec<_>>();
+            // let mut q_1_x_y  = vec![];
+            //     for i in 0..polynomial.degree_0 {
+            //         for j in 0..polynomial.degree_1{
+            //             q_1_x_y.push((coeffs[j*polynomial.degree_0 + i] - f_x_b[i])  * y_minus_a_inv_lag[j]);
+            //         }
+            //     }
+
+            let q_1_x_y = coeffs
+                .iter()
+                .zip_eq(y_minus_a_inv_lag.iter())
+                .map(|(c, y)| (*c) * *y)
+                .collect::<Vec<_>>();
+
+            best_multiexp(
+                &q_1_x_y,
+                prover_param
+                    .borrow()
+                    // .powers_of_g
+                    .powers_of_g_lagrange_over_both_roots
+                    .as_ref(),
+            )
+            .to_affine()
             // // let domain  = Domain::<E::Fr>::new_for_size(prover_param.borrow().powers_of_g_lagrange_over_both_roots.len() as u64).unwrap();
 
             // let bases = prover_param.borrow().powers_of_g_lagrange_over_both_roots.as_slice();
@@ -292,14 +362,7 @@ where
             // }
         };
 
-        // fixme
-        let tau_0 = prover_param.borrow().tau_0;
-        let tau_1 = prover_param.borrow().tau_1;
-        let a = point.0;
-        let b = point.1;
-        let c = polynomial.evaluate(&tau_0, &tau_1);
-
-        let u = polynomial.evaluate(&a, &b);
+        // let u = polynomial.evaluate(&a, &b);
         let u_prime = polynomial.evaluate(&tau_0, &b);
 
         let f_tau0_b = polynomial.evaluate(&tau_0, &b);
@@ -310,7 +373,7 @@ where
         let q_1 = (c - u_prime) * ((tau_1 - b).invert().unwrap());
 
         println!("here2");
-        let proof = BiKZGProof {
+        let proof = BiKZGProof::<E> {
             pi0: (prover_param.borrow().powers_of_g[0] * q_0).into(),
             pi1: (prover_param.borrow().powers_of_g[0] * q_1).into(),
         };
@@ -321,6 +384,12 @@ where
 
         assert_eq!(t0 + t1, right, "t0 + t1 != right");
         assert_eq!(pi_0, proof.pi0, "pi0 != pi_0");
+        assert_eq!(pi_1, proof.pi1, "pi1 != pi_1");
+
+        let proof2 = BiKZGProof::<E> {
+            pi0: pi_0,
+            pi1: pi_1,
+        };
 
         (proof, u)
     }
