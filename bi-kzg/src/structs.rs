@@ -30,8 +30,10 @@ pub struct BiKZGSRS<E: Engine> {
     ///  ..., g_1^{\tau_0^N\tau_1^M}
     /// )
     pub powers_of_g: Vec<E::G1Affine>,
-    /// g in lagrange form
-    pub powers_of_g_lagrange: Vec<E::G1Affine>,
+    /// g in lagrange form over omega_0
+    pub powers_of_tau_0: Vec<E::G1Affine>,
+    /// g in lagrange form over omega_0 and omega_1
+    pub powers_of_g_lagrange_over_both_roots: Vec<E::G1Affine>,
     /// The generator of G2.
     pub h: E::G2Affine,
     /// tau_0 times the above generator of G2.

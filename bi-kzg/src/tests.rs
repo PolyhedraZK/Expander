@@ -6,26 +6,6 @@ use crate::{
     util::tensor_product_parallel, BivariatePolynomial,
 };
 
-// #[test]
-// fn test_interpolation() {
-//     let f = (0..8).map(|x| Fr::from(x as u64)).collect::<Vec<Fr>>();
-//     let f = BivariatePolynomial::new(f, 2, 4);
-//     let r1 = (0..2).map(|x| Fr::from(x as u64)).collect::<Vec<Fr>>();
-//     let r2 = (0..4).map(|x| Fr::from(x as u64)).collect::<Vec<Fr>>();
-
-//     let evals = r2
-//         .iter()
-//         .flat_map(|r2| {
-//             r1.iter()
-//                 .map(|&r1| f.evaluate(&r1, &r2))
-//                 .collect::<Vec<_>>()
-//         })
-//         .collect::<Vec<Fr>>();
-
-//     let power
-
-// }
-
 #[test]
 fn test_bi_kzg_e2e() {
     let mut rng = test_rng();
@@ -56,7 +36,6 @@ fn test_bi_kzg_e2e() {
 
     println!("poly lag coeff: {:?}", poly.lagrange_coeffs());
 
-
     let commit = BiKZG::<Bn256>::commit(&srs, &poly);
     let (proof, eval) = BiKZG::<Bn256>::open(&srs, &poly, &(x, y));
 
@@ -72,13 +51,13 @@ fn test_bi_kzg_e2e() {
 }
 
 #[test]
-fn test_lagrange_eval() {
+fn test_lagrange_coeffs() {
     let roots = vec![Fr::from(1u64), Fr::from(2u64), Fr::from(3u64)];
-    let points = vec![Fr::from(4u64), Fr::from(5u64), Fr::from(6u64)];
-    let result = lagrange_coefficients(&roots, &points);
+    let point = Fr::from(4u64);
+    let result = lagrange_coefficients(&roots, &point);
     assert_eq!(result[0], Fr::from(1u64));
-    assert_eq!(result[1], -Fr::from(8u64));
-    assert_eq!(result[2], Fr::from(10u64));
+    assert_eq!(result[1], -Fr::from(3u64));
+    assert_eq!(result[2], Fr::from(3u64));
 }
 
 #[test]

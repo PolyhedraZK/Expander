@@ -8,6 +8,7 @@ ark-std.workspace = true
 clap.workspace = true
 halo2curves.workspace = true
 log.workspace = true
+itertools.workspace = true
 rand.workspace = true
 rayon.workspace = true
 sha2.workspace = true

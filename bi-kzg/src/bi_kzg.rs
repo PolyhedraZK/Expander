@@ -1,9 +1,11 @@
 use std::ops::{Add, AddAssign};
 use std::process::Output;
+use std::thread;
 use std::{borrow::Borrow, marker::PhantomData, slice::ChunkBy};
 
 use halo2curves::ff::Field;
 use halo2curves::ff::PrimeField;
+use halo2curves::fft::best_fft;
 use halo2curves::group::prime::PrimeCurveAffine;
 use halo2curves::group::Curve;
 use halo2curves::group::Group;
@@ -16,7 +18,7 @@ use rand::Rng;
 use rand::RngCore;
 
 use crate::msm::best_multiexp;
-use crate::poly::{lagrange_coefficients, lagrange_coefficients_a};
+use crate::poly::{lagrange_coefficients, univariate_quotient};
 use crate::structs::BivariatePolynomial;
 use crate::util::parallelize;
 use crate::{
@@ -83,20 +85,26 @@ where
 
         println!("start to compute the scalars");
         // computes the vector of L_i^N(tau_0) * L_j^M(tau_1) for i in 0..supported_n and j in 0..supported_m
-        let (scalars, lagrange_scalars) = {
+        let (scalars, powers_of_tau_0, lagrange_scalars) = {
             let powers_of_omega_0 = powers_of_field_elements(&omega_0, supported_n);
             let powers_of_tau_0 = powers_of_field_elements(&tau_0, supported_n);
-            let lagrange_tau_0 = lagrange_coefficients_a(&powers_of_omega_0, &tau_0);
+            let lagrange_tau_0 = lagrange_coefficients(&powers_of_omega_0, &tau_0);
             let powers_of_omega_1 = powers_of_field_elements(&omega_1, supported_m);
             let powers_of_tau_1 = powers_of_field_elements(&tau_1, supported_m);
-            let lagrange_tau_1 = lagrange_coefficients_a(&powers_of_omega_1, &tau_1);
+            let lagrange_tau_1 = lagrange_coefficients(&powers_of_omega_1, &tau_1);
             let scalars = tensor_product_parallel(&powers_of_tau_0, &powers_of_tau_1);
             let lagrange_scalars = tensor_product_parallel(&lagrange_tau_0, &lagrange_tau_1);
 
+            // let mut f_x_b_scalars = lagrange_tau_0.clone();
+            // powers_of_tau_1.iter().skip(1).for_each(|bi| {
+            //     f_x_b_scalars
+            //         .iter_mut()
+            //         .zip(lagrange_tau_0.iter())
+            //         .for_each(|(fi, li)| *fi += *bi * *li);
+            // });
 
-            println!("lagrange_tau_0: {:?}", lagrange_tau_0);
-            println!("lagrange_tau_1: {:?}", lagrange_tau_1);
-            (scalars, lagrange_scalars)
+            // (scalars, f_x_b_scalars, lagrange_scalars)
+            (scalars, powers_of_tau_0, lagrange_scalars)
         };
 
         println!("lagrange scalars: {:?} ", lagrange_scalars);
@@ -120,6 +128,27 @@ where
         };
 
         println!("start to compute the lagrange bases");
+
+        let powers_of_tau_0 = {
+            let mut proj_bases = vec![E::G1::identity(); supported_n];
+            parallelize(&mut proj_bases, |g, start| {
+                for (idx, g) in g.iter_mut().enumerate() {
+                    let offset = start + idx;
+                    *g = g1 * powers_of_tau_0[offset];
+                }
+            });
+
+            let mut affine_bases = vec![E::G1Affine::identity(); supported_n];
+            parallelize(&mut affine_bases, |affine_bases, starts| {
+                E::G1::batch_normalize(
+                    &proj_bases[starts..(starts + affine_bases.len())],
+                    affine_bases,
+                );
+            });
+            drop(proj_bases);
+            affine_bases
+        };
+
         println!("lagrange scalars: {:?} ", lagrange_scalars);
         let lagrange_bases = {
             let mut proj_bases = vec![E::G1::identity(); supported_n * supported_m];
@@ -130,22 +159,23 @@ where
                 }
             });
 
-            let mut g_lagrange = vec![E::G1Affine::identity(); supported_n * supported_m];
-            parallelize(&mut g_lagrange, |g_lagrange, starts| {
+            let mut affine_bases = vec![E::G1Affine::identity(); supported_n * supported_m];
+            parallelize(&mut affine_bases, |affine_bases, starts| {
                 E::G1::batch_normalize(
-                    &proj_bases[starts..(starts + g_lagrange.len())],
-                    g_lagrange,
+                    &proj_bases[starts..(starts + affine_bases.len())],
+                    affine_bases,
                 );
             });
             drop(proj_bases);
-            g_lagrange
+            affine_bases
         };
 
         BiKZGSRS {
             tau_0,
             tau_1,
             powers_of_g: coeff_bases,
-            powers_of_g_lagrange: lagrange_bases,
+            powers_of_tau_0: powers_of_tau_0,
+            powers_of_g_lagrange_over_both_roots: lagrange_bases,
             h: E::G2Affine::generator(),
             tau_0_h: (E::G2Affine::generator() * tau_0).into(),
             tau_1_h: (E::G2Affine::generator() * tau_1).into(),
@@ -177,17 +207,32 @@ where
             .into(),
             "commitment is not equal to evaluation"
         );
+        {
+            let lag_coeff = poly.lagrange_coeffs();
+            let com_lag = best_multiexp(
+                &lag_coeff,
+                prover_param
+                    .borrow()
+                    .powers_of_g_lagrange_over_both_roots
+                    .as_slice(),
+            )
+            .into();
+            assert_eq!(
+                com, com_lag,
+                "commitment is not equal to lagrange commitment"
+            );
+        }
 
-        let lag_coeff = poly.lagrange_coeffs();
-        let com_lag = best_multiexp(
-            &lag_coeff,
-            prover_param.borrow().powers_of_g_lagrange.as_slice(),
-        )
-        .into();
-        assert_eq!(
-            com, com_lag,
-            "commitment is not equal to lagrange commitment"
-        );
+        {
+            let lag_coeff = poly.evaluate_y(&prover_param.borrow().tau_1);
+            let com_lag =
+                best_multiexp(&lag_coeff, prover_param.borrow().powers_of_tau_0.as_slice()).into();
+            assert_eq!(
+                com, com_lag,
+                "commitment is not equal to lagrange commitment"
+            );
+        }
+
         println!("finished commit");
         Self::Commitment { com }
     }
@@ -197,6 +242,55 @@ where
         polynomial: &Self::Polynomial,
         point: &Self::Point,
     ) -> (Self::Proof, Self::Evaluation) {
+        let pi_0 = {
+            let f_x_b = polynomial.evaluate_y(&point.1); 
+            let q_0_x_b = univariate_quotient(&f_x_b, &point.1); 
+            best_multiexp(
+                &q_0_x_b,
+                prover_param.borrow().powers_of_tau_0.as_slice(),
+            )
+            .to_affine()
+        };
+
+        let pi_1 = {
+
+            // // let domain  = Domain::<E::Fr>::new_for_size(prover_param.borrow().powers_of_g_lagrange_over_both_roots.len() as u64).unwrap();
+
+            // let bases = prover_param.borrow().powers_of_g_lagrange_over_both_roots.as_slice();
+            // let mut q_1_x_y = vec![];
+            // let lag_bases = (0..polynomial.degree_0*polynomial.degree_1).map(|i|E::Fr::from(i as u64)).   collect::<Vec<_>>();
+            // let mut cb = vec![E::Fr::from(0);polynomial.degree_0*polynomial.degree_1];
+            // for i in 0..1 {
+            //     let start = 0;
+            //     let mut end = polynomial.degree_0;
+            //     if end > polynomial.degree_0 {end = polynomial.degree_0;}
+            //     let handle = thread::spawn(move || {
+            //         // let cb_ptr = cb_ptr_usize as *mut E::Fr;
+            //         // let mut lag_base_ptr = lag_base_ptr_usize as *const Fr;
+            //         // lag_base_ptr =  unsafe { lag_base_ptr.offset((start * degree_m) as isize)};
+            //         for j in start..end {
+            //             let mut cj = vec![E::Fr::from(0);polynomial.degree_0];
+            //             // lag_base_ptr =  unsafe { lag_base_ptr.offset(degree_m as isize)};
+            //             // domain1.ifft_in_place(&mut cj);
+            //             best_fft(&mut cj, );
+                        
+
+            //             let mut cb_temp  = cj[degree_m-1];
+            //             unsafe{ cb_ptr.add(j*degree_m + degree_m - 1).write(cb_temp) };
+            //             for k in (1..(degree_m-1)).rev() {
+            //                 cb_temp *= b;
+            //                 cb_temp += cj[k];
+            //                 unsafe{ cb_ptr.add(j*degree_m + k).write(cb_temp) };
+            //             }
+            //         }
+            //     });
+            //     handles.push(handle);
+            // }
+
+
+        };
+
+
         // fixme
         let tau_0 = prover_param.borrow().tau_0;
         let tau_1 = prover_param.borrow().tau_1;
@@ -225,6 +319,7 @@ where
         let right = c - u;
 
         assert_eq!(t0 + t1, right, "t0 + t1 != right");
+        assert_eq!(pi_0, proof.pi0, "pi0 != pi_0");
 
         (proof, u)
     }
