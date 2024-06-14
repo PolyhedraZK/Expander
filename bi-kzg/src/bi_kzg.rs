@@ -170,11 +170,13 @@ where
             affine_bases
         };
 
+        assert_eq!(coeff_bases[..supported_n], powers_of_tau_0);
+
         BiKZGSRS {
             tau_0,
             tau_1,
             powers_of_g: coeff_bases,
-            powers_of_tau_0: powers_of_tau_0,
+            // powers_of_tau_0: powers_of_tau_0,
             powers_of_g_lagrange_over_both_roots: lagrange_bases,
             h: E::G2Affine::generator(),
             tau_0_h: (E::G2Affine::generator() * tau_0).into(),
@@ -225,8 +227,11 @@ where
 
         {
             let lag_coeff = poly.evaluate_y(&prover_param.borrow().tau_1);
-            let com_lag =
-                best_multiexp(&lag_coeff, prover_param.borrow().powers_of_tau_0.as_slice()).into();
+            let com_lag = best_multiexp(
+                &lag_coeff,
+                prover_param.borrow().powers_of_g[..poly.degree_0].as_ref(),
+            )
+            .into();
             assert_eq!(
                 com, com_lag,
                 "commitment is not equal to lagrange commitment"
@@ -243,11 +248,11 @@ where
         point: &Self::Point,
     ) -> (Self::Proof, Self::Evaluation) {
         let pi_0 = {
-            let f_x_b = polynomial.evaluate_y(&point.1); 
-            let q_0_x_b = univariate_quotient(&f_x_b, &point.1); 
+            let f_x_b = polynomial.evaluate_y(&point.1);
+            let q_0_x_b = univariate_quotient(&f_x_b, &point.1);
             best_multiexp(
                 &q_0_x_b,
-                prover_param.borrow().powers_of_tau_0.as_slice(),
+                prover_param.borrow().powers_of_g[..polynomial.degree_0].as_ref(),
             )
             .to_affine()
         };
@@ -273,7 +278,6 @@ where
             //             // lag_base_ptr =  unsafe { lag_base_ptr.offset(degree_m as isize)};
             //             // domain1.ifft_in_place(&mut cj);
             //             best_fft(&mut cj, );
-                        
 
             //             let mut cb_temp  = cj[degree_m-1];
             //             unsafe{ cb_ptr.add(j*degree_m + degree_m - 1).write(cb_temp) };
@@ -286,10 +290,7 @@ where
             //     });
             //     handles.push(handle);
             // }
-
-
         };
-
 
         // fixme
         let tau_0 = prover_param.borrow().tau_0;
