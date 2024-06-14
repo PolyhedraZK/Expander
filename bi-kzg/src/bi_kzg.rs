@@ -250,9 +250,23 @@ where
         polynomial: &Self::Polynomial,
         point: &Self::Point,
     ) -> (Self::Proof, Self::Evaluation) {
+        // fixme
+        let tau_0 = prover_param.borrow().tau_0;
+        let tau_1 = prover_param.borrow().tau_1;
+        let a = point.0;
+        let b = point.1;
+        let c = polynomial.evaluate(&tau_0, &tau_1);
+        let u = polynomial.evaluate(&a, &b);
         let (pi_0, f_x_b) = {
             let f_x_b = polynomial.evaluate_y(&point.1);
-            let q_0_x_b = univariate_quotient(&f_x_b, &point.1);
+            let mut q_0__x_b = f_x_b.clone();
+            q_0__x_b[0] -= u;
+            let q_0_x_b = univariate_quotient(&q_0__x_b, &point.0);
+            println!("poly: {:?}", polynomial);
+            println!("point: {:?}", point);
+            println!("f_x_b: {:?}", f_x_b);
+            println!("q_0_x_b: {:?}", q_0_x_b);
+
             let pi_0 = best_multiexp(
                 &q_0_x_b,
                 // prover_param.borrow().f_x_b_scalars.as_ref(),
@@ -262,13 +276,6 @@ where
             (pi_0, f_x_b)
         };
 
-        // fixme
-        let tau_0 = prover_param.borrow().tau_0;
-        let tau_1 = prover_param.borrow().tau_1;
-        let a = point.0;
-        let b = point.1;
-        let c = polynomial.evaluate(&tau_0, &tau_1);
-        let u = polynomial.evaluate(&a, &b);
         // let u_prime = polynomial.evaluate(&tau_0, &b);
         let pi_1 = {
             let mut t = polynomial.clone();
