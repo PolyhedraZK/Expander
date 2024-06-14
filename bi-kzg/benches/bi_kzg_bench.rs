@@ -1,5 +1,4 @@
 use ark_bn254::{Fr, G1Affine, G1Projective};
-use ark_ec::short_weierstrass::Projective;
 use ark_ec::Group;
 use ark_ec::{AffineRepr, VariableBaseMSM};
 use ark_ff::Zero;
@@ -7,10 +6,9 @@ use ark_ff::{PrimeField, UniformRand};
 use halo2curves::bn256;
 use halo2curves::ff::Field;
 use halo2curves::msm::best_multiexp;
-use rand::Rng;
 use std::{thread, time::Duration};
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 
 fn criterion_benchmark(c: &mut Criterion) {
     let degree_set = vec![2048, 4096, 8192, 16384];

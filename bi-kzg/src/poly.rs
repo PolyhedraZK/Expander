@@ -2,7 +2,6 @@ use halo2curves::ff::{Field, PrimeField};
 use itertools::Itertools;
 use rand::RngCore;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
-use rayon::vec;
 
 use crate::structs::{BivariateLagrangePolynomial, BivariatePolynomial};
 use crate::util::powers_of_field_elements;
@@ -78,11 +77,6 @@ impl<F: PrimeField> BivariatePolynomial<F> {
         };
         let powers_of_omega_0 = powers_of_field_elements(&omega_0, self.degree_0);
         let powers_of_omega_1 = powers_of_field_elements(&omega_1, self.degree_1);
-        // println!(
-        //     "omega len {} {}",
-        //     powers_of_omega_0.len(),
-        //     powers_of_omega_1.len()
-        // );
 
         // Todo! Optimize me. This is not efficient.
         let mut res = vec![];
@@ -91,15 +85,10 @@ impl<F: PrimeField> BivariatePolynomial<F> {
                 res.push(self.evaluate(omega_0_power, omega_1_power));
             }
         }
-        // println!("powers_of_omega_1: {:?}", powers_of_omega_1);
-        // println!("res: {:?}", res);
+
         res
     }
 
-    // pub fn from_lagrange_coeffs(coeffs: Vec<F>, degree_0: usize, degree_1: usize) -> Self {
-    //     assert_eq!(coeffs.len(), degree_0 * degree_1);
-    //     todo!()
-    // }
 }
 
 /// For x in points, compute the Lagrange coefficients at x given the roots.
@@ -210,7 +199,7 @@ impl<F: PrimeField> From<BivariatePolynomial<F>> for BivariateLagrangePolynomial
 }
 
 impl<F: PrimeField> From<BivariateLagrangePolynomial<F>> for BivariatePolynomial<F> {
-    fn from(poly: BivariateLagrangePolynomial<F>) -> Self {
+    fn from(_poly: BivariateLagrangePolynomial<F>) -> Self {
         todo!()
     }
 }
@@ -320,21 +309,21 @@ mod tests {
         let eval_at_y = poly.evaluate_y(&Fr::from(10u64));
         assert_eq!(eval_at_y, vec![Fr::from(7531u64), Fr::from(8642u64)]);
 
-        let poly = BivariatePolynomial::new(
-            vec![
-                Fr::from(1u64),
-                Fr::from(0u64),
-                Fr::from(1u64),
-                Fr::from(0u64),
-                Fr::from(0u64),
-                Fr::from(0u64),
-                Fr::from(0u64),
-                Fr::from(0u64),
-            ],
-            2,
-            4,
-        );
-        println!("poly: {:?}", poly.lagrange_coeffs());
+        // let poly = BivariatePolynomial::new(
+        //     vec![
+        //         Fr::from(1u64),
+        //         Fr::from(0u64),
+        //         Fr::from(1u64),
+        //         Fr::from(0u64),
+        //         Fr::from(0u64),
+        //         Fr::from(0u64),
+        //         Fr::from(0u64),
+        //         Fr::from(0u64),
+        //     ],
+        //     2,
+        //     4,
+        // );
+        // println!("poly: {:?}", poly.lagrange_coeffs());
     }
 
     #[test]
@@ -410,7 +399,6 @@ mod tests {
         // 0x0000000000000000000000000000000000000000000000000000000000000000,
         // 0x30644e72e131a0241a2988cc74389d96cde5cdbc97894b683d626c78eb81b1a1,
         // 0x0000000000000000000000000000000000000000000000000000000000000000]
-        println!("lag: {:?}", lagrange_coeffs);
         assert_eq!(lagrange_coeffs.len(), 8);
         assert_eq!(
             format!("{:?}", lagrange_coeffs[0]),

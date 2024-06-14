@@ -1,5 +1,5 @@
 use halo2curves::ff::Field;
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 pub(crate) fn powers_of_field_elements<F: Field>(x: &F, n: usize) -> Vec<F> {
     let mut powers = vec![F::ONE];

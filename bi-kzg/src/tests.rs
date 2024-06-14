@@ -37,8 +37,6 @@ fn test_bi_kzg_e2e() {
 
     assert_eq!(poly.evaluate(&x, &y), Fr::from(85309u64));
 
-    println!("poly lag coeff: {:?}", poly.lagrange_coeffs());
-
     let commit = BiKZG::<Bn256>::commit(&srs, &poly);
     let (proof, eval) = BiKZG::<Bn256>::open(&srs, &poly, &(x, y));
 
@@ -46,7 +44,6 @@ fn test_bi_kzg_e2e() {
 
     for n in [2, 4, 8, 16] {
         for m in [2, 4, 8, 16] {
-            println!("m: {}, n: {}", m, n);
             let srs = BiKZG::<Bn256>::gen_srs_for_testing(&mut rng, n, m);
             let vk = BiKZGVerifierParam::<Bn256>::from(&srs);
             for _ in 0..10 {

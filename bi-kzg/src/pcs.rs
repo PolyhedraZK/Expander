@@ -1,7 +1,7 @@
-use std::{borrow::Borrow, fmt::Debug, hash::Hash};
+use std::{borrow::Borrow, fmt::Debug};
 
-use halo2curves::{ff::Field, pairing::Engine, serde::SerdeObject};
-use rand::{Rng, RngCore};
+use halo2curves::{ff::Field, serde::SerdeObject};
+use rand::RngCore;
 
 /// This trait defines APIs for polynomial commitment schemes.
 /// Note that for our usage of PCS, we do not require the hiding property.

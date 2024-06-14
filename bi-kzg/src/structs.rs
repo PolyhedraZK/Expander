@@ -19,10 +19,6 @@ pub struct BivariateLagrangePolynomial<F> {
 /// Structured reference string for Bi-KZG polynomial commitment scheme.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct BiKZGSRS<E: Engine> {
-    // FIXME: remove me
-    pub tau_0: E::Fr,
-    pub tau_1: E::Fr,
-
     /// (g_1^{\tau_0^i\tau_1^j})_{i\in [0,N], j\in [0, M]} = \\
     /// (
     ///  g_1, g_1^{\tau_0}, g_1^{\tau_0^2}, ..., g_1^{\tau_0^N},
@@ -30,8 +26,6 @@ pub struct BiKZGSRS<E: Engine> {
     ///  ..., g_1^{\tau_0^N\tau_1^M}
     /// )
     pub powers_of_g: Vec<E::G1Affine>,
-    /// g in lagrange form over omega_0
-    pub f_x_b_scalars: Vec<E::G1Affine>,
     /// g in lagrange form over omega_0 and omega_1
     pub powers_of_g_lagrange_over_both_roots: Vec<E::G1Affine>,
     /// The generator of G2.
@@ -95,10 +89,10 @@ impl<E: Engine> SerdeObject for BiKZGCommitment<E> {
     /// to ensure the bytes represent a valid object. As such this function should only be
     /// used internally as an extension of machine memory. It should not be used to deserialize
     /// externally provided data.
-    fn from_raw_bytes_unchecked(bytes: &[u8]) -> Self {
+    fn from_raw_bytes_unchecked(_bytes: &[u8]) -> Self {
         todo!("Implement this function")
     }
-    fn from_raw_bytes(bytes: &[u8]) -> Option<Self> {
+    fn from_raw_bytes(_bytes: &[u8]) -> Option<Self> {
         todo!("Implement this function")
     }
 
@@ -111,14 +105,14 @@ impl<E: Engine> SerdeObject for BiKZGCommitment<E> {
     /// to ensure the bytes represent a valid object. This function should only be used
     /// internally when some machine state cannot be kept in memory (e.g., between runs)
     /// and needs to be reloaded as quickly as possible.
-    fn read_raw_unchecked<R: Read>(reader: &mut R) -> Self {
+    fn read_raw_unchecked<R: Read>(_reader: &mut R) -> Self {
         todo!("Implement this function")
     }
-    fn read_raw<R: Read>(reader: &mut R) -> io::Result<Self> {
+    fn read_raw<R: Read>(_reader: &mut R) -> io::Result<Self> {
         todo!("Implement this function")
     }
 
-    fn write_raw<W: Write>(&self, writer: &mut W) -> io::Result<()> {
+    fn write_raw<W: Write>(&self, _writer: &mut W) -> io::Result<()> {
         todo!("Implement this function")
     }
 }
@@ -129,10 +123,10 @@ impl<E: Engine> SerdeObject for BiKZGProof<E> {
     /// to ensure the bytes represent a valid object. As such this function should only be
     /// used internally as an extension of machine memory. It should not be used to deserialize
     /// externally provided data.
-    fn from_raw_bytes_unchecked(bytes: &[u8]) -> Self {
+    fn from_raw_bytes_unchecked(_bytes: &[u8]) -> Self {
         todo!("Implement this function")
     }
-    fn from_raw_bytes(bytes: &[u8]) -> Option<Self> {
+    fn from_raw_bytes(_bytes: &[u8]) -> Option<Self> {
         todo!("Implement this function")
     }
 
@@ -145,14 +139,14 @@ impl<E: Engine> SerdeObject for BiKZGProof<E> {
     /// to ensure the bytes represent a valid object. This function should only be used
     /// internally when some machine state cannot be kept in memory (e.g., between runs)
     /// and needs to be reloaded as quickly as possible.
-    fn read_raw_unchecked<R: Read>(reader: &mut R) -> Self {
+    fn read_raw_unchecked<R: Read>(_reader: &mut R) -> Self {
         todo!("Implement this function")
     }
-    fn read_raw<R: Read>(reader: &mut R) -> io::Result<Self> {
+    fn read_raw<R: Read>(_reader: &mut R) -> io::Result<Self> {
         todo!("Implement this function")
     }
 
-    fn write_raw<W: Write>(&self, writer: &mut W) -> io::Result<()> {
+    fn write_raw<W: Write>(&self, _writer: &mut W) -> io::Result<()> {
         todo!("Implement this function")
     }
 }
