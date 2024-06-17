@@ -3,6 +3,7 @@
 
 use std::ops::{Add, Neg};
 
+use ark_std::{end_timer, start_timer};
 use halo2curves::ff::PrimeField;
 use halo2curves::group::Group;
 use halo2curves::pairing::PairingCurveAffine;
@@ -60,10 +61,11 @@ pub fn best_multiexp<C: PairingCurveAffine + Add<Output = C::Curve>>(
     coeffs: &[C::Scalar],
     bases: &[C],
 ) -> C::Curve {
+    let timer = start_timer!(|| format!("Multiexp of dim {}", coeffs.len()));
     assert_eq!(coeffs.len(), bases.len());
 
     let num_threads = rayon::current_num_threads();
-    if coeffs.len() > num_threads {
+    let res = if coeffs.len() > num_threads {
         let chunk = coeffs.len() / num_threads;
         let num_chunks = coeffs.chunks(chunk).len();
         let mut results = vec![C::Curve::identity(); num_chunks];
@@ -85,7 +87,10 @@ pub fn best_multiexp<C: PairingCurveAffine + Add<Output = C::Curve>>(
         let mut acc = C::Curve::identity();
         multiexp_serial(coeffs, bases, &mut acc);
         acc
-    }
+    };
+
+    end_timer!(timer);
+    res
 }
 
 pub fn multiexp_serial<C: PairingCurveAffine + Add<Output = C::Curve>>(

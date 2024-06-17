@@ -1,3 +1,4 @@
+use ark_std::{end_timer, start_timer};
 use halo2curves::ff::{Field, PrimeField};
 use itertools::Itertools;
 use rand::RngCore;
@@ -58,7 +59,13 @@ impl<F: PrimeField> BivariatePolynomial<F> {
     }
 
     ///
+    // TODO: this is super slow. Implement FFT for bivariate polynomials.
     pub fn lagrange_coeffs(&self) -> Vec<F> {
+        let timer = start_timer!(|| format!(
+            "Lagrange coefficients of degree {} {}",
+            self.degree_0, self.degree_1
+        ));
+
         // roots of unity for supported_n and supported_m
         let (omega_0, omega_1) = {
             let omega = F::ROOT_OF_UNITY;
@@ -85,10 +92,9 @@ impl<F: PrimeField> BivariatePolynomial<F> {
                 res.push(self.evaluate(omega_0_power, omega_1_power));
             }
         }
-
+        end_timer!(timer);
         res
     }
-
 }
 
 /// For x in points, compute the Lagrange coefficients at x given the roots.
@@ -116,6 +122,7 @@ pub(crate) fn lagrange_coefficients<F: Field + Send + Sync>(roots: &[F], points:
 ///
 // TODO: this algorithm is quadratic. is this more efficient than FFT?
 pub(crate) fn univariate_quotient<F: PrimeField>(poly: &[F], point: &F) -> Vec<F> {
+    let timer = start_timer!(|| format!("Univariate quotient of degree {}", poly.len()));
     let mut dividend_coeff = poly.to_vec();
     let divisor = vec![-*point, F::from(1u64)];
     let mut coefficients = vec![];
@@ -141,7 +148,7 @@ pub(crate) fn univariate_quotient<F: PrimeField>(poly: &[F], point: &F) -> Vec<F
     }
     coefficients.reverse();
     coefficients.push(F::from(0u64));
-
+    end_timer!(timer);
     coefficients
 }
 

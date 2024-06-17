@@ -1,6 +1,7 @@
 use std::ops::Add;
 use std::{borrow::Borrow, marker::PhantomData};
 
+use ark_std::{end_timer, start_timer};
 use halo2curves::ff::Field;
 use halo2curves::ff::PrimeField;
 use halo2curves::group::prime::PrimeCurveAffine;
@@ -70,7 +71,7 @@ where
             (omega_0, omega_1)
         };
 
-        println!("start to compute the scalars");
+        // println!("start to compute the scalars");
         // computes the vector of L_i^N(tau_0) * L_j^M(tau_1) for i in 0..supported_n and j in 0..supported_m
         let (scalars, lagrange_scalars) = {
             let powers_of_omega_0 = powers_of_field_elements(&omega_0, supported_n);
@@ -85,7 +86,7 @@ where
             (scalars, lagrange_scalars)
         };
 
-        println!("start to compute the affine bases");
+        // println!("start to compute the affine bases");
         let coeff_bases = {
             let mut proj_bases = vec![E::G1::identity(); supported_n * supported_m];
             parallelize(&mut proj_bases, |g, start| {
@@ -103,7 +104,7 @@ where
             g_bases
         };
 
-        println!("start to compute the lagrange bases");
+        // println!("start to compute the lagrange bases");
 
         let lagrange_bases = {
             let mut proj_bases = vec![E::G1::identity(); supported_n * supported_m];
@@ -148,6 +149,11 @@ where
         prover_param: impl Borrow<Self::ProverParam>,
         poly: &Self::Polynomial,
     ) -> Self::Commitment {
+        let timer = start_timer!(|| format!(
+            "Committing to polynomial of degree {} {}",
+            poly.degree_0, poly.degree_1
+        ));
+
         let com = best_multiexp(
             &poly.coefficients,
             prover_param.borrow().powers_of_g.as_slice(),
@@ -171,6 +177,8 @@ where
             );
         }
 
+        end_timer!(timer);
+
         Self::Commitment { com }
     }
 
@@ -179,10 +187,16 @@ where
         polynomial: &Self::Polynomial,
         point: &Self::Point,
     ) -> (Self::Proof, Self::Evaluation) {
+        let timer = start_timer!(|| format!(
+            "Opening polynomial of degree {} {}",
+            polynomial.degree_0, polynomial.degree_1
+        ));
+
         let a = point.0;
         let b = point.1;
         let u = polynomial.evaluate(&a, &b);
 
+        let timer2 = start_timer!(|| "Computing the proof pi0");
         let (pi_0, f_x_b) = {
             let f_x_b = polynomial.evaluate_y(&point.1);
             let mut q_0_x_b = f_x_b.clone();
@@ -196,7 +210,9 @@ where
             .to_affine();
             (pi_0, f_x_b)
         };
+        end_timer!(timer2);
 
+        let timer2 = start_timer!(|| "Computing the proof pi1");
         let pi_1 = {
             let mut t = polynomial.clone();
             t.coefficients
@@ -236,18 +252,18 @@ where
                 &q_1_x_y,
                 prover_param
                     .borrow()
-                    // .powers_of_g
                     .powers_of_g_lagrange_over_both_roots
                     .as_ref(),
             )
             .to_affine()
         };
-
+        end_timer!(timer2);
         let proof = BiKZGProof::<E> {
             pi0: pi_0,
             pi1: pi_1,
         };
 
+        end_timer!(timer);
         (proof, u)
     }
 
