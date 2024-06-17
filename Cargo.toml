@@ -28,7 +28,7 @@ members = [
 ark-std = "0.4"
 ark-bn254 = "0.4.0"
 ark-ec = "0.4.0"
-ark-ff = { version = "0.4", features = [ "asm" ] }
+ark-ff = { version = "0.4" }
 clap = { version = "4.1", features = ["derive"] }
 criterion = { version = "0.5", features = ["html_reports"] }
 itertools = "0.13"
@@ -37,4 +37,4 @@ rand = "0.8.5"
 rayon = "1.10"
 sha2 = "0.10.8"
 
-halo2curves = { git = "https://github.com/zhenfeizhang/halo2curves", default-features = false, features = [ "bits", "asm", "bn256-table" ] }
+halo2curves = { git = "https://github.com/zhenfeizhang/halo2curves", default-features = false, features = [ "bits", "bn256-table" ] }
