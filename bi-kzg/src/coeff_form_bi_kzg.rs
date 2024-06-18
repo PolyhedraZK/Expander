@@ -160,12 +160,13 @@ where
             "Committing to polynomial of degree {} {}",
             poly.degree_0, poly.degree_1
         ));
-
+        let timer2 =
+            start_timer!(|| format!("Computing the msm for size {}", poly.coefficients.len()));
         let com = best_multiexp(
             &poly.coefficients,
             prover_param.borrow().powers_of_g.as_slice(),
         );
-
+        end_timer!(timer2);
         end_timer!(timer);
 
         Self::Commitment { com: com.into() }
@@ -192,11 +193,13 @@ where
             q_0_x_b[0] -= u;
             let q_0_x_b = univariate_quotient(&q_0_x_b, &point.0);
 
+            let timer2 = start_timer!(|| format!("Computing the msm for size {}", q_0_x_b.len()));
             let pi_0 = best_multiexp(
                 &q_0_x_b,
                 prover_param.borrow().powers_of_g[..polynomial.degree_0].as_ref(),
             )
             .to_affine();
+            end_timer!(timer2);
             (pi_0, f_x_b)
         };
         end_timer!(timer2);
@@ -237,14 +240,17 @@ where
                 .map(|(c, y)| (*c) * *y)
                 .collect::<Vec<_>>();
 
-            best_multiexp(
+            let timer2 = start_timer!(|| format!("Computing the msm for size {}", q_1_x_y.len()));
+            let res = best_multiexp(
                 &q_1_x_y,
                 prover_param
                     .borrow()
                     .powers_of_g_lagrange_over_both_roots
                     .as_ref(),
             )
-            .to_affine()
+            .to_affine();
+            end_timer!(timer2);
+            res
         };
         end_timer!(timer2);
         let proof = BiKZGProof::<E> {

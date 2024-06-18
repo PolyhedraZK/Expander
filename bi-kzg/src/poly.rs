@@ -4,6 +4,7 @@ use itertools::Itertools;
 use rand::RngCore;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
+use crate::bi_fft::bi_fft_in_place;
 use crate::structs::{BivariateLagrangePolynomial, BivariatePolynomial};
 use crate::util::powers_of_field_elements;
 
@@ -66,6 +67,9 @@ impl<F: PrimeField> BivariatePolynomial<F> {
             self.degree_0, self.degree_1
         ));
 
+        // let mut coeff = self.coefficients.clone();
+        // bi_fft_in_place(&mut coeff, self.degree_0, self.degree_1);
+
         // roots of unity for supported_n and supported_m
         let (omega_0, omega_1) = {
             let omega = F::ROOT_OF_UNITY;
@@ -93,6 +97,7 @@ impl<F: PrimeField> BivariatePolynomial<F> {
             }
         }
         end_timer!(timer);
+        // coeff
         res
     }
 }

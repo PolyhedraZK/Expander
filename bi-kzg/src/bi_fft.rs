@@ -3,7 +3,7 @@
 use ark_std::log2;
 use halo2curves::{
     ff::{Field, PrimeField},
-    fft::{best_fft, FftGroup},
+    fft::best_fft,
 };
 
 fn bitreverse(mut n: usize, l: usize) -> usize {
@@ -21,10 +21,6 @@ fn deep_swap_chunks<F: Clone + Copy>(a: &mut [&mut [F]], rk: usize, k: usize) {
     let buf2 = (a[rk]).to_vec();
     a[rk].copy_from_slice(&buf1);
     a[k].copy_from_slice(&buf2);
-    // a[rk].iter_mut().zip(a[k].iter_mut()).for_each(|(a, b)| {
-    //     let t = *a;
-    //     *a = *b;
-    //     *b = t});
 }
 
 // #[inline]
@@ -110,22 +106,22 @@ pub fn best_fft_vec<F: PrimeField>(a: &mut [F], omega: F, log_n: u32, log_m: u32
         let rk = bitreverse(k, log_m as usize);
 
         if k < rk {
-            println!("k: {}, rk: {}", k, rk);
-            for a in a_vec_ptrs.iter().enumerate() {
-                println!("{}: {:?}", a.0, a.1);
-            }
+            // println!("k: {}, rk: {}", k, rk);
+            // for a in a_vec_ptrs.iter().enumerate() {
+            //     println!("{}: {:?}", a.0, a.1);
+            // }
 
-            deep_swap_chunks(&mut a_vec_ptrs, rk, k );
+            deep_swap_chunks(&mut a_vec_ptrs, rk, k);
 
             // a_vec_ptrs.swap(rk, k);
             // swap_chunks(a_vec_ptrs[k], log_n);
             // swap_chunks(a_vec_ptrs[rk], log_n);
 
-            for a in a_vec_ptrs.iter().enumerate() {
-                println!("{}: {:?}", a.0, a.1);
-            }
+            // for a in a_vec_ptrs.iter().enumerate() {
+            //     println!("{}: {:?}", a.0, a.1);
+            // }
 
-            println!();
+            // println!();
         }
     }
 
@@ -268,9 +264,9 @@ pub(crate) fn bi_fft_in_place<F: PrimeField>(coeffs: &mut [F], degree_n: usize, 
         .chunks_exact_mut(degree_n)
         .for_each(|chunk| best_fft(chunk, omega_0, log2(degree_n)));
 
-    println!("before: {:?}", coeffs);
+    // println!("before: {:?}", coeffs);
     best_fft_vec(coeffs, omega_1, log2(degree_n), log2(degree_m));
-    println!("after: {:?}", coeffs);
+    // println!("after: {:?}", coeffs);
 }
 
 #[cfg(test)]
@@ -313,11 +309,11 @@ mod tests {
             let poly_lag = poly.lagrange_coeffs();
             bi_fft_in_place(&mut poly_lag2, n, m);
 
-            for (i, (a, b)) in poly_lag.iter().zip(poly_lag2.iter()).enumerate() {
-                println!("{}: {:?} == {:?}", i, a, b);
-            }
+            // for (i, (a, b)) in poly_lag.iter().zip(poly_lag2.iter()).enumerate() {
+            //     println!("{}: {:?} == {:?}", i, a, b);
+            // }
 
-            println!("correct one {:?}", poly_lag);
+            // println!("correct one {:?}", poly_lag);
             // println!();
             // println!("{:?}", poly_lag2);
             // println!();
@@ -332,7 +328,7 @@ mod tests {
                 let mut poly_lag2 = poly.coefficients.clone();
                 let poly_lag = poly.lagrange_coeffs();
                 bi_fft_in_place(&mut poly_lag2, *n, *m);
-                println!("m = {}, n = {}: {}", m, n, poly_lag == poly_lag2);
+                // println!("m = {}, n = {}: {}", m, n, poly_lag == poly_lag2);
                 assert_eq!(poly_lag, poly_lag2);
             }
         }
