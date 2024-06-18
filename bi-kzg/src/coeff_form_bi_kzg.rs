@@ -212,7 +212,7 @@ where
                 .take(polynomial.degree_0)
                 .zip_eq(f_x_b.iter())
                 .for_each(|(c, f)| *c -= f);
-            let coeffs = t.lagrange_coeffs();
+            let coeffs = t.interpolate();
 
             let mut divisor = vec![E::Fr::from(0); polynomial.degree_0 * polynomial.degree_1];
             divisor[0] = -point.1;
@@ -220,7 +220,7 @@ where
             let divisor =
                 BivariatePolynomial::new(divisor, polynomial.degree_0, polynomial.degree_1);
 
-            let divisor = divisor.lagrange_coeffs();
+            let divisor = divisor.interpolate();
 
             // todo: batch invert
             let y_minus_a_inv_lag = divisor

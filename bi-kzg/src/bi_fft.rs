@@ -6,6 +6,7 @@ use halo2curves::{
     fft::best_fft,
 };
 
+#[inline]
 fn bitreverse(mut n: usize, l: usize) -> usize {
     let mut r = 0;
     for _ in 0..l {
@@ -17,63 +18,36 @@ fn bitreverse(mut n: usize, l: usize) -> usize {
 
 #[inline]
 fn deep_swap_chunks<F: Clone + Copy>(a: &mut [&mut [F]], rk: usize, k: usize) {
+    // hmmm maybe use unsafe functions to avoid two clones here?
     let buf1 = (a[k]).to_vec();
     let buf2 = (a[rk]).to_vec();
     a[rk].copy_from_slice(&buf1);
     a[k].copy_from_slice(&buf2);
 }
 
-// #[inline]
-// fn swap_chunks<F>(a: &mut [F], log_n: u32) {
-
-//     for k in 0..1<<log_n {
-//         let rk = bitreverse(k, log_n as usize);
-//         if k < rk {
-//             a.swap(rk, k);
-//         }
-//     }
-
-// }
-
-fn assign_vec<F: Field>(a: &mut [F], b: &[F], n: usize) {
-    assert!(a.len() == n);
-    assert!(b.len() == n);
-    a.iter_mut()
-        .zip(b.iter())
-        .take(n)
-        .for_each(|(a, b)| *a = *b);
+fn assign_vec<F: Field>(a: &mut [F], b: &[F]) {
+    a.iter_mut().zip(b.iter()).for_each(|(a, b)| *a = *b);
 }
 
 #[inline]
-fn add_assign_vec<F: Field>(a: &mut [F], b: &[F], n: usize) {
-    assert!(a.len() == n);
-    assert!(b.len() == n);
-
-    a.iter_mut()
-        .zip(b.iter())
-        .take(n)
-        .for_each(|(a, b)| *a += b);
+fn add_assign_vec<F: Field>(a: &mut [F], b: &[F]) {
+    a.iter_mut().zip(b.iter()).for_each(|(a, b)| *a += b);
 }
 
 #[inline]
-fn sub_assign_vec<F: Field>(a: &mut [F], b: &[F], n: usize) {
-    assert!(a.len() == n);
-    assert!(b.len() == n);
-    a.iter_mut()
-        .zip(b.iter())
-        .take(n)
-        .for_each(|(a, b)| *a -= b);
+fn sub_assign_vec<F: Field>(a: &mut [F], b: &[F]) {
+    a.iter_mut().zip(b.iter()).for_each(|(a, b)| *a -= b);
 }
 
 #[inline]
-fn mul_assign_vec<F: Field>(a: &mut [F], b: &F, n: usize) {
-    assert!(a.len() == n);
-    a.iter_mut().take(n).for_each(|a| *a *= b);
+fn mul_assign_vec<F: Field>(a: &mut [F], b: &F) {
+    a.iter_mut().for_each(|a| *a *= b);
 }
 
 // code copied from Halo2curves with adaption to vectors
+// todo: add multi-threading
 //
-
+//
 /// Performs a radix-$2$ Fast-Fourier Transformation (FFT) on a vector of size
 /// $n = 2^k$, when provided `log_n` = $k$ and an element of multiplicative
 /// order $n$ called `omega` ($\omega$). The result is that the vector `a`, when
@@ -86,42 +60,20 @@ fn mul_assign_vec<F: Field>(a: &mut [F], b: &F, n: usize) {
 /// This will use multithreading if beneficial.
 pub fn best_fft_vec<F: PrimeField>(a: &mut [F], omega: F, log_n: u32, log_m: u32) {
     let threads = rayon::current_num_threads();
-    let log_threads = threads.ilog2();
+    let _log_threads = threads.ilog2();
     let mn = a.len();
     let m = 1 << log_m;
     let n = 1 << log_n;
     assert_eq!(mn, 1 << (log_n + log_m));
 
-    // let mut a = (0..mn).map(|i| F::from(i as u64)).collect::<Vec<_>>();
-    // println!("a: {:?}", a);
-    // swap_chunks(a, log_n+log_m);
-    // println!("a: {:?}", a);
     let mut a_vec_ptrs = a.chunks_exact_mut(n).collect::<Vec<_>>();
-
-    // for a in a_vec_ptrs.iter_mut() {
-    //     swap_chunks(a, log_n);
-    // }
 
     for k in 0..m {
         let rk = bitreverse(k, log_m as usize);
 
         if k < rk {
-            // println!("k: {}, rk: {}", k, rk);
-            // for a in a_vec_ptrs.iter().enumerate() {
-            //     println!("{}: {:?}", a.0, a.1);
-            // }
-
+            // `a_vec_ptrs.swap(rk, k)` doesn't work here as it only swaps the pointers not the actual data
             deep_swap_chunks(&mut a_vec_ptrs, rk, k);
-
-            // a_vec_ptrs.swap(rk, k);
-            // swap_chunks(a_vec_ptrs[k], log_n);
-            // swap_chunks(a_vec_ptrs[rk], log_n);
-
-            // for a in a_vec_ptrs.iter().enumerate() {
-            //     println!("{}: {:?}", a.0, a.1);
-            // }
-
-            // println!();
         }
     }
 
@@ -149,9 +101,9 @@ pub fn best_fft_vec<F: PrimeField>(a: &mut [F], omega: F, log_n: u32, log_m: u32
             // b[0] = a[0];
             // a[0] += &t;
             // b[0] -= &t;
-            assign_vec(b[0], a[0], n);
-            add_assign_vec(a[0], &t, n);
-            sub_assign_vec(b[0], &t, n);
+            assign_vec(b[0], a[0]);
+            add_assign_vec(a[0], &t);
+            sub_assign_vec(b[0], &t);
 
             left.iter_mut()
                 .zip(right.iter_mut())
@@ -164,10 +116,10 @@ pub fn best_fft_vec<F: PrimeField>(a: &mut [F], omega: F, log_n: u32, log_m: u32
                     // *a += &t;
                     // *b -= &t;
 
-                    mul_assign_vec(&mut t, &twiddles[(i + 1) * twiddle_chunk], n);
-                    assign_vec(b, a, n);
-                    add_assign_vec(a, &t, n);
-                    sub_assign_vec(b, &t, n);
+                    mul_assign_vec(&mut t, &twiddles[(i + 1) * twiddle_chunk]);
+                    assign_vec(b, a);
+                    add_assign_vec(a, &t);
+                    sub_assign_vec(b, &t);
                 });
         });
         chunk *= 2;
@@ -306,7 +258,7 @@ mod tests {
                 m,
             );
             let mut poly_lag2 = poly.coefficients.clone();
-            let poly_lag = poly.lagrange_coeffs();
+            let poly_lag = poly.interpolate();
             bi_fft_in_place(&mut poly_lag2, n, m);
 
             // for (i, (a, b)) in poly_lag.iter().zip(poly_lag2.iter()).enumerate() {
@@ -326,7 +278,7 @@ mod tests {
             for n in [2, 4, 8, 16].iter() {
                 let poly = BivariatePolynomial::<Fr>::random(&mut rng, *n, *m);
                 let mut poly_lag2 = poly.coefficients.clone();
-                let poly_lag = poly.lagrange_coeffs();
+                let poly_lag = poly.interpolate();
                 bi_fft_in_place(&mut poly_lag2, *n, *m);
                 // println!("m = {}, n = {}: {}", m, n, poly_lag == poly_lag2);
                 assert_eq!(poly_lag, poly_lag2);
