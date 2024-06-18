@@ -59,8 +59,43 @@ impl<F: PrimeField> BivariatePolynomial<F> {
         f_x_b
     }
 
-    ///
-    // TODO: this is super slow. Implement FFT for bivariate polynomials.
+    /// same as interpolate but slower.
+    pub fn evaluate_at_roots(&self) -> Vec<F> {
+        let timer = start_timer!(|| format!(
+            "Lagrange coefficients of degree {} {}",
+            self.degree_0, self.degree_1
+        ));
+
+        // roots of unity for supported_n and supported_m
+        let (omega_0, omega_1) = {
+            let omega = F::ROOT_OF_UNITY;
+            let omega_0 = omega.pow_vartime(&[(1 << F::S) / self.degree_0 as u64]);
+            let omega_1 = omega.pow_vartime(&[(1 << F::S) / self.degree_1 as u64]);
+
+            assert!(
+                omega_0.pow_vartime(&[self.degree_0 as u64]) == F::ONE,
+                "omega_0 is not root of unity for supported_n"
+            );
+            assert!(
+                omega_1.pow_vartime(&[self.degree_1 as u64]) == F::ONE,
+                "omega_1 is not root of unity for supported_m"
+            );
+            (omega_0, omega_1)
+        };
+        let powers_of_omega_0 = powers_of_field_elements(&omega_0, self.degree_0);
+        let powers_of_omega_1 = powers_of_field_elements(&omega_1, self.degree_1);
+
+        let mut res = vec![];
+        for omega_1_power in powers_of_omega_1.iter() {
+            for omega_0_power in powers_of_omega_0.iter() {
+                res.push(self.evaluate(omega_0_power, omega_1_power));
+            }
+        }
+        end_timer!(timer);
+        res
+    }
+
+    /// interpolate the polynomial over the roots via bi-variate FFT
     pub fn interpolate(&self) -> Vec<F> {
         let timer = start_timer!(|| format!(
             "Lagrange coefficients of degree {} {}",
@@ -71,7 +106,6 @@ impl<F: PrimeField> BivariatePolynomial<F> {
         bi_fft_in_place(&mut coeff, self.degree_0, self.degree_1);
         end_timer!(timer);
         coeff
-
     }
 }
 
