@@ -1,4 +1,4 @@
-use bi_kzg::{BiKZG, BiKZGVerifierParam, BivariatePolynomial, PolynomialCommitmentScheme};
+use bi_kzg::{BiKZGVerifierParam, BivariatePolynomial, CoeffFormBiKZG, PolynomialCommitmentScheme};
 use halo2curves::bn256::{self, Bn256, Fr};
 use halo2curves::ff::Field;
 use halo2curves::msm::best_multiexp;
@@ -31,19 +31,19 @@ fn bench_commit(c: &mut Criterion) {
     let mut rng = rand::thread_rng();
     for &degree_0 in degree_set.iter() {
         for &degree_1 in degree_set.iter() {
-            let srs = BiKZG::<Bn256>::gen_srs_for_testing(&mut rng, degree_0, degree_1);
+            let srs = CoeffFormBiKZG::<Bn256>::gen_srs_for_testing(&mut rng, degree_0, degree_1);
             let vk = BiKZGVerifierParam::<Bn256>::from(&srs);
             let poly = BivariatePolynomial::<Fr>::random(&mut rng, degree_0, degree_1);
             c.bench_function(
                 &format!("bi-kzg commit with degrees {} {}", degree_0, degree_1),
                 |b| {
                     b.iter(|| {
-                        let _ = black_box(BiKZG::<Bn256>::commit(&srs, &poly));
+                        let _ = black_box(CoeffFormBiKZG::<Bn256>::commit(&srs, &poly));
                     });
                 },
             );
 
-            let com = BiKZG::<Bn256>::commit(&srs, &poly);
+            let com = CoeffFormBiKZG::<Bn256>::commit(&srs, &poly);
 
             let points = (0..10)
                 .map(|_| (Fr::random(&mut rng), Fr::random(&mut rng)))
@@ -59,14 +59,14 @@ fn bench_commit(c: &mut Criterion) {
                     b.iter(|| {
                         let _ = points
                             .iter()
-                            .map(|p| BiKZG::<Bn256>::open(&srs, &poly, p))
+                            .map(|p| CoeffFormBiKZG::<Bn256>::open(&srs, &poly, p))
                             .collect::<Vec<_>>();
                     });
                 },
             );
             let proofs = points
                 .iter()
-                .map(|p| BiKZG::<Bn256>::open(&srs, &poly, p))
+                .map(|p| CoeffFormBiKZG::<Bn256>::open(&srs, &poly, p))
                 .collect::<Vec<_>>();
 
             c.bench_function(
@@ -79,7 +79,9 @@ fn bench_commit(c: &mut Criterion) {
                 |b| {
                     b.iter(|| {
                         points.iter().zip(proofs.iter()).for_each(|(p, proof)| {
-                            assert!(BiKZG::<Bn256>::verify(&vk, &com, p, &proof.1, &proof.0))
+                            assert!(CoeffFormBiKZG::<Bn256>::verify(
+                                &vk, &com, p, &proof.1, &proof.0
+                            ))
                         })
                     });
                 },

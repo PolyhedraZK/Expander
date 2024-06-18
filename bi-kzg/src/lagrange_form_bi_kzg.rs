@@ -1,4 +1,3 @@
-use std::ops::Add;
 use std::{borrow::Borrow, marker::PhantomData};
 
 use ark_std::{end_timer, start_timer};
@@ -7,13 +6,14 @@ use halo2curves::ff::PrimeField;
 use halo2curves::group::prime::PrimeCurveAffine;
 use halo2curves::group::Curve;
 use halo2curves::group::Group;
+use halo2curves::msm::best_multiexp;
 use halo2curves::pairing::{MillerLoopResult, MultiMillerLoop};
+use halo2curves::CurveAffine;
 use itertools::Itertools;
 use rand::RngCore;
 
-use crate::msm::best_multiexp;
 use crate::poly::{lagrange_coefficients, univariate_quotient};
-use crate::structs::BivariatePolynomial;
+use crate::structs::BivariateLagrangePolynomial;
 use crate::util::parallelize;
 use crate::{
     pcs::PolynomialCommitmentScheme,
@@ -21,18 +21,20 @@ use crate::{
     BiKZGCommitment, BiKZGProof, BiKZGSRS, BiKZGVerifierParam,
 };
 
-pub struct BiKZG<E: MultiMillerLoop> {
+/// Commit to the bi-variate polynomial in its lagrange form.
+/// this should be the preferred form for commitment.
+pub struct LagrangeFormBiKZG<E: MultiMillerLoop> {
     _phantom: PhantomData<E>,
 }
 
-impl<E: MultiMillerLoop> PolynomialCommitmentScheme for BiKZG<E>
+impl<E: MultiMillerLoop> PolynomialCommitmentScheme for LagrangeFormBiKZG<E>
 where
-    E::G1Affine: Add<Output = E::G1>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {
     type SRS = BiKZGSRS<E>;
     type ProverParam = BiKZGSRS<E>;
     type VerifierParam = BiKZGVerifierParam<E>;
-    type Polynomial = BivariatePolynomial<E::Fr>;
+    type Polynomial = BivariateLagrangePolynomial<E::Fr>;
     type Commitment = BiKZGCommitment<E>;
     type Proof = BiKZGProof<E>;
     type Evaluation = E::Fr;
@@ -87,12 +89,13 @@ where
         };
 
         // println!("start to compute the affine bases");
+        let g1_prog = g1.to_curve();
         let coeff_bases = {
             let mut proj_bases = vec![E::G1::identity(); supported_n * supported_m];
             parallelize(&mut proj_bases, |g, start| {
                 for (idx, g) in g.iter_mut().enumerate() {
                     let offset = start + idx;
-                    *g = g1 * scalars[offset];
+                    *g = g1_prog * scalars[offset];
                 }
             });
 
@@ -150,36 +153,21 @@ where
         poly: &Self::Polynomial,
     ) -> Self::Commitment {
         let timer = start_timer!(|| format!(
-            "Committing to polynomial of degree {} {}",
+            "Committing to lagrange polynomial of degree {} {}",
             poly.degree_0, poly.degree_1
         ));
 
         let com = best_multiexp(
             &poly.coefficients,
-            prover_param.borrow().powers_of_g.as_slice(),
-        )
-        .into();
-
-        #[cfg(test)]
-        {
-            let lag_coeff = poly.lagrange_coeffs();
-            let com_lag = best_multiexp(
-                &lag_coeff,
-                prover_param
-                    .borrow()
-                    .powers_of_g_lagrange_over_both_roots
-                    .as_slice(),
-            )
-            .into();
-            assert_eq!(
-                com, com_lag,
-                "commitment is not equal to lagrange commitment"
-            );
-        }
+            prover_param
+                .borrow()
+                .powers_of_g_lagrange_over_both_roots
+                .as_slice(),
+        );
 
         end_timer!(timer);
 
-        Self::Commitment { com }
+        Self::Commitment { com: com.into() }
     }
 
     fn open(
@@ -302,7 +290,6 @@ where
         _polynomials: &[Self::Polynomial],
         _points: &[Self::Point],
         _evals: &[Self::Evaluation],
-        // _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Self::BatchProof {
         unimplemented!()
     }

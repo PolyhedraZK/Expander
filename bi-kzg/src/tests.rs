@@ -5,8 +5,9 @@ use halo2curves::{
 };
 
 use crate::{
-    bi_kzg::BiKZG, pcs::PolynomialCommitmentScheme, poly::lagrange_coefficients,
-    util::tensor_product_parallel, BiKZGVerifierParam, BivariatePolynomial,
+    coeff_form_bi_kzg::CoeffFormBiKZG, pcs::PolynomialCommitmentScheme,
+    poly::lagrange_coefficients, util::tensor_product_parallel, BiKZGVerifierParam,
+    BivariatePolynomial,
 };
 
 #[test]
@@ -15,7 +16,7 @@ fn test_bi_kzg_with_profiling() {
     let n = 16;
     let m = 32;
 
-    let srs = BiKZG::<Bn256>::gen_srs_for_testing(&mut rng, n, m);
+    let srs = CoeffFormBiKZG::<Bn256>::gen_srs_for_testing(&mut rng, n, m);
     let vk = BiKZGVerifierParam::<Bn256>::from(&srs);
 
     let poly = BivariatePolynomial::<Fr>::random(&mut rng, n, m);
@@ -23,9 +24,15 @@ fn test_bi_kzg_with_profiling() {
     let x = Fr::random(&mut rng);
     let y = Fr::random(&mut rng);
 
-    let commit = BiKZG::<Bn256>::commit(&srs, &poly);
-    let (proof, eval) = BiKZG::<Bn256>::open(&srs, &poly, &(x, y));
-    assert!(BiKZG::<Bn256>::verify(&vk, &commit, &(x, y), &eval, &proof));
+    let commit = CoeffFormBiKZG::<Bn256>::commit(&srs, &poly);
+    let (proof, eval) = CoeffFormBiKZG::<Bn256>::open(&srs, &poly, &(x, y));
+    assert!(CoeffFormBiKZG::<Bn256>::verify(
+        &vk,
+        &commit,
+        &(x, y),
+        &eval,
+        &proof
+    ));
 }
 
 #[test]
@@ -33,7 +40,7 @@ fn test_bi_kzg_e2e() {
     let mut rng = test_rng();
     let n = 2;
     let m = 4;
-    let srs = BiKZG::<Bn256>::gen_srs_for_testing(&mut rng, n, m);
+    let srs = CoeffFormBiKZG::<Bn256>::gen_srs_for_testing(&mut rng, n, m);
     let vk = BiKZGVerifierParam::<Bn256>::from(&srs);
     let poly = BivariatePolynomial::new(
         vec![
@@ -56,14 +63,20 @@ fn test_bi_kzg_e2e() {
 
     assert_eq!(poly.evaluate(&x, &y), Fr::from(85309u64));
 
-    let commit = BiKZG::<Bn256>::commit(&srs, &poly);
-    let (proof, eval) = BiKZG::<Bn256>::open(&srs, &poly, &(x, y));
+    let commit = CoeffFormBiKZG::<Bn256>::commit(&srs, &poly);
+    let (proof, eval) = CoeffFormBiKZG::<Bn256>::open(&srs, &poly, &(x, y));
 
-    assert!(BiKZG::<Bn256>::verify(&vk, &commit, &(x, y), &eval, &proof));
+    assert!(CoeffFormBiKZG::<Bn256>::verify(
+        &vk,
+        &commit,
+        &(x, y),
+        &eval,
+        &proof
+    ));
 
     for n in [2, 4, 8, 16] {
         for m in [2, 4, 8, 16] {
-            let srs = BiKZG::<Bn256>::gen_srs_for_testing(&mut rng, n, m);
+            let srs = CoeffFormBiKZG::<Bn256>::gen_srs_for_testing(&mut rng, n, m);
             let vk = BiKZGVerifierParam::<Bn256>::from(&srs);
             for _ in 0..10 {
                 let poly = BivariatePolynomial::<Fr>::random(&mut rng, n, m);
@@ -71,9 +84,15 @@ fn test_bi_kzg_e2e() {
                 let x = Fr::random(&mut rng);
                 let y = Fr::random(&mut rng);
 
-                let commit = BiKZG::<Bn256>::commit(&srs, &poly);
-                let (proof, eval) = BiKZG::<Bn256>::open(&srs, &poly, &(x, y));
-                assert!(BiKZG::<Bn256>::verify(&vk, &commit, &(x, y), &eval, &proof));
+                let commit = CoeffFormBiKZG::<Bn256>::commit(&srs, &poly);
+                let (proof, eval) = CoeffFormBiKZG::<Bn256>::open(&srs, &poly, &(x, y));
+                assert!(CoeffFormBiKZG::<Bn256>::verify(
+                    &vk,
+                    &commit,
+                    &(x, y),
+                    &eval,
+                    &proof
+                ));
             }
         }
     }

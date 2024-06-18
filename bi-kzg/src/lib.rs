@@ -1,13 +1,16 @@
-mod bi_kzg;
-mod msm;
+mod bi_fft;
+mod coeff_form_bi_kzg;
+// mod lagrange_form_bi_kzg;
 mod pcs;
 mod poly;
 mod structs;
-#[cfg(test)]
-mod tests;
 mod util;
 
-pub use bi_kzg::BiKZG;
+#[cfg(test)]
+mod tests;
+
+pub use coeff_form_bi_kzg::CoeffFormBiKZG;
+// pub use lagrange_form_bi_kzg::LagrangeFormBiKZG;
 pub use pcs::PolynomialCommitmentScheme;
 pub use structs::BivariatePolynomial;
 pub use structs::{BiKZGCommitment, BiKZGProof, BiKZGSRS, BiKZGVerifierParam};
