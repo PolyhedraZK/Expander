@@ -43,7 +43,11 @@ where
     type Point = (E::Fr, E::Fr);
     type BatchProof = Vec<Self::Proof>;
 
-    fn gen_srs_for_testing(mut rng: impl RngCore, supported_n: usize, supported_m: usize) -> Self::SRS {
+    fn gen_srs_for_testing(
+        mut rng: impl RngCore,
+        supported_n: usize,
+        supported_m: usize,
+    ) -> Self::SRS {
         // LagrangeFormBiKZG::<E>::gen_srs_for_testing(rng, supported_n, supported_m)
 
         assert!(supported_n.is_power_of_two());
