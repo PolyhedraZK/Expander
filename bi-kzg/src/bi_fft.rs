@@ -6,10 +6,36 @@ use halo2curves::{
     fft::{best_fft, FftGroup},
 };
 
-// #[inline]
-// fn swap_chunks<F>(a: &mut [&mut[F]], rk: usize, k: usize) {
+fn bitreverse(mut n: usize, l: usize) -> usize {
+    let mut r = 0;
+    for _ in 0..l {
+        r = (r << 1) | (n & 1);
+        n >>= 1;
+    }
+    r
+}
 
-//         a.swap( rk,  k);
+#[inline]
+fn deep_swap_chunks<F: Clone + Copy>(a: &mut [&mut [F]], rk: usize, k: usize) {
+    let buf1 = (a[k]).to_vec();
+    let buf2 = (a[rk]).to_vec();
+    a[rk].copy_from_slice(&buf1);
+    a[k].copy_from_slice(&buf2);
+    // a[rk].iter_mut().zip(a[k].iter_mut()).for_each(|(a, b)| {
+    //     let t = *a;
+    //     *a = *b;
+    //     *b = t});
+}
+
+// #[inline]
+// fn swap_chunks<F>(a: &mut [F], log_n: u32) {
+
+//     for k in 0..1<<log_n {
+//         let rk = bitreverse(k, log_n as usize);
+//         if k < rk {
+//             a.swap(rk, k);
+//         }
+//     }
 
 // }
 
@@ -62,16 +88,7 @@ fn mul_assign_vec<F: Field>(a: &mut [F], b: &F, n: usize) {
 /// by $n$.
 ///
 /// This will use multithreading if beneficial.
-pub fn best_fft_vec<F: Field>(a: &mut [F], omega: F, log_n: u32, log_m: u32) {
-    fn bitreverse(mut n: usize, l: usize) -> usize {
-        let mut r = 0;
-        for _ in 0..l {
-            r = (r << 1) | (n & 1);
-            n >>= 1;
-        }
-        r
-    }
-
+pub fn best_fft_vec<F: PrimeField>(a: &mut [F], omega: F, log_n: u32, log_m: u32) {
     let threads = rayon::current_num_threads();
     let log_threads = threads.ilog2();
     let mn = a.len();
@@ -79,12 +96,36 @@ pub fn best_fft_vec<F: Field>(a: &mut [F], omega: F, log_n: u32, log_m: u32) {
     let n = 1 << log_n;
     assert_eq!(mn, 1 << (log_n + log_m));
 
+    // let mut a = (0..mn).map(|i| F::from(i as u64)).collect::<Vec<_>>();
+    // println!("a: {:?}", a);
+    // swap_chunks(a, log_n+log_m);
+    // println!("a: {:?}", a);
     let mut a_vec_ptrs = a.chunks_exact_mut(n).collect::<Vec<_>>();
+
+    // for a in a_vec_ptrs.iter_mut() {
+    //     swap_chunks(a, log_n);
+    // }
 
     for k in 0..m {
         let rk = bitreverse(k, log_m as usize);
+
         if k < rk {
-            a_vec_ptrs.swap(rk, k);
+            println!("k: {}, rk: {}", k, rk);
+            for a in a_vec_ptrs.iter().enumerate() {
+                println!("{}: {:?}", a.0, a.1);
+            }
+
+            deep_swap_chunks(&mut a_vec_ptrs, rk, k );
+
+            // a_vec_ptrs.swap(rk, k);
+            // swap_chunks(a_vec_ptrs[k], log_n);
+            // swap_chunks(a_vec_ptrs[rk], log_n);
+
+            for a in a_vec_ptrs.iter().enumerate() {
+                println!("{}: {:?}", a.0, a.1);
+            }
+
+            println!();
         }
     }
 
@@ -136,9 +177,33 @@ pub fn best_fft_vec<F: Field>(a: &mut [F], omega: F, log_n: u32, log_m: u32) {
         chunk *= 2;
         twiddle_chunk /= 2;
     }
-    // } else {
-    //     recursive_butterfly_arithmetic(a, n, 1, &twiddles)
+    // // } else {
+    // //     recursive_butterfly_arithmetic(a, n, 1, &twiddles)
+    // // }
+    // println!("before is correct: {:?}", a_vec_ptrs);
+
+    // for k in 0..m {
+    //     let rk = bitreverse(k, log_m as usize);
+
+    //     if k < rk {
+    //         println!("k: {}, rk: {}", k, rk);
+    //         for a in a_vec_ptrs.iter().enumerate() {
+    //             println!("{}: {:?}", a.0, a.1);
+    //         }
+
+    //         a_vec_ptrs.swap(rk, k);
+    //         // swap_chunks(a_vec_ptrs[k], log_n);
+    //         // swap_chunks(a_vec_ptrs[rk], log_n);
+
+    //         for a in a_vec_ptrs.iter().enumerate() {
+    //             println!("{}: {:?}", a.0, a.1);
+    //         }
+
+    //         println!();
+    //     }
     // }
+
+    // println!("after: {:?}", a_vec_ptrs);
 }
 
 // /// This perform recursive butterfly arithmetic
@@ -220,18 +285,26 @@ mod tests {
     #[test]
     fn test_bi_fft() {
         {
-            let n = 2;
+            let n = 4;
             let m = 4;
             let poly = BivariatePolynomial::new(
                 vec![
                     Fr::from(1u64),
                     Fr::from(2u64),
-                    Fr::from(3u64),
                     Fr::from(4u64),
-                    Fr::from(5u64),
-                    Fr::from(6u64),
-                    Fr::from(7u64),
                     Fr::from(8u64),
+                    Fr::from(16u64),
+                    Fr::from(32u64),
+                    Fr::from(64u64),
+                    Fr::from(128u64),
+                    Fr::from(256u64),
+                    Fr::from(128u64),
+                    Fr::from(64u64),
+                    Fr::from(32u64),
+                    Fr::from(16u64),
+                    Fr::from(8u64),
+                    Fr::from(4u64),
+                    Fr::from(2u64),
                 ],
                 n,
                 m,
@@ -239,9 +312,29 @@ mod tests {
             let mut poly_lag2 = poly.coefficients.clone();
             let poly_lag = poly.lagrange_coeffs();
             bi_fft_in_place(&mut poly_lag2, n, m);
+
+            for (i, (a, b)) in poly_lag.iter().zip(poly_lag2.iter()).enumerate() {
+                println!("{}: {:?} == {:?}", i, a, b);
+            }
+
+            println!("correct one {:?}", poly_lag);
+            // println!();
+            // println!("{:?}", poly_lag2);
+            // println!();
             assert_eq!(poly_lag, poly_lag2);
         }
 
         let mut rng = test_rng();
+
+        for m in [2, 4, 8, 16].iter() {
+            for n in [2, 4, 8, 16].iter() {
+                let poly = BivariatePolynomial::<Fr>::random(&mut rng, *n, *m);
+                let mut poly_lag2 = poly.coefficients.clone();
+                let poly_lag = poly.lagrange_coeffs();
+                bi_fft_in_place(&mut poly_lag2, *n, *m);
+                println!("m = {}, n = {}: {}", m, n, poly_lag == poly_lag2);
+                assert_eq!(poly_lag, poly_lag2);
+            }
+        }
     }
 }
