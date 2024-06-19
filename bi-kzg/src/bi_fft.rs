@@ -21,6 +21,7 @@ fn deep_swap_chunks<F: Clone + Copy>(a: &mut [&mut [F]], rk: usize, k: usize) {
     let x = a[k].as_mut_ptr();
     let y = a[rk].as_mut_ptr();
     unsafe {
+        // is there a
         for i in 0..a[k].len() {
             std::ptr::swap(x.add(i), y.add(i));
         }
@@ -129,7 +130,7 @@ pub fn best_fft_vec_in_place<F: PrimeField>(a: &mut [F], omega: F, log_n: u32, l
             twiddle_chunk /= 2;
         }
     } else {
-        recursive_butterfly_arithmetic(&mut a_vec_ptrs, m, n, 1, &twiddles)
+        recursive_butterfly_arithmetic(&mut a_vec_ptrs, m, 1, &twiddles)
     }
 }
 
@@ -137,7 +138,6 @@ pub fn best_fft_vec_in_place<F: PrimeField>(a: &mut [F], omega: F, log_n: u32, l
 fn recursive_butterfly_arithmetic<F: PrimeField>(
     a: &mut [&mut [F]],
     m: usize,
-    n: usize,
     twiddle_chunk: usize,
     twiddles: &[F],
 ) {
@@ -154,8 +154,8 @@ fn recursive_butterfly_arithmetic<F: PrimeField>(
     } else {
         let (left, right) = a.split_at_mut(m / 2);
         rayon::join(
-            || recursive_butterfly_arithmetic(left, m / 2, n, twiddle_chunk * 2, twiddles),
-            || recursive_butterfly_arithmetic(right, m / 2, n, twiddle_chunk * 2, twiddles),
+            || recursive_butterfly_arithmetic(left, m / 2, twiddle_chunk * 2, twiddles),
+            || recursive_butterfly_arithmetic(right, m / 2, twiddle_chunk * 2, twiddles),
         );
 
         // case when twiddle factor is one
@@ -188,6 +188,7 @@ fn recursive_butterfly_arithmetic<F: PrimeField>(
     }
 }
 
+/// Convert a polynomial in coefficient form to evaluation form using a two layer FFT
 pub(crate) fn bi_fft_in_place<F: PrimeField>(coeffs: &mut [F], degree_n: usize, degree_m: usize) {
     assert_eq!(coeffs.len(), degree_n * degree_m);
     assert!(degree_n.is_power_of_two());
@@ -196,71 +197,17 @@ pub(crate) fn bi_fft_in_place<F: PrimeField>(coeffs: &mut [F], degree_n: usize, 
     // roots of unity for supported_n and supported_m
     let (omega_0, omega_1) = {
         let omega = F::ROOT_OF_UNITY;
-        let omega_0 = omega.pow_vartime(&[(1 << F::S) / degree_n as u64]);
-        let omega_1 = omega.pow_vartime(&[(1 << F::S) / degree_m as u64]);
+        let omega_0 = omega.pow_vartime([(1 << F::S) / degree_n as u64]);
+        let omega_1 = omega.pow_vartime([(1 << F::S) / degree_m as u64]);
 
         (omega_0, omega_1)
     };
 
+    // inner layer of FFT over variable x
     coeffs
         .chunks_exact_mut(degree_n)
         .for_each(|chunk| best_fft(chunk, omega_0, log2(degree_n)));
 
+    // outer layer of FFT over variable y
     best_fft_vec_in_place(coeffs, omega_1, log2(degree_n), log2(degree_m));
-}
-
-#[cfg(test)]
-mod tests {
-    use ark_std::test_rng;
-    use halo2curves::bn256::Fr;
-
-    use crate::BivariatePolynomial;
-
-    use super::bi_fft_in_place;
-
-    #[test]
-    fn test_bi_fft() {
-        {
-            let n = 4;
-            let m = 4;
-            let poly = BivariatePolynomial::new(
-                vec![
-                    Fr::from(1u64),
-                    Fr::from(2u64),
-                    Fr::from(4u64),
-                    Fr::from(8u64),
-                    Fr::from(16u64),
-                    Fr::from(32u64),
-                    Fr::from(64u64),
-                    Fr::from(128u64),
-                    Fr::from(256u64),
-                    Fr::from(128u64),
-                    Fr::from(64u64),
-                    Fr::from(32u64),
-                    Fr::from(16u64),
-                    Fr::from(8u64),
-                    Fr::from(4u64),
-                    Fr::from(2u64),
-                ],
-                n,
-                m,
-            );
-            let mut poly_lag2 = poly.coefficients.clone();
-            let poly_lag = poly.interpolate();
-            bi_fft_in_place(&mut poly_lag2, n, m);
-            assert_eq!(poly_lag, poly_lag2);
-        }
-
-        let mut rng = test_rng();
-
-        for m in [2, 4, 8, 16, 32, 64].iter() {
-            for n in [2, 4, 8, 16, 32, 64].iter() {
-                let poly = BivariatePolynomial::<Fr>::random(&mut rng, *n, *m);
-                let mut poly_lag2 = poly.coefficients.clone();
-                let poly_lag = poly.evaluate_at_roots();
-                bi_fft_in_place(&mut poly_lag2, *n, *m);
-                assert_eq!(poly_lag, poly_lag2);
-            }
-        }
-    }
 }

@@ -26,7 +26,7 @@ pub(crate) fn parallelize_internal<T: Send, F: Fn(&mut [T], usize) + Send + Sync
 ) -> Vec<usize> {
     let n = v.len();
     let num_threads = rayon::current_num_threads();
-    let mut chunk = (n as usize) / num_threads;
+    let mut chunk = n / num_threads;
     if chunk < num_threads {
         chunk = 1;
     }

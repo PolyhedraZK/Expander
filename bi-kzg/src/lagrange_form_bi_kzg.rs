@@ -1,3 +1,5 @@
+//! We don't need this file for now. We will use the `CoeffFormBiKZG`.
+
 use std::{borrow::Borrow, marker::PhantomData};
 
 use ark_std::{end_timer, start_timer};
@@ -276,21 +278,6 @@ where
         res
     }
 
-    fn multi_open(
-        _prover_param: impl Borrow<Self::ProverParam>,
-        _polynomials: &[Self::Polynomial],
-        _points: &[Self::Point],
-        _evals: &[Self::Evaluation],
-    ) -> Self::BatchProof {
-        unimplemented!()
-    }
-
-    fn batch_verify(
-        _verifier_param: &Self::VerifierParam,
-        _commitments: &[Self::Commitment],
-        _points: &[Self::Point],
-        _batch_proof: &Self::BatchProof,
-    ) -> bool {
-        unimplemented!()
-    }
+    
+    // TODO: implement multi-opening and batch verification
 }

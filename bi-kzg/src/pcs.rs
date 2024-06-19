@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, fmt::Debug};
 
-use halo2curves::{ff::Field, serde::SerdeObject};
+use halo2curves::ff::Field;
 use rand::RngCore;
 
 /// This trait defines APIs for polynomial commitment schemes.
@@ -21,9 +21,9 @@ pub trait PolynomialCommitmentScheme {
     /// Polynomial Evaluation
     type Evaluation: Field;
     /// Commitments
-    type Commitment: Clone + SerdeObject + Debug;
+    type Commitment: Clone + Debug;
     /// Proofs
-    type Proof: Clone + SerdeObject + Debug;
+    type Proof: Clone + Debug;
     /// Batch proofs
     type BatchProof;
 
@@ -33,22 +33,6 @@ pub trait PolynomialCommitmentScheme {
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
     fn gen_srs_for_testing(rng: impl RngCore, supported_n: usize, supported_m: usize) -> Self::SRS;
-
-    // /// Trim the universal parameters to specialize the public parameters.
-    // /// Input both `supported_degree` for univariate and
-    // /// `supported_num_vars` for multilinear.
-    // /// ## Note on function signature
-    // /// Usually, data structure like SRS and ProverParam are huge and users
-    // /// might wish to keep them in heap using different kinds of smart pointers
-    // /// (instead of only in stack) therefore our `impl Borrow<_>` interface
-    // /// allows for passing in any pointer type, e.g.: `trim(srs: &Self::SRS,
-    // /// ..)` or `trim(srs: Box<Self::SRS>, ..)` or `trim(srs: Arc<Self::SRS>,
-    // /// ..)` etc.
-    // fn trim(
-    //     srs: impl Borrow<Self::SRS>,
-    //     supported_degree: Option<usize>,
-    //     supported_num_vars: Option<usize>,
-    // ) -> (Self::ProverParam, Self::VerifierParam);
 
     /// Generate a commitment for a polynomial
     /// ## Note on function signature
@@ -72,14 +56,12 @@ pub trait PolynomialCommitmentScheme {
         point: &Self::Point,
     ) -> (Self::Proof, Self::Evaluation);
 
-    /// Input a list of multilinear extensions, and a same number of points, and
-    /// a transcript, compute a multi-opening for all the polynomials.
+    /// Input a list of polynomials, and a same number of points, compute a multi-opening for all the polynomials.
     fn multi_open(
         _prover_param: impl Borrow<Self::ProverParam>,
         _polynomials: &[Self::Polynomial],
         _points: &[Self::Point],
         _evals: &[Self::Evaluation],
-        // _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Self::BatchProof {
         // the reason we use unimplemented!() is to enable developers to implement the
         // trait without always implementing the batching APIs.
@@ -103,7 +85,6 @@ pub trait PolynomialCommitmentScheme {
         _commitments: &[Self::Commitment],
         _points: &[Self::Point],
         _batch_proof: &Self::BatchProof,
-        // _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> bool {
         // the reason we use unimplemented!() is to enable developers to implement the
         // trait without always implementing the batching APIs.

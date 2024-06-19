@@ -47,36 +47,30 @@ where
         supported_n: usize,
         supported_m: usize,
     ) -> Self::SRS {
-        // LagrangeFormBiKZG::<E>::gen_srs_for_testing(rng, supported_n, supported_m)
-
         assert!(supported_n.is_power_of_two());
         assert!(supported_m.is_power_of_two());
 
         let tau_0 = E::Fr::random(&mut rng);
         let tau_1 = E::Fr::random(&mut rng);
-        // let tau_0 = E::Fr::from(5);
-        // let tau_1 = E::Fr::from(7);
-
         let g1 = E::G1Affine::generator();
 
         // roots of unity for supported_n and supported_m
         let (omega_0, omega_1) = {
             let omega = E::Fr::ROOT_OF_UNITY;
-            let omega_0 = omega.pow_vartime(&[(1 << E::Fr::S) / supported_n as u64]);
-            let omega_1 = omega.pow_vartime(&[(1 << E::Fr::S) / supported_m as u64]);
+            let omega_0 = omega.pow_vartime([(1 << E::Fr::S) / supported_n as u64]);
+            let omega_1 = omega.pow_vartime([(1 << E::Fr::S) / supported_m as u64]);
 
             assert!(
-                omega_0.pow_vartime(&[supported_n as u64]) == E::Fr::ONE,
+                omega_0.pow_vartime([supported_n as u64]) == E::Fr::ONE,
                 "omega_0 is not root of unity for supported_n"
             );
             assert!(
-                omega_1.pow_vartime(&[supported_m as u64]) == E::Fr::ONE,
+                omega_1.pow_vartime([supported_m as u64]) == E::Fr::ONE,
                 "omega_1 is not root of unity for supported_m"
             );
             (omega_0, omega_1)
         };
 
-        // println!("start to compute the scalars");
         // computes the vector of L_i^N(tau_0) * L_j^M(tau_1) for i in 0..supported_n and j in 0..supported_m
         let (scalars, lagrange_scalars) = {
             let powers_of_omega_0 = powers_of_field_elements(&omega_0, supported_n);
@@ -91,7 +85,6 @@ where
             (scalars, lagrange_scalars)
         };
 
-        // println!("start to compute the affine bases");
         let g1_prog = g1.to_curve();
         let coeff_bases = {
             let mut proj_bases = vec![E::G1::identity(); supported_n * supported_m];
@@ -109,8 +102,6 @@ where
             drop(proj_bases);
             g_bases
         };
-
-        // println!("start to compute the lagrange bases");
 
         let lagrange_bases = {
             let mut proj_bases = vec![E::G1::identity(); supported_n * supported_m];
@@ -131,8 +122,6 @@ where
             drop(proj_bases);
             affine_bases
         };
-
-        // assert_eq!(coeff_bases[..supported_n], f_x_b_scalars);
 
         BiKZGSRS {
             powers_of_g: coeff_bases,
@@ -189,7 +178,7 @@ where
         let timer2 = start_timer!(|| "Computing the proof pi0");
         let (pi_0, f_x_b) = {
             // t = f(x, b) - f(a, b)
-            let f_x_b = polynomial.evaluate_y(&point.1);
+            let f_x_b = polynomial.evaluate_at_y(&point.1);
             let mut t = f_x_b.clone();
             t[0] -= u;
             // q_0(x, b) = t(x) / (x - a)
@@ -274,14 +263,10 @@ where
     where
         E: MultiMillerLoop,
     {
+        let timers = start_timer!(|| "Verifying the proof");
         let pi0_a_pi1_b_g1_cmu = best_multiexp(
             &[point.0, point.1, E::Fr::ONE, -*value],
-            &[
-                proof.pi0,
-                proof.pi1,
-                commitment.com.into(),
-                verifier_param.g.into(),
-            ],
+            &[proof.pi0, proof.pi1, commitment.com, verifier_param.g],
         );
         let pi0_a_pi1_b_g1_cmu = (-pi0_a_pi1_b_g1_cmu).to_affine();
         let res = E::multi_miller_loop(&[
@@ -290,25 +275,9 @@ where
             (&pi0_a_pi1_b_g1_cmu, &verifier_param.h.into()),
         ]);
         let res = res.final_exponentiation().is_identity().into();
-
+        end_timer!(timers);
         res
     }
 
-    fn multi_open(
-        _prover_param: impl Borrow<Self::ProverParam>,
-        _polynomials: &[Self::Polynomial],
-        _points: &[Self::Point],
-        _evals: &[Self::Evaluation],
-    ) -> Self::BatchProof {
-        unimplemented!()
-    }
-
-    fn batch_verify(
-        _verifier_param: &Self::VerifierParam,
-        _commitments: &[Self::Commitment],
-        _points: &[Self::Point],
-        _batch_proof: &Self::BatchProof,
-    ) -> bool {
-        unimplemented!()
-    }
+    // TODO: implement multi-opening and batch verification
 }

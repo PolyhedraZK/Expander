@@ -26,6 +26,7 @@ impl<F: PrimeField> BivariatePolynomial<F> {
         Self::new(coefficients, degree_0, degree_1)
     }
 
+    /// evaluate the polynomial at (x, y)
     pub fn evaluate(&self, x: &F, y: &F) -> F {
         let x_power = powers_of_field_elements(x, self.degree_0);
         let y_power = powers_of_field_elements(y, self.degree_1);
@@ -42,7 +43,8 @@ impl<F: PrimeField> BivariatePolynomial<F> {
             })
     }
 
-    pub fn evaluate_y(&self, y: &F) -> Vec<F> {
+    /// evaluate the polynomial at y, return a univariate polynomial in x
+    pub fn evaluate_at_y(&self, y: &F) -> Vec<F> {
         let mut f_x_b = self.coefficients[0..self.degree_0].to_vec();
         let powers_of_b = powers_of_field_elements(y, self.degree_1);
         powers_of_b
@@ -69,15 +71,15 @@ impl<F: PrimeField> BivariatePolynomial<F> {
         // roots of unity for supported_n and supported_m
         let (omega_0, omega_1) = {
             let omega = F::ROOT_OF_UNITY;
-            let omega_0 = omega.pow_vartime(&[(1 << F::S) / self.degree_0 as u64]);
-            let omega_1 = omega.pow_vartime(&[(1 << F::S) / self.degree_1 as u64]);
+            let omega_0 = omega.pow_vartime([(1 << F::S) / self.degree_0 as u64]);
+            let omega_1 = omega.pow_vartime([(1 << F::S) / self.degree_1 as u64]);
 
             assert!(
-                omega_0.pow_vartime(&[self.degree_0 as u64]) == F::ONE,
+                omega_0.pow_vartime([self.degree_0 as u64]) == F::ONE,
                 "omega_0 is not root of unity for supported_n"
             );
             assert!(
-                omega_1.pow_vartime(&[self.degree_1 as u64]) == F::ONE,
+                omega_1.pow_vartime([self.degree_1 as u64]) == F::ONE,
                 "omega_1 is not root of unity for supported_m"
             );
             (omega_0, omega_1)
@@ -109,8 +111,8 @@ impl<F: PrimeField> BivariatePolynomial<F> {
     }
 }
 
-/// For x in points, compute the Lagrange coefficients at x given the roots.
-/// `L_{i}(x) = \prod_{j \neq i} \frac{x - r_j}{r_i - r_j}``
+/// For a point x, compute the coefficients of Lagrange polynomial L_{i}(x) at x, given the roots.
+/// `L_{i}(x) = \prod_{j \neq i} \frac{x - r_j}{r_i - r_j}`
 pub(crate) fn lagrange_coefficients<F: Field + Send + Sync>(roots: &[F], points: &F) -> Vec<F> {
     roots
         .par_iter()
@@ -130,13 +132,11 @@ pub(crate) fn lagrange_coefficients<F: Field + Send + Sync>(roots: &[F], points:
         .collect()
 }
 
-/// Compute poly / (x-point)
-///
-// TODO: this algorithm is quadratic. is this more efficient than FFT?
+/// Compute poly / (x-point) using univariate division
 pub(crate) fn univariate_quotient<F: PrimeField>(poly: &[F], point: &F) -> Vec<F> {
     let timer = start_timer!(|| format!("Univariate quotient of degree {}", poly.len()));
     let mut dividend_coeff = poly.to_vec();
-    let divisor = vec![-*point, F::from(1u64)];
+    let divisor = [-*point, F::from(1u64)];
     let mut coefficients = vec![];
 
     let mut dividend_pos = dividend_coeff.len() - 1;
@@ -194,251 +194,13 @@ impl<F: PrimeField> BivariateLagrangePolynomial<F> {
         // roots of unity for supported_n and supported_m
         let omega_1 = {
             let omega = F::ROOT_OF_UNITY;
-            omega.pow_vartime(&[(1 << F::S) / m as u64])
+            omega.pow_vartime([(1 << F::S) / m as u64])
         };
         let mut coeffs = vec![F::ZERO; n * m];
         for i in 0..m {
-            let element = omega_1.pow_vartime(&[i as u64]) - *b;
+            let element = omega_1.pow_vartime([i as u64]) - *b;
             coeffs[i * n..(i + 1) * n].copy_from_slice(vec![element; n].as_slice());
         }
         BivariateLagrangePolynomial::new(coeffs, n, m)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::structs::BivariatePolynomial;
-    use halo2curves::bn256::Fr;
-
-    #[test]
-    fn test_bivariate_poly_eval() {
-        {
-            let poly = BivariatePolynomial::new(
-                vec![
-                    Fr::from(1u64),
-                    Fr::from(2u64),
-                    Fr::from(3u64),
-                    Fr::from(4u64),
-                ],
-                2,
-                2,
-            );
-            let x = Fr::from(5u64);
-            let y = Fr::from(7u64);
-            let result = poly.evaluate(&x, &y);
-            assert_eq!(
-                result,
-                Fr::from(1u64) + Fr::from(2u64) * x + Fr::from(3u64) * y + Fr::from(4u64) * x * y
-            );
-        }
-
-        {
-            let poly = BivariatePolynomial::new(
-                vec![
-                    Fr::from(1u64),
-                    Fr::from(2u64),
-                    Fr::from(3u64),
-                    Fr::from(4u64),
-                    Fr::from(5u64),
-                    Fr::from(6u64),
-                    Fr::from(7u64),
-                    Fr::from(8u64),
-                ],
-                2,
-                4,
-            );
-            let x = Fr::from(9u64);
-            let y = Fr::from(10u64);
-            let result = poly.evaluate(&x, &y);
-            assert_eq!(
-                result,
-                Fr::from(1u64)
-                    + Fr::from(2u64) * x
-                    + (Fr::from(3u64) + Fr::from(4u64) * x) * y
-                    + (Fr::from(5u64) + Fr::from(6u64) * x) * y * y
-                    + (Fr::from(7u64) + Fr::from(8u64) * x) * y * y * y
-            );
-        }
-
-        let poly = BivariatePolynomial::new(
-            vec![
-                Fr::from(1u64),
-                Fr::from(2u64),
-                Fr::from(3u64),
-                Fr::from(4u64),
-                Fr::from(5u64),
-                Fr::from(6u64),
-                Fr::from(7u64),
-                Fr::from(8u64),
-            ],
-            4,
-            2,
-        );
-        let x = Fr::from(9u64);
-        let y = Fr::from(10u64);
-        let result = poly.evaluate(&x, &y);
-        assert_eq!(
-            result,
-            Fr::from(1u64)
-                + Fr::from(2u64) * x
-                + Fr::from(3u64) * x * x
-                + Fr::from(4u64) * x * x * x
-                + (Fr::from(5u64)
-                    + Fr::from(6u64) * x
-                    + Fr::from(7u64) * x * x
-                    + Fr::from(8u64) * x * x * x)
-                    * y
-        );
-    }
-
-    #[test]
-    fn test_eval_at_y() {
-        let poly = BivariatePolynomial::new(
-            vec![
-                Fr::from(1u64),
-                Fr::from(2u64),
-                Fr::from(3u64),
-                Fr::from(4u64),
-                Fr::from(5u64),
-                Fr::from(6u64),
-                Fr::from(7u64),
-                Fr::from(8u64),
-            ],
-            2,
-            4,
-        );
-        let eval_at_y = poly.evaluate_y(&Fr::from(10u64));
-        assert_eq!(eval_at_y, vec![Fr::from(7531u64), Fr::from(8642u64)]);
-    }
-
-    #[test]
-    fn test_poly_div() {
-        {
-            // x^3 + 1 = (x + 1)(x^2 - x + 1)
-            let poly = vec![
-                Fr::from(1u64),
-                Fr::from(0u64),
-                Fr::from(0u64),
-                Fr::from(1u64),
-            ];
-            let point = -Fr::from(1u64);
-            let result = super::univariate_quotient(&poly, &point);
-            assert_eq!(
-                result,
-                vec![
-                    Fr::from(1u64),
-                    -Fr::from(1u64),
-                    Fr::from(1u64),
-                    Fr::from(0u64)
-                ]
-            );
-        }
-        {
-            // x^3 - 1 = (x-1)(x^2 + x + 1)
-            let poly = vec![
-                -Fr::from(1u64),
-                Fr::from(0u64),
-                Fr::from(0u64),
-                Fr::from(1u64),
-            ];
-            let point = Fr::from(1u64);
-            let result = super::univariate_quotient(&poly, &point);
-            assert_eq!(
-                result,
-                vec![
-                    Fr::from(1u64),
-                    Fr::from(1u64),
-                    Fr::from(1u64),
-                    Fr::from(0u64)
-                ]
-            );
-        }
-    }
-
-    #[test]
-    fn test_lagrange_coeffs() {
-        let poly = BivariatePolynomial::new(
-            vec![
-                Fr::from(1u64),
-                Fr::from(2u64),
-                Fr::from(3u64),
-                Fr::from(4u64),
-                Fr::from(5u64),
-                Fr::from(6u64),
-                Fr::from(7u64),
-                Fr::from(8u64),
-            ],
-            2,
-            4,
-        );
-
-        let lagrange_coeffs = poly.interpolate();
-
-        // From sage script
-        // poly_lag_coeff = [
-        // 0x0000000000000000000000000000000000000000000000000000000000000024,
-        // 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593effffffd,
-        // 0x00000000000000059e26bcea0d48bac65a4e1a8be2302529067f891b047e4e50,
-        // 0x0000000000000000000000000000000000000000000000000000000000000000,
-        // 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593effffff9,
-        // 0x0000000000000000000000000000000000000000000000000000000000000000,
-        // 0x30644e72e131a0241a2988cc74389d96cde5cdbc97894b683d626c78eb81b1a1,
-        // 0x0000000000000000000000000000000000000000000000000000000000000000]
-        assert_eq!(lagrange_coeffs.len(), 8);
-        assert_eq!(
-            format!("{:?}", lagrange_coeffs[0]),
-            "0x0000000000000000000000000000000000000000000000000000000000000024"
-        );
-        assert_eq!(
-            format!("{:?}", lagrange_coeffs[1]),
-            "0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593effffffd"
-        );
-        assert_eq!(
-            format!("{:?}", lagrange_coeffs[2]),
-            "0x00000000000000059e26bcea0d48bac65a4e1a8be2302529067f891b047e4e50"
-        );
-        assert_eq!(
-            format!("{:?}", lagrange_coeffs[3]),
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        assert_eq!(
-            format!("{:?}", lagrange_coeffs[4]),
-            "0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593effffff9"
-        );
-        assert_eq!(
-            format!("{:?}", lagrange_coeffs[5]),
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-        assert_eq!(
-            format!("{:?}", lagrange_coeffs[6]),
-            "0x30644e72e131a0241a2988cc74389d96cde5cdbc97894b683d626c78eb81b1a1"
-        );
-        assert_eq!(
-            format!("{:?}", lagrange_coeffs[7]),
-            "0x0000000000000000000000000000000000000000000000000000000000000000"
-        );
-    }
-
-    #[test]
-    fn test_from_y() {
-        let b = Fr::from(10u64);
-        let n = 2;
-        let m = 4;
-        let poly1 = super::BivariateLagrangePolynomial::from_y_monomial(&b, n, m);
-        let poly2 = super::BivariatePolynomial::new(
-            vec![
-                -b,
-                Fr::from(0u64),
-                Fr::from(1u64),
-                Fr::from(0u64),
-                Fr::from(0u64),
-                Fr::from(0u64),
-                Fr::from(0u64),
-                Fr::from(0u64),
-            ],
-            n,
-            m,
-        );
-        assert_eq!(poly1.coefficients, poly2.interpolate());
     }
 }
