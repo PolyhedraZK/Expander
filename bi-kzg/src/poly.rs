@@ -164,41 +164,6 @@ pub(crate) fn univariate_quotient<F: PrimeField>(poly: &[F], point: &F) -> Vec<F
     coefficients
 }
 
-// // fixme
-// pub(crate) fn fft_slow<F: PrimeField>(coeffs: &[F], omega: &F) -> Vec<F> {
-//     let n = coeffs.len();
-//     let mut res = vec![F::ZERO; n];
-//     for i in 0..n {
-//         let mut omega_i = F::ONE;
-//         for j in 0..n {
-//             res[i] += omega_i * coeffs[j];
-//             omega_i *= omega;
-//         }
-//     }
-//     res
-// }
-
-// /// For x in points, compute the Lagrange coefficients at x given the roots.
-// /// `L_{i}(x) = \prod_{j \neq i} \frac{x - r_j}{r_i - r_j}``
-// pub(crate) fn lagrange_coefficients<F: Field + Send + Sync>(roots: &[F], points: &[F]) -> Vec<F> {
-//     roots
-//         .par_iter()
-//         .enumerate()
-//         .map(|(i, _)| {
-//             let mut numerator = F::ONE;
-//             let mut denominator = F::ONE;
-//             for j in 0..roots.len() {
-//                 if i == j {
-//                     continue;
-//                 }
-//                 numerator *= roots[j] - points[i];
-//                 denominator *= roots[j] - roots[i];
-//             }
-//             numerator * denominator.invert().unwrap()
-//         })
-//         .collect()
-// }
-
 impl<F: Field> BivariateLagrangePolynomial<F> {
     fn new(coeffs: Vec<F>, degree_0: usize, degree_1: usize) -> Self {
         assert_eq!(coeffs.len(), degree_0 * degree_1);
@@ -212,14 +177,31 @@ impl<F: Field> BivariateLagrangePolynomial<F> {
 
 impl<F: PrimeField> From<BivariatePolynomial<F>> for BivariateLagrangePolynomial<F> {
     fn from(poly: BivariatePolynomial<F>) -> Self {
+        Self::from(&poly)
+    }
+}
+
+impl<F: PrimeField> From<&BivariatePolynomial<F>> for BivariateLagrangePolynomial<F> {
+    fn from(poly: &BivariatePolynomial<F>) -> Self {
         let coeffs = poly.interpolate();
         BivariateLagrangePolynomial::new(coeffs, poly.degree_0, poly.degree_1)
     }
 }
 
-impl<F: PrimeField> From<BivariateLagrangePolynomial<F>> for BivariatePolynomial<F> {
-    fn from(_poly: BivariateLagrangePolynomial<F>) -> Self {
-        todo!()
+impl<F: PrimeField> BivariateLagrangePolynomial<F> {
+    /// construct a bivariate lagrange polynomial from a monomial f(y) = y - b
+    pub(crate) fn from_y_monomial(b: &F, n: usize, m: usize) -> Self {
+        // roots of unity for supported_n and supported_m
+        let omega_1 = {
+            let omega = F::ROOT_OF_UNITY;
+            omega.pow_vartime(&[(1 << F::S) / m as u64])
+        };
+        let mut coeffs = vec![F::ZERO; n * m];
+        for i in 0..m {
+            let element = omega_1.pow_vartime(&[i as u64]) - *b;
+            coeffs[i * n..(i + 1) * n].copy_from_slice(vec![element; n].as_slice());
+        }
+        BivariateLagrangePolynomial::new(coeffs, n, m)
     }
 }
 
@@ -327,22 +309,6 @@ mod tests {
         );
         let eval_at_y = poly.evaluate_y(&Fr::from(10u64));
         assert_eq!(eval_at_y, vec![Fr::from(7531u64), Fr::from(8642u64)]);
-
-        // let poly = BivariatePolynomial::new(
-        //     vec![
-        //         Fr::from(1u64),
-        //         Fr::from(0u64),
-        //         Fr::from(1u64),
-        //         Fr::from(0u64),
-        //         Fr::from(0u64),
-        //         Fr::from(0u64),
-        //         Fr::from(0u64),
-        //         Fr::from(0u64),
-        //     ],
-        //     2,
-        //     4,
-        // );
-        // println!("poly: {:?}", poly.lagrange_coeffs());
     }
 
     #[test]
@@ -451,5 +417,28 @@ mod tests {
             format!("{:?}", lagrange_coeffs[7]),
             "0x0000000000000000000000000000000000000000000000000000000000000000"
         );
+    }
+
+    #[test]
+    fn test_from_y() {
+        let b = Fr::from(10u64);
+        let n = 2;
+        let m = 4;
+        let poly1 = super::BivariateLagrangePolynomial::from_y_monomial(&b, n, m);
+        let poly2 = super::BivariatePolynomial::new(
+            vec![
+                -b,
+                Fr::from(0u64),
+                Fr::from(1u64),
+                Fr::from(0u64),
+                Fr::from(0u64),
+                Fr::from(0u64),
+                Fr::from(0u64),
+                Fr::from(0u64),
+            ],
+            n,
+            m,
+        );
+        assert_eq!(poly1.coefficients, poly2.interpolate());
     }
 }

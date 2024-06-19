@@ -12,11 +12,10 @@ use halo2curves::CurveAffine;
 use itertools::Itertools;
 use rand::RngCore;
 
-// use crate::msm::best_multiexp;
 use crate::poly::{lagrange_coefficients, univariate_quotient};
+use crate::structs::BivariateLagrangePolynomial;
 use crate::structs::BivariatePolynomial;
 use crate::util::parallelize;
-// use crate::LagrangeFormBiKZG;
 use crate::{
     pcs::PolynomialCommitmentScheme,
     util::{powers_of_field_elements, tensor_product_parallel},
@@ -184,14 +183,17 @@ where
 
         let a = point.0;
         let b = point.1;
+        // u = f(a, b)
         let u = polynomial.evaluate(&a, &b);
 
         let timer2 = start_timer!(|| "Computing the proof pi0");
         let (pi_0, f_x_b) = {
+            // t = f(x, b) - f(a, b)
             let f_x_b = polynomial.evaluate_y(&point.1);
-            let mut q_0_x_b = f_x_b.clone();
-            q_0_x_b[0] -= u;
-            let q_0_x_b = univariate_quotient(&q_0_x_b, &point.0);
+            let mut t = f_x_b.clone();
+            t[0] -= u;
+            // q_0(x, b) = t(x) / (x - a)
+            let q_0_x_b = univariate_quotient(&t, &point.0);
 
             let timer2 = start_timer!(|| format!("Computing the msm for size {}", q_0_x_b.len()));
             let pi_0 = best_multiexp(
@@ -206,24 +208,23 @@ where
 
         let timer2 = start_timer!(|| "Computing the proof pi1");
         let pi_1 = {
+            // t = f(x, y) - f(x, b)
             let mut t = polynomial.clone();
             t.coefficients
                 .iter_mut()
                 .take(polynomial.degree_0)
                 .zip_eq(f_x_b.iter())
                 .for_each(|(c, f)| *c -= f);
-            let coeffs = t.interpolate();
+            let t_lag = t.interpolate();
 
-            let mut divisor = vec![E::Fr::from(0); polynomial.degree_0 * polynomial.degree_1];
-            divisor[0] = -point.1;
-            divisor[polynomial.degree_0] = E::Fr::ONE;
-            let divisor =
-                BivariatePolynomial::new(divisor, polynomial.degree_0, polynomial.degree_1);
-
-            let divisor = divisor.interpolate();
-
-            // todo: batch invert
-            let y_minus_a_inv_lag = divisor
+            // divisor = (y - b)
+            let divisor_lag = BivariateLagrangePolynomial::from_y_monomial(
+                &point.1,
+                polynomial.degree_0,
+                polynomial.degree_1,
+            );
+            let y_minus_a_inv_lag = divisor_lag
+                .coefficients
                 .iter()
                 .map(|o| {
                     if o.is_zero_vartime() {
@@ -234,7 +235,8 @@ where
                 })
                 .collect::<Vec<_>>();
 
-            let q_1_x_y = coeffs
+            // q_1(x, y) = t(x, y) * (y - b)^{-1}
+            let q_1_x_y = t_lag
                 .iter()
                 .zip_eq(y_minus_a_inv_lag.iter())
                 .map(|(c, y)| (*c) * *y)

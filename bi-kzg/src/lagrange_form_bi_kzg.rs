@@ -51,9 +51,6 @@ where
 
         let tau_0 = E::Fr::random(&mut rng);
         let tau_1 = E::Fr::random(&mut rng);
-        // let tau_0 = E::Fr::from(5);
-        // let tau_1 = E::Fr::from(7);
-
         let g1 = E::G1Affine::generator();
 
         // roots of unity for supported_n and supported_m
@@ -73,7 +70,6 @@ where
             (omega_0, omega_1)
         };
 
-        // println!("start to compute the scalars");
         // computes the vector of L_i^N(tau_0) * L_j^M(tau_1) for i in 0..supported_n and j in 0..supported_m
         let (scalars, lagrange_scalars) = {
             let powers_of_omega_0 = powers_of_field_elements(&omega_0, supported_n);
@@ -88,7 +84,6 @@ where
             (scalars, lagrange_scalars)
         };
 
-        // println!("start to compute the affine bases");
         let g1_prog = g1.to_curve();
         let coeff_bases = {
             let mut proj_bases = vec![E::G1::identity(); supported_n * supported_m];
@@ -106,8 +101,6 @@ where
             drop(proj_bases);
             g_bases
         };
-
-        // println!("start to compute the lagrange bases");
 
         let lagrange_bases = {
             let mut proj_bases = vec![E::G1::identity(); supported_n * supported_m];
@@ -128,8 +121,6 @@ where
             drop(proj_bases);
             affine_bases
         };
-
-        // assert_eq!(coeff_bases[..supported_n], f_x_b_scalars);
 
         BiKZGSRS {
             powers_of_g: coeff_bases,

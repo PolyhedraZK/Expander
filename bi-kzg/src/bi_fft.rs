@@ -48,7 +48,6 @@ fn mul_assign_vec<F: Field>(a: &mut [F], b: &F) {
 }
 
 // code copied from Halo2curves with adaption to vectors
-// todo: add multi-threading
 //
 //
 /// Performs a radix-$2$ Fast-Fourier Transformation (FFT) on a vector of size
@@ -135,7 +134,7 @@ pub fn best_fft_vec_in_place<F: PrimeField>(a: &mut [F], omega: F, log_n: u32, l
 }
 
 /// This perform recursive butterfly arithmetic
-pub fn recursive_butterfly_arithmetic<F: PrimeField>(
+fn recursive_butterfly_arithmetic<F: PrimeField>(
     a: &mut [&mut [F]],
     m: usize,
     n: usize,
@@ -190,20 +189,16 @@ pub fn recursive_butterfly_arithmetic<F: PrimeField>(
 }
 
 pub(crate) fn bi_fft_in_place<F: PrimeField>(coeffs: &mut [F], degree_n: usize, degree_m: usize) {
+    assert_eq!(coeffs.len(), degree_n * degree_m);
+    assert!(degree_n.is_power_of_two());
+    assert!(degree_m.is_power_of_two());
+
     // roots of unity for supported_n and supported_m
     let (omega_0, omega_1) = {
         let omega = F::ROOT_OF_UNITY;
         let omega_0 = omega.pow_vartime(&[(1 << F::S) / degree_n as u64]);
         let omega_1 = omega.pow_vartime(&[(1 << F::S) / degree_m as u64]);
 
-        assert!(
-            omega_0.pow_vartime(&[degree_n as u64]) == F::ONE,
-            "omega_0 is not root of unity for supported_n"
-        );
-        assert!(
-            omega_1.pow_vartime(&[degree_m as u64]) == F::ONE,
-            "omega_1 is not root of unity for supported_m"
-        );
         (omega_0, omega_1)
     };
 
