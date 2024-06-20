@@ -50,7 +50,7 @@ async fn main() {
     // examples:
     // expander-exec prove <input:circuit_file> <input:witness_file> <output:proof>
     // expander-exec verify <input:circuit_file> <input:witness_file> <input:proof>
-    // expander-exec serve <input:circuit_file> <input:host> <input:port>
+    // expander-exec serve <input:circuit_file> <input:ip> <input:port>
     let args = std::env::args().collect::<Vec<String>>();
     if args.len() < 4 {
         println!(

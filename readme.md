@@ -68,6 +68,11 @@ RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- veri
 RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- serve ./data/compiler_out/circuit.txt 127.0.0.1 3030
 ```
 
+To test the service started by `expander-exec serve`, you can use the following command:
+```sh
+python ./scripts/test_http.py  # need "requests" package
+```
+
 ## How to contribute?
 
 Thank you for your interest in contributing to our project! We seek contributors with a robust background in cryptography and programming, aiming to improve and expand the capabilities of our proof generation system.
