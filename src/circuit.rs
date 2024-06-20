@@ -210,9 +210,12 @@ fn read_f_u32_val(file_bytes: &[u8]) -> u32 {
 }
 
 impl<F: Field> Circuit<F> {
-    pub fn load_witness(&mut self, filename: &str) {
+    pub fn load_witness_file(&mut self, filename: &str) {
         // note that, for data parallel, one should load multiple witnesses into different slot in the vectorized F
         let file_bytes = fs::read(filename).unwrap();
+        self.load_witness_bytes(&file_bytes);
+    }
+    pub fn load_witness_bytes(&mut self, file_bytes: &[u8]) {
         log::trace!("witness file size: {} bytes", file_bytes.len());
         log::trace!("expecting: {} bytes", 32 * (1 << self.log_input_size()));
         let mut cur = 0;
