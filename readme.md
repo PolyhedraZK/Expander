@@ -57,6 +57,7 @@ Usage:
 ```sh
 RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- prove <input:circuit_file> <input:witness_file> <output:proof>
 RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- verify <input:circuit_file> <input:witness_file> <input:proof>
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- serve <input:circuit_file> <input:ip> <input:port>
 ```
 
 Example:
@@ -64,6 +65,12 @@ Example:
 ```sh
 RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- prove ./data/compiler_out/circuit.txt ./data/compiler_out/witness.txt ./data/compiler_out/out.bin
 RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- verify ./data/compiler_out/circuit.txt ./data/compiler_out/witness.txt ./data/compiler_out/out.bin
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- serve ./data/compiler_out/circuit.txt 127.0.0.1 3030
+```
+
+To test the service started by `expander-exec serve`, you can use the following command:
+```sh
+python ./scripts/test_http.py  # need "requests" package
 ```
 
 ## How to contribute?
