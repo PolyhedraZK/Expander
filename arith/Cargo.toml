@@ -9,7 +9,6 @@ halo2curves.workspace = true
 log.workspace = true
 rand.workspace = true
 sha2.workspace = true
-halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", default-features = false, features = [ "bits" ] }
 
 
 [features]
