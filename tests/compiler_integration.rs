@@ -16,7 +16,7 @@ fn test_compiler_format_integration() {
     println!("Config created.");
     let mut circuit = Circuit::<F>::load_circuit(FILENAME_CIRCUIT);
     println!("Circuit loaded.");
-    circuit.load_witness(FILENAME_WITNESS);
+    circuit.load_witness_file(FILENAME_WITNESS);
     println!("Witness loaded.");
     circuit.evaluate();
     println!("Circuit evaluated.");

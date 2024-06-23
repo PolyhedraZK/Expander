@@ -2,17 +2,24 @@
 name = "expander-rs"
 version = "0.1.0"
 edition = "2021"
-default-run = "expander-rs"  # default
+default-run = "expander-rs" # default
 
 [dependencies]
 arith = { path = "arith" }
-
 ark-std.workspace = true
 clap.workspace = true
 halo2curves.workspace = true
 log.workspace = true
 rand.workspace = true
 sha2.workspace = true
+
+halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", default-features = false, features = [
+    "bits",
+] }
+# for the server
+warp = "0.3.7"
+tokio = { version = "1.38.0", features = ["full"] }
+bytes = "1.6.0"
 
 [[bin]]
 name = "expander-exec"
