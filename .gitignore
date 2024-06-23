@@ -29,3 +29,4 @@ perf.data.old
 flamegraph.svg
 output.txt
 .DS_Store
+*.log
