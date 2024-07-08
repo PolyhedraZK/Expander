@@ -30,6 +30,12 @@ impl FieldSerde for VectorizedFr {
         let v = Fr::deserialize_from(buffer);
         Self { v: [v] }
     }
+
+    #[inline(always)]
+    fn deserialize_from_ecc_format(bytes: &[u8; 32]) -> Self {
+        let v = Fr::deserialize_from_ecc_format(bytes);
+        Self { v: [v] }
+    }
 }
 
 impl Field for VectorizedFr {

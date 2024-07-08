@@ -55,6 +55,15 @@ impl FieldSerde for M31 {
         v = mod_reduce_i32(v);
         M31 { v: v as u32 }
     }
+
+    #[inline(always)]
+    fn deserialize_from_ecc_format(bytes: &[u8; 32]) -> Self {
+        let val: [u8; 32] = bytes[0..32].try_into().unwrap();
+        for (i, v) in val.iter().enumerate().skip(4).take(28) {
+            assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
+        }
+        Self::from(u32::from_le_bytes(val[..4].try_into().unwrap()))
+    }
 }
 
 impl Field for M31 {

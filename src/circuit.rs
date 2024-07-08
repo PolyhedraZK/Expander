@@ -1,4 +1,4 @@
-use arith::{Field, MultiLinearPoly};
+use arith::{Field, FieldSerde, MultiLinearPoly};
 use ark_std::test_rng;
 use std::{cmp::max, collections::HashMap, fs};
 
@@ -200,16 +200,7 @@ pub struct Segment<F: Field> {
     pub gate_consts: Vec<GateConst<F>>,
 }
 
-fn read_f_u32_val(file_bytes: &[u8]) -> u32 {
-    // hard-coded to read 32 bytes for now
-    let val: [u8; 32] = file_bytes[0..32].try_into().unwrap();
-    for (i, v) in val.iter().enumerate().skip(4).take(28) {
-        assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
-    }
-    u32::from_le_bytes(val[..4].try_into().unwrap())
-}
-
-impl<F: Field> Circuit<F> {
+impl<F: Field + FieldSerde> Circuit<F> {
     pub fn load_witness_file(&mut self, filename: &str) {
         // note that, for data parallel, one should load multiple witnesses into different slot in the vectorized F
         let file_bytes = fs::read(filename).unwrap();
@@ -221,9 +212,10 @@ impl<F: Field> Circuit<F> {
         let mut cur = 0;
         self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
             .map(|_| {
-                let u32_val = read_f_u32_val(&file_bytes[cur..cur + 32]);
+                let ret =
+                    F::deserialize_from_ecc_format(file_bytes[cur..cur + 32].try_into().unwrap());
                 cur += 32;
-                F::from(u32_val)
+                ret
             })
             .collect();
     }
@@ -282,7 +274,9 @@ impl<F: Field> Segment<F> {
                 ],
                 o_id: u64::from_le_bytes(file_bytes[*cur + 16..*cur + 24].try_into().unwrap())
                     as usize,
-                coef: F::BaseField::from(read_f_u32_val(&file_bytes[*cur + 24..*cur + 56])),
+                coef: F::BaseField::deserialize_from_ecc_format(
+                    &file_bytes[*cur + 24..*cur + 56].try_into().unwrap(),
+                ),
             };
             *cur += 56;
             ret.gate_muls.push(gate);
@@ -297,7 +291,9 @@ impl<F: Field> Segment<F> {
                 ],
                 o_id: u64::from_le_bytes(file_bytes[*cur + 8..*cur + 16].try_into().unwrap())
                     as usize,
-                coef: F::BaseField::from(read_f_u32_val(&file_bytes[*cur + 16..*cur + 48])),
+                coef: F::BaseField::deserialize_from_ecc_format(
+                    &file_bytes[*cur + 16..*cur + 48].try_into().unwrap(),
+                ),
             };
             *cur += 48;
             ret.gate_adds.push(gate);
@@ -317,7 +313,9 @@ impl<F: Field> Segment<F> {
             let gate = GateConst {
                 i_ids: [],
                 o_id: u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
-                coef: F::BaseField::from(read_f_u32_val(&file_bytes[*cur + 8..*cur + 40])),
+                coef: F::BaseField::deserialize_from_ecc_format(
+                    &file_bytes[*cur + 8..*cur + 40].try_into().unwrap(),
+                ),
             };
             *cur += 40;
             ret.gate_consts.push(gate);
