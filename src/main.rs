@@ -95,7 +95,7 @@ fn run_poseidon_bench_m31(args: &Args) {
                     prover.prove(&c);
                     // update cnt
                     let mut cnt = partial_proof_cnt.lock().unwrap();
-                    const CIRCUIT_COPY_SIZE: usize = 8;
+                    const CIRCUIT_COPY_SIZE: usize = 100;
                     let proof_cnt_this_round = CIRCUIT_COPY_SIZE
                         * VectorizedM31::PACK_SIZE
                         * VectorizedM31::VECTORIZE_SIZE;
@@ -115,11 +115,7 @@ fn run_poseidon_bench_m31(args: &Args) {
             total_proof_cnt += *cnt.lock().unwrap();
         }
         let throughput = total_proof_cnt as f64 / duration.as_secs_f64();
-        println!(
-            "{}-bench: throughput: {} poseidon/s",
-            i,
-            throughput.round() * 100f64
-        );
+        println!("{}-bench: throughput: {} poseidon/s", i, throughput.round());
     }
 }
 
