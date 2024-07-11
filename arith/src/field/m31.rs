@@ -23,7 +23,7 @@ use std::{
 pub const M31_MOD: i32 = 2147483647;
 
 #[inline]
-fn mod_reduce_i32(x: i32) -> i32 {
+pub(crate) fn mod_reduce_i32(x: i32) -> i32 {
     (x & M31_MOD) + (x >> 31)
 }
 
