@@ -136,4 +136,7 @@ pub trait FieldSerde {
 
     /// deserialize bytes into field
     fn deserialize_from(buffer: &[u8]) -> Self;
+
+    /// deserialize bytes into field following ecc format
+    fn deserialize_from_ecc_format(bytes: &[u8; 32]) -> Self;
 }

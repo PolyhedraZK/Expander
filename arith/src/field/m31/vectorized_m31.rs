@@ -47,6 +47,14 @@ impl FieldSerde for VectorizedM31 {
             }
         }
     }
+
+    #[inline(always)]
+    fn deserialize_from_ecc_format(bytes: &[u8; 32]) -> Self {
+        for (i, v) in bytes.iter().enumerate().skip(4).take(28) {
+            assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
+        }
+        Self::from(u32::from_le_bytes(bytes[..4].try_into().unwrap()))
+    }
 }
 
 impl Field for VectorizedM31 {
