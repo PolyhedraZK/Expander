@@ -1,6 +1,6 @@
 // this module benchmarks the performance of different field operations
 
-use arith::{Field, M31Ext3, M31};
+use arith::{Field, M31Ext3, PackedM31Ext3, M31};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use halo2curves::bn256::Fr;
@@ -132,6 +132,7 @@ pub(crate) fn bench_field_avx512<F: Field>(c: &mut Criterion) {
 fn criterion_benchmark(c: &mut Criterion) {
     bench_field_avx512::<M31>(c);
     bench_field_avx512::<M31Ext3>(c);
+    bench_field_avx512::<PackedM31Ext3>(c);
     bench_field_avx512::<Fr>(c);
 }
 

@@ -1,6 +1,5 @@
 use std::{
-    iter::{Product, Sum},
-    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    iter::{Product, Sum}, mem::transmute, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}
 };
 
 use rand::RngCore;
@@ -251,6 +250,9 @@ impl From<u32> for PackedM31Ext3 {
         }
     }
 }
+
+const FIVE: PackedM31 = PackedM31{v: unsafe { transmute([5; 8]) }};
+
 // polynomial mod (x^3 - 5)
 //
 //   (a0 + a1*x + a2*x^2) * (b0 + b1*x + b2*x^2) mod (x^3 - 5)
@@ -260,5 +262,9 @@ impl From<u32> for PackedM31Ext3 {
 // + (a0*b1 + a1*b0)*x + 5* a2*b2
 // + (a0*b2 + a1*b1 + a2*b0)*x^2
 fn mul_internal(a: &[PackedM31; 3], b: &[PackedM31; 3]) -> [PackedM31; 3] {
-    todo!()
+    let mut res = [PackedM31::default(); 3];
+    res[0] = a[0] * b[0] + FIVE * (a[1] * b[2] + a[2] * b[1]);
+    res[1] = a[0] * b[1] + a[1] * b[0] + FIVE * a[2] * b[2];
+    res[2] = a[0] * b[2] + a[1] * b[1] + a[2] * b[0];
+    res
 }
