@@ -53,12 +53,21 @@ impl PackedM31 {
 impl FieldSerde for PackedM31 {
     /// serialize self into bytes
     fn serialize_into(&self, buffer: &mut [u8]) {
-        todo!()
+        unsafe {
+            let data = transmute::<PackedDataType, [u8; 32]>(self.v);
+            buffer[..32].copy_from_slice(&data);
+        }
     }
 
     /// deserialize bytes into field
     fn deserialize_from(buffer: &[u8]) -> Self {
-        todo!()
+        let mut data = [0; 32];
+        data.copy_from_slice(buffer);
+        unsafe {
+            PackedM31 {
+                v: transmute::<[u8; 32], PackedDataType>(data),
+            }
+        }
     }
 }
 

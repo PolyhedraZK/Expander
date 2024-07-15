@@ -4,6 +4,10 @@ use std::{
     thread,
 };
 
+use arith::{
+    Field, FieldSerde, M31Ext3, PackedM31, PackedM31Ext3, VectorizedField, VectorizedFr,
+    VectorizedM31, M31,
+};
 use arith::{Field, FieldSerde, VectorizedField, VectorizedFr, VectorizedM31, M31};
 use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
@@ -17,8 +21,8 @@ const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Curve id
-    #[arg(short, long, default_value_t = 31)]
-    field: usize,
+    #[arg(short, long,default_value_t = String::from("m31ext3"))]
+    field: String,
 
     /// number of repeat
     #[arg(short, long, default_value_t = 4)]
@@ -32,21 +36,23 @@ struct Args {
 fn main() {
     let args = Args::parse();
     print_info(&args);
-    match args.field {
-        31 => run_keccak_bench::<M31, VectorizedM31>(&args, Config::m31_config()),
-        254 => run_keccak_bench::<Fr, VectorizedFr>(&args, Config::bn254_config()),
+
+    match args.field.as_str() {
+        "m31" => run_benchmark::<M31, VectorizedM31>(&args, Config::m31_config()),
+        "m31ext3" => run_benchmark::<PackedM31, PackedM31Ext3>(&args, Config::m31_ext3_config()),
+        "fr" => run_benchmark::<Fr, VectorizedFr>(&args, Config::bn254_config()),
         _ => unreachable!(),
-    }
+    };
 }
 
-fn run_keccak_bench<F, VecF>(args: &Args, config: Config)
+fn run_benchmark<F, VecF>(args: &Args, config: Config)
 where
     F: Field,
     VecF: VectorizedField + FieldSerde + Send + 'static,
     VecF::BaseField: Send,
     VecF::PackedBaseField: Field<BaseField = VecF::BaseField>,
 {
-    println!("benchmarking keccak over {}", F::NAME);
+    println!("benchmarking keccak over {}", args.field);
     println!(
         "Default parallel repetition config {}",
         config.get_num_repetitions()

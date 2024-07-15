@@ -1,14 +1,54 @@
 use std::{
-    iter::{Product, Sum}, mem::transmute, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}
+    iter::{Product, Sum},
+    mem::transmute,
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 use rand::RngCore;
 
-use crate::{Field, PackedM31};
+use crate::{Field, FieldSerde, PackedM31, VectorizedField};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct PackedM31Ext3 {
     pub v: [PackedM31; 3],
+}
+
+impl FieldSerde for PackedM31Ext3 {
+    #[inline(always)]
+    fn serialize_into(&self, buffer: &mut [u8]) {
+        self.v[0].serialize_into(buffer);
+        self.v[1].serialize_into(&mut buffer[32..]);
+        self.v[2].serialize_into(&mut buffer[64..]);
+    }
+
+    #[inline(always)]
+    fn deserialize_from(buffer: &[u8]) -> Self {
+        PackedM31Ext3 {
+            v: [
+                PackedM31::deserialize_from(&buffer[..32]),
+                PackedM31::deserialize_from(&buffer[32..64]),
+                PackedM31::deserialize_from(&buffer[64..]),
+            ],
+        }
+    }
+}
+
+impl VectorizedField for PackedM31Ext3 {
+    const PACK_SIZE: usize = 8;
+
+    const VECTORIZE_SIZE: usize = 1;
+
+    type PackedBaseField = PackedM31Ext3;
+
+    #[inline(always)]
+    fn as_packed_slices(&self) -> &[PackedM31Ext3] {
+        todo!()
+    }
+
+    #[inline(always)]
+    fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
+        todo!()
+    }
 }
 
 impl Field for PackedM31Ext3 {
@@ -251,7 +291,9 @@ impl From<u32> for PackedM31Ext3 {
     }
 }
 
-const FIVE: PackedM31 = PackedM31{v: unsafe { transmute([5; 8]) }};
+const FIVE: PackedM31 = PackedM31 {
+    v: unsafe { transmute([5; 8]) },
+};
 
 // polynomial mod (x^3 - 5)
 //

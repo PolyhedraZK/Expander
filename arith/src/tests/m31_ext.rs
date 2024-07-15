@@ -1,8 +1,8 @@
 use std::ops::MulAssign;
 
-use crate::{Field, M31Ext3, PackedM31Ext3, M31};
+use crate::{Field, M31Ext3, PackedM31Ext3};
 
-use super::field::{random_field_tests, random_small_field_tests, random_vectorized_field_tests};
+use super::field::{random_field_tests, random_small_field_tests};
 #[test]
 fn test_field() {
     random_field_tests::<M31Ext3>("M31 Ext3".to_string());
