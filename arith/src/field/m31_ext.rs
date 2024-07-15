@@ -1,3 +1,7 @@
+mod packed_m31_ext;
+
+pub use packed_m31_ext::PackedM31Ext3;
+
 use ark_std::Zero;
 use rand::RngCore;
 use std::{

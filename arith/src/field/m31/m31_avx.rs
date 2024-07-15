@@ -6,7 +6,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{Field, M31, M31_MOD};
+use crate::{Field, FieldSerde, M31, M31_MOD};
 
 type PackedDataType = __m256i;
 pub(super) const M31_PACK_SIZE: usize = 8;
@@ -47,6 +47,18 @@ impl PackedM31 {
         PackedM31 {
             v: unsafe { _mm256_set1_epi32(x.v as i32) },
         }
+    }
+}
+
+impl FieldSerde for PackedM31 {
+    /// serialize self into bytes
+    fn serialize_into(&self, buffer: &mut [u8]) {
+        todo!()
+    }
+
+    /// deserialize bytes into field
+    fn deserialize_from(buffer: &[u8]) -> Self {
+        todo!()
     }
 }
 
