@@ -117,6 +117,16 @@ impl Field for M31Ext3 {
         *self += Self::from(rhs)
     }
 
+    /// Squaring
+    #[inline(always)]
+    fn square(&self) -> Self {
+        let mut res = [M31::default(); 3];
+        res[0] = self.v[0] * self.v[0] + M31 { v: 10 } * (self.v[1] * self.v[2]);
+        res[1] = self.v[0] * self.v[1].double() + M31 { v: 5 } * self.v[2] * self.v[2];
+        res[2] = self.v[0] * self.v[2].double() + self.v[1] * self.v[1];
+        Self { v: res }
+    }
+
     #[inline(always)]
     fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
         Self {

@@ -105,6 +105,7 @@ fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type_name: Stri
 
         assert_eq!(t0, t1);
         assert_eq!(t1, t2);
+        assert_eq!(a.square(), a * a);
     }
     end_timer!(start);
 }

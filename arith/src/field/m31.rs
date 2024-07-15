@@ -65,6 +65,20 @@ impl FieldSerde for M31 {
     }
 }
 
+impl M31 {
+    // Add two M31 without mod reduction
+    #[inline(always)]
+    pub fn unsafe_add(&self, rhs: &Self) -> Self {
+        Self { v: self.v + rhs.v }
+    }
+
+    // Double an M31 without mod reduction
+    #[inline(always)]
+    pub fn unsafe_double(&self) -> Self {
+        Self { v: self.v << 1 }
+    }
+}
+
 impl Field for M31 {
     const NAME: &'static str = "Mersenne 31";
 
