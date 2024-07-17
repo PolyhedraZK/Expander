@@ -8,7 +8,10 @@ fn test_field() {
     random_field_tests::<M31Ext3>("M31 Ext3".to_string());
     random_small_field_tests::<M31Ext3>("M31 Ext3".to_string());
 
+    #[cfg(target_arch = "x86_64")]
     random_field_tests::<PackedM31Ext3>("Vectorized M31 Ext3".to_string());
+
+    #[cfg(target_arch = "x86_64")]
     random_small_field_tests::<PackedM31Ext3>("Vectorized M31".to_string());
 
     // random_vectorized_field_tests::<PackedM31Ext3>("Vectorized M31".to_string());

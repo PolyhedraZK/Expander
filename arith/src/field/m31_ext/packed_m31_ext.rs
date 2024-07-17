@@ -97,7 +97,7 @@ impl Field for PackedM31Ext3 {
         }
     }
 
-    fn exp(&self, exponent: &Self) -> Self {
+    fn exp(&self, _exponent: &Self) -> Self {
         todo!()
     }
 

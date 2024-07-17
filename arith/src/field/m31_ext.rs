@@ -1,5 +1,7 @@
+#[cfg(target_arch = "x86_64")]
 mod packed_m31_ext;
 
+#[cfg(target_arch = "x86_64")]
 pub use packed_m31_ext::PackedM31Ext3;
 
 use ark_std::Zero;
