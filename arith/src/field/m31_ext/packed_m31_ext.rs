@@ -292,7 +292,7 @@ impl From<u32> for PackedM31Ext3 {
 }
 
 const FIVE: PackedM31 = PackedM31 {
-    v: unsafe { transmute([5; 8]) },
+    v: unsafe { transmute::<[i32; 8], std::arch::x86_64::__m256i>([5; 8]) },
 };
 
 // polynomial mod (x^3 - 5)

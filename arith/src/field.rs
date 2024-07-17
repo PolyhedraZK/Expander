@@ -140,5 +140,11 @@ pub trait FieldSerde {
     fn deserialize_from(buffer: &[u8]) -> Self;
 
     /// deserialize bytes into field following ecc format
-    fn deserialize_from_ecc_format(bytes: &[u8; 32]) -> Self;
+    fn deserialize_from_ecc_format(_bytes: &[u8; 32]) -> Self
+    where
+        Self: Sized,
+    {
+        // add default implementation to avoid duplications when this isn't required
+        unimplemented!()
+    }
 }

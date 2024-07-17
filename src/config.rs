@@ -97,19 +97,12 @@ impl Config {
 
     // using degree 3 extension of m31
     pub fn m31_ext3_config() -> Self {
-        let mut vectorize_size = 0;
-
         let security_bits = 100;
         let grinding_bits = 10;
         let num_parallel = 16;
 
-        let field_size = match FieldType::M31 {
-            FieldType::M31 => {
-                vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
-                93
-            }
-            _ => panic!("unsupported field type"),
-        };
+        let field_size = 93;
+        let vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
 
         let num_repetitions = 1; // we do not need repetitions for m31_ext3
 
