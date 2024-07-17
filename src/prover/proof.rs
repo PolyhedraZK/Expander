@@ -1,3 +1,5 @@
+use std::io::{Read, Write};
+
 use arith::{Field, FieldSerde};
 
 /// Proof. In the serialized mode.
@@ -25,5 +27,29 @@ impl Proof {
         let ret = F::deserialize_from(&self.bytes[self.idx..]);
         self.step(F::SIZE);
         ret
+    }
+}
+
+impl FieldSerde for Proof {
+    #[inline(always)]
+    fn serialize_into<W: Write>(&self, mut writer: W) {
+        (self.bytes.len() as u64).serialize_into(&mut writer);
+        writer.write_all(&self.bytes).unwrap();
+    }
+
+    #[inline(always)]
+    fn serialized_size() -> usize {
+        0 // proof is not a fixed size
+    }
+
+    #[inline(always)]
+    fn deserialize_from<R: Read>(mut reader: R) -> Self {
+        let proof_len = u64::deserialize_from(&mut reader) as usize;
+        let mut proof = vec![0u8; proof_len];
+        reader.read_exact(&mut proof).unwrap();
+        Self {
+            idx: 0,
+            bytes: proof,
+        }
     }
 }

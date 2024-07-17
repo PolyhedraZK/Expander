@@ -1,6 +1,11 @@
 use arith::{Field, FieldSerde, MultiLinearPoly};
 use ark_std::test_rng;
-use std::{cmp::max, collections::HashMap, fs, io::{Cursor, Read}};
+use std::{
+    cmp::max,
+    collections::HashMap,
+    fs,
+    io::{Cursor, Read},
+};
 
 use crate::Transcript;
 
@@ -212,9 +217,7 @@ impl<F: Field + FieldSerde> Circuit<F> {
 
         let mut cursor = Cursor::new(file_bytes);
         self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
-            .map(|_| {
-                    F::deserialize_from_ecc_format(&mut cursor)
-            })
+            .map(|_| F::deserialize_from_ecc_format(&mut cursor))
             .collect();
     }
 }
@@ -224,9 +227,9 @@ impl<F: Field> Segment<F> {
         !self.gate_muls.is_empty() || !self.gate_adds.is_empty() || !self.gate_consts.is_empty()
     }
 
-    pub(crate) fn read<R: Read>(mut reader: R)-> Self {
-        let i_len = u64::deserialize_from(&mut reader)as usize;
-        let o_len = u64::deserialize_from(&mut reader)as usize;
+    pub(crate) fn read<R: Read>(mut reader: R) -> Self {
+        let i_len = u64::deserialize_from(&mut reader) as usize;
+        let o_len = u64::deserialize_from(&mut reader) as usize;
         assert!(i_len.is_power_of_two());
         assert!(o_len.is_power_of_two());
 
@@ -239,15 +242,12 @@ impl<F: Field> Segment<F> {
             gate_consts: Vec::new(),
         };
 
-
         let child_segs_num = u64::deserialize_from(&mut reader) as usize;
 
         // let child_segs_num =
         //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
         // *cur += 8;
         for _ in 0..child_segs_num {
-
-            
             let child_seg_id = u64::deserialize_from(&mut reader) as SegmentId;
 
             // let child_seg_id =
@@ -255,13 +255,11 @@ impl<F: Field> Segment<F> {
             // *cur += 8;
             let allocation_num = u64::deserialize_from(&mut reader) as usize;
 
-
             // let allocation_num =
             //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
             // *cur += 8;
             for _ in 0..allocation_num {
                 let i_offset = u64::deserialize_from(&mut reader) as usize;
-
 
                 //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
                 // *cur += 8;
@@ -283,23 +281,17 @@ impl<F: Field> Segment<F> {
         for _ in 0..gate_muls_num {
             let gate = GateMul {
                 i_ids: [
-
                     u64::deserialize_from(&mut reader) as usize,
                     u64::deserialize_from(&mut reader) as usize,
-
                     // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
                     // u64::from_le_bytes(file_bytes[*cur + 8..*cur + 16].try_into().unwrap())
                     //     as usize,
                 ],
-                o_id:   u64::deserialize_from(&mut reader) as usize,
-                
-                
+                o_id: u64::deserialize_from(&mut reader) as usize,
+
                 // u64::from_le_bytes(file_bytes[*cur + 16..*cur + 24].try_into().unwrap())
                 //     as usize,
-                coef: F::BaseField::deserialize_from_ecc_format(
-                    &mut reader
-                ),
-                
+                coef: F::BaseField::deserialize_from_ecc_format(&mut reader),
                 // F::BaseField::deserialize_from_ecc_format(
                 //     &file_bytes[*cur + 24..*cur + 56].try_into().unwrap(),
                 // ),
@@ -308,26 +300,21 @@ impl<F: Field> Segment<F> {
             ret.gate_muls.push(gate);
         }
         let gate_adds_num = u64::deserialize_from(&mut reader) as usize;
-            // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
+        // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
         // *cur += 8;
         for _ in 0..gate_adds_num {
             let gate = GateAdd {
                 i_ids: [
                     u64::deserialize_from(&mut reader) as usize,
-
                     // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
                 ],
                 o_id: u64::deserialize_from(&mut reader) as usize,
-                
+
                 // u64::from_le_bytes(file_bytes[*cur + 8..*cur + 16].try_into().unwrap())
                 //     as usize,
-                coef: 
-                F::BaseField::deserialize_from_ecc_format(
-                    &mut reader
-                ),
-                
+                coef: F::BaseField::deserialize_from_ecc_format(&mut reader),
                 // F::BaseField::deserialize_from_ecc_format(
-                    // &file_bytes[*cur + 16..*cur + 48].try_into().unwrap(),
+                // &file_bytes[*cur + 16..*cur + 48].try_into().unwrap(),
                 // ),
             };
             // *cur += 48;
@@ -348,11 +335,9 @@ impl<F: Field> Segment<F> {
             let gate = GateConst {
                 i_ids: [],
                 o_id: u64::deserialize_from(&mut reader) as usize,
-                
+
                 // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
-                coef:  F::BaseField::deserialize_from_ecc_format(
-                    &mut reader
-                ),
+                coef: F::BaseField::deserialize_from_ecc_format(&mut reader),
                 // F::BaseField::deserialize_from_ecc_format(
                 //     &file_bytes[*cur + 8..*cur + 40].try_into().unwrap(),
                 // ),
@@ -366,8 +351,7 @@ impl<F: Field> Segment<F> {
         let mut t = Transcript::new(); // FIXME LATER: use an empty transcript to align the randomness
         for _ in 0..rand_coef_idx_num {
             let idx = u64::deserialize_from(&mut reader) as usize;
-            
-            
+
             // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
             // *cur += 8;
             let rand_coef = t.challenge_f::<F>();
@@ -381,7 +365,6 @@ impl<F: Field> Segment<F> {
         }
         ret
     }
-
 
     pub fn scan_leaf_segments(
         &self,
@@ -433,12 +416,12 @@ impl<F: Field> RecursiveCircuit<F> {
         let mut cursor = Cursor::new(file_bytes);
         // let mut cur = 0;
         let magic_num = u64::deserialize_from(&mut cursor);
-        
+
         // u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap());
         // cur += 8;
         assert_eq!(magic_num, MAGIC_NUM);
         let segment_num = u64::deserialize_from(&mut cursor);
-        
+
         // u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap()) as usize;
         // cur += 8;
         for _ in 0..segment_num {
@@ -446,7 +429,7 @@ impl<F: Field> RecursiveCircuit<F> {
             ret.segments.push(seg);
         }
         let layer_num = u64::deserialize_from(&mut cursor);
-        
+
         // u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap()) as usize;
         // cur += 8;
         for _ in 0..layer_num {
