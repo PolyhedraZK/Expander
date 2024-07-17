@@ -152,3 +152,22 @@ pub trait FieldSerde {
         unimplemented!()
     }
 }
+
+impl FieldSerde for u64{
+    /// serialize u64 into bytes
+    fn serialize_into<W: Write>(&self, mut writer: W){
+        writer.write_all(&self.to_le_bytes()).unwrap();
+    }
+
+    /// size of the serialized bytes
+    fn serialized_size() -> usize{
+        8
+    }
+
+    /// deserialize bytes into u64
+    fn deserialize_from<R: Read>(mut reader: R) -> Self{
+        let mut buffer = [0u8; 8];
+        reader.read_exact(&mut buffer).unwrap();
+        u64::from_le_bytes(buffer)
+    }    
+}

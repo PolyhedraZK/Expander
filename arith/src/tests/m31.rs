@@ -3,11 +3,8 @@ use std::io::Cursor;
 use crate::{FieldSerde, PackedM31, VectorizedM31, M31, VECTORIZEDM31_INV_2};
 
 use super::field::{
-    random_field_tests,
-    random_inversion_tests,
-    random_small_field_tests,
-    random_vectorized_field_tests,
-    test_basic_field_op,
+    random_field_tests, random_inversion_tests, random_small_field_tests,
+    random_vectorized_field_tests, test_basic_field_op,
 };
 
 #[test]

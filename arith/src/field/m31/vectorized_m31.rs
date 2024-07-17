@@ -7,7 +7,10 @@ use super::m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE, PACKED_INV_2
 
 use crate::{Field, FieldSerde, VectorizedField, M31};
 use std::{
-    io::{Read, Write}, iter::{Product, Sum}, mem::size_of, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}
+    io::{Read, Write},
+    iter::{Product, Sum},
+    mem::size_of,
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 /// A VectorizedM31 stores 256 bits of data.
@@ -35,7 +38,7 @@ impl FieldSerde for VectorizedM31 {
 
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
-       let v = (0..VectorizedM31::VECTORIZE_SIZE)
+        let v = (0..VectorizedM31::VECTORIZE_SIZE)
             .map(|_| PackedM31::deserialize_from(&mut reader))
             .collect::<Vec<_>>()
             .try_into()
@@ -43,13 +46,15 @@ impl FieldSerde for VectorizedM31 {
         Self { v }
     }
 
-    // #[inline(always)]
-    // fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
-    //     for (i, v) in bytes.iter().enumerate().skip(4).take(28) {
-    //         assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
-    //     }
-    //     Self::from(u32::from_le_bytes(bytes[..4].try_into().unwrap()))
-    // }
+    #[inline(always)]
+    fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
+        let mut buf = [0u8; 32];
+        reader.read_exact(&mut buf).unwrap(); // todo: error propagation
+        for (i, v) in buf.iter().enumerate().skip(4).take(28) {
+            assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
+        }
+        Self::from(u32::from_le_bytes(buf[..4].try_into().unwrap()))
+    }
 }
 
 impl Field for VectorizedM31 {

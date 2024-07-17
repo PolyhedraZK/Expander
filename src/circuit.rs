@@ -1,6 +1,6 @@
 use arith::{Field, FieldSerde, MultiLinearPoly};
 use ark_std::test_rng;
-use std::{cmp::max, collections::HashMap, fs};
+use std::{cmp::max, collections::HashMap, fs, io::{Cursor, Read}};
 
 use crate::Transcript;
 
@@ -209,30 +209,27 @@ impl<F: Field + FieldSerde> Circuit<F> {
     pub fn load_witness_bytes(&mut self, file_bytes: &[u8]) {
         log::trace!("witness file size: {} bytes", file_bytes.len());
         log::trace!("expecting: {} bytes", 32 * (1 << self.log_input_size()));
-        let mut cur = 0;
+
+        let mut cursor = Cursor::new(file_bytes);
         self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
             .map(|_| {
-                let ret =
-                    F::deserialize_from_ecc_format(file_bytes[cur..cur + 32].try_into().unwrap());
-                cur += 32;
-                ret
+                    F::deserialize_from_ecc_format(&mut cursor)
             })
             .collect();
     }
 }
 
 impl<F: Field> Segment<F> {
-    pub fn contain_gates(&self) -> bool {
+    pub(crate) fn contain_gates(&self) -> bool {
         !self.gate_muls.is_empty() || !self.gate_adds.is_empty() || !self.gate_consts.is_empty()
     }
 
-    pub fn read(file_bytes: &[u8], cur: &mut usize) -> Segment<F> {
-        let i_len = u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-        *cur += 8;
-        let o_len = u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-        *cur += 8;
+    pub(crate) fn read<R: Read>(mut reader: R)-> Self {
+        let i_len = u64::deserialize_from(&mut reader)as usize;
+        let o_len = u64::deserialize_from(&mut reader)as usize;
         assert!(i_len.is_power_of_two());
         assert!(o_len.is_power_of_two());
+
         let mut ret = Segment::<F> {
             i_var_num: i_len.trailing_zeros() as usize,
             o_var_num: o_len.trailing_zeros() as usize,
@@ -241,66 +238,104 @@ impl<F: Field> Segment<F> {
             gate_adds: Vec::new(),
             gate_consts: Vec::new(),
         };
-        let child_segs_num =
-            u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-        *cur += 8;
+
+
+        let child_segs_num = u64::deserialize_from(&mut reader) as usize;
+
+        // let child_segs_num =
+        //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
+        // *cur += 8;
         for _ in 0..child_segs_num {
-            let child_seg_id =
-                u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as SegmentId;
-            *cur += 8;
-            let allocation_num =
-                u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-            *cur += 8;
+
+            
+            let child_seg_id = u64::deserialize_from(&mut reader) as SegmentId;
+
+            // let child_seg_id =
+            //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as SegmentId;
+            // *cur += 8;
+            let allocation_num = u64::deserialize_from(&mut reader) as usize;
+
+
+            // let allocation_num =
+            //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
+            // *cur += 8;
             for _ in 0..allocation_num {
-                let i_offset =
-                    u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-                *cur += 8;
-                let o_offset =
-                    u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-                *cur += 8;
+                let i_offset = u64::deserialize_from(&mut reader) as usize;
+
+
+                //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
+                // *cur += 8;
+
+                let o_offset = u64::deserialize_from(&mut reader) as usize;
+
+                // let o_offset =
+                //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
+                // *cur += 8;
                 ret.child_segs
                     .push((child_seg_id, vec![Allocation { i_offset, o_offset }]));
             }
         }
-        let gate_muls_num =
-            u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-        *cur += 8;
+        let gate_muls_num = u64::deserialize_from(&mut reader) as usize;
+
+        // let gate_muls_num =
+        //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
+        // *cur += 8;
         for _ in 0..gate_muls_num {
             let gate = GateMul {
                 i_ids: [
-                    u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
-                    u64::from_le_bytes(file_bytes[*cur + 8..*cur + 16].try_into().unwrap())
-                        as usize,
+
+                    u64::deserialize_from(&mut reader) as usize,
+                    u64::deserialize_from(&mut reader) as usize,
+
+                    // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
+                    // u64::from_le_bytes(file_bytes[*cur + 8..*cur + 16].try_into().unwrap())
+                    //     as usize,
                 ],
-                o_id: u64::from_le_bytes(file_bytes[*cur + 16..*cur + 24].try_into().unwrap())
-                    as usize,
+                o_id:   u64::deserialize_from(&mut reader) as usize,
+                
+                
+                // u64::from_le_bytes(file_bytes[*cur + 16..*cur + 24].try_into().unwrap())
+                //     as usize,
                 coef: F::BaseField::deserialize_from_ecc_format(
-                    &file_bytes[*cur + 24..*cur + 56].try_into().unwrap(),
+                    &mut reader
                 ),
+                
+                // F::BaseField::deserialize_from_ecc_format(
+                //     &file_bytes[*cur + 24..*cur + 56].try_into().unwrap(),
+                // ),
             };
-            *cur += 56;
+            // *cur += 56;
             ret.gate_muls.push(gate);
         }
-        let gate_adds_num =
-            u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-        *cur += 8;
+        let gate_adds_num = u64::deserialize_from(&mut reader) as usize;
+            // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
+        // *cur += 8;
         for _ in 0..gate_adds_num {
             let gate = GateAdd {
                 i_ids: [
-                    u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
+                    u64::deserialize_from(&mut reader) as usize,
+
+                    // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
                 ],
-                o_id: u64::from_le_bytes(file_bytes[*cur + 8..*cur + 16].try_into().unwrap())
-                    as usize,
-                coef: F::BaseField::deserialize_from_ecc_format(
-                    &file_bytes[*cur + 16..*cur + 48].try_into().unwrap(),
+                o_id: u64::deserialize_from(&mut reader) as usize,
+                
+                // u64::from_le_bytes(file_bytes[*cur + 8..*cur + 16].try_into().unwrap())
+                //     as usize,
+                coef: 
+                F::BaseField::deserialize_from_ecc_format(
+                    &mut reader
                 ),
+                
+                // F::BaseField::deserialize_from_ecc_format(
+                    // &file_bytes[*cur + 16..*cur + 48].try_into().unwrap(),
+                // ),
             };
-            *cur += 48;
+            // *cur += 48;
             ret.gate_adds.push(gate);
         }
-        let gate_consts_num =
-            u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-        *cur += 8;
+        let gate_consts_num = u64::deserialize_from(&mut reader) as usize;
+        //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
+        // *cur += 8;
 
         log::trace!(
             "gate nums: {} mul, {} add, {} const",
@@ -312,21 +347,29 @@ impl<F: Field> Segment<F> {
         for _ in 0..gate_consts_num {
             let gate = GateConst {
                 i_ids: [],
-                o_id: u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
-                coef: F::BaseField::deserialize_from_ecc_format(
-                    &file_bytes[*cur + 8..*cur + 40].try_into().unwrap(),
+                o_id: u64::deserialize_from(&mut reader) as usize,
+                
+                // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
+                coef:  F::BaseField::deserialize_from_ecc_format(
+                    &mut reader
                 ),
+                // F::BaseField::deserialize_from_ecc_format(
+                //     &file_bytes[*cur + 8..*cur + 40].try_into().unwrap(),
+                // ),
             };
-            *cur += 40;
+            // *cur += 40;
             ret.gate_consts.push(gate);
         }
-        let rand_coef_idx_num =
-            u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-        *cur += 8;
+        let rand_coef_idx_num = u64::deserialize_from(&mut reader) as usize;
+        //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
+        // *cur += 8;
         let mut t = Transcript::new(); // FIXME LATER: use an empty transcript to align the randomness
         for _ in 0..rand_coef_idx_num {
-            let idx = u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-            *cur += 8;
+            let idx = u64::deserialize_from(&mut reader) as usize;
+            
+            
+            // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
+            // *cur += 8;
             let rand_coef = t.challenge_f::<F>();
             if idx < ret.gate_muls.len() {
                 ret.gate_muls[idx].coef = rand_coef;
@@ -338,6 +381,8 @@ impl<F: Field> Segment<F> {
         }
         ret
     }
+
+
     pub fn scan_leaf_segments(
         &self,
         rc: &RecursiveCircuit<F>,
@@ -385,26 +430,33 @@ impl<F: Field> RecursiveCircuit<F> {
             layers: Vec::new(),
         };
         let file_bytes = fs::read(filename).unwrap();
-        let mut cur = 0;
-        let magic_num = u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap());
-        cur += 8;
+        let mut cursor = Cursor::new(file_bytes);
+        // let mut cur = 0;
+        let magic_num = u64::deserialize_from(&mut cursor);
+        
+        // u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap());
+        // cur += 8;
         assert_eq!(magic_num, MAGIC_NUM);
-        let segment_num = u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap()) as usize;
-        cur += 8;
+        let segment_num = u64::deserialize_from(&mut cursor);
+        
+        // u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap()) as usize;
+        // cur += 8;
         for _ in 0..segment_num {
-            let seg = Segment::<F>::read(&file_bytes, &mut cur);
+            let seg = Segment::<F>::read(&mut cursor);
             ret.segments.push(seg);
         }
-        let layer_num = u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap()) as usize;
-        cur += 8;
+        let layer_num = u64::deserialize_from(&mut cursor);
+        
+        // u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap()) as usize;
+        // cur += 8;
         for _ in 0..layer_num {
-            let layer_id =
-                u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap()) as SegmentId;
-            cur += 8;
+            let layer_id = u64::deserialize_from(&mut cursor) as SegmentId;
+            //     u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap()) as SegmentId;
+            // cur += 8;
             ret.layers.push(layer_id);
         }
         // TODO: configure sentinel (currently it is manually handled as sentinel is unknown before loading)
-        assert_eq!(file_bytes.len(), cur + 32);
+        // assert_eq!(file_bytes.len(), cur + 32);
         ret
     }
     pub fn flatten(&self) -> Circuit<F> {

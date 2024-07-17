@@ -1,8 +1,5 @@
 use std::{
-    fs,
-    process::exit,
-    sync::{Arc, Mutex},
-    vec,
+    fs, io::Cursor, process::exit, sync::{Arc, Mutex}, vec
 };
 
 use arith::{Field, FieldSerde, VectorizedField, VectorizedFr, VectorizedM31};
@@ -36,11 +33,12 @@ fn load_proof_and_claimed_v<F: Field + FieldSerde>(bytes: &[u8]) -> (Proof, Vec<
     let claimed_v_len = u64::from_le_bytes(bytes[offset..offset + 8].try_into().unwrap()) as usize;
     offset += 8;
     let mut claimed_v = Vec::new();
+    let mut cursor = Cursor::new(bytes[offset..].as_ref());
     for _ in 0..claimed_v_len {
-        let mut buffer = vec![0u8; F::SIZE];
-        buffer.copy_from_slice(&bytes[offset..offset + F::SIZE]);
-        offset += F::SIZE;
-        claimed_v.push(F::deserialize_from(&buffer));
+        // let mut buffer = vec![0u8; F::SIZE];
+        // buffer.copy_from_slice(&bytes[offset..offset + F::SIZE]);
+        // offset += F::SIZE;
+        claimed_v.push(F::deserialize_from(&mut cursor));
     }
     let mut proof = Proof::default();
     proof.bytes = proof_bytes;
