@@ -21,6 +21,9 @@ Cargo.lock
 /data/circuit8.txt
 /data/compiler_out
 /data/keccak*
+/data/bn254_circuit.txt
+/data/poseidon_witness.txt
+/data/poseidon_100_circuit.txt
 notes.md
 
 # Programming env

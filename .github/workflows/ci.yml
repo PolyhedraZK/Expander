@@ -54,8 +54,8 @@ jobs:
       - run: cargo test -p bi-kzg --release
       - run: cargo test --no-default-features --release      
       - run: cargo test --all-features --release
-      - run: cargo run --release -- -t 4 -f 31 
-      - run: cargo run --release -- -t 4 -f 254 
+      - run: cargo run --release -- -t 4 -f m31 
+      - run: cargo run --release -- -t 4 -f fr 
 
   test-linux:
     name: Test-linux
@@ -76,5 +76,5 @@ jobs:
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test -p bi-kzg --release
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --no-default-features --release
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --all-features --release
-      - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f 31 
-      - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f 254 
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f m31 
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f fr 

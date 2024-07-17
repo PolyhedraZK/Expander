@@ -95,6 +95,38 @@ impl Config {
         }
     }
 
+    // using degree 3 extension of m31
+    pub fn m31_ext3_config() -> Self {
+        let security_bits = 100;
+        let grinding_bits = 10;
+        let num_parallel = 16;
+
+        let field_size = 93;
+        let vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
+
+        let num_repetitions = 1; // we do not need repetitions for m31_ext3
+
+        let polynomial_commitment_type = PolynomialCommitmentType::Raw;
+        let field_type = FieldType::M31;
+        let fs_hash = FiatShamirHashType::SHA256;
+
+        if polynomial_commitment_type == PolynomialCommitmentType::KZG {
+            assert_eq!(field_type, FieldType::BN254);
+        }
+
+        Config {
+            num_repetitions, // update later
+            vectorize_size,  // update later
+            field_size,      // update later
+            security_bits,
+            grinding_bits,
+            num_parallel,
+            polynomial_commitment_type,
+            field_type,
+            fs_hash,
+        }
+    }
+
     pub fn bn254_config() -> Self {
         let vectorize_size = 1;
 

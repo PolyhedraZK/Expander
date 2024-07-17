@@ -10,5 +10,12 @@ log.workspace = true
 rand.workspace = true
 sha2.workspace = true
 
+[dev-dependencies]
+tynm.workspace = true
+criterion.workspace = true
+
+[[bench]]
+name = "field"
+harness = false
 
 [features]

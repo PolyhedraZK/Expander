@@ -23,7 +23,7 @@ use std::{
 pub const M31_MOD: i32 = 2147483647;
 
 #[inline]
-fn mod_reduce_i32(x: i32) -> i32 {
+pub(crate) fn mod_reduce_i32(x: i32) -> i32 {
     (x & M31_MOD) + (x >> 31)
 }
 
@@ -62,6 +62,20 @@ impl FieldSerde for M31 {
             assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
         }
         Self::from(u32::from_le_bytes(bytes[..4].try_into().unwrap()))
+    }
+}
+
+impl M31 {
+    // Add two M31 without mod reduction
+    #[inline(always)]
+    pub fn unsafe_add(&self, rhs: &Self) -> Self {
+        Self { v: self.v + rhs.v }
+    }
+
+    // Double an M31 without mod reduction
+    #[inline(always)]
+    pub fn unsafe_double(&self) -> Self {
+        Self { v: self.v << 1 }
     }
 }
 
