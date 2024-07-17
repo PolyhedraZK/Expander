@@ -1,6 +1,9 @@
 use std::ops::MulAssign;
 
-use crate::{Field, M31Ext3, PackedM31Ext3};
+use crate::{Field, M31Ext3};
+
+#[cfg(target_arch = "x86_64")]
+use crate::PackedM31Ext3;
 
 use super::field::{random_field_tests, random_small_field_tests};
 #[test]
