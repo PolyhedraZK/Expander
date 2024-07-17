@@ -113,5 +113,5 @@ where
 fn print_info(args: &Args) {
     println!("field:          {}", args.field);
     println!("#threads:       {}", args.threads);
-    println!("#repeats:       {}", args.repeats);
+    println!("#bench repeats: {}", args.repeats);
 }

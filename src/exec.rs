@@ -1,5 +1,8 @@
 use std::{
-    fs, io::Cursor, process::exit, sync::{Arc, Mutex}, 
+    fs,
+    io::Cursor,
+    process::exit,
+    sync::{Arc, Mutex},
 };
 
 use arith::{Field, FieldSerde, VectorizedField, VectorizedFr, VectorizedM31};
@@ -11,7 +14,7 @@ use warp::Filter;
 
 fn dump_proof_and_claimed_v<F: Field + FieldSerde>(proof: &Proof, claimed_v: &[F]) -> Vec<u8> {
     let mut bytes = Vec::new();
-    
+
     proof.serialize_into(&mut bytes);
 
     let claimed_v_len = claimed_v.len();
@@ -26,7 +29,9 @@ fn load_proof_and_claimed_v<F: Field + FieldSerde>(bytes: &[u8]) -> (Proof, Vec<
 
     let proof = Proof::deserialize_from(&mut cursor);
     let claimed_v_len = u64::deserialize_from(&mut cursor) as usize;
-    let claimed_v = (0..claimed_v_len).map(|_| F::deserialize_from(&mut cursor)).collect::<Vec<_>>();
+    let claimed_v = (0..claimed_v_len)
+        .map(|_| F::deserialize_from(&mut cursor))
+        .collect::<Vec<_>>();
 
     (proof, claimed_v)
 }

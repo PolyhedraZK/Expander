@@ -244,85 +244,43 @@ impl<F: Field> Segment<F> {
 
         let child_segs_num = u64::deserialize_from(&mut reader) as usize;
 
-        // let child_segs_num =
-        //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-        // *cur += 8;
         for _ in 0..child_segs_num {
             let child_seg_id = u64::deserialize_from(&mut reader) as SegmentId;
 
-            // let child_seg_id =
-            //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as SegmentId;
-            // *cur += 8;
             let allocation_num = u64::deserialize_from(&mut reader) as usize;
 
-            // let allocation_num =
-            //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-            // *cur += 8;
             for _ in 0..allocation_num {
                 let i_offset = u64::deserialize_from(&mut reader) as usize;
-
-                //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-                // *cur += 8;
-
                 let o_offset = u64::deserialize_from(&mut reader) as usize;
-
-                // let o_offset =
-                //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-                // *cur += 8;
                 ret.child_segs
                     .push((child_seg_id, vec![Allocation { i_offset, o_offset }]));
             }
         }
-        let gate_muls_num = u64::deserialize_from(&mut reader) as usize;
 
-        // let gate_muls_num =
-        //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-        // *cur += 8;
+        let gate_muls_num = u64::deserialize_from(&mut reader) as usize;
         for _ in 0..gate_muls_num {
             let gate = GateMul {
                 i_ids: [
                     u64::deserialize_from(&mut reader) as usize,
                     u64::deserialize_from(&mut reader) as usize,
-                    // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
-                    // u64::from_le_bytes(file_bytes[*cur + 8..*cur + 16].try_into().unwrap())
-                    //     as usize,
                 ],
                 o_id: u64::deserialize_from(&mut reader) as usize,
-
-                // u64::from_le_bytes(file_bytes[*cur + 16..*cur + 24].try_into().unwrap())
-                //     as usize,
                 coef: F::BaseField::deserialize_from_ecc_format(&mut reader),
-                // F::BaseField::deserialize_from_ecc_format(
-                //     &file_bytes[*cur + 24..*cur + 56].try_into().unwrap(),
-                // ),
             };
-            // *cur += 56;
             ret.gate_muls.push(gate);
         }
+
         let gate_adds_num = u64::deserialize_from(&mut reader) as usize;
-        // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-        // *cur += 8;
         for _ in 0..gate_adds_num {
             let gate = GateAdd {
-                i_ids: [
-                    u64::deserialize_from(&mut reader) as usize,
-                    // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
-                ],
+                i_ids: [u64::deserialize_from(&mut reader) as usize],
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
-                // u64::from_le_bytes(file_bytes[*cur + 8..*cur + 16].try_into().unwrap())
-                //     as usize,
                 coef: F::BaseField::deserialize_from_ecc_format(&mut reader),
-                // F::BaseField::deserialize_from_ecc_format(
-                // &file_bytes[*cur + 16..*cur + 48].try_into().unwrap(),
-                // ),
             };
-            // *cur += 48;
             ret.gate_adds.push(gate);
         }
         let gate_consts_num = u64::deserialize_from(&mut reader) as usize;
-        //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-        // *cur += 8;
 
         log::trace!(
             "gate nums: {} mul, {} add, {} const",
@@ -336,24 +294,16 @@ impl<F: Field> Segment<F> {
                 i_ids: [],
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
-                // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize,
                 coef: F::BaseField::deserialize_from_ecc_format(&mut reader),
-                // F::BaseField::deserialize_from_ecc_format(
-                //     &file_bytes[*cur + 8..*cur + 40].try_into().unwrap(),
-                // ),
             };
-            // *cur += 40;
             ret.gate_consts.push(gate);
         }
         let rand_coef_idx_num = u64::deserialize_from(&mut reader) as usize;
-        //     u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-        // *cur += 8;
+
         let mut t = Transcript::new(); // FIXME LATER: use an empty transcript to align the randomness
         for _ in 0..rand_coef_idx_num {
             let idx = u64::deserialize_from(&mut reader) as usize;
 
-            // u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
-            // *cur += 8;
             let rand_coef = t.challenge_f::<F>();
             if idx < ret.gate_muls.len() {
                 ret.gate_muls[idx].coef = rand_coef;
@@ -414,28 +364,20 @@ impl<F: Field> RecursiveCircuit<F> {
         };
         let file_bytes = fs::read(filename).unwrap();
         let mut cursor = Cursor::new(file_bytes);
-        // let mut cur = 0;
+
         let magic_num = u64::deserialize_from(&mut cursor);
-
-        // u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap());
-        // cur += 8;
         assert_eq!(magic_num, MAGIC_NUM);
-        let segment_num = u64::deserialize_from(&mut cursor);
 
-        // u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap()) as usize;
-        // cur += 8;
+        let segment_num = u64::deserialize_from(&mut cursor);
         for _ in 0..segment_num {
             let seg = Segment::<F>::read(&mut cursor);
             ret.segments.push(seg);
         }
-        let layer_num = u64::deserialize_from(&mut cursor);
 
-        // u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap()) as usize;
-        // cur += 8;
+        let layer_num = u64::deserialize_from(&mut cursor);
         for _ in 0..layer_num {
             let layer_id = u64::deserialize_from(&mut cursor) as SegmentId;
-            //     u64::from_le_bytes(file_bytes[cur..cur + 8].try_into().unwrap()) as SegmentId;
-            // cur += 8;
+
             ret.layers.push(layer_id);
         }
         // TODO: configure sentinel (currently it is manually handled as sentinel is unknown before loading)
