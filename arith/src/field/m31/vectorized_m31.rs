@@ -7,9 +7,7 @@ use super::m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE, PACKED_INV_2
 
 use crate::{Field, FieldSerde, VectorizedField, M31};
 use std::{
-    iter::{Product, Sum},
-    mem::size_of,
-    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    io::{Read, Write}, iter::{Product, Sum}, mem::size_of, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}
 };
 
 /// A VectorizedM31 stores 256 bits of data.
@@ -25,36 +23,33 @@ pub const VECTORIZEDM31_INV_2: VectorizedM31 = VectorizedM31 {
 };
 
 impl FieldSerde for VectorizedM31 {
-    // todo: turn serialization functions into a trait
-    // perhaps derive from Serde or ark-serde
-
     #[inline(always)]
-    fn serialize_into(&self, buffer: &mut [u8]) {
-        buffer.copy_from_slice(unsafe {
-            std::slice::from_raw_parts(
-                self.v.as_ptr() as *const u8,
-                Self::VECTORIZE_SIZE * PackedM31::SIZE,
-            )
-        });
+    fn serialize_into<W: Write>(&self, mut writer: W) {
+        self.v.iter().for_each(|x| x.serialize_into(&mut writer));
     }
 
     #[inline(always)]
-    fn deserialize_from(buffer: &[u8]) -> Self {
-        let ptr = buffer.as_ptr() as *const [PackedM31; Self::VECTORIZE_SIZE];
-        unsafe {
-            VectorizedM31 {
-                v: ptr.read_unaligned(),
-            }
-        }
+    fn serialized_size() -> usize {
+        32
     }
 
     #[inline(always)]
-    fn deserialize_from_ecc_format(bytes: &[u8; 32]) -> Self {
-        for (i, v) in bytes.iter().enumerate().skip(4).take(28) {
-            assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
-        }
-        Self::from(u32::from_le_bytes(bytes[..4].try_into().unwrap()))
+    fn deserialize_from<R: Read>(mut reader: R) -> Self {
+       let v = (0..VectorizedM31::VECTORIZE_SIZE)
+            .map(|_| PackedM31::deserialize_from(&mut reader))
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap();
+        Self { v }
     }
+
+    // #[inline(always)]
+    // fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
+    //     for (i, v) in bytes.iter().enumerate().skip(4).take(28) {
+    //         assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
+    //     }
+    //     Self::from(u32::from_le_bytes(bytes[..4].try_into().unwrap()))
+    // }
 }
 
 impl Field for VectorizedM31 {

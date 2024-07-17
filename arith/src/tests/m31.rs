@@ -1,8 +1,13 @@
-use crate::{FieldSerde, PackedM31, VectorizedField, VectorizedM31, M31, VECTORIZEDM31_INV_2};
+use std::io::Cursor;
+
+use crate::{FieldSerde, PackedM31, VectorizedM31, M31, VECTORIZEDM31_INV_2};
 
 use super::field::{
-    random_field_tests, random_inversion_tests, random_small_field_tests,
-    random_vectorized_field_tests, test_basic_field_op,
+    random_field_tests,
+    random_inversion_tests,
+    random_small_field_tests,
+    random_vectorized_field_tests,
+    test_basic_field_op,
 };
 
 #[test]
@@ -45,14 +50,9 @@ fn test_sanity_check_vectorize_m31() {
 #[test]
 fn test_custom_serde_vectorize_m31() {
     let a = VectorizedM31::from(256 + 2);
-    let mut buffer = vec![PackedM31::default(); VectorizedM31::VECTORIZE_SIZE];
-    let buffer_slice: &mut [u8] = unsafe {
-        std::slice::from_raw_parts_mut(
-            buffer.as_mut_ptr() as *mut u8,
-            buffer.len() * std::mem::size_of::<PackedM31>(),
-        )
-    };
-    a.serialize_into(buffer_slice);
-    let b = VectorizedM31::deserialize_from(&buffer_slice);
+    let mut buffer = vec![];
+    a.serialize_into(&mut buffer);
+    let mut cursor = Cursor::new(buffer);
+    let b = VectorizedM31::deserialize_from(&mut cursor);
     assert_eq!(a, b);
 }

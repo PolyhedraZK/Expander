@@ -1,4 +1,5 @@
 use std::{
+    io::{Read, Write},
     iter::{Product, Sum},
     mem::size_of,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
@@ -17,23 +18,25 @@ pub struct VectorizedFr {
 pub const VECTORIZEDM31_INV_2: VectorizedFr = VectorizedFr { v: [Fr::INV_2; 1] };
 
 impl FieldSerde for VectorizedFr {
-    // todo: turn serialization functions into a trait
-    // perhaps derive from Serde or ark-serde
-
     #[inline(always)]
-    fn serialize_into(&self, buffer: &mut [u8]) {
-        self.v[0].serialize_into(buffer);
+    fn serialize_into<W: Write>(&self, writer: W) {
+        self.v[0].serialize_into(writer);
     }
 
     #[inline(always)]
-    fn deserialize_from(buffer: &[u8]) -> Self {
-        let v = Fr::deserialize_from(buffer);
+    fn serialized_size() -> usize {
+        32
+    }
+
+    #[inline(always)]
+    fn deserialize_from<R: Read>(reader: R) -> Self {
+        let v = Fr::deserialize_from(reader);
         Self { v: [v] }
     }
 
     #[inline(always)]
-    fn deserialize_from_ecc_format(bytes: &[u8; 32]) -> Self {
-        let v = Fr::deserialize_from_ecc_format(bytes);
+    fn deserialize_from_ecc_format<R: Read>(reader: R) -> Self {
+        let v = Fr::deserialize_from_ecc_format(reader);
         Self { v: [v] }
     }
 }

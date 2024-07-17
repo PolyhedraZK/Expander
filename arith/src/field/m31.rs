@@ -1,11 +1,10 @@
 mod vectorized_m31;
-use ark_std::Zero;
 pub use vectorized_m31::*;
 
 #[cfg(target_arch = "x86_64")]
-pub mod m31_avx;
+pub(crate) mod m31_avx;
 #[cfg(target_arch = "x86_64")]
-pub use m31_avx::PackedM31;
+pub(crate) use m31_avx::PackedM31;
 
 #[cfg(target_arch = "aarch64")]
 pub mod m31_neon;
@@ -15,15 +14,18 @@ use rand::RngCore;
 
 use crate::{Field, FieldSerde};
 use std::{
+    io::{Read, Write},
     iter::{Product, Sum},
     mem::size_of,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-pub const M31_MOD: i32 = 2147483647;
+use ark_std::Zero;
+
+pub const M31_MOD: u32 = 2147483647;
 
 #[inline]
-pub(crate) fn mod_reduce_i32(x: i32) -> i32 {
+pub(crate) fn mod_reduce_u32(x: u32) -> u32 {
     (x & M31_MOD) + (x >> 31)
 }
 
@@ -39,29 +41,34 @@ pub struct M31 {
 
 impl FieldSerde for M31 {
     #[inline(always)]
-    fn serialize_into(&self, buffer: &mut [u8]) {
-        buffer[..M31::SIZE].copy_from_slice(unsafe {
-            std::slice::from_raw_parts(&self.v as *const u32 as *const u8, M31::SIZE)
-        });
+    fn serialize_into<W: Write>(&self, mut writer: W) {
+        writer.write(self.v.to_le_bytes().as_ref()).unwrap(); // todo: error propagation
+    }
+
+    #[inline(always)]
+    fn serialized_size() -> usize {
+        4
     }
 
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from(buffer: &[u8]) -> Self {
-        let ptr = buffer.as_ptr() as *const u32;
-
-        let mut v = unsafe { ptr.read_unaligned() } as i32;
-        v = mod_reduce_i32(v);
-        M31 { v: v as u32 }
+    fn deserialize_from<R: Read>(mut reader: R) -> Self {
+        let mut u = [0u8; 4];
+        reader.read_exact(&mut u).unwrap(); // todo: error propagation
+        let mut v = u32::from_le_bytes(u);
+        v = mod_reduce_u32(v);
+        M31 { v }
     }
 
     #[inline(always)]
-    fn deserialize_from_ecc_format(bytes: &[u8; 32]) -> Self {
-        for (i, v) in bytes.iter().enumerate().skip(4).take(28) {
+    fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
+        let mut buf = [0u8; 32];
+        reader.read_exact(&mut buf).unwrap(); // todo: error propagation
+        for (i, v) in buf.iter().enumerate().skip(4).take(28) {
             assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
         }
-        Self::from(u32::from_le_bytes(bytes[..4].try_into().unwrap()))
+        Self::from(u32::from_le_bytes(buf[..4].try_into().unwrap()))
     }
 }
 
@@ -152,10 +159,9 @@ impl Field for M31 {
 
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        let ptr = bytes.as_ptr() as *const u32;
-        let mut v = unsafe { ptr.read_unaligned() } as i32;
-        v = mod_reduce_i32(v);
-        M31 { v: v as u32 }
+        let mut v = u32::from_le_bytes(bytes[..4].try_into().unwrap());
+        v = mod_reduce_u32(v);
+        M31 { v }
     }
 }
 

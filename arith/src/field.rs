@@ -2,13 +2,14 @@ mod m31;
 pub use m31::*;
 mod bn254;
 pub use bn254::*;
-mod m31_ext;
-pub use m31_ext::*;
+// mod m31_ext;
+// pub use m31_ext::*;
 
 use rand::RngCore;
 
 use std::{
     fmt::Debug,
+    io::{Read, Write},
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -134,13 +135,16 @@ pub trait VectorizedField: Field {
 /// Serde for Fields
 pub trait FieldSerde {
     /// serialize self into bytes
-    fn serialize_into(&self, buffer: &mut [u8]);
+    fn serialize_into<W: Write>(&self, writer: W);
+
+    /// size of the serialized bytes
+    fn serialized_size() -> usize;
 
     /// deserialize bytes into field
-    fn deserialize_from(buffer: &[u8]) -> Self;
+    fn deserialize_from<R: Read>(reader: R) -> Self;
 
     /// deserialize bytes into field following ecc format
-    fn deserialize_from_ecc_format(_bytes: &[u8; 32]) -> Self
+    fn deserialize_from_ecc_format<R: Read>(_reader: R) -> Self
     where
         Self: Sized,
     {

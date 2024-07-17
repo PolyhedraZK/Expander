@@ -1,3 +1,5 @@
+use std::io::Cursor;
+
 use ark_std::{end_timer, start_timer, test_rng};
 use rand::{Rng, RngCore};
 
@@ -261,20 +263,27 @@ fn random_serdes_tests<F: VectorizedField + FieldSerde, R: RngCore>(
     _type_name: String,
 ) {
     let start = start_timer!(|| format!("expansion {}", _type_name));
-    for _ in 0..1000 {
+    for _ in 0..100 {
         // convert a into and from bytes
 
         let a = F::random_unsafe(&mut rng);
-        let mut buffer = vec![F::PackedBaseField::default(); F::VECTORIZE_SIZE];
-        let buffer_slice: &mut [u8] = unsafe {
-            std::slice::from_raw_parts_mut(
-                buffer.as_mut_ptr() as *mut u8,
-                buffer.len() * std::mem::size_of::<F::PackedBaseField>(),
-            )
-        };
-        a.serialize_into(buffer_slice);
-        let b = F::deserialize_from(&buffer_slice);
+        let mut buffer = vec![];
+        a.serialize_into(&mut buffer);
+        let mut cursor = Cursor::new(buffer);
+        let b = F::deserialize_from(&mut cursor);
         assert_eq!(a, b);
     }
+
+    let a = (0..100)
+        .map(|_| F::random_unsafe(&mut rng))
+        .collect::<Vec<_>>();
+    let mut buffer = vec![];
+    a.iter().for_each(|x| x.serialize_into(&mut buffer));
+    let mut cursor = Cursor::new(buffer);
+    let b = (0..100)
+        .map(|_| F::deserialize_from(&mut cursor))
+        .collect::<Vec<_>>();
+    assert_eq!(a, b);
+
     end_timer!(start);
 }

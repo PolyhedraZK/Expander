@@ -1,8 +1,9 @@
 use std::{
     arch::x86_64::*,
     fmt::Debug,
+    io::{Read, Write},
     iter::{Product, Sum},
-    mem::{size_of, transmute},
+    mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
@@ -41,9 +42,8 @@ pub struct PackedM31 {
 }
 
 impl PackedM31 {
-    pub const SIZE: usize = size_of::<PackedDataType>();
     #[inline(always)]
-    pub fn pack_full(x: M31) -> PackedM31 {
+    pub(crate) fn pack_full(x: M31) -> PackedM31 {
         PackedM31 {
             v: unsafe { _mm256_set1_epi32(x.v as i32) },
         }
@@ -51,18 +51,23 @@ impl PackedM31 {
 }
 
 impl FieldSerde for PackedM31 {
+    #[inline(always)]
     /// serialize self into bytes
-    fn serialize_into(&self, buffer: &mut [u8]) {
-        unsafe {
-            let data = transmute::<PackedDataType, [u8; 32]>(self.v);
-            buffer[..32].copy_from_slice(&data);
-        }
+    fn serialize_into<W: Write>(&self, mut writer: W) {
+        let data = unsafe { transmute::<PackedDataType, [u8; 32]>(self.v) };
+        writer.write_all(&data).unwrap();
+    }
+
+    #[inline(always)]
+    fn serialized_size() -> usize {
+        32
     }
 
     /// deserialize bytes into field
-    fn deserialize_from(buffer: &[u8]) -> Self {
+    #[inline(always)]
+    fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let mut data = [0; 32];
-        data.copy_from_slice(buffer);
+        reader.read_exact(&mut data).unwrap();
         unsafe {
             PackedM31 {
                 v: transmute::<[u8; 32], PackedDataType>(data),
@@ -74,7 +79,7 @@ impl FieldSerde for PackedM31 {
 impl Field for PackedM31 {
     const NAME: &'static str = "AVX Packed Mersenne 31";
 
-    const SIZE: usize = size_of::<PackedDataType>();
+    const SIZE: usize = 32;
 
     const INV_2: Self = Self { v: PACKED_INV_2 };
 
