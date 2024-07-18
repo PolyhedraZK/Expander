@@ -1,18 +1,23 @@
 #[cfg(target_arch = "x86_64")]
 mod packed_m31_ext;
+#[cfg(target_arch = "x86_64")]
+mod vectorized_m31;
 
 #[cfg(target_arch = "x86_64")]
 pub use packed_m31_ext::PackedM31Ext3;
+#[cfg(target_arch = "x86_64")]
+pub use vectorized_m31::VectorizedM31Ext3;
 
 use ark_std::Zero;
 use rand::RngCore;
 use std::{
+    io::{Read, Write},
     iter::{Product, Sum},
     mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{mod_reduce_i32, Field, FieldSerde, M31};
+use crate::{mod_reduce_u32, Field, FieldSerde, M31};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct M31Ext3 {
@@ -21,23 +26,38 @@ pub struct M31Ext3 {
 
 impl FieldSerde for M31Ext3 {
     #[inline(always)]
-    fn serialize_into(&self, buffer: &mut [u8]) {
-        self.v[0].serialize_into(buffer);
-        self.v[1].serialize_into(&mut buffer[4..]);
-        self.v[2].serialize_into(&mut buffer[8..]);
+    fn serialize_into<W: Write>(&self, mut writer: W) {
+        self.v[0].serialize_into(&mut writer);
+        self.v[1].serialize_into(&mut writer);
+        self.v[2].serialize_into(&mut writer);
+    }
+
+    #[inline(always)]
+    fn serialized_size() -> usize {
+        12
     }
 
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from(buffer: &[u8]) -> Self {
+    fn deserialize_from<R: Read>(mut reader: R) -> Self {
         M31Ext3 {
             v: [
-                M31::deserialize_from(&buffer[0..4]),
-                M31::deserialize_from(&buffer[4..8]),
-                M31::deserialize_from(&buffer[8..12]),
+                M31::deserialize_from(&mut reader),
+                M31::deserialize_from(&mut reader),
+                M31::deserialize_from(&mut reader),
             ],
         }
+    }
+
+    #[inline(always)]
+    fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
+        let mut buf = [0u8; 32];
+        reader.read_exact(&mut buf).unwrap(); // todo: error propagation
+        for (i, v) in buf.iter().enumerate().skip(4).take(28) {
+            assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
+        }
+        Self::from(u32::from_le_bytes(buf[..4].try_into().unwrap()))
     }
 }
 
@@ -76,13 +96,9 @@ impl Field for M31Ext3 {
         }
     }
 
-    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         M31Ext3 {
-            v: [
-                M31::random_bool_unsafe(&mut rng),
-                M31::random_bool_unsafe(&mut rng),
-                M31::random_bool_unsafe(&mut rng),
-            ],
+            v: [M31::random_bool(&mut rng), M31::zero(), M31::zero()],
         }
     }
 
@@ -152,19 +168,19 @@ impl Field for M31Ext3 {
 
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        let v1 = mod_reduce_i32(i32::from_be_bytes(bytes[0..4].try_into().unwrap()));
-        let v2 = mod_reduce_i32(i32::from_be_bytes(bytes[4..8].try_into().unwrap()));
-        let v3 = mod_reduce_i32(i32::from_be_bytes(bytes[8..12].try_into().unwrap()));
+        let v1 = mod_reduce_u32(u32::from_be_bytes(bytes[0..4].try_into().unwrap()));
+        let v2 = mod_reduce_u32(u32::from_be_bytes(bytes[4..8].try_into().unwrap()));
+        let v3 = mod_reduce_u32(u32::from_be_bytes(bytes[8..12].try_into().unwrap()));
         Self {
             v: [
                 M31 {
-                    v: mod_reduce_i32(v1) as u32,
+                    v: mod_reduce_u32(v1) as u32,
                 },
                 M31 {
-                    v: mod_reduce_i32(v2) as u32,
+                    v: mod_reduce_u32(v2) as u32,
                 },
                 M31 {
-                    v: mod_reduce_i32(v3) as u32,
+                    v: mod_reduce_u32(v3) as u32,
                 },
             ],
         }

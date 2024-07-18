@@ -45,7 +45,7 @@ impl Field for Fr {
     }
 
     /// create a random boolean element from rng
-    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         Self::from((rng.next_u32() & 1) as u64)
     }
 

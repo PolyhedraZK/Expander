@@ -7,6 +7,7 @@ impl SHA256hasher {
         let hashed = Sha256::digest(&input[..input_len]);
         output.copy_from_slice(&hashed[..]);
     }
+
     pub fn hash_inplace(&self, buffer: &mut [u8], input_len: usize) {
         let hashed = Sha256::digest(&buffer[..input_len]);
         buffer.copy_from_slice(&hashed[..]);

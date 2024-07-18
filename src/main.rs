@@ -8,8 +8,8 @@ use arith::{Field, FieldSerde, VectorizedField, VectorizedFr, VectorizedM31};
 use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
 
-// #[cfg(target_arch = "x86_64")]
-// use arith::PackedM31Ext3;
+#[cfg(target_arch = "x86_64")]
+use arith::VectorizedM31Ext3;
 
 const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
 const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
@@ -37,8 +37,8 @@ fn main() {
 
     match args.field.as_str() {
         "m31" => run_benchmark::<VectorizedM31>(&args, Config::m31_config()),
-        // #[cfg(target_arch = "x86_64")]
-        // "m31ext3" => run_benchmark::<PackedM31Ext3>(&args, Config::m31_ext3_config()),
+        #[cfg(target_arch = "x86_64")]
+        "m31ext3" => run_benchmark::<VectorizedM31Ext3>(&args, Config::m31_ext3_config()),
         "fr" => run_benchmark::<VectorizedFr>(&args, Config::bn254_config()),
         _ => unreachable!(),
     };

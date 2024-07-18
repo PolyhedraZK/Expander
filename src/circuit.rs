@@ -154,7 +154,7 @@ impl<F: Field> Circuit<F> {
     pub fn set_random_bool_input_for_test(&mut self) {
         let mut rng = test_rng();
         self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
-            .map(|_| F::random_bool_unsafe(&mut rng))
+            .map(|_| F::random_bool(&mut rng))
             .collect();
     }
 

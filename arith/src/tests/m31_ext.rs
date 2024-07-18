@@ -5,7 +5,7 @@ use crate::{Field, M31Ext3};
 #[cfg(target_arch = "x86_64")]
 use crate::PackedM31Ext3;
 
-use super::field::{random_field_tests, random_small_field_tests};
+use super::field::{random_field_tests, random_small_field_tests, random_vectorized_field_tests};
 #[test]
 fn test_field() {
     random_field_tests::<M31Ext3>("M31 Ext3".to_string());
@@ -17,7 +17,8 @@ fn test_field() {
     #[cfg(target_arch = "x86_64")]
     random_small_field_tests::<PackedM31Ext3>("Vectorized M31".to_string());
 
-    // random_vectorized_field_tests::<PackedM31Ext3>("Vectorized M31".to_string());
+    #[cfg(target_arch = "x86_64")]
+    random_vectorized_field_tests::<PackedM31Ext3>("Vectorized M31".to_string());
 }
 
 #[test]

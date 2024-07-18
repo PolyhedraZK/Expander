@@ -92,10 +92,10 @@ impl Field for VectorizedM31 {
     }
 
     #[inline(always)]
-    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         VectorizedM31 {
             v: (0..Self::VECTORIZE_SIZE)
-                .map(|_| PackedM31::random_bool_unsafe(&mut rng))
+                .map(|_| PackedM31::random_bool(&mut rng))
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
@@ -135,7 +135,7 @@ impl Field for VectorizedM31 {
     }
 
     fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
-        unimplemented!(" cannot convert 32 bytes into a vectorized M31")
+        unimplemented!("vec m31: cannot convert from 32 bytes")
     }
 }
 

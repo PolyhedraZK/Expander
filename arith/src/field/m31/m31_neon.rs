@@ -80,7 +80,7 @@ impl Field for PackedM31 {
     }
 
     #[inline(always)]
-    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         unsafe {
             PackedM31 {
                 v: vld1q_u32(

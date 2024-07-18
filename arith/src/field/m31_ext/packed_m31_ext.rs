@@ -1,4 +1,5 @@
 use std::{
+    io::{Read, Write},
     iter::{Product, Sum},
     mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
@@ -15,19 +16,24 @@ pub struct PackedM31Ext3 {
 
 impl FieldSerde for PackedM31Ext3 {
     #[inline(always)]
-    fn serialize_into(&self, buffer: &mut [u8]) {
-        self.v[0].serialize_into(buffer);
-        self.v[1].serialize_into(&mut buffer[32..]);
-        self.v[2].serialize_into(&mut buffer[64..]);
+    fn serialize_into<W: Write>(&self, mut writer: W) {
+        self.v[0].serialize_into(&mut writer);
+        self.v[1].serialize_into(&mut writer);
+        self.v[2].serialize_into(&mut writer);
     }
 
     #[inline(always)]
-    fn deserialize_from(buffer: &[u8]) -> Self {
+    fn serialized_size() -> usize {
+        96
+    }
+
+    #[inline(always)]
+    fn deserialize_from<R: Read>(mut reader: R) -> Self {
         PackedM31Ext3 {
             v: [
-                PackedM31::deserialize_from(&buffer[..32]),
-                PackedM31::deserialize_from(&buffer[32..64]),
-                PackedM31::deserialize_from(&buffer[64..]),
+                PackedM31::deserialize_from(&mut reader),
+                PackedM31::deserialize_from(&mut reader),
+                PackedM31::deserialize_from(&mut reader),
             ],
         }
     }
@@ -54,7 +60,7 @@ impl VectorizedField for PackedM31Ext3 {
 impl Field for PackedM31Ext3 {
     const NAME: &'static str = "AVX Packed Mersenne 31 Extension 3";
 
-    const SIZE: usize = 72;
+    const SIZE: usize = 96;
 
     // const INV_2: PackedM31Ext3 = PackedM31Ext3 {
     //     v: [PackedM31::INV_2, PackedM31::zero(), PackedM31::zero()],
@@ -87,12 +93,12 @@ impl Field for PackedM31Ext3 {
         }
     }
 
-    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         PackedM31Ext3 {
             v: [
-                PackedM31::random_bool_unsafe(&mut rng),
-                PackedM31::random_bool_unsafe(&mut rng),
-                PackedM31::random_bool_unsafe(&mut rng),
+                PackedM31::random_bool(&mut rng),
+                PackedM31::random_bool(&mut rng),
+                PackedM31::random_bool(&mut rng),
             ],
         }
     }
@@ -151,7 +157,7 @@ impl Field for PackedM31Ext3 {
     }
 
     fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
-        unimplemented!(" cannot convert 32 bytes into a vectorized M31")
+        unimplemented!("packed m31: cannot convert from 32 bytes")
     }
 }
 

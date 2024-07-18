@@ -123,7 +123,7 @@ impl Field for PackedM31 {
     }
 
     #[inline(always)]
-    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         PackedM31 {
             v: unsafe {
                 _mm256_setr_epi32(
@@ -172,8 +172,9 @@ impl Field for PackedM31 {
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
-    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
-        unimplemented!(" cannot convert 32 bytes into a vectorized M31")
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+        let v = unsafe { transmute::<[u8; 32], __m256i>(*bytes) };
+        Self { v }
     }
 }
 

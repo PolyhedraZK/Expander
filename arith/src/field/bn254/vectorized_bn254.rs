@@ -68,9 +68,9 @@ impl Field for VectorizedFr {
     }
 
     #[inline(always)]
-    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         VectorizedFr {
-            v: [Fr::random_bool_unsafe(&mut rng)],
+            v: [Fr::random_bool(&mut rng)],
         }
     }
 
@@ -106,7 +106,7 @@ impl Field for VectorizedFr {
         unimplemented!("self is a vector, cannot convert to u32")
     }
     fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
-        unimplemented!(" cannot convert 32 bytes into a vectorized M31")
+        unimplemented!(" vec fr: cannot convert from 32 bytes")
     }
 }
 

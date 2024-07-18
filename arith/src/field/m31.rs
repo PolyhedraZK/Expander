@@ -109,7 +109,7 @@ impl Field for M31 {
         rng.next_u32().into()
     }
 
-    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         (rng.next_u32() & 1).into()
     }
 

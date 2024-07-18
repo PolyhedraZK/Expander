@@ -8,15 +8,12 @@ use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Tra
 pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
 
-    let initial_hash = transcript.challenge_fs::<F>(256 / config.field_size);
-    let mut hash_bytes = [0u8; 256 / 8];
-    let mut offset = 0;
-    let step = (config.field_size + 7) / 8;
+    let mut hash_bytes = vec![];
 
-    for h in initial_hash.iter() {
-        h.serialize_into(&mut hash_bytes[offset..]);
-        offset += step;
-    }
+    let initial_hash = transcript.challenge_fs::<F>((31 + F::SIZE) / F::SIZE);
+    initial_hash
+        .iter()
+        .for_each(|h| h.serialize_into(&mut hash_bytes));
 
     for _ in 0..(1 << config.grinding_bits) {
         transcript.hasher.hash_inplace(&mut hash_bytes, 256 / 8);
@@ -71,6 +68,9 @@ impl<F: VectorizedField + FieldSerde> Prover<F> {
 
         // PC commit
         let commitment = RawCommitment::new(c.layers[0].input_vals.evals.clone());
+
+        println!("commitment size: {} {}", commitment.size(), F::SIZE);
+
         let buffer_v = vec![F::default(); commitment.size() / F::SIZE];
         let buffer = unsafe {
             std::slice::from_raw_parts_mut(buffer_v.as_ptr() as *mut u8, commitment.size())
@@ -79,8 +79,10 @@ impl<F: VectorizedField + FieldSerde> Prover<F> {
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(buffer, commitment.size());
 
+        println!("commitment size: {}", commitment.size());
         grind::<F>(&mut transcript, &self.config);
 
+        println!("after grind");
         let (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
 
         // open

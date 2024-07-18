@@ -2,8 +2,8 @@ mod m31;
 pub use m31::*;
 mod bn254;
 pub use bn254::*;
-// mod m31_ext;
-// pub use m31_ext::*;
+mod m31_ext;
+pub use m31_ext::*;
 
 use rand::RngCore;
 
@@ -74,7 +74,7 @@ pub trait Field:
     fn random_unsafe(rng: impl RngCore) -> Self;
 
     /// create a random boolean element from rng
-    fn random_bool_unsafe(rng: impl RngCore) -> Self;
+    fn random_bool(rng: impl RngCore) -> Self;
 
     // ====================================
     // arithmetics
