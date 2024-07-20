@@ -1,15 +1,11 @@
 use std::{
-    arch::aarch64::*,
-    fmt::Debug,
-    iter::{Product, Sum},
-    mem::{size_of, transmute},
-    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    arch::aarch64::*, fmt::Debug, io::{Read, Write}, iter::{Product, Sum}, mem::{size_of, transmute}, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}
 };
 
-use crate::{Field, M31, M31_MOD};
+use crate::{Field, FieldSerde, M31, M31_MOD};
 
-type PackedDataType = uint32x4_t;
-pub(super) const M31_PACK_SIZE: usize = 4;
+type PackedDataType = [uint32x4_t; 2];
+pub(super) const M31_PACK_SIZE: usize = 8;
 pub(super) const M31_VECTORIZE_SIZE: usize = 2;
 
 const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD as u32; 4]) };
@@ -25,39 +21,67 @@ fn reduce_sum(x: uint32x4_t) -> uint32x4_t {
 }
 
 #[derive(Clone, Copy)]
-pub struct PackedM31 {
-    pub v: PackedDataType,
+pub struct NeonM31 {
+    pub v: [uint32x4_t; 2],
 }
 
-impl PackedM31 {
+impl NeonM31 {
     #[inline(always)]
-    pub fn pack_full(x: M31) -> PackedM31 {
-        PackedM31 {
-            v: unsafe { vdupq_n_u32(x.v) },
+    pub fn pack_full(x: M31) -> NeonM31 {
+        NeonM31 {
+            v: unsafe { [vdupq_n_u32(x.v), vdupq_n_u32(x.v)] },
         }
     }
 }
 
-impl Field for PackedM31 {
+
+impl FieldSerde for NeonM31 {
+    #[inline(always)]
+    /// serialize self into bytes
+    fn serialize_into<W: Write>(&self, mut writer: W) {
+        let data = unsafe { transmute::<[uint32x4_t; 2], [u8; 32]>(self.v) };
+        writer.write_all(&data).unwrap();
+    }
+
+    #[inline(always)]
+    fn serialized_size() -> usize {
+        32
+    }
+
+    /// deserialize bytes into field
+    #[inline(always)]
+    fn deserialize_from<R: Read>(mut reader: R) -> Self {
+        let mut data = [0; 32];
+        reader.read_exact(&mut data).unwrap();
+        unsafe {
+            NeonM31 {
+                v: transmute::<[u8; 32], [uint32x4_t; 2]>(data),
+            }
+        }
+    }
+}
+
+
+impl Field for NeonM31 {
     const NAME: &'static str = "Neon Packed Mersenne 31";
 
-    const SIZE: usize = size_of::<PackedDataType>();
+    const SIZE: usize = 256;
 
-    const INV_2: Self = Self { v: PACKED_INV_2 };
+    const INV_2: Self = Self {
+        v: [PACKED_INV_2; 2],
+    };
 
-    type BaseField = M31;
+    // type BaseField = M31;
 
     #[inline(always)]
     fn zero() -> Self {
-        PackedM31 {
-            v: unsafe { vdupq_n_u32(0) },
-        }
+        Self { v: [PACKED_0; 2] }
     }
 
     #[inline(always)]
     fn one() -> Self {
-        PackedM31 {
-            v: unsafe { vdupq_n_u32(1) },
+        NeonM31 {
+            v: unsafe { [vdupq_n_u32(1); 2] },
         }
     }
 
@@ -65,16 +89,27 @@ impl Field for PackedM31 {
     fn random_unsafe(mut rng: impl RngCore) -> Self {
         // Caution: this may not produce uniformly random elements
         unsafe {
-            PackedM31 {
-                v: vld1q_u32(
-                    [
-                        rng.gen::<u32>() % M31_MOD as u32,
-                        rng.gen::<u32>() % M31_MOD as u32,
-                        rng.gen::<u32>() % M31_MOD as u32,
-                        rng.gen::<u32>() % M31_MOD as u32,
-                    ]
-                    .as_ptr(),
-                ),
+            NeonM31 {
+                v: [
+                    vld1q_u32(
+                        [
+                            rng.gen::<u32>() % M31_MOD as u32,
+                            rng.gen::<u32>() % M31_MOD as u32,
+                            rng.gen::<u32>() % M31_MOD as u32,
+                            rng.gen::<u32>() % M31_MOD as u32,
+                        ]
+                        .as_ptr(),
+                    ),
+                    vld1q_u32(
+                        [
+                            rng.gen::<u32>() % M31_MOD as u32,
+                            rng.gen::<u32>() % M31_MOD as u32,
+                            rng.gen::<u32>() % M31_MOD as u32,
+                            rng.gen::<u32>() % M31_MOD as u32,
+                        ]
+                        .as_ptr(),
+                    ),
+                ],
             }
         }
     }
@@ -82,16 +117,27 @@ impl Field for PackedM31 {
     #[inline(always)]
     fn random_bool(mut rng: impl RngCore) -> Self {
         unsafe {
-            PackedM31 {
-                v: vld1q_u32(
-                    [
-                        rng.gen::<bool>() as u32,
-                        rng.gen::<bool>() as u32,
-                        rng.gen::<bool>() as u32,
-                        rng.gen::<bool>() as u32,
-                    ]
-                    .as_ptr(),
-                ),
+            NeonM31 {
+                v: [
+                    vld1q_u32(
+                        [
+                            rng.gen::<bool>() as u32,
+                            rng.gen::<bool>() as u32,
+                            rng.gen::<bool>() as u32,
+                            rng.gen::<bool>() as u32,
+                        ]
+                        .as_ptr(),
+                    ),
+                    vld1q_u32(
+                        [
+                            rng.gen::<bool>() as u32,
+                            rng.gen::<bool>() as u32,
+                            rng.gen::<bool>() as u32,
+                            rng.gen::<bool>() as u32,
+                        ]
+                        .as_ptr(),
+                    ),
+                ],
             }
         }
     }
@@ -105,25 +151,25 @@ impl Field for PackedM31 {
         todo!();
     }
 
-    #[inline(always)]
-    fn add_base_elem(&self, _rhs: &Self::BaseField) -> Self {
-        unimplemented!()
-    }
+    // #[inline(always)]
+    // fn add_base_elem(&self, _rhs: &Self::BaseField) -> Self {
+    //     unimplemented!()
+    // }
 
-    #[inline(always)]
-    fn add_assign_base_elem(&mut self, _rhs: &Self::BaseField) {
-        unimplemented!()
-    }
+    // #[inline(always)]
+    // fn add_assign_base_elem(&mut self, _rhs: &Self::BaseField) {
+    //     unimplemented!()
+    // }
 
-    #[inline(always)]
-    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        *self * rhs
-    }
+    // #[inline(always)]
+    // fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
+    //     *self * rhs
+    // }
 
-    #[inline(always)]
-    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self = *self * rhs;
-    }
+    // #[inline(always)]
+    // fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
+    //     *self = *self * rhs;
+    // }
 
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
@@ -133,200 +179,226 @@ impl Field for PackedM31 {
     }
 }
 
-impl Debug for PackedM31 {
+impl Debug for NeonM31 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        unsafe {
-            let data = [
-                vgetq_lane_u32(self.v, 0),
-                vgetq_lane_u32(self.v, 1),
-                vgetq_lane_u32(self.v, 2),
-                vgetq_lane_u32(self.v, 3),
-            ];
-            // if all data is the same, print only one
-            if data.iter().all(|&x| x == data[0]) {
-                write!(
-                    f,
-                    "uint32x4_t<8 x {}>",
-                    if M31_MOD as u32 - data[0] > 1024 {
-                        format!("{}", data[0])
-                    } else {
-                        format!("-{}", M31_MOD as u32 - data[0])
-                    }
-                )
-            } else {
-                write!(f, "uint32x4_t<{:?}>", data)
+        for &v in self.v.iter() {
+            unsafe {
+                let data = [
+                    vgetq_lane_u32(v, 0),
+                    vgetq_lane_u32(v, 1),
+                    vgetq_lane_u32(v, 2),
+                    vgetq_lane_u32(v, 3),
+                ];
+                // if all data is the same, print only one
+                if data.iter().all(|&x| x == data[0]) {
+                    write!(
+                        f,
+                        "uint32x4_t<8 x {}>",
+                        if M31_MOD as u32 - data[0] > 1024 {
+                            format!("{}", data[0])
+                        } else {
+                            format!("-{}", M31_MOD as u32 - data[0])
+                        }
+                    )?;
+                } else {
+                    write!(f, "uint32x4_t<{:?}>", data)?;
+                }
             }
         }
+        Ok(())
     }
 }
 
-impl Default for PackedM31 {
+impl Default for NeonM31 {
     fn default() -> Self {
-        PackedM31::zero()
+        NeonM31::zero()
     }
 }
 
-impl PartialEq for PackedM31 {
+impl PartialEq for NeonM31 {
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let eq_v = vceqq_u32(self.v, other.v);
-            vgetq_lane_u32(eq_v, 0) != 0
-                && vgetq_lane_u32(eq_v, 1) != 0
-                && vgetq_lane_u32(eq_v, 2) != 0
-                && vgetq_lane_u32(eq_v, 3) != 0
+            let eq_v_0 = vceqq_u32(self.v[0], other.v[0]);
+            let eq_v_1 = vceqq_u32(self.v[1], other.v[1]);
+            vgetq_lane_u32(eq_v_0, 0) != 0
+                && vgetq_lane_u32(eq_v_0, 1) != 0
+                && vgetq_lane_u32(eq_v_0, 2) != 0
+                && vgetq_lane_u32(eq_v_0, 3) != 0
+                && vgetq_lane_u32(eq_v_1, 0) != 0
+                && vgetq_lane_u32(eq_v_1, 1) != 0
+                && vgetq_lane_u32(eq_v_1, 2) != 0
+                && vgetq_lane_u32(eq_v_1, 3) != 0
         }
     }
 }
 
-impl Mul<&PackedM31> for PackedM31 {
-    type Output = PackedM31;
+impl Mul<&NeonM31> for NeonM31 {
+    type Output = NeonM31;
     #[inline(always)]
-    fn mul(self, rhs: &PackedM31) -> Self::Output {
-        unsafe {
-            let prod_hi = vreinterpretq_u32_s32(vqdmulhq_s32(
-                vreinterpretq_s32_u32(self.v),
-                vreinterpretq_s32_u32(rhs.v),
-            ));
-            let prod_lo = vmulq_u32(self.v, rhs.v);
-            let t = vmlsq_u32(prod_lo, prod_hi, PACKED_MOD);
-            PackedM31 { v: reduce_sum(t) }
+    fn mul(self, rhs: &NeonM31) -> Self::Output {
+        let v = self
+            .v
+            .iter()
+            .zip(rhs.v.iter())
+            .map(|(&l, &r)| unsafe {
+                let prod_hi = vreinterpretq_u32_s32(vqdmulhq_s32(
+                    vreinterpretq_s32_u32(l),
+                    vreinterpretq_s32_u32(r),
+                ));
+                let prod_lo = vmulq_u32(l, r);
+                let t = vmlsq_u32(prod_lo, prod_hi, PACKED_MOD);
+                reduce_sum(t)
+            })
+            .collect::<Vec<_>>();
+        NeonM31 {
+            v: v.try_into().unwrap(),
         }
     }
 }
 
-impl Mul for PackedM31 {
-    type Output = PackedM31;
+impl Mul for NeonM31 {
+    type Output = NeonM31;
     #[inline(always)]
     #[allow(clippy::op_ref)]
-    fn mul(self, rhs: PackedM31) -> Self::Output {
+    fn mul(self, rhs: NeonM31) -> Self::Output {
         self * &rhs
     }
 }
 
-impl Mul<&M31> for PackedM31 {
-    type Output = PackedM31;
+impl Mul<&M31> for NeonM31 {
+    type Output = NeonM31;
     #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
-        let rhs_p = PackedM31::pack_full(*rhs);
+        let rhs_p = NeonM31::pack_full(*rhs);
         self * rhs_p
     }
 }
 
-impl Mul<M31> for PackedM31 {
-    type Output = PackedM31;
+impl Mul<M31> for NeonM31 {
+    type Output = NeonM31;
     #[inline(always)]
     fn mul(self, rhs: M31) -> Self::Output {
         self * &rhs
     }
 }
 
-impl MulAssign<&PackedM31> for PackedM31 {
+impl MulAssign<&NeonM31> for NeonM31 {
     #[inline(always)]
-    fn mul_assign(&mut self, rhs: &PackedM31) {
+    fn mul_assign(&mut self, rhs: &NeonM31) {
         *self = *self * rhs;
     }
 }
 
-impl MulAssign for PackedM31 {
+impl MulAssign for NeonM31 {
     #[inline(always)]
     fn mul_assign(&mut self, rhs: Self) {
         *self *= &rhs;
     }
 }
 
-impl<T: ::core::borrow::Borrow<PackedM31>> Product<T> for PackedM31 {
+impl<T: ::core::borrow::Borrow<NeonM31>> Product<T> for NeonM31 {
     fn product<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::one(), |acc, item| acc * item.borrow())
     }
 }
 
-impl Add<&PackedM31> for PackedM31 {
-    type Output = PackedM31;
+impl Add<&NeonM31> for NeonM31 {
+    type Output = NeonM31;
     #[inline(always)]
-    fn add(self, rhs: &PackedM31) -> Self::Output {
+    fn add(self, rhs: &NeonM31) -> Self::Output {
         unsafe {
-            PackedM31 {
-                v: reduce_sum(vaddq_u32(self.v, rhs.v)),
+            NeonM31 {
+                v: [
+                    reduce_sum(vaddq_u32(self.v[0], rhs.v[0])),
+                    reduce_sum(vaddq_u32(self.v[1], rhs.v[1])),
+                ],
             }
         }
     }
 }
 
-impl Add for PackedM31 {
-    type Output = PackedM31;
+impl Add for NeonM31 {
+    type Output = NeonM31;
     #[inline(always)]
     #[allow(clippy::op_ref)]
-    fn add(self, rhs: PackedM31) -> Self::Output {
+    fn add(self, rhs: NeonM31) -> Self::Output {
         self + &rhs
     }
 }
 
-impl AddAssign<&PackedM31> for PackedM31 {
+impl AddAssign<&NeonM31> for NeonM31 {
     #[inline(always)]
-    fn add_assign(&mut self, rhs: &PackedM31) {
+    fn add_assign(&mut self, rhs: &NeonM31) {
         *self = *self + rhs;
     }
 }
 
-impl AddAssign for PackedM31 {
+impl AddAssign for NeonM31 {
     #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self += &rhs;
     }
 }
 
-impl<T: ::core::borrow::Borrow<PackedM31>> Sum<T> for PackedM31 {
+impl<T: ::core::borrow::Borrow<NeonM31>> Sum<T> for NeonM31 {
     fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::zero(), |acc, item| acc + item.borrow())
     }
 }
 
-impl From<u32> for PackedM31 {
+impl From<u32> for NeonM31 {
     #[inline(always)]
     fn from(x: u32) -> Self {
-        PackedM31::pack_full(M31::from(x))
+        NeonM31::pack_full(M31::from(x))
     }
 }
 
-impl Neg for PackedM31 {
-    type Output = PackedM31;
+impl Neg for NeonM31 {
+    type Output = NeonM31;
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        PackedM31 { v: PACKED_0 } - self
+        NeonM31::zero() - self
     }
 }
 
-impl Sub<&PackedM31> for PackedM31 {
-    type Output = PackedM31;
+impl Sub<&NeonM31> for NeonM31 {
+    type Output = NeonM31;
     #[inline(always)]
-    fn sub(self, rhs: &PackedM31) -> Self::Output {
-        PackedM31 {
-            v: unsafe {
-                let diff = vsubq_u32(self.v, rhs.v);
-                let u = vaddq_u32(diff, PACKED_MOD);
-                vminq_u32(diff, u)
-            },
+    fn sub(self, rhs: &NeonM31) -> Self::Output {
+        NeonM31 {
+            v: [
+                unsafe {
+                    let diff = vsubq_u32(self.v[0], rhs.v[0]);
+                    let u = vaddq_u32(diff, PACKED_MOD);
+                    vminq_u32(diff, u)
+                },
+                unsafe {
+                    let diff = vsubq_u32(self.v[1], rhs.v[1]);
+                    let u = vaddq_u32(diff, PACKED_MOD);
+                    vminq_u32(diff, u)
+                },
+            ],
         }
     }
 }
 
-impl Sub for PackedM31 {
-    type Output = PackedM31;
+impl Sub for NeonM31 {
+    type Output = NeonM31;
     #[inline(always)]
     #[allow(clippy::op_ref)]
-    fn sub(self, rhs: PackedM31) -> Self::Output {
+    fn sub(self, rhs: NeonM31) -> Self::Output {
         self - &rhs
     }
 }
 
-impl SubAssign<&PackedM31> for PackedM31 {
+impl SubAssign<&NeonM31> for NeonM31 {
     #[inline(always)]
-    fn sub_assign(&mut self, rhs: &PackedM31) {
+    fn sub_assign(&mut self, rhs: &NeonM31) {
         *self = *self - rhs;
     }
 }
 
-impl SubAssign for PackedM31 {
+impl SubAssign for NeonM31 {
     #[inline(always)]
     fn sub_assign(&mut self, rhs: Self) {
         *self -= &rhs;

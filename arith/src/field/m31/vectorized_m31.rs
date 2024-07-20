@@ -3,7 +3,7 @@ use rand::RngCore;
 #[cfg(target_arch = "x86_64")]
 use super::m31_avx::{AVXM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE, PACKED_INV_2};
 #[cfg(target_arch = "aarch64")]
-use super::m31_neon::{PackedM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE, PACKED_INV_2};
+use super::m31_neon::{NeonM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE, PACKED_INV_2};
 
 use crate::{Field, FieldSerde, VectorizedField, M31};
 use std::{
@@ -18,6 +18,9 @@ use std::{
 /// With NEON it stores two uint32x4_t elements.
 #[cfg(target_arch = "x86_64")]
 pub type VectorizedM31 = AVXM31;
+
+#[cfg(target_arch = "aarch64")]
+pub type VectorizedM31 = NeonM31;
 
 // #[derive(Debug, Clone, Copy, Default, PartialEq)]
 // pub struct VectorizedM31 {

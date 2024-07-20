@@ -1,6 +1,7 @@
 use std::io::Cursor;
 
-use crate::{FieldSerde, AVXM31, VectorizedM31, M31};
+use crate::{FieldSerde, 
+    VectorizedM31,  M31};
 
 use super::field::{
     random_field_tests,
@@ -27,10 +28,10 @@ fn test_m31_basic_field_op() {
     test_basic_field_op::<M31>();
 }
 
-#[test]
-fn test_packed_m31_basic_field_op() {
-    test_basic_field_op::<AVXM31>();
-}
+// #[test]
+// fn test_packed_m31_basic_field_op() {
+//     test_basic_field_op::<AVXM31>();
+// }
 
 #[test]
 fn test_vectorize_m31_basic_field_op() {

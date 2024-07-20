@@ -1,15 +1,11 @@
 mod vectorized_m31;
-pub use vectorized_m31::*;
+pub use vectorized_m31::VectorizedM31;
 
 #[cfg(target_arch = "x86_64")]
 pub(crate) mod m31_avx;
-#[cfg(target_arch = "x86_64")]
-pub(crate) use m31_avx::AVXM31;
 
 #[cfg(target_arch = "aarch64")]
 pub mod m31_neon;
-#[cfg(target_arch = "aarch64")]
-pub use m31_neon::PackedM31;
 use rand::RngCore;
 
 use crate::{Field, FieldSerde};

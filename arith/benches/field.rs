@@ -18,7 +18,7 @@ fn random_element<F: Field>() -> F {
     F::random_unsafe(&mut rng)
 }
 
-pub(crate) fn bench_field_avx512<F: Field>(c: &mut Criterion) {
+pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
     c.bench_function(&format!("mul-throughput<{}>", type_name::<F>()), |b| {
         b.iter_batched(
             || {
@@ -137,11 +137,11 @@ pub(crate) fn bench_field_avx512<F: Field>(c: &mut Criterion) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    bench_field_avx512::<M31>(c);
+    bench_field::<M31>(c);
     // bench_field_avx512::<M31Ext3>(c);
     // #[cfg(target_arch = "x86_64")]
     // bench_field_avx512::<PackedM31Ext3>(c);
-    bench_field_avx512::<Fr>(c);
+    // bench_field::<Fr>(c);
 }
 
 criterion_group!(benches, criterion_benchmark);
