@@ -6,7 +6,7 @@ use crate::{FieldSerde,
 use super::field::{
     random_field_tests,
     random_inversion_tests,
-    random_small_field_tests,
+    // random_extension_field_tests,
     // random_vectorized_field_tests,
     test_basic_field_op,
 };

@@ -20,7 +20,7 @@ pub(crate) fn test_basic_field_op<F: Field>() {
     assert_eq!(prod_0, prod_1);
 }
 
-pub(crate) fn random_small_field_tests<F: ExtensionField>(type_name: String) {
+pub(crate) fn random_extension_field_tests<F: ExtensionField>(type_name: String) {
     let mut rng = test_rng();
 
     let _message = format!("multiplication {}", type_name);

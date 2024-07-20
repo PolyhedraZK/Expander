@@ -1,7 +1,7 @@
 mod m31;
 pub use m31::*;
-// mod bn254;
-// pub use bn254::*;
+mod bn254;
+pub use bn254::*;
 // mod m31_ext;
 // pub use m31_ext::*;
 

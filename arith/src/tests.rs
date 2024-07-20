@@ -1,4 +1,4 @@
-// mod bn254;
+mod bn254;
 mod field;
 mod m31;
 // mod m31_ext;

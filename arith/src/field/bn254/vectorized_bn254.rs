@@ -48,7 +48,7 @@ impl Field for VectorizedFr {
 
     const INV_2: Self = VECTORIZEDM31_INV_2;
 
-    type BaseField = Fr;
+    // type BaseField = Fr;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -87,20 +87,20 @@ impl Field for VectorizedFr {
     //     unimplemented!()
     // }
 
-    #[inline(always)]
-    fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self += rhs;
-    }
+    // #[inline(always)]
+    // fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {
+    //     *self += rhs;
+    // }
 
-    #[inline(always)]
-    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        *self * rhs
-    }
+    // #[inline(always)]
+    // fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
+    //     *self * rhs
+    // }
 
-    #[inline(always)]
-    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self = *self * rhs;
-    }
+    // #[inline(always)]
+    // fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
+    //     *self = *self * rhs;
+    // }
 
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
@@ -110,23 +110,23 @@ impl Field for VectorizedFr {
     }
 }
 
-impl VectorizedField for VectorizedFr {
-    const PACK_SIZE: usize = 1;
+// impl VectorizedField for VectorizedFr {
+//     const PACK_SIZE: usize = 1;
 
-    const VECTORIZE_SIZE: usize = 1;
+//     const VECTORIZE_SIZE: usize = 1;
 
-    type PackedBaseField = Fr;
+//     type PackedBaseField = Fr;
 
-    #[inline(always)]
-    fn as_packed_slices(&self) -> &[Fr] {
-        &self.v
-    }
+//     #[inline(always)]
+//     fn as_packed_slices(&self) -> &[Fr] {
+//         &self.v
+//     }
 
-    #[inline(always)]
-    fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
-        &mut self.v
-    }
-}
+//     #[inline(always)]
+//     fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
+//         &mut self.v
+//     }
+// }
 
 impl Mul<&VectorizedFr> for VectorizedFr {
     type Output = VectorizedFr;
