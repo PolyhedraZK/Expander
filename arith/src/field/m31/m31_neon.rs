@@ -255,22 +255,26 @@ impl Mul<&NeonM31> for NeonM31 {
     type Output = NeonM31;
     #[inline(always)]
     fn mul(self, rhs: &NeonM31) -> Self::Output {
-        let v = self
-            .v
-            .iter()
-            .zip(rhs.v.iter())
-            .map(|(&l, &r)| unsafe {
-                let prod_hi = vreinterpretq_u32_s32(vqdmulhq_s32(
-                    vreinterpretq_s32_u32(l),
-                    vreinterpretq_s32_u32(r),
-                ));
-                let prod_lo = vmulq_u32(l, r);
-                let t = vmlsq_u32(prod_lo, prod_hi, PACKED_MOD);
-                reduce_sum(t)
-            })
-            .collect::<Vec<_>>();
+        let v1 = unsafe {
+            let prod_hi = vreinterpretq_u32_s32(vqdmulhq_s32(
+                vreinterpretq_s32_u32(self.v[0]),
+                vreinterpretq_s32_u32(rhs.v[0]),
+            ));
+            let prod_lo = vmulq_u32(self.v[0], rhs.v[0]);
+            let t = vmlsq_u32(prod_lo, prod_hi, PACKED_MOD);
+            reduce_sum(t)
+        };
+        let v2 = unsafe {
+            let prod_hi = vreinterpretq_u32_s32(vqdmulhq_s32(
+                vreinterpretq_s32_u32(self.v[1]),
+                vreinterpretq_s32_u32(rhs.v[1]),
+            ));
+            let prod_lo = vmulq_u32(self.v[1], rhs.v[1]);
+            let t = vmlsq_u32(prod_lo, prod_hi, PACKED_MOD);
+            reduce_sum(t)
+        };
         NeonM31 {
-            v: v.try_into().unwrap(),
+            v: [v1, v2],
         }
     }
 }
