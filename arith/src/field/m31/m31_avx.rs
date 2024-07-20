@@ -83,6 +83,7 @@ impl FieldSerde for AVXM31 {
 impl Field for AVXM31 {
     const NAME: &'static str = "AVX Packed Mersenne 31";
 
+    // size in bytes
     const SIZE: usize = 32;
 
     const INV_2: Self = Self { v: PACKED_INV_2 };
@@ -152,18 +153,15 @@ impl Field for AVXM31 {
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
         // slow, should not be used in production
-        let m31_vec = unsafe { transmute::<__m256i, [M31; 8]>(self.v) };
+        let mut m31_vec = unsafe { transmute::<__m256i, [M31; 8]>(self.v) };
         let is_non_zero = m31_vec.iter().all(|x| !x.is_zero());
         if !is_non_zero {
             return None;
         }
 
-        let m32_vec_inv = m31_vec
-            .iter()
-            .map(|x| x.inv().unwrap())
-            .collect::<Vec<M31>>();
+        m31_vec.iter_mut().for_each(|x| *x = x.inv().unwrap()); // safe unwrap
         Some(Self {
-            v: unsafe { transmute::<[M31; 8], __m256i>(m32_vec_inv.try_into().unwrap()) },
+            v: unsafe { transmute::<[M31; 8], __m256i>(m31_vec) },
         })
     }
 

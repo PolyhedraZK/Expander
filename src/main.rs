@@ -7,12 +7,17 @@ use std::{
 use arith::{Field, FieldSerde, VectorizedM31};
 use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
+use halo2curves::bn256::Fr;
 
 // #[cfg(target_arch = "x86_64")]
 // use arith::VectorizedM31Ext3;
 
 const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
 const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
+
+const CIRCUIT_COPY_SIZE: usize = 8;
+const M31_PACKSIZE: usize = 16;
+const FR_PACKSIZE: usize = 1;
 
 /// ...
 #[derive(Parser, Debug)]
@@ -39,7 +44,7 @@ fn main() {
         "m31" => run_benchmark::<VectorizedM31>(&args, Config::m31_config()),
         // #[cfg(target_arch = "x86_64")]
         // "m31ext3" => run_benchmark::<VectorizedM31Ext3>(&args, Config::m31_ext3_config()),
-        // "fr" => run_benchmark::<VectorizedFr>(&args, Config::bn254_config()),
+        "fr" => run_benchmark::<Fr>(&args, Config::bn254_config()),
         _ => unreachable!(),
     };
 }
@@ -58,6 +63,12 @@ where
         .map(|_| Arc::new(Mutex::new(0)))
         .collect::<Vec<_>>();
     let start_time = std::time::Instant::now();
+
+    let pack_size = match args.field.as_str() {
+        "m31" => M31_PACKSIZE,
+        "fr" => FR_PACKSIZE,
+        _ => unreachable!(),
+    };
 
     // load circuit
     let circuit_template = Circuit::<VecF>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
@@ -85,8 +96,8 @@ where
                     prover.prove(&c);
                     // update cnt
                     let mut cnt = partial_proof_cnt.lock().unwrap();
-                    const CIRCUIT_COPY_SIZE: usize = 8;
-                    let proof_cnt_this_round = CIRCUIT_COPY_SIZE * 16;
+
+                    let proof_cnt_this_round = CIRCUIT_COPY_SIZE * pack_size;
                     *cnt += proof_cnt_this_round;
                 }
             })

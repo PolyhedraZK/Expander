@@ -3,19 +3,15 @@ use std::{
     fmt::Debug,
     io::{Read, Write},
     iter::{Product, Sum},
-    mem::{size_of, transmute},
+    mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 use crate::{Field, FieldSerde, M31, M31_MOD};
 
-type PackedDataType = [uint32x4_t; 2];
-pub(super) const M31_PACK_SIZE: usize = 8;
-pub(super) const M31_VECTORIZE_SIZE: usize = 2;
-
-const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD as u32; 4]) };
+const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD; 4]) };
 const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
-pub(crate) const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
+const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
 
 use rand::{Rng, RngCore};
 
@@ -63,12 +59,23 @@ impl FieldSerde for NeonM31 {
             }
         }
     }
+
+    #[inline(always)]
+    fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
+        let mut buf = [0u8; 32];
+        reader.read_exact(&mut buf).unwrap(); // todo: error propagation
+        for (i, v) in buf.iter().enumerate().skip(4).take(28) {
+            assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
+        }
+        Self::pack_full(u32::from_le_bytes(buf[..4].try_into().unwrap()).into())
+    }
 }
 
 impl Field for NeonM31 {
     const NAME: &'static str = "Neon Packed Mersenne 31";
 
-    const SIZE: usize = 256;
+    // size in bytes
+    const SIZE: usize = 32;
 
     const INV_2: Self = Self {
         v: [PACKED_INV_2; 2],
@@ -96,19 +103,19 @@ impl Field for NeonM31 {
                 v: [
                     vld1q_u32(
                         [
-                            rng.gen::<u32>() % M31_MOD as u32,
-                            rng.gen::<u32>() % M31_MOD as u32,
-                            rng.gen::<u32>() % M31_MOD as u32,
-                            rng.gen::<u32>() % M31_MOD as u32,
+                            rng.gen::<u32>() % M31_MOD,
+                            rng.gen::<u32>() % M31_MOD,
+                            rng.gen::<u32>() % M31_MOD,
+                            rng.gen::<u32>() % M31_MOD,
                         ]
                         .as_ptr(),
                     ),
                     vld1q_u32(
                         [
-                            rng.gen::<u32>() % M31_MOD as u32,
-                            rng.gen::<u32>() % M31_MOD as u32,
-                            rng.gen::<u32>() % M31_MOD as u32,
-                            rng.gen::<u32>() % M31_MOD as u32,
+                            rng.gen::<u32>() % M31_MOD,
+                            rng.gen::<u32>() % M31_MOD,
+                            rng.gen::<u32>() % M31_MOD,
+                            rng.gen::<u32>() % M31_MOD,
                         ]
                         .as_ptr(),
                     ),
@@ -151,34 +158,27 @@ impl Field for NeonM31 {
 
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
-        todo!();
+        // slow, should not be used in production
+        let mut m31_vec = unsafe { transmute::<[uint32x4_t; 2], [M31; 8]>(self.v) };
+        let is_non_zero = m31_vec.iter().all(|x| !x.is_zero());
+        if !is_non_zero {
+            return None;
+        }
+
+        m31_vec.iter_mut().for_each(|x| *x = x.inv().unwrap()); // safe unwrap
+        Some(Self {
+            v: unsafe { transmute::<[M31; 8], [uint32x4_t; 2]>(m31_vec) },
+        })
     }
-
-    // #[inline(always)]
-    // fn add_base_elem(&self, _rhs: &Self::BaseField) -> Self {
-    //     unimplemented!()
-    // }
-
-    // #[inline(always)]
-    // fn add_assign_base_elem(&mut self, _rhs: &Self::BaseField) {
-    //     unimplemented!()
-    // }
-
-    // #[inline(always)]
-    // fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
-    //     *self * rhs
-    // }
-
-    // #[inline(always)]
-    // fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-    //     *self = *self * rhs;
-    // }
 
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
-    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
-        unimplemented!(" cannot convert 32 bytes into a vectorized M31")
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+        let m = M31::from_uniform_bytes(bytes);
+        Self {
+            v: unsafe { [vdupq_n_u32(m.v), vdupq_n_u32(m.v)] },
+        }
     }
 }
 
@@ -197,10 +197,10 @@ impl Debug for NeonM31 {
                     write!(
                         f,
                         "uint32x4_t<8 x {}>",
-                        if M31_MOD as u32 - data[0] > 1024 {
+                        if M31_MOD - data[0] > 1024 {
                             format!("{}", data[0])
                         } else {
-                            format!("-{}", M31_MOD as u32 - data[0])
+                            format!("-{}", M31_MOD - data[0])
                         }
                     )?;
                 } else {

@@ -69,7 +69,7 @@ impl<F: Field + FieldSerde> Prover<F> {
         // PC commit
         let commitment = RawCommitment::new(c.layers[0].input_vals.evals.clone());
 
-        println!("commitment size: {} {}", commitment.size(), F::SIZE);
+        // println!("commitment size: {} {}", commitment.size(), F::SIZE);
 
         let buffer_v = vec![F::default(); commitment.size() / F::SIZE];
         let buffer = unsafe {
@@ -79,10 +79,10 @@ impl<F: Field + FieldSerde> Prover<F> {
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(buffer, commitment.size());
 
-        println!("commitment size: {}", commitment.size());
+        // println!("commitment size: {}", commitment.size());
         grind::<F>(&mut transcript, &self.config);
 
-        println!("after grind");
+        // println!("after grind");
         let (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
 
         // open
