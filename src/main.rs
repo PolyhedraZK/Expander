@@ -16,7 +16,7 @@ const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
 const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
 
 const CIRCUIT_COPY_SIZE: usize = 8;
-const M31_PACKSIZE: usize = 16;
+const M31_PACKSIZE: usize = 8;
 const FR_PACKSIZE: usize = 1;
 
 /// ...
