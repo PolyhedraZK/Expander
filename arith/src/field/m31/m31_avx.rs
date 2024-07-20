@@ -213,8 +213,10 @@ impl Field for AVXM31 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        let v = unsafe { transmute::<[u8; 32], __m256i>(*bytes) };
-        Self { v }
+        let m = M31::from_uniform_bytes(bytes);
+        Self {
+            v: unsafe { _mm256_set1_epi32(m.v as i32) },
+        }
     }
 }
 
