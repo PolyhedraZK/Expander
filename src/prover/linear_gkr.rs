@@ -13,15 +13,18 @@ pub fn grind<F: Field + FieldSerde + FiatShamirConfig>(
 
     let mut hash_bytes = vec![];
 
-    let initial_hash = transcript.challenge_fs::<F>((31 + F::SIZE) / F::SIZE);
+    // ceil(32/field_size)
+    let num_field_elements = (31 + F::ChallengeField::SIZE) / F::ChallengeField::SIZE;
+
+    let initial_hash = transcript.challenge_fs::<F>(num_field_elements);
     initial_hash
         .iter()
         .for_each(|h| h.serialize_into(&mut hash_bytes));
 
     for _ in 0..(1 << config.grinding_bits) {
-        transcript.hasher.hash_inplace(&mut hash_bytes, 256 / 8);
+        transcript.hasher.hash_inplace(&mut hash_bytes, 32);
     }
-    transcript.append_u8_slice(&hash_bytes, 256 / 8);
+    transcript.append_u8_slice(&hash_bytes, 32);
     end_timer!(timer);
 }
 
