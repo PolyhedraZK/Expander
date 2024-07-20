@@ -7,7 +7,7 @@ use std::{
 
 use rand::RngCore;
 
-use crate::{Field, FieldSerde, PackedM31, VectorizedField};
+use crate::{Field, FieldSerde, M31Ext3, PackedM31, VectorizedField};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct PackedM31Ext3 {
@@ -39,23 +39,23 @@ impl FieldSerde for PackedM31Ext3 {
     }
 }
 
-impl VectorizedField for PackedM31Ext3 {
-    const PACK_SIZE: usize = 8;
+// impl VectorizedField for PackedM31Ext3 {
+//     const PACK_SIZE: usize = 8;
 
-    const VECTORIZE_SIZE: usize = 1;
+//     const VECTORIZE_SIZE: usize = 1;
 
-    type PackedBaseField = PackedM31Ext3;
+//     type PackedBaseField = PackedM31;
 
-    #[inline(always)]
-    fn as_packed_slices(&self) -> &[PackedM31Ext3] {
-        todo!()
-    }
+//     #[inline(always)]
+//     fn as_packed_slices(&self) -> &[PackedM31Ext3] {
+//         todo!()
+//     }
 
-    #[inline(always)]
-    fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
-        todo!()
-    }
-}
+//     #[inline(always)]
+//     fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
+//         todo!()
+//     }
+// }
 
 impl Field for PackedM31Ext3 {
     const NAME: &'static str = "AVX Packed Mersenne 31 Extension 3";
@@ -67,7 +67,7 @@ impl Field for PackedM31Ext3 {
     // };
     const INV_2: Self = todo!();
 
-    type BaseField = PackedM31;
+    type BaseField = M31Ext3;
 
     #[inline(always)]
     fn zero() -> Self {

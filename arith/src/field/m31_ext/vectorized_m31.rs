@@ -67,7 +67,7 @@ impl Field for VectorizedM31Ext3 {
     // };
     const INV_2: Self = todo!();
 
-    type BaseField = PackedM31Ext3;
+    type BaseField = M31Ext3;
 
     #[inline(always)]
     fn zero() -> Self {

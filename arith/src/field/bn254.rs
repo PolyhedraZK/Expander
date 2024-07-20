@@ -72,10 +72,10 @@ impl Field for Fr {
         self.invert().into()
     }
 
-    /// Add the field element with its base field element
-    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        self + rhs
-    }
+    // /// Add the field element with its base field element
+    // fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
+    //     self + rhs
+    // }
 
     /// Add the field element with its base field element
     fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {

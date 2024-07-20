@@ -132,10 +132,10 @@ impl Field for M31 {
         self.try_inverse()
     }
 
-    #[inline(always)]
-    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        *self + *rhs
-    }
+    // #[inline(always)]
+    // fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
+    //     *self + *rhs
+    // }
 
     #[inline(always)]
     fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {

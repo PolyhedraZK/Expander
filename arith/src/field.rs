@@ -2,8 +2,8 @@ mod m31;
 pub use m31::*;
 mod bn254;
 pub use bn254::*;
-mod m31_ext;
-pub use m31_ext::*;
+// mod m31_ext;
+// pub use m31_ext::*;
 
 use rand::RngCore;
 
@@ -95,8 +95,8 @@ pub trait Field:
     /// find the inverse of the element; return None if not exist
     fn inv(&self) -> Option<Self>;
 
-    /// Add the field element with its base field element
-    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self;
+    // /// Add the field element with its base field element
+    // fn add_base_elem(&self, rhs: &Self::BaseField) -> Self;
 
     /// Add the field element with its base field element
     fn add_assign_base_elem(&mut self, rhs: &Self::BaseField);
