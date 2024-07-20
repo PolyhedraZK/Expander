@@ -8,6 +8,7 @@ default-run = "expander-rs" # default
 arith = { path = "arith" }
 ark-std.workspace = true
 clap.workspace = true
+env_logger.workspace = true
 log.workspace = true
 rand.workspace = true
 sha2.workspace = true
@@ -35,6 +36,7 @@ ark-ec = "0.4.0"
 ark-ff = { version = "0.4" }
 clap = { version = "4.1", features = ["derive"] }
 criterion = { version = "0.5", features = ["html_reports"] }
+env_logger = "0.11"
 halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", default-features = false, features = [
     "bits",
 ] }

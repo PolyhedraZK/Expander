@@ -32,7 +32,7 @@ impl<F: Field + FieldSerde> RawCommitment<F> {
     pub fn new(poly_vals: Vec<F>) -> Self {
         RawCommitment { poly_vals }
     }
-    pub fn verify(&self, x: &[F::BaseField], y: F) -> bool {
+    pub fn verify(&self, x: &[F], y: F) -> bool {
         y == MultiLinearPoly::<F>::eval_multilinear(&self.poly_vals, x)
     }
 }

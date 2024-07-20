@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use crate::{FieldSerde, VectorizedFr};
+// use crate::{FieldSerde, VectorizedFr};
 use halo2curves::bn256::Fr;
 
 use super::field::{
@@ -28,17 +28,17 @@ fn test_packed_bn254_basic_field_op() {
     test_basic_field_op::<Fr>();
 }
 
-#[test]
-fn test_vectorize_bn254_basic_field_op() {
-    test_basic_field_op::<VectorizedFr>();
-}
+// #[test]
+// fn test_vectorize_bn254_basic_field_op() {
+//     test_basic_field_op::<VectorizedFr>();
+// }
 
-#[test]
-fn test_custom_serde_vectorize_bn254() {
-    let a = VectorizedFr::from(256 + 2);
-    let mut buf = vec![];
-    a.serialize_into(&mut buf);
-    let mut cursor = Cursor::new(buf);
-    let b = VectorizedFr::deserialize_from(&mut cursor);
-    assert_eq!(a, b);
-}
+// #[test]
+// fn test_custom_serde_vectorize_bn254() {
+//     let a = VectorizedFr::from(256 + 2);
+//     let mut buf = vec![];
+//     a.serialize_into(&mut buf);
+//     let mut cursor = Cursor::new(buf);
+//     let b = VectorizedFr::deserialize_from(&mut cursor);
+//     assert_eq!(a, b);
+// }

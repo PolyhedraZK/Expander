@@ -53,13 +53,13 @@ impl Transcript {
         self.proof.append_u8_slice(buffer, size);
     }
 
-    pub fn challenge_f<F: Field>(&mut self) -> F::BaseField {
+    pub fn challenge_f<F: Field>(&mut self) -> F {
         self.hash_to_digest();
-        assert!(F::BaseField::SIZE <= Self::DIGEST_SIZE);
-        F::BaseField::from_uniform_bytes(&self.digest)
+        assert!(F::SIZE <= Self::DIGEST_SIZE);
+        F::from_uniform_bytes(&self.digest)
     }
 
-    pub fn challenge_fs<F: Field>(&mut self, size: usize) -> Vec<F::BaseField> {
+    pub fn challenge_fs<F: Field>(&mut self, size: usize) -> Vec<F> {
         (0..size).map(|_| self.challenge_f::<F>()).collect()
     }
 }

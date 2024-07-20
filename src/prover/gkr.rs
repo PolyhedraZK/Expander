@@ -1,6 +1,6 @@
 //! This module implements the core GKR IOP.
 
-use arith::{Field, FieldSerde, MultiLinearPoly, VectorizedField};
+use arith::{Field, FieldSerde, MultiLinearPoly, };
 use ark_std::{end_timer, start_timer};
 
 use crate::{sumcheck_prove_gkr_layer, Circuit, Config, GkrScratchpad, Transcript};
@@ -12,10 +12,10 @@ pub fn gkr_prove<F>(
     sp: &mut [GkrScratchpad<F>],
     transcript: &mut Transcript,
     config: &Config,
-) -> (Vec<F>, Vec<Vec<F::BaseField>>, Vec<Vec<F::BaseField>>)
+) -> (Vec<F>, Vec<Vec<F>>, Vec<Vec<F>>)
 where
-    F: VectorizedField + FieldSerde,
-    F::PackedBaseField: Field<BaseField = F::BaseField>,
+    F: Field + FieldSerde,
+    // F::PackedBaseField: Field<BaseField = F::BaseField>,
 {
     let timer = start_timer!(|| "gkr prove");
     let layer_num = circuit.layers.len();
@@ -26,12 +26,12 @@ where
     for _i in 0..circuit.layers.last().unwrap().output_var_num {
         for j in 0..config.get_num_repetitions() {
             rz0[j].push(transcript.challenge_f::<F>());
-            rz1[j].push(F::BaseField::zero());
+            rz1[j].push(F::zero());
         }
     }
 
-    let mut alpha = F::BaseField::one();
-    let mut beta = F::BaseField::zero();
+    let mut alpha = F::one();
+    let mut beta = F::zero();
     let mut claimed_v = vec![];
 
     for t in rz0.iter().take(config.get_num_repetitions()) {

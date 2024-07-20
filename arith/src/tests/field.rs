@@ -3,7 +3,7 @@ use std::io::Cursor;
 use ark_std::{end_timer, start_timer, test_rng};
 use rand::{Rng, RngCore};
 
-use crate::{ExtensionField, Field, FieldSerde, VectorizedField};
+use crate::{ExtensionField, Field, FieldSerde, };
 
 pub(crate) fn test_basic_field_op<F: Field>() {
     let mut rng = rand::thread_rng();

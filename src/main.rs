@@ -4,7 +4,9 @@ use std::{
     thread,
 };
 
-use arith::{Field, FieldSerde, VectorizedField, VectorizedFr, VectorizedM31};
+use arith::{Field, FieldSerde, 
+    // VectorizedField, VectorizedFr, 
+    VectorizedM31};
 use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
 
@@ -39,16 +41,17 @@ fn main() {
         "m31" => run_benchmark::<VectorizedM31>(&args, Config::m31_config()),
         // #[cfg(target_arch = "x86_64")]
         // "m31ext3" => run_benchmark::<VectorizedM31Ext3>(&args, Config::m31_ext3_config()),
-        "fr" => run_benchmark::<VectorizedFr>(&args, Config::bn254_config()),
+        // "fr" => run_benchmark::<VectorizedFr>(&args, Config::bn254_config()),
         _ => unreachable!(),
     };
 }
 
 fn run_benchmark<VecF>(args: &Args, config: Config)
 where
-    VecF: VectorizedField + FieldSerde + Send + 'static,
-    VecF::BaseField: Send,
-    VecF::PackedBaseField: Field<BaseField = VecF::BaseField>,
+VecF: Field + FieldSerde + Send + 'static,
+    // VecF: VectorizedField + FieldSerde + Send + 'static,
+    // VecF::BaseField: Send,
+    // VecF::PackedBaseField: Field<BaseField = VecF::BaseField>,
 {
     println!("benchmarking keccak over {}", args.field);
     println!(
@@ -89,7 +92,7 @@ where
                     let mut cnt = partial_proof_cnt.lock().unwrap();
                     const CIRCUIT_COPY_SIZE: usize = 8;
                     let proof_cnt_this_round =
-                        CIRCUIT_COPY_SIZE * VecF::PACK_SIZE * VecF::VECTORIZE_SIZE;
+                        CIRCUIT_COPY_SIZE * 16;
                     *cnt += proof_cnt_this_round;
                 }
             })

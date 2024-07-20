@@ -1,4 +1,4 @@
-use arith::{VectorizedField, VectorizedM31};
+use arith::{ VectorizedM31};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolynomialCommitmentType {
@@ -65,7 +65,8 @@ impl Config {
 
         let field_size = match FieldType::M31 {
             FieldType::M31 => {
-                vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
+                vectorize_size = 2;
+                // vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
                 31
             }
             FieldType::BabyBear => 31,
@@ -102,7 +103,8 @@ impl Config {
         let num_parallel = 16;
 
         let field_size = 93;
-        let vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
+        let vectorize_size = 1;
+        // let vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
 
         let num_repetitions = 1; // we do not need repetitions for m31_ext3
 

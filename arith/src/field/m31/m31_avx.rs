@@ -7,7 +7,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{Field, FieldSerde, M31, M31_MOD};
+use crate::{Field, FieldSerde,  M31, M31_MOD};
 
 pub(super) const M31_PACK_SIZE: usize = 8;
 pub(super) const M31_VECTORIZE_SIZE: usize = 1;
@@ -73,7 +73,48 @@ impl FieldSerde for AVXM31 {
             }
         }
     }
+
+    #[inline(always)]
+    fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
+        let mut buf = [0u8; 32];
+        reader.read_exact(&mut buf).unwrap(); // todo: error propagation
+        for (i, v) in buf.iter().enumerate().skip(4).take(28) {
+            assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
+        }
+        Self::pack_full(u32::from_le_bytes(buf[..4].try_into().unwrap()).into())
+    }
+
 }
+
+// impl VectorizedField for AVXM31{
+//     /// pack size, size for each packed PackedBaseField
+//     const PACK_SIZE: usize = 1;
+
+//     /// size of the vector
+//     const VECTORIZE_SIZE: usize = 8;
+
+//     /// type of the based field, if applicable
+//     type Field = M31;
+
+//     type PackedField = Self;
+
+//     /// expose the internal elements
+//     fn as_packed_slices(&self) -> &[Self::PackedField];
+
+//     /// expose the internal elements mutable
+//     fn mut_packed_slices(&mut self) -> &mut [Self::PackedField];
+
+//     // // /// Add the field element with its base field element
+//     // // fn add_base_elem(&self, rhs: &Self::BaseField) -> Self;
+
+//     // /// Add the field element with its base field element
+//     // fn add_assign_base_elem(&mut self, rhs: &Self::Field);
+
+//     /// multiply the field element with its base field element
+//     // todo! rename to scalar multiplication
+//     fn mul_packed_elem(&self, rhs: &Self::PackedField) -> Self;
+// }
+
 
 impl Field for AVXM31 {
     const NAME: &'static str = "AVX Packed Mersenne 31";

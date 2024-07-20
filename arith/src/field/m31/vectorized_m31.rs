@@ -5,7 +5,7 @@ use super::m31_avx::{AVXM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE, PACKED_INV_2};
 #[cfg(target_arch = "aarch64")]
 use super::m31_neon::{NeonM31, M31_PACK_SIZE, M31_VECTORIZE_SIZE, PACKED_INV_2};
 
-use crate::{Field, FieldSerde, VectorizedField, M31};
+use crate::{Field, FieldSerde,  M31};
 use std::{
     io::{Read, Write},
     iter::{Product, Sum},

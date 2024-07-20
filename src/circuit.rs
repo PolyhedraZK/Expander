@@ -13,7 +13,7 @@ use crate::Transcript;
 pub struct Gate<F: Field, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
     pub o_id: usize,
-    pub coef: F::BaseField,
+    pub coef: F,
 }
 
 pub type GateMul<F> = Gate<F, 2>;
@@ -40,16 +40,16 @@ impl<F: Field> CircuitLayer<F> {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let i1 = &self.input_vals.evals[gate.i_ids[1]];
             let o = &mut res[gate.o_id];
-            *o += (*i0 * i1).mul_base_elem(&gate.coef);
+            *o += (*i0 * i1)* &gate.coef;
         }
         for gate in &self.add {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
-            *o += i0.mul_base_elem(&gate.coef);
+            *o += *i0* &gate.coef;
         }
         for gate in &self.const_ {
             let o = &mut res[gate.o_id];
-            *o += F::one().mul_base_elem(&gate.coef); // FIXME LATER: add a packing function to the trait
+            *o += gate.coef;
         }
         res
     }
@@ -60,7 +60,7 @@ pub struct Circuit<F: Field> {
     pub layers: Vec<CircuitLayer<F>>,
 }
 
-impl<F: Field> Circuit<F> {
+impl<F: Field + FieldSerde> Circuit<F> {
     pub fn load_circuit(filename: &str) -> Self {
         let rc = RecursiveCircuit::<F>::load(filename);
         rc.flatten()
@@ -91,7 +91,7 @@ impl<F: Field> Circuit<F> {
                 let gate = GateMul {
                     i_ids: [mul_input[i * 4 + 1], mul_input[i * 4 + 2]],
                     o_id: mul_input[i * 4 + 3],
-                    coef: F::BaseField::from(mul_input[i * 4 + 4] as u32),
+                    coef: F::from(mul_input[i * 4 + 4] as u32),
                 };
                 layer.mul.push(gate);
             }
@@ -110,7 +110,7 @@ impl<F: Field> Circuit<F> {
                 let gate = GateAdd {
                     i_ids: [add_input[i * 3 + 1]],
                     o_id: add_input[i * 3 + 2],
-                    coef: F::BaseField::from(add_input[i * 3 + 3] as u32),
+                    coef: F::from(add_input[i * 3 + 3] as u32),
                 };
                 layer.add.push(gate);
             }
@@ -222,7 +222,7 @@ impl<F: Field + FieldSerde> Circuit<F> {
     }
 }
 
-impl<F: Field> Segment<F> {
+impl<F: Field + FieldSerde> Segment<F> {
     pub(crate) fn contain_gates(&self) -> bool {
         !self.gate_muls.is_empty() || !self.gate_adds.is_empty() || !self.gate_consts.is_empty()
     }
@@ -265,7 +265,7 @@ impl<F: Field> Segment<F> {
                     u64::deserialize_from(&mut reader) as usize,
                 ],
                 o_id: u64::deserialize_from(&mut reader) as usize,
-                coef: F::BaseField::deserialize_from_ecc_format(&mut reader),
+                coef: F::deserialize_from_ecc_format(&mut reader),
             };
             ret.gate_muls.push(gate);
         }
@@ -276,7 +276,7 @@ impl<F: Field> Segment<F> {
                 i_ids: [u64::deserialize_from(&mut reader) as usize],
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
-                coef: F::BaseField::deserialize_from_ecc_format(&mut reader),
+                coef: F::deserialize_from_ecc_format(&mut reader),
             };
             ret.gate_adds.push(gate);
         }
@@ -294,7 +294,7 @@ impl<F: Field> Segment<F> {
                 i_ids: [],
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
-                coef: F::BaseField::deserialize_from_ecc_format(&mut reader),
+                coef: F::deserialize_from_ecc_format(&mut reader),
             };
             ret.gate_consts.push(gate);
         }
@@ -356,7 +356,7 @@ pub struct RecursiveCircuit<F: Field> {
 
 const MAGIC_NUM: u64 = 3626604230490605891; // b'CIRCUIT2'
 
-impl<F: Field> RecursiveCircuit<F> {
+impl<F: Field + FieldSerde> RecursiveCircuit<F> {
     pub fn load(filename: &str) -> Self {
         let mut ret = RecursiveCircuit::<F> {
             segments: Vec::new(),

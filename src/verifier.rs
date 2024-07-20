@@ -8,34 +8,34 @@ use crate::{
     Transcript,
 };
 
-fn degree_2_eval<F: Field>(p0: F, p1: F, p2: F, x: F::BaseField) -> F {
+fn degree_2_eval<F: Field>(p0: F, p1: F, p2: F, x: F) -> F {
     let c0 = &p0;
     let c2 = F::INV_2 * (p2 - p1 - p1 + p0);
     let c1 = p1 - p0 - c2;
-    *c0 + (c2.mul_base_elem(&x) + c1).mul_base_elem(&x)
+    *c0 + (c2*x + c1)*x
 }
 
 fn eval_sparse_circuit_connect_poly<F: Field, const INPUT_NUM: usize>(
     gates: &[Gate<F, INPUT_NUM>],
-    rz0: &[F::BaseField],
-    rz1: &[F::BaseField],
-    alpha: F::BaseField,
-    beta: F::BaseField,
-    ris: &[Vec<F::BaseField>],
-) -> F::BaseField {
-    let mut eq_evals_at_rz0 = vec![F::BaseField::zero(); 1 << rz0.len()];
-    let mut eq_evals_at_rz1 = vec![F::BaseField::zero(); 1 << rz1.len()];
+    rz0: &[F],
+    rz1: &[F],
+    alpha: F,
+    beta: F,
+    ris: &[Vec<F>],
+) -> F {
+    let mut eq_evals_at_rz0 = vec![F::zero(); 1 << rz0.len()];
+    let mut eq_evals_at_rz1 = vec![F::zero(); 1 << rz1.len()];
 
     eq_evals_at_primitive(rz0, &alpha, &mut eq_evals_at_rz0);
     eq_evals_at_primitive(rz1, &beta, &mut eq_evals_at_rz1);
 
     let mut eq_evals_at_ris = vec![vec![]; INPUT_NUM];
     for i in 0..INPUT_NUM {
-        eq_evals_at_ris[i] = vec![F::BaseField::zero(); 1 << ris[i].len()];
-        eq_evals_at_primitive(&ris[i], &F::BaseField::one(), &mut eq_evals_at_ris[i])
+        eq_evals_at_ris[i] = vec![F::zero(); 1 << ris[i].len()];
+        eq_evals_at_primitive(&ris[i], &F::one(), &mut eq_evals_at_ris[i])
     }
 
-    let mut v = F::BaseField::zero();
+    let mut v = F::zero();
     for g in gates {
         let mut prod = eq_evals_at_rz0[g.o_id] + eq_evals_at_rz1[g.o_id];
 
@@ -52,34 +52,34 @@ fn eval_sparse_circuit_connect_poly<F: Field, const INPUT_NUM: usize>(
 #[allow(clippy::type_complexity)]
 fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
     layer: &CircuitLayer<F>,
-    rz0: &[Vec<F::BaseField>],
-    rz1: &[Vec<F::BaseField>],
+    rz0: &[Vec<F>],
+    rz1: &[Vec<F>],
     claimed_v0: &[F],
     claimed_v1: &[F],
-    alpha: F::BaseField,
-    beta: F::BaseField,
+    alpha: F,
+    beta: F,
     proof: &mut Proof,
     transcript: &mut Transcript,
     config: &Config,
 ) -> (
     bool,
-    Vec<Vec<F::BaseField>>,
-    Vec<Vec<F::BaseField>>,
+    Vec<Vec<F>>,
+    Vec<Vec<F>>,
     Vec<F>,
     Vec<F>,
 ) {
     let var_num = layer.input_var_num;
     let mut sum = (0..config.get_num_repetitions())
         .map(|i| {
-            claimed_v0[i].mul_base_elem(&alpha) + claimed_v1[i].mul_base_elem(&beta)
-                - F::one().mul_base_elem(&eval_sparse_circuit_connect_poly(
+            claimed_v0[i]*&alpha + claimed_v1[i]*&beta
+                -&eval_sparse_circuit_connect_poly(
                     &layer.const_,
                     &rz0[i],
                     &rz1[i],
                     alpha,
                     beta,
                     &[],
-                ))
+                )
         })
         .collect::<Vec<_>>();
     let mut rx = vec![vec![]; config.get_num_repetitions()];
@@ -117,14 +117,14 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
 
             if i_var == var_num - 1 {
                 vx_claim[j] = proof.get_next_and_step();
-                sum[j] -= vx_claim[j].mul_base_elem(&eval_sparse_circuit_connect_poly(
+                sum[j] -= vx_claim[j]*&eval_sparse_circuit_connect_poly(
                     &layer.add,
                     &rz0[j],
                     &rz1[j],
                     alpha,
                     beta,
                     &[rx[j].clone()],
-                ));
+                );
                 transcript.append_f(vx_claim[j]);
             }
         }
@@ -134,14 +134,14 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
         vy_claim.push(proof.get_next_and_step());
         verified &= sum[j]
             == vx_claim[j]
-                * vy_claim[j].mul_base_elem(&eval_sparse_circuit_connect_poly(
+                * vy_claim[j]*&eval_sparse_circuit_connect_poly(
                     &layer.mul,
                     &rz0[j],
                     &rz1[j],
                     alpha,
                     beta,
                     &[rx[j].clone(), ry[j].clone()],
-                ));
+                );
         transcript.append_f(vy_claim[j]);
     }
     (verified, rx, ry, vx_claim, vy_claim)
@@ -157,8 +157,8 @@ pub fn gkr_verify<F: Field + FieldSerde>(
     config: &Config,
 ) -> (
     bool,
-    Vec<Vec<F::BaseField>>,
-    Vec<Vec<F::BaseField>>,
+    Vec<Vec<F>>,
+    Vec<Vec<F>>,
     Vec<F>,
     Vec<F>,
 ) {
@@ -169,11 +169,11 @@ pub fn gkr_verify<F: Field + FieldSerde>(
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
         for j in 0..config.get_num_repetitions() {
             rz0[j].push(transcript.challenge_f::<F>());
-            rz1[j].push(F::BaseField::zero());
+            rz1[j].push(F::zero());
         }
     }
-    let mut alpha = F::BaseField::one();
-    let mut beta = F::BaseField::zero();
+    let mut alpha = F::one();
+    let mut beta = F::zero();
     let mut claimed_v0 = claimed_v.to_vec();
     let mut claimed_v1 = vec![F::zero(); claimed_v.len()];
 

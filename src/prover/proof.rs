@@ -52,4 +52,10 @@ impl FieldSerde for Proof {
             bytes: proof,
         }
     }
+
+    #[inline(always)]
+    fn deserialize_from_ecc_format<R: Read>(_reader: R) -> Self {
+        unimplemented!("not implemented for Proof")
+    }
+
 }
