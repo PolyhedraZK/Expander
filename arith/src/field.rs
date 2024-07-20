@@ -1,7 +1,7 @@
 mod m31;
 pub use m31::*;
-mod bn254;
-pub use bn254::*;
+// mod bn254;
+// pub use bn254::*;
 // mod m31_ext;
 // pub use m31_ext::*;
 
@@ -49,8 +49,8 @@ pub trait Field:
     /// Inverse of 2
     const INV_2: Self;
 
-    /// type of the base field, can be itself
-    type BaseField: Field + FieldSerde;
+    // /// type of the base field, can be itself
+    // type BaseField: Field + FieldSerde;
 
     // ====================================
     // constants
@@ -95,17 +95,17 @@ pub trait Field:
     /// find the inverse of the element; return None if not exist
     fn inv(&self) -> Option<Self>;
 
+    // // /// Add the field element with its base field element
+    // // fn add_base_elem(&self, rhs: &Self::BaseField) -> Self;
+
     // /// Add the field element with its base field element
-    // fn add_base_elem(&self, rhs: &Self::BaseField) -> Self;
+    // fn add_assign_base_elem(&mut self, rhs: &Self::BaseField);
 
-    /// Add the field element with its base field element
-    fn add_assign_base_elem(&mut self, rhs: &Self::BaseField);
+    // /// multiply the field element with its base field element
+    // fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self;
 
-    /// multiply the field element with its base field element
-    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self;
-
-    /// multiply the field element with its base field element
-    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField);
+    // /// multiply the field element with its base field element
+    // fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField);
 
     /// expose the element as u32.
     fn as_u32_unchecked(&self) -> u32;
@@ -115,21 +115,60 @@ pub trait Field:
 }
 
 /// A vector of Field elements.
-pub trait VectorizedField: Field {
+pub trait VectorizedField {
     /// pack size, size for each packed PackedBaseField
     const PACK_SIZE: usize;
 
     /// size of the vector
     const VECTORIZE_SIZE: usize;
 
-    /// type of the packed based field, if applicable
-    type PackedBaseField: Default + Clone;
+    /// type of the based field, if applicable
+    type Field: Default + Clone;
+
+    type PackedField: Default + Clone;
 
     /// expose the internal elements
-    fn as_packed_slices(&self) -> &[Self::PackedBaseField];
+    fn as_packed_slices(&self) -> &[Self::PackedField];
 
     /// expose the internal elements mutable
-    fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField];
+    fn mut_packed_slices(&mut self) -> &mut [Self::PackedField];
+
+    // // /// Add the field element with its base field element
+    // // fn add_base_elem(&self, rhs: &Self::BaseField) -> Self;
+
+    // /// Add the field element with its base field element
+    // fn add_assign_base_elem(&mut self, rhs: &Self::Field);
+
+    // /// multiply the field element with its base field element
+    // // todo! rename to scalar multiplication
+    // fn mul_base_elem(&self, rhs: &Self::Field) -> Self;
+
+    // /// multiply the field element with its base field element
+    // // todo! rename to scalar multiplication
+    // fn mul_assign_base_elem(&mut self, rhs: &Self::Field);
+}
+
+/// Extension Field of a given field.
+pub trait ExtensionField:
+    Field
+    + Add<Self::BaseField, Output = Self>
+    + Mul<Self::BaseField, Output = Self>
+    + Sub<Self::BaseField, Output = Self>
+    + for<'a> Add<&'a Self::BaseField, Output = Self>
+    + for<'a> Mul<&'a Self::BaseField, Output = Self>
+    + for<'a> Sub<&'a Self::BaseField, Output = Self>
+    + AddAssign<Self::BaseField>
+    + MulAssign<Self::BaseField>
+    + SubAssign<Self::BaseField>
+    + for<'a> AddAssign<&'a Self::BaseField>
+    + for<'a> MulAssign<&'a Self::BaseField>
+    + for<'a> SubAssign<&'a Self::BaseField>
+{
+    /// Extension degree
+    const EXTENSION_DEGREE: usize;
+
+    /// Base field
+    type BaseField: Field + FieldSerde;
 }
 
 /// Serde for Fields

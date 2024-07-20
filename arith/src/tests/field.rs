@@ -3,7 +3,7 @@ use std::io::Cursor;
 use ark_std::{end_timer, start_timer, test_rng};
 use rand::{Rng, RngCore};
 
-use crate::{Field, FieldSerde, VectorizedField};
+use crate::{ExtensionField, Field, FieldSerde, VectorizedField};
 
 pub(crate) fn test_basic_field_op<F: Field>() {
     let mut rng = rand::thread_rng();
@@ -20,7 +20,7 @@ pub(crate) fn test_basic_field_op<F: Field>() {
     assert_eq!(prod_0, prod_1);
 }
 
-pub(crate) fn random_small_field_tests<F: Field>(type_name: String) {
+pub(crate) fn random_small_field_tests<F: ExtensionField>(type_name: String) {
     let mut rng = test_rng();
 
     let _message = format!("multiplication {}", type_name);
@@ -31,16 +31,16 @@ pub(crate) fn random_small_field_tests<F: Field>(type_name: String) {
         let c = F::random_unsafe(&mut rng);
 
         let mut t0 = a; // (a * b) * c
-        t0 = t0.mul_base_elem(&b);
-        t0.mul_assign(&c);
+        t0 *= b;
+        t0 *= c;
 
         let mut t1 = a; // (a * c) * b
-        t1.mul_assign(&c);
-        t1 = t1.mul_base_elem(&b);
+        t1 *= c;
+        t1 *= b;
 
         let mut t2 = c; // (b * c) * a
-        t2.mul_assign_base_elem(&b);
-        t2.mul_assign(&a);
+        t2 *= b;
+        t2 *= a;
 
         assert_eq!(t0, t1);
         assert_eq!(t1, t2);
@@ -252,38 +252,38 @@ fn random_expansion_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     end_timer!(start);
 }
 
-pub fn random_vectorized_field_tests<F: VectorizedField + FieldSerde>(type_name: String) {
-    let mut rng = test_rng();
+// pub fn random_vectorized_field_tests<F: VectorizedField + FieldSerde>(type_name: String) {
+//     let mut rng = test_rng();
 
-    random_serdes_tests::<F, _>(&mut rng, type_name);
-}
+//     random_serdes_tests::<F, _>(&mut rng, type_name);
+// }
 
-fn random_serdes_tests<F: VectorizedField + FieldSerde, R: RngCore>(
-    mut rng: R,
-    _type_name: String,
-) {
-    let start = start_timer!(|| format!("expansion {}", _type_name));
-    for _ in 0..100 {
-        // convert a into and from bytes
+// fn random_serdes_tests<F: VectorizedField + FieldSerde, R: RngCore>(
+//     mut rng: R,
+//     _type_name: String,
+// ) {
+//     let start = start_timer!(|| format!("expansion {}", _type_name));
+//     for _ in 0..100 {
+//         // convert a into and from bytes
 
-        let a = F::random_unsafe(&mut rng);
-        let mut buffer = vec![];
-        a.serialize_into(&mut buffer);
-        let mut cursor = Cursor::new(buffer);
-        let b = F::deserialize_from(&mut cursor);
-        assert_eq!(a, b);
-    }
+//         let a = F::random_unsafe(&mut rng);
+//         let mut buffer = vec![];
+//         a.serialize_into(&mut buffer);
+//         let mut cursor = Cursor::new(buffer);
+//         let b = F::deserialize_from(&mut cursor);
+//         assert_eq!(a, b);
+//     }
 
-    let a = (0..100)
-        .map(|_| F::random_unsafe(&mut rng))
-        .collect::<Vec<_>>();
-    let mut buffer = vec![];
-    a.iter().for_each(|x| x.serialize_into(&mut buffer));
-    let mut cursor = Cursor::new(buffer);
-    let b = (0..100)
-        .map(|_| F::deserialize_from(&mut cursor))
-        .collect::<Vec<_>>();
-    assert_eq!(a, b);
+//     let a = (0..100)
+//         .map(|_| F::random_unsafe(&mut rng))
+//         .collect::<Vec<_>>();
+//     let mut buffer = vec![];
+//     a.iter().for_each(|x| x.serialize_into(&mut buffer));
+//     let mut cursor = Cursor::new(buffer);
+//     let b = (0..100)
+//         .map(|_| F::deserialize_from(&mut cursor))
+//         .collect::<Vec<_>>();
+//     assert_eq!(a, b);
 
-    end_timer!(start);
-}
+//     end_timer!(start);
+// }

@@ -4,7 +4,7 @@ pub use vectorized_m31::*;
 #[cfg(target_arch = "x86_64")]
 pub(crate) mod m31_avx;
 #[cfg(target_arch = "x86_64")]
-pub(crate) use m31_avx::PackedM31;
+pub(crate) use m31_avx::AVXM31;
 
 #[cfg(target_arch = "aarch64")]
 pub mod m31_neon;
@@ -93,7 +93,7 @@ impl Field for M31 {
 
     const INV_2: M31 = M31 { v: 1 << 30 };
 
-    type BaseField = M31;
+    // type BaseField = M31;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -132,25 +132,25 @@ impl Field for M31 {
         self.try_inverse()
     }
 
+    // // #[inline(always)]
+    // // fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
+    // //     *self + *rhs
+    // // }
+
     // #[inline(always)]
-    // fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
-    //     *self + *rhs
+    // fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {
+    //     *self += rhs
     // }
 
-    #[inline(always)]
-    fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self += rhs
-    }
+    // #[inline(always)]
+    // fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
+    //     *self * rhs
+    // }
 
-    #[inline(always)]
-    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        *self * rhs
-    }
-
-    #[inline(always)]
-    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self *= rhs;
-    }
+    // #[inline(always)]
+    // fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
+    //     *self *= rhs;
+    // }
 
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
