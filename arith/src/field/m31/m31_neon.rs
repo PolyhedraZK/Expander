@@ -7,7 +7,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{Field, FieldSerde, M31, M31_MOD};
+use crate::{FiatShamirConfig, Field, FieldSerde, M31, M31_MOD};
 
 const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD; 4]) };
 const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
@@ -179,6 +179,22 @@ impl Field for NeonM31 {
         Self {
             v: unsafe { [vdupq_n_u32(m.v), vdupq_n_u32(m.v)] },
         }
+    }
+}
+
+impl FiatShamirConfig for NeonM31 {
+    type ChallengeField = M31;
+
+    fn scale(&self, challenge: &Self::ChallengeField) -> Self {
+        let packed_challenge = NeonM31::pack_full(*challenge);
+        *self * packed_challenge
+    }
+}
+
+impl From<M31> for NeonM31 {
+    #[inline(always)]
+    fn from(x: M31) -> Self {
+        NeonM31::pack_full(x)
     }
 }
 
