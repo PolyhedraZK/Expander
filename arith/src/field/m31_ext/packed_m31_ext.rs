@@ -6,7 +6,7 @@ use std::{
 
 use rand::RngCore;
 
-use crate::{Field, FieldSerde, PackedM31, VectorizedField};
+use crate::{Field, FieldSerde, PackedM31, VectorizedField, M31};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct PackedM31Ext3 {
@@ -55,7 +55,7 @@ impl Field for PackedM31Ext3 {
     const NAME: &'static str = "AVX Packed Mersenne 31 Extension 3";
 
     const SIZE: usize = 72;
-
+    
     // const INV_2: PackedM31Ext3 = PackedM31Ext3 {
     //     v: [PackedM31::INV_2, PackedM31::zero(), PackedM31::zero()],
     // };
@@ -125,12 +125,11 @@ impl Field for PackedM31Ext3 {
     /// Squaring
     #[inline(always)]
     fn square(&self) -> Self {
-        *self * *self
-        // let mut res = [PackedM31::default(); 3];
-        // res[0] = self.v[0] * self.v[0] + M31 { v: 10 } * (self.v[1] * self.v[2]);
-        // res[1] = self.v[0] * self.v[1].double() + M31 { v: 5 } * self.v[2] * self.v[2];
-        // res[2] = self.v[0] * self.v[2].double() + self.v[1] * self.v[1];
-        // Self { v: res }
+        let mut res = [PackedM31::default(); 3];
+        res[0] = self.v[0] * self.v[0] + PackedM31::pack_full(M31{v:10}) * (self.v[1] * self.v[2]);
+        res[1] = self.v[0] * self.v[1].double() + PackedM31::pack_full(M31{v:5}) * self.v[2] * self.v[2];
+        res[2] = self.v[0] * self.v[2].double() + self.v[1] * self.v[1];
+        Self { v: res }
     }
 
     #[inline(always)]

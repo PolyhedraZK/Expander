@@ -3,8 +3,7 @@ use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verif
 use rand::Rng;
 use sha2::Digest;
 
-const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
-const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
+const CIRCUIT_NAME: &str = "data/circuit8.txt";
 
 #[allow(dead_code)]
 fn gen_simple_circuit<F: VectorizedField>() -> Circuit<F> {
@@ -50,7 +49,7 @@ where
     F::PackedBaseField: Field<BaseField = F::BaseField>,
 {
     println!("Config created.");
-    let mut circuit = Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
+    let mut circuit = Circuit::<F>::load_circuit(CIRCUIT_NAME);
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
     // let mut circuit = gen_simple_circuit(); // for custom circuit
     println!("Circuit loaded.");
