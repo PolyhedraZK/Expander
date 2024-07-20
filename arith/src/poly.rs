@@ -1,6 +1,6 @@
 use ark_std::{end_timer, start_timer};
 
-use crate::Field;
+use crate::{FiatShamirConfig, Field};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 /// Definition for an MLE, with an associated type F.
@@ -11,8 +11,8 @@ pub struct MultiLinearPoly<F: Field> {
     pub evals: Vec<F>,
 }
 
-impl<F: Field> MultiLinearPoly<F> {
-    pub fn eval_multilinear(evals: &[F], x: &[F]) -> F {
+impl<F: Field + FiatShamirConfig> MultiLinearPoly<F> {
+    pub fn eval_multilinear(evals: &[F], x: &[F::ChallengeField]) -> F {
         let timer = start_timer!(|| format!("eval mle with {} vars", x.len()));
         assert_eq!(1 << x.len(), evals.len());
         let mut scratch = evals.to_vec();
@@ -20,7 +20,7 @@ impl<F: Field> MultiLinearPoly<F> {
         for r in x.iter() {
             log::trace!("scratch: {:?}", scratch);
             for i in 0..cur_eval_size {
-                scratch[i] = scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]) * r;
+                scratch[i] = scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]).scale(r);
             }
             cur_eval_size >>= 1;
         }

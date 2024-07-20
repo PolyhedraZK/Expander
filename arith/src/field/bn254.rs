@@ -4,7 +4,7 @@ use halo2curves::ff::{Field as Halo2Field, FromUniformBytes};
 use halo2curves::{bn256::Fr, ff::PrimeField};
 use rand::RngCore;
 
-use crate::{Field, FieldSerde};
+use crate::{FiatShamirConfig, Field, FieldSerde};
 
 impl Field for Fr {
     /// name
@@ -79,6 +79,14 @@ impl Field for Fr {
                 .try_into()
                 .unwrap(),
         )
+    }
+}
+
+impl FiatShamirConfig for Fr {
+    type ChallengeField = Self;
+
+    fn scale(&self, challenge: &Self::ChallengeField) -> Self {
+        self * challenge
     }
 }
 

@@ -1,4 +1,4 @@
-use arith::Field;
+use arith::{FiatShamirConfig, Field};
 
 use crate::{CircuitLayer, GkrScratchpad};
 
@@ -108,10 +108,10 @@ impl SumcheckMultilinearProdHelper {
         [p0, p1, p2]
     }
 
-    fn receive_challenge<F: Field>(
+    fn receive_challenge<F: Field + FiatShamirConfig>(
         &mut self,
         var_idx: usize,
-        r: F,
+        r: F::ChallengeField,
         bk_f: &mut [F],
         bk_hg: &mut [F],
         init_v: &[F],
@@ -125,9 +125,9 @@ impl SumcheckMultilinearProdHelper {
                 gate_exists[i] = false;
 
                 if var_idx == 0 {
-                    bk_f[i] = init_v[2 * i] + (init_v[2 * i + 1] - init_v[2 * i]) * r;
+                    bk_f[i] = init_v[2 * i] + (init_v[2 * i + 1] - init_v[2 * i]).scale(&r);
                 } else {
-                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]) * r;
+                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
                 }
 
                 bk_hg[i] = F::zero();
@@ -135,11 +135,11 @@ impl SumcheckMultilinearProdHelper {
                 gate_exists[i] = true;
 
                 if var_idx == 0 {
-                    bk_f[i] = init_v[2 * i] + (init_v[2 * i + 1] - init_v[2 * i]) * r;
+                    bk_f[i] = init_v[2 * i] + (init_v[2 * i + 1] - init_v[2 * i]).scale(&r);
                 } else {
-                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]) * r;
+                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
                 }
-                bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]) * r;
+                bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
             }
         }
 
@@ -149,16 +149,16 @@ impl SumcheckMultilinearProdHelper {
 }
 
 #[allow(dead_code)]
-pub(crate) struct SumcheckGkrHelper<'a, F: Field> {
-    pub(crate) rx: Vec<F>,
-    pub(crate) ry: Vec<F>,
+pub(crate) struct SumcheckGkrHelper<'a, F: Field + FiatShamirConfig> {
+    pub(crate) rx: Vec<F::ChallengeField>,
+    pub(crate) ry: Vec<F::ChallengeField>,
 
     layer: &'a CircuitLayer<F>,
     sp: &'a mut GkrScratchpad<F>,
-    rz0: &'a [F],
-    rz1: &'a [F],
-    alpha: F,
-    beta: F,
+    rz0: &'a [F::ChallengeField],
+    rz1: &'a [F::ChallengeField],
+    alpha: F::ChallengeField,
+    beta: F::ChallengeField,
 
     input_var_num: usize,
     output_var_num: usize,
@@ -167,13 +167,13 @@ pub(crate) struct SumcheckGkrHelper<'a, F: Field> {
     y_helper: SumcheckMultilinearProdHelper,
 }
 
-impl<'a, F: Field> SumcheckGkrHelper<'a, F> {
+impl<'a, F: Field + FiatShamirConfig> SumcheckGkrHelper<'a, F> {
     pub fn new(
         layer: &'a CircuitLayer<F>,
-        rz0: &'a [F],
-        rz1: &'a [F],
-        alpha: &'a F,
-        beta: &'a F,
+        rz0: &'a [F::ChallengeField],
+        rz1: &'a [F::ChallengeField],
+        alpha: &'a F::ChallengeField,
+        beta: &'a F::ChallengeField,
         sp: &'a mut GkrScratchpad<F>,
     ) -> Self {
         SumcheckGkrHelper {
@@ -217,7 +217,7 @@ impl<'a, F: Field> SumcheckGkrHelper<'a, F> {
         }
     }
 
-    pub fn receive_challenge(&mut self, var_idx: usize, r: F) {
+    pub fn receive_challenge(&mut self, var_idx: usize, r: F::ChallengeField) {
         if var_idx < self.input_var_num {
             self.x_helper.receive_challenge(
                 var_idx,
@@ -285,11 +285,12 @@ impl<'a, F: Field> SumcheckGkrHelper<'a, F> {
         }
 
         for g in mul.iter() {
-            hg_vals[g.i_ids[0]] += vals.evals[g.i_ids[1]] * g.coef * eq_evals_at_rz0[g.o_id];
+            hg_vals[g.i_ids[0]] +=
+                vals.evals[g.i_ids[1]].scale(&(g.coef * eq_evals_at_rz0[g.o_id]));
             gate_exists[g.i_ids[0]] = true;
         }
         for g in add.iter() {
-            hg_vals[g.i_ids[0]] += g.coef * eq_evals_at_rz0[g.o_id];
+            hg_vals[g.i_ids[0]] += F::from(g.coef * eq_evals_at_rz0[g.o_id]);
             gate_exists[g.i_ids[0]] = true;
         }
     }
@@ -312,7 +313,7 @@ impl<'a, F: Field> SumcheckGkrHelper<'a, F> {
 
         eq_eval_at(
             &self.rx,
-            &F::one(),
+            &F::ChallengeField::one(),
             eq_evals_at_rx,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -320,7 +321,7 @@ impl<'a, F: Field> SumcheckGkrHelper<'a, F> {
 
         for g in mul.iter() {
             hg_vals[g.i_ids[1]] +=
-                v_rx * eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]] * g.coef;
+                v_rx.scale(&(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]] * g.coef));
             gate_exists[g.i_ids[1]] = true;
         }
     }

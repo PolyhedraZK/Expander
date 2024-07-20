@@ -13,7 +13,6 @@ use crate::{Field, FieldSerde};
 use std::{
     io::{Read, Write},
     iter::{Product, Sum},
-    mem::size_of,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
@@ -86,7 +85,7 @@ impl M31 {
 impl Field for M31 {
     const NAME: &'static str = "Mersenne 31";
 
-    const SIZE: usize = size_of::<u32>();
+    const SIZE: usize = 4;
 
     const INV_2: M31 = M31 { v: 1 << 30 };
 

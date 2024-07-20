@@ -114,6 +114,17 @@ pub trait Field:
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;
 }
 
+/// Configurations for the Fiat-Shamir transform.
+pub trait FiatShamirConfig: From<Self::ChallengeField> {
+    // todo: consolidate gkr config
+
+    /// Field for the challenge. Can be self.
+    type ChallengeField: Field + FieldSerde + Send;
+
+    /// scale self with the challenge
+    fn scale(&self, challenge: &Self::ChallengeField) -> Self;
+}
+
 /// Extension Field of a given field.
 pub trait ExtensionField:
     Field

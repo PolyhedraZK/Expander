@@ -4,7 +4,7 @@ use std::{
     thread,
 };
 
-use arith::{Field, FieldSerde, VectorizedM31};
+use arith::{FiatShamirConfig, Field, FieldSerde, VectorizedM31};
 use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
 use halo2curves::bn256::Fr;
@@ -51,7 +51,7 @@ fn main() {
 
 fn run_benchmark<VecF>(args: &Args, config: Config)
 where
-    VecF: Field + FieldSerde + Send + 'static,
+    VecF: Field + FieldSerde + FiatShamirConfig + Send + 'static,
 {
     println!("benchmarking keccak over {}", args.field);
     println!(

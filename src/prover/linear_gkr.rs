@@ -1,11 +1,14 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::{Field, FieldSerde};
+use arith::{FiatShamirConfig, Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 
 use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
 
-pub fn grind<F: Field + FieldSerde>(transcript: &mut Transcript, config: &Config) {
+pub fn grind<F: Field + FieldSerde + FiatShamirConfig>(
+    transcript: &mut Transcript,
+    config: &Config,
+) {
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
 
     let mut hash_bytes = vec![];
@@ -22,12 +25,12 @@ pub fn grind<F: Field + FieldSerde>(transcript: &mut Transcript, config: &Config
     end_timer!(timer);
 }
 
-pub struct Prover<F: Field> {
+pub struct Prover<F: Field + FieldSerde + FiatShamirConfig> {
     config: Config,
     sp: Vec<GkrScratchpad<F>>,
 }
 
-impl<F: Field + FieldSerde> Prover<F> {
+impl<F: Field + FieldSerde + FiatShamirConfig> Prover<F> {
     pub fn new(config: &Config) -> Self {
         // assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
@@ -59,17 +62,14 @@ impl<F: Field + FieldSerde> Prover<F> {
             .collect();
     }
 
-    pub fn prove(&mut self, c: &Circuit<F>) -> (Vec<F>, Proof)
-// where
-    //     F::PackedBaseField: Field<BaseField = F::BaseField>,
-    {
+    pub fn prove(&mut self, c: &Circuit<F>) -> (Vec<F>, Proof) {
         let timer = start_timer!(|| "prove");
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
         // PC commit
         let commitment = RawCommitment::new(c.layers[0].input_vals.evals.clone());
 
-        // println!("commitment size: {} {}", commitment.size(), F::SIZE);
+        println!("commitment size: {} {}", commitment.size(), F::SIZE);
 
         let buffer_v = vec![F::default(); commitment.size() / F::SIZE];
         let buffer = unsafe {
@@ -79,10 +79,10 @@ impl<F: Field + FieldSerde> Prover<F> {
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(buffer, commitment.size());
 
-        // println!("commitment size: {}", commitment.size());
+        println!("commitment size: {}", commitment.size());
         grind::<F>(&mut transcript, &self.config);
 
-        // println!("after grind");
+        println!("after grind");
         let (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
 
         // open

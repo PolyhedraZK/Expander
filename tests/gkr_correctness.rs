@@ -1,4 +1,4 @@
-use arith::{Field, FieldSerde, VectorizedM31};
+use arith::{FiatShamirConfig, Field, FieldSerde, VectorizedM31};
 use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier};
 use halo2curves::bn256::Fr;
 use rand::Rng;
@@ -8,7 +8,7 @@ const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
 const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
 
 #[allow(dead_code)]
-fn gen_simple_circuit<F: Field>() -> Circuit<F> {
+fn gen_simple_circuit<F: Field + FieldSerde + FiatShamirConfig>() -> Circuit<F> {
     let mut circuit = Circuit::default();
     let mut l0 = CircuitLayer::default();
     l0.input_var_num = 2;
@@ -16,22 +16,22 @@ fn gen_simple_circuit<F: Field>() -> Circuit<F> {
     l0.add.push(GateAdd {
         i_ids: [0],
         o_id: 0,
-        coef: F::from(1),
+        coef: F::ChallengeField::from(1),
     });
     l0.add.push(GateAdd {
         i_ids: [0],
         o_id: 1,
-        coef: F::from(1),
+        coef: F::ChallengeField::from(1),
     });
     l0.add.push(GateAdd {
         i_ids: [1],
         o_id: 1,
-        coef: F::from(1),
+        coef: F::ChallengeField::from(1),
     });
     l0.mul.push(GateMul {
         i_ids: [0, 2],
         o_id: 2,
-        coef: F::from(1),
+        coef: F::ChallengeField::from(1),
     });
     circuit.layers.push(l0.clone());
     circuit
@@ -47,7 +47,7 @@ fn test_gkr_correctness() {
 
 fn test_gkr_correctness_helper<F>(config: &Config)
 where
-    F: Field + FieldSerde + Send + 'static,
+    F: Field + FieldSerde + FiatShamirConfig + Send + 'static,
 {
     println!("Config created.");
     let mut circuit = Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
