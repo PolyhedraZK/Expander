@@ -39,7 +39,7 @@ pub struct M31 {
 impl FieldSerde for M31 {
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) {
-        writer.write(self.v.to_le_bytes().as_ref()).unwrap(); // todo: error propagation
+        writer.write_all(self.v.to_le_bytes().as_ref()).unwrap(); // todo: error propagation
     }
 
     #[inline(always)]
@@ -129,26 +129,6 @@ impl Field for M31 {
         self.try_inverse()
     }
 
-    // // #[inline(always)]
-    // // fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
-    // //     *self + *rhs
-    // // }
-
-    // #[inline(always)]
-    // fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-    //     *self += rhs
-    // }
-
-    // #[inline(always)]
-    // fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
-    //     *self * rhs
-    // }
-
-    // #[inline(always)]
-    // fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-    //     *self *= rhs;
-    // }
-
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
         self.v
@@ -215,8 +195,8 @@ impl Add<&M31> for M31 {
     #[inline(always)]
     fn add(self, rhs: &M31) -> Self::Output {
         let mut vv = self.v + rhs.v;
-        if vv >= M31_MOD as u32 {
-            vv -= M31_MOD as u32;
+        if vv >= M31_MOD {
+            vv -= M31_MOD;
         }
         M31 { v: vv }
     }
@@ -256,11 +236,7 @@ impl Neg for M31 {
     #[inline(always)]
     fn neg(self) -> Self::Output {
         M31 {
-            v: if self.v == 0 {
-                0
-            } else {
-                M31_MOD as u32 - self.v
-            },
+            v: if self.v == 0 { 0 } else { M31_MOD - self.v },
         }
     }
 }
@@ -301,11 +277,7 @@ impl From<u32> for M31 {
     #[inline(always)]
     fn from(x: u32) -> Self {
         M31 {
-            v: if x < M31_MOD as u32 {
-                x
-            } else {
-                x % M31_MOD as u32
-            },
+            v: if x < M31_MOD { x } else { x % M31_MOD },
         }
     }
 }
@@ -320,7 +292,6 @@ impl M31 {
     }
 
     /// credit: https://github.com/Plonky3/Plonky3/blob/ed21a5e11cb20effadaab606598ccad4e70e1a3e/mersenne-31/src/mersenne_31.rs#L235
-
     fn try_inverse(&self) -> Option<Self> {
         if self.is_zero() {
             return None;

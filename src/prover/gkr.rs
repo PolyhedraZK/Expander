@@ -15,7 +15,6 @@ pub fn gkr_prove<F>(
 ) -> (Vec<F>, Vec<Vec<F>>, Vec<Vec<F>>)
 where
     F: Field + FieldSerde,
-    // F::PackedBaseField: Field<BaseField = F::BaseField>,
 {
     let timer = start_timer!(|| "gkr prove");
     let layer_num = circuit.layers.len();

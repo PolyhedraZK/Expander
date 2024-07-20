@@ -6,12 +6,10 @@ use arith::{Field, FieldSerde};
 #[derive(Debug, Clone, Default)]
 pub struct Proof {
     idx: usize,
-    // ZZ: shall we use Vec<[u8; F::SIZE]> so we can remove idx field?
     pub bytes: Vec<u8>,
 }
 
 impl Proof {
-    // ZZ: may be all the functions here can be pub(crate)?
     #[inline(always)]
     pub fn append_u8_slice(&mut self, buffer: &[u8], size: usize) {
         self.bytes.extend_from_slice(&buffer[..size]);

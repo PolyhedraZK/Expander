@@ -152,7 +152,7 @@ impl Field for AVXM31 {
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
         // slow, should not be used in production
-        let m31_vec = unsafe { transmute::<_, [M31; 8]>(self.v) };
+        let m31_vec = unsafe { transmute::<__m256i, [M31; 8]>(self.v) };
         let is_non_zero = m31_vec.iter().all(|x| !x.is_zero());
         if !is_non_zero {
             return None;

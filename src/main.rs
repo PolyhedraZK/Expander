@@ -4,12 +4,7 @@ use std::{
     thread,
 };
 
-use arith::{
-    Field,
-    FieldSerde,
-    // VectorizedField, VectorizedFr,
-    VectorizedM31,
-};
+use arith::{Field, FieldSerde, VectorizedM31};
 use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
 
@@ -52,9 +47,6 @@ fn main() {
 fn run_benchmark<VecF>(args: &Args, config: Config)
 where
     VecF: Field + FieldSerde + Send + 'static,
-    // VecF: VectorizedField + FieldSerde + Send + 'static,
-    // VecF::BaseField: Send,
-    // VecF::PackedBaseField: Field<BaseField = VecF::BaseField>,
 {
     println!("benchmarking keccak over {}", args.field);
     println!(

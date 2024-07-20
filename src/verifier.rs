@@ -65,8 +65,8 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
     let var_num = layer.input_var_num;
     let mut sum = (0..config.get_num_repetitions())
         .map(|i| {
-            claimed_v0[i] * &alpha + claimed_v1[i] * &beta
-                - &eval_sparse_circuit_connect_poly(
+            claimed_v0[i] * alpha + claimed_v1[i] * beta
+                - eval_sparse_circuit_connect_poly(
                     &layer.const_,
                     &rz0[i],
                     &rz1[i],
@@ -112,7 +112,7 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
             if i_var == var_num - 1 {
                 vx_claim[j] = proof.get_next_and_step();
                 sum[j] -= vx_claim[j]
-                    * &eval_sparse_circuit_connect_poly(
+                    * eval_sparse_circuit_connect_poly(
                         &layer.add,
                         &rz0[j],
                         &rz1[j],
@@ -130,7 +130,7 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde>(
         verified &= sum[j]
             == vx_claim[j]
                 * vy_claim[j]
-                * &eval_sparse_circuit_connect_poly(
+                * eval_sparse_circuit_connect_poly(
                     &layer.mul,
                     &rz0[j],
                     &rz1[j],
