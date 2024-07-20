@@ -1,6 +1,6 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::{Field, FieldSerde, };
+use arith::{Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 
 use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
@@ -60,7 +60,7 @@ impl<F: Field + FieldSerde> Prover<F> {
     }
 
     pub fn prove(&mut self, c: &Circuit<F>) -> (Vec<F>, Proof)
-    // where
+// where
     //     F::PackedBaseField: Field<BaseField = F::BaseField>,
     {
         let timer = start_timer!(|| "prove");

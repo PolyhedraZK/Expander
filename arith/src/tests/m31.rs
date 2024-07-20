@@ -1,11 +1,10 @@
 use std::io::Cursor;
 
-use crate::{FieldSerde, 
-    VectorizedM31,  M31};
+use crate::{FieldSerde, VectorizedM31, M31};
 
 use super::field::{
     random_field_tests,
-    random_inversion_tests,
+    // random_inversion_tests,
     // random_extension_field_tests,
     // random_vectorized_field_tests,
     test_basic_field_op,
@@ -14,7 +13,7 @@ use super::field::{
 #[test]
 fn test_field() {
     random_field_tests::<M31>("M31".to_string());
-    random_inversion_tests::<M31>("M31".to_string());
+    // random_inversion_tests::<M31>("M31".to_string());
     // random_small_field_tests::<M31>("M31".to_string());
 
     random_field_tests::<VectorizedM31>("Vectorized M31".to_string());

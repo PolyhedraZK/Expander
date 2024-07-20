@@ -1,5 +1,10 @@
 use std::{
-    arch::aarch64::*, fmt::Debug, io::{Read, Write}, iter::{Product, Sum}, mem::{size_of, transmute}, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}
+    arch::aarch64::*,
+    fmt::Debug,
+    io::{Read, Write},
+    iter::{Product, Sum},
+    mem::{size_of, transmute},
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 use crate::{Field, FieldSerde, M31, M31_MOD};
@@ -34,7 +39,6 @@ impl NeonM31 {
     }
 }
 
-
 impl FieldSerde for NeonM31 {
     #[inline(always)]
     /// serialize self into bytes
@@ -60,7 +64,6 @@ impl FieldSerde for NeonM31 {
         }
     }
 }
-
 
 impl Field for NeonM31 {
     const NAME: &'static str = "Neon Packed Mersenne 31";

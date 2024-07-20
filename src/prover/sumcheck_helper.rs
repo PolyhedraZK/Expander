@@ -1,4 +1,4 @@
-use arith::{Field};
+use arith::Field;
 
 use crate::{CircuitLayer, GkrScratchpad};
 
@@ -66,7 +66,7 @@ impl SumcheckMultilinearProdHelper {
         }
     }
 
-    fn poly_eval_at<F:Field>(
+    fn poly_eval_at<F: Field>(
         &self,
         var_idx: usize,
         degree: usize,
@@ -75,7 +75,7 @@ impl SumcheckMultilinearProdHelper {
         init_v: &[F],
         gate_exists: &[bool],
     ) -> [F; 3]
-    // where
+// where
     //     F::PackedBaseField: Field,
     {
         assert_eq!(degree, 2);
@@ -93,20 +93,20 @@ impl SumcheckMultilinearProdHelper {
                 continue;
             }
             // for j in 0..F::VECTORIZE_SIZE {
-                let f_v_0 = src_v[i * 2];//.as_packed_slices()[j];
-                let f_v_1 = src_v[i * 2 + 1];//.as_packed_slices()[j];
-                let hg_v_0 = bk_hg[i * 2];//.as_packed_slices()[j];
-                let hg_v_1 = bk_hg[i * 2 + 1];//.as_packed_slices()[j];
-                p0 += f_v_0 * hg_v_0;
-                log::trace!(
-                    "p0.v+= {:?} * {:?} =  {:?}",
-                    // j,
-                    f_v_0,
-                    hg_v_0,
-                    f_v_0 * hg_v_0 + p1//.as_packed_slices()[j]
-                );
-                p1 += f_v_1 * hg_v_1;
-                p2 += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
+            let f_v_0 = src_v[i * 2]; //.as_packed_slices()[j];
+            let f_v_1 = src_v[i * 2 + 1]; //.as_packed_slices()[j];
+            let hg_v_0 = bk_hg[i * 2]; //.as_packed_slices()[j];
+            let hg_v_1 = bk_hg[i * 2 + 1]; //.as_packed_slices()[j];
+            p0 += f_v_0 * hg_v_0;
+            log::trace!(
+                "p0.v+= {:?} * {:?} =  {:?}",
+                // j,
+                f_v_0,
+                hg_v_0,
+                f_v_0 * hg_v_0 + p1 //.as_packed_slices()[j]
+            );
+            p1 += f_v_1 * hg_v_1;
+            p2 += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
             // }
         }
         p2 = p1 * F::from(6) + p0 * F::from(3) - p2 * F::from(2);
@@ -121,7 +121,7 @@ impl SumcheckMultilinearProdHelper {
         bk_hg: &mut [F],
         init_v: &[F],
         gate_exists: &mut [bool],
-    ) 
+    )
     // where
     //     F::PackedBaseField: Field<BaseField = F::BaseField>,
     {
@@ -132,59 +132,45 @@ impl SumcheckMultilinearProdHelper {
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 gate_exists[i] = false;
                 // for j in 0..F::VECTORIZE_SIZE {
-                    if var_idx == 0 {
-                        bk_f[i] = init_v[2 * i]
-                        + (init_v[2 * i + 1]
-                            - init_v[2 * i])
-                            *&r;
-                        // bk_f[i].mut_packed_slices()[j] = init_v[2 * i].as_packed_slices()[j]
-                        //     + (init_v[2 * i + 1].as_packed_slices()[j]
-                        //         - init_v[2 * i].as_packed_slices()[j])
-                        //         .mul_base_elem(&r);
-                    } else {
-                        bk_f[i] = bk_f[2 * i]
-                            + (bk_f[2 * i + 1]
-                                - bk_f[2 * i])*r;
-                        // bk_f[i].mut_packed_slices()[j] = bk_f[2 * i].as_packed_slices()[j]
-                        //     + (bk_f[2 * i + 1].as_packed_slices()[j]
-                        //         - bk_f[2 * i].as_packed_slices()[j])
-                        //         .mul_base_elem(&r);
-                    }
+                if var_idx == 0 {
+                    bk_f[i] = init_v[2 * i] + (init_v[2 * i + 1] - init_v[2 * i]) * &r;
+                    // bk_f[i].mut_packed_slices()[j] = init_v[2 * i].as_packed_slices()[j]
+                    //     + (init_v[2 * i + 1].as_packed_slices()[j]
+                    //         - init_v[2 * i].as_packed_slices()[j])
+                    //         .mul_base_elem(&r);
+                } else {
+                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]) * r;
+                    // bk_f[i].mut_packed_slices()[j] = bk_f[2 * i].as_packed_slices()[j]
+                    //     + (bk_f[2 * i + 1].as_packed_slices()[j]
+                    //         - bk_f[2 * i].as_packed_slices()[j])
+                    //         .mul_base_elem(&r);
+                }
                 // }
                 bk_hg[i] = F::zero();
             } else {
                 gate_exists[i] = true;
                 // for j in 0..F::VECTORIZE_SIZE {
-                    if var_idx == 0 {
-                        bk_f[i] = init_v[2 * i]
-                        + (init_v[2 * i + 1]
-                            - init_v[2 * i])*r;
+                if var_idx == 0 {
+                    bk_f[i] = init_v[2 * i] + (init_v[2 * i + 1] - init_v[2 * i]) * r;
 
+                    // bk_f[i].mut_packed_slices()[j] = init_v[2 * i].as_packed_slices()[j]
+                    //     + (init_v[2 * i + 1].as_packed_slices()[j]
+                    //         - init_v[2 * i].as_packed_slices()[j])
+                    // .mul_base_elem(&r);
+                } else {
+                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]) * r;
 
-                        // bk_f[i].mut_packed_slices()[j] = init_v[2 * i].as_packed_slices()[j]
-                        //     + (init_v[2 * i + 1].as_packed_slices()[j]
-                        //         - init_v[2 * i].as_packed_slices()[j])
-                                // .mul_base_elem(&r);
-                    } else {
-                        bk_f[i] = bk_f[2 * i]
-                        + (bk_f[2 * i + 1]
-                            - bk_f[2 * i])*r;
-
-
-                        // bk_f[i].mut_packed_slices()[j] = bk_f[2 * i].as_packed_slices()[j]
-                        //     + (bk_f[2 * i + 1].as_packed_slices()[j]
-                        //         - bk_f[2 * i].as_packed_slices()[j])
-                        //         .mul_base_elem(&r);
-                    }
-                    bk_hg[i]= bk_hg[2 * i]
-                    + (bk_hg[2 * i + 1]
-                        - bk_hg[2 * i])*r;
-
-
-                    // bk_hg[i].mut_packed_slices()[j] = bk_hg[2 * i].as_packed_slices()[j]
-                    //     + (bk_hg[2 * i + 1].as_packed_slices()[j]
-                    //         - bk_hg[2 * i].as_packed_slices()[j])
+                    // bk_f[i].mut_packed_slices()[j] = bk_f[2 * i].as_packed_slices()[j]
+                    //     + (bk_f[2 * i + 1].as_packed_slices()[j]
+                    //         - bk_f[2 * i].as_packed_slices()[j])
                     //         .mul_base_elem(&r);
+                }
+                bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]) * r;
+
+                // bk_hg[i].mut_packed_slices()[j] = bk_hg[2 * i].as_packed_slices()[j]
+                //     + (bk_hg[2 * i + 1].as_packed_slices()[j]
+                //         - bk_hg[2 * i].as_packed_slices()[j])
+                //         .mul_base_elem(&r);
                 // }
             }
         }
@@ -337,12 +323,11 @@ impl<'a, F: Field> SumcheckGkrHelper<'a, F>
         }
 
         for g in mul.iter() {
-            hg_vals[g.i_ids[0]] +=
-                vals.evals[g.i_ids[1]]*&(g.coef * eq_evals_at_rz0[g.o_id]);
+            hg_vals[g.i_ids[0]] += vals.evals[g.i_ids[1]] * &(g.coef * eq_evals_at_rz0[g.o_id]);
             gate_exists[g.i_ids[0]] = true;
         }
         for g in add.iter() {
-            hg_vals[g.i_ids[0]]+=(&(g.coef * eq_evals_at_rz0[g.o_id]));
+            hg_vals[g.i_ids[0]] += &(g.coef * eq_evals_at_rz0[g.o_id]);
             gate_exists[g.i_ids[0]] = true;
         }
     }
@@ -372,8 +357,8 @@ impl<'a, F: Field> SumcheckGkrHelper<'a, F>
         );
 
         for g in mul.iter() {
-            hg_vals[g.i_ids[1]] += v_rx
-                *(&(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]] * g.coef));
+            hg_vals[g.i_ids[1]] +=
+                v_rx * (&(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]] * g.coef));
             gate_exists[g.i_ids[1]] = true;
         }
     }

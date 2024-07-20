@@ -1,6 +1,4 @@
-use arith::{Field, FieldSerde, 
-    // VectorizedField, VectorizedFr, 
-    VectorizedM31};
+use arith::{Field, FieldSerde, VectorizedM31};
 use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier};
 use halo2curves::bn256::Fr;
 use rand::Rng;
@@ -41,21 +39,15 @@ fn gen_simple_circuit<F: Field>() -> Circuit<F> {
 
 #[test]
 fn test_gkr_correctness() {
-    env_logger::init();
-
-    // let config = Config::m31_config();
-    // test_gkr_correctness_helper::<VectorizedM31>(&config);
+    let config = Config::m31_config();
+    test_gkr_correctness_helper::<VectorizedM31>(&config);
     let config = Config::bn254_config();
     test_gkr_correctness_helper::<Fr>(&config);
 }
 
 fn test_gkr_correctness_helper<F>(config: &Config)
-
 where
-F: Field + FieldSerde + Send + 'static,
-// where
-//     F: VectorizedField + FieldSerde,
-//     F::PackedBaseField: Field<BaseField = F::BaseField>,
+    F: Field + FieldSerde + Send + 'static,
 {
     println!("Config created.");
     let mut circuit = Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);

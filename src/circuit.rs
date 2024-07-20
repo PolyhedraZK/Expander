@@ -40,12 +40,12 @@ impl<F: Field> CircuitLayer<F> {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let i1 = &self.input_vals.evals[gate.i_ids[1]];
             let o = &mut res[gate.o_id];
-            *o += (*i0 * i1)* &gate.coef;
+            *o += (*i0 * i1) * &gate.coef;
         }
         for gate in &self.add {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
-            *o += *i0* &gate.coef;
+            *o += *i0 * &gate.coef;
         }
         for gate in &self.const_ {
             let o = &mut res[gate.o_id];

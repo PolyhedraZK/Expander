@@ -1,4 +1,4 @@
-use arith::{Field, FieldSerde,};// VectorizedField};
+use arith::{Field, FieldSerde}; // VectorizedField};
 
 use crate::{CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, Transcript};
 

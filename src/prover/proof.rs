@@ -57,5 +57,4 @@ impl FieldSerde for Proof {
     fn deserialize_from_ecc_format<R: Read>(_reader: R) -> Self {
         unimplemented!("not implemented for Proof")
     }
-
 }

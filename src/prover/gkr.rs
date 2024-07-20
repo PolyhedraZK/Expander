@@ -1,6 +1,6 @@
 //! This module implements the core GKR IOP.
 
-use arith::{Field, FieldSerde, MultiLinearPoly, };
+use arith::{Field, FieldSerde, MultiLinearPoly};
 use ark_std::{end_timer, start_timer};
 
 use crate::{sumcheck_prove_gkr_layer, Circuit, Config, GkrScratchpad, Transcript};

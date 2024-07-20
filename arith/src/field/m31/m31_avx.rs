@@ -7,17 +7,15 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{Field, FieldSerde,  M31, M31_MOD};
+use rand::{Rng, RngCore};
 
-pub(super) const M31_PACK_SIZE: usize = 8;
-pub(super) const M31_VECTORIZE_SIZE: usize = 1;
+use crate::{Field, FieldSerde, M31, M31_MOD};
 
-const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; 8]) };
-const PACKED_0: __m256i = unsafe { transmute([0; 8]) };
+const M31_PACK_SIZE: usize = 8;
+const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; M31_PACK_SIZE]) };
+const PACKED_0: __m256i = unsafe { transmute([0; M31_PACK_SIZE]) };
 const PACKED_MOD_EPI64: __m256i = unsafe { transmute([M31_MOD as u64; 4]) };
-const _PACKED_MOD_SQUARE: __m256 = unsafe { transmute([(M31_MOD as u64 * M31_MOD as u64); 4]) };
-const _PACKED_MOD_512: __m512i = unsafe { transmute([M31_MOD as i64; 8]) };
-pub(crate) const PACKED_INV_2: __m256i = unsafe { transmute([1 << 30; 8]) };
+const PACKED_INV_2: __m256i = unsafe { transmute([1 << 30; M31_PACK_SIZE]) };
 
 #[inline(always)]
 unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
@@ -31,9 +29,6 @@ unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
 unsafe fn mod_reduce_epi32(x: __m256i) -> __m256i {
     _mm256_add_epi32(_mm256_and_si256(x, PACKED_MOD), _mm256_srli_epi32(x, 31))
 }
-
-use mod_reduce_epi64 as mod_reduce;
-use rand::{Rng, RngCore};
 
 #[derive(Clone, Copy)]
 pub struct AVXM31 {
@@ -83,38 +78,7 @@ impl FieldSerde for AVXM31 {
         }
         Self::pack_full(u32::from_le_bytes(buf[..4].try_into().unwrap()).into())
     }
-
 }
-
-// impl VectorizedField for AVXM31{
-//     /// pack size, size for each packed PackedBaseField
-//     const PACK_SIZE: usize = 1;
-
-//     /// size of the vector
-//     const VECTORIZE_SIZE: usize = 8;
-
-//     /// type of the based field, if applicable
-//     type Field = M31;
-
-//     type PackedField = Self;
-
-//     /// expose the internal elements
-//     fn as_packed_slices(&self) -> &[Self::PackedField];
-
-//     /// expose the internal elements mutable
-//     fn mut_packed_slices(&mut self) -> &mut [Self::PackedField];
-
-//     // // /// Add the field element with its base field element
-//     // // fn add_base_elem(&self, rhs: &Self::BaseField) -> Self;
-
-//     // /// Add the field element with its base field element
-//     // fn add_assign_base_elem(&mut self, rhs: &Self::Field);
-
-//     /// multiply the field element with its base field element
-//     // todo! rename to scalar multiplication
-//     fn mul_packed_elem(&self, rhs: &Self::PackedField) -> Self;
-// }
-
 
 impl Field for AVXM31 {
     const NAME: &'static str = "AVX Packed Mersenne 31";
@@ -164,6 +128,7 @@ impl Field for AVXM31 {
 
     #[inline(always)]
     fn random_bool(mut rng: impl RngCore) -> Self {
+        // TODO: optimize this code
         AVXM31 {
             v: unsafe {
                 _mm256_setr_epi32(
@@ -186,32 +151,26 @@ impl Field for AVXM31 {
 
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
-        unimplemented!()
+        // slow, should not be used in production
+        let m31_vec = unsafe { transmute::<_, [M31; 8]>(self.v) };
+        let is_non_zero = m31_vec.iter().all(|x| !x.is_zero());
+        if !is_non_zero {
+            return None;
+        }
+
+        let m32_vec_inv = m31_vec
+            .iter()
+            .map(|x| x.inv().unwrap())
+            .collect::<Vec<M31>>();
+        Some(Self {
+            v: unsafe { transmute::<[M31; 8], __m256i>(m32_vec_inv.try_into().unwrap()) },
+        })
     }
-
-    // #[inline(always)]
-    // fn add_base_elem(&self, _rhs: &Self::BaseField) -> Self {
-    //     unimplemented!()
-    // }
-
-    // #[inline(always)]
-    // fn add_assign_base_elem(&mut self, _rhs: &Self::BaseField) {
-    //     unimplemented!()
-    // }
-
-    // #[inline(always)]
-    // fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
-    //     *self * rhs
-    // }
-
-    // #[inline(always)]
-    // fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-    //     *self = *self * rhs;
-    // }
 
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
+
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         let m = M31::from_uniform_bytes(bytes);
         Self {
@@ -267,8 +226,8 @@ impl Mul<&AVXM31> for AVXM31 {
             let rhs_shifted = _mm256_srli_epi64::<32>(rhs.v);
             let mut xa_even = _mm256_mul_epi32(self.v, rhs.v);
             let mut xa_odd = _mm256_mul_epi32(x_shifted, rhs_shifted);
-            xa_even = mod_reduce(xa_even);
-            xa_odd = mod_reduce(xa_odd);
+            xa_even = mod_reduce_epi64(xa_even);
+            xa_odd = mod_reduce_epi64(xa_odd);
             AVXM31 {
                 v: mod_reduce_epi32(_mm256_or_si256(xa_even, _mm256_slli_epi64::<32>(xa_odd))),
             }

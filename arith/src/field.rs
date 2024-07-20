@@ -114,40 +114,6 @@ pub trait Field:
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;
 }
 
-// /// A vector of Field elements.
-// pub trait VectorizedField: Field {
-//     /// pack size, size for each packed PackedBaseField
-//     const PACK_SIZE: usize;
-
-//     /// size of the vector
-//     const VECTORIZE_SIZE: usize;
-
-//     /// type of the based field, if applicable
-//     type Field: Default + Clone;
-
-//     type PackedField: Default + Clone;
-
-//     /// expose the internal elements
-//     fn as_packed_slices(&self) -> &[Self::PackedField];
-
-//     /// expose the internal elements mutable
-//     fn mut_packed_slices(&mut self) -> &mut [Self::PackedField];
-
-//     // // /// Add the field element with its base field element
-//     // // fn add_base_elem(&self, rhs: &Self::BaseField) -> Self;
-
-//     // /// Add the field element with its base field element
-//     // fn add_assign_base_elem(&mut self, rhs: &Self::Field);
-
-//     /// multiply the field element with its base field element
-//     // todo! rename to scalar multiplication
-//     fn mul_packed_elem(&self, rhs: &Self::PackedField) -> Self;
-
-//     // /// multiply the field element with its base field element
-//     // // todo! rename to scalar multiplication
-//     // fn mul_assign_base_elem(&mut self, rhs: &Self::Field);
-// }
-
 /// Extension Field of a given field.
 pub trait ExtensionField:
     Field
@@ -183,15 +149,8 @@ pub trait FieldSerde {
     fn deserialize_from<R: Read>(reader: R) -> Self;
 
     /// deserialize bytes into field following ecc format
-    /// 
+    ///
     fn deserialize_from_ecc_format<R: Read>(_reader: R) -> Self;
-    // fn deserialize_from_ecc_format<R: Read>(_reader: R) -> Self
-    // where
-    //     Self: Sized,
-    // {
-    //     // add default implementation to avoid duplications when this isn't required
-    //     unimplemented!()
-    // }
 }
 
 impl FieldSerde for u64 {
@@ -212,8 +171,7 @@ impl FieldSerde for u64 {
         u64::from_le_bytes(buffer)
     }
 
-    fn deserialize_from_ecc_format<R: Read>(_reader: R) -> Self
-    {
+    fn deserialize_from_ecc_format<R: Read>(_reader: R) -> Self {
         unimplemented!("not implemented for u64")
     }
 }

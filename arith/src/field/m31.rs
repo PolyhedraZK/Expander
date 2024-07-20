@@ -6,6 +6,7 @@ pub(crate) mod m31_avx;
 
 #[cfg(target_arch = "aarch64")]
 pub mod m31_neon;
+
 use rand::RngCore;
 
 use crate::{Field, FieldSerde};
