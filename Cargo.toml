@@ -17,6 +17,7 @@ halo2curves.workspace = true
 warp = "0.3.7"
 tokio = { version = "1.38.0", features = ["full"] }
 bytes = "1.6.0"
+env_logger = "0.11.3"
 
 [[bin]]
 name = "expander-exec"
