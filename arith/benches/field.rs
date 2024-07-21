@@ -1,13 +1,13 @@
 // this module benchmarks the performance of different field operations
 
-use arith::{Field, M31Ext3, VectorizedM31, VectorizedM31Ext3, M31};
+#[cfg(target_arch = "x86_64")]
+use arith::VectorizedM31Ext3;
+
+use arith::{Field, M31Ext3, VectorizedM31, M31};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use halo2curves::bn256::Fr;
 use tynm::type_name;
-
-// #[cfg(target_arch = "x86_64")]
-// use arith::PackedM31Ext3;
 
 fn random_element<F: Field>() -> F {
     let mut rng = test_rng();
