@@ -12,6 +12,8 @@ use halo2curves::bn256::Fr;
 
 const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
 const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
+// circuit for repeating Poseidon for 120 times
+const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
 
 const CIRCUIT_COPY_SIZE: usize = 8;
 const M31_PACKSIZE: usize = 8;
@@ -21,9 +23,13 @@ const FR_PACKSIZE: usize = 1;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Curve id
-    #[arg(short, long,default_value_t = String::from("fr"))]
+    /// Field Identifier: fr, m31, m31ext3
+    #[arg(short, long,default_value_t = String::from("m31ext3"))]
     field: String,
+
+    // scheme: keccak, poseidon
+    #[arg(short, long, default_value_t = String::from("keccak"))]
+    scheme: String,
 
     /// number of repeat
     #[arg(short, long, default_value_t = 4)]
@@ -69,7 +75,12 @@ where
     };
 
     // load circuit
-    let circuit_template = Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
+    let circuit_template = match args.scheme.as_str() {
+        "keccak" => Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD),
+        "poseidon" => Circuit::<F>::load_circuit(POSEIDON_CIRCUIT),
+        _ => unreachable!(),
+    };
+
     let circuits = (0..args.threads)
         .map(|_| {
             let mut c = circuit_template.clone();

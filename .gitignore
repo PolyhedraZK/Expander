@@ -17,8 +17,6 @@ Cargo.lock
 /target
 
 # Project data
-/data/Extracted*
-/data/circuit8.txt
 /data/compiler_out
 /data/keccak*
 /data/bn254_circuit.txt
@@ -34,3 +32,8 @@ flamegraph.svg
 output.txt
 .DS_Store
 *.log
+
+# circuit fies
+data/poseidon_*.txt
+/data/Extracted*
+/data/circuit8.txt
