@@ -174,6 +174,8 @@ impl Field for NeonM31 {
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
+
+    #[inline]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         let m = M31::from_uniform_bytes(bytes);
         Self {
@@ -185,6 +187,7 @@ impl Field for NeonM31 {
 impl FiatShamirConfig for NeonM31 {
     type ChallengeField = M31;
 
+    #[inline]
     fn scale(&self, challenge: &Self::ChallengeField) -> Self {
         let packed_challenge = NeonM31::pack_full(*challenge);
         *self * packed_challenge

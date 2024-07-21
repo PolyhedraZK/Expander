@@ -21,10 +21,12 @@ pub fn grind<F: Field + FieldSerde + FiatShamirConfig>(
         .iter()
         .for_each(|h| h.serialize_into(&mut hash_bytes));
 
+    assert!(hash_bytes.len() >= 32);
+
     for _ in 0..(1 << config.grinding_bits) {
         transcript.hasher.hash_inplace(&mut hash_bytes, 32);
     }
-    transcript.append_u8_slice(&hash_bytes, 32);
+    transcript.append_u8_slice(&hash_bytes[..32]);
     end_timer!(timer);
 }
 
@@ -72,13 +74,10 @@ impl<F: Field + FieldSerde + FiatShamirConfig> Prover<F> {
         // PC commit
         let commitment = RawCommitment::new(c.layers[0].input_vals.evals.clone());
 
-        let buffer_v = vec![F::default(); commitment.size() / F::SIZE];
-        let buffer = unsafe {
-            std::slice::from_raw_parts_mut(buffer_v.as_ptr() as *mut u8, commitment.size())
-        };
-        commitment.serialize_into(buffer);
+        let mut buffer = vec![];
+        commitment.serialize_into(&mut buffer);
         let mut transcript = Transcript::new();
-        transcript.append_u8_slice(buffer, commitment.size());
+        transcript.append_u8_slice(&buffer);
 
         grind::<F>(&mut transcript, &self.config);
 

@@ -1,4 +1,4 @@
-use std::vec;
+use std::{io::Cursor, vec};
 
 use arith::{FiatShamirConfig, Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
@@ -8,6 +8,7 @@ use crate::{
     Transcript,
 };
 
+#[inline]
 fn degree_2_eval<F: Field + FiatShamirConfig>(p0: F, p1: F, p2: F, x: F::ChallengeField) -> F {
     let c0 = &p0;
     let c2 = F::INV_2 * (p2 - p1 - p1 + p0);
@@ -228,10 +229,12 @@ impl Verifier {
         let timer = start_timer!(|| "verify");
 
         let poly_size = circuit.layers.first().unwrap().input_vals.evals.len();
-        let commitment = RawCommitment::deserialize_from(&proof.bytes, poly_size);
+        let mut cursor = Cursor::new(&proof.bytes);
+
+        let commitment = RawCommitment::deserialize_from(&mut cursor, poly_size);
 
         let mut transcript = Transcript::new();
-        transcript.append_u8_slice(&proof.bytes, commitment.size());
+        transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
