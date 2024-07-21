@@ -55,10 +55,6 @@ impl Field for PackedM31Ext3 {
     const NAME: &'static str = "AVX Packed Mersenne 31 Extension 3";
 
     const SIZE: usize = 72;
-    
-    // const INV_2: PackedM31Ext3 = PackedM31Ext3 {
-    //     v: [PackedM31::INV_2, PackedM31::zero(), PackedM31::zero()],
-    // };
     const INV_2: Self = todo!();
 
     type BaseField = PackedM31;
@@ -126,8 +122,10 @@ impl Field for PackedM31Ext3 {
     #[inline(always)]
     fn square(&self) -> Self {
         let mut res = [PackedM31::default(); 3];
-        res[0] = self.v[0] * self.v[0] + PackedM31::pack_full(M31{v:10}) * (self.v[1] * self.v[2]);
-        res[1] = self.v[0] * self.v[1].double() + PackedM31::pack_full(M31{v:5}) * self.v[2] * self.v[2];
+        res[0] =
+            self.v[0] * self.v[0] + PackedM31::pack_full(M31 { v: 10 }) * (self.v[1] * self.v[2]);
+        res[1] = self.v[0] * self.v[1].double()
+            + PackedM31::pack_full(M31 { v: 5 }) * self.v[2] * self.v[2];
         res[2] = self.v[0] * self.v[2].double() + self.v[1] * self.v[1];
         Self { v: res }
     }
