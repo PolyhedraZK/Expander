@@ -4,7 +4,10 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{m31_avx::FIVE, FiatShamirConfig, Field, FieldSerde, M31Ext3, VectorizedM31};
+use crate::{
+    m31_avx::{FIVE, TEN},
+    FiatShamirConfig, Field, FieldSerde, M31Ext3, VectorizedM31,
+};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct VectorizedM31Ext3 {
@@ -90,10 +93,7 @@ impl Field for VectorizedM31Ext3 {
 
     const SIZE: usize = 96;
 
-    // const INV_2: PackedM31Ext3 = PackedM31Ext3 {
-    //     v: [PackedM31::INV_2, PackedM31::zero(), PackedM31::zero()],
-    // };
-    const INV_2: Self = todo!();
+    const INV_2: Self = unimplemented!();
 
     #[inline(always)]
     fn zero() -> Self {
@@ -132,6 +132,13 @@ impl Field for VectorizedM31Ext3 {
                 VectorizedM31::zero(),
                 VectorizedM31::zero(),
             ],
+        }
+    }
+
+    #[inline(always)]
+    fn square(&self) -> Self {
+        Self {
+            v: square_internal(&self.v),
         }
     }
 
@@ -306,5 +313,15 @@ fn mul_internal(a: &[VectorizedM31; 3], b: &[VectorizedM31; 3]) -> [VectorizedM3
     res[0] = a[0] * b[0] + FIVE * (a[1] * b[2] + a[2] * b[1]);
     res[1] = a[0] * b[1] + a[1] * b[0] + FIVE * a[2] * b[2];
     res[2] = a[0] * b[2] + a[1] * b[1] + a[2] * b[0];
+    res
+}
+
+fn square_internal(a: &[VectorizedM31; 3]) -> [VectorizedM31; 3] {
+    let mut res = [VectorizedM31::default(); 3];
+    res[0] = a[0].square() + TEN * a[1] * a[2];
+    let t = a[0] * a[1];
+    res[1] = t + t + FIVE * a[2].square();
+    let t = a[0] * a[2];
+    res[2] = t + t + a[1] * a[1];
     res
 }

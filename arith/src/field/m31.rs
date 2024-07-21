@@ -89,8 +89,6 @@ impl Field for M31 {
 
     const INV_2: M31 = M31 { v: 1 << 30 };
 
-    // type BaseField = M31;
-
     #[inline(always)]
     fn zero() -> Self {
         M31 { v: 0 }

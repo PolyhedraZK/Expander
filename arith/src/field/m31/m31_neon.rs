@@ -81,8 +81,6 @@ impl Field for NeonM31 {
         v: [PACKED_INV_2; 2],
     };
 
-    // type BaseField = M31;
-
     #[inline(always)]
     fn zero() -> Self {
         Self { v: [PACKED_0; 2] }

@@ -21,6 +21,10 @@ pub(crate) const FIVE: AVXM31 = AVXM31 {
     v: unsafe { transmute::<[i32; 8], std::arch::x86_64::__m256i>([5; 8]) },
 };
 
+pub(crate) const TEN: AVXM31 = AVXM31 {
+    v: unsafe { transmute::<[i32; 8], std::arch::x86_64::__m256i>([10; 8]) },
+};
+
 #[inline(always)]
 unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
     _mm256_add_epi64(
@@ -91,8 +95,6 @@ impl Field for AVXM31 {
     const SIZE: usize = 32;
 
     const INV_2: Self = Self { v: PACKED_INV_2 };
-
-    // type BaseField = M31;
 
     #[inline(always)]
     fn zero() -> Self {
