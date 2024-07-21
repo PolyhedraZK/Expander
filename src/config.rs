@@ -51,6 +51,13 @@ impl Default for Config {
 
 impl Config {
     pub fn m31_config() -> Self {
+        println!("===================================================");
+        println!("WARNING: Using M31 for testing purposes only.");
+        println!("WARNING: Do not use in production.");
+        println!("WARNING: M31 may not give you enough soundness.");
+        println!("WARNING: consider to use M31Ext3 or Bn254::Fr instead.");
+        println!("===================================================");
+
         let security_bits = 100;
         let grinding_bits = 10;
 

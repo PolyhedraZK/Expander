@@ -46,9 +46,9 @@ fn main() {
     };
 }
 
-fn run_benchmark<VecF>(args: &Args, config: Config)
+fn run_benchmark<F>(args: &Args, config: Config)
 where
-    VecF: Field + FieldSerde + FiatShamirConfig + Send + 'static,
+    F: Field + FieldSerde + FiatShamirConfig + Send + 'static,
 {
     println!("benchmarking keccak over {}", args.field);
     println!(
@@ -69,7 +69,7 @@ where
     };
 
     // load circuit
-    let circuit_template = Circuit::<VecF>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
+    let circuit_template = Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
     let circuits = (0..args.threads)
         .map(|_| {
             let mut c = circuit_template.clone();
