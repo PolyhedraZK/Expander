@@ -49,9 +49,6 @@ pub trait Field:
     /// Inverse of 2
     const INV_2: Self;
 
-    // /// type of the base field, can be itself
-    // type BaseField: Field + FieldSerde;
-
     // ====================================
     // constants
     // ====================================
@@ -113,29 +110,6 @@ pub trait FiatShamirConfig: From<Self::ChallengeField> {
     fn scale(&self, challenge: &Self::ChallengeField) -> Self;
 }
 
-/// Extension Field of a given field.
-pub trait ExtensionField:
-    Field
-    + Add<Self::BaseField, Output = Self>
-    + Mul<Self::BaseField, Output = Self>
-    + Sub<Self::BaseField, Output = Self>
-    + for<'a> Add<&'a Self::BaseField, Output = Self>
-    + for<'a> Mul<&'a Self::BaseField, Output = Self>
-    + for<'a> Sub<&'a Self::BaseField, Output = Self>
-    + AddAssign<Self::BaseField>
-    + MulAssign<Self::BaseField>
-    + SubAssign<Self::BaseField>
-    + for<'a> AddAssign<&'a Self::BaseField>
-    + for<'a> MulAssign<&'a Self::BaseField>
-    + for<'a> SubAssign<&'a Self::BaseField>
-{
-    /// Extension degree
-    const EXTENSION_DEGREE: usize;
-
-    /// Base field
-    type BaseField: Field + FieldSerde;
-}
-
 /// Serde for Fields
 pub trait FieldSerde {
     /// serialize self into bytes
@@ -148,7 +122,6 @@ pub trait FieldSerde {
     fn deserialize_from<R: Read>(reader: R) -> Self;
 
     /// deserialize bytes into field following ecc format
-    ///
     fn deserialize_from_ecc_format<R: Read>(_reader: R) -> Self;
 }
 

@@ -61,9 +61,10 @@ impl FieldSerde for M31 {
     fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
         let mut buf = [0u8; 32];
         reader.read_exact(&mut buf).unwrap(); // todo: error propagation
-        for (i, v) in buf.iter().enumerate().skip(4).take(28) {
-            assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
-        }
+        assert!(
+            buf.iter().skip(4).all(|&x| x == 0),
+            "non-zero byte found in witness byte"
+        );
         Self::from(u32::from_le_bytes(buf[..4].try_into().unwrap()))
     }
 }

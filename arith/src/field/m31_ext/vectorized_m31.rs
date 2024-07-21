@@ -4,10 +4,13 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{
-    m31_avx::{FIVE, TEN},
-    FiatShamirConfig, Field, FieldSerde, M31Ext3, VectorizedM31,
-};
+#[cfg(target_arch = "x86_64")]
+use crate::m31_avx::{FIVE, TEN};
+
+#[cfg(target_arch = "aarch64")]
+use crate::m31_neon::{FIVE, TEN};
+
+use crate::{FiatShamirConfig, Field, FieldSerde, M31Ext3, VectorizedM31};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct VectorizedM31Ext3 {
@@ -316,6 +319,7 @@ fn mul_internal(a: &[VectorizedM31; 3], b: &[VectorizedM31; 3]) -> [VectorizedM3
     res
 }
 
+// same as mul; merge identical terms
 fn square_internal(a: &[VectorizedM31; 3]) -> [VectorizedM31; 3] {
     let mut res = [VectorizedM31::default(); 3];
     res[0] = a[0].square() + TEN * a[1] * a[2];

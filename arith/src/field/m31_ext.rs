@@ -1,7 +1,4 @@
-#[cfg(target_arch = "x86_64")]
 mod vectorized_m31;
-
-#[cfg(target_arch = "x86_64")]
 pub use vectorized_m31::VectorizedM31Ext3;
 
 use ark_std::Zero;
@@ -50,9 +47,10 @@ impl FieldSerde for M31Ext3 {
     fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
         let mut buf = [0u8; 32];
         reader.read_exact(&mut buf).unwrap(); // todo: error propagation
-        for (i, v) in buf.iter().enumerate().skip(4).take(28) {
-            assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
-        }
+        assert!(
+            buf.iter().skip(4).all(|&x| x == 0),
+            "non-zero byte found in witness byte"
+        );
         Self::from(u32::from_le_bytes(buf[..4].try_into().unwrap()))
     }
 }
@@ -124,11 +122,9 @@ impl Field for M31Ext3 {
     /// Squaring
     #[inline(always)]
     fn square(&self) -> Self {
-        let mut res = [M31::default(); 3];
-        res[0] = self.v[0] * self.v[0] + M31 { v: 10 } * (self.v[1] * self.v[2]);
-        res[1] = self.v[0] * self.v[1].double() + M31 { v: 5 } * self.v[2] * self.v[2];
-        res[2] = self.v[0] * self.v[2].double() + self.v[1] * self.v[1];
-        Self { v: res }
+        Self {
+            v: square_internal(&self.v),
+        }
     }
 
     #[inline(always)]
@@ -360,5 +356,13 @@ fn mul_internal(a: &[M31; 3], b: &[M31; 3]) -> [M31; 3] {
     res[0] = a[0] * b[0] + M31 { v: 5 } * (a[1] * b[2] + a[2] * b[1]);
     res[1] = a[0] * b[1] + a[1] * b[0] + M31 { v: 5 } * a[2] * b[2];
     res[2] = a[0] * b[2] + a[1] * b[1] + a[2] * b[0];
+    res
+}
+
+fn square_internal(a: &[M31; 3]) -> [M31; 3] {
+    let mut res = [M31::default(); 3];
+    res[0] = a[0].square() + M31 { v: 10 } * (a[1] * a[2]);
+    res[1] = a[0] * a[1].double() + M31 { v: 5 } * a[2].square();
+    res[2] = a[0] * a[2].double() + a[1].square();
     res
 }

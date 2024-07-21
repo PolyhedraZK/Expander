@@ -7,13 +7,21 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
+use rand::{Rng, RngCore};
+
 use crate::{FiatShamirConfig, Field, FieldSerde, M31, M31_MOD};
 
 const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD; 4]) };
 const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
 const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
 
-use rand::{Rng, RngCore};
+pub(crate) const FIVE: NeonM31 = NeonM31 {
+    v: unsafe { transmute::<[i32; 8], [uint32x4_t; 2]>([5; 8]) },
+};
+
+pub(crate) const TEN: NeonM31 = NeonM31 {
+    v: unsafe { transmute::<[i32; 8], [uint32x4_t; 2]>([10; 8]) },
+};
 
 #[inline(always)]
 fn reduce_sum(x: uint32x4_t) -> uint32x4_t {
@@ -21,6 +29,7 @@ fn reduce_sum(x: uint32x4_t) -> uint32x4_t {
     unsafe { vminq_u32(x, vsubq_u32(x, PACKED_MOD)) }
 }
 
+/// NeonM31 packs 8 M31 elements and operates on them in parallel
 #[derive(Clone, Copy)]
 pub struct NeonM31 {
     pub v: [uint32x4_t; 2],
@@ -64,9 +73,10 @@ impl FieldSerde for NeonM31 {
     fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
         let mut buf = [0u8; 32];
         reader.read_exact(&mut buf).unwrap(); // todo: error propagation
-        for (i, v) in buf.iter().enumerate().skip(4).take(28) {
-            assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
-        }
+        assert!(
+            buf.iter().skip(4).all(|&x| x == 0),
+            "non-zero byte found in witness byte"
+        );
         Self::pack_full(u32::from_le_bytes(buf[..4].try_into().unwrap()).into())
     }
 }
@@ -256,7 +266,10 @@ impl Mul<&NeonM31> for NeonM31 {
     type Output = NeonM31;
     #[inline(always)]
     fn mul(self, rhs: &NeonM31) -> Self::Output {
-        let v1 = unsafe {
+        let mut res = NeonM31 {
+            v: [PACKED_0, PACKED_0],
+        };
+        res.v[0] = unsafe {
             let prod_hi = vreinterpretq_u32_s32(vqdmulhq_s32(
                 vreinterpretq_s32_u32(self.v[0]),
                 vreinterpretq_s32_u32(rhs.v[0]),
@@ -265,7 +278,7 @@ impl Mul<&NeonM31> for NeonM31 {
             let t = vmlsq_u32(prod_lo, prod_hi, PACKED_MOD);
             reduce_sum(t)
         };
-        let v2 = unsafe {
+        res.v[1] = unsafe {
             let prod_hi = vreinterpretq_u32_s32(vqdmulhq_s32(
                 vreinterpretq_s32_u32(self.v[1]),
                 vreinterpretq_s32_u32(rhs.v[1]),
@@ -274,7 +287,7 @@ impl Mul<&NeonM31> for NeonM31 {
             let t = vmlsq_u32(prod_lo, prod_hi, PACKED_MOD);
             reduce_sum(t)
         };
-        NeonM31 { v: [v1, v2] }
+        res
     }
 }
 

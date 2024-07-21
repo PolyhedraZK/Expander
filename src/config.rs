@@ -71,7 +71,6 @@ impl Config {
             field_size,      // update later
             security_bits,
             grinding_bits,
-            // num_parallel,
             polynomial_commitment_type,
             field_type,
             fs_hash,

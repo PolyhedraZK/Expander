@@ -3,7 +3,7 @@ use std::io::Cursor;
 use ark_std::{end_timer, start_timer, test_rng};
 use rand::{Rng, RngCore};
 
-use crate::{ExtensionField, Field, FieldSerde};
+use crate::{Field, FieldSerde};
 
 pub(crate) fn test_basic_field_op<F: Field>() {
     let mut rng = rand::thread_rng();
@@ -20,35 +20,6 @@ pub(crate) fn test_basic_field_op<F: Field>() {
     assert_eq!(prod_0, prod_1);
 }
 
-#[allow(dead_code)] //todo: remove
-pub(crate) fn random_extension_field_tests<F: ExtensionField>(type_name: String) {
-    let mut rng = test_rng();
-
-    let _message = format!("multiplication {}", type_name);
-    let start = start_timer!(|| _message);
-    for _ in 0..1000 {
-        let a = F::random_unsafe(&mut rng);
-        let b = F::BaseField::random_unsafe(&mut rng);
-        let c = F::random_unsafe(&mut rng);
-
-        let mut t0 = a; // (a * b) * c
-        t0 *= b;
-        t0 *= c;
-
-        let mut t1 = a; // (a * c) * b
-        t1 *= c;
-        t1 *= b;
-
-        let mut t2 = c; // (b * c) * a
-        t2 *= b;
-        t2 *= a;
-
-        assert_eq!(t0, t1);
-        assert_eq!(t1, t2);
-    }
-    end_timer!(start);
-}
-
 pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
     let mut rng = test_rng();
 
@@ -58,7 +29,6 @@ pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
     random_negation_tests::<F, _>(&mut rng, type_name.clone());
     random_doubling_tests::<F, _>(&mut rng, type_name.clone());
     random_squaring_tests::<F, _>(&mut rng, type_name.clone());
-    // random_inversion_tests::<F, _>(&mut rng, type_name.clone());
     random_expansion_tests::<F, _>(&mut rng, type_name.clone());
     random_serde_tests::<F, _>(&mut rng, type_name);
 
@@ -68,8 +38,6 @@ pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
         z = z.neg();
         assert_eq!(z.is_zero(), true);
     }
-
-    // assert!(bool::from(F::zero().inv().is_none()));
 
     // Multiplication by zero
     {
