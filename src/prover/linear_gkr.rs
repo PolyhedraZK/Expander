@@ -21,7 +21,8 @@ pub fn grind<F: Field + FieldSerde + FiatShamirConfig>(
         .iter()
         .for_each(|h| h.serialize_into(&mut hash_bytes));
 
-    assert!(hash_bytes.len() >= 32);
+    assert!(hash_bytes.len() >= 32, "hash len: {}", hash_bytes.len());
+    hash_bytes.truncate(32);
 
     for _ in 0..(1 << config.grinding_bits) {
         transcript.hasher.hash_inplace(&mut hash_bytes, 32);

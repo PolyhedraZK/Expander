@@ -1,10 +1,6 @@
 #[cfg(target_arch = "x86_64")]
-mod packed_m31_ext;
-#[cfg(target_arch = "x86_64")]
 mod vectorized_m31;
 
-#[cfg(target_arch = "x86_64")]
-pub use packed_m31_ext::PackedM31Ext3;
 #[cfg(target_arch = "x86_64")]
 pub use vectorized_m31::VectorizedM31Ext3;
 
@@ -64,13 +60,11 @@ impl FieldSerde for M31Ext3 {
 impl Field for M31Ext3 {
     const NAME: &'static str = "Mersenne 31 Extension 3";
 
-    const SIZE: usize = 24;
+    const SIZE: usize = 12;
 
     const INV_2: M31Ext3 = M31Ext3 {
         v: [M31::INV_2, M31 { v: 0 }, M31 { v: 0 }],
     };
-
-    type BaseField = M31;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -127,18 +121,6 @@ impl Field for M31Ext3 {
         // self.try_inverse()
     }
 
-    #[inline(always)]
-    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        let mut res = *self;
-        res.v[0] += rhs;
-        res
-    }
-
-    #[inline(always)]
-    fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self += Self::from(rhs)
-    }
-
     /// Squaring
     #[inline(always)]
     fn square(&self) -> Self {
@@ -147,18 +129,6 @@ impl Field for M31Ext3 {
         res[1] = self.v[0] * self.v[1].double() + M31 { v: 5 } * self.v[2] * self.v[2];
         res[2] = self.v[0] * self.v[2].double() + self.v[1] * self.v[1];
         Self { v: res }
-    }
-
-    #[inline(always)]
-    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        Self {
-            v: [self.v[0] * rhs, self.v[1] * rhs, self.v[2] * rhs],
-        }
-    }
-
-    #[inline(always)]
-    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self = self.mul_base_elem(rhs);
     }
 
     #[inline(always)]
@@ -174,13 +144,13 @@ impl Field for M31Ext3 {
         Self {
             v: [
                 M31 {
-                    v: mod_reduce_u32(v1) as u32,
+                    v: mod_reduce_u32(v1),
                 },
                 M31 {
-                    v: mod_reduce_u32(v2) as u32,
+                    v: mod_reduce_u32(v2),
                 },
                 M31 {
-                    v: mod_reduce_u32(v3) as u32,
+                    v: mod_reduce_u32(v3),
                 },
             ],
         }

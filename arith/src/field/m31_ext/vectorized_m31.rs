@@ -4,17 +4,19 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{Field, FieldSerde, M31Ext3, PackedM31Ext3, VectorizedField};
+use crate::{m31_avx::FIVE, FiatShamirConfig, Field, FieldSerde, M31Ext3, VectorizedM31};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct VectorizedM31Ext3 {
-    pub v: [PackedM31Ext3; 1],
+    pub v: [VectorizedM31; 3],
 }
 
 impl FieldSerde for VectorizedM31Ext3 {
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) {
         self.v[0].serialize_into(&mut writer);
+        self.v[1].serialize_into(&mut writer);
+        self.v[2].serialize_into(&mut writer);
     }
 
     #[inline(always)]
@@ -27,33 +29,59 @@ impl FieldSerde for VectorizedM31Ext3 {
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         Self {
-            v: [PackedM31Ext3::deserialize_from(&mut reader)],
+            v: [
+                VectorizedM31::deserialize_from(&mut reader),
+                VectorizedM31::deserialize_from(&mut reader),
+                VectorizedM31::deserialize_from(&mut reader),
+            ],
         }
     }
 
     #[inline(always)]
     fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
         Self {
-            v: [PackedM31Ext3::deserialize_from_ecc_format(&mut reader)],
+            v: [
+                VectorizedM31::deserialize_from_ecc_format(&mut reader),
+                VectorizedM31::zero(),
+                VectorizedM31::zero(),
+            ],
         }
     }
 }
 
-impl VectorizedField for VectorizedM31Ext3 {
-    const PACK_SIZE: usize = 8;
+impl FiatShamirConfig for VectorizedM31Ext3 {
+    type ChallengeField = M31Ext3;
 
-    const VECTORIZE_SIZE: usize = 1;
-
-    type PackedBaseField = PackedM31Ext3;
-
-    #[inline(always)]
-    fn as_packed_slices(&self) -> &[PackedM31Ext3] {
-        &self.v
+    #[inline]
+    fn scale(&self, challenge: &Self::ChallengeField) -> Self {
+        *self * *challenge
     }
+}
 
+impl Mul<M31Ext3> for VectorizedM31Ext3 {
+    type Output = Self;
     #[inline(always)]
-    fn mut_packed_slices(&mut self) -> &mut [Self::PackedBaseField] {
-        &mut self.v
+    fn mul(self, rhs: M31Ext3) -> Self::Output {
+        VectorizedM31Ext3 {
+            v: [
+                self.v[0] * rhs.v[0],
+                self.v[1] * rhs.v[1],
+                self.v[2] * rhs.v[2],
+            ],
+        }
+    }
+}
+
+impl From<M31Ext3> for VectorizedM31Ext3 {
+    #[inline(always)]
+    fn from(x: M31Ext3) -> Self {
+        Self {
+            v: [
+                VectorizedM31::pack_full(x.v[0]),
+                VectorizedM31::pack_full(x.v[1]),
+                VectorizedM31::pack_full(x.v[2]),
+            ],
+        }
     }
 }
 
@@ -67,33 +95,43 @@ impl Field for VectorizedM31Ext3 {
     // };
     const INV_2: Self = todo!();
 
-    type BaseField = M31Ext3;
-
     #[inline(always)]
     fn zero() -> Self {
         VectorizedM31Ext3 {
-            v: [PackedM31Ext3::zero()],
+            v: [VectorizedM31::zero(); 3],
         }
     }
 
     #[inline(always)]
     fn one() -> Self {
         VectorizedM31Ext3 {
-            v: [PackedM31Ext3::one()],
+            v: [
+                VectorizedM31::one(),
+                VectorizedM31::zero(),
+                VectorizedM31::zero(),
+            ],
         }
     }
 
     #[inline(always)]
     fn random_unsafe(mut rng: impl rand::RngCore) -> Self {
         VectorizedM31Ext3 {
-            v: [PackedM31Ext3::random_unsafe(&mut rng)],
+            v: [
+                VectorizedM31::random_unsafe(&mut rng),
+                VectorizedM31::random_unsafe(&mut rng),
+                VectorizedM31::random_unsafe(&mut rng),
+            ],
         }
     }
 
     #[inline(always)]
     fn random_bool(mut rng: impl rand::RngCore) -> Self {
         VectorizedM31Ext3 {
-            v: [PackedM31Ext3::random_bool(&mut rng)],
+            v: [
+                VectorizedM31::random_bool(&mut rng),
+                VectorizedM31::zero(),
+                VectorizedM31::zero(),
+            ],
         }
     }
 
@@ -103,29 +141,6 @@ impl Field for VectorizedM31Ext3 {
 
     fn inv(&self) -> Option<Self> {
         unimplemented!()
-    }
-
-    #[inline(always)]
-    fn add_base_elem(&self, _rhs: &Self::BaseField) -> Self {
-        unimplemented!()
-    }
-
-    #[inline(always)]
-    fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        todo!()
-        // *self += rhs;
-    }
-
-    #[inline(always)]
-    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        todo!()
-        // *self * rhs
-    }
-
-    #[inline(always)]
-    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        todo!()
-        // *self = *self * rhs;
     }
 
     fn as_u32_unchecked(&self) -> u32 {
@@ -146,7 +161,7 @@ impl Mul<&VectorizedM31Ext3> for VectorizedM31Ext3 {
     #[inline(always)]
     fn mul(self, rhs: &VectorizedM31Ext3) -> Self::Output {
         VectorizedM31Ext3 {
-            v: [self.v[0] * rhs.v[0]],
+            v: mul_internal(&self.v, &rhs.v),
         }
     }
 }
@@ -185,7 +200,11 @@ impl Add<&VectorizedM31Ext3> for VectorizedM31Ext3 {
     #[inline(always)]
     fn add(self, rhs: &VectorizedM31Ext3) -> Self::Output {
         VectorizedM31Ext3 {
-            v: [self.v[0] + rhs.v[0]],
+            v: [
+                self.v[0] + rhs.v[0],
+                self.v[1] + rhs.v[1],
+                self.v[2] + rhs.v[2],
+            ],
         }
     }
 }
@@ -223,7 +242,9 @@ impl Neg for VectorizedM31Ext3 {
     type Output = VectorizedM31Ext3;
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        VectorizedM31Ext3 { v: [-self.v[0]] }
+        VectorizedM31Ext3 {
+            v: [-self.v[0], -self.v[1], -self.v[2]],
+        }
     }
 }
 
@@ -263,7 +284,27 @@ impl From<u32> for VectorizedM31Ext3 {
     #[inline(always)]
     fn from(x: u32) -> Self {
         VectorizedM31Ext3 {
-            v: [PackedM31Ext3::from(x)],
+            v: [
+                VectorizedM31::from(x),
+                VectorizedM31::zero(),
+                VectorizedM31::zero(),
+            ],
         }
     }
+}
+
+// polynomial mod (x^3 - 5)
+//
+//   (a0 + a1*x + a2*x^2) * (b0 + b1*x + b2*x^2) mod (x^3 - 5)
+// = a0*b0 + (a0*b1 + a1*b0)*x + (a0*b2 + a1*b1 + a2*b0)*x^2
+// + (a1*b2 + a2*b1)*x^3 + a2*b2*x^4 mod (x^3 - 5)
+// = a0*b0 + 5*(a1*b2 + a2*b1)
+// + (a0*b1 + a1*b0)*x + 5* a2*b2
+// + (a0*b2 + a1*b1 + a2*b0)*x^2
+fn mul_internal(a: &[VectorizedM31; 3], b: &[VectorizedM31; 3]) -> [VectorizedM31; 3] {
+    let mut res = [VectorizedM31::default(); 3];
+    res[0] = a[0] * b[0] + FIVE * (a[1] * b[2] + a[2] * b[1]);
+    res[1] = a[0] * b[1] + a[1] * b[0] + FIVE * a[2] * b[2];
+    res[2] = a[0] * b[2] + a[1] * b[1] + a[2] * b[0];
+    res
 }

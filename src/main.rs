@@ -9,8 +9,8 @@ use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
 use halo2curves::bn256::Fr;
 
-// #[cfg(target_arch = "x86_64")]
-// use arith::VectorizedM31Ext3;
+#[cfg(target_arch = "x86_64")]
+use arith::VectorizedM31Ext3;
 
 const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
 const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
@@ -42,8 +42,8 @@ fn main() {
 
     match args.field.as_str() {
         "m31" => run_benchmark::<VectorizedM31>(&args, Config::m31_config()),
-        // #[cfg(target_arch = "x86_64")]
-        // "m31ext3" => run_benchmark::<VectorizedM31Ext3>(&args, Config::m31_ext3_config()),
+        #[cfg(target_arch = "x86_64")]
+        "m31ext3" => run_benchmark::<VectorizedM31Ext3>(&args, Config::m31_ext3_config()),
         "fr" => run_benchmark::<Fr>(&args, Config::bn254_config()),
         _ => unreachable!(),
     };
@@ -66,6 +66,7 @@ where
 
     let pack_size = match args.field.as_str() {
         "m31" => M31_PACKSIZE,
+        "m31ext3" => M31_PACKSIZE,
         "fr" => FR_PACKSIZE,
         _ => unreachable!(),
     };

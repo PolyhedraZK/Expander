@@ -1,9 +1,9 @@
 mod bn254;
 mod m31;
-// mod m31_ext;
+mod m31_ext;
 
 pub use m31::*;
-// pub use m31_ext::*;
+pub use m31_ext::*;
 
 use rand::RngCore;
 

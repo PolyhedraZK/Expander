@@ -6,3 +6,6 @@ pub type VectorizedM31 = super::m31_avx::AVXM31;
 
 #[cfg(target_arch = "aarch64")]
 pub type VectorizedM31 = super::m31_neon::NeonM31;
+
+// #[cfg(target_arch = "x86_64")]
+// pub(crate) use super::m31_avx::FIVE;

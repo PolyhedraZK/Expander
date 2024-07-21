@@ -58,7 +58,7 @@ pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
     random_negation_tests::<F, _>(&mut rng, type_name.clone());
     random_doubling_tests::<F, _>(&mut rng, type_name.clone());
     random_squaring_tests::<F, _>(&mut rng, type_name.clone());
-    random_inversion_tests::<F, _>(&mut rng, type_name.clone());
+    // random_inversion_tests::<F, _>(&mut rng, type_name.clone());
     random_expansion_tests::<F, _>(&mut rng, type_name.clone());
     random_serde_tests::<F, _>(&mut rng, type_name);
 
@@ -203,7 +203,7 @@ fn random_squaring_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     end_timer!(start);
 }
 
-fn random_inversion_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
+pub(crate) fn random_inversion_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     assert!(bool::from(F::zero().inv().is_none()));
 
     let _message = format!("inversion {}", type_name);

@@ -17,6 +17,10 @@ const PACKED_0: __m256i = unsafe { transmute([0; M31_PACK_SIZE]) };
 const PACKED_MOD_EPI64: __m256i = unsafe { transmute([M31_MOD as u64; 4]) };
 const PACKED_INV_2: __m256i = unsafe { transmute([1 << 30; M31_PACK_SIZE]) };
 
+pub(crate) const FIVE: AVXM31 = AVXM31 {
+    v: unsafe { transmute::<[i32; 8], std::arch::x86_64::__m256i>([5; 8]) },
+};
+
 #[inline(always)]
 unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
     _mm256_add_epi64(

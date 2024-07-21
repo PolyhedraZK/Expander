@@ -276,9 +276,7 @@ impl Mul<&NeonM31> for NeonM31 {
             let t = vmlsq_u32(prod_lo, prod_hi, PACKED_MOD);
             reduce_sum(t)
         };
-        NeonM31 {
-            v: [v1, v2],
-        }
+        NeonM31 { v: [v1, v2] }
     }
 }
 
