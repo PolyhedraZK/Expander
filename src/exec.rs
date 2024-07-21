@@ -9,7 +9,7 @@ use arith::{FiatShamirConfig, Field, FieldSerde, VectorizedM31};
 use expander_rs::{
     Circuit, Config, FieldType, Proof, Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
 };
-use log::debug;
+use log::{debug, info};
 use warp::Filter;
 
 fn dump_proof_and_claimed_v<F: Field + FieldSerde>(proof: &Proof, claimed_v: &[F]) -> Vec<u8> {
@@ -104,6 +104,7 @@ where
                 warp::path("prove")
                     .and(warp::body::bytes())
                     .map(move |bytes: bytes::Bytes| {
+                        info!("Received prove request.");
                         let witness_bytes: Vec<u8> = bytes.to_vec();
                         let mut circuit = circuit.lock().unwrap();
                         let mut prover = prover.lock().unwrap();
@@ -116,6 +117,7 @@ where
                 warp::path("verify")
                     .and(warp::body::bytes())
                     .map(move |bytes: bytes::Bytes| {
+                        info!("Received verify request.");
                         let witness_and_proof_bytes: Vec<u8> = bytes.to_vec();
                         let length_of_witness_bytes =
                             u64::from_le_bytes(witness_and_proof_bytes[0..8].try_into().unwrap())
@@ -154,6 +156,7 @@ async fn main() {
     // expander-exec prove <input:circuit_file> <input:witness_file> <output:proof>
     // expander-exec verify <input:circuit_file> <input:witness_file> <input:proof>
     // expander-exec serve <input:circuit_file> <input:ip> <input:port>
+    env_logger::init();
     let args = std::env::args().collect::<Vec<String>>();
     if args.len() < 4 {
         println!(

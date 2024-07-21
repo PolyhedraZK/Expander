@@ -262,8 +262,8 @@ impl Verifier {
                     let v1 = commitment.verify(&rz0[i], claimed_v0[i]);
                     let v2 = commitment.verify(&rz1[i], claimed_v1[i]);
 
-                    log::info!("first commitment verification: {}", v1);
-                    log::info!("second commitment verification: {}", v2);
+                    log::debug!("first commitment verification: {}", v1);
+                    log::debug!("second commitment verification: {}", v2);
 
                     verified &= v1;
                     verified &= v2;
