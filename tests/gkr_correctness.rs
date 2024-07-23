@@ -3,8 +3,7 @@ use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verif
 use rand::Rng;
 use sha2::Digest;
 
-const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
-const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
+const CIRCUIT_NAME: &str = "data/compiler_out/circuit.txt";
 
 #[allow(dead_code)]
 fn gen_simple_circuit<F: VectorizedField>() -> Circuit<F> {
@@ -16,21 +15,25 @@ fn gen_simple_circuit<F: VectorizedField>() -> Circuit<F> {
         i_ids: [0],
         o_id: 0,
         coef: F::BaseField::from(1),
+        gate_type: 1,
     });
     l0.add.push(GateAdd {
         i_ids: [0],
         o_id: 1,
         coef: F::BaseField::from(1),
+        gate_type: 1,
     });
     l0.add.push(GateAdd {
         i_ids: [1],
         o_id: 1,
         coef: F::BaseField::from(1),
+        gate_type: 1,
     });
     l0.mul.push(GateMul {
         i_ids: [0, 2],
         o_id: 2,
         coef: F::BaseField::from(1),
+        gate_type: 0,
     });
     circuit.layers.push(l0.clone());
     circuit
@@ -50,7 +53,7 @@ where
     F::PackedBaseField: Field<BaseField = F::BaseField>,
 {
     println!("Config created.");
-    let mut circuit = Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
+    let mut circuit = Circuit::<F>::load_circuit(CIRCUIT_NAME);
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
     // let mut circuit = gen_simple_circuit(); // for custom circuit
     println!("Circuit loaded.");

@@ -11,8 +11,7 @@ use expander_rs::{Circuit, Config, Prover};
 #[cfg(target_arch = "x86_64")]
 use arith::PackedM31Ext3;
 
-const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
-const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
+const CIRCUIT_NAME: &str = "data/compiler_out/circuit.txt";
 
 /// ...
 #[derive(Parser, Debug)]
@@ -62,7 +61,7 @@ where
     let start_time = std::time::Instant::now();
 
     // load circuit
-    let circuit_template = Circuit::<VecF>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD);
+    let circuit_template = Circuit::<VecF>::load_circuit(CIRCUIT_NAME);
     let circuits = (0..args.threads)
         .map(|_| {
             let mut c = circuit_template.clone();
