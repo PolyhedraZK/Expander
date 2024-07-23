@@ -1,7 +1,6 @@
 use arith::{FiatShamirConfig, Field, FieldSerde, MultiLinearPoly};
 use ark_std::test_rng;
 use std::{
-    cmp::max,
     collections::HashMap,
     fs,
     io::{Cursor, Read},
@@ -63,29 +62,11 @@ impl<F: Field + FiatShamirConfig> CircuitLayer<F> {
                     let i0_2 = i0.square();
                     let i0_4 = i0_2.square();
                     let i0_5 = i0_4 * i0;
-                    *o += i0_5.mul_base_elem(&gate.coef);
+                    *o += i0_5.scale(&gate.coef);
                 }
                 12346 => {
                     // pow1
-                    *o += i0.mul_base_elem(&gate.coef);
-                }
-                _ => panic!("Unknown gate type: {}", gate.gate_type),
-            }
-        }
-        for gate in &self.uni {
-            let i0 = &self.input_vals.evals[gate.i_ids[0]];
-            let o = &mut res[gate.o_id];
-            match gate.gate_type {
-                12345 => {
-                    // pow5
-                    let i0_2 = i0.square();
-                    let i0_4 = i0_2.square();
-                    let i0_5 = i0_4 * i0;
-                    *o += i0_5.mul_base_elem(&gate.coef);
-                }
-                12346 => {
-                    // pow1
-                    *o += i0.mul_base_elem(&gate.coef);
+                    *o += i0.scale(&gate.coef);
                 }
                 _ => panic!("Unknown gate type: {}", gate.gate_type),
             }
@@ -181,9 +162,12 @@ impl<F: Field + FieldSerde + FiatShamirConfig> Circuit<F> {
             .collect();
     }
 }
-impl<F: Field> Segment<F> {
+impl<F: Field + FiatShamirConfig> Segment<F> {
     pub fn contain_gates(&self) -> bool {
-        !self.gate_muls.is_empty() || !self.gate_adds.is_empty() || !self.gate_consts.is_empty() || !self.gate_uni.is_empty()
+        !self.gate_muls.is_empty() 
+            || !self.gate_adds.is_empty() 
+            || !self.gate_consts.is_empty() 
+            || !self.gate_uni.is_empty()
     }
 
     pub(crate) fn read<R: Read>(mut reader: R) -> Self {
