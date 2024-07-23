@@ -1,27 +1,20 @@
-use std::mem::size_of;
+use std::io::{Read, Write};
 
 use halo2curves::ff::{Field as Halo2Field, FromUniformBytes};
 use halo2curves::{bn256::Fr, ff::PrimeField};
 use rand::RngCore;
 
-use crate::{Field, FieldSerde};
-
-mod vectorized_bn254;
-
-pub use vectorized_bn254::VectorizedFr;
+use crate::{FiatShamirConfig, Field, FieldSerde};
 
 impl Field for Fr {
     /// name
     const NAME: &'static str = "bn254 scalar field";
 
     /// size required to store the data
-    const SIZE: usize = size_of::<Fr>();
+    const SIZE: usize = 32;
 
     /// Inverse of 2
     const INV_2: Self = Fr::TWO_INV;
-
-    /// type of the base field, can be itself
-    type BaseField = Self;
 
     // ====================================
     // constants
@@ -46,7 +39,7 @@ impl Field for Fr {
     }
 
     /// create a random boolean element from rng
-    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         Self::from((rng.next_u32() & 1) as u64)
     }
 
@@ -73,26 +66,6 @@ impl Field for Fr {
         self.invert().into()
     }
 
-    /// Add the field element with its base field element
-    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        self + rhs
-    }
-
-    /// Add the field element with its base field element
-    fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self += rhs
-    }
-
-    /// multiply the field element with its base field element
-    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        self * rhs
-    }
-
-    /// multiply the field element with its base field element
-    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self *= rhs
-    }
-
     /// expose the element as u32.
     fn as_u32_unchecked(&self) -> u32 {
         todo!()
@@ -109,16 +82,31 @@ impl Field for Fr {
     }
 }
 
+impl FiatShamirConfig for Fr {
+    type ChallengeField = Self;
+
+    fn scale(&self, challenge: &Self::ChallengeField) -> Self {
+        self * challenge
+    }
+}
+
 impl FieldSerde for Fr {
-    fn serialize_into(&self, buffer: &mut [u8]) {
-        buffer.copy_from_slice(self.to_bytes().as_slice())
+    fn serialize_into<W: Write>(&self, mut writer: W) {
+        writer.write_all(self.to_bytes().as_ref()).unwrap();
     }
 
-    fn deserialize_from(buffer: &[u8]) -> Self {
-        Fr::from_bytes(buffer[..Fr::SIZE].try_into().unwrap()).unwrap()
+    /// size of the serialized bytes
+    fn serialized_size() -> usize {
+        32
     }
 
-    fn deserialize_from_ecc_format(bytes: &[u8; 32]) -> Self {
-        Fr::deserialize_from(bytes) // same as deserialize_from
+    fn deserialize_from<R: Read>(mut reader: R) -> Self {
+        let mut buffer = [0u8; 32];
+        reader.read_exact(&mut buffer).unwrap();
+        Fr::from_bytes(&buffer).unwrap()
+    }
+
+    fn deserialize_from_ecc_format<R: Read>(reader: R) -> Self {
+        Fr::deserialize_from(reader) // same as deserialize_from
     }
 }

@@ -32,13 +32,13 @@ wget -P data/compiler_out https://storage.googleapis.com/keccak8/witness.txt
 Command template:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -f [254|31] -t [#threads]
+RUSTFLAGS="-C target-cpu=native" RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -f [fr|m31|m31ext3] -t [#threads] -s [keccak|poseidon]
 ```
 
 Concretely if you are running on a 16 physical core CPU for Bn256 scalar field:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" cargo run --release -- -f 254 -t 16
+RUSTFLAGS="-C target-cpu=native" cargo run --release -- -f fr -t 16
 ```
 
 ## Correctness test

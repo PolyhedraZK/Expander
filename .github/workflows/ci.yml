@@ -45,8 +45,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: wget -P data/compiler_out https://storage.googleapis.com/keccak8/circuit.txt
-      - run: wget -P data/compiler_out https://storage.googleapis.com/keccak8/witness.txt
+      - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
+      - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
       - run: cargo test -p arith --release
       - run: cargo test -p bi-kzg --release
       - run: cargo test --no-default-features --release      
@@ -64,11 +64,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: wget -P data/compiler_out https://storage.googleapis.com/keccak8/circuit.txt
-      - run: wget -P data/compiler_out https://storage.googleapis.com/keccak8/witness.txt
+      - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
+      - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test -p arith --release
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test -p bi-kzg --release
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --no-default-features --release
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --all-features --release
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f m31 
-      - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f fr 
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f fr       
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f m31ext3 

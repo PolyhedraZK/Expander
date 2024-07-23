@@ -1,11 +1,11 @@
 use std::{
     fs,
+    io::Cursor,
     process::exit,
     sync::{Arc, Mutex},
-    vec,
 };
 
-use arith::{Field, FieldSerde, VectorizedField, VectorizedFr, VectorizedM31};
+use arith::{FiatShamirConfig, Field, FieldSerde, VectorizedM31};
 use expander_rs::{
     Circuit, Config, FieldType, Proof, Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
 };
@@ -14,36 +14,25 @@ use warp::Filter;
 
 fn dump_proof_and_claimed_v<F: Field + FieldSerde>(proof: &Proof, claimed_v: &[F]) -> Vec<u8> {
     let mut bytes = Vec::new();
-    let proof_len = proof.bytes.len();
+
+    proof.serialize_into(&mut bytes);
+
     let claimed_v_len = claimed_v.len();
-    bytes.extend_from_slice(&proof_len.to_le_bytes());
-    bytes.extend_from_slice(&proof.bytes);
-    bytes.extend_from_slice(&claimed_v_len.to_le_bytes());
-    for v in claimed_v.iter() {
-        let mut buffer = vec![0u8; F::SIZE];
-        v.serialize_into(&mut buffer);
-        bytes.extend_from_slice(&buffer);
-    }
+    (claimed_v_len as u64).serialize_into(&mut bytes);
+    claimed_v.iter().for_each(|f| f.serialize_into(&mut bytes));
+
     bytes
 }
 
 fn load_proof_and_claimed_v<F: Field + FieldSerde>(bytes: &[u8]) -> (Proof, Vec<F>) {
-    let mut offset = 0;
-    let proof_len = u64::from_le_bytes(bytes[offset..offset + 8].try_into().unwrap()) as usize;
-    offset += 8;
-    let proof_bytes = bytes[offset..offset + proof_len].to_vec();
-    offset += proof_len;
-    let claimed_v_len = u64::from_le_bytes(bytes[offset..offset + 8].try_into().unwrap()) as usize;
-    offset += 8;
-    let mut claimed_v = Vec::new();
-    for _ in 0..claimed_v_len {
-        let mut buffer = vec![0u8; F::SIZE];
-        buffer.copy_from_slice(&bytes[offset..offset + F::SIZE]);
-        offset += F::SIZE;
-        claimed_v.push(F::deserialize_from(&buffer));
-    }
-    let mut proof = Proof::default();
-    proof.bytes = proof_bytes;
+    let mut cursor = Cursor::new(bytes);
+
+    let proof = Proof::deserialize_from(&mut cursor);
+    let claimed_v_len = u64::deserialize_from(&mut cursor) as usize;
+    let claimed_v = (0..claimed_v_len)
+        .map(|_| F::deserialize_from(&mut cursor))
+        .collect::<Vec<_>>();
+
     (proof, claimed_v)
 }
 
@@ -63,9 +52,7 @@ fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
 
 async fn run_command<F>(field_type: FieldType, command: &str, circuit_file: &str, args: &[String])
 where
-    F: VectorizedField + FieldSerde + Send + 'static,
-    F::BaseField: Send,
-    F::PackedBaseField: Field<BaseField = F::BaseField>,
+    F: Field + FieldSerde + FiatShamirConfig + Send + 'static,
 {
     let config = match field_type {
         FieldType::M31 => Config::m31_config(),
@@ -189,9 +176,9 @@ async fn main() {
         FieldType::M31 => {
             run_command::<VectorizedM31>(field_type, command, circuit_file, &args).await;
         }
-        FieldType::BN254 => {
-            run_command::<VectorizedFr>(field_type, command, circuit_file, &args).await;
-        }
+        // FieldType::BN254 => {
+        //     run_command::<VectorizedFr>(field_type, command, circuit_file, &args).await;
+        // }
         _ => unreachable!(),
     }
 }

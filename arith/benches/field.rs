@@ -1,20 +1,20 @@
 // this module benchmarks the performance of different field operations
 
-use arith::{Field, M31Ext3, M31};
+#[cfg(target_arch = "x86_64")]
+use arith::VectorizedM31Ext3;
+
+use arith::{Field, M31Ext3, VectorizedM31, M31};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use halo2curves::bn256::Fr;
 use tynm::type_name;
-
-#[cfg(target_arch = "x86_64")]
-use arith::PackedM31Ext3;
 
 fn random_element<F: Field>() -> F {
     let mut rng = test_rng();
     F::random_unsafe(&mut rng)
 }
 
-pub(crate) fn bench_field_avx512<F: Field>(c: &mut Criterion) {
+pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
     c.bench_function(&format!("mul-throughput<{}>", type_name::<F>()), |b| {
         b.iter_batched(
             || {
@@ -133,11 +133,12 @@ pub(crate) fn bench_field_avx512<F: Field>(c: &mut Criterion) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    bench_field_avx512::<M31>(c);
-    bench_field_avx512::<M31Ext3>(c);
+    bench_field::<M31>(c);
+    bench_field::<VectorizedM31>(c);
+    bench_field::<M31Ext3>(c);
     #[cfg(target_arch = "x86_64")]
-    bench_field_avx512::<PackedM31Ext3>(c);
-    bench_field_avx512::<Fr>(c);
+    bench_field::<VectorizedM31Ext3>(c);
+    bench_field::<Fr>(c);
 }
 
 criterion_group!(benches, criterion_benchmark);

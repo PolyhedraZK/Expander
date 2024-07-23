@@ -1,36 +1,42 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::{Field, FieldSerde, VectorizedField};
+use arith::{FiatShamirConfig, Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 
 use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
 
-pub fn grind<F: Field>(transcript: &mut Transcript, config: &Config) {
+pub fn grind<F: Field + FieldSerde + FiatShamirConfig>(
+    transcript: &mut Transcript,
+    config: &Config,
+) {
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
 
-    let initial_hash = transcript.challenge_fs::<F>(256 / config.field_size);
-    let mut hash_bytes = [0u8; 256 / 8];
-    let mut offset = 0;
-    let step = (config.field_size + 7) / 8;
+    let mut hash_bytes = vec![];
 
-    for h in initial_hash.iter() {
-        h.serialize_into(&mut hash_bytes[offset..]);
-        offset += step;
-    }
+    // ceil(32/field_size)
+    let num_field_elements = (31 + F::ChallengeField::SIZE) / F::ChallengeField::SIZE;
+
+    let initial_hash = transcript.challenge_fs::<F>(num_field_elements);
+    initial_hash
+        .iter()
+        .for_each(|h| h.serialize_into(&mut hash_bytes));
+
+    assert!(hash_bytes.len() >= 32, "hash len: {}", hash_bytes.len());
+    hash_bytes.truncate(32);
 
     for _ in 0..(1 << config.grinding_bits) {
-        transcript.hasher.hash_inplace(&mut hash_bytes, 256 / 8);
+        transcript.hasher.hash_inplace(&mut hash_bytes, 32);
     }
-    transcript.append_u8_slice(&hash_bytes, 256 / 8);
+    transcript.append_u8_slice(&hash_bytes[..32]);
     end_timer!(timer);
 }
 
-pub struct Prover<F: Field> {
+pub struct Prover<F: Field + FieldSerde + FiatShamirConfig> {
     config: Config,
     sp: Vec<GkrScratchpad<F>>,
 }
 
-impl<F: VectorizedField + FieldSerde> Prover<F> {
+impl<F: Field + FieldSerde + FiatShamirConfig> Prover<F> {
     pub fn new(config: &Config) -> Self {
         // assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
@@ -62,22 +68,17 @@ impl<F: VectorizedField + FieldSerde> Prover<F> {
             .collect();
     }
 
-    pub fn prove(&mut self, c: &Circuit<F>) -> (Vec<F>, Proof)
-    where
-        F::PackedBaseField: Field<BaseField = F::BaseField>,
-    {
+    pub fn prove(&mut self, c: &Circuit<F>) -> (Vec<F>, Proof) {
         let timer = start_timer!(|| "prove");
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
         // PC commit
         let commitment = RawCommitment::new(c.layers[0].input_vals.evals.clone());
-        let buffer_v = vec![F::default(); commitment.size() / F::SIZE];
-        let buffer = unsafe {
-            std::slice::from_raw_parts_mut(buffer_v.as_ptr() as *mut u8, commitment.size())
-        };
-        commitment.serialize_into(buffer);
+
+        let mut buffer = vec![];
+        commitment.serialize_into(&mut buffer);
         let mut transcript = Transcript::new();
-        transcript.append_u8_slice(buffer, commitment.size());
+        transcript.append_u8_slice(&buffer);
 
         grind::<F>(&mut transcript, &self.config);
 

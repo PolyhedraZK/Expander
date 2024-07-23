@@ -1,4 +1,4 @@
-use arith::{Field, FieldSerde};
+use arith::{FiatShamirConfig, Field, FieldSerde};
 
 use crate::{Proof, SHA256hasher};
 
@@ -42,24 +42,24 @@ impl Transcript {
             proof: Proof::default(),
         }
     }
-
+    #[inline]
     pub fn append_f<F: Field + FieldSerde>(&mut self, f: F) {
         let cur_size = self.proof.bytes.len();
         self.proof.bytes.resize(cur_size + F::SIZE, 0);
         f.serialize_into(&mut self.proof.bytes[cur_size..]);
     }
-
-    pub fn append_u8_slice(&mut self, buffer: &[u8], size: usize) {
-        self.proof.append_u8_slice(buffer, size);
+    #[inline]
+    pub fn append_u8_slice(&mut self, buffer: &[u8]) {
+        self.proof.bytes.extend_from_slice(buffer);
     }
-
-    pub fn challenge_f<F: Field>(&mut self) -> F::BaseField {
+    #[inline]
+    pub fn challenge_f<F: FiatShamirConfig>(&mut self) -> F::ChallengeField {
         self.hash_to_digest();
-        assert!(F::BaseField::SIZE <= Self::DIGEST_SIZE);
-        F::BaseField::from_uniform_bytes(&self.digest)
+        assert!(F::ChallengeField::SIZE <= Self::DIGEST_SIZE);
+        F::ChallengeField::from_uniform_bytes(&self.digest)
     }
-
-    pub fn challenge_fs<F: Field>(&mut self, size: usize) -> Vec<F::BaseField> {
+    #[inline]
+    pub fn challenge_fs<F: FiatShamirConfig>(&mut self, size: usize) -> Vec<F::ChallengeField> {
         (0..size).map(|_| self.challenge_f::<F>()).collect()
     }
 }

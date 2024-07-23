@@ -1,29 +1,27 @@
 mod vectorized_m31;
-use ark_std::Zero;
-pub use vectorized_m31::*;
+pub use vectorized_m31::VectorizedM31;
 
 #[cfg(target_arch = "x86_64")]
-pub mod m31_avx;
-#[cfg(target_arch = "x86_64")]
-pub use m31_avx::PackedM31;
+pub(crate) mod m31_avx;
 
 #[cfg(target_arch = "aarch64")]
 pub mod m31_neon;
-#[cfg(target_arch = "aarch64")]
-pub use m31_neon::PackedM31;
+
 use rand::RngCore;
 
 use crate::{Field, FieldSerde};
 use std::{
+    io::{Read, Write},
     iter::{Product, Sum},
-    mem::size_of,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-pub const M31_MOD: i32 = 2147483647;
+use ark_std::Zero;
+
+pub const M31_MOD: u32 = 2147483647;
 
 #[inline]
-pub(crate) fn mod_reduce_i32(x: i32) -> i32 {
+pub(crate) fn mod_reduce_u32(x: u32) -> u32 {
     (x & M31_MOD) + (x >> 31)
 }
 
@@ -39,29 +37,35 @@ pub struct M31 {
 
 impl FieldSerde for M31 {
     #[inline(always)]
-    fn serialize_into(&self, buffer: &mut [u8]) {
-        buffer[..M31::SIZE].copy_from_slice(unsafe {
-            std::slice::from_raw_parts(&self.v as *const u32 as *const u8, M31::SIZE)
-        });
+    fn serialize_into<W: Write>(&self, mut writer: W) {
+        writer.write_all(self.v.to_le_bytes().as_ref()).unwrap(); // todo: error propagation
+    }
+
+    #[inline(always)]
+    fn serialized_size() -> usize {
+        4
     }
 
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from(buffer: &[u8]) -> Self {
-        let ptr = buffer.as_ptr() as *const u32;
-
-        let mut v = unsafe { ptr.read_unaligned() } as i32;
-        v = mod_reduce_i32(v);
-        M31 { v: v as u32 }
+    fn deserialize_from<R: Read>(mut reader: R) -> Self {
+        let mut u = [0u8; 4];
+        reader.read_exact(&mut u).unwrap(); // todo: error propagation
+        let mut v = u32::from_le_bytes(u);
+        v = mod_reduce_u32(v);
+        M31 { v }
     }
 
     #[inline(always)]
-    fn deserialize_from_ecc_format(bytes: &[u8; 32]) -> Self {
-        for (i, v) in bytes.iter().enumerate().skip(4).take(28) {
-            assert_eq!(*v, 0, "non-zero byte found in witness at {}'th byte", i);
-        }
-        Self::from(u32::from_le_bytes(bytes[..4].try_into().unwrap()))
+    fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
+        let mut buf = [0u8; 32];
+        reader.read_exact(&mut buf).unwrap(); // todo: error propagation
+        assert!(
+            buf.iter().skip(4).all(|&x| x == 0),
+            "non-zero byte found in witness byte"
+        );
+        Self::from(u32::from_le_bytes(buf[..4].try_into().unwrap()))
     }
 }
 
@@ -82,11 +86,9 @@ impl M31 {
 impl Field for M31 {
     const NAME: &'static str = "Mersenne 31";
 
-    const SIZE: usize = size_of::<u32>();
+    const SIZE: usize = 4;
 
     const INV_2: M31 = M31 { v: 1 << 30 };
-
-    type BaseField = M31;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -102,7 +104,7 @@ impl Field for M31 {
         rng.next_u32().into()
     }
 
-    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         (rng.next_u32() & 1).into()
     }
 
@@ -126,36 +128,15 @@ impl Field for M31 {
     }
 
     #[inline(always)]
-    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        *self + *rhs
-    }
-
-    #[inline(always)]
-    fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self += rhs
-    }
-
-    #[inline(always)]
-    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        *self * rhs
-    }
-
-    #[inline(always)]
-    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self *= rhs;
-    }
-
-    #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
         self.v
     }
 
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        let ptr = bytes.as_ptr() as *const u32;
-        let mut v = unsafe { ptr.read_unaligned() } as i32;
-        v = mod_reduce_i32(v);
-        M31 { v: v as u32 }
+        let mut v = u32::from_le_bytes(bytes[..4].try_into().unwrap());
+        v = mod_reduce_u32(v);
+        M31 { v }
     }
 }
 
@@ -212,8 +193,8 @@ impl Add<&M31> for M31 {
     #[inline(always)]
     fn add(self, rhs: &M31) -> Self::Output {
         let mut vv = self.v + rhs.v;
-        if vv >= M31_MOD as u32 {
-            vv -= M31_MOD as u32;
+        if vv >= M31_MOD {
+            vv -= M31_MOD;
         }
         M31 { v: vv }
     }
@@ -253,11 +234,7 @@ impl Neg for M31 {
     #[inline(always)]
     fn neg(self) -> Self::Output {
         M31 {
-            v: if self.v == 0 {
-                0
-            } else {
-                M31_MOD as u32 - self.v
-            },
+            v: if self.v == 0 { 0 } else { M31_MOD - self.v },
         }
     }
 }
@@ -298,11 +275,7 @@ impl From<u32> for M31 {
     #[inline(always)]
     fn from(x: u32) -> Self {
         M31 {
-            v: if x < M31_MOD as u32 {
-                x
-            } else {
-                x % M31_MOD as u32
-            },
+            v: if x < M31_MOD { x } else { x % M31_MOD },
         }
     }
 }
@@ -317,7 +290,6 @@ impl M31 {
     }
 
     /// credit: https://github.com/Plonky3/Plonky3/blob/ed21a5e11cb20effadaab606598ccad4e70e1a3e/mersenne-31/src/mersenne_31.rs#L235
-
     fn try_inverse(&self) -> Option<Self> {
         if self.is_zero() {
             return None;

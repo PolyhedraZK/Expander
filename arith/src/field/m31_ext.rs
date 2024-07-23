@@ -1,18 +1,16 @@
-#[cfg(target_arch = "x86_64")]
-mod packed_m31_ext;
-
-#[cfg(target_arch = "x86_64")]
-pub use packed_m31_ext::PackedM31Ext3;
+mod vectorized_m31;
+pub use vectorized_m31::VectorizedM31Ext3;
 
 use ark_std::Zero;
 use rand::RngCore;
 use std::{
+    io::{Read, Write},
     iter::{Product, Sum},
     mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{mod_reduce_i32, Field, FieldSerde, M31};
+use crate::{mod_reduce_u32, Field, FieldSerde, M31};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct M31Ext3 {
@@ -21,40 +19,50 @@ pub struct M31Ext3 {
 
 impl FieldSerde for M31Ext3 {
     #[inline(always)]
-    fn serialize_into(&self, buffer: &mut [u8]) {
-        self.v[0].serialize_into(buffer);
-        self.v[1].serialize_into(&mut buffer[4..]);
-        self.v[2].serialize_into(&mut buffer[8..]);
+    fn serialize_into<W: Write>(&self, mut writer: W) {
+        self.v[0].serialize_into(&mut writer);
+        self.v[1].serialize_into(&mut writer);
+        self.v[2].serialize_into(&mut writer);
+    }
+
+    #[inline(always)]
+    fn serialized_size() -> usize {
+        12
     }
 
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from(buffer: &[u8]) -> Self {
+    fn deserialize_from<R: Read>(mut reader: R) -> Self {
         M31Ext3 {
             v: [
-                M31::deserialize_from(&buffer[0..4]),
-                M31::deserialize_from(&buffer[4..8]),
-                M31::deserialize_from(&buffer[8..12]),
+                M31::deserialize_from(&mut reader),
+                M31::deserialize_from(&mut reader),
+                M31::deserialize_from(&mut reader),
             ],
         }
     }
 
-    fn deserialize_from_ecc_format(_bytes: &[u8; 32]) -> Self {
-        todo!()
+    #[inline(always)]
+    fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
+        let mut buf = [0u8; 32];
+        reader.read_exact(&mut buf).unwrap(); // todo: error propagation
+        assert!(
+            buf.iter().skip(4).all(|&x| x == 0),
+            "non-zero byte found in witness byte"
+        );
+        Self::from(u32::from_le_bytes(buf[..4].try_into().unwrap()))
     }
 }
 
 impl Field for M31Ext3 {
     const NAME: &'static str = "Mersenne 31 Extension 3";
 
-    const SIZE: usize = 24;
+    const SIZE: usize = 12;
 
     const INV_2: M31Ext3 = M31Ext3 {
         v: [M31::INV_2, M31 { v: 0 }, M31 { v: 0 }],
     };
-
-    type BaseField = M31;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -80,13 +88,9 @@ impl Field for M31Ext3 {
         }
     }
 
-    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         M31Ext3 {
-            v: [
-                M31::random_bool_unsafe(&mut rng),
-                M31::random_bool_unsafe(&mut rng),
-                M31::random_bool_unsafe(&mut rng),
-            ],
+            v: [M31::random_bool(&mut rng), M31::zero(), M31::zero()],
         }
     }
 
@@ -115,38 +119,12 @@ impl Field for M31Ext3 {
         // self.try_inverse()
     }
 
-    #[inline(always)]
-    fn add_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        let mut res = *self;
-        res.v[0] += rhs;
-        res
-    }
-
-    #[inline(always)]
-    fn add_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self += Self::from(rhs)
-    }
-
     /// Squaring
     #[inline(always)]
     fn square(&self) -> Self {
-        let mut res = [M31::default(); 3];
-        res[0] = self.v[0] * self.v[0] + M31 { v: 10 } * (self.v[1] * self.v[2]);
-        res[1] = self.v[0] * self.v[1].double() + M31 { v: 5 } * self.v[2] * self.v[2];
-        res[2] = self.v[0] * self.v[2].double() + self.v[1] * self.v[1];
-        Self { v: res }
-    }
-
-    #[inline(always)]
-    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
         Self {
-            v: [self.v[0] * rhs, self.v[1] * rhs, self.v[2] * rhs],
+            v: square_internal(&self.v),
         }
-    }
-
-    #[inline(always)]
-    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self = self.mul_base_elem(rhs);
     }
 
     #[inline(always)]
@@ -156,19 +134,19 @@ impl Field for M31Ext3 {
 
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        let v1 = mod_reduce_i32(i32::from_be_bytes(bytes[0..4].try_into().unwrap()));
-        let v2 = mod_reduce_i32(i32::from_be_bytes(bytes[4..8].try_into().unwrap()));
-        let v3 = mod_reduce_i32(i32::from_be_bytes(bytes[8..12].try_into().unwrap()));
+        let v1 = mod_reduce_u32(u32::from_be_bytes(bytes[0..4].try_into().unwrap()));
+        let v2 = mod_reduce_u32(u32::from_be_bytes(bytes[4..8].try_into().unwrap()));
+        let v3 = mod_reduce_u32(u32::from_be_bytes(bytes[8..12].try_into().unwrap()));
         Self {
             v: [
                 M31 {
-                    v: mod_reduce_i32(v1) as u32,
+                    v: mod_reduce_u32(v1),
                 },
                 M31 {
-                    v: mod_reduce_i32(v2) as u32,
+                    v: mod_reduce_u32(v2),
                 },
                 M31 {
-                    v: mod_reduce_i32(v3) as u32,
+                    v: mod_reduce_u32(v3),
                 },
             ],
         }
@@ -378,5 +356,13 @@ fn mul_internal(a: &[M31; 3], b: &[M31; 3]) -> [M31; 3] {
     res[0] = a[0] * b[0] + M31 { v: 5 } * (a[1] * b[2] + a[2] * b[1]);
     res[1] = a[0] * b[1] + a[1] * b[0] + M31 { v: 5 } * a[2] * b[2];
     res[2] = a[0] * b[2] + a[1] * b[1] + a[2] * b[0];
+    res
+}
+
+fn square_internal(a: &[M31; 3]) -> [M31; 3] {
+    let mut res = [M31::default(); 3];
+    res[0] = a[0].square() + M31 { v: 10 } * (a[1] * a[2]);
+    res[1] = a[0] * a[1].double() + M31 { v: 5 } * a[2].square();
+    res[2] = a[0] * a[2].double() + a[1].square();
     res
 }

@@ -1,5 +1,3 @@
-use arith::{VectorizedField, VectorizedM31};
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolynomialCommitmentType {
     Raw,
@@ -37,13 +35,9 @@ pub enum FiatShamirHashType {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
     pub num_repetitions: usize,
-    pub vectorize_size: usize,
-
     pub field_size: usize,
     pub security_bits: usize,
     pub grinding_bits: usize,
-    pub num_parallel: usize, // nb_parallel
-
     pub polynomial_commitment_type: PolynomialCommitmentType,
     pub field_type: FieldType, // LATER: consider infer this from trait
     pub fs_hash: FiatShamirHashType,
@@ -57,22 +51,19 @@ impl Default for Config {
 
 impl Config {
     pub fn m31_config() -> Self {
-        let mut vectorize_size = 0;
+        println!("===================================================");
+        println!("WARNING: Using M31 for testing purposes only.");
+        println!("WARNING: Do not use in production.");
+        println!("WARNING: M31 may not give you enough soundness.");
+        println!("WARNING: consider to use M31Ext3 or Bn254::Fr instead.");
+        println!("===================================================");
 
         let security_bits = 100;
         let grinding_bits = 10;
-        let num_parallel = 16;
 
-        let field_size = match FieldType::M31 {
-            FieldType::M31 => {
-                vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
-                31
-            }
-            FieldType::BabyBear => 31,
-            FieldType::BN254 => 254,
-        };
+        let field_size = 31;
 
-        let num_repetitions = (security_bits - grinding_bits + field_size - 1) / field_size;
+        let num_repetitions = 3;
 
         let polynomial_commitment_type = PolynomialCommitmentType::Raw;
         let field_type = FieldType::M31;
@@ -84,11 +75,9 @@ impl Config {
 
         Config {
             num_repetitions, // update later
-            vectorize_size,  // update later
             field_size,      // update later
             security_bits,
             grinding_bits,
-            num_parallel,
             polynomial_commitment_type,
             field_type,
             fs_hash,
@@ -99,10 +88,8 @@ impl Config {
     pub fn m31_ext3_config() -> Self {
         let security_bits = 100;
         let grinding_bits = 10;
-        let num_parallel = 16;
 
         let field_size = 93;
-        let vectorize_size = num_parallel / VectorizedM31::PACK_SIZE;
 
         let num_repetitions = 1; // we do not need repetitions for m31_ext3
 
@@ -116,11 +103,9 @@ impl Config {
 
         Config {
             num_repetitions, // update later
-            vectorize_size,  // update later
             field_size,      // update later
             security_bits,
             grinding_bits,
-            num_parallel,
             polynomial_commitment_type,
             field_type,
             fs_hash,
@@ -128,11 +113,8 @@ impl Config {
     }
 
     pub fn bn254_config() -> Self {
-        let vectorize_size = 1;
-
         let security_bits = 128;
         let grinding_bits = 0;
-        let num_parallel = 16;
 
         let field_size = 254;
 
@@ -148,11 +130,9 @@ impl Config {
 
         Config {
             num_repetitions, // update later
-            vectorize_size,  // update later
             field_size,      // update later
             security_bits,
             grinding_bits,
-            num_parallel,
             polynomial_commitment_type,
             field_type,
             fs_hash,

@@ -1,23 +1,29 @@
 use std::{
     arch::x86_64::*,
     fmt::Debug,
+    io::{Read, Write},
     iter::{Product, Sum},
-    mem::{size_of, transmute},
+    mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{Field, FieldSerde, M31, M31_MOD};
+use rand::{Rng, RngCore};
 
-type PackedDataType = __m256i;
-pub(super) const M31_PACK_SIZE: usize = 8;
-pub(super) const M31_VECTORIZE_SIZE: usize = 1;
+use crate::{FiatShamirConfig, Field, FieldSerde, M31, M31_MOD};
 
-const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; 8]) };
-const PACKED_0: __m256i = unsafe { transmute([0; 8]) };
+const M31_PACK_SIZE: usize = 8;
+const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; M31_PACK_SIZE]) };
+const PACKED_0: __m256i = unsafe { transmute([0; M31_PACK_SIZE]) };
 const PACKED_MOD_EPI64: __m256i = unsafe { transmute([M31_MOD as u64; 4]) };
-const _PACKED_MOD_SQUARE: __m256 = unsafe { transmute([(M31_MOD as u64 * M31_MOD as u64); 4]) };
-const _PACKED_MOD_512: __m512i = unsafe { transmute([M31_MOD as i64; 8]) };
-pub(crate) const PACKED_INV_2: __m256i = unsafe { transmute([1 << 30; 8]) };
+const PACKED_INV_2: __m256i = unsafe { transmute([1 << 30; M31_PACK_SIZE]) };
+
+pub(crate) const FIVE: AVXM31 = AVXM31 {
+    v: unsafe { transmute::<[i32; 8], std::arch::x86_64::__m256i>([5; 8]) },
+};
+
+pub(crate) const TEN: AVXM31 = AVXM31 {
+    v: unsafe { transmute::<[i32; 8], std::arch::x86_64::__m256i>([10; 8]) },
+};
 
 #[inline(always)]
 unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
@@ -32,68 +38,75 @@ unsafe fn mod_reduce_epi32(x: __m256i) -> __m256i {
     _mm256_add_epi32(_mm256_and_si256(x, PACKED_MOD), _mm256_srli_epi32(x, 31))
 }
 
-use mod_reduce_epi64 as mod_reduce;
-use rand::{Rng, RngCore};
-
 #[derive(Clone, Copy)]
-pub struct PackedM31 {
-    pub v: PackedDataType,
+pub struct AVXM31 {
+    pub v: __m256i,
 }
 
-impl PackedM31 {
-    pub const SIZE: usize = size_of::<PackedDataType>();
+impl AVXM31 {
     #[inline(always)]
-    pub fn pack_full(x: M31) -> PackedM31 {
-        PackedM31 {
+    pub(crate) fn pack_full(x: M31) -> AVXM31 {
+        AVXM31 {
             v: unsafe { _mm256_set1_epi32(x.v as i32) },
         }
     }
 }
 
-impl FieldSerde for PackedM31 {
+impl FieldSerde for AVXM31 {
+    #[inline(always)]
     /// serialize self into bytes
-    fn serialize_into(&self, buffer: &mut [u8]) {
-        unsafe {
-            let data = transmute::<PackedDataType, [u8; 32]>(self.v);
-            buffer[..32].copy_from_slice(&data);
-        }
+    fn serialize_into<W: Write>(&self, mut writer: W) {
+        let data = unsafe { transmute::<__m256i, [u8; 32]>(self.v) };
+        writer.write_all(&data).unwrap();
+    }
+
+    #[inline(always)]
+    fn serialized_size() -> usize {
+        32
     }
 
     /// deserialize bytes into field
-    fn deserialize_from(buffer: &[u8]) -> Self {
+    #[inline(always)]
+    fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let mut data = [0; 32];
-        data.copy_from_slice(buffer);
+        reader.read_exact(&mut data).unwrap();
         unsafe {
-            PackedM31 {
-                v: transmute::<[u8; 32], PackedDataType>(data),
+            AVXM31 {
+                v: transmute::<[u8; 32], __m256i>(data),
             }
         }
     }
 
-    fn deserialize_from_ecc_format(_bytes: &[u8; 32]) -> Self {
-        todo!()
+    #[inline(always)]
+    fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
+        let mut buf = [0u8; 32];
+        reader.read_exact(&mut buf).unwrap(); // todo: error propagation
+        assert!(
+            buf.iter().skip(4).all(|&x| x == 0),
+            "non-zero byte found in witness byte"
+        );
+        Self::pack_full(u32::from_le_bytes(buf[..4].try_into().unwrap()).into())
     }
 }
 
-impl Field for PackedM31 {
+impl Field for AVXM31 {
     const NAME: &'static str = "AVX Packed Mersenne 31";
 
-    const SIZE: usize = size_of::<PackedDataType>();
+    // size in bytes
+    const SIZE: usize = 32;
 
     const INV_2: Self = Self { v: PACKED_INV_2 };
 
-    type BaseField = M31;
-
     #[inline(always)]
     fn zero() -> Self {
-        PackedM31 {
+        AVXM31 {
             v: unsafe { _mm256_set1_epi32(0) },
         }
     }
 
     #[inline(always)]
     fn one() -> Self {
-        PackedM31 {
+        AVXM31 {
             v: unsafe { _mm256_set1_epi32(1) },
         }
     }
@@ -117,13 +130,14 @@ impl Field for PackedM31 {
             );
             v = mod_reduce_epi32(v);
             v = mod_reduce_epi32(v);
-            PackedM31 { v }
+            AVXM31 { v }
         }
     }
 
     #[inline(always)]
-    fn random_bool_unsafe(mut rng: impl RngCore) -> Self {
-        PackedM31 {
+    fn random_bool(mut rng: impl RngCore) -> Self {
+        // TODO: optimize this code
+        AVXM31 {
             v: unsafe {
                 _mm256_setr_epi32(
                     rng.gen::<bool>() as i32,
@@ -140,47 +154,58 @@ impl Field for PackedM31 {
     }
 
     fn exp(&self, _exponent: &Self) -> Self {
-        todo!()
+        unimplemented!("exp not implemented for AVXM31")
     }
 
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
-        unimplemented!()
-    }
+        // slow, should not be used in production
+        let mut m31_vec = unsafe { transmute::<__m256i, [M31; 8]>(self.v) };
+        let is_non_zero = m31_vec.iter().all(|x| !x.is_zero());
+        if !is_non_zero {
+            return None;
+        }
 
-    #[inline(always)]
-    fn add_base_elem(&self, _rhs: &Self::BaseField) -> Self {
-        unimplemented!()
-    }
-
-    #[inline(always)]
-    fn add_assign_base_elem(&mut self, _rhs: &Self::BaseField) {
-        unimplemented!()
-    }
-
-    #[inline(always)]
-    fn mul_base_elem(&self, rhs: &Self::BaseField) -> Self {
-        *self * rhs
-    }
-
-    #[inline(always)]
-    fn mul_assign_base_elem(&mut self, rhs: &Self::BaseField) {
-        *self = *self * rhs;
+        m31_vec.iter_mut().for_each(|x| *x = x.inv().unwrap()); // safe unwrap
+        Some(Self {
+            v: unsafe { transmute::<[M31; 8], __m256i>(m31_vec) },
+        })
     }
 
     fn as_u32_unchecked(&self) -> u32 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
-    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
-        unimplemented!(" cannot convert 32 bytes into a vectorized M31")
+
+    #[inline]
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+        let m = M31::from_uniform_bytes(bytes);
+        Self {
+            v: unsafe { _mm256_set1_epi32(m.v as i32) },
+        }
     }
 }
 
-impl Debug for PackedM31 {
+impl FiatShamirConfig for AVXM31 {
+    type ChallengeField = M31;
+
+    #[inline]
+    fn scale(&self, challenge: &Self::ChallengeField) -> Self {
+        *self * *challenge
+    }
+}
+
+impl From<M31> for AVXM31 {
+    #[inline(always)]
+    fn from(x: M31) -> Self {
+        AVXM31::pack_full(x)
+    }
+}
+
+impl Debug for AVXM31 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut data = [0; M31_PACK_SIZE];
         unsafe {
-            _mm256_storeu_si256(data.as_mut_ptr() as *mut PackedDataType, self.v);
+            _mm256_storeu_si256(data.as_mut_ptr() as *mut __m256i, self.v);
         }
         // if all data is the same, print only one
         if data.iter().all(|&x| x == data[0]) {
@@ -199,13 +224,13 @@ impl Debug for PackedM31 {
     }
 }
 
-impl Default for PackedM31 {
+impl Default for AVXM31 {
     fn default() -> Self {
-        PackedM31::zero()
+        AVXM31::zero()
     }
 }
 
-impl PartialEq for PackedM31 {
+impl PartialEq for AVXM31 {
     fn eq(&self, other: &Self) -> bool {
         unsafe {
             let pcmp = _mm256_cmpeq_epi32(self.v, other.v);
@@ -214,141 +239,141 @@ impl PartialEq for PackedM31 {
     }
 }
 
-impl Mul<&PackedM31> for PackedM31 {
-    type Output = PackedM31;
+impl Mul<&AVXM31> for AVXM31 {
+    type Output = AVXM31;
     #[inline(always)]
-    fn mul(self, rhs: &PackedM31) -> Self::Output {
+    fn mul(self, rhs: &AVXM31) -> Self::Output {
         unsafe {
             let x_shifted = _mm256_srli_epi64::<32>(self.v);
             let rhs_shifted = _mm256_srli_epi64::<32>(rhs.v);
             let mut xa_even = _mm256_mul_epi32(self.v, rhs.v);
             let mut xa_odd = _mm256_mul_epi32(x_shifted, rhs_shifted);
-            xa_even = mod_reduce(xa_even);
-            xa_odd = mod_reduce(xa_odd);
-            PackedM31 {
+            xa_even = mod_reduce_epi64(xa_even);
+            xa_odd = mod_reduce_epi64(xa_odd);
+            AVXM31 {
                 v: mod_reduce_epi32(_mm256_or_si256(xa_even, _mm256_slli_epi64::<32>(xa_odd))),
             }
         }
     }
 }
 
-impl Mul for PackedM31 {
-    type Output = PackedM31;
+impl Mul for AVXM31 {
+    type Output = AVXM31;
     #[inline(always)]
     #[allow(clippy::op_ref)]
-    fn mul(self, rhs: PackedM31) -> Self::Output {
+    fn mul(self, rhs: AVXM31) -> Self::Output {
         self * &rhs
     }
 }
 
-impl Mul<&M31> for PackedM31 {
-    type Output = PackedM31;
+impl Mul<&M31> for AVXM31 {
+    type Output = AVXM31;
     #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
         unsafe {
             let rhs_p = _mm256_set1_epi32(rhs.v as i32);
-            self * PackedM31 { v: rhs_p }
+            self * AVXM31 { v: rhs_p }
         }
     }
 }
 
-impl Mul<M31> for PackedM31 {
-    type Output = PackedM31;
+impl Mul<M31> for AVXM31 {
+    type Output = AVXM31;
     #[inline(always)]
     fn mul(self, rhs: M31) -> Self::Output {
         self * &rhs
     }
 }
 
-impl MulAssign<&PackedM31> for PackedM31 {
+impl MulAssign<&AVXM31> for AVXM31 {
     #[inline(always)]
-    fn mul_assign(&mut self, rhs: &PackedM31) {
+    fn mul_assign(&mut self, rhs: &AVXM31) {
         *self = *self * rhs;
     }
 }
 
-impl MulAssign for PackedM31 {
+impl MulAssign for AVXM31 {
     #[inline(always)]
     fn mul_assign(&mut self, rhs: Self) {
         *self *= &rhs;
     }
 }
 
-impl<T: ::core::borrow::Borrow<PackedM31>> Product<T> for PackedM31 {
+impl<T: ::core::borrow::Borrow<AVXM31>> Product<T> for AVXM31 {
     fn product<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::one(), |acc, item| acc * item.borrow())
     }
 }
 
-impl Add<&PackedM31> for PackedM31 {
-    type Output = PackedM31;
+impl Add<&AVXM31> for AVXM31 {
+    type Output = AVXM31;
     #[inline(always)]
-    fn add(self, rhs: &PackedM31) -> Self::Output {
+    fn add(self, rhs: &AVXM31) -> Self::Output {
         unsafe {
             let mut result = _mm256_add_epi32(self.v, rhs.v);
             let subx = _mm256_sub_epi32(result, PACKED_MOD);
             result = _mm256_min_epu32(result, subx);
 
-            PackedM31 { v: result }
+            AVXM31 { v: result }
         }
     }
 }
 
-impl Add for PackedM31 {
-    type Output = PackedM31;
+impl Add for AVXM31 {
+    type Output = AVXM31;
     #[inline(always)]
     #[allow(clippy::op_ref)]
-    fn add(self, rhs: PackedM31) -> Self::Output {
+    fn add(self, rhs: AVXM31) -> Self::Output {
         self + &rhs
     }
 }
 
-impl AddAssign<&PackedM31> for PackedM31 {
+impl AddAssign<&AVXM31> for AVXM31 {
     #[inline(always)]
-    fn add_assign(&mut self, rhs: &PackedM31) {
+    fn add_assign(&mut self, rhs: &AVXM31) {
         *self = *self + rhs;
     }
 }
 
-impl AddAssign for PackedM31 {
+impl AddAssign for AVXM31 {
     #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self += &rhs;
     }
 }
 
-impl<T: ::core::borrow::Borrow<PackedM31>> Sum<T> for PackedM31 {
+impl<T: ::core::borrow::Borrow<AVXM31>> Sum<T> for AVXM31 {
     fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::zero(), |acc, item| acc + item.borrow())
     }
 }
 
-impl From<u32> for PackedM31 {
+impl From<u32> for AVXM31 {
     #[inline(always)]
     fn from(x: u32) -> Self {
-        PackedM31::pack_full(M31::from(x))
+        AVXM31::pack_full(M31::from(x))
     }
 }
 
-impl Neg for PackedM31 {
-    type Output = PackedM31;
+impl Neg for AVXM31 {
+    type Output = AVXM31;
     #[inline(always)]
     fn neg(self) -> Self::Output {
         unsafe {
             let subx = _mm256_sub_epi32(PACKED_MOD, self.v);
             let zero_cmp = _mm256_cmpeq_epi32(self.v, PACKED_0);
-            PackedM31 {
+            AVXM31 {
                 v: _mm256_andnot_si256(zero_cmp, subx),
             }
         }
     }
 }
 
-impl Sub<&PackedM31> for PackedM31 {
-    type Output = PackedM31;
+impl Sub<&AVXM31> for AVXM31 {
+    type Output = AVXM31;
     #[inline(always)]
-    fn sub(self, rhs: &PackedM31) -> Self::Output {
-        PackedM31 {
+    fn sub(self, rhs: &AVXM31) -> Self::Output {
+        AVXM31 {
             v: unsafe {
                 let t = _mm256_sub_epi32(self.v, rhs.v);
                 let subx = _mm256_add_epi32(t, PACKED_MOD);
@@ -358,23 +383,23 @@ impl Sub<&PackedM31> for PackedM31 {
     }
 }
 
-impl Sub for PackedM31 {
-    type Output = PackedM31;
+impl Sub for AVXM31 {
+    type Output = AVXM31;
     #[inline(always)]
     #[allow(clippy::op_ref)]
-    fn sub(self, rhs: PackedM31) -> Self::Output {
+    fn sub(self, rhs: AVXM31) -> Self::Output {
         self - &rhs
     }
 }
 
-impl SubAssign<&PackedM31> for PackedM31 {
+impl SubAssign<&AVXM31> for AVXM31 {
     #[inline(always)]
-    fn sub_assign(&mut self, rhs: &PackedM31) {
+    fn sub_assign(&mut self, rhs: &AVXM31) {
         *self = *self - rhs;
     }
 }
 
-impl SubAssign for PackedM31 {
+impl SubAssign for AVXM31 {
     #[inline(always)]
     fn sub_assign(&mut self, rhs: Self) {
         *self -= &rhs;

@@ -4,22 +4,31 @@ use std::{
     thread,
 };
 
-use arith::{Field, FieldSerde, VectorizedField, VectorizedFr, VectorizedM31};
+use arith::VectorizedM31Ext3;
+use arith::{FiatShamirConfig, Field, FieldSerde, VectorizedM31};
 use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
+use halo2curves::bn256::Fr;
 
-#[cfg(target_arch = "x86_64")]
-use arith::PackedM31Ext3;
+const KECCAK_CIRCUIT: &str = "data/circuit.txt";
+// circuit for repeating Poseidon for 120 times
+const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
 
-const CIRCUIT_NAME: &str = "data/compiler_out/circuit.txt";
+const CIRCUIT_COPY_SIZE: usize = 8;
+const M31_PACKSIZE: usize = 8;
+const FR_PACKSIZE: usize = 1;
 
 /// ...
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Curve id
-    #[arg(short, long,default_value_t = String::from("fr"))]
+    /// Field Identifier: fr, m31, m31ext3
+    #[arg(short, long,default_value_t = String::from("m31ext3"))]
     field: String,
+
+    // scheme: keccak, poseidon
+    #[arg(short, long, default_value_t = String::from("keccak"))]
+    scheme: String,
 
     /// number of repeat
     #[arg(short, long, default_value_t = 4)]
@@ -36,18 +45,15 @@ fn main() {
 
     match args.field.as_str() {
         "m31" => run_benchmark::<VectorizedM31>(&args, Config::m31_config()),
-        #[cfg(target_arch = "x86_64")]
-        "m31ext3" => run_benchmark::<PackedM31Ext3>(&args, Config::m31_ext3_config()),
-        "fr" => run_benchmark::<VectorizedFr>(&args, Config::bn254_config()),
+        "m31ext3" => run_benchmark::<VectorizedM31Ext3>(&args, Config::m31_ext3_config()),
+        "fr" => run_benchmark::<Fr>(&args, Config::bn254_config()),
         _ => unreachable!(),
     };
 }
 
-fn run_benchmark<VecF>(args: &Args, config: Config)
+fn run_benchmark<F>(args: &Args, config: Config)
 where
-    VecF: VectorizedField + FieldSerde + Send + 'static,
-    VecF::BaseField: Send,
-    VecF::PackedBaseField: Field<BaseField = VecF::BaseField>,
+    F: Field + FieldSerde + FiatShamirConfig + Send + 'static,
 {
     println!("benchmarking keccak over {}", args.field);
     println!(
@@ -60,8 +66,20 @@ where
         .collect::<Vec<_>>();
     let start_time = std::time::Instant::now();
 
+    let pack_size = match args.field.as_str() {
+        "m31" => M31_PACKSIZE,
+        "m31ext3" => M31_PACKSIZE,
+        "fr" => FR_PACKSIZE,
+        _ => unreachable!(),
+    };
+
     // load circuit
-    let circuit_template = Circuit::<VecF>::load_circuit(CIRCUIT_NAME);
+    let circuit_template = match args.scheme.as_str() {
+        "keccak" => Circuit::<F>::load_circuit(KECCAK_CIRCUIT),
+        "poseidon" => Circuit::<F>::load_circuit(POSEIDON_CIRCUIT),
+        _ => unreachable!(),
+    };
+
     let circuits = (0..args.threads)
         .map(|_| {
             let mut c = circuit_template.clone();
@@ -86,9 +104,8 @@ where
                     prover.prove(&c);
                     // update cnt
                     let mut cnt = partial_proof_cnt.lock().unwrap();
-                    const CIRCUIT_COPY_SIZE: usize = 8;
-                    let proof_cnt_this_round =
-                        CIRCUIT_COPY_SIZE * VecF::PACK_SIZE * VecF::VECTORIZE_SIZE;
+
+                    let proof_cnt_this_round = CIRCUIT_COPY_SIZE * pack_size;
                     *cnt += proof_cnt_this_round;
                 }
             })
@@ -112,5 +129,5 @@ where
 fn print_info(args: &Args) {
     println!("field:          {}", args.field);
     println!("#threads:       {}", args.threads);
-    println!("#repeats:       {}", args.repeats);
+    println!("#bench repeats: {}", args.repeats);
 }
