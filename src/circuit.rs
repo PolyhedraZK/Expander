@@ -315,8 +315,9 @@ impl<F: Field> Segment<F> {
             } else if idx < ret.gate_muls.len() + ret.gate_adds.len() + ret.gate_consts.len() {
                 ret.gate_consts[idx - ret.gate_muls.len() - ret.gate_adds.len()].coef = rand_coef;
             } else {
-                ret.gate_uni[idx - ret.gate_muls.len() - ret.gate_adds.len() - ret.gate_consts.len()]
-                    .coef = rand_coef;
+                ret.gate_uni
+                    [idx - ret.gate_muls.len() - ret.gate_adds.len() - ret.gate_consts.len()]
+                .coef = rand_coef;
             }
         }
         ret
