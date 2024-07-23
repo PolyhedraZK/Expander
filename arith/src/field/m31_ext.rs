@@ -39,6 +39,10 @@ impl FieldSerde for M31Ext3 {
             ],
         }
     }
+
+    fn deserialize_from_ecc_format(_bytes: &[u8; 32]) -> Self {
+        todo!()
+    }
 }
 
 impl Field for M31Ext3 {

@@ -15,21 +15,25 @@ fn gen_simple_circuit<F: VectorizedField>() -> Circuit<F> {
         i_ids: [0],
         o_id: 0,
         coef: F::BaseField::from(1),
+        gate_type: 1,
     });
     l0.add.push(GateAdd {
         i_ids: [0],
         o_id: 1,
         coef: F::BaseField::from(1),
+        gate_type: 1,
     });
     l0.add.push(GateAdd {
         i_ids: [1],
         o_id: 1,
         coef: F::BaseField::from(1),
+        gate_type: 1,
     });
     l0.mul.push(GateMul {
         i_ids: [0, 2],
         o_id: 2,
         coef: F::BaseField::from(1),
+        gate_type: 0,
     });
     circuit.layers.push(l0.clone());
     circuit

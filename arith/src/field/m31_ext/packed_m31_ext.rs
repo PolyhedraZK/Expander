@@ -31,6 +31,10 @@ impl FieldSerde for PackedM31Ext3 {
             ],
         }
     }
+
+    fn deserialize_from_ecc_format(_bytes: &[u8; 32]) -> Self {
+        todo!()
+    }
 }
 
 impl VectorizedField for PackedM31Ext3 {
