@@ -3,7 +3,7 @@ use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verif
 use rand::Rng;
 use sha2::Digest;
 
-const CIRCUIT_NAME: &str = "data/circuit8.txt";
+const CIRCUIT_NAME: &str = "data/compiler_out/circuit.txt";
 
 #[allow(dead_code)]
 fn gen_simple_circuit<F: VectorizedField>() -> Circuit<F> {

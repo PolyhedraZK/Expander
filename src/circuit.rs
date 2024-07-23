@@ -173,7 +173,6 @@ impl<F: Field> Segment<F> {
         *cur += 8;
         let o_len = u64::from_le_bytes(file_bytes[*cur..*cur + 8].try_into().unwrap()) as usize;
         *cur += 8;
-        println!("segment i_len: {}, o_len: {}", i_len, o_len);
         assert!(i_len.is_power_of_two());
         assert!(o_len.is_power_of_two());
         let mut ret = Segment::<F> {
