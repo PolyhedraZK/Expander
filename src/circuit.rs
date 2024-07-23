@@ -165,7 +165,7 @@ impl<F: Field + FieldSerde> Circuit<F> {
 
 impl<F: Field> Segment<F> {
     pub fn contain_gates(&self) -> bool {
-        !self.gate_muls.is_empty() || !self.gate_adds.is_empty() || !self.gate_consts.is_empty()
+        !self.gate_muls.is_empty() || !self.gate_adds.is_empty() || !self.gate_consts.is_empty() || !self.gate_uni.is_empty()
     }
 
     pub fn read(file_bytes: &[u8], cur: &mut usize) -> Segment<F> {
@@ -449,11 +449,12 @@ impl<F: Field> RecursiveCircuit<F> {
             }
             // debug print layer
             log::trace!(
-                "layer {} mul: {} add: {} const:{} i_var_num: {} o_var_num: {}",
+                "layer {} mul: {} add: {} const:{} uni:{} i_var_num: {} o_var_num: {}",
                 ret.layers.len(),
                 ret_layer.mul.len(),
                 ret_layer.add.len(),
                 ret_layer.const_.len(),
+                ret_layer.uni.len(),
                 ret_layer.input_var_num,
                 ret_layer.output_var_num,
             );
