@@ -11,7 +11,7 @@ use expander_rs::{Circuit, Config, Prover};
 #[cfg(target_arch = "x86_64")]
 use arith::PackedM31Ext3;
 
-const CIRCUIT_NAME: &str = "data/circuit8.txt";
+const CIRCUIT_NAME: &str = "data/compiler_out/circuit.txt";
 
 /// ...
 #[derive(Parser, Debug)]
