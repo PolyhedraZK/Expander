@@ -4,7 +4,7 @@ use halo2curves::bn256::Fr;
 use rand::Rng;
 use sha2::Digest;
 
-const CIRCUIT_NAME: &str = "data/compiler_out/circuit.txt";
+const CIRCUIT_NAME: &str = "data/circuit.txt";
 
 #[allow(dead_code)]
 fn gen_simple_circuit<F: Field + FieldSerde + FiatShamirConfig>() -> Circuit<F> {
