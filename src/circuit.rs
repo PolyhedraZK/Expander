@@ -244,14 +244,10 @@ impl<F: Field + FieldSerde + FiatShamirConfig> Segment<F> {
             let in_len = u64::deserialize_from(&mut reader) as usize;
             let mut inputs = Vec::new();
             for _ in 0..in_len {
-                inputs.push(
-                    u64::deserialize_from(&mut reader) as usize,
-                );
+                inputs.push(u64::deserialize_from(&mut reader) as usize);
             }
             let out = u64::deserialize_from(&mut reader) as usize;
-            let coef = F::ChallengeField::deserialize_from_ecc_format(
-                &mut reader
-            );
+            let coef = F::ChallengeField::deserialize_from_ecc_format(&mut reader);
             let gate = GateUni {
                 i_ids: [inputs[0]],
                 o_id: out,
