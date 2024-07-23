@@ -44,3 +44,18 @@ fn test_compiler_format_integration() {
     assert!(!verifier.verify(&circuit, &claimed_v, &bad_proof));
     println!("Bad proof rejected.");
 }
+
+#[test]
+fn test_compiler_format_integration_no_prove() {
+    println!("Config created.");
+    let mut circuit = Circuit::<F>::load_circuit(FILENAME_CIRCUIT);
+    println!("Circuit loaded.");
+    circuit.load_witness_file(FILENAME_WITNESS);
+    println!("Witness loaded.");
+    circuit.evaluate();
+    println!("Circuit evaluated.");
+    // check last layer first output
+    let last_layer = circuit.layers.last().unwrap();
+    let last_layer_first_output = last_layer.output_vals.evals[0];
+    assert_eq!(last_layer_first_output, F::zero());
+}

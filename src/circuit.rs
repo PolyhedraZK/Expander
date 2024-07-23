@@ -14,10 +14,12 @@ pub struct Gate<F: FiatShamirConfig, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
     pub o_id: usize,
     pub coef: F::ChallengeField,
+    pub gate_type: usize,
 }
 
 pub type GateMul<F> = Gate<F, 2>;
 pub type GateAdd<F> = Gate<F, 1>;
+pub type GateUni<F> = Gate<F, 1>;
 pub type GateConst<F> = Gate<F, 0>;
 
 #[derive(Debug, Clone, Default)]
@@ -31,6 +33,7 @@ pub struct CircuitLayer<F: Field + FiatShamirConfig> {
     pub mul: Vec<GateMul<F>>,
     pub add: Vec<GateAdd<F>>,
     pub const_: Vec<GateConst<F>>,
+    pub uni: Vec<GateUni<F>>,
 }
 
 impl<F: Field + FiatShamirConfig> CircuitLayer<F> {
@@ -51,6 +54,24 @@ impl<F: Field + FiatShamirConfig> CircuitLayer<F> {
             let o = &mut res[gate.o_id];
             *o += F::from(gate.coef);
         }
+        for gate in &self.uni {
+            let i0 = &self.input_vals.evals[gate.i_ids[0]];
+            let o = &mut res[gate.o_id];
+            match gate.gate_type {
+                12345 => {
+                    // pow5
+                    let i0_2 = i0.square();
+                    let i0_4 = i0_2.square();
+                    let i0_5 = i0_4 * i0;
+                    *o += i0_5.mul_base_elem(&gate.coef);
+                }
+                12346 => {
+                    // pow1
+                    *o += i0.mul_base_elem(&gate.coef);
+                }
+                _ => panic!("Unknown gate type: {}", gate.gate_type),
+            }
+        }
         res
     }
 }
@@ -64,86 +85,6 @@ impl<F: Field + FieldSerde + FiatShamirConfig> Circuit<F> {
     pub fn load_circuit(filename: &str) -> Self {
         let rc = RecursiveCircuit::<F>::load(filename);
         rc.flatten()
-    }
-    pub fn load_extracted_gates(filename_mul: &str, filename_add: &str) -> Self {
-        let mut circuit = Circuit::default();
-        let mul_file = fs::read_to_string(filename_mul).unwrap();
-        let add_file = fs::read_to_string(filename_add).unwrap();
-
-        let layer_num = mul_file.lines().count();
-        assert_eq!(layer_num, add_file.lines().count());
-        circuit.layers.resize(layer_num, CircuitLayer::default());
-
-        for l in 0..layer_num {
-            let layer = &mut circuit.layers[layer_num - l - 1]; // reversed
-            let mul_input = mul_file
-                .lines()
-                .nth(l)
-                .unwrap()
-                .split(' ')
-                .filter(|x| x != &"")
-                .map(|x| x.parse::<usize>().unwrap())
-                .collect::<Vec<_>>();
-            let mul_gate_num = mul_input[0];
-            assert_eq!(mul_gate_num * 4 + 1, mul_input.len());
-            layer.mul = Vec::with_capacity(mul_gate_num);
-            for i in 0..mul_gate_num {
-                let gate = GateMul {
-                    i_ids: [mul_input[i * 4 + 1], mul_input[i * 4 + 2]],
-                    o_id: mul_input[i * 4 + 3],
-                    coef: F::ChallengeField::from(mul_input[i * 4 + 4] as u32),
-                };
-                layer.mul.push(gate);
-            }
-            let add_input = add_file
-                .lines()
-                .nth(l)
-                .unwrap()
-                .split(' ')
-                .filter(|x| x != &"")
-                .map(|x| x.parse::<usize>().unwrap())
-                .collect::<Vec<_>>();
-            let add_gate_num = add_input[0];
-            assert_eq!(add_gate_num * 3 + 1, add_input.len());
-            layer.add = Vec::with_capacity(add_gate_num);
-            for i in 0..add_gate_num {
-                let gate = GateAdd {
-                    i_ids: [add_input[i * 3 + 1]],
-                    o_id: add_input[i * 3 + 2],
-                    coef: F::ChallengeField::from(add_input[i * 3 + 3] as u32),
-                };
-                layer.add.push(gate);
-            }
-        }
-        circuit.compute_var_num();
-        circuit
-    }
-
-    fn compute_var_num(&mut self) {
-        for (i, layer) in self.layers.iter_mut().enumerate() {
-            let max_i = max(
-                layer
-                    .mul
-                    .iter()
-                    .map(|g| max(g.i_ids[0], g.i_ids[1]))
-                    .max()
-                    .unwrap_or(0),
-                layer.add.iter().map(|g| g.i_ids[0]).max().unwrap_or(0),
-            );
-            let max_o = max(
-                layer.mul.iter().map(|g| g.o_id).max().unwrap_or(0),
-                layer.add.iter().map(|g| g.o_id).max().unwrap_or(0),
-            );
-            layer.input_var_num = max_i.next_power_of_two().trailing_zeros() as usize;
-            layer.output_var_num = max_o.next_power_of_two().trailing_zeros() as usize;
-            layer.input_vals.var_num = layer.input_var_num;
-            log::trace!(
-                "layer {} input_var_num: {} output_var_num: {}",
-                i,
-                layer.input_var_num,
-                layer.output_var_num
-            );
-        }
     }
 
     pub fn log_input_size(&self) -> usize {
@@ -203,6 +144,7 @@ pub struct Segment<F: Field + FiatShamirConfig> {
     pub gate_muls: Vec<GateMul<F>>,
     pub gate_adds: Vec<GateAdd<F>>,
     pub gate_consts: Vec<GateConst<F>>,
+    pub gate_uni: Vec<GateUni<F>>,
 }
 
 impl<F: Field + FieldSerde + FiatShamirConfig> Circuit<F> {
@@ -240,6 +182,7 @@ impl<F: Field + FieldSerde + FiatShamirConfig> Segment<F> {
             gate_muls: Vec::new(),
             gate_adds: Vec::new(),
             gate_consts: Vec::new(),
+            gate_uni: Vec::new(),
         };
 
         let child_segs_num = u64::deserialize_from(&mut reader) as usize;
@@ -266,6 +209,7 @@ impl<F: Field + FieldSerde + FiatShamirConfig> Segment<F> {
                 ],
                 o_id: u64::deserialize_from(&mut reader) as usize,
                 coef: F::ChallengeField::deserialize_from_ecc_format(&mut reader),
+                gate_type: 0,
             };
             ret.gate_muls.push(gate);
         }
@@ -277,17 +221,11 @@ impl<F: Field + FieldSerde + FiatShamirConfig> Segment<F> {
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
                 coef: F::ChallengeField::deserialize_from_ecc_format(&mut reader),
+                gate_type: 1,
             };
             ret.gate_adds.push(gate);
         }
         let gate_consts_num = u64::deserialize_from(&mut reader) as usize;
-
-        log::trace!(
-            "gate nums: {} mul, {} add, {} const",
-            gate_muls_num,
-            gate_adds_num,
-            gate_consts_num
-        );
 
         for _ in 0..gate_consts_num {
             let gate = GateConst {
@@ -295,11 +233,43 @@ impl<F: Field + FieldSerde + FiatShamirConfig> Segment<F> {
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
                 coef: F::ChallengeField::deserialize_from_ecc_format(&mut reader),
+                gate_type: 2,
             };
             ret.gate_consts.push(gate);
         }
-        let rand_coef_idx_num = u64::deserialize_from(&mut reader) as usize;
 
+        let gate_custom_num = u64::deserialize_from(&mut reader) as usize;
+        for _ in 0..gate_custom_num {
+            let gate_type = u64::deserialize_from(&mut reader) as usize;
+            let in_len = u64::deserialize_from(&mut reader) as usize;
+            let mut inputs = Vec::new();
+            for _ in 0..in_len {
+                inputs.push(
+                    u64::deserialize_from(&mut reader) as usize,
+                );
+            }
+            let out = u64::deserialize_from(&mut reader) as usize;
+            let coef = F::ChallengeField::deserialize_from_ecc_format(
+                &mut reader
+            );
+            let gate = GateUni {
+                i_ids: [inputs[0]],
+                o_id: out,
+                coef,
+                gate_type,
+            };
+            ret.gate_uni.push(gate);
+        }
+
+        log::trace!(
+            "gate nums: {} mul, {} add, {} const, {} custom",
+            gate_muls_num,
+            gate_adds_num,
+            gate_consts_num,
+            gate_custom_num
+        );
+
+        let rand_coef_idx_num = u64::deserialize_from(&mut reader) as usize;
         let mut t = Transcript::new(); // FIXME LATER: use an empty transcript to align the randomness
         for _ in 0..rand_coef_idx_num {
             let idx = u64::deserialize_from(&mut reader) as usize;
@@ -309,8 +279,12 @@ impl<F: Field + FieldSerde + FiatShamirConfig> Segment<F> {
                 ret.gate_muls[idx].coef = rand_coef;
             } else if idx < ret.gate_muls.len() + ret.gate_adds.len() {
                 ret.gate_adds[idx - ret.gate_muls.len()].coef = rand_coef;
-            } else {
+            } else if idx < ret.gate_muls.len() + ret.gate_adds.len() + ret.gate_consts.len() {
                 ret.gate_consts[idx - ret.gate_muls.len() - ret.gate_adds.len()].coef = rand_coef;
+            } else {
+                ret.gate_uni
+                    [idx - ret.gate_muls.len() - ret.gate_adds.len() - ret.gate_consts.len()]
+                .coef = rand_coef;
             }
         }
         ret
@@ -354,7 +328,7 @@ pub struct RecursiveCircuit<F: Field + FiatShamirConfig> {
     pub layers: Vec<SegmentId>,
 }
 
-const MAGIC_NUM: u64 = 3626604230490605891; // b'CIRCUIT2'
+const MAGIC_NUM: u64 = 3770719418566461763; // b'CIRCUIT4'
 
 impl<F: Field + FieldSerde + FiatShamirConfig> RecursiveCircuit<F> {
     pub fn load(filename: &str) -> Self {
@@ -368,6 +342,8 @@ impl<F: Field + FieldSerde + FiatShamirConfig> RecursiveCircuit<F> {
         let magic_num = u64::deserialize_from(&mut cursor);
         assert_eq!(magic_num, MAGIC_NUM);
 
+        let field_mod = F::deserialize_from(&mut cursor);
+        log::trace!("field mod: {:?}", field_mod);
         let segment_num = u64::deserialize_from(&mut cursor);
         for _ in 0..segment_num {
             let seg = Segment::<F>::read(&mut cursor);
@@ -404,6 +380,7 @@ impl<F: Field + FieldSerde + FiatShamirConfig> RecursiveCircuit<F> {
                 mul: vec![],
                 add: vec![],
                 const_: vec![],
+                uni: vec![],
             };
             for (leaf_seg_id, leaf_allocs) in leaves {
                 let leaf_seg = &self.segments[leaf_seg_id];
@@ -425,6 +402,12 @@ impl<F: Field + FieldSerde + FiatShamirConfig> RecursiveCircuit<F> {
                         let mut gate = gate.clone();
                         gate.o_id += alloc.o_offset;
                         ret_layer.const_.push(gate);
+                    }
+                    for gate in &leaf_seg.gate_uni {
+                        let mut gate = gate.clone();
+                        gate.i_ids[0] += alloc.i_offset;
+                        gate.o_id += alloc.o_offset;
+                        ret_layer.uni.push(gate);
                     }
                 }
             }

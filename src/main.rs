@@ -10,8 +10,7 @@ use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
 use halo2curves::bn256::Fr;
 
-const FILENAME_MUL: &str = "data/ExtractedCircuitMul.txt";
-const FILENAME_ADD: &str = "data/ExtractedCircuitAdd.txt";
+const KECCAK_CIRCUIT: &str = "data/circuit.txt";
 // circuit for repeating Poseidon for 120 times
 const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
 
@@ -76,7 +75,7 @@ where
 
     // load circuit
     let circuit_template = match args.scheme.as_str() {
-        "keccak" => Circuit::<F>::load_extracted_gates(FILENAME_MUL, FILENAME_ADD),
+        "keccak" => Circuit::<F>::load_circuit(KECCAK_CIRCUIT),
         "poseidon" => Circuit::<F>::load_circuit(POSEIDON_CIRCUIT),
         _ => unreachable!(),
     };
