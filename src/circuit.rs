@@ -164,9 +164,9 @@ impl<F: Field + FieldSerde + FiatShamirConfig> Circuit<F> {
 }
 impl<F: Field + FiatShamirConfig> Segment<F> {
     pub fn contain_gates(&self) -> bool {
-        !self.gate_muls.is_empty() 
-            || !self.gate_adds.is_empty() 
-            || !self.gate_consts.is_empty() 
+        !self.gate_muls.is_empty()
+            || !self.gate_adds.is_empty()
+            || !self.gate_consts.is_empty()
             || !self.gate_uni.is_empty()
     }
 
