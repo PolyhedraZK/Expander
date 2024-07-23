@@ -60,9 +60,9 @@ RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- serv
 Example:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- prove ./data/compiler_out/circuit.txt ./data/compiler_out/witness.txt ./data/compiler_out/out.bin
-RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- verify ./data/compiler_out/circuit.txt ./data/compiler_out/witness.txt ./data/compiler_out/out.bin
-RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- serve ./data/compiler_out/circuit.txt 127.0.0.1 3030
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- prove ./data/circuit.txt ./data/witness.txt ./data/out.bin
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- verify ./data/circuit.txt ./data/witness.txt ./data/out.bin
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- serve ./data/circuit.txt 127.0.0.1 3030
 ```
 
 To test the service started by `expander-exec serve`, you can use the following command:
