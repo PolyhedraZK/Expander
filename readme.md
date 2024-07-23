@@ -17,11 +17,8 @@ For more information, see the cpp version of the repo [here](https://github.com/
 Before executing setup, please make sure you read through the system requirements, and make sure your CPU is in the list.
 
 ```sh
-wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitMul.txt
-wget -P data https://storage.googleapis.com/keccak8/ExtractedCircuitAdd.txt
-wget -P data https://storage.googleapis.com/keccak8/circuit8.txt
-wget -P data/compiler_out https://storage.googleapis.com/keccak8/circuit.txt
-wget -P data/compiler_out https://storage.googleapis.com/keccak8/witness.txt
+wget -P data https://storage.googleapis.com/keccak8/circuit.txt
+wget -P data https://storage.googleapis.com/keccak8/witness.txt
 ```
 
 
