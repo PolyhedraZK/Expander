@@ -339,7 +339,7 @@ impl<F: Field + FieldSerde + FiatShamirConfig> RecursiveCircuit<F> {
         let magic_num = u64::deserialize_from(&mut cursor);
         assert_eq!(magic_num, MAGIC_NUM);
 
-        let field_mod = F::deserialize_from(&mut cursor);
+        let field_mod = F::deserialize_from_ecc_format(&mut cursor);
         log::trace!("field mod: {:?}", field_mod);
         let segment_num = u64::deserialize_from(&mut cursor);
         for _ in 0..segment_num {
