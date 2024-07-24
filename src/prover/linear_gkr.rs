@@ -3,7 +3,7 @@
 use arith::{BinomialExtensionField, Field, FieldSerde, SimdField};
 use ark_std::{end_timer, start_timer};
 
-use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
+use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript, gkr_square_prove};
 
 pub fn grind<F: Field + FieldSerde + SimdField>(transcript: &mut Transcript, config: &Config) {
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
@@ -76,8 +76,15 @@ impl<F: BinomialExtensionField<3> + FieldSerde + SimdField> Prover<F> {
         transcript.append_u8_slice(&buffer);
 
         grind::<F>(&mut transcript, &self.config);
+        let claimed_v: F;
+        let mut _rz0s = vec![];
+        let mut _rz1s = vec![];
 
-        let (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
+        if self.config.gkr_square {
+            (claimed_v, _rz0s) = gkr_square_prove(c, &mut self.sp, &mut transcript, &self.config);
+        } else {
+            (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
+        }
 
         // open
         match self.config.polynomial_commitment_type {
