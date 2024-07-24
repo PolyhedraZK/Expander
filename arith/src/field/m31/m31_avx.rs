@@ -53,12 +53,19 @@ impl AVXM31 {
 
     #[inline(always)]
     pub(crate) fn mul_by_5(&self) -> AVXM31 {
-        *self * FIVE
+        let double = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(self.v)) };
+        let quad = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(double)) };
+        let res = unsafe { mod_reduce_epi32(_mm256_add_epi32(self.v, quad)) };
+        Self { v: res }
     }
 
     #[inline(always)]
     pub(crate) fn mul_by_10(&self) -> AVXM31 {
-        *self * TEN
+        let double = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(self.v)) };
+        let quad = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(double)) };
+        let oct = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(quad)) };
+        let res = unsafe { mod_reduce_epi32(_mm256_add_epi32(double, oct)) };
+        Self { v: res }
     }
 }
 
