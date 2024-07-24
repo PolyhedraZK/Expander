@@ -12,11 +12,7 @@ pub fn gkr_prove<F>(
     sp: &mut GkrScratchpad<F>,
     transcript: &mut Transcript,
     config: &Config,
-) -> (
-    F,
-    Vec<F::Scalar>,
-    Vec<F::Scalar>,
-)
+) -> (F, Vec<F::Scalar>, Vec<F::Scalar>)
 where
     F: Field + FieldSerde + SimdField,
 {
