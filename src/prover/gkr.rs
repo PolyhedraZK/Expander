@@ -27,12 +27,11 @@ where
     let mut rz1 = vec![];
     for _i in 0..circuit.layers.last().unwrap().output_var_num {
         rz0.push(transcript.challenge_f::<F>());
-        rz1.push(F::ChallengeField::zero());
+        rz1.push(F::Scalar::zero());
     }
 
     let mut alpha = F::Scalar::one();
     let mut beta = F::Scalar::zero();
-    let mut claimed_v = vec![];
 
     let claimed_v = MultiLinearPoly::<F>::eval_multilinear(
         &circuit.layers.last().unwrap().output_vals.evals,

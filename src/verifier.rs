@@ -53,8 +53,8 @@ fn eval_sparse_circuit_connect_poly<F: Field + SimdField, const INPUT_NUM: usize
 #[allow(clippy::type_complexity)]
 fn sumcheck_verify_gkr_layer<F: Field + FieldSerde + SimdField>(
     layer: &CircuitLayer<F>,
-    rz0: &F::Scalar,
-    rz1: &F::Scalar,
+    rz0: &[F::Scalar],
+    rz1: &[F::Scalar],
     claimed_v0: F,
     claimed_v1: F,
     alpha: F::Scalar,
