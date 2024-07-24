@@ -4,12 +4,6 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-#[cfg(target_arch = "x86_64")]
-use crate::m31_avx::{FIVE, TEN};
-
-#[cfg(target_arch = "aarch64")]
-use crate::m31_neon::{FIVE, TEN};
-
 use crate::{BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31, M31};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]

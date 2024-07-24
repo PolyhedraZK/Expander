@@ -1,9 +1,6 @@
 // this module benchmarks the performance of different field operations
 
-#[cfg(target_arch = "x86_64")]
-use arith::SimdM31Ext3;
-
-use arith::{Field, M31Ext3, SimdM31, M31};
+use arith::{Field, M31Ext3, SimdM31, SimdM31Ext3, M31};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use halo2curves::bn256::Fr;
@@ -133,11 +130,11 @@ pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    // bench_field::<M31>(c);
+    bench_field::<M31>(c);
     bench_field::<SimdM31>(c);
-    // bench_field::<M31Ext3>(c);
+    bench_field::<M31Ext3>(c);
     bench_field::<SimdM31Ext3>(c);
-    // bench_field::<Fr>(c);
+    bench_field::<Fr>(c);
 }
 
 criterion_group!(benches, criterion_benchmark);
