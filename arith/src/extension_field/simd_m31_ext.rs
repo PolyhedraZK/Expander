@@ -351,8 +351,8 @@ fn square_internal(a: &[SimdM31; 3]) -> [SimdM31; 3] {
     let mut res = [SimdM31::default(); 3];
     res[0] = a[0].square() + a[1] * a[2].mul_by_10();
     let t = a[0] * a[1];
-    res[1] = t + t + a[2].square().mul_by_5();
+    res[1] = t.double() + a[2].square().mul_by_5();
     let t = a[0] * a[2];
-    res[2] = t + t + a[1] * a[1];
+    res[2] = t.double() + a[1] * a[1];
     res
 }
