@@ -35,6 +35,12 @@ impl AVXM31 {
     }
 
     #[inline(always)]
+    pub(crate) fn mul_by_2(&self) -> AVXM31 {
+        let double = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(self.v)) };
+        Self { v: double }
+    }
+
+    #[inline(always)]
     pub(crate) fn mul_by_5(&self) -> AVXM31 {
         let double = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(self.v)) };
         let quad = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(double)) };
@@ -44,11 +50,7 @@ impl AVXM31 {
 
     #[inline(always)]
     pub(crate) fn mul_by_10(&self) -> AVXM31 {
-        let double = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(self.v)) };
-        let quad = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(double)) };
-        let oct = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(quad)) };
-        let res = unsafe { mod_reduce_epi32(_mm256_add_epi32(double, oct)) };
-        Self { v: res }
+        self.mul_by_5().mul_by_2()
     }
 }
 
@@ -158,6 +160,11 @@ impl Field for AVXM31 {
     }
 
     #[inline(always)]
+    fn double(&self) -> Self {
+        self.mul_by_2()
+    }
+
+    #[inline(always)]
     fn inv(&self) -> Option<Self> {
         // slow, should not be used in production
         let mut m31_vec = unsafe { transmute::<__m256i, [M31; 8]>(self.v) };
@@ -243,6 +250,7 @@ impl Mul<&AVXM31> for AVXM31 {
     type Output = AVXM31;
     #[inline(always)]
     fn mul(self, rhs: &AVXM31) -> Self::Output {
+        // credit: https://github.com/Plonky3/Plonky3/blob/eeb4e37b20127c4daa871b2bad0df30a7c7380db/mersenne-31/src/x86_64_avx2/packing.rs#L154
         unsafe {
             let lhs_evn = self.v;
             let lhs_odd_dbl = _mm256_srli_epi64::<31>(self.v);
