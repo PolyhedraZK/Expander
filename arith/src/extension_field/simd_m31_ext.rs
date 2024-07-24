@@ -10,14 +10,14 @@ use crate::m31_avx::{FIVE, TEN};
 #[cfg(target_arch = "aarch64")]
 use crate::m31_neon::{FIVE, TEN};
 
-use crate::{FiatShamirConfig, Field, FieldSerde, M31Ext3, VectorizedM31};
+use crate::{BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31, M31};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
-pub struct VectorizedM31Ext3 {
-    pub v: [VectorizedM31; 3],
+pub struct SimdM31Ext3 {
+    pub v: [SimdM31; 3],
 }
 
-impl FieldSerde for VectorizedM31Ext3 {
+impl FieldSerde for SimdM31Ext3 {
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) {
         self.v[0].serialize_into(&mut writer);
@@ -36,9 +36,9 @@ impl FieldSerde for VectorizedM31Ext3 {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         Self {
             v: [
-                VectorizedM31::deserialize_from(&mut reader),
-                VectorizedM31::deserialize_from(&mut reader),
-                VectorizedM31::deserialize_from(&mut reader),
+                SimdM31::deserialize_from(&mut reader),
+                SimdM31::deserialize_from(&mut reader),
+                SimdM31::deserialize_from(&mut reader),
             ],
         }
     }
@@ -47,51 +47,89 @@ impl FieldSerde for VectorizedM31Ext3 {
     fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
         Self {
             v: [
-                VectorizedM31::deserialize_from_ecc_format(&mut reader),
-                VectorizedM31::zero(),
-                VectorizedM31::zero(),
+                SimdM31::deserialize_from_ecc_format(&mut reader),
+                SimdM31::zero(),
+                SimdM31::zero(),
             ],
         }
     }
 }
 
-impl FiatShamirConfig for VectorizedM31Ext3 {
-    type ChallengeField = M31Ext3;
+impl SimdField for SimdM31Ext3 {
+    type Scalar = M31Ext3;
 
     #[inline]
-    fn scale(&self, challenge: &Self::ChallengeField) -> Self {
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
         *self * *challenge
     }
 }
 
-impl Mul<M31Ext3> for VectorizedM31Ext3 {
-    type Output = Self;
+impl From<SimdM31> for SimdM31Ext3 {
     #[inline(always)]
-    fn mul(self, rhs: M31Ext3) -> Self::Output {
-        VectorizedM31Ext3 {
-            v: [
-                self.v[0] * rhs.v[0],
-                self.v[1] * rhs.v[1],
-                self.v[2] * rhs.v[2],
-            ],
+    fn from(x: SimdM31) -> Self {
+        Self {
+            v: [x, SimdM31::zero(), SimdM31::zero()],
         }
     }
 }
 
-impl From<M31Ext3> for VectorizedM31Ext3 {
+impl BinomialExtensionField<3> for SimdM31Ext3 {
+    const W: u32 = 5;
+
+    type BaseField = SimdM31;
+
+    #[inline(always)]
+    fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
+        SimdM31Ext3 {
+            v: [self.v[0] * base, self.v[1] * base, self.v[2] * base],
+        }
+    }
+
+    #[inline(always)]
+    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
+        SimdM31Ext3 {
+            v: [self.v[0] + base, self.v[1], self.v[2]],
+        }
+    }
+}
+
+impl Mul<M31Ext3> for SimdM31Ext3 {
+    type Output = Self;
+    #[inline(always)]
+    fn mul(self, rhs: M31Ext3) -> Self::Output {
+        // polynomial mod (x^3 - 5)
+        //
+        //   (a0 + a1*x + a2*x^2) * (b0 + b1*x + b2*x^2) mod (x^3 - 5)
+        // = a0*b0 + (a0*b1 + a1*b0)*x + (a0*b2 + a1*b1 + a2*b0)*x^2
+        // + (a1*b2 + a2*b1)*x^3 + a2*b2*x^4 mod (x^3 - 5)
+        // = a0*b0 + 5*(a1*b2 + a2*b1)
+        // + (a0*b1 + a1*b0)*x + 5* a2*b2
+        // + (a0*b2 + a1*b1 + a2*b0)*x^2
+
+        let five = M31::from(5);
+        let mut res = [SimdM31::default(); 3];
+        res[0] =
+            self.v[0] * rhs.v[0] + self.v[1] * (rhs.v[2] * five) + self.v[2] * (rhs.v[1] * five);
+        res[1] = self.v[0] * rhs.v[1] + self.v[1] * rhs.v[0] + self.v[2] * (rhs.v[2] * five);
+        res[2] = self.v[0] * rhs.v[2] + self.v[1] * rhs.v[1] + self.v[2] * rhs.v[0];
+        Self { v: res }
+    }
+}
+
+impl From<M31Ext3> for SimdM31Ext3 {
     #[inline(always)]
     fn from(x: M31Ext3) -> Self {
         Self {
             v: [
-                VectorizedM31::pack_full(x.v[0]),
-                VectorizedM31::pack_full(x.v[1]),
-                VectorizedM31::pack_full(x.v[2]),
+                SimdM31::pack_full(x.v[0]),
+                SimdM31::pack_full(x.v[1]),
+                SimdM31::pack_full(x.v[2]),
             ],
         }
     }
 }
 
-impl Field for VectorizedM31Ext3 {
+impl Field for SimdM31Ext3 {
     const NAME: &'static str = "AVX Vectorized Mersenne 31 Extension 3";
 
     const SIZE: usize = 96;
@@ -100,40 +138,36 @@ impl Field for VectorizedM31Ext3 {
 
     #[inline(always)]
     fn zero() -> Self {
-        VectorizedM31Ext3 {
-            v: [VectorizedM31::zero(); 3],
+        SimdM31Ext3 {
+            v: [SimdM31::zero(); 3],
         }
     }
 
     #[inline(always)]
     fn one() -> Self {
-        VectorizedM31Ext3 {
-            v: [
-                VectorizedM31::one(),
-                VectorizedM31::zero(),
-                VectorizedM31::zero(),
-            ],
+        SimdM31Ext3 {
+            v: [SimdM31::one(), SimdM31::zero(), SimdM31::zero()],
         }
     }
 
     #[inline(always)]
     fn random_unsafe(mut rng: impl rand::RngCore) -> Self {
-        VectorizedM31Ext3 {
+        SimdM31Ext3 {
             v: [
-                VectorizedM31::random_unsafe(&mut rng),
-                VectorizedM31::random_unsafe(&mut rng),
-                VectorizedM31::random_unsafe(&mut rng),
+                SimdM31::random_unsafe(&mut rng),
+                SimdM31::random_unsafe(&mut rng),
+                SimdM31::random_unsafe(&mut rng),
             ],
         }
     }
 
     #[inline(always)]
     fn random_bool(mut rng: impl rand::RngCore) -> Self {
-        VectorizedM31Ext3 {
+        SimdM31Ext3 {
             v: [
-                VectorizedM31::random_bool(&mut rng),
-                VectorizedM31::zero(),
-                VectorizedM31::zero(),
+                SimdM31::random_bool(&mut rng),
+                SimdM31::zero(),
+                SimdM31::zero(),
             ],
         }
     }
@@ -166,50 +200,50 @@ impl Field for VectorizedM31Ext3 {
 // Arithmetics for M31Ext
 // ====================================
 
-impl Mul<&VectorizedM31Ext3> for VectorizedM31Ext3 {
-    type Output = VectorizedM31Ext3;
+impl Mul<&SimdM31Ext3> for SimdM31Ext3 {
+    type Output = SimdM31Ext3;
     #[inline(always)]
-    fn mul(self, rhs: &VectorizedM31Ext3) -> Self::Output {
-        VectorizedM31Ext3 {
+    fn mul(self, rhs: &SimdM31Ext3) -> Self::Output {
+        SimdM31Ext3 {
             v: mul_internal(&self.v, &rhs.v),
         }
     }
 }
 
-impl Mul for VectorizedM31Ext3 {
-    type Output = VectorizedM31Ext3;
+impl Mul for SimdM31Ext3 {
+    type Output = SimdM31Ext3;
     #[inline(always)]
     #[allow(clippy::op_ref)]
-    fn mul(self, rhs: VectorizedM31Ext3) -> Self::Output {
+    fn mul(self, rhs: SimdM31Ext3) -> Self::Output {
         self * &rhs
     }
 }
 
-impl MulAssign<&VectorizedM31Ext3> for VectorizedM31Ext3 {
+impl MulAssign<&SimdM31Ext3> for SimdM31Ext3 {
     #[inline(always)]
-    fn mul_assign(&mut self, rhs: &VectorizedM31Ext3) {
+    fn mul_assign(&mut self, rhs: &SimdM31Ext3) {
         *self = *self * rhs;
     }
 }
 
-impl MulAssign for VectorizedM31Ext3 {
+impl MulAssign for SimdM31Ext3 {
     #[inline(always)]
     fn mul_assign(&mut self, rhs: Self) {
         *self *= &rhs;
     }
 }
 
-impl<T: ::core::borrow::Borrow<VectorizedM31Ext3>> Product<T> for VectorizedM31Ext3 {
+impl<T: ::core::borrow::Borrow<SimdM31Ext3>> Product<T> for SimdM31Ext3 {
     fn product<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::one(), |acc, item| acc * item.borrow())
     }
 }
 
-impl Add<&VectorizedM31Ext3> for VectorizedM31Ext3 {
-    type Output = VectorizedM31Ext3;
+impl Add<&SimdM31Ext3> for SimdM31Ext3 {
+    type Output = SimdM31Ext3;
     #[inline(always)]
-    fn add(self, rhs: &VectorizedM31Ext3) -> Self::Output {
-        VectorizedM31Ext3 {
+    fn add(self, rhs: &SimdM31Ext3) -> Self::Output {
+        SimdM31Ext3 {
             v: [
                 self.v[0] + rhs.v[0],
                 self.v[1] + rhs.v[1],
@@ -219,86 +253,82 @@ impl Add<&VectorizedM31Ext3> for VectorizedM31Ext3 {
     }
 }
 
-impl Add for VectorizedM31Ext3 {
-    type Output = VectorizedM31Ext3;
+impl Add for SimdM31Ext3 {
+    type Output = SimdM31Ext3;
     #[inline(always)]
     #[allow(clippy::op_ref)]
-    fn add(self, rhs: VectorizedM31Ext3) -> Self::Output {
+    fn add(self, rhs: SimdM31Ext3) -> Self::Output {
         self + &rhs
     }
 }
 
-impl AddAssign<&VectorizedM31Ext3> for VectorizedM31Ext3 {
+impl AddAssign<&SimdM31Ext3> for SimdM31Ext3 {
     #[inline(always)]
-    fn add_assign(&mut self, rhs: &VectorizedM31Ext3) {
+    fn add_assign(&mut self, rhs: &SimdM31Ext3) {
         *self = *self + rhs;
     }
 }
 
-impl AddAssign for VectorizedM31Ext3 {
+impl AddAssign for SimdM31Ext3 {
     #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self += &rhs;
     }
 }
 
-impl<T: ::core::borrow::Borrow<VectorizedM31Ext3>> Sum<T> for VectorizedM31Ext3 {
+impl<T: ::core::borrow::Borrow<SimdM31Ext3>> Sum<T> for SimdM31Ext3 {
     fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::zero(), |acc, item| acc + item.borrow())
     }
 }
 
-impl Neg for VectorizedM31Ext3 {
-    type Output = VectorizedM31Ext3;
+impl Neg for SimdM31Ext3 {
+    type Output = SimdM31Ext3;
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        VectorizedM31Ext3 {
+        SimdM31Ext3 {
             v: [-self.v[0], -self.v[1], -self.v[2]],
         }
     }
 }
 
-impl Sub<&VectorizedM31Ext3> for VectorizedM31Ext3 {
-    type Output = VectorizedM31Ext3;
+impl Sub<&SimdM31Ext3> for SimdM31Ext3 {
+    type Output = SimdM31Ext3;
     #[inline(always)]
     #[allow(clippy::op_ref)]
-    fn sub(self, rhs: &VectorizedM31Ext3) -> Self::Output {
+    fn sub(self, rhs: &SimdM31Ext3) -> Self::Output {
         self + &(-*rhs)
     }
 }
 
-impl Sub for VectorizedM31Ext3 {
-    type Output = VectorizedM31Ext3;
+impl Sub for SimdM31Ext3 {
+    type Output = SimdM31Ext3;
     #[inline(always)]
     #[allow(clippy::op_ref)]
-    fn sub(self, rhs: VectorizedM31Ext3) -> Self::Output {
+    fn sub(self, rhs: SimdM31Ext3) -> Self::Output {
         self - &rhs
     }
 }
 
-impl SubAssign<&VectorizedM31Ext3> for VectorizedM31Ext3 {
+impl SubAssign<&SimdM31Ext3> for SimdM31Ext3 {
     #[inline(always)]
-    fn sub_assign(&mut self, rhs: &VectorizedM31Ext3) {
+    fn sub_assign(&mut self, rhs: &SimdM31Ext3) {
         *self = *self - rhs;
     }
 }
 
-impl SubAssign for VectorizedM31Ext3 {
+impl SubAssign for SimdM31Ext3 {
     #[inline(always)]
     fn sub_assign(&mut self, rhs: Self) {
         *self -= &rhs;
     }
 }
 
-impl From<u32> for VectorizedM31Ext3 {
+impl From<u32> for SimdM31Ext3 {
     #[inline(always)]
     fn from(x: u32) -> Self {
-        VectorizedM31Ext3 {
-            v: [
-                VectorizedM31::from(x),
-                VectorizedM31::zero(),
-                VectorizedM31::zero(),
-            ],
+        SimdM31Ext3 {
+            v: [SimdM31::from(x), SimdM31::zero(), SimdM31::zero()],
         }
     }
 }
@@ -311,8 +341,8 @@ impl From<u32> for VectorizedM31Ext3 {
 // = a0*b0 + 5*(a1*b2 + a2*b1)
 // + (a0*b1 + a1*b0)*x + 5* a2*b2
 // + (a0*b2 + a1*b1 + a2*b0)*x^2
-fn mul_internal(a: &[VectorizedM31; 3], b: &[VectorizedM31; 3]) -> [VectorizedM31; 3] {
-    let mut res = [VectorizedM31::default(); 3];
+fn mul_internal(a: &[SimdM31; 3], b: &[SimdM31; 3]) -> [SimdM31; 3] {
+    let mut res = [SimdM31::default(); 3];
     res[0] = a[0] * b[0] + FIVE * (a[1] * b[2] + a[2] * b[1]);
     res[1] = a[0] * b[1] + a[1] * b[0] + FIVE * a[2] * b[2];
     res[2] = a[0] * b[2] + a[1] * b[1] + a[2] * b[0];
@@ -320,8 +350,8 @@ fn mul_internal(a: &[VectorizedM31; 3], b: &[VectorizedM31; 3]) -> [VectorizedM3
 }
 
 // same as mul; merge identical terms
-fn square_internal(a: &[VectorizedM31; 3]) -> [VectorizedM31; 3] {
-    let mut res = [VectorizedM31::default(); 3];
+fn square_internal(a: &[SimdM31; 3]) -> [SimdM31; 3] {
+    let mut res = [SimdM31::default(); 3];
     res[0] = a[0].square() + TEN * a[1] * a[2];
     let t = a[0] * a[1];
     res[1] = t + t + FIVE * a[2].square();

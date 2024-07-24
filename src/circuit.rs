@@ -1,4 +1,4 @@
-use arith::{FiatShamirConfig, Field, FieldSerde, MultiLinearPoly};
+use arith::{Field, FieldSerde, MultiLinearPoly, SimdField};
 use ark_std::test_rng;
 use std::{
     collections::HashMap,
@@ -9,10 +9,10 @@ use std::{
 use crate::Transcript;
 
 #[derive(Debug, Clone)]
-pub struct Gate<F: FiatShamirConfig, const INPUT_NUM: usize> {
+pub struct Gate<F: SimdField, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
     pub o_id: usize,
-    pub coef: F::ChallengeField,
+    pub coef: F::Scalar,
     pub gate_type: usize,
 }
 
@@ -22,7 +22,7 @@ pub type GateUni<F> = Gate<F, 1>;
 pub type GateConst<F> = Gate<F, 0>;
 
 #[derive(Debug, Clone, Default)]
-pub struct CircuitLayer<F: Field + FiatShamirConfig> {
+pub struct CircuitLayer<F: Field + SimdField> {
     pub input_var_num: usize,
     pub output_var_num: usize,
 
@@ -35,7 +35,7 @@ pub struct CircuitLayer<F: Field + FiatShamirConfig> {
     pub uni: Vec<GateUni<F>>,
 }
 
-impl<F: Field + FiatShamirConfig> CircuitLayer<F> {
+impl<F: Field + SimdField> CircuitLayer<F> {
     pub fn evaluate(&self) -> Vec<F> {
         let mut res = vec![F::zero(); 1 << self.output_var_num];
         for gate in &self.mul {
@@ -76,11 +76,11 @@ impl<F: Field + FiatShamirConfig> CircuitLayer<F> {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Circuit<F: Field + FiatShamirConfig> {
+pub struct Circuit<F: Field + SimdField> {
     pub layers: Vec<CircuitLayer<F>>,
 }
 
-impl<F: Field + FieldSerde + FiatShamirConfig> Circuit<F> {
+impl<F: Field + FieldSerde + SimdField> Circuit<F> {
     pub fn load_circuit(filename: &str) -> Self {
         let rc = RecursiveCircuit::<F>::load(filename);
         rc.flatten()
@@ -136,7 +136,7 @@ pub struct Allocation {
     pub o_offset: usize,
 }
 
-pub struct Segment<F: Field + FiatShamirConfig> {
+pub struct Segment<F: Field + SimdField> {
     pub i_var_num: usize,
     pub o_var_num: usize,
     pub child_segs: Vec<(SegmentId, Vec<Allocation>)>,
@@ -146,7 +146,7 @@ pub struct Segment<F: Field + FiatShamirConfig> {
     pub gate_uni: Vec<GateUni<F>>,
 }
 
-impl<F: Field + FieldSerde + FiatShamirConfig> Circuit<F> {
+impl<F: Field + FieldSerde + SimdField> Circuit<F> {
     pub fn load_witness_file(&mut self, filename: &str) {
         // note that, for data parallel, one should load multiple witnesses into different slot in the vectorized F
         let file_bytes = fs::read(filename).unwrap();
@@ -162,7 +162,7 @@ impl<F: Field + FieldSerde + FiatShamirConfig> Circuit<F> {
             .collect();
     }
 }
-impl<F: Field + FiatShamirConfig> Segment<F> {
+impl<F: Field + SimdField> Segment<F> {
     pub fn contain_gates(&self) -> bool {
         !self.gate_muls.is_empty()
             || !self.gate_adds.is_empty()
@@ -209,7 +209,7 @@ impl<F: Field + FiatShamirConfig> Segment<F> {
                     u64::deserialize_from(&mut reader) as usize,
                 ],
                 o_id: u64::deserialize_from(&mut reader) as usize,
-                coef: F::ChallengeField::deserialize_from_ecc_format(&mut reader),
+                coef: F::Scalar::deserialize_from_ecc_format(&mut reader),
                 gate_type: 0,
             };
             ret.gate_muls.push(gate);
@@ -221,7 +221,7 @@ impl<F: Field + FiatShamirConfig> Segment<F> {
                 i_ids: [u64::deserialize_from(&mut reader) as usize],
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
-                coef: F::ChallengeField::deserialize_from_ecc_format(&mut reader),
+                coef: F::Scalar::deserialize_from_ecc_format(&mut reader),
                 gate_type: 1,
             };
             ret.gate_adds.push(gate);
@@ -233,7 +233,7 @@ impl<F: Field + FiatShamirConfig> Segment<F> {
                 i_ids: [],
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
-                coef: F::ChallengeField::deserialize_from_ecc_format(&mut reader),
+                coef: F::Scalar::deserialize_from_ecc_format(&mut reader),
                 gate_type: 2,
             };
             ret.gate_consts.push(gate);
@@ -248,7 +248,7 @@ impl<F: Field + FiatShamirConfig> Segment<F> {
                 inputs.push(u64::deserialize_from(&mut reader) as usize);
             }
             let out = u64::deserialize_from(&mut reader) as usize;
-            let coef = F::ChallengeField::deserialize_from_ecc_format(&mut reader);
+            let coef = F::Scalar::deserialize_from_ecc_format(&mut reader);
             let gate = GateUni {
                 i_ids: [inputs[0]],
                 o_id: out,
@@ -320,14 +320,14 @@ impl<F: Field + FiatShamirConfig> Segment<F> {
     }
 }
 
-pub struct RecursiveCircuit<F: Field + FiatShamirConfig> {
+pub struct RecursiveCircuit<F: Field + SimdField> {
     pub segments: Vec<Segment<F>>,
     pub layers: Vec<SegmentId>,
 }
 
 const MAGIC_NUM: u64 = 3770719418566461763; // b'CIRCUIT4'
 
-impl<F: Field + FieldSerde + FiatShamirConfig> RecursiveCircuit<F> {
+impl<F: Field + FieldSerde + SimdField> RecursiveCircuit<F> {
     pub fn load(filename: &str) -> Self {
         let mut ret = RecursiveCircuit::<F> {
             segments: Vec::new(),

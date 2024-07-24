@@ -1,6 +1,6 @@
 use std::{io::Cursor, vec};
 
-use arith::{FiatShamirConfig, Field, FieldSerde};
+use arith::{Field, FieldSerde, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
@@ -9,34 +9,34 @@ use crate::{
 };
 
 #[inline]
-fn degree_2_eval<F: Field + FiatShamirConfig>(p0: F, p1: F, p2: F, x: F::ChallengeField) -> F {
+fn degree_2_eval<F: Field + SimdField>(p0: F, p1: F, p2: F, x: F::Scalar) -> F {
     let c0 = &p0;
     let c2 = F::INV_2 * (p2 - p1 - p1 + p0);
     let c1 = p1 - p0 - c2;
     *c0 + (c2.scale(&x) + c1).scale(&x)
 }
 
-fn eval_sparse_circuit_connect_poly<F: Field + FiatShamirConfig, const INPUT_NUM: usize>(
+fn eval_sparse_circuit_connect_poly<F: Field + SimdField, const INPUT_NUM: usize>(
     gates: &[Gate<F, INPUT_NUM>],
-    rz0: &[F::ChallengeField],
-    rz1: &[F::ChallengeField],
-    alpha: F::ChallengeField,
-    beta: F::ChallengeField,
-    ris: &[Vec<F::ChallengeField>],
-) -> F::ChallengeField {
-    let mut eq_evals_at_rz0 = vec![F::ChallengeField::zero(); 1 << rz0.len()];
-    let mut eq_evals_at_rz1 = vec![F::ChallengeField::zero(); 1 << rz1.len()];
+    rz0: &[F::Scalar],
+    rz1: &[F::Scalar],
+    alpha: F::Scalar,
+    beta: F::Scalar,
+    ris: &[Vec<F::Scalar>],
+) -> F::Scalar {
+    let mut eq_evals_at_rz0 = vec![F::Scalar::zero(); 1 << rz0.len()];
+    let mut eq_evals_at_rz1 = vec![F::Scalar::zero(); 1 << rz1.len()];
 
     eq_evals_at_primitive(rz0, &alpha, &mut eq_evals_at_rz0);
     eq_evals_at_primitive(rz1, &beta, &mut eq_evals_at_rz1);
 
     let mut eq_evals_at_ris = vec![vec![]; INPUT_NUM];
     for i in 0..INPUT_NUM {
-        eq_evals_at_ris[i] = vec![F::ChallengeField::zero(); 1 << ris[i].len()];
-        eq_evals_at_primitive(&ris[i], &F::ChallengeField::one(), &mut eq_evals_at_ris[i])
+        eq_evals_at_ris[i] = vec![F::Scalar::zero(); 1 << ris[i].len()];
+        eq_evals_at_primitive(&ris[i], &F::Scalar::one(), &mut eq_evals_at_ris[i])
     }
 
-    let mut v = F::ChallengeField::zero();
+    let mut v = F::Scalar::zero();
     for g in gates {
         let mut prod = eq_evals_at_rz0[g.o_id] + eq_evals_at_rz1[g.o_id];
 
@@ -51,18 +51,18 @@ fn eval_sparse_circuit_connect_poly<F: Field + FiatShamirConfig, const INPUT_NUM
 // todo: FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
-fn sumcheck_verify_gkr_layer<F: Field + FieldSerde + FiatShamirConfig>(
+fn sumcheck_verify_gkr_layer<F: Field + FieldSerde + SimdField>(
     layer: &CircuitLayer<F>,
-    rz0: &[F::ChallengeField],
-    rz1: &[F::ChallengeField],
+    rz0: &F::Scalar,
+    rz1: &F::Scalar,
     claimed_v0: F,
     claimed_v1: F,
-    alpha: F::ChallengeField,
-    beta: F::ChallengeField,
+    alpha: F::Scalar,
+    beta: F::Scalar,
     proof: &mut Proof,
     transcript: &mut Transcript,
     _config: &Config,
-) -> (bool, Vec<F::ChallengeField>, Vec<F::ChallengeField>, F, F) {
+) -> (bool, Vec<F::Scalar>, Vec<F::Scalar>, F, F) {
     let var_num = layer.input_var_num;
     let mut sum = claimed_v0.scale(&alpha) + claimed_v1.scale(&beta)
         - F::from(eval_sparse_circuit_connect_poly(
@@ -128,23 +128,23 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde + FiatShamirConfig>(
 
 // todo: FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_verify<F: Field + FieldSerde + FiatShamirConfig>(
+pub fn gkr_verify<F: Field + FieldSerde + SimdField>(
     circuit: &Circuit<F>,
     claimed_v: &F,
     transcript: &mut Transcript,
     proof: &mut Proof,
     config: &Config,
-) -> (bool, Vec<F::ChallengeField>, Vec<F::ChallengeField>, F, F) {
+) -> (bool, Vec<F::Scalar>, Vec<F::Scalar>, F, F) {
     let timer = start_timer!(|| "gkr verify");
     let layer_num = circuit.layers.len();
     let mut rz0 = vec![];
     let mut rz1 = vec![];
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
         rz0.push(transcript.challenge_f::<F>());
-        rz1.push(F::ChallengeField::zero());
+        rz1.push(F::Scalar::zero());
     }
-    let mut alpha = F::ChallengeField::one();
-    let mut beta = F::ChallengeField::zero();
+    let mut alpha = F::Scalar::one();
+    let mut beta = F::Scalar::zero();
     let mut claimed_v0 = *claimed_v;
     let mut claimed_v1 = F::zero();
 
@@ -190,7 +190,7 @@ impl Verifier {
         }
     }
 
-    pub fn verify<F: Field + FieldSerde + FiatShamirConfig>(
+    pub fn verify<F: Field + FieldSerde + SimdField>(
         &self,
         circuit: &Circuit<F>,
         claimed_v: &F,

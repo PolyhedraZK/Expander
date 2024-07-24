@@ -1,4 +1,4 @@
-use arith::{FiatShamirConfig, Field, FieldSerde};
+use arith::{Field, FieldSerde, SimdField};
 
 use crate::{CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, Transcript};
 
@@ -7,16 +7,16 @@ use crate::{CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, Transcript};
 #[allow(clippy::type_complexity)]
 pub fn sumcheck_prove_gkr_layer<F>(
     layer: &CircuitLayer<F>,
-    rz0: &[F::ChallengeField],
-    rz1: &[F::ChallengeField],
-    alpha: &F::ChallengeField,
-    beta: &F::ChallengeField,
+    rz0: &[F::Scalar],
+    rz1: &[F::Scalar],
+    alpha: &F::Scalar,
+    beta: &F::Scalar,
     transcript: &mut Transcript,
     sp: &mut GkrScratchpad<F>,
     _config: &Config,
-) -> (Vec<F::ChallengeField>, Vec<F::ChallengeField>)
+) -> (Vec<F::Scalar>, Vec<F::Scalar>)
 where
-    F: Field + FieldSerde + FiatShamirConfig,
+    F: Field + FieldSerde + SimdField,
 {
     let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, alpha, beta, sp);
 
