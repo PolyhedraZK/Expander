@@ -9,7 +9,7 @@ use std::{
 
 use rand::{Rng, RngCore};
 
-use crate::{FiatShamirConfig, Field, FieldSerde, M31, M31_MOD};
+use crate::{SimdField, Field, FieldSerde, M31, M31_MOD};
 
 const M31_PACK_SIZE: usize = 8;
 const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; M31_PACK_SIZE]) };
@@ -185,11 +185,11 @@ impl Field for AVXM31 {
     }
 }
 
-impl FiatShamirConfig for AVXM31 {
-    type ChallengeField = M31;
+impl SimdField for AVXM31 {
+    type Scalar = M31;
 
     #[inline]
-    fn scale(&self, challenge: &Self::ChallengeField) -> Self {
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
         *self * *challenge
     }
 }

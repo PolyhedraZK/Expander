@@ -1,4 +1,4 @@
-use arith::{FiatShamirConfig, Field};
+use arith::{SimdField, Field};
 
 use crate::{CircuitLayer, GkrScratchpad};
 
@@ -108,10 +108,10 @@ impl SumcheckMultilinearProdHelper {
         [p0, p1, p2]
     }
 
-    fn receive_challenge<F: Field + FiatShamirConfig>(
+    fn receive_challenge<F: Field + SimdField>(
         &mut self,
         var_idx: usize,
-        r: F::ChallengeField,
+        r: F::Scalar,
         bk_f: &mut [F],
         bk_hg: &mut [F],
         init_v: &[F],
@@ -149,16 +149,16 @@ impl SumcheckMultilinearProdHelper {
 }
 
 #[allow(dead_code)]
-pub(crate) struct SumcheckGkrHelper<'a, F: Field + FiatShamirConfig> {
-    pub(crate) rx: Vec<F::ChallengeField>,
-    pub(crate) ry: Vec<F::ChallengeField>,
+pub(crate) struct SumcheckGkrHelper<'a, F: Field + SimdField> {
+    pub(crate) rx: Vec<F::Scalar>,
+    pub(crate) ry: Vec<F::Scalar>,
 
     layer: &'a CircuitLayer<F>,
     sp: &'a mut GkrScratchpad<F>,
-    rz0: &'a [F::ChallengeField],
-    rz1: &'a [F::ChallengeField],
-    alpha: F::ChallengeField,
-    beta: F::ChallengeField,
+    rz0: &'a [F::Scalar],
+    rz1: &'a [F::Scalar],
+    alpha: F::Scalar,
+    beta: F::Scalar,
 
     input_var_num: usize,
     output_var_num: usize,
@@ -167,13 +167,13 @@ pub(crate) struct SumcheckGkrHelper<'a, F: Field + FiatShamirConfig> {
     y_helper: SumcheckMultilinearProdHelper,
 }
 
-impl<'a, F: Field + FiatShamirConfig> SumcheckGkrHelper<'a, F> {
+impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
     pub fn new(
         layer: &'a CircuitLayer<F>,
-        rz0: &'a [F::ChallengeField],
-        rz1: &'a [F::ChallengeField],
-        alpha: &'a F::ChallengeField,
-        beta: &'a F::ChallengeField,
+        rz0: &'a [F::Scalar],
+        rz1: &'a [F::Scalar],
+        alpha: &'a F::Scalar,
+        beta: &'a F::Scalar,
         sp: &'a mut GkrScratchpad<F>,
     ) -> Self {
         SumcheckGkrHelper {
@@ -217,7 +217,7 @@ impl<'a, F: Field + FiatShamirConfig> SumcheckGkrHelper<'a, F> {
         }
     }
 
-    pub fn receive_challenge(&mut self, var_idx: usize, r: F::ChallengeField) {
+    pub fn receive_challenge(&mut self, var_idx: usize, r: F::Scalar) {
         if var_idx < self.input_var_num {
             self.x_helper.receive_challenge(
                 var_idx,
@@ -313,7 +313,7 @@ impl<'a, F: Field + FiatShamirConfig> SumcheckGkrHelper<'a, F> {
 
         eq_eval_at(
             &self.rx,
-            &F::ChallengeField::one(),
+            &F::Scalar::one(),
             eq_evals_at_rx,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,

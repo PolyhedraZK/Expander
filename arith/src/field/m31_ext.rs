@@ -1,5 +1,5 @@
 mod vectorized_m31;
-pub use vectorized_m31::VectorizedM31Ext3;
+pub use vectorized_m31::SimdM31Ext3;
 
 use ark_std::Zero;
 use rand::RngCore;

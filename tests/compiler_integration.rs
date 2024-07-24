@@ -1,6 +1,6 @@
 use std::fs;
 
-use arith::{Field, VectorizedM31};
+use arith::{Field, SimdM31};
 use expander_rs::{Circuit, Config, Prover, Verifier};
 use rand::Rng;
 
@@ -8,7 +8,7 @@ const FILENAME_CIRCUIT: &str = "data/circuit.txt";
 const FILENAME_WITNESS: &str = "data/witness.txt";
 const FILENAME_PROOF: &str = "data/proof.bin";
 
-type F = VectorizedM31;
+type F = SimdM31;
 
 #[test]
 fn test_compiler_format_integration() {

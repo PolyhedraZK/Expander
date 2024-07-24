@@ -100,14 +100,14 @@ pub trait Field:
 }
 
 /// Configurations for the Fiat-Shamir transform.
-pub trait FiatShamirConfig: From<Self::ChallengeField> {
+pub trait SimdField: From<Self::Scalar> {
     // todo: consolidate gkr config
 
     /// Field for the challenge. Can be self.
-    type ChallengeField: Field + FieldSerde + Send;
+    type Scalar: Field + FieldSerde + Send;
 
     /// scale self with the challenge
-    fn scale(&self, challenge: &Self::ChallengeField) -> Self;
+    fn scale(&self, challenge: &Self::Scalar) -> Self;
 }
 
 /// Serde for Fields

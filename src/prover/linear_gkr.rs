@@ -1,11 +1,11 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::{FiatShamirConfig, Field, FieldSerde};
+use arith::{SimdField, Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 
 use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
 
-pub fn grind<F: Field + FieldSerde + FiatShamirConfig>(
+pub fn grind<F: Field + FieldSerde + SimdField>(
     transcript: &mut Transcript,
     config: &Config,
 ) {
@@ -14,7 +14,7 @@ pub fn grind<F: Field + FieldSerde + FiatShamirConfig>(
     let mut hash_bytes = vec![];
 
     // ceil(32/field_size)
-    let num_field_elements = (31 + F::ChallengeField::SIZE) / F::ChallengeField::SIZE;
+    let num_field_elements = (31 + F::Scalar::SIZE) / F::Scalar::SIZE;
 
     let initial_hash = transcript.challenge_fs::<F>(num_field_elements);
     initial_hash
@@ -31,12 +31,12 @@ pub fn grind<F: Field + FieldSerde + FiatShamirConfig>(
     end_timer!(timer);
 }
 
-pub struct Prover<F: Field + FieldSerde + FiatShamirConfig> {
+pub struct Prover<F: Field + FieldSerde + SimdField> {
     config: Config,
     sp: Vec<GkrScratchpad<F>>,
 }
 
-impl<F: Field + FieldSerde + FiatShamirConfig> Prover<F> {
+impl<F: Field + FieldSerde + SimdField> Prover<F> {
     pub fn new(config: &Config) -> Self {
         // assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
