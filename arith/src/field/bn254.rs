@@ -13,6 +13,9 @@ impl Field for Fr {
     /// size required to store the data
     const SIZE: usize = 32;
 
+    /// zero
+    const ZERO: Self = Fr::zero();
+
     /// Inverse of 2
     const INV_2: Self = Fr::TWO_INV;
 

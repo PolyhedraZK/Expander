@@ -1,4 +1,4 @@
-use arith::{Field, FieldSerde, SimdField, SimdM31};
+use arith::{Field, FieldSerde, SimdField, SimdM31, SimdM31Ext3};
 use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier};
 use halo2curves::bn256::Fr;
 use rand::Rng;
@@ -44,6 +44,10 @@ fn gen_simple_circuit<F: Field + FieldSerde + SimdField>() -> Circuit<F> {
 fn test_gkr_correctness() {
     let config = Config::m31_config();
     test_gkr_correctness_helper::<SimdM31>(&config);
+
+    let config = Config::m31_ext3_config();
+    test_gkr_correctness_helper::<SimdM31Ext3>(&config);
+
     let config = Config::bn254_config();
     test_gkr_correctness_helper::<Fr>(&config);
 }

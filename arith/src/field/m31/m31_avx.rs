@@ -97,6 +97,8 @@ impl Field for AVXM31 {
     // size in bytes
     const SIZE: usize = 32;
 
+    const ZERO: Self = Self { v: PACKED_0 };
+
     const INV_2: Self = Self { v: PACKED_INV_2 };
 
     #[inline(always)]

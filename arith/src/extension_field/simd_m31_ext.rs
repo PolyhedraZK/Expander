@@ -131,7 +131,13 @@ impl Field for SimdM31Ext3 {
 
     const SIZE: usize = 96;
 
-    const INV_2: Self = unimplemented!();
+    const ZERO: Self = Self {
+        v: [SimdM31::ZERO; 3],
+    };
+
+    const INV_2: Self = Self {
+        v: [SimdM31::INV_2, SimdM31::ZERO, SimdM31::ZERO],
+    };
 
     #[inline(always)]
     fn zero() -> Self {

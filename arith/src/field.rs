@@ -43,6 +43,9 @@ pub trait Field:
     /// size required to store the data
     const SIZE: usize;
 
+    /// zero
+    const ZERO: Self;
+
     /// Inverse of 2
     const INV_2: Self;
 

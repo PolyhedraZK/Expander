@@ -59,6 +59,10 @@ impl Field for M31Ext3 {
 
     const SIZE: usize = 12;
 
+    const ZERO: Self = M31Ext3 {
+        v: [M31::ZERO, M31::ZERO, M31::ZERO],
+    };
+
     const INV_2: M31Ext3 = M31Ext3 {
         v: [M31::INV_2, M31 { v: 0 }, M31 { v: 0 }],
     };
