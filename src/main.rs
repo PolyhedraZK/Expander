@@ -4,11 +4,10 @@ use std::{
     thread,
 };
 
-use arith::SimdM31Ext3;
-use arith::{Field, FieldSerde, SimdField, SimdM31};
+use arith::{BinomialExtensionField, Bn254DummyExt3, SimdM31Ext3};
+use arith::{FieldSerde, SimdField};
 use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
-use halo2curves::bn256::Fr;
 
 const KECCAK_CIRCUIT: &str = "data/circuit.txt";
 // circuit for repeating Poseidon for 120 times
@@ -44,16 +43,15 @@ fn main() {
     print_info(&args);
 
     match args.field.as_str() {
-        "m31" => run_benchmark::<SimdM31>(&args, Config::m31_config()),
         "m31ext3" => run_benchmark::<SimdM31Ext3>(&args, Config::m31_ext3_config()),
-        "fr" => run_benchmark::<Fr>(&args, Config::bn254_config()),
+        "fr" => run_benchmark::<Bn254DummyExt3>(&args, Config::bn254_config()),
         _ => unreachable!(),
     };
 }
 
 fn run_benchmark<F>(args: &Args, config: Config)
 where
-    F: Field + FieldSerde + SimdField + Send + 'static,
+    F: BinomialExtensionField<3> + FieldSerde + SimdField + Send + 'static,
 {
     println!("benchmarking keccak over {}", args.field);
 

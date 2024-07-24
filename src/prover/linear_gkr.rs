@@ -1,6 +1,6 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::{Field, FieldSerde, SimdField};
+use arith::{BinomialExtensionField, Field, FieldSerde, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
@@ -28,12 +28,12 @@ pub fn grind<F: Field + FieldSerde + SimdField>(transcript: &mut Transcript, con
     end_timer!(timer);
 }
 
-pub struct Prover<F: Field + FieldSerde + SimdField> {
+pub struct Prover<F: BinomialExtensionField<3> + FieldSerde + SimdField> {
     config: Config,
     sp: GkrScratchpad<F>,
 }
 
-impl<F: Field + FieldSerde + SimdField> Prover<F> {
+impl<F: BinomialExtensionField<3> + FieldSerde + SimdField> Prover<F> {
     pub fn new(config: &Config) -> Self {
         // assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
