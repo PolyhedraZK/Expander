@@ -1,6 +1,6 @@
 use arith::{Field, SimdField};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct GkrScratchpad<F: Field + SimdField> {
     pub(crate) v_evals: Vec<F>,
     pub(crate) hg_evals: Vec<F>,

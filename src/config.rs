@@ -34,7 +34,6 @@ pub enum FiatShamirHashType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Config {
-    pub num_repetitions: usize,
     pub field_size: usize,
     pub security_bits: usize,
     pub grinding_bits: usize,
@@ -63,8 +62,6 @@ impl Config {
 
         let field_size = 31;
 
-        let num_repetitions = 3;
-
         let polynomial_commitment_type = PolynomialCommitmentType::Raw;
         let field_type = FieldType::M31;
         let fs_hash = FiatShamirHashType::SHA256;
@@ -74,8 +71,7 @@ impl Config {
         }
 
         Config {
-            num_repetitions, // update later
-            field_size,      // update later
+            field_size, // update later
             security_bits,
             grinding_bits,
             polynomial_commitment_type,
@@ -91,8 +87,6 @@ impl Config {
 
         let field_size = 93;
 
-        let num_repetitions = 1; // we do not need repetitions for m31_ext3
-
         let polynomial_commitment_type = PolynomialCommitmentType::Raw;
         let field_type = FieldType::M31;
         let fs_hash = FiatShamirHashType::SHA256;
@@ -102,8 +96,7 @@ impl Config {
         }
 
         Config {
-            num_repetitions, // update later
-            field_size,      // update later
+            field_size, // update later
             security_bits,
             grinding_bits,
             polynomial_commitment_type,
@@ -118,8 +111,6 @@ impl Config {
 
         let field_size = 254;
 
-        let num_repetitions = 1;
-
         let polynomial_commitment_type = PolynomialCommitmentType::Raw;
         let field_type = FieldType::BN254;
         let fs_hash = FiatShamirHashType::SHA256;
@@ -129,19 +120,12 @@ impl Config {
         }
 
         Config {
-            num_repetitions, // update later
-            field_size,      // update later
+            field_size, // update later
             security_bits,
             grinding_bits,
             polynomial_commitment_type,
             field_type,
             fs_hash,
         }
-    }
-
-    #[inline(always)]
-    /// return the number of repetitions we will need to achieve security
-    pub fn get_num_repetitions(&self) -> usize {
-        self.num_repetitions
     }
 }

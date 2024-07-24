@@ -30,7 +30,7 @@ pub fn grind<F: Field + FieldSerde + SimdField>(transcript: &mut Transcript, con
 
 pub struct Prover<F: Field + FieldSerde + SimdField> {
     config: Config,
-    sp: Vec<GkrScratchpad<F>>,
+    sp: GkrScratchpad<F>,
 }
 
 impl<F: Field + FieldSerde + SimdField> Prover<F> {
@@ -43,7 +43,7 @@ impl<F: Field + FieldSerde + SimdField> Prover<F> {
         );
         Prover {
             config: config.clone(),
-            sp: Vec::new(),
+            sp: GkrScratchpad::<F>::default(),
         }
     }
 
@@ -60,12 +60,10 @@ impl<F: Field + FieldSerde + SimdField> Prover<F> {
             .map(|layer| layer.output_var_num)
             .max()
             .unwrap();
-        self.sp = (0..self.config.get_num_repetitions())
-            .map(|_| GkrScratchpad::new(max_num_input_var, max_num_output_var))
-            .collect();
+        self.sp = GkrScratchpad::<F>::new(max_num_input_var, max_num_output_var);
     }
 
-    pub fn prove(&mut self, c: &Circuit<F>) -> (Vec<F>, Proof) {
+    pub fn prove(&mut self, c: &Circuit<F>) -> (F, Proof) {
         let timer = start_timer!(|| "prove");
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 

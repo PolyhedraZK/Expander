@@ -12,26 +12,20 @@ use expander_rs::{
 use log::{debug, info};
 use warp::Filter;
 
-fn dump_proof_and_claimed_v<F: Field + FieldSerde>(proof: &Proof, claimed_v: &[F]) -> Vec<u8> {
+fn dump_proof_and_claimed_v<F: Field + FieldSerde>(proof: &Proof, claimed_v: &F) -> Vec<u8> {
     let mut bytes = Vec::new();
 
     proof.serialize_into(&mut bytes);
-
-    let claimed_v_len = claimed_v.len();
-    (claimed_v_len as u64).serialize_into(&mut bytes);
-    claimed_v.iter().for_each(|f| f.serialize_into(&mut bytes));
+    claimed_v.serialize_into(&mut bytes);
 
     bytes
 }
 
-fn load_proof_and_claimed_v<F: Field + FieldSerde>(bytes: &[u8]) -> (Proof, Vec<F>) {
+fn load_proof_and_claimed_v<F: Field + FieldSerde>(bytes: &[u8]) -> (Proof, F) {
     let mut cursor = Cursor::new(bytes);
 
     let proof = Proof::deserialize_from(&mut cursor);
-    let claimed_v_len = u64::deserialize_from(&mut cursor) as usize;
-    let claimed_v = (0..claimed_v_len)
-        .map(|_| F::deserialize_from(&mut cursor))
-        .collect::<Vec<_>>();
+    let claimed_v = F::deserialize_from(&mut cursor);
 
     (proof, claimed_v)
 }
