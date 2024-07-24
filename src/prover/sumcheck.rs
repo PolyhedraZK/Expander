@@ -7,71 +7,53 @@ use crate::{CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, Transcript};
 #[allow(clippy::type_complexity)]
 pub fn sumcheck_prove_gkr_layer<F>(
     layer: &CircuitLayer<F>,
-    rz0: &[Vec<F::ChallengeField>],
-    rz1: &[Vec<F::ChallengeField>],
+    rz0: &[F::ChallengeField],
+    rz1: &[F::ChallengeField],
     alpha: &F::ChallengeField,
     beta: &F::ChallengeField,
     transcript: &mut Transcript,
-    sp: &mut [GkrScratchpad<F>],
-    config: &Config,
-) -> (Vec<Vec<F::ChallengeField>>, Vec<Vec<F::ChallengeField>>)
+    sp: &mut GkrScratchpad<F>,
+    _config: &Config,
+) -> (Vec<F::ChallengeField>, Vec<F::ChallengeField>)
 where
     F: Field + FieldSerde + FiatShamirConfig,
 {
-    let mut helpers = vec![];
-    assert_eq!(config.get_num_repetitions(), sp.len());
-    for (j, sp_) in sp.iter_mut().enumerate() {
-        helpers.push(SumcheckGkrHelper::new(
-            layer, &rz0[j], &rz1[j], alpha, beta, sp_,
-        ));
-    }
+
+    let mut helper = SumcheckGkrHelper::new(
+        layer, &rz0, &rz1, alpha, beta, sp,
+    );
 
     for i_var in 0..layer.input_var_num * 2 {
-        for (j, helper) in helpers
-            .iter_mut()
-            .enumerate()
-            .take(config.get_num_repetitions())
-        {
-            if i_var == 0 {
-                helper.prepare_g_x_vals()
-            }
-            if i_var == layer.input_var_num {
-                let vx_claim = helper.vx_claim();
-                helper.prepare_h_y_vals(vx_claim)
-            }
+        if i_var == 0 {
+            helper.prepare_g_x_vals()
+        }
 
-            let evals = helper.poly_evals_at(i_var, 2);
+        if i_var == layer.input_var_num {
+            let vx_claim = helper.vx_claim();
+            helper.prepare_h_y_vals(vx_claim)
+        }
 
-            transcript.append_f(evals[0]);
-            transcript.append_f(evals[1]);
-            transcript.append_f(evals[2]);
+        let evals = helper.poly_evals_at(i_var, 2);
 
-            let r = transcript.challenge_f::<F>();
-            if j == 0 {
-                log::trace!("i_var={} j={} evals: {:?} r: {:?}", i_var, j, evals, r);
-            }
-            helper.receive_challenge(i_var, r);
-            if i_var == layer.input_var_num - 1 {
-                log::trace!("vx claim: {:?}", helper.vx_claim());
-                transcript.append_f(helper.vx_claim());
-            }
+        transcript.append_f(evals[0]);
+        transcript.append_f(evals[1]);
+        transcript.append_f(evals[2]);
+
+        let r = transcript.challenge_f::<F>();
+        
+        log::trace!("i_var={} evals: {:?} r: {:?}", i_var, evals, r);
+        
+        helper.receive_challenge(i_var, r);
+        if i_var == layer.input_var_num - 1 {
+            log::trace!("vx claim: {:?}", helper.vx_claim());
+            transcript.append_f(helper.vx_claim());
         }
     }
 
-    for (j, helper) in helpers
-        .iter()
-        .enumerate()
-        .take(config.get_num_repetitions())
-    {
-        log::trace!("claimed vy[{}] = {:?}", j, helper.vy_claim());
-        transcript.append_f(helper.vy_claim());
-    }
+    log::trace!("claimed vy = {:?}", helper.vy_claim());
+    transcript.append_f(helper.vy_claim());
 
-    let rz0s = (0..config.get_num_repetitions())
-        .map(|j| helpers[j].rx.clone()) // FIXME: clone might be avoided
-        .collect();
-    let rz1s = (0..config.get_num_repetitions())
-        .map(|j| helpers[j].ry.clone()) // FIXME: clone might be avoided
-        .collect();
-    (rz0s, rz1s)
+    let rz0 = helper.rx.clone();
+    let rz1 = helper.ry.clone();
+    (rz0, rz1)
 }

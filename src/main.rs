@@ -56,10 +56,6 @@ where
     F: Field + FieldSerde + FiatShamirConfig + Send + 'static,
 {
     println!("benchmarking keccak over {}", args.field);
-    println!(
-        "Default parallel repetition config {}",
-        config.get_num_repetitions()
-    );
 
     let partial_proof_cnts = (0..args.threads)
         .map(|_| Arc::new(Mutex::new(0)))
