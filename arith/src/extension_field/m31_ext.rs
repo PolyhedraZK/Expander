@@ -1,6 +1,3 @@
-mod vectorized_m31;
-pub use vectorized_m31::VectorizedM31Ext3;
-
 use ark_std::Zero;
 use rand::RngCore;
 use std::{
@@ -11,6 +8,8 @@ use std::{
 };
 
 use crate::{mod_reduce_u32, Field, FieldSerde, M31};
+
+use super::BinomialExtensionField;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct M31Ext3 {
@@ -150,6 +149,30 @@ impl Field for M31Ext3 {
                 },
             ],
         }
+    }
+}
+
+impl BinomialExtensionField<3> for M31Ext3 {
+    /// Extension Field
+    const W: u32 = 5;
+
+    /// Base field for the extension
+    type BaseField = M31;
+
+    /// Multiply the extension field with the base field
+    fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
+        let mut res = self.v;
+        res[0] *= base;
+        res[1] *= base;
+        res[2] *= base;
+        Self { v: res }
+    }
+
+    /// Add the extension field with the base field
+    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
+        let mut res = self.v;
+        res[0] += base;
+        Self { v: res }
     }
 }
 

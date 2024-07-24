@@ -3,7 +3,7 @@
 
 use std::io::{Read, Write};
 
-use arith::{FiatShamirConfig, Field, FieldSerde, MultiLinearPoly};
+use arith::{Field, FieldSerde, MultiLinearPoly, SimdField};
 
 pub struct RawOpening {}
 
@@ -34,14 +34,14 @@ impl<F: Field + FieldSerde> RawCommitment<F> {
     }
 }
 
-impl<F: Field + FieldSerde + FiatShamirConfig> RawCommitment<F> {
+impl<F: Field + FieldSerde + SimdField> RawCommitment<F> {
     #[inline]
     pub fn new(poly_vals: Vec<F>) -> Self {
         RawCommitment { poly_vals }
     }
 
     #[inline]
-    pub fn verify(&self, x: &[F::ChallengeField], y: F) -> bool {
+    pub fn verify(&self, x: &[F::Scalar], y: F) -> bool {
         y == MultiLinearPoly::<F>::eval_multilinear(&self.poly_vals, x)
     }
 }

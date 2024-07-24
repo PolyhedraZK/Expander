@@ -1,4 +1,4 @@
-use arith::{FiatShamirConfig, Field, FieldSerde};
+use arith::{Field, FieldSerde, SimdField};
 
 use crate::{Proof, SHA256hasher};
 
@@ -53,13 +53,13 @@ impl Transcript {
         self.proof.bytes.extend_from_slice(buffer);
     }
     #[inline]
-    pub fn challenge_f<F: FiatShamirConfig>(&mut self) -> F::ChallengeField {
+    pub fn challenge_f<F: SimdField>(&mut self) -> F::Scalar {
         self.hash_to_digest();
-        assert!(F::ChallengeField::SIZE <= Self::DIGEST_SIZE);
-        F::ChallengeField::from_uniform_bytes(&self.digest)
+        assert!(F::Scalar::SIZE <= Self::DIGEST_SIZE);
+        F::Scalar::from_uniform_bytes(&self.digest)
     }
     #[inline]
-    pub fn challenge_fs<F: FiatShamirConfig>(&mut self, size: usize) -> Vec<F::ChallengeField> {
+    pub fn challenge_fs<F: SimdField>(&mut self, size: usize) -> Vec<F::Scalar> {
         (0..size).map(|_| self.challenge_f::<F>()).collect()
     }
 }

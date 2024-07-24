@@ -4,8 +4,8 @@ use std::{
     thread,
 };
 
-use arith::VectorizedM31Ext3;
-use arith::{FiatShamirConfig, Field, FieldSerde, VectorizedM31};
+use arith::SimdM31Ext3;
+use arith::{Field, FieldSerde, SimdField, SimdM31};
 use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
 use halo2curves::bn256::Fr;
@@ -44,8 +44,8 @@ fn main() {
     print_info(&args);
 
     match args.field.as_str() {
-        "m31" => run_benchmark::<VectorizedM31>(&args, Config::m31_config()),
-        "m31ext3" => run_benchmark::<VectorizedM31Ext3>(&args, Config::m31_ext3_config()),
+        "m31" => run_benchmark::<SimdM31>(&args, Config::m31_config()),
+        "m31ext3" => run_benchmark::<SimdM31Ext3>(&args, Config::m31_ext3_config()),
         "fr" => run_benchmark::<Fr>(&args, Config::bn254_config()),
         _ => unreachable!(),
     };
@@ -53,7 +53,7 @@ fn main() {
 
 fn run_benchmark<F>(args: &Args, config: Config)
 where
-    F: Field + FieldSerde + FiatShamirConfig + Send + 'static,
+    F: Field + FieldSerde + SimdField + Send + 'static,
 {
     println!("benchmarking keccak over {}", args.field);
     println!(

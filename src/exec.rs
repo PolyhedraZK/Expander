@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use arith::{FiatShamirConfig, Field, FieldSerde, VectorizedM31};
+use arith::{Field, FieldSerde, SimdField, SimdM31};
 use expander_rs::{
     Circuit, Config, FieldType, Proof, Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
 };
@@ -52,7 +52,7 @@ fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
 
 async fn run_command<F>(field_type: FieldType, command: &str, circuit_file: &str, args: &[String])
 where
-    F: Field + FieldSerde + FiatShamirConfig + Send + 'static,
+    F: Field + FieldSerde + SimdField + Send + 'static,
 {
     let config = match field_type {
         FieldType::M31 => Config::m31_config(),
@@ -174,7 +174,7 @@ async fn main() {
     debug!("field type: {:?}", field_type);
     match field_type {
         FieldType::M31 => {
-            run_command::<VectorizedM31>(field_type, command, circuit_file, &args).await;
+            run_command::<SimdM31>(field_type, command, circuit_file, &args).await;
         }
         // FieldType::BN254 => {
         //     run_command::<VectorizedFr>(field_type, command, circuit_file, &args).await;
