@@ -1,4 +1,4 @@
-use arith::{SimdField, Field, FieldSerde, SimdM31};
+use arith::{Field, FieldSerde, SimdField, SimdM31};
 use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier};
 use halo2curves::bn256::Fr;
 use rand::Rng;

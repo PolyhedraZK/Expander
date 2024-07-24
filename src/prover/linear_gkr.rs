@@ -1,14 +1,11 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::{SimdField, Field, FieldSerde};
+use arith::{Field, FieldSerde, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
 
-pub fn grind<F: Field + FieldSerde + SimdField>(
-    transcript: &mut Transcript,
-    config: &Config,
-) {
+pub fn grind<F: Field + FieldSerde + SimdField>(transcript: &mut Transcript, config: &Config) {
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
 
     let mut hash_bytes = vec![];

@@ -1,4 +1,4 @@
-use arith::{SimdField, Field};
+use arith::{Field, SimdField};
 
 use crate::{CircuitLayer, GkrScratchpad};
 

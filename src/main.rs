@@ -5,7 +5,7 @@ use std::{
 };
 
 use arith::SimdM31Ext3;
-use arith::{SimdField, Field, FieldSerde, SimdM31};
+use arith::{Field, FieldSerde, SimdField, SimdM31};
 use clap::Parser;
 use expander_rs::{Circuit, Config, Prover};
 use halo2curves::bn256::Fr;

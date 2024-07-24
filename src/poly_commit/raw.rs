@@ -3,7 +3,7 @@
 
 use std::io::{Read, Write};
 
-use arith::{SimdField, Field, FieldSerde, MultiLinearPoly};
+use arith::{Field, FieldSerde, MultiLinearPoly, SimdField};
 
 pub struct RawOpening {}
 

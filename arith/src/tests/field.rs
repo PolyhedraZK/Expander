@@ -5,24 +5,10 @@ use rand::{Rng, RngCore};
 
 use crate::{Field, FieldSerde};
 
-pub(crate) fn test_basic_field_op<F: Field>() {
-    let mut rng = rand::thread_rng();
-
-    let f = F::random_unsafe(&mut rng);
-
-    let rhs = rng.gen::<u32>() % 100;
-
-    let prod_0 = f * F::from(rhs);
-    let mut prod_1 = F::zero();
-    for _ in 0..rhs {
-        prod_1 += f;
-    }
-    assert_eq!(prod_0, prod_1);
-}
-
 pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
     let mut rng = test_rng();
 
+    test_basic_field_op::<F>(type_name.clone());
     random_multiplication_tests::<F, _>(&mut rng, type_name.clone());
     random_addition_tests::<F, _>(&mut rng, type_name.clone());
     random_subtraction_tests::<F, _>(&mut rng, type_name.clone());
@@ -53,6 +39,21 @@ pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
         a.add_assign(&F::zero());
         assert_eq!(a, copy);
     }
+}
+
+fn test_basic_field_op<F: Field>(_type_name: String) {
+    let mut rng = rand::thread_rng();
+
+    let f = F::random_unsafe(&mut rng);
+
+    let rhs = rng.gen::<u32>() % 100;
+
+    let prod_0 = f * F::from(rhs);
+    let mut prod_1 = F::zero();
+    for _ in 0..rhs {
+        prod_1 += f;
+    }
+    assert_eq!(prod_0, prod_1);
 }
 
 fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {

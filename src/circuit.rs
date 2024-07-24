@@ -1,4 +1,4 @@
-use arith::{SimdField, Field, FieldSerde, MultiLinearPoly};
+use arith::{Field, FieldSerde, MultiLinearPoly, SimdField};
 use ark_std::test_rng;
 use std::{
     collections::HashMap,

@@ -1,4 +1,4 @@
-use arith::{SimdField, Field, FieldSerde};
+use arith::{Field, FieldSerde, SimdField};
 
 use crate::{Proof, SHA256hasher};
 

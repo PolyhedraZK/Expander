@@ -1,4 +1,4 @@
-use arith::{SimdField, Field};
+use arith::{Field, SimdField};
 
 #[derive(Clone, Debug)]
 pub struct GkrScratchpad<F: Field + SimdField> {

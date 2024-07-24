@@ -4,7 +4,10 @@ use ark_std::test_rng;
 
 use crate::{FieldSerde, SimdM31, M31};
 
-use super::field::{random_field_tests, random_inversion_tests, test_basic_field_op};
+use super::{
+    field::{random_field_tests, random_inversion_tests},
+    simd_field::random_simd_field_tests,
+};
 
 #[test]
 fn test_field() {
@@ -14,16 +17,8 @@ fn test_field() {
     let mut rng = test_rng();
     random_inversion_tests::<M31, _>(&mut rng, "M31".to_string());
     random_inversion_tests::<SimdM31, _>(&mut rng, "Vectorized M31".to_string());
-}
 
-#[test]
-fn test_m31_basic_field_op() {
-    test_basic_field_op::<M31>();
-}
-
-#[test]
-fn test_vectorize_m31_basic_field_op() {
-    test_basic_field_op::<SimdM31>();
+    random_simd_field_tests::<SimdM31>("Vectorized M31".to_string());
 }
 
 #[test]

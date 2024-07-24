@@ -1,15 +1,12 @@
 mod bn254;
 mod m31;
-mod m31_ext;
 
 pub use m31::*;
-pub use m31_ext::*;
 
 use rand::RngCore;
 
 use std::{
     fmt::Debug,
-    io::{Read, Write},
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -97,69 +94,4 @@ pub trait Field:
 
     /// sample from a 32 bytes
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;
-}
-
-/// Configurations for the SimdField.
-pub trait SimdField: From<Self::Scalar> + Field + FieldSerde {
-    /// Field for the challenge. Can be self.
-    type Scalar: Field + FieldSerde + Send;
-
-    /// scale self with the challenge
-    fn scale(&self, challenge: &Self::Scalar) -> Self;
-}
-
-/// Configurations for   Extension Field
-/// the Binomial polynomial x^DEGREE - W
-pub trait BinomialExtensionField<const DEGREE: usize>:
-    From<Self::BaseField> + Field + FieldSerde
-{
-    /// Extension Field
-    const W: u32;
-
-    /// Base field for the extension
-    type BaseField: Field + FieldSerde + Send;
-
-    /// Multiply the extension field with the base field
-    fn mul_by_base_field(&self, base: &Self::BaseField) -> Self;
-
-    /// Add the extension field with the base field
-    fn add_by_base_field(&self, base: &Self::BaseField) -> Self;
-}
-
-/// Serde for Fields
-pub trait FieldSerde {
-    /// serialize self into bytes
-    fn serialize_into<W: Write>(&self, writer: W);
-
-    /// size of the serialized bytes
-    fn serialized_size() -> usize;
-
-    /// deserialize bytes into field
-    fn deserialize_from<R: Read>(reader: R) -> Self;
-
-    /// deserialize bytes into field following ecc format
-    fn deserialize_from_ecc_format<R: Read>(_reader: R) -> Self;
-}
-
-impl FieldSerde for u64 {
-    /// serialize u64 into bytes
-    fn serialize_into<W: Write>(&self, mut writer: W) {
-        writer.write_all(&self.to_le_bytes()).unwrap();
-    }
-
-    /// size of the serialized bytes
-    fn serialized_size() -> usize {
-        8
-    }
-
-    /// deserialize bytes into u64
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let mut buffer = [0u8; 8];
-        reader.read_exact(&mut buffer).unwrap();
-        u64::from_le_bytes(buffer)
-    }
-
-    fn deserialize_from_ecc_format<R: Read>(_reader: R) -> Self {
-        unimplemented!("not implemented for u64")
-    }
 }
