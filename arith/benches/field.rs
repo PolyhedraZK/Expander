@@ -133,12 +133,11 @@ pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    bench_field::<M31>(c);
+    // bench_field::<M31>(c);
     bench_field::<SimdM31>(c);
-    bench_field::<M31Ext3>(c);
-    #[cfg(target_arch = "x86_64")]
+    // bench_field::<M31Ext3>(c);
     bench_field::<SimdM31Ext3>(c);
-    bench_field::<Fr>(c);
+    // bench_field::<Fr>(c);
 }
 
 criterion_group!(benches, criterion_benchmark);

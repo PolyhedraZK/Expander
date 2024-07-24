@@ -42,6 +42,11 @@ impl NeonM31 {
             v: unsafe { [vdupq_n_u32(x.v), vdupq_n_u32(x.v)] },
         }
     }
+
+    #[inline(always)]
+    pub(crate) fn mul_by_5(&self) -> AVXM31 {
+        *self * FIVE
+    }
 }
 
 impl FieldSerde for NeonM31 {

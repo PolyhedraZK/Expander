@@ -50,6 +50,16 @@ impl AVXM31 {
             v: unsafe { _mm256_set1_epi32(x.v as i32) },
         }
     }
+
+    #[inline(always)]
+    pub(crate) fn mul_by_5(&self) -> AVXM31 {
+        *self * FIVE
+    }
+
+    #[inline(always)]
+    pub(crate) fn mul_by_10(&self) -> AVXM31 {
+        *self * TEN
+    }
 }
 
 impl FieldSerde for AVXM31 {
@@ -244,15 +254,28 @@ impl Mul<&AVXM31> for AVXM31 {
     #[inline(always)]
     fn mul(self, rhs: &AVXM31) -> Self::Output {
         unsafe {
-            let x_shifted = _mm256_srli_epi64::<32>(self.v);
-            let rhs_shifted = _mm256_srli_epi64::<32>(rhs.v);
-            let mut xa_even = _mm256_mul_epi32(self.v, rhs.v);
-            let mut xa_odd = _mm256_mul_epi32(x_shifted, rhs_shifted);
-            xa_even = mod_reduce_epi64(xa_even);
-            xa_odd = mod_reduce_epi64(xa_odd);
-            AVXM31 {
-                v: mod_reduce_epi32(_mm256_or_si256(xa_even, _mm256_slli_epi64::<32>(xa_odd))),
-            }
+            let lhs_evn = self.v;
+            let lhs_odd_dbl = _mm256_srli_epi64::<31>(self.v);
+
+            let rhs_evn = rhs.v;
+            let rhs_odd = movehdup_epi32(rhs.v);
+
+            let prod_odd_dbl = _mm256_mul_epu32(lhs_odd_dbl, rhs_odd);
+            let prod_evn = _mm256_mul_epu32(lhs_evn, rhs_evn);
+
+            let prod_odd_lo_dirty = _mm256_slli_epi64::<31>(prod_odd_dbl);
+            let prod_evn_hi = _mm256_srli_epi64::<31>(prod_evn);
+
+            let prod_lo_dirty = _mm256_blend_epi32::<0b10101010>(prod_evn, prod_odd_lo_dirty);
+
+            let prod_hi = _mm256_blend_epi32::<0b10101010>(prod_evn_hi, prod_odd_dbl);
+            let prod_lo = _mm256_and_si256(prod_lo_dirty, PACKED_MOD);
+
+            let t = _mm256_add_epi32(prod_hi, prod_lo);
+            let u = _mm256_sub_epi32(t, PACKED_MOD);
+            let res = _mm256_min_epu32(t, u);
+
+            AVXM31 { v: res }
         }
     }
 }
@@ -404,4 +427,12 @@ impl SubAssign for AVXM31 {
     fn sub_assign(&mut self, rhs: Self) {
         *self -= &rhs;
     }
+}
+
+#[inline]
+#[must_use]
+fn movehdup_epi32(x: __m256i) -> __m256i {
+    // The instruction is only available in the floating-point flavor; this distinction is only for
+    // historical reasons and no longer matters. We cast to floats, duplicate, and cast back.
+    unsafe { _mm256_castps_si256(_mm256_movehdup_ps(_mm256_castsi256_ps(x))) }
 }
