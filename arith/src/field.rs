@@ -53,6 +53,7 @@ pub trait Field:
     fn zero() -> Self;
 
     /// Is zero
+    #[inline(always)]
     fn is_zero(&self) -> bool {
         *self == Self::zero()
     }
@@ -74,11 +75,13 @@ pub trait Field:
     // arithmetics
     // ====================================
     /// Squaring
+    #[inline(always)]
     fn square(&self) -> Self {
         *self * *self
     }
 
     /// Doubling
+    #[inline(always)]
     fn double(&self) -> Self {
         *self + *self
     }

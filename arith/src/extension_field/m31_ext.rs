@@ -160,6 +160,7 @@ impl BinomialExtensionField<3> for M31Ext3 {
     type BaseField = M31;
 
     /// Multiply the extension field with the base field
+    #[inline]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
         let mut res = self.v;
         res[0] *= base;
@@ -169,6 +170,7 @@ impl BinomialExtensionField<3> for M31Ext3 {
     }
 
     /// Add the extension field with the base field
+    #[inline]
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
         let mut res = self.v;
         res[0] += base;
