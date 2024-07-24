@@ -14,7 +14,6 @@ use crate::{Field, FieldSerde, SimdField, M31, M31_MOD};
 const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD; 4]) };
 const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
 const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
-const ONE: int32x4_t = unsafe { transmute([0; 4]) };
 
 #[inline(always)]
 fn reduce_sum(x: uint32x4_t) -> uint32x4_t {
@@ -42,12 +41,12 @@ impl NeonM31 {
             v: [PACKED_0, PACKED_0],
         };
         res.v[0] = unsafe {
-            let double = vqshlq_u32(self.v[0], ONE);
-            reduce_sum(vaddq_u32(double, self.v[0]))
+            let double = vshlq_n_u32(self.v[0], 1);
+            reduce_sum(double)
         };
         res.v[1] = unsafe {
-            let double = vqshlq_u32(self.v[1], ONE);
-            reduce_sum(vaddq_u32(double, self.v[1]))
+            let double = vshlq_n_u32(self.v[1], 1);
+            reduce_sum(double)
         };
         res
     }
@@ -58,13 +57,13 @@ impl NeonM31 {
             v: [PACKED_0, PACKED_0],
         };
         res.v[0] = unsafe {
-            let double = reduce_sum(vqshlq_u32(self.v[0], ONE));
-            let quad = reduce_sum(vqshlq_u32(double, ONE));
+            let double = reduce_sum(vshlq_n_u32(self.v[0], 1));
+            let quad = reduce_sum(vshlq_n_u32(double, 1));
             reduce_sum(vaddq_u32(quad, self.v[0]))
         };
         res.v[1] = unsafe {
-            let double = reduce_sum(vqshlq_u32(self.v[1], ONE));
-            let quad = reduce_sum(vqshlq_u32(double, ONE));
+            let double = reduce_sum(vshlq_n_u32(self.v[1], 1));
+            let quad = reduce_sum(vshlq_n_u32(double, 1));
             reduce_sum(vaddq_u32(quad, self.v[1]))
         };
         res
@@ -76,15 +75,15 @@ impl NeonM31 {
             v: [PACKED_0, PACKED_0],
         };
         res.v[0] = unsafe {
-            let double = reduce_sum(vqshlq_u32(self.v[0], ONE));
-            let quad = reduce_sum(vqshlq_u32(double, ONE));
-            let oct = reduce_sum(vqshlq_u32(quad, ONE));
+            let double = reduce_sum(vshlq_n_u32(self.v[0], 1));
+            let quad = reduce_sum(vshlq_n_u32(double, 1));
+            let oct = reduce_sum(vshlq_n_u32(quad, 1));
             reduce_sum(vaddq_u32(oct, double))
         };
         res.v[1] = unsafe {
-            let double = reduce_sum(vqshlq_u32(self.v[0], ONE));
-            let quad = reduce_sum(vqshlq_u32(double, ONE));
-            let oct = reduce_sum(vqshlq_u32(quad, ONE));
+            let double = reduce_sum(vshlq_n_u32(self.v[1], 1));
+            let quad = reduce_sum(vshlq_n_u32(double, 1));
+            let oct = reduce_sum(vshlq_n_u32(quad, 1));
             reduce_sum(vaddq_u32(oct, double))
         };
         res
