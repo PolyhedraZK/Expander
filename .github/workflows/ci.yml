@@ -63,7 +63,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
       - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
-      - run: cargo run --release --bin bench -- -t 4 -f m31ext3
+      - run: cargo run --release -- -t 4 -f m31ext3
   
   bench-mac-fr:
     name: Bench-mac-m31
@@ -77,7 +77,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
       - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
-      - run: cargo run --release --bin bench -- -t 4 -f fr
+      - run: cargo run --release -- -t 4 -f fr
 
   test-linux:
     name: Test-linux
