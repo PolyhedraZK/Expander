@@ -18,10 +18,7 @@ pub fn sumcheck_prove_gkr_layer<F>(
 where
     F: Field + FieldSerde + FiatShamirConfig,
 {
-
-    let mut helper = SumcheckGkrHelper::new(
-        layer, &rz0, &rz1, alpha, beta, sp,
-    );
+    let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, alpha, beta, sp);
 
     for i_var in 0..layer.input_var_num * 2 {
         if i_var == 0 {
@@ -40,9 +37,9 @@ where
         transcript.append_f(evals[2]);
 
         let r = transcript.challenge_f::<F>();
-        
+
         log::trace!("i_var={} evals: {:?} r: {:?}", i_var, evals, r);
-        
+
         helper.receive_challenge(i_var, r);
         if i_var == layer.input_var_num - 1 {
             log::trace!("vx claim: {:?}", helper.vx_claim());

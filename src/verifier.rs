@@ -62,23 +62,17 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde + FiatShamirConfig>(
     proof: &mut Proof,
     transcript: &mut Transcript,
     _config: &Config,
-) -> (
-    bool,
-    Vec<F::ChallengeField>,
-    Vec<F::ChallengeField>,
-    F,
-    F,
-) {
+) -> (bool, Vec<F::ChallengeField>, Vec<F::ChallengeField>, F, F) {
     let var_num = layer.input_var_num;
     let mut sum = claimed_v0.scale(&alpha) + claimed_v1.scale(&beta)
-                - F::from(eval_sparse_circuit_connect_poly(
-                    &layer.const_,
-                    &rz0,
-                    &rz1,
-                    alpha,
-                    beta,
-                    &[],
-                ));
+        - F::from(eval_sparse_circuit_connect_poly(
+            &layer.const_,
+            rz0,
+            rz1,
+            alpha,
+            beta,
+            &[],
+        ));
 
     let mut rx = vec![];
     let mut ry = vec![];
@@ -92,13 +86,7 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde + FiatShamirConfig>(
         transcript.append_f(p1);
         transcript.append_f(p2);
 
-        log::trace!(
-            "i_var={} p0 p1 p2: {:?} {:?} {:?}",
-            i_var,
-            p0,
-            p1,
-            p2
-        );
+        log::trace!("i_var={} p0 p1 p2: {:?} {:?} {:?}", i_var, p0, p1, p2);
         let r = transcript.challenge_f::<F>();
 
         if i_var < var_num {
@@ -114,8 +102,8 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde + FiatShamirConfig>(
             vx_claim = proof.get_next_and_step();
             sum -= vx_claim.scale(&eval_sparse_circuit_connect_poly(
                 &layer.add,
-                &rz0,
-                &rz1,
+                rz0,
+                rz1,
                 alpha,
                 beta,
                 &[rx.clone()],
@@ -128,8 +116,8 @@ fn sumcheck_verify_gkr_layer<F: Field + FieldSerde + FiatShamirConfig>(
         == vx_claim
             * vy_claim.scale(&eval_sparse_circuit_connect_poly(
                 &layer.mul,
-                &rz0,
-                &rz1,
+                rz0,
+                rz1,
                 alpha,
                 beta,
                 &[rx.clone(), ry.clone()],
@@ -146,13 +134,7 @@ pub fn gkr_verify<F: Field + FieldSerde + FiatShamirConfig>(
     transcript: &mut Transcript,
     proof: &mut Proof,
     config: &Config,
-) -> (
-    bool,
-    Vec<F::ChallengeField>,
-    Vec<F::ChallengeField>,
-    F,
-    F,
-) {
+) -> (bool, Vec<F::ChallengeField>, Vec<F::ChallengeField>, F, F) {
     let timer = start_timer!(|| "gkr verify");
     let layer_num = circuit.layers.len();
     let mut rz0 = vec![];
@@ -163,7 +145,7 @@ pub fn gkr_verify<F: Field + FieldSerde + FiatShamirConfig>(
     }
     let mut alpha = F::ChallengeField::one();
     let mut beta = F::ChallengeField::zero();
-    let mut claimed_v0 = claimed_v.clone();
+    let mut claimed_v0 = *claimed_v;
     let mut claimed_v1 = F::zero();
 
     let mut verified = true;

@@ -12,11 +12,7 @@ pub fn gkr_prove<F>(
     sp: &mut GkrScratchpad<F>,
     transcript: &mut Transcript,
     config: &Config,
-) -> (
-    F,
-    Vec<F::ChallengeField>,
-    Vec<F::ChallengeField>,
-)
+) -> (F, Vec<F::ChallengeField>, Vec<F::ChallengeField>)
 where
     F: Field + FieldSerde + FiatShamirConfig,
 {
@@ -33,7 +29,9 @@ where
     let mut alpha = F::ChallengeField::one();
     let mut beta = F::ChallengeField::zero();
     let claimed_v = MultiLinearPoly::<F>::eval_multilinear(
-        &circuit.layers.last().unwrap().output_vals.evals, &rz0);
+        &circuit.layers.last().unwrap().output_vals.evals,
+        &rz0,
+    );
 
     for i in (0..layer_num).rev() {
         (rz0, rz1) = sumcheck_prove_gkr_layer(

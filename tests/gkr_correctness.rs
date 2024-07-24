@@ -73,7 +73,7 @@ where
     // println!("Output: {:?}", circuit.layers.last().unwrap().output_vals.evals);
     println!("Circuit evaluated.");
 
-    let mut prover = Prover::new(&config);
+    let mut prover = Prover::new(config);
     prover.prepare_mem(&circuit);
     let (claimed_v, proof) = prover.prove(&circuit);
     println!("Proof generated. Size: {} bytes", proof.bytes.len());
@@ -97,7 +97,7 @@ where
     println!();
 
     // Verify
-    let verifier = Verifier::new(&config);
+    let verifier = Verifier::new(config);
     println!("Verifier created.");
     assert!(verifier.verify(&circuit, &claimed_v, &proof));
     println!("Correct proof verified.");

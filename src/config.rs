@@ -71,7 +71,7 @@ impl Config {
         }
 
         Config {
-            field_size,      // update later
+            field_size, // update later
             security_bits,
             grinding_bits,
             polynomial_commitment_type,
@@ -96,7 +96,7 @@ impl Config {
         }
 
         Config {
-            field_size,      // update later
+            field_size, // update later
             security_bits,
             grinding_bits,
             polynomial_commitment_type,
@@ -120,7 +120,7 @@ impl Config {
         }
 
         Config {
-            field_size,      // update later
+            field_size, // update later
             security_bits,
             grinding_bits,
             polynomial_commitment_type,
@@ -128,5 +128,4 @@ impl Config {
             fs_hash,
         }
     }
-
 }
