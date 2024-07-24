@@ -66,7 +66,7 @@ jobs:
       - run: cargo run --release -- -t 4 -f m31ext3
   
   bench-mac-fr:
-    name: Bench-mac-m31
+    name: Bench-mac-fr
     runs-on: macos-latest
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
@@ -98,7 +98,7 @@ jobs:
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f fr       
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f m31ext3 
   test-linux-m31:
-    name: Test-linux
+    name: test-linux-m31
     runs-on: ubuntu-latest
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
@@ -111,7 +111,7 @@ jobs:
       - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f m31ext3 
   test-linux-fr:
-    name: Test-linux
+    name: test-linux-fr
     runs-on: ubuntu-latest
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
