@@ -10,7 +10,7 @@ use crate::m31_avx::{FIVE, TEN};
 #[cfg(target_arch = "aarch64")]
 use crate::m31_neon::{FIVE, TEN};
 
-use crate::{SimdField, Field, FieldSerde, M31Ext3, SimdM31};
+use crate::{BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct SimdM31Ext3 {
@@ -64,6 +64,35 @@ impl SimdField for SimdM31Ext3 {
     }
 }
 
+impl From<SimdM31> for SimdM31Ext3 {
+    #[inline(always)]
+    fn from(x: SimdM31) -> Self {
+        Self {
+            v: [x, SimdM31::zero(), SimdM31::zero()],
+        }
+    }
+}
+
+impl BinomialExtensionField<3> for SimdM31Ext3 {
+    const W: u32 = 5;
+
+    type BaseField = SimdM31;
+
+    #[inline(always)]
+    fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
+        SimdM31Ext3 {
+            v: [self.v[0] * base, self.v[1] * base, self.v[2] * base],
+        }
+    }
+
+    #[inline(always)]
+    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
+        SimdM31Ext3 {
+            v: [self.v[0] + base, self.v[1], self.v[2]],
+        }
+    }
+}
+
 impl Mul<M31Ext3> for SimdM31Ext3 {
     type Output = Self;
     #[inline(always)]
@@ -108,11 +137,7 @@ impl Field for SimdM31Ext3 {
     #[inline(always)]
     fn one() -> Self {
         SimdM31Ext3 {
-            v: [
-                SimdM31::one(),
-                SimdM31::zero(),
-                SimdM31::zero(),
-            ],
+            v: [SimdM31::one(), SimdM31::zero(), SimdM31::zero()],
         }
     }
 
@@ -294,11 +319,7 @@ impl From<u32> for SimdM31Ext3 {
     #[inline(always)]
     fn from(x: u32) -> Self {
         SimdM31Ext3 {
-            v: [
-                SimdM31::from(x),
-                SimdM31::zero(),
-                SimdM31::zero(),
-            ],
+            v: [SimdM31::from(x), SimdM31::zero(), SimdM31::zero()],
         }
     }
 }

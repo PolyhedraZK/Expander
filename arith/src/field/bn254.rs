@@ -4,7 +4,7 @@ use halo2curves::ff::{Field as Halo2Field, FromUniformBytes};
 use halo2curves::{bn256::Fr, ff::PrimeField};
 use rand::RngCore;
 
-use crate::{SimdField, Field, FieldSerde};
+use crate::{Field, FieldSerde, SimdField};
 
 impl Field for Fr {
     /// name

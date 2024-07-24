@@ -99,15 +99,31 @@ pub trait Field:
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;
 }
 
-/// Configurations for the Fiat-Shamir transform.
-pub trait SimdField: From<Self::Scalar> {
-    // todo: consolidate gkr config
-
+/// Configurations for the SimdField.
+pub trait SimdField: From<Self::Scalar> + Field + FieldSerde {
     /// Field for the challenge. Can be self.
     type Scalar: Field + FieldSerde + Send;
 
     /// scale self with the challenge
     fn scale(&self, challenge: &Self::Scalar) -> Self;
+}
+
+/// Configurations for   Extension Field
+/// the Binomial polynomial x^DEGREE - W
+pub trait BinomialExtensionField<const DEGREE: usize>:
+    From<Self::BaseField> + Field + FieldSerde
+{
+    /// Extension Field
+    const W: u32;
+
+    /// Base field for the extension
+    type BaseField: Field + FieldSerde + Send;
+
+    /// Multiply the extension field with the base field
+    fn mul_by_base_field(&self, base: &Self::BaseField) -> Self;
+
+    /// Add the extension field with the base field
+    fn add_by_base_field(&self, base: &Self::BaseField) -> Self;
 }
 
 /// Serde for Fields

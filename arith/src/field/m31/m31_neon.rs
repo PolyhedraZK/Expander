@@ -9,7 +9,7 @@ use std::{
 
 use rand::{Rng, RngCore};
 
-use crate::{SimdField, Field, FieldSerde, M31, M31_MOD};
+use crate::{Field, FieldSerde, SimdField, M31, M31_MOD};
 
 const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD; 4]) };
 const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };

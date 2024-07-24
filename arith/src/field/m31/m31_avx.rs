@@ -9,7 +9,7 @@ use std::{
 
 use rand::{Rng, RngCore};
 
-use crate::{SimdField, Field, FieldSerde, M31, M31_MOD};
+use crate::{Field, FieldSerde, SimdField, M31, M31_MOD};
 
 const M31_PACK_SIZE: usize = 8;
 const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; M31_PACK_SIZE]) };

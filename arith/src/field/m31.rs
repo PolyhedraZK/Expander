@@ -1,5 +1,5 @@
-mod vectorized_m31;
-pub use vectorized_m31::SimdM31;
+mod simd_m31;
+pub use simd_m31::SimdM31;
 
 #[cfg(target_arch = "x86_64")]
 pub(crate) mod m31_avx;

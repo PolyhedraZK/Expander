@@ -1,6 +1,6 @@
 use ark_std::{end_timer, start_timer};
 
-use crate::{SimdField, Field};
+use crate::{Field, SimdField};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 /// Definition for an MLE, with an associated type F.
