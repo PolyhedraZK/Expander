@@ -201,18 +201,18 @@ impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
                 var_idx,
                 degree,
                 &mut self.sp.v_evals,
-                &mut self.sp.hg_evals,
+                &mut self.sp.hg_evals_5,
                 &self.layer.input_vals.evals,
-                &self.sp.gate_exists,
+                &self.sp.gate_exists_5,
             )
         } else {
             self.y_helper.poly_eval_at(
                 var_idx - self.input_var_num,
                 degree,
                 &mut self.sp.v_evals,
-                &mut self.sp.hg_evals,
+                &mut self.sp.hg_evals_5,
                 &self.layer.input_vals.evals,
-                &self.sp.gate_exists,
+                &self.sp.gate_exists_5,
             )
         }
     }
@@ -223,9 +223,9 @@ impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
                 var_idx,
                 r,
                 &mut self.sp.v_evals,
-                &mut self.sp.hg_evals,
+                &mut self.sp.hg_evals_5,
                 &self.layer.input_vals.evals,
-                &mut self.sp.gate_exists,
+                &mut self.sp.gate_exists_5,
             );
             log::trace!("v_eval[0]:= {:?}", self.sp.v_evals[0]);
             self.rx.push(r);
@@ -234,9 +234,9 @@ impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
                 var_idx - self.input_var_num,
                 r,
                 &mut self.sp.v_evals,
-                &mut self.sp.hg_evals,
+                &mut self.sp.hg_evals_5,
                 &self.layer.input_vals.evals,
-                &mut self.sp.gate_exists,
+                &mut self.sp.gate_exists_5,
             );
             self.ry.push(r);
         }
@@ -256,8 +256,8 @@ impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
         let vals = &self.layer.input_vals;
         let eq_evals_at_rz0 = &mut self.sp.eq_evals_at_rz0;
         let eq_evals_at_rz1 = &mut self.sp.eq_evals_at_rz1;
-        let gate_exists = &mut self.sp.gate_exists;
-        let hg_vals = &mut self.sp.hg_evals;
+        let gate_exists = &mut self.sp.gate_exists_5;
+        let hg_vals = &mut self.sp.hg_evals_5;
         // hg_vals[0..vals.evals.len()].fill(F::zero()); // FIXED: consider memset unsafe?
         unsafe {
             std::ptr::write_bytes(hg_vals.as_mut_ptr(), 0, vals.evals.len());
@@ -299,8 +299,8 @@ impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
         let mul = &self.layer.mul;
         let eq_evals_at_rz0 = &mut self.sp.eq_evals_at_rz0;
         let eq_evals_at_rx = &mut self.sp.eq_evals_at_rx;
-        let gate_exists = &mut self.sp.gate_exists;
-        let hg_vals = &mut self.sp.hg_evals;
+        let gate_exists = &mut self.sp.gate_exists_5;
+        let hg_vals = &mut self.sp.hg_evals_5;
         let fill_len = 1 << self.rx.len();
         // hg_vals[0..fill_len].fill(F::zero()); // FIXED: consider memset unsafe?
         unsafe {

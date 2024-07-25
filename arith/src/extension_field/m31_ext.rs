@@ -26,7 +26,7 @@ impl FieldSerde for M31Ext3 {
 
     #[inline(always)]
     fn serialized_size() -> usize {
-        12
+        32 / 8 * 3
     }
 
     // FIXME: this deserialization function auto corrects invalid inputs.
@@ -57,7 +57,7 @@ impl FieldSerde for M31Ext3 {
 impl Field for M31Ext3 {
     const NAME: &'static str = "Mersenne 31 Extension 3";
 
-    const SIZE: usize = 12;
+    const SIZE: usize = 32 / 8 * 3;
 
     const ZERO: Self = M31Ext3 {
         v: [M31::ZERO, M31::ZERO, M31::ZERO],

@@ -100,7 +100,7 @@ impl FieldSerde for NeonM31 {
 
     #[inline(always)]
     fn serialized_size() -> usize {
-        32
+        128 / 8 * 2
     }
 
     /// deserialize bytes into field
@@ -131,7 +131,7 @@ impl Field for NeonM31 {
     const NAME: &'static str = "Neon Packed Mersenne 31";
 
     // size in bytes
-    const SIZE: usize = 32;
+    const SIZE: usize = 128 / 8 * 2;
 
     const ZERO: Self = Self {
         v: [PACKED_0, PACKED_0],

@@ -94,7 +94,6 @@ impl<F: BinomialExtensionField<3> + FieldSerde + SimdField> Prover<F> {
             }
             _ => todo!(),
         }
-
         end_timer!(timer);
         (claimed_v, transcript.proof)
     }

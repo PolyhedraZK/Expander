@@ -13,7 +13,6 @@ const KECCAK_CIRCUIT: &str = "data/circuit.txt";
 // circuit for repeating Poseidon for 120 times
 const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
 
-const M31_PACKSIZE: usize = 8;
 const FR_PACKSIZE: usize = 1;
 
 /// ...
@@ -58,9 +57,12 @@ where
         .map(|_| Arc::new(Mutex::new(0)))
         .collect::<Vec<_>>();
     let start_time = std::time::Instant::now();
-
+    #[cfg(target_arch = "x86_64")]
+    let m31_packsize: usize = 16;
+    #[cfg(target_arch = "aarch64")]
+    let m31_packsize: usize = 8;
     let pack_size = match args.field.as_str() {
-        "m31ext3" => M31_PACKSIZE,
+        "m31ext3" => m31_packsize,
         "fr" => FR_PACKSIZE,
         _ => unreachable!(),
     };
@@ -71,7 +73,7 @@ where
         "poseidon" => Circuit::<F>::load_circuit(POSEIDON_CIRCUIT),
         _ => unreachable!(),
     };
-    
+
     let circuit_copy_size: usize = match args.scheme.as_str() {
         "keccak" => 8,
         "poseidon" => 120,
@@ -107,7 +109,6 @@ where
                     prover.prove(&c);
                     // update cnt
                     let mut cnt = partial_proof_cnt.lock().unwrap();
-
                     let proof_cnt_this_round = circuit_copy_size * pack_size;
                     *cnt += proof_cnt_this_round;
                 }
