@@ -4,7 +4,7 @@ use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
-    eq_evals_at_primitive, Circuit, CircuitLayer, Config, Gate, Proof, RawCommitment, Transcript,
+    eq_evals_at_primitive, Circuit, CircuitLayer, GKRConfig, Gate, Proof, RawCommitment, Transcript,
 };
 
 #[inline]

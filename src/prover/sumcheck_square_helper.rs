@@ -231,11 +231,13 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
         for g in uni.iter() {
             match g.gate_type {
                 12345 => {
-                    hg_evals_5[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit(&eq_evals_at_rz0[g.o_id], &g.coef));
+                    hg_evals_5[g.i_ids[0]] +=
+                        C::Field::from(C::challenge_mul_circuit(&eq_evals_at_rz0[g.o_id], &g.coef));
                     gate_exists_5[g.i_ids[0]] = true;
                 }
                 12346 => {
-                    hg_evals_1[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit(&eq_evals_at_rz0[g.o_id], &g.coef));
+                    hg_evals_1[g.i_ids[0]] +=
+                        C::Field::from(C::challenge_mul_circuit(&eq_evals_at_rz0[g.o_id], &g.coef));
                     gate_exists_1[g.i_ids[0]] = true;
                 }
                 _ => panic!("Unsupported gate type"),

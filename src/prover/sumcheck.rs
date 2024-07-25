@@ -74,7 +74,7 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
         for deg in 0..D {
             transcript.append_f::<C>(evals[deg]);
         }
-      
+
         let r = transcript.challenge_f::<C>();
 
         log::trace!("i_var={} evals: {:?} r: {:?}", i_var, evals, r);
