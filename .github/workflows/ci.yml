@@ -51,8 +51,33 @@ jobs:
       - run: cargo test -p bi-kzg --release
       - run: cargo test --no-default-features --release      
       - run: cargo test --all-features --release
-      - run: cargo run --release -- -t 4 -f m31 
-      - run: cargo run --release -- -t 4 -f fr 
+  bench-mac-m31:
+    name: Bench-mac-m31
+    runs-on: macos-latest
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          all_but_latest: true
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
+      - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
+      - run: cargo run --release -- -t 4 -f m31ext3
+  
+  bench-mac-fr:
+    name: Bench-mac-fr
+    runs-on: macos-latest
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          all_but_latest: true
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
+      - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
+      - run: cargo run --release -- -t 4 -f fr
 
   test-linux:
     name: Test-linux
@@ -70,6 +95,29 @@ jobs:
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test -p bi-kzg --release
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --no-default-features --release
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --all-features --release
-      - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f m31 
-      - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f fr       
+  Bench-linux-m31:
+    name: Bench-linux-m31
+    runs-on: ubuntu-latest
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          all_but_latest: true
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
+      - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
       - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f m31ext3 
+  Bench-linux-fr:
+    name: Bench-linux-fr
+    runs-on: ubuntu-latest
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          all_but_latest: true
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
+      - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo run --release -- -t 4 -f fr

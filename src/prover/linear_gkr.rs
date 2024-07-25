@@ -1,9 +1,11 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::{Field, FieldSerde, SimdField};
+use arith::{BinomialExtensionField, Field, FieldSerde, SimdField};
 use ark_std::{end_timer, start_timer};
 
-use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript};
+use crate::{
+    gkr_prove, gkr_square_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript,
+};
 
 pub fn grind<F: Field + FieldSerde + SimdField>(transcript: &mut Transcript, config: &Config) {
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
@@ -28,12 +30,12 @@ pub fn grind<F: Field + FieldSerde + SimdField>(transcript: &mut Transcript, con
     end_timer!(timer);
 }
 
-pub struct Prover<F: Field + FieldSerde + SimdField> {
+pub struct Prover<F: BinomialExtensionField<3> + FieldSerde + SimdField> {
     config: Config,
     sp: GkrScratchpad<F>,
 }
 
-impl<F: Field + FieldSerde + SimdField> Prover<F> {
+impl<F: BinomialExtensionField<3> + FieldSerde + SimdField> Prover<F> {
     pub fn new(config: &Config) -> Self {
         // assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
@@ -76,8 +78,15 @@ impl<F: Field + FieldSerde + SimdField> Prover<F> {
         transcript.append_u8_slice(&buffer);
 
         grind::<F>(&mut transcript, &self.config);
+        let claimed_v: F;
+        let mut _rz0s = vec![];
+        let mut _rz1s = vec![];
 
-        let (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
+        if self.config.gkr_square {
+            (claimed_v, _rz0s) = gkr_square_prove(c, &mut self.sp, &mut transcript, &self.config);
+        } else {
+            (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
+        }
 
         // open
         match self.config.polynomial_commitment_type {

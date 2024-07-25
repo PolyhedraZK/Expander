@@ -32,7 +32,7 @@ pub(crate) fn eq_evals_at_primitive<F: Field>(r: &[F], mul_factor: &F, eq_evals:
     }
 }
 
-fn eq_eval_at<F: Field>(
+pub(crate) fn eq_eval_at<F: Field>(
     r: &[F],
     mul_factor: &F,
     eq_evals: &mut [F],

@@ -40,6 +40,7 @@ pub struct Config {
     pub polynomial_commitment_type: PolynomialCommitmentType,
     pub field_type: FieldType, // LATER: consider infer this from trait
     pub fs_hash: FiatShamirHashType,
+    pub gkr_square: bool,
 }
 
 impl Default for Config {
@@ -77,6 +78,7 @@ impl Config {
             polynomial_commitment_type,
             field_type,
             fs_hash,
+            gkr_square: false,
         }
     }
 
@@ -102,6 +104,7 @@ impl Config {
             polynomial_commitment_type,
             field_type,
             fs_hash,
+            gkr_square: false,
         }
     }
 
@@ -126,6 +129,7 @@ impl Config {
             polynomial_commitment_type,
             field_type,
             fs_hash,
+            gkr_square: false,
         }
     }
 }

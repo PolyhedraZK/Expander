@@ -96,6 +96,7 @@ impl Field for AVXM31 {
     const SIZE: usize = 32;
 
     const INV_2: Self = Self { v: PACKED_INV_2 };
+    const ZERO: Self = Self { v: PACKED_0 };
 
     #[inline(always)]
     fn zero() -> Self {
