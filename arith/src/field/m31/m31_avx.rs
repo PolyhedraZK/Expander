@@ -11,40 +11,40 @@ use rand::{Rng, RngCore};
 
 use crate::{Field, FieldSerde, SimdField, M31, M31_MOD};
 
-const M31_PACK_SIZE: usize = 8;
-const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; M31_PACK_SIZE]) };
-const PACKED_0: __m256i = unsafe { transmute([0; M31_PACK_SIZE]) };
-const PACKED_INV_2: __m256i = unsafe { transmute([1 << 30; M31_PACK_SIZE]) };
+const M31_PACK_SIZE: usize = 16;
+const PACKED_MOD: __m512i = unsafe { transmute([M31_MOD; M31_PACK_SIZE]) };
+const PACKED_0: __m512i = unsafe { transmute([0; M31_PACK_SIZE]) };
+const PACKED_INV_2: __m512i = unsafe { transmute([1 << 30; M31_PACK_SIZE]) };
 
 #[inline(always)]
-unsafe fn mod_reduce_epi32(x: __m256i) -> __m256i {
-    _mm256_add_epi32(_mm256_and_si256(x, PACKED_MOD), _mm256_srli_epi32(x, 31))
+unsafe fn mod_reduce_epi32(x: __m512i) -> __m512i {
+    _mm512_add_epi32(_mm512_and_si512(x, PACKED_MOD), _mm512_srli_epi32(x, 31))
 }
 
 #[derive(Clone, Copy)]
 pub struct AVXM31 {
-    pub v: __m256i,
+    pub v: __m512i,
 }
 
 impl AVXM31 {
     #[inline(always)]
     pub(crate) fn pack_full(x: M31) -> AVXM31 {
         AVXM31 {
-            v: unsafe { _mm256_set1_epi32(x.v as i32) },
+            v: unsafe { _mm512_set1_epi32(x.v as i32) },
         }
     }
 
     #[inline(always)]
     pub(crate) fn mul_by_2(&self) -> AVXM31 {
-        let double = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(self.v)) };
+        let double = unsafe { mod_reduce_epi32(_mm512_slli_epi32::<1>(self.v)) };
         Self { v: double }
     }
 
     #[inline(always)]
     pub(crate) fn mul_by_5(&self) -> AVXM31 {
-        let double = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(self.v)) };
-        let quad = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(double)) };
-        let res = unsafe { mod_reduce_epi32(_mm256_add_epi32(self.v, quad)) };
+        let double = unsafe { mod_reduce_epi32(_mm512_slli_epi32::<1>(self.v)) };
+        let quad = unsafe { mod_reduce_epi32(_mm512_slli_epi32::<1>(double)) };
+        let res = unsafe { mod_reduce_epi32(_mm512_add_epi32(self.v, quad)) };
         Self { v: res }
     }
 
@@ -58,23 +58,23 @@ impl FieldSerde for AVXM31 {
     #[inline(always)]
     /// serialize self into bytes
     fn serialize_into<W: Write>(&self, mut writer: W) {
-        let data = unsafe { transmute::<__m256i, [u8; 32]>(self.v) };
+        let data = unsafe { transmute::<__m512i, [u8; 64]>(self.v) };
         writer.write_all(&data).unwrap();
     }
 
     #[inline(always)]
     fn serialized_size() -> usize {
-        32
+        64
     }
 
     /// deserialize bytes into field
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let mut data = [0; 32];
+        let mut data = [0; 64];
         reader.read_exact(&mut data).unwrap();
         unsafe {
             AVXM31 {
-                v: transmute::<[u8; 32], __m256i>(data),
+                v: transmute::<[u8; 64], __m512i>(data),
             }
         }
     }
@@ -95,7 +95,7 @@ impl Field for AVXM31 {
     const NAME: &'static str = "AVX Packed Mersenne 31";
 
     // size in bytes
-    const SIZE: usize = 32;
+    const SIZE: usize = 64;
 
     const ZERO: Self = Self { v: PACKED_0 };
 
@@ -104,14 +104,14 @@ impl Field for AVXM31 {
     #[inline(always)]
     fn zero() -> Self {
         AVXM31 {
-            v: unsafe { _mm256_set1_epi32(0) },
+            v: unsafe { _mm512_set1_epi32(0) },
         }
     }
 
     #[inline(always)]
     fn one() -> Self {
         AVXM31 {
-            v: unsafe { _mm256_set1_epi32(1) },
+            v: unsafe { _mm512_set1_epi32(1) },
         }
     }
 
@@ -122,7 +122,15 @@ impl Field for AVXM31 {
     fn random_unsafe(mut rng: impl RngCore) -> Self {
         // Caution: this may not produce uniformly random elements
         unsafe {
-            let mut v = _mm256_setr_epi32(
+            let mut v = _mm512_setr_epi32(
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
                 rng.gen::<i32>(),
                 rng.gen::<i32>(),
                 rng.gen::<i32>(),
@@ -143,7 +151,15 @@ impl Field for AVXM31 {
         // TODO: optimize this code
         AVXM31 {
             v: unsafe {
-                _mm256_setr_epi32(
+                _mm512_setr_epi32(
+                    rng.gen::<bool>() as i32,
+                    rng.gen::<bool>() as i32,
+                    rng.gen::<bool>() as i32,
+                    rng.gen::<bool>() as i32,
+                    rng.gen::<bool>() as i32,
+                    rng.gen::<bool>() as i32,
+                    rng.gen::<bool>() as i32,
+                    rng.gen::<bool>() as i32,
                     rng.gen::<bool>() as i32,
                     rng.gen::<bool>() as i32,
                     rng.gen::<bool>() as i32,
@@ -169,7 +185,7 @@ impl Field for AVXM31 {
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
         // slow, should not be used in production
-        let mut m31_vec = unsafe { transmute::<__m256i, [M31; 8]>(self.v) };
+        let mut m31_vec = unsafe { transmute::<__m512i, [M31; 16]>(self.v) };
         let is_non_zero = m31_vec.iter().all(|x| !x.is_zero());
         if !is_non_zero {
             return None;
@@ -177,7 +193,7 @@ impl Field for AVXM31 {
 
         m31_vec.iter_mut().for_each(|x| *x = x.inv().unwrap()); // safe unwrap
         Some(Self {
-            v: unsafe { transmute::<[M31; 8], __m256i>(m31_vec) },
+            v: unsafe { transmute::<[M31; 16], __m512i>(m31_vec) },
         })
     }
 
@@ -189,7 +205,7 @@ impl Field for AVXM31 {
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         let m = M31::from_uniform_bytes(bytes);
         Self {
-            v: unsafe { _mm256_set1_epi32(m.v as i32) },
+            v: unsafe { _mm512_set1_epi32(m.v as i32) },
         }
     }
 }
@@ -214,13 +230,13 @@ impl Debug for AVXM31 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut data = [0; M31_PACK_SIZE];
         unsafe {
-            _mm256_storeu_si256(data.as_mut_ptr() as *mut __m256i, self.v);
+            _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.v);
         }
         // if all data is the same, print only one
         if data.iter().all(|&x| x == data[0]) {
             write!(
                 f,
-                "mm256i<8 x {}>",
+                "mm512i<8 x {}>",
                 if M31_MOD - data[0] > 1024 {
                     format!("{}", data[0])
                 } else {
@@ -228,7 +244,7 @@ impl Debug for AVXM31 {
                 }
             )
         } else {
-            write!(f, "mm256i<{:?}>", data)
+            write!(f, "mm512i<{:?}>", data)
         }
     }
 }
@@ -243,11 +259,48 @@ impl PartialEq for AVXM31 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let pcmp = _mm256_cmpeq_epi32(self.v, other.v);
-            _mm256_movemask_epi8(pcmp) == 0xffffffffu32 as i32
+            let pcmp = _mm512_cmpeq_epi32_mask(self.v, other.v);
+            pcmp == 0xFFFF
         }
     }
 }
+
+#[inline]
+#[must_use]
+fn mask_movehdup_epi32(src: __m512i, k: __mmask16, a: __m512i) -> __m512i {
+    // The instruction is only available in the floating-point flavor; this distinction is only for
+    // historical reasons and no longer matters. We cast to floats, do the thing, and cast back.
+    unsafe {
+        let src = _mm512_castsi512_ps(src);
+        let a = _mm512_castsi512_ps(a);
+        _mm512_castps_si512(_mm512_mask_movehdup_ps(src, k, a))
+    }
+}
+
+#[inline]
+#[must_use]
+fn mask_moveldup_epi32(src: __m512i, k: __mmask16, a: __m512i) -> __m512i {
+    // The instruction is only available in the floating-point flavor; this distinction is only for
+    // historical reasons and no longer matters. We cast to floats, do the thing, and cast back.
+    unsafe {
+        let src = _mm512_castsi512_ps(src);
+        let a = _mm512_castsi512_ps(a);
+        _mm512_castps_si512(_mm512_mask_moveldup_ps(src, k, a))
+    }
+}
+
+#[inline]
+#[must_use]
+fn add(lhs: __m512i, rhs: __m512i) -> __m512i {
+    unsafe {
+        let t = _mm512_add_epi32(lhs, rhs);
+        let u = _mm512_sub_epi32(t, PACKED_MOD);
+        _mm512_min_epu32(t, u)
+    }
+}
+
+const EVENS: __mmask16 = 0b0101010101010101;
+const ODDS: __mmask16 = 0b1010101010101010;
 
 impl Mul<&AVXM31> for AVXM31 {
     type Output = AVXM31;
@@ -255,27 +308,21 @@ impl Mul<&AVXM31> for AVXM31 {
     fn mul(self, rhs: &AVXM31) -> Self::Output {
         // credit: https://github.com/Plonky3/Plonky3/blob/eeb4e37b20127c4daa871b2bad0df30a7c7380db/mersenne-31/src/x86_64_avx2/packing.rs#L154
         unsafe {
-            let lhs_evn = self.v;
-            let lhs_odd_dbl = _mm256_srli_epi64::<31>(self.v);
-
             let rhs_evn = rhs.v;
+            let lhs_odd_dbl = _mm512_srli_epi64(self.v, 31);
+            let lhs_evn_dbl = _mm512_add_epi32(self.v, self.v);
             let rhs_odd = movehdup_epi32(rhs.v);
 
-            let prod_odd_dbl = _mm256_mul_epu32(lhs_odd_dbl, rhs_odd);
-            let prod_evn = _mm256_mul_epu32(lhs_evn, rhs_evn);
+            let prod_odd_dbl = _mm512_mul_epu32(lhs_odd_dbl, rhs_odd);
+            let prod_evn_dbl = _mm512_mul_epu32(lhs_evn_dbl, rhs_evn);
 
-            let prod_odd_lo_dirty = _mm256_slli_epi64::<31>(prod_odd_dbl);
-            let prod_evn_hi = _mm256_srli_epi64::<31>(prod_evn);
+            let prod_lo_dbl = mask_moveldup_epi32(prod_evn_dbl, ODDS, prod_odd_dbl);
+            let prod_hi = mask_movehdup_epi32(prod_odd_dbl, EVENS, prod_evn_dbl);
+            // Right shift to undo the doubling.
+            let prod_lo = _mm512_srli_epi32::<1>(prod_lo_dbl);
 
-            let prod_lo_dirty = _mm256_blend_epi32::<0b10101010>(prod_evn, prod_odd_lo_dirty);
-
-            let prod_hi = _mm256_blend_epi32::<0b10101010>(prod_evn_hi, prod_odd_dbl);
-            let prod_lo = _mm256_and_si256(prod_lo_dirty, PACKED_MOD);
-
-            let t = _mm256_add_epi32(prod_hi, prod_lo);
-            let u = _mm256_sub_epi32(t, PACKED_MOD);
-            let res = _mm256_min_epu32(t, u);
-
+            // Standard addition of two 31-bit values.
+            let res = add(prod_lo, prod_hi);
             AVXM31 { v: res }
         }
     }
@@ -295,27 +342,23 @@ impl Mul<&M31> for AVXM31 {
 
     #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
+        let rhsv = AVXM31::pack_full(*rhs);
         unsafe {
-            let lhs_evn = self.v;
-            let lhs_odd_dbl = _mm256_srli_epi64::<31>(self.v);
+            let rhs_evn = rhsv.v;
+            let lhs_odd_dbl = _mm512_srli_epi64(self.v, 31);
+            let lhs_evn_dbl = _mm512_add_epi32(self.v, self.v);
+            let rhs_odd = movehdup_epi32(rhsv.v);
 
-            let rhs = _mm256_set1_epi32(rhs.v as i32);
+            let prod_odd_dbl = _mm512_mul_epu32(lhs_odd_dbl, rhs_odd);
+            let prod_evn_dbl = _mm512_mul_epu32(lhs_evn_dbl, rhs_evn);
 
-            let prod_odd_dbl = _mm256_mul_epu32(lhs_odd_dbl, rhs);
-            let prod_evn = _mm256_mul_epu32(lhs_evn, rhs);
+            let prod_lo_dbl = mask_moveldup_epi32(prod_evn_dbl, ODDS, prod_odd_dbl);
+            let prod_hi = mask_movehdup_epi32(prod_odd_dbl, EVENS, prod_evn_dbl);
+            // Right shift to undo the doubling.
+            let prod_lo = _mm512_srli_epi32::<1>(prod_lo_dbl);
 
-            let prod_odd_lo_dirty = _mm256_slli_epi64::<31>(prod_odd_dbl);
-            let prod_evn_hi = _mm256_srli_epi64::<31>(prod_evn);
-
-            let prod_lo_dirty = _mm256_blend_epi32::<0b10101010>(prod_evn, prod_odd_lo_dirty);
-
-            let prod_hi = _mm256_blend_epi32::<0b10101010>(prod_evn_hi, prod_odd_dbl);
-            let prod_lo = _mm256_and_si256(prod_lo_dirty, PACKED_MOD);
-
-            let t = _mm256_add_epi32(prod_hi, prod_lo);
-            let u = _mm256_sub_epi32(t, PACKED_MOD);
-            let res = _mm256_min_epu32(t, u);
-
+            // Standard addition of two 31-bit values.
+            let res = add(prod_lo, prod_hi);
             AVXM31 { v: res }
         }
     }
@@ -354,9 +397,9 @@ impl Add<&AVXM31> for AVXM31 {
     #[inline(always)]
     fn add(self, rhs: &AVXM31) -> Self::Output {
         unsafe {
-            let mut result = _mm256_add_epi32(self.v, rhs.v);
-            let subx = _mm256_sub_epi32(result, PACKED_MOD);
-            result = _mm256_min_epu32(result, subx);
+            let mut result = _mm512_add_epi32(self.v, rhs.v);
+            let subx = _mm512_sub_epi32(result, PACKED_MOD);
+            result = _mm512_min_epu32(result, subx);
 
             AVXM31 { v: result }
         }
@@ -403,12 +446,10 @@ impl Neg for AVXM31 {
     type Output = AVXM31;
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        unsafe {
-            let subx = _mm256_sub_epi32(PACKED_MOD, self.v);
-            let zero_cmp = _mm256_cmpeq_epi32(self.v, PACKED_0);
-            AVXM31 {
-                v: _mm256_andnot_si256(zero_cmp, subx),
-            }
+        AVXM31 {
+            v: unsafe {
+                _mm512_xor_epi32(self.v, PACKED_MOD)
+            },
         }
     }
 }
@@ -419,9 +460,9 @@ impl Sub<&AVXM31> for AVXM31 {
     fn sub(self, rhs: &AVXM31) -> Self::Output {
         AVXM31 {
             v: unsafe {
-                let t = _mm256_sub_epi32(self.v, rhs.v);
-                let subx = _mm256_add_epi32(t, PACKED_MOD);
-                _mm256_min_epu32(t, subx)
+                let t = _mm512_sub_epi32(self.v, rhs.v);
+                let subx = _mm512_add_epi32(t, PACKED_MOD);
+                _mm512_min_epu32(t, subx)
             },
         }
     }
@@ -452,8 +493,8 @@ impl SubAssign for AVXM31 {
 
 #[inline]
 #[must_use]
-fn movehdup_epi32(x: __m256i) -> __m256i {
+fn movehdup_epi32(x: __m512i) -> __m512i {
     // The instruction is only available in the floating-point flavor; this distinction is only for
     // historical reasons and no longer matters. We cast to floats, duplicate, and cast back.
-    unsafe { _mm256_castps_si256(_mm256_movehdup_ps(_mm256_castsi256_ps(x))) }
+    unsafe { _mm512_castps_si512(_mm512_movehdup_ps(_mm512_castsi512_ps(x))) }
 }
