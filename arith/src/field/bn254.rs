@@ -23,11 +23,13 @@ impl Field for Fr {
     // constants
     // ====================================
     /// Zero element
+    #[inline(always)]
     fn zero() -> Self {
         Fr::zero()
     }
 
     /// Identity element
+    #[inline(always)]
     fn one() -> Self {
         Fr::one()
     }
@@ -37,11 +39,13 @@ impl Field for Fr {
     // ====================================
     /// create a random element from rng.
     /// test only -- the output may not be uniformly random.
+    #[inline(always)]
     fn random_unsafe(rng: impl RngCore) -> Self {
         Fr::random(rng)
     }
 
     /// create a random boolean element from rng
+    #[inline(always)]
     fn random_bool(mut rng: impl RngCore) -> Self {
         Self::from((rng.next_u32() & 1) as u64)
     }
@@ -50,11 +54,13 @@ impl Field for Fr {
     // arithmetics
     // ====================================
     /// Squaring
+    #[inline(always)]
     fn square(&self) -> Self {
         *self * *self
     }
 
     /// Doubling
+    #[inline(always)]
     fn double(&self) -> Self {
         *self + *self
     }
@@ -65,6 +71,7 @@ impl Field for Fr {
     }
 
     /// find the inverse of the element; return None if not exist
+    #[inline(always)]
     fn inv(&self) -> Option<Self> {
         self.invert().into()
     }
@@ -88,27 +95,32 @@ impl Field for Fr {
 impl SimdField for Fr {
     type Scalar = Self;
 
+    #[inline(always)]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
         self * challenge
     }
 }
 
 impl FieldSerde for Fr {
+    #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) {
         writer.write_all(self.to_bytes().as_ref()).unwrap();
     }
 
     /// size of the serialized bytes
+    #[inline(always)]
     fn serialized_size() -> usize {
         32
     }
 
+    #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let mut buffer = [0u8; 32];
         reader.read_exact(&mut buffer).unwrap();
         Fr::from_bytes(&buffer).unwrap()
     }
 
+    #[inline(always)]
     fn deserialize_from_ecc_format<R: Read>(reader: R) -> Self {
         Fr::deserialize_from(reader) // same as deserialize_from
     }

@@ -344,6 +344,7 @@ impl From<u32> for SimdM31Ext3 {
 // = a0*b0 + 5*(a1*b2 + a2*b1)
 // + (a0*b1 + a1*b0)*x + 5* a2*b2
 // + (a0*b2 + a1*b1 + a2*b0)*x^2
+#[inline(always)]
 fn mul_internal(a: &[SimdM31; 3], b: &[SimdM31; 3]) -> [SimdM31; 3] {
     let mut res = [SimdM31::default(); 3];
     res[0] = a[0] * b[0] + (a[1] * b[2] + a[2] * b[1]).mul_by_5();
@@ -353,6 +354,7 @@ fn mul_internal(a: &[SimdM31; 3], b: &[SimdM31; 3]) -> [SimdM31; 3] {
 }
 
 // same as mul; merge identical terms
+#[inline(always)]
 fn square_internal(a: &[SimdM31; 3]) -> [SimdM31; 3] {
     let mut res = [SimdM31::default(); 3];
     res[0] = a[0].square() + a[1] * a[2].mul_by_10();

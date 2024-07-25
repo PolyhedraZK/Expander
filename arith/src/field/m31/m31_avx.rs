@@ -240,6 +240,7 @@ impl Default for AVXM31 {
 }
 
 impl PartialEq for AVXM31 {
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
             let pcmp = _mm256_cmpeq_epi32(self.v, other.v);
