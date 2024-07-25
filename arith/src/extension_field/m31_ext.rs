@@ -75,6 +75,11 @@ impl Field for M31Ext3 {
     }
 
     #[inline(always)]
+    fn is_zero(&self) -> bool {
+        self.v[0].is_zero() && self.v[1].is_zero() && self.v[2].is_zero()
+    }
+
+    #[inline(always)]
     fn one() -> Self {
         M31Ext3 {
             v: [M31 { v: 1 }, M31 { v: 0 }, M31 { v: 0 }],

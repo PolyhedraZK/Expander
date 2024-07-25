@@ -147,6 +147,17 @@ impl Field for NeonM31 {
     }
 
     #[inline(always)]
+    fn is_zero(&self) -> bool {
+        unsafe {
+            let comparison_0: uint32x4_t = vceqq_u32(self.v[0], PACKED_0);
+            let comparison_1: uint32x4_t = vceqq_u32(self.v[1], PACKED_0);
+            let result_0 = transmute::<uint32x4_t, [u32; 4]>(comparison_0);
+            let result_1 = transmute::<uint32x4_t, [u32; 4]>(comparison_1);
+            result_0.iter().all(|&x| x != 0) && result_1.iter().all(|&x| x != 0)
+        }
+    }
+
+    #[inline(always)]
     fn one() -> Self {
         NeonM31 {
             v: unsafe { [vdupq_n_u32(1); 2] },

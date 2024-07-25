@@ -66,6 +66,11 @@ impl Field for Bn254DummyExt3 {
     }
 
     #[inline(always)]
+    fn is_zero(&self) -> bool {
+        self.v.is_zero()
+    }
+
+    #[inline(always)]
     fn one() -> Self {
         Bn254DummyExt3 { v: Fr::one() }
     }

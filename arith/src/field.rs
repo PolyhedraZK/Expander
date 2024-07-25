@@ -56,10 +56,7 @@ pub trait Field:
     fn zero() -> Self;
 
     /// Is zero
-    #[inline(always)]
-    fn is_zero(&self) -> bool {
-        *self == Self::zero()
-    }
+    fn is_zero(&self) -> bool;
 
     /// Identity element
     fn one() -> Self;

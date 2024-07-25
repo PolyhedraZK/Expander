@@ -19,9 +19,16 @@ impl FieldSerde for SimdM31Ext3 {
         self.v[2].serialize_into(&mut writer);
     }
 
+    #[cfg(target_arch = "x86_64")]
     #[inline(always)]
     fn serialized_size() -> usize {
         512 / 8 * 3
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    #[inline(always)]
+    fn serialized_size() -> usize {
+        256 / 8 * 3
     }
 
     // FIXME: this deserialization function auto corrects invalid inputs.
@@ -127,9 +134,15 @@ impl From<M31Ext3> for SimdM31Ext3 {
 }
 
 impl Field for SimdM31Ext3 {
+    #[cfg(target_arch = "x86_64")]
     const NAME: &'static str = "AVX Vectorized Mersenne 31 Extension 3";
-
+    #[cfg(target_arch = "x86_64")]
     const SIZE: usize = 512 / 8 * 3;
+
+    #[cfg(target_arch = "aarch64")]
+    const NAME: &'static str = "Neon Vectorized Mersenne 31 Extension 3";
+    #[cfg(target_arch = "aarch64")]
+    const SIZE: usize = 256 / 8 * 3;
 
     const ZERO: Self = Self {
         v: [SimdM31::ZERO; 3],
@@ -144,6 +157,11 @@ impl Field for SimdM31Ext3 {
         SimdM31Ext3 {
             v: [SimdM31::zero(); 3],
         }
+    }
+
+    #[inline(always)]
+    fn is_zero(&self) -> bool {
+        self.v[0].is_zero() && self.v[1].is_zero() && self.v[2].is_zero()
     }
 
     #[inline(always)]
