@@ -81,7 +81,7 @@ jobs:
 
   test-linux:
     name: Test-linux
-    runs-on: [avx512]
+    runs-on: self-hosted
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
         with:
@@ -97,7 +97,7 @@ jobs:
       - run: RUSTFLAGS="-C target-feature=+avx512f" cargo test --all-features --release
   Bench-linux-m31:
     name: Bench-linux-m31
-    runs-on: [avx512]
+    runs-on: self-hosted
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
         with:
@@ -110,7 +110,7 @@ jobs:
       - run: RUSTFLAGS="-C target-feature=+avx512f" cargo run --release -- -t 4 -f m31ext3 
   Bench-linux-fr:
     name: Bench-linux-fr
-    runs-on: [avx512]
+    runs-on: self-hosted
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
         with:
