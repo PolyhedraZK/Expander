@@ -35,11 +35,17 @@ pub struct Prover<C: GKRConfig> {
     sp: GkrScratchpad<C>,
 }
 
+impl<C: GKRConfig> Default for Prover<C> {
+    fn default() -> Self {
+        Self {
+            sp: GkrScratchpad::default(),
+        }
+    }
+}
+
 impl<C: GKRConfig> Prover<C> {
     pub fn new() -> Self {
-        Prover {
-            sp: GkrScratchpad::<C>::default(),
-        }
+        Self::default()
     }
 
     pub fn prepare_mem(&mut self, c: &Circuit<C>) {

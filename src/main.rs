@@ -69,7 +69,7 @@ where
         "poseidon" => Circuit::<C>::load_circuit(POSEIDON_CIRCUIT),
         _ => unreachable!(),
     };
-    
+
     let circuit_copy_size: usize = match args.scheme.as_str() {
         "keccak" => 8,
         "poseidon" => 120,

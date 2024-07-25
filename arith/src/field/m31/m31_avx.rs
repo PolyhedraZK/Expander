@@ -100,7 +100,7 @@ impl Field for AVXM31 {
     const ZERO: Self = Self { v: PACKED_0 };
 
     const INV_2: Self = Self { v: PACKED_INV_2 };
-    
+
     #[inline(always)]
     fn zero() -> Self {
         AVXM31 {

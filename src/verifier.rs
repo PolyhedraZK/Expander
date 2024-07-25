@@ -192,11 +192,17 @@ pub struct Verifier<C: GKRConfig> {
     phantom: PhantomData<C>,
 }
 
-impl<C: GKRConfig> Verifier<C> {
-    pub fn new() -> Self {
+impl<C: GKRConfig> Default for Verifier<C> {
+    fn default() -> Self {
         Self {
             phantom: PhantomData,
         }
+    }
+}
+
+impl<C: GKRConfig> Verifier<C> {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn verify(&self, circuit: &Circuit<C>, claimed_v: &C::Field, proof: &Proof) -> bool {
