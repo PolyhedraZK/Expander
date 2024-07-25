@@ -67,7 +67,9 @@ impl From<SimdM31> for SimdM31Ext3 {
     }
 }
 
-impl BinomialExtensionField<3> for SimdM31Ext3 {
+impl BinomialExtensionField for SimdM31Ext3 {
+    const DEGREE: usize = 3;
+
     const W: u32 = 5;
 
     type BaseField = SimdM31;

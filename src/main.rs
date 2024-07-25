@@ -7,6 +7,7 @@ use std::{
 use clap::Parser;
 use expander_rs::{BN254Config, Circuit, GKRConfig, M31ExtConfig, Prover};
 
+// circuit for repeating Keccak for 8 times
 const KECCAK_CIRCUIT: &str = "data/circuit.txt";
 // circuit for repeating Poseidon for 120 times
 const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";

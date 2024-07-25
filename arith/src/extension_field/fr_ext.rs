@@ -2,7 +2,9 @@ use halo2curves::bn256::Fr;
 
 use super::BinomialExtensionField;
 
-impl BinomialExtensionField<3> for Fr {
+impl BinomialExtensionField for Fr {
+    const DEGREE: usize = 1;
+
     /// Extension Field over X-1 which is self
     const W: u32 = 1;
 

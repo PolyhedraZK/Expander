@@ -156,7 +156,9 @@ impl Field for M31Ext3 {
     }
 }
 
-impl BinomialExtensionField<3> for M31Ext3 {
+impl BinomialExtensionField for M31Ext3 {
+    const DEGREE: usize = 3;
+
     /// Extension Field
     const W: u32 = 5;
 

@@ -40,10 +40,10 @@ pub trait GKRConfig: Default + Clone + Send + 'static {
     type CircuitField: Field + FieldSerde + Send;
 
     /// Field type for the challenge, e.g., M31Ext3
-    type ChallengeField: BinomialExtensionField<3, BaseField = Self::CircuitField> + Send;
+    type ChallengeField: BinomialExtensionField<BaseField = Self::CircuitField> + Send;
 
     /// Main field type for the scheme, e.g., SimdM31Ext3
-    type Field: BinomialExtensionField<3> + SimdField<Scalar = Self::ChallengeField> + Send;
+    type Field: BinomialExtensionField + SimdField<Scalar = Self::ChallengeField> + Send;
 
     /// Field size for the main field
     const FIELD_SIZE: usize;
