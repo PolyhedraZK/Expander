@@ -147,6 +147,11 @@ impl Field for NeonM31 {
     }
 
     #[inline(always)]
+    fn is_zero() -> bool {
+        v[0] == PACKED_0 && v[1] == PACKED_0
+    }
+
+    #[inline(always)]
     fn one() -> Self {
         NeonM31 {
             v: unsafe { [vdupq_n_u32(1); 2] },
