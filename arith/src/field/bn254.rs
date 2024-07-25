@@ -19,6 +19,9 @@ impl Field for Fr {
     /// Inverse of 2
     const INV_2: Self = Fr::TWO_INV;
 
+    /// ZERO
+    const ZERO: Self = Fr::zero();
+
     // ====================================
     // constants
     // ====================================

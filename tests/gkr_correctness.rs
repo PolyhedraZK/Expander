@@ -1,6 +1,6 @@
-use arith::{Field, FieldSerde, SimdField, SimdM31, SimdM31Ext3};
+use arith::{BinomialExtensionField, Bn254DummyExt3, Field, FieldSerde, SimdField, SimdM31Ext3};
 use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier};
-use halo2curves::bn256::Fr;
+
 use rand::Rng;
 use sha2::Digest;
 
@@ -42,19 +42,15 @@ fn gen_simple_circuit<F: Field + FieldSerde + SimdField>() -> Circuit<F> {
 
 #[test]
 fn test_gkr_correctness() {
-    let config = Config::m31_config();
-    test_gkr_correctness_helper::<SimdM31>(&config);
-
     let config = Config::m31_ext3_config();
     test_gkr_correctness_helper::<SimdM31Ext3>(&config);
-
     let config = Config::bn254_config();
-    test_gkr_correctness_helper::<Fr>(&config);
+    test_gkr_correctness_helper::<Bn254DummyExt3>(&config);
 }
 
 fn test_gkr_correctness_helper<F>(config: &Config)
 where
-    F: Field + FieldSerde + SimdField + Send + 'static,
+    F: BinomialExtensionField<3> + FieldSerde + SimdField + Send + 'static,
 {
     println!("Config created.");
     let mut circuit = Circuit::<F>::load_circuit(CIRCUIT_NAME);

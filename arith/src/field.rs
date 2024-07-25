@@ -49,6 +49,9 @@ pub trait Field:
     /// Inverse of 2
     const INV_2: Self;
 
+    /// ZERO
+    const ZERO: Self;
+
     // ====================================
     // constants
     // ====================================

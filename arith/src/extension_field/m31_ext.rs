@@ -67,6 +67,10 @@ impl Field for M31Ext3 {
         v: [M31::INV_2, M31 { v: 0 }, M31 { v: 0 }],
     };
 
+    const ZERO: M31Ext3 = M31Ext3 {
+        v: [M31::ZERO, M31::ZERO, M31::ZERO],
+    };
+
     #[inline(always)]
     fn zero() -> Self {
         M31Ext3 {
