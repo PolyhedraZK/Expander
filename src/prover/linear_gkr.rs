@@ -3,7 +3,9 @@
 use arith::{BinomialExtensionField, Field, FieldSerde, SimdField};
 use ark_std::{end_timer, start_timer};
 
-use crate::{gkr_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript, gkr_square_prove};
+use crate::{
+    gkr_prove, gkr_square_prove, Circuit, Config, GkrScratchpad, Proof, RawCommitment, Transcript,
+};
 
 pub fn grind<F: Field + FieldSerde + SimdField>(transcript: &mut Transcript, config: &Config) {
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));

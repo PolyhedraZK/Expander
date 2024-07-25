@@ -31,13 +31,7 @@ where
     );
 
     for i in (0..layer_num).rev() {
-        rz0 = sumcheck_prove_gkr_square_layer(
-            &circuit.layers[i],
-            &rz0,
-            transcript,
-            sp,
-            config,
-        );
+        rz0 = sumcheck_prove_gkr_square_layer(&circuit.layers[i], &rz0, transcript, sp, config);
 
         log::trace!("Layer {} proved", i);
         log::trace!("rz0.0: {:?}", rz0[0]);

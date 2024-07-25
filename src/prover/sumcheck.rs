@@ -1,6 +1,8 @@
 use arith::{Field, FieldSerde, SimdField};
 
-use crate::{CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, SumcheckGkrSquareHelper, Transcript};
+use crate::{
+    CircuitLayer, Config, GkrScratchpad, SumcheckGkrHelper, SumcheckGkrSquareHelper, Transcript,
+};
 
 // FIXME
 #[allow(clippy::too_many_arguments)]
@@ -55,8 +57,6 @@ where
     (rz0, rz1)
 }
 
-
-
 // FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
@@ -78,12 +78,11 @@ where
             helper.prepare_g_x_vals()
         }
 
-        let evals : [F; D] = helper.poly_evals_at(i_var);
+        let evals: [F; D] = helper.poly_evals_at(i_var);
 
         for deg in 0..D {
             transcript.append_f(evals[deg]);
         }
-
 
         let r = transcript.challenge_f::<F>();
 

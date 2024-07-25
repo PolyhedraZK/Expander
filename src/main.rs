@@ -61,7 +61,6 @@ where
     let start_time = std::time::Instant::now();
 
     let pack_size = match args.field.as_str() {
-        "m31" => M31_PACKSIZE,
         "m31ext3" => M31_PACKSIZE,
         "fr" => FR_PACKSIZE,
         _ => unreachable!(),
@@ -89,7 +88,12 @@ where
         .enumerate()
         .map(|(i, c)| {
             let partial_proof_cnt = partial_proof_cnts[i].clone();
-            let local_config = config.clone();
+            let mut local_config = config.clone();
+            local_config.gkr_square = match args.scheme.as_str() {
+                "keccak" => false,
+                "poseidon" => true,
+                _ => unreachable!(),
+            };
             thread::spawn(move || {
                 loop {
                     // bench func
