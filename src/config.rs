@@ -102,6 +102,7 @@ impl GKRConfig for M31ExtConfig {
 
     const GKR_SQUARE: bool = false;
 
+    #[inline(always)]
     fn challenge_mul_circuit(
         a: &Self::ChallengeField,
         b: &Self::CircuitField,
@@ -109,6 +110,7 @@ impl GKRConfig for M31ExtConfig {
         a.mul_by_base_field(b)
     }
 
+    #[inline(always)]
     fn field_mul_circuit(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
         // todo! optimize me
         a.scale(&M31Ext3::from(b))
