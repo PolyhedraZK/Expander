@@ -147,8 +147,8 @@ impl Field for NeonM31 {
     }
 
     #[inline(always)]
-    fn is_zero() -> bool {
-        v[0] == PACKED_0 && v[1] == PACKED_0
+    fn is_zero(&self) -> bool {
+        self.v[0] == PACKED_0 && self.v[1] == PACKED_0
     }
 
     #[inline(always)]
