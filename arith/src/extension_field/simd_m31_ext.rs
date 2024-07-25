@@ -129,7 +129,7 @@ impl From<M31Ext3> for SimdM31Ext3 {
 impl Field for SimdM31Ext3 {
     const NAME: &'static str = "AVX Vectorized Mersenne 31 Extension 3";
 
-    const SIZE: usize = 64*3;
+    const SIZE: usize = 512 / 8 * 3;
 
     const ZERO: Self = Self {
         v: [SimdM31::ZERO; 3],

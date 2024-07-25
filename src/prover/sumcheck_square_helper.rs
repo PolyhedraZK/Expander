@@ -18,7 +18,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
             cur_eval_size: 1 << var_num,
         }
     }
-
+    #[allow(clippy::too_many_arguments)]
     fn poly_eval_at<F: Field>(
         &self,
         var_idx: usize,
@@ -92,6 +92,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
         p
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn receive_challenge<F: Field + SimdField>(
         &mut self,
         var_idx: usize,

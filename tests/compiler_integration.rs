@@ -12,7 +12,7 @@ type F = SimdM31Ext3;
 
 #[test]
 fn test_compiler_format_integration() {
-    let config = Config::m31_config();
+    let config = Config::m31_ext3_config();
     println!("Config created.");
     let mut circuit = Circuit::<F>::load_circuit(FILENAME_CIRCUIT);
     println!("Circuit loaded.");
@@ -40,7 +40,7 @@ fn test_compiler_format_integration() {
     let rng = &mut rand::thread_rng();
     let random_idx = rng.gen_range(0..bad_proof.bytes.len());
     let random_change = rng.gen_range(1..256) as u8;
-    bad_proof.bytes[random_idx] += random_change;
+    bad_proof.bytes[random_idx] ^= random_change;
     assert!(!verifier.verify(&circuit, &claimed_v, &bad_proof));
     println!("Bad proof rejected.");
 }

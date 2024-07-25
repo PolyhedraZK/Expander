@@ -64,7 +64,7 @@ impl FieldSerde for AVXM31 {
 
     #[inline(always)]
     fn serialized_size() -> usize {
-        64
+        512 / 8
     }
 
     /// deserialize bytes into field
@@ -95,7 +95,7 @@ impl Field for AVXM31 {
     const NAME: &'static str = "AVX Packed Mersenne 31";
 
     // size in bytes
-    const SIZE: usize = 64;
+    const SIZE: usize = 512 / 8;
 
     const ZERO: Self = Self { v: PACKED_0 };
 
@@ -447,9 +447,7 @@ impl Neg for AVXM31 {
     #[inline(always)]
     fn neg(self) -> Self::Output {
         AVXM31 {
-            v: unsafe {
-                _mm512_xor_epi32(self.v, PACKED_MOD)
-            },
+            v: unsafe { _mm512_xor_epi32(self.v, PACKED_MOD) },
         }
     }
 }

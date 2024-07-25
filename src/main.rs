@@ -1,6 +1,7 @@
 // TODO: move this to `bench` repo and refactor with criterion
 use std::{
-    process::exit, sync::{Arc, Mutex}, thread
+    sync::{Arc, Mutex},
+    thread,
 };
 
 use arith::{BinomialExtensionField, Bn254DummyExt3, SimdM31Ext3};
@@ -72,7 +73,7 @@ where
         "poseidon" => Circuit::<F>::load_circuit(POSEIDON_CIRCUIT),
         _ => unreachable!(),
     };
-    
+
     let circuit_copy_size: usize = match args.scheme.as_str() {
         "keccak" => 8,
         "poseidon" => 120,
