@@ -245,6 +245,7 @@ impl Mul<M31> for SimdM31Ext3 {
     #[inline(always)]
     fn mul(self, rhs: M31) -> Self::Output {
         SimdM31Ext3 {
+            // SimdM31 * M31
             v: [self.v[0] * rhs, self.v[1] * rhs, self.v[2] * rhs],
         }
     }
