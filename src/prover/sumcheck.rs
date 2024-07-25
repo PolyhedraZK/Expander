@@ -60,6 +60,7 @@ where
 // FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
+#[allow(clippy::needless_range_loop)]
 pub fn sumcheck_prove_gkr_square_layer<F>(
     layer: &CircuitLayer<F>,
     rz0: &[F::Scalar],
@@ -98,6 +99,5 @@ where
     log::trace!("claimed vx = {:?}", helper.vx_claim());
     transcript.append_f(helper.vx_claim());
 
-    let rz0 = helper.rx.clone();
-    rz0
+    helper.rx.clone()
 }
