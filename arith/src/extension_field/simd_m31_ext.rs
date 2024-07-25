@@ -251,6 +251,17 @@ impl Mul<M31> for SimdM31Ext3 {
     }
 }
 
+impl Add<M31> for SimdM31Ext3 {
+    type Output = SimdM31Ext3;
+    #[inline(always)]
+    fn add(self, rhs: M31) -> Self::Output {
+        SimdM31Ext3 {
+            // SimdM31 + M31
+            v: [self.v[0] + rhs, self.v[1], self.v[2]],
+        }
+    }
+}
+
 impl<T: ::core::borrow::Borrow<SimdM31Ext3>> Product<T> for SimdM31Ext3 {
     fn product<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::one(), |acc, item| acc * item.borrow())

@@ -3,6 +3,9 @@ use std::{io::Cursor, marker::PhantomData, vec};
 use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 
+#[cfg(feature = "grinding")]
+use crate::grind;
+
 use crate::{
     eq_evals_at_primitive, Circuit, CircuitLayer, GKRConfig, Gate, Proof, RawCommitment, Transcript,
 };
@@ -17,8 +20,8 @@ fn degree_2_eval<F: Field + SimdField>(p0: F, p1: F, p2: F, x: F::Scalar) -> F {
 
 fn eval_sparse_circuit_connect_poly<C: GKRConfig, const INPUT_NUM: usize>(
     gates: &[Gate<C, INPUT_NUM>],
-    rz0: &[C::ChallengeField], //
-    rz1: &[C::ChallengeField], //
+    rz0: &[C::ChallengeField],
+    rz1: &[C::ChallengeField],
     alpha: C::ChallengeField,
     beta: C::ChallengeField,
     ris: &[Vec<C::ChallengeField>],
@@ -42,7 +45,7 @@ fn eval_sparse_circuit_connect_poly<C: GKRConfig, const INPUT_NUM: usize>(
         for (i, eq_evals_at_ri) in eq_evals_at_ris.iter().enumerate().take(INPUT_NUM) {
             prod *= eq_evals_at_ri[g.i_ids[i]];
         }
-        v += C::challenge_mul_circuit(&prod, &g.coef);
+        v += C::challenge_mul_circuit_field(&prod, &g.coef);
     }
     v
 }
@@ -217,7 +220,14 @@ impl<C: GKRConfig> Verifier<C> {
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
+        #[cfg(feature = "grinding")]
+        grind::<C>(&mut transcript);
+
         let mut proof = proof.clone(); // FIXME: consider separating pointers to make proof always immutable?
+        
+        #[cfg(feature = "grinding")]
+        proof.step(commitment.size() + 32);
+        #[cfg(not(feature = "grinding"))]
         proof.step(commitment.size());
 
         let (mut verified, rz0, rz1, claimed_v0, claimed_v1) =

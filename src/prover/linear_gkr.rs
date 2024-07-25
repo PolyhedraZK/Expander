@@ -1,6 +1,5 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::{Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
@@ -8,7 +7,10 @@ use crate::{
     Transcript,
 };
 
-pub fn grind<C: GKRConfig>(transcript: &mut Transcript) {
+#[cfg(feature = "grinding")]
+pub(crate) fn grind<C: GKRConfig>(transcript: &mut Transcript) {
+    use arith::{Field, FieldSerde};
+
     let timer = start_timer!(|| format!("grind {} bits", C::GRINDING_BITS));
 
     let mut hash_bytes = vec![];
@@ -76,7 +78,9 @@ impl<C: GKRConfig> Prover<C> {
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(&buffer);
 
+        #[cfg(feature = "grinding")]
         grind::<C>(&mut transcript);
+
         let claimed_v: C::Field;
         let mut _rz0s = vec![];
         let mut _rz1s = vec![];

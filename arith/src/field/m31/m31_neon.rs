@@ -36,22 +36,6 @@ impl NeonM31 {
     }
 
     #[inline(always)]
-    pub(crate) fn mul_by_2(&self) -> NeonM31 {
-        let mut res = NeonM31 {
-            v: [PACKED_0, PACKED_0],
-        };
-        res.v[0] = unsafe {
-            let double = vshlq_n_u32(self.v[0], 1);
-            reduce_sum(double)
-        };
-        res.v[1] = unsafe {
-            let double = vshlq_n_u32(self.v[1], 1);
-            reduce_sum(double)
-        };
-        res
-    }
-
-    #[inline(always)]
     pub(crate) fn mul_by_5(&self) -> NeonM31 {
         let mut res = NeonM31 {
             v: [PACKED_0, PACKED_0],
@@ -245,6 +229,22 @@ impl Field for NeonM31 {
             v: unsafe { [vdupq_n_u32(m.v), vdupq_n_u32(m.v)] },
         }
     }
+
+    #[inline(always)]
+    fn mul_by_2(&self) -> NeonM31 {
+        let mut res = NeonM31 {
+            v: [PACKED_0, PACKED_0],
+        };
+        res.v[0] = unsafe {
+            let double = vshlq_n_u32(self.v[0], 1);
+            reduce_sum(double)
+        };
+        res.v[1] = unsafe {
+            let double = vshlq_n_u32(self.v[1], 1);
+            reduce_sum(double)
+        };
+        res
+    }
 }
 
 impl SimdField for NeonM31 {
@@ -427,6 +427,15 @@ impl AddAssign for NeonM31 {
     #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self += &rhs;
+    }
+}
+
+impl Add<M31> for NeonM31 {
+    type Output = NeonM31;
+    #[inline(always)]
+    #[allow(clippy::op_ref)]
+    fn add(self, rhs: M31) -> Self::Output {
+        self + NeonM31::pack_full(rhs)
     }
 }
 

@@ -104,7 +104,7 @@ impl SumcheckMultilinearProdHelper {
             p1 += f_v_1 * hg_v_1;
             p2 += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
         }
-        p2 = p1 * F::from(6) + p0 * F::from(3) - p2 * F::from(2);
+        p2 = p1.mul_by_6() + p0.mul_by_3() - p2.double();
         [p0, p1, p2]
     }
 
@@ -285,14 +285,17 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         }
 
         for g in mul.iter() {
-            hg_vals[g.i_ids[0]] += vals.evals[g.i_ids[1]]
-                .scale(&C::challenge_mul_circuit(&eq_evals_at_rz0[g.o_id], &g.coef));
+            hg_vals[g.i_ids[0]] += vals.evals[g.i_ids[1]].scale(&C::challenge_mul_circuit_field(
+                &eq_evals_at_rz0[g.o_id],
+                &g.coef,
+            ));
             gate_exists[g.i_ids[0]] = true;
         }
         for g in add.iter() {
-            hg_vals[g.i_ids[0]] += C::Field::from(
-                C::challenge_mul_circuit(&eq_evals_at_rz0[g.o_id], &g.coef), // g.coef * eq_evals_at_rz0[g.o_id]
-            );
+            hg_vals[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit_field(
+                &eq_evals_at_rz0[g.o_id],
+                &g.coef,
+            ));
             gate_exists[g.i_ids[0]] = true;
         }
     }
@@ -323,7 +326,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
         for g in mul.iter() {
             hg_vals[g.i_ids[1]] += v_rx.scale(
-                &(C::challenge_mul_circuit(
+                &(C::challenge_mul_circuit_field(
                     &(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
                     &g.coef,
                 )),

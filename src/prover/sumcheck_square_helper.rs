@@ -76,7 +76,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
             p_add[1] += f_v[1] * hg_v[1];
             p_add[2] += f_v[2] * hg_v[2];
         }
-        // interolate p_add into 7 points
+        // interpolate p_add into 7 points
         let p_add_coef_0 = p_add[0];
         let p_add_coef_2 = (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * F::INV_2;
         let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
@@ -231,13 +231,17 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
         for g in uni.iter() {
             match g.gate_type {
                 12345 => {
-                    hg_evals_5[g.i_ids[0]] +=
-                        C::Field::from(C::challenge_mul_circuit(&eq_evals_at_rz0[g.o_id], &g.coef));
+                    hg_evals_5[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit_field(
+                        &eq_evals_at_rz0[g.o_id],
+                        &g.coef,
+                    ));
                     gate_exists_5[g.i_ids[0]] = true;
                 }
                 12346 => {
-                    hg_evals_1[g.i_ids[0]] +=
-                        C::Field::from(C::challenge_mul_circuit(&eq_evals_at_rz0[g.o_id], &g.coef));
+                    hg_evals_1[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit_field(
+                        &eq_evals_at_rz0[g.o_id],
+                        &g.coef,
+                    ));
                     gate_exists_1[g.i_ids[0]] = true;
                 }
                 _ => panic!("Unsupported gate type"),

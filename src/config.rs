@@ -52,6 +52,7 @@ pub trait GKRConfig: Default + Clone + Send + 'static {
     const SECURITY_BITS: usize;
 
     /// Grinding bits to achieve the target security level
+    #[cfg(feature = "grinding")]
     const GRINDING_BITS: usize;
 
     /// Polynomial commitment scheme
@@ -67,13 +68,16 @@ pub trait GKRConfig: Default + Clone + Send + 'static {
     const GKR_SQUARE: bool;
 
     /// API to allow for multiplications between the challenge and the circuit field
-    fn challenge_mul_circuit(
+    fn challenge_mul_circuit_field(
         a: &Self::ChallengeField,
         b: &Self::CircuitField,
     ) -> Self::ChallengeField;
 
     /// API to allow for multiplications between the main field and the circuit field
-    fn field_mul_circuit(a: &Self::Field, b: &Self::CircuitField) -> Self::Field;
+    fn field_mul_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field;
+
+    /// API to allow for addition between the main field and the circuit field
+    fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field;
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -90,6 +94,7 @@ impl GKRConfig for M31ExtConfig {
 
     const SECURITY_BITS: usize = 100;
 
+    #[cfg(feature = "grinding")]
     const GRINDING_BITS: usize = 10;
 
     const POLYNOMIAL_COMMITMENT_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;
@@ -101,7 +106,7 @@ impl GKRConfig for M31ExtConfig {
     const GKR_SQUARE: bool = false;
 
     #[inline(always)]
-    fn challenge_mul_circuit(
+    fn challenge_mul_circuit_field(
         a: &Self::ChallengeField,
         b: &Self::CircuitField,
     ) -> Self::ChallengeField {
@@ -109,10 +114,17 @@ impl GKRConfig for M31ExtConfig {
     }
 
     #[inline(always)]
-    fn field_mul_circuit(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
+    fn field_mul_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
         // directly multiply M31Ext3 with M31
         // skipping the conversion M31 -> M31Ext3
         *a * *b
+    }
+
+    #[inline(always)]
+    fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
+        // directly add M31Ext3 with M31
+        // skipping the conversion M31 -> M31Ext3
+        *a + *b
     }
 }
 
@@ -130,6 +142,7 @@ impl GKRConfig for BN254Config {
 
     const SECURITY_BITS: usize = 100;
 
+    #[cfg(feature = "grinding")]
     const GRINDING_BITS: usize = 0;
 
     const POLYNOMIAL_COMMITMENT_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;
@@ -141,7 +154,7 @@ impl GKRConfig for BN254Config {
     const GKR_SQUARE: bool = false;
 
     #[inline(always)]
-    fn challenge_mul_circuit(
+    fn challenge_mul_circuit_field(
         a: &Self::ChallengeField,
         b: &Self::CircuitField,
     ) -> Self::ChallengeField {
@@ -149,7 +162,12 @@ impl GKRConfig for BN254Config {
     }
 
     #[inline(always)]
-    fn field_mul_circuit(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
+    fn field_mul_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
         a * b
+    }
+
+    #[inline(always)]
+    fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
+        *a + *b
     }
 }

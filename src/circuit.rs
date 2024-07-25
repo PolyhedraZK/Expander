@@ -42,16 +42,16 @@ impl<C: GKRConfig> CircuitLayer<C> {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let i1 = &self.input_vals.evals[gate.i_ids[1]];
             let o = &mut res[gate.o_id];
-            *o += C::field_mul_circuit(&(*i0 * i1), &gate.coef);
+            *o += C::field_mul_circuit_field(&(*i0 * i1), &gate.coef);
         }
         for gate in &self.add {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
-            *o += C::field_mul_circuit(i0, &gate.coef);
+            *o += C::field_mul_circuit_field(i0, &gate.coef);
         }
         for gate in &self.const_ {
             let o = &mut res[gate.o_id];
-            *o += C::Field::from(C::ChallengeField::from(gate.coef));
+            *o = C::field_add_circuit_field(o, &gate.coef);
         }
         for gate in &self.uni {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
@@ -62,11 +62,11 @@ impl<C: GKRConfig> CircuitLayer<C> {
                     let i0_2 = i0.square();
                     let i0_4 = i0_2.square();
                     let i0_5 = i0_4 * i0;
-                    *o += C::field_mul_circuit(&i0_5, &gate.coef);
+                    *o += C::field_mul_circuit_field(&i0_5, &gate.coef);
                 }
                 12346 => {
                     // pow1
-                    *o += C::field_mul_circuit(i0, &gate.coef);
+                    *o += C::field_mul_circuit_field(i0, &gate.coef);
                 }
                 _ => panic!("Unknown gate type: {}", gate.gate_type),
             }

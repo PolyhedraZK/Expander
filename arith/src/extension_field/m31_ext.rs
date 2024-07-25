@@ -269,6 +269,15 @@ impl AddAssign for M31Ext3 {
     }
 }
 
+impl Add<M31> for M31Ext3 {
+    type Output = M31Ext3;
+
+    #[inline(always)]
+    fn add(self, rhs: M31) -> Self::Output {
+        self + M31Ext3::from(rhs)
+    }
+}
+
 impl<T: ::core::borrow::Borrow<M31Ext3>> Sum<T> for M31Ext3 {
     fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::zero(), |acc, item| acc + item.borrow())
