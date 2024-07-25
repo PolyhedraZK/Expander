@@ -48,23 +48,31 @@ pub trait GKRConfig: Default + Clone + Send + 'static {
     /// Field size for the main field
     const FIELD_SIZE: usize;
 
+    /// Targeted security level for the scheme
     const SECURITY_BITS: usize;
 
+    /// Grinding bits to achieve the target security level
     const GRINDING_BITS: usize;
 
+    /// Polynomial commitment scheme
     const POLYNOMIAL_COMMITMENT_TYPE: PolynomialCommitmentType;
 
+    /// Enum type for Self::Field
     const FIELD_TYPE: FieldType;
 
+    /// Configuration for FIAT-SHAMIR transformation
     const FS_HASH: FiatShamirHashType;
 
+    /// If this is a GKR^2 scheme
     const GKR_SQUARE: bool;
 
+    /// API to allow for multiplications between the challenge and the circuit field
     fn challenge_mul_circuit(
         a: &Self::ChallengeField,
         b: &Self::CircuitField,
     ) -> Self::ChallengeField;
 
+    /// API to allow for multiplications between the main field and the circuit field
     fn field_mul_circuit(a: &Self::Field, b: &Self::CircuitField) -> Self::Field;
 }
 
