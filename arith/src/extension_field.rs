@@ -22,4 +22,7 @@ pub trait BinomialExtensionField<const DEGREE: usize>:
 
     /// Add the extension field with the base field
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self;
+
+    /// Get the basefield element from the extension field
+    fn first_base_field(&self) -> Self::BaseField;
 }

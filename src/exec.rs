@@ -7,7 +7,8 @@ use std::{
 
 use arith::{BinomialExtensionField, Field, FieldSerde, SimdField, SimdM31Ext3};
 use expander_rs::{
-    Circuit, Config, FieldType, Proof, Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
+    Circuit, Config, FieldType, GKRConfig, M31ExtConfig, Proof, Prover, Verifier, SENTINEL_BN254,
+    SENTINEL_M31,
 };
 use log::{debug, info};
 use warp::Filter;
@@ -44,10 +45,12 @@ fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     }
 }
 
-async fn run_command<F>(field_type: FieldType, command: &str, circuit_file: &str, args: &[String])
-where
-    F: BinomialExtensionField<3> + FieldSerde + SimdField + Send + 'static,
-{
+async fn run_command<C: GKRConfig>(
+    field_type: FieldType,
+    command: &str,
+    circuit_file: &str,
+    args: &[String],
+) {
     let config = match field_type {
         FieldType::M31 => Config::m31_config(),
         FieldType::BN254 => Config::bn254_config(),
@@ -57,7 +60,7 @@ where
         "prove" => {
             let witness_file = &args[3];
             let output_file = &args[4];
-            let mut circuit = Circuit::<F>::load_circuit(circuit_file);
+            let mut circuit = Circuit::<C>::load_circuit(circuit_file);
             circuit.load_witness_file(witness_file);
             circuit.evaluate();
             let mut prover = Prover::new(&config);
@@ -69,7 +72,7 @@ where
         "verify" => {
             let witness_file = &args[3];
             let output_file = &args[4];
-            let mut circuit = Circuit::<F>::load_circuit(circuit_file);
+            let mut circuit = Circuit::<C>::load_circuit(circuit_file);
             circuit.load_witness_file(witness_file);
             let bytes = fs::read(output_file).expect("Unable to read proof from file.");
             let (proof, claimed_v) = load_proof_and_claimed_v(&bytes);
@@ -85,7 +88,7 @@ where
                 .try_into()
                 .unwrap();
             let port = args[4].parse().unwrap();
-            let circuit = Circuit::<F>::load_circuit(circuit_file);
+            let circuit = Circuit::<C>::load_circuit(circuit_file);
             let mut prover = Prover::new(&config);
             prover.prepare_mem(&circuit);
             let verifier = Verifier::new(&config);
@@ -168,7 +171,7 @@ async fn main() {
     debug!("field type: {:?}", field_type);
     match field_type {
         FieldType::M31 => {
-            run_command::<SimdM31Ext3>(field_type, command, circuit_file, &args).await;
+            run_command::<M31ExtConfig>(field_type, command, circuit_file, &args).await;
         }
         // FieldType::BN254 => {
         //     run_command::<VectorizedFr>(field_type, command, circuit_file, &args).await;

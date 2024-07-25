@@ -1,6 +1,6 @@
-use arith::{Field, FieldSerde, SimdField};
+use arith::{Field, FieldSerde};
 
-use crate::{Proof, SHA256hasher};
+use crate::{GKRConfig, Proof, SHA256hasher};
 
 pub struct Transcript {
     pub hasher: SHA256hasher,
@@ -43,9 +43,9 @@ impl Transcript {
         }
     }
     #[inline]
-    pub fn append_f<F: Field + FieldSerde>(&mut self, f: F) {
+    pub fn append_f<C: GKRConfig>(&mut self, f: C::Field) {
         let cur_size = self.proof.bytes.len();
-        self.proof.bytes.resize(cur_size + F::SIZE, 0);
+        self.proof.bytes.resize(cur_size + C::Field::SIZE, 0);
         f.serialize_into(&mut self.proof.bytes[cur_size..]);
     }
     #[inline]
@@ -53,13 +53,13 @@ impl Transcript {
         self.proof.bytes.extend_from_slice(buffer);
     }
     #[inline]
-    pub fn challenge_f<F: SimdField>(&mut self) -> F::Scalar {
+    pub fn challenge_f<C: GKRConfig>(&mut self) -> C::ChallengeField {
         self.hash_to_digest();
-        assert!(F::Scalar::SIZE <= Self::DIGEST_SIZE);
-        F::Scalar::from_uniform_bytes(&self.digest)
+        assert!(C::ChallengeField::SIZE <= Self::DIGEST_SIZE);
+        C::ChallengeField::from_uniform_bytes(&self.digest)
     }
     #[inline]
-    pub fn challenge_fs<F: SimdField>(&mut self, size: usize) -> Vec<F::Scalar> {
-        (0..size).map(|_| self.challenge_f::<F>()).collect()
+    pub fn challenge_fs<C: GKRConfig>(&mut self, size: usize) -> Vec<C::ChallengeField> {
+        (0..size).map(|_| self.challenge_f::<C>()).collect()
     }
 }

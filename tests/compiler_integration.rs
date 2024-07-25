@@ -1,7 +1,7 @@
 use std::fs;
 
 use arith::{Field, SimdM31Ext3};
-use expander_rs::{Circuit, Config, Prover, Verifier};
+use expander_rs::{Circuit, Config, M31ExtConfig, Prover, Verifier};
 use rand::Rng;
 
 const FILENAME_CIRCUIT: &str = "data/circuit.txt";
@@ -14,7 +14,7 @@ type F = SimdM31Ext3;
 fn test_compiler_format_integration() {
     let config = Config::m31_config();
     println!("Config created.");
-    let mut circuit = Circuit::<F>::load_circuit(FILENAME_CIRCUIT);
+    let mut circuit = Circuit::<M31ExtConfig>::load_circuit(FILENAME_CIRCUIT);
     println!("Circuit loaded.");
     circuit.load_witness_file(FILENAME_WITNESS);
     println!("Witness loaded.");
@@ -48,7 +48,7 @@ fn test_compiler_format_integration() {
 #[test]
 fn test_compiler_format_integration_no_prove() {
     println!("Config created.");
-    let mut circuit = Circuit::<F>::load_circuit(FILENAME_CIRCUIT);
+    let mut circuit = Circuit::<M31ExtConfig>::load_circuit(FILENAME_CIRCUIT);
     println!("Circuit loaded.");
     circuit.load_witness_file(FILENAME_WITNESS);
     println!("Witness loaded.");

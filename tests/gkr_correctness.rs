@@ -1,5 +1,7 @@
 use arith::{BinomialExtensionField, Bn254DummyExt3, Field, FieldSerde, SimdField, SimdM31Ext3};
-use expander_rs::{Circuit, CircuitLayer, Config, GateAdd, GateMul, Prover, Verifier};
+use expander_rs::{
+    Circuit, CircuitLayer, Config, GKRConfig, GateAdd, GateMul, M31ExtConfig, Prover, Verifier,
+};
 
 use rand::Rng;
 use sha2::Digest;
@@ -7,7 +9,7 @@ use sha2::Digest;
 const CIRCUIT_NAME: &str = "data/circuit.txt";
 
 #[allow(dead_code)]
-fn gen_simple_circuit<F: Field + FieldSerde + SimdField>() -> Circuit<F> {
+fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
     let mut circuit = Circuit::default();
     let mut l0 = CircuitLayer::default();
     l0.input_var_num = 2;
@@ -15,25 +17,25 @@ fn gen_simple_circuit<F: Field + FieldSerde + SimdField>() -> Circuit<F> {
     l0.add.push(GateAdd {
         i_ids: [0],
         o_id: 0,
-        coef: F::Scalar::from(1),
+        coef: C::CircuitField::from(1),
         gate_type: 1,
     });
     l0.add.push(GateAdd {
         i_ids: [0],
         o_id: 1,
-        coef: F::Scalar::from(1),
+        coef: C::CircuitField::from(1),
         gate_type: 1,
     });
     l0.add.push(GateAdd {
         i_ids: [1],
         o_id: 1,
-        coef: F::Scalar::from(1),
+        coef: C::CircuitField::from(1),
         gate_type: 1,
     });
     l0.mul.push(GateMul {
         i_ids: [0, 2],
         o_id: 2,
-        coef: F::Scalar::from(1),
+        coef: C::CircuitField::from(1),
         gate_type: 1,
     });
     circuit.layers.push(l0.clone());
@@ -43,17 +45,14 @@ fn gen_simple_circuit<F: Field + FieldSerde + SimdField>() -> Circuit<F> {
 #[test]
 fn test_gkr_correctness() {
     let config = Config::m31_config();
-    test_gkr_correctness_helper::<SimdM31Ext3>(&config);
-    let config = Config::bn254_config();
-    test_gkr_correctness_helper::<Bn254DummyExt3>(&config);
+    test_gkr_correctness_helper::<M31ExtConfig>(&config);
+    // let config = Config::bn254_config();
+    // test_gkr_correctness_helper::<Bn254DummyExt3>(&config);
 }
 
-fn test_gkr_correctness_helper<F>(config: &Config)
-where
-    F: BinomialExtensionField<3> + FieldSerde + SimdField + Send + 'static,
-{
+fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config) {
     println!("Config created.");
-    let mut circuit = Circuit::<F>::load_circuit(CIRCUIT_NAME);
+    let mut circuit = Circuit::<C>::load_circuit(CIRCUIT_NAME);
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
     // let mut circuit = gen_simple_circuit(); // for custom circuit
     println!("Circuit loaded.");

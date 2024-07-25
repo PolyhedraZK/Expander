@@ -1,3 +1,7 @@
+use std::ops::Mul;
+
+use arith::{BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31Ext3, M31};
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolynomialCommitmentType {
     Raw,
@@ -41,6 +45,76 @@ pub struct Config {
     pub field_type: FieldType, // LATER: consider infer this from trait
     pub fs_hash: FiatShamirHashType,
     pub gkr_square: bool,
+}
+
+pub trait GKRConfig: Default + Clone + Send + 'static {
+    /// Field type for the circuit, e.g., M31
+    type CircuitField: Field + FieldSerde + Send;
+
+    /// Field type for the challenge, e.g., M31Ext3
+    type ChallengeField: BinomialExtensionField<3, BaseField = Self::CircuitField> + Send;
+
+    /// Main field type for the scheme, e.g., SimdM31Ext3
+    type Field: BinomialExtensionField<3> + SimdField<Scalar = Self::ChallengeField> + Send;
+
+    ///
+    const FIELD_SIZE: usize;
+
+    const SECURITY_BITS: usize;
+
+    const GRINDING_BITS: usize;
+
+    const POLYNOMIAL_COMMITMENT_TYPE: PolynomialCommitmentType;
+
+    const FIELD_TYPE: FieldType;
+
+    const FS_HASH: FiatShamirHashType;
+
+    const GKR_SQUARE: bool;
+
+    fn challenge_mul_circuit(
+        a: &Self::ChallengeField,
+        b: &Self::CircuitField,
+    ) -> Self::ChallengeField;
+
+    fn field_mul_circuit(a: &Self::Field, b: &Self::CircuitField) -> Self::Field;
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct M31ExtConfig;
+
+impl GKRConfig for M31ExtConfig {
+    type CircuitField = M31;
+
+    type ChallengeField = M31Ext3;
+
+    type Field = SimdM31Ext3;
+
+    const FIELD_SIZE: usize = 93;
+
+    const SECURITY_BITS: usize = 100;
+
+    const GRINDING_BITS: usize = 10;
+
+    const POLYNOMIAL_COMMITMENT_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;
+
+    const FIELD_TYPE: FieldType = FieldType::M31;
+
+    const FS_HASH: FiatShamirHashType = FiatShamirHashType::SHA256;
+
+    const GKR_SQUARE: bool = false;
+
+    fn challenge_mul_circuit(
+        a: &Self::ChallengeField,
+        b: &Self::CircuitField,
+    ) -> Self::ChallengeField {
+        a.mul_by_base_field(b)
+    }
+
+    fn field_mul_circuit(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
+        // todo! optimize me
+        a.scale(&M31Ext3::from(b))
+    }
 }
 
 impl Default for Config {

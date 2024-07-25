@@ -1,6 +1,6 @@
-use arith::{Field, SimdField};
+use arith::{BinomialExtensionField, Field, SimdField};
 
-use crate::{CircuitLayer, GkrScratchpad};
+use crate::{CircuitLayer, GKRConfig, GkrScratchpad};
 
 #[inline(always)]
 fn _eq<F: Field>(x: &F, y: &F) -> F {
@@ -108,13 +108,13 @@ impl SumcheckMultilinearProdHelper {
         [p0, p1, p2]
     }
 
-    fn receive_challenge<F: Field + SimdField>(
+    fn receive_challenge<C: GKRConfig>(
         &mut self,
         var_idx: usize,
-        r: F::Scalar,
-        bk_f: &mut [F],
-        bk_hg: &mut [F],
-        init_v: &[F],
+        r: C::ChallengeField,
+        bk_f: &mut [C::Field],
+        bk_hg: &mut [C::Field],
+        init_v: &[C::Field],
         gate_exists: &mut [bool],
     ) {
         assert_eq!(var_idx, self.sumcheck_var_idx);
@@ -130,7 +130,7 @@ impl SumcheckMultilinearProdHelper {
                     bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
                 }
 
-                bk_hg[i] = F::zero();
+                bk_hg[i] = C::Field::zero();
             } else {
                 gate_exists[i] = true;
 
@@ -149,16 +149,16 @@ impl SumcheckMultilinearProdHelper {
 }
 
 #[allow(dead_code)]
-pub(crate) struct SumcheckGkrHelper<'a, F: Field + SimdField> {
-    pub(crate) rx: Vec<F::Scalar>,
-    pub(crate) ry: Vec<F::Scalar>,
+pub(crate) struct SumcheckGkrHelper<'a, C: GKRConfig> {
+    pub(crate) rx: Vec<C::ChallengeField>,
+    pub(crate) ry: Vec<C::ChallengeField>,
 
-    layer: &'a CircuitLayer<F>,
-    sp: &'a mut GkrScratchpad<F>,
-    rz0: &'a [F::Scalar],
-    rz1: &'a [F::Scalar],
-    alpha: F::Scalar,
-    beta: F::Scalar,
+    layer: &'a CircuitLayer<C>,
+    sp: &'a mut GkrScratchpad<C>,
+    rz0: &'a [C::ChallengeField],
+    rz1: &'a [C::ChallengeField],
+    alpha: C::ChallengeField,
+    beta: C::ChallengeField,
 
     input_var_num: usize,
     output_var_num: usize,
@@ -167,14 +167,14 @@ pub(crate) struct SumcheckGkrHelper<'a, F: Field + SimdField> {
     y_helper: SumcheckMultilinearProdHelper,
 }
 
-impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
+impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     pub fn new(
-        layer: &'a CircuitLayer<F>,
-        rz0: &'a [F::Scalar],
-        rz1: &'a [F::Scalar],
-        alpha: &'a F::Scalar,
-        beta: &'a F::Scalar,
-        sp: &'a mut GkrScratchpad<F>,
+        layer: &'a CircuitLayer<C>,
+        rz0: &'a [C::ChallengeField],
+        rz1: &'a [C::ChallengeField],
+        alpha: &'a C::ChallengeField,
+        beta: &'a C::ChallengeField,
+        sp: &'a mut GkrScratchpad<C>,
     ) -> Self {
         SumcheckGkrHelper {
             rx: vec![],
@@ -195,7 +195,7 @@ impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
         }
     }
 
-    pub fn poly_evals_at(&mut self, var_idx: usize, degree: usize) -> [F; 3] {
+    pub fn poly_evals_at(&mut self, var_idx: usize, degree: usize) -> [C::Field; 3] {
         if var_idx < self.input_var_num {
             self.x_helper.poly_eval_at(
                 var_idx,
@@ -217,9 +217,9 @@ impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
         }
     }
 
-    pub fn receive_challenge(&mut self, var_idx: usize, r: F::Scalar) {
+    pub fn receive_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
         if var_idx < self.input_var_num {
-            self.x_helper.receive_challenge(
+            self.x_helper.receive_challenge::<C>(
                 var_idx,
                 r,
                 &mut self.sp.v_evals,
@@ -230,7 +230,7 @@ impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
             log::trace!("v_eval[0]:= {:?}", self.sp.v_evals[0]);
             self.rx.push(r);
         } else {
-            self.y_helper.receive_challenge(
+            self.y_helper.receive_challenge::<C>(
                 var_idx - self.input_var_num,
                 r,
                 &mut self.sp.v_evals,
@@ -242,11 +242,11 @@ impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
         }
     }
 
-    pub fn vx_claim(&self) -> F {
+    pub fn vx_claim(&self) -> C::Field {
         self.sp.v_evals[0]
     }
 
-    pub fn vy_claim(&self) -> F {
+    pub fn vy_claim(&self) -> C::Field {
         self.sp.v_evals[0]
     }
 
@@ -285,17 +285,19 @@ impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
         }
 
         for g in mul.iter() {
-            hg_vals[g.i_ids[0]] +=
-                vals.evals[g.i_ids[1]].scale(&(g.coef * eq_evals_at_rz0[g.o_id]));
+            hg_vals[g.i_ids[0]] += vals.evals[g.i_ids[1]]
+                .scale(&C::challenge_mul_circuit(&eq_evals_at_rz0[g.o_id], &g.coef));
             gate_exists[g.i_ids[0]] = true;
         }
         for g in add.iter() {
-            hg_vals[g.i_ids[0]] += F::from(g.coef * eq_evals_at_rz0[g.o_id]);
+            hg_vals[g.i_ids[0]] += C::Field::from(
+                C::challenge_mul_circuit(&eq_evals_at_rz0[g.o_id], &g.coef), // g.coef * eq_evals_at_rz0[g.o_id]
+            );
             gate_exists[g.i_ids[0]] = true;
         }
     }
 
-    pub fn prepare_h_y_vals(&mut self, v_rx: F) {
+    pub fn prepare_h_y_vals(&mut self, v_rx: C::Field) {
         let mul = &self.layer.mul;
         let eq_evals_at_rz0 = &mut self.sp.eq_evals_at_rz0;
         let eq_evals_at_rx = &mut self.sp.eq_evals_at_rx;
@@ -313,15 +315,19 @@ impl<'a, F: Field + SimdField> SumcheckGkrHelper<'a, F> {
 
         eq_eval_at(
             &self.rx,
-            &F::Scalar::one(),
+            &C::ChallengeField::one(),
             eq_evals_at_rx,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
 
         for g in mul.iter() {
-            hg_vals[g.i_ids[1]] +=
-                v_rx.scale(&(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]] * g.coef));
+            hg_vals[g.i_ids[1]] += v_rx.scale(
+                &(C::challenge_mul_circuit(
+                    &(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
+                    &g.coef,
+                )),
+            );
             gate_exists[g.i_ids[1]] = true;
         }
     }

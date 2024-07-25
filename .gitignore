@@ -40,3 +40,5 @@ output.txt
 data/poseidon_*.txt
 /data/Extracted*
 /data/circuit8.txt
+/data/witness.txt.1
+/data/circuit.txt.1

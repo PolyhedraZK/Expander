@@ -1,6 +1,6 @@
 use arith::{Field, SimdField};
 
-use crate::{CircuitLayer, GkrScratchpad};
+use crate::{CircuitLayer, GKRConfig, GkrScratchpad};
 
 use crate::sumcheck_helper::eq_eval_at;
 
@@ -46,7 +46,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
             hg_v[1] = bk_hg[i * 2 + 1];
             let delta_f = f_v[1] - f_v[0];
             let delta_hg = hg_v[1] - hg_v[0];
-            
+
             for i in 2..D {
                 f_v[i] = f_v[i - 1] + delta_f;
                 hg_v[i] = hg_v[i - 1] + delta_hg;
@@ -99,12 +99,13 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
 }
 
 #[allow(dead_code)]
-pub(crate) struct SumcheckGkrSquareHelper<'a, F: Field + SimdField, const D: usize> {
-    pub(crate) rx: Vec<F::Scalar>,
+// todo: Move D to GKRConfig
+pub(crate) struct SumcheckGkrSquareHelper<'a, C: GKRConfig, const D: usize> {
+    pub(crate) rx: Vec<C::ChallengeField>,
 
-    layer: &'a CircuitLayer<F>,
-    sp: &'a mut GkrScratchpad<F>,
-    rz0: &'a [F::Scalar],
+    layer: &'a CircuitLayer<C>,
+    sp: &'a mut GkrScratchpad<C>,
+    rz0: &'a [C::ChallengeField],
 
     input_var_num: usize,
     output_var_num: usize,
@@ -112,11 +113,11 @@ pub(crate) struct SumcheckGkrSquareHelper<'a, F: Field + SimdField, const D: usi
     x_helper: SumcheckMultiSquareHelper<D>,
 }
 
-impl<'a, F: Field + SimdField, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
+impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
     pub fn new(
-        layer: &'a CircuitLayer<F>,
-        rz0: &'a [F::Scalar],
-        sp: &'a mut GkrScratchpad<F>,
+        layer: &'a CircuitLayer<C>,
+        rz0: &'a [C::ChallengeField],
+        sp: &'a mut GkrScratchpad<C>,
     ) -> Self {
         SumcheckGkrSquareHelper {
             rx: vec![],
@@ -132,7 +133,7 @@ impl<'a, F: Field + SimdField, const D: usize> SumcheckGkrSquareHelper<'a, F, D>
         }
     }
 
-    pub fn poly_evals_at(&mut self, var_idx: usize) -> [F; D] {
+    pub fn poly_evals_at(&mut self, var_idx: usize) -> [C::Field; D] {
         self.x_helper.poly_eval_at(
             var_idx,
             &mut self.sp.v_evals,
@@ -142,7 +143,7 @@ impl<'a, F: Field + SimdField, const D: usize> SumcheckGkrSquareHelper<'a, F, D>
         )
     }
 
-    pub fn receive_challenge(&mut self, var_idx: usize, r: F::Scalar) {
+    pub fn receive_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
         self.x_helper.receive_challenge(
             var_idx,
             r,
@@ -155,7 +156,7 @@ impl<'a, F: Field + SimdField, const D: usize> SumcheckGkrSquareHelper<'a, F, D>
         self.rx.push(r);
     }
 
-    pub fn vx_claim(&self) -> F {
+    pub fn vx_claim(&self) -> C::Field {
         self.sp.v_evals[0]
     }
 
@@ -176,18 +177,20 @@ impl<'a, F: Field + SimdField, const D: usize> SumcheckGkrSquareHelper<'a, F, D>
         }
         eq_eval_at(
             self.rz0,
-            &F::Scalar::one(),
+            &C::ChallengeField::one(),
             eq_evals_at_rz0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
 
         for g in uni.iter() {
-            hg_vals[g.i_ids[0]] += F::from(g.coef * eq_evals_at_rz0[g.o_id]);
+            hg_vals[g.i_ids[0]] +=
+                C::Field::from(C::challenge_mul_circuit(&eq_evals_at_rz0[g.o_id], &g.coef));
             gate_exists[g.i_ids[0]] = true;
         }
         for g in add.iter() {
-            hg_vals[g.i_ids[0]] += F::from(g.coef * eq_evals_at_rz0[g.o_id]);
+            hg_vals[g.i_ids[0]] +=
+                C::Field::from(C::challenge_mul_circuit(&eq_evals_at_rz0[g.o_id], &g.coef));
             gate_exists[g.i_ids[0]] = true;
         }
     }
