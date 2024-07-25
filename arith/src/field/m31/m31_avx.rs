@@ -14,24 +14,7 @@ use crate::{Field, FieldSerde, SimdField, M31, M31_MOD};
 const M31_PACK_SIZE: usize = 8;
 const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; M31_PACK_SIZE]) };
 const PACKED_0: __m256i = unsafe { transmute([0; M31_PACK_SIZE]) };
-const PACKED_MOD_EPI64: __m256i = unsafe { transmute([M31_MOD as u64; 4]) };
 const PACKED_INV_2: __m256i = unsafe { transmute([1 << 30; M31_PACK_SIZE]) };
-
-pub(crate) const FIVE: AVXM31 = AVXM31 {
-    v: unsafe { transmute::<[i32; 8], std::arch::x86_64::__m256i>([5; 8]) },
-};
-
-pub(crate) const TEN: AVXM31 = AVXM31 {
-    v: unsafe { transmute::<[i32; 8], std::arch::x86_64::__m256i>([10; 8]) },
-};
-
-#[inline(always)]
-unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
-    _mm256_add_epi64(
-        _mm256_and_si256(x, PACKED_MOD_EPI64),
-        _mm256_srli_epi64(x, 31),
-    )
-}
 
 #[inline(always)]
 unsafe fn mod_reduce_epi32(x: __m256i) -> __m256i {
@@ -49,6 +32,25 @@ impl AVXM31 {
         AVXM31 {
             v: unsafe { _mm256_set1_epi32(x.v as i32) },
         }
+    }
+
+    #[inline(always)]
+    pub(crate) fn mul_by_2(&self) -> AVXM31 {
+        let double = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(self.v)) };
+        Self { v: double }
+    }
+
+    #[inline(always)]
+    pub(crate) fn mul_by_5(&self) -> AVXM31 {
+        let double = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(self.v)) };
+        let quad = unsafe { mod_reduce_epi32(_mm256_slli_epi32::<1>(double)) };
+        let res = unsafe { mod_reduce_epi32(_mm256_add_epi32(self.v, quad)) };
+        Self { v: res }
+    }
+
+    #[inline(always)]
+    pub(crate) fn mul_by_10(&self) -> AVXM31 {
+        self.mul_by_5().mul_by_2()
     }
 }
 
@@ -95,9 +97,10 @@ impl Field for AVXM31 {
     // size in bytes
     const SIZE: usize = 32;
 
-    const INV_2: Self = Self { v: PACKED_INV_2 };
     const ZERO: Self = Self { v: PACKED_0 };
 
+    const INV_2: Self = Self { v: PACKED_INV_2 };
+    
     #[inline(always)]
     fn zero() -> Self {
         AVXM31 {
@@ -156,6 +159,11 @@ impl Field for AVXM31 {
 
     fn exp(&self, _exponent: &Self) -> Self {
         unimplemented!("exp not implemented for AVXM31")
+    }
+
+    #[inline(always)]
+    fn double(&self) -> Self {
+        self.mul_by_2()
     }
 
     #[inline(always)]
@@ -232,6 +240,7 @@ impl Default for AVXM31 {
 }
 
 impl PartialEq for AVXM31 {
+    #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
             let pcmp = _mm256_cmpeq_epi32(self.v, other.v);
@@ -244,16 +253,30 @@ impl Mul<&AVXM31> for AVXM31 {
     type Output = AVXM31;
     #[inline(always)]
     fn mul(self, rhs: &AVXM31) -> Self::Output {
+        // credit: https://github.com/Plonky3/Plonky3/blob/eeb4e37b20127c4daa871b2bad0df30a7c7380db/mersenne-31/src/x86_64_avx2/packing.rs#L154
         unsafe {
-            let x_shifted = _mm256_srli_epi64::<32>(self.v);
-            let rhs_shifted = _mm256_srli_epi64::<32>(rhs.v);
-            let mut xa_even = _mm256_mul_epi32(self.v, rhs.v);
-            let mut xa_odd = _mm256_mul_epi32(x_shifted, rhs_shifted);
-            xa_even = mod_reduce_epi64(xa_even);
-            xa_odd = mod_reduce_epi64(xa_odd);
-            AVXM31 {
-                v: mod_reduce_epi32(_mm256_or_si256(xa_even, _mm256_slli_epi64::<32>(xa_odd))),
-            }
+            let lhs_evn = self.v;
+            let lhs_odd_dbl = _mm256_srli_epi64::<31>(self.v);
+
+            let rhs_evn = rhs.v;
+            let rhs_odd = movehdup_epi32(rhs.v);
+
+            let prod_odd_dbl = _mm256_mul_epu32(lhs_odd_dbl, rhs_odd);
+            let prod_evn = _mm256_mul_epu32(lhs_evn, rhs_evn);
+
+            let prod_odd_lo_dirty = _mm256_slli_epi64::<31>(prod_odd_dbl);
+            let prod_evn_hi = _mm256_srli_epi64::<31>(prod_evn);
+
+            let prod_lo_dirty = _mm256_blend_epi32::<0b10101010>(prod_evn, prod_odd_lo_dirty);
+
+            let prod_hi = _mm256_blend_epi32::<0b10101010>(prod_evn_hi, prod_odd_dbl);
+            let prod_lo = _mm256_and_si256(prod_lo_dirty, PACKED_MOD);
+
+            let t = _mm256_add_epi32(prod_hi, prod_lo);
+            let u = _mm256_sub_epi32(t, PACKED_MOD);
+            let res = _mm256_min_epu32(t, u);
+
+            AVXM31 { v: res }
         }
     }
 }
@@ -269,11 +292,31 @@ impl Mul for AVXM31 {
 
 impl Mul<&M31> for AVXM31 {
     type Output = AVXM31;
+
     #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
         unsafe {
-            let rhs_p = _mm256_set1_epi32(rhs.v as i32);
-            self * AVXM31 { v: rhs_p }
+            let lhs_evn = self.v;
+            let lhs_odd_dbl = _mm256_srli_epi64::<31>(self.v);
+
+            let rhs = _mm256_set1_epi32(rhs.v as i32);
+
+            let prod_odd_dbl = _mm256_mul_epu32(lhs_odd_dbl, rhs);
+            let prod_evn = _mm256_mul_epu32(lhs_evn, rhs);
+
+            let prod_odd_lo_dirty = _mm256_slli_epi64::<31>(prod_odd_dbl);
+            let prod_evn_hi = _mm256_srli_epi64::<31>(prod_evn);
+
+            let prod_lo_dirty = _mm256_blend_epi32::<0b10101010>(prod_evn, prod_odd_lo_dirty);
+
+            let prod_hi = _mm256_blend_epi32::<0b10101010>(prod_evn_hi, prod_odd_dbl);
+            let prod_lo = _mm256_and_si256(prod_lo_dirty, PACKED_MOD);
+
+            let t = _mm256_add_epi32(prod_hi, prod_lo);
+            let u = _mm256_sub_epi32(t, PACKED_MOD);
+            let res = _mm256_min_epu32(t, u);
+
+            AVXM31 { v: res }
         }
     }
 }
@@ -405,4 +448,12 @@ impl SubAssign for AVXM31 {
     fn sub_assign(&mut self, rhs: Self) {
         *self -= &rhs;
     }
+}
+
+#[inline]
+#[must_use]
+fn movehdup_epi32(x: __m256i) -> __m256i {
+    // The instruction is only available in the floating-point flavor; this distinction is only for
+    // historical reasons and no longer matters. We cast to floats, duplicate, and cast back.
+    unsafe { _mm256_castps_si256(_mm256_movehdup_ps(_mm256_castsi256_ps(x))) }
 }

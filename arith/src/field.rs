@@ -43,11 +43,11 @@ pub trait Field:
     /// size required to store the data
     const SIZE: usize;
 
+    /// zero
+    const ZERO: Self;
+
     /// Inverse of 2
     const INV_2: Self;
-
-    /// ZERO
-    const ZERO: Self;
 
     // ====================================
     // constants
@@ -56,6 +56,7 @@ pub trait Field:
     fn zero() -> Self;
 
     /// Is zero
+    #[inline(always)]
     fn is_zero(&self) -> bool {
         *self == Self::zero()
     }
@@ -77,11 +78,13 @@ pub trait Field:
     // arithmetics
     // ====================================
     /// Squaring
+    #[inline(always)]
     fn square(&self) -> Self {
         *self * *self
     }
 
     /// Doubling
+    #[inline(always)]
     fn double(&self) -> Self {
         *self + *self
     }

@@ -4,12 +4,6 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-#[cfg(target_arch = "x86_64")]
-use crate::m31_avx::{FIVE, TEN};
-
-#[cfg(target_arch = "aarch64")]
-use crate::m31_neon::{FIVE, TEN};
-
 use crate::{BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31, M31};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -116,12 +110,12 @@ impl Field for SimdM31Ext3 {
 
     const SIZE: usize = 96;
 
-    const INV_2: Self = Self {
-        v: [SimdM31::INV_2, SimdM31::ZERO, SimdM31::ZERO],
+    const ZERO: Self = Self {
+        v: [SimdM31::ZERO; 3],
     };
 
-    const ZERO: Self = Self {
-        v: [SimdM31::ZERO, SimdM31::ZERO, SimdM31::ZERO],
+    const INV_2: Self = Self {
+        v: [SimdM31::INV_2, SimdM31::ZERO, SimdM31::ZERO],
     };
 
     #[inline(always)]
@@ -362,12 +356,11 @@ impl From<u32> for SimdM31Ext3 {
 // = a0*b0 + 5*(a1*b2 + a2*b1)
 // + (a0*b1 + a1*b0)*x + 5* a2*b2
 // + (a0*b2 + a1*b1 + a2*b0)*x^2
-
 #[inline(always)]
 fn mul_internal(a: &[SimdM31; 3], b: &[SimdM31; 3]) -> [SimdM31; 3] {
     let mut res = [SimdM31::default(); 3];
-    res[0] = a[0] * b[0] + FIVE * (a[1] * b[2] + a[2] * b[1]);
-    res[1] = a[0] * b[1] + a[1] * b[0] + FIVE * a[2] * b[2];
+    res[0] = a[0] * b[0] + (a[1] * b[2] + a[2] * b[1]).mul_by_5();
+    res[1] = a[0] * b[1] + a[1] * b[0] + a[2] * b[2].mul_by_5();
     res[2] = a[0] * b[2] + a[1] * b[1] + a[2] * b[0];
     res
 }
@@ -376,10 +369,10 @@ fn mul_internal(a: &[SimdM31; 3], b: &[SimdM31; 3]) -> [SimdM31; 3] {
 #[inline(always)]
 fn square_internal(a: &[SimdM31; 3]) -> [SimdM31; 3] {
     let mut res = [SimdM31::default(); 3];
-    res[0] = a[0].square() + TEN * a[1] * a[2];
+    res[0] = a[0].square() + a[1] * a[2].mul_by_10();
     let t = a[0] * a[1];
-    res[1] = t + t + FIVE * a[2].square();
+    res[1] = t.double() + a[2].square().mul_by_5();
     let t = a[0] * a[2];
-    res[2] = t + t + a[1] * a[1];
+    res[2] = t.double() + a[1] * a[1];
     res
 }

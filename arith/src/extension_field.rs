@@ -5,7 +5,7 @@ mod simd_m31_ext;
 
 use crate::{Field, FieldSerde};
 
-// pub use bn254_dummy_ext::Bn254DummyExt3;
+pub use bn254_dummy_ext::Bn254DummyExt3;
 pub use m31_ext::M31Ext3;
 pub use simd_m31_ext::SimdM31Ext3;
 

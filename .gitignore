@@ -18,13 +18,7 @@ Cargo.lock
 
 # Project data
 /data/compiler_out
-/data/keccak*
-/data/bn254_circuit.txt
-/data/poseidon_witness.txt
-/data/poseidon_100_circuit.txt
 /data/proof.bin
-/data/circuit.txt
-/data/witness.txt
 notes.md
 
 # Programming env
@@ -42,3 +36,6 @@ data/poseidon_*.txt
 /data/circuit8.txt
 /data/witness.txt.1
 /data/circuit.txt.1
+/data/bn254_circuit.txt
+/data/circuit.txt
+/data/witness.txt

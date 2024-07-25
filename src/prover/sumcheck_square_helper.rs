@@ -38,8 +38,8 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 continue;
             }
-            let mut f_v = [F::zero(); 7];
-            let mut hg_v = [F::zero(); 7];
+            let mut f_v = [F::zero(); D];
+            let mut hg_v = [F::zero(); D];
             f_v[0] = src_v[i * 2];
             f_v[1] = src_v[i * 2 + 1];
             hg_v[0] = bk_hg[i * 2];

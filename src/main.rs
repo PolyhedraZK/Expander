@@ -11,7 +11,6 @@ const KECCAK_CIRCUIT: &str = "data/circuit.txt";
 // circuit for repeating Poseidon for 120 times
 const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
 
-const CIRCUIT_COPY_SIZE: usize = 8;
 const M31_PACKSIZE: usize = 8;
 const FR_PACKSIZE: usize = 1;
 
@@ -59,7 +58,6 @@ where
     let start_time = std::time::Instant::now();
 
     let pack_size = match args.field.as_str() {
-        "m31" => M31_PACKSIZE,
         "m31ext3" => M31_PACKSIZE,
         "fr" => FR_PACKSIZE,
         _ => unreachable!(),
@@ -69,6 +67,12 @@ where
     let circuit_template = match args.scheme.as_str() {
         "keccak" => Circuit::<C>::load_circuit(KECCAK_CIRCUIT),
         "poseidon" => Circuit::<C>::load_circuit(POSEIDON_CIRCUIT),
+        _ => unreachable!(),
+    };
+    
+    let circuit_copy_size: usize = match args.scheme.as_str() {
+        "keccak" => 8,
+        "poseidon" => 120,
         _ => unreachable!(),
     };
 
@@ -96,7 +100,7 @@ where
                     // update cnt
                     let mut cnt = partial_proof_cnt.lock().unwrap();
 
-                    let proof_cnt_this_round = CIRCUIT_COPY_SIZE * pack_size;
+                    let proof_cnt_this_round = circuit_copy_size * pack_size;
                     *cnt += proof_cnt_this_round;
                 }
             })
@@ -113,7 +117,7 @@ where
             total_proof_cnt += *cnt.lock().unwrap();
         }
         let throughput = total_proof_cnt as f64 / duration.as_secs_f64();
-        println!("{}-bench: throughput: {} keccaks/s", i, throughput.round());
+        println!("{}-bench: throughput: {} hashes/s", i, throughput.round());
     }
 }
 
@@ -121,4 +125,5 @@ fn print_info(args: &Args) {
     println!("field:          {}", args.field);
     println!("#threads:       {}", args.threads);
     println!("#bench repeats: {}", args.repeats);
+    println!("scheme:         {}", args.scheme);
 }

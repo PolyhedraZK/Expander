@@ -15,14 +15,6 @@ const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD; 4]) };
 const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
 const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
 
-pub(crate) const FIVE: NeonM31 = NeonM31 {
-    v: unsafe { transmute::<[i32; 8], [uint32x4_t; 2]>([5; 8]) },
-};
-
-pub(crate) const TEN: NeonM31 = NeonM31 {
-    v: unsafe { transmute::<[i32; 8], [uint32x4_t; 2]>([10; 8]) },
-};
-
 #[inline(always)]
 fn reduce_sum(x: uint32x4_t) -> uint32x4_t {
     //aarch64 only
@@ -41,6 +33,60 @@ impl NeonM31 {
         NeonM31 {
             v: unsafe { [vdupq_n_u32(x.v), vdupq_n_u32(x.v)] },
         }
+    }
+
+    #[inline(always)]
+    pub(crate) fn mul_by_2(&self) -> NeonM31 {
+        let mut res = NeonM31 {
+            v: [PACKED_0, PACKED_0],
+        };
+        res.v[0] = unsafe {
+            let double = vshlq_n_u32(self.v[0], 1);
+            reduce_sum(double)
+        };
+        res.v[1] = unsafe {
+            let double = vshlq_n_u32(self.v[1], 1);
+            reduce_sum(double)
+        };
+        res
+    }
+
+    #[inline(always)]
+    pub(crate) fn mul_by_5(&self) -> NeonM31 {
+        let mut res = NeonM31 {
+            v: [PACKED_0, PACKED_0],
+        };
+        res.v[0] = unsafe {
+            let double = reduce_sum(vshlq_n_u32(self.v[0], 1));
+            let quad = reduce_sum(vshlq_n_u32(double, 1));
+            reduce_sum(vaddq_u32(quad, self.v[0]))
+        };
+        res.v[1] = unsafe {
+            let double = reduce_sum(vshlq_n_u32(self.v[1], 1));
+            let quad = reduce_sum(vshlq_n_u32(double, 1));
+            reduce_sum(vaddq_u32(quad, self.v[1]))
+        };
+        res
+    }
+
+    #[inline(always)]
+    pub(crate) fn mul_by_10(&self) -> NeonM31 {
+        let mut res = NeonM31 {
+            v: [PACKED_0, PACKED_0],
+        };
+        res.v[0] = unsafe {
+            let double = reduce_sum(vshlq_n_u32(self.v[0], 1));
+            let quad = reduce_sum(vshlq_n_u32(double, 1));
+            let oct = reduce_sum(vshlq_n_u32(quad, 1));
+            reduce_sum(vaddq_u32(oct, double))
+        };
+        res.v[1] = unsafe {
+            let double = reduce_sum(vshlq_n_u32(self.v[1], 1));
+            let quad = reduce_sum(vshlq_n_u32(double, 1));
+            let oct = reduce_sum(vshlq_n_u32(quad, 1));
+            reduce_sum(vaddq_u32(oct, double))
+        };
+        res
     }
 }
 
@@ -86,6 +132,10 @@ impl Field for NeonM31 {
 
     // size in bytes
     const SIZE: usize = 32;
+
+    const ZERO: Self = Self {
+        v: [PACKED_0, PACKED_0],
+    };
 
     const INV_2: Self = Self {
         v: [PACKED_INV_2; 2],
@@ -160,6 +210,11 @@ impl Field for NeonM31 {
                 ],
             }
         }
+    }
+
+    #[inline]
+    fn double(&self) -> Self {
+        self.mul_by_2()
     }
 
     fn exp(&self, _exponent: &Self) -> Self {
