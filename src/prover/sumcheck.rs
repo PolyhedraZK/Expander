@@ -66,7 +66,7 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
 
     for i_var in 0..layer.input_var_num {
         if i_var == 0 {
-            helper.prepare_g_x_vals()
+            helper.prepare_g_x_vals();
         }
 
         let evals: [C::Field; D] = helper.poly_evals_at(i_var);
@@ -74,7 +74,7 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
         for deg in 0..D {
             transcript.append_f::<C>(evals[deg]);
         }
-
+      
         let r = transcript.challenge_f::<C>();
 
         log::trace!("i_var={} evals: {:?} r: {:?}", i_var, evals, r);

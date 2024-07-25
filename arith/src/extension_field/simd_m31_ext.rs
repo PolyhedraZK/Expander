@@ -21,7 +21,7 @@ impl FieldSerde for SimdM31Ext3 {
 
     #[inline(always)]
     fn serialized_size() -> usize {
-        96
+        512 / 8 * 3
     }
 
     // FIXME: this deserialization function auto corrects invalid inputs.
@@ -110,7 +110,7 @@ impl From<M31Ext3> for SimdM31Ext3 {
 impl Field for SimdM31Ext3 {
     const NAME: &'static str = "AVX Vectorized Mersenne 31 Extension 3";
 
-    const SIZE: usize = 96;
+    const SIZE: usize = 512 / 8 * 3;
 
     const ZERO: Self = Self {
         v: [SimdM31::ZERO; 3],

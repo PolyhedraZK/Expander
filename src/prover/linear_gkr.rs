@@ -94,7 +94,6 @@ impl<C: GKRConfig> Prover<C> {
             }
             _ => todo!(),
         }
-
         end_timer!(timer);
         (claimed_v, transcript.proof)
     }

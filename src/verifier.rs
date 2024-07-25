@@ -4,8 +4,7 @@ use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
-    eq_evals_at_primitive, grind, Circuit, CircuitLayer, GKRConfig, Gate, Proof, RawCommitment,
-    Transcript,
+    eq_evals_at_primitive, Circuit, CircuitLayer, Config, Gate, Proof, RawCommitment, Transcript,
 };
 
 #[inline]
@@ -218,9 +217,8 @@ impl<C: GKRConfig> Verifier<C> {
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
-        grind::<C>(&mut transcript);
         let mut proof = proof.clone(); // FIXME: consider separating pointers to make proof always immutable?
-        proof.step(commitment.size() + 256 / 8);
+        proof.step(commitment.size());
 
         let (mut verified, rz0, rz1, claimed_v0, claimed_v1) =
             gkr_verify(circuit, claimed_v, &mut transcript, &mut proof);
