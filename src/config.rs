@@ -112,8 +112,9 @@ impl GKRConfig for M31ExtConfig {
 
     #[inline(always)]
     fn field_mul_circuit(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
-        // todo! optimize me
-        a.scale(&M31Ext3::from(b))
+        // directly multiply M31Ext3 with M31
+        // skipping the conversion M31 -> M31Ext3
+        *a * *b
     }
 }
 

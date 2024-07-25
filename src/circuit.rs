@@ -47,7 +47,6 @@ impl<C: GKRConfig> CircuitLayer<C> {
         for gate in &self.add {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
-            // *o += i0.scale(&gate.coef);
             *o += C::field_mul_circuit(i0, &gate.coef);
         }
         for gate in &self.const_ {
