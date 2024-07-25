@@ -42,7 +42,7 @@ fn gen_simple_circuit<F: Field + FieldSerde + SimdField>() -> Circuit<F> {
 
 #[test]
 fn test_gkr_correctness() {
-    let config = Config::m31_config();
+    let config = Config::m31_ext3_config();
     test_gkr_correctness_helper::<SimdM31Ext3>(&config);
     let config = Config::bn254_config();
     test_gkr_correctness_helper::<Bn254DummyExt3>(&config);

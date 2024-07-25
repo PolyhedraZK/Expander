@@ -88,6 +88,8 @@ impl Field for M31 {
 
     const SIZE: usize = 4;
 
+    const ZERO: Self = M31 { v: 0 };
+
     const INV_2: M31 = M31 { v: 1 << 30 };
 
     const ZERO: M31 = M31 { v: 0 };
@@ -153,7 +155,6 @@ impl Mul<&M31> for M31 {
         let mut vv = self.v as i64 * rhs.v as i64;
         vv = mod_reduce_i64(vv);
 
-        // ZZ: this seems unnecessary since it is already reduced?
         if vv >= M31_MOD as i64 {
             vv -= M31_MOD as i64;
         }
@@ -283,6 +284,7 @@ impl From<u32> for M31 {
 }
 
 impl M31 {
+    #[inline(always)]
     fn exp_power_of_2(&self, power_log: usize) -> Self {
         let mut res = *self;
         for _ in 0..power_log {
@@ -292,6 +294,7 @@ impl M31 {
     }
 
     /// credit: https://github.com/Plonky3/Plonky3/blob/ed21a5e11cb20effadaab606598ccad4e70e1a3e/mersenne-31/src/mersenne_31.rs#L235
+    #[inline(always)]
     fn try_inverse(&self) -> Option<Self> {
         if self.is_zero() {
             return None;
