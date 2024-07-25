@@ -1,7 +1,7 @@
 // an implementation of the GKR^2 protocol
 //! This module implements the core GKR^2 IOP.
 
-use arith::{Field, FieldSerde, MultiLinearPoly, SimdField};
+use arith::MultiLinearPoly;
 use ark_std::{end_timer, start_timer};
 
 use crate::{

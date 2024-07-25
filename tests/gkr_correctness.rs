@@ -1,4 +1,3 @@
-use arith::{BinomialExtensionField, Bn254DummyExt3, Field, FieldSerde, SimdField, SimdM31Ext3};
 use expander_rs::{
     Circuit, CircuitLayer, Config, GKRConfig, GateAdd, GateMul, M31ExtConfig, Prover, Verifier,
 };

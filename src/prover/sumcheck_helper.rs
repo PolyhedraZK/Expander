@@ -1,4 +1,4 @@
-use arith::{BinomialExtensionField, Field, SimdField};
+use arith::{Field, SimdField};
 
 use crate::{CircuitLayer, GKRConfig, GkrScratchpad};
 
@@ -168,7 +168,7 @@ pub(crate) struct SumcheckGkrHelper<'a, C: GKRConfig> {
 }
 
 impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
-    pub fn new(
+    pub(crate) fn new(
         layer: &'a CircuitLayer<C>,
         rz0: &'a [C::ChallengeField],
         rz1: &'a [C::ChallengeField],
@@ -195,7 +195,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         }
     }
 
-    pub fn poly_evals_at(&mut self, var_idx: usize, degree: usize) -> [C::Field; 3] {
+    pub(crate) fn poly_evals_at(&mut self, var_idx: usize, degree: usize) -> [C::Field; 3] {
         if var_idx < self.input_var_num {
             self.x_helper.poly_eval_at(
                 var_idx,
@@ -217,7 +217,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         }
     }
 
-    pub fn receive_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
+    pub(crate) fn receive_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
         if var_idx < self.input_var_num {
             self.x_helper.receive_challenge::<C>(
                 var_idx,
@@ -242,15 +242,15 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         }
     }
 
-    pub fn vx_claim(&self) -> C::Field {
+    pub(crate) fn vx_claim(&self) -> C::Field {
         self.sp.v_evals[0]
     }
 
-    pub fn vy_claim(&self) -> C::Field {
+    pub(crate) fn vy_claim(&self) -> C::Field {
         self.sp.v_evals[0]
     }
 
-    pub fn prepare_g_x_vals(&mut self) {
+    pub(crate) fn prepare_g_x_vals(&mut self) {
         let mul = &self.layer.mul;
         let add = &self.layer.add;
         let vals = &self.layer.input_vals;
@@ -297,7 +297,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         }
     }
 
-    pub fn prepare_h_y_vals(&mut self, v_rx: C::Field) {
+    pub(crate) fn prepare_h_y_vals(&mut self, v_rx: C::Field) {
         let mul = &self.layer.mul;
         let eq_evals_at_rz0 = &mut self.sp.eq_evals_at_rz0;
         let eq_evals_at_rx = &mut self.sp.eq_evals_at_rx;

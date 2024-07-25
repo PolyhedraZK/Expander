@@ -1,6 +1,6 @@
 use std::{io::Cursor, marker::PhantomData, vec};
 
-use arith::{Field, FieldSerde, SimdField};
+use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{

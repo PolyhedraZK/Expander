@@ -114,7 +114,7 @@ pub(crate) struct SumcheckGkrSquareHelper<'a, C: GKRConfig, const D: usize> {
 }
 
 impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
-    pub fn new(
+    pub(crate) fn new(
         layer: &'a CircuitLayer<C>,
         rz0: &'a [C::ChallengeField],
         sp: &'a mut GkrScratchpad<C>,
@@ -133,7 +133,7 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
         }
     }
 
-    pub fn poly_evals_at(&mut self, var_idx: usize) -> [C::Field; D] {
+    pub(crate) fn poly_evals_at(&mut self, var_idx: usize) -> [C::Field; D] {
         self.x_helper.poly_eval_at(
             var_idx,
             &mut self.sp.v_evals,
@@ -143,7 +143,7 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
         )
     }
 
-    pub fn receive_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
+    pub(crate) fn receive_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
         self.x_helper.receive_challenge(
             var_idx,
             r,
@@ -156,11 +156,11 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
         self.rx.push(r);
     }
 
-    pub fn vx_claim(&self) -> C::Field {
+    pub(crate) fn vx_claim(&self) -> C::Field {
         self.sp.v_evals[0]
     }
 
-    pub fn prepare_g_x_vals(&mut self) {
+    pub(crate) fn prepare_g_x_vals(&mut self) {
         let uni = &self.layer.uni; // univariate things like square, pow5, etc.
         let add = &self.layer.add;
         let vals = &self.layer.input_vals;

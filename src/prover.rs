@@ -23,4 +23,4 @@ pub mod linear_gkr;
 pub use linear_gkr::*;
 
 pub mod sumcheck_square_helper;
-pub use sumcheck_square_helper::*;
+pub(crate) use sumcheck_square_helper::*;

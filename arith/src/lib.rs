@@ -9,9 +9,6 @@ pub use extension_field::*;
 mod simd_field;
 pub use simd_field::*;
 
-mod simd_ext_field;
-pub use simd_ext_field::*;
-
 mod serde;
 pub use serde::FieldSerde;
 

@@ -1,5 +1,3 @@
-use arith::{BinomialExtensionField, Field, FieldSerde, SimdField};
-
 use crate::{
     CircuitLayer, Config, GKRConfig, GkrScratchpad, SumcheckGkrHelper, SumcheckGkrSquareHelper,
     Transcript,
@@ -58,6 +56,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
 // FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
+#[allow(clippy::needless_range_loop)] // todo: remove
 pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
@@ -92,7 +91,6 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
 
     log::trace!("claimed vx = {:?}", helper.vx_claim());
     transcript.append_f::<C>(helper.vx_claim());
-
-    let rz0 = helper.rx.clone();
-    rz0
+    
+    helper.rx
 }

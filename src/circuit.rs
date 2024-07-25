@@ -1,4 +1,4 @@
-use arith::{BinomialExtensionField, Field, FieldSerde, MultiLinearPoly, SimdField};
+use arith::{BinomialExtensionField, Field, FieldSerde, MultiLinearPoly};
 use ark_std::test_rng;
 use std::{
     collections::HashMap,

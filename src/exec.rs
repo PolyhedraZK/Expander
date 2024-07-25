@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use arith::{BinomialExtensionField, Field, FieldSerde, SimdField, SimdM31Ext3};
+use arith::{Field, FieldSerde};
 use expander_rs::{
     Circuit, Config, FieldType, GKRConfig, M31ExtConfig, Proof, Prover, Verifier, SENTINEL_BN254,
     SENTINEL_M31,

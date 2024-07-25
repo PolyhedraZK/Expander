@@ -3,7 +3,7 @@
 
 use std::io::{Read, Write};
 
-use arith::{Field, FieldSerde, MultiLinearPoly, SimdField};
+use arith::{Field, FieldSerde, MultiLinearPoly};
 
 use crate::GKRConfig;
 

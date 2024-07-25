@@ -1,5 +1,3 @@
-use arith::{Field, SimdField};
-
 use crate::GKRConfig;
 
 #[derive(Clone, Debug, Default)]

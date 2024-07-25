@@ -4,8 +4,6 @@ use std::{
     thread,
 };
 
-use arith::{BinomialExtensionField, Bn254DummyExt3, SimdM31Ext3};
-use arith::{FieldSerde, SimdField};
 use clap::Parser;
 use expander_rs::{Circuit, Config, GKRConfig, M31ExtConfig, Prover};
 

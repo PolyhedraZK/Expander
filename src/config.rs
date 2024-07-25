@@ -1,5 +1,3 @@
-use std::ops::Mul;
-
 use arith::{BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31Ext3, M31};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -57,7 +55,7 @@ pub trait GKRConfig: Default + Clone + Send + 'static {
     /// Main field type for the scheme, e.g., SimdM31Ext3
     type Field: BinomialExtensionField<3> + SimdField<Scalar = Self::ChallengeField> + Send;
 
-    ///
+    /// Field size for the main field
     const FIELD_SIZE: usize;
 
     const SECURITY_BITS: usize;
