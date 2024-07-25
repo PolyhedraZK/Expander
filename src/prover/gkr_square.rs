@@ -8,8 +8,6 @@ use crate::{
     sumcheck_prove_gkr_square_layer, Circuit, Config, GKRConfig, GkrScratchpad, Transcript,
 };
 
-// FIXME
-#[allow(clippy::type_complexity)]
 pub fn gkr_square_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
     sp: &mut GkrScratchpad<C>,
