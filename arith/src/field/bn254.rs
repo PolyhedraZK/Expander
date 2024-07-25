@@ -28,6 +28,11 @@ impl Field for Fr {
         Fr::zero()
     }
 
+    #[inline(always)]
+    fn is_zero(&self) -> bool {
+        *self == Fr::zero()
+    }
+
     /// Identity element
     #[inline(always)]
     fn one() -> Self {

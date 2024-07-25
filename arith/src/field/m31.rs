@@ -102,6 +102,11 @@ impl Field for M31 {
         M31 { v: 1 }
     }
 
+    #[inline(always)]
+    fn is_zero(&self) -> bool {
+        self.v == 0 || self.v == M31_MOD
+    }
+
     fn random_unsafe(mut rng: impl RngCore) -> Self {
         rng.next_u32().into()
     }

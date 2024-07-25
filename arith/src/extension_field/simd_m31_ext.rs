@@ -147,6 +147,11 @@ impl Field for SimdM31Ext3 {
     }
 
     #[inline(always)]
+    fn is_zero(&self) -> bool {
+        self.v[0].is_zero() && self.v[1].is_zero() && self.v[2].is_zero()
+    }
+
+    #[inline(always)]
     fn one() -> Self {
         SimdM31Ext3 {
             v: [SimdM31::one(), SimdM31::zero(), SimdM31::zero()],
