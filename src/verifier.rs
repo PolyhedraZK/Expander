@@ -224,7 +224,7 @@ impl<C: GKRConfig> Verifier<C> {
         grind::<C>(&mut transcript);
 
         let mut proof = proof.clone(); // FIXME: consider separating pointers to make proof always immutable?
-        
+
         #[cfg(feature = "grinding")]
         proof.step(commitment.size() + 32);
         #[cfg(not(feature = "grinding"))]
