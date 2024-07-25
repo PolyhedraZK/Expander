@@ -76,15 +76,12 @@ where
 
     for i_var in 0..layer.input_var_num {
         if i_var == 0 {
-            helper.prepare_g_x_vals()
+            helper.prepare_g_x_vals();
         }
-
         let evals: [F; D] = helper.poly_evals_at(i_var);
-
         for deg in 0..D {
             transcript.append_f(evals[deg]);
         }
-
         let r = transcript.challenge_f::<F>();
 
         log::trace!("i_var={} evals: {:?} r: {:?}", i_var, evals, r);

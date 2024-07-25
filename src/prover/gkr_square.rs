@@ -24,7 +24,6 @@ where
     for _i in 0..circuit.layers.last().unwrap().output_var_num {
         rz0.push(transcript.challenge_f::<F>());
     }
-
     let claimed_v = MultiLinearPoly::<F>::eval_multilinear(
         &circuit.layers.last().unwrap().output_vals.evals,
         &rz0,

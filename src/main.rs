@@ -1,7 +1,6 @@
 // TODO: move this to `bench` repo and refactor with criterion
 use std::{
-    sync::{Arc, Mutex},
-    thread,
+    process::exit, sync::{Arc, Mutex}, thread
 };
 
 use arith::{BinomialExtensionField, Bn254DummyExt3, SimdM31Ext3};
@@ -109,7 +108,6 @@ where
                     prover.prove(&c);
                     // update cnt
                     let mut cnt = partial_proof_cnt.lock().unwrap();
-
                     let proof_cnt_this_round = circuit_copy_size * pack_size;
                     *cnt += proof_cnt_this_round;
                 }
