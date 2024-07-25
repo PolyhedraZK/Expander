@@ -3,7 +3,7 @@
 use arith::{Field, MultiLinearPoly};
 use ark_std::{end_timer, start_timer};
 
-use crate::{sumcheck_prove_gkr_layer, Circuit, Config, GKRConfig, GkrScratchpad, Transcript};
+use crate::{sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, Transcript};
 
 // FIXME
 #[allow(clippy::type_complexity)]
@@ -11,7 +11,6 @@ pub fn gkr_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
     sp: &mut GkrScratchpad<C>,
     transcript: &mut Transcript,
-    config: &Config,
 ) -> (C::Field, Vec<C::ChallengeField>, Vec<C::ChallengeField>) {
     let timer = start_timer!(|| "gkr prove");
     let layer_num = circuit.layers.len();
@@ -40,7 +39,6 @@ pub fn gkr_prove<C: GKRConfig>(
             &beta,
             transcript,
             sp,
-            config,
         );
         alpha = transcript.challenge_f::<C>();
         beta = transcript.challenge_f::<C>();

@@ -18,6 +18,7 @@ impl Default for Transcript {
 impl Transcript {
     pub const DIGEST_SIZE: usize = 32;
 
+    #[inline]
     fn hash_to_digest(&mut self) {
         let hash_end_idx = self.proof.bytes.len();
         if hash_end_idx > self.hash_start_idx {
@@ -42,22 +43,26 @@ impl Transcript {
             proof: Proof::default(),
         }
     }
+
     #[inline]
     pub fn append_f<C: GKRConfig>(&mut self, f: C::Field) {
         let cur_size = self.proof.bytes.len();
         self.proof.bytes.resize(cur_size + C::Field::SIZE, 0);
         f.serialize_into(&mut self.proof.bytes[cur_size..]);
     }
+
     #[inline]
     pub fn append_u8_slice(&mut self, buffer: &[u8]) {
         self.proof.bytes.extend_from_slice(buffer);
     }
+
     #[inline]
     pub fn challenge_f<C: GKRConfig>(&mut self) -> C::ChallengeField {
         self.hash_to_digest();
         assert!(C::ChallengeField::SIZE <= Self::DIGEST_SIZE);
         C::ChallengeField::from_uniform_bytes(&self.digest)
     }
+
     #[inline]
     pub fn challenge_fs<C: GKRConfig>(&mut self, size: usize) -> Vec<C::ChallengeField> {
         (0..size).map(|_| self.challenge_f::<C>()).collect()

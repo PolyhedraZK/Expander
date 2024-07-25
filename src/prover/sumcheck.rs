@@ -1,6 +1,5 @@
 use crate::{
-    CircuitLayer, Config, GKRConfig, GkrScratchpad, SumcheckGkrHelper, SumcheckGkrSquareHelper,
-    Transcript,
+    CircuitLayer, GKRConfig, GkrScratchpad, SumcheckGkrHelper, SumcheckGkrSquareHelper, Transcript,
 };
 
 // FIXME
@@ -14,7 +13,6 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     beta: &C::ChallengeField,
     transcript: &mut Transcript,
     sp: &mut GkrScratchpad<C>,
-    _config: &Config, // todo: remove
 ) -> (Vec<C::ChallengeField>, Vec<C::ChallengeField>) {
     let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, alpha, beta, sp);
 
@@ -62,7 +60,6 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
     rz0: &[C::ChallengeField],
     transcript: &mut Transcript,
     sp: &mut GkrScratchpad<C>,
-    _config: &Config,
 ) -> Vec<C::ChallengeField> {
     const D: usize = 7;
     let mut helper = SumcheckGkrSquareHelper::new(layer, rz0, sp);
@@ -91,6 +88,6 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
 
     log::trace!("claimed vx = {:?}", helper.vx_claim());
     transcript.append_f::<C>(helper.vx_claim());
-    
+
     helper.rx
 }

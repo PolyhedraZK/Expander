@@ -4,8 +4,8 @@ use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
-    eq_evals_at_primitive, grind, Circuit, CircuitLayer, Config, GKRConfig, Gate, Proof,
-    RawCommitment, Transcript,
+    eq_evals_at_primitive, grind, Circuit, CircuitLayer, GKRConfig, Gate, Proof, RawCommitment,
+    Transcript,
 };
 
 #[inline]
@@ -61,7 +61,6 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     beta: C::ChallengeField,
     proof: &mut Proof,
     transcript: &mut Transcript,
-    _config: &Config,
 ) -> (
     bool,
     Vec<C::ChallengeField>,
@@ -139,7 +138,6 @@ pub fn gkr_verify<C: GKRConfig>(
     claimed_v: &C::Field,
     transcript: &mut Transcript,
     proof: &mut Proof,
-    config: &Config,
 ) -> (
     bool,
     Vec<C::ChallengeField>,
@@ -173,7 +171,6 @@ pub fn gkr_verify<C: GKRConfig>(
             beta,
             proof,
             transcript,
-            config,
         );
         verified &= cur_verified;
         alpha = transcript.challenge_f::<C>();
@@ -192,15 +189,12 @@ pub fn gkr_verify<C: GKRConfig>(
 }
 
 pub struct Verifier<C: GKRConfig> {
-    config: Config,
     phantom: PhantomData<C>,
 }
 
 impl<C: GKRConfig> Verifier<C> {
-    // todo: FIXME
-    pub fn new(config: &Config) -> Self {
-        Verifier {
-            config: config.clone(),
+    pub fn new() -> Self {
+        Self {
             phantom: PhantomData,
         }
     }
@@ -218,21 +212,16 @@ impl<C: GKRConfig> Verifier<C> {
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
-        grind::<C>(&mut transcript, &self.config);
+        grind::<C>(&mut transcript);
         let mut proof = proof.clone(); // FIXME: consider separating pointers to make proof always immutable?
         proof.step(commitment.size() + 256 / 8);
 
-        let (mut verified, rz0, rz1, claimed_v0, claimed_v1) = gkr_verify(
-            circuit,
-            claimed_v,
-            &mut transcript,
-            &mut proof,
-            &self.config,
-        );
+        let (mut verified, rz0, rz1, claimed_v0, claimed_v1) =
+            gkr_verify(circuit, claimed_v, &mut transcript, &mut proof);
 
         log::info!("GKR verification: {}", verified);
 
-        match self.config.polynomial_commitment_type {
+        match C::POLYNOMIAL_COMMITMENT_TYPE {
             crate::PolynomialCommitmentType::Raw => {
                 // for Raw, no need to load from proof
                 log::trace!("rz0.size() = {}", rz0.len());

@@ -4,15 +4,12 @@
 use arith::MultiLinearPoly;
 use ark_std::{end_timer, start_timer};
 
-use crate::{
-    sumcheck_prove_gkr_square_layer, Circuit, Config, GKRConfig, GkrScratchpad, Transcript,
-};
+use crate::{sumcheck_prove_gkr_square_layer, Circuit, GKRConfig, GkrScratchpad, Transcript};
 
 pub fn gkr_square_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
     sp: &mut GkrScratchpad<C>,
     transcript: &mut Transcript,
-    config: &Config,
 ) -> (C::Field, Vec<C::ChallengeField>) {
     let timer = start_timer!(|| "gkr^2 prove");
     let layer_num = circuit.layers.len();
@@ -28,7 +25,7 @@ pub fn gkr_square_prove<C: GKRConfig>(
     );
 
     for i in (0..layer_num).rev() {
-        rz0 = sumcheck_prove_gkr_square_layer(&circuit.layers[i], &rz0, transcript, sp, config);
+        rz0 = sumcheck_prove_gkr_square_layer(&circuit.layers[i], &rz0, transcript, sp);
 
         log::trace!("Layer {} proved", i);
         log::trace!("rz0.0: {:?}", rz0[0]);

@@ -5,7 +5,7 @@ use std::{
 };
 
 use clap::Parser;
-use expander_rs::{Circuit, Config, GKRConfig, M31ExtConfig, Prover};
+use expander_rs::{BN254Config, Circuit, GKRConfig, M31ExtConfig, Prover};
 
 const KECCAK_CIRCUIT: &str = "data/circuit.txt";
 // circuit for repeating Poseidon for 120 times
@@ -41,13 +41,13 @@ fn main() {
     print_info(&args);
 
     match args.field.as_str() {
-        "m31ext3" => run_benchmark::<M31ExtConfig>(&args, Config::m31_ext3_config()),
-        // "fr" => run_benchmark::<Bn254DummyExt3>(&args, Config::bn254_config()),
+        "m31ext3" => run_benchmark::<M31ExtConfig>(&args),
+        "fr" => run_benchmark::<BN254Config>(&args),
         _ => unreachable!(),
     };
 }
 
-fn run_benchmark<C>(args: &Args, config: Config)
+fn run_benchmark<C>(args: &Args)
 where
     C: GKRConfig,
 {
@@ -87,11 +87,10 @@ where
         .enumerate()
         .map(|(i, c)| {
             let partial_proof_cnt = partial_proof_cnts[i].clone();
-            let local_config = config.clone();
             thread::spawn(move || {
                 loop {
                     // bench func
-                    let mut prover = Prover::new(&local_config);
+                    let mut prover = Prover::new();
                     prover.prepare_mem(&c);
                     prover.prove(&c);
                     // update cnt

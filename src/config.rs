@@ -1,4 +1,5 @@
 use arith::{BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31Ext3, M31};
+use halo2curves::bn256::Fr;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PolynomialCommitmentType {
@@ -32,17 +33,6 @@ pub enum FiatShamirHashType {
     Poseidon,
     Animoe,
     MIMC7,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Config {
-    pub field_size: usize,
-    pub security_bits: usize,
-    pub grinding_bits: usize,
-    pub polynomial_commitment_type: PolynomialCommitmentType,
-    pub field_type: FieldType, // LATER: consider infer this from trait
-    pub fs_hash: FiatShamirHashType,
-    pub gkr_square: bool,
 }
 
 pub trait GKRConfig: Default + Clone + Send + 'static {
@@ -118,93 +108,40 @@ impl GKRConfig for M31ExtConfig {
     }
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self::m31_config()
-    }
-}
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct BN254Config;
 
-impl Config {
-    pub fn m31_config() -> Self {
-        println!("===================================================");
-        println!("WARNING: Using M31 for testing purposes only.");
-        println!("WARNING: Do not use in production.");
-        println!("WARNING: M31 may not give you enough soundness.");
-        println!("WARNING: consider to use M31Ext3 or Bn254::Fr instead.");
-        println!("===================================================");
+impl GKRConfig for BN254Config {
+    type CircuitField = Fr;
 
-        let security_bits = 100;
-        let grinding_bits = 10;
+    type ChallengeField = Fr;
 
-        let field_size = 31;
+    type Field = Fr;
 
-        let polynomial_commitment_type = PolynomialCommitmentType::Raw;
-        let field_type = FieldType::M31;
-        let fs_hash = FiatShamirHashType::SHA256;
+    const FIELD_SIZE: usize = 254;
 
-        if polynomial_commitment_type == PolynomialCommitmentType::KZG {
-            assert_eq!(field_type, FieldType::BN254);
-        }
+    const SECURITY_BITS: usize = 100;
 
-        Config {
-            field_size, // update later
-            security_bits,
-            grinding_bits,
-            polynomial_commitment_type,
-            field_type,
-            fs_hash,
-            gkr_square: false,
-        }
+    const GRINDING_BITS: usize = 0;
+
+    const POLYNOMIAL_COMMITMENT_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;
+
+    const FIELD_TYPE: FieldType = FieldType::BN254;
+
+    const FS_HASH: FiatShamirHashType = FiatShamirHashType::SHA256;
+
+    const GKR_SQUARE: bool = false;
+
+    #[inline(always)]
+    fn challenge_mul_circuit(
+        a: &Self::ChallengeField,
+        b: &Self::CircuitField,
+    ) -> Self::ChallengeField {
+        a * b
     }
 
-    // using degree 3 extension of m31
-    pub fn m31_ext3_config() -> Self {
-        let security_bits = 100;
-        let grinding_bits = 10;
-
-        let field_size = 93;
-
-        let polynomial_commitment_type = PolynomialCommitmentType::Raw;
-        let field_type = FieldType::M31;
-        let fs_hash = FiatShamirHashType::SHA256;
-
-        if polynomial_commitment_type == PolynomialCommitmentType::KZG {
-            assert_eq!(field_type, FieldType::BN254);
-        }
-
-        Config {
-            field_size, // update later
-            security_bits,
-            grinding_bits,
-            polynomial_commitment_type,
-            field_type,
-            fs_hash,
-            gkr_square: false,
-        }
-    }
-
-    pub fn bn254_config() -> Self {
-        let security_bits = 128;
-        let grinding_bits = 0;
-
-        let field_size = 254;
-
-        let polynomial_commitment_type = PolynomialCommitmentType::Raw;
-        let field_type = FieldType::BN254;
-        let fs_hash = FiatShamirHashType::SHA256;
-
-        if polynomial_commitment_type == PolynomialCommitmentType::KZG {
-            assert_eq!(field_type, FieldType::BN254);
-        }
-
-        Config {
-            field_size, // update later
-            security_bits,
-            grinding_bits,
-            polynomial_commitment_type,
-            field_type,
-            fs_hash,
-            gkr_square: false,
-        }
+    #[inline(always)]
+    fn field_mul_circuit(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
+        a * b
     }
 }

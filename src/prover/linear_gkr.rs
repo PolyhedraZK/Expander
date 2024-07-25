@@ -4,12 +4,12 @@ use arith::{Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
-    gkr_prove, gkr_square_prove, Circuit, Config, GKRConfig, GkrScratchpad, Proof, RawCommitment,
+    gkr_prove, gkr_square_prove, Circuit, GKRConfig, GkrScratchpad, Proof, RawCommitment,
     Transcript,
 };
 
-pub fn grind<C: GKRConfig>(transcript: &mut Transcript, config: &Config) {
-    let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
+pub fn grind<C: GKRConfig>(transcript: &mut Transcript) {
+    let timer = start_timer!(|| format!("grind {} bits", C::GRINDING_BITS));
 
     let mut hash_bytes = vec![];
 
@@ -24,7 +24,7 @@ pub fn grind<C: GKRConfig>(transcript: &mut Transcript, config: &Config) {
     assert!(hash_bytes.len() >= 32, "hash len: {}", hash_bytes.len());
     hash_bytes.truncate(32);
 
-    for _ in 0..(1 << config.grinding_bits) {
+    for _ in 0..(1 << C::GRINDING_BITS) {
         transcript.hasher.hash_inplace(&mut hash_bytes, 32);
     }
     transcript.append_u8_slice(&hash_bytes[..32]);
@@ -32,20 +32,12 @@ pub fn grind<C: GKRConfig>(transcript: &mut Transcript, config: &Config) {
 }
 
 pub struct Prover<C: GKRConfig> {
-    config: Config,
     sp: GkrScratchpad<C>,
 }
 
 impl<C: GKRConfig> Prover<C> {
-    pub fn new(config: &Config) -> Self {
-        // assert_eq!(config.field_type, crate::config::FieldType::M31);
-        assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
-        assert_eq!(
-            config.polynomial_commitment_type,
-            crate::config::PolynomialCommitmentType::Raw
-        );
+    pub fn new() -> Self {
         Prover {
-            config: config.clone(),
             sp: GkrScratchpad::<C>::default(),
         }
     }
@@ -78,19 +70,19 @@ impl<C: GKRConfig> Prover<C> {
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(&buffer);
 
-        grind::<C>(&mut transcript, &self.config);
+        grind::<C>(&mut transcript);
         let claimed_v: C::Field;
         let mut _rz0s = vec![];
         let mut _rz1s = vec![];
 
-        if self.config.gkr_square {
-            (claimed_v, _rz0s) = gkr_square_prove(c, &mut self.sp, &mut transcript, &self.config);
+        if C::GKR_SQUARE {
+            (claimed_v, _rz0s) = gkr_square_prove(c, &mut self.sp, &mut transcript);
         } else {
-            (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript, &self.config);
+            (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript);
         }
 
         // open
-        match self.config.polynomial_commitment_type {
+        match C::POLYNOMIAL_COMMITMENT_TYPE {
             crate::config::PolynomialCommitmentType::Raw => {
                 // no need to update transcript
             }

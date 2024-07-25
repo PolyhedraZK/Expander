@@ -221,7 +221,6 @@ impl MulAssign for SimdM31Ext3 {
     }
 }
 
-
 impl Mul<M31Ext3> for SimdM31Ext3 {
     type Output = Self;
     #[inline(always)]

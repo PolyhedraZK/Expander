@@ -395,7 +395,6 @@ fn mul_internal(a: &[M31; 3], b: &[M31; 3]) -> [M31; 3] {
     res
 }
 
-
 #[inline(always)]
 fn square_internal(a: &[M31; 3]) -> [M31; 3] {
     let mut res = [M31::default(); 3];
