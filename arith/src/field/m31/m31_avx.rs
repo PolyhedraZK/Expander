@@ -294,8 +294,27 @@ impl Mul<&M31> for AVXM31 {
     #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
         unsafe {
-            let rhs_p = _mm256_set1_epi32(rhs.v as i32);
-            self * AVXM31 { v: rhs_p }
+            let lhs_evn = self.v;
+            let lhs_odd_dbl = _mm256_srli_epi64::<31>(self.v);
+
+            let rhs: __m256i = transmute::<[u32; 8], _>([rhs.v; 8]);
+
+            let prod_odd_dbl = _mm256_mul_epu32(lhs_odd_dbl, rhs);
+            let prod_evn = _mm256_mul_epu32(lhs_evn, rhs);
+
+            let prod_odd_lo_dirty = _mm256_slli_epi64::<31>(prod_odd_dbl);
+            let prod_evn_hi = _mm256_srli_epi64::<31>(prod_evn);
+
+            let prod_lo_dirty = _mm256_blend_epi32::<0b10101010>(prod_evn, prod_odd_lo_dirty);
+
+            let prod_hi = _mm256_blend_epi32::<0b10101010>(prod_evn_hi, prod_odd_dbl);
+            let prod_lo = _mm256_and_si256(prod_lo_dirty, PACKED_MOD);
+
+            let t = _mm256_add_epi32(prod_hi, prod_lo);
+            let u = _mm256_sub_epi32(t, PACKED_MOD);
+            let res = _mm256_min_epu32(t, u);
+
+            AVXM31 { v: res }
         }
     }
 }
