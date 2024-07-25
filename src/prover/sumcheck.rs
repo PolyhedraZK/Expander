@@ -90,10 +90,6 @@ where
         log::trace!("i_var={} evals: {:?} r: {:?}", i_var, evals, r);
 
         helper.receive_challenge(i_var, r);
-        if i_var == layer.input_var_num - 1 {
-            log::trace!("vx claim: {:?}", helper.vx_claim());
-            transcript.append_f(helper.vx_claim());
-        }
     }
 
     log::trace!("claimed vx = {:?}", helper.vx_claim());

@@ -77,7 +77,6 @@ impl<F: BinomialExtensionField<3> + FieldSerde + SimdField> Prover<F> {
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(&buffer);
 
-        grind::<F>(&mut transcript, &self.config);
         let claimed_v: F;
         let mut _rz0s = vec![];
         let mut _rz1s = vec![];
