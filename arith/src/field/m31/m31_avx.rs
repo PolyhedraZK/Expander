@@ -291,13 +291,14 @@ impl Mul for AVXM31 {
 
 impl Mul<&M31> for AVXM31 {
     type Output = AVXM31;
+
     #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
         unsafe {
             let lhs_evn = self.v;
             let lhs_odd_dbl = _mm256_srli_epi64::<31>(self.v);
 
-            let rhs: __m256i = transmute::<[u32; 8], _>([rhs.v; 8]);
+            let rhs = _mm256_set1_epi32(rhs.v as i32);
 
             let prod_odd_dbl = _mm256_mul_epu32(lhs_odd_dbl, rhs);
             let prod_evn = _mm256_mul_epu32(lhs_evn, rhs);
