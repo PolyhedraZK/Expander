@@ -52,26 +52,6 @@ impl NeonM31 {
         };
         res
     }
-
-    #[inline(always)]
-    pub(crate) fn mul_by_10(&self) -> NeonM31 {
-        let mut res = NeonM31 {
-            v: [PACKED_0, PACKED_0],
-        };
-        res.v[0] = unsafe {
-            let double = reduce_sum(vshlq_n_u32(self.v[0], 1));
-            let quad = reduce_sum(vshlq_n_u32(double, 1));
-            let oct = reduce_sum(vshlq_n_u32(quad, 1));
-            reduce_sum(vaddq_u32(oct, double))
-        };
-        res.v[1] = unsafe {
-            let double = reduce_sum(vshlq_n_u32(self.v[1], 1));
-            let quad = reduce_sum(vshlq_n_u32(double, 1));
-            let oct = reduce_sum(vshlq_n_u32(quad, 1));
-            reduce_sum(vaddq_u32(oct, double))
-        };
-        res
-    }
 }
 
 impl FieldSerde for NeonM31 {
