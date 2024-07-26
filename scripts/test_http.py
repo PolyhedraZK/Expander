@@ -43,3 +43,14 @@ if __name__ == '__main__':
     # check failure message
     assert response.text == "failure", f"Failed to detect tempered proof: {response.text}"
     print("Tempered proof detected successfully")
+
+    # try prove using witness with invalid length
+    tempered_witness = witness[:-1]
+    prove_headers = {
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': str(len(tempered_witness)),
+    }
+    response = requests.post(url+"/prove", headers=prove_headers, data=tempered_witness)
+    # check 400
+    assert response.status_code == 400, f"Failed to detect invalid witness length: {response.text}"
+    print("Invalid witness length detected successfully")

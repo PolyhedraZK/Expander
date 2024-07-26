@@ -11,7 +11,7 @@ use expander_rs::{
     SENTINEL_BN254, SENTINEL_M31,
 };
 use log::{debug, info};
-use warp::Filter;
+use warp::{http::StatusCode, reply, Filter};
 
 fn dump_proof_and_claimed_v<F: Field + FieldSerde>(proof: &Proof, claimed_v: &F) -> Vec<u8> {
     let mut bytes = Vec::new();
@@ -95,10 +95,16 @@ async fn run_command<C: GKRConfig>(command: &str, circuit_file: &str, args: &[St
                         let witness_bytes: Vec<u8> = bytes.to_vec();
                         let mut circuit = circuit.lock().unwrap();
                         let mut prover = prover.lock().unwrap();
-                        circuit.load_witness_bytes(&witness_bytes);
-                        circuit.evaluate();
-                        let (claimed_v, proof) = prover.prove(&circuit);
-                        dump_proof_and_claimed_v(&proof, &claimed_v)
+                        if circuit.load_witness_bytes(&witness_bytes).is_err() {
+                            reply::with_status(vec![], StatusCode::BAD_REQUEST)
+                        } else {
+                            circuit.evaluate();
+                            let (claimed_v, proof) = prover.prove(&circuit);
+                            reply::with_status(
+                                dump_proof_and_claimed_v(&proof, &claimed_v),
+                                StatusCode::OK,
+                            )
+                        }
                     });
             let verify =
                 warp::path("verify")
@@ -119,12 +125,15 @@ async fn run_command<C: GKRConfig>(command: &str, circuit_file: &str, args: &[St
 
                         let mut circuit = circuit_clone_for_verifier.lock().unwrap();
                         let verifier = verifier.lock().unwrap();
-                        circuit.load_witness_bytes(witness_bytes);
-                        let (proof, claimed_v) = load_proof_and_claimed_v(proof_bytes);
-                        if verifier.verify(&circuit, &claimed_v, &proof) {
-                            "success".to_string()
-                        } else {
+                        if circuit.load_witness_bytes(witness_bytes).is_err() {
                             "failure".to_string()
+                        } else {
+                            let (proof, claimed_v) = load_proof_and_claimed_v(proof_bytes);
+                            if verifier.verify(&circuit, &claimed_v, &proof) {
+                                "success".to_string()
+                            } else {
+                                "failure".to_string()
+                            }
                         }
                     });
             warp::serve(warp::post().and(prove.or(verify)))

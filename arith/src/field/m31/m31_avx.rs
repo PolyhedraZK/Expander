@@ -83,6 +83,23 @@ impl FieldSerde for AVXM31 {
         );
         Self::pack_full(u32::from_le_bytes(buf[..4].try_into().unwrap()).into())
     }
+
+    fn try_deserialize_from_ecc_format<R: Read>(
+        mut reader: R,
+    ) -> std::result::Result<Self, std::io::Error>
+    where
+        Self: Sized,
+    {
+        let mut buf = [0u8; 32];
+        reader.read_exact(&mut buf)?;
+        assert!(
+            buf.iter().skip(4).all(|&x| x == 0),
+            "non-zero byte found in witness byte"
+        );
+        Ok(Self::pack_full(
+            u32::from_le_bytes(buf[..4].try_into().unwrap()).into(),
+        ))
+    }
 }
 
 impl Field for AVXM31 {
