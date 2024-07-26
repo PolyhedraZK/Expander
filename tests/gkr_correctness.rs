@@ -1,5 +1,6 @@
 use expander_rs::{
-    BN254Config, Circuit, CircuitLayer, GKRConfig, GateAdd, GateMul, M31ExtConfig, Prover, Verifier,
+    BN254Config, Circuit, CircuitLayer, Config, GKRConfig, GKRScheme, GateAdd, GateMul,
+    M31ExtConfig, Prover, Verifier,
 };
 
 use rand::Rng;
@@ -43,11 +44,11 @@ fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
 
 #[test]
 fn test_gkr_correctness() {
-    test_gkr_correctness_helper::<M31ExtConfig>();
-    test_gkr_correctness_helper::<BN254Config>();
+    test_gkr_correctness_helper::<M31ExtConfig>(&Config::<M31ExtConfig>::new(GKRScheme::Vanilla));
+    test_gkr_correctness_helper::<BN254Config>(&Config::<BN254Config>::new(GKRScheme::Vanilla));
 }
 
-fn test_gkr_correctness_helper<C: GKRConfig>() {
+fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     println!("Config created.");
     let mut circuit = Circuit::<C>::load_circuit(CIRCUIT_NAME);
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
@@ -69,7 +70,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>() {
     // println!("Output: {:?}", circuit.layers.last().unwrap().output_vals.evals);
     println!("Circuit evaluated.");
 
-    let mut prover = Prover::new();
+    let mut prover = Prover::new(&config);
     prover.prepare_mem(&circuit);
     let (claimed_v, proof) = prover.prove(&circuit);
     println!("Proof generated. Size: {} bytes", proof.bytes.len());
@@ -93,7 +94,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>() {
     println!();
 
     // Verify
-    let verifier = Verifier::new();
+    let verifier = Verifier::new(&config);
     println!("Verifier created.");
     assert!(verifier.verify(&circuit, &claimed_v, &proof));
     println!("Correct proof verified.");

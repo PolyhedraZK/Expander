@@ -9,6 +9,12 @@ pub enum PolynomialCommitmentType {
     FRI,
 }
 
+impl Default for PolynomialCommitmentType {
+    fn default() -> Self {
+        PolynomialCommitmentType::Raw
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldType {
     M31,
@@ -27,6 +33,18 @@ pub const SENTINEL_BN254: [u8; 32] = [
 ];
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum GKRScheme {
+    Vanilla,
+    GkrSquare,
+}
+
+impl Default for GKRScheme {
+    fn default() -> Self {
+        GKRScheme::Vanilla
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum FiatShamirHashType {
     SHA256,
     Keccak256,
@@ -35,7 +53,62 @@ pub enum FiatShamirHashType {
     MIMC7,
 }
 
-pub trait GKRConfig: Default + Clone + Send + 'static {
+impl Default for FiatShamirHashType {
+    fn default() -> Self {
+        FiatShamirHashType::SHA256
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Config<C: GKRConfig> {
+    // Field size for the variables
+    pub field_size: usize,
+    // Targeted security level for the scheme
+    pub security_bits: usize,
+    #[cfg(feature = "grinding")]
+    // Grinding bits to achieve the target security level
+    pub grinding_bits: usize,
+    // Polynomial commitment scheme
+    pub polynomial_commitment_type: PolynomialCommitmentType,
+    // Enum type for the field
+    pub fs_hash: FiatShamirHashType,
+    // Configuration for GKR
+    pub gkr_config: C,
+    //  Whether to use GKR^2
+    pub gkr_scheme: GKRScheme,
+}
+
+impl Config<M31ExtConfig> {
+    pub fn new(gkr_scheme: GKRScheme) -> Self {
+        Config {
+            field_size: 93,
+            security_bits: 100,
+            #[cfg(feature = "grinding")]
+            grinding_bits: 10,
+            polynomial_commitment_type: PolynomialCommitmentType::Raw,
+            fs_hash: FiatShamirHashType::SHA256,
+            gkr_config: M31ExtConfig::default(),
+            gkr_scheme,
+        }
+    }
+}
+
+impl Config<BN254Config> {
+    pub fn new(gkr_scheme: GKRScheme) -> Self {
+        Config {
+            field_size: 93,
+            security_bits: 100,
+            #[cfg(feature = "grinding")]
+            grinding_bits: 10,
+            polynomial_commitment_type: PolynomialCommitmentType::Raw,
+            fs_hash: FiatShamirHashType::SHA256,
+            gkr_config: BN254Config::default(),
+            gkr_scheme,
+        }
+    }
+}
+
+pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     /// Field type for the circuit, e.g., M31
     type CircuitField: Field + FieldSerde + Send;
 
@@ -45,27 +118,8 @@ pub trait GKRConfig: Default + Clone + Send + 'static {
     /// Main field type for the scheme, e.g., SimdM31Ext3
     type Field: BinomialExtensionField + SimdField<Scalar = Self::ChallengeField> + Send;
 
-    /// Field size for the main field
-    const FIELD_SIZE: usize;
-
-    /// Targeted security level for the scheme
-    const SECURITY_BITS: usize;
-
-    /// Grinding bits to achieve the target security level
-    #[cfg(feature = "grinding")]
-    const GRINDING_BITS: usize;
-
-    /// Polynomial commitment scheme
-    const POLYNOMIAL_COMMITMENT_TYPE: PolynomialCommitmentType;
-
     /// Enum type for Self::Field
     const FIELD_TYPE: FieldType;
-
-    /// Configuration for FIAT-SHAMIR transformation
-    const FS_HASH: FiatShamirHashType;
-
-    /// If this is a GKR^2 scheme
-    const GKR_SQUARE: bool;
 
     /// API to allow for multiplications between the challenge and the circuit field
     fn challenge_mul_circuit_field(
@@ -90,20 +144,7 @@ impl GKRConfig for M31ExtConfig {
 
     type Field = SimdM31Ext3;
 
-    const FIELD_SIZE: usize = 93;
-
-    const SECURITY_BITS: usize = 100;
-
-    #[cfg(feature = "grinding")]
-    const GRINDING_BITS: usize = 10;
-
-    const POLYNOMIAL_COMMITMENT_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;
-
     const FIELD_TYPE: FieldType = FieldType::M31;
-
-    const FS_HASH: FiatShamirHashType = FiatShamirHashType::SHA256;
-
-    const GKR_SQUARE: bool = false;
 
     #[inline(always)]
     fn challenge_mul_circuit_field(
@@ -138,20 +179,7 @@ impl GKRConfig for BN254Config {
 
     type Field = Fr;
 
-    const FIELD_SIZE: usize = 254;
-
-    const SECURITY_BITS: usize = 100;
-
-    #[cfg(feature = "grinding")]
-    const GRINDING_BITS: usize = 0;
-
-    const POLYNOMIAL_COMMITMENT_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;
-
     const FIELD_TYPE: FieldType = FieldType::BN254;
-
-    const FS_HASH: FiatShamirHashType = FiatShamirHashType::SHA256;
-
-    const GKR_SQUARE: bool = false;
 
     #[inline(always)]
     fn challenge_mul_circuit_field(

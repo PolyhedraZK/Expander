@@ -5,7 +5,7 @@ use std::{
 };
 
 use clap::Parser;
-use expander_rs::{BN254Config, Circuit, GKRConfig, M31ExtConfig, Prover};
+use expander_rs::{BN254Config, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfig, Prover};
 
 // circuit for repeating Keccak for 8 times
 const KECCAK_CIRCUIT: &str = "data/circuit.txt";
@@ -40,18 +40,15 @@ fn main() {
     print_info(&args);
 
     match args.field.as_str() {
-        "m31ext3" => run_benchmark::<M31ExtConfig>(&args),
-        "fr" => run_benchmark::<BN254Config>(&args),
+        "m31ext3" => {
+            run_benchmark::<M31ExtConfig>(&args, Config::<M31ExtConfig>::new(GKRScheme::GkrSquare))
+        }
+        "fr" => run_benchmark::<BN254Config>(&args, Config::<BN254Config>::new(GKRScheme::Vanilla)),
         _ => unreachable!(),
     };
 }
 
-fn run_benchmark<C>(args: &Args)
-where
-    C: GKRConfig,
-{
-    println!("benchmarking keccak over {}", args.field);
-
+fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     let partial_proof_cnts = (0..args.threads)
         .map(|_| Arc::new(Mutex::new(0)))
         .collect::<Vec<_>>();
@@ -94,10 +91,11 @@ where
         .enumerate()
         .map(|(i, c)| {
             let partial_proof_cnt = partial_proof_cnts[i].clone();
+            let local_config = config.clone();
             thread::spawn(move || {
                 loop {
                     // bench func
-                    let mut prover = Prover::new();
+                    let mut prover = Prover::new(&local_config);
                     prover.prepare_mem(&c);
                     prover.prove(&c);
                     // update cnt
@@ -124,8 +122,14 @@ where
 }
 
 fn print_info(args: &Args) {
+    println!("===============================");
+    println!(
+        "benchmarking {} with GKR^2 over {}",
+        args.scheme, args.field
+    );
     println!("field:          {}", args.field);
     println!("#threads:       {}", args.threads);
     println!("#bench repeats: {}", args.repeats);
-    println!("scheme:         {}", args.scheme);
+    println!("hash scheme:    {}", args.scheme);
+    println!("===============================")
 }
