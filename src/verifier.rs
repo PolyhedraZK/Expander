@@ -1,4 +1,4 @@
-use std::{io::Cursor, marker::PhantomData, vec};
+use std::{io::Cursor, vec};
 
 use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
@@ -7,7 +7,8 @@ use ark_std::{end_timer, start_timer};
 use crate::grind;
 
 use crate::{
-    eq_evals_at_primitive, Circuit, CircuitLayer, GKRConfig, Gate, Proof, RawCommitment, Transcript,
+    eq_evals_at_primitive, Circuit, CircuitLayer, Config, GKRConfig, Gate, Proof, RawCommitment,
+    Transcript,
 };
 
 #[inline]
@@ -191,20 +192,22 @@ pub fn gkr_verify<C: GKRConfig>(
 }
 
 pub struct Verifier<C: GKRConfig> {
-    phantom: PhantomData<C>,
+    config: Config<C>,
 }
 
 impl<C: GKRConfig> Default for Verifier<C> {
     fn default() -> Self {
         Self {
-            phantom: PhantomData,
+            config: Config::<C>::default(),
         }
     }
 }
 
 impl<C: GKRConfig> Verifier<C> {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(config: &Config<C>) -> Self {
+        Verifier {
+            config: config.clone(),
+        }
     }
 
     pub fn verify(&self, circuit: &Circuit<C>, claimed_v: &C::Field, proof: &Proof) -> bool {
@@ -221,7 +224,7 @@ impl<C: GKRConfig> Verifier<C> {
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
         #[cfg(feature = "grinding")]
-        grind::<C>(&mut transcript);
+        grind::<C>(&mut transcript, &self.config);
 
         let mut proof = proof.clone(); // FIXME: consider separating pointers to make proof always immutable?
 
@@ -235,7 +238,7 @@ impl<C: GKRConfig> Verifier<C> {
 
         log::info!("GKR verification: {}", verified);
 
-        match C::POLYNOMIAL_COMMITMENT_TYPE {
+        match self.config.polynomial_commitment_type {
             crate::PolynomialCommitmentType::Raw => {
                 // for Raw, no need to load from proof
                 log::trace!("rz0.size() = {}", rz0.len());
