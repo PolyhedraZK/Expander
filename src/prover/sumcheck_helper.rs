@@ -66,23 +66,24 @@ impl SumcheckMultilinearProdHelper {
         }
     }
 
-    fn poly_eval_at<F: Field>(
+    fn poly_eval_at<C: GKRConfig>(
         &self,
         var_idx: usize,
         degree: usize,
-        bk_f: &mut [F],
-        bk_hg: &mut [F],
-        init_v: &[F],
+        bk_f: &mut [C::Field],
+        bk_hg: &mut [C::Field],
+        init_v: &[C::SimdCircuitField],
         gate_exists: &[bool],
-    ) -> [F; 3] {
+    ) -> [C::Field; 3] {
         assert_eq!(degree, 2);
-        let mut p0 = F::zero();
-        let mut p1 = F::zero();
-        let mut p2 = F::zero();
+        let mut p0 = C::Field::zero();
+        let mut p1 = C::Field::zero();
+        let mut p2 = C::Field::zero();
         log::trace!("bk_f: {:?}", &bk_f[..4]);
         log::trace!("bk_hg: {:?}", &bk_hg[..4]);
         log::trace!("init_v: {:?}", &init_v[..4]);
-        let src_v = if var_idx == 0 { init_v } else { bk_f };
+        let init_v_field : Vec<C::Field> = init_v.iter().map(|x| C::simd_circuit_field_into_field(x)).collect();
+        let src_v = if var_idx == 0 { init_v_field } else { bk_f.to_vec() };
         let eval_size = 1 << (self.var_num - var_idx - 1);
         log::trace!("Eval size: {}", eval_size);
         for i in 0..eval_size {
@@ -114,18 +115,19 @@ impl SumcheckMultilinearProdHelper {
         r: C::ChallengeField,
         bk_f: &mut [C::Field],
         bk_hg: &mut [C::Field],
-        init_v: &[C::Field],
+        init_v: &[C::SimdCircuitField],
         gate_exists: &mut [bool],
     ) {
         assert_eq!(var_idx, self.sumcheck_var_idx);
         assert!(var_idx < self.var_num);
         log::trace!("challenge eval size: {}", self.cur_eval_size);
+        let init_v_field : Vec<C::Field> = init_v.iter().map(|x| C::simd_circuit_field_into_field(x)).collect();
         for i in 0..self.cur_eval_size >> 1 {
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 gate_exists[i] = false;
 
                 if var_idx == 0 {
-                    bk_f[i] = init_v[2 * i] + (init_v[2 * i + 1] - init_v[2 * i]).scale(&r);
+                    bk_f[i] = init_v_field[2 * i] + (init_v_field[2 * i + 1] - init_v_field[2 * i]).scale(&r);
                 } else {
                     bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
                 }
@@ -135,7 +137,7 @@ impl SumcheckMultilinearProdHelper {
                 gate_exists[i] = true;
 
                 if var_idx == 0 {
-                    bk_f[i] = init_v[2 * i] + (init_v[2 * i + 1] - init_v[2 * i]).scale(&r);
+                    bk_f[i] = init_v_field[2 * i] + (init_v_field[2 * i + 1] - init_v_field[2 * i]).scale(&r);
                 } else {
                     bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
                 }
@@ -197,20 +199,20 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
     pub(crate) fn poly_evals_at(&mut self, var_idx: usize, degree: usize) -> [C::Field; 3] {
         if var_idx < self.input_var_num {
-            self.x_helper.poly_eval_at(
+            self.x_helper.poly_eval_at::<C>(
                 var_idx,
                 degree,
                 &mut self.sp.v_evals,
-                &mut self.sp.hg_evals_5,
+                &mut self.sp.hg_evals,
                 &self.layer.input_vals.evals,
                 &self.sp.gate_exists_5,
             )
         } else {
-            self.y_helper.poly_eval_at(
+            self.y_helper.poly_eval_at::<C>(
                 var_idx - self.input_var_num,
                 degree,
                 &mut self.sp.v_evals,
-                &mut self.sp.hg_evals_5,
+                &mut self.sp.hg_evals,
                 &self.layer.input_vals.evals,
                 &self.sp.gate_exists_5,
             )
@@ -223,7 +225,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
                 var_idx,
                 r,
                 &mut self.sp.v_evals,
-                &mut self.sp.hg_evals_5,
+                &mut self.sp.hg_evals,
                 &self.layer.input_vals.evals,
                 &mut self.sp.gate_exists_5,
             );
@@ -234,7 +236,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
                 var_idx - self.input_var_num,
                 r,
                 &mut self.sp.v_evals,
-                &mut self.sp.hg_evals_5,
+                &mut self.sp.hg_evals,
                 &self.layer.input_vals.evals,
                 &mut self.sp.gate_exists_5,
             );
@@ -257,7 +259,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         let eq_evals_at_rz0 = &mut self.sp.eq_evals_at_rz0;
         let eq_evals_at_rz1 = &mut self.sp.eq_evals_at_rz1;
         let gate_exists = &mut self.sp.gate_exists_5;
-        let hg_vals = &mut self.sp.hg_evals_5;
+        let hg_vals = &mut self.sp.hg_evals;
         // hg_vals[0..vals.evals.len()].fill(F::zero()); // FIXED: consider memset unsafe?
         unsafe {
             std::ptr::write_bytes(hg_vals.as_mut_ptr(), 0, vals.evals.len());
@@ -285,10 +287,12 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         }
 
         for g in mul.iter() {
-            hg_vals[g.i_ids[0]] += vals.evals[g.i_ids[1]].scale(&C::challenge_mul_circuit_field(
+            let r = C::challenge_mul_circuit_field(
                 &eq_evals_at_rz0[g.o_id],
                 &g.coef,
-            ));
+            );
+            hg_vals[g.i_ids[0]] += C::simd_circuit_field_mul_challenge_field(&vals.evals[g.i_ids[1]], &r);
+            
             gate_exists[g.i_ids[0]] = true;
         }
         for g in add.iter() {
@@ -305,7 +309,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         let eq_evals_at_rz0 = &mut self.sp.eq_evals_at_rz0;
         let eq_evals_at_rx = &mut self.sp.eq_evals_at_rx;
         let gate_exists = &mut self.sp.gate_exists_5;
-        let hg_vals = &mut self.sp.hg_evals_5;
+        let hg_vals = &mut self.sp.hg_evals;
         let fill_len = 1 << self.rx.len();
         // hg_vals[0..fill_len].fill(F::zero()); // FIXED: consider memset unsafe?
         unsafe {

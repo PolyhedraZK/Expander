@@ -72,10 +72,7 @@ pub trait Field:
     fn random_bool(rng: impl RngCore) -> Self;
 
     // ====================================
-    // arithmetics
-    // ====================================
-    /// Squaring
-    #[inline(always)]
+    //    #[inline(always)]
     fn square(&self) -> Self {
         *self * *self
     }

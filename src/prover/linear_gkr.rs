@@ -79,9 +79,11 @@ impl<C: GKRConfig> Prover<C> {
     pub fn prove(&mut self, c: &Circuit<C>) -> (C::Field, Proof) {
         let timer = start_timer!(|| "prove");
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
+        
+        let layer0_input : Vec<C::Field> = c.layers[0].input_vals.evals.iter().map(|x| C::simd_circuit_field_into_field(&x)).collect();
 
         // PC commit
-        let commitment = RawCommitment::<C>::new(c.layers[0].input_vals.evals.clone());
+        let commitment = RawCommitment::<C>::new(layer0_input);
 
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer);

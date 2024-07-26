@@ -25,8 +25,9 @@ pub fn gkr_prove<C: GKRConfig>(
     let mut alpha = C::ChallengeField::one();
     let mut beta = C::ChallengeField::zero();
 
+    let output_vals_field : Vec<C::Field> = circuit.layers.last().unwrap().output_vals.evals.iter().map(|x| C::simd_circuit_field_into_field(&x)).collect();
     let claimed_v = MultiLinearPoly::<C::Field>::eval_multilinear(
-        &circuit.layers.last().unwrap().output_vals.evals,
+        &output_vals_field,
         &rz0,
     );
 

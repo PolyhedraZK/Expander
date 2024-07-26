@@ -96,7 +96,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     let circuits = (0..args.threads)
         .map(|_| {
             let mut c = circuit_template.clone();
-            c.set_random_bool_input_for_test();
+            c.set_random_input_for_test();
             c.evaluate();
             c
         })

@@ -401,10 +401,9 @@ fn mul_internal(a: &[SimdM31; 3], b: &[SimdM31; 3]) -> [SimdM31; 3] {
 #[inline(always)]
 fn square_internal(a: &[SimdM31; 3]) -> [SimdM31; 3] {
     let mut res = [SimdM31::default(); 3];
-    res[0] = a[0].square() + a[1] * a[2].mul_by_10();
-    let t = a[0] * a[1];
-    res[1] = t.double() + a[2].square().mul_by_5();
-    let t = a[0] * a[2];
-    res[2] = t.double() + a[1] * a[1];
+    let a2_w = a[2].mul_by_5();
+    res[0] = a[0].square() + a[1] * a2_w.double();
+    res[1] = a[0] * a[1].double() + a[2] * a2_w;
+    res[2] = a[0] * a[2].double() + a[1] * a[1];
     res
 }
