@@ -57,9 +57,9 @@ pub struct Config<C: GKRConfig> {
     pub polynomial_commitment_type: PolynomialCommitmentType,
     // Enum type for the field
     pub fs_hash: FiatShamirHashType,
-    // Configuration for GKR
+    // Field configuration for GKR
     pub gkr_config: C,
-    //  Whether to use GKR^2
+    // Whether to use GKR^2
     pub gkr_scheme: GKRScheme,
 }
 
