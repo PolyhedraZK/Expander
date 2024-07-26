@@ -5,9 +5,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use arith::{BinomialExtensionField, Field, FieldSerde, SimdField, SimdM31Ext3};
+use arith::{Field, FieldSerde};
 use expander_rs::{
-    Circuit, Config, FieldType, Proof, Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
+    BN254Config, Circuit, FieldType, GKRConfig, M31ExtConfig, Proof, Prover, Verifier,
+    SENTINEL_BN254, SENTINEL_M31,
 };
 use log::{debug, info};
 use warp::Filter;
@@ -31,7 +32,7 @@ fn load_proof_and_claimed_v<F: Field + FieldSerde>(bytes: &[u8]) -> (Proof, F) {
 }
 
 fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
-    // read last 32 byte of sentinal field element to determine field type
+    // read last 32 byte of sentinel field element to determine field type
     let bytes = fs::read(circuit_file).expect("Unable to read circuit file.");
     let field_bytes = &bytes[bytes.len() - 32..bytes.len()];
     match field_bytes.try_into().unwrap() {
@@ -44,23 +45,15 @@ fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     }
 }
 
-async fn run_command<F>(field_type: FieldType, command: &str, circuit_file: &str, args: &[String])
-where
-    F: BinomialExtensionField<3> + FieldSerde + SimdField + Send + 'static,
-{
-    let config = match field_type {
-        FieldType::M31 => Config::m31_config(),
-        FieldType::BN254 => Config::bn254_config(),
-        _ => todo!("baby bear"),
-    };
+async fn run_command<C: GKRConfig>(command: &str, circuit_file: &str, args: &[String]) {
     match command {
         "prove" => {
             let witness_file = &args[3];
             let output_file = &args[4];
-            let mut circuit = Circuit::<F>::load_circuit(circuit_file);
+            let mut circuit = Circuit::<C>::load_circuit(circuit_file);
             circuit.load_witness_file(witness_file);
             circuit.evaluate();
-            let mut prover = Prover::new(&config);
+            let mut prover = Prover::new();
             prover.prepare_mem(&circuit);
             let (claimed_v, proof) = prover.prove(&circuit);
             let bytes = dump_proof_and_claimed_v(&proof, &claimed_v);
@@ -69,11 +62,11 @@ where
         "verify" => {
             let witness_file = &args[3];
             let output_file = &args[4];
-            let mut circuit = Circuit::<F>::load_circuit(circuit_file);
+            let mut circuit = Circuit::<C>::load_circuit(circuit_file);
             circuit.load_witness_file(witness_file);
             let bytes = fs::read(output_file).expect("Unable to read proof from file.");
             let (proof, claimed_v) = load_proof_and_claimed_v(&bytes);
-            let verifier = Verifier::new(&config);
+            let verifier = Verifier::new();
             assert!(verifier.verify(&circuit, &claimed_v, &proof));
             println!("success");
         }
@@ -85,10 +78,10 @@ where
                 .try_into()
                 .unwrap();
             let port = args[4].parse().unwrap();
-            let circuit = Circuit::<F>::load_circuit(circuit_file);
-            let mut prover = Prover::new(&config);
+            let circuit = Circuit::<C>::load_circuit(circuit_file);
+            let mut prover = Prover::new();
             prover.prepare_mem(&circuit);
-            let verifier = Verifier::new(&config);
+            let verifier = Verifier::new();
             let circuit = Arc::new(Mutex::new(circuit));
             let circuit_clone_for_verifier = circuit.clone();
             let prover = Arc::new(Mutex::new(prover));
@@ -168,11 +161,11 @@ async fn main() {
     debug!("field type: {:?}", field_type);
     match field_type {
         FieldType::M31 => {
-            run_command::<SimdM31Ext3>(field_type, command, circuit_file, &args).await;
+            run_command::<M31ExtConfig>(command, circuit_file, &args).await;
         }
-        // FieldType::BN254 => {
-        //     run_command::<VectorizedFr>(field_type, command, circuit_file, &args).await;
-        // }
+        FieldType::BN254 => {
+            run_command::<BN254Config>(command, circuit_file, &args).await;
+        }
         _ => unreachable!(),
     }
 }

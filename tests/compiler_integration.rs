@@ -1,7 +1,7 @@
 use std::fs;
 
 use arith::{Field, SimdM31Ext3};
-use expander_rs::{Circuit, Config, Prover, Verifier};
+use expander_rs::{Circuit, M31ExtConfig, Prover, Verifier};
 use rand::Rng;
 
 const FILENAME_CIRCUIT: &str = "data/circuit.txt";
@@ -12,9 +12,7 @@ type F = SimdM31Ext3;
 
 #[test]
 fn test_compiler_format_integration() {
-    let config = Config::m31_ext3_config();
-    println!("Config created.");
-    let mut circuit = Circuit::<F>::load_circuit(FILENAME_CIRCUIT);
+    let mut circuit = Circuit::<M31ExtConfig>::load_circuit(FILENAME_CIRCUIT);
     println!("Circuit loaded.");
     circuit.load_witness_file(FILENAME_WITNESS);
     println!("Witness loaded.");
@@ -25,14 +23,14 @@ fn test_compiler_format_integration() {
     let last_layer_first_output = last_layer.output_vals.evals[0];
     assert_eq!(last_layer_first_output, F::zero());
 
-    let mut prover = Prover::new(&config);
+    let mut prover = Prover::new();
     prover.prepare_mem(&circuit);
     let (claimed_v, proof) = prover.prove(&circuit);
     println!("Proof generated. Size: {} bytes", proof.bytes.len());
     // write proof to file
     fs::write(FILENAME_PROOF, &proof.bytes).expect("Unable to write proof to file.");
 
-    let verifier = Verifier::new(&config);
+    let verifier = Verifier::new();
     println!("Verifier created.");
     assert!(verifier.verify(&circuit, &claimed_v, &proof));
     println!("Correct proof verified.");
@@ -48,7 +46,7 @@ fn test_compiler_format_integration() {
 #[test]
 fn test_compiler_format_integration_no_prove() {
     println!("Config created.");
-    let mut circuit = Circuit::<F>::load_circuit(FILENAME_CIRCUIT);
+    let mut circuit = Circuit::<M31ExtConfig>::load_circuit(FILENAME_CIRCUIT);
     println!("Circuit loaded.");
     circuit.load_witness_file(FILENAME_WITNESS);
     println!("Witness loaded.");

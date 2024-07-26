@@ -1,6 +1,6 @@
 use arith::{Field, SimdField};
 
-use crate::{CircuitLayer, GkrScratchpad};
+use crate::{CircuitLayer, GKRConfig, GkrScratchpad};
 
 use crate::sumcheck_helper::eq_eval_at;
 
@@ -76,7 +76,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
             p_add[1] += f_v[1] * hg_v[1];
             p_add[2] += f_v[2] * hg_v[2];
         }
-        // interolate p_add into 7 points
+        // interpolate p_add into 7 points
         let p_add_coef_0 = p_add[0];
         let p_add_coef_2 = (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * F::INV_2;
         let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
@@ -137,12 +137,13 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
 }
 
 #[allow(dead_code)]
-pub(crate) struct SumcheckGkrSquareHelper<'a, F: Field + SimdField, const D: usize> {
-    pub(crate) rx: Vec<F::Scalar>,
+// todo: Move D to GKRConfig
+pub(crate) struct SumcheckGkrSquareHelper<'a, C: GKRConfig, const D: usize> {
+    pub(crate) rx: Vec<C::ChallengeField>,
 
-    layer: &'a CircuitLayer<F>,
-    sp: &'a mut GkrScratchpad<F>,
-    rz0: &'a [F::Scalar],
+    layer: &'a CircuitLayer<C>,
+    sp: &'a mut GkrScratchpad<C>,
+    rz0: &'a [C::ChallengeField],
 
     input_var_num: usize,
     output_var_num: usize,
@@ -150,11 +151,11 @@ pub(crate) struct SumcheckGkrSquareHelper<'a, F: Field + SimdField, const D: usi
     x_helper: SumcheckMultiSquareHelper<D>,
 }
 
-impl<'a, F: Field + SimdField, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
-    pub fn new(
-        layer: &'a CircuitLayer<F>,
-        rz0: &'a [F::Scalar],
-        sp: &'a mut GkrScratchpad<F>,
+impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
+    pub(crate) fn new(
+        layer: &'a CircuitLayer<C>,
+        rz0: &'a [C::ChallengeField],
+        sp: &'a mut GkrScratchpad<C>,
     ) -> Self {
         SumcheckGkrSquareHelper {
             rx: vec![],
@@ -170,7 +171,7 @@ impl<'a, F: Field + SimdField, const D: usize> SumcheckGkrSquareHelper<'a, F, D>
         }
     }
 
-    pub fn poly_evals_at(&mut self, var_idx: usize) -> [F; D] {
+    pub(crate) fn poly_evals_at(&mut self, var_idx: usize) -> [C::Field; D] {
         self.x_helper.poly_eval_at(
             var_idx,
             &mut self.sp.v_evals,
@@ -182,7 +183,7 @@ impl<'a, F: Field + SimdField, const D: usize> SumcheckGkrSquareHelper<'a, F, D>
         )
     }
 
-    pub fn receive_challenge(&mut self, var_idx: usize, r: F::Scalar) {
+    pub(crate) fn receive_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
         self.x_helper.receive_challenge(
             var_idx,
             r,
@@ -197,11 +198,11 @@ impl<'a, F: Field + SimdField, const D: usize> SumcheckGkrSquareHelper<'a, F, D>
         self.rx.push(r);
     }
 
-    pub fn vx_claim(&self) -> F {
+    pub(crate) fn vx_claim(&self) -> C::Field {
         self.sp.v_evals[0]
     }
 
-    pub fn prepare_g_x_vals(&mut self) {
+    pub(crate) fn prepare_g_x_vals(&mut self) {
         let uni = &self.layer.uni; // univariate things like square, pow5, etc.
         let vals = &self.layer.input_vals;
         let eq_evals_at_rz0 = &mut self.sp.eq_evals_at_rz0;
@@ -221,7 +222,7 @@ impl<'a, F: Field + SimdField, const D: usize> SumcheckGkrSquareHelper<'a, F, D>
         }
         eq_eval_at(
             self.rz0,
-            &F::Scalar::one(),
+            &C::ChallengeField::one(),
             eq_evals_at_rz0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -230,11 +231,17 @@ impl<'a, F: Field + SimdField, const D: usize> SumcheckGkrSquareHelper<'a, F, D>
         for g in uni.iter() {
             match g.gate_type {
                 12345 => {
-                    hg_evals_5[g.i_ids[0]] += F::from(g.coef * eq_evals_at_rz0[g.o_id]);
+                    hg_evals_5[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit_field(
+                        &eq_evals_at_rz0[g.o_id],
+                        &g.coef,
+                    ));
                     gate_exists_5[g.i_ids[0]] = true;
                 }
                 12346 => {
-                    hg_evals_1[g.i_ids[0]] += F::from(g.coef * eq_evals_at_rz0[g.o_id]);
+                    hg_evals_1[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit_field(
+                        &eq_evals_at_rz0[g.o_id],
+                        &g.coef,
+                    ));
                     gate_exists_1[g.i_ids[0]] = true;
                 }
                 _ => panic!("Unsupported gate type"),

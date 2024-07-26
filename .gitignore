@@ -31,5 +31,11 @@ output.txt
 *.log
 
 # circuit fies
-/data/*.txt
-/data/*.txt.1
+data/poseidon_*.txt
+/data/Extracted*
+/data/circuit8.txt
+/data/witness.txt.1
+/data/circuit.txt.1
+/data/bn254_circuit.txt
+/data/circuit.txt
+/data/witness.txt

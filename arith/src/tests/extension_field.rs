@@ -3,7 +3,7 @@ use ark_std::test_rng;
 use crate::field::Field;
 use crate::BinomialExtensionField;
 
-pub(crate) fn random_extension_field_tests<F: BinomialExtensionField<3>>(_name: String) {
+pub(crate) fn random_extension_field_tests<F: BinomialExtensionField>(_name: String) {
     let mut rng = test_rng();
 
     {

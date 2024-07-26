@@ -23,6 +23,11 @@ warp.workspace = true
 name = "expander-exec"
 path = "src/exec.rs"
 
+[features]
+default = []
+# default = [ "grinding" ]
+grinding = []
+
 [workspace]
 members = [
     "arith",

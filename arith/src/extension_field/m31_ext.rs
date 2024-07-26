@@ -161,15 +161,17 @@ impl Field for M31Ext3 {
     }
 }
 
-impl BinomialExtensionField<3> for M31Ext3 {
+impl BinomialExtensionField for M31Ext3 {
+    const DEGREE: usize = 3;
+
     /// Extension Field
     const W: u32 = 5;
 
     /// Base field for the extension
     type BaseField = M31;
 
+    #[inline(always)]
     /// Multiply the extension field with the base field
-    #[inline]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
         let mut res = self.v;
         res[0] *= base;
@@ -178,12 +180,18 @@ impl BinomialExtensionField<3> for M31Ext3 {
         Self { v: res }
     }
 
+    #[inline(always)]
     /// Add the extension field with the base field
-    #[inline]
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
         let mut res = self.v;
         res[0] += base;
         Self { v: res }
+    }
+
+    #[inline(always)]
+    /// Get the basefield element from the extension field
+    fn first_base_field(&self) -> Self::BaseField {
+        self.v[0]
     }
 }
 
@@ -263,6 +271,15 @@ impl AddAssign for M31Ext3 {
     #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self += &rhs;
+    }
+}
+
+impl Add<M31> for M31Ext3 {
+    type Output = M31Ext3;
+
+    #[inline(always)]
+    fn add(self, rhs: M31) -> Self::Output {
+        self + M31Ext3::from(rhs)
     }
 }
 

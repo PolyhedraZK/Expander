@@ -3,18 +3,20 @@
 
 use std::io::{Read, Write};
 
-use arith::{Field, FieldSerde, MultiLinearPoly, SimdField};
+use arith::{Field, FieldSerde, MultiLinearPoly};
+
+use crate::GKRConfig;
 
 pub struct RawOpening {}
 
-pub struct RawCommitment<F> {
-    pub poly_vals: Vec<F>,
+pub struct RawCommitment<C: GKRConfig> {
+    pub poly_vals: Vec<C::Field>,
 }
 
-impl<F: Field + FieldSerde> RawCommitment<F> {
+impl<C: GKRConfig> RawCommitment<C> {
     #[inline]
     pub fn size(&self) -> usize {
-        self.poly_vals.len() * F::SIZE
+        self.poly_vals.len() * C::Field::SIZE
     }
 
     #[inline]
@@ -27,21 +29,21 @@ impl<F: Field + FieldSerde> RawCommitment<F> {
     #[inline]
     pub fn deserialize_from<R: Read>(mut reader: R, poly_size: usize) -> Self {
         let poly_vals = (0..poly_size)
-            .map(|_| F::deserialize_from(&mut reader))
+            .map(|_| C::Field::deserialize_from(&mut reader))
             .collect();
 
         RawCommitment { poly_vals }
     }
 }
 
-impl<F: Field + FieldSerde + SimdField> RawCommitment<F> {
+impl<C: GKRConfig> RawCommitment<C> {
     #[inline]
-    pub fn new(poly_vals: Vec<F>) -> Self {
+    pub fn new(poly_vals: Vec<C::Field>) -> Self {
         RawCommitment { poly_vals }
     }
 
     #[inline]
-    pub fn verify(&self, x: &[F::Scalar], y: F) -> bool {
-        y == MultiLinearPoly::<F>::eval_multilinear(&self.poly_vals, x)
+    pub fn verify(&self, x: &[C::ChallengeField], y: C::Field) -> bool {
+        y == MultiLinearPoly::<C::Field>::eval_multilinear(&self.poly_vals, x)
     }
 }

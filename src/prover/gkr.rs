@@ -1,35 +1,31 @@
 //! This module implements the core GKR IOP.
 
-use arith::{Field, FieldSerde, MultiLinearPoly, SimdField};
+use arith::{Field, MultiLinearPoly};
 use ark_std::{end_timer, start_timer};
 
-use crate::{sumcheck_prove_gkr_layer, Circuit, Config, GkrScratchpad, Transcript};
+use crate::{sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, Transcript};
 
 // FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_prove<F>(
-    circuit: &Circuit<F>,
-    sp: &mut GkrScratchpad<F>,
+pub fn gkr_prove<C: GKRConfig>(
+    circuit: &Circuit<C>,
+    sp: &mut GkrScratchpad<C>,
     transcript: &mut Transcript,
-    config: &Config,
-) -> (F, Vec<F::Scalar>, Vec<F::Scalar>)
-where
-    F: Field + FieldSerde + SimdField,
-{
+) -> (C::Field, Vec<C::ChallengeField>, Vec<C::ChallengeField>) {
     let timer = start_timer!(|| "gkr prove");
     let layer_num = circuit.layers.len();
 
     let mut rz0 = vec![];
     let mut rz1 = vec![];
     for _i in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.challenge_f::<F>());
-        rz1.push(F::Scalar::zero());
+        rz0.push(transcript.challenge_f::<C>());
+        rz1.push(C::ChallengeField::zero());
     }
 
-    let mut alpha = F::Scalar::one();
-    let mut beta = F::Scalar::zero();
+    let mut alpha = C::ChallengeField::one();
+    let mut beta = C::ChallengeField::zero();
 
-    let claimed_v = MultiLinearPoly::<F>::eval_multilinear(
+    let claimed_v = MultiLinearPoly::<C::Field>::eval_multilinear(
         &circuit.layers.last().unwrap().output_vals.evals,
         &rz0,
     );
@@ -43,10 +39,9 @@ where
             &beta,
             transcript,
             sp,
-            config,
         );
-        alpha = transcript.challenge_f::<F>();
-        beta = transcript.challenge_f::<F>();
+        alpha = transcript.challenge_f::<C>();
+        beta = transcript.challenge_f::<C>();
 
         log::trace!("Layer {} proved with alpha={:?}, beta={:?}", i, alpha, beta);
         log::trace!("rz0.0: {:?}", rz0[0]);

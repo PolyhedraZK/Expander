@@ -35,12 +35,6 @@ impl AVXM31 {
     }
 
     #[inline(always)]
-    pub(crate) fn mul_by_2(&self) -> AVXM31 {
-        let double = unsafe { mod_reduce_epi32(_mm512_slli_epi32::<1>(self.v)) };
-        Self { v: double }
-    }
-
-    #[inline(always)]
     pub(crate) fn mul_by_5(&self) -> AVXM31 {
         let double = unsafe { mod_reduce_epi32(_mm512_slli_epi32::<1>(self.v)) };
         let quad = unsafe { mod_reduce_epi32(_mm512_slli_epi32::<1>(double)) };
@@ -217,6 +211,13 @@ impl Field for AVXM31 {
         Self {
             v: unsafe { _mm512_set1_epi32(m.v as i32) },
         }
+    }
+
+    #[inline(always)]
+    fn mul_by_3(&self) -> AVXM31 {
+        let double = unsafe { mod_reduce_epi32(_mm512_slli_epi32::<1>(self.v)) };
+        let res = unsafe { mod_reduce_epi32(_mm512_add_epi32(self.v, double)) };
+        Self { v: res }
     }
 }
 
@@ -436,6 +437,15 @@ impl AddAssign for AVXM31 {
     #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self += &rhs;
+    }
+}
+
+impl Add<M31> for AVXM31 {
+    type Output = AVXM31;
+    #[inline(always)]
+    #[allow(clippy::op_ref)]
+    fn add(self, rhs: M31) -> Self::Output {
+        self + AVXM31::pack_full(rhs)
     }
 }
 

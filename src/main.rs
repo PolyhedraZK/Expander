@@ -4,11 +4,10 @@ use std::{
     thread,
 };
 
-use arith::{BinomialExtensionField, Bn254DummyExt3, SimdM31Ext3};
-use arith::{FieldSerde, SimdField};
 use clap::Parser;
-use expander_rs::{Circuit, Config, Prover};
+use expander_rs::{BN254Config, Circuit, GKRConfig, M31ExtConfig, Prover};
 
+// circuit for repeating Keccak for 8 times
 const KECCAK_CIRCUIT: &str = "data/circuit.txt";
 // circuit for repeating Poseidon for 120 times
 const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
@@ -41,15 +40,15 @@ fn main() {
     print_info(&args);
 
     match args.field.as_str() {
-        "m31ext3" => run_benchmark::<SimdM31Ext3>(&args, Config::m31_ext3_config()),
-        "fr" => run_benchmark::<Bn254DummyExt3>(&args, Config::bn254_config()),
+        "m31ext3" => run_benchmark::<M31ExtConfig>(&args),
+        "fr" => run_benchmark::<BN254Config>(&args),
         _ => unreachable!(),
     };
 }
 
-fn run_benchmark<F>(args: &Args, config: Config)
+fn run_benchmark<C>(args: &Args)
 where
-    F: BinomialExtensionField<3> + FieldSerde + SimdField + Send + 'static,
+    C: GKRConfig,
 {
     println!("benchmarking keccak over {}", args.field);
 
@@ -69,8 +68,8 @@ where
 
     // load circuit
     let circuit_template = match args.scheme.as_str() {
-        "keccak" => Circuit::<F>::load_circuit(KECCAK_CIRCUIT),
-        "poseidon" => Circuit::<F>::load_circuit(POSEIDON_CIRCUIT),
+        "keccak" => Circuit::<C>::load_circuit(KECCAK_CIRCUIT),
+        "poseidon" => Circuit::<C>::load_circuit(POSEIDON_CIRCUIT),
         _ => unreachable!(),
     };
 
@@ -95,16 +94,10 @@ where
         .enumerate()
         .map(|(i, c)| {
             let partial_proof_cnt = partial_proof_cnts[i].clone();
-            let mut local_config = config.clone();
-            local_config.gkr_square = match args.scheme.as_str() {
-                "keccak" => false,
-                "poseidon" => true,
-                _ => unreachable!(),
-            };
             thread::spawn(move || {
                 loop {
                     // bench func
-                    let mut prover = Prover::new(&local_config);
+                    let mut prover = Prover::new();
                     prover.prepare_mem(&c);
                     prover.prove(&c);
                     // update cnt

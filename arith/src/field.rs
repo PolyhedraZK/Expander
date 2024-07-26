@@ -97,4 +97,23 @@ pub trait Field:
 
     /// sample from a 32 bytes
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;
+
+    /// multiply by 2
+    #[inline(always)]
+    fn mul_by_2(&self) -> Self {
+        *self + *self
+    }
+
+    #[inline(always)]
+    /// multiply by 3
+    fn mul_by_3(&self) -> Self {
+        *self + *self + *self
+    }
+
+    #[inline(always)]
+    /// multiply by 6
+    fn mul_by_6(&self) -> Self {
+        let t = self.mul_by_3();
+        t + t
+    }
 }

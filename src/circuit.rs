@@ -1,4 +1,4 @@
-use arith::{Field, FieldSerde, MultiLinearPoly, SimdField};
+use arith::{BinomialExtensionField, Field, FieldSerde, MultiLinearPoly};
 use ark_std::test_rng;
 use std::{
     collections::HashMap,
@@ -6,52 +6,52 @@ use std::{
     io::{Cursor, Read},
 };
 
-use crate::Transcript;
+use crate::{GKRConfig, Transcript};
 
 #[derive(Debug, Clone)]
-pub struct Gate<F: SimdField, const INPUT_NUM: usize> {
+pub struct Gate<C: GKRConfig, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
     pub o_id: usize,
-    pub coef: F::Scalar,
+    pub coef: C::CircuitField,
     pub gate_type: usize,
 }
 
-pub type GateMul<F> = Gate<F, 2>;
-pub type GateAdd<F> = Gate<F, 1>;
-pub type GateUni<F> = Gate<F, 1>;
-pub type GateConst<F> = Gate<F, 0>;
+pub type GateMul<C> = Gate<C, 2>;
+pub type GateAdd<C> = Gate<C, 1>;
+pub type GateUni<C> = Gate<C, 1>;
+pub type GateConst<C> = Gate<C, 0>;
 
 #[derive(Debug, Clone, Default)]
-pub struct CircuitLayer<F: Field + SimdField> {
+pub struct CircuitLayer<C: GKRConfig> {
     pub input_var_num: usize,
     pub output_var_num: usize,
 
-    pub input_vals: MultiLinearPoly<F>,
-    pub output_vals: MultiLinearPoly<F>, // empty most time, unless in the last layer
+    pub input_vals: MultiLinearPoly<C::Field>,
+    pub output_vals: MultiLinearPoly<C::Field>, // empty most time, unless in the last layer
 
-    pub mul: Vec<GateMul<F>>,
-    pub add: Vec<GateAdd<F>>,
-    pub const_: Vec<GateConst<F>>,
-    pub uni: Vec<GateUni<F>>,
+    pub mul: Vec<GateMul<C>>,
+    pub add: Vec<GateAdd<C>>,
+    pub const_: Vec<GateConst<C>>,
+    pub uni: Vec<GateUni<C>>,
 }
 
-impl<F: Field + SimdField> CircuitLayer<F> {
-    pub fn evaluate(&self) -> Vec<F> {
-        let mut res = vec![F::zero(); 1 << self.output_var_num];
+impl<C: GKRConfig> CircuitLayer<C> {
+    pub fn evaluate(&self) -> Vec<C::Field> {
+        let mut res = vec![C::Field::zero(); 1 << self.output_var_num];
         for gate in &self.mul {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let i1 = &self.input_vals.evals[gate.i_ids[1]];
             let o = &mut res[gate.o_id];
-            *o += (*i0 * i1).scale(&gate.coef);
+            *o += C::field_mul_circuit_field(&(*i0 * i1), &gate.coef);
         }
         for gate in &self.add {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
-            *o += i0.scale(&gate.coef);
+            *o += C::field_mul_circuit_field(i0, &gate.coef);
         }
         for gate in &self.const_ {
             let o = &mut res[gate.o_id];
-            *o += F::from(gate.coef);
+            *o = C::field_add_circuit_field(o, &gate.coef);
         }
         for gate in &self.uni {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
@@ -62,11 +62,11 @@ impl<F: Field + SimdField> CircuitLayer<F> {
                     let i0_2 = i0.square();
                     let i0_4 = i0_2.square();
                     let i0_5 = i0_4 * i0;
-                    *o += i0_5.scale(&gate.coef);
+                    *o += C::field_mul_circuit_field(&i0_5, &gate.coef);
                 }
                 12346 => {
                     // pow1
-                    *o += i0.scale(&gate.coef);
+                    *o += C::field_mul_circuit_field(i0, &gate.coef);
                 }
                 _ => panic!("Unknown gate type: {}", gate.gate_type),
             }
@@ -76,13 +76,13 @@ impl<F: Field + SimdField> CircuitLayer<F> {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Circuit<F: Field + SimdField> {
-    pub layers: Vec<CircuitLayer<F>>,
+pub struct Circuit<C: GKRConfig> {
+    pub layers: Vec<CircuitLayer<C>>,
 }
 
-impl<F: Field + FieldSerde + SimdField> Circuit<F> {
+impl<C: GKRConfig> Circuit<C> {
     pub fn load_circuit(filename: &str) -> Self {
-        let rc = RecursiveCircuit::<F>::load(filename);
+        let rc = RecursiveCircuit::<C>::load(filename);
         rc.flatten()
     }
 
@@ -94,7 +94,7 @@ impl<F: Field + FieldSerde + SimdField> Circuit<F> {
     pub fn set_random_bool_input_for_test(&mut self) {
         let mut rng = test_rng();
         self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
-            .map(|_| F::random_bool(&mut rng))
+            .map(|_| C::Field::random_bool(&mut rng))
             .collect();
     }
 
@@ -136,17 +136,17 @@ pub struct Allocation {
     pub o_offset: usize,
 }
 
-pub struct Segment<F: Field + SimdField> {
+pub struct Segment<C: GKRConfig> {
     pub i_var_num: usize,
     pub o_var_num: usize,
     pub child_segs: Vec<(SegmentId, Vec<Allocation>)>,
-    pub gate_muls: Vec<GateMul<F>>,
-    pub gate_adds: Vec<GateAdd<F>>,
-    pub gate_consts: Vec<GateConst<F>>,
-    pub gate_uni: Vec<GateUni<F>>,
+    pub gate_muls: Vec<GateMul<C>>,
+    pub gate_adds: Vec<GateAdd<C>>,
+    pub gate_consts: Vec<GateConst<C>>,
+    pub gate_uni: Vec<GateUni<C>>,
 }
 
-impl<F: Field + FieldSerde + SimdField> Circuit<F> {
+impl<C: GKRConfig> Circuit<C> {
     pub fn load_witness_file(&mut self, filename: &str) {
         // note that, for data parallel, one should load multiple witnesses into different slot in the vectorized F
         let file_bytes = fs::read(filename).unwrap();
@@ -158,11 +158,11 @@ impl<F: Field + FieldSerde + SimdField> Circuit<F> {
 
         let mut cursor = Cursor::new(file_bytes);
         self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
-            .map(|_| F::deserialize_from_ecc_format(&mut cursor))
+            .map(|_| C::Field::deserialize_from_ecc_format(&mut cursor))
             .collect();
     }
 }
-impl<F: Field + SimdField> Segment<F> {
+impl<C: GKRConfig> Segment<C> {
     pub fn contain_gates(&self) -> bool {
         !self.gate_muls.is_empty()
             || !self.gate_adds.is_empty()
@@ -176,7 +176,7 @@ impl<F: Field + SimdField> Segment<F> {
         assert!(i_len.is_power_of_two());
         assert!(o_len.is_power_of_two());
 
-        let mut ret = Segment::<F> {
+        let mut ret = Segment::<C> {
             i_var_num: i_len.trailing_zeros() as usize,
             o_var_num: o_len.trailing_zeros() as usize,
             child_segs: Vec::new(),
@@ -209,7 +209,7 @@ impl<F: Field + SimdField> Segment<F> {
                     u64::deserialize_from(&mut reader) as usize,
                 ],
                 o_id: u64::deserialize_from(&mut reader) as usize,
-                coef: F::Scalar::deserialize_from_ecc_format(&mut reader),
+                coef: C::CircuitField::deserialize_from_ecc_format(&mut reader),
                 gate_type: 0,
             };
             ret.gate_muls.push(gate);
@@ -221,7 +221,7 @@ impl<F: Field + SimdField> Segment<F> {
                 i_ids: [u64::deserialize_from(&mut reader) as usize],
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
-                coef: F::Scalar::deserialize_from_ecc_format(&mut reader),
+                coef: C::CircuitField::deserialize_from_ecc_format(&mut reader),
                 gate_type: 1,
             };
             ret.gate_adds.push(gate);
@@ -233,7 +233,7 @@ impl<F: Field + SimdField> Segment<F> {
                 i_ids: [],
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
-                coef: F::Scalar::deserialize_from_ecc_format(&mut reader),
+                coef: C::CircuitField::deserialize_from_ecc_format(&mut reader),
                 gate_type: 2,
             };
             ret.gate_consts.push(gate);
@@ -248,7 +248,7 @@ impl<F: Field + SimdField> Segment<F> {
                 inputs.push(u64::deserialize_from(&mut reader) as usize);
             }
             let out = u64::deserialize_from(&mut reader) as usize;
-            let coef = F::Scalar::deserialize_from_ecc_format(&mut reader);
+            let coef = C::CircuitField::deserialize_from_ecc_format(&mut reader);
             let gate = GateUni {
                 i_ids: [inputs[0]],
                 o_id: out,
@@ -271,7 +271,7 @@ impl<F: Field + SimdField> Segment<F> {
         for _ in 0..rand_coef_idx_num {
             let idx = u64::deserialize_from(&mut reader) as usize;
 
-            let rand_coef = t.challenge_f::<F>();
+            let rand_coef = t.challenge_f::<C>().first_base_field(); // ZZ: THIS SEEMS SUSPICIOUS
             if idx < ret.gate_muls.len() {
                 ret.gate_muls[idx].coef = rand_coef;
             } else if idx < ret.gate_muls.len() + ret.gate_adds.len() {
@@ -289,7 +289,7 @@ impl<F: Field + SimdField> Segment<F> {
 
     pub fn scan_leaf_segments(
         &self,
-        rc: &RecursiveCircuit<F>,
+        rc: &RecursiveCircuit<C>,
         cur_id: SegmentId,
     ) -> HashMap<SegmentId, Vec<Allocation>> {
         let mut ret = HashMap::new();
@@ -320,16 +320,16 @@ impl<F: Field + SimdField> Segment<F> {
     }
 }
 
-pub struct RecursiveCircuit<F: Field + SimdField> {
-    pub segments: Vec<Segment<F>>,
+pub struct RecursiveCircuit<C: GKRConfig> {
+    pub segments: Vec<Segment<C>>,
     pub layers: Vec<SegmentId>,
 }
 
 const MAGIC_NUM: u64 = 3770719418566461763; // b'CIRCUIT4'
 
-impl<F: Field + FieldSerde + SimdField> RecursiveCircuit<F> {
+impl<C: GKRConfig> RecursiveCircuit<C> {
     pub fn load(filename: &str) -> Self {
-        let mut ret = RecursiveCircuit::<F> {
+        let mut ret = RecursiveCircuit::<C> {
             segments: Vec::new(),
             layers: Vec::new(),
         };
@@ -339,11 +339,11 @@ impl<F: Field + FieldSerde + SimdField> RecursiveCircuit<F> {
         let magic_num = u64::deserialize_from(&mut cursor);
         assert_eq!(magic_num, MAGIC_NUM);
 
-        let field_mod = F::deserialize_from_ecc_format(&mut cursor);
+        let field_mod = C::Field::deserialize_from_ecc_format(&mut cursor);
         log::trace!("field mod: {:?}", field_mod);
         let segment_num = u64::deserialize_from(&mut cursor);
         for _ in 0..segment_num {
-            let seg = Segment::<F>::read(&mut cursor);
+            let seg = Segment::<C>::read(&mut cursor);
             ret.segments.push(seg);
         }
 
@@ -357,7 +357,8 @@ impl<F: Field + FieldSerde + SimdField> RecursiveCircuit<F> {
         // assert_eq!(file_bytes.len(), cur + 32);
         ret
     }
-    pub fn flatten(&self) -> Circuit<F> {
+
+    pub fn flatten(&self) -> Circuit<C> {
         let mut ret = Circuit::default();
         // layer-by-layer conversion
         for layer_id in &self.layers {
@@ -366,11 +367,11 @@ impl<F: Field + FieldSerde + SimdField> RecursiveCircuit<F> {
             let mut ret_layer = CircuitLayer {
                 input_var_num: layer_seg.i_var_num,
                 output_var_num: layer_seg.o_var_num,
-                input_vals: MultiLinearPoly::<F> {
+                input_vals: MultiLinearPoly::<C::Field> {
                     var_num: layer_seg.i_var_num,
                     evals: vec![],
                 },
-                output_vals: MultiLinearPoly::<F> {
+                output_vals: MultiLinearPoly::<C::Field> {
                     var_num: layer_seg.o_var_num,
                     evals: vec![],
                 },

@@ -51,6 +51,7 @@ jobs:
       - run: cargo test -p bi-kzg --release
       - run: cargo test --no-default-features --release      
       - run: cargo test --all-features --release
+
   bench-mac-m31:
     name: Bench-mac-m31
     runs-on: macos-latest
