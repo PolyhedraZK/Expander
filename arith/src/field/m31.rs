@@ -145,6 +145,16 @@ impl Field for M31 {
         v = mod_reduce_u32(v);
         M31 { v }
     }
+
+    #[inline(always)]
+    fn mul_by_5(&self) -> Self {
+        *self * Self { v: 5 }
+    }
+
+    #[inline(always)]
+    fn mul_by_6(&self) -> Self {
+        *self * Self { v: 6 }
+    }
 }
 
 // ====================================

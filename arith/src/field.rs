@@ -108,6 +108,14 @@ pub trait Field:
     }
 
     #[inline(always)]
+    /// multiply by 5
+    fn mul_by_5(&self) -> Self {
+        let double = self.mul_by_2();
+        let quad = double.mul_by_2();
+        *self + quad
+    }
+
+    #[inline(always)]
     /// multiply by 6
     fn mul_by_6(&self) -> Self {
         let t = self.mul_by_3();

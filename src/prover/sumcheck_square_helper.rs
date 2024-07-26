@@ -18,6 +18,31 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
             cur_eval_size: 1 << var_num,
         }
     }
+
+    fn interpolate_3<C: GKRConfig>(p_add: &[C::Field; 3], p: &mut [C::Field; D]) {
+        let p_add_coef_0 = p_add[0];
+        let p_add_coef_2 = C::field_mul_circuit_field(
+            &(p_add[2] - p_add[1] - p_add[1] + p_add[0]),
+            &C::CircuitField::INV_2,
+        );
+
+        let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
+
+        p[0] += p_add_coef_0;
+        p[1] += p_add_coef_0 + p_add_coef_1 + p_add_coef_2;
+        p[2] += p_add_coef_0 + p_add_coef_1.double() + p_add_coef_2.double().double();
+        p[3] += p_add_coef_0 + p_add_coef_1.mul_by_3() + p_add_coef_2.mul_by_3().mul_by_3();
+        p[4] += p_add_coef_0
+            + p_add_coef_1.double().double()
+            + C::field_mul_circuit_field(&p_add_coef_2, &C::CircuitField::from(16));
+        p[5] += p_add_coef_0
+            + p_add_coef_1.mul_by_5()
+            + C::field_mul_circuit_field(&p_add_coef_2, &C::CircuitField::from(25));
+        p[6] += p_add_coef_0
+            + p_add_coef_1.mul_by_3().double()
+            + C::field_mul_circuit_field(&p_add_coef_2, &C::CircuitField::from(36));
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn poly_eval_at<C: GKRConfig>(
         &self,
@@ -76,6 +101,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 let s_hg_v = hg_v[0] + hg_v[1];
                 p_add[2] += C::simd_circuit_field_mul_challenge_field(&s_f_v, &s_hg_v);
             }
+<<<<<<< HEAD
             p_add[2] = p_add[1]
                 + p_add[1]
                 + p_add[1]
@@ -87,24 +113,10 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 + p_add[0]
                 - p_add[2]
                 - p_add[2];
+=======
+>>>>>>> 1109eff (minor)
             // interpolate p_add into 7 points
-            let p_add_coef_0 = p_add[0];
-            let p_add_coef_2 = (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * C::Field::INV_2;
-            let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
-
-            p[0] += p_add_coef_0;
-            p[1] += p_add_coef_0 + p_add_coef_1 + p_add_coef_2;
-            p[2] +=
-                p_add_coef_0 + p_add_coef_1 * C::Field::from(2) + p_add_coef_2 * C::Field::from(4);
-            p[3] +=
-                p_add_coef_0 + p_add_coef_1 * C::Field::from(3) + p_add_coef_2 * C::Field::from(9);
-            p[4] +=
-                p_add_coef_0 + p_add_coef_1 * C::Field::from(4) + p_add_coef_2 * C::Field::from(16);
-            p[5] +=
-                p_add_coef_0 + p_add_coef_1 * C::Field::from(5) + p_add_coef_2 * C::Field::from(25);
-            p[6] +=
-                p_add_coef_0 + p_add_coef_1 * C::Field::from(6) + p_add_coef_2 * C::Field::from(36);
-
+            Self::interpolate_3::<C>(&p_add, &mut p);
             p
         } else {
             let src_v = bk_f;
@@ -146,25 +158,8 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 p_add[0] += C::challenge_mul_field(&hg_v[0], &f_v[0]);
                 p_add[1] += C::challenge_mul_field(&hg_v[1], &f_v[1]);
             }
-            p_add[2] = p_add[1] + p_add[1] - p_add[0] + C::Field::from(2);
             // interpolate p_add into 7 points
-            let p_add_coef_0 = p_add[0];
-            let p_add_coef_2 = (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * C::Field::INV_2;
-            let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
-
-            p[0] += p_add_coef_0;
-            p[1] += p_add_coef_0 + p_add_coef_1 + p_add_coef_2;
-            p[2] +=
-                p_add_coef_0 + p_add_coef_1 * C::Field::from(2) + p_add_coef_2 * C::Field::from(4);
-            p[3] +=
-                p_add_coef_0 + p_add_coef_1 * C::Field::from(3) + p_add_coef_2 * C::Field::from(9);
-            p[4] +=
-                p_add_coef_0 + p_add_coef_1 * C::Field::from(4) + p_add_coef_2 * C::Field::from(16);
-            p[5] +=
-                p_add_coef_0 + p_add_coef_1 * C::Field::from(5) + p_add_coef_2 * C::Field::from(25);
-            p[6] +=
-                p_add_coef_0 + p_add_coef_1 * C::Field::from(6) + p_add_coef_2 * C::Field::from(36);
-
+            Self::interpolate_3::<C>(&p_add, &mut p);
             p
         }
     }
