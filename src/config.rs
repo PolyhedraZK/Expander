@@ -1,18 +1,13 @@
 use arith::{BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31Ext3, M31};
 use halo2curves::bn256::Fr;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum PolynomialCommitmentType {
+    #[default]
     Raw,
     KZG,
     Orion,
     FRI,
-}
-
-impl Default for PolynomialCommitmentType {
-    fn default() -> Self {
-        PolynomialCommitmentType::Raw
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -32,31 +27,21 @@ pub const SENTINEL_BN254: [u8; 32] = [
     69, 80, 184, 41, 160, 49, 225, 114, 78, 100, 48,
 ];
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum GKRScheme {
+    #[default]
     Vanilla,
     GkrSquare,
 }
 
-impl Default for GKRScheme {
-    fn default() -> Self {
-        GKRScheme::Vanilla
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum FiatShamirHashType {
+    #[default]
     SHA256,
     Keccak256,
     Poseidon,
     Animoe,
     MIMC7,
-}
-
-impl Default for FiatShamirHashType {
-    fn default() -> Self {
-        FiatShamirHashType::SHA256
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -87,7 +72,7 @@ impl Config<M31ExtConfig> {
             grinding_bits: 10,
             polynomial_commitment_type: PolynomialCommitmentType::Raw,
             fs_hash: FiatShamirHashType::SHA256,
-            gkr_config: M31ExtConfig::default(),
+            gkr_config: M31ExtConfig,
             gkr_scheme,
         }
     }
@@ -102,7 +87,7 @@ impl Config<BN254Config> {
             grinding_bits: 10,
             polynomial_commitment_type: PolynomialCommitmentType::Raw,
             fs_hash: FiatShamirHashType::SHA256,
-            gkr_config: BN254Config::default(),
+            gkr_config: BN254Config,
             gkr_scheme,
         }
     }
