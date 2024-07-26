@@ -40,10 +40,27 @@ fn main() {
     print_info(&args);
 
     match args.field.as_str() {
-        "m31ext3" => {
-            run_benchmark::<M31ExtConfig>(&args, Config::<M31ExtConfig>::new(GKRScheme::GkrSquare))
-        }
-        "fr" => run_benchmark::<BN254Config>(&args, Config::<BN254Config>::new(GKRScheme::Vanilla)),
+        "m31ext3" => match args.scheme.as_str() {
+            "keccak" => run_benchmark::<M31ExtConfig>(
+                &args,
+                Config::<M31ExtConfig>::new(GKRScheme::Vanilla),
+            ),
+            "poseidon" => run_benchmark::<M31ExtConfig>(
+                &args,
+                Config::<M31ExtConfig>::new(GKRScheme::GkrSquare),
+            ),
+            _ => unreachable!(),
+        },
+        "fr" => match args.scheme.as_str() {
+            "keccak" => {
+                run_benchmark::<BN254Config>(&args, Config::<BN254Config>::new(GKRScheme::Vanilla))
+            }
+            "poseidon" => run_benchmark::<BN254Config>(
+                &args,
+                Config::<BN254Config>::new(GKRScheme::GkrSquare),
+            ),
+            _ => unreachable!(),
+        },
         _ => unreachable!(),
     };
 }
