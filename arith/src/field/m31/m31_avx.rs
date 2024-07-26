@@ -103,6 +103,16 @@ impl Field for AVXM31 {
     }
 
     #[inline(always)]
+    fn is_zero(&self) -> bool {
+        // value is either zero or 0x7FFFFFFF
+        unsafe {
+            let pcmp = _mm512_cmpeq_epi32_mask(self.v, PACKED_0);
+            let pcmp2 = _mm512_cmpeq_epi32_mask(self.v, PACKED_MOD);
+            (pcmp | pcmp2) == 0xFFFF
+        }
+    }
+
+    #[inline(always)]
     fn one() -> Self {
         AVXM31 {
             v: unsafe { _mm512_set1_epi32(1) },
