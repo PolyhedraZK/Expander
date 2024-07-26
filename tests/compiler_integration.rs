@@ -8,8 +8,6 @@ const FILENAME_CIRCUIT: &str = "data/circuit.txt";
 const FILENAME_WITNESS: &str = "data/witness.txt";
 const FILENAME_PROOF: &str = "data/proof.bin";
 
-type F = SimdM31Ext3;
-
 #[test]
 fn test_compiler_format_integration() {
     let config = Config::<M31ExtConfig>::new(GKRScheme::Vanilla);
