@@ -1,6 +1,6 @@
 use std::fs;
 
-use arith::{Field, SimdM31, SimdM31Ext3};
+use arith::{Field, SimdM31};
 use expander_rs::{Circuit, Config, GKRScheme, M31ExtConfig, Prover, Verifier};
 use rand::Rng;
 
