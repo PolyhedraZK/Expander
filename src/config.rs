@@ -1,4 +1,6 @@
-use arith::{BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31, SimdM31Ext3, M31};
+use arith::{
+    BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31, SimdM31Ext3, M31,
+};
 use halo2curves::bn256::Fr;
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -253,12 +255,12 @@ impl GKRConfig for BN254Config {
         a * b
     }
 
-    # [inline(always)]
+    #[inline(always)]
     fn circuit_field_into_field(a: &Self::CircuitField) -> Self::Field {
-        Self::Field::from(*a)
+        *a
     }
 
-    # [inline(always)]
+    #[inline(always)]
     fn circuit_field_mul_simd_circuit_field(
         a: &Self::CircuitField,
         b: &Self::SimdCircuitField,
@@ -266,16 +268,16 @@ impl GKRConfig for BN254Config {
         *a * *b
     }
 
-    # [inline(always)]
+    #[inline(always)]
     fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField {
         *a
     }
-    # [inline(always)]
+    #[inline(always)]
     fn simd_circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field {
-        Self::Field::from(*a)
+        *a
     }
 
-    # [inline(always)]
+    #[inline(always)]
     fn simd_circuit_field_mul_challenge_field(
         a: &Self::SimdCircuitField,
         b: &Self::ChallengeField,

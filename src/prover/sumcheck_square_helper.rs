@@ -85,11 +85,16 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
 
             p[0] += p_add_coef_0;
             p[1] += p_add_coef_0 + p_add_coef_1 + p_add_coef_2;
-            p[2] += p_add_coef_0 + p_add_coef_1 * C::Field::from(2) + p_add_coef_2 * C::Field::from(4);
-            p[3] += p_add_coef_0 + p_add_coef_1 * C::Field::from(3) + p_add_coef_2 * C::Field::from(9);
-            p[4] += p_add_coef_0 + p_add_coef_1 * C::Field::from(4) + p_add_coef_2 * C::Field::from(16);
-            p[5] += p_add_coef_0 + p_add_coef_1 * C::Field::from(5) + p_add_coef_2 * C::Field::from(25);
-            p[6] += p_add_coef_0 + p_add_coef_1 * C::Field::from(6) + p_add_coef_2 * C::Field::from(36);
+            p[2] +=
+                p_add_coef_0 + p_add_coef_1 * C::Field::from(2) + p_add_coef_2 * C::Field::from(4);
+            p[3] +=
+                p_add_coef_0 + p_add_coef_1 * C::Field::from(3) + p_add_coef_2 * C::Field::from(9);
+            p[4] +=
+                p_add_coef_0 + p_add_coef_1 * C::Field::from(4) + p_add_coef_2 * C::Field::from(16);
+            p[5] +=
+                p_add_coef_0 + p_add_coef_1 * C::Field::from(5) + p_add_coef_2 * C::Field::from(25);
+            p[6] +=
+                p_add_coef_0 + p_add_coef_1 * C::Field::from(6) + p_add_coef_2 * C::Field::from(36);
 
             p
         } else {
@@ -144,15 +149,19 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
 
             p[0] += p_add_coef_0;
             p[1] += p_add_coef_0 + p_add_coef_1 + p_add_coef_2;
-            p[2] += p_add_coef_0 + p_add_coef_1 * C::Field::from(2) + p_add_coef_2 * C::Field::from(4);
-            p[3] += p_add_coef_0 + p_add_coef_1 * C::Field::from(3) + p_add_coef_2 * C::Field::from(9);
-            p[4] += p_add_coef_0 + p_add_coef_1 * C::Field::from(4) + p_add_coef_2 * C::Field::from(16);
-            p[5] += p_add_coef_0 + p_add_coef_1 * C::Field::from(5) + p_add_coef_2 * C::Field::from(25);
-            p[6] += p_add_coef_0 + p_add_coef_1 * C::Field::from(6) + p_add_coef_2 * C::Field::from(36);
+            p[2] +=
+                p_add_coef_0 + p_add_coef_1 * C::Field::from(2) + p_add_coef_2 * C::Field::from(4);
+            p[3] +=
+                p_add_coef_0 + p_add_coef_1 * C::Field::from(3) + p_add_coef_2 * C::Field::from(9);
+            p[4] +=
+                p_add_coef_0 + p_add_coef_1 * C::Field::from(4) + p_add_coef_2 * C::Field::from(16);
+            p[5] +=
+                p_add_coef_0 + p_add_coef_1 * C::Field::from(5) + p_add_coef_2 * C::Field::from(25);
+            p[6] +=
+                p_add_coef_0 + p_add_coef_1 * C::Field::from(6) + p_add_coef_2 * C::Field::from(36);
 
             p
         }
-        
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -172,50 +181,48 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
         log::trace!("challenge eval size: {}", self.cur_eval_size);
         if var_idx == 0 {
             for i in 0..self.cur_eval_size >> 1 {
-
                 let diff = init_v[2 * i + 1] - init_v[2 * i];
                 let mul = C::simd_circuit_field_mul_challenge_field(&diff, &r);
                 let init_v_0 = C::simd_circuit_field_into_field(&init_v[2 * i]);
-                bk_f[i] = init_v_0 + mul; 
-    
+                bk_f[i] = init_v_0 + mul;
+
                 if !gate_exists_5[i * 2] && !gate_exists_5[i * 2 + 1] {
                     gate_exists_5[i] = false;
                     bk_hg_5[i] = C::ChallengeField::zero();
                 } else {
                     gate_exists_5[i] = true;
-                    bk_hg_5[i] = bk_hg_5[2 * i] + (bk_hg_5[2 * i + 1] - bk_hg_5[2 * i]) * (&r);
+                    bk_hg_5[i] = bk_hg_5[2 * i] + (bk_hg_5[2 * i + 1] - bk_hg_5[2 * i]) * r;
                 }
-    
+
                 if !gate_exists_1[i * 2] && !gate_exists_1[i * 2 + 1] {
                     gate_exists_1[i] = false;
                     bk_hg_1[i] = C::ChallengeField::zero();
                 } else {
                     gate_exists_1[i] = true;
-                    bk_hg_1[i] = bk_hg_1[2 * i] + (bk_hg_1[2 * i + 1] - bk_hg_1[2 * i]) * (&r);
+                    bk_hg_1[i] = bk_hg_1[2 * i] + (bk_hg_1[2 * i + 1] - bk_hg_1[2 * i]) * r;
                 }
             }
         } else {
             for i in 0..self.cur_eval_size >> 1 {
                 bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
-                
+
                 if !gate_exists_5[i * 2] && !gate_exists_5[i * 2 + 1] {
                     gate_exists_5[i] = false;
                     bk_hg_5[i] = C::ChallengeField::zero();
                 } else {
                     gate_exists_5[i] = true;
-                    bk_hg_5[i] = bk_hg_5[2 * i] + (bk_hg_5[2 * i + 1] - bk_hg_5[2 * i]) * (&r);
+                    bk_hg_5[i] = bk_hg_5[2 * i] + (bk_hg_5[2 * i + 1] - bk_hg_5[2 * i]) * r;
                 }
-    
+
                 if !gate_exists_1[i * 2] && !gate_exists_1[i * 2 + 1] {
                     gate_exists_1[i] = false;
                     bk_hg_1[i] = C::ChallengeField::zero();
                 } else {
                     gate_exists_1[i] = true;
-                    bk_hg_1[i] = bk_hg_1[2 * i] + (bk_hg_1[2 * i + 1] - bk_hg_1[2 * i]) * (&r);
+                    bk_hg_1[i] = bk_hg_1[2 * i] + (bk_hg_1[2 * i + 1] - bk_hg_1[2 * i]) * r;
                 }
             }
         }
-        
 
         self.cur_eval_size >>= 1;
         self.sumcheck_var_idx += 1;
