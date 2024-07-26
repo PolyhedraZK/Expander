@@ -34,12 +34,12 @@ fn load_proof_and_claimed_v<F: Field + FieldSerde>(bytes: &[u8]) -> (Proof, F) {
 fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     // read last 32 byte of sentinel field element to determine field type
     let bytes = fs::read(circuit_file).expect("Unable to read circuit file.");
-    let field_bytes = &bytes[bytes.len() - 32..bytes.len()];
+    let field_bytes = &bytes[8..8 + 32];
     match field_bytes.try_into().unwrap() {
         SENTINEL_M31 => FieldType::M31,
         SENTINEL_BN254 => FieldType::BN254,
         _ => {
-            println!("Unknown field type.");
+            println!("Unknown field type. Field byte value: {:?}", field_bytes);
             exit(1);
         }
     }

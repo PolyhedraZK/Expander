@@ -353,8 +353,6 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
 
             ret.layers.push(layer_id);
         }
-        // TODO: configure sentinel (currently it is manually handled as sentinel is unknown before loading)
-        // assert_eq!(file_bytes.len(), cur + 32);
         ret
     }
 
