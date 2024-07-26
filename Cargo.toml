@@ -24,8 +24,8 @@ name = "expander-exec"
 path = "src/exec.rs"
 
 [features]
-# default = []
-default = [ "grinding" ]
+default = []
+# default = [ "grinding" ]
 grinding = []
 
 [workspace]
