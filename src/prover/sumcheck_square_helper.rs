@@ -50,15 +50,16 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 let delta_f = f_v[1] - f_v[0];
                 let delta_hg = hg_v[1] - hg_v[0];
 
-                for i in 2..D {
+                for i in 2..D-1 {
                     f_v[i] = f_v[i - 1] + delta_f;
                     hg_v[i] = hg_v[i - 1] + delta_hg;
                 }
-                for i in 0..D {
+                for i in 0..D-1 {
                     let pow5 = f_v[i].square().square() * f_v[i];
                     p[i] += C::simd_circuit_field_mul_challenge_field(&pow5, &hg_v[i]);
                 }
             }
+            p[6] = p[0] + p[1] + p[2] + p[3] + p[4] + p[5] + C::Field::from(2);
             let mut p_add = [C::Field::zero(); 3];
             for i in 0..eval_size {
                 if !gate_exists_1[i * 2] && !gate_exists_1[i * 2 + 1] {
@@ -110,15 +111,16 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 let delta_f = f_v[1] - f_v[0];
                 let delta_hg = hg_v[1] - hg_v[0];
 
-                for i in 2..D {
+                for i in 2..D-1 {
                     f_v[i] = f_v[i - 1] + delta_f;
                     hg_v[i] = hg_v[i - 1] + delta_hg;
                 }
-                for i in 0..D {
+                for i in 0..D-1 {
                     let pow5 = f_v[i].square().square() * f_v[i];
                     p[i] += C::challenge_mul_field(&hg_v[i], &pow5);
                 }
             }
+            p[6] = p[0] + p[1] + p[2] + p[3] + p[4] + p[5] + C::Field::from(2);
             let mut p_add = [C::Field::zero(); 3];
             for i in 0..eval_size {
                 if !gate_exists_1[i * 2] && !gate_exists_1[i * 2 + 1] {
