@@ -70,14 +70,10 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 f_v[1] = src_v[i * 2 + 1];
                 hg_v[0] = bk_hg_1[i * 2];
                 hg_v[1] = bk_hg_1[i * 2 + 1];
-                let delta_f = f_v[1] - f_v[0];
-                let delta_hg = hg_v[1] - hg_v[0];
-                f_v[2] = f_v[1] + delta_f;
-                hg_v[2] = hg_v[1] + delta_hg;
                 p_add[0] += C::simd_circuit_field_mul_challenge_field(&f_v[0], &hg_v[0]);
                 p_add[1] += C::simd_circuit_field_mul_challenge_field(&f_v[1], &hg_v[1]);
-                p_add[2] += C::simd_circuit_field_mul_challenge_field(&f_v[2], &hg_v[2]);
             }
+            p_add[2] = p_add[1] + p_add[1] - p_add[0] + C::Field::from(2);
             // interpolate p_add into 7 points
             let p_add_coef_0 = p_add[0];
             let p_add_coef_2 = (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * C::Field::INV_2;
@@ -134,14 +130,10 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 f_v[1] = src_v[i * 2 + 1];
                 hg_v[0] = bk_hg_1[i * 2];
                 hg_v[1] = bk_hg_1[i * 2 + 1];
-                let delta_f = f_v[1] - f_v[0];
-                let delta_hg = hg_v[1] - hg_v[0];
-                f_v[2] = f_v[1] + delta_f;
-                hg_v[2] = hg_v[1] + delta_hg;
                 p_add[0] += C::challenge_mul_field(&hg_v[0], &f_v[0]);
                 p_add[1] += C::challenge_mul_field(&hg_v[1], &f_v[1]);
-                p_add[2] += C::challenge_mul_field(&hg_v[2], &f_v[2]);
             }
+            p_add[2] = p_add[1] + p_add[1] - p_add[0] + C::Field::from(2);
             // interpolate p_add into 7 points
             let p_add_coef_0 = p_add[0];
             let p_add_coef_2 = (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * C::Field::INV_2;

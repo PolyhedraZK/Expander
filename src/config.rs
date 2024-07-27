@@ -212,9 +212,14 @@ impl GKRConfig for M31ExtConfig {
         a: &Self::SimdCircuitField,
         b: &Self::ChallengeField,
     ) -> Self::Field {
-        let b_simd = Self::Field::from(*b);
-        let a_simd = Self::Field::from(*a);
-        a_simd * b_simd
+        let b_simd_ext = Self::Field::from(*b);
+        Self::Field {
+            v: [
+                b_simd_ext.v[0] * a,
+                b_simd_ext.v[1] * a,
+                b_simd_ext.v[2] * a,
+            ],
+        }
     }
 }
 
