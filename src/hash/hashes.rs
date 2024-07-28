@@ -1,6 +1,6 @@
 use sha2::{
-    digest::{generic_array::GenericArray, Output},
-    Digest, Sha256, Sha256VarCore,
+    digest::Output,
+    Digest, Sha256,
 };
 #[derive(Debug, Clone, Default)]
 pub struct SHA256hasher {
