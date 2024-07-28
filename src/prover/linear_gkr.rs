@@ -86,6 +86,9 @@ impl<C: GKRConfig> Prover<C> {
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer);
         let mut transcript = Transcript::new();
+        for _ in 0..10 {
+            println!("{:?}", transcript.challenge_f::<C>());
+        }
         transcript.append_u8_slice(&buffer);
 
         #[cfg(feature = "grinding")]
