@@ -210,7 +210,7 @@ impl<C: GKRConfig> Verifier<C> {
         }
     }
 
-    pub fn verify(&self, circuit: &Circuit<C>, claimed_v: &C::Field, proof: &Proof) -> bool {
+    pub fn verify(&self, circuit: &mut Circuit<C>, claimed_v: &C::Field, proof: &Proof) -> bool {
         let timer = start_timer!(|| "verify");
 
         let poly_size = circuit.layers.first().unwrap().input_vals.evals.len();
@@ -225,6 +225,8 @@ impl<C: GKRConfig> Verifier<C> {
         // (and also be recursion friendly)
         #[cfg(feature = "grinding")]
         grind::<C>(&mut transcript, &self.config);
+
+        circuit.fill_rnd_coefs(&mut transcript);
 
         let mut proof = proof.clone(); // FIXME: consider separating pointers to make proof always immutable?
 

@@ -67,4 +67,11 @@ impl Transcript {
     pub fn challenge_fs<C: GKRConfig>(&mut self, size: usize) -> Vec<C::ChallengeField> {
         (0..size).map(|_| self.challenge_f::<C>()).collect()
     }
+
+    #[inline]
+    pub fn circuit_f<C: GKRConfig>(&mut self) -> C::CircuitField {
+        self.hash_to_digest();
+        assert!(C::CircuitField::SIZE <= Self::DIGEST_SIZE);
+        C::CircuitField::from_uniform_bytes(&self.digest)
+    }
 }
