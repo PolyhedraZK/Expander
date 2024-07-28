@@ -66,7 +66,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     //     circuit.layers.first_mut().unwrap().input_vals.evals[i] = F::from((i % 3 == 1) as u32);
     // }
 
-    let mut prover = Prover::new(&config);
+    let mut prover = Prover::new(config);
     prover.prepare_mem(&circuit);
     let (claimed_v, proof) = prover.prove(&mut circuit);
     println!("Proof generated. Size: {} bytes", proof.bytes.len());
@@ -90,7 +90,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     println!();
 
     // Verify
-    let verifier = Verifier::new(&config);
+    let verifier = Verifier::new(config);
     println!("Verifier created.");
     assert!(verifier.verify(&mut circuit, &claimed_v, &proof));
     println!("Correct proof verified.");
