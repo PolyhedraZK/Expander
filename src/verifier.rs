@@ -227,6 +227,7 @@ impl<C: GKRConfig> Verifier<C> {
         grind::<C>(&mut transcript, &self.config);
 
         circuit.fill_rnd_coefs(&mut transcript);
+        circuit.evaluate();
 
         let mut proof = proof.clone(); // FIXME: consider separating pointers to make proof always immutable?
 

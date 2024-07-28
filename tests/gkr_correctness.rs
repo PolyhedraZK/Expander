@@ -66,14 +66,6 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     //     circuit.layers.first_mut().unwrap().input_vals.evals[i] = F::from((i % 3 == 1) as u32);
     // }
 
-    circuit.evaluate();
-    // for i in 0..circuit.layers.len() {
-    //     println!("Layer {}:", i);
-    //     println!("Input: {:?}", circuit.layers[i].input_vals.evals);
-    // }
-    // println!("Output: {:?}", circuit.layers.last().unwrap().output_vals.evals);
-    println!("Circuit evaluated.");
-
     let mut prover = Prover::new(&config);
     prover.prepare_mem(&circuit);
     let (claimed_v, proof) = prover.prove(&mut circuit);

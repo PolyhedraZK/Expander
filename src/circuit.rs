@@ -75,8 +75,7 @@ impl<C: GKRConfig> CircuitLayer<C> {
         res
     }
 
-    pub fn identify_rnd_coefs(&mut self, rnd_coefs: &mut Vec<*mut C::CircuitField>)
-    {
+    pub fn identify_rnd_coefs(&mut self, rnd_coefs: &mut Vec<*mut C::CircuitField>) {
         for gate in &mut self.mul {
             if gate.is_random {
                 rnd_coefs.push(&mut gate.coef);
@@ -113,7 +112,7 @@ impl<C: GKRConfig> Clone for Circuit<C> {
         let mut ret = Circuit::<C> {
             layers: self.layers.clone(),
             rnd_coefs_identified: false,
-            rnd_coefs: vec!(),
+            rnd_coefs: vec![],
         };
 
         if self.rnd_coefs_identified {
@@ -174,6 +173,7 @@ impl<C: GKRConfig> Circuit<C> {
     }
 
     pub fn identify_rnd_coefs(&mut self) {
+        self.rnd_coefs.clear();
         for layer in &mut self.layers {
             layer.identify_rnd_coefs(&mut self.rnd_coefs);
         }

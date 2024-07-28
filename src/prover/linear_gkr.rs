@@ -92,6 +92,7 @@ impl<C: GKRConfig> Prover<C> {
         grind::<C>(&mut transcript, &self.config);
 
         c.fill_rnd_coefs(&mut transcript);
+        c.evaluate();
 
         let claimed_v: C::Field;
         let mut _rz0s = vec![];

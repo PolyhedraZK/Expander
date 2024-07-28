@@ -93,7 +93,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         _ => unreachable!(),
     };
 
-    let mut circuits = (0..args.threads)
+    let circuits = (0..args.threads)
         .map(|_| {
             let mut c = circuit_template.clone();
             c.set_random_bool_input_for_test();
