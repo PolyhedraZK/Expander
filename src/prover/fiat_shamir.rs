@@ -28,8 +28,7 @@ impl Transcript {
             );
             self.hash_start_idx = hash_end_idx;
         } else {
-            self.hasher
-                .hash_inplace(&mut self.digest)
+            self.hasher.hash_inplace(&mut self.digest)
         }
     }
 
