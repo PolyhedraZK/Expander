@@ -27,7 +27,7 @@ pub(crate) fn grind<C: GKRConfig>(transcript: &mut Transcript, config: &Config<C
     hash_bytes.truncate(32);
 
     for _ in 0..(1 << config.grinding_bits) {
-        transcript.hasher.hash_inplace(&mut hash_bytes, 32);
+        transcript.hasher.hash_inplace(&mut hash_bytes);
     }
     transcript.append_u8_slice(&hash_bytes[..32]);
     end_timer!(timer);
