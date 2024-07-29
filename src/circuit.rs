@@ -37,8 +37,10 @@ pub struct CircuitLayer<C: GKRConfig> {
 }
 
 impl<C: GKRConfig> CircuitLayer<C> {
-    pub fn evaluate(&self) -> Vec<C::Field> {
-        let mut res = vec![C::Field::zero(); 1 << self.output_var_num];
+    pub fn evaluate(&self, res: &mut Vec<C::Field>) {
+        res.clear();
+        res.resize(1 << self.output_var_num, C::Field::zero());
+
         for gate in &self.mul {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let i1 = &self.input_vals.evals[gate.i_ids[1]];
@@ -72,7 +74,6 @@ impl<C: GKRConfig> CircuitLayer<C> {
                 _ => panic!("Unknown gate type: {}", gate.gate_type),
             }
         }
-        res
     }
 
     pub fn identify_rnd_coefs(&mut self, rnd_coefs: &mut Vec<*mut C::CircuitField>) {
@@ -145,7 +146,11 @@ impl<C: GKRConfig> Circuit<C> {
 
     pub fn evaluate(&mut self) {
         for i in 0..self.layers.len() - 1 {
-            self.layers[i + 1].input_vals.evals = self.layers[i].evaluate();
+            let (layer_p_1, layer_p_2) = self.layers.split_at_mut(i + 1);
+            layer_p_1
+                .last()
+                .unwrap()
+                .evaluate(&mut layer_p_2[0].input_vals.evals);
             log::trace!(
                 "layer {} evaluated - First 10 values: {:?}",
                 i,
@@ -157,7 +162,10 @@ impl<C: GKRConfig> Circuit<C> {
                     .collect::<Vec<_>>()
             );
         }
-        self.layers.last_mut().unwrap().output_vals.evals = self.layers.last().unwrap().evaluate();
+        let mut output = vec![];
+        self.layers.last().unwrap().evaluate(&mut output);
+        self.layers.last_mut().unwrap().output_vals.evals = output;
+
         log::trace!("output evaluated");
         log::trace!(
             "First ten values: {:?}",
