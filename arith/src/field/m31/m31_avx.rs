@@ -76,7 +76,7 @@ impl FieldSerde for AVXM31 {
     #[inline(always)]
     fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
         let mut buf = [0u8; 32];
-        reader.read_exact(&mut buf).unwrap(); // todo: error propagation
+        reader.read_exact(&mut buf).unwrap();
         assert!(
             buf.iter().skip(4).all(|&x| x == 0),
             "non-zero byte found in witness byte"
