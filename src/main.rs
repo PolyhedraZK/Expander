@@ -106,7 +106,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     let _ = circuits
         .into_iter()
         .enumerate()
-        .map(|(i, c)| {
+        .map(|(i, mut c)| {
             let partial_proof_cnt = partial_proof_cnts[i].clone();
             let local_config = config.clone();
             thread::spawn(move || {
@@ -114,7 +114,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
                     // bench func
                     let mut prover = Prover::new(&local_config);
                     prover.prepare_mem(&c);
-                    prover.prove(&c);
+                    prover.prove(&mut c);
                     // update cnt
                     let mut cnt = partial_proof_cnt.lock().unwrap();
                     let proof_cnt_this_round = circuit_copy_size * pack_size;

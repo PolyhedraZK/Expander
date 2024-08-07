@@ -60,7 +60,7 @@ async fn run_command<C: GKRConfig>(
             circuit.evaluate();
             let mut prover = Prover::new(&config);
             prover.prepare_mem(&circuit);
-            let (claimed_v, proof) = prover.prove(&circuit);
+            let (claimed_v, proof) = prover.prove(&mut circuit);
             let bytes = dump_proof_and_claimed_v(&proof, &claimed_v);
             fs::write(output_file, bytes).expect("Unable to write proof to file.");
         }
@@ -72,7 +72,7 @@ async fn run_command<C: GKRConfig>(
             let bytes = fs::read(output_file).expect("Unable to read proof from file.");
             let (proof, claimed_v) = load_proof_and_claimed_v(&bytes);
             let verifier = Verifier::new(&config);
-            assert!(verifier.verify(&circuit, &claimed_v, &proof));
+            assert!(verifier.verify(&mut circuit, &claimed_v, &proof));
             println!("success");
         }
         "serve" => {
@@ -102,7 +102,7 @@ async fn run_command<C: GKRConfig>(
                         let mut prover = prover.lock().unwrap();
                         circuit.load_witness_bytes(&witness_bytes);
                         circuit.evaluate();
-                        let (claimed_v, proof) = prover.prove(&circuit);
+                        let (claimed_v, proof) = prover.prove(&mut circuit);
                         dump_proof_and_claimed_v(&proof, &claimed_v)
                     });
             let verify =
@@ -126,7 +126,7 @@ async fn run_command<C: GKRConfig>(
                         let verifier = verifier.lock().unwrap();
                         circuit.load_witness_bytes(witness_bytes);
                         let (proof, claimed_v) = load_proof_and_claimed_v(proof_bytes);
-                        if verifier.verify(&circuit, &claimed_v, &proof) {
+                        if verifier.verify(&mut circuit, &claimed_v, &proof) {
                             "success".to_string()
                         } else {
                             "failure".to_string()
