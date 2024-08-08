@@ -101,7 +101,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 let s_hg_v = hg_v[0] + hg_v[1];
                 p_add[2] += C::simd_circuit_field_mul_challenge_field(&s_f_v, &s_hg_v);
             }
-<<<<<<< HEAD
+
             p_add[2] = p_add[1]
                 + p_add[1]
                 + p_add[1]
@@ -113,8 +113,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 + p_add[0]
                 - p_add[2]
                 - p_add[2];
-=======
->>>>>>> 1109eff (minor)
+
             // interpolate p_add into 7 points
             Self::interpolate_3::<C>(&p_add, &mut p);
             p
@@ -144,6 +143,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                     p[i] += C::challenge_mul_field(&hg_v[i], &pow5);
                 }
             }
+
             let mut p_add = [C::Field::zero(); 3];
             for i in 0..eval_size {
                 if !gate_exists_1[i * 2] && !gate_exists_1[i * 2 + 1] {
@@ -158,6 +158,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 p_add[0] += C::challenge_mul_field(&hg_v[0], &f_v[0]);
                 p_add[1] += C::challenge_mul_field(&hg_v[1], &f_v[1]);
             }
+            p_add[2] = p_add[1] + p_add[1] - p_add[0] + C::Field::from(2);
             // interpolate p_add into 7 points
             Self::interpolate_3::<C>(&p_add, &mut p);
             p
