@@ -50,16 +50,15 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 let delta_f = f_v[1] - f_v[0];
                 let delta_hg = hg_v[1] - hg_v[0];
 
-                for i in 2..D-1 {
+                for i in 2..D {
                     f_v[i] = f_v[i - 1] + delta_f;
                     hg_v[i] = hg_v[i - 1] + delta_hg;
                 }
-                for i in 0..D-1 {
+                for i in 0..D {
                     let pow5 = f_v[i].square().square() * f_v[i];
                     p[i] += C::simd_circuit_field_mul_challenge_field(&pow5, &hg_v[i]);
                 }
             }
-            p[6] = p[0] + p[1] + p[2] + p[3] + p[4] + p[5] + C::Field::from(2);
             let mut p_add = [C::Field::zero(); 3];
             for i in 0..eval_size {
                 if !gate_exists_1[i * 2] && !gate_exists_1[i * 2 + 1] {
@@ -73,8 +72,21 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 hg_v[1] = bk_hg_1[i * 2 + 1];
                 p_add[0] += C::simd_circuit_field_mul_challenge_field(&f_v[0], &hg_v[0]);
                 p_add[1] += C::simd_circuit_field_mul_challenge_field(&f_v[1], &hg_v[1]);
+                let s_f_v = f_v[0] + f_v[1];
+                let s_hg_v = hg_v[0] + hg_v[1];
+                p_add[2] += C::simd_circuit_field_mul_challenge_field(&s_f_v, &s_hg_v);
             }
-            p_add[2] = p_add[1] + p_add[1] - p_add[0] + C::Field::from(2);
+            p_add[2] = p_add[1]
+                + p_add[1]
+                + p_add[1]
+                + p_add[1]
+                + p_add[1]
+                + p_add[1]
+                + p_add[0]
+                + p_add[0]
+                + p_add[0]
+                - p_add[2]
+                - p_add[2];
             // interpolate p_add into 7 points
             let p_add_coef_0 = p_add[0];
             let p_add_coef_2 = (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * C::Field::INV_2;
@@ -111,16 +123,15 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 let delta_f = f_v[1] - f_v[0];
                 let delta_hg = hg_v[1] - hg_v[0];
 
-                for i in 2..D-1 {
+                for i in 2..D {
                     f_v[i] = f_v[i - 1] + delta_f;
                     hg_v[i] = hg_v[i - 1] + delta_hg;
                 }
-                for i in 0..D-1 {
+                for i in 0..D {
                     let pow5 = f_v[i].square().square() * f_v[i];
                     p[i] += C::challenge_mul_field(&hg_v[i], &pow5);
                 }
             }
-            p[6] = p[0] + p[1] + p[2] + p[3] + p[4] + p[5] + C::Field::from(2);
             let mut p_add = [C::Field::zero(); 3];
             for i in 0..eval_size {
                 if !gate_exists_1[i * 2] && !gate_exists_1[i * 2 + 1] {
