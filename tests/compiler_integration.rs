@@ -26,21 +26,21 @@ fn test_compiler_format_integration() {
 
     let mut prover = Prover::new(&config);
     prover.prepare_mem(&circuit);
-    let (claimed_v, proof) = prover.prove(&circuit);
+    let (claimed_v, proof) = prover.prove(&mut circuit);
     println!("Proof generated. Size: {} bytes", proof.bytes.len());
     // write proof to file
     fs::write(FILENAME_PROOF, &proof.bytes).expect("Unable to write proof to file.");
 
     let verifier = Verifier::new(&config);
     println!("Verifier created.");
-    assert!(verifier.verify(&circuit, &claimed_v, &proof));
+    assert!(verifier.verify(&mut circuit, &claimed_v, &proof));
     println!("Correct proof verified.");
     let mut bad_proof = proof.clone();
     let rng = &mut rand::thread_rng();
     let random_idx = rng.gen_range(0..bad_proof.bytes.len());
     let random_change = rng.gen_range(1..256) as u8;
     bad_proof.bytes[random_idx] ^= random_change;
-    assert!(!verifier.verify(&circuit, &claimed_v, &bad_proof));
+    assert!(!verifier.verify(&mut circuit, &claimed_v, &bad_proof));
     println!("Bad proof rejected.");
 }
 

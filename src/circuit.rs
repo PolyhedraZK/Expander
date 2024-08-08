@@ -1,4 +1,4 @@
-use arith::{BinomialExtensionField, Field, FieldSerde, MultiLinearPoly};
+use arith::{Field, FieldSerde, MultiLinearPoly};
 use ark_std::test_rng;
 use std::{
     collections::HashMap,
@@ -13,6 +13,7 @@ pub struct Gate<C: GKRConfig, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
     pub o_id: usize,
     pub coef: C::CircuitField,
+    pub is_random: bool,
     pub gate_type: usize,
 }
 
@@ -36,8 +37,9 @@ pub struct CircuitLayer<C: GKRConfig> {
 }
 
 impl<C: GKRConfig> CircuitLayer<C> {
-    pub fn evaluate(&self) -> Vec<C::SimdCircuitField> {
-        let mut res = vec![C::SimdCircuitField::zero(); 1 << self.output_var_num];
+    pub fn evaluate(&self, res: &mut Vec<C::Field>) {
+        res.clear();
+        res.resize(1 << self.output_var_num, C::Field::zero());
         for gate in &self.mul {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let i1 = &self.input_vals.evals[gate.i_ids[1]];
@@ -72,14 +74,57 @@ impl<C: GKRConfig> CircuitLayer<C> {
                 _ => panic!("Unknown gate type: {}", gate.gate_type),
             }
         }
-        res
+    }
+
+    pub fn identify_rnd_coefs(&mut self, rnd_coefs: &mut Vec<*mut C::CircuitField>) {
+        for gate in &mut self.mul {
+            if gate.is_random {
+                rnd_coefs.push(&mut gate.coef);
+            }
+        }
+        for gate in &mut self.add {
+            if gate.is_random {
+                rnd_coefs.push(&mut gate.coef);
+            }
+        }
+        for gate in &mut self.const_ {
+            if gate.is_random {
+                rnd_coefs.push(&mut gate.coef);
+            }
+        }
+        for gate in &mut self.uni {
+            if gate.is_random {
+                rnd_coefs.push(&mut gate.coef);
+            }
+        }
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct Circuit<C: GKRConfig> {
     pub layers: Vec<CircuitLayer<C>>,
+
+    pub rnd_coefs_identified: bool,
+    pub rnd_coefs: Vec<*mut C::CircuitField>, // unsafe
 }
+
+impl<C: GKRConfig> Clone for Circuit<C> {
+    fn clone(&self) -> Circuit<C> {
+        let mut ret = Circuit::<C> {
+            layers: self.layers.clone(),
+            rnd_coefs_identified: false,
+            rnd_coefs: vec![],
+        };
+
+        if self.rnd_coefs_identified {
+            ret.identify_rnd_coefs();
+        }
+        ret
+    }
+}
+
+// FIXME: not 100% sure this is correct
+unsafe impl<C: GKRConfig> Send for Circuit<C> {}
 
 impl<C: GKRConfig> Circuit<C> {
     pub fn load_circuit(filename: &str) -> Self {
@@ -101,7 +146,11 @@ impl<C: GKRConfig> Circuit<C> {
 
     pub fn evaluate(&mut self) {
         for i in 0..self.layers.len() - 1 {
-            self.layers[i + 1].input_vals.evals = self.layers[i].evaluate();
+            let (layer_p_1, layer_p_2) = self.layers.split_at_mut(i + 1);
+            layer_p_1
+                .last()
+                .unwrap()
+                .evaluate(&mut layer_p_2[0].input_vals.evals);
             log::trace!(
                 "layer {} evaluated - First 10 values: {:?}",
                 i,
@@ -113,7 +162,10 @@ impl<C: GKRConfig> Circuit<C> {
                     .collect::<Vec<_>>()
             );
         }
-        self.layers.last_mut().unwrap().output_vals.evals = self.layers.last().unwrap().evaluate();
+        let mut output = vec![];
+        self.layers.last().unwrap().evaluate(&mut output);
+        self.layers.last_mut().unwrap().output_vals.evals = output;
+
         log::trace!("output evaluated");
         log::trace!(
             "First ten values: {:?}",
@@ -126,6 +178,23 @@ impl<C: GKRConfig> Circuit<C> {
                 .take(10)
                 .collect::<Vec<_>>()
         );
+    }
+
+    pub fn identify_rnd_coefs(&mut self) {
+        self.rnd_coefs.clear();
+        for layer in &mut self.layers {
+            layer.identify_rnd_coefs(&mut self.rnd_coefs);
+        }
+        self.rnd_coefs_identified = true;
+    }
+
+    pub fn fill_rnd_coefs(&mut self, transcript: &mut Transcript) {
+        assert!(self.rnd_coefs_identified);
+        for &rnd_coef_ptr in &self.rnd_coefs {
+            unsafe {
+                *rnd_coef_ptr = transcript.circuit_f::<C>();
+            }
+        }
     }
 }
 
@@ -211,6 +280,7 @@ impl<C: GKRConfig> Segment<C> {
                 ],
                 o_id: u64::deserialize_from(&mut reader) as usize,
                 coef: C::CircuitField::deserialize_from_ecc_format(&mut reader),
+                is_random: false,
                 gate_type: 0,
             };
             ret.gate_muls.push(gate);
@@ -223,6 +293,7 @@ impl<C: GKRConfig> Segment<C> {
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
                 coef: C::CircuitField::deserialize_from_ecc_format(&mut reader),
+                is_random: false,
                 gate_type: 1,
             };
             ret.gate_adds.push(gate);
@@ -235,6 +306,7 @@ impl<C: GKRConfig> Segment<C> {
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
                 coef: C::CircuitField::deserialize_from_ecc_format(&mut reader),
+                is_random: false,
                 gate_type: 2,
             };
             ret.gate_consts.push(gate);
@@ -254,6 +326,7 @@ impl<C: GKRConfig> Segment<C> {
                 i_ids: [inputs[0]],
                 o_id: out,
                 coef,
+                is_random: false,
                 gate_type,
             };
             ret.gate_uni.push(gate);
@@ -268,21 +341,19 @@ impl<C: GKRConfig> Segment<C> {
         );
 
         let rand_coef_idx_num = u64::deserialize_from(&mut reader) as usize;
-        let mut t = Transcript::new(); // FIXME LATER: use an empty transcript to align the randomness
         for _ in 0..rand_coef_idx_num {
             let idx = u64::deserialize_from(&mut reader) as usize;
 
-            let rand_coef = t.challenge_f::<C>().first_base_field(); // ZZ: THIS SEEMS SUSPICIOUS
             if idx < ret.gate_muls.len() {
-                ret.gate_muls[idx].coef = rand_coef;
+                ret.gate_muls[idx].is_random = true;
             } else if idx < ret.gate_muls.len() + ret.gate_adds.len() {
-                ret.gate_adds[idx - ret.gate_muls.len()].coef = rand_coef;
+                ret.gate_adds[idx - ret.gate_muls.len()].is_random = true;
             } else if idx < ret.gate_muls.len() + ret.gate_adds.len() + ret.gate_consts.len() {
-                ret.gate_consts[idx - ret.gate_muls.len() - ret.gate_adds.len()].coef = rand_coef;
+                ret.gate_consts[idx - ret.gate_muls.len() - ret.gate_adds.len()].is_random = true;
             } else {
                 ret.gate_uni
                     [idx - ret.gate_muls.len() - ret.gate_adds.len() - ret.gate_consts.len()]
-                .coef = rand_coef;
+                .is_random = true;
             }
         }
         ret
@@ -424,6 +495,7 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
             ret.layers.push(ret_layer);
         }
 
+        ret.identify_rnd_coefs();
         ret
     }
 }

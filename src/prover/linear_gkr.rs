@@ -27,7 +27,7 @@ pub(crate) fn grind<C: GKRConfig>(transcript: &mut Transcript, config: &Config<C
     hash_bytes.truncate(32);
 
     for _ in 0..(1 << config.grinding_bits) {
-        transcript.hasher.hash_inplace(&mut hash_bytes, 32);
+        transcript.hasher.hash_inplace(&mut hash_bytes);
     }
     transcript.append_u8_slice(&hash_bytes[..32]);
     end_timer!(timer);
@@ -76,7 +76,7 @@ impl<C: GKRConfig> Prover<C> {
         self.sp = GkrScratchpad::<C>::new(max_num_input_var, max_num_output_var);
     }
 
-    pub fn prove(&mut self, c: &Circuit<C>) -> (C::Field, Proof) {
+    pub fn prove(&mut self, c: &mut Circuit<C>) -> (C::Field, Proof) {
         let timer = start_timer!(|| "prove");
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
@@ -97,6 +97,9 @@ impl<C: GKRConfig> Prover<C> {
 
         #[cfg(feature = "grinding")]
         grind::<C>(&mut transcript, &self.config);
+
+        c.fill_rnd_coefs(&mut transcript);
+        c.evaluate();
 
         let claimed_v: C::Field;
         let mut _rz0s = vec![];
