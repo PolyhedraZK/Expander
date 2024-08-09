@@ -1,4 +1,6 @@
-use arith::{BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31Ext3, M31};
+use arith::{
+    BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31, SimdM31Ext3, M31,
+};
 use halo2curves::bn256::Fr;
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -103,6 +105,9 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     /// Main field type for the scheme, e.g., SimdM31Ext3
     type Field: BinomialExtensionField + SimdField<Scalar = Self::ChallengeField> + Send;
 
+    /// Simd field for circuit
+    type SimdCircuitField: SimdField + FieldSerde + Send;
+
     /// Enum type for Self::Field
     const FIELD_TYPE: FieldType;
 
@@ -117,6 +122,25 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
 
     /// API to allow for addition between the main field and the circuit field
     fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field;
+
+    /// API to allow for multiplications between the challenge and the main field
+    fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field;
+
+    fn circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field;
+
+    fn circuit_field_mul_simd_circuit_field(
+        a: &Self::CircuitField,
+        b: &Self::SimdCircuitField,
+    ) -> Self::SimdCircuitField;
+
+    fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField;
+
+    fn simd_circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field;
+
+    fn simd_circuit_field_mul_challenge_field(
+        a: &Self::SimdCircuitField,
+        b: &Self::ChallengeField,
+    ) -> Self::Field;
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -124,6 +148,8 @@ pub struct M31ExtConfig;
 
 impl GKRConfig for M31ExtConfig {
     type CircuitField = M31;
+
+    type SimdCircuitField = SimdM31;
 
     type ChallengeField = M31Ext3;
 
@@ -152,6 +178,49 @@ impl GKRConfig for M31ExtConfig {
         // skipping the conversion M31 -> M31Ext3
         *a + *b
     }
+
+    #[inline(always)]
+    fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field {
+        let a_simd = Self::Field::from(*a);
+        a_simd * b
+    }
+
+    #[inline(always)]
+    fn circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field {
+        Self::Field::from(*a)
+    }
+
+    #[inline(always)]
+    fn circuit_field_mul_simd_circuit_field(
+        a: &Self::CircuitField,
+        b: &Self::SimdCircuitField,
+    ) -> Self::SimdCircuitField {
+        Self::SimdCircuitField::from(*a) * *b
+    }
+    #[inline(always)]
+    fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField {
+        Self::SimdCircuitField::from(*a)
+    }
+
+    #[inline(always)]
+    fn simd_circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field {
+        Self::Field::from(*a)
+    }
+
+    #[inline(always)]
+    fn simd_circuit_field_mul_challenge_field(
+        a: &Self::SimdCircuitField,
+        b: &Self::ChallengeField,
+    ) -> Self::Field {
+        let b_simd_ext = Self::Field::from(*b);
+        Self::Field {
+            v: [
+                b_simd_ext.v[0] * a,
+                b_simd_ext.v[1] * a,
+                b_simd_ext.v[2] * a,
+            ],
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -163,6 +232,8 @@ impl GKRConfig for BN254Config {
     type ChallengeField = Fr;
 
     type Field = Fr;
+
+    type SimdCircuitField = Fr;
 
     const FIELD_TYPE: FieldType = FieldType::BN254;
 
@@ -182,5 +253,40 @@ impl GKRConfig for BN254Config {
     #[inline(always)]
     fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
         *a + *b
+    }
+
+    #[inline(always)]
+    fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field {
+        a * b
+    }
+
+    #[inline(always)]
+    fn circuit_field_into_field(a: &Self::CircuitField) -> Self::Field {
+        *a
+    }
+
+    #[inline(always)]
+    fn circuit_field_mul_simd_circuit_field(
+        a: &Self::CircuitField,
+        b: &Self::SimdCircuitField,
+    ) -> Self::SimdCircuitField {
+        *a * *b
+    }
+
+    #[inline(always)]
+    fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField {
+        *a
+    }
+    #[inline(always)]
+    fn simd_circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field {
+        *a
+    }
+
+    #[inline(always)]
+    fn simd_circuit_field_mul_challenge_field(
+        a: &Self::SimdCircuitField,
+        b: &Self::ChallengeField,
+    ) -> Self::Field {
+        *a * b
     }
 }

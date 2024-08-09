@@ -25,10 +25,16 @@ pub fn gkr_prove<C: GKRConfig>(
     let mut alpha = C::ChallengeField::one();
     let mut beta = C::ChallengeField::zero();
 
-    let claimed_v = MultiLinearPoly::<C::Field>::eval_multilinear(
-        &circuit.layers.last().unwrap().output_vals.evals,
-        &rz0,
-    );
+    let output_vals_field: Vec<C::Field> = circuit
+        .layers
+        .last()
+        .unwrap()
+        .output_vals
+        .evals
+        .iter()
+        .map(|x| C::simd_circuit_field_into_field(x))
+        .collect();
+    let claimed_v = MultiLinearPoly::<C::Field>::eval_multilinear(&output_vals_field, &rz0);
 
     for i in (0..layer_num).rev() {
         (rz0, rz1) = sumcheck_prove_gkr_layer(

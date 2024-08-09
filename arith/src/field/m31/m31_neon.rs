@@ -34,44 +34,6 @@ impl NeonM31 {
             v: unsafe { [vdupq_n_u32(x.v), vdupq_n_u32(x.v)] },
         }
     }
-
-    #[inline(always)]
-    pub(crate) fn mul_by_5(&self) -> NeonM31 {
-        let mut res = NeonM31 {
-            v: [PACKED_0, PACKED_0],
-        };
-        res.v[0] = unsafe {
-            let double = reduce_sum(vshlq_n_u32(self.v[0], 1));
-            let quad = reduce_sum(vshlq_n_u32(double, 1));
-            reduce_sum(vaddq_u32(quad, self.v[0]))
-        };
-        res.v[1] = unsafe {
-            let double = reduce_sum(vshlq_n_u32(self.v[1], 1));
-            let quad = reduce_sum(vshlq_n_u32(double, 1));
-            reduce_sum(vaddq_u32(quad, self.v[1]))
-        };
-        res
-    }
-
-    #[inline(always)]
-    pub(crate) fn mul_by_10(&self) -> NeonM31 {
-        let mut res = NeonM31 {
-            v: [PACKED_0, PACKED_0],
-        };
-        res.v[0] = unsafe {
-            let double = reduce_sum(vshlq_n_u32(self.v[0], 1));
-            let quad = reduce_sum(vshlq_n_u32(double, 1));
-            let oct = reduce_sum(vshlq_n_u32(quad, 1));
-            reduce_sum(vaddq_u32(oct, double))
-        };
-        res.v[1] = unsafe {
-            let double = reduce_sum(vshlq_n_u32(self.v[1], 1));
-            let quad = reduce_sum(vshlq_n_u32(double, 1));
-            let oct = reduce_sum(vshlq_n_u32(quad, 1));
-            reduce_sum(vaddq_u32(oct, double))
-        };
-        res
-    }
 }
 
 impl FieldSerde for NeonM31 {
@@ -253,6 +215,24 @@ impl Field for NeonM31 {
         res.v[1] = unsafe {
             let double = vshlq_n_u32(self.v[1], 1);
             reduce_sum(double)
+        };
+        res
+    }
+
+    #[inline(always)]
+    fn mul_by_5(&self) -> NeonM31 {
+        let mut res = NeonM31 {
+            v: [PACKED_0, PACKED_0],
+        };
+        res.v[0] = unsafe {
+            let double = reduce_sum(vshlq_n_u32(self.v[0], 1));
+            let quad = reduce_sum(vshlq_n_u32(double, 1));
+            reduce_sum(vaddq_u32(quad, self.v[0]))
+        };
+        res.v[1] = unsafe {
+            let double = reduce_sum(vshlq_n_u32(self.v[1], 1));
+            let quad = reduce_sum(vshlq_n_u32(double, 1));
+            reduce_sum(vaddq_u32(quad, self.v[1]))
         };
         res
     }

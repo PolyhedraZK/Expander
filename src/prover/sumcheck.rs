@@ -68,7 +68,6 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
         if i_var == 0 {
             helper.prepare_g_x_vals();
         }
-
         let evals: [C::Field; D] = helper.poly_evals_at(i_var);
 
         for deg in 0..D {

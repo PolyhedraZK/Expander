@@ -1,14 +1,12 @@
 use std::fs;
 
-use arith::{Field, SimdM31Ext3};
+use arith::{Field, SimdM31};
 use expander_rs::{Circuit, Config, GKRScheme, M31ExtConfig, Prover, Verifier};
 use rand::Rng;
 
 const FILENAME_CIRCUIT: &str = "data/circuit.txt";
 const FILENAME_WITNESS: &str = "data/witness.txt";
 const FILENAME_PROOF: &str = "data/proof.bin";
-
-type F = SimdM31Ext3;
 
 #[test]
 fn test_compiler_format_integration() {
@@ -24,7 +22,7 @@ fn test_compiler_format_integration() {
     // check last layer first output
     let last_layer = circuit.layers.last().unwrap();
     let last_layer_first_output = last_layer.output_vals.evals[0];
-    assert_eq!(last_layer_first_output, F::zero());
+    assert_eq!(last_layer_first_output, SimdM31::zero());
 
     let mut prover = Prover::new(&config);
     prover.prepare_mem(&circuit);
@@ -58,5 +56,5 @@ fn test_compiler_format_integration_no_prove() {
     // check last layer first output
     let last_layer = circuit.layers.last().unwrap();
     let last_layer_first_output = last_layer.output_vals.evals[0];
-    assert_eq!(last_layer_first_output, F::zero());
+    assert_eq!(last_layer_first_output, SimdM31::zero());
 }

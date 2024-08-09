@@ -72,10 +72,7 @@ pub trait Field:
     fn random_bool(rng: impl RngCore) -> Self;
 
     // ====================================
-    // arithmetics
-    // ====================================
-    /// Squaring
-    #[inline(always)]
+    //    #[inline(always)]
     fn square(&self) -> Self {
         *self * *self
     }
@@ -108,6 +105,14 @@ pub trait Field:
     /// multiply by 3
     fn mul_by_3(&self) -> Self {
         *self + *self + *self
+    }
+
+    #[inline(always)]
+    /// multiply by 5
+    fn mul_by_5(&self) -> Self {
+        let double = self.mul_by_2();
+        let quad = double.mul_by_2();
+        *self + quad
     }
 
     #[inline(always)]

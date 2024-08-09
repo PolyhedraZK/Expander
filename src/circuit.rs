@@ -27,8 +27,8 @@ pub struct CircuitLayer<C: GKRConfig> {
     pub input_var_num: usize,
     pub output_var_num: usize,
 
-    pub input_vals: MultiLinearPoly<C::Field>,
-    pub output_vals: MultiLinearPoly<C::Field>, // empty most time, unless in the last layer
+    pub input_vals: MultiLinearPoly<C::SimdCircuitField>,
+    pub output_vals: MultiLinearPoly<C::SimdCircuitField>, // empty most time, unless in the last layer
 
     pub mul: Vec<GateMul<C>>,
     pub add: Vec<GateAdd<C>>,
@@ -37,24 +37,24 @@ pub struct CircuitLayer<C: GKRConfig> {
 }
 
 impl<C: GKRConfig> CircuitLayer<C> {
-    pub fn evaluate(&self, res: &mut Vec<C::Field>) {
+    pub fn evaluate(&self, res: &mut Vec<C::SimdCircuitField>) {
         res.clear();
-        res.resize(1 << self.output_var_num, C::Field::zero());
-
+        res.resize(1 << self.output_var_num, C::SimdCircuitField::zero());
         for gate in &self.mul {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let i1 = &self.input_vals.evals[gate.i_ids[1]];
             let o = &mut res[gate.o_id];
-            *o += C::field_mul_circuit_field(&(*i0 * i1), &gate.coef);
+            let mul = *i0 * i1;
+            *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &mul);
         }
         for gate in &self.add {
-            let i0 = &self.input_vals.evals[gate.i_ids[0]];
+            let i0 = self.input_vals.evals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
-            *o += C::field_mul_circuit_field(i0, &gate.coef);
+            *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0);
         }
         for gate in &self.const_ {
             let o = &mut res[gate.o_id];
-            *o = C::field_add_circuit_field(o, &gate.coef);
+            *o += C::circuit_field_to_simd_circuit_field(&gate.coef);
         }
         for gate in &self.uni {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
@@ -65,11 +65,11 @@ impl<C: GKRConfig> CircuitLayer<C> {
                     let i0_2 = i0.square();
                     let i0_4 = i0_2.square();
                     let i0_5 = i0_4 * i0;
-                    *o += C::field_mul_circuit_field(&i0_5, &gate.coef);
+                    *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0_5);
                 }
                 12346 => {
                     // pow1
-                    *o += C::field_mul_circuit_field(i0, &gate.coef);
+                    *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, i0);
                 }
                 _ => panic!("Unknown gate type: {}", gate.gate_type),
             }
@@ -137,10 +137,10 @@ impl<C: GKRConfig> Circuit<C> {
     }
 
     // Build a random mock circuit with binary inputs
-    pub fn set_random_bool_input_for_test(&mut self) {
+    pub fn set_random_input_for_test(&mut self) {
         let mut rng = test_rng();
         self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
-            .map(|_| C::Field::random_bool(&mut rng))
+            .map(|_| C::SimdCircuitField::random_unsafe(&mut rng))
             .collect();
     }
 
@@ -228,7 +228,7 @@ impl<C: GKRConfig> Circuit<C> {
 
         let mut cursor = Cursor::new(file_bytes);
         self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
-            .map(|_| C::Field::deserialize_from_ecc_format(&mut cursor))
+            .map(|_| C::SimdCircuitField::deserialize_from_ecc_format(&mut cursor))
             .collect();
     }
 }
@@ -439,11 +439,11 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
             let mut ret_layer = CircuitLayer {
                 input_var_num: layer_seg.i_var_num,
                 output_var_num: layer_seg.o_var_num,
-                input_vals: MultiLinearPoly::<C::Field> {
+                input_vals: MultiLinearPoly::<C::SimdCircuitField> {
                     var_num: layer_seg.i_var_num,
                     evals: vec![],
                 },
-                output_vals: MultiLinearPoly::<C::Field> {
+                output_vals: MultiLinearPoly::<C::SimdCircuitField> {
                     var_num: layer_seg.o_var_num,
                     evals: vec![],
                 },
