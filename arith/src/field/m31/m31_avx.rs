@@ -33,14 +33,6 @@ impl AVXM31 {
             v: unsafe { _mm512_set1_epi32(x.v as i32) },
         }
     }
-
-    #[inline(always)]
-    pub(crate) fn mul_by_5(&self) -> AVXM31 {
-        let double = unsafe { mod_reduce_epi32(_mm512_slli_epi32::<1>(self.v)) };
-        let quad = unsafe { mod_reduce_epi32(_mm512_slli_epi32::<1>(double)) };
-        let res = unsafe { mod_reduce_epi32(_mm512_add_epi32(self.v, quad)) };
-        Self { v: res }
-    }
 }
 
 impl FieldSerde for AVXM31 {
@@ -179,6 +171,14 @@ impl Field for AVXM31 {
     #[inline(always)]
     fn double(&self) -> Self {
         self.mul_by_2()
+    }
+
+    #[inline(always)]
+    fn mul_by_5(&self) -> AVXM31 {
+        let double = unsafe { mod_reduce_epi32(_mm512_slli_epi32::<1>(self.v)) };
+        let quad = unsafe { mod_reduce_epi32(_mm512_slli_epi32::<1>(double)) };
+        let res = unsafe { mod_reduce_epi32(_mm512_add_epi32(self.v, quad)) };
+        Self { v: res }
     }
 
     #[inline(always)]

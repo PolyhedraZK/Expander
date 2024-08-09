@@ -37,9 +37,9 @@ pub struct CircuitLayer<C: GKRConfig> {
 }
 
 impl<C: GKRConfig> CircuitLayer<C> {
-    pub fn evaluate(&self, res: &mut Vec<C::Field>) {
+    pub fn evaluate(&self, res: &mut Vec<C::SimdCircuitField>) {
         res.clear();
-        res.resize(1 << self.output_var_num, C::Field::zero());
+        res.resize(1 << self.output_var_num, C::SimdCircuitField::zero());
         for gate in &self.mul {
             let i0 = &self.input_vals.evals[gate.i_ids[0]];
             let i1 = &self.input_vals.evals[gate.i_ids[1]];
