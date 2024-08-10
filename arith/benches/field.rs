@@ -12,7 +12,7 @@ fn random_element<F: Field>() -> F {
 }
 
 pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
-    c.bench_function(&format!("mul-throughput<{}>", type_name::<F>()), |b| {
+    c.bench_function(&format!("mul-throughput<{}> 100x ", type_name::<F>()), |b| {
         b.iter_batched(
             || {
                 (
@@ -32,7 +32,7 @@ pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
         )
     });
 
-    c.bench_function(&format!("mul-latency<{}>", type_name::<F>()), |b| {
+    c.bench_function(&format!("mul-latency<{}> 100x ", type_name::<F>()), |b| {
         b.iter_batched(
             || random_element::<F>(),
             |mut x| {
@@ -45,7 +45,7 @@ pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
         )
     });
 
-    c.bench_function(&format!("sqr-throughput<{}>", type_name::<F>()), |b| {
+    c.bench_function(&format!("sqr-throughput<{}> 100x ", type_name::<F>()), |b| {
         b.iter_batched(
             || {
                 (
@@ -65,7 +65,7 @@ pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
         )
     });
 
-    c.bench_function(&format!("sqr-latency<{}>", type_name::<F>()), |b| {
+    c.bench_function(&format!("sqr-latency<{}> 100x ", type_name::<F>()), |b| {
         b.iter_batched(
             || random_element::<F>(),
             |mut x| {
@@ -78,7 +78,7 @@ pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
         )
     });
 
-    c.bench_function(&format!("add-throughput<{}>", type_name::<F>()), |b| {
+    c.bench_function(&format!("add-throughput<{}> 100x ", type_name::<F>()), |b| {
         b.iter_batched(
             || {
                 (
@@ -115,7 +115,7 @@ pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
         )
     });
 
-    c.bench_function(&format!("add-latency<{}>", type_name::<F>()), |b| {
+    c.bench_function(&format!("add-latency<{}> 100x ", type_name::<F>()), |b| {
         b.iter_batched(
             || random_element::<F>(),
             |mut x| {
