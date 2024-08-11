@@ -16,9 +16,6 @@ impl Field for Fr {
     /// zero
     const ZERO: Self = Fr::zero();
 
-    /// Inverse of 2
-    const INV_2: Self = Fr::TWO_INV;
-
     // ====================================
     // constants
     // ====================================
@@ -37,6 +34,11 @@ impl Field for Fr {
     #[inline(always)]
     fn one() -> Self {
         Fr::one()
+    }
+
+    #[inline(always)]
+    fn inv_of_2() -> Self {
+        Fr::TWO_INV
     }
 
     // ====================================

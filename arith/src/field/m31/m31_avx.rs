@@ -80,12 +80,17 @@ impl Field for AVXM31 {
 
     const ZERO: Self = Self { v: PACKED_0 };
 
-    const INV_2: Self = Self { v: PACKED_INV_2 };
-
     #[inline(always)]
     fn zero() -> Self {
         AVXM31 {
             v: unsafe { _mm512_set1_epi32(0) },
+        }
+    }
+
+    #[inline(always)]
+    fn inv_of_2() -> Self {
+        Self {
+            v: [PACKED_INV_2; 2],
         }
     }
 

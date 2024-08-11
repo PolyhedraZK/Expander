@@ -46,9 +46,6 @@ pub trait Field:
     /// zero
     const ZERO: Self;
 
-    /// Inverse of 2
-    const INV_2: Self;
-
     // ====================================
     // constants
     // ====================================
@@ -60,6 +57,11 @@ pub trait Field:
 
     /// Identity element
     fn one() -> Self;
+
+    /// Inverse of 2, may not exist
+    fn inv_of_2() -> Self {
+        unimplemented!("inv of 2 does not exist")
+    }
 
     // ====================================
     // generators

@@ -129,14 +129,17 @@ impl Field for SimdM31Ext3 {
         v: [SimdM31::ZERO; 3],
     };
 
-    const INV_2: Self = Self {
-        v: [SimdM31::INV_2, SimdM31::ZERO, SimdM31::ZERO],
-    };
-
     #[inline(always)]
     fn zero() -> Self {
         SimdM31Ext3 {
             v: [SimdM31::zero(); 3],
+        }
+    }
+
+    #[inline(always)]
+    fn inv_of_2() -> Self {
+        Self {
+            v: [SimdM31::inv_of_2(), SimdM31::zero(), SimdM31::zero()],
         }
     }
 

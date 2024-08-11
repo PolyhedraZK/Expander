@@ -83,13 +83,16 @@ impl Field for NeonM31 {
         v: [PACKED_0, PACKED_0],
     };
 
-    const INV_2: Self = Self {
-        v: [PACKED_INV_2; 2],
-    };
-
     #[inline(always)]
     fn zero() -> Self {
         Self { v: [PACKED_0; 2] }
+    }
+
+    #[inline(always)]
+    fn inv_of_2() -> Self {
+        Self {
+            v: [PACKED_INV_2; 2],
+        }
     }
 
     #[inline(always)]

@@ -90,8 +90,6 @@ impl Field for M31 {
 
     const ZERO: Self = M31 { v: 0 };
 
-    const INV_2: M31 = M31 { v: 1 << 30 };
-
     #[inline(always)]
     fn zero() -> Self {
         M31 { v: 0 }
@@ -100,6 +98,11 @@ impl Field for M31 {
     #[inline(always)]
     fn one() -> Self {
         M31 { v: 1 }
+    }
+
+    #[inline(always)]
+    fn inv_of_2() -> Self {
+        M31 { v: 1 << 30 }
     }
 
     #[inline(always)]

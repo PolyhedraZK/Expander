@@ -14,7 +14,7 @@ use crate::{
 #[inline]
 fn degree_2_eval<F: Field + SimdField>(p0: F, p1: F, p2: F, x: F::Scalar) -> F {
     let c0 = &p0;
-    let c2 = F::INV_2 * (p2 - p1 - p1 + p0);
+    let c2 = F::inv_of_2() * (p2 - p1 - p1 + p0);
     let c1 = p1 - p0 - c2;
     *c0 + (c2.scale(&x) + c1).scale(&x)
 }

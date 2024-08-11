@@ -23,7 +23,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
         let p_add_coef_0 = p_add[0];
         let p_add_coef_2 = C::field_mul_circuit_field(
             &(p_add[2] - p_add[1] - p_add[1] + p_add[0]),
-            &C::CircuitField::INV_2,
+            &C::CircuitField::inv_of_2(),
         );
 
         let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
