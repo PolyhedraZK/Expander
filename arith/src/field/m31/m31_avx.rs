@@ -89,9 +89,7 @@ impl Field for AVXM31 {
 
     #[inline(always)]
     fn inv_of_2() -> Self {
-        Self {
-            v: [PACKED_INV_2; 2],
-        }
+        Self { v: PACKED_INV_2 }
     }
 
     #[inline(always)]
