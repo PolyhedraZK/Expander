@@ -82,6 +82,8 @@ impl Field for AVXM31 {
 
     const INV_2: Self = Self { v: PACKED_INV_2 };
 
+    const FIELD_SIZE: usize = 32;
+
     #[inline(always)]
     fn zero() -> Self {
         AVXM31 {
@@ -164,7 +166,7 @@ impl Field for AVXM31 {
         }
     }
 
-    fn exp(&self, _exponent: &Self) -> Self {
+    fn exp(&self, _exponent: u128) -> Self {
         unimplemented!("exp not implemented for AVXM31")
     }
 

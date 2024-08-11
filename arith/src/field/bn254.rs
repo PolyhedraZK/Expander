@@ -13,6 +13,8 @@ impl Field for Fr {
     /// size required to store the data
     const SIZE: usize = 32;
 
+    const FIELD_SIZE: usize = 256;
+
     /// zero
     const ZERO: Self = Fr::zero();
 
@@ -71,7 +73,7 @@ impl Field for Fr {
     }
 
     /// Exp
-    fn exp(&self, _exponent: &Self) -> Self {
+    fn exp(&self, _exponent: u128) -> Self {
         unimplemented!()
     }
 

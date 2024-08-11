@@ -92,6 +92,8 @@ impl Field for M31 {
 
     const INV_2: M31 = M31 { v: 1 << 30 };
 
+    const FIELD_SIZE: usize = 32;
+
     #[inline(always)]
     fn zero() -> Self {
         M31 { v: 0 }
@@ -115,8 +117,8 @@ impl Field for M31 {
         (rng.next_u32() & 1).into()
     }
 
-    fn exp(&self, exponent: &Self) -> Self {
-        let mut e = exponent.v;
+    fn exp(&self, exponent: u128) -> Self {
+        let mut e = exponent;
         let mut res = Self::one();
         let mut t = *self;
         while !e.is_zero() {

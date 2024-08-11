@@ -125,6 +125,8 @@ impl Field for SimdM31Ext3 {
     #[cfg(target_arch = "aarch64")]
     const SIZE: usize = 256 / 8 * 3;
 
+    const FIELD_SIZE: usize = 32 * 3;
+
     const ZERO: Self = Self {
         v: [SimdM31::ZERO; 3],
     };
@@ -181,7 +183,7 @@ impl Field for SimdM31Ext3 {
         }
     }
 
-    fn exp(&self, _exponent: &Self) -> Self {
+    fn exp(&self, _exponent: u128) -> Self {
         unimplemented!()
     }
 

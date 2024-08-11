@@ -1,4 +1,3 @@
-use ark_std::Zero;
 use rand::RngCore;
 use std::{
     io::{Read, Write},
@@ -58,6 +57,7 @@ impl Field for M31Ext3 {
     const NAME: &'static str = "Mersenne 31 Extension 3";
 
     const SIZE: usize = 32 / 8 * 3;
+    const FIELD_SIZE: usize = 32 * 3;
 
     const ZERO: Self = M31Ext3 {
         v: [M31::ZERO, M31::ZERO, M31::ZERO],
@@ -102,16 +102,13 @@ impl Field for M31Ext3 {
         }
     }
 
-    fn exp(&self, exponent: &Self) -> Self {
+    fn exp(&self, exponent: u128) -> Self {
         // raise to the exp only when exponent is a base field element
-        if !exponent.v[1].is_zero() || !exponent.v[2].is_zero() {
-            panic!("exponentiation is not supported for M31Ext3");
-        }
 
-        let mut e = exponent.v[0].v;
+        let mut e = exponent;
         let mut res = Self::one();
         let mut t = *self;
-        while !e.is_zero() {
+        while e != 0 {
             let b = e & 1;
             if b == 1 {
                 res *= self;
