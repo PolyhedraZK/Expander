@@ -1,9 +1,11 @@
 use arith::{Field, FieldSerde, MultiLinearPoly};
-use ark_std::test_rng;
+use ark_std::{iterable::Iterable, test_rng};
 use std::{
     collections::HashMap,
     fs,
     io::{Cursor, Read},
+    ops::Mul,
+    process::exit,
 };
 
 use crate::{GKRConfig, Transcript};
@@ -32,47 +34,133 @@ pub struct CircuitLayer<C: GKRConfig> {
 
     pub mul: Vec<GateMul<C>>,
     pub add: Vec<GateAdd<C>>,
-    pub const_: Vec<GateConst<C>>,
+    pub cst: Vec<GateConst<C>>,
     pub uni: Vec<GateUni<C>>,
+
+    pub nb_repetition: usize,
+    pub sub_layer: Option<Box<Self>>,
+}
+
+macro_rules! nb_gates_in_layer {
+    ($name:ident, $gate_type:ident) => {
+        pub fn $name(&self) -> usize {
+            let mut n = self.$gate_type.len();
+            if self.sub_layer.is_some() {
+                n += self.sub_layer.as_ref().unwrap().$name();
+            }
+            n
+        }
+    };
 }
 
 impl<C: GKRConfig> CircuitLayer<C> {
+    pub fn new(nb_inpt_vars: usize, nb_output_vars: usize) -> CircuitLayer<C> {
+        CircuitLayer::<C> {
+            input_var_num: nb_inpt_vars,
+            output_var_num: nb_output_vars,
+
+            input_vals: MultiLinearPoly::<C::Field> {
+                var_num: nb_inpt_vars,
+                evals: vec![],
+            },
+            output_vals: MultiLinearPoly::<C::Field> {
+                var_num: nb_output_vars,
+                evals: vec![],
+            },
+
+            mul: vec![],
+            add: vec![],
+            cst: vec![],
+            uni: vec![],
+
+            nb_repetition: 0,
+            sub_layer: None,
+        }
+    }
+
+    fn repeat_and_evaluate(
+        &self,
+        output: &mut Vec<C::Field>,
+        input: &Vec<C::Field>,
+        nb_repeat: usize,
+    ) {
+        let input_size = 1 << self.input_var_num;
+        let output_size = 1 << self.output_var_num;
+
+        for gate in &self.mul {
+            let mut i_offset = 0;
+            let mut o_offset = 0;
+            for _ in 0..nb_repeat {
+                let i0 = &input[gate.i_ids[0] + i_offset];
+                let i1 = &input[gate.i_ids[1] + i_offset];
+                let o = &mut output[gate.o_id + o_offset];
+                *o += C::field_mul_circuit_field(&(*i0 * i1), &gate.coef);
+
+                i_offset += input_size;
+                o_offset += output_size;
+            }
+        }
+
+        for gate in &self.add {
+            let mut i_offset = 0;
+            let mut o_offset = 0;
+            for _ in 0..nb_repeat {
+                let i0 = &input[gate.i_ids[0] + i_offset];
+                let o = &mut output[gate.o_id + o_offset];
+                *o += C::field_mul_circuit_field(i0, &gate.coef);
+
+                i_offset += input_size;
+                o_offset += output_size;
+            }
+        }
+
+        for gate in &self.cst {
+            let mut o_offset = 0;
+            for _ in 0..nb_repeat {
+                let o = &mut output[gate.o_id + o_offset];
+                *o = C::field_add_circuit_field(o, &gate.coef);
+
+                o_offset += output_size;
+            }
+        }
+
+        for gate in &self.uni {
+            let mut i_offset = 0;
+            let mut o_offset = 0;
+            for _ in 0..nb_repeat {
+                let i0 = &input[gate.i_ids[0] + i_offset];
+                let o = &mut output[gate.o_id + o_offset];
+                match gate.gate_type {
+                    12345 => {
+                        // pow5
+                        let i0_2 = i0.square();
+                        let i0_4 = i0_2.square();
+                        let i0_5 = i0_4 * i0;
+                        *o += C::field_mul_circuit_field(&i0_5, &gate.coef);
+                    }
+                    12346 => {
+                        // pow1
+                        *o += C::field_mul_circuit_field(i0, &gate.coef);
+                    }
+                    _ => panic!("Unknown gate type: {}", gate.gate_type),
+                }
+                i_offset += input_size;
+                o_offset += output_size;
+            }
+        }
+    }
+
     pub fn evaluate(&self, res: &mut Vec<C::Field>) {
         res.clear();
         res.resize(1 << self.output_var_num, C::Field::zero());
 
-        for gate in &self.mul {
-            let i0 = &self.input_vals.evals[gate.i_ids[0]];
-            let i1 = &self.input_vals.evals[gate.i_ids[1]];
-            let o = &mut res[gate.o_id];
-            *o += C::field_mul_circuit_field(&(*i0 * i1), &gate.coef);
-        }
-        for gate in &self.add {
-            let i0 = &self.input_vals.evals[gate.i_ids[0]];
-            let o = &mut res[gate.o_id];
-            *o += C::field_mul_circuit_field(i0, &gate.coef);
-        }
-        for gate in &self.const_ {
-            let o = &mut res[gate.o_id];
-            *o = C::field_add_circuit_field(o, &gate.coef);
-        }
-        for gate in &self.uni {
-            let i0 = &self.input_vals.evals[gate.i_ids[0]];
-            let o = &mut res[gate.o_id];
-            match gate.gate_type {
-                12345 => {
-                    // pow5
-                    let i0_2 = i0.square();
-                    let i0_4 = i0_2.square();
-                    let i0_5 = i0_4 * i0;
-                    *o += C::field_mul_circuit_field(&i0_5, &gate.coef);
-                }
-                12346 => {
-                    // pow1
-                    *o += C::field_mul_circuit_field(i0, &gate.coef);
-                }
-                _ => panic!("Unknown gate type: {}", gate.gate_type),
-            }
+        self.repeat_and_evaluate(res, &self.input_vals.evals, 1);
+        if self.sub_layer.is_some() {
+            self.sub_layer.as_ref().unwrap().repeat_and_evaluate(
+                res,
+                &self.input_vals.evals,
+                self.nb_repetition,
+            )
         }
     }
 
@@ -87,7 +175,7 @@ impl<C: GKRConfig> CircuitLayer<C> {
                 rnd_coefs.push(&mut gate.coef);
             }
         }
-        for gate in &mut self.const_ {
+        for gate in &mut self.cst {
             if gate.is_random {
                 rnd_coefs.push(&mut gate.coef);
             }
@@ -97,7 +185,19 @@ impl<C: GKRConfig> CircuitLayer<C> {
                 rnd_coefs.push(&mut gate.coef);
             }
         }
+
+        if self.sub_layer.is_some() {
+            self.sub_layer
+                .as_mut()
+                .unwrap()
+                .identify_rnd_coefs(rnd_coefs);
+        }
     }
+
+    nb_gates_in_layer!(nb_add_gates, add);
+    nb_gates_in_layer!(nb_mul_gates, mul);
+    nb_gates_in_layer!(nb_cst_gates, cst);
+    nb_gates_in_layer!(nb_uni_gates, uni);
 }
 
 #[derive(Debug, Default)]
@@ -123,13 +223,35 @@ impl<C: GKRConfig> Clone for Circuit<C> {
     }
 }
 
-// FIXME: not 100% sure this is correct
 unsafe impl<C: GKRConfig> Send for Circuit<C> {}
+
+macro_rules! nb_gates_in_circuit {
+    ($name:ident) => {
+        pub fn $name(&self) -> usize {
+            self.layers.iter().map(|layer| layer.$name()).sum()
+        }
+    };
+}
 
 impl<C: GKRConfig> Circuit<C> {
     pub fn load_circuit(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename);
         rc.flatten()
+    }
+
+    pub fn load_witness_file(&mut self, filename: &str) {
+        // note that, for data parallel, one should load multiple witnesses into different slot in the vectorized F
+        let file_bytes = fs::read(filename).unwrap();
+        self.load_witness_bytes(&file_bytes);
+    }
+    pub fn load_witness_bytes(&mut self, file_bytes: &[u8]) {
+        log::trace!("witness file size: {} bytes", file_bytes.len());
+        log::trace!("expecting: {} bytes", 32 * (1 << self.log_input_size()));
+
+        let mut cursor = Cursor::new(file_bytes);
+        self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
+            .map(|_| C::Field::deserialize_from_ecc_format(&mut cursor))
+            .collect();
     }
 
     pub fn log_input_size(&self) -> usize {
@@ -196,11 +318,17 @@ impl<C: GKRConfig> Circuit<C> {
             }
         }
     }
+
+    nb_gates_in_circuit!(nb_add_gates);
+    nb_gates_in_circuit!(nb_cst_gates);
+    nb_gates_in_circuit!(nb_mul_gates);
+    nb_gates_in_circuit!(nb_uni_gates);
 }
 
 // recursive format used in compiler
 pub type SegmentId = usize;
 
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Allocation {
     pub i_offset: usize,
     pub o_offset: usize,
@@ -216,22 +344,6 @@ pub struct Segment<C: GKRConfig> {
     pub gate_uni: Vec<GateUni<C>>,
 }
 
-impl<C: GKRConfig> Circuit<C> {
-    pub fn load_witness_file(&mut self, filename: &str) {
-        // note that, for data parallel, one should load multiple witnesses into different slot in the vectorized F
-        let file_bytes = fs::read(filename).unwrap();
-        self.load_witness_bytes(&file_bytes);
-    }
-    pub fn load_witness_bytes(&mut self, file_bytes: &[u8]) {
-        log::trace!("witness file size: {} bytes", file_bytes.len());
-        log::trace!("expecting: {} bytes", 32 * (1 << self.log_input_size()));
-
-        let mut cursor = Cursor::new(file_bytes);
-        self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
-            .map(|_| C::Field::deserialize_from_ecc_format(&mut cursor))
-            .collect();
-    }
-}
 impl<C: GKRConfig> Segment<C> {
     pub fn contain_gates(&self) -> bool {
         !self.gate_muls.is_empty()
@@ -430,65 +542,126 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
         ret
     }
 
+    fn is_parallel_repetition(&self, seg: &Segment<C>) -> bool {
+        if seg.child_segs.len() == 0 {
+            false
+        } else {
+            let child_seg_id = seg.child_segs[0].0;
+            for child_seg in &seg.child_segs {
+                if child_seg.0 != child_seg_id {
+                    return false;
+                }
+            }
+
+            let child_seg = &self.segments[seg.child_segs[0].0];
+            if child_seg.child_segs.len() != 0 {
+                println!("Loc 1: nb child child segs {}", child_seg.child_segs.len());
+                // can actually support this recursive structure
+                false
+            } else {
+                let child_seg_inpt_size = 1usize << child_seg.i_var_num;
+                let child_seg_opt_size = 1usize << child_seg.o_var_num;
+                let child_seg_allocs = seg
+                    .child_segs
+                    .iter()
+                    .map(|(_seg, _alloc)| _alloc[0])
+                    .collect::<Vec<Allocation>>();
+
+                let is_parallel = child_seg_allocs.iter().enumerate().all(|(i, alloc)| {
+                    alloc.i_offset == i * child_seg_inpt_size
+                        && alloc.o_offset == i * child_seg_opt_size
+                });
+
+                is_parallel
+            }
+        }
+    }
+
+    fn flatten_into_layer_non_recursive(
+        &self,
+        layer_seg: &Segment<C>,
+        i_offset: usize,
+        o_offset: usize,
+        ret_layer: &mut CircuitLayer<C>,
+    ) {
+        for gate in &layer_seg.gate_muls {
+            let mut gate = gate.clone();
+            gate.i_ids[0] += i_offset;
+            gate.i_ids[1] += i_offset;
+            gate.o_id += o_offset;
+            ret_layer.mul.push(gate);
+        }
+        for gate in &layer_seg.gate_adds {
+            let mut gate = gate.clone();
+            gate.i_ids[0] += i_offset;
+            gate.o_id += o_offset;
+            ret_layer.add.push(gate);
+        }
+
+        for gate in &layer_seg.gate_consts {
+            let mut gate = gate.clone();
+            gate.o_id += o_offset;
+            ret_layer.cst.push(gate);
+        }
+
+        for gate in &layer_seg.gate_uni {
+            let mut gate = gate.clone();
+            gate.i_ids[0] += i_offset;
+            gate.o_id += o_offset;
+            ret_layer.uni.push(gate);
+        }
+    }
+
     pub fn flatten(&self) -> Circuit<C> {
         let mut ret = Circuit::default();
+
+        let mut nb_parallel_repetition_layers = 0;
         // layer-by-layer conversion
         for layer_id in &self.layers {
-            let layer_seg = &self.segments[*layer_id];
-            let leaves = layer_seg.scan_leaf_segments(self, *layer_id);
-            let mut ret_layer = CircuitLayer {
-                input_var_num: layer_seg.i_var_num,
-                output_var_num: layer_seg.o_var_num,
-                input_vals: MultiLinearPoly::<C::Field> {
-                    var_num: layer_seg.i_var_num,
-                    evals: vec![],
-                },
-                output_vals: MultiLinearPoly::<C::Field> {
-                    var_num: layer_seg.o_var_num,
-                    evals: vec![],
-                },
-                mul: vec![],
-                add: vec![],
-                const_: vec![],
-                uni: vec![],
-            };
-            for (leaf_seg_id, leaf_allocs) in leaves {
-                let leaf_seg = &self.segments[leaf_seg_id];
-                for alloc in leaf_allocs {
-                    for gate in &leaf_seg.gate_muls {
-                        let mut gate = gate.clone();
-                        gate.i_ids[0] += alloc.i_offset;
-                        gate.i_ids[1] += alloc.i_offset;
-                        gate.o_id += alloc.o_offset;
-                        ret_layer.mul.push(gate);
-                    }
-                    for gate in &leaf_seg.gate_adds {
-                        let mut gate = gate.clone();
-                        gate.i_ids[0] += alloc.i_offset;
-                        gate.o_id += alloc.o_offset;
-                        ret_layer.add.push(gate);
-                    }
-                    for gate in &leaf_seg.gate_consts {
-                        let mut gate = gate.clone();
-                        gate.o_id += alloc.o_offset;
-                        ret_layer.const_.push(gate);
-                    }
-                    for gate in &leaf_seg.gate_uni {
-                        let mut gate = gate.clone();
-                        gate.i_ids[0] += alloc.i_offset;
-                        gate.o_id += alloc.o_offset;
-                        ret_layer.uni.push(gate);
+            let layer_seg: &Segment<C> = &self.segments[*layer_id];
+            let mut ret_layer = CircuitLayer::<C>::new(layer_seg.i_var_num, layer_seg.o_var_num);
+
+            if self.is_parallel_repetition(layer_seg) {
+                nb_parallel_repetition_layers += 1;
+                self.flatten_into_layer_non_recursive(layer_seg, 0, 0, &mut ret_layer);
+
+                let child_seg = &self.segments[layer_seg.child_segs[0].0];
+                ret_layer.nb_repetition = layer_seg.child_segs[0].1.len();
+                ret_layer.sub_layer = Some(Box::new(CircuitLayer::<C>::new(
+                    child_seg.i_var_num,
+                    child_seg.o_var_num,
+                )));
+                self.flatten_into_layer_non_recursive(
+                    child_seg,
+                    0,
+                    0,
+                    &mut ret_layer.sub_layer.as_mut().unwrap(),
+                );
+            } else {
+                let leaves: HashMap<usize, Vec<Allocation>> =
+                    layer_seg.scan_leaf_segments(self, *layer_id);
+                for (leaf_seg_id, leaf_allocs) in leaves {
+                    let leaf_seg = &self.segments[leaf_seg_id];
+                    for alloc in leaf_allocs {
+                        self.flatten_into_layer_non_recursive(
+                            leaf_seg,
+                            alloc.i_offset,
+                            alloc.o_offset,
+                            &mut ret_layer,
+                        )
                     }
                 }
             }
+
             // debug print layer
             log::trace!(
-                "layer {} mul: {} add: {} const:{} uni:{} i_var_num: {} o_var_num: {}",
+                "total layers {}, parallel repetition layers: {} mul: {} add: {} const:{} uni:{} i_var_num: {} o_var_num: {}",
                 ret.layers.len(),
-                ret_layer.mul.len(),
-                ret_layer.add.len(),
-                ret_layer.const_.len(),
-                ret_layer.uni.len(),
+                nb_parallel_repetition_layers,
+                ret_layer.nb_mul_gates(),
+                ret_layer.nb_add_gates(),
+                ret_layer.nb_cst_gates(),
+                ret_layer.nb_uni_gates(),
                 ret_layer.input_var_num,
                 ret_layer.output_var_num,
             );

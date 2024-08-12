@@ -74,7 +74,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     let var_num = layer.input_var_num;
     let mut sum = claimed_v0.scale(&alpha) + claimed_v1.scale(&beta)
         - C::Field::from(eval_sparse_circuit_connect_poly(
-            &layer.const_,
+            &layer.cst,
             rz0,
             rz1,
             alpha,
