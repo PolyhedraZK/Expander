@@ -11,11 +11,6 @@ use crate::FieldSerde;
 
 use super::Field;
 
-#[cfg(target_arch = "x86_64")]
-pub(crate) mod gf2_avx512;
-
-#[cfg(target_arch = "aarch64")]
-pub(crate) mod gf2_neon;
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct GF2 {
     pub v: u8,

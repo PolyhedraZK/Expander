@@ -1,5 +1,6 @@
 mod avx_gf2_128;
 mod fr_ext;
+mod gf2_128;
 mod m31_ext;
 mod simd_gf2_128;
 mod simd_m31_ext;

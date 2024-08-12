@@ -69,7 +69,7 @@ const PACKED_INV_2: __m512i = unsafe {
 
 // p(x) = x^128 + x^7 + x^2 + x + 1
 impl Field for AVX512GF2_128 {
-    const NAME: &'static str = "AVX512GF2_128";
+    const NAME: &'static str = "AVX512 Galios Field 2^128";
 
     // size in bytes
     const SIZE: usize = 512 / 8;
