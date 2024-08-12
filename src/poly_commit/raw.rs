@@ -38,9 +38,9 @@ impl<C: GKRConfig> RawCommitment<C> {
 
 impl<C: GKRConfig> RawCommitment<C> {
     #[inline]
-    pub fn new(poly_vals: &Vec<C::SimdCircuitField>) -> Self {
+    pub fn new(poly_vals: &[C::SimdCircuitField]) -> Self {
         RawCommitment {
-            poly_vals: poly_vals.clone(),
+            poly_vals: poly_vals.to_owned(),
         }
     }
 
