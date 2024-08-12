@@ -213,7 +213,7 @@ impl<C: GKRConfig> Verifier<C> {
     pub fn verify(&self, circuit: &mut Circuit<C>, claimed_v: &C::Field, proof: &Proof) -> bool {
         let timer = start_timer!(|| "verify");
 
-        let poly_size = circuit.layers.first().unwrap().input_vals.evals.len();
+        let poly_size = circuit.layers.first().unwrap().input_vals.len();
         let mut cursor = Cursor::new(&proof.bytes);
 
         let commitment = RawCommitment::<C>::deserialize_from(&mut cursor, poly_size);

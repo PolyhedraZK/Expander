@@ -10,13 +10,13 @@ use crate::GKRConfig;
 pub struct RawOpening {}
 
 pub struct RawCommitment<C: GKRConfig> {
-    pub poly_vals: Vec<C::Field>,
+    pub poly_vals: Vec<C::SimdCircuitField>,
 }
 
 impl<C: GKRConfig> RawCommitment<C> {
     #[inline]
     pub fn size(&self) -> usize {
-        self.poly_vals.len() * C::Field::SIZE
+        self.poly_vals.len() * C::SimdCircuitField::SIZE
     }
 
     #[inline]
@@ -29,7 +29,7 @@ impl<C: GKRConfig> RawCommitment<C> {
     #[inline]
     pub fn deserialize_from<R: Read>(mut reader: R, poly_size: usize) -> Self {
         let poly_vals = (0..poly_size)
-            .map(|_| C::Field::deserialize_from(&mut reader))
+            .map(|_| C::SimdCircuitField::deserialize_from(&mut reader))
             .collect();
 
         RawCommitment { poly_vals }
@@ -38,12 +38,19 @@ impl<C: GKRConfig> RawCommitment<C> {
 
 impl<C: GKRConfig> RawCommitment<C> {
     #[inline]
-    pub fn new(poly_vals: Vec<C::Field>) -> Self {
-        RawCommitment { poly_vals }
+    pub fn new(poly_vals: &Vec<C::SimdCircuitField>) -> Self {
+        RawCommitment {
+            poly_vals: poly_vals.clone(),
+        }
     }
 
     #[inline]
     pub fn verify(&self, x: &[C::ChallengeField], y: C::Field) -> bool {
-        y == MultiLinearPoly::<C::Field>::eval_multilinear(&self.poly_vals, x)
+        let poly_vals: Vec<C::Field> = self
+            .poly_vals
+            .iter()
+            .map(|x| C::simd_circuit_field_into_field(x))
+            .collect();
+        y == MultiLinearPoly::<C::Field>::eval_multilinear(&poly_vals, x)
     }
 }

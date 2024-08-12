@@ -216,7 +216,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
                 degree,
                 &mut self.sp.v_evals,
                 &mut self.sp.hg_evals,
-                &self.layer.input_vals.evals,
+                &self.layer.input_vals,
                 &self.sp.gate_exists_5,
             )
         } else {
@@ -225,7 +225,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
                 degree,
                 &mut self.sp.v_evals,
                 &mut self.sp.hg_evals,
-                &self.layer.input_vals.evals,
+                &self.layer.input_vals,
                 &self.sp.gate_exists_5,
             )
         }
@@ -238,7 +238,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
                 r,
                 &mut self.sp.v_evals,
                 &mut self.sp.hg_evals,
-                &self.layer.input_vals.evals,
+                &self.layer.input_vals,
                 &mut self.sp.gate_exists_5,
             );
             log::trace!("v_eval[0]:= {:?}", self.sp.v_evals[0]);
@@ -249,7 +249,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
                 r,
                 &mut self.sp.v_evals,
                 &mut self.sp.hg_evals,
-                &self.layer.input_vals.evals,
+                &self.layer.input_vals,
                 &mut self.sp.gate_exists_5,
             );
             self.ry.push(r);
@@ -272,13 +272,13 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         let eq_evals_at_rz1 = &mut self.sp.eq_evals_at_rz1;
         let gate_exists = &mut self.sp.gate_exists_5;
         let hg_vals = &mut self.sp.hg_evals;
-        // hg_vals[0..vals.evals.len()].fill(F::zero()); // FIXED: consider memset unsafe?
+        // hg_vals[0..vals.len()].fill(F::zero()); // FIXED: consider memset unsafe?
         unsafe {
-            std::ptr::write_bytes(hg_vals.as_mut_ptr(), 0, vals.evals.len());
+            std::ptr::write_bytes(hg_vals.as_mut_ptr(), 0, vals.len());
         }
-        // gate_exists[0..vals.evals.len()].fill(false); // FIXED: consider memset unsafe?
+        // gate_exists[0..vals.len()].fill(false); // FIXED: consider memset unsafe?
         unsafe {
-            std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, vals.evals.len());
+            std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, vals.len());
         }
         eq_eval_at(
             self.rz0,
@@ -300,8 +300,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
         for g in mul.iter() {
             let r = C::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
-            hg_vals[g.i_ids[0]] +=
-                C::simd_circuit_field_mul_challenge_field(&vals.evals[g.i_ids[1]], &r);
+            hg_vals[g.i_ids[0]] += C::simd_circuit_field_mul_challenge_field(&vals[g.i_ids[1]], &r);
 
             gate_exists[g.i_ids[0]] = true;
         }

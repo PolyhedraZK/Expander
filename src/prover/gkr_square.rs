@@ -24,7 +24,6 @@ pub fn gkr_square_prove<C: GKRConfig>(
         .last()
         .unwrap()
         .output_vals
-        .evals
         .iter()
         .map(|x| C::simd_circuit_field_into_field(x))
         .collect();
