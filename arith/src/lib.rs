@@ -12,8 +12,5 @@ pub use simd_field::*;
 mod serde;
 pub use serde::FieldSerde;
 
-mod poly;
-pub use poly::*;
-
 #[cfg(test)]
 mod tests;

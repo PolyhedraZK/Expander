@@ -3,9 +3,9 @@
 
 use std::io::{Read, Write};
 
-use arith::{Field, FieldSerde, MultiLinearPoly};
+use arith::{Field, FieldSerde};
 
-use crate::GKRConfig;
+use crate::{GKRConfig, MultiLinearPoly};
 
 pub struct RawOpening {}
 
@@ -46,11 +46,7 @@ impl<C: GKRConfig> RawCommitment<C> {
 
     #[inline]
     pub fn verify(&self, x: &[C::ChallengeField], y: C::Field) -> bool {
-        let poly_vals: Vec<C::Field> = self
-            .poly_vals
-            .iter()
-            .map(|x| C::simd_circuit_field_into_field(x))
-            .collect();
-        y == MultiLinearPoly::<C::Field>::eval_multilinear(&poly_vals, x)
+        let mut scratch = vec![C::Field::default(); self.poly_vals.len()];
+        y == MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(&self.poly_vals, x, &mut scratch)
     }
 }
