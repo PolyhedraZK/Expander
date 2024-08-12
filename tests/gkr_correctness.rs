@@ -92,13 +92,22 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     // Verify
     let verifier = Verifier::new(config);
     println!("Verifier created.");
-    assert!(verifier.verify(&mut circuit, &claimed_v, &proof));
+    assert!(
+        verifier.verify(&mut circuit, &claimed_v, &proof),
+        "Proof {:?}",
+        proof.bytes
+    );
     println!("Correct proof verified.");
     let mut bad_proof = proof.clone();
     let rng = &mut rand::thread_rng();
     let random_idx = rng.gen_range(0..bad_proof.bytes.len());
     let random_change = rng.gen_range(1..256) as u8;
-    bad_proof.bytes[random_idx] += random_change;
-    assert!(!verifier.verify(&mut circuit, &claimed_v, &bad_proof));
+    bad_proof.bytes[random_idx] ^= random_change;
+    assert!(
+        !verifier.verify(&mut circuit, &claimed_v, &bad_proof),
+        "Proof {:?}, Bad proof {:?}",
+        proof.bytes,
+        bad_proof.bytes
+    );
     println!("Bad proof rejected.");
 }

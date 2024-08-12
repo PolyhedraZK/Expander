@@ -54,9 +54,9 @@ impl FieldSerde for AVXM31 {
         let mut data = [0; 64];
         reader.read_exact(&mut data).unwrap();
         unsafe {
-            AVXM31 {
-                v: transmute::<[u8; 64], __m512i>(data),
-            }
+            let mut value = transmute::<[u8; 64], __m512i>(data);
+            value = mod_reduce_epi32(value);
+            AVXM31 { v: value }
         }
     }
 
