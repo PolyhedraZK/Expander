@@ -44,7 +44,7 @@ pub trait Field:
     /// size required to store the data
     const SIZE: usize;
 
-    /// Field element size in bits
+    /// Field element size in bits, e.g., log_2(modulus), rounded up to the next power of 2.
     const FIELD_SIZE: usize;
 
     /// zero

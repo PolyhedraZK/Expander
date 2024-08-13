@@ -2,12 +2,13 @@
 // credit to intel for the original implementation
 // https://www.intel.com/content/dam/develop/external/us/en/documents/clmul-wp-rev-2-02-2014-04-20.pdf
 
-mod simd_gf2;
+mod gf2x8;
+use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-pub use simd_gf2::SimdGF2;
+pub use gf2x8::GF2x8;
 
-use crate::FieldSerde;
+use crate::{field_common, FieldSerde};
 
 use super::Field;
 
@@ -15,6 +16,8 @@ use super::Field;
 pub struct GF2 {
     pub v: u8,
 }
+
+field_common!(GF2);
 
 impl FieldSerde for GF2 {
     #[inline(always)]
@@ -117,110 +120,6 @@ impl Field for GF2 {
     }
 }
 
-impl Mul<&GF2> for GF2 {
-    type Output = GF2;
-
-    #[inline(always)]
-    #[allow(clippy::suspicious_arithmetic_impl)]
-    fn mul(self, rhs: &GF2) -> GF2 {
-        GF2 { v: self.v & rhs.v }
-    }
-}
-
-impl Mul<GF2> for GF2 {
-    type Output = GF2;
-
-    #[inline(always)]
-    #[allow(clippy::suspicious_arithmetic_impl)]
-    fn mul(self, rhs: GF2) -> GF2 {
-        GF2 { v: self.v & rhs.v }
-    }
-}
-
-impl MulAssign<&GF2> for GF2 {
-    #[inline(always)]
-    #[allow(clippy::suspicious_op_assign_impl)]
-    fn mul_assign(&mut self, rhs: &GF2) {
-        self.v &= rhs.v;
-    }
-}
-
-impl MulAssign<GF2> for GF2 {
-    #[inline(always)]
-    #[allow(clippy::suspicious_op_assign_impl)]
-    fn mul_assign(&mut self, rhs: GF2) {
-        self.v &= rhs.v;
-    }
-}
-
-impl Sub for GF2 {
-    type Output = GF2;
-
-    #[inline(always)]
-    #[allow(clippy::suspicious_arithmetic_impl)]
-    fn sub(self, rhs: GF2) -> GF2 {
-        GF2 { v: self.v ^ rhs.v }
-    }
-}
-
-impl SubAssign for GF2 {
-    #[inline(always)]
-    #[allow(clippy::suspicious_op_assign_impl)]
-    fn sub_assign(&mut self, rhs: GF2) {
-        self.v ^= rhs.v;
-    }
-}
-
-impl Add for GF2 {
-    type Output = GF2;
-
-    #[inline(always)]
-    #[allow(clippy::suspicious_arithmetic_impl)]
-    fn add(self, rhs: GF2) -> GF2 {
-        GF2 { v: self.v ^ rhs.v }
-    }
-}
-
-impl AddAssign for GF2 {
-    #[inline(always)]
-    #[allow(clippy::suspicious_op_assign_impl)]
-    fn add_assign(&mut self, rhs: GF2) {
-        self.v ^= rhs.v;
-    }
-}
-
-impl Add<&GF2> for GF2 {
-    type Output = GF2;
-
-    #[inline(always)]
-    #[allow(clippy::suspicious_arithmetic_impl)]
-    fn add(self, rhs: &GF2) -> GF2 {
-        GF2 { v: self.v ^ rhs.v }
-    }
-}
-
-impl Sub<&GF2> for GF2 {
-    type Output = GF2;
-
-    #[inline(always)]
-    #[allow(clippy::suspicious_arithmetic_impl)]
-    fn sub(self, rhs: &GF2) -> GF2 {
-        GF2 { v: self.v ^ rhs.v }
-    }
-}
-
-impl<T: std::borrow::Borrow<GF2>> std::iter::Sum<T> for GF2 {
-    fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::zero(), |acc, item| acc + item.borrow())
-    }
-}
-
-impl<T: std::borrow::Borrow<GF2>> std::iter::Product<T> for GF2 {
-    fn product<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::one(), |acc, item| acc * item.borrow())
-    }
-}
-
 impl Neg for GF2 {
     type Output = GF2;
 
@@ -231,25 +130,24 @@ impl Neg for GF2 {
     }
 }
 
-impl AddAssign<&GF2> for GF2 {
-    #[inline(always)]
-    #[allow(clippy::suspicious_op_assign_impl)]
-    fn add_assign(&mut self, rhs: &GF2) {
-        self.v ^= rhs.v;
-    }
-}
-
-impl SubAssign<&GF2> for GF2 {
-    #[inline(always)]
-    #[allow(clippy::suspicious_op_assign_impl)]
-    fn sub_assign(&mut self, rhs: &GF2) {
-        self.v ^= rhs.v;
-    }
-}
-
 impl From<u32> for GF2 {
     #[inline(always)]
     fn from(v: u32) -> Self {
         GF2 { v: (v % 2) as u8 }
     }
+}
+
+#[inline(always)]
+fn add_internal(a: &GF2, b: &GF2) -> GF2 {
+    GF2 { v: a.v ^ b.v }
+}
+
+#[inline(always)]
+fn sub_internal(a: &GF2, b: &GF2) -> GF2 {
+    GF2 { v: a.v ^ b.v }
+}
+
+#[inline(always)]
+fn mul_internal(a: &GF2, b: &GF2) -> GF2 {
+    GF2 { v: a.v & b.v }
 }

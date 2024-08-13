@@ -5,6 +5,8 @@ mod gf2;
 mod gf2_128;
 mod m31;
 mod m31_ext;
+#[cfg(target_arch = "aarch64")]
+mod neon_gf2_128;
 mod simd_field;
 
 #[cfg(target_arch = "x86_64")]
