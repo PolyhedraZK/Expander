@@ -25,6 +25,7 @@ fn mul_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
 
 //
 // multiply the polynomial by x^32, without reducing the irreducible polynomial
+// equivalent to _mm_shuffle_epi32(a, 147)
 // TODO: Is there an instruction for this?
 unsafe fn cyclic_rotate_1(input: uint32x4_t) -> uint32x4_t {
     let a = vgetq_lane_u32(input, 0);
@@ -41,6 +42,7 @@ unsafe fn cyclic_rotate_1(input: uint32x4_t) -> uint32x4_t {
 }
 
 // multiply the polynomial by x^64, without reducing the irreducible polynomial
+// equivalent to _mm_shuffle_epi32(a, 78)
 // TODO: Is there an instruction for this?
 unsafe fn cyclic_rotate_2(input: uint32x4_t) -> uint32x4_t {
     let a = vgetq_lane_u32(input, 0);
