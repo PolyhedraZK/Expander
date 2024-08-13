@@ -1,20 +1,22 @@
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::{
+    arch::x86_64::*,
+    mem::transmute,
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+};
 
-use crate::{Field, FieldSerde, GF2};
-
-use super::BinomialExtensionField;
+use crate::{BinomialExtensionField, Field, FieldSerde, GF2};
 
 #[derive(Debug, Clone, Copy)]
-pub struct GF2_128 {
+pub struct AVX512GF2_128 {
     pub v: __m128i,
 }
 
-impl FieldSerde for GF2_128 {
+impl FieldSerde for AVX512GF2_128 {
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
         unsafe {
             writer
-                .write_all(transmute::<_, [u8; 16]>(self.data).as_ref())
+                .write_all(transmute::<__m128i, [u8; 16]>(self.v).as_ref())
                 .unwrap(); // todo: error propagation
         }
     }
@@ -28,40 +30,48 @@ impl FieldSerde for GF2_128 {
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> Self {
         let mut u = [0u8; 16];
         reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        unsafe { GF2_128 { v: transmute(u) } }
+        unsafe {
+            AVX512GF2_128 {
+                v: transmute::<[u8; 16], __m128i>(u),
+            }
+        }
     }
 
     #[inline(always)]
     fn deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> Self {
         let mut u = [0u8; 32];
         _reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        unsafe { GF2_128 { v: transmute(u) } }
+        unsafe {
+            AVX512GF2_128 {
+                v: transmute::<[u8; 16], __m128i>(u[..16].try_into().unwrap()),
+            }
+        }
     }
 }
 
-impl Field for GF2_128 {
+impl Field for AVX512GF2_128 {
     const NAME: &'static str = "Galios Field 2^128";
     const SIZE: usize = 128 / 8;
     const FIELD_SIZE: usize = 128; // in bits
 
-    const ZERO: Self = GF2_128 {
+    const ZERO: Self = AVX512GF2_128 {
         v: unsafe { std::mem::zeroed() },
     };
 
-    const INV_2: Self = GF2_128 {
+    const INV_2: Self = AVX512GF2_128 {
         v: unsafe { std::mem::zeroed() },
     }; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {
-        GF2_128 {
+        AVX512GF2_128 {
             v: unsafe { std::mem::zeroed() },
         }
     }
 
     #[inline(always)]
     fn one() -> Self {
-        GF2_128 {
+        AVX512GF2_128 {
             // 1 in the first bit
             v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) }, // TODO check bit order
         }
@@ -72,7 +82,7 @@ impl Field for GF2_128 {
         let mut u = [0u8; 16];
         rng.fill_bytes(&mut u);
         unsafe {
-            GF2_128 {
+            AVX512GF2_128 {
                 v: *(u.as_ptr() as *const __m128i),
             }
         }
@@ -80,7 +90,7 @@ impl Field for GF2_128 {
 
     #[inline(always)]
     fn random_bool(mut rng: impl rand::RngCore) -> Self {
-        GF2_128 {
+        AVX512GF2_128 {
             v: unsafe { std::mem::transmute::<[u32; 4], __m128i>([rng.next_u32() % 2, 0, 0, 0]) },
         }
     }
@@ -127,14 +137,14 @@ impl Field for GF2_128 {
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         unsafe {
-            GF2_128 {
+            AVX512GF2_128 {
                 v: *(bytes.as_ptr() as *const __m128i),
             }
         }
     }
 }
 
-impl BinomialExtensionField for GF2_128 {
+impl BinomialExtensionField for AVX512GF2_128 {
     const DEGREE: usize = 128;
     const W: u32 = 0x87;
 
@@ -158,89 +168,89 @@ impl BinomialExtensionField for GF2_128 {
 
     #[inline(always)]
     fn first_base_field(&self) -> Self::BaseField {
-        // but this doesn't make sense for GF2_128
+        // but this doesn't make sense for AVX512GF2_128
         let v = unsafe { _mm_extract_epi64(self.v, 0) };
         GF2 { v: v as u8 }
     }
 }
 
-impl From<GF2> for GF2_128 {
+impl From<GF2> for AVX512GF2_128 {
     #[inline(always)]
     fn from(v: GF2) -> Self {
-        GF2_128 {
+        AVX512GF2_128 {
             v: unsafe { _mm_set_epi64x(0, v.v as i64) },
         }
     }
 }
 
-impl Add for GF2_128 {
+impl Add for AVX512GF2_128 {
     type Output = Self;
 
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        GF2_128 {
+        AVX512GF2_128 {
             v: unsafe { _mm_xor_si128(self.v, rhs.v) },
         }
     }
 }
 
-impl Sub for GF2_128 {
+impl Sub for AVX512GF2_128 {
     type Output = Self;
 
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        GF2_128 {
+        AVX512GF2_128 {
             v: unsafe { _mm_xor_si128(self.v, rhs.v) },
         }
     }
 }
 
-impl Add<&GF2_128> for GF2_128 {
-    type Output = GF2_128;
+impl Add<&AVX512GF2_128> for AVX512GF2_128 {
+    type Output = AVX512GF2_128;
 
     #[inline(always)]
-    fn add(self, rhs: &GF2_128) -> GF2_128 {
-        GF2_128 {
+    fn add(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
+        AVX512GF2_128 {
             v: unsafe { _mm_xor_si128(self.v, rhs.v) },
         }
     }
 }
 
-impl Sub<&GF2_128> for GF2_128 {
-    type Output = GF2_128;
+impl Sub<&AVX512GF2_128> for AVX512GF2_128 {
+    type Output = AVX512GF2_128;
 
     #[inline(always)]
-    fn sub(self, rhs: &GF2_128) -> GF2_128 {
-        GF2_128 {
+    fn sub(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
+        AVX512GF2_128 {
             v: unsafe { _mm_xor_si128(self.v, rhs.v) },
         }
     }
 }
 
-impl AddAssign for GF2_128 {
+impl AddAssign for AVX512GF2_128 {
     #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         self.v = unsafe { _mm_xor_si128(self.v, rhs.v) };
     }
 }
 
-impl AddAssign<&GF2_128> for GF2_128 {
+impl AddAssign<&AVX512GF2_128> for AVX512GF2_128 {
     #[inline(always)]
-    fn add_assign(&mut self, rhs: &GF2_128) {
+    fn add_assign(&mut self, rhs: &AVX512GF2_128) {
         self.v = unsafe { _mm_xor_si128(self.v, rhs.v) };
     }
 }
 
-impl SubAssign for GF2_128 {
+impl SubAssign for AVX512GF2_128 {
     #[inline(always)]
     fn sub_assign(&mut self, rhs: Self) {
         self.v = unsafe { _mm_xor_si128(self.v, rhs.v) };
     }
 }
 
-impl SubAssign<&GF2_128> for GF2_128 {
+impl SubAssign<&AVX512GF2_128> for AVX512GF2_128 {
     #[inline(always)]
-    fn sub_assign(&mut self, rhs: &GF2_128) {
+    fn sub_assign(&mut self, rhs: &AVX512GF2_128) {
         self.v = unsafe { _mm_xor_si128(self.v, rhs.v) };
     }
 }
@@ -293,83 +303,83 @@ unsafe fn gfmul(a: __m128i, b: __m128i, res: &mut __m128i) {
     *res = _mm_xor_si128(tmp3, tmp6);
 }
 
-impl Mul<GF2_128> for GF2_128 {
+impl Mul<AVX512GF2_128> for AVX512GF2_128 {
     type Output = Self;
 
     #[inline(always)]
     fn mul(self, rhs: Self) -> Self {
         let mut res = unsafe { std::mem::zeroed() };
         unsafe { gfmul(self.v, rhs.v, &mut res) };
-        GF2_128 { v: res }
+        AVX512GF2_128 { v: res }
     }
 }
 
-impl Mul<&GF2_128> for GF2_128 {
-    type Output = GF2_128;
+impl Mul<&AVX512GF2_128> for AVX512GF2_128 {
+    type Output = AVX512GF2_128;
 
     #[inline(always)]
-    fn mul(self, rhs: &GF2_128) -> GF2_128 {
+    fn mul(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
         let mut res = unsafe { std::mem::zeroed() };
         unsafe { gfmul(self.v, rhs.v, &mut res) };
-        GF2_128 { v: res }
+        AVX512GF2_128 { v: res }
     }
 }
 
-impl Mul<GF2_128> for &GF2_128 {
-    type Output = GF2_128;
+impl Mul<AVX512GF2_128> for &AVX512GF2_128 {
+    type Output = AVX512GF2_128;
 
     #[inline(always)]
-    fn mul(self, rhs: GF2_128) -> GF2_128 {
+    fn mul(self, rhs: AVX512GF2_128) -> AVX512GF2_128 {
         let mut res = unsafe { std::mem::zeroed() };
         unsafe { gfmul(self.v, rhs.v, &mut res) };
-        GF2_128 { v: res }
+        AVX512GF2_128 { v: res }
     }
 }
 
-impl Mul<&GF2_128> for &GF2_128 {
-    type Output = GF2_128;
+impl Mul<&AVX512GF2_128> for &AVX512GF2_128 {
+    type Output = AVX512GF2_128;
 
     #[inline(always)]
-    fn mul(self, rhs: &GF2_128) -> GF2_128 {
+    fn mul(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
         let mut res = unsafe { std::mem::zeroed() };
         unsafe { gfmul(self.v, rhs.v, &mut res) };
-        GF2_128 { v: res }
+        AVX512GF2_128 { v: res }
     }
 }
 
-impl MulAssign<GF2_128> for GF2_128 {
+impl MulAssign<AVX512GF2_128> for AVX512GF2_128 {
     #[inline(always)]
-    fn mul_assign(&mut self, rhs: GF2_128) {
-        let mut res = unsafe { std::mem::zeroed() };
-        unsafe { gfmul(self.v, rhs.v, &mut res) };
-        self.v = res;
-    }
-}
-
-impl MulAssign<&GF2_128> for GF2_128 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: &GF2_128) {
+    fn mul_assign(&mut self, rhs: AVX512GF2_128) {
         let mut res = unsafe { std::mem::zeroed() };
         unsafe { gfmul(self.v, rhs.v, &mut res) };
         self.v = res;
     }
 }
 
-impl Default for GF2_128 {
+impl MulAssign<&AVX512GF2_128> for AVX512GF2_128 {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: &AVX512GF2_128) {
+        let mut res = unsafe { std::mem::zeroed() };
+        unsafe { gfmul(self.v, rhs.v, &mut res) };
+        self.v = res;
+    }
+}
+
+impl Default for AVX512GF2_128 {
     #[inline(always)]
     fn default() -> Self {
         Self::zero()
     }
 }
 
-impl PartialEq for GF2_128 {
+impl PartialEq for AVX512GF2_128 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe { _mm_test_all_ones(_mm_cmpeq_epi8(self.v, other.v)) == 1 }
     }
 }
 
-impl Neg for GF2_128 {
+impl Neg for AVX512GF2_128 {
     type Output = Self;
 
     #[inline(always)]
@@ -378,22 +388,22 @@ impl Neg for GF2_128 {
     }
 }
 
-impl<T: std::borrow::Borrow<GF2_128>> std::iter::Sum<T> for GF2_128 {
+impl<T: std::borrow::Borrow<AVX512GF2_128>> std::iter::Sum<T> for AVX512GF2_128 {
     fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::zero(), |acc, item| acc + item.borrow())
     }
 }
 
-impl<T: std::borrow::Borrow<GF2_128>> std::iter::Product<T> for GF2_128 {
+impl<T: std::borrow::Borrow<AVX512GF2_128>> std::iter::Product<T> for AVX512GF2_128 {
     fn product<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::one(), |acc, item| acc * item.borrow())
     }
 }
 
-impl From<u32> for GF2_128 {
+impl From<u32> for AVX512GF2_128 {
     #[inline(always)]
     fn from(v: u32) -> Self {
-        GF2_128 {
+        AVX512GF2_128 {
             v: unsafe { std::mem::transmute::<[u32; 4], __m128i>([v, 0, 0, 0]) },
         }
     }
