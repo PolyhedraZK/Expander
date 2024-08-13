@@ -1,6 +1,6 @@
 // this module benchmarks the performance of different field operations
 
-use arith::{Field, M31Ext3, SimdGF2, SimdGF2_128, SimdM31, SimdM31Ext3, GF2, M31};
+use arith::{Field, M31Ext3, GF2x8, SimdGF2_128, SimdM31, SimdM31Ext3, GF2, M31};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use halo2curves::bn256::Fr;

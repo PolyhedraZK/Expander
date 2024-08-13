@@ -2,7 +2,8 @@ use std::{arch::aarch64::*, mem::transmute};
 
 use rand::RngCore;
 
-use crate::neon_gf2_128::{gfadd, gfmul};
+use crate::neon::{gfadd, gfmul};
+
 
 #[test]
 // known answer test, results cross-checked with avx_gf2_128
