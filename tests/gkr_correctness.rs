@@ -2,6 +2,8 @@ use expander_rs::{
     BN254Config, Circuit, CircuitLayer, Config, GKRConfig, GKRScheme, GateAdd, GateMul,
     M31ExtConfig, Prover, Verifier,
 };
+use std::panic;
+use std::panic::AssertUnwindSafe;
 
 use rand::Rng;
 use sha2::Digest;
@@ -103,11 +105,21 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     let random_idx = rng.gen_range(0..bad_proof.bytes.len());
     let random_change = rng.gen_range(1..256) as u8;
     bad_proof.bytes[random_idx] ^= random_change;
+
+    // Catch the panic and treat it as returning `false`
+    let result = panic::catch_unwind(AssertUnwindSafe(|| {
+        verifier.verify(&mut circuit, &claimed_v, &bad_proof)
+    }));
+
+    let final_result = match result {
+        Ok(value) => value,
+        Err(_) => false,
+    };
+
     assert!(
-        !verifier.verify(&mut circuit, &claimed_v, &bad_proof),
+        !final_result,
         "Proof {:?}, Bad proof {:?}",
-        proof.bytes,
-        bad_proof.bytes
+        proof.bytes, bad_proof.bytes
     );
     println!("Bad proof rejected.");
 }

@@ -181,7 +181,7 @@ impl Field for AVX512GF2_128x4 {
 
     #[inline(always)]
     fn double(&self) -> Self {
-        *self + *self
+        Self::ZERO
     }
 
     #[inline(always)]
