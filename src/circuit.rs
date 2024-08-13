@@ -296,7 +296,7 @@ impl<C: GKRConfig> Segment<C> {
                     u64::deserialize_from(&mut reader) as usize,
                 ],
                 o_id: u64::deserialize_from(&mut reader) as usize,
-                coef: C::CircuitField::deserialize_from_ecc_format(&mut reader),
+                coef: C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
                 is_random: false,
                 gate_type: 0,
             };
@@ -309,7 +309,7 @@ impl<C: GKRConfig> Segment<C> {
                 i_ids: [u64::deserialize_from(&mut reader) as usize],
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
-                coef: C::CircuitField::deserialize_from_ecc_format(&mut reader),
+                coef: C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
                 is_random: false,
                 gate_type: 1,
             };
@@ -322,7 +322,7 @@ impl<C: GKRConfig> Segment<C> {
                 i_ids: [],
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
-                coef: C::CircuitField::deserialize_from_ecc_format(&mut reader),
+                coef: C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
                 is_random: false,
                 gate_type: 2,
             };
@@ -338,7 +338,7 @@ impl<C: GKRConfig> Segment<C> {
                 inputs.push(u64::deserialize_from(&mut reader) as usize);
             }
             let out = u64::deserialize_from(&mut reader) as usize;
-            let coef = C::CircuitField::deserialize_from_ecc_format(&mut reader);
+            let coef = C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap();
             let gate = GateUni {
                 i_ids: [inputs[0]],
                 o_id: out,
@@ -428,7 +428,7 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
         let magic_num = u64::deserialize_from(&mut cursor);
         assert_eq!(magic_num, MAGIC_NUM);
 
-        let field_mod = C::Field::deserialize_from_ecc_format(&mut cursor);
+        let field_mod = C::Field::try_deserialize_from_ecc_format(&mut cursor).unwrap();
         log::trace!("field mod: {:?}", field_mod);
         let segment_num = u64::deserialize_from(&mut cursor);
         for _ in 0..segment_num {

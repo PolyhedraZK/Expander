@@ -57,15 +57,20 @@ impl FieldSerde for NeonGF2_128x4 {
         res
     }
 
-    #[inline(always)]
-    fn deserialize_from_ecc_format<R: std::io::Read>(mut reader: R) -> Self {
+    #[inline]
+    fn try_deserialize_from_ecc_format<R: std::io::Read>(
+        mut reader: R,
+    ) -> std::result::Result<Self, std::io::Error>
+    where
+        Self: Sized,
+    {
         let mut res = Self::zero();
         res.v.iter_mut().for_each(|vv| {
             let mut u = [0u8; 32];
             reader.read_exact(&mut u).unwrap();
-            *vv = unsafe { transmute::<[u8; 16], uint32x4_t>(u[..16].try_into().unwrap()) }
+            *vv = unsafe { transmute::<[u8; 16], uint32x4_t>(u[..16].try_into().unwrap()) };
         });
-        res
+        Ok(res)
     }
 }
 

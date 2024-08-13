@@ -127,11 +127,7 @@ impl FieldSerde for Fr {
         Fr::from_bytes(&buffer).unwrap()
     }
 
-    #[inline(always)]
-    fn deserialize_from_ecc_format<R: Read>(reader: R) -> Self {
-        Fr::deserialize_from(reader) // same as deserialize_from
-    }
-
+    #[inline]
     fn try_deserialize_from_ecc_format<R: Read>(
         mut reader: R,
     ) -> std::result::Result<Self, std::io::Error>

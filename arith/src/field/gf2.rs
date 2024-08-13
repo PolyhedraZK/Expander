@@ -3,6 +3,7 @@
 // https://www.intel.com/content/dam/develop/external/us/en/documents/clmul-wp-rev-2-02-2014-04-20.pdf
 
 mod gf2x8;
+use std::io::Read;
 use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
@@ -38,10 +39,15 @@ impl FieldSerde for GF2 {
     }
 
     #[inline(always)]
-    fn deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> Self {
+    fn try_deserialize_from_ecc_format<R: Read>(
+        mut reader: R,
+    ) -> std::result::Result<Self, std::io::Error>
+    where
+        Self: Sized,
+    {
         let mut u = [0u8; 1];
-        _reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        GF2 { v: u[0] % 2 }
+        reader.read_exact(&mut u)?;
+        Ok(GF2 { v: u[0] % 2 })
     }
 }
 

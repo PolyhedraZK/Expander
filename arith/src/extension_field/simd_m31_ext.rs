@@ -44,17 +44,6 @@ impl FieldSerde for SimdM31Ext3 {
         }
     }
 
-    #[inline(always)]
-    fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
-        Self {
-            v: [
-                SimdM31::deserialize_from_ecc_format(&mut reader),
-                SimdM31::zero(),
-                SimdM31::zero(),
-            ],
-        }
-    }
-
     fn try_deserialize_from_ecc_format<R: Read>(
         mut reader: R,
     ) -> std::result::Result<Self, std::io::Error>

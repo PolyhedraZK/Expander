@@ -28,11 +28,16 @@ impl FieldSerde for GF2x8 {
         GF2x8 { v: u[0] }
     }
 
-    #[inline(always)]
-    fn deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> Self {
-        let mut u = [0u8; 1];
-        _reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        GF2x8 { v: u[0] }
+    #[inline]
+    fn try_deserialize_from_ecc_format<R: std::io::Read>(
+        mut reader: R,
+    ) -> std::result::Result<Self, std::io::Error>
+    where
+        Self: Sized,
+    {
+        let mut u = [0u8; 32];
+        reader.read_exact(&mut u)?;
+        Ok(GF2x8 { v: u[0] })
     }
 }
 
