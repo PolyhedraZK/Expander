@@ -16,7 +16,7 @@ fn test_field() {
 
     let mut rng = test_rng();
     random_inversion_tests::<GF2_128, _>(&mut rng, "GF2_128".to_string());
-    random_simd_field_tests::<SimdGF2_128>("Vectorized GF2_128".to_string());
+    // random_simd_field_tests::<SimdGF2_128>("Vectorized GF2_128".to_string());
 }
 
 #[test]

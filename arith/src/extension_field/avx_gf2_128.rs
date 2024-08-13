@@ -14,10 +14,7 @@ impl FieldSerde for GF2_128 {
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
         unsafe {
             writer
-                .write_all(std::slice::from_raw_parts(
-                    &self.v as *const __m128i as *const u8,
-                    16,
-                ))
+                .write_all(transmute::<_, [u8; 16]>(self.data).as_ref())
                 .unwrap(); // todo: error propagation
         }
     }
@@ -31,22 +28,14 @@ impl FieldSerde for GF2_128 {
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> Self {
         let mut u = [0u8; 16];
         reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        unsafe {
-            GF2_128 {
-                v: *(u.as_ptr() as *const __m128i),
-            }
-        }
+        unsafe { GF2_128 { v: transmute(u) } }
     }
 
     #[inline(always)]
     fn deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> Self {
         let mut u = [0u8; 32];
         _reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        unsafe {
-            GF2_128 {
-                v: *(u.as_ptr() as *const __m128i),
-            }
-        }
+        unsafe { GF2_128 { v: transmute(u) } }
     }
 }
 

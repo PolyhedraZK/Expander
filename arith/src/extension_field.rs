@@ -1,9 +1,7 @@
 #[cfg(target_arch = "aarch64")]
-mod neon_gf2_128;
+pub(crate) mod neon_gf2_128;
 #[cfg(target_arch = "aarch64")]
-pub use neon_gf2_128::NeonGF2_128;
-#[cfg(target_arch = "aarch64")]
-pub(crate) use neon_gf2_128::{gfadd, gfmul};
+pub use neon_gf2_128::GF2_128;
 
 #[cfg(target_arch = "x86_64")]
 mod avx_gf2_128;
@@ -24,6 +22,9 @@ pub use simd_m31_ext::SimdM31Ext3;
 
 /// Configurations for Extension Field over
 /// the Binomial polynomial x^DEGREE - W
+//
+// FIXME: Our binary extension field is no longer a binomial extension field
+// will fix later
 pub trait BinomialExtensionField: From<Self::BaseField> + Field + FieldSerde {
     /// Degree of the Extension
     const DEGREE: usize;
