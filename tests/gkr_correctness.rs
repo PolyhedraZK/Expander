@@ -1,9 +1,9 @@
-use std::panic;
-use std::panic::AssertUnwindSafe;
 use expander_rs::{
     BN254Config, Circuit, CircuitLayer, Config, GKRConfig, GKRScheme, GateAdd, GateMul,
     M31ExtConfig, Prover, Verifier,
 };
+use std::panic;
+use std::panic::AssertUnwindSafe;
 
 use rand::Rng;
 use sha2::Digest;
@@ -113,14 +113,13 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
 
     let final_result = match result {
         Ok(value) => value,
-        Err(_) => false
+        Err(_) => false,
     };
 
     assert!(
         !final_result,
         "Proof {:?}, Bad proof {:?}",
-        proof.bytes,
-        bad_proof.bytes
+        proof.bytes, bad_proof.bytes
     );
     println!("Bad proof rejected.");
 }
