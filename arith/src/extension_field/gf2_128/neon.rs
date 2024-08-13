@@ -6,7 +6,7 @@ use crate::{field_common, BinomialExtensionField, Field, FieldSerde, GF2};
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128 {
-    v: uint32x4_t,
+    pub(crate) v: uint32x4_t,
 }
 
 field_common!(NeonGF2_128);
@@ -53,9 +53,9 @@ impl FieldSerde for NeonGF2_128 {
     }
 
     #[inline(always)]
-    fn deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> Self {
+    fn deserialize_from_ecc_format<R: std::io::Read>(mut reader: R) -> Self {
         let mut u = [0u8; 32];
-        _reader.read_exact(&mut u).unwrap(); // todo: error propagation
+        reader.read_exact(&mut u).unwrap(); // todo: error propagation
         unsafe {
             NeonGF2_128 {
                 v: transmute::<[u8; 16], _>(u[..16].try_into().unwrap()),
