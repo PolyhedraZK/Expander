@@ -4,9 +4,6 @@ use rand::RngCore;
 
 use crate::neon::{gfadd, gfmul};
 
-
-
-
 #[test]
 // known answer test, results cross-checked with avx_gf2_128
 fn test_gf_mul_kat() {

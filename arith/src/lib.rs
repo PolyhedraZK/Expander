@@ -15,5 +15,7 @@ pub use serde::FieldSerde;
 mod poly;
 pub use poly::*;
 
+mod macros;
+
 #[cfg(test)]
 mod tests;

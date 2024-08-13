@@ -512,9 +512,7 @@ impl Debug for GF2_128x4 {
         unsafe {
             _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data);
         }
-        f.debug_struct("GF2_128x4")
-            .field("data", &data)
-            .finish()
+        f.debug_struct("GF2_128x4").field("data", &data).finish()
     }
 }
 

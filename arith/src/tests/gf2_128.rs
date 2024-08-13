@@ -1,7 +1,7 @@
 use ark_std::test_rng;
 use std::io::Cursor;
 
-use crate::{FieldSerde, GF2_128, };
+use crate::{FieldSerde, GF2_128};
 
 use super::{
     field::{random_field_tests, random_inversion_tests},

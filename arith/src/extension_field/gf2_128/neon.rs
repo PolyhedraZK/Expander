@@ -1,11 +1,33 @@
+use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use std::{arch::aarch64::*, mem::transmute};
 
-use crate::{BinomialExtensionField, Field, FieldSerde, GF2};
+use crate::{field_common, BinomialExtensionField, Field, FieldSerde, GF2};
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128 {
     v: uint32x4_t,
+}
+
+field_common!(NeonGF2_128);
+
+#[inline(always)]
+fn add_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
+    NeonGF2_128 {
+        v: unsafe { gfadd(a.v, b.v) },
+    }
+}
+
+#[inline(always)]
+fn mul_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
+    NeonGF2_128 {
+        v: unsafe { gfmul(a.v, b.v) },
+    }
+}
+
+#[inline(always)]
+fn sub_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
+    add_internal(a, b)
 }
 
 impl FieldSerde for NeonGF2_128 {
@@ -176,124 +198,6 @@ impl From<GF2> for NeonGF2_128 {
     }
 }
 
-impl Add for NeonGF2_128 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn add(self, rhs: Self) -> Self {
-        Self {
-            v: unsafe { gfadd(self.v, rhs.v) },
-        }
-    }
-}
-
-impl Sub for NeonGF2_128 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn sub(self, rhs: Self) -> Self {
-        self + rhs
-    }
-}
-
-impl Add<&NeonGF2_128> for NeonGF2_128 {
-    type Output = NeonGF2_128;
-
-    #[inline(always)]
-    fn add(self, rhs: &NeonGF2_128) -> NeonGF2_128 {
-        self + *rhs
-    }
-}
-
-impl Sub<&NeonGF2_128> for NeonGF2_128 {
-    type Output = NeonGF2_128;
-
-    #[inline(always)]
-    fn sub(self, rhs: &NeonGF2_128) -> NeonGF2_128 {
-        self - *rhs
-    }
-}
-
-impl AddAssign for NeonGF2_128 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs;
-    }
-}
-
-impl AddAssign<&NeonGF2_128> for NeonGF2_128 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: &NeonGF2_128) {
-        self.add_assign(*rhs)
-    }
-}
-
-impl SubAssign for NeonGF2_128 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: Self) {
-        self.add_assign(rhs)
-    }
-}
-
-impl SubAssign<&NeonGF2_128> for NeonGF2_128 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: &NeonGF2_128) {
-        self.add_assign(*rhs)
-    }
-}
-
-impl Mul<NeonGF2_128> for NeonGF2_128 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn mul(self, rhs: Self) -> Self {
-        NeonGF2_128 {
-            v: unsafe { gfmul(self.v, rhs.v) },
-        }
-    }
-}
-
-impl Mul<&NeonGF2_128> for NeonGF2_128 {
-    type Output = NeonGF2_128;
-
-    #[inline(always)]
-    fn mul(self, rhs: &NeonGF2_128) -> NeonGF2_128 {
-        self * *rhs
-    }
-}
-
-impl Mul<NeonGF2_128> for &NeonGF2_128 {
-    type Output = NeonGF2_128;
-
-    #[inline(always)]
-    fn mul(self, rhs: NeonGF2_128) -> NeonGF2_128 {
-        *self * rhs
-    }
-}
-
-impl Mul<&NeonGF2_128> for &NeonGF2_128 {
-    type Output = NeonGF2_128;
-
-    #[inline(always)]
-    fn mul(self, rhs: &NeonGF2_128) -> NeonGF2_128 {
-        *self * *rhs
-    }
-}
-
-impl MulAssign<NeonGF2_128> for NeonGF2_128 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: NeonGF2_128) {
-        *self = *self * rhs;
-    }
-}
-
-impl MulAssign<&NeonGF2_128> for NeonGF2_128 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: &NeonGF2_128) {
-        *self = *self * *rhs;
-    }
-}
-
 impl Default for NeonGF2_128 {
     #[inline(always)]
     fn default() -> Self {
@@ -317,18 +221,6 @@ impl Neg for NeonGF2_128 {
     }
 }
 
-impl<T: std::borrow::Borrow<NeonGF2_128>> std::iter::Sum<T> for NeonGF2_128 {
-    fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::zero(), |acc, item| acc + item.borrow())
-    }
-}
-
-impl<T: std::borrow::Borrow<NeonGF2_128>> std::iter::Product<T> for NeonGF2_128 {
-    fn product<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::one(), |acc, item| acc * item.borrow())
-    }
-}
-
 impl From<u32> for NeonGF2_128 {
     #[inline(always)]
     fn from(v: u32) -> Self {
@@ -338,7 +230,6 @@ impl From<u32> for NeonGF2_128 {
     }
 }
 
-//
 // multiply the polynomial by x^32, without reducing the irreducible polynomial
 // equivalent to _mm_shuffle_epi32(a, 147)
 // TODO: Is there an instruction for this?
