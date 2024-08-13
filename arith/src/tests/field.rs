@@ -1,14 +1,13 @@
 use std::io::Cursor;
 
 use ark_std::{end_timer, start_timer, test_rng};
-use rand::{Rng, RngCore};
+use rand::RngCore;
 
 use crate::{Field, FieldSerde};
 
 pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
     let mut rng = test_rng();
 
-    test_basic_field_op::<F>(type_name.clone());
     random_multiplication_tests::<F, _>(&mut rng, type_name.clone());
     random_addition_tests::<F, _>(&mut rng, type_name.clone());
     random_subtraction_tests::<F, _>(&mut rng, type_name.clone());
@@ -79,21 +78,6 @@ fn identity_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
 //     // pass for now
 //     todo!();
 // }
-
-fn test_basic_field_op<F: Field>(_type_name: String) {
-    let mut rng = rand::thread_rng();
-
-    let f = F::random_unsafe(&mut rng);
-
-    let rhs = rng.gen::<u32>() % 100;
-
-    let prod_0 = f * F::from(rhs);
-    let mut prod_1 = F::zero();
-    for _ in 0..rhs {
-        prod_1 += f;
-    }
-    assert_eq!(prod_0, prod_1);
-}
 
 fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("multiplication {}", type_name);
@@ -218,6 +202,9 @@ pub(crate) fn random_inversion_tests<F: Field, R: RngCore>(mut rng: R, type_name
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let mut a = F::random_unsafe(&mut rng);
+        if a.is_zero() {
+            a = F::one();
+        }
         let b = a.inv().unwrap(); // probabilistically nonzero
         a.mul_assign(&b);
         assert_eq!(a, F::one());

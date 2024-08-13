@@ -31,14 +31,14 @@ impl FieldSerde for GF2 {
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> Self {
         let mut u = [0u8; 1];
         reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        GF2 { v: u[0] }
+        GF2 { v: u[0] % 2 }
     }
 
     #[inline(always)]
     fn deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> Self {
         let mut u = [0u8; 1];
         _reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        GF2 { v: u[0] }
+        GF2 { v: u[0] % 2 }
     }
 }
 
@@ -67,14 +67,14 @@ impl Field for GF2 {
     #[inline(always)]
     fn random_unsafe(mut rng: impl rand::RngCore) -> Self {
         GF2 {
-            v: (rng.next_u32() % 256) as u8,
+            v: (rng.next_u32() % 2) as u8,
         }
     }
 
     #[inline(always)]
     fn random_bool(mut rng: impl rand::RngCore) -> Self {
         GF2 {
-            v: (rng.next_u32() % 256) as u8,
+            v: (rng.next_u32() % 2) as u8,
         }
     }
 
@@ -89,27 +89,31 @@ impl Field for GF2 {
 
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
-        Some(*self + GF2 { v: 255 })
+        if self.v == 0 {
+            None
+        } else {
+            Some(Self::one())
+        }
     }
 
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
-        self.v as u32
+        self.v as u32 % 2
     }
 
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        GF2 { v: bytes[0] }
+        GF2 { v: bytes[0] % 2}
     }
 
     #[inline(always)]
     fn mul_by_5(&self) -> Self {
-        unimplemented!("mul_by_5 is not implemented for GF2")
+        *self
     }
 
     #[inline(always)]
     fn mul_by_6(&self) -> Self {
-        unimplemented!("mul_by_6 is not implemented for GF2")
+        Self::ZERO
     }
 }
 
@@ -246,6 +250,6 @@ impl SubAssign<&GF2> for GF2 {
 impl From<u32> for GF2 {
     #[inline(always)]
     fn from(v: u32) -> Self {
-        GF2 { v: (v % 256) as u8 }
+        GF2 { v: (v % 2) as u8 }
     }
 }
