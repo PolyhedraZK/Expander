@@ -15,11 +15,10 @@ impl MultiLinearPoly {
         let timer = start_timer!(|| format!("eval mle with {} vars", x.len()));
         assert_eq!(1 << x.len(), evals.len());
 
-        let x0 = &x[0];
         for i in 0..(evals.len() >> 1) {
-            // FIXME: may need a field_add_simd_circuit_field to be optimal
-            scratch[i] = C::simd_circuit_field_into_field(&evals[i * 2])
-                + C::simd_circuit_field_mul_challenge_field(&(evals[i * 2 + 1] - evals[i * 2]), x0);
+            scratch[i] = C::field_add_simd_circuit_field(
+                &C::simd_circuit_field_mul_challenge_field(&(evals[i * 2 + 1] - evals[i * 2]), &x[0]),
+                &evals[i * 2]);
         }
 
         let mut cur_eval_size = evals.len() >> 2;
