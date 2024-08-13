@@ -1,12 +1,19 @@
+#[cfg(target_arch = "aarch64")]
+mod neon_gf2_128;
+
+#[cfg(target_arch = "x86_64")]
 mod avx_gf2_128;
+#[cfg(target_arch = "x86_64")]
+mod avx_gf2_128x4;
+#[cfg(target_arch = "x86_64")]
+pub use avx_gf2_128::GF2_128;
+
 mod fr_ext;
-mod gf2_128;
 mod m31_ext;
 mod simd_gf2_128;
 mod simd_m31_ext;
 use crate::{Field, FieldSerde};
 
-pub use gf2_128::GF2_128;
 pub use m31_ext::M31Ext3;
 pub use simd_gf2_128::SimdGF2_128;
 pub use simd_m31_ext::SimdM31Ext3;

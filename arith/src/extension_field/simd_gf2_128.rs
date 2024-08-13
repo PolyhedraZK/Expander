@@ -5,4 +5,4 @@
 pub type SimdGF2_128 = super::avx_gf2_128::AVX512GF2_128;
 
 #[cfg(target_arch = "aarch64")]
-pub type SimdGF2 = super::gf2_neon::NeonGF2;
+pub type SimdGF2_128 = super::neon_gf2_128::NeonGF2_128;
