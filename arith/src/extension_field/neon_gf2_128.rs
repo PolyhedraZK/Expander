@@ -23,8 +23,10 @@ fn mul_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
     }
 }
 
+//
+// multiply the polynomial by x^32, without reducing the irreducible polynomial
 // TODO: Is there an instruction for this?
-unsafe fn shuffle_epi32_neon_147(input: uint32x4_t) -> uint32x4_t {
+unsafe fn cyclic_rotate_1(input: uint32x4_t) -> uint32x4_t {
     let a = vgetq_lane_u32(input, 0);
     let b = vgetq_lane_u32(input, 1);
     let c = vgetq_lane_u32(input, 2);
@@ -38,8 +40,9 @@ unsafe fn shuffle_epi32_neon_147(input: uint32x4_t) -> uint32x4_t {
     res
 }
 
+// multiply the polynomial by x^64, without reducing the irreducible polynomial
 // TODO: Is there an instruction for this?
-unsafe fn shuffle_epi32_neon_78(input: uint32x4_t) -> uint32x4_t {
+unsafe fn cyclic_rotate_2(input: uint32x4_t) -> uint32x4_t {
     let a = vgetq_lane_u32(input, 0);
     let b = vgetq_lane_u32(input, 1);
     let c = vgetq_lane_u32(input, 2);
@@ -56,140 +59,91 @@ unsafe fn shuffle_epi32_neon_78(input: uint32x4_t) -> uint32x4_t {
 unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
     let xmm_mask = transmute([0xffffffffu32, 0, 0, 0]);
 
+    // case a and b as u64 vectors
     // a = a0|a1, b = b0|b1
-    println!("{:?}", a);
-    println!("{:?}", b);
     let a64 = vreinterpretq_u64_u32(a);
     let b64 = vreinterpretq_u64_u32(b);
 
-    println!("{:?}", a64);
-    println!("{:?}", b64);
+    // =========================================
+    // step 1: compute a0 * b0, a1 * b1, and (a0 * b1 + a1 * b0)
+    // =========================================
 
+    // tmp3 = a0 * b0
     let tmp3 = transmute::<_, uint64x2_t>(vmull_p64(
-        vget_lane_u64(vget_low_u64(a64), 0),
-        vget_lane_u64(vget_low_u64(b64), 0),
-    )); // tmp3 = a0 * b0
-
-    println!("tmp3: {:?} {:?}", tmp3, transmute::<_, u128>(tmp3));
-
+        transmute(vget_low_u64(a64)),
+        transmute(vget_low_u64(b64)),
+    ));
+    // tmp6 = a1 * b1
     let tmp6 = transmute::<_, uint64x2_t>(vmull_p64(
-        vget_lane_u64::<0>(vget_high_u64(a64)),
-        vget_lane_u64::<0>(vget_high_u64(b64)),
-    )); // tmp6 = a1 * b1
+        transmute(vget_high_u64(a64)),
+        transmute(vget_high_u64(b64)),
+    ));
 
-    println!("tmp6: {:?} {:?}", tmp6, transmute::<_, u128>(tmp6));
+    // shuffle the lanes, i.e., multiply by x^64
+    let tmp4 = cyclic_rotate_2(a);
+    let tmp5 = cyclic_rotate_2(b);
 
-    // let tmp4 = transmute::<_, uint32x4_t>(
-    //     ((vgetq_lane_u64(a64, 0) | vgetq_lane_u64(a64, 1)) as u128) << 64,
-    // );
-    // let tmp5 =
-    //     transmute::<_, uint32x4_t>((vgetq_lane_u64(b64, 0) | vgetq_lane_u64(b64, 1)) as u128);
+    // tmp4 = (a0 + a1) | (a0 + a1)
+    let tmp4 = veorq_u32(tmp4, a);
+    // tmp5 = (b0 + b1) | (b0 + b1)
+    let tmp5 = veorq_u32(tmp5, b);
 
-    let tmp4 = shuffle_epi32_neon_78(a);
-    let tmp5 = shuffle_epi32_neon_78(b);
-
-    // let tmp4 = vrev64q_u32(a); // tmp4 = a1|a0
-    // let tmp5 = vrev64q_u32(b); // tmp5 = b1|b0
-
-    // and => mul
-    // xor => add
-
-    println!("tmp4 shuffled: {:?} {:?}", tmp4, transmute::<_, u128>(tmp4));
-    println!("tmp5 shuffled: {:?} {:?}", tmp5, transmute::<_, u128>(tmp5));
-    println!();
-    let tmp4 = veorq_u32(tmp4, a); // tmp4 = (a0 + a1) | (a0 + a1)
-    let tmp5 = veorq_u32(tmp5, b); // tmp5 = (b0 + b1) | (b0 + b1)
-
-    println!("tmp4: {:?} {:?}", tmp4, transmute::<_, u128>(tmp4));
-    println!("tmp5: {:?} {:?}", tmp5, transmute::<_, u128>(tmp5));
-
+    // tmp4 = (a0 + a1) * (b0 + b1)
     let tmp4_64 = transmute::<_, uint64x2_t>(vmull_p64(
-        vget_lane_u64::<0>(vreinterpret_u64_u32(vget_low_u32(tmp4))),
-        vget_lane_u64::<0>(vreinterpret_u64_u32(vget_low_u32(tmp5))),
-    )); // tmp4 = (a0 + a1) * (b0 + b1)
+        transmute(vget_low_u32(tmp4)),
+        transmute(vget_low_u32(tmp5)),
+    ));
 
-    println!("tmp4_64 {:?}", tmp4_64);
+    // tmp4 = (a0 + a1) * (b0 + b1) - a0 * b0
+    let tmp4_64 = veorq_u64(tmp4_64, tmp3);
 
-    let tmp4_64 = veorq_u64(tmp4_64, tmp3); // tmp4 = (a0 + a1) * (b0 + b1) - a0 * b0
+    // tmp4 = (a0 + a1) * (b0 + b1) - a0 * b0 - a1 * b1 = a0 * b1 + a1 * b0
+    let tmp4_64 = veorq_u64(tmp4_64, tmp6);
 
-    println!("tmp4 {:?}", tmp4_64);
+    // =========================================
+    // step 2: mod reductions
+    // =========================================
 
-    let tmp4_64 = veorq_u64(tmp4_64, tmp6); // tmp4 = (a0 + a1) * (b0 + b1) - a0 * b0 - a1 * b1 = a0 * b1 + a1 * b0
-
-    println!("tmp4 before shift {:?}", tmp4_64);
-
-    // let tmp5_shifted_left = vshlq_n_u64(tmp4_64, 8);
-    // probably not correct
-    // let tmp5_shifted_left = vcombine_u64(vget_high_u64(tmp4_64),vget_low_u64(tmp4_64));
+    // tmp5_shifted_left = (a0 * b1) << 64
+    // TODO: is there a better way to do this?
     let tmp5_shifted_left = transmute(transmute::<_, u128>(tmp4_64) << 64);
-
+    // tmp4_64 = (a0 * b1) >> 64
+    // TODO: is there a better way to do this?
     let tmp4_64 = transmute(transmute::<_, u128>(tmp4_64) >> 64);
+    // tmp3 = a0 * b0 xor (a0 * b1) << 64
     let tmp3 = veorq_u64(tmp3, tmp5_shifted_left);
+    // tmp6 = a1 * b1 xor (a0 * b1) >> 64
     let tmp6 = veorq_u64(tmp6, tmp4_64);
 
-    println!(
-        "tmp5_shifted_left: {:?} {:?}",
-        tmp5_shifted_left,
-        transmute::<_, u128>(tmp5_shifted_left)
-    );
-    println!("tmp4_64: {:?}", tmp4_64);
-    println!();
-    println!("tmp3: {:?}", tmp3);
-    println!("tmp6: {:?}", tmp6);
-
+    // performs necessary shifts as per the avx code
+    // 31, 30, 25 as reflecting the non-zero entries of the irreducible polynomial
     let tmp7 = vshrq_n_u32(vreinterpretq_u32_u64(tmp6), 31);
     let tmp8 = vshrq_n_u32(vreinterpretq_u32_u64(tmp6), 30);
     let tmp9 = vshrq_n_u32(vreinterpretq_u32_u64(tmp6), 25);
 
-    println!("tmp7: {:?}", tmp7);
-    println!("tmp9: {:?}", tmp9);
-    println!("tmp7: {:?}", tmp7);
-
+    // xor all the shifted values
     let tmp7 = veorq_u32(tmp7, tmp8);
     let tmp7 = veorq_u32(tmp7, tmp9);
 
-    println!("tmp7: {:?}", tmp7);
-    println!("tmp7: {:?}", tmp7);
-
-    // let tmp8 = vrev64q_u32(tmp7);
-    let tmp8 = shuffle_epi32_neon_147(tmp7);
-    println!("shuffled tmp8: {:?}", transmute::<_, uint64x2_t>(tmp8));
-    println!();
+    // shuffle the lanes, i.e., multiply by x^32
+    let tmp8 = cyclic_rotate_1(tmp7);
 
     let tmp7 = vandq_u32(xmm_mask, tmp8);
     let tmp8 = vbicq_u32(tmp8, xmm_mask);
 
-    println!("tmp7: {:?}", tmp7);
-    println!("tmp8: {:?}", tmp8);
-
     let tmp3 = veorq_u64(tmp3, vreinterpretq_u64_u32(tmp8));
     let tmp6 = veorq_u64(tmp6, vreinterpretq_u64_u32(tmp7));
 
-    println!("tmp3: {:?}", tmp3);
-    println!("tmp6: {:?}", tmp6);
-
-    let tmp10 = vshlq_n_u32(transmute(tmp6), 1);
-
+    let tmp10 = vshlq_n_u32(vreinterpretq_u32_u64(tmp6), 1);
     let tmp3 = veorq_u64(tmp3, vreinterpretq_u64_u32(tmp10));
-
-    println!("tmp10: {:?}", tmp10);
-    println!("tmp3: {:?}", tmp3);
 
     let tmp11 = vshlq_n_u32(vreinterpretq_u32_u64(tmp6), 2);
     let tmp3 = veorq_u64(tmp3, vreinterpretq_u64_u32(tmp11));
 
-    println!("tmp11: {:?}", tmp11);
-    println!("tmp3: {:?}", tmp3);
-
     let tmp12 = vshlq_n_u32(vreinterpretq_u32_u64(tmp6), 7);
     let tmp3 = veorq_u64(tmp3, vreinterpretq_u64_u32(tmp12));
 
-    println!("tmp12: {:?}", tmp12);
-    println!("tmp3: {:?}", tmp3);
-
-    let res = transmute::<_, uint32x4_t>(veorq_u64(tmp3, tmp6));
-
-    println!("res: {:?}", res);
+    let res = vreinterpretq_u32_u64(veorq_u64(tmp3, tmp6));
 
     res
 }
@@ -213,71 +167,60 @@ mod tests {
     #[test]
     fn test_gfmul_one() {
         unsafe {
-            // {
-            //     let zero = transmute(0u128);
-            // let a = transmute((3u128 << 64) + 5);
-            //     let result = gfmul(a, zero);
-            //     assert_eq!(vgetq_lane_u32(result, 0), 0);
-            //     assert_eq!(vgetq_lane_u32(result, 1), 0);
-            //     assert_eq!(vgetq_lane_u32(result, 2), 0);
-            //     assert_eq!(vgetq_lane_u32(result, 3), 0);
-            // }
+            {
+                let zero = transmute(0u128);
+                let a = transmute((3u128 << 64) + 5);
+                let result = gfmul(a, zero);
 
-            // {
+                assert_eq!(vgetq_lane_u32(result, 0), 0);
+                assert_eq!(vgetq_lane_u32(result, 1), 0);
+                assert_eq!(vgetq_lane_u32(result, 2), 0);
+                assert_eq!(vgetq_lane_u32(result, 3), 0);
+            }
 
-            //     let one = transmute(1u128);
-            // let a = transmute((3u128 << 64) + 5);
-            //     let result = gfmul(one, a);
-            //     println!("{:?}", result);
-            //     println!("{:?}", transmute::<_, u128>(result));
-            //     assert_eq!(vgetq_lane_u32(result, 0), 5);
-            //     assert_eq!(vgetq_lane_u32(result, 1), 0);
-            //     assert_eq!(vgetq_lane_u32(result, 2), 3);
-            //     assert_eq!(vgetq_lane_u32(result, 3), 0);
-            // }
+            {
+                let one = transmute(1u128);
+                let a = transmute((3u128 << 64) + 5);
+                let result = gfmul(one, a);
 
-            // {
+                assert_eq!(vgetq_lane_u32(result, 0), 5);
+                assert_eq!(vgetq_lane_u32(result, 1), 0);
+                assert_eq!(vgetq_lane_u32(result, 2), 3);
+                assert_eq!(vgetq_lane_u32(result, 3), 0);
+            }
 
-            // let a = transmute((3u128 << 64) + 5);
+            {
+                let a = transmute((3u128 << 64) + 5);
+                let b = transmute((1u128 << 64) + 7);
+                let result = gfmul(a, b);
 
-            // let b =  transmute((1u128 << 64) + 7);
-            //     let result = gfmul(a, b);
-            //     println!("{:?}", result);
-            //     println!("{:?}", transmute::<_, u128>(result));
-            //     assert_eq!(vgetq_lane_u32(result, 0), 402);
-            //     assert_eq!(vgetq_lane_u32(result, 1), 0);
-            //     assert_eq!(vgetq_lane_u32(result, 2), 12);
-            //     assert_eq!(vgetq_lane_u32(result, 3), 0);
-            // }
+                assert_eq!(vgetq_lane_u32(result, 0), 402);
+                assert_eq!(vgetq_lane_u32(result, 1), 0);
+                assert_eq!(vgetq_lane_u32(result, 2), 12);
+                assert_eq!(vgetq_lane_u32(result, 3), 0);
+            }
 
-            // {
+            {
+                let b = transmute((1u128 << 64) + 7);
+                let c = transmute((1u128 << 96) + (1 << 64) + (1 << 32) + 1);
+                let result = gfmul(b, c);
 
-            //     let b =  transmute((1u128 << 64) + 7);
+                assert_eq!(vgetq_lane_u32(result, 0), 128);
+                assert_eq!(vgetq_lane_u32(result, 1), 128);
+                assert_eq!(vgetq_lane_u32(result, 2), 6);
+                assert_eq!(vgetq_lane_u32(result, 3), 6);
+            }
 
-            // let c = transmute((1u128<<96) + (1<<64) + (1<<32) + 1 );
+            {
+                let a = transmute::<_, uint32x4_t>([7u8; 16]);
+                let b = transmute::<_, uint32x4_t>([5u8; 16]);
+                let result = gfmul(a, b);
 
-            //     let result = gfmul(b, c);
-            //     println!("{:?}", result);
-            //     println!("{:?}", transmute::<_, u128>(result));
-            //     assert_eq!(vgetq_lane_u32(result, 0), 128);
-            //     assert_eq!(vgetq_lane_u32(result, 1), 128);
-            //     assert_eq!(vgetq_lane_u32(result, 2), 6);
-            //     assert_eq!(vgetq_lane_u32(result, 3), 6);
-            // }
-
-            // {
-            //     let a = transmute::<_,uint32x4_t>([7u8; 16]);
-            //     let b = transmute::<_,uint32x4_t>([5u8; 16]);
-
-            //     let result = gfmul(a, b, );
-
-            //     println!("{:?}", result);
-            //     println!("{:?}", transmute::<_, u128>(result));
-            //     assert_eq!(vgetq_lane_u32(result, 0), 232394202);
-            //     assert_eq!(vgetq_lane_u32(result, 1), 232394202);
-            //     assert_eq!(vgetq_lane_u32(result, 2), 232394202);
-            //     assert_eq!(vgetq_lane_u32(result, 3), 232394202);
-            // }
+                assert_eq!(vgetq_lane_u32(result, 0), 232394202);
+                assert_eq!(vgetq_lane_u32(result, 1), 232394202);
+                assert_eq!(vgetq_lane_u32(result, 2), 232394202);
+                assert_eq!(vgetq_lane_u32(result, 3), 232394202);
+            }
 
             {
                 let mut a = [6u8; 16];
@@ -286,11 +229,8 @@ mod tests {
                 let mut b = [5u8; 16];
                 b[4] = 1;
                 let b = transmute::<_, uint32x4_t>(b);
-
                 let result = gfmul(a, b);
 
-                println!("{:?}", result);
-                println!("{:?}", transmute::<_, u128>(result));
                 assert_eq!(vgetq_lane_u32(result, 0), 508894806);
                 assert_eq!(vgetq_lane_u32(result, 1), 1107902981);
                 assert_eq!(vgetq_lane_u32(result, 2), 155322701);
