@@ -149,7 +149,7 @@ impl BinomialExtensionField for NeonGF2_128 {
     }
 
     #[inline(always)]
-    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
+    fn add_by_base_field(&self, _base: &Self::BaseField) -> Self {
         todo!()
         // let mut res = *self;
         // res.v = unsafe { _mm_xor_si128(res.v, _mm_set_epi64x(0, base.v as i64)) };
@@ -336,20 +336,6 @@ impl From<u32> for NeonGF2_128 {
             v: unsafe { transmute([v, 0, 0, 0]) },
         }
     }
-}
-
-#[inline(always)]
-fn add_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
-    unsafe {
-        NeonGF2_128 {
-            v: vaddq_u32(a.v, b.v),
-        }
-    }
-}
-
-#[inline(always)]
-fn mul_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
-    unsafe { NeonGF2_128 { v: gfmul(a.v, b.v) } }
 }
 
 //

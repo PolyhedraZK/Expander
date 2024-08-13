@@ -10,18 +10,18 @@ use std::{
 use super::GF2_128;
 
 #[derive(Clone, Copy)]
-pub struct AVX512GF2_128 {
+pub struct GF2_128x4 {
     data: __m512i,
 }
 
-impl AVX512GF2_128 {
+impl GF2_128x4 {
     #[inline(always)]
     pub(crate) fn pack_full(data: __m128i) -> __m512i {
         unsafe { _mm512_broadcast_i32x4(data) }
     }
 }
 
-impl FieldSerde for AVX512GF2_128 {
+impl FieldSerde for GF2_128x4 {
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
         unsafe {
@@ -70,7 +70,7 @@ const PACKED_INV_2: __m512i = unsafe {
 };
 
 // p(x) = x^128 + x^7 + x^2 + x + 1
-impl Field for AVX512GF2_128 {
+impl Field for GF2_128x4 {
     const NAME: &'static str = "AVX512 Galios Field 2^128";
 
     // size in bytes
@@ -317,7 +317,7 @@ void gfmul_avx512(__m512i a, __m512i b, __m512i *res) {
  */
 
 #[inline(always)]
-unsafe fn mul_internal(a: &AVX512GF2_128, b: &AVX512GF2_128) -> AVX512GF2_128 {
+unsafe fn mul_internal(a: &GF2_128x4, b: &GF2_128x4) -> GF2_128x4 {
     let xmmmask = _mm512_set_epi32(
         0,
         0,
@@ -379,146 +379,146 @@ unsafe fn mul_internal(a: &AVX512GF2_128, b: &AVX512GF2_128) -> AVX512GF2_128 {
 
     let result = _mm512_xor_si512(tmp3, tmp6);
 
-    AVX512GF2_128 { data: result }
+    GF2_128x4 { data: result }
 }
 
-impl Mul<&AVX512GF2_128> for &AVX512GF2_128 {
-    type Output = AVX512GF2_128;
+impl Mul<&GF2_128x4> for &GF2_128x4 {
+    type Output = GF2_128x4;
 
     #[inline(always)]
-    fn mul(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
+    fn mul(self, rhs: &GF2_128x4) -> GF2_128x4 {
         unsafe { mul_internal(self, rhs) }
     }
 }
 
-impl Mul<AVX512GF2_128> for AVX512GF2_128 {
-    type Output = AVX512GF2_128;
+impl Mul<GF2_128x4> for GF2_128x4 {
+    type Output = GF2_128x4;
 
     #[inline(always)]
-    fn mul(self, rhs: AVX512GF2_128) -> AVX512GF2_128 {
+    fn mul(self, rhs: GF2_128x4) -> GF2_128x4 {
         unsafe { mul_internal(&self, &rhs) }
     }
 }
 
-impl MulAssign<&AVX512GF2_128> for AVX512GF2_128 {
+impl MulAssign<&GF2_128x4> for GF2_128x4 {
     #[inline(always)]
-    fn mul_assign(&mut self, rhs: &AVX512GF2_128) {
+    fn mul_assign(&mut self, rhs: &GF2_128x4) {
         *self = *self * *rhs;
     }
 }
 
-impl MulAssign<AVX512GF2_128> for AVX512GF2_128 {
+impl MulAssign<GF2_128x4> for GF2_128x4 {
     #[inline(always)]
-    fn mul_assign(&mut self, rhs: AVX512GF2_128) {
+    fn mul_assign(&mut self, rhs: GF2_128x4) {
         *self = *self * rhs;
     }
 }
 
-impl Add<&AVX512GF2_128> for AVX512GF2_128 {
-    type Output = AVX512GF2_128;
+impl Add<&GF2_128x4> for GF2_128x4 {
+    type Output = GF2_128x4;
 
     #[inline(always)]
-    fn add(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
+    fn add(self, rhs: &GF2_128x4) -> GF2_128x4 {
         unsafe {
-            AVX512GF2_128 {
+            GF2_128x4 {
                 data: _mm512_xor_si512(self.data, rhs.data),
             }
         }
     }
 }
 
-impl Add for AVX512GF2_128 {
-    type Output = AVX512GF2_128;
+impl Add for GF2_128x4 {
+    type Output = GF2_128x4;
 
     #[inline(always)]
-    fn add(self, rhs: AVX512GF2_128) -> AVX512GF2_128 {
+    fn add(self, rhs: GF2_128x4) -> GF2_128x4 {
         unsafe {
-            AVX512GF2_128 {
+            GF2_128x4 {
                 data: _mm512_xor_si512(self.data, rhs.data),
             }
         }
     }
 }
 
-impl AddAssign<&AVX512GF2_128> for AVX512GF2_128 {
+impl AddAssign<&GF2_128x4> for GF2_128x4 {
     #[inline(always)]
-    fn add_assign(&mut self, rhs: &AVX512GF2_128) {
+    fn add_assign(&mut self, rhs: &GF2_128x4) {
         *self = *self + rhs;
     }
 }
 
-impl AddAssign<AVX512GF2_128> for AVX512GF2_128 {
+impl AddAssign<GF2_128x4> for GF2_128x4 {
     #[inline(always)]
-    fn add_assign(&mut self, rhs: AVX512GF2_128) {
+    fn add_assign(&mut self, rhs: GF2_128x4) {
         *self = *self + rhs;
     }
 }
 
-impl From<u32> for AVX512GF2_128 {
+impl From<u32> for GF2_128x4 {
     #[inline(always)]
-    fn from(v: u32) -> AVX512GF2_128 {
+    fn from(v: u32) -> GF2_128x4 {
         assert!(v < 2); // only 0 and 1 are allowed
         let data = unsafe { _mm512_set_epi64(0, v as i64, 0, v as i64, 0, v as i64, 0, v as i64) };
-        AVX512GF2_128 { data }
+        GF2_128x4 { data }
     }
 }
 
-impl Neg for AVX512GF2_128 {
-    type Output = AVX512GF2_128;
+impl Neg for GF2_128x4 {
+    type Output = GF2_128x4;
 
     #[inline(always)]
-    fn neg(self) -> AVX512GF2_128 {
+    fn neg(self) -> GF2_128x4 {
         self
     }
 }
 
-impl Sub<&AVX512GF2_128> for AVX512GF2_128 {
-    type Output = AVX512GF2_128;
+impl Sub<&GF2_128x4> for GF2_128x4 {
+    type Output = GF2_128x4;
 
     #[inline(always)]
     #[allow(clippy::suspicious_arithmetic_impl)]
-    fn sub(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
+    fn sub(self, rhs: &GF2_128x4) -> GF2_128x4 {
         self + rhs
     }
 }
 
-impl Sub for AVX512GF2_128 {
-    type Output = AVX512GF2_128;
+impl Sub for GF2_128x4 {
+    type Output = GF2_128x4;
 
     #[inline(always)]
     #[allow(clippy::suspicious_arithmetic_impl)]
-    fn sub(self, rhs: AVX512GF2_128) -> AVX512GF2_128 {
+    fn sub(self, rhs: GF2_128x4) -> GF2_128x4 {
         self + rhs
     }
 }
 
-impl SubAssign<&AVX512GF2_128> for AVX512GF2_128 {
+impl SubAssign<&GF2_128x4> for GF2_128x4 {
     #[inline(always)]
-    fn sub_assign(&mut self, rhs: &AVX512GF2_128) {
+    fn sub_assign(&mut self, rhs: &GF2_128x4) {
         *self = *self - rhs;
     }
 }
 
-impl SubAssign<AVX512GF2_128> for AVX512GF2_128 {
+impl SubAssign<GF2_128x4> for GF2_128x4 {
     #[inline(always)]
-    fn sub_assign(&mut self, rhs: AVX512GF2_128) {
+    fn sub_assign(&mut self, rhs: GF2_128x4) {
         *self = *self - rhs;
     }
 }
 
-impl Debug for AVX512GF2_128 {
+impl Debug for GF2_128x4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut data = [0u8; 64];
         unsafe {
             _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data);
         }
-        f.debug_struct("AVX512GF2_128")
+        f.debug_struct("GF2_128x4")
             .field("data", &data)
             .finish()
     }
 }
 
-impl PartialEq for AVX512GF2_128 {
+impl PartialEq for GF2_128x4 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
@@ -528,52 +528,52 @@ impl PartialEq for AVX512GF2_128 {
     }
 }
 
-impl Default for AVX512GF2_128 {
+impl Default for GF2_128x4 {
     #[inline(always)]
     fn default() -> Self {
         Self::zero()
     }
 }
 
-impl<T: ::core::borrow::Borrow<AVX512GF2_128>> Sum<T> for AVX512GF2_128 {
+impl<T: ::core::borrow::Borrow<GF2_128x4>> Sum<T> for GF2_128x4 {
     fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::zero(), |acc, item| acc + item.borrow())
     }
 }
 
-impl<T: ::core::borrow::Borrow<AVX512GF2_128>> Product<T> for AVX512GF2_128 {
+impl<T: ::core::borrow::Borrow<GF2_128x4>> Product<T> for GF2_128x4 {
     fn product<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::one(), |acc, item| acc * *item.borrow())
     }
 }
 
-impl Mul<&AVX512GF2_128> for AVX512GF2_128 {
-    type Output = AVX512GF2_128;
+impl Mul<&GF2_128x4> for GF2_128x4 {
+    type Output = GF2_128x4;
 
     #[inline(always)]
-    fn mul(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
+    fn mul(self, rhs: &GF2_128x4) -> GF2_128x4 {
         unsafe { mul_internal(&self, rhs) }
     }
 }
 
-impl From<GF2_128> for AVX512GF2_128 {
+impl From<GF2_128> for GF2_128x4 {
     #[inline(always)]
-    fn from(v: GF2_128) -> AVX512GF2_128 {
+    fn from(v: GF2_128) -> GF2_128x4 {
         unsafe {
             let mut result = _mm512_setzero_si512(); // Initialize a zeroed _m512i
             result = _mm512_inserti32x4(result, v.v, 0); // Insert `a` at position 0
             result = _mm512_inserti32x4(result, v.v, 1); // Insert `b` at position 1
             result = _mm512_inserti32x4(result, v.v, 2); // Insert `c` at position 2
             result = _mm512_inserti32x4(result, v.v, 3); // Insert `d` at position 3
-            AVX512GF2_128 { data: result }
+            GF2_128x4 { data: result }
         }
     }
 }
 
-impl SimdField for AVX512GF2_128 {
+impl SimdField for GF2_128x4 {
     #[inline(always)]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
-        let simd_challenge = AVX512GF2_128::from(*challenge);
+        let simd_challenge = GF2_128x4::from(*challenge);
         *self * simd_challenge
     }
     type Scalar = GF2_128;
