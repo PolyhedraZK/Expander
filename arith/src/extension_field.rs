@@ -3,11 +3,13 @@
 mod fr_ext;
 mod m31_ext;
 mod gf2_128;
+mod gf2_128x4;
 mod simd_m31_ext;
 use crate::{Field, FieldSerde};
 
 pub use m31_ext::M31Ext3;
 pub use gf2_128::*;
+pub use gf2_128x4::GF2_128x4;
 pub use simd_m31_ext::SimdM31Ext3;
 
 /// Configurations for Extension Field over
