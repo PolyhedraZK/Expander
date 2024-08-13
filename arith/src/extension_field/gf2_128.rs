@@ -111,7 +111,7 @@ impl Field for GF2_128 {
         let mut t = *self;
         while e > 0 {
             if e & 1 == 1 {
-                res *= self;
+                res *= t;
             }
             t = t * t;
             e >>= 1;
@@ -121,7 +121,11 @@ impl Field for GF2_128 {
 
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
-        unimplemented!("inv is not implemented for GF2_128")
+        if self.is_zero() {
+            return None;
+        }
+        let p_m2 = !(0u128) - 1;
+        Some(Self::exp(self, p_m2))
     }
 
     #[inline(always)]

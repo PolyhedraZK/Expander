@@ -5,6 +5,7 @@ mod gf2;
 mod m31;
 mod m31_ext;
 mod simd_field;
+mod gf2_128;
 
 #[cfg(target_arch = "x86_64")]
 #[test]

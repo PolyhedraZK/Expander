@@ -1,4 +1,4 @@
-use crate::{Field, FieldSerde};
+use crate::{Field, FieldSerde, SimdField};
 use std::fmt::Debug;
 use std::{
     arch::x86_64::*,
@@ -6,6 +6,8 @@ use std::{
     mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
+
+use super::GF2_128;
 
 #[derive(Clone, Copy)]
 pub struct AVX512GF2_128 {
@@ -147,7 +149,7 @@ impl Field for AVX512GF2_128 {
         while e != 0 {
             let b = e & 1;
             if b == 1 {
-                res *= self;
+                res *= t;
             }
             t = t * t;
             e >>= 1;
@@ -181,27 +183,27 @@ impl Field for AVX512GF2_128 {
 
     #[inline(always)]
     fn double(&self) -> Self {
-        todo!()
+        *self + *self
     }
 
     #[inline(always)]
     fn mul_by_2(&self) -> Self {
-        todo!()
+        Self::ZERO
     }
 
     #[inline(always)]
     fn mul_by_3(&self) -> Self {
-        todo!()
+        *self
     }
 
     #[inline(always)]
     fn mul_by_5(&self) -> Self {
-        todo!()
+        *self
     }
 
     #[inline(always)]
     fn mul_by_6(&self) -> Self {
-        todo!()
+        Self::ZERO
     }
 }
 /*
@@ -552,4 +554,27 @@ impl Mul<&AVX512GF2_128> for AVX512GF2_128 {
     fn mul(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
         unsafe { mul_internal(&self, rhs) }
     }
+}
+
+impl From<GF2_128> for AVX512GF2_128 {
+    #[inline(always)]
+    fn from(v: GF2_128) -> AVX512GF2_128 {
+        unsafe {
+            let mut result = _mm512_setzero_si512();   // Initialize a zeroed _m512i
+            result = _mm512_inserti32x4(result, v.v, 0); // Insert `a` at position 0
+            result = _mm512_inserti32x4(result, v.v, 1); // Insert `b` at position 1
+            result = _mm512_inserti32x4(result, v.v, 2); // Insert `c` at position 2
+            result = _mm512_inserti32x4(result, v.v, 3); // Insert `d` at position 3
+            AVX512GF2_128 { data: result }
+        }
+    }
+}
+
+impl SimdField for AVX512GF2_128 {
+    #[inline(always)]
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
+        let simd_challenge = AVX512GF2_128::from(*challenge);
+        *self * simd_challenge
+    }
+    type Scalar = GF2_128;
 }
