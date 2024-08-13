@@ -74,11 +74,6 @@ fn identity_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     end_timer!(start);
 }
 
-// fn inverse_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-//     // pass for now
-//     todo!();
-// }
-
 fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("multiplication {}", type_name);
     let start = start_timer!(|| _message);

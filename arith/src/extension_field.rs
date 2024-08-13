@@ -1,5 +1,9 @@
 #[cfg(target_arch = "aarch64")]
 mod neon_gf2_128;
+#[cfg(target_arch = "aarch64")]
+pub use neon_gf2_128::NeonGF2_128;
+#[cfg(target_arch = "aarch64")]
+pub(crate) use neon_gf2_128::{gfadd, gfmul};
 
 #[cfg(target_arch = "x86_64")]
 mod avx_gf2_128;
