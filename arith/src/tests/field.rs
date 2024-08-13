@@ -1,22 +1,25 @@
 use std::io::Cursor;
 
 use ark_std::{end_timer, start_timer, test_rng};
-use rand::{Rng, RngCore};
+use rand::RngCore;
 
 use crate::{Field, FieldSerde};
 
 pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
     let mut rng = test_rng();
 
-    test_basic_field_op::<F>(type_name.clone());
     random_multiplication_tests::<F, _>(&mut rng, type_name.clone());
     random_addition_tests::<F, _>(&mut rng, type_name.clone());
     random_subtraction_tests::<F, _>(&mut rng, type_name.clone());
     random_negation_tests::<F, _>(&mut rng, type_name.clone());
     random_doubling_tests::<F, _>(&mut rng, type_name.clone());
     random_squaring_tests::<F, _>(&mut rng, type_name.clone());
-    random_expansion_tests::<F, _>(&mut rng, type_name.clone());
-    random_serde_tests::<F, _>(&mut rng, type_name);
+    random_expansion_tests::<F, _>(&mut rng, type_name.clone()); // also serve as distributivity tests
+    random_serde_tests::<F, _>(&mut rng, type_name.clone());
+    associativity_tests::<F, _>(&mut rng, type_name.clone());
+    commutativity_tests::<F, _>(&mut rng, type_name.clone());
+    identity_tests::<F, _>(&mut rng, type_name.clone());
+    //inverse_tests::<F, _>(&mut rng, type_name.clone());
 
     assert_eq!(F::zero().is_zero(), true);
     {
@@ -41,19 +44,34 @@ pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
     }
 }
 
-fn test_basic_field_op<F: Field>(_type_name: String) {
-    let mut rng = rand::thread_rng();
+fn commutativity_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
+    let _message = format!("commutativity {}", type_name);
+    let start = start_timer!(|| _message);
+    for _ in 0..1000 {
+        let a = F::random_unsafe(&mut rng);
+        let b = F::random_unsafe(&mut rng);
 
-    let f = F::random_unsafe(&mut rng);
-
-    let rhs = rng.gen::<u32>() % 100;
-
-    let prod_0 = f * F::from(rhs);
-    let mut prod_1 = F::zero();
-    for _ in 0..rhs {
-        prod_1 += f;
+        assert_eq!(a * b, b * a);
+        assert_eq!(a + b, b + a);
     }
-    assert_eq!(prod_0, prod_1);
+    end_timer!(start);
+}
+
+fn identity_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
+    let _message = format!("identity {}", type_name);
+    let start = start_timer!(|| _message);
+    for _ in 0..1000 {
+        let a = F::random_unsafe(&mut rng);
+
+        let mut t = a;
+        t.add_assign(&F::zero());
+        assert_eq!(t, a);
+
+        let mut t = a;
+        t.mul_assign(&F::one());
+        assert_eq!(t, a);
+    }
+    end_timer!(start);
 }
 
 fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
@@ -179,6 +197,9 @@ pub(crate) fn random_inversion_tests<F: Field, R: RngCore>(mut rng: R, type_name
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let mut a = F::random_unsafe(&mut rng);
+        if a.is_zero() {
+            a = F::one();
+        }
         let b = a.inv().unwrap(); // probabilistically nonzero
         a.mul_assign(&b);
         assert_eq!(a, F::one());
@@ -231,6 +252,27 @@ fn random_serde_tests<F: Field + FieldSerde, R: RngCore>(mut rng: R, type_name: 
         let mut cursor = Cursor::new(buffer);
         let b = F::deserialize_from(&mut cursor);
         assert_eq!(a, b);
+    }
+    end_timer!(start);
+}
+
+fn associativity_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
+    let _message = format!("associativity {}", type_name);
+    let start = start_timer!(|| _message);
+    for _ in 0..1000 {
+        let a = F::random_unsafe(&mut rng);
+        let b = F::random_unsafe(&mut rng);
+        let c = F::random_unsafe(&mut rng);
+
+        let t0 = (a + b) + c; // (a + b) + c
+        let t1 = a + (b + c); // a + (b + c)
+
+        assert_eq!(t0, t1);
+
+        let t0 = a * (b * c);
+        let t1 = (a * b) * c;
+
+        assert_eq!(t0, t1);
     }
     end_timer!(start);
 }

@@ -61,17 +61,7 @@ impl FieldSerde for NeonM31 {
         }
     }
 
-    #[inline(always)]
-    fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
-        let mut buf = [0u8; 32];
-        reader.read_exact(&mut buf).unwrap();
-        assert!(
-            buf.iter().skip(4).all(|&x| x == 0),
-            "non-zero byte found in witness byte"
-        );
-        Self::pack_full(u32::from_le_bytes(buf[..4].try_into().unwrap()).into())
-    }
-
+    #[inline]
     fn try_deserialize_from_ecc_format<R: Read>(
         mut reader: R,
     ) -> std::result::Result<Self, std::io::Error>
@@ -95,6 +85,8 @@ impl Field for NeonM31 {
 
     // size in bytes
     const SIZE: usize = 128 / 8 * 2;
+
+    const FIELD_SIZE: usize = 32;
 
     const ZERO: Self = Self {
         v: [PACKED_0, PACKED_0],
@@ -189,7 +181,7 @@ impl Field for NeonM31 {
         self.mul_by_2()
     }
 
-    fn exp(&self, _exponent: &Self) -> Self {
+    fn exp(&self, _exponent: u128) -> Self {
         todo!()
     }
 

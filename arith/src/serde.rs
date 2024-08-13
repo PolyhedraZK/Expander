@@ -12,9 +12,6 @@ pub trait FieldSerde {
     fn deserialize_from<R: Read>(reader: R) -> Self;
 
     /// deserialize bytes into field following ecc format
-    fn deserialize_from_ecc_format<R: Read>(reader: R) -> Self;
-
-    /// deserialize bytes into field following ecc format
     fn try_deserialize_from_ecc_format<R: Read>(
         reader: R,
     ) -> std::result::Result<Self, std::io::Error>
@@ -38,10 +35,6 @@ impl FieldSerde for u64 {
         let mut buffer = [0u8; 8];
         reader.read_exact(&mut buffer).unwrap();
         u64::from_le_bytes(buffer)
-    }
-
-    fn deserialize_from_ecc_format<R: Read>(_reader: R) -> Self {
-        unimplemented!("not implemented for u64")
     }
 
     fn try_deserialize_from_ecc_format<R: Read>(
