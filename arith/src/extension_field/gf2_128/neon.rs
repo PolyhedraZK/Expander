@@ -35,7 +35,7 @@ impl FieldSerde for NeonGF2_128 {
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
         unsafe {
             writer
-                .write_all(transmute::<_, [u8; 16]>(self.v).as_ref())
+                .write_all(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref())
                 .unwrap(); // todo: error propagation
         }
     }
@@ -49,7 +49,11 @@ impl FieldSerde for NeonGF2_128 {
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> Self {
         let mut u = [0u8; 16];
         reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        unsafe { NeonGF2_128 { v: transmute(u) } }
+        unsafe {
+            NeonGF2_128 {
+                v: transmute::<[u8; 16], uint32x4_t>(u),
+            }
+        }
     }
 
     #[inline(always)]
@@ -58,7 +62,7 @@ impl FieldSerde for NeonGF2_128 {
         reader.read_exact(&mut u).unwrap(); // todo: error propagation
         unsafe {
             NeonGF2_128 {
-                v: transmute::<[u8; 16], _>(u[..16].try_into().unwrap()),
+                v: transmute::<[u8; 16], uint32x4_t>(u[..16].try_into().unwrap()),
             }
         }
     }
@@ -88,7 +92,7 @@ impl Field for NeonGF2_128 {
     fn one() -> Self {
         NeonGF2_128 {
             // 1 in the first bit
-            v: unsafe { transmute::<[i32; 4], _>([1, 0, 0, 0]) }, // TODO check bit order
+            v: unsafe { transmute::<[u32; 4], uint32x4_t>([1, 0, 0, 0]) }, // TODO check bit order
         }
     }
 
@@ -96,19 +100,23 @@ impl Field for NeonGF2_128 {
     fn random_unsafe(mut rng: impl rand::RngCore) -> Self {
         let mut u = [0u8; 16];
         rng.fill_bytes(&mut u);
-        unsafe { NeonGF2_128 { v: transmute(u) } }
+        unsafe {
+            NeonGF2_128 {
+                v: transmute::<[u8; 16], uint32x4_t>(u),
+            }
+        }
     }
 
     #[inline(always)]
     fn random_bool(mut rng: impl rand::RngCore) -> Self {
         NeonGF2_128 {
-            v: unsafe { transmute([rng.next_u32() % 2, 0, 0, 0]) },
+            v: unsafe { transmute::<[u32; 4], uint32x4_t>([rng.next_u32() % 2, 0, 0, 0]) },
         }
     }
 
     #[inline(always)]
     fn is_zero(&self) -> bool {
-        unsafe { transmute::<_, [u8; 16]>(self.v) == [0; 16] }
+        unsafe { transmute::<uint32x4_t, [u8; 16]>(self.v) == [0; 16] }
     }
 
     #[inline(always)]
@@ -149,7 +157,7 @@ impl Field for NeonGF2_128 {
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         unsafe {
             NeonGF2_128 {
-                v: transmute::<[u8; 16], _>(bytes[..16].try_into().unwrap()),
+                v: transmute::<[u8; 16], uint32x4_t>(bytes[..16].try_into().unwrap()),
             }
         }
     }
@@ -208,7 +216,9 @@ impl Default for NeonGF2_128 {
 impl PartialEq for NeonGF2_128 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        unsafe { transmute::<_, [u8; 16]>(self.v) == transmute::<_, [u8; 16]>(other.v) }
+        unsafe {
+            transmute::<uint32x4_t, [u8; 16]>(self.v) == transmute::<uint32x4_t, [u8; 16]>(other.v)
+        }
     }
 }
 
@@ -225,7 +235,7 @@ impl From<u32> for NeonGF2_128 {
     #[inline(always)]
     fn from(v: u32) -> Self {
         NeonGF2_128 {
-            v: unsafe { transmute([v, 0, 0, 0]) },
+            v: unsafe { transmute::<[u32; 4], uint32x4_t>([v, 0, 0, 0]) },
         }
     }
 }
@@ -235,7 +245,7 @@ impl From<u32> for NeonGF2_128 {
 // TODO: Is there an instruction for this?
 #[inline(always)]
 unsafe fn cyclic_rotate_1(input: uint32x4_t) -> uint32x4_t {
-    let [a, b, c, d] = transmute::<_, [u32; 4]>(input);
+    let [a, b, c, d] = transmute::<uint32x4_t, [u32; 4]>(input);
     transmute([d, a, b, c])
 }
 
@@ -244,7 +254,7 @@ unsafe fn cyclic_rotate_1(input: uint32x4_t) -> uint32x4_t {
 // TODO: Is there an instruction for this?
 #[inline(always)]
 unsafe fn cyclic_rotate_2(input: uint32x4_t) -> uint32x4_t {
-    let [a, b, c, d] = transmute::<_, [u32; 4]>(input);
+    let [a, b, c, d] = transmute::<uint32x4_t, [u32; 4]>(input);
     transmute([c, d, a, b])
 }
 
@@ -255,7 +265,7 @@ pub(crate) unsafe fn gfadd(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
 
 #[inline]
 pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-    let xmm_mask = transmute([0xffffffffu32, 0, 0, 0]);
+    let xmm_mask = transmute::<[u32; 4], uint32x4_t>([0xffffffffu32, 0, 0, 0]);
 
     // case a and b as u64 vectors
     // a = a0|a1, b = b0|b1
@@ -267,14 +277,14 @@ pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
     // =========================================
 
     // tmp3 = a0 * b0
-    let tmp3 = transmute::<_, uint64x2_t>(vmull_p64(
-        transmute(vget_low_u64(a64)),
-        transmute(vget_low_u64(b64)),
+    let tmp3 = transmute::<u128, uint64x2_t>(vmull_p64(
+        transmute::<uint64x1_t, u64>(vget_low_u64(a64)),
+        transmute::<uint64x1_t, u64>(vget_low_u64(b64)),
     ));
     // tmp6 = a1 * b1
-    let tmp6 = transmute::<_, uint64x2_t>(vmull_p64(
-        transmute(vget_high_u64(a64)),
-        transmute(vget_high_u64(b64)),
+    let tmp6 = transmute::<u128, uint64x2_t>(vmull_p64(
+        transmute::<uint64x1_t, u64>(vget_high_u64(a64)),
+        transmute::<uint64x1_t, u64>(vget_high_u64(b64)),
     ));
 
     // shuffle the lanes, i.e., multiply by x^64
@@ -287,9 +297,9 @@ pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
     let tmp5 = veorq_u32(tmp5, b);
 
     // tmp4 = (a0 + a1) * (b0 + b1)
-    let tmp4_64 = transmute::<_, uint64x2_t>(vmull_p64(
-        transmute(vget_low_u32(tmp4)),
-        transmute(vget_low_u32(tmp5)),
+    let tmp4_64 = transmute::<u128, uint64x2_t>(vmull_p64(
+        transmute::<uint32x2_t, u64>(vget_low_u32(tmp4)),
+        transmute::<uint32x2_t, u64>(vget_low_u32(tmp5)),
     ));
 
     // tmp4 = (a0 + a1) * (b0 + b1) - a0 * b0
@@ -304,10 +314,11 @@ pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
 
     // tmp5_shifted_left = (a0 * b1) << 64
     // TODO: is there a better way to do this?
-    let tmp5_shifted_left = transmute(transmute::<_, u128>(tmp4_64) << 64);
+    let tmp5_shifted_left =
+        transmute::<u128, uint64x2_t>(transmute::<uint64x2_t, u128>(tmp4_64) << 64);
     // tmp4_64 = (a0 * b1) >> 64
     // TODO: is there a better way to do this?
-    let tmp4_64 = transmute(transmute::<_, u128>(tmp4_64) >> 64);
+    let tmp4_64 = transmute::<u128, uint64x2_t>(transmute::<uint64x2_t, u128>(tmp4_64) >> 64);
     // tmp3 = a0 * b0 xor ((a0 * b1) << 64), i.e., low 128 coeff of the poly
     let tmp3 = veorq_u64(tmp3, tmp5_shifted_left);
     // tmp6 = a1 * b1 xor ((a0 * b1) >> 64), i.e., high 128 coeff of the poly
@@ -344,7 +355,5 @@ pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
     let tmp12 = vshlq_n_u32(vreinterpretq_u32_u64(tmp6), 7);
     let tmp3 = veorq_u64(tmp3, vreinterpretq_u64_u32(tmp12));
 
-    let res = vreinterpretq_u32_u64(veorq_u64(tmp3, tmp6));
-
-    res
+    vreinterpretq_u32_u64(veorq_u64(tmp3, tmp6))
 }

@@ -25,10 +25,9 @@ impl Default for NeonGF2_128x4 {
 
 impl PartialEq for NeonGF2_128x4 {
     fn eq(&self, other: &Self) -> bool {
-        self.v
-            .iter()
-            .zip(other.v.iter())
-            .all(|(a, b)| unsafe { transmute::<_, [u8; 16]>(*a) == transmute::<_, [u8; 16]>(*b) })
+        self.v.iter().zip(other.v.iter()).all(|(a, b)| unsafe {
+            transmute::<uint32x4_t, [u8; 16]>(*a) == transmute::<uint32x4_t, [u8; 16]>(*b)
+        })
     }
 }
 
@@ -37,7 +36,7 @@ impl FieldSerde for NeonGF2_128x4 {
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
         self.v.iter().for_each(|&vv| {
             writer
-                .write_all(unsafe { transmute::<_, [u8; 16]>(vv) }.as_ref())
+                .write_all(unsafe { transmute::<uint32x4_t, [u8; 16]>(vv) }.as_ref())
                 .unwrap()
         })
     }
@@ -53,7 +52,7 @@ impl FieldSerde for NeonGF2_128x4 {
         res.v.iter_mut().for_each(|vv| {
             let mut u = [0u8; 16];
             reader.read_exact(&mut u).unwrap();
-            *vv = unsafe { transmute(u) }
+            *vv = unsafe { transmute::<[u8; 16], uint32x4_t>(u) }
         });
         res
     }
@@ -64,7 +63,7 @@ impl FieldSerde for NeonGF2_128x4 {
         res.v.iter_mut().for_each(|vv| {
             let mut u = [0u8; 32];
             reader.read_exact(&mut u).unwrap();
-            *vv = unsafe { transmute::<[u8; 16], _>(u[..16].try_into().unwrap()) }
+            *vv = unsafe { transmute::<[u8; 16], uint32x4_t>(u[..16].try_into().unwrap()) }
         });
         res
     }
@@ -78,24 +77,24 @@ impl Field for NeonGF2_128x4 {
     const FIELD_SIZE: usize = 128 * 4; // in bits
 
     const ZERO: Self = NeonGF2_128x4 {
-        v: [unsafe { transmute([0, 0, 0, 0]) }; 4],
+        v: [unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) }; 4],
     };
 
     const INV_2: Self = NeonGF2_128x4 {
-        v: [unsafe { transmute([0, 0, 0, 0]) }; 4],
+        v: [unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) }; 4],
     }; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {
         NeonGF2_128x4 {
-            v: [unsafe { transmute([0, 0, 0, 0]) }; 4],
+            v: [unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) }; 4],
         }
     }
 
     #[inline(always)]
     fn one() -> Self {
         NeonGF2_128x4 {
-            v: [unsafe { transmute([1, 0, 0, 0]) }; 4],
+            v: [unsafe { transmute::<[u32; 4], uint32x4_t>([1, 0, 0, 0]) }; 4],
         }
     }
 
@@ -103,17 +102,17 @@ impl Field for NeonGF2_128x4 {
     fn is_zero(&self) -> bool {
         self.v
             .iter()
-            .all(|vv| unsafe { transmute::<_, [u8; 16]>(*vv) == [0; 16] })
+            .all(|vv| unsafe { transmute::<uint32x4_t, [u8; 16]>(*vv) == [0; 16] })
     }
 
     #[inline(always)]
     fn random_unsafe(mut rng: impl rand::RngCore) -> Self {
         NeonGF2_128x4 {
             v: [
-                unsafe { transmute([rng.next_u64(), rng.next_u64()]) },
-                unsafe { transmute([rng.next_u64(), rng.next_u64()]) },
-                unsafe { transmute([rng.next_u64(), rng.next_u64()]) },
-                unsafe { transmute([rng.next_u64(), rng.next_u64()]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([rng.next_u64(), rng.next_u64()]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([rng.next_u64(), rng.next_u64()]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([rng.next_u64(), rng.next_u64()]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([rng.next_u64(), rng.next_u64()]) },
             ],
         }
     }
@@ -122,10 +121,10 @@ impl Field for NeonGF2_128x4 {
     fn random_bool(mut rng: impl rand::RngCore) -> Self {
         NeonGF2_128x4 {
             v: [
-                unsafe { transmute([rng.next_u32() % 2, 0, 0, 0]) },
-                unsafe { transmute([rng.next_u32() % 2, 0, 0, 0]) },
-                unsafe { transmute([rng.next_u32() % 2, 0, 0, 0]) },
-                unsafe { transmute([rng.next_u32() % 2, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([rng.next_u32() % 2, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([rng.next_u32() % 2, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([rng.next_u32() % 2, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([rng.next_u32() % 2, 0, 0, 0]) },
             ],
         }
     }
@@ -186,7 +185,12 @@ impl From<NeonGF2_128> for NeonGF2_128x4 {
     fn from(v: NeonGF2_128) -> Self {
         unsafe {
             NeonGF2_128x4 {
-                v: [v.v, transmute(0u128), transmute(0u128), transmute(0u128)],
+                v: [
+                    v.v,
+                    transmute::<u128, uint32x4_t>(0u128),
+                    transmute::<u128, uint32x4_t>(0u128),
+                    transmute::<u128, uint32x4_t>(0u128),
+                ],
             }
         }
     }
@@ -205,10 +209,10 @@ impl From<u32> for NeonGF2_128x4 {
     fn from(v: u32) -> Self {
         NeonGF2_128x4 {
             v: [
-                unsafe { transmute([v, 0, 0, 0]) },
-                unsafe { transmute([0, 0, 0, 0]) },
-                unsafe { transmute([0, 0, 0, 0]) },
-                unsafe { transmute([0, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) },
             ],
         }
     }
