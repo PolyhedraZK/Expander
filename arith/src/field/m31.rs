@@ -9,7 +9,7 @@ pub mod m31_neon;
 
 use rand::RngCore;
 
-use crate::{Field, FieldSerde};
+use crate::{field_common, Field, FieldSerde};
 use std::{
     io::{Read, Write},
     iter::{Product, Sum},
@@ -34,6 +34,8 @@ fn mod_reduce_i64(x: i64) -> i64 {
 pub struct M31 {
     pub v: u32,
 }
+
+field_common!(M31);
 
 impl FieldSerde for M31 {
     #[inline(always)]
@@ -159,94 +161,6 @@ impl Field for M31 {
     }
 }
 
-// ====================================
-// Arithmetics for M31
-// ====================================
-
-impl Mul<&M31> for M31 {
-    type Output = M31;
-    #[inline(always)]
-    fn mul(self, rhs: &M31) -> Self::Output {
-        let mut vv = self.v as i64 * rhs.v as i64;
-        vv = mod_reduce_i64(vv);
-
-        if vv >= M31_MOD as i64 {
-            vv -= M31_MOD as i64;
-        }
-        M31 { v: vv as u32 }
-    }
-}
-
-impl Mul for M31 {
-    type Output = M31;
-    #[inline(always)]
-    #[allow(clippy::op_ref)]
-    fn mul(self, rhs: M31) -> Self::Output {
-        self * &rhs
-    }
-}
-
-impl MulAssign<&M31> for M31 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: &M31) {
-        *self = *self * rhs;
-    }
-}
-
-impl MulAssign for M31 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: Self) {
-        *self *= &rhs;
-    }
-}
-
-impl<T: ::core::borrow::Borrow<M31>> Product<T> for M31 {
-    fn product<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::one(), |acc, item| acc * item.borrow())
-    }
-}
-
-impl Add<&M31> for M31 {
-    type Output = M31;
-    #[inline(always)]
-    fn add(self, rhs: &M31) -> Self::Output {
-        let mut vv = self.v + rhs.v;
-        if vv >= M31_MOD {
-            vv -= M31_MOD;
-        }
-        M31 { v: vv }
-    }
-}
-
-impl Add for M31 {
-    type Output = M31;
-    #[inline(always)]
-    #[allow(clippy::op_ref)]
-    fn add(self, rhs: M31) -> Self::Output {
-        self + &rhs
-    }
-}
-
-impl AddAssign<&M31> for M31 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: &M31) {
-        *self = *self + rhs;
-    }
-}
-
-impl AddAssign for M31 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: Self) {
-        *self += &rhs;
-    }
-}
-
-impl<T: ::core::borrow::Borrow<M31>> Sum<T> for M31 {
-    fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::zero(), |acc, item| acc + item.borrow())
-    }
-}
-
 impl Neg for M31 {
     type Output = M31;
     #[inline(always)]
@@ -254,38 +168,6 @@ impl Neg for M31 {
         M31 {
             v: if self.v == 0 { 0 } else { M31_MOD - self.v },
         }
-    }
-}
-
-impl Sub<&M31> for M31 {
-    type Output = M31;
-    #[inline(always)]
-    #[allow(clippy::op_ref)]
-    fn sub(self, rhs: &M31) -> Self::Output {
-        self + &(-*rhs)
-    }
-}
-
-impl Sub for M31 {
-    type Output = M31;
-    #[inline(always)]
-    #[allow(clippy::op_ref)]
-    fn sub(self, rhs: M31) -> Self::Output {
-        self - &rhs
-    }
-}
-
-impl SubAssign<&M31> for M31 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: &M31) {
-        *self = *self - rhs;
-    }
-}
-
-impl SubAssign for M31 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: Self) {
-        *self -= &rhs;
     }
 }
 
@@ -331,4 +213,33 @@ impl M31 {
             p1111111111111111111111111111.exp_power_of_2(3) * p101;
         Some(p1111111111111111111111111111101)
     }
+}
+
+#[inline(always)]
+fn add_internal(a: &M31, b: &M31) -> M31 {
+    let mut vv = a.v + b.v;
+    if vv >= M31_MOD {
+        vv -= M31_MOD;
+    }
+    M31 { v: vv }
+}
+
+#[inline(always)]
+fn sub_internal(a: &M31, b: &M31) -> M31 {
+    let mut vv = a.v + M31_MOD - b.v;
+    if vv >= M31_MOD {
+        vv -= M31_MOD;
+    }
+    M31 { v: vv }
+}
+
+#[inline(always)]
+fn mul_internal(a: &M31, b: &M31) -> M31 {
+    let mut vv = a.v as i64 * b.v as i64;
+    vv = mod_reduce_i64(vv);
+
+    if vv >= M31_MOD as i64 {
+        vv -= M31_MOD as i64;
+    }
+    M31 { v: vv as u32 }
 }
