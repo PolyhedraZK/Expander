@@ -3,7 +3,9 @@
 
 use ark_std::{end_timer, start_timer};
 
-use crate::{sumcheck_prove_gkr_square_layer, Circuit, GKRConfig, GkrScratchpad, MultiLinearPoly, Transcript};
+use crate::{
+    sumcheck_prove_gkr_square_layer, Circuit, GKRConfig, GkrScratchpad, MultiLinearPoly, Transcript,
+};
 
 pub fn gkr_square_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
@@ -18,15 +20,12 @@ pub fn gkr_square_prove<C: GKRConfig>(
         rz0.push(transcript.challenge_f::<C>());
     }
 
-    let circuit_output = &circuit
-        .layers
-        .last()
-        .unwrap()
-        .output_vals;
+    let circuit_output = &circuit.layers.last().unwrap().output_vals;
     let claimed_v = MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(
-        circuit_output, 
+        circuit_output,
         &rz0,
-        &mut sp.hg_evals);
+        &mut sp.hg_evals,
+    );
 
     for i in (0..layer_num).rev() {
         rz0 = sumcheck_prove_gkr_square_layer(&circuit.layers[i], &rz0, transcript, sp);

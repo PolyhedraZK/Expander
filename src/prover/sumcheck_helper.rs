@@ -1,4 +1,5 @@
-use arith::{Field, SimdField};
+use arith::{BinomialExtensionField, Field, SimdField};
+use env_logger::init;
 
 use crate::{CircuitLayer, GKRConfig, GkrScratchpad};
 
@@ -82,35 +83,50 @@ impl SumcheckMultilinearProdHelper {
         log::trace!("bk_f: {:?}", &bk_f[..4]);
         log::trace!("bk_hg: {:?}", &bk_hg[..4]);
         log::trace!("init_v: {:?}", &init_v[..4]);
-        let init_v_field: Vec<C::Field> = init_v
-            .iter()
-            .map(|x| C::simd_circuit_field_into_field(x))
-            .collect();
-        let src_v = if var_idx == 0 {
-            init_v_field
-        } else {
-            bk_f.to_vec()
-        };
+
         let eval_size = 1 << (self.var_num - var_idx - 1);
         log::trace!("Eval size: {}", eval_size);
-        for i in 0..eval_size {
-            if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                continue;
-            }
 
-            let f_v_0 = src_v[i * 2];
-            let f_v_1 = src_v[i * 2 + 1];
-            let hg_v_0 = bk_hg[i * 2];
-            let hg_v_1 = bk_hg[i * 2 + 1];
-            p0 += f_v_0 * hg_v_0;
-            log::trace!(
-                "p0.v+= {:?} * {:?} =  {:?}",
-                f_v_0,
-                hg_v_0,
-                f_v_0 * hg_v_0 + p1
-            );
-            p1 += f_v_1 * hg_v_1;
-            p2 += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
+        if var_idx == 0 {
+            for i in 0..eval_size {
+                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
+                    continue;
+                }
+
+                let f_v_0 = init_v[i * 2];
+                let f_v_1 = init_v[i * 2 + 1];
+                let hg_v_0 = bk_hg[i * 2];
+                let hg_v_1 = bk_hg[i * 2 + 1];
+                p0 += C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
+                log::trace!(
+                    "p0.v+= {:?} * {:?} =  {:?}",
+                    f_v_0,
+                    hg_v_0,
+                    C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0) + p1
+                );
+                p1 += C::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
+                p2 += C::field_mul_simd_circuit_field(&(hg_v_0 + hg_v_1), &(f_v_0 + f_v_1));
+            }
+        } else {
+            for i in 0..eval_size {
+                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
+                    continue;
+                }
+
+                let f_v_0 = bk_f[i * 2];
+                let f_v_1 = bk_f[i * 2 + 1];
+                let hg_v_0 = bk_hg[i * 2];
+                let hg_v_1 = bk_hg[i * 2 + 1];
+                p0 += f_v_0 * hg_v_0;
+                log::trace!(
+                    "p0.v+= {:?} * {:?} =  {:?}",
+                    f_v_0,
+                    hg_v_0,
+                    f_v_0 * hg_v_0 + p1
+                );
+                p1 += f_v_1 * hg_v_1;
+                p2 += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
+            }
         }
         p2 = p1.mul_by_6() + p0.mul_by_3() - p2.double();
         [p0, p1, p2]
@@ -128,32 +144,44 @@ impl SumcheckMultilinearProdHelper {
         assert_eq!(var_idx, self.sumcheck_var_idx);
         assert!(var_idx < self.var_num);
         log::trace!("challenge eval size: {}", self.cur_eval_size);
-        let init_v_field: Vec<C::Field> = init_v
-            .iter()
-            .map(|x| C::simd_circuit_field_into_field(x))
-            .collect();
-        for i in 0..self.cur_eval_size >> 1 {
-            if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                gate_exists[i] = false;
 
-                if var_idx == 0 {
-                    bk_f[i] = init_v_field[2 * i]
-                        + (init_v_field[2 * i + 1] - init_v_field[2 * i]).scale(&r);
+        if var_idx == 0 {
+            for i in 0..self.cur_eval_size >> 1 {
+                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
+                    gate_exists[i] = false;
+
+                    bk_f[i] = C::field_add_simd_circuit_field(
+                        &C::simd_circuit_field_mul_challenge_field(
+                            &(init_v[2 * i + 1] - init_v[2 * i]),
+                            &r,
+                        ),
+                        &init_v[2 * i],
+                    );
+                    bk_hg[i] = C::Field::zero();
                 } else {
-                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
+                    gate_exists[i] = true;
+
+                    bk_f[i] = C::field_add_simd_circuit_field(
+                        &C::simd_circuit_field_mul_challenge_field(
+                            &(init_v[2 * i + 1] - init_v[2 * i]),
+                            &r,
+                        ),
+                        &init_v[2 * i],
+                    );
+                    bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
                 }
-
-                bk_hg[i] = C::Field::zero();
-            } else {
-                gate_exists[i] = true;
-
-                if var_idx == 0 {
-                    bk_f[i] = init_v_field[2 * i]
-                        + (init_v_field[2 * i + 1] - init_v_field[2 * i]).scale(&r);
+            }
+        } else {
+            for i in 0..self.cur_eval_size >> 1 {
+                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
+                    gate_exists[i] = false;
+                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
+                    bk_hg[i] = C::Field::zero();
                 } else {
+                    gate_exists[i] = true;
                     bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
+                    bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
                 }
-                bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
             }
         }
 
