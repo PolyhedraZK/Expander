@@ -560,7 +560,7 @@ impl From<GF2_128> for AVX512GF2_128 {
     #[inline(always)]
     fn from(v: GF2_128) -> AVX512GF2_128 {
         unsafe {
-            let mut result = _mm512_setzero_si512();   // Initialize a zeroed _m512i
+            let mut result = _mm512_setzero_si512(); // Initialize a zeroed _m512i
             result = _mm512_inserti32x4(result, v.v, 0); // Insert `a` at position 0
             result = _mm512_inserti32x4(result, v.v, 1); // Insert `b` at position 1
             result = _mm512_inserti32x4(result, v.v, 2); // Insert `c` at position 2

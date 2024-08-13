@@ -2,10 +2,10 @@ mod bn254;
 mod extension_field;
 mod field;
 mod gf2;
+mod gf2_128;
 mod m31;
 mod m31_ext;
 mod simd_field;
-mod gf2_128;
 
 #[cfg(target_arch = "x86_64")]
 #[test]

@@ -1,6 +1,6 @@
-use std::io::Cursor;
 use crate::GF2_128;
 use ark_std::test_rng;
+use std::io::Cursor;
 
 use crate::{FieldSerde, SimdGF2_128};
 

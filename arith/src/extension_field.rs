@@ -6,10 +6,10 @@ mod simd_gf2_128;
 mod simd_m31_ext;
 use crate::{Field, FieldSerde};
 
+pub use gf2_128::GF2_128;
 pub use m31_ext::M31Ext3;
 pub use simd_gf2_128::SimdGF2_128;
 pub use simd_m31_ext::SimdM31Ext3;
-pub use gf2_128::GF2_128;
 
 /// Configurations for Extension Field over
 /// the Binomial polynomial x^DEGREE - W

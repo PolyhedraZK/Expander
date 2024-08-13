@@ -94,7 +94,7 @@ impl Field for SimdGF2 {
 
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        SimdGF2 { v: bytes[0] & 255}
+        SimdGF2 { v: bytes[0] }
     }
 
     #[inline(always)]
@@ -260,6 +260,6 @@ impl SimdField for SimdGF2 {
             *self
         }
     }
-    
+
     type Scalar = crate::GF2;
 }
