@@ -38,14 +38,19 @@ impl FieldSerde for AVX512GF2_128 {
     }
 
     #[inline(always)]
-    fn deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> Self {
+    fn try_deserialize_from_ecc_format<R: std::io::Read>(
+        mut reader: R,
+    ) -> std::result::Result<Self, std::io::Error>
+    where
+        Self: Sized,
+    {
         let mut u = [0u8; 32];
-        _reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        unsafe {
+        reader.read_exact(&mut u)?;
+        Ok(unsafe {
             AVX512GF2_128 {
                 v: transmute::<[u8; 16], __m128i>(u[..16].try_into().unwrap()),
             }
-        }
+        })
     }
 }
 
