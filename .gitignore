@@ -39,3 +39,6 @@ data/poseidon_*.txt
 /data/bn254_circuit.txt
 /data/circuit.txt
 /data/witness.txt
+
+# idea
+.idea/
