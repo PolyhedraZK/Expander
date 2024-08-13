@@ -6,7 +6,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{mod_reduce_u32, Field, FieldSerde, M31};
+use crate::{field_common, mod_reduce_u32, Field, FieldSerde, M31};
 
 use super::BinomialExtensionField;
 
@@ -14,6 +14,8 @@ use super::BinomialExtensionField;
 pub struct M31Ext3 {
     pub v: [M31; 3],
 }
+
+field_common!(M31Ext3);
 
 impl FieldSerde for M31Ext3 {
     #[inline(always)]
@@ -192,97 +194,12 @@ impl BinomialExtensionField for M31Ext3 {
     }
 }
 
-// ====================================
-// Arithmetics for M31Ext
-// ====================================
-
-impl Mul<&M31Ext3> for M31Ext3 {
-    type Output = M31Ext3;
-    #[inline(always)]
-    fn mul(self, rhs: &M31Ext3) -> Self::Output {
-        Self {
-            v: mul_internal(&self.v, &rhs.v),
-        }
-    }
-}
-
-impl Mul for M31Ext3 {
-    type Output = M31Ext3;
-    #[inline(always)]
-    #[allow(clippy::op_ref)]
-    fn mul(self, rhs: M31Ext3) -> Self::Output {
-        self * &rhs
-    }
-}
-
-impl MulAssign<&M31Ext3> for M31Ext3 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: &M31Ext3) {
-        *self = *self * rhs;
-    }
-}
-
-impl MulAssign for M31Ext3 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: Self) {
-        *self *= &rhs;
-    }
-}
-
-impl<T: ::core::borrow::Borrow<M31Ext3>> Product<T> for M31Ext3 {
-    fn product<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::one(), |acc, item| acc * item.borrow())
-    }
-}
-
-impl Add<&M31Ext3> for M31Ext3 {
-    type Output = M31Ext3;
-    #[inline(always)]
-    fn add(self, rhs: &M31Ext3) -> Self::Output {
-        let mut vv = self.v;
-        vv[0] += rhs.v[0];
-        vv[1] += rhs.v[1];
-        vv[2] += rhs.v[2];
-
-        M31Ext3 { v: vv }
-    }
-}
-
-impl Add for M31Ext3 {
-    type Output = M31Ext3;
-    #[inline(always)]
-    #[allow(clippy::op_ref)]
-    fn add(self, rhs: M31Ext3) -> Self::Output {
-        self + &rhs
-    }
-}
-
-impl AddAssign<&M31Ext3> for M31Ext3 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: &M31Ext3) {
-        *self = *self + rhs;
-    }
-}
-
-impl AddAssign for M31Ext3 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: Self) {
-        *self += &rhs;
-    }
-}
-
 impl Add<M31> for M31Ext3 {
     type Output = M31Ext3;
 
     #[inline(always)]
     fn add(self, rhs: M31) -> Self::Output {
         self + M31Ext3::from(rhs)
-    }
-}
-
-impl<T: ::core::borrow::Borrow<M31Ext3>> Sum<T> for M31Ext3 {
-    fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::zero(), |acc, item| acc + item.borrow())
     }
 }
 
@@ -293,38 +210,6 @@ impl Neg for M31Ext3 {
         M31Ext3 {
             v: [-self.v[0], -self.v[1], -self.v[2]],
         }
-    }
-}
-
-impl Sub<&M31Ext3> for M31Ext3 {
-    type Output = M31Ext3;
-    #[inline(always)]
-    #[allow(clippy::op_ref)]
-    fn sub(self, rhs: &M31Ext3) -> Self::Output {
-        self + &(-*rhs)
-    }
-}
-
-impl Sub for M31Ext3 {
-    type Output = M31Ext3;
-    #[inline(always)]
-    #[allow(clippy::op_ref)]
-    fn sub(self, rhs: M31Ext3) -> Self::Output {
-        self - &rhs
-    }
-}
-
-impl SubAssign<&M31Ext3> for M31Ext3 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: &M31Ext3) {
-        *self = *self - rhs;
-    }
-}
-
-impl SubAssign for M31Ext3 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: Self) {
-        *self -= &rhs;
     }
 }
 
@@ -391,6 +276,25 @@ impl From<&M31Ext3> for M31 {
     }
 }
 
+#[inline(always)]
+fn add_internal(a: &M31Ext3, b: &M31Ext3) -> M31Ext3 {
+    let mut vv = a.v;
+    vv[0] += b.v[0];
+    vv[1] += b.v[1];
+    vv[2] += b.v[2];
+
+    M31Ext3 { v: vv }
+}
+
+fn sub_internal(a: &M31Ext3, b: &M31Ext3) -> M31Ext3 {
+    let mut vv = a.v;
+    vv[0] -= b.v[0];
+    vv[1] -= b.v[1];
+    vv[2] -= b.v[2];
+
+    M31Ext3 { v: vv }
+}
+
 // polynomial mod (x^3 - 5)
 //
 //   (a0 + a1*x + a2*x^2) * (b0 + b1*x + b2*x^2) mod (x^3 - 5)
@@ -400,12 +304,14 @@ impl From<&M31Ext3> for M31 {
 // + (a0*b1 + a1*b0)*x + 5* a2*b2
 // + (a0*b2 + a1*b1 + a2*b0)*x^2
 #[inline(always)]
-fn mul_internal(a: &[M31; 3], b: &[M31; 3]) -> [M31; 3] {
+fn mul_internal(a: &M31Ext3, b: &M31Ext3) -> M31Ext3 {
+    let a = &a.v;
+    let b = &b.v;
     let mut res = [M31::default(); 3];
     res[0] = a[0] * b[0] + M31 { v: 5 } * (a[1] * b[2] + a[2] * b[1]);
     res[1] = a[0] * b[1] + a[1] * b[0] + M31 { v: 5 } * a[2] * b[2];
     res[2] = a[0] * b[2] + a[1] * b[1] + a[2] * b[0];
-    res
+    M31Ext3 { v: res }
 }
 
 #[inline(always)]

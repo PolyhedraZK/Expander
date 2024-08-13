@@ -104,7 +104,7 @@ macro_rules! field_common {
         }
 
         impl Mul<$field> for &$field {
-            type Output = NeonGF2_128;
+            type Output = $field;
 
             #[inline(always)]
             fn mul(self, rhs: $field) -> $field {
