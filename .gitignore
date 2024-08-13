@@ -42,3 +42,4 @@ data/poseidon_*.txt
 
 # idea
 .idea/
+/data
