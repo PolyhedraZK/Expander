@@ -1,8 +1,11 @@
-use arith::{BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31Ext3, M31};
+use arith::{
+    BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31, SimdM31Ext3, M31,
+};
 use halo2curves::bn256::Fr;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum PolynomialCommitmentType {
+    #[default]
     Raw,
     KZG,
     Orion,
@@ -26,8 +29,16 @@ pub const SENTINEL_BN254: [u8; 32] = [
     69, 80, 184, 41, 160, 49, 225, 114, 78, 100, 48,
 ];
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum GKRScheme {
+    #[default]
+    Vanilla,
+    GkrSquare,
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum FiatShamirHashType {
+    #[default]
     SHA256,
     Keccak256,
     Poseidon,
@@ -35,7 +46,56 @@ pub enum FiatShamirHashType {
     MIMC7,
 }
 
-pub trait GKRConfig: Default + Clone + Send + 'static {
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Config<C: GKRConfig> {
+    // Field size for the variables
+    pub field_size: usize,
+    // Targeted security level for the scheme
+    pub security_bits: usize,
+    #[cfg(feature = "grinding")]
+    // Grinding bits to achieve the target security level
+    pub grinding_bits: usize,
+    // Polynomial commitment scheme
+    pub polynomial_commitment_type: PolynomialCommitmentType,
+    // Enum type for the field
+    pub fs_hash: FiatShamirHashType,
+    // Field configuration for GKR
+    pub gkr_config: C,
+    // Whether to use GKR^2
+    pub gkr_scheme: GKRScheme,
+}
+
+impl Config<M31ExtConfig> {
+    pub fn new(gkr_scheme: GKRScheme) -> Self {
+        Config {
+            field_size: 93,
+            security_bits: 100,
+            #[cfg(feature = "grinding")]
+            grinding_bits: 10,
+            polynomial_commitment_type: PolynomialCommitmentType::Raw,
+            fs_hash: FiatShamirHashType::SHA256,
+            gkr_config: M31ExtConfig,
+            gkr_scheme,
+        }
+    }
+}
+
+impl Config<BN254Config> {
+    pub fn new(gkr_scheme: GKRScheme) -> Self {
+        Config {
+            field_size: 93,
+            security_bits: 100,
+            #[cfg(feature = "grinding")]
+            grinding_bits: 10,
+            polynomial_commitment_type: PolynomialCommitmentType::Raw,
+            fs_hash: FiatShamirHashType::SHA256,
+            gkr_config: BN254Config,
+            gkr_scheme,
+        }
+    }
+}
+
+pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     /// Field type for the circuit, e.g., M31
     type CircuitField: Field + FieldSerde + Send;
 
@@ -45,27 +105,11 @@ pub trait GKRConfig: Default + Clone + Send + 'static {
     /// Main field type for the scheme, e.g., SimdM31Ext3
     type Field: BinomialExtensionField + SimdField<Scalar = Self::ChallengeField> + Send;
 
-    /// Field size for the main field
-    const FIELD_SIZE: usize;
-
-    /// Targeted security level for the scheme
-    const SECURITY_BITS: usize;
-
-    /// Grinding bits to achieve the target security level
-    #[cfg(feature = "grinding")]
-    const GRINDING_BITS: usize;
-
-    /// Polynomial commitment scheme
-    const POLYNOMIAL_COMMITMENT_TYPE: PolynomialCommitmentType;
+    /// Simd field for circuit
+    type SimdCircuitField: SimdField + FieldSerde + Send;
 
     /// Enum type for Self::Field
     const FIELD_TYPE: FieldType;
-
-    /// Configuration for FIAT-SHAMIR transformation
-    const FS_HASH: FiatShamirHashType;
-
-    /// If this is a GKR^2 scheme
-    const GKR_SQUARE: bool;
 
     /// API to allow for multiplications between the challenge and the circuit field
     fn challenge_mul_circuit_field(
@@ -78,6 +122,25 @@ pub trait GKRConfig: Default + Clone + Send + 'static {
 
     /// API to allow for addition between the main field and the circuit field
     fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field;
+
+    /// API to allow for multiplications between the challenge and the main field
+    fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field;
+
+    fn circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field;
+
+    fn circuit_field_mul_simd_circuit_field(
+        a: &Self::CircuitField,
+        b: &Self::SimdCircuitField,
+    ) -> Self::SimdCircuitField;
+
+    fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField;
+
+    fn simd_circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field;
+
+    fn simd_circuit_field_mul_challenge_field(
+        a: &Self::SimdCircuitField,
+        b: &Self::ChallengeField,
+    ) -> Self::Field;
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -86,24 +149,13 @@ pub struct M31ExtConfig;
 impl GKRConfig for M31ExtConfig {
     type CircuitField = M31;
 
+    type SimdCircuitField = SimdM31;
+
     type ChallengeField = M31Ext3;
 
     type Field = SimdM31Ext3;
 
-    const FIELD_SIZE: usize = 93;
-
-    const SECURITY_BITS: usize = 100;
-
-    #[cfg(feature = "grinding")]
-    const GRINDING_BITS: usize = 10;
-
-    const POLYNOMIAL_COMMITMENT_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;
-
     const FIELD_TYPE: FieldType = FieldType::M31;
-
-    const FS_HASH: FiatShamirHashType = FiatShamirHashType::SHA256;
-
-    const GKR_SQUARE: bool = false;
 
     #[inline(always)]
     fn challenge_mul_circuit_field(
@@ -126,6 +178,49 @@ impl GKRConfig for M31ExtConfig {
         // skipping the conversion M31 -> M31Ext3
         *a + *b
     }
+
+    #[inline(always)]
+    fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field {
+        let a_simd = Self::Field::from(*a);
+        a_simd * b
+    }
+
+    #[inline(always)]
+    fn circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field {
+        Self::Field::from(*a)
+    }
+
+    #[inline(always)]
+    fn circuit_field_mul_simd_circuit_field(
+        a: &Self::CircuitField,
+        b: &Self::SimdCircuitField,
+    ) -> Self::SimdCircuitField {
+        Self::SimdCircuitField::from(*a) * *b
+    }
+    #[inline(always)]
+    fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField {
+        Self::SimdCircuitField::from(*a)
+    }
+
+    #[inline(always)]
+    fn simd_circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field {
+        Self::Field::from(*a)
+    }
+
+    #[inline(always)]
+    fn simd_circuit_field_mul_challenge_field(
+        a: &Self::SimdCircuitField,
+        b: &Self::ChallengeField,
+    ) -> Self::Field {
+        let b_simd_ext = Self::Field::from(*b);
+        Self::Field {
+            v: [
+                b_simd_ext.v[0] * a,
+                b_simd_ext.v[1] * a,
+                b_simd_ext.v[2] * a,
+            ],
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -138,20 +233,9 @@ impl GKRConfig for BN254Config {
 
     type Field = Fr;
 
-    const FIELD_SIZE: usize = 254;
-
-    const SECURITY_BITS: usize = 100;
-
-    #[cfg(feature = "grinding")]
-    const GRINDING_BITS: usize = 0;
-
-    const POLYNOMIAL_COMMITMENT_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;
+    type SimdCircuitField = Fr;
 
     const FIELD_TYPE: FieldType = FieldType::BN254;
-
-    const FS_HASH: FiatShamirHashType = FiatShamirHashType::SHA256;
-
-    const GKR_SQUARE: bool = false;
 
     #[inline(always)]
     fn challenge_mul_circuit_field(
@@ -169,5 +253,40 @@ impl GKRConfig for BN254Config {
     #[inline(always)]
     fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
         *a + *b
+    }
+
+    #[inline(always)]
+    fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field {
+        a * b
+    }
+
+    #[inline(always)]
+    fn circuit_field_into_field(a: &Self::CircuitField) -> Self::Field {
+        *a
+    }
+
+    #[inline(always)]
+    fn circuit_field_mul_simd_circuit_field(
+        a: &Self::CircuitField,
+        b: &Self::SimdCircuitField,
+    ) -> Self::SimdCircuitField {
+        *a * *b
+    }
+
+    #[inline(always)]
+    fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField {
+        *a
+    }
+    #[inline(always)]
+    fn simd_circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field {
+        *a
+    }
+
+    #[inline(always)]
+    fn simd_circuit_field_mul_challenge_field(
+        a: &Self::SimdCircuitField,
+        b: &Self::ChallengeField,
+    ) -> Self::Field {
+        *a * b
     }
 }

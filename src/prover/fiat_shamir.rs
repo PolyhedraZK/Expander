@@ -24,20 +24,18 @@ impl Transcript {
         if hash_end_idx > self.hash_start_idx {
             self.hasher.hash(
                 &mut self.digest,
-                &self.proof.bytes[self.hash_start_idx..],
-                hash_end_idx - self.hash_start_idx,
+                &self.proof.bytes[self.hash_start_idx..hash_end_idx],
             );
             self.hash_start_idx = hash_end_idx;
         } else {
-            self.hasher
-                .hash_inplace(&mut self.digest, Self::DIGEST_SIZE)
+            self.hasher.hash_inplace(&mut self.digest)
         }
     }
 
     #[inline]
     pub fn new() -> Self {
         Transcript {
-            hasher: SHA256hasher,
+            hasher: SHA256hasher::new(),
             hash_start_idx: 0,
             digest: [0u8; Self::DIGEST_SIZE],
             proof: Proof::default(),
@@ -66,5 +64,12 @@ impl Transcript {
     #[inline]
     pub fn challenge_fs<C: GKRConfig>(&mut self, size: usize) -> Vec<C::ChallengeField> {
         (0..size).map(|_| self.challenge_f::<C>()).collect()
+    }
+
+    #[inline]
+    pub fn circuit_f<C: GKRConfig>(&mut self) -> C::CircuitField {
+        self.hash_to_digest();
+        assert!(C::CircuitField::SIZE <= Self::DIGEST_SIZE);
+        C::CircuitField::from_uniform_bytes(&self.digest)
     }
 }
