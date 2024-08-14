@@ -12,6 +12,18 @@ And [here](./tests/gkr_correctness.rs) for an example on how to use the gkr lib.
 
 For more information, see the cpp version of the repo [here](https://github.com/PolyhedraZK/Expander).
 
+## Developer helper
+
+We understand the product is currently under developing and not so user friendly, we encourage developers to join our telegram chat group for Q&A: https://t.me/+XEdEEknIdaI0YjEx
+
+We also encourage people to look at the circuit compiler: https://github.com/PolyhedraZK/ExpanderCompilerCollection
+
+The compiler should be your entry point to use our prover, this repo is only the core executor not the developer frontend. Our product pipeline works as follows:
+
+`Your circuit code -> Expander Compiler -> circuit.txt & witness.txt -> Expander-rs -> proof `
+
+Note: the witness generation process is not optimal, we are pushing forward to have a better way of witness generation.
+
 ## Environment Setup
 
 Before executing setup, please make sure you read through the system requirements, and make sure your CPU is in the list.
