@@ -139,10 +139,16 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
 }
 
 fn print_info(args: &Args) {
+    let prover = match args.scheme.as_str() {
+        "keccak" => "GKR",
+        "poseidon" => "GKR^2",
+        _ => unreachable!(),
+    };
+
     println!("===============================");
     println!(
-        "benchmarking {} with GKR^2 over {}",
-        args.scheme, args.field
+        "benchmarking {} with {} over {}",
+        args.scheme, prover, args.field
     );
     println!("field:          {}", args.field);
     println!("#threads:       {}", args.threads);
