@@ -14,15 +14,15 @@ For more information, see the cpp version of the repo [here](https://github.com/
 
 ## Developer helper
 
-We understand the product is currently under developing and not so user friendly, we encourage developers to join our telegram chat group for Q&A: https://t.me/+XEdEEknIdaI0YjEx
+We understand that the product is currently in development and may not be very user-friendly yet. We encourage developers to join our Telegram chat group for Q&A: https://t.me/+XEdEEknIdaI0YjEx
 
-We also encourage people to look at the circuit compiler: https://github.com/PolyhedraZK/ExpanderCompilerCollection
+Additionally, please take a look at our circuit compiler: https://github.com/PolyhedraZK/ExpanderCompilerCollection
 
-The compiler should be your entry point to use our prover, this repo is only the core executor not the developer frontend. Our product pipeline works as follows:
+This compiler is your entry point for using our prover; the repository you have is primarily the core executor, not the developer frontend. Our product pipeline is as follows:
 
 `Your circuit code -> Expander Compiler -> circuit.txt & witness.txt -> Expander-rs -> proof `
 
-Note: the witness generation process is not optimal, we are pushing forward to have a better way of witness generation.
+Please note that the witness generation process is not yet optimal, and we are actively working on improving it.
 
 ## Environment Setup
 
