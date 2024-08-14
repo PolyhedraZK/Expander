@@ -187,12 +187,12 @@ impl GKRConfig for M31ExtConfig {
 
     #[inline(always)]
     fn field_add_simd_circuit_field(a: &Self::Field, b: &Self::SimdCircuitField) -> Self::Field {
-        a.add_by_base_field(&b)
+        a.add_by_base_field(b)
     }
 
     #[inline(always)]
     fn field_mul_simd_circuit_field(a: &Self::Field, b: &Self::SimdCircuitField) -> Self::Field {
-        a.mul_by_base_field(&b)
+        a.mul_by_base_field(b)
     }
 
     #[inline(always)]

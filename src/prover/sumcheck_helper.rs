@@ -1,5 +1,4 @@
-use arith::{BinomialExtensionField, Field, SimdField};
-use env_logger::init;
+use arith::{Field, SimdField};
 
 use crate::{CircuitLayer, GKRConfig, GkrScratchpad};
 

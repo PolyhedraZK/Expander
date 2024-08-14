@@ -15,7 +15,7 @@ impl MultiLinearPoly {
         let timer = start_timer!(|| format!("eval mle with {} vars", x.len()));
         assert_eq!(1 << x.len(), evals.len());
 
-        let ret = if x.len() == 0 {
+        let ret = if x.is_empty() {
             C::simd_circuit_field_into_field(&evals[0])
         } else {
             for i in 0..(evals.len() >> 1) {
