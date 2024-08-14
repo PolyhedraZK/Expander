@@ -176,7 +176,6 @@ pub fn gkr_verify<C: GKRConfig>(
             transcript,
         );
         verified &= cur_verified;
-        println!("Layer {} verified? {}", i, cur_verified);
         alpha = transcript.challenge_f::<C>();
         beta = transcript.challenge_f::<C>();
         log::trace!(
@@ -228,7 +227,6 @@ impl<C: GKRConfig> Verifier<C> {
         grind::<C>(&mut transcript, &self.config);
 
         circuit.fill_rnd_coefs(&mut transcript);
-        circuit.evaluate();
 
         let mut proof = proof.clone(); // FIXME: consider separating pointers to make proof always immutable?
 
@@ -241,7 +239,6 @@ impl<C: GKRConfig> Verifier<C> {
             gkr_verify(circuit, claimed_v, &mut transcript, &mut proof);
 
         log::info!("GKR verification: {}", verified);
-        println!("GKR verification: {}", verified);
 
         match self.config.polynomial_commitment_type {
             crate::PolynomialCommitmentType::Raw => {
@@ -254,9 +251,6 @@ impl<C: GKRConfig> Verifier<C> {
 
                 log::debug!("first commitment verification: {}", v1);
                 log::debug!("second commitment verification: {}", v2);
-
-                println!("first commitment verification: {}", v1);
-                println!("second commitment verification: {}", v2);
 
                 verified &= v1;
                 verified &= v2;

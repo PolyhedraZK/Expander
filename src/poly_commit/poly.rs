@@ -15,22 +15,31 @@ impl MultiLinearPoly {
         let timer = start_timer!(|| format!("eval mle with {} vars", x.len()));
         assert_eq!(1 << x.len(), evals.len());
 
-        for i in 0..(evals.len() >> 1) {
-            scratch[i] = C::field_add_simd_circuit_field(
-                &C::simd_circuit_field_mul_challenge_field(&(evals[i * 2 + 1] - evals[i * 2]), &x[0]),
-                &evals[i * 2]);
-        }
-
-        let mut cur_eval_size = evals.len() >> 2;
-        for r in x.iter().skip(1) {
-            for i in 0..cur_eval_size {
-                scratch[i] = scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]).scale(r);
+        let ret = if x.len() == 0 {
+            C::simd_circuit_field_into_field(&evals[0])
+        } else {
+            for i in 0..(evals.len() >> 1) {
+                scratch[i] = C::field_add_simd_circuit_field(
+                    &C::simd_circuit_field_mul_challenge_field(
+                        &(evals[i * 2 + 1] - evals[i * 2]),
+                        &x[0],
+                    ),
+                    &evals[i * 2],
+                );
             }
-            cur_eval_size >>= 1;
-        }
 
+            let mut cur_eval_size = evals.len() >> 2;
+            for r in x.iter().skip(1) {
+                for i in 0..cur_eval_size {
+                    scratch[i] = scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]).scale(r);
+                }
+                cur_eval_size >>= 1;
+            }
+            scratch[0]
+        };
         end_timer!(timer);
-        scratch[0]
+
+        ret
     }
 
     // pub fn eval_multilinear(evals: &[F], x: &[F::Scalar]) -> F {
