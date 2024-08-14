@@ -88,7 +88,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     };
 
     let circuit_copy_size: usize = match args.scheme.as_str() {
-        "keccak" => 8,
+        "keccak" => 2,
         "poseidon" => 120,
         _ => unreachable!(),
     };
