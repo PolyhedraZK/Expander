@@ -13,6 +13,8 @@ impl Field for Fr {
     /// size required to store the data
     const SIZE: usize = 32;
 
+    const FIELD_SIZE: usize = 256;
+
     /// zero
     const ZERO: Self = Fr::zero();
 
@@ -71,7 +73,7 @@ impl Field for Fr {
     }
 
     /// Exp
-    fn exp(&self, _exponent: &Self) -> Self {
+    fn exp(&self, _exponent: u128) -> Self {
         unimplemented!()
     }
 
@@ -125,8 +127,15 @@ impl FieldSerde for Fr {
         Fr::from_bytes(&buffer).unwrap()
     }
 
-    #[inline(always)]
-    fn deserialize_from_ecc_format<R: Read>(reader: R) -> Self {
-        Fr::deserialize_from(reader) // same as deserialize_from
+    #[inline]
+    fn try_deserialize_from_ecc_format<R: Read>(
+        mut reader: R,
+    ) -> std::result::Result<Self, std::io::Error>
+    where
+        Self: Sized,
+    {
+        let mut buffer = [0u8; 32];
+        reader.read_exact(&mut buffer)?;
+        Ok(Fr::from_bytes(&buffer).unwrap())
     }
 }

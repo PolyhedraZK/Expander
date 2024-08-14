@@ -1,8 +1,9 @@
 mod bn254;
+mod gf2;
 mod m31;
 
+pub use gf2::*;
 pub use m31::*;
-
 use rand::RngCore;
 
 use std::{
@@ -42,6 +43,9 @@ pub trait Field:
 
     /// size required to store the data
     const SIZE: usize;
+
+    /// Field element size in bits, e.g., log_2(modulus), rounded up to the next power of 2.
+    const FIELD_SIZE: usize;
 
     /// zero
     const ZERO: Self;
@@ -84,7 +88,7 @@ pub trait Field:
     }
 
     /// Exp
-    fn exp(&self, exponent: &Self) -> Self;
+    fn exp(&self, exponent: u128) -> Self;
 
     /// find the inverse of the element; return None if not exist
     fn inv(&self) -> Option<Self>;

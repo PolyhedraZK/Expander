@@ -54,21 +54,28 @@ impl FieldSerde for AVXM31 {
         let mut data = [0; 64];
         reader.read_exact(&mut data).unwrap();
         unsafe {
-            AVXM31 {
-                v: transmute::<[u8; 64], __m512i>(data),
-            }
+            let mut value = transmute::<[u8; 64], __m512i>(data);
+            value = mod_reduce_epi32(value);
+            AVXM31 { v: value }
         }
     }
 
     #[inline(always)]
-    fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
+    fn try_deserialize_from_ecc_format<R: Read>(
+        mut reader: R,
+    ) -> std::result::Result<Self, std::io::Error>
+    where
+        Self: Sized,
+    {
         let mut buf = [0u8; 32];
-        reader.read_exact(&mut buf).unwrap(); // todo: error propagation
+        reader.read_exact(&mut buf)?;
         assert!(
             buf.iter().skip(4).all(|&x| x == 0),
             "non-zero byte found in witness byte"
         );
-        Self::pack_full(u32::from_le_bytes(buf[..4].try_into().unwrap()).into())
+        Ok(Self::pack_full(
+            u32::from_le_bytes(buf[..4].try_into().unwrap()).into(),
+        ))
     }
 }
 
@@ -81,6 +88,8 @@ impl Field for AVXM31 {
     const ZERO: Self = Self { v: PACKED_0 };
 
     const INV_2: Self = Self { v: PACKED_INV_2 };
+
+    const FIELD_SIZE: usize = 32;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -164,7 +173,7 @@ impl Field for AVXM31 {
         }
     }
 
-    fn exp(&self, _exponent: &Self) -> Self {
+    fn exp(&self, _exponent: u128) -> Self {
         unimplemented!("exp not implemented for AVXM31")
     }
 

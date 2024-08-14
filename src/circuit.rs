@@ -218,16 +218,33 @@ impl<C: GKRConfig> Circuit<C> {
     pub fn load_witness_file(&mut self, filename: &str) {
         // note that, for data parallel, one should load multiple witnesses into different slot in the vectorized F
         let file_bytes = fs::read(filename).unwrap();
-        self.load_witness_bytes(&file_bytes);
+        self.load_witness_bytes(&file_bytes).unwrap();
     }
-    pub fn load_witness_bytes(&mut self, file_bytes: &[u8]) {
+    pub fn load_witness_bytes(
+        &mut self,
+        file_bytes: &[u8],
+    ) -> std::result::Result<(), std::io::Error> {
         log::trace!("witness file size: {} bytes", file_bytes.len());
         log::trace!("expecting: {} bytes", 32 * (1 << self.log_input_size()));
+        if file_bytes.len() != 32 * (1 << self.log_input_size()) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "Invalid witness file size",
+            ));
+        }
 
         let mut cursor = Cursor::new(file_bytes);
-        self.layers[0].input_vals = (0..(1 << self.log_input_size()))
-            .map(|_| C::SimdCircuitField::deserialize_from_ecc_format(&mut cursor))
-            .collect();
+        let mut evals = vec![];
+        for _ in 0..(1 << self.log_input_size()) {
+            evals.push(
+                match C::SimdCircuitField::try_deserialize_from_ecc_format(&mut cursor) {
+                    Ok(v) => v,
+                    Err(e) => return Err(e),
+                },
+            );
+        }
+        self.layers[0].input_vals = evals;
+        Ok(())
     }
 }
 impl<C: GKRConfig> Segment<C> {
@@ -277,7 +294,7 @@ impl<C: GKRConfig> Segment<C> {
                     u64::deserialize_from(&mut reader) as usize,
                 ],
                 o_id: u64::deserialize_from(&mut reader) as usize,
-                coef: C::CircuitField::deserialize_from_ecc_format(&mut reader),
+                coef: C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
                 is_random: false,
                 gate_type: 0,
             };
@@ -290,7 +307,7 @@ impl<C: GKRConfig> Segment<C> {
                 i_ids: [u64::deserialize_from(&mut reader) as usize],
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
-                coef: C::CircuitField::deserialize_from_ecc_format(&mut reader),
+                coef: C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
                 is_random: false,
                 gate_type: 1,
             };
@@ -303,7 +320,7 @@ impl<C: GKRConfig> Segment<C> {
                 i_ids: [],
                 o_id: u64::deserialize_from(&mut reader) as usize,
 
-                coef: C::CircuitField::deserialize_from_ecc_format(&mut reader),
+                coef: C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
                 is_random: false,
                 gate_type: 2,
             };
@@ -319,7 +336,7 @@ impl<C: GKRConfig> Segment<C> {
                 inputs.push(u64::deserialize_from(&mut reader) as usize);
             }
             let out = u64::deserialize_from(&mut reader) as usize;
-            let coef = C::CircuitField::deserialize_from_ecc_format(&mut reader);
+            let coef = C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap();
             let gate = GateUni {
                 i_ids: [inputs[0]],
                 o_id: out,
@@ -409,7 +426,7 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
         let magic_num = u64::deserialize_from(&mut cursor);
         assert_eq!(magic_num, MAGIC_NUM);
 
-        let field_mod = C::Field::deserialize_from_ecc_format(&mut cursor);
+        let field_mod = C::Field::try_deserialize_from_ecc_format(&mut cursor).unwrap();
         log::trace!("field mod: {:?}", field_mod);
         let segment_num = u64::deserialize_from(&mut cursor);
         for _ in 0..segment_num {
@@ -423,8 +440,6 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
 
             ret.layers.push(layer_id);
         }
-        // TODO: configure sentinel (currently it is manually handled as sentinel is unknown before loading)
-        // assert_eq!(file_bytes.len(), cur + 32);
         ret
     }
 

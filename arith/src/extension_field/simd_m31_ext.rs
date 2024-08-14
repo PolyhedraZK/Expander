@@ -44,15 +44,19 @@ impl FieldSerde for SimdM31Ext3 {
         }
     }
 
-    #[inline(always)]
-    fn deserialize_from_ecc_format<R: Read>(mut reader: R) -> Self {
-        Self {
+    fn try_deserialize_from_ecc_format<R: Read>(
+        mut reader: R,
+    ) -> std::result::Result<Self, std::io::Error>
+    where
+        Self: Sized,
+    {
+        Ok(Self {
             v: [
-                SimdM31::deserialize_from_ecc_format(&mut reader),
+                SimdM31::try_deserialize_from_ecc_format(&mut reader)?,
                 SimdM31::zero(),
                 SimdM31::zero(),
             ],
-        }
+        })
     }
 }
 
@@ -125,6 +129,8 @@ impl Field for SimdM31Ext3 {
     #[cfg(target_arch = "aarch64")]
     const SIZE: usize = 256 / 8 * 3;
 
+    const FIELD_SIZE: usize = 32 * 3;
+
     const ZERO: Self = Self {
         v: [SimdM31::ZERO; 3],
     };
@@ -181,7 +187,7 @@ impl Field for SimdM31Ext3 {
         }
     }
 
-    fn exp(&self, _exponent: &Self) -> Self {
+    fn exp(&self, _exponent: u128) -> Self {
         unimplemented!()
     }
 

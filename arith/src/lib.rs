@@ -12,5 +12,7 @@ pub use simd_field::*;
 mod serde;
 pub use serde::FieldSerde;
 
+mod macros;
+
 #[cfg(test)]
 mod tests;
