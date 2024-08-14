@@ -1,9 +1,11 @@
 //! This module implements the core GKR IOP.
 
-use arith::{Field, MultiLinearPoly};
+use arith::Field;
 use ark_std::{end_timer, start_timer};
 
-use crate::{sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, Transcript};
+use crate::{
+    sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, MultiLinearPoly, Transcript,
+};
 
 // FIXME
 #[allow(clippy::type_complexity)]
@@ -25,16 +27,9 @@ pub fn gkr_prove<C: GKRConfig>(
     let mut alpha = C::ChallengeField::one();
     let mut beta = C::ChallengeField::zero();
 
-    let output_vals_field: Vec<C::Field> = circuit
-        .layers
-        .last()
-        .unwrap()
-        .output_vals
-        .evals
-        .iter()
-        .map(|x| C::simd_circuit_field_into_field(x))
-        .collect();
-    let claimed_v = MultiLinearPoly::<C::Field>::eval_multilinear(&output_vals_field, &rz0);
+    let output_vals = &circuit.layers.last().unwrap().output_vals;
+    let claimed_v =
+        MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(output_vals, &rz0, &mut sp.hg_evals);
 
     for i in (0..layer_num).rev() {
         (rz0, rz1) = sumcheck_prove_gkr_layer(

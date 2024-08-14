@@ -1,4 +1,4 @@
-use arith::{Field, FieldSerde, MultiLinearPoly};
+use arith::{Field, FieldSerde};
 use ark_std::test_rng;
 use std::{
     collections::HashMap,
@@ -27,8 +27,8 @@ pub struct CircuitLayer<C: GKRConfig> {
     pub input_var_num: usize,
     pub output_var_num: usize,
 
-    pub input_vals: MultiLinearPoly<C::SimdCircuitField>,
-    pub output_vals: MultiLinearPoly<C::SimdCircuitField>, // empty most time, unless in the last layer
+    pub input_vals: Vec<C::SimdCircuitField>,
+    pub output_vals: Vec<C::SimdCircuitField>, // empty most time, unless in the last layer
 
     pub mul: Vec<GateMul<C>>,
     pub add: Vec<GateAdd<C>>,
@@ -41,14 +41,14 @@ impl<C: GKRConfig> CircuitLayer<C> {
         res.clear();
         res.resize(1 << self.output_var_num, C::SimdCircuitField::zero());
         for gate in &self.mul {
-            let i0 = &self.input_vals.evals[gate.i_ids[0]];
-            let i1 = &self.input_vals.evals[gate.i_ids[1]];
+            let i0 = &self.input_vals[gate.i_ids[0]];
+            let i1 = &self.input_vals[gate.i_ids[1]];
             let o = &mut res[gate.o_id];
             let mul = *i0 * i1;
             *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &mul);
         }
         for gate in &self.add {
-            let i0 = self.input_vals.evals[gate.i_ids[0]];
+            let i0 = self.input_vals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
             *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0);
         }
@@ -57,7 +57,7 @@ impl<C: GKRConfig> CircuitLayer<C> {
             *o += C::circuit_field_to_simd_circuit_field(&gate.coef);
         }
         for gate in &self.uni {
-            let i0 = &self.input_vals.evals[gate.i_ids[0]];
+            let i0 = &self.input_vals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
             match gate.gate_type {
                 12345 => {
@@ -139,7 +139,7 @@ impl<C: GKRConfig> Circuit<C> {
     // Build a random mock circuit with binary inputs
     pub fn set_random_input_for_test(&mut self) {
         let mut rng = test_rng();
-        self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
+        self.layers[0].input_vals = (0..(1 << self.log_input_size()))
             .map(|_| C::SimdCircuitField::random_unsafe(&mut rng))
             .collect();
     }
@@ -150,13 +150,12 @@ impl<C: GKRConfig> Circuit<C> {
             layer_p_1
                 .last()
                 .unwrap()
-                .evaluate(&mut layer_p_2[0].input_vals.evals);
+                .evaluate(&mut layer_p_2[0].input_vals);
             log::trace!(
                 "layer {} evaluated - First 10 values: {:?}",
                 i,
                 self.layers[i + 1]
                     .input_vals
-                    .evals
                     .iter()
                     .take(10)
                     .collect::<Vec<_>>()
@@ -164,7 +163,7 @@ impl<C: GKRConfig> Circuit<C> {
         }
         let mut output = vec![];
         self.layers.last().unwrap().evaluate(&mut output);
-        self.layers.last_mut().unwrap().output_vals.evals = output;
+        self.layers.last_mut().unwrap().output_vals = output;
 
         log::trace!("output evaluated");
         log::trace!(
@@ -173,7 +172,6 @@ impl<C: GKRConfig> Circuit<C> {
                 .last()
                 .unwrap()
                 .output_vals
-                .evals
                 .iter()
                 .take(10)
                 .collect::<Vec<_>>()
@@ -245,7 +243,7 @@ impl<C: GKRConfig> Circuit<C> {
                 },
             );
         }
-        self.layers[0].input_vals.evals = evals;
+        self.layers[0].input_vals = evals;
         Ok(())
     }
 }
@@ -454,14 +452,8 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
             let mut ret_layer = CircuitLayer {
                 input_var_num: layer_seg.i_var_num,
                 output_var_num: layer_seg.o_var_num,
-                input_vals: MultiLinearPoly::<C::SimdCircuitField> {
-                    var_num: layer_seg.i_var_num,
-                    evals: vec![],
-                },
-                output_vals: MultiLinearPoly::<C::SimdCircuitField> {
-                    var_num: layer_seg.o_var_num,
-                    evals: vec![],
-                },
+                input_vals: vec![],
+                output_vals: vec![],
                 mul: vec![],
                 add: vec![],
                 const_: vec![],

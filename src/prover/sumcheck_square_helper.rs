@@ -271,7 +271,7 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
             &mut self.sp.v_evals,
             &mut self.sp.hg_evals_5,
             &mut self.sp.hg_evals_1,
-            &self.layer.input_vals.evals,
+            &self.layer.input_vals,
             &self.sp.gate_exists_5,
             &self.sp.gate_exists_1,
         )
@@ -284,7 +284,7 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
             &mut self.sp.v_evals,
             &mut self.sp.hg_evals_5,
             &mut self.sp.hg_evals_1,
-            &self.layer.input_vals.evals,
+            &self.layer.input_vals,
             &mut self.sp.gate_exists_5,
             &mut self.sp.gate_exists_1,
         );
@@ -304,15 +304,15 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
         let gate_exists_1 = &mut self.sp.gate_exists_1;
         let hg_evals_5 = &mut self.sp.hg_evals_5;
         let hg_evals_1 = &mut self.sp.hg_evals_1;
-        // hg_vals[0..vals.evals.len()].fill(F::zero()); // FIXED: consider memset unsafe?
+        // hg_vals[0..vals.len()].fill(F::zero()); // FIXED: consider memset unsafe?
         unsafe {
-            std::ptr::write_bytes(hg_evals_5.as_mut_ptr(), 0, vals.evals.len());
-            std::ptr::write_bytes(hg_evals_1.as_mut_ptr(), 0, vals.evals.len());
+            std::ptr::write_bytes(hg_evals_5.as_mut_ptr(), 0, vals.len());
+            std::ptr::write_bytes(hg_evals_1.as_mut_ptr(), 0, vals.len());
         }
-        // gate_exists[0..vals.evals.len()].fill(false); // FIXED: consider memset unsafe?
+        // gate_exists[0..vals.len()].fill(false); // FIXED: consider memset unsafe?
         unsafe {
-            std::ptr::write_bytes(gate_exists_5.as_mut_ptr(), 0, vals.evals.len());
-            std::ptr::write_bytes(gate_exists_1.as_mut_ptr(), 0, vals.evals.len());
+            std::ptr::write_bytes(gate_exists_5.as_mut_ptr(), 0, vals.len());
+            std::ptr::write_bytes(gate_exists_1.as_mut_ptr(), 0, vals.len());
         }
         eq_eval_at(
             self.rz0,

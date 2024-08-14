@@ -123,6 +123,12 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     /// API to allow for addition between the main field and the circuit field
     fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field;
 
+    /// API to allow multiplications between the main field and the simd circuit field
+    fn field_add_simd_circuit_field(a: &Self::Field, b: &Self::SimdCircuitField) -> Self::Field;
+
+    /// API to allow multiplications between the main field and the simd circuit field
+    fn field_mul_simd_circuit_field(a: &Self::Field, b: &Self::SimdCircuitField) -> Self::Field;
+
     /// API to allow for multiplications between the challenge and the main field
     fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field;
 
@@ -177,6 +183,16 @@ impl GKRConfig for M31ExtConfig {
         // directly add M31Ext3 with M31
         // skipping the conversion M31 -> M31Ext3
         *a + *b
+    }
+
+    #[inline(always)]
+    fn field_add_simd_circuit_field(a: &Self::Field, b: &Self::SimdCircuitField) -> Self::Field {
+        a.add_by_base_field(b)
+    }
+
+    #[inline(always)]
+    fn field_mul_simd_circuit_field(a: &Self::Field, b: &Self::SimdCircuitField) -> Self::Field {
+        a.mul_by_base_field(b)
     }
 
     #[inline(always)]
@@ -253,6 +269,16 @@ impl GKRConfig for BN254Config {
     #[inline(always)]
     fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
         *a + *b
+    }
+
+    #[inline(always)]
+    fn field_add_simd_circuit_field(a: &Self::Field, b: &Self::SimdCircuitField) -> Self::Field {
+        a + b
+    }
+
+    #[inline(always)]
+    fn field_mul_simd_circuit_field(a: &Self::Field, b: &Self::SimdCircuitField) -> Self::Field {
+        a * b
     }
 
     #[inline(always)]

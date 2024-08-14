@@ -65,7 +65,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
 
     // for fixed input
     // for i in 0..(1 << circuit.log_input_size()) {
-    //     circuit.layers.first_mut().unwrap().input_vals.evals[i] = F::from((i % 3 == 1) as u32);
+    //     circuit.layers.first_mut().unwrap().input_vals[i] = F::from((i % 3 == 1) as u32);
     // }
 
     let mut prover = Prover::new(config);

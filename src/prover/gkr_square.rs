@@ -1,10 +1,11 @@
 // an implementation of the GKR^2 protocol
 //! This module implements the core GKR^2 IOP.
 
-use arith::MultiLinearPoly;
 use ark_std::{end_timer, start_timer};
 
-use crate::{sumcheck_prove_gkr_square_layer, Circuit, GKRConfig, GkrScratchpad, Transcript};
+use crate::{
+    sumcheck_prove_gkr_square_layer, Circuit, GKRConfig, GkrScratchpad, MultiLinearPoly, Transcript,
+};
 
 pub fn gkr_square_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
@@ -19,16 +20,12 @@ pub fn gkr_square_prove<C: GKRConfig>(
         rz0.push(transcript.challenge_f::<C>());
     }
 
-    let circuit_output_field: Vec<C::Field> = circuit
-        .layers
-        .last()
-        .unwrap()
-        .output_vals
-        .evals
-        .iter()
-        .map(|x| C::simd_circuit_field_into_field(x))
-        .collect();
-    let claimed_v = MultiLinearPoly::<C::Field>::eval_multilinear(&circuit_output_field, &rz0);
+    let circuit_output = &circuit.layers.last().unwrap().output_vals;
+    let claimed_v = MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(
+        circuit_output,
+        &rz0,
+        &mut sp.hg_evals,
+    );
 
     for i in (0..layer_num).rev() {
         rz0 = sumcheck_prove_gkr_square_layer(&circuit.layers[i], &rz0, transcript, sp);

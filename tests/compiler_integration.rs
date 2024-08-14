@@ -21,7 +21,7 @@ fn test_compiler_format_integration() {
 
     // check last layer first output
     let last_layer = circuit.layers.last().unwrap();
-    let last_layer_first_output = last_layer.output_vals.evals[0];
+    let last_layer_first_output = last_layer.output_vals[0];
     assert_eq!(last_layer_first_output, SimdM31::zero());
 
     let mut prover = Prover::new(&config);
@@ -55,6 +55,6 @@ fn test_compiler_format_integration_no_prove() {
     println!("Circuit evaluated.");
     // check last layer first output
     let last_layer = circuit.layers.last().unwrap();
-    let last_layer_first_output = last_layer.output_vals.evals[0];
+    let last_layer_first_output = last_layer.output_vals[0];
     assert_eq!(last_layer_first_output, SimdM31::zero());
 }

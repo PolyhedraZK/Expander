@@ -3,20 +3,20 @@
 
 use std::io::{Read, Write};
 
-use arith::{Field, FieldSerde, MultiLinearPoly};
+use arith::{Field, FieldSerde};
 
-use crate::GKRConfig;
+use crate::{GKRConfig, MultiLinearPoly};
 
 pub struct RawOpening {}
 
 pub struct RawCommitment<C: GKRConfig> {
-    pub poly_vals: Vec<C::Field>,
+    pub poly_vals: Vec<C::SimdCircuitField>,
 }
 
 impl<C: GKRConfig> RawCommitment<C> {
     #[inline]
     pub fn size(&self) -> usize {
-        self.poly_vals.len() * C::Field::SIZE
+        self.poly_vals.len() * C::SimdCircuitField::SIZE
     }
 
     #[inline]
@@ -29,7 +29,7 @@ impl<C: GKRConfig> RawCommitment<C> {
     #[inline]
     pub fn deserialize_from<R: Read>(mut reader: R, poly_size: usize) -> Self {
         let poly_vals = (0..poly_size)
-            .map(|_| C::Field::deserialize_from(&mut reader))
+            .map(|_| C::SimdCircuitField::deserialize_from(&mut reader))
             .collect();
 
         RawCommitment { poly_vals }
@@ -38,12 +38,15 @@ impl<C: GKRConfig> RawCommitment<C> {
 
 impl<C: GKRConfig> RawCommitment<C> {
     #[inline]
-    pub fn new(poly_vals: Vec<C::Field>) -> Self {
-        RawCommitment { poly_vals }
+    pub fn new(poly_vals: &[C::SimdCircuitField]) -> Self {
+        RawCommitment {
+            poly_vals: poly_vals.to_owned(),
+        }
     }
 
     #[inline]
     pub fn verify(&self, x: &[C::ChallengeField], y: C::Field) -> bool {
-        y == MultiLinearPoly::<C::Field>::eval_multilinear(&self.poly_vals, x)
+        let mut scratch = vec![C::Field::default(); self.poly_vals.len()];
+        y == MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(&self.poly_vals, x, &mut scratch)
     }
 }
