@@ -91,7 +91,11 @@ async fn run_command<C: GKRConfig>(
             let circuit_clone_for_verifier = circuit.clone();
             let prover = Arc::new(Mutex::new(prover));
             let verifier = Arc::new(Mutex::new(verifier));
-
+            let ready_time = chrono::offset::Utc::now();
+            let ready = warp::path("ready").map(move || {
+                info!("Received ready request.");
+                reply::with_status(format!("Ready since {:?}", ready_time), StatusCode::OK)
+            });
             let prove =
                 warp::path("prove")
                     .and(warp::body::bytes())
@@ -141,9 +145,13 @@ async fn run_command<C: GKRConfig>(
                             }
                         }
                     });
-            warp::serve(warp::post().and(prove.or(verify)))
-                .run((host, port))
-                .await;
+            warp::serve(
+                warp::post()
+                    .and(prove.or(verify))
+                    .or(warp::get().and(ready)),
+            )
+            .run((host, port))
+            .await;
         }
         _ => {
             println!("Invalid command.");
