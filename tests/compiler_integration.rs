@@ -1,6 +1,6 @@
 use std::fs;
 
-use arith::{Field, SimdM31};
+use arith::{Field, M31x16};
 use expander_rs::{Circuit, Config, GKRScheme, M31ExtConfig, Prover, Verifier};
 use rand::Rng;
 
@@ -22,7 +22,7 @@ fn test_compiler_format_integration() {
     // check last layer first output
     let last_layer = circuit.layers.last().unwrap();
     let last_layer_first_output = last_layer.output_vals[0];
-    assert_eq!(last_layer_first_output, SimdM31::zero());
+    assert_eq!(last_layer_first_output, M31x16::zero());
 
     let mut prover = Prover::new(&config);
     prover.prepare_mem(&circuit);
@@ -56,5 +56,5 @@ fn test_compiler_format_integration_no_prove() {
     // check last layer first output
     let last_layer = circuit.layers.last().unwrap();
     let last_layer_first_output = last_layer.output_vals[0];
-    assert_eq!(last_layer_first_output, SimdM31::zero());
+    assert_eq!(last_layer_first_output, M31x16::zero());
 }

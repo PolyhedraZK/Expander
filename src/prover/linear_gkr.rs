@@ -49,7 +49,6 @@ impl<C: GKRConfig> Default for Prover<C> {
 
 impl<C: GKRConfig> Prover<C> {
     pub fn new(config: &Config<C>) -> Self {
-        // assert_eq!(config.field_type, crate::config::FieldType::M31);
         assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
         assert_eq!(
             config.polynomial_commitment_type,

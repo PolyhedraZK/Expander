@@ -1,5 +1,5 @@
 use arith::{
-    BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, SimdM31, SimdM31Ext3, M31,
+    BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, M31x16, M31Ext3x16, M31,
 };
 use halo2curves::bn256::Fr;
 
@@ -102,7 +102,7 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     /// Field type for the challenge, e.g., M31Ext3
     type ChallengeField: BinomialExtensionField<BaseField = Self::CircuitField> + Send;
 
-    /// Main field type for the scheme, e.g., SimdM31Ext3
+    /// Main field type for the scheme, e.g., M31Ext3x16
     type Field: BinomialExtensionField + SimdField<Scalar = Self::ChallengeField> + Send;
 
     /// Simd field for circuit
@@ -155,11 +155,11 @@ pub struct M31ExtConfig;
 impl GKRConfig for M31ExtConfig {
     type CircuitField = M31;
 
-    type SimdCircuitField = SimdM31;
+    type SimdCircuitField = M31x16;
 
     type ChallengeField = M31Ext3;
 
-    type Field = SimdM31Ext3;
+    type Field = M31Ext3x16;
 
     const FIELD_TYPE: FieldType = FieldType::M31;
 
