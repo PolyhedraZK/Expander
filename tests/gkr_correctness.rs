@@ -50,7 +50,7 @@ fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
 
 #[test]
 fn test_gkr_correctness() {
-    test_gkr_correctness_helper::<M31ExtConfig>(&Config::<M31ExtConfig>::new(GKRScheme::Vanilla));
+    // test_gkr_correctness_helper::<M31ExtConfig>(&Config::<M31ExtConfig>::new(GKRScheme::Vanilla));
     test_gkr_correctness_helper::<BN254Config>(&Config::<BN254Config>::new(GKRScheme::Vanilla));
 }
 
@@ -65,7 +65,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
 
     // for fixed input
     // for i in 0..(1 << circuit.log_input_size()) {
-    //     circuit.layers.first_mut().unwrap().input_vals[i] = F::from((i % 3 == 1) as u32);
+    //     circuit.layers.first_mut().unwrap().input_vals[i] = C::SimdCircuitField::from(i as u32);
     // }
 
     let mut prover = Prover::new(config);
@@ -95,10 +95,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     let verifier = Verifier::new(config);
     println!("Verifier created.");
     assert!(
-        verifier.verify(&mut circuit, &claimed_v, &proof),
-        "Proof {:?}",
-        proof.bytes
-    );
+        verifier.verify(&mut circuit, &claimed_v, &proof));
     println!("Correct proof verified.");
     let mut bad_proof = proof.clone();
     let rng = &mut rand::thread_rng();

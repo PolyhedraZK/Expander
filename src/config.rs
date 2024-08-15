@@ -123,7 +123,7 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     /// API to allow for addition between the main field and the circuit field
     fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field;
 
-    /// API to allow multiplications between the main field and the simd circuit field
+    /// API to allow additions between the main field and the simd circuit field
     fn field_add_simd_circuit_field(a: &Self::Field, b: &Self::SimdCircuitField) -> Self::Field;
 
     /// API to allow multiplications between the main field and the simd circuit field
@@ -133,6 +133,11 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field;
 
     fn circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field;
+
+    fn circuit_field_add_simd_circuit_field(
+        a: &Self::CircuitField,
+        b: &Self::SimdCircuitField,
+    ) -> Self::SimdCircuitField;
 
     fn circuit_field_mul_simd_circuit_field(
         a: &Self::CircuitField,
@@ -213,6 +218,15 @@ impl GKRConfig for M31ExtConfig {
     ) -> Self::SimdCircuitField {
         Self::SimdCircuitField::from(*a) * *b
     }
+
+    #[inline(always)]
+    fn circuit_field_add_simd_circuit_field(
+            a: &Self::CircuitField,
+            b: &Self::SimdCircuitField,
+        ) -> Self::SimdCircuitField {
+        Self::SimdCircuitField::from(*a) + *b
+    }
+
     #[inline(always)]
     fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField {
         Self::SimdCircuitField::from(*a)
@@ -297,6 +311,14 @@ impl GKRConfig for BN254Config {
         b: &Self::SimdCircuitField,
     ) -> Self::SimdCircuitField {
         *a * *b
+    }
+
+    #[inline(always)]
+    fn circuit_field_add_simd_circuit_field(
+            a: &Self::CircuitField,
+            b: &Self::SimdCircuitField,
+        ) -> Self::SimdCircuitField {
+        *a + *b
     }
 
     #[inline(always)]

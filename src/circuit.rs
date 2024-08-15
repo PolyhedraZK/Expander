@@ -59,14 +59,8 @@ impl<C: GKRConfig> CircuitLayer<C> {
             input_var_num: nb_inpt_vars,
             output_var_num: nb_output_vars,
 
-            input_vals: MultiLinearPoly::<C::Field> {
-                var_num: nb_inpt_vars,
-                evals: vec![],
-            },
-            output_vals: MultiLinearPoly::<C::Field> {
-                var_num: nb_output_vars,
-                evals: vec![],
-            },
+            input_vals: vec![],
+            output_vals: vec![],
 
             mul: vec![],
             add: vec![],
@@ -80,8 +74,8 @@ impl<C: GKRConfig> CircuitLayer<C> {
 
     fn repeat_and_evaluate(
         &self,
-        output: &mut Vec<C::Field>,
-        input: &Vec<C::Field>,
+        output: &mut Vec<C::SimdCircuitField>,
+        input: &Vec<C::SimdCircuitField>,
         nb_repeat: usize,
     ) {
         let input_size = 1 << self.input_var_num;
@@ -94,7 +88,7 @@ impl<C: GKRConfig> CircuitLayer<C> {
                 let i0 = &input[gate.i_ids[0] + i_offset];
                 let i1 = &input[gate.i_ids[1] + i_offset];
                 let o = &mut output[gate.o_id + o_offset];
-                *o += C::field_mul_circuit_field(&(*i0 * i1), &gate.coef);
+                *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &(*i0 * i1));
 
                 i_offset += input_size;
                 o_offset += output_size;
@@ -107,7 +101,7 @@ impl<C: GKRConfig> CircuitLayer<C> {
             for _ in 0..nb_repeat {
                 let i0 = &input[gate.i_ids[0] + i_offset];
                 let o = &mut output[gate.o_id + o_offset];
-                *o += C::field_mul_circuit_field(i0, &gate.coef);
+                *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, i0);
 
                 i_offset += input_size;
                 o_offset += output_size;
@@ -118,7 +112,7 @@ impl<C: GKRConfig> CircuitLayer<C> {
             let mut o_offset = 0;
             for _ in 0..nb_repeat {
                 let o = &mut output[gate.o_id + o_offset];
-                *o = C::field_add_circuit_field(o, &gate.coef);
+                *o = C::circuit_field_add_simd_circuit_field(&gate.coef, o);
 
                 o_offset += output_size;
             }
@@ -136,11 +130,11 @@ impl<C: GKRConfig> CircuitLayer<C> {
                         let i0_2 = i0.square();
                         let i0_4 = i0_2.square();
                         let i0_5 = i0_4 * i0;
-                        *o += C::field_mul_circuit_field(&i0_5, &gate.coef);
+                        *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0_5);
                     }
                     12346 => {
                         // pow1
-                        *o += C::field_mul_circuit_field(i0, &gate.coef);
+                        *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0);
                     }
                     _ => panic!("Unknown gate type: {}", gate.gate_type),
                 }
@@ -150,15 +144,15 @@ impl<C: GKRConfig> CircuitLayer<C> {
         }
     }
 
-    pub fn evaluate(&self, res: &mut Vec<C::Field>) {
+    pub fn evaluate(&self, res: &mut Vec<C::SimdCircuitField>) {
         res.clear();
-        res.resize(1 << self.output_var_num, C::Field::zero());
+        res.resize(1 << self.output_var_num, C::SimdCircuitField::zero());
 
-        self.repeat_and_evaluate(res, &self.input_vals.evals, 1);
+        self.repeat_and_evaluate(res, &self.input_vals, 1);
         if self.sub_layer.is_some() {
             self.sub_layer.as_ref().unwrap().repeat_and_evaluate(
                 res,
-                &self.input_vals.evals,
+                &self.input_vals,
                 self.nb_repetition,
             )
         }
@@ -239,21 +233,6 @@ impl<C: GKRConfig> Circuit<C> {
         rc.flatten()
     }
 
-    pub fn load_witness_file(&mut self, filename: &str) {
-        // note that, for data parallel, one should load multiple witnesses into different slot in the vectorized F
-        let file_bytes = fs::read(filename).unwrap();
-        self.load_witness_bytes(&file_bytes);
-    }
-    pub fn load_witness_bytes(&mut self, file_bytes: &[u8]) {
-        log::trace!("witness file size: {} bytes", file_bytes.len());
-        log::trace!("expecting: {} bytes", 32 * (1 << self.log_input_size()));
-
-        let mut cursor = Cursor::new(file_bytes);
-        self.layers[0].input_vals.evals = (0..(1 << self.log_input_size()))
-            .map(|_| C::Field::deserialize_from_ecc_format(&mut cursor))
-            .collect();
-    }
-
     pub fn log_input_size(&self) -> usize {
         self.layers[0].input_var_num
     }
@@ -272,7 +251,7 @@ impl<C: GKRConfig> Circuit<C> {
             layer_p_1
                 .last()
                 .unwrap()
-                .evaluate(&mut layer_p_2[0].input_vals.evals);
+                .evaluate(&mut layer_p_2[0].input_vals);
             log::trace!(
                 "layer {} evaluated - First 10 values: {:?}",
                 i,
@@ -285,7 +264,7 @@ impl<C: GKRConfig> Circuit<C> {
         }
         let mut output = vec![];
         self.layers.last().unwrap().evaluate(&mut output);
-        self.layers.last_mut().unwrap().output_vals.evals = output;
+        self.layers.last_mut().unwrap().output_vals = output;
 
         log::trace!("output evaluated");
         log::trace!(
@@ -470,7 +449,6 @@ impl<C: GKRConfig> Segment<C> {
                 o_id: out,
                 coef,
                 is_random: false,
-                is_random: false,
                 gate_type,
             };
             ret.gate_uni.push(gate);
@@ -574,6 +552,8 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
 
 
     fn is_parallel_repetition(&self, seg: &Segment<C>) -> bool {
+
+        return false;
         if seg.child_segs.len() == 0 {
             false
         } else {

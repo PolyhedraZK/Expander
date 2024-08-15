@@ -1,6 +1,9 @@
-use arith::{Field, SimdField};
+use std::any::TypeId;
 
-use crate::{CircuitLayer, GKRConfig, GkrScratchpad};
+use arith::{Field, SimdField};
+use sha2::digest::typenum::assert_type_eq;
+
+use crate::{CircuitLayer, GKRConfig, Gate, GkrScratchpad};
 
 #[inline(always)]
 fn _eq<F: Field>(x: &F, y: &F) -> F {
@@ -206,6 +209,8 @@ pub(crate) struct SumcheckGkrHelper<'a, C: GKRConfig> {
 
     x_helper: SumcheckMultilinearProdHelper,
     y_helper: SumcheckMultilinearProdHelper,
+
+    v_rx: C::Field,
 }
 
 impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
@@ -233,6 +238,8 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
             x_helper: SumcheckMultilinearProdHelper::new(layer.input_var_num),
             y_helper: SumcheckMultilinearProdHelper::new(layer.input_var_num),
+
+            v_rx: C::Field::zero(),
         }
     }
 
@@ -247,14 +254,20 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
                 &self.sp.gate_exists_5,
             )
         } else {
-            self.y_helper.poly_eval_at::<C>(
+            let mut p = self.y_helper.poly_eval_at::<C>(
                 var_idx - self.input_var_num,
                 degree,
                 &mut self.sp.v_evals,
                 &mut self.sp.hg_evals,
                 &self.layer.input_vals,
                 &self.sp.gate_exists_5,
-            )
+            );
+
+            // TODO-Zhiyong: Move this part to the verifier
+            p[0] *= self.v_rx;
+            p[1] *= self.v_rx;
+            p[2] *= self.v_rx;
+            p
         }
     }
 
@@ -291,6 +304,63 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         self.sp.v_evals[0]
     }
 
+    #[inline(always)]
+    fn prepare_g_x_with_repetition(
+        layer: &CircuitLayer<C>,
+        eq_evals_at_rz: &[C::ChallengeField],
+        hg_vals: &mut [C::Field],
+        gate_exists: &mut [bool],
+        nb_repetition: usize,
+    ) {
+        assert!(layer.uni.len() == 0); // For now, it doesn't make sense to have uni and mul at the same time
+        let mul = &layer.mul;
+        let add = &layer.add;
+        let input_vals = &layer.input_vals;
+
+        let inpt_size = 1usize << layer.input_var_num;
+        let opt_size = 1usize << layer.output_var_num;
+            
+        for g in mul.iter() {
+            let mut i_offset = 0usize;
+            let mut o_offset = 0usize;
+            
+            for _ in 0..nb_repetition {
+                let x = g.i_ids[0] + i_offset;
+                let y = g.i_ids[1] + i_offset;
+                let z = g.o_id + o_offset;
+
+                hg_vals[x] += C::simd_circuit_field_mul_challenge_field(
+                    &input_vals[y],
+                    &C::challenge_mul_circuit_field(
+                        &eq_evals_at_rz[z],
+                        &g.coef,
+                ),);
+                gate_exists[x] = true;
+                
+                i_offset += inpt_size;
+                o_offset += opt_size;
+            }
+        }
+
+        for g in add.iter() {
+            let mut i_offset = 0usize;
+            let mut o_offset = 0usize;
+
+            for _ in 0..nb_repetition {
+                let x = g.i_ids[0] + i_offset;
+                let z = g.o_id + o_offset;
+                hg_vals[x] += C::Field::from(C::challenge_mul_circuit_field(
+                    &eq_evals_at_rz[z],
+                    &g.coef,
+                ));
+                gate_exists[x] = true;    
+                
+                i_offset += inpt_size;
+                o_offset += opt_size;
+            }
+        }
+    }
+
     pub(crate) fn prepare_g_x_vals(&mut self) {
         let vals = &self.layer.input_vals;
         let eq_evals_at_rz0 = &mut self.sp.eq_evals_at_rz0;
@@ -323,80 +393,76 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             eq_evals_at_rz0[i] += eq_evals_at_rz1[i];
         }
 
-        let mul = &self.layer.mul;
-        let add = &self.layer.add;
-        assert!(self.layer.uni.len() == 0); // FIXME: consider support pow gate later, or probably do not?
-        for g in mul.iter() {
-            let r = C::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
-            hg_vals[g.i_ids[0]] += C::simd_circuit_field_mul_challenge_field(&vals[g.i_ids[1]], &r);
-
-            gate_exists[g.i_ids[0]] = true;
-        }
-        for g in add.iter() {
-            hg_vals[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit_field(
-                &eq_evals_at_rz0[g.o_id],
-                &g.coef,
-            ));
-            gate_exists[g.i_ids[0]] = true;
-        }
+        Self::prepare_g_x_with_repetition(
+            &self.layer, 
+            eq_evals_at_rz0, 
+            hg_vals, 
+            gate_exists,
+            1,
+        );
 
         if self.layer.sub_layer.is_some() {
-            let sub_layer = self.layer.sub_layer.as_ref().unwrap();
-            let nb_repetition = self.layer.nb_repetition;
-            let sub_layer_in_size = 1usize << sub_layer.input_var_num;
-            let sub_layer_out_size = 1usize << sub_layer.output_var_num;
-            
-            let mul = &sub_layer.mul;
-            let add = &sub_layer.add;
-            for g in mul.iter() {
-                let mut i_offset = 0usize;
-                let mut o_offset = 0usize;
-                for _ in 0..nb_repetition {
-                    let x = g.i_ids[0] + i_offset;
-                    let y = g.i_ids[1] + i_offset;
-                    let z = g.o_id + o_offset;
-
-                    hg_vals[x] += vals.evals[y].scale(&C::challenge_mul_circuit_field(
-                        &eq_evals_at_rz0[z],
-                        &g.coef,
-                    ));
-                    gate_exists[x] = true;
-                    
-                    i_offset += sub_layer_in_size;
-                    o_offset += sub_layer_out_size;
-                }
-            }
-
-            for g in add.iter() {
-                let mut i_offset = 0usize;
-                let mut o_offset = 0usize;
-                for _ in 0..nb_repetition {
-                    let x = g.i_ids[0] + i_offset;
-                    let z = g.o_id + o_offset;
-                    hg_vals[x] += C::Field::from(C::challenge_mul_circuit_field(
-                        &eq_evals_at_rz0[z],
-                        &g.coef,
-                    ));
-                    gate_exists[x] = true;    
-                    
-                    i_offset += sub_layer_in_size;
-                    o_offset += sub_layer_out_size;
-                }
-            }
-            
+            Self::prepare_g_x_with_repetition(
+                self.layer.sub_layer.as_ref().unwrap(), 
+                eq_evals_at_rz0, 
+                hg_vals, 
+                gate_exists, 
+                self.layer.nb_repetition,
+            );
         }
     }
 
+    #[inline(always)]
+    fn prepare_h_y_with_repetition(
+        layer: &CircuitLayer<C>,
+        eq_evals_at_rz: &[C::ChallengeField],
+        eq_evals_at_rx: &[C::ChallengeField],
+        hg_vals_1: &mut [C::ChallengeField],
+        gate_exists: &mut [bool],
+        nb_repetition: usize,
+    ) {
+        let inpt_size = 1usize << layer.input_var_num;
+        let opt_size = 1usize << layer.output_var_num;
+        
+        let mul = &layer.mul;
+        for g in mul.iter() {
+            let mut i_offset = 0usize;
+            let mut o_offset = 0usize;
+            for _ in 0..nb_repetition {
+                let x = g.i_ids[0] + i_offset;
+                let y = g.i_ids[1] + i_offset;
+                let z = g.o_id + o_offset;
+
+                hg_vals_1[y] += C::challenge_mul_circuit_field(&(eq_evals_at_rz[z] * eq_evals_at_rx[x]),&g.coef);
+
+                gate_exists[y] = true;
+                i_offset += inpt_size;
+                o_offset += opt_size;
+            }
+        } 
+    }
+
     pub(crate) fn prepare_h_y_vals(&mut self, v_rx: C::Field) {
-        let mul = &self.layer.mul;
-        let eq_evals_at_rz0 = &mut self.sp.eq_evals_at_rz0;
+        let field_same_as_challenge_field = TypeId::of::<C::Field>() != TypeId::of::<C::ChallengeField>();
+        self.v_rx = v_rx;
+
+        let eq_evals_at_rz = &mut self.sp.eq_evals_at_rz0;
         let eq_evals_at_rx = &mut self.sp.eq_evals_at_rx;
         let gate_exists = &mut self.sp.gate_exists_5;
         let hg_vals = &mut self.sp.hg_evals;
+
+        let hg_vals_1 = if field_same_as_challenge_field {
+            unsafe {
+                (hg_vals.as_ptr() as *mut Vec<C::ChallengeField>).as_mut().unwrap()              
+            }
+        } else {
+            &mut self.sp.hg_evals_1
+        };
+
         let fill_len = 1 << self.rx.len();
         // hg_vals[0..fill_len].fill(F::zero()); // FIXED: consider memset unsafe?
         unsafe {
-            std::ptr::write_bytes(hg_vals.as_mut_ptr(), 0, fill_len);
+            std::ptr::write_bytes(hg_vals_1.as_mut_ptr(), 0, fill_len);
         }
         // gate_exists[0..fill_len].fill(false); // FIXED: consider memset unsafe?
         unsafe {
@@ -411,42 +477,31 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             &mut self.sp.eq_evals_second_half,
         );
 
-        for g in mul.iter() {
-            hg_vals[g.i_ids[1]] += v_rx.scale(
-                &(C::challenge_mul_circuit_field(
-                    &(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
-                    &g.coef,
-                )),
-            );
-            gate_exists[g.i_ids[1]] = true;
-        }
+        Self::prepare_h_y_with_repetition(
+            &self.layer, 
+            eq_evals_at_rz, 
+            eq_evals_at_rx, 
+            hg_vals_1, 
+            gate_exists, 
+            1,
+        );
 
         if self.layer.sub_layer.is_some() {
-            let sub_layer = self.layer.sub_layer.as_ref().unwrap();
-            let nb_repetition = self.layer.nb_repetition;
-            let sub_layer_in_size = 1usize << sub_layer.input_var_num;
-            let sub_layer_out_size = 1usize << sub_layer.output_var_num;
-            
-            let mul = &sub_layer.mul;
-            for g in mul.iter() {
-                let mut i_offset = 0usize;
-                let mut o_offset = 0usize;
-                for _ in 0..nb_repetition {
-                    let x = g.i_ids[0] + i_offset;
-                    let y = g.i_ids[1] + i_offset;
-                    let z = g.o_id + o_offset;
+            Self::prepare_h_y_with_repetition(
+                self.layer.sub_layer.as_ref().unwrap(), 
+                eq_evals_at_rz, 
+                eq_evals_at_rx, 
+                hg_vals_1, 
+                gate_exists, 
+                self.layer.nb_repetition,
+            );            
+        }
 
-                    hg_vals[y] += v_rx.scale(
-                        &(C::challenge_mul_circuit_field(
-                            &(eq_evals_at_rz0[z] * eq_evals_at_rx[x]),
-                            &g.coef,
-                        )),
-                    );
-                    gate_exists[y] = true;
-                    i_offset += sub_layer_in_size;
-                    o_offset += sub_layer_out_size;
-                }
-            }            
+        // It seems simd ops always pack scalar first, so this copy can not be avoided anyway
+        if !field_same_as_challenge_field {
+            for i in 0..fill_len {
+                hg_vals[i] = C::Field::from(hg_vals_1[i]);
+            }
         }
 
     }

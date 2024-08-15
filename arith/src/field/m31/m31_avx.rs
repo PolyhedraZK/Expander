@@ -228,7 +228,7 @@ impl Field for AVXM31 {
 impl SimdField for AVXM31 {
     type Scalar = M31;
 
-    #[inline]
+    #[inline(always)]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
         *self * *challenge
     }
