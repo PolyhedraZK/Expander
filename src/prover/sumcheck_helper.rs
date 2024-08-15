@@ -292,8 +292,6 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     }
 
     pub(crate) fn prepare_g_x_vals(&mut self) {
-        let mul = &self.layer.mul;
-        let add = &self.layer.add;
         let vals = &self.layer.input_vals;
         let eq_evals_at_rz0 = &mut self.sp.eq_evals_at_rz0;
         let eq_evals_at_rz1 = &mut self.sp.eq_evals_at_rz1;
@@ -325,6 +323,9 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             eq_evals_at_rz0[i] += eq_evals_at_rz1[i];
         }
 
+        let mul = &self.layer.mul;
+        let add = &self.layer.add;
+        assert!(self.layer.uni.len() == 0); // FIXME: consider support pow gate later, or probably do not?
         for g in mul.iter() {
             let r = C::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
             hg_vals[g.i_ids[0]] += C::simd_circuit_field_mul_challenge_field(&vals[g.i_ids[1]], &r);
@@ -337,6 +338,52 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
                 &g.coef,
             ));
             gate_exists[g.i_ids[0]] = true;
+        }
+
+        if self.layer.sub_layer.is_some() {
+            let sub_layer = self.layer.sub_layer.as_ref().unwrap();
+            let nb_repetition = self.layer.nb_repetition;
+            let sub_layer_in_size = 1usize << sub_layer.input_var_num;
+            let sub_layer_out_size = 1usize << sub_layer.output_var_num;
+            
+            let mul = &sub_layer.mul;
+            let add = &sub_layer.add;
+            for g in mul.iter() {
+                let mut i_offset = 0usize;
+                let mut o_offset = 0usize;
+                for _ in 0..nb_repetition {
+                    let x = g.i_ids[0] + i_offset;
+                    let y = g.i_ids[1] + i_offset;
+                    let z = g.o_id + o_offset;
+
+                    hg_vals[x] += vals.evals[y].scale(&C::challenge_mul_circuit_field(
+                        &eq_evals_at_rz0[z],
+                        &g.coef,
+                    ));
+                    gate_exists[x] = true;
+                    
+                    i_offset += sub_layer_in_size;
+                    o_offset += sub_layer_out_size;
+                }
+            }
+
+            for g in add.iter() {
+                let mut i_offset = 0usize;
+                let mut o_offset = 0usize;
+                for _ in 0..nb_repetition {
+                    let x = g.i_ids[0] + i_offset;
+                    let z = g.o_id + o_offset;
+                    hg_vals[x] += C::Field::from(C::challenge_mul_circuit_field(
+                        &eq_evals_at_rz0[z],
+                        &g.coef,
+                    ));
+                    gate_exists[x] = true;    
+                    
+                    i_offset += sub_layer_in_size;
+                    o_offset += sub_layer_out_size;
+                }
+            }
+            
         }
     }
 
@@ -373,5 +420,34 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             );
             gate_exists[g.i_ids[1]] = true;
         }
+
+        if self.layer.sub_layer.is_some() {
+            let sub_layer = self.layer.sub_layer.as_ref().unwrap();
+            let nb_repetition = self.layer.nb_repetition;
+            let sub_layer_in_size = 1usize << sub_layer.input_var_num;
+            let sub_layer_out_size = 1usize << sub_layer.output_var_num;
+            
+            let mul = &sub_layer.mul;
+            for g in mul.iter() {
+                let mut i_offset = 0usize;
+                let mut o_offset = 0usize;
+                for _ in 0..nb_repetition {
+                    let x = g.i_ids[0] + i_offset;
+                    let y = g.i_ids[1] + i_offset;
+                    let z = g.o_id + o_offset;
+
+                    hg_vals[y] += v_rx.scale(
+                        &(C::challenge_mul_circuit_field(
+                            &(eq_evals_at_rz0[z] * eq_evals_at_rx[x]),
+                            &g.coef,
+                        )),
+                    );
+                    gate_exists[y] = true;
+                    i_offset += sub_layer_in_size;
+                    o_offset += sub_layer_out_size;
+                }
+            }            
+        }
+
     }
 }
