@@ -11,7 +11,7 @@ use expander_rs::{BN254Config, Circuit, Config, GKRConfig, GKRScheme, M31ExtConf
 const KECCAK_CIRCUIT: &str = "data/circuit.txt";
 // circuit for repeating Poseidon for 120 times
 const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
-
+const M31_PACKSIZE: usize = 16;
 const FR_PACKSIZE: usize = 1;
 
 /// ...
@@ -70,12 +70,8 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         .map(|_| Arc::new(Mutex::new(0)))
         .collect::<Vec<_>>();
     let start_time = std::time::Instant::now();
-    #[cfg(target_arch = "x86_64")]
-    let m31_packsize: usize = 16;
-    #[cfg(target_arch = "aarch64")]
-    let m31_packsize: usize = 8;
     let pack_size = match args.field.as_str() {
-        "m31ext3" => m31_packsize,
+        "m31ext3" => M31_PACKSIZE,
         "fr" => FR_PACKSIZE,
         _ => unreachable!(),
     };
