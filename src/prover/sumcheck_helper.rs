@@ -453,7 +453,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
         let hg_vals_1 = if field_same_as_challenge_field {
             unsafe {
-                (hg_vals.as_ptr() as *mut Vec<C::ChallengeField>).as_mut().unwrap()              
+                (std::ptr::from_ref(hg_vals) as *mut Vec<C::ChallengeField>).as_mut().unwrap()              
             }
         } else {
             &mut self.sp.hg_evals_1
