@@ -9,7 +9,7 @@ use std::{
 
 use rand::{Rng, RngCore};
 
-use crate::{Field, FieldSerde, SimdField, M31, M31_MOD};
+use crate::{field_common, Field, FieldSerde, SimdField, M31, M31_MOD};
 
 const M31_PACK_SIZE: usize = 16;
 const PACKED_MOD: __m512i = unsafe { transmute([M31_MOD; M31_PACK_SIZE]) };
@@ -34,6 +34,8 @@ impl AVXM31 {
         }
     }
 }
+
+field_common!(AVXM31);
 
 impl FieldSerde for AVXM31 {
     #[inline(always)]
@@ -317,41 +319,6 @@ fn add(lhs: __m512i, rhs: __m512i) -> __m512i {
 const EVENS: __mmask16 = 0b0101010101010101;
 const ODDS: __mmask16 = 0b1010101010101010;
 
-impl Mul<&AVXM31> for AVXM31 {
-    type Output = AVXM31;
-    #[inline(always)]
-    fn mul(self, rhs: &AVXM31) -> Self::Output {
-        // credit: https://github.com/Plonky3/Plonky3/blob/eeb4e37b20127c4daa871b2bad0df30a7c7380db/mersenne-31/src/x86_64_avx2/packing.rs#L154
-        unsafe {
-            let rhs_evn = rhs.v;
-            let lhs_odd_dbl = _mm512_srli_epi64(self.v, 31);
-            let lhs_evn_dbl = _mm512_add_epi32(self.v, self.v);
-            let rhs_odd = movehdup_epi32(rhs.v);
-
-            let prod_odd_dbl = _mm512_mul_epu32(lhs_odd_dbl, rhs_odd);
-            let prod_evn_dbl = _mm512_mul_epu32(lhs_evn_dbl, rhs_evn);
-
-            let prod_lo_dbl = mask_moveldup_epi32(prod_evn_dbl, ODDS, prod_odd_dbl);
-            let prod_hi = mask_movehdup_epi32(prod_odd_dbl, EVENS, prod_evn_dbl);
-            // Right shift to undo the doubling.
-            let prod_lo = _mm512_srli_epi32::<1>(prod_lo_dbl);
-
-            // Standard addition of two 31-bit values.
-            let res = add(prod_lo, prod_hi);
-            AVXM31 { v: res }
-        }
-    }
-}
-
-impl Mul for AVXM31 {
-    type Output = AVXM31;
-    #[inline(always)]
-    #[allow(clippy::op_ref)]
-    fn mul(self, rhs: AVXM31) -> Self::Output {
-        self * &rhs
-    }
-}
-
 impl Mul<&M31> for AVXM31 {
     type Output = AVXM31;
 
@@ -387,75 +354,12 @@ impl Mul<M31> for AVXM31 {
     }
 }
 
-impl MulAssign<&AVXM31> for AVXM31 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: &AVXM31) {
-        *self = *self * rhs;
-    }
-}
-
-impl MulAssign for AVXM31 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: Self) {
-        *self *= &rhs;
-    }
-}
-
-impl<T: ::core::borrow::Borrow<AVXM31>> Product<T> for AVXM31 {
-    fn product<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::one(), |acc, item| acc * item.borrow())
-    }
-}
-
-impl Add<&AVXM31> for AVXM31 {
-    type Output = AVXM31;
-    #[inline(always)]
-    fn add(self, rhs: &AVXM31) -> Self::Output {
-        unsafe {
-            let mut result = _mm512_add_epi32(self.v, rhs.v);
-            let subx = _mm512_sub_epi32(result, PACKED_MOD);
-            result = _mm512_min_epu32(result, subx);
-
-            AVXM31 { v: result }
-        }
-    }
-}
-
-impl Add for AVXM31 {
-    type Output = AVXM31;
-    #[inline(always)]
-    #[allow(clippy::op_ref)]
-    fn add(self, rhs: AVXM31) -> Self::Output {
-        self + &rhs
-    }
-}
-
-impl AddAssign<&AVXM31> for AVXM31 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: &AVXM31) {
-        *self = *self + rhs;
-    }
-}
-
-impl AddAssign for AVXM31 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: Self) {
-        *self += &rhs;
-    }
-}
-
 impl Add<M31> for AVXM31 {
     type Output = AVXM31;
     #[inline(always)]
     #[allow(clippy::op_ref)]
     fn add(self, rhs: M31) -> Self::Output {
         self + AVXM31::pack_full(rhs)
-    }
-}
-
-impl<T: ::core::borrow::Borrow<AVXM31>> Sum<T> for AVXM31 {
-    fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::zero(), |acc, item| acc + item.borrow())
     }
 }
 
@@ -476,47 +380,55 @@ impl Neg for AVXM31 {
     }
 }
 
-impl Sub<&AVXM31> for AVXM31 {
-    type Output = AVXM31;
-    #[inline(always)]
-    fn sub(self, rhs: &AVXM31) -> Self::Output {
-        AVXM31 {
-            v: unsafe {
-                let t = _mm512_sub_epi32(self.v, rhs.v);
-                let subx = _mm512_add_epi32(t, PACKED_MOD);
-                _mm512_min_epu32(t, subx)
-            },
-        }
-    }
-}
-
-impl Sub for AVXM31 {
-    type Output = AVXM31;
-    #[inline(always)]
-    #[allow(clippy::op_ref)]
-    fn sub(self, rhs: AVXM31) -> Self::Output {
-        self - &rhs
-    }
-}
-
-impl SubAssign<&AVXM31> for AVXM31 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: &AVXM31) {
-        *self = *self - rhs;
-    }
-}
-
-impl SubAssign for AVXM31 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: Self) {
-        *self -= &rhs;
-    }
-}
-
 #[inline]
 #[must_use]
 fn movehdup_epi32(x: __m512i) -> __m512i {
     // The instruction is only available in the floating-point flavor; this distinction is only for
     // historical reasons and no longer matters. We cast to floats, duplicate, and cast back.
     unsafe { _mm512_castps_si512(_mm512_movehdup_ps(_mm512_castsi512_ps(x))) }
+}
+
+#[inline(always)]
+fn add_internal(a: &AVXM31, b: &AVXM31) -> AVXM31 {
+    unsafe {
+        let mut result = _mm512_add_epi32(a.v, b.v);
+        let subx = _mm512_sub_epi32(result, PACKED_MOD);
+        result = _mm512_min_epu32(result, subx);
+
+        AVXM31 { v: result }
+    }
+}
+
+#[inline(always)]
+fn sub_internal(a: &AVXM31, b: &AVXM31) -> AVXM31 {
+    AVXM31 {
+        v: unsafe {
+            let t = _mm512_sub_epi32(a.v, b.v);
+            let subx = _mm512_add_epi32(t, PACKED_MOD);
+            _mm512_min_epu32(t, subx)
+        },
+    }
+}
+
+#[inline]
+fn mul_internal(a: &AVXM31, b: &AVXM31) -> AVXM31 {
+    // credit: https://github.com/Plonky3/Plonky3/blob/eeb4e37b20127c4daa871b2bad0df30a7c7380db/mersenne-31/src/x86_64_avx2/packing.rs#L154
+    unsafe {
+        let rhs_evn = b.v;
+        let lhs_odd_dbl = _mm512_srli_epi64(a.v, 31);
+        let lhs_evn_dbl = _mm512_add_epi32(a.v, a.v);
+        let rhs_odd = movehdup_epi32(b.v);
+
+        let prod_odd_dbl = _mm512_mul_epu32(lhs_odd_dbl, rhs_odd);
+        let prod_evn_dbl = _mm512_mul_epu32(lhs_evn_dbl, rhs_evn);
+
+        let prod_lo_dbl = mask_moveldup_epi32(prod_evn_dbl, ODDS, prod_odd_dbl);
+        let prod_hi = mask_movehdup_epi32(prod_odd_dbl, EVENS, prod_evn_dbl);
+        // Right shift to undo the doubling.
+        let prod_lo = _mm512_srli_epi32::<1>(prod_lo_dbl);
+
+        // Standard addition of two 31-bit values.
+        let res = add(prod_lo, prod_hi);
+        AVXM31 { v: res }
+    }
 }

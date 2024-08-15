@@ -1,3 +1,5 @@
+use crate::field_common;
+
 use crate::{Field, FieldSerde, SimdField, GF2_128};
 use std::fmt::Debug;
 use std::{
@@ -11,6 +13,8 @@ use std::{
 pub struct AVX512GF2_128x4 {
     data: __m512i,
 }
+
+field_common!(AVX512GF2_128x4);
 
 impl AVX512GF2_128x4 {
     #[inline(always)]
@@ -319,144 +323,6 @@ void gfmul_avx512(__m512i a, __m512i b, __m512i *res) {
 }
  */
 
-#[inline(always)]
-unsafe fn mul_internal(a: &AVX512GF2_128x4, b: &AVX512GF2_128x4) -> AVX512GF2_128x4 {
-    let xmmmask = _mm512_set_epi32(
-        0,
-        0,
-        0,
-        0xffffffffu32 as i32,
-        0,
-        0,
-        0,
-        0xffffffffu32 as i32,
-        0,
-        0,
-        0,
-        0xffffffffu32 as i32,
-        0,
-        0,
-        0,
-        0xffffffffu32 as i32,
-    );
-
-    let mut tmp3 = _mm512_clmulepi64_epi128(a.data, b.data, 0x00);
-    let mut tmp6 = _mm512_clmulepi64_epi128(a.data, b.data, 0x11);
-
-    let mut tmp4 = _mm512_shuffle_epi32(a.data, _MM_PERM_BADC);
-    let mut tmp5 = _mm512_shuffle_epi32(b.data, _MM_PERM_BADC);
-    tmp4 = _mm512_xor_si512(tmp4, a.data);
-    tmp5 = _mm512_xor_si512(tmp5, b.data);
-
-    tmp4 = _mm512_clmulepi64_epi128(tmp4, tmp5, 0x00);
-    tmp4 = _mm512_xor_si512(tmp4, tmp3);
-    tmp4 = _mm512_xor_si512(tmp4, tmp6);
-
-    tmp5 = _mm512_bslli_epi128(tmp4, 8);
-    tmp4 = _mm512_bsrli_epi128(tmp4, 8);
-    tmp3 = _mm512_xor_si512(tmp3, tmp5);
-    tmp6 = _mm512_xor_si512(tmp6, tmp4);
-
-    let tmp7 = _mm512_srli_epi32(tmp6, 31);
-    let tmp8 = _mm512_srli_epi32(tmp6, 30);
-    let tmp9 = _mm512_srli_epi32(tmp6, 25);
-
-    let mut tmp7 = _mm512_xor_si512(tmp7, tmp8);
-    tmp7 = _mm512_xor_si512(tmp7, tmp9);
-
-    let mut tmp8 = _mm512_shuffle_epi32(tmp7, _MM_PERM_CBAD);
-    tmp7 = _mm512_and_si512(xmmmask, tmp8);
-    tmp8 = _mm512_andnot_si512(xmmmask, tmp8);
-
-    tmp3 = _mm512_xor_si512(tmp3, tmp8);
-    tmp6 = _mm512_xor_si512(tmp6, tmp7);
-
-    let tmp10 = _mm512_slli_epi32(tmp6, 1);
-    tmp3 = _mm512_xor_si512(tmp3, tmp10);
-
-    let tmp11 = _mm512_slli_epi32(tmp6, 2);
-    tmp3 = _mm512_xor_si512(tmp3, tmp11);
-
-    let tmp12 = _mm512_slli_epi32(tmp6, 7);
-    tmp3 = _mm512_xor_si512(tmp3, tmp12);
-
-    let result = _mm512_xor_si512(tmp3, tmp6);
-
-    AVX512GF2_128x4 { data: result }
-}
-
-impl Mul<&AVX512GF2_128x4> for &AVX512GF2_128x4 {
-    type Output = AVX512GF2_128x4;
-
-    #[inline(always)]
-    fn mul(self, rhs: &AVX512GF2_128x4) -> AVX512GF2_128x4 {
-        unsafe { mul_internal(self, rhs) }
-    }
-}
-
-impl Mul<AVX512GF2_128x4> for AVX512GF2_128x4 {
-    type Output = AVX512GF2_128x4;
-
-    #[inline(always)]
-    fn mul(self, rhs: AVX512GF2_128x4) -> AVX512GF2_128x4 {
-        unsafe { mul_internal(&self, &rhs) }
-    }
-}
-
-impl MulAssign<&AVX512GF2_128x4> for AVX512GF2_128x4 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: &AVX512GF2_128x4) {
-        *self = *self * *rhs;
-    }
-}
-
-impl MulAssign<AVX512GF2_128x4> for AVX512GF2_128x4 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: AVX512GF2_128x4) {
-        *self = *self * rhs;
-    }
-}
-
-impl Add<&AVX512GF2_128x4> for AVX512GF2_128x4 {
-    type Output = AVX512GF2_128x4;
-
-    #[inline(always)]
-    fn add(self, rhs: &AVX512GF2_128x4) -> AVX512GF2_128x4 {
-        unsafe {
-            AVX512GF2_128x4 {
-                data: _mm512_xor_si512(self.data, rhs.data),
-            }
-        }
-    }
-}
-
-impl Add for AVX512GF2_128x4 {
-    type Output = AVX512GF2_128x4;
-
-    #[inline(always)]
-    fn add(self, rhs: AVX512GF2_128x4) -> AVX512GF2_128x4 {
-        unsafe {
-            AVX512GF2_128x4 {
-                data: _mm512_xor_si512(self.data, rhs.data),
-            }
-        }
-    }
-}
-
-impl AddAssign<&AVX512GF2_128x4> for AVX512GF2_128x4 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: &AVX512GF2_128x4) {
-        *self = *self + rhs;
-    }
-}
-
-impl AddAssign<AVX512GF2_128x4> for AVX512GF2_128x4 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: AVX512GF2_128x4) {
-        *self = *self + rhs;
-    }
-}
-
 impl From<u32> for AVX512GF2_128x4 {
     #[inline(always)]
     fn from(v: u32) -> AVX512GF2_128x4 {
@@ -472,40 +338,6 @@ impl Neg for AVX512GF2_128x4 {
     #[inline(always)]
     fn neg(self) -> AVX512GF2_128x4 {
         self
-    }
-}
-
-impl Sub<&AVX512GF2_128x4> for AVX512GF2_128x4 {
-    type Output = AVX512GF2_128x4;
-
-    #[inline(always)]
-    #[allow(clippy::suspicious_arithmetic_impl)]
-    fn sub(self, rhs: &AVX512GF2_128x4) -> AVX512GF2_128x4 {
-        self + rhs
-    }
-}
-
-impl Sub for AVX512GF2_128x4 {
-    type Output = AVX512GF2_128x4;
-
-    #[inline(always)]
-    #[allow(clippy::suspicious_arithmetic_impl)]
-    fn sub(self, rhs: AVX512GF2_128x4) -> AVX512GF2_128x4 {
-        self + rhs
-    }
-}
-
-impl SubAssign<&AVX512GF2_128x4> for AVX512GF2_128x4 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: &AVX512GF2_128x4) {
-        *self = *self - rhs;
-    }
-}
-
-impl SubAssign<AVX512GF2_128x4> for AVX512GF2_128x4 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: AVX512GF2_128x4) {
-        *self = *self - rhs;
     }
 }
 
@@ -538,27 +370,6 @@ impl Default for AVX512GF2_128x4 {
     }
 }
 
-impl<T: ::core::borrow::Borrow<AVX512GF2_128x4>> Sum<T> for AVX512GF2_128x4 {
-    fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::zero(), |acc, item| acc + item.borrow())
-    }
-}
-
-impl<T: ::core::borrow::Borrow<AVX512GF2_128x4>> Product<T> for AVX512GF2_128x4 {
-    fn product<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::one(), |acc, item| acc * *item.borrow())
-    }
-}
-
-impl Mul<&AVX512GF2_128x4> for AVX512GF2_128x4 {
-    type Output = AVX512GF2_128x4;
-
-    #[inline(always)]
-    fn mul(self, rhs: &AVX512GF2_128x4) -> AVX512GF2_128x4 {
-        unsafe { mul_internal(&self, rhs) }
-    }
-}
-
 impl From<GF2_128> for AVX512GF2_128x4 {
     #[inline(always)]
     fn from(v: GF2_128) -> AVX512GF2_128x4 {
@@ -580,4 +391,90 @@ impl SimdField for AVX512GF2_128x4 {
         *self * simd_challenge
     }
     type Scalar = GF2_128;
+}
+
+#[inline(always)]
+fn add_internal(a: &AVX512GF2_128x4, b: &AVX512GF2_128x4) -> AVX512GF2_128x4 {
+    unsafe {
+        AVX512GF2_128x4 {
+            data: _mm512_xor_si512(a.data, b.data),
+        }
+    }
+}
+
+#[inline(always)]
+fn sub_internal(a: &AVX512GF2_128x4, b: &AVX512GF2_128x4) -> AVX512GF2_128x4 {
+    unsafe {
+        AVX512GF2_128x4 {
+            data: _mm512_xor_si512(a.data, b.data),
+        }
+    }
+}
+
+#[inline(always)]
+fn mul_internal(a: &AVX512GF2_128x4, b: &AVX512GF2_128x4) -> AVX512GF2_128x4 {
+    unsafe {
+        let xmmmask = _mm512_set_epi32(
+            0,
+            0,
+            0,
+            0xffffffffu32 as i32,
+            0,
+            0,
+            0,
+            0xffffffffu32 as i32,
+            0,
+            0,
+            0,
+            0xffffffffu32 as i32,
+            0,
+            0,
+            0,
+            0xffffffffu32 as i32,
+        );
+
+        let mut tmp3 = _mm512_clmulepi64_epi128(a.data, b.data, 0x00);
+        let mut tmp6 = _mm512_clmulepi64_epi128(a.data, b.data, 0x11);
+
+        let mut tmp4 = _mm512_shuffle_epi32(a.data, _MM_PERM_BADC);
+        let mut tmp5 = _mm512_shuffle_epi32(b.data, _MM_PERM_BADC);
+        tmp4 = _mm512_xor_si512(tmp4, a.data);
+        tmp5 = _mm512_xor_si512(tmp5, b.data);
+
+        tmp4 = _mm512_clmulepi64_epi128(tmp4, tmp5, 0x00);
+        tmp4 = _mm512_xor_si512(tmp4, tmp3);
+        tmp4 = _mm512_xor_si512(tmp4, tmp6);
+
+        tmp5 = _mm512_bslli_epi128(tmp4, 8);
+        tmp4 = _mm512_bsrli_epi128(tmp4, 8);
+        tmp3 = _mm512_xor_si512(tmp3, tmp5);
+        tmp6 = _mm512_xor_si512(tmp6, tmp4);
+
+        let tmp7 = _mm512_srli_epi32(tmp6, 31);
+        let tmp8 = _mm512_srli_epi32(tmp6, 30);
+        let tmp9 = _mm512_srli_epi32(tmp6, 25);
+
+        let mut tmp7 = _mm512_xor_si512(tmp7, tmp8);
+        tmp7 = _mm512_xor_si512(tmp7, tmp9);
+
+        let mut tmp8 = _mm512_shuffle_epi32(tmp7, _MM_PERM_CBAD);
+        tmp7 = _mm512_and_si512(xmmmask, tmp8);
+        tmp8 = _mm512_andnot_si512(xmmmask, tmp8);
+
+        tmp3 = _mm512_xor_si512(tmp3, tmp8);
+        tmp6 = _mm512_xor_si512(tmp6, tmp7);
+
+        let tmp10 = _mm512_slli_epi32(tmp6, 1);
+        tmp3 = _mm512_xor_si512(tmp3, tmp10);
+
+        let tmp11 = _mm512_slli_epi32(tmp6, 2);
+        tmp3 = _mm512_xor_si512(tmp3, tmp11);
+
+        let tmp12 = _mm512_slli_epi32(tmp6, 7);
+        tmp3 = _mm512_xor_si512(tmp3, tmp12);
+
+        let result = _mm512_xor_si512(tmp3, tmp6);
+
+        AVX512GF2_128x4 { data: result }
+    }
 }

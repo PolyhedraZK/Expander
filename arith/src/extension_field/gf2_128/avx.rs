@@ -1,15 +1,18 @@
+use std::iter::{Product, Sum};
 use std::{
     arch::x86_64::*,
     mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{BinomialExtensionField, Field, FieldSerde, GF2};
+use crate::{field_common, BinomialExtensionField, Field, FieldSerde, GF2};
 
 #[derive(Debug, Clone, Copy)]
 pub struct AVX512GF2_128 {
     pub v: __m128i,
 }
+
+field_common!(AVX512GF2_128);
 
 impl FieldSerde for AVX512GF2_128 {
     #[inline(always)]
@@ -188,79 +191,7 @@ impl From<GF2> for AVX512GF2_128 {
     }
 }
 
-impl Add for AVX512GF2_128 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn add(self, rhs: Self) -> Self {
-        AVX512GF2_128 {
-            v: unsafe { _mm_xor_si128(self.v, rhs.v) },
-        }
-    }
-}
-
-impl Sub for AVX512GF2_128 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn sub(self, rhs: Self) -> Self {
-        AVX512GF2_128 {
-            v: unsafe { _mm_xor_si128(self.v, rhs.v) },
-        }
-    }
-}
-
-impl Add<&AVX512GF2_128> for AVX512GF2_128 {
-    type Output = AVX512GF2_128;
-
-    #[inline(always)]
-    fn add(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
-        AVX512GF2_128 {
-            v: unsafe { _mm_xor_si128(self.v, rhs.v) },
-        }
-    }
-}
-
-impl Sub<&AVX512GF2_128> for AVX512GF2_128 {
-    type Output = AVX512GF2_128;
-
-    #[inline(always)]
-    fn sub(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
-        AVX512GF2_128 {
-            v: unsafe { _mm_xor_si128(self.v, rhs.v) },
-        }
-    }
-}
-
-impl AddAssign for AVX512GF2_128 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: Self) {
-        self.v = unsafe { _mm_xor_si128(self.v, rhs.v) };
-    }
-}
-
-impl AddAssign<&AVX512GF2_128> for AVX512GF2_128 {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: &AVX512GF2_128) {
-        self.v = unsafe { _mm_xor_si128(self.v, rhs.v) };
-    }
-}
-
-impl SubAssign for AVX512GF2_128 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: Self) {
-        self.v = unsafe { _mm_xor_si128(self.v, rhs.v) };
-    }
-}
-
-impl SubAssign<&AVX512GF2_128> for AVX512GF2_128 {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: &AVX512GF2_128) {
-        self.v = unsafe { _mm_xor_si128(self.v, rhs.v) };
-    }
-}
-
-unsafe fn gfmul(a: __m128i, b: __m128i, res: &mut __m128i) {
+unsafe fn gfmul(a: __m128i, b: __m128i) -> __m128i {
     let xmm_mask = _mm_setr_epi32((0xffffffff_u32) as i32, 0x0, 0x0, 0x0);
 
     // a = a0|a1, b = b0|b1
@@ -305,69 +236,7 @@ unsafe fn gfmul(a: __m128i, b: __m128i, res: &mut __m128i) {
     let tmp12 = _mm_slli_epi32(tmp6, 7);
     tmp3 = _mm_xor_si128(tmp3, tmp12);
 
-    *res = _mm_xor_si128(tmp3, tmp6);
-}
-
-impl Mul<AVX512GF2_128> for AVX512GF2_128 {
-    type Output = Self;
-
-    #[inline(always)]
-    fn mul(self, rhs: Self) -> Self {
-        let mut res = unsafe { std::mem::zeroed() };
-        unsafe { gfmul(self.v, rhs.v, &mut res) };
-        AVX512GF2_128 { v: res }
-    }
-}
-
-impl Mul<&AVX512GF2_128> for AVX512GF2_128 {
-    type Output = AVX512GF2_128;
-
-    #[inline(always)]
-    fn mul(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
-        let mut res = unsafe { std::mem::zeroed() };
-        unsafe { gfmul(self.v, rhs.v, &mut res) };
-        AVX512GF2_128 { v: res }
-    }
-}
-
-impl Mul<AVX512GF2_128> for &AVX512GF2_128 {
-    type Output = AVX512GF2_128;
-
-    #[inline(always)]
-    fn mul(self, rhs: AVX512GF2_128) -> AVX512GF2_128 {
-        let mut res = unsafe { std::mem::zeroed() };
-        unsafe { gfmul(self.v, rhs.v, &mut res) };
-        AVX512GF2_128 { v: res }
-    }
-}
-
-impl Mul<&AVX512GF2_128> for &AVX512GF2_128 {
-    type Output = AVX512GF2_128;
-
-    #[inline(always)]
-    fn mul(self, rhs: &AVX512GF2_128) -> AVX512GF2_128 {
-        let mut res = unsafe { std::mem::zeroed() };
-        unsafe { gfmul(self.v, rhs.v, &mut res) };
-        AVX512GF2_128 { v: res }
-    }
-}
-
-impl MulAssign<AVX512GF2_128> for AVX512GF2_128 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: AVX512GF2_128) {
-        let mut res = unsafe { std::mem::zeroed() };
-        unsafe { gfmul(self.v, rhs.v, &mut res) };
-        self.v = res;
-    }
-}
-
-impl MulAssign<&AVX512GF2_128> for AVX512GF2_128 {
-    #[inline(always)]
-    fn mul_assign(&mut self, rhs: &AVX512GF2_128) {
-        let mut res = unsafe { std::mem::zeroed() };
-        unsafe { gfmul(self.v, rhs.v, &mut res) };
-        self.v = res;
-    }
+    _mm_xor_si128(tmp3, tmp6)
 }
 
 impl Default for AVX512GF2_128 {
@@ -393,23 +262,32 @@ impl Neg for AVX512GF2_128 {
     }
 }
 
-impl<T: std::borrow::Borrow<AVX512GF2_128>> std::iter::Sum<T> for AVX512GF2_128 {
-    fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::zero(), |acc, item| acc + item.borrow())
-    }
-}
-
-impl<T: std::borrow::Borrow<AVX512GF2_128>> std::iter::Product<T> for AVX512GF2_128 {
-    fn product<I: Iterator<Item = T>>(iter: I) -> Self {
-        iter.fold(Self::one(), |acc, item| acc * item.borrow())
-    }
-}
-
 impl From<u32> for AVX512GF2_128 {
     #[inline(always)]
     fn from(v: u32) -> Self {
         AVX512GF2_128 {
             v: unsafe { std::mem::transmute::<[u32; 4], __m128i>([v, 0, 0, 0]) },
         }
+    }
+}
+
+#[inline(always)]
+fn add_internal(a: &AVX512GF2_128, b: &AVX512GF2_128) -> AVX512GF2_128 {
+    AVX512GF2_128 {
+        v: unsafe { _mm_xor_si128(a.v, b.v) },
+    }
+}
+
+#[inline(always)]
+fn sub_internal(a: &AVX512GF2_128, b: &AVX512GF2_128) -> AVX512GF2_128 {
+    AVX512GF2_128 {
+        v: unsafe { _mm_xor_si128(a.v, b.v) },
+    }
+}
+
+#[inline(always)]
+fn mul_internal(a: &AVX512GF2_128, b: &AVX512GF2_128) -> AVX512GF2_128 {
+    AVX512GF2_128 {
+        v: unsafe { gfmul(a.v, b.v) },
     }
 }
