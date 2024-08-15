@@ -443,7 +443,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     }
 
     pub(crate) fn prepare_h_y_vals(&mut self, v_rx: C::Field) {
-        let field_same_as_challenge_field = TypeId::of::<C::Field>() != TypeId::of::<C::ChallengeField>();
+        let field_same_as_challenge_field = TypeId::of::<C::Field>() == TypeId::of::<C::ChallengeField>();
         self.v_rx = v_rx;
 
         let eq_evals_at_rz = &mut self.sp.eq_evals_at_rz0;
