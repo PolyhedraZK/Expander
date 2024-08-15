@@ -102,17 +102,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 p_add[2] += C::simd_circuit_field_mul_challenge_field(&s_f_v, &s_hg_v);
             }
 
-            p_add[2] = p_add[1]
-                + p_add[1]
-                + p_add[1]
-                + p_add[1]
-                + p_add[1]
-                + p_add[1]
-                + p_add[0]
-                + p_add[0]
-                + p_add[0]
-                - p_add[2]
-                - p_add[2];
+            p_add[2] = p_add[1].mul_by_6() + p_add[0].mul_by_3() - p_add[2].double();
 
             // interpolate p_add into 7 points
             Self::interpolate_3::<C>(&p_add, &mut p);
@@ -265,6 +255,7 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
         }
     }
 
+    #[inline]
     pub(crate) fn poly_evals_at(&mut self, var_idx: usize) -> [C::Field; D] {
         self.x_helper.poly_eval_at::<C>(
             var_idx,
@@ -277,6 +268,7 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
         )
     }
 
+    #[inline]
     pub(crate) fn receive_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
         self.x_helper.receive_challenge::<C>(
             var_idx,
@@ -292,6 +284,7 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
         self.rx.push(r);
     }
 
+    #[inline(always)]
     pub(crate) fn vx_claim(&self) -> C::Field {
         self.sp.v_evals[0]
     }
