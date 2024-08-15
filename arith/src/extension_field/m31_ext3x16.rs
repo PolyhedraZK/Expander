@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    field_common, BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, M31x16, M31,
+    field_common, BinomialExtensionField, Field, FieldSerde, M31Ext3, M31x16, SimdField, M31,
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]

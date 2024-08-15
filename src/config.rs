@@ -1,5 +1,5 @@
 use arith::{
-    BinomialExtensionField, Field, FieldSerde, M31Ext3, SimdField, M31x16, M31Ext3x16, M31,
+    BinomialExtensionField, Field, FieldSerde, M31Ext3, M31Ext3x16, M31x16, SimdField, M31,
 };
 use halo2curves::bn256::Fr;
 
