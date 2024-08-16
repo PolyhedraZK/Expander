@@ -54,7 +54,7 @@ pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
                     }
                     x
                 },
-                BatchSize::SmallInput,
+                BatchSize::SmallInput, 
             )
         },
     );
