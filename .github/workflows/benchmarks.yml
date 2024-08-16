@@ -1,1 +1,29 @@
-name: expander-rs-micro-benchmarks
+name: Run Benchmarks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: styfle/cancel-workflow-action@0.11.0
+    - uses: actions/checkout@v4
+    - name: Benchmark
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Run benchmark
+      run: cargo criterion --message-format=json > benchmark_results.json
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+    - name: Upload benchmark results to Google Cloud Storage
+      run: |
+        commit_hash=$(git rev-parse HEAD)
+        parent_hash=$(git rev-parse HEAD^)
+        gsutil cp benchmark_results.json gs://github_micro_bench/benchmark_$commit_hash_$parent_hash.json
