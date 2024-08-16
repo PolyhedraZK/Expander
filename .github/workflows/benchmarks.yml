@@ -2,30 +2,51 @@ name: Run Benchmarks
 
 on:
   push:
+    branches: [ main, develop ]
   pull_request:
+    branches: [ main ]
 
 jobs:
   benchmark:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: styfle/cancel-workflow-action@0.11.0
-    - uses: actions/checkout@v4
-    - name: Benchmark
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Fetch all history for all branches and tags
+
+    - name: Set up Rust
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-    - name: Install criterion
+        
+    - name: Install cargo-criterion
       run: cargo install cargo-criterion
+      
     - name: Run benchmark
       run: cargo criterion --message-format=json > benchmark_results.json
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0
+      
+    - id: 'auth'
+      name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v1'
       with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+    - name: 'Set up Cloud SDK'
+      uses: 'google-github-actions/setup-gcloud@v1'
+      
+    - name: 'Use gcloud CLI'
+      run: 'gcloud info'
+
     - name: Upload benchmark results to Google Cloud Storage
       run: |
         commit_hash=$(git rev-parse HEAD)
         parent_hash=$(git rev-parse HEAD^)
-        gsutil cp benchmark_results.json gs://github_micro_bench/benchmark_$commit_hash_$parent_hash.json
+        gsutil cp benchmark_results.json gs://github_micro_bench/benchmark_${commit_hash}_${parent_hash}.json
+        
+    - name: Update commit info
+      run: |
+        commit_hash=$(git rev-parse HEAD)
+        parent_hash=$(git rev-parse HEAD^)
+        timestamp=$(git show -s --format=%ct $commit_hash)
+        echo "{\"hash\":\"$commit_hash\",\"parent\":\"$parent_hash\",\"timestamp\":$timestamp}" > commit_info.json
+        gsutil cp commit_info.json gs://github_micro_bench/commits/commit_${commit_hash}.json
