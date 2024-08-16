@@ -11,7 +11,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - uses: styfle/cancel-workflow-action@0.11.0
     - name: update toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -39,8 +38,5 @@ jobs:
     - name: Upload benchmark results to Google Cloud Storage
       run: |
         commit_hash=$(git rev-parse HEAD)
-        parent_hash=$(git rev-parse HEAD~1)
         repo_name="${GITHUB_REPOSITORY#*/}"
-        echo "Commit Hash: $commit_hash"
-        echo "Parent Hash: $parent_hash"
-        gsutil cp benchmark_results_clean.json gs://github_micro_bench/${repo_name}/benchmark_${commit_hash}_${parent_hash}.json
+        gsutil cp benchmark_results_clean.json gs://github_micro_bench/${repo_name}/benchmark_${commit_hash}.json
