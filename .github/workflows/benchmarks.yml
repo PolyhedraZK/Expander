@@ -15,8 +15,10 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-    - name: Run benchmark
+    - name: Install criterion
       run: cargo add criterion
+    - name: Run benchmark
+      
       run: cargo criterion --message-format=json > benchmark_results.json
     - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v0
