@@ -20,6 +20,9 @@ tokio.workspace = true
 warp.workspace = true
 chrono.workspace = true
 
+[dev-dependencies]
+criterion = "0.5.1"
+
 [[bin]]
 name = "expander-exec"
 path = "src/exec.rs"
