@@ -8,7 +8,7 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - uses: styfle/cancel-workflow-action@0.11.0
@@ -17,17 +17,20 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-    - name: Install criterion
-      run: cargo install cargo-criterion
-    - name: Run benchmark
-      run: cargo criterion --message-format=json > benchmark_results.json
+    - name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v1'
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
     - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
+    - name: Install criterion
+      run: cargo install cargo-criterion
+    - name: Run benchmark
+      run: cargo criterion --message-format=json > benchmark_results.json
     - name: Upload benchmark results to Google Cloud Storage
       run: |
         commit_hash=$(git rev-parse HEAD)
-        parent_hash=$(git rev-parse HEAD^)
+        parent_hash=$(git rev-parse HEAD~1)
         gsutil cp benchmark_results.json gs://github_micro_bench/benchmark_$commit_hash_$parent_hash.json
