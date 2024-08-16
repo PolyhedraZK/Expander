@@ -11,16 +11,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - name: get commit hash
-      run: |
-        commit_hash=$(git rev-parse HEAD)
-        parent_hash=$(git rev-parse HEAD~1)
-        echo "commit_hash=$commit_hash" >> $GITHUB_OUTPUT
-        echo "parent_hash=$parent_hash" >> $GITHUB_OUTPUT
-        echo "Commit Hash: $commit_hash"
-        echo "Parent Hash: $parent_hash"
     - uses: styfle/cancel-workflow-action@0.11.0
-    - uses: actions/checkout@v4
     - name: update toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -39,6 +30,8 @@ jobs:
       run: cargo criterion --message-format=json > benchmark_results.json
     - name: Upload benchmark results to Google Cloud Storage
       run: |
+        commit_hash=$(git rev-parse HEAD)
+        parent_hash=$(git rev-parse HEAD~1)
         echo "Commit Hash: $commit_hash"
         echo "Parent Hash: $parent_hash"
         gsutil cp benchmark_results.json gs://github_micro_bench/benchmark_${commit_hash}_${parent_hash}.json
