@@ -15,6 +15,10 @@ jobs:
       run: |
         commit_hash=$(git rev-parse HEAD)
         parent_hash=$(git rev-parse HEAD~1)
+        echo "commit_hash=$commit_hash" >> $GITHUB_OUTPUT
+        echo "parent_hash=$parent_hash" >> $GITHUB_OUTPUT
+        echo "Commit Hash: $commit_hash"
+        echo "Parent Hash: $parent_hash"
     - uses: styfle/cancel-workflow-action@0.11.0
     - uses: actions/checkout@v4
     - name: update toolchain
