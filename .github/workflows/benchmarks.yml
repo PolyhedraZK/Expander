@@ -28,6 +28,14 @@ jobs:
       run: cargo install cargo-criterion
     - name: Run benchmark
       run: cargo criterion --message-format=json > benchmark_results.json
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    - name: Clean benchmark results
+      run: |
+        wget https://raw.githubusercontent.com/PolyhedraZK/Expander-rs/main/scripts/parse_benchmark_result.py
+        python3 parse_benchmark_result.py benchmark_results.json benchmark_results_clean.json
     - name: Upload benchmark results to Google Cloud Storage
       run: |
         commit_hash=$(git rev-parse HEAD)
@@ -35,4 +43,4 @@ jobs:
         repo_name="${GITHUB_REPOSITORY#*/}"
         echo "Commit Hash: $commit_hash"
         echo "Parent Hash: $parent_hash"
-        gsutil cp benchmark_results.json gs://github_micro_bench/${repo_name}/benchmark_${commit_hash}_${parent_hash}.json
+        gsutil cp benchmark_results_clean.json gs://github_micro_bench/${repo_name}/benchmark_${commit_hash}_${parent_hash}.json
