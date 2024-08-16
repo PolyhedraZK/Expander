@@ -43,10 +43,3 @@ jobs:
         parent_hash=$(git rev-parse HEAD^)
         gsutil cp benchmark_results.json gs://github_micro_bench/benchmark_${commit_hash}_${parent_hash}.json
         
-    - name: Update commit info
-      run: |
-        commit_hash=$(git rev-parse HEAD)
-        parent_hash=$(git rev-parse HEAD^)
-        timestamp=$(git show -s --format=%ct $commit_hash)
-        echo "{\"hash\":\"$commit_hash\",\"parent\":\"$parent_hash\",\"timestamp\":$timestamp}" > commit_info.json
-        gsutil cp commit_info.json gs://github_micro_bench/commits/commit_${commit_hash}.json
