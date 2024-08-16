@@ -32,6 +32,7 @@ jobs:
       run: |
         commit_hash=$(git rev-parse HEAD)
         parent_hash=$(git rev-parse HEAD~1)
+        repo_name="${GITHUB_REPOSITORY#*/}"
         echo "Commit Hash: $commit_hash"
         echo "Parent Hash: $parent_hash"
-        gsutil cp benchmark_results.json gs://github_micro_bench/benchmark_${commit_hash}_${parent_hash}.json
+        gsutil cp benchmark_results.json gs://github_micro_bench/${repo_name}/benchmark_${commit_hash}_${parent_hash}.json
