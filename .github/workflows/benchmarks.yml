@@ -35,4 +35,4 @@ jobs:
       run: cargo criterion --message-format=json > benchmark_results.json
     - name: Upload benchmark results to Google Cloud Storage
       run: 
-        gsutil cp benchmark_results.json gs://github_micro_bench/benchmark_$commit_hash_$parent_hash.json
+        gsutil cp benchmark_results.json gs://github_micro_bench/benchmark_${commit_hash}_${parent_hash}.json
