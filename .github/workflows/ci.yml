@@ -8,7 +8,7 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  lint:
+  Lint:
     name: Lint
     runs-on: macos-latest
     steps:
@@ -18,8 +18,7 @@ jobs:
           components: rustfmt, clippy
       - run: cargo fmt --all -- --check
       - run: cargo clippy
-
-  build:
+  Build:
     name: Build
     runs-on: macos-latest
     steps:
@@ -32,8 +31,7 @@ jobs:
       - run: cargo check --all-features --examples --benches --workspace
       - run: cargo build --no-default-features --release
       - run: cargo build --all-features --release
-
-  test-mac:
+  Test-mac:
     name: Test-mac
     runs-on: macos-latest
     steps:
@@ -49,9 +47,8 @@ jobs:
       - run: cargo test -p bi-kzg --release
       - run: cargo test --no-default-features --release      
       - run: cargo test --all-features --release
-
-  bench-mac-m31:
-    name: Bench-mac-m31
+  Bench-mac-m31-ext3:
+    name: Bench-mac-m31-ext3
     runs-on: macos-latest
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
@@ -62,10 +59,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
       - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
-      - run: cargo run --release -- -t 2 -f m31ext3
-  
-  bench-mac-fr:
-    name: Bench-mac-fr
+      - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 2 -f m31ext3
+  Bench-mac-BN254:
+    name: Bench-mac-BN254
     runs-on: macos-latest
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
@@ -76,9 +72,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
       - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
-      - run: cargo run --release -- -t 2 -f fr
-
-  test-linux:
+      - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 2 -f fr
+  Test-linux:
     name: Test-linux
     runs-on: self-hosted
     steps:
@@ -89,12 +84,12 @@ jobs:
       - run: . "$HOME/.cargo/env" 
       - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
       - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
-      - run: RUSTFLAGS="-C target-cpu=native" RUSTFLAGS="-C target-feature=+avx512f" cargo test -p arith --release
-      - run: RUSTFLAGS="-C target-cpu=native" RUSTFLAGS="-C target-feature=+avx512f" cargo test -p bi-kzg --release
-      - run: RUSTFLAGS="-C target-cpu=native" RUSTFLAGS="-C target-feature=+avx512f" cargo test --no-default-features --release
-      - run: RUSTFLAGS="-C target-cpu=native" RUSTFLAGS="-C target-feature=+avx512f" cargo test --all-features --release
-  Bench-linux-m31:
-    name: Bench-linux-m31
+      - run: RUSTFLAGS="-C target-cpu=native" cargo test -p arith --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo test -p bi-kzg --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo test --no-default-features --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo test --all-features --release
+  Bench-linux-m31-ext3:
+    name: Bench-linux-m31-ext3
     runs-on: self-hosted
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
@@ -104,9 +99,9 @@ jobs:
       - run: . "$HOME/.cargo/env" 
       - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
       - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
-      - run: RUSTFLAGS="-C target-cpu=native" RUSTFLAGS="-C target-feature=+avx512f" cargo run --release -- -t 16 -f m31ext3 
-  Bench-linux-fr:
-    name: Bench-linux-fr
+      - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 16 -f m31ext3
+  Bench-linux-BN254:
+    name: Bench-linux-BN254
     runs-on: self-hosted
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
@@ -116,4 +111,4 @@ jobs:
       - run: . "$HOME/.cargo/env" 
       - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
       - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
-      - run: RUSTFLAGS="-C target-cpu=native" RUSTFLAGS="-C target-feature=+avx512f" cargo run --release -- -t 16 -f fr
+      - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 16 -f fr
