@@ -25,8 +25,7 @@ jobs:
     - name: Run benchmark
       run: cargo criterion --message-format=json > benchmark_results.json
       
-    - id: 'auth'
-      name: 'Authenticate to Google Cloud'
+    - name: 'Authenticate to Google Cloud'
       uses: 'google-github-actions/auth@v1'
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY }}'
