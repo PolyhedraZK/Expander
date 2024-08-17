@@ -247,20 +247,16 @@ impl From<u32> for NeonGF2_128 {
 
 // multiply the polynomial by x^32, without reducing the irreducible polynomial
 // equivalent to _mm_shuffle_epi32(a, 147)
-// TODO: Is there an instruction for this?
 #[inline(always)]
 unsafe fn cyclic_rotate_1(input: uint32x4_t) -> uint32x4_t {
-    let [a, b, c, d] = transmute::<uint32x4_t, [u32; 4]>(input);
-    transmute([d, a, b, c])
+    vextq_u32(input, input, 1)
 }
 
 // multiply the polynomial by x^64, without reducing the irreducible polynomial
 // equivalent to _mm_shuffle_epi32(a, 78)
-// TODO: Is there an instruction for this?
 #[inline(always)]
 unsafe fn cyclic_rotate_2(input: uint32x4_t) -> uint32x4_t {
-    let [a, b, c, d] = transmute::<uint32x4_t, [u32; 4]>(input);
-    transmute([c, d, a, b])
+    vextq_u32(input, input, 2)
 }
 
 #[inline(always)]
