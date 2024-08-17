@@ -68,7 +68,7 @@ pub struct Config<C: GKRConfig> {
 impl<C: GKRConfig> Config<C> {
     pub fn new(gkr_scheme: GKRScheme) -> Self {
         Config {
-            field_size: 93,
+            field_size: C::ChallengeField::FIELD_SIZE,
             security_bits: 100,
             #[cfg(feature = "grinding")]
             grinding_bits: 10,
