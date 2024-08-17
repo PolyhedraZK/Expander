@@ -4,7 +4,7 @@ use std::hint::black_box;
 
 // NOTE(HS): Don't like multiple declarations for circuit files in different files
 
-// circuit for repeating Keccak for 8 times
+// circuit for repeating Keccak for 2 times
 const KECCAK_CIRCUIT: &str = "data/circuit.txt";
 // circuit for repeating Poseidon for 120 times
 const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
@@ -29,7 +29,7 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
     let (bn254_config, mut bn254_circuit) =
         benchmark_setup::<BN254Config>(GKRScheme::Vanilla, KECCAK_CIRCUIT);
 
-    let mut group = c.benchmark_group("prove keccak by GKR vanilla");
+    let mut group = c.benchmark_group("single thread proving 2 keccak by GKR vanilla");
     group.bench_function(BenchmarkId::new("Over M31", 0), |b| {
         b.iter(|| {
             let _ = black_box(prover_run(&m31_config, &mut m31_circuit));
@@ -49,7 +49,7 @@ fn criterion_gkr_poseidon(c: &mut Criterion) {
     let (bn254_config, mut bn254_circuit) =
         benchmark_setup::<BN254Config>(GKRScheme::GkrSquare, POSEIDON_CIRCUIT);
 
-    let mut group = c.benchmark_group("prove poseidon by GKR^2");
+    let mut group = c.benchmark_group("single thread proving 120 poseidon by GKR^2");
     group.bench_function(BenchmarkId::new("Over M31", 0), |b| {
         b.iter(|| {
             let _ = black_box(prover_run(&m31_config, &mut m31_circuit));
