@@ -2,6 +2,18 @@
 
 # Expander-RS
 
+<div align="center">
+  <h3>
+    <a href="https://eprint.iacr.org/2019/317">
+      Paper
+    </a>
+    <span> | </span>
+    <a href="https://polyhedrazk.github.io/benchmark-pages/">
+      Benchmarks
+    </a>
+  </h3>
+</div>
+
 Expander is a proof generation backend for Polyhedra Network. It aims to support fast proof generation.
 
 This is the *rust version* of the "core" repo and more on "demo" purpose, we will continue develop on the repo to support more features.
