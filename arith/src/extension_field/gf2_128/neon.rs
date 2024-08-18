@@ -176,7 +176,7 @@ impl BinomialExtensionField for NeonGF2_128 {
 
     #[inline(always)]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
-        if base.v == 0 {
+        if base.is_zero() {
             Self::zero()
         } else {
             *self
@@ -195,11 +195,7 @@ impl BinomialExtensionField for NeonGF2_128 {
     fn first_base_field(&self) -> Self::BaseField {
         let one = Self::one();
         let out = vandq_u32(self.v, one.v);
-        if vmaxvq_u32(out) == 0 {
-            GF2::zero()
-        } else {
-            GF2::one()
-        }
+        GF2::from(out)
     }
 }
 
