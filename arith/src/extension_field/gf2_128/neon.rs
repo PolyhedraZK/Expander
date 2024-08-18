@@ -268,7 +268,7 @@ pub(crate) unsafe fn gfadd(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
 pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
     let xmm_mask = transmute::<[u32; 4], uint32x4_t>([0xffffffffu32, 0, 0, 0]);
 
-    let zero_64x2 = transmute::<[u64; 2], uint64x2_t>([0, 0]);
+    let zero_64x2: uint64x2_t = unsafe { std::mem::zeroed() };
 
     // case a and b as u64 vectors
     // a = a0|a1, b = b0|b1
