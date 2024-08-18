@@ -115,7 +115,7 @@ impl Field for NeonGF2_128 {
     #[inline(always)]
     fn random_bool(mut rng: impl rand::RngCore) -> Self {
         NeonGF2_128 {
-            v: unsafe { transmute::<[u32; 4], uint32x4_t>([rng.next_u32() % 2, 0, 0, 0]) },
+            v: unsafe { transmute::<[u32; 4], uint32x4_t>([rng.next_u32() & 1, 0, 0, 0]) },
         }
     }
 
@@ -144,7 +144,7 @@ impl Field for NeonGF2_128 {
         if self.is_zero() {
             return None;
         }
-        let p_m2 = !(0u128) - 1;
+        let p_m2 = u128::MAX - 1;
         Some(Self::exp(self, p_m2))
     }
 
@@ -266,7 +266,7 @@ pub(crate) unsafe fn gfadd(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
 
 #[inline]
 pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-    let xmm_mask = transmute::<[u32; 4], uint32x4_t>([0xffffffffu32, 0, 0, 0]);
+    let xmm_mask = transmute::<[u32; 4], uint32x4_t>([u32::MAX, 0, 0, 0]);
 
     let zero_64x2: uint64x2_t = unsafe { std::mem::zeroed() };
 
