@@ -184,11 +184,11 @@ impl BinomialExtensionField for NeonGF2_128 {
     }
 
     #[inline(always)]
-    fn add_by_base_field(&self, _base: &Self::BaseField) -> Self {
-        todo!()
-        // let mut res = *self;
-        // res.v = unsafe { _mm_xor_si128(res.v, _mm_set_epi64x(0, base.v as i64)) };
-        // res
+    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
+        if base.v == 0 {
+            return *self;
+        }
+        add_internal(&Self::one(), self)
     }
 
     #[inline(always)]
