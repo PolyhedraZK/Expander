@@ -185,7 +185,7 @@ impl BinomialExtensionField for NeonGF2_128 {
 
     #[inline(always)]
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
-        if base.v == 0 {
+        if base.is_zero() {
             return *self;
         }
         add_internal(&Self::one(), self)
@@ -193,10 +193,13 @@ impl BinomialExtensionField for NeonGF2_128 {
 
     #[inline(always)]
     fn first_base_field(&self) -> Self::BaseField {
-        todo!()
-        // // but this doesn't make sense for NeonGF2_128
-        // let v = unsafe { _mm_extract_epi64(self.v, 0) };
-        // GF2 { v: v as u8 }
+        let one = Self::one();
+        let out = vandq_u32(self.v, one.v);
+        if vmaxvq_u32(out) == 0 {
+            GF2::zero()
+        } else {
+            GF2::one()
+        }
     }
 }
 
