@@ -190,13 +190,6 @@ impl BinomialExtensionField for NeonGF2_128 {
         }
         add_internal(&Self::one(), self)
     }
-
-    #[inline(always)]
-    fn first_base_field(&self) -> Self::BaseField {
-        let one = Self::one();
-        let out = vandq_u32(self.v, one.v);
-        GF2::from(out)
-    }
 }
 
 impl From<GF2> for NeonGF2_128 {
@@ -318,7 +311,7 @@ pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
     let tmp5_shifted_left = vextq_u64(tmp4_64, zero_64x2, 1);
 
     // tmp4_64 = (a0 * b1) >> 64
-    let tmp_64 = vextq_u64(zero_64x2, tmp4_64, 1);
+    let tmp4_64 = vextq_u64(zero_64x2, tmp4_64, 1);
 
     // tmp3 = a0 * b0 xor ((a0 * b1) << 64), i.e., low 128 coeff of the poly
     let tmp3 = veorq_u64(tmp3, tmp5_shifted_left);

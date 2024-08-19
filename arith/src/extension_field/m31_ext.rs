@@ -189,12 +189,6 @@ impl BinomialExtensionField for M31Ext3 {
         res[0] += base;
         Self { v: res }
     }
-
-    #[inline(always)]
-    /// Get the basefield element from the extension field
-    fn first_base_field(&self) -> Self::BaseField {
-        self.v[0]
-    }
 }
 
 impl Add<M31> for M31Ext3 {
