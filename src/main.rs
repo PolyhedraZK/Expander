@@ -1,4 +1,3 @@
-// TODO: move this to `bench` repo and refactor with criterion
 use std::{
     sync::{Arc, Mutex},
     thread,
@@ -7,7 +6,7 @@ use std::{
 use clap::Parser;
 use expander_rs::{BN254Config, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfig, Prover};
 
-// circuit for repeating Keccak for 8 times
+// circuit for repeating Keccak for 2 times
 const KECCAK_CIRCUIT: &str = "data/circuit.txt";
 // circuit for repeating Poseidon for 120 times
 const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
