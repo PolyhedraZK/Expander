@@ -144,4 +144,5 @@ We would like to thank the following projects and individuals:
 1. [Gnark](https://github.com/Consensys/gnark): for their exceptional frontend circuit language.
 2. [Plonky2&3](https://github.com/Plonky3/Plonky3): for their inspiring work on Merseene prime AVX and ARM-Neon assembly implementation.
 3. [Justin Thaler](https://people.cs.georgetown.edu/jthaler/): for pointing out the soundness issue of using repetition.
+3. [Stwo](https://github.com/starkware-libs/stwo): for inspiring us to make the benchmark page.
 4. [Intel](https://www.intel.com/content/dam/develop/external/us/en/documents/clmul-wp-rev-2-02-2014-04-20.pdf): for their detailed implementation of GF(2^128) field multiplication.
