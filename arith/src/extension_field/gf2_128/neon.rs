@@ -258,10 +258,10 @@ pub(crate) unsafe fn gfadd(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
 
 const ZERO_64X2: uint64x2_t = unsafe { std::mem::zeroed() };
 
+const XMM_MASK_32X4: uint32x4_t = unsafe { transmute([u32::MAX, 0, 0, 0]) };
+
 #[inline]
 pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-    let xmm_mask = transmute::<[u32; 4], uint32x4_t>([u32::MAX, 0, 0, 0]);
-
     // case a and b as u64 vectors
     // a = a0|a1, b = b0|b1
     let a64 = vreinterpretq_u64_u32(a);
@@ -331,8 +331,8 @@ pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
     // shuffle the lanes, i.e., multiply by x^32
     let tmp8 = cyclic_rotate_1(tmp7);
 
-    let tmp7 = vandq_u32(tmp8, xmm_mask);
-    let tmp8 = vbicq_u32(tmp8, xmm_mask);
+    let tmp7 = vandq_u32(tmp8, XMM_MASK_32X4);
+    let tmp8 = vbicq_u32(tmp8, XMM_MASK_32X4);
 
     // tmp3 has the low 128 bits of the polynomial
     // tmp6 has the high 128 bits of the polynomial
