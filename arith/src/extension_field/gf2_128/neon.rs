@@ -241,7 +241,7 @@ impl From<u32> for NeonGF2_128 {
 // equivalent to _mm_shuffle_epi32(a, 147)
 #[inline(always)]
 unsafe fn cyclic_rotate_1(input: uint32x4_t) -> uint32x4_t {
-    vextq_u32(input, input, 1)
+    vextq_u32(input, input, 3)
 }
 
 // multiply the polynomial by x^64, without reducing the irreducible polynomial
