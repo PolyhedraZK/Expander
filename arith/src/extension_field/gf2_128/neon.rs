@@ -308,10 +308,10 @@ pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
     // =========================================
 
     // tmp5_shifted_left = (a0 * b1) << 64
-    let tmp5_shifted_left = vextq_u64(tmp4_64, zero_64x2, 1);
+    let tmp5_shifted_left = vextq_u64(zero_64x2, tmp4_64, 1);
 
     // tmp4_64 = (a0 * b1) >> 64
-    let tmp4_64 = vextq_u64(zero_64x2, tmp4_64, 1);
+    let tmp4_64 = vextq_u64(tmp4_64, zero_64x2, 1);
 
     // tmp3 = a0 * b0 xor ((a0 * b1) << 64), i.e., low 128 coeff of the poly
     let tmp3 = veorq_u64(tmp3, tmp5_shifted_left);
