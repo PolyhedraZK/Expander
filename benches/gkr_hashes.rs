@@ -17,8 +17,10 @@ fn prover_run<C: GKRConfig>(config: &Config<C>, circuit: &mut Circuit<C>) {
 
 fn benchmark_setup<C: GKRConfig>(scheme: GKRScheme, circuit_file: &str) -> (Config<C>, Circuit<C>) {
     // wget all necessary files using bash script
-    let url_keccak = "https://storage.googleapis.com/expander-compiled-circuits/keccak_2_circuit.txt";
-    let url_poseidon = "https://storage.googleapis.com/expander-compiled-circuits/poseidon_120_circuit.txt";
+    let url_keccak =
+        "https://storage.googleapis.com/expander-compiled-circuits/keccak_2_circuit.txt";
+    let url_poseidon =
+        "https://storage.googleapis.com/expander-compiled-circuits/poseidon_120_circuit.txt";
     let _ = std::process::Command::new("bash")
         .arg("-c")
         .arg("mkdir -p data")
@@ -34,10 +36,12 @@ fn benchmark_setup<C: GKRConfig>(scheme: GKRScheme, circuit_file: &str) -> (Conf
     }
     let _ = std::process::Command::new("bash")
         .arg("-c")
-        .arg(format!("wget {} -O data/poseidon_120_circuit.txt", url_poseidon))
+        .arg(format!(
+            "wget {} -O data/poseidon_120_circuit.txt",
+            url_poseidon
+        ))
         .output()
         .expect("Failed to download poseidon circuit");
-
 
     let config = Config::<C>::new(scheme);
     let mut circuit = Circuit::<C>::load_circuit(circuit_file);
