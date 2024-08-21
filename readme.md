@@ -11,6 +11,9 @@
     <a href="https://polyhedrazk.github.io/benchmark-pages/">
       Benchmarks
     </a>
+    <a href="https://github.com/PolyhedraZK/ExpanderCompilerCollection">
+      Your Code Compiler
+    </a>
   </h3>
 </div>
 
@@ -22,7 +25,7 @@ For more technical introduction, visit our markdown files [here](https://github.
 
 And [here](./tests/gkr_correctness.rs) for an example on how to use the gkr lib.
 
-For more information, see the cpp version of the repo [here](https://github.com/PolyhedraZK/Expander).
+This is a core repo for our prover, to write circuits on our prover, please visit [our compiler](https://github.com/PolyhedraZK/ExpanderCompilerCollection)
 
 ## Developer helper
 
