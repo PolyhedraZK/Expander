@@ -294,6 +294,11 @@ impl SimdField for NeonM31 {
         let packed_challenge = NeonM31::pack_full(*challenge);
         *self * packed_challenge
     }
+
+    #[inline(always)]
+    fn pack_size() -> usize {
+        4
+    }
 }
 
 impl From<M31> for NeonM31 {
