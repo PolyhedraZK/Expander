@@ -7,4 +7,6 @@ pub trait SimdField: From<Self::Scalar> + Field + FieldSerde {
 
     /// scale self with the challenge
     fn scale(&self, challenge: &Self::Scalar) -> Self;
+
+    fn pack_size() -> usize;
 }

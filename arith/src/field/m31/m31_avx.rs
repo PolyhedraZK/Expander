@@ -234,6 +234,11 @@ impl SimdField for AVXM31 {
     fn scale(&self, challenge: &Self::Scalar) -> Self {
         *self * *challenge
     }
+
+    #[inline(always)]
+    fn pack_size() -> usize {
+        M31_PACK_SIZE
+    }
 }
 
 impl From<M31> for AVXM31 {

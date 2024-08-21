@@ -184,6 +184,10 @@ impl SimdField for NeonGF2_128x4 {
             ],
         }
     }
+    #[inline(always)]
+    fn pack_size() -> usize {
+        4
+    }
 }
 
 impl From<NeonGF2_128> for NeonGF2_128x4 {

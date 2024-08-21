@@ -265,5 +265,9 @@ impl SimdField for GF2x8 {
         }
     }
 
+    fn pack_size() -> usize {
+        8
+    }
+
     type Scalar = crate::GF2;
 }

@@ -65,31 +65,16 @@ pub struct Config<C: GKRConfig> {
     pub gkr_scheme: GKRScheme,
 }
 
-impl Config<M31ExtConfig> {
+impl<C: GKRConfig> Config<C> {
     pub fn new(gkr_scheme: GKRScheme) -> Self {
         Config {
-            field_size: 93,
+            field_size: C::ChallengeField::FIELD_SIZE,
             security_bits: 100,
             #[cfg(feature = "grinding")]
             grinding_bits: 10,
             polynomial_commitment_type: PolynomialCommitmentType::Raw,
             fs_hash: FiatShamirHashType::SHA256,
-            gkr_config: M31ExtConfig,
-            gkr_scheme,
-        }
-    }
-}
-
-impl Config<BN254Config> {
-    pub fn new(gkr_scheme: GKRScheme) -> Self {
-        Config {
-            field_size: 93,
-            security_bits: 100,
-            #[cfg(feature = "grinding")]
-            grinding_bits: 10,
-            polynomial_commitment_type: PolynomialCommitmentType::Raw,
-            fs_hash: FiatShamirHashType::SHA256,
-            gkr_config: BN254Config,
+            gkr_config: C::default(),
             gkr_scheme,
         }
     }
@@ -147,6 +132,10 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
         a: &Self::SimdCircuitField,
         b: &Self::ChallengeField,
     ) -> Self::Field;
+
+    fn get_field_pack_size() -> usize {
+        Self::SimdCircuitField::pack_size()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
