@@ -15,6 +15,10 @@
     <a href="https://github.com/PolyhedraZK/ExpanderCompilerCollection">
       Your Code Compiler
     </a>
+    <span> | </span>
+    <a href="https://t.me/+XEdEEknIdaI0YjEx">
+      Telegram Group
+    </a>
   </h3>
 </div>
 
