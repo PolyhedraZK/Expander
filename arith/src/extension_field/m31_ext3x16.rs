@@ -95,11 +95,6 @@ impl BinomialExtensionField for M31Ext3x16 {
             v: [self.v[0] + base, self.v[1], self.v[2]],
         }
     }
-
-    #[inline(always)]
-    fn first_base_field(&self) -> Self::BaseField {
-        self.v[0]
-    }
 }
 
 impl From<M31Ext3> for M31Ext3x16 {

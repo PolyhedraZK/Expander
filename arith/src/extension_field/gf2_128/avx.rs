@@ -173,13 +173,6 @@ impl BinomialExtensionField for AVX512GF2_128 {
         res.v = unsafe { _mm_xor_si128(res.v, _mm_set_epi64x(0, base.v as i64)) };
         res
     }
-
-    #[inline(always)]
-    fn first_base_field(&self) -> Self::BaseField {
-        // but this doesn't make sense for AVX512GF2_128
-        let v = unsafe { _mm_extract_epi64(self.v, 0) };
-        GF2 { v: v as u8 }
-    }
 }
 
 impl From<GF2> for AVX512GF2_128 {

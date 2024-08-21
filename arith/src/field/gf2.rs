@@ -143,6 +143,13 @@ impl From<u32> for GF2 {
     }
 }
 
+impl From<bool> for GF2 {
+    #[inline(always)]
+    fn from(value: bool) -> Self {
+        GF2 { v: value.into() }
+    }
+}
+
 #[inline(always)]
 fn add_internal(a: &GF2, b: &GF2) -> GF2 {
     GF2 { v: a.v ^ b.v }

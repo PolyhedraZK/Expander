@@ -20,9 +20,4 @@ impl BinomialExtensionField for Fr {
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
         self + base
     }
-
-    /// Get the basefield element from the extension field
-    fn first_base_field(&self) -> Self::BaseField {
-        *self
-    }
 }

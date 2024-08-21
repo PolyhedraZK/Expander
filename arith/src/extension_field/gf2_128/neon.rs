@@ -115,7 +115,7 @@ impl Field for NeonGF2_128 {
     #[inline(always)]
     fn random_bool(mut rng: impl rand::RngCore) -> Self {
         NeonGF2_128 {
-            v: unsafe { transmute::<[u32; 4], uint32x4_t>([rng.next_u32() % 2, 0, 0, 0]) },
+            v: unsafe { transmute::<[u32; 4], uint32x4_t>([rng.next_u32() & 1, 0, 0, 0]) },
         }
     }
 
@@ -144,7 +144,7 @@ impl Field for NeonGF2_128 {
         if self.is_zero() {
             return None;
         }
-        let p_m2 = !(0u128) - 1;
+        let p_m2 = u128::MAX - 1;
         Some(Self::exp(self, p_m2))
     }
 
@@ -176,7 +176,7 @@ impl BinomialExtensionField for NeonGF2_128 {
 
     #[inline(always)]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
-        if base.v == 0 {
+        if base.is_zero() {
             Self::zero()
         } else {
             *self
@@ -184,19 +184,11 @@ impl BinomialExtensionField for NeonGF2_128 {
     }
 
     #[inline(always)]
-    fn add_by_base_field(&self, _base: &Self::BaseField) -> Self {
-        todo!()
-        // let mut res = *self;
-        // res.v = unsafe { _mm_xor_si128(res.v, _mm_set_epi64x(0, base.v as i64)) };
-        // res
-    }
-
-    #[inline(always)]
-    fn first_base_field(&self) -> Self::BaseField {
-        todo!()
-        // // but this doesn't make sense for NeonGF2_128
-        // let v = unsafe { _mm_extract_epi64(self.v, 0) };
-        // GF2 { v: v as u8 }
+    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
+        if base.is_zero() {
+            return *self;
+        }
+        add_internal(&Self::one(), self)
     }
 }
 
@@ -247,20 +239,16 @@ impl From<u32> for NeonGF2_128 {
 
 // multiply the polynomial by x^32, without reducing the irreducible polynomial
 // equivalent to _mm_shuffle_epi32(a, 147)
-// TODO: Is there an instruction for this?
 #[inline(always)]
 unsafe fn cyclic_rotate_1(input: uint32x4_t) -> uint32x4_t {
-    let [a, b, c, d] = transmute::<uint32x4_t, [u32; 4]>(input);
-    transmute([d, a, b, c])
+    vextq_u32(input, input, 3)
 }
 
 // multiply the polynomial by x^64, without reducing the irreducible polynomial
 // equivalent to _mm_shuffle_epi32(a, 78)
-// TODO: Is there an instruction for this?
 #[inline(always)]
 unsafe fn cyclic_rotate_2(input: uint32x4_t) -> uint32x4_t {
-    let [a, b, c, d] = transmute::<uint32x4_t, [u32; 4]>(input);
-    transmute([c, d, a, b])
+    vextq_u32(input, input, 2)
 }
 
 #[inline(always)]
@@ -268,10 +256,12 @@ pub(crate) unsafe fn gfadd(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
     veorq_u32(a, b)
 }
 
+const ZERO_64X2: uint64x2_t = unsafe { std::mem::zeroed() };
+
+const XMM_MASK_32X4: uint32x4_t = unsafe { transmute([u32::MAX, 0, 0, 0]) };
+
 #[inline]
 pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-    let xmm_mask = transmute::<[u32; 4], uint32x4_t>([0xffffffffu32, 0, 0, 0]);
-
     // case a and b as u64 vectors
     // a = a0|a1, b = b0|b1
     let a64 = vreinterpretq_u64_u32(a);
@@ -318,12 +308,11 @@ pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
     // =========================================
 
     // tmp5_shifted_left = (a0 * b1) << 64
-    // TODO: is there a better way to do this?
-    let tmp5_shifted_left =
-        transmute::<u128, uint64x2_t>(transmute::<uint64x2_t, u128>(tmp4_64) << 64);
+    let tmp5_shifted_left = vextq_u64(ZERO_64X2, tmp4_64, 1);
+
     // tmp4_64 = (a0 * b1) >> 64
-    // TODO: is there a better way to do this?
-    let tmp4_64 = transmute::<u128, uint64x2_t>(transmute::<uint64x2_t, u128>(tmp4_64) >> 64);
+    let tmp4_64 = vextq_u64(tmp4_64, ZERO_64X2, 1);
+
     // tmp3 = a0 * b0 xor ((a0 * b1) << 64), i.e., low 128 coeff of the poly
     let tmp3 = veorq_u64(tmp3, tmp5_shifted_left);
     // tmp6 = a1 * b1 xor ((a0 * b1) >> 64), i.e., high 128 coeff of the poly
@@ -342,8 +331,8 @@ pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
     // shuffle the lanes, i.e., multiply by x^32
     let tmp8 = cyclic_rotate_1(tmp7);
 
-    let tmp7 = vandq_u32(tmp8, xmm_mask);
-    let tmp8 = vbicq_u32(tmp8, xmm_mask);
+    let tmp7 = vandq_u32(tmp8, XMM_MASK_32X4);
+    let tmp8 = vbicq_u32(tmp8, XMM_MASK_32X4);
 
     // tmp3 has the low 128 bits of the polynomial
     // tmp6 has the high 128 bits of the polynomial
