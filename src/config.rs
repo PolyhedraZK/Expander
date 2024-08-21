@@ -132,6 +132,10 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
         a: &Self::SimdCircuitField,
         b: &Self::ChallengeField,
     ) -> Self::Field;
+
+    fn get_field_pack_size() -> usize {
+        Self::SimdCircuitField::pack_size()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

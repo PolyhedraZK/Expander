@@ -391,6 +391,11 @@ impl SimdField for AVX512GF2_128x4 {
         *self * simd_challenge
     }
     type Scalar = GF2_128;
+
+    #[inline(always)]
+    fn pack_size() -> usize {
+        4
+    }
 }
 
 #[inline(always)]

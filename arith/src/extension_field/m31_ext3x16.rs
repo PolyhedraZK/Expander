@@ -64,6 +64,11 @@ impl SimdField for M31Ext3x16 {
     fn scale(&self, challenge: &Self::Scalar) -> Self {
         *self * *challenge
     }
+
+    #[inline(always)]
+    fn pack_size() -> usize {
+        M31x16::pack_size()
+    }
 }
 
 impl From<M31x16> for M31Ext3x16 {

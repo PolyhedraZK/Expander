@@ -106,6 +106,11 @@ impl SimdField for Fr {
     fn scale(&self, challenge: &Self::Scalar) -> Self {
         self * challenge
     }
+
+    #[inline(always)]
+    fn pack_size() -> usize {
+        1
+    }
 }
 
 impl FieldSerde for Fr {

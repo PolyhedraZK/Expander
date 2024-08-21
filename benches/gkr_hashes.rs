@@ -54,19 +54,39 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
         benchmark_setup::<M31ExtConfig>(GKRScheme::Vanilla, KECCAK_CIRCUIT);
     let (bn254_config, mut bn254_circuit) =
         benchmark_setup::<BN254Config>(GKRScheme::Vanilla, KECCAK_CIRCUIT);
+    let num_keccak_m31 = 2 * M31ExtConfig::get_field_pack_size();
+    let num_keccak_bn254 = 2 * BN254Config::get_field_pack_size();
 
-    let mut group = c.benchmark_group("single thread proving 2 keccak by GKR vanilla");
-    group.bench_function(BenchmarkId::new("Over M31", 0), |b| {
-        b.iter(|| {
-            let _ = black_box(prover_run(&m31_config, &mut m31_circuit));
-        })
-    });
+    let mut group = c.benchmark_group("single thread proving keccak by GKR vanilla");
+    group.bench_function(
+        BenchmarkId::new(
+            format!(
+                "Over M31, with {} keccak instances per proof",
+                num_keccak_m31
+            ),
+            0,
+        ),
+        |b| {
+            b.iter(|| {
+                let _ = black_box(prover_run(&m31_config, &mut m31_circuit));
+            })
+        },
+    );
 
-    group.bench_function(BenchmarkId::new("Over BN254", 0), |b| {
-        b.iter(|| {
-            let _ = black_box(prover_run(&bn254_config, &mut bn254_circuit));
-        })
-    });
+    group.bench_function(
+        BenchmarkId::new(
+            format!(
+                "Over BN254, with {} keccak instances per proof",
+                num_keccak_bn254
+            ),
+            0,
+        ),
+        |b| {
+            b.iter(|| {
+                let _ = black_box(prover_run(&bn254_config, &mut bn254_circuit));
+            })
+        },
+    );
 }
 
 fn criterion_gkr_poseidon(c: &mut Criterion) {
@@ -75,18 +95,38 @@ fn criterion_gkr_poseidon(c: &mut Criterion) {
     let (bn254_config, mut bn254_circuit) =
         benchmark_setup::<BN254Config>(GKRScheme::GkrSquare, POSEIDON_CIRCUIT);
 
-    let mut group = c.benchmark_group("single thread proving 120 poseidon by GKR^2");
-    group.bench_function(BenchmarkId::new("Over M31", 0), |b| {
-        b.iter(|| {
-            let _ = black_box(prover_run(&m31_config, &mut m31_circuit));
-        })
-    });
+    let mut group = c.benchmark_group("single thread proving poseidon by GKR^2");
+    let num_poseidon_m31 = 120 * M31ExtConfig::get_field_pack_size();
+    let num_poseidon_bn254 = 120 * BN254Config::get_field_pack_size();
+    group.bench_function(
+        BenchmarkId::new(
+            format!(
+                "Over M31, with {} poseidon instances per proof",
+                num_poseidon_m31
+            ),
+            0,
+        ),
+        |b| {
+            b.iter(|| {
+                let _ = black_box(prover_run(&m31_config, &mut m31_circuit));
+            })
+        },
+    );
 
-    group.bench_function(BenchmarkId::new("Over BN254", 0), |b| {
-        b.iter(|| {
-            let _ = black_box(prover_run(&bn254_config, &mut bn254_circuit));
-        })
-    });
+    group.bench_function(
+        BenchmarkId::new(
+            format!(
+                "Over BN254, with {} poseidon instances per proof",
+                num_poseidon_bn254
+            ),
+            0,
+        ),
+        |b| {
+            b.iter(|| {
+                let _ = black_box(prover_run(&bn254_config, &mut bn254_circuit));
+            })
+        },
+    );
 }
 
 criterion_group!(benches, criterion_gkr_keccak, criterion_gkr_poseidon);
