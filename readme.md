@@ -11,6 +11,7 @@
     <a href="https://polyhedrazk.github.io/benchmark-pages/">
       Benchmarks
     </a>
+    <span> | </span>
     <a href="https://github.com/PolyhedraZK/ExpanderCompilerCollection">
       Your Code Compiler
     </a>
