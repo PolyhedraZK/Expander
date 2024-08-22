@@ -132,7 +132,18 @@ fn criterion_gkr_poseidon(c: &mut Criterion) {
         ),
         |b| {
             b.iter(|| {
-                let _ = black_box(prover_run(&m31_config, &mut m31_circuit));
+                let threads = (0..16)
+                    .map(|_| {
+                        let m31_config = m31_config.clone();
+                        let mut m31_circuit = m31_circuit.clone();
+                        thread::spawn(move || {
+                            let _ = black_box(prover_run(&m31_config, &mut m31_circuit));
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                for thread in threads {
+                    thread.join().unwrap();
+                }
             })
         },
     );
@@ -147,7 +158,18 @@ fn criterion_gkr_poseidon(c: &mut Criterion) {
         ),
         |b| {
             b.iter(|| {
-                let _ = black_box(prover_run(&bn254_config, &mut bn254_circuit));
+                let threads = (0..16)
+                    .map(|_| {
+                        let bn254_config = bn254_config.clone();
+                        let mut bn254_circuit = bn254_circuit.clone();
+                        thread::spawn(move || {
+                            let _ = black_box(prover_run(&bn254_config, &mut bn254_circuit));
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                for thread in threads {
+                    thread.join().unwrap();
+                }
             })
         },
     );
