@@ -4,12 +4,9 @@ use std::{
 };
 
 use clap::Parser;
+use expander_rs::utils::{KECCAK_CIRCUIT, POSEIDON_CIRCUIT};
 use expander_rs::{BN254Config, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfig, Prover};
 
-// circuit for repeating Keccak for 2 times
-const KECCAK_CIRCUIT: &str = "data/circuit.txt";
-// circuit for repeating Poseidon for 120 times
-const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
 const M31_PACKSIZE: usize = 16;
 const FR_PACKSIZE: usize = 1;
 

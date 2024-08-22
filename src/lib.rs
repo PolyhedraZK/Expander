@@ -17,3 +17,5 @@ pub use prover::*;
 
 pub mod verifier;
 pub use verifier::*;
+
+pub mod utils;

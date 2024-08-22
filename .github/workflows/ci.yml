@@ -41,11 +41,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
-      - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
+      - run: cargo run --bin=dev-setup --release
       - run: cargo test -p arith --release
       - run: cargo test -p bi-kzg --release
-      - run: cargo test --no-default-features --release      
+      - run: cargo test --no-default-features --release
       - run: cargo test --all-features --release
   Bench-mac-m31-ext3:
     name: Bench-mac-m31-ext3
@@ -57,8 +56,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
-      - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
+      - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 2 -f m31ext3
   Bench-mac-BN254:
     name: Bench-mac-BN254
@@ -70,8 +68,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
-      - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
+      - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 2 -f fr
   Test-linux:
     name: Test-linux
@@ -81,9 +78,8 @@ jobs:
         with:
           all_but_latest: true
       - uses: actions/checkout@v4
-      - run: . "$HOME/.cargo/env" 
-      - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
-      - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
+      - run: . "$HOME/.cargo/env"
+      - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo test -p arith --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo test -p bi-kzg --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo test --no-default-features --release
@@ -96,9 +92,8 @@ jobs:
         with:
           all_but_latest: true
       - uses: actions/checkout@v4
-      - run: . "$HOME/.cargo/env" 
-      - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
-      - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
+      - run: . "$HOME/.cargo/env"
+      - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 16 -f m31ext3
   Bench-linux-BN254:
     name: Bench-linux-BN254
@@ -108,7 +103,6 @@ jobs:
         with:
           all_but_latest: true
       - uses: actions/checkout@v4
-      - run: . "$HOME/.cargo/env" 
-      - run: wget -P data https://storage.googleapis.com/keccak8/circuit.txt
-      - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
+      - run: . "$HOME/.cargo/env"
+      - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 16 -f fr

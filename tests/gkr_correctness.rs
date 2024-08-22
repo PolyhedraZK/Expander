@@ -1,3 +1,4 @@
+use expander_rs::utils::*;
 use expander_rs::{
     BN254Config, Circuit, CircuitLayer, Config, GKRConfig, GKRScheme, GateAdd, GateMul,
     M31ExtConfig, Prover, Verifier,
@@ -7,8 +8,6 @@ use std::panic::AssertUnwindSafe;
 
 use rand::Rng;
 use sha2::Digest;
-
-const CIRCUIT_NAME: &str = "data/circuit.txt";
 
 #[allow(dead_code)]
 fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
@@ -56,7 +55,7 @@ fn test_gkr_correctness() {
 
 fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     println!("Config created.");
-    let mut circuit = Circuit::<C>::load_circuit(CIRCUIT_NAME);
+    let mut circuit = Circuit::<C>::load_circuit(KECCAK_CIRCUIT);
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
     // let mut circuit = gen_simple_circuit(); // for custom circuit
     println!("Circuit loaded.");
