@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use expander_rs::{BN254Config, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfig, Prover};
-use std::hint::black_box;
+use std::{hint::black_box, thread};
 
 // NOTE(HS): Don't like multiple declarations for circuit files in different files
 
@@ -50,14 +50,14 @@ fn benchmark_setup<C: GKRConfig>(scheme: GKRScheme, circuit_file: &str) -> (Conf
 }
 
 fn criterion_gkr_keccak(c: &mut Criterion) {
-    let (m31_config, mut m31_circuit) =
+    let (m31_config, m31_circuit) =
         benchmark_setup::<M31ExtConfig>(GKRScheme::Vanilla, KECCAK_CIRCUIT);
-    let (bn254_config, mut bn254_circuit) =
+    let (bn254_config, bn254_circuit) =
         benchmark_setup::<BN254Config>(GKRScheme::Vanilla, KECCAK_CIRCUIT);
-    let num_keccak_m31 = 2 * M31ExtConfig::get_field_pack_size();
-    let num_keccak_bn254 = 2 * BN254Config::get_field_pack_size();
+    let num_keccak_m31 = 2 * M31ExtConfig::get_field_pack_size() * 16;
+    let num_keccak_bn254 = 2 * BN254Config::get_field_pack_size() * 16;
 
-    let mut group = c.benchmark_group("single thread proving keccak by GKR vanilla");
+    let mut group = c.benchmark_group("16 threads proving keccak by GKR vanilla");
     group.bench_function(
         BenchmarkId::new(
             format!(
@@ -68,7 +68,19 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
         ),
         |b| {
             b.iter(|| {
-                let _ = black_box(prover_run(&m31_config, &mut m31_circuit));
+                let threads: Vec<_> = (0..16)
+                    .map(|_| {
+                        let m31_config = m31_config.clone();
+                        let mut m31_circuit = m31_circuit.clone();
+                        thread::spawn(move || {
+                            let _ = black_box(prover_run(&m31_config, &mut m31_circuit));
+                        })
+                    })
+                    .collect();
+
+                for thread in threads {
+                    thread.join().unwrap();
+                }
             })
         },
     );
@@ -83,7 +95,19 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
         ),
         |b| {
             b.iter(|| {
-                let _ = black_box(prover_run(&bn254_config, &mut bn254_circuit));
+                let threads: Vec<_> = (0..16)
+                    .map(|_| {
+                        let bn254_config = bn254_config.clone();
+                        let mut bn254_circuit = bn254_circuit.clone();
+                        thread::spawn(move || {
+                            let _ = black_box(prover_run(&bn254_config, &mut bn254_circuit));
+                        })
+                    })
+                    .collect();
+
+                for thread in threads {
+                    thread.join().unwrap();
+                }
             })
         },
     );
@@ -95,9 +119,9 @@ fn criterion_gkr_poseidon(c: &mut Criterion) {
     let (bn254_config, mut bn254_circuit) =
         benchmark_setup::<BN254Config>(GKRScheme::GkrSquare, POSEIDON_CIRCUIT);
 
-    let mut group = c.benchmark_group("single thread proving poseidon by GKR^2");
-    let num_poseidon_m31 = 120 * M31ExtConfig::get_field_pack_size();
-    let num_poseidon_bn254 = 120 * BN254Config::get_field_pack_size();
+    let mut group = c.benchmark_group("16 threads proving poseidon by GKR^2");
+    let num_poseidon_m31 = 120 * M31ExtConfig::get_field_pack_size() * 16;
+    let num_poseidon_bn254 = 120 * BN254Config::get_field_pack_size() * 16;
     group.bench_function(
         BenchmarkId::new(
             format!(
