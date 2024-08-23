@@ -1,7 +1,5 @@
-use std::{
-    fs::{self, OpenOptions},
-    io::Write,
-};
+use std::fs;
+use std::process::Command;
 
 const DATA_PREFIX: &str = "data/";
 
@@ -20,18 +18,17 @@ pub const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
 pub const POSEIDON_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/poseidon_120_circuit.txt";
 
+// NOTE(Hang 08/23/24):
+// CI process is unhappy about reqwest as a dependency,
+// so we use wget as a backup option.
 fn download_and_store(url: &str, file: &str) {
-    let resp = reqwest::blocking::get(url).expect("reqwest failed");
-    let body = resp.bytes().expect("body invalid");
+    let download = Command::new("bash")
+        .arg("-c")
+        .arg(format!("wget {url} -O {file}"))
+        .output()
+        .expect("Failed to download circuit");
 
-    let mut io_out = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(file)
-        .expect("failed to open or create file");
-
-    io_out.write_all(&body).expect("failed to copy content");
+    assert!(download.status.success(), "Circuit download failure")
 }
 
 pub fn dev_env_data_setup() {
