@@ -426,7 +426,12 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
         let magic_num = u64::deserialize_from(&mut cursor);
         assert_eq!(magic_num, MAGIC_NUM);
 
-        let field_mod = C::Field::try_deserialize_from_ecc_format(&mut cursor).unwrap();
+        let field_mod = [
+            u64::deserialize_from(&mut cursor),
+            u64::deserialize_from(&mut cursor),
+            u64::deserialize_from(&mut cursor),
+            u64::deserialize_from(&mut cursor),
+        ];
         log::trace!("field mod: {:?}", field_mod);
         let segment_num = u64::deserialize_from(&mut cursor);
         for _ in 0..segment_num {
