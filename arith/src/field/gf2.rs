@@ -7,6 +7,7 @@ use std::io::Read;
 use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
+use ark_std::iterable::Iterable;
 pub use gf2x8::GF2x8;
 
 use crate::{field_common, FieldSerde};
@@ -45,8 +46,9 @@ impl FieldSerde for GF2 {
     where
         Self: Sized,
     {
-        let mut u = [0u8; 1];
+        let mut u = [0u8; 32];
         reader.read_exact(&mut u)?;
+        assert!(u.iter().skip(1).all(|x| x == 0u8));
         Ok(GF2 { v: u[0] % 2 })
     }
 }

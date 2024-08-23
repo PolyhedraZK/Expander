@@ -1,6 +1,5 @@
 use expander_rs::{
-    BN254Config, Circuit, CircuitLayer, Config, GKRConfig, GKRScheme, GateAdd, GateMul,
-    M31ExtConfig, Prover, Verifier,
+    BN254Config, Circuit, CircuitLayer, Config, GF2ExtConfig, GKRConfig, GKRScheme, GateAdd, GateMul, M31ExtConfig, Prover, Verifier
 };
 use std::panic;
 use std::panic::AssertUnwindSafe;
@@ -50,6 +49,7 @@ fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
 
 #[test]
 fn test_gkr_correctness() {
+    test_gkr_correctness_helper::<GF2ExtConfig>(&Config::<GF2ExtConfig>::new(GKRScheme::Vanilla));
     test_gkr_correctness_helper::<M31ExtConfig>(&Config::<M31ExtConfig>::new(GKRScheme::Vanilla));
     test_gkr_correctness_helper::<BN254Config>(&Config::<BN254Config>::new(GKRScheme::Vanilla));
 }

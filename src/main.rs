@@ -4,14 +4,12 @@ use std::{
 };
 
 use clap::Parser;
-use expander_rs::{BN254Config, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfig, Prover};
+use expander_rs::{BN254Config, Circuit, Config, GF2ExtConfig, GKRConfig, GKRScheme, M31ExtConfig, Prover};
 
 // circuit for repeating Keccak for 2 times
 const KECCAK_CIRCUIT: &str = "data/circuit.txt";
 // circuit for repeating Poseidon for 120 times
 const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
-const M31_PACKSIZE: usize = 16;
-const FR_PACKSIZE: usize = 1;
 
 /// ...
 #[derive(Parser, Debug)]
@@ -60,6 +58,17 @@ fn main() {
             ),
             _ => unreachable!(),
         },
+        "gf2ext128" => match args.scheme.as_str() {
+            "keccak" => run_benchmark::<GF2ExtConfig>(
+                &args,
+                Config::<GF2ExtConfig>::new(GKRScheme::Vanilla),
+            ),
+            "poseidon" => run_benchmark::<GF2ExtConfig>(
+                &args,
+                Config::<GF2ExtConfig>::new(GKRScheme::GkrSquare),
+            ),
+            _ => unreachable!(),
+        }
         _ => unreachable!(),
     };
 }
@@ -68,12 +77,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     let partial_proof_cnts = (0..args.threads)
         .map(|_| Arc::new(Mutex::new(0)))
         .collect::<Vec<_>>();
-    let start_time = std::time::Instant::now();
-    let pack_size = match args.field.as_str() {
-        "m31ext3" => M31_PACKSIZE,
-        "fr" => FR_PACKSIZE,
-        _ => unreachable!(),
-    };
+    let pack_size = C::get_field_pack_size();
 
     // load circuit
     let circuit_template = match args.scheme.as_str() {
@@ -98,6 +102,8 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         .collect::<Vec<_>>();
 
     println!("Circuit loaded!");
+
+    let start_time = std::time::Instant::now();
     let _ = circuits
         .into_iter()
         .enumerate()
