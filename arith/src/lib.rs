@@ -9,7 +9,6 @@ pub use extension_field::*;
 mod simd_field;
 pub use simd_field::*;
 
-// TODO: change to serdes? also make use of zerocopy
 mod serde;
 pub use serde::FieldSerde;
 
