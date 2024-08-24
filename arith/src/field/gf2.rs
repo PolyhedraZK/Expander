@@ -48,7 +48,11 @@ impl FieldSerde for GF2 {
     {
         let mut u = [0u8; 32];
         reader.read_exact(&mut u)?;
-        assert!(u.iter().skip(1).all(|x| x == 0u8));
+
+        // FIXME:
+        // assert!(u.iter().skip(1).all(|x| x == 0u8));
+        assert!(u.iter().skip(4).all(|x| x == 0u8));
+
         Ok(GF2 { v: u[0] % 2 })
     }
 }

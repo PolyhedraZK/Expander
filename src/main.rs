@@ -4,7 +4,9 @@ use std::{
 };
 
 use clap::Parser;
-use expander_rs::{BN254Config, Circuit, Config, GF2ExtConfig, GKRConfig, GKRScheme, M31ExtConfig, Prover};
+use expander_rs::{
+    BN254Config, Circuit, Config, GF2ExtConfig, GKRConfig, GKRScheme, M31ExtConfig, Prover,
+};
 
 // circuit for repeating Keccak for 2 times
 const KECCAK_CIRCUIT: &str = "data/circuit.txt";
@@ -68,7 +70,7 @@ fn main() {
                 Config::<GF2ExtConfig>::new(GKRScheme::GkrSquare),
             ),
             _ => unreachable!(),
-        }
+        },
         _ => unreachable!(),
     };
 }

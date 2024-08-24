@@ -146,7 +146,7 @@ impl Field for AVX512GF2_128 {
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         unsafe {
             AVX512GF2_128 {
-                v: *(bytes.as_ptr() as *const __m128i),
+                v: transmute::<[u8; 16], __m128i>(bytes[..16].try_into().unwrap()),
             }
         }
     }

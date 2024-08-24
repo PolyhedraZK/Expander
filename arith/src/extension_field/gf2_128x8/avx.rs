@@ -1,6 +1,6 @@
 use crate::{field_common, GF2x8, GF2};
 
-use crate::{Field, FieldSerde, SimdField, BinomialExtensionField, GF2_128};
+use crate::{BinomialExtensionField, Field, FieldSerde, SimdField, GF2_128};
 use std::fmt::Debug;
 use std::{
     arch::x86_64::*,
@@ -19,10 +19,9 @@ field_common!(AVX512GF2_128x8);
 impl AVX512GF2_128x8 {
     #[inline(always)]
     pub(crate) fn pack_full(data: __m128i) -> [__m512i; 2] {
-        [
-            unsafe { _mm512_broadcast_i32x4(data) },
-            unsafe { _mm512_broadcast_i32x4(data) },
-        ]
+        [unsafe { _mm512_broadcast_i32x4(data) }, unsafe {
+            _mm512_broadcast_i32x4(data)
+        }]
     }
 }
 
@@ -49,7 +48,7 @@ impl FieldSerde for AVX512GF2_128x8 {
                 data: [
                     _mm512_loadu_si512(data.as_ptr() as *const i32),
                     _mm512_loadu_si512((data.as_ptr() as *const i32).offset(16)),
-                ]
+                ],
             }
         }
     }
@@ -72,7 +71,7 @@ impl FieldSerde for AVX512GF2_128x8 {
     }
 }
 
-const PACKED_0: [__m512i; 2] = [ unsafe { transmute([0; 16]) }, unsafe { transmute([0; 16]) }];
+const PACKED_0: [__m512i; 2] = [unsafe { transmute([0; 16]) }, unsafe { transmute([0; 16]) }];
 const _M512_INV_2: __m512i = unsafe {
     transmute([
         67_u64,
@@ -128,57 +127,63 @@ impl Field for AVX512GF2_128x8 {
 
     #[inline(always)]
     fn random_unsafe(mut rng: impl rand::RngCore) -> Self {
-        let data = [ unsafe {
-            _mm512_set_epi64(
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-            )
-        }, unsafe {
-            _mm512_set_epi64(
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-                rng.next_u64() as i64,
-            )
-        }];
+        let data = [
+            unsafe {
+                _mm512_set_epi64(
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                )
+            },
+            unsafe {
+                _mm512_set_epi64(
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                    rng.next_u64() as i64,
+                )
+            },
+        ];
         Self { data }
     }
 
     #[inline(always)]
     fn random_bool(mut rng: impl rand::RngCore) -> Self {
-        let data = [ unsafe {
-            _mm512_set_epi64(
-                0,
-                (rng.next_u64() % 2) as i64,
-                0,
-                (rng.next_u64() % 2) as i64,
-                0,
-                (rng.next_u64() % 2) as i64,
-                0,
-                (rng.next_u64() % 2) as i64,
-            )
-        }, unsafe {
-            _mm512_set_epi64(
-                0,
-                (rng.next_u64() % 2) as i64,
-                0,
-                (rng.next_u64() % 2) as i64,
-                0,
-                (rng.next_u64() % 2) as i64,
-                0,
-                (rng.next_u64() % 2) as i64,
-            )
-        }];
+        let data = [
+            unsafe {
+                _mm512_set_epi64(
+                    0,
+                    (rng.next_u64() % 2) as i64,
+                    0,
+                    (rng.next_u64() % 2) as i64,
+                    0,
+                    (rng.next_u64() % 2) as i64,
+                    0,
+                    (rng.next_u64() % 2) as i64,
+                )
+            },
+            unsafe {
+                _mm512_set_epi64(
+                    0,
+                    (rng.next_u64() % 2) as i64,
+                    0,
+                    (rng.next_u64() % 2) as i64,
+                    0,
+                    (rng.next_u64() % 2) as i64,
+                    0,
+                    (rng.next_u64() % 2) as i64,
+                )
+            },
+        ];
         Self { data }
     }
 
@@ -415,7 +420,9 @@ impl From<GF2_128> for AVX512GF2_128x8 {
             result = _mm512_inserti32x4(result, v.v, 1); // Insert `b` at position 1
             result = _mm512_inserti32x4(result, v.v, 2); // Insert `c` at position 2
             result = _mm512_inserti32x4(result, v.v, 3); // Insert `d` at position 3
-            AVX512GF2_128x8 { data: [result, result] }
+            AVX512GF2_128x8 {
+                data: [result, result],
+            }
         }
     }
 }
@@ -438,10 +445,10 @@ impl SimdField for AVX512GF2_128x8 {
 fn add_internal(a: &AVX512GF2_128x8, b: &AVX512GF2_128x8) -> AVX512GF2_128x8 {
     unsafe {
         AVX512GF2_128x8 {
-            data: [ 
+            data: [
                 _mm512_xor_si512(a.data[0], b.data[0]),
                 _mm512_xor_si512(a.data[1], b.data[1]),
-            ]
+            ],
         }
     }
 }
@@ -453,7 +460,7 @@ fn sub_internal(a: &AVX512GF2_128x8, b: &AVX512GF2_128x8) -> AVX512GF2_128x8 {
             data: [
                 _mm512_xor_si512(a.data[0], b.data[0]),
                 _mm512_xor_si512(a.data[1], b.data[1]),
-            ]
+            ],
         }
     }
 }
@@ -528,9 +535,10 @@ fn _m512_mul_internal(a: __m512i, b: __m512i) -> __m512i {
 
 #[inline(always)]
 fn mul_internal(a: &AVX512GF2_128x8, b: &AVX512GF2_128x8) -> AVX512GF2_128x8 {
-    AVX512GF2_128x8 { data: [
-        _m512_mul_internal(a.data[0], b.data[0]), 
-        _m512_mul_internal(a.data[1], b.data[1]), 
+    AVX512GF2_128x8 {
+        data: [
+            _m512_mul_internal(a.data[0], b.data[0]),
+            _m512_mul_internal(a.data[1], b.data[1]),
         ],
     }
 }
@@ -551,7 +559,6 @@ fn duplicate_odd_bits(byte: u8) -> u8 {
     odd_bits | odd_bits_shifted
 }
 
-
 impl BinomialExtensionField for AVX512GF2_128x8 {
     const DEGREE: usize = 128;
     const W: u32 = 0x87;
@@ -565,9 +572,9 @@ impl BinomialExtensionField for AVX512GF2_128x8 {
 
         Self {
             data: [
-                unsafe {_mm512_maskz_mov_epi64(mask_even, self.data[0])},
-                unsafe {_mm512_maskz_mov_epi64(mask_odd, self.data[1])},
-            ]
+                unsafe { _mm512_maskz_mov_epi64(mask_even, self.data[0]) },
+                unsafe { _mm512_maskz_mov_epi64(mask_odd, self.data[1]) },
+            ],
         }
     }
 
@@ -583,8 +590,10 @@ impl BinomialExtensionField for AVX512GF2_128x8 {
         let v7 = ((base.v >> 0) & 1u8) as i64;
 
         let mut res = *self;
-        res.data[0] = unsafe {_mm512_xor_si512(res.data[0], _mm512_set_epi64(0, v0, 0, v2, 0, v4, 0, v6))};
-        res.data[1] = unsafe {_mm512_xor_si512(res.data[1], _mm512_set_epi64(0, v1, 0, v3, 0, v5, 0, v7))};
+        res.data[0] =
+            unsafe { _mm512_xor_si512(res.data[0], _mm512_set_epi64(0, v0, 0, v2, 0, v4, 0, v6)) };
+        res.data[1] =
+            unsafe { _mm512_xor_si512(res.data[1], _mm512_set_epi64(0, v1, 0, v3, 0, v5, 0, v7)) };
 
         res
     }
@@ -604,16 +613,16 @@ impl From<GF2x8> for AVX512GF2_128x8 {
 
         AVX512GF2_128x8 {
             data: [
-                unsafe {_mm512_set_epi64(0, v0, 0, v2, 0, v4, 0, v6)}, // even
-                unsafe {_mm512_set_epi64(0, v1, 0, v3, 0, v5, 0, v7)}, // odd
-            ]
+                unsafe { _mm512_set_epi64(0, v0, 0, v2, 0, v4, 0, v6) }, // even
+                unsafe { _mm512_set_epi64(0, v1, 0, v3, 0, v5, 0, v7) }, // odd
+            ],
         }
     }
 }
 
 impl Mul<GF2> for AVX512GF2_128x8 {
     type Output = AVX512GF2_128x8;
-    
+
     #[inline(always)]
     fn mul(self, rhs: GF2) -> Self::Output {
         if rhs.is_zero() {
@@ -628,12 +637,12 @@ impl Add<GF2> for AVX512GF2_128x8 {
     type Output = AVX512GF2_128x8;
     #[inline(always)]
     fn add(self, rhs: GF2) -> Self::Output {
-        let rhs_extended = unsafe {_mm512_maskz_set1_epi64(0b01010101, rhs.v as i64)};
+        let rhs_extended = unsafe { _mm512_maskz_set1_epi64(0b01010101, rhs.v as i64) };
         AVX512GF2_128x8 {
             data: [
-                unsafe {_mm512_xor_si512(self.data[0], rhs_extended)},
-                unsafe {_mm512_xor_si512(self.data[1], rhs_extended)},
-            ]
+                unsafe { _mm512_xor_si512(self.data[0], rhs_extended) },
+                unsafe { _mm512_xor_si512(self.data[1], rhs_extended) },
+            ],
         }
     }
 }

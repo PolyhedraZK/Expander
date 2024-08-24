@@ -1,5 +1,6 @@
 use expander_rs::{
-    BN254Config, Circuit, CircuitLayer, Config, GF2ExtConfig, GKRConfig, GKRScheme, GateAdd, GateMul, M31ExtConfig, Prover, Verifier
+    BN254Config, Circuit, CircuitLayer, Config, GF2ExtConfig, GKRConfig, GKRScheme, GateAdd,
+    GateMul, M31ExtConfig, Prover, Verifier,
 };
 use std::panic;
 use std::panic::AssertUnwindSafe;
@@ -96,8 +97,6 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     println!("Verifier created.");
     assert!(
         verifier.verify(&mut circuit, &claimed_v, &proof),
-        "Proof {:?}",
-        proof.bytes
     );
     println!("Correct proof verified.");
     let mut bad_proof = proof.clone();
@@ -118,8 +117,6 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
 
     assert!(
         !final_result,
-        "Proof {:?}, Bad proof {:?}",
-        proof.bytes, bad_proof.bytes
     );
     println!("Bad proof rejected.");
 }

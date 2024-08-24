@@ -65,7 +65,7 @@ impl FieldSerde for NeonGF2_128x8 {
         Self: Sized,
     {
         unimplemented!("We don't have a serialization for gf2_128 in ecc yet.")
-        
+
         // let mut res = Self::zero();
         // res.v.iter_mut().for_each(|vv| {
         //     let mut u = [0u8; 32];

@@ -25,7 +25,6 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
             let vx_claim = helper.vx_claim();
             helper.prepare_h_y_vals(vx_claim)
         }
-
         let evals = helper.poly_evals_at(i_var, 2);
 
         transcript.append_f::<C>(evals[0]);
