@@ -115,8 +115,8 @@ impl SimdField for Fr {
 
 impl FieldSerde for Fr {
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) {
-        writer.write_all(self.to_bytes().as_ref()).unwrap();
+    fn serialize_into<W: Write>(&self, mut writer: W) -> std::result::Result<(), std::io::Error> {
+        writer.write_all(self.to_bytes().as_ref())
     }
 
     /// size of the serialized bytes

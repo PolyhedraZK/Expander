@@ -33,11 +33,12 @@ impl PartialEq for NeonGF2_128x4 {
 
 impl FieldSerde for NeonGF2_128x4 {
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
-        self.v.iter().for_each(|&vv| {
-            writer
-                .write_all(unsafe { transmute::<uint32x4_t, [u8; 16]>(vv) }.as_ref())
-                .unwrap()
+    fn serialize_into<W: std::io::Write>(
+        &self,
+        mut writer: W,
+    ) -> std::result::Result<(), std::io::Error> {
+        self.v.iter().try_for_each(|&vv| {
+            writer.write_all(unsafe { transmute::<uint32x4_t, [u8; 16]>(vv) }.as_ref())
         })
     }
 

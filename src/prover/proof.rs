@@ -30,14 +30,14 @@ impl Proof {
 
 impl FieldSerde for Proof {
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) {
-        (self.bytes.len() as u64).serialize_into(&mut writer);
-        writer.write_all(&self.bytes).unwrap();
+    fn serialize_into<W: Write>(&self, mut writer: W) -> std::result::Result<(), std::io::Error> {
+        (self.bytes.len() as u64).serialize_into(&mut writer)?;
+        writer.write_all(&self.bytes)
     }
 
     #[inline(always)]
     fn serialized_size() -> usize {
-        0 // proof is not a fixed size
+        unimplemented!("not implemented for Proof")
     }
 
     #[inline(always)]

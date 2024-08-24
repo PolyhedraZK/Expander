@@ -32,12 +32,11 @@ fn sub_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
 
 impl FieldSerde for NeonGF2_128 {
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
-        unsafe {
-            writer
-                .write_all(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref())
-                .unwrap(); // todo: error propagation
-        }
+    fn serialize_into<W: std::io::Write>(
+        &self,
+        mut writer: W,
+    ) -> std::result::Result<(), std::io::Error> {
+        unsafe { writer.write_all(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref()) }
     }
 
     #[inline(always)]

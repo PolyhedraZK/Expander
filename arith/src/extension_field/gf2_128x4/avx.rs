@@ -25,11 +25,14 @@ impl AVX512GF2_128x4 {
 
 impl FieldSerde for AVX512GF2_128x4 {
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
+    fn serialize_into<W: std::io::Write>(
+        &self,
+        mut writer: W,
+    ) -> std::result::Result<(), std::io::Error> {
         unsafe {
             let mut data = [0u8; 64];
             _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data);
-            writer.write_all(&data).unwrap();
+            writer.write_all(&data)
         }
     }
     #[inline(always)]

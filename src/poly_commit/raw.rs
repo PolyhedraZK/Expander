@@ -20,10 +20,13 @@ impl<C: GKRConfig> RawCommitment<C> {
     }
 
     #[inline]
-    pub fn serialize_into<W: Write>(&self, mut writer: W) {
+    pub fn serialize_into<W: Write>(
+        &self,
+        mut writer: W,
+    ) -> std::result::Result<(), std::io::Error> {
         self.poly_vals
             .iter()
-            .for_each(|v| v.serialize_into(&mut writer));
+            .try_for_each(|v| v.serialize_into(&mut writer))
     }
 
     #[inline]

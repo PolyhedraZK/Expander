@@ -16,8 +16,8 @@ use warp::{http::StatusCode, reply, Filter};
 fn dump_proof_and_claimed_v<F: Field + FieldSerde>(proof: &Proof, claimed_v: &F) -> Vec<u8> {
     let mut bytes = Vec::new();
 
-    proof.serialize_into(&mut bytes);
-    claimed_v.serialize_into(&mut bytes);
+    proof.serialize_into(&mut bytes).unwrap(); // TODO: error propagation
+    claimed_v.serialize_into(&mut bytes).unwrap(); // TODO: error propagation
 
     bytes
 }

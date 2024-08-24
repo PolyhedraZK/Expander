@@ -46,7 +46,7 @@ impl Transcript {
     pub fn append_f<C: GKRConfig>(&mut self, f: C::Field) {
         let cur_size = self.proof.bytes.len();
         self.proof.bytes.resize(cur_size + C::Field::SIZE, 0);
-        f.serialize_into(&mut self.proof.bytes[cur_size..]);
+        f.serialize_into(&mut self.proof.bytes[cur_size..]).unwrap(); // TODO: error propagation
     }
 
     #[inline]

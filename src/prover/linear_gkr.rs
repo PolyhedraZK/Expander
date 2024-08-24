@@ -83,7 +83,7 @@ impl<C: GKRConfig> Prover<C> {
         let commitment = RawCommitment::<C>::new(&c.layers[0].input_vals);
 
         let mut buffer = vec![];
-        commitment.serialize_into(&mut buffer);
+        commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(&buffer);
 

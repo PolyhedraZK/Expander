@@ -48,9 +48,9 @@ impl NeonM31 {
 impl FieldSerde for NeonM31 {
     #[inline(always)]
     /// serialize self into bytes
-    fn serialize_into<W: Write>(&self, mut writer: W) {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> std::result::Result<(), std::io::Error> {
         let data = unsafe { transmute::<[uint32x4_t; 4], [u8; 64]>(self.v) };
-        writer.write_all(&data).unwrap();
+        writer.write_all(&data)
     }
 
     #[inline(always)]

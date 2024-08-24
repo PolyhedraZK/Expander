@@ -22,7 +22,7 @@ fn test_field() {
 fn test_custom_serde_vectorize_gf2() {
     let a = GF2_128::from(0);
     let mut buffer = vec![];
-    a.serialize_into(&mut buffer);
+    assert!(a.serialize_into(&mut buffer).is_ok());
     let mut cursor = Cursor::new(buffer);
     let b = GF2_128::deserialize_from(&mut cursor);
     assert_eq!(a, b);

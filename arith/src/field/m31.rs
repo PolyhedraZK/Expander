@@ -39,8 +39,8 @@ field_common!(M31);
 
 impl FieldSerde for M31 {
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) {
-        writer.write_all(self.v.to_le_bytes().as_ref()).unwrap(); // todo: error propagation
+    fn serialize_into<W: Write>(&self, mut writer: W) -> std::result::Result<(), std::io::Error> {
+        writer.write_all(self.v.to_le_bytes().as_ref())
     }
 
     #[inline(always)]

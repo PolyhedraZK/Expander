@@ -16,12 +16,11 @@ field_common!(AVX512GF2_128);
 
 impl FieldSerde for AVX512GF2_128 {
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
-        unsafe {
-            writer
-                .write_all(transmute::<__m128i, [u8; 16]>(self.v).as_ref())
-                .unwrap(); // todo: error propagation
-        }
+    fn serialize_into<W: std::io::Write>(
+        &self,
+        mut writer: W,
+    ) -> std::result::Result<(), std::io::Error> {
+        unsafe { writer.write_all(transmute::<__m128i, [u8; 16]>(self.v).as_ref()) }
     }
 
     #[inline(always)]

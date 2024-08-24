@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 /// Serde for Fields
 pub trait FieldSerde: Sized {
     /// serialize self into bytes
-    fn serialize_into<W: Write>(&self, writer: W);
+    fn serialize_into<W: Write>(&self, writer: W) -> std::result::Result<(), std::io::Error>;
 
     /// size of the serialized bytes
     fn serialized_size() -> usize;
@@ -19,8 +19,8 @@ pub trait FieldSerde: Sized {
 
 impl FieldSerde for u64 {
     /// serialize u64 into bytes
-    fn serialize_into<W: Write>(&self, mut writer: W) {
-        writer.write_all(&self.to_le_bytes()).unwrap();
+    fn serialize_into<W: Write>(&self, mut writer: W) -> std::result::Result<(), std::io::Error> {
+        writer.write_all(&self.to_le_bytes())
     }
 
     /// size of the serialized bytes

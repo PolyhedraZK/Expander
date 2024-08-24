@@ -17,10 +17,10 @@ field_common!(M31Ext3x16);
 
 impl FieldSerde for M31Ext3x16 {
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) {
-        self.v[0].serialize_into(&mut writer);
-        self.v[1].serialize_into(&mut writer);
-        self.v[2].serialize_into(&mut writer);
+    fn serialize_into<W: Write>(&self, mut writer: W) -> std::result::Result<(), std::io::Error> {
+        self.v[0].serialize_into(&mut writer)?;
+        self.v[1].serialize_into(&mut writer)?;
+        self.v[2].serialize_into(&mut writer)
     }
 
     #[inline(always)]
