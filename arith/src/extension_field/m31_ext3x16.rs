@@ -43,10 +43,7 @@ impl FieldSerde for M31Ext3x16 {
 
     fn try_deserialize_from_ecc_format<R: Read>(
         mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    ) -> std::result::Result<Self, std::io::Error> {
         Ok(Self {
             v: [
                 M31x16::try_deserialize_from_ecc_format(&mut reader)?,

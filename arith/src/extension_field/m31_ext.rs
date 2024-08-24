@@ -44,10 +44,7 @@ impl FieldSerde for M31Ext3 {
     }
 
     #[inline]
-    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> Result<Self, std::io::Error> {
         let mut buf = [0u8; 32];
         reader.read_exact(&mut buf)?;
         assert!(

@@ -50,10 +50,7 @@ impl FieldSerde for AVX512GF2_128x4 {
     #[inline(always)]
     fn try_deserialize_from_ecc_format<R: std::io::Read>(
         mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    ) -> std::result::Result<Self, std::io::Error> {
         let mut buf = [0u8; 32];
         reader.read_exact(&mut buf)?;
         let data: __m128i = unsafe { _mm_loadu_si128(buf.as_ptr() as *const __m128i) };

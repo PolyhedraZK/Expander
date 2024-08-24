@@ -135,10 +135,7 @@ impl FieldSerde for Fr {
     #[inline]
     fn try_deserialize_from_ecc_format<R: Read>(
         mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    ) -> std::result::Result<Self, std::io::Error> {
         let mut buffer = [0u8; 32];
         reader.read_exact(&mut buffer)?;
         Ok(Fr::from_bytes(&buffer).unwrap())

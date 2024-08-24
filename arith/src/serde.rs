@@ -1,7 +1,7 @@
 use std::io::{Read, Write};
 
 /// Serde for Fields
-pub trait FieldSerde {
+pub trait FieldSerde: Sized {
     /// serialize self into bytes
     fn serialize_into<W: Write>(&self, writer: W);
 
@@ -14,9 +14,7 @@ pub trait FieldSerde {
     /// deserialize bytes into field following ecc format
     fn try_deserialize_from_ecc_format<R: Read>(
         reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
-    where
-        Self: Sized;
+    ) -> std::result::Result<Self, std::io::Error>;
 }
 
 impl FieldSerde for u64 {
@@ -39,10 +37,7 @@ impl FieldSerde for u64 {
 
     fn try_deserialize_from_ecc_format<R: Read>(
         _reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    ) -> std::result::Result<Self, std::io::Error> {
         unimplemented!("not implemented for u64")
     }
 }
