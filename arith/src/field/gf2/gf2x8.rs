@@ -1,6 +1,6 @@
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use crate::{Field, FieldSerde, SimdField};
+use crate::{Field, FieldSerde, FieldSerdeResult, SimdField};
 
 use super::GF2;
 
@@ -12,11 +12,9 @@ pub struct GF2x8 {
 
 impl FieldSerde for GF2x8 {
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(
-        &self,
-        mut writer: W,
-    ) -> std::result::Result<(), std::io::Error> {
-        writer.write_all(self.v.to_le_bytes().as_ref())
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        writer.write_all(self.v.to_le_bytes().as_ref())?;
+        Ok(())
     }
 
     #[inline(always)]
@@ -25,18 +23,14 @@ impl FieldSerde for GF2x8 {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut u = [0u8; 1];
         reader.read_exact(&mut u)?;
         Ok(GF2x8 { v: u[0] })
     }
 
     #[inline]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error> {
+    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut u = [0u8; 32];
         reader.read_exact(&mut u)?;
         Ok(GF2x8 { v: u[0] })

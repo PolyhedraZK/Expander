@@ -9,7 +9,7 @@ use std::{
 
 use rand::{Rng, RngCore};
 
-use crate::{field_common, Field, FieldSerde, SimdField, M31, M31_MOD};
+use crate::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField, M31, M31_MOD};
 
 const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD; 4]) };
 const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
@@ -48,9 +48,10 @@ impl NeonM31 {
 impl FieldSerde for NeonM31 {
     #[inline(always)]
     /// serialize self into bytes
-    fn serialize_into<W: Write>(&self, mut writer: W) -> std::result::Result<(), std::io::Error> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         let data = unsafe { transmute::<[uint32x4_t; 4], [u8; 64]>(self.v) };
-        writer.write_all(&data)
+        writer.write_all(&data)?;
+        Ok(())
     }
 
     #[inline(always)]
@@ -60,7 +61,7 @@ impl FieldSerde for NeonM31 {
 
     /// deserialize bytes into field
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> std::result::Result<Self, std::io::Error> {
+    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut data = [0; 64];
         reader.read_exact(&mut data)?;
         unsafe {
@@ -71,9 +72,7 @@ impl FieldSerde for NeonM31 {
     }
 
     #[inline]
-    fn try_deserialize_from_ecc_format<R: Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
+    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self>
     where
         Self: Sized,
     {

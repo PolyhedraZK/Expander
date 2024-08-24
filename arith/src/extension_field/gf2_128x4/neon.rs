@@ -7,7 +7,7 @@ use crate::SimdField;
 use crate::{
     field_common,
     neon::{gfadd, gfmul, NeonGF2_128},
-    Field, FieldSerde,
+    Field, FieldSerde, FieldSerdeResult,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -33,10 +33,7 @@ impl PartialEq for NeonGF2_128x4 {
 
 impl FieldSerde for NeonGF2_128x4 {
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(
-        &self,
-        mut writer: W,
-    ) -> std::result::Result<(), std::io::Error> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         self.v.iter().try_for_each(|&vv| {
             writer.write_all(unsafe { transmute::<uint32x4_t, [u8; 16]>(vv) }.as_ref())
         })
@@ -48,9 +45,7 @@ impl FieldSerde for NeonGF2_128x4 {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut res = Self::zero();
         res.v.iter_mut().try_for_each(|vv| {
             let mut u = [0u8; 16];
@@ -61,12 +56,7 @@ impl FieldSerde for NeonGF2_128x4 {
     }
 
     #[inline]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut res = Self::zero();
         res.v.iter_mut().for_each(|vv| {
             let mut u = [0u8; 32];

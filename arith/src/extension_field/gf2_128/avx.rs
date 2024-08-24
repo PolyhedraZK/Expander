@@ -5,7 +5,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{field_common, BinomialExtensionField, Field, FieldSerde, GF2};
+use crate::{field_common, BinomialExtensionField, Field, FieldSerde, FieldSerdeResult, GF2};
 
 #[derive(Debug, Clone, Copy)]
 pub struct AVX512GF2_128 {
@@ -16,11 +16,9 @@ field_common!(AVX512GF2_128);
 
 impl FieldSerde for AVX512GF2_128 {
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(
-        &self,
-        mut writer: W,
-    ) -> std::result::Result<(), std::io::Error> {
-        unsafe { writer.write_all(transmute::<__m128i, [u8; 16]>(self.v).as_ref()) }
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        unsafe { writer.write_all(transmute::<__m128i, [u8; 16]>(self.v).as_ref())? };
+        Ok(())
     }
 
     #[inline(always)]
@@ -29,9 +27,7 @@ impl FieldSerde for AVX512GF2_128 {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut u = [0u8; 16];
         reader.read_exact(&mut u)?;
         unsafe {
@@ -42,9 +38,7 @@ impl FieldSerde for AVX512GF2_128 {
     }
 
     #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error> {
+    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut u = [0u8; 32];
         reader.read_exact(&mut u)?;
         Ok(unsafe {

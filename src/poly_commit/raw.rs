@@ -3,7 +3,7 @@
 
 use std::io::{Read, Write};
 
-use arith::{Field, FieldSerde};
+use arith::{Field, FieldSerde, FieldSerdeResult};
 
 use crate::{GKRConfig, MultiLinearPoly};
 
@@ -20,10 +20,7 @@ impl<C: GKRConfig> RawCommitment<C> {
     }
 
     #[inline]
-    pub fn serialize_into<W: Write>(
-        &self,
-        mut writer: W,
-    ) -> std::result::Result<(), std::io::Error> {
+    pub fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         self.poly_vals
             .iter()
             .try_for_each(|v| v.serialize_into(&mut writer))

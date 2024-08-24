@@ -5,7 +5,8 @@ use std::{
 };
 
 use crate::{
-    field_common, BinomialExtensionField, Field, FieldSerde, M31Ext3, M31x16, SimdField, M31,
+    field_common, BinomialExtensionField, Field, FieldSerde, FieldSerdeResult, M31Ext3, M31x16,
+    SimdField, M31,
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -17,7 +18,7 @@ field_common!(M31Ext3x16);
 
 impl FieldSerde for M31Ext3x16 {
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> std::result::Result<(), std::io::Error> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         self.v[0].serialize_into(&mut writer)?;
         self.v[1].serialize_into(&mut writer)?;
         self.v[2].serialize_into(&mut writer)
@@ -31,7 +32,7 @@ impl FieldSerde for M31Ext3x16 {
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> std::result::Result<Self, std::io::Error> {
+    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
         Ok(Self {
             v: [
                 M31x16::deserialize_from(&mut reader)?,
@@ -41,9 +42,7 @@ impl FieldSerde for M31Ext3x16 {
         })
     }
 
-    fn try_deserialize_from_ecc_format<R: Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error> {
+    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
         Ok(Self {
             v: [
                 M31x16::try_deserialize_from_ecc_format(&mut reader)?,

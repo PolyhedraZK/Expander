@@ -2,7 +2,7 @@ use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use std::{arch::aarch64::*, mem::transmute};
 
-use crate::{field_common, BinomialExtensionField, Field, FieldSerde, GF2};
+use crate::{field_common, BinomialExtensionField, Field, FieldSerde, FieldSerdeResult, GF2};
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128 {
@@ -32,11 +32,9 @@ fn sub_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
 
 impl FieldSerde for NeonGF2_128 {
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(
-        &self,
-        mut writer: W,
-    ) -> std::result::Result<(), std::io::Error> {
-        unsafe { writer.write_all(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref()) }
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        unsafe { writer.write_all(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref())? };
+        Ok(())
     }
 
     #[inline(always)]
@@ -45,9 +43,7 @@ impl FieldSerde for NeonGF2_128 {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut u = [0u8; 16];
         reader.read_exact(&mut u)?;
         unsafe {
@@ -58,9 +54,7 @@ impl FieldSerde for NeonGF2_128 {
     }
 
     #[inline]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
+    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self>
     where
         Self: Sized,
     {

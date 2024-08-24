@@ -9,7 +9,7 @@ use std::{
 
 use rand::{Rng, RngCore};
 
-use crate::{field_common, Field, FieldSerde, SimdField, M31, M31_MOD};
+use crate::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField, M31, M31_MOD};
 
 const M31_PACK_SIZE: usize = 16;
 const PACKED_MOD: __m512i = unsafe { transmute([M31_MOD; M31_PACK_SIZE]) };
@@ -40,9 +40,10 @@ field_common!(AVXM31);
 impl FieldSerde for AVXM31 {
     #[inline(always)]
     /// serialize self into bytes
-    fn serialize_into<W: Write>(&self, mut writer: W) -> std::result::Result<(), std::io::Error> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         let data = unsafe { transmute::<__m512i, [u8; 64]>(self.v) };
-        writer.write_all(&data)
+        writer.write_all(&data)?;
+        Ok(())
     }
 
     #[inline(always)]
@@ -52,7 +53,7 @@ impl FieldSerde for AVXM31 {
 
     /// deserialize bytes into field
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> std::result::Result<Self, std::io::Error> {
+    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut data = [0; 64];
         reader.read_exact(&mut data)?;
         unsafe {
@@ -63,9 +64,7 @@ impl FieldSerde for AVXM31 {
     }
 
     #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error> {
+    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut buf = [0u8; 32];
         reader.read_exact(&mut buf)?;
         assert!(

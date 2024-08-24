@@ -1,10 +1,11 @@
-use arith::{Field, FieldSerde};
+use arith::{Field, FieldSerde, FieldSerdeError};
 use ark_std::test_rng;
 use std::{
     collections::HashMap,
     fs,
     io::{Cursor, Read},
 };
+use thiserror::Error;
 
 use crate::{GKRConfig, Transcript};
 
@@ -214,6 +215,15 @@ pub struct Segment<C: GKRConfig> {
     pub gate_uni: Vec<GateUni<C>>,
 }
 
+#[derive(Debug, Error)]
+pub enum CircuitError {
+    #[error("field serde error: {0:?}")]
+    FieldSerdeError(#[from] FieldSerdeError),
+
+    #[error("other error: {0:?}")]
+    OtherError(#[from] std::io::Error),
+}
+
 impl<C: GKRConfig> Circuit<C> {
     pub fn load_witness_file(&mut self, filename: &str) {
         // note that, for data parallel, one should load multiple witnesses into different slot in the vectorized F
@@ -223,30 +233,29 @@ impl<C: GKRConfig> Circuit<C> {
     pub fn load_witness_bytes(
         &mut self,
         file_bytes: &[u8],
-    ) -> std::result::Result<(), std::io::Error> {
+    ) -> std::result::Result<(), CircuitError> {
         log::trace!("witness file size: {} bytes", file_bytes.len());
         log::trace!("expecting: {} bytes", 32 * (1 << self.log_input_size()));
         if file_bytes.len() != 32 * (1 << self.log_input_size()) {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 "Invalid witness file size",
-            ));
+            )
+            .into());
         }
 
         let mut cursor = Cursor::new(file_bytes);
         let mut evals = vec![];
         for _ in 0..(1 << self.log_input_size()) {
-            evals.push(
-                match C::SimdCircuitField::try_deserialize_from_ecc_format(&mut cursor) {
-                    Ok(v) => v,
-                    Err(e) => return Err(e),
-                },
-            );
+            evals.push(C::SimdCircuitField::try_deserialize_from_ecc_format(
+                &mut cursor,
+            )?);
         }
         self.layers[0].input_vals = evals;
         Ok(())
     }
 }
+
 impl<C: GKRConfig> Segment<C> {
     pub fn contain_gates(&self) -> bool {
         !self.gate_muls.is_empty()
@@ -255,7 +264,7 @@ impl<C: GKRConfig> Segment<C> {
             || !self.gate_uni.is_empty()
     }
 
-    pub(crate) fn read<R: Read>(mut reader: R) -> std::result::Result<Self, std::io::Error> {
+    pub(crate) fn read<R: Read>(mut reader: R) -> std::result::Result<Self, CircuitError> {
         let i_len = u64::deserialize_from(&mut reader)? as usize;
         let o_len = u64::deserialize_from(&mut reader)? as usize;
         assert!(i_len.is_power_of_two());

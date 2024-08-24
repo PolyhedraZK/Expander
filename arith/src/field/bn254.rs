@@ -4,6 +4,7 @@ use halo2curves::ff::{Field as Halo2Field, FromUniformBytes};
 use halo2curves::{bn256::Fr, ff::PrimeField};
 use rand::RngCore;
 
+use crate::serde::{FieldSerdeError, FieldSerdeResult};
 use crate::{Field, FieldSerde, SimdField};
 
 impl Field for Fr {
@@ -115,8 +116,9 @@ impl SimdField for Fr {
 
 impl FieldSerde for Fr {
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> std::result::Result<(), std::io::Error> {
-        writer.write_all(self.to_bytes().as_ref())
+    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        writer.write_all(self.to_bytes().as_ref())?;
+        Ok(())
     }
 
     /// size of the serialized bytes
@@ -126,18 +128,22 @@ impl FieldSerde for Fr {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> std::result::Result<Self, std::io::Error> {
+    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut buffer = [0u8; 32];
         reader.read_exact(&mut buffer)?;
-        Ok(Fr::from_bytes(&buffer).unwrap()) // TODO: ctoption into result
+        match Fr::from_bytes(&buffer).into_option() {
+            Some(v) => Ok(v),
+            None => Err(FieldSerdeError::DeserializeError),
+        }
     }
 
     #[inline]
-    fn try_deserialize_from_ecc_format<R: Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error> {
+    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut buffer = [0u8; 32];
         reader.read_exact(&mut buffer)?;
-        Ok(Fr::from_bytes(&buffer).unwrap()) // TODO: ctoption into result
+        match Fr::from_bytes(&buffer).into_option() {
+            Some(v) => Ok(v),
+            None => Err(FieldSerdeError::DeserializeError),
+        }
     }
 }
