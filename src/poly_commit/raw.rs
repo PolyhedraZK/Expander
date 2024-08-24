@@ -32,7 +32,7 @@ impl<C: GKRConfig> RawCommitment<C> {
     #[inline]
     pub fn deserialize_from<R: Read>(mut reader: R, poly_size: usize) -> Self {
         let poly_vals = (0..poly_size)
-            .map(|_| C::SimdCircuitField::deserialize_from(&mut reader))
+            .map(|_| C::SimdCircuitField::deserialize_from(&mut reader).unwrap()) // TODO: error propagation
             .collect();
 
         RawCommitment { poly_vals }

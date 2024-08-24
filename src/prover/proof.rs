@@ -22,7 +22,7 @@ impl Proof {
 
     #[inline(always)]
     pub fn get_next_and_step<F: Field + FieldSerde>(&mut self) -> F {
-        let ret = F::deserialize_from(&self.bytes[self.idx..]);
+        let ret = F::deserialize_from(&self.bytes[self.idx..]).unwrap(); // TODO: error propagation
         self.step(F::SIZE);
         ret
     }
@@ -41,14 +41,14 @@ impl FieldSerde for Proof {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let proof_len = u64::deserialize_from(&mut reader) as usize;
+    fn deserialize_from<R: Read>(mut reader: R) -> std::result::Result<Self, std::io::Error> {
+        let proof_len = u64::deserialize_from(&mut reader)? as usize;
         let mut proof = vec![0u8; proof_len];
         reader.read_exact(&mut proof).unwrap();
-        Self {
+        Ok(Self {
             idx: 0,
             bytes: proof,
-        }
+        })
     }
 
     fn try_deserialize_from_ecc_format<R: Read>(

@@ -51,12 +51,12 @@ impl FieldSerde for M31 {
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
+    fn deserialize_from<R: Read>(mut reader: R) -> std::result::Result<Self, std::io::Error> {
         let mut u = [0u8; 4];
-        reader.read_exact(&mut u).unwrap(); // todo: error propagation
+        reader.read_exact(&mut u)?;
         let mut v = u32::from_le_bytes(u);
         v = mod_reduce_u32(v);
-        M31 { v }
+        Ok(M31 { v })
     }
 
     #[inline]

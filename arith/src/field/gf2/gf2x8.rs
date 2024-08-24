@@ -25,10 +25,12 @@ impl FieldSerde for GF2x8 {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> Self {
+    fn deserialize_from<R: std::io::Read>(
+        mut reader: R,
+    ) -> std::result::Result<Self, std::io::Error> {
         let mut u = [0u8; 1];
-        reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        GF2x8 { v: u[0] }
+        reader.read_exact(&mut u)?;
+        Ok(GF2x8 { v: u[0] })
     }
 
     #[inline]

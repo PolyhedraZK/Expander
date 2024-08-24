@@ -255,9 +255,9 @@ impl<C: GKRConfig> Segment<C> {
             || !self.gate_uni.is_empty()
     }
 
-    pub(crate) fn read<R: Read>(mut reader: R) -> Self {
-        let i_len = u64::deserialize_from(&mut reader) as usize;
-        let o_len = u64::deserialize_from(&mut reader) as usize;
+    pub(crate) fn read<R: Read>(mut reader: R) -> std::result::Result<Self, std::io::Error> {
+        let i_len = u64::deserialize_from(&mut reader)? as usize;
+        let o_len = u64::deserialize_from(&mut reader)? as usize;
         assert!(i_len.is_power_of_two());
         assert!(o_len.is_power_of_two());
 
@@ -271,72 +271,72 @@ impl<C: GKRConfig> Segment<C> {
             gate_uni: Vec::new(),
         };
 
-        let child_segs_num = u64::deserialize_from(&mut reader) as usize;
+        let child_segs_num = u64::deserialize_from(&mut reader)? as usize;
 
         for _ in 0..child_segs_num {
-            let child_seg_id = u64::deserialize_from(&mut reader) as SegmentId;
+            let child_seg_id = u64::deserialize_from(&mut reader)? as SegmentId;
 
-            let allocation_num = u64::deserialize_from(&mut reader) as usize;
+            let allocation_num = u64::deserialize_from(&mut reader)? as usize;
 
             for _ in 0..allocation_num {
-                let i_offset = u64::deserialize_from(&mut reader) as usize;
-                let o_offset = u64::deserialize_from(&mut reader) as usize;
+                let i_offset = u64::deserialize_from(&mut reader)? as usize;
+                let o_offset = u64::deserialize_from(&mut reader)? as usize;
                 ret.child_segs
                     .push((child_seg_id, vec![Allocation { i_offset, o_offset }]));
             }
         }
 
-        let gate_muls_num = u64::deserialize_from(&mut reader) as usize;
+        let gate_muls_num = u64::deserialize_from(&mut reader)? as usize;
         for _ in 0..gate_muls_num {
             let gate = GateMul {
                 i_ids: [
-                    u64::deserialize_from(&mut reader) as usize,
-                    u64::deserialize_from(&mut reader) as usize,
+                    u64::deserialize_from(&mut reader)? as usize,
+                    u64::deserialize_from(&mut reader)? as usize,
                 ],
-                o_id: u64::deserialize_from(&mut reader) as usize,
-                coef: C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
+                o_id: u64::deserialize_from(&mut reader)? as usize,
+                coef: C::CircuitField::try_deserialize_from_ecc_format(&mut reader)?,
                 is_random: false,
                 gate_type: 0,
             };
             ret.gate_muls.push(gate);
         }
 
-        let gate_adds_num = u64::deserialize_from(&mut reader) as usize;
+        let gate_adds_num = u64::deserialize_from(&mut reader)? as usize;
         for _ in 0..gate_adds_num {
             let gate = GateAdd {
-                i_ids: [u64::deserialize_from(&mut reader) as usize],
-                o_id: u64::deserialize_from(&mut reader) as usize,
+                i_ids: [u64::deserialize_from(&mut reader)? as usize],
+                o_id: u64::deserialize_from(&mut reader)? as usize,
 
-                coef: C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
+                coef: C::CircuitField::try_deserialize_from_ecc_format(&mut reader)?,
                 is_random: false,
                 gate_type: 1,
             };
             ret.gate_adds.push(gate);
         }
-        let gate_consts_num = u64::deserialize_from(&mut reader) as usize;
+        let gate_consts_num = u64::deserialize_from(&mut reader)? as usize;
 
         for _ in 0..gate_consts_num {
             let gate = GateConst {
                 i_ids: [],
-                o_id: u64::deserialize_from(&mut reader) as usize,
+                o_id: u64::deserialize_from(&mut reader)? as usize,
 
-                coef: C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
+                coef: C::CircuitField::try_deserialize_from_ecc_format(&mut reader)?,
                 is_random: false,
                 gate_type: 2,
             };
             ret.gate_consts.push(gate);
         }
 
-        let gate_custom_num = u64::deserialize_from(&mut reader) as usize;
+        let gate_custom_num = u64::deserialize_from(&mut reader)? as usize;
         for _ in 0..gate_custom_num {
-            let gate_type = u64::deserialize_from(&mut reader) as usize;
-            let in_len = u64::deserialize_from(&mut reader) as usize;
+            let gate_type = u64::deserialize_from(&mut reader)? as usize;
+            let in_len = u64::deserialize_from(&mut reader)? as usize;
             let mut inputs = Vec::new();
             for _ in 0..in_len {
-                inputs.push(u64::deserialize_from(&mut reader) as usize);
+                inputs.push(u64::deserialize_from(&mut reader)? as usize);
             }
-            let out = u64::deserialize_from(&mut reader) as usize;
-            let coef = C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap();
+            let out = u64::deserialize_from(&mut reader)? as usize;
+            let coef = C::CircuitField::try_deserialize_from_ecc_format(&mut reader)?;
             let gate = GateUni {
                 i_ids: [inputs[0]],
                 o_id: out,
@@ -355,9 +355,9 @@ impl<C: GKRConfig> Segment<C> {
             gate_custom_num
         );
 
-        let rand_coef_idx_num = u64::deserialize_from(&mut reader) as usize;
+        let rand_coef_idx_num = u64::deserialize_from(&mut reader)? as usize;
         for _ in 0..rand_coef_idx_num {
-            let idx = u64::deserialize_from(&mut reader) as usize;
+            let idx = u64::deserialize_from(&mut reader)? as usize;
 
             if idx < ret.gate_muls.len() {
                 ret.gate_muls[idx].is_random = true;
@@ -371,7 +371,7 @@ impl<C: GKRConfig> Segment<C> {
                 .is_random = true;
             }
         }
-        ret
+        Ok(ret)
     }
 
     pub fn scan_leaf_segments(
@@ -423,7 +423,7 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
         let file_bytes = fs::read(filename).unwrap();
         let mut cursor = Cursor::new(file_bytes);
 
-        let magic_num = u64::deserialize_from(&mut cursor);
+        let magic_num = u64::deserialize_from(&mut cursor).unwrap(); // TODO: error propagation
         assert_eq!(magic_num, MAGIC_NUM);
 
         let field_mod = [
@@ -433,15 +433,15 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
             u64::deserialize_from(&mut cursor),
         ];
         log::trace!("field mod: {:?}", field_mod);
-        let segment_num = u64::deserialize_from(&mut cursor);
+        let segment_num = u64::deserialize_from(&mut cursor).unwrap(); // TODO: error propagation
         for _ in 0..segment_num {
-            let seg = Segment::<C>::read(&mut cursor);
+            let seg = Segment::<C>::read(&mut cursor).unwrap(); // TODO: error propagation
             ret.segments.push(seg);
         }
 
-        let layer_num = u64::deserialize_from(&mut cursor);
+        let layer_num = u64::deserialize_from(&mut cursor).unwrap(); // TODO: error propagation
         for _ in 0..layer_num {
-            let layer_id = u64::deserialize_from(&mut cursor) as SegmentId;
+            let layer_id = u64::deserialize_from(&mut cursor).unwrap() as SegmentId; // TODO: error propagation
 
             ret.layers.push(layer_id);
         }

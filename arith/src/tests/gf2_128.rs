@@ -25,5 +25,7 @@ fn test_custom_serde_vectorize_gf2() {
     assert!(a.serialize_into(&mut buffer).is_ok());
     let mut cursor = Cursor::new(buffer);
     let b = GF2_128::deserialize_from(&mut cursor);
+    assert!(b.is_ok());
+    let b = b.unwrap();
     assert_eq!(a, b);
 }

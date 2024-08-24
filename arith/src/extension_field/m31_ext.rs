@@ -33,14 +33,14 @@ impl FieldSerde for M31Ext3 {
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        M31Ext3 {
+    fn deserialize_from<R: Read>(mut reader: R) -> std::result::Result<Self, std::io::Error> {
+        Ok(M31Ext3 {
             v: [
-                M31::deserialize_from(&mut reader),
-                M31::deserialize_from(&mut reader),
-                M31::deserialize_from(&mut reader),
+                M31::deserialize_from(&mut reader)?,
+                M31::deserialize_from(&mut reader)?,
+                M31::deserialize_from(&mut reader)?,
             ],
-        }
+        })
     }
 
     #[inline]

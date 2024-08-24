@@ -60,13 +60,13 @@ impl FieldSerde for NeonM31 {
 
     /// deserialize bytes into field
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
+    fn deserialize_from<R: Read>(mut reader: R) -> std::result::Result<Self, std::io::Error> {
         let mut data = [0; 64];
-        reader.read_exact(&mut data).unwrap();
+        reader.read_exact(&mut data)?;
         unsafe {
-            NeonM31 {
+            Ok(NeonM31 {
                 v: transmute::<[u8; 64], [uint32x4_t; 4]>(data),
-            }
+            })
         }
     }
 

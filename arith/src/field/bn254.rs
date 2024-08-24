@@ -126,10 +126,10 @@ impl FieldSerde for Fr {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
+    fn deserialize_from<R: Read>(mut reader: R) -> std::result::Result<Self, std::io::Error> {
         let mut buffer = [0u8; 32];
-        reader.read_exact(&mut buffer).unwrap();
-        Fr::from_bytes(&buffer).unwrap()
+        reader.read_exact(&mut buffer)?;
+        Ok(Fr::from_bytes(&buffer).unwrap()) // TODO: ctoption into result
     }
 
     #[inline]
@@ -138,6 +138,6 @@ impl FieldSerde for Fr {
     ) -> std::result::Result<Self, std::io::Error> {
         let mut buffer = [0u8; 32];
         reader.read_exact(&mut buffer)?;
-        Ok(Fr::from_bytes(&buffer).unwrap())
+        Ok(Fr::from_bytes(&buffer).unwrap()) // TODO: ctoption into result
     }
 }

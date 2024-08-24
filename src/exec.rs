@@ -25,8 +25,8 @@ fn dump_proof_and_claimed_v<F: Field + FieldSerde>(proof: &Proof, claimed_v: &F)
 fn load_proof_and_claimed_v<F: Field + FieldSerde>(bytes: &[u8]) -> (Proof, F) {
     let mut cursor = Cursor::new(bytes);
 
-    let proof = Proof::deserialize_from(&mut cursor);
-    let claimed_v = F::deserialize_from(&mut cursor);
+    let proof = Proof::deserialize_from(&mut cursor).unwrap(); // TODO: error propagation
+    let claimed_v = F::deserialize_from(&mut cursor).unwrap(); // TODO: error propagation
 
     (proof, claimed_v)
 }

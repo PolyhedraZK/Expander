@@ -40,13 +40,15 @@ impl FieldSerde for AVX512GF2_128x4 {
         512 / 8
     }
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> Self {
+    fn deserialize_from<R: std::io::Read>(
+        mut reader: R,
+    ) -> std::result::Result<Self, std::io::Error> {
         let mut data = [0u8; 64];
-        reader.read_exact(&mut data).unwrap();
+        reader.read_exact(&mut data)?;
         unsafe {
-            Self {
+            Ok(Self {
                 data: _mm512_loadu_si512(data.as_ptr() as *const i32),
-            }
+            })
         }
     }
 

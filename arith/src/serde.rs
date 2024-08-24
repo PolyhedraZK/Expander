@@ -9,7 +9,7 @@ pub trait FieldSerde: Sized {
     fn serialized_size() -> usize;
 
     /// deserialize bytes into field
-    fn deserialize_from<R: Read>(reader: R) -> Self;
+    fn deserialize_from<R: Read>(reader: R) -> std::result::Result<Self, std::io::Error>;
 
     /// deserialize bytes into field following ecc format
     fn try_deserialize_from_ecc_format<R: Read>(
@@ -29,10 +29,10 @@ impl FieldSerde for u64 {
     }
 
     /// deserialize bytes into u64
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
+    fn deserialize_from<R: Read>(mut reader: R) -> std::result::Result<Self, std::io::Error> {
         let mut buffer = [0u8; 8];
-        reader.read_exact(&mut buffer).unwrap();
-        u64::from_le_bytes(buffer)
+        reader.read_exact(&mut buffer)?;
+        Ok(u64::from_le_bytes(buffer))
     }
 
     fn try_deserialize_from_ecc_format<R: Read>(
