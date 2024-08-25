@@ -51,10 +51,10 @@ impl FieldSerde for AVXM31 {
     /// deserialize bytes into field
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut data = [0; 64];
+        let mut data = [0; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut data)?;
         unsafe {
-            let mut value = transmute::<[u8; 64], __m512i>(data);
+            let mut value = transmute::<[u8; Self::SERIALIZED_SIZE], __m512i>(data);
             value = mod_reduce_epi32(value);
             Ok(AVXM31 { v: value })
         }

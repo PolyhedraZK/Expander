@@ -25,11 +25,11 @@ impl FieldSerde for AVX512GF2_128 {
 
     #[inline(always)]
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut u = [0u8; 16];
+        let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
         unsafe {
             Ok(AVX512GF2_128 {
-                v: transmute::<[u8; 16], __m128i>(u),
+                v: transmute::<[u8; Self::SERIALIZED_SIZE], __m128i>(u),
             })
         }
     }
