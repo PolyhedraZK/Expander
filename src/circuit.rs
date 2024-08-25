@@ -416,6 +416,7 @@ impl<C: GKRConfig> Segment<C> {
     }
 }
 
+#[derive(Default)]
 pub struct RecursiveCircuit<C: GKRConfig> {
     pub segments: Vec<Segment<C>>,
     pub layers: Vec<SegmentId>,
@@ -425,10 +426,7 @@ const MAGIC_NUM: u64 = 3770719418566461763; // b'CIRCUIT4'
 
 impl<C: GKRConfig> RecursiveCircuit<C> {
     pub fn load(filename: &str) -> Self {
-        let mut ret = RecursiveCircuit::<C> {
-            segments: Vec::new(),
-            layers: Vec::new(),
-        };
+        let mut ret = RecursiveCircuit::<C>::default();
         let file_bytes = fs::read(filename).unwrap();
         let mut cursor = Cursor::new(file_bytes);
 
@@ -466,12 +464,7 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
             let mut ret_layer = CircuitLayer {
                 input_var_num: layer_seg.i_var_num,
                 output_var_num: layer_seg.o_var_num,
-                input_vals: vec![],
-                output_vals: vec![],
-                mul: vec![],
-                add: vec![],
-                const_: vec![],
-                uni: vec![],
+                ..Default::default()
             };
             for (leaf_seg_id, leaf_allocs) in leaves {
                 let leaf_seg = &self.segments[leaf_seg_id];
