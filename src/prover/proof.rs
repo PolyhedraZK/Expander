@@ -29,16 +29,13 @@ impl Proof {
 }
 
 impl FieldSerde for Proof {
+    const SERIALIZED_SIZE: usize = panic!("not implemented for Proof");
+
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         (self.bytes.len() as u64).serialize_into(&mut writer)?;
         writer.write_all(&self.bytes)?;
         Ok(())
-    }
-
-    #[inline(always)]
-    fn serialized_size() -> usize {
-        unimplemented!("not implemented for Proof")
     }
 
     #[inline(always)]

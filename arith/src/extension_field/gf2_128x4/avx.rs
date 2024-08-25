@@ -24,6 +24,8 @@ impl AVX512GF2_128x4 {
 }
 
 impl FieldSerde for AVX512GF2_128x4 {
+    const SERIALIZED_SIZE: usize = 512 / 8;
+
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         unsafe {
@@ -32,10 +34,6 @@ impl FieldSerde for AVX512GF2_128x4 {
             writer.write_all(&data)?;
         }
         Ok(())
-    }
-    #[inline(always)]
-    fn serialized_size() -> usize {
-        512 / 8
     }
     #[inline(always)]
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {

@@ -14,11 +14,10 @@ pub type FieldSerdeResult<T> = std::result::Result<T, FieldSerdeError>;
 
 /// Serde for Fields
 pub trait FieldSerde: Sized {
+    const SERIALIZED_SIZE: usize;
+
     /// serialize self into bytes
     fn serialize_into<W: Write>(&self, writer: W) -> FieldSerdeResult<()>;
-
-    /// size of the serialized bytes
-    fn serialized_size() -> usize;
 
     /// deserialize bytes into field
     fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self>;
@@ -28,20 +27,18 @@ pub trait FieldSerde: Sized {
 }
 
 impl FieldSerde for u64 {
+    /// size of the serialized bytes
+    const SERIALIZED_SIZE: usize = 8;
+
     /// serialize u64 into bytes
     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         writer.write_all(&self.to_le_bytes())?;
         Ok(())
     }
 
-    /// size of the serialized bytes
-    fn serialized_size() -> usize {
-        8
-    }
-
     /// deserialize bytes into u64
     fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut buffer = [0u8; 8];
+        let mut buffer = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut buffer)?;
         Ok(u64::from_le_bytes(buffer))
     }

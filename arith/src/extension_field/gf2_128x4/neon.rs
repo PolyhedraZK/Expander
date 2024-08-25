@@ -32,16 +32,13 @@ impl PartialEq for NeonGF2_128x4 {
 }
 
 impl FieldSerde for NeonGF2_128x4 {
+    const SERIALIZED_SIZE: usize = 16 * 4;
+
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         self.v.iter().try_for_each(|&vv| {
             writer.write_all(unsafe { transmute::<uint32x4_t, [u8; 16]>(vv) }.as_ref())
         })
-    }
-
-    #[inline(always)]
-    fn serialized_size() -> usize {
-        16 * 4
     }
 
     #[inline(always)]

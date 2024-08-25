@@ -38,17 +38,14 @@ impl AVXM31 {
 field_common!(AVXM31);
 
 impl FieldSerde for AVXM31 {
+    const SERIALIZED_SIZE: usize = 512 / 8;
+
     #[inline(always)]
     /// serialize self into bytes
     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         let data = unsafe { transmute::<__m512i, [u8; 64]>(self.v) };
         writer.write_all(&data)?;
         Ok(())
-    }
-
-    #[inline(always)]
-    fn serialized_size() -> usize {
-        512 / 8
     }
 
     /// deserialize bytes into field

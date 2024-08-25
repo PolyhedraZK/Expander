@@ -17,16 +17,13 @@ pub struct M31Ext3x16 {
 field_common!(M31Ext3x16);
 
 impl FieldSerde for M31Ext3x16 {
+    const SERIALIZED_SIZE: usize = (512 / 8) * 3;
+
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         self.v[0].serialize_into(&mut writer)?;
         self.v[1].serialize_into(&mut writer)?;
         self.v[2].serialize_into(&mut writer)
-    }
-
-    #[inline(always)]
-    fn serialized_size() -> usize {
-        512 / 8 * 3
     }
 
     // FIXME: this deserialization function auto corrects invalid inputs.

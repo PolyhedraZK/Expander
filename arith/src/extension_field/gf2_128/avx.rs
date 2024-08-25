@@ -15,15 +15,12 @@ pub struct AVX512GF2_128 {
 field_common!(AVX512GF2_128);
 
 impl FieldSerde for AVX512GF2_128 {
+    const SERIALIZED_SIZE: usize = 16;
+
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         unsafe { writer.write_all(transmute::<__m128i, [u8; 16]>(self.v).as_ref())? };
         Ok(())
-    }
-
-    #[inline(always)]
-    fn serialized_size() -> usize {
-        16
     }
 
     #[inline(always)]

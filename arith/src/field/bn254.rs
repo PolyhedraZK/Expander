@@ -115,21 +115,17 @@ impl SimdField for Fr {
 }
 
 impl FieldSerde for Fr {
+    const SERIALIZED_SIZE: usize = 32;
+
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         writer.write_all(self.to_bytes().as_ref())?;
         Ok(())
     }
 
-    /// size of the serialized bytes
-    #[inline(always)]
-    fn serialized_size() -> usize {
-        32
-    }
-
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut buffer = [0u8; 32];
+        let mut buffer = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut buffer)?;
         match Fr::from_bytes(&buffer).into_option() {
             Some(v) => Ok(v),
@@ -139,7 +135,7 @@ impl FieldSerde for Fr {
 
     #[inline]
     fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut buffer = [0u8; 32];
+        let mut buffer = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut buffer)?;
         match Fr::from_bytes(&buffer).into_option() {
             Some(v) => Ok(v),
