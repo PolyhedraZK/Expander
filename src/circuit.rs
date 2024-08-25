@@ -113,8 +113,7 @@ impl<C: GKRConfig> Clone for Circuit<C> {
     fn clone(&self) -> Circuit<C> {
         let mut ret = Circuit::<C> {
             layers: self.layers.clone(),
-            rnd_coefs_identified: false,
-            rnd_coefs: vec![],
+            ..Default::default()
         };
 
         if self.rnd_coefs_identified {
@@ -124,12 +123,11 @@ impl<C: GKRConfig> Clone for Circuit<C> {
     }
 }
 
-// FIXME: not 100% sure this is correct
-unsafe impl<C: GKRConfig> Send for Circuit<C> {}
+unsafe impl<C> Send for Circuit<C> where C: GKRConfig {}
 
 impl<C: GKRConfig> Circuit<C> {
     pub fn load_circuit(filename: &str) -> Self {
-        let rc = RecursiveCircuit::<C>::load(filename);
+        let rc = RecursiveCircuit::<C>::load(filename).unwrap();
         rc.flatten()
     }
 
@@ -205,6 +203,7 @@ pub struct Allocation {
     pub o_offset: usize,
 }
 
+#[derive(Default)]
 pub struct Segment<C: GKRConfig> {
     pub i_var_num: usize,
     pub o_var_num: usize,
@@ -245,13 +244,10 @@ impl<C: GKRConfig> Circuit<C> {
         }
 
         let mut cursor = Cursor::new(file_bytes);
-        let mut evals = vec![];
-        for _ in 0..(1 << self.log_input_size()) {
-            evals.push(C::SimdCircuitField::try_deserialize_from_ecc_format(
-                &mut cursor,
-            )?);
-        }
-        self.layers[0].input_vals = evals;
+        self.layers[0].input_vals = (0..(1 << self.log_input_size()))
+            .map(|_| C::SimdCircuitField::try_deserialize_from_ecc_format(&mut cursor))
+            .collect::<std::result::Result<_, _>>()?;
+
         Ok(())
     }
 }
@@ -273,11 +269,7 @@ impl<C: GKRConfig> Segment<C> {
         let mut ret = Segment::<C> {
             i_var_num: i_len.trailing_zeros() as usize,
             o_var_num: o_len.trailing_zeros() as usize,
-            child_segs: Vec::new(),
-            gate_muls: Vec::new(),
-            gate_adds: Vec::new(),
-            gate_consts: Vec::new(),
-            gate_uni: Vec::new(),
+            ..Default::default()
         };
 
         let child_segs_num = u64::deserialize_from(&mut reader)? as usize;
@@ -425,34 +417,34 @@ pub struct RecursiveCircuit<C: GKRConfig> {
 const MAGIC_NUM: u64 = 3770719418566461763; // b'CIRCUIT4'
 
 impl<C: GKRConfig> RecursiveCircuit<C> {
-    pub fn load(filename: &str) -> Self {
+    pub fn load(filename: &str) -> std::result::Result<Self, CircuitError> {
         let mut ret = RecursiveCircuit::<C>::default();
-        let file_bytes = fs::read(filename).unwrap();
+        let file_bytes = fs::read(filename)?;
         let mut cursor = Cursor::new(file_bytes);
 
-        let magic_num = u64::deserialize_from(&mut cursor).unwrap(); // TODO: error propagation
+        let magic_num = u64::deserialize_from(&mut cursor)?;
         assert_eq!(magic_num, MAGIC_NUM);
 
         let field_mod = [
-            u64::deserialize_from(&mut cursor),
-            u64::deserialize_from(&mut cursor),
-            u64::deserialize_from(&mut cursor),
-            u64::deserialize_from(&mut cursor),
+            u64::deserialize_from(&mut cursor)?,
+            u64::deserialize_from(&mut cursor)?,
+            u64::deserialize_from(&mut cursor)?,
+            u64::deserialize_from(&mut cursor)?,
         ];
         log::trace!("field mod: {:?}", field_mod);
-        let segment_num = u64::deserialize_from(&mut cursor).unwrap(); // TODO: error propagation
+        let segment_num = u64::deserialize_from(&mut cursor)?;
         for _ in 0..segment_num {
-            let seg = Segment::<C>::read(&mut cursor).unwrap(); // TODO: error propagation
+            let seg = Segment::<C>::read(&mut cursor)?;
             ret.segments.push(seg);
         }
 
-        let layer_num = u64::deserialize_from(&mut cursor).unwrap(); // TODO: error propagation
+        let layer_num = u64::deserialize_from(&mut cursor)?;
         for _ in 0..layer_num {
-            let layer_id = u64::deserialize_from(&mut cursor).unwrap() as SegmentId; // TODO: error propagation
+            let layer_id = u64::deserialize_from(&mut cursor)? as SegmentId;
 
             ret.layers.push(layer_id);
         }
-        ret
+        Ok(ret)
     }
 
     pub fn flatten(&self) -> Circuit<C> {
