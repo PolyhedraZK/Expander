@@ -93,6 +93,8 @@ impl<C: GKRConfig> Prover<C> {
         c.fill_rnd_coefs(&mut transcript);
         c.evaluate();
 
+        println!("Output: {:?}", c.layers.last().unwrap().output_vals);
+
         let claimed_v: C::Field;
         let mut _rz0s = vec![];
         let mut _rz1s = vec![];

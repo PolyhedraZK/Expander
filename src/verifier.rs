@@ -7,14 +7,25 @@ use ark_std::{end_timer, start_timer};
 use crate::grind;
 
 use crate::{
-    eq_evals_at_primitive, Circuit, CircuitLayer, Config, GKRConfig, Gate, Proof, RawCommitment,
-    Transcript,
+    eq_evals_at_primitive, Circuit, CircuitLayer, Config, FieldType, GKRConfig, Gate, Proof, RawCommitment, Transcript
 };
 
 #[inline]
 fn degree_2_eval<F: Field + SimdField>(p0: F, p1: F, p2: F, x: F::Scalar) -> F {
     let c0 = &p0;
     let c2 = F::INV_2 * (p2 - p1 - p1 + p0);
+    let c1 = p1 - p0 - c2;
+    *c0 + (c2.scale(&x) + c1).scale(&x)
+}
+
+#[inline]
+fn gf2_sp_eval<F: Field + SimdField>(p0: F, p1: F, p2: F, x: F::Scalar) -> F {
+    let eval_point = F::Scalar::from_uniform_bytes(&[1u8; 32]);
+
+    let c0 = &p0;
+    let c2 = (p2 - p0 - p1.scale(&eval_point) + p0.scale(&eval_point)).scale(
+        &(eval_point.square() - eval_point).inv().unwrap()
+    );
     let c1 = p1 - p0 - c2;
     *c0 + (c2.scale(&x) + c1).scale(&x)
 }
@@ -103,11 +114,19 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
             ry.push(r);
         }
         verified &= (p0 + p1) == sum;
+        println!("Var {} verified? {}", i_var, verified);
 
-        sum = degree_2_eval(p0, p1, p2, r);
+        println!("p0: {:?}, p1: {:?}, p2: {:?}", p0, p1, p2);
+        if C::FIELD_TYPE == FieldType::GF2 {
+            sum = gf2_sp_eval(p0, p1, p2, r);
+        } else {
+            sum = degree_2_eval(p0, p1, p2, r);
+        }
+        println!("Sum for next {:?}", sum);
 
         if i_var == var_num - 1 {
             vx_claim = proof.get_next_and_step();
+            println!("alpha {:?}, beta {:?}, vx_claim {:?}", alpha, beta, vx_claim);
             sum -= vx_claim.scale(&eval_sparse_circuit_connect_poly(
                 &layer.add,
                 rz0,
@@ -116,6 +135,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
                 beta,
                 &[rx.clone()],
             ));
+            println!("Sum after half {:?}", sum);
             transcript.append_f::<C>(vx_claim);
         }
     }
@@ -163,6 +183,7 @@ pub fn gkr_verify<C: GKRConfig>(
 
     let mut verified = true;
     for i in (0..layer_num).rev() {
+        println!("Verifying layer {}", i);
         let cur_verified;
         (cur_verified, rz0, rz1, claimed_v0, claimed_v1) = sumcheck_verify_gkr_layer(
             &circuit.layers[i],
@@ -238,6 +259,7 @@ impl<C: GKRConfig> Verifier<C> {
         let (mut verified, rz0, rz1, claimed_v0, claimed_v1) =
             gkr_verify(circuit, claimed_v, &mut transcript, &mut proof);
 
+        println!("Gkr verified? {}", verified);
         log::info!("GKR verification: {}", verified);
 
         match self.config.polynomial_commitment_type {

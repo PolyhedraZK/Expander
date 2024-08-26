@@ -1,6 +1,6 @@
-use arith::{Field, SimdField};
+use arith::{Field, SimdField, GF2, GF2_128};
 
-use crate::{CircuitLayer, GKRConfig, GkrScratchpad};
+use crate::{CircuitLayer, FieldType, GKRConfig, GkrScratchpad};
 
 #[inline(always)]
 fn _eq<F: Field>(x: &F, y: &F) -> F {
@@ -77,6 +77,47 @@ impl SumcheckMultilinearProdHelper {
 
         let eval_size = 1 << (self.var_num - var_idx - 1);
         log::trace!("Eval size: {}", eval_size);
+
+        let sp_process_gf2 = true;
+        if sp_process_gf2 && C::FIELD_TYPE == FieldType::GF2 {
+            let eval_point = C::ChallengeField::from_uniform_bytes(&[1u8; 32]);
+            let mut eqs = [C::ChallengeField::zero(); 2];
+            eq_evals_at_primitive(&[eval_point], &C::ChallengeField::one(), &mut eqs);
+            eqs[0] *= eqs[0];
+            eqs[1] *= eqs[1];
+
+            if var_idx == 0 {
+                for i in 0..eval_size {
+                    if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
+                        continue;
+                    }
+    
+                    let f_v_0 = init_v[i * 2];
+                    let f_v_1 = init_v[i * 2 + 1];
+                    let hg_v_0 = bk_hg[i * 2];
+                    let hg_v_1 = bk_hg[i * 2 + 1];
+                    p0 += C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
+                    p1 += C::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
+                    p2 += C::challenge_mul_field(&eqs[0], &C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0)) +
+                        C::challenge_mul_field(&eqs[1],&C::field_mul_simd_circuit_field(&hg_v_1, &f_v_1))                }
+            } else {
+                for i in 0..eval_size {
+                    if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
+                        continue;
+                    }
+    
+                    let f_v_0 = bk_f[i * 2];
+                    let f_v_1 = bk_f[i * 2 + 1];
+                    let hg_v_0 = bk_hg[i * 2];
+                    let hg_v_1 = bk_hg[i * 2 + 1];
+                    p0 += f_v_0 * hg_v_0;
+                    p1 += f_v_1 * hg_v_1;
+                    p2 += C::challenge_mul_field(&eqs[0], &(f_v_0 * hg_v_0)) +
+                        C::challenge_mul_field(&eqs[1],&( f_v_1 * hg_v_1 ));
+                }
+            }
+            return [p0, p1, p2];
+        }
 
         if var_idx == 0 {
             for i in 0..eval_size {
