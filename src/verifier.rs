@@ -63,7 +63,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     alpha: C::ChallengeField,
     beta: C::ChallengeField,
     proof: &mut Proof,
-    transcript: &mut Transcript,
+    transcript: &mut Transcript<C::FiatShamirHashType>,
 ) -> (
     bool,
     Vec<C::ChallengeField>,
@@ -139,7 +139,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
 pub fn gkr_verify<C: GKRConfig>(
     circuit: &Circuit<C>,
     claimed_v: &C::Field,
-    transcript: &mut Transcript,
+    transcript: &mut Transcript<C::FiatShamirHashType>,
     proof: &mut Proof,
 ) -> (
     bool,

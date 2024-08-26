@@ -186,7 +186,7 @@ impl<C: GKRConfig> Circuit<C> {
         self.rnd_coefs_identified = true;
     }
 
-    pub fn fill_rnd_coefs(&mut self, transcript: &mut Transcript) {
+    pub fn fill_rnd_coefs(&mut self, transcript: &mut Transcript<C::FiatShamirHashType>) {
         assert!(self.rnd_coefs_identified);
         for &rnd_coef_ptr in &self.rnd_coefs {
             unsafe {

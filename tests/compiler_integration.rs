@@ -1,7 +1,7 @@
 use std::fs;
 
 use arith::{Field, M31x16};
-use expander_rs::{Circuit, Config, GKRScheme, M31ExtConfig, Prover, Verifier};
+use expander_rs::{Circuit, Config, GKRScheme, M31ExtConfigSha2, Prover, Verifier};
 use rand::Rng;
 
 const FILENAME_CIRCUIT: &str = "data/circuit.txt";
@@ -10,9 +10,9 @@ const FILENAME_PROOF: &str = "data/proof.bin";
 
 #[test]
 fn test_compiler_format_integration() {
-    let config = Config::<M31ExtConfig>::new(GKRScheme::Vanilla);
+    let config = Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla);
 
-    let mut circuit = Circuit::<M31ExtConfig>::load_circuit(FILENAME_CIRCUIT);
+    let mut circuit = Circuit::<M31ExtConfigSha2>::load_circuit(FILENAME_CIRCUIT);
     println!("Circuit loaded.");
     circuit.load_witness_file(FILENAME_WITNESS);
     println!("Witness loaded.");
@@ -47,7 +47,7 @@ fn test_compiler_format_integration() {
 #[test]
 fn test_compiler_format_integration_no_prove() {
     println!("Config created.");
-    let mut circuit = Circuit::<M31ExtConfig>::load_circuit(FILENAME_CIRCUIT);
+    let mut circuit = Circuit::<M31ExtConfigSha2>::load_circuit(FILENAME_CIRCUIT);
     println!("Circuit loaded.");
     circuit.load_witness_file(FILENAME_WITNESS);
     println!("Witness loaded.");

@@ -11,7 +11,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     rz1: &[C::ChallengeField],
     alpha: &C::ChallengeField,
     beta: &C::ChallengeField,
-    transcript: &mut Transcript,
+    transcript: &mut Transcript<C::FiatShamirHashType>,
     sp: &mut GkrScratchpad<C>,
 ) -> (Vec<C::ChallengeField>, Vec<C::ChallengeField>) {
     let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, alpha, beta, sp);
@@ -58,7 +58,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
 pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
-    transcript: &mut Transcript,
+    transcript: &mut Transcript<C::FiatShamirHashType>,
     sp: &mut GkrScratchpad<C>,
 ) -> Vec<C::ChallengeField> {
     const D: usize = 7;
