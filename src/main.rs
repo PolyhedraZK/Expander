@@ -3,9 +3,10 @@ use std::{
     thread,
 };
 
+use arith::Field;
 use clap::Parser;
 use expander_rs::{
-    BN254Config, Circuit, Config, GF2ExtConfig, GKRConfig, GKRScheme, M31ExtConfig, Prover,
+    BN254Config, Circuit, Config, FieldType, GF2ExtConfig, GKRConfig, GKRScheme, M31ExtConfig, Prover
 };
 
 // circuit for repeating Keccak for 2 times
@@ -88,9 +89,12 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         _ => unreachable!(),
     };
 
-    let circuit_copy_size: usize = match args.scheme.as_str() {
-        "keccak" => 2,
-        "poseidon" => 120,
+    let circuit_copy_size: usize = match (C::FIELD_TYPE, args.scheme.as_str()) {
+        (FieldType::GF2, "keccak") => 8,
+        (FieldType::M31, "keccak") => 2,
+        (FieldType::BN254, "keccak") => 2,
+        (FieldType::M31, "poseidon") => 120,
+        (FieldType::BN254, "poseidon") => 120,
         _ => unreachable!(),
     };
 

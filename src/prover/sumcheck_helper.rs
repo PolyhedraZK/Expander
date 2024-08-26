@@ -78,8 +78,7 @@ impl SumcheckMultilinearProdHelper {
         let eval_size = 1 << (self.var_num - var_idx - 1);
         log::trace!("Eval size: {}", eval_size);
 
-        let sp_process_gf2 = true;
-        if sp_process_gf2 && C::FIELD_TYPE == FieldType::GF2 {
+        if C::FIELD_TYPE == FieldType::GF2 {
             let eval_point = C::ChallengeField::from_uniform_bytes(&[1u8; 32]);
             let mut eqs = [C::ChallengeField::zero(); 2];
             eq_evals_at_primitive(&[eval_point], &C::ChallengeField::one(), &mut eqs);
