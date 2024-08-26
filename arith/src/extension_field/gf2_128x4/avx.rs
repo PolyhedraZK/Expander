@@ -62,7 +62,9 @@ impl FieldSerde for AVX512GF2_128x4 {
         })
     }
 }
+
 const PACKED_0: __m512i = unsafe { transmute([0; 16]) };
+
 const PACKED_INV_2: __m512i = unsafe {
     transmute([
         67_u64,
