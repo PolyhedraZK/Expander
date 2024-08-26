@@ -98,8 +98,9 @@ impl SumcheckMultilinearProdHelper {
                     let hg_v_1 = bk_hg[i * 2 + 1];
                     p0 += C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
                     p1 += C::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
-                    p2 += C::challenge_mul_field(&eqs[0], &C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0)) +
-                        C::challenge_mul_field(&eqs[1],&C::field_mul_simd_circuit_field(&hg_v_1, &f_v_1))                }
+                    p2 += (C::field_add_simd_circuit_field(&C::simd_circuit_field_mul_challenge_field(&(f_v_1 - f_v_0), &eval_point), &f_v_0)) * 
+                         (C::challenge_mul_field(&eval_point, &(hg_v_1 - hg_v_0)) + hg_v_0);
+                }
             } else {
                 for i in 0..eval_size {
                     if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
@@ -112,8 +113,9 @@ impl SumcheckMultilinearProdHelper {
                     let hg_v_1 = bk_hg[i * 2 + 1];
                     p0 += f_v_0 * hg_v_0;
                     p1 += f_v_1 * hg_v_1;
-                    p2 += C::challenge_mul_field(&eqs[0], &(f_v_0 * hg_v_0)) +
-                        C::challenge_mul_field(&eqs[1],&( f_v_1 * hg_v_1 ));
+                    p2 +=  (C::challenge_mul_field(&eval_point, &(f_v_1 - f_v_0)) + f_v_0) *                         
+                        (C::challenge_mul_field(&eval_point, &(hg_v_1 - hg_v_0)) + hg_v_0);
+
                 }
             }
             return [p0, p1, p2];

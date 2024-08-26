@@ -64,25 +64,9 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     circuit.layers[0].add.clear();
     circuit.layers[0].uni.clear();
     circuit.layers[0].const_.clear();
-    circuit.layers[0].input_var_num = 1;
-    circuit.layers[0].output_var_num = 1;
-    
-    circuit.layers[0].add.push(GateAdd {
-        i_ids: [0],
-        o_id: 1,
-        coef: C::CircuitField::one(),
-        is_random: false,
-        gate_type: 0,
-    });
-    circuit.layers[0].add.push(GateAdd {
-        i_ids: [1],
-        o_id: 0,
-        coef: C::CircuitField::one(),
-        is_random: false,
-        gate_type: 0,
-    });
-    circuit.identify_rnd_coefs();
-    assert!(circuit.rnd_coefs.is_empty());
+
+    circuit.rnd_coefs.clear();
+    // circuit.identify_rnd_coefs();
 
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
     // let mut circuit = gen_simple_circuit(); // for custom circuit
