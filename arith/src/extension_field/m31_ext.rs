@@ -283,6 +283,7 @@ fn add_internal(a: &M31Ext3, b: &M31Ext3) -> M31Ext3 {
     M31Ext3 { v: vv }
 }
 
+#[inline(always)]
 fn sub_internal(a: &M31Ext3, b: &M31Ext3) -> M31Ext3 {
     let mut vv = a.v;
     vv[0] -= b.v[0];

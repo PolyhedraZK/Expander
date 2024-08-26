@@ -416,7 +416,7 @@ fn sub_internal(a: &AVX512GF2_128x4, b: &AVX512GF2_128x4) -> AVX512GF2_128x4 {
     }
 }
 
-#[inline(always)]
+#[inline]
 fn mul_internal(a: &AVX512GF2_128x4, b: &AVX512GF2_128x4) -> AVX512GF2_128x4 {
     unsafe {
         let xmmmask = _mm512_set_epi32(
