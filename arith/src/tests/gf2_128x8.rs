@@ -8,9 +8,6 @@ use super::{
 };
 #[test]
 fn test_field() {
-    println!("{:?}", GF2_128x8::INV_2 * (GF2_128x8::one() + GF2_128x8::one()));
-    println!("{:?}", GF2_128x8::one());
-
     random_field_tests::<GF2_128>("M31 Ext3".to_string());
     random_extension_field_tests::<GF2_128>("M31 Ext3".to_string());
 

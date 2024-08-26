@@ -32,14 +32,12 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
         transcript.append_f::<C>(evals[2]);
 
         let r = transcript.challenge_f::<C>();
-        println!("Prover var {} challenge r {:?}", i_var, r);
 
         log::trace!("i_var={} evals: {:?} r: {:?}", i_var, evals, r);
 
         helper.receive_challenge(i_var, r);
         if i_var == layer.input_var_num - 1 {
             log::trace!("vx claim: {:?}", helper.vx_claim());
-            println!("alpha {:?}, beta {:?}, vx_claim {:?}", alpha, beta, helper.vx_claim());
             transcript.append_f::<C>(helper.vx_claim());
         }
     }

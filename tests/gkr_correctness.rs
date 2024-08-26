@@ -59,22 +59,13 @@ fn test_gkr_correctness() {
 fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     println!("Config created.");
     let mut circuit = Circuit::<C>::load_circuit(CIRCUIT_NAME);
-    circuit.layers.resize(1, CircuitLayer::<C>::default());
-    circuit.layers[0].mul.clear();
-    circuit.layers[0].add.clear();
-    circuit.layers[0].uni.clear();
-    circuit.layers[0].const_.clear();
-
-    circuit.rnd_coefs.clear();
-    // circuit.identify_rnd_coefs();
+    circuit.identify_rnd_coefs();
 
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
     // let mut circuit = gen_simple_circuit(); // for custom circuit
     println!("Circuit loaded.");
 
     circuit.set_random_input_for_test();
-
-    println!("Inputs: {:?}", circuit.layers[0].input_vals);
 
     // for fixed input
     // for i in 0..(1 << circuit.log_input_size()) {
