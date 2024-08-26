@@ -49,7 +49,7 @@ impl FieldSerde for NeonGF2_128x4 {
             let mut u = [0u8; 16];
             reader.read_exact(&mut u)?;
             *vv = unsafe { transmute::<[u8; 16], uint32x4_t>(u) };
-            Ok::<(), std::io::Error>(())
+            Ok::<_, std::io::Error>(())
         })?;
         Ok(res)
     }
@@ -61,7 +61,7 @@ impl FieldSerde for NeonGF2_128x4 {
             let mut u = [0u8; 32];
             reader.read_exact(&mut u)?;
             *vv = unsafe { transmute::<[u8; 16], uint32x4_t>(u[..16].try_into().unwrap()) };
-            Ok::<(), std::io::Error>(())
+            Ok::<_, std::io::Error>(())
         })?;
         Ok(res)
     }
