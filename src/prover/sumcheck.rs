@@ -90,3 +90,62 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
 
     helper.rx
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{BN254ConfigKeccak, Circuit, GKRConfig, GkrScratchpad, sumcheck_prove_gkr_layer, RawCommitment, Transcript, Keccak256hasher};
+
+    type C = BN254ConfigKeccak;
+
+    #[test]
+    fn test_sumcheck_cuda(){
+        // Field: BN254 Scalar; Fiat Shamir Hash Function: Keccak256; Scheme: Vanilla GKR
+
+        // Sumcheck Outstanding Results
+        let mut rz0 = vec![];
+        let mut rz1 = vec![];
+
+        // Random Linear Combination
+        let mut alpha = <C as GKRConfig>::ChallengeField::one();
+        let mut beta = <C as GKRConfig>::ChallengeField::zero();
+
+        // Loading Circuit (hard-coded keccak circuit for now)
+        let mut circuit = Circuit::<BN254ConfigKeccak>::load_circuit("data/circuit.txt");
+        circuit.set_random_input_for_test();
+        circuit.evaluate();
+        let layer_num = circuit.layers.len();
+
+        // Define the scratchpad
+        let max_num_input_var = circuit
+            .layers.iter()
+            .map(|layer| layer.input_var_num)
+            .max().unwrap();
+        let max_num_output_var = circuit
+            .layers.iter()
+            .map(|layer| layer.output_var_num)
+            .max().unwrap();
+        let mut sp = GkrScratchpad::<BN254ConfigKeccak>::new(max_num_input_var, max_num_output_var);
+
+        // Do the PC commitment to initial the transcript
+        let commitment = RawCommitment::<C>::new(&circuit.layers[0].input_vals);
+        let mut buffer = vec![];
+        commitment.serialize_into(&mut buffer);
+        let mut transcript = Transcript::<Keccak256hasher>::new();
+        transcript.append_u8_slice(&buffer);
+
+        // Do SumCheck Once
+        for i in (0..layer_num).rev() {
+            (rz0, rz1) = sumcheck_prove_gkr_layer(
+                &circuit.layers[i],
+                &rz0,
+                &rz1,
+                &alpha,
+                &beta,
+                &mut transcript,
+                &mut sp,
+            );
+            alpha = transcript.challenge_f::<C>();
+            beta = transcript.challenge_f::<C>();
+        }
+    }
+}
