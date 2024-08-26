@@ -184,6 +184,7 @@ impl From<GF2> for AVX512GF2_128 {
     }
 }
 
+#[inline]
 unsafe fn gfmul(a: __m128i, b: __m128i) -> __m128i {
     let xmm_mask = _mm_setr_epi32((0xffffffff_u32) as i32, 0x0, 0x0, 0x0);
 
