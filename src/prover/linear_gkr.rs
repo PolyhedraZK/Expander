@@ -21,7 +21,7 @@ pub(crate) fn grind<C: GKRConfig>(transcript: &mut Transcript, config: &Config<C
     let initial_hash = transcript.challenge_fs::<C>(num_field_elements);
     initial_hash
         .iter()
-        .for_each(|h| h.serialize_into(&mut hash_bytes));
+        .for_each(|h| h.serialize_into(&mut hash_bytes).unwrap());
 
     assert!(hash_bytes.len() >= 32, "hash len: {}", hash_bytes.len());
     hash_bytes.truncate(32);
