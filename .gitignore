@@ -30,6 +30,7 @@ output.txt
 
 # circuit files
 /data/*
+gkr/data/*
 
 # idea
 .idea/

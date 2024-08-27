@@ -113,7 +113,7 @@ mod tests {
         let mut beta = <C as GKRConfig>::ChallengeField::zero();
 
         // Loading Circuit (hard-coded keccak circuit for now)
-        let mut circuit = Circuit::<BN254ConfigKeccak>::load_circuit("data/circuit.txt");
+        let mut circuit = Circuit::<BN254ConfigKeccak>::load_circuit("../data/circuit.txt");
         circuit.set_random_input_for_test();
         circuit.evaluate();
         let layer_num = circuit.layers.len();

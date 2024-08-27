@@ -1,0 +1,45 @@
+[package]
+name = "expander-rs"
+version = "0.1.0"
+edition = "2021"
+default-run = "expander-rs" # default
+
+[dependencies]
+arith = { path = "../arith" }
+ark-std.workspace = true
+clap.workspace = true
+env_logger.workspace = true
+log.workspace = true
+rand.workspace = true
+sha2.workspace = true
+halo2curves.workspace = true
+thiserror.workspace = true
+
+# for the server
+bytes.workspace = true
+tokio.workspace = true
+warp.workspace = true
+chrono.workspace = true
+tynm.workspace = true
+tiny-keccak.workspace = true
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bin]]
+name = "expander-exec"
+path = "src/exec.rs"
+
+[[bin]]
+name = "dev-setup"
+path = "src/utils.rs"
+
+[features]
+default = []
+# default = [ "grinding" ]
+grinding = []
+
+[[bench]]
+name = "gkr-hashes"
+harness = false
+path = "benches/gkr_hashes.rs"
