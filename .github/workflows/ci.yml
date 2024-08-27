@@ -74,7 +74,7 @@ jobs:
       - run: wget -P data https://storage.googleapis.com/keccak8/witness.txt
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 2 -f fr
   Bench-mac-gf2-ext128:
-    name: Bench-max-gf2ext128
+    name: Bench-mac-gf2ext128
     runs-on: macos-latest
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
