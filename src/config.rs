@@ -1,10 +1,14 @@
 mod bn254_keccak;
 mod bn254_sha2;
+mod gf2_ext_keccak;
+mod gf2_ext_sha2;
 mod m31_ext_keccak;
 mod m31_ext_sha2;
 
 pub use bn254_keccak::BN254ConfigKeccak;
 pub use bn254_sha2::BN254ConfigSha2;
+pub use gf2_ext_keccak::GF2ExtConfigKeccak;
+pub use gf2_ext_sha2::GF2ExtConfigSha2;
 pub use m31_ext_keccak::M31ExtConfigKeccak;
 pub use m31_ext_sha2::M31ExtConfigSha2;
 

@@ -6,11 +6,9 @@ use std::{
 use clap::Parser;
 use expander_rs::utils::{KECCAK_CIRCUIT, POSEIDON_CIRCUIT};
 use expander_rs::{
-    
-    BN254ConfigSha2, Circuit, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2,
-    Prover,
+    BN254ConfigSha2, Circuit, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme,
+    M31ExtConfigSha2, Prover,
 };
-
 
 /// ...
 #[derive(Parser, Debug)]

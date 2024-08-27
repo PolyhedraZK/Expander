@@ -1,7 +1,8 @@
 use expander_rs::utils::*;
 use expander_rs::{
-    BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GKRConfig, GKRScheme,
-    GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2, Prover, Verifier, GF2ExtConfigKeccak, GF2ExtConfigSha2
+    BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GF2ExtConfigKeccak,
+    GF2ExtConfigSha2, GKRConfig, GKRScheme, GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2,
+    Prover, Verifier,
 };
 use std::panic;
 use std::panic::AssertUnwindSafe;

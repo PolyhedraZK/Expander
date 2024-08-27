@@ -1,6 +1,9 @@
 use crate::{field_common, GF2x8, GF2};
 
-use crate::{BinomialExtensionField, Field, FieldSerde, FieldSerdeResult, SimdField, GF2_128};
+use crate::{
+    BinomialExtensionField, Field, FieldSerde, FieldSerdeError, FieldSerdeResult, SimdField,
+    GF2_128,
+};
 use std::fmt::Debug;
 use std::{
     arch::x86_64::*,
@@ -26,7 +29,6 @@ impl AVX512GF2_128x8 {
 }
 
 impl FieldSerde for AVX512GF2_128x8 {
-
     const SERIALIZED_SIZE: usize = 512 * 2 / 8;
 
     #[inline(always)]
@@ -41,7 +43,9 @@ impl FieldSerde for AVX512GF2_128x8 {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> Self {
+    fn deserialize_from<R: std::io::Read>(
+        mut reader: R,
+    ) -> Result<AVX512GF2_128x8, FieldSerdeError> {
         let mut data = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut data).unwrap();
         unsafe {
