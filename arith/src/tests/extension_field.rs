@@ -1,9 +1,7 @@
-use std::mem::transmute;
-
 use ark_std::test_rng;
 
 use crate::field::Field;
-use crate::{ExtensionField, GF2_128};
+use crate::ExtensionField;
 
 pub(crate) fn random_extension_field_tests<F: ExtensionField>(_name: String) {
     let mut rng = test_rng();
@@ -45,20 +43,11 @@ pub(crate) fn random_extension_field_tests<F: ExtensionField>(_name: String) {
         }
 
         {
-            let a = GF2_128::random_unsafe(&mut rng);
-            let b = GF2_128::X;
+            let a = F::random_unsafe(&mut rng);
+            let b = F::X;
             let ax = a.mul_by_x();
             let ab = a * b;
-            unsafe {
-                println!("a     {:02x?}", transmute::<_, [u8; 16]>(a));
-                println!("a*x   {:02x?}", transmute::<_, [u8; 16]>(ax));
-                println!("a*b   {:02x?}", transmute::<_, [u8; 16]>(ab));
-            }
             assert_eq!(ax, ab);
         }
     }
 }
-// pub(crate) fn random_extension_field_tests_g2f128() {
-//     let mut rng = test_rng();
-
-// }

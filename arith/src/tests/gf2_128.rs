@@ -14,7 +14,7 @@ fn test_field() {
     random_field_tests::<GF2_128>("GF2_128".to_string());
     random_extension_field_tests::<GF2_128>("GF2_128".to_string());
     random_field_tests::<GF2_128x4>("Vectorized GF2_128".to_string());
-    // random_extension_field_tests::<GF2_128x4>("Vectorized GF2_128".to_string());
+    random_extension_field_tests::<GF2_128x4>("Vectorized GF2_128".to_string());
 
     let mut rng = test_rng();
     random_inversion_tests::<GF2_128, _>(&mut rng, "GF2_128".to_string());
