@@ -8,7 +8,7 @@ use std::{
 
 use crate::{field_common, mod_reduce_u32, Field, FieldSerde, FieldSerdeResult, M31};
 
-use super::BinomialExtensionField;
+use super::ExtensionField;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct M31Ext3 {
@@ -56,10 +56,15 @@ impl Field for M31Ext3 {
     const NAME: &'static str = "Mersenne 31 Extension 3";
 
     const SIZE: usize = 32 / 8 * 3;
+
     const FIELD_SIZE: usize = 32 * 3;
 
     const ZERO: Self = M31Ext3 {
         v: [M31::ZERO, M31::ZERO, M31::ZERO],
+    };
+
+    const ONE: Self = M31Ext3 {
+        v: [M31::ONE, M31::ZERO, M31::ZERO],
     };
 
     const INV_2: M31Ext3 = M31Ext3 {
@@ -157,11 +162,15 @@ impl Field for M31Ext3 {
     }
 }
 
-impl BinomialExtensionField for M31Ext3 {
+impl ExtensionField for M31Ext3 {
     const DEGREE: usize = 3;
 
     /// Extension Field
     const W: u32 = 5;
+
+    const X: Self = M31Ext3 {
+        v: [M31::ZERO, M31::ONE, M31::ZERO],
+    };
 
     /// Base field for the extension
     type BaseField = M31;
@@ -182,6 +191,14 @@ impl BinomialExtensionField for M31Ext3 {
         let mut res = self.v;
         res[0] += base;
         Self { v: res }
+    }
+
+    /// Multiply the extension field by x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
+    #[inline(always)]
+    fn mul_by_x(&self) -> Self {
+        Self {
+            v: [self.v[2].mul_by_5(), self.v[0], self.v[1]],
+        }
     }
 }
 

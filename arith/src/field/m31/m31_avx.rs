@@ -82,6 +82,10 @@ impl Field for AVXM31 {
 
     const ZERO: Self = Self { v: PACKED_0 };
 
+    const ONE: Self = Self {
+        v: unsafe { transmute([1; M31_PACK_SIZE]) },
+    };
+
     const INV_2: Self = Self { v: PACKED_INV_2 };
 
     const FIELD_SIZE: usize = 32;

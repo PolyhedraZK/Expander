@@ -1,4 +1,4 @@
-use crate::field_common;
+use crate::{field_common, ExtensionField};
 
 use crate::{Field, FieldSerde, FieldSerdeResult, SimdField, GF2_128};
 use std::fmt::Debug;
@@ -80,6 +80,10 @@ impl Field for AVX512GF2_128x4 {
     const SIZE: usize = 512 / 8;
 
     const ZERO: Self = Self { data: PACKED_0 };
+
+    const ONE: Self = Self {
+        data: unsafe { transmute::<[u64; 8], _>([1, 0, 1, 0, 1, 0, 1, 0]) },
+    };
 
     const INV_2: Self = Self { data: PACKED_INV_2 };
 
@@ -391,6 +395,67 @@ impl SimdField for AVX512GF2_128x4 {
     #[inline(always)]
     fn pack_size() -> usize {
         4
+    }
+}
+
+impl ExtensionField for AVX512GF2_128x4 {
+    const DEGREE: usize = GF2_128::DEGREE;
+
+    const W: u32 = GF2_128::W;
+
+    const X: Self = Self {
+        data: unsafe { transmute([2u64, 0, 2u64, 0, 2u64, 0, 2u64, 0]) },
+    };
+
+    type BaseField = GF2_128;
+
+    #[inline(always)]
+    fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
+        let simd_base = AVX512GF2_128x4::from(*base);
+        *self * simd_base
+    }
+
+    #[inline(always)]
+    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
+        unsafe {
+            let base_vec = transmute::<_, u128>(*base);
+            let mut res = transmute::<_, [u128; 4]>(*self);
+            res[0] ^= base_vec;
+            Self {
+                data: transmute(res),
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn mul_by_x(&self) -> Self {
+        unsafe {
+            // Shift left by 1 bit
+            let shifted = _mm512_slli_epi64(self.data, 1);
+
+            // Get the most significant bit
+            let msb = _mm512_srli_epi64(self.data, 63);
+
+            // Shift the msb to the least significant bit of the high 64 bits
+            // We need to use a different approach for AVX-512
+            let msb_moved = _mm512_shuffle_epi32(msb, 0b10110001);
+
+            // Combine the shifted value with the moved msb
+            let result = _mm512_or_si512(shifted, msb_moved);
+
+            // If the msb was 1, XOR with the reduction polynomial
+            let mask = _mm512_cmpeq_epi64_mask(msb, _mm512_set1_epi64(1));
+
+            // Gamma: 0x87 := x^128 + x^7 + x^2 + x + 1
+            let gamma = _mm512_set1_epi64(0x87);
+
+            // Use the mask to select either (0, 0x87) or (0, 0) for each 128-bit element
+            let reduction = _mm512_maskz_mov_epi64(mask, gamma);
+
+            let res = _mm512_xor_si512(result, reduction);
+
+            AVX512GF2_128x4 { data: res }
+        }
     }
 }
 

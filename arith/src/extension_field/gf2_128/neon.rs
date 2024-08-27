@@ -2,7 +2,7 @@ use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use std::{arch::aarch64::*, mem::transmute};
 
-use crate::{field_common, BinomialExtensionField, Field, FieldSerde, FieldSerdeResult, GF2};
+use crate::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, GF2};
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128 {
@@ -160,7 +160,7 @@ impl Field for NeonGF2_128 {
     }
 }
 
-impl BinomialExtensionField for NeonGF2_128 {
+impl ExtensionField for NeonGF2_128 {
     const DEGREE: usize = 128;
     const W: u32 = 0x87;
 

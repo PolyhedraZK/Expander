@@ -11,16 +11,18 @@ pub use m31_ext::M31Ext3;
 pub use m31_ext3x16::M31Ext3x16;
 
 /// Configurations for Extension Field over
-/// the Binomial polynomial x^DEGREE - W
+/// - either the Binomial polynomial x^DEGREE - W
+/// - or the AES polynomial x^128 + x^7 + x^2 + x + 1
 //
-// FIXME: Our binary extension field is no longer a binomial extension field
-// will fix later
-pub trait BinomialExtensionField: From<Self::BaseField> + Field + FieldSerde {
+pub trait ExtensionField: From<Self::BaseField> + Field + FieldSerde {
     /// Degree of the Extension
     const DEGREE: usize;
 
-    /// Extension Field
+    /// x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
     const W: u32;
+
+    /// Zero element for the extension field
+    const X: Self;
 
     /// Base field for the extension
     type BaseField: Field + FieldSerde + Send;
@@ -30,4 +32,7 @@ pub trait BinomialExtensionField: From<Self::BaseField> + Field + FieldSerde {
 
     /// Add the extension field with the base field
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self;
+
+    /// Multiply the extension field by x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
+    fn mul_by_x(&self) -> Self;
 }

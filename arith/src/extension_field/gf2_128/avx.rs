@@ -5,7 +5,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{field_common, BinomialExtensionField, Field, FieldSerde, FieldSerdeResult, GF2};
+use crate::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, GF2};
 
 #[derive(Debug, Clone, Copy)]
 pub struct AVX512GF2_128 {
@@ -48,11 +48,17 @@ impl FieldSerde for AVX512GF2_128 {
 
 impl Field for AVX512GF2_128 {
     const NAME: &'static str = "Galios Field 2^128";
+
     const SIZE: usize = 128 / 8;
+
     const FIELD_SIZE: usize = 128; // in bits
 
     const ZERO: Self = AVX512GF2_128 {
         v: unsafe { std::mem::zeroed() },
+    };
+
+    const ONE: Self = AVX512GF2_128 {
+        v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) },
     };
 
     const INV_2: Self = AVX512GF2_128 {
@@ -141,9 +147,14 @@ impl Field for AVX512GF2_128 {
     }
 }
 
-impl BinomialExtensionField for AVX512GF2_128 {
+impl ExtensionField for AVX512GF2_128 {
     const DEGREE: usize = 128;
+
     const W: u32 = 0x87;
+
+    const X: Self = AVX512GF2_128 {
+        v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([2, 0, 0, 0]) },
+    };
 
     type BaseField = GF2;
 
@@ -161,6 +172,61 @@ impl BinomialExtensionField for AVX512GF2_128 {
         let mut res = *self;
         res.v = unsafe { _mm_xor_si128(res.v, _mm_set_epi64x(0, base.v as i64)) };
         res
+    }
+
+    #[inline]
+    fn mul_by_x(&self) -> Self {
+        unsafe {
+            // Shift left by 1 bit
+            let shifted = _mm_slli_epi64(self.v, 1);
+
+            // println!(
+            //     "self   {:0x?}\nshifted {:0x?}",
+            //     transmute::<_, [u8; 16]>(self.v),
+            //     transmute::<_, [u8; 16]>(shifted)
+            // );
+
+            // Get the most significant bit
+            let msb = _mm_srli_epi64(self.v, 63);
+
+            // Move the MSB from the high 64 bits to the LSB of the low 64 bits
+            let msb_moved = _mm_slli_si128(msb, 8);
+            let lsb = _mm_srli_si128(msb, 8);
+
+            println!();
+            println!("self      {:02x?}", transmute::<_, [u8; 16]>(self.v));
+            println!("shifted   {:02x?}", transmute::<_, [u8; 16]>(shifted));
+            println!("msb       {:02x?}", transmute::<_, [u8; 16]>(msb));
+            println!("msb_moved {:02x?}", transmute::<_, [u8; 16]>(msb_moved));            
+            println!("msb {:?}", msb);
+            println!("msb_moved {:?}", msb_moved);
+            // // Combine the shifted value with the moved msb
+            let result = _mm_or_si128(shifted, msb_moved);
+
+            // If the msb was 1, XOR with the reduction polynomial
+            // Create a mask based on the second 64-bit element of a
+            let mask = _mm_cmpeq_epi64(lsb, _mm_set_epi64x(0, 1));
+
+            // Create the value to return if the condition is true: (0, 0x87)
+            let true_value = _mm_set_epi64x( 0, 0x87);
+
+            // Use the mask to select either (0, 0x87) or (0, 0)
+            let reduction = _mm_and_si128(mask, true_value);
+
+            // let msb_mask = _mm_srli_epi64(msb_moved, 63);
+            // let reduction_polynomial = _mm_set_epi64x(0, 0x87); // x^128 + x^7 + x^2 + x + 1
+            // let reduction = _mm_and_si128(reduction_polynomial, msb_mask);
+
+            let res = _mm_xor_si128(result, reduction);
+
+            println!("mask      {:02x?}", transmute::<_, [u8; 16]>(mask));
+            // println!("result    {:02x?}", transmute::<_, [u8; 16]>(result));
+            println!("shifted   {:02x?}", transmute::<_, [u8; 16]>(shifted));
+            println!("reduction {:02x?}", transmute::<_, [u8; 16]>(reduction));
+            println!("res       {:02x?}", transmute::<_, [u8; 16]>(res));
+
+            AVX512GF2_128 { v: res }
+        }
     }
 }
 
