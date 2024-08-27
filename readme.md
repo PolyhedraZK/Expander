@@ -26,7 +26,7 @@ Expander is a proof generation backend for Polyhedra Network. It aims to support
 
 This is the *rust version* of the "core" repo.
 
-For more technical introduction, visit our markdown files [here](https://github.com/PolyhedraZK/Expander/tree/master/docs/doc.md).
+For more technical introduction, visit our markdown files [here](https://github.com/PolyhedraZK/Expander-cpp/tree/master/docs/doc.md).
 
 And [here](./tests/gkr_correctness.rs) for an example on how to use the gkr lib.
 
