@@ -246,7 +246,12 @@ impl SubAssign<&GF2x8> for GF2x8 {
 impl From<u32> for GF2x8 {
     #[inline(always)]
     fn from(v: u32) -> Self {
-        GF2x8 { v: (v % 2) as u8 }
+        assert!(v < 2);
+        if v == 0 {
+            GF2x8 { v: 0 }
+        } else {
+            GF2x8 { v: 0xFF }
+        }
     }
 }
 

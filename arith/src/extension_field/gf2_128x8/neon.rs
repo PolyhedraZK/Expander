@@ -208,16 +208,7 @@ impl From<NeonGF2_128> for NeonGF2_128x8 {
     fn from(v: NeonGF2_128) -> Self {
         unsafe {
             NeonGF2_128x8 {
-                v: [
-                    v.v,
-                    transmute::<u128, uint32x4_t>(0u128),
-                    transmute::<u128, uint32x4_t>(0u128),
-                    transmute::<u128, uint32x4_t>(0u128),
-                    transmute::<u128, uint32x4_t>(0u128),
-                    transmute::<u128, uint32x4_t>(0u128),
-                    transmute::<u128, uint32x4_t>(0u128),
-                    transmute::<u128, uint32x4_t>(0u128),
-                ],
+                v: [ v.v; Self::pack_size() ],
             }
         }
     }
