@@ -3,12 +3,13 @@ use std::iter::{Product, Sum};
 use std::mem::transmute;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use crate::SimdField;
+use crate::neon::mul_by_x_internal;
 use crate::{
     field_common,
     neon::{gfadd, gfmul, NeonGF2_128},
     Field, FieldSerde, FieldSerdeResult,
 };
+use crate::{ExtensionField, SimdField};
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128x4 {
@@ -76,6 +77,10 @@ impl Field for NeonGF2_128x4 {
 
     const ZERO: Self = NeonGF2_128x4 {
         v: [unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) }; 4],
+    };
+
+    const ONE: Self = NeonGF2_128x4 {
+        v: [unsafe { transmute::<[u32; 4], uint32x4_t>([1, 0, 0, 0]) }; 4],
     };
 
     const INV_2: Self = NeonGF2_128x4 {
@@ -217,6 +222,46 @@ impl From<u32> for NeonGF2_128x4 {
                 unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) },
             ],
         }
+    }
+}
+
+impl ExtensionField for NeonGF2_128x4 {
+    const DEGREE: usize = NeonGF2_128::DEGREE;
+
+    const W: u32 = NeonGF2_128::W;
+
+    const X: Self = Self {
+        v: unsafe { transmute::<[u64; 8], [uint32x4_t; 4]>([2u64, 0, 2u64, 0, 2u64, 0, 2u64, 0]) },
+    };
+
+    type BaseField = NeonGF2_128;
+
+    #[inline(always)]
+    fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
+        let simd_base = Self::from(*base);
+        *self * simd_base
+    }
+
+    #[inline(always)]
+    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
+        unsafe {
+            let base_vec = transmute::<NeonGF2_128, u128>(*base);
+            let mut res = transmute::<Self, [u128; 4]>(*self);
+            res[0] ^= base_vec;
+            Self {
+                v: transmute::<[u128; 4], [uint32x4_t; 4]>(res),
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn mul_by_x(&self) -> Self {
+        let mut res = Self::default();
+        res.v[0] = mul_by_x_internal(&self.v[0]);
+        res.v[1] = mul_by_x_internal(&self.v[1]);
+        res.v[2] = mul_by_x_internal(&self.v[2]);
+        res.v[3] = mul_by_x_internal(&self.v[3]);
+        res
     }
 }
 
