@@ -1,4 +1,4 @@
-use arith::{ExtensionField, Field, GF2_128x4, M31Ext3, M31Ext3x16, GF2_128};
+use arith::{ExtensionField, Field, GF2_128x8, M31Ext3, M31Ext3x16, GF2_128};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use tynm::type_name;
@@ -153,7 +153,7 @@ fn ext_by_base_benchmark(c: &mut Criterion) {
     bench_field::<M31Ext3>(c);
     bench_field::<M31Ext3x16>(c);
     bench_field::<GF2_128>(c);
-    bench_field::<GF2_128x4>(c);
+    bench_field::<GF2_128x8>(c);
 }
 
 criterion_group!(ext_by_base_benches, ext_by_base_benchmark);
