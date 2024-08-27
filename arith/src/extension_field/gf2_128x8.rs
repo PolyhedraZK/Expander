@@ -1,3 +1,5 @@
+mod common;
+
 #[cfg(target_arch = "aarch64")]
 pub(crate) mod neon;
 #[cfg(target_arch = "aarch64")]

@@ -7,7 +7,8 @@ use ark_std::{end_timer, start_timer};
 use crate::grind;
 
 use crate::{
-    eq_evals_at_primitive, Circuit, CircuitLayer, Config, FieldType, GKRConfig, Gate, Proof, RawCommitment, Transcript
+    eq_evals_at_primitive, Circuit, CircuitLayer, Config, FieldType, GKRConfig, Gate, Proof,
+    RawCommitment, Transcript,
 };
 
 #[inline]
@@ -23,9 +24,8 @@ fn gf2_sp_eval<F: Field + SimdField>(p0: F, p1: F, p2: F, x: F::Scalar) -> F {
     let eval_point = F::Scalar::from_uniform_bytes(&[1u8; 32]);
 
     let c0 = &p0;
-    let c2 = (p2 - p0 - p1.scale(&eval_point) + p0.scale(&eval_point)).scale(
-        &(eval_point.square() - eval_point).inv().unwrap()
-    );
+    let c2 = (p2 - p0 - p1.scale(&eval_point) + p0.scale(&eval_point))
+        .scale(&(eval_point.square() - eval_point).inv().unwrap());
     let c1 = p1 - p0 - c2;
     *c0 + (c2.scale(&x) + c1).scale(&x)
 }

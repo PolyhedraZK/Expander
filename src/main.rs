@@ -6,7 +6,8 @@ use std::{
 use arith::Field;
 use clap::Parser;
 use expander_rs::{
-    BN254Config, Circuit, Config, FieldType, GF2ExtConfig, GKRConfig, GKRScheme, M31ExtConfig, Prover
+    BN254Config, Circuit, Config, FieldType, GF2ExtConfig, GKRConfig, GKRScheme, M31ExtConfig,
+    Prover,
 };
 
 // circuit for repeating Keccak for 2 times

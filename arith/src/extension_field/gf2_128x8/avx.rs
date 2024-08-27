@@ -9,6 +9,8 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
+use super::common::{duplicate_even_bits, duplicate_odd_bits};
+
 #[derive(Clone, Copy)]
 pub struct AVX512GF2_128x8 {
     data: [__m512i; 2],
@@ -414,15 +416,8 @@ impl Default for AVX512GF2_128x8 {
 impl From<GF2_128> for AVX512GF2_128x8 {
     #[inline(always)]
     fn from(v: GF2_128) -> AVX512GF2_128x8 {
-        unsafe {
-            let mut result = _mm512_setzero_si512(); // Initialize a zeroed _m512i
-            result = _mm512_inserti32x4(result, v.v, 0); // Insert `a` at position 0
-            result = _mm512_inserti32x4(result, v.v, 1); // Insert `b` at position 1
-            result = _mm512_inserti32x4(result, v.v, 2); // Insert `c` at position 2
-            result = _mm512_inserti32x4(result, v.v, 3); // Insert `d` at position 3
-            AVX512GF2_128x8 {
-                data: [result, result],
-            }
+        AVX512GF2_128x8 {
+            data: Self::pack_full(v.v),
         }
     }
 }
@@ -541,22 +536,6 @@ fn mul_internal(a: &AVX512GF2_128x8, b: &AVX512GF2_128x8) -> AVX512GF2_128x8 {
             _m512_mul_internal(a.data[1], b.data[1]),
         ],
     }
-}
-
-// abcdefgh -> aacceegg
-#[inline(always)]
-fn duplicate_even_bits(byte: u8) -> u8 {
-    let even_bits = byte & 0b10101010;
-    let even_bits_shifted = even_bits >> 1;
-    even_bits | even_bits_shifted
-}
-
-// abcdefgh -> bbddffhh
-#[inline(always)]
-fn duplicate_odd_bits(byte: u8) -> u8 {
-    let odd_bits = byte & 0b01010101;
-    let odd_bits_shifted = odd_bits << 1;
-    odd_bits | odd_bits_shifted
 }
 
 impl BinomialExtensionField for AVX512GF2_128x8 {

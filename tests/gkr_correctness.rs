@@ -98,9 +98,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     // Verify
     let verifier = Verifier::new(config);
     println!("Verifier created.");
-    assert!(
-        verifier.verify(&mut circuit, &claimed_v, &proof),
-    );
+    assert!(verifier.verify(&mut circuit, &claimed_v, &proof),);
     println!("Correct proof verified.");
     let mut bad_proof = proof.clone();
     let rng = &mut rand::thread_rng();
@@ -118,8 +116,6 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
         Err(_) => false,
     };
 
-    assert!(
-        !final_result,
-    );
+    assert!(!final_result,);
     println!("Bad proof rejected.");
 }

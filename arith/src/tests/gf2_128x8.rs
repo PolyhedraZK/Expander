@@ -1,6 +1,6 @@
 use crate::Field;
-use crate::GF2_128;
 use crate::GF2_128x8;
+use crate::GF2_128;
 
 use super::{
     extension_field::random_extension_field_tests, field::random_field_tests,
