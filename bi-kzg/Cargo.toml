@@ -19,9 +19,9 @@ ark-ec.workspace = true
 ark-ff.workspace = true
 criterion.workspace = true
 
-[[bench]]
-name = "bi_kzg_bench"
-harness = false
+# [[bench]]
+# name = "bi_kzg_bench"
+# harness = false
 
 
 [features]
