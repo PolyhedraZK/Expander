@@ -1,4 +1,4 @@
-![Expander](https://github.com/PolyhedraZK/Expander/blob/master/data/logo.jpg)
+![Expander](https://github.com/PolyhedraZK/Expander-cpp/blob/master/data/logo.jpg)
 
 # Expander-RS
 
