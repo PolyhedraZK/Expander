@@ -3,7 +3,6 @@ use std::{
     thread,
 };
 
-use arith::Field;
 use clap::Parser;
 use expander_rs::{
     BN254Config, Circuit, Config, FieldType, GF2ExtConfig, GKRConfig, GKRScheme, M31ExtConfig,

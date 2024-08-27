@@ -1,4 +1,3 @@
-use arith::Field;
 use expander_rs::{
     BN254Config, Circuit, CircuitLayer, Config, GF2ExtConfig, GKRConfig, GKRScheme, GateAdd,
     GateMul, M31ExtConfig, Prover, Verifier,
@@ -111,10 +110,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
         verifier.verify(&mut circuit, &claimed_v, &bad_proof)
     }));
 
-    let final_result = match result {
-        Ok(value) => value,
-        Err(_) => false,
-    };
+    let final_result = result.unwrap_or_default();
 
     assert!(!final_result,);
     println!("Bad proof rejected.");

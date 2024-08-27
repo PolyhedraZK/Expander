@@ -384,6 +384,6 @@ impl GKRConfig for GF2ExtConfig {
         b: &Self::ChallengeField,
     ) -> Self::Field {
         let b_simd_ext = Self::Field::from(*b);
-        b_simd_ext.mul_by_base_field(&a)
+        b_simd_ext.mul_by_base_field(a)
     }
 }
