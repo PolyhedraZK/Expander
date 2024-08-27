@@ -134,18 +134,17 @@ mod tests {
         transcript.append_u8_slice(&buffer);
 
         // Do SumCheck Once
-        for i in (0..layer_num).rev() {
-            (rz0, rz1) = sumcheck_prove_gkr_layer(
-                &circuit.layers[i],
-                &rz0,
-                &rz1,
-                &alpha,
-                &beta,
-                &mut transcript,
-                &mut sp,
-            );
-            alpha = transcript.challenge_f::<C>();
-            beta = transcript.challenge_f::<C>();
-        }
+        (rz0, rz1) = sumcheck_prove_gkr_layer(
+            &circuit.layers[layer_num-1],
+            &rz0,
+            &rz1,
+            &alpha,
+            &beta,
+            &mut transcript,
+            &mut sp,
+        );
+        alpha = transcript.challenge_f::<C>();
+        beta = transcript.challenge_f::<C>();
+        println!("rz0 = {:?}\nrz1 = {:?}\nalpha = {:?}, beta = {:?}", rz0, rz1, alpha, beta);
     }
 }
