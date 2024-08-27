@@ -10,7 +10,7 @@ use crate::{
 pub fn gkr_square_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
     sp: &mut GkrScratchpad<C>,
-    transcript: &mut Transcript,
+    transcript: &mut Transcript<C::FiatShamirHashType>,
 ) -> (C::Field, Vec<C::ChallengeField>) {
     let timer = start_timer!(|| "gkr^2 prove");
     let layer_num = circuit.layers.len();

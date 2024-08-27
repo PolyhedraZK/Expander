@@ -7,8 +7,8 @@ use std::{
 
 use arith::{Field, FieldSerde};
 use expander_rs::{
-    BN254Config, Circuit, Config, FieldType, GKRConfig, GKRScheme, M31ExtConfig, Proof, Prover,
-    Verifier, SENTINEL_BN254, SENTINEL_M31,
+    BN254ConfigSha2, Circuit, Config, FieldType, GKRConfig, GKRScheme, M31ExtConfigSha2, Proof,
+    Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
 };
 use log::{debug, info};
 use warp::{http::StatusCode, reply, Filter};
@@ -16,8 +16,8 @@ use warp::{http::StatusCode, reply, Filter};
 fn dump_proof_and_claimed_v<F: Field + FieldSerde>(proof: &Proof, claimed_v: &F) -> Vec<u8> {
     let mut bytes = Vec::new();
 
-    proof.serialize_into(&mut bytes);
-    claimed_v.serialize_into(&mut bytes);
+    proof.serialize_into(&mut bytes).unwrap(); // TODO: error propagation
+    claimed_v.serialize_into(&mut bytes).unwrap(); // TODO: error propagation
 
     bytes
 }
@@ -25,8 +25,8 @@ fn dump_proof_and_claimed_v<F: Field + FieldSerde>(proof: &Proof, claimed_v: &F)
 fn load_proof_and_claimed_v<F: Field + FieldSerde>(bytes: &[u8]) -> (Proof, F) {
     let mut cursor = Cursor::new(bytes);
 
-    let proof = Proof::deserialize_from(&mut cursor);
-    let claimed_v = F::deserialize_from(&mut cursor);
+    let proof = Proof::deserialize_from(&mut cursor).unwrap(); // TODO: error propagation
+    let claimed_v = F::deserialize_from(&mut cursor).unwrap(); // TODO: error propagation
 
     (proof, claimed_v)
 }
@@ -183,19 +183,19 @@ async fn main() {
     debug!("field type: {:?}", field_type);
     match field_type {
         FieldType::M31 => {
-            run_command::<M31ExtConfig>(
+            run_command::<M31ExtConfigSha2>(
                 command,
                 circuit_file,
-                Config::<M31ExtConfig>::new(GKRScheme::Vanilla),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla),
                 &args,
             )
             .await;
         }
         FieldType::BN254 => {
-            run_command::<BN254Config>(
+            run_command::<BN254ConfigSha2>(
                 command,
                 circuit_file,
-                Config::<BN254Config>::new(GKRScheme::Vanilla),
+                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla),
                 &args,
             )
             .await;

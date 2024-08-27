@@ -9,7 +9,7 @@ use std::{
 
 use rand::{Rng, RngCore};
 
-use crate::{field_common, Field, FieldSerde, SimdField, M31, M31_MOD};
+use crate::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField, M31, M31_MOD};
 
 const M31_PACK_SIZE: usize = 16;
 const PACKED_MOD: __m512i = unsafe { transmute([M31_MOD; M31_PACK_SIZE]) };
@@ -38,37 +38,30 @@ impl AVXM31 {
 field_common!(AVXM31);
 
 impl FieldSerde for AVXM31 {
-    #[inline(always)]
-    /// serialize self into bytes
-    fn serialize_into<W: Write>(&self, mut writer: W) {
-        let data = unsafe { transmute::<__m512i, [u8; 64]>(self.v) };
-        writer.write_all(&data).unwrap();
-    }
+    const SERIALIZED_SIZE: usize = 512 / 8;
 
     #[inline(always)]
-    fn serialized_size() -> usize {
-        512 / 8
+    /// serialize self into bytes
+    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        let data = unsafe { transmute::<__m512i, [u8; 64]>(self.v) };
+        writer.write_all(&data)?;
+        Ok(())
     }
 
     /// deserialize bytes into field
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let mut data = [0; 64];
-        reader.read_exact(&mut data).unwrap();
+    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+        let mut data = [0; Self::SERIALIZED_SIZE];
+        reader.read_exact(&mut data)?;
         unsafe {
-            let mut value = transmute::<[u8; 64], __m512i>(data);
+            let mut value = transmute::<[u8; Self::SERIALIZED_SIZE], __m512i>(data);
             value = mod_reduce_epi32(value);
-            AVXM31 { v: value }
+            Ok(AVXM31 { v: value })
         }
     }
 
     #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut buf = [0u8; 32];
         reader.read_exact(&mut buf)?;
         assert!(

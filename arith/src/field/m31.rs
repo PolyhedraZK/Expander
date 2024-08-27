@@ -9,7 +9,7 @@ pub mod m31_neon;
 
 use rand::RngCore;
 
-use crate::{field_common, Field, FieldSerde};
+use crate::{field_common, Field, FieldSerde, FieldSerdeResult};
 use std::{
     io::{Read, Write},
     iter::{Product, Sum},
@@ -38,34 +38,27 @@ pub struct M31 {
 field_common!(M31);
 
 impl FieldSerde for M31 {
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) {
-        writer.write_all(self.v.to_le_bytes().as_ref()).unwrap(); // todo: error propagation
-    }
+    const SERIALIZED_SIZE: usize = 32 / 8;
 
     #[inline(always)]
-    fn serialized_size() -> usize {
-        32 / 8
+    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        writer.write_all(self.v.to_le_bytes().as_ref())?;
+        Ok(())
     }
 
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let mut u = [0u8; 4];
-        reader.read_exact(&mut u).unwrap(); // todo: error propagation
+    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+        let mut u = [0u8; Self::SERIALIZED_SIZE];
+        reader.read_exact(&mut u)?;
         let mut v = u32::from_le_bytes(u);
         v = mod_reduce_u32(v);
-        M31 { v }
+        Ok(M31 { v })
     }
 
     #[inline]
-    fn try_deserialize_from_ecc_format<R: Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut buf = [0u8; 32];
         reader.read_exact(&mut buf)?;
         assert!(

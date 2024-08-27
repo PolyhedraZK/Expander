@@ -8,7 +8,11 @@ use crate::{
 };
 
 #[cfg(feature = "grinding")]
-pub(crate) fn grind<C: GKRConfig>(transcript: &mut Transcript, config: &Config<C>) {
+pub(crate) fn grind<C: GKRConfig>(
+    transcript: &mut Transcript<C::FiatShamirHashType>,
+    config: &Config<C>,
+) {
+    use crate::hash::FiatShamirHash;
     use arith::{Field, FieldSerde};
 
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
@@ -21,7 +25,7 @@ pub(crate) fn grind<C: GKRConfig>(transcript: &mut Transcript, config: &Config<C
     let initial_hash = transcript.challenge_fs::<C>(num_field_elements);
     initial_hash
         .iter()
-        .for_each(|h| h.serialize_into(&mut hash_bytes));
+        .for_each(|h| h.serialize_into(&mut hash_bytes).unwrap()); // TODO: error propagation
 
     assert!(hash_bytes.len() >= 32, "hash len: {}", hash_bytes.len());
     hash_bytes.truncate(32);
@@ -33,23 +37,15 @@ pub(crate) fn grind<C: GKRConfig>(transcript: &mut Transcript, config: &Config<C
     end_timer!(timer);
 }
 
+#[derive(Default)]
 pub struct Prover<C: GKRConfig> {
     config: Config<C>,
     sp: GkrScratchpad<C>,
 }
 
-impl<C: GKRConfig> Default for Prover<C> {
-    fn default() -> Self {
-        Self {
-            config: Config::<C>::default(),
-            sp: GkrScratchpad::default(),
-        }
-    }
-}
-
 impl<C: GKRConfig> Prover<C> {
     pub fn new(config: &Config<C>) -> Self {
-        assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
+        // assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
         assert_eq!(
             config.polynomial_commitment_type,
             crate::config::PolynomialCommitmentType::Raw
@@ -83,7 +79,7 @@ impl<C: GKRConfig> Prover<C> {
         let commitment = RawCommitment::<C>::new(&c.layers[0].input_vals);
 
         let mut buffer = vec![];
-        commitment.serialize_into(&mut buffer);
+        commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(&buffer);
 

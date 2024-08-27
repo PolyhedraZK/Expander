@@ -10,7 +10,7 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use ark_std::iterable::Iterable;
 pub use gf2x8::GF2x8;
 
-use crate::{field_common, FieldSerde};
+use crate::{field_common, FieldSerde, FieldSerdeResult};
 
 use super::Field;
 
@@ -22,30 +22,23 @@ pub struct GF2 {
 field_common!(GF2);
 
 impl FieldSerde for GF2 {
+    const SERIALIZED_SIZE: usize = 1;
+
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
-        writer.write_all(self.v.to_le_bytes().as_ref()).unwrap(); // todo: error propagation
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        writer.write_all(self.v.to_le_bytes().as_ref())?;
+        Ok(())
     }
 
     #[inline(always)]
-    fn serialized_size() -> usize {
-        1
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+        let mut u = [0u8; Self::SERIALIZED_SIZE];
+        reader.read_exact(&mut u)?;
+        Ok(GF2 { v: u[0] % 2 })
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> Self {
-        let mut u = [0u8; 1];
-        reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        GF2 { v: u[0] % 2 }
-    }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut u = [0u8; 32];
         reader.read_exact(&mut u)?;
 

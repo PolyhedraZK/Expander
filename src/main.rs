@@ -4,15 +4,13 @@ use std::{
 };
 
 use clap::Parser;
+use expander_rs::utils::{KECCAK_CIRCUIT, POSEIDON_CIRCUIT};
 use expander_rs::{
-    BN254Config, Circuit, Config, FieldType, GF2ExtConfig, GKRConfig, GKRScheme, M31ExtConfig,
+    
+    BN254ConfigSha2, Circuit, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2,
     Prover,
 };
 
-// circuit for repeating Keccak for 2 times
-const KECCAK_CIRCUIT: &str = "data/circuit.txt";
-// circuit for repeating Poseidon for 120 times
-const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
 
 /// ...
 #[derive(Parser, Debug)]
@@ -41,34 +39,35 @@ fn main() {
 
     match args.field.as_str() {
         "m31ext3" => match args.scheme.as_str() {
-            "keccak" => run_benchmark::<M31ExtConfig>(
+            "keccak" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
-                Config::<M31ExtConfig>::new(GKRScheme::Vanilla),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla),
             ),
-            "poseidon" => run_benchmark::<M31ExtConfig>(
+            "poseidon" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
-                Config::<M31ExtConfig>::new(GKRScheme::GkrSquare),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::GkrSquare),
             ),
             _ => unreachable!(),
         },
         "fr" => match args.scheme.as_str() {
-            "keccak" => {
-                run_benchmark::<BN254Config>(&args, Config::<BN254Config>::new(GKRScheme::Vanilla))
-            }
-            "poseidon" => run_benchmark::<BN254Config>(
+            "keccak" => run_benchmark::<BN254ConfigSha2>(
                 &args,
-                Config::<BN254Config>::new(GKRScheme::GkrSquare),
+                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla),
+            ),
+            "poseidon" => run_benchmark::<BN254ConfigSha2>(
+                &args,
+                Config::<BN254ConfigSha2>::new(GKRScheme::GkrSquare),
             ),
             _ => unreachable!(),
         },
         "gf2ext128" => match args.scheme.as_str() {
-            "keccak" => run_benchmark::<GF2ExtConfig>(
+            "keccak" => run_benchmark::<GF2ExtConfigSha2>(
                 &args,
-                Config::<GF2ExtConfig>::new(GKRScheme::Vanilla),
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla),
             ),
-            "poseidon" => run_benchmark::<GF2ExtConfig>(
+            "poseidon" => run_benchmark::<GF2ExtConfigSha2>(
                 &args,
-                Config::<GF2ExtConfig>::new(GKRScheme::GkrSquare),
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::GkrSquare),
             ),
             _ => unreachable!(),
         },

@@ -1,14 +1,13 @@
+use expander_rs::utils::*;
 use expander_rs::{
-    BN254Config, Circuit, CircuitLayer, Config, GF2ExtConfig, GKRConfig, GKRScheme, GateAdd,
-    GateMul, M31ExtConfig, Prover, Verifier,
+    BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GKRConfig, GKRScheme,
+    GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2, Prover, Verifier, GF2ExtConfigKeccak, GF2ExtConfigSha2
 };
 use std::panic;
 use std::panic::AssertUnwindSafe;
 
 use rand::Rng;
 use sha2::Digest;
-
-const CIRCUIT_NAME: &str = "data/circuit.txt";
 
 #[allow(dead_code)]
 fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
@@ -50,15 +49,29 @@ fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
 
 #[test]
 fn test_gkr_correctness() {
-    test_gkr_correctness_helper::<GF2ExtConfig>(&Config::<GF2ExtConfig>::new(GKRScheme::Vanilla));
-    test_gkr_correctness_helper::<M31ExtConfig>(&Config::<M31ExtConfig>::new(GKRScheme::Vanilla));
-    test_gkr_correctness_helper::<BN254Config>(&Config::<BN254Config>::new(GKRScheme::Vanilla));
+    test_gkr_correctness_helper::<GF2ExtConfigSha2>(&Config::<GF2ExtConfigSha2>::new(
+        GKRScheme::Vanilla,
+    ));
+    test_gkr_correctness_helper::<GF2ExtConfigKeccak>(&Config::<GF2ExtConfigKeccak>::new(
+        GKRScheme::Vanilla,
+    ));
+    test_gkr_correctness_helper::<M31ExtConfigSha2>(&Config::<M31ExtConfigSha2>::new(
+        GKRScheme::Vanilla,
+    ));
+    test_gkr_correctness_helper::<M31ExtConfigKeccak>(&Config::<M31ExtConfigKeccak>::new(
+        GKRScheme::Vanilla,
+    ));
+    test_gkr_correctness_helper::<BN254ConfigSha2>(&Config::<BN254ConfigSha2>::new(
+        GKRScheme::Vanilla,
+    ));
+    test_gkr_correctness_helper::<BN254ConfigKeccak>(&Config::<BN254ConfigKeccak>::new(
+        GKRScheme::Vanilla,
+    ));
 }
 
 fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     println!("Config created.");
-    let mut circuit = Circuit::<C>::load_circuit(CIRCUIT_NAME);
-
+    let mut circuit = Circuit::<C>::load_circuit(KECCAK_CIRCUIT);
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
     // let mut circuit = gen_simple_circuit(); // for custom circuit
     println!("Circuit loaded.");
