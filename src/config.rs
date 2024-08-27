@@ -12,7 +12,7 @@ pub use gf2_ext_sha2::GF2ExtConfigSha2;
 pub use m31_ext_keccak::M31ExtConfigKeccak;
 pub use m31_ext_sha2::M31ExtConfigSha2;
 
-use arith::{BinomialExtensionField, Field, FieldSerde, SimdField};
+use arith::{ExtensionField, Field, FieldSerde, SimdField};
 
 use crate::FiatShamirHash;
 
@@ -95,10 +95,10 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     type CircuitField: Field + FieldSerde + Send;
 
     /// Field type for the challenge, e.g., M31Ext3
-    type ChallengeField: BinomialExtensionField<BaseField = Self::CircuitField> + Send;
+    type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send;
 
     /// Main field type for the scheme, e.g., M31Ext3x16
-    type Field: BinomialExtensionField + SimdField<Scalar = Self::ChallengeField> + Send;
+    type Field: ExtensionField + SimdField<Scalar = Self::ChallengeField> + Send;
 
     /// Simd field for circuit
     type SimdCircuitField: SimdField + FieldSerde + Send;

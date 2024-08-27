@@ -1,4 +1,4 @@
-use arith::{BinomialExtensionField, Field, GF2_128x8, M31Ext3, M31Ext3x16, GF2_128};
+use arith::{ExtensionField, Field, GF2_128x4, M31Ext3, M31Ext3x16, GF2_128};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use tynm::type_name;
@@ -8,7 +8,7 @@ fn random_element<F: Field>() -> F {
     F::random_unsafe(&mut rng)
 }
 
-pub(crate) fn bench_field<F: Field + BinomialExtensionField>(c: &mut Criterion) {
+pub(crate) fn bench_field<F: Field + ExtensionField>(c: &mut Criterion) {
     c.bench_function(
         &format!(
             "mul-by-base-throughput<{}> 100x times {}x ",
@@ -37,6 +37,33 @@ pub(crate) fn bench_field<F: Field + BinomialExtensionField>(c: &mut Criterion) 
                             z.mul_by_base_field(&zz),
                             w.mul_by_base_field(&ww),
                         );
+                    }
+                    (x, y, z, w)
+                },
+                BatchSize::SmallInput,
+            )
+        },
+    );
+
+    c.bench_function(
+        &format!(
+            "mul-by-x-throughput<{}> 100x times {}x ",
+            type_name::<F>(),
+            F::SIZE * 8 / F::FIELD_SIZE
+        ),
+        |b| {
+            b.iter_batched(
+                || {
+                    (
+                        random_element::<F>(),
+                        random_element::<F>(),
+                        random_element::<F>(),
+                        random_element::<F>(),
+                    )
+                },
+                |(mut x, mut y, mut z, mut w)| {
+                    for _ in 0..25 {
+                        (x, y, z, w) = (x.mul_by_x(), y.mul_by_x(), z.mul_by_x(), w.mul_by_x());
                     }
                     (x, y, z, w)
                 },
@@ -126,7 +153,7 @@ fn ext_by_base_benchmark(c: &mut Criterion) {
     bench_field::<M31Ext3>(c);
     bench_field::<M31Ext3x16>(c);
     bench_field::<GF2_128>(c);
-    bench_field::<GF2_128x8>(c);
+    bench_field::<GF2_128x4>(c);
 }
 
 criterion_group!(ext_by_base_benches, ext_by_base_benchmark);
