@@ -4,9 +4,21 @@ use itertools::Itertools;
 use rand::RngCore;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::bi_fft::bi_fft_in_place;
-use crate::structs::{BivariateLagrangePolynomial, BivariatePolynomial};
-use crate::util::powers_of_field_elements;
+use crate::poly::fft::bi_fft_in_place;
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct BivariatePolynomial<F> {
+    pub coefficients: Vec<F>,
+    pub degree_0: usize,
+    pub degree_1: usize,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct BivariateLagrangePolynomial<F> {
+    pub coefficients: Vec<F>,
+    pub degree_0: usize,
+    pub degree_1: usize,
+}
 
 impl<F: PrimeField> BivariatePolynomial<F> {
     #[inline]
@@ -113,7 +125,7 @@ impl<F: PrimeField> BivariatePolynomial<F> {
 
 /// For a point x, compute the coefficients of Lagrange polynomial L_{i}(x) at x, given the roots.
 /// `L_{i}(x) = \prod_{j \neq i} \frac{x - r_j}{r_i - r_j}`
-pub(crate) fn lagrange_coefficients<F: Field + Send + Sync>(roots: &[F], points: &F) -> Vec<F> {
+pub fn lagrange_coefficients<F: Field + Send + Sync>(roots: &[F], points: &F) -> Vec<F> {
     roots
         .par_iter()
         .enumerate()
@@ -133,7 +145,7 @@ pub(crate) fn lagrange_coefficients<F: Field + Send + Sync>(roots: &[F], points:
 }
 
 /// Compute poly / (x-point) using univariate division
-pub(crate) fn univariate_quotient<F: PrimeField>(poly: &[F], point: &F) -> Vec<F> {
+pub fn univariate_quotient<F: PrimeField>(poly: &[F], point: &F) -> Vec<F> {
     let timer = start_timer!(|| format!("Univariate quotient of degree {}", poly.len()));
     let mut dividend_coeff = poly.to_vec();
     let divisor = [-*point, F::from(1u64)];
@@ -190,7 +202,7 @@ impl<F: PrimeField> From<&BivariatePolynomial<F>> for BivariateLagrangePolynomia
 
 impl<F: PrimeField> BivariateLagrangePolynomial<F> {
     /// construct a bivariate lagrange polynomial from a monomial f(y) = y - b
-    pub(crate) fn from_y_monomial(b: &F, n: usize, m: usize) -> Self {
+    pub fn from_y_monomial(b: &F, n: usize, m: usize) -> Self {
         // roots of unity for supported_n and supported_m
         let omega_1 = {
             let omega = F::ROOT_OF_UNITY;
@@ -203,4 +215,14 @@ impl<F: PrimeField> BivariateLagrangePolynomial<F> {
         }
         BivariateLagrangePolynomial::new(coeffs, n, m)
     }
+}
+
+pub fn powers_of_field_elements<F: Field>(x: &F, n: usize) -> Vec<F> {
+    let mut powers = vec![F::ONE];
+    let mut cur = *x;
+    for _ in 0..n - 1 {
+        powers.push(cur);
+        cur *= x;
+    }
+    powers
 }

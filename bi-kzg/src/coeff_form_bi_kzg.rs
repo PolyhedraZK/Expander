@@ -1,5 +1,10 @@
 use std::{borrow::Borrow, marker::PhantomData};
 
+use arith::lagrange_coefficients;
+use arith::powers_of_field_elements;
+use arith::univariate_quotient;
+use arith::BivariateLagrangePolynomial;
+use arith::BivariatePolynomial;
 use ark_std::{end_timer, start_timer};
 use halo2curves::ff::Field;
 use halo2curves::ff::PrimeField;
@@ -13,17 +18,9 @@ use itertools::Itertools;
 use rand::RngCore;
 use uni_kzg::PolynomialCommitmentScheme;
 
-use crate::poly::{lagrange_coefficients, univariate_quotient};
-use crate::structs::BivariateLagrangePolynomial;
-use crate::structs::BivariatePolynomial;
 use crate::util::parallelize;
 use crate::{
-    // pcs::PolynomialCommitmentScheme,
-    util::{powers_of_field_elements, tensor_product_parallel},
-    BiKZGCommitment,
-    BiKZGProof,
-    BiKZGSRS,
-    BiKZGVerifierParam,
+    util::tensor_product_parallel, BiKZGCommitment, BiKZGProof, BiKZGSRS, BiKZGVerifierParam,
 };
 
 /// Commit to the bi-variate polynomial in its coefficient form.

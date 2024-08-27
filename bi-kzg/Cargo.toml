@@ -11,6 +11,8 @@ itertools.workspace = true
 rand.workspace = true
 rayon.workspace = true
 sha2.workspace = true
+
+arith = { path = "../arith" }
 uni-kzg = { path = "../uni-kzg" }
 
 [dev-dependencies]

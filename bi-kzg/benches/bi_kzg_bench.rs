@@ -1,4 +1,5 @@
-use bi_kzg::{BiKZGVerifierParam, BivariatePolynomial, CoeffFormBiKZG};
+use arith::BivariatePolynomial;
+use bi_kzg::{BiKZGVerifierParam, CoeffFormBiKZG};
 use halo2curves::bn256::{self, Bn256, Fr};
 use halo2curves::ff::Field;
 use halo2curves::msm::best_multiexp;

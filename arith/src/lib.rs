@@ -6,6 +6,9 @@ pub use field::*;
 mod extension_field;
 pub use extension_field::*;
 
+mod poly;
+pub use poly::*;
+
 mod simd_field;
 pub use simd_field::*;
 
