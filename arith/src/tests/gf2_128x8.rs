@@ -1,4 +1,3 @@
-use crate::Field;
 use crate::GF2_128x8;
 use crate::GF2_128;
 
