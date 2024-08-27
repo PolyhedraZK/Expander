@@ -20,6 +20,7 @@ tokio.workspace = true
 warp.workspace = true
 chrono.workspace = true
 tynm.workspace = true
+tiny-keccak.workspace = true
 
 [dev-dependencies]
 criterion = "0.5.1"
@@ -58,6 +59,7 @@ log = "0.4"
 rand = "0.8.5"
 rayon = "1.10"
 sha2 = "0.10.8"
+tiny-keccak = { version = "2.0.2", features = [ "sha3" ] }
 tokio = { version = "1.38.0", features = ["full"] }
 tynm = { version = "0.1.6", default-features = false }
 warp = "0.3.7"

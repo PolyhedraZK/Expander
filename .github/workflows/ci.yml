@@ -22,9 +22,6 @@ jobs:
     name: Build
     runs-on: macos-latest
     steps:
-      - uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          all_but_latest: true
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -35,9 +32,6 @@ jobs:
     name: Test-mac
     runs-on: macos-latest
     steps:
-      - uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          all_but_latest: true
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -50,9 +44,6 @@ jobs:
     name: Bench-mac-m31-ext3
     runs-on: macos-latest
     steps:
-      - uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          all_but_latest: true
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -62,9 +53,6 @@ jobs:
     name: Bench-mac-BN254
     runs-on: macos-latest
     steps:
-      - uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          all_but_latest: true
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -74,9 +62,6 @@ jobs:
     name: Test-linux
     runs-on: 7950x3d
     steps:
-      - uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          all_but_latest: true
       - uses: actions/checkout@v4
       - run: . "$HOME/.cargo/env"
       - run: cargo run --bin=dev-setup --release
@@ -88,9 +73,6 @@ jobs:
     name: Bench-linux-m31-ext3
     runs-on: 7950x3d
     steps:
-      - uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          all_but_latest: true
       - uses: actions/checkout@v4
       - run: . "$HOME/.cargo/env"
       - run: cargo run --bin=dev-setup --release
@@ -99,9 +81,6 @@ jobs:
     name: Bench-linux-BN254
     runs-on: 7950x3d
     steps:
-      - uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          all_but_latest: true
       - uses: actions/checkout@v4
       - run: . "$HOME/.cargo/env"
       - run: cargo run --bin=dev-setup --release

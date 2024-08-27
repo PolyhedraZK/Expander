@@ -1,21 +1,21 @@
 use arith::{Field, FieldSerde};
 
-use crate::{GKRConfig, Proof, SHA256hasher};
+use crate::{FiatShamirHash, GKRConfig, Proof};
 
-pub struct Transcript {
-    pub hasher: SHA256hasher,
+pub struct Transcript<H: FiatShamirHash> {
+    pub hasher: H,
     hash_start_idx: usize,
-    digest: [u8; Self::DIGEST_SIZE],
+    digest: Vec<u8>,
     pub proof: Proof,
 }
 
-impl Default for Transcript {
+impl<H: FiatShamirHash> Default for Transcript<H> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Transcript {
+impl<H: FiatShamirHash> Transcript<H> {
     pub const DIGEST_SIZE: usize = 32;
 
     #[inline]
@@ -35,9 +35,9 @@ impl Transcript {
     #[inline]
     pub fn new() -> Self {
         Transcript {
-            hasher: SHA256hasher::new(),
+            hasher: H::new(),
             hash_start_idx: 0,
-            digest: [0u8; Self::DIGEST_SIZE],
+            digest: vec![0u8; Self::DIGEST_SIZE],
             proof: Proof::default(),
         }
     }
@@ -58,7 +58,7 @@ impl Transcript {
     pub fn challenge_f<C: GKRConfig>(&mut self) -> C::ChallengeField {
         self.hash_to_digest();
         assert!(C::ChallengeField::SIZE <= Self::DIGEST_SIZE);
-        C::ChallengeField::from_uniform_bytes(&self.digest)
+        C::ChallengeField::from_uniform_bytes(&self.digest.clone().try_into().unwrap())
     }
 
     #[inline]
@@ -70,6 +70,6 @@ impl Transcript {
     pub fn circuit_f<C: GKRConfig>(&mut self) -> C::CircuitField {
         self.hash_to_digest();
         assert!(C::CircuitField::SIZE <= Self::DIGEST_SIZE);
-        C::CircuitField::from_uniform_bytes(&self.digest)
+        C::CircuitField::from_uniform_bytes(&self.digest.clone().try_into().unwrap())
     }
 }
