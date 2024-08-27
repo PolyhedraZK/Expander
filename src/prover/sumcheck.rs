@@ -93,12 +93,15 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{BN254ConfigKeccak, Circuit, GKRConfig, GkrScratchpad, sumcheck_prove_gkr_layer, RawCommitment, Transcript, Keccak256hasher};
+    use crate::{
+        sumcheck_prove_gkr_layer, BN254ConfigKeccak, Circuit, GKRConfig, GkrScratchpad,
+        Keccak256hasher, RawCommitment, Transcript,
+    };
 
     type C = BN254ConfigKeccak;
 
     #[test]
-    fn test_sumcheck_cuda(){
+    fn test_sumcheck_cuda() {
         // Field: BN254 Scalar; Fiat Shamir Hash Function: Keccak256; Scheme: Vanilla GKR
 
         // Sumcheck Outstanding Results
@@ -117,13 +120,17 @@ mod tests {
 
         // Define the scratchpad
         let max_num_input_var = circuit
-            .layers.iter()
+            .layers
+            .iter()
             .map(|layer| layer.input_var_num)
-            .max().unwrap();
+            .max()
+            .unwrap();
         let max_num_output_var = circuit
-            .layers.iter()
+            .layers
+            .iter()
             .map(|layer| layer.output_var_num)
-            .max().unwrap();
+            .max()
+            .unwrap();
         let mut sp = GkrScratchpad::<BN254ConfigKeccak>::new(max_num_input_var, max_num_output_var);
 
         // Do the PC commitment to initial the transcript
@@ -135,7 +142,7 @@ mod tests {
 
         // Do SumCheck Once
         (rz0, rz1) = sumcheck_prove_gkr_layer(
-            &circuit.layers[layer_num-1],
+            &circuit.layers[layer_num - 1],
             &rz0,
             &rz1,
             &alpha,
@@ -145,6 +152,9 @@ mod tests {
         );
         alpha = transcript.challenge_f::<C>();
         beta = transcript.challenge_f::<C>();
-        println!("rz0 = {:?}\nrz1 = {:?}\nalpha = {:?}, beta = {:?}", rz0, rz1, alpha, beta);
+        println!(
+            "rz0 = {:?}\nrz1 = {:?}\nalpha = {:?}, beta = {:?}",
+            rz0, rz1, alpha, beta
+        );
     }
 }
