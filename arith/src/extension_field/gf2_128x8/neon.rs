@@ -32,35 +32,33 @@ impl PartialEq for NeonGF2_128x8 {
 }
 
 impl FieldSerde for NeonGF2_128x8 {
+    const SERIALIZED_SIZE: usize = 128;
+
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         self.v.iter().for_each(|&vv| {
             writer
                 .write_all(unsafe { transmute::<uint32x4_t, [u8; 16]>(vv) }.as_ref())
                 .unwrap()
-        })
+        });
+        Ok(())
     }
 
     #[inline(always)]
-    fn serialized_size() -> usize {
-        16 * 8
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> Self {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut res = Self::zero();
         res.v.iter_mut().for_each(|vv| {
             let mut u = [0u8; 16];
             reader.read_exact(&mut u).unwrap();
             *vv = unsafe { transmute::<[u8; 16], uint32x4_t>(u) }
         });
-        res
+        Ok(res)
     }
 
     #[inline]
     fn try_deserialize_from_ecc_format<R: std::io::Read>(
         mut _reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
+    ) -> FieldSerdeResult<Self>
     where
         Self: Sized,
     {
