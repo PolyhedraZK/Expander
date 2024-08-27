@@ -21,9 +21,6 @@ jobs:
             flags: 'RUSTFLAGS="-C target-feature=+avx2"'
     runs-on: ${{ matrix.ci_image }}
     steps:
-      - uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          all_but_latest: true
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
