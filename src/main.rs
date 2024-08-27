@@ -27,7 +27,7 @@ struct Args {
     scheme: String,
 
     /// number of repeat
-    #[arg(short, long, default_value_t = 4)]
+    #[arg(short, long, default_value_t = 1)]
     repeats: usize,
 
     /// number of thread
