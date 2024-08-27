@@ -56,9 +56,7 @@ impl FieldSerde for NeonGF2_128x8 {
     }
 
     #[inline]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(
-        mut _reader: R,
-    ) -> FieldSerdeResult<Self>
+    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> FieldSerdeResult<Self>
     where
         Self: Sized,
     {
