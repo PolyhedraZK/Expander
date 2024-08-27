@@ -27,6 +27,8 @@ jobs:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
     - name: Install criterion
       run: cargo install cargo-criterion
+    - name: setup
+      run: cargo run --bin=dev-setup --release
     - name: Run benchmark
       run: RUSTFLAGS="-C target-cpu=native" cargo criterion --message-format=json > benchmark_results.json
     - name: Clean benchmark results

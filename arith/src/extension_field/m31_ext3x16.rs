@@ -5,7 +5,8 @@ use std::{
 };
 
 use crate::{
-    field_common, BinomialExtensionField, Field, FieldSerde, M31Ext3, M31x16, SimdField, M31,
+    field_common, BinomialExtensionField, Field, FieldSerde, FieldSerdeResult, M31Ext3, M31x16,
+    SimdField, M31,
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -16,37 +17,29 @@ pub struct M31Ext3x16 {
 field_common!(M31Ext3x16);
 
 impl FieldSerde for M31Ext3x16 {
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) {
-        self.v[0].serialize_into(&mut writer);
-        self.v[1].serialize_into(&mut writer);
-        self.v[2].serialize_into(&mut writer);
-    }
+    const SERIALIZED_SIZE: usize = (512 / 8) * 3;
 
     #[inline(always)]
-    fn serialized_size() -> usize {
-        512 / 8 * 3
+    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        self.v[0].serialize_into(&mut writer)?;
+        self.v[1].serialize_into(&mut writer)?;
+        self.v[2].serialize_into(&mut writer)
     }
 
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        Self {
+    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+        Ok(Self {
             v: [
-                M31x16::deserialize_from(&mut reader),
-                M31x16::deserialize_from(&mut reader),
-                M31x16::deserialize_from(&mut reader),
+                M31x16::deserialize_from(&mut reader)?,
+                M31x16::deserialize_from(&mut reader)?,
+                M31x16::deserialize_from(&mut reader)?,
             ],
-        }
+        })
     }
 
-    fn try_deserialize_from_ecc_format<R: Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
         Ok(Self {
             v: [
                 M31x16::try_deserialize_from_ecc_format(&mut reader)?,
@@ -263,6 +256,7 @@ impl From<u32> for M31Ext3x16 {
     }
 }
 
+#[inline(always)]
 fn add_internal(a: &M31Ext3x16, b: &M31Ext3x16) -> M31Ext3x16 {
     let mut vv = a.v;
     vv[0] += b.v[0];
@@ -272,6 +266,7 @@ fn add_internal(a: &M31Ext3x16, b: &M31Ext3x16) -> M31Ext3x16 {
     M31Ext3x16 { v: vv }
 }
 
+#[inline(always)]
 fn sub_internal(a: &M31Ext3x16, b: &M31Ext3x16) -> M31Ext3x16 {
     let mut vv = a.v;
     vv[0] -= b.v[0];

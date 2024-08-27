@@ -248,9 +248,11 @@ fn random_serde_tests<F: Field + FieldSerde, R: RngCore>(mut rng: R, type_name: 
     for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
         let mut buffer = vec![];
-        a.serialize_into(&mut buffer);
+        assert!(a.serialize_into(&mut buffer).is_ok());
         let mut cursor = Cursor::new(buffer);
         let b = F::deserialize_from(&mut cursor);
+        assert!(b.is_ok());
+        let b = b.unwrap();
         assert_eq!(a, b);
     }
     end_timer!(start);

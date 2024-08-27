@@ -6,7 +6,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{field_common, mod_reduce_u32, Field, FieldSerde, M31};
+use crate::{field_common, mod_reduce_u32, Field, FieldSerde, FieldSerdeResult, M31};
 
 use super::BinomialExtensionField;
 
@@ -18,36 +18,30 @@ pub struct M31Ext3 {
 field_common!(M31Ext3);
 
 impl FieldSerde for M31Ext3 {
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) {
-        self.v[0].serialize_into(&mut writer);
-        self.v[1].serialize_into(&mut writer);
-        self.v[2].serialize_into(&mut writer);
-    }
+    const SERIALIZED_SIZE: usize = (32 / 8) * 3;
 
     #[inline(always)]
-    fn serialized_size() -> usize {
-        32 / 8 * 3
+    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        self.v[0].serialize_into(&mut writer)?;
+        self.v[1].serialize_into(&mut writer)?;
+        self.v[2].serialize_into(&mut writer)
     }
 
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        M31Ext3 {
+    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+        Ok(M31Ext3 {
             v: [
-                M31::deserialize_from(&mut reader),
-                M31::deserialize_from(&mut reader),
-                M31::deserialize_from(&mut reader),
+                M31::deserialize_from(&mut reader)?,
+                M31::deserialize_from(&mut reader)?,
+                M31::deserialize_from(&mut reader)?,
             ],
-        }
+        })
     }
 
     #[inline]
-    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut buf = [0u8; 32];
         reader.read_exact(&mut buf)?;
         assert!(
@@ -283,6 +277,7 @@ fn add_internal(a: &M31Ext3, b: &M31Ext3) -> M31Ext3 {
     M31Ext3 { v: vv }
 }
 
+#[inline(always)]
 fn sub_internal(a: &M31Ext3, b: &M31Ext3) -> M31Ext3 {
     let mut vv = a.v;
     vv[0] -= b.v[0];

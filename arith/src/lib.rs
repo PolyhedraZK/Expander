@@ -10,7 +10,7 @@ mod simd_field;
 pub use simd_field::*;
 
 mod serde;
-pub use serde::FieldSerde;
+pub use serde::*;
 
 mod macros;
 

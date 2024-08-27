@@ -5,7 +5,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{field_common, BinomialExtensionField, Field, FieldSerde, GF2};
+use crate::{field_common, BinomialExtensionField, Field, FieldSerde, FieldSerdeResult, GF2};
 
 #[derive(Debug, Clone, Copy)]
 pub struct AVX512GF2_128 {
@@ -15,38 +15,27 @@ pub struct AVX512GF2_128 {
 field_common!(AVX512GF2_128);
 
 impl FieldSerde for AVX512GF2_128 {
+    const SERIALIZED_SIZE: usize = 16;
+
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        unsafe { writer.write_all(transmute::<__m128i, [u8; 16]>(self.v).as_ref())? };
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+        let mut u = [0u8; Self::SERIALIZED_SIZE];
+        reader.read_exact(&mut u)?;
         unsafe {
-            writer
-                .write_all(transmute::<__m128i, [u8; 16]>(self.v).as_ref())
-                .unwrap(); // todo: error propagation
+            Ok(AVX512GF2_128 {
+                v: transmute::<[u8; Self::SERIALIZED_SIZE], __m128i>(u),
+            })
         }
     }
 
     #[inline(always)]
-    fn serialized_size() -> usize {
-        16
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> Self {
-        let mut u = [0u8; 16];
-        reader.read_exact(&mut u).unwrap(); // todo: error propagation
-        unsafe {
-            AVX512GF2_128 {
-                v: transmute::<[u8; 16], __m128i>(u),
-            }
-        }
-    }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut u = [0u8; 32];
         reader.read_exact(&mut u)?;
         Ok(unsafe {
@@ -184,6 +173,7 @@ impl From<GF2> for AVX512GF2_128 {
     }
 }
 
+#[inline]
 unsafe fn gfmul(a: __m128i, b: __m128i) -> __m128i {
     let xmm_mask = _mm_setr_epi32((0xffffffff_u32) as i32, 0x0, 0x0, 0x0);
 
