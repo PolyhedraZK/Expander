@@ -206,9 +206,7 @@ impl SimdField for NeonGF2_128x8 {
 
 impl From<NeonGF2_128> for NeonGF2_128x8 {
     fn from(v: NeonGF2_128) -> Self {
-        NeonGF2_128x8 {
-            v: [v.v; 8],
-        }
+        NeonGF2_128x8 { v: [v.v; 8] }
     }
 }
 

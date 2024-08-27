@@ -1,40 +1,40 @@
-# name: build-expander-exec
-# on:
-#   release:
-#     types: [released]
+name: build-expander-exec
+on:
+  release:
+    types: [released]
 
-# env:
-#   RUSTFLAGS: "-Dwarnings"
-#   RUST_BACKTRACE: 1
+env:
+  RUSTFLAGS: "-Dwarnings"
+  RUST_BACKTRACE: 1
 
-# jobs:
-#   build:
-#     strategy:
-#       matrix:
-#         platform: [macos, linux-avx2]
-#         include:
-#           - platform: macos
-#             ci_image: macos-latest
-#             flags: ''
-#           - platform: linux-avx2
-#             ci_image: ubuntu-latest
-#             flags: 'RUSTFLAGS="-C target-feature=+avx2"'
-#     runs-on: ${{ matrix.ci_image }}
-#     steps:
-#       - uses: actions/checkout@v4
-#       - uses: dtolnay/rust-toolchain@stable
-#       - uses: Swatinem/rust-cache@v2
-#       - name: Prepare binary
-#         run: ${{ matrix.flags }} cargo build --release --bin expander-exec
-#       - name: Upload release asset
-#         uses: actions/github-script@v6
-#         with:
-#           script: |
-#             const fs = require('fs').promises;
-#             github.rest.repos.uploadReleaseAsset({
-#               owner: context.repo.owner,
-#               repo: context.repo.repo,
-#               release_id: ${{ github.event.release.id }},
-#               name: 'expander-exec-${{ matrix.platform }}',
-#               data: await fs.readFile('target/release/expander-exec')
-#             });
+jobs:
+  build:
+    strategy:
+      matrix:
+        platform: [macos, linux-avx2]
+        include:
+          - platform: macos
+            ci_image: macos-latest
+            flags: ''
+          - platform: linux-avx2
+            ci_image: ubuntu-latest
+            flags: 'RUSTFLAGS="-C target-feature=+avx2"'
+    runs-on: ${{ matrix.ci_image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Prepare binary
+        run: ${{ matrix.flags }} cargo build --release --bin expander-exec
+      - name: Upload release asset
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs').promises;
+            github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ github.event.release.id }},
+              name: 'expander-exec-${{ matrix.platform }}',
+              data: await fs.readFile('target/release/expander-exec')
+            });
