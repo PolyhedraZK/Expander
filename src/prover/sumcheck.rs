@@ -136,11 +136,11 @@ mod tests {
         // Do the PC commitment to initial the transcript
         let commitment = RawCommitment::<C>::new(&circuit.layers[0].input_vals);
         let mut buffer = vec![];
-        commitment.serialize_into(&mut buffer);
+        commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         let mut transcript = Transcript::<Keccak256hasher>::new();
         transcript.append_u8_slice(&buffer);
 
-        // Do SumCheck Once
+        // Do SumCheck Once from the output layer
         (rz0, rz1) = sumcheck_prove_gkr_layer(
             &circuit.layers[layer_num - 1],
             &rz0,
