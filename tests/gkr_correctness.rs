@@ -1,6 +1,6 @@
 use expander_rs::{
-    BN254Config, Circuit, CircuitLayer, Config, GKRConfig, GKRScheme, GateAdd, GateMul,
-    M31ExtConfig, Prover, Verifier,
+    BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GKRConfig, GKRScheme,
+    GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2, Prover, Verifier,
 };
 use std::panic;
 use std::panic::AssertUnwindSafe;
@@ -50,8 +50,18 @@ fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
 
 #[test]
 fn test_gkr_correctness() {
-    test_gkr_correctness_helper::<M31ExtConfig>(&Config::<M31ExtConfig>::new(GKRScheme::Vanilla));
-    test_gkr_correctness_helper::<BN254Config>(&Config::<BN254Config>::new(GKRScheme::Vanilla));
+    test_gkr_correctness_helper::<M31ExtConfigSha2>(&Config::<M31ExtConfigSha2>::new(
+        GKRScheme::Vanilla,
+    ));
+    test_gkr_correctness_helper::<M31ExtConfigKeccak>(&Config::<M31ExtConfigKeccak>::new(
+        GKRScheme::Vanilla,
+    ));
+    test_gkr_correctness_helper::<BN254ConfigSha2>(&Config::<BN254ConfigSha2>::new(
+        GKRScheme::Vanilla,
+    ));
+    test_gkr_correctness_helper::<BN254ConfigKeccak>(&Config::<BN254ConfigKeccak>::new(
+        GKRScheme::Vanilla,
+    ));
 }
 
 fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
