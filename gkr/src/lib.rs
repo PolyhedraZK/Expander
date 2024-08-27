@@ -19,3 +19,6 @@ pub mod verifier;
 pub use verifier::*;
 
 pub mod utils;
+
+#[cfg(test)]
+mod tests;

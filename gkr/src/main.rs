@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::Parser;
-use expander_rs::utils::{KECCAK_CIRCUIT, POSEIDON_CIRCUIT};
+use expander_rs::utils::{dev_env_data_setup, KECCAK_CIRCUIT, POSEIDON_CIRCUIT};
 use expander_rs::{
     BN254ConfigSha2, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfigSha2, Prover,
 };
@@ -35,7 +35,10 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
+
     print_info(&args);
+
+    dev_env_data_setup();
 
     match args.field.as_str() {
         "m31ext3" => match args.scheme.as_str() {
