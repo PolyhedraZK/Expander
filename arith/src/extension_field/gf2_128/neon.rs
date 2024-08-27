@@ -67,11 +67,17 @@ impl FieldSerde for NeonGF2_128 {
 
 impl Field for NeonGF2_128 {
     const NAME: &'static str = "Galios Field 2^128";
+
     const SIZE: usize = 128 / 8;
+
     const FIELD_SIZE: usize = 128; // in bits
 
     const ZERO: Self = NeonGF2_128 {
         v: unsafe { std::mem::zeroed() },
+    };
+
+    const ONE: Self = NeonGF2_128 {
+        v: unsafe { transmute::<[u32; 4], uint32x4_t>([1, 0, 0, 0]) },
     };
 
     const INV_2: Self = NeonGF2_128 {
@@ -162,7 +168,12 @@ impl Field for NeonGF2_128 {
 
 impl ExtensionField for NeonGF2_128 {
     const DEGREE: usize = 128;
+
     const W: u32 = 0x87;
+
+    const X: Self = NeonGF2_128 {
+        v: unsafe { std::mem::transmute::<[i32; 4], uint32x4_t>([2, 0, 0, 0]) },
+    };
 
     type BaseField = GF2;
 
@@ -181,6 +192,13 @@ impl ExtensionField for NeonGF2_128 {
             return *self;
         }
         add_internal(&Self::one(), self)
+    }
+
+    #[inline(always)]
+    fn mul_by_x(&self) -> Self {
+        Self {
+            v: mul_by_x_internal(&self.v),
+        }
     }
 }
 
@@ -342,4 +360,36 @@ pub(crate) unsafe fn gfmul(a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
     let tmp3 = veorq_u64(tmp3, vreinterpretq_u64_u32(tmp12));
 
     vreinterpretq_u32_u64(veorq_u64(tmp3, tmp6))
+}
+
+#[inline]
+pub(crate) fn mul_by_x_internal(a: &uint32x4_t) -> uint32x4_t {
+    unsafe {
+        let (high_bit, shifted_consolidated) = {
+            // Reinterpret uint32x4_t as uint64x2_t
+            let a_u64 = vreinterpretq_u64_u32(*a);
+
+            // Extract the highest bit of both channels
+            let high_bit_first = vgetq_lane_u64(a_u64, 0) >> 63;
+            let high_bit_second = vgetq_lane_u64(a_u64, 1) >> 63;
+
+            // shift to the left by 1
+            let shifted = vshlq_n_u64(a_u64, 1);
+
+            // Create a mask with the high bit in the lowest position of the second channel
+            let mask = vsetq_lane_u64(high_bit_first, vdupq_n_u64(0), 1);
+
+            // OR the shifted value with the mask to set the low bit of the second channel
+            let shifted_consolidated = vorrq_u64(shifted, mask);
+
+            (high_bit_second, shifted_consolidated)
+        };
+
+        let reduction = vcombine_u64(vdup_n_u64(0x87 * high_bit), vdup_n_u64(0));
+
+        let res = veorq_u64(shifted_consolidated, reduction);
+
+        // Reinterpret uint64x2_t back to uint32x4_t
+        vreinterpretq_u32_u64(res)
+    }
 }
