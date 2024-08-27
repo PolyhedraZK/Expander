@@ -305,14 +305,14 @@ impl BinomialExtensionField for NeonGF2_128x8 {
 
         Self {
             v: [
-                gfmul(self.v[0], transmute::<[u32; 4], uint32x4_t>([v0, 0, 0, 0])),
-                gfmul(self.v[1], transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0])),
-                gfmul(self.v[2], transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0])),
-                gfmul(self.v[3], transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0])),
-                gfmul(self.v[4], transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0])),
-                gfmul(self.v[5], transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0])),
-                gfmul(self.v[6], transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0])),
-                gfmul(self.v[7], transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0])),
+                unsafe { gfmul(self.v[0], transmute::<[u32; 4], uint32x4_t>([v0, 0, 0, 0])) },
+                unsafe { gfmul(self.v[1], transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0])) },
+                unsafe { gfmul(self.v[2], transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0])) },
+                unsafe { gfmul(self.v[3], transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0])) },
+                unsafe { gfmul(self.v[4], transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0])) },
+                unsafe { gfmul(self.v[5], transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0])) },
+                unsafe { gfmul(self.v[6], transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0])) },
+                unsafe { gfmul(self.v[7], transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0])) },
             ],
         }
     }
@@ -387,7 +387,7 @@ impl Add<GF2> for NeonGF2_128x8 {
     type Output = NeonGF2_128x8;
     #[inline(always)]
     fn add(self, rhs: GF2) -> Self::Output {
-        let rhs_extended = unsafe { transmute::<[u32; 4], uint32x4_t>([rhs.v, 0, 0, 0]) };
+        let rhs_extended = unsafe { transmute::<[u32; 4], uint32x4_t>([rhs.v as u32, 0, 0, 0]) };
         NeonGF2_128x8 {
             v: [
                 unsafe { gfmul(self.v[0], rhs_extended) },
