@@ -342,10 +342,10 @@ impl ExtensionField for NeonGF2_128x8 {
         res.v[1] = mul_by_x_internal(&self.v[1]);
         res.v[2] = mul_by_x_internal(&self.v[2]);
         res.v[3] = mul_by_x_internal(&self.v[3]);
-        res.v[4] = mul_by_x_internal(&self.v[3]);
-        res.v[5] = mul_by_x_internal(&self.v[3]);
-        res.v[6] = mul_by_x_internal(&self.v[3]);
-        res.v[7] = mul_by_x_internal(&self.v[3]);
+        res.v[4] = mul_by_x_internal(&self.v[4]);
+        res.v[5] = mul_by_x_internal(&self.v[5]);
+        res.v[6] = mul_by_x_internal(&self.v[6]);
+        res.v[7] = mul_by_x_internal(&self.v[7]);
         res
     }
 }
