@@ -390,14 +390,14 @@ impl Add<GF2> for NeonGF2_128x8 {
         let rhs_extended = unsafe { transmute::<[u32; 4], uint32x4_t>([rhs.v as u32, 0, 0, 0]) };
         NeonGF2_128x8 {
             v: [
-                unsafe { gfmul(self.v[0], rhs_extended) },
-                unsafe { gfmul(self.v[1], rhs_extended) },
-                unsafe { gfmul(self.v[2], rhs_extended) },
-                unsafe { gfmul(self.v[3], rhs_extended) },
-                unsafe { gfmul(self.v[4], rhs_extended) },
-                unsafe { gfmul(self.v[5], rhs_extended) },
-                unsafe { gfmul(self.v[6], rhs_extended) },
-                unsafe { gfmul(self.v[7], rhs_extended) },
+                unsafe { gfadd(self.v[0], rhs_extended) },
+                unsafe { gfadd(self.v[1], rhs_extended) },
+                unsafe { gfadd(self.v[2], rhs_extended) },
+                unsafe { gfadd(self.v[3], rhs_extended) },
+                unsafe { gfadd(self.v[4], rhs_extended) },
+                unsafe { gfadd(self.v[5], rhs_extended) },
+                unsafe { gfadd(self.v[6], rhs_extended) },
+                unsafe { gfadd(self.v[7], rhs_extended) },
             ],
         }
     }
