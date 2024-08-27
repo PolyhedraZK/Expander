@@ -7,7 +7,7 @@ use crate::SimdField;
 use crate::{
     field_common,
     neon::{gfadd, gfmul, NeonGF2_128},
-    Field, FieldSerde,
+    BinomialExtensionField, Field, FieldSerde, GF2x8, GF2,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -305,14 +305,14 @@ impl BinomialExtensionField for NeonGF2_128x8 {
 
         Self {
             v: [
-                gfmul(res.v[0], transmute::<[u32; 4], uint32x4_t>([v0, 0, 0, 0])),
-                gfmul(res.v[1], transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0])),
-                gfmul(res.v[2], transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0])),
-                gfmul(res.v[3], transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0])),
-                gfmul(res.v[4], transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0])),
-                gfmul(res.v[5], transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0])),
-                gfmul(res.v[6], transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0])),
-                gfmul(res.v[7], transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0])),
+                gfmul(self.v[0], transmute::<[u32; 4], uint32x4_t>([v0, 0, 0, 0])),
+                gfmul(self.v[1], transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0])),
+                gfmul(self.v[2], transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0])),
+                gfmul(self.v[3], transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0])),
+                gfmul(self.v[4], transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0])),
+                gfmul(self.v[5], transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0])),
+                gfmul(self.v[6], transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0])),
+                gfmul(self.v[7], transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0])),
             ],
         }
     }
@@ -330,14 +330,14 @@ impl BinomialExtensionField for NeonGF2_128x8 {
 
         Self {
             v: [
-                unsafe { gfadd(res.v[0], transmute::<[u32; 4], uint32x4_t>([v0, 0, 0, 0])) },
-                unsafe { gfadd(res.v[1], transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0])) },
-                unsafe { gfadd(res.v[2], transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0])) },
-                unsafe { gfadd(res.v[3], transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0])) },
-                unsafe { gfadd(res.v[4], transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0])) },
-                unsafe { gfadd(res.v[5], transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0])) },
-                unsafe { gfadd(res.v[6], transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0])) },
-                unsafe { gfadd(res.v[7], transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0])) },
+                unsafe { gfadd(self.v[0], transmute::<[u32; 4], uint32x4_t>([v0, 0, 0, 0])) },
+                unsafe { gfadd(self.v[1], transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0])) },
+                unsafe { gfadd(self.v[2], transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0])) },
+                unsafe { gfadd(self.v[3], transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0])) },
+                unsafe { gfadd(self.v[4], transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0])) },
+                unsafe { gfadd(self.v[5], transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0])) },
+                unsafe { gfadd(self.v[6], transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0])) },
+                unsafe { gfadd(self.v[7], transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0])) },
             ],
         }
     }
