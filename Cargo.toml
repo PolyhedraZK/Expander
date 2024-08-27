@@ -64,6 +64,11 @@ harness = false
 path = "arith/benches/field.rs"
 
 [[bench]]
+name = "arith-ext-by-base"
+harness = false
+path = "arith/benches/ext_field.rs"
+
+[[bench]]
 name = "gkr-hashes"
 harness = false
 path = "benches/gkr_hashes.rs"
