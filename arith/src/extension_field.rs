@@ -18,10 +18,10 @@ pub trait ExtensionField: From<Self::BaseField> + Field + FieldSerde {
     /// Degree of the Extension
     const DEGREE: usize;
 
-    /// x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
+    /// constant term if the extension field is represented as a binomial polynomial
     const W: u32;
 
-    /// Zero element for the extension field
+    /// x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
     const X: Self;
 
     /// Base field for the extension
@@ -33,6 +33,6 @@ pub trait ExtensionField: From<Self::BaseField> + Field + FieldSerde {
     /// Add the extension field with the base field
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self;
 
-    /// Multiply the extension field by x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
+    /// Multiply the extension field element by x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
     fn mul_by_x(&self) -> Self;
 }

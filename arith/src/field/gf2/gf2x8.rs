@@ -45,7 +45,7 @@ impl Field for GF2x8 {
 
     const ZERO: Self = GF2x8 { v: 0 };
 
-    const ONE: Self = GF2x8 { v: 1 };
+    const ONE: Self = GF2x8 { v: 255 };
 
     const INV_2: Self = GF2x8 { v: 0 }; // should not be used
 
