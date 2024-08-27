@@ -1,8 +1,7 @@
 use crate::{field_common, GF2x8, GF2};
 
 use crate::{
-    BinomialExtensionField, Field, FieldSerde, FieldSerdeError, FieldSerdeResult, SimdField,
-    GF2_128,
+    ExtensionField, Field, FieldSerde, FieldSerdeError, FieldSerdeResult, SimdField, GF2_128,
 };
 use std::fmt::Debug;
 use std::{
@@ -94,6 +93,15 @@ impl Field for AVX512GF2_128x8 {
     const SIZE: usize = 512 * 2 / 8;
 
     const ZERO: Self = Self { data: PACKED_0 };
+
+    const ONE: Self = Self {
+        data: unsafe {
+            [
+                transmute::<[u64; 8], __m512i>([1, 0, 1, 0, 1, 0, 1, 0]),
+                transmute::<[u64; 8], __m512i>([1, 0, 1, 0, 1, 0, 1, 0]),
+            ]
+        },
+    };
 
     const INV_2: Self = Self { data: PACKED_INV_2 };
 
@@ -552,9 +560,19 @@ pub fn duplicate_odd_bits(byte: u8) -> u8 {
     odd_bits | odd_bits_shifted
 }
 
-impl BinomialExtensionField for AVX512GF2_128x8 {
-    const DEGREE: usize = 128;
-    const W: u32 = 0x87;
+impl ExtensionField for AVX512GF2_128x8 {
+    const DEGREE: usize = GF2_128::DEGREE;
+
+    const W: u32 = GF2_128::W;
+
+    const X: Self = Self {
+        data: unsafe {
+            [
+                transmute::<[u64; 8], __m512i>([2u64, 0, 2u64, 0, 2u64, 0, 2u64, 0]),
+                transmute::<[u64; 8], __m512i>([2u64, 0, 2u64, 0, 2u64, 0, 2u64, 0]),
+            ]
+        },
+    };
 
     type BaseField = GF2x8;
 
@@ -589,6 +607,44 @@ impl BinomialExtensionField for AVX512GF2_128x8 {
             unsafe { _mm512_xor_si512(res.data[1], _mm512_set_epi64(0, v1, 0, v3, 0, v5, 0, v7)) };
 
         res
+    }
+
+    #[inline(always)]
+    fn mul_by_x(&self) -> Self {
+        #[inline]
+        fn mul_by_x_internal(data: __m512i) -> __m512i {
+            unsafe {
+                // Shift left by 1 bit
+                let shifted = _mm512_slli_epi64(data, 1);
+
+                // Get the most significant bit of each 64-bit part
+                let msb = _mm512_srli_epi64(data, 63);
+
+                // Move the MSB from the high 64 bits to the LSB of the low 64 bits for each 128-bit element
+                let msb_moved = _mm512_bslli_epi128(msb, 8);
+
+                // Combine the shifted value with the moved msb
+                let shifted_consolidated = _mm512_or_si512(shifted, msb_moved);
+
+                // compute the reduced polynomial
+                let reduction = {
+                    let odd_elements = _mm512_maskz_compress_epi64(0b10101010, msb);
+                    let mask = _mm512_maskz_expand_epi64(0b01010101, odd_elements);
+                    let multiplier = _mm512_set1_epi64(0x87);
+                    _mm512_mul_epu32(multiplier, mask)
+                };
+
+                // Apply the reduction conditionally
+                _mm512_xor_si512(shifted_consolidated, reduction)
+            }
+        }
+
+        Self {
+            data: [
+                mul_by_x_internal(self.data[0]),
+                mul_by_x_internal(self.data[1]),
+            ],
+        }
     }
 }
 

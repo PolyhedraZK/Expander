@@ -1,4 +1,4 @@
-use arith::{BinomialExtensionField, GF2_128x8, GF2x8, GF2, GF2_128};
+use arith::{ExtensionField, GF2_128x8, GF2x8, GF2, GF2_128};
 
 use crate::SHA256hasher;
 
