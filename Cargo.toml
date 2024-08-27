@@ -1,5 +1,10 @@
 [workspace]
-members = ["arith", "bi-kzg", "gkr"]
+members = [
+    "arith",    # arithmetic backend
+    "bi-kzg",   # bivariate KZG commitment scheme
+    "gkr",      # GKR proof system
+    "uni-kzg"   # univariate KZG commitment scheme
+    ]
 
 [workspace.dependencies]
 ark-std = "0.4"

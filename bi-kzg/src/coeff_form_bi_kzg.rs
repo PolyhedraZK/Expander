@@ -11,15 +11,19 @@ use halo2curves::pairing::{MillerLoopResult, MultiMillerLoop};
 use halo2curves::CurveAffine;
 use itertools::Itertools;
 use rand::RngCore;
+use uni_kzg::PolynomialCommitmentScheme;
 
 use crate::poly::{lagrange_coefficients, univariate_quotient};
 use crate::structs::BivariateLagrangePolynomial;
 use crate::structs::BivariatePolynomial;
 use crate::util::parallelize;
 use crate::{
-    pcs::PolynomialCommitmentScheme,
+    // pcs::PolynomialCommitmentScheme,
     util::{powers_of_field_elements, tensor_product_parallel},
-    BiKZGCommitment, BiKZGProof, BiKZGSRS, BiKZGVerifierParam,
+    BiKZGCommitment,
+    BiKZGProof,
+    BiKZGSRS,
+    BiKZGVerifierParam,
 };
 
 /// Commit to the bi-variate polynomial in its coefficient form.

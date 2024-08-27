@@ -3,15 +3,17 @@ use halo2curves::{
     bn256::{Bn256, Fr},
     ff::Field,
 };
+use uni_kzg::PolynomialCommitmentScheme;
 
 use crate::{
     bi_fft::bi_fft_in_place,
     coeff_form_bi_kzg::CoeffFormBiKZG,
-    pcs::PolynomialCommitmentScheme,
+    // pcs::PolynomialCommitmentScheme,
     poly::{lagrange_coefficients, univariate_quotient},
     structs::BivariateLagrangePolynomial,
     util::tensor_product_parallel,
-    BiKZGVerifierParam, BivariatePolynomial,
+    BiKZGVerifierParam,
+    BivariatePolynomial,
 };
 
 #[test]
