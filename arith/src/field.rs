@@ -50,9 +50,6 @@ pub trait Field:
     /// zero
     const ZERO: Self;
 
-    /// One
-    const ONE: Self;
-
     /// Inverse of 2
     const INV_2: Self;
 

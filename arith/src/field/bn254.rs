@@ -19,9 +19,6 @@ impl Field for Fr {
     /// zero
     const ZERO: Self = Fr::zero();
 
-    /// One
-    const ONE: Self = Fr::one();
-
     /// Inverse of 2
     const INV_2: Self = Fr::TWO_INV;
 
