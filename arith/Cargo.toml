@@ -9,6 +9,7 @@ halo2curves.workspace = true
 log.workspace = true
 rand.workspace = true
 sha2.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 tynm.workspace = true

@@ -1,6 +1,6 @@
 use crate::field_common;
 
-use crate::{Field, FieldSerde, SimdField, GF2_128};
+use crate::{Field, FieldSerde, FieldSerdeResult, SimdField, GF2_128};
 use std::fmt::Debug;
 use std::{
     arch::x86_64::*,
@@ -24,36 +24,30 @@ impl AVX512GF2_128x4 {
 }
 
 impl FieldSerde for AVX512GF2_128x4 {
+    const SERIALIZED_SIZE: usize = 512 / 8;
+
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         unsafe {
             let mut data = [0u8; 64];
             _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data);
-            writer.write_all(&data).unwrap();
+            writer.write_all(&data)?;
         }
+        Ok(())
     }
     #[inline(always)]
-    fn serialized_size() -> usize {
-        512 / 8
-    }
-    #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> Self {
-        let mut data = [0u8; 64];
-        reader.read_exact(&mut data).unwrap();
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+        let mut data = [0u8; Self::SERIALIZED_SIZE];
+        reader.read_exact(&mut data)?;
         unsafe {
-            Self {
+            Ok(Self {
                 data: _mm512_loadu_si512(data.as_ptr() as *const i32),
-            }
+            })
         }
     }
 
     #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(
-        mut reader: R,
-    ) -> std::result::Result<Self, std::io::Error>
-    where
-        Self: Sized,
-    {
+    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut buf = [0u8; 32];
         reader.read_exact(&mut buf)?;
         let data: __m128i = unsafe { _mm_loadu_si128(buf.as_ptr() as *const __m128i) };

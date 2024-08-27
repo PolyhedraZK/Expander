@@ -25,7 +25,7 @@ pub(crate) fn grind<C: GKRConfig>(
     let initial_hash = transcript.challenge_fs::<C>(num_field_elements);
     initial_hash
         .iter()
-        .for_each(|h| h.serialize_into(&mut hash_bytes));
+        .for_each(|h| h.serialize_into(&mut hash_bytes).unwrap()); // TODO: error propagation
 
     assert!(hash_bytes.len() >= 32, "hash len: {}", hash_bytes.len());
     hash_bytes.truncate(32);
@@ -37,18 +37,10 @@ pub(crate) fn grind<C: GKRConfig>(
     end_timer!(timer);
 }
 
+#[derive(Default)]
 pub struct Prover<C: GKRConfig> {
     config: Config<C>,
     sp: GkrScratchpad<C>,
-}
-
-impl<C: GKRConfig> Default for Prover<C> {
-    fn default() -> Self {
-        Self {
-            config: Config::<C>::default(),
-            sp: GkrScratchpad::default(),
-        }
-    }
 }
 
 impl<C: GKRConfig> Prover<C> {
@@ -87,7 +79,7 @@ impl<C: GKRConfig> Prover<C> {
         let commitment = RawCommitment::<C>::new(&c.layers[0].input_vals);
 
         let mut buffer = vec![];
-        commitment.serialize_into(&mut buffer);
+        commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(&buffer);
 
