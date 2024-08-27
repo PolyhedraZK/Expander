@@ -6,6 +6,7 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use crate::SimdField;
 use crate::{
     field_common,
+    FieldSerdeResult,
     neon::{gfadd, gfmul, NeonGF2_128},
     BinomialExtensionField, Field, FieldSerde, GF2x8, GF2,
 };
