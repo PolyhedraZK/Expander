@@ -208,7 +208,7 @@ impl From<NeonGF2_128> for NeonGF2_128x8 {
     fn from(v: NeonGF2_128) -> Self {
         unsafe {
             NeonGF2_128x8 {
-                v: [v.v; Self::pack_size()],
+                v: [v.v; 8],
             }
         }
     }
