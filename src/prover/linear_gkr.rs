@@ -8,7 +8,11 @@ use crate::{
 };
 
 #[cfg(feature = "grinding")]
-pub(crate) fn grind<C: GKRConfig>(transcript: &mut Transcript, config: &Config<C>) {
+pub(crate) fn grind<C: GKRConfig>(
+    transcript: &mut Transcript<C::FiatShamirHashType>,
+    config: &Config<C>,
+) {
+    use crate::hash::FiatShamirHash;
     use arith::{Field, FieldSerde};
 
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
@@ -41,7 +45,7 @@ pub struct Prover<C: GKRConfig> {
 
 impl<C: GKRConfig> Prover<C> {
     pub fn new(config: &Config<C>) -> Self {
-        assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
+        // assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
         assert_eq!(
             config.polynomial_commitment_type,
             crate::config::PolynomialCommitmentType::Raw

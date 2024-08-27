@@ -4,12 +4,11 @@ use std::{
 };
 
 use clap::Parser;
-use expander_rs::{BN254Config, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfig, Prover};
+use expander_rs::utils::{KECCAK_CIRCUIT, POSEIDON_CIRCUIT};
+use expander_rs::{
+    BN254ConfigSha2, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfigSha2, Prover,
+};
 
-// circuit for repeating Keccak for 2 times
-const KECCAK_CIRCUIT: &str = "data/circuit.txt";
-// circuit for repeating Poseidon for 120 times
-const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
 const M31_PACKSIZE: usize = 16;
 const FR_PACKSIZE: usize = 1;
 
@@ -26,7 +25,7 @@ struct Args {
     scheme: String,
 
     /// number of repeat
-    #[arg(short, long, default_value_t = 4)]
+    #[arg(short, long, default_value_t = 1)]
     repeats: usize,
 
     /// number of thread
@@ -40,23 +39,24 @@ fn main() {
 
     match args.field.as_str() {
         "m31ext3" => match args.scheme.as_str() {
-            "keccak" => run_benchmark::<M31ExtConfig>(
+            "keccak" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
-                Config::<M31ExtConfig>::new(GKRScheme::Vanilla),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla),
             ),
-            "poseidon" => run_benchmark::<M31ExtConfig>(
+            "poseidon" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
-                Config::<M31ExtConfig>::new(GKRScheme::GkrSquare),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::GkrSquare),
             ),
             _ => unreachable!(),
         },
         "fr" => match args.scheme.as_str() {
-            "keccak" => {
-                run_benchmark::<BN254Config>(&args, Config::<BN254Config>::new(GKRScheme::Vanilla))
-            }
-            "poseidon" => run_benchmark::<BN254Config>(
+            "keccak" => run_benchmark::<BN254ConfigSha2>(
                 &args,
-                Config::<BN254Config>::new(GKRScheme::GkrSquare),
+                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla),
+            ),
+            "poseidon" => run_benchmark::<BN254ConfigSha2>(
+                &args,
+                Config::<BN254ConfigSha2>::new(GKRScheme::GkrSquare),
             ),
             _ => unreachable!(),
         },

@@ -56,7 +56,9 @@ impl FieldSerde for AVX512GF2_128x4 {
         })
     }
 }
+
 const PACKED_0: __m512i = unsafe { transmute([0; 16]) };
+
 const PACKED_INV_2: __m512i = unsafe {
     transmute([
         67_u64,
@@ -410,7 +412,7 @@ fn sub_internal(a: &AVX512GF2_128x4, b: &AVX512GF2_128x4) -> AVX512GF2_128x4 {
     }
 }
 
-#[inline(always)]
+#[inline]
 fn mul_internal(a: &AVX512GF2_128x4, b: &AVX512GF2_128x4) -> AVX512GF2_128x4 {
     unsafe {
         let xmmmask = _mm512_set_epi32(

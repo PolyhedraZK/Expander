@@ -7,8 +7,8 @@ use std::{
 
 use arith::{Field, FieldSerde};
 use expander_rs::{
-    BN254Config, Circuit, Config, FieldType, GKRConfig, GKRScheme, M31ExtConfig, Proof, Prover,
-    Verifier, SENTINEL_BN254, SENTINEL_M31,
+    BN254ConfigSha2, Circuit, Config, FieldType, GKRConfig, GKRScheme, M31ExtConfigSha2, Proof,
+    Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
 };
 use log::{debug, info};
 use warp::{http::StatusCode, reply, Filter};
@@ -183,19 +183,19 @@ async fn main() {
     debug!("field type: {:?}", field_type);
     match field_type {
         FieldType::M31 => {
-            run_command::<M31ExtConfig>(
+            run_command::<M31ExtConfigSha2>(
                 command,
                 circuit_file,
-                Config::<M31ExtConfig>::new(GKRScheme::Vanilla),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla),
                 &args,
             )
             .await;
         }
         FieldType::BN254 => {
-            run_command::<BN254Config>(
+            run_command::<BN254ConfigSha2>(
                 command,
                 circuit_file,
-                Config::<BN254Config>::new(GKRScheme::Vanilla),
+                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla),
                 &args,
             )
             .await;

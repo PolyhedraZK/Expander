@@ -17,8 +17,6 @@ Cargo.lock
 /target
 
 # Project data
-/data/compiler_out
-/data/proof.bin
 notes.md
 
 # Programming env
@@ -30,15 +28,8 @@ output.txt
 .DS_Store
 *.log
 
-# circuit fies
-data/poseidon_*.txt
-/data/Extracted*
-/data/circuit8.txt
-/data/witness.txt.1
-/data/circuit.txt.1
-/data/bn254_circuit.txt
-/data/circuit.txt
-/data/witness.txt
+# circuit files
+/data/*
 
 # idea
 .idea/
