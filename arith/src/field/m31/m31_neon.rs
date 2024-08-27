@@ -96,7 +96,7 @@ impl Field for NeonM31 {
     const ZERO: Self = Self { v: [PACKED_0; 4] };
 
     const ONE: Self = Self {
-        v: [unsafe { transmute([1; 4]) }; 4],
+        v: [unsafe { transmute::<[u32; 4], uint32x4_t>([1; 4]) }; 4],
     };
 
     const INV_2: Self = Self {
