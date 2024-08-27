@@ -237,13 +237,13 @@ impl From<u32> for NeonGF2_128x8 {
         NeonGF2_128x8 {
             v: [
                 unsafe { transmute::<[u32; 4], uint32x4_t>([v, 0, 0, 0]) },
-                unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) },
-                unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) },
-                unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) },
-                unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) },
-                unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) },
-                unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) },
-                unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v, 0, 0, 0]) },
             ],
         }
     }
@@ -283,5 +283,122 @@ fn mul_internal(a: &NeonGF2_128x8, b: &NeonGF2_128x8) -> NeonGF2_128x8 {
             unsafe { gfmul(a.v[6], b.v[6]) },
             unsafe { gfmul(a.v[7], b.v[7]) },
         ],
+    }
+}
+
+impl BinomialExtensionField for NeonGF2_128x8 {
+    const DEGREE: usize = 128;
+    const W: u32 = 0x87;
+
+    type BaseField = GF2x8;
+
+    #[inline(always)]
+    fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
+        let v0 = ((base.v >> 7) & 1u8) as u32;
+        let v1 = ((base.v >> 6) & 1u8) as u32;
+        let v2 = ((base.v >> 5) & 1u8) as u32;
+        let v3 = ((base.v >> 4) & 1u8) as u32;
+        let v4 = ((base.v >> 3) & 1u8) as u32;
+        let v5 = ((base.v >> 2) & 1u8) as u32;
+        let v6 = ((base.v >> 1) & 1u8) as u32;
+        let v7 = ((base.v >> 0) & 1u8) as u32;
+
+        Self {
+            v: [
+                gfmul(res.v[0], transmute::<[u32; 4], uint32x4_t>([v0, 0, 0, 0])),
+                gfmul(res.v[1], transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0])),
+                gfmul(res.v[2], transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0])),
+                gfmul(res.v[3], transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0])),
+                gfmul(res.v[4], transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0])),
+                gfmul(res.v[5], transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0])),
+                gfmul(res.v[6], transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0])),
+                gfmul(res.v[7], transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0])),
+            ],
+        }
+    }
+
+    #[inline(always)]
+    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
+        let v0 = ((base.v >> 7) & 1u8) as u32;
+        let v1 = ((base.v >> 6) & 1u8) as u32;
+        let v2 = ((base.v >> 5) & 1u8) as u32;
+        let v3 = ((base.v >> 4) & 1u8) as u32;
+        let v4 = ((base.v >> 3) & 1u8) as u32;
+        let v5 = ((base.v >> 2) & 1u8) as u32;
+        let v6 = ((base.v >> 1) & 1u8) as u32;
+        let v7 = ((base.v >> 0) & 1u8) as u32;
+
+        Self {
+            v: [
+                unsafe { gfadd(res.v[0], transmute::<[u32; 4], uint32x4_t>([v0, 0, 0, 0])) },
+                unsafe { gfadd(res.v[1], transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0])) },
+                unsafe { gfadd(res.v[2], transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0])) },
+                unsafe { gfadd(res.v[3], transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0])) },
+                unsafe { gfadd(res.v[4], transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0])) },
+                unsafe { gfadd(res.v[5], transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0])) },
+                unsafe { gfadd(res.v[6], transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0])) },
+                unsafe { gfadd(res.v[7], transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0])) },
+            ],
+        }
+    }
+}
+
+impl From<GF2x8> for NeonGF2_128x8 {
+    #[inline(always)]
+    fn from(v: GF2x8) -> Self {
+        let v0 = ((v.v >> 7) & 1u8) as u32;
+        let v1 = ((v.v >> 6) & 1u8) as u32;
+        let v2 = ((v.v >> 5) & 1u8) as u32;
+        let v3 = ((v.v >> 4) & 1u8) as u32;
+        let v4 = ((v.v >> 3) & 1u8) as u32;
+        let v5 = ((v.v >> 2) & 1u8) as u32;
+        let v6 = ((v.v >> 1) & 1u8) as u32;
+        let v7 = ((v.v >> 0) & 1u8) as u32;
+
+        NeonGF2_128x8 {
+            v: [
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v0, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0]) },
+            ],
+        }
+    }
+}
+
+impl Mul<GF2> for NeonGF2_128x8 {
+    type Output = NeonGF2_128x8;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2) -> Self::Output {
+        if rhs.is_zero() {
+            Self::zero()
+        } else {
+            self
+        }
+    }
+}
+
+impl Add<GF2> for NeonGF2_128x8 {
+    type Output = NeonGF2_128x8;
+    #[inline(always)]
+    fn add(self, rhs: GF2) -> Self::Output {
+        let rhs_extended = unsafe { transmute::<[u32; 4], uint32x4_t>([rhs.v, 0, 0, 0]) };
+        NeonGF2_128x8 {
+            v: [
+                unsafe { gfmul(self.v[0], rhs_extended) },
+                unsafe { gfmul(self.v[1], rhs_extended) },
+                unsafe { gfmul(self.v[2], rhs_extended) },
+                unsafe { gfmul(self.v[3], rhs_extended) },
+                unsafe { gfmul(self.v[4], rhs_extended) },
+                unsafe { gfmul(self.v[5], rhs_extended) },
+                unsafe { gfmul(self.v[6], rhs_extended) },
+                unsafe { gfmul(self.v[7], rhs_extended) },
+            ],
+        }
     }
 }

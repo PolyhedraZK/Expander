@@ -1,4 +1,4 @@
-use arith::{Field, BinomialExtensionField, GF2_128x8, M31Ext3, M31Ext3x16, GF2_128};
+use arith::{BinomialExtensionField, Field, GF2_128x8, M31Ext3, M31Ext3x16, GF2_128};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use tynm::type_name;
@@ -8,7 +8,7 @@ fn random_element<F: Field>() -> F {
     F::random_unsafe(&mut rng)
 }
 
-pub(crate) fn bench_field<F: Field+BinomialExtensionField>(c: &mut Criterion) {
+pub(crate) fn bench_field<F: Field + BinomialExtensionField>(c: &mut Criterion) {
     c.bench_function(
         &format!(
             "mul-by-base-throughput<{}> 100x times {}x ",
@@ -31,7 +31,12 @@ pub(crate) fn bench_field<F: Field+BinomialExtensionField>(c: &mut Criterion) {
                 },
                 |(mut x, mut y, mut z, mut w, xx, yy, zz, ww)| {
                     for _ in 0..25 {
-                        (x, y, z, w) = (x.mul_by_base_field(&xx), y.mul_by_base_field(&yy), z.mul_by_base_field(&zz), w.mul_by_base_field(&ww));
+                        (x, y, z, w) = (
+                            x.mul_by_base_field(&xx),
+                            y.mul_by_base_field(&yy),
+                            z.mul_by_base_field(&zz),
+                            w.mul_by_base_field(&ww),
+                        );
                     }
                     (x, y, z, w)
                 },
@@ -48,12 +53,7 @@ pub(crate) fn bench_field<F: Field+BinomialExtensionField>(c: &mut Criterion) {
         ),
         |b| {
             b.iter_batched(
-                || {
-                    (
-                        random_element::<F>(),
-                        random_element::<F::BaseField>(),
-                    )
-                },
+                || (random_element::<F>(), random_element::<F::BaseField>()),
                 |(mut x, xx)| {
                     for _ in 0..100 {
                         x = x.mul_by_base_field(&xx);
@@ -87,7 +87,12 @@ pub(crate) fn bench_field<F: Field+BinomialExtensionField>(c: &mut Criterion) {
                 },
                 |(mut x, mut y, mut z, mut w, xx, yy, zz, ww)| {
                     for _ in 0..25 {
-                        (x, y, z, w) = (x.add_by_base_field(&xx), y.add_by_base_field(&yy), z.add_by_base_field(&zz), w.add_by_base_field(&ww));
+                        (x, y, z, w) = (
+                            x.add_by_base_field(&xx),
+                            y.add_by_base_field(&yy),
+                            z.add_by_base_field(&zz),
+                            w.add_by_base_field(&ww),
+                        );
                     }
                     (x, y, z, w)
                 },
@@ -104,12 +109,7 @@ pub(crate) fn bench_field<F: Field+BinomialExtensionField>(c: &mut Criterion) {
         ),
         |b| {
             b.iter_batched(
-                || {
-                    (
-                        random_element::<F>(),
-                        random_element::<F::BaseField>(),
-                    )
-                },
+                || (random_element::<F>(), random_element::<F::BaseField>()),
                 |(mut x, xx)| {
                     for _ in 0..100 {
                         x = x.add_by_base_field(&xx);
@@ -120,7 +120,6 @@ pub(crate) fn bench_field<F: Field+BinomialExtensionField>(c: &mut Criterion) {
             )
         },
     );
-
 }
 
 fn ext_by_base_benchmark(c: &mut Criterion) {
