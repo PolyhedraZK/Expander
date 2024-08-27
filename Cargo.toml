@@ -29,6 +29,10 @@ criterion = "0.5.1"
 name = "expander-exec"
 path = "src/exec.rs"
 
+[[bin]]
+name = "dev-setup"
+path = "src/utils.rs"
+
 [features]
 default = []
 # default = [ "grinding" ]

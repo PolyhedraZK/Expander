@@ -49,8 +49,7 @@ Please note that the witness generation process is not yet optimal, and we are a
 Before executing setup, please make sure you read through the system requirements, and make sure your CPU is in the list.
 
 ```sh
-wget -P data https://storage.googleapis.com/keccak8/circuit.txt
-wget -P data https://storage.googleapis.com/keccak8/witness.txt
+cargo run --bin=dev-setup --release
 ```
 
 
@@ -72,7 +71,7 @@ RUSTFLAGS="-C target-cpu=native" cargo run --release -- -f fr -t 16
 
 ## Correctness test
 
-[Here](./tests/gkr_correctness.rs) we provide a test case for end-to-end proof generation and verification. 
+[Here](./tests/gkr_correctness.rs) we provide a test case for end-to-end proof generation and verification.
 To check the correctness, run the follow standard Rust test command:
 
 ```sh
