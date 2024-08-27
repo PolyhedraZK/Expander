@@ -301,7 +301,7 @@ impl BinomialExtensionField for NeonGF2_128x8 {
         let v4 = ((base.v >> 3) & 1u8) as u32;
         let v5 = ((base.v >> 2) & 1u8) as u32;
         let v6 = ((base.v >> 1) & 1u8) as u32;
-        let v7 = ((base.v >> 0) & 1u8) as u32;
+        let v7 = (base.v & 1u8) as u32;
 
         Self {
             v: [
@@ -326,7 +326,7 @@ impl BinomialExtensionField for NeonGF2_128x8 {
         let v4 = ((base.v >> 3) & 1u8) as u32;
         let v5 = ((base.v >> 2) & 1u8) as u32;
         let v6 = ((base.v >> 1) & 1u8) as u32;
-        let v7 = ((base.v >> 0) & 1u8) as u32;
+        let v7 = (base.v & 1u8) as u32;
 
         Self {
             v: [
@@ -353,7 +353,7 @@ impl From<GF2x8> for NeonGF2_128x8 {
         let v4 = ((v.v >> 3) & 1u8) as u32;
         let v5 = ((v.v >> 2) & 1u8) as u32;
         let v6 = ((v.v >> 1) & 1u8) as u32;
-        let v7 = ((v.v >> 0) & 1u8) as u32;
+        let v7 = (v.v & 1u8) as u32;
 
         NeonGF2_128x8 {
             v: [
