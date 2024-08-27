@@ -36,19 +36,11 @@ impl FieldSerde for GF2x8 {
 
 impl Field for GF2x8 {
     // still will pack 8 bits into a u8
-
     const NAME: &'static str = "Galios Field 2 SIMD";
-
     const SIZE: usize = 1;
-
     const FIELD_SIZE: usize = 1; // in bits
-
     const ZERO: Self = GF2x8 { v: 0 };
-
-    const ONE: Self = GF2x8 { v: 255 };
-
     const INV_2: Self = GF2x8 { v: 0 }; // should not be used
-
     #[inline(always)]
     fn zero() -> Self {
         GF2x8 { v: 0 }

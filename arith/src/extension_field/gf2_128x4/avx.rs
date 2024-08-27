@@ -1,4 +1,4 @@
-use crate::{field_common, ExtensionField};
+use crate::field_common;
 
 use crate::{Field, FieldSerde, FieldSerdeResult, SimdField, GF2_128};
 use std::fmt::Debug;
@@ -80,10 +80,6 @@ impl Field for AVX512GF2_128x4 {
     const SIZE: usize = 512 / 8;
 
     const ZERO: Self = Self { data: PACKED_0 };
-
-    const ONE: Self = Self {
-        data: unsafe { transmute::<[u64; 8], __m512i>([1, 0, 1, 0, 1, 0, 1, 0]) },
-    };
 
     const INV_2: Self = Self { data: PACKED_INV_2 };
 
@@ -395,65 +391,6 @@ impl SimdField for AVX512GF2_128x4 {
     #[inline(always)]
     fn pack_size() -> usize {
         4
-    }
-}
-
-impl ExtensionField for AVX512GF2_128x4 {
-    const DEGREE: usize = GF2_128::DEGREE;
-
-    const W: u32 = GF2_128::W;
-
-    const X: Self = Self {
-        data: unsafe { transmute::<[u64; 8], __m512i>([2u64, 0, 2u64, 0, 2u64, 0, 2u64, 0]) },
-    };
-
-    type BaseField = GF2_128;
-
-    #[inline(always)]
-    fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
-        let simd_base = AVX512GF2_128x4::from(*base);
-        *self * simd_base
-    }
-
-    #[inline(always)]
-    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
-        unsafe {
-            let base_vec = transmute::<GF2_128, u128>(*base);
-            let mut res = transmute::<AVX512GF2_128x4, [u128; 4]>(*self);
-            res[0] ^= base_vec;
-            Self {
-                data: transmute::<[u128; 4], __m512i>(res),
-            }
-        }
-    }
-
-    #[inline(always)]
-    fn mul_by_x(&self) -> Self {
-        unsafe {
-            // Shift left by 1 bit
-            let shifted = _mm512_slli_epi64(self.data, 1);
-
-            // Get the most significant bit of each 64-bit part
-            let msb = _mm512_srli_epi64(self.data, 63);
-
-            // Move the MSB from the high 64 bits to the LSB of the low 64 bits for each 128-bit element
-            let msb_moved = _mm512_bslli_epi128(msb, 8);
-
-            // Combine the shifted value with the moved msb
-            let shifted_consolidated = _mm512_or_si512(shifted, msb_moved);
-
-            // compute the reduced polynomial
-            let reduction = {
-                let odd_elements = _mm512_maskz_compress_epi64(0b10101010, msb);
-                let mask = _mm512_maskz_expand_epi64(0b01010101, odd_elements);
-                let multiplier = _mm512_set1_epi64(0x87);
-                _mm512_mul_epu32(multiplier, mask)
-            };
-
-            // Apply the reduction conditionally
-            let res = _mm512_xor_si512(shifted_consolidated, reduction);
-            AVX512GF2_128x4 { data: res }
-        }
     }
 }
 

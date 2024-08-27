@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, M31Ext3, M31x16, SimdField,
-    M31,
+    field_common, BinomialExtensionField, Field, FieldSerde, FieldSerdeResult, M31Ext3, M31x16,
+    SimdField, M31,
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -73,14 +73,10 @@ impl From<M31x16> for M31Ext3x16 {
     }
 }
 
-impl ExtensionField for M31Ext3x16 {
+impl BinomialExtensionField for M31Ext3x16 {
     const DEGREE: usize = 3;
 
     const W: u32 = 5;
-
-    const X: Self = M31Ext3x16 {
-        v: [M31x16::ZERO, M31x16::ONE, M31x16::ZERO],
-    };
 
     type BaseField = M31x16;
 
@@ -95,14 +91,6 @@ impl ExtensionField for M31Ext3x16 {
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
         M31Ext3x16 {
             v: [self.v[0] + base, self.v[1], self.v[2]],
-        }
-    }
-
-    /// Multiply the extension field by x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
-    #[inline(always)]
-    fn mul_by_x(&self) -> Self {
-        Self {
-            v: [self.v[2].mul_by_5(), self.v[0], self.v[1]],
         }
     }
 }
@@ -133,10 +121,6 @@ impl Field for M31Ext3x16 {
 
     const ZERO: Self = Self {
         v: [M31x16::ZERO; 3],
-    };
-
-    const ONE: Self = Self {
-        v: [M31x16::ONE, M31x16::ZERO, M31x16::ZERO],
     };
 
     const INV_2: Self = Self {
