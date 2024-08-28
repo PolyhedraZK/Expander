@@ -49,7 +49,7 @@ where
 
         // root of unity
         let mut omega = E::Fr::ROOT_OF_UNITY;
-        omega = omega.pow_vartime(&[1 << (E::Fr::S - log_degree)]);
+        omega = omega.pow_vartime([1 << (E::Fr::S - log_degree)]);
 
         // toxic waste
         let tau = E::Fr::random(&mut rng);
@@ -180,5 +180,4 @@ where
     }
 
     // todo: implement batch opening and batch verification
-
 }
