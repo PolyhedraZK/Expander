@@ -36,8 +36,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo run --bin=dev-setup --release
-      - run: cargo test -p arith --release
-      - run: cargo test -p bi-kzg --release
       - run: cargo test --no-default-features --release
       - run: cargo test --all-features --release
   Bench-mac-m31-ext3:
@@ -65,8 +63,6 @@ jobs:
       - uses: actions/checkout@v4
       - run: . "$HOME/.cargo/env"
       - run: cargo run --bin=dev-setup --release
-      - run: RUSTFLAGS="-C target-cpu=native" cargo test -p arith --release
-      - run: RUSTFLAGS="-C target-cpu=native" cargo test -p bi-kzg --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo test --no-default-features --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo test --all-features --release
   Bench-linux-m31-ext3:
