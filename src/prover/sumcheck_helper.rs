@@ -1,4 +1,4 @@
-use arith::{Field, SimdField};
+use arith::{ExtensionField, Field, SimdField};
 
 use crate::{CircuitLayer, FieldType, GKRConfig, GkrScratchpad};
 
@@ -79,12 +79,6 @@ impl SumcheckMultilinearProdHelper {
         log::trace!("Eval size: {}", eval_size);
 
         if C::FIELD_TYPE == FieldType::GF2 {
-            let eval_point = C::ChallengeField::from_uniform_bytes(&[1u8; 32]);
-            let mut eqs = [C::ChallengeField::zero(); 2];
-            eq_evals_at_primitive(&[eval_point], &C::ChallengeField::one(), &mut eqs);
-            eqs[0] *= eqs[0];
-            eqs[1] *= eqs[1];
-
             if var_idx == 0 {
                 for i in 0..eval_size {
                     if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
@@ -97,10 +91,10 @@ impl SumcheckMultilinearProdHelper {
                     let hg_v_1 = bk_hg[i * 2 + 1];
                     p0 += C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
                     p1 += C::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
-                    p2 += (C::field_add_simd_circuit_field(
-                        &C::simd_circuit_field_mul_challenge_field(&(f_v_1 - f_v_0), &eval_point),
-                        &f_v_0,
-                    )) * (C::challenge_mul_field(&eval_point, &(hg_v_1 - hg_v_0)) + hg_v_0);
+                    p2 += C::field_add_simd_circuit_field(
+                        &C::field_mul_simd_circuit_field(&C::Field::X, &(f_v_1 - f_v_0)),
+                        &f_v_0) // this should be cheaper than convert than mul by x
+                    * ((hg_v_1 - hg_v_0).mul_by_x() + hg_v_0);
                 }
             } else {
                 for i in 0..eval_size {
@@ -114,8 +108,8 @@ impl SumcheckMultilinearProdHelper {
                     let hg_v_1 = bk_hg[i * 2 + 1];
                     p0 += f_v_0 * hg_v_0;
                     p1 += f_v_1 * hg_v_1;
-                    p2 += (C::challenge_mul_field(&eval_point, &(f_v_1 - f_v_0)) + f_v_0)
-                        * (C::challenge_mul_field(&eval_point, &(hg_v_1 - hg_v_0)) + hg_v_0);
+                    p2 += ((f_v_1 - f_v_0).mul_by_x() + f_v_0)
+                        * ((hg_v_1 - hg_v_0).mul_by_x() + hg_v_0);
                 }
             }
             return [p0, p1, p2];
