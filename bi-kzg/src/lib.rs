@@ -1,6 +1,5 @@
 mod coeff_form_bi_kzg;
 mod structs;
-mod util;
 
 // mod lagrange_form_bi_kzg;
 

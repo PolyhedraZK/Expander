@@ -1,4 +1,7 @@
 mod coeff_form_uni_kzg;
+pub use coeff_form_uni_kzg::*;
+mod structs;
+pub use structs::*;
 
 use std::{borrow::Borrow, fmt::Debug};
 

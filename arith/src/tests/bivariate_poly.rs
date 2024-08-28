@@ -1,12 +1,9 @@
 use ark_std::test_rng;
-use halo2curves::{
-    bn256::{Bn256, Fr},
-    ff::Field,
-};
+use halo2curves::bn256::Fr;
 
 use crate::{
-    bi_fft_in_place, lagrange_coefficients, univariate_quotient, BivariateLagrangePolynomial,
-    BivariatePolynomial,
+    bi_fft_in_place, lagrange_coefficients, tensor_product_parallel, univariate_quotient,
+    BivariateLagrangePolynomial, BivariatePolynomial,
 };
 
 #[test]
@@ -295,4 +292,20 @@ fn test_bi_fft() {
             assert_eq!(poly_lag, poly_lag2);
         }
     }
+}
+
+#[test]
+fn test_tensor_product() {
+    let vec1 = vec![Fr::from(1u64), Fr::from(2u64), Fr::from(3u64)];
+    let vec2 = vec![Fr::from(4u64), Fr::from(5u64), Fr::from(6u64)];
+    let result = tensor_product_parallel(&vec1, &vec2);
+    assert_eq!(result[0], Fr::from(4u64));
+    assert_eq!(result[1], Fr::from(2u64) * Fr::from(4u64));
+    assert_eq!(result[2], Fr::from(3u64) * Fr::from(4u64));
+    assert_eq!(result[3], Fr::from(5u64));
+    assert_eq!(result[4], Fr::from(2u64) * Fr::from(5u64));
+    assert_eq!(result[5], Fr::from(3u64) * Fr::from(5u64));
+    assert_eq!(result[6], Fr::from(6u64));
+    assert_eq!(result[7], Fr::from(2u64) * Fr::from(6u64));
+    assert_eq!(result[8], Fr::from(3u64) * Fr::from(6u64));
 }

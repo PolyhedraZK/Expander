@@ -1,7 +1,9 @@
 use std::{borrow::Borrow, marker::PhantomData};
 
 use arith::lagrange_coefficients;
+use arith::parallelize;
 use arith::powers_of_field_elements;
+use arith::tensor_product_parallel;
 use arith::univariate_quotient;
 use arith::BivariateLagrangePolynomial;
 use arith::BivariatePolynomial;
@@ -18,10 +20,7 @@ use itertools::Itertools;
 use rand::RngCore;
 use uni_kzg::PolynomialCommitmentScheme;
 
-use crate::util::parallelize;
-use crate::{
-    util::tensor_product_parallel, BiKZGCommitment, BiKZGProof, BiKZGSRS, BiKZGVerifierParam,
-};
+use crate::{BiKZGCommitment, BiKZGProof, BiKZGSRS, BiKZGVerifierParam};
 
 /// Commit to the bi-variate polynomial in its coefficient form.
 /// Note that it is in general more efficient to use the lagrange form.
