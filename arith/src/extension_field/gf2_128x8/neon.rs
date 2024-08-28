@@ -161,7 +161,11 @@ impl Field for NeonGF2_128x8 {
 
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
-        todo!()
+        if self.is_zero() {
+            return None;
+        }
+        let p_m2 = !(0u128) - 1;
+        Some(Self::exp(self, p_m2))
     }
 
     #[inline(always)]
