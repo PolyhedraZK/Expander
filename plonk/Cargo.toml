@@ -15,5 +15,6 @@ uni-kzg ={ path = "../uni-kzg" }
 
 
 [features]
+# default = [ ]
 default = [ "print-gates" ]
 print-gates = [ ]

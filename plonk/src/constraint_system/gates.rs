@@ -1,7 +1,10 @@
 use arith::Field;
 use halo2curves::ff::{PrimeField, WithSmallOrderMulGroup};
 
-use crate::{ConstraintSystem, GatesID, VariableIndex, VAR_ONE, VAR_ZERO};
+use crate::{ConstraintSystem, VariableIndex, VAR_ONE, VAR_ZERO};
+
+#[cfg(feature = "print-gates")]
+use crate::GatesID;
 
 // Gate implementations
 impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
