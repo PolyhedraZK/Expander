@@ -58,6 +58,12 @@ fn main() {
             _ => unreachable!(),
         },
         "gf2ext128" => {
+            #[cfg(not(feature = "coef-all-one"))]
+            {
+                eprintln!("Coefficients must be all one for gf2, please enable the coef-all-one feature for benchmark");
+                std::process::exit(1);
+            }
+            
             #[cfg(feature = "coef-all-one")]
             {
                 match args.scheme.as_str() {
@@ -71,12 +77,6 @@ fn main() {
                     ),
                     _ => unreachable!(),
                 }
-            }
-            
-            #[cfg(not(feature = "coef-all-one"))]
-            {
-                eprintln!("Coefficients must be all one for gf2, please enable the coef-all-one feature for benchmark");
-                std::process::exit(1);
             }
         },
         _ => unreachable!(),
