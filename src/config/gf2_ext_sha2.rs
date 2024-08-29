@@ -1,24 +1,24 @@
-use arith::{ExtensionField, M31Ext3, M31Ext3x16, M31x16, M31};
+use arith::{ExtensionField, GF2_128x8, GF2x8, GF2, GF2_128};
 
 use crate::SHA256hasher;
 
 use super::{FieldType, GKRConfig};
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct M31ExtConfigSha2;
+pub struct GF2ExtConfigSha2;
 
-impl GKRConfig for M31ExtConfigSha2 {
-    type CircuitField = M31;
+impl GKRConfig for GF2ExtConfigSha2 {
+    type CircuitField = GF2;
 
-    type SimdCircuitField = M31x16;
+    type SimdCircuitField = GF2x8;
 
-    type ChallengeField = M31Ext3;
+    type ChallengeField = GF2_128;
 
-    type Field = M31Ext3x16;
+    type Field = GF2_128x8;
 
     type FiatShamirHashType = SHA256hasher;
 
-    const FIELD_TYPE: FieldType = FieldType::M31;
+    const FIELD_TYPE: FieldType = FieldType::GF2;
 
     #[inline(always)]
     fn challenge_mul_circuit_field(
@@ -30,15 +30,11 @@ impl GKRConfig for M31ExtConfigSha2 {
 
     #[inline(always)]
     fn field_mul_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
-        // directly multiply M31Ext3 with M31
-        // skipping the conversion M31 -> M31Ext3
         *a * *b
     }
 
     #[inline(always)]
     fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
-        // directly add M31Ext3 with M31
-        // skipping the conversion M31 -> M31Ext3
         *a + *b
     }
 
@@ -70,6 +66,7 @@ impl GKRConfig for M31ExtConfigSha2 {
     ) -> Self::SimdCircuitField {
         Self::SimdCircuitField::from(*a) * *b
     }
+
     #[inline(always)]
     fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField {
         Self::SimdCircuitField::from(*a)
@@ -86,12 +83,6 @@ impl GKRConfig for M31ExtConfigSha2 {
         b: &Self::ChallengeField,
     ) -> Self::Field {
         let b_simd_ext = Self::Field::from(*b);
-        Self::Field {
-            v: [
-                b_simd_ext.v[0] * a,
-                b_simd_ext.v[1] * a,
-                b_simd_ext.v[2] * a,
-            ],
-        }
+        b_simd_ext.mul_by_base_field(a)
     }
 }

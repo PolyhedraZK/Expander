@@ -27,20 +27,29 @@ impl FieldSerde for GF2x8 {
     }
 
     #[inline]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut u = [0u8; 32];
-        reader.read_exact(&mut u)?;
-        Ok(GF2x8 { v: u[0] })
+    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> FieldSerdeResult<Self> {
+        unimplemented!("We don't have serialization in ecc for gf2x8")
+        // let mut u = [0u8; 32];
+        // reader.read_exact(&mut u)?;
+        // Ok(GF2x8 { v: u[0] })
     }
 }
 
 impl Field for GF2x8 {
     // still will pack 8 bits into a u8
+
     const NAME: &'static str = "Galios Field 2 SIMD";
+
     const SIZE: usize = 1;
+
     const FIELD_SIZE: usize = 1; // in bits
+
     const ZERO: Self = GF2x8 { v: 0 };
+
+    const ONE: Self = GF2x8 { v: 255 };
+
     const INV_2: Self = GF2x8 { v: 0 }; // should not be used
+
     #[inline(always)]
     fn zero() -> Self {
         GF2x8 { v: 0 }
@@ -238,14 +247,24 @@ impl SubAssign<&GF2x8> for GF2x8 {
 impl From<u32> for GF2x8 {
     #[inline(always)]
     fn from(v: u32) -> Self {
-        GF2x8 { v: (v % 2) as u8 }
+        assert!(v < 2);
+        if v == 0 {
+            GF2x8 { v: 0 }
+        } else {
+            GF2x8 { v: 0xFF }
+        }
     }
 }
 
 impl From<GF2> for GF2x8 {
     #[inline(always)]
     fn from(v: GF2) -> Self {
-        GF2x8 { v: v.v }
+        assert!(v.v < 2);
+        if v.v == 0 {
+            GF2x8 { v: 0 }
+        } else {
+            GF2x8 { v: 0xFF }
+        }
     }
 }
 

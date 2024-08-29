@@ -1,14 +1,18 @@
 mod bn254_keccak;
 mod bn254_sha2;
+mod gf2_ext_keccak;
+mod gf2_ext_sha2;
 mod m31_ext_keccak;
 mod m31_ext_sha2;
 
 pub use bn254_keccak::BN254ConfigKeccak;
 pub use bn254_sha2::BN254ConfigSha2;
+pub use gf2_ext_keccak::GF2ExtConfigKeccak;
+pub use gf2_ext_sha2::GF2ExtConfigSha2;
 pub use m31_ext_keccak::M31ExtConfigKeccak;
 pub use m31_ext_sha2::M31ExtConfigSha2;
 
-use arith::{BinomialExtensionField, Field, FieldSerde, SimdField};
+use arith::{ExtensionField, Field, FieldSerde, SimdField};
 
 use crate::FiatShamirHash;
 
@@ -24,8 +28,8 @@ pub enum PolynomialCommitmentType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldType {
     M31,
-    BabyBear,
     BN254,
+    GF2,
 }
 
 pub const SENTINEL_M31: [u8; 32] = [
@@ -91,10 +95,10 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     type CircuitField: Field + FieldSerde + Send;
 
     /// Field type for the challenge, e.g., M31Ext3
-    type ChallengeField: BinomialExtensionField<BaseField = Self::CircuitField> + Send;
+    type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send;
 
     /// Main field type for the scheme, e.g., M31Ext3x16
-    type Field: BinomialExtensionField + SimdField<Scalar = Self::ChallengeField> + Send;
+    type Field: ExtensionField + SimdField<Scalar = Self::ChallengeField> + Send;
 
     /// Simd field for circuit
     type SimdCircuitField: SimdField + FieldSerde + Send;

@@ -3,6 +3,7 @@ mod extension_field;
 mod field;
 mod gf2;
 mod gf2_128;
+mod gf2_128x8;
 mod m31;
 mod m31_ext;
 #[cfg(target_arch = "aarch64")]

@@ -1,7 +1,8 @@
 use expander_rs::utils::*;
 use expander_rs::{
-    BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GKRConfig, GKRScheme,
-    GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2, Prover, Verifier,
+    BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GF2ExtConfigKeccak,
+    GF2ExtConfigSha2, GKRConfig, GKRScheme, GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2,
+    Prover, Verifier,
 };
 use std::panic;
 use std::panic::AssertUnwindSafe;
@@ -49,6 +50,12 @@ fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
 
 #[test]
 fn test_gkr_correctness() {
+    test_gkr_correctness_helper::<GF2ExtConfigSha2>(&Config::<GF2ExtConfigSha2>::new(
+        GKRScheme::Vanilla,
+    ));
+    test_gkr_correctness_helper::<GF2ExtConfigKeccak>(&Config::<GF2ExtConfigKeccak>::new(
+        GKRScheme::Vanilla,
+    ));
     test_gkr_correctness_helper::<M31ExtConfigSha2>(&Config::<M31ExtConfigSha2>::new(
         GKRScheme::Vanilla,
     ));
@@ -103,11 +110,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     // Verify
     let verifier = Verifier::new(config);
     println!("Verifier created.");
-    assert!(
-        verifier.verify(&mut circuit, &claimed_v, &proof),
-        "Proof {:?}",
-        proof.bytes
-    );
+    assert!(verifier.verify(&mut circuit, &claimed_v, &proof),);
     println!("Correct proof verified.");
     let mut bad_proof = proof.clone();
     let rng = &mut rand::thread_rng();
@@ -120,15 +123,8 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
         verifier.verify(&mut circuit, &claimed_v, &bad_proof)
     }));
 
-    let final_result = match result {
-        Ok(value) => value,
-        Err(_) => false,
-    };
+    let final_result = result.unwrap_or_default();
 
-    assert!(
-        !final_result,
-        "Proof {:?}, Bad proof {:?}",
-        proof.bytes, bad_proof.bytes
-    );
+    assert!(!final_result,);
     println!("Bad proof rejected.");
 }
