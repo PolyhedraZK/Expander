@@ -7,6 +7,7 @@ use std::io::Read;
 use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
+use ark_std::iterable::Iterable;
 pub use gf2x8::GF2x8;
 
 use crate::{field_common, FieldSerde, FieldSerdeResult};
@@ -38,19 +39,32 @@ impl FieldSerde for GF2 {
 
     #[inline(always)]
     fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut u = [0u8; 1];
+        let mut u = [0u8; 32];
         reader.read_exact(&mut u)?;
+
+        // FIXME:
+        // assert!(u.iter().skip(1).all(|x| x == 0u8));
+        assert!(u.iter().skip(4).all(|x| x == 0u8));
+
         Ok(GF2 { v: u[0] % 2 })
     }
 }
 
 impl Field for GF2 {
     // still will pack 8 bits into a u8
+
     const NAME: &'static str = "Galios Field 2";
+
     const SIZE: usize = 1;
+
     const FIELD_SIZE: usize = 1; // in bits
+
     const ZERO: Self = GF2 { v: 0 };
+
+    const ONE: Self = GF2 { v: 1 };
+
     const INV_2: Self = GF2 { v: 0 }; // should not be used
+
     #[inline(always)]
     fn zero() -> Self {
         GF2 { v: 0 }

@@ -1,9 +1,10 @@
 use ark_std::test_rng;
 use std::io::Cursor;
 
-use crate::{FieldSerde, GF2_128x4, GF2_128};
+use crate::{FieldSerde, GF2_128x8, GF2_128};
 
 use super::{
+    extension_field::random_extension_field_tests,
     field::{random_field_tests, random_inversion_tests},
     simd_field::random_simd_field_tests,
 };
@@ -11,11 +12,13 @@ use super::{
 #[test]
 fn test_field() {
     random_field_tests::<GF2_128>("GF2_128".to_string());
-    random_field_tests::<GF2_128x4>("Vectorized GF2_128".to_string());
+    random_extension_field_tests::<GF2_128>("GF2_128".to_string());
+    random_field_tests::<GF2_128x8>("Vectorized GF2_128".to_string());
+    random_extension_field_tests::<GF2_128x8>("Vectorized GF2_128".to_string());
 
     let mut rng = test_rng();
     random_inversion_tests::<GF2_128, _>(&mut rng, "GF2_128".to_string());
-    random_simd_field_tests::<GF2_128x4>("Vectorized GF2_128".to_string());
+    random_simd_field_tests::<GF2_128x8>("Vectorized GF2_128".to_string());
 }
 
 #[test]

@@ -90,6 +90,8 @@ impl Field for M31 {
 
     const ZERO: Self = M31 { v: 0 };
 
+    const ONE: Self = M31 { v: 1 };
+
     const INV_2: M31 = M31 { v: 1 << 30 };
 
     const FIELD_SIZE: usize = 32;

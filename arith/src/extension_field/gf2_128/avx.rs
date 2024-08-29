@@ -5,7 +5,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{field_common, BinomialExtensionField, Field, FieldSerde, FieldSerdeResult, GF2};
+use crate::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, GF2};
 
 #[derive(Debug, Clone, Copy)]
 pub struct AVX512GF2_128 {
@@ -48,11 +48,17 @@ impl FieldSerde for AVX512GF2_128 {
 
 impl Field for AVX512GF2_128 {
     const NAME: &'static str = "Galios Field 2^128";
+
     const SIZE: usize = 128 / 8;
+
     const FIELD_SIZE: usize = 128; // in bits
 
     const ZERO: Self = AVX512GF2_128 {
         v: unsafe { std::mem::zeroed() },
+    };
+
+    const ONE: Self = AVX512GF2_128 {
+        v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) },
     };
 
     const INV_2: Self = AVX512GF2_128 {
@@ -135,15 +141,20 @@ impl Field for AVX512GF2_128 {
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         unsafe {
             AVX512GF2_128 {
-                v: *(bytes.as_ptr() as *const __m128i),
+                v: transmute::<[u8; 16], __m128i>(bytes[..16].try_into().unwrap()),
             }
         }
     }
 }
 
-impl BinomialExtensionField for AVX512GF2_128 {
+impl ExtensionField for AVX512GF2_128 {
     const DEGREE: usize = 128;
+
     const W: u32 = 0x87;
+
+    const X: Self = AVX512GF2_128 {
+        v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([2, 0, 0, 0]) },
+    };
 
     type BaseField = GF2;
 
@@ -161,6 +172,37 @@ impl BinomialExtensionField for AVX512GF2_128 {
         let mut res = *self;
         res.v = unsafe { _mm_xor_si128(res.v, _mm_set_epi64x(0, base.v as i64)) };
         res
+    }
+
+    #[inline]
+    fn mul_by_x(&self) -> Self {
+        unsafe {
+            // Shift left by 1 bit
+            let shifted = _mm_slli_epi64(self.v, 1);
+
+            // Get the most significant bit and move it
+            let msb = _mm_srli_epi64(self.v, 63);
+            let msb_moved = _mm_slli_si128(msb, 8);
+
+            // Combine the shifted value with the moved msb
+            let shifted_consolidated = _mm_or_si128(shifted, msb_moved);
+
+            // Create the reduction value (0x87) and the comparison value (1)
+            let reduction = {
+                let multiplier = _mm_set_epi64x(0, 0x87);
+                let one = _mm_set_epi64x(0, 1);
+
+                // Check if the MSB was 1 and create a mask
+                let mask = _mm_cmpeq_epi64(_mm_srli_si128(msb, 8), one);
+
+                _mm_and_si128(mask, multiplier)
+            };
+
+            // Apply the reduction conditionally
+            let res = _mm_xor_si128(shifted_consolidated, reduction);
+
+            Self { v: res }
+        }
     }
 }
 

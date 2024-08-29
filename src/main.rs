@@ -6,11 +6,9 @@ use std::{
 use clap::Parser;
 use expander_rs::utils::{KECCAK_CIRCUIT, POSEIDON_CIRCUIT};
 use expander_rs::{
-    BN254ConfigSha2, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfigSha2, Prover,
+    BN254ConfigSha2, Circuit, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme,
+    M31ExtConfigSha2, Prover,
 };
-
-const M31_PACKSIZE: usize = 16;
-const FR_PACKSIZE: usize = 1;
 
 /// ...
 #[derive(Parser, Debug)]
@@ -60,6 +58,17 @@ fn main() {
             ),
             _ => unreachable!(),
         },
+        "gf2ext128" => match args.scheme.as_str() {
+            "keccak" => run_benchmark::<GF2ExtConfigSha2>(
+                &args,
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla),
+            ),
+            "poseidon" => run_benchmark::<GF2ExtConfigSha2>(
+                &args,
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::GkrSquare),
+            ),
+            _ => unreachable!(),
+        },
         _ => unreachable!(),
     };
 }
@@ -68,12 +77,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     let partial_proof_cnts = (0..args.threads)
         .map(|_| Arc::new(Mutex::new(0)))
         .collect::<Vec<_>>();
-    let start_time = std::time::Instant::now();
-    let pack_size = match args.field.as_str() {
-        "m31ext3" => M31_PACKSIZE,
-        "fr" => FR_PACKSIZE,
-        _ => unreachable!(),
-    };
+    let pack_size = C::get_field_pack_size();
 
     // load circuit
     let circuit_template = match args.scheme.as_str() {
@@ -82,9 +86,12 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         _ => unreachable!(),
     };
 
-    let circuit_copy_size: usize = match args.scheme.as_str() {
-        "keccak" => 2,
-        "poseidon" => 120,
+    let circuit_copy_size: usize = match (C::FIELD_TYPE, args.scheme.as_str()) {
+        (FieldType::GF2, "keccak") => 8,
+        (FieldType::M31, "keccak") => 2,
+        (FieldType::BN254, "keccak") => 2,
+        (FieldType::M31, "poseidon") => 120,
+        (FieldType::BN254, "poseidon") => 120,
         _ => unreachable!(),
     };
 
@@ -98,6 +105,8 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         .collect::<Vec<_>>();
 
     println!("Circuit loaded!");
+
+    let start_time = std::time::Instant::now();
     let _ = circuits
         .into_iter()
         .enumerate()

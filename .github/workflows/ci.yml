@@ -58,6 +58,18 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 2 -f fr
+  Bench-mac-gf2-ext128:
+    name: Bench-mac-gf2ext128
+    runs-on: macos-latest
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          all_but_latest: true
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: wget -P data https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/gf2/circuit.txt
+      - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 2 -f gf2ext128
   Test-linux:
     name: Test-linux
     runs-on: 7950x3d
@@ -85,3 +97,14 @@ jobs:
       - run: . "$HOME/.cargo/env"
       - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 16 -f fr
+  Bench-linux-gf2-ext128:
+    name: Bench-linux-gf2-ext128
+    runs-on: 7950x3d
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          all_but_latest: true
+      - uses: actions/checkout@v4
+      - run: . "$HOME/.cargo/env" 
+      - run: wget -P data https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/gf2/circuit.txt
+      - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 16 -f gf2ext128

@@ -1,6 +1,6 @@
-use arith::{Field, SimdField};
+use arith::{ExtensionField, Field, SimdField};
 
-use crate::{CircuitLayer, GKRConfig, GkrScratchpad};
+use crate::{CircuitLayer, FieldType, GKRConfig, GkrScratchpad};
 
 #[inline(always)]
 fn _eq<F: Field>(x: &F, y: &F) -> F {
@@ -77,6 +77,43 @@ impl SumcheckMultilinearProdHelper {
 
         let eval_size = 1 << (self.var_num - var_idx - 1);
         log::trace!("Eval size: {}", eval_size);
+
+        if C::FIELD_TYPE == FieldType::GF2 {
+            if var_idx == 0 {
+                for i in 0..eval_size {
+                    if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
+                        continue;
+                    }
+
+                    let f_v_0 = init_v[i * 2];
+                    let f_v_1 = init_v[i * 2 + 1];
+                    let hg_v_0 = bk_hg[i * 2];
+                    let hg_v_1 = bk_hg[i * 2 + 1];
+                    p0 += C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
+                    p1 += C::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
+                    p2 += C::field_add_simd_circuit_field(
+                        &C::field_mul_simd_circuit_field(&C::Field::X, &(f_v_1 - f_v_0)),
+                        &f_v_0) // this should be cheaper than convert than mul by x
+                    * ((hg_v_1 - hg_v_0).mul_by_x() + hg_v_0);
+                }
+            } else {
+                for i in 0..eval_size {
+                    if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
+                        continue;
+                    }
+
+                    let f_v_0 = bk_f[i * 2];
+                    let f_v_1 = bk_f[i * 2 + 1];
+                    let hg_v_0 = bk_hg[i * 2];
+                    let hg_v_1 = bk_hg[i * 2 + 1];
+                    p0 += f_v_0 * hg_v_0;
+                    p1 += f_v_1 * hg_v_1;
+                    p2 += ((f_v_1 - f_v_0).mul_by_x() + f_v_0)
+                        * ((hg_v_1 - hg_v_0).mul_by_x() + hg_v_0);
+                }
+            }
+            return [p0, p1, p2];
+        }
 
         if var_idx == 0 {
             for i in 0..eval_size {

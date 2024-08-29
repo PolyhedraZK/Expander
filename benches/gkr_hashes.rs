@@ -37,7 +37,10 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
         ),
         |b| {
             b.iter(|| {
-                let _ = black_box(prover_run(&m31_config, &mut m31_circuit));
+                {
+                    prover_run(&m31_config, &mut m31_circuit);
+                    black_box(())
+                };
             })
         },
     );
@@ -52,7 +55,10 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
         ),
         |b| {
             b.iter(|| {
-                let _ = black_box(prover_run(&bn254_config, &mut bn254_circuit));
+                {
+                    prover_run(&bn254_config, &mut bn254_circuit);
+                    black_box(())
+                };
             })
         },
     );
@@ -77,7 +83,10 @@ fn criterion_gkr_poseidon(c: &mut Criterion) {
         ),
         |b| {
             b.iter(|| {
-                let _ = black_box(prover_run(&m31_config, &mut m31_circuit));
+                {
+                    prover_run(&m31_config, &mut m31_circuit);
+                    black_box(())
+                };
             })
         },
     );
@@ -92,7 +101,10 @@ fn criterion_gkr_poseidon(c: &mut Criterion) {
         ),
         |b| {
             b.iter(|| {
-                let _ = black_box(prover_run(&bn254_config, &mut bn254_circuit));
+                {
+                    prover_run(&bn254_config, &mut bn254_circuit);
+                    black_box(())
+                };
             })
         },
     );
