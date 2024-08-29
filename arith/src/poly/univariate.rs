@@ -76,3 +76,39 @@ pub fn univariate_quotient<F: PrimeField>(poly: &[F], point: &F) -> Vec<F> {
     end_timer!(timer);
     coefficients
 }
+
+// impl<F: PrimeField> From<&UnivariatePolynomial<F>>
+//     for UnivariateLagrangePolynomial<F>
+// {
+//     fn from(poly: &UnivariatePolynomial<F>) -> Self {
+//         let mut poly = poly.coefficients.clone();
+//         let log_len = log2(poly.len());
+//         let next_power_of_2 = 1 << log_len;
+//         poly.resize(next_power_of_2, F::ZERO);
+
+//         let mut omega = F::ROOT_OF_UNITY;
+//         omega = omega.pow_vartime([1 << (F::S - log_len) as u64]);
+
+//         best_fft(&mut poly, omega, log_len);
+
+//         UnivariateLagrangePolynomial { coefficients: poly }
+//     }
+// }
+
+// impl <F: PrimeField> From<&UnivariateLagrangePolynomial<F>>
+// for UnivariatePolynomial<F> {
+//     fn from(poly: &UnivariateLagrangePolynomial<F>) -> Self {
+//         let mut poly = poly.coefficients.clone();
+
+//         best_fft(&mut poly, omega, log_len);
+
+//         UnivariatePolynomial { coefficients: poly }
+//     }
+// }
+
+// fn best_ifft<F: PrimeField>(coeff: &mut [F], omega: &F, log_n: usize) {
+//     assert_eq!(1<<log_n, coeff.len());
+
+//     let one_over_n = F::from(next_power_of_2 as u64).invert().unwrap();
+
+// }

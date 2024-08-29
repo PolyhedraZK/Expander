@@ -1,0 +1,11 @@
+[package]
+name = "transcript"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+sha2.workspace = true
+tiny-keccak.workspace = true
+
+arith = { path = "../arith" }
