@@ -322,7 +322,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         }
         if C::FIELD_TYPE == FieldType::GF2 {
             for g in add.iter() {
-                hg_vals_linear[g.i_ids[0]] += eq_evals_at_rz0[g.o_id];
+                hg_vals_linear[g.i_ids[0]] += C::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
                 gate_exists[g.i_ids[0]] = true;
             }
             for i in 0..vals.len() {
