@@ -68,7 +68,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: wget -P data https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/gf2/circuit.txt
+      - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 2 -f gf2ext128
   Test-linux:
     name: Test-linux
