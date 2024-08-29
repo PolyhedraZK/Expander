@@ -10,6 +10,7 @@ pub struct FFTDomain<F: PrimeField> {
 }
 
 impl<F: PrimeField> FFTDomain<F> {
+    #[inline]
     pub fn new(log_n: usize) -> Self {
         let n = 1 << log_n;
         let r = F::ROOT_OF_UNITY;
@@ -25,14 +26,30 @@ impl<F: PrimeField> FFTDomain<F> {
         }
     }
 
+    #[inline]
     pub fn fft_in_place(&self, a: &mut [F]) {
         assert!(a.len() == self.n);
         best_fft(a, self.omega, self.log_n as u32);
     }
 
+    #[inline]
+    pub fn fft(&self, a: &[F]) -> Vec<F> {
+        let mut a = a.to_vec();
+        self.fft_in_place(&mut a);
+        a
+    }
+
+    #[inline]
     pub fn ifft_in_place(&self, a: &mut [F]) {
         assert!(a.len() == self.n);
         best_fft(a, self.omega_inv, self.log_n as u32);
         a.iter_mut().for_each(|a| *a *= &self.one_over_n);
+    }
+
+    #[inline]
+    pub fn ifft(&self, a: &[F]) -> Vec<F> {
+        let mut a = a.to_vec();
+        self.ifft_in_place(&mut a);
+        a
     }
 }
