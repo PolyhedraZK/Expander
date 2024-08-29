@@ -78,43 +78,6 @@ impl SumcheckMultilinearProdHelper {
         let eval_size = 1 << (self.var_num - var_idx - 1);
         log::trace!("Eval size: {}", eval_size);
 
-        if C::FIELD_TYPE == FieldType::GF2 {
-            if var_idx == 0 {
-                for i in 0..eval_size {
-                    if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                        continue;
-                    }
-
-                    let f_v_0 = init_v[i * 2];
-                    let f_v_1 = init_v[i * 2 + 1];
-                    let hg_v_0 = bk_hg[i * 2];
-                    let hg_v_1 = bk_hg[i * 2 + 1];
-                    p0 += C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
-                    p1 += C::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
-                    p2 += C::field_add_simd_circuit_field(
-                        &C::field_mul_simd_circuit_field(&C::Field::X, &(f_v_1 - f_v_0)),
-                        &f_v_0) // this should be cheaper than convert than mul by x
-                    * ((hg_v_1 - hg_v_0).mul_by_x() + hg_v_0);
-                }
-            } else {
-                for i in 0..eval_size {
-                    if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                        continue;
-                    }
-
-                    let f_v_0 = bk_f[i * 2];
-                    let f_v_1 = bk_f[i * 2 + 1];
-                    let hg_v_0 = bk_hg[i * 2];
-                    let hg_v_1 = bk_hg[i * 2 + 1];
-                    p0 += f_v_0 * hg_v_0;
-                    p1 += f_v_1 * hg_v_1;
-                    p2 += ((f_v_1 - f_v_0).mul_by_x() + f_v_0)
-                        * ((hg_v_1 - hg_v_0).mul_by_x() + hg_v_0);
-                }
-            }
-            return [p0, p1, p2];
-        }
-
         if var_idx == 0 {
             for i in 0..eval_size {
                 if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
@@ -156,7 +119,14 @@ impl SumcheckMultilinearProdHelper {
                 p2 += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
             }
         }
-        p2 = p1.mul_by_6() + p0.mul_by_3() - p2.double();
+        if C::FIELD_TYPE == FieldType::GF2 {
+            let p2x = p2.mul_by_x();
+            let p2x2 = p2x.mul_by_x();
+            let linear_term = p1 + p0 + p2;
+            p2 = p2x2 + linear_term.mul_by_x() + p0;
+        } else {
+            p2 = p1.mul_by_6() + p0.mul_by_3() - p2.double();
+        }
         [p0, p1, p2]
     }
 

@@ -70,7 +70,10 @@ impl FieldSerde for AVX512GF2_128x8 {
     }
 }
 
-const PACKED_0: [__m512i; 2] = [unsafe { transmute([0; 16]) }, unsafe { transmute([0; 16]) }];
+const PACKED_0: [__m512i; 2] = [
+    unsafe { transmute::<[i32; 16], std::arch::x86_64::__m512i>([0; 16]) },
+    unsafe { transmute::<[i32; 16], std::arch::x86_64::__m512i>([0; 16]) },
+];
 const _M512_INV_2: __m512i = unsafe {
     transmute([
         67_u64,
@@ -528,9 +531,7 @@ fn _m512_mul_internal(a: __m512i, b: __m512i) -> __m512i {
         let tmp12 = _mm512_slli_epi32(tmp6, 7);
         tmp3 = _mm512_xor_si512(tmp3, tmp12);
 
-        let result = _mm512_xor_si512(tmp3, tmp6);
-
-        result
+        _mm512_xor_si512(tmp3, tmp6)
     }
 }
 
@@ -598,7 +599,7 @@ impl ExtensionField for AVX512GF2_128x8 {
         let v4 = ((base.v >> 3) & 1u8) as i64;
         let v5 = ((base.v >> 2) & 1u8) as i64;
         let v6 = ((base.v >> 1) & 1u8) as i64;
-        let v7 = ((base.v >> 0) & 1u8) as i64;
+        let v7 = (base.v & 1u8) as i64;
 
         let mut res = *self;
         res.data[0] =
@@ -658,7 +659,7 @@ impl From<GF2x8> for AVX512GF2_128x8 {
         let v4 = ((v.v >> 3) & 1u8) as i64;
         let v5 = ((v.v >> 2) & 1u8) as i64;
         let v6 = ((v.v >> 1) & 1u8) as i64;
-        let v7 = ((v.v >> 0) & 1u8) as i64;
+        let v7 = (v.v & 1u8) as i64;
 
         AVX512GF2_128x8 {
             data: [

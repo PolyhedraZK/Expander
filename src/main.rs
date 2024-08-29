@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::Parser;
-use expander_rs::utils::{KECCAK_CIRCUIT, POSEIDON_CIRCUIT};
+use expander_rs::utils::{KECCAK_GF2_CIRCUIT, KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT};
 use expander_rs::{
     BN254ConfigSha2, Circuit, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme,
     M31ExtConfigSha2, Prover,
@@ -81,13 +81,17 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
 
     // load circuit
     let circuit_template = match args.scheme.as_str() {
-        "keccak" => Circuit::<C>::load_circuit(KECCAK_CIRCUIT),
+        "keccak" => match C::FIELD_TYPE {
+            FieldType::GF2 => Circuit::<C>::load_circuit(KECCAK_GF2_CIRCUIT),
+            FieldType::M31 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
+            FieldType::BN254 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
+        },
         "poseidon" => Circuit::<C>::load_circuit(POSEIDON_CIRCUIT),
         _ => unreachable!(),
     };
 
     let circuit_copy_size: usize = match (C::FIELD_TYPE, args.scheme.as_str()) {
-        (FieldType::GF2, "keccak") => 8,
+        (FieldType::GF2, "keccak") => 1,
         (FieldType::M31, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
         (FieldType::M31, "poseidon") => 120,
@@ -130,7 +134,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
 
     println!("We are now calculating average throughput, please wait for 1 minutes");
     for i in 0..args.repeats {
-        thread::sleep(std::time::Duration::from_secs(60));
+        thread::sleep(std::time::Duration::from_secs(5));
         let stop_time = std::time::Instant::now();
         let duration = stop_time.duration_since(start_time);
         let mut total_proof_cnt = 0;

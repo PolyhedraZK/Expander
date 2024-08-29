@@ -4,11 +4,13 @@ use std::process::Command;
 const DATA_PREFIX: &str = "data/";
 
 // circuit for repeating Keccak for 2 times
-pub const KECCAK_CIRCUIT: &str = "data/circuit.txt";
+pub const KECCAK_M31_CIRCUIT: &str = "data/circuit_m31.txt";
+pub const KECCAK_GF2_CIRCUIT: &str = "data/circuit_gf2.txt";
 // URL for Keccak circuit repeated for 2 times
-pub const KECCAK_URL: &str =
+pub const KECCAK_M31_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/keccak_2_circuit.txt";
-
+pub const KECCAK_GF2_URL: &str =
+    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/gf2/circuit.txt";
 pub const KECCAK_WITNESS: &str = "data/witness.txt";
 pub const KECCAK_WITNESS_URL: &str = "https://storage.googleapis.com/keccak8/witness.txt";
 
@@ -33,7 +35,8 @@ fn download_and_store(url: &str, file: &str) {
 
 pub fn dev_env_data_setup() {
     fs::create_dir_all(DATA_PREFIX).unwrap();
-    download_and_store(KECCAK_URL, KECCAK_CIRCUIT);
+    download_and_store(KECCAK_M31_URL, KECCAK_M31_CIRCUIT);
+    download_and_store(KECCAK_GF2_URL, KECCAK_GF2_CIRCUIT);
     download_and_store(KECCAK_WITNESS_URL, KECCAK_WITNESS);
     download_and_store(POSEIDON_URL, POSEIDON_CIRCUIT);
 }
