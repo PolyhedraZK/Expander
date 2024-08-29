@@ -1,4 +1,4 @@
-use expander_rs::utils::*;
+use expander_rs::{utils::*, FieldType};
 use expander_rs::{
     BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GF2ExtConfigKeccak,
     GF2ExtConfigSha2, GKRConfig, GKRScheme, GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2,
@@ -72,7 +72,12 @@ fn test_gkr_correctness() {
 
 fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     println!("Config created.");
-    let mut circuit = Circuit::<C>::load_circuit(KECCAK_CIRCUIT);
+    let mut circuit_path = KECCAK_M31_CIRCUIT;
+    if C::FIELD_TYPE == FieldType::GF2 {
+        circuit_path = KECCAK_GF2_CIRCUIT;
+    }
+
+    let mut circuit = Circuit::<C>::load_circuit(circuit_path);
     // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
     // let mut circuit = gen_simple_circuit(); // for custom circuit
     println!("Circuit loaded.");

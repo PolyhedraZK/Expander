@@ -15,7 +15,6 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     sp: &mut GkrScratchpad<C>,
 ) -> (Vec<C::ChallengeField>, Vec<C::ChallengeField>) {
     let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, alpha, beta, sp);
-
     for i_var in 0..layer.input_var_num * 2 {
         if i_var == 0 {
             helper.prepare_g_x_vals()
@@ -93,8 +92,8 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
 #[cfg(test)]
 mod tests {
     use crate::{
-        sumcheck_prove_gkr_layer, BN254ConfigKeccak, Circuit, GKRConfig, GkrScratchpad,
-        Keccak256hasher, RawCommitment, Transcript,
+        sumcheck_prove_gkr_layer, utils::KECCAK_M31_CIRCUIT, BN254ConfigKeccak, Circuit, GKRConfig,
+        GkrScratchpad, Keccak256hasher, RawCommitment, Transcript,
     };
 
     type C = BN254ConfigKeccak;
@@ -112,7 +111,7 @@ mod tests {
         let mut beta = <C as GKRConfig>::ChallengeField::zero();
 
         // Loading Circuit (hard-coded keccak circuit for now)
-        let mut circuit = Circuit::<BN254ConfigKeccak>::load_circuit("data/circuit.txt");
+        let mut circuit = Circuit::<BN254ConfigKeccak>::load_circuit(KECCAK_M31_CIRCUIT);
         circuit.set_random_input_for_test();
         circuit.evaluate();
         let layer_num = circuit.layers.len();

@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use expander_rs::utils::{KECCAK_CIRCUIT, POSEIDON_CIRCUIT};
+use expander_rs::utils::{KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT};
 use expander_rs::{
     BN254ConfigSha2, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfigSha2, Prover,
 };
@@ -20,9 +20,9 @@ fn benchmark_setup<C: GKRConfig>(scheme: GKRScheme, circuit_file: &str) -> (Conf
 
 fn criterion_gkr_keccak(c: &mut Criterion) {
     let (m31_config, mut m31_circuit) =
-        benchmark_setup::<M31ExtConfigSha2>(GKRScheme::Vanilla, KECCAK_CIRCUIT);
+        benchmark_setup::<M31ExtConfigSha2>(GKRScheme::Vanilla, KECCAK_M31_CIRCUIT);
     let (bn254_config, mut bn254_circuit) =
-        benchmark_setup::<BN254ConfigSha2>(GKRScheme::Vanilla, KECCAK_CIRCUIT);
+        benchmark_setup::<BN254ConfigSha2>(GKRScheme::Vanilla, KECCAK_M31_CIRCUIT);
     let num_keccak_m31 = 2 * M31ExtConfigSha2::get_field_pack_size();
     let num_keccak_bn254 = 2 * BN254ConfigSha2::get_field_pack_size();
 
