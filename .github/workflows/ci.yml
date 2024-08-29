@@ -62,9 +62,6 @@ jobs:
     name: Bench-mac-gf2ext128
     runs-on: macos-latest
     steps:
-      - uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          all_but_latest: true
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -101,9 +98,6 @@ jobs:
     name: Bench-linux-gf2-ext128
     runs-on: 7950x3d
     steps:
-      - uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          all_but_latest: true
       - uses: actions/checkout@v4
       - run: . "$HOME/.cargo/env" 
       - run: cargo run --bin=dev-setup --release
