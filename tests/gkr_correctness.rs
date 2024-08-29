@@ -56,7 +56,7 @@ fn test_gkr_correctness() {
     test_gkr_correctness_helper::<GF2ExtConfigKeccak>(&Config::<GF2ExtConfigKeccak>::new(
         GKRScheme::Vanilla,
     ));
-    /*test_gkr_correctness_helper::<M31ExtConfigSha2>(&Config::<M31ExtConfigSha2>::new(
+    test_gkr_correctness_helper::<M31ExtConfigSha2>(&Config::<M31ExtConfigSha2>::new(
         GKRScheme::Vanilla,
     ));
     test_gkr_correctness_helper::<M31ExtConfigKeccak>(&Config::<M31ExtConfigKeccak>::new(
@@ -67,7 +67,7 @@ fn test_gkr_correctness() {
     ));
     test_gkr_correctness_helper::<BN254ConfigKeccak>(&Config::<BN254ConfigKeccak>::new(
         GKRScheme::Vanilla,
-    ));*/
+    ));
 }
 
 fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {

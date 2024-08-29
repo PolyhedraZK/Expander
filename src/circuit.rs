@@ -1,6 +1,7 @@
 use arith::{Field, FieldSerde, FieldSerdeError};
 use ark_std::test_rng;
 use std::{
+    cmp::max,
     collections::HashMap,
     fs,
     io::{Cursor, Read},
@@ -183,7 +184,7 @@ impl<C: GKRConfig> Circuit<C> {
         {
             for layer in &mut self.layers {
                 layer.identify_rnd_coefs(&mut self.rnd_coefs);
-            }                
+            }
         }
         self.rnd_coefs_identified = true;
     }
@@ -457,8 +458,8 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
             let layer_seg = &self.segments[*layer_id];
             let leaves = layer_seg.scan_leaf_segments(self, *layer_id);
             let mut ret_layer = CircuitLayer {
-                input_var_num: layer_seg.i_var_num,
-                output_var_num: layer_seg.o_var_num,
+                input_var_num: max(layer_seg.i_var_num, 1), // Temp solution: input size >= 2
+                output_var_num: max(layer_seg.o_var_num, 1), // Temp solution: output size >= 2, consider fix this in the protocol
                 ..Default::default()
             };
             for (leaf_seg_id, leaf_allocs) in leaves {

@@ -1,5 +1,6 @@
 use std::{
-    sync::{Arc, Mutex}, thread
+    sync::{Arc, Mutex},
+    thread,
 };
 
 use clap::Parser;
@@ -63,7 +64,7 @@ fn main() {
                 eprintln!("Coefficients must be all one for gf2, please enable the coef-all-one feature for benchmark");
                 std::process::exit(1);
             }
-            
+
             #[cfg(feature = "coef-all-one")]
             {
                 match args.scheme.as_str() {
@@ -78,7 +79,7 @@ fn main() {
                     _ => unreachable!(),
                 }
             }
-        },
+        }
         _ => unreachable!(),
     };
 }
