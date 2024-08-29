@@ -15,7 +15,6 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     sp: &mut GkrScratchpad<C>,
 ) -> (Vec<C::ChallengeField>, Vec<C::ChallengeField>) {
     let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, alpha, beta, sp);
-
     for i_var in 0..layer.input_var_num * 2 {
         if i_var == 0 {
             helper.prepare_g_x_vals()
