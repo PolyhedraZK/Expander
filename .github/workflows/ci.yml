@@ -106,5 +106,5 @@ jobs:
           all_but_latest: true
       - uses: actions/checkout@v4
       - run: . "$HOME/.cargo/env" 
-      - run: wget -P data https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/gf2/circuit.txt
+      - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 16 -f gf2ext128
