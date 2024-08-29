@@ -13,30 +13,30 @@ jobs:
         fetch-depth: 0
     - name: Set up Python
       run: python3 --version
-    - name: update toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-    - name: 'Authenticate to Google Cloud'
-      uses: 'google-github-actions/auth@v1'
-      with:
-        credentials_json: '${{ secrets.GCP_SA_KEY }}'
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/setup-gcloud@v1
-      with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
-    - name: Install criterion
-      run: cargo install cargo-criterion
-    - name: setup
-      run: cargo run --bin=dev-setup --release
-    - name: Run benchmark
-      run: RUSTFLAGS="-C target-cpu=native" cargo criterion --message-format=json > benchmark_results.json
-    - name: Clean benchmark results
-      run: |
-        wget https://raw.githubusercontent.com/PolyhedraZK/Expander-rs/main/scripts/parse_benchmark_result.py
-        python3 parse_benchmark_result.py benchmark_results.json benchmark_results_clean.json
-    - name: Upload benchmark results to Google Cloud Storage
-      run: |
-        commit_hash=$(git rev-parse HEAD)
-        repo_name="${GITHUB_REPOSITORY#*/}"
-        gsutil cp benchmark_results_clean.json gs://github_micro_bench/${repo_name}/benchmark_${commit_hash}.json
+    # - name: update toolchain
+    #   uses: actions-rs/toolchain@v1
+    #   with:
+    #     toolchain: stable
+    # - name: 'Authenticate to Google Cloud'
+    #   uses: 'google-github-actions/auth@v1'
+    #   with:
+    #     credentials_json: '${{ secrets.GCP_SA_KEY }}'
+    # - name: Set up Google Cloud SDK
+    #   uses: google-github-actions/setup-gcloud@v1
+    #   with:
+    #     project_id: ${{ secrets.GCP_PROJECT_ID }}
+    # - name: Install criterion
+    #   run: cargo install cargo-criterion
+    # - name: setup
+    #   run: cargo run --bin=dev-setup --release
+    # - name: Run benchmark
+    #   run: RUSTFLAGS="-C target-cpu=native" cargo criterion --message-format=json > benchmark_results.json
+    # - name: Clean benchmark results
+    #   run: |
+    #     wget https://raw.githubusercontent.com/PolyhedraZK/Expander-rs/main/scripts/parse_benchmark_result.py
+    #     python3 parse_benchmark_result.py benchmark_results.json benchmark_results_clean.json
+    # - name: Upload benchmark results to Google Cloud Storage
+    #   run: |
+    #     commit_hash=$(git rev-parse HEAD)
+    #     repo_name="${GITHUB_REPOSITORY#*/}"
+    #     gsutil cp benchmark_results_clean.json gs://github_micro_bench/${repo_name}/benchmark_${commit_hash}.json

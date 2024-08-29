@@ -1,3 +1,4 @@
+mod bivariate_poly;
 mod bn254;
 mod extension_field;
 mod field;

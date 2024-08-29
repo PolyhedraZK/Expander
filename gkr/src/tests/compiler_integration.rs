@@ -1,11 +1,13 @@
 use std::fs;
 
 use arith::{Field, M31x16};
-use expander_rs::utils::*;
-use expander_rs::{Circuit, Config, GKRScheme, M31ExtConfigSha2, Prover, Verifier};
 use rand::Rng;
 
-const FILENAME_PROOF: &str = "data/proof.bin";
+use crate::{Circuit, Config, GKRScheme, M31ExtConfigSha2, Prover, Verifier};
+
+const KECCAK_CIRCUIT: &str = "../data/circuit.txt";
+const KECCAK_WITNESS: &str = "../data/witness.txt";
+const FILENAME_PROOF: &str = "../data/proof.bin";
 
 #[test]
 fn test_compiler_format_integration() {

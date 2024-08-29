@@ -1,3 +1,11 @@
+mod coeff_form_uni_kzg;
+pub use coeff_form_uni_kzg::*;
+mod structs;
+pub use structs::*;
+
+#[cfg(test)]
+mod tests;
+
 use std::{borrow::Borrow, fmt::Debug};
 
 use halo2curves::ff::Field;

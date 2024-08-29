@@ -1,13 +1,15 @@
-use expander_rs::utils::*;
-use expander_rs::{
-    BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GKRConfig, GKRScheme,
-    GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2, Prover, Verifier,
-};
 use std::panic;
 use std::panic::AssertUnwindSafe;
 
 use rand::Rng;
 use sha2::Digest;
+
+use crate::{
+    BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GKRConfig, GKRScheme,
+    GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2, Prover, Verifier,
+};
+
+const KECCAK_CIRCUIT: &str = "../data/circuit.txt";
 
 #[allow(dead_code)]
 fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {

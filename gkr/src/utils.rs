@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::Path;
 use std::process::Command;
 
 const DATA_PREFIX: &str = "data/";
@@ -18,24 +19,26 @@ pub const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
 pub const POSEIDON_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/poseidon_120_circuit.txt";
 
-// NOTE(Hang 08/23/24):
-// CI process is unhappy about reqwest as a dependency,
-// so we use wget as a backup option.
-fn download_and_store(url: &str, file: &str) {
-    let download = Command::new("bash")
-        .arg("-c")
-        .arg(format!("wget {url} -O {file}"))
-        .output()
-        .expect("Failed to download circuit");
+fn download_if_not_exists(url: &str, file: &str) {
+    if !Path::new(file).exists() {
+        println!("Downloading {}", file);
+        let download = Command::new("bash")
+            .arg("-c")
+            .arg(format!("wget {url} -O {file}"))
+            .output()
+            .expect("Failed to download circuit");
 
-    assert!(download.status.success(), "Circuit download failure")
+        assert!(download.status.success(), "Circuit download failure");
+    } else {
+        println!("{} already exists, skipping download", file);
+    }
 }
 
 pub fn dev_env_data_setup() {
     fs::create_dir_all(DATA_PREFIX).unwrap();
-    download_and_store(KECCAK_URL, KECCAK_CIRCUIT);
-    download_and_store(KECCAK_WITNESS_URL, KECCAK_WITNESS);
-    download_and_store(POSEIDON_URL, POSEIDON_CIRCUIT);
+    download_if_not_exists(KECCAK_URL, KECCAK_CIRCUIT);
+    download_if_not_exists(KECCAK_WITNESS_URL, KECCAK_WITNESS);
+    download_if_not_exists(POSEIDON_URL, POSEIDON_CIRCUIT);
 }
 
 #[allow(dead_code)]
