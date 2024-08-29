@@ -1,13 +1,14 @@
 use arith::{Field, FieldSerde, FieldSerdeError};
 use ark_std::test_rng;
 use std::{
+    cmp::max,
     collections::HashMap,
     fs,
     io::{Cursor, Read},
 };
 use thiserror::Error;
 
-use crate::{GKRConfig, Transcript};
+use crate::{circuit_field_mul_simd_circuit_field, GKRConfig, Transcript};
 
 #[derive(Debug, Clone)]
 pub struct Gate<C: GKRConfig, const INPUT_NUM: usize> {
@@ -46,12 +47,12 @@ impl<C: GKRConfig> CircuitLayer<C> {
             let i1 = &self.input_vals[gate.i_ids[1]];
             let o = &mut res[gate.o_id];
             let mul = *i0 * i1;
-            *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &mul);
+            *o += circuit_field_mul_simd_circuit_field!(&gate.coef, &mul);
         }
         for gate in &self.add {
             let i0 = self.input_vals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
-            *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0);
+            *o += circuit_field_mul_simd_circuit_field!(&gate.coef, &i0);
         }
         for gate in &self.const_ {
             let o = &mut res[gate.o_id];
@@ -66,11 +67,11 @@ impl<C: GKRConfig> CircuitLayer<C> {
                     let i0_2 = i0.square();
                     let i0_4 = i0_2.square();
                     let i0_5 = i0_4 * i0;
-                    *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0_5);
+                    *o += circuit_field_mul_simd_circuit_field!(&gate.coef, &i0_5);
                 }
                 12346 => {
                     // pow1
-                    *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, i0);
+                    *o += circuit_field_mul_simd_circuit_field!(&gate.coef, i0);
                 }
                 _ => panic!("Unknown gate type: {}", gate.gate_type),
             }
@@ -179,8 +180,11 @@ impl<C: GKRConfig> Circuit<C> {
 
     pub fn identify_rnd_coefs(&mut self) {
         self.rnd_coefs.clear();
-        for layer in &mut self.layers {
-            layer.identify_rnd_coefs(&mut self.rnd_coefs);
+        #[cfg(not(feature = "coef-all-one"))]
+        {
+            for layer in &mut self.layers {
+                layer.identify_rnd_coefs(&mut self.rnd_coefs);
+            }
         }
         self.rnd_coefs_identified = true;
     }
@@ -454,8 +458,8 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
             let layer_seg = &self.segments[*layer_id];
             let leaves = layer_seg.scan_leaf_segments(self, *layer_id);
             let mut ret_layer = CircuitLayer {
-                input_var_num: layer_seg.i_var_num,
-                output_var_num: layer_seg.o_var_num,
+                input_var_num: max(layer_seg.i_var_num, 1), // Temp solution: input size >= 2
+                output_var_num: max(layer_seg.o_var_num, 1), // Temp solution: output size >= 2, consider fix this in the protocol
                 ..Default::default()
             };
             for (leaf_seg_id, leaf_allocs) in leaves {
