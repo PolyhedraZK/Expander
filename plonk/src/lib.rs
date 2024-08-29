@@ -12,8 +12,8 @@ pub use selectors::*;
 mod variable;
 pub use variable::*;
 
-mod witnesses;
-pub use witnesses::*;
+mod domain;
+pub use domain::*;
 
 #[cfg(test)]
 mod tests;

@@ -5,13 +5,13 @@ edition = "2021"
 
 [dependencies]
 ark-std.workspace = true
+halo2curves.workspace = true
 
 arith = { path = "../arith" }
 uni-kzg ={ path = "../uni-kzg" }
 
 
 [dev-dependencies]
-halo2curves.workspace = true
 
 
 [features]

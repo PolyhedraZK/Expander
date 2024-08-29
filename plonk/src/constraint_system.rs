@@ -1,9 +1,10 @@
 use arith::Field;
+use halo2curves::ff::PrimeField;
 
 use crate::{
     selectors::Selector,
     variable::{VariableColumn, VariableIndex, Variables, VAR_ONE, VAR_ZERO},
-    GatesID,
+    FFTDomain, GatesID,
 };
 
 /// Constraint system for the vanilla plonk protocol.
@@ -18,7 +19,7 @@ use crate::{
 /// - `q_c` is the constant term of the constraint system.
 ///
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
-pub struct ConstraintSystem<F> {
+pub struct ConstraintSystem<F: PrimeField> {
     /// selectors
     pub q_l: Selector<F>,
     pub q_r: Selector<F>,
@@ -36,9 +37,15 @@ pub struct ConstraintSystem<F> {
 
     #[cfg(feature = "print-gates")]
     pub gates: Vec<GatesID>,
+
+    /// fft domain
+    pub eval_domain: FFTDomain<F>,
+
+    /// coset domain
+    pub coset_domain: FFTDomain<F>,
 }
 
-impl<F: Field> ConstraintSystem<F> {
+impl<F: Field + PrimeField> ConstraintSystem<F> {
     /// initialize a new constraint system with default constants
     #[inline]
     pub fn init() -> Self {
@@ -150,7 +157,7 @@ impl<F: Field> ConstraintSystem<F> {
 }
 
 // Gate implementations
-impl<F: Field> ConstraintSystem<F> {
+impl<F: Field + PrimeField> ConstraintSystem<F> {
     /// constant gate
     #[inline]
     pub fn constant_gate(&mut self, c: &F) -> VariableIndex {

@@ -1,10 +1,11 @@
 [workspace]
 members = [
-    "arith",    # arithmetic backend
-    "bi-kzg",   # bivariate KZG commitment scheme
-    "gkr",      # GKR proof system
-    "plonk",    # PLONK proof system
-    "uni-kzg"   # univariate KZG commitment scheme
+    "arith",        # arithmetic backend
+    "bi-kzg",       # bivariate KZG commitment scheme
+    "gkr",          # GKR proof system
+    "plonk",        # PLONK proof system
+    # "transcript",   # transcript backend
+    "uni-kzg"       # univariate KZG commitment scheme
     ]
 
 [workspace.dependencies]
