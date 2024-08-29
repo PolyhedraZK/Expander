@@ -1,4 +1,4 @@
-use expander_rs::{circuit, utils::*, FieldType};
+use expander_rs::{utils::*, FieldType};
 use expander_rs::{
     BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GF2ExtConfigKeccak,
     GF2ExtConfigSha2, GKRConfig, GKRScheme, GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2,
