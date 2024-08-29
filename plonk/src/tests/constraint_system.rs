@@ -1,12 +1,10 @@
-use arith::{Field, M31};
+use arith::Field;
 use halo2curves::{bn256::Fr, ff::PrimeField};
 
 use crate::constraint_system::ConstraintSystem;
 
-use super::*;
-
 #[test]
-fn test_constraint_system() {
+fn test_gates() {
     test_suites::<Fr>();
 }
 
@@ -14,6 +12,7 @@ fn test_suites<F: Field + PrimeField>() {
     test_arithmetics_helper::<F>();
     test_boolean_helper::<F>();
     test_equality_helper::<F>();
+    test_selection_helper::<F>();
 }
 
 fn test_arithmetics_helper<F: Field + PrimeField>() {

@@ -2,11 +2,9 @@ use arith::Field;
 use ark_std::log2;
 use halo2curves::ff::PrimeField;
 
-use crate::{
-    selectors::Selector,
-    variable::{VariableColumn, VariableIndex, Variables, VAR_ONE, VAR_ZERO},
-    ConstraintSystem, FFTDomain, GatesID, PublicKey,
-};
+use crate::{ConstraintSystem, FFTDomain, PublicKey, VAR_ONE};
+
+use super::{GatesID, VariableIndex, VAR_ZERO};
 
 // Gate implementations
 impl<F: Field + PrimeField> ConstraintSystem<F> {

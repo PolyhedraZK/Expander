@@ -1,14 +1,24 @@
 mod gates;
 
+mod selectors;
+pub use selectors::Selector;
+
+mod public_inputs;
+pub use public_inputs::PublicInputs;
+
+mod variables;
+pub use variables::*;
+
+#[cfg(feature = "print-gates")]
+mod gates_id;
+#[cfg(feature = "print-gates")]
+pub use gates_id::GatesID;
+
 use arith::Field;
 use ark_std::log2;
 use halo2curves::ff::PrimeField;
 
-use crate::{
-    selectors::Selector,
-    variable::{VariableColumn, VariableIndex, Variables, VAR_ONE, VAR_ZERO},
-    FFTDomain, GatesID, PublicKey,
-};
+use crate::{FFTDomain, PublicKey};
 
 /// Constraint system for the vanilla plonk protocol.
 ///
