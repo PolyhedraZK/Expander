@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 mod constraint_system;
 pub use constraint_system::*;
 

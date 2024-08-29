@@ -1,6 +1,6 @@
 use halo2curves::bn256::Fr;
 
-use crate::FFTDomain;
+use crate::{CosetFFTDomain, FFTDomain};
 
 #[test]
 fn test_fft_domain_new() {
@@ -54,4 +54,39 @@ fn test_fft_ifft_roundtrip() {
             assert_eq!(c[i], Fr::zero());
         }
     }
+}
+
+#[test]
+fn test_coset_fft_ifft_roundtrip() {
+    let domain = CosetFFTDomain::<Fr>::new(2);
+    let input = vec![
+        Fr::from(1u64),
+        Fr::from(2u64),
+        Fr::from(3u64),
+        Fr::from(4u64),
+    ];
+
+    let fft_result = domain.coset_fft(&input);
+    let ifft_result = domain.coset_ifft(&fft_result);
+
+    for (a, b) in input.iter().zip(ifft_result.iter().take(input.len())) {
+        assert_eq!(a, b);
+    }
+}
+
+#[test]
+fn test_distribute_powers_zeta() {
+    let domain = CosetFFTDomain::<Fr>::new(2);
+    let mut input = vec![
+        Fr::from(1u64),
+        Fr::from(2u64),
+        Fr::from(3u64),
+        Fr::from(4u64),
+    ];
+    let original = input.clone();
+
+    domain.distribute_powers_zeta(&mut input, true);
+    domain.distribute_powers_zeta(&mut input, false);
+
+    assert_eq!(input, original);
 }

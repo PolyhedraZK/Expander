@@ -1,4 +1,4 @@
-use arith::{Field, UnivariateLagrangePolynomial, UnivariatePolynomial};
+use arith::Field;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Selector<F> {
@@ -15,16 +15,5 @@ impl<F: Field> Selector<F> {
     /// add a new element to the selector
     pub(crate) fn push(&mut self, value: F) {
         self.q.push(value);
-    }
-}
-
-impl<F: Field> From<&Selector<F>> for UnivariatePolynomial<F> {
-    fn from(selector: &Selector<F>) -> Self {
-        // let lagrange_poly = UnivariateLagrangePolynomial {
-        //     coefficients: selector.q.clone(),
-        // };
-        // lagrange_poly.into()
-
-        todo!()
     }
 }

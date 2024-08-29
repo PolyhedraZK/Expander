@@ -1,4 +1,4 @@
-use halo2curves::ff::PrimeField;
+use halo2curves::ff::{PrimeField, WithSmallOrderMulGroup};
 
 use crate::ConstraintSystem;
 
@@ -14,7 +14,7 @@ pub struct PublicKey<F: PrimeField> {
     pub q_c_coset: Vec<F>,
 }
 
-impl<F: PrimeField> PublicKey<F> {
+impl<F: PrimeField + WithSmallOrderMulGroup<3>> PublicKey<F> {
     pub fn extract_public_key(cs: &ConstraintSystem<F>) -> Self {
         let domain = match &cs.eval_domain {
             Some(domain) => domain,
@@ -26,19 +26,19 @@ impl<F: PrimeField> PublicKey<F> {
         };
 
         let q_l_x = domain.ifft(&cs.q_l.q);
-        let q_l_coset = coset_domain.fft(&q_l_x);
+        let q_l_coset = coset_domain.coset_fft(&q_l_x);
 
         let q_r_x = domain.ifft(&cs.q_r.q);
-        let q_r_coset = coset_domain.fft(&q_r_x);
+        let q_r_coset = coset_domain.coset_fft(&q_r_x);
 
         let q_o_x = domain.ifft(&cs.q_o.q);
-        let q_o_coset = coset_domain.fft(&q_o_x);
+        let q_o_coset = coset_domain.coset_fft(&q_o_x);
 
         let q_m_x = domain.ifft(&cs.q_m.q);
-        let q_m_coset = coset_domain.fft(&q_m_x);
+        let q_m_coset = coset_domain.coset_fft(&q_m_x);
 
         let q_c_x = domain.ifft(&cs.q_c.q);
-        let q_c_coset = coset_domain.fft(&q_c_x);
+        let q_c_coset = coset_domain.coset_fft(&q_c_x);
 
         Self {
             q_l_coset,

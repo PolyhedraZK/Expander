@@ -16,9 +16,9 @@ pub use gates_id::GatesID;
 
 use arith::Field;
 use ark_std::log2;
-use halo2curves::ff::PrimeField;
+use halo2curves::ff::{PrimeField, WithSmallOrderMulGroup};
 
-use crate::FFTDomain;
+use crate::{CosetFFTDomain, FFTDomain};
 
 /// Constraint system for the vanilla plonk protocol.
 ///
@@ -59,10 +59,10 @@ pub struct ConstraintSystem<F: PrimeField> {
     pub eval_domain: Option<FFTDomain<F>>,
 
     /// coset domain
-    pub coset_domain: Option<FFTDomain<F>>,
+    pub coset_domain: Option<CosetFFTDomain<F>>,
 }
 
-impl<F: Field + PrimeField> ConstraintSystem<F> {
+impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
     /// initialize a new constraint system with default constants
     #[inline]
     pub fn init() -> Self {
@@ -117,8 +117,37 @@ impl<F: Field + PrimeField> ConstraintSystem<F> {
         assert_eq!(self.c.len(), n);
 
         let log_n = log2(n);
+        let new_n = 1 << log_n;
+
+        self.q_l.q.resize(new_n, F::zero());
+        self.q_r.q.resize(new_n, F::zero());
+        self.q_o.q.resize(new_n, F::zero());
+        self.q_m.q.resize(new_n, F::zero());
+        self.q_c.q.resize(new_n, F::zero());
+
+        self.a.resize(new_n, VAR_ZERO);
+        self.b.resize(new_n, VAR_ZERO);
+        self.c.resize(new_n, VAR_ZERO);
+
         self.eval_domain = Some(FFTDomain::new(log_n as usize));
-        self.coset_domain = Some(FFTDomain::new(log_n as usize + 1));
+        self.coset_domain = Some(CosetFFTDomain::new(log_n as usize));
+    }
+
+    /// build the witness polynomials for a, b, and c
+    #[inline]
+    pub(crate) fn build_witness_polynomials(&self) -> [Vec<F>; 3] {
+        let n = self.q_l.get_nv();
+        let mut a = vec![F::zero(); n];
+        let mut b = vec![F::zero(); n];
+        let mut c = vec![F::zero(); n];
+
+        for i in 0..n {
+            a[i] = self.variables.witnesses[self.a[i]];
+            b[i] = self.variables.witnesses[self.b[i]];
+            c[i] = self.variables.witnesses[self.c[i]];
+        }
+
+        [a, b, c]
     }
 
     /// create a new variable
@@ -136,6 +165,11 @@ impl<F: Field + PrimeField> ConstraintSystem<F> {
     /// check the constraint system is satisfied
     #[inline]
     pub fn is_satisfied(&self, public_inputs: &[F]) -> bool {
+        if public_inputs.len() != self.public_inputs_indices.row_index.len() {
+            println!("public inputs length not match");
+            return false;
+        }
+
         let length = self.q_l.get_nv();
 
         if self.q_r.get_nv() != length {

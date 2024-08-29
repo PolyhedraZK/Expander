@@ -1,22 +1,26 @@
 use arith::Field;
-use halo2curves::{bn256::Fr, ff::PrimeField};
+use halo2curves::{
+    bn256::Fr,
+    ff::{PrimeField, WithSmallOrderMulGroup},
+};
 
-use crate::constraint_system::ConstraintSystem;
+use crate::{constraint_system::ConstraintSystem, PlonkIOP};
 
 #[test]
 fn test_gates() {
     test_suites::<Fr>();
 }
 
-fn test_suites<F: Field + PrimeField>() {
+fn test_suites<F: Field + PrimeField + WithSmallOrderMulGroup<3>>() {
     test_arithmetics_helper::<F>();
     test_boolean_helper::<F>();
     test_equality_helper::<F>();
     test_selection_helper::<F>();
     test_pi_helper::<F>();
+    test_h_poly::<F>();
 }
 
-fn test_arithmetics_helper<F: Field + PrimeField>() {
+fn test_arithmetics_helper<F: Field + PrimeField + WithSmallOrderMulGroup<3>>() {
     {
         // addition gate
 
@@ -94,7 +98,7 @@ fn test_arithmetics_helper<F: Field + PrimeField>() {
     }
 }
 
-fn test_boolean_helper<F: Field + PrimeField>() {
+fn test_boolean_helper<F: Field + PrimeField + WithSmallOrderMulGroup<3>>() {
     let mut cs = ConstraintSystem::<F>::init();
 
     // assert one
@@ -116,7 +120,7 @@ fn test_boolean_helper<F: Field + PrimeField>() {
     assert!(cs.is_satisfied(&[]));
 }
 
-fn test_equality_helper<F: Field + PrimeField>() {
+fn test_equality_helper<F: Field + PrimeField + WithSmallOrderMulGroup<3>>() {
     let mut cs = ConstraintSystem::<F>::init();
 
     let a = cs.new_variable(F::from(2u64));
@@ -131,7 +135,7 @@ fn test_equality_helper<F: Field + PrimeField>() {
     assert!(!cs.is_satisfied(&[]));
 }
 
-fn test_selection_helper<F: Field + PrimeField>() {
+fn test_selection_helper<F: Field + PrimeField + WithSmallOrderMulGroup<3>>() {
     let mut cs = ConstraintSystem::<F>::init();
 
     let first = cs.new_variable(F::from(0u64));
@@ -146,14 +150,70 @@ fn test_selection_helper<F: Field + PrimeField>() {
     cs.assert_equal(&a, &a_selected);
     cs.assert_equal(&b, &b_selected);
 
-    assert!(!cs.is_satisfied(&[]));
+    assert!(cs.is_satisfied(&[]));
 }
 
-fn test_pi_helper<F: Field + PrimeField>() {
+fn test_pi_helper<F: Field + PrimeField + WithSmallOrderMulGroup<3>>() {
     let mut cs = ConstraintSystem::<F>::init();
     let two = F::from(2u64);
     cs.public_input_gate(two);
 
     assert!(cs.is_satisfied(&[two]));
     assert!(!cs.is_satisfied(&[F::one()]));
+}
+
+fn test_h_poly<F: Field + PrimeField + WithSmallOrderMulGroup<3>>() {
+    let mut cs = ConstraintSystem::<F>::init();
+    {
+        let a = cs.new_variable(F::from(2u64));
+        let b = cs.new_variable(F::from(3u64));
+        let c = cs.addition_gate(&a, &b);
+        assert_eq!(cs.get_value(c), F::from(5u64));
+        cs.assert_addition(&a, &b, &c);
+    }
+
+    {
+        let a = cs.new_variable(F::from(2u64));
+        let b = cs.new_variable(F::from(3u64));
+        let c = cs.subtraction_gate(&a, &b);
+        assert_eq!(cs.get_value(c), -F::from(1u64));
+        cs.assert_subtraction(&a, &b, &c);
+    }
+
+    {
+        let a = cs.new_variable(F::from(2u64));
+        let b = cs.new_variable(F::from(3u64));
+        let c = cs.multiplication_gate(&a, &b);
+        assert_eq!(cs.get_value(c), F::from(6u64));
+        cs.assert_multiplication(&a, &b, &c);
+    }
+
+    {
+        let a = cs.new_variable(F::from(6u64));
+        let b = cs.new_variable(F::from(3u64));
+        let c = cs.division_gate(&a, &b);
+
+        cs.assert_division(&a, &b, &c);
+    }
+
+    {
+        let first = cs.new_variable(F::from(0u64));
+        let second = cs.new_variable(F::from(1u64));
+
+        let a = cs.new_variable(F::from(3u64));
+        let b = cs.new_variable(F::from(4u64));
+
+        let a_selected = cs.selection_gate(&first, &a, &b);
+        let b_selected = cs.selection_gate(&second, &a, &b);
+
+        cs.assert_equal(&a, &a_selected);
+        cs.assert_equal(&b, &b_selected);
+    }
+
+    assert!(cs.is_satisfied(&[]));
+    cs.finalize();
+    println!("cs: {:?}", cs.eval_domain);
+    println!("cs: {:?}", cs.coset_domain);
+
+    let _hx = PlonkIOP::generate_vanishing_polynomial(&cs, &[]);
 }

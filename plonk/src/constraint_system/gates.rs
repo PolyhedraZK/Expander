@@ -1,13 +1,10 @@
 use arith::Field;
-use ark_std::log2;
-use halo2curves::ff::PrimeField;
+use halo2curves::ff::{PrimeField, WithSmallOrderMulGroup};
 
-use crate::{ConstraintSystem, FFTDomain, PublicKey, VAR_ONE};
-
-use super::{GatesID, VariableIndex, VAR_ZERO};
+use crate::{ConstraintSystem, GatesID, VariableIndex, VAR_ONE, VAR_ZERO};
 
 // Gate implementations
-impl<F: Field + PrimeField> ConstraintSystem<F> {
+impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
     /// constant gate
     #[inline]
     pub fn constant_gate(&mut self, c: &F) -> VariableIndex {
@@ -263,18 +260,18 @@ impl<F: Field + PrimeField> ConstraintSystem<F> {
         self.assert_multiplication(c, b, a)
     }
 
-    /// selection gate: return the variable index of s * a + (1 - s) * b
+    /// selection gate: return the variable index of (1 - s) * a + s * b
     #[inline]
     pub fn selection_gate(
         &mut self,
         s: &VariableIndex,
-        a: &VariableIndex,
-        b: &VariableIndex,
+        a: &VariableIndex, // if s == 0
+        b: &VariableIndex, // if s == 1
     ) -> VariableIndex {
         let s_val = self.get_value(*s);
         let a_val = self.get_value(*a);
         let b_val = self.get_value(*b);
-        let c_val = s_val * a_val + (F::one() - s_val) * b_val;
+        let c_val = (F::one() - s_val) * a_val + s_val * b_val;
         let c = self.new_variable(c_val);
 
         self.assert_selection(s, a, b, &c);
@@ -282,15 +279,15 @@ impl<F: Field + PrimeField> ConstraintSystem<F> {
         c
     }
 
-    /// assert selection is correct: c = s * a + (1 - s) * b
+    /// assert selection is correct: c = (1 - s) * a + s * b
     ///
-    /// c = s * (a - b) + b
+    /// c = s * (b - a) + a
     ///
     /// statements:
     /// - s is binary
-    /// - t1 = a - b
+    /// - t1 = b - a
     /// - t2 = s * t1
-    /// - c = t2 + b
+    /// - c = t2 + a
     ///
     /// This requires 4 rows of constraints
     #[inline]
@@ -304,13 +301,13 @@ impl<F: Field + PrimeField> ConstraintSystem<F> {
         // s is binary
         self.assert_binary(s);
 
-        // t1 = a - b
-        let t1 = self.subtraction_gate(a, b);
+        // t1 = b - a
+        let t1 = self.subtraction_gate(b, a);
 
         // t2 = s * t1
         let t2 = self.multiplication_gate(s, &t1);
 
         // c = t2 + b
-        self.assert_addition(&t2, b, c);
+        self.assert_addition(&t2, a, c);
     }
 }
