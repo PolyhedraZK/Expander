@@ -122,7 +122,8 @@ impl SumcheckMultilinearProdHelper {
         if C::FIELD_TYPE == FieldType::GF2 {
             let p2x = p2.mul_by_x();
             let p2x2 = p2x.mul_by_x();
-            p2 = p2x2 + p2x + p0;
+            let linear_term = p1 + p0 + p2;
+            p2 = p2x2 + linear_term.mul_by_x() + p0;
         } else {
             p2 = p1.mul_by_6() + p0.mul_by_3() - p2.double();
         }
