@@ -73,6 +73,8 @@ fn mul_assign_vec<F: Field>(a: &mut [F], b: &F) {
 // code copied from Halo2curves with adaption to vectors
 //
 //
+/// Performs FFT in place on a vector of field elements.
+/// 
 /// Performs a radix-$2$ Fast-Fourier Transformation (FFT) on a vector of size
 /// $n = 2^k$, when provided `log_n` = $k$ and an element of multiplicative
 /// order $n$ called `omega` ($\omega$). The result is that the vector `a`, when

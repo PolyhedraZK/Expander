@@ -7,6 +7,9 @@ pub fn tensor_product_parallel<F: Field>(vec1: &[F], vec2: &[F]) -> Vec<F> {
         .collect()
 }
 
+
+/// Utility: parallelize an operation over a mutable slice.
+/// 
 /// This simple utility function will parallelize an operation that is to be
 /// performed over a mutable slice.
 /// credit: https://github.com/scroll-tech/halo2/blob/1070391642dd64b2d68b47ec246cba9e35bd3c15/halo2_proofs/src/arithmetic.rs#L546
