@@ -2,7 +2,8 @@ use arith::Field;
 
 use crate::{
     selectors::Selector,
-    variable::{VariableColumn, VariableIndex, VariableOne, VariableZero, Variables},
+    variable::{VariableColumn, VariableIndex, Variables, VAR_ONE, VAR_ZERO},
+    GatesID,
 };
 
 /// Constraint system for the vanilla plonk protocol.
@@ -32,6 +33,9 @@ pub struct ConstraintSystem<F> {
 
     /// the actual witnesses
     pub variables: Variables<F>,
+
+    #[cfg(feature = "print-gates")]
+    pub gates: Vec<GatesID>,
 }
 
 impl<F: Field> ConstraintSystem<F> {
@@ -54,6 +58,9 @@ impl<F: Field> ConstraintSystem<F> {
             cs.a.push(zero_var);
             cs.b.push(zero_var);
             cs.c.push(zero_var);
+
+            #[cfg(feature = "print-gates")]
+            cs.gates.push(GatesID::Constants);
         }
         // assert the second witness is 1
         {
@@ -66,6 +73,9 @@ impl<F: Field> ConstraintSystem<F> {
             cs.a.push(one_var);
             cs.b.push(zero_var);
             cs.c.push(zero_var);
+
+            #[cfg(feature = "print-gates")]
+            cs.gates.push(GatesID::Constants);
         }
         cs
     }
@@ -94,10 +104,30 @@ impl<F: Field> ConstraintSystem<F> {
         self.q_c.push(-*c);
 
         self.a.push(var_c);
-        self.b.push(VariableZero);
-        self.c.push(VariableZero);
+        self.b.push(VAR_ZERO);
+        self.c.push(VAR_ZERO);
+
+        #[cfg(feature = "print-gates")]
+        self.gates.push(GatesID::Constants);
 
         var_c
+    }
+
+    /// Assert two variables are equal
+    #[inline]
+    pub fn assert_equal(&mut self, a: &VariableIndex, b: &VariableIndex) {
+        self.q_l.push(F::one());
+        self.q_r.push(-F::one());
+        self.q_o.push(F::zero());
+        self.q_m.push(F::zero());
+        self.q_c.push(F::zero());
+
+        self.a.push(*a);
+        self.b.push(*b);
+        self.c.push(VAR_ZERO);
+
+        #[cfg(feature = "print-gates")]
+        self.gates.push(GatesID::Equal);
     }
 
     /// Assert the variable is zero
@@ -113,8 +143,11 @@ impl<F: Field> ConstraintSystem<F> {
         self.q_c.push(F::zero());
 
         self.a.push(*a);
-        self.b.push(VariableZero);
-        self.c.push(VariableZero);
+        self.b.push(VAR_ZERO);
+        self.c.push(VAR_ZERO);
+
+        #[cfg(feature = "print-gates")]
+        self.gates.push(GatesID::Binary);
     }
 
     /// Assert the variable is one
@@ -130,8 +163,11 @@ impl<F: Field> ConstraintSystem<F> {
         self.q_c.push(F::zero());
 
         self.a.push(*a);
-        self.b.push(VariableZero);
-        self.c.push(VariableZero);
+        self.b.push(VAR_ZERO);
+        self.c.push(VAR_ONE);
+
+        #[cfg(feature = "print-gates")]
+        self.gates.push(GatesID::Constants);
     }
 
     /// Assert the variable is binary
@@ -153,7 +189,10 @@ impl<F: Field> ConstraintSystem<F> {
 
         self.a.push(*a);
         self.b.push(*a);
-        self.c.push(VariableZero);
+        self.c.push(VAR_ZERO);
+
+        #[cfg(feature = "print-gates")]
+        self.gates.push(GatesID::Constants);
     }
 
     /// Assert the variable is not zero
@@ -174,7 +213,10 @@ impl<F: Field> ConstraintSystem<F> {
 
         self.a.push(*a);
         self.b.push(a_inv_var);
-        self.c.push(VariableOne);
+        self.c.push(VAR_ONE);
+
+        #[cfg(feature = "print-gates")]
+        self.gates.push(GatesID::NonZero);
     }
 
     /// addition gate: return the variable index of a + b
@@ -192,10 +234,6 @@ impl<F: Field> ConstraintSystem<F> {
     /// assert addition is correct: c = a + b
     #[inline]
     pub fn assert_addition(&mut self, a: &VariableIndex, b: &VariableIndex, c: &VariableIndex) {
-        let a_val = self.get_value(*a);
-        let b_val = self.get_value(*b);
-        let c_val = self.get_value(*c);
-
         self.q_l.push(F::one());
         self.q_r.push(F::one());
         self.q_o.push(-F::one());
@@ -205,6 +243,9 @@ impl<F: Field> ConstraintSystem<F> {
         self.a.push(*a);
         self.b.push(*b);
         self.c.push(*c);
+
+        #[cfg(feature = "print-gates")]
+        self.gates.push(GatesID::Add);
     }
 
     /// subtraction gate: return the variable index of a - b
@@ -247,10 +288,6 @@ impl<F: Field> ConstraintSystem<F> {
         b: &VariableIndex,
         c: &VariableIndex,
     ) {
-        let a_val = self.get_value(*a);
-        let b_val = self.get_value(*b);
-        let c_val = self.get_value(*c);
-
         self.q_l.push(F::zero());
         self.q_r.push(F::zero());
         self.q_o.push(-F::one());
@@ -260,6 +297,9 @@ impl<F: Field> ConstraintSystem<F> {
         self.a.push(*a);
         self.b.push(*b);
         self.c.push(*c);
+
+        #[cfg(feature = "print-gates")]
+        self.gates.push(GatesID::Mul);
     }
 
     /// division gate: return the variable index of a / b
@@ -312,7 +352,14 @@ impl<F: Field> ConstraintSystem<F> {
             let q_c = self.q_c.q[index];
 
             if a * q_l + b * q_r + c * q_o + a * b * q_m + q_c != F::zero() {
-                println!("cs failed at row {}", index);
+                #[cfg(not(feature = "print-gates"))]
+                println!("cs failed at row {}", index,);
+                #[cfg(feature = "print-gates")]
+                println!(
+                    "cs failed at row {} with gate: {:?}",
+                    index, self.gates[index]
+                );
+
                 println!("a: {:?}", a);
                 println!("b: {:?}", b);
                 println!("c: {:?}", c);
@@ -321,9 +368,12 @@ impl<F: Field> ConstraintSystem<F> {
                 println!("q_o: {:?}", q_o);
                 println!("q_m: {:?}", q_m);
                 println!("q_c: {:?}", q_c);
+                println!();
                 return false;
             }
         }
+
+        // todo: permutation checks
 
         true
     }

@@ -12,3 +12,8 @@ uni-kzg ={ path = "../uni-kzg" }
 
 [dev-dependencies]
 halo2curves.workspace = true
+
+
+[features]
+default = [ "print-gates" ]
+print-gates = [ ]

@@ -2,7 +2,7 @@
 members = [
     "arith",    # arithmetic backend
     "bi-kzg",   # bivariate KZG commitment scheme
-    "gkr",      # GKR proof system
+    "gkr", "plonk",      # GKR proof system
     "uni-kzg"   # univariate KZG commitment scheme
     ]
 

@@ -76,3 +76,12 @@ pub fn univariate_quotient<F: PrimeField>(poly: &[F], point: &F) -> Vec<F> {
     end_timer!(timer);
     coefficients
 }
+
+
+
+impl<F> From<&UnivariatePolynomial<F>> for UnivariateLagrangePolynomial<F> {
+    fn from(poly: &UnivariatePolynomial<F>) -> Self {
+        /// call best fft
+        todo!()
+    }
+}

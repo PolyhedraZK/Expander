@@ -7,8 +7,14 @@ use super::*;
 
 #[test]
 fn test_constraint_system() {
-    test_arithmetics_helper::<M31>();
-    test_arithmetics_helper::<Fr>();
+    test_suites::<Fr>();
+    test_suites::<M31>();
+}
+
+fn test_suites<F: Field>() {
+    test_arithmetics_helper::<F>();
+    test_boolean_helper::<F>();
+    test_equality_helper::<F>();
 }
 
 fn test_arithmetics_helper<F: Field>() {
@@ -87,4 +93,37 @@ fn test_arithmetics_helper<F: Field>() {
         let d = cs.new_variable(F::from(7));
         cs.assert_division(&a, &b, &d);
     }
+}
+
+fn test_boolean_helper<F: Field>() {
+    let mut cs = ConstraintSystem::<F>::init();
+
+    // assert one
+    let a = cs.new_variable(F::from(1));
+    cs.assert_one(&a);
+
+    // assert zero
+    let b = cs.new_variable(F::from(0));
+    cs.assert_zero(&b);
+
+    // assert binary
+    cs.assert_binary(&a);
+    cs.assert_binary(&b);
+
+    assert!(cs.is_satisfied());
+}
+
+fn test_equality_helper<F: Field>() {
+    let mut cs = ConstraintSystem::<F>::init();
+
+    let a = cs.new_variable(F::from(2));
+    let b = cs.new_variable(F::from(2));
+    cs.assert_equal(&a, &b);
+
+    assert!(cs.is_satisfied());
+
+    let c = cs.new_variable(F::from(3));
+    cs.assert_equal(&a, &c);
+
+    assert!(!cs.is_satisfied());
 }

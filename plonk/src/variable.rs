@@ -2,8 +2,8 @@ use arith::Field;
 
 pub type VariableIndex = usize;
 
-pub const VariableZero: VariableIndex = 0;
-pub const VariableOne: VariableIndex = 1;
+pub const VAR_ZERO: VariableIndex = 0;
+pub const VAR_ONE: VariableIndex = 1;
 
 /// This struct stores all the variables that will be used in the circuit
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
