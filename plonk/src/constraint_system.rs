@@ -2,15 +2,15 @@ use arith::Field;
 
 use crate::{
     selectors::Selector,
-    variable::{VariableColumn, VariableIndex, VariableZero, Variables},
+    variable::{VariableColumn, VariableIndex, VariableOne, VariableZero, Variables},
 };
 
 /// Constraint system for the vanilla plonk protocol.
 ///
 /// Vanilla plonk gate:
-/// 
+///
 /// q_l * a + q_r * b + q_o * c + q_m * a * b + q_c = 0
-/// 
+///
 /// where
 /// - `a`, `b`, `c` are the variables of the constraint system.
 /// - `q_l`, `q_r`, `q_o`, `q_m` are the coefficients of the constraint system.
@@ -18,6 +18,7 @@ use crate::{
 ///
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct ConstraintSystem<F> {
+    /// selectors
     pub q_l: Selector<F>,
     pub q_r: Selector<F>,
     pub q_o: Selector<F>,
@@ -34,16 +35,10 @@ pub struct ConstraintSystem<F> {
 }
 
 impl<F: Field> ConstraintSystem<F> {
-    /// Create a new, empty constraint system.
-    #[inline]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// initialize a new constraint system with default constants
     #[inline]
     pub fn init() -> Self {
-        let mut cs = ConstraintSystem::new();
+        let mut cs = ConstraintSystem::default();
 
         let zero_var = cs.variables.new_variable(F::zero());
         let one_var = cs.variables.new_variable(F::one());
@@ -61,7 +56,6 @@ impl<F: Field> ConstraintSystem<F> {
             cs.c.push(zero_var);
         }
         // assert the second witness is 1
-
         {
             cs.q_l.push(F::one());
             cs.q_r.push(F::zero());
@@ -76,11 +70,13 @@ impl<F: Field> ConstraintSystem<F> {
         cs
     }
 
+    /// create a new variable
     #[inline]
     pub fn new_variable(&mut self, f: F) -> VariableIndex {
         self.variables.new_variable(f)
     }
 
+    /// get the field element of a variable
     #[inline]
     pub fn get_value(&self, index: VariableIndex) -> F {
         self.variables.witnesses[index]
@@ -104,13 +100,101 @@ impl<F: Field> ConstraintSystem<F> {
         var_c
     }
 
-    /// addition gate
+    /// Assert the variable is zero
+    #[inline]
+    pub fn assert_zero(&mut self, a: &VariableIndex) {
+        let a_val = self.get_value(*a);
+        assert!(a_val == F::zero(), "a should be zero");
+
+        self.q_l.push(F::one());
+        self.q_r.push(F::zero());
+        self.q_o.push(F::zero());
+        self.q_m.push(F::zero());
+        self.q_c.push(F::zero());
+
+        self.a.push(*a);
+        self.b.push(VariableZero);
+        self.c.push(VariableZero);
+    }
+
+    /// Assert the variable is one
+    #[inline]
+    pub fn assert_one(&mut self, a: &VariableIndex) {
+        let a_val = self.get_value(*a);
+        assert!(a_val == F::one(), "a should be one");
+
+        self.q_l.push(F::one());
+        self.q_r.push(F::zero());
+        self.q_o.push(-F::one());
+        self.q_m.push(F::zero());
+        self.q_c.push(F::zero());
+
+        self.a.push(*a);
+        self.b.push(VariableZero);
+        self.c.push(VariableZero);
+    }
+
+    /// Assert the variable is binary
+    ///
+    /// this is handled by constraint `a * (a - 1) = 0`
+    #[inline]
+    pub fn assert_binary(&mut self, a: &VariableIndex) {
+        let a_val = self.get_value(*a);
+        assert!(
+            a_val == F::zero() || a_val == F::one(),
+            "a should be binary"
+        );
+
+        self.q_l.push(-F::one());
+        self.q_r.push(F::zero());
+        self.q_o.push(F::zero());
+        self.q_m.push(F::one());
+        self.q_c.push(F::zero());
+
+        self.a.push(*a);
+        self.b.push(*a);
+        self.c.push(VariableZero);
+    }
+
+    /// Assert the variable is not zero
+    ///
+    /// this is handled by adding a new variable `a_inv` and asserting `a * a_inv = 1`
+    #[inline]
+    pub fn assert_none_zero(&mut self, a: &VariableIndex) {
+        let a_val = self.get_value(*a);
+        assert!(a_val != F::zero(), "a should not be zero");
+        let a_inv = a_val.inv().unwrap(); // safe unwrap
+        let a_inv_var = self.new_variable(a_inv);
+
+        self.q_l.push(F::zero());
+        self.q_r.push(F::zero());
+        self.q_o.push(-F::one());
+        self.q_m.push(F::one());
+        self.q_c.push(F::zero());
+
+        self.a.push(*a);
+        self.b.push(a_inv_var);
+        self.c.push(VariableOne);
+    }
+
+    /// addition gate: return the variable index of a + b
     #[inline]
     pub fn addition_gate(&mut self, a: &VariableIndex, b: &VariableIndex) -> VariableIndex {
         let a_val = self.get_value(*a);
         let b_val = self.get_value(*b);
         let c_val = a_val + b_val;
         let c = self.new_variable(c_val);
+
+        self.assert_addition(a, b, &c);
+        c
+    }
+
+    /// assert addition is correct: c = a + b
+    #[inline]
+    pub fn assert_addition(&mut self, a: &VariableIndex, b: &VariableIndex, c: &VariableIndex) {
+        let a_val = self.get_value(*a);
+        let b_val = self.get_value(*b);
+        let c_val = self.get_value(*c);
 
         self.q_l.push(F::one());
         self.q_r.push(F::one());
@@ -120,13 +204,87 @@ impl<F: Field> ConstraintSystem<F> {
 
         self.a.push(*a);
         self.b.push(*b);
-        self.c.push(c);
+        self.c.push(*c);
+    }
+
+    /// subtraction gate: return the variable index of a - b
+    #[inline]
+    pub fn subtraction_gate(&mut self, a: &VariableIndex, b: &VariableIndex) -> VariableIndex {
+        let a_val = self.get_value(*a);
+        let b_val = self.get_value(*b);
+        let c_val = a_val - b_val;
+        let c = self.new_variable(c_val);
+
+        self.assert_subtraction(a, b, &c);
 
         c
     }
 
+    /// assert subtraction is correct: c = a - b
     #[inline]
-    pub fn check_cs(&self) -> bool {
+    pub fn assert_subtraction(&mut self, a: &VariableIndex, b: &VariableIndex, c: &VariableIndex) {
+        self.assert_addition(c, b, a)
+    }
+
+    /// multiplication gate: return the variable index of a * b
+    #[inline]
+    pub fn multiplication_gate(&mut self, a: &VariableIndex, b: &VariableIndex) -> VariableIndex {
+        let a_val = self.get_value(*a);
+        let b_val = self.get_value(*b);
+        let c_val = a_val * b_val;
+        let c = self.new_variable(c_val);
+
+        self.assert_multiplication(a, b, &c);
+
+        c
+    }
+
+    /// assert multiplication is correct: c = a * b
+    #[inline]
+    pub fn assert_multiplication(
+        &mut self,
+        a: &VariableIndex,
+        b: &VariableIndex,
+        c: &VariableIndex,
+    ) {
+        let a_val = self.get_value(*a);
+        let b_val = self.get_value(*b);
+        let c_val = self.get_value(*c);
+
+        self.q_l.push(F::zero());
+        self.q_r.push(F::zero());
+        self.q_o.push(-F::one());
+        self.q_m.push(F::one());
+        self.q_c.push(F::zero());
+
+        self.a.push(*a);
+        self.b.push(*b);
+        self.c.push(*c);
+    }
+
+    /// division gate: return the variable index of a / b
+    #[inline]
+    pub fn division_gate(&mut self, a: &VariableIndex, b: &VariableIndex) -> VariableIndex {
+        self.assert_none_zero(b);
+        let a_val = self.get_value(*a);
+        let b_val = self.get_value(*b);
+        let c_val = a_val * b_val.inv().unwrap(); // safe unwrap
+        let c = self.new_variable(c_val);
+
+        self.assert_division(a, b, &c);
+
+        c
+    }
+
+    /// assert division is correct: c = a / b
+    #[inline]
+    pub fn assert_division(&mut self, a: &VariableIndex, b: &VariableIndex, c: &VariableIndex) {
+        self.assert_multiplication(c, b, a)
+    }
+
+    /// check the constraint system is satisfied
+    #[inline]
+    pub fn is_satisfied(&self) -> bool {
         let length = self.q_l.get_nv();
 
         if self.q_r.get_nv() != length {
@@ -168,29 +326,5 @@ impl<F: Field> ConstraintSystem<F> {
         }
 
         true
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    use arith::M31;
-
-    use super::*;
-
-    #[test]
-    fn test_constraint_system() {
-        let mut cs = ConstraintSystem::<M31>::init();
-
-        let a = cs.new_variable(M31::from(3));
-        let b = cs.new_variable(M31::from(4));
-
-        let c = cs.addition_gate(&a, &b);
-        let d = cs.addition_gate(&b, &c);
-
-        assert_eq!(cs.get_value(c), M31::from(7));
-        assert_eq!(cs.get_value(d), M31::from(11));
-
-        assert_eq!(cs.check_cs(), true);
     }
 }
