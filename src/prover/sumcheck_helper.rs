@@ -1,6 +1,6 @@
 use arith::{ExtensionField, Field, SimdField};
 
-use crate::{CircuitLayer, FieldType, GKRConfig, GkrScratchpad};
+use crate::{challenge_mul_circuit_field, CircuitLayer, FieldType, GKRConfig, GkrScratchpad};
 
 #[inline(always)]
 fn _eq<F: Field>(x: &F, y: &F) -> F {
@@ -355,15 +355,15 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         }
 
         for g in mul.iter() {
-            let r = C::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
+            let r = challenge_mul_circuit_field!(&eq_evals_at_rz0[g.o_id], &g.coef);
             hg_vals[g.i_ids[0]] += C::simd_circuit_field_mul_challenge_field(&vals[g.i_ids[1]], &r);
 
             gate_exists[g.i_ids[0]] = true;
         }
         for g in add.iter() {
-            hg_vals[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit_field(
+            hg_vals[g.i_ids[0]] += C::Field::from(challenge_mul_circuit_field!(
                 &eq_evals_at_rz0[g.o_id],
-                &g.coef,
+                &g.coef
             ));
             gate_exists[g.i_ids[0]] = true;
         }
@@ -395,9 +395,9 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
         for g in mul.iter() {
             hg_vals[g.i_ids[1]] += v_rx.scale(
-                &(C::challenge_mul_circuit_field(
+                &(challenge_mul_circuit_field!(
                     &(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
-                    &g.coef,
+                    &g.coef
                 )),
             );
             gate_exists[g.i_ids[1]] = true;

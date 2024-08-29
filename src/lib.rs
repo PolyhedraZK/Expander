@@ -19,3 +19,5 @@ pub mod verifier;
 pub use verifier::*;
 
 pub mod utils;
+
+mod macros;

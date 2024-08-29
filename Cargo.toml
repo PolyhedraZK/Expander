@@ -38,6 +38,7 @@ path = "src/utils.rs"
 default = []
 # default = [ "grinding" ]
 grinding = []
+coef-all-one = []
 
 [workspace]
 members = ["arith", "bi-kzg"]

@@ -7,7 +7,7 @@ use std::{
 };
 use thiserror::Error;
 
-use crate::{GKRConfig, Transcript};
+use crate::{circuit_field_mul_simd_circuit_field, GKRConfig, Transcript};
 
 #[derive(Debug, Clone)]
 pub struct Gate<C: GKRConfig, const INPUT_NUM: usize> {
@@ -46,12 +46,12 @@ impl<C: GKRConfig> CircuitLayer<C> {
             let i1 = &self.input_vals[gate.i_ids[1]];
             let o = &mut res[gate.o_id];
             let mul = *i0 * i1;
-            *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &mul);
+            *o += circuit_field_mul_simd_circuit_field!(&gate.coef, &mul);
         }
         for gate in &self.add {
             let i0 = self.input_vals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
-            *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0);
+            *o += circuit_field_mul_simd_circuit_field!(&gate.coef, &i0);
         }
         for gate in &self.const_ {
             let o = &mut res[gate.o_id];
@@ -66,11 +66,11 @@ impl<C: GKRConfig> CircuitLayer<C> {
                     let i0_2 = i0.square();
                     let i0_4 = i0_2.square();
                     let i0_5 = i0_4 * i0;
-                    *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0_5);
+                    *o += circuit_field_mul_simd_circuit_field!(&gate.coef, &i0_5);
                 }
                 12346 => {
                     // pow1
-                    *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, i0);
+                    *o += circuit_field_mul_simd_circuit_field!(&gate.coef, i0);
                 }
                 _ => panic!("Unknown gate type: {}", gate.gate_type),
             }
@@ -179,8 +179,11 @@ impl<C: GKRConfig> Circuit<C> {
 
     pub fn identify_rnd_coefs(&mut self) {
         self.rnd_coefs.clear();
-        for layer in &mut self.layers {
-            layer.identify_rnd_coefs(&mut self.rnd_coefs);
+        #[cfg(not(feature = "coef-all-one"))]
+        {
+            for layer in &mut self.layers {
+                layer.identify_rnd_coefs(&mut self.rnd_coefs);
+            }                
         }
         self.rnd_coefs_identified = true;
     }
