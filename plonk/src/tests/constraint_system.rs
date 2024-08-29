@@ -213,7 +213,6 @@ fn test_h_poly<F: Field + PrimeField + WithSmallOrderMulGroup<3>>() {
     assert!(cs.is_satisfied(&[]));
     cs.finalize();
 
-
     let _hx = PlonkIOP::generate_zero_polynomial(&cs, &[]);
 
     // none zero terms in hx

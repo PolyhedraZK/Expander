@@ -69,7 +69,7 @@ pub struct CosetFFTDomain<F: PrimeField> {
     // zeta^3 == 1
     pub(crate) zeta: F,
     pub(crate) zeta_inv: F,
-    
+
     // dimension of base domain
     pub(crate) n: usize,
     pub(crate) log_n: usize,
@@ -94,7 +94,7 @@ impl<F: PrimeField + WithSmallOrderMulGroup<3>> CosetFFTDomain<F> {
         let r = F::ROOT_OF_UNITY;
         let omega = r.pow_vartime([1u64 << (F::S - log_ext_n as u32) as u64]);
         let omega_inv = omega.invert().unwrap(); // safe unwrap
-        let one_over_ext_n = F::from(ext_n ).invert().unwrap(); // safe unwrap
+        let one_over_ext_n = F::from(ext_n).invert().unwrap(); // safe unwrap
         let zeta = F::ZETA;
         let zeta_inv = zeta.square();
 
@@ -190,7 +190,7 @@ impl<F: PrimeField + WithSmallOrderMulGroup<3>> CosetFFTDomain<F> {
 
         // Divide to obtain the quotient polynomial in the coset evaluation
         // domain.
-        parallelize( a, |h, mut index| {
+        parallelize(a, |h, mut index| {
             for h in h {
                 *h *= &self.t_eval_inv[index % self.t_eval_inv.len()];
                 index += 1;
