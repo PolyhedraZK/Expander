@@ -544,22 +544,7 @@ fn mul_internal(a: &AVX512GF2_128x8, b: &AVX512GF2_128x8) -> AVX512GF2_128x8 {
         ],
     }
 }
-
-// abcdefgh -> aacceegg
-#[inline(always)]
-pub fn duplicate_even_bits(byte: u8) -> u8 {
-    let even_bits = byte & 0b10101010;
-    let even_bits_shifted = even_bits >> 1;
-    even_bits | even_bits_shifted
-}
-
-// abcdefgh -> bbddffhh
-#[inline(always)]
-pub fn duplicate_odd_bits(byte: u8) -> u8 {
-    let odd_bits = byte & 0b01010101;
-    let odd_bits_shifted = odd_bits << 1;
-    odd_bits | odd_bits_shifted
-}
+static ONE_VEC: __m512i = unsafe { std::mem::transmute([1i64; 8]) };
 
 impl ExtensionField for AVX512GF2_128x8 {
     const DEGREE: usize = GF2_128::DEGREE;
@@ -577,11 +562,12 @@ impl ExtensionField for AVX512GF2_128x8 {
 
     type BaseField = GF2x8;
 
-    #[inline(always)]
+    #[inline]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
-        let mask_even = duplicate_even_bits(base.v);
-        let mask_odd = duplicate_odd_bits(base.v);
-
+        let mut mask_even = (base.v & 0b10101010) as __mmask8;
+        let mut mask_odd = (base.v & 0b01010101) as __mmask8;
+        mask_even = mask_even | (mask_even >> 1);
+        mask_odd = mask_odd | (mask_odd << 1);
         Self {
             data: [
                 unsafe { _mm512_maskz_mov_epi64(mask_even, self.data[0]) },
@@ -589,25 +575,21 @@ impl ExtensionField for AVX512GF2_128x8 {
             ],
         }
     }
-
-    #[inline(always)]
+    
+    #[inline]
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
-        let v0 = ((base.v >> 7) & 1u8) as i64;
-        let v1 = ((base.v >> 6) & 1u8) as i64;
-        let v2 = ((base.v >> 5) & 1u8) as i64;
-        let v3 = ((base.v >> 4) & 1u8) as i64;
-        let v4 = ((base.v >> 3) & 1u8) as i64;
-        let v5 = ((base.v >> 2) & 1u8) as i64;
-        let v6 = ((base.v >> 1) & 1u8) as i64;
-        let v7 = (base.v & 1u8) as i64;
+        let mask_even = ((base.v >> 1) & 0b01010101) as __mmask8;
+        let mask_odd = (base.v & 0b01010101) as __mmask8;
+        
+        Self {
+            data: unsafe {
+                [
+                    _mm512_mask_xor_epi64(self.data[0], mask_even, self.data[0], ONE_VEC),
+                    _mm512_mask_xor_epi64(self.data[1], mask_odd, self.data[1], ONE_VEC),
+                ]
+            },
+        }
 
-        let mut res = *self;
-        res.data[0] =
-            unsafe { _mm512_xor_si512(res.data[0], _mm512_set_epi64(0, v0, 0, v2, 0, v4, 0, v6)) };
-        res.data[1] =
-            unsafe { _mm512_xor_si512(res.data[1], _mm512_set_epi64(0, v1, 0, v3, 0, v5, 0, v7)) };
-
-        res
     }
 
     #[inline(always)]

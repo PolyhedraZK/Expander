@@ -89,12 +89,6 @@ impl SumcheckMultilinearProdHelper {
                 let hg_v_0 = bk_hg[i * 2];
                 let hg_v_1 = bk_hg[i * 2 + 1];
                 p0 += C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
-                log::trace!(
-                    "p0.v+= {:?} * {:?} =  {:?}",
-                    f_v_0,
-                    hg_v_0,
-                    C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0) + p1
-                );
                 p1 += C::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
                 p2 += C::field_mul_simd_circuit_field(&(hg_v_0 + hg_v_1), &(f_v_0 + f_v_1));
             }
@@ -109,12 +103,6 @@ impl SumcheckMultilinearProdHelper {
                 let hg_v_0 = bk_hg[i * 2];
                 let hg_v_1 = bk_hg[i * 2 + 1];
                 p0 += f_v_0 * hg_v_0;
-                log::trace!(
-                    "p0.v+= {:?} * {:?} =  {:?}",
-                    f_v_0,
-                    hg_v_0,
-                    f_v_0 * hg_v_0 + p1
-                );
                 p1 += f_v_1 * hg_v_1;
                 p2 += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
             }
@@ -298,9 +286,11 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         let eq_evals_at_rz1 = &mut self.sp.eq_evals_at_rz1;
         let gate_exists = &mut self.sp.gate_exists_5;
         let hg_vals = &mut self.sp.hg_evals;
+        let hg_vals_linear = &mut self.sp.hg_evals_linear;
         // hg_vals[0..vals.len()].fill(F::zero()); // FIXED: consider memset unsafe?
         unsafe {
-            std::ptr::write_bytes(hg_vals.as_mut_ptr(), 0, vals.len());
+            std::ptr::write_bytes(hg_vals.as_mut_ptr(), 0, hg_vals.len());
+            std::ptr::write_bytes(hg_vals_linear.as_mut_ptr(), 0, hg_vals_linear.len());
         }
         // gate_exists[0..vals.len()].fill(false); // FIXED: consider memset unsafe?
         unsafe {
@@ -330,12 +320,22 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
             gate_exists[g.i_ids[0]] = true;
         }
-        for g in add.iter() {
-            hg_vals[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit_field(
-                &eq_evals_at_rz0[g.o_id],
-                &g.coef,
-            ));
-            gate_exists[g.i_ids[0]] = true;
+        if C::FIELD_TYPE == FieldType::GF2 {
+            for g in add.iter() {
+                hg_vals_linear[g.i_ids[0]] += eq_evals_at_rz0[g.o_id];
+                gate_exists[g.i_ids[0]] = true;
+            }
+            for i in 0..vals.len() {
+                hg_vals[i] += C::Field::from(hg_vals_linear[i]);
+            }
+        } else {
+            for g in add.iter() {
+                hg_vals[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit_field(
+                    &eq_evals_at_rz0[g.o_id],
+                    &g.coef,
+                ));
+                gate_exists[g.i_ids[0]] = true;
+            }
         }
     }
 

@@ -17,12 +17,12 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, alpha, beta, sp);
     for i_var in 0..layer.input_var_num * 2 {
         if i_var == 0 {
-            helper.prepare_g_x_vals()
+            helper.prepare_g_x_vals();
         }
 
         if i_var == layer.input_var_num {
             let vx_claim = helper.vx_claim();
-            helper.prepare_h_y_vals(vx_claim)
+            helper.prepare_h_y_vals(vx_claim);
         }
         let evals = helper.poly_evals_at(i_var, 2);
 
@@ -31,9 +31,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
         transcript.append_f::<C>(evals[2]);
 
         let r = transcript.challenge_f::<C>();
-
         log::trace!("i_var={} evals: {:?} r: {:?}", i_var, evals, r);
-
         helper.receive_challenge(i_var, r);
         if i_var == layer.input_var_num - 1 {
             log::trace!("vx claim: {:?}", helper.vx_claim());
