@@ -92,6 +92,65 @@ impl<F: Field> ConstraintSystem<F> {
         self.variables.witnesses[index]
     }
 
+    /// check the constraint system is satisfied
+    #[inline]
+    pub fn is_satisfied(&self) -> bool {
+        let length = self.q_l.get_nv();
+
+        if self.q_r.get_nv() != length {
+            return false;
+        }
+        if self.q_o.get_nv() != length {
+            return false;
+        }
+        if self.q_m.get_nv() != length {
+            return false;
+        }
+        if self.q_c.get_nv() != length {
+            return false;
+        }
+
+        for index in 0..length {
+            let a = self.get_value(self.a[index]);
+            let b = self.get_value(self.b[index]);
+            let c = self.get_value(self.c[index]);
+
+            let q_l = self.q_l.q[index];
+            let q_r = self.q_r.q[index];
+            let q_o = self.q_o.q[index];
+            let q_m = self.q_m.q[index];
+            let q_c = self.q_c.q[index];
+
+            if a * q_l + b * q_r + c * q_o + a * b * q_m + q_c != F::zero() {
+                #[cfg(not(feature = "print-gates"))]
+                println!("cs failed at row {}", index,);
+                #[cfg(feature = "print-gates")]
+                println!(
+                    "cs failed at row {} with gate: {:?}",
+                    index, self.gates[index]
+                );
+
+                println!("a: {:?}", a);
+                println!("b: {:?}", b);
+                println!("c: {:?}", c);
+                println!("q_l: {:?}", q_l);
+                println!("q_r: {:?}", q_r);
+                println!("q_o: {:?}", q_o);
+                println!("q_m: {:?}", q_m);
+                println!("q_c: {:?}", q_c);
+                println!();
+                return false;
+            }
+        }
+
+        // todo: permutation checks
+
+        true
+    }
+}
+
+// Gate implementations
+impl<F: Field> ConstraintSystem<F> {
     /// constant gate
     #[inline]
     pub fn constant_gate(&mut self, c: &F) -> VariableIndex {
@@ -199,7 +258,7 @@ impl<F: Field> ConstraintSystem<F> {
     ///
     /// this is handled by adding a new variable `a_inv` and asserting `a * a_inv = 1`
     #[inline]
-    pub fn assert_none_zero(&mut self, a: &VariableIndex) {
+    pub fn assert_nonzero(&mut self, a: &VariableIndex) {
         let a_val = self.get_value(*a);
         assert!(a_val != F::zero(), "a should not be zero");
         let a_inv = a_val.inv().unwrap(); // safe unwrap
@@ -305,7 +364,7 @@ impl<F: Field> ConstraintSystem<F> {
     /// division gate: return the variable index of a / b
     #[inline]
     pub fn division_gate(&mut self, a: &VariableIndex, b: &VariableIndex) -> VariableIndex {
-        self.assert_none_zero(b);
+        self.assert_nonzero(b);
         let a_val = self.get_value(*a);
         let b_val = self.get_value(*b);
         let c_val = a_val * b_val.inv().unwrap(); // safe unwrap
@@ -322,59 +381,54 @@ impl<F: Field> ConstraintSystem<F> {
         self.assert_multiplication(c, b, a)
     }
 
-    /// check the constraint system is satisfied
+    /// selection gate: return the variable index of s * a + (1 - s) * b
     #[inline]
-    pub fn is_satisfied(&self) -> bool {
-        let length = self.q_l.get_nv();
+    pub fn selection_gate(
+        &mut self,
+        s: &VariableIndex,
+        a: &VariableIndex,
+        b: &VariableIndex,
+    ) -> VariableIndex {
+        let s_val = self.get_value(*s);
+        let a_val = self.get_value(*a);
+        let b_val = self.get_value(*b);
+        let c_val = s_val * a_val + (F::one() - s_val) * b_val;
+        let c = self.new_variable(c_val);
 
-        if self.q_r.get_nv() != length {
-            return false;
-        }
-        if self.q_o.get_nv() != length {
-            return false;
-        }
-        if self.q_m.get_nv() != length {
-            return false;
-        }
-        if self.q_c.get_nv() != length {
-            return false;
-        }
+        self.assert_selection(s, a, b, &c);
 
-        for index in 0..length {
-            let a = self.get_value(self.a[index]);
-            let b = self.get_value(self.b[index]);
-            let c = self.get_value(self.c[index]);
+        c
+    }
 
-            let q_l = self.q_l.q[index];
-            let q_r = self.q_r.q[index];
-            let q_o = self.q_o.q[index];
-            let q_m = self.q_m.q[index];
-            let q_c = self.q_c.q[index];
+    /// assert selection is correct: c = s * a + (1 - s) * b
+    ///
+    /// c = s * (a - b) + b
+    ///
+    /// statements:
+    /// - s is binary
+    /// - t1 = a - b
+    /// - t2 = s * t1
+    /// - c = t2 + b
+    ///
+    /// This requires 4 rows of constraints
+    #[inline]
+    pub fn assert_selection(
+        &mut self,
+        s: &VariableIndex,
+        a: &VariableIndex,
+        b: &VariableIndex,
+        c: &VariableIndex,
+    ) {
+        // s is binary
+        self.assert_binary(s);
 
-            if a * q_l + b * q_r + c * q_o + a * b * q_m + q_c != F::zero() {
-                #[cfg(not(feature = "print-gates"))]
-                println!("cs failed at row {}", index,);
-                #[cfg(feature = "print-gates")]
-                println!(
-                    "cs failed at row {} with gate: {:?}",
-                    index, self.gates[index]
-                );
+        // t1 = a - b
+        let t1 = self.subtraction_gate(a, b);
 
-                println!("a: {:?}", a);
-                println!("b: {:?}", b);
-                println!("c: {:?}", c);
-                println!("q_l: {:?}", q_l);
-                println!("q_r: {:?}", q_r);
-                println!("q_o: {:?}", q_o);
-                println!("q_m: {:?}", q_m);
-                println!("q_c: {:?}", q_c);
-                println!();
-                return false;
-            }
-        }
+        // t2 = s * t1
+        let t2 = self.multiplication_gate(s, &t1);
 
-        // todo: permutation checks
-
-        true
+        // c = t2 + b
+        self.assert_addition(&t2, b, c);
     }
 }

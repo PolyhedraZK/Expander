@@ -30,14 +30,14 @@ impl<F: Field> Variables<F> {
 
     /// get the index for zero
     pub(crate) fn zero(&self) -> VariableIndex {
-        // zero is always at index 0
-        0
+        // zero is always at index 0 by cs initialization
+        VAR_ZERO
     }
 
     /// get the index for one
     pub(crate) fn one(&self) -> VariableIndex {
-        // one is always at index 1
-        1
+        // one is always at index 1 by cs initialization
+        VAR_ONE
     }
 }
 

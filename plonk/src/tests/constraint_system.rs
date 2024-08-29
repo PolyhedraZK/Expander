@@ -110,6 +110,10 @@ fn test_boolean_helper<F: Field>() {
     cs.assert_binary(&a);
     cs.assert_binary(&b);
 
+    // assert none zero
+    let c = cs.new_variable(F::from(2));
+    cs.assert_nonzero(&c);
+
     assert!(cs.is_satisfied());
 }
 
@@ -124,6 +128,24 @@ fn test_equality_helper<F: Field>() {
 
     let c = cs.new_variable(F::from(3));
     cs.assert_equal(&a, &c);
+
+    assert!(!cs.is_satisfied());
+}
+
+fn test_selection_helper<F: Field>() {
+    let mut cs = ConstraintSystem::<F>::init();
+
+    let first = cs.new_variable(F::from(0));
+    let second = cs.new_variable(F::from(1));
+
+    let a = cs.new_variable(F::from(3));
+    let b = cs.new_variable(F::from(4));
+
+    let a_selected = cs.selection_gate(&first, &a, &b);
+    let b_selected = cs.selection_gate(&second, &a, &b);
+
+    cs.assert_equal(&a, &a_selected);
+    cs.assert_equal(&b, &b_selected);
 
     assert!(!cs.is_satisfied());
 }
