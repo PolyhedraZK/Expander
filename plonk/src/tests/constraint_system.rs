@@ -212,8 +212,11 @@ fn test_h_poly<F: Field + PrimeField + WithSmallOrderMulGroup<3>>() {
 
     assert!(cs.is_satisfied(&[]));
     cs.finalize();
-    println!("cs: {:?}", cs.eval_domain);
-    println!("cs: {:?}", cs.coset_domain);
 
-    let _hx = PlonkIOP::generate_vanishing_polynomial(&cs, &[]);
+
+    let _hx = PlonkIOP::generate_zero_polynomial(&cs, &[]);
+
+    // none zero terms in hx
+    let non_zero_in_h = _hx.iter().filter(|x| !x.is_zero_vartime()).count();
+    println!("degree of h: {:?}", non_zero_in_h);
 }

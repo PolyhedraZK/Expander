@@ -2,8 +2,6 @@ use ark_std::{end_timer, log2, start_timer};
 use halo2curves::{ff::PrimeField, fft::best_fft};
 use rand::RngCore;
 
-use crate::Field;
-
 use super::powers_of_field_elements;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

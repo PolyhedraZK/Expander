@@ -1,22 +1,21 @@
 use arith::{Field, UnivariatePolynomial};
 use halo2curves::ff::{PrimeField, WithSmallOrderMulGroup};
 
-use crate::ConstraintSystem;
+use crate::{ConstraintSystem, LOG_EXT_DEGREE};
 
 pub struct PlonkIOP;
 
 impl PlonkIOP {
-    /// Generate a vanishing polynomial for the IOP.
+    /// Generate a zero polynomial for the IOP.
     ///
-    /// h(x) = q_l(x) * a(x) + q_r(x) * b(x) + q_o(x) * c(x) + q_m(x) * a(x) * b(x) + q_c(x)
+    /// h(x) = [ q_l(x) * a(x) + q_r(x) * b(x) + q_o(x) * c(x) + q_m(x) * a(x) * b(x) + q_c(x) ] / (x^n - 1)
     ///
     /// this polynomial should be of degree 2n if all constraints are satisfied
-    pub fn generate_vanishing_polynomial<F: Field + PrimeField + WithSmallOrderMulGroup<3>>(
+    pub fn generate_zero_polynomial<F: Field + PrimeField + WithSmallOrderMulGroup<3>>(
         cs: &ConstraintSystem<F>,
         pi_poly: &[F],
     ) -> Vec<F> {
         let n = cs.q_l.q.len();
-        println!("n: {:?}", n);
 
         let eval_domain = match &cs.eval_domain {
             Some(domain) => domain,
@@ -28,7 +27,7 @@ impl PlonkIOP {
             None => panic!("coset domain is not set: suspect cs not finalized"),
         };
 
-        let mut hx_ext = vec![F::zero(); n << 2];
+        let mut hx_ext = vec![F::zero(); n << LOG_EXT_DEGREE];
 
         let [a, b, c] = cs.build_witness_polynomials();
         let pi_eval = cs.public_inputs_indices.build_pi_poly(pi_poly, n);
@@ -61,10 +60,7 @@ impl PlonkIOP {
         let pi_x = eval_domain.ifft(&pi_eval);
         let pi_x_ext = coset_domain.coset_fft(&pi_x);
 
-        println!("cs.q_l.q: {:?}", cs.q_l.q.len());
-        println!("q_l_x: {:?}", q_l_x.len());
-
-        for i in 0..n << 2 {
+        for i in 0..n << LOG_EXT_DEGREE {
             hx_ext[i] = q_l_x_ext[i] * a_x_ext[i]
                 + q_r_x_ext[i] * b_x_ext[i]
                 + q_o_x_ext[i] * c_x_ext[i]
@@ -73,14 +69,14 @@ impl PlonkIOP {
                 + pi_x_ext[i];
         }
 
-        let hx = coset_domain.coset_ifft(&hx_ext);
+        coset_domain.divide_by_vanishing_poly(&mut hx_ext);
 
-        println!("hx: {:?}", hx);
+        let hx = coset_domain.coset_ifft(&hx_ext);
 
         {
             // check hx is computed correctly via Schwartz-Zippel lemma
             // for debugging we use a fixed challenge
-            let challenge = F::from(3u64);
+            let challenge = F::from(100u64);
 
             let q_l_x_eval = UnivariatePolynomial::new(q_l_x).evaluate(&challenge);
             let q_r_x_eval = UnivariatePolynomial::new(q_r_x).evaluate(&challenge);
@@ -95,9 +91,10 @@ impl PlonkIOP {
             let pi_x_eval = UnivariatePolynomial::new(pi_x).evaluate(&challenge);
 
             let hx_eval = UnivariatePolynomial::new(hx.clone()).evaluate(&challenge);
+            let tx_eval = challenge.pow_vartime([n as u64]) - F::one();
 
             assert_eq!(
-                hx_eval,
+                hx_eval * tx_eval,
                 q_l_x_eval * a_x_eval
                     + q_r_x_eval * b_x_eval
                     + q_o_x_eval * c_x_eval

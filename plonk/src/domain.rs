@@ -1,8 +1,10 @@
 use arith::parallelize;
 use halo2curves::{
-    ff::{PrimeField, WithSmallOrderMulGroup},
+    ff::{BatchInvert, PrimeField, WithSmallOrderMulGroup},
     fft::best_fft,
 };
+
+pub const LOG_EXT_DEGREE: usize = 1;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct FFTDomain<F: PrimeField> {
@@ -18,7 +20,7 @@ impl<F: PrimeField> FFTDomain<F> {
     pub fn new(log_n: usize) -> Self {
         let n = 1 << log_n;
         let r = F::ROOT_OF_UNITY;
-        let omega = r.pow_vartime(&[1u64 << (F::S - log_n as u32) as u64]);
+        let omega = r.pow_vartime([1u64 << (F::S - log_n as u32) as u64]);
         let omega_inv = omega.invert().unwrap(); // safe unwrap
         let one_over_n = F::from(n as u64).invert().unwrap(); // safe unwrap
         Self {
@@ -60,28 +62,67 @@ impl<F: PrimeField> FFTDomain<F> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct CosetFFTDomain<F: PrimeField> {
+    /// roots of extension field
     pub(crate) omega: F,
     pub(crate) omega_inv: F,
+
+    // zeta^3 == 1
     pub(crate) zeta: F,
     pub(crate) zeta_inv: F,
+    
+    // dimension of base domain
     pub(crate) n: usize,
     pub(crate) log_n: usize,
+
+    // dimension of extended domain
     pub(crate) ext_n: usize,
     pub(crate) log_ext_n: usize,
+
+    // 1/ext_n
     pub(crate) one_over_ext_n: F,
+
+    // evaluation of x^n-1 at the coset domain, inverted
+    pub(crate) t_eval_inv: Vec<F>,
 }
 
 impl<F: PrimeField + WithSmallOrderMulGroup<3>> CosetFFTDomain<F> {
     #[inline]
     pub fn new(log_n: usize) -> Self {
         let n = 1 << log_n;
-        let ext_n = n << 2;
+        let log_ext_n = log_n + LOG_EXT_DEGREE;
+        let ext_n = n << LOG_EXT_DEGREE;
         let r = F::ROOT_OF_UNITY;
-        let omega = r.pow_vartime(&[1u64 << (F::S - 2 - log_n as u32) as u64]);
+        let omega = r.pow_vartime([1u64 << (F::S - log_ext_n as u32) as u64]);
         let omega_inv = omega.invert().unwrap(); // safe unwrap
-        let one_over_ext_n = F::from(ext_n as u64).invert().unwrap(); // safe unwrap
+        let one_over_ext_n = F::from(ext_n ).invert().unwrap(); // safe unwrap
         let zeta = F::ZETA;
         let zeta_inv = zeta.square();
+
+        let mut t_eval_inv = Vec::with_capacity(1 << (log_ext_n - log_n));
+        {
+            // Compute the evaluations of t(X) = X^n - 1 in the coset evaluation domain.
+            // We don't have to compute all of them, because it will repeat.
+            let orig = F::ZETA.pow_vartime([n]);
+            let step = omega.pow_vartime([n]);
+            let mut cur = orig;
+            loop {
+                t_eval_inv.push(cur);
+                cur *= &step;
+                if cur == orig {
+                    break;
+                }
+            }
+            assert_eq!(t_eval_inv.len(), 1 << (log_ext_n - log_n));
+
+            // Subtract 1 from each to give us t_evaluations[i] = t(zeta * extended_omega^i)
+            for coeff in &mut t_eval_inv {
+                *coeff -= &F::ONE;
+            }
+
+            // Invert, because we're dividing by this polynomial.
+            // We invert in a batch, below.
+        }
+        t_eval_inv.batch_invert();
 
         Self {
             omega,
@@ -91,8 +132,9 @@ impl<F: PrimeField + WithSmallOrderMulGroup<3>> CosetFFTDomain<F> {
             n: n as usize,
             log_n,
             ext_n: ext_n as usize,
-            log_ext_n: log_n + 2,
+            log_ext_n,
             one_over_ext_n,
+            t_eval_inv,
         }
     }
 
@@ -136,6 +178,21 @@ impl<F: PrimeField + WithSmallOrderMulGroup<3>> CosetFFTDomain<F> {
                 if i != 0 {
                     *a *= &coset_powers[i - 1];
                 }
+                index += 1;
+            }
+        });
+    }
+
+    /// This divides the polynomial (in the extended domain) by the vanishing
+    /// polynomial of the $2^k$ size domain.
+    pub fn divide_by_vanishing_poly(&self, a: &mut [F]) {
+        assert_eq!(a.len(), self.ext_n);
+
+        // Divide to obtain the quotient polynomial in the coset evaluation
+        // domain.
+        parallelize( a, |h, mut index| {
+            for h in h {
+                *h *= &self.t_eval_inv[index % self.t_eval_inv.len()];
                 index += 1;
             }
         });

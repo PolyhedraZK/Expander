@@ -164,6 +164,7 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
 
     /// check the constraint system is satisfied
     #[inline]
+    #[allow(clippy::needless_range_loop)]
     pub fn is_satisfied(&self, public_inputs: &[F]) -> bool {
         if public_inputs.len() != self.public_inputs_indices.row_index.len() {
             println!("public inputs length not match");
