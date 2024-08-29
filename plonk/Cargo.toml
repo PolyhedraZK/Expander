@@ -1,0 +1,11 @@
+[package]
+name = "plonk"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ark-std.workspace = true
+
+
+arith = { path = "../arith" }
+uni-kzg ={ path = "../uni-kzg" }
