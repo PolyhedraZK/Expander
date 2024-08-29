@@ -29,6 +29,31 @@ impl<F: Field + PrimeField> ConstraintSystem<F> {
         var_c
     }
 
+    /// public input gate
+    #[inline]
+    pub fn public_input_gate(&mut self, pi: F) -> VariableIndex {
+        // update pi list
+        let row_index = self.q_l.get_nv();
+        self.public_inputs_indices.push(row_index);
+
+        let var_pi = self.new_variable(pi);
+
+        self.q_l.push(-F::one());
+        self.q_r.push(F::zero());
+        self.q_o.push(F::zero());
+        self.q_m.push(F::zero());
+        self.q_c.push(F::zero());
+
+        self.a.push(var_pi);
+        self.b.push(VAR_ZERO);
+        self.c.push(VAR_ZERO);
+
+        #[cfg(feature = "print-gates")]
+        self.gates.push(GatesID::Constants);
+
+        var_pi
+    }
+
     /// Assert two variables are equal
     #[inline]
     pub fn assert_equal(&mut self, a: &VariableIndex, b: &VariableIndex) {

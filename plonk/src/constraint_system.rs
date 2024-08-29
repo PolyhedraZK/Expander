@@ -4,7 +4,7 @@ mod selectors;
 pub use selectors::Selector;
 
 mod public_inputs;
-pub use public_inputs::PublicInputs;
+pub use public_inputs::PublicInputsIndices;
 
 mod variables;
 pub use variables::*;
@@ -18,18 +18,19 @@ use arith::Field;
 use ark_std::log2;
 use halo2curves::ff::PrimeField;
 
-use crate::{FFTDomain, PublicKey};
+use crate::FFTDomain;
 
 /// Constraint system for the vanilla plonk protocol.
 ///
 /// Vanilla plonk gate:
 ///
-/// q_l * a + q_r * b + q_o * c + q_m * a * b + q_c = 0
+/// q_l * a + q_r * b + q_o * c + q_m * a * b + q_c + PI = 0
 ///
 /// where
 /// - `a`, `b`, `c` are the variables of the constraint system.
 /// - `q_l`, `q_r`, `q_o`, `q_m` are the coefficients of the constraint system.
 /// - `q_c` is the constant term of the constraint system.
+/// - `PI` is the public input
 ///
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct ConstraintSystem<F: PrimeField> {
@@ -44,6 +45,9 @@ pub struct ConstraintSystem<F: PrimeField> {
     pub a: VariableColumn,
     pub b: VariableColumn,
     pub c: VariableColumn,
+
+    /// public inputs
+    pub public_inputs_indices: PublicInputsIndices,
 
     /// the actual witnesses
     pub variables: Variables<F>,
@@ -131,7 +135,7 @@ impl<F: Field + PrimeField> ConstraintSystem<F> {
 
     /// check the constraint system is satisfied
     #[inline]
-    pub fn is_satisfied(&self) -> bool {
+    pub fn is_satisfied(&self, public_inputs: &[F]) -> bool {
         let length = self.q_l.get_nv();
 
         if self.q_r.get_nv() != length {
@@ -147,6 +151,14 @@ impl<F: Field + PrimeField> ConstraintSystem<F> {
             return false;
         }
 
+        let pi = self
+            .public_inputs_indices
+            .build_pi_poly(public_inputs, length);
+
+        println!("public inputs: {:?}", self.public_inputs_indices);
+        println!("public inputs: {:?}", pi);
+        println!("public inputs: {:?}", public_inputs);
+
         for index in 0..length {
             let a = self.get_value(self.a[index]);
             let b = self.get_value(self.b[index]);
@@ -158,7 +170,9 @@ impl<F: Field + PrimeField> ConstraintSystem<F> {
             let q_m = self.q_m.q[index];
             let q_c = self.q_c.q[index];
 
-            if a * q_l + b * q_r + c * q_o + a * b * q_m + q_c != F::zero() {
+            let pi_i = pi[index];
+
+            if a * q_l + b * q_r + c * q_o + a * b * q_m + q_c + pi_i != F::zero() {
                 #[cfg(not(feature = "print-gates"))]
                 println!("cs failed at row {}", index,);
                 #[cfg(feature = "print-gates")]
@@ -167,9 +181,10 @@ impl<F: Field + PrimeField> ConstraintSystem<F> {
                     index, self.gates[index]
                 );
 
-                println!("a: {:?}", a);
-                println!("b: {:?}", b);
-                println!("c: {:?}", c);
+                println!("a:   {:?}", a);
+                println!("b:   {:?}", b);
+                println!("c:   {:?}", c);
+                println!("pi:  {:?}", pi_i);
                 println!("q_l: {:?}", q_l);
                 println!("q_r: {:?}", q_r);
                 println!("q_o: {:?}", q_o);

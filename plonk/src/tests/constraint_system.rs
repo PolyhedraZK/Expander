@@ -13,6 +13,7 @@ fn test_suites<F: Field + PrimeField>() {
     test_boolean_helper::<F>();
     test_equality_helper::<F>();
     test_selection_helper::<F>();
+    test_pi_helper::<F>();
 }
 
 fn test_arithmetics_helper<F: Field + PrimeField>() {
@@ -27,12 +28,12 @@ fn test_arithmetics_helper<F: Field + PrimeField>() {
         assert_eq!(cs.get_value(c), F::from(5u64));
         cs.assert_addition(&a, &b, &c);
 
-        assert!(cs.is_satisfied());
+        assert!(cs.is_satisfied(&[]));
 
         let d = cs.new_variable(F::from(7u64));
         cs.assert_addition(&a, &b, &d);
 
-        assert!(!cs.is_satisfied());
+        assert!(!cs.is_satisfied(&[]));
     }
 
     {
@@ -46,12 +47,12 @@ fn test_arithmetics_helper<F: Field + PrimeField>() {
         assert_eq!(cs.get_value(c), -F::from(1u64));
         cs.assert_subtraction(&a, &b, &c);
 
-        assert!(cs.is_satisfied());
+        assert!(cs.is_satisfied(&[]));
 
         let d = cs.new_variable(F::from(7u64));
         cs.assert_subtraction(&a, &b, &d);
 
-        assert!(!cs.is_satisfied());
+        assert!(!cs.is_satisfied(&[]));
     }
 
     {
@@ -65,12 +66,12 @@ fn test_arithmetics_helper<F: Field + PrimeField>() {
         assert_eq!(cs.get_value(c), F::from(6u64));
         cs.assert_multiplication(&a, &b, &c);
 
-        assert!(cs.is_satisfied());
+        assert!(cs.is_satisfied(&[]));
 
         let d = cs.new_variable(F::from(7u64));
         cs.assert_multiplication(&a, &b, &d);
 
-        assert!(!cs.is_satisfied());
+        assert!(!cs.is_satisfied(&[]));
     }
 
     {
@@ -86,7 +87,7 @@ fn test_arithmetics_helper<F: Field + PrimeField>() {
 
         cs.assert_division(&a, &b, &c);
 
-        assert!(cs.is_satisfied());
+        assert!(cs.is_satisfied(&[]));
 
         let d = cs.new_variable(F::from(7u64));
         cs.assert_division(&a, &b, &d);
@@ -112,7 +113,7 @@ fn test_boolean_helper<F: Field + PrimeField>() {
     let c = cs.new_variable(F::from(2u64));
     cs.assert_nonzero(&c);
 
-    assert!(cs.is_satisfied());
+    assert!(cs.is_satisfied(&[]));
 }
 
 fn test_equality_helper<F: Field + PrimeField>() {
@@ -122,12 +123,12 @@ fn test_equality_helper<F: Field + PrimeField>() {
     let b = cs.new_variable(F::from(2u64));
     cs.assert_equal(&a, &b);
 
-    assert!(cs.is_satisfied());
+    assert!(cs.is_satisfied(&[]));
 
     let c = cs.new_variable(F::from(3u64));
     cs.assert_equal(&a, &c);
 
-    assert!(!cs.is_satisfied());
+    assert!(!cs.is_satisfied(&[]));
 }
 
 fn test_selection_helper<F: Field + PrimeField>() {
@@ -145,5 +146,14 @@ fn test_selection_helper<F: Field + PrimeField>() {
     cs.assert_equal(&a, &a_selected);
     cs.assert_equal(&b, &b_selected);
 
-    assert!(!cs.is_satisfied());
+    assert!(!cs.is_satisfied(&[]));
+}
+
+fn test_pi_helper<F: Field + PrimeField>() {
+    let mut cs = ConstraintSystem::<F>::init();
+    let two = F::from(2u64);
+    cs.public_input_gate(two);
+
+    assert!(cs.is_satisfied(&[two]));
+    assert!(!cs.is_satisfied(&[F::one()]));
 }
