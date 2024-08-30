@@ -9,6 +9,9 @@ pub use public_inputs::PublicInputsIndices;
 mod variables;
 pub use variables::*;
 
+mod cells;
+pub use cells::*;
+
 #[cfg(feature = "print-gates")]
 mod gates_id;
 #[cfg(feature = "print-gates")]
@@ -50,7 +53,7 @@ pub struct ConstraintSystem<F: PrimeField> {
     pub public_inputs_indices: PublicInputsIndices,
 
     /// the actual witnesses
-    pub variables: Variables<F>,
+    pub witness_list: WitnessList<F>,
 
     #[cfg(feature = "print-gates")]
     pub gates: Vec<GatesID>,
@@ -68,8 +71,12 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
     pub fn init() -> Self {
         let mut cs = ConstraintSystem::default();
 
-        let zero_var = cs.variables.new_variable(F::zero());
-        let one_var = cs.variables.new_variable(F::one());
+        cs.a.id = ColumnID::A;
+        cs.b.id = ColumnID::B;
+        cs.c.id = ColumnID::C;
+
+        let zero_var = cs.witness_list.new_witness(F::zero());
+        let one_var = cs.witness_list.new_witness(F::one());
 
         // assert the first witness is 0
         {
@@ -142,9 +149,9 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
         let mut c = vec![F::zero(); n];
 
         for i in 0..n {
-            a[i] = self.variables.witnesses[self.a[i]];
-            b[i] = self.variables.witnesses[self.b[i]];
-            c[i] = self.variables.witnesses[self.c[i]];
+            a[i] = self.witness_list.witnesses[self.a.get_var_index(i)];
+            b[i] = self.witness_list.witnesses[self.b.get_var_index(i)];
+            c[i] = self.witness_list.witnesses[self.c.get_var_index(i)];
         }
 
         [a, b, c]
@@ -152,14 +159,14 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
 
     /// create a new variable
     #[inline]
-    pub fn new_variable(&mut self, f: F) -> VariableIndex {
-        self.variables.new_variable(f)
+    pub fn new_variable(&mut self, f: F) -> Variable {
+        self.witness_list.new_witness(f)
     }
 
     /// get the field element of a variable
     #[inline]
-    pub fn get_value(&self, index: VariableIndex) -> F {
-        self.variables.witnesses[index]
+    pub fn get_value(&self, index: Variable) -> F {
+        self.witness_list.witnesses[index]
     }
 
     /// check the constraint system is satisfied
@@ -195,9 +202,9 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
         println!("public inputs: {:?}", public_inputs);
 
         for index in 0..length {
-            let a = self.get_value(self.a[index]);
-            let b = self.get_value(self.b[index]);
-            let c = self.get_value(self.c[index]);
+            let a = self.get_value(self.a.get_var_index(index));
+            let b = self.get_value(self.b.get_var_index(index));
+            let c = self.get_value(self.c.get_var_index(index));
 
             let q_l = self.q_l.q[index];
             let q_r = self.q_r.q[index];

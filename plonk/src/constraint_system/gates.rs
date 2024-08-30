@@ -1,7 +1,7 @@
 use arith::Field;
 use halo2curves::ff::{PrimeField, WithSmallOrderMulGroup};
 
-use crate::{ConstraintSystem, VariableIndex, VAR_ONE, VAR_ZERO};
+use crate::{ConstraintSystem, Variable, VAR_ONE, VAR_ZERO};
 
 #[cfg(feature = "print-gates")]
 use crate::GatesID;
@@ -10,7 +10,7 @@ use crate::GatesID;
 impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
     /// constant gate
     #[inline]
-    pub fn constant_gate(&mut self, c: &F) -> VariableIndex {
+    pub fn constant_gate(&mut self, c: &F) -> Variable {
         let var_c = self.new_variable(*c);
 
         self.q_l.push(F::one());
@@ -31,7 +31,7 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
 
     /// public input gate
     #[inline]
-    pub fn public_input_gate(&mut self, pi: F) -> VariableIndex {
+    pub fn public_input_gate(&mut self, pi: F) -> Variable {
         // update pi list
         let row_index = self.q_l.get_nv();
         self.public_inputs_indices.push(row_index);
@@ -56,7 +56,7 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
 
     /// Assert two variables are equal
     #[inline]
-    pub fn assert_equal(&mut self, a: &VariableIndex, b: &VariableIndex) {
+    pub fn assert_equal(&mut self, a: &Variable, b: &Variable) {
         self.q_l.push(F::one());
         self.q_r.push(-F::one());
         self.q_o.push(F::zero());
@@ -73,7 +73,7 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
 
     /// Assert the variable is zero
     #[inline]
-    pub fn assert_zero(&mut self, a: &VariableIndex) {
+    pub fn assert_zero(&mut self, a: &Variable) {
         let a_val = self.get_value(*a);
         assert!(a_val == F::zero(), "a should be zero");
 
@@ -93,7 +93,7 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
 
     /// Assert the variable is one
     #[inline]
-    pub fn assert_one(&mut self, a: &VariableIndex) {
+    pub fn assert_one(&mut self, a: &Variable) {
         let a_val = self.get_value(*a);
         assert!(a_val == F::one(), "a should be one");
 
@@ -115,7 +115,7 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
     ///
     /// this is handled by constraint `a * (a - 1) = 0`
     #[inline]
-    pub fn assert_binary(&mut self, a: &VariableIndex) {
+    pub fn assert_binary(&mut self, a: &Variable) {
         let a_val = self.get_value(*a);
         assert!(
             a_val == F::zero() || a_val == F::one(),
@@ -140,7 +140,7 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
     ///
     /// this is handled by adding a new variable `a_inv` and asserting `a * a_inv = 1`
     #[inline]
-    pub fn assert_nonzero(&mut self, a: &VariableIndex) {
+    pub fn assert_nonzero(&mut self, a: &Variable) {
         let a_val = self.get_value(*a);
         assert!(a_val != F::zero(), "a should not be zero");
         let a_inv = a_val.inv().unwrap(); // safe unwrap
@@ -162,7 +162,7 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
 
     /// addition gate: return the variable index of a + b
     #[inline]
-    pub fn addition_gate(&mut self, a: &VariableIndex, b: &VariableIndex) -> VariableIndex {
+    pub fn addition_gate(&mut self, a: &Variable, b: &Variable) -> Variable {
         let a_val = self.get_value(*a);
         let b_val = self.get_value(*b);
         let c_val = a_val + b_val;
@@ -174,7 +174,7 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
 
     /// assert addition is correct: c = a + b
     #[inline]
-    pub fn assert_addition(&mut self, a: &VariableIndex, b: &VariableIndex, c: &VariableIndex) {
+    pub fn assert_addition(&mut self, a: &Variable, b: &Variable, c: &Variable) {
         self.q_l.push(F::one());
         self.q_r.push(F::one());
         self.q_o.push(-F::one());
@@ -191,7 +191,7 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
 
     /// subtraction gate: return the variable index of a - b
     #[inline]
-    pub fn subtraction_gate(&mut self, a: &VariableIndex, b: &VariableIndex) -> VariableIndex {
+    pub fn subtraction_gate(&mut self, a: &Variable, b: &Variable) -> Variable {
         let a_val = self.get_value(*a);
         let b_val = self.get_value(*b);
         let c_val = a_val - b_val;
@@ -204,13 +204,13 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
 
     /// assert subtraction is correct: c = a - b
     #[inline]
-    pub fn assert_subtraction(&mut self, a: &VariableIndex, b: &VariableIndex, c: &VariableIndex) {
+    pub fn assert_subtraction(&mut self, a: &Variable, b: &Variable, c: &Variable) {
         self.assert_addition(c, b, a)
     }
 
     /// multiplication gate: return the variable index of a * b
     #[inline]
-    pub fn multiplication_gate(&mut self, a: &VariableIndex, b: &VariableIndex) -> VariableIndex {
+    pub fn multiplication_gate(&mut self, a: &Variable, b: &Variable) -> Variable {
         let a_val = self.get_value(*a);
         let b_val = self.get_value(*b);
         let c_val = a_val * b_val;
@@ -225,9 +225,9 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
     #[inline]
     pub fn assert_multiplication(
         &mut self,
-        a: &VariableIndex,
-        b: &VariableIndex,
-        c: &VariableIndex,
+        a: &Variable,
+        b: &Variable,
+        c: &Variable,
     ) {
         self.q_l.push(F::zero());
         self.q_r.push(F::zero());
@@ -245,7 +245,7 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
 
     /// division gate: return the variable index of a / b
     #[inline]
-    pub fn division_gate(&mut self, a: &VariableIndex, b: &VariableIndex) -> VariableIndex {
+    pub fn division_gate(&mut self, a: &Variable, b: &Variable) -> Variable {
         self.assert_nonzero(b);
         let a_val = self.get_value(*a);
         let b_val = self.get_value(*b);
@@ -259,7 +259,7 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
 
     /// assert division is correct: c = a / b
     #[inline]
-    pub fn assert_division(&mut self, a: &VariableIndex, b: &VariableIndex, c: &VariableIndex) {
+    pub fn assert_division(&mut self, a: &Variable, b: &Variable, c: &Variable) {
         self.assert_multiplication(c, b, a)
     }
 
@@ -267,10 +267,10 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
     #[inline]
     pub fn selection_gate(
         &mut self,
-        s: &VariableIndex,
-        a: &VariableIndex, // if s == 0
-        b: &VariableIndex, // if s == 1
-    ) -> VariableIndex {
+        s: &Variable,
+        a: &Variable, // if s == 0
+        b: &Variable, // if s == 1
+    ) -> Variable {
         let s_val = self.get_value(*s);
         let a_val = self.get_value(*a);
         let b_val = self.get_value(*b);
@@ -296,10 +296,10 @@ impl<F: Field + PrimeField + WithSmallOrderMulGroup<3>> ConstraintSystem<F> {
     #[inline]
     pub fn assert_selection(
         &mut self,
-        s: &VariableIndex,
-        a: &VariableIndex,
-        b: &VariableIndex,
-        c: &VariableIndex,
+        s: &Variable,
+        a: &Variable,
+        b: &Variable,
+        c: &Variable,
     ) {
         // s is binary
         self.assert_binary(s);

@@ -106,4 +106,23 @@ impl PlonkIOP {
 
         hx
     }
+
+    /// compute the grand product polynomial
+    /// \prod_i (
+    ///     \frac{
+    ///        (a_i + beta x^i + gamma)(b_i + beta x^i + gamma)(c_i + beta x^i + gamma)
+    ///     }{
+    ///        (a_i + beta sigma_a(x^i) + gamma)(b_i + beta sigma_b(x^i) + gamma)(c_i + beta sigma_c(x^i) + gamma)
+    ///     }
+    /// )
+    /// where sigma_a, sigma_b, sigma_c are the permutation polynomials for a, b, c
+    /// and beta, gamma are random challenges
+    ///
+    fn compute_grand_product<F: Field + PrimeField + WithSmallOrderMulGroup<3>>(
+        cs: &ConstraintSystem<F>,
+        beta: F,
+        gamma: F,
+    ) {
+        // TODO
+    }
 }

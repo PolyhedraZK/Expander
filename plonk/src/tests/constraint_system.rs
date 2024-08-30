@@ -170,6 +170,9 @@ fn test_h_poly<F: Field + PrimeField + WithSmallOrderMulGroup<3>>() {
         let c = cs.addition_gate(&a, &b);
         assert_eq!(cs.get_value(c), F::from(5u64));
         cs.assert_addition(&a, &b, &c);
+        let c = cs.addition_gate(&a, &b);
+        assert_eq!(cs.get_value(c), F::from(5u64));
+        cs.assert_addition(&a, &b, &c);
     }
 
     {
@@ -212,6 +215,8 @@ fn test_h_poly<F: Field + PrimeField + WithSmallOrderMulGroup<3>>() {
 
     assert!(cs.is_satisfied(&[]));
     cs.finalize();
+
+    println!("cs: number of witnesses: {:?}", cs.witness_list.witnesses.len());
 
     let _hx = PlonkIOP::generate_zero_polynomial(&cs, &[]);
 
