@@ -12,9 +12,11 @@ pub use gf2x8::GF2x8;
 
 use crate::{field_common, FieldSerde, FieldSerdeResult};
 
-use super::Field;
+use super::{Field, FieldForECC, U256};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub const MOD: u32 = 2;
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct GF2 {
     pub v: u8,
 }
@@ -133,6 +135,12 @@ impl Field for GF2 {
     }
 }
 
+impl FieldForECC for GF2 {
+    fn modulus() -> U256 {
+        U256::from(MOD)
+    }
+}
+
 impl Neg for GF2 {
     type Output = GF2;
 
@@ -154,6 +162,22 @@ impl From<bool> for GF2 {
     #[inline(always)]
     fn from(value: bool) -> Self {
         GF2 { v: value.into() }
+    }
+}
+
+impl From<U256> for GF2 {
+    #[inline(always)]
+    fn from(x: U256) -> Self {
+        GF2 {
+            v: (x.as_u32() & 1) as u8,
+        }
+    }
+}
+
+impl Into<U256> for GF2 {
+    #[inline(always)]
+    fn into(self) -> U256 {
+        U256::from(self.v as u32)
     }
 }
 

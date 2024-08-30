@@ -5,7 +5,16 @@ use halo2curves::{bn256::Fr, ff::PrimeField};
 use rand::RngCore;
 
 use crate::serde::{FieldSerdeError, FieldSerdeResult};
-use crate::{Field, FieldSerde, SimdField};
+use crate::{Field, FieldForECC, FieldSerde, SimdField, U256};
+
+const MODULUS: U256 = U256([
+    0x43e1f593f0000001,
+    0x2833e84879b97091,
+    0xb85045b68181585d,
+    0x30644e72e131a029,
+]);
+
+pub use halo2curves::bn256::Fr as BN254;
 
 impl Field for Fr {
     /// name
@@ -100,6 +109,29 @@ impl Field for Fr {
                 .try_into()
                 .unwrap(),
         )
+    }
+}
+
+impl FieldForECC for Fr {
+    fn modulus() -> U256 {
+        MODULUS
+    }
+}
+
+impl From<U256> for Fr {
+    #[inline(always)]
+    fn from(x: U256) -> Self {
+        let mut b = [0u8; 32];
+        (x % Fr::modulus()).to_little_endian(&mut b);
+        Fr::from_bytes(&b).unwrap()
+    }
+}
+
+impl Into<U256> for Fr {
+    #[inline(always)]
+    fn into(self) -> U256 {
+        let b = self.to_bytes();
+        U256::from_little_endian(&b)
     }
 }
 

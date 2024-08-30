@@ -65,6 +65,7 @@ tokio = { version = "1.38.0", features = ["full"] }
 tynm = { version = "0.1.6", default-features = false }
 warp = "0.3.7"
 thiserror = "1.0.63"
+uint = "0.9.5"
 
 [[bench]]
 name = "arith"

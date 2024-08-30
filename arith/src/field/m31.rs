@@ -9,7 +9,7 @@ pub mod m31_neon;
 
 use rand::RngCore;
 
-use crate::{field_common, Field, FieldSerde, FieldSerdeResult};
+use crate::{field_common, Field, FieldForECC, FieldSerde, FieldSerdeResult, U256};
 use std::{
     io::{Read, Write},
     iter::{Product, Sum},
@@ -30,7 +30,7 @@ fn mod_reduce_i64(x: i64) -> i64 {
     (x & M31_MOD as i64) + (x >> 31)
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct M31 {
     pub v: u32,
 }
@@ -161,6 +161,12 @@ impl Field for M31 {
     }
 }
 
+impl FieldForECC for M31 {
+    fn modulus() -> U256 {
+        U256::from(M31_MOD)
+    }
+}
+
 impl Neg for M31 {
     type Output = M31;
     #[inline(always)]
@@ -177,6 +183,22 @@ impl From<u32> for M31 {
         M31 {
             v: if x < M31_MOD { x } else { x % M31_MOD },
         }
+    }
+}
+
+impl From<U256> for M31 {
+    #[inline(always)]
+    fn from(x: U256) -> Self {
+        M31 {
+            v: (x % M31_MOD).as_u32(),
+        }
+    }
+}
+
+impl Into<U256> for M31 {
+    #[inline(always)]
+    fn into(self) -> U256 {
+        U256::from(mod_reduce_u32(self.v))
     }
 }
 

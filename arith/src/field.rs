@@ -2,12 +2,15 @@ mod bn254;
 mod gf2;
 mod m31;
 
+pub use bn254::*;
 pub use gf2::*;
 pub use m31::*;
 use rand::RngCore;
+use uint::construct_uint;
 
 use std::{
     fmt::Debug,
+    hash::Hash,
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -128,4 +131,14 @@ pub trait Field:
         let t = self.mul_by_3();
         t + t
     }
+}
+
+construct_uint! {
+    /// 256-bit unsigned integer.
+    pub struct U256(4);
+}
+
+pub trait FieldForECC: Field + From<U256> + Into<U256> + Hash + Eq + PartialOrd + Ord {
+    /// Modulus
+    fn modulus() -> U256;
 }
