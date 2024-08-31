@@ -141,7 +141,7 @@ impl FieldForECC for GF2 {
     }
     fn from_u256(x: ethnum::U256) -> Self {
         GF2 {
-            v: (x.as_u32() % 1) as u8,
+            v: (x.as_u32() & 1) as u8,
         }
     }
     fn to_u256(&self) -> ethnum::U256 {
