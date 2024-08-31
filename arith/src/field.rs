@@ -2,12 +2,14 @@ mod bn254;
 mod gf2;
 mod m31;
 
+pub use bn254::*;
 pub use gf2::*;
 pub use m31::*;
 use rand::RngCore;
 
 use std::{
     fmt::Debug,
+    hash::Hash,
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -128,4 +130,12 @@ pub trait Field:
         let t = self.mul_by_3();
         t + t
     }
+}
+
+pub trait FieldForECC: Field + Hash + Eq + PartialOrd + Ord {
+    /// Modulus
+    fn modulus() -> ethnum::U256;
+
+    fn from_u256(x: ethnum::U256) -> Self;
+    fn to_u256(&self) -> ethnum::U256;
 }

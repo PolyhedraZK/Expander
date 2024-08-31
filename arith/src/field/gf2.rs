@@ -12,9 +12,11 @@ pub use gf2x8::GF2x8;
 
 use crate::{field_common, FieldSerde, FieldSerdeResult};
 
-use super::Field;
+use super::{Field, FieldForECC};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub const MOD: u32 = 2;
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct GF2 {
     pub v: u8,
 }
@@ -130,6 +132,20 @@ impl Field for GF2 {
     #[inline(always)]
     fn mul_by_6(&self) -> Self {
         Self::ZERO
+    }
+}
+
+impl FieldForECC for GF2 {
+    fn modulus() -> ethnum::U256 {
+        ethnum::U256::from(MOD)
+    }
+    fn from_u256(x: ethnum::U256) -> Self {
+        GF2 {
+            v: (x.as_u32() & 1) as u8,
+        }
+    }
+    fn to_u256(&self) -> ethnum::U256 {
+        ethnum::U256::from(self.v as u32)
     }
 }
 
