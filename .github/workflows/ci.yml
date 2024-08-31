@@ -72,6 +72,7 @@ jobs:
     runs-on: 7950x3d
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - run: . "$HOME/.cargo/env"
       - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo test -p arith --release
@@ -83,6 +84,7 @@ jobs:
     runs-on: 7950x3d
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - run: . "$HOME/.cargo/env"
       - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 16 -f m31ext3
@@ -91,6 +93,7 @@ jobs:
     runs-on: 7950x3d
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - run: . "$HOME/.cargo/env"
       - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 16 -f fr
@@ -99,6 +102,7 @@ jobs:
     runs-on: 7950x3d
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - run: . "$HOME/.cargo/env" 
       - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 16 -f gf2ext128
