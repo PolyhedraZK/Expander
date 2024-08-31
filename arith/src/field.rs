@@ -6,7 +6,6 @@ pub use bn254::*;
 pub use gf2::*;
 pub use m31::*;
 use rand::RngCore;
-use uint::construct_uint;
 
 use std::{
     fmt::Debug,
@@ -133,12 +132,10 @@ pub trait Field:
     }
 }
 
-construct_uint! {
-    /// 256-bit unsigned integer.
-    pub struct U256(4);
-}
-
-pub trait FieldForECC: Field + From<U256> + Into<U256> + Hash + Eq + PartialOrd + Ord {
+pub trait FieldForECC: Field + Hash + Eq + PartialOrd + Ord {
     /// Modulus
-    fn modulus() -> U256;
+    fn modulus() -> ethnum::U256;
+
+    fn from_u256(x: ethnum::U256) -> Self;
+    fn to_u256(&self) -> ethnum::U256;
 }

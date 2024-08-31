@@ -5,13 +5,11 @@ use halo2curves::{bn256::Fr, ff::PrimeField};
 use rand::RngCore;
 
 use crate::serde::{FieldSerdeError, FieldSerdeResult};
-use crate::{Field, FieldForECC, FieldSerde, SimdField, U256};
+use crate::{Field, FieldForECC, FieldSerde, SimdField};
 
-const MODULUS: U256 = U256([
-    0x43e1f593f0000001,
-    0x2833e84879b97091,
-    0xb85045b68181585d,
-    0x30644e72e131a029,
+const MODULUS: ethnum::U256 = ethnum::U256([
+    0x2833e84879b9709143e1f593f0000001,
+    0x30644e72e131a029b85045b68181585d,
 ]);
 
 pub use halo2curves::bn256::Fr as BN254;
@@ -113,25 +111,14 @@ impl Field for Fr {
 }
 
 impl FieldForECC for Fr {
-    fn modulus() -> U256 {
+    fn modulus() -> ethnum::U256 {
         MODULUS
     }
-}
-
-impl From<U256> for Fr {
-    #[inline(always)]
-    fn from(x: U256) -> Self {
-        let mut b = [0u8; 32];
-        (x % Fr::modulus()).to_little_endian(&mut b);
-        Fr::from_bytes(&b).unwrap()
+    fn from_u256(x: ethnum::U256) -> Self {
+        Fr::from_bytes(&(x % Fr::modulus()).to_le_bytes()).unwrap()
     }
-}
-
-impl Into<U256> for Fr {
-    #[inline(always)]
-    fn into(self) -> U256 {
-        let b = self.to_bytes();
-        U256::from_little_endian(&b)
+    fn to_u256(&self) -> ethnum::U256 {
+        ethnum::U256::from_le_bytes(self.to_bytes())
     }
 }
 
