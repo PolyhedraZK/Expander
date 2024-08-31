@@ -1,6 +1,7 @@
 use arith::{Field, FieldSerde, FieldSerdeError};
 use ark_std::test_rng;
 use std::{
+    cmp::max,
     collections::HashMap,
     fs,
     io::{Cursor, Read},
@@ -454,8 +455,8 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
             let layer_seg = &self.segments[*layer_id];
             let leaves = layer_seg.scan_leaf_segments(self, *layer_id);
             let mut ret_layer = CircuitLayer {
-                input_var_num: layer_seg.i_var_num,
-                output_var_num: layer_seg.o_var_num,
+                input_var_num: max(layer_seg.i_var_num, 1), // var_num >= 1
+                output_var_num: max(layer_seg.o_var_num, 1), // var_num >= 1
                 ..Default::default()
             };
             for (leaf_seg_id, leaf_allocs) in leaves {
