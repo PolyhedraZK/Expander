@@ -7,6 +7,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
+use ark_std::iterable::Iterable;
 use rand::{Rng, RngCore};
 
 use crate::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField, M31, M31_MOD};
@@ -65,7 +66,7 @@ impl FieldSerde for AVXM31 {
         let mut buf = [0u8; 32];
         reader.read_exact(&mut buf)?;
         assert!(
-            buf.iter().skip(4).all(|&x| x == 0),
+            buf.iter().skip(4).all(|x| x == 0),
             "non-zero byte found in witness byte"
         );
         Ok(Self::pack_full(
@@ -236,6 +237,13 @@ impl SimdField for AVXM31 {
     fn pack_size() -> usize {
         M31_PACK_SIZE
     }
+
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        let ret = unsafe { transmute::<__m512i, [u32; M31_PACK_SIZE]>(self.v) };
+        ret.iter()
+            .map(|v| M31 {v})
+            .collect()
+    }
 }
 
 impl From<M31> for AVXM31 {
@@ -252,7 +260,7 @@ impl Debug for AVXM31 {
             _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.v);
         }
         // if all data is the same, print only one
-        if data.iter().all(|&x| x == data[0]) {
+        if data.iter().all(|x| x == data[0]) {
             write!(
                 f,
                 "mm512i<8 x {}>",

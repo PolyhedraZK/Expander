@@ -281,5 +281,13 @@ impl SimdField for GF2x8 {
         8
     }
 
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        let mut ret = vec![];
+        for i in 0..Self::pack_size() {
+            ret.push(Self::Scalar {v : (self.v >> (7 - i)) & 1u8 });
+        }
+        ret
+    }
+
     type Scalar = crate::GF2;
 }

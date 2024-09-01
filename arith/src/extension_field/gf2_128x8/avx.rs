@@ -431,6 +431,11 @@ impl From<GF2_128> for AVX512GF2_128x8 {
     }
 }
 
+// GF2 -> GF2_128
+// GF2 -> GF2x8
+// GF2_128 -> GF2_128x8
+// GF2x8 -> GF2_128x8
+
 impl SimdField for AVX512GF2_128x8 {
     #[inline(always)]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
@@ -442,6 +447,13 @@ impl SimdField for AVX512GF2_128x8 {
     #[inline(always)]
     fn pack_size() -> usize {
         8
+    }
+
+    #[inline(always)]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        let data0 = unsafe {transmute::<__m512i, [Self::Scalar; 4]>(self.data[0])};
+        let data1 = unsafe {transmute::<__m512i, [Self::Scalar; 4]>(self.data[1])};
+        vec![data0[0], data1[0], data0[1], data1[1], data0[2], data1[2], data0[3], data1[3]]
     }
 }
 

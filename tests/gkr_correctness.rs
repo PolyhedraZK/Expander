@@ -6,6 +6,7 @@ use expander_rs::{
 };
 use std::panic;
 use std::panic::AssertUnwindSafe;
+use std::time::Instant;
 
 use rand::Rng;
 use sha2::Digest;
@@ -71,27 +72,34 @@ fn test_gkr_correctness() {
 }
 
 fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
+    println!("============== start ===============");
+    println!("Field Type: {:?}", C::FIELD_TYPE);
+    let circuit_copy_size: usize = match C::FIELD_TYPE {
+        FieldType::GF2 => 1,
+        FieldType::M31 => 2,
+        FieldType::BN254 => 2,
+        _ => unreachable!(),
+    };
+    println!("Proving {} keccak instances at once.", circuit_copy_size * C::get_field_pack_size());
+
     println!("Config created.");
-    let mut circuit_path = KECCAK_M31_CIRCUIT;
-    if C::FIELD_TYPE == FieldType::GF2 {
-        circuit_path = KECCAK_GF2_CIRCUIT;
-    }
+    let circuit_path = match C::FIELD_TYPE {
+        FieldType::GF2 => KECCAK_GF2_CIRCUIT,
+        _ => KECCAK_M31_CIRCUIT, // Use this for both M31 and BN254-Fr
+    };
 
     let mut circuit = Circuit::<C>::load_circuit(circuit_path);
-    // circuit.layers = circuit.layers[6..7].to_vec(); //  for only evaluate certain layer
-    // let mut circuit = gen_simple_circuit(); // for custom circuit
     println!("Circuit loaded.");
 
     circuit.set_random_input_for_test();
 
-    // for fixed input
-    // for i in 0..(1 << circuit.log_input_size()) {
-    //     circuit.layers.first_mut().unwrap().input_vals[i] = F::from((i % 3 == 1) as u32);
-    // }
-
     let mut prover = Prover::new(config);
     prover.prepare_mem(&circuit);
+
+    let proving_start = Instant::now();
     let (claimed_v, proof) = prover.prove(&mut circuit);
+    println!("Proving time: {} ms", proving_start.elapsed().as_millis());
+
     println!("Proof generated. Size: {} bytes", proof.bytes.len());
     // first and last 16 proof u8
     println!("Proof bytes: ");
@@ -115,7 +123,9 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     // Verify
     let verifier = Verifier::new(config);
     println!("Verifier created.");
+    let verification_start = Instant::now();
     assert!(verifier.verify(&mut circuit, &claimed_v, &proof),);
+    println!("Verification time: {} ms", verification_start.elapsed().as_millis());
     println!("Correct proof verified.");
     let mut bad_proof = proof.clone();
     let rng = &mut rand::thread_rng();
@@ -132,4 +142,5 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
 
     assert!(!final_result,);
     println!("Bad proof rejected.");
+    println!("============== end ===============");
 }

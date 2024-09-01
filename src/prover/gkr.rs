@@ -19,9 +19,16 @@ pub fn gkr_prove<C: GKRConfig>(
 
     let mut rz0 = vec![];
     let mut rz1 = vec![];
-    for _i in 0..circuit.layers.last().unwrap().output_var_num {
+    let mut r_simd0 = vec![];
+    let mut r_simd1 = vec![];
+    for _ in 0..circuit.layers.last().unwrap().output_var_num {
         rz0.push(transcript.challenge_f::<C>());
         rz1.push(C::ChallengeField::zero());
+    }
+
+    for _ in 0..C::get_field_pack_size().trailing_zeros() {
+        r_simd0.push(transcript.challenge_f::<C>());
+        r_simd1.push(C::ChallengeField::zero());
     }
 
     let mut alpha = C::ChallengeField::one();

@@ -188,7 +188,6 @@ impl SumcheckMultilinearProdHelper {
     }
 }
 
-#[allow(dead_code)]
 pub(crate) struct SumcheckGkrHelper<'a, C: GKRConfig> {
     pub(crate) rx: Vec<C::ChallengeField>,
     pub(crate) ry: Vec<C::ChallengeField>,

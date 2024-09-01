@@ -131,6 +131,11 @@ impl SimdField for Fr {
     }
 
     #[inline(always)]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        vec![*self]
+    }
+
+    #[inline(always)]
     fn pack_size() -> usize {
         1
     }
