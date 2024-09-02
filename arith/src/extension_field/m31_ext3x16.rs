@@ -5,8 +5,7 @@ use std::{
 };
 
 use crate::{
-    field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, M31Ext3, M31x16, SimdField,
-    M31,
+    field_common, m31_avx::AVXM31, ExtensionField, Field, FieldSerde, FieldSerdeResult, M31Ext3, M31x16, SimdField, M31
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -63,6 +62,25 @@ impl SimdField for M31Ext3x16 {
         M31x16::pack_size()
     }
 
+    #[inline(always)]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        debug_assert!(base_vec.len() == Self::pack_size());
+        let mut v0s = vec![];
+        let mut v1s = vec![];
+        let mut v2s = vec![];
+
+        for scalar in base_vec {
+            v0s.push(scalar.v[0]);
+            v1s.push(scalar.v[1]);
+            v2s.push(scalar.v[2]);
+        }
+
+        Self {
+            v: [AVXM31::pack(&v0s), AVXM31::pack(&v1s), AVXM31::pack(&v2s)]
+        }
+    }
+
+    #[inline(always)]
     fn unpack(&self) -> Vec<Self::Scalar> {
         let v0s = self.v[0].unpack();
         let v1s = self.v[1].unpack();

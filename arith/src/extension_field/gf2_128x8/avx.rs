@@ -376,7 +376,7 @@ void gfmul_avx512(__m512i a, __m512i b, __m512i *res) {
 impl From<u32> for AVX512GF2_128x8 {
     #[inline(always)]
     fn from(v: u32) -> AVX512GF2_128x8 {
-        assert!(v < 2); // only 0 and 1 are allowed
+        debug_assert!(v < 2); // only 0 and 1 are allowed
         let data = unsafe { _mm512_set_epi64(0, v as i64, 0, v as i64, 0, v as i64, 0, v as i64) };
         AVX512GF2_128x8 { data: [data, data] }
     }
@@ -431,10 +431,12 @@ impl From<GF2_128> for AVX512GF2_128x8 {
     }
 }
 
-// GF2 -> GF2_128
-// GF2 -> GF2x8
-// GF2_128 -> GF2_128x8
-// GF2x8 -> GF2_128x8
+// The following two must agree:
+// 1. [GF2; 8] -> GF2x8 -> GF2_128x8 
+// 2. [GF2; 8] -> [GF2x128; 8] -> GF2_128x8
+
+// For all simd field: 
+// [GF2x128; 8] -> GF2_128x8 -> [GF2x128; 8] should not change the order
 
 impl SimdField for AVX512GF2_128x8 {
     #[inline(always)]
@@ -450,10 +452,16 @@ impl SimdField for AVX512GF2_128x8 {
     }
 
     #[inline(always)]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        debug_assert!(base_vec.len() == 8);
+        let base_vec_array: [Self::Scalar; 8] = base_vec.try_into().unwrap();
+        unsafe { transmute(base_vec_array) }
+    }
+
+    #[inline(always)]
     fn unpack(&self) -> Vec<Self::Scalar> {
-        let data0 = unsafe {transmute::<__m512i, [Self::Scalar; 4]>(self.data[0])};
-        let data1 = unsafe {transmute::<__m512i, [Self::Scalar; 4]>(self.data[1])};
-        vec![data0[0], data1[0], data0[1], data1[1], data0[2], data1[2], data0[3], data1[3]]
+        let array: [Self::Scalar; 8] = unsafe { transmute(self.data) };
+        array.to_vec()
     }
 }
 
@@ -557,20 +565,25 @@ fn mul_internal(a: &AVX512GF2_128x8, b: &AVX512GF2_128x8) -> AVX512GF2_128x8 {
     }
 }
 
-// abcdefgh -> aacceegg
 #[inline(always)]
-pub fn duplicate_even_bits(byte: u8) -> u8 {
-    let even_bits = byte & 0b10101010;
-    let even_bits_shifted = even_bits >> 1;
-    even_bits | even_bits_shifted
+// abcd**** -> aabbccdd
+pub fn duplicate_higher_4bits(x: u8) -> u8 {
+    let shifted = (x & 0b1000_0000) |
+                      (x & 0b0100_0000) >> 1 | 
+                      (x & 0b0010_0000) >> 2 |
+                      (x & 0b0001_0000) >> 3;
+
+    shifted | (shifted >> 1)   
 }
 
-// abcdefgh -> bbddffhh
+// ****abcd -> aabbccdd
 #[inline(always)]
-pub fn duplicate_odd_bits(byte: u8) -> u8 {
-    let odd_bits = byte & 0b01010101;
-    let odd_bits_shifted = odd_bits << 1;
-    odd_bits | odd_bits_shifted
+pub fn duplicate_lower_4bits(x: u8) -> u8 {
+    let shifted = (x & 0b0001) | 
+                  (x & 0b0010) << 1 |
+                  (x & 0b0100) << 2 |
+                  (x & 0b1000) << 3;
+    shifted | (shifted << 1)
 }
 
 impl ExtensionField for AVX512GF2_128x8 {
@@ -591,13 +604,13 @@ impl ExtensionField for AVX512GF2_128x8 {
 
     #[inline(always)]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
-        let mask_even = duplicate_even_bits(base.v);
-        let mask_odd = duplicate_odd_bits(base.v);
+        let mask_high = duplicate_higher_4bits(base.v).reverse_bits();
+        let mask_low = duplicate_lower_4bits(base.v).reverse_bits();
 
         Self {
             data: [
-                unsafe { _mm512_maskz_mov_epi64(mask_even, self.data[0]) },
-                unsafe { _mm512_maskz_mov_epi64(mask_odd, self.data[1]) },
+                unsafe { _mm512_maskz_mov_epi64(mask_high, self.data[0]) },
+                unsafe { _mm512_maskz_mov_epi64(mask_low, self.data[1]) },
             ],
         }
     }
@@ -615,9 +628,9 @@ impl ExtensionField for AVX512GF2_128x8 {
 
         let mut res = *self;
         res.data[0] =
-            unsafe { _mm512_xor_si512(res.data[0], _mm512_set_epi64(0, v0, 0, v2, 0, v4, 0, v6)) };
+            unsafe { _mm512_xor_si512(res.data[0], transmute([v0, 0, v1, 0, v2, 0, v3, 0])) };
         res.data[1] =
-            unsafe { _mm512_xor_si512(res.data[1], _mm512_set_epi64(0, v1, 0, v3, 0, v5, 0, v7)) };
+            unsafe { _mm512_xor_si512(res.data[1], transmute([v4, 0, v5, 0, v6, 0, v7, 0])) };
 
         res
     }
@@ -675,8 +688,8 @@ impl From<GF2x8> for AVX512GF2_128x8 {
 
         AVX512GF2_128x8 {
             data: [
-                unsafe { _mm512_set_epi64(0, v0, 0, v2, 0, v4, 0, v6) }, // even
-                unsafe { _mm512_set_epi64(0, v1, 0, v3, 0, v5, 0, v7) }, // odd
+                unsafe { transmute([v0, 0, v1, 0, v2, 0, v3, 0]) }, 
+                unsafe { transmute([v4, 0, v5, 0, v6, 0, v7, 0]) }, 
             ],
         }
     }
