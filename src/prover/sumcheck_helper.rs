@@ -137,7 +137,6 @@ impl SumcheckMultilinearProdHelper {
         gate_exists: &mut [bool],
     ) {
         assert!(var_idx < self.var_num);
-        log::trace!("challenge eval size: {}", self.cur_eval_size);
 
         let eval_size = 1 << (self.var_num - var_idx - 1);
         if var_idx == 0 {
@@ -264,19 +263,28 @@ pub(crate) struct SumcheckGkrHelper<'a, C: GKRConfig> {
     alpha: C::ChallengeField,
     beta: C::ChallengeField,
 
-    input_var_num: usize,
+    pub(crate) input_var_num: usize,
     output_var_num: usize,
-    simd_var_num: usize,
+    pub(crate) simd_var_num: usize,
 
     xy_helper: SumcheckMultilinearProdHelper,
     simd_var_helper: SumcheckMultilinearProdSimdVarHelper,
 }
 
-/// Private internal helper functions
+/// internal helper functions
 impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     #[inline(always)]
-    fn unpack_and_sum(p: C::Field) -> C::ChallengeField {
+    pub(crate) fn unpack_and_sum(p: C::Field) -> C::ChallengeField {
         p.unpack().into_iter().sum()
+    }
+
+    pub(crate) fn unpack_and_combine(p: C::Field, coef: &[C::ChallengeField]) -> C::ChallengeField {
+        let p_unpacked = p.unpack();
+        p_unpacked
+            .into_iter()
+            .zip(coef)
+            .map(|(p_i, coef_i)| p_i * coef_i)
+            .sum()
     }
 
     #[inline(always)]
@@ -496,9 +504,13 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     }
 
     /// \sum_{y, wy} V(rx, rwx) eq(rw, rwx, wy) mul(rz, x, y) V(y, wy)
+    /// Note: v_rx refers to the value V(rx, rwx)
+    /// Note: eq(rw, rwx, wy) = eq(rw, wy) eq(rwx, wy) when wy are values on the boolean hypercube
+    /// The above can be rewrote as 
+    /// V(rx, rwx) \sum_{y, wy} eq(rwx, wy) eq(rw, wy) mul(rz, rx, y) V(y, wy) 
     pub(crate) fn prepare_y_vals(&mut self, v_rx: C::ChallengeField) {
         let mul = &self.layer.mul;
-        let eq_evals_at_rz_combined = &mut self.sp.eq_evals_at_rz0;
+        let eq_evals_at_rz_combined = &mut self.sp.eq_evals_at_rz_combined;
         let eq_evals_at_rx = &mut self.sp.eq_evals_at_rx;
         let gate_exists = &mut self.sp.gate_exists_5;
         let hg_vals = &mut self.sp.hg_evals;
@@ -513,28 +525,28 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         }
 
         eq_eval_at(
-            &(self.r_simd_var_x), 
-            &C::ChallengeField::one(), 
-            &mut self.sp.eq_evals_at_r_simd0, 
-            &mut self.sp.eq_evals_first_half, 
-            &mut self.sp.eq_evals_second_half,
-        );
-
-        eq_eval_at(
             &self.rx,
             &C::ChallengeField::one(),
             eq_evals_at_rx,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
+        
+        eq_eval_at(
+            &self.r_simd_var_x, 
+            &C::ChallengeField::one(),
+            &mut self.sp.eq_evals_at_r_simd0, 
+            &mut self.sp.eq_evals_first_half,
+            &mut &mut self.sp.eq_evals_second_half,
+        );
+        let eq_evals_at_r_simdx = C::Field::pack(&self.sp.eq_evals_at_r_simd0);
 
+        let prefix = C::challenge_mul_field(&v_rx, &eq_evals_at_r_simdx);
         for g in mul.iter() {
-            hg_vals[g.i_ids[1]] += v_rx.scale(
-                &(C::challenge_mul_circuit_field(
-                    &(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
-                    &g.coef,
-                )),
-            );
+            hg_vals[g.i_ids[1]] += prefix * 
+                C::challenge_mul_field(
+                    &C::challenge_mul_circuit_field(&eq_evals_at_rx[g.i_ids[0]], &g.coef), 
+                    &eq_evals_at_rz_combined[g.o_id]);
             gate_exists[g.i_ids[1]] = true;
         }
     }

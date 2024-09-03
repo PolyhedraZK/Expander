@@ -71,7 +71,7 @@ impl<C: GKRConfig> Prover<C> {
         self.sp = GkrScratchpad::<C>::new(max_num_input_var, max_num_output_var);
     }
 
-    pub fn prove(&mut self, c: &mut Circuit<C>) -> (C::Field, Proof) {
+    pub fn prove(&mut self, c: &mut Circuit<C>) -> (C::ChallengeField, Proof) {
         let timer = start_timer!(|| "prove");
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
@@ -89,14 +89,16 @@ impl<C: GKRConfig> Prover<C> {
         c.fill_rnd_coefs(&mut transcript);
         c.evaluate();
 
-        let claimed_v: C::Field;
+        let mut claimed_v = C::ChallengeField::default();
         let mut _rz0s = vec![];
         let mut _rz1s = vec![];
+        let mut _rsimd0s = vec![];
+        let mut _rsimd1s = vec![];
 
         if self.config.gkr_scheme == GKRScheme::GkrSquare {
-            (claimed_v, _rz0s) = gkr_square_prove(c, &mut self.sp, &mut transcript);
+            (_, _rz0s) = gkr_square_prove(c, &mut self.sp, &mut transcript);
         } else {
-            (claimed_v, _rz0s, _rz1s) = gkr_prove(c, &mut self.sp, &mut transcript);
+            (claimed_v, _rz0s, _rz1s, _rsimd0s, _rsimd1s) = gkr_prove(c, &mut self.sp, &mut transcript);
         }
 
         // open
