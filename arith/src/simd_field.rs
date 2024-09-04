@@ -11,7 +11,7 @@ pub trait SimdField: From<Self::Scalar> + Field + FieldSerde {
     /// pack a vec of scalar field into self
     fn pack(base_vec: &[Self::Scalar]) -> Self;
 
-    /// unpack into a vector. 
+    /// unpack into a vector.
     fn unpack(&self) -> Vec<Self::Scalar>;
 
     fn pack_size() -> usize;

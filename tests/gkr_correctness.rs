@@ -80,7 +80,10 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
         FieldType::BN254 => 2,
         _ => unreachable!(),
     };
-    println!("Proving {} keccak instances at once.", circuit_copy_size * C::get_field_pack_size());
+    println!(
+        "Proving {} keccak instances at once.",
+        circuit_copy_size * C::get_field_pack_size()
+    );
 
     println!("Config created.");
     let circuit_path = match C::FIELD_TYPE {
@@ -89,6 +92,14 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     };
 
     let mut circuit = Circuit::<C>::load_circuit(circuit_path);
+
+    // debug codes
+    circuit.layers.resize(1, CircuitLayer::<C>::default());
+    circuit.layers[0].add.clear();
+    circuit.layers[0].mul.clear();
+    circuit.identify_rnd_coefs();
+    // debug code done
+
     println!("Circuit loaded.");
 
     circuit.set_random_input_for_test();
@@ -125,7 +136,10 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     println!("Verifier created.");
     let verification_start = Instant::now();
     assert!(verifier.verify(&mut circuit, &claimed_v, &proof),);
-    println!("Verification time: {} ms", verification_start.elapsed().as_millis());
+    println!(
+        "Verification time: {} ms",
+        verification_start.elapsed().as_millis()
+    );
     println!("Correct proof verified.");
     let mut bad_proof = proof.clone();
     let rng = &mut rand::thread_rng();

@@ -98,7 +98,8 @@ impl<C: GKRConfig> Prover<C> {
         if self.config.gkr_scheme == GKRScheme::GkrSquare {
             (_, _rz0s) = gkr_square_prove(c, &mut self.sp, &mut transcript);
         } else {
-            (claimed_v, _rz0s, _rz1s, _rsimd0s, _rsimd1s) = gkr_prove(c, &mut self.sp, &mut transcript);
+            (claimed_v, _rz0s, _rz1s, _rsimd0s, _rsimd1s) =
+                gkr_prove(c, &mut self.sp, &mut transcript);
         }
 
         // open

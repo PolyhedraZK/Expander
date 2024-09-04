@@ -98,7 +98,9 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send;
 
     /// Main field type for the scheme, e.g., M31Ext3x16
-    type Field: ExtensionField<BaseField = Self::SimdCircuitField> + SimdField<Scalar = Self::ChallengeField> + Send;
+    type Field: ExtensionField<BaseField = Self::SimdCircuitField>
+        + SimdField<Scalar = Self::ChallengeField>
+        + Send;
 
     /// Simd field for circuit
     type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + FieldSerde + Send;

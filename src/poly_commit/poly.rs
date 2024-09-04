@@ -7,19 +7,19 @@ use arith::{Field, SimdField};
 pub struct MultiLinearPoly {}
 
 impl MultiLinearPoly {
-    pub fn eval_generic<F: Field>(
-        evals: &[F],
-        x: &[F],
-        scratch: &mut [F],
-    ) -> F {
+    pub fn eval_generic<F: Field>(evals: &[F], x: &[F], scratch: &mut [F]) -> F {
         debug_assert_eq!(1 << x.len(), evals.len());
         debug_assert_eq!(evals.len(), scratch.len());
 
         if x.is_empty() {
             evals[0]
         } else {
-            let mut cur_eval_size = evals.len() >> 1;
-            for r in x.iter() {
+            for i in 0..(evals.len() >> 1) {
+                scratch[i] = (evals[i * 2 + 1] - evals[i * 2]) * x[0] + evals[i * 2];
+            }
+
+            let mut cur_eval_size = evals.len() >> 2;
+            for r in x.iter().skip(1) {
                 for i in 0..cur_eval_size {
                     scratch[i] = scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]) * r;
                 }

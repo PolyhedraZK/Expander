@@ -8,7 +8,7 @@ use crate::grind;
 
 use crate::{
     eq_evals_at_primitive, Circuit, CircuitLayer, Config, FieldType, GKRConfig, Gate, Proof,
-    RawCommitment, Transcript,
+    RawCommitment, Transcript, _eq_vec, _eq_vec_3,
 };
 
 #[inline]
@@ -46,7 +46,7 @@ fn eval_sparse_circuit_connect_poly<C: GKRConfig, const INPUT_NUM: usize>(
     let mut eq_evals_at_rz1 = vec![C::ChallengeField::zero(); 1 << rz1.len()];
     let mut eq_evals_at_r_simd0 = vec![C::ChallengeField::zero(); 1 << r_simd0.len()];
     let mut eq_evals_at_r_simd1 = vec![C::ChallengeField::zero(); 1 << r_simd1.len()];
-    
+
     let mut eq_evals_at_rx = vec![C::ChallengeField::zero(); 1 << rx.len()];
     let mut eq_evals_at_ry = vec![C::ChallengeField::zero(); 1 << ry.len()];
     let mut eq_evals_at_r_simdx = vec![C::ChallengeField::zero(); 1 << r_simdx.len()];
@@ -62,7 +62,6 @@ fn eval_sparse_circuit_connect_poly<C: GKRConfig, const INPUT_NUM: usize>(
     eq_evals_at_primitive(r_simdx, &C::ChallengeField::one(), &mut eq_evals_at_r_simdx);
     eq_evals_at_primitive(r_simdy, &C::ChallengeField::one(), &mut eq_evals_at_r_simdy);
 
-
     if INPUT_NUM == 0 {
         let mut v0 = C::ChallengeField::zero();
         let mut v1 = C::ChallengeField::zero();
@@ -76,28 +75,35 @@ fn eval_sparse_circuit_connect_poly<C: GKRConfig, const INPUT_NUM: usize>(
         let simd_sum1: C::ChallengeField = eq_evals_at_r_simd1.iter().sum();
         v0 * simd_sum0 + v1 * simd_sum1
     } else if INPUT_NUM == 1 {
-        let mut v = C::ChallengeField::zero();
+        let mut v0 = C::ChallengeField::zero();
+        let mut v1 = C::ChallengeField::zero();
         for add_gate in gates {
-            v += C::challenge_mul_circuit_field(
-                &((eq_evals_at_rz0[add_gate.o_id] + eq_evals_at_rz1[add_gate.o_id]) * eq_evals_at_rx[add_gate.i_ids[0]]),
-                &add_gate.coef,
-            );
+            let tmp =
+                C::challenge_mul_circuit_field(&eq_evals_at_rx[add_gate.i_ids[0]], &add_gate.coef);
+            v0 += eq_evals_at_rz0[add_gate.o_id] * tmp;
+            v1 += eq_evals_at_rz1[add_gate.o_id] * tmp;
         }
-        v
+        v0 * _eq_vec(r_simd0, r_simdx) + v1 * _eq_vec(r_simd1, r_simdx)
     } else if INPUT_NUM == 2 {
-        let mut v = C::ChallengeField::zero();
+        let mut v0 = C::ChallengeField::zero();
+        let mut v1 = C::ChallengeField::zero();
         for mul_gate in gates {
-            v += C::challenge_mul_circuit_field(&((eq_evals_at_rz0[mul_gate.o_id] + eq_evals_at_rz1[mul_gate.o_id]) *
-                eq_evals_at_rx[mul_gate.i_ids[0]] * eq_evals_at_ry[mul_gate.i_ids[1]]), &mul_gate.coef);
+            let tmp = eq_evals_at_rx[mul_gate.i_ids[0]]
+                * C::challenge_mul_circuit_field(
+                    &eq_evals_at_ry[mul_gate.i_ids[1]],
+                    &mul_gate.coef,
+                );
+            v0 += eq_evals_at_rz0[mul_gate.o_id] * tmp;
+            v1 += eq_evals_at_rz1[mul_gate.o_id] * tmp;
         }
-        v
+        v0 * _eq_vec_3(r_simd0, r_simdx, r_simdy) + v1 * _eq_vec_3(r_simd1, r_simdx, r_simdy)
     } else {
         unreachable!()
     }
 }
 
 #[inline(always)]
-fn verify_sumcheck_step<C: GKRConfig> (
+fn verify_sumcheck_step<C: GKRConfig>(
     proof: &mut Proof,
     transcript: &mut Transcript<C::FiatShamirHashType>,
     claimed_sum: &mut C::ChallengeField,
@@ -171,53 +177,45 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     let mut r_simdy = vec![];
     let mut verified = true;
 
-    for i_var in 0..var_num {
+    for _i_var in 0..var_num {
         verified &= verify_sumcheck_step::<C>(proof, transcript, &mut sum, &mut rx);
     }
 
-    for i_var in 0..simd_var_num {
-        verified &= verify_sumcheck_step::<C>(proof, transcript, &mut sum, &mut r_simdx);   
+    for _i_var in 0..simd_var_num {
+        verified &= verify_sumcheck_step::<C>(proof, transcript, &mut sum, &mut r_simdx);
     }
 
     let vx_claim = proof.get_next_and_step::<C::ChallengeField>();
-    sum -= vx_claim * eval_sparse_circuit_connect_poly(
-        &layer.add,
-        rz0,
-        rz1,
-        r_simd0,
-        r_simd1,
-        alpha,
-        beta,
-        &rx,
-        &vec![], 
-        &r_simdx,
-        &vec![],
-    );
+    sum -= vx_claim
+        * eval_sparse_circuit_connect_poly(
+            &layer.add,
+            rz0,
+            rz1,
+            r_simd0,
+            r_simd1,
+            alpha,
+            beta,
+            &rx,
+            &vec![],
+            &r_simdx,
+            &vec![],
+        );
     transcript.append_challenge_f::<C>(&vx_claim);
 
-    for i_var in 0..var_num {
+    for _i_var in 0..var_num {
         verified &= verify_sumcheck_step::<C>(proof, transcript, &mut sum, &mut ry);
     }
 
-    for i_var in 0..simd_var_num {
-        verified &= verify_sumcheck_step::<C>(proof, transcript, &mut sum, &mut r_simdy);   
+    for _i_var in 0..simd_var_num {
+        verified &= verify_sumcheck_step::<C>(proof, transcript, &mut sum, &mut r_simdy);
     }
 
     let vy_claim = proof.get_next_and_step::<C::ChallengeField>();
     verified &= sum
         == vx_claim
-            * vy_claim * eval_sparse_circuit_connect_poly(
-                &layer.mul,
-                rz0,
-                rz1,
-                r_simd0,
-                r_simd1,
-                alpha,
-                beta,
-                &rx,
-                &ry,
-                &r_simd0,
-                &r_simd1,
+            * vy_claim
+            * eval_sparse_circuit_connect_poly(
+                &layer.mul, rz0, rz1, r_simd0, r_simd1, alpha, beta, &rx, &ry, &r_simd0, &r_simd1,
             );
     transcript.append_challenge_f::<C>(&vy_claim);
     (verified, rx, ry, r_simdx, r_simdy, vx_claim, vy_claim)
@@ -245,7 +243,7 @@ pub fn gkr_verify<C: GKRConfig>(
     let mut rz1 = vec![];
     let mut r_simd0 = vec![];
     let mut r_simd1 = vec![];
-    
+
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
         rz0.push(transcript.challenge_f::<C>());
         rz1.push(C::ChallengeField::zero());
@@ -264,7 +262,15 @@ pub fn gkr_verify<C: GKRConfig>(
     let mut verified = true;
     for i in (0..layer_num).rev() {
         let cur_verified;
-        (cur_verified, rz0, rz1, r_simd0, r_simd1, claimed_v0, claimed_v1) = sumcheck_verify_gkr_layer(
+        (
+            cur_verified,
+            rz0,
+            rz1,
+            r_simd0,
+            r_simd1,
+            claimed_v0,
+            claimed_v1,
+        ) = sumcheck_verify_gkr_layer(
             &circuit.layers[i],
             &rz0,
             &rz1,
@@ -312,7 +318,12 @@ impl<C: GKRConfig> Verifier<C> {
         }
     }
 
-    pub fn verify(&self, circuit: &mut Circuit<C>, claimed_v: &C::ChallengeField, proof: &Proof) -> bool {
+    pub fn verify(
+        &self,
+        circuit: &mut Circuit<C>,
+        claimed_v: &C::ChallengeField,
+        proof: &Proof,
+    ) -> bool {
         let timer = start_timer!(|| "verify");
 
         let poly_size = circuit.layers.first().unwrap().input_vals.len();

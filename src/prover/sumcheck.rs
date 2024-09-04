@@ -3,7 +3,10 @@ use crate::{
 };
 
 #[inline(always)]
-fn transcript_io<C: GKRConfig>(p: &[C::ChallengeField; 3], transcript: &mut Transcript<C::FiatShamirHashType>) -> C::ChallengeField {
+fn transcript_io<C: GKRConfig>(
+    p: &[C::ChallengeField; 3],
+    transcript: &mut Transcript<C::FiatShamirHashType>,
+) -> C::ChallengeField {
     transcript.append_challenge_f::<C>(&p[0]);
     transcript.append_challenge_f::<C>(&p[1]);
     transcript.append_challenge_f::<C>(&p[2]);
@@ -23,9 +26,14 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     beta: &C::ChallengeField,
     transcript: &mut Transcript<C::FiatShamirHashType>,
     sp: &mut GkrScratchpad<C>,
-) -> (Vec<C::ChallengeField>, Vec<C::ChallengeField>, Vec<C::ChallengeField>, Vec<C::ChallengeField>) {
+) -> (
+    Vec<C::ChallengeField>,
+    Vec<C::ChallengeField>,
+    Vec<C::ChallengeField>,
+    Vec<C::ChallengeField>,
+) {
     let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, r_simd0, r_simd1, alpha, beta, sp);
-    
+
     helper.prepare_simd();
     helper.prepare_x_vals();
 
@@ -58,13 +66,15 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
         helper.receive_r_simd_var_y(i_var, r);
     }
 
-    transcript.append_challenge_f::<C>(&helper.vy_claim());
+    let vy_claim = helper.vy_claim();
+    transcript.append_challenge_f::<C>(&vy_claim);
 
-    let rz0 = helper.rx.clone();
-    let rz1 = helper.ry.clone();
-    let rsimdx = helper.r_simd_var_x;
-    let rsimdy = helper.r_simd_var_y;
-    (rz0, rz1, rsimdx, rsimdy)
+    let rx = helper.rx;
+    let ry = helper.ry;
+    let r_simdx = helper.r_simd_var_x;
+    let r_simdy = helper.r_simd_var_y;
+
+    (rx, ry, r_simdx, r_simdy)
 }
 
 // FIXME

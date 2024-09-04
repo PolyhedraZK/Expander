@@ -290,14 +290,16 @@ impl SimdField for GF2x8 {
         for (i, scalar) in base_vec.iter().enumerate() {
             ret |= scalar.v << (7 - i);
         }
-        Self {v: ret}
+        Self { v: ret }
     }
 
     #[inline(always)]
     fn unpack(&self) -> Vec<Self::Scalar> {
         let mut ret = vec![];
         for i in 0..Self::pack_size() {
-            ret.push(Self::Scalar {v : (self.v >> (7 - i)) & 1u8 });
+            ret.push(Self::Scalar {
+                v: (self.v >> (7 - i)) & 1u8,
+            });
         }
         ret
     }

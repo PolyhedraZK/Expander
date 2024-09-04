@@ -52,7 +52,9 @@ impl<H: FiatShamirHash> Transcript<H> {
     #[inline]
     pub fn append_challenge_f<C: GKRConfig>(&mut self, f: &C::ChallengeField) {
         let cur_size = self.proof.bytes.len();
-        self.proof.bytes.resize(cur_size + C::ChallengeField::SIZE, 0);
+        self.proof
+            .bytes
+            .resize(cur_size + C::ChallengeField::SIZE, 0);
         f.serialize_into(&mut self.proof.bytes[cur_size..]).unwrap();
     }
 

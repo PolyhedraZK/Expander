@@ -432,10 +432,10 @@ impl From<GF2_128> for AVX512GF2_128x8 {
 }
 
 // The following two must agree:
-// 1. [GF2; 8] -> GF2x8 -> GF2_128x8 
+// 1. [GF2; 8] -> GF2x8 -> GF2_128x8
 // 2. [GF2; 8] -> [GF2x128; 8] -> GF2_128x8
 
-// For all simd field: 
+// For all simd field:
 // [GF2x128; 8] -> GF2_128x8 -> [GF2x128; 8] should not change the order
 
 impl SimdField for AVX512GF2_128x8 {
@@ -568,21 +568,18 @@ fn mul_internal(a: &AVX512GF2_128x8, b: &AVX512GF2_128x8) -> AVX512GF2_128x8 {
 #[inline(always)]
 // abcd**** -> aabbccdd
 pub fn duplicate_higher_4bits(x: u8) -> u8 {
-    let shifted = (x & 0b1000_0000) |
-                      (x & 0b0100_0000) >> 1 | 
-                      (x & 0b0010_0000) >> 2 |
-                      (x & 0b0001_0000) >> 3;
+    let shifted = (x & 0b1000_0000)
+        | (x & 0b0100_0000) >> 1
+        | (x & 0b0010_0000) >> 2
+        | (x & 0b0001_0000) >> 3;
 
-    shifted | (shifted >> 1)   
+    shifted | (shifted >> 1)
 }
 
 // ****abcd -> aabbccdd
 #[inline(always)]
 pub fn duplicate_lower_4bits(x: u8) -> u8 {
-    let shifted = (x & 0b0001) | 
-                  (x & 0b0010) << 1 |
-                  (x & 0b0100) << 2 |
-                  (x & 0b1000) << 3;
+    let shifted = (x & 0b0001) | (x & 0b0010) << 1 | (x & 0b0100) << 2 | (x & 0b1000) << 3;
     shifted | (shifted << 1)
 }
 
@@ -687,10 +684,9 @@ impl From<GF2x8> for AVX512GF2_128x8 {
         let v7 = (v.v & 1u8) as i64;
 
         AVX512GF2_128x8 {
-            data: [
-                unsafe { transmute([v0, 0, v1, 0, v2, 0, v3, 0]) }, 
-                unsafe { transmute([v4, 0, v5, 0, v6, 0, v7, 0]) }, 
-            ],
+            data: [unsafe { transmute([v0, 0, v1, 0, v2, 0, v3, 0]) }, unsafe {
+                transmute([v4, 0, v5, 0, v6, 0, v7, 0])
+            }],
         }
     }
 }

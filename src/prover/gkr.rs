@@ -1,10 +1,13 @@
 //! This module implements the core GKR IOP.
 
-use arith::Field;
+use std::ops::Mul;
+
+use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
-    eq_eval_at, sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, MultiLinearPoly, SumcheckGkrHelper, Transcript
+    eq_eval_at, sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, MultiLinearPoly,
+    SumcheckGkrHelper, Transcript,
 };
 
 // FIXME
@@ -13,7 +16,13 @@ pub fn gkr_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
     sp: &mut GkrScratchpad<C>,
     transcript: &mut Transcript<C::FiatShamirHashType>,
-) -> (C::ChallengeField, Vec<C::ChallengeField>, Vec<C::ChallengeField>, Vec<C::ChallengeField>, Vec<C::ChallengeField>) {
+) -> (
+    C::ChallengeField,
+    Vec<C::ChallengeField>,
+    Vec<C::ChallengeField>,
+    Vec<C::ChallengeField>,
+    Vec<C::ChallengeField>,
+) {
     let timer = start_timer!(|| "gkr prove");
     let layer_num = circuit.layers.len();
 
@@ -35,17 +44,13 @@ pub fn gkr_prove<C: GKRConfig>(
     let mut beta = C::ChallengeField::zero();
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
-    let claimed_v =
+    let claimed_v_simd =
         MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(output_vals, &rz0, &mut sp.hg_evals);
-    
-    eq_eval_at(
-        &r_simd0, 
-        &C::ChallengeField::one(), 
-        &mut sp.eq_evals_at_r_simd0, 
-        &mut sp.eq_evals_first_half, 
-        &mut sp.eq_evals_second_half,
+    let claimed_v = MultiLinearPoly::eval_generic::<C::ChallengeField>(
+        &claimed_v_simd.unpack(),
+        &r_simd0,
+        &mut sp.eq_evals_at_r_simd0,
     );
-    let claimed_v = SumcheckGkrHelper::<C>::unpack_and_combine(claimed_v, &sp.eq_evals_at_r_simd0);
 
     for i in (0..layer_num).rev() {
         (rz0, rz1, r_simd0, r_simd1) = sumcheck_prove_gkr_layer(
