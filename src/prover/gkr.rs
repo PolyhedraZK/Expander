@@ -1,6 +1,5 @@
 //! This module implements the core GKR IOP.
 
-
 use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 

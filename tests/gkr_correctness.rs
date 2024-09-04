@@ -93,13 +93,6 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
 
     let mut circuit = Circuit::<C>::load_circuit(circuit_path);
 
-    // debug codes
-    circuit.layers.resize(1, CircuitLayer::<C>::default());
-    circuit.layers[0].add.clear();
-    circuit.layers[0].mul.clear();
-    circuit.identify_rnd_coefs();
-    // debug code done
-
     println!("Circuit loaded.");
 
     circuit.set_random_input_for_test();

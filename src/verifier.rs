@@ -179,10 +179,12 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
 
     for _i_var in 0..var_num {
         verified &= verify_sumcheck_step::<C>(proof, transcript, &mut sum, &mut rx);
+        // println!("x {} var, verified? {}", _i_var, verified);
     }
 
     for _i_var in 0..simd_var_num {
         verified &= verify_sumcheck_step::<C>(proof, transcript, &mut sum, &mut r_simdx);
+        // println!("x {} simd var, verified? {}", _i_var, verified);
     }
 
     let vx_claim = proof.get_next_and_step::<C::ChallengeField>();
@@ -204,10 +206,12 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
 
     for _i_var in 0..var_num {
         verified &= verify_sumcheck_step::<C>(proof, transcript, &mut sum, &mut ry);
+        // println!("y {} var, verified? {}", _i_var, verified);
     }
 
     for _i_var in 0..simd_var_num {
         verified &= verify_sumcheck_step::<C>(proof, transcript, &mut sum, &mut r_simdy);
+        // println!("y {} simd var, verified? {}", _i_var, verified);
     }
 
     let vy_claim = proof.get_next_and_step::<C::ChallengeField>();
@@ -215,7 +219,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
         == vx_claim
             * vy_claim
             * eval_sparse_circuit_connect_poly(
-                &layer.mul, rz0, rz1, r_simd0, r_simd1, alpha, beta, &rx, &ry, r_simd0, r_simd1,
+                &layer.mul, rz0, rz1, r_simd0, r_simd1, alpha, beta, &rx, &ry, &r_simdx, &r_simdy,
             );
     transcript.append_challenge_f::<C>(&vy_claim);
     (verified, rx, ry, r_simdx, r_simdy, vx_claim, vy_claim)
@@ -361,6 +365,9 @@ impl<C: GKRConfig> Verifier<C> {
 
                 let v1 = commitment.verify(&rz0, &r_simd0, claimed_v0);
                 let v2 = commitment.verify(&rz1, &r_simd1, claimed_v1);
+
+                println!("Debug: v1 verified? {}", v1);
+                println!("Debug: v2 verified? {}", v2);
 
                 log::debug!("first commitment verification: {}", v1);
                 log::debug!("second commitment verification: {}", v2);
