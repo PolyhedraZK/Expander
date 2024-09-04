@@ -3,7 +3,7 @@
 
 use std::io::{Read, Write};
 
-use arith::{Field, FieldSerde, FieldSerdeResult};
+use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
 
 use crate::{GKRConfig, MultiLinearPoly};
 
@@ -45,8 +45,11 @@ impl<C: GKRConfig> RawCommitment<C> {
     }
 
     #[inline]
-    pub fn verify(&self, x: &[C::ChallengeField], y: C::Field) -> bool {
+    pub fn verify(&self, x: &[C::ChallengeField], r_simd: &[C::ChallengeField], y: C::ChallengeField) -> bool {
         let mut scratch = vec![C::Field::default(); self.poly_vals.len()];
-        y == MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(&self.poly_vals, x, &mut scratch)
+        let y_simd = MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(&self.poly_vals, x, &mut scratch);
+        let y_simd_unpacked = y_simd.unpack();
+        let mut scratch = vec![C::ChallengeField::default(); y_simd_unpacked.len()];
+        y == MultiLinearPoly::eval_generic(&y_simd_unpacked, r_simd, &mut scratch)
     }
 }

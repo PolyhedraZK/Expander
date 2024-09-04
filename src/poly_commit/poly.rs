@@ -1,12 +1,34 @@
 use ark_std::{end_timer, start_timer};
 
 use crate::GKRConfig;
-use arith::SimdField;
+use arith::{Field, SimdField};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MultiLinearPoly {}
 
 impl MultiLinearPoly {
+    pub fn eval_generic<F: Field>(
+        evals: &[F],
+        x: &[F],
+        scratch: &mut [F],
+    ) -> F {
+        debug_assert_eq!(1 << x.len(), evals.len());
+        debug_assert_eq!(evals.len(), scratch.len());
+
+        if x.is_empty() {
+            evals[0]
+        } else {
+            let mut cur_eval_size = evals.len() >> 1;
+            for r in x.iter() {
+                for i in 0..cur_eval_size {
+                    scratch[i] = scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]) * r;
+                }
+                cur_eval_size >>= 1;
+            }
+            scratch[0]
+        }
+    }
+
     pub fn eval_circuit_vals_at_challenge<C: GKRConfig>(
         evals: &[C::SimdCircuitField],
         x: &[C::ChallengeField],
