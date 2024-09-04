@@ -119,10 +119,7 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        sumcheck_prove_gkr_layer, utils::KECCAK_M31_CIRCUIT, BN254ConfigKeccak, Circuit, GKRConfig,
-        GkrScratchpad, Keccak256hasher, RawCommitment, Transcript,
-    };
+    use crate::BN254ConfigKeccak;
 
     type C = BN254ConfigKeccak;
 

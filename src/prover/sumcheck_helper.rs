@@ -448,7 +448,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
     pub(crate) fn prepare_simd(&mut self) {
         eq_eval_at(
-            &self.r_simd0,
+            self.r_simd0,
             &C::ChallengeField::one(),
             &mut self.sp.eq_evals_at_r_simd0,
             &mut self.sp.eq_evals_first_half,
@@ -456,7 +456,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         );
 
         eq_eval_at(
-            &self.r_simd1,
+            self.r_simd1,
             &C::ChallengeField::one(),
             &mut self.sp.eq_evals_at_r_simd1,
             &mut self.sp.eq_evals_first_half,
@@ -570,7 +570,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             &C::ChallengeField::one(),
             &mut self.sp.eq_evals_at_r_simd0,
             &mut self.sp.eq_evals_first_half,
-            &mut &mut self.sp.eq_evals_second_half,
+            &mut self.sp.eq_evals_second_half,
         );
         let eq_evals_at_r_simdx = C::Field::pack(&self.sp.eq_evals_at_r_simd0);
 

@@ -1,6 +1,6 @@
 use std::{io::Cursor, vec};
 
-use arith::{ExtensionField, Field, SimdField};
+use arith::{ExtensionField, Field};
 use ark_std::{end_timer, iterable::Iterable, start_timer};
 
 #[cfg(feature = "grinding")]
@@ -165,10 +165,10 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
             r_simd1,
             alpha,
             beta,
-            &vec![],
-            &vec![],
-            &vec![],
-            &vec![],
+            &[],
+            &[],
+            &[],
+            &[],
         );
 
     let mut rx = vec![];
@@ -196,9 +196,9 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
             alpha,
             beta,
             &rx,
-            &vec![],
+            &[],
             &r_simdx,
-            &vec![],
+            &[],
         );
     transcript.append_challenge_f::<C>(&vx_claim);
 
@@ -215,7 +215,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
         == vx_claim
             * vy_claim
             * eval_sparse_circuit_connect_poly(
-                &layer.mul, rz0, rz1, r_simd0, r_simd1, alpha, beta, &rx, &ry, &r_simd0, &r_simd1,
+                &layer.mul, rz0, rz1, r_simd0, r_simd1, alpha, beta, &rx, &ry, r_simd0, r_simd1,
             );
     transcript.append_challenge_f::<C>(&vy_claim);
     (verified, rx, ry, r_simdx, r_simdy, vx_claim, vy_claim)
