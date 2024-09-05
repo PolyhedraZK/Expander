@@ -216,7 +216,7 @@ impl SimdField for NeonGF2_128x8 {
 
     #[inline(always)]
     fn unpack(&self) -> Vec<Self::Scalar> {
-        let array: [Self::Scalar; 8] = unsafe { transmute(self.data) };
+        let array: [Self::Scalar; 8] = unsafe { transmute(self.v) };
         array.to_vec()
     }
 }
