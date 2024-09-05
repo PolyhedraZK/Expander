@@ -71,6 +71,7 @@ fn test_gkr_correctness() {
     ));
 }
 
+#[allow(unreachable_patterns)]
 fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     println!("============== start ===============");
     println!("Field Type: {:?}", C::FIELD_TYPE);

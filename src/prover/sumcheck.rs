@@ -117,11 +117,11 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
     helper.rx
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::BN254ConfigKeccak;
+// #[cfg(test)]
+// mod tests {
+    // use crate::BN254ConfigKeccak;
 
-    type C = BN254ConfigKeccak;
+    // type C = BN254ConfigKeccak;
 
     // #[test]
     // fn test_sumcheck_cuda() {
@@ -180,4 +180,4 @@ mod tests {
     //         rz0, rz1, alpha, beta
     //     );
     // }
-}
+// }

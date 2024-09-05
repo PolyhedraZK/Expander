@@ -88,8 +88,8 @@ impl SimdField for M31Ext3x16 {
         let v2s = self.v[2].unpack();
 
         v0s.into_iter()
-            .zip(v1s.into_iter())
-            .zip(v2s.into_iter())
+            .zip(v1s)
+            .zip(v2s)
             .map(|((v0, v1), v2)| M31Ext3 { v: [v0, v1, v2] })
             .collect()
     }
