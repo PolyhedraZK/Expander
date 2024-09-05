@@ -255,8 +255,8 @@ impl SumcheckMultilinearProdSimdVarHelper {
 
         let eval_size = 1 << (self.var_num - var_idx - 1);
         for i in 0..eval_size {
-            bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]) * (&r);
-            bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]) * (&r);
+            bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]) * r;
+            bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]) * r;
         }
     }
 }
@@ -324,6 +324,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 }
 
 /// Helper functions to be called
+#[allow(clippy::too_many_arguments)]
 impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     pub(crate) fn new(
         layer: &'a CircuitLayer<C>,

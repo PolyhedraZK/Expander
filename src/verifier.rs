@@ -29,6 +29,7 @@ fn gf2_sp_eval<F: Field + ExtensionField>(p0: F, p1: F, p2: F, x: F) -> F {
 }
 
 // TODO: Remove redundant computation and split it into cst, add/uni and mul
+#[allow(clippy::too_many_arguments)]
 fn eval_sparse_circuit_connect_poly<C: GKRConfig, const INPUT_NUM: usize>(
     gates: &[Gate<C, INPUT_NUM>],
     rz0: &[C::ChallengeField],
@@ -156,7 +157,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
 ) {
     let var_num = layer.input_var_num;
     let simd_var_num = C::get_field_pack_size().trailing_zeros() as usize;
-    let mut sum = claimed_v0 * alpha + claimed_v1 * &beta
+    let mut sum = claimed_v0 * alpha + claimed_v1 * beta
         - eval_sparse_circuit_connect_poly(
             &layer.const_,
             rz0,

@@ -624,10 +624,18 @@ impl ExtensionField for AVX512GF2_128x8 {
         let v7 = (base.v & 1u8) as i64;
 
         let mut res = *self;
-        res.data[0] =
-            unsafe { _mm512_xor_si512(res.data[0], transmute([v0, 0, v1, 0, v2, 0, v3, 0])) };
-        res.data[1] =
-            unsafe { _mm512_xor_si512(res.data[1], transmute([v4, 0, v5, 0, v6, 0, v7, 0])) };
+        res.data[0] = unsafe {
+            _mm512_xor_si512(
+                res.data[0],
+                transmute::<[i64; 8], __m512i>([v0, 0, v1, 0, v2, 0, v3, 0]),
+            )
+        };
+        res.data[1] = unsafe {
+            _mm512_xor_si512(
+                res.data[1],
+                transmute::<[i64; 8], __m512i>([v4, 0, v5, 0, v6, 0, v7, 0]),
+            )
+        };
 
         res
     }
@@ -684,9 +692,10 @@ impl From<GF2x8> for AVX512GF2_128x8 {
         let v7 = (v.v & 1u8) as i64;
 
         AVX512GF2_128x8 {
-            data: [unsafe { transmute([v0, 0, v1, 0, v2, 0, v3, 0]) }, unsafe {
-                transmute([v4, 0, v5, 0, v6, 0, v7, 0])
-            }],
+            data: [
+                unsafe { transmute::<[i64; 8], __m512i>([v0, 0, v1, 0, v2, 0, v3, 0]) },
+                unsafe { transmute::<[i64; 8], __m512i>([v4, 0, v5, 0, v6, 0, v7, 0]) },
+            ],
         }
     }
 }
