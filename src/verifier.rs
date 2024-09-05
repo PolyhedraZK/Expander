@@ -1,7 +1,7 @@
 use std::{io::Cursor, vec};
 
 use arith::{ExtensionField, Field};
-use ark_std::{end_timer, iterable::Iterable, start_timer};
+use ark_std::{end_timer, start_timer};
 
 #[cfg(feature = "grinding")]
 use crate::grind;

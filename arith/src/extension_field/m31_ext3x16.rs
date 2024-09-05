@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    field_common, m31_avx::AVXM31, ExtensionField, Field, FieldSerde, FieldSerdeResult, M31Ext3,
-    M31x16, SimdField, M31,
+    field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, M31Ext3, M31x16, SimdField,
+    M31,
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -77,7 +77,7 @@ impl SimdField for M31Ext3x16 {
         }
 
         Self {
-            v: [AVXM31::pack(&v0s), AVXM31::pack(&v1s), AVXM31::pack(&v2s)],
+            v: [M31x16::pack(&v0s), M31x16::pack(&v1s), M31x16::pack(&v2s)],
         }
     }
 

@@ -11,6 +11,7 @@ use rand::{Rng, RngCore};
 
 use crate::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField, M31, M31_MOD};
 
+const M31_PACK_SIZE: usize = 16;
 const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD; 4]) };
 const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
 const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
@@ -21,7 +22,7 @@ fn reduce_sum(x: uint32x4_t) -> uint32x4_t {
     unsafe { vminq_u32(x, vsubq_u32(x, PACKED_MOD)) }
 }
 
-/// NeonM31 packs 8 M31 elements and operates on them in parallel
+/// NeonM31 packs 16 M31 elements and operates on them in parallel
 #[derive(Clone, Copy)]
 pub struct NeonM31 {
     pub v: [uint32x4_t; 4],
@@ -297,7 +298,20 @@ impl SimdField for NeonM31 {
 
     #[inline(always)]
     fn pack_size() -> usize {
-        4
+        M31_PACK_SIZE
+    }
+
+    #[inline(always)]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        debug_assert!(base_vec.len() == M31_PACK_SIZE);
+        let ret: [Self::Scalar; M31_PACK_SIZE] = base_vec.try_into().unwrap();
+        unsafe { transmute(ret) }
+    }
+
+    #[inline(always)]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        let ret = unsafe { transmute::<[uint32x4_t; 4], [Self::Scalar; M31_PACK_SIZE]>(self.v) };
+        ret.to_vec()
     }
 }
 

@@ -206,6 +206,19 @@ impl SimdField for NeonGF2_128x8 {
     fn pack_size() -> usize {
         8
     }
+
+    #[inline(always)]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        debug_assert!(base_vec.len() == 8);
+        let base_vec_array: [Self::Scalar; 8] = base_vec.try_into().unwrap();
+        unsafe { transmute(base_vec_array) }
+    }
+
+    #[inline(always)]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        let array: [Self::Scalar; 8] = unsafe { transmute(self.data) };
+        array.to_vec()
+    }
 }
 
 impl From<NeonGF2_128> for NeonGF2_128x8 {
@@ -303,12 +316,12 @@ impl ExtensionField for NeonGF2_128x8 {
         Self {
             v: [
                 unsafe { gfmul(self.v[0], transmute::<[u32; 4], uint32x4_t>([v0, 0, 0, 0])) },
-                unsafe { gfmul(self.v[1], transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0])) },
-                unsafe { gfmul(self.v[2], transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0])) },
-                unsafe { gfmul(self.v[3], transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0])) },
-                unsafe { gfmul(self.v[4], transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0])) },
-                unsafe { gfmul(self.v[5], transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0])) },
-                unsafe { gfmul(self.v[6], transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0])) },
+                unsafe { gfmul(self.v[1], transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0])) },
+                unsafe { gfmul(self.v[2], transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0])) },
+                unsafe { gfmul(self.v[3], transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0])) },
+                unsafe { gfmul(self.v[4], transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0])) },
+                unsafe { gfmul(self.v[5], transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0])) },
+                unsafe { gfmul(self.v[6], transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0])) },
                 unsafe { gfmul(self.v[7], transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0])) },
             ],
         }
@@ -328,12 +341,12 @@ impl ExtensionField for NeonGF2_128x8 {
         Self {
             v: [
                 unsafe { gfadd(self.v[0], transmute::<[u32; 4], uint32x4_t>([v0, 0, 0, 0])) },
-                unsafe { gfadd(self.v[1], transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0])) },
-                unsafe { gfadd(self.v[2], transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0])) },
-                unsafe { gfadd(self.v[3], transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0])) },
-                unsafe { gfadd(self.v[4], transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0])) },
-                unsafe { gfadd(self.v[5], transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0])) },
-                unsafe { gfadd(self.v[6], transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0])) },
+                unsafe { gfadd(self.v[1], transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0])) },
+                unsafe { gfadd(self.v[2], transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0])) },
+                unsafe { gfadd(self.v[3], transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0])) },
+                unsafe { gfadd(self.v[4], transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0])) },
+                unsafe { gfadd(self.v[5], transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0])) },
+                unsafe { gfadd(self.v[6], transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0])) },
                 unsafe { gfadd(self.v[7], transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0])) },
             ],
         }
@@ -369,12 +382,12 @@ impl From<GF2x8> for NeonGF2_128x8 {
         NeonGF2_128x8 {
             v: [
                 unsafe { transmute::<[u32; 4], uint32x4_t>([v0, 0, 0, 0]) },
-                unsafe { transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0]) },
-                unsafe { transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0]) },
-                unsafe { transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0]) },
                 unsafe { transmute::<[u32; 4], uint32x4_t>([v1, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v2, 0, 0, 0]) },
                 unsafe { transmute::<[u32; 4], uint32x4_t>([v3, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v4, 0, 0, 0]) },
                 unsafe { transmute::<[u32; 4], uint32x4_t>([v5, 0, 0, 0]) },
+                unsafe { transmute::<[u32; 4], uint32x4_t>([v6, 0, 0, 0]) },
                 unsafe { transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0]) },
             ],
         }

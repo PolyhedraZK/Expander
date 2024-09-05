@@ -277,7 +277,6 @@ pub(crate) struct SumcheckGkrHelper<'a, C: GKRConfig> {
     beta: C::ChallengeField,
 
     pub(crate) input_var_num: usize,
-    output_var_num: usize,
     pub(crate) simd_var_num: usize,
 
     xy_helper: SumcheckMultilinearProdHelper,
@@ -291,6 +290,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         p.unpack().into_iter().sum()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn unpack_and_combine(p: C::Field, coef: &[C::ChallengeField]) -> C::ChallengeField {
         let p_unpacked = p.unpack();
         p_unpacked
@@ -352,7 +352,6 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             beta: *beta,
 
             input_var_num: layer.input_var_num,
-            output_var_num: layer.output_var_num,
             simd_var_num,
 
             xy_helper: SumcheckMultilinearProdHelper::new(layer.input_var_num),
