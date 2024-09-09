@@ -13,4 +13,3 @@ cfg_if::cfg_if! {
         pub type GF2_128x8 = avx::AVX512GF2_128x8;
     }
 }
-
