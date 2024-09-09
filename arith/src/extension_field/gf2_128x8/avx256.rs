@@ -41,9 +41,9 @@ impl FieldSerde for AVX256GF2_128x8 {
         unsafe {
             let mut data = [0u8; 128];
             _mm256_storeu_si256(data.as_mut_ptr() as *mut __m256i, self.data[0]);
-            _mm256_storeu_si256((data.as_mut_ptr() as *mut __m256i).offset(8), self.data[1]);
-            _mm256_storeu_si256((data.as_mut_ptr() as *mut __m256i).offset(16), self.data[2]);
-            _mm256_storeu_si256((data.as_mut_ptr() as *mut __m256i).offset(24), self.data[3]);
+            _mm256_storeu_si256((data.as_mut_ptr() as *mut __m256i).offset(1), self.data[1]);
+            _mm256_storeu_si256((data.as_mut_ptr() as *mut __m256i).offset(2), self.data[2]);
+            _mm256_storeu_si256((data.as_mut_ptr() as *mut __m256i).offset(3), self.data[3]);
             writer.write_all(&data)?;
         }
         Ok(())
@@ -59,9 +59,9 @@ impl FieldSerde for AVX256GF2_128x8 {
             Ok(Self {
                 data: [
                     _mm256_loadu_si256(data.as_ptr() as *const __m256i),
-                    _mm256_loadu_si256((data.as_ptr() as *const __m256i).offset(8)),
-                    _mm256_loadu_si256((data.as_ptr() as *const __m256i).offset(16)),
-                    _mm256_loadu_si256((data.as_ptr() as *const __m256i).offset(24)),
+                    _mm256_loadu_si256((data.as_ptr() as *const __m256i).offset(1)),
+                    _mm256_loadu_si256((data.as_ptr() as *const __m256i).offset(2)),
+                    _mm256_loadu_si256((data.as_ptr() as *const __m256i).offset(3)),
                 ],
             })
         }

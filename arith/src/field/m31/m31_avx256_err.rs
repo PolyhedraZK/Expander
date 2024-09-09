@@ -232,6 +232,7 @@ impl Field for AVXM31 {
     }
 
     #[inline(always)]
+    // modified
     fn mul_by_3(&self) -> AVXM31 {
         let double = unsafe { mod_reduce_epi32_2([_mm256_slli_epi32::<1>(self.v[0]), _mm256_slli_epi32::<1>(self.v[1])]) };
         let res = unsafe { mod_reduce_epi32_2([_mm256_add_epi32(self.v[0], double[0]), _mm256_add_epi32(self.v[1], double[1])]) };
@@ -261,6 +262,7 @@ impl From<M31> for AVXM31 {
 }
 
 impl Debug for AVXM31 {
+    // modified
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut data = [0; M31_PACK_SIZE];
         unsafe {
@@ -296,6 +298,13 @@ impl PartialEq for AVXM31 {
         unsafe {
             let cmp0 = _mm256_cmpeq_epi32_mask(self.v[0], other.v[0]);
             let cmp1 = _mm256_cmpeq_epi32_mask(self.v[1], other.v[1]);
+if (cmp0 & cmp1) != 0xFF {
+    print_m256i_bits(self.v[0]);
+    print_m256i_bits(self.v[1]);
+    print_m256i_bits(other.v[0]);
+    print_m256i_bits(other.v[1]);
+    println!("======= {} {}", cmp0, cmp1);
+}
             (cmp0 & cmp1) == 0xFF
         }
     }
@@ -325,12 +334,38 @@ fn mask_moveldup_epi32(src: __m256i, k: __mmask8, a: __m256i) -> __m256i {
     }
 }
 
+use std::arch::x86_64::*; // 确保在x86_64架构上使用
+
+fn print_m256i_bits(value: __m256i) {
+    println!("__m256i: {:?}", m256i2arr(value));
+}
+
+fn m256i2arr(value: __m256i) -> [u32; 8]{
+    let mut arr = [0u32; 8];
+    unsafe {
+        _mm256_storeu_si256(arr.as_mut_ptr() as *mut __m256i, value);
+    }
+    arr
+}
+
 #[inline]
 #[must_use]
 fn add(lhs: __m256i, rhs: __m256i) -> __m256i { 
+//    print_m256i_bits(lhs);
+//    print_m256i_bits(rhs);
     unsafe {
         let t = _mm256_add_epi32(lhs, rhs);
         let u = _mm256_sub_epi32(t, PACKED_MOD);
+//println!("{:?} + {:?} == {:?} ? {:?}", m256i2arr(lhs), m256i2arr(rhs), m256i2arr(t), m256i2arr(u));
+let t_ = m256i2arr(t);
+let u_ = m256i2arr(u);
+if t_[4] == 2609101268u32 || u_[4] == 2609101268u32 || t_[4] == 1062346703u32 || u_[4] == 1062346703u32{
+    print_m256i_bits(lhs);
+    print_m256i_bits(rhs);
+    print_m256i_bits(t);
+    print_m256i_bits(u);
+    println!("=======");
+}
         _mm256_min_epu32(t, u)
     }
 }

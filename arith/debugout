@@ -1,0 +1,31 @@
+
+running 10 tests
+test tests::gf2::test_custom_serde_vectorize_gf2 ... ok
+test tests::gf2_128::test_custom_serde_vectorize_gf2 ... ok
+test tests::test_mm256_const_init ... ok
+test tests::m31::test_custom_serde_vectorize_m31 ... ok
+arith::field::gf2::GF2
+arith::field::m31::M31
+arith::extension_field::m31_ext::M31Ext3
+arith::extension_field::gf2_128::avx::AVX512GF2_128
+arith::field::gf2::gf2x8::GF2x8
+arith::extension_field::gf2_128::avx::AVX512GF2_128
+test tests::gf2::test_field ... ok
+halo2curves::bn256::fr::Fr
+arith::field::m31::m31_avx256::AVXM31
+arith::extension_field::gf2_128x8::avx256::AVX256GF2_128x8
+arith::extension_field::gf2_128x8::avx256::AVX256GF2_128x8
+arith::extension_field::m31_ext3x16::M31Ext3x16
+test tests::m31::test_field ... ok
+test tests::bn254::test_field ... ok
+test tests::gf2_128x8::test_field ... ok
+test tests::gf2_128::test_field ... ok
+test tests::m31_ext::test_field ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
