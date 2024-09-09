@@ -8,30 +8,18 @@ use crate::{Field, FieldSerde};
 pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
     let mut rng = test_rng();
 
-    println!("{}", std::any::type_name::<F>());
 
     random_multiplication_tests::<F, _>(&mut rng, type_name.clone());
-    println!("{} random_multiplication_tests done", type_name);
     random_addition_tests::<F, _>(&mut rng, type_name.clone());
-    println!("{} random_addition_tests done", type_name);
     random_subtraction_tests::<F, _>(&mut rng, type_name.clone());
-    println!("{} random_subtraction_tests done", type_name);
     random_negation_tests::<F, _>(&mut rng, type_name.clone());
-    println!("{} random_negation_tests done", type_name);
     random_doubling_tests::<F, _>(&mut rng, type_name.clone());
-    println!("{} random_doubling_tests done", type_name);
     random_squaring_tests::<F, _>(&mut rng, type_name.clone());
-    println!("{} random_squaring_tests done", type_name);
     random_expansion_tests::<F, _>(&mut rng, type_name.clone()); // also serve as distributivity tests
-    println!("{} random_expansion_tests done", type_name);
     random_serde_tests::<F, _>(&mut rng, type_name.clone());
-    println!("{} random_serde_tests done", type_name);
     associativity_tests::<F, _>(&mut rng, type_name.clone());
-    println!("{} associativity_tests done", type_name);
     commutativity_tests::<F, _>(&mut rng, type_name.clone());
-    println!("{} commutativity_tests done", type_name);
     identity_tests::<F, _>(&mut rng, type_name.clone());
-    println!("{} identity_tests done", type_name);
     //inverse_tests::<F, _>(&mut rng, type_name.clone());
 
     assert_eq!(F::zero().is_zero(), true);
