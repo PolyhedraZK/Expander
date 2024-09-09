@@ -20,8 +20,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
     rz1: &[C::ChallengeField],
-    r_simd0: &[C::ChallengeField],
-    r_simd1: &[C::ChallengeField],
+    r_simd: &[C::ChallengeField],
     alpha: &C::ChallengeField,
     beta: &C::ChallengeField,
     transcript: &mut Transcript<C::FiatShamirHashType>,
@@ -30,9 +29,8 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
 ) {
-    let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, r_simd0, r_simd1, alpha, beta, sp);
+    let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, r_simd, alpha, beta, sp);
 
     helper.prepare_simd();
     helper.prepare_x_vals();
@@ -74,7 +72,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     let r_simdx = helper.r_simd_var_x;
     let r_simdy = helper.r_simd_var_y;
 
-    (rx, ry, r_simdx, r_simdy)
+    (rx, ry, r_simd)
 }
 
 // FIXME

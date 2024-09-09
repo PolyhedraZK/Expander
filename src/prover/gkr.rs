@@ -18,23 +18,20 @@ pub fn gkr_prove<C: GKRConfig>(
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
 ) {
     let timer = start_timer!(|| "gkr prove");
     let layer_num = circuit.layers.len();
 
     let mut rz0 = vec![];
     let mut rz1 = vec![];
-    let mut r_simd0 = vec![];
-    let mut r_simd1 = vec![];
+    let mut r_simd = vec![];
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
         rz0.push(transcript.challenge_f::<C>());
         rz1.push(C::ChallengeField::zero());
     }
 
     for _ in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd0.push(transcript.challenge_f::<C>());
-        r_simd1.push(C::ChallengeField::zero());
+        r_simd.push(transcript.challenge_f::<C>());
     }
 
     let mut alpha = C::ChallengeField::one();
@@ -45,17 +42,16 @@ pub fn gkr_prove<C: GKRConfig>(
         MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(output_vals, &rz0, &mut sp.hg_evals);
     let claimed_v = MultiLinearPoly::eval_generic::<C::ChallengeField>(
         &claimed_v_simd.unpack(),
-        &r_simd0,
+        &r_simd,
         &mut sp.eq_evals_at_r_simd0,
     );
 
     for i in (0..layer_num).rev() {
-        (rz0, rz1, r_simd0, r_simd1) = sumcheck_prove_gkr_layer(
+        (rz0, rz1, r_simd) = sumcheck_prove_gkr_layer(
             &circuit.layers[i],
             &rz0,
             &rz1,
-            &r_simd0,
-            &r_simd1,
+            &r_simd,
             &alpha,
             &beta,
             transcript,
@@ -74,5 +70,5 @@ pub fn gkr_prove<C: GKRConfig>(
     }
 
     end_timer!(timer);
-    (claimed_v, rz0, rz1, r_simd0, r_simd1)
+    (claimed_v, rz0, rz1, r_simd)
 }

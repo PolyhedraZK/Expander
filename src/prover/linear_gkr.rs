@@ -90,15 +90,14 @@ impl<C: GKRConfig> Prover<C> {
         c.evaluate();
 
         let mut claimed_v = C::ChallengeField::default();
-        let mut _rz0s = vec![];
-        let mut _rz1s = vec![];
-        let mut _rsimd0s = vec![];
-        let mut _rsimd1s = vec![];
+        let mut _rx = vec![];
+        let mut _ry = vec![];
+        let mut _rsimd = vec![];
 
         if self.config.gkr_scheme == GKRScheme::GkrSquare {
-            (_, _rz0s) = gkr_square_prove(c, &mut self.sp, &mut transcript);
+            (_, _rx) = gkr_square_prove(c, &mut self.sp, &mut transcript);
         } else {
-            (claimed_v, _rz0s, _rz1s, _rsimd0s, _rsimd1s) =
+            (claimed_v, _rx, _ry, _rsimd) =
                 gkr_prove(c, &mut self.sp, &mut transcript);
         }
 
