@@ -4,12 +4,13 @@ use crate::{
 
 #[inline(always)]
 fn transcript_io<C: GKRConfig>(
-    p: &[C::ChallengeField; 3],
+    ps: &[C::ChallengeField],
     transcript: &mut Transcript<C::FiatShamirHashType>,
 ) -> C::ChallengeField {
-    transcript.append_challenge_f::<C>(&p[0]);
-    transcript.append_challenge_f::<C>(&p[1]);
-    transcript.append_challenge_f::<C>(&p[2]);
+    debug_assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
+    for p in ps {
+        transcript.append_challenge_f::<C>(p);    
+    }
     transcript.challenge_f::<C>()
 }
 
@@ -41,27 +42,20 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
         helper.receive_rx(i_var, r);
     }
 
-    helper.prepare_simd_var_x_vals();
+    helper.prepare_simd_var_vals();
     for i_var in 0..helper.simd_var_num {
-        let evals = helper.poly_evals_at_r_simd_var_x(i_var, 2);
+        let evals = helper.poly_evals_at_r_simd_var(i_var, 2);
         let r = transcript_io::<C>(&evals, transcript);
-        helper.receive_r_simd_var_x(i_var, r);
+        helper.receive_r_simd_var(i_var, r);
     }
 
     let vx_claim = helper.vx_claim();
     transcript.append_challenge_f::<C>(&vx_claim);
-    helper.prepare_y_vals(vx_claim);
+    helper.prepare_y_vals();
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_ry(i_var, 2);
         let r = transcript_io::<C>(&evals, transcript);
         helper.receive_ry(i_var, r);
-    }
-
-    helper.prepare_simd_var_y_vals();
-    for i_var in 0..helper.simd_var_num {
-        let evals = helper.poly_evals_at_simd_var_y(i_var, 2);
-        let r = transcript_io::<C>(&evals, transcript);
-        helper.receive_r_simd_var_y(i_var, r);
     }
 
     let vy_claim = helper.vy_claim();
@@ -69,8 +63,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
 
     let rx = helper.rx;
     let ry = helper.ry;
-    let r_simdx = helper.r_simd_var_x;
-    let r_simdy = helper.r_simd_var_y;
+    let r_simd = helper.r_simd_var;
 
     (rx, ry, r_simd)
 }

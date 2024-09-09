@@ -12,9 +12,7 @@ pub struct GkrScratchpad<C: GKRConfig> {
     pub(crate) eq_evals_at_rx: Vec<C::ChallengeField>,
     pub(crate) eq_evals_at_rz0: Vec<C::ChallengeField>,
     pub(crate) eq_evals_at_rz1: Vec<C::ChallengeField>,
-    pub(crate) eq_evals_at_rz_combined: Vec<C::Field>,
     pub(crate) eq_evals_at_r_simd0: Vec<C::ChallengeField>,
-    pub(crate) eq_evals_at_r_simd1: Vec<C::ChallengeField>,
     pub(crate) eq_evals_first_half: Vec<C::ChallengeField>,
     pub(crate) eq_evals_second_half: Vec<C::ChallengeField>,
 
