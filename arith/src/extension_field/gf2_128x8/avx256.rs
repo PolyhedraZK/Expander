@@ -27,6 +27,10 @@ impl AVX256GF2_128x8 {
          unsafe { _mm256_broadcast_i32x4(data) },
         ]
     }
+
+    pub fn printavxtype() {
+        println!("Using avx256");
+    }
 }
 
 impl FieldSerde for AVX256GF2_128x8 {
@@ -36,10 +40,10 @@ impl FieldSerde for AVX256GF2_128x8 {
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         unsafe {
             let mut data = [0u8; 128];
-            _mm256_storeu_si256(data.as_mut_ptr() as *mut i32, self.data[0]);
-            _mm256_storeu_si256((data.as_mut_ptr() as *mut i32).offset(8), self.data[1]);
-            _mm256_storeu_si256((data.as_mut_ptr() as *mut i32).offset(16), self.data[2]);
-            _mm256_storeu_si256((data.as_mut_ptr() as *mut i32).offset(24), self.data[3]);
+            _mm256_storeu_si256(data.as_mut_ptr() as *mut __m256i, self.data[0]);
+            _mm256_storeu_si256((data.as_mut_ptr() as *mut __m256i).offset(8), self.data[1]);
+            _mm256_storeu_si256((data.as_mut_ptr() as *mut __m256i).offset(16), self.data[2]);
+            _mm256_storeu_si256((data.as_mut_ptr() as *mut __m256i).offset(24), self.data[3]);
             writer.write_all(&data)?;
         }
         Ok(())
@@ -54,10 +58,10 @@ impl FieldSerde for AVX256GF2_128x8 {
         unsafe {
             Ok(Self {
                 data: [
-                    _mm256_loadu_si256(data.as_ptr() as *const i32),
-                    _mm256_loadu_si256((data.as_ptr() as *const i32).offset(8)),
-                    _mm256_loadu_si256((data.as_ptr() as *const i32).offset(16)),
-                    _mm256_loadu_si256((data.as_ptr() as *const i32).offset(24),
+                    _mm256_loadu_si256(data.as_ptr() as *const __m256i),
+                    _mm256_loadu_si256((data.as_ptr() as *const __m256i).offset(8)),
+                    _mm256_loadu_si256((data.as_ptr() as *const __m256i).offset(16)),
+                    _mm256_loadu_si256((data.as_ptr() as *const __m256i).offset(24)),
                 ],
             })
         }
@@ -77,10 +81,10 @@ impl FieldSerde for AVX256GF2_128x8 {
 }
 
 const PACKED_0: [__m256i; 4] = [
-    unsafe { transmute::<[i32; 16], std::arch::x86_64::__m256i>([0; 16]) },
-    unsafe { transmute::<[i32; 16], std::arch::x86_64::__m256i>([0; 16]) },
-    unsafe { transmute::<[i32; 16], std::arch::x86_64::__m256i>([0; 16]) },
-    unsafe { transmute::<[i32; 16], std::arch::x86_64::__m256i>([0; 16]) },
+    unsafe { transmute::<[i32; 8], std::arch::x86_64::__m256i>([0; 8]) },
+    unsafe { transmute::<[i32; 8], std::arch::x86_64::__m256i>([0; 8]) },
+    unsafe { transmute::<[i32; 8], std::arch::x86_64::__m256i>([0; 8]) },
+    unsafe { transmute::<[i32; 8], std::arch::x86_64::__m256i>([0; 8]) },
 ];
 const _M256_INV_2: __m256i = unsafe {
     transmute([
@@ -104,10 +108,10 @@ impl Field for AVX256GF2_128x8 {
     const ONE: Self = Self {
         data: unsafe {
             [
-                transmute::<[u64; 8], __m256i>([1, 0, 1, 0, 1, 0, 1, 0]),
-                transmute::<[u64; 8], __m256i>([1, 0, 1, 0, 1, 0, 1, 0]),
-                transmute::<[u64; 8], __m256i>([1, 0, 1, 0, 1, 0, 1, 0]),
-                transmute::<[u64; 8], __m256i>([1, 0, 1, 0, 1, 0, 1, 0]),
+                transmute::<[u64; 4], __m256i>([1, 0, 1, 0]),
+                transmute::<[u64; 4], __m256i>([1, 0, 1, 0]),
+                transmute::<[u64; 4], __m256i>([1, 0, 1, 0]),
+                transmute::<[u64; 4], __m256i>([1, 0, 1, 0]),
             ]
         },
     };
@@ -120,7 +124,7 @@ impl Field for AVX256GF2_128x8 {
     fn zero() -> Self {
         unsafe {
             let zero = _mm256_setzero_si256();
-            Self { data: [zero, zero] }
+            Self { data: [zero, zero, zero, zero] }
         }
     }
 
@@ -130,14 +134,14 @@ impl Field for AVX256GF2_128x8 {
             let zero = _mm256_setzero_si256();
             let cmp_0 = _mm256_cmpeq_epi64_mask(self.data[0], zero) & _mm256_cmpeq_epi64_mask(self.data[1], zero);
             let cmp_1 = _mm256_cmpeq_epi64_mask(self.data[2], zero) & _mm256_cmpeq_epi64_mask(self.data[3], zero);
-            (cmp_0 & cmp_1) == 0xFF // All 16 64-bit integers are equal (zero)
+            (cmp_0 & cmp_1) == 0xF // All 16 64-bit integers are equal (zero)
         }
     }
 
     #[inline(always)]
     fn one() -> Self {
         unsafe {
-            let one = _mm256_set_epi64(0, 1, 0, 1, 0, 1, 0, 1);
+            let one = _mm256_set_epi64x(0, 1, 0, 1);
             Self { data: [one, one, one, one] }
         }
     }
@@ -146,7 +150,7 @@ impl Field for AVX256GF2_128x8 {
     fn random_unsafe(mut rng: impl rand::RngCore) -> Self {
         let data = [
             unsafe {
-                _mm256_set_epi64(
+                _mm256_set_epi64x(
                     rng.next_u64() as i64,
                     rng.next_u64() as i64,
                     rng.next_u64() as i64,
@@ -154,7 +158,7 @@ impl Field for AVX256GF2_128x8 {
                 )
             },
             unsafe {
-                _mm256_set_epi64(
+                _mm256_set_epi64x(
                     rng.next_u64() as i64,
                     rng.next_u64() as i64,
                     rng.next_u64() as i64,
@@ -162,7 +166,7 @@ impl Field for AVX256GF2_128x8 {
                 )
             },
             unsafe {
-                _mm256_set_epi64(
+                _mm256_set_epi64x(
                     rng.next_u64() as i64,
                     rng.next_u64() as i64,
                     rng.next_u64() as i64,
@@ -170,7 +174,7 @@ impl Field for AVX256GF2_128x8 {
                 )
             },
             unsafe {
-                _mm256_set_epi64(
+                _mm256_set_epi64x(
                     rng.next_u64() as i64,
                     rng.next_u64() as i64,
                     rng.next_u64() as i64,
@@ -185,7 +189,7 @@ impl Field for AVX256GF2_128x8 {
     fn random_bool(mut rng: impl rand::RngCore) -> Self {
         let data = [
             unsafe {
-                _mm256_set_epi64(
+                _mm256_set_epi64x(
                     0,
                     (rng.next_u64() % 2) as i64,
                     0,
@@ -193,7 +197,7 @@ impl Field for AVX256GF2_128x8 {
                 )
             },
             unsafe {
-                _mm256_set_epi64(
+                _mm256_set_epi64x(
                     0,
                     (rng.next_u64() % 2) as i64,
                     0,
@@ -201,7 +205,7 @@ impl Field for AVX256GF2_128x8 {
                 )
             },
             unsafe {
-                _mm256_set_epi64(
+                _mm256_set_epi64x(
                     0,
                     (rng.next_u64() % 2) as i64,
                     0,
@@ -209,7 +213,7 @@ impl Field for AVX256GF2_128x8 {
                 )
             },
             unsafe {
-                _mm256_set_epi64(
+                _mm256_set_epi64x(
                     0,
                     (rng.next_u64() % 2) as i64,
                     0,
@@ -399,7 +403,7 @@ impl From<u32> for AVX256GF2_128x8 {
     #[inline(always)]
     fn from(v: u32) -> AVX256GF2_128x8 {
         assert!(v < 2); // only 0 and 1 are allowed
-        let data = unsafe { _mm256_set_epi64(0, v as i64, 0, v as i64, 0) };
+        let data = unsafe { _mm256_set_epi64x(0, v as i64, 0, v as i64) };
         AVX256GF2_128x8 { data: [data, data, data, data] }
     }
 }
@@ -417,10 +421,10 @@ impl Debug for AVX256GF2_128x8 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut data = [0u8; 128];
         unsafe {
-            _mm256_storeu_si256(data.as_mut_ptr() as *mut i32, self.data[0]);
-            _mm256_storeu_si256((data.as_mut_ptr() as *mut i32).offset(8), self.data[1]);
-            _mm256_storeu_si256((data.as_mut_ptr() as *mut i32).offset(16), self.data[2]);
-            _mm256_storeu_si256((data.as_mut_ptr() as *mut i32).offset(24), self.data[3]);
+            _mm256_storeu_si256(data.as_mut_ptr() as *mut __m256i, self.data[0]);
+            _mm256_storeu_si256((data.as_mut_ptr() as *mut __m256i).offset(8), self.data[1]);
+            _mm256_storeu_si256((data.as_mut_ptr() as *mut __m256i).offset(16), self.data[2]);
+            _mm256_storeu_si256((data.as_mut_ptr() as *mut __m256i).offset(24), self.data[3]);
         }
         f.debug_struct("AVX256GF2_128x8")
             .field("data", &data)
@@ -434,7 +438,7 @@ impl PartialEq for AVX256GF2_128x8 {
         unsafe {
             let cmp_0 = _mm256_cmpeq_epi64_mask(self.data[0], other.data[0]) & _mm256_cmpeq_epi64_mask(self.data[1], other.data[1]);
             let cmp_1 = _mm256_cmpeq_epi64_mask(self.data[2], other.data[2]) & _mm256_cmpeq_epi64_mask(self.data[3], other.data[3]);
-            (cmp_0 & cmp_1) == 0xFF // All 16 64-bit integers are equal
+            (cmp_0 & cmp_1) == 0xF // All 16 64-bit integers are equal
         }
     }
 }
@@ -629,13 +633,13 @@ impl ExtensionField for AVX256GF2_128x8 {
 
         let mut res = *self;
         res.data[0] =
-            unsafe { _mm256_xor_si256(res.data[0], _mm256_set_epi64(0, v0, 0, v2)) };
+            unsafe { _mm256_xor_si256(res.data[0], _mm256_set_epi64x(0, v0, 0, v2)) };
         res.data[1] =
-            unsafe { _mm256_xor_si256(res.data[1], _mm256_set_epi64(0, v4, 0, v6)) };
+            unsafe { _mm256_xor_si256(res.data[1], _mm256_set_epi64x(0, v4, 0, v6)) };
         res.data[2] =
-            unsafe { _mm256_xor_si256(res.data[2], _mm256_set_epi64(0, v1, 0, v3,)) };
+            unsafe { _mm256_xor_si256(res.data[2], _mm256_set_epi64x(0, v1, 0, v3,)) };
         res.data[3] =
-            unsafe { _mm256_xor_si256(res.data[3], _mm256_set_epi64(0, v5, 0, v7)) };
+            unsafe { _mm256_xor_si256(res.data[3], _mm256_set_epi64x(0, v5, 0, v7)) };
 
         res
     }
@@ -661,7 +665,7 @@ impl ExtensionField for AVX256GF2_128x8 {
                 let reduction = {
                     let odd_elements = _mm256_maskz_compress_epi64(0b10101010, msb);
                     let mask = _mm256_maskz_expand_epi64(0b01010101, odd_elements);
-                    let multiplier = _mm256_set1_epi64(0x87);
+                    let multiplier = _mm256_set1_epi64x(0x87);
                     _mm256_mul_epu32(multiplier, mask)
                 };
 
@@ -674,6 +678,8 @@ impl ExtensionField for AVX256GF2_128x8 {
             data: [
                 mul_by_x_internal(self.data[0]),
                 mul_by_x_internal(self.data[1]),
+                mul_by_x_internal(self.data[2]),
+                mul_by_x_internal(self.data[3]),
             ],
         }
     }
@@ -693,10 +699,10 @@ impl From<GF2x8> for AVX256GF2_128x8 {
 
         AVX256GF2_128x8 {
             data: [
-                unsafe { _mm256_set_epi64(0, v0, 0, v2) }, // even
-                unsafe { _mm256_set_epi64(0, v4, 0, v6) }, // even
-                unsafe { _mm256_set_epi64(0, v1, 0, v3) }, // odd
-                unsafe { _mm256_set_epi64(0, v5, 0, v7) }, // odd
+                unsafe { _mm256_set_epi64x(0, v0, 0, v2) }, // even
+                unsafe { _mm256_set_epi64x(0, v4, 0, v6) }, // even
+                unsafe { _mm256_set_epi64x(0, v1, 0, v3) }, // odd
+                unsafe { _mm256_set_epi64x(0, v5, 0, v7) }, // odd
             ],
         }
     }

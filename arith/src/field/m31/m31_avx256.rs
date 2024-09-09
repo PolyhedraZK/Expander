@@ -38,10 +38,6 @@ impl AVXM31 {
             v: unsafe { [_mm256_set1_epi32(x.v as i32), _mm256_set1_epi32(x.v as i32)] },
         }
     }
-
-    pub fn printavxtype() {
-        println!("Using avx256");
-    }
 }
 
 field_common!(AVXM31);
@@ -277,7 +273,7 @@ impl Debug for AVXM31 {
         if data.iter().all(|&x| x == data[0]) {
             write!(
                 f,
-                "mm512i<8 x {}>",
+                "mm256i<8 x {}>",
                 if M31_MOD - data[0] > 1024 {
                     format!("{}", data[0])
                 } else {
@@ -285,7 +281,7 @@ impl Debug for AVXM31 {
                 }
             )
         } else {
-            write!(f, "mm512i<{:?}>", data)
+            write!(f, "mm256i<{:?}>", data)
         }
     }
 }
@@ -300,8 +296,16 @@ impl PartialEq for AVXM31 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool { 
         unsafe {
-            let pcmp = _mm256_cmpeq_epi32_mask(self.v[0], other.v[0]) & _mm256_cmpeq_epi32_mask(self.v[1], other.v[1]);
-            pcmp == 0xFF
+            let cmp0 = _mm256_cmpeq_epi32_mask(self.v[0], other.v[0]);
+            let cmp1 = _mm256_cmpeq_epi32_mask(self.v[1], other.v[1]);
+if (cmp0 & cmp1) != 0xFF {
+    print_m256i_bits(self.v[0]);
+    print_m256i_bits(self.v[1]);
+    print_m256i_bits(other.v[0]);
+    print_m256i_bits(other.v[1]);
+    println!("======= {} {}", cmp0, cmp1);
+}
+            (cmp0 & cmp1) == 0xFF
         }
     }
 }
@@ -330,12 +334,37 @@ fn mask_moveldup_epi32(src: __m256i, k: __mmask8, a: __m256i) -> __m256i {
     }
 }
 
+use std::arch::x86_64::*; // 确保在x86_64架构上使用
+
+fn print_m256i_bits(value: __m256i) {
+    println!("__m256i: {:?}", m256i2arr(value));
+}
+
+fn m256i2arr(value: __m256i) -> [u32; 8]{
+    let mut arr = [0u32; 8];
+    unsafe {
+        _mm256_storeu_si256(arr.as_mut_ptr() as *mut __m256i, value);
+    }
+    arr
+}
+
 #[inline]
 #[must_use]
 fn add(lhs: __m256i, rhs: __m256i) -> __m256i { 
+//    print_m256i_bits(lhs);
+//    print_m256i_bits(rhs);
     unsafe {
         let t = _mm256_add_epi32(lhs, rhs);
         let u = _mm256_sub_epi32(t, PACKED_MOD);
+let t_ = m256i2arr(t);
+let u_ = m256i2arr(u);
+if t_[4] == 2609101268 || u_[4] == 2609101268 || t_[4] == 1062346703 || u_[4] == 1062346703{
+    print_m256i_bits(lhs);
+    print_m256i_bits(rhs);
+    print_m256i_bits(t);
+    print_m256i_bits(u);
+    println!("=======");
+}
         _mm256_min_epu32(t, u)
     }
 }

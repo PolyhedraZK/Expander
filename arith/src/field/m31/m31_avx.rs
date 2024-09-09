@@ -33,10 +33,6 @@ impl AVXM31 {
             v: unsafe { _mm512_set1_epi32(x.v as i32) },
         }
     }
-
-    pub fn printavxtype() {
-        println!("Using avx256");
-    }
 }
 
 field_common!(AVXM31);
