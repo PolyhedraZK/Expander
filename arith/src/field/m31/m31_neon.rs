@@ -43,6 +43,10 @@ impl NeonM31 {
             },
         }
     }
+
+    pub fn printavxtype() {
+        println!("Not avx");
+    }
 }
 
 impl FieldSerde for NeonM31 {
