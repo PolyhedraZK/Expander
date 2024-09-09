@@ -35,9 +35,7 @@ impl<C: GKRConfig> GkrScratchpad<C> {
             eq_evals_at_rx: vec![C::ChallengeField::default(); max_input_num],
             eq_evals_at_rz0: vec![C::ChallengeField::default(); max_output_num],
             eq_evals_at_rz1: vec![C::ChallengeField::default(); max_output_num],
-            eq_evals_at_rz_combined: vec![C::Field::default(); max_output_num],
             eq_evals_at_r_simd0: vec![C::ChallengeField::default(); C::get_field_pack_size()],
-            eq_evals_at_r_simd1: vec![C::ChallengeField::default(); C::get_field_pack_size()],
             eq_evals_first_half: vec![C::ChallengeField::default(); max_output_num],
             eq_evals_second_half: vec![C::ChallengeField::default(); max_output_num],
 

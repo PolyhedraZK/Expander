@@ -240,9 +240,9 @@ impl SumcheckMultilinearProdSimdVarHelper {
                 let f_linear = (f_v_1 - f_v_0).mul_by_x();
                 let hg_linear = (hg_v_1 - hg_v_0).mul_by_x();
                 
-                // evaluated at x and (x+1) for p2 and p3
+                // evaluated at x and x^2 for p2 and p3
                 p2 += (eq_linear + eq_v_0) * (f_linear + f_v_0) * (hg_linear + hg_v_0);
-                p3 += (eq_linear + eq_v_1) * (f_linear + f_v_1) * (hg_linear + hg_v_1);
+                p3 += (eq_linear.mul_by_x() + eq_v_0) * (f_linear.mul_by_x() + f_v_0) * (hg_linear.mul_by_x() + hg_v_0);
             }
         } else {
             for i in 0..eval_size {
@@ -255,7 +255,6 @@ impl SumcheckMultilinearProdSimdVarHelper {
                 
                 p0 += eq_v_0 * f_v_0 * hg_v_0;
                 p1 += eq_v_1 * f_v_1 * hg_v_1;
-
                 
                 // evaluated at 2 and 3 for p2 and p3
                 let tmp0 = eq_v_1 - eq_v_0;
