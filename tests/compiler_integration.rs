@@ -9,7 +9,6 @@ const FILENAME_PROOF: &str = "data/proof.bin";
 
 #[test]
 fn test_compiler_format_integration() {
-    M31x16::printavxtype();
     let config = Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla);
 
     let mut circuit = Circuit::<M31ExtConfigSha2>::load_circuit(KECCAK_M31_CIRCUIT);

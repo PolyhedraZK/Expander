@@ -358,7 +358,7 @@ fn mask_moveldup_epi32(src: __m256i, k: __mmask8, a: __m256i) -> __m256i {
 
 #[inline]
 #[must_use]
-fn add(lhs: __m256i, rhs: __m256i) -> __m256i { 
+fn add(lhs: __m256i, rhs: __m256i) -> __m256i {
     unsafe {
         let t = _mm256_add_epi32(lhs, rhs);
         let u = _mm256_sub_epi32(t, PACKED_MOD);

@@ -115,7 +115,6 @@ fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type_name: Stri
 }
 
 fn random_addition_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-
     let _message = format!("addition {}", type_name);
     let start = start_timer!(|| _message);
     for _ in 0..1000 {

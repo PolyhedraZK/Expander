@@ -3,6 +3,7 @@ pub use m31x16::M31x16;
 
 #[cfg(target_arch = "x86_64")]
 pub(crate) mod m31_avx;
+#[cfg(target_arch = "x86_64")]
 pub(crate) mod m31_avx256;
 
 #[cfg(target_arch = "aarch64")]
