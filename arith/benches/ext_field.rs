@@ -1,4 +1,4 @@
-use arith::{ExtensionField, Field, GF2_128x8, M31Ext3, M31Ext3x16, GF2_128, GF2_128x8_256};
+use arith::{ExtensionField, Field, GF2_128x8, GF2_128x8_256, M31Ext3, M31Ext3x16, GF2_128};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use tynm::type_name;
