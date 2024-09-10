@@ -232,17 +232,19 @@ impl SumcheckMultilinearProdSimdVarHelper {
                 let f_v_1 = bk_f[i * 2 + 1];
                 let hg_v_0 = bk_hg[i * 2];
                 let hg_v_1 = bk_hg[i * 2 + 1];
-                
+
                 p0 += eq_v_0 * f_v_0 * hg_v_0;
                 p1 += eq_v_1 * f_v_1 * hg_v_1;
 
                 let eq_linear = (eq_v_1 - eq_v_0).mul_by_x();
                 let f_linear = (f_v_1 - f_v_0).mul_by_x();
                 let hg_linear = (hg_v_1 - hg_v_0).mul_by_x();
-                
+
                 // evaluated at x and x^2 for p2 and p3
                 p2 += (eq_linear + eq_v_0) * (f_linear + f_v_0) * (hg_linear + hg_v_0);
-                p3 += (eq_linear.mul_by_x() + eq_v_0) * (f_linear.mul_by_x() + f_v_0) * (hg_linear.mul_by_x() + hg_v_0);
+                p3 += (eq_linear.mul_by_x() + eq_v_0)
+                    * (f_linear.mul_by_x() + f_v_0)
+                    * (hg_linear.mul_by_x() + hg_v_0);
             }
         } else {
             for i in 0..eval_size {
@@ -252,10 +254,10 @@ impl SumcheckMultilinearProdSimdVarHelper {
                 let f_v_1 = bk_f[i * 2 + 1];
                 let hg_v_0 = bk_hg[i * 2];
                 let hg_v_1 = bk_hg[i * 2 + 1];
-                
+
                 p0 += eq_v_0 * f_v_0 * hg_v_0;
                 p1 += eq_v_1 * f_v_1 * hg_v_1;
-                
+
                 // evaluated at 2 and 3 for p2 and p3
                 let tmp0 = eq_v_1 - eq_v_0;
                 let tmp1 = f_v_1 - f_v_0;
@@ -456,10 +458,9 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         self.sp.simd_var_v_evals[0]
     }
 
-    /// Seems wierd, but it's correct since this is called at a different time of the protocol
     #[inline(always)]
     pub(crate) fn vy_claim(&self) -> C::ChallengeField {
-        self.vx_claim()
+        Self::unpack_and_combine(self.sp.v_evals[0], &self.sp.eq_evals_at_r_simd1)
     }
 
     pub(crate) fn prepare_simd(&mut self) {
@@ -532,7 +533,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
     pub(crate) fn prepare_y_vals(&mut self) {
         let mul = &self.layer.mul;
-        let eq_evals_at_rz0 = & self.sp.eq_evals_at_rz0;
+        let eq_evals_at_rz0 = &self.sp.eq_evals_at_rz0;
         let eq_evals_at_rx = &mut self.sp.eq_evals_at_rx;
         let gate_exists = &mut self.sp.gate_exists_5;
         let hg_vals = &mut self.sp.hg_evals;
@@ -558,22 +559,21 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         eq_eval_at(
             &self.r_simd_var,
             &C::ChallengeField::one(),
-            &mut self.sp.eq_evals_at_r_simd0,
+            &mut self.sp.eq_evals_at_r_simd1,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
-        
+
         for i in 0..(1 << self.simd_var_num) {
-            self.sp.eq_evals_at_r_simd0[i] *= coef;
+            self.sp.eq_evals_at_r_simd0[i] = self.sp.eq_evals_at_r_simd1[i] * coef;
         }
 
         // TODO-OPTIMIZATION: hg_vals does not have to be simd here
         for g in mul.iter() {
-            hg_vals[g.i_ids[1]] += C::Field::from( C::challenge_mul_circuit_field(
-                    &(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
-                    &g.coef,
-                ),
-            );
+            hg_vals[g.i_ids[1]] += C::Field::from(C::challenge_mul_circuit_field(
+                &(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
+                &g.coef,
+            ));
             gate_exists[g.i_ids[1]] = true;
         }
     }
