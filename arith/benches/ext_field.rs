@@ -1,3 +1,5 @@
+#[cfg(target_arch = "x86_64")]
+use arith::GF2_128x8_256;
 use arith::{ExtensionField, Field, GF2_128x8, M31Ext3, M31Ext3x16, GF2_128};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
@@ -154,6 +156,8 @@ fn ext_by_base_benchmark(c: &mut Criterion) {
     bench_field::<M31Ext3x16>(c);
     bench_field::<GF2_128>(c);
     bench_field::<GF2_128x8>(c);
+    #[cfg(target_arch = "x86_64")]
+    bench_field::<GF2_128x8_256>(c);
 }
 
 criterion_group!(ext_by_base_benches, ext_by_base_benchmark);
