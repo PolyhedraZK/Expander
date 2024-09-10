@@ -17,7 +17,7 @@ pub struct VerifierScratchPad<C: GKRConfig> {
     eq_evals_first_part: Vec<C::ChallengeField>,
     eq_evals_second_part: Vec<C::ChallengeField>,
 
-    r_simd: *const [C::ChallengeField],
+    r_simd: *const Vec<C::ChallengeField>,
     eq_r_simd_r_simd_xy: C::ChallengeField,
 
     // ====== for deg2, deg3 eval ======
