@@ -7,10 +7,10 @@ use super::{
 };
 #[test]
 fn test_field() {
-    random_field_tests::<GF2_128>("M31 Ext3".to_string());
-    random_extension_field_tests::<GF2_128>("M31 Ext3".to_string());
+    random_field_tests::<GF2_128>("GF2 Ext128".to_string());
+    random_extension_field_tests::<GF2_128>("GF2 Ext128".to_string());
 
-    random_field_tests::<GF2_128x8>("Simd M31 Ext3".to_string());
-    random_extension_field_tests::<GF2_128x8>("Simd M31 Ext3".to_string());
-    random_simd_field_tests::<GF2_128x8>("Simd M31 Ext3".to_string());
+    random_field_tests::<GF2_128x8>("Simd GF2 Ext128".to_string());
+    random_extension_field_tests::<GF2_128x8>("Simd GF2 Ext128".to_string());
+    random_simd_field_tests::<GF2_128x8>("Simd GF2 Ext128".to_string());
 }

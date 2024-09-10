@@ -23,4 +23,11 @@ pub(crate) fn random_simd_field_tests<F: SimdField>(_name: String) {
         assert_eq!(a.scale(&s) * b, (a * b).scale(&s),);
         assert_eq!(b.scale(&s) * a, (a * b).scale(&s),);
     }
+
+    {
+        let x = F::random_unsafe(&mut rng);
+        let scalars = x.unpack();
+        let x_repacked = F::pack(&scalars);
+        assert_eq!(x, x_repacked);
+    }
 }

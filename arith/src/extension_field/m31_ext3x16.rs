@@ -62,6 +62,37 @@ impl SimdField for M31Ext3x16 {
     fn pack_size() -> usize {
         M31x16::pack_size()
     }
+
+    #[inline(always)]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        debug_assert!(base_vec.len() == Self::pack_size());
+        let mut v0s = vec![];
+        let mut v1s = vec![];
+        let mut v2s = vec![];
+
+        for scalar in base_vec {
+            v0s.push(scalar.v[0]);
+            v1s.push(scalar.v[1]);
+            v2s.push(scalar.v[2]);
+        }
+
+        Self {
+            v: [M31x16::pack(&v0s), M31x16::pack(&v1s), M31x16::pack(&v2s)],
+        }
+    }
+
+    #[inline(always)]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        let v0s = self.v[0].unpack();
+        let v1s = self.v[1].unpack();
+        let v2s = self.v[2].unpack();
+
+        v0s.into_iter()
+            .zip(v1s)
+            .zip(v2s)
+            .map(|((v0, v1), v2)| M31Ext3 { v: [v0, v1, v2] })
+            .collect()
+    }
 }
 
 impl From<M31x16> for M31Ext3x16 {

@@ -115,7 +115,7 @@ impl Field for M31Ext3 {
         while e != 0 {
             let b = e & 1;
             if b == 1 {
-                res *= self;
+                res *= t;
             }
             t = t * t;
             e >>= 1;
@@ -124,8 +124,12 @@ impl Field for M31Ext3 {
     }
 
     fn inv(&self) -> Option<Self> {
-        unimplemented!("inverse is not supported for M31Ext3")
-        // self.try_inverse()
+        if self.is_zero() {
+            None
+        } else {
+            let base_field_size = (1u128 << 31) - 1;
+            Some(self.exp(base_field_size * base_field_size * base_field_size - 2))
+        }
     }
 
     /// Squaring

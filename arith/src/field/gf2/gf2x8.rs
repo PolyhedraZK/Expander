@@ -247,7 +247,7 @@ impl SubAssign<&GF2x8> for GF2x8 {
 impl From<u32> for GF2x8 {
     #[inline(always)]
     fn from(v: u32) -> Self {
-        assert!(v < 2);
+        debug_assert!(v < 2);
         if v == 0 {
             GF2x8 { v: 0 }
         } else {
@@ -259,7 +259,7 @@ impl From<u32> for GF2x8 {
 impl From<GF2> for GF2x8 {
     #[inline(always)]
     fn from(v: GF2) -> Self {
-        assert!(v.v < 2);
+        debug_assert!(v.v < 2);
         if v.v == 0 {
             GF2x8 { v: 0 }
         } else {
@@ -269,6 +269,7 @@ impl From<GF2> for GF2x8 {
 }
 
 impl SimdField for GF2x8 {
+    #[inline(always)]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
         if challenge.v == 0 {
             Self::zero()
@@ -277,8 +278,30 @@ impl SimdField for GF2x8 {
         }
     }
 
+    #[inline(always)]
     fn pack_size() -> usize {
         8
+    }
+
+    #[inline(always)]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        debug_assert!(base_vec.len() == Self::pack_size());
+        let mut ret = 0u8;
+        for (i, scalar) in base_vec.iter().enumerate() {
+            ret |= scalar.v << (7 - i);
+        }
+        Self { v: ret }
+    }
+
+    #[inline(always)]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        let mut ret = vec![];
+        for i in 0..Self::pack_size() {
+            ret.push(Self::Scalar {
+                v: (self.v >> (7 - i)) & 1u8,
+            });
+        }
+        ret
     }
 
     type Scalar = crate::GF2;

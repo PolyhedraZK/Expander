@@ -50,6 +50,15 @@ impl<H: FiatShamirHash> Transcript<H> {
     }
 
     #[inline]
+    pub fn append_challenge_f<C: GKRConfig>(&mut self, f: &C::ChallengeField) {
+        let cur_size = self.proof.bytes.len();
+        self.proof
+            .bytes
+            .resize(cur_size + C::ChallengeField::SIZE, 0);
+        f.serialize_into(&mut self.proof.bytes[cur_size..]).unwrap();
+    }
+
+    #[inline]
     pub fn append_u8_slice(&mut self, buffer: &[u8]) {
         self.proof.bytes.extend_from_slice(buffer);
     }
@@ -57,7 +66,7 @@ impl<H: FiatShamirHash> Transcript<H> {
     #[inline]
     pub fn challenge_f<C: GKRConfig>(&mut self) -> C::ChallengeField {
         self.hash_to_digest();
-        assert!(C::ChallengeField::SIZE <= Self::DIGEST_SIZE);
+        debug_assert!(C::ChallengeField::SIZE <= Self::DIGEST_SIZE);
         C::ChallengeField::from_uniform_bytes(&self.digest.clone().try_into().unwrap())
     }
 
@@ -69,7 +78,7 @@ impl<H: FiatShamirHash> Transcript<H> {
     #[inline]
     pub fn circuit_f<C: GKRConfig>(&mut self) -> C::CircuitField {
         self.hash_to_digest();
-        assert!(C::CircuitField::SIZE <= Self::DIGEST_SIZE);
+        debug_assert!(C::CircuitField::SIZE <= Self::DIGEST_SIZE);
         C::CircuitField::from_uniform_bytes(&self.digest.clone().try_into().unwrap())
     }
 }
