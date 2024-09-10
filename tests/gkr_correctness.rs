@@ -103,7 +103,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
 
     let proving_start = Instant::now();
     let (claimed_v, proof) = prover.prove(&mut circuit);
-    println!("Proving time: {} ms", proving_start.elapsed().as_millis());
+    println!("Proving time: {} μs", proving_start.elapsed().as_micros());
 
     println!("Proof generated. Size: {} bytes", proof.bytes.len());
     // first and last 16 proof u8
@@ -131,8 +131,8 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     let verification_start = Instant::now();
     assert!(verifier.verify(&mut circuit, &claimed_v, &proof),);
     println!(
-        "Verification time: {} ms",
-        verification_start.elapsed().as_millis()
+        "Verification time: {} μs",
+        verification_start.elapsed().as_micros()
     );
     println!("Correct proof verified.");
     let mut bad_proof = proof.clone();
