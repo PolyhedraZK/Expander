@@ -1,6 +1,6 @@
 ![Expander](https://github.com/PolyhedraZK/Expander-cpp/blob/master/data/logo.jpg)
 
-# Expander-RS
+# Expander
 
 <div align="center">
   <h3>
@@ -43,6 +43,9 @@ This compiler is your entry point for using our prover; the repository you have 
 `Your circuit code -> Expander Compiler -> circuit.txt & witness.txt -> Expander-rs -> proof `
 
 Please note that the witness generation process is not yet optimal, and we are actively working on improving it.
+
+## AVX
+We use AVX512 by default, if your CPU doesn't support AVX512, or you encountered illegal instruction error, please use `--features avx256` instead.
 
 ## Environment Setup
 
