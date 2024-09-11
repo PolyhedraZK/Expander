@@ -10,10 +10,7 @@ use ark_std::{end_timer, start_timer};
 #[cfg(feature = "grinding")]
 use crate::grind;
 
-use crate::{
-    Circuit, CircuitLayer, Config, GKRConfig, Proof,
-    RawCommitment, Transcript,
-};
+use crate::{Circuit, CircuitLayer, Config, GKRConfig, Proof, RawCommitment, Transcript};
 
 #[inline(always)]
 fn verify_sumcheck_step<C: GKRConfig>(
