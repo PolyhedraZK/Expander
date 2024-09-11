@@ -127,7 +127,7 @@ impl GKRVerifierHelper {
             &mut sp.eq_evals_second_part,
         );
 
-        for i in 0..layer.output_var_num {
+        for i in 0..(1usize << layer.output_var_num) {
             sp.eq_evals_at_rz0[i] += sp.eq_evals_at_rz1[i];
         }
 
@@ -206,7 +206,7 @@ impl GKRVerifierHelper {
         r_simd_xy: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
     ) {
-        sp.eq_r_simd_r_simd_xy = _eq_vec(unsafe { sp.r_simd.as_ref().unwrap() }, &r_simd_xy);
+        sp.eq_r_simd_r_simd_xy = _eq_vec(unsafe { sp.r_simd.as_ref().unwrap() }, r_simd_xy);
     }
 
     #[inline(always)]

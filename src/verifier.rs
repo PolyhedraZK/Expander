@@ -4,15 +4,15 @@ pub use sumcheck_verifier_helper::*;
 
 use std::{io::Cursor, vec};
 
-use arith::{ExtensionField, Field};
+use arith::Field;
 use ark_std::{end_timer, start_timer};
 
 #[cfg(feature = "grinding")]
 use crate::grind;
 
 use crate::{
-    eq_evals_at_primitive, Circuit, CircuitLayer, Config, FieldType, GKRConfig, Gate, Proof,
-    RawCommitment, Transcript, _eq_vec,
+    Circuit, CircuitLayer, Config, GKRConfig, Proof,
+    RawCommitment, Transcript,
 };
 
 #[inline(always)]
