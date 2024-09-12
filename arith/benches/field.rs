@@ -201,13 +201,15 @@ fn bench_mul_i32<F: Field>(c: &mut Criterion) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
+    
     bench_mul_i32::<Fr>(c);
-    // bench_field::<M31>(c);
-    // bench_field::<M31x16>(c);
-    // #[cfg(target_arch = "x86_64")]
-    // bench_field::<M31x16_256>(c);
-    // bench_field::<M31Ext3>(c);
-    // bench_field::<M31Ext3x16>(c);
+
+    bench_field::<M31>(c);
+    bench_field::<M31x16>(c);
+    #[cfg(target_arch = "x86_64")]
+    bench_field::<M31x16_256>(c);
+    bench_field::<M31Ext3>(c);
+    bench_field::<M31Ext3x16>(c);
     bench_field::<Fr>(c);
     bench_field::<GF2>(c);
     bench_field::<GF2x8>(c);
