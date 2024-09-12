@@ -3,6 +3,7 @@
 use arith::{Field, GF2_128x8, GF2x8, M31Ext3, M31Ext3x16, M31x16, GF2, GF2_128, M31};
 #[cfg(target_arch = "x86_64")]
 use arith::{GF2_128x8_256, M31x16_256};
+use ark_std::rand::RngCore;
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use halo2curves::bn256::Fr;
@@ -173,13 +174,40 @@ pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
     );
 }
 
+fn bench_mul_i32<F: Field>(c: &mut Criterion) {
+    let mut rng = test_rng();
+
+    c.bench_function(
+        &format!(
+            "mul-i32<{}> 100x times {}x",
+            type_name::<F>(),
+            F::SIZE * 8 / F::FIELD_SIZE
+        ),
+        |b| {
+            b.iter_batched(
+                || random_element::<F>(),
+                |mut x| {
+                    let b = rng.next_u32() as i32;
+
+                    for _ in 0..100 {
+                        x = x.mul_by_i32(b)
+                    }
+                    x
+                },
+                BatchSize::SmallInput,
+            )
+        },
+    );
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
-    bench_field::<M31>(c);
-    bench_field::<M31x16>(c);
-    #[cfg(target_arch = "x86_64")]
-    bench_field::<M31x16_256>(c);
-    bench_field::<M31Ext3>(c);
-    bench_field::<M31Ext3x16>(c);
+    bench_mul_i32::<Fr>(c);
+    // bench_field::<M31>(c);
+    // bench_field::<M31x16>(c);
+    // #[cfg(target_arch = "x86_64")]
+    // bench_field::<M31x16_256>(c);
+    // bench_field::<M31Ext3>(c);
+    // bench_field::<M31Ext3x16>(c);
     bench_field::<Fr>(c);
     bench_field::<GF2>(c);
     bench_field::<GF2x8>(c);
