@@ -1,6 +1,6 @@
 use arith::{ExtensionField, Field, SimdField};
 
-use crate::{CircuitLayer, FieldType, GKRConfig, GkrScratchpad};
+use crate::{CircuitLayer, FieldType, GKRConfig, GkrScratchpad, MPIToolKit};
 
 #[inline(always)]
 fn _eq<F: Field>(x: &F, y: &F) -> F {
@@ -297,12 +297,14 @@ pub(crate) struct SumcheckGkrHelper<'a, C: GKRConfig> {
     pub(crate) rx: Vec<C::ChallengeField>,
     pub(crate) ry: Vec<C::ChallengeField>,
     pub(crate) r_simd_var: Vec<C::ChallengeField>,
+    pub(crate) r_mpi_var: Vec<C::ChallengeField>,
 
     layer: &'a CircuitLayer<C>,
     sp: &'a mut GkrScratchpad<C>,
     rz0: &'a [C::ChallengeField],
     rz1: &'a [C::ChallengeField],
     r_simd: &'a [C::ChallengeField],
+    r_mpi: &'a [C::ChallengeField],
     alpha: C::ChallengeField,
     beta: C::ChallengeField,
 
@@ -317,13 +319,16 @@ pub(crate) struct SumcheckGkrHelper<'a, C: GKRConfig> {
 impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     #[allow(dead_code)]
     #[inline(always)]
-    pub(crate) fn unpack_and_sum(p: C::Field) -> C::ChallengeField {
+    pub(crate) fn unpack_and_sum(p: &C::Field) -> C::ChallengeField {
         p.unpack().into_iter().sum()
     }
 
     #[allow(dead_code)]
     #[inline(always)]
-    pub(crate) fn unpack_and_combine(p: C::Field, coef: &[C::ChallengeField]) -> C::ChallengeField {
+    pub(crate) fn unpack_and_combine(
+        p: &C::Field,
+        coef: &[C::ChallengeField],
+    ) -> C::ChallengeField {
         let p_unpacked = p.unpack();
         p_unpacked
             .into_iter()
@@ -343,17 +348,6 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             &mut self.sp.gate_exists_5,
         );
     }
-
-    #[inline(always)]
-    fn simd_helper_receive_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
-        self.simd_var_helper.receive_challenge::<C>(
-            var_idx,
-            r,
-            &mut self.sp.eq_evals_at_r_simd0,
-            &mut self.sp.simd_var_v_evals,
-            &mut self.sp.simd_var_hg_evals,
-        );
-    }
 }
 
 /// Helper functions to be called
@@ -364,6 +358,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         rz0: &'a [C::ChallengeField],
         rz1: &'a [C::ChallengeField],
         r_simd: &'a [C::ChallengeField],
+        r_mpi: &'a [C::ChallengeField],
         alpha: &'a C::ChallengeField,
         beta: &'a C::ChallengeField,
         sp: &'a mut GkrScratchpad<C>,
@@ -373,12 +368,14 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             rx: vec![],
             ry: vec![],
             r_simd_var: vec![],
+            r_mpi_var: vec![],
 
             layer,
             sp,
             rz0,
             rz1,
             r_simd,
+            r_mpi,
             alpha: *alpha,
             beta: *beta,
 
@@ -396,7 +393,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         degree: usize,
     ) -> [C::ChallengeField; 3] {
         debug_assert!(var_idx < self.input_var_num);
-        let [p0, p1, p2] = self.xy_helper.poly_eval_at::<C>(
+        let local_evals_simd = self.xy_helper.poly_eval_at::<C>(
             var_idx,
             degree,
             &mut self.sp.v_evals,
@@ -404,11 +401,15 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             &self.layer.input_vals,
             &self.sp.gate_exists_5,
         );
-        [
-            Self::unpack_and_combine(p0, &self.sp.eq_evals_at_r_simd0),
-            Self::unpack_and_combine(p1, &self.sp.eq_evals_at_r_simd0),
-            Self::unpack_and_combine(p2, &self.sp.eq_evals_at_r_simd0),
-        ]
+
+        // SIMD
+        let local_evals = local_evals_simd
+            .iter()
+            .map(|p| Self::unpack_and_combine(p, &self.sp.eq_evals_at_r_simd0))
+            .collect::<Vec<C::ChallengeField>>();
+
+        // MPI
+        MPIToolKit::sum_vec(&local_evals).try_into().unwrap()
     }
 
     pub(crate) fn poly_evals_at_r_simd_var(
@@ -416,14 +417,31 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         var_idx: usize,
         degree: usize,
     ) -> [C::ChallengeField; 4] {
-        debug_assert_eq!(degree, 3);
         debug_assert!(var_idx < self.simd_var_num);
-        self.simd_var_helper.poly_eval_at::<C>(
+        let local_vals = self.simd_var_helper.poly_eval_at::<C>(
             var_idx,
             degree,
             &mut self.sp.eq_evals_at_r_simd0,
             &mut self.sp.simd_var_v_evals,
             &mut self.sp.simd_var_hg_evals,
+        );
+        MPIToolKit::sum_vec(&local_vals.to_vec())
+            .try_into()
+            .unwrap()
+    }
+
+    pub(crate) fn poly_evals_at_r_mpi_var(
+        &mut self,
+        var_idx: usize,
+        degree: usize,
+    ) -> [C::ChallengeField; 4] {
+        debug_assert!(var_idx < MPIToolKit::world_size().trailing_zeros() as usize);
+        self.simd_var_helper.poly_eval_at::<C>(
+            var_idx,
+            degree,
+            &mut self.sp.eq_evals_at_r_mpi0,
+            &mut self.sp.mpi_var_v_evals,
+            &mut self.sp.mpi_var_hg_evals,
         )
     }
 
@@ -442,8 +460,25 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     }
 
     pub(crate) fn receive_r_simd_var(&mut self, var_idx: usize, r: C::ChallengeField) {
-        self.simd_helper_receive_challenge(var_idx, r);
+        self.simd_var_helper.receive_challenge::<C>(
+            var_idx,
+            r,
+            &mut self.sp.eq_evals_at_r_simd0,
+            &mut self.sp.simd_var_v_evals,
+            &mut self.sp.simd_var_hg_evals,
+        );
         self.r_simd_var.push(r);
+    }
+
+    pub(crate) fn receive_r_mpi_var(&mut self, var_idx: usize, r: C::ChallengeField) {
+        self.simd_var_helper.receive_challenge::<C>(
+            var_idx,
+            r,
+            &mut self.sp.eq_evals_at_r_mpi0,
+            &mut self.sp.mpi_var_v_evals,
+            &mut self.sp.mpi_var_hg_evals,
+        );
+        self.r_mpi_var.push(r);
     }
 
     pub(crate) fn receive_ry(&mut self, var_idx: usize, r: C::ChallengeField) {
@@ -455,12 +490,18 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     /// The function must be called at a specific point of the protocol, otherwise it's incorrect
     /// Consider fix this.
     pub(crate) fn vx_claim(&self) -> C::ChallengeField {
-        self.sp.simd_var_v_evals[0]
+        self.sp.mpi_var_v_evals[0]
     }
 
     #[inline(always)]
     pub(crate) fn vy_claim(&self) -> C::ChallengeField {
-        Self::unpack_and_combine(self.sp.v_evals[0], &self.sp.eq_evals_at_r_simd1)
+        let vy_local = Self::unpack_and_combine(&self.sp.v_evals[0], &self.sp.eq_evals_at_r_simd0);
+        let summation = MPIToolKit::sum_vec(&vec![vy_local]);
+        if MPIToolKit::is_root() {
+            summation[0]
+        } else {
+            C::ChallengeField::ZERO
+        }
     }
 
     pub(crate) fn prepare_simd(&mut self) {
@@ -468,6 +509,17 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             self.r_simd,
             &C::ChallengeField::one(),
             &mut self.sp.eq_evals_at_r_simd0,
+            &mut self.sp.eq_evals_first_half,
+            &mut self.sp.eq_evals_second_half,
+        );
+    }
+
+    pub(crate) fn prepare_mpi(&mut self) {
+        // TODO: No need to evaluate it at all world ranks, remove redundancy later.
+        eq_eval_at(
+            self.r_mpi,
+            &C::ChallengeField::one(),
+            &mut self.sp.eq_evals_at_r_mpi0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
@@ -490,9 +542,11 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, vals.len());
         }
 
+        let eq_evals_at_world_rank = self.sp.eq_evals_at_r_mpi0[MPIToolKit::world_rank()];
+
         eq_eval_at(
             self.rz0,
-            &self.alpha,
+            &(self.alpha * eq_evals_at_world_rank),
             eq_evals_at_rz0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -500,7 +554,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
         eq_eval_at(
             self.rz1,
-            &self.beta,
+            &(self.beta * eq_evals_at_world_rank),
             eq_evals_at_rz1,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -531,6 +585,17 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         self.sp.simd_var_hg_evals = self.sp.hg_evals[0].unpack();
     }
 
+    pub(crate) fn prepare_mpi_var_vals(&mut self) {
+        MPIToolKit::gather_vec(
+            &vec![self.sp.simd_var_v_evals[0]],
+            &mut self.sp.mpi_var_v_evals,
+        );
+        MPIToolKit::gather_vec(
+            &vec![self.sp.simd_var_hg_evals[0]],
+            &mut self.sp.mpi_var_hg_evals,
+        );
+    }
+
     pub(crate) fn prepare_y_vals(&mut self) {
         let mul = &self.layer.mul;
         let eq_evals_at_rz0 = &self.sp.eq_evals_at_rz0;
@@ -547,26 +612,36 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, fill_len);
         }
 
+        // TODO: Compute eq(r_mpi_var, self_rank) only
+        eq_eval_at(
+            &self.r_mpi_var,
+            &C::ChallengeField::one(),
+            &mut self.sp.eq_evals_at_r_mpi0,
+            &mut self.sp.eq_evals_first_half,
+            &mut self.sp.eq_evals_second_half,
+        );
+
+        // TODO: For root process, _eq_vec does not have to be recomputed
+        let coef = self.sp.eq_evals_at_r_mpi0[MPIToolKit::world_rank()]
+            * _eq_vec(self.r_mpi, &self.r_mpi_var)
+            * self.sp.eq_evals_at_r_simd0[0]
+            * self.sp.simd_var_v_evals[0];
+
         eq_eval_at(
             &self.rx,
-            &C::ChallengeField::one(),
+            &coef,
             eq_evals_at_rx,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
 
-        let coef = self.sp.eq_evals_at_r_simd0[0] * self.sp.simd_var_v_evals[0];
         eq_eval_at(
             &self.r_simd_var,
             &C::ChallengeField::one(),
-            &mut self.sp.eq_evals_at_r_simd1,
+            &mut self.sp.eq_evals_at_r_simd0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
-
-        for i in 0..(1 << self.simd_var_num) {
-            self.sp.eq_evals_at_r_simd0[i] = self.sp.eq_evals_at_r_simd1[i] * coef;
-        }
 
         // TODO-OPTIMIZATION: hg_vals does not have to be simd here
         for g in mul.iter() {

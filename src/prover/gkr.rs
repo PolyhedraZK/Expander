@@ -4,7 +4,8 @@ use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
-    sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, MultiLinearPoly, Transcript,
+    sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, MPIToolKit, MultiLinearPoly,
+    Transcript,
 };
 
 // FIXME
@@ -18,6 +19,7 @@ pub fn gkr_prove<C: GKRConfig>(
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
+    Vec<C::ChallengeField>,
 ) {
     let timer = start_timer!(|| "gkr prove");
     let layer_num = circuit.layers.len();
@@ -25,6 +27,7 @@ pub fn gkr_prove<C: GKRConfig>(
     let mut rz0 = vec![];
     let mut rz1 = vec![];
     let mut r_simd = vec![];
+    let mut r_mpi = vec![];
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
         rz0.push(transcript.challenge_f::<C>());
         rz1.push(C::ChallengeField::zero());
@@ -34,31 +37,55 @@ pub fn gkr_prove<C: GKRConfig>(
         r_simd.push(transcript.challenge_f::<C>());
     }
 
+    for _ in 0..MPIToolKit::world_size() {
+        r_mpi.push(transcript.challenge_f::<C>());
+    }
+
     let mut alpha = C::ChallengeField::one();
     let mut beta = C::ChallengeField::zero();
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
+
     let claimed_v_simd =
         MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(output_vals, &rz0, &mut sp.hg_evals);
-    let claimed_v = MultiLinearPoly::eval_generic::<C::ChallengeField>(
+    let claimed_v_local = MultiLinearPoly::eval_generic::<C::ChallengeField>(
         &claimed_v_simd.unpack(),
         &r_simd,
         &mut sp.eq_evals_at_r_simd0,
     );
 
+    let claimed_v: C::ChallengeField;
+    if MPIToolKit::is_root() {
+        let mut claimed_v_gathering_buffer =
+            vec![C::ChallengeField::zero(); MPIToolKit::world_size()];
+        MPIToolKit::gather_vec(&vec![claimed_v_local], &mut claimed_v_gathering_buffer);
+        claimed_v = MultiLinearPoly::eval_generic(
+            &claimed_v_gathering_buffer,
+            &r_mpi,
+            &mut sp.eq_evals_at_r_mpi0,
+        );
+    } else {
+        MPIToolKit::gather_vec(&vec![claimed_v_local], &mut vec![]);
+        claimed_v = C::ChallengeField::zero();
+    };
+
     for i in (0..layer_num).rev() {
-        (rz0, rz1, r_simd) = sumcheck_prove_gkr_layer(
+        (rz0, rz1, r_simd, r_mpi) = sumcheck_prove_gkr_layer(
             &circuit.layers[i],
             &rz0,
             &rz1,
             &r_simd,
+            &r_mpi,
             &alpha,
             &beta,
             transcript,
             sp,
         );
+
         alpha = transcript.challenge_f::<C>();
         beta = transcript.challenge_f::<C>();
+        MPIToolKit::root_broadcast(&mut alpha);
+        MPIToolKit::root_broadcast(&mut beta);
 
         log::trace!("Layer {} proved with alpha={:?}, beta={:?}", i, alpha, beta);
         log::trace!("rz0.0: {:?}", rz0[0]);
@@ -70,5 +97,5 @@ pub fn gkr_prove<C: GKRConfig>(
     }
 
     end_timer!(timer);
-    (claimed_v, rz0, rz1, r_simd)
+    (claimed_v, rz0, rz1, r_simd, r_mpi)
 }

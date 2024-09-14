@@ -74,6 +74,8 @@ pub struct Config<C: GKRConfig> {
     pub gkr_config: C,
     // Whether to use GKR^2
     pub gkr_scheme: GKRScheme,
+    // mpi size
+    pub mpi_world_size: usize,
 }
 
 impl<C: GKRConfig> Config<C> {
@@ -86,6 +88,7 @@ impl<C: GKRConfig> Config<C> {
             polynomial_commitment_type: PolynomialCommitmentType::Raw,
             gkr_config: C::default(),
             gkr_scheme,
+            mpi_world_size: 1,
         }
     }
 }

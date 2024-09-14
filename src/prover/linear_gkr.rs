@@ -3,8 +3,8 @@
 use ark_std::{end_timer, start_timer};
 
 use crate::{
-    gkr_prove, gkr_square_prove, Circuit, Config, GKRConfig, GKRScheme, GkrScratchpad, Proof,
-    RawCommitment, Transcript,
+    gkr_prove, gkr_square_prove, Circuit, Config, GKRConfig, GKRScheme, GkrScratchpad, MPIToolKit,
+    Proof, RawCommitment, Transcript,
 };
 
 #[cfg(feature = "grinding")]
@@ -76,12 +76,14 @@ impl<C: GKRConfig> Prover<C> {
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
         // PC commit
-        let commitment = RawCommitment::<C>::new(&c.layers[0].input_vals);
+        let commitment = RawCommitment::<C>::mpi_new(&c.layers[0].input_vals);
 
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(&buffer);
+
+        MPIToolKit::transcript_sync_up(&mut transcript);
 
         #[cfg(feature = "grinding")]
         grind::<C>(&mut transcript, &self.config);
@@ -93,11 +95,12 @@ impl<C: GKRConfig> Prover<C> {
         let mut _rx = vec![];
         let mut _ry = vec![];
         let mut _rsimd = vec![];
+        let mut _rmpi = vec![];
 
         if self.config.gkr_scheme == GKRScheme::GkrSquare {
             (_, _rx) = gkr_square_prove(c, &mut self.sp, &mut transcript);
         } else {
-            (claimed_v, _rx, _ry, _rsimd) = gkr_prove(c, &mut self.sp, &mut transcript);
+            (claimed_v, _rx, _ry, _rsimd, _rmpi) = gkr_prove(c, &mut self.sp, &mut transcript);
         }
 
         // open

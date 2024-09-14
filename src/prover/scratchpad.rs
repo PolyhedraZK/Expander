@@ -1,4 +1,4 @@
-use crate::GKRConfig;
+use crate::{GKRConfig, MPIToolKit};
 
 #[derive(Clone, Debug, Default)]
 pub struct GkrScratchpad<C: GKRConfig> {
@@ -8,12 +8,16 @@ pub struct GkrScratchpad<C: GKRConfig> {
     pub(crate) hg_evals: Vec<C::Field>,
     pub(crate) simd_var_v_evals: Vec<C::ChallengeField>,
     pub(crate) simd_var_hg_evals: Vec<C::ChallengeField>,
+    pub(crate) mpi_var_v_evals: Vec<C::ChallengeField>,
+    pub(crate) mpi_var_hg_evals: Vec<C::ChallengeField>,
 
     pub(crate) eq_evals_at_rx: Vec<C::ChallengeField>,
     pub(crate) eq_evals_at_rz0: Vec<C::ChallengeField>,
     pub(crate) eq_evals_at_rz1: Vec<C::ChallengeField>,
     pub(crate) eq_evals_at_r_simd0: Vec<C::ChallengeField>,
     pub(crate) eq_evals_at_r_simd1: Vec<C::ChallengeField>,
+    pub(crate) eq_evals_at_r_mpi0: Vec<C::ChallengeField>,
+    pub(crate) eq_evals_at_r_mpi1: Vec<C::ChallengeField>,
     pub(crate) eq_evals_first_half: Vec<C::ChallengeField>,
     pub(crate) eq_evals_second_half: Vec<C::ChallengeField>,
 
@@ -32,12 +36,16 @@ impl<C: GKRConfig> GkrScratchpad<C> {
             hg_evals: vec![C::Field::default(); max_input_num],
             simd_var_v_evals: vec![C::ChallengeField::default(); C::get_field_pack_size()],
             simd_var_hg_evals: vec![C::ChallengeField::default(); C::get_field_pack_size()],
+            mpi_var_v_evals: vec![C::ChallengeField::default(); MPIToolKit::world_size()],
+            mpi_var_hg_evals: vec![C::ChallengeField::default(); MPIToolKit::world_size()],
 
             eq_evals_at_rx: vec![C::ChallengeField::default(); max_input_num],
             eq_evals_at_rz0: vec![C::ChallengeField::default(); max_output_num],
             eq_evals_at_rz1: vec![C::ChallengeField::default(); max_output_num],
             eq_evals_at_r_simd0: vec![C::ChallengeField::default(); C::get_field_pack_size()],
             eq_evals_at_r_simd1: vec![C::ChallengeField::default(); C::get_field_pack_size()],
+            eq_evals_at_r_mpi0: vec![C::ChallengeField::default(); MPIToolKit::world_size()],
+            eq_evals_at_r_mpi1: vec![C::ChallengeField::default(); MPIToolKit::world_size()],
             eq_evals_first_half: vec![C::ChallengeField::default(); max_output_num],
             eq_evals_second_half: vec![C::ChallengeField::default(); max_output_num],
 

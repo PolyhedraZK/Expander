@@ -1,5 +1,6 @@
 use crate::{
-    CircuitLayer, GKRConfig, GkrScratchpad, SumcheckGkrHelper, SumcheckGkrSquareHelper, Transcript,
+    CircuitLayer, GKRConfig, GkrScratchpad, MPIToolKit, SumcheckGkrHelper, SumcheckGkrSquareHelper,
+    Transcript,
 };
 
 #[inline(always)]
@@ -11,7 +12,9 @@ fn transcript_io<C: GKRConfig>(
     for p in ps {
         transcript.append_challenge_f::<C>(p);
     }
-    transcript.challenge_f::<C>()
+    let mut r = transcript.challenge_f::<C>();
+    MPIToolKit::root_broadcast(&mut r);
+    r
 }
 
 // FIXME
@@ -22,6 +25,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     rz0: &[C::ChallengeField],
     rz1: &[C::ChallengeField],
     r_simd: &[C::ChallengeField],
+    r_mpi: &[C::ChallengeField],
     alpha: &C::ChallengeField,
     beta: &C::ChallengeField,
     transcript: &mut Transcript<C::FiatShamirHashType>,
@@ -30,10 +34,12 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
+    Vec<C::ChallengeField>,
 ) {
-    let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, r_simd, alpha, beta, sp);
+    let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, r_simd, r_mpi, alpha, beta, sp);
 
     helper.prepare_simd();
+    helper.prepare_mpi();
     helper.prepare_x_vals();
 
     for i_var in 0..helper.input_var_num {
@@ -44,9 +50,16 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
 
     helper.prepare_simd_var_vals();
     for i_var in 0..helper.simd_var_num {
-        let evals = helper.poly_evals_at_r_simd_var(i_var, 2);
+        let evals = helper.poly_evals_at_r_simd_var(i_var, 3);
         let r = transcript_io::<C>(&evals, transcript);
         helper.receive_r_simd_var(i_var, r);
+    }
+
+    helper.prepare_mpi_var_vals();
+    for i_var in 0..MPIToolKit::world_size().trailing_zeros() as usize {
+        let evals = helper.poly_evals_at_r_mpi_var(i_var, 3);
+        let r = transcript_io::<C>(&evals, transcript);
+        helper.receive_r_mpi_var(i_var, r);
     }
 
     let vx_claim = helper.vx_claim();
@@ -64,8 +77,9 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     let rx = helper.rx;
     let ry = helper.ry;
     let r_simd = helper.r_simd_var;
+    let r_mpi = helper.r_mpi_var;
 
-    (rx, ry, r_simd)
+    (rx, ry, r_simd, r_mpi)
 }
 
 // FIXME
