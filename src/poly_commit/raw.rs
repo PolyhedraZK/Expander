@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 
 use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
 
-use crate::{GKRConfig, MPIToolKit, MultiLinearPoly, MPI_SIZE};
+use crate::{GKRConfig, MPIToolKit, MultiLinearPoly};
 
 #[derive(Default)]
 pub struct RawOpening {}

@@ -3,9 +3,8 @@ use mpi::{
     topology::{Process, SimpleCommunicator},
     traits::*,
 };
-use mpi_derive;
 
-use crate::{FiatShamirHash, GKRConfig, RawCommitment, Transcript};
+use crate::{FiatShamirHash, Transcript};
 
 pub static mut MPI_UNIVERSE: Option<mpi::environment::Universe> = None;
 pub static mut MPI_WORLD: Option<SimpleCommunicator> = None;
@@ -49,20 +48,18 @@ impl MPIToolKit {
             debug_assert!(global_vec.len() >= local_vec.len() * (MPI_SIZE as usize));
             if MPI_SIZE == 1 {
                 *global_vec = local_vec.clone()
+            } else if MPI_RANK == MPI_ROOT_RANK {
+                let local_vec_u8 = Self::vec_to_u8_bytes(local_vec);
+                let mut global_vec_u8 = Self::vec_to_u8_bytes(global_vec);
+                MPI_ROOT_PROCESS
+                    .unwrap()
+                    .gather_into_root(&local_vec_u8, &mut global_vec_u8);
+                local_vec_u8.leak(); // discard control of the memory
+                global_vec_u8.leak();
             } else {
-                if MPI_RANK == MPI_ROOT_RANK {
-                    let local_vec_u8 = Self::vec_to_u8_bytes(local_vec);
-                    let mut global_vec_u8 = Self::vec_to_u8_bytes(global_vec);
-                    MPI_ROOT_PROCESS
-                        .unwrap()
-                        .gather_into_root(&local_vec_u8, &mut global_vec_u8);
-                    local_vec_u8.leak(); // discard control of the memory
-                    global_vec_u8.leak();
-                } else {
-                    let local_vec_u8 = Self::vec_to_u8_bytes(local_vec);
-                    MPI_ROOT_PROCESS.unwrap().gather_into(&local_vec_u8);
-                    local_vec_u8.leak();
-                }
+                let local_vec_u8 = Self::vec_to_u8_bytes(local_vec);
+                MPI_ROOT_PROCESS.unwrap().gather_into(&local_vec_u8);
+                local_vec_u8.leak();
             }
         }
     }
@@ -71,7 +68,6 @@ impl MPIToolKit {
     pub fn transcript_sync_up<H: FiatShamirHash>(transcript: &mut Transcript<H>) {
         unsafe {
             if MPI_SIZE == 1 {
-                return;
             } else {
                 transcript.hash_to_digest();
                 MPI_ROOT_PROCESS
@@ -85,7 +81,6 @@ impl MPIToolKit {
     pub fn root_broadcast<F: Field>(f: &mut F) {
         unsafe {
             if MPI_SIZE == 1 {
-                return;
             } else {
                 let mut vec_u8 = Self::elem_to_u8_bytes(&f, F::SIZE);
                 MPI_ROOT_PROCESS.unwrap().broadcast_into(&mut vec_u8);
@@ -99,20 +94,18 @@ impl MPIToolKit {
         unsafe {
             if MPI_SIZE == 1 {
                 local_vec.clone()
-            } else {
-                if MPI_RANK == MPI_ROOT_RANK {
-                    let mut global_vec = vec![F::ZERO; local_vec.len() * (MPI_SIZE as usize)];
-                    Self::gather_vec(local_vec, &mut global_vec);
-                    for i in 0..local_vec.len() {
-                        for j in 1..(MPI_SIZE as usize) {
-                            global_vec[i] = global_vec[i] + global_vec[j * local_vec.len() + i];
-                        }
+            } else if MPI_RANK == MPI_ROOT_RANK {
+                let mut global_vec = vec![F::ZERO; local_vec.len() * (MPI_SIZE as usize)];
+                Self::gather_vec(local_vec, &mut global_vec);
+                for i in 0..local_vec.len() {
+                    for j in 1..(MPI_SIZE as usize) {
+                        global_vec[i] = global_vec[i] + global_vec[j * local_vec.len() + i];
                     }
-                    global_vec
-                } else {
-                    Self::gather_vec(local_vec, &mut vec![]);
-                    vec![]
                 }
+                global_vec
+            } else {
+                Self::gather_vec(local_vec, &mut vec![]);
+                vec![]
             }
         }
     }
