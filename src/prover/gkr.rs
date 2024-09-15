@@ -54,19 +54,18 @@ pub fn gkr_prove<C: GKRConfig>(
         &mut sp.eq_evals_at_r_simd0,
     );
 
-    let claimed_v: C::ChallengeField;
-    if MPIToolKit::is_root() {
+    let claimed_v = if MPIToolKit::is_root() {
         let mut claimed_v_gathering_buffer =
             vec![C::ChallengeField::zero(); MPIToolKit::world_size()];
         MPIToolKit::gather_vec(&vec![claimed_v_local], &mut claimed_v_gathering_buffer);
-        claimed_v = MultiLinearPoly::eval_generic(
+        MultiLinearPoly::eval_generic(
             &claimed_v_gathering_buffer,
             &r_mpi,
             &mut sp.eq_evals_at_r_mpi0,
-        );
+        )
     } else {
         MPIToolKit::gather_vec(&vec![claimed_v_local], &mut vec![]);
-        claimed_v = C::ChallengeField::zero();
+        C::ChallengeField::zero()
     };
 
     for i in (0..layer_num).rev() {

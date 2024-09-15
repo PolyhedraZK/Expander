@@ -108,6 +108,7 @@ impl<C: GKRConfig> VerifierScratchPad<C> {
 pub struct GKRVerifierHelper {}
 
 impl GKRVerifierHelper {
+    #[allow(clippy::too_many_arguments)]
     #[inline(always)]
     pub fn prepare_layer<C: GKRConfig>(
         layer: &CircuitLayer<C>,

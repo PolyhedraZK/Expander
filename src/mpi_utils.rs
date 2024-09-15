@@ -96,7 +96,7 @@ impl MPIToolKit {
     }
 
     /// Root process broadcase a value f into all the processes
-    pub fn root_broadcast<F: Field>(f: &F) {
+    pub fn root_broadcast<F: Field>(f: &mut F) {
         unsafe {
             if MPI_SIZE == 1 {
             } else {
@@ -107,7 +107,7 @@ impl MPIToolKit {
         }
     }
 
-    ///
+    /// sum up all local values
     pub fn sum_vec<F: Field>(local_vec: &Vec<F>) -> Vec<F> {
         unsafe {
             if MPI_SIZE == 1 {
@@ -129,8 +129,8 @@ impl MPIToolKit {
         }
     }
 
-    ///
-    pub fn coef_combine_vec<F: Field>(local_vec: &Vec<F>, coef: &Vec<F>) -> Vec<F> {
+    /// coef has a length of mpi_world_size
+    pub fn coef_combine_vec<F: Field>(local_vec: &Vec<F>, coef: &[F]) -> Vec<F> {
         unsafe {
             if MPI_SIZE == 1 {
                 // Warning: literally, it should be coef[0] * local_vec
