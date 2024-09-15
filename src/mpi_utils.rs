@@ -135,7 +135,7 @@ impl MPIToolKit {
                 Self::gather_vec(local_vec, &mut global_vec);
                 for i in 0..local_vec.len() {
                     for j in 0..(MPI_SIZE as usize) {
-                        ret[i] = ret[i] + global_vec[j * local_vec.len() + i] * coef[j];
+                        ret[i] += global_vec[j * local_vec.len() + i] * coef[j];
                     }
                 }
                 ret

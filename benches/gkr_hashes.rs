@@ -12,7 +12,7 @@ fn prover_run<C: GKRConfig>(config: &Config<C>, circuit: &mut Circuit<C>) {
 }
 
 fn benchmark_setup<C: GKRConfig>(scheme: GKRScheme, circuit_file: &str) -> (Config<C>, Circuit<C>) {
-    let config = Config::<C>::new(scheme);
+    let config = Config::<C>::new(scheme, 1);
     let mut circuit = Circuit::<C>::load_circuit(circuit_file);
     circuit.set_random_input_for_test();
     (config, circuit)

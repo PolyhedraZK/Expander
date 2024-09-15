@@ -1,6 +1,6 @@
 use arith::{ExtensionField, Field, SimdField};
 
-use crate::{root_println, CircuitLayer, FieldType, GKRConfig, GkrScratchpad, MPIToolKit};
+use crate::{CircuitLayer, FieldType, GKRConfig, GkrScratchpad, MPIToolKit};
 
 #[inline(always)]
 fn _eq<F: Field>(x: &F, y: &F) -> F {

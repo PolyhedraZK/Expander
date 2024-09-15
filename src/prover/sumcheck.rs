@@ -1,5 +1,5 @@
 use crate::{
-    root_println, CircuitLayer, GKRConfig, GkrScratchpad, MPIToolKit, SumcheckGkrHelper,
+    CircuitLayer, GKRConfig, GkrScratchpad, MPIToolKit, SumcheckGkrHelper,
     SumcheckGkrSquareHelper, Transcript,
 };
 
