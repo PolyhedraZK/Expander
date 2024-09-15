@@ -7,8 +7,7 @@ use std::{
 
 use arith::{Field, FieldSerde};
 use expander_rs::{
-    BN254ConfigSha2, Circuit, Config, FieldType, GKRConfig, GKRScheme, M31ExtConfigSha2, Proof,
-    Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
+    mpi_init, BN254ConfigSha2, Circuit, Config, FieldType, GKRConfig, GKRScheme, M31ExtConfigSha2, MPIToolKit, Proof, Prover, Verifier, SENTINEL_BN254, SENTINEL_M31
 };
 use log::{debug, info};
 use warp::{http::StatusCode, reply, Filter};
@@ -166,6 +165,9 @@ async fn main() {
     // expander-exec verify <input:circuit_file> <input:witness_file> <input:proof>
     // expander-exec serve <input:circuit_file> <input:ip> <input:port>
     env_logger::init();
+    mpi_init();
+    let mpi_world_size = MPIToolKit::world_size();
+
     let args = std::env::args().collect::<Vec<String>>();
     if args.len() < 4 {
         println!(
@@ -186,7 +188,7 @@ async fn main() {
             run_command::<M31ExtConfigSha2>(
                 command,
                 circuit_file,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_world_size),
                 &args,
             )
             .await;
@@ -195,7 +197,7 @@ async fn main() {
             run_command::<BN254ConfigSha2>(
                 command,
                 circuit_file,
-                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla),
+                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_world_size),
                 &args,
             )
             .await;

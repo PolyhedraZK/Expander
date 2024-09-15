@@ -49,14 +49,18 @@ impl<C: GKRConfig> RawCommitment<C> {
     /// Should also work if mpi is not initialized
     #[inline]
     pub fn mpi_new(local_poly_vals: &Vec<C::SimdCircuitField>) -> Self {
-        let mut buffer = if MPIToolKit::is_root() {
-            vec![C::SimdCircuitField::zero(); local_poly_vals.len() * MPIToolKit::world_size()]
+        if MPIToolKit::world_size() == 1 {
+            Self::new(local_poly_vals)
         } else {
-            vec![]
-        };
-
-        MPIToolKit::gather_vec(local_poly_vals, &mut buffer);
-        RawCommitment { poly_vals: buffer }
+            let mut buffer = if MPIToolKit::is_root() {
+                vec![C::SimdCircuitField::zero(); local_poly_vals.len() * MPIToolKit::world_size()]
+            } else {
+                vec![]
+            };
+    
+            MPIToolKit::gather_vec(local_poly_vals, &mut buffer);
+            Self { poly_vals: buffer }
+        }
     }
 
     #[inline(always)]

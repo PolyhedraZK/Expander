@@ -24,6 +24,17 @@ pub fn mpi_init() {
         MPI_ROOT_PROCESS = Some(MPI_WORLD.as_ref().unwrap().process_at_rank(MPI_ROOT_RANK));
     }
 }
+
+#[macro_export]
+macro_rules! root_println {
+    () => {println!();};
+    ($($arg:tt)*) => {
+        if MPIToolKit::is_root() {
+            println!($($arg)*);
+        }
+    };
+}
+
 pub struct MPIToolKit {}
 
 /// MPI toolkit:
@@ -78,11 +89,11 @@ impl MPIToolKit {
     }
 
     /// Root process broadcase a value f into all the processes
-    pub fn root_broadcast<F: Field>(f: &mut F) {
+    pub fn root_broadcast<F: Field>(f: &F) {
         unsafe {
             if MPI_SIZE == 1 {
             } else {
-                let mut vec_u8 = Self::elem_to_u8_bytes(&f, F::SIZE);
+                let mut vec_u8 = Self::elem_to_u8_bytes(f, F::SIZE);
                 MPI_ROOT_PROCESS.unwrap().broadcast_into(&mut vec_u8);
                 vec_u8.leak();
             }
@@ -102,7 +113,33 @@ impl MPIToolKit {
                         global_vec[i] = global_vec[i] + global_vec[j * local_vec.len() + i];
                     }
                 }
+                global_vec.truncate(local_vec.len());
                 global_vec
+            } else {
+                Self::gather_vec(local_vec, &mut vec![]);
+                vec![]
+            }
+        }
+    }
+
+
+    /// 
+    pub fn coef_combine_vec<F: Field>(local_vec: &Vec<F>, coef: &Vec<F>) -> Vec<F> {
+        unsafe {
+            if MPI_SIZE == 1 {
+                // Warning: literally, it should be coef[0] * local_vec
+                // but coef[0] is always one in our use case of MPI_SIZE = 1
+                local_vec.clone()
+            } else if MPI_RANK == MPI_ROOT_RANK {
+                let mut global_vec = vec![F::ZERO; local_vec.len() * (MPI_SIZE as usize)];
+                let mut ret = vec![F::ZERO; local_vec.len()];
+                Self::gather_vec(local_vec, &mut global_vec);
+                for i in 0..local_vec.len() {
+                    for j in 0..(MPI_SIZE as usize) {
+                        ret[i] = ret[i] + global_vec[j * local_vec.len() + i] * coef[j];
+                    }
+                }
+                ret
             } else {
                 Self::gather_vec(local_vec, &mut vec![]);
                 vec![]

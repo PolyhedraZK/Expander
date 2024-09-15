@@ -82,18 +82,19 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
 
     for _i_var in 0..var_num {
         verified &= verify_sumcheck_step::<C>(proof, 2, transcript, &mut sum, &mut rx, sp);
-        // println!("x {} var, verified? {}", _i_var, verified);
+        println!("x {} var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_rx(&rx, sp);
 
     for _i_var in 0..simd_var_num {
         verified &= verify_sumcheck_step::<C>(proof, 3, transcript, &mut sum, &mut r_simd_xy, sp);
-        // println!("{} simd var, verified? {}", _i_var, verified);
+        println!("{} simd var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_r_simd_xy(&r_simd_xy, sp);
 
-    for _i_var in 0..config.mpi_world_size {
+    for _i_var in 0..config.mpi_world_size.trailing_zeros() {
         verified &= verify_sumcheck_step::<C>(proof, 3, transcript, &mut sum, &mut r_mpi_xy, sp);
+        println!("{} mpi var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_r_mpi_xy(&r_mpi_xy, sp);
 
@@ -101,9 +102,13 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     sum -= vx_claim * GKRVerifierHelper::eval_add(&layer.add, sp);
     transcript.append_challenge_f::<C>(&vx_claim);
 
+    // println!("Verifier rx, rsimd, rmpi {:?}, {:?}, {:?}", rx[0], r_simd_xy[0], r_mpi_xy[0]);
+    // println!("Verifier vx claim {:?}", vx_claim);
+    // println!("sum should be zero here {:?}", sum);
+
     for _i_var in 0..var_num {
         verified &= verify_sumcheck_step::<C>(proof, 2, transcript, &mut sum, &mut ry, sp);
-        // println!("y {} var, verified? {}", _i_var, verified);
+        println!("y {} var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_ry(&ry, sp);
 
@@ -148,7 +153,7 @@ pub fn gkr_verify<C: GKRConfig>(
         r_simd.push(transcript.challenge_f::<C>());
     }
 
-    for _ in 0..config.mpi_world_size.trailing_ones() {
+    for _ in 0..config.mpi_world_size.trailing_zeros() {
         r_mpi.push(transcript.challenge_f::<C>());
     }
 

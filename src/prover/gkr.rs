@@ -37,7 +37,7 @@ pub fn gkr_prove<C: GKRConfig>(
         r_simd.push(transcript.challenge_f::<C>());
     }
 
-    for _ in 0..MPIToolKit::world_size() {
+    for _ in 0..MPIToolKit::world_size().trailing_zeros() {
         r_mpi.push(transcript.challenge_f::<C>());
     }
 

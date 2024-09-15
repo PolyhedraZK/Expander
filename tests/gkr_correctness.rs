@@ -1,4 +1,4 @@
-use expander_rs::{utils::*, FieldType};
+use expander_rs::{mpi_init, root_println, MPIToolKit, utils::*, FieldType};
 use expander_rs::{
     BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GF2ExtConfigKeccak,
     GF2ExtConfigSha2, GKRConfig, GKRScheme, GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2,
@@ -51,50 +51,54 @@ fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
 
 #[test]
 fn test_gkr_correctness() {
+    mpi_init();
+    let mpi_world_size = MPIToolKit::world_size();
+
     test_gkr_correctness_helper::<GF2ExtConfigSha2>(&Config::<GF2ExtConfigSha2>::new(
-        GKRScheme::Vanilla,
+        GKRScheme::Vanilla, mpi_world_size, 
     ));
     test_gkr_correctness_helper::<GF2ExtConfigKeccak>(&Config::<GF2ExtConfigKeccak>::new(
-        GKRScheme::Vanilla,
+        GKRScheme::Vanilla, mpi_world_size, 
     ));
     test_gkr_correctness_helper::<M31ExtConfigSha2>(&Config::<M31ExtConfigSha2>::new(
-        GKRScheme::Vanilla,
+        GKRScheme::Vanilla, mpi_world_size, 
     ));
     test_gkr_correctness_helper::<M31ExtConfigKeccak>(&Config::<M31ExtConfigKeccak>::new(
-        GKRScheme::Vanilla,
+        GKRScheme::Vanilla, mpi_world_size, 
     ));
     test_gkr_correctness_helper::<BN254ConfigSha2>(&Config::<BN254ConfigSha2>::new(
-        GKRScheme::Vanilla,
+        GKRScheme::Vanilla, mpi_world_size, 
     ));
     test_gkr_correctness_helper::<BN254ConfigKeccak>(&Config::<BN254ConfigKeccak>::new(
-        GKRScheme::Vanilla,
+        GKRScheme::Vanilla, mpi_world_size, 
     ));
+
+    
 }
 
 #[allow(unreachable_patterns)]
 fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
-    println!("============== start ===============");
-    println!("Field Type: {:?}", C::FIELD_TYPE);
+    root_println!("============== start ===============");
+    root_println!("Field Type: {:?}", C::FIELD_TYPE);
     let circuit_copy_size: usize = match C::FIELD_TYPE {
         FieldType::GF2 => 1,
         FieldType::M31 => 2,
         FieldType::BN254 => 2,
         _ => unreachable!(),
     };
-    println!(
+    root_println!(
         "Proving {} keccak instances at once.",
         circuit_copy_size * C::get_field_pack_size()
     );
 
-    println!("Config created.");
+    root_println!("Config created.");
     let circuit_path = match C::FIELD_TYPE {
         FieldType::GF2 => KECCAK_GF2_CIRCUIT,
         _ => KECCAK_M31_CIRCUIT, // Use this for both M31 and BN254-Fr
     };
 
     let mut circuit = Circuit::<C>::load_circuit(circuit_path);
-
-    println!("Circuit loaded.");
+    root_println!("Circuit loaded.");
 
     circuit.set_random_input_for_test();
 
@@ -103,11 +107,11 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
 
     let proving_start = Instant::now();
     let (claimed_v, proof) = prover.prove(&mut circuit);
-    println!("Proving time: {} μs", proving_start.elapsed().as_micros());
+    root_println!("Proving time: {} μs", proving_start.elapsed().as_micros());
 
-    println!("Proof generated. Size: {} bytes", proof.bytes.len());
+    root_println!("Proof generated. Size: {} bytes", proof.bytes.len());
     // first and last 16 proof u8
-    println!("Proof bytes: ");
+    root_println!("Proof bytes: ");
     proof.bytes.iter().take(16).for_each(|b| print!("{} ", b));
     print!("... ");
     proof
@@ -117,38 +121,40 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
         .take(16)
         .rev()
         .for_each(|b| print!("{} ", b));
-    println!();
+    root_println!();
 
-    println!("Proof hash: ");
+    root_println!("Proof hash: ");
     sha2::Sha256::digest(&proof.bytes)
         .iter()
         .for_each(|b| print!("{} ", b));
-    println!();
+    root_println!();
 
     // Verify
-    let verifier = Verifier::new(config);
-    println!("Verifier created.");
-    let verification_start = Instant::now();
-    assert!(verifier.verify(&mut circuit, &claimed_v, &proof),);
-    println!(
-        "Verification time: {} μs",
-        verification_start.elapsed().as_micros()
-    );
-    println!("Correct proof verified.");
-    let mut bad_proof = proof.clone();
-    let rng = &mut rand::thread_rng();
-    let random_idx = rng.gen_range(0..bad_proof.bytes.len());
-    let random_change = rng.gen_range(1..256) as u8;
-    bad_proof.bytes[random_idx] ^= random_change;
-
-    // Catch the panic and treat it as returning `false`
-    let result = panic::catch_unwind(AssertUnwindSafe(|| {
-        verifier.verify(&mut circuit, &claimed_v, &bad_proof)
-    }));
-
-    let final_result = result.unwrap_or_default();
-
-    assert!(!final_result,);
-    println!("Bad proof rejected.");
-    println!("============== end ===============");
+    if MPIToolKit::is_root() {
+        let verifier = Verifier::new(config);
+        println!("Verifier created.");
+        let verification_start = Instant::now();
+        assert!(verifier.verify(&mut circuit, &claimed_v, &proof),);
+        println!(
+            "Verification time: {} μs",
+            verification_start.elapsed().as_micros()
+        );
+        println!("Correct proof verified.");
+        let mut bad_proof = proof.clone();
+        let rng = &mut rand::thread_rng();
+        let random_idx = rng.gen_range(0..bad_proof.bytes.len());
+        let random_change = rng.gen_range(1..256) as u8;
+        bad_proof.bytes[random_idx] ^= random_change;
+    
+        // Catch the panic and treat it as returning `false`
+        let result = panic::catch_unwind(AssertUnwindSafe(|| {
+            verifier.verify(&mut circuit, &claimed_v, &bad_proof)
+        }));
+    
+        let final_result = result.unwrap_or_default();
+    
+        assert!(!final_result,);
+        println!("Bad proof rejected.");
+        println!("============== end ===============");
+    }
 }

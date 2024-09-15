@@ -1,6 +1,6 @@
 use arith::{ExtensionField, Field, SimdField};
 
-use crate::{CircuitLayer, FieldType, GKRConfig, GkrScratchpad, MPIToolKit};
+use crate::{root_println, CircuitLayer, FieldType, GKRConfig, GkrScratchpad, MPIToolKit};
 
 #[inline(always)]
 fn _eq<F: Field>(x: &F, y: &F) -> F {
@@ -216,7 +216,7 @@ impl SumcheckMultilinearProdSimdVarHelper {
         bk_f: &mut [C::ChallengeField],
         bk_hg: &mut [C::ChallengeField],
     ) -> [C::ChallengeField; 4] {
-        assert_eq!(degree, 2);
+        debug_assert_eq!(degree, 3);
         let mut p0 = C::ChallengeField::zero();
         let mut p1 = C::ChallengeField::zero();
         let mut p2 = C::ChallengeField::zero();
@@ -313,6 +313,7 @@ pub(crate) struct SumcheckGkrHelper<'a, C: GKRConfig> {
 
     xy_helper: SumcheckMultilinearProdHelper,
     simd_var_helper: SumcheckMultilinearProdSimdVarHelper,
+    mpi_var_helper: SumcheckMultilinearProdSimdVarHelper,
 }
 
 /// internal helper functions
@@ -384,6 +385,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
             xy_helper: SumcheckMultilinearProdHelper::new(layer.input_var_num),
             simd_var_helper: SumcheckMultilinearProdSimdVarHelper::new(simd_var_num),
+            mpi_var_helper: SumcheckMultilinearProdSimdVarHelper::new(MPIToolKit::world_size().trailing_zeros() as usize),
         }
     }
 
@@ -393,7 +395,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         degree: usize,
     ) -> [C::ChallengeField; 3] {
         debug_assert!(var_idx < self.input_var_num);
-        let local_evals_simd = self.xy_helper.poly_eval_at::<C>(
+        let local_vals_simd = self.xy_helper.poly_eval_at::<C>(
             var_idx,
             degree,
             &mut self.sp.v_evals,
@@ -403,13 +405,19 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         );
 
         // SIMD
-        let local_evals = local_evals_simd
+        let local_vals = local_vals_simd
             .iter()
             .map(|p| Self::unpack_and_combine(p, &self.sp.eq_evals_at_r_simd0))
             .collect::<Vec<C::ChallengeField>>();
 
         // MPI
-        MPIToolKit::sum_vec(&local_evals).try_into().unwrap()
+        let global_vals = MPIToolKit::coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0);
+        if MPIToolKit::is_root() {
+            global_vals.try_into().unwrap()
+        }
+        else {
+            [C::ChallengeField::ZERO; 3]
+        }
     }
 
     pub(crate) fn poly_evals_at_r_simd_var(
@@ -425,9 +433,13 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             &mut self.sp.simd_var_v_evals,
             &mut self.sp.simd_var_hg_evals,
         );
-        MPIToolKit::sum_vec(&local_vals.to_vec())
-            .try_into()
-            .unwrap()
+        let global_vals = MPIToolKit::coef_combine_vec(&local_vals.to_vec(), &self.sp.eq_evals_at_r_mpi0);
+        if MPIToolKit::is_root() {
+            global_vals.try_into().unwrap()
+        }
+        else {
+            [C::ChallengeField::ZERO; 4]
+        }
     }
 
     pub(crate) fn poly_evals_at_r_mpi_var(
@@ -436,7 +448,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         degree: usize,
     ) -> [C::ChallengeField; 4] {
         debug_assert!(var_idx < MPIToolKit::world_size().trailing_zeros() as usize);
-        self.simd_var_helper.poly_eval_at::<C>(
+        self.mpi_var_helper.poly_eval_at::<C>(
             var_idx,
             degree,
             &mut self.sp.eq_evals_at_r_mpi0,
@@ -471,7 +483,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     }
 
     pub(crate) fn receive_r_mpi_var(&mut self, var_idx: usize, r: C::ChallengeField) {
-        self.simd_var_helper.receive_challenge::<C>(
+        self.mpi_var_helper.receive_challenge::<C>(
             var_idx,
             r,
             &mut self.sp.eq_evals_at_r_mpi0,
@@ -496,7 +508,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     #[inline(always)]
     pub(crate) fn vy_claim(&self) -> C::ChallengeField {
         let vy_local = Self::unpack_and_combine(&self.sp.v_evals[0], &self.sp.eq_evals_at_r_simd0);
-        let summation = MPIToolKit::sum_vec(&vec![vy_local]);
+        let summation = MPIToolKit::coef_combine_vec(&vec![vy_local], &self.sp.eq_evals_at_r_mpi0);
         if MPIToolKit::is_root() {
             summation[0]
         } else {
@@ -542,11 +554,9 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, vals.len());
         }
 
-        let eq_evals_at_world_rank = self.sp.eq_evals_at_r_mpi0[MPIToolKit::world_rank()];
-
         eq_eval_at(
             self.rz0,
-            &(self.alpha * eq_evals_at_world_rank),
+            &self.alpha,
             eq_evals_at_rz0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -554,7 +564,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
         eq_eval_at(
             self.rz1,
-            &(self.beta * eq_evals_at_world_rank),
+            &self.beta,
             eq_evals_at_rz1,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -591,12 +601,15 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             &mut self.sp.mpi_var_v_evals,
         );
         MPIToolKit::gather_vec(
-            &vec![self.sp.simd_var_hg_evals[0]],
+            &vec![self.sp.simd_var_hg_evals[0] * self.sp.eq_evals_at_r_simd0[0]],
             &mut self.sp.mpi_var_hg_evals,
         );
     }
 
     pub(crate) fn prepare_y_vals(&mut self) {
+        let mut v_rx_rsimd_rw = self.sp.mpi_var_v_evals[0];
+        MPIToolKit::root_broadcast(&mut v_rx_rsimd_rw);
+
         let mul = &self.layer.mul;
         let eq_evals_at_rz0 = &self.sp.eq_evals_at_rz0;
         let eq_evals_at_rx = &mut self.sp.eq_evals_at_rx;
@@ -612,7 +625,6 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, fill_len);
         }
 
-        // TODO: Compute eq(r_mpi_var, self_rank) only
         eq_eval_at(
             &self.r_mpi_var,
             &C::ChallengeField::one(),
@@ -622,10 +634,9 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         );
 
         // TODO: For root process, _eq_vec does not have to be recomputed
-        let coef = self.sp.eq_evals_at_r_mpi0[MPIToolKit::world_rank()]
-            * _eq_vec(self.r_mpi, &self.r_mpi_var)
+        let coef = _eq_vec(self.r_mpi, &self.r_mpi_var)
             * self.sp.eq_evals_at_r_simd0[0]
-            * self.sp.simd_var_v_evals[0];
+            * v_rx_rsimd_rw;
 
         eq_eval_at(
             &self.rx,

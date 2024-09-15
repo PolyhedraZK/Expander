@@ -79,7 +79,7 @@ pub struct Config<C: GKRConfig> {
 }
 
 impl<C: GKRConfig> Config<C> {
-    pub fn new(gkr_scheme: GKRScheme) -> Self {
+    pub fn new(gkr_scheme: GKRScheme, mpi_world_size: usize) -> Self {
         Config {
             field_size: C::ChallengeField::FIELD_SIZE,
             security_bits: 100,
@@ -88,7 +88,7 @@ impl<C: GKRConfig> Config<C> {
             polynomial_commitment_type: PolynomialCommitmentType::Raw,
             gkr_config: C::default(),
             gkr_scheme,
-            mpi_world_size: 1,
+            mpi_world_size,
         }
     }
 }

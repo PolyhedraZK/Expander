@@ -1,14 +1,15 @@
 use arith::{Field, FieldSerde, FieldSerdeError};
 use ark_std::test_rng;
+use rand::RngCore;
 use std::{
     cmp::max,
     collections::HashMap,
     fs,
-    io::{Cursor, Read},
+    io::{Cursor, Read}, mem::transmute,
 };
 use thiserror::Error;
 
-use crate::{GKRConfig, Transcript};
+use crate::{GKRConfig, MPIToolKit, Transcript};
 
 #[derive(Debug, Clone)]
 pub struct Gate<C: GKRConfig, const INPUT_NUM: usize> {
