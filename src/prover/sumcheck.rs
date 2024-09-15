@@ -1,6 +1,6 @@
 use crate::{
-    CircuitLayer, GKRConfig, GkrScratchpad, MPIToolKit, SumcheckGkrHelper,
-    SumcheckGkrSquareHelper, Transcript,
+    CircuitLayer, GKRConfig, GkrScratchpad, MPIToolKit, SumcheckGkrHelper, SumcheckGkrSquareHelper,
+    Transcript,
 };
 
 #[inline(always)]

@@ -5,7 +5,7 @@ use std::{
 
 use clap::Parser;
 use expander_rs::{
-    mpi_init,
+    mpi_finalize, mpi_init,
     utils::{KECCAK_GF2_CIRCUIT, KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT},
     MPIToolKit,
 };
@@ -78,6 +78,8 @@ fn main() {
         },
         _ => unreachable!(),
     };
+
+    mpi_finalize();
 }
 
 fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {

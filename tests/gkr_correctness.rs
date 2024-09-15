@@ -1,4 +1,4 @@
-use expander_rs::{mpi_init, root_println, utils::*, FieldType, MPIToolKit};
+use expander_rs::{mpi_finalize, mpi_init, root_println, utils::*, FieldType, MPIToolKit};
 use expander_rs::{
     BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GF2ExtConfigKeccak,
     GF2ExtConfigSha2, GKRConfig, GKRScheme, GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2,
@@ -78,6 +78,8 @@ fn test_gkr_correctness() {
         GKRScheme::Vanilla,
         mpi_world_size,
     ));
+
+    mpi_finalize();
 }
 
 #[allow(unreachable_patterns)]

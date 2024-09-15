@@ -7,8 +7,8 @@ use std::{
 
 use arith::{Field, FieldSerde};
 use expander_rs::{
-    mpi_init, BN254ConfigSha2, Circuit, Config, FieldType, GKRConfig, GKRScheme, M31ExtConfigSha2,
-    MPIToolKit, Proof, Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
+    mpi_finalize, mpi_init, BN254ConfigSha2, Circuit, Config, FieldType, GKRConfig, GKRScheme,
+    M31ExtConfigSha2, MPIToolKit, Proof, Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
 };
 use log::{debug, info};
 use warp::{http::StatusCode, reply, Filter};
@@ -205,4 +205,6 @@ async fn main() {
         }
         _ => unreachable!(),
     }
+
+    mpi_finalize();
 }

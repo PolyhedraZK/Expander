@@ -1,5 +1,6 @@
 use arith::Field;
 use mpi::{
+    ffi,
     topology::{Process, SimpleCommunicator},
     traits::*,
 };
@@ -22,6 +23,12 @@ pub fn mpi_init() {
         MPI_RANK = MPI_WORLD.as_ref().unwrap().rank();
 
         MPI_ROOT_PROCESS = Some(MPI_WORLD.as_ref().unwrap().process_at_rank(MPI_ROOT_RANK));
+    }
+}
+
+pub fn mpi_finalize() {
+    unsafe {
+        ffi::MPI_Finalize();
     }
 }
 
