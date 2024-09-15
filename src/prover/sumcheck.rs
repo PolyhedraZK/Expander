@@ -1,5 +1,6 @@
 use crate::{
-    root_println, CircuitLayer, GKRConfig, GkrScratchpad, MPIToolKit, SumcheckGkrHelper, SumcheckGkrSquareHelper, Transcript
+    root_println, CircuitLayer, GKRConfig, GkrScratchpad, MPIToolKit, SumcheckGkrHelper,
+    SumcheckGkrSquareHelper, Transcript,
 };
 
 #[inline(always)]
@@ -63,9 +64,6 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
 
     let vx_claim = helper.vx_claim();
     transcript.append_challenge_f::<C>(&vx_claim);
-
-    // root_println!("Prover rx, rsimd, rmpi {:?}, {:?}, {:?}", helper.rx[0], helper.r_simd_var[0], helper.r_mpi_var[0]);
-    // root_println!("Prover vx {:?}", vx_claim);
 
     helper.prepare_y_vals();
     for i_var in 0..helper.input_var_num {

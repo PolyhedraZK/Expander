@@ -122,8 +122,7 @@ impl MPIToolKit {
         }
     }
 
-
-    /// 
+    ///
     pub fn coef_combine_vec<F: Field>(local_vec: &Vec<F>, coef: &Vec<F>) -> Vec<F> {
         unsafe {
             if MPI_SIZE == 1 {

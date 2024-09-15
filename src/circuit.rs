@@ -5,7 +5,8 @@ use std::{
     cmp::max,
     collections::HashMap,
     fs,
-    io::{Cursor, Read}, mem::transmute,
+    io::{Cursor, Read},
+    mem::transmute,
 };
 use thiserror::Error;
 

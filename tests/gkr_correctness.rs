@@ -1,4 +1,4 @@
-use expander_rs::{mpi_init, root_println, MPIToolKit, utils::*, FieldType};
+use expander_rs::{mpi_init, root_println, utils::*, FieldType, MPIToolKit};
 use expander_rs::{
     BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GF2ExtConfigKeccak,
     GF2ExtConfigSha2, GKRConfig, GKRScheme, GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2,
@@ -55,25 +55,29 @@ fn test_gkr_correctness() {
     let mpi_world_size = MPIToolKit::world_size();
 
     test_gkr_correctness_helper::<GF2ExtConfigSha2>(&Config::<GF2ExtConfigSha2>::new(
-        GKRScheme::Vanilla, mpi_world_size, 
+        GKRScheme::Vanilla,
+        mpi_world_size,
     ));
     test_gkr_correctness_helper::<GF2ExtConfigKeccak>(&Config::<GF2ExtConfigKeccak>::new(
-        GKRScheme::Vanilla, mpi_world_size, 
+        GKRScheme::Vanilla,
+        mpi_world_size,
     ));
     test_gkr_correctness_helper::<M31ExtConfigSha2>(&Config::<M31ExtConfigSha2>::new(
-        GKRScheme::Vanilla, mpi_world_size, 
+        GKRScheme::Vanilla,
+        mpi_world_size,
     ));
     test_gkr_correctness_helper::<M31ExtConfigKeccak>(&Config::<M31ExtConfigKeccak>::new(
-        GKRScheme::Vanilla, mpi_world_size, 
+        GKRScheme::Vanilla,
+        mpi_world_size,
     ));
     test_gkr_correctness_helper::<BN254ConfigSha2>(&Config::<BN254ConfigSha2>::new(
-        GKRScheme::Vanilla, mpi_world_size, 
+        GKRScheme::Vanilla,
+        mpi_world_size,
     ));
     test_gkr_correctness_helper::<BN254ConfigKeccak>(&Config::<BN254ConfigKeccak>::new(
-        GKRScheme::Vanilla, mpi_world_size, 
+        GKRScheme::Vanilla,
+        mpi_world_size,
     ));
-
-    
 }
 
 #[allow(unreachable_patterns)]
@@ -145,14 +149,14 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
         let random_idx = rng.gen_range(0..bad_proof.bytes.len());
         let random_change = rng.gen_range(1..256) as u8;
         bad_proof.bytes[random_idx] ^= random_change;
-    
+
         // Catch the panic and treat it as returning `false`
         let result = panic::catch_unwind(AssertUnwindSafe(|| {
             verifier.verify(&mut circuit, &claimed_v, &bad_proof)
         }));
-    
+
         let final_result = result.unwrap_or_default();
-    
+
         assert!(!final_result,);
         println!("Bad proof rejected.");
         println!("============== end ===============");

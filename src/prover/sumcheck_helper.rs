@@ -385,7 +385,9 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
             xy_helper: SumcheckMultilinearProdHelper::new(layer.input_var_num),
             simd_var_helper: SumcheckMultilinearProdSimdVarHelper::new(simd_var_num),
-            mpi_var_helper: SumcheckMultilinearProdSimdVarHelper::new(MPIToolKit::world_size().trailing_zeros() as usize),
+            mpi_var_helper: SumcheckMultilinearProdSimdVarHelper::new(
+                MPIToolKit::world_size().trailing_zeros() as usize,
+            ),
         }
     }
 
@@ -414,8 +416,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         let global_vals = MPIToolKit::coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0);
         if MPIToolKit::is_root() {
             global_vals.try_into().unwrap()
-        }
-        else {
+        } else {
             [C::ChallengeField::ZERO; 3]
         }
     }
@@ -433,11 +434,11 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             &mut self.sp.simd_var_v_evals,
             &mut self.sp.simd_var_hg_evals,
         );
-        let global_vals = MPIToolKit::coef_combine_vec(&local_vals.to_vec(), &self.sp.eq_evals_at_r_mpi0);
+        let global_vals =
+            MPIToolKit::coef_combine_vec(&local_vals.to_vec(), &self.sp.eq_evals_at_r_mpi0);
         if MPIToolKit::is_root() {
             global_vals.try_into().unwrap()
-        }
-        else {
+        } else {
             [C::ChallengeField::ZERO; 4]
         }
     }
@@ -634,9 +635,8 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         );
 
         // TODO: For root process, _eq_vec does not have to be recomputed
-        let coef = _eq_vec(self.r_mpi, &self.r_mpi_var)
-            * self.sp.eq_evals_at_r_simd0[0]
-            * v_rx_rsimd_rw;
+        let coef =
+            _eq_vec(self.r_mpi, &self.r_mpi_var) * self.sp.eq_evals_at_r_simd0[0] * v_rx_rsimd_rw;
 
         eq_eval_at(
             &self.rx,

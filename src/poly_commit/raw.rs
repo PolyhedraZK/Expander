@@ -57,7 +57,7 @@ impl<C: GKRConfig> RawCommitment<C> {
             } else {
                 vec![]
             };
-    
+
             MPIToolKit::gather_vec(local_poly_vals, &mut buffer);
             Self { poly_vals: buffer }
         }
