@@ -1,4 +1,5 @@
 mod baby_bear;
+mod baby_bear_ext;
 mod bn254;
 mod extension_field;
 mod field;
