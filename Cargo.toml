@@ -35,6 +35,7 @@ name = "dev-setup"
 path = "src/utils.rs"
 
 [features]
+avx256 = [ "arith/avx256" ]
 default = []
 # default = [ "grinding" ]
 grinding = []
