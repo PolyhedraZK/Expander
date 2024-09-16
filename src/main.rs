@@ -82,6 +82,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     // load circuit
     let circuit_template = match args.scheme.as_str() {
         "keccak" => match C::FIELD_TYPE {
+            FieldType::BabyBear => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT), // TODO
             FieldType::GF2 => Circuit::<C>::load_circuit(KECCAK_GF2_CIRCUIT),
             FieldType::M31 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
             FieldType::BN254 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),

@@ -1,3 +1,4 @@
+mod baby_bear_keccak;
 mod bn254_keccak;
 mod bn254_sha2;
 mod gf2_ext_keccak;
@@ -5,6 +6,7 @@ mod gf2_ext_sha2;
 mod m31_ext_keccak;
 mod m31_ext_sha2;
 
+pub use baby_bear_keccak::BabyBearConfigKeccak;
 pub use bn254_keccak::BN254ConfigKeccak;
 pub use bn254_sha2::BN254ConfigSha2;
 pub use gf2_ext_keccak::GF2ExtConfigKeccak;
@@ -27,6 +29,7 @@ pub enum PolynomialCommitmentType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldType {
+    BabyBear,
     M31,
     BN254,
     GF2,

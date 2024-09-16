@@ -1,8 +1,8 @@
 use expander_rs::{utils::*, FieldType};
 use expander_rs::{
-    BN254ConfigKeccak, BN254ConfigSha2, Circuit, CircuitLayer, Config, GF2ExtConfigKeccak,
-    GF2ExtConfigSha2, GKRConfig, GKRScheme, GateAdd, GateMul, M31ExtConfigKeccak, M31ExtConfigSha2,
-    Prover, Verifier,
+    BN254ConfigKeccak, BN254ConfigSha2, BabyBearConfigKeccak, Circuit, CircuitLayer, Config,
+    GF2ExtConfigKeccak, GF2ExtConfigSha2, GKRConfig, GKRScheme, GateAdd, GateMul,
+    M31ExtConfigKeccak, M31ExtConfigSha2, Prover, Verifier,
 };
 use std::panic;
 use std::panic::AssertUnwindSafe;
@@ -51,6 +51,9 @@ fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
 
 #[test]
 fn test_gkr_correctness() {
+    test_gkr_correctness_helper::<BabyBearConfigKeccak>(&Config::<BabyBearConfigKeccak>::new(
+        GKRScheme::Vanilla,
+    ));
     test_gkr_correctness_helper::<GF2ExtConfigSha2>(&Config::<GF2ExtConfigSha2>::new(
         GKRScheme::Vanilla,
     ));
@@ -76,6 +79,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     println!("============== start ===============");
     println!("Field Type: {:?}", C::FIELD_TYPE);
     let circuit_copy_size: usize = match C::FIELD_TYPE {
+        FieldType::BabyBear => 2,
         FieldType::GF2 => 1,
         FieldType::M31 => 2,
         FieldType::BN254 => 2,

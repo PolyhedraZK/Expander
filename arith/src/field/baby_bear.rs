@@ -1,4 +1,4 @@
-use crate::{field_common, Field, FieldForECC, FieldSerde, FieldSerdeResult};
+use crate::{field_common, Field, FieldForECC, FieldSerde, FieldSerdeResult, SimdField};
 use ark_std::Zero;
 use core::{
     iter::{Product, Sum},
@@ -136,6 +136,29 @@ impl FieldForECC for BabyBear {
     fn to_u256(&self) -> ethnum::U256 {
         // Converts to canonical form before casting to U256
         ethnum::U256::from(self.as_u32_unchecked())
+    }
+}
+
+// TODO: Actual SIMD impl
+// This is a dummy implementation to satisfy trait bounds
+impl SimdField for BabyBear {
+    type Scalar = Self;
+
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
+        self * challenge
+    }
+
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        debug_assert!(base_vec.len() == 1);
+        base_vec[0]
+    }
+
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        vec![*self]
+    }
+
+    fn pack_size() -> usize {
+        1
     }
 }
 

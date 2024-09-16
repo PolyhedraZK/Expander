@@ -1,9 +1,10 @@
 use super::ExtensionField;
-use crate::{field_common, BabyBear, Field, FieldSerde, FieldSerdeResult};
+use crate::{field_common, BabyBear, Field, FieldSerde, FieldSerdeResult, SimdField};
 use core::{
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
+use p3_field::{AbstractExtensionField, Field as P3Field, PrimeField32};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct BabyBearExt4 {
@@ -127,7 +128,10 @@ impl Field for BabyBearExt4 {
     }
 
     fn inv(&self) -> Option<Self> {
-        unimplemented!("inverse not implemented for BabyBearExt4")
+        // Cast to P3 type, invert, and cast back
+        let p3_self: P3BabyBearExt4 = self.into();
+        let p3_inv = p3_self.try_inverse()?;
+        Some((&p3_inv).into())
     }
 
     #[inline(always)]
@@ -191,6 +195,29 @@ impl ExtensionField for BabyBearExt4 {
         Self {
             v: [self.v[3] * w, self.v[0], self.v[1], self.v[2]],
         }
+    }
+}
+
+// TODO: Actual SIMD impl
+// This is a dummy implementation to satisfy trait bounds
+impl SimdField for BabyBearExt4 {
+    type Scalar = Self;
+
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
+        self * challenge
+    }
+
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        debug_assert!(base_vec.len() == 1);
+        base_vec[0]
+    }
+
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        vec![*self]
+    }
+
+    fn pack_size() -> usize {
+        1
     }
 }
 
@@ -339,59 +366,73 @@ fn square_internal(a: &[BabyBear; 4]) -> [BabyBear; 4] {
     res
 }
 
-/// Compare this multiplication to Plonky3
+// Useful for conversion to Plonky3
+type P3BabyBearExt4 = p3_field::extension::BinomialExtensionField<p3_baby_bear::BabyBear, 4>;
+
+impl From<&P3BabyBearExt4> for BabyBearExt4 {
+    fn from(p3: &P3BabyBearExt4) -> Self {
+        Self {
+            v: p3
+                .as_base_slice()
+                .iter()
+                .map(|x: &p3_baby_bear::BabyBear| x.as_canonical_u32().into())
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
+        }
+    }
+}
+
+impl From<&BabyBearExt4> for P3BabyBearExt4 {
+    fn from(b: &BabyBearExt4) -> Self {
+        P3BabyBearExt4::from_base_slice(
+            &b.v.iter()
+                .map(|x| p3_baby_bear::BabyBear::new(x.as_u32_unchecked()))
+                .collect::<Vec<_>>(),
+        )
+    }
+}
+
 #[test]
-fn test_mul_internal() {
-    use p3_baby_bear::BabyBear as P3BabyBear;
-    use p3_field::{extension::BinomialExtensionField, AbstractExtensionField, PrimeField32};
-    use rand::rngs::OsRng;
+fn test_compare_plonky3() {
+    use p3_field::AbstractField;
+    use rand::{rngs::OsRng, Rng};
 
     for _ in 0..1000 {
         let mut rng = OsRng;
         let a = BabyBearExt4::random_unsafe(&mut rng);
         let b = BabyBearExt4::random_unsafe(&mut rng);
 
-        // Multiply as defined here
+        // Test conversion
+        let p3_a: P3BabyBearExt4 = (&a).into();
+        let p3_b: P3BabyBearExt4 = (&b).into();
+        assert_eq!(a, (&p3_a).into());
+        assert_eq!(b, (&p3_b).into());
+
+        // Test Add
+        let a_plus_b = add_internal(&a, &b);
+        let p3_a_plus_b = p3_a + p3_b;
+        assert_eq!(a_plus_b, (&p3_a_plus_b).into());
+
+        // Test Sub
+        let a_minus_b = sub_internal(&a, &b);
+        let p3_a_minus_b = p3_a - p3_b;
+        assert_eq!(a_minus_b, (&p3_a_minus_b).into());
+
+        // Test Mul
         let a_times_b = mul_internal(&a, &b);
-
-        // Multiply using Plonky3
-        let p3_a = BinomialExtensionField::<P3BabyBear, 4>::from_base_slice(
-            &a.as_u32_array()
-                .into_iter()
-                .map(P3BabyBear::new)
-                .collect::<Vec<_>>(),
-        );
-        let p3_b = BinomialExtensionField::<P3BabyBear, 4>::from_base_slice(
-            &b.as_u32_array()
-                .into_iter()
-                .map(P3BabyBear::new)
-                .collect::<Vec<_>>(),
-        );
         let p3_a_times_b = p3_a * p3_b;
-
-        // Compare
-        a_times_b
-            .as_u32_array()
-            .into_iter()
-            .zip(
-                p3_a_times_b
-                    .as_base_slice()
-                    .iter()
-                    .map(P3BabyBear::as_canonical_u32),
-            )
-            .for_each(|(a, b)| {
-                assert_eq!(a, b);
-            });
+        assert_eq!(a_times_b, (&p3_a_times_b).into());
 
         // Test square
-        let a_square = square_internal(&a.v);
+        let a_square = a.square();
         let p3_a_square = p3_a * p3_a;
-        let p3_a_square: &[P3BabyBear] = p3_a_square.as_base_slice();
-        a_square
-            .iter()
-            .zip(p3_a_square.iter().map(P3BabyBear::as_canonical_u32))
-            .for_each(|(a, b)| {
-                assert_eq!(a.as_u32_unchecked(), b);
-            });
+        assert_eq!(a_square, (&p3_a_square).into());
+
+        // Test exp
+        let e = rng.gen_range(0..10);
+        let a_exp_e = a.exp(e);
+        let p3_a_exp_e = p3_a.exp_u64(e as u64);
+        assert_eq!(a_exp_e, (&p3_a_exp_e).into());
     }
 }
