@@ -45,6 +45,7 @@ impl FieldSerde for BabyBearExt4 {
             buf.iter().skip(4).all(|&x| x == 0),
             "non-zero byte found in witness byte"
         );
+        // ? this can only read in a base field element, do we ever need to read in an ext'n field?
         Ok(Self::from(u32::from_le_bytes(buf[..4].try_into().unwrap())))
     }
 }

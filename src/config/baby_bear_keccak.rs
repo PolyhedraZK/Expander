@@ -3,9 +3,9 @@ use crate::Keccak256hasher;
 use arith::{BabyBear, BabyBearExt4, BabyBearExt4x16, BabyBearx16, ExtensionField};
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct BabyBearConfigKeccak;
+pub struct BabyBearExt4ConfigKeccak;
 
-impl GKRConfig for BabyBearConfigKeccak {
+impl GKRConfig for BabyBearExt4ConfigKeccak {
     type CircuitField = BabyBear;
 
     type ChallengeField = BabyBearExt4;

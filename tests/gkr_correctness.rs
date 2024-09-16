@@ -1,6 +1,6 @@
 use expander_rs::{utils::*, FieldType};
 use expander_rs::{
-    BN254ConfigKeccak, BN254ConfigSha2, BabyBearConfigKeccak, Circuit, CircuitLayer, Config,
+    BN254ConfigKeccak, BN254ConfigSha2, BabyBearExt4ConfigKeccak, Circuit, CircuitLayer, Config,
     GF2ExtConfigKeccak, GF2ExtConfigSha2, GKRConfig, GKRScheme, GateAdd, GateMul,
     M31ExtConfigKeccak, M31ExtConfigSha2, Prover, Verifier,
 };
@@ -51,9 +51,9 @@ fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
 
 #[test]
 fn test_gkr_correctness() {
-    test_gkr_correctness_helper::<BabyBearConfigKeccak>(&Config::<BabyBearConfigKeccak>::new(
-        GKRScheme::Vanilla,
-    ));
+    test_gkr_correctness_helper::<BabyBearExt4ConfigKeccak>(
+        &Config::<BabyBearExt4ConfigKeccak>::new(GKRScheme::Vanilla),
+    );
     test_gkr_correctness_helper::<GF2ExtConfigSha2>(&Config::<GF2ExtConfigSha2>::new(
         GKRScheme::Vanilla,
     ));

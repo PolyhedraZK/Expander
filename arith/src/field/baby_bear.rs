@@ -26,6 +26,8 @@ pub use baby_bear_avx::AVXBabyBear;
 #[repr(transparent)]
 pub struct BabyBear(P3BabyBear);
 
+pub const BABYBEAR_MODULUS: u32 = 0x78000001;
+
 field_common!(BabyBear);
 
 impl BabyBear {
