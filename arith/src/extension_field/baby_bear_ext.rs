@@ -8,7 +8,7 @@ use p3_field::{AbstractExtensionField, Field as P3Field, PrimeField32};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct BabyBearExt4 {
-    v: [BabyBear; 4],
+    pub v: [BabyBear; 4],
 }
 
 field_common!(BabyBearExt4);

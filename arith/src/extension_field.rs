@@ -1,4 +1,5 @@
 mod baby_bear_ext;
+mod baby_bear_ext4x16;
 mod fr_ext;
 // mod gf2_127;
 mod gf2_128;
@@ -8,6 +9,7 @@ mod m31_ext3x16;
 use crate::{Field, FieldSerde};
 
 pub use baby_bear_ext::*;
+pub use baby_bear_ext4x16::BabyBearExt4x16;
 // pub use gf2_127::*;
 pub use gf2_128::*;
 pub use gf2_128x8::GF2_128x8;

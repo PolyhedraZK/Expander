@@ -12,6 +12,9 @@ use std::io::{Read, Write};
 #[cfg(target_arch = "x86_64")]
 pub(crate) mod baby_bear_avx;
 
+#[cfg(target_arch = "x86_64")]
+pub use baby_bear_avx::AVXBabyBear;
+
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct BabyBear(P3BabyBear);
