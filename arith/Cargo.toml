@@ -7,8 +7,10 @@ edition = "2021"
 ark-std.workspace = true
 halo2curves.workspace = true
 log.workspace = true
-p3-baby-bear = { git = "https://github.com/Plonky3/Plonky3.git", version = "0.1.0" }
+p3-baby-bear = { git = "https://github.com/Plonky3/Plonky3.git", version = "0.1.0", features = ["nightly-features"] }
 p3-field = { git = "https://github.com/Plonky3/Plonky3.git", version = "0.1.0" }
+# This import should be unnecessary but p3-baby-bear fails to turn on "nightly-features" for this dependency
+p3-monty-31 = { git = "https://github.com/Plonky3/Plonky3.git", version = "0.1.0", features = ["nightly-features"] }
 rand.workspace = true
 sha2.workspace = true
 thiserror.workspace = true
