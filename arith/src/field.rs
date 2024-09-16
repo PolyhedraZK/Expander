@@ -1,7 +1,9 @@
+mod baby_bear;
 mod bn254;
 mod gf2;
 mod m31;
 
+pub use baby_bear::*;
 pub use bn254::*;
 pub use gf2::*;
 pub use m31::*;
