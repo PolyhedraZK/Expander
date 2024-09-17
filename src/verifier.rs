@@ -92,7 +92,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     }
     GKRVerifierHelper::set_r_simd_xy(&r_simd_xy, sp);
 
-    for _i_var in 0..config.mpi_world_size.trailing_zeros() {
+    for _i_var in 0..config.mpi_config.world_size().trailing_zeros() {
         verified &= verify_sumcheck_step::<C>(proof, 3, transcript, &mut sum, &mut r_mpi_xy, sp);
         // println!("{} mpi var, verified? {}", _i_var, verified);
     }
@@ -149,7 +149,7 @@ pub fn gkr_verify<C: GKRConfig>(
         r_simd.push(transcript.challenge_f::<C>());
     }
 
-    for _ in 0..config.mpi_world_size.trailing_zeros() {
+    for _ in 0..config.mpi_config.world_size().trailing_zeros() {
         r_mpi.push(transcript.challenge_f::<C>());
     }
 
@@ -228,7 +228,7 @@ impl<C: GKRConfig> Verifier<C> {
         let timer = start_timer!(|| "verify");
 
         let poly_size =
-            circuit.layers.first().unwrap().input_vals.len() * self.config.mpi_world_size;
+            circuit.layers.first().unwrap().input_vals.len() * self.config.mpi_config.world_size();
         let mut cursor = Cursor::new(&proof.bytes);
 
         let commitment = RawCommitment::<C>::deserialize_from(&mut cursor, poly_size);
@@ -236,7 +236,7 @@ impl<C: GKRConfig> Verifier<C> {
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
-        if self.config.mpi_world_size > 1 {
+        if self.config.mpi_config.world_size() > 1 {
             transcript.hash_to_digest(); // In prover, we call hash_to_digest before sync up the transcript state
         }
 

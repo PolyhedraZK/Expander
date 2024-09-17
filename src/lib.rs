@@ -20,5 +20,3 @@ pub use verifier::*;
 
 pub mod utils;
 
-pub mod mpi_utils;
-pub use mpi_utils::*;

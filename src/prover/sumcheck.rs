@@ -1,19 +1,19 @@
 use crate::{
-    CircuitLayer, GKRConfig, GkrScratchpad, MPIToolKit, SumcheckGkrHelper, SumcheckGkrSquareHelper,
-    Transcript,
+    CircuitLayer, GKRConfig, GkrScratchpad, MPIConfig, SumcheckGkrHelper, SumcheckGkrSquareHelper, Transcript
 };
 
 #[inline(always)]
 fn transcript_io<C: GKRConfig>(
     ps: &[C::ChallengeField],
     transcript: &mut Transcript<C::FiatShamirHashType>,
+    mpi_config: &MPIConfig
 ) -> C::ChallengeField {
     debug_assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
     for p in ps {
         transcript.append_challenge_f::<C>(p);
     }
     let mut r = transcript.challenge_f::<C>();
-    MPIToolKit::root_broadcast(&mut r);
+    mpi_config.root_broadcast(&mut r);
     r
 }
 
@@ -30,13 +30,14 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     beta: &C::ChallengeField,
     transcript: &mut Transcript<C::FiatShamirHashType>,
     sp: &mut GkrScratchpad<C>,
+    mpi_config: &MPIConfig,
 ) -> (
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
 ) {
-    let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, r_simd, r_mpi, alpha, beta, sp);
+    let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, r_simd, r_mpi, alpha, beta, sp, mpi_config);
 
     helper.prepare_simd();
     helper.prepare_mpi();
@@ -44,21 +45,21 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
 
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
-        let r = transcript_io::<C>(&evals, transcript);
+        let r = transcript_io::<C>(&evals, transcript, mpi_config);
         helper.receive_rx(i_var, r);
     }
 
     helper.prepare_simd_var_vals();
     for i_var in 0..helper.simd_var_num {
         let evals = helper.poly_evals_at_r_simd_var(i_var, 3);
-        let r = transcript_io::<C>(&evals, transcript);
+        let r = transcript_io::<C>(&evals, transcript, mpi_config);
         helper.receive_r_simd_var(i_var, r);
     }
 
     helper.prepare_mpi_var_vals();
-    for i_var in 0..MPIToolKit::world_size().trailing_zeros() as usize {
+    for i_var in 0..mpi_config.world_size().trailing_zeros() as usize {
         let evals = helper.poly_evals_at_r_mpi_var(i_var, 3);
-        let r = transcript_io::<C>(&evals, transcript);
+        let r = transcript_io::<C>(&evals, transcript, mpi_config);
         helper.receive_r_mpi_var(i_var, r);
     }
 
@@ -68,7 +69,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     helper.prepare_y_vals();
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_ry(i_var, 2);
-        let r = transcript_io::<C>(&evals, transcript);
+        let r = transcript_io::<C>(&evals, transcript, mpi_config);
         helper.receive_ry(i_var, r);
     }
 

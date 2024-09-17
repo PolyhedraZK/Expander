@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 
 use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
 
-use crate::{GKRConfig, MPIToolKit, MultiLinearPoly};
+use crate::{GKRConfig, MPIConfig, MultiLinearPoly};
 
 #[derive(Default)]
 pub struct RawOpening {}
@@ -48,17 +48,17 @@ impl<C: GKRConfig> RawCommitment<C> {
     /// create a commitment collectively
     /// Should also work if mpi is not initialized
     #[inline]
-    pub fn mpi_new(local_poly_vals: &Vec<C::SimdCircuitField>) -> Self {
-        if MPIToolKit::world_size() == 1 {
+    pub fn mpi_new(local_poly_vals: &Vec<C::SimdCircuitField>, mpi_config: &MPIConfig) -> Self {
+        if mpi_config.world_size() == 1 {
             Self::new(local_poly_vals)
         } else {
-            let mut buffer = if MPIToolKit::is_root() {
-                vec![C::SimdCircuitField::zero(); local_poly_vals.len() * MPIToolKit::world_size()]
+            let mut buffer = if mpi_config.is_root() {
+                vec![C::SimdCircuitField::zero(); local_poly_vals.len() * mpi_config.world_size()]
             } else {
                 vec![]
             };
 
-            MPIToolKit::gather_vec(local_poly_vals, &mut buffer);
+            mpi_config.gather_vec(local_poly_vals, &mut buffer);
             Self { poly_vals: buffer }
         }
     }
@@ -87,7 +87,9 @@ impl<C: GKRConfig> RawCommitment<C> {
     }
 
     /// Note: this only runs on the root rank
-    /// Note: verifier should not have access to the MPIToolKit
+    /// Note: verifier should not have access to the MPIConfig
+    /// The mpi size is implicitly specified by the length of x_mpi,
+    /// So make sure it is correct
     #[inline]
     pub fn mpi_verify(
         &self,

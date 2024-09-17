@@ -4,8 +4,7 @@ use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
-    sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, MPIToolKit, MultiLinearPoly,
-    Transcript,
+    sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, MPIConfig, MultiLinearPoly, Transcript
 };
 
 // FIXME
@@ -14,6 +13,7 @@ pub fn gkr_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
     sp: &mut GkrScratchpad<C>,
     transcript: &mut Transcript<C::FiatShamirHashType>,
+    mpi_config: &MPIConfig,
 ) -> (
     C::ChallengeField,
     Vec<C::ChallengeField>,
@@ -37,7 +37,7 @@ pub fn gkr_prove<C: GKRConfig>(
         r_simd.push(transcript.challenge_f::<C>());
     }
 
-    for _ in 0..MPIToolKit::world_size().trailing_zeros() {
+    for _ in 0..mpi_config.world_size().trailing_zeros() {
         r_mpi.push(transcript.challenge_f::<C>());
     }
 
@@ -54,17 +54,17 @@ pub fn gkr_prove<C: GKRConfig>(
         &mut sp.eq_evals_at_r_simd0,
     );
 
-    let claimed_v = if MPIToolKit::is_root() {
+    let claimed_v = if mpi_config.is_root() {
         let mut claimed_v_gathering_buffer =
-            vec![C::ChallengeField::zero(); MPIToolKit::world_size()];
-        MPIToolKit::gather_vec(&vec![claimed_v_local], &mut claimed_v_gathering_buffer);
+            vec![C::ChallengeField::zero(); mpi_config.world_size()];
+        mpi_config.gather_vec(&vec![claimed_v_local], &mut claimed_v_gathering_buffer);
         MultiLinearPoly::eval_generic(
             &claimed_v_gathering_buffer,
             &r_mpi,
             &mut sp.eq_evals_at_r_mpi0,
         )
     } else {
-        MPIToolKit::gather_vec(&vec![claimed_v_local], &mut vec![]);
+        mpi_config.gather_vec(&vec![claimed_v_local], &mut vec![]);
         C::ChallengeField::zero()
     };
 
@@ -79,12 +79,13 @@ pub fn gkr_prove<C: GKRConfig>(
             &beta,
             transcript,
             sp,
+            mpi_config,
         );
 
         alpha = transcript.challenge_f::<C>();
         beta = transcript.challenge_f::<C>();
-        MPIToolKit::root_broadcast(&mut alpha);
-        MPIToolKit::root_broadcast(&mut beta);
+        mpi_config.root_broadcast(&mut alpha);
+        mpi_config.root_broadcast(&mut beta);
 
         log::trace!("Layer {} proved with alpha={:?}, beta={:?}", i, alpha, beta);
         log::trace!("rz0.0: {:?}", rz0[0]);

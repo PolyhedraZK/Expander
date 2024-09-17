@@ -4,11 +4,8 @@ use std::{
 };
 
 use clap::Parser;
-use expander_rs::{
-    mpi_finalize, mpi_init,
-    utils::{KECCAK_GF2_CIRCUIT, KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT},
-    MPIToolKit,
-};
+use expander_rs::{utils::{KECCAK_GF2_CIRCUIT, KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT}, MPIConfig};
+
 use expander_rs::{
     BN254ConfigSha2, Circuit, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme,
     M31ExtConfigSha2, Prover,
@@ -39,47 +36,45 @@ fn main() {
     let args = Args::parse();
     print_info(&args);
 
-    mpi_init();
-    let mpi_world_size = MPIToolKit::world_size();
+    let mpi_config = MPIConfig::new();
 
     match args.field.as_str() {
         "m31ext3" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_world_size),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
             ),
             "poseidon" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::GkrSquare, mpi_world_size),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),
             _ => unreachable!(),
         },
         "fr" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<BN254ConfigSha2>(
                 &args,
-                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_world_size),
+                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
             ),
             "poseidon" => run_benchmark::<BN254ConfigSha2>(
                 &args,
-                Config::<BN254ConfigSha2>::new(GKRScheme::GkrSquare, mpi_world_size),
+                Config::<BN254ConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),
             _ => unreachable!(),
         },
         "gf2ext128" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<GF2ExtConfigSha2>(
                 &args,
-                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_world_size),
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
             ),
             "poseidon" => run_benchmark::<GF2ExtConfigSha2>(
                 &args,
-                Config::<GF2ExtConfigSha2>::new(GKRScheme::GkrSquare, mpi_world_size),
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),
             _ => unreachable!(),
         },
         _ => unreachable!(),
     };
 
-    mpi_finalize();
 }
 
 fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {

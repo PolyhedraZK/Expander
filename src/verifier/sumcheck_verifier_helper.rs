@@ -84,7 +84,7 @@ impl<C: GKRConfig> VerifierScratchPad<C> {
             eq_evals_at_rz0: vec![C::ChallengeField::zero(); max_io_size],
             eq_evals_at_rz1: vec![C::ChallengeField::zero(); max_io_size],
             eq_evals_at_r_simd: vec![C::ChallengeField::zero(); simd_size],
-            eq_evals_at_r_mpi: vec![C::ChallengeField::zero(); config.mpi_world_size],
+            eq_evals_at_r_mpi: vec![C::ChallengeField::zero(); config.mpi_config.world_size()],
 
             eq_evals_at_rx: vec![C::ChallengeField::zero(); max_io_size],
             eq_evals_at_ry: vec![C::ChallengeField::zero(); max_io_size],

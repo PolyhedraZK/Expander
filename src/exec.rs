@@ -7,8 +7,7 @@ use std::{
 
 use arith::{Field, FieldSerde};
 use expander_rs::{
-    mpi_finalize, mpi_init, BN254ConfigSha2, Circuit, Config, FieldType, GKRConfig, GKRScheme,
-    M31ExtConfigSha2, MPIToolKit, Proof, Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
+    BN254ConfigSha2, Circuit, Config, FieldType, GKRConfig, GKRScheme, M31ExtConfigSha2, MPIConfig, Proof, Prover, Verifier, SENTINEL_BN254, SENTINEL_M31
 };
 use log::{debug, info};
 use warp::{http::StatusCode, reply, Filter};
@@ -45,7 +44,7 @@ fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     }
 }
 
-async fn run_command<C: GKRConfig>(
+async fn run_command<'a, C: GKRConfig>(
     command: &str,
     circuit_file: &str,
     config: Config<C>,
@@ -165,9 +164,7 @@ async fn main() {
     // expander-exec prove <input:circuit_file> <input:witness_file> <output:proof>
     // expander-exec verify <input:circuit_file> <input:witness_file> <input:proof>
     // expander-exec serve <input:circuit_file> <input:ip> <input:port>
-    env_logger::init();
-    mpi_init();
-    let mpi_world_size = MPIToolKit::world_size();
+    let mpi_config = MPIConfig::new();
 
     let args = std::env::args().collect::<Vec<String>>();
     if args.len() < 4 {
@@ -189,7 +186,7 @@ async fn main() {
             run_command::<M31ExtConfigSha2>(
                 command,
                 circuit_file,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_world_size),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
                 &args,
             )
             .await;
@@ -198,7 +195,7 @@ async fn main() {
             run_command::<BN254ConfigSha2>(
                 command,
                 circuit_file,
-                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_world_size),
+                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
                 &args,
             )
             .await;
@@ -206,5 +203,4 @@ async fn main() {
         _ => unreachable!(),
     }
 
-    mpi_finalize();
 }
