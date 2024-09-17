@@ -94,13 +94,13 @@ impl MPIConfig {
         Self::init();
         let universe = unsafe { UNIVERSE.as_ref() };
         let world = unsafe { WORLD.as_ref() };
-        let world_size = if world.is_some() {
-            world.unwrap().size()
+        let world_size = if let Some(world) = world {
+            world.size()
         } else {
             1
         };
-        let world_rank = if world.is_some() {
-            world.unwrap().rank()
+        let world_rank = if let Some(world) = world {
+            world.rank()
         } else {
             0
         };
