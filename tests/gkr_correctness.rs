@@ -93,7 +93,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     println!("Config created.");
     let circuit_path = match C::FIELD_TYPE {
         FieldType::GF2 => KECCAK_GF2_CIRCUIT,
-        _ => KECCAK_M31_CIRCUIT, // Use this for both M31 and BN254-Fr
+        _ => KECCAK_M31_CIRCUIT, // Use this for BabyBear, M31 and BN254-Fr
     };
 
     let mut circuit = Circuit::<C>::load_circuit(circuit_path);

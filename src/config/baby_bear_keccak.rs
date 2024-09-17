@@ -1,19 +1,18 @@
 use super::{FieldType, GKRConfig};
 use crate::Keccak256hasher;
-use arith::{BabyBear, BabyBearExt4, ExtensionField};
+use arith::{AVXBabyBear as BabyBearx16, BabyBear, BabyBearExt4, BabyBearExt4x16, ExtensionField};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BabyBearConfigKeccak;
 
-// TODO: Replace Field, SimdCircuitField with SIMD field types
 impl GKRConfig for BabyBearConfigKeccak {
     type CircuitField = BabyBear;
 
     type ChallengeField = BabyBearExt4;
 
-    type Field = BabyBearExt4;
+    type Field = BabyBearExt4x16;
 
-    type SimdCircuitField = BabyBear;
+    type SimdCircuitField = BabyBearx16;
 
     type FiatShamirHashType = Keccak256hasher;
 
@@ -27,11 +26,11 @@ impl GKRConfig for BabyBearConfigKeccak {
     }
 
     fn field_mul_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
-        a.mul_by_base_field(b)
+        *a * *b
     }
 
     fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
-        a.add_by_base_field(b)
+        *a + *b
     }
 
     fn field_add_simd_circuit_field(a: &Self::Field, b: &Self::SimdCircuitField) -> Self::Field {
@@ -43,7 +42,8 @@ impl GKRConfig for BabyBearConfigKeccak {
     }
 
     fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field {
-        a * b
+        let a_simd = Self::Field::from(*a);
+        a_simd * b
     }
 
     fn circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field {
@@ -54,11 +54,11 @@ impl GKRConfig for BabyBearConfigKeccak {
         a: &Self::CircuitField,
         b: &Self::SimdCircuitField,
     ) -> Self::SimdCircuitField {
-        a * b
+        Self::SimdCircuitField::from(*a) * *b
     }
 
     fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField {
-        *a
+        Self::SimdCircuitField::from(*a)
     }
 
     fn simd_circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field {
@@ -69,6 +69,14 @@ impl GKRConfig for BabyBearConfigKeccak {
         a: &Self::SimdCircuitField,
         b: &Self::ChallengeField,
     ) -> Self::Field {
-        b.mul_by_base_field(a)
+        let b_simd_ext = Self::Field::from(*b);
+        Self::Field {
+            v: [
+                b_simd_ext.v[0] * a,
+                b_simd_ext.v[1] * a,
+                b_simd_ext.v[2] * a,
+                b_simd_ext.v[3] * a,
+            ],
+        }
     }
 }
