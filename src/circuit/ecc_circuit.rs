@@ -1,5 +1,4 @@
-use arith::{Field, FieldSerde, FieldSerdeError};
-use ark_std::test_rng;
+use arith::{FieldSerde, FieldSerdeError};
 use std::{
     cmp::max,
     collections::HashMap,
@@ -9,7 +8,7 @@ use std::{
 use thiserror::Error;
 
 use crate::circuit::*;
-use crate::{GKRConfig, Transcript};
+use crate::GKRConfig;
 
 // recursive format used in compiler
 pub type SegmentId = usize;

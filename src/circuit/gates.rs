@@ -1,3 +1,5 @@
+use crate::GKRConfig;
+
 #[derive(Debug, Clone)]
 pub struct Gate<C: GKRConfig, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
