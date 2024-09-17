@@ -65,4 +65,3 @@ impl<C: GKRConfig> Config<C> {
         }
     }
 }
-

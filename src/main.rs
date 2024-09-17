@@ -4,7 +4,10 @@ use std::{
 };
 
 use clap::Parser;
-use expander_rs::{utils::{KECCAK_GF2_CIRCUIT, KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT}, MPIConfig};
+use expander_rs::{
+    utils::{KECCAK_GF2_CIRCUIT, KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT},
+    MPIConfig,
+};
 
 use expander_rs::{
     BN254ConfigSha2, Circuit, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme,
@@ -75,6 +78,7 @@ fn main() {
         _ => unreachable!(),
     };
 
+    MPIConfig::finalize();
 }
 
 fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {

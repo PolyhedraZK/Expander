@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use expander_rs::utils::{KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT};
 use expander_rs::{
-    BN254ConfigSha2, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfigSha2, MPIConfig, Prover
+    BN254ConfigSha2, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfigSha2, MPIConfig, Prover,
 };
 use std::hint::black_box;
 

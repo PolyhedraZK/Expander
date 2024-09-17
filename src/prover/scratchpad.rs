@@ -24,7 +24,11 @@ pub struct GkrScratchpad<C: GKRConfig> {
 }
 
 impl<C: GKRConfig> GkrScratchpad<C> {
-    pub(crate) fn new(max_num_input_var: usize, max_num_output_var: usize, mpi_world_size: usize) -> Self {
+    pub(crate) fn new(
+        max_num_input_var: usize,
+        max_num_output_var: usize,
+        mpi_world_size: usize,
+    ) -> Self {
         let max_input_num = 1 << max_num_input_var;
         let max_output_num = 1 << max_num_output_var;
         GkrScratchpad {

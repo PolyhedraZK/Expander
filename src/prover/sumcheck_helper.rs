@@ -388,7 +388,9 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
             xy_helper: SumcheckMultilinearProdHelper::new(layer.input_var_num),
             simd_var_helper: SumcheckMultilinearProdSimdVarHelper::new(simd_var_num),
-            mpi_var_helper: SumcheckMultilinearProdSimdVarHelper::new(mpi_config.world_size()),
+            mpi_var_helper: SumcheckMultilinearProdSimdVarHelper::new(
+                mpi_config.world_size().trailing_zeros() as usize,
+            ),
             mpi_config,
         }
     }
@@ -415,7 +417,9 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             .collect::<Vec<C::ChallengeField>>();
 
         // MPI
-        let global_vals = self.mpi_config.coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0);
+        let global_vals = self
+            .mpi_config
+            .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0);
         if self.mpi_config.is_root() {
             global_vals.try_into().unwrap()
         } else {
@@ -436,8 +440,9 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             &mut self.sp.simd_var_v_evals,
             &mut self.sp.simd_var_hg_evals,
         );
-        let global_vals =
-            self.mpi_config.coef_combine_vec(&local_vals.to_vec(), &self.sp.eq_evals_at_r_mpi0);
+        let global_vals = self
+            .mpi_config
+            .coef_combine_vec(&local_vals.to_vec(), &self.sp.eq_evals_at_r_mpi0);
         if self.mpi_config.is_root() {
             global_vals.try_into().unwrap()
         } else {
@@ -511,7 +516,9 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     #[inline(always)]
     pub(crate) fn vy_claim(&self) -> C::ChallengeField {
         let vy_local = Self::unpack_and_combine(&self.sp.v_evals[0], &self.sp.eq_evals_at_r_simd0);
-        let summation = self.mpi_config.coef_combine_vec(&vec![vy_local], &self.sp.eq_evals_at_r_mpi0);
+        let summation = self
+            .mpi_config
+            .coef_combine_vec(&vec![vy_local], &self.sp.eq_evals_at_r_mpi0);
         if self.mpi_config.is_root() {
             summation[0]
         } else {

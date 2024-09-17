@@ -1,12 +1,13 @@
 use crate::{
-    CircuitLayer, GKRConfig, GkrScratchpad, MPIConfig, SumcheckGkrHelper, SumcheckGkrSquareHelper, Transcript
+    CircuitLayer, GKRConfig, GkrScratchpad, MPIConfig, SumcheckGkrHelper, SumcheckGkrSquareHelper,
+    Transcript,
 };
 
 #[inline(always)]
 fn transcript_io<C: GKRConfig>(
     ps: &[C::ChallengeField],
     transcript: &mut Transcript<C::FiatShamirHashType>,
-    mpi_config: &MPIConfig
+    mpi_config: &MPIConfig,
 ) -> C::ChallengeField {
     debug_assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
     for p in ps {
@@ -37,7 +38,8 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
 ) {
-    let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, r_simd, r_mpi, alpha, beta, sp, mpi_config);
+    let mut helper =
+        SumcheckGkrHelper::new(layer, rz0, rz1, r_simd, r_mpi, alpha, beta, sp, mpi_config);
 
     helper.prepare_simd();
     helper.prepare_mpi();

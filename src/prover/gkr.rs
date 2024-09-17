@@ -4,7 +4,8 @@ use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
-    sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, MPIConfig, MultiLinearPoly, Transcript
+    sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, MPIConfig, MultiLinearPoly,
+    Transcript,
 };
 
 // FIXME

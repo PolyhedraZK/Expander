@@ -1,8 +1,7 @@
 use expander_rs::{root_println, utils::*, FieldType, MPIConfig};
 use expander_rs::{
-    BN254ConfigKeccak, BN254ConfigSha2, Circuit, Config, GF2ExtConfigKeccak,
-    GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigKeccak, M31ExtConfigSha2,
-    Prover, Verifier,
+    BN254ConfigKeccak, BN254ConfigSha2, Circuit, Config, GF2ExtConfigKeccak, GF2ExtConfigSha2,
+    GKRConfig, GKRScheme, M31ExtConfigKeccak, M31ExtConfigSha2, Prover, Verifier,
 };
 use std::panic;
 use std::panic::AssertUnwindSafe;
@@ -13,7 +12,6 @@ use sha2::Digest;
 
 #[test]
 fn test_gkr_correctness() {
-    
     let mpi_config = MPIConfig::new();
 
     test_gkr_correctness_helper::<GF2ExtConfigSha2>(&Config::<GF2ExtConfigSha2>::new(
@@ -40,6 +38,8 @@ fn test_gkr_correctness() {
         GKRScheme::Vanilla,
         mpi_config.clone(),
     ));
+
+    MPIConfig::finalize();
 }
 
 #[allow(unreachable_patterns)]
@@ -52,7 +52,8 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
         FieldType::BN254 => 2,
         _ => unreachable!(),
     };
-    root_println!(config.mpi_config, 
+    root_println!(
+        config.mpi_config,
         "Proving {} keccak instances at once.",
         circuit_copy_size * C::get_field_pack_size()
     );
@@ -73,9 +74,17 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
 
     let proving_start = Instant::now();
     let (claimed_v, proof) = prover.prove(&mut circuit);
-    root_println!(config.mpi_config, "Proving time: {} μs", proving_start.elapsed().as_micros());
+    root_println!(
+        config.mpi_config,
+        "Proving time: {} μs",
+        proving_start.elapsed().as_micros()
+    );
 
-    root_println!(config.mpi_config, "Proof generated. Size: {} bytes", proof.bytes.len());
+    root_println!(
+        config.mpi_config,
+        "Proof generated. Size: {} bytes",
+        proof.bytes.len()
+    );
     // first and last 16 proof u8
     root_println!(config.mpi_config, "Proof bytes: ");
     proof.bytes.iter().take(16).for_each(|b| print!("{} ", b));
@@ -87,13 +96,13 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
         .take(16)
         .rev()
         .for_each(|b| print!("{} ", b));
-    root_println!(config.mpi_config, );
+    root_println!(config.mpi_config,);
 
     root_println!(config.mpi_config, "Proof hash: ");
     sha2::Sha256::digest(&proof.bytes)
         .iter()
         .for_each(|b| print!("{} ", b));
-    root_println!(config.mpi_config, );
+    root_println!(config.mpi_config,);
 
     // Verify
     if config.mpi_config.is_root() {

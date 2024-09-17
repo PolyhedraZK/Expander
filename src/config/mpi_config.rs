@@ -2,7 +2,10 @@ use std::fmt::Debug;
 
 use arith::Field;
 use mpi::{
-    environment::Universe, topology::{Process, SimpleCommunicator}, traits::*
+    environment::Universe,
+    ffi,
+    topology::{Process, SimpleCommunicator},
+    traits::*,
 };
 
 use crate::{FiatShamirHash, Transcript};
@@ -53,11 +56,11 @@ impl Debug for MPIConfig {
         };
 
         f.debug_struct("MPIConfig")
-        .field("universe", &universe_fmt)
-        .field("world", &world_fmt)
-        .field("world_size", &self.world_size)
-        .field("world_rank", &self.world_rank)
-        .finish()
+            .field("universe", &universe_fmt)
+            .field("world", &world_fmt)
+            .field("world_size", &self.world_size)
+            .field("world_rank", &self.world_rank)
+            .finish()
     }
 }
 
@@ -73,7 +76,7 @@ impl MPIConfig {
     const ROOT_RANK: i32 = 0;
 
     // OK if already initialized, mpi::initialize() will return None
-    pub fn mpi_init() {
+    pub fn init() {
         unsafe {
             let universe = mpi::initialize();
             if universe.is_some() {
@@ -83,12 +86,24 @@ impl MPIConfig {
         }
     }
 
+    pub fn finalize() {
+        unsafe { ffi::MPI_Finalize() };
+    }
+
     pub fn new() -> Self {
-        Self::mpi_init(); 
-        let universe = unsafe {UNIVERSE.as_ref()};
-        let world = unsafe {WORLD.as_ref()};
-        let world_size = if world.is_some() {world.unwrap().size()} else {1};
-        let world_rank = if world.is_some() {world.unwrap().rank()} else {0};
+        Self::init();
+        let universe = unsafe { UNIVERSE.as_ref() };
+        let world = unsafe { WORLD.as_ref() };
+        let world_size = if world.is_some() {
+            world.unwrap().size()
+        } else {
+            1
+        };
+        let world_rank = if world.is_some() {
+            world.unwrap().rank()
+        } else {
+            0
+        };
         Self {
             universe,
             world,
@@ -145,8 +160,7 @@ impl MPIConfig {
         if self.world_size == 1 {
         } else {
             transcript.hash_to_digest();
-            self.root_process()
-                .broadcast_into(&mut transcript.digest);
+            self.root_process().broadcast_into(&mut transcript.digest);
         }
     }
 
