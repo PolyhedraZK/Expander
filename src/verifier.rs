@@ -44,6 +44,7 @@ fn verify_sumcheck_step<C: GKRConfig>(
 // todo: FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
+#[allow(clippy::unnecessary_unwrap)]
 fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     config: &Config<C>,
     layer: &CircuitLayer<C>,
@@ -75,7 +76,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     let var_num = layer.input_var_num;
     let simd_var_num = C::get_field_pack_size().trailing_zeros() as usize;
     let mut sum = claimed_v0 * alpha;
-    if claimed_v1.is_some() {
+    if claimed_v1.is_some() && beta.is_some() {
         sum += claimed_v1.unwrap() * beta.unwrap();
     }
     sum -= GKRVerifierHelper::eval_cst(&layer.const_, sp);

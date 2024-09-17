@@ -1,6 +1,5 @@
 use arith::Field;
 use ark_std::test_rng;
-use std::io::Read;
 
 use crate::circuit::*;
 use crate::{GKRConfig, Transcript};
