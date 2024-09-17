@@ -6,6 +6,11 @@ use crate::circuit::*;
 use crate::{GKRConfig, Transcript};
 
 #[derive(Debug, Clone, Default)]
+pub struct StructureInfo {
+    pub max_degree_one: bool,
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct CircuitLayer<C: GKRConfig> {
     pub input_var_num: usize,
     pub output_var_num: usize,
@@ -17,6 +22,8 @@ pub struct CircuitLayer<C: GKRConfig> {
     pub add: Vec<GateAdd<C>>,
     pub const_: Vec<GateConst<C>>,
     pub uni: Vec<GateUni<C>>,
+
+    pub structure_info: StructureInfo,
 }
 
 impl<C: GKRConfig> CircuitLayer<C> {
@@ -80,6 +87,10 @@ impl<C: GKRConfig> CircuitLayer<C> {
                 rnd_coefs.push(&mut gate.coef);
             }
         }
+    }
+
+    pub fn identify_structure_info(&mut self) {
+        self.structure_info.max_degree_one = self.mul.is_empty();
     }
 }
 
@@ -173,6 +184,12 @@ impl<C: GKRConfig> Circuit<C> {
             unsafe {
                 *rnd_coef_ptr = transcript.circuit_f::<C>();
             }
+        }
+    }
+
+    pub fn identify_structure_info(&mut self) {
+        for layer in &mut self.layers {
+            layer.identify_structure_info();
         }
     }
 }

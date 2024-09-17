@@ -113,9 +113,9 @@ impl GKRVerifierHelper {
     pub fn prepare_layer<C: GKRConfig>(
         layer: &CircuitLayer<C>,
         alpha: &C::ChallengeField,
-        beta: &C::ChallengeField,
+        beta: &Option<C::ChallengeField>,
         rz0: &[C::ChallengeField],
-        rz1: &[C::ChallengeField],
+        rz1: &Option<Vec<C::ChallengeField>>,
         r_simd: &Vec<C::ChallengeField>,
         r_mpi: &Vec<C::ChallengeField>,
         sp: &mut VerifierScratchPad<C>,
@@ -128,16 +128,18 @@ impl GKRVerifierHelper {
             &mut sp.eq_evals_second_part,
         );
 
-        eq_eval_at(
-            rz1,
-            beta,
-            &mut sp.eq_evals_at_rz1,
-            &mut sp.eq_evals_first_part,
-            &mut sp.eq_evals_second_part,
-        );
+        if beta.is_some() && rz1.is_some() {
+            eq_eval_at(
+                rz1.as_ref().unwrap(),
+                beta.as_ref().unwrap(),
+                &mut sp.eq_evals_at_rz1,
+                &mut sp.eq_evals_first_part,
+                &mut sp.eq_evals_second_part,
+            );
 
-        for i in 0..(1usize << layer.output_var_num) {
-            sp.eq_evals_at_rz0[i] += sp.eq_evals_at_rz1[i];
+            for i in 0..(1usize << layer.output_var_num) {
+                sp.eq_evals_at_rz0[i] += sp.eq_evals_at_rz1[i];
+            }
         }
 
         eq_eval_at(

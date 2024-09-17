@@ -317,6 +317,7 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
         }
 
         ret.identify_rnd_coefs();
+        ret.identify_structure_info();
         ret
     }
 }

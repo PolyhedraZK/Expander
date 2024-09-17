@@ -48,34 +48,40 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     config: &Config<C>,
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
-    rz1: &[C::ChallengeField],
+    rz1: &Option<Vec<C::ChallengeField>>,
     r_simd: &Vec<C::ChallengeField>,
     r_mpi: &Vec<C::ChallengeField>,
     claimed_v0: C::ChallengeField,
-    claimed_v1: C::ChallengeField,
+    claimed_v1: Option<C::ChallengeField>,
     alpha: C::ChallengeField,
-    beta: C::ChallengeField,
+    beta: Option<C::ChallengeField>,
     proof: &mut Proof,
     transcript: &mut Transcript<C::FiatShamirHashType>,
     sp: &mut VerifierScratchPad<C>,
 ) -> (
     bool,
     Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
+    Option<Vec<C::ChallengeField>>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
     C::ChallengeField,
-    C::ChallengeField,
+    Option<C::ChallengeField>,
 ) {
+    debug_assert_eq!(rz1.is_none(), claimed_v1.is_none());
+    debug_assert_eq!(rz1.is_none(), beta.is_none());
+
     GKRVerifierHelper::prepare_layer(layer, &alpha, &beta, rz0, rz1, r_simd, r_mpi, sp);
 
     let var_num = layer.input_var_num;
     let simd_var_num = C::get_field_pack_size().trailing_zeros() as usize;
-    let mut sum =
-        claimed_v0 * alpha + claimed_v1 * beta - GKRVerifierHelper::eval_cst(&layer.const_, sp);
+    let mut sum = claimed_v0 * alpha;
+    if claimed_v1.is_some() {
+        sum += claimed_v1.unwrap() * beta.unwrap();
+    }
+    sum -= GKRVerifierHelper::eval_cst(&layer.const_, sp);
 
     let mut rx = vec![];
-    let mut ry = vec![];
+    let mut ry = None;
     let mut r_simd_xy = vec![];
     let mut r_mpi_xy = vec![];
     let mut verified = true;
@@ -102,15 +108,23 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     sum -= vx_claim * GKRVerifierHelper::eval_add(&layer.add, sp);
     transcript.append_challenge_f::<C>(&vx_claim);
 
-    for _i_var in 0..var_num {
-        verified &= verify_sumcheck_step::<C>(proof, 2, transcript, &mut sum, &mut ry, sp);
-        // println!("y {} var, verified? {}", _i_var, verified);
-    }
-    GKRVerifierHelper::set_ry(&ry, sp);
+    let vy_claim = if !layer.structure_info.max_degree_one {
+        ry = Some(vec![]);
+        for _i_var in 0..var_num {
+            verified &=
+                verify_sumcheck_step::<C>(proof, 2, transcript, &mut sum, ry.as_mut().unwrap(), sp);
+            // println!("y {} var, verified? {}", _i_var, verified);
+        }
+        GKRVerifierHelper::set_ry(ry.as_ref().unwrap(), sp);
+        let vy_claim = proof.get_next_and_step::<C::ChallengeField>();
+        transcript.append_challenge_f::<C>(&vy_claim);
+        verified &= sum == vx_claim * vy_claim * GKRVerifierHelper::eval_mul(&layer.mul, sp);
+        Some(vy_claim)
+    } else {
+        verified &= sum == C::ChallengeField::ZERO;
+        None
+    };
 
-    let vy_claim = proof.get_next_and_step::<C::ChallengeField>();
-    verified &= sum == vx_claim * vy_claim * GKRVerifierHelper::eval_mul(&layer.mul, sp);
-    transcript.append_challenge_f::<C>(&vy_claim);
     (verified, rx, ry, r_simd_xy, r_mpi_xy, vx_claim, vy_claim)
 }
 
@@ -125,24 +139,23 @@ pub fn gkr_verify<C: GKRConfig>(
 ) -> (
     bool,
     Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
+    Option<Vec<C::ChallengeField>>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
     C::ChallengeField,
-    C::ChallengeField,
+    Option<C::ChallengeField>,
 ) {
     let timer = start_timer!(|| "gkr verify");
     let mut sp = VerifierScratchPad::<C>::new(config, circuit);
 
     let layer_num = circuit.layers.len();
     let mut rz0 = vec![];
-    let mut rz1 = vec![];
+    let mut rz1 = None;
     let mut r_simd = vec![];
     let mut r_mpi = vec![];
 
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
         rz0.push(transcript.challenge_f::<C>());
-        rz1.push(C::ChallengeField::zero());
     }
 
     for _ in 0..C::get_field_pack_size().trailing_zeros() {
@@ -154,9 +167,9 @@ pub fn gkr_verify<C: GKRConfig>(
     }
 
     let mut alpha = C::ChallengeField::one();
-    let mut beta = C::ChallengeField::zero();
+    let mut beta = None;
     let mut claimed_v0 = *claimed_v;
-    let mut claimed_v1 = C::ChallengeField::zero();
+    let mut claimed_v1 = None;
 
     let mut verified = true;
     for i in (0..layer_num).rev() {
@@ -186,7 +199,11 @@ pub fn gkr_verify<C: GKRConfig>(
         );
         verified &= cur_verified;
         alpha = transcript.challenge_f::<C>();
-        beta = transcript.challenge_f::<C>();
+        beta = if rz1.is_some() {
+            Some(transcript.challenge_f::<C>())
+        } else {
+            None
+        };
         log::trace!(
             "Layer {} verified with alpha={:?} and beta={:?}, claimed_v0={:?}, claimed_v1={:?}",
             i,
@@ -271,10 +288,17 @@ impl<C: GKRConfig> Verifier<C> {
                 log::trace!("Poly_vals.size() = {}", commitment.poly_vals.len());
 
                 let v1 = commitment.mpi_verify(&rz0, &r_simd, &r_mpi, claimed_v0);
-                let v2 = commitment.mpi_verify(&rz1, &r_simd, &r_mpi, claimed_v1);
-
                 verified &= v1;
-                verified &= v2;
+
+                if rz1.is_some() {
+                    let v2 = commitment.mpi_verify(
+                        rz1.as_ref().unwrap(),
+                        &r_simd,
+                        &r_mpi,
+                        claimed_v1.unwrap(),
+                    );
+                    verified &= v2;
+                }
             }
             _ => todo!(),
         }

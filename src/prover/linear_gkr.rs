@@ -98,7 +98,7 @@ impl<C: GKRConfig> Prover<C> {
 
         let mut claimed_v = C::ChallengeField::default();
         let mut _rx = vec![];
-        let mut _ry = vec![];
+        let mut _ry = None;
         let mut _rsimd = vec![];
         let mut _rmpi = vec![];
 

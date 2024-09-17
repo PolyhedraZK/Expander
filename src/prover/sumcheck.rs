@@ -24,17 +24,17 @@ fn transcript_io<C: GKRConfig>(
 pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
-    rz1: &[C::ChallengeField],
+    rz1: &Option<Vec<C::ChallengeField>>,
     r_simd: &[C::ChallengeField],
     r_mpi: &[C::ChallengeField],
     alpha: &C::ChallengeField,
-    beta: &C::ChallengeField,
+    beta: &Option<C::ChallengeField>,
     transcript: &mut Transcript<C::FiatShamirHashType>,
     sp: &mut GkrScratchpad<C>,
     mpi_config: &MPIConfig,
 ) -> (
     Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
+    Option<Vec<C::ChallengeField>>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
 ) {
@@ -68,18 +68,23 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     let vx_claim = helper.vx_claim();
     transcript.append_challenge_f::<C>(&vx_claim);
 
-    helper.prepare_y_vals();
-    for i_var in 0..helper.input_var_num {
-        let evals = helper.poly_evals_at_ry(i_var, 2);
-        let r = transcript_io::<C>(&evals, transcript, mpi_config);
-        helper.receive_ry(i_var, r);
+    if !layer.structure_info.max_degree_one {
+        helper.prepare_y_vals();
+        for i_var in 0..helper.input_var_num {
+            let evals = helper.poly_evals_at_ry(i_var, 2);
+            let r = transcript_io::<C>(&evals, transcript, mpi_config);
+            helper.receive_ry(i_var, r);
+        }
+        let vy_claim = helper.vy_claim();
+        transcript.append_challenge_f::<C>(&vy_claim);
     }
 
-    let vy_claim = helper.vy_claim();
-    transcript.append_challenge_f::<C>(&vy_claim);
-
     let rx = helper.rx;
-    let ry = helper.ry;
+    let ry = if !layer.structure_info.max_degree_one {
+        Some(helper.ry)
+    } else {
+        None
+    };
     let r_simd = helper.r_simd_var;
     let r_mpi = helper.r_mpi_var;
 

@@ -302,11 +302,11 @@ pub(crate) struct SumcheckGkrHelper<'a, C: GKRConfig> {
     layer: &'a CircuitLayer<C>,
     sp: &'a mut GkrScratchpad<C>,
     rz0: &'a [C::ChallengeField],
-    rz1: &'a [C::ChallengeField],
+    rz1: &'a Option<Vec<C::ChallengeField>>,
     r_simd: &'a [C::ChallengeField],
     r_mpi: &'a [C::ChallengeField],
     alpha: C::ChallengeField,
-    beta: C::ChallengeField,
+    beta: Option<C::ChallengeField>,
 
     pub(crate) input_var_num: usize,
     pub(crate) simd_var_num: usize,
@@ -359,11 +359,11 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
     pub(crate) fn new(
         layer: &'a CircuitLayer<C>,
         rz0: &'a [C::ChallengeField],
-        rz1: &'a [C::ChallengeField],
+        rz1: &'a Option<Vec<C::ChallengeField>>,
         r_simd: &'a [C::ChallengeField],
         r_mpi: &'a [C::ChallengeField],
         alpha: &'a C::ChallengeField,
-        beta: &'a C::ChallengeField,
+        beta: &'a Option<C::ChallengeField>,
         sp: &'a mut GkrScratchpad<C>,
         mpi_config: &'a MPIConfig,
     ) -> Self {
@@ -381,7 +381,11 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             r_simd,
             r_mpi,
             alpha: *alpha,
-            beta: *beta,
+            beta: if beta.is_none() {
+                None
+            } else {
+                Some(*beta.as_ref().unwrap())
+            },
 
             input_var_num: layer.input_var_num,
             simd_var_num,
@@ -572,16 +576,19 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             &mut self.sp.eq_evals_second_half,
         );
 
-        eq_eval_at(
-            self.rz1,
-            &self.beta,
-            eq_evals_at_rz1,
-            &mut self.sp.eq_evals_first_half,
-            &mut self.sp.eq_evals_second_half,
-        );
+        // they should both be some or both be none though
+        if self.rz1.is_some() && self.beta.is_some() {
+            eq_eval_at(
+                self.rz1.as_ref().unwrap(),
+                &self.beta.unwrap(),
+                eq_evals_at_rz1,
+                &mut self.sp.eq_evals_first_half,
+                &mut self.sp.eq_evals_second_half,
+            );
 
-        for i in 0..1 << self.rz0.len() {
-            eq_evals_at_rz0[i] += eq_evals_at_rz1[i];
+            for i in 0..1 << self.rz0.len() {
+                eq_evals_at_rz0[i] += eq_evals_at_rz1[i];
+            }
         }
 
         for g in mul.iter() {

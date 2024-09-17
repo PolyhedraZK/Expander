@@ -18,7 +18,7 @@ pub fn gkr_prove<C: GKRConfig>(
 ) -> (
     C::ChallengeField,
     Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
+    Option<Vec<C::ChallengeField>>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
 ) {
@@ -26,12 +26,11 @@ pub fn gkr_prove<C: GKRConfig>(
     let layer_num = circuit.layers.len();
 
     let mut rz0 = vec![];
-    let mut rz1 = vec![];
+    let mut rz1 = None;
     let mut r_simd = vec![];
     let mut r_mpi = vec![];
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
         rz0.push(transcript.challenge_f::<C>());
-        rz1.push(C::ChallengeField::zero());
     }
 
     for _ in 0..C::get_field_pack_size().trailing_zeros() {
@@ -43,7 +42,7 @@ pub fn gkr_prove<C: GKRConfig>(
     }
 
     let mut alpha = C::ChallengeField::one();
-    let mut beta = C::ChallengeField::zero();
+    let mut beta = None;
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
 
@@ -84,17 +83,16 @@ pub fn gkr_prove<C: GKRConfig>(
         );
 
         alpha = transcript.challenge_f::<C>();
-        beta = transcript.challenge_f::<C>();
         mpi_config.root_broadcast(&mut alpha);
-        mpi_config.root_broadcast(&mut beta);
 
-        log::trace!("Layer {} proved with alpha={:?}, beta={:?}", i, alpha, beta);
-        log::trace!("rz0.0: {:?}", rz0[0]);
-        log::trace!("rz0.1: {:?}", rz0[1]);
-        log::trace!("rz0.2: {:?}", rz0[2]);
-        log::trace!("rz1.0: {:?}", rz1[0]);
-        log::trace!("rz1.1: {:?}", rz1[1]);
-        log::trace!("rz1.2: {:?}", rz1[2]);
+        if rz1.is_some() {
+            // TODO: try broadcast beta.unwrap directly
+            let mut tmp = transcript.challenge_f::<C>();
+            mpi_config.root_broadcast(&mut tmp);
+            beta = Some(tmp)
+        } else {
+            beta = None;
+        }
     }
 
     end_timer!(timer);
