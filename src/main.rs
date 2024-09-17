@@ -149,7 +149,8 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         for cnt in &partial_proof_cnts {
             total_proof_cnt += *cnt.lock().unwrap();
         }
-        let throughput = total_proof_cnt as f64 / duration.as_secs_f64();
+        let throughput = total_proof_cnt as f64 / duration.as_secs_f64()
+            * (config.mpi_config.world_size() as f64);
         println!("{}-bench: throughput: {} hashes/s", i, throughput.round());
     }
 }

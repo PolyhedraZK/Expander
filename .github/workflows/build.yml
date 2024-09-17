@@ -24,6 +24,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: Install MPI
+        run: python3 ./scripts/install.py
       - name: Prepare binary
         run: ${{ matrix.flags }} cargo build --release --bin expander-exec
       - name: Upload release asset
