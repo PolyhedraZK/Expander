@@ -1,15 +1,8 @@
-import os
 import subprocess
 from sys import platform
 
 if __name__ == "__main__":
-    if platform == "darwin":
+    if platform == "darwin": # mac os
         subprocess.run(["brew", "install", "openmpi"])
     else:
-        subprocess.run(["wget", "https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.5.tar.gz"])
-        subprocess.run(["tar", "-xzf", "openmpi-5.0.5.tar.gz"])
-        os.chdir("openmpi-5.0.5")
-        subprocess.run(["./configure", "--prefix=/tmp"])
-        subprocess.run(["make", "-j", "all"])
-        subprocess.run(["make", "install"])
-        os.chdir("..")
+        pass # Do nothing, assuming mpi has already been installed
