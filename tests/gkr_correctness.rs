@@ -109,7 +109,10 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
         let verifier = Verifier::new(config);
         println!("Verifier created.");
         let verification_start = Instant::now();
-        assert!(verifier.verify(&mut circuit, &claimed_v, &proof),);
+        assert!(
+            config.mpi_config.world_size() == 1
+                && verifier.verify(&mut circuit, &claimed_v, &proof),
+        );
         println!(
             "Verification time: {} μs",
             verification_start.elapsed().as_micros()

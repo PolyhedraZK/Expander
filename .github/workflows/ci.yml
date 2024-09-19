@@ -42,7 +42,7 @@ jobs:
       - run: cargo test -p arith --release
       - run: cargo test -p bi-kzg --release
       - run: cargo test --no-default-features --release
-      - run: mpiexec -n 2 ./target/release/deps/gkr_correctness-*
+      - run: rm ./target/release/deps/*.d && mpiexec -n 2 ./target/release/deps/gkr_correctness-*
       - run: cargo test --all-features --release
   Bench-mac-m31-ext3:
     name: Bench-mac-m31-ext3
@@ -86,7 +86,7 @@ jobs:
       - run: RUSTFLAGS="-C target-cpu=native" cargo test -p arith --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo test -p bi-kzg --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo test --no-default-features --release
-      - run: mpiexec -n 2 ./target/release/deps/gkr_correctness-*
+      - run: rm ./target/release/deps/*.d && mpiexec -n 2 ./target/release/deps/gkr_correctness-*
       - run: RUSTFLAGS="-C target-cpu=native" cargo test --all-features --release
   Bench-linux-m31-ext3:
     name: Bench-linux-m31-ext3
