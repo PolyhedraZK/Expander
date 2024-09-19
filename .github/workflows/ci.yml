@@ -76,9 +76,25 @@ jobs:
       - run: . "$HOME/.cargo/env"
       - run: cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo test -p arith --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo test -p mersenne31 --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo test -p gf2 --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo test -p bi-kzg --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo test --no-default-features --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo test --all-features --release
+  Test-linux-avx2:
+    name: Test-linux
+    runs-on: 7950x3d
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: . "$HOME/.cargo/env"
+      - run: cargo run --bin=dev-setup --release
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo test -p arith --release
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo test -p mersenne31 --release
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo test -p gf2 --release
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo test -p bi-kzg --release
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --no-default-features --release
+      - run: RUSTFLAGS="-C target-feature=+avx2" cargo test --all-features --release
   Bench-linux-m31-ext3:
     name: Bench-linux-m31-ext3
     runs-on: 7950x3d
