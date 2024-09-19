@@ -1,14 +1,14 @@
 use super::{FieldType, GKRConfig};
-use crate::Keccak256hasher;
+use crate::SHA256hasher;
 use arith::{
     BabyBear, BabyBearExt3, BabyBearExt3x16, BabyBearExt4, BabyBearExt4x16, BabyBearx16,
     ExtensionField,
 };
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct BabyBearExt4ConfigKeccak;
+pub struct BabyBearExt4ConfigSha2;
 
-impl GKRConfig for BabyBearExt4ConfigKeccak {
+impl GKRConfig for BabyBearExt4ConfigSha2 {
     type CircuitField = BabyBear;
 
     type ChallengeField = BabyBearExt4;
@@ -17,7 +17,7 @@ impl GKRConfig for BabyBearExt4ConfigKeccak {
 
     type SimdCircuitField = BabyBearx16;
 
-    type FiatShamirHashType = Keccak256hasher;
+    type FiatShamirHashType = SHA256hasher;
 
     const FIELD_TYPE: FieldType = FieldType::BabyBear;
 
@@ -85,9 +85,9 @@ impl GKRConfig for BabyBearExt4ConfigKeccak {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct BabyBearExt3ConfigKeccak;
+pub struct BabyBearExt3ConfigSha2;
 
-impl GKRConfig for BabyBearExt3ConfigKeccak {
+impl GKRConfig for BabyBearExt3ConfigSha2 {
     type CircuitField = BabyBear;
 
     type ChallengeField = BabyBearExt3;
@@ -96,7 +96,7 @@ impl GKRConfig for BabyBearExt3ConfigKeccak {
 
     type SimdCircuitField = BabyBearx16;
 
-    type FiatShamirHashType = Keccak256hasher;
+    type FiatShamirHashType = SHA256hasher;
 
     const FIELD_TYPE: FieldType = FieldType::BabyBear;
 
