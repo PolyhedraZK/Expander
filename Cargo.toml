@@ -53,7 +53,7 @@ clap = { version = "4.1", features = ["derive"] }
 cfg-if = "1.0"
 criterion = { version = "0.5", features = ["html_reports"] }
 env_logger = "0.11.3"
-halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", default-features = false, features = [
+halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", branch = "non-canonical-montgomery", default-features = false, features = [
     "bits",
 ] }
 itertools = "0.13"

@@ -22,9 +22,9 @@ criterion.workspace = true
 name = "field"
 harness = false
 
-[[bench]]
-name = "ext_field"
-harness = false
+# [[bench]]
+# name = "ext_field"
+# harness = false
 
 [features]
 avx256 = []

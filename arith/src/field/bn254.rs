@@ -1,5 +1,4 @@
 use std::io::{Read, Write};
-use std::mem::transmute;
 
 use halo2curves::ff::{Field as Halo2Field, FromUniformBytes};
 use halo2curves::{bn256::Fr, ff::PrimeField};
@@ -108,74 +107,6 @@ impl Field for Fr {
                 .try_into()
                 .unwrap(),
         )
-    }
-
-    #[inline]
-    // Faster multiplication when the other element is not in Montgomery form
-    //
-    // # setup
-    // p = 21888242871839275222246405745257275088548364400416034343698204186575808495617
-    // N = 2^256
-    // r = N % p
-    // r_inv = 1/r % N
-    //
-    // # initialization for montgomery form
-    // a = 123456789
-    // a_mont = a * r % N
-    // b = 987654321
-    // b_mont = b * r % N
-    //
-    // # default multiplication
-    // c = a * b
-    // c_mont = c * r % N
-    // c_mont2 = a_mont * b_mont * r_inv % N
-    // print("default mul is correct:", c_mont==c_mont2)
-    //
-    // # short circuit multiplication
-    // # a is in u32 and does not require to be converted to montgomery
-    // # this requires one u32 * u256 operation
-    // # v.s. default mul requires two u256 * u256 operations
-    // c_mont3 = a * b_mont % N
-    // print("fast mul is correct:", c_mont==c_mont3)
-    //
-    //
-    // warning: currently the code failed the test
-    // it generates a same Fr field element, but the montgomery form is different
-    fn mul_by_i32(&self, rhs: i32) -> Self {
-        // the following is more efficient than directly performing u256 * u256
-        unsafe {
-            let [a, b, c, d] = transmute::<Fr, [u64; 4]>(*self);
-            let (sign, rhs_unsigned) = if rhs < 0 {
-                (false, -rhs as u32)
-            } else {
-                (true, rhs as u32)
-            };
-
-            let ar128 = u128::from(a) * rhs_unsigned as u128;
-            let br128 = u128::from(b) * rhs_unsigned as u128;
-            let cr128 = u128::from(c) * rhs_unsigned as u128;
-            let dr64 = d * rhs_unsigned as u64; // we don't care about the upper 64 bits
-
-            let [ar_low, ar_high] = transmute::<u128, [u64; 2]>(ar128);
-            let [br_low, br_high] = transmute::<u128, [u64; 2]>(br128);
-            let [cr_low, cr_high] = transmute::<u128, [u64; 2]>(cr128);
-
-            let mut result = [0u64; 4];
-            let mut carry = false;
-
-            result[0] = ar_low;
-            (result[1], carry) = br_low.overflowing_add(ar_high);
-            (result[2], carry) = cr_low.overflowing_add(br_high + carry as u64); // br_high is 32 bits so we can add without overflow
-            result[3] = dr64 + cr_high + carry as u64; // don't care for overflow
-
-            let fr = transmute::<[u64; 4], Fr>(result);
-
-            if sign {
-                fr
-            } else {
-                -fr
-            }
-        }
     }
 }
 

@@ -130,11 +130,6 @@ pub trait Field:
         let t = self.mul_by_3();
         t + t
     }
-
-    #[inline(always)]
-    fn mul_by_i32(&self, _b: i32) -> Self {
-        unimplemented!("not supported for this field")
-    }
 }
 
 pub trait FieldForECC: Field + Hash + Eq + PartialOrd + Ord {

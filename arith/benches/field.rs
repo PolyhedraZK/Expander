@@ -188,9 +188,13 @@ fn bench_mul_i32<F: Field>(c: &mut Criterion) {
                 || random_element::<F>(),
                 |mut x| {
                     let b = rng.next_u32() as i32;
-
+                    let b_fr = if b < 0 {
+                        -F::from(-b as u32)
+                    } else {
+                        F::from(b as u32)
+                    };
                     for _ in 0..100 {
-                        x = x.mul_by_i32(b)
+                        x = x * b_fr
                     }
                     x
                 },
@@ -201,7 +205,6 @@ fn bench_mul_i32<F: Field>(c: &mut Criterion) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    
     bench_mul_i32::<Fr>(c);
 
     bench_field::<M31>(c);
