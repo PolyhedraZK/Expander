@@ -49,8 +49,6 @@ fn test_uint32x4_const_init() {
     assert!(all_equal, "x and y are not equal");
 }
 
-
-
 pub fn random_extension_field_tests<F: ExtensionField>(_name: String) {
     let mut rng = test_rng();
     for _ in 0..1000 {
@@ -99,8 +97,6 @@ pub fn random_extension_field_tests<F: ExtensionField>(_name: String) {
         }
     }
 }
-
-
 
 pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
     let mut rng = test_rng();
@@ -376,8 +372,6 @@ fn associativity_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     end_timer!(start);
 }
 
-
-
 pub fn random_simd_field_tests<F: SimdField>(_name: String) {
     let mut rng = test_rng();
 
@@ -406,4 +400,3 @@ pub fn random_simd_field_tests<F: SimdField>(_name: String) {
         assert_eq!(x, x_repacked);
     }
 }
-

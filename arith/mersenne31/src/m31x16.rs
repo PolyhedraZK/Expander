@@ -13,13 +13,7 @@ mod m31_avx512;
 pub type M31x16 = m31_avx512::AVXM31;
 
 // Fallback, use avx2
-#[cfg(all(
-    target_arch = "x86_64",
-    not(target_feature = "avx512f"),
-))]
+#[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f"),))]
 mod m31_avx256;
-#[cfg(all(
-    target_arch = "x86_64",
-    not(target_feature = "avx512f"),
-))]
+#[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f"),))]
 pub type M31x16 = m31_avx256::AVXM31;
