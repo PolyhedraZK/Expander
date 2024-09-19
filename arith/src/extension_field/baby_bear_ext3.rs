@@ -168,9 +168,9 @@ impl ExtensionField for BabyBearExt3 {
 
     #[inline(always)]
     fn mul_by_x(&self) -> Self {
-        let w = BabyBear::from(Self::W);
+        // Note: W = 2
         Self {
-            v: [self.v[2] * w, self.v[0], self.v[1]],
+            v: [self.v[2].double(), self.v[0], self.v[1]],
         }
     }
 }
@@ -310,22 +310,22 @@ fn sub_internal(a: &BabyBearExt3, b: &BabyBearExt3) -> BabyBearExt3 {
 //   + {(a0 b2 + a1 b1 + a2 b0)} x^2
 #[inline(always)]
 fn mul_internal(a: &BabyBearExt3, b: &BabyBearExt3) -> BabyBearExt3 {
-    let w = BabyBear::new(BabyBearExt3::W);
+    // Note: W = 2
     let a = a.v;
     let b = b.v;
     let mut res = [BabyBear::default(); 3];
-    res[0] = a[0] * b[0] + w * (a[1] * b[2] + a[2] * b[1]);
-    res[1] = (a[0] * b[1] + a[1] * b[0]) + w * a[2] * b[2];
+    res[0] = a[0] * b[0] + (a[1] * b[2] + a[2] * b[1]).double();
+    res[1] = (a[0] * b[1] + a[1] * b[0]) + a[2] * b[2].double();
     res[2] = a[0] * b[2] + a[1] * b[1] + a[2] * b[0];
     BabyBearExt3 { v: res }
 }
 
 #[inline(always)]
 fn square_internal(a: &[BabyBear; 3]) -> [BabyBear; 3] {
-    let w = BabyBear::new(BabyBearExt3::W);
+    // Note: W = 2
     let mut res = [BabyBear::default(); 3];
-    res[0] = a[0].square() + w * (a[1] * a[2]).double();
-    res[1] = (a[0] * a[1]).double() + w * a[2].square();
+    res[0] = a[0].square() + (a[1] * a[2]).double().double();
+    res[1] = (a[0] * a[1]).double() + a[2].square().double();
     res[2] = a[0] * a[2].double() + a[1].square();
     res
 }

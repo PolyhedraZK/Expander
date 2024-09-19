@@ -134,7 +134,8 @@ impl ExtensionField for BabyBearExt3x16 {
     #[inline(always)]
     fn mul_by_x(&self) -> Self {
         Self {
-            v: [self.v[2] * BabyBearx16::from(Self::W), self.v[0], self.v[1]],
+            // Note: W = 2
+            v: [self.v[2].double(), self.v[0], self.v[1]],
         }
     }
 }
@@ -249,10 +250,10 @@ impl Mul<BabyBearExt3> for BabyBearExt3x16 {
         //   + {(a0 b1 + a1 b0) + w * a2 b2} x
         //   + {(a0 b2 + a1 b1 + a2 b0)} x^2
 
-        let w = BabyBear::from(BabyBearExt3x16::W);
+        // Note: W = 2
         let mut res = [BabyBearx16::ZERO; 3];
-        res[0] = self.v[0] * rhs.v[0] + (self.v[1] * rhs.v[2] + self.v[2] * rhs.v[1]) * w;
-        res[1] = self.v[0] * rhs.v[1] + self.v[1] * rhs.v[0] + self.v[2] * rhs.v[2] * w;
+        res[0] = self.v[0] * rhs.v[0] + (self.v[1] * rhs.v[2] + self.v[2] * rhs.v[1]).double();
+        res[1] = self.v[0] * rhs.v[1] + self.v[1] * rhs.v[0] + self.v[2] * rhs.v[2].double();
         res[2] = self.v[0] * rhs.v[2] + self.v[1] * rhs.v[1] + self.v[2] * rhs.v[0];
         Self { v: res }
     }
@@ -336,9 +337,9 @@ fn mul_internal(a: &BabyBearExt3x16, b: &BabyBearExt3x16) -> BabyBearExt3x16 {
     let a = &a.v;
     let b = &b.v;
     let mut res = [BabyBearx16::default(); 3];
-    let w = BabyBear::from(BabyBearExt3x16::W);
-    res[0] = a[0] * b[0] + (a[1] * b[2] + a[2] * b[1]) * w;
-    res[1] = (a[0] * b[1] + a[1] * b[0]) + a[2] * b[2] * w;
+    // Note: W = 2
+    res[0] = a[0] * b[0] + (a[1] * b[2] + a[2] * b[1]).double();
+    res[1] = (a[0] * b[1] + a[1] * b[0]) + a[2] * b[2].double();
     res[2] = a[0] * b[2] + a[1] * b[1] + a[2] * b[0];
 
     BabyBearExt3x16 { v: res }
@@ -347,9 +348,9 @@ fn mul_internal(a: &BabyBearExt3x16, b: &BabyBearExt3x16) -> BabyBearExt3x16 {
 #[inline(always)]
 fn square_internal(a: &[BabyBearx16; 3]) -> [BabyBearx16; 3] {
     let mut res = [BabyBearx16::default(); 3];
-    let w = BabyBear::from(BabyBearExt3x16::W);
-    res[0] = a[0].square() + (a[1] * a[2]).double() * w;
-    res[1] = (a[0] * a[1]).double() + a[2].square() * w;
+    // Note: W = 2
+    res[0] = a[0].square() + (a[1] * a[2]).double().double();
+    res[1] = (a[0] * a[1]).double() + a[2].square().double();
     res[2] = a[0] * a[2].double() + a[1].square();
 
     res
