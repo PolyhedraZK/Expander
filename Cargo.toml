@@ -40,7 +40,12 @@ default = []
 grinding = []
 
 [workspace]
-members = ["arith", "bi-kzg"]
+members = [
+    "arith", 
+    "arith/goldilocks",
+    "arith/mersenne31",
+    "bi-kzg"
+    ]
 
 [workspace.dependencies]
 ark-std = "0.4"
