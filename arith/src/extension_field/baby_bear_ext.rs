@@ -436,3 +436,53 @@ fn test_compare_plonky3() {
         assert_eq!(a_exp_e, (&p3_a_exp_e).into());
     }
 }
+
+/// Compare to test vectors generated using SageMath
+#[test]
+fn test_compare_sage() {
+    let a = BabyBearExt4 {
+        v: [
+            BabyBear::new(1),
+            BabyBear::new(2),
+            BabyBear::new(3),
+            BabyBear::new(4),
+        ],
+    };
+    let b = BabyBearExt4 {
+        v: [
+            BabyBear::new(5),
+            BabyBear::new(6),
+            BabyBear::new(7),
+            BabyBear::new(8),
+        ],
+    };
+    let expected_prod = BabyBearExt4 {
+        v: [
+            BabyBear::new(676),
+            BabyBear::new(588),
+            BabyBear::new(386),
+            BabyBear::new(60),
+        ],
+    };
+    assert_eq!(a * b, expected_prod);
+
+    let a_inv = BabyBearExt4 {
+        v: [
+            BabyBear::new(1587469345),
+            BabyBear::new(920666518),
+            BabyBear::new(1160282443),
+            BabyBear::new(647153706),
+        ],
+    };
+    assert_eq!(a.inv().unwrap(), a_inv);
+
+    let a_to_eleven = BabyBearExt4 {
+        v: [
+            BabyBear::new(374109212),
+            BabyBear::new(621581642),
+            BabyBear::new(269190551),
+            BabyBear::new(1925703176),
+        ],
+    };
+    assert_eq!(a.exp(11), a_to_eleven);
+}
