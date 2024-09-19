@@ -1,8 +1,8 @@
-use expander_rs::{utils::*, FieldType};
+use expander_rs::{utils::*, BabyBearExt3ConfigKeccak, BabyBearExt4ConfigKeccak, FieldType};
 use expander_rs::{
-    BN254ConfigKeccak, BN254ConfigSha2, BabyBearExt4ConfigKeccak, Circuit, CircuitLayer, Config,
-    GF2ExtConfigKeccak, GF2ExtConfigSha2, GKRConfig, GKRScheme, GateAdd, GateMul,
-    M31ExtConfigKeccak, M31ExtConfigSha2, Prover, Verifier,
+    BN254ConfigKeccak, BN254ConfigSha2, BabyBearExt3ConfigSha2, BabyBearExt4ConfigSha2, Circuit,
+    CircuitLayer, Config, GF2ExtConfigKeccak, GF2ExtConfigSha2, GKRConfig, GKRScheme, GateAdd,
+    GateMul, M31ExtConfigKeccak, M31ExtConfigSha2, Prover, Verifier,
 };
 use std::panic;
 use std::panic::AssertUnwindSafe;
@@ -51,8 +51,17 @@ fn gen_simple_circuit<C: GKRConfig>() -> Circuit<C> {
 
 #[test]
 fn test_gkr_correctness() {
+    test_gkr_correctness_helper::<BabyBearExt3ConfigSha2>(&Config::<BabyBearExt3ConfigSha2>::new(
+        GKRScheme::Vanilla,
+    ));
+    test_gkr_correctness_helper::<BabyBearExt4ConfigSha2>(&Config::<BabyBearExt4ConfigSha2>::new(
+        GKRScheme::Vanilla,
+    ));
     test_gkr_correctness_helper::<BabyBearExt4ConfigKeccak>(
         &Config::<BabyBearExt4ConfigKeccak>::new(GKRScheme::Vanilla),
+    );
+    test_gkr_correctness_helper::<BabyBearExt3ConfigKeccak>(
+        &Config::<BabyBearExt3ConfigKeccak>::new(GKRScheme::Vanilla),
     );
     test_gkr_correctness_helper::<GF2ExtConfigSha2>(&Config::<GF2ExtConfigSha2>::new(
         GKRScheme::Vanilla,
