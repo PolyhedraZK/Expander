@@ -2,7 +2,9 @@ use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use std::{arch::aarch64::*, mem::transmute};
 
-use crate::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, GF2};
+use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult};
+
+use crate::GF2;
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128 {

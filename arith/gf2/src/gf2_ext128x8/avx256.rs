@@ -1,9 +1,3 @@
-use crate::{GF2x8, GF2};
-
-use arith::{
-    field_common, ExtensionField, Field, FieldSerde, FieldSerdeError, FieldSerdeResult, SimdField,
-    GF2_128,
-};
 use std::fmt::Debug;
 use std::{
     arch::x86_64::*,
@@ -11,6 +5,12 @@ use std::{
     mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
+
+use arith::{
+    field_common, ExtensionField, Field, FieldSerde, FieldSerdeError, FieldSerdeResult, SimdField,
+};
+
+use crate::{GF2x8, GF2, GF2_128};
 
 #[derive(Clone, Copy)]
 pub struct AVX256GF2_128x8 {
@@ -129,11 +129,11 @@ impl Field for AVX256GF2_128x8 {
     fn is_zero(&self) -> bool {
         unsafe {
             let zero = _mm256_setzero_si256();
-            let cmp_0 = _mm256_cmpeq_epi64_mask(self.data[0], zero)
-                & _mm256_cmpeq_epi64_mask(self.data[1], zero);
-            let cmp_1 = _mm256_cmpeq_epi64_mask(self.data[2], zero)
-                & _mm256_cmpeq_epi64_mask(self.data[3], zero);
-            (cmp_0 & cmp_1) == 0xF // All 16 64-bit integers are equal (zero)
+            let cmp0 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(self.data[0], zero));
+            let cmp1 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(self.data[1], zero));
+            let cmp2 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(self.data[2], zero));
+            let cmp3 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(self.data[3], zero));
+            (cmp0 & cmp1 & cmp2 & cmp3) == !0i32
         }
     }
 
@@ -439,11 +439,11 @@ impl PartialEq for AVX256GF2_128x8 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let cmp_0 = _mm256_cmpeq_epi64_mask(self.data[0], other.data[0])
-                & _mm256_cmpeq_epi64_mask(self.data[1], other.data[1]);
-            let cmp_1 = _mm256_cmpeq_epi64_mask(self.data[2], other.data[2])
-                & _mm256_cmpeq_epi64_mask(self.data[3], other.data[3]);
-            (cmp_0 & cmp_1) == 0xF // All 16 64-bit integers are equal
+            let cmp0 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(self.data[0], other.data[0]));
+            let cmp1 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(self.data[1], other.data[1]));
+            let cmp2 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(self.data[2], other.data[2]));
+            let cmp3 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(self.data[3], other.data[3]));
+            (cmp0 & cmp1 & cmp2 & cmp3) == !0i32
         }
     }
 }
@@ -579,22 +579,6 @@ fn mul_internal(a: &AVX256GF2_128x8, b: &AVX256GF2_128x8) -> AVX256GF2_128x8 {
     }
 }
 
-// abcdefgh -> aacceegg
-#[inline(always)]
-pub fn duplicate_even_bits(byte: u8) -> u8 {
-    let even_bits = byte & 0b10101010;
-    let even_bits_shifted = even_bits >> 1;
-    even_bits | even_bits_shifted
-}
-
-// abcdefgh -> bbddffhh
-#[inline(always)]
-pub fn duplicate_odd_bits(byte: u8) -> u8 {
-    let odd_bits = byte & 0b01010101;
-    let odd_bits_shifted = odd_bits << 1;
-    odd_bits | odd_bits_shifted
-}
-
 impl ExtensionField for AVX256GF2_128x8 {
     const DEGREE: usize = GF2_128::DEGREE;
 
@@ -615,17 +599,23 @@ impl ExtensionField for AVX256GF2_128x8 {
 
     #[inline(always)]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
-        let mask_even = duplicate_even_bits(base.v);
-        let mask_odd = duplicate_odd_bits(base.v);
+        // -1 -> 0b11111111
+        let v0 = -(((base.v >> 7) & 1u8) as i64);
+        let v1 = -(((base.v >> 6) & 1u8) as i64);
+        let v2 = -(((base.v >> 5) & 1u8) as i64);
+        let v3 = -(((base.v >> 4) & 1u8) as i64);
+        let v4 = -(((base.v >> 3) & 1u8) as i64);
+        let v5 = -(((base.v >> 2) & 1u8) as i64);
+        let v6 = -(((base.v >> 1) & 1u8) as i64);
+        let v7 = -((base.v & 1u8) as i64);
 
-        Self {
-            data: [
-                unsafe { _mm256_maskz_mov_epi64(mask_even, self.data[0]) },
-                unsafe { _mm256_maskz_mov_epi64(mask_even, self.data[1]) },
-                unsafe { _mm256_maskz_mov_epi64(mask_odd, self.data[2]) },
-                unsafe { _mm256_maskz_mov_epi64(mask_odd, self.data[3]) },
-            ],
-        }
+        let mut res = *self;
+        res.data[0] = unsafe { _mm256_and_si256(res.data[0], _mm256_set_epi64x(v0, v0, v2, v2)) };
+        res.data[1] = unsafe { _mm256_and_si256(res.data[1], _mm256_set_epi64x(v4, v4, v6, v6)) };
+        res.data[2] = unsafe { _mm256_and_si256(res.data[2], _mm256_set_epi64x(v1, v1, v3, v3)) };
+        res.data[3] = unsafe { _mm256_and_si256(res.data[3], _mm256_set_epi64x(v5, v5, v7, v7)) };
+
+        res
     }
 
     #[inline(always)]
@@ -667,8 +657,8 @@ impl ExtensionField for AVX256GF2_128x8 {
 
                 // compute the reduced polynomial
                 let reduction = {
-                    let odd_elements = _mm256_maskz_compress_epi64(0b10101010, msb);
-                    let mask = _mm256_maskz_expand_epi64(0b01010101, odd_elements);
+                    let odd_elements = _mm256_and_si256(msb, _mm256_set_epi64x(-1, 0, -1, 0));
+                    let mask = _mm256_permute4x64_epi64::<0b00110001>(odd_elements);
                     let multiplier = _mm256_set1_epi64x(0x87);
                     _mm256_mul_epu32(multiplier, mask)
                 };
