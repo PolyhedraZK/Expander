@@ -1,9 +1,3 @@
-pub mod proof;
-pub use proof::*;
-
-pub mod fiat_shamir;
-pub use fiat_shamir::*;
-
 pub mod scratchpad;
 pub use scratchpad::*;
 

@@ -1,0 +1,30 @@
+[package]
+name = "mersenne31"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arith = { path = "../" }
+
+ark-std.workspace = true
+halo2curves.workspace = true
+log.workspace = true
+rand.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+ethnum.workspace = true
+
+raw-cpuid = "11.1.0"
+cfg-if = "1.0"
+
+
+[dev-dependencies]
+tynm.workspace = true
+criterion.workspace = true
+
+[features]
+avx256 = []
+
+[[bench]]
+name = "m31"
+harness = false
