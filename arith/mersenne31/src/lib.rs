@@ -15,3 +15,6 @@ pub use m31_ext::M31Ext3;
 /// SIMDx16 for Degree 3 extension field for Mersenne-31
 mod m31_ext3x16;
 pub use m31_ext3x16::M31Ext3x16;
+
+#[cfg(test)]
+mod tests;

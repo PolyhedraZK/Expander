@@ -17,5 +17,5 @@ mod macros;
 mod benches;
 pub use benches::*;
 
-#[cfg(test)]
 mod tests;
+pub use tests::*;
