@@ -1,2 +1,2 @@
 [build]
-rustflags = ["-C", "target-feature=+avx512f"]
+# rustflags = ["-C", "target-feature=+avx512f"]

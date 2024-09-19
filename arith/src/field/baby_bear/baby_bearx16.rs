@@ -11,5 +11,5 @@ cfg_if::cfg_if! {
     }
 }
 
-// #[cfg(target_arch = "aarch64")]
-// pub type BabyBearx16 = super::baby_bear_neon::NeonBabyBear;
+#[cfg(target_arch = "aarch64")]
+pub type BabyBearx16 = super::baby_bear_neon::NeonBabyBear;

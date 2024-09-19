@@ -16,6 +16,8 @@ pub use baby_bearx16::BabyBearx16;
 pub(crate) mod baby_bear_avx;
 #[cfg(target_arch = "x86_64")]
 pub(crate) mod baby_bear_avx256;
+#[cfg(target_arch = "aarch64")]
+pub(crate) mod baby_bear_neon;
 
 #[cfg(target_arch = "x86_64")]
 pub use baby_bear_avx::AVXBabyBear;

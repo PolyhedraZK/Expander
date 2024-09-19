@@ -182,6 +182,9 @@ impl Field for BabyBearExt4x16 {
     #[cfg(target_arch = "x86_64")]
     const NAME: &'static str = "AVX Vectorized BabyBear Extension 4";
 
+    #[cfg(target_arch = "aarch64")]
+    const NAME: &'static str = "NEON Vectorized BabyBear Extension 4";
+
     const SIZE: usize = 512 / 8 * 3;
 
     const FIELD_SIZE: usize = 32 * 4;
