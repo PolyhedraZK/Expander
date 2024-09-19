@@ -1,7 +1,5 @@
 use super::ExtensionField;
-use crate::{
-    field_common, BabyBear, Field, FieldSerde, FieldSerdeResult, SimdField, BABYBEAR_MODULUS,
-};
+use crate::{field_common, BabyBear, Field, FieldSerde, FieldSerdeResult, BABYBEAR_MODULUS};
 use core::{
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
@@ -172,29 +170,6 @@ impl ExtensionField for BabyBearExt3 {
         Self {
             v: [self.v[2].double(), self.v[0], self.v[1]],
         }
-    }
-}
-
-// TODO: Actual SIMD impl
-// This is a dummy implementation to satisfy trait bounds
-impl SimdField for BabyBearExt3 {
-    type Scalar = Self;
-
-    fn scale(&self, challenge: &Self::Scalar) -> Self {
-        self * challenge
-    }
-
-    fn pack(base_vec: &[Self::Scalar]) -> Self {
-        debug_assert!(base_vec.len() == 1);
-        base_vec[0]
-    }
-
-    fn unpack(&self) -> Vec<Self::Scalar> {
-        vec![*self]
-    }
-
-    fn pack_size() -> usize {
-        1
     }
 }
 
