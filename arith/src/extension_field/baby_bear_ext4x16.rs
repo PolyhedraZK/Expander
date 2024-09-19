@@ -1,6 +1,6 @@
 use crate::{
-    field_common, AVXBabyBear as BabyBearx16, BabyBear, BabyBearExt4, ExtensionField, Field,
-    FieldSerde, FieldSerdeResult, SimdField,
+    field_common, BabyBear, BabyBearExt4, BabyBearx16, ExtensionField, Field, FieldSerde,
+    FieldSerdeResult, SimdField,
 };
 use std::{
     io::{Read, Write},

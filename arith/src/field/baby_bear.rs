@@ -9,8 +9,13 @@ use p3_field::{Field as P3Field, PrimeField32};
 use rand::distributions::{Distribution, Standard};
 use std::io::{Read, Write};
 
+mod baby_bearx16;
+pub use baby_bearx16::BabyBearx16;
+
 #[cfg(target_arch = "x86_64")]
 pub(crate) mod baby_bear_avx;
+#[cfg(target_arch = "x86_64")]
+pub(crate) mod baby_bear_avx256;
 
 #[cfg(target_arch = "x86_64")]
 pub use baby_bear_avx::AVXBabyBear;

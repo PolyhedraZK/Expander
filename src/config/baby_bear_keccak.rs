@@ -1,6 +1,6 @@
 use super::{FieldType, GKRConfig};
 use crate::Keccak256hasher;
-use arith::{AVXBabyBear as BabyBearx16, BabyBear, BabyBearExt4, BabyBearExt4x16, ExtensionField};
+use arith::{BabyBear, BabyBearExt4, BabyBearExt4x16, BabyBearx16, ExtensionField};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BabyBearConfigKeccak;
