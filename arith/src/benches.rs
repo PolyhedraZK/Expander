@@ -1,10 +1,8 @@
-
 use ark_std::test_rng;
 use criterion::{BatchSize, Criterion};
 use tynm::type_name;
 
-
-use crate::{ExtensionField, Field, };
+use crate::{ExtensionField, Field};
 
 fn random_element<F: Field>() -> F {
     let mut rng = test_rng();

@@ -41,7 +41,7 @@ grinding = []
 
 [workspace]
 members = [
-    "arith", 
+    "arith", # definitions of Field, Extensions, SIMDS
     "arith/goldilocks",
     "arith/mersenne31",
     "bi-kzg"

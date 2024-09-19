@@ -4,11 +4,15 @@
 #[cfg(target_arch = "x86_64")]
 cfg_if::cfg_if! {
     if #[cfg(feature = "avx256")] {
-        pub type M31x16 = super::m31_avx256::AVXM31;
+        mod m31_avx256;
+        pub type M31x16 = m31_avx256::AVXM31;
     } else {
-        pub type M31x16 = super::m31_avx::AVXM31;
+        mod m31_avx;
+        pub type M31x16 = m31_avx::AVXM31;
     }
 }
 
+#[cfg(target_arch = "aarch64")]
+mod m31_neon;
 #[cfg(target_arch = "aarch64")]
 pub type M31x16 = super::m31_neon::NeonM31;
