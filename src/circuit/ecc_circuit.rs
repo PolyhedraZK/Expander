@@ -1,9 +1,8 @@
-use arith::{FieldSerde, FieldSerdeError};
 use std::{
     cmp::max,
     collections::HashMap,
     fs,
-    io::{Cursor, Read},
+    io::Cursor,
 };
 
 use crate::circuit::*;
@@ -88,8 +87,10 @@ impl<C: GKRConfig> RecursiveCircuit<C> {
     }
 
     pub fn flatten(&self) -> Circuit<C> {
-        let mut ret = Circuit::default();
-        ret.expected_num_output_zeros = self.expected_num_output_zeros;
+        let mut ret = Circuit::<C> {
+            expected_num_output_zeros: self.expected_num_output_zeros,
+            ..Default::default()
+        };
         // layer-by-layer conversion
         for layer_id in &self.layers {
             let layer_seg = &self.segments[*layer_id];

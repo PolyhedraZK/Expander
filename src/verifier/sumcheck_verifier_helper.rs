@@ -3,7 +3,7 @@ use std::{cmp::max, ptr};
 
 use crate::{
     eq_eval_at, Circuit, CircuitLayer, CoefType, Config, FieldType, GKRConfig, GateAdd, GateConst,
-    GateMul, SumcheckGkrHelper, _eq_vec, unpack_and_combine,
+    GateMul, _eq_vec, unpack_and_combine,
 };
 
 pub struct VerifierScratchPad<C: GKRConfig> {

@@ -1,8 +1,8 @@
 use core::panic;
 use std::io::Cursor;
-use std::{fs, primitive};
+use std::fs;
 
-use arith::{Field, FieldSerde, SimdField};
+use arith::{Field, SimdField};
 use ark_std::test_rng;
 
 use crate::circuit::*;
@@ -151,6 +151,7 @@ impl<C: GKRConfig> Circuit<C> {
         let total_size = private_input_size + public_input_size;
 
         assert_eq!(witness.num_private_inputs_per_witness, private_input_size);
+        #[allow(clippy::comparison_chain)]
         if witness.num_witnesses < C::get_field_pack_size() {
             panic!("Not enough witness");
         } else if witness.num_witnesses > C::get_field_pack_size() {

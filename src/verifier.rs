@@ -188,7 +188,7 @@ pub fn gkr_verify<C: GKRConfig>(
         ) = sumcheck_verify_gkr_layer(
             config,
             &circuit.layers[i],
-            &public_input,
+            public_input,
             &rz0,
             &rz1,
             &r_simd,

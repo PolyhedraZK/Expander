@@ -61,8 +61,8 @@ impl FieldSerde for [u64; 4] {
     const SERIALIZED_SIZE: usize = 32;
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        for i in 0..4 {
-            writer.write_all(&self[i].to_le_bytes())?;
+        for i in self {
+            writer.write_all(&i.to_le_bytes())?;
         }
         Ok(())
     }
@@ -71,9 +71,9 @@ impl FieldSerde for [u64; 4] {
         let mut ret = [0u64; 4];
         let mut buffer = [0u8; u64::SERIALIZED_SIZE];
 
-        for i in 0..4 {
+        for r in &mut ret {
             reader.read_exact(&mut buffer)?;
-            ret[i] = u64::from_le_bytes(buffer)
+            *r = u64::from_le_bytes(buffer);
         }
         Ok(ret)
     }
