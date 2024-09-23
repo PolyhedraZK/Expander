@@ -48,6 +48,7 @@ fn verify_sumcheck_step<C: GKRConfig>(
 fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     config: &Config<C>,
     layer: &CircuitLayer<C>,
+    public_input: &[C::SimdCircuitField],
     rz0: &[C::ChallengeField],
     rz1: &Option<Vec<C::ChallengeField>>,
     r_simd: &Vec<C::ChallengeField>,
@@ -79,7 +80,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     if claimed_v1.is_some() && beta.is_some() {
         sum += claimed_v1.unwrap() * beta.unwrap();
     }
-    sum -= GKRVerifierHelper::eval_cst(&layer.const_, sp);
+    sum -= GKRVerifierHelper::eval_cst(&layer.const_, public_input, sp);
 
     let mut rx = vec![];
     let mut ry = None;
@@ -134,6 +135,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
 pub fn gkr_verify<C: GKRConfig>(
     config: &Config<C>,
     circuit: &Circuit<C>,
+    public_input: &[C::SimdCircuitField],
     claimed_v: &C::ChallengeField,
     transcript: &mut Transcript<C::FiatShamirHashType>,
     proof: &mut Proof,
@@ -186,6 +188,7 @@ pub fn gkr_verify<C: GKRConfig>(
         ) = sumcheck_verify_gkr_layer(
             config,
             &circuit.layers[i],
+            &public_input,
             &rz0,
             &rz1,
             &r_simd,
@@ -240,6 +243,7 @@ impl<C: GKRConfig> Verifier<C> {
     pub fn verify(
         &self,
         circuit: &mut Circuit<C>,
+        public_input: &[C::SimdCircuitField],
         claimed_v: &C::ChallengeField,
         proof: &Proof,
     ) -> bool {
@@ -275,6 +279,7 @@ impl<C: GKRConfig> Verifier<C> {
         let (mut verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = gkr_verify(
             &self.config,
             circuit,
+            public_input,
             claimed_v,
             &mut transcript,
             &mut proof,

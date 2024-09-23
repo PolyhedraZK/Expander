@@ -1,4 +1,8 @@
-use arith::Field;
+use core::panic;
+use std::io::Cursor;
+use std::{fs, primitive};
+
+use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
 
 use crate::circuit::*;
@@ -26,7 +30,7 @@ pub struct CircuitLayer<C: GKRConfig> {
 }
 
 impl<C: GKRConfig> CircuitLayer<C> {
-    pub fn evaluate(&self, res: &mut Vec<C::SimdCircuitField>) {
+    pub fn evaluate(&self, res: &mut Vec<C::SimdCircuitField>, public_input: &[C::SimdCircuitField]) {
         res.clear();
         res.resize(1 << self.output_var_num, C::SimdCircuitField::zero());
         for gate in &self.mul {
@@ -36,15 +40,23 @@ impl<C: GKRConfig> CircuitLayer<C> {
             let mul = *i0 * i1;
             *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &mul);
         }
+
         for gate in &self.add {
             let i0 = self.input_vals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
             *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0);
         }
+        
         for gate in &self.const_ {
             let o = &mut res[gate.o_id];
-            *o += C::circuit_field_to_simd_circuit_field(&gate.coef);
+            
+            let coef = match gate.coef_type {
+                CoefType::PublicInput(input_idx) => public_input[input_idx],
+                _ => C::circuit_field_to_simd_circuit_field(&gate.coef),
+            };
+            *o += coef;
         }
+        
         for gate in &self.uni {
             let i0 = &self.input_vals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
@@ -67,22 +79,22 @@ impl<C: GKRConfig> CircuitLayer<C> {
 
     pub fn identify_rnd_coefs(&mut self, rnd_coefs: &mut Vec<*mut C::CircuitField>) {
         for gate in &mut self.mul {
-            if gate.is_random {
+            if gate.coef_type == CoefType::Random {
                 rnd_coefs.push(&mut gate.coef);
             }
         }
         for gate in &mut self.add {
-            if gate.is_random {
+            if gate.coef_type == CoefType::Random {
                 rnd_coefs.push(&mut gate.coef);
             }
         }
         for gate in &mut self.const_ {
-            if gate.is_random {
+            if gate.coef_type == CoefType::Random {
                 rnd_coefs.push(&mut gate.coef);
             }
         }
         for gate in &mut self.uni {
-            if gate.is_random {
+            if gate.coef_type == CoefType::Random {
                 rnd_coefs.push(&mut gate.coef);
             }
         }
@@ -96,6 +108,8 @@ impl<C: GKRConfig> CircuitLayer<C> {
 #[derive(Debug, Default)]
 pub struct Circuit<C: GKRConfig> {
     pub layers: Vec<CircuitLayer<C>>,
+    pub public_input: Vec<C::SimdCircuitField>,
+    pub expected_num_output_zeros: usize,
 
     pub rnd_coefs_identified: bool,
     pub rnd_coefs: Vec<*mut C::CircuitField>, // unsafe
@@ -123,6 +137,48 @@ impl<C: GKRConfig> Circuit<C> {
         rc.flatten()
     }
 
+    pub fn load_witness_file(&mut self, filename: &str) {
+        let file_bytes = fs::read(filename).unwrap();
+        let cursor = Cursor::new(file_bytes);
+        let witness = Witness::<C>::deserialize_from(cursor);
+
+        let private_input_size = 1 << self.log_input_size();
+        let public_input_size = witness.num_public_inputs_per_witness;
+        let total_size = private_input_size + public_input_size;
+
+        assert_eq!(witness.num_private_inputs_per_witness, private_input_size);
+        if witness.num_witnesses < C::get_field_pack_size() {
+            panic!("Not enough witness");
+        } else if witness.num_witnesses > C::get_field_pack_size() {
+            println!("Warning: dropping additional witnesses");
+        }
+
+        let input = &witness.values;
+        let private_input = &mut self.layers[0].input_vals;
+        let public_input = &mut self.public_input;
+
+        private_input.clear();
+        public_input.clear();
+
+        for i in 0..private_input_size {
+            let mut private_wit_i = vec![];
+            for j in 0..C::get_field_pack_size() {
+                private_wit_i.push(input[j * total_size + i]);
+            }
+            private_input.push(C::SimdCircuitField::pack(&private_wit_i));
+        }
+
+        for i in 0..public_input_size {
+            let mut public_wit_i = vec![];
+            for j in 0..C::get_field_pack_size() {
+                public_wit_i.push(input[j * total_size + private_input_size + i]);
+            }
+            public_input.push(C::SimdCircuitField::pack(&public_wit_i));
+        }
+    }
+}
+
+impl<C: GKRConfig> Circuit<C> {
     pub fn log_input_size(&self) -> usize {
         self.layers[0].input_var_num
     }
@@ -141,7 +197,7 @@ impl<C: GKRConfig> Circuit<C> {
             layer_p_1
                 .last()
                 .unwrap()
-                .evaluate(&mut layer_p_2[0].input_vals);
+                .evaluate(&mut layer_p_2[0].input_vals, &self.public_input);
             log::trace!(
                 "layer {} evaluated - First 10 values: {:?}",
                 i,
@@ -153,7 +209,7 @@ impl<C: GKRConfig> Circuit<C> {
             );
         }
         let mut output = vec![];
-        self.layers.last().unwrap().evaluate(&mut output);
+        self.layers.last().unwrap().evaluate(&mut output, &self.public_input);
         self.layers.last_mut().unwrap().output_vals = output;
 
         log::trace!("output evaluated");

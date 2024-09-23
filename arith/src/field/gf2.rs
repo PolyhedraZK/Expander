@@ -7,7 +7,6 @@ use std::io::Read;
 use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use ark_std::iterable::Iterable;
 pub use gf2x8::GF2x8;
 
 use crate::{field_common, FieldSerde, FieldSerdeResult};
@@ -40,15 +39,8 @@ impl FieldSerde for GF2 {
     }
 
     #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut u = [0u8; 32];
-        reader.read_exact(&mut u)?;
-
-        // FIXME:
-        // assert!(u.iter().skip(1).all(|x| x == 0u8));
-        assert!(u.iter().skip(4).all(|x| x == 0u8));
-
-        Ok(GF2 { v: u[0] % 2 })
+    fn try_deserialize_from_ecc_format<R: Read>(reader: R) -> FieldSerdeResult<Self> {
+        Self::deserialize_from(reader)
     }
 }
 

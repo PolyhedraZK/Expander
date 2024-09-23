@@ -6,6 +6,9 @@ const DATA_PREFIX: &str = "data/";
 // circuit for repeating Keccak for 2 times
 pub const KECCAK_M31_CIRCUIT: &str = "data/circuit_m31.txt";
 pub const KECCAK_GF2_CIRCUIT: &str = "data/circuit_gf2.txt";
+pub const KECCAK_M31_WITNESS: &str = "data/witness_m31.txt";
+pub const KECCAK_GF2_WITNESS: &str = "data/witness_gf2.txt";
+
 // URL for Keccak circuit repeated for 2 times
 pub const KECCAK_M31_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/keccak_2_circuit.txt";

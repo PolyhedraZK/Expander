@@ -63,6 +63,25 @@ pub(crate) fn eq_eval_at<F: Field>(
     }
 }
 
+#[allow(dead_code)]
+#[inline(always)]
+pub(crate) fn unpack_and_sum<F: SimdField>(p: &F) -> F::Scalar {
+    p.unpack().into_iter().sum()
+}
+
+#[allow(dead_code)]
+#[inline(always)]
+pub(crate) fn unpack_and_combine<F: SimdField>(
+    p: &F,
+    coef: &[F::Scalar],
+) -> F::Scalar {
+    let p_unpacked = p.unpack();
+    p_unpacked
+        .into_iter()
+        .zip(coef)
+        .map(|(p_i, coef_i)| p_i * coef_i)
+        .sum()
+}
 struct SumcheckMultilinearProdHelper {
     var_num: usize,
 }
@@ -320,26 +339,6 @@ pub(crate) struct SumcheckGkrHelper<'a, C: GKRConfig> {
 
 /// internal helper functions
 impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) fn unpack_and_sum(p: &C::Field) -> C::ChallengeField {
-        p.unpack().into_iter().sum()
-    }
-
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) fn unpack_and_combine(
-        p: &C::Field,
-        coef: &[C::ChallengeField],
-    ) -> C::ChallengeField {
-        let p_unpacked = p.unpack();
-        p_unpacked
-            .into_iter()
-            .zip(coef)
-            .map(|(p_i, coef_i)| p_i * coef_i)
-            .sum()
-    }
-
     #[inline(always)]
     fn xy_helper_receive_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
         self.xy_helper.receive_challenge::<C>(
@@ -417,7 +416,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         // SIMD
         let local_vals = local_vals_simd
             .iter()
-            .map(|p| Self::unpack_and_combine(p, &self.sp.eq_evals_at_r_simd0))
+            .map(|p| unpack_and_combine(p, &self.sp.eq_evals_at_r_simd0))
             .collect::<Vec<C::ChallengeField>>();
 
         // MPI
@@ -519,7 +518,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 
     #[inline(always)]
     pub(crate) fn vy_claim(&self) -> C::ChallengeField {
-        let vy_local = Self::unpack_and_combine(&self.sp.v_evals[0], &self.sp.eq_evals_at_r_simd0);
+        let vy_local = unpack_and_combine(&self.sp.v_evals[0], &self.sp.eq_evals_at_r_simd0);
         let summation = self
             .mpi_config
             .coef_combine_vec(&vec![vy_local], &self.sp.eq_evals_at_r_mpi0);
