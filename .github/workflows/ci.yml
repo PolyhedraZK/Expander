@@ -32,9 +32,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --all-features --examples --benches --workspace
-      - run: cargo build --no-default-features --release
-      - run: cargo build --all-features --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo check --all-features --examples --benches --workspace
+      - run: RUSTFLAGS="-C target-cpu=native" cargo build --no-default-features --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo build --all-features --release
   Test-mac:
     name: Test-mac
     runs-on: macos-latest
@@ -42,11 +42,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo run --bin=dev-setup --release
-      - run: cargo test -p arith --release
-      - run: cargo test -p bi-kzg --release
-      - run: cargo test --no-default-features --release
-      - run: cargo test --all-features --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo run --bin=dev-setup --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo test -p arith --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo test -p bi-kzg --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo test --no-default-features --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo test --all-features --release
   Bench-mac-m31-ext3:
     name: Bench-mac-m31-ext3
     runs-on: macos-latest
@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo run --bin=dev-setup --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 2 -f m31ext3
   Bench-mac-BN254:
     name: Bench-mac-BN254
@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo run --bin=dev-setup --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 2 -f fr
   Bench-mac-gf2-ext128:
     name: Bench-mac-gf2ext128
@@ -72,8 +72,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo run --bin=dev-setup --release
-      - run: RUSTFLAGS="AVX2FLAGS -C target-cpu=native" cargo run --release -- -t 2 -f gf2ext128
+      - run: RUSTFLAGS="-C target-cpu=native" cargo run --bin=dev-setup --release
+      - run: RUSTFLAGS="-C target-cpu=native" cargo run --release -- -t 2 -f gf2ext128
 
   #############################################
   # AVX2
@@ -85,9 +85,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --all-features --examples --benches --workspace
-      - run: cargo build --no-default-features --release
-      - run: cargo build --all-features --release
+      - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo check --all-features --examples --benches --workspace
+      - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo build --no-default-features --release
+      - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo build --all-features --release
 
   Test-linux-avx2:
     name: Test-linux-avx2
@@ -96,7 +96,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: . "$HOME/.cargo/env"
-      - run: cargo run --bin=dev-setup --release
+      - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo test -p arith --release
       - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo test -p bi-kzg --release
       - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo test --no-default-features --release
@@ -108,7 +108,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: . "$HOME/.cargo/env"
-      - run: cargo run --bin=dev-setup --release
+      - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo run --release -- -t 16 -f m31ext3
   Bench-linux-avx2-BN254:
     name: Bench-linux-avx2-BN254
@@ -117,7 +117,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: . "$HOME/.cargo/env"
-      - run: cargo run --bin=dev-setup --release
+      - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo run --release -- -t 16 -f fr
   Bench-linux-avx2-gf2-ext128:
     name: Bench-linux-avx2-gf2-ext128
@@ -126,7 +126,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: . "$HOME/.cargo/env" 
-      - run: cargo run --bin=dev-setup --release
+      - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="$AVX2FLAGS -C target-cpu=native" cargo run --release -- -t 16 -f gf2ext128
 
 
@@ -140,9 +140,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --all-features --examples --benches --workspace
-      - run: cargo build --no-default-features --release
-      - run: cargo build --all-features --release
+      - run: RUSTFLAGS="$AVX512FLAGS -C target-cpu=native" cargo check --all-features --examples --benches --workspace
+      - run: RUSTFLAGS="$AVX512FLAGS -C target-cpu=native" cargo build --no-default-features --release
+      - run: RUSTFLAGS="$AVX512FLAGS -C target-cpu=native" cargo build --all-features --release
 
   Test-linux-avx512-avx512:
     name: Test-linux
@@ -151,7 +151,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: . "$HOME/.cargo/env"
-      - run: cargo run --bin=dev-setup --release
+      - run: RUSTFLAGS="$AVX512FLAGS -C target-cpu=native" cargo run --bin=dev-setup --release
       - run: RUSTFLAGS="$AVX512FLAGS -C target-cpu=native" cargo test -p arith --release
       - run: RUSTFLAGS="$AVX512FLAGS -C target-cpu=native" cargo test -p bi-kzg --release
       - run: RUSTFLAGS="$AVX512FLAGS -C target-cpu=native" cargo test --no-default-features --release
