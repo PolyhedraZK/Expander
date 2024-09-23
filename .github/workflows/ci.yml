@@ -28,7 +28,7 @@ jobs:
           - os: 7950x3d
             feature: avx2
           - os: 7950x3d
-            feature: avx512
+            feature: avx512f
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -44,44 +44,44 @@ jobs:
           cargo test -p arith --release
           cargo test -p bi-kzg --release
 
-  # benchmark:
-  #   name: Benchmark (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }}, ${{ matrix.field }})
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     matrix:
-  #       include:
-  #         - os: macos-latest
-  #           field: m31ext3
-  #         - os: macos-latest
-  #           field: fr
-  #         - os: macos-latest
-  #           field: gf2ext128
-  #         - os: 7950x3d
-  #           feature: avx2
-  #           field: m31ext3
-  #         - os: 7950x3d
-  #           feature: avx2
-  #           field: fr
-  #         - os: 7950x3d
-  #           feature: avx2
-  #           field: gf2ext128
-  #         - os: 7950x3d
-  #           feature: avx512
-  #           field: m31ext3
-  #         - os: 7950x3d
-  #           feature: avx512
-  #           field: fr
-  #         - os: 7950x3d
-  #           feature: avx512
-  #           field: gf2ext128
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: dtolnay/rust-toolchain@stable
-  #     - uses: Swatinem/rust-cache@v2
-  #     - name: Set RUSTFLAGS for AVX
-  #       if: matrix.feature != ''
-  #       run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV
-  #     - name: Run benchmark
-  #       run: |
-  #         cargo run --bin=dev-setup --release
-  #         cargo run --release -- -t ${{ matrix.os == 'macos-latest' && 2 || 16 }} -f ${{ matrix.field }}
+  benchmark:
+    name: Benchmark (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }}, ${{ matrix.field }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            field: m31ext3
+          - os: macos-latest
+            field: fr
+          - os: macos-latest
+            field: gf2ext128
+          - os: 7950x3d
+            feature: avx2
+            field: m31ext3
+          - os: 7950x3d
+            feature: avx2
+            field: fr
+          - os: 7950x3d
+            feature: avx2
+            field: gf2ext128
+          - os: 7950x3d
+            feature: avx512
+            field: m31ext3
+          - os: 7950x3d
+            feature: avx512
+            field: fr
+          - os: 7950x3d
+            feature: avx512
+            field: gf2ext128
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Set RUSTFLAGS for AVX
+        if: matrix.feature != ''
+        run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV
+      - name: Run benchmark
+        run: |
+          cargo run --bin=dev-setup --release
+          cargo run --release -- -t ${{ matrix.os == 'macos-latest' && 2 || 16 }} -f ${{ matrix.field }}
