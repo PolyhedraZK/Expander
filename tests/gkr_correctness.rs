@@ -78,7 +78,9 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
 
     circuit.evaluate();
     let output = &circuit.layers.last().unwrap().output_vals;
-    assert!(output[..circuit.expected_num_output_zeros].iter().all(|f| f.is_zero()));
+    assert!(output[..circuit.expected_num_output_zeros]
+        .iter()
+        .all(|f| f.is_zero()));
 
     let mut prover = Prover::new(config);
     prover.prepare_mem(&circuit);
@@ -120,7 +122,9 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     } else {
         vec![]
     };
-    config.mpi_config.gather_vec(&circuit.public_input, &mut public_input_gathered);
+    config
+        .mpi_config
+        .gather_vec(&circuit.public_input, &mut public_input_gathered);
 
     // Verify
     if config.mpi_config.is_root() {

@@ -30,7 +30,11 @@ pub struct CircuitLayer<C: GKRConfig> {
 }
 
 impl<C: GKRConfig> CircuitLayer<C> {
-    pub fn evaluate(&self, res: &mut Vec<C::SimdCircuitField>, public_input: &[C::SimdCircuitField]) {
+    pub fn evaluate(
+        &self,
+        res: &mut Vec<C::SimdCircuitField>,
+        public_input: &[C::SimdCircuitField],
+    ) {
         res.clear();
         res.resize(1 << self.output_var_num, C::SimdCircuitField::zero());
         for gate in &self.mul {
@@ -46,17 +50,17 @@ impl<C: GKRConfig> CircuitLayer<C> {
             let o = &mut res[gate.o_id];
             *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0);
         }
-        
+
         for gate in &self.const_ {
             let o = &mut res[gate.o_id];
-            
+
             let coef = match gate.coef_type {
                 CoefType::PublicInput(input_idx) => public_input[input_idx],
                 _ => C::circuit_field_to_simd_circuit_field(&gate.coef),
             };
             *o += coef;
         }
-        
+
         for gate in &self.uni {
             let i0 = &self.input_vals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
@@ -209,7 +213,10 @@ impl<C: GKRConfig> Circuit<C> {
             );
         }
         let mut output = vec![];
-        self.layers.last().unwrap().evaluate(&mut output, &self.public_input);
+        self.layers
+            .last()
+            .unwrap()
+            .evaluate(&mut output, &self.public_input);
         self.layers.last_mut().unwrap().output_vals = output;
 
         log::trace!("output evaluated");

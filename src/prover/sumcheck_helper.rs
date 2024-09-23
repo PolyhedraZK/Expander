@@ -71,10 +71,7 @@ pub(crate) fn unpack_and_sum<F: SimdField>(p: &F) -> F::Scalar {
 
 #[allow(dead_code)]
 #[inline(always)]
-pub(crate) fn unpack_and_combine<F: SimdField>(
-    p: &F,
-    coef: &[F::Scalar],
-) -> F::Scalar {
+pub(crate) fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar {
     let p_unpacked = p.unpack();
     p_unpacked
         .into_iter()

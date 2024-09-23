@@ -115,7 +115,7 @@ impl<C: GKRConfig, const INPUT_NUM: usize> CircuitSerde for CustomGateWrapper<C,
                     ),
                     C::CircuitField::ZERO,
                 )
-            },
+            }
             _ => unreachable!(),
         };
 
