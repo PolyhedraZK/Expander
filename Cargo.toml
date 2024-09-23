@@ -42,7 +42,9 @@ grinding = []
 [workspace]
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
-    "arith/gf2",
+    "arith/gf2",    
+    "arith/gf2_127",
+    "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31",
     "bi-kzg"

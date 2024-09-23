@@ -1,17 +1,15 @@
 use arith::{bench_ext_field, bench_field};
 use criterion::{criterion_group, criterion_main, Criterion};
-use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
+use gf2_128::{GF2_128x8, GF2_128};
 
 fn ext_by_base_benchmark(c: &mut Criterion) {
-    bench_ext_field::<M31Ext3>(c);
-    bench_ext_field::<M31Ext3x16>(c);
+    bench_ext_field::<GF2_128>(c);
+    bench_ext_field::<GF2_128x8>(c);
 }
 
 fn field_benchmark(c: &mut Criterion) {
-    bench_field::<M31>(c);
-    bench_field::<M31x16>(c);
-    bench_field::<M31Ext3>(c);
-    bench_field::<M31Ext3x16>(c);
+    bench_field::<GF2_128>(c);
+    bench_field::<GF2_128x8>(c);
 }
 
 criterion_group!(bench, ext_by_base_benchmark, field_benchmark);
