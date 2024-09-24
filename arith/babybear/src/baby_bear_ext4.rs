@@ -1,10 +1,12 @@
-use super::ExtensionField;
-use crate::{field_common, BabyBear, Field, FieldSerde, FieldSerdeResult};
-use core::{
+use std::{
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
+
+use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult};
 use p3_field::{AbstractExtensionField, Field as P3Field, PrimeField32};
+
+use crate::BabyBear;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct BabyBearExt4 {
@@ -292,7 +294,7 @@ impl From<&BabyBearExt4> for BabyBear {
 }
 
 #[inline(always)]
-fn add_internal(a: &BabyBearExt4, b: &BabyBearExt4) -> BabyBearExt4 {
+pub(crate) fn add_internal(a: &BabyBearExt4, b: &BabyBearExt4) -> BabyBearExt4 {
     let mut vv = a.v;
     vv[0] += b.v[0];
     vv[1] += b.v[1];
@@ -302,7 +304,7 @@ fn add_internal(a: &BabyBearExt4, b: &BabyBearExt4) -> BabyBearExt4 {
 }
 
 #[inline(always)]
-fn sub_internal(a: &BabyBearExt4, b: &BabyBearExt4) -> BabyBearExt4 {
+pub(crate) fn sub_internal(a: &BabyBearExt4, b: &BabyBearExt4) -> BabyBearExt4 {
     let mut vv = a.v;
     vv[0] -= b.v[0];
     vv[1] -= b.v[1];
@@ -321,7 +323,7 @@ fn sub_internal(a: &BabyBearExt4, b: &BabyBearExt4) -> BabyBearExt4 {
 // + { (a0 b2 + a1 b1 + a2 b0) + 11 a3 b3 } x^2
 // + { (a0 b3 + a1 b2 + a2 b1 + a3 b0) } x^3
 #[inline(always)]
-fn mul_internal(a: &BabyBearExt4, b: &BabyBearExt4) -> BabyBearExt4 {
+pub(crate) fn mul_internal(a: &BabyBearExt4, b: &BabyBearExt4) -> BabyBearExt4 {
     let w = BabyBear::new(BabyBearExt4::W);
     let a = a.v;
     let b = b.v;
@@ -345,7 +347,8 @@ fn square_internal(a: &[BabyBear; 4]) -> [BabyBear; 4] {
 }
 
 // Useful for conversion to Plonky3
-type P3BabyBearExt4 = p3_field::extension::BinomialExtensionField<p3_baby_bear::BabyBear, 4>;
+pub(crate) type P3BabyBearExt4 =
+    p3_field::extension::BinomialExtensionField<p3_baby_bear::BabyBear, 4>;
 
 impl From<&P3BabyBearExt4> for BabyBearExt4 {
     fn from(p3: &P3BabyBearExt4) -> Self {
@@ -369,98 +372,4 @@ impl From<&BabyBearExt4> for P3BabyBearExt4 {
                 .collect::<Vec<_>>(),
         )
     }
-}
-
-#[test]
-fn test_compare_plonky3() {
-    use p3_field::AbstractField;
-    use rand::{rngs::OsRng, Rng};
-
-    for _ in 0..1000 {
-        let mut rng = OsRng;
-        let a = BabyBearExt4::random_unsafe(&mut rng);
-        let b = BabyBearExt4::random_unsafe(&mut rng);
-
-        // Test conversion
-        let p3_a: P3BabyBearExt4 = (&a).into();
-        let p3_b: P3BabyBearExt4 = (&b).into();
-        assert_eq!(a, (&p3_a).into());
-        assert_eq!(b, (&p3_b).into());
-
-        // Test Add
-        let a_plus_b = add_internal(&a, &b);
-        let p3_a_plus_b = p3_a + p3_b;
-        assert_eq!(a_plus_b, (&p3_a_plus_b).into());
-
-        // Test Sub
-        let a_minus_b = sub_internal(&a, &b);
-        let p3_a_minus_b = p3_a - p3_b;
-        assert_eq!(a_minus_b, (&p3_a_minus_b).into());
-
-        // Test Mul
-        let a_times_b = mul_internal(&a, &b);
-        let p3_a_times_b = p3_a * p3_b;
-        assert_eq!(a_times_b, (&p3_a_times_b).into());
-
-        // Test square
-        let a_square = a.square();
-        let p3_a_square = p3_a * p3_a;
-        assert_eq!(a_square, (&p3_a_square).into());
-
-        // Test exp
-        let e = rng.gen_range(0..10);
-        let a_exp_e = a.exp(e);
-        let p3_a_exp_e = p3_a.exp_u64(e as u64);
-        assert_eq!(a_exp_e, (&p3_a_exp_e).into());
-    }
-}
-
-/// Compare to test vectors generated using SageMath
-#[test]
-fn test_compare_sage() {
-    let a = BabyBearExt4 {
-        v: [
-            BabyBear::new(1),
-            BabyBear::new(2),
-            BabyBear::new(3),
-            BabyBear::new(4),
-        ],
-    };
-    let b = BabyBearExt4 {
-        v: [
-            BabyBear::new(5),
-            BabyBear::new(6),
-            BabyBear::new(7),
-            BabyBear::new(8),
-        ],
-    };
-    let expected_prod = BabyBearExt4 {
-        v: [
-            BabyBear::new(676),
-            BabyBear::new(588),
-            BabyBear::new(386),
-            BabyBear::new(60),
-        ],
-    };
-    assert_eq!(a * b, expected_prod);
-
-    let a_inv = BabyBearExt4 {
-        v: [
-            BabyBear::new(1587469345),
-            BabyBear::new(920666518),
-            BabyBear::new(1160282443),
-            BabyBear::new(647153706),
-        ],
-    };
-    assert_eq!(a.inv().unwrap(), a_inv);
-
-    let a_to_eleven = BabyBearExt4 {
-        v: [
-            BabyBear::new(374109212),
-            BabyBear::new(621581642),
-            BabyBear::new(269190551),
-            BabyBear::new(1925703176),
-        ],
-    };
-    assert_eq!(a.exp(11), a_to_eleven);
 }

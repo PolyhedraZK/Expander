@@ -1,8 +1,10 @@
+use arith::ExtensionField;
+use babybear::{
+    BabyBear, BabyBearExt3, BabyBearExt3x16, BabyBearExt4, BabyBearExt4x16, BabyBearx16,
+};
+
 use super::{FieldType, GKRConfig};
 use crate::SHA256hasher;
-use arith::{
-    ExtensionField,
-};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BabyBearExt4ConfigSha2;
