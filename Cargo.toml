@@ -50,8 +50,9 @@ members = [
     "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31",
-    "bi-kzg"
-    ]
+    "bi-kzg",
+    "transcript"
+]
 
 [workspace.dependencies]
 ark-std = "0.4"
