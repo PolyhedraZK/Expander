@@ -1,7 +1,6 @@
 use arith::ExtensionField;
 use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
-
-use crate::Keccak256hasher;
+use transcript::Keccak256hasher;
 
 use super::{FieldType, GKRConfig};
 

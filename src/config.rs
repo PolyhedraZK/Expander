@@ -13,8 +13,7 @@ pub use m31_ext_keccak::M31ExtConfigKeccak;
 pub use m31_ext_sha2::M31ExtConfigSha2;
 
 use arith::{ExtensionField, Field, FieldSerde, SimdField};
-
-use crate::FiatShamirHash;
+use transcript::FiatShamirHash;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum PolynomialCommitmentType {

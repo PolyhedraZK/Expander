@@ -1,17 +1,17 @@
-use crate::{
-    CircuitLayer, GKRConfig, GkrScratchpad, SumcheckGkrHelper, SumcheckGkrSquareHelper, Transcript,
-};
+use transcript::{Transcript, TranscriptInstance};
+
+use crate::{CircuitLayer, GKRConfig, GkrScratchpad, SumcheckGkrHelper, SumcheckGkrSquareHelper};
 
 #[inline(always)]
 fn transcript_io<C: GKRConfig>(
     ps: &[C::ChallengeField],
-    transcript: &mut Transcript<C::FiatShamirHashType>,
+    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
 ) -> C::ChallengeField {
     assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
     for p in ps {
-        transcript.append_challenge_f::<C>(p);
+        transcript.append_field_element::<C::ChallengeField>(p);
     }
-    transcript.challenge_f::<C>()
+    transcript.generate_challenge::<C::ChallengeField>()
 }
 
 // FIXME
@@ -24,7 +24,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     r_simd: &[C::ChallengeField],
     alpha: &C::ChallengeField,
     beta: &C::ChallengeField,
-    transcript: &mut Transcript<C::FiatShamirHashType>,
+    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
     sp: &mut GkrScratchpad<C>,
 ) -> (
     Vec<C::ChallengeField>,
@@ -50,7 +50,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     }
 
     let vx_claim = helper.vx_claim();
-    transcript.append_challenge_f::<C>(&vx_claim);
+    transcript.append_field_element::<C::ChallengeField>(&vx_claim);
     helper.prepare_y_vals();
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_ry(i_var, 2);
@@ -59,7 +59,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     }
 
     let vy_claim = helper.vy_claim();
-    transcript.append_challenge_f::<C>(&vy_claim);
+    transcript.append_field_element::<C::ChallengeField>(&vy_claim);
 
     let rx = helper.rx;
     let ry = helper.ry;
@@ -75,7 +75,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
 pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
-    transcript: &mut Transcript<C::FiatShamirHashType>,
+    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
     sp: &mut GkrScratchpad<C>,
 ) -> Vec<C::ChallengeField> {
     const D: usize = 7;
@@ -88,22 +88,22 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
         let evals: [C::Field; D] = helper.poly_evals_at(i_var);
 
         for deg in 0..D {
-            transcript.append_f::<C>(evals[deg]);
+            transcript.append_field_element::<C::Field>(&evals[deg]);
         }
 
-        let r = transcript.challenge_f::<C>();
+        let r = transcript.generate_challenge::<C::ChallengeField>();
 
         log::trace!("i_var={} evals: {:?} r: {:?}", i_var, evals, r);
 
         helper.receive_challenge(i_var, r);
         if i_var == layer.input_var_num - 1 {
             log::trace!("vx claim: {:?}", helper.vx_claim());
-            transcript.append_f::<C>(helper.vx_claim());
+            transcript.append_field_element::<C::Field>(&helper.vx_claim());
         }
     }
 
     log::trace!("claimed vx = {:?}", helper.vx_claim());
-    transcript.append_f::<C>(helper.vx_claim());
+    transcript.append_field_element::<C::Field>(&helper.vx_claim());
 
     helper.rx
 }

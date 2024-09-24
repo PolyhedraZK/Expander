@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use arith::{Field, FieldSerde};
 
-use crate::fiat_shamir_hash::FiatShamirHash;
+use crate::{fiat_shamir_hash::FiatShamirHash, Proof};
 
 pub trait Transcript<H: FiatShamirHash> {
     /// Create a new transcript.
@@ -43,7 +43,7 @@ pub struct TranscriptInstance<H: FiatShamirHash> {
     digest: Vec<u8>,
 
     /// The proof bytes.
-    pub proof: Vec<u8>,
+    pub proof: Proof,
 
     /// The pointer to the proof bytes indicating where the hash starts.
     hash_start_index: usize,
@@ -53,15 +53,15 @@ impl<H: FiatShamirHash> Transcript<H> for TranscriptInstance<H> {
     fn new() -> Self {
         TranscriptInstance {
             phantom: PhantomData,
-            digest: Vec::new(),
-            proof: Vec::new(),
+            digest: vec![0u8; H::DIGEST_SIZE],
+            proof: Proof::default(),
             hash_start_index: 0,
         }
     }
 
     /// Append a byte slice to the transcript.
     fn append_u8_slice(&mut self, buffer: &[u8]) {
-        self.proof.extend_from_slice(buffer);
+        self.proof.bytes.extend_from_slice(buffer);
     }
 
     /// Generate a challenge.
@@ -75,11 +75,11 @@ impl<H: FiatShamirHash> Transcript<H> for TranscriptInstance<H> {
 impl<H: FiatShamirHash> TranscriptInstance<H> {
     /// Hash the input into the output.
     fn hash_to_digest(&mut self) {
-        let hash_end_index = self.proof.len();
+        let hash_end_index = self.proof.bytes.len();
         if hash_end_index > self.hash_start_index {
             H::hash(
                 &mut self.digest,
-                &self.proof[self.hash_start_index..hash_end_index],
+                &self.proof.bytes[self.hash_start_index..hash_end_index],
             );
             self.hash_start_index = hash_end_index;
         } else {
