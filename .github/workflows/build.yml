@@ -11,7 +11,7 @@ jobs:
   build:
     strategy:
       matrix:
-        platform: [macos, linux-avx2]
+        platform: [macos, 7950x3d]
         include:
           - platform: macos
             ci_image: macos-latest
