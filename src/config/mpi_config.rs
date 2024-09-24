@@ -76,6 +76,7 @@ impl MPIConfig {
     const ROOT_RANK: i32 = 0;
 
     // OK if already initialized, mpi::initialize() will return None
+    #[allow(static_mut_refs)]
     pub fn init() {
         unsafe {
             let universe = mpi::initialize();
@@ -90,6 +91,7 @@ impl MPIConfig {
         unsafe { ffi::MPI_Finalize() };
     }
 
+    #[allow(static_mut_refs)]
     pub fn new() -> Self {
         Self::init();
         let universe = unsafe { UNIVERSE.as_ref() };
