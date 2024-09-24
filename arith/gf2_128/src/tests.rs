@@ -44,6 +44,9 @@ fn test_custom_serde_vectorize_gf2_128() {
 #[test]
 // known answer test, results cross-checked with avx_gf2_128
 fn test_gf_mul_kat() {
+    use core::mem::transmute;
+    use std::arch::aarch64::*;
+
     unsafe {
         {
             let a = vdupq_n_u32(0);
@@ -127,6 +130,10 @@ fn test_gf_mul_kat() {
 #[cfg(target_arch = "aarch64")]
 #[test]
 fn test_gf_mul_rnd() {
+    use core::mem::transmute;
+    use rand::RngCore;
+    use std::arch::aarch64::*;
+
     let mut rng = rand::thread_rng();
     for _ in 0..100 {
         unsafe {

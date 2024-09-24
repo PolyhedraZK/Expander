@@ -5,7 +5,7 @@
 #[cfg(target_arch = "aarch64")]
 mod m31_neon;
 #[cfg(target_arch = "aarch64")]
-pub type M31x16 = super::m31_neon::NeonM31;
+pub type M31x16 = m31_neon::NeonM31;
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 mod m31_avx512;

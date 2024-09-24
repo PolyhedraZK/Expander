@@ -7,9 +7,10 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
+use arith::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField};
 use rand::{Rng, RngCore};
 
-use crate::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField, M31, M31_MOD};
+use crate::{m31::M31_MOD, M31};
 
 const M31_PACK_SIZE: usize = 16;
 const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD; 4]) };
