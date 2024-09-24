@@ -5,14 +5,14 @@ use halo2curves::{bn256::Fr, ff::PrimeField};
 use rand::RngCore;
 
 use crate::serde::{FieldSerdeError, FieldSerdeResult};
-use crate::{Field, FieldForECC, FieldSerde, SimdField};
+use crate::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
 
 const MODULUS: ethnum::U256 = ethnum::U256([
     0x2833e84879b9709143e1f593f0000001,
     0x30644e72e131a029b85045b68181585d,
 ]);
 
-pub use halo2curves::bn256::Fr as BN254;
+pub use halo2curves::bn256::Fr as BN254Fr;
 
 impl Field for Fr {
     /// name
@@ -174,5 +174,33 @@ impl FieldSerde for Fr {
             Some(v) => Ok(v),
             None => Err(FieldSerdeError::DeserializeError),
         }
+    }
+}
+
+impl ExtensionField for Fr {
+    const DEGREE: usize = 1;
+
+    /// Extension Field over X-1 which is self
+    const W: u32 = 1;
+
+    // placeholder, doesn't make sense for Fr
+    const X: Self = Fr::zero();
+
+    /// Base field for the extension
+    type BaseField = Self;
+
+    /// Multiply the extension field with the base field
+    fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
+        self * base
+    }
+
+    /// Add the extension field with the base field
+    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
+        self + base
+    }
+
+    /// Multiply the extension field by x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
+    fn mul_by_x(&self) -> Self {
+        unimplemented!("mul_by_x for Fr doesn't make sense")
     }
 }

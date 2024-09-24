@@ -6,6 +6,10 @@ default-run = "expander-rs" # default
 
 [dependencies]
 arith = { path = "arith" }
+gf2 = { path = "arith/gf2" }
+gf2_128 = { path = "arith/gf2_128" }
+mersenne31 = { path = "arith/mersenne31" }
+
 ark-std.workspace = true
 clap.workspace = true
 env_logger.workspace = true
@@ -43,7 +47,6 @@ grinding = []
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
     "arith/gf2",    
-    "arith/gf2_127",
     "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31",

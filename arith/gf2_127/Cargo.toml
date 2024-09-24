@@ -1,6 +1,0 @@
-[package]
-name = "gf2_127"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]

@@ -23,9 +23,5 @@ cfg-if = "1.0"
 name = "field"
 harness = false
 
-[[bench]]
-name = "ext_field"
-harness = false
-
 [features]
 avx256 = []

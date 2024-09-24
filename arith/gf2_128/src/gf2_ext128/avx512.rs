@@ -7,7 +7,7 @@ use std::{
 
 use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult};
 
-use crate::GF2;
+use gf2::GF2;
 
 #[derive(Debug, Clone, Copy)]
 pub struct AVX512GF2_128 {

@@ -9,8 +9,9 @@ use std::{
 use arith::{
     field_common, ExtensionField, Field, FieldSerde, FieldSerdeError, FieldSerdeResult, SimdField,
 };
+use gf2::{GF2x8, GF2};
 
-use crate::{GF2x8, GF2, GF2_128};
+use crate::GF2_128;
 
 #[derive(Clone, Copy)]
 pub struct AVX256GF2_128x8 {
