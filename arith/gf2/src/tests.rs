@@ -1,10 +1,7 @@
 use ark_std::test_rng;
 use std::io::Cursor;
 
-use arith::{
-    random_field_tests, random_inversion_tests,
-    random_simd_field_tests, FieldSerde,
-};
+use arith::{random_field_tests, random_inversion_tests, random_simd_field_tests, FieldSerde};
 
 use crate::{GF2x8, GF2};
 
