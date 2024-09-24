@@ -378,7 +378,7 @@ void gfmul_avx512(__m512i a, __m512i b, __m512i *res) {
 impl From<u32> for AVX512GF2_128x8 {
     #[inline(always)]
     fn from(v: u32) -> AVX512GF2_128x8 {
-        debug_assert!(v < 2); // only 0 and 1 are allowed
+        assert!(v < 2); // only 0 and 1 are allowed
         let data = unsafe { _mm512_set_epi64(0, v as i64, 0, v as i64, 0, v as i64, 0, v as i64) };
         AVX512GF2_128x8 { data: [data, data] }
     }
@@ -455,7 +455,7 @@ impl SimdField for AVX512GF2_128x8 {
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        debug_assert!(base_vec.len() == 8);
+        assert!(base_vec.len() == 8);
         let base_vec_array: [Self::Scalar; 8] = base_vec.try_into().unwrap();
         unsafe { transmute(base_vec_array) }
     }

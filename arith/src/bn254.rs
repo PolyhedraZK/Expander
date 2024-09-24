@@ -132,7 +132,7 @@ impl SimdField for Fr {
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        debug_assert!(base_vec.len() == 1);
+        assert!(base_vec.len() == 1);
         base_vec[0]
     }
 

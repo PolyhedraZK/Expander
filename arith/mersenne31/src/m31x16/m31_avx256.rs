@@ -285,7 +285,7 @@ impl SimdField for AVXM31 {
     }
 
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        debug_assert_eq!(base_vec.len(), M31_PACK_SIZE);
+        assert_eq!(base_vec.len(), M31_PACK_SIZE);
         let ret: [Self::Scalar; M31_PACK_SIZE] = base_vec.try_into().unwrap();
         unsafe { transmute(ret) }
     }
