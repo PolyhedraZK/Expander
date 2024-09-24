@@ -131,7 +131,7 @@ impl Field for M31 {
         while !e.is_zero() {
             let b = e & 1;
             if b == 1 {
-                res *= t;
+                res *= self;
             }
             t = t * t;
             e >>= 1;
