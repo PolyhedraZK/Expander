@@ -1,4 +1,4 @@
-use crate::{field_common, BabyBear, Field, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{field_common,  Field, FieldSerde, FieldSerdeResult, SimdField};
 use p3_baby_bear::PackedBabyBearNeon;
 use rand::RngCore;
 use std::{
@@ -9,6 +9,8 @@ use std::{
     mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
+
+use crate::BabyBear;
 
 const BABY_BEAR_PACK_SIZE: usize = 16;
 
