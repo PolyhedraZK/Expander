@@ -51,9 +51,9 @@ impl FieldSerde for BabyBearExt3 {
 impl Field for BabyBearExt3 {
     const NAME: &'static str = "Baby Bear Extension 4";
 
-    const SIZE: usize = 32 / 8 * 4;
+    const SIZE: usize = 32 / 8 * 3;
 
-    const FIELD_SIZE: usize = 32 * 4;
+    const FIELD_SIZE: usize = 32 * 3;
 
     const ZERO: Self = Self {
         v: [BabyBear::ZERO; 3],
