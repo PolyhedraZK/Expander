@@ -3,8 +3,7 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use std::{arch::aarch64::*, mem::transmute};
 
 use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult};
-
-use crate::GF2;
+use gf2::GF2;
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128 {

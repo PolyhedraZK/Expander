@@ -30,6 +30,7 @@ fn test_avx_version() {
     let avx_version = get_avx_version();
     println!("Current AVX version: {}", avx_version);
     assert!([
+        "arm64",
         "AVX512",
         "AVX2 (256-bit)",
         "AVX (256-bit)",

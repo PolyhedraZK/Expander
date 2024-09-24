@@ -3,12 +3,10 @@ use std::iter::{Product, Sum};
 use std::mem::transmute;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use crate::neon::mul_by_x_internal;
-use crate::{
-    field_common,
-    neon::{gfadd, gfmul, NeonGF2_128},
-    ExtensionField, Field, FieldSerde, FieldSerdeResult, GF2x8, SimdField, GF2,
-};
+use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, SimdField};
+use gf2::{GF2x8, GF2};
+
+use crate::gf2_ext128::neon::{gfadd, gfmul, mul_by_x_internal, NeonGF2_128};
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128x8 {

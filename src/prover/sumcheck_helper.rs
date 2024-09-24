@@ -416,7 +416,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         var_idx: usize,
         degree: usize,
     ) -> [C::ChallengeField; 4] {
-        debug_assert_eq!(degree, 3);
+        debug_assert_eq!(degree, 2);
         debug_assert!(var_idx < self.simd_var_num);
         self.simd_var_helper.poly_eval_at::<C>(
             var_idx,
