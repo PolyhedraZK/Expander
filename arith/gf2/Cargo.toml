@@ -22,9 +22,6 @@ cfg-if = "1.0"
 tynm.workspace = true
 criterion.workspace = true
 
-[features]
-avx256 = []
-
 [[bench]]
 name = "gf2"
 harness = false

@@ -111,11 +111,11 @@ impl Field for AVXM31 {
     fn is_zero(&self) -> bool {
         // value is either zero or 0x7FFFFFFF
         unsafe {
-            let pcmp = _mm256_cmpeq_epi32_mask(self.v[0], PACKED_0)
-                & _mm256_cmpeq_epi32_mask(self.v[1], PACKED_0);
-            let pcmp2 = _mm256_cmpeq_epi32_mask(self.v[0], PACKED_MOD)
-                & _mm256_cmpeq_epi32_mask(self.v[1], PACKED_MOD);
-            (pcmp | pcmp2) == 0xFF
+            let cmp0 = _mm256_movemask_epi8(_mm256_cmpeq_epi32(self.v[0], PACKED_0));
+            let cmp1 = _mm256_movemask_epi8(_mm256_cmpeq_epi32(self.v[1], PACKED_0));
+            let cmp2 = _mm256_movemask_epi8(_mm256_cmpeq_epi32(self.v[0], PACKED_MOD));
+            let cmp3 = _mm256_movemask_epi8(_mm256_cmpeq_epi32(self.v[1], PACKED_MOD));
+            (cmp0 | cmp2) == !0i32 && (cmp1 | cmp3) == !0i32
         }
     }
 
@@ -337,34 +337,32 @@ impl PartialEq for AVXM31 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let cmp0 = _mm256_cmpeq_epi32_mask(self.v[0], other.v[0]);
-            let cmp1 = _mm256_cmpeq_epi32_mask(self.v[1], other.v[1]);
-            (cmp0 & cmp1) == 0xFF
+            let cmp0 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(self.v[0], other.v[0]));
+            let cmp1 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(self.v[1], other.v[1]));
+            (cmp0 & cmp1) == !0i32
         }
     }
 }
 
 #[inline]
 #[must_use]
-fn mask_movehdup_epi32(src: __m256i, k: __mmask8, a: __m256i) -> __m256i {
+fn movehdup_epi32(a: __m256i) -> __m256i {
     // The instruction is only available in the floating-point flavor; this distinction is only for
     // historical reasons and no longer matters. We cast to floats, do the thing, and cast back.
     unsafe {
-        let src = _mm256_castsi256_ps(src);
         let a = _mm256_castsi256_ps(a);
-        _mm256_castps_si256(_mm256_mask_movehdup_ps(src, k, a))
+        _mm256_castps_si256(_mm256_movehdup_ps(a))
     }
 }
 
 #[inline]
 #[must_use]
-fn mask_moveldup_epi32(src: __m256i, k: __mmask8, a: __m256i) -> __m256i {
+fn moveldup_epi32(a: __m256i) -> __m256i {
     // The instruction is only available in the floating-point flavor; this distinction is only for
     // historical reasons and no longer matters. We cast to floats, do the thing, and cast back.
     unsafe {
-        let src = _mm256_castsi256_ps(src);
         let a = _mm256_castsi256_ps(a);
-        _mm256_castps_si256(_mm256_mask_moveldup_ps(src, k, a))
+        _mm256_castps_si256(_mm256_moveldup_ps(a))
     }
 }
 
@@ -378,8 +376,8 @@ fn add(lhs: __m256i, rhs: __m256i) -> __m256i {
     }
 }
 
-const EVENS: __mmask8 = 0b01010101;
-const ODDS: __mmask8 = 0b10101010;
+const EVENS: i32 = 0b01010101;
+const ODDS: i32 = 0b10101010;
 
 impl Mul<&M31> for AVXM31 {
     type Output = AVXM31;
@@ -399,8 +397,10 @@ impl Mul<&M31> for AVXM31 {
                 let prod_odd_dbl = _mm256_mul_epu32(lhs_odd_dbl, rhs_odd);
                 let prod_evn_dbl = _mm256_mul_epu32(lhs_evn_dbl, rhs_evn);
 
-                let prod_lo_dbl = mask_moveldup_epi32(prod_evn_dbl, ODDS, prod_odd_dbl);
-                let prod_hi = mask_movehdup_epi32(prod_odd_dbl, EVENS, prod_evn_dbl);
+                let prod_odd_dup = moveldup_epi32(prod_odd_dbl);
+                let prod_evn_dup = movehdup_epi32(prod_evn_dbl);
+                let prod_lo_dbl = _mm256_blend_epi32(prod_evn_dbl, prod_odd_dup, ODDS);
+                let prod_hi = _mm256_blend_epi32(prod_odd_dbl, prod_evn_dup, EVENS);
                 // Right shift to undo the doubling.
                 let prod_lo = _mm256_srli_epi32::<1>(prod_lo_dbl);
 
@@ -450,14 +450,6 @@ impl Neg for AVXM31 {
             },
         }
     }
-}
-
-#[inline]
-#[must_use]
-fn movehdup_epi32(x: __m256i) -> __m256i {
-    // The instruction is only available in the floating-point flavor; this distinction is only for
-    // historical reasons and no longer matters. We cast to floats, duplicate, and cast back.
-    unsafe { _mm256_castps_si256(_mm256_movehdup_ps(_mm256_castsi256_ps(x))) }
 }
 
 #[inline(always)]
@@ -515,8 +507,10 @@ fn mul_internal(a: &AVXM31, b: &AVXM31) -> AVXM31 {
             let prod_odd_dbl = _mm256_mul_epu32(lhs_odd_dbl, rhs_odd);
             let prod_evn_dbl = _mm256_mul_epu32(lhs_evn_dbl, rhs_evn);
 
-            let prod_lo_dbl = mask_moveldup_epi32(prod_evn_dbl, ODDS, prod_odd_dbl);
-            let prod_hi = mask_movehdup_epi32(prod_odd_dbl, EVENS, prod_evn_dbl);
+            let prod_odd_dup = moveldup_epi32(prod_odd_dbl);
+            let prod_evn_dup = movehdup_epi32(prod_evn_dbl);
+            let prod_lo_dbl = _mm256_blend_epi32(prod_evn_dbl, prod_odd_dup, ODDS);
+            let prod_hi = _mm256_blend_epi32(prod_odd_dbl, prod_evn_dup, EVENS);
             // Right shift to undo the doubling.
             let prod_lo = _mm256_srli_epi32::<1>(prod_lo_dbl);
 

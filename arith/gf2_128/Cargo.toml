@@ -15,9 +15,6 @@ rand.workspace = true
 tynm.workspace = true
 criterion.workspace = true
 
-[features]
-avx256 = []
-
 [[bench]]
 name = "gf2_128"
 harness = false
