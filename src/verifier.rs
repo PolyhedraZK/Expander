@@ -1,6 +1,7 @@
 mod sumcheck_verifier_helper;
 
 pub use sumcheck_verifier_helper::*;
+use transcript::{Proof, Transcript, TranscriptInstance};
 
 use std::{io::Cursor, vec};
 
@@ -10,13 +11,13 @@ use ark_std::{end_timer, start_timer};
 #[cfg(feature = "grinding")]
 use crate::grind;
 
-use crate::{Circuit, CircuitLayer, Config, GKRConfig, Proof, RawCommitment, Transcript};
+use crate::{Circuit, CircuitLayer, Config, GKRConfig, RawCommitment};
 
 #[inline(always)]
 fn verify_sumcheck_step<C: GKRConfig>(
     proof: &mut Proof,
     degree: usize,
-    transcript: &mut Transcript<C::FiatShamirHashType>,
+    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
     claimed_sum: &mut C::ChallengeField,
     randomness_vec: &mut Vec<C::ChallengeField>,
     sp: &VerifierScratchPad<C>,
@@ -24,10 +25,10 @@ fn verify_sumcheck_step<C: GKRConfig>(
     let mut ps = vec![];
     for i in 0..(degree + 1) {
         ps.push(proof.get_next_and_step());
-        transcript.append_challenge_f::<C>(&ps[i]);
+        transcript.append_field_element::<C::ChallengeField>(&ps[i]);
     }
 
-    let r = transcript.challenge_f::<C>();
+    let r = transcript.generate_challenge::<C::ChallengeField>();
     randomness_vec.push(r);
 
     let verified = (ps[0] + ps[1]) == *claimed_sum;
@@ -54,7 +55,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     alpha: C::ChallengeField,
     beta: C::ChallengeField,
     proof: &mut Proof,
-    transcript: &mut Transcript<C::FiatShamirHashType>,
+    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
     sp: &mut VerifierScratchPad<C>,
 ) -> (
     bool,
@@ -90,7 +91,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
 
     let vx_claim = proof.get_next_and_step::<C::ChallengeField>();
     sum -= vx_claim * GKRVerifierHelper::eval_add(&layer.add, sp);
-    transcript.append_challenge_f::<C>(&vx_claim);
+    transcript.append_field_element::<C::ChallengeField>(&vx_claim);
 
     for _i_var in 0..var_num {
         verified &= verify_sumcheck_step::<C>(proof, 2, transcript, &mut sum, &mut ry, sp);
@@ -100,7 +101,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
 
     let vy_claim = proof.get_next_and_step::<C::ChallengeField>();
     verified &= sum == vx_claim * vy_claim * GKRVerifierHelper::eval_mul(&layer.mul, sp);
-    transcript.append_challenge_f::<C>(&vy_claim);
+    transcript.append_field_element::<C::ChallengeField>(&vy_claim);
     (verified, rx, ry, r_simd_xy, vx_claim, vy_claim)
 }
 
@@ -109,7 +110,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
 pub fn gkr_verify<C: GKRConfig>(
     circuit: &Circuit<C>,
     claimed_v: &C::ChallengeField,
-    transcript: &mut Transcript<C::FiatShamirHashType>,
+    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
     proof: &mut Proof,
 ) -> (
     bool,
@@ -128,12 +129,12 @@ pub fn gkr_verify<C: GKRConfig>(
     let mut r_simd = vec![];
 
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.challenge_f::<C>());
+        rz0.push(transcript.generate_challenge::<C::ChallengeField>());
         rz1.push(C::ChallengeField::zero());
     }
 
     for _ in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.challenge_f::<C>());
+        r_simd.push(transcript.generate_challenge::<C::ChallengeField>());
     }
 
     let mut alpha = C::ChallengeField::one();
@@ -158,8 +159,8 @@ pub fn gkr_verify<C: GKRConfig>(
             &mut sp,
         );
         verified &= cur_verified;
-        alpha = transcript.challenge_f::<C>();
-        beta = transcript.challenge_f::<C>();
+        alpha = transcript.generate_challenge::<C::ChallengeField>();
+        beta = transcript.generate_challenge::<C::ChallengeField>();
         log::trace!(
             "Layer {} verified with alpha={:?} and beta={:?}, claimed_v0={:?}, claimed_v1={:?}",
             i,
@@ -205,7 +206,7 @@ impl<C: GKRConfig> Verifier<C> {
 
         let commitment = RawCommitment::<C>::deserialize_from(&mut cursor, poly_size);
 
-        let mut transcript = Transcript::new();
+        let mut transcript = TranscriptInstance::new();
         transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?

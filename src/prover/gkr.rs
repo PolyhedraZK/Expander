@@ -2,17 +2,16 @@
 
 use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
+use transcript::{Transcript, TranscriptInstance};
 
-use crate::{
-    sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, MultiLinearPoly, Transcript,
-};
+use crate::{sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, MultiLinearPoly};
 
 // FIXME
 #[allow(clippy::type_complexity)]
 pub fn gkr_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
     sp: &mut GkrScratchpad<C>,
-    transcript: &mut Transcript<C::FiatShamirHashType>,
+    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
 ) -> (
     C::ChallengeField,
     Vec<C::ChallengeField>,
@@ -26,12 +25,12 @@ pub fn gkr_prove<C: GKRConfig>(
     let mut rz1 = vec![];
     let mut r_simd = vec![];
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.challenge_f::<C>());
+        rz0.push(transcript.generate_challenge::<C::ChallengeField>());
         rz1.push(C::ChallengeField::zero());
     }
 
     for _ in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.challenge_f::<C>());
+        r_simd.push(transcript.generate_challenge::<C::ChallengeField>());
     }
 
     let mut alpha = C::ChallengeField::one();
@@ -57,8 +56,8 @@ pub fn gkr_prove<C: GKRConfig>(
             transcript,
             sp,
         );
-        alpha = transcript.challenge_f::<C>();
-        beta = transcript.challenge_f::<C>();
+        alpha = transcript.generate_challenge::<C::ChallengeField>();
+        beta = transcript.generate_challenge::<C::ChallengeField>();
 
         log::trace!("Layer {} proved with alpha={:?}, beta={:?}", i, alpha, beta);
         log::trace!("rz0.0: {:?}", rz0[0]);
