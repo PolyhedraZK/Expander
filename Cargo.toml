@@ -39,6 +39,7 @@ name = "dev-setup"
 path = "src/utils.rs"
 
 [features]
+avx256 = [ "arith/avx256" ]
 default = []
 # default = [ "grinding" ]
 grinding = []
@@ -68,6 +69,10 @@ halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", default-feat
 ] }
 itertools = "0.13"
 log = "0.4"
+p3-baby-bear = { git = "https://github.com/Plonky3/Plonky3.git", version = "0.1.0", features = ["nightly-features"] }
+p3-field = { git = "https://github.com/Plonky3/Plonky3.git", version = "0.1.0" }
+# This import should be unnecessary but p3-baby-bear fails to turn on "nightly-features" for this dependency
+p3-monty-31 = { git = "https://github.com/Plonky3/Plonky3.git", version = "0.1.0", features = ["nightly-features"] }
 rand = "0.8.5"
 rayon = "1.10"
 sha2 = "0.10.8"
