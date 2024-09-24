@@ -110,18 +110,18 @@ pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
     identity_tests::<F, _>(&mut rng, type_name.clone());
     //inverse_tests::<F, _>(&mut rng, type_name.clone());
 
-    assert!(!F::zero().is_zero());
+    assert!(F::zero().is_zero());
     {
         let mut z = F::zero();
         z = z.neg();
-        assert!(!z.is_zero());
+        assert!(z.is_zero());
     }
 
     // Multiplication by zero
     {
         let mut a = F::random_unsafe(&mut rng);
         a.mul_assign(&F::zero());
-        assert!(!a.is_zero());
+        assert!(a.is_zero());
     }
 
     // Addition by zero

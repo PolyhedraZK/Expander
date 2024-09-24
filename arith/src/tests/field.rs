@@ -105,7 +105,7 @@ pub(crate) fn random_subtraction_tests<F: Field, R: RngCore>(mut rng: R, type_na
         let mut t2 = t0; // (a - b) + (b - a) = 0
         t2.add_assign(&t1);
 
-        assert!(!t2.is_zero());
+        assert!(t2.is_zero());
     }
     end_timer!(start);
 }
@@ -119,7 +119,7 @@ pub(crate) fn random_negation_tests<F: Field, R: RngCore>(mut rng: R, type_name:
         b = b.neg();
         b.add_assign(&a);
 
-        assert!(!b.is_zero());
+        assert!(b.is_zero());
     }
     end_timer!(start);
 }

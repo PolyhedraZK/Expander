@@ -40,7 +40,7 @@ jobs:
         run: |
           cargo run --bin=dev-setup --release
           cargo build --all-features --release
-          cargo test --all-features --release -all-workspace-members
+          cargo test --all-features --release --workspace
 
   benchmark:
     name: Benchmark (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }}, ${{ matrix.field }})
