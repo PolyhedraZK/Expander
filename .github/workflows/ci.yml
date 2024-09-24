@@ -64,13 +64,13 @@ jobs:
             feature: avx2
             field: gf2ext128
           - os: 7950x3d
-            feature: avx512
+            feature: avx512f
             field: m31ext3
           - os: 7950x3d
-            feature: avx512
+            feature: avx512f
             field: fr
           - os: 7950x3d
-            feature: avx512
+            feature: avx512f
             field: gf2ext128
     steps:
       - uses: actions/checkout@v4

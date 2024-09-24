@@ -20,7 +20,7 @@ cfg-if = "1.0"
 [dev-dependencies]
 
 [[bench]]
-name = "field"
+name = "fr"
 harness = false
 
 [features]
