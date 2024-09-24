@@ -110,18 +110,18 @@ pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
     identity_tests::<F, _>(&mut rng, type_name.clone());
     //inverse_tests::<F, _>(&mut rng, type_name.clone());
 
-    assert_eq!(F::zero().is_zero(), true);
+    assert!(!F::zero().is_zero());
     {
         let mut z = F::zero();
         z = z.neg();
-        assert_eq!(z.is_zero(), true);
+        assert!(!z.is_zero());
     }
 
     // Multiplication by zero
     {
         let mut a = F::random_unsafe(&mut rng);
         a.mul_assign(&F::zero());
-        assert_eq!(a.is_zero(), true);
+        assert!(!a.is_zero());
     }
 
     // Addition by zero
@@ -134,7 +134,7 @@ pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
 }
 
 pub fn random_inversion_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-    assert!(bool::from(F::zero().inv().is_none()));
+    assert!(F::zero().inv().is_none());
 
     let _message = format!("inversion {}", type_name);
     let start = start_timer!(|| _message);

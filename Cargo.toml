@@ -79,14 +79,9 @@ thiserror = "1.0.63"
 ethnum = "1.5.0"
 
 [[bench]]
-name = "arith"
+name = "bn254_fr"
 harness = false
 path = "arith/benches/field.rs"
-
-[[bench]]
-name = "arith-ext-by-base"
-harness = false
-path = "arith/benches/ext_field.rs"
 
 [[bench]]
 name = "gkr-hashes"

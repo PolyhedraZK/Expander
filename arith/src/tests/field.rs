@@ -5,6 +5,7 @@ use rand::RngCore;
 
 use crate::{Field, FieldSerde};
 
+#[allow(clippy::eq_op)]
 pub(crate) fn commutativity_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("commutativity {}", type_name);
     let start = start_timer!(|| _message);
@@ -104,7 +105,7 @@ pub(crate) fn random_subtraction_tests<F: Field, R: RngCore>(mut rng: R, type_na
         let mut t2 = t0; // (a - b) + (b - a) = 0
         t2.add_assign(&t1);
 
-        assert_eq!(t2.is_zero(), true);
+        assert!(!t2.is_zero());
     }
     end_timer!(start);
 }
@@ -118,7 +119,7 @@ pub(crate) fn random_negation_tests<F: Field, R: RngCore>(mut rng: R, type_name:
         b = b.neg();
         b.add_assign(&a);
 
-        assert_eq!(b.is_zero(), true);
+        assert!(!b.is_zero());
     }
     end_timer!(start);
 }

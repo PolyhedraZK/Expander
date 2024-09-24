@@ -16,7 +16,7 @@ jobs:
         with:
           components: rustfmt, clippy
       - run: cargo fmt --all -- --check
-      - run: cargo clippy
+      - run: cargo clippy --all
 
   build-and-test:
     name: Build and Test (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }})
