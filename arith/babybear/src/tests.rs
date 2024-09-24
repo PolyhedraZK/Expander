@@ -212,5 +212,3 @@ fn test_ext4_field() {
     random_extension_field_tests::<BabyBearExt4x16>("Simd M31 Ext3".to_string());
     random_simd_field_tests::<BabyBearExt4x16>("Simd M31 Ext3".to_string());
 }
-
-
