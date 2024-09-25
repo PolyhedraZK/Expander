@@ -18,7 +18,7 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --all
         env:
-          RUSTFLAGS: "-Dwarnings -C target-cpu=native"
+          RUSTFLAGS: "-Dwarnings -C target-cpu=native -C target-feature=+avx512f"
 
   build-and-test:
     name: Build and Test (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }})
