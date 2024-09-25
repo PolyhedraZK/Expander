@@ -28,7 +28,7 @@ impl NeonBabyBear {
             v: unsafe {
                 // Safety: memory representation of [x; BABY_BEAR_PACK_SIZE]
                 // is 16 u32s, which can be reinterpreted as 4 uint32x4_t.
-                transmute([x; BABY_BEAR_PACK_SIZE])
+                transmute::<[BabyBear; 16], [uint32x4_t; 4]>([x; BABY_BEAR_PACK_SIZE])
             },
         }
     }
@@ -48,7 +48,9 @@ impl FieldSerde for NeonBabyBear {
             .collect::<Vec<_>>()
             .try_into()
             .unwrap();
-        let data = unsafe { transmute::<_, [u8; Self::SERIALIZED_SIZE]>(canonical) };
+        let data = unsafe {
+            transmute::<[u32; BABY_BEAR_PACK_SIZE], [u8; Self::SERIALIZED_SIZE]>(canonical)
+        };
         writer.write_all(&data)?;
         Ok(())
     }
@@ -58,7 +60,8 @@ impl FieldSerde for NeonBabyBear {
         let mut data = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut data)?;
         // Transmute would fail to convert to Montgomery form
-        let canonical = unsafe { transmute::<_, [u32; BABY_BEAR_PACK_SIZE]>(data) };
+        let canonical =
+            unsafe { transmute::<[u8; Self::SERIALIZED_SIZE], [u32; BABY_BEAR_PACK_SIZE]>(data) };
         let unpacked = canonical
             .iter()
             .map(|x| BabyBear::new(*x))
@@ -89,15 +92,21 @@ impl Field for NeonBabyBear {
     const FIELD_SIZE: usize = 32;
 
     const ZERO: Self = Self {
-        v: unsafe { transmute([BabyBear::ZERO; BABY_BEAR_PACK_SIZE]) },
+        v: unsafe {
+            transmute::<[BabyBear; 16], [uint32x4_t; 4]>([BabyBear::ZERO; BABY_BEAR_PACK_SIZE])
+        },
     };
 
     const ONE: Self = Self {
-        v: unsafe { transmute([BabyBear::ONE; BABY_BEAR_PACK_SIZE]) },
+        v: unsafe {
+            transmute::<[BabyBear; 16], [uint32x4_t; 4]>([BabyBear::ONE; BABY_BEAR_PACK_SIZE])
+        },
     };
 
     const INV_2: Self = Self {
-        v: unsafe { transmute([BabyBear::INV_2; BABY_BEAR_PACK_SIZE]) },
+        v: unsafe {
+            transmute::<[BabyBear; 16], [uint32x4_t; 4]>([BabyBear::INV_2; BABY_BEAR_PACK_SIZE])
+        },
     };
 
     fn zero() -> Self {
@@ -116,9 +125,9 @@ impl Field for NeonBabyBear {
         // TODO: Is it safe to instead sample a u32, reduce mod p,
         // and treat this directly as the Montgomery form of an element?
         let mut sample = [BabyBear::ZERO; BABY_BEAR_PACK_SIZE];
-        for i in 0..BABY_BEAR_PACK_SIZE {
-            sample[i] = BabyBear::random_unsafe(&mut rng);
-        }
+        sample
+            .iter_mut()
+            .for_each(|s| *s = BabyBear::random_unsafe(&mut rng));
         Self::pack(&sample)
     }
 
@@ -168,7 +177,7 @@ impl SimdField for NeonBabyBear {
         let ret: [Self::Scalar; BABY_BEAR_PACK_SIZE] = base_vec.try_into().unwrap();
         Self {
             // Transmute is reinterpreting an array of scalars in Montgomery form to an AVX register
-            v: unsafe { transmute(ret) },
+            v: unsafe { transmute::<[BabyBear; 16], [uint32x4_t; 4]>(ret) },
         }
     }
 
@@ -259,9 +268,7 @@ impl Neg for NeonBabyBear {
     fn neg(self) -> Self::Output {
         unsafe {
             let mut a: [PackedBabyBearNeon; 4] = transmute(self);
-            for i in 0..4 {
-                a[i] = a[i].neg();
-            }
+            a.iter_mut().for_each(|x| *x = x.neg());
             transmute(a)
         }
     }

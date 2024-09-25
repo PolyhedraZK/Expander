@@ -116,7 +116,7 @@ impl Field for BabyBearExt3 {
         } else {
             // TODO: Implement a more efficient inversion
             let e = (BABYBEAR_MODULUS as u128).pow(3) - 2;
-            Some(self.exp(e as u128))
+            Some(self.exp(e))
         }
     }
 
