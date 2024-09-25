@@ -5,8 +5,9 @@ use std::io::{Read, Write};
 
 use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
 
-use crate::{GKRConfig, MultiLinearPoly};
+use crate::{GKRConfig, MPIConfig, MultiLinearPoly};
 
+#[derive(Default)]
 pub struct RawOpening {}
 
 pub struct RawCommitment<C: GKRConfig> {
@@ -44,18 +45,67 @@ impl<C: GKRConfig> RawCommitment<C> {
         }
     }
 
+    /// create a commitment collectively
+    /// Should also work if mpi is not initialized
+    #[inline]
+    pub fn mpi_new(local_poly_vals: &Vec<C::SimdCircuitField>, mpi_config: &MPIConfig) -> Self {
+        if mpi_config.world_size() == 1 {
+            Self::new(local_poly_vals)
+        } else {
+            let mut buffer = if mpi_config.is_root() {
+                vec![C::SimdCircuitField::zero(); local_poly_vals.len() * mpi_config.world_size()]
+            } else {
+                vec![]
+            };
+
+            mpi_config.gather_vec(local_poly_vals, &mut buffer);
+            Self { poly_vals: buffer }
+        }
+    }
+
+    #[inline(always)]
+    fn eval_local(
+        v: &[C::SimdCircuitField],
+        x: &[C::ChallengeField],
+        x_simd: &[C::ChallengeField],
+    ) -> C::ChallengeField {
+        let mut scratch = vec![C::Field::default(); v.len()];
+        let y_simd = MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(v, x, &mut scratch);
+        let y_simd_unpacked = y_simd.unpack();
+        let mut scratch = vec![C::ChallengeField::default(); y_simd_unpacked.len()];
+        MultiLinearPoly::eval_generic(&y_simd_unpacked, x_simd, &mut scratch)
+    }
+
     #[inline]
     pub fn verify(
         &self,
         x: &[C::ChallengeField],
-        r_simd: &[C::ChallengeField],
+        x_simd: &[C::ChallengeField],
         y: C::ChallengeField,
     ) -> bool {
-        let mut scratch = vec![C::Field::default(); self.poly_vals.len()];
-        let y_simd =
-            MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(&self.poly_vals, x, &mut scratch);
-        let y_simd_unpacked = y_simd.unpack();
-        let mut scratch = vec![C::ChallengeField::default(); y_simd_unpacked.len()];
-        y == MultiLinearPoly::eval_generic(&y_simd_unpacked, r_simd, &mut scratch)
+        y == Self::eval_local(&self.poly_vals, x, x_simd)
+    }
+
+    /// Note: this only runs on the root rank
+    /// Note: verifier should not have access to the MPIConfig
+    /// The mpi size is implicitly specified by the length of x_mpi,
+    /// So make sure it is correct
+    #[inline]
+    pub fn mpi_verify(
+        &self,
+        x: &[C::ChallengeField],
+        x_simd: &[C::ChallengeField],
+        x_mpi: &[C::ChallengeField],
+        y: C::ChallengeField,
+    ) -> bool {
+        let local_poly_size = self.poly_vals.len() >> x_mpi.len();
+        let local_evals = self
+            .poly_vals
+            .chunks(local_poly_size)
+            .map(|local_vals| Self::eval_local(local_vals, x, x_simd))
+            .collect::<Vec<C::ChallengeField>>();
+
+        let mut scratch = vec![C::ChallengeField::default(); local_evals.len()];
+        y == MultiLinearPoly::eval_generic(&local_evals, x_mpi, &mut scratch)
     }
 }

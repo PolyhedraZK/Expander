@@ -1,17 +1,21 @@
 use crate::{
-    CircuitLayer, GKRConfig, GkrScratchpad, SumcheckGkrHelper, SumcheckGkrSquareHelper, Transcript,
+    CircuitLayer, GKRConfig, GkrScratchpad, MPIConfig, SumcheckGkrHelper, SumcheckGkrSquareHelper,
+    Transcript,
 };
 
 #[inline(always)]
 fn transcript_io<C: GKRConfig>(
     ps: &[C::ChallengeField],
     transcript: &mut Transcript<C::FiatShamirHashType>,
+    mpi_config: &MPIConfig,
 ) -> C::ChallengeField {
     debug_assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
     for p in ps {
         transcript.append_challenge_f::<C>(p);
     }
-    transcript.challenge_f::<C>()
+    let mut r = transcript.challenge_f::<C>();
+    mpi_config.root_broadcast(&mut r);
+    r
 }
 
 // FIXME
@@ -20,52 +24,71 @@ fn transcript_io<C: GKRConfig>(
 pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
-    rz1: &[C::ChallengeField],
+    rz1: &Option<Vec<C::ChallengeField>>,
     r_simd: &[C::ChallengeField],
+    r_mpi: &[C::ChallengeField],
     alpha: &C::ChallengeField,
-    beta: &C::ChallengeField,
+    beta: &Option<C::ChallengeField>,
     transcript: &mut Transcript<C::FiatShamirHashType>,
     sp: &mut GkrScratchpad<C>,
+    mpi_config: &MPIConfig,
 ) -> (
     Vec<C::ChallengeField>,
+    Option<Vec<C::ChallengeField>>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
 ) {
-    let mut helper = SumcheckGkrHelper::new(layer, rz0, rz1, r_simd, alpha, beta, sp);
+    let mut helper =
+        SumcheckGkrHelper::new(layer, rz0, rz1, r_simd, r_mpi, alpha, beta, sp, mpi_config);
 
     helper.prepare_simd();
+    helper.prepare_mpi();
     helper.prepare_x_vals();
 
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
-        let r = transcript_io::<C>(&evals, transcript);
+        let r = transcript_io::<C>(&evals, transcript, mpi_config);
         helper.receive_rx(i_var, r);
     }
 
     helper.prepare_simd_var_vals();
     for i_var in 0..helper.simd_var_num {
-        let evals = helper.poly_evals_at_r_simd_var(i_var, 2);
-        let r = transcript_io::<C>(&evals, transcript);
+        let evals = helper.poly_evals_at_r_simd_var(i_var, 3);
+        let r = transcript_io::<C>(&evals, transcript, mpi_config);
         helper.receive_r_simd_var(i_var, r);
+    }
+
+    helper.prepare_mpi_var_vals();
+    for i_var in 0..mpi_config.world_size().trailing_zeros() as usize {
+        let evals = helper.poly_evals_at_r_mpi_var(i_var, 3);
+        let r = transcript_io::<C>(&evals, transcript, mpi_config);
+        helper.receive_r_mpi_var(i_var, r);
     }
 
     let vx_claim = helper.vx_claim();
     transcript.append_challenge_f::<C>(&vx_claim);
-    helper.prepare_y_vals();
-    for i_var in 0..helper.input_var_num {
-        let evals = helper.poly_evals_at_ry(i_var, 2);
-        let r = transcript_io::<C>(&evals, transcript);
-        helper.receive_ry(i_var, r);
+
+    if !layer.structure_info.max_degree_one {
+        helper.prepare_y_vals();
+        for i_var in 0..helper.input_var_num {
+            let evals = helper.poly_evals_at_ry(i_var, 2);
+            let r = transcript_io::<C>(&evals, transcript, mpi_config);
+            helper.receive_ry(i_var, r);
+        }
+        let vy_claim = helper.vy_claim();
+        transcript.append_challenge_f::<C>(&vy_claim);
     }
 
-    let vy_claim = helper.vy_claim();
-    transcript.append_challenge_f::<C>(&vy_claim);
-
     let rx = helper.rx;
-    let ry = helper.ry;
+    let ry = if !layer.structure_info.max_degree_one {
+        Some(helper.ry)
+    } else {
+        None
+    };
     let r_simd = helper.r_simd_var;
+    let r_mpi = helper.r_mpi_var;
 
-    (rx, ry, r_simd)
+    (rx, ry, r_simd, r_mpi)
 }
 
 // FIXME

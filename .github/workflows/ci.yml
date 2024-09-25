@@ -9,15 +9,15 @@ env:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: 7950x3d
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - run: python3 ./scripts/install.py
       - run: cargo fmt --all -- --check
       - run: cargo clippy
-
   build-and-test:
     name: Build and Test (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }})
     runs-on: ${{ matrix.os }}
@@ -38,6 +38,7 @@ jobs:
         run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV
       - name: Build and Test
         run: |
+          python3 ./scripts/install.py
           cargo run --bin=dev-setup --release
           cargo build --all-features --release
           cargo test --all-features --release      
@@ -83,6 +84,8 @@ jobs:
         run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV
       - name: Run benchmark
         run: |
+          python3 ./scripts/install.py
           cargo run --bin=dev-setup --release
           cargo run --release -- -t ${{ matrix.os == 'macos-latest' && 2 || 16 }} -f ${{ matrix.field }}
+
 
