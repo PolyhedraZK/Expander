@@ -5,7 +5,7 @@ use std::{
 
 use clap::Parser;
 use expander_rs::{
-    utils::{KECCAK_GF2_CIRCUIT, KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT},
+    utils::{KECCAK_BN254_CIRCUIT, KECCAK_GF2_CIRCUIT, KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT},
     MPIConfig,
 };
 
@@ -92,7 +92,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         "keccak" => match C::FIELD_TYPE {
             FieldType::GF2 => Circuit::<C>::load_circuit(KECCAK_GF2_CIRCUIT),
             FieldType::M31 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
-            FieldType::BN254 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
+            FieldType::BN254 => Circuit::<C>::load_circuit(KECCAK_BN254_CIRCUIT),
         },
         "poseidon" => Circuit::<C>::load_circuit(POSEIDON_CIRCUIT),
         _ => unreachable!(),
