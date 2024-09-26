@@ -1,16 +1,12 @@
 mod fr_ext;
-// mod gf2_127;
 mod gf2_128;
 mod gf2_128x8;
 mod m31_ext;
 mod m31_ext3x16;
 use crate::{Field, FieldSerde};
 
-// pub use gf2_127::*;
 pub use gf2_128::*;
 pub use gf2_128x8::GF2_128x8;
-#[cfg(target_arch = "x86_64")]
-pub use gf2_128x8::GF2_128x8_256;
 pub use m31_ext::M31Ext3;
 pub use m31_ext3x16::M31Ext3x16;
 

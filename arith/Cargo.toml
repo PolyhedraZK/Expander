@@ -27,5 +27,3 @@ harness = false
 name = "ext_field"
 harness = false
 
-[features]
-avx256 = []

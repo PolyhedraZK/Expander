@@ -1,10 +1,11 @@
 mod m31x16;
 pub use m31x16::M31x16;
 
-#[cfg(target_arch = "x86_64")]
-pub(crate) mod m31_avx;
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
 pub(crate) mod m31_avx256;
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
+pub(crate) mod m31_avx512;
 
 #[cfg(target_arch = "x86_64")]
 pub type M31x16_256 = m31_avx256::AVXM31;
