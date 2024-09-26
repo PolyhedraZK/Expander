@@ -53,8 +53,10 @@ members = [
     "arith/gf2",    
     "arith/gf2_128",
     "arith/goldilocks",
-    "arith/mersenne31",
-    "bi-kzg",
+    "arith/mersenne31", 
+    "basefold",
+    "bi-kzg", 
+    "poseidon",
     "transcript"
 ]
 
