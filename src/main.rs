@@ -5,7 +5,7 @@ use std::{
 
 use clap::Parser;
 use expander_rs::{
-    utils::{KECCAK_BN254_CIRCUIT, KECCAK_GF2_CIRCUIT, KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT},
+    utils::{KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS, KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_CIRCUIT},
     MPIConfig,
 };
 
@@ -88,7 +88,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     let pack_size = C::get_field_pack_size();
 
     // load circuit
-    let circuit_template = match args.scheme.as_str() {
+    let mut circuit_template = match args.scheme.as_str() {
         "keccak" => match C::FIELD_TYPE {
             FieldType::GF2 => Circuit::<C>::load_circuit(KECCAK_GF2_CIRCUIT),
             FieldType::M31 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
@@ -97,6 +97,13 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         "poseidon" => Circuit::<C>::load_circuit(POSEIDON_CIRCUIT),
         _ => unreachable!(),
     };
+
+    let witness_path = match C::FIELD_TYPE {
+        FieldType::GF2 => KECCAK_GF2_WITNESS,
+        FieldType::M31 => KECCAK_M31_WITNESS,
+        FieldType::BN254 => KECCAK_BN254_WITNESS,
+    };
+    circuit_template.load_witness_file(witness_path);
 
     let circuit_copy_size: usize = match (C::FIELD_TYPE, args.scheme.as_str()) {
         (FieldType::GF2, "keccak") => 1,
@@ -110,7 +117,6 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     let circuits = (0..args.threads)
         .map(|_| {
             let mut c = circuit_template.clone();
-            c.set_random_input_for_test();
             c.evaluate();
             c
         })

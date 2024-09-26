@@ -123,6 +123,7 @@ impl<C: GKRConfig> Clone for Circuit<C> {
     fn clone(&self) -> Circuit<C> {
         let mut ret = Circuit::<C> {
             layers: self.layers.clone(),
+            public_input: self.public_input.clone(),
             ..Default::default()
         };
 
