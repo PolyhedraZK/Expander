@@ -6,6 +6,7 @@ default-run = "expander-rs" # default
 
 [dependencies]
 arith = { path = "arith" }
+babybear = { path = "arith/babybear" }
 gf2 = { path = "arith/gf2" }
 gf2_128 = { path = "arith/gf2_128" }
 mersenne31 = { path = "arith/mersenne31" }
@@ -48,6 +49,7 @@ grinding = []
 [workspace]
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
+    "arith/babybear",
     "arith/gf2",    
     "arith/gf2_128",
     "arith/goldilocks",

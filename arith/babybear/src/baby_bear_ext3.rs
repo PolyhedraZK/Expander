@@ -1,9 +1,11 @@
-use super::ExtensionField;
-use crate::{field_common, BabyBear, Field, FieldSerde, FieldSerdeResult, BABYBEAR_MODULUS};
-use core::{
+use std::{
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
+
+use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult};
+
+use crate::{BabyBear, BABYBEAR_MODULUS};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct BabyBearExt3 {
@@ -49,9 +51,9 @@ impl FieldSerde for BabyBearExt3 {
 impl Field for BabyBearExt3 {
     const NAME: &'static str = "Baby Bear Extension 4";
 
-    const SIZE: usize = 32 / 8 * 4;
+    const SIZE: usize = 32 / 8 * 3;
 
-    const FIELD_SIZE: usize = 32 * 4;
+    const FIELD_SIZE: usize = 32 * 3;
 
     const ZERO: Self = Self {
         v: [BabyBear::ZERO; 3],
@@ -114,7 +116,7 @@ impl Field for BabyBearExt3 {
         } else {
             // TODO: Implement a more efficient inversion
             let e = (BABYBEAR_MODULUS as u128).pow(3) - 2;
-            Some(self.exp(e as u128))
+            Some(self.exp(e))
         }
     }
 
@@ -303,37 +305,4 @@ fn square_internal(a: &[BabyBear; 3]) -> [BabyBear; 3] {
     res[1] = (a[0] * a[1]).double() + a[2].square().double();
     res[2] = a[0] * a[2].double() + a[1].square();
     res
-}
-
-/// Compare to test vectors generated using SageMath
-#[test]
-fn test_compare_sage() {
-    let a = BabyBearExt3 {
-        v: [BabyBear::new(1), BabyBear::new(2), BabyBear::new(3)],
-    };
-    let b = BabyBearExt3 {
-        v: [BabyBear::new(4), BabyBear::new(5), BabyBear::new(6)],
-    };
-    let expected_prod = BabyBearExt3 {
-        v: [BabyBear::new(58), BabyBear::new(49), BabyBear::new(28)],
-    };
-    assert_eq!(a * b, expected_prod);
-
-    let a_inv = BabyBearExt3 {
-        v: [
-            BabyBear::new(1628709509),
-            BabyBear::new(1108427305),
-            BabyBear::new(950080547),
-        ],
-    };
-    assert_eq!(a.inv().unwrap(), a_inv);
-
-    let a_to_eleven = BabyBearExt3 {
-        v: [
-            BabyBear::new(164947539),
-            BabyBear::new(1313663563),
-            BabyBear::new(627537568),
-        ],
-    };
-    assert_eq!(a.exp(11), a_to_eleven);
 }

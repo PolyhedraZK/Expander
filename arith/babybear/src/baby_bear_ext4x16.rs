@@ -1,12 +1,12 @@
-use crate::{
-    field_common, BabyBear, BabyBearExt4, BabyBearx16, ExtensionField, Field, FieldSerde,
-    FieldSerdeResult, SimdField,
-};
 use std::{
     io::{Read, Write},
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
+
+use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, SimdField};
+
+use crate::{baby_bear::BabyBearx16, BabyBear, BabyBearExt4};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct BabyBearExt4x16 {

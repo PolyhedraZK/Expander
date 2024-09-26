@@ -1,9 +1,10 @@
-use super::{FieldType, GKRConfig};
-use crate::Keccak256hasher;
-use arith::{
+use arith::ExtensionField;
+use babybear::{
     BabyBear, BabyBearExt3, BabyBearExt3x16, BabyBearExt4, BabyBearExt4x16, BabyBearx16,
-    ExtensionField,
 };
+use transcript::Keccak256hasher;
+
+use super::{FieldType, GKRConfig};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BabyBearExt4ConfigKeccak;
