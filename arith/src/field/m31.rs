@@ -3,18 +3,15 @@ pub mod m31x16_neon;
 #[cfg(target_arch = "aarch64")]
 pub type M31x16 = m31x16_neon::NeonM31;
 
-
 #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 pub mod m31x16_avx512;
 #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 pub type M31x16 = m31x16_avx512::AVXM31;
 
-
 #[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
 pub mod m31x16_avx256;
 #[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
 pub type M31x16 = m31x16_avx256::AVXM31;
-
 
 use rand::RngCore;
 
