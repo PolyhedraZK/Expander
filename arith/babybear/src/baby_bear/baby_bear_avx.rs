@@ -25,7 +25,7 @@ impl AVXBabyBear {
     #[inline(always)]
     pub(crate) fn pack_full(x: BabyBear) -> Self {
         AVXBabyBear {
-            v: unsafe { transmute([x; BABY_BEAR_PACK_SIZE]) },
+            v: unsafe { transmute::<[BabyBear; 16], __m512i>([x; BABY_BEAR_PACK_SIZE]) },
         }
     }
 }
@@ -46,7 +46,9 @@ impl FieldSerde for AVXBabyBear {
             .collect::<Vec<_>>()
             .try_into()
             .unwrap();
-        let data = unsafe { transmute::<_, [u8; Self::SERIALIZED_SIZE]>(canonical) };
+        let data = unsafe {
+            transmute::<[u32; BABY_BEAR_PACK_SIZE], [u8; Self::SERIALIZED_SIZE]>(canonical)
+        };
         writer.write_all(&data)?;
         Ok(())
     }
@@ -56,11 +58,9 @@ impl FieldSerde for AVXBabyBear {
         let mut data = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut data)?;
         // Transmute would fail to convert to Montgomery form
-        let canonical = unsafe { transmute::<_, [u32; BABY_BEAR_PACK_SIZE]>(data) };
-        let unpacked = canonical
-            .iter()
-            .map(|x| BabyBear::new(x))
-            .collect::<Vec<_>>();
+        let canonical =
+            unsafe { transmute::<[u8; Self::SERIALIZED_SIZE], [u32; BABY_BEAR_PACK_SIZE]>(data) };
+        let unpacked = canonical.iter().map(BabyBear::new).collect::<Vec<_>>();
         Ok(Self::pack(&unpacked))
     }
 
@@ -87,15 +87,15 @@ impl Field for AVXBabyBear {
     const FIELD_SIZE: usize = 32;
 
     const ZERO: Self = Self {
-        v: unsafe { transmute([BabyBear::ZERO; BABY_BEAR_PACK_SIZE]) },
+        v: unsafe { transmute::<[BabyBear; 16], __m512i>([BabyBear::ZERO; BABY_BEAR_PACK_SIZE]) },
     };
 
     const ONE: Self = Self {
-        v: unsafe { transmute([BabyBear::ONE; BABY_BEAR_PACK_SIZE]) },
+        v: unsafe { transmute::<[BabyBear; 16], __m512i>([BabyBear::ONE; BABY_BEAR_PACK_SIZE]) },
     };
 
     const INV_2: Self = Self {
-        v: unsafe { transmute([BabyBear::INV_2; BABY_BEAR_PACK_SIZE]) },
+        v: unsafe { transmute::<[BabyBear; 16], __m512i>([BabyBear::INV_2; BABY_BEAR_PACK_SIZE]) },
     };
 
     fn zero() -> Self {
@@ -114,9 +114,9 @@ impl Field for AVXBabyBear {
         // TODO: Is it safe to instead sample a u32, reduce mod p,
         // and treat this directly as the Montgomery form of an element?
         let mut sample = [BabyBear::ZERO; BABY_BEAR_PACK_SIZE];
-        for i in 0..BABY_BEAR_PACK_SIZE {
-            sample[i] = BabyBear::random_unsafe(&mut rng);
-        }
+        sample
+            .iter_mut()
+            .for_each(|x| *x = BabyBear::random_unsafe(&mut rng));
         Self::pack(&sample)
     }
 
@@ -167,7 +167,7 @@ impl SimdField for AVXBabyBear {
         let ret: [Self::Scalar; BABY_BEAR_PACK_SIZE] = base_vec.try_into().unwrap();
         Self {
             // Transmute is reinterpreting an array of scalars in Montgomery form to an AVX register
-            v: unsafe { transmute(ret) },
+            v: unsafe { transmute::<[BabyBear; 16], __m512i>(ret) },
         }
     }
 

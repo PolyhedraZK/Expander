@@ -6,7 +6,6 @@ use transcript::SHA256hasher;
 
 use super::{FieldType, GKRConfig};
 
-
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BabyBearExt4ConfigSha2;
 
