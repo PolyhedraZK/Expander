@@ -2,7 +2,11 @@ use std::io::Cursor;
 
 use ark_std::test_rng;
 
+<<<<<<< HEAD:arith/mersenne31/src/tests/m31.rs
 use arith::{random_field_tests, random_inversion_tests, random_simd_field_tests, FieldSerde};
+=======
+use crate::{Field, FieldSerde, M31x16, M31};
+>>>>>>> main:arith/src/tests/m31.rs
 
 use crate::{M31x16, M31};
 
@@ -34,4 +38,16 @@ fn test_simd_field() {
     assert!(b.is_ok());
     let b = b.unwrap();
     assert_eq!(a, b);
+}
+
+/// Compare to test vectors generated in SageMath
+#[test]
+fn test_vectors() {
+    // M31 inversion
+    let a = M31::from(3);
+    let a_inv = M31::from(1431655765);
+    assert_eq!(a_inv, a.inv().unwrap());
+    // M31 exponentiation
+    let a_pow_11 = M31::from(177147);
+    assert_eq!(a_pow_11, a.exp(11));
 }

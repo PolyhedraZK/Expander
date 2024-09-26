@@ -1,8 +1,3 @@
-use std::{
-    sync::{Arc, Mutex},
-    thread,
-};
-
 use clap::Parser;
 use expander_rs::{
     utils::{KECCAK_GF2_CIRCUIT, KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT},
@@ -29,10 +24,6 @@ struct Args {
     /// number of repeat
     #[arg(short, long, default_value_t = 1)]
     repeats: usize,
-
-    /// number of thread
-    #[arg(short, long, default_value_t = 1)]
-    threads: u64,
 }
 
 fn main() {
@@ -82,13 +73,10 @@ fn main() {
 }
 
 fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
-    let partial_proof_cnts = (0..args.threads)
-        .map(|_| Arc::new(Mutex::new(0)))
-        .collect::<Vec<_>>();
     let pack_size = C::get_field_pack_size();
 
     // load circuit
-    let circuit_template = match args.scheme.as_str() {
+    let mut circuit = match args.scheme.as_str() {
         "keccak" => match C::FIELD_TYPE {
             FieldType::GF2 => Circuit::<C>::load_circuit(KECCAK_GF2_CIRCUIT),
             FieldType::M31 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
@@ -97,6 +85,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         "poseidon" => Circuit::<C>::load_circuit(POSEIDON_CIRCUIT),
         _ => unreachable!(),
     };
+    circuit.set_random_input_for_test();
 
     let circuit_copy_size: usize = match (C::FIELD_TYPE, args.scheme.as_str()) {
         (FieldType::GF2, "keccak") => 1,
@@ -107,50 +96,21 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         _ => unreachable!(),
     };
 
-    let circuits = (0..args.threads)
-        .map(|_| {
-            let mut c = circuit_template.clone();
-            c.set_random_input_for_test();
-            c.evaluate();
-            c
-        })
-        .collect::<Vec<_>>();
-
-    println!("Circuit loaded!");
-
-    let start_time = std::time::Instant::now();
-    let _ = circuits
-        .into_iter()
-        .enumerate()
-        .map(|(i, mut c)| {
-            let partial_proof_cnt = partial_proof_cnts[i].clone();
-            let local_config = config.clone();
-            thread::spawn(move || {
-                loop {
-                    // bench func
-                    let mut prover = Prover::new(&local_config);
-                    prover.prepare_mem(&c);
-                    prover.prove(&mut c);
-                    // update cnt
-                    let mut cnt = partial_proof_cnt.lock().unwrap();
-                    let proof_cnt_this_round = circuit_copy_size * pack_size;
-                    *cnt += proof_cnt_this_round;
-                }
-            })
-        })
-        .collect::<Vec<_>>();
+    const N_PROOF: usize = 1000;
 
     println!("We are now calculating average throughput, please wait for 1 minutes");
     for i in 0..args.repeats {
-        thread::sleep(std::time::Duration::from_secs(5));
+        let start_time = std::time::Instant::now();
+        for _j in 0..N_PROOF {
+            let mut prover = Prover::new(&config);
+            prover.prepare_mem(&circuit);
+            prover.prove(&mut circuit);
+        }
         let stop_time = std::time::Instant::now();
         let duration = stop_time.duration_since(start_time);
-        let mut total_proof_cnt = 0;
-        for cnt in &partial_proof_cnts {
-            total_proof_cnt += *cnt.lock().unwrap();
-        }
-        let throughput = total_proof_cnt as f64 / duration.as_secs_f64()
-            * (config.mpi_config.world_size() as f64);
+        let throughput = (N_PROOF * circuit_copy_size * pack_size * config.mpi_config.world_size())
+            as f64
+            / duration.as_secs_f64();
         println!("{}-bench: throughput: {} hashes/s", i, throughput.round());
     }
 }
@@ -168,7 +128,6 @@ fn print_info(args: &Args) {
         args.scheme, prover, args.field
     );
     println!("field:          {}", args.field);
-    println!("#threads:       {}", args.threads);
     println!("#bench repeats: {}", args.repeats);
     println!("hash scheme:    {}", args.scheme);
     println!("===============================")

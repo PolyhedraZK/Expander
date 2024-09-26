@@ -5,7 +5,7 @@ use crate::{FiatShamirHash, GKRConfig, Proof};
 pub struct Transcript<H: FiatShamirHash> {
     pub hasher: H,
     hash_start_idx: usize,
-    digest: Vec<u8>,
+    pub(crate) digest: Vec<u8>,
     pub proof: Proof,
 }
 
@@ -19,7 +19,7 @@ impl<H: FiatShamirHash> Transcript<H> {
     pub const DIGEST_SIZE: usize = 32;
 
     #[inline]
-    fn hash_to_digest(&mut self) {
+    pub(crate) fn hash_to_digest(&mut self) {
         let hash_end_idx = self.proof.bytes.len();
         if hash_end_idx > self.hash_start_idx {
             self.hasher.hash(

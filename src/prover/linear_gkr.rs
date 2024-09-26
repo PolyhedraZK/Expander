@@ -68,7 +68,11 @@ impl<C: GKRConfig> Prover<C> {
             .map(|layer| layer.output_var_num)
             .max()
             .unwrap();
-        self.sp = GkrScratchpad::<C>::new(max_num_input_var, max_num_output_var);
+        self.sp = GkrScratchpad::<C>::new(
+            max_num_input_var,
+            max_num_output_var,
+            self.config.mpi_config.world_size(),
+        );
     }
 
     pub fn prove(&mut self, c: &mut Circuit<C>) -> (C::ChallengeField, Proof) {
@@ -76,12 +80,15 @@ impl<C: GKRConfig> Prover<C> {
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
         // PC commit
-        let commitment = RawCommitment::<C>::new(&c.layers[0].input_vals);
+        let commitment =
+            RawCommitment::<C>::mpi_new(&c.layers[0].input_vals, &self.config.mpi_config);
 
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(&buffer);
+
+        self.config.mpi_config.transcript_sync_up(&mut transcript);
 
         #[cfg(feature = "grinding")]
         grind::<C>(&mut transcript, &self.config);
@@ -91,13 +98,15 @@ impl<C: GKRConfig> Prover<C> {
 
         let mut claimed_v = C::ChallengeField::default();
         let mut _rx = vec![];
-        let mut _ry = vec![];
+        let mut _ry = None;
         let mut _rsimd = vec![];
+        let mut _rmpi = vec![];
 
         if self.config.gkr_scheme == GKRScheme::GkrSquare {
             (_, _rx) = gkr_square_prove(c, &mut self.sp, &mut transcript);
         } else {
-            (claimed_v, _rx, _ry, _rsimd) = gkr_prove(c, &mut self.sp, &mut transcript);
+            (claimed_v, _rx, _ry, _rsimd, _rmpi) =
+                gkr_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
         }
 
         // open
