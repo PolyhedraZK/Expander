@@ -1,2 +1,2 @@
-mod pcs;
 mod hash;
+mod pcs;

@@ -1,12 +1,12 @@
-use goldilocks::Goldilocks;
-use poseidon::Poseidon;
-use sha2::Digest as Sha2Digest;
-use sha2::Sha256;
-use sha2::Sha512_256;
+
 use std::mem::size_of;
 use std::mem::transmute;
 
-#[derive(Debug, Default, PartialEq, Eq, Clone, Copy, )]
+
+use sha2::Digest as Sha2Digest;
+use sha2::Sha256;
+
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub struct Digest(pub [u8; OCTOPOS_OUTPUT_BYTES]);
 
 impl Digest {

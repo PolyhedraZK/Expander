@@ -3,8 +3,6 @@
 
 use arith::Field;
 
-
-
 /// This trait defines APIs for polynomial commitment schemes.
 /// Note that for our usage of PCS, we do not require the hiding property.
 ///
