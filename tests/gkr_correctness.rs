@@ -63,7 +63,8 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     let circuit_path = match C::FIELD_TYPE {
         FieldType::GF2 => KECCAK_GF2_CIRCUIT,
         FieldType::M31 => KECCAK_M31_CIRCUIT,
-        _ => unreachable!(), // TODO: Add bn254
+        FieldType::BN254 => KECCAK_BN254_CIRCUIT,
+        _ => unreachable!(),
     };
     let mut circuit = Circuit::<C>::load_circuit(circuit_path);
     root_println!(config.mpi_config, "Circuit loaded.");
@@ -71,6 +72,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     let witness_path = match C::FIELD_TYPE {
         FieldType::GF2 => KECCAK_GF2_WITNESS,
         FieldType::M31 => KECCAK_M31_WITNESS,
+        FieldType::BN254 => KECCAK_BN254_WITNESS,
         _ => unreachable!(),
     };
     circuit.load_witness_file(witness_path);

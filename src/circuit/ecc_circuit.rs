@@ -1,9 +1,4 @@
-use std::{
-    cmp::max,
-    collections::HashMap,
-    fs,
-    io::Cursor,
-};
+use std::{cmp::max, collections::HashMap, fs, io::Cursor};
 
 use crate::circuit::*;
 use crate::GKRConfig;

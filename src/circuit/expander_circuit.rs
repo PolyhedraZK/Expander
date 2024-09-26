@@ -1,6 +1,6 @@
 use core::panic;
-use std::io::Cursor;
 use std::fs;
+use std::io::Cursor;
 
 use arith::{Field, SimdField};
 use ark_std::test_rng;

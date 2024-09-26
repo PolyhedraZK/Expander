@@ -13,11 +13,11 @@ pub enum CircuitError {
     #[error("other error: {0:?}")]
     OtherError(#[from] std::io::Error),
 }
-pub trait CircuitSerde {
+pub trait FromEccSerde {
     fn deserialize_from<R: Read>(reader: R) -> Self;
 }
 
-impl<T: CircuitSerde> CircuitSerde for Vec<T> {
+impl<T: FromEccSerde> FromEccSerde for Vec<T> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let vec_len = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
         let mut ret = vec![];
@@ -28,7 +28,7 @@ impl<T: CircuitSerde> CircuitSerde for Vec<T> {
     }
 }
 
-impl<T1: CircuitSerde, T2: CircuitSerde> CircuitSerde for (T1, T2) {
+impl<T1: FromEccSerde, T2: FromEccSerde> FromEccSerde for (T1, T2) {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         (
             T1::deserialize_from(&mut reader),
@@ -37,13 +37,13 @@ impl<T1: CircuitSerde, T2: CircuitSerde> CircuitSerde for (T1, T2) {
     }
 }
 
-impl CircuitSerde for usize {
+impl FromEccSerde for usize {
     fn deserialize_from<R: Read>(reader: R) -> Self {
         <usize as FieldSerde>::deserialize_from(reader).unwrap()
     }
 }
 
-impl<C: GKRConfig, const INPUT_NUM: usize> CircuitSerde for Gate<C, INPUT_NUM> {
+impl<C: GKRConfig, const INPUT_NUM: usize> FromEccSerde for Gate<C, INPUT_NUM> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let mut i_ids = [0usize; INPUT_NUM];
         for id in &mut i_ids {
@@ -88,7 +88,7 @@ pub struct CustomGateWrapper<C: GKRConfig, const INPUT_NUM: usize> {
     pub custom_gate: Gate<C, INPUT_NUM>,
 }
 
-impl<C: GKRConfig, const INPUT_NUM: usize> CircuitSerde for CustomGateWrapper<C, INPUT_NUM> {
+impl<C: GKRConfig, const INPUT_NUM: usize> FromEccSerde for CustomGateWrapper<C, INPUT_NUM> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let gate_type = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
         let i_ids: [usize; INPUT_NUM] = Vec::<usize>::deserialize_from(&mut reader)
@@ -131,7 +131,7 @@ impl<C: GKRConfig, const INPUT_NUM: usize> CircuitSerde for CustomGateWrapper<C,
     }
 }
 
-impl CircuitSerde for Allocation {
+impl FromEccSerde for Allocation {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         Self {
             i_offset: <usize as FieldSerde>::deserialize_from(&mut reader).unwrap(),
@@ -140,7 +140,7 @@ impl CircuitSerde for Allocation {
     }
 }
 
-impl<C: GKRConfig> CircuitSerde for Segment<C> {
+impl<C: GKRConfig> FromEccSerde for Segment<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let i_len = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
         let o_len = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
@@ -173,7 +173,7 @@ impl<C: GKRConfig> CircuitSerde for Segment<C> {
 
 const VERSION_NUM: usize = 3914834606642317635; // b'CIRCUIT6'
 
-impl<C: GKRConfig> CircuitSerde for RecursiveCircuit<C> {
+impl<C: GKRConfig> FromEccSerde for RecursiveCircuit<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let version_num = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
         assert_eq!(version_num, VERSION_NUM);
@@ -191,7 +191,7 @@ impl<C: GKRConfig> CircuitSerde for RecursiveCircuit<C> {
     }
 }
 
-impl<C: GKRConfig> CircuitSerde for Witness<C> {
+impl<C: GKRConfig> FromEccSerde for Witness<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let num_witnesses = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
         let num_private_inputs_per_witness =
