@@ -17,12 +17,8 @@ jobs:
           components: rustfmt, clippy
       - run: python3 ./scripts/install.py
       - run: cargo fmt --all -- --check
-<<<<<<< HEAD
       - run: cargo clippy --all
 
-=======
-      - run: cargo clippy
->>>>>>> main
   build-and-test:
     name: Build and Test (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }})
     runs-on: ${{ matrix.os }}
@@ -90,8 +86,3 @@ jobs:
           python3 ./scripts/install.py
           cargo run --bin=dev-setup --release
           cargo run --release -- -t ${{ matrix.os == 'macos-latest' && 2 || 16 }} -f ${{ matrix.field }}
-<<<<<<< HEAD
-=======
-
-
->>>>>>> main
