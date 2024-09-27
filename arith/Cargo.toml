@@ -23,5 +23,3 @@ cfg-if = "1.0"
 name = "fr"
 harness = false
 
-[features]
-avx256 = []

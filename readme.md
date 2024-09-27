@@ -45,7 +45,16 @@ This compiler is your entry point for using our prover; the repository you have 
 Please note that the witness generation process is not yet optimal, and we are actively working on improving it.
 
 ## AVX
-We use AVX512 by default, if your CPU doesn't support AVX512, or you encountered illegal instruction error, please use `--features avx256` instead.
+We use AVX2 by default. On an x86 or a mac, you can simply do
+```
+RUSTFLAGS="-C target-cpu=native" cargo test --release --workspace
+```
+For some platforms, if you do not indicate `target-cpu=native` it may simulate avx2 instructions, rather than use it directly, and this will cause performance decrease.
+
+Our code also supports `avx512`. This is not turned on by default. To use `avx512`
+```
+RUSTFLAGS="-C target-cpu=native -C target-features=+avx512f" cargo test --release --workspace
+```
 
 ## Environment Setup
 

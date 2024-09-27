@@ -10,13 +10,13 @@ use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult};
 use gf2::GF2;
 
 #[derive(Debug, Clone, Copy)]
-pub struct AVX512GF2_128 {
+pub struct AVXGF2_128 {
     pub v: __m128i,
 }
 
-field_common!(AVX512GF2_128);
+field_common!(AVXGF2_128);
 
-impl FieldSerde for AVX512GF2_128 {
+impl FieldSerde for AVXGF2_128 {
     const SERIALIZED_SIZE: usize = 16;
 
     #[inline(always)]
@@ -30,7 +30,7 @@ impl FieldSerde for AVX512GF2_128 {
         let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
         unsafe {
-            Ok(AVX512GF2_128 {
+            Ok(AVXGF2_128 {
                 v: transmute::<[u8; Self::SERIALIZED_SIZE], __m128i>(u),
             })
         }
@@ -41,42 +41,42 @@ impl FieldSerde for AVX512GF2_128 {
         let mut u = [0u8; 32];
         reader.read_exact(&mut u)?;
         Ok(unsafe {
-            AVX512GF2_128 {
+            AVXGF2_128 {
                 v: transmute::<[u8; 16], __m128i>(u[..16].try_into().unwrap()),
             }
         })
     }
 }
 
-impl Field for AVX512GF2_128 {
+impl Field for AVXGF2_128 {
     const NAME: &'static str = "Galios Field 2^128";
 
     const SIZE: usize = 128 / 8;
 
     const FIELD_SIZE: usize = 128; // in bits
 
-    const ZERO: Self = AVX512GF2_128 {
+    const ZERO: Self = AVXGF2_128 {
         v: unsafe { std::mem::zeroed() },
     };
 
-    const ONE: Self = AVX512GF2_128 {
+    const ONE: Self = AVXGF2_128 {
         v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) },
     };
 
-    const INV_2: Self = AVX512GF2_128 {
+    const INV_2: Self = AVXGF2_128 {
         v: unsafe { std::mem::zeroed() },
     }; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {
-        AVX512GF2_128 {
+        AVXGF2_128 {
             v: unsafe { std::mem::zeroed() },
         }
     }
 
     #[inline(always)]
     fn one() -> Self {
-        AVX512GF2_128 {
+        AVXGF2_128 {
             // 1 in the first bit
             v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) }, // TODO check bit order
         }
@@ -87,7 +87,7 @@ impl Field for AVX512GF2_128 {
         let mut u = [0u8; 16];
         rng.fill_bytes(&mut u);
         unsafe {
-            AVX512GF2_128 {
+            AVXGF2_128 {
                 v: *(u.as_ptr() as *const __m128i),
             }
         }
@@ -95,7 +95,7 @@ impl Field for AVX512GF2_128 {
 
     #[inline(always)]
     fn random_bool(mut rng: impl rand::RngCore) -> Self {
-        AVX512GF2_128 {
+        AVXGF2_128 {
             v: unsafe { std::mem::transmute::<[u32; 4], __m128i>([rng.next_u32() % 2, 0, 0, 0]) },
         }
     }
@@ -142,19 +142,19 @@ impl Field for AVX512GF2_128 {
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         unsafe {
-            AVX512GF2_128 {
+            AVXGF2_128 {
                 v: transmute::<[u8; 16], __m128i>(bytes[..16].try_into().unwrap()),
             }
         }
     }
 }
 
-impl ExtensionField for AVX512GF2_128 {
+impl ExtensionField for AVXGF2_128 {
     const DEGREE: usize = 128;
 
     const W: u32 = 0x87;
 
-    const X: Self = AVX512GF2_128 {
+    const X: Self = AVXGF2_128 {
         v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([2, 0, 0, 0]) },
     };
 
@@ -208,10 +208,10 @@ impl ExtensionField for AVX512GF2_128 {
     }
 }
 
-impl From<GF2> for AVX512GF2_128 {
+impl From<GF2> for AVXGF2_128 {
     #[inline(always)]
     fn from(v: GF2) -> Self {
-        AVX512GF2_128 {
+        AVXGF2_128 {
             v: unsafe { _mm_set_epi64x(0, v.v as i64) },
         }
     }
@@ -266,21 +266,21 @@ unsafe fn gfmul(a: __m128i, b: __m128i) -> __m128i {
     _mm_xor_si128(tmp3, tmp6)
 }
 
-impl Default for AVX512GF2_128 {
+impl Default for AVXGF2_128 {
     #[inline(always)]
     fn default() -> Self {
         Self::zero()
     }
 }
 
-impl PartialEq for AVX512GF2_128 {
+impl PartialEq for AVXGF2_128 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe { _mm_test_all_ones(_mm_cmpeq_epi8(self.v, other.v)) == 1 }
     }
 }
 
-impl Neg for AVX512GF2_128 {
+impl Neg for AVXGF2_128 {
     type Output = Self;
 
     #[inline(always)]
@@ -289,32 +289,32 @@ impl Neg for AVX512GF2_128 {
     }
 }
 
-impl From<u32> for AVX512GF2_128 {
+impl From<u32> for AVXGF2_128 {
     #[inline(always)]
     fn from(v: u32) -> Self {
-        AVX512GF2_128 {
+        AVXGF2_128 {
             v: unsafe { std::mem::transmute::<[u32; 4], __m128i>([v, 0, 0, 0]) },
         }
     }
 }
 
 #[inline(always)]
-fn add_internal(a: &AVX512GF2_128, b: &AVX512GF2_128) -> AVX512GF2_128 {
-    AVX512GF2_128 {
+fn add_internal(a: &AVXGF2_128, b: &AVXGF2_128) -> AVXGF2_128 {
+    AVXGF2_128 {
         v: unsafe { _mm_xor_si128(a.v, b.v) },
     }
 }
 
 #[inline(always)]
-fn sub_internal(a: &AVX512GF2_128, b: &AVX512GF2_128) -> AVX512GF2_128 {
-    AVX512GF2_128 {
+fn sub_internal(a: &AVXGF2_128, b: &AVXGF2_128) -> AVXGF2_128 {
+    AVXGF2_128 {
         v: unsafe { _mm_xor_si128(a.v, b.v) },
     }
 }
 
 #[inline(always)]
-fn mul_internal(a: &AVX512GF2_128, b: &AVX512GF2_128) -> AVX512GF2_128 {
-    AVX512GF2_128 {
+fn mul_internal(a: &AVXGF2_128, b: &AVXGF2_128) -> AVXGF2_128 {
+    AVXGF2_128 {
         v: unsafe { gfmul(a.v, b.v) },
     }
 }
