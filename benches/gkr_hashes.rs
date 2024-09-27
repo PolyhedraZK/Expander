@@ -1,5 +1,8 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use expander_rs::utils::{KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT};
+use expander_rs::utils::{
+    KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS,
+    POSEIDON_CIRCUIT,
+};
 use expander_rs::{
     BN254ConfigSha2, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfigSha2, MPIConfig, Prover,
 };
@@ -11,18 +14,33 @@ fn prover_run<C: GKRConfig>(config: &Config<C>, circuit: &mut Circuit<C>) {
     prover.prove(circuit);
 }
 
-fn benchmark_setup<C: GKRConfig>(scheme: GKRScheme, circuit_file: &str) -> (Config<C>, Circuit<C>) {
+fn benchmark_setup<C: GKRConfig>(
+    scheme: GKRScheme,
+    circuit_file: &str,
+    witness_file: Option<&str>,
+) -> (Config<C>, Circuit<C>) {
     let config = Config::<C>::new(scheme, MPIConfig::new());
     let mut circuit = Circuit::<C>::load_circuit(circuit_file);
-    circuit.set_random_input_for_test();
+    if witness_file.is_some() {
+        circuit.load_witness_file(witness_file.unwrap());
+    } else {
+        circuit.set_random_input_for_test();
+    }
     (config, circuit)
 }
 
 fn criterion_gkr_keccak(c: &mut Criterion) {
-    let (m31_config, mut m31_circuit) =
-        benchmark_setup::<M31ExtConfigSha2>(GKRScheme::Vanilla, KECCAK_M31_CIRCUIT);
-    let (bn254_config, mut bn254_circuit) =
-        benchmark_setup::<BN254ConfigSha2>(GKRScheme::Vanilla, KECCAK_M31_CIRCUIT);
+    let (m31_config, mut m31_circuit) = benchmark_setup::<M31ExtConfigSha2>(
+        GKRScheme::Vanilla,
+        KECCAK_M31_CIRCUIT,
+        Some(KECCAK_M31_WITNESS),
+    );
+    let (bn254_config, mut bn254_circuit) = benchmark_setup::<BN254ConfigSha2>(
+        GKRScheme::Vanilla,
+        KECCAK_BN254_CIRCUIT,
+        Some(KECCAK_BN254_WITNESS),
+    );
+
     let num_keccak_m31 = 2 * M31ExtConfigSha2::get_field_pack_size();
     let num_keccak_bn254 = 2 * BN254ConfigSha2::get_field_pack_size();
 
@@ -66,9 +84,9 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
 
 fn criterion_gkr_poseidon(c: &mut Criterion) {
     let (m31_config, mut m31_circuit) =
-        benchmark_setup::<M31ExtConfigSha2>(GKRScheme::GkrSquare, POSEIDON_CIRCUIT);
+        benchmark_setup::<M31ExtConfigSha2>(GKRScheme::GkrSquare, POSEIDON_CIRCUIT, None);
     let (bn254_config, mut bn254_circuit) =
-        benchmark_setup::<BN254ConfigSha2>(GKRScheme::GkrSquare, POSEIDON_CIRCUIT);
+        benchmark_setup::<BN254ConfigSha2>(GKRScheme::GkrSquare, POSEIDON_CIRCUIT, None);
 
     let mut group = c.benchmark_group("single thread proving poseidon by GKR^2");
     let num_poseidon_m31 = 120 * M31ExtConfigSha2::get_field_pack_size();
