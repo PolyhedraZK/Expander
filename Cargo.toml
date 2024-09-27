@@ -43,7 +43,6 @@ path = "src/utils.rs"
 default = []
 # default = [ "grinding" ]
 grinding = []
-avx256 = ["arith/avx256"]
 
 [workspace]
 members = ["arith", "bi-kzg"]

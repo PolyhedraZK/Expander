@@ -4,6 +4,6 @@ pub(crate) mod neon;
 pub type GF2_128 = neon::NeonGF2_128;
 
 #[cfg(target_arch = "x86_64")]
-mod avx;
+pub(crate) mod avx;
 #[cfg(target_arch = "x86_64")]
-pub type GF2_128 = avx::AVX512GF2_128;
+pub type GF2_128 = avx::AVXGF2_128;

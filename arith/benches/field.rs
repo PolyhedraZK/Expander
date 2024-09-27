@@ -1,8 +1,6 @@
 // this module benchmarks the performance of different field operations
 
 use arith::{Field, GF2_128x8, GF2x8, M31Ext3, M31Ext3x16, M31x16, GF2, GF2_128, M31};
-#[cfg(target_arch = "x86_64")]
-use arith::{GF2_128x8_256, M31x16_256};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use halo2curves::bn256::Fr;
@@ -176,8 +174,6 @@ pub(crate) fn bench_field<F: Field>(c: &mut Criterion) {
 fn criterion_benchmark(c: &mut Criterion) {
     bench_field::<M31>(c);
     bench_field::<M31x16>(c);
-    #[cfg(target_arch = "x86_64")]
-    bench_field::<M31x16_256>(c);
     bench_field::<M31Ext3>(c);
     bench_field::<M31Ext3x16>(c);
     bench_field::<Fr>(c);
@@ -185,8 +181,6 @@ fn criterion_benchmark(c: &mut Criterion) {
     bench_field::<GF2x8>(c);
     bench_field::<GF2_128>(c);
     bench_field::<GF2_128x8>(c);
-    #[cfg(target_arch = "x86_64")]
-    bench_field::<GF2_128x8_256>(c);
 }
 
 criterion_group!(benches, criterion_benchmark);
