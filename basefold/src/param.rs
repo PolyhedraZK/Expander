@@ -1,3 +1,4 @@
+use arith::Field;
 use transcript::Transcript;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -35,4 +36,18 @@ impl<T: Transcript> BasefoldParam<T> {
     pub fn codeword_bits(&self, num_vars: usize) -> usize {
         self.rate_bits + num_vars
     }
+
+    #[inline]
+    pub fn t_term<F:Field>(
+        &self,
+        num_vars: usize,
+        round: usize,
+        index: usize,
+    ) -> F {
+        let t = F::two_adic_generator(self.codeword_bits(num_vars));
+
+        let round_gen = T::two_adic_generator(self.codeword_bits(num_vars) - round);
+        round_gen.exp_u64(index as u64)
+    }
+
 }

@@ -3,7 +3,7 @@ use core::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field, FieldForECC, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{field_common, FFTField, Field, FieldForECC, FieldSerde, FieldSerdeResult, SimdField};
 use ark_std::Zero;
 use p3_baby_bear::BabyBear as P3BabyBear;
 use p3_field::{Field as P3Field, PrimeField32};
@@ -174,6 +174,12 @@ impl SimdField for BabyBear {
     fn pack_size() -> usize {
         1
     }
+}
+
+impl FFTField for BabyBear {
+    const ROOT_OF_UNITY: Self = BabyBear::new(0x1a427a41);
+
+    const TWO_ADICITY: u32 = 27;
 }
 
 impl Neg for BabyBear {

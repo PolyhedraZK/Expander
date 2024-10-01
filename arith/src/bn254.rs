@@ -5,7 +5,7 @@ use halo2curves::{bn256::Fr, ff::PrimeField};
 use rand::RngCore;
 
 use crate::serde::{FieldSerdeError, FieldSerdeResult};
-use crate::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
+use crate::{ExtensionField, FFTField, Field, FieldForECC, FieldSerde, SimdField};
 
 const MODULUS: ethnum::U256 = ethnum::U256([
     0x2833e84879b9709143e1f593f0000001,
@@ -203,4 +203,11 @@ impl ExtensionField for Fr {
     fn mul_by_x(&self) -> Self {
         unimplemented!("mul_by_x for Fr doesn't make sense")
     }
+}
+
+
+impl FFTField for Fr {
+    const ROOT_OF_UNITY: Self = <Fr as PrimeField>::ROOT_OF_UNITY;
+
+    const TWO_ADICITY: u32 = <Fr as PrimeField>::S;
 }
