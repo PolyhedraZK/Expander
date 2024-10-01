@@ -1,7 +1,5 @@
-
 use std::mem::size_of;
 use std::mem::transmute;
-
 
 use sha2::Digest as Sha2Digest;
 use sha2::Sha256;

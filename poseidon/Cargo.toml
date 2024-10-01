@@ -21,4 +21,5 @@ name = "poseidon"
 harness = false
 
 [features]
-default = ["ark-std/print-trace"]
+default = [ ]
+# default = ["ark-std/print-trace"]

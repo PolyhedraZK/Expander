@@ -57,8 +57,8 @@ members = [
     "basefold",
     "bi-kzg", 
     "poseidon",
-    "transcript"
-]
+    "transcript",
+    "tree"]
 
 [workspace.dependencies]
 ark-std = "0.4"
