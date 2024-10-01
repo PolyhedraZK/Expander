@@ -53,7 +53,7 @@ For some platforms, if you do not indicate `target-cpu=native` it may simulate a
 
 Our code also supports `avx512`. This is not turned on by default. To use `avx512`
 ```
-RUSTFLAGS="-C target-cpu=native -C target-features=+avx512f" cargo test --release --workspace
+RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo test --release --workspace
 ```
 
 ## Environment Setup
