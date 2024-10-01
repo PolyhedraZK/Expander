@@ -9,7 +9,7 @@ fn transcript_io<C: GKRConfig>(
     transcript: &mut Transcript<C::FiatShamirHashType>,
     mpi_config: &MPIConfig,
 ) -> C::ChallengeField {
-    debug_assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
+    assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
     for p in ps {
         transcript.append_challenge_f::<C>(p);
     }
