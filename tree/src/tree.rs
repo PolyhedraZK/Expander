@@ -134,9 +134,13 @@ impl Tree {
     #[inline]
     pub fn gen_proof(&self, index: usize, tree_height: usize) -> Path {
         let timer = start_timer!(|| "generate membership proof");
-        let leaf_index_in_tree = convert_index_to_last_level(index, tree_height);
-        let sibling_index_in_tree = sibling_index(leaf_index_in_tree).unwrap();
 
+        // Leaf
+        let leaf_index_in_tree = convert_index_to_last_level(index, tree_height);
+        let leaf = self.leaves[index];
+
+        // Path nodes
+        let sibling_index_in_tree = sibling_index(leaf_index_in_tree).unwrap();
         let mut path_nodes = Vec::with_capacity(tree_height - 1);
         path_nodes.push(self.nodes[sibling_index_in_tree]);
 
@@ -150,7 +154,11 @@ impl Tree {
 
         path_nodes.reverse();
         end_timer!(timer);
-        Path { index, path_nodes }
+        Path {
+            index,
+            leaf,
+            path_nodes,
+        }
     }
 }
 

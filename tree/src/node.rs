@@ -44,4 +44,9 @@ impl Node {
             data: result[..32].try_into().unwrap(),
         }
     }
+
+    /// Returns the data of the node as a slice of bytes.
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.data
+    }
 }

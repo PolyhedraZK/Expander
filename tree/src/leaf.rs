@@ -10,7 +10,7 @@ use crate::Node;
 /// Represents a leaf in the Merkle tree, containing 64 bytes of data stored in a BabyBearx16.
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Leaf {
-    pub(crate) data: BabyBearx16,
+    pub data: BabyBearx16,
 }
 
 impl Display for Leaf {

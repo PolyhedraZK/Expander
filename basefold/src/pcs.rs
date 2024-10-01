@@ -1,7 +1,10 @@
 //! Definition of polynomial commitment scheme
 // TODO: merge with bi-kzg/src/pcs.rs
 
+use std::{borrow::Borrow, fmt::Debug};
+
 use arith::Field;
+use rand::RngCore;
 
 /// This trait defines APIs for polynomial commitment schemes.
 /// Note that for our usage of PCS, we do not require the hiding property.

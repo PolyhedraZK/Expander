@@ -44,7 +44,7 @@ fn test_tree() {
             // Verify the proof
             // This checks that the leaf at the given index is indeed part of the tree
             // with the given root, using the generated proof
-            assert!(proof.verify(&root, &tree.leaves[index as usize], &leaf_hasher));
+            assert!(proof.verify(&root, &leaf_hasher));
         }
     }
 }

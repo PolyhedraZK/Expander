@@ -9,6 +9,7 @@ use crate::{Leaf, Node};
 /// Represents a path in the Merkle tree, used for proving membership.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Path {
+    pub(crate) leaf: Leaf,
     pub(crate) path_nodes: Vec<Node>,
     pub(crate) index: usize,
 }
@@ -52,11 +53,11 @@ impl Path {
     ///
     /// `true` if the path is valid, `false` otherwise.
     #[inline]
-    pub fn verify(&self, root: &Node, leaf: &Leaf, hasher: &PoseidonBabyBearParams) -> bool {
+    pub fn verify(&self, root: &Node, hasher: &PoseidonBabyBearParams) -> bool {
         let timer = start_timer!(|| "path verify");
 
         let position_list = self.position_list().collect::<Vec<_>>();
-        let leaf_node = leaf.leaf_hash(hasher);
+        let leaf_node = self.leaf.leaf_hash(hasher);
         let mut current_node = leaf_node;
 
         // Traverse the path from leaf to root
@@ -75,5 +76,11 @@ impl Path {
         } else {
             true
         }
+    }
+
+    /// Return the leaf of the path
+    #[inline]
+    pub fn leaf(&self) -> &Leaf {
+        &self.leaf
     }
 }

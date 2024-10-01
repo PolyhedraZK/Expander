@@ -5,4 +5,10 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
+babybear = { path = "../arith/babybear" }
+poseidon = { path = "../poseidon" }
 transcript = { path = "../transcript" }
+tree = { path = "../tree" }
+
+
+rand.workspace = true
