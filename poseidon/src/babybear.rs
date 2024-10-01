@@ -95,37 +95,15 @@ impl PoseidonBabyBearParams {
             end_timer!(timer1);
 
             let timer1 = start_timer!(|| "sum");
-            let sum = unsafe {
-                transmute::<BabyBearx16, [u32; 16]>(pair_product)
-                    .iter()
-                    .map(|&x| x as u64)
-                    .sum::<u64>()
+            *res = unsafe {
+                transmute::<BabyBear, u32>(
+                    transmute::<BabyBearx16, [BabyBear; 16]>(pair_product)
+                        .iter()
+                        .sum::<BabyBear>(),
+                )
             };
-            *res = mod_reduce_u64_safe(sum);
             end_timer!(timer1);
         });
-
-        // parallelize the code make it 10x slower SMH...
-        // It is likely because within each thread we only did 1 AVXM31 mul and 1 sum
-        // The overhead of creating threads and managing them is too high
-        //
-        // use rayon::iter::{
-        //     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator,
-        //     ParallelIterator,
-        // };
-        //
-        // res.par_iter_mut()
-        //     .zip_eq(self.mds.par_iter())
-        //     .for_each(|(res, mds)| {
-        //         let pair_product = *mds * *state;
-        //         let sum = unsafe {
-        //             transmute::<_, [u32; 16]>(pair_product)
-        //                 .iter()
-        //                 .map(|&x| x as u64)
-        //                 .sum::<u64>()
-        //         };
-        //         *res = mod_reduce_u64(sum);
-        //     });
 
         *state = unsafe { transmute::<[u32; 16], BabyBearx16>(res) };
         end_timer!(timer);
@@ -136,7 +114,7 @@ impl PoseidonBabyBearParams {
         let timer = start_timer!(|| "full_round_sbox");
         let double = *state * *state;
         let quad = double * double;
-        *state *= quad;
+        *state *= double * quad;
         end_timer!(timer);
     }
 
@@ -152,16 +130,4 @@ impl PoseidonBabyBearParams {
         *state = unsafe { transmute::<[u32; 16], BabyBearx16>(buf) };
         end_timer!(time);
     }
-}
-
-const M31_MOD: u32 = 2147483647;
-
-#[inline]
-// mod reduce u64 with a promise the input is less than (2^31-1) * 16
-fn mod_reduce_u64_safe(x: u64) -> u32 {
-    let mut t = (x & M31_MOD as u64) + (x >> 31);
-    if t >= M31_MOD as u64 {
-        t -= M31_MOD as u64;
-    }
-    t as u32
 }
