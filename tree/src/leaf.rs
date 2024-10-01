@@ -7,7 +7,7 @@ use poseidon::{PoseidonBabyBearParams, PoseidonBabyBearState};
 
 use crate::Node;
 
-/// A leaf is a blob of 64 bytes of data, stored in a BabyBearx16
+/// Represents a leaf in the Merkle tree, containing 64 bytes of data stored in a BabyBearx16.
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Leaf {
     pub(crate) data: BabyBearx16,
@@ -15,17 +15,30 @@ pub struct Leaf {
 
 impl Display for Leaf {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Display the first and last byte of the leaf data for brevity
         let t = unsafe { transmute::<BabyBearx16, [u8; 64]>(self.data) };
         write!(f, "leaf: 0x{:02x?}...{:02x?}", t[0], t[63])
     }
 }
 
 impl Leaf {
+    /// Creates a new Leaf with the given data.
     pub fn new(data: BabyBearx16) -> Self {
         Self { data }
     }
 
+    /// Computes the hash of the leaf using Poseidon hash function.
+    ///
+    /// # Arguments
+    ///
+    /// * `hash_param` - The Poseidon hash parameters
+    ///
+    /// # Returns
+    ///
+    /// A Node containing the hash of the leaf data.
     pub fn leaf_hash(&self, hash_param: &PoseidonBabyBearParams) -> Node {
+        // Use Poseidon hash for leaf nodes
+        // Note: This could be replaced with SHA2 if performance requires
         let mut state = PoseidonBabyBearState { state: self.data };
         hash_param.permute(&mut state);
         Node {
@@ -39,6 +52,7 @@ impl Leaf {
 }
 
 impl From<BabyBearx16> for Leaf {
+    /// Implements the From trait to allow creation of a Leaf from BabyBearx16 data.
     fn from(data: BabyBearx16) -> Self {
         Self { data }
     }

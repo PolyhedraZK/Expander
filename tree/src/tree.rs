@@ -8,10 +8,11 @@ use rayon::iter::{
 
 use crate::{Leaf, Node, Path};
 
+/// Represents a Merkle tree structure.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Tree {
     pub nodes: Vec<Node>,
-    pub leaves: Vec<Leaf>, // todo: avoid cloning the data here
+    pub leaves: Vec<Leaf>,
 }
 
 impl Display for Tree {
@@ -29,24 +30,24 @@ impl Display for Tree {
 }
 
 impl Tree {
-    /// create an empty tree
+    /// Creates an empty tree with default leaves.
     #[inline]
     pub fn init(hasher: &PoseidonBabyBearParams, tree_height: usize) -> Self {
         let leaves = vec![Leaf::default(); 1 << (tree_height - 1)];
         Self::new_with_leaves(hasher, leaves, tree_height)
     }
 
-    /// build a tree with leaves
+    /// Builds a tree with the given leaves.
     #[inline]
     pub fn new_with_leaves(
-        hasher: &PoseidonBabyBearParams,
+        leaf_hasher: &PoseidonBabyBearParams,
         leaves: Vec<Leaf>,
         tree_height: usize,
     ) -> Self {
         let leaf_nodes = leaves
             .as_slice()
             .into_par_iter()
-            .map(|leaf| leaf.leaf_hash(hasher))
+            .map(|leaf| leaf.leaf_hash(leaf_hasher))
             .collect::<Vec<Node>>();
         let nodes = Self::new_with_leaf_nodes(leaf_nodes, tree_height);
         Self {
@@ -55,9 +56,16 @@ impl Tree {
         }
     }
 
-    /// build a tree with leaves
-    /// assume the leaves are already hashed via leaf hash
-    /// returns the leaf nodes and the tree nodes
+    /// Builds a tree with pre-hashed leaf nodes.
+    ///
+    /// # Arguments
+    ///
+    /// * `leaf_nodes` - Vector of pre-hashed leaf nodes
+    /// * `tree_height` - Height of the tree
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing vectors of non-leaf nodes and leaf nodes.
     pub fn new_with_leaf_nodes(
         leaf_nodes: Vec<Node>,
         tree_height: usize,
@@ -77,7 +85,7 @@ impl Tree {
             index = left_child_index(index);
         }
 
-        // compute the hash values for the non-leaf bottom layer
+        // Compute the hash values for the non-leaf bottom layer
         {
             let start_index = level_indices.pop().unwrap();
             let upper_bound = left_child_index(start_index);
@@ -88,12 +96,8 @@ impl Tree {
                 .take(upper_bound)
                 .skip(start_index)
                 .for_each(|(current_index, e)| {
-                    // `left_child_index(current_index)` and `right_child_index(current_index) returns the position of
-                    // leaf in the whole tree (represented as a list in level order). We need to shift it
-                    // by `-upper_bound` to get the index in `leaf_nodes` list.
                     let left_leaf_index = left_child_index(current_index) - upper_bound;
                     let right_leaf_index = right_child_index(current_index) - upper_bound;
-                    // compute hash
                     *e = Node::node_hash(
                         &leaf_nodes[left_leaf_index],
                         &leaf_nodes[right_leaf_index],
@@ -101,11 +105,10 @@ impl Tree {
                 });
         }
 
-        // compute the hash values for nodes in every other layer in the tree
+        // Compute the hash values for nodes in every other layer in the tree
         level_indices.reverse();
 
         for &start_index in &level_indices {
-            // The layer beginning `start_index` ends at `upper_bound` (exclusive).
             let upper_bound = left_child_index(start_index);
             let mut buf = non_leaf_nodes[start_index..upper_bound].to_vec();
             buf.par_iter_mut().enumerate().for_each(|(index, node)| {
@@ -121,34 +124,30 @@ impl Tree {
         (non_leaf_nodes, leaf_nodes.to_vec())
     }
 
+    /// Returns the root node of the tree.
     #[inline]
     pub fn root(&self) -> Node {
         self.nodes[0]
     }
 
-    // generate a membership proof for the given index
+    /// Generates a membership proof for the given index.
     #[inline]
     pub fn gen_proof(&self, index: usize, tree_height: usize) -> Path {
         let timer = start_timer!(|| "generate membership proof");
-        // Get Leaf hash, and leaf sibling hash,
         let leaf_index_in_tree = convert_index_to_last_level(index, tree_height);
         let sibling_index_in_tree = sibling_index(leaf_index_in_tree).unwrap();
 
-        // path.len() = `tree height - 1`, the missing elements being the root
         let mut path_nodes = Vec::with_capacity(tree_height - 1);
         path_nodes.push(self.nodes[sibling_index_in_tree]);
 
-        // Iterate from the bottom layer after the leaves, to the top, storing all nodes and their siblings.
+        // Iterate from the bottom layer after the leaves to the top
         let mut current_node = parent_index(leaf_index_in_tree).unwrap();
         while current_node != 0 {
             let sibling_node = sibling_index(current_node).unwrap();
-
             path_nodes.push(self.nodes[sibling_node]);
-
             current_node = parent_index(current_node).unwrap();
         }
 
-        // we want to make path from root to bottom
         path_nodes.reverse();
         end_timer!(timer);
         Path { index, path_nodes }
@@ -189,12 +188,13 @@ fn right_child_index(index: usize) -> usize {
     2 * index + 2
 }
 
+/// Converts a leaf index to its position in the last level of the tree.
 #[inline]
 fn convert_index_to_last_level(index: usize, tree_height: usize) -> usize {
     index + (1 << (tree_height - 1)) - 1
 }
 
-/// Returns true iff the given index represents a left child.
+/// Returns true if the given index represents a left child.
 #[inline]
 fn is_left_child(index: usize) -> bool {
     index % 2 == 1
