@@ -1,4 +1,14 @@
+mod fr_ext;
+mod gf2_128;
+mod gf2_128x8;
+mod m31_ext;
+mod m31_ext3x16;
 use crate::{Field, FieldSerde};
+
+pub use gf2_128::*;
+pub use gf2_128x8::GF2_128x8;
+pub use m31_ext::M31Ext3;
+pub use m31_ext3x16::M31Ext3x16;
 
 /// Configurations for Extension Field over
 /// - either the Binomial polynomial x^DEGREE - W

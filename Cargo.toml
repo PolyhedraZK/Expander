@@ -6,10 +6,6 @@ default-run = "expander-rs" # default
 
 [dependencies]
 arith = { path = "arith" }
-gf2 = { path = "arith/gf2" }
-gf2_128 = { path = "arith/gf2_128" }
-mersenne31 = { path = "arith/mersenne31" }
-
 ark-std.workspace = true
 clap.workspace = true
 env_logger.workspace = true
@@ -49,14 +45,7 @@ default = []
 grinding = []
 
 [workspace]
-members = [
-    "arith", # definitions of Field, Extensions, SIMDS
-    "arith/gf2",    
-    "arith/gf2_128",
-    "arith/goldilocks",
-    "arith/mersenne31",
-    "bi-kzg"
-    ]
+members = ["arith", "bi-kzg"]
 
 [workspace.dependencies]
 ark-std = "0.4"
@@ -85,24 +74,14 @@ thiserror = "1.0.63"
 ethnum = "1.5.0"
 
 [[bench]]
-name = "bn254_fr"
+name = "arith"
 harness = false
-path = "arith/benches/fr.rs"
+path = "arith/benches/field.rs"
 
 [[bench]]
-name = "gf2"
+name = "arith-ext-by-base"
 harness = false
-path = "arith/gf2/benches/gf2.rs"
-
-[[bench]]
-name = "gf2_128"
-harness = false
-path = "arith/gf2_128/benches/gf2_128.rs"
-
-[[bench]]
-name = "m31"
-harness = false
-path = "arith/mersenne31/benches/m31.rs"
+path = "arith/benches/ext_field.rs"
 
 [[bench]]
 name = "gkr-hashes"

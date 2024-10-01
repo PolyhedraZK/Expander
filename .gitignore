@@ -37,6 +37,3 @@ output.txt
 # idea
 .idea/
 /data
-
-# vscode settings
-.vscode/

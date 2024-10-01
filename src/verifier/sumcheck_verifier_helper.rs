@@ -255,7 +255,7 @@ impl GKRVerifierHelper {
         x: C::ChallengeField,
         sp: &VerifierScratchPad<C>,
     ) -> C::ChallengeField {
-        assert_eq!(ps.len(), 3);
+        debug_assert_eq!(ps.len(), 3);
         let p0 = ps[0];
         let p1 = ps[1];
         let p2 = ps[2];
@@ -290,7 +290,7 @@ impl GKRVerifierHelper {
         x: C::ChallengeField,
         sp: &VerifierScratchPad<C>,
     ) -> C::ChallengeField {
-        assert_eq!(sp.deg3_eval_at.len(), vals.len());
+        debug_assert_eq!(sp.deg3_eval_at.len(), vals.len());
 
         let mut v = C::ChallengeField::ZERO;
         for i in 0..vals.len() {

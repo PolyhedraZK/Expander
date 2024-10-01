@@ -6,9 +6,6 @@ pub use field::*;
 mod extension_field;
 pub use extension_field::*;
 
-mod bn254;
-pub use bn254::*;
-
 mod simd_field;
 pub use simd_field::*;
 
@@ -17,8 +14,5 @@ pub use serde::*;
 
 mod macros;
 
-mod benches;
-pub use benches::*;
-
+#[cfg(test)]
 mod tests;
-pub use tests::*;
