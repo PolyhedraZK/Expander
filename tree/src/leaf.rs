@@ -34,9 +34,7 @@ impl Leaf {
         hasher.update(unsafe { transmute::<BabyBearx16, [u8; 64]>(self.data) });
         let result: [u8; 32] = hasher.finalize()[..32].try_into().unwrap();
 
-        Node {
-            data: result,
-        }
+        Node { data: result }
     }
 
     // /// Computes the hash of the leaf using Poseidon hash function.

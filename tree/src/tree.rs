@@ -1,6 +1,6 @@
 use std::fmt::{self, Display};
 
-use ark_std::{end_timer, start_timer};
+use ark_std::{end_timer, log2, start_timer};
 // use poseidon::PoseidonBabyBearParams;
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator,
@@ -34,12 +34,14 @@ impl Tree {
     #[inline]
     pub fn init(tree_height: usize) -> Self {
         let leaves = vec![Leaf::default(); 1 << (tree_height - 1)];
-        Self::new_with_leaves(leaves, tree_height)
+        Self::new_with_leaves(leaves)
     }
 
     /// Builds a tree with the given leaves.
     #[inline]
-    pub fn new_with_leaves(leaves: Vec<Leaf>, tree_height: usize) -> Self {
+    pub fn new_with_leaves(leaves: Vec<Leaf>) -> Self {
+        let tree_height = log2(leaves.len() + 1);
+
         let leaf_nodes = leaves
             .as_slice()
             .into_par_iter()
@@ -62,10 +64,7 @@ impl Tree {
     /// # Returns
     ///
     /// A tuple containing vectors of non-leaf nodes and leaf nodes.
-    pub fn new_with_leaf_nodes(
-        leaf_nodes: Vec<Node>,
-        tree_height: usize,
-    ) -> (Vec<Node>, Vec<Node>) {
+    pub fn new_with_leaf_nodes(leaf_nodes: Vec<Node>, tree_height: u32) -> (Vec<Node>, Vec<Node>) {
         let timer = start_timer!(|| format!("generate new tree with {} leaves", leaf_nodes.len()));
 
         let len = leaf_nodes.len();
@@ -75,7 +74,7 @@ impl Tree {
 
         // Compute the starting indices for each non-leaf level of the tree
         let mut index = 0;
-        let mut level_indices = Vec::with_capacity(tree_height - 1);
+        let mut level_indices = Vec::with_capacity(tree_height as usize - 1);
         for _ in 0..(tree_height - 1) {
             level_indices.push(index);
             index = left_child_index(index);

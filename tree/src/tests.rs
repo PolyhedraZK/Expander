@@ -33,7 +33,7 @@ fn test_tree() {
             .collect();
 
         // Create a new tree with the generated leaves
-        let tree = Tree::new_with_leaves(leaves, height);
+        let tree = Tree::new_with_leaves(leaves);
 
         // Perform 100 random verifications for each tree
         for _ in 0..100 {
