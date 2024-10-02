@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use expander_rs::utils::{
     KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS,
-    POSEIDON_CIRCUIT,
+    POSEIDON_BN254_CIRCUIT, POSEIDON_M31_CIRCUIT,
 };
 use expander_rs::{
     BN254ConfigSha2, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfigSha2, MPIConfig, Prover,
@@ -84,9 +84,9 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
 
 fn criterion_gkr_poseidon(c: &mut Criterion) {
     let (m31_config, mut m31_circuit) =
-        benchmark_setup::<M31ExtConfigSha2>(GKRScheme::GkrSquare, POSEIDON_CIRCUIT, None);
+        benchmark_setup::<M31ExtConfigSha2>(GKRScheme::GkrSquare, POSEIDON_M31_CIRCUIT, None);
     let (bn254_config, mut bn254_circuit) =
-        benchmark_setup::<BN254ConfigSha2>(GKRScheme::GkrSquare, POSEIDON_CIRCUIT, None);
+        benchmark_setup::<BN254ConfigSha2>(GKRScheme::GkrSquare, POSEIDON_BN254_CIRCUIT, None);
 
     let mut group = c.benchmark_group("single thread proving poseidon by GKR^2");
     let num_poseidon_m31 = 120 * M31ExtConfigSha2::get_field_pack_size();

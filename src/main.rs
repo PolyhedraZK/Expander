@@ -7,7 +7,7 @@ use clap::Parser;
 use expander_rs::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
-        KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_CIRCUIT,
+        KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_BN254_CIRCUIT, POSEIDON_M31_CIRCUIT,
     },
     MPIConfig,
 };
@@ -97,7 +97,12 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
             FieldType::M31 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
             FieldType::BN254 => Circuit::<C>::load_circuit(KECCAK_BN254_CIRCUIT),
         },
-        "poseidon" => Circuit::<C>::load_circuit(POSEIDON_CIRCUIT),
+        "poseidon" => match C::FIELD_TYPE {
+            FieldType::GF2 => unreachable!(),
+            FieldType::M31 => Circuit::<C>::load_circuit(POSEIDON_M31_CIRCUIT),
+            FieldType::BN254 => Circuit::<C>::load_circuit(POSEIDON_BN254_CIRCUIT),
+        },
+
         _ => unreachable!(),
     };
 
