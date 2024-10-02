@@ -1,14 +1,19 @@
 use arith::Field;
-use transcript::Transcript;
+use transcript::{FiatShamirHash, Transcript};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct BasefoldParam<T> {
+pub struct BasefoldParam<T, H> {
     pub rate_bits: usize,
     pub verifier_queries: usize,
-    pub _marker: std::marker::PhantomData<T>,
+    pub transcript: std::marker::PhantomData<T>,
+    pub hasher: std::marker::PhantomData<H>,
 }
 
-impl<T: Transcript> BasefoldParam<T> {
+impl<T, H> BasefoldParam<T, H>
+where
+    T: Transcript<H>,
+    H: FiatShamirHash,
+{
     pub fn new(rate_bits: usize) -> Self {
         // TODO: this number is arbitrary, need further analysis.
         let verifier_queries = 80;
@@ -16,7 +21,8 @@ impl<T: Transcript> BasefoldParam<T> {
         Self {
             rate_bits,
             verifier_queries,
-            _marker: std::marker::PhantomData,
+            transcript: std::marker::PhantomData,
+            hasher: std::marker::PhantomData,
         }
     }
 
@@ -38,16 +44,10 @@ impl<T: Transcript> BasefoldParam<T> {
     }
 
     #[inline]
-    pub fn t_term<F:Field>(
-        &self,
-        num_vars: usize,
-        round: usize,
-        index: usize,
-    ) -> F {
+    pub fn t_term<F: Field>(&self, num_vars: usize, round: usize, index: usize) -> F {
         let t = F::two_adic_generator(self.codeword_bits(num_vars));
 
         let round_gen = T::two_adic_generator(self.codeword_bits(num_vars) - round);
         round_gen.exp_u64(index as u64)
     }
-
 }

@@ -2,7 +2,8 @@ use arith::{ExtensionField, Field};
 use std::{cmp::max, ptr};
 
 use crate::{
-    eq_eval_at, Circuit, CircuitLayer, FieldType, GKRConfig, GateAdd, GateConst, GateMul, _eq_vec,
+    eq_eval_at, Circuit, CircuitLayer, Config, FieldType, GKRConfig, GateAdd, GateConst, GateMul,
+    _eq_vec,
 };
 
 pub struct VerifierScratchPad<C: GKRConfig> {
@@ -10,6 +11,7 @@ pub struct VerifierScratchPad<C: GKRConfig> {
     eq_evals_at_rz0: Vec<C::ChallengeField>,
     eq_evals_at_rz1: Vec<C::ChallengeField>,
     eq_evals_at_r_simd: Vec<C::ChallengeField>,
+    eq_evals_at_r_mpi: Vec<C::ChallengeField>,
 
     eq_evals_at_rx: Vec<C::ChallengeField>,
     eq_evals_at_ry: Vec<C::ChallengeField>,
@@ -18,7 +20,9 @@ pub struct VerifierScratchPad<C: GKRConfig> {
     eq_evals_second_part: Vec<C::ChallengeField>,
 
     r_simd: *const Vec<C::ChallengeField>,
+    r_mpi: *const Vec<C::ChallengeField>,
     eq_r_simd_r_simd_xy: C::ChallengeField,
+    eq_r_mpi_r_mpi_xy: C::ChallengeField,
 
     // ====== for deg2, deg3 eval ======
     gf2_deg2_eval_coef: C::ChallengeField, // 1 / x(x - 1)
@@ -27,7 +31,7 @@ pub struct VerifierScratchPad<C: GKRConfig> {
 }
 
 impl<C: GKRConfig> VerifierScratchPad<C> {
-    pub fn new(circuit: &Circuit<C>) -> Self {
+    pub fn new(config: &Config<C>, circuit: &Circuit<C>) -> Self {
         let mut max_num_var = circuit
             .layers
             .iter()
@@ -80,6 +84,7 @@ impl<C: GKRConfig> VerifierScratchPad<C> {
             eq_evals_at_rz0: vec![C::ChallengeField::zero(); max_io_size],
             eq_evals_at_rz1: vec![C::ChallengeField::zero(); max_io_size],
             eq_evals_at_r_simd: vec![C::ChallengeField::zero(); simd_size],
+            eq_evals_at_r_mpi: vec![C::ChallengeField::zero(); config.mpi_config.world_size()],
 
             eq_evals_at_rx: vec![C::ChallengeField::zero(); max_io_size],
             eq_evals_at_ry: vec![C::ChallengeField::zero(); max_io_size],
@@ -88,7 +93,9 @@ impl<C: GKRConfig> VerifierScratchPad<C> {
             eq_evals_second_part: vec![C::ChallengeField::zero(); max_io_size],
 
             r_simd: ptr::null(),
+            r_mpi: ptr::null(),
             eq_r_simd_r_simd_xy: C::ChallengeField::zero(),
+            eq_r_mpi_r_mpi_xy: C::ChallengeField::zero(),
 
             gf2_deg2_eval_coef,
             deg3_eval_at,
@@ -101,14 +108,16 @@ impl<C: GKRConfig> VerifierScratchPad<C> {
 pub struct GKRVerifierHelper {}
 
 impl GKRVerifierHelper {
+    #[allow(clippy::too_many_arguments)]
     #[inline(always)]
     pub fn prepare_layer<C: GKRConfig>(
         layer: &CircuitLayer<C>,
         alpha: &C::ChallengeField,
-        beta: &C::ChallengeField,
+        beta: &Option<C::ChallengeField>,
         rz0: &[C::ChallengeField],
-        rz1: &[C::ChallengeField],
+        rz1: &Option<Vec<C::ChallengeField>>,
         r_simd: &Vec<C::ChallengeField>,
+        r_mpi: &Vec<C::ChallengeField>,
         sp: &mut VerifierScratchPad<C>,
     ) {
         eq_eval_at(
@@ -119,16 +128,18 @@ impl GKRVerifierHelper {
             &mut sp.eq_evals_second_part,
         );
 
-        eq_eval_at(
-            rz1,
-            beta,
-            &mut sp.eq_evals_at_rz1,
-            &mut sp.eq_evals_first_part,
-            &mut sp.eq_evals_second_part,
-        );
+        if beta.is_some() && rz1.is_some() {
+            eq_eval_at(
+                rz1.as_ref().unwrap(),
+                beta.as_ref().unwrap(),
+                &mut sp.eq_evals_at_rz1,
+                &mut sp.eq_evals_first_part,
+                &mut sp.eq_evals_second_part,
+            );
 
-        for i in 0..(1usize << layer.output_var_num) {
-            sp.eq_evals_at_rz0[i] += sp.eq_evals_at_rz1[i];
+            for i in 0..(1usize << layer.output_var_num) {
+                sp.eq_evals_at_rz0[i] += sp.eq_evals_at_rz1[i];
+            }
         }
 
         eq_eval_at(
@@ -139,7 +150,16 @@ impl GKRVerifierHelper {
             &mut sp.eq_evals_second_part,
         );
 
+        eq_eval_at(
+            r_mpi,
+            &C::ChallengeField::ONE,
+            &mut sp.eq_evals_at_r_mpi,
+            &mut sp.eq_evals_first_part,
+            &mut sp.eq_evals_second_part,
+        );
+
         sp.r_simd = r_simd;
+        sp.r_mpi = r_mpi;
     }
 
     #[inline(always)]
@@ -154,7 +174,8 @@ impl GKRVerifierHelper {
         }
 
         let simd_sum: C::ChallengeField = sp.eq_evals_at_r_simd.iter().sum();
-        v * simd_sum
+        let mpi_sum: C::ChallengeField = sp.eq_evals_at_r_mpi.iter().sum();
+        v * simd_sum * mpi_sum
     }
 
     #[inline(always)]
@@ -170,7 +191,7 @@ impl GKRVerifierHelper {
                     &add_gate.coef,
                 );
         }
-        v * sp.eq_r_simd_r_simd_xy
+        v * sp.eq_r_simd_r_simd_xy * sp.eq_r_mpi_r_mpi_xy
     }
 
     #[inline(always)]
@@ -187,7 +208,7 @@ impl GKRVerifierHelper {
                 );
             v += sp.eq_evals_at_rz0[mul_gate.o_id] * tmp;
         }
-        v * sp.eq_r_simd_r_simd_xy
+        v * sp.eq_r_simd_r_simd_xy * sp.eq_r_mpi_r_mpi_xy
     }
 
     #[inline(always)]
@@ -207,6 +228,14 @@ impl GKRVerifierHelper {
         sp: &mut VerifierScratchPad<C>,
     ) {
         sp.eq_r_simd_r_simd_xy = _eq_vec(unsafe { sp.r_simd.as_ref().unwrap() }, r_simd_xy);
+    }
+
+    #[inline(always)]
+    pub fn set_r_mpi_xy<C: GKRConfig>(
+        r_mpi_xy: &[C::ChallengeField],
+        sp: &mut VerifierScratchPad<C>,
+    ) {
+        sp.eq_r_mpi_r_mpi_xy = _eq_vec(unsafe { sp.r_mpi.as_ref().unwrap() }, r_mpi_xy);
     }
 
     #[inline(always)]

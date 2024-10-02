@@ -205,7 +205,6 @@ impl ExtensionField for Fr {
     }
 }
 
-
 impl FFTField for Fr {
     const ROOT_OF_UNITY: Self = <Fr as PrimeField>::ROOT_OF_UNITY;
 
