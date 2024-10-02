@@ -1,11 +1,19 @@
 use crate::GKRConfig;
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub enum CoefType {
+    #[default]
+    Constant,
+    Random,
+    PublicInput(usize),
+}
+
 #[derive(Debug, Clone)]
 pub struct Gate<C: GKRConfig, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
     pub o_id: usize,
+    pub coef_type: CoefType,
     pub coef: C::CircuitField,
-    pub is_random: bool,
     pub gate_type: usize,
 }
 

@@ -166,14 +166,9 @@ impl FieldSerde for Fr {
         }
     }
 
-    #[inline]
-    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut buffer = [0u8; Self::SERIALIZED_SIZE];
-        reader.read_exact(&mut buffer)?;
-        match Fr::from_bytes(&buffer).into_option() {
-            Some(v) => Ok(v),
-            None => Err(FieldSerdeError::DeserializeError),
-        }
+    #[inline(always)]
+    fn try_deserialize_from_ecc_format<R: Read>(reader: R) -> FieldSerdeResult<Self> {
+        Self::deserialize_from(reader)
     }
 }
 

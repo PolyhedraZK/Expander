@@ -2,8 +2,8 @@ use arith::{ExtensionField, Field};
 use std::{cmp::max, ptr};
 
 use crate::{
-    eq_eval_at, Circuit, CircuitLayer, Config, FieldType, GKRConfig, GateAdd, GateConst, GateMul,
-    _eq_vec,
+    eq_eval_at, Circuit, CircuitLayer, CoefType, Config, FieldType, GKRConfig, GateAdd, GateConst,
+    GateMul, _eq_vec, unpack_and_combine,
 };
 
 pub struct VerifierScratchPad<C: GKRConfig> {
@@ -165,16 +165,50 @@ impl GKRVerifierHelper {
     #[inline(always)]
     pub fn eval_cst<C: GKRConfig>(
         cst_gates: &[GateConst<C>],
+        public_input: &[C::SimdCircuitField],
         sp: &VerifierScratchPad<C>,
     ) -> C::ChallengeField {
         let mut v = C::ChallengeField::zero();
 
-        for cst_gate in cst_gates {
-            v += C::challenge_mul_circuit_field(&sp.eq_evals_at_rz0[cst_gate.o_id], &cst_gate.coef);
-        }
+        let mpi_world_size = sp.eq_evals_at_r_mpi.len();
+        let local_input_size = public_input.len() / mpi_world_size;
 
         let simd_sum: C::ChallengeField = sp.eq_evals_at_r_simd.iter().sum();
         let mpi_sum: C::ChallengeField = sp.eq_evals_at_r_mpi.iter().sum();
+        let simd_mpi_sum = simd_sum * mpi_sum;
+
+        for cst_gate in cst_gates {
+            let tmp = match cst_gate.coef_type {
+                CoefType::PublicInput(input_idx) => {
+                    let mut input = vec![];
+                    for i in 0..mpi_world_size {
+                        input.push(public_input[i * local_input_size + input_idx]);
+                    }
+
+                    // mpi combined
+                    let input_mpi_combined: C::Field = input
+                        .iter()
+                        .zip(&sp.eq_evals_at_r_mpi)
+                        .map(|(v, c)| C::simd_circuit_field_mul_challenge_field(v, c))
+                        .sum();
+
+                    // simd combined
+                    sp.eq_evals_at_rz0[cst_gate.o_id]
+                        * unpack_and_combine::<C::Field>(
+                            &input_mpi_combined,
+                            &sp.eq_evals_at_r_simd,
+                        )
+                }
+                _ => {
+                    C::challenge_mul_circuit_field(
+                        &sp.eq_evals_at_rz0[cst_gate.o_id],
+                        &cst_gate.coef,
+                    ) * simd_mpi_sum
+                }
+            };
+            v += tmp;
+        }
+
         v * simd_sum * mpi_sum
     }
 
