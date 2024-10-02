@@ -15,6 +15,7 @@ ark-std.workspace = true
 clap.workspace = true
 env_logger.workspace = true
 log.workspace = true
+mpi.workspace = true
 rand.workspace = true
 sha2.workspace = true
 halo2curves.workspace = true
@@ -32,6 +33,10 @@ tiny-keccak.workspace = true
 criterion = "0.5.1"
 
 [[bin]]
+name = "expander-rs-mpi"
+path = "src/main_mpi.rs"
+
+[[bin]]
 name = "expander-exec"
 path = "src/exec.rs"
 
@@ -43,7 +48,6 @@ path = "src/utils.rs"
 default = []
 # default = [ "grinding" ]
 grinding = []
-avx256 = ["arith/avx256"]
 
 [workspace]
 members = [
@@ -71,6 +75,7 @@ halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", default-feat
 ] }
 itertools = "0.13"
 log = "0.4"
+mpi = "0.8.0"
 rand = "0.8.5"
 rayon = "1.10"
 sha2 = "0.10.8"

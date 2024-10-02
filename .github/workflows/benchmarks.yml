@@ -27,6 +27,8 @@ jobs:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
     - name: Install criterion
       run: cargo install cargo-criterion
+    - name: Install mpi
+      run: python3 ./scripts/install.py
     - name: setup
       run: cargo run --bin=dev-setup --release
     - name: Run benchmark

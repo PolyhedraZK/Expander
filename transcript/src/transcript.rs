@@ -40,7 +40,7 @@ pub struct TranscriptInstance<H: FiatShamirHash> {
     phantom: PhantomData<H>,
 
     /// The digest bytes.
-    digest: Vec<u8>,
+    pub digest: Vec<u8>,
 
     /// The proof bytes.
     pub proof: Proof,
@@ -74,7 +74,7 @@ impl<H: FiatShamirHash> Transcript<H> for TranscriptInstance<H> {
 
 impl<H: FiatShamirHash> TranscriptInstance<H> {
     /// Hash the input into the output.
-    fn hash_to_digest(&mut self) {
+    pub fn hash_to_digest(&mut self) {
         let hash_end_index = self.proof.bytes.len();
         if hash_end_index > self.hash_start_index {
             H::hash(

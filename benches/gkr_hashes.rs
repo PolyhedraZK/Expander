@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use expander_rs::utils::{KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT};
 use expander_rs::{
-    BN254ConfigSha2, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfigSha2, Prover,
+    BN254ConfigSha2, Circuit, Config, GKRConfig, GKRScheme, M31ExtConfigSha2, MPIConfig, Prover,
 };
 use std::hint::black_box;
 
@@ -12,7 +12,7 @@ fn prover_run<C: GKRConfig>(config: &Config<C>, circuit: &mut Circuit<C>) {
 }
 
 fn benchmark_setup<C: GKRConfig>(scheme: GKRScheme, circuit_file: &str) -> (Config<C>, Circuit<C>) {
-    let config = Config::<C>::new(scheme);
+    let config = Config::<C>::new(scheme, MPIConfig::new());
     let mut circuit = Circuit::<C>::load_circuit(circuit_file);
     circuit.set_random_input_for_test();
     (config, circuit)

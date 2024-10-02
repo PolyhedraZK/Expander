@@ -9,11 +9,7 @@ env:
 jobs:
   lint:
     name: Lint
-<<<<<<< HEAD
     runs-on: 7950x3d
-=======
-    runs-on: ubuntu-latest
->>>>>>> d446962 (update CI (#102))
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -21,11 +17,7 @@ jobs:
           components: rustfmt, clippy
       - run: python3 ./scripts/install.py
       - run: cargo fmt --all -- --check
-<<<<<<< HEAD
       - run: cargo clippy --all
-=======
-      - run: cargo clippy
->>>>>>> d446962 (update CI (#102))
 
   build-and-test:
     name: Build and Test (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }})
@@ -47,18 +39,10 @@ jobs:
         run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV
       - name: Build and Test
         run: |
-<<<<<<< HEAD
           python3 ./scripts/install.py
           cargo run --bin=dev-setup --release
           cargo build --all-features --release
           cargo test --all-features --release --workspace
-=======
-          cargo run --bin=dev-setup --release
-          cargo build --all-features --release
-          cargo test --all-features --release      
-          cargo test -p arith --release
-          cargo test -p bi-kzg --release
->>>>>>> d446962 (update CI (#102))
 
   benchmark:
     name: Benchmark (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }}, ${{ matrix.field }})
@@ -82,7 +66,6 @@ jobs:
             feature: avx2
             field: gf2ext128
           - os: 7950x3d
-<<<<<<< HEAD
             feature: avx512f
             field: m31ext3
           - os: 7950x3d
@@ -90,15 +73,6 @@ jobs:
             field: fr
           - os: 7950x3d
             feature: avx512f
-=======
-            feature: avx512
-            field: m31ext3
-          - os: 7950x3d
-            feature: avx512
-            field: fr
-          - os: 7950x3d
-            feature: avx512
->>>>>>> d446962 (update CI (#102))
             field: gf2ext128
     steps:
       - uses: actions/checkout@v4
@@ -109,10 +83,6 @@ jobs:
         run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV
       - name: Run benchmark
         run: |
-<<<<<<< HEAD
           python3 ./scripts/install.py
-=======
->>>>>>> d446962 (update CI (#102))
           cargo run --bin=dev-setup --release
           cargo run --release -- -t ${{ matrix.os == 'macos-latest' && 2 || 16 }} -f ${{ matrix.field }}
-
