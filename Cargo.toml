@@ -9,6 +9,7 @@ arith = { path = "arith" }
 gf2 = { path = "arith/gf2" }
 gf2_128 = { path = "arith/gf2_128" }
 mersenne31 = { path = "arith/mersenne31" }
+transcript = { path = "transcript" }
 
 ark-std.workspace = true
 clap.workspace = true
@@ -55,8 +56,9 @@ members = [
     "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31",
-    "bi-kzg"
-    ]
+    "bi-kzg",
+    "transcript"
+]
 
 [workspace.dependencies]
 ark-std = "0.4"

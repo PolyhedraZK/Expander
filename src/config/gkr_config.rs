@@ -4,9 +4,8 @@ mod gf2_ext_keccak;
 mod gf2_ext_sha2;
 mod m31_ext_keccak;
 mod m31_ext_sha2;
-
-use crate::FiatShamirHash;
 use arith::{ExtensionField, Field, FieldSerde, SimdField};
+use transcript::FiatShamirHash;
 
 pub use bn254_keccak::BN254ConfigKeccak;
 pub use bn254_sha2::BN254ConfigSha2;

@@ -14,14 +14,14 @@ impl FiatShamirHash for Keccak256hasher {
     }
 
     #[inline]
-    fn hash(&mut self, output: &mut [u8], input: &[u8]) {
+    fn hash(output: &mut [u8], input: &[u8]) {
         let mut hasher = Sha3::v256();
         hasher.update(input);
         hasher.finalize(output);
     }
 
     #[inline]
-    fn hash_inplace(&mut self, buffer: &mut [u8]) {
+    fn hash_inplace(buffer: &mut [u8]) {
         let mut hasher = Sha3::v256();
         hasher.update(&*buffer);
         hasher.finalize(buffer);

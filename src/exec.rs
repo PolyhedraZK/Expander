@@ -8,9 +8,10 @@ use std::{
 use arith::{Field, FieldSerde};
 use expander_rs::{
     BN254ConfigSha2, Circuit, Config, FieldType, GKRConfig, GKRScheme, M31ExtConfigSha2, MPIConfig,
-    Proof, Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
+    Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
 };
 use log::{debug, info};
+use transcript::Proof;
 use warp::{http::StatusCode, reply, Filter};
 
 fn dump_proof_and_claimed_v<F: Field + FieldSerde>(proof: &Proof, claimed_v: &F) -> Vec<u8> {

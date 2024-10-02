@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 use arith::{Field, FieldSerde, FieldSerdeResult};
 
 /// Proof. In the serialized mode.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Proof {
     idx: usize,
     pub bytes: Vec<u8>,
