@@ -58,7 +58,7 @@ members = [
     "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31", 
-    # "basefold",
+    "basefold",
     "bi-kzg", 
     "poseidon",
     "transcript",

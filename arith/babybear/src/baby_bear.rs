@@ -176,10 +176,23 @@ impl SimdField for BabyBear {
     }
 }
 
+const TWO_ADIC_GENERATORS: [u32; 28] = [
+    0x1, 0x78000000, 0x67055c21, 0x5ee99486, 0xbb4c4e4, 0x2d4cc4da, 0x669d6090, 0x17b56c64,
+    0x67456167, 0x688442f9, 0x145e952d, 0x4fe61226, 0x4c734715, 0x11c33e2a, 0x62c3d2b1, 0x77cad399,
+    0x54c131f4, 0x4cabd6a6, 0x5cf5713f, 0x3e9430e8, 0xba067a3, 0x18adc27d, 0x21fd55bc, 0x4b859b3d,
+    0x3bd57996, 0x4483d85a, 0x3a26eef8, 0x1a427a41,
+];
+
 impl FFTField for BabyBear {
     const ROOT_OF_UNITY: Self = BabyBear::new(0x1a427a41);
 
     const TWO_ADICITY: u32 = 27;
+
+    fn two_adic_generator(bits: usize) -> Self {
+        Self(P3BabyBear::new(
+            TWO_ADIC_GENERATORS[Self::TWO_ADICITY as usize - bits],
+        ))
+    }
 }
 
 impl Neg for BabyBear {

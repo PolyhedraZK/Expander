@@ -1,7 +1,7 @@
 use std::fmt::{self, Display};
 
 use ark_std::{end_timer, start_timer};
-use poseidon::PoseidonBabyBearParams;
+// use poseidon::PoseidonBabyBearParams;
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator,
 };
@@ -32,22 +32,18 @@ impl Display for Tree {
 impl Tree {
     /// Creates an empty tree with default leaves.
     #[inline]
-    pub fn init(hasher: &PoseidonBabyBearParams, tree_height: usize) -> Self {
+    pub fn init(tree_height: usize) -> Self {
         let leaves = vec![Leaf::default(); 1 << (tree_height - 1)];
-        Self::new_with_leaves(hasher, leaves, tree_height)
+        Self::new_with_leaves(leaves, tree_height)
     }
 
     /// Builds a tree with the given leaves.
     #[inline]
-    pub fn new_with_leaves(
-        leaf_hasher: &PoseidonBabyBearParams,
-        leaves: Vec<Leaf>,
-        tree_height: usize,
-    ) -> Self {
+    pub fn new_with_leaves(leaves: Vec<Leaf>, tree_height: usize) -> Self {
         let leaf_nodes = leaves
             .as_slice()
             .into_par_iter()
-            .map(|leaf| leaf.leaf_hash(leaf_hasher))
+            .map(|leaf| leaf.leaf_hash())
             .collect::<Vec<Node>>();
         let nodes = Self::new_with_leaf_nodes(leaf_nodes, tree_height);
         Self {

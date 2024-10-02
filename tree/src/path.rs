@@ -2,7 +2,9 @@ use core::fmt;
 use std::fmt::Display;
 
 use ark_std::{end_timer, start_timer};
-use poseidon::PoseidonBabyBearParams;
+// use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
+
+// use poseidon::PoseidonBabyBearParams;
 
 use crate::{Leaf, Node};
 
@@ -53,11 +55,12 @@ impl Path {
     ///
     /// `true` if the path is valid, `false` otherwise.
     #[inline]
-    pub fn verify(&self, root: &Node, hasher: &PoseidonBabyBearParams) -> bool {
+    pub fn verify(&self, root: &Node) -> bool {
         let timer = start_timer!(|| "path verify");
 
         let position_list = self.position_list().collect::<Vec<_>>();
-        let leaf_node = self.leaf.leaf_hash(hasher);
+        // let leaf_node = self.leaf.leaf_hash(hasher);
+        let leaf_node = self.leaf.leaf_hash();
         let mut current_node = leaf_node;
 
         // Traverse the path from leaf to root

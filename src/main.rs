@@ -5,7 +5,8 @@ use std::{
 
 use clap::Parser;
 use expander_rs::{
-    utils::{KECCAK_GF2_CIRCUIT, KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT}, BabyBearExt3ConfigSha2, MPIConfig
+    utils::{KECCAK_GF2_CIRCUIT, KECCAK_M31_CIRCUIT, POSEIDON_CIRCUIT},
+    BabyBearExt3ConfigSha2, MPIConfig,
 };
 
 use expander_rs::{

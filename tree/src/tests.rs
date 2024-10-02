@@ -1,9 +1,20 @@
-use arith::Field;
+use std::mem::transmute;
+
+// use arith::Field;
 use ark_std::{rand::RngCore, test_rng};
-use babybear::BabyBearx16;
-use poseidon::PoseidonBabyBearParams;
+// use babybear::BabyBearx16;
+use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
+// use poseidon::PoseidonBabyBearParams;
 
 use crate::{Leaf, Tree};
+
+fn random_leaf<R: RngCore>(rng: &mut R) -> Leaf {
+    Leaf::new(unsafe {
+        let mut data = [0u8; 64];
+        rng.fill_bytes(&mut data);
+        transmute::<[u8; 64], BabyBearx16>(data)
+    })
+}
 
 #[test]
 fn test_tree() {
@@ -11,18 +22,18 @@ fn test_tree() {
     let mut rng = test_rng();
 
     // Create a new instance of PoseidonBabyBearParams for hashing
-    let leaf_hasher = PoseidonBabyBearParams::new(&mut rng);
+    // let leaf_hasher = PoseidonBabyBearParams::new(&mut rng);
 
     // Test trees of different heights, from 4 to 14
     for height in 4..15 {
         // Generate random leaves for the tree
         // The number of leaves is 2^(height-1)
         let leaves: Vec<Leaf> = (0..(1 << (height - 1)))
-            .map(|_| BabyBearx16::random_unsafe(&mut rng).into())
+            .map(|_| random_leaf(&mut rng))
             .collect();
 
         // Create a new tree with the generated leaves
-        let tree = Tree::new_with_leaves(&leaf_hasher, leaves, height);
+        let tree = Tree::new_with_leaves(leaves, height);
 
         // Perform 100 random verifications for each tree
         for _ in 0..100 {
@@ -44,7 +55,7 @@ fn test_tree() {
             // Verify the proof
             // This checks that the leaf at the given index is indeed part of the tree
             // with the given root, using the generated proof
-            assert!(proof.verify(&root, &leaf_hasher));
+            assert!(proof.verify(&root,));
         }
     }
 }

@@ -1,4 +1,4 @@
-use arith::Field;
+use arith::{FFTField, Field};
 use transcript::{FiatShamirHash, Transcript};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -34,6 +34,7 @@ where
         // NOTE: Fiat-Shamir sampling an IOPP query point ranging [0, 2^codeword_bits - 1].
         transcript
             .generate_challenge_index_vector(self.verifier_queries)
+            .iter()
             .map(|c| c & iopp_challenge_bitmask)
             .collect()
     }
@@ -44,10 +45,9 @@ where
     }
 
     #[inline]
-    pub fn t_term<F: Field>(&self, num_vars: usize, round: usize, index: usize) -> F {
+    pub fn t_term<F: FFTField>(&self, num_vars: usize, round: usize, index: usize) -> F {
         let t = F::two_adic_generator(self.codeword_bits(num_vars));
-
-        let round_gen = T::two_adic_generator(self.codeword_bits(num_vars) - round);
-        round_gen.exp_u64(index as u64)
+        let round_gen = F::two_adic_generator(self.codeword_bits(num_vars) - round);
+        round_gen.exp(index as u128)
     }
 }

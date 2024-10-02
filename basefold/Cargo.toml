@@ -5,10 +5,12 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
-babybear = { path = "../arith/babybear" }
-poseidon = { path = "../poseidon" }
+# babybear = { path = "../arith/babybear" }
+# poseidon = { path = "../poseidon" }
 transcript = { path = "../transcript" }
 tree = { path = "../tree" }
 
-
+p3-baby-bear.workspace = true
+p3-field.workspace = true
+p3-monty-31.workspace = true
 rand.workspace = true
