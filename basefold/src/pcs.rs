@@ -3,7 +3,7 @@
 
 use std::{borrow::Borrow, fmt::Debug};
 
-use arith::Field;
+// use arith::Field;
 use rand::RngCore;
 
 /// This trait defines APIs for polynomial commitment schemes.
@@ -22,7 +22,7 @@ pub trait PolynomialCommitmentScheme {
     /// Polynomial input domain
     type Point: Clone + Debug + Sync + PartialEq + Eq;
     /// Polynomial Evaluation
-    type Evaluation: Field;
+    type Evaluation;
     /// Commitments
     type Commitment: Clone + Debug;
     /// Proofs

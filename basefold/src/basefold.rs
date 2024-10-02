@@ -1,4 +1,5 @@
-use babybear::BabyBear;
+// use babybear::BabyBear;
+use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
 use rand::RngCore;
 
 use crate::PolynomialCommitmentScheme;
@@ -11,7 +12,7 @@ impl PolynomialCommitmentScheme for BaseFoldPCS {
     type SRS = ();
     type Polynomial = ();
     type Point = ();
-    type Evaluation = BabyBear;
+    type Evaluation = BabyBearx16;
     type Commitment = ();
     type Proof = ();
     type BatchProof = ();
