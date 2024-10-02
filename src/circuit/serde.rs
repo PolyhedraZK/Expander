@@ -1,5 +1,5 @@
 use crate::{GKRConfig, GateAdd, GateConst, GateMul, SegmentId};
-use arith::{Field, FieldSerde, FieldSerdeError};
+use arith::{Field, FieldForECC, FieldSerde, FieldSerdeError};
 use std::{io::Read, vec};
 use thiserror::Error;
 
@@ -177,7 +177,11 @@ impl<C: GKRConfig> FromEccSerde for RecursiveCircuit<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let version_num = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
         assert_eq!(version_num, VERSION_NUM);
-        let _field_mod = <[u64; 4]>::deserialize_from(&mut reader).unwrap();
+        let expected_mod = <C::CircuitField as FieldForECC>::modulus();
+        let mut field_mod = [0u8; 32];
+        reader.read_exact(&mut field_mod).unwrap();
+        let read_mod = ethnum::U256::from_le_bytes(field_mod);
+        assert_eq!(expected_mod, read_mod);
 
         RecursiveCircuit {
             num_public_inputs: <usize as FieldSerde>::deserialize_from(&mut reader).unwrap(),

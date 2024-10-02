@@ -15,6 +15,7 @@ rand.workspace = true
 sha2.workspace = true
 halo2curves.workspace = true
 thiserror.workspace = true
+ethnum.workspace = true
 
 # for the server
 bytes.workspace = true

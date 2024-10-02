@@ -6,7 +6,7 @@ mod m31_ext_keccak;
 mod m31_ext_sha2;
 
 use crate::FiatShamirHash;
-use arith::{ExtensionField, Field, FieldSerde, SimdField};
+use arith::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
 
 pub use bn254_keccak::BN254ConfigKeccak;
 pub use bn254_sha2::BN254ConfigSha2;
@@ -34,7 +34,7 @@ pub enum FiatShamirHashType {
 
 pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     /// Field type for the circuit, e.g., M31
-    type CircuitField: Field + FieldSerde + Send;
+    type CircuitField: Field + FieldSerde + FieldForECC + Send;
 
     /// Field type for the challenge, e.g., M31Ext3
     type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send;
