@@ -1,6 +1,5 @@
 use halo2curves::bn256::Fr;
-
-use crate::Keccak256hasher;
+use transcript::Keccak256hasher;
 
 use super::{FieldType, GKRConfig};
 

@@ -7,8 +7,7 @@ use mpi::{
     topology::{Process, SimpleCommunicator},
     traits::*,
 };
-
-use crate::{FiatShamirHash, Transcript};
+use transcript::{FiatShamirHash, TranscriptInstance};
 
 #[macro_export]
 macro_rules! root_println {
@@ -158,7 +157,7 @@ impl MPIConfig {
     }
 
     /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
-    pub fn transcript_sync_up<H: FiatShamirHash>(&self, transcript: &mut Transcript<H>) {
+    pub fn transcript_sync_up<H: FiatShamirHash>(&self, transcript: &mut TranscriptInstance<H>) {
         if self.world_size == 1 {
         } else {
             transcript.hash_to_digest();

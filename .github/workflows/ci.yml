@@ -17,7 +17,8 @@ jobs:
           components: rustfmt, clippy
       - run: python3 ./scripts/install.py
       - run: cargo fmt --all -- --check
-      - run: cargo clippy
+      - run: cargo clippy --all
+
   build-and-test:
     name: Build and Test (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }})
     runs-on: ${{ matrix.os }}
@@ -41,9 +42,7 @@ jobs:
           python3 ./scripts/install.py
           cargo run --bin=dev-setup --release
           cargo build --all-features --release
-          cargo test --all-features --release      
-          cargo test -p arith --release
-          cargo test -p bi-kzg --release
+          cargo test --all-features --release --workspace
 
   benchmark:
     name: Benchmark (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }}, ${{ matrix.field }})
@@ -67,13 +66,13 @@ jobs:
             feature: avx2
             field: gf2ext128
           - os: 7950x3d
-            feature: avx512
+            feature: avx512f
             field: m31ext3
           - os: 7950x3d
-            feature: avx512
+            feature: avx512f
             field: fr
           - os: 7950x3d
-            feature: avx512
+            feature: avx512f
             field: gf2ext128
     steps:
       - uses: actions/checkout@v4
@@ -87,5 +86,3 @@ jobs:
           python3 ./scripts/install.py
           cargo run --bin=dev-setup --release
           cargo run --release -- -t ${{ matrix.os == 'macos-latest' && 2 || 16 }} -f ${{ matrix.field }}
-
-

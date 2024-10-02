@@ -2,22 +2,21 @@
 //! This module implements the core GKR^2 IOP.
 
 use ark_std::{end_timer, start_timer};
+use transcript::{Transcript, TranscriptInstance};
 
-use crate::{
-    sumcheck_prove_gkr_square_layer, Circuit, GKRConfig, GkrScratchpad, MultiLinearPoly, Transcript,
-};
+use crate::{sumcheck_prove_gkr_square_layer, Circuit, GKRConfig, GkrScratchpad, MultiLinearPoly};
 
 pub fn gkr_square_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
     sp: &mut GkrScratchpad<C>,
-    transcript: &mut Transcript<C::FiatShamirHashType>,
+    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
 ) -> (C::Field, Vec<C::ChallengeField>) {
     let timer = start_timer!(|| "gkr^2 prove");
     let layer_num = circuit.layers.len();
 
     let mut rz0 = vec![];
     for _i in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.challenge_f::<C>());
+        rz0.push(transcript.generate_challenge::<C::ChallengeField>());
     }
 
     let circuit_output = &circuit.layers.last().unwrap().output_vals;

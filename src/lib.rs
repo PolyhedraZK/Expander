@@ -6,9 +6,6 @@ pub use circuit::*;
 pub mod config;
 pub use config::*;
 
-pub mod hash;
-pub use hash::*;
-
 pub mod poly_commit;
 pub use poly_commit::*;
 

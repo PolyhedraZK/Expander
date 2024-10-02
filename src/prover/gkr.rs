@@ -2,10 +2,10 @@
 
 use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
+use transcript::{Transcript, TranscriptInstance};
 
 use crate::{
     sumcheck_prove_gkr_layer, Circuit, GKRConfig, GkrScratchpad, MPIConfig, MultiLinearPoly,
-    Transcript,
 };
 
 // FIXME
@@ -13,7 +13,7 @@ use crate::{
 pub fn gkr_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
     sp: &mut GkrScratchpad<C>,
-    transcript: &mut Transcript<C::FiatShamirHashType>,
+    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
     mpi_config: &MPIConfig,
 ) -> (
     C::ChallengeField,
@@ -30,15 +30,15 @@ pub fn gkr_prove<C: GKRConfig>(
     let mut r_simd = vec![];
     let mut r_mpi = vec![];
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.challenge_f::<C>());
+        rz0.push(transcript.generate_challenge::<C::ChallengeField>());
     }
 
     for _ in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.challenge_f::<C>());
+        r_simd.push(transcript.generate_challenge::<C::ChallengeField>());
     }
 
     for _ in 0..mpi_config.world_size().trailing_zeros() {
-        r_mpi.push(transcript.challenge_f::<C>());
+        r_mpi.push(transcript.generate_challenge::<C::ChallengeField>());
     }
 
     let mut alpha = C::ChallengeField::one();
@@ -81,13 +81,13 @@ pub fn gkr_prove<C: GKRConfig>(
             sp,
             mpi_config,
         );
+        alpha = transcript.generate_challenge::<C::ChallengeField>();
 
-        alpha = transcript.challenge_f::<C>();
         mpi_config.root_broadcast(&mut alpha);
 
         if rz1.is_some() {
             // TODO: try broadcast beta.unwrap directly
-            let mut tmp = transcript.challenge_f::<C>();
+            let mut tmp = transcript.generate_challenge::<C::ChallengeField>();
             mpi_config.root_broadcast(&mut tmp);
             beta = Some(tmp)
         } else {

@@ -3,9 +3,11 @@ use std::io::Cursor;
 
 use arith::{Field, SimdField};
 use ark_std::test_rng;
+use transcript::Transcript;
+use transcript::TranscriptInstance;
 
 use crate::circuit::*;
-use crate::{GKRConfig, Transcript};
+use crate::GKRConfig;
 
 #[derive(Debug, Clone, Default)]
 pub struct StructureInfo {
@@ -241,11 +243,11 @@ impl<C: GKRConfig> Circuit<C> {
         self.rnd_coefs_identified = true;
     }
 
-    pub fn fill_rnd_coefs(&mut self, transcript: &mut Transcript<C::FiatShamirHashType>) {
+    pub fn fill_rnd_coefs(&mut self, transcript: &mut TranscriptInstance<C::FiatShamirHashType>) {
         assert!(self.rnd_coefs_identified);
         for &rnd_coef_ptr in &self.rnd_coefs {
             unsafe {
-                *rnd_coef_ptr = transcript.circuit_f::<C>();
+                *rnd_coef_ptr = transcript.generate_challenge::<C::CircuitField>();
             }
         }
     }

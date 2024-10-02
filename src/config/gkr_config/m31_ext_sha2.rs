@@ -1,6 +1,6 @@
-use arith::{ExtensionField, M31Ext3, M31Ext3x16, M31x16, M31};
-
-use crate::SHA256hasher;
+use arith::ExtensionField;
+use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
+use transcript::SHA256hasher;
 
 use super::{FieldType, GKRConfig};
 
