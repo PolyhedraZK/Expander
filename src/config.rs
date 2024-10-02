@@ -4,8 +4,7 @@ pub use gkr_config::*;
 mod mpi_config;
 pub use mpi_config::*;
 
-use arith::{ExtensionField, Field, FieldSerde, SimdField};
-use transcript::FiatShamirHash;
+use arith::Field;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum PolynomialCommitmentType {

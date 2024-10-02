@@ -7,7 +7,7 @@ use mpi::{
     topology::{Process, SimpleCommunicator},
     traits::*,
 };
-use transcript::{FiatShamirHash, Transcript, TranscriptInstance};
+use transcript::{FiatShamirHash, TranscriptInstance};
 
 #[macro_export]
 macro_rules! root_println {
