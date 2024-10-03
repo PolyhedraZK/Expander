@@ -288,8 +288,9 @@ pub fn random_fft_field_tests<F: Field + FFTField>(_name: String) {
 }
 
 /// school book multiplication
-/// output = a(x) * b(x) mod x^N +1 mod MODULUS
+/// output = a(x) * b(x) mod x^N - 1 mod MODULUS
 /// using school-book multiplications
+/// This is used to verify the correctness of the FFT multiplication
 fn schoolbook_mul<F: Field>(a: &[F], b: &[F]) -> Vec<F> {
     let degree = a.len();
     assert_eq!(degree, b.len());

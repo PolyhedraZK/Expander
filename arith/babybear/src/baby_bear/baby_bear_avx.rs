@@ -8,7 +8,7 @@ use std::{
 };
 
 use arith::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField};
-use ark_std::iterable::Iterable;
+use ark_std::{iterable::Iterable, Zero};
 use p3_baby_bear::PackedBabyBearAVX512;
 use rand::RngCore;
 
@@ -127,8 +127,19 @@ impl Field for AVXBabyBear {
         Self::pack(&sample)
     }
 
-    fn exp(&self, _: u128) -> Self {
-        unimplemented!("exp not implemented for AVXBabyBear")
+    fn exp(&self, exponent: u128) -> Self {
+        let mut e = exponent;
+        let mut res = Self::one();
+        let mut t = *self;
+        while !e.is_zero() {
+            let b = e & 1;
+            if b == 1 {
+                res *= t;
+            }
+            t = t * t;
+            e >>= 1;
+        }
+        res
     }
 
     fn inv(&self) -> Option<Self> {

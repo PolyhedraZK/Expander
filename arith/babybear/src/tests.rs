@@ -1,8 +1,8 @@
 use std::io::Cursor;
 
 use arith::{
-    random_extension_field_tests, random_field_tests, random_inversion_tests,
-    random_simd_field_tests, Field, FieldSerde,
+    random_extension_field_tests, random_fft_field_tests, random_field_tests,
+    random_inversion_tests, random_simd_field_tests, Field, FieldSerde,
 };
 use ark_std::test_rng;
 use p3_baby_bear::BabyBear as P3BabyBear;
@@ -174,16 +174,17 @@ fn test_base_field() {
 
     let mut rng = test_rng();
     random_inversion_tests::<BabyBear, _>(&mut rng, "M31".to_string());
+    random_fft_field_tests::<BabyBear>("bn254::Fr".to_string());
 }
 
 #[test]
 fn test_simd_field() {
     random_field_tests::<BabyBearx16>("Vectorized M31".to_string());
+    random_simd_field_tests::<BabyBearx16>("Vectorized M31".to_string());
 
     let mut rng = test_rng();
     random_inversion_tests::<BabyBearx16, _>(&mut rng, "Vectorized M31".to_string());
-
-    random_simd_field_tests::<BabyBearx16>("Vectorized M31".to_string());
+    random_fft_field_tests::<BabyBearx16>("bn254::Fr".to_string());
 
     let a = BabyBearx16::from(256 + 2);
     let mut buffer = vec![];

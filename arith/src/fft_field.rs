@@ -5,7 +5,8 @@ use crate::Field;
 pub trait FFTField: Field {
     const TWO_ADICITY: u32;
 
-    const ROOT_OF_UNITY: Self;
+    /// Returns a primitive $n$-th root of unity.
+    fn root_of_unity() -> Self;
 
     /// Returns a generator of the multiplicative group of order `2^bits`.
     /// Assumes `bits < TWO_ADICITY`, otherwise the result is undefined.

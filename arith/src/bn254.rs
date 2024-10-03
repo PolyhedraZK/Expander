@@ -206,15 +206,19 @@ impl ExtensionField for Fr {
 }
 
 impl FFTField for Fr {
-    const ROOT_OF_UNITY: Self = <Fr as PrimeField>::ROOT_OF_UNITY;
 
     const TWO_ADICITY: u32 = <Fr as PrimeField>::S;
+
+    #[inline]
+    fn root_of_unity() -> Self {
+        <Fr as PrimeField>::ROOT_OF_UNITY
+    }
 
     /// Returns a generator of the multiplicative group of order `2^bits`.
     /// Assumes `bits < TWO_ADICITY`, otherwise the result is undefined.
     #[must_use]
     fn two_adic_generator(bits: usize) -> Self {
-        let mut res = <Self as FFTField>::ROOT_OF_UNITY;
+        let mut res = <Self as FFTField>::root_of_unity();
         for _ in bits..Self::TWO_ADICITY as usize {
             res = res.square();
         }
