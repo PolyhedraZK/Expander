@@ -163,7 +163,7 @@ impl SimdField for BabyBear {
     }
 
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        debug_assert!(base_vec.len() == 1);
+        assert!(base_vec.len() == 1);
         base_vec[0]
     }
 

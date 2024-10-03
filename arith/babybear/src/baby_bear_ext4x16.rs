@@ -61,7 +61,7 @@ impl SimdField for BabyBearExt4x16 {
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        debug_assert!(base_vec.len() == Self::pack_size());
+        assert!(base_vec.len() == Self::pack_size());
         let mut v0s = vec![];
         let mut v1s = vec![];
         let mut v2s = vec![];

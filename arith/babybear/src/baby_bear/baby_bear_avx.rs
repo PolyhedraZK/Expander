@@ -174,7 +174,7 @@ impl SimdField for AVXBabyBear {
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        debug_assert!(base_vec.len() == BABY_BEAR_PACK_SIZE);
+        assert!(base_vec.len() == BABY_BEAR_PACK_SIZE);
         let ret: [Self::Scalar; BABY_BEAR_PACK_SIZE] = base_vec.try_into().unwrap();
         Self {
             // Transmute is reinterpreting an array of scalars in Montgomery form to an AVX register
