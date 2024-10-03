@@ -1,5 +1,5 @@
-// use babybear::BabyBear;
-use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
+use babybear::BabyBearx16;
+// use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
 use rand::RngCore;
 
 use crate::PolynomialCommitmentScheme;

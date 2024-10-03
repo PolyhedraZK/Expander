@@ -1,31 +1,32 @@
-// use babybear::BabyBearx16;
-use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
+use arith::{Field, FieldSerde};
+use babybear::BabyBearx16;
+// use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
 use tree::Path;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BasefoldIOPPQuery {
+pub struct BasefoldIOPPQuery<F: Field+FieldSerde>  {
     // NOTE: the folding r's are in sumcheck verification, deriving from Fiat-Shamir.
-    iopp_round_query: Vec<BasefoldIOPPQuerySingleRound>,
+    iopp_round_query: Vec<BasefoldIOPPQuerySingleRound<F> >,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BasefoldIOPPQuerySingleRound {
-    left: Path,
-    right: Path,
+pub struct BasefoldIOPPQuerySingleRound<F: Field+FieldSerde>  {
+    left: Path<F>,
+    right: Path<F>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BasefoldVirtualIOPPQuery {
-    virtual_queries: Vec<BasefoldIOPPQuerySingleRound>,
-    iopp_query: BasefoldIOPPQuery,
+pub struct BasefoldVirtualIOPPQuery<F: Field+FieldSerde>  {
+    virtual_queries: Vec<BasefoldIOPPQuerySingleRound<F>>,
+    iopp_query: BasefoldIOPPQuery<F>,
 }
 
-impl BasefoldIOPPQuerySingleRound {
+impl<F: Field+FieldSerde>  BasefoldIOPPQuerySingleRound<F> {
     pub fn check_expected_codeword(
         &self,
         entry_index: usize,
         oracle_len: usize,
-        entry: &BabyBearx16,
+        entry: &F,
     ) -> bool {
         let side = &match entry_index & (oracle_len >> 1) {
             0 => self.left.leaf(),
@@ -36,9 +37,9 @@ impl BasefoldIOPPQuerySingleRound {
     }
 }
 
-impl BasefoldVirtualIOPPQuery {
+impl<F: Field+FieldSerde>  BasefoldVirtualIOPPQuery<F> {
     #[inline]
-    fn deteriorate_to_basefold_iopp_query(&self) -> BasefoldIOPPQuery {
+    fn deteriorate_to_basefold_iopp_query(&self) -> BasefoldIOPPQuery<F> {
         // NOTE: the deterioration happens only when there is only one virtual query,
         // namely, using batch for one single polynomial.
         assert_eq!(self.virtual_queries.len(), 1);
