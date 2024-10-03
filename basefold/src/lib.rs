@@ -13,6 +13,4 @@ pub use iop::BasefoldIOPPQuerySingleRound;
 mod param;
 pub use param::BasefoldParam;
 
-// todo: refactor to a separate module
-mod mpoly;
-pub use mpoly::MultiLinearPoly;
+pub use p3_baby_bear::PackedBabyBearAVX512 as Babybearx16;

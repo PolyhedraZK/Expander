@@ -1,0 +1,9 @@
+[package]
+name = "mpoly"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+ark-std.workspace = true
+p3-baby-bear.workspace = true

@@ -9,6 +9,7 @@ edition = "2021"
 # poseidon = { path = "../poseidon" }
 transcript = { path = "../transcript" }
 tree = { path = "../tree" }
+mpoly = { path = "../arith/mpoly" }
 
 ark-std.workspace = true
 p3-baby-bear.workspace = true

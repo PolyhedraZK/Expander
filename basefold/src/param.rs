@@ -1,11 +1,16 @@
 // use arith::{FFTField, Field};
 use ark_std::{end_timer, start_timer};
+use mpoly::MultiLinearPoly;
 use p3_dft::TwoAdicSubgroupDft;
-use p3_field::{ ExtensionField, TwoAdicField};
+use p3_field::{ExtensionField, TwoAdicField};
 use p3_matrix::{dense::RowMajorMatrix, Matrix};
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+};
 use transcript::{FiatShamirHash, Transcript};
 use tree::Tree;
+
+use crate::Babybearx16;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BasefoldParam<T, H, ExtF, F> {
@@ -74,10 +79,7 @@ where
     }
 
     /// Performs dft in batch. returns a vector that is concatenated from all the dft results.
-    fn batch_reed_solomon_from_coeff_vecs(
-        &self,
-        mut coeff_vecs: Vec<Vec<F>>,
-    ) -> Vec<Vec<F>> {
+    fn batch_reed_solomon_from_coeff_vecs(&self, mut coeff_vecs: Vec<Vec<F>>) -> Vec<Vec<F>> {
         let length = coeff_vecs[0].len();
         let num_poly = coeff_vecs.len();
         let extended_length = length << self.rate_bits;
@@ -121,7 +123,7 @@ where
         let timer = start_timer!(|| "interpolate over hypercube");
         let coeffs: Vec<Vec<F>> = evals
             .par_iter()
-            .map(|&evals| DensePolynomial::interpolate_over_hypercube_impl(evals))
+            .map(|&evals| MultiLinearPoly::interpolate_over_hypercube_impl(evals))
             .collect();
         end_timer!(timer);
 
@@ -130,16 +132,16 @@ where
         end_timer!(timer);
 
         let timer = start_timer!(|| "new from leaves");
-    
+
         let trees = rs_codes
             .par_iter()
-            .map(|codeword| Tree::new_with_leaves(codeword.to_vec(), ))
+            .map(|codeword| Tree::new_with_field_elements(codeword))
             .collect::<Vec<_>>();
         end_timer!(timer);
         trees
     }
 
-    pub fn basefold_oracle_from_poly(&self, poly: &DensePolynomial<F>) -> OctoposTree<F> {
+    pub fn basefold_oracle_from_poly(&self, poly: &MultiLinearPoly) -> Tree {
         let timer =
             start_timer!(|| format!("basefold oracle from poly of {} vars", poly.get_num_vars()));
         let timer2 = start_timer!(|| "interpolate over hypercube");
@@ -151,7 +153,7 @@ where
         end_timer!(timer2);
 
         let timer2 = start_timer!(|| "new from leaves");
-        let tree = Tree::new_with_leaves(codeword,);
+        let tree = Tree::new_with_field_elements(codeword);
         end_timer!(timer2);
         end_timer!(timer);
         tree
