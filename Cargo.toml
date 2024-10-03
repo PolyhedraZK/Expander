@@ -12,6 +12,8 @@ members = [
     "sumcheck",
     "transcript"
 ]
+resolver = "2"
+
 
 [workspace.dependencies]
 ark-std = "0.4"

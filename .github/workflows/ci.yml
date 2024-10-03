@@ -85,4 +85,4 @@ jobs:
         run: |
           python3 ./scripts/install.py
           cargo run --bin=dev-setup --release
-          cargo run --release -- -t ${{ matrix.os == 'macos-latest' && 2 || 16 }} -f ${{ matrix.field }}
+          cargo run --bin=gkr --release -- -t ${{ matrix.os == 'macos-latest' && 2 || 16 }} -f ${{ matrix.field }}
