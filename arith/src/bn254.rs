@@ -206,7 +206,6 @@ impl ExtensionField for Fr {
 }
 
 impl FFTField for Fr {
-
     const TWO_ADICITY: u32 = <Fr as PrimeField>::S;
 
     #[inline]

@@ -14,16 +14,23 @@ pub trait FFTField: Field {
     fn two_adic_generator(bits: usize) -> Self;
 
     #[inline]
-    fn fft(poly: &[Self], omega: &Self) -> Vec<Self> {
+    fn fft(poly: &[Self]) -> Vec<Self> {
+        let log_degree = log2(poly.len()) as usize;
+        let omega = &Self::two_adic_generator(log_degree);
+
         let mut poly = poly.to_vec();
         Self::fft_in_place(&mut poly, omega);
         poly
     }
 
     #[inline]
-    fn ifft(poly: &[Self], omega_inv: &Self) -> Vec<Self> {
+    fn ifft(poly: &[Self]) -> Vec<Self> {
+        let log_degree = log2(poly.len()) as usize;
+        let omega = &Self::two_adic_generator(log_degree);
+        let omega_inv = omega.inv().unwrap();
+
         let mut poly = poly.to_vec();
-        Self::ifft_in_place(&mut poly, omega_inv);
+        Self::ifft_in_place(&mut poly, &omega_inv);
         poly
     }
 

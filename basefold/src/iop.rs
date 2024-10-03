@@ -6,13 +6,13 @@ use tree::Path;
 #[derive(Clone, Debug, PartialEq)]
 pub struct BasefoldIOPPQuery<F: Field + FieldSerde> {
     // NOTE: the folding r's are in sumcheck verification, deriving from Fiat-Shamir.
-    iopp_round_query: Vec<BasefoldIOPPQuerySingleRound<F>>,
+    pub(crate) iopp_round_query: Vec<BasefoldIOPPQuerySingleRound<F>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BasefoldIOPPQuerySingleRound<F: Field + FieldSerde> {
-    left: Path<F>,
-    right: Path<F>,
+    pub(crate) left: Path<F>,
+    pub(crate) right: Path<F>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -12,7 +12,7 @@ use rand::RngCore;
 /// Credit: https://github.com/EspressoSystems/hyperplonk/blob/8698369edfe82bd6617a9609602380f21cabd1da/subroutines/src/pcs/mod.rs#L24
 pub trait PolynomialCommitmentScheme {
     /// Prover parameters
-    type ProverParam: Clone + Sync;
+    type ProverParam: Clone;
     /// Verifier parameters
     type VerifierParam: Clone;
     /// Structured reference string
@@ -20,7 +20,7 @@ pub trait PolynomialCommitmentScheme {
     /// Polynomial and its associated types
     type Polynomial: Clone + Debug;
     /// Polynomial input domain
-    type Point: Clone + Debug + Sync + PartialEq + Eq;
+    type Point: Clone + Debug + PartialEq;
     /// Polynomial Evaluation
     type Evaluation;
     /// Commitments
@@ -29,6 +29,8 @@ pub trait PolynomialCommitmentScheme {
     type Proof: Clone + Debug;
     /// Batch proofs
     type BatchProof;
+    /// Transcript
+    type Transcript: Clone;
 
     /// Build SRS for testing.
     ///
@@ -48,16 +50,18 @@ pub trait PolynomialCommitmentScheme {
     /// Arc<Self::ProverParam>, ..)` etc.
     fn commit(
         prover_param: impl Borrow<Self::ProverParam>,
-        poly: &Self::Polynomial,
+        polynomial: &Self::Polynomial,
     ) -> Self::Commitment;
 
     /// On input a polynomial `p` and a point `point`, outputs a proof for the
     /// same.
     fn open(
         prover_param: impl Borrow<Self::ProverParam>,
+        commitment: &Self::Commitment,
         polynomial: &Self::Polynomial,
-        point: &Self::Point,
-    ) -> (Self::Proof, Self::Evaluation);
+        opening_point: &Self::Point,
+        transcript: &mut Self::Transcript,
+    ) -> Self::Proof;
 
     /// Input a list of polynomials, and a same number of points, compute a multi-opening for all the polynomials.
     fn multi_open(

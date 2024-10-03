@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+arith = { path = "../" }
 
 ark-std.workspace = true
-p3-baby-bear.workspace = true

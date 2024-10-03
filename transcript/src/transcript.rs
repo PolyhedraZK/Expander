@@ -1,10 +1,10 @@
-use std::marker::PhantomData;
+use std::{fmt::Debug, marker::PhantomData};
 
 use arith::{Field, FieldSerde};
 
 use crate::{fiat_shamir_hash::FiatShamirHash, Proof};
 
-pub trait Transcript<H: FiatShamirHash> {
+pub trait Transcript<H: FiatShamirHash>: Debug + Clone {
     /// Create a new transcript.
     fn new() -> Self;
 

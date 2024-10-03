@@ -4,7 +4,7 @@ use tree::{Path, Tree};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BasefoldCommitment<F: Field + FieldSerde> {
-    tree: Tree<F>,
+    pub(crate) tree: Tree<F>,
 }
 
 impl<F: Field + FieldSerde> BasefoldCommitment<F> {
