@@ -1,21 +1,20 @@
-use std::fmt::{self, Display};
+use std::fmt;
+use std::fmt::{Debug, Display};
 
+use arith::{Field, FieldSerde};
 use ark_std::{end_timer, log2, start_timer};
-// use poseidon::PoseidonBabyBearParams;
-use rayon::iter::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefMutIterator, ParallelIterator,
-};
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::{Leaf, Node, Path};
 
 /// Represents a Merkle tree structure.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Tree {
+pub struct Tree<F: Field + FieldSerde> {
     pub nodes: Vec<Node>,
-    pub leaves: Vec<Leaf>,
+    pub leaves: Vec<Leaf<F>>,
 }
 
-impl Display for Tree {
+impl<F: Field + FieldSerde> Display for Tree<F> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "nodes:")?;
         for (i, e) in self.nodes.iter().enumerate() {
@@ -29,7 +28,7 @@ impl Display for Tree {
     }
 }
 
-impl Tree {
+impl<F: Field + FieldSerde> Tree<F> {
     /// Creates an empty tree with default leaves.
     #[inline]
     pub fn init(tree_height: usize) -> Self {
@@ -39,12 +38,22 @@ impl Tree {
 
     /// Builds a tree with the given leaves.
     #[inline]
-    pub fn new_with_leaves(leaves: Vec<Leaf>) -> Self {
+    pub fn new_with_field_elements(leave_elems: &[F]) -> Self {
+        let leaves = leave_elems
+            .iter()
+            .map(|&leaf| Leaf { data: leaf })
+            .collect::<Vec<Leaf<F>>>();
+        Self::new_with_leaves(leaves)
+    }
+
+    /// Builds a tree with the given leaves.
+    #[inline]
+    pub fn new_with_leaves(leaves: Vec<Leaf<F>>) -> Self {
         let tree_height = log2(leaves.len() + 1);
 
         let leaf_nodes = leaves
             .as_slice()
-            .into_par_iter()
+            .iter()
             .map(|leaf| leaf.leaf_hash())
             .collect::<Vec<Node>>();
         let nodes = Self::new_with_leaf_nodes(leaf_nodes, tree_height);
@@ -127,7 +136,7 @@ impl Tree {
 
     /// Generates a membership proof for the given index.
     #[inline]
-    pub fn gen_proof(&self, index: usize, tree_height: usize) -> Path {
+    pub fn gen_proof(&self, index: usize, tree_height: usize) -> Path<F> {
         let timer = start_timer!(|| "generate membership proof");
 
         // Leaf

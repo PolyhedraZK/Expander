@@ -5,13 +5,13 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
-# babybear = { path = "../arith/babybear" }
+babybear = { path = "../arith/babybear" }
 # poseidon = { path = "../poseidon" }
 
 ark-std.workspace = true
 sha2.workspace = true
 rayon.workspace = true
 
-p3-baby-bear.workspace = true
-p3-field.workspace = true
-p3-monty-31.workspace = true
+# p3-baby-bear.workspace = true
+# p3-field.workspace = true
+# p3-monty-31.workspace = true

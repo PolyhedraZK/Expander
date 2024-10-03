@@ -1,22 +1,20 @@
-use core::fmt;
-use std::fmt::Display;
+use std::fmt;
+use std::fmt::{Debug, Display};
 
+use arith::{Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
-// use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
-
-// use poseidon::PoseidonBabyBearParams;
 
 use crate::{Leaf, Node};
 
 /// Represents a path in the Merkle tree, used for proving membership.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Path {
-    pub(crate) leaf: Leaf,
+pub struct Path<F: Field + FieldSerde> {
+    pub(crate) leaf: Leaf<F>,
     pub(crate) path_nodes: Vec<Node>,
     pub(crate) index: usize,
 }
 
-impl Display for Path {
+impl<F: Field + FieldSerde> Display for Path<F> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "leaf index: {}", self.index)?;
 
@@ -33,7 +31,7 @@ impl Display for Path {
     }
 }
 
-impl Path {
+impl<F: Field + FieldSerde> Path<F> {
     /// Computes the position of on-path nodes in the Merkle tree.
     ///
     /// This function converts the leaf index to a boolean array in big-endian form,
@@ -83,7 +81,7 @@ impl Path {
 
     /// Return the leaf of the path
     #[inline]
-    pub fn leaf(&self) -> &Leaf {
+    pub fn leaf(&self) -> &Leaf<F> {
         &self.leaf
     }
 }

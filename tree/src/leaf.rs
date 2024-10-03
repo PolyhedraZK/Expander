@@ -1,37 +1,34 @@
 use std::fmt;
-use std::fmt::Display;
-use std::mem::transmute;
+use std::fmt::{Debug, Display};
 
-// use babybear::BabyBearx16;
-// use poseidon::{PoseidonBabyBearParams, PoseidonBabyBearState};
-use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
+use arith::{Field, FieldSerde};
 use sha2::{Digest, Sha512};
 
 use crate::Node;
 
 /// Represents a leaf in the Merkle tree, containing 64 bytes of data stored in a BabyBearx16.
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
-pub struct Leaf {
-    pub data: BabyBearx16,
+pub struct Leaf<F: Field + FieldSerde> {
+    pub data: F,
 }
 
-impl Display for Leaf {
+impl<F: Field + FieldSerde> Display for Leaf<F> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Display the first and last byte of the leaf data for brevity
-        let t = unsafe { transmute::<BabyBearx16, [u8; 64]>(self.data) };
-        write!(f, "leaf: 0x{:02x?}...{:02x?}", t[0], t[63])
+        write!(f, "leaf: 0x{:02x?}", self.data)
     }
 }
 
-impl Leaf {
+impl<F: Field + FieldSerde> Leaf<F> {
     /// Creates a new Leaf with the given data.
-    pub fn new(data: BabyBearx16) -> Self {
+    pub fn new(data: F) -> Self {
         Self { data }
     }
 
     pub fn leaf_hash(&self) -> Node {
         let mut hasher = Sha512::new();
-        hasher.update(unsafe { transmute::<BabyBearx16, [u8; 64]>(self.data) });
+        self.data.serialize_into(&mut hasher).unwrap();
+
         let result: [u8; 32] = hasher.finalize()[..32].try_into().unwrap();
 
         Node { data: result }
@@ -61,9 +58,9 @@ impl Leaf {
     // }
 }
 
-impl From<BabyBearx16> for Leaf {
+impl<F: Field + FieldSerde> From<F> for Leaf<F> {
     /// Implements the From trait to allow creation of a Leaf from BabyBearx16 data.
-    fn from(data: BabyBearx16) -> Self {
+    fn from(data: F) -> Self {
         Self { data }
     }
 }
