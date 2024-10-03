@@ -4,24 +4,24 @@ use babybear::BabyBearx16;
 use tree::Path;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BasefoldIOPPQuery<F: Field+FieldSerde>  {
+pub struct BasefoldIOPPQuery<F: Field + FieldSerde> {
     // NOTE: the folding r's are in sumcheck verification, deriving from Fiat-Shamir.
-    iopp_round_query: Vec<BasefoldIOPPQuerySingleRound<F> >,
+    iopp_round_query: Vec<BasefoldIOPPQuerySingleRound<F>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BasefoldIOPPQuerySingleRound<F: Field+FieldSerde>  {
+pub struct BasefoldIOPPQuerySingleRound<F: Field + FieldSerde> {
     left: Path<F>,
     right: Path<F>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BasefoldVirtualIOPPQuery<F: Field+FieldSerde>  {
+pub struct BasefoldVirtualIOPPQuery<F: Field + FieldSerde> {
     virtual_queries: Vec<BasefoldIOPPQuerySingleRound<F>>,
     iopp_query: BasefoldIOPPQuery<F>,
 }
 
-impl<F: Field+FieldSerde>  BasefoldIOPPQuerySingleRound<F> {
+impl<F: Field + FieldSerde> BasefoldIOPPQuerySingleRound<F> {
     pub fn check_expected_codeword(
         &self,
         entry_index: usize,
@@ -37,7 +37,7 @@ impl<F: Field+FieldSerde>  BasefoldIOPPQuerySingleRound<F> {
     }
 }
 
-impl<F: Field+FieldSerde>  BasefoldVirtualIOPPQuery<F> {
+impl<F: Field + FieldSerde> BasefoldVirtualIOPPQuery<F> {
     #[inline]
     fn deteriorate_to_basefold_iopp_query(&self) -> BasefoldIOPPQuery<F> {
         // NOTE: the deterioration happens only when there is only one virtual query,

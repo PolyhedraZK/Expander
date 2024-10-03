@@ -84,8 +84,8 @@ impl Field for Fr {
     }
 
     /// Exp
-    fn exp(&self, _exponent: u128) -> Self {
-        unimplemented!()
+    fn exp(&self, exp: u128) -> Self {
+        self.pow_vartime(&[exp as u64])
     }
 
     /// find the inverse of the element; return None if not exist
@@ -214,6 +214,12 @@ impl FFTField for Fr {
     /// Assumes `bits < TWO_ADICITY`, otherwise the result is undefined.
     #[must_use]
     fn two_adic_generator(bits: usize) -> Self {
-        <Self as FFTField>::ROOT_OF_UNITY.pow_vartime(&[Self::TWO_ADICITY as u64 - bits as u64])
+        let mut res = <Self as FFTField>::ROOT_OF_UNITY;
+        for _ in bits..Self::TWO_ADICITY as usize {
+            res = res.square();
+        }
+
+        res
+        // <Self as FFTField>::ROOT_OF_UNITY.pow_vartime(&[Self::TWO_ADICITY as u64 - bits as u64])
     }
 }

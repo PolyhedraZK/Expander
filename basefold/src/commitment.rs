@@ -3,11 +3,11 @@ use transcript::{FiatShamirHash, Transcript};
 use tree::{Path, Tree};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct BasefoldCommitment<F: Field+FieldSerde> {
+pub struct BasefoldCommitment<F: Field + FieldSerde> {
     tree: Tree<F>,
 }
 
-impl<F: Field+FieldSerde>  BasefoldCommitment<F> {
+impl<F: Field + FieldSerde> BasefoldCommitment<F> {
     pub fn append_to_transcript<T, H>(&self, transcript: &mut T)
     where
         T: Transcript<H>,

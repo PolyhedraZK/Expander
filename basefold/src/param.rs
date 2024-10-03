@@ -1,4 +1,4 @@
-use arith::{ExtensionField, Field};
+use arith::{ExtensionField, FFTField, Field};
 // use arith::{FFTField, Field};
 use ark_std::{end_timer, start_timer};
 use mpoly::MultiLinearPoly;
@@ -27,7 +27,7 @@ impl<T, H, ExtF, F> BasefoldParam<T, H, ExtF, F>
 where
     T: Transcript<H>,
     H: FiatShamirHash,
-    F: Field,
+    F: FFTField,
     ExtF: ExtensionField<BaseField = F>,
 {
     pub fn new(rate_bits: usize) -> Self {
@@ -62,21 +62,21 @@ where
         self.rate_bits + num_vars
     }
 
-    // #[inline]
-    // pub fn t_term(&self, num_vars: usize, round: usize, index: usize) -> F {
-    //     // let t = F::two_adic_generator(self.codeword_bits(num_vars));
-    //     // let round_gen = F::two_adic_generator(self.codeword_bits(num_vars) - round);
-    //     // round_gen.exp(index as u128)
-    //     let round_gen = F::two_adic_generator(self.codeword_bits(num_vars) - round);
-    //     round_gen.exp_u64(index as u64)
-    // }
+    #[inline]
+    pub fn t_term(&self, num_vars: usize, round: usize, index: usize) -> F {
+        let t = F::two_adic_generator(self.codeword_bits(num_vars));
+        let round_gen = F::two_adic_generator(self.codeword_bits(num_vars) - round);
+        round_gen.exp(index as u128)
+        // let round_gen = F::two_adic_generator(self.codeword_bits(num_vars) - round);
+        // round_gen.exp_u64(index as u64)
+    }
 
     // #[inline]
     // pub fn reed_solomon_from_coeffs(&self, mut coeffs: Vec<F>) -> Vec<F> {
     //     plonky2_util::reverse_index_bits_in_place(&mut coeffs);
     //     let extended_length = coeffs.len() << self.rate_bits;
     //     coeffs.resize(extended_length, F::zero());
-    //     p3_dft::Radix2DitParallel.dft(coeffs)
+    //     // p3_dft::Radix2DitParallel.dft(coeffs)
     // }
 
     // /// Performs dft in batch. returns a vector that is concatenated from all the dft results.
