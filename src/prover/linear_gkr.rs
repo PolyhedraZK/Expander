@@ -71,7 +71,7 @@ impl<C: GKRConfig> Prover<C> {
         self.sp = GkrScratchpad::<C>::new(max_num_input_var, max_num_output_var);
     }
 
-    pub fn prove(&mut self, c: &mut Circuit<C>) -> (C::Field, Proof) {
+    pub fn prove(&mut self, c: &Circuit<C>) -> (C::Field, Proof) {
         let timer = start_timer!(|| "prove");
         // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
@@ -80,14 +80,12 @@ impl<C: GKRConfig> Prover<C> {
 
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
+
         let mut transcript = Transcript::new();
         transcript.append_u8_slice(&buffer);
-
         #[cfg(feature = "grinding")]
         grind::<C>(&mut transcript, &self.config);
 
-        c.fill_rnd_coefs(&mut transcript);
-        c.evaluate();
 
         let claimed_v: C::Field;
         let mut _rz0s = vec![];

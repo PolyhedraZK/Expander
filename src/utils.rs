@@ -4,8 +4,11 @@ use std::process::Command;
 const DATA_PREFIX: &str = "data/";
 
 // circuit for repeating Keccak for 2 times
-pub const KECCAK_M31_CIRCUIT: &str = "data/circuit_m31.txt";
+// pub const KECCAK_M31_CIRCUIT: &str = "data/circuit_m31.txt";
+// pub const KECCAK_M31_CIRCUIT: &str = "../circuits/eth2/validator/gkr/circuit.txt";
+pub const KECCAK_M31_CIRCUIT: &str = "../circuits/eth2/validator/hashMap/gkr/circuit.txt";
 pub const KECCAK_GF2_CIRCUIT: &str = "data/circuit_gf2.txt";
+pub const BENCH_PERIOD:u64 = 60;
 // URL for Keccak circuit repeated for 2 times
 pub const KECCAK_M31_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/keccak_2_circuit.txt";
@@ -19,6 +22,9 @@ pub const POSEIDON_CIRCUIT: &str = "data/poseidon_120_circuit.txt";
 // URL for Poseidon circuit repeated for 120 times
 pub const POSEIDON_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/poseidon_120_circuit.txt";
+
+pub const PAPER_CIRCUIT : &str = "data/paper_circuit.txt";
+
 
 // NOTE(Hang 08/23/24):
 // CI process is unhappy about reqwest as a dependency,

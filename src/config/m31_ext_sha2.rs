@@ -1,4 +1,4 @@
-use arith::{ExtensionField, M31Ext3, M31Ext3x16, M31x16, M31};
+use arith::{ExtensionField, M31Ext3, M31Ext3x16, M31x16, SimdField, M31};
 
 use crate::SHA256hasher;
 
@@ -10,11 +10,11 @@ pub struct M31ExtConfigSha2;
 impl GKRConfig for M31ExtConfigSha2 {
     type CircuitField = M31;
 
-    type SimdCircuitField = M31x16;
+    type SimdCircuitField = M31;
 
     type ChallengeField = M31Ext3;
 
-    type Field = M31Ext3x16;
+    type Field = M31Ext3;
 
     type FiatShamirHashType = SHA256hasher;
 
@@ -32,7 +32,8 @@ impl GKRConfig for M31ExtConfigSha2 {
     fn field_mul_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
         // directly multiply M31Ext3 with M31
         // skipping the conversion M31 -> M31Ext3
-        *a * *b
+        let b_ext = M31Ext3::from(*b);
+        a.scale(&b_ext)
     }
 
     #[inline(always)]

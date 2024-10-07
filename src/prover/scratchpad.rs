@@ -21,17 +21,19 @@ impl<C: GKRConfig> GkrScratchpad<C> {
     pub(crate) fn new(max_num_input_var: usize, max_num_output_var: usize) -> Self {
         let max_input_num = 1 << max_num_input_var;
         let max_output_num = 1 << max_num_output_var;
+        let sqrt_output_num = 1 << (max_num_output_var / 2 + 1);
+        println!("max_input_num: {}, max_output_num: {}, sqrt_output_num: {}", max_input_num, max_output_num, sqrt_output_num);
         GkrScratchpad {
             v_evals: vec![C::Field::default(); max_input_num],
-            hg_evals_5: vec![C::ChallengeField::default(); max_input_num],
-            hg_evals_1: vec![C::ChallengeField::default(); max_input_num],
+            hg_evals_5: vec![C::ChallengeField::default(); 1],
+            hg_evals_1: vec![C::ChallengeField::default(); 1],
             hg_evals: vec![C::Field::default(); max_input_num],
 
             eq_evals_at_rx: vec![C::ChallengeField::default(); max_input_num],
             eq_evals_at_rz0: vec![C::ChallengeField::default(); max_output_num],
             eq_evals_at_rz1: vec![C::ChallengeField::default(); max_output_num],
-            eq_evals_first_half: vec![C::ChallengeField::default(); max_output_num],
-            eq_evals_second_half: vec![C::ChallengeField::default(); max_output_num],
+            eq_evals_first_half: vec![C::ChallengeField::default(); sqrt_output_num],
+            eq_evals_second_half: vec![C::ChallengeField::default(); sqrt_output_num],
 
             gate_exists_5: vec![false; max_input_num],
             gate_exists_1: vec![false; max_input_num],

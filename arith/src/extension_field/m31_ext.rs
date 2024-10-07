@@ -6,13 +6,25 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{field_common, mod_reduce_u32, Field, FieldSerde, FieldSerdeResult, M31};
+use crate::{field_common, mod_reduce_u32, Field, FieldSerde, FieldSerdeResult, SimdField, M31};
 
 use super::ExtensionField;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct M31Ext3 {
     pub v: [M31; 3],
+}
+
+impl SimdField for M31Ext3 {
+    type Scalar = M31Ext3;
+
+    fn pack_size() -> usize {
+        1
+    }
+
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
+        *self * *challenge
+    }
 }
 
 field_common!(M31Ext3);

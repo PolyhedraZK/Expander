@@ -9,7 +9,7 @@ pub mod m31_neon;
 
 use rand::RngCore;
 
-use crate::{field_common, Field, FieldForECC, FieldSerde, FieldSerdeResult};
+use crate::{field_common, Field, FieldForECC, FieldSerde, FieldSerdeResult, SimdField};
 use std::{
     io::{Read, Write},
     iter::{Product, Sum},
@@ -33,6 +33,18 @@ fn mod_reduce_i64(x: i64) -> i64 {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct M31 {
     pub v: u32,
+}
+
+impl SimdField for M31 {
+    type Scalar = M31;
+
+    fn pack_size() -> usize {
+        1
+    }
+
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
+        *self * *challenge
+    }
 }
 
 field_common!(M31);

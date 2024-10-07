@@ -2,7 +2,7 @@ use std::{
     fs,
     io::Cursor,
     process::exit,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex}, thread,
 };
 
 use arith::{Field, FieldSerde};
@@ -11,7 +11,9 @@ use expander_rs::{
     Prover, Verifier, SENTINEL_BN254, SENTINEL_M31,
 };
 use log::{debug, info};
+use tokio::task;
 use warp::{http::StatusCode, reply, Filter};
+const THREAD: usize = 1;
 
 fn dump_proof_and_claimed_v<F: Field + FieldSerde>(proof: &Proof, claimed_v: &F) -> Vec<u8> {
     let mut bytes = Vec::new();
@@ -56,13 +58,23 @@ async fn run_command<C: GKRConfig>(
             let witness_file = &args[3];
             let output_file = &args[4];
             let mut circuit = Circuit::<C>::load_circuit(circuit_file);
+            println!("Circuit loaded.");
+            let start_time = std::time::Instant::now();
             circuit.load_witness_file(witness_file);
+            println!("Witness loaded. {:?}", start_time.elapsed());
             circuit.evaluate();
+            println!("evaluate circuit. {:?}", start_time.elapsed());
             let mut prover = Prover::new(&config);
+            println!("Prover created.{:?}", start_time.elapsed());
             prover.prepare_mem(&circuit);
+            println!("Prover prepared.{:?}", start_time.elapsed());
             let (claimed_v, proof) = prover.prove(&mut circuit);
             let bytes = dump_proof_and_claimed_v(&proof, &claimed_v);
+            let elapsed = start_time.elapsed();
+            println!("Proof finished: {:.2?}", elapsed);
             fs::write(output_file, bytes).expect("Unable to write proof to file.");
+            let elapsed2 = start_time.elapsed();
+            println!("Proof File saved: {:.2?}", elapsed2);
         }
         "verify" => {
             let witness_file = &args[3];
@@ -101,19 +113,38 @@ async fn run_command<C: GKRConfig>(
                     .and(warp::body::bytes())
                     .map(move |bytes: bytes::Bytes| {
                         info!("Received prove request.");
+                        println!("Received prove request.");
+                        let start_time = std::time::Instant::now();
                         let witness_bytes: Vec<u8> = bytes.to_vec();
                         let mut circuit = circuit.lock().unwrap();
+                        circuit.set_random_input_for_test();
+                        println!("load witness. {:?}", start_time.elapsed());
+                        circuit.evaluate();
+                        println!("evaluate circuit. {:?}", start_time.elapsed());
                         let mut prover = prover.lock().unwrap();
-                        if circuit.load_witness_bytes(&witness_bytes).is_err() {
-                            reply::with_status(vec![], StatusCode::BAD_REQUEST)
-                        } else {
-                            circuit.evaluate();
-                            let (claimed_v, proof) = prover.prove(&mut circuit);
-                            reply::with_status(
-                                dump_proof_and_claimed_v(&proof, &claimed_v),
-                                StatusCode::OK,
-                            )
-                        }
+                        let (claimed_v, proof) = prover.prove(&mut circuit);
+                        let elapsed = start_time.elapsed();
+                        println!("Proof finished: {:.2?}", elapsed);
+                        reply::with_status(
+                            dump_proof_and_claimed_v(&proof, &claimed_v),
+                            StatusCode::OK,
+                        )
+                        // if circuit.load_witness_bytes(&witness_bytes).is_err() {
+                        //     reply::with_status(vec![], StatusCode::BAD_REQUEST)
+                        // } else {
+                        //     println!("load witness. {:?}", start_time.elapsed());
+                        //     let start_time2 = std::time::Instant::now();
+                        //     circuit.evaluate();
+                        //     let start_time3 = std::time::Instant::now();
+                        //     println!("evaluate circuit. {:?}, from load: {:?}", start_time.elapsed(), start_time2.elapsed());
+                        //     prover.prove(&mut circuit);
+                        //     println!("Proof finished: {:.2?}, from load: {:?}, from evaluate {:?}",  start_time.elapsed(), start_time2.elapsed(), start_time3.elapsed());
+                        //     reply::with_status(vec![], StatusCode::BAD_REQUEST)
+                        //     // reply::with_status(
+                        //     //     dump_proof_and_claimed_v(&proof, &claimed_v),
+                        //     //     StatusCode::OK,
+                        //     // )
+                        // }
                     });
             let verify =
                 warp::path("verify")
@@ -137,10 +168,14 @@ async fn run_command<C: GKRConfig>(
                         if circuit.load_witness_bytes(witness_bytes).is_err() {
                             "failure".to_string()
                         } else {
+                            let start_time = std::time::Instant::now();
                             let (proof, claimed_v) = load_proof_and_claimed_v(proof_bytes);
+                            println!("load proof. {:?}", start_time.elapsed());
                             if verifier.verify(&mut circuit, &claimed_v, &proof) {
+                                println!("verify success. {:?}", start_time.elapsed());
                                 "success".to_string()
                             } else {
+                                println!("verify failure. {:?}", start_time.elapsed());
                                 "failure".to_string()
                             }
                         }
@@ -181,8 +216,10 @@ async fn main() {
     let circuit_file = &args[2];
     let field_type = detect_field_type_from_circuit_file(circuit_file);
     debug!("field type: {:?}", field_type);
+    println!("field type: {:?}", field_type);
     match field_type {
         FieldType::M31 => {
+            println!("inside m31");
             run_command::<M31ExtConfigSha2>(
                 command,
                 circuit_file,
@@ -202,4 +239,56 @@ async fn main() {
         }
         _ => unreachable!(),
     }
+    // let start_time = std::time::Instant::now();
+    // match field_type {
+    //     FieldType::M31 => {
+    //         println!("inside m31");
+    //         for _ in 0..THREAD {
+    //             let command = command.to_string();
+    //             let circuit_file = circuit_file.to_string();
+    //             let new_args = args.clone();
+    //             let handle = task::spawn({
+    //                 async move {
+    //                     // bench func
+    //                     run_command::<M31ExtConfigSha2>(
+    //                         &command,
+    //                         &circuit_file,
+    //                         Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla),
+    //                         &new_args,
+    //                     ).await;
+    //                 }
+    //             });
+    //             handles.push(handle);
+    //         }
+    //         for handle in handles {
+    //             handle.await.unwrap(); 
+    //         }
+    //     }
+    //     FieldType::BN254 => {
+    //         println!("inside bn254");
+    //         for _ in 0..THREAD {
+    //             let command = command.to_string();
+    //             let circuit_file = circuit_file.to_string();
+    //             let new_args = args.clone();
+    //             let handle = task::spawn({
+    //                 async move {
+    //                     // bench func
+    //                     run_command::<BN254ConfigSha2>(
+    //                         &command,
+    //                         &circuit_file,
+    //                         Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla),
+    //                         &new_args,
+    //                     ).await;
+    //                 }
+    //             });
+    //             handles.push(handle);
+    //         }
+    //         for handle in handles {
+    //             handle.await.unwrap(); 
+    //         }
+    //     }
+    //     _ => unreachable!(),
+    // }
+    // let elapsed = start_time.elapsed();
+    // println!("Elapsed: {:.2?}", elapsed);
 }
