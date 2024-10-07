@@ -5,16 +5,16 @@ use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use config::{GKRConfig, MPIConfig};
 use sumcheck::{sumcheck_prove_gkr_layer, GkrScratchpad};
-use transcript::{Transcript, TranscriptInstance};
+use transcript::Transcript;
 
 use crate::MultiLinearPoly;
 
 // FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_prove<C: GKRConfig>(
+pub fn gkr_prove<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     circuit: &Circuit<C>,
     sp: &mut GkrScratchpad<C>,
-    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
+    transcript: &mut T,
     mpi_config: &MPIConfig,
 ) -> (
     C::ChallengeField,
@@ -31,15 +31,15 @@ pub fn gkr_prove<C: GKRConfig>(
     let mut r_simd = vec![];
     let mut r_mpi = vec![];
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.generate_challenge::<C::ChallengeField>());
+        rz0.push(transcript.generate_challenge_field_element());
     }
 
     for _ in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.generate_challenge::<C::ChallengeField>());
+        r_simd.push(transcript.generate_challenge_field_element());
     }
 
     for _ in 0..mpi_config.world_size().trailing_zeros() {
-        r_mpi.push(transcript.generate_challenge::<C::ChallengeField>());
+        r_mpi.push(transcript.generate_challenge_field_element());
     }
 
     let mut alpha = C::ChallengeField::one();
@@ -82,13 +82,13 @@ pub fn gkr_prove<C: GKRConfig>(
             sp,
             mpi_config,
         );
-        alpha = transcript.generate_challenge::<C::ChallengeField>();
+        alpha = transcript.generate_challenge_field_element();
 
         mpi_config.root_broadcast(&mut alpha);
 
         if rz1.is_some() {
             // TODO: try broadcast beta.unwrap directly
-            let mut tmp = transcript.generate_challenge::<C::ChallengeField>();
+            let mut tmp = transcript.generate_challenge_field_element();
             mpi_config.root_broadcast(&mut tmp);
             beta = Some(tmp)
         } else {

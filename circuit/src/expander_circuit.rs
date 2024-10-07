@@ -1,11 +1,10 @@
-use std::fs;
+use std::{any::TypeId, fs};
 use std::io::Cursor;
 
-use arith::{Field, SimdField};
+use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
 use config::GKRConfig;
 use transcript::Transcript;
-use transcript::TranscriptInstance;
 
 use crate::*;
 
@@ -243,12 +242,25 @@ impl<C: GKRConfig> Circuit<C> {
         self.rnd_coefs_identified = true;
     }
 
-    pub fn fill_rnd_coefs(&mut self, transcript: &mut TranscriptInstance<C::FiatShamirHashType>) {
+    pub fn fill_rnd_coefs<T: Transcript<C::ChallengeField>>(&mut self, transcript: &mut T) {
         assert!(self.rnd_coefs_identified);
-        for &rnd_coef_ptr in &self.rnd_coefs {
-            unsafe {
-                *rnd_coef_ptr = transcript.generate_challenge::<C::CircuitField>();
+
+        if TypeId::of::<C::ChallengeField>() == TypeId::of::<C::CircuitField>() { 
+            for &rnd_coef_ptr in &self.rnd_coefs {
+                unsafe {
+                    *(rnd_coef_ptr as *mut C::ChallengeField) = transcript.generate_challenge_field_element();
+                }
             }
+        } else {
+            let n_bytes_required = C::CircuitField::SIZE * self.rnd_coefs.len();
+            let challenge_bytes = transcript.generate_challenge_u8_slice(n_bytes_required);
+            let mut cursor = Cursor::new(challenge_bytes);
+    
+            for &rnd_coef_ptr in &self.rnd_coefs {
+                unsafe {
+                    *rnd_coef_ptr = C::CircuitField::deserialize_from(&mut cursor).unwrap();
+                }
+            }    
         }
     }
 

@@ -6,7 +6,6 @@ mod m31_ext_keccak;
 mod m31_ext_sha2;
 
 use arith::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
-use transcript::FiatShamirHash;
 
 pub use bn254_keccak::BN254ConfigKeccak;
 pub use bn254_sha2::BN254ConfigSha2;
@@ -48,7 +47,7 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + FieldSerde + Send;
 
     /// Fiat Shamir hash type
-    type FiatShamirHashType: FiatShamirHash;
+    const FIAT_SHAMIR_HASH: FiatShamirHashType;
 
     /// Enum type for Self::Field
     const FIELD_TYPE: FieldType;

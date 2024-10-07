@@ -2,7 +2,7 @@ use tiny_keccak::{Hasher, Sha3};
 
 use super::FiatShamirBytesHash;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Keccak256hasher {}
 
 impl FiatShamirBytesHash for Keccak256hasher {

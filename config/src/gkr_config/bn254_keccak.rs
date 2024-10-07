@@ -1,7 +1,7 @@
 use halo2curves::bn256::Fr;
 use transcript::Keccak256hasher;
 
-use super::{FieldType, GKRConfig};
+use super::{FieldType, GKRConfig, FiatShamirHashType};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BN254ConfigKeccak;
@@ -15,7 +15,7 @@ impl GKRConfig for BN254ConfigKeccak {
 
     type SimdCircuitField = Fr;
 
-    type FiatShamirHashType = Keccak256hasher;
+    const FIAT_SHAMIR_HASH: FiatShamirHashType = FiatShamirHashType::Keccak256;
 
     const FIELD_TYPE: FieldType = FieldType::BN254;
 

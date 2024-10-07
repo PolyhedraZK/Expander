@@ -6,7 +6,7 @@ pub use sha2_256::*;
 pub mod keccak_256;
 pub use keccak_256::*;
 
-pub trait FiatShamirBytesHash {
+pub trait FiatShamirBytesHash: Default {
     /// The size of the hash output in bytes.
     const DIGEST_SIZE: usize;
 
@@ -21,7 +21,7 @@ pub trait FiatShamirBytesHash {
 }
 
 
-pub trait FiatShamirFieldHash<F: Field + FieldSerde> {
+pub trait FiatShamirFieldHash<F: Field + FieldSerde>: Default {
     /// Create a new hash instance.
     fn new() -> Self;
 

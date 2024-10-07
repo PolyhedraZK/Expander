@@ -2,7 +2,7 @@ use arith::ExtensionField;
 use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
 use transcript::SHA256hasher;
 
-use super::{FieldType, GKRConfig};
+use super::{FieldType, GKRConfig, FiatShamirHashType};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct M31ExtConfigSha2;
@@ -16,7 +16,7 @@ impl GKRConfig for M31ExtConfigSha2 {
 
     type Field = M31Ext3x16;
 
-    type FiatShamirHashType = SHA256hasher;
+    const FIAT_SHAMIR_HASH: FiatShamirHashType = FiatShamirHashType::SHA256;
 
     const FIELD_TYPE: FieldType = FieldType::M31;
 

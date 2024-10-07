@@ -34,23 +34,31 @@ pub trait Transcript<F: Field + FieldSerde> {
     /// Produce the proof
     /// It is not recommended to append/challenge after calling this function
     fn finalize_and_get_proof(&self) -> Proof;
+
+    /// Return current state of the transcript
+    /// Note: this may incur an additional hash to shrink the state
+    fn state(&mut self) -> Vec<u8>;
+
+    /// Set the state 
+    /// Note: Any unhashed data will be discarded
+    fn set_state(&mut self, state: &[u8]);
 }
 
 #[derive(Clone, Default, Debug, PartialEq)]
-pub struct BytesHashTranscript<H: FiatShamirBytesHash> {
-    phantom: PhantomData<H>,
+pub struct BytesHashTranscript<F: Field + FieldSerde, H: FiatShamirBytesHash> {
+    phantom: PhantomData<(F, H)>,
 
     /// The digest bytes.
     pub digest: Vec<u8>,
 
     /// The proof bytes.
-    pub proof: Proof,
+    proof: Proof,
 
     /// The pointer to the proof bytes indicating where the hash starts.
     hash_start_index: usize,
 }
 
-impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<H> {
+impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, H> {
     fn new() -> Self {
         Self {
             phantom: PhantomData,
@@ -96,9 +104,19 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashT
         self.proof.clone()
     }
 
+    fn state(&mut self) -> Vec<u8> {
+        self.hash_to_digest();
+        self.digest.clone()
+    }
+
+    fn set_state(&mut self, state: &[u8]) {
+        self.hash_start_index = self.proof.bytes.len(); // discard unhashed data
+        assert!(state.len() == H::DIGEST_SIZE);
+        self.digest = state.to_vec();
+    }
 }
 
-impl<H: FiatShamirBytesHash> BytesHashTranscript<H> {
+impl<F: Field + FieldSerde, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
     /// Hash the input into the output.
     pub fn hash_to_digest(&mut self) {
         let hash_end_index = self.proof.bytes.len();
@@ -119,33 +137,96 @@ pub struct FieldHashTranscript<F: Field+FieldSerde, H: FiatShamirFieldHash<F>> {
     phantom: PhantomData<(F, H)>,
 
     /// The digest bytes.
-    pub digest: Vec<u8>,
+    pub digest: F,
 
     /// The proof bytes.
-    pub proof: Proof,
+    pub data_pool: Vec<F>,
 
     /// The pointer to the proof bytes indicating where the hash starts.
     hash_start_index: usize,
 }
 
-impl <F: Field+FieldSerde, H: FiatShamirFieldHash<F>> Transcript for FieldHashTranscript<F, H> {
+impl <F: Field+FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<F, H> {
+    
+    #[inline(always)]
     fn new() -> Self {
-        todo!()
+        Self::default()
     }
 
     fn append_field_element(&mut self, f: &F) {
-        todo!()
+        self.data_pool.push(*f);
     }
 
     fn append_u8_slice(&mut self, buffer: &[u8]) {
-        todo!()
-    }
+        let buffer_size = buffer.len();
+        let mut cur = 0;
+        while cur + 32 <= buffer_size {
+            self.data_pool.push(F::from_uniform_bytes(buffer[cur..cur+32].try_into().unwrap()));
+            cur += 32
+        }
 
-    fn generate_challenge(&mut self) -> F {
-        todo!()
+        if cur < buffer_size {
+            let mut buffer_last = buffer[cur..].to_vec();
+            buffer_last.resize(32, 0);
+            self.data_pool.push(F::from_uniform_bytes(buffer_last[..].try_into().unwrap()));
+        }
+    }
+    
+    fn generate_challenge_field_element(&mut self) -> F {
+        self.hash_to_digest();
+        self.digest
+    }
+    
+    fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
+        let mut bytes = vec![];
+        let mut buf = vec![];
+        while bytes.len() < n_bytes {
+            self.hash_to_digest();
+            self.digest.serialize_into(&mut buf).unwrap();
+            bytes.extend_from_slice(&buf);
+        }
+        bytes.resize(n_bytes, 0);
+        bytes
     }
 
     fn finalize_and_get_proof(&self) -> Proof {
-        todo!()
+        let proof_bytes = 
+            self.data_pool.iter()
+                      .map(|f| {
+                        let mut buf = vec![];
+                        f.serialize_into(&mut buf).unwrap();
+                        buf
+                      })
+                      .flatten()
+                      .collect();
+        
+        let mut proof = Proof::default();
+        proof.bytes = proof_bytes;
+        proof
+    }
+
+    fn state(&mut self) -> Vec<u8> {
+        self.hash_to_digest();
+        let mut state = vec![];
+        self.digest.serialize_into(&mut state).unwrap();
+        state
+    }
+
+    fn set_state(&mut self, state: &[u8]) {
+        self.hash_start_index = self.data_pool.len(); // discard unhashed data
+        self.digest = F::deserialize_from(state).unwrap();
+    }
+}
+
+impl <F: Field+FieldSerde, H: FiatShamirFieldHash<F>> FieldHashTranscript<F, H> {
+
+    pub fn hash_to_digest(&mut self) {
+        let hash_end_index = self.data_pool.len();
+        if hash_end_index > self.hash_start_index {
+            self.digest = H::hash(&self.data_pool[self.hash_start_index..hash_end_index]);
+            self.hash_start_index = hash_end_index;
+        } else {
+            self.digest = H::hash(&[self.digest]);
+        }
     }
 }

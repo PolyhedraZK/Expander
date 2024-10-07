@@ -1,13 +1,13 @@
 use std::fmt::Debug;
 
-use arith::Field;
+use arith::{Field, FieldSerde};
 use mpi::{
     environment::Universe,
     ffi,
     topology::{Process, SimpleCommunicator},
     traits::*,
 };
-use transcript::{FiatShamirHash, TranscriptInstance};
+use transcript::Transcript;
 
 #[macro_export]
 macro_rules! root_println {
@@ -157,11 +157,16 @@ impl MPIConfig {
     }
 
     /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
-    pub fn transcript_sync_up<H: FiatShamirHash>(&self, transcript: &mut TranscriptInstance<H>) {
+    pub fn transcript_sync_up<F, T>(&self, transcript: &mut T) 
+    where 
+        F: Field + FieldSerde,
+        T: Transcript<F>, 
+    {
         if self.world_size == 1 {
         } else {
-            transcript.hash_to_digest();
-            self.root_process().broadcast_into(&mut transcript.digest);
+            let mut state = transcript.state();
+            self.root_process().broadcast_into(&mut state);
+            transcript.set_state(&state);
         }
     }
 
