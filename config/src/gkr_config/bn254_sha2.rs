@@ -1,5 +1,4 @@
 use halo2curves::bn256::Fr;
-use transcript::SHA256hasher;
 
 use super::{FiatShamirHashType, FieldType, GKRConfig};
 

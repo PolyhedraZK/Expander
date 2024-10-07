@@ -82,7 +82,7 @@ pub fn get_constants<F: Field>(seed: &str, n_rounds: i64) -> Vec<F> {
 
         // big endian -> little endian, in order to match the one in gnark
         // or probably we can change the implementation there
-        let mut h_reverse = h.clone();
+        let mut h_reverse = h;
         h_reverse.reverse();
 
         cts.push(F::from_uniform_bytes(&h_reverse));

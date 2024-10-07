@@ -202,12 +202,11 @@ impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHa
         let proof_bytes = self
             .data_pool
             .iter()
-            .map(|f| {
+            .flat_map(|f| {
                 let mut buf = vec![];
                 f.serialize_into(&mut buf).unwrap();
                 buf
             })
-            .flatten()
             .collect();
 
         let mut proof = Proof::default();
