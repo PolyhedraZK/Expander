@@ -6,6 +6,9 @@ pub use sha2_256::*;
 pub mod keccak_256;
 pub use keccak_256::*;
 
+pub mod mimc;
+pub use mimc::*;
+
 pub trait FiatShamirBytesHash: Default {
     /// The size of the hash output in bytes.
     const DIGEST_SIZE: usize;
@@ -26,5 +29,5 @@ pub trait FiatShamirFieldHash<F: Field + FieldSerde>: Default {
     fn new() -> Self;
 
     /// hash a vector of field element and return the hash result
-    fn hash(input: &[F]) -> F;
+    fn hash(&self, input: &[F]) -> F;
 }

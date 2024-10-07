@@ -5,7 +5,7 @@ use std::time::Instant;
 use arith::Field;
 use circuit::Circuit;
 use config::{
-    root_println, BN254ConfigKeccak, BN254ConfigSha2, Config, FieldType, GF2ExtConfigKeccak,
+    root_println, BN254ConfigKeccak, BN254ConfigSha2, BN254ConfigMIMC5, Config, FieldType, GF2ExtConfigKeccak,
     GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigKeccak, M31ExtConfigSha2, MPIConfig,
 };
 use rand::Rng;
@@ -38,6 +38,10 @@ fn test_gkr_correctness() {
         mpi_config.clone(),
     ));
     test_gkr_correctness_helper::<BN254ConfigKeccak>(&Config::<BN254ConfigKeccak>::new(
+        GKRScheme::Vanilla,
+        mpi_config.clone(),
+    ));
+    test_gkr_correctness_helper::<BN254ConfigMIMC5>(&Config::<BN254ConfigMIMC5>::new(
         GKRScheme::Vanilla,
         mpi_config.clone(),
     ));

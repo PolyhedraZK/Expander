@@ -134,7 +134,9 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct FieldHashTranscript<F: Field+FieldSerde, H: FiatShamirFieldHash<F>> {
-    phantom: PhantomData<(F, H)>,
+
+    /// Internal hasher
+    pub hasher: H,
 
     /// The digest bytes.
     pub digest: F,
@@ -150,7 +152,10 @@ impl <F: Field+FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHas
     
     #[inline(always)]
     fn new() -> Self {
-        Self::default()
+        Self {
+            hasher: H::new(),
+            ..Default::default()
+        }
     }
 
     fn append_field_element(&mut self, f: &F) {
@@ -223,10 +228,10 @@ impl <F: Field+FieldSerde, H: FiatShamirFieldHash<F>> FieldHashTranscript<F, H> 
     pub fn hash_to_digest(&mut self) {
         let hash_end_index = self.data_pool.len();
         if hash_end_index > self.hash_start_index {
-            self.digest = H::hash(&self.data_pool[self.hash_start_index..hash_end_index]);
+            self.digest = self.hasher.hash(&self.data_pool[self.hash_start_index..hash_end_index]);
             self.hash_start_index = hash_end_index;
         } else {
-            self.digest = H::hash(&[self.digest]);
+            self.digest = self.hasher.hash(&[self.digest]);
         }
     }
 }

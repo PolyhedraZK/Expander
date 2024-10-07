@@ -5,7 +5,7 @@ use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
 use config::{Config, FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
-use transcript::{BytesHashTranscript, Keccak256hasher, Proof, SHA256hasher, Transcript};
+use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, Proof, SHA256hasher, Transcript};
 
 #[cfg(feature = "grinding")]
 use crate::grind;
@@ -326,6 +326,10 @@ impl<C: GKRConfig> Verifier<C> {
             }
             FiatShamirHashType::SHA256 => {
                 let mut transcript = BytesHashTranscript::<C::ChallengeField, SHA256hasher>::new();
+                self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
+            }
+            FiatShamirHashType::MIMC5 => {
+                let mut transcript = FieldHashTranscript::<C::ChallengeField, MIMCHasher<C::ChallengeField>>::new();
                 self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
             }
             _ => unreachable!()

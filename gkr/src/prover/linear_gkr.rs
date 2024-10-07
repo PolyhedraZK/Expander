@@ -4,7 +4,7 @@ use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use config::{Config, GKRConfig, GKRScheme, PolynomialCommitmentType, FiatShamirHashType};
 use sumcheck::GkrScratchpad;
-use transcript::{BytesHashTranscript, Keccak256hasher, Proof, SHA256hasher, Transcript};
+use transcript::{Transcript, BytesHashTranscript, FieldHashTranscript, Keccak256hasher, Proof, SHA256hasher, MIMCHasher};
 
 use crate::{gkr_prove, gkr_square_prove, RawCommitment};
 
@@ -132,6 +132,10 @@ impl<C: GKRConfig> Prover<C> {
             }
             FiatShamirHashType::SHA256 => {
                 let mut transcript = BytesHashTranscript::<C::ChallengeField, SHA256hasher>::new();
+                self.prove_internal(c, &mut transcript)
+            }
+            FiatShamirHashType::MIMC5 => {
+                let mut transcript: FieldHashTranscript<<C as GKRConfig>::ChallengeField, _> = FieldHashTranscript::<C::ChallengeField, MIMCHasher<C::ChallengeField>>::new();
                 self.prove_internal(c, &mut transcript)
             }
             _ => unreachable!()
