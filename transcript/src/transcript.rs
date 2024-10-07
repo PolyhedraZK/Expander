@@ -2,7 +2,10 @@ use std::marker::PhantomData;
 
 use arith::{Field, FieldSerde};
 
-use crate::{fiat_shamir_hash::{FiatShamirBytesHash, FiatShamirFieldHash}, Proof};
+use crate::{
+    fiat_shamir_hash::{FiatShamirBytesHash, FiatShamirFieldHash},
+    Proof,
+};
 
 pub trait Transcript<F: Field + FieldSerde> {
     /// Create a new transcript.
@@ -10,7 +13,7 @@ pub trait Transcript<F: Field + FieldSerde> {
 
     /// Append a field element to the transcript.
     fn append_field_element(&mut self, f: &F);
-    
+
     /// Append a slice of bytes
     fn append_u8_slice(&mut self, buffer: &[u8]);
 
@@ -39,7 +42,7 @@ pub trait Transcript<F: Field + FieldSerde> {
     /// Note: this may incur an additional hash to shrink the state
     fn state(&mut self) -> Vec<u8>;
 
-    /// Set the state 
+    /// Set the state
     /// Note: Any unhashed data will be discarded
     fn set_state(&mut self, state: &[u8]);
 }
@@ -133,8 +136,7 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
 }
 
 #[derive(Clone, Default, Debug, PartialEq)]
-pub struct FieldHashTranscript<F: Field+FieldSerde, H: FiatShamirFieldHash<F>> {
-
+pub struct FieldHashTranscript<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> {
     /// Internal hasher
     pub hasher: H,
 
@@ -148,8 +150,7 @@ pub struct FieldHashTranscript<F: Field+FieldSerde, H: FiatShamirFieldHash<F>> {
     hash_start_index: usize,
 }
 
-impl <F: Field+FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<F, H> {
-    
+impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<F, H> {
     #[inline(always)]
     fn new() -> Self {
         Self {
@@ -166,22 +167,25 @@ impl <F: Field+FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHas
         let buffer_size = buffer.len();
         let mut cur = 0;
         while cur + 32 <= buffer_size {
-            self.data_pool.push(F::from_uniform_bytes(buffer[cur..cur+32].try_into().unwrap()));
+            self.data_pool.push(F::from_uniform_bytes(
+                buffer[cur..cur + 32].try_into().unwrap(),
+            ));
             cur += 32
         }
 
         if cur < buffer_size {
             let mut buffer_last = buffer[cur..].to_vec();
             buffer_last.resize(32, 0);
-            self.data_pool.push(F::from_uniform_bytes(buffer_last[..].try_into().unwrap()));
+            self.data_pool
+                .push(F::from_uniform_bytes(buffer_last[..].try_into().unwrap()));
         }
     }
-    
+
     fn generate_challenge_field_element(&mut self) -> F {
         self.hash_to_digest();
         self.digest
     }
-    
+
     fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
         let mut bytes = vec![];
         let mut buf = vec![];
@@ -195,16 +199,17 @@ impl <F: Field+FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHas
     }
 
     fn finalize_and_get_proof(&self) -> Proof {
-        let proof_bytes = 
-            self.data_pool.iter()
-                      .map(|f| {
-                        let mut buf = vec![];
-                        f.serialize_into(&mut buf).unwrap();
-                        buf
-                      })
-                      .flatten()
-                      .collect();
-        
+        let proof_bytes = self
+            .data_pool
+            .iter()
+            .map(|f| {
+                let mut buf = vec![];
+                f.serialize_into(&mut buf).unwrap();
+                buf
+            })
+            .flatten()
+            .collect();
+
         let mut proof = Proof::default();
         proof.bytes = proof_bytes;
         proof
@@ -223,12 +228,13 @@ impl <F: Field+FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHas
     }
 }
 
-impl <F: Field+FieldSerde, H: FiatShamirFieldHash<F>> FieldHashTranscript<F, H> {
-
+impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> FieldHashTranscript<F, H> {
     pub fn hash_to_digest(&mut self) {
         let hash_end_index = self.data_pool.len();
         if hash_end_index > self.hash_start_index {
-            self.digest = self.hasher.hash(&self.data_pool[self.hash_start_index..hash_end_index]);
+            self.digest = self
+                .hasher
+                .hash(&self.data_pool[self.hash_start_index..hash_end_index]);
             self.hash_start_index = hash_end_index;
         } else {
             self.digest = self.hasher.hash(&[self.digest]);

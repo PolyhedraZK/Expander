@@ -157,10 +157,10 @@ impl MPIConfig {
     }
 
     /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
-    pub fn transcript_sync_up<F, T>(&self, transcript: &mut T) 
-    where 
+    pub fn transcript_sync_up<F, T>(&self, transcript: &mut T)
+    where
         F: Field + FieldSerde,
-        T: Transcript<F>, 
+        T: Transcript<F>,
     {
         if self.world_size == 1 {
         } else {

@@ -15,10 +15,10 @@ pub struct MIMCHasher<F: Field> {
     constants: MIMCConstants<F>,
 }
 
-impl<F: Field+FieldSerde> FiatShamirFieldHash<F> for MIMCHasher<F> {
+impl<F: Field + FieldSerde> FiatShamirFieldHash<F> for MIMCHasher<F> {
     fn new() -> Self {
         Self {
-            constants: generate_mimc_constants::<F>()
+            constants: generate_mimc_constants::<F>(),
         }
     }
 
@@ -32,10 +32,9 @@ impl<F: Field+FieldSerde> FiatShamirFieldHash<F> for MIMCHasher<F> {
     }
 }
 
-impl<F: Field+FieldSerde> MIMCHasher<F> {
-
+impl<F: Field + FieldSerde> MIMCHasher<F> {
     #[inline(always)]
-    pub fn pow5(x: F) -> F{
+    pub fn pow5(x: F) -> F {
         let x2 = x * x;
         let x4 = x2 * x2;
         x4 * x
@@ -51,7 +50,6 @@ impl<F: Field+FieldSerde> MIMCHasher<F> {
     }
 }
 
-
 const SEED: &str = "seed";
 pub fn generate_mimc_constants<F: Field>() -> MIMCConstants<F> {
     let mut keccak = Sha3::v256();
@@ -66,10 +64,7 @@ pub fn generate_mimc_constants<F: Field>() -> MIMCConstants<F> {
 
     let n_rounds: i64 = 110;
     let cts = get_constants(SEED, n_rounds);
-    MIMCConstants::<F> {
-        cts,
-        n_rounds,
-    }
+    MIMCConstants::<F> { cts, n_rounds }
 }
 
 pub fn get_constants<F: Field>(seed: &str, n_rounds: i64) -> Vec<F> {

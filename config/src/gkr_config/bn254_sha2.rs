@@ -1,7 +1,7 @@
 use halo2curves::bn256::Fr;
 use transcript::SHA256hasher;
 
-use super::{FieldType, GKRConfig, FiatShamirHashType};
+use super::{FiatShamirHashType, FieldType, GKRConfig};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BN254ConfigSha2;

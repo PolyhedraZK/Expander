@@ -2,9 +2,12 @@
 
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
-use config::{Config, GKRConfig, GKRScheme, PolynomialCommitmentType, FiatShamirHashType};
+use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use sumcheck::GkrScratchpad;
-use transcript::{Transcript, BytesHashTranscript, FieldHashTranscript, Keccak256hasher, Proof, SHA256hasher, MIMCHasher};
+use transcript::{
+    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, Proof, SHA256hasher,
+    Transcript,
+};
 
 use crate::{gkr_prove, gkr_square_prove, RawCommitment};
 
@@ -76,9 +79,14 @@ impl<C: GKRConfig> Prover<C> {
             self.config.mpi_config.world_size(),
         );
     }
-    
-    fn prove_internal<T>(&mut self, c: &mut Circuit<C>, transcript: &mut T) -> (C::ChallengeField, Proof)
-    where T: Transcript<C::ChallengeField>,
+
+    fn prove_internal<T>(
+        &mut self,
+        c: &mut Circuit<C>,
+        transcript: &mut T,
+    ) -> (C::ChallengeField, Proof)
+    where
+        T: Transcript<C::ChallengeField>,
     {
         let timer = start_timer!(|| "prove");
 
@@ -127,7 +135,8 @@ impl<C: GKRConfig> Prover<C> {
     pub fn prove(&mut self, c: &mut Circuit<C>) -> (C::ChallengeField, Proof) {
         match C::FIAT_SHAMIR_HASH {
             FiatShamirHashType::Keccak256 => {
-                let mut transcript = BytesHashTranscript::<C::ChallengeField, Keccak256hasher>::new();
+                let mut transcript =
+                    BytesHashTranscript::<C::ChallengeField, Keccak256hasher>::new();
                 self.prove_internal(c, &mut transcript)
             }
             FiatShamirHashType::SHA256 => {
@@ -135,10 +144,11 @@ impl<C: GKRConfig> Prover<C> {
                 self.prove_internal(c, &mut transcript)
             }
             FiatShamirHashType::MIMC5 => {
-                let mut transcript: FieldHashTranscript<<C as GKRConfig>::ChallengeField, _> = FieldHashTranscript::<C::ChallengeField, MIMCHasher<C::ChallengeField>>::new();
+                let mut transcript: FieldHashTranscript<<C as GKRConfig>::ChallengeField, _> =
+                    FieldHashTranscript::<C::ChallengeField, MIMCHasher<C::ChallengeField>>::new();
                 self.prove_internal(c, &mut transcript)
             }
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }

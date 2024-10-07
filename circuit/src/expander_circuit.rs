@@ -1,5 +1,5 @@
-use std::{any::TypeId, fs};
 use std::io::Cursor;
+use std::{any::TypeId, fs};
 
 use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
@@ -245,22 +245,23 @@ impl<C: GKRConfig> Circuit<C> {
     pub fn fill_rnd_coefs<T: Transcript<C::ChallengeField>>(&mut self, transcript: &mut T) {
         assert!(self.rnd_coefs_identified);
 
-        if TypeId::of::<C::ChallengeField>() == TypeId::of::<C::CircuitField>() { 
+        if TypeId::of::<C::ChallengeField>() == TypeId::of::<C::CircuitField>() {
             for &rnd_coef_ptr in &self.rnd_coefs {
                 unsafe {
-                    *(rnd_coef_ptr as *mut C::ChallengeField) = transcript.generate_challenge_field_element();
+                    *(rnd_coef_ptr as *mut C::ChallengeField) =
+                        transcript.generate_challenge_field_element();
                 }
             }
         } else {
             let n_bytes_required = C::CircuitField::SIZE * self.rnd_coefs.len();
             let challenge_bytes = transcript.generate_challenge_u8_slice(n_bytes_required);
             let mut cursor = Cursor::new(challenge_bytes);
-    
+
             for &rnd_coef_ptr in &self.rnd_coefs {
                 unsafe {
                     *rnd_coef_ptr = C::CircuitField::deserialize_from(&mut cursor).unwrap();
                 }
-            }    
+            }
         }
     }
 

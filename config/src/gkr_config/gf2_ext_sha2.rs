@@ -3,7 +3,7 @@ use gf2::{GF2x8, GF2};
 use gf2_128::{GF2_128x8, GF2_128};
 use transcript::SHA256hasher;
 
-use super::{FieldType, GKRConfig, FiatShamirHashType};
+use super::{FiatShamirHashType, FieldType, GKRConfig};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct GF2ExtConfigSha2;

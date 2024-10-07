@@ -1,5 +1,5 @@
-use circuit::CircuitLayer;
 use arith::FieldSerde;
+use circuit::CircuitLayer;
 use config::{GKRConfig, MPIConfig};
 use transcript::Transcript;
 

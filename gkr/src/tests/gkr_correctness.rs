@@ -5,8 +5,9 @@ use std::time::Instant;
 use arith::Field;
 use circuit::Circuit;
 use config::{
-    root_println, BN254ConfigKeccak, BN254ConfigSha2, BN254ConfigMIMC5, Config, FieldType, GF2ExtConfigKeccak,
-    GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigKeccak, M31ExtConfigSha2, MPIConfig,
+    root_println, BN254ConfigKeccak, BN254ConfigMIMC5, BN254ConfigSha2, Config, FieldType,
+    GF2ExtConfigKeccak, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigKeccak,
+    M31ExtConfigSha2, MPIConfig,
 };
 use rand::Rng;
 use sha2::Digest;

@@ -5,7 +5,10 @@ use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
 use config::{Config, FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
-use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, Proof, SHA256hasher, Transcript};
+use transcript::{
+    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, Proof, SHA256hasher,
+    Transcript,
+};
 
 #[cfg(feature = "grinding")]
 use crate::grind;
@@ -94,7 +97,8 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     GKRVerifierHelper::set_rx(&rx, sp);
 
     for _i_var in 0..simd_var_num {
-        verified &= verify_sumcheck_step::<C, T>(proof, 3, transcript, &mut sum, &mut r_simd_xy, sp);
+        verified &=
+            verify_sumcheck_step::<C, T>(proof, 3, transcript, &mut sum, &mut r_simd_xy, sp);
         // println!("{} simd var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_r_simd_xy(&r_simd_xy, sp);
@@ -112,8 +116,14 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     let vy_claim = if !layer.structure_info.max_degree_one {
         ry = Some(vec![]);
         for _i_var in 0..var_num {
-            verified &=
-                verify_sumcheck_step::<C, T>(proof, 2, transcript, &mut sum, ry.as_mut().unwrap(), sp);
+            verified &= verify_sumcheck_step::<C, T>(
+                proof,
+                2,
+                transcript,
+                &mut sum,
+                ry.as_mut().unwrap(),
+                sp,
+            );
             // println!("y {} var, verified? {}", _i_var, verified);
         }
         GKRVerifierHelper::set_ry(ry.as_ref().unwrap(), sp);
@@ -245,7 +255,7 @@ impl<C: GKRConfig> Verifier<C> {
         public_input: &[C::SimdCircuitField],
         claimed_v: &C::ChallengeField,
         proof: &Proof,
-        transcript: &mut T
+        transcript: &mut T,
     ) -> bool {
         let timer = start_timer!(|| "verify");
 
@@ -321,7 +331,8 @@ impl<C: GKRConfig> Verifier<C> {
     ) -> bool {
         match C::FIAT_SHAMIR_HASH {
             FiatShamirHashType::Keccak256 => {
-                let mut transcript = BytesHashTranscript::<C::ChallengeField, Keccak256hasher>::new();
+                let mut transcript =
+                    BytesHashTranscript::<C::ChallengeField, Keccak256hasher>::new();
                 self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
             }
             FiatShamirHashType::SHA256 => {
@@ -329,10 +340,11 @@ impl<C: GKRConfig> Verifier<C> {
                 self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
             }
             FiatShamirHashType::MIMC5 => {
-                let mut transcript = FieldHashTranscript::<C::ChallengeField, MIMCHasher<C::ChallengeField>>::new();
+                let mut transcript =
+                    FieldHashTranscript::<C::ChallengeField, MIMCHasher<C::ChallengeField>>::new();
                 self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
             }
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }

@@ -23,7 +23,6 @@ pub trait FiatShamirBytesHash: Default {
     fn hash_inplace(buffer: &mut [u8]);
 }
 
-
 pub trait FiatShamirFieldHash<F: Field + FieldSerde>: Default {
     /// Create a new hash instance.
     fn new() -> Self;

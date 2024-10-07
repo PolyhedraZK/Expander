@@ -1,7 +1,7 @@
 use halo2curves::bn256::Fr;
 use transcript::Keccak256hasher;
 
-use super::{FieldType, GKRConfig, FiatShamirHashType};
+use super::{FiatShamirHashType, FieldType, GKRConfig};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BN254ConfigKeccak;
