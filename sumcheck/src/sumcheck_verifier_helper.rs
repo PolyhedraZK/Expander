@@ -4,7 +4,7 @@ use arith::{ExtensionField, Field};
 use circuit::{Circuit, CircuitLayer, CoefType, GateAdd, GateConst, GateMul};
 use config::{Config, FieldType, GKRConfig};
 
-use crate::sumcheck_helper::{_eq_vec, eq_eval_at, unpack_and_combine};
+use crate::{sumcheck_helper::unpack_and_combine, EqPolynomial};
 
 pub struct VerifierScratchPad<C: GKRConfig> {
     // ====== for evaluating cst, add and mul ======
@@ -120,7 +120,7 @@ impl GKRVerifierHelper {
         r_mpi: &Vec<C::ChallengeField>,
         sp: &mut VerifierScratchPad<C>,
     ) {
-        eq_eval_at(
+        EqPolynomial::<C::ChallengeField>::eq_eval_at(
             rz0,
             alpha,
             &mut sp.eq_evals_at_rz0,
@@ -129,7 +129,7 @@ impl GKRVerifierHelper {
         );
 
         if beta.is_some() && rz1.is_some() {
-            eq_eval_at(
+            EqPolynomial::<C::ChallengeField>::eq_eval_at(
                 rz1.as_ref().unwrap(),
                 beta.as_ref().unwrap(),
                 &mut sp.eq_evals_at_rz1,
@@ -142,7 +142,7 @@ impl GKRVerifierHelper {
             }
         }
 
-        eq_eval_at(
+        EqPolynomial::<C::ChallengeField>::eq_eval_at(
             r_simd,
             &C::ChallengeField::ONE,
             &mut sp.eq_evals_at_r_simd,
@@ -150,7 +150,7 @@ impl GKRVerifierHelper {
             &mut sp.eq_evals_second_part,
         );
 
-        eq_eval_at(
+        EqPolynomial::<C::ChallengeField>::eq_eval_at(
             r_mpi,
             &C::ChallengeField::ONE,
             &mut sp.eq_evals_at_r_mpi,
@@ -247,7 +247,7 @@ impl GKRVerifierHelper {
 
     #[inline(always)]
     pub fn set_rx<C: GKRConfig>(rx: &[C::ChallengeField], sp: &mut VerifierScratchPad<C>) {
-        eq_eval_at(
+        EqPolynomial::<C::ChallengeField>::eq_eval_at(
             rx,
             &C::ChallengeField::ONE,
             &mut sp.eq_evals_at_rx,
@@ -261,7 +261,7 @@ impl GKRVerifierHelper {
         r_simd_xy: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
     ) {
-        sp.eq_r_simd_r_simd_xy = _eq_vec(unsafe { sp.r_simd.as_ref().unwrap() }, r_simd_xy);
+        sp.eq_r_simd_r_simd_xy = EqPolynomial::<C::ChallengeField>::eq_vec(unsafe { sp.r_simd.as_ref().unwrap() }, r_simd_xy);
     }
 
     #[inline(always)]
@@ -269,12 +269,12 @@ impl GKRVerifierHelper {
         r_mpi_xy: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
     ) {
-        sp.eq_r_mpi_r_mpi_xy = _eq_vec(unsafe { sp.r_mpi.as_ref().unwrap() }, r_mpi_xy);
+        sp.eq_r_mpi_r_mpi_xy = EqPolynomial::<C::ChallengeField>::eq_vec(unsafe { sp.r_mpi.as_ref().unwrap() }, r_mpi_xy);
     }
 
     #[inline(always)]
     pub fn set_ry<C: GKRConfig>(ry: &[C::ChallengeField], sp: &mut VerifierScratchPad<C>) {
-        eq_eval_at(
+        EqPolynomial::<C::ChallengeField>::eq_eval_at(
             ry,
             &C::ChallengeField::ONE,
             &mut sp.eq_evals_at_ry,
