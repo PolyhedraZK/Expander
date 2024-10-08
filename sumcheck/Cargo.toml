@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
+mpoly = { path = "../arith/mpoly" }
 circuit = { path = "../circuit" }
 config = { path = "../config" }
 transcript = { path = "../transcript" }

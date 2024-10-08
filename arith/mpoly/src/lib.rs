@@ -53,4 +53,14 @@ impl<F: Field> MultiLinearPoly<F> {
         // whole space, which means we cannot simply relying Z's size itself.
         Self::interpolate_over_hypercube_impl(&self.coeffs)
     }
+
+    pub fn eval_top_var(&mut self, r: &F) {
+        let n = self.coeffs.len() / 2;
+        let (left, right) = self.coeffs.split_at_mut(n);
+
+        left.iter_mut().zip(right.iter()).for_each(|(a, b)| {
+            *a += *r * (*b - *a);
+        });
+        self.coeffs.truncate(n);
+    }
 }
