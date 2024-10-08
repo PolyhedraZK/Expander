@@ -1,8 +1,9 @@
 use arith::{Field, SimdField};
 use circuit::CircuitLayer;
 use config::GKRConfig;
+use mpoly::EqPolynomial;
 
-use crate::{EqPolynomial, GkrScratchpad};
+use crate::GkrScratchpad;
 
 struct SumcheckMultiSquareHelper<const D: usize> {
     var_num: usize,
@@ -307,7 +308,7 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
             std::ptr::write_bytes(gate_exists_5.as_mut_ptr(), 0, vals.len());
             std::ptr::write_bytes(gate_exists_1.as_mut_ptr(), 0, vals.len());
         }
-        EqPolynomial::<C::ChallengeField>:: eq_eval_at(
+        EqPolynomial::<C::ChallengeField>::eq_eval_at(
             self.rz0,
             &C::ChallengeField::one(),
             eq_evals_at_rz0,
