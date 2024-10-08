@@ -31,7 +31,7 @@ impl<F: Field> MultiLinearPoly<F> {
                 right
                     .iter_mut()
                     .zip(left.iter())
-                    .for_each(|(a, b)| *a = *a - *b);
+                    .for_each(|(a, b)| *a -= *b);
             })
         }
 
