@@ -7,3 +7,4 @@ edition = "2021"
 arith = { path = "../" }
 
 ark-std.workspace = true
+halo2curves.workspace = true

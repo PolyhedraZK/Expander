@@ -3,8 +3,9 @@ use std::{cmp::max, ptr};
 use arith::{ExtensionField, Field};
 use circuit::{Circuit, CircuitLayer, CoefType, GateAdd, GateConst, GateMul};
 use config::{Config, FieldType, GKRConfig};
+use mpoly::EqPolynomial;
 
-use crate::{sumcheck_helper::unpack_and_combine, EqPolynomial};
+use crate::sumcheck_helper::unpack_and_combine;
 
 pub struct VerifierScratchPad<C: GKRConfig> {
     // ====== for evaluating cst, add and mul ======
@@ -261,7 +262,10 @@ impl GKRVerifierHelper {
         r_simd_xy: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
     ) {
-        sp.eq_r_simd_r_simd_xy = EqPolynomial::<C::ChallengeField>::eq_vec(unsafe { sp.r_simd.as_ref().unwrap() }, r_simd_xy);
+        sp.eq_r_simd_r_simd_xy = EqPolynomial::<C::ChallengeField>::eq_vec(
+            unsafe { sp.r_simd.as_ref().unwrap() },
+            r_simd_xy,
+        );
     }
 
     #[inline(always)]
@@ -269,7 +273,10 @@ impl GKRVerifierHelper {
         r_mpi_xy: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
     ) {
-        sp.eq_r_mpi_r_mpi_xy = EqPolynomial::<C::ChallengeField>::eq_vec(unsafe { sp.r_mpi.as_ref().unwrap() }, r_mpi_xy);
+        sp.eq_r_mpi_r_mpi_xy = EqPolynomial::<C::ChallengeField>::eq_vec(
+            unsafe { sp.r_mpi.as_ref().unwrap() },
+            r_mpi_xy,
+        );
     }
 
     #[inline(always)]
