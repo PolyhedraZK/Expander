@@ -97,7 +97,7 @@ where
         // let round_uni_poly = UniPoly::from_evals(&eval_points);
 
         // append the prover's message to the transcript
-        // round_uni_poly.
+        round_uni_poly.
         // transcript.append_field_element(f);
 
         round_uni_poly.append_to_transcript(b"poly", transcript);

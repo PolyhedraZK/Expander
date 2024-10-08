@@ -1,5 +1,5 @@
 use arith::Field;
-use ark_std::log2;
+use ark_std::{log2, rand::RngCore};
 
 #[derive(Debug, Clone)]
 pub struct MultiLinearPoly<F: Field> {
@@ -7,6 +7,12 @@ pub struct MultiLinearPoly<F: Field> {
 }
 
 impl<F: Field> MultiLinearPoly<F> {
+    /// Sample a random polynomials.
+    pub fn random(nv: usize, rng: impl RngCore) -> Self {
+        let coeff = (0..1 << nv).map(|_| F::random_unsafe(rng)).collect();
+        Self { coeffs: coeff }
+    }
+
     pub fn get_num_vars(&self) -> usize {
         log2(self.coeffs.len()) as usize
     }
@@ -54,7 +60,8 @@ impl<F: Field> MultiLinearPoly<F> {
         Self::interpolate_over_hypercube_impl(&self.coeffs)
     }
 
-    pub fn eval_top_var(&mut self, r: &F) {
+    // Evaluate the polynomial at a single variable
+    pub fn fix_top_variable(&mut self, r: &F) {
         let n = self.coeffs.len() / 2;
         let (left, right) = self.coeffs.split_at_mut(n);
 
@@ -62,5 +69,13 @@ impl<F: Field> MultiLinearPoly<F> {
             *a += *r * (*b - *a);
         });
         self.coeffs.truncate(n);
+    }
+
+    // Evaluate the polynomial at a set of variables
+    pub fn fix_variables(&mut self, partial_point: &[F]) {
+        // evaluate single variable of partial point from left to right
+        partial_point
+            .iter()
+            .for_each(|point| self.fix_top_variable(point));
     }
 }

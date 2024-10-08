@@ -4,6 +4,20 @@ use ark_std::test_rng;
 use halo2curves::bn256::Fr;
 
 #[test]
+fn test_mle_eval() {
+    let mut rng = test_rng();
+    for nv in 4..10 {
+        let mut mle = MultiLinearPoly::<Fr>::random(nv, &mut rng);
+        let point = (0..nv)
+            .map(|_| Fr::random_unsafe(&mut rng))
+            .collect::<Vec<_>>();
+        let mut mle_eval = mle.clone();
+        mle_eval.fix_variables(point.as_ref());
+        assert!(mle_eval.coeffs.len()==1);
+    }
+}
+
+#[test]
 fn test_eq_xr() {
     let mut rng = test_rng();
     for nv in 4..10 {

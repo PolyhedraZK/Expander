@@ -36,7 +36,6 @@ impl<F: Field> EqPolynomial<F> {
             .product()
     }
 
-
     /// This function build the eq(x, r) polynomial for any given r, and output the
     /// evaluation of eq(x, r) in its vector form.
     ///
@@ -77,7 +76,6 @@ impl<F: Field> EqPolynomial<F> {
     //     // TODO: extend this
     //     *x * y * z + (F::one() - x) * (F::one() - y) * (F::one() - z)
     // }
-
 
     /// A helper function to build eq(x, r) recursively.
     /// This function takes `r.len()` steps, and for each step it requires a maximum
