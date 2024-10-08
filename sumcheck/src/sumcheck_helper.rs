@@ -5,14 +5,17 @@ use mpoly::EqPolynomial;
 
 use crate::GkrScratchpad;
 
-#[allow(dead_code)]
-#[inline(always)]
-pub(crate) fn unpack_and_sum<F: SimdField>(p: &F) -> F::Scalar {
-    p.unpack().into_iter().sum()
-}
+// #[inline(always)]
+// pub(crate) fn unpack_and_sum<F: SimdField>(p: &F) -> F::Scalar {
+//     p.unpack().into_iter().sum()
+// }
 
-#[allow(dead_code)]
 #[inline(always)]
+/// Input
+/// - a SIMD field, denoted by p := [p0, ... pn]
+/// - a vector of coefficients, denoted by coef := [c0, ... cn]
+/// Output
+/// - p0 * c0 + ... + pn * cn
 pub(crate) fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar {
     let p_unpacked = p.unpack();
     p_unpacked
@@ -30,16 +33,30 @@ impl SumcheckMultilinearProdHelper {
         SumcheckMultilinearProdHelper { var_num }
     }
 
+    // Sumcheck the product of two multi-linear polynomials f and h_g
+    //
+    // Inputs:
+    // - var_idx: the index of the variable to evaluate
+    // - degree: the degree of the result univariate polynomial
+    // - bk_f: bookkeeping table of f(x)
+    // - bk_hg: bookkeeping table of h_g(x)
+    // - init_v: input values; will be processed iff var_idex == 0
+    // Output:
+    // - the univariate polynomial that prover sends to the verifier
+    #[inline]
     fn poly_eval_at<C: GKRConfig>(
         &self,
         var_idx: usize,
         degree: usize,
-        bk_f: &mut [C::Field],
-        bk_hg: &mut [C::Field],
+        bk_f: &[C::Field],
+        bk_hg: &[C::Field],
         init_v: &[C::SimdCircuitField],
         gate_exists: &[bool],
     ) -> [C::Field; 3] {
         assert_eq!(degree, 2);
+        // assert_eq!(bk_f.len(), bk_hg.len());
+        // QQ(ZZ): bk_f length doesn't match init_v length?
+
         let mut p0 = C::Field::zero();
         let mut p1 = C::Field::zero();
         let mut p2 = C::Field::zero();
@@ -51,6 +68,8 @@ impl SumcheckMultilinearProdHelper {
         log::trace!("Eval size: {}", eval_size);
 
         if var_idx == 0 {
+            // this is the first layer, we are able to accelerate by
+            // avoiding the extension field operations
             for i in 0..eval_size {
                 if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                     continue;
@@ -60,9 +79,10 @@ impl SumcheckMultilinearProdHelper {
                 let f_v_1 = init_v[i * 2 + 1];
                 let hg_v_0 = bk_hg[i * 2];
                 let hg_v_1 = bk_hg[i * 2 + 1];
+
                 p0 += C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
                 log::trace!(
-                    "p0.v+= {:?} * {:?} =  {:?}",
+                    "p0.v += {:?} * {:?} = {:?}",
                     f_v_0,
                     hg_v_0,
                     C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0) + p1
@@ -71,6 +91,7 @@ impl SumcheckMultilinearProdHelper {
                 p2 += C::field_mul_simd_circuit_field(&(hg_v_0 + hg_v_1), &(f_v_0 + f_v_1));
             }
         } else {
+            // for the rest of layers we use extension field operations.
             for i in 0..eval_size {
                 if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                     continue;
@@ -91,17 +112,22 @@ impl SumcheckMultilinearProdHelper {
                 p2 += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
             }
         }
+
         if C::FIELD_TYPE == FieldType::GF2 {
+            // over GF2_128, the three points are at 0, 1 and X
             let p2x = p2.mul_by_x();
             let p2x2 = p2x.mul_by_x();
             let linear_term = p1 + p0 + p2;
             p2 = p2x2 + linear_term.mul_by_x() + p0;
         } else {
+            // when Field size > 2, the three points are 0, 1, -2
             p2 = p1.mul_by_6() + p0.mul_by_3() - p2.double();
         }
         [p0, p1, p2]
     }
 
+    // process the challenge and update the bookkeeping tables for f and h_g accordingly
+    #[inline]
     fn receive_challenge<C: GKRConfig>(
         &mut self,
         var_idx: usize,
@@ -112,6 +138,7 @@ impl SumcheckMultilinearProdHelper {
         gate_exists: &mut [bool],
     ) {
         assert!(var_idx < self.var_num);
+        // assert_eq!(bk_f.len(), bk_hg.len());
 
         let eval_size = 1 << (self.var_num - var_idx - 1);
         if var_idx == 0 {
@@ -166,6 +193,7 @@ impl SumcheckMultilinearProdSimdVarHelper {
         SumcheckMultilinearProdSimdVarHelper { var_num }
     }
 
+    #[inline]
     fn poly_eval_at<C: GKRConfig>(
         &self,
         var_idx: usize,
@@ -232,6 +260,7 @@ impl SumcheckMultilinearProdSimdVarHelper {
         [p0, p1, p2, p3]
     }
 
+    #[inline]
     fn receive_challenge<C: GKRConfig>(
         &mut self,
         var_idx: usize,
@@ -294,6 +323,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
 /// Helper functions to be called
 #[allow(clippy::too_many_arguments)]
 impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
+    #[inline]
     pub(crate) fn new(
         layer: &'a CircuitLayer<C>,
         rz0: &'a [C::ChallengeField],
@@ -416,11 +446,13 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         self.poly_evals_at_rx(var_idx, degree)
     }
 
+    #[inline]
     pub(crate) fn receive_rx(&mut self, var_idx: usize, r: C::ChallengeField) {
         self.xy_helper_receive_challenge(var_idx, r);
         self.rx.push(r);
     }
 
+    #[inline]
     pub(crate) fn receive_r_simd_var(&mut self, var_idx: usize, r: C::ChallengeField) {
         self.simd_var_helper.receive_challenge::<C>(
             var_idx,
@@ -432,6 +464,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         self.r_simd_var.push(r);
     }
 
+    #[inline]
     pub(crate) fn receive_r_mpi_var(&mut self, var_idx: usize, r: C::ChallengeField) {
         self.mpi_var_helper.receive_challenge::<C>(
             var_idx,
@@ -443,6 +476,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         self.r_mpi_var.push(r);
     }
 
+    #[inline]
     pub(crate) fn receive_ry(&mut self, var_idx: usize, r: C::ChallengeField) {
         self.xy_helper_receive_challenge(var_idx, r);
         self.ry.push(r);
@@ -468,6 +502,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         }
     }
 
+    #[inline]
     pub(crate) fn prepare_simd(&mut self) {
         EqPolynomial::<C::ChallengeField>::eq_eval_at(
             self.r_simd,
@@ -478,6 +513,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         );
     }
 
+    #[inline]
     pub(crate) fn prepare_mpi(&mut self) {
         // TODO: No need to evaluate it at all world ranks, remove redundancy later.
         EqPolynomial::<C::ChallengeField>::eq_eval_at(
@@ -489,6 +525,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         );
     }
 
+    #[inline]
     pub(crate) fn prepare_x_vals(&mut self) {
         let mul = &self.layer.mul;
         let add = &self.layer.add;
@@ -545,11 +582,13 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         }
     }
 
+    #[inline]
     pub(crate) fn prepare_simd_var_vals(&mut self) {
         self.sp.simd_var_v_evals = self.sp.v_evals[0].unpack();
         self.sp.simd_var_hg_evals = self.sp.hg_evals[0].unpack();
     }
 
+    #[inline]
     pub(crate) fn prepare_mpi_var_vals(&mut self) {
         self.mpi_config.gather_vec(
             &vec![self.sp.simd_var_v_evals[0]],
@@ -561,6 +600,7 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         );
     }
 
+    #[inline]
     pub(crate) fn prepare_y_vals(&mut self) {
         let mut v_rx_rsimd_rw = self.sp.mpi_var_v_evals[0];
         self.mpi_config.root_broadcast(&mut v_rx_rsimd_rw);

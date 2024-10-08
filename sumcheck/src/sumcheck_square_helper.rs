@@ -20,7 +20,9 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
         }
     }
 
+    // Function to interpolate a quadratic polynomial and update an array of points
     fn interpolate_3<C: GKRConfig>(p_add: &[C::Field; 3], p: &mut [C::Field; D]) {
+        // Calculate coefficients for the interpolating polynomial
         let p_add_coef_0 = p_add[0];
         let p_add_coef_2 = C::field_mul_circuit_field(
             &(p_add[2] - p_add[1] - p_add[1] + p_add[0]),
@@ -29,6 +31,8 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
 
         let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
 
+        // Update the p array by evaluating the interpolated polynomial at different points
+        // and adding the results to the existing values
         p[0] += p_add_coef_0;
         p[1] += p_add_coef_0 + p_add_coef_1 + p_add_coef_2;
         p[2] += p_add_coef_0 + p_add_coef_1.double() + p_add_coef_2.double().double();
