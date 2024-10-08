@@ -8,8 +8,8 @@ pub struct MultiLinearPoly<F: Field> {
 
 impl<F: Field> MultiLinearPoly<F> {
     /// Sample a random polynomials.
-    pub fn random(nv: usize, rng: impl RngCore) -> Self {
-        let coeff = (0..1 << nv).map(|_| F::random_unsafe(rng)).collect();
+    pub fn random(nv: usize, mut rng: impl RngCore) -> Self {
+        let coeff = (0..1 << nv).map(|_| F::random_unsafe(&mut rng)).collect();
         Self { coeffs: coeff }
     }
 
