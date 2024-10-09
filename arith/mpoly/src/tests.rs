@@ -13,7 +13,7 @@ fn test_mle_eval() {
             .collect::<Vec<_>>();
         let mut mle_eval = mle.clone();
         mle_eval.fix_variables(point.as_ref());
-        assert!(mle_eval.coeffs.len()==1);
+        assert!(mle_eval.coeffs.len() == 1);
     }
 }
 
