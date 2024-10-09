@@ -7,20 +7,20 @@ use crate::{
     GkrScratchpad,
 };
 
-#[inline(always)]
-fn transcript_io<C: GKRConfig>(
-    ps: &[C::ChallengeField],
-    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
-    mpi_config: &MPIConfig,
-) -> C::ChallengeField {
-    assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
-    for p in ps {
-        transcript.append_field_element::<C::ChallengeField>(p);
-    }
-    let mut r = transcript.generate_challenge::<C::ChallengeField>();
-    mpi_config.root_broadcast(&mut r);
-    r
-}
+// #[inline(always)]
+// fn transcript_io<C: GKRConfig>(
+//     ps: &[C::ChallengeField],
+//     transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
+//     mpi_config: &MPIConfig,
+// ) -> C::ChallengeField {
+//     assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
+//     for p in ps {
+//         transcript.append_field_element::<C::ChallengeField>(p);
+//     }
+//     let mut r = transcript.generate_challenge::<C::ChallengeField>();
+//     mpi_config.root_broadcast(&mut r);
+//     r
+// }
 
 // FIXME
 #[allow(clippy::too_many_arguments)]
@@ -31,8 +31,8 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     rz1: &Option<Vec<C::ChallengeField>>,
     r_simd: &[C::ChallengeField],
     r_mpi: &[C::ChallengeField],
-    alpha: &C::ChallengeField,
-    beta: &Option<C::ChallengeField>,
+    alpha: C::ChallengeField,
+    beta: Option<C::ChallengeField>,
     transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
     sp: &mut GkrScratchpad<C>,
     mpi_config: &MPIConfig,
@@ -51,21 +51,24 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
 
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
-        let r = transcript_io::<C>(&evals, transcript, mpi_config);
+        let r = mpi_config
+            .transcript_io::<C::ChallengeField, C::FiatShamirHashType>(&evals, transcript);
         helper.receive_rx(i_var, r);
     }
 
     helper.prepare_simd_var_vals();
     for i_var in 0..helper.simd_var_num {
         let evals = helper.poly_evals_at_r_simd_var(i_var, 3);
-        let r = transcript_io::<C>(&evals, transcript, mpi_config);
+        let r = mpi_config
+            .transcript_io::<C::ChallengeField, C::FiatShamirHashType>(&evals, transcript);
         helper.receive_r_simd_var(i_var, r);
     }
 
     helper.prepare_mpi_var_vals();
     for i_var in 0..mpi_config.world_size().trailing_zeros() as usize {
         let evals = helper.poly_evals_at_r_mpi_var(i_var, 3);
-        let r = transcript_io::<C>(&evals, transcript, mpi_config);
+        let r = mpi_config
+            .transcript_io::<C::ChallengeField, C::FiatShamirHashType>(&evals, transcript);
         helper.receive_r_mpi_var(i_var, r);
     }
 
@@ -76,7 +79,8 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
         helper.prepare_y_vals();
         for i_var in 0..helper.input_var_num {
             let evals = helper.poly_evals_at_ry(i_var, 2);
-            let r = transcript_io::<C>(&evals, transcript, mpi_config);
+            let r = mpi_config
+                .transcript_io::<C::ChallengeField, C::FiatShamirHashType>(&evals, transcript);
             helper.receive_ry(i_var, r);
         }
         let vy_claim = helper.vy_claim();

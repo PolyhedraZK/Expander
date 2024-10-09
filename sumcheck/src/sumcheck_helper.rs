@@ -330,8 +330,8 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
         rz1: &'a Option<Vec<C::ChallengeField>>,
         r_simd: &'a [C::ChallengeField],
         r_mpi: &'a [C::ChallengeField],
-        alpha: &'a C::ChallengeField,
-        beta: &'a Option<C::ChallengeField>,
+        alpha: C::ChallengeField,
+        beta: Option<C::ChallengeField>,
         sp: &'a mut GkrScratchpad<C>,
         mpi_config: &'a MPIConfig,
     ) -> Self {
@@ -348,12 +348,8 @@ impl<'a, C: GKRConfig> SumcheckGkrHelper<'a, C> {
             rz1,
             r_simd,
             r_mpi,
-            alpha: *alpha,
-            beta: if beta.is_none() {
-                None
-            } else {
-                Some(*beta.as_ref().unwrap())
-            },
+            alpha,
+            beta,
 
             input_var_num: layer.input_var_num,
             simd_var_num,
