@@ -7,21 +7,6 @@ use crate::{
     GkrScratchpad,
 };
 
-// #[inline(always)]
-// fn transcript_io<C: GKRConfig>(
-//     ps: &[C::ChallengeField],
-//     transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
-//     mpi_config: &MPIConfig,
-// ) -> C::ChallengeField {
-//     assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
-//     for p in ps {
-//         transcript.append_field_element::<C::ChallengeField>(p);
-//     }
-//     let mut r = transcript.generate_challenge::<C::ChallengeField>();
-//     mpi_config.root_broadcast(&mut r);
-//     r
-// }
-
 // FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
@@ -49,6 +34,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     helper.prepare_mpi();
     helper.prepare_x_vals();
 
+    // gkr phase 1 over variable x
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
         let r = mpi_config
@@ -75,6 +61,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     let vx_claim = helper.vx_claim();
     transcript.append_field_element::<C::ChallengeField>(&vx_claim);
 
+    // gkr phase 2 over variable y
     if !layer.structure_info.max_degree_one {
         helper.prepare_y_vals();
         for i_var in 0..helper.input_var_num {
