@@ -11,9 +11,14 @@ fn test_mle_eval() {
         let point = (0..nv)
             .map(|_| Fr::random_unsafe(&mut rng))
             .collect::<Vec<_>>();
+        let mut point_rev = point.clone();
+        point_rev.reverse();
+        let eval_via_eq = mle.evaluate(&point_rev);
         let mut mle_eval = mle.clone();
         mle_eval.fix_variables(point.as_ref());
         assert!(mle_eval.coeffs.len() == 1);
+
+        assert_eq!(eval_via_eq, mle_eval.coeffs[0]);
     }
 }
 

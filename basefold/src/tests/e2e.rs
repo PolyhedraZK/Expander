@@ -18,12 +18,12 @@ fn test_basefold_vanilla() {
     }
 }
 
-fn test_basefold_helper(num_vars: usize, mut rng:  impl RngCore) {
+fn test_basefold_helper(num_vars: usize, mut rng: impl RngCore) {
     let pp = BasefoldParam::<
     TranscriptInstance<SHA256hasher>, SHA256hasher, BabyBearExt3, BabyBear,
 >::new(3);
 
-    let poly = MultiLinearPoly::<BabyBear>::random(num_vars,&mut  rng);
+    let poly = MultiLinearPoly::<BabyBear>::random(num_vars, &mut rng);
 
     let opening_point: Vec<_> = (0..num_vars)
         .map(|_| BabyBear::random_unsafe(&mut rng))
