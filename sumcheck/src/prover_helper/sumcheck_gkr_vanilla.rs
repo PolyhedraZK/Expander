@@ -127,7 +127,7 @@ impl<'a, C: GKRConfig> SumcheckGkrVanillaHelper<'a, C> {
         var_idx: usize,
         degree: usize,
     ) -> [C::ChallengeField; 4] {
-        debug_assert!(var_idx < self.simd_var_num);
+        assert!(var_idx < self.simd_var_num);
         let local_vals = self.simd_var_helper.poly_eval_at::<C>(
             var_idx,
             degree,
@@ -150,7 +150,7 @@ impl<'a, C: GKRConfig> SumcheckGkrVanillaHelper<'a, C> {
         var_idx: usize,
         degree: usize,
     ) -> [C::ChallengeField; 4] {
-        debug_assert!(var_idx < self.mpi_config.world_size().trailing_zeros() as usize);
+        assert!(var_idx < self.mpi_config.world_size().trailing_zeros() as usize);
         self.mpi_var_helper.poly_eval_at::<C>(
             var_idx,
             degree,

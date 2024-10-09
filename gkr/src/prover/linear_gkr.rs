@@ -79,7 +79,6 @@ impl<C: GKRConfig> Prover<C> {
 
     pub fn prove(&mut self, c: &mut Circuit<C>) -> (C::ChallengeField, Proof) {
         let timer = start_timer!(|| "prove");
-        // std::thread::sleep(std::time::Duration::from_secs(1)); // TODO
 
         // PC commit
         let commitment =

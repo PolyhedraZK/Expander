@@ -143,7 +143,7 @@ impl MPIConfig {
     #[inline]
     pub fn gather_vec<F: Field>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<F>) {
         unsafe {
-            debug_assert!(global_vec.len() >= local_vec.len() * (self.world_size as usize));
+            assert!(global_vec.len() >= local_vec.len() * (self.world_size as usize));
             if self.world_size == 1 {
                 *global_vec = local_vec.clone()
             } else if self.world_rank == Self::ROOT_RANK {

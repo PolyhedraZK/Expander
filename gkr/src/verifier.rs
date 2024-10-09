@@ -71,8 +71,8 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     C::ChallengeField,
     Option<C::ChallengeField>,
 ) {
-    debug_assert_eq!(rz1.is_none(), claimed_v1.is_none());
-    debug_assert_eq!(rz1.is_none(), beta.is_none());
+    assert_eq!(rz1.is_none(), claimed_v1.is_none());
+    assert_eq!(rz1.is_none(), beta.is_none());
 
     GKRVerifierHelper::prepare_layer(layer, &alpha, &beta, rz0, rz1, r_simd, r_mpi, sp);
 
