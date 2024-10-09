@@ -87,8 +87,6 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
 }
 
 // FIXME
-#[allow(clippy::too_many_arguments)]
-#[allow(clippy::type_complexity)]
 #[allow(clippy::needless_range_loop)] // todo: remove
 pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
     layer: &CircuitLayer<C>,

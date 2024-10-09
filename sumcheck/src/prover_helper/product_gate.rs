@@ -116,7 +116,6 @@ impl SumcheckProductGateHelper {
         gate_exists: &mut [bool],
     ) {
         assert!(var_idx < self.var_num);
-        // assert_eq!(bk_f.len(), bk_hg.len());
 
         let eval_size = 1 << (self.var_num - var_idx - 1);
         if var_idx == 0 {
