@@ -294,6 +294,16 @@ impl<C: GKRConfig> Verifier<C> {
 
         circuit.fill_rnd_coefs(&mut transcript);
 
+        // FIXME
+        // We don't really need to put the grinding result into the proof.
+        // The verifier already recomputed it -- and if it doesn't match, the proof is invalid.
+        #[cfg(feature = "grinding")]
+        {
+            // skip 32 bytes which is the grinding result
+            let mut buf = [0u8; 32];
+            cursor.read_exact(&mut buf).unwrap()
+        }
+
         let (mut verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = gkr_verify(
             &self.config,
             circuit,
