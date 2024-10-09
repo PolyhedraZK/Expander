@@ -12,6 +12,10 @@ pub struct SumcheckInstanceProof<F: Field> {
 }
 
 impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
+    pub fn new(uni_polys: Vec<UniPoly<F>>) -> SumcheckInstanceProof<F> {
+        SumcheckInstanceProof { uni_polys }
+    }
+
     /// Create a sumcheck proof for polynomial(s) of arbitrary degree.
     ///
     /// Params

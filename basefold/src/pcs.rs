@@ -83,6 +83,7 @@ pub trait PolynomialCommitmentScheme {
         point: &Self::Point,
         value: &Self::Evaluation,
         proof: &Self::Proof,
+        transcript: &mut Self::Transcript,
     ) -> bool;
 
     /// Verifies that `value_i` is the evaluation at `x_i` of the polynomial

@@ -1,6 +1,8 @@
 use arith::Field;
 use ark_std::{log2, rand::RngCore};
 
+use crate::EqPolynomial;
+
 #[derive(Debug, Clone)]
 pub struct MultiLinearPoly<F: Field> {
     pub coeffs: Vec<F>,
@@ -77,5 +79,18 @@ impl<F: Field> MultiLinearPoly<F> {
         partial_point
             .iter()
             .for_each(|point| self.fix_top_variable(point));
+    }
+
+    // returns Z(r) in O(n) time
+    pub fn evaluate(&self, r: &[F]) -> F {
+        // r must have a value for each variable
+        assert_eq!(r.len(), self.get_num_vars());
+        let chis = EqPolynomial::build_eq_x_r(r);
+        assert_eq!(chis.len(), self.coeffs.len());
+        self.coeffs
+            .iter()
+            .zip(chis.iter())
+            .map(|(c, chi)| *c * *chi)
+            .sum()
     }
 }

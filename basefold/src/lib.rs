@@ -20,3 +20,6 @@ mod opening;
 pub use opening::BasefoldProof;
 
 // pub use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
+
+#[cfg(test)]
+mod tests;

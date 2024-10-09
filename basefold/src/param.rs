@@ -78,11 +78,11 @@ where
     }
 
     #[inline]
-    pub fn reed_solomon_from_coeffs(&self, mut coeffs: Vec<ExtF>) -> Vec<ExtF> {
+    pub fn reed_solomon_from_coeffs(&self, mut coeffs: Vec<F>) -> Vec<F> {
         plonky2_util::reverse_index_bits_in_place(&mut coeffs);
         let extended_length = coeffs.len() << self.rate_bits;
-        coeffs.resize(extended_length, ExtF::zero());
-        ExtF::fft(&coeffs)
+        coeffs.resize(extended_length, F::zero());
+        F::fft(&coeffs)
     }
 
     /// Performs dft in batch. returns a vector that is concatenated from all the dft results.

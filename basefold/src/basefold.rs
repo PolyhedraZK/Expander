@@ -34,7 +34,7 @@ where
     type SRS = BasefoldParam<T, H, ExtF, F>;
     type Polynomial = MultiLinearPoly<F>;
     type Point = Vec<F>;
-    type Evaluation = ExtF;
+    type Evaluation = F;
     type Commitment = BasefoldCommitment<F>;
     type Proof = BasefoldProof<ExtF>;
     type BatchProof = ();
@@ -77,42 +77,41 @@ where
         ));
 
         let shift_z = EqPolynomial::build_eq_x_r(
-            &opening_point
-                .iter()
-                .map(|&x| ExtF::from(x))
-                .collect::<Vec<_>>(),
+            &opening_point, // .iter()
+                            // .map(|&x| F::from(x))
+                            // .collect::<Vec<_>>(),
         );
         let shift_z_poly = MultiLinearPoly { coeffs: shift_z };
-        let poly_ext_coeff = polynomial
-            .coeffs
-            .iter()
-            .map(|&x| ExtF::from(x))
-            .collect::<Vec<_>>();
-        let poly_ext = MultiLinearPoly {
-            coeffs: poly_ext_coeff,
-        };
+        // let poly_ext_coeff = polynomial.clone();
+        //     // .coeffs
+        //     // .iter()
+        //     // .map(|&x| ExtF::from(x))
+        //     // .collect::<Vec<_>>();
+        // let poly_ext = MultiLinearPoly {
+        //     coeffs: poly_ext_coeff,
+        // };
 
-        let mut sumcheck_poly_vec = vec![poly_ext, shift_z_poly];
-        let merge_function = |x: &[ExtF]| x.iter().product::<ExtF>();
+        let mut sumcheck_poly_vec = vec![polynomial.clone(), shift_z_poly];
+        let merge_function = |x: &[F]| x.iter().product::<F>();
 
         let num_vars = polynomial.get_num_vars();
 
         let mut sumcheck_polys: Vec<_> = Vec::with_capacity(num_vars);
-        let mut iopp_codewords: Vec<Vec<ExtF>> = Vec::with_capacity(num_vars);
+        let mut iopp_codewords: Vec<Vec<F>> = Vec::with_capacity(num_vars);
 
         (0..num_vars).for_each(|_| {
             // NOTE: sumcheck a single step, r_i start from x_0 towards x_n
             // TODO: this seems to sumcheck against a product of two polynomials.
             // Try to use our own sumcheck instead
             let (sc_univariate_poly_i, _, _) = SumcheckInstanceProof::prove_arbitrary(
-                &ExtF::zero(),
+                &F::zero(),
                 1,
                 &mut sumcheck_poly_vec,
                 merge_function,
                 MERGE_POLY_DEG,
                 transcript,
             );
-            sumcheck_polys.push(sc_univariate_poly_i.clone());
+            sumcheck_polys.push(sc_univariate_poly_i.uni_polys[0].clone());
             drop(sc_univariate_poly_i);
 
             let coeffs = sumcheck_poly_vec[0].interpolate_over_hypercube();
@@ -123,8 +122,9 @@ where
 
         let iopp_last_oracle_message = iopp_oracles[iopp_oracles.len() - 1].leaves.clone();
         let iopp_challenges = prover_param.borrow().iopp_challenges(num_vars, transcript);
+        let mut first_round_queries = vec![];
 
-        let  rest_iopp_queries= (0..prover_param.borrow().verifier_queries)
+        let _rest_iopp_queries = (0..prover_param.borrow().verifier_queries)
             .zip(iopp_challenges)
             .map(|(_, mut point)| {
                 let mut iopp_round_query = Vec::with_capacity(iopp_oracles.len() + 1);
@@ -140,6 +140,8 @@ where
                     left: commitment.tree.index_query(left),
                     right: commitment.tree.index_query(right),
                 };
+
+                first_round_queries.push(first_round_query);
 
                 // Merkle queries over ExtF
                 iopp_oracles.iter().for_each(|oracle| {
@@ -167,24 +169,70 @@ where
                 // todo: include first round query in the iopp round query
                 BasefoldIOPPQuery { iopp_round_query }
             })
-            .collect();
+            .collect::<Vec<_>>();
         end_timer!(timer);
 
         BasefoldProof {
-            // sumcheck_transcript: SumcheckInstanceProof::new(sumcheck_polys),
+            sumcheck_transcript: SumcheckInstanceProof::new(sumcheck_polys),
             iopp_oracles: iopp_oracles.iter().map(|t| t.root()).collect(),
             iopp_last_oracle_message,
-            iopp_queries: rest_iopp_queries,
+            first_iopp_query: first_round_queries,
+            // iopp_queries: rest_iopp_queries,
         }
     }
 
     fn verify(
-        _verifier_param: &Self::VerifierParam,
-        _commitment: &Self::Commitment,
-        _point: &Self::Point,
-        _value: &Self::Evaluation,
-        _proof: &Self::Proof,
+        verifier_param: &Self::VerifierParam,
+        commitment: &Self::Commitment,
+        opening_point: &Self::Point,
+        value: &Self::Evaluation,
+        proof: &Self::Proof,
+        transcript: &mut Self::Transcript,
     ) -> bool {
-        unimplemented!()
+        let num_vars = opening_point.len();
+
+        // let opening_lifted: ExtF = <Self::Field as Into<ExtF>>::into(*opening);
+        // let opening_point_lifted: Vec<ExtF> =
+        //     opening_point.iter().cloned().map(Into::into).collect_vec();
+
+        // NOTE: check sumcheck statement:
+        // f(z) = \sum_{r \in {0, 1}^n} (f(r) \eq(r, z)) can be reduced to
+        // f_r_eq_zr = f(rs) \eq(rs, z)
+        let (f_r_eq_zr, rs) =
+            proof
+                .sumcheck_transcript
+                .verify(*value, num_vars, MERGE_POLY_DEG, transcript);
+
+        // let eq_zr = EqPolynomial::new(opening_point_lifted).evaluate(&rs);
+        // let f_r = f_r_eq_zr / eq_zr;
+
+        // // NOTE: Basefold IOPP fold each round with rs (backwards),
+        // // so the last round of RS code should be all f(rs).
+        // if proof.iopp_last_oracle_message.len() != 1 << setup.rate_bits {
+        //     return Err(ProofVerifyError::InternalError);
+        // }
+
+        // if proof.iopp_last_oracle_message.iter().any(|&x| x != f_r) {
+        //     return Err(ProofVerifyError::InternalError);
+        // }
+
+        // let commitment_root = commitment.merkle.root();
+        // let oracles = rayon::iter::once(&commitment_root)
+        //     .chain(proof.iopp_oracles.par_iter())
+        //     .take(num_vars)
+        //     .into_par_iter();
+
+        // let points = setup.iopp_challenges(num_vars, transcript);
+
+        // if !proof
+        //     .iopp_queries
+        //     .par_iter()
+        //     .enumerate()
+        //     .all(|(i, iopp_query)| iopp_query.verify(setup, points[i], oracles.clone(), &rs))
+        // {
+        //     return Err(ProofVerifyError::InternalError);
+        // }
+
+        true
     }
 }
