@@ -14,7 +14,7 @@ mod param;
 pub use param::BasefoldParam;
 
 mod config;
-pub use config::LOG_RATE;
+pub use config::{LOG_RATE, MERGE_POLY_DEG};
 
 mod opening;
 pub use opening::BasefoldProof;

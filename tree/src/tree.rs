@@ -134,6 +134,11 @@ impl<F: Field + FieldSerde> Tree<F> {
         self.nodes[0]
     }
 
+    #[inline]
+    pub fn size(&self) -> usize {
+        self.leaves.len()
+    }
+
     /// Generates a membership proof for the given index.
     #[inline]
     pub fn gen_proof(&self, index: usize, tree_height: usize) -> Path<F> {
@@ -163,6 +168,21 @@ impl<F: Field + FieldSerde> Tree<F> {
             leaf,
             path_nodes,
         }
+    }
+
+    #[inline]
+    pub fn index_query(&self, index: usize) -> Path<F> {
+        let tree_height = log2(self.leaves.len() + 1) as usize;
+
+        self.gen_proof(index, tree_height)
+    }
+
+    pub fn batch_tree_for_recursive_oracles(leaves_vec: Vec<Vec<F>>) -> Vec<Self> {
+        // todo! optimize
+        leaves_vec
+            .iter()
+            .map(|leaves| Self::new_with_field_elements(leaves))
+            .collect()
     }
 }
 

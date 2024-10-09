@@ -3,15 +3,16 @@ use std::ops::Mul;
 use arith::{ExtensionField, FFTField, FieldSerde};
 use ark_std::{end_timer, start_timer};
 use babybear::BabyBearx16;
-use mpoly::MultiLinearPoly;
+use mpoly::{EqPolynomial, MultiLinearPoly};
 // use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
 use rand::RngCore;
+use sumcheck::SumcheckInstanceProof;
 use transcript::{FiatShamirHash, Transcript};
 use tree::Tree;
 
 use crate::{
     iop::BasefoldIOPPQuery, BasefoldCommitment, BasefoldIOPPQuerySingleRound, BasefoldParam,
-    BasefoldProof, PolynomialCommitmentScheme, LOG_RATE,
+    BasefoldProof, PolynomialCommitmentScheme, LOG_RATE, MERGE_POLY_DEG,
 };
 
 pub struct BaseFoldPCS<T, H, ExtF, F> {
@@ -75,10 +76,24 @@ where
             polynomial.get_num_vars()
         ));
 
-        let shift_z =
-            EqPolynomial::new(opening_point.iter().cloned().map(Into::into).collect_vec())
-                .to_dense();
-        let mut sumcheck_poly_vec = vec![polynomial.lift_to::<ExtF>(), shift_z];
+        let shift_z = EqPolynomial::build_eq_x_r(
+            &opening_point
+                .iter()
+                .map(|&x| ExtF::from(x))
+                .collect::<Vec<_>>(),
+        );
+        let shift_z_poly = MultiLinearPoly { coeffs: shift_z };
+        let poly_ext_coeff = polynomial
+            .coeffs
+            .iter()
+            .map(|&x| ExtF::from(x))
+            .collect::<Vec<_>>();
+        let poly_ext = MultiLinearPoly {
+            coeffs: poly_ext_coeff,
+        };
+        //     EqPolynomial::new(opening_point.iter().cloned().map(Into::into).collect_vec())
+        //         .to_dense();
+        let mut sumcheck_poly_vec = vec![poly_ext, shift_z_poly];
         let merge_function = |x: &[ExtF]| x.iter().product::<ExtF>();
 
         let num_vars = polynomial.get_num_vars();
@@ -86,10 +101,10 @@ where
         let mut sumcheck_polys: Vec<_> = Vec::with_capacity(num_vars);
         let mut iopp_codewords: Vec<_> = Vec::with_capacity(num_vars);
 
-        let hasher = H::new_instance();
-
         (0..num_vars).for_each(|_| {
             // NOTE: sumcheck a single step, r_i start from x_0 towards x_n
+            // TODO: this seems to sumcheck against a product of two polynomials.
+            // Try to use our own sumcheck instead
             let (sc_univariate_poly_i, _, _) = SumcheckInstanceProof::prove_arbitrary(
                 &ExtF::zero(),
                 1,
@@ -98,14 +113,14 @@ where
                 MERGE_POLY_DEG,
                 transcript,
             );
-            sumcheck_polys.push(sc_univariate_poly_i.compressed_polys[0].clone());
+            sumcheck_polys.push(sc_univariate_poly_i.clone());
             drop(sc_univariate_poly_i);
 
             let coeffs = sumcheck_poly_vec[0].interpolate_over_hypercube();
             iopp_codewords.push(prover_param.borrow().reed_solomon_from_coeffs(coeffs));
         });
 
-        let iopp_oracles = Tree::batch_tree_for_recursive_oracles(iopp_codewords, &hasher);
+        let iopp_oracles = Tree::batch_tree_for_recursive_oracles(iopp_codewords);
 
         let iopp_last_oracle_message = iopp_oracles[iopp_oracles.len() - 1].leaves.clone();
         let iopp_challenges = prover_param.borrow().iopp_challenges(num_vars, transcript);

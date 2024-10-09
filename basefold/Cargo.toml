@@ -10,6 +10,7 @@ babybear = { path = "../arith/babybear" }
 transcript = { path = "../transcript" }
 tree = { path = "../tree" }
 mpoly = { path = "../arith/mpoly" }
+sumcheck = { path = "../sumcheck" }
 
 ark-std.workspace = true
 # p3-baby-bear.workspace = true

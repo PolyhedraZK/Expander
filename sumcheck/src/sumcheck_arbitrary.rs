@@ -6,7 +6,7 @@ use arith::{Field, FieldSerde};
 use mpoly::{MultiLinearPoly, UniPoly};
 use transcript::{FiatShamirHash, Transcript};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SumcheckInstanceProof<F: Field> {
     pub uni_polys: Vec<UniPoly<F>>,
 }
@@ -185,9 +185,5 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
     }
 }
 
-
-
 #[cfg(test)]
-mod test {
-
-}
+mod test {}
