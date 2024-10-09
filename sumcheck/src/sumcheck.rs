@@ -32,9 +32,9 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
 
     helper.prepare_simd();
     helper.prepare_mpi();
-    helper.prepare_x_vals();
 
     // gkr phase 1 over variable x
+    helper.prepare_x_vals();
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
         let r = mpi_config

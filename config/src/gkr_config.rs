@@ -44,7 +44,7 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
         + SimdField<Scalar = Self::ChallengeField>
         + Send;
 
-    /// Simd field for circuit
+    /// Simd field for circuit, e.g., M31x16
     type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + FieldSerde + Send;
 
     /// Fiat Shamir hash type
@@ -74,22 +74,28 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     /// API to allow for multiplications between the challenge and the main field
     fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field;
 
+    /// API to allow for multiplications between the challenge and the simd circuit field
     fn circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field;
 
+    /// API to allow for multiplications between the simd circuit field and the challenge
     fn circuit_field_mul_simd_circuit_field(
         a: &Self::CircuitField,
         b: &Self::SimdCircuitField,
     ) -> Self::SimdCircuitField;
 
+    /// Convert a circuit field to a simd circuit field
     fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField;
 
+    /// Convert a simd circuit field to a circuit field
     fn simd_circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field;
 
+    /// API to allow for multiplications between the simd circuit field and the challenge
     fn simd_circuit_field_mul_challenge_field(
         a: &Self::SimdCircuitField,
         b: &Self::ChallengeField,
     ) -> Self::Field;
 
+    /// The pack size for the simd circuit field, e.g., 16 for M31x16
     fn get_field_pack_size() -> usize {
         Self::SimdCircuitField::pack_size()
     }
