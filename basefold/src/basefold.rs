@@ -91,15 +91,14 @@ where
         let poly_ext = MultiLinearPoly {
             coeffs: poly_ext_coeff,
         };
-        //     EqPolynomial::new(opening_point.iter().cloned().map(Into::into).collect_vec())
-        //         .to_dense();
+
         let mut sumcheck_poly_vec = vec![poly_ext, shift_z_poly];
         let merge_function = |x: &[ExtF]| x.iter().product::<ExtF>();
 
         let num_vars = polynomial.get_num_vars();
 
         let mut sumcheck_polys: Vec<_> = Vec::with_capacity(num_vars);
-        let mut iopp_codewords: Vec<_> = Vec::with_capacity(num_vars);
+        let mut iopp_codewords: Vec<Vec<ExtF>> = Vec::with_capacity(num_vars);
 
         (0..num_vars).for_each(|_| {
             // NOTE: sumcheck a single step, r_i start from x_0 towards x_n
@@ -125,7 +124,7 @@ where
         let iopp_last_oracle_message = iopp_oracles[iopp_oracles.len() - 1].leaves.clone();
         let iopp_challenges = prover_param.borrow().iopp_challenges(num_vars, transcript);
 
-        let iopp_queries = (0..prover_param.borrow().verifier_queries)
+        let  rest_iopp_queries= (0..prover_param.borrow().verifier_queries)
             .zip(iopp_challenges)
             .map(|(_, mut point)| {
                 let mut iopp_round_query = Vec::with_capacity(iopp_oracles.len() + 1);
@@ -137,10 +136,10 @@ where
                 let right = oracle_rhs_start + left;
                 point = left;
 
-                iopp_round_query.push(BasefoldIOPPQuerySingleRound {
+                let first_round_query = BasefoldIOPPQuerySingleRound {
                     left: commitment.tree.index_query(left),
                     right: commitment.tree.index_query(right),
-                });
+                };
 
                 // Merkle queries over ExtF
                 iopp_oracles.iter().for_each(|oracle| {
@@ -165,6 +164,7 @@ where
                     })
                 });
 
+                // todo: include first round query in the iopp round query
                 BasefoldIOPPQuery { iopp_round_query }
             })
             .collect();
@@ -174,7 +174,7 @@ where
             // sumcheck_transcript: SumcheckInstanceProof::new(sumcheck_polys),
             iopp_oracles: iopp_oracles.iter().map(|t| t.root()).collect(),
             iopp_last_oracle_message,
-            iopp_queries,
+            iopp_queries: rest_iopp_queries,
         }
     }
 

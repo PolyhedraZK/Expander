@@ -1,5 +1,5 @@
 use arith::ExtensionField;
-use tree::Node;
+use tree::{Leaf, Node};
 
 use crate::iop::BasefoldIOPPQuery;
 
@@ -7,6 +7,6 @@ use crate::iop::BasefoldIOPPQuery;
 pub struct BasefoldProof<ExtF: ExtensionField> {
     // sumcheck_transcript: SumcheckInstanceProof<ExtF>,
     pub(crate) iopp_oracles: Vec<Node>,
-    pub(crate) iopp_last_oracle_message: Vec<ExtF>,
-    pub(crate) iopp_queries: Vec<BasefoldIOPPQuery<ExtF::BaseField>>,
+    pub(crate) iopp_last_oracle_message: Vec<Leaf<ExtF>>,
+    pub(crate) iopp_queries: Vec<BasefoldIOPPQuery<ExtF>>,
 }
