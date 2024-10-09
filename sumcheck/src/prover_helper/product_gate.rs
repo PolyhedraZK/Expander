@@ -1,3 +1,6 @@
+//! This module implements helper functions for the prover side of the sumcheck protocol
+//! to evaluate Mul gates
+
 use arith::{ExtensionField, Field, SimdField};
 use config::{FieldType, GKRConfig};
 

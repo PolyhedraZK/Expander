@@ -1,5 +1,5 @@
 //! This module implements helper functions for the prover side of the sumcheck protocol
-//! to evaluate a power gate
+//! to evaluate power gates
 
 use arith::{Field, SimdField};
 use config::GKRConfig;

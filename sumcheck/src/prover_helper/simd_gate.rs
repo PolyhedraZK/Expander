@@ -1,3 +1,6 @@
+//! This module implements helper functions for the prover side of the sumcheck protocol
+//! to evaluate SIMD gates. A SIMD gate is a gate that merges all elements in a SIMD into a single one.
+
 use arith::{ExtensionField, Field};
 use config::{FieldType, GKRConfig};
 
