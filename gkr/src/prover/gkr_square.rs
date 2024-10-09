@@ -4,14 +4,14 @@
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use config::GKRConfig;
-use sumcheck::{sumcheck_prove_gkr_square_layer, GkrScratchpad};
+use sumcheck::{sumcheck_prove_gkr_square_layer, ProverScratchPad};
 use transcript::{Transcript, TranscriptInstance};
 
 use crate::MultiLinearPoly;
 
 pub fn gkr_square_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
-    sp: &mut GkrScratchpad<C>,
+    sp: &mut ProverScratchPad<C>,
     transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
 ) -> (C::Field, Vec<C::ChallengeField>) {
     let timer = start_timer!(|| "gkr^2 prove");

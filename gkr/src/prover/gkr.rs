@@ -4,7 +4,7 @@ use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use config::{GKRConfig, MPIConfig};
-use sumcheck::{sumcheck_prove_gkr_layer, GkrScratchpad};
+use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use transcript::{Transcript, TranscriptInstance};
 
 use crate::MultiLinearPoly;
@@ -13,7 +13,7 @@ use crate::MultiLinearPoly;
 #[allow(clippy::type_complexity)]
 pub fn gkr_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
-    sp: &mut GkrScratchpad<C>,
+    sp: &mut ProverScratchPad<C>,
     transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
     mpi_config: &MPIConfig,
 ) -> (

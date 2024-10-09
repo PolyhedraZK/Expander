@@ -3,8 +3,8 @@ use config::{GKRConfig, MPIConfig};
 use transcript::{Transcript, TranscriptInstance};
 
 use crate::{
-    sumcheck_helper::SumcheckGkrHelper, sumcheck_square_helper::SumcheckGkrSquareHelper,
-    GkrScratchpad,
+    prover_helper::{SumcheckGkrSquareHelper, SumcheckGkrVanillaHelper},
+    ProverScratchPad,
 };
 
 // FIXME
@@ -19,7 +19,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     alpha: C::ChallengeField,
     beta: Option<C::ChallengeField>,
     transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
-    sp: &mut GkrScratchpad<C>,
+    sp: &mut ProverScratchPad<C>,
     mpi_config: &MPIConfig,
 ) -> (
     Vec<C::ChallengeField>,
@@ -28,7 +28,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     Vec<C::ChallengeField>,
 ) {
     let mut helper =
-        SumcheckGkrHelper::new(layer, rz0, rz1, r_simd, r_mpi, alpha, beta, sp, mpi_config);
+        SumcheckGkrVanillaHelper::new(layer, rz0, rz1, r_simd, r_mpi, alpha, beta, sp, mpi_config);
 
     helper.prepare_simd();
     helper.prepare_mpi();
@@ -94,7 +94,7 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
     transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
-    sp: &mut GkrScratchpad<C>,
+    sp: &mut ProverScratchPad<C>,
 ) -> Vec<C::ChallengeField> {
     const D: usize = 7;
     let mut helper = SumcheckGkrSquareHelper::new(layer, rz0, sp);
@@ -163,7 +163,7 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
 //         .map(|layer| layer.output_var_num)
 //         .max()
 //         .unwrap();
-//     let mut sp = GkrScratchpad::<BN254ConfigKeccak>::new(max_num_input_var, max_num_output_var);
+//     let mut sp = ProverScratchPad::<BN254ConfigKeccak>::new(max_num_input_var, max_num_output_var);
 
 //     // Do the PC commitment to initial the transcript
 //     let commitment = RawCommitment::<C>::new(&circuit.layers[0].input_vals);
