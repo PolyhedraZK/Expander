@@ -310,7 +310,7 @@ impl<C: GKRConfig> Verifier<C> {
             public_input,
             claimed_v,
             &mut transcript,
-            &mut cursor, // &mut proof,
+            &mut cursor,
         );
 
         log::info!("GKR verification: {}", verified);

@@ -9,7 +9,6 @@ pub(crate) struct SumcheckSimdProdGateHelper {
 }
 
 // The logic is exactly the same as SumcheckProductGateHelper, but field types are different
-
 impl SumcheckSimdProdGateHelper {
     pub(crate) fn new(var_num: usize) -> Self {
         SumcheckSimdProdGateHelper { var_num }
