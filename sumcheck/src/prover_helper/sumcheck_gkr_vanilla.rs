@@ -1,7 +1,7 @@
 use arith::{Field, SimdField};
 use circuit::CircuitLayer;
 use config::{GKRConfig, MPIConfig};
-use mpoly::EqPolynomial;
+use polynomials::EqPolynomial;
 
 use crate::{unpack_and_combine, ProverScratchPad};
 

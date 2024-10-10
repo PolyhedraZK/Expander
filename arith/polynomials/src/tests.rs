@@ -11,9 +11,24 @@ fn test_mle_eval() {
         let point = (0..nv)
             .map(|_| Fr::random_unsafe(&mut rng))
             .collect::<Vec<_>>();
+
+        // jolt's method
+        let eval_via_eq = mle.evaluate_jolt(&point);
+
+        // hyperplonk's method
         let mut mle_eval = mle.clone();
         mle_eval.fix_variables(point.as_ref());
         assert!(mle_eval.coeffs.len() == 1);
+        assert_eq!(eval_via_eq, mle_eval.coeffs[0]);
+
+        // expander's method
+        let mut buf = vec![Fr::zero(); 1 << nv];
+        MultiLinearPoly::<Fr>::evaluate_with_buffer(
+            mle.coeffs.as_ref(),
+            point.as_ref(),
+            buf.as_mut(),
+        );
+        assert_eq!(eval_via_eq, buf[0]);
     }
 }
 
@@ -22,9 +37,22 @@ fn test_eq_xr() {
     let mut rng = test_rng();
     for nv in 4..10 {
         let r: Vec<Fr> = (0..nv).map(|_| Fr::random_unsafe(&mut rng)).collect();
-        let eq_x_r = EqPolynomial::<Fr>::build_eq_x_r(r.as_ref());
-        let eq_x_r2 = build_eq_x_r_for_test(r.as_ref());
-        assert_eq!(eq_x_r, eq_x_r2);
+
+        // naive
+        let eq_x_r0 = build_eq_x_r_for_test(r.as_ref());
+
+        // hyperplonk
+        let eq_x_r1 = EqPolynomial::<Fr>::build_eq_x_r(r.as_ref());
+        assert_eq!(eq_x_r1, eq_x_r0);
+
+        // expander
+        let mut eq_x_r2 = vec![Fr::zero(); 1 << nv];
+        EqPolynomial::<Fr>::build_eq_x_r_with_buf(r.as_ref(), &Fr::ONE, &mut eq_x_r2);
+        assert_eq!(eq_x_r2, eq_x_r0);
+
+        // jolt
+        let eq_x_r3 = EqPolynomial::<Fr>::evals_jolt(r.as_ref());
+        assert_eq!(eq_x_r3, eq_x_r0);
     }
 }
 

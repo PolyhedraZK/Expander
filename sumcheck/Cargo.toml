@@ -5,9 +5,9 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
-mpoly = { path = "../arith/mpoly" }
 circuit = { path = "../circuit" }
 config = { path = "../config" }
+polynomials = { path = "../arith/polynomials" }
 transcript = { path = "../transcript" }
 
 env_logger.workspace = true

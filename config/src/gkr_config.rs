@@ -6,6 +6,7 @@ mod m31_ext_keccak;
 mod m31_ext_sha2;
 
 use arith::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
+use ark_std::{end_timer, start_timer};
 use transcript::FiatShamirHash;
 
 pub use bn254_keccak::BN254ConfigKeccak;
@@ -98,5 +99,42 @@ pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
     /// The pack size for the simd circuit field, e.g., 16 for M31x16
     fn get_field_pack_size() -> usize {
         Self::SimdCircuitField::pack_size()
+    }
+
+    /// Evaluate the circuit values at the challenge
+    #[inline]
+    fn eval_circuit_vals_at_challenge(
+        evals: &[Self::SimdCircuitField],
+        x: &[Self::ChallengeField],
+        scratch: &mut [Self::Field],
+    ) -> Self::Field {
+        let timer = start_timer!(|| format!("eval mle with {} vars", x.len()));
+        assert_eq!(1 << x.len(), evals.len());
+
+        let ret = if x.is_empty() {
+            Self::simd_circuit_field_into_field(&evals[0])
+        } else {
+            for i in 0..(evals.len() >> 1) {
+                scratch[i] = Self::field_add_simd_circuit_field(
+                    &Self::simd_circuit_field_mul_challenge_field(
+                        &(evals[i * 2 + 1] - evals[i * 2]),
+                        &x[0],
+                    ),
+                    &evals[i * 2],
+                );
+            }
+
+            let mut cur_eval_size = evals.len() >> 2;
+            for r in x.iter().skip(1) {
+                for i in 0..cur_eval_size {
+                    scratch[i] = scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]).scale(r);
+                }
+                cur_eval_size >>= 1;
+            }
+            scratch[0]
+        };
+        end_timer!(timer);
+
+        ret
     }
 }

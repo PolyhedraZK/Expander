@@ -17,13 +17,30 @@ impl<F: Field> EqPolynomial<F> {
     ) {
         let first_half_bits = r.len() / 2;
         let first_half_mask = (1 << first_half_bits) - 1;
-        Self::eq_evals_at_primitive(&r[0..first_half_bits], mul_factor, sqrt_n_1st);
-        Self::eq_evals_at_primitive(&r[first_half_bits..], &F::one(), sqrt_n_2nd);
+        Self::build_eq_x_r_with_buf(&r[0..first_half_bits], mul_factor, sqrt_n_1st);
+        Self::build_eq_x_r_with_buf(&r[first_half_bits..], &F::one(), sqrt_n_2nd);
 
         for (i, eq_eval) in eq_evals.iter_mut().enumerate().take(1 << r.len()) {
             let first_half = i & first_half_mask;
             let second_half = i >> first_half_bits;
             *eq_eval = sqrt_n_1st[first_half] * sqrt_n_2nd[second_half];
+        }
+    }
+
+    #[inline]
+    /// Expander's method of computing Eq(x, r)
+    pub fn build_eq_x_r_with_buf(r: &[F], mul_factor: &F, eq_evals: &mut [F]) {
+        eq_evals[0] = *mul_factor;
+        let mut cur_eval_num = 1;
+
+        for r_i in r.iter() {
+            let eq_z_i_zero = F::one() - r_i;
+            let eq_z_i_one = r_i;
+            for j in 0..cur_eval_num {
+                eq_evals[j + cur_eval_num] = eq_evals[j] * eq_z_i_one;
+                eq_evals[j] *= eq_z_i_zero;
+            }
+            cur_eval_num <<= 1;
         }
     }
 
@@ -36,6 +53,8 @@ impl<F: Field> EqPolynomial<F> {
             .product()
     }
 
+    /// Hyperplonk's method of computing Eq(x, r)
+    ///
     /// This function build the eq(x, r) polynomial for any given r, and output the
     /// evaluation of eq(x, r) in its vector form.
     ///
@@ -61,8 +80,29 @@ impl<F: Field> EqPolynomial<F> {
 
         eval
     }
+
+    /// Jolt's method of compute Eq(x,r)
+    ///
+    /// Computes evals serially. Uses less memory (and fewer allocations) than `evals_parallel`.
+    #[inline]
+    pub fn evals_jolt(r: &[F]) -> Vec<F> {
+        let mut evals: Vec<F> = vec![F::one(); 1 << r.len()];
+        let mut size = 1;
+        for j in 0..r.len() {
+            // in each iteration, we double the size of chis
+            size *= 2;
+            for i in (0..size).rev().step_by(2) {
+                // copy each element from the prior iteration twice
+                let scalar = evals[i / 2];
+                evals[i] = scalar * r[r.len() - j - 1];
+                evals[i - 1] = scalar - evals[i];
+            }
+        }
+        evals
+    }
 }
 
+// Private functions
 impl<F: Field> EqPolynomial<F> {
     #[inline(always)]
     fn eq(x: &F, y: &F) -> F {
@@ -77,6 +117,8 @@ impl<F: Field> EqPolynomial<F> {
     //     *x * y * z + (F::one() - x) * (F::one() - y) * (F::one() - z)
     // }
 
+    /// Hyperplonk's method of computing Eq(x, r)
+    ///
     /// A helper function to build eq(x, r) recursively.
     /// This function takes `r.len()` steps, and for each step it requires a maximum
     /// `r.len()-1` multiplications.
@@ -114,22 +156,6 @@ impl<F: Field> EqPolynomial<F> {
                 }
             });
             *buf = res;
-        }
-    }
-
-    #[inline]
-    pub(crate) fn eq_evals_at_primitive(r: &[F], mul_factor: &F, eq_evals: &mut [F]) {
-        eq_evals[0] = *mul_factor;
-        let mut cur_eval_num = 1;
-
-        for r_i in r.iter() {
-            let eq_z_i_zero = F::one() - r_i;
-            let eq_z_i_one = r_i;
-            for j in 0..cur_eval_num {
-                eq_evals[j + cur_eval_num] = eq_evals[j] * eq_z_i_one;
-                eq_evals[j] *= eq_z_i_zero;
-            }
-            cur_eval_num <<= 1;
         }
     }
 }

@@ -1,6 +1,8 @@
 use arith::Field;
 use ark_std::{log2, rand::RngCore};
 
+use crate::EqPolynomial;
+
 #[derive(Debug, Clone)]
 pub struct MultiLinearPoly<F: Field> {
     pub coeffs: Vec<F>,
@@ -8,16 +10,20 @@ pub struct MultiLinearPoly<F: Field> {
 
 impl<F: Field> MultiLinearPoly<F> {
     /// Sample a random polynomials.
+
+    #[inline]
     pub fn random(nv: usize, mut rng: impl RngCore) -> Self {
         let coeff = (0..1 << nv).map(|_| F::random_unsafe(&mut rng)).collect();
         Self { coeffs: coeff }
     }
 
+    #[inline]
     pub fn get_num_vars(&self) -> usize {
         log2(self.coeffs.len()) as usize
     }
 
     // TODO: optimize this function
+    #[inline]
     pub fn interpolate_over_hypercube_impl(evals: &[F]) -> Vec<F> {
         let mut coeffs = evals.to_vec();
         let num_vars = log2(evals.len());
@@ -39,6 +45,7 @@ impl<F: Field> MultiLinearPoly<F> {
     }
 
     // interpolate Z evaluations over boolean hypercube {0, 1}^n
+    #[inline]
     pub fn interpolate_over_hypercube(&self) -> Vec<F> {
         // Take eq poly as an example:
         //
@@ -60,7 +67,8 @@ impl<F: Field> MultiLinearPoly<F> {
         Self::interpolate_over_hypercube_impl(&self.coeffs)
     }
 
-    // Evaluate the polynomial at a single variable
+    /// Evaluate the polynomial at the top variable
+    #[inline]
     pub fn fix_top_variable(&mut self, r: &F) {
         let n = self.coeffs.len() / 2;
         let (left, right) = self.coeffs.split_at_mut(n);
@@ -71,11 +79,58 @@ impl<F: Field> MultiLinearPoly<F> {
         self.coeffs.truncate(n);
     }
 
-    // Evaluate the polynomial at a set of variables
+    /// Hyperplonk's implementation
+    /// Evaluate the polynomial at a set of variables, from bottom to top
+    /// This is equivalent to `evaluate` when partial_point.len() = nv
+    #[inline]
     pub fn fix_variables(&mut self, partial_point: &[F]) {
         // evaluate single variable of partial point from left to right
         partial_point
             .iter()
+            .rev() // need to reverse the order of the point
             .for_each(|point| self.fix_top_variable(point));
+    }
+
+    /// Jolt's implementation
+    /// Evaluate the polynomial at a set of variables, from bottom to top
+    /// This is equivalent to `evaluate_with_buffer`, but slower
+    /// returns Z(r) in O(n) time
+    #[inline]
+    pub fn evaluate_jolt(&self, r: &[F]) -> F {
+        // r must have a value for each variable
+        assert_eq!(r.len(), self.get_num_vars());
+        let chis = EqPolynomial::evals_jolt(r);
+        assert_eq!(chis.len(), self.coeffs.len());
+        self.coeffs
+            .iter()
+            .zip(chis.iter())
+            .map(|(c, chi)| *c * *chi)
+            .sum()
+    }
+
+    #[inline]
+    /// Expander's implementation
+    /// Generic method to evaluate a multilinear polynomial.
+    /// This is the preferred method to evaluate a multilinear polynomial as it does not require additional memory.
+    pub fn evaluate_with_buffer(evals: &[F], point: &[F], scratch: &mut [F]) -> F {
+        assert_eq!(1 << point.len(), evals.len());
+        assert_eq!(evals.len(), scratch.len());
+
+        if point.is_empty() {
+            evals[0]
+        } else {
+            for i in 0..(evals.len() >> 1) {
+                scratch[i] = (evals[i * 2 + 1] - evals[i * 2]) * point[0] + evals[i * 2];
+            }
+
+            let mut cur_eval_size = evals.len() >> 2;
+            for r in point.iter().skip(1) {
+                for i in 0..cur_eval_size {
+                    scratch[i] = scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]) * r;
+                }
+                cur_eval_size >>= 1;
+            }
+            scratch[0]
+        }
     }
 }

@@ -1,7 +1,7 @@
 use arith::{ExtensionField, Field};
 use circuit::{CircuitLayer, CoefType, GateAdd, GateConst, GateMul};
 use config::{FieldType, GKRConfig};
-use mpoly::EqPolynomial;
+use polynomials::EqPolynomial;
 
 use crate::{scratch_pad::VerifierScratchPad, unpack_and_combine};
 

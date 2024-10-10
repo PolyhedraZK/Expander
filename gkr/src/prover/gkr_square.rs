@@ -7,8 +7,6 @@ use config::GKRConfig;
 use sumcheck::{sumcheck_prove_gkr_square_layer, ProverScratchPad};
 use transcript::{Transcript, TranscriptInstance};
 
-use crate::MultiLinearPoly;
-
 pub fn gkr_square_prove<C: GKRConfig>(
     circuit: &Circuit<C>,
     sp: &mut ProverScratchPad<C>,
@@ -23,11 +21,7 @@ pub fn gkr_square_prove<C: GKRConfig>(
     }
 
     let circuit_output = &circuit.layers.last().unwrap().output_vals;
-    let claimed_v = MultiLinearPoly::eval_circuit_vals_at_challenge::<C>(
-        circuit_output,
-        &rz0,
-        &mut sp.hg_evals,
-    );
+    let claimed_v = C::eval_circuit_vals_at_challenge(circuit_output, &rz0, &mut sp.hg_evals);
 
     for i in (0..layer_num).rev() {
         rz0 = sumcheck_prove_gkr_square_layer(&circuit.layers[i], &rz0, transcript, sp);
