@@ -30,7 +30,7 @@ impl<F: Field> EqPolynomial<F> {
     #[inline]
     /// Expander's method of computing Eq(x, r)
     pub fn build_eq_x_r_with_buf(r: &[F], mul_factor: &F, eq_evals: &mut [F]) {
-        // well, Jolt's method to build eq(x,r) is slightly faster 
+        // well, Jolt's method to build eq(x,r) is slightly faster
         //
         let tmp = Self::scaled_evals_jolt(r, mul_factor);
         eq_evals[..tmp.len()].copy_from_slice(&tmp);
