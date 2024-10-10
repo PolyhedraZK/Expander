@@ -82,9 +82,42 @@ fn bench_eq_xr<F: Field>(c: &mut Criterion) {
     }
 }
 
+fn bench_scaled_eq_xr<F: Field>(c: &mut Criterion) {
+    let mut rng = test_rng();
+    for nv in RANGE {
+        let point = (0..nv)
+            .map(|_| F::random_unsafe(&mut rng))
+            .collect::<Vec<_>>();
+        let scalar = F::random_unsafe(&mut rng);
+
+        // first method
+        let label = format!("jolt's scaled eq_xr, dim = {}", nv);
+        c.bench_function(label.as_str(), |b| {
+            b.iter(|| {
+                black_box(EqPolynomial::<F>::scaled_evals_jolt(
+                    point.as_ref(),
+                    &scalar,
+                ))
+            })
+        });
+
+        // second method
+        let label = format!("expander's scaled eq_xr, dim = {}", nv);
+        c.bench_function(label.as_str(), |b| {
+            b.iter(|| {
+                black_box({
+                    let mut eq_x_r = vec![F::zero(); 1 << nv];
+                    EqPolynomial::<F>::build_eq_x_r_with_buf(point.as_ref(), &scalar, &mut eq_x_r);
+                })
+            })
+        });
+    }
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     bench_mle_eval::<Fr>(c);
     bench_eq_xr::<Fr>(c);
+    bench_scaled_eq_xr::<Fr>(c);
 }
 
 criterion_group!(benches, criterion_benchmark);

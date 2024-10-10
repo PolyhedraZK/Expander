@@ -4,6 +4,24 @@ use ark_std::test_rng;
 use halo2curves::bn256::Fr;
 
 #[test]
+fn test_scaled_eq_xr() {
+    let mut rng = test_rng();
+    for nv in 4..10 {
+        let r: Vec<Fr> = (0..nv).map(|_| Fr::random_unsafe(&mut rng)).collect();
+        let scalar = Fr::random_unsafe(&mut rng);
+
+        // expander
+        let mut eq_x_r1 = vec![Fr::zero(); 1 << nv];
+        EqPolynomial::<Fr>::build_eq_x_r_with_buf(r.as_ref(), &scalar, &mut eq_x_r1);
+
+        // jolt
+        let eq_x_r2 = EqPolynomial::<Fr>::scaled_evals_jolt(r.as_ref(), &scalar);
+
+        assert_eq!(eq_x_r1, eq_x_r2);
+    }
+}
+
+#[test]
 fn test_mle_eval() {
     let mut rng = test_rng();
     for nv in 4..10 {

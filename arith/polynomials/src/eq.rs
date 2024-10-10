@@ -100,6 +100,26 @@ impl<F: Field> EqPolynomial<F> {
         }
         evals
     }
+
+    /// Jolt's method of compute Eq(x,r)
+    ///
+    /// Computes evals serially. Uses less memory (and fewer allocations) than `evals_parallel`.
+    #[inline]
+    pub fn scaled_evals_jolt(r: &[F], mul_factor: &F) -> Vec<F> {
+        let mut evals: Vec<F> = vec![*mul_factor; 1 << r.len()];
+        let mut size = 1;
+        for j in 0..r.len() {
+            // in each iteration, we double the size of chis
+            size *= 2;
+            for i in (0..size).rev().step_by(2) {
+                // copy each element from the prior iteration twice
+                let scalar = evals[i / 2];
+                evals[i] = scalar * r[r.len() - j - 1];
+                evals[i - 1] = scalar - evals[i];
+            }
+        }
+        evals
+    }
 }
 
 // Private functions
