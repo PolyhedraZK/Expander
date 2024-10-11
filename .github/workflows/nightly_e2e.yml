@@ -1,0 +1,71 @@
+name: E2E Tests
+
+on:
+  schedule:
+    # This will run the workflow every day at 2:00 AM UTC
+    - cron: '0 2 * * *'
+  
+  pull_request:
+    branches:
+    # not to be run on DEV branch to save resources
+      - main
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.16'
+
+    - name: Run tests
+      run: |
+        mkdir -p tmp/data
+        cd tmp
+
+        # ECC part
+        git clone https://github.com/PolyhedraZK/ExpanderCompilerCollection.git
+        cd ExpanderCompilerCollection 
+        # fixme: change to dev after https://github.com/PolyhedraZK/ExpanderCompilerCollection/pull/36 is merged
+        git switch zz/circuit_names
+        cargo test --release
+        cp expander_compiler/*.txt ../data
+
+        go run ecgo/examples/poseidon_m31/main.go
+        cp *.txt ../data
+
+        cd ../
+
+        # Expander part
+        git clone https://github.com/PolyhedraZK/Expander.git
+        cd Expander
+        # fixme: change to dev after https://github.com/PolyhedraZK/ExpanderCompilerCollection/pull/36 is merged
+        git switch zz/fix-poseidon-witnesses
+
+        mkdir data
+        mv ../data/*.txt data/
+        ls -l data
+
+        # Run local tests
+        RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo +nightly run --release --bin=gkr -- -s keccak -f gf2ext128 -t 16
+        RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo +nightly run --release --bin=gkr -- -s keccak -f m31ext3 -t 16
+        RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo +nightly run --release --bin=gkr -- -s keccak -f fr -t 16
+        RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo +nightly run --release --bin=gkr -- -s poseidon -f m31ext3 -t 16
+
+        # # Run MPI tests
+        # RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" mpiexec -n 2 cargo +nightly run --release --bin=gkr-mpi -- -s keccak -f gf2ext128
+        # RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" mpiexec -n 2 cargo +nightly run --release --bin=gkr-mpi -- -s keccak -f m31ext3
+        # RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" mpiexec -n 2 cargo +nightly run --release --bin=gkr-mpi -- -s keccak -f fr
+        # RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" mpiexec -n 2 cargo +nightly run --release --bin=gkr-mpi -- -s poseidon -f m31ext3
