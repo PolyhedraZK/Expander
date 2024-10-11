@@ -68,6 +68,7 @@ pub fn gkr_prove<C: GKRConfig>(
     };
 
     for i in (0..layer_num).rev() {
+        let timer2 = start_timer!(|| format!("layer {}", i));
         (rz0, rz1, r_simd, r_mpi) = sumcheck_prove_gkr_layer(
             &circuit.layers[i],
             &rz0,
@@ -92,6 +93,7 @@ pub fn gkr_prove<C: GKRConfig>(
         } else {
             beta = None;
         }
+        end_timer!(timer2);
     }
 
     end_timer!(timer);

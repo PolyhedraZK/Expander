@@ -81,21 +81,29 @@ impl<C: GKRConfig> Prover<C> {
         let timer = start_timer!(|| "prove");
 
         // PC commit
+        let timer2 = start_timer!(|| "PCS");
         let commitment =
             RawCommitment::<C>::mpi_new(&c.layers[0].input_vals, &self.config.mpi_config);
+        end_timer!(timer2);
 
+        let timer2 = start_timer!(|| "Transcript init");
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         let mut transcript = TranscriptInstance::new();
         transcript.append_u8_slice(&buffer);
 
         self.config.mpi_config.transcript_sync_up(&mut transcript);
+        end_timer!(timer2);
 
+        let timer2 = start_timer!(|| "Grinding");
         #[cfg(feature = "grinding")]
         grind::<C>(&mut transcript, &self.config);
+        end_timer!(timer2);
 
+        let timer2 = start_timer!(|| "Evaluate circuit");
         c.fill_rnd_coefs(&mut transcript);
         c.evaluate();
+        end_timer!(timer2);
 
         let mut claimed_v = C::ChallengeField::default();
         let mut _rx = vec![];

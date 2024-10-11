@@ -1,3 +1,4 @@
+use ark_std::{end_timer, start_timer};
 use circuit::CircuitLayer;
 use config::{GKRConfig, MPIConfig};
 use transcript::{Transcript, TranscriptInstance};
@@ -33,37 +34,62 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     helper.prepare_simd();
     helper.prepare_mpi();
 
+    let timer1 = start_timer!(|| format!("gkr phase 1: {} vars", helper.input_var_num));
     // gkr phase 1 over variable x
+    let timer2 = start_timer!(|| "prepare x");
     helper.prepare_x_vals();
+    end_timer!(timer2);
+    let timer2 = start_timer!(|| "eval x");
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
         let r = mpi_config
             .transcript_io::<C::ChallengeField, C::FiatShamirHashType>(&evals, transcript);
         helper.receive_rx(i_var, r);
     }
+    end_timer!(timer2);
+    end_timer!(timer1);
 
+    let timer1 = start_timer!(|| format!("gkr phase simd: {} vars", helper.simd_var_num));
+    let timer2 = start_timer!(|| "prepare simd");
     helper.prepare_simd_var_vals();
+    end_timer!(timer2);
+    let timer2 = start_timer!(|| "eval simd");
     for i_var in 0..helper.simd_var_num {
         let evals = helper.poly_evals_at_r_simd_var(i_var, 3);
         let r = mpi_config
             .transcript_io::<C::ChallengeField, C::FiatShamirHashType>(&evals, transcript);
         helper.receive_r_simd_var(i_var, r);
     }
+    end_timer!(timer2);
+    end_timer!(timer1);
 
+    let timer1 = start_timer!(|| format!(
+        "gkr phase mpi: {} vars",
+        mpi_config.world_size().trailing_zeros()
+    ));
+    let timer2 = start_timer!(|| "prepare mpi");
     helper.prepare_mpi_var_vals();
+    end_timer!(timer2);
+    let timer2 = start_timer!(|| "eval mpi");
     for i_var in 0..mpi_config.world_size().trailing_zeros() as usize {
         let evals = helper.poly_evals_at_r_mpi_var(i_var, 3);
         let r = mpi_config
             .transcript_io::<C::ChallengeField, C::FiatShamirHashType>(&evals, transcript);
         helper.receive_r_mpi_var(i_var, r);
     }
+    end_timer!(timer2);
+    end_timer!(timer1);
 
     let vx_claim = helper.vx_claim();
     transcript.append_field_element::<C::ChallengeField>(&vx_claim);
 
     // gkr phase 2 over variable y
     if !layer.structure_info.max_degree_one {
+        let timer1 = start_timer!(|| format!("gkr phase 2: {} vars", helper.input_var_num));
+        let timer2 = start_timer!(|| "prepare y");
         helper.prepare_y_vals();
+        end_timer!(timer2);
+        let timer2 = start_timer!(|| "eval y");
         for i_var in 0..helper.input_var_num {
             let evals = helper.poly_evals_at_ry(i_var, 2);
             let r = mpi_config
@@ -72,6 +98,8 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
         }
         let vy_claim = helper.vy_claim();
         transcript.append_field_element::<C::ChallengeField>(&vy_claim);
+        end_timer!(timer2);
+        end_timer!(timer1);
     }
 
     let rx = helper.rx;

@@ -49,7 +49,8 @@ name = "dev-setup"
 path = "src/utils.rs"
 
 [features]
-default = []
+# default = []
+default = [ "ark-std/print-trace" ]
 # default = [ "grinding" ]
 grinding = [ "config/grinding" ]
 
