@@ -12,12 +12,11 @@ use transcript::{
 use crate::{gkr_prove, gkr_square_prove, RawCommitment};
 
 #[cfg(feature = "grinding")]
-pub(crate) fn grind<C: GKRConfig>(
-    transcript: &mut transcript::TranscriptInstance<C::FiatShamirHashType>,
+pub(crate) fn grind<C: GKRConfig, T: Transcript<C::ChallengeField>>(
+    transcript: &mut T,
     config: &Config<C>,
 ) {
     use arith::{Field, FieldSerde};
-    use transcript::FiatShamirHash;
 
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
 
@@ -26,8 +25,7 @@ pub(crate) fn grind<C: GKRConfig>(
     // ceil(32/field_size)
     let num_field_elements = (31 + C::ChallengeField::SIZE) / C::ChallengeField::SIZE;
 
-    let initial_hash =
-        transcript.generate_challenge_vector::<C::ChallengeField>(num_field_elements);
+    let initial_hash = transcript.generate_challenge_field_elements(num_field_elements);
     initial_hash
         .iter()
         .for_each(|h| h.serialize_into(&mut hash_bytes).unwrap()); // TODO: error propagation
@@ -36,7 +34,8 @@ pub(crate) fn grind<C: GKRConfig>(
     hash_bytes.truncate(32);
 
     for _ in 0..(1 << config.grinding_bits) {
-        C::FiatShamirHashType::hash_inplace(&mut hash_bytes);
+        transcript.append_u8_slice(&hash_bytes);
+        hash_bytes = transcript.generate_challenge_u8_slice(32);
     }
     transcript.append_u8_slice(&hash_bytes[..32]);
     end_timer!(timer);
