@@ -23,11 +23,13 @@ fn benchmark_setup<C: GKRConfig>(
 ) -> (Config<C>, Circuit<C>) {
     let config = Config::<C>::new(scheme, MPIConfig::new());
     let mut circuit = Circuit::<C>::load_circuit(circuit_file);
-    if witness_file.is_some() {
-        circuit.load_witness_file(witness_file.unwrap());
+    
+    if let Some(witness_file) = witness_file {
+        circuit.load_witness_file(witness_file);
     } else {
         circuit.set_random_input_for_test();
     }
+        
     (config, circuit)
 }
 
