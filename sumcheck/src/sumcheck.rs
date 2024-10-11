@@ -1,26 +1,12 @@
+use ark_std::{end_timer, start_timer};
 use circuit::CircuitLayer;
 use config::{GKRConfig, MPIConfig};
 use transcript::{Transcript, TranscriptInstance};
 
 use crate::{
-    sumcheck_helper::SumcheckGkrHelper, sumcheck_square_helper::SumcheckGkrSquareHelper,
-    GkrScratchpad,
+    prover_helper::{SumcheckGkrSquareHelper, SumcheckGkrVanillaHelper},
+    ProverScratchPad,
 };
-
-#[inline(always)]
-fn transcript_io<C: GKRConfig>(
-    ps: &[C::ChallengeField],
-    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
-    mpi_config: &MPIConfig,
-) -> C::ChallengeField {
-    assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
-    for p in ps {
-        transcript.append_field_element::<C::ChallengeField>(p);
-    }
-    let mut r = transcript.generate_challenge::<C::ChallengeField>();
-    mpi_config.root_broadcast(&mut r);
-    r
-}
 
 // FIXME
 #[allow(clippy::too_many_arguments)]
@@ -31,10 +17,10 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     rz1: &Option<Vec<C::ChallengeField>>,
     r_simd: &[C::ChallengeField],
     r_mpi: &[C::ChallengeField],
-    alpha: &C::ChallengeField,
-    beta: &Option<C::ChallengeField>,
+    alpha: C::ChallengeField,
+    beta: Option<C::ChallengeField>,
     transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
-    sp: &mut GkrScratchpad<C>,
+    sp: &mut ProverScratchPad<C>,
     mpi_config: &MPIConfig,
 ) -> (
     Vec<C::ChallengeField>,
@@ -43,44 +29,77 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
     Vec<C::ChallengeField>,
 ) {
     let mut helper =
-        SumcheckGkrHelper::new(layer, rz0, rz1, r_simd, r_mpi, alpha, beta, sp, mpi_config);
+        SumcheckGkrVanillaHelper::new(layer, rz0, rz1, r_simd, r_mpi, alpha, beta, sp, mpi_config);
 
     helper.prepare_simd();
     helper.prepare_mpi();
-    helper.prepare_x_vals();
 
+    let timer1 = start_timer!(|| format!("gkr phase 1: {} vars", helper.input_var_num));
+    // gkr phase 1 over variable x
+    let timer2 = start_timer!(|| "prepare x");
+    helper.prepare_x_vals();
+    end_timer!(timer2);
+    let timer2 = start_timer!(|| "eval x");
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
-        let r = transcript_io::<C>(&evals, transcript, mpi_config);
+        let r = mpi_config
+            .transcript_io::<C::ChallengeField, C::FiatShamirHashType>(&evals, transcript);
         helper.receive_rx(i_var, r);
     }
+    end_timer!(timer2);
+    end_timer!(timer1);
 
+    let timer1 = start_timer!(|| format!("gkr phase simd: {} vars", helper.simd_var_num));
+    let timer2 = start_timer!(|| "prepare simd");
     helper.prepare_simd_var_vals();
+    end_timer!(timer2);
+    let timer2 = start_timer!(|| "eval simd");
     for i_var in 0..helper.simd_var_num {
         let evals = helper.poly_evals_at_r_simd_var(i_var, 3);
-        let r = transcript_io::<C>(&evals, transcript, mpi_config);
+        let r = mpi_config
+            .transcript_io::<C::ChallengeField, C::FiatShamirHashType>(&evals, transcript);
         helper.receive_r_simd_var(i_var, r);
     }
+    end_timer!(timer2);
+    end_timer!(timer1);
 
+    let timer1 = start_timer!(|| format!(
+        "gkr phase mpi: {} vars",
+        mpi_config.world_size().trailing_zeros()
+    ));
+    let timer2 = start_timer!(|| "prepare mpi");
     helper.prepare_mpi_var_vals();
+    end_timer!(timer2);
+    let timer2 = start_timer!(|| "eval mpi");
     for i_var in 0..mpi_config.world_size().trailing_zeros() as usize {
         let evals = helper.poly_evals_at_r_mpi_var(i_var, 3);
-        let r = transcript_io::<C>(&evals, transcript, mpi_config);
+        let r = mpi_config
+            .transcript_io::<C::ChallengeField, C::FiatShamirHashType>(&evals, transcript);
         helper.receive_r_mpi_var(i_var, r);
     }
+    end_timer!(timer2);
+    end_timer!(timer1);
 
     let vx_claim = helper.vx_claim();
     transcript.append_field_element::<C::ChallengeField>(&vx_claim);
 
+    // gkr phase 2 over variable y
     if !layer.structure_info.max_degree_one {
+        let timer1 = start_timer!(|| format!("gkr phase 2: {} vars", helper.input_var_num));
+        let timer2 = start_timer!(|| "prepare y");
         helper.prepare_y_vals();
+        end_timer!(timer2);
+        let timer2 = start_timer!(|| "eval y");
         for i_var in 0..helper.input_var_num {
             let evals = helper.poly_evals_at_ry(i_var, 2);
-            let r = transcript_io::<C>(&evals, transcript, mpi_config);
+            let r = mpi_config
+                .transcript_io::<C::ChallengeField, C::FiatShamirHashType>(&evals, transcript);
             helper.receive_ry(i_var, r);
         }
         let vy_claim = helper.vy_claim();
         transcript.append_field_element::<C::ChallengeField>(&vy_claim);
+        end_timer!(timer2);
+        end_timer!(timer1);
     }
 
     let rx = helper.rx;
@@ -96,14 +115,12 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig>(
 }
 
 // FIXME
-#[allow(clippy::too_many_arguments)]
-#[allow(clippy::type_complexity)]
 #[allow(clippy::needless_range_loop)] // todo: remove
 pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
     transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
-    sp: &mut GkrScratchpad<C>,
+    sp: &mut ProverScratchPad<C>,
 ) -> Vec<C::ChallengeField> {
     const D: usize = 7;
     let mut helper = SumcheckGkrSquareHelper::new(layer, rz0, sp);
@@ -134,68 +151,3 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRConfig>(
 
     helper.rx
 }
-
-// #[cfg(test)]
-// mod tests {
-// use crate::BN254ConfigKeccak;
-
-// type C = BN254ConfigKeccak;
-
-// #[test]
-// fn test_sumcheck_cuda() {
-//     // Field: BN254 Scalar; Fiat Shamir Hash Function: Keccak256; Scheme: Vanilla GKR
-
-//     // Sumcheck Outstanding Results
-//     let mut rz0 = vec![];
-//     let mut rz1 = vec![];
-
-//     // Random Linear Combination
-//     let mut alpha = <C as GKRConfig>::ChallengeField::one();
-//     let mut beta = <C as GKRConfig>::ChallengeField::zero();
-
-//     // Loading Circuit (hard-coded keccak circuit for now)
-//     let mut circuit = Circuit::<BN254ConfigKeccak>::load_circuit(KECCAK_M31_CIRCUIT);
-//     circuit.set_random_input_for_test();
-//     circuit.evaluate();
-//     let layer_num = circuit.layers.len();
-
-//     // Define the scratchpad
-//     let max_num_input_var = circuit
-//         .layers
-//         .iter()
-//         .map(|layer| layer.input_var_num)
-//         .max()
-//         .unwrap();
-//     let max_num_output_var = circuit
-//         .layers
-//         .iter()
-//         .map(|layer| layer.output_var_num)
-//         .max()
-//         .unwrap();
-//     let mut sp = GkrScratchpad::<BN254ConfigKeccak>::new(max_num_input_var, max_num_output_var);
-
-//     // Do the PC commitment to initial the transcript
-//     let commitment = RawCommitment::<C>::new(&circuit.layers[0].input_vals);
-//     let mut buffer = vec![];
-//     commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
-//     let mut transcript = Transcript::<Keccak256hasher>::new();
-//     transcript.append_u8_slice(&buffer);
-
-//     // Do SumCheck Once from the output layer
-//     (rz0, rz1) = sumcheck_prove_gkr_layer(
-//         &circuit.layers[layer_num - 1],
-//         &rz0,
-//         &rz1,
-//         &alpha,
-//         &beta,
-//         &mut transcript,
-//         &mut sp,
-//     );
-//     alpha = transcript.challenge_f::<C>();
-//     beta = transcript.challenge_f::<C>();
-//     println!(
-//         "rz0 = {:?}\nrz1 = {:?}\nalpha = {:?}, beta = {:?}",
-//         rz0, rz1, alpha, beta
-//     );
-// }
-// }
