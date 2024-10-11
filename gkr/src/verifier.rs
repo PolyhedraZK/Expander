@@ -186,7 +186,6 @@ pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
 
     let mut verified = true;
     for i in (0..layer_num).rev() {
-
         let cur_verified;
         (
             cur_verified,

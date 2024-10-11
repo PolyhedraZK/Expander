@@ -19,34 +19,28 @@ use crate::{utils::*, Prover, Verifier};
 fn test_gkr_correctness() {
     let mpi_config = MPIConfig::new();
 
-    test_gkr_correctness_helper::<GF2ExtConfigSha2>(&Config::<GF2ExtConfigSha2>::new(
-        GKRScheme::Vanilla,
-        mpi_config.clone()),
+    test_gkr_correctness_helper::<GF2ExtConfigSha2>(
+        &Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper::<GF2ExtConfigKeccak>(&Config::<GF2ExtConfigKeccak>::new(
-        GKRScheme::Vanilla,
-        mpi_config.clone()),
+    test_gkr_correctness_helper::<GF2ExtConfigKeccak>(
+        &Config::<GF2ExtConfigKeccak>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper::<M31ExtConfigSha2>(&Config::<M31ExtConfigSha2>::new(
-        GKRScheme::Vanilla,
-        mpi_config.clone()),
+    test_gkr_correctness_helper::<M31ExtConfigSha2>(
+        &Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper::<M31ExtConfigKeccak>(&Config::<M31ExtConfigKeccak>::new(
-        GKRScheme::Vanilla,
-        mpi_config.clone()),
+    test_gkr_correctness_helper::<M31ExtConfigKeccak>(
+        &Config::<M31ExtConfigKeccak>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper::<BN254ConfigSha2>(&Config::<BN254ConfigSha2>::new(
-        GKRScheme::Vanilla,
-        mpi_config.clone()),
+    test_gkr_correctness_helper::<BN254ConfigSha2>(
+        &Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper::<BN254ConfigKeccak>(&Config::<BN254ConfigKeccak>::new(
-        GKRScheme::Vanilla,
-        mpi_config.clone()),
+    test_gkr_correctness_helper::<BN254ConfigKeccak>(
+        &Config::<BN254ConfigKeccak>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
     test_gkr_correctness_helper::<BN254ConfigMIMC5>(
