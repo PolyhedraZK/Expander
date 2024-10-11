@@ -30,6 +30,7 @@ flamegraph.svg
 output.txt
 .DS_Store
 *.log
+*.txt
 
 # circuit files
 /data/*

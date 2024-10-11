@@ -29,12 +29,16 @@ pub const KECCAK_WITNESS_BN254_URL: &str =
 
 // circuit for repeating Poseidon for 120 times
 pub const POSEIDON_M31_CIRCUIT: &str = "data/poseidon_120_circuit_m31.txt";
+// circuit for repeating Poseidon for 120 times
+pub const POSEIDON_M31_WITNESS: &str = "data/poseidon_120_witness_m31.txt";
+// circuit for repeating Poseidon for 120 times
+pub const POSEIDON_BN254_CIRCUIT: &str = "data/poseidon_120_circuit_bn254.txt";
+// circuit for repeating Poseidon for 120 times
+pub const POSEIDON_BN254_WITNESS: &str = "data/poseidon_120_witness_bn254.txt";
+
 // URL for Poseidon circuit repeated for 120 times
 pub const POSEIDON_M31_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_circuit_m31.txt";
-
-// circuit for repeating Poseidon for 120 times
-pub const POSEIDON_BN254_CIRCUIT: &str = "data/poseidon_120_circuit_bn254.txt";
 // URL for Poseidon circuit repeated for 120 times
 pub const POSEIDON_BN254_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_circuit_bn254.txt";

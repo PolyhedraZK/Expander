@@ -5,6 +5,8 @@ mod gf2_ext_sha2;
 mod m31_ext_keccak;
 mod m31_ext_sha2;
 
+use std::fmt::Debug;
+
 use arith::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
 use transcript::FiatShamirHash;
 
@@ -32,7 +34,7 @@ pub enum FiatShamirHashType {
     MIMC7,
 }
 
-pub trait GKRConfig: Default + Clone + Send + Sync + 'static {
+pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
     /// Field type for the circuit, e.g., M31
     type CircuitField: Field + FieldSerde + FieldForECC + Send;
 
