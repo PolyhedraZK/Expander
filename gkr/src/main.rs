@@ -11,10 +11,7 @@ use config::{
 };
 use gkr::{
     utils::{
-        KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
-        KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS,  POSEIDON_M31_CIRCUIT,
-        TRIVIAL_BN254_CIRCUIT,
-   POSEIDON_M31_WITNESS,
+        KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS, KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS, TRIVIAL_BN254_CIRCUIT, TRIVIAL_BN254_WITNESS
     },
     Prover,
 };
@@ -128,6 +125,10 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
             FieldType::M31 => POSEIDON_M31_WITNESS,
             _ => unreachable!("not supported"),
         },
+        "trivial" => match C::FIELD_TYPE {
+            FieldType::BN254 => TRIVIAL_BN254_WITNESS,
+            _ => unreachable!(),
+        },
         _ => unreachable!(),
     };
 
@@ -137,7 +138,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
             FieldType::M31 => circuit_template.load_non_simd_witness_file(witness_path, 16),
             _ => unreachable!("not supported"),
         },
-
+        "trivial" => circuit_template.load_witness_file(witness_path),
         _ => unreachable!(),
     };
 

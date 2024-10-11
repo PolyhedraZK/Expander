@@ -49,8 +49,11 @@ pub const POSEIDON_WITNESS_M31_URL: &str =
 // pub const POSEIDON_WITNESS_BN254_URL: &str =
 //         "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_witness_bn254.txt";
 
-pub const TRIVIAL_BN254_CIRCUIT: &str = "data/trivial_circuit_bn254.txt";
-pub const TRIVIAL_M31_CIRCUIT: &str = "data/trivial_circuit_m31.txt";
+pub const TRIVIAL_BN254_CIRCUIT: &str = "data/trivial_circuit_22.txt";
+pub const TRIVIAL_M31_CIRCUIT: &str = "data/trivial_circuit_22.txt";
+
+pub const TRIVIAL_BN254_WITNESS: &str = "data/trivial_witness_22.txt";
+pub const TRIVIAL_M31_WITNESS: &str = "data/trivial_witness_22.txt";
 
 // NOTE(Hang 08/23/24):
 // CI process is unhappy about reqwest as a dependency,
