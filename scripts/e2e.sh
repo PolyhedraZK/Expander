@@ -48,7 +48,9 @@ RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo +nightly run -
 
 ## SEEMS MPI will freeze?
 # run mpi tests
-RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" mpiexec -n 2 cargo +nightly run --release --bin=gkr-mpi -- -s keccak -f gf2ext128
-RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" mpiexec -n 2 cargo +nightly run --release --bin=gkr-mpi -- -s keccak -f m31ext3
-RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" mpiexec -n 2 cargo +nightly run --release --bin=gkr-mpi -- -s keccak -f fr
-RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" mpiexec -n 2 cargo +nightly run --release --bin=gkr-mpi -- -s poseidon -f m31ext3
+RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo +nightly build --release --bin=gkr-mpi 
+
+mpiexec -n 2 ./target/release/gkr-mpi -- -s keccak -f gf2ext128
+mpiexec -n 2 ./target/release/gkr-mpi -- -s keccak -f m31ext3
+mpiexec -n 2 ./target/release/gkr-mpi -- -s keccak -f fr
+mpiexec -n 2 ./target/release/gkr-mpi -- -s poseidon -f m31ext3
