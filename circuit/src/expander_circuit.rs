@@ -198,9 +198,6 @@ impl<C: GKRConfig> Circuit<C> {
         let cursor = Cursor::new(file_bytes);
         let witness = Witness::<C>::deserialize_from(cursor);
 
-        println!("witnesses: {:?}", witness);
-        println!("witnesses: {:?}", witness.values.len());
-
         let private_input_size = 1 << self.log_input_size();
         let public_input_size = witness.num_public_inputs_per_witness;
         let total_size = private_input_size + public_input_size;
