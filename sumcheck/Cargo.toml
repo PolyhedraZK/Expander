@@ -13,3 +13,7 @@ transcript = { path = "../transcript" }
 ark-std.workspace = true
 env_logger.workspace = true
 log.workspace = true
+
+
+[dev-dependencies]
+halo2curves.workspace = true

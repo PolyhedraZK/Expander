@@ -1,0 +1,7 @@
+===============================
+benchmarking trivial with GKR over fr
+field:          fr
+#threads:       1
+#bench repeats: 1
+hash scheme:    trivial
+===============================
