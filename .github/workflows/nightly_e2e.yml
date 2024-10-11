@@ -15,7 +15,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: 7950x3d
     
     steps:
     - uses: actions/checkout@v2
