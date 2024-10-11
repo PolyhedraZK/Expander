@@ -149,8 +149,6 @@ impl<C: GKRConfig> Circuit<C> {
         let cursor = Cursor::new(file_bytes);
         let mut witness = Witness::<C>::deserialize_from(cursor);
 
-        println!("witnesses: {:?}", witness);
-
         assert_eq!(witness.num_witnesses, 1);
         witness.num_witnesses = pack_size;
         witness.values = (0..pack_size)

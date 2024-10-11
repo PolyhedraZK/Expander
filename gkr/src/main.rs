@@ -12,8 +12,7 @@ use config::{
 use gkr::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
-        KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_BN254_CIRCUIT, POSEIDON_BN254_WITNESS,
-        POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
+        KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
     Prover,
 };
@@ -99,9 +98,8 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
             FieldType::BN254 => Circuit::<C>::load_circuit(KECCAK_BN254_CIRCUIT),
         },
         "poseidon" => match C::FIELD_TYPE {
-            FieldType::GF2 => unreachable!(),
             FieldType::M31 => Circuit::<C>::load_circuit(POSEIDON_M31_CIRCUIT),
-            FieldType::BN254 => Circuit::<C>::load_circuit(POSEIDON_BN254_CIRCUIT),
+            _ => unreachable!("not supported"),
         },
 
         _ => unreachable!(),
@@ -114,20 +112,17 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
             FieldType::BN254 => KECCAK_BN254_WITNESS,
         },
         "poseidon" => match C::FIELD_TYPE {
-            FieldType::GF2 => unreachable!(),
             FieldType::M31 => POSEIDON_M31_WITNESS,
-            FieldType::BN254 => POSEIDON_BN254_WITNESS,
+            _ => unreachable!("not supported"),
         },
-
         _ => unreachable!(),
     };
 
     match args.scheme.as_str() {
         "keccak" => circuit_template.load_witness_file(witness_path),
         "poseidon" => match C::FIELD_TYPE {
-            FieldType::GF2 => unreachable!(),
             FieldType::M31 => circuit_template.load_non_simd_witness_file(witness_path, 16),
-            FieldType::BN254 => circuit_template.load_witness_file(witness_path),
+            _ => unreachable!("not supported"),
         },
 
         _ => unreachable!(),
@@ -138,7 +133,6 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         (FieldType::M31, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
         (FieldType::M31, "poseidon") => 120,
-        (FieldType::BN254, "poseidon") => 120,
         _ => unreachable!(),
     };
 

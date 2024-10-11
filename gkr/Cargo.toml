@@ -36,7 +36,7 @@ tiny-keccak.workspace = true
 criterion = "0.5.1"
 
 [[bin]]
-name = "expander-rs-mpi"
+name = "gkr-mpi"
 path = "src/main_mpi.rs"
 
 [[bin]]
