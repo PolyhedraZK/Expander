@@ -1,3 +1,4 @@
+use core::hash;
 use std::marker::PhantomData;
 
 use arith::{Field, FieldSerde};
@@ -143,6 +144,9 @@ pub struct FieldHashTranscript<F: Field + FieldSerde, H: FiatShamirFieldHash<F>>
     /// The digest bytes.
     pub digest: F,
 
+    /// Proof
+    pub proof: Proof,
+
     /// The proof bytes.
     pub data_pool: Vec<F>,
 
@@ -160,10 +164,16 @@ impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHa
     }
 
     fn append_field_element(&mut self, f: &F) {
+        let mut buffer = vec![];
+        f.serialize_into(&mut buffer).unwrap();
+        self.proof.bytes.extend_from_slice(&buffer);
+
         self.data_pool.push(*f);
     }
 
     fn append_u8_slice(&mut self, buffer: &[u8]) {
+        self.proof.bytes.extend_from_slice(buffer);
+
         let buffer_size = buffer.len();
         let mut cur = 0;
         while cur + 32 <= buffer_size {
@@ -199,19 +209,7 @@ impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHa
     }
 
     fn finalize_and_get_proof(&self) -> Proof {
-        let proof_bytes = self
-            .data_pool
-            .iter()
-            .flat_map(|f| {
-                let mut buf = vec![];
-                f.serialize_into(&mut buf).unwrap();
-                buf
-            })
-            .collect();
-
-        let mut proof = Proof::default();
-        proof.bytes = proof_bytes;
-        proof
+        self.proof.clone()
     }
 
     fn state(&mut self) -> Vec<u8> {

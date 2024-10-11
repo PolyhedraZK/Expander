@@ -173,10 +173,6 @@ impl GKRVerifierHelper {
         let mpi_world_size = sp.eq_evals_at_r_mpi.len();
         let local_input_size = public_input.len() / mpi_world_size;
 
-        let simd_sum: C::ChallengeField = sp.eq_evals_at_r_simd.iter().sum();
-        let mpi_sum: C::ChallengeField = sp.eq_evals_at_r_mpi.iter().sum();
-        let simd_mpi_sum = simd_sum * mpi_sum;
-
         for cst_gate in cst_gates {
             let tmp = match cst_gate.coef_type {
                 CoefType::PublicInput(input_idx) => {
@@ -199,17 +195,15 @@ impl GKRVerifierHelper {
                             &sp.eq_evals_at_r_simd,
                         )
                 }
-                _ => {
-                    C::challenge_mul_circuit_field(
-                        &sp.eq_evals_at_rz0[cst_gate.o_id],
-                        &cst_gate.coef,
-                    ) * simd_mpi_sum
-                }
+                _ => C::challenge_mul_circuit_field(
+                    &sp.eq_evals_at_rz0[cst_gate.o_id],
+                    &cst_gate.coef,
+                ),
             };
             v += tmp;
         }
 
-        v * simd_sum * mpi_sum
+        v
     }
 
     #[inline(always)]

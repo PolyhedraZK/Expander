@@ -1,6 +1,6 @@
 use arith::{Field, FieldForECC, FieldSerde, FieldSerdeError};
 use config::GKRConfig;
-use std::{io::Read, vec};
+use std::{fs::read, io::Read, vec};
 use thiserror::Error;
 
 use super::{Allocation, CoefType, Gate, RecursiveCircuit, Segment, Witness};

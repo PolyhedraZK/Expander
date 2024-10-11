@@ -10,7 +10,7 @@ members = [
     "config", 
     "gkr", 
     "sumcheck",
-    "transcript"
+    "transcript",
 ]
 resolver = "2"
 

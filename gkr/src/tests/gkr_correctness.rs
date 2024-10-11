@@ -1,6 +1,8 @@
-use std::panic;
+use std::io::Write;
 use std::panic::AssertUnwindSafe;
+use std::process::exit;
 use std::time::Instant;
+use std::{fs, panic};
 
 use arith::Field;
 use circuit::Circuit;
@@ -20,38 +22,44 @@ fn test_gkr_correctness() {
 
     test_gkr_correctness_helper::<GF2ExtConfigSha2>(&Config::<GF2ExtConfigSha2>::new(
         GKRScheme::Vanilla,
-        mpi_config.clone(),
-    ));
+        mpi_config.clone()),
+        None,
+    );
     test_gkr_correctness_helper::<GF2ExtConfigKeccak>(&Config::<GF2ExtConfigKeccak>::new(
         GKRScheme::Vanilla,
-        mpi_config.clone(),
-    ));
+        mpi_config.clone()),
+        None,
+    );
     test_gkr_correctness_helper::<M31ExtConfigSha2>(&Config::<M31ExtConfigSha2>::new(
         GKRScheme::Vanilla,
-        mpi_config.clone(),
-    ));
+        mpi_config.clone()),
+        None,
+    );
     test_gkr_correctness_helper::<M31ExtConfigKeccak>(&Config::<M31ExtConfigKeccak>::new(
         GKRScheme::Vanilla,
-        mpi_config.clone(),
-    ));
+        mpi_config.clone()),
+        None,
+    );
     test_gkr_correctness_helper::<BN254ConfigSha2>(&Config::<BN254ConfigSha2>::new(
         GKRScheme::Vanilla,
-        mpi_config.clone(),
-    ));
+        mpi_config.clone()),
+        None,
+    );
     test_gkr_correctness_helper::<BN254ConfigKeccak>(&Config::<BN254ConfigKeccak>::new(
         GKRScheme::Vanilla,
-        mpi_config.clone(),
-    ));
-    test_gkr_correctness_helper::<BN254ConfigMIMC5>(&Config::<BN254ConfigMIMC5>::new(
-        GKRScheme::Vanilla,
-        mpi_config.clone(),
-    ));
+        mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper::<BN254ConfigMIMC5>(
+        &Config::<BN254ConfigMIMC5>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        Some("proof.txt"),
+    );
 
     MPIConfig::finalize();
 }
 
 #[allow(unreachable_patterns)]
-fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
+fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>, write_proof_to: Option<&str>) {
     root_println!(config.mpi_config, "============== start ===============");
     root_println!(config.mpi_config, "Field Type: {:?}", C::FIELD_TYPE);
     let circuit_copy_size: usize = match C::FIELD_TYPE {
@@ -68,9 +76,9 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     root_println!(config.mpi_config, "Config created.");
 
     let circuit_path = match C::FIELD_TYPE {
-        FieldType::GF2 => "../data/circuit_gf2.txt",
-        FieldType::M31 => "../data/circuit_m31.txt",
-        FieldType::BN254 => "../data/circuit_bn254.txt",
+        FieldType::GF2 => KECCAK_GF2_CIRCUIT,
+        FieldType::M31 => KECCAK_M31_CIRCUIT,
+        FieldType::BN254 => KECCAK_BN254_CIRCUIT,
         _ => unreachable!(),
     };
     let mut circuit = Circuit::<C>::load_circuit(circuit_path);
@@ -107,17 +115,6 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
         "Proof generated. Size: {} bytes",
         proof.bytes.len()
     );
-    // first and last 16 proof u8
-    root_println!(config.mpi_config, "Proof bytes: ");
-    proof.bytes.iter().take(16).for_each(|b| print!("{} ", b));
-    print!("... ");
-    proof
-        .bytes
-        .iter()
-        .rev()
-        .take(16)
-        .rev()
-        .for_each(|b| print!("{} ", b));
     root_println!(config.mpi_config,);
 
     root_println!(config.mpi_config, "Proof hash: ");
@@ -137,6 +134,14 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
 
     // Verify
     if config.mpi_config.is_root() {
+        if let Some(str) = write_proof_to {
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(str)
+                .unwrap();
+            file.write_all(&proof.bytes).unwrap();
+        }
         let verifier = Verifier::new(config);
         println!("Verifier created.");
         let verification_start = Instant::now();

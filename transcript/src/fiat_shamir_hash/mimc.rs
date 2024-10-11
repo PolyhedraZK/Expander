@@ -1,6 +1,6 @@
 use arith::{Field, FieldSerde};
 
-use tiny_keccak::{Hasher, Sha3};
+use tiny_keccak::{Hasher, Keccak};
 
 use super::FiatShamirFieldHash;
 
@@ -52,11 +52,11 @@ impl<F: Field + FieldSerde> MIMCHasher<F> {
 
 const SEED: &str = "seed";
 pub fn generate_mimc_constants<F: Field>() -> MIMCConstants<F> {
-    let mut keccak = Sha3::v256();
+    let mut keccak = Keccak::v256();
     let mut h = [0u8; 32];
     keccak.update(SEED.as_bytes());
     keccak.finalize(&mut h);
-    let mut keccak = Sha3::v256();
+    let mut keccak = Keccak::v256();
     let mut h_iv = [0u8; 32];
     let seed_iv = format!("{}{}", SEED, "_iv");
     keccak.update(seed_iv.as_bytes());
@@ -70,13 +70,13 @@ pub fn generate_mimc_constants<F: Field>() -> MIMCConstants<F> {
 pub fn get_constants<F: Field>(seed: &str, n_rounds: i64) -> Vec<F> {
     let mut cts: Vec<F> = Vec::new();
 
-    let mut keccak = Sha3::v256();
+    let mut keccak = Keccak::v256();
     let mut h = [0u8; 32];
     keccak.update(seed.as_bytes());
     keccak.finalize(&mut h);
 
     for _ in 0..n_rounds {
-        let mut keccak = Sha3::v256();
+        let mut keccak = Keccak::v256();
         keccak.update(&h);
         keccak.finalize(&mut h);
 

@@ -82,6 +82,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     if claimed_v1.is_some() && beta.is_some() {
         sum += claimed_v1.unwrap() * beta.unwrap();
     }
+
     sum -= GKRVerifierHelper::eval_cst(&layer.const_, public_input, sp);
 
     let mut rx = vec![];
@@ -185,6 +186,7 @@ pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
 
     let mut verified = true;
     for i in (0..layer_num).rev() {
+
         let cur_verified;
         (
             cur_verified,
@@ -217,14 +219,6 @@ pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
         } else {
             None
         };
-        log::trace!(
-            "Layer {} verified with alpha={:?} and beta={:?}, claimed_v0={:?}, claimed_v1={:?}",
-            i,
-            alpha,
-            beta,
-            claimed_v0,
-            claimed_v1
-        );
     }
     end_timer!(timer);
     (verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1)

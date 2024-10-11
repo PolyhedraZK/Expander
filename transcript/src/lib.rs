@@ -1,5 +1,7 @@
 mod fiat_shamir_hash;
-pub use fiat_shamir_hash::{FiatShamirBytesHash, Keccak256hasher, MIMCHasher, SHA256hasher};
+pub use fiat_shamir_hash::{
+    FiatShamirBytesHash, FiatShamirFieldHash, Keccak256hasher, MIMCHasher, SHA256hasher,
+};
 
 mod transcript;
 pub use transcript::{BytesHashTranscript, FieldHashTranscript, Transcript};
