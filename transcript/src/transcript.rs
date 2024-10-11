@@ -1,4 +1,3 @@
-use core::hash;
 use std::marker::PhantomData;
 
 use arith::{Field, FieldSerde};

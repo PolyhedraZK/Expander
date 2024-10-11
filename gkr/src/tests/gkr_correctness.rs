@@ -1,6 +1,5 @@
 use std::io::Write;
 use std::panic::AssertUnwindSafe;
-use std::process::exit;
 use std::time::Instant;
 use std::{fs, panic};
 
@@ -138,6 +137,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>, write_proof_to:
             let mut file = fs::OpenOptions::new()
                 .write(true)
                 .create(true)
+                .truncate(true)
                 .open(str)
                 .unwrap();
             file.write_all(&proof.bytes).unwrap();
