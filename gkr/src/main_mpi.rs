@@ -108,7 +108,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     match args.scheme.as_str() {
         "keccak" => circuit.load_witness_file(witness_path),
         "poseidon" => match C::FIELD_TYPE {
-            FieldType::M31 => circuit.load_non_simd_witness_file(witness_path, 16),
+            FieldType::M31 => circuit.load_non_simd_witness_file(witness_path),
             _ => unreachable!("not supported"),
         },
 
