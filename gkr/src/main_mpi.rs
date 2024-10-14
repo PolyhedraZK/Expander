@@ -127,6 +127,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
 
     println!("We are now calculating average throughput, please wait for 1 minutes");
     for i in 0..args.repeats {
+        config.mpi_config.barrier(); // wait until everyone is here
         let start_time = std::time::Instant::now();
         for _j in 0..N_PROOF {
             let mut prover = Prover::new(&config);

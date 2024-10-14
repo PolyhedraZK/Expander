@@ -201,16 +201,6 @@ impl MPIConfig {
         }
     }
 
-    /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
-    #[inline]
-    pub fn transcript_sync_up<H: FiatShamirHash>(&self, transcript: &mut TranscriptInstance<H>) {
-        if self.world_size == 1 {
-        } else {
-            transcript.hash_to_digest();
-            self.root_process().broadcast_into(&mut transcript.digest);
-        }
-    }
-
     /// Root process broadcase a value f into all the processes
     #[inline]
     pub fn root_broadcast<F: Field>(&self, f: &mut F) {
@@ -286,6 +276,21 @@ impl MPIConfig {
     #[inline(always)]
     pub fn root_process(&self) -> Process {
         self.world.unwrap().process_at_rank(Self::ROOT_RANK)
+    }
+
+    #[inline(always)]
+    pub fn barrier(&self) {
+        self.world.unwrap().barrier();
+    }
+
+    /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
+    #[inline]
+    pub fn transcript_sync_up<H: FiatShamirHash>(&self, transcript: &mut TranscriptInstance<H>) {
+        if self.world_size == 1 {
+        } else {
+            transcript.hash_to_digest();
+            self.root_process().broadcast_into(&mut transcript.digest);
+        }
     }
 
     /// Transcript IO for MPI
