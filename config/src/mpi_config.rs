@@ -146,10 +146,11 @@ impl MPIConfig {
     #[allow(clippy::collapsible_else_if)]
     pub fn gather_vec<F: Field>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<F>) {
         unsafe {
-            assert!(global_vec.len() >= local_vec.len() * (self.world_size as usize));
             if self.world_size == 1 {
                 *global_vec = local_vec.clone()
             } else {
+                assert!(!self.is_root() || global_vec.len() == local_vec.len() * self.world_size());
+
                 let local_vec_u8 = Self::vec_to_u8_bytes(local_vec);
                 let local_n_bytes = local_vec_u8.len();
                 let n_chunks = (local_n_bytes + Self::CHUNK_SIZE - 1) / Self::CHUNK_SIZE;
