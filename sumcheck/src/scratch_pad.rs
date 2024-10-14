@@ -50,11 +50,17 @@ impl<C: GKRConfig> ProverScratchPad<C> {
             eq_evals_at_r_mpi0: vec![C::ChallengeField::default(); mpi_world_size],
             eq_evals_first_half: vec![
                 C::ChallengeField::default();
-                max(max_output_num, C::get_field_pack_size())
+                max(
+                    max(max_output_num, C::get_field_pack_size()),
+                    mpi_world_size
+                )
             ],
             eq_evals_second_half: vec![
                 C::ChallengeField::default();
-                max(max_output_num, C::get_field_pack_size())
+                max(
+                    max(max_output_num, C::get_field_pack_size()),
+                    mpi_world_size
+                )
             ],
 
             gate_exists_5: vec![false; max_input_num],
