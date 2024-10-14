@@ -220,7 +220,6 @@ async fn main() {
             )
             .await
         }
-        _ => unreachable!(),
     }
 
     MPIConfig::finalize();
