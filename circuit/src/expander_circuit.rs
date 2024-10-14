@@ -11,6 +11,8 @@ use crate::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct StructureInfo {
+    // this var name is a bit misleading -- the power5 gate's max degree is > 1.
+    // this is really try to see if we need to use two phase GKR or not
     pub max_degree_one: bool,
 }
 
@@ -31,6 +33,7 @@ pub struct CircuitLayer<C: GKRConfig> {
 }
 
 impl<C: GKRConfig> CircuitLayer<C> {
+    #[inline]
     pub fn evaluate(
         &self,
         res: &mut Vec<C::SimdCircuitField>,
@@ -82,6 +85,7 @@ impl<C: GKRConfig> CircuitLayer<C> {
         }
     }
 
+    #[inline]
     pub fn identify_rnd_coefs(&mut self, rnd_coefs: &mut Vec<*mut C::CircuitField>) {
         for gate in &mut self.mul {
             if gate.coef_type == CoefType::Random {
@@ -105,6 +109,7 @@ impl<C: GKRConfig> CircuitLayer<C> {
         }
     }
 
+    #[inline]
     pub fn identify_structure_info(&mut self) {
         self.structure_info.max_degree_one = self.mul.is_empty();
     }
@@ -141,6 +146,54 @@ impl<C: GKRConfig> Circuit<C> {
     pub fn load_circuit(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
         rc.flatten()
+    }
+
+    /// temp fix the issue where witness is not SIMDed
+    pub fn load_non_simd_witness_file(&mut self, filename: &str, pack_size: usize) {
+        let file_bytes = fs::read(filename).unwrap();
+        let cursor = Cursor::new(file_bytes);
+        let mut witness = Witness::<C>::deserialize_from(cursor);
+
+        assert_eq!(witness.num_witnesses, 1);
+        witness.num_witnesses = pack_size;
+        witness.values = (0..pack_size)
+            .flat_map(|_| witness.values.clone())
+            .collect();
+
+        let private_input_size = 1 << self.log_input_size();
+        let public_input_size = witness.num_public_inputs_per_witness;
+        let total_size = private_input_size + public_input_size;
+
+        assert_eq!(witness.num_private_inputs_per_witness, private_input_size);
+        #[allow(clippy::comparison_chain)]
+        if witness.num_witnesses < C::get_field_pack_size() {
+            panic!("Not enough witness");
+        } else if witness.num_witnesses > C::get_field_pack_size() {
+            println!("Warning: dropping additional witnesses");
+        }
+
+        let input = &witness.values;
+        let private_input = &mut self.layers[0].input_vals;
+        let public_input = &mut self.public_input;
+
+        private_input.clear();
+        public_input.clear();
+
+        for i in 0..private_input_size {
+            let mut private_wit_i = vec![];
+            for j in 0..C::get_field_pack_size() {
+                private_wit_i.push(input[j * total_size + i]);
+            }
+            private_input.push(C::SimdCircuitField::pack(&private_wit_i));
+        }
+
+        for i in 0..public_input_size {
+            let mut public_wit_i = vec![];
+            for j in 0..C::get_field_pack_size() {
+                public_wit_i.push(input[j * total_size + private_input_size + i]);
+            }
+            public_input.push(C::SimdCircuitField::pack(&public_wit_i));
+        }
     }
 
     pub fn load_witness_file(&mut self, filename: &str) {
