@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{cmp, fmt::Debug};
 
 use arith::Field;
 use mpi::{
@@ -74,6 +74,9 @@ impl PartialEq for MPIConfig {
 impl MPIConfig {
     const ROOT_RANK: i32 = 0;
 
+    /// The communication limit for MPI is 2^30. Save 10 bits for #parties here.
+    const CHUNK_SIZE: usize = 1usize << 20;
+
     // OK if already initialized, mpi::initialize() will return None
     #[allow(static_mut_refs)]
     pub fn init() {
@@ -141,17 +144,31 @@ impl MPIConfig {
             debug_assert!(global_vec.len() >= local_vec.len() * (self.world_size as usize));
             if self.world_size == 1 {
                 *global_vec = local_vec.clone()
-            } else if self.world_rank == Self::ROOT_RANK {
-                let local_vec_u8 = Self::vec_to_u8_bytes(local_vec);
-                let mut global_vec_u8 = Self::vec_to_u8_bytes(global_vec);
-                self.root_process()
-                    .gather_into_root(&local_vec_u8, &mut global_vec_u8);
-                local_vec_u8.leak(); // discard control of the memory
-                global_vec_u8.leak();
             } else {
                 let local_vec_u8 = Self::vec_to_u8_bytes(local_vec);
-                self.root_process().gather_into(&local_vec_u8);
-                local_vec_u8.leak();
+                let n_chunks = (local_vec_u8.len() + Self::CHUNK_SIZE - 1) / Self::CHUNK_SIZE;
+                if self.world_rank == Self::ROOT_RANK {
+                    let mut global_vec_u8 = Self::vec_to_u8_bytes(global_vec);
+                    for i in 0..n_chunks {
+                        let local_start = i * Self::CHUNK_SIZE;
+                        let local_end = cmp::min((i + 1) * Self::CHUNK_SIZE, local_vec_u8.len());
+                        let global_start = local_start * self.world_size();
+                        let global_end = local_end * self.world_size();
+                        self.root_process().gather_into_root(
+                            &local_vec_u8[local_start..local_end],
+                            &mut global_vec_u8[global_start..global_end],
+                        );
+                    }
+                    global_vec_u8.leak();
+                } else {
+                    for i in 0..n_chunks {
+                        let local_start = i * Self::CHUNK_SIZE;
+                        let local_end = cmp::min((i + 1) * Self::CHUNK_SIZE, local_vec_u8.len());
+                        self.root_process()
+                            .gather_into(&local_vec_u8[local_start..local_end]);
+                    }
+                }
+                local_vec_u8.leak(); // discard control of the memory
             }
         }
     }
