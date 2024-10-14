@@ -146,10 +146,11 @@ impl MPIConfig {
     #[allow(clippy::collapsible_else_if)]
     pub fn gather_vec<F: Field>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<F>) {
         unsafe {
-            assert!(global_vec.len() >= local_vec.len() * (self.world_size as usize));
             if self.world_size == 1 {
                 *global_vec = local_vec.clone()
             } else {
+                assert!(!self.is_root() || global_vec.len() == local_vec.len() * self.world_size());
+
                 let local_vec_u8 = Self::vec_to_u8_bytes(local_vec);
                 let local_n_bytes = local_vec_u8.len();
                 let n_chunks = (local_n_bytes + Self::CHUNK_SIZE - 1) / Self::CHUNK_SIZE;
@@ -197,16 +198,6 @@ impl MPIConfig {
                 }
                 local_vec_u8.leak(); // discard control of the memory
             }
-        }
-    }
-
-    /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
-    #[inline]
-    pub fn transcript_sync_up<H: FiatShamirHash>(&self, transcript: &mut TranscriptInstance<H>) {
-        if self.world_size == 1 {
-        } else {
-            transcript.hash_to_digest();
-            self.root_process().broadcast_into(&mut transcript.digest);
         }
     }
 
@@ -285,6 +276,21 @@ impl MPIConfig {
     #[inline(always)]
     pub fn root_process(&self) -> Process {
         self.world.unwrap().process_at_rank(Self::ROOT_RANK)
+    }
+
+    #[inline(always)]
+    pub fn barrier(&self) {
+        self.world.unwrap().barrier();
+    }
+
+    /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
+    #[inline]
+    pub fn transcript_sync_up<H: FiatShamirHash>(&self, transcript: &mut TranscriptInstance<H>) {
+        if self.world_size == 1 {
+        } else {
+            transcript.hash_to_digest();
+            self.root_process().broadcast_into(&mut transcript.digest);
+        }
     }
 
     /// Transcript IO for MPI
