@@ -27,7 +27,7 @@ fn bench_msm(c: &mut Criterion) {
 }
 
 fn bench_commit(c: &mut Criterion) {
-    let degree_set = vec![4usize, 16, 64, 256];
+    let degree_set = [4usize, 16, 64, 256];
     let mut rng = rand::thread_rng();
     for &degree_0 in degree_set.iter() {
         for &degree_1 in degree_set.iter() {
