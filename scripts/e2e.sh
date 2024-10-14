@@ -13,8 +13,7 @@ mkdir data
 ##########################
 git clone https://github.com/PolyhedraZK/ExpanderCompilerCollection.git
 cd ExpanderCompilerCollection 
-# fixme: change to dev after https://github.com/PolyhedraZK/ExpanderCompilerCollection/pull/36 is merged
-git switch zz/circuit_names
+git switch dev
 
 # generate keccak circuit and witnesses
 cargo test --release keccak
@@ -33,8 +32,7 @@ ls -l data
 ##########################
 git clone git@github.com:PolyhedraZK/Expander.git
 cd Expander
-# fixme: change to dev after https://github.com/PolyhedraZK/ExpanderCompilerCollection/pull/36 is merged
-git switch zz/fix-poseidon-witnesses
+git switch dev
 
 mkdir data
 mv ../data/*.txt data/
