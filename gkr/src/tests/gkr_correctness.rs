@@ -63,9 +63,9 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>) {
     root_println!(config.mpi_config, "Config created.");
 
     let circuit_path = match C::FIELD_TYPE {
-        FieldType::GF2 => "../data/circuit_gf2.txt",
-        FieldType::M31 => "../data/circuit_m31.txt",
-        FieldType::BN254 => "../data/circuit_bn254.txt",
+        FieldType::GF2 => KECCAK_GF2_CIRCUIT,
+        FieldType::M31 => KECCAK_M31_CIRCUIT,
+        FieldType::BN254 => KECCAK_BN254_CIRCUIT,
         _ => unreachable!(),
     };
     let mut circuit = Circuit::<C>::load_circuit(circuit_path);
