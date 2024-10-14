@@ -75,7 +75,7 @@ impl MPIConfig {
     const ROOT_RANK: i32 = 0;
 
     /// The communication limit for MPI is 2^31 - 1. Save 10 bits for #parties here.
-    const CHUNK_SIZE: usize = 1usize << 20;
+    const CHUNK_SIZE: usize = 1usize << 10;
 
     // OK if already initialized, mpi::initialize() will return None
     #[allow(static_mut_refs)]
@@ -139,6 +139,7 @@ impl MPIConfig {
         )
     }
 
+    #[allow(clippy::collapsible_else_if)]
     pub fn gather_vec<F: Field>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<F>) {
         unsafe {
             debug_assert!(global_vec.len() >= local_vec.len() * (self.world_size as usize));
@@ -146,9 +147,8 @@ impl MPIConfig {
                 *global_vec = local_vec.clone()
             } else {
                 let local_vec_u8 = Self::vec_to_u8_bytes(local_vec);
-                let n_bytes = local_vec_u8.len();
-                let n_chunks = (n_bytes + Self::CHUNK_SIZE - 1) / Self::CHUNK_SIZE;
-
+                let local_n_bytes = local_vec_u8.len();
+                let n_chunks = (local_n_bytes + Self::CHUNK_SIZE - 1) / Self::CHUNK_SIZE;
                 if n_chunks == 1 {
                     if self.world_rank == Self::ROOT_RANK {
                         let mut global_vec_u8 = Self::vec_to_u8_bytes(global_vec);
@@ -164,21 +164,20 @@ impl MPIConfig {
                         let mut global_vec_u8 = Self::vec_to_u8_bytes(global_vec);
                         for i in 0..n_chunks {
                             let local_start = i * Self::CHUNK_SIZE;
-                            let local_end =
-                                cmp::min((i + 1) * Self::CHUNK_SIZE, local_vec_u8.len());
+                            let local_end = cmp::min(local_start + Self::CHUNK_SIZE, local_n_bytes);
                             self.root_process().gather_into_root(
                                 &local_vec_u8[local_start..local_end],
                                 &mut chunk_buffer_u8,
                             );
-                            
+
                             // distribute the data to where they belong to in global vec
                             let actual_chunk_size = local_end - local_start;
                             for j in 0..self.world_size() {
-                                let global_start = j * n_bytes + i * Self::CHUNK_SIZE;
+                                let global_start = j * local_n_bytes + local_start;
                                 let global_end = global_start + actual_chunk_size;
                                 global_vec_u8[global_start..global_end].copy_from_slice(
-                                    &chunk_buffer_u8
-                                        [j * actual_chunk_size..(j + 1) * actual_chunk_size],
+                                    &chunk_buffer_u8[j * Self::CHUNK_SIZE
+                                        ..j * Self::CHUNK_SIZE + actual_chunk_size],
                                 );
                             }
                         }
@@ -186,8 +185,7 @@ impl MPIConfig {
                     } else {
                         for i in 0..n_chunks {
                             let local_start = i * Self::CHUNK_SIZE;
-                            let local_end =
-                                cmp::min((i + 1) * Self::CHUNK_SIZE, local_vec_u8.len());
+                            let local_end = cmp::min(local_start + Self::CHUNK_SIZE, local_n_bytes);
                             self.root_process()
                                 .gather_into(&local_vec_u8[local_start..local_end]);
                         }
