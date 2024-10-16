@@ -29,15 +29,25 @@ pub const KECCAK_WITNESS_BN254_URL: &str =
 
 // circuit for repeating Poseidon for 120 times
 pub const POSEIDON_M31_CIRCUIT: &str = "data/poseidon_120_circuit_m31.txt";
-// URL for Poseidon circuit repeated for 120 times
-pub const POSEIDON_M31_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_circuit_m31.txt";
-
 // circuit for repeating Poseidon for 120 times
-pub const POSEIDON_BN254_CIRCUIT: &str = "data/poseidon_120_circuit_bn254.txt";
+pub const POSEIDON_M31_WITNESS: &str = "data/poseidon_120_witness_m31.txt";
+// // circuit for repeating Poseidon for 120 times
+// pub const POSEIDON_BN254_CIRCUIT: &str = "data/poseidon_120_circuit_bn254.txt";
+// // circuit for repeating Poseidon for 120 times
+// pub const POSEIDON_BN254_WITNESS: &str = "data/poseidon_120_witness_bn254.txt";
+
 // URL for Poseidon circuit repeated for 120 times
-pub const POSEIDON_BN254_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_circuit_bn254.txt";
+pub const POSEIDON_CIRCUIT_M31_URL: &str =
+    "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_circuit_m31.txt";
+// URL for Poseidon circuit repeated for 120 times
+pub const POSEIDON_WITNESS_M31_URL: &str =
+        "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_witness_m31.txt";
+// // URL for Poseidon circuit repeated for 120 times
+// pub const POSEIDON_CIRCUIT_BN254_URL: &str =
+// "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_circuit_bn254.txt";
+// // URL for Poseidon circuit repeated for 120 times
+// pub const POSEIDON_WITNESS_BN254_URL: &str =
+//         "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_witness_bn254.txt";
 
 // NOTE(Hang 08/23/24):
 // CI process is unhappy about reqwest as a dependency,
@@ -63,8 +73,11 @@ pub fn dev_env_data_setup() {
     download_and_store(KECCAK_WITNESS_GF2_URL, KECCAK_GF2_WITNESS);
     download_and_store(KECCAK_WITNESS_BN254_URL, KECCAK_BN254_WITNESS);
 
-    download_and_store(POSEIDON_M31_URL, POSEIDON_M31_CIRCUIT);
-    download_and_store(POSEIDON_BN254_URL, POSEIDON_BN254_CIRCUIT);
+    download_and_store(POSEIDON_CIRCUIT_M31_URL, POSEIDON_M31_CIRCUIT);
+    // download_and_store(POSEIDON_CIRCUIT_BN254_URL, POSEIDON_BN254_CIRCUIT);
+
+    download_and_store(POSEIDON_WITNESS_M31_URL, POSEIDON_M31_WITNESS);
+    // download_and_store(POSEIDON_WITNESS_BN254_URL, POSEIDON_BN254_WITNESS);
 }
 
 #[allow(dead_code)]

@@ -72,13 +72,13 @@ cargo run --bin=dev-setup --release
 Command template:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" cargo run --release -- -f [fr|m31ext3] -t [#threads] -s [keccak|poseidon]
+RUSTFLAGS="-C target-cpu=native" cargo run --release --bin gkr -- -f [fr|m31ext3] -t [#threads] -s [keccak|poseidon]
 ```
 
 Concretely if you are running on a 16 physical core CPU for Bn256 scalar field:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" cargo run --release -- -f fr -t 16
+RUSTFLAGS="-C target-cpu=native" cargo run --release --bin gkr -- -f fr -t 16
 ```
 
 ## Correctness test
@@ -103,9 +103,9 @@ RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- serv
 Example:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- prove ./data/circuit.txt ./data/witness.txt ./data/out.bin
-RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- verify ./data/circuit.txt ./data/witness.txt ./data/out.bin
-RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- serve ./data/circuit.txt 127.0.0.1 3030
+RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- prove ./data/circuit_m31.txt ./data/witness_m31.txt ./data/out_m31.bin
+RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- verify ./data/circuit_m31.txt ./data/witness_m31.txt ./data/out_m31.bin
+RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- serve ./data/circuit_m31.txt 127.0.0.1 3030
 ```
 
 To test the service started by `expander-exec serve`, you can use the following command:
