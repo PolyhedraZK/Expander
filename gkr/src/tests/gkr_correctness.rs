@@ -45,7 +45,7 @@ fn test_gkr_correctness() {
     );
     test_gkr_correctness_helper::<BN254ConfigMIMC5>(
         &Config::<BN254ConfigMIMC5>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        Some("../data/proof.txt"),
+        Some("../data/gkr_proof.txt"),
     );
 
     MPIConfig::finalize();

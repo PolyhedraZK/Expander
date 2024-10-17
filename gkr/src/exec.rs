@@ -8,8 +8,7 @@ use std::{
 use arith::{Field, FieldSerde, FieldSerdeError};
 use circuit::Circuit;
 use config::{
-    BN254ConfigSha2, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2,
-    MPIConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31,
+    BN254ConfigMIMC5, BN254ConfigSha2, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2, MPIConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31
 };
 use log::{debug, info};
 use transcript::Proof;
@@ -65,7 +64,6 @@ async fn run_command<'a, C: GKRConfig>(
             let output_file = &args[4];
             let mut circuit = Circuit::<C>::load_circuit(circuit_file);
             circuit.load_witness_file(witness_file);
-            circuit.evaluate();
             let mut prover = gkr::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let (claimed_v, proof) = prover.prove(&mut circuit);
