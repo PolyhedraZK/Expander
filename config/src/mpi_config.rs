@@ -283,8 +283,6 @@ impl MPIConfig {
         self.world.unwrap().barrier();
     }
 
-    
-
     /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
     pub fn transcript_sync_up<F, T>(&self, transcript: &mut T)
     where
@@ -304,7 +302,7 @@ impl MPIConfig {
     pub fn transcript_io<F, T>(&self, ps: &[F], transcript: &mut T) -> F
     where
         F: Field + FieldSerde,
-        T: Transcript<F>
+        T: Transcript<F>,
     {
         assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
         for p in ps {

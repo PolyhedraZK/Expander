@@ -45,7 +45,7 @@ fn test_gkr_correctness() {
     );
     test_gkr_correctness_helper::<BN254ConfigMIMC5>(
         &Config::<BN254ConfigMIMC5>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        Some("proof.txt"),
+        Some("../data/proof.txt"),
     );
 
     MPIConfig::finalize();
@@ -69,21 +69,21 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>, write_proof_to:
     root_println!(config.mpi_config, "Config created.");
 
     let circuit_path = match C::FIELD_TYPE {
-        FieldType::GF2 => KECCAK_GF2_CIRCUIT,
-        FieldType::M31 => KECCAK_M31_CIRCUIT,
-        FieldType::BN254 => KECCAK_BN254_CIRCUIT,
+        FieldType::GF2 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
+        FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
+        FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
         _ => unreachable!(),
     };
-    let mut circuit = Circuit::<C>::load_circuit(circuit_path);
+    let mut circuit = Circuit::<C>::load_circuit(&circuit_path);
     root_println!(config.mpi_config, "Circuit loaded.");
 
     let witness_path = match C::FIELD_TYPE {
-        FieldType::GF2 => KECCAK_GF2_WITNESS,
-        FieldType::M31 => KECCAK_M31_WITNESS,
-        FieldType::BN254 => KECCAK_BN254_WITNESS,
+        FieldType::GF2 => "../".to_owned() + KECCAK_GF2_WITNESS,
+        FieldType::M31 => "../".to_owned() + KECCAK_M31_WITNESS,
+        FieldType::BN254 => "../".to_owned() + KECCAK_BN254_WITNESS,
         _ => unreachable!(),
     };
-    circuit.load_witness_file(witness_path);
+    circuit.load_witness_file(&witness_path);
     root_println!(config.mpi_config, "Witness loaded.");
 
     circuit.evaluate();

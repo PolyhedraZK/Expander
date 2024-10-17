@@ -102,8 +102,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     GKRVerifierHelper::set_rx(&rx, sp);
 
     for _i_var in 0..simd_var_num {
-        verified &=
-            verify_sumcheck_step::<C, T>(
+        verified &= verify_sumcheck_step::<C, T>(
             &mut proof_reader,
             3,
             transcript,
