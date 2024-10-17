@@ -151,8 +151,13 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
                 hg_v[1] = bk_hg_1[i * 2 + 1];
                 p_add[0] += C::challenge_mul_field(&hg_v[0], &f_v[0]);
                 p_add[1] += C::challenge_mul_field(&hg_v[1], &f_v[1]);
+
+                let s_f_v = f_v[0] + f_v[1];
+                let s_hg_v = hg_v[0] + hg_v[1];
+                p_add[2] += C::challenge_mul_field(&s_hg_v, &s_f_v);
             }
-            p_add[2] = p_add[1] + p_add[1] - p_add[0] + C::Field::from(2);
+            p_add[2] = p_add[1].mul_by_6() + p_add[0].mul_by_3() - p_add[2].double();
+
             // interpolate p_add into 7 points
             Self::interpolate_3::<C>(&p_add, &mut p);
             p
