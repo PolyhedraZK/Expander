@@ -8,7 +8,8 @@ use std::{
 use arith::{Field, FieldSerde, FieldSerdeError};
 use circuit::Circuit;
 use config::{
-    BN254ConfigMIMC5, BN254ConfigSha2, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2, MPIConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31
+    BN254ConfigMIMC5, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2,
+    MPIConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31,
 };
 use log::{debug, info};
 use transcript::Proof;
@@ -201,10 +202,10 @@ async fn main() {
             .await;
         }
         FieldType::BN254 => {
-            run_command::<BN254ConfigSha2>(
+            run_command::<BN254ConfigMIMC5>(
                 command,
                 circuit_file,
-                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<BN254ConfigMIMC5>::new(GKRScheme::Vanilla, mpi_config.clone()),
                 &args,
             )
             .await;

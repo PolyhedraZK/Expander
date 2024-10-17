@@ -229,6 +229,7 @@ func (buf *InputBuf) ReadWitness() *Witness {
 
 func (buf *InputBuf) ReadProof() *Proof {
 	elems := make([]frontend.Variable, 0)
+	_ = buf.ReadUint64()
 	for buf.Len() > 0 {
 		if buf.Len() < N_FIELD_BYTES {
 			panic("Trailing bytes, proof parsing fails")

@@ -3,7 +3,7 @@ use std::panic::AssertUnwindSafe;
 use std::time::Instant;
 use std::{fs, panic};
 
-use arith::Field;
+use arith::{Field, FieldSerde};
 use circuit::Circuit;
 use config::{
     root_println, BN254ConfigKeccak, BN254ConfigMIMC5, BN254ConfigSha2, Config, FieldType,
@@ -134,7 +134,10 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>, write_proof_to:
                 .truncate(true)
                 .open(str)
                 .unwrap();
-            file.write_all(&proof.bytes).unwrap();
+
+            let mut buf = vec![];
+            proof.serialize_into(&mut buf).unwrap();
+            file.write_all(&buf).unwrap();
         }
         let verifier = Verifier::new(config);
         println!("Verifier created.");
