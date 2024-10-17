@@ -100,7 +100,7 @@ impl<C: GKRConfig> Prover<C> {
         self.config.mpi_config.transcript_sync_up(transcript);
 
         #[cfg(feature = "grinding")]
-        grind::<C>(&mut transcript, &self.config);
+        grind::<C, T>(transcript, &self.config);
 
         c.fill_rnd_coefs(transcript);
         c.evaluate();
