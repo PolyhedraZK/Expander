@@ -279,7 +279,7 @@ impl<C: GKRConfig> Verifier<C> {
         transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
         if self.config.mpi_config.world_size() > 1 {
-            let _ = transcript.state(); // Trigger an additional hash
+            let _ = transcript.hash_and_return_state(); // Trigger an additional hash
         }
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
@@ -288,16 +288,6 @@ impl<C: GKRConfig> Verifier<C> {
         grind::<C, T>(transcript, &self.config);
 
         circuit.fill_rnd_coefs(transcript);
-
-        // FIXME
-        // We don't really need to put the grinding result into the proof.
-        // The verifier already recomputed it -- and if it doesn't match, the proof is invalid.
-        #[cfg(feature = "grinding")]
-        {
-            // skip 32 bytes which is the grinding result
-            let mut buf = [0u8; 32];
-            cursor.read_exact(&mut buf).unwrap()
-        }
 
         let (mut verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = gkr_verify(
             &self.config,

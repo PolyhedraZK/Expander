@@ -291,7 +291,7 @@ impl MPIConfig {
     {
         if self.world_size == 1 {
         } else {
-            let mut state = transcript.state();
+            let mut state = transcript.hash_and_return_state();
             self.root_process().broadcast_into(&mut state);
             transcript.set_state(&state);
         }

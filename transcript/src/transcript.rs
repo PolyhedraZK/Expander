@@ -40,11 +40,17 @@ pub trait Transcript<F: Field + FieldSerde> {
 
     /// Return current state of the transcript
     /// Note: this may incur an additional hash to shrink the state
-    fn state(&mut self) -> Vec<u8>;
+    fn hash_and_return_state(&mut self) -> Vec<u8>;
 
     /// Set the state
     /// Note: Any unhashed data will be discarded
     fn set_state(&mut self, state: &[u8]);
+
+    /// lock proof, no changes will be made to the proof until unlock is called
+    fn lock_proof(&mut self);
+
+    /// unlock proof
+    fn unlock_proof(&mut self);
 }
 
 #[derive(Clone, Default, Debug, PartialEq)]
@@ -59,6 +65,10 @@ pub struct BytesHashTranscript<F: Field + FieldSerde, H: FiatShamirBytesHash> {
 
     /// The pointer to the proof bytes indicating where the hash starts.
     hash_start_index: usize,
+
+    /// locking point
+    proof_locked: bool,
+    proof_locked_at: usize,
 }
 
 impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, H> {
@@ -68,6 +78,8 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashT
             digest: vec![0u8; H::DIGEST_SIZE],
             proof: Proof::default(),
             hash_start_index: 0,
+            proof_locked: false,
+            proof_locked_at: 0,
         }
     }
 
@@ -107,7 +119,7 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashT
         self.proof.clone()
     }
 
-    fn state(&mut self) -> Vec<u8> {
+    fn hash_and_return_state(&mut self) -> Vec<u8> {
         self.hash_to_digest();
         self.digest.clone()
     }
@@ -116,6 +128,22 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashT
         self.hash_start_index = self.proof.bytes.len(); // discard unhashed data
         assert!(state.len() == H::DIGEST_SIZE);
         self.digest = state.to_vec();
+    }
+
+    fn lock_proof(&mut self) {
+        assert!(!self.proof_locked);
+        self.proof_locked = true;
+        self.proof_locked_at = self.proof.bytes.len();
+    }
+
+    fn unlock_proof(&mut self) {
+        assert!(self.proof_locked);
+        self.proof_locked = false;
+        if self.hash_start_index < self.proof.bytes.len() {
+            self.hash_to_digest();
+        }
+        self.proof.bytes.resize(self.proof_locked_at, 0);
+        self.hash_start_index = self.proof.bytes.len();
     }
 }
 
@@ -135,22 +163,22 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
     }
 }
 
-#[derive(Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FieldHashTranscript<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> {
-    /// Internal hasher
+    /// Internal hasher, it's a little costly to create a new hasher
     pub hasher: H,
 
     /// The digest bytes.
     pub digest: F,
 
-    /// Proof
+    /// The proof bytes
     pub proof: Proof,
 
-    /// The proof bytes.
+    /// The data to be hashed
     pub data_pool: Vec<F>,
 
-    /// The pointer to the proof bytes indicating where the hash starts.
-    hash_start_index: usize,
+    /// Proof locked or not
+    pub proof_locked: bool,
 }
 
 impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<F, H> {
@@ -158,21 +186,26 @@ impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHa
     fn new() -> Self {
         Self {
             hasher: H::new(),
-            ..Default::default()
+            digest: F::default(),
+            proof: Proof::default(),
+            data_pool: vec![],
+            proof_locked: false,
         }
     }
 
     fn append_field_element(&mut self, f: &F) {
         let mut buffer = vec![];
         f.serialize_into(&mut buffer).unwrap();
-        self.proof.bytes.extend_from_slice(&buffer);
-
+        if !self.proof_locked {
+            self.proof.bytes.extend_from_slice(&buffer);
+        }
         self.data_pool.push(*f);
     }
 
     fn append_u8_slice(&mut self, buffer: &[u8]) {
-        self.proof.bytes.extend_from_slice(buffer);
-
+        if !self.proof_locked {
+            self.proof.bytes.extend_from_slice(buffer);
+        }
         let buffer_size = buffer.len();
         let mut cur = 0;
         while cur + 32 <= buffer_size {
@@ -211,7 +244,7 @@ impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHa
         self.proof.clone()
     }
 
-    fn state(&mut self) -> Vec<u8> {
+    fn hash_and_return_state(&mut self) -> Vec<u8> {
         self.hash_to_digest();
         let mut state = vec![];
         self.digest.serialize_into(&mut state).unwrap();
@@ -219,19 +252,26 @@ impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHa
     }
 
     fn set_state(&mut self, state: &[u8]) {
-        self.hash_start_index = self.data_pool.len(); // discard unhashed data
+        self.data_pool.clear();
         self.digest = F::deserialize_from(state).unwrap();
+    }
+
+    fn lock_proof(&mut self) {
+        assert!(!self.proof_locked);
+        self.proof_locked = true;
+    }
+
+    fn unlock_proof(&mut self) {
+        assert!(self.proof_locked);
+        self.proof_locked = false;
     }
 }
 
 impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> FieldHashTranscript<F, H> {
     pub fn hash_to_digest(&mut self) {
-        let hash_end_index = self.data_pool.len();
-        if hash_end_index > self.hash_start_index {
-            self.digest = self
-                .hasher
-                .hash(&self.data_pool[self.hash_start_index..hash_end_index]);
-            self.hash_start_index = hash_end_index;
+        if !self.data_pool.is_empty() {
+            self.digest = self.hasher.hash(&self.data_pool);
+            self.data_pool.clear();
         } else {
             self.digest = self.hasher.hash(&[self.digest]);
         }

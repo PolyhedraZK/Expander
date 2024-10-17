@@ -9,7 +9,7 @@ pub use keccak_256::*;
 pub mod mimc;
 pub use mimc::*;
 
-pub trait FiatShamirBytesHash: Default {
+pub trait FiatShamirBytesHash {
     /// The size of the hash output in bytes.
     const DIGEST_SIZE: usize;
 
@@ -23,7 +23,7 @@ pub trait FiatShamirBytesHash: Default {
     fn hash_inplace(buffer: &mut [u8]);
 }
 
-pub trait FiatShamirFieldHash<F: Field + FieldSerde>: Default {
+pub trait FiatShamirFieldHash<F: Field + FieldSerde> {
     /// Create a new hash instance.
     fn new() -> Self;
 

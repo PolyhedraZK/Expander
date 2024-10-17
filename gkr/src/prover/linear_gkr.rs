@@ -33,11 +33,13 @@ pub(crate) fn grind<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     assert!(hash_bytes.len() >= 32, "hash len: {}", hash_bytes.len());
     hash_bytes.truncate(32);
 
+    transcript.lock_proof();
     for _ in 0..(1 << config.grinding_bits) {
         transcript.append_u8_slice(&hash_bytes);
         hash_bytes = transcript.generate_challenge_u8_slice(32);
     }
     transcript.append_u8_slice(&hash_bytes[..32]);
+    transcript.unlock_proof();
     end_timer!(timer);
 }
 
