@@ -10,7 +10,6 @@ use std::fmt::Debug;
 
 use arith::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
 use ark_std::{end_timer, start_timer};
-use transcript::FiatShamirHash;
 
 pub use bn254_keccak::BN254ConfigKeccak;
 pub use bn254_mimc::BN254ConfigMIMC5;
