@@ -74,7 +74,7 @@ func EvalCst(
 	var mpi_size = len(sp.EqEvalsAtRMpi)
 	var simd_size = len(sp.EqEvalsAtRSimd)
 
-	if mpi_size != 1 || simd_size != 1 {
+	if simd_size != 1 {
 		panic("Only support mpi size 1 and simd size 1 for now")
 	}
 

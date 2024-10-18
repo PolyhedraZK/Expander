@@ -39,8 +39,8 @@ func testGroth16() {
 	witness_file := flag.String("witness", "../data/witness_bn254.txt", "witness file")
 	gkr_proof_file := flag.String("gkr_proof", "../data/gkr_proof.txt", "gkr proof file")
 
-	groth16_pk_file := flag.String("groth16_pk", "../data/groth16_pk.txt", "where to put the proving key, will create a new one and write to this file if it does not exist")
-	groth16_vk_file := flag.String("groth16_vk", "../data/groth16_vk.txt", "where to put the verifying key, will create a new one and write to this file if it does not exist")
+	groth16_pk_file := flag.String("groth16_pk", "", "where to put the proving key, will create a new one and write to this file if it does not exist")
+	groth16_vk_file := flag.String("groth16_vk", "", "where to put the verifying key, will create a new one and write to this file if it does not exist")
 	recursive_proof_file := flag.String("recursive_proof", "../data/recursive_proof.txt", "where to output the groth16 recursive proof")
 
 	mpi_size := *flag.Uint("mpi_size", 1, "mpi size of gkr proof")
@@ -92,7 +92,8 @@ func testGroth16() {
 	vk := groth16.NewVerifyingKey(ecc.BN254)
 	var setup_err error
 	// groth16 zkSNARK: Setup
-	if checkFileExists(*groth16_pk_file) && checkFileExists(*groth16_vk_file) {
+	if *groth16_pk_file != "" && *groth16_vk_file != "" &&
+		checkFileExists(*groth16_pk_file) && checkFileExists(*groth16_vk_file) {
 		println("Groth16 reading pk vk from file...", groth16_pk_file, " ", groth16_vk_file)
 		pk_file, _ := os.OpenFile(*groth16_pk_file, os.O_RDONLY, 0444)
 		pk.ReadFrom(pk_file)
