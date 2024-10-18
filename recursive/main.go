@@ -16,15 +16,15 @@ import (
 )
 
 type VerifierCircuit struct {
+	MpiSize         uint
+	SimdSize        uint
 	OriginalCircuit circuit.Circuit
 	Proof           circuit.Proof // private input
 }
 
 // Define declares the circuit constraints
 func (circuit *VerifierCircuit) Define(api frontend.API) error {
-	var simd_size uint = 1
-	var mpi_size uint = 1
-	verifier.Verify(api, &circuit.OriginalCircuit, circuit.OriginalCircuit.PublicInput, 0, simd_size, mpi_size, &circuit.Proof)
+	verifier.Verify(api, &circuit.OriginalCircuit, circuit.OriginalCircuit.PublicInput, 0, circuit.SimdSize, circuit.MpiSize, &circuit.Proof)
 	return nil
 }
 
@@ -43,10 +43,19 @@ func testGroth16() {
 	groth16_vk_file := flag.String("groth16_vk", "../data/groth16_vk.txt", "where to put the verifying key, will create a new one and write to this file if it does not exist")
 	recursive_proof_file := flag.String("recursive_proof", "../data/recursive_proof.txt", "where to output the groth16 recursive proof")
 
+	mpi_size := *flag.Uint("mpi_size", 1, "mpi size of gkr proof")
+	simd_size := *flag.Uint("simd_size", 1, "simd size of gkr proof")
+
+	if simd_size != 1 {
+		panic("For bn254, Expander only implements simd size 1, so it must be 1 here")
+	}
+
 	original_circuit, _ := circuit.ReadCircuit(*circuit_file, *witness_file)
 	proof := circuit.ReadProof(*gkr_proof_file)
 
 	verifier_circuit := VerifierCircuit{
+		MpiSize:         mpi_size,
+		SimdSize:        simd_size,
 		OriginalCircuit: *original_circuit,
 		Proof:           *proof.PlaceHolder(),
 	}
@@ -60,6 +69,8 @@ func testGroth16() {
 	// witness definition
 	original_circuit, _ = circuit.ReadCircuit(*circuit_file, *witness_file)
 	assignment := VerifierCircuit{
+		MpiSize:         mpi_size,
+		SimdSize:        simd_size,
 		OriginalCircuit: *original_circuit,
 		Proof:           *proof,
 	}

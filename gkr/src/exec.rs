@@ -68,9 +68,12 @@ async fn run_command<'a, C: GKRConfig>(
             let mut prover = gkr::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let (claimed_v, proof) = prover.prove(&mut circuit);
-            let bytes =
-                dump_proof_and_claimed_v(&proof, &claimed_v).expect("Unable to serialize proof.");
-            fs::write(output_file, bytes).expect("Unable to write proof to file.");
+
+            if config.mpi_config.is_root() {
+                let bytes = dump_proof_and_claimed_v(&proof, &claimed_v)
+                    .expect("Unable to serialize proof.");
+                fs::write(output_file, bytes).expect("Unable to write proof to file.");
+            }
         }
         "verify" => {
             let witness_file = &args[3];
