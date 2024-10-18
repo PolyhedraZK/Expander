@@ -1,11 +1,11 @@
 use sha2::{digest::Output, Digest, Sha256};
 
-use super::FiatShamirHash;
+use super::FiatShamirBytesHash;
 
 #[derive(Debug, Clone, Default)]
 pub struct SHA256hasher;
 
-impl FiatShamirHash for SHA256hasher {
+impl FiatShamirBytesHash for SHA256hasher {
     const DIGEST_SIZE: usize = 32;
 
     #[inline]

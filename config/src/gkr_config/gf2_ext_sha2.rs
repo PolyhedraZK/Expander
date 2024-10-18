@@ -1,9 +1,8 @@
 use arith::ExtensionField;
 use gf2::{GF2x8, GF2};
 use gf2_128::{GF2_128x8, GF2_128};
-use transcript::SHA256hasher;
 
-use super::{FieldType, GKRConfig};
+use super::{FiatShamirHashType, FieldType, GKRConfig};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct GF2ExtConfigSha2;
@@ -17,7 +16,7 @@ impl GKRConfig for GF2ExtConfigSha2 {
 
     type Field = GF2_128x8;
 
-    type FiatShamirHashType = SHA256hasher;
+    const FIAT_SHAMIR_HASH: FiatShamirHashType = FiatShamirHashType::SHA256;
 
     const FIELD_TYPE: FieldType = FieldType::GF2;
 

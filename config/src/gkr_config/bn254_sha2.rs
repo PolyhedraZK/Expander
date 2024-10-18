@@ -1,7 +1,6 @@
 use halo2curves::bn256::Fr;
-use transcript::SHA256hasher;
 
-use super::{FieldType, GKRConfig};
+use super::{FiatShamirHashType, FieldType, GKRConfig};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BN254ConfigSha2;
@@ -15,7 +14,7 @@ impl GKRConfig for BN254ConfigSha2 {
 
     type SimdCircuitField = Fr;
 
-    type FiatShamirHashType = SHA256hasher;
+    const FIAT_SHAMIR_HASH: FiatShamirHashType = FiatShamirHashType::SHA256;
 
     const FIELD_TYPE: FieldType = FieldType::BN254;
 

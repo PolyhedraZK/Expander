@@ -8,7 +8,7 @@ use std::{
 use arith::{Field, FieldSerde, FieldSerdeError};
 use circuit::Circuit;
 use config::{
-    BN254ConfigSha2, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2,
+    BN254ConfigMIMC5, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2,
     MPIConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31,
 };
 use log::{debug, info};
@@ -65,13 +65,15 @@ async fn run_command<'a, C: GKRConfig>(
             let output_file = &args[4];
             let mut circuit = Circuit::<C>::load_circuit(circuit_file);
             circuit.load_witness_file(witness_file);
-            circuit.evaluate();
             let mut prover = gkr::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let (claimed_v, proof) = prover.prove(&mut circuit);
-            let bytes =
-                dump_proof_and_claimed_v(&proof, &claimed_v).expect("Unable to serialize proof.");
-            fs::write(output_file, bytes).expect("Unable to write proof to file.");
+
+            if config.mpi_config.is_root() {
+                let bytes = dump_proof_and_claimed_v(&proof, &claimed_v)
+                    .expect("Unable to serialize proof.");
+                fs::write(output_file, bytes).expect("Unable to write proof to file.");
+            }
         }
         "verify" => {
             let witness_file = &args[3];
@@ -203,10 +205,10 @@ async fn main() {
             .await;
         }
         FieldType::BN254 => {
-            run_command::<BN254ConfigSha2>(
+            run_command::<BN254ConfigMIMC5>(
                 command,
                 circuit_file,
-                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<BN254ConfigMIMC5>::new(GKRScheme::Vanilla, mpi_config.clone()),
                 &args,
             )
             .await;
