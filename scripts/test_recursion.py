@@ -2,6 +2,7 @@
 
 # Run the script from the root repo of Expander
 
+import os
 import sys
 import json
 import subprocess
@@ -27,6 +28,11 @@ PROOF_CONFIG = '''
     "recursive_proof": "data/recursive_proof.txt"
 }
 '''
+
+def change_working_dir():
+    cwd = os.getcwd()
+    if "Expander/scripts" in cwd:
+        os.chdir("..")
 
 def parse_mpi_config(mpi_config):
     n_groups = mpi_config["n_groups"]
@@ -58,6 +64,8 @@ DEBUG = True
 
 # Run two mpi process
 if __name__ == "__main__":
+    change_working_dir()
+
     mpi_config = json.loads(MPI_CONFIG)
     n_groups, mpi_size_each_group, cpu_ids = parse_mpi_config(mpi_config)
 
