@@ -82,7 +82,7 @@ if __name__ == "__main__":
     for i in range(n_groups):
         subprocess.run(
             f'''
-                cd recursive
+                cd recursion
                 go run main.go -circuit={"../" + circuit} -witness={"../" + witness} -gkr_proof={"../" + gkr_proof + "." + str(i)} -recursive_proof={"../" + recursive_proof + "." + str(i)} -mpi_size={mpi_size_each_group}
                 cd ..
             ''',
