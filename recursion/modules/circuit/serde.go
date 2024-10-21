@@ -255,13 +255,13 @@ func ReadCircuit(circuit_filename string, witness_filename string, mpi_size uint
 	// Now the witness only takes into account the simd size
 	// We're repeating the witness for each mpi
 	// TODO: fix this later
-	n_witness_per_mpi_node := witness.NumWitnesses
+	witness.NumWitnesses *= mpi_size
+	n_witness_per_mpi_node := len(witness.Values)
 	for i := 1; i < int(mpi_size); i++ {
 		for j := 0; j < int(n_witness_per_mpi_node); j++ {
 			witness.Values = append(witness.Values, witness.Values[j])
 		}
 	}
-	witness.NumWitnesses *= mpi_size
 
 	public_input, private_input := witness.ToPubPri()
 	expander_circuit.PublicInput = public_input

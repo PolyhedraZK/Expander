@@ -254,7 +254,7 @@ func Verify(
 	// Only supports RawCommitment now
 	circuit_input_size := uint(1) << circuit.Layers[0].InputLenLog
 	vals := make([]frontend.Variable, 0)
-	for i := uint(0); i < circuit_input_size; i++ {
+	for i := uint(0); i < circuit_input_size*mpi_size; i++ {
 		vals = append(vals, proof.Next())
 		transcript.AppendF(vals[i])
 	}
@@ -269,9 +269,12 @@ func Verify(
 
 	var rx, ry, r_simd, r_mpi, claimed_v0, claimed_v1 = GKRVerify(api, circuit, public_input, claimed_v, simd_size, mpi_size, &transcript, proof)
 
-	if len(r_simd) > 0 || len(r_mpi) > 0 {
-		panic("Simd and mpi not supported yet.")
+	if len(r_simd) > 0 {
+		panic("Simd not supported yet.")
 	}
+
+	rx = append(rx, r_mpi...)
+	ry = append(ry, r_mpi...)
 
 	raw_commitment.Verify(api, rx, claimed_v0)
 	raw_commitment.Verify(api, ry, claimed_v1)

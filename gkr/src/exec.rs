@@ -80,6 +80,16 @@ async fn run_command<'a, C: GKRConfig>(
             let output_file = &args[4];
             let mut circuit = Circuit::<C>::load_circuit(circuit_file);
             circuit.load_witness_file(witness_file);
+            
+            // Repeating the same public input for mpi_size times
+            // TODO: Fix this, use real input
+            if args.len() > 5 {
+                let mpi_size = args[5].parse::<i32>().unwrap();
+                let n_public_input_per_mpi = circuit.public_input.len();
+                for _ in 1..mpi_size {
+                    circuit.public_input.append(&mut circuit.public_input[..n_public_input_per_mpi].to_owned());
+                }
+            }
             let bytes = fs::read(output_file).expect("Unable to read proof from file.");
             let (proof, claimed_v) =
                 load_proof_and_claimed_v(&bytes).expect("Unable to deserialize proof.");
@@ -171,17 +181,17 @@ async fn run_command<'a, C: GKRConfig>(
 async fn main() {
     // examples:
     // expander-exec prove <input:circuit_file> <input:witness_file> <output:proof>
-    // expander-exec verify <input:circuit_file> <input:witness_file> <input:proof>
+    // expander-exec verify <input:circuit_file> <input:witness_file> <input:proof> <input:mpi_size>
     // expander-exec serve <input:circuit_file> <input:ip> <input:port>
-    let mpi_config = MPIConfig::new();
+    let mut mpi_config = MPIConfig::new();
 
     let args = std::env::args().collect::<Vec<String>>();
-    if args.len() < 4 {
+    if args.len() < 5 {
         println!(
             "Usage: expander-exec prove <input:circuit_file> <input:witness_file> <output:proof>"
         );
         println!(
-            "Usage: expander-exec verify <input:circuit_file> <input:witness_file> <input:proof>"
+            "Usage: expander-exec verify <input:circuit_file> <input:witness_file> <input:proof> <input:mpi_size>"
         );
         println!("Usage: expander-exec serve <input:circuit_file> <input:host> <input:port>");
         return;
@@ -191,6 +201,12 @@ async fn main() {
         println!("Invalid command.");
         return;
     }
+
+    if command == "verify" && args.len() > 5 {
+        assert!(mpi_config.world_size == 1); // verifier should not be run with mpiexec
+        mpi_config.world_size = args[5].parse::<i32>().expect("Parsing mpi size fails");
+    }
+
     let circuit_file = &args[2];
     let field_type = detect_field_type_from_circuit_file(circuit_file);
     debug!("field type: {:?}", field_type);

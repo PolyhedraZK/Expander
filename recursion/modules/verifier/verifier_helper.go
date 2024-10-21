@@ -231,7 +231,7 @@ func LagEval(
 
 	var v frontend.Variable = 0
 	for i := 0; i < len(vals); i++ {
-		var numerator frontend.Variable = 0
+		var numerator frontend.Variable = 1
 		for j := 0; j < len(vals); j++ {
 			if j == i {
 				continue

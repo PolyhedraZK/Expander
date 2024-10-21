@@ -70,7 +70,7 @@ func (e *Evaluation) Define(api frontend.API) error {
 }
 
 func TestCircuitEvaluation(t *testing.T) {
-	circuit, private_input := ReadCircuit("../../../data/circuit.txt", "../../../data/witness.txt")
+	circuit, private_input := ReadCircuit("../../../data/circuit.txt", "../../../data/witness.txt", 1)
 
 	println(circuit.ExpectedNumOutputZeros)
 	for i := 0; i < len(circuit.PublicInput[0]); i++ {
@@ -104,7 +104,7 @@ func TestCircuitEvaluation(t *testing.T) {
 	println("Nb Public Witness:", r1cs.GetNbPublicVariables())
 
 	// Correct Witness
-	circuit, private_input = ReadCircuit("../../../data/circuit.txt", "../../../data/witness.txt")
+	circuit, private_input = ReadCircuit("../../../data/circuit.txt", "../../../data/witness.txt", 1)
 
 	assignment := Evaluation{
 		Circuit:      *circuit,
@@ -121,7 +121,7 @@ func TestCircuitEvaluation(t *testing.T) {
 	}
 
 	// Incorrect witness
-	circuit, private_input = ReadCircuit("../../../data/circuit.txt", "../../../data/witness.txt")
+	circuit, private_input = ReadCircuit("../../../data/circuit.txt", "../../../data/witness.txt", 1)
 	ri := rand.Intn(len(private_input))
 	rj := rand.Intn(len(private_input[0]))
 	private_input[ri][rj] = 147258369 // this should make the evaluation incorrect
