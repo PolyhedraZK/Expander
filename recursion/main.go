@@ -45,6 +45,7 @@ func testGroth16() {
 
 	mpi_size := *flag.Uint("mpi_size", 1, "mpi size of gkr proof")
 	simd_size := *flag.Uint("simd_size", 1, "simd size of gkr proof")
+	flag.Parse()
 
 	if simd_size != 1 {
 		panic("For bn254, Expander only implements simd size 1, so it must be 1 here")
