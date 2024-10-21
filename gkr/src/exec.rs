@@ -80,14 +80,16 @@ async fn run_command<'a, C: GKRConfig>(
             let output_file = &args[4];
             let mut circuit = Circuit::<C>::load_circuit(circuit_file);
             circuit.load_witness_file(witness_file);
-            
+
             // Repeating the same public input for mpi_size times
             // TODO: Fix this, use real input
             if args.len() > 5 {
                 let mpi_size = args[5].parse::<i32>().unwrap();
                 let n_public_input_per_mpi = circuit.public_input.len();
                 for _ in 1..mpi_size {
-                    circuit.public_input.append(&mut circuit.public_input[..n_public_input_per_mpi].to_owned());
+                    circuit
+                        .public_input
+                        .append(&mut circuit.public_input[..n_public_input_per_mpi].to_owned());
                 }
             }
             let bytes = fs::read(output_file).expect("Unable to read proof from file.");
