@@ -43,11 +43,11 @@ func testGroth16() {
 	groth16_vk_file := flag.String("groth16_vk", "", "where to put the verifying key, will create a new one and write to this file if it does not exist")
 	recursive_proof_file := flag.String("recursive_proof", "../data/recursive_proof.txt", "where to output the groth16 recursive proof")
 
-	mpi_size := *flag.Uint("mpi_size", 1, "mpi size of gkr proof")
-	simd_size := *flag.Uint("simd_size", 1, "simd size of gkr proof")
+	mpi_size := flag.Uint("mpi_size", 1, "mpi size of gkr proof")
+	simd_size := flag.Uint("simd_size", 1, "simd size of gkr proof")
 	flag.Parse()
 
-	if simd_size != 1 {
+	if *simd_size != 1 {
 		panic("For bn254, Expander only implements simd size 1, so it must be 1 here")
 	}
 
@@ -55,8 +55,8 @@ func testGroth16() {
 	proof := circuit.ReadProof(*gkr_proof_file)
 
 	verifier_circuit := VerifierCircuit{
-		MpiSize:         mpi_size,
-		SimdSize:        simd_size,
+		MpiSize:         *mpi_size,
+		SimdSize:        *simd_size,
 		OriginalCircuit: *original_circuit,
 		Proof:           *proof.PlaceHolder(),
 	}
@@ -70,8 +70,8 @@ func testGroth16() {
 	// witness definition
 	original_circuit, _ = circuit.ReadCircuit(*circuit_file, *witness_file)
 	assignment := VerifierCircuit{
-		MpiSize:         mpi_size,
-		SimdSize:        simd_size,
+		MpiSize:         *mpi_size,
+		SimdSize:        *simd_size,
 		OriginalCircuit: *original_circuit,
 		Proof:           *proof,
 	}
