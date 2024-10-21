@@ -51,7 +51,7 @@ func testGroth16() {
 		panic("For bn254, Expander only implements simd size 1, so it must be 1 here")
 	}
 
-	original_circuit, _ := circuit.ReadCircuit(*circuit_file, *witness_file)
+	original_circuit, _ := circuit.ReadCircuit(*circuit_file, *witness_file, *mpi_size)
 	proof := circuit.ReadProof(*gkr_proof_file)
 
 	verifier_circuit := VerifierCircuit{
@@ -68,7 +68,7 @@ func testGroth16() {
 	println("Nb Public Witness:", r1cs.GetNbPublicVariables())
 
 	// witness definition
-	original_circuit, _ = circuit.ReadCircuit(*circuit_file, *witness_file)
+	original_circuit, _ = circuit.ReadCircuit(*circuit_file, *witness_file, *mpi_size)
 	assignment := VerifierCircuit{
 		MpiSize:         *mpi_size,
 		SimdSize:        *simd_size,

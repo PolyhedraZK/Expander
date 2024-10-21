@@ -244,13 +244,25 @@ func (buf *InputBuf) ReadProof() *Proof {
 
 // TODO:
 // Verifier should not have access to the private part of witness, consider separating the witness
-func ReadCircuit(circuit_filename string, witness_filename string) (*Circuit, [][]frontend.Variable) {
+func ReadCircuit(circuit_filename string, witness_filename string, mpi_size uint) (*Circuit, [][]frontend.Variable) {
 	circuit_input_buf := NewInputBuf(circuit_filename)
 	ecc_circuit := circuit_input_buf.ReadECCCircuit()
 	expander_circuit := ecc_circuit.Flatten()
 
 	witness_input_buf := NewInputBuf(witness_filename)
 	witness := witness_input_buf.ReadWitness()
+
+	// Now the witness only takes into account the simd size
+	// We're repeating the witness for each mpi
+	// TODO: fix this later
+	n_witness_per_mpi_node := witness.NumWitnesses
+	for i := 1; i < int(mpi_size); i++ {
+		for j := 0; j < int(n_witness_per_mpi_node); j++ {
+			witness.Values = append(witness.Values, witness.Values[j])
+		}
+	}
+	witness.NumWitnesses *= mpi_size
+
 	public_input, private_input := witness.ToPubPri()
 	expander_circuit.PublicInput = public_input
 
