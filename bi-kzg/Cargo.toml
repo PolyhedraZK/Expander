@@ -23,7 +23,6 @@ criterion.workspace = true
 name = "bi_kzg_bench"
 harness = false
 
-
 [features]
 default = [ 
     # "ark-std/print-trace",
