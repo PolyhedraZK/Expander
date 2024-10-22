@@ -9,9 +9,8 @@ use crate::{
     coeff_form_bi_kzg::CoeffFormBiKZG,
     pcs::PolynomialCommitmentScheme,
     poly::{lagrange_coefficients, univariate_quotient},
-    structs::BivariateLagrangePolynomial,
     util::tensor_product_parallel,
-    BiKZGVerifierParam, BivariatePolynomial,
+    BiKZGVerifierParam, BivariateLagrangePolynomial, BivariatePolynomial,
 };
 
 #[test]
