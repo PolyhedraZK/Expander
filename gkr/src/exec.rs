@@ -8,7 +8,7 @@ use std::{
 use arith::{Field, FieldSerde, FieldSerdeError};
 use circuit::Circuit;
 use config::{
-    BN254ConfigSha2, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2,
+    BN254ConfigMIMC5, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2,
     MPIConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31,
 };
 use log::{debug, info};
@@ -65,19 +65,33 @@ async fn run_command<'a, C: GKRConfig>(
             let output_file = &args[4];
             let mut circuit = Circuit::<C>::load_circuit(circuit_file);
             circuit.load_witness_file(witness_file);
-            circuit.evaluate();
             let mut prover = gkr::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let (claimed_v, proof) = prover.prove(&mut circuit);
-            let bytes =
-                dump_proof_and_claimed_v(&proof, &claimed_v).expect("Unable to serialize proof.");
-            fs::write(output_file, bytes).expect("Unable to write proof to file.");
+
+            if config.mpi_config.is_root() {
+                let bytes = dump_proof_and_claimed_v(&proof, &claimed_v)
+                    .expect("Unable to serialize proof.");
+                fs::write(output_file, bytes).expect("Unable to write proof to file.");
+            }
         }
         "verify" => {
             let witness_file = &args[3];
             let output_file = &args[4];
             let mut circuit = Circuit::<C>::load_circuit(circuit_file);
             circuit.load_witness_file(witness_file);
+
+            // Repeating the same public input for mpi_size times
+            // TODO: Fix this, use real input
+            if args.len() > 5 {
+                let mpi_size = args[5].parse::<i32>().unwrap();
+                let n_public_input_per_mpi = circuit.public_input.len();
+                for _ in 1..mpi_size {
+                    circuit
+                        .public_input
+                        .append(&mut circuit.public_input[..n_public_input_per_mpi].to_owned());
+                }
+            }
             let bytes = fs::read(output_file).expect("Unable to read proof from file.");
             let (proof, claimed_v) =
                 load_proof_and_claimed_v(&bytes).expect("Unable to deserialize proof.");
@@ -169,17 +183,17 @@ async fn run_command<'a, C: GKRConfig>(
 async fn main() {
     // examples:
     // expander-exec prove <input:circuit_file> <input:witness_file> <output:proof>
-    // expander-exec verify <input:circuit_file> <input:witness_file> <input:proof>
+    // expander-exec verify <input:circuit_file> <input:witness_file> <input:proof> <input:mpi_size>
     // expander-exec serve <input:circuit_file> <input:ip> <input:port>
-    let mpi_config = MPIConfig::new();
+    let mut mpi_config = MPIConfig::new();
 
     let args = std::env::args().collect::<Vec<String>>();
-    if args.len() < 4 {
+    if args.len() < 5 {
         println!(
             "Usage: expander-exec prove <input:circuit_file> <input:witness_file> <output:proof>"
         );
         println!(
-            "Usage: expander-exec verify <input:circuit_file> <input:witness_file> <input:proof>"
+            "Usage: expander-exec verify <input:circuit_file> <input:witness_file> <input:proof> <input:mpi_size>"
         );
         println!("Usage: expander-exec serve <input:circuit_file> <input:host> <input:port>");
         return;
@@ -189,6 +203,12 @@ async fn main() {
         println!("Invalid command.");
         return;
     }
+
+    if command == "verify" && args.len() > 5 {
+        assert!(mpi_config.world_size == 1); // verifier should not be run with mpiexec
+        mpi_config.world_size = args[5].parse::<i32>().expect("Parsing mpi size fails");
+    }
+
     let circuit_file = &args[2];
     let field_type = detect_field_type_from_circuit_file(circuit_file);
     debug!("field type: {:?}", field_type);
@@ -203,10 +223,10 @@ async fn main() {
             .await;
         }
         FieldType::BN254 => {
-            run_command::<BN254ConfigSha2>(
+            run_command::<BN254ConfigMIMC5>(
                 command,
                 circuit_file,
-                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<BN254ConfigMIMC5>::new(GKRScheme::Vanilla, mpi_config.clone()),
                 &args,
             )
             .await;

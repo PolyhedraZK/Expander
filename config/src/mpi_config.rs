@@ -7,7 +7,7 @@ use mpi::{
     topology::{Process, SimpleCommunicator},
     traits::*,
 };
-use transcript::{FiatShamirHash, Transcript, TranscriptInstance};
+use transcript::Transcript;
 
 #[macro_export]
 macro_rules! root_println {
@@ -284,27 +284,31 @@ impl MPIConfig {
     }
 
     /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
-    #[inline]
-    pub fn transcript_sync_up<H: FiatShamirHash>(&self, transcript: &mut TranscriptInstance<H>) {
+    pub fn transcript_sync_up<F, T>(&self, transcript: &mut T)
+    where
+        F: Field + FieldSerde,
+        T: Transcript<F>,
+    {
         if self.world_size == 1 {
         } else {
-            transcript.hash_to_digest();
-            self.root_process().broadcast_into(&mut transcript.digest);
+            let mut state = transcript.hash_and_return_state();
+            self.root_process().broadcast_into(&mut state);
+            transcript.set_state(&state);
         }
     }
 
     /// Transcript IO for MPI
     #[inline]
-    pub fn transcript_io<F, H>(&self, ps: &[F], transcript: &mut TranscriptInstance<H>) -> F
+    pub fn transcript_io<F, T>(&self, ps: &[F], transcript: &mut T) -> F
     where
         F: Field + FieldSerde,
-        H: FiatShamirHash,
+        T: Transcript<F>,
     {
         assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
         for p in ps {
-            transcript.append_field_element::<F>(p);
+            transcript.append_field_element(p);
         }
-        let mut r = transcript.generate_challenge::<F>();
+        let mut r = transcript.generate_challenge_field_element();
         self.root_broadcast(&mut r);
         r
     }

@@ -1,4 +1,5 @@
 mod bn254_keccak;
+mod bn254_mimc;
 mod bn254_sha2;
 mod gf2_ext_keccak;
 mod gf2_ext_sha2;
@@ -9,9 +10,9 @@ use std::fmt::Debug;
 
 use arith::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
 use ark_std::{end_timer, start_timer};
-use transcript::FiatShamirHash;
 
 pub use bn254_keccak::BN254ConfigKeccak;
+pub use bn254_mimc::BN254ConfigMIMC5;
 pub use bn254_sha2::BN254ConfigSha2;
 pub use gf2_ext_keccak::GF2ExtConfigKeccak;
 pub use gf2_ext_sha2::GF2ExtConfigSha2;
@@ -32,7 +33,7 @@ pub enum FiatShamirHashType {
     Keccak256,
     Poseidon,
     Animoe,
-    MIMC7,
+    MIMC5, // Note: use MIMC5 for bn254 ONLY
 }
 
 pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
@@ -51,7 +52,7 @@ pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
     type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + FieldSerde + Send;
 
     /// Fiat Shamir hash type
-    type FiatShamirHashType: FiatShamirHash;
+    const FIAT_SHAMIR_HASH: FiatShamirHashType;
 
     /// Enum type for Self::Field
     const FIELD_TYPE: FieldType;
