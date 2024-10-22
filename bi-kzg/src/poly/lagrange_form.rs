@@ -2,6 +2,7 @@ use crate::{powers_of_field_elements, primitive_root_of_unity};
 
 use super::{lagrange_coefficients, BivariateLagrangePolynomial, BivariatePolynomial};
 use halo2curves::ff::{Field, PrimeField};
+use rand::RngCore;
 
 impl<F: Field> BivariateLagrangePolynomial<F> {
     fn new(coeffs: Vec<F>, degree_0: usize, degree_1: usize) -> Self {
@@ -11,6 +12,13 @@ impl<F: Field> BivariateLagrangePolynomial<F> {
             degree_0,
             degree_1,
         }
+    }
+
+    pub fn random(mut rng: impl RngCore, degree_0: usize, degree_1: usize) -> Self {
+        let coefficients = (0..degree_0 * degree_1)
+            .map(|_| F::random(&mut rng))
+            .collect();
+        Self::new(coefficients, degree_0, degree_1)
     }
 }
 

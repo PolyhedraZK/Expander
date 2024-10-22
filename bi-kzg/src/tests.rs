@@ -8,13 +8,16 @@ use crate::{
     bi_fft::bi_fft_in_place,
     coeff_form_bi_kzg::CoeffFormBiKZG,
     pcs::PolynomialCommitmentScheme,
-    poly::{lagrange_coefficients, univariate_quotient},
+    poly::{
+        lagrange_coefficients, univariate_quotient, BivariateLagrangePolynomial,
+        BivariatePolynomial,
+    },
     util::tensor_product_parallel,
-    BiKZGVerifierParam, BivariateLagrangePolynomial, BivariatePolynomial,
+    BiKZGVerifierParam, LagrangeFormBiKZG,
 };
 
 #[test]
-fn test_bi_kzg_single_pass() {
+fn test_coef_form_bi_kzg_single_pass() {
     let mut rng = test_rng();
     let n = 16;
     let m = 32;
@@ -29,6 +32,31 @@ fn test_bi_kzg_single_pass() {
 
     let commit = CoeffFormBiKZG::<Bn256>::commit(&srs, &poly);
     let (proof, eval) = CoeffFormBiKZG::<Bn256>::open(&srs, &poly, &(x, y));
+    assert!(CoeffFormBiKZG::<Bn256>::verify(
+        &vk,
+        &commit,
+        &(x, y),
+        &eval,
+        &proof
+    ));
+}
+
+#[test]
+fn test_lagrange_form_bi_kzg_single_pass() {
+    let mut rng = test_rng();
+    let n = 16;
+    let m = 32;
+
+    let srs = LagrangeFormBiKZG::<Bn256>::gen_srs_for_testing(&mut rng, n, m);
+    let vk = BiKZGVerifierParam::<Bn256>::from(&srs);
+
+    let poly = BivariateLagrangePolynomial::<Fr>::random(&mut rng, n, m);
+
+    let x = Fr::random(&mut rng);
+    let y = Fr::random(&mut rng);
+
+    let commit = LagrangeFormBiKZG::<Bn256>::commit(&srs, &poly);
+    let (proof, eval) = LagrangeFormBiKZG::<Bn256>::open(&srs, &poly, &(x, y));
     assert!(CoeffFormBiKZG::<Bn256>::verify(
         &vk,
         &commit,

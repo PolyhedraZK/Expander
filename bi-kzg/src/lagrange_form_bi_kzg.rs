@@ -68,13 +68,6 @@ where
             (lagrange_tau_0, lagrange_scalars)
         };
 
-        // parallelize(&mut proj_bases, |g, start| {
-        //     for (idx, g) in g.iter_mut().enumerate() {
-        //         let offset = start + idx;
-        //         *g = g1_prog * scalars[offset];
-        //     }
-        // });
-
         let g1_prog = g1.to_curve();
         let lagrange_x_bases = {
             let mut proj_bases = vec![E::G1::identity(); supported_n];
