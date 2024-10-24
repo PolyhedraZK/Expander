@@ -1,109 +1,10 @@
-use std::{cmp::max, ptr};
 
 use arith::{ExtensionField, Field};
-use circuit::{Circuit, CircuitLayer, CoefType, GateAdd, GateConst, GateMul};
-use config::{Config, FieldType, GKRConfig};
-use mpoly::EqPolynomial;
+use circuit::{CircuitLayer, CoefType, GateAdd, GateConst, GateMul};
+use config::{FieldType, GKRConfig};
+use polynomials::EqPolynomial;
 
-use crate::sumcheck_helper::unpack_and_combine;
-
-pub struct VerifierScratchPad<C: GKRConfig> {
-    // ====== for evaluating cst, add and mul ======
-    eq_evals_at_rz0: Vec<C::ChallengeField>,
-    eq_evals_at_rz1: Vec<C::ChallengeField>,
-    eq_evals_at_r_simd: Vec<C::ChallengeField>,
-    eq_evals_at_r_mpi: Vec<C::ChallengeField>,
-
-    eq_evals_at_rx: Vec<C::ChallengeField>,
-    eq_evals_at_ry: Vec<C::ChallengeField>,
-
-    eq_evals_first_part: Vec<C::ChallengeField>,
-    eq_evals_second_part: Vec<C::ChallengeField>,
-
-    r_simd: *const Vec<C::ChallengeField>,
-    r_mpi: *const Vec<C::ChallengeField>,
-    eq_r_simd_r_simd_xy: C::ChallengeField,
-    eq_r_mpi_r_mpi_xy: C::ChallengeField,
-
-    // ====== for deg2, deg3 eval ======
-    gf2_deg2_eval_coef: C::ChallengeField, // 1 / x(x - 1)
-    deg3_eval_at: [C::ChallengeField; 4],
-    deg3_lag_denoms_inv: [C::ChallengeField; 4],
-}
-
-impl<C: GKRConfig> VerifierScratchPad<C> {
-    pub fn new(config: &Config<C>, circuit: &Circuit<C>) -> Self {
-        let mut max_num_var = circuit
-            .layers
-            .iter()
-            .map(|layer| layer.output_var_num)
-            .max()
-            .unwrap();
-        max_num_var = max(max_num_var, circuit.log_input_size());
-
-        let max_io_size = 1usize << max_num_var;
-        let simd_size = C::get_field_pack_size();
-
-        let gf2_deg2_eval_coef = if C::FIELD_TYPE == FieldType::GF2 {
-            (C::ChallengeField::X - C::ChallengeField::one())
-                .mul_by_x()
-                .inv()
-                .unwrap()
-        } else {
-            C::ChallengeField::INV_2
-        };
-
-        let deg3_eval_at = if C::FIELD_TYPE == FieldType::GF2 {
-            [
-                C::ChallengeField::ZERO,
-                C::ChallengeField::ONE,
-                C::ChallengeField::X,
-                C::ChallengeField::X.mul_by_x(),
-            ]
-        } else {
-            [
-                C::ChallengeField::ZERO,
-                C::ChallengeField::ONE,
-                C::ChallengeField::from(2),
-                C::ChallengeField::from(3),
-            ]
-        };
-
-        let mut deg3_lag_denoms_inv = [C::ChallengeField::ZERO; 4];
-        for i in 0..4 {
-            let mut denominator = C::ChallengeField::ONE;
-            for j in 0..4 {
-                if j == i {
-                    continue;
-                }
-                denominator *= deg3_eval_at[i] - deg3_eval_at[j];
-            }
-            deg3_lag_denoms_inv[i] = denominator.inv().unwrap();
-        }
-
-        Self {
-            eq_evals_at_rz0: vec![C::ChallengeField::zero(); max_io_size],
-            eq_evals_at_rz1: vec![C::ChallengeField::zero(); max_io_size],
-            eq_evals_at_r_simd: vec![C::ChallengeField::zero(); simd_size],
-            eq_evals_at_r_mpi: vec![C::ChallengeField::zero(); config.mpi_config.world_size()],
-
-            eq_evals_at_rx: vec![C::ChallengeField::zero(); max_io_size],
-            eq_evals_at_ry: vec![C::ChallengeField::zero(); max_io_size],
-
-            eq_evals_first_part: vec![C::ChallengeField::zero(); max_io_size],
-            eq_evals_second_part: vec![C::ChallengeField::zero(); max_io_size],
-
-            r_simd: ptr::null(),
-            r_mpi: ptr::null(),
-            eq_r_simd_r_simd_xy: C::ChallengeField::zero(),
-            eq_r_mpi_r_mpi_xy: C::ChallengeField::zero(),
-
-            gf2_deg2_eval_coef,
-            deg3_eval_at,
-            deg3_lag_denoms_inv,
-        }
-    }
-}
+use crate::{scratch_pad::VerifierScratchPad, unpack_and_combine};
 
 #[derive(Default)]
 pub struct GKRVerifierHelper {}
@@ -174,10 +75,6 @@ impl GKRVerifierHelper {
         let mpi_world_size = sp.eq_evals_at_r_mpi.len();
         let local_input_size = public_input.len() / mpi_world_size;
 
-        let simd_sum: C::ChallengeField = sp.eq_evals_at_r_simd.iter().sum();
-        let mpi_sum: C::ChallengeField = sp.eq_evals_at_r_mpi.iter().sum();
-        let simd_mpi_sum = simd_sum * mpi_sum;
-
         for cst_gate in cst_gates {
             let tmp = match cst_gate.coef_type {
                 CoefType::PublicInput(input_idx) => {
@@ -200,17 +97,15 @@ impl GKRVerifierHelper {
                             &sp.eq_evals_at_r_simd,
                         )
                 }
-                _ => {
-                    C::challenge_mul_circuit_field(
-                        &sp.eq_evals_at_rz0[cst_gate.o_id],
-                        &cst_gate.coef,
-                    ) * simd_mpi_sum
-                }
+                _ => C::challenge_mul_circuit_field(
+                    &sp.eq_evals_at_rz0[cst_gate.o_id],
+                    &cst_gate.coef,
+                ),
             };
             v += tmp;
         }
 
-        v * simd_sum * mpi_sum
+        v
     }
 
     #[inline(always)]

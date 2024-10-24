@@ -2,9 +2,8 @@ use arith::ExtensionField;
 use babybear::{
     BabyBear, BabyBearExt3, BabyBearExt3x16, BabyBearExt4, BabyBearExt4x16, BabyBearx16,
 };
-use transcript::SHA256hasher;
 
-use super::{FieldType, GKRConfig};
+use super::{FiatShamirHashType, FieldType, GKRConfig};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BabyBearExt4ConfigSha2;
@@ -18,7 +17,7 @@ impl GKRConfig for BabyBearExt4ConfigSha2 {
 
     type SimdCircuitField = BabyBearx16;
 
-    type FiatShamirHashType = SHA256hasher;
+    const FIAT_SHAMIR_HASH: FiatShamirHashType = FiatShamirHashType::SHA256;
 
     const FIELD_TYPE: FieldType = FieldType::BabyBear;
 
@@ -97,7 +96,7 @@ impl GKRConfig for BabyBearExt3ConfigSha2 {
 
     type SimdCircuitField = BabyBearx16;
 
-    type FiatShamirHashType = SHA256hasher;
+    const FIAT_SHAMIR_HASH: FiatShamirHashType = FiatShamirHashType::SHA256;
 
     const FIELD_TYPE: FieldType = FieldType::BabyBear;
 

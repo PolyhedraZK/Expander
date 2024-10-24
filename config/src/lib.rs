@@ -25,6 +25,10 @@ pub const SENTINEL_BN254: [u8; 32] = [
     69, 80, 184, 41, 160, 49, 225, 114, 78, 100, 48,
 ];
 
+pub const SENTINEL_GF2: [u8; 32] = [
+    2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum GKRScheme {
     #[default]

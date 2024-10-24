@@ -1,26 +1,28 @@
+//! This module implements helper functions for the prover side of the sumcheck protocol
+//! to evaluate power gates
+
 use arith::{Field, SimdField};
-use circuit::CircuitLayer;
+
 use config::GKRConfig;
-use mpoly::EqPolynomial;
 
-use crate::GkrScratchpad;
-
-struct SumcheckMultiSquareHelper<const D: usize> {
+pub(crate) struct SumcheckPowerGateHelper<const D: usize> {
     var_num: usize,
     sumcheck_var_idx: usize,
     cur_eval_size: usize,
 }
 
-impl<const D: usize> SumcheckMultiSquareHelper<D> {
-    fn new(var_num: usize) -> Self {
-        SumcheckMultiSquareHelper {
+impl<const D: usize> SumcheckPowerGateHelper<D> {
+    pub(crate) fn new(var_num: usize) -> Self {
+        SumcheckPowerGateHelper {
             var_num,
             sumcheck_var_idx: 0,
             cur_eval_size: 1 << var_num,
         }
     }
 
+    // Function to interpolate a quadratic polynomial and update an array of points
     fn interpolate_3<C: GKRConfig>(p_add: &[C::Field; 3], p: &mut [C::Field; D]) {
+        // Calculate coefficients for the interpolating polynomial
         let p_add_coef_0 = p_add[0];
         let p_add_coef_2 = C::field_mul_circuit_field(
             &(p_add[2] - p_add[1] - p_add[1] + p_add[0]),
@@ -29,6 +31,8 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
 
         let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
 
+        // Update the p array by evaluating the interpolated polynomial at different points
+        // and adding the results to the existing values
         p[0] += p_add_coef_0;
         p[1] += p_add_coef_0 + p_add_coef_1 + p_add_coef_2;
         p[2] += p_add_coef_0 + p_add_coef_1.double() + p_add_coef_2.double().double();
@@ -45,12 +49,12 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn poly_eval_at<C: GKRConfig>(
+    pub(crate) fn poly_eval_at<C: GKRConfig>(
         &self,
         var_idx: usize,
-        bk_f: &mut [C::Field],
-        bk_hg_5: &mut [C::ChallengeField],
-        bk_hg_1: &mut [C::ChallengeField],
+        bk_f: &[C::Field],
+        bk_hg_5: &[C::ChallengeField],
+        bk_hg_1: &[C::ChallengeField],
         init_v: &[C::SimdCircuitField],
         gate_exists_5: &[bool],
         gate_exists_1: &[bool],
@@ -148,8 +152,13 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
                 hg_v[1] = bk_hg_1[i * 2 + 1];
                 p_add[0] += C::challenge_mul_field(&hg_v[0], &f_v[0]);
                 p_add[1] += C::challenge_mul_field(&hg_v[1], &f_v[1]);
+
+                let s_f_v = f_v[0] + f_v[1];
+                let s_hg_v = hg_v[0] + hg_v[1];
+                p_add[2] += C::challenge_mul_field(&s_hg_v, &s_f_v);
             }
-            p_add[2] = p_add[1] + p_add[1] - p_add[0] + C::Field::from(2);
+            p_add[2] = p_add[1].mul_by_6() + p_add[0].mul_by_3() - p_add[2].double();
+
             // interpolate p_add into 7 points
             Self::interpolate_3::<C>(&p_add, &mut p);
             p
@@ -157,7 +166,7 @@ impl<const D: usize> SumcheckMultiSquareHelper<D> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn receive_challenge<C: GKRConfig>(
+    pub(crate) fn receive_challenge<C: GKRConfig>(
         &mut self,
         var_idx: usize,
         r: C::ChallengeField,
@@ -333,3 +342,4 @@ impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
         }
     }
 }
+

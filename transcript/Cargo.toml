@@ -7,4 +7,4 @@ edition = "2021"
 arith = { path = "../arith" }
 
 sha2 = "0.10.8"
-tiny-keccak = { version = "2.0.2", features = [ "sha3" ] }
+tiny-keccak = { version = "2.0.2", features = [ "sha3", "keccak" ] }

@@ -2,9 +2,8 @@ use arith::ExtensionField;
 use babybear::{
     BabyBear, BabyBearExt3, BabyBearExt3x16, BabyBearExt4, BabyBearExt4x16, BabyBearx16,
 };
-use transcript::Keccak256hasher;
 
-use super::{FieldType, GKRConfig};
+use super::{FiatShamirHashType, FieldType, GKRConfig};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BabyBearExt4ConfigKeccak;
@@ -18,7 +17,7 @@ impl GKRConfig for BabyBearExt4ConfigKeccak {
 
     type SimdCircuitField = BabyBearx16;
 
-    type FiatShamirHashType = Keccak256hasher;
+    const FIAT_SHAMIR_HASH: FiatShamirHashType = FiatShamirHashType::Keccak256;
 
     const FIELD_TYPE: FieldType = FieldType::BabyBear;
 
@@ -97,7 +96,7 @@ impl GKRConfig for BabyBearExt3ConfigKeccak {
 
     type SimdCircuitField = BabyBearx16;
 
-    type FiatShamirHashType = Keccak256hasher;
+    const FIAT_SHAMIR_HASH: FiatShamirHashType = FiatShamirHashType::Keccak256;
 
     const FIELD_TYPE: FieldType = FieldType::BabyBear;
 

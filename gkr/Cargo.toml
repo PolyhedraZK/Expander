@@ -10,6 +10,7 @@ circuit = { path = "../circuit" }
 gf2 = { path = "../arith/gf2" }
 gf2_128 = { path = "../arith/gf2_128" }
 mersenne31 = { path = "../arith/mersenne31" }
+polynomials = { path = "../arith/polynomials" }
 sumcheck = { path = "../sumcheck" }
 transcript = { path = "../transcript" }
 
@@ -36,7 +37,7 @@ tiny-keccak.workspace = true
 criterion = "0.5.1"
 
 [[bin]]
-name = "expander-rs-mpi"
+name = "gkr-mpi"
 path = "src/main_mpi.rs"
 
 [[bin]]

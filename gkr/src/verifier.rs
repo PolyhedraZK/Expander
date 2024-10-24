@@ -1,32 +1,38 @@
-use std::{io::Cursor, vec};
+use std::{
+    io::{Cursor, Read},
+    vec,
+};
 
-use arith::Field;
+use arith::{Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
-use config::{Config, GKRConfig, PolynomialCommitmentType};
+use config::{Config, FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
-use transcript::{Proof, Transcript, TranscriptInstance};
+use transcript::{
+    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, Proof, SHA256hasher,
+    Transcript,
+};
 
 #[cfg(feature = "grinding")]
 use crate::grind;
 use crate::RawCommitment;
 
 #[inline(always)]
-fn verify_sumcheck_step<C: GKRConfig>(
-    proof: &mut Proof,
+fn verify_sumcheck_step<C: GKRConfig, T: Transcript<C::ChallengeField>>(
+    mut proof_reader: impl Read,
     degree: usize,
-    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
+    transcript: &mut T,
     claimed_sum: &mut C::ChallengeField,
     randomness_vec: &mut Vec<C::ChallengeField>,
     sp: &VerifierScratchPad<C>,
 ) -> bool {
     let mut ps = vec![];
     for i in 0..(degree + 1) {
-        ps.push(proof.get_next_and_step());
-        transcript.append_field_element::<C::ChallengeField>(&ps[i]);
+        ps.push(C::ChallengeField::deserialize_from(&mut proof_reader).unwrap());
+        transcript.append_field_element(&ps[i]);
     }
 
-    let r = transcript.generate_challenge::<C::ChallengeField>();
+    let r = transcript.generate_challenge_field_element();
     randomness_vec.push(r);
 
     let verified = (ps[0] + ps[1]) == *claimed_sum;
@@ -44,7 +50,7 @@ fn verify_sumcheck_step<C: GKRConfig>(
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
-fn sumcheck_verify_gkr_layer<C: GKRConfig>(
+fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     config: &Config<C>,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
@@ -56,8 +62,8 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     claimed_v1: Option<C::ChallengeField>,
     alpha: C::ChallengeField,
     beta: Option<C::ChallengeField>,
-    proof: &mut Proof,
-    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
+    mut proof_reader: impl Read,
+    transcript: &mut T,
     sp: &mut VerifierScratchPad<C>,
 ) -> (
     bool,
@@ -68,8 +74,8 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     C::ChallengeField,
     Option<C::ChallengeField>,
 ) {
-    debug_assert_eq!(rz1.is_none(), claimed_v1.is_none());
-    debug_assert_eq!(rz1.is_none(), beta.is_none());
+    assert_eq!(rz1.is_none(), claimed_v1.is_none());
+    assert_eq!(rz1.is_none(), beta.is_none());
 
     GKRVerifierHelper::prepare_layer(layer, &alpha, &beta, rz0, rz1, r_simd, r_mpi, sp);
 
@@ -79,6 +85,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     if claimed_v1.is_some() && beta.is_some() {
         sum += claimed_v1.unwrap() * beta.unwrap();
     }
+
     sum -= GKRVerifierHelper::eval_cst(&layer.const_, public_input, sp);
 
     let mut rx = vec![];
@@ -88,37 +95,60 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
     let mut verified = true;
 
     for _i_var in 0..var_num {
-        verified &= verify_sumcheck_step::<C>(proof, 2, transcript, &mut sum, &mut rx, sp);
+        verified &=
+            verify_sumcheck_step::<C, T>(&mut proof_reader, 2, transcript, &mut sum, &mut rx, sp);
         // println!("x {} var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_rx(&rx, sp);
 
     for _i_var in 0..simd_var_num {
-        verified &= verify_sumcheck_step::<C>(proof, 3, transcript, &mut sum, &mut r_simd_xy, sp);
+        verified &= verify_sumcheck_step::<C, T>(
+            &mut proof_reader,
+            3,
+            transcript,
+            &mut sum,
+            &mut r_simd_xy,
+            sp,
+        );
         // println!("{} simd var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_r_simd_xy(&r_simd_xy, sp);
 
     for _i_var in 0..config.mpi_config.world_size().trailing_zeros() {
-        verified &= verify_sumcheck_step::<C>(proof, 3, transcript, &mut sum, &mut r_mpi_xy, sp);
+        verified &= verify_sumcheck_step::<C, T>(
+            &mut proof_reader,
+            3,
+            transcript,
+            &mut sum,
+            &mut r_mpi_xy,
+            sp,
+        );
         // println!("{} mpi var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_r_mpi_xy(&r_mpi_xy, sp);
 
-    let vx_claim = proof.get_next_and_step::<C::ChallengeField>();
+    let vx_claim = C::ChallengeField::deserialize_from(&mut proof_reader).unwrap();
+
     sum -= vx_claim * GKRVerifierHelper::eval_add(&layer.add, sp);
-    transcript.append_field_element::<C::ChallengeField>(&vx_claim);
+    transcript.append_field_element(&vx_claim);
 
     let vy_claim = if !layer.structure_info.max_degree_one {
         ry = Some(vec![]);
         for _i_var in 0..var_num {
-            verified &=
-                verify_sumcheck_step::<C>(proof, 2, transcript, &mut sum, ry.as_mut().unwrap(), sp);
+            verified &= verify_sumcheck_step::<C, T>(
+                &mut proof_reader,
+                2,
+                transcript,
+                &mut sum,
+                ry.as_mut().unwrap(),
+                sp,
+            );
             // println!("y {} var, verified? {}", _i_var, verified);
         }
         GKRVerifierHelper::set_ry(ry.as_ref().unwrap(), sp);
-        let vy_claim = proof.get_next_and_step::<C::ChallengeField>();
-        transcript.append_field_element::<C::ChallengeField>(&vy_claim);
+
+        let vy_claim = C::ChallengeField::deserialize_from(&mut proof_reader).unwrap();
+        transcript.append_field_element(&vy_claim);
         verified &= sum == vx_claim * vy_claim * GKRVerifierHelper::eval_mul(&layer.mul, sp);
         Some(vy_claim)
     } else {
@@ -131,13 +161,13 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig>(
 
 // todo: FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_verify<C: GKRConfig>(
+pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     config: &Config<C>,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
     claimed_v: &C::ChallengeField,
-    transcript: &mut TranscriptInstance<C::FiatShamirHashType>,
-    proof: &mut Proof,
+    transcript: &mut T,
+    mut proof_reader: impl Read,
 ) -> (
     bool,
     Vec<C::ChallengeField>,
@@ -157,15 +187,15 @@ pub fn gkr_verify<C: GKRConfig>(
     let mut r_mpi = vec![];
 
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.generate_challenge::<C::ChallengeField>());
+        rz0.push(transcript.generate_challenge_field_element());
     }
 
     for _ in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.generate_challenge::<C::ChallengeField>());
+        r_simd.push(transcript.generate_challenge_field_element());
     }
 
     for _ in 0..config.mpi_config.world_size().trailing_zeros() {
-        r_mpi.push(transcript.generate_challenge::<C::ChallengeField>());
+        r_mpi.push(transcript.generate_challenge_field_element());
     }
 
     let mut alpha = C::ChallengeField::one();
@@ -196,25 +226,17 @@ pub fn gkr_verify<C: GKRConfig>(
             claimed_v1,
             alpha,
             beta,
-            proof,
+            &mut proof_reader,
             transcript,
             &mut sp,
         );
         verified &= cur_verified;
-        alpha = transcript.generate_challenge::<C::ChallengeField>();
+        alpha = transcript.generate_challenge_field_element();
         beta = if rz1.is_some() {
-            Some(transcript.generate_challenge::<C::ChallengeField>())
+            Some(transcript.generate_challenge_field_element())
         } else {
             None
         };
-        log::trace!(
-            "Layer {} verified with alpha={:?} and beta={:?}, claimed_v0={:?}, claimed_v1={:?}",
-            i,
-            alpha,
-            beta,
-            claimed_v0,
-            claimed_v1
-        );
     }
     end_timer!(timer);
     (verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1)
@@ -239,12 +261,13 @@ impl<C: GKRConfig> Verifier<C> {
         }
     }
 
-    pub fn verify(
+    fn verify_internal<T: Transcript<C::ChallengeField>>(
         &self,
         circuit: &mut Circuit<C>,
         public_input: &[C::SimdCircuitField],
         claimed_v: &C::ChallengeField,
         proof: &Proof,
+        transcript: &mut T,
     ) -> bool {
         let timer = start_timer!(|| "verify");
 
@@ -253,35 +276,26 @@ impl<C: GKRConfig> Verifier<C> {
         let mut cursor = Cursor::new(&proof.bytes);
 
         let commitment = RawCommitment::<C>::deserialize_from(&mut cursor, poly_size);
-
-        let mut transcript = TranscriptInstance::new();
         transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
         if self.config.mpi_config.world_size() > 1 {
-            transcript.hash_to_digest(); // In prover, we call hash_to_digest before sync up the transcript state
+            let _ = transcript.hash_and_return_state(); // Trigger an additional hash
         }
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
         #[cfg(feature = "grinding")]
-        grind::<C>(&mut transcript, &self.config);
+        grind::<C, T>(transcript, &self.config);
 
-        circuit.fill_rnd_coefs(&mut transcript);
-
-        let mut proof = proof.clone(); // FIXME: consider separating pointers to make proof always immutable?
-
-        #[cfg(feature = "grinding")]
-        proof.step(commitment.size() + 32);
-        #[cfg(not(feature = "grinding"))]
-        proof.step(commitment.size());
+        circuit.fill_rnd_coefs(transcript);
 
         let (mut verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = gkr_verify(
             &self.config,
             circuit,
             public_input,
             claimed_v,
-            &mut transcript,
-            &mut proof,
+            transcript,
+            &mut cursor,
         );
 
         log::info!("GKR verification: {}", verified);
@@ -311,5 +325,31 @@ impl<C: GKRConfig> Verifier<C> {
         end_timer!(timer);
 
         verified
+    }
+
+    pub fn verify(
+        &self,
+        circuit: &mut Circuit<C>,
+        public_input: &[C::SimdCircuitField],
+        claimed_v: &C::ChallengeField,
+        proof: &Proof,
+    ) -> bool {
+        match C::FIAT_SHAMIR_HASH {
+            FiatShamirHashType::Keccak256 => {
+                let mut transcript =
+                    BytesHashTranscript::<C::ChallengeField, Keccak256hasher>::new();
+                self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
+            }
+            FiatShamirHashType::SHA256 => {
+                let mut transcript = BytesHashTranscript::<C::ChallengeField, SHA256hasher>::new();
+                self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
+            }
+            FiatShamirHashType::MIMC5 => {
+                let mut transcript =
+                    FieldHashTranscript::<C::ChallengeField, MIMCHasher<C::ChallengeField>>::new();
+                self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
+            }
+            _ => unreachable!(),
+        }
     }
 }

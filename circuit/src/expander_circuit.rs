@@ -1,16 +1,17 @@
-use std::fs;
 use std::io::Cursor;
+use std::{any::TypeId, fs};
 
-use arith::{Field, SimdField};
+use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
 use config::GKRConfig;
 use transcript::Transcript;
-use transcript::TranscriptInstance;
 
 use crate::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct StructureInfo {
+    // this var name is a bit misleading -- the power5 gate's max degree is > 1.
+    // this is really try to see if we need to use two phase GKR or not
     pub max_degree_one: bool,
 }
 
@@ -31,6 +32,7 @@ pub struct CircuitLayer<C: GKRConfig> {
 }
 
 impl<C: GKRConfig> CircuitLayer<C> {
+    #[inline]
     pub fn evaluate(
         &self,
         res: &mut Vec<C::SimdCircuitField>,
@@ -82,6 +84,7 @@ impl<C: GKRConfig> CircuitLayer<C> {
         }
     }
 
+    #[inline]
     pub fn identify_rnd_coefs(&mut self, rnd_coefs: &mut Vec<*mut C::CircuitField>) {
         for gate in &mut self.mul {
             if gate.coef_type == CoefType::Random {
@@ -105,6 +108,7 @@ impl<C: GKRConfig> CircuitLayer<C> {
         }
     }
 
+    #[inline]
     pub fn identify_structure_info(&mut self) {
         self.structure_info.max_degree_one = self.mul.is_empty();
     }
@@ -143,8 +147,17 @@ impl<C: GKRConfig> Circuit<C> {
         rc.flatten()
     }
 
+    pub fn load_non_simd_witness_file(&mut self, filename: &str) {
+        let file_bytes = fs::read(filename).unwrap();
+        self.load_witness_bytes(&file_bytes, true);
+    }
+
     pub fn load_witness_file(&mut self, filename: &str) {
         let file_bytes = fs::read(filename).unwrap();
+        self.load_witness_bytes(&file_bytes, false);
+    }
+
+    pub fn load_witness_bytes(&mut self, file_bytes: &[u8], allow_padding: bool) {
         let cursor = Cursor::new(file_bytes);
         let witness = Witness::<C>::deserialize_from(cursor);
 
@@ -155,9 +168,25 @@ impl<C: GKRConfig> Circuit<C> {
         assert_eq!(witness.num_private_inputs_per_witness, private_input_size);
         #[allow(clippy::comparison_chain)]
         if witness.num_witnesses < C::get_field_pack_size() {
-            panic!("Not enough witness");
+            if !allow_padding {
+                panic!(
+                    "Not enough witness, expected {}, got {}",
+                    C::get_field_pack_size(),
+                    witness.num_witnesses
+                );
+            } else {
+                println!(
+                    "Warning: padding witnesses, expected {}, got {}",
+                    C::get_field_pack_size(),
+                    witness.num_witnesses
+                );
+            }
         } else if witness.num_witnesses > C::get_field_pack_size() {
-            println!("Warning: dropping additional witnesses");
+            println!(
+                "Warning: dropping additional witnesses, expected {}, got {}",
+                C::get_field_pack_size(),
+                witness.num_witnesses
+            );
         }
 
         let input = &witness.values;
@@ -169,16 +198,22 @@ impl<C: GKRConfig> Circuit<C> {
 
         for i in 0..private_input_size {
             let mut private_wit_i = vec![];
-            for j in 0..C::get_field_pack_size() {
+            for j in 0..C::get_field_pack_size().min(witness.num_witnesses) {
                 private_wit_i.push(input[j * total_size + i]);
+            }
+            while private_wit_i.len() < C::get_field_pack_size() {
+                private_wit_i.push(private_wit_i[0]);
             }
             private_input.push(C::SimdCircuitField::pack(&private_wit_i));
         }
 
         for i in 0..public_input_size {
             let mut public_wit_i = vec![];
-            for j in 0..C::get_field_pack_size() {
+            for j in 0..C::get_field_pack_size().min(witness.num_witnesses) {
                 public_wit_i.push(input[j * total_size + private_input_size + i]);
+            }
+            while public_wit_i.len() < C::get_field_pack_size() {
+                public_wit_i.push(public_wit_i[0]);
             }
             public_input.push(C::SimdCircuitField::pack(&public_wit_i));
         }
@@ -243,11 +278,25 @@ impl<C: GKRConfig> Circuit<C> {
         self.rnd_coefs_identified = true;
     }
 
-    pub fn fill_rnd_coefs(&mut self, transcript: &mut TranscriptInstance<C::FiatShamirHashType>) {
+    pub fn fill_rnd_coefs<T: Transcript<C::ChallengeField>>(&mut self, transcript: &mut T) {
         assert!(self.rnd_coefs_identified);
-        for &rnd_coef_ptr in &self.rnd_coefs {
-            unsafe {
-                *rnd_coef_ptr = transcript.generate_challenge::<C::CircuitField>();
+
+        if TypeId::of::<C::ChallengeField>() == TypeId::of::<C::CircuitField>() {
+            for &rnd_coef_ptr in &self.rnd_coefs {
+                unsafe {
+                    *(rnd_coef_ptr as *mut C::ChallengeField) =
+                        transcript.generate_challenge_field_element();
+                }
+            }
+        } else {
+            let n_bytes_required = C::CircuitField::SIZE * self.rnd_coefs.len();
+            let challenge_bytes = transcript.generate_challenge_u8_slice(n_bytes_required);
+            let mut cursor = Cursor::new(challenge_bytes);
+
+            for &rnd_coef_ptr in &self.rnd_coefs {
+                unsafe {
+                    *rnd_coef_ptr = C::CircuitField::deserialize_from(&mut cursor).unwrap();
+                }
             }
         }
     }

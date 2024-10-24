@@ -7,7 +7,7 @@ use config::{
 use gkr::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
-        KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_BN254_CIRCUIT, POSEIDON_M31_CIRCUIT,
+        KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
     Prover,
 };
@@ -87,28 +87,41 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
             FieldType::BN254 => Circuit::<C>::load_circuit(KECCAK_BN254_CIRCUIT),
         },
         "poseidon" => match C::FIELD_TYPE {
-            FieldType::GF2 => unreachable!(),
             FieldType::M31 => Circuit::<C>::load_circuit(POSEIDON_M31_CIRCUIT),
-            FieldType::BabyBear => Circuit::<C>::load_circuit(POSEIDON_M31_CIRCUIT),
-            FieldType::BN254 => Circuit::<C>::load_circuit(POSEIDON_BN254_CIRCUIT),
+            _ => unreachable!(),
         },
         _ => unreachable!(),
     };
 
-    let witness_path = match C::FIELD_TYPE {
-        FieldType::GF2 => KECCAK_GF2_WITNESS,
-        FieldType::M31 => KECCAK_M31_WITNESS,
-        FieldType::BabyBear => KECCAK_M31_WITNESS,
-        FieldType::BN254 => KECCAK_BN254_WITNESS,
+    let witness_path = match args.scheme.as_str() {
+        "keccak" => match C::FIELD_TYPE {
+            FieldType::GF2 => KECCAK_GF2_WITNESS,
+            FieldType::M31 => KECCAK_M31_WITNESS,
+            FieldType::BN254 => KECCAK_BN254_WITNESS,
+            _ => unreachable!(),
+        },
+        "poseidon" => match C::FIELD_TYPE {
+            FieldType::M31 => POSEIDON_M31_WITNESS,
+            _ => unreachable!("not supported"),
+        },
+        _ => unreachable!(),
     };
-    circuit.load_witness_file(witness_path);
+
+    match args.scheme.as_str() {
+        "keccak" => circuit.load_witness_file(witness_path),
+        "poseidon" => match C::FIELD_TYPE {
+            FieldType::M31 => circuit.load_non_simd_witness_file(witness_path),
+            _ => unreachable!("not supported"),
+        },
+
+        _ => unreachable!(),
+    };
 
     let circuit_copy_size: usize = match (C::FIELD_TYPE, args.scheme.as_str()) {
         (FieldType::GF2, "keccak") => 1,
         (FieldType::M31, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
         (FieldType::M31, "poseidon") => 120,
-        (FieldType::BN254, "poseidon") => 120,
         _ => unreachable!(),
     };
 
@@ -116,6 +129,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
 
     println!("We are now calculating average throughput, please wait for 1 minutes");
     for i in 0..args.repeats {
+        config.mpi_config.barrier(); // wait until everyone is here
         let start_time = std::time::Instant::now();
         for _j in 0..N_PROOF {
             let mut prover = Prover::new(&config);
