@@ -53,8 +53,8 @@ fn mul_assign_vec<F: Field>(a: &mut [F], b: &F) {
 //
 /// Performs a radix-$2$ Fast-Fourier Transformation (FFT) on a vector of size
 /// $n = 2^k$, when provided `log_n` = $k$ and an element of multiplicative
-/// order $n$ called `omega` ($\omega$). 
-/// 
+/// order $n$ called `omega` ($\omega$).
+///
 /// The result is that the vector `a`, when
 /// interpreted as the coefficients of a polynomial of degree $n - 1$, is
 /// transformed into the evaluations of this polynomial at each of the $n$
