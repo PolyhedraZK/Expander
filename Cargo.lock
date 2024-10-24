@@ -1418,15 +1418,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mpoly"
-version = "0.1.0"
-dependencies = [
- "arith",
- "ark-std",
- "halo2curves",
-]
-
-[[package]]
 name = "multer"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

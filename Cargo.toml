@@ -6,7 +6,7 @@ members = [
     "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31",
-    "arith/mpoly", 
+    "arith/polynomials", 
     # "basefold",
     "bi-kzg", 
     "poseidon",
