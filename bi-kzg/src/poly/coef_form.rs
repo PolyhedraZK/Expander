@@ -19,6 +19,7 @@ impl<F: PrimeField> BivariatePolynomial<F> {
         }
     }
 
+    #[inline]
     pub fn random(mut rng: impl RngCore, degree_0: usize, degree_1: usize) -> Self {
         let coefficients = (0..degree_0 * degree_1)
             .map(|_| F::random(&mut rng))
@@ -27,6 +28,7 @@ impl<F: PrimeField> BivariatePolynomial<F> {
     }
 
     /// evaluate the polynomial at (x, y)
+    #[inline]
     pub fn evaluate(&self, x: &F, y: &F) -> F {
         let x_power = powers_of_field_elements(x, self.degree_0);
         let y_power = powers_of_field_elements(y, self.degree_1);
@@ -44,6 +46,7 @@ impl<F: PrimeField> BivariatePolynomial<F> {
     }
 
     /// evaluate the polynomial at y, return a univariate polynomial in x
+    #[inline]
     pub fn evaluate_at_y(&self, y: &F) -> Vec<F> {
         let mut f_x_b = self.coefficients[0..self.degree_0].to_vec();
         let powers_of_b = powers_of_field_elements(y, self.degree_1);
@@ -62,6 +65,7 @@ impl<F: PrimeField> BivariatePolynomial<F> {
     }
 
     /// same as interpolate but slower.
+    #[inline]
     pub fn evaluate_at_roots(&self) -> Vec<F> {
         let timer = start_timer!(|| format!(
             "Lagrange coefficients of degree {} {}",
@@ -98,6 +102,7 @@ impl<F: PrimeField> BivariatePolynomial<F> {
     }
 
     /// interpolate the polynomial over the roots via bi-variate FFT
+    #[inline]
     pub fn interpolate(&self) -> Vec<F> {
         let timer = start_timer!(|| format!(
             "Lagrange coefficients of degree {} {}",

@@ -164,6 +164,7 @@ where
             let omega_0 = primitive_root_of_unity(polynomial.degree_0);
             let powers_of_omega_0 =
                 powers_of_field_elements::<E::Fr>(&omega_0, polynomial.degree_0);
+            // todo use batch inversion
             let powers_of_omega_0_minus_x_inv = powers_of_omega_0
                 .iter()
                 .map(|w| (*w - point.0).invert().unwrap())
@@ -191,6 +192,7 @@ where
             let powers_of_omega_1 =
                 powers_of_field_elements::<E::Fr>(&omega_1, polynomial.degree_1);
 
+            // todo use batch inversion
             let q_1_x_y = polynomial
                 .coefficients
                 .chunks_exact(polynomial.degree_0)

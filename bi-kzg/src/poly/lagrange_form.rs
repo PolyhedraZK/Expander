@@ -5,7 +5,8 @@ use halo2curves::ff::{Field, PrimeField};
 use rand::RngCore;
 
 impl<F: Field> BivariateLagrangePolynomial<F> {
-    fn new(coeffs: Vec<F>, degree_0: usize, degree_1: usize) -> Self {
+    #[inline]
+    pub fn new(coeffs: Vec<F>, degree_0: usize, degree_1: usize) -> Self {
         assert_eq!(coeffs.len(), degree_0 * degree_1);
         Self {
             coefficients: coeffs,
@@ -14,6 +15,7 @@ impl<F: Field> BivariateLagrangePolynomial<F> {
         }
     }
 
+    #[inline]
     pub fn random(mut rng: impl RngCore, degree_0: usize, degree_1: usize) -> Self {
         let coefficients = (0..degree_0 * degree_1)
             .map(|_| F::random(&mut rng))
@@ -23,12 +25,14 @@ impl<F: Field> BivariateLagrangePolynomial<F> {
 }
 
 impl<F: PrimeField> From<BivariatePolynomial<F>> for BivariateLagrangePolynomial<F> {
+    #[inline]
     fn from(poly: BivariatePolynomial<F>) -> Self {
         Self::from(&poly)
     }
 }
 
 impl<F: PrimeField> From<&BivariatePolynomial<F>> for BivariateLagrangePolynomial<F> {
+    #[inline]
     fn from(poly: &BivariatePolynomial<F>) -> Self {
         let coeffs = poly.interpolate();
         BivariateLagrangePolynomial::new(coeffs, poly.degree_0, poly.degree_1)
@@ -37,6 +41,7 @@ impl<F: PrimeField> From<&BivariatePolynomial<F>> for BivariateLagrangePolynomia
 
 impl<F: PrimeField> BivariateLagrangePolynomial<F> {
     /// construct a bivariate lagrange polynomial from a monomial f(y) = y - b
+    #[inline]
     pub fn from_y_monomial(b: &F, n: usize, m: usize) -> Self {
         // roots of unity for supported_n and supported_m
         let omega_1 = {
@@ -54,6 +59,7 @@ impl<F: PrimeField> BivariateLagrangePolynomial<F> {
 
 impl<F: PrimeField> BivariateLagrangePolynomial<F> {
     /// evaluate the polynomial at (x, y)
+    #[inline]
     pub fn evaluate(&self, x: &F, y: &F) -> F {
         let omega_0 = primitive_root_of_unity::<F>(self.degree_0);
         let omega_1 = primitive_root_of_unity::<F>(self.degree_1);
@@ -76,6 +82,7 @@ impl<F: PrimeField> BivariateLagrangePolynomial<F> {
             })
     }
 
+    #[inline]
     pub fn evaluate_at_y(&self, y: &F) -> Vec<F> {
         let omega_1 = primitive_root_of_unity::<F>(self.degree_1);
         let powers_of_omega_1 = powers_of_field_elements(&omega_1, self.degree_1);
