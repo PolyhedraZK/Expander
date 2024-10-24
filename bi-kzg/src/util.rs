@@ -1,11 +1,11 @@
 use halo2curves::ff::{Field, PrimeField};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-pub fn primitive_root_of_unity<Fr: PrimeField>(group_size: usize) -> Fr {
-    let omega = Fr::ROOT_OF_UNITY;
-    let omega = omega.pow_vartime([(1 << Fr::S) / group_size as u64]);
+pub fn primitive_root_of_unity<F: PrimeField>(group_size: usize) -> F {
+    let omega = F::ROOT_OF_UNITY;
+    let omega = omega.pow_vartime([(1 << F::S) / group_size as u64]);
     assert!(
-        omega.pow_vartime([group_size as u64]) == Fr::ONE,
+        omega.pow_vartime([group_size as u64]) == F::ONE,
         "omega_0 is not root of unity for supported_n"
     );
     omega
