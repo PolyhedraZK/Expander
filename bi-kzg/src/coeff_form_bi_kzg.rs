@@ -12,14 +12,14 @@ use halo2curves::CurveAffine;
 use itertools::Itertools;
 use rand::RngCore;
 
-use crate::poly::{lagrange_coefficients, univariate_quotient};
-use crate::structs::BivariateLagrangePolynomial;
-use crate::structs::BivariatePolynomial;
+use crate::poly::{
+    lagrange_coefficients, univariate_quotient, BivariateLagrangePolynomial, BivariatePolynomial,
+};
 use crate::util::parallelize;
 use crate::{
     pcs::PolynomialCommitmentScheme,
     util::{powers_of_field_elements, tensor_product_parallel},
-    BiKZGCommitment, BiKZGProof, BiKZGSRS, BiKZGVerifierParam,
+    BiKZGCommitment, BiKZGProof, BiKZGVerifierParam, CoefFormBiKZGSRS,
 };
 
 /// Commit to the bi-variate polynomial in its coefficient form.
@@ -32,8 +32,8 @@ impl<E: MultiMillerLoop> PolynomialCommitmentScheme for CoeffFormBiKZG<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {
-    type SRS = BiKZGSRS<E>;
-    type ProverParam = BiKZGSRS<E>;
+    type SRS = CoefFormBiKZGSRS<E>;
+    type ProverParam = CoefFormBiKZGSRS<E>;
     type VerifierParam = BiKZGVerifierParam<E>;
     type Polynomial = BivariatePolynomial<E::Fr>;
     type Commitment = BiKZGCommitment<E>;
@@ -123,7 +123,7 @@ where
             affine_bases
         };
 
-        BiKZGSRS {
+        CoefFormBiKZGSRS {
             powers_of_g: coeff_bases,
             powers_of_g_lagrange_over_both_roots: lagrange_bases,
             h: E::G2Affine::generator(),
