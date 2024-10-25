@@ -35,3 +35,32 @@ pub fn bitreverse(mut n: usize, l: usize) -> usize {
     }
     r
 }
+
+#[inline]
+pub fn batch_inversion_in_place<F>(values: &mut Vec<F>)
+where
+    F: Field + Copy,
+{
+    // Step 1: Compute running products
+    // prod[i] = a[0] * a[1] * ... * a[i]
+    let mut prod = vec![F::zero(); values.len()];
+    prod[0] = values[0];
+
+    for i in 1..values.len() {
+        if values[i].is_zero() {
+            panic!("Cannot invert a vector with a zero entry");
+        }
+        prod[i] = prod[i - 1] * values[i];
+    }
+
+    // Step 2: Invert the final product
+    let mut inv = prod.last().unwrap().inv().unwrap();
+
+    // Step 3: Walk backwards to compute individual inverses
+    for i in (1..values.len()).rev() {
+        let tmp = inv * prod[i - 1];
+        inv *= values[i];
+        values[i] = tmp;
+    }
+    values[0] = inv;
+}
