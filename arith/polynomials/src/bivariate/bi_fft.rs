@@ -3,17 +3,7 @@
 use arith::FFTField;
 use ark_std::log2;
 
-use crate::{best_fft, primitive_root_of_unity};
-
-#[inline]
-fn bitreverse(mut n: usize, l: usize) -> usize {
-    let mut r = 0;
-    for _ in 0..l {
-        r = (r << 1) | (n & 1);
-        n >>= 1;
-    }
-    r
-}
+use crate::{best_fft, bitreverse, primitive_root_of_unity};
 
 #[inline]
 fn deep_swap_chunks<F: Clone + Copy>(a: &mut [&mut [F]], rk: usize, k: usize) {
@@ -60,7 +50,7 @@ fn mul_assign_vec<F: FFTField>(a: &mut [F], b: &F) {
 /// by $n$.
 ///
 /// This will use multithreading if beneficial.
-pub fn best_fft_vec_in_place<F: FFTField>(a: &mut [F], omega: F, log_n: u32, log_m: u32) {
+fn best_fft_vec_in_place<F: FFTField>(a: &mut [F], omega: F, log_n: u32, log_m: u32) {
     let threads = rayon::current_num_threads();
     let log_threads = threads.ilog2();
     let mn = a.len();

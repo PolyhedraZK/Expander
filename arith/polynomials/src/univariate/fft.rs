@@ -1,5 +1,7 @@
 use arith::FFTField;
 
+use crate::bitreverse;
+
 /// Performs a radix-$2$ Fast-Fourier Transformation (FFT) on a vector of size
 /// $n = 2^k$, when provided `log_n` = $k$ and an element of multiplicative
 /// order $n$ called `omega` ($\omega$). The result is that the vector `a`, when
@@ -11,15 +13,6 @@ use arith::FFTField;
 ///
 /// This will use multithreading if beneficial.
 pub fn best_fft<F: FFTField>(a: &mut [F], omega: F, log_n: u32) {
-    fn bitreverse(mut n: usize, l: usize) -> usize {
-        let mut r = 0;
-        for _ in 0..l {
-            r = (r << 1) | (n & 1);
-            n >>= 1;
-        }
-        r
-    }
-
     let threads = rayon::current_num_threads();
     let log_threads = threads.ilog2();
     let n = a.len();
