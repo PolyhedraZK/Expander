@@ -1,7 +1,8 @@
-use super::*;
 use arith::Field;
 use ark_std::test_rng;
 use halo2curves::bn256::Fr;
+
+use crate::{EqPolynomial, MultiLinearPoly};
 
 #[test]
 fn test_scaled_eq_xr() {
