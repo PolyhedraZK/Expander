@@ -32,6 +32,8 @@ pub trait Field:
     + for<'a> AddAssign<&'a Self>
     + for<'a> SubAssign<&'a Self>
     + for<'a> MulAssign<&'a Self>
+    + Send
+    + Sync
 {
     /// name
     const NAME: &'static str;
