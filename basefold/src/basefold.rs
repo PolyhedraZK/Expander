@@ -3,11 +3,11 @@ use std::ops::Mul;
 use arith::{ExtensionField, FFTField, FieldSerde};
 use ark_std::{end_timer, start_timer};
 use babybear::BabyBearx16;
-use mpoly::{EqPolynomial, MultiLinearPoly};
+use polynomials::{EqPolynomial, MultiLinearPoly};
 // use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
 use rand::RngCore;
-use sumcheck::SumcheckInstanceProof;
-use transcript::{FiatShamirHash, Transcript};
+// use sumcheck::SumcheckInstanceProof;
+use transcript::{FiatShamirBytesHash, Transcript};
 use tree::Tree;
 
 use crate::{
@@ -25,7 +25,7 @@ pub struct BaseFoldPCS<T, H, ExtF, F> {
 impl<T, H, ExtF, F> PolynomialCommitmentScheme for BaseFoldPCS<T, H, ExtF, F>
 where
     T: Transcript<H>,
-    H: FiatShamirHash,
+    H: FiatShamirBytesHash,
     F: FFTField + FieldSerde,
     ExtF: ExtensionField<BaseField = F>,
 {

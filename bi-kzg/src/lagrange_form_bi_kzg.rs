@@ -14,7 +14,6 @@ use halo2curves::CurveAffine;
 use itertools::Itertools;
 use rand::RngCore;
 
-use crate::poly::{lagrange_coefficients, univariate_quotient};
 use crate::structs::BivariateLagrangePolynomial;
 use crate::util::parallelize;
 use crate::{
@@ -278,6 +277,5 @@ where
         res
     }
 
-    
     // TODO: implement multi-opening and batch verification
 }

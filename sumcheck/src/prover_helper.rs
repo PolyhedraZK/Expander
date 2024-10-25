@@ -1,3 +1,4 @@
+mod arbitrary_gate;
 mod power_gate;
 mod product_gate;
 mod simd_gate;

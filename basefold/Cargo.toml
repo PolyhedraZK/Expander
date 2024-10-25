@@ -9,7 +9,7 @@ babybear = { path = "../arith/babybear" }
 # poseidon = { path = "../poseidon" }
 transcript = { path = "../transcript" }
 tree = { path = "../tree" }
-mpoly = { path = "../arith/mpoly" }
+polynomials = { path = "../arith/polynomials" }
 sumcheck = { path = "../sumcheck" }
 
 ark-std.workspace = true

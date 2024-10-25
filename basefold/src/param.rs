@@ -1,14 +1,14 @@
 use arith::{ExtensionField, FFTField, Field, FieldSerde};
 // use arith::{FFTField, Field};
 use ark_std::{end_timer, start_timer};
-use mpoly::MultiLinearPoly;
+use polynomials::MultiLinearPoly;
 // use p3_dft::TwoAdicSubgroupDft;
 // use p3_field::{ExtensionField, TwoAdicField};
 // use p3_matrix::{dense::RowMajorMatrix, Matrix};
 // use rayon::iter::{
 //     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
 // };
-use transcript::{FiatShamirHash, Transcript};
+use transcript::{FiatShamirBytesHash, Transcript};
 use tree::Tree;
 
 // use crate::Babybearx16
@@ -17,7 +17,7 @@ use tree::Tree;
 pub struct BasefoldParam<T, H, ExtF, F>
 where
     T: Transcript<H>,
-    H: FiatShamirHash,
+    H: FiatShamirBytesHash,
     F: FFTField + FieldSerde,
     ExtF: ExtensionField<BaseField = F>,
 {
@@ -35,7 +35,7 @@ where
 impl<T, H, ExtF, F> BasefoldParam<T, H, ExtF, F>
 where
     T: Transcript<H>,
-    H: FiatShamirHash,
+    H: FiatShamirBytesHash,
     F: FFTField + FieldSerde,
     ExtF: ExtensionField<BaseField = F>,
 {

@@ -12,7 +12,8 @@ use halo2curves::CurveAffine;
 use itertools::Itertools;
 use rand::RngCore;
 
-use crate::poly::{lagrange_coefficients, univariate_quotient};
+use halo2curves::fft::best_fft;
+
 use crate::structs::BivariateLagrangePolynomial;
 use crate::structs::BivariatePolynomial;
 use crate::util::parallelize;

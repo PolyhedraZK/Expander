@@ -3,7 +3,7 @@
 use core::panic;
 
 use arith::{Field, FieldSerde};
-use mpoly::{MultiLinearPoly, UniPoly};
+use polynomials::MultiLinearPoly;
 use transcript::{FiatShamirHash, Transcript};
 
 #[derive(Debug, Clone)]

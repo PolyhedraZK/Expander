@@ -1,19 +1,5 @@
 use halo2curves::pairing::Engine;
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct BivariatePolynomial<F> {
-    pub coefficients: Vec<F>,
-    pub degree_0: usize,
-    pub degree_1: usize,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct BivariateLagrangePolynomial<F> {
-    pub coefficients: Vec<F>,
-    pub degree_0: usize,
-    pub degree_1: usize,
-}
-
 /// Structured reference string for Bi-KZG polynomial commitment scheme.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct BiKZGSRS<E: Engine> {
