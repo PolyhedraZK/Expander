@@ -1,8 +1,7 @@
 use arith::ExtensionField;
 use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
-use transcript::Keccak256hasher;
 
-use super::{FieldType, GKRConfig};
+use super::{FiatShamirHashType, FieldType, GKRConfig};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct M31ExtConfigKeccak;
@@ -16,7 +15,7 @@ impl GKRConfig for M31ExtConfigKeccak {
 
     type Field = M31Ext3x16;
 
-    type FiatShamirHashType = Keccak256hasher;
+    const FIAT_SHAMIR_HASH: FiatShamirHashType = FiatShamirHashType::Keccak256;
 
     const FIELD_TYPE: FieldType = FieldType::M31;
 

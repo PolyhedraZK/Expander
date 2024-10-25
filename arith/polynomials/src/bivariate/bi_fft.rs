@@ -1,20 +1,9 @@
 //! Two layer FFT and its inverse
 
+use arith::FFTField;
 use ark_std::log2;
-use halo2curves::{
-    ff::{Field, PrimeField},
-    fft::best_fft,
-};
 
-#[inline]
-fn bitreverse(mut n: usize, l: usize) -> usize {
-    let mut r = 0;
-    for _ in 0..l {
-        r = (r << 1) | (n & 1);
-        n >>= 1;
-    }
-    r
-}
+use crate::{best_fft, bitreverse, primitive_root_of_unity};
 
 #[inline]
 fn deep_swap_chunks<F: Clone + Copy>(a: &mut [&mut [F]], rk: usize, k: usize) {
@@ -29,22 +18,22 @@ fn deep_swap_chunks<F: Clone + Copy>(a: &mut [&mut [F]], rk: usize, k: usize) {
 }
 
 #[inline]
-fn assign_vec<F: Field>(a: &mut [F], b: &[F]) {
+fn assign_vec<F: FFTField>(a: &mut [F], b: &[F]) {
     a.iter_mut().zip(b.iter()).for_each(|(a, b)| *a = *b);
 }
 
 #[inline]
-fn add_assign_vec<F: Field>(a: &mut [F], b: &[F]) {
+fn add_assign_vec<F: FFTField>(a: &mut [F], b: &[F]) {
     a.iter_mut().zip(b.iter()).for_each(|(a, b)| *a += b);
 }
 
 #[inline]
-fn sub_assign_vec<F: Field>(a: &mut [F], b: &[F]) {
+fn sub_assign_vec<F: FFTField>(a: &mut [F], b: &[F]) {
     a.iter_mut().zip(b.iter()).for_each(|(a, b)| *a -= b);
 }
 
 #[inline]
-fn mul_assign_vec<F: Field>(a: &mut [F], b: &F) {
+fn mul_assign_vec<F: FFTField>(a: &mut [F], b: &F) {
     a.iter_mut().for_each(|a| *a *= b);
 }
 
@@ -61,7 +50,7 @@ fn mul_assign_vec<F: Field>(a: &mut [F], b: &F) {
 /// by $n$.
 ///
 /// This will use multithreading if beneficial.
-pub fn best_fft_vec_in_place<F: PrimeField>(a: &mut [F], omega: F, log_n: u32, log_m: u32) {
+fn best_fft_vec_in_place<F: FFTField>(a: &mut [F], omega: F, log_n: u32, log_m: u32) {
     let threads = rayon::current_num_threads();
     let log_threads = threads.ilog2();
     let mn = a.len();
@@ -135,7 +124,7 @@ pub fn best_fft_vec_in_place<F: PrimeField>(a: &mut [F], omega: F, log_n: u32, l
 }
 
 /// This perform recursive butterfly arithmetic
-fn recursive_butterfly_arithmetic<F: PrimeField>(
+fn recursive_butterfly_arithmetic<F: FFTField>(
     a: &mut [&mut [F]],
     m: usize,
     twiddle_chunk: usize,
@@ -189,19 +178,14 @@ fn recursive_butterfly_arithmetic<F: PrimeField>(
 }
 
 /// Convert a polynomial in coefficient form to evaluation form using a two layer FFT
-pub(crate) fn bi_fft_in_place<F: PrimeField>(coeffs: &mut [F], degree_n: usize, degree_m: usize) {
+pub fn bi_fft_in_place<F: FFTField>(coeffs: &mut [F], degree_n: usize, degree_m: usize) {
     assert_eq!(coeffs.len(), degree_n * degree_m);
     assert!(degree_n.is_power_of_two());
     assert!(degree_m.is_power_of_two());
 
     // roots of unity for supported_n and supported_m
-    let (omega_0, omega_1) = {
-        let omega = F::ROOT_OF_UNITY;
-        let omega_0 = omega.pow_vartime([(1 << F::S) / degree_n as u64]);
-        let omega_1 = omega.pow_vartime([(1 << F::S) / degree_m as u64]);
-
-        (omega_0, omega_1)
-    };
+    let omega_0 = primitive_root_of_unity(degree_n);
+    let omega_1 = primitive_root_of_unity(degree_m);
 
     // inner layer of FFT over variable x
     coeffs

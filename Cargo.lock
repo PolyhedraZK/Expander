@@ -118,6 +118,9 @@ dependencies = [
  "ethnum",
  "halo2curves",
  "log",
+ "p3-baby-bear",
+ "p3-field",
+ "p3-monty-31",
  "rand",
  "raw-cpuid",
  "sha2",
@@ -263,6 +266,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
+name = "babybear"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "ethnum",
+ "p3-baby-bear",
+ "p3-field",
+ "p3-monty-31",
+ "rand",
+]
+
+[[package]]
 name = "backtrace"
 version = "0.3.74"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -287,6 +303,7 @@ checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 name = "bi-kzg"
 version = "0.1.0"
 dependencies = [
+ "arith",
  "ark-bn254",
  "ark-ec",
  "ark-ff",
@@ -296,6 +313,7 @@ dependencies = [
  "halo2curves",
  "itertools 0.13.0",
  "log",
+ "polynomials",
  "rand",
  "rayon",
  "sha2",
@@ -546,6 +564,7 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "ark-std",
+ "babybear",
  "gf2",
  "gf2_128",
  "halo2curves",
@@ -828,6 +847,12 @@ dependencies = [
  "pin-utils",
  "slab",
 ]
+
+[[package]]
+name = "gcd"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d758ba1b47b00caf47f24925c0074ecb20d6dfcffe7f6d53395c0465674841a"
 
 [[package]]
 name = "generic-array"
@@ -1319,15 +1344,9 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "ark-std",
- "cfg-if",
  "criterion",
  "ethnum",
- "halo2curves",
- "log",
  "rand",
- "raw-cpuid",
- "sha2",
- "thiserror",
  "tynm",
 ]
 
@@ -1436,6 +1455,7 @@ checksum = "a5e44f723f1133c9deac646763579fdb3ac745e418f2a7af9cd0c431da1f20b9"
 dependencies = [
  "num-integer",
  "num-traits",
+ "rand",
 ]
 
 [[package]]
@@ -1454,6 +1474,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "nums"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf3c74f925fb8cfc49a8022f2afce48a0683b70f9e439885594e84c5edbf5b01"
+dependencies = [
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+ "rand",
 ]
 
 [[package]]
@@ -1476,6 +1508,135 @@ name = "oorandom"
 version = "11.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b410bbe7e14ab526a0e86877eb47c6996a2bd7746f027ba551028c925390e4e9"
+
+[[package]]
+name = "p3-baby-bear"
+version = "0.1.0"
+source = "git+https://github.com/Plonky3/Plonky3.git#d35b34a54a5d8988dd7ebcd2e7988c12da049b29"
+dependencies = [
+ "p3-field",
+ "p3-mds",
+ "p3-monty-31",
+ "p3-poseidon2",
+ "p3-symmetric",
+ "rand",
+ "serde",
+]
+
+[[package]]
+name = "p3-dft"
+version = "0.1.0"
+source = "git+https://github.com/Plonky3/Plonky3.git#d35b34a54a5d8988dd7ebcd2e7988c12da049b29"
+dependencies = [
+ "itertools 0.13.0",
+ "p3-field",
+ "p3-matrix",
+ "p3-maybe-rayon",
+ "p3-util",
+ "tracing",
+]
+
+[[package]]
+name = "p3-field"
+version = "0.1.0"
+source = "git+https://github.com/Plonky3/Plonky3.git#d35b34a54a5d8988dd7ebcd2e7988c12da049b29"
+dependencies = [
+ "itertools 0.13.0",
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+ "nums",
+ "p3-maybe-rayon",
+ "p3-util",
+ "rand",
+ "serde",
+ "tracing",
+]
+
+[[package]]
+name = "p3-matrix"
+version = "0.1.0"
+source = "git+https://github.com/Plonky3/Plonky3.git#d35b34a54a5d8988dd7ebcd2e7988c12da049b29"
+dependencies = [
+ "itertools 0.13.0",
+ "p3-field",
+ "p3-maybe-rayon",
+ "p3-util",
+ "rand",
+ "serde",
+ "tracing",
+ "transpose",
+]
+
+[[package]]
+name = "p3-maybe-rayon"
+version = "0.1.0"
+source = "git+https://github.com/Plonky3/Plonky3.git#d35b34a54a5d8988dd7ebcd2e7988c12da049b29"
+
+[[package]]
+name = "p3-mds"
+version = "0.1.0"
+source = "git+https://github.com/Plonky3/Plonky3.git#d35b34a54a5d8988dd7ebcd2e7988c12da049b29"
+dependencies = [
+ "itertools 0.13.0",
+ "p3-dft",
+ "p3-field",
+ "p3-matrix",
+ "p3-symmetric",
+ "p3-util",
+ "rand",
+]
+
+[[package]]
+name = "p3-monty-31"
+version = "0.1.0"
+source = "git+https://github.com/Plonky3/Plonky3.git#d35b34a54a5d8988dd7ebcd2e7988c12da049b29"
+dependencies = [
+ "itertools 0.13.0",
+ "num-bigint",
+ "p3-dft",
+ "p3-field",
+ "p3-matrix",
+ "p3-maybe-rayon",
+ "p3-mds",
+ "p3-poseidon2",
+ "p3-symmetric",
+ "p3-util",
+ "rand",
+ "serde",
+ "tracing",
+ "transpose",
+]
+
+[[package]]
+name = "p3-poseidon2"
+version = "0.1.0"
+source = "git+https://github.com/Plonky3/Plonky3.git#d35b34a54a5d8988dd7ebcd2e7988c12da049b29"
+dependencies = [
+ "gcd",
+ "p3-field",
+ "p3-mds",
+ "p3-symmetric",
+ "rand",
+]
+
+[[package]]
+name = "p3-symmetric"
+version = "0.1.0"
+source = "git+https://github.com/Plonky3/Plonky3.git#d35b34a54a5d8988dd7ebcd2e7988c12da049b29"
+dependencies = [
+ "itertools 0.13.0",
+ "p3-field",
+ "serde",
+]
+
+[[package]]
+name = "p3-util"
+version = "0.1.0"
+source = "git+https://github.com/Plonky3/Plonky3.git#d35b34a54a5d8988dd7ebcd2e7988c12da049b29"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "pairing"
@@ -1610,6 +1771,22 @@ dependencies = [
  "ark-std",
  "criterion",
  "halo2curves",
+ "itertools 0.13.0",
+ "rand",
+ "rayon",
+]
+
+[[package]]
+name = "poseidon"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "babybear",
+ "criterion",
+ "mersenne31",
+ "rand",
+ "rayon",
 ]
 
 [[package]]
@@ -1944,6 +2121,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
+name = "strength_reduce"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe895eb47f22e2ddd4dabc02bce419d2e643c8e3b585c78158b349195bc24d82"
+
+[[package]]
 name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2118,7 +2301,19 @@ checksum = "c3523ab5a71916ccf420eebdf5521fcef02141234bbc0b8a49f2fdc4544364ef"
 dependencies = [
  "log",
  "pin-project-lite",
+ "tracing-attributes",
  "tracing-core",
+]
+
+[[package]]
+name = "tracing-attributes"
+version = "0.1.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34704c8d6ebcbc939824180af020566b01a7c01f80641264eba0999f6c2b6be7"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.79",
 ]
 
 [[package]]
@@ -2137,6 +2332,27 @@ dependencies = [
  "arith",
  "sha2",
  "tiny-keccak",
+]
+
+[[package]]
+name = "transpose"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ad61aed86bc3faea4300c7aee358b4c6d0c8d6ccc36524c96e4c92ccf26e77e"
+dependencies = [
+ "num-integer",
+ "strength_reduce",
+]
+
+[[package]]
+name = "tree"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "babybear",
+ "rayon",
+ "sha2",
 ]
 
 [[package]]

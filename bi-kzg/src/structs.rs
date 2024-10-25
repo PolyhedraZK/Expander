@@ -1,22 +1,8 @@
 use halo2curves::pairing::Engine;
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct BivariatePolynomial<F> {
-    pub coefficients: Vec<F>,
-    pub degree_0: usize,
-    pub degree_1: usize,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct BivariateLagrangePolynomial<F> {
-    pub coefficients: Vec<F>,
-    pub degree_0: usize,
-    pub degree_1: usize,
-}
-
 /// Structured reference string for Bi-KZG polynomial commitment scheme.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct BiKZGSRS<E: Engine> {
+pub struct CoefFormBiKZGSRS<E: Engine> {
     /// (g_1^{\tau_0^i\tau_1^j})_{i\in [0,N], j\in [0, M]} = \\
     /// (
     ///  g_1, g_1^{\tau_0}, g_1^{\tau_0^2}, ..., g_1^{\tau_0^N},
@@ -24,6 +10,23 @@ pub struct BiKZGSRS<E: Engine> {
     ///  ..., g_1^{\tau_0^N\tau_1^M}
     /// )
     pub powers_of_g: Vec<E::G1Affine>,
+    /// g in lagrange form over omega_0 and omega_1
+    pub powers_of_g_lagrange_over_both_roots: Vec<E::G1Affine>,
+    /// The generator of G2.
+    pub h: E::G2Affine,
+    /// tau_0 times the above generator of G2.
+    pub tau_0_h: E::G2Affine,
+    /// tau_1 times the above generator of G2.
+    pub tau_1_h: E::G2Affine,
+}
+
+/// Structured reference string for Bi-KZG polynomial commitment scheme.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct LagrangeFormBiKZGSRS<E: Engine> {
+    /// The generator of G1
+    pub g: E::G1Affine,
+    /// g in lagrange form over omega_0
+    pub powers_of_g_lagrange_over_x: Vec<E::G1Affine>,
     /// g in lagrange form over omega_0 and omega_1
     pub powers_of_g_lagrange_over_both_roots: Vec<E::G1Affine>,
     /// The generator of G2.
@@ -63,10 +66,21 @@ pub struct BiKZGProof<E: Engine> {
     pub pi1: E::G1Affine,
 }
 
-impl<E: Engine> From<&BiKZGSRS<E>> for BiKZGVerifierParam<E> {
-    fn from(srs: &BiKZGSRS<E>) -> Self {
+impl<E: Engine> From<&CoefFormBiKZGSRS<E>> for BiKZGVerifierParam<E> {
+    fn from(srs: &CoefFormBiKZGSRS<E>) -> Self {
         Self {
             g: srs.powers_of_g[0],
+            h: srs.h,
+            tau_0_h: srs.tau_0_h,
+            tau_1_h: srs.tau_1_h,
+        }
+    }
+}
+
+impl<E: Engine> From<&LagrangeFormBiKZGSRS<E>> for BiKZGVerifierParam<E> {
+    fn from(srs: &LagrangeFormBiKZGSRS<E>) -> Self {
+        Self {
+            g: srs.g,
             h: srs.h,
             tau_0_h: srs.tau_0_h,
             tau_1_h: srs.tau_1_h,
