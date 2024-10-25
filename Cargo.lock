@@ -318,6 +318,7 @@ dependencies = [
 name = "bi-kzg"
 version = "0.1.0"
 dependencies = [
+ "arith",
  "ark-bn254",
  "ark-ec",
  "ark-ff",

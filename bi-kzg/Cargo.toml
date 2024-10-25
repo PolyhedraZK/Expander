@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+arith = { path = "../arith" }
 polynomials = { path = "../arith/polynomials" }
 
 ark-std.workspace = true

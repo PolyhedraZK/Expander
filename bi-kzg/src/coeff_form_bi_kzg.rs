@@ -1,8 +1,8 @@
 use std::{borrow::Borrow, marker::PhantomData};
 
+use arith::FFTField;
+use arith::Field;
 use ark_std::{end_timer, start_timer};
-use halo2curves::ff::Field;
-use halo2curves::ff::PrimeField;
 use halo2curves::group::prime::PrimeCurveAffine;
 use halo2curves::group::Curve;
 use halo2curves::group::Group;
@@ -10,20 +10,18 @@ use halo2curves::msm::best_multiexp;
 use halo2curves::pairing::{MillerLoopResult, MultiMillerLoop};
 use halo2curves::CurveAffine;
 use itertools::Itertools;
+use polynomials::lagrange_coefficients;
+use polynomials::powers_of_field_elements;
+use polynomials::tensor_product_parallel;
+use polynomials::univariate_quotient;
+use polynomials::BivariateLagrangePolynomial;
+use polynomials::BivariatePolynomial;
 use rand::RngCore;
 
-use halo2curves::fft::best_fft;
-
-use crate::structs::BivariateLagrangePolynomial;
-use crate::structs::BivariatePolynomial;
-use crate::poly::{
-    lagrange_coefficients, univariate_quotient, BivariateLagrangePolynomial, BivariatePolynomial,
-};
 use crate::util::parallelize;
 use crate::{
-    pcs::PolynomialCommitmentScheme,
-    util::{powers_of_field_elements, tensor_product_parallel},
-    BiKZGCommitment, BiKZGProof, BiKZGVerifierParam, CoefFormBiKZGSRS,
+    pcs::PolynomialCommitmentScheme, BiKZGCommitment, BiKZGProof, BiKZGVerifierParam,
+    CoefFormBiKZGSRS,
 };
 
 /// Commit to the bi-variate polynomial in its coefficient form.
@@ -35,6 +33,7 @@ pub struct CoeffFormBiKZG<E: MultiMillerLoop> {
 impl<E: MultiMillerLoop> PolynomialCommitmentScheme for CoeffFormBiKZG<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::Fr: FFTField,
 {
     type SRS = CoefFormBiKZGSRS<E>;
     type ProverParam = CoefFormBiKZGSRS<E>;
@@ -54,26 +53,16 @@ where
         assert!(supported_n.is_power_of_two());
         assert!(supported_m.is_power_of_two());
 
-        let tau_0 = E::Fr::random(&mut rng);
-        let tau_1 = E::Fr::random(&mut rng);
+        let tau_0 = E::Fr::random_unsafe(&mut rng);
+        let tau_1 = E::Fr::random_unsafe(&mut rng);
         let g1 = E::G1Affine::generator();
 
         // roots of unity for supported_n and supported_m
-        let (omega_0, omega_1) = {
-            let omega = E::Fr::ROOT_OF_UNITY;
-            let omega_0 = omega.pow_vartime([(1 << E::Fr::S) / supported_n as u64]);
-            let omega_1 = omega.pow_vartime([(1 << E::Fr::S) / supported_m as u64]);
+        let log_n = supported_n.trailing_zeros();
+        let log_m = supported_m.trailing_zeros();
 
-            assert!(
-                omega_0.pow_vartime([supported_n as u64]) == E::Fr::ONE,
-                "omega_0 is not root of unity for supported_n"
-            );
-            assert!(
-                omega_1.pow_vartime([supported_m as u64]) == E::Fr::ONE,
-                "omega_1 is not root of unity for supported_m"
-            );
-            (omega_0, omega_1)
-        };
+        let omega_0 = E::Fr::two_adic_generator(log_n as usize);
+        let omega_1 = E::Fr::two_adic_generator(log_m as usize);
 
         // computes the vector of L_i^N(tau_0) * L_j^M(tau_1) for i in 0..supported_n and j in 0..supported_m
         let (scalars, lagrange_scalars) = {
@@ -144,6 +133,7 @@ where
     //     unimplemented!()
     // }
 
+    #[inline]
     fn commit(
         prover_param: impl Borrow<Self::ProverParam>,
         poly: &Self::Polynomial,
@@ -164,6 +154,7 @@ where
         Self::Commitment { com: com.into() }
     }
 
+    #[inline]
     fn open(
         prover_param: impl Borrow<Self::ProverParam>,
         polynomial: &Self::Polynomial,
@@ -220,10 +211,10 @@ where
                 .coefficients
                 .iter()
                 .map(|o| {
-                    if o.is_zero_vartime() {
+                    if o.is_zero() {
                         panic!("not invertible")
                     } else {
-                        o.invert().unwrap()
+                        o.inv().unwrap()
                     }
                 })
                 .collect::<Vec<_>>();
@@ -257,6 +248,7 @@ where
         (proof, u)
     }
 
+    #[inline]
     fn verify(
         verifier_param: &Self::VerifierParam,
         commitment: &Self::Commitment,

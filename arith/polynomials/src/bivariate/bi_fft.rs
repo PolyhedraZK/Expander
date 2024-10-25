@@ -3,7 +3,7 @@
 use arith::FFTField;
 use ark_std::log2;
 
-use crate::best_fft;
+use crate::{best_fft, primitive_root_of_unity};
 
 #[inline]
 fn bitreverse(mut n: usize, l: usize) -> usize {
@@ -193,12 +193,9 @@ pub fn bi_fft_in_place<F: FFTField>(coeffs: &mut [F], degree_n: usize, degree_m:
     assert!(degree_n.is_power_of_two());
     assert!(degree_m.is_power_of_two());
 
-    let log_n = degree_n.trailing_zeros();
-    let log_m = degree_m.trailing_zeros();
-
     // roots of unity for supported_n and supported_m
-    let omega_0 = F::two_adic_generator(log_n as usize);
-    let omega_1 = F::two_adic_generator(log_m as usize);
+    let omega_0 = primitive_root_of_unity(degree_n);
+    let omega_1 = primitive_root_of_unity(degree_m);
 
     // inner layer of FFT over variable x
     coeffs

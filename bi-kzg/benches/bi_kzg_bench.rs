@@ -1,7 +1,8 @@
-use bi_kzg::{BiKZGVerifierParam, BivariatePolynomial, CoeffFormBiKZG, PolynomialCommitmentScheme};
+use bi_kzg::{BiKZGVerifierParam, CoeffFormBiKZG, PolynomialCommitmentScheme};
 use halo2curves::bn256::{self, Bn256, Fr};
 use halo2curves::ff::Field;
 use halo2curves::msm::best_multiexp;
+use polynomials::BivariatePolynomial;
 use std::time::Duration;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};

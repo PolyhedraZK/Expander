@@ -1,5 +1,6 @@
 use std::{borrow::Borrow, marker::PhantomData};
 
+use arith::FFTField;
 use ark_std::{end_timer, start_timer};
 use halo2curves::ff::Field;
 use halo2curves::group::prime::PrimeCurveAffine;
@@ -9,18 +10,17 @@ use halo2curves::msm::best_multiexp;
 use halo2curves::pairing::{MillerLoopResult, MultiMillerLoop};
 use halo2curves::CurveAffine;
 use itertools::Itertools;
+use polynomials::powers_of_field_elements;
+use polynomials::primitive_root_of_unity;
+use polynomials::tensor_product_parallel;
 use rand::RngCore;
 
-use crate::structs::BivariateLagrangePolynomial;
-use crate::util::parallelize;
 use crate::parallelize;
-use crate::poly::{lagrange_coefficients, BivariateLagrangePolynomial};
-use crate::primitive_root_of_unity;
 use crate::{
-    pcs::PolynomialCommitmentScheme,
-    util::{powers_of_field_elements, tensor_product_parallel},
-    BiKZGCommitment, BiKZGProof, BiKZGVerifierParam, LagrangeFormBiKZGSRS,
+    pcs::PolynomialCommitmentScheme, BiKZGCommitment, BiKZGProof, BiKZGVerifierParam,
+    LagrangeFormBiKZGSRS,
 };
+use polynomials::{lagrange_coefficients, BivariateLagrangePolynomial};
 
 /// Commit to the bi-variate polynomial in its lagrange form.
 /// this should be the preferred form for commitment.
@@ -31,6 +31,7 @@ pub struct LagrangeFormBiKZG<E: MultiMillerLoop> {
 impl<E: MultiMillerLoop> PolynomialCommitmentScheme for LagrangeFormBiKZG<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::Fr: FFTField,
 {
     type SRS = LagrangeFormBiKZGSRS<E>;
     type ProverParam = LagrangeFormBiKZGSRS<E>;

@@ -1,4 +1,4 @@
-use arith::Field;
+use arith::{FFTField, Field};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 pub fn powers_of_field_elements<F: Field>(x: &F, n: usize) -> Vec<F> {
@@ -15,4 +15,10 @@ pub fn tensor_product_parallel<F: Field>(vec1: &[F], vec2: &[F]) -> Vec<F> {
     vec2.par_iter()
         .flat_map(|&i| vec1.iter().map(|&j| i * j).collect::<Vec<_>>())
         .collect()
+}
+
+pub fn primitive_root_of_unity<F: FFTField>(group_size: usize) -> F {
+    let log_size = group_size.trailing_zeros() as usize;
+    assert_eq!(1 << log_size, group_size);
+    F::two_adic_generator(log_size)
 }

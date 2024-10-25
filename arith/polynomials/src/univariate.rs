@@ -5,7 +5,7 @@ use arith::Field;
 use ark_std::{end_timer, start_timer};
 
 /// Compute poly / (x-point) using univariate division
-pub(crate) fn univariate_quotient<F: Field>(poly: &[F], point: &F) -> Vec<F> {
+pub fn univariate_quotient<F: Field>(poly: &[F], point: &F) -> Vec<F> {
     let timer = start_timer!(|| format!("Univariate quotient of degree {}", poly.len()));
     let mut dividend_coeff = poly.to_vec();
     let divisor = [-*point, F::from(1u32)];

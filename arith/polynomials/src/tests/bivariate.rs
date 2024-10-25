@@ -1,5 +1,5 @@
 use ark_std::test_rng;
-use halo2curves::bn256::Fr;
+use halo2curves::{bn256::Fr, ff::Field};
 
 use crate::{
     bi_fft_in_place, tensor_product_parallel, BivariateLagrangePolynomial, BivariatePolynomial,
@@ -253,4 +253,20 @@ fn test_bi_fft() {
             assert_eq!(poly_lag, poly_lag2);
         }
     }
+}
+
+#[test]
+fn test_lagrange_transform() {
+    let mut rng = test_rng();
+
+    let a = BivariatePolynomial::<Fr>::random(&mut rng, 4, 8);
+    let a_fft = BivariateLagrangePolynomial::from(&a);
+
+    let x = Fr::random(&mut rng);
+    let y = Fr::random(&mut rng);
+
+    let a_eval = a.evaluate(&x, &y);
+    let a_fft_eval = a_fft.evaluate(&x, &y);
+
+    assert_eq!(a_eval, a_fft_eval);
 }

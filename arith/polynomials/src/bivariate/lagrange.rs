@@ -1,10 +1,34 @@
+use arith::FFTField;
+use rand::RngCore;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+
 use crate::{powers_of_field_elements, primitive_root_of_unity};
 
-use super::{lagrange_coefficients, BivariateLagrangePolynomial, BivariatePolynomial};
-use halo2curves::ff::{Field, PrimeField};
-use rand::RngCore;
+use super::BivariateLagrangePolynomial;
 
-impl<F: Field> BivariateLagrangePolynomial<F> {
+/// For a point x, compute the coefficients of Lagrange polynomial L_{i}(x) at x, given the roots.
+/// `L_{i}(x) = \prod_{j \neq i} \frac{x - r_j}{r_i - r_j}`
+#[inline]
+pub fn lagrange_coefficients<F: FFTField + Send + Sync>(roots: &[F], points: &F) -> Vec<F> {
+    roots
+        .par_iter()
+        .enumerate()
+        .map(|(i, _)| {
+            let mut numerator = F::ONE;
+            let mut denominator = F::ONE;
+            for j in 0..roots.len() {
+                if i == j {
+                    continue;
+                }
+                numerator *= roots[j] - points;
+                denominator *= roots[j] - roots[i];
+            }
+            numerator * denominator.inv().unwrap()
+        })
+        .collect()
+}
+
+impl<F: FFTField> BivariateLagrangePolynomial<F> {
     #[inline]
     pub fn new(coeffs: Vec<F>, degree_0: usize, degree_1: usize) -> Self {
         assert_eq!(coeffs.len(), degree_0 * degree_1);
@@ -18,46 +42,27 @@ impl<F: Field> BivariateLagrangePolynomial<F> {
     #[inline]
     pub fn random(mut rng: impl RngCore, degree_0: usize, degree_1: usize) -> Self {
         let coefficients = (0..degree_0 * degree_1)
-            .map(|_| F::random(&mut rng))
+            .map(|_| F::random_unsafe(&mut rng))
             .collect();
         Self::new(coefficients, degree_0, degree_1)
     }
-}
 
-impl<F: PrimeField> From<BivariatePolynomial<F>> for BivariateLagrangePolynomial<F> {
-    #[inline]
-    fn from(poly: BivariatePolynomial<F>) -> Self {
-        Self::from(&poly)
-    }
-}
-
-impl<F: PrimeField> From<&BivariatePolynomial<F>> for BivariateLagrangePolynomial<F> {
-    #[inline]
-    fn from(poly: &BivariatePolynomial<F>) -> Self {
-        let coeffs = poly.interpolate();
-        BivariateLagrangePolynomial::new(coeffs, poly.degree_0, poly.degree_1)
-    }
-}
-
-impl<F: PrimeField> BivariateLagrangePolynomial<F> {
     /// construct a bivariate lagrange polynomial from a monomial f(y) = y - b
     #[inline]
     pub fn from_y_monomial(b: &F, n: usize, m: usize) -> Self {
         // roots of unity for supported_n and supported_m
         let omega_1 = {
-            let omega = F::ROOT_OF_UNITY;
-            omega.pow_vartime([(1 << F::S) / m as u64])
+            let omega = F::root_of_unity();
+            omega.exp((1 << F::TWO_ADICITY) / m as u128)
         };
         let mut coeffs = vec![F::ZERO; n * m];
         for i in 0..m {
-            let element = omega_1.pow_vartime([i as u64]) - *b;
+            let element = omega_1.exp(i as u128) - *b;
             coeffs[i * n..(i + 1) * n].copy_from_slice(vec![element; n].as_slice());
         }
         BivariateLagrangePolynomial::new(coeffs, n, m)
     }
-}
 
-impl<F: PrimeField> BivariateLagrangePolynomial<F> {
     /// evaluate the polynomial at (x, y)
     #[inline]
     pub fn evaluate(&self, x: &F, y: &F) -> F {
