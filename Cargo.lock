@@ -2146,6 +2146,7 @@ dependencies = [
  "circuit",
  "config",
  "env_logger",
+ "halo2curves",
  "log",
  "polynomials",
  "transcript",

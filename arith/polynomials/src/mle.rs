@@ -9,8 +9,13 @@ pub struct MultiLinearPoly<F> {
 }
 
 impl<F: Field> MultiLinearPoly<F> {
-    /// Sample a random polynomials.
+    #[inline]
+    pub fn new(coeffs: Vec<F>) -> Self {
+        Self { coeffs }
+    }
 
+
+    /// Sample a random polynomials.
     #[inline]
     pub fn random(nv: usize, mut rng: impl RngCore) -> Self {
         let coeff = (0..1 << nv).map(|_| F::random_unsafe(&mut rng)).collect();
@@ -132,5 +137,11 @@ impl<F: Field> MultiLinearPoly<F> {
             }
             scratch[0]
         }
+    }
+
+    #[inline]
+    pub fn evaluate(&self, r: &[F]) -> F {
+        let mut scratch = vec![F::zero(); self.coeffs.len()];
+        Self::evaluate_with_buffer(&self.coeffs, r, &mut scratch)
     }
 }
