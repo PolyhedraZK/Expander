@@ -1,18 +1,16 @@
-//! TODO: merge this module with sumcheck_helper
-
 use core::panic;
 
 use arith::{Field, FieldSerde};
-use polynomials::MultiLinearPoly;
-use transcript::{FiatShamirHash, Transcript};
+use polynomials::{MultiLinearPoly, UnivariatePolynomial};
+use transcript::Transcript;
 
 #[derive(Debug, Clone)]
 pub struct SumcheckInstanceProof<F: Field> {
-    pub uni_polys: Vec<UniPoly<F>>,
+    pub uni_polys: Vec<UnivariatePolynomial<F>>,
 }
 
 impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
-    pub fn new(uni_polys: Vec<UniPoly<F>>) -> SumcheckInstanceProof<F> {
+    pub fn new(uni_polys: Vec<UnivariatePolynomial<F>>) -> SumcheckInstanceProof<F> {
         SumcheckInstanceProof { uni_polys }
     }
 
@@ -28,7 +26,7 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
     /// Returns (SumcheckInstanceProof, r_eval_point, final_evals)
     /// - `r_eval_point`: Final random point of evaluation
     /// - `final_evals`: Each of the polys evaluated at `r_eval_point`
-    pub fn prove_arbitrary<Func, H, T>(
+    pub fn prove_arbitrary<Func, T>(
         _claim: &F,
         num_rounds: usize,
         polys: &mut Vec<MultiLinearPoly<F>>,
@@ -38,11 +36,10 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
     ) -> (Self, Vec<F>, Vec<F>)
     where
         Func: Fn(&[F]) -> F + std::marker::Sync,
-        H: FiatShamirHash,
-        T: Transcript<H>,
+        T: Transcript<F>,
     {
         let mut r: Vec<F> = Vec::new();
-        let mut uni_polys: Vec<UniPoly<F>> = Vec::new();
+        let mut uni_polys: Vec<UnivariatePolynomial<F>> = Vec::new();
 
         for _round in 0..num_rounds {
             let mle_half = polys[0].coeffs.len() / 2;
@@ -101,18 +98,18 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
                 .map(|poly_i| accum.iter().map(|mle| mle[poly_i]).sum())
                 .collect();
 
-            let round_uni_poly = UniPoly::from_evals(&uni_poly_eval_points);
+            let round_uni_poly = UnivariatePolynomial::from_evals(&uni_poly_eval_points);
 
             // append the prover's message to the transcript
             // round_uni_poly.
             // transcript.append_field_element(f);
-            println!("round_uni_poly: {:?}", round_uni_poly.coeffs.len());
+            println!("round_uni_poly: {:?}", round_uni_poly.coefficients.len());
             round_uni_poly
-                .coeffs
+                .coefficients
                 .iter()
                 .for_each(|f| transcript.append_field_element(f));
 
-            let r_j = transcript.generate_challenge();
+            let r_j = transcript.generate_challenge_field_element();
             r.push(r_j);
 
             // bound all tables to the verifier's challenge
@@ -140,7 +137,7 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
     /// Returns (e, r)
     /// - `e`: Claimed evaluation at random point
     /// - `r`: Evaluation point
-    pub fn verify<H, T>(
+    pub fn verify<T>(
         &self,
         claim: F,
         num_rounds: usize,
@@ -148,8 +145,7 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
         transcript: &mut T,
     ) -> (F, Vec<F>)
     where
-        H: FiatShamirHash,
-        T: Transcript<H>,
+        T: Transcript<F>,
     {
         let mut e = claim;
         let mut r: Vec<F> = Vec::new();
@@ -166,18 +162,18 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
 
             // check if G_k(0) + G_k(1) = e
 
-            let poly_at_zero = poly.coeffs[0];
-            let poly_at_one = poly.coeffs.iter().sum::<F>();
+            let poly_at_zero = poly.coefficients[0];
+            let poly_at_one = poly.coefficients.iter().sum::<F>();
 
             assert_eq!(poly_at_zero + poly_at_one, e, "sum is not equal to e");
 
             // append the prover's message to the transcript
-            poly.coeffs
+            poly.coefficients
                 .iter()
                 .for_each(|f| transcript.append_field_element(f));
 
             //derive the verifier's challenge for the next round
-            let r_i = transcript.generate_challenge();
+            let r_i = transcript.generate_challenge_field_element();
 
             r.push(r_i);
 

@@ -2,7 +2,7 @@ use arith::{FFTField, Field};
 use ark_std::{end_timer, start_timer};
 use rand::RngCore;
 
-use crate::{powers_of_field_elements, primitive_root_of_unity};
+use crate::{gaussian_elimination, powers_of_field_elements, primitive_root_of_unity};
 
 use super::{best_fft, UnivariatePolynomial};
 
@@ -10,6 +10,11 @@ impl<F: Field> UnivariatePolynomial<F> {
     #[inline]
     pub fn new(coefficients: Vec<F>) -> Self {
         Self { coefficients }
+    }
+
+    #[inline]
+    pub fn degree(&self) -> usize {
+        self.coefficients.len() - 1
     }
 
     #[inline]
@@ -32,6 +37,32 @@ impl<F: Field> UnivariatePolynomial<F> {
             .iter()
             .zip(x_power.iter())
             .fold(F::ZERO, |acc, (c, x_i)| acc + *c * *x_i)
+    }
+
+    pub fn from_evals(evals: &[F]) -> Self {
+        Self {
+            coefficients: Self::vandermonde_interpolation(evals),
+        }
+    }
+
+    fn vandermonde_interpolation(evals: &[F]) -> Vec<F> {
+        let n = evals.len();
+        let xs: Vec<F> = (0..n).map(|x| F::from(x as u32)).collect();
+
+        let mut vandermonde: Vec<Vec<F>> = Vec::with_capacity(n);
+        for i in 0..n {
+            let mut row = Vec::with_capacity(n);
+            let x = xs[i];
+            row.push(F::one());
+            row.push(x);
+            for j in 2..n {
+                row.push(row[j - 1] * x);
+            }
+            row.push(evals[i]);
+            vandermonde.push(row);
+        }
+
+        gaussian_elimination(&mut vandermonde)
     }
 }
 
