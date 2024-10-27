@@ -1,4 +1,5 @@
 use arith::ExtensionField;
+use sumcheck::SumcheckInstanceProof;
 use tree::{Leaf, Node};
 
 use crate::{iop::BasefoldIOPPQuery, BasefoldIOPPQuerySingleRound};

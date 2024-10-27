@@ -1,5 +1,5 @@
 use arith::{Field, FieldSerde};
-use transcript::{FiatShamirBytesHash, Transcript};
+use transcript::Transcript;
 use tree::Tree;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -8,10 +8,9 @@ pub struct BasefoldCommitment<F: Field + FieldSerde> {
 }
 
 impl<F: Field + FieldSerde> BasefoldCommitment<F> {
-    pub fn append_to_transcript<T, H>(&self, transcript: &mut T)
+    pub fn append_to_transcript<T>(&self, transcript: &mut T)
     where
-        T: Transcript<H>,
-        H: FiatShamirBytesHash,
+        T: Transcript<F>,
     {
         transcript.append_u8_slice(self.tree.root().as_bytes());
     }

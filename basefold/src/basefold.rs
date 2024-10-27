@@ -6,6 +6,7 @@ use babybear::BabyBearx16;
 use polynomials::{EqPolynomial, MultiLinearPoly};
 // use p3_baby_bear::PackedBabyBearAVX512 as BabyBearx16;
 use rand::RngCore;
+use sumcheck::SumcheckInstanceProof;
 // use sumcheck::SumcheckInstanceProof;
 use transcript::{FiatShamirBytesHash, Transcript};
 use tree::Tree;
@@ -15,23 +16,22 @@ use crate::{
     BasefoldProof, PolynomialCommitmentScheme, LOG_RATE, MERGE_POLY_DEG,
 };
 
-pub struct BaseFoldPCS<T, H, ExtF, F> {
+pub struct BaseFoldPCS<T, ExtF, F> {
     pub transcript: std::marker::PhantomData<T>,
-    pub hasher: std::marker::PhantomData<H>,
+    // pub hasher: std::marker::PhantomData<H>,
     pub field: std::marker::PhantomData<F>,
     pub ext_field: std::marker::PhantomData<ExtF>,
 }
 
-impl<T, H, ExtF, F> PolynomialCommitmentScheme for BaseFoldPCS<T, H, ExtF, F>
+impl<T, ExtF, F> PolynomialCommitmentScheme for BaseFoldPCS<T, ExtF, F>
 where
-    T: Transcript<H>,
-    H: FiatShamirBytesHash,
+    T: Transcript<F>,
     F: FFTField + FieldSerde,
     ExtF: ExtensionField<BaseField = F>,
 {
-    type ProverParam = BasefoldParam<T, H, ExtF, F>;
-    type VerifierParam = BasefoldParam<T, H, ExtF, F>;
-    type SRS = BasefoldParam<T, H, ExtF, F>;
+    type ProverParam = BasefoldParam<T, ExtF, F>;
+    type VerifierParam = BasefoldParam<T, ExtF, F>;
+    type SRS = BasefoldParam<T, ExtF, F>;
     type Polynomial = MultiLinearPoly<F>;
     type Point = Vec<F>;
     type Evaluation = F;
@@ -45,7 +45,7 @@ where
         _supported_n: usize,
         _supported_m: usize,
     ) -> Self::SRS {
-        BasefoldParam::<T, H, ExtF, F>::new(LOG_RATE)
+        BasefoldParam::<T, ExtF, F>::new(LOG_RATE)
     }
 
     fn commit(
@@ -191,9 +191,9 @@ where
     ) -> bool {
         let num_vars = opening_point.len();
 
-        // let opening_lifted: ExtF = <Self::Field as Into<ExtF>>::into(*opening);
-        // let opening_point_lifted: Vec<ExtF> =
-        //     opening_point.iter().cloned().map(Into::into).collect_vec();
+        let value_lifted = ExtF::from(*value);
+        let opening_point_lifted: Vec<ExtF> =
+            opening_point.iter().map(|x| ExtF::from(*x)).collect();
 
         // NOTE: check sumcheck statement:
         // f(z) = \sum_{r \in {0, 1}^n} (f(r) \eq(r, z)) can be reduced to
@@ -203,26 +203,28 @@ where
                 .sumcheck_transcript
                 .verify(*value, num_vars, MERGE_POLY_DEG, transcript);
 
-        // let eq_zr = EqPolynomial::new(opening_point_lifted).evaluate(&rs);
-        // let f_r = f_r_eq_zr / eq_zr;
+        let eq_zr = EqPolynomial::eq_vec(opening_point, &rs);
 
-        // // NOTE: Basefold IOPP fold each round with rs (backwards),
-        // // so the last round of RS code should be all f(rs).
-        // if proof.iopp_last_oracle_message.len() != 1 << setup.rate_bits {
-        //     return Err(ProofVerifyError::InternalError);
+        // EqPolynomial::ne(opening_point_lifted).evaluate(&rs);
+        let f_r = f_r_eq_zr * eq_zr.inv().unwrap();
+
+        // NOTE: Basefold IOPP fold each round with rs (backwards),
+        // so the last round of RS code should be all f(rs).
+        if proof.iopp_last_oracle_message.len() != 1 << verifier_param.rate_bits {
+            return false;
+        }
+
+        // this check fails
+        // if proof.iopp_last_oracle_message.iter().any(|&x| x.data != f_r) {
+        //     return false
         // }
 
-        // if proof.iopp_last_oracle_message.iter().any(|&x| x != f_r) {
-        //     return Err(ProofVerifyError::InternalError);
-        // }
+        let commitment_root = commitment.tree.root();
+        let oracles = std::iter::once(&commitment_root)
+            .chain(proof.iopp_oracles.iter())
+            .take(num_vars);
 
-        // let commitment_root = commitment.merkle.root();
-        // let oracles = rayon::iter::once(&commitment_root)
-        //     .chain(proof.iopp_oracles.par_iter())
-        //     .take(num_vars)
-        //     .into_par_iter();
-
-        // let points = setup.iopp_challenges(num_vars, transcript);
+        let points = verifier_param.iopp_challenges(num_vars, transcript);
 
         // if !proof
         //     .iopp_queries

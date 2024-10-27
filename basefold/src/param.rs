@@ -14,10 +14,9 @@ use tree::Tree;
 // use crate::Babybearx16
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct BasefoldParam<T, H, ExtF, F>
+pub struct BasefoldParam<T, ExtF, F>
 where
-    T: Transcript<H>,
-    H: FiatShamirBytesHash,
+    T: Transcript<F>,
     F: FFTField + FieldSerde,
     ExtF: ExtensionField<BaseField = F>,
 {
@@ -27,15 +26,13 @@ where
     pub verifier_queries: usize,
 
     pub transcript: std::marker::PhantomData<T>,
-    pub hasher: std::marker::PhantomData<H>,
     pub field: std::marker::PhantomData<F>,
     pub ext_field: std::marker::PhantomData<ExtF>,
 }
 
-impl<T, H, ExtF, F> BasefoldParam<T, H, ExtF, F>
+impl<T, ExtF, F> BasefoldParam<T, ExtF, F>
 where
-    T: Transcript<H>,
-    H: FiatShamirBytesHash,
+    T: Transcript<F>,
     F: FFTField + FieldSerde,
     ExtF: ExtensionField<BaseField = F>,
 {
@@ -47,7 +44,6 @@ where
             rate_bits,
             verifier_queries,
             transcript: std::marker::PhantomData,
-            hasher: std::marker::PhantomData,
             field: std::marker::PhantomData,
             ext_field: std::marker::PhantomData,
         }
