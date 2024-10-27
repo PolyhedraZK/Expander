@@ -2,6 +2,7 @@ mod sumcheck;
 pub use sumcheck::*;
 
 mod prover_helper;
+pub use prover_helper::*;
 
 mod verifier_helper;
 pub use verifier_helper::*;

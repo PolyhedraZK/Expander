@@ -5,6 +5,6 @@ mod simd_gate;
 mod sumcheck_gkr_square;
 mod sumcheck_gkr_vanilla;
 
-pub(crate) use arbitrary_gate::SumcheckInstanceProof;
+pub use arbitrary_gate::SumcheckInstanceProof;
 pub(crate) use sumcheck_gkr_square::SumcheckGkrSquareHelper;
 pub(crate) use sumcheck_gkr_vanilla::SumcheckGkrVanillaHelper;

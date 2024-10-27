@@ -14,7 +14,6 @@ impl<F: Field> MultiLinearPoly<F> {
         Self { coeffs }
     }
 
-
     /// Sample a random polynomials.
     #[inline]
     pub fn random(nv: usize, mut rng: impl RngCore) -> Self {

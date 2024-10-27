@@ -7,7 +7,7 @@ members = [
     "arith/goldilocks",
     "arith/mersenne31",
     "arith/polynomials", 
-    # "basefold",
+    "basefold",
     "bi-kzg", 
     "poseidon",
     "circuit", 
