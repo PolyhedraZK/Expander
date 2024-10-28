@@ -300,21 +300,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
-name = "basefold"
-version = "0.1.0"
-dependencies = [
- "arith",
- "ark-std",
- "babybear",
- "plonky2_util",
- "polynomials",
- "rand",
- "sumcheck",
- "transcript",
- "tree",
-]
-
-[[package]]
 name = "bi-kzg"
 version = "0.1.0"
 dependencies = [
@@ -1749,12 +1734,6 @@ name = "pkg-config"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
-
-[[package]]
-name = "plonky2_util"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b16136f5f3019c1e83035af76cccddd56d789a5e2933306270185c3f99f12259"
 
 [[package]]
 name = "plotters"

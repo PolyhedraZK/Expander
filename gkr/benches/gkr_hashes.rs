@@ -4,7 +4,7 @@ use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gkr::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS,
-        POSEIDON_BN254_CIRCUIT, POSEIDON_M31_CIRCUIT,
+        POSEIDON_M31_CIRCUIT,
     },
     Prover,
 };
