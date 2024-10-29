@@ -112,9 +112,10 @@ impl PoseidonBabyBearParams {
     #[inline]
     fn full_round_sbox(state: &mut BabyBearx16) {
         let timer = start_timer!(|| "full_round_sbox");
-        let double = *state * *state;
-        let quad = double * double;
-        *state *= double * quad;
+        let e2 = *state * *state;
+        let e4 = e2 * e2;
+        let e6 = e4 * e2;
+        *state *= e6;
         end_timer!(timer);
     }
 
