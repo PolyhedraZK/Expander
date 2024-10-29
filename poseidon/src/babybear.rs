@@ -122,7 +122,7 @@ impl PoseidonBabyBearParams {
         let e2 = *state * *state;
         let e4 = e2 * e2;
         let e6 = e4 * e2;
-        *state *= e6 * *state;
+        *state *= e6;
         end_timer!(timer);
     }
 
