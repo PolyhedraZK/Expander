@@ -207,7 +207,7 @@ pub fn random_fft_field_tests<F: Field + FFTField>(_name: String) {
             F::fft_in_place(&mut b, &omega);
 
             a.iter_mut().zip(b.iter()).for_each(|(a, b)| {
-                *a = *a * *b;
+                *a *= *b;
             });
 
             F::ifft_in_place(&mut a, &omega_inv);
@@ -232,7 +232,7 @@ pub fn random_fft_field_tests<F: Field + FFTField>(_name: String) {
             F::fft_in_place(&mut b, &omega);
 
             a.iter_mut().zip(b.iter()).for_each(|(a, b)| {
-                *a = *a * *b;
+                *a *= *b;
             });
 
             F::ifft_in_place(&mut a, &omega_inv);

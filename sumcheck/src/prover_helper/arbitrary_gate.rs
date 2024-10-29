@@ -29,7 +29,7 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
     pub fn prove_arbitrary<Func, T>(
         _claim: &F,
         num_rounds: usize,
-        polys: &mut Vec<MultiLinearPoly<F>>,
+        polys: &mut [MultiLinearPoly<F>],
         comb_func: Func,
         combined_degree: usize,
         transcript: &mut T,
@@ -45,7 +45,6 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
             let mle_half = polys[0].coeffs.len() / 2;
 
             let accum: Vec<Vec<F>> = (0..mle_half)
-                .into_iter()
                 .map(|poly_term_i| {
                     let mut accum = vec![F::zero(); combined_degree + 1];
                     // Evaluate P({0, ..., |g(r)|})
@@ -75,7 +74,7 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
                     // D_n(index, 3) = D_{n-1}[HIGH] + (D_{n-1}[HIGH] - D_{n-1}[LOW]) + (D_{n-1}[HIGH] - D_{n-1}[LOW])
                     // ...
                     let mut existing_term = params_one;
-                    for eval_i in 2..(combined_degree + 1) {
+                    for eval_i in accum.iter_mut().take(combined_degree + 1).skip(2) {
                         let mut poly_evals = vec![F::zero(); polys.len()];
                         for poly_i in 0..polys.len() {
                             let poly = &polys[poly_i];
@@ -84,7 +83,7 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
                                 - poly.coeffs[poly_term_i];
                         }
 
-                        accum[eval_i] += comb_func(&poly_evals);
+                        *eval_i += comb_func(&poly_evals);
                         existing_term = poly_evals;
                     }
                     accum
@@ -94,7 +93,6 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
             // Vector storing evaluations of combined polynomials g(x) = P_0(x) * ... P_{num_polys} (x)
             // for points {0, ..., |g(x)|}
             let uni_poly_eval_points: Vec<F> = (0..combined_degree + 1)
-                .into_iter()
                 .map(|poly_i| accum.iter().map(|mle| mle[poly_i]).sum())
                 .collect();
 
