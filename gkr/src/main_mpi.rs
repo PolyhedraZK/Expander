@@ -27,6 +27,12 @@ struct Args {
     /// number of repeat
     #[arg(short, long, default_value_t = 1)]
     repeats: usize,
+
+    #[arg(short, long,default_value_t = KECCAK_M31_CIRCUIT.to_string())]
+    circuit: String,
+
+    #[arg(short, long,default_value_t = KECCAK_M31_WITNESS.to_string())]
+    witness: String,
 }
 
 fn main() {
@@ -82,7 +88,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     let mut circuit = match args.scheme.as_str() {
         "keccak" => match C::FIELD_TYPE {
             FieldType::GF2 => Circuit::<C>::load_circuit(KECCAK_GF2_CIRCUIT),
-            FieldType::M31 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
+            FieldType::M31 => Circuit::<C>::load_circuit(args.circuit.as_str()),
             FieldType::BN254 => Circuit::<C>::load_circuit(KECCAK_BN254_CIRCUIT),
         },
         "poseidon" => match C::FIELD_TYPE {
@@ -95,7 +101,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     let witness_path = match args.scheme.as_str() {
         "keccak" => match C::FIELD_TYPE {
             FieldType::GF2 => KECCAK_GF2_WITNESS,
-            FieldType::M31 => KECCAK_M31_WITNESS,
+            FieldType::M31 => args.witness.as_str(),
             FieldType::BN254 => KECCAK_BN254_WITNESS,
         },
         "poseidon" => match C::FIELD_TYPE {
@@ -117,15 +123,19 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
 
     let circuit_copy_size: usize = match (C::FIELD_TYPE, args.scheme.as_str()) {
         (FieldType::GF2, "keccak") => 1,
-        (FieldType::M31, "keccak") => 2,
+        (FieldType::M31, "keccak") => 1,
         (FieldType::BN254, "keccak") => 2,
         (FieldType::M31, "poseidon") => 120,
         _ => unreachable!(),
     };
 
-    const N_PROOF: usize = 1000;
-
+    const N_PROOF: usize = 1;
+    println!("circuit_copy_size: {}", circuit_copy_size);
+    println!("pack_size: {}", pack_size);
+    println!("world_size: {}", config.mpi_config.world_size());
     println!("We are now calculating average throughput, please wait for 1 minutes");
+    println!("circuit path: {}", args.circuit);
+    println!("witness path: {}", witness_path);
     for i in 0..args.repeats {
         config.mpi_config.barrier(); // wait until everyone is here
         let start_time = std::time::Instant::now();
@@ -139,7 +149,9 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         let throughput = (N_PROOF * circuit_copy_size * pack_size * config.mpi_config.world_size())
             as f64
             / duration.as_secs_f64();
+        println!("{}-bench: count: {} times", i, N_PROOF * circuit_copy_size * pack_size * config.mpi_config.world_size());
         println!("{}-bench: throughput: {} hashes/s", i, throughput.round());
+        println!("{}-bench: duration: {:?} s", i, duration);
     }
 }
 

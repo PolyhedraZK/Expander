@@ -5,7 +5,7 @@ import subprocess
 MPI_CONFIG_JSON = '''
 {
     "field": "m31ext3",
-    "n_groups": 1,
+    "n_groups": 8,
     "mpi_size_each_group": 8
 }
 '''
@@ -37,5 +37,4 @@ if __name__ == "__main__":
 
     for i in range(n_groups):
         cpu_id = ",".join(map(str, cpu_ids[i]))
-        subprocess.Popen(["mpiexec", "-cpu-set", cpu_id, "-n", str(mpi_size_each_group), "./target/release/gkr-mpi", "-f", field, "-c",  "../../EthFullConsensus/consensus/shuffle/gkr/circuit_shufflewithhashmap128tobinary.txt", "-w",  "../../EthFullConsensus/consensus/shuffle/gkr/witness_shufflewithhashmap128tobinary.txt"])
-        # subprocess.Popen(["mpiexec", "-cpu-set", cpu_id, "-n", str(mpi_size_each_group), "./target/release/expander-exec", "-- serve", "../../EthFullConsensus/consensus/shuffle/gkr/circuit_shufflewithhashmap128tobinary.txt",  "127.0.0.1 3030"])
+        subprocess.Popen(["mpiexec", "-cpu-set", cpu_id, "-n", str(mpi_size_each_group), "./target/release/gkr-mpi", "-f", field, "-c",  "../../EthFullConsensus/consensus/hashmap/gkr/circuit.txt", "-w",  "../../EthFullConsensus/consensus/hashmap/gkr/witness.txt"])

@@ -4,11 +4,27 @@ use std::process::Command;
 const DATA_PREFIX: &str = "data/";
 
 // circuit for repeating Keccak for 2 times
-pub const KECCAK_M31_CIRCUIT: &str = "data/circuit_m31.txt";
+// pub const KECCAK_M31_CIRCUIT: &str = "data/circuit_m31.txt";
+// pub const KECCAK_M31_CIRCUIT: &str = "../../gnark-bls12_381/gkr/circuit_pairing.txt";
+// pub const KECCAK_M31_CIRCUIT: &str = "../../gnark-bls12_381/gkr/circuit_ate2.txt";
+pub const KECCAK_M31_CIRCUIT: &str = "../../EthFullConsensus/consensus/shuffle/gkr/circuit_shufflewithhashmap32range.txt";
+// pub const KECCAK_M31_CIRCUIT: &str = "../../EthFullConsensus/consensus/hashmap/gkr/circuit.txt";
+// pub const KECCAK_M31_CIRCUIT: &str = "../../ExpanderCompilerCollection/ecgo/examples/poseidon_m31/poseidon_120_circuit_m31.txt";
+// pub const KECCAK_M31_CIRCUIT: &str = "../../EthFullConsensus/consensus/shuffle/gkr/circuit_prepare64.txt";
+// pub const KECCAK_M31_CIRCUIT: &str = "/home/hc/gnark_m31/std/algebra/emulated/sw_bls12381_m31/circuit_aggpubkey_pairing.txt";
+// pub const KECCAK_M31_CIRCUIT: &str = "/home/hc/gnark-bls12_381/gkr/circuit_aggpubkey_And_pairing.txt";
 pub const KECCAK_GF2_CIRCUIT: &str = "data/circuit_gf2.txt";
 pub const KECCAK_BN254_CIRCUIT: &str = "data/circuit_bn254.txt";
 
-pub const KECCAK_M31_WITNESS: &str = "data/witness_m31.txt";
+// pub const KECCAK_M31_WITNESS: &str = "data/witness_m31.txt";
+// pub const KECCAK_M31_WITNESS: &str = "../../gnark-bls12_381/gkr/witness_pairing.txt";
+// pub const KECCAK_M31_WITNESS: &str = "../../gnark-bls12_381/gkr/witness_ate2.txt";
+pub const KECCAK_M31_WITNESS: &str = "../../EthFullConsensus/consensus/shuffle/gkr/witness_shufflewithhashmap32range.txt";
+// pub const KECCAK_M31_WITNESS: &str = "../../EthFullConsensus/consensus/hashmap/gkr/witness.txt";
+// pub const KECCAK_M31_WITNESS: &str =  "../../ExpanderCompilerCollection/ecgo/examples/poseidon_m31/poseidon_120_witness_m31.txt";
+// pub const KECCAK_M31_WITNESS: &str = "../../EthFullConsensus/consensus/shuffle/gkr/witness_prepare64.txt";
+// pub const KECCAK_M31_WITNESS: &str = "/home/hc/gnark_m31/std/algebra/emulated/sw_bls12381_m31/witness_aggpubkey_pairing.txt";
+// pub const KECCAK_M31_WITNESS: &str = "/home/hc/gnark-bls12_381/gkr/witness_aggpubkey_And_pairing.txt";
 pub const KECCAK_GF2_WITNESS: &str = "data/witness_gf2.txt";
 pub const KECCAK_BN254_WITNESS: &str = "data/witness_bn254.txt";
 

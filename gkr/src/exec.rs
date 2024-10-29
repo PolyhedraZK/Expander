@@ -93,7 +93,9 @@ async fn run_command<'a, C: GKRConfig>(
                 .collect::<Vec<u8>>()
                 .try_into()
                 .unwrap();
-            let port = args[4].parse().unwrap();
+            let mut port = args[4].parse().unwrap();
+            let mpi_rank = config.mpi_config.world_rank();
+            port = port + mpi_rank as u16;
             let circuit = Circuit::<C>::load_circuit(circuit_file);
             let mut prover = gkr::Prover::new(&config);
             prover.prepare_mem(&circuit);
@@ -118,10 +120,15 @@ async fn run_command<'a, C: GKRConfig>(
                         circuit.load_witness_bytes(&witness_bytes, true);
                         circuit.evaluate();
                         let (claimed_v, proof) = prover.prove(&mut circuit);
+                        if mpi_rank != 0 {
+                            let empty_bytes:Vec<u8> = Vec::new();
+                            println!("Prover rank {} finished.", mpi_rank);
+                            reply::with_status(empty_bytes, StatusCode::OK)
+                        } else {
+                            println!("Prover rank {} finished.", mpi_rank);
                         reply::with_status(
-                            dump_proof_and_claimed_v(&proof, &claimed_v).unwrap(),
-                            StatusCode::OK,
-                        )
+                                dump_proof_and_claimed_v(&proof, &claimed_v).unwrap(),StatusCode::OK)
+                        }
                     });
             let verify =
                 warp::path("verify")
@@ -144,6 +151,7 @@ async fn run_command<'a, C: GKRConfig>(
                         let verifier = verifier.lock().unwrap();
                         circuit.load_witness_bytes(witness_bytes, true);
                         let public_input = circuit.public_input.clone();
+                        println!("verifier rank {} loaded witness.", mpi_rank);
                         let (proof, claimed_v) = load_proof_and_claimed_v(proof_bytes).unwrap();
                         if verifier.verify(&mut circuit, &public_input, &claimed_v, &proof) {
                             "success".to_string()

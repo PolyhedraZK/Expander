@@ -88,6 +88,8 @@ impl<C: GKRConfig> Prover<C> {
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         let mut transcript = TranscriptInstance::new();
         transcript.append_u8_slice(&buffer);
+        let input_size =  transcript.proof.bytes.len();
+
 
         self.config.mpi_config.transcript_sync_up(&mut transcript);
 
@@ -118,6 +120,10 @@ impl<C: GKRConfig> Prover<C> {
             _ => todo!(),
         }
         end_timer!(timer);
+        if (input_size) > 0 {
+            let proof_size = transcript.proof.bytes.len() - input_size;
+            println!("proof size: {}", proof_size);
+        }
         (claimed_v, transcript.proof)
     }
 }
