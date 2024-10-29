@@ -138,7 +138,7 @@ impl Field for NeonBabyBear {
         Self::pack(&sample)
     }
 
-    fn exp(&self, _: u128) -> Self {
+    fn exp(&self, exponent: u128) -> Self {
         let mut e = exponent;
         let mut res = Self::one();
         let mut t = *self;
