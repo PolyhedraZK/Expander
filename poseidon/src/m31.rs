@@ -22,16 +22,22 @@ pub struct PoseidonM31Params {
 }
 
 impl PoseidonM31Params {
+    #[inline]
     pub fn new(mut rng: impl RngCore) -> Self {
         let full_rounds = 8;
+
         let partial_rounds = 14;
+
         let sbox = 5;
+
         let mds = (0..16)
             .map(|_| M31x16::random_unsafe(&mut rng))
             .collect::<Vec<M31x16>>();
+
         let round_constants = (0..full_rounds + partial_rounds)
             .map(|_| M31x16::random_unsafe(&mut rng))
             .collect::<Vec<M31x16>>();
+
         Self {
             full_rounds,
             partial_rounds,

@@ -15,23 +15,30 @@ pub struct PoseidonBabyBearParams {
     pub full_rounds: usize,
     pub partial_rounds: usize,
     pub sbox: usize,
-    // the mds matrix is a 16x16 matrix of M31 elements
+    // the mds matrix is a 16x16 matrix of BabyBear elements
     pub mds: [BabyBearx16; 16],
-    // for each round the key is 16 M31 elements
+    // for each round the key is 16 BabyBear elements
     pub round_constants: Vec<BabyBearx16>,
 }
 
 impl PoseidonBabyBearParams {
+    #[inline]
     pub fn new(mut rng: impl RngCore) -> Self {
         let full_rounds = 8;
+
         let partial_rounds = 14;
-        let sbox = 5;
+
+        // (q-1) = 2^27 * 3 * 5
+        let sbox = 7;
+
         let mds = (0..16)
             .map(|_| BabyBearx16::random_unsafe(&mut rng))
             .collect::<Vec<BabyBearx16>>();
+
         let round_constants = (0..full_rounds + partial_rounds)
             .map(|_| BabyBearx16::random_unsafe(&mut rng))
             .collect::<Vec<BabyBearx16>>();
+
         Self {
             full_rounds,
             partial_rounds,
@@ -112,9 +119,10 @@ impl PoseidonBabyBearParams {
     #[inline]
     fn full_round_sbox(state: &mut BabyBearx16) {
         let timer = start_timer!(|| "full_round_sbox");
-        let double = *state * *state;
-        let quad = double * double;
-        *state *= double * quad;
+        let e2 = *state * *state;
+        let e4 = e2 * e2;
+        let e6 = e4 * e2;
+        *state *= e6 * *state;
         end_timer!(timer);
     }
 
@@ -125,8 +133,9 @@ impl PoseidonBabyBearParams {
         let e = unsafe { transmute::<u32, BabyBear>(buf[0]) };
         let e2 = e * e;
         let e4 = e2 * e2;
-        let e5 = e4 * e;
-        buf[0] = unsafe { transmute::<BabyBear, u32>(e5) };
+        let e6 = e4 * e2;
+        let e7 = e6 * e;
+        buf[0] = unsafe { transmute::<BabyBear, u32>(e7) };
         *state = unsafe { transmute::<[u32; 16], BabyBearx16>(buf) };
         end_timer!(time);
     }
