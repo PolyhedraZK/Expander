@@ -1,6 +1,3 @@
-use arith::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField};
-use p3_baby_bear::PackedBabyBearNeon;
-use rand::RngCore;
 use std::{
     arch::aarch64::*,
     fmt::Debug,
@@ -9,6 +6,11 @@ use std::{
     mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
+
+use arith::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField};
+use ark_std::Zero;
+use p3_baby_bear::PackedBabyBearNeon;
+use rand::RngCore;
 
 use crate::BabyBear;
 
