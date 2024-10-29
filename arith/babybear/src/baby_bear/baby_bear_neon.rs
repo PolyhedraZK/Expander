@@ -139,7 +139,18 @@ impl Field for NeonBabyBear {
     }
 
     fn exp(&self, _: u128) -> Self {
-        unimplemented!("exp not implemented for NeonBabyBear")
+        let mut e = exponent;
+        let mut res = Self::one();
+        let mut t = *self;
+        while !e.is_zero() {
+            let b = e & 1;
+            if b == 1 {
+                res *= t;
+            }
+            t = t * t;
+            e >>= 1;
+        }
+        res
     }
 
     fn inv(&self) -> Option<Self> {

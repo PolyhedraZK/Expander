@@ -37,7 +37,7 @@ pub fn bitreverse(mut n: usize, l: usize) -> usize {
 }
 
 #[inline]
-pub fn batch_inversion_in_place<F>(values: &mut Vec<F>)
+pub fn batch_inversion_in_place<F>(values: &mut [F])
 where
     F: Field + Copy,
 {

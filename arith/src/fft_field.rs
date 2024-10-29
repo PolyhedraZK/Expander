@@ -50,9 +50,13 @@ pub trait FFTField: Field {
     }
 }
 
+// Credit: halo2 curves
+//
 /// Performs a radix-$2$ Fast-Fourier Transformation (FFT) on a vector of size
 /// $n = 2^k$, when provided `log_n` = $k$ and an element of multiplicative
-/// order $n$ called `omega` ($\omega$). The result is that the vector `a`, when
+/// order $n$ called `omega` ($\omega$).
+///
+/// The result is that the vector `a`, when
 /// interpreted as the coefficients of a polynomial of degree $n - 1$, is
 /// transformed into the evaluations of this polynomial at each of the $n$
 /// distinct powers of $\omega$. This transformation is invertible by providing
@@ -79,11 +83,11 @@ pub fn single_thread_fft<F: FFTField>(a: &mut [F], omega: &F, log_n: u32) {
         while k < n {
             let mut w = F::ONE;
             for j in 0..m {
-                let mut t = a[(k + j + m) as usize];
+                let mut t = a[k + j + m];
                 t *= &w;
-                a[(k + j + m) as usize] = a[(k + j) as usize];
-                a[(k + j + m) as usize] -= &t;
-                a[(k + j) as usize] += &t;
+                a[k + j + m] = a[k + j];
+                a[k + j + m] -= &t;
+                a[k + j] += &t;
                 w *= &w_m;
             }
 
