@@ -81,6 +81,9 @@ where
                             // .map(|&x| F::from(x))
                             // .collect::<Vec<_>>(),
         );
+
+        println!("shift_z: {:?}", shift_z);
+
         let shift_z_poly = MultiLinearPoly { coeffs: shift_z };
         // let poly_ext_coeff = polynomial.clone();
         //     // .coeffs
@@ -91,7 +94,7 @@ where
         //     coeffs: poly_ext_coeff,
         // };
 
-        let mut sumcheck_poly_vec = vec![polynomial.clone(), shift_z_poly];
+        let mut sumcheck_poly_vec = vec![polynomial.clone(), shift_z_poly.clone()];
         let merge_function = |x: &[F]| x.iter().product::<F>();
 
         let num_vars = polynomial.get_num_vars();
@@ -99,26 +102,49 @@ where
         let mut sumcheck_polys: Vec<_> = Vec::with_capacity(num_vars);
         let mut iopp_codewords: Vec<Vec<F>> = Vec::with_capacity(num_vars);
 
-        (0..num_vars).for_each(|_| {
-            // NOTE: sumcheck a single step, r_i start from x_0 towards x_n
-            // TODO: this seems to sumcheck against a product of two polynomials.
-            // Try to use our own sumcheck instead
-            let (sc_univariate_poly_i, _, _) = SumcheckInstanceProof::prove_arbitrary(
-                &F::zero(),
-                1,
-                &mut sumcheck_poly_vec,
-                merge_function,
-                MERGE_POLY_DEG,
-                transcript,
-            );
-            sumcheck_polys.push(sc_univariate_poly_i.uni_polys[0].clone());
-            drop(sc_univariate_poly_i);
+        // todo: merge this loop into the sumcheck protocol.
+        let rs = (0..num_vars)
+            .flat_map(|i| {
+                // NOTE: sumcheck a single step, r_i start from x_0 towards x_n
+                // TODO: this seems to sumcheck against a product of two polynomials.
+                // Try to use our own sumcheck instead
+                let (sc_univariate_poly_i, rs, final_evals) =
+                    SumcheckInstanceProof::prove_arbitrary(
+                        &F::zero(),
+                        1,
+                        &mut sumcheck_poly_vec,
+                        merge_function,
+                        MERGE_POLY_DEG,
+                        transcript,
+                    );
+                sumcheck_polys.push(sc_univariate_poly_i.uni_polys[0].clone());
+                drop(sc_univariate_poly_i);
 
-            let coeffs = sumcheck_poly_vec[0].interpolate_over_hypercube();
-            iopp_codewords.push(prover_param.borrow().reed_solomon_from_coeffs(coeffs));
-        });
+                let coeffs = sumcheck_poly_vec[0].interpolate_over_hypercube();
+                iopp_codewords.push(prover_param.borrow().reed_solomon_from_coeffs(coeffs));
+
+                // println!("{}-th round: randomness: {:?}", i, rs);
+                println!("{}-th round: final evals: {:?}", i, final_evals);
+                rs
+            })
+            .collect::<Vec<F>>();
+
+        println!("prover randomness: {:?}", rs);
+
+        let eq_zr_2 = shift_z_poly.evaluate(&rs);
+        println!("prover eq(z, r): {:?}", eq_zr_2);
+
+        let poly_r = polynomial.evaluate(&rs);
+        println!("prover f(r): {:?}", poly_r);
+
+        let poly_z = polynomial.evaluate(&opening_point);
+        println!("prover f(z): {:?}", poly_z);
+
+        // println!("iopp code wrd: {:?}", iopp_codewords);
 
         let iopp_oracles = Tree::batch_tree_for_recursive_oracles(iopp_codewords);
+
+        // println!("iopp code word: {:?}", iopp_oracles);
 
         let iopp_last_oracle_message = iopp_oracles[iopp_oracles.len() - 1].leaves.clone();
         let iopp_challenges = prover_param.borrow().iopp_challenges(num_vars, transcript);
@@ -203,10 +229,17 @@ where
                 .sumcheck_transcript
                 .verify(*value, num_vars, MERGE_POLY_DEG, transcript);
 
-        let eq_zr = EqPolynomial::eq_vec(opening_point, &rs);
+        println!("verifier f(z): {:?}", value);
+        println!("verifier f(r) * eq(z,r): {:?}", f_r_eq_zr);
 
-        // EqPolynomial::ne(opening_point_lifted).evaluate(&rs);
+        println!("verifier randomness: {:?}", rs);
+        let eq_zr = EqPolynomial::eq_vec(opening_point, &rs);
+        // EqPolynomial::new(opening_point_lifted).evaluate(&rs);
+        println!("verifier eq(z, r): {:?}", eq_zr);
+
         let f_r = f_r_eq_zr * eq_zr.inv().unwrap();
+
+        println!("verifier f(r): {:?}", f_r);
 
         // NOTE: Basefold IOPP fold each round with rs (backwards),
         // so the last round of RS code should be all f(rs).
@@ -214,10 +247,19 @@ where
             return false;
         }
 
+        println!(
+            "iopp_last_oracle_message: {:?}",
+            proof.iopp_last_oracle_message
+        );
+
         // this check fails
-        // if proof.iopp_last_oracle_message.iter().any(|&x| x.data != f_r) {
-        //     return false
-        // }
+        if proof
+            .iopp_last_oracle_message
+            .iter()
+            .any(|&x| x.data != f_r)
+        {
+            return false;
+        }
 
         let commitment_root = commitment.tree.root();
         let oracles = std::iter::once(&commitment_root)

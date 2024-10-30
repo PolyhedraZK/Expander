@@ -100,8 +100,6 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
 
             // append the prover's message to the transcript
             // round_uni_poly.
-            // transcript.append_field_element(f);
-            println!("round_uni_poly: {:?}", round_uni_poly.coefficients.len());
             round_uni_poly
                 .coefficients
                 .iter()

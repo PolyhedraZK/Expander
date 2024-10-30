@@ -31,6 +31,7 @@ fn test_basefold_helper(num_vars: usize, mut rng: impl RngCore) {
         .map(|_| BabyBear::random_unsafe(&mut rng))
         .collect();
     let eval = poly.evaluate(&opening_point);
+    println!("f eval: {:?}", eval);
 
     let now = Instant::now();
     let commitment = BaseFoldPCS::commit(&pp, &poly);
