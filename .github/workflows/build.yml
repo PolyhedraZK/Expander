@@ -1,7 +1,7 @@
-name: build-expander-exec
+name: build-release-binary
 on:
   release:
-    types: [released]
+    types: [published]
 
 env:
   RUSTFLAGS: "-Dwarnings"
@@ -14,18 +14,26 @@ jobs:
         platform: [macos, 7950x3d]
         include:
           - platform: macos
-            ci_image: macos-latest
-            flags: ''
-          - platform: linux-avx2
-            ci_image: ubuntu-latest
-            flags: 'RUSTFLAGS="-C target-feature=+avx2"'
-    runs-on: ${{ matrix.ci_image }}
+            os: macos-latest
+          - platform: 7950x3d
+            os: ubuntu-latest
+            feature: avx2
+          - platform: 7950x3d
+            os: ubuntu-latest
+            feature: avx512f
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          # The prefix cache key, this can be changed to start a new cache manually.
+          prefix-key: "mpi-v5.0.5" # update me if brew formula changes to a new version
       - name: Install MPI
         run: python3 ./scripts/install.py
+      - name: Set RUSTFLAGS for AVX
+        if: matrix.feature != ''
+        run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV  
       - name: Prepare binary
         run: ${{ matrix.flags }} cargo build --release --bin expander-exec
       - name: Upload release asset
@@ -37,6 +45,6 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: ${{ github.event.release.id }},
-              name: 'expander-exec-${{ matrix.platform }}',
+              name: 'expander-exec-${{ matrix.os }}-${{ matrix.feature }}',
               data: await fs.readFile('target/release/expander-exec')
             });
