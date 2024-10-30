@@ -4,23 +4,22 @@ on:
     types: [published]
 
 env:
-  RUSTFLAGS: "-Dwarnings"
+  RUSTFLAGS: "-Dwarnings -C target-cpu=native"
   RUST_BACKTRACE: 1
 
 jobs:
   build:
     strategy:
       matrix:
-        platform: [macos, 7950x3d]
         include:
-          - platform: macos
-            os: macos-latest
-          - platform: 7950x3d
-            os: ubuntu-latest
+          - os: macos-latest
+            binary_name: expander-macos
+          - os: 7950x3d
             feature: avx2
-          - platform: 7950x3d
-            os: ubuntu-latest
+            binary_name: expander-linux-avx2
+          - os: 7950x3d
             feature: avx512f
+            binary_name: expander-linux-avx512
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +34,7 @@ jobs:
         if: matrix.feature != ''
         run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV  
       - name: Prepare binary
-        run: ${{ matrix.flags }} cargo build --release --bin expander-exec
+        run: cargo build --release --bin expander-exec
       - name: Upload release asset
         uses: actions/github-script@v6
         with:
@@ -45,6 +44,6 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: ${{ github.event.release.id }},
-              name: 'expander-exec-${{ matrix.os }}-${{ matrix.feature }}',
+              name: '${{ matrix.binary_name }}',
               data: await fs.readFile('target/release/expander-exec')
             });
