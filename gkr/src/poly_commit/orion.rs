@@ -1,6 +1,8 @@
-use std::marker::PhantomData;
+//! Orion polynomial commitment scheme prototype implementaiton.
+//! Includes implementation for Orion Expander-Code.
 
 use arith::Field;
+use rand::seq::index;
 
 #[derive(Debug, Clone, Copy)]
 pub struct OrionCodeParameter {
@@ -21,29 +23,86 @@ pub struct OrionCodeParameter {
     pub degree_g1: usize,
 }
 
-// TODO: Orion Expander Graph Struct
-#[derive(Clone, Copy)]
-pub struct OrionExpanderGraph<F: Field> {
-    // TODO: neighborings: L to R, R to L
-    // TODO: random weights: L to R, R to L
-
-    // TODO: implement weights, and remove this
-    _phantom: PhantomData<F>,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WeightedEdge<F: Field> {
+    pub index: usize,
+    pub weight: F,
 }
 
-#[derive(Clone, Copy)]
+impl<F: Field> WeightedEdge<F> {
+    pub fn new(index: usize, mut rng: impl rand::RngCore) -> Self {
+        Self {
+            index,
+            weight: F::random_unsafe(&mut rng),
+        }
+    }
+}
+
+type Neighboring<F> = Vec<WeightedEdge<F>>;
+
+#[derive(Clone)]
+pub struct OrionExpanderGraph<F: Field> {
+    pub weighted_neighborings: Vec<Neighboring<F>>,
+
+    // L R vertices size book keeping:
+    // keep track of message length (l), and "compressed" code length (r)
+    pub l_vertices_size: usize,
+    pub r_vertices_size: usize,
+}
+
+impl<F: Field> OrionExpanderGraph<F> {
+    pub fn new(
+        l_vertices_size: usize,
+        r_vertices_size: usize,
+        expanding_degree: usize,
+        mut rng: impl rand::RngCore,
+    ) -> Self {
+        let mut weighted_neighborings: Vec<Neighboring<F>> =
+            vec![Vec::with_capacity(l_vertices_size); r_vertices_size];
+
+        (0..l_vertices_size).for_each(|l_index| {
+            let random_r_vertices = index::sample(&mut rng, r_vertices_size, expanding_degree);
+
+            random_r_vertices.iter().for_each(|r_index| {
+                weighted_neighborings[r_index].push(WeightedEdge::new(l_index, &mut rng))
+            })
+        });
+
+        Self {
+            weighted_neighborings,
+            l_vertices_size,
+            r_vertices_size,
+        }
+    }
+
+    pub fn expander_mul(&self, l_vertices: &[F], r_vertices: &mut [F]) {
+        // TODO: error propagation for Orion encoding
+        assert_eq!(l_vertices.len(), self.l_vertices_size);
+        assert_eq!(r_vertices.len(), self.r_vertices_size);
+
+        r_vertices
+            .iter_mut()
+            .zip(self.weighted_neighborings.iter())
+            .for_each(|(ri, ni)| {
+                *ri = ni
+                    .iter()
+                    .map(|WeightedEdge { index, weight }| l_vertices[*index] * weight)
+                    .sum();
+            });
+    }
+}
+
+// TODO: Orion code ascii code explanation for g0s and g1s, how they encode msg
+#[derive(Clone)]
 pub struct OrionCode<F: Field> {
     pub params: OrionCodeParameter,
 
-    // TODO: a bunch of graphs: [g0], [g1]
-
-    // TODO: phantom marker for the field that the code operates on.
-    // remove after graph is implemented
-    _phantom: PhantomData<F>,
+    pub g0s: Vec<OrionExpanderGraph<F>>,
+    pub g1s: Vec<OrionExpanderGraph<F>>,
 }
 
 impl<F: Field> OrionCode<F> {
-    // TODO: parameter generation
+    // TODO: generation new instance of orion code
     pub fn new(
         #[allow(unused)] params: OrionCodeParameter,
         #[allow(unused)] mut rng: impl rand::RngCore,
@@ -53,7 +112,10 @@ impl<F: Field> OrionCode<F> {
 
     // TODO: encode from expander graphs
     // length from n -> (rate_inv x n)
-    pub fn encode(&self, #[allow(unused)] msg: &[F]) -> Vec<F> {
+    pub fn encode(&self, msg: &[F]) -> Vec<F> {
+        // TODO: error propagation for Orion encoding
+        assert_eq!(msg.len(), self.params.message_len);
+
         todo!()
     }
 }
