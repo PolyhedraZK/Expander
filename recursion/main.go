@@ -53,6 +53,7 @@ func testGroth16() {
 
 	original_circuit, _ := circuit.ReadCircuit(*circuit_file, *witness_file, *mpi_size)
 	proof := circuit.ReadProof(*gkr_proof_file)
+	original_circuit.PrintStats()
 
 	verifier_circuit := VerifierCircuit{
 		MpiSize:         *mpi_size,

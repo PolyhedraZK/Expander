@@ -2,6 +2,7 @@ package circuit
 
 import (
 	"ExpanderVerifierCircuit/modules/transcript"
+	"log"
 	"math/big"
 
 	"github.com/consensys/gnark/frontend"
@@ -86,4 +87,26 @@ func (c *Circuit) FillRndCoef(transcript *transcript.Transcript) {
 	for i := 0; i < len(c.Layers); i++ {
 		c.Layers[i].FillRndCoef(transcript)
 	}
+}
+
+func (c *Circuit) PrintStats() {
+	n_mul := 0
+	n_add := 0
+	n_cst_circuit := 0
+	n_cst_input := 0
+
+	for i := 0; i < len(c.Layers); i++ {
+		n_mul += len(c.Layers[i].Mul)
+		n_add += len(c.Layers[i].Add)
+		n_cst_circuit += len(c.Layers[i].Cst)
+	}
+
+	n_cst_input = len(c.PublicInput[0])
+	n_cst_circuit -= n_cst_input
+
+	log.Println("#Layers: ", len(c.Layers))
+	log.Println("#Mul Gates: ", n_mul)
+	log.Println("#Add Gates: ", n_add)
+	log.Println("#Cst Circuit: ", n_cst_circuit)
+	log.Println("#Cst Input: ", n_cst_input)
 }
