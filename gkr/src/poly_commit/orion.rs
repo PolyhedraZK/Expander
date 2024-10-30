@@ -3,6 +3,19 @@
 
 use arith::Field;
 use rand::seq::index;
+use thiserror::Error;
+
+/******************************
+ * PCS ERROR AND RESULT SETUP *
+ ******************************/
+
+#[derive(Debug, Error)]
+pub enum OrionPCSError {
+    #[error("Orion PCS linear code parameter unmatch error")]
+    ParameterUnmatchError,
+}
+
+pub type OrionResult<T> = std::result::Result<T, OrionPCSError>;
 
 /********************************************
  * IMPLEMENTATIONS FOR ORION EXPANDER GRAPH *
@@ -15,6 +28,7 @@ pub struct WeightedEdge<F: Field> {
 }
 
 impl<F: Field> WeightedEdge<F> {
+    #[inline(always)]
     pub fn new(index: usize, mut rng: impl rand::RngCore) -> Self {
         Self {
             index,
@@ -65,10 +79,11 @@ impl<F: Field> OrionExpanderGraph<F> {
         }
     }
 
-    pub fn expander_mul(&self, l_vertices: &[F], r_vertices: &mut [F]) {
-        // TODO: error propagation for Orion encoding
-        assert_eq!(l_vertices.len(), self.l_vertices_size);
-        assert_eq!(r_vertices.len(), self.r_vertices_size);
+    #[inline(always)]
+    pub fn expander_mul(&self, l_vertices: &[F], r_vertices: &mut [F]) -> OrionResult<()> {
+        if l_vertices.len() != self.l_vertices_size || r_vertices.len() != self.r_vertices_size {
+            return Err(OrionPCSError::ParameterUnmatchError);
+        }
 
         r_vertices
             .iter_mut()
@@ -79,6 +94,8 @@ impl<F: Field> OrionExpanderGraph<F> {
                     .map(|WeightedEdge { index, weight }| l_vertices[*index] * weight)
                     .sum();
             });
+
+        Ok(())
     }
 }
 
@@ -96,7 +113,7 @@ pub struct OrionCodeParameter {
 
     // parameter for graph g0, that maps n -> (\alpha n)
     // alpha should be ranging in (0, 1)
-    pub alpha: f64,
+    pub alpha_g0: f64,
     pub degree_g0: usize,
 
     // parameter regarding graph generation for the code:
@@ -110,10 +127,12 @@ pub struct OrionCodeParameter {
 }
 
 impl OrionCodeParameter {
+    #[inline(always)]
     pub fn code_rate(&self) -> f64 {
         self.input_message_len as f64 / self.output_code_len as f64
     }
 
+    #[inline(always)]
     pub fn inv_code_rate(&self) -> f64 {
         self.output_code_len as f64 / self.input_message_len as f64
     }
@@ -129,6 +148,7 @@ pub struct OrionExpanderGraphPositioned<F: Field> {
 }
 
 impl<F: Field> OrionExpanderGraphPositioned<F> {
+    #[inline(always)]
     pub fn new(
         input_starts: usize,
         output_starts: usize,
@@ -149,12 +169,15 @@ impl<F: Field> OrionExpanderGraphPositioned<F> {
         }
     }
 
-    pub fn expander_mul_in_place(&self, buffer: &mut [F], scratch: &mut [F]) {
+    #[inline(always)]
+    pub fn expander_mul(&self, buffer: &mut [F], scratch: &mut [F]) -> OrionResult<()> {
         let input_ref = &buffer[self.input_starts..self.output_starts];
         let output_ref = &mut scratch[self.output_starts..self.output_ends + 1];
 
-        self.graph.expander_mul(input_ref, output_ref);
+        self.graph.expander_mul(input_ref, output_ref)?;
         buffer[self.output_starts..self.output_ends + 1].copy_from_slice(output_ref);
+
+        Ok(())
     }
 }
 
@@ -173,7 +196,6 @@ pub struct OrionCode<F: Field> {
 }
 
 impl<F: Field> OrionCode<F> {
-    // TODO: generation new instance of orion code
     pub fn new(params: OrionCodeParameter, mut rng: impl rand::RngCore) -> Self {
         let mut recursive_code_msg_code_starts: Vec<(usize, usize)> = Vec::new();
 
@@ -185,7 +207,7 @@ impl<F: Field> OrionCode<F> {
 
         while g0_output_starts - g0_input_starts > params.lenghth_threshold_g0s {
             let n = g0_output_starts - g0_input_starts;
-            let g0_output_len = (n as f64 * params.alpha).round() as usize;
+            let g0_output_len = (n as f64 * params.alpha_g0).round() as usize;
 
             g0s.push(OrionExpanderGraphPositioned::new(
                 g0_input_starts,
@@ -221,17 +243,21 @@ impl<F: Field> OrionCode<F> {
         Self { params, g0s, g1s }
     }
 
+    #[inline(always)]
     pub fn code_len(&self) -> usize {
         self.params.output_code_len
     }
 
+    #[inline(always)]
     pub fn msg_len(&self) -> usize {
         self.params.input_message_len
     }
 
-    pub fn encode(&self, msg: &[F]) -> Vec<F> {
-        // TODO: error propagation for Orion encoding
-        assert_eq!(msg.len(), self.params.input_message_len);
+    #[inline(always)]
+    pub fn encode(&self, msg: &[F]) -> OrionResult<Vec<F>> {
+        if msg.len() != self.msg_len() {
+            return Err(OrionPCSError::ParameterUnmatchError);
+        }
 
         let mut codeword = vec![F::ZERO; self.code_len()];
         codeword[..self.msg_len()].copy_from_slice(msg);
@@ -241,8 +267,8 @@ impl<F: Field> OrionCode<F> {
         self.g0s
             .iter()
             .chain(self.g1s.iter())
-            .for_each(|g| g.expander_mul_in_place(&mut codeword, &mut scratch));
+            .try_for_each(|g| g.expander_mul(&mut codeword, &mut scratch))?;
 
-        codeword
+        Ok(codeword)
     }
 }
