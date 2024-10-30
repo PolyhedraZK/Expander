@@ -28,6 +28,9 @@ type ScratchPad struct {
 	Inv2             frontend.Variable
 	Deg3EvalAt       [4]frontend.Variable
 	Deg3LagDenomsInv [4]frontend.Variable
+
+	// ====== helper field to get the statistics of the circuit =====
+	EqEvalsCount map[uint]uint
 }
 
 func NewScratchPad(api frontend.API, circuit *circuit.Circuit, simd_size uint, mpi_size uint) (*ScratchPad, error) {
@@ -64,5 +67,6 @@ func NewScratchPad(api frontend.API, circuit *circuit.Circuit, simd_size uint, m
 		sp.Deg3LagDenomsInv[i] = api.Inverse(denominator)
 	}
 
+	sp.EqEvalsCount = make(map[uint]uint)
 	return &sp, nil
 }

@@ -14,11 +14,9 @@ func EqEvalsAtPrimitive(
 	var cur_eval_num = 1
 
 	for i := 0; i < len(r); i++ {
-		var eq_zero = api.Sub(1, r[i])
-		var eq_one = r[i]
 		for j := 0; j < cur_eval_num; j++ {
-			ret_evals[j+cur_eval_num] = api.Mul(ret_evals[j], eq_one)
-			ret_evals[j] = api.Mul(ret_evals[j], eq_zero)
+			ret_evals[j+cur_eval_num] = api.Mul(ret_evals[j], r[i])
+			ret_evals[j] = api.Sub(ret_evals[j], ret_evals[j+cur_eval_num])
 		}
 		cur_eval_num <<= 1
 	}
@@ -31,7 +29,15 @@ func EqEvalsAtEfficient(
 	ret_evals []frontend.Variable,
 	tmp_1st_half []frontend.Variable,
 	tmp_2nd_half []frontend.Variable,
+	eq_evals_count map[uint]uint,
 ) {
+	ret_len := uint(1) << len(r)
+	if val, ok := eq_evals_count[ret_len]; ok {
+		eq_evals_count[ret_len] = val + 1
+	} else {
+		eq_evals_count[ret_len] = 1
+	}
+
 	var first_half_bits uint = uint(len(r) >> 1)
 	var first_half_mask uint = (1 << first_half_bits) - 1
 

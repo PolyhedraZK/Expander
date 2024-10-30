@@ -17,6 +17,9 @@ type Transcript struct {
 
 	// The state
 	state frontend.Variable
+
+	// helper field: counting, irrelevant to circuit
+	count uint
 }
 
 func NewTranscript(api frontend.API) (Transcript, error) {
@@ -26,12 +29,14 @@ func NewTranscript(api frontend.API) (Transcript, error) {
 		t:      []frontend.Variable{},
 		hasher: &mimc,
 		state:  0,
+		count:  0,
 	}
 
 	return T, err
 }
 
 func (T *Transcript) AppendF(f frontend.Variable) {
+	T.count++
 	T.t = append(T.t, f)
 }
 
@@ -44,6 +49,7 @@ func (T *Transcript) ChallengeF() frontend.Variable {
 		T.t = T.t[:0]
 	} else {
 		T.hasher.Write(T.state)
+		T.count++
 	}
 	T.state = T.hasher.Sum()
 	return T.state
@@ -59,4 +65,12 @@ func (T *Transcript) ChallengeFs(n uint) []frontend.Variable {
 
 func (T *Transcript) GetState() frontend.Variable {
 	return T.state
+}
+
+func (T *Transcript) GetCount() uint {
+	return T.count
+}
+
+func (T *Transcript) ResetCount() {
+	T.count = 0
 }

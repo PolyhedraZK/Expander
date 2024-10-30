@@ -4,6 +4,7 @@ import (
 	"ExpanderVerifierCircuit/modules/circuit"
 	"ExpanderVerifierCircuit/modules/polycommit"
 	"ExpanderVerifierCircuit/modules/transcript"
+	"log"
 	"math/bits"
 
 	"github.com/consensys/gnark/frontend"
@@ -233,7 +234,10 @@ func GKRVerify(
 		}
 	}
 
-	// api.AssertIsEqual(api.Add(rz0[0], claimed_v0, alpha, public_input[0][0]), 1)
+	for size, count := range sp.EqEvalsCount {
+		log.Println("Eq Evals Size", size, " Count: ", count)
+	}
+
 	return rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1
 }
 
@@ -265,9 +269,19 @@ func Verify(
 	if mpi_size > 1 {
 		_ = transcript.ChallengeF()
 	}
+
+	log.Println("#Hashes for input: ", transcript.GetCount())
+	transcript.ResetCount()
+
 	circuit.FillRndCoef(&transcript)
 
+	log.Println("#Hashes for random gate: ", transcript.GetCount())
+	transcript.ResetCount()
+
 	var rx, ry, r_simd, r_mpi, claimed_v0, claimed_v1 = GKRVerify(api, circuit, public_input, claimed_v, simd_size, mpi_size, &transcript, proof)
+
+	log.Println("#Hashes for gkr challenge: ", transcript.GetCount())
+	transcript.ResetCount()
 
 	if len(r_simd) > 0 {
 		panic("Simd not supported yet.")

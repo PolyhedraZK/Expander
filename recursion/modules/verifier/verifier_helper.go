@@ -24,6 +24,7 @@ func PrepareLayer(
 		sp.EqEvalsAtRz0,
 		sp.EqEvalsFirstPart,
 		sp.EqEvalsSecondPart,
+		sp.EqEvalsCount,
 	)
 
 	if rz1 != nil && beta != nil {
@@ -34,6 +35,7 @@ func PrepareLayer(
 			sp.EqEvalsAtRz1,
 			sp.EqEvalsFirstPart,
 			sp.EqEvalsSecondPart,
+			sp.EqEvalsCount,
 		)
 
 		for i := 0; i < 1<<layer.OutputLenLog; i++ {
@@ -48,6 +50,7 @@ func PrepareLayer(
 		sp.EqEvalsAtRSimd,
 		sp.EqEvalsFirstPart,
 		sp.EqEvalsSecondPart,
+		sp.EqEvalsCount,
 	)
 
 	EqEvalsAtEfficient(
@@ -57,6 +60,7 @@ func PrepareLayer(
 		sp.EqEvalsAtRMpi,
 		sp.EqEvalsFirstPart,
 		sp.EqEvalsSecondPart,
+		sp.EqEvalsCount,
 	)
 
 	sp.RSimd = &r_simd
@@ -155,6 +159,7 @@ func SetRx(
 		sp.EqEvalsAtRx,
 		sp.EqEvalsFirstPart,
 		sp.EqEvalsSecondPart,
+		sp.EqEvalsCount,
 	)
 }
 
@@ -186,6 +191,7 @@ func SetRY(
 		sp.EqEvalsAtRy,
 		sp.EqEvalsFirstPart,
 		sp.EqEvalsSecondPart,
+		sp.EqEvalsCount,
 	)
 }
 
