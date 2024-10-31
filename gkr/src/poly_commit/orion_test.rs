@@ -17,12 +17,17 @@ fn gen_msg_codeword<F: Field>(
     (random_msg0, codeword0)
 }
 
-fn vec_add<F: Field>(vec0: Vec<F>, vec1: Vec<F>) -> Vec<F> {
-    assert_eq!(vec0.len(), vec1.len());
+fn linear_combine<F: Field>(vec_s: &Vec<Vec<F>>, scalars: &[F]) -> Vec<F> {
+    assert_eq!(vec_s.len(), scalars.len());
 
-    let mut out = vec![F::ZERO; vec0.len()];
+    let mut out = vec![F::ZERO; vec_s[0].len()];
 
-    (0..vec0.len()).for_each(|i| out[i] = vec0[i] + vec1[i]);
+    scalars.iter().enumerate().for_each(|(i, scalar)| {
+        vec_s[i]
+            .iter()
+            .zip(out.iter_mut())
+            .for_each(|(v_ij, o_j)| *o_j += *v_ij * scalar);
+    });
 
     out
 }
@@ -49,16 +54,23 @@ fn test_orion_code_generic<F: Field>() {
 
     let orion_code = OrionCode::<F>::new(example_orion_code_parameter, &mut rng);
 
-    // TODO: linearity to random linear combination over vector spaces
-    let (msg0, codeword0) = gen_msg_codeword(&orion_code, &mut rng);
-    let (msg1, codeword1) = gen_msg_codeword(&orion_code, &mut rng);
+    // TODO: 128 scalars
+    let linear_combine_size = 128;
 
-    let msg_sum = vec_add(msg0, msg1);
-    let codeword_sum = vec_add(codeword0, codeword1);
+    let random_scalrs: Vec<_> = (0..linear_combine_size)
+        .map(|_| F::random_unsafe(&mut rng))
+        .collect();
 
-    let codeword_computed = orion_code.encode(&msg_sum).unwrap();
+    let (msgs, codewords): (Vec<_>, Vec<_>) = (0..linear_combine_size)
+        .map(|_| gen_msg_codeword(&orion_code, &mut rng))
+        .unzip();
 
-    assert_eq!(codeword_sum, codeword_computed);
+    let msg_linear_combined = linear_combine(&msgs, &random_scalrs);
+    let codeword_linear_combined = linear_combine(&codewords, &random_scalrs);
+
+    let codeword_computed = orion_code.encode(&msg_linear_combined).unwrap();
+
+    assert_eq!(codeword_linear_combined, codeword_computed);
 }
 
 #[test]
