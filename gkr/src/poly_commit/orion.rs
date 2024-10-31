@@ -182,6 +182,8 @@ pub struct OrionCode {
     pub g1s: Vec<OrionExpanderGraphPositioned>,
 }
 
+pub type OrionCodeword<F> = Vec<F>;
+
 impl OrionCode {
     pub fn new(params: OrionCodeParameter, mut rng: impl rand::RngCore) -> Self {
         let mut recursive_code_msg_code_starts: Vec<(usize, usize)> = Vec::new();
@@ -241,7 +243,7 @@ impl OrionCode {
     }
 
     #[inline(always)]
-    pub fn encode<F: Field>(&self, msg: &[F]) -> OrionResult<Vec<F>> {
+    pub fn encode<F: Field>(&self, msg: &[F]) -> OrionResult<OrionCodeword<F>> {
         if msg.len() != self.msg_len() {
             return Err(OrionPCSError::ParameterUnmatchError);
         }
@@ -264,8 +266,66 @@ impl OrionCode {
  * IMPLEMENTATIONS FOR ORION POLYNOMIAL COMMITMENT SCHEME *
  **********************************************************/
 
-// TODO multilinear polynomial
-// TODO write to matrix, encode each row (k x k matrix)
-// TODO need a merkle tree to commit each column (k x n matrix)
-// - TODO need a cache friendly transpose
-// TODO need a merkle tree to commit against all merkle tree roots
+#[derive(Clone)]
+pub struct OrionPCSImpl {
+    pub num_variables: usize,
+
+    pub code_instance: OrionCode,
+}
+
+// TODO use interleaved codeword and commit against interleaved alphabets
+#[allow(unused)]
+type InterleavedOrionCodeword<F> = Vec<OrionCodeword<F>>;
+
+impl OrionPCSImpl {
+    // TODO: check num_variables ~ code_params.msg_len()
+    pub fn new(num_variables: usize, code_instance: OrionCode) -> Self {
+        // NOTE: we just move the instance of code,
+        // don't think the instance of expander code will be used elsewhere
+        Self {
+            num_variables,
+            code_instance,
+        }
+    }
+
+    // TODO: check num_variables ~ code_params.msg_len()
+    pub fn from_random(
+        num_variables: usize,
+        code_params: OrionCodeParameter,
+        mut rng: impl rand::RngCore,
+    ) -> Self {
+        Self {
+            num_variables,
+            code_instance: OrionCode::new(code_params, &mut rng),
+        }
+    }
+
+    // TODO query complexity for how many queries one need for interleaved codeword
+    pub fn query_complexity(#[allow(unused)] soundness_bits: usize) -> usize {
+        todo!()
+    }
+
+    // TODO multilinear polynomial
+    // TODO write to matrix, encode each row (k x k matrix)
+    // TODO need a merkle tree to commit each column (k x n matrix)
+    // - TODO need a cache friendly transpose
+    // TODO need a merkle tree to commit against all merkle tree roots
+    // TODO commitment with data
+    pub fn commit() {
+        todo!()
+    }
+
+    // TODO fiat-shamir challenge
+    // TODO random evaluation point
+    // TODO define orion proof structure
+    pub fn open() {
+        todo!()
+    }
+
+    // TODO after open gets implemented
+    pub fn verify() {
+        todo!()
+    }
+}
+
+// TODO waiting on a unified multilinear PCS trait - align OrionPCSImpl against PCS trait
