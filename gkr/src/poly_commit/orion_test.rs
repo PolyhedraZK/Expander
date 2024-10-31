@@ -5,13 +5,13 @@ use gf2_128::GF2_128;
 use crate::{OrionCode, OrionCodeParameter};
 
 fn gen_msg_codeword<F: Field>(code: &OrionCode, mut rng: impl rand::RngCore) -> (Vec<F>, Vec<F>) {
-    let random_msg0: Vec<_> = (0..code.msg_len())
+    let random_msg: Vec<_> = (0..code.msg_len())
         .map(|_| F::random_unsafe(&mut rng))
         .collect();
 
-    let codeword0 = code.encode(&random_msg0).unwrap();
+    let codeword = code.encode(&random_msg).unwrap();
 
-    (random_msg0, codeword0)
+    (random_msg, codeword)
 }
 
 fn linear_combine<F: Field>(vec_s: &Vec<Vec<F>>, scalars: &[F]) -> Vec<F> {
@@ -19,12 +19,15 @@ fn linear_combine<F: Field>(vec_s: &Vec<Vec<F>>, scalars: &[F]) -> Vec<F> {
 
     let mut out = vec![F::ZERO; vec_s[0].len()];
 
-    scalars.iter().enumerate().for_each(|(i, scalar)| {
-        vec_s[i]
-            .iter()
-            .zip(out.iter_mut())
-            .for_each(|(v_ij, o_j)| *o_j += *v_ij * scalar);
-    });
+    scalars
+        .iter()
+        .zip(vec_s.iter())
+        .for_each(|(scalar_i, vec_i)| {
+            vec_i
+                .iter()
+                .zip(out.iter_mut())
+                .for_each(|(v_ij, o_j)| *o_j += *v_ij * scalar_i);
+        });
 
     out
 }
@@ -38,8 +41,8 @@ fn test_orion_code_generic<F: Field>() {
     // This set of params might not be carefully calculated for soundness.
     // Only used here for testing purpose
     let example_orion_code_parameter = OrionCodeParameter {
-        input_message_len: (1 << 10),
-        output_code_len: (1 << 12),
+        input_message_len: 1 << 10,
+        output_code_len: 1 << 12,
 
         alpha_g0: 0.5,
         degree_g0: 6,

@@ -21,9 +21,9 @@ pub type OrionResult<T> = std::result::Result<T, OrionPCSError>;
  * IMPLEMENTATIONS FOR ORION EXPANDER GRAPH *
  ********************************************/
 
-type Edge = usize;
+type DiredtedEdge = usize;
 
-type Neighboring = Vec<Edge>;
+type DirectedNeighboring = Vec<DiredtedEdge>;
 
 #[derive(Clone)]
 pub struct OrionExpanderGraph {
@@ -37,7 +37,7 @@ pub struct OrionExpanderGraph {
     // of vertices in R set of the bipariate graph, which explains why it has
     // size of l_vertices_size, while each neighboring reserved r_vertices_size
     // capacity.
-    pub neighborings: Vec<Neighboring>,
+    pub neighborings: Vec<DirectedNeighboring>,
 }
 
 impl OrionExpanderGraph {
@@ -47,7 +47,7 @@ impl OrionExpanderGraph {
         expanding_degree: usize,
         mut rng: impl rand::RngCore,
     ) -> Self {
-        let mut neighborings: Vec<Neighboring> =
+        let mut neighborings: Vec<DirectedNeighboring> =
             vec![Vec::with_capacity(l_vertices_size); r_vertices_size];
 
         (0..l_vertices_size).for_each(|l_index| {
@@ -90,7 +90,7 @@ impl OrionExpanderGraph {
  * IMPLEMENTATIONS FOR ORION CODE FROM EXPANDER GRAPH *
  ******************************************************/
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct OrionCodeParameter {
     // empirical parameters for the expander code on input/output size
     // NOTE: the derived code rate and invert code rate should preserve
@@ -206,8 +206,8 @@ impl OrionCode {
 
             recursive_code_msg_code_starts.push((g0_input_starts, g0_output_starts));
 
-            g0_input_starts = g0_output_starts;
-            g0_output_starts += g0_output_len;
+            (g0_input_starts, g0_output_starts) =
+                (g0_output_starts, g0_output_starts + g0_output_len);
         }
 
         let mut g1_output_starts = g0_output_starts;
@@ -259,3 +259,13 @@ impl OrionCode {
         Ok(codeword)
     }
 }
+
+/**********************************************************
+ * IMPLEMENTATIONS FOR ORION POLYNOMIAL COMMITMENT SCHEME *
+ **********************************************************/
+
+// TODO multilinear polynomial
+// TODO write to matrix, encode each row (k x k matrix)
+// TODO need a merkle tree to commit each column (k x n matrix)
+// - TODO need a cache friendly transpose
+// TODO need a merkle tree to commit against all merkle tree roots
