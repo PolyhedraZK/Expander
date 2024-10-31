@@ -2,6 +2,7 @@
 //! Includes implementation for Orion Expander-Code.
 
 use arith::Field;
+use polynomials::MultiLinearPoly;
 use rand::seq::index;
 use thiserror::Error;
 
@@ -125,6 +126,8 @@ impl OrionCodeParameter {
     }
 }
 
+// TODO: fix a set of Orion code parameters for message length ranging 2^5 - 2^15
+
 #[derive(Clone)]
 pub struct OrionExpanderGraphPositioned {
     pub graph: OrionExpanderGraph,
@@ -244,22 +247,54 @@ impl OrionCode {
 
     #[inline(always)]
     pub fn encode<F: Field>(&self, msg: &[F]) -> OrionResult<OrionCodeword<F>> {
-        if msg.len() != self.msg_len() {
+        let mut codeword = vec![F::ZERO; self.code_len()];
+        self.encode_in_place(msg, &mut codeword)?;
+        Ok(codeword)
+    }
+
+    #[inline(always)]
+    pub fn encode_in_place<F: Field>(&self, msg: &[F], buffer: &mut [F]) -> OrionResult<()> {
+        if msg.len() != self.msg_len() || buffer.len() != self.code_len() {
             return Err(OrionPCSError::ParameterUnmatchError);
         }
 
-        let mut codeword = vec![F::ZERO; self.code_len()];
-        codeword[..self.msg_len()].copy_from_slice(msg);
-
+        buffer[..self.msg_len()].copy_from_slice(msg);
         let mut scratch = vec![F::ZERO; self.code_len()];
 
         self.g0s
             .iter()
             .chain(self.g1s.iter())
-            .try_for_each(|g| g.expander_mul(&mut codeword, &mut scratch))?;
-
-        Ok(codeword)
+            .try_for_each(|g| g.expander_mul(buffer, &mut scratch))
     }
+}
+
+/****************************************
+ * IMPLEMENTATIONS FOR MATRIX TRANSPOSE *
+ ****************************************/
+
+pub(crate) const fn cache_batch_size<F: Sized>() -> usize {
+    const CACHE_SIZE: usize = 1 << 16;
+    CACHE_SIZE / size_of::<F>()
+}
+
+// NOTE we assume that the matrix has sides of length po2
+pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row_num: usize) {
+    let col_num = mat.len() / row_num;
+    let batch_size = cache_batch_size::<F>();
+
+    mat.chunks(batch_size)
+        .enumerate()
+        .for_each(|(i, ith_batch)| {
+            let src_starts = i * batch_size;
+            let dst_starts = (src_starts / col_num) + (src_starts % col_num) * row_num;
+
+            ith_batch
+                .iter()
+                .enumerate()
+                .for_each(|(j, &elem_j)| scratch[dst_starts + j * row_num] = elem_j)
+        });
+
+    mat.copy_from_slice(scratch);
 }
 
 /**********************************************************
@@ -273,45 +308,81 @@ pub struct OrionPCSImpl {
     pub code_instance: OrionCode,
 }
 
-// TODO use interleaved codeword and commit against interleaved alphabets
-#[allow(unused)]
-type InterleavedOrionCodeword<F> = Vec<OrionCodeword<F>>;
-
 impl OrionPCSImpl {
-    // TODO: check num_variables ~ code_params.msg_len()
-    pub fn new(num_variables: usize, code_instance: OrionCode) -> Self {
-        // NOTE: we just move the instance of code,
-        // don't think the instance of expander code will be used elsewhere
-        Self {
-            num_variables,
-            code_instance,
-        }
+    fn row_col_from_variables(num_variables: usize) -> (usize, usize) {
+        let poly_variables: usize = num_variables;
+
+        // NOTE(Hang): rounding up here in halving the poly variable num
+        // up to discussion if we want to half by round down
+        let row_num: usize = 1 << ((poly_variables + 1) / 2);
+        let msg_size: usize = (1 << poly_variables) / row_num;
+
+        (row_num, msg_size)
     }
 
-    // TODO: check num_variables ~ code_params.msg_len()
+    pub fn new(num_variables: usize, code_instance: OrionCode) -> OrionResult<Self> {
+        let (_, msg_size) = Self::row_col_from_variables(num_variables);
+        if msg_size != code_instance.msg_len() {
+            return Err(OrionPCSError::ParameterUnmatchError);
+        }
+
+        // NOTE: we just move the instance of code,
+        // don't think the instance of expander code will be used elsewhere
+        Ok(Self {
+            num_variables,
+            code_instance,
+        })
+    }
+
     pub fn from_random(
         num_variables: usize,
+        // TODO: should be removed with a precomputed list of params
         code_params: OrionCodeParameter,
         mut rng: impl rand::RngCore,
-    ) -> Self {
-        Self {
+    ) -> OrionResult<Self> {
+        let (_, msg_size) = Self::row_col_from_variables(num_variables);
+        if msg_size != code_params.input_message_len {
+            return Err(OrionPCSError::ParameterUnmatchError);
+        }
+
+        Ok(Self {
             num_variables,
             code_instance: OrionCode::new(code_params, &mut rng),
-        }
+        })
     }
 
     // TODO query complexity for how many queries one need for interleaved codeword
-    pub fn query_complexity(#[allow(unused)] soundness_bits: usize) -> usize {
+    pub fn query_complexity(&self, #[allow(unused)] soundness_bits: usize) -> usize {
         todo!()
     }
 
-    // TODO multilinear polynomial
-    // TODO write to matrix, encode each row (k x k matrix)
-    // TODO need a merkle tree to commit each column (k x n matrix)
-    // - TODO need a cache friendly transpose
-    // TODO need a merkle tree to commit against all merkle tree roots
     // TODO commitment with data
-    pub fn commit() {
+    pub fn commit<F: Field>(&self, poly: &MultiLinearPoly<F>) -> OrionResult<()> {
+        let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
+
+        // NOTE(Hang): another idea - if the inv_code_rate happens to be a po2
+        // then it would very much favor us, as matrix will be square,
+        // or composed by 2 squared matrices
+
+        let mut interleaved_codeword_buffer =
+            vec![F::ZERO; row_num * self.code_instance.code_len()];
+
+        // NOTE: now the interleaved codeword is k x n matrix from expander code
+        poly.coeffs
+            .chunks(msg_size)
+            .zip(interleaved_codeword_buffer.chunks_mut(self.code_instance.msg_len()))
+            .try_for_each(|(row_i, codeword_i)| {
+                self.code_instance.encode_in_place(row_i, codeword_i)
+            })?;
+
+        // NOTE: the interleaved codeword buffer is n x k matrix
+        // with each column being an expander code
+        let mut scratch = vec![F::ZERO; row_num * self.code_instance.code_len()];
+        transpose_in_place(&mut interleaved_codeword_buffer, &mut scratch, row_num);
+        drop(scratch);
+
+        // TODO need a merkle tree to commit against all merkle tree roots
+
         todo!()
     }
 
@@ -324,6 +395,21 @@ impl OrionPCSImpl {
 
     // TODO after open gets implemented
     pub fn verify() {
+        todo!()
+    }
+
+    // TODO after commit and open
+    pub fn batch_commit() {
+        todo!()
+    }
+
+    // TODO after commit and open
+    pub fn batch_open() {
+        todo!()
+    }
+
+    // TODO after commit and open
+    pub fn batch_verify() {
         todo!()
     }
 }

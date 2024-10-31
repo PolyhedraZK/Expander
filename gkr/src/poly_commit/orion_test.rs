@@ -1,6 +1,7 @@
 use arith::Field;
 use ark_std::test_rng;
 use gf2_128::GF2_128;
+use mersenne31::M31Ext3;
 
 use crate::{OrionCode, OrionCodeParameter};
 
@@ -14,9 +15,7 @@ fn gen_msg_codeword<F: Field>(code: &OrionCode, mut rng: impl rand::RngCore) -> 
     (random_msg, codeword)
 }
 
-fn linear_combine<F: Field>(vec_s: &Vec<Vec<F>>, scalars: &[F]) -> Vec<F> {
-    assert_eq!(vec_s.len(), scalars.len());
-
+fn row_combination<F: Field>(vec_s: &[Vec<F>], scalars: &[F]) -> Vec<F> {
     let mut out = vec![F::ZERO; vec_s[0].len()];
 
     scalars
@@ -64,8 +63,8 @@ fn test_orion_code_generic<F: Field>() {
         .map(|_| gen_msg_codeword(&orion_code, &mut rng))
         .unzip();
 
-    let msg_linear_combined = linear_combine(&msgs, &random_scalrs);
-    let codeword_linear_combined = linear_combine(&codewords, &random_scalrs);
+    let msg_linear_combined = row_combination(&msgs, &random_scalrs);
+    let codeword_linear_combined = row_combination(&codewords, &random_scalrs);
 
     let codeword_computed = orion_code.encode(&msg_linear_combined).unwrap();
 
@@ -74,5 +73,6 @@ fn test_orion_code_generic<F: Field>() {
 
 #[test]
 fn test_orion_code() {
-    test_orion_code_generic::<GF2_128>()
+    test_orion_code_generic::<GF2_128>();
+    test_orion_code_generic::<M31Ext3>();
 }
