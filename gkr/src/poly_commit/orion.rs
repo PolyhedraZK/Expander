@@ -21,78 +21,65 @@ pub type OrionResult<T> = std::result::Result<T, OrionPCSError>;
  * IMPLEMENTATIONS FOR ORION EXPANDER GRAPH *
  ********************************************/
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct WeightedEdge<F: Field> {
-    pub index: usize,
-    pub weight: F,
-}
+type Edge = usize;
 
-impl<F: Field> WeightedEdge<F> {
-    #[inline(always)]
-    pub fn new(index: usize, mut rng: impl rand::RngCore) -> Self {
-        Self {
-            index,
-            weight: F::random_unsafe(&mut rng),
-        }
-    }
-}
-
-type Neighboring<F> = Vec<WeightedEdge<F>>;
+type Neighboring = Vec<Edge>;
 
 #[derive(Clone)]
-pub struct OrionExpanderGraph<F: Field> {
+pub struct OrionExpanderGraph {
     // L R vertices size book keeping:
     // keep track of message length (l), and "compressed" code length (r)
     pub l_vertices_size: usize,
     pub r_vertices_size: usize,
 
     // neighboring stands for all (weighted) connected vertices of a vertex.
-    // In this context, the weighted_neighborings stands for the neighborings
+    // In this context, the neighborings stands for the neighborings
     // of vertices in R set of the bipariate graph, which explains why it has
     // size of l_vertices_size, while each neighboring reserved r_vertices_size
     // capacity.
-    pub weighted_neighborings: Vec<Neighboring<F>>,
+    pub neighborings: Vec<Neighboring>,
 }
 
-impl<F: Field> OrionExpanderGraph<F> {
+impl OrionExpanderGraph {
     pub fn new(
         l_vertices_size: usize,
         r_vertices_size: usize,
         expanding_degree: usize,
         mut rng: impl rand::RngCore,
     ) -> Self {
-        let mut weighted_neighborings: Vec<Neighboring<F>> =
+        let mut neighborings: Vec<Neighboring> =
             vec![Vec::with_capacity(l_vertices_size); r_vertices_size];
 
         (0..l_vertices_size).for_each(|l_index| {
             let random_r_vertices = index::sample(&mut rng, r_vertices_size, expanding_degree);
 
-            random_r_vertices.iter().for_each(|r_index| {
-                weighted_neighborings[r_index].push(WeightedEdge::new(l_index, &mut rng))
-            })
+            random_r_vertices
+                .iter()
+                .for_each(|r_index| neighborings[r_index].push(l_index))
         });
 
         Self {
-            weighted_neighborings,
+            neighborings,
             l_vertices_size,
             r_vertices_size,
         }
     }
 
     #[inline(always)]
-    pub fn expander_mul(&self, l_vertices: &[F], r_vertices: &mut [F]) -> OrionResult<()> {
+    pub fn expander_mul<F: Field>(
+        &self,
+        l_vertices: &[F],
+        r_vertices: &mut [F],
+    ) -> OrionResult<()> {
         if l_vertices.len() != self.l_vertices_size || r_vertices.len() != self.r_vertices_size {
             return Err(OrionPCSError::ParameterUnmatchError);
         }
 
         r_vertices
             .iter_mut()
-            .zip(self.weighted_neighborings.iter())
+            .zip(self.neighborings.iter())
             .for_each(|(ri, ni)| {
-                *ri = ni
-                    .iter()
-                    .map(|WeightedEdge { index, weight }| l_vertices[*index] * weight)
-                    .sum();
+                *ri = ni.iter().map(|&edge_i| l_vertices[edge_i]).sum();
             });
 
         Ok(())
@@ -139,15 +126,15 @@ impl OrionCodeParameter {
 }
 
 #[derive(Clone)]
-pub struct OrionExpanderGraphPositioned<F: Field> {
-    pub graph: OrionExpanderGraph<F>,
+pub struct OrionExpanderGraphPositioned {
+    pub graph: OrionExpanderGraph,
 
     pub input_starts: usize,
     pub output_starts: usize,
     pub output_ends: usize,
 }
 
-impl<F: Field> OrionExpanderGraphPositioned<F> {
+impl OrionExpanderGraphPositioned {
     #[inline(always)]
     pub fn new(
         input_starts: usize,
@@ -170,7 +157,7 @@ impl<F: Field> OrionExpanderGraphPositioned<F> {
     }
 
     #[inline(always)]
-    pub fn expander_mul(&self, buffer: &mut [F], scratch: &mut [F]) -> OrionResult<()> {
+    pub fn expander_mul<F: Field>(&self, buffer: &mut [F], scratch: &mut [F]) -> OrionResult<()> {
         let input_ref = &buffer[self.input_starts..self.output_starts];
         let output_ref = &mut scratch[self.output_starts..self.output_ends + 1];
 
@@ -183,24 +170,24 @@ impl<F: Field> OrionExpanderGraphPositioned<F> {
 
 // TODO: Orion code ascii code explanation for g0s and g1s, how they encode msg
 #[derive(Clone)]
-pub struct OrionCode<F: Field> {
+pub struct OrionCode {
     pub params: OrionCodeParameter,
 
     // g0s (affecting left side alphabets of the codeword)
     // generated from the largest to the smallest
-    pub g0s: Vec<OrionExpanderGraphPositioned<F>>,
+    pub g0s: Vec<OrionExpanderGraphPositioned>,
 
     // g1s (affecting right side alphabets of the codeword)
     // generated from the smallest to the largest
-    pub g1s: Vec<OrionExpanderGraphPositioned<F>>,
+    pub g1s: Vec<OrionExpanderGraphPositioned>,
 }
 
-impl<F: Field> OrionCode<F> {
+impl OrionCode {
     pub fn new(params: OrionCodeParameter, mut rng: impl rand::RngCore) -> Self {
         let mut recursive_code_msg_code_starts: Vec<(usize, usize)> = Vec::new();
 
-        let mut g0s: Vec<OrionExpanderGraphPositioned<F>> = Vec::new();
-        let mut g1s: Vec<OrionExpanderGraphPositioned<F>> = Vec::new();
+        let mut g0s: Vec<OrionExpanderGraphPositioned> = Vec::new();
+        let mut g1s: Vec<OrionExpanderGraphPositioned> = Vec::new();
 
         let mut g0_input_starts = 0;
         let mut g0_output_starts = params.input_message_len;
@@ -254,7 +241,7 @@ impl<F: Field> OrionCode<F> {
     }
 
     #[inline(always)]
-    pub fn encode(&self, msg: &[F]) -> OrionResult<Vec<F>> {
+    pub fn encode<F: Field>(&self, msg: &[F]) -> OrionResult<Vec<F>> {
         if msg.len() != self.msg_len() {
             return Err(OrionPCSError::ParameterUnmatchError);
         }

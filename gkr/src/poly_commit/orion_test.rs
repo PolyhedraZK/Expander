@@ -4,10 +4,7 @@ use gf2_128::GF2_128;
 
 use crate::{OrionCode, OrionCodeParameter};
 
-fn gen_msg_codeword<F: Field>(
-    code: &OrionCode<F>,
-    mut rng: impl rand::RngCore,
-) -> (Vec<F>, Vec<F>) {
+fn gen_msg_codeword<F: Field>(code: &OrionCode, mut rng: impl rand::RngCore) -> (Vec<F>, Vec<F>) {
     let random_msg0: Vec<_> = (0..code.msg_len())
         .map(|_| F::random_unsafe(&mut rng))
         .collect();
@@ -52,9 +49,8 @@ fn test_orion_code_generic<F: Field>() {
         degree_g1: 6,
     };
 
-    let orion_code = OrionCode::<F>::new(example_orion_code_parameter, &mut rng);
+    let orion_code = OrionCode::new(example_orion_code_parameter, &mut rng);
 
-    // TODO: 128 scalars
     let linear_combine_size = 128;
 
     let random_scalrs: Vec<_> = (0..linear_combine_size)
