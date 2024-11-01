@@ -1,10 +1,11 @@
 //! Orion polynomial commitment scheme prototype implementaiton.
 //! Includes implementation for Orion Expander-Code.
 
-use arith::Field;
+use arith::{Field, FieldSerde};
 use polynomials::MultiLinearPoly;
 use rand::seq::index;
 use thiserror::Error;
+use transcript::Transcript;
 
 /******************************
  * PCS ERROR AND RESULT SETUP *
@@ -278,6 +279,7 @@ pub(crate) const fn cache_batch_size<F: Sized>() -> usize {
 }
 
 // NOTE we assume that the matrix has sides of length po2
+#[inline(always)]
 pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row_num: usize) {
     let col_num = mat.len() / row_num;
     let batch_size = cache_batch_size::<F>();
@@ -300,20 +302,17 @@ pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row
 
 // NOTE: internal use, we assume that the mat slice has size row-by-col precisely
 #[allow(unused)]
+#[inline(always)]
 pub(crate) fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<F> {
-    let mut out = vec![F::ZERO; mat.len() / combination.len()];
-
     mat.chunks(combination.len())
-        .zip(out.iter_mut())
-        .for_each(|(row_i, out_i)| {
-            *out_i = row_i
+        .map(|row_i| {
+            row_i
                 .iter()
                 .zip(combination.iter())
                 .map(|(&r_ij, &c_j)| r_ij * c_j)
-                .sum();
-        });
-
-    out
+                .sum()
+        })
+        .collect()
 }
 
 /**********************************************************
@@ -328,6 +327,7 @@ pub struct OrionPCSImpl {
 }
 
 impl OrionPCSImpl {
+    #[inline(always)]
     fn row_col_from_variables(num_variables: usize) -> (usize, usize) {
         let poly_variables: usize = num_variables;
 
@@ -376,7 +376,7 @@ impl OrionPCSImpl {
     }
 
     // TODO commitment with data
-    pub fn commit<F: Field>(&self, poly: &MultiLinearPoly<F>) -> OrionResult<()> {
+    pub fn commit<F: Field + FieldSerde>(&self, poly: &MultiLinearPoly<F>) -> OrionResult<()> {
         let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
 
         // NOTE(Hang): another idea - if the inv_code_rate happens to be a po2
@@ -401,14 +401,19 @@ impl OrionPCSImpl {
         drop(scratch);
 
         // TODO need a merkle tree to commit against all merkle tree roots
+        // TODO also keep track of number of variables
 
         todo!()
     }
 
-    // TODO fiat-shamir challenge
-    // TODO random evaluation point
     // TODO define orion proof structure
-    pub fn open() {
+    pub fn open<F: Field + FieldSerde, T: Transcript<F>>(
+        &self,
+        // TODO: commitment with data
+        #[allow(unused)] poly: &MultiLinearPoly<F>,
+        #[allow(unused)] point: &[F],
+        #[allow(unused)] transcript: &mut T,
+    ) {
         // TODO need eq eval against the point of evaluation
         // TODO column_combination use here
 
