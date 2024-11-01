@@ -1,5 +1,6 @@
 use arith::Field;
 use ark_std::test_rng;
+use gf2::GF2;
 use gf2_128::GF2_128;
 use mersenne31::M31Ext3;
 
@@ -79,5 +80,6 @@ fn test_orion_code_generic<F: Field>() {
 #[test]
 fn test_orion_code() {
     test_orion_code_generic::<GF2_128>();
+    test_orion_code_generic::<GF2>();
     test_orion_code_generic::<M31Ext3>();
 }
