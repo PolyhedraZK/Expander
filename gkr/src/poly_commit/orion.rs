@@ -285,16 +285,35 @@ pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row
     mat.chunks(batch_size)
         .enumerate()
         .for_each(|(i, ith_batch)| {
-            let src_starts = i * batch_size;
-            let dst_starts = (src_starts / col_num) + (src_starts % col_num) * row_num;
+            let batch_srt = batch_size * i;
 
-            ith_batch
-                .iter()
-                .enumerate()
-                .for_each(|(j, &elem_j)| scratch[dst_starts + j * row_num] = elem_j)
+            ith_batch.iter().enumerate().for_each(|(j, &elem_j)| {
+                let src = batch_srt + j;
+                let dst = (src / col_num) + (src % col_num) * row_num;
+
+                scratch[dst] = elem_j;
+            })
         });
 
     mat.copy_from_slice(scratch);
+}
+
+// NOTE: internal use, we assume that the mat slice has size row-by-col precisely
+#[allow(unused)]
+pub(crate) fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<F> {
+    let mut out = vec![F::ZERO; mat.len() / combination.len()];
+
+    mat.chunks(combination.len())
+        .zip(out.iter_mut())
+        .for_each(|(row_i, out_i)| {
+            *out_i = row_i
+                .iter()
+                .zip(combination.iter())
+                .map(|(&r_ij, &c_j)| r_ij * c_j)
+                .sum();
+        });
+
+    out
 }
 
 /**********************************************************
@@ -390,6 +409,9 @@ impl OrionPCSImpl {
     // TODO random evaluation point
     // TODO define orion proof structure
     pub fn open() {
+        // TODO need eq eval against the point of evaluation
+        // TODO column_combination use here
+
         todo!()
     }
 

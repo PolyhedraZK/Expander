@@ -3,33 +3,7 @@ use ark_std::test_rng;
 use gf2_128::GF2_128;
 use mersenne31::M31Ext3;
 
-use crate::{OrionCode, OrionCodeParameter};
-
-fn gen_msg_codeword<F: Field>(code: &OrionCode, mut rng: impl rand::RngCore) -> (Vec<F>, Vec<F>) {
-    let random_msg: Vec<_> = (0..code.msg_len())
-        .map(|_| F::random_unsafe(&mut rng))
-        .collect();
-
-    let codeword = code.encode(&random_msg).unwrap();
-
-    (random_msg, codeword)
-}
-
-fn row_combination<F: Field>(vec_s: &[Vec<F>], scalars: &[F]) -> Vec<F> {
-    let mut out = vec![F::ZERO; vec_s[0].len()];
-
-    scalars
-        .iter()
-        .zip(vec_s.iter())
-        .for_each(|(scalar_i, vec_i)| {
-            vec_i
-                .iter()
-                .zip(out.iter_mut())
-                .for_each(|(v_ij, o_j)| *o_j += *v_ij * scalar_i);
-        });
-
-    out
-}
+use crate::{column_combination, transpose_in_place, OrionCode, OrionCodeParameter};
 
 fn test_orion_code_generic<F: Field>() {
     let mut rng = test_rng();
@@ -59,12 +33,43 @@ fn test_orion_code_generic<F: Field>() {
         .map(|_| F::random_unsafe(&mut rng))
         .collect();
 
-    let (msgs, codewords): (Vec<_>, Vec<_>) = (0..linear_combine_size)
-        .map(|_| gen_msg_codeword(&orion_code, &mut rng))
-        .unzip();
+    // NOTE: generate message and codeword in the slice buffer
 
-    let msg_linear_combined = row_combination(&msgs, &random_scalrs);
-    let codeword_linear_combined = row_combination(&codewords, &random_scalrs);
+    let mut message_mat =
+        vec![F::ZERO; linear_combine_size * example_orion_code_parameter.input_message_len];
+
+    let mut codeword_mat =
+        vec![F::ZERO; linear_combine_size * example_orion_code_parameter.output_code_len];
+
+    message_mat
+        .chunks_mut(example_orion_code_parameter.input_message_len)
+        .zip(codeword_mat.chunks_mut(example_orion_code_parameter.output_code_len))
+        .try_for_each(|(msg, codeword)| {
+            msg.iter_mut().for_each(|x| *x = F::random_unsafe(&mut rng));
+            orion_code.encode_in_place(msg, codeword)
+        })
+        .unwrap();
+
+    // NOTE: transpose message and codeword matrix
+
+    let mut message_scratch =
+        vec![F::ZERO; linear_combine_size * example_orion_code_parameter.input_message_len];
+    transpose_in_place(&mut message_mat, &mut message_scratch, linear_combine_size);
+    drop(message_scratch);
+
+    let mut codeword_scratch =
+        vec![F::ZERO; linear_combine_size * example_orion_code_parameter.output_code_len];
+    transpose_in_place(
+        &mut codeword_mat,
+        &mut codeword_scratch,
+        linear_combine_size,
+    );
+    drop(codeword_scratch);
+
+    // NOTE: message and codeword matrix linear combination with weights
+
+    let msg_linear_combined = column_combination(&message_mat, &random_scalrs);
+    let codeword_linear_combined = column_combination(&codeword_mat, &random_scalrs);
 
     let codeword_computed = orion_code.encode(&msg_linear_combined).unwrap();
 
