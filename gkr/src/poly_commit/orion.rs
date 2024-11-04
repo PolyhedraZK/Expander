@@ -551,7 +551,7 @@ impl OrionPCSImpl {
     >(
         &self,
         // TODO: commitment, just the MT hash
-        #[allow(unused)] commitment: OrionCommitmentWithData<F>,
+        #[allow(unused)] commitment: &OrionCommitmentWithData<F>,
         point: &[ExtF],
         evaluation: &ExtF,
         proof: &OrionProof<F, ExtF>,
@@ -589,7 +589,7 @@ impl OrionPCSImpl {
             .map(|r| self.code_instance.encode(r).unwrap())
             .collect::<Vec<_>>();
         let eval_response_codeword = self.code_instance.encode(&proof.eval_row).unwrap();
-        let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
+        let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
 
         // NOTE: againts all index challenges, check alphabets against proximity responses
         // and evaluation response

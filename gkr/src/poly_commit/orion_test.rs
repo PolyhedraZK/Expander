@@ -281,3 +281,50 @@ fn test_orion_pcs_open() {
     test_orion_pcs_open_generics::<GF2, GF2_128, GF2_128>();
     test_orion_pcs_open_generics::<M31, M31Ext3, M31x16>()
 }
+
+fn test_orion_pcs_full_e2e_generics<
+    F: Field + FieldSerde,
+    ExtF: ExtensionField<BaseField = F>,
+    PackF: SimdField<Scalar = F>,
+>() {
+    let mut rng = test_rng();
+    let num_of_vars = log2(EXAMPLE_ORION_CODE_PARAMETER.input_message_len) as usize * 2usize;
+
+    let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
+    let random_poly_ext = MultiLinearPoly {
+        coeffs: random_poly.coeffs.iter().map(|c| ExtF::from(*c)).collect(),
+    };
+    let random_point: Vec<_> = (0..num_of_vars)
+        .map(|_| ExtF::random_bool(&mut rng))
+        .collect();
+    let expected_eval = random_poly_ext.evaluate_jolt(&random_point);
+
+    let mut transcript: BytesHashTranscript<ExtF, Keccak256hasher> = BytesHashTranscript::new();
+    let mut transcript_cloned = transcript.clone();
+
+    let orion_pcs =
+        OrionPCSImpl::from_random(num_of_vars, EXAMPLE_ORION_CODE_PARAMETER, &mut rng).unwrap();
+
+    let commit_with_data = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
+
+    let opening = orion_pcs.open(
+        &random_poly,
+        &commit_with_data,
+        &random_point,
+        &mut transcript,
+    );
+
+    assert!(orion_pcs.verify(
+        &commit_with_data,
+        &random_point,
+        &expected_eval,
+        &opening,
+        &mut transcript_cloned
+    ));
+}
+
+#[test]
+fn test_orion_pcs_full_e2e() {
+    test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2_128>();
+    test_orion_pcs_full_e2e_generics::<M31, M31Ext3, M31x16>()
+}
