@@ -200,10 +200,8 @@ impl SimdField for NeonGF2_128x8 {
             ],
         }
     }
-    #[inline(always)]
-    fn pack_size() -> usize {
-        8
-    }
+
+    const PACK_SIZE: usize = 8;
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {

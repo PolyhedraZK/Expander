@@ -473,10 +473,7 @@ impl SimdField for AVX256GF2_128x8 {
     }
     type Scalar = GF2_128;
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        8
-    }
+    const PACK_SIZE: usize = 8;
 
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == 8);
