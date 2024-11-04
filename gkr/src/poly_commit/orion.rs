@@ -1,11 +1,11 @@
 //! Orion polynomial commitment scheme prototype implementaiton.
 //! Includes implementation for Orion Expander-Code.
 
-use std::cmp;
+use std::{cmp, iter::once};
 
 use arith::{ExtensionField, Field, FieldSerde, SimdField};
 use ark_std::log2;
-use polynomials::MultiLinearPoly;
+use polynomials::{EqPolynomial, MultiLinearPoly};
 use rand::seq::index;
 use thiserror::Error;
 use transcript::Transcript;
@@ -529,7 +529,8 @@ impl OrionPCSImpl {
 
         // TODO: merkle tree openings
         let query_num = self.query_complexity(ORION_PCS_SOUNDNESS_BITS);
-        (0..query_num).for_each(|_| {
+        let query_points = transcript.generate_challenge_index_vector(query_num);
+        query_points.iter().for_each(|_| {
             // TODO query a row from MT for a block of interleaved codeword matrix
         });
 
@@ -552,24 +553,61 @@ impl OrionPCSImpl {
         proof: &OrionProof<F, ExtF>,
         #[allow(unused)] transcript: &mut T,
     ) -> bool {
-        // TODO row num for drawing randomness
-        #[allow(unused)]
         let (row_num, msg_size) = Self::row_col_from_variables(point.len());
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
         // NOTE: working on evaluation response, evaluate the rest of the response
-        let poly_final_eval = MultiLinearPoly {
+        let poly_half_evaled = MultiLinearPoly {
             coeffs: proof.eval_row.clone(),
-        }
-        .evaluate_jolt(&point[..num_of_vars_in_codeword]);
-        if poly_final_eval != *evaluation {
+        };
+        let final_eval = poly_half_evaled.evaluate_jolt(&point[..num_of_vars_in_codeword]);
+        if final_eval != *evaluation {
             return false;
         }
 
-        // TODO: sample fiat shamir random linear combination
-        // TODO: merkle tree openings
+        // NOTE: working on proximity responses, draw random linear combinations
+        // then draw query points from fiat shamir transcripts
+        let proximity_test_num =
+            self.test_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
+        let random_linear_combinations: Vec<Vec<ExtF>> = (0..proximity_test_num)
+            .map(|_| transcript.generate_challenge_field_elements(row_num))
+            .collect();
+        let query_num = self.query_complexity(ORION_PCS_SOUNDNESS_BITS);
+        let mut query_points = transcript.generate_challenge_index_vector(query_num);
+        query_points.iter_mut().for_each(|qi| {
+            *qi %= self.code_len();
+        });
 
-        todo!()
+        // NOTE: encode proximity responses and evaluation response
+        let proximity_response_codewords = proof
+            .proximity_rows
+            .iter()
+            .map(|r| self.code_instance.encode(r).unwrap())
+            .collect::<Vec<_>>();
+        let eval_response_codeword = self.code_instance.encode(&proof.eval_row).unwrap();
+        let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
+
+        // NOTE: againts all index challenges, check alphabets against proximity responses
+        // and evaluation response
+        random_linear_combinations
+            .iter()
+            .zip(proximity_response_codewords.iter())
+            .chain(once((&eq_linear_combination, &eval_response_codeword)))
+            .all(|(rl, codeword)| {
+                query_points.iter().all(|&qi| {
+                    let col = &commitment.interleaved_codewords[qi * row_num..(qi + 1) * row_num];
+
+                    // TODO merkle tree consistency test
+
+                    let alphabet: ExtF = col
+                        .iter()
+                        .zip(rl.iter())
+                        .map(|(c, r)| r.mul_by_base_field(c))
+                        .sum();
+
+                    alphabet == codeword[qi]
+                })
+            })
     }
 }
 
