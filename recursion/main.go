@@ -39,6 +39,7 @@ func testGroth16() {
 	witness_file := flag.String("witness", "../data/witness_bn254.txt", "witness file")
 	gkr_proof_file := flag.String("gkr_proof", "../data/gkr_proof.txt", "gkr proof file")
 
+	with_groth16 := flag.Bool("with_groth16", false, "set true to do groth16 proof")
 	groth16_pk_file := flag.String("groth16_pk", "", "where to put the proving key, will create a new one and write to this file if it does not exist")
 	groth16_vk_file := flag.String("groth16_vk", "", "where to put the verifying key, will create a new one and write to this file if it does not exist")
 	recursive_proof_file := flag.String("recursive_proof", "../data/recursive_proof.txt", "where to output the groth16 recursive proof")
@@ -90,39 +91,43 @@ func testGroth16() {
 	}
 	println("R1CS satisfied.")
 
-	pk := groth16.NewProvingKey(ecc.BN254)
-	vk := groth16.NewVerifyingKey(ecc.BN254)
-	var setup_err error
-	// groth16 zkSNARK: Setup
-	if *groth16_pk_file != "" && *groth16_vk_file != "" &&
-		checkFileExists(*groth16_pk_file) && checkFileExists(*groth16_vk_file) {
-		println("Groth16 reading pk vk from file...", groth16_pk_file, " ", groth16_vk_file)
-		pk_file, _ := os.OpenFile(*groth16_pk_file, os.O_RDONLY, 0444)
-		pk.ReadFrom(pk_file)
-		vk_file, _ := os.OpenFile(*groth16_vk_file, os.O_RDONLY, 0444)
-		vk.ReadFrom(vk_file)
+	if *with_groth16 {
+		pk := groth16.NewProvingKey(ecc.BN254)
+		vk := groth16.NewVerifyingKey(ecc.BN254)
+		var setup_err error
+		// groth16 zkSNARK: Setup
+		if *groth16_pk_file != "" && *groth16_vk_file != "" &&
+			checkFileExists(*groth16_pk_file) && checkFileExists(*groth16_vk_file) {
+			println("Groth16 reading pk vk from file...", groth16_pk_file, " ", groth16_vk_file)
+			pk_file, _ := os.OpenFile(*groth16_pk_file, os.O_RDONLY, 0444)
+			pk.ReadFrom(pk_file)
+			vk_file, _ := os.OpenFile(*groth16_vk_file, os.O_RDONLY, 0444)
+			vk.ReadFrom(vk_file)
+		} else {
+			println("Groth16 generating setup from scratch...")
+			pk, vk, setup_err = groth16.Setup(r1cs)
+
+			pk_file, _ := os.OpenFile(*groth16_pk_file, os.O_WRONLY|os.O_CREATE, 0644)
+			pk.WriteTo(pk_file)
+
+			vk_file, _ := os.OpenFile(*groth16_vk_file, os.O_WRONLY|os.O_CREATE, 0644)
+			vk.WriteTo(vk_file)
+		}
+		println("Setup done.")
+
+		println("Groth16 prove-verify ing...")
+		publicWitness, public_err := witness.Public()
+		groth16_proof, prove_err := groth16.Prove(r1cs, pk, witness)
+		verify_err := groth16.Verify(groth16_proof, vk, publicWitness)
+		if setup_err != nil || public_err != nil || prove_err != nil || verify_err != nil {
+			panic("Groth16 fails")
+		}
+
+		file, _ := os.OpenFile(*recursive_proof_file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		groth16_proof.WriteTo(file)
 	} else {
-		println("Groth16 generating setup from scratch...")
-		pk, vk, setup_err = groth16.Setup(r1cs)
-
-		pk_file, _ := os.OpenFile(*groth16_pk_file, os.O_WRONLY|os.O_CREATE, 0644)
-		pk.WriteTo(pk_file)
-
-		vk_file, _ := os.OpenFile(*groth16_vk_file, os.O_WRONLY|os.O_CREATE, 0644)
-		vk.WriteTo(vk_file)
+		println("Groth16 proof skipped, set '-with_groth16=1' to produce a proof")
 	}
-	println("Setup done.")
-
-	println("Groth16 prove-verify ing...")
-	publicWitness, public_err := witness.Public()
-	groth16_proof, prove_err := groth16.Prove(r1cs, pk, witness)
-	verify_err := groth16.Verify(groth16_proof, vk, publicWitness)
-	if setup_err != nil || public_err != nil || prove_err != nil || verify_err != nil {
-		panic("Groth16 fails")
-	}
-
-	file, _ := os.OpenFile(*recursive_proof_file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	groth16_proof.WriteTo(file)
 
 	println("Done.")
 }

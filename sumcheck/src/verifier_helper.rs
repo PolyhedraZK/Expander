@@ -13,33 +13,33 @@ impl GKRVerifierHelper {
     #[inline(always)]
     pub fn prepare_layer<C: GKRConfig>(
         layer: &CircuitLayer<C>,
-        alpha: &C::ChallengeField,
-        beta: &Option<C::ChallengeField>,
+        alpha: &Option<C::ChallengeField>,
         rz0: &[C::ChallengeField],
         rz1: &Option<Vec<C::ChallengeField>>,
         r_simd: &Vec<C::ChallengeField>,
         r_mpi: &Vec<C::ChallengeField>,
         sp: &mut VerifierScratchPad<C>,
+        is_output_layer: bool,
     ) {
-        EqPolynomial::<C::ChallengeField>::eq_eval_at(
-            rz0,
-            alpha,
-            &mut sp.eq_evals_at_rz0,
-            &mut sp.eq_evals_first_part,
-            &mut sp.eq_evals_second_part,
-        );
+        assert_eq!(alpha.is_none(), rz1.is_none());
 
-        if beta.is_some() && rz1.is_some() {
+        if is_output_layer {
             EqPolynomial::<C::ChallengeField>::eq_eval_at(
-                rz1.as_ref().unwrap(),
-                beta.as_ref().unwrap(),
-                &mut sp.eq_evals_at_rz1,
+                rz0,
+                &C::ChallengeField::ONE,
+                &mut sp.eq_evals_at_rz0,
                 &mut sp.eq_evals_first_part,
                 &mut sp.eq_evals_second_part,
             );
-
-            for i in 0..(1usize << layer.output_var_num) {
-                sp.eq_evals_at_rz0[i] += sp.eq_evals_at_rz1[i];
+        } else {
+            // use results from previous layer
+            let output_len = 1 << rz0.len();
+            sp.eq_evals_at_rz0[..output_len].copy_from_slice(&sp.eq_evals_at_rx[..output_len]);
+            if alpha.is_some() && rz1.is_some() {
+                let alpha = alpha.unwrap();
+                for i in 0..(1usize << layer.output_var_num) {
+                    sp.eq_evals_at_rz0[i] += alpha * sp.eq_evals_at_ry[i];
+                }
             }
         }
 

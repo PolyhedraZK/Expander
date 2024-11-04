@@ -17,19 +17,28 @@ pub fn sumcheck_prove_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     rz1: &Option<Vec<C::ChallengeField>>,
     r_simd: &[C::ChallengeField],
     r_mpi: &[C::ChallengeField],
-    alpha: C::ChallengeField,
-    beta: Option<C::ChallengeField>,
+    alpha: Option<C::ChallengeField>,
     transcript: &mut T,
     sp: &mut ProverScratchPad<C>,
     mpi_config: &MPIConfig,
+    is_output_layer: bool,
 ) -> (
     Vec<C::ChallengeField>,
     Option<Vec<C::ChallengeField>>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
 ) {
-    let mut helper =
-        SumcheckGkrVanillaHelper::new(layer, rz0, rz1, r_simd, r_mpi, alpha, beta, sp, mpi_config);
+    let mut helper = SumcheckGkrVanillaHelper::new(
+        layer,
+        rz0,
+        rz1,
+        r_simd,
+        r_mpi,
+        alpha,
+        sp,
+        mpi_config,
+        is_output_layer,
+    );
 
     helper.prepare_simd();
     helper.prepare_mpi();
