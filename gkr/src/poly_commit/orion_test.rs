@@ -24,6 +24,9 @@ fn test_orion_code_generic<F: Field>() {
         lenghth_threshold_g0s: 10,
 
         degree_g1: 6,
+
+        // TODO: update to real parameter
+        hamming_weight: 0.07,
     };
 
     let orion_code = OrionCode::new(example_orion_code_parameter, &mut rng);

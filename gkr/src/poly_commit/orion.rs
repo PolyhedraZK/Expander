@@ -1,7 +1,9 @@
 //! Orion polynomial commitment scheme prototype implementaiton.
 //! Includes implementation for Orion Expander-Code.
 
-use arith::{Field, FieldSerde};
+use std::cmp;
+
+use arith::{ExtensionField, Field, FieldSerde};
 use polynomials::MultiLinearPoly;
 use rand::seq::index;
 use thiserror::Error;
@@ -113,6 +115,9 @@ pub struct OrionCodeParameter {
     // parameter for graph g1, let the message in the middle has length L,
     // then the graph g1 maps L -> ((rate_inv - 1) x n) - L
     pub degree_g1: usize,
+
+    // TODO: code distances
+    pub hamming_weight: f64,
 }
 
 impl OrionCodeParameter {
@@ -125,9 +130,23 @@ impl OrionCodeParameter {
     pub fn inv_code_rate(&self) -> f64 {
         self.output_code_len as f64 / self.input_message_len as f64
     }
+
+    #[inline(always)]
+    pub fn hamming_weight(&self) -> f64 {
+        self.hamming_weight
+    }
 }
 
+// ACKNOWLEDGEMENT: on alphabet being F2 binary case, we appreciate the help from
+// - Section 18 in essential coding theory
+//   https://cse.buffalo.edu/faculty/atri/courses/coding-theory/book/web-coding-book.pdf
+// - Notes from coding theory
+//   https://www.cs.cmu.edu/~venkatg/teaching/codingtheory/notes/notes8.pdf
+// - Druk-Ishai 2014
+//   https://dl.acm.org/doi/10.1145/2554797.2554815
+
 // TODO: fix a set of Orion code parameters for message length ranging 2^5 - 2^15
+// together with the code distances, where we need for query number computation
 
 #[derive(Clone)]
 pub struct OrionExpanderGraphPositioned {
@@ -172,7 +191,10 @@ impl OrionExpanderGraphPositioned {
     }
 }
 
-// TODO: Orion code ascii code explanation for g0s and g1s, how they encode msg
+// NOTE: The OrionCode here is representing an instance of Spielman code
+// (Spielman96), that relies on 2 lists of expander graphs serving as
+// error reduction code, and thus the linear error correction code derive
+// from the parity matrices corresponding to these expander graphs.
 #[derive(Clone)]
 pub struct OrionCode {
     pub params: OrionCodeParameter,
@@ -198,7 +220,12 @@ impl OrionCode {
         let mut g0_input_starts = 0;
         let mut g0_output_starts = params.input_message_len;
 
-        while g0_output_starts - g0_input_starts > params.lenghth_threshold_g0s {
+        // For Spielman code, we keep recurse down til a point to stop,
+        // and either the next subcodeword is too short for threshold,
+        // or the next codeword is smaller than the expanding degree.
+        let stopping_g0_len = cmp::max(params.lenghth_threshold_g0s, params.degree_g0);
+
+        while g0_output_starts - g0_input_starts > stopping_g0_len {
             let n = g0_output_starts - g0_input_starts;
             let g0_output_len = (n as f64 * params.alpha_g0).round() as usize;
 
@@ -216,6 +243,7 @@ impl OrionCode {
                 (g0_output_starts, g0_output_starts + g0_output_len);
         }
 
+        // After g0s are generated, we generate g1s
         let mut g1_output_starts = g0_output_starts;
 
         while let Some((code_starts, g1_input_starts)) = recursive_code_msg_code_starts.pop() {
@@ -244,6 +272,11 @@ impl OrionCode {
     #[inline(always)]
     pub fn msg_len(&self) -> usize {
         self.params.input_message_len
+    }
+
+    #[inline(always)]
+    pub fn hamming_weight(&self) -> f64 {
+        self.params.hamming_weight()
     }
 
     #[inline(always)]
@@ -319,11 +352,28 @@ pub(crate) fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<
  * IMPLEMENTATIONS FOR ORION POLYNOMIAL COMMITMENT SCHEME *
  **********************************************************/
 
+pub const ORION_PCS_SOUNDNESS_BITS: usize = 128;
+
 #[derive(Clone)]
 pub struct OrionPCSImpl {
     pub num_variables: usize,
 
     pub code_instance: OrionCode,
+}
+
+#[derive(Clone)]
+pub struct OrionCommitmentWithData<F: Field + FieldSerde> {
+    pub num_of_variables: usize,
+    pub interleaved_codewords: Vec<F>,
+    // TODO merkle tree
+}
+
+type OrionProximityCodeword<F> = Vec<F>;
+
+pub struct OrionProof<F: Field + FieldSerde, ExtF: ExtensionField<BaseField = F>> {
+    pub eval_row: Vec<ExtF>,
+    pub proximity_rows: Vec<OrionProximityCodeword<ExtF>>,
+    // TODO merkle paths for queries
 }
 
 impl OrionPCSImpl {
@@ -370,13 +420,28 @@ impl OrionPCSImpl {
         })
     }
 
-    // TODO query complexity for how many queries one need for interleaved codeword
-    pub fn query_complexity(&self, #[allow(unused)] soundness_bits: usize) -> usize {
-        todo!()
+    pub fn query_complexity(&self, soundness_bits: usize) -> usize {
+        // NOTE: use Ligero (AHIV22) or Avg-case dist to a code (BKS18)
+        // version of avg case dist in unique decoding technique.
+        let avg_case_dist = self.code_instance.hamming_weight() / 3f64;
+        let sec_bits = -(1f64 - avg_case_dist).log2();
+
+        (soundness_bits as f64 / sec_bits).ceil() as usize
     }
 
-    // TODO commitment with data
-    pub fn commit<F: Field + FieldSerde>(&self, poly: &MultiLinearPoly<F>) -> OrionResult<()> {
+    pub fn test_repetition_num(&self, soundness_bits: usize, field_size_bits: usize) -> usize {
+        // NOTE: use Ligero (AHIV22) or Avg-case dist to a code (BKS18)
+        // version of avg case dist in unique decoding technique.
+        // Here is the probability union bound
+        let code_len_over_f_bits = field_size_bits - self.code_instance.code_len();
+
+        (soundness_bits as f64 / code_len_over_f_bits as f64).ceil() as usize
+    }
+
+    pub fn commit<F: Field + FieldSerde>(
+        &self,
+        poly: &MultiLinearPoly<F>,
+    ) -> OrionResult<OrionCommitmentWithData<F>> {
         let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
 
         // NOTE(Hang): another idea - if the inv_code_rate happens to be a po2
@@ -400,20 +465,22 @@ impl OrionPCSImpl {
         transpose_in_place(&mut interleaved_codeword_buffer, &mut scratch, row_num);
         drop(scratch);
 
-        // TODO need a merkle tree to commit against all merkle tree roots
-        // TODO also keep track of number of variables
+        // TODO need a merkle tree to commit against all merkle tree roots,
+        // and move it to commitment with data
 
-        todo!()
+        Ok(OrionCommitmentWithData {
+            num_of_variables: poly.get_num_vars(),
+            interleaved_codewords: interleaved_codeword_buffer,
+        })
     }
 
-    // TODO define orion proof structure
-    pub fn open<F: Field + FieldSerde, T: Transcript<F>>(
+    pub fn open<F: Field + FieldSerde, ExtF: ExtensionField<BaseField = F>, T: Transcript<ExtF>>(
         &self,
-        // TODO: commitment with data
         #[allow(unused)] poly: &MultiLinearPoly<F>,
-        #[allow(unused)] point: &[F],
+        #[allow(unused)] commitment_with_data: &OrionCommitmentWithData<F>,
+        #[allow(unused)] point: &[ExtF],
         #[allow(unused)] transcript: &mut T,
-    ) {
+    ) -> OrionProof<F, ExtF> {
         // TODO need eq eval against the point of evaluation
         // TODO column_combination use here
 
@@ -421,22 +488,7 @@ impl OrionPCSImpl {
     }
 
     // TODO after open gets implemented
-    pub fn verify() {
-        todo!()
-    }
-
-    // TODO after commit and open
-    pub fn batch_commit() {
-        todo!()
-    }
-
-    // TODO after commit and open
-    pub fn batch_open() {
-        todo!()
-    }
-
-    // TODO after commit and open
-    pub fn batch_verify() {
+    pub fn verify(&self) -> bool {
         todo!()
     }
 }
