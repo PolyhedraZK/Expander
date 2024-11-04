@@ -1,9 +1,9 @@
-use arith::{Field, FieldSerde, SimdField};
+use arith::{ExtensionField, Field, FieldSerde, SimdField};
 use ark_std::{log2, test_rng};
 use gf2::{GF2x64, GF2x8, GF2};
 use gf2_128::GF2_128;
-use mersenne31::M31Ext3;
-use polynomials::MultiLinearPoly;
+use mersenne31::{M31Ext3, M31x16, M31};
+use polynomials::{EqPolynomial, MultiLinearPoly};
 
 use crate::{transpose_in_place, OrionCode, OrionCodeParameter};
 
@@ -154,5 +154,51 @@ fn test_orion_commit_consistency_generic<F: Field + FieldSerde, PackF: SimdField
 fn test_orion_commit_consistency() {
     test_orion_commit_consistency_generic::<GF2, GF2x8>();
     test_orion_commit_consistency_generic::<GF2, GF2x64>();
-    test_orion_commit_consistency_generic::<GF2, GF2_128>()
+    test_orion_commit_consistency_generic::<GF2, GF2_128>();
+    test_orion_commit_consistency_generic::<M31, M31x16>();
+}
+
+fn test_multilinear_poly_tensor_eval_generic<F: Field, ExtF: ExtensionField<BaseField = F>>(
+    num_of_vars: usize,
+) {
+    let mut rng = test_rng();
+
+    let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
+    let random_poly_ext = MultiLinearPoly {
+        coeffs: random_poly.coeffs.iter().map(|c| ExtF::from(*c)).collect(),
+    };
+
+    let random_point: Vec<_> = (0..num_of_vars)
+        .map(|_| ExtF::random_unsafe(&mut rng))
+        .collect();
+
+    let expected_eval = random_poly_ext.evaluate_jolt(&random_point);
+
+    let (_row_num, col_num) = OrionPCSImpl::row_col_from_variables(num_of_vars);
+    // row for higher vars, cols for lower vars
+    let vars_for_col = log2(col_num) as usize;
+
+    let mut random_poly_ext_half_evaluated = random_poly_ext.clone();
+    random_point[vars_for_col..]
+        .iter()
+        .rev()
+        .for_each(|p| random_poly_ext_half_evaluated.fix_top_variable(p));
+
+    let eq_linear_combination = EqPolynomial::build_eq_x_r(&random_point[..vars_for_col]);
+    let actual_eval: ExtF = random_poly_ext_half_evaluated
+        .coeffs
+        .iter()
+        .zip(eq_linear_combination.iter())
+        .map(|(&c, &eq_c)| c * eq_c)
+        .sum();
+
+    assert_eq!(expected_eval, actual_eval)
+}
+
+#[test]
+fn test_multilinear_poly_tensor_eval() {
+    (10..22).for_each(|vars| {
+        test_multilinear_poly_tensor_eval_generic::<GF2, GF2_128>(vars);
+        test_multilinear_poly_tensor_eval_generic::<M31, M31Ext3>(vars)
+    })
 }
