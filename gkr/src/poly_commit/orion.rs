@@ -4,6 +4,7 @@
 use std::cmp;
 
 use arith::{ExtensionField, Field, FieldSerde, SimdField};
+use ark_std::log2;
 use polynomials::MultiLinearPoly;
 use rand::seq::index;
 use thiserror::Error;
@@ -497,15 +498,60 @@ impl OrionPCSImpl {
 
     pub fn open<F: Field + FieldSerde, ExtF: ExtensionField<BaseField = F>, T: Transcript<ExtF>>(
         &self,
-        #[allow(unused)] poly: &MultiLinearPoly<F>,
+        poly: &MultiLinearPoly<F>,
         #[allow(unused)] commitment_with_data: &OrionCommitmentWithData<F>,
-        #[allow(unused)] point: &[ExtF],
-        #[allow(unused)] transcript: &mut T,
+        point: &[ExtF],
+        transcript: &mut T,
     ) -> OrionProof<F, ExtF> {
-        // TODO need eq eval against the point of evaluation
-        // TODO column_combination use here
+        let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
+        let num_of_vars_in_codeword = log2(msg_size) as usize;
 
-        todo!()
+        // NOTE: working on evaluation response of tensor code IOP based PCS
+        let mut poly_ext_field = MultiLinearPoly {
+            coeffs: poly.coeffs.iter().map(|&c| ExtF::from(c)).collect(),
+        };
+        point[num_of_vars_in_codeword..]
+            .iter()
+            .rev()
+            .for_each(|pt| poly_ext_field.fix_top_variable(pt));
+        let eval_row = poly_ext_field.coeffs;
+
+        // NOTE: transpose evaluations for random linear combination in proximity tests
+        let mut transposed_evaluations = poly.coeffs.clone();
+        let mut scratch = vec![F::ZERO; 1 << poly.get_num_vars()];
+        transpose_in_place(&mut transposed_evaluations, &mut scratch, row_num);
+        drop(scratch);
+
+        // NOTE: draw random linear combination out
+        // and compose proximity response(s) of tensor code IOP based PCS
+        let proximity_test_num =
+            self.test_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
+        let proximity_rows: Vec<_> = (0..proximity_test_num)
+            .map(|_| {
+                let random_linear_combination =
+                    transcript.generate_challenge_field_elements(row_num);
+                transposed_evaluations
+                    .chunks(row_num)
+                    .map(|col| {
+                        col.iter()
+                            .zip(random_linear_combination.iter())
+                            .map(|(c, &li)| li.mul_by_base_field(c))
+                            .sum()
+                    })
+                    .collect::<Vec<ExtF>>()
+            })
+            .collect();
+
+        // TODO: merkle tree openings
+        let query_num = self.query_complexity(ORION_PCS_SOUNDNESS_BITS);
+        (0..query_num).for_each(|_| {
+            // TODO query a row from MT for a block of interleaved codeword matrix
+        });
+
+        OrionProof {
+            eval_row,
+            proximity_rows,
+        }
     }
 
     pub fn verify<
