@@ -3,7 +3,7 @@
 
 use std::cmp;
 
-use arith::{ExtensionField, Field, FieldSerde};
+use arith::{ExtensionField, Field, FieldSerde, SimdField};
 use polynomials::MultiLinearPoly;
 use rand::seq::index;
 use thiserror::Error;
@@ -420,6 +420,10 @@ impl OrionPCSImpl {
         })
     }
 
+    pub fn code_len(&self) -> usize {
+        self.code_instance.code_len()
+    }
+
     pub fn query_complexity(&self, soundness_bits: usize) -> usize {
         // NOTE: use Ligero (AHIV22) or Avg-case dist to a code (BKS18)
         // version of avg case dist in unique decoding technique.
@@ -438,39 +442,56 @@ impl OrionPCSImpl {
         (soundness_bits as f64 / code_len_over_f_bits as f64).ceil() as usize
     }
 
-    pub fn commit<F: Field + FieldSerde>(
+    pub fn commit<F: Field + FieldSerde, PackF: SimdField<Scalar = F>>(
         &self,
         poly: &MultiLinearPoly<F>,
     ) -> OrionResult<OrionCommitmentWithData<F>> {
         let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
 
-        // NOTE(Hang): another idea - if the inv_code_rate happens to be a po2
-        // then it would very much favor us, as matrix will be square,
-        // or composed by 2 squared matrices
+        // NOTE: pre transpose evaluations
+        let mut transposed_evaluations = poly.coeffs.clone();
+        let mut scratch = vec![F::ZERO; 1 << poly.get_num_vars()];
+        transpose_in_place(&mut transposed_evaluations, &mut scratch, row_num);
+        drop(scratch);
 
-        let mut interleaved_codeword_buffer =
-            vec![F::ZERO; row_num * self.code_instance.code_len()];
+        // NOTE: SIMD pack each row of transposed matrix
+        let mut packed_evals: Vec<PackF> = transposed_evaluations
+            .chunks(PackF::PACK_SIZE)
+            .map(SimdField::pack)
+            .collect();
+        drop(transposed_evaluations);
 
-        // NOTE: now the interleaved codeword is k x n matrix from expander code
-        poly.coeffs
+        // NOTE: transpose back to rows of evaluations, but packed
+        let packed_rows = row_num / PackF::PACK_SIZE;
+
+        let mut scratch = vec![PackF::ZERO; packed_rows * msg_size];
+        transpose_in_place(&mut packed_evals, &mut scratch, msg_size);
+        drop(scratch);
+
+        // NOTE: packed codeword buffer and encode over packed field
+        let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * self.code_len()];
+        packed_evals
             .chunks(msg_size)
-            .zip(interleaved_codeword_buffer.chunks_mut(self.code_instance.msg_len()))
-            .try_for_each(|(row_i, codeword_i)| {
-                self.code_instance.encode_in_place(row_i, codeword_i)
+            .zip(packed_interleaved_codewords.chunks_mut(self.code_len()))
+            .try_for_each(|(evals, codeword)| {
+                self.code_instance.encode_in_place(evals, codeword)
             })?;
 
-        // NOTE: the interleaved codeword buffer is n x k matrix
-        // with each column being an expander code
-        let mut scratch = vec![F::ZERO; row_num * self.code_instance.code_len()];
-        transpose_in_place(&mut interleaved_codeword_buffer, &mut scratch, row_num);
+        // NOTE: transpose codeword s.t., the matrix has codewords being columns
+        let mut scratch = vec![PackF::ZERO; packed_rows * self.code_len()];
+        transpose_in_place(&mut packed_interleaved_codewords, &mut scratch, packed_rows);
         drop(scratch);
+
+        // NOTE: unpack the packed codewords
+        let interleaved_codewords: Vec<F> = packed_evals.iter().flat_map(|p| p.unpack()).collect();
+        drop(packed_interleaved_codewords);
 
         // TODO need a merkle tree to commit against all merkle tree roots,
         // and move it to commitment with data
 
         Ok(OrionCommitmentWithData {
             num_of_variables: poly.get_num_vars(),
-            interleaved_codewords: interleaved_codeword_buffer,
+            interleaved_codewords,
         })
     }
 
@@ -487,8 +508,18 @@ impl OrionPCSImpl {
         todo!()
     }
 
-    // TODO after open gets implemented
-    pub fn verify(&self) -> bool {
+    pub fn verify<
+        F: Field + FieldSerde,
+        ExtF: ExtensionField<BaseField = F>,
+        T: Transcript<ExtF>,
+    >(
+        &self,
+        // TODO: commitment,
+        #[allow(unused)] point: &[ExtF],
+        #[allow(unused)] evaluation: &ExtF,
+        #[allow(unused)] proof: &OrionProof<F, ExtF>,
+        #[allow(unused)] transcript: &mut T,
+    ) -> bool {
         todo!()
     }
 }
