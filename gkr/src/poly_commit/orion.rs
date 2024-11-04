@@ -566,6 +566,9 @@ impl OrionPCSImpl {
             return false;
         }
 
+        // TODO: sample fiat shamir random linear combination
+        // TODO: merkle tree openings
+
         todo!()
     }
 }

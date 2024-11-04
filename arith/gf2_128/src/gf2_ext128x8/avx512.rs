@@ -452,7 +452,7 @@ impl SimdField for AVX512GF2_128x8 {
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == 8);
+        assert_eq!(base_vec.len(), Self::PACK_SIZE);
         let base_vec_array: [Self::Scalar; 8] = base_vec.try_into().unwrap();
         unsafe { transmute(base_vec_array) }
     }

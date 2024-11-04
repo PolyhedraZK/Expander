@@ -6,7 +6,7 @@ use mersenne31::M31Ext3;
 
 use crate::{transpose_in_place, OrionCode, OrionCodeParameter};
 
-pub(crate) fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<F> {
+fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<F> {
     mat.chunks(combination.len())
         .map(|row_i| {
             row_i
