@@ -448,10 +448,7 @@ impl SimdField for AVX512GF2_128x8 {
     }
     type Scalar = GF2_128;
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        8
-    }
+    const PACK_SIZE: usize = 8;
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {

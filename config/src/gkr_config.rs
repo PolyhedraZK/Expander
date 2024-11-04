@@ -101,7 +101,7 @@ pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
 
     /// The pack size for the simd circuit field, e.g., 16 for M31x16
     fn get_field_pack_size() -> usize {
-        Self::SimdCircuitField::pack_size()
+        Self::SimdCircuitField::PACK_SIZE
     }
 
     /// Evaluate the circuit values at the challenge
