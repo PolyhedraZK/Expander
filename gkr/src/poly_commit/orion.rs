@@ -334,21 +334,6 @@ pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row
     mat.copy_from_slice(scratch);
 }
 
-// NOTE: internal use, we assume that the mat slice has size row-by-col precisely
-#[allow(unused)]
-#[inline(always)]
-pub(crate) fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<F> {
-    mat.chunks(combination.len())
-        .map(|row_i| {
-            row_i
-                .iter()
-                .zip(combination.iter())
-                .map(|(&r_ij, &c_j)| r_ij * c_j)
-                .sum()
-        })
-        .collect()
-}
-
 /**********************************************************
  * IMPLEMENTATIONS FOR ORION POLYNOMIAL COMMITMENT SCHEME *
  **********************************************************/
@@ -560,12 +545,27 @@ impl OrionPCSImpl {
         T: Transcript<ExtF>,
     >(
         &self,
-        // TODO: commitment,
-        #[allow(unused)] point: &[ExtF],
-        #[allow(unused)] evaluation: &ExtF,
-        #[allow(unused)] proof: &OrionProof<F, ExtF>,
+        // TODO: commitment, just the MT hash
+        #[allow(unused)] commitment: OrionCommitmentWithData<F>,
+        point: &[ExtF],
+        evaluation: &ExtF,
+        proof: &OrionProof<F, ExtF>,
         #[allow(unused)] transcript: &mut T,
     ) -> bool {
+        // TODO row num for drawing randomness
+        #[allow(unused)]
+        let (row_num, msg_size) = Self::row_col_from_variables(point.len());
+        let num_of_vars_in_codeword = log2(msg_size) as usize;
+
+        // NOTE: working on evaluation response, evaluate the rest of the response
+        let poly_final_eval = MultiLinearPoly {
+            coeffs: proof.eval_row.clone(),
+        }
+        .evaluate_jolt(&point[..num_of_vars_in_codeword]);
+        if poly_final_eval != *evaluation {
+            return false;
+        }
+
         todo!()
     }
 }

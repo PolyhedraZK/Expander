@@ -4,7 +4,19 @@ use gf2::GF2;
 use gf2_128::GF2_128;
 use mersenne31::M31Ext3;
 
-use crate::{column_combination, transpose_in_place, OrionCode, OrionCodeParameter};
+use crate::{transpose_in_place, OrionCode, OrionCodeParameter};
+
+pub(crate) fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<F> {
+    mat.chunks(combination.len())
+        .map(|row_i| {
+            row_i
+                .iter()
+                .zip(combination.iter())
+                .map(|(&r_ij, &c_j)| r_ij * c_j)
+                .sum()
+        })
+        .collect()
+}
 
 fn test_orion_code_generic<F: Field>() {
     let mut rng = test_rng();
