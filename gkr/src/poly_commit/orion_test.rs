@@ -4,8 +4,9 @@ use gf2::{GF2x64, GF2x8, GF2};
 use gf2_128::GF2_128;
 use mersenne31::{M31Ext3, M31x16, M31};
 use polynomials::{EqPolynomial, MultiLinearPoly};
+use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
-use crate::{transpose_in_place, OrionCode, OrionCodeParameter};
+use crate::{transpose_in_place, OrionCode, OrionCodeParameter, ORION_PCS_SOUNDNESS_BITS};
 
 use super::{OrionCommitmentWithData, OrionPCSImpl};
 
@@ -201,4 +202,82 @@ fn test_multilinear_poly_tensor_eval() {
         test_multilinear_poly_tensor_eval_generic::<GF2, GF2_128>(vars);
         test_multilinear_poly_tensor_eval_generic::<M31, M31Ext3>(vars)
     })
+}
+
+fn test_orion_pcs_open_generics<
+    F: Field + FieldSerde,
+    ExtF: ExtensionField<BaseField = F>,
+    PackF: SimdField<Scalar = F>,
+>() {
+    let mut rng = test_rng();
+    let num_of_vars = log2(EXAMPLE_ORION_CODE_PARAMETER.input_message_len) as usize * 2usize;
+
+    let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
+    let random_poly_ext = MultiLinearPoly {
+        coeffs: random_poly.coeffs.iter().map(|c| ExtF::from(*c)).collect(),
+    };
+    let random_point: Vec<_> = (0..num_of_vars)
+        .map(|_| ExtF::random_bool(&mut rng))
+        .collect();
+
+    let mut transcript: BytesHashTranscript<ExtF, Keccak256hasher> = BytesHashTranscript::new();
+    let mut transcript_cloned = transcript.clone();
+
+    let orion_pcs =
+        OrionPCSImpl::from_random(num_of_vars, EXAMPLE_ORION_CODE_PARAMETER, &mut rng).unwrap();
+
+    let commit_with_data = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
+
+    let opening = orion_pcs.open(
+        &random_poly,
+        &commit_with_data,
+        &random_point,
+        &mut transcript,
+    );
+
+    // NOTE: evaluation consistency check
+    let (row_num, col_num) = OrionPCSImpl::row_col_from_variables(num_of_vars);
+    let vars_for_col = log2(col_num) as usize;
+    let poly_half_evaled = MultiLinearPoly {
+        coeffs: opening.eval_row.clone(),
+    };
+    let actual_eval = poly_half_evaled.evaluate_jolt(&random_point[..vars_for_col]);
+    let expected_eval = random_poly_ext.evaluate_jolt(&random_point);
+    assert_eq!(expected_eval, actual_eval);
+
+    // NOTE: compute evaluation codeword
+    let eval_codeword = orion_pcs.code_instance.encode(&opening.eval_row).unwrap();
+    let eq_linear_combination = EqPolynomial::build_eq_x_r(&random_point[vars_for_col..]);
+    let interleaved_codeword_ext = commit_with_data
+        .interleaved_codewords
+        .iter()
+        .map(|t| ExtF::from(*t))
+        .collect::<Vec<_>>();
+
+    let eq_combined_codeword =
+        column_combination(&interleaved_codeword_ext, &eq_linear_combination);
+    assert_eq!(eval_codeword, eq_combined_codeword);
+
+    // NOTE: compute proximity codewords
+    let proximity_test_num =
+        orion_pcs.test_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
+    assert_eq!(proximity_test_num, opening.proximity_rows.len());
+
+    opening.proximity_rows.iter().for_each(|proximity_row| {
+        let random_linear_combination =
+            transcript_cloned.generate_challenge_field_elements(row_num);
+
+        let expected_proximity_codeword =
+            column_combination(&interleaved_codeword_ext, &random_linear_combination);
+
+        let actual_proximity_codeword = orion_pcs.code_instance.encode(proximity_row).unwrap();
+
+        assert_eq!(expected_proximity_codeword, actual_proximity_codeword)
+    });
+}
+
+#[test]
+fn test_orion_pcs_open() {
+    test_orion_pcs_open_generics::<GF2, GF2_128, GF2_128>();
+    test_orion_pcs_open_generics::<M31, M31Ext3, M31x16>()
 }
