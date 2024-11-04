@@ -364,7 +364,7 @@ pub struct OrionProof<F: Field + FieldSerde, ExtF: ExtensionField<BaseField = F>
 
 impl OrionPCSImpl {
     #[inline(always)]
-    fn row_col_from_variables(num_variables: usize) -> (usize, usize) {
+    pub(crate) fn row_col_from_variables(num_variables: usize) -> (usize, usize) {
         let poly_variables: usize = num_variables;
 
         // NOTE(Hang): rounding up here in halving the poly variable num
@@ -462,6 +462,7 @@ impl OrionPCSImpl {
             .try_for_each(|(evals, codeword)| {
                 self.code_instance.encode_in_place(evals, codeword)
             })?;
+        drop(packed_evals);
 
         // NOTE: transpose codeword s.t., the matrix has codewords being columns
         let mut scratch = vec![PackF::ZERO; packed_rows * self.code_len()];
@@ -469,7 +470,10 @@ impl OrionPCSImpl {
         drop(scratch);
 
         // NOTE: unpack the packed codewords
-        let interleaved_codewords: Vec<F> = packed_evals.iter().flat_map(|p| p.unpack()).collect();
+        let interleaved_codewords: Vec<F> = packed_interleaved_codewords
+            .iter()
+            .flat_map(|p| p.unpack())
+            .collect();
         drop(packed_interleaved_codewords);
 
         // TODO need a merkle tree to commit against all merkle tree roots,

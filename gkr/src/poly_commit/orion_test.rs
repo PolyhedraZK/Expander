@@ -1,10 +1,13 @@
-use arith::Field;
-use ark_std::test_rng;
-use gf2::GF2;
+use arith::{Field, FieldSerde, SimdField};
+use ark_std::{log2, test_rng};
+use gf2::{GF2x64, GF2x8, GF2};
 use gf2_128::GF2_128;
 use mersenne31::M31Ext3;
+use polynomials::MultiLinearPoly;
 
 use crate::{transpose_in_place, OrionCode, OrionCodeParameter};
+
+use super::{OrionCommitmentWithData, OrionPCSImpl};
 
 fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<F> {
     mat.chunks(combination.len())
@@ -18,30 +21,30 @@ fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<F> {
         .collect()
 }
 
+// NOTE: beware - this is a sketch code parameter from
+// https://eprint.iacr.org/2022/1010.pdf (Orion) p8
+// on general Spielman code.
+// This set of params might not be carefully calculated for soundness.
+// Only used here for testing purpose
+const EXAMPLE_ORION_CODE_PARAMETER: OrionCodeParameter = OrionCodeParameter {
+    input_message_len: 1 << 10,
+    output_code_len: 1 << 12,
+
+    alpha_g0: 0.5,
+    degree_g0: 6,
+
+    lenghth_threshold_g0s: 10,
+
+    degree_g1: 6,
+
+    // TODO: update to real parameter
+    hamming_weight: 0.07,
+};
+
 fn test_orion_code_generic<F: Field>() {
     let mut rng = test_rng();
 
-    // NOTE: beware - this is a sketch code parameter from
-    // https://eprint.iacr.org/2022/1010.pdf (Orion) p8
-    // on general Spielman code.
-    // This set of params might not be carefully calculated for soundness.
-    // Only used here for testing purpose
-    let example_orion_code_parameter = OrionCodeParameter {
-        input_message_len: 1 << 10,
-        output_code_len: 1 << 12,
-
-        alpha_g0: 0.5,
-        degree_g0: 6,
-
-        lenghth_threshold_g0s: 10,
-
-        degree_g1: 6,
-
-        // TODO: update to real parameter
-        hamming_weight: 0.07,
-    };
-
-    let orion_code = OrionCode::new(example_orion_code_parameter, &mut rng);
+    let orion_code = OrionCode::new(EXAMPLE_ORION_CODE_PARAMETER, &mut rng);
 
     let linear_combine_size = 128;
 
@@ -52,14 +55,14 @@ fn test_orion_code_generic<F: Field>() {
     // NOTE: generate message and codeword in the slice buffer
 
     let mut message_mat =
-        vec![F::ZERO; linear_combine_size * example_orion_code_parameter.input_message_len];
+        vec![F::ZERO; linear_combine_size * EXAMPLE_ORION_CODE_PARAMETER.input_message_len];
 
     let mut codeword_mat =
-        vec![F::ZERO; linear_combine_size * example_orion_code_parameter.output_code_len];
+        vec![F::ZERO; linear_combine_size * EXAMPLE_ORION_CODE_PARAMETER.output_code_len];
 
     message_mat
-        .chunks_mut(example_orion_code_parameter.input_message_len)
-        .zip(codeword_mat.chunks_mut(example_orion_code_parameter.output_code_len))
+        .chunks_mut(EXAMPLE_ORION_CODE_PARAMETER.input_message_len)
+        .zip(codeword_mat.chunks_mut(EXAMPLE_ORION_CODE_PARAMETER.output_code_len))
         .try_for_each(|(msg, codeword)| {
             msg.iter_mut().for_each(|x| *x = F::random_unsafe(&mut rng));
             orion_code.encode_in_place(msg, codeword)
@@ -69,12 +72,12 @@ fn test_orion_code_generic<F: Field>() {
     // NOTE: transpose message and codeword matrix
 
     let mut message_scratch =
-        vec![F::ZERO; linear_combine_size * example_orion_code_parameter.input_message_len];
+        vec![F::ZERO; linear_combine_size * EXAMPLE_ORION_CODE_PARAMETER.input_message_len];
     transpose_in_place(&mut message_mat, &mut message_scratch, linear_combine_size);
     drop(message_scratch);
 
     let mut codeword_scratch =
-        vec![F::ZERO; linear_combine_size * example_orion_code_parameter.output_code_len];
+        vec![F::ZERO; linear_combine_size * EXAMPLE_ORION_CODE_PARAMETER.output_code_len];
     transpose_in_place(
         &mut codeword_mat,
         &mut codeword_scratch,
@@ -97,4 +100,59 @@ fn test_orion_code() {
     test_orion_code_generic::<GF2_128>();
     test_orion_code_generic::<GF2>();
     test_orion_code_generic::<M31Ext3>();
+}
+
+impl OrionPCSImpl {
+    fn dumb_commit<F: Field + FieldSerde>(
+        &self,
+        poly: &MultiLinearPoly<F>,
+    ) -> OrionCommitmentWithData<F> {
+        let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
+
+        let mut interleaved_codewords: Vec<_> = poly
+            .coeffs
+            .chunks(msg_size)
+            .flat_map(|msg| self.code_instance.encode(&msg).unwrap())
+            .collect();
+
+        let mut scratch = vec![F::ZERO; row_num * self.code_len()];
+        transpose_in_place(&mut interleaved_codewords, &mut scratch, row_num);
+        drop(scratch);
+
+        OrionCommitmentWithData {
+            num_of_variables: poly.get_num_vars(),
+            interleaved_codewords,
+        }
+    }
+}
+
+fn test_orion_commit_consistency_generic<F: Field + FieldSerde, PackF: SimdField<Scalar = F>>() {
+    let mut rng = test_rng();
+    let num_of_vars = log2(EXAMPLE_ORION_CODE_PARAMETER.input_message_len) as usize * 2usize;
+
+    let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
+
+    let orion_pcs =
+        OrionPCSImpl::from_random(num_of_vars, EXAMPLE_ORION_CODE_PARAMETER, &mut rng).unwrap();
+
+    let real_commit = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
+    let dumb_commit = orion_pcs.dumb_commit(&random_poly);
+
+    dbg!(
+        real_commit.interleaved_codewords.len(),
+        dumb_commit.interleaved_codewords.len()
+    );
+
+    assert_eq!(real_commit.num_of_variables, dumb_commit.num_of_variables);
+    assert_eq!(
+        real_commit.interleaved_codewords,
+        dumb_commit.interleaved_codewords
+    );
+}
+
+#[test]
+fn test_orion_commit_consistency() {
+    test_orion_commit_consistency_generic::<GF2, GF2x8>();
+    test_orion_commit_consistency_generic::<GF2, GF2x64>();
+    test_orion_commit_consistency_generic::<GF2, GF2_128>()
 }
