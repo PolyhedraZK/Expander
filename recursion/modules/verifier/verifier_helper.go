@@ -10,36 +10,33 @@ func PrepareLayer(
 	api frontend.API,
 	layer *circuit.Layer,
 	alpha frontend.Variable,
-	beta frontend.Variable,
 	rz0 []frontend.Variable,
 	rz1 []frontend.Variable,
 	r_simd []frontend.Variable,
 	r_mpi []frontend.Variable,
 	sp *ScratchPad,
+	is_output_layer bool,
 ) {
-	EqEvalsAtEfficient(
-		api,
-		rz0,
-		alpha,
-		sp.EqEvalsAtRz0,
-		sp.EqEvalsFirstPart,
-		sp.EqEvalsSecondPart,
-		sp.EqEvalsCount,
-	)
-
-	if rz1 != nil && beta != nil {
+	if is_output_layer {
 		EqEvalsAtEfficient(
 			api,
-			rz1,
-			beta,
-			sp.EqEvalsAtRz1,
+			rz0,
+			1,
+			sp.EqEvalsAtRz0,
 			sp.EqEvalsFirstPart,
 			sp.EqEvalsSecondPart,
 			sp.EqEvalsCount,
 		)
-
-		for i := 0; i < 1<<layer.OutputLenLog; i++ {
-			sp.EqEvalsAtRz0[i] = api.Add(sp.EqEvalsAtRz0[i], sp.EqEvalsAtRz1[i])
+	} else {
+		output_len := 1 << len(rz0)
+		copy(sp.EqEvalsAtRz0[:output_len], sp.EqEvalsAtRx[:output_len])
+		if rz1 != nil && alpha != nil {
+			for i := 0; i < 1<<layer.OutputLenLog; i++ {
+				sp.EqEvalsAtRz0[i] = api.Add(
+					sp.EqEvalsAtRz0[i],
+					api.Mul(alpha, sp.EqEvalsAtRy[i]),
+				)
+			}
 		}
 	}
 
