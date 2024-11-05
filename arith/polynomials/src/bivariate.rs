@@ -4,11 +4,11 @@ pub use bi_fft::bi_fft_in_place;
 mod coeff;
 
 mod lagrange;
-pub use lagrange::*;
 
 use arith::FFTField;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
+// the coefficients are ordered by degree_0 x degree_1, where x has degree_0 and y has degree_1
 pub struct BivariatePolynomial<F> {
     pub coefficients: Vec<F>,
     pub degree_0: usize,
@@ -16,6 +16,7 @@ pub struct BivariatePolynomial<F> {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
+// the coefficients are ordered by degree_0 x degree_1, where x has degree_0 and y has degree_1
 pub struct BivariateLagrangePolynomial<F> {
     pub coefficients: Vec<F>,
     pub degree_0: usize,

@@ -1,32 +1,9 @@
 use arith::FFTField;
 use rand::RngCore;
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
-use crate::{powers_of_field_elements, primitive_root_of_unity};
+use crate::{lagrange_coefficients, powers_of_field_elements, primitive_root_of_unity};
 
 use super::BivariateLagrangePolynomial;
-
-/// For a point x, compute the coefficients of Lagrange polynomial L_{i}(x) at x, given the roots.
-/// `L_{i}(x) = \prod_{j \neq i} \frac{x - r_j}{r_i - r_j}`
-#[inline]
-pub fn lagrange_coefficients<F: FFTField + Send + Sync>(roots: &[F], points: &F) -> Vec<F> {
-    roots
-        .par_iter()
-        .enumerate()
-        .map(|(i, _)| {
-            let mut numerator = F::ONE;
-            let mut denominator = F::ONE;
-            for j in 0..roots.len() {
-                if i == j {
-                    continue;
-                }
-                numerator *= roots[j] - points;
-                denominator *= roots[j] - roots[i];
-            }
-            numerator * denominator.inv().unwrap()
-        })
-        .collect()
-}
 
 impl<F: FFTField> BivariateLagrangePolynomial<F> {
     #[inline]

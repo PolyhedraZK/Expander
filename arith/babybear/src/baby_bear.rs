@@ -78,7 +78,6 @@ impl Field for BabyBear {
 
     const ONE: Self = BabyBear::new(1);
 
-    // See test below
     const INV_2: Self = BabyBear::new(1006632961);
 
     #[inline(always)]
@@ -153,7 +152,6 @@ impl FieldForECC for BabyBear {
     }
 }
 
-// TODO: Actual SIMD impl
 // This is a dummy implementation to satisfy trait bounds
 impl SimdField for BabyBear {
     type Scalar = Self;

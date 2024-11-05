@@ -29,7 +29,7 @@ impl<F: Field> UnivariatePolynomial<F> {
         Self::new(univariate_quotient(&self.coefficients, point))
     }
 
-    /// evaluate the polynomial at (x, y)
+    /// evaluate the polynomial at x
     #[inline]
     pub fn evaluate(&self, x: &F) -> F {
         let x_power = powers_of_field_elements(x, self.coefficients.len());
@@ -80,7 +80,7 @@ impl<F: FFTField> UnivariatePolynomial<F> {
 
 /// Compute poly / (x-point) using univariate division
 pub fn univariate_quotient<F: Field>(poly: &[F], point: &F) -> Vec<F> {
-    let timer = start_timer!(|| format!("Univariate quotient of degree {}", poly.len()));
+    let timer = start_timer!(|| format!("Univariate quotient of degree {}", poly.len() - 1));
     let mut dividend_coeff = poly.to_vec();
     let divisor = [-*point, F::from(1u32)];
     let mut coefficients = vec![];

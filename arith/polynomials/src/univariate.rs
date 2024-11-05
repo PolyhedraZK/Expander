@@ -5,7 +5,7 @@ mod coeff;
 pub use coeff::*;
 
 mod lagrange;
-// pub use lagrange::*;
+pub use lagrange::*;
 
 use arith::FFTField;
 
