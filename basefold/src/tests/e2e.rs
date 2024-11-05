@@ -13,7 +13,7 @@ use crate::{BaseFoldPCS, BasefoldParam, PolynomialCommitmentScheme};
 fn test_basefold_vanilla() {
     let mut rng = test_rng();
 
-    for i in 2..=2 {
+    for i in 2..=10 {
         for _ in 0..10 {
             test_basefold_helper(i, &mut rng);
         }
@@ -27,12 +27,29 @@ fn test_basefold_helper(num_vars: usize, mut rng: impl RngCore) {
 
     let poly = MultiLinearPoly::<BabyBear>::random(num_vars, &mut rng);
 
+    // let poly = MultiLinearPoly::<BabyBear>::new(vec![
+    //     BabyBear::from(1u32),
+    //     BabyBear::from(2u32),
+    //     BabyBear::from(3u32),
+    //     BabyBear::from(4u32),
+    // ]);
+
     let opening_point: Vec<_> = (0..num_vars)
         .map(|_| BabyBear::random_unsafe(&mut rng))
         .collect();
+    // let mut opening_point: Vec<_> = (0..num_vars)
+    //     .map(|i| BabyBear::from(i as u32 + 1))
+    //     .collect();
+
     let f_z = poly.evaluate(&opening_point);
+
+    let mut opening_inv = opening_point.clone();
+    opening_inv.reverse();
+    let f_z_inv = poly.evaluate(&opening_inv);
+
     println!("f: {:?}", poly);
     println!("f(z): {:?}", f_z);
+    println!("f(z_rev): {:?}", f_z_inv);
 
     let now = Instant::now();
     let commitment = BaseFoldPCS::commit(&pp, &poly);
@@ -53,6 +70,12 @@ fn test_basefold_helper(num_vars: usize, mut rng: impl RngCore) {
 
     let f_r = poly.evaluate(&eval_proof.randomness);
     println!("f(r): {:?}", f_r);
+
+    let mut f_r_rev = eval_proof.randomness.clone();
+    f_r_rev.reverse();
+    let f_r_inv = poly.evaluate(&f_r_rev);
+    println!("f(r_rev): {:?}", f_r_inv);
+    // opening_point.reverse();
 
     let now = Instant::now();
     let verify = BaseFoldPCS::verify(

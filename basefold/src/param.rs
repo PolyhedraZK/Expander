@@ -78,10 +78,7 @@ where
         plonky2_util::reverse_index_bits_in_place(&mut coeffs);
         let extended_length = coeffs.len() << self.rate_bits;
         coeffs.resize(extended_length, F::zero());
-        
 
-
-        
         F::fft(&coeffs)
     }
 

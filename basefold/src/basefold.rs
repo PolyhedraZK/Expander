@@ -203,8 +203,7 @@ where
             iopp_oracles: iopp_oracles.iter().map(|t| t.root()).collect(),
             iopp_last_oracle_message,
             first_iopp_query: first_round_queries,
-            randomness: rs
-            // iopp_queries: rest_iopp_queries,
+            randomness: rs, // iopp_queries: rest_iopp_queries,
         }
     }
 
@@ -218,6 +217,9 @@ where
     ) -> bool {
         let num_vars = opening_point.len();
 
+        let mut opening_point = opening_point.clone();
+        opening_point.reverse();
+
         let value_lifted = ExtF::from(*value);
         let opening_point_lifted: Vec<ExtF> =
             opening_point.iter().map(|x| ExtF::from(*x)).collect();
@@ -225,7 +227,7 @@ where
         // NOTE: check sumcheck statement:
         // f(z) = \sum_{r \in {0, 1}^n} (f(r) \eq(r, z)) can be reduced to
         // f_r_eq_zr = f(rs) \eq(rs, z)
-        let (f_r_eq_zr, rs) =
+        let (f_r_eq_zr, mut rs) =
             proof
                 .sumcheck_transcript
                 .verify(*value, num_vars, MERGE_POLY_DEG, transcript);
@@ -233,8 +235,7 @@ where
         println!("verifier f(z): {:?}", value);
         println!("verifier f(r) * eq(z,r): {:?}", f_r_eq_zr);
 
-        println!("verifier randomness: {:?}", rs);
-        let eq_zr = EqPolynomial::eq_vec(opening_point, &rs);
+        let eq_zr = EqPolynomial::eq_vec(&opening_point, &rs);
         // EqPolynomial::new(opening_point_lifted).evaluate(&rs);
         println!("verifier eq(z, r): {:?}", eq_zr);
 

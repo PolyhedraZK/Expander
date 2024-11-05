@@ -10,6 +10,5 @@ pub struct BasefoldProof<ExtF: ExtensionField> {
     pub(crate) iopp_oracles: Vec<Node>,
     pub(crate) iopp_last_oracle_message: Vec<Leaf<ExtF::BaseField>>,
     pub(crate) first_iopp_query: Vec<BasefoldIOPPQuerySingleRound<ExtF::BaseField>>,
-    pub(crate) randomness: Vec<ExtF::BaseField>
-    // pub(crate) iopp_queries: Vec<BasefoldIOPPQuery<ExtF>>,
+    pub(crate) randomness: Vec<ExtF::BaseField>, // pub(crate) iopp_queries: Vec<BasefoldIOPPQuery<ExtF>>,
 }
