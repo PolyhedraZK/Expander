@@ -1,4 +1,3 @@
-use arith::FieldSerde;
 use circuit::CircuitLayer;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
@@ -99,41 +98,49 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
 pub fn sumcheck_prove_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
+    r_simd: &[C::ChallengeField],
     transcript: &mut T,
     sp: &mut ProverScratchPad<C>,
-) -> Vec<C::ChallengeField> {
+) -> (Vec<C::ChallengeField>, Vec<C::ChallengeField>) {
     const D: usize = 7;
-    let mut helper = SumcheckGkrSquareHelper::new(layer, rz0, sp);
+    let mut helper = SumcheckGkrSquareHelper::new(layer, rz0, r_simd, sp);
 
+    helper.prepare_simd();
+    helper.prepare_g_x_vals();
+
+    // x-variable sumcheck rounds
     for i_var in 0..layer.input_var_num {
-        if i_var == 0 {
-            helper.prepare_g_x_vals();
-        }
-        let evals: [C::Field; D] = helper.poly_evals_at(i_var);
+        let evals: [C::ChallengeField; D] = helper.poly_evals_at_x(i_var);
 
         for deg in 0..D {
-            let mut buf = vec![];
-            evals[deg].serialize_into(&mut buf).unwrap();
-            transcript.append_u8_slice(&buf);
+            transcript.append_field_element(&evals[deg]);
         }
-
         let r = transcript.generate_challenge_field_element();
 
-        log::trace!("i_var={} evals: {:?} r: {:?}", i_var, evals, r);
+        log::trace!("x i_var={} evals: {:?} r: {:?}", i_var, evals, r);
 
-        helper.receive_challenge(i_var, r);
-        if i_var == layer.input_var_num - 1 {
-            log::trace!("vx claim: {:?}", helper.vx_claim());
-            let mut buf = vec![];
-            helper.vx_claim().serialize_into(&mut buf).unwrap();
-            transcript.append_u8_slice(&buf);
-        }
+        helper.receive_x_challenge(i_var, r);
     }
 
-    log::trace!("claimed vx = {:?}", helper.vx_claim());
-    let mut buf = vec![];
-    helper.vx_claim().serialize_into(&mut buf).unwrap();
-    transcript.append_u8_slice(&buf);
+    // Unpack SIMD witness polynomial evaluations
+    helper.prepare_simd_var_vals();
 
-    helper.rx
+    // SIMD-variable sumcheck rounds
+    for i_var in 0..helper.simd_var_num {
+        let evals = helper.poly_evals_at_simd(i_var);
+
+        for deg in 0..D {
+            transcript.append_field_element(&evals[deg]);
+        }
+        let r = transcript.generate_challenge_field_element();
+
+        log::trace!("SIMD i_var={} evals: {:?} r: {:?}", i_var, evals, r);
+
+        helper.receive_simd_challenge(i_var, r);
+    }
+
+    log::trace!("vx claim: {:?}", helper.vx_claim());
+    transcript.append_field_element(&helper.vx_claim());
+
+    (helper.rx, helper.r_simd_var)
 }

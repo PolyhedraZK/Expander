@@ -115,7 +115,8 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         let mut rmpi = vec![];
 
         if self.config.gkr_scheme == GKRScheme::GkrSquare {
-            (_, rx) = gkr_square_prove(c, &mut self.sp, &mut transcript);
+            (claimed_v, rx, rsimd) =
+                gkr_square_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
         } else {
             (claimed_v, rx, ry, rsimd, rmpi) =
                 gkr_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
