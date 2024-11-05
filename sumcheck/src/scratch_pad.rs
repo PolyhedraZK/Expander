@@ -91,6 +91,9 @@ pub struct VerifierScratchPad<C: GKRFieldConfig> {
     pub gf2_deg2_eval_coef: C::ChallengeField, // 1 / x(x - 1)
     pub deg3_eval_at: [C::ChallengeField; 4],
     pub deg3_lag_denoms_inv: [C::ChallengeField; 4],
+    // ====== for deg6 eval ======
+    pub deg6_eval_at: [C::ChallengeField; 7],
+    pub deg6_lag_denoms_inv: [C::ChallengeField; 7],
 }
 
 impl<C: GKRFieldConfig> VerifierScratchPad<C> {
@@ -143,6 +146,32 @@ impl<C: GKRFieldConfig> VerifierScratchPad<C> {
             deg3_lag_denoms_inv[i] = denominator.inv().unwrap();
         }
 
+        let deg6_eval_at = if C::FIELD_TYPE == FieldType::GF2 {
+            panic!("GF2 not supported yet");
+        } else {
+            [
+                C::ChallengeField::ZERO,
+                C::ChallengeField::ONE,
+                C::ChallengeField::from(2),
+                C::ChallengeField::from(3),
+                C::ChallengeField::from(4),
+                C::ChallengeField::from(5),
+                C::ChallengeField::from(6),
+            ]
+        };
+
+        let mut deg6_lag_denoms_inv = [C::ChallengeField::ZERO; 7];
+        for i in 0..7 {
+            let mut denominator = C::ChallengeField::ONE;
+            for j in 0..7 {
+                if j == i {
+                    continue;
+                }
+                denominator *= deg6_eval_at[i] - deg6_eval_at[j];
+            }
+            deg6_lag_denoms_inv[i] = denominator.inv().unwrap();
+        }
+
         Self {
             eq_evals_at_rz0: vec![C::ChallengeField::zero(); max_io_size],
             eq_evals_at_r_simd: vec![C::ChallengeField::zero(); simd_size],
@@ -168,6 +197,8 @@ impl<C: GKRFieldConfig> VerifierScratchPad<C> {
             gf2_deg2_eval_coef,
             deg3_eval_at,
             deg3_lag_denoms_inv,
+            deg6_eval_at,
+            deg6_lag_denoms_inv,
         }
     }
 }
