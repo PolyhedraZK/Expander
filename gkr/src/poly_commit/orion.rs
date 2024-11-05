@@ -501,9 +501,8 @@ impl OrionPCSImpl {
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
         // NOTE: working on evaluation response of tensor code IOP based PCS
-        let mut poly_ext_field = MultiLinearPoly {
-            coeffs: poly.coeffs.iter().map(|&c| ExtF::from(c)).collect(),
-        };
+        let mut poly_ext_field =
+            MultiLinearPoly::new(poly.coeffs.iter().cloned().map(ExtF::from).collect());
         point[num_of_vars_in_codeword..]
             .iter()
             .rev()
@@ -567,9 +566,7 @@ impl OrionPCSImpl {
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
         // NOTE: working on evaluation response, evaluate the rest of the response
-        let poly_half_evaled = MultiLinearPoly {
-            coeffs: proof.eval_row.clone(),
-        };
+        let poly_half_evaled = MultiLinearPoly::new(proof.eval_row.clone());
         let final_eval = poly_half_evaled.evaluate_jolt(&point[..num_of_vars_in_codeword]);
         if final_eval != *evaluation {
             return false;

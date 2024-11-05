@@ -160,9 +160,8 @@ fn test_multilinear_poly_tensor_eval_generic<F: Field, ExtF: ExtensionField<Base
     let mut rng = test_rng();
 
     let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
-    let random_poly_ext = MultiLinearPoly {
-        coeffs: random_poly.coeffs.iter().map(|c| ExtF::from(*c)).collect(),
-    };
+    let random_poly_ext =
+        MultiLinearPoly::new(random_poly.coeffs.iter().cloned().map(ExtF::from).collect());
 
     let random_point: Vec<_> = (0..num_of_vars)
         .map(|_| ExtF::random_unsafe(&mut rng))
@@ -208,9 +207,8 @@ fn test_orion_pcs_open_generics<
     let num_of_vars = log2(EXAMPLE_ORION_CODE_PARAMETER.input_message_len) as usize * 2usize;
 
     let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
-    let random_poly_ext = MultiLinearPoly {
-        coeffs: random_poly.coeffs.iter().map(|c| ExtF::from(*c)).collect(),
-    };
+    let random_poly_ext =
+        MultiLinearPoly::new(random_poly.coeffs.iter().cloned().map(ExtF::from).collect());
     let random_point: Vec<_> = (0..num_of_vars)
         .map(|_| ExtF::random_bool(&mut rng))
         .collect();
@@ -233,9 +231,7 @@ fn test_orion_pcs_open_generics<
     // NOTE: evaluation consistency check
     let (row_num, col_num) = OrionPCSImpl::row_col_from_variables(num_of_vars);
     let vars_for_col = log2(col_num) as usize;
-    let poly_half_evaled = MultiLinearPoly {
-        coeffs: opening.eval_row.clone(),
-    };
+    let poly_half_evaled = MultiLinearPoly::new(opening.eval_row.clone());
     let actual_eval = poly_half_evaled.evaluate_jolt(&random_point[..vars_for_col]);
     let expected_eval = random_poly_ext.evaluate_jolt(&random_point);
     assert_eq!(expected_eval, actual_eval);
@@ -286,9 +282,8 @@ fn test_orion_pcs_full_e2e_generics<
     let num_of_vars = log2(EXAMPLE_ORION_CODE_PARAMETER.input_message_len) as usize * 2usize;
 
     let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
-    let random_poly_ext = MultiLinearPoly {
-        coeffs: random_poly.coeffs.iter().map(|c| ExtF::from(*c)).collect(),
-    };
+    let random_poly_ext =
+        MultiLinearPoly::new(random_poly.coeffs.iter().cloned().map(ExtF::from).collect());
     let random_point: Vec<_> = (0..num_of_vars)
         .map(|_| ExtF::random_bool(&mut rng))
         .collect();
