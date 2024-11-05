@@ -589,16 +589,24 @@ impl OrionPCSImpl {
         });
 
         // NOTE: encode proximity responses and evaluation response
-        let proximity_response_codewords = proof
+        let proximity_response_codewords: Vec<_> = match proof
             .proximity_rows
             .iter()
-            .map(|r| self.code_instance.encode(r).unwrap())
-            .collect::<Vec<_>>();
-        let eval_response_codeword = self.code_instance.encode(&proof.eval_row).unwrap();
-        let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
+            .map(|r| self.code_instance.encode(r))
+            .collect::<OrionResult<_>>()
+        {
+            Ok(codewords) => codewords,
+            _ => return false,
+        };
+        let eval_response_codeword: OrionCodeword<ExtF> =
+            match self.code_instance.encode(&proof.eval_row) {
+                Ok(codeword) => codeword,
+                _ => return false,
+            };
 
         // NOTE: againts all index challenges, check alphabets against proximity responses
         // and evaluation response
+        let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
         random_linear_combinations
             .iter()
             .zip(proximity_response_codewords.iter())
