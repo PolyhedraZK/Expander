@@ -6,8 +6,8 @@ use std::{
 use circuit::Circuit;
 use clap::Parser;
 use config::{
-    BN254ConfigSha2, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2,
-    MPIConfig,
+    BN254ConfigSha2, BabyBearExt3ConfigSha2, BabyBearExt4ConfigSha2, Config, FieldType,
+    GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2, MPIConfig,
 };
 use gkr::{
     utils::{
@@ -78,6 +78,28 @@ fn main() {
             ),
             _ => unreachable!(),
         },
+        "babybearext3" => match args.scheme.as_str() {
+            "keccak" => run_benchmark::<BabyBearExt3ConfigSha2>(
+                &args,
+                Config::<BabyBearExt3ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+            ),
+            "poseidon" => run_benchmark::<BabyBearExt3ConfigSha2>(
+                &args,
+                Config::<BabyBearExt3ConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+            ),
+            _ => unreachable!(),
+        },
+        "babybearext4" => match args.scheme.as_str() {
+            "keccak" => run_benchmark::<BabyBearExt4ConfigSha2>(
+                &args,
+                Config::<BabyBearExt4ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+            ),
+            "poseidon" => run_benchmark::<BabyBearExt4ConfigSha2>(
+                &args,
+                Config::<BabyBearExt4ConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+            ),
+            _ => unreachable!(),
+        },
         _ => unreachable!(),
     };
 
@@ -93,11 +115,14 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     // load circuit
     let mut circuit_template = match args.scheme.as_str() {
         "keccak" => match C::FIELD_TYPE {
+            FieldType::BabyBear => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT), // TODO
             FieldType::GF2 => Circuit::<C>::load_circuit(KECCAK_GF2_CIRCUIT),
             FieldType::M31 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
             FieldType::BN254 => Circuit::<C>::load_circuit(KECCAK_BN254_CIRCUIT),
         },
         "poseidon" => match C::FIELD_TYPE {
+            FieldType::GF2 => unreachable!(),
+            FieldType::BabyBear => Circuit::<C>::load_circuit(POSEIDON_M31_CIRCUIT), // TODO
             FieldType::M31 => Circuit::<C>::load_circuit(POSEIDON_M31_CIRCUIT),
             _ => unreachable!("not supported"),
         },
@@ -110,6 +135,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
             FieldType::GF2 => KECCAK_GF2_WITNESS,
             FieldType::M31 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
+            _ => unreachable!("not supported"),
         },
         "poseidon" => match C::FIELD_TYPE {
             FieldType::M31 => POSEIDON_M31_WITNESS,
@@ -129,9 +155,11 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     };
 
     let circuit_copy_size: usize = match (C::FIELD_TYPE, args.scheme.as_str()) {
+        (FieldType::BabyBear, "keccak") => 2,
         (FieldType::GF2, "keccak") => 1,
         (FieldType::M31, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
+        (FieldType::BabyBear, "poseidon") => 120,
         (FieldType::M31, "poseidon") => 120,
         _ => unreachable!(),
     };

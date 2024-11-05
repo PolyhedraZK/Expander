@@ -1,14 +1,13 @@
+use arith::FFTField;
 use ark_std::{end_timer, start_timer};
-use halo2curves::ff::PrimeField;
 use itertools::Itertools;
 use rand::RngCore;
 
-use crate::bi_fft::bi_fft_in_place;
-use crate::util::powers_of_field_elements;
+use crate::{bi_fft_in_place, powers_of_field_elements, primitive_root_of_unity};
 
 use super::BivariatePolynomial;
 
-impl<F: PrimeField> BivariatePolynomial<F> {
+impl<F: FFTField> BivariatePolynomial<F> {
     #[inline]
     pub fn new(coefficients: Vec<F>, degree_0: usize, degree_1: usize) -> Self {
         assert_eq!(coefficients.len(), degree_0 * degree_1);
@@ -22,7 +21,7 @@ impl<F: PrimeField> BivariatePolynomial<F> {
     #[inline]
     pub fn random(mut rng: impl RngCore, degree_0: usize, degree_1: usize) -> Self {
         let coefficients = (0..degree_0 * degree_1)
-            .map(|_| F::random(&mut rng))
+            .map(|_| F::random_unsafe(&mut rng))
             .collect();
         Self::new(coefficients, degree_0, degree_1)
     }
@@ -73,21 +72,9 @@ impl<F: PrimeField> BivariatePolynomial<F> {
         ));
 
         // roots of unity for supported_n and supported_m
-        let (omega_0, omega_1) = {
-            let omega = F::ROOT_OF_UNITY;
-            let omega_0 = omega.pow_vartime([(1 << F::S) / self.degree_0 as u64]);
-            let omega_1 = omega.pow_vartime([(1 << F::S) / self.degree_1 as u64]);
+        let omega_0 = primitive_root_of_unity(self.degree_0);
+        let omega_1 = primitive_root_of_unity(self.degree_1);
 
-            assert!(
-                omega_0.pow_vartime([self.degree_0 as u64]) == F::ONE,
-                "omega_0 is not root of unity for supported_n"
-            );
-            assert!(
-                omega_1.pow_vartime([self.degree_1 as u64]) == F::ONE,
-                "omega_1 is not root of unity for supported_m"
-            );
-            (omega_0, omega_1)
-        };
         let powers_of_omega_0 = powers_of_field_elements(&omega_0, self.degree_0);
         let powers_of_omega_1 = powers_of_field_elements(&omega_1, self.degree_1);
 

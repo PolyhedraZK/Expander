@@ -1,3 +1,5 @@
+mod baby_bear_keccak;
+mod baby_bear_sha2;
 mod bn254_keccak;
 mod bn254_mimc;
 mod bn254_sha2;
@@ -11,6 +13,8 @@ use std::fmt::Debug;
 use arith::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
 use ark_std::{end_timer, start_timer};
 
+pub use baby_bear_keccak::{BabyBearExt3ConfigKeccak, BabyBearExt4ConfigKeccak};
+pub use baby_bear_sha2::{BabyBearExt3ConfigSha2, BabyBearExt4ConfigSha2};
 pub use bn254_keccak::BN254ConfigKeccak;
 pub use bn254_mimc::BN254ConfigMIMC5;
 pub use bn254_sha2::BN254ConfigSha2;
@@ -24,6 +28,7 @@ pub enum FieldType {
     M31,
     BN254,
     GF2,
+    BabyBear,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

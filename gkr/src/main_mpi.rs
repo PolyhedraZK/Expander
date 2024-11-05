@@ -83,6 +83,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         "keccak" => match C::FIELD_TYPE {
             FieldType::GF2 => Circuit::<C>::load_circuit(KECCAK_GF2_CIRCUIT),
             FieldType::M31 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
+            FieldType::BabyBear => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
             FieldType::BN254 => Circuit::<C>::load_circuit(KECCAK_BN254_CIRCUIT),
         },
         "poseidon" => match C::FIELD_TYPE {
@@ -97,6 +98,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
             FieldType::GF2 => KECCAK_GF2_WITNESS,
             FieldType::M31 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
+            _ => unreachable!(),
         },
         "poseidon" => match C::FIELD_TYPE {
             FieldType::M31 => POSEIDON_M31_WITNESS,
