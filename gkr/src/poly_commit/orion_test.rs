@@ -139,11 +139,6 @@ fn test_orion_commit_consistency_generic<F: Field + FieldSerde, PackF: SimdField
     let real_commit = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
     let dumb_commit = orion_pcs.dumb_commit(&random_poly);
 
-    dbg!(
-        real_commit.interleaved_codewords.len(),
-        dumb_commit.interleaved_codewords.len()
-    );
-
     assert_eq!(real_commit.num_of_variables, dumb_commit.num_of_variables);
     assert_eq!(
         real_commit.interleaved_codewords,
