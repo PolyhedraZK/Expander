@@ -485,13 +485,18 @@ impl OrionPCSImpl {
         })
     }
 
-    pub fn open<F: Field + FieldSerde, ExtF: ExtensionField<BaseField = F>, T: Transcript<ExtF>>(
+    pub fn open<F, ExtF, T>(
         &self,
         poly: &MultiLinearPoly<F>,
         #[allow(unused)] commitment_with_data: &OrionCommitmentWithData<F>,
         point: &[ExtF],
         transcript: &mut T,
-    ) -> OrionProof<F, ExtF> {
+    ) -> OrionProof<F, ExtF>
+    where
+        F: Field + FieldSerde,
+        ExtF: ExtensionField<BaseField = F>,
+        T: Transcript<ExtF>,
+    {
         let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
@@ -544,11 +549,7 @@ impl OrionPCSImpl {
         }
     }
 
-    pub fn verify<
-        F: Field + FieldSerde,
-        ExtF: ExtensionField<BaseField = F>,
-        T: Transcript<ExtF>,
-    >(
+    pub fn verify<F, ExtF, T>(
         &self,
         // TODO: commitment, just the MT hash
         #[allow(unused)] commitment: &OrionCommitmentWithData<F>,
@@ -556,7 +557,12 @@ impl OrionPCSImpl {
         evaluation: &ExtF,
         proof: &OrionProof<F, ExtF>,
         #[allow(unused)] transcript: &mut T,
-    ) -> bool {
+    ) -> bool
+    where
+        F: Field + FieldSerde,
+        ExtF: ExtensionField<BaseField = F>,
+        T: Transcript<ExtF>,
+    {
         let (row_num, msg_size) = Self::row_col_from_variables(point.len());
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
