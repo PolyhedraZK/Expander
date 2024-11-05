@@ -419,11 +419,11 @@ impl OrionPCSImpl {
         (soundness_bits as f64 / sec_bits).ceil() as usize
     }
 
-    pub fn test_repetition_num(&self, soundness_bits: usize, field_size_bits: usize) -> usize {
+    pub fn proximity_repetition_num(&self, soundness_bits: usize, field_size_bits: usize) -> usize {
         // NOTE: use Ligero (AHIV22) or Avg-case dist to a code (BKS18)
         // version of avg case dist in unique decoding technique.
         // Here is the probability union bound
-        let code_len_over_f_bits = field_size_bits - self.code_instance.code_len();
+        let code_len_over_f_bits = field_size_bits - log2(self.code_instance.code_len()) as usize;
 
         (soundness_bits as f64 / code_len_over_f_bits as f64).ceil() as usize
     }
@@ -513,9 +513,9 @@ impl OrionPCSImpl {
 
         // NOTE: draw random linear combination out
         // and compose proximity response(s) of tensor code IOP based PCS
-        let proximity_test_num =
-            self.test_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
-        let proximity_rows: Vec<_> = (0..proximity_test_num)
+        let proximity_repetitions =
+            self.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
+        let proximity_rows: Vec<_> = (0..proximity_repetitions)
             .map(|_| {
                 let random_linear_combination =
                     transcript.generate_challenge_field_elements(row_num);
@@ -572,7 +572,7 @@ impl OrionPCSImpl {
         // NOTE: working on proximity responses, draw random linear combinations
         // then draw query points from fiat shamir transcripts
         let proximity_test_num =
-            self.test_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
+            self.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
         let random_linear_combinations: Vec<Vec<ExtF>> = (0..proximity_test_num)
             .map(|_| transcript.generate_challenge_field_elements(row_num))
             .collect();

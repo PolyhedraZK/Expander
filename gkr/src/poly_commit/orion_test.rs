@@ -254,9 +254,9 @@ fn test_orion_pcs_open_generics<
     assert_eq!(eval_codeword, eq_combined_codeword);
 
     // NOTE: compute proximity codewords
-    let proximity_test_num =
-        orion_pcs.test_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
-    assert_eq!(proximity_test_num, opening.proximity_rows.len());
+    let proximity_repetitions =
+        orion_pcs.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
+    assert_eq!(proximity_repetitions, opening.proximity_rows.len());
 
     opening.proximity_rows.iter().for_each(|proximity_row| {
         let random_linear_combination =
