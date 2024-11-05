@@ -161,7 +161,7 @@ impl<F: Field + FieldSerde> SumcheckInstanceProof<F> {
             let poly_at_zero = poly.coefficients[0];
             let poly_at_one = poly.coefficients.iter().sum::<F>();
 
-            assert_eq!(poly_at_zero + poly_at_one, e, "sum is not equal to e");
+            assert_eq!(poly_at_zero + poly_at_one, e, "{}-th sum is not equal to e", i);
 
             // append the prover's message to the transcript
             poly.coefficients

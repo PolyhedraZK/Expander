@@ -203,6 +203,7 @@ where
             iopp_oracles: iopp_oracles.iter().map(|t| t.root()).collect(),
             iopp_last_oracle_message,
             first_iopp_query: first_round_queries,
+            randomness: rs
             // iopp_queries: rest_iopp_queries,
         }
     }
