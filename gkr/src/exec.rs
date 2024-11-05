@@ -239,6 +239,9 @@ async fn main() {
             )
             .await
         }
+        _ => {
+            println!("Unsupported field type.");
+        }
     }
 
     MPIConfig::finalize();

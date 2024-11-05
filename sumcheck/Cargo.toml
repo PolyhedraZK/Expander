@@ -12,3 +12,6 @@ transcript = { path = "../transcript" }
 
 env_logger.workspace = true
 log.workspace = true
+
+[dev-dependencies]
+halo2curves.workspace = true

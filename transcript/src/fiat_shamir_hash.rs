@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use arith::{Field, FieldSerde};
 
 pub mod sha2_256;
@@ -9,7 +11,7 @@ pub use keccak_256::*;
 pub mod mimc;
 pub use mimc::*;
 
-pub trait FiatShamirBytesHash {
+pub trait FiatShamirBytesHash: Clone + Debug {
     /// The size of the hash output in bytes.
     const DIGEST_SIZE: usize;
 
@@ -23,7 +25,7 @@ pub trait FiatShamirBytesHash {
     fn hash_inplace(buffer: &mut [u8]);
 }
 
-pub trait FiatShamirFieldHash<F: Field + FieldSerde> {
+pub trait FiatShamirFieldHash<F: Field + FieldSerde>: Clone + Debug {
     /// Create a new hash instance.
     fn new() -> Self;
 

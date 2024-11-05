@@ -48,6 +48,16 @@ fn test_gkr_correctness() {
         Some("../data/gkr_proof.txt"),
     );
 
+    // FIXME: babybear has a different circuit representation
+    //
+    // test_gkr_correctness_helper::<BabyBearExt4ConfigSha2>(&Config::<BabyBearExt4ConfigSha2>::new(
+    //     GKRScheme::Vanilla,
+    //     mpi_config.clone(),
+    // ));
+    // test_gkr_correctness_helper::<BabyBearExt4ConfigKeccak>(
+    //     &Config::<BabyBearExt4ConfigKeccak>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    // );
+
     MPIConfig::finalize();
 }
 
@@ -56,6 +66,7 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>, write_proof_to:
     root_println!(config.mpi_config, "============== start ===============");
     root_println!(config.mpi_config, "Field Type: {:?}", C::FIELD_TYPE);
     let circuit_copy_size: usize = match C::FIELD_TYPE {
+        FieldType::BabyBear => 2,
         FieldType::GF2 => 1,
         FieldType::M31 => 2,
         FieldType::BN254 => 2,
