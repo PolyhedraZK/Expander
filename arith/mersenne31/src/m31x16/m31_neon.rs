@@ -97,7 +97,7 @@ impl Field for NeonM31 {
     // size in bytes
     const SIZE: usize = 128 / 8 * 4;
 
-    const FIELD_SIZE: usize = 32;
+    const FIELD_SIZE: usize = 512;
 
     const ZERO: Self = Self { v: [PACKED_0; 4] };
 
