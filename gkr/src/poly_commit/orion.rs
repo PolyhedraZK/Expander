@@ -1,14 +1,15 @@
 //! Orion polynomial commitment scheme prototype implementaiton.
 //! Includes implementation for Orion Expander-Code.
 
-use std::{cmp, iter::once};
+use std::{cmp, iter::once, marker::PhantomData};
 
-use arith::{ExtensionField, Field, FieldSerde, SimdField};
+use arith::{ExtensionField, Field, FieldSerde, FieldSerdeError, FieldSerdeResult, SimdField};
 use ark_std::log2;
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use rand::seq::index;
 use thiserror::Error;
 use transcript::Transcript;
+use tree::{Leaf, Tree, LEAF_BYTES, LEAF_HASH_BYTES};
 
 /******************************
  * PCS ERROR AND RESULT SETUP *
@@ -18,6 +19,9 @@ use transcript::Transcript;
 pub enum OrionPCSError {
     #[error("Orion PCS linear code parameter unmatch error")]
     ParameterUnmatchError,
+
+    #[error("field serde error")]
+    SerializationError(#[from] FieldSerdeError),
 }
 
 pub type OrionResult<T> = std::result::Result<T, OrionPCSError>;
@@ -348,18 +352,25 @@ pub struct OrionPCSImpl {
 }
 
 #[derive(Clone)]
-pub struct OrionCommitmentWithData<F: Field + FieldSerde> {
+pub struct OrionCommitmentWithData<F: Field + FieldSerde, PackF: SimdField<Scalar = F>> {
     pub num_of_variables: usize,
     pub interleaved_codewords: Vec<F>,
-    // TODO merkle tree
+
+    pub interleaved_alphabet_trees: Vec<Tree>,
+    pub commitment_tree: Tree,
+
+    pub _phantom: PhantomData<PackF>,
 }
+
+pub type OrionCommitment = tree::Node;
 
 type OrionProximityCodeword<F> = Vec<F>;
 
 pub struct OrionProof<F: Field + FieldSerde, ExtF: ExtensionField<BaseField = F>> {
     pub eval_row: Vec<ExtF>,
     pub proximity_rows: Vec<OrionProximityCodeword<ExtF>>,
-    // TODO merkle paths for queries
+
+    pub query_openings: Vec<(tree::Path, tree::Tree)>,
 }
 
 impl OrionPCSImpl {
@@ -431,7 +442,7 @@ impl OrionPCSImpl {
     pub fn commit<F: Field + FieldSerde, PackF: SimdField<Scalar = F>>(
         &self,
         poly: &MultiLinearPoly<F>,
-    ) -> OrionResult<OrionCommitmentWithData<F>> {
+    ) -> OrionResult<OrionCommitmentWithData<F, PackF>> {
         let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
 
         // NOTE: pre transpose evaluations
@@ -474,26 +485,66 @@ impl OrionPCSImpl {
             .iter()
             .flat_map(|p| p.unpack())
             .collect();
-        drop(packed_interleaved_codewords);
 
-        // TODO need a merkle tree to commit against all merkle tree roots,
-        // and move it to commitment with data
+        // NOTE: commit the interleaved codeword
+        // make sure that there are power-of-two number of leaves
+        assert!((PackF::FIELD_SIZE * packed_rows / LEAF_BYTES).is_power_of_two());
+        let interleaved_alphabet_trees: Vec<_> = packed_interleaved_codewords
+            .chunks(packed_rows)
+            .map(|packed_interleaved_alphabet| {
+                let serialized_alphabet: Vec<_> = packed_interleaved_alphabet
+                    .iter()
+                    .map(|&p| {
+                        let mut buffer = Vec::new();
+                        p.serialize_into(&mut buffer)?;
+                        Ok(buffer)
+                    })
+                    .collect::<OrionResult<Vec<_>>>()?
+                    .into_iter()
+                    .flatten()
+                    .collect();
+
+                let leaves = serialized_alphabet
+                    .chunks(LEAF_BYTES)
+                    .map(|chunk| Leaf::new(chunk.try_into().unwrap()))
+                    .collect();
+
+                Ok(Tree::new_with_leaves(leaves))
+            })
+            .collect::<OrionResult<_>>()?;
+
+        let column_size_to_po2 = interleaved_alphabet_trees.len().next_power_of_two();
+        let mut commitment_leaves = vec![Leaf::default(); column_size_to_po2];
+        interleaved_alphabet_trees
+            .iter()
+            .zip(commitment_leaves.iter_mut())
+            .for_each(|(tree, leaf): (&Tree, &mut Leaf)| {
+                let root = tree.root();
+                leaf.data[..LEAF_HASH_BYTES].copy_from_slice(root.as_bytes());
+            });
+        let commitment_tree = Tree::new_with_leaves(commitment_leaves);
 
         Ok(OrionCommitmentWithData {
             num_of_variables: poly.get_num_vars(),
             interleaved_codewords,
+
+            interleaved_alphabet_trees,
+            commitment_tree,
+
+            _phantom: PhantomData,
         })
     }
 
-    pub fn open<F, ExtF, T>(
+    pub fn open<F, PackF, ExtF, T>(
         &self,
         poly: &MultiLinearPoly<F>,
-        #[allow(unused)] commitment_with_data: &OrionCommitmentWithData<F>,
+        #[allow(unused)] commitment_with_data: &OrionCommitmentWithData<F, PackF>,
         point: &[ExtF],
         transcript: &mut T,
     ) -> OrionProof<F, ExtF>
     where
         F: Field + FieldSerde,
+        PackF: SimdField<Scalar = F>,
         ExtF: ExtensionField<BaseField = F>,
         T: Transcript<ExtF>,
     {
@@ -535,30 +586,40 @@ impl OrionPCSImpl {
             })
             .collect();
 
-        // TODO: merkle tree openings
+        // NOTE: MT opening for point queries
         let query_num = self.query_complexity(ORION_PCS_SOUNDNESS_BITS);
-        let query_points = transcript.generate_challenge_index_vector(query_num);
-        query_points.iter().for_each(|_| {
-            // TODO query a row from MT for a block of interleaved codeword matrix
-        });
+        let mut query_points = transcript.generate_challenge_index_vector(query_num);
+        let query_openings = query_points
+            .iter_mut()
+            .map(|qi| {
+                *qi %= self.code_len();
+                let path = commitment_with_data.commitment_tree.index_query(*qi);
+
+                (
+                    path,
+                    commitment_with_data.interleaved_alphabet_trees[*qi].clone(),
+                )
+            })
+            .collect();
 
         OrionProof {
             eval_row,
             proximity_rows,
+            query_openings,
         }
     }
 
-    pub fn verify<F, ExtF, T>(
+    pub fn verify<F, PackF, ExtF, T>(
         &self,
-        // TODO: commitment, just the MT hash
-        #[allow(unused)] commitment: &OrionCommitmentWithData<F>,
+        commitment: &OrionCommitment,
         point: &[ExtF],
         evaluation: &ExtF,
         proof: &OrionProof<F, ExtF>,
-        #[allow(unused)] transcript: &mut T,
+        transcript: &mut T,
     ) -> bool
     where
         F: Field + FieldSerde,
+        PackF: SimdField<Scalar = F>,
         ExtF: ExtensionField<BaseField = F>,
         T: Transcript<ExtF>,
     {
@@ -604,24 +665,44 @@ impl OrionPCSImpl {
         // NOTE: againts all index challenges, check alphabets against proximity responses
         // and evaluation response
         let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
+
         random_linear_combinations
             .iter()
             .zip(proximity_response_codewords.iter())
             .chain(once((&eq_linear_combination, &eval_response_codeword)))
             .all(|(rl, codeword)| {
-                query_points.iter().all(|&qi| {
-                    let col = &commitment.interleaved_codewords[qi * row_num..(qi + 1) * row_num];
+                query_points
+                    .iter()
+                    .zip(proof.query_openings.iter())
+                    .all(|(&qi, (path, tree))| {
+                        // TODO: check tree build
+                        let bytes: Vec<_> = tree
+                            .leaves
+                            .iter()
+                            .flat_map(|l| l.data.iter().cloned())
+                            .collect();
 
-                    // TODO merkle tree consistency test
+                        let interleaved_alphabet: Vec<_> = match bytes
+                            .chunks(PackF::FIELD_SIZE / 8)
+                            .map(|byte_slice| {
+                                let pack = PackF::deserialize_from(byte_slice)?;
+                                Ok(pack.unpack())
+                            })
+                            .collect::<FieldSerdeResult<Vec<_>>>()
+                        {
+                            Ok(col) => col.into_iter().flatten().collect(),
+                            _ => return false,
+                        };
 
-                    let alphabet: ExtF = col
-                        .iter()
-                        .zip(rl.iter())
-                        .map(|(c, r)| r.mul_by_base_field(c))
-                        .sum();
+                        let alphabet: ExtF = interleaved_alphabet
+                            .iter()
+                            .zip(rl.iter())
+                            .map(|(c, r)| r.mul_by_base_field(c))
+                            .sum();
 
-                    alphabet == codeword[qi]
-                })
+                        // TODO: check path leaf against tree root
+                        alphabet == codeword[qi] && path.verify(commitment)
+                    })
             })
     }
 }

@@ -11,6 +11,7 @@ members = [
     "config",
     "gkr",
     "sumcheck",
+    "tree",
     "transcript",
 ]
 resolver = "2"

@@ -13,6 +13,7 @@ mersenne31 = { path = "../arith/mersenne31" }
 polynomials = { path = "../arith/polynomials" }
 sumcheck = { path = "../sumcheck" }
 transcript = { path = "../transcript" }
+tree = { path = "../tree" }
 
 ark-std.workspace = true
 clap.workspace = true

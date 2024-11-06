@@ -914,6 +914,7 @@ dependencies = [
  "tiny-keccak",
  "tokio",
  "transcript",
+ "tree",
  "tynm",
  "warp",
 ]
@@ -2137,6 +2138,16 @@ dependencies = [
  "arith",
  "sha2",
  "tiny-keccak",
+]
+
+[[package]]
+name = "tree"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "rayon",
+ "sha2",
 ]
 
 [[package]]
