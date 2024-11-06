@@ -60,11 +60,11 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     r_mpi: &Vec<C::ChallengeField>,
     claimed_v0: C::ChallengeField,
     claimed_v1: Option<C::ChallengeField>,
-    alpha: C::ChallengeField,
-    beta: Option<C::ChallengeField>,
+    alpha: Option<C::ChallengeField>,
     mut proof_reader: impl Read,
     transcript: &mut T,
     sp: &mut VerifierScratchPad<C>,
+    is_output_layer: bool,
 ) -> (
     bool,
     Vec<C::ChallengeField>,
@@ -75,15 +75,15 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     Option<C::ChallengeField>,
 ) {
     assert_eq!(rz1.is_none(), claimed_v1.is_none());
-    assert_eq!(rz1.is_none(), beta.is_none());
+    assert_eq!(rz1.is_none(), alpha.is_none());
 
-    GKRVerifierHelper::prepare_layer(layer, &alpha, &beta, rz0, rz1, r_simd, r_mpi, sp);
+    GKRVerifierHelper::prepare_layer(layer, &alpha, rz0, rz1, r_simd, r_mpi, sp, is_output_layer);
 
     let var_num = layer.input_var_num;
     let simd_var_num = C::get_field_pack_size().trailing_zeros() as usize;
-    let mut sum = claimed_v0 * alpha;
-    if claimed_v1.is_some() && beta.is_some() {
-        sum += claimed_v1.unwrap() * beta.unwrap();
+    let mut sum = claimed_v0;
+    if claimed_v1.is_some() && alpha.is_some() {
+        sum += claimed_v1.unwrap() * alpha.unwrap();
     }
 
     sum -= GKRVerifierHelper::eval_cst(&layer.const_, public_input, sp);
@@ -198,8 +198,7 @@ pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
         r_mpi.push(transcript.generate_challenge_field_element());
     }
 
-    let mut alpha = C::ChallengeField::one();
-    let mut beta = None;
+    let mut alpha = None;
     let mut claimed_v0 = *claimed_v;
     let mut claimed_v1 = None;
 
@@ -225,14 +224,13 @@ pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
             claimed_v0,
             claimed_v1,
             alpha,
-            beta,
             &mut proof_reader,
             transcript,
             &mut sp,
+            i == layer_num - 1,
         );
         verified &= cur_verified;
-        alpha = transcript.generate_challenge_field_element();
-        beta = if rz1.is_some() {
+        alpha = if rz1.is_some() {
             Some(transcript.generate_challenge_field_element())
         } else {
             None

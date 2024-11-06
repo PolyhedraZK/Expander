@@ -130,7 +130,6 @@ async fn run_command<'a, C: GKRConfig>(
                         let mut circuit = circuit.lock().unwrap();
                         let mut prover = prover.lock().unwrap();
                         circuit.load_witness_bytes(&witness_bytes, true);
-                        circuit.evaluate();
                         let (claimed_v, proof) = prover.prove(&mut circuit);
                         reply::with_status(
                             dump_proof_and_claimed_v(&proof, &claimed_v).unwrap(),

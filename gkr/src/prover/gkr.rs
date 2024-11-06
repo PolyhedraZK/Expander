@@ -41,8 +41,7 @@ pub fn gkr_prove<C: GKRConfig, T: Transcript<C::ChallengeField>>(
         r_mpi.push(transcript.generate_challenge_field_element());
     }
 
-    let mut alpha = C::ChallengeField::one();
-    let mut beta = None;
+    let mut alpha = None;
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
 
@@ -75,22 +74,19 @@ pub fn gkr_prove<C: GKRConfig, T: Transcript<C::ChallengeField>>(
             &r_simd,
             &r_mpi,
             alpha,
-            beta,
             transcript,
             sp,
             mpi_config,
+            i == layer_num - 1,
         );
-        alpha = transcript.generate_challenge_field_element();
-
-        mpi_config.root_broadcast(&mut alpha);
 
         if rz1.is_some() {
             // TODO: try broadcast beta.unwrap directly
             let mut tmp = transcript.generate_challenge_field_element();
             mpi_config.root_broadcast(&mut tmp);
-            beta = Some(tmp)
+            alpha = Some(tmp)
         } else {
-            beta = None;
+            alpha = None;
         }
     }
 

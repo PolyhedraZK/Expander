@@ -49,10 +49,10 @@ func SumcheckLayerVerify(
 	claimed_v0 frontend.Variable,
 	claimed_v1 frontend.Variable,
 	alpha frontend.Variable,
-	beta frontend.Variable,
 	proof *circuit.Proof,
 	transcript *transcript.Transcript,
 	sp *ScratchPad,
+	is_output_layer bool,
 ) (
 	[]frontend.Variable,
 	[]frontend.Variable,
@@ -65,20 +65,20 @@ func SumcheckLayerVerify(
 		api,
 		layer,
 		alpha,
-		beta,
 		rz0,
 		rz1,
 		r_simd,
 		r_mpi,
 		sp,
+		is_output_layer,
 	)
 
 	var var_num = layer.InputLenLog
 	var simd_var_num = len(r_simd)
 	var mpi_var_num = len(r_mpi)
-	var sum = api.Mul(alpha, claimed_v0)
-	if beta != nil && claimed_v1 != nil {
-		sum = api.Add(sum, api.Mul(beta, claimed_v1))
+	var sum = claimed_v0
+	if alpha != nil && claimed_v1 != nil {
+		sum = api.Add(sum, api.Mul(alpha, claimed_v1))
 	}
 	sum = api.Sub(sum, EvalCst(api, layer.Cst, public_input, sp))
 
@@ -203,10 +203,9 @@ func GKRVerify(
 		r_mpi = append(r_mpi, transcript.ChallengeF())
 	}
 
-	var alpha frontend.Variable = 1
-	var beta frontend.Variable = nil
+	var alpha frontend.Variable = nil
 	var claimed_v0 = claimed_v
-	var claimed_v1 frontend.Variable = 0
+	var claimed_v1 frontend.Variable = nil
 
 	for i := n_layers - 1; i >= 0; i-- {
 		rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1 = SumcheckLayerVerify(
@@ -220,17 +219,16 @@ func GKRVerify(
 			claimed_v0,
 			claimed_v1,
 			alpha,
-			beta,
 			proof,
 			transcript,
 			sp,
+			i == n_layers-1,
 		)
 
-		alpha = transcript.ChallengeF()
 		if rz1 != nil && claimed_v1 != nil {
-			beta = transcript.ChallengeF()
+			alpha = transcript.ChallengeF()
 		} else {
-			beta = nil
+			alpha = nil
 		}
 	}
 
