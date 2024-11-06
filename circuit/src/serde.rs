@@ -92,7 +92,7 @@ pub struct CustomGateWrapper<C: GKRConfig, const INPUT_NUM: usize> {
 impl<C: GKRConfig, const INPUT_NUM: usize> FromEccSerde for CustomGateWrapper<C, INPUT_NUM> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let gate_type = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
-        let i_ids: [usize; INPUT_NUM] = Vec::<usize>::deserialize_from(&mut reader)
+        let i_ids: [usize; INPUT_NUM] = <Vec<usize> as FromEccSerde>::deserialize_from(&mut reader)
             .try_into()
             .unwrap();
 
@@ -191,7 +191,7 @@ impl<C: GKRConfig> FromEccSerde for RecursiveCircuit<C> {
                 .unwrap(),
 
             segments: Vec::<Segment<C>>::deserialize_from(&mut reader),
-            layers: Vec::<usize>::deserialize_from(&mut reader),
+            layers: <Vec<usize> as FromEccSerde>::deserialize_from(&mut reader),
         }
     }
 }

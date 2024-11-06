@@ -56,6 +56,31 @@ field_serde_for_integer!(u64, 8);
 field_serde_for_integer!(usize, 8);
 field_serde_for_integer!(u8, 1);
 
+impl<V: FieldSerde> FieldSerde for Vec<V> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        self.len().serialize_into(&mut writer)?;
+        for v in self.iter() {
+            v.serialize_into(&mut writer)?;
+        }
+        Ok(())
+    }
+
+    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+        let mut v = Self::default();
+        let len = usize::deserialize_from(&mut reader)?;
+        for _ in 0..len {
+            v.push(V::deserialize_from(&mut reader)?);
+        }
+        Ok(v)
+    }
+
+    fn try_deserialize_from_ecc_format<R: Read>(_reader: R) -> FieldSerdeResult<Self> {
+        unimplemented!()
+    }
+}
+
 // Consider use const generics after it gets stable
 impl FieldSerde for [u64; 4] {
     const SERIALIZED_SIZE: usize = 32;
