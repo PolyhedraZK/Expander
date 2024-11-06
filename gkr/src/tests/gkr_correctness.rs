@@ -4,7 +4,7 @@ use std::time::Instant;
 use std::{fs, panic};
 
 use arith::{Field, FieldSerde, SimdField};
-use circuit::{Circuit, CircuitLayer, CoefType, GateUni};
+use circuit::{Circuit, CircuitLayer, CoefType, GateConst, GateUni};
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
@@ -250,8 +250,8 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
 ///         N_0_0     N_0_1             Layer 0 (Output)
 ///    x11 /   \    /    |  \
 ///  N_1_0     N_1_1  N_1_2  N_1_3      Layer 1
-///     |       |    /  |      |
-/// Pow5|       |  /    |      |
+///     |       |    /  |      |   \
+/// Pow5|       |  /    |      |    PI[0]
 ///  N_2_0     N_2_1   N_2_2  N_2_3     Layer 2 (Input)
 /// ```
 /// (Unmarked lines are `+` gates with coeff 1)
@@ -264,6 +264,14 @@ pub fn gkr_square_test_circuit<C: GKRFieldConfig>() -> Circuit<C> {
         output_var_num: 2,
         ..Default::default()
     };
+    // N_1_3 += PI[0] (public input)
+    l1.const_.push(GateConst {
+        i_ids: [],
+        o_id: 3,
+        coef: C::CircuitField::from(1),
+        coef_type: CoefType::PublicInput(0),
+        gate_type: 0,
+    });
     // N_1_0 += (N_2_0)^5
     l1.uni.push(GateUni {
         i_ids: [0],
@@ -376,6 +384,8 @@ fn gkr_square_correctness() {
     let final_vals = (0..16).map(|x| x.into()).collect::<Vec<_>>();
     let final_vals = <GkrFieldConfigType as GKRFieldConfig>::SimdCircuitField::pack(&final_vals);
     circuit.layers[0].input_vals = vec![2.into(), 3.into(), 5.into(), final_vals];
+    // Set public input PI[0] = 13
+    circuit.public_input = vec![13.into()];
 
     let config = Config::<GkrConfigType>::new(GKRScheme::GkrSquare, MPIConfig::default());
     do_prove_verify(config, &mut circuit);
@@ -397,7 +407,7 @@ fn do_prove_verify<Cfg: GKRConfig>(config: Config<Cfg>, circuit: &mut Circuit<Cf
 
     // Verify
     let verifier = Verifier::new(&config);
-    let public_input = vec![];
+    let public_input = circuit.public_input.clone();
     assert!(verifier.verify(
         circuit,
         &public_input,
