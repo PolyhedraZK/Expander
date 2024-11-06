@@ -8,9 +8,9 @@ use crate::{Leaf, Node};
 /// Represents a path in the Merkle tree, used for proving membership.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Path {
-    pub(crate) leaf: Leaf,
+    pub leaf: Leaf,
     pub(crate) path_nodes: Vec<Node>,
-    pub(crate) index: usize,
+    pub index: usize,
 }
 
 impl Display for Path {

@@ -18,7 +18,7 @@ pub const fn leaf_adic<F: Field>() -> usize {
 }
 
 /// Represents a leaf in the Merkle tree, containing 64 bytes of data stored in a BabyBearx16.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Leaf {
     pub data: [u8; LEAF_BYTES],
 }

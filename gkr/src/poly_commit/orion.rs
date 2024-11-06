@@ -675,12 +675,21 @@ impl OrionPCSImpl {
                     .iter()
                     .zip(proof.query_openings.iter())
                     .all(|(&qi, (path, tree))| {
-                        // TODO: check tree build
                         let bytes: Vec<_> = tree
                             .leaves
                             .iter()
                             .flat_map(|l| l.data.iter().cloned())
                             .collect();
+
+                        let deserialized_leaves = bytes
+                            .chunks(LEAF_BYTES)
+                            .map(|chunk| Leaf::new(chunk.try_into().unwrap()))
+                            .collect();
+
+                        let computed_tree = Tree::new_with_leaves(deserialized_leaves);
+                        if computed_tree.root() != tree.root() {
+                            return false;
+                        }
 
                         let interleaved_alphabet: Vec<_> = match bytes
                             .chunks(PackF::FIELD_SIZE / 8)
@@ -700,8 +709,11 @@ impl OrionPCSImpl {
                             .map(|(c, r)| r.mul_by_base_field(c))
                             .sum();
 
-                        // TODO: check path leaf against tree root
-                        alphabet == codeword[qi] && path.verify(commitment)
+                        alphabet == codeword[qi]
+                            && path.verify(commitment)
+                            && qi == path.index
+                            && path.leaf.data[..LEAF_HASH_BYTES]
+                                == tree.root().as_bytes()[..LEAF_HASH_BYTES]
                     })
             })
     }
