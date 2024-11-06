@@ -326,6 +326,8 @@ fn test_orion_pcs_full_e2e_generics<
 
 #[test]
 fn test_orion_pcs_full_e2e() {
+    test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x8>();
+    test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x64>();
     test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2_128>();
     // test_orion_pcs_full_e2e_generics::<M31, M31Ext3, M31x16>()
 }
