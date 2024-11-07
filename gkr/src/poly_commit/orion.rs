@@ -1,15 +1,15 @@
 //! Orion polynomial commitment scheme prototype implementaiton.
 //! Includes implementation for Orion Expander-Code.
 
-use std::{cmp, iter::once, marker::PhantomData};
+use std::{cmp, iter, marker::PhantomData};
 
-use arith::{ExtensionField, Field, FieldSerde, FieldSerdeError, FieldSerdeResult, SimdField};
+use arith::{ExtensionField, Field, FieldSerde, FieldSerdeError, SimdField};
 use ark_std::log2;
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use rand::seq::index;
 use thiserror::Error;
 use transcript::Transcript;
-use tree::{Leaf, Tree, LEAF_BYTES, LEAF_HASH_BYTES};
+use tree::LEAF_HASH_BYTES;
 
 /******************************
  * PCS ERROR AND RESULT SETUP *
@@ -316,7 +316,6 @@ pub(crate) const fn cache_batch_size<F: Sized>() -> usize {
     CACHE_SIZE / size_of::<F>()
 }
 
-// NOTE we assume that the matrix has sides of length po2
 #[inline(always)]
 pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row_num: usize) {
     let col_num = mat.len() / row_num;
@@ -338,6 +337,14 @@ pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row
     mat.copy_from_slice(scratch);
 }
 
+#[inline]
+pub(crate) fn inner_product<F0, F1>(l: &[F0], r: &[F1], mul: impl Fn(&F0, &F1) -> F1) -> F1
+where
+    F1: std::iter::Sum,
+{
+    l.iter().zip(r.iter()).map(|(li, ri)| mul(li, ri)).sum()
+}
+
 /**********************************************************
  * IMPLEMENTATIONS FOR ORION POLYNOMIAL COMMITMENT SCHEME *
  **********************************************************/
@@ -353,16 +360,24 @@ pub struct OrionPCSImpl {
 
 #[derive(Clone)]
 pub struct OrionCommitmentWithData<F: Field + FieldSerde, PackF: SimdField<Scalar = F>> {
-    pub num_of_variables: usize,
-    pub interleaved_codewords: Vec<F>,
-
-    pub interleaved_alphabet_trees: Vec<Tree>,
-    pub commitment_tree: Tree,
+    pub interleaved_alphabet_trees: Vec<tree::Tree>,
+    pub commitment_tree: tree::Tree,
 
     pub _phantom: PhantomData<PackF>,
 }
 
 pub type OrionCommitment = tree::Node;
+
+impl<F, PackF> OrionCommitmentWithData<F, PackF>
+where
+    F: Field + FieldSerde,
+    PackF: SimdField<Scalar = F>,
+{
+    #[inline]
+    pub fn to_commitment(&self) -> OrionCommitment {
+        self.commitment_tree.root()
+    }
+}
 
 type OrionProximityCodeword<F> = Vec<F>;
 
@@ -370,7 +385,7 @@ pub struct OrionProof<F: Field + FieldSerde, ExtF: ExtensionField<BaseField = F>
     pub eval_row: Vec<ExtF>,
     pub proximity_rows: Vec<OrionProximityCodeword<ExtF>>,
 
-    pub query_openings: Vec<(tree::Path, tree::Tree)>,
+    pub query_openings: Vec<(tree::Path, (tree::Node, Vec<F>))>,
 }
 
 impl OrionPCSImpl {
@@ -480,54 +495,25 @@ impl OrionPCSImpl {
         transpose_in_place(&mut packed_interleaved_codewords, &mut scratch, packed_rows);
         drop(scratch);
 
-        // NOTE: unpack the packed codewords
-        let interleaved_codewords: Vec<F> = packed_interleaved_codewords
-            .iter()
-            .flat_map(|p| p.unpack())
-            .collect();
-
         // NOTE: commit the interleaved codeword
-        // make sure that there are power-of-two number of leaves
-        assert!((PackF::FIELD_SIZE * packed_rows / LEAF_BYTES).is_power_of_two());
+        // we just directly commit to the packed field elements to leaves
         let interleaved_alphabet_trees: Vec<_> = packed_interleaved_codewords
             .chunks(packed_rows)
-            .map(|packed_interleaved_alphabet| {
-                let serialized_alphabet: Vec<_> = packed_interleaved_alphabet
-                    .iter()
-                    .map(|&p| {
-                        let mut buffer = Vec::new();
-                        p.serialize_into(&mut buffer)?;
-                        Ok(buffer)
-                    })
-                    .collect::<OrionResult<Vec<_>>>()?
-                    .into_iter()
-                    .flatten()
-                    .collect();
-
-                let leaves = serialized_alphabet
-                    .chunks(LEAF_BYTES)
-                    .map(|chunk| Leaf::new(chunk.try_into().unwrap()))
-                    .collect();
-
-                Ok(Tree::new_with_leaves(leaves))
-            })
-            .collect::<OrionResult<_>>()?;
+            .map(tree::Tree::compact_new_with_packed_field_elems::<F, PackF>)
+            .collect();
 
         let column_size_to_po2 = interleaved_alphabet_trees.len().next_power_of_two();
-        let mut commitment_leaves = vec![Leaf::default(); column_size_to_po2];
+        let mut commitment_leaves = vec![tree::Leaf::default(); column_size_to_po2];
         interleaved_alphabet_trees
             .iter()
             .zip(commitment_leaves.iter_mut())
-            .for_each(|(tree, leaf): (&Tree, &mut Leaf)| {
+            .for_each(|(tree, leaf): (&tree::Tree, &mut tree::Leaf)| {
                 let root = tree.root();
                 leaf.data[..LEAF_HASH_BYTES].copy_from_slice(root.as_bytes());
             });
-        let commitment_tree = Tree::new_with_leaves(commitment_leaves);
+        let commitment_tree = tree::Tree::new_with_leaves(commitment_leaves);
 
         Ok(OrionCommitmentWithData {
-            num_of_variables: poly.get_num_vars(),
-            interleaved_codewords,
-
             interleaved_alphabet_trees,
             commitment_tree,
 
@@ -538,7 +524,7 @@ impl OrionPCSImpl {
     pub fn open<F, PackF, ExtF, T>(
         &self,
         poly: &MultiLinearPoly<F>,
-        #[allow(unused)] commitment_with_data: &OrionCommitmentWithData<F, PackF>,
+        commitment_with_data: &OrionCommitmentWithData<F, PackF>,
         point: &[ExtF],
         transcript: &mut T,
     ) -> OrionProof<F, ExtF>
@@ -568,6 +554,7 @@ impl OrionPCSImpl {
 
         // NOTE: draw random linear combination out
         // and compose proximity response(s) of tensor code IOP based PCS
+        let mul_ext_f = |i: &F, ei: &ExtF| ei.mul_by_base_field(i);
         let proximity_repetitions =
             self.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
         let proximity_rows: Vec<_> = (0..proximity_repetitions)
@@ -576,12 +563,7 @@ impl OrionPCSImpl {
                     transcript.generate_challenge_field_elements(row_num);
                 transposed_evaluations
                     .chunks(row_num)
-                    .map(|col| {
-                        col.iter()
-                            .zip(random_linear_combination.iter())
-                            .map(|(c, &li)| li.mul_by_base_field(c))
-                            .sum()
-                    })
+                    .map(|col| inner_product(col, &random_linear_combination, mul_ext_f))
                     .collect::<Vec<ExtF>>()
             })
             .collect();
@@ -594,11 +576,11 @@ impl OrionPCSImpl {
             .map(|qi| {
                 *qi %= self.code_len();
                 let path = commitment_with_data.commitment_tree.index_query(*qi);
+                let col_root = commitment_with_data.interleaved_alphabet_trees[*qi].root();
+                let col = commitment_with_data.interleaved_alphabet_trees[*qi]
+                    .get_field_elems_from_compact_leaves::<F, PackF>();
 
-                (
-                    path,
-                    commitment_with_data.interleaved_alphabet_trees[*qi].clone(),
-                )
+                (path, (col_root, col))
             })
             .collect();
 
@@ -646,75 +628,38 @@ impl OrionPCSImpl {
             *qi %= self.code_len();
         });
 
-        // NOTE: encode proximity responses and evaluation response
-        let proximity_response_codewords: Vec<_> = match proof
-            .proximity_rows
-            .iter()
-            .map(|r| self.code_instance.encode(r))
-            .collect::<OrionResult<_>>()
-        {
-            Ok(codewords) => codewords,
-            _ => return false,
-        };
-        let eval_response_codeword: OrionCodeword<ExtF> =
-            match self.code_instance.encode(&proof.eval_row) {
-                Ok(codeword) => codeword,
-                _ => return false,
-            };
+        // NOTE: check consistency in MT in the opening trees and against the commitment tree
+        let mt_consistency = query_points.iter().zip(proof.query_openings.iter()).all(
+            |(&qi, (path, (col_root, col)))| {
+                let recomputed_tree = tree::Tree::compact_new_with_field_elems::<F, PackF>(col);
 
-        // NOTE: againts all index challenges, check alphabets against proximity responses
-        // and evaluation response
+                *col_root == recomputed_tree.root()
+                    && qi == path.index
+                    && path.verify(commitment)
+                    && path.leaf.data[..LEAF_HASH_BYTES] == *col_root.as_bytes()
+            },
+        );
+        if !mt_consistency {
+            return false;
+        }
+
+        // NOTE: encode the proximity/evaluation responses,
+        // check againts all challenged indices by check alphabets against
+        // linear combined interleaved alphabet
         let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
-
+        let mul_ext_f = |i: &F, ei: &ExtF| ei.mul_by_base_field(i);
         random_linear_combinations
             .iter()
-            .zip(proximity_response_codewords.iter())
-            .chain(once((&eq_linear_combination, &eval_response_codeword)))
-            .all(|(rl, codeword)| {
-                query_points
-                    .iter()
-                    .zip(proof.query_openings.iter())
-                    .all(|(&qi, (path, tree))| {
-                        let bytes: Vec<_> = tree
-                            .leaves
-                            .iter()
-                            .flat_map(|l| l.data.iter().cloned())
-                            .collect();
-
-                        let deserialized_leaves = bytes
-                            .chunks(LEAF_BYTES)
-                            .map(|chunk| Leaf::new(chunk.try_into().unwrap()))
-                            .collect();
-
-                        let computed_tree = Tree::new_with_leaves(deserialized_leaves);
-                        if computed_tree.root() != tree.root() {
-                            return false;
-                        }
-
-                        let interleaved_alphabet: Vec<_> = match bytes
-                            .chunks(PackF::FIELD_SIZE / 8)
-                            .map(|byte_slice| {
-                                let pack = PackF::deserialize_from(byte_slice)?;
-                                Ok(pack.unpack())
-                            })
-                            .collect::<FieldSerdeResult<Vec<_>>>()
-                        {
-                            Ok(col) => col.into_iter().flatten().collect(),
-                            _ => return false,
-                        };
-
-                        let alphabet: ExtF = interleaved_alphabet
-                            .iter()
-                            .zip(rl.iter())
-                            .map(|(c, r)| r.mul_by_base_field(c))
-                            .sum();
-
+            .zip(proof.proximity_rows.iter())
+            .chain(iter::once((&eq_linear_combination, &proof.eval_row)))
+            .all(|(rl, msg)| match self.code_instance.encode(msg) {
+                Ok(codeword) => query_points.iter().zip(proof.query_openings.iter()).all(
+                    |(&qi, (_, (_, interleaved_alphabet)))| {
+                        let alphabet = inner_product(interleaved_alphabet, rl, mul_ext_f);
                         alphabet == codeword[qi]
-                            && path.verify(commitment)
-                            && qi == path.index
-                            && path.leaf.data[..LEAF_HASH_BYTES]
-                                == tree.root().as_bytes()[..LEAF_HASH_BYTES]
-                    })
+                    },
+                ),
+                _ => false,
             })
     }
 }

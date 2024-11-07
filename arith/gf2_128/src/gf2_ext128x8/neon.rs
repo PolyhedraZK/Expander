@@ -75,7 +75,7 @@ impl Field for NeonGF2_128x8 {
 
     const SIZE: usize = 16 * 8;
 
-    const FIELD_SIZE: usize = 128 * 8; // in bits
+    const FIELD_SIZE: usize = 128; // in bits
 
     const ZERO: Self = NeonGF2_128x8 {
         v: [unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) }; 8],

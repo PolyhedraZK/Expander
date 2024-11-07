@@ -1,10 +1,11 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
 
+use arith::{Field, FieldSerde, SimdField};
 use ark_std::{end_timer, log2, start_timer};
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
-use crate::{Leaf, Node, Path};
+use crate::{Leaf, Node, Path, LEAF_BYTES};
 
 /// Represents a Merkle tree structure.
 #[derive(Clone, Debug, PartialEq)]
@@ -60,6 +61,73 @@ impl Tree {
             nodes: [nodes.0, nodes.1].concat(),
             leaves,
         }
+    }
+
+    /// Create a tree with compact serialization of field elements as leaves,
+    /// by taking advantage of PackF
+    #[inline]
+    pub fn compact_new_with_field_elems<F, PackF>(field_elems: &[F]) -> Self
+    where
+        F: Field + FieldSerde,
+        PackF: SimdField<Scalar = F>,
+    {
+        let packed_elems: Vec<PackF> = field_elems
+            .chunks(PackF::PACK_SIZE)
+            .map(SimdField::pack)
+            .collect();
+
+        Self::compact_new_with_packed_field_elems(&packed_elems)
+    }
+
+    /// Create a tree with compact serialization of *packed* field elements as leaves.
+    #[inline]
+    pub fn compact_new_with_packed_field_elems<F, PackF>(field_elems: &[PackF]) -> Self
+    where
+        F: Field + FieldSerde,
+        PackF: SimdField<Scalar = F>,
+    {
+        let serialized_bytes: Vec<_> = field_elems
+            .iter()
+            .map(|&p| {
+                let mut buffer = Vec::new();
+                p.serialize_into(&mut buffer).unwrap();
+                buffer
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flatten()
+            .collect();
+
+        assert!((serialized_bytes.len() / LEAF_BYTES).is_power_of_two());
+
+        let leaves = serialized_bytes
+            .chunks(LEAF_BYTES)
+            .map(|chunk| Leaf::new(chunk.try_into().unwrap()))
+            .collect();
+
+        Tree::new_with_leaves(leaves)
+    }
+
+    /// Get field elements out of leaves with compact serialization.
+    #[inline]
+    pub fn get_field_elems_from_compact_leaves<F, PackF>(&self) -> Vec<F>
+    where
+        F: Field + FieldSerde,
+        PackF: SimdField<Scalar = F>,
+    {
+        let bytes: Vec<_> = self
+            .leaves
+            .iter()
+            .flat_map(|l| l.data.iter().cloned())
+            .collect();
+
+        bytes
+            .chunks(PackF::SIZE)
+            .flat_map(|byte_slice| {
+                let pack = PackF::deserialize_from(byte_slice).unwrap();
+                pack.unpack()
+            })
+            .collect()
     }
 
     /// Builds a tree with pre-hashed leaf nodes.

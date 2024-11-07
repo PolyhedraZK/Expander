@@ -42,7 +42,7 @@ impl Field for GF2x8 {
 
     const SIZE: usize = 1;
 
-    const FIELD_SIZE: usize = 8; // in bits
+    const FIELD_SIZE: usize = 1; // in bits
 
     const ZERO: Self = GF2x8 { v: 0 };
 

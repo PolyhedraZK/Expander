@@ -38,7 +38,7 @@ impl Field for GF2x64 {
 
     const SIZE: usize = 8;
 
-    const FIELD_SIZE: usize = 64;
+    const FIELD_SIZE: usize = 1;
 
     const ZERO: Self = GF2x64 { v: 0 };
 

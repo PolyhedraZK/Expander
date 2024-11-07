@@ -7,21 +7,17 @@ use gf2_128::GF2_128;
 use mersenne31::{M31Ext3, M31x16, M31};
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
-use tree::{Leaf, Tree};
+use tree::{Leaf, Tree, LEAF_HASH_BYTES};
 
-use crate::{transpose_in_place, OrionCode, OrionCodeParameter, ORION_PCS_SOUNDNESS_BITS};
+use crate::{
+    inner_product, transpose_in_place, OrionCode, OrionCodeParameter, ORION_PCS_SOUNDNESS_BITS,
+};
 
 use super::{OrionCommitmentWithData, OrionPCSImpl};
 
 fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<F> {
     mat.chunks(combination.len())
-        .map(|row_i| {
-            row_i
-                .iter()
-                .zip(combination.iter())
-                .map(|(&r_ij, &c_j)| r_ij * c_j)
-                .sum()
-        })
+        .map(|row_i| inner_product(row_i, combination, |a, b| *a * *b))
         .collect()
 }
 
@@ -123,12 +119,25 @@ impl OrionPCSImpl {
         transpose_in_place(&mut interleaved_codewords, &mut scratch, row_num);
         drop(scratch);
 
-        OrionCommitmentWithData {
-            num_of_variables: poly.get_num_vars(),
-            interleaved_codewords,
+        let interleaved_alphabet_trees: Vec<_> = interleaved_codewords
+            .chunks(row_num)
+            .map(Tree::compact_new_with_field_elems::<F, PackF>)
+            .collect();
 
-            interleaved_alphabet_trees: Vec::new(),
-            commitment_tree: Tree::new_with_leaves(vec![Leaf::default(), Leaf::default()]),
+        let column_size_to_po2 = interleaved_alphabet_trees.len().next_power_of_two();
+        let mut commitment_leaves = vec![Leaf::default(); column_size_to_po2];
+        interleaved_alphabet_trees
+            .iter()
+            .zip(commitment_leaves.iter_mut())
+            .for_each(|(tree, leaf): (&Tree, &mut Leaf)| {
+                let root = tree.root();
+                leaf.data[..LEAF_HASH_BYTES].copy_from_slice(root.as_bytes());
+            });
+        let commitment_tree = Tree::new_with_leaves(commitment_leaves);
+
+        OrionCommitmentWithData {
+            interleaved_alphabet_trees,
+            commitment_tree,
 
             _phantom: PhantomData,
         }
@@ -147,11 +156,7 @@ fn test_orion_commit_consistency_generic<F: Field + FieldSerde, PackF: SimdField
     let real_commit = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
     let dumb_commit = orion_pcs.dumb_commit::<F, PackF>(&random_poly);
 
-    assert_eq!(real_commit.num_of_variables, dumb_commit.num_of_variables);
-    assert_eq!(
-        real_commit.interleaved_codewords,
-        dumb_commit.interleaved_codewords
-    );
+    assert_eq!(real_commit.to_commitment(), dumb_commit.to_commitment());
 }
 
 #[test]
@@ -188,12 +193,11 @@ fn test_multilinear_poly_tensor_eval_generic<F: Field, ExtF: ExtensionField<Base
         .for_each(|p| random_poly_ext_half_evaluated.fix_top_variable(p));
 
     let eq_linear_combination = EqPolynomial::build_eq_x_r(&random_point[..vars_for_col]);
-    let actual_eval: ExtF = random_poly_ext_half_evaluated
-        .coeffs
-        .iter()
-        .zip(eq_linear_combination.iter())
-        .map(|(&c, &eq_c)| c * eq_c)
-        .sum();
+    let actual_eval: ExtF = inner_product(
+        &random_poly_ext_half_evaluated.coeffs,
+        &eq_linear_combination,
+        |a, b| *a * *b,
+    );
 
     assert_eq!(expected_eval, actual_eval)
 }
@@ -206,11 +210,12 @@ fn test_multilinear_poly_tensor_eval() {
     })
 }
 
-fn test_orion_pcs_open_generics<
+fn test_orion_pcs_open_generics<F, ExtF, PackF>()
+where
     F: Field + FieldSerde,
     ExtF: ExtensionField<BaseField = F>,
     PackF: SimdField<Scalar = F>,
->() {
+{
     let mut rng = test_rng();
     let num_of_vars = log2(EXAMPLE_ORION_CODE_PARAMETER.input_message_len) as usize * 2usize;
 
@@ -248,9 +253,10 @@ fn test_orion_pcs_open_generics<
     let eval_codeword = orion_pcs.code_instance.encode(&opening.eval_row).unwrap();
     let eq_linear_combination = EqPolynomial::build_eq_x_r(&random_point[vars_for_col..]);
     let interleaved_codeword_ext = commit_with_data
-        .interleaved_codewords
+        .interleaved_alphabet_trees
         .iter()
-        .cloned()
+        .map(|t| t.get_field_elems_from_compact_leaves::<F, PackF>())
+        .flatten()
         .map(ExtF::from)
         .collect::<Vec<_>>();
 
@@ -282,11 +288,12 @@ fn test_orion_pcs_open() {
     test_orion_pcs_open_generics::<M31, M31Ext3, M31x16>()
 }
 
-fn test_orion_pcs_full_e2e_generics<
+fn test_orion_pcs_full_e2e_generics<F, ExtF, PackF>()
+where
     F: Field + FieldSerde,
     ExtF: ExtensionField<BaseField = F>,
     PackF: SimdField<Scalar = F>,
->() {
+{
     let mut rng = test_rng();
     let num_of_vars = log2(EXAMPLE_ORION_CODE_PARAMETER.input_message_len) as usize * 2usize;
 
@@ -315,7 +322,7 @@ fn test_orion_pcs_full_e2e_generics<
 
     assert!(
         orion_pcs.verify::<F, PackF, ExtF, BytesHashTranscript<ExtF, Keccak256hasher>>(
-            &commit_with_data.commitment_tree.root(),
+            &commit_with_data.to_commitment(),
             &random_point,
             &expected_eval,
             &opening,
