@@ -385,7 +385,7 @@ pub struct OrionProof<F: Field + FieldSerde, ExtF: ExtensionField<BaseField = F>
     pub eval_row: Vec<ExtF>,
     pub proximity_rows: Vec<OrionProximityCodeword<ExtF>>,
 
-    pub query_openings: Vec<(tree::Path, (tree::Node, Vec<F>))>,
+    pub query_openings: Vec<(tree::Path, Vec<F>)>,
 }
 
 impl OrionPCSImpl {
@@ -576,11 +576,10 @@ impl OrionPCSImpl {
             .map(|qi| {
                 *qi %= self.code_len();
                 let path = commitment_with_data.commitment_tree.index_query(*qi);
-                let col_root = commitment_with_data.interleaved_alphabet_trees[*qi].root();
                 let col = commitment_with_data.interleaved_alphabet_trees[*qi]
                     .get_field_elems_from_compact_leaves::<F, PackF>();
 
-                (path, (col_root, col))
+                (path, col)
             })
             .collect();
 
@@ -629,16 +628,17 @@ impl OrionPCSImpl {
         });
 
         // NOTE: check consistency in MT in the opening trees and against the commitment tree
-        let mt_consistency = query_points.iter().zip(proof.query_openings.iter()).all(
-            |(&qi, (path, (col_root, col)))| {
-                let recomputed_tree = tree::Tree::compact_new_with_field_elems::<F, PackF>(col);
+        let mt_consistency =
+            query_points
+                .iter()
+                .zip(proof.query_openings.iter())
+                .all(|(&qi, (path, col))| {
+                    let recomputed_tree = tree::Tree::compact_new_with_field_elems::<F, PackF>(col);
 
-                *col_root == recomputed_tree.root()
-                    && qi == path.index
-                    && path.verify(commitment)
-                    && path.leaf.data[..LEAF_HASH_BYTES] == *col_root.as_bytes()
-            },
-        );
+                    qi == path.index
+                        && path.verify(commitment)
+                        && path.leaf.data[..LEAF_HASH_BYTES] == *recomputed_tree.root().as_bytes()
+                });
         if !mt_consistency {
             return false;
         }
@@ -654,7 +654,7 @@ impl OrionPCSImpl {
             .chain(iter::once((&eq_linear_combination, &proof.eval_row)))
             .all(|(rl, msg)| match self.code_instance.encode(msg) {
                 Ok(codeword) => query_points.iter().zip(proof.query_openings.iter()).all(
-                    |(&qi, (_, (_, interleaved_alphabet)))| {
+                    |(&qi, (_, interleaved_alphabet))| {
                         let alphabet = inner_product(interleaved_alphabet, rl, mul_ext_f);
                         alphabet == codeword[qi]
                     },
