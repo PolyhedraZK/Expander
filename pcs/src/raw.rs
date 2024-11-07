@@ -28,12 +28,12 @@ impl<F: Field + FieldSerde> PCS<F> for RawML {
 
     type Opening = EmptyType;
 
-    fn gen_srs_for_testing(&self, _rng: impl RngCore, _params: &Self::Params) -> Self::SRS {
+    fn gen_srs_for_testing(&mut self, _rng: impl RngCore, _params: &Self::Params) -> Self::SRS {
         Self::SRS::default()
     }
 
     fn commit(
-        &self,
+        &mut self,
         params: &Self::Params,
         _proving_key: &Self::PKey,
         poly: &Self::Poly,
@@ -43,7 +43,7 @@ impl<F: Field + FieldSerde> PCS<F> for RawML {
     }
 
     fn open(
-        &self,
+        &mut self,
         params: &Self::Params,
         _proving_key: &Self::PKey,
         poly: &Self::Poly,
@@ -54,7 +54,7 @@ impl<F: Field + FieldSerde> PCS<F> for RawML {
     }
 
     fn verify(
-        &self,
+        &mut self,
         params: &Self::Params,
         _verifying_key: &Self::VKey,
         commitment: &Self::Commitment,

@@ -8,7 +8,7 @@ use rand::thread_rng;
 #[test]
 fn test_raw() {
     let params = RawMLParams { n_vars: 8 };
-    let raw_ml = RawML {};
+    let mut raw_ml = RawML {};
     let mut rng = thread_rng();
     let poly = MultiLinearPoly::random(params.n_vars, &mut rng);
     let xs = (0..100)
@@ -19,5 +19,5 @@ fn test_raw() {
         })
         .collect::<Vec<Vec<BN254Fr>>>();
 
-    common::test_pcs::<BN254Fr, RawML>(&raw_ml, &params, &poly, &xs);
+    common::test_pcs::<BN254Fr, RawML>(&mut raw_ml, &params, &poly, &xs);
 }

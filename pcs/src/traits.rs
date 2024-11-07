@@ -13,17 +13,17 @@ pub trait PCS<F: Field + FieldSerde> {
     type Commitment: Clone + Debug + FieldSerde;
     type Opening: Clone + Debug + FieldSerde;
 
-    fn gen_srs_for_testing(&self, rng: impl RngCore, params: &Self::Params) -> Self::SRS;
+    fn gen_srs_for_testing(&mut self, rng: impl RngCore, params: &Self::Params) -> Self::SRS;
 
     fn commit(
-        &self,
+        &mut self,
         params: &Self::Params,
         proving_key: &Self::PKey,
         poly: &Self::Poly,
     ) -> Self::Commitment;
 
     fn open(
-        &self,
+        &mut self,
         params: &Self::Params,
         proving_key: &Self::PKey,
         poly: &Self::Poly,
@@ -31,7 +31,7 @@ pub trait PCS<F: Field + FieldSerde> {
     ) -> (F, Self::Opening);
 
     fn verify(
-        &self,
+        &mut self,
         params: &Self::Params,
         verifying_key: &Self::VKey,
         commitment: &Self::Commitment,

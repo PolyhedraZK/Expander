@@ -3,7 +3,7 @@ use pcs::PCS;
 use rand::thread_rng;
 
 pub fn test_pcs<F: Field + FieldSerde, P: PCS<F>>(
-    pcs: &P,
+    pcs: &mut P,
     params: &P::Params,
     poly: &P::Poly,
     xs: &[P::EvalPoint],
