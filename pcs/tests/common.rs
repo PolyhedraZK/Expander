@@ -17,6 +17,13 @@ pub fn test_pcs<F: Field + FieldSerde, P: PCS<F>>(
 
     for x in xs {
         let (v, opening) = pcs.open(params, &proving_key, poly, x);
-        assert!(pcs.verify(params, &verification_key, &commitment, x, v, &opening));
+        assert!(P::verify(
+            params,
+            &verification_key,
+            &commitment,
+            x,
+            v,
+            &opening
+        ));
     }
 }

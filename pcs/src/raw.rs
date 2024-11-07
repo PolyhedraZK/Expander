@@ -54,7 +54,6 @@ impl<F: Field + FieldSerde> PCS<F> for RawML {
     }
 
     fn verify(
-        &mut self,
         params: &Self::Params,
         _verifying_key: &Self::VKey,
         commitment: &Self::Commitment,

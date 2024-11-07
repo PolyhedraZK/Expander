@@ -31,7 +31,6 @@ pub trait PCS<F: Field + FieldSerde> {
     ) -> (F, Self::Opening);
 
     fn verify(
-        &mut self,
         params: &Self::Params,
         verifying_key: &Self::VKey,
         commitment: &Self::Commitment,
