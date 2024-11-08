@@ -1,6 +1,7 @@
 use std::{fmt::Debug, marker::PhantomData};
 
 use arith::{Field, FieldSerde};
+use ark_std::{rand::RngCore, test_rng};
 
 use crate::{
     fiat_shamir_hash::{FiatShamirBytesHash, FiatShamirFieldHash},
@@ -111,6 +112,10 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashT
     fn generate_challenge_field_element(&mut self) -> F {
         self.hash_to_digest();
         assert!(F::SIZE <= H::DIGEST_SIZE);
+        // let mut data = [0u8; 32];
+        // data[0] = self.digest[0];
+        // // data[0] = 2;
+        // F::from_uniform_bytes(&data)
         F::from_uniform_bytes(&self.digest.clone().try_into().unwrap())
     }
 

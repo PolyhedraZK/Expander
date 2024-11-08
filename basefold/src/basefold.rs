@@ -76,6 +76,8 @@ where
             polynomial.get_num_vars()
         ));
 
+        println!("commitment {}", commitment.tree);
+
         let shift_z = EqPolynomial::build_eq_x_r(
             &opening_point, // .iter()
                             // .map(|&x| F::from(x))
@@ -150,7 +152,7 @@ where
         let iopp_challenges = prover_param.borrow().iopp_challenges(num_vars, transcript);
         let mut first_round_queries = vec![];
 
-        let _rest_iopp_queries = (0..prover_param.borrow().verifier_queries)
+        let rest_iopp_queries = (0..prover_param.borrow().verifier_queries)
             .zip(iopp_challenges)
             .map(|(_, mut point)| {
                 let mut iopp_round_query = Vec::with_capacity(iopp_oracles.len() + 1);
@@ -203,7 +205,8 @@ where
             iopp_oracles: iopp_oracles.iter().map(|t| t.root()).collect(),
             iopp_last_oracle_message,
             first_iopp_query: first_round_queries,
-            randomness: rs, // iopp_queries: rest_iopp_queries,
+            randomness: rs,
+            iopp_queries: rest_iopp_queries,
         }
     }
 
@@ -217,6 +220,7 @@ where
     ) -> bool {
         let num_vars = opening_point.len();
 
+        // smh -- endianess hell strikes again
         let mut opening_point = opening_point.clone();
         opening_point.reverse();
 
@@ -227,7 +231,7 @@ where
         // NOTE: check sumcheck statement:
         // f(z) = \sum_{r \in {0, 1}^n} (f(r) \eq(r, z)) can be reduced to
         // f_r_eq_zr = f(rs) \eq(rs, z)
-        let (f_r_eq_zr, mut rs) =
+        let (f_r_eq_zr, rs) =
             proof
                 .sumcheck_transcript
                 .verify(*value, num_vars, MERGE_POLY_DEG, transcript);
@@ -266,18 +270,20 @@ where
         let commitment_root = commitment.tree.root();
         let oracles = std::iter::once(&commitment_root)
             .chain(proof.iopp_oracles.iter())
-            .take(num_vars);
+            .cloned()
+            .take(num_vars)
+            .collect::<Vec<_>>();
 
         let points = verifier_param.iopp_challenges(num_vars, transcript);
 
-        // if !proof
-        //     .iopp_queries
-        //     .par_iter()
-        //     .enumerate()
-        //     .all(|(i, iopp_query)| iopp_query.verify(setup, points[i], oracles.clone(), &rs))
-        // {
-        //     return Err(ProofVerifyError::InternalError);
-        // }
+        if !proof
+            .iopp_queries
+            .iter()
+            .enumerate()
+            .all(|(i, iopp_query)| iopp_query.verify(verifier_param, points[i], &oracles, &rs))
+        {
+            return false;
+        }
 
         true
     }
