@@ -17,7 +17,6 @@ members = [
 ]
 resolver = "2"
 
-
 [workspace.dependencies]
 ark-std = "0.4"
 ark-bn254 = "0.4.0"

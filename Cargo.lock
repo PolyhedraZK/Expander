@@ -1536,8 +1536,15 @@ name = "pcs"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "ark-std",
+ "gf2",
+ "gf2_128",
+ "mersenne31",
  "polynomials",
  "rand",
+ "thiserror",
+ "transcript",
+ "tree",
 ]
 
 [[package]]
