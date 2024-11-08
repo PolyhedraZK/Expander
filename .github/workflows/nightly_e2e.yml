@@ -23,6 +23,9 @@ jobs:
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
     - uses: Swatinem/rust-cache@v2
+      with:
+        # The prefix cache key, this can be changed to start a new cache manually.
+        prefix-key: "mpi-v5.0.5" # update me if brew formula changes to a new version
     
     - name: Set up Go
       uses: actions/setup-go@v2
