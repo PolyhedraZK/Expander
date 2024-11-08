@@ -5,7 +5,7 @@ use arith::{Field, FieldSerde, SimdField};
 use ark_std::{end_timer, log2, start_timer};
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
-use crate::{Leaf, Node, Path, LEAF_BYTES};
+use crate::{Leaf, Node, Path, RangePath, LEAF_BYTES};
 
 /// Represents a Merkle tree structure.
 #[derive(Clone, Debug, PartialEq)]
@@ -206,6 +206,11 @@ impl Tree {
         self.leaves.len()
     }
 
+    #[inline]
+    pub fn height(&self) -> usize {
+        log2(self.leaves.len() + 1) as usize
+    }
+
     /// Generates a membership proof for the given index.
     #[inline]
     pub fn gen_proof(&self, index: usize, tree_height: usize) -> Path {
@@ -237,11 +242,50 @@ impl Tree {
         }
     }
 
+    /// Generates a range membership proof for given index range [left, right].
+    #[inline]
+    pub fn gen_range_proof(&self, left: usize, right: usize, tree_height: usize) -> RangePath {
+        assert!(right > left);
+        assert!((right - left + 1).is_power_of_two());
+        assert!(left % (right - left + 1) == 0);
+
+        // Leaves
+        let range_leaves = self.leaves[left..right + 1].to_vec();
+        let left_index_in_tree = convert_index_to_last_level(left, tree_height);
+        let right_index_in_tree = convert_index_to_last_level(right, tree_height);
+
+        // Common ancestor
+        let mut current_node = common_ancestor(left_index_in_tree, right_index_in_tree);
+
+        // Path node
+        let mut path_nodes: Vec<Node> = Vec::new();
+        while current_node != 0 {
+            let sibling_node = sibling_index(current_node).unwrap();
+            path_nodes.push(self.nodes[sibling_node]);
+            current_node = parent_index(current_node).unwrap();
+        }
+        path_nodes.reverse();
+
+        RangePath {
+            left,
+            right,
+            path_nodes,
+            leaves: range_leaves,
+        }
+    }
+
     #[inline]
     pub fn index_query(&self, index: usize) -> Path {
         let tree_height = log2(self.leaves.len() + 1) as usize;
 
         self.gen_proof(index, tree_height)
+    }
+
+    #[inline]
+    pub fn range_query(&self, left: usize, right: usize) -> RangePath {
+        let tree_height = log2(self.leaves.len() + 1) as usize;
+
+        self.gen_range_proof(left, right, tree_height)
     }
 
     // pub fn batch_tree_for_recursive_oracles(leaves_vec: Vec<Vec<F>>) -> Vec<Self> {
@@ -267,7 +311,7 @@ fn sibling_index(index: usize) -> Option<usize> {
 
 /// Returns the index of the parent, given an index.
 #[inline]
-fn parent_index(index: usize) -> Option<usize> {
+pub(crate) fn parent_index(index: usize) -> Option<usize> {
     if index > 0 {
         Some((index - 1) >> 1)
     } else {
@@ -289,12 +333,22 @@ fn right_child_index(index: usize) -> usize {
 
 /// Converts a leaf index to its position in the last level of the tree.
 #[inline]
-fn convert_index_to_last_level(index: usize, tree_height: usize) -> usize {
+pub(crate) fn convert_index_to_last_level(index: usize, tree_height: usize) -> usize {
     index + (1 << (tree_height - 1)) - 1
+}
+
+#[inline]
+pub(crate) fn common_ancestor(left: usize, right: usize) -> usize {
+    let (mut current_left, mut current_right) = (left, right);
+    while current_left != current_right {
+        current_left = parent_index(current_left).unwrap();
+        current_right = parent_index(current_right).unwrap();
+    }
+    current_left
 }
 
 /// Returns true if the given index represents a left child.
 #[inline]
-fn is_left_child(index: usize) -> bool {
+pub(crate) fn is_left_child(index: usize) -> bool {
     index % 2 == 1
 }

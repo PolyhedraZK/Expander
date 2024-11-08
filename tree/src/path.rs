@@ -1,9 +1,12 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
 
+use arith::{Field, FieldSerde, SimdField};
 use ark_std::{end_timer, start_timer};
 
-use crate::{Leaf, Node};
+use crate::{
+    common_ancestor, convert_index_to_last_level, is_left_child, parent_index, Leaf, Node, Tree,
+};
 
 /// Represents a path in the Merkle tree, used for proving membership.
 #[derive(Clone, Debug, PartialEq)]
@@ -81,5 +84,62 @@ impl Path {
     #[inline]
     pub fn leaf(&self) -> &Leaf {
         &self.leaf
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct RangePath {
+    pub leaves: Vec<Leaf>,
+    pub(crate) path_nodes: Vec<Node>,
+    pub left: usize,
+    pub right: usize,
+}
+
+impl RangePath {
+    #[inline]
+    pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
+    where
+        F: Field + FieldSerde,
+        PackF: SimdField<Scalar = F>,
+    {
+        let bytes: Vec<_> = self
+            .leaves
+            .iter()
+            .flat_map(|l| l.data.iter().cloned())
+            .collect();
+
+        bytes
+            .chunks(PackF::SIZE)
+            .flat_map(|byte_slice| {
+                let pack = PackF::deserialize_from(byte_slice).unwrap();
+                pack.unpack()
+            })
+            .collect()
+    }
+
+    #[inline]
+    pub fn verify(&self, root: &Node) -> bool {
+        let sub_tree = Tree::new_with_leaves(self.leaves.clone());
+
+        let tree_height = sub_tree.height() + self.path_nodes.len();
+
+        let left_index_in_tree = convert_index_to_last_level(self.left, tree_height);
+        let right_index_in_tree = convert_index_to_last_level(self.right, tree_height);
+
+        let mut current_node_index = common_ancestor(left_index_in_tree, right_index_in_tree);
+
+        let mut current_node = sub_tree.root();
+
+        self.path_nodes.iter().rev().for_each(|node| {
+            if is_left_child(current_node_index) {
+                current_node = Node::node_hash(&current_node, node)
+            } else {
+                current_node = Node::node_hash(node, &current_node)
+            }
+
+            current_node_index = parent_index(current_node_index).unwrap();
+        });
+
+        current_node == *root
     }
 }

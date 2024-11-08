@@ -20,7 +20,7 @@ impl Display for Node {
 
 impl Node {
     /// Creates a new Node with the given data.
-    pub fn new(data: [u8; 32]) -> Self {
+    pub fn new(data: [u8; LEAF_HASH_BYTES]) -> Self {
         Self { data }
     }
 

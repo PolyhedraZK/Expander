@@ -7,7 +7,6 @@ use gf2_128::GF2_128;
 use mersenne31::{M31Ext3, M31x16, M31};
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
-use tree::{Leaf, Tree, LEAF_HASH_BYTES};
 
 use crate::{
     inner_product, transpose_in_place, OrionCode, OrionCodeParameter, ORION_PCS_SOUNDNESS_BITS,
@@ -119,26 +118,11 @@ impl OrionPCSImpl {
         transpose_in_place(&mut interleaved_codewords, &mut scratch, row_num);
         drop(scratch);
 
-        let interleaved_alphabet_trees: Vec<_> = interleaved_codewords
-            .chunks(row_num)
-            .map(Tree::compact_new_with_field_elems::<F, PackF>)
-            .collect();
-
-        let column_size_to_po2 = interleaved_alphabet_trees.len().next_power_of_two();
-        let mut commitment_leaves = vec![Leaf::default(); column_size_to_po2];
-        interleaved_alphabet_trees
-            .iter()
-            .zip(commitment_leaves.iter_mut())
-            .for_each(|(tree, leaf): (&Tree, &mut Leaf)| {
-                let root = tree.root();
-                leaf.data[..LEAF_HASH_BYTES].copy_from_slice(root.as_bytes());
-            });
-        let commitment_tree = Tree::new_with_leaves(commitment_leaves);
+        let interleaved_alphabet_tree =
+            tree::Tree::compact_new_with_field_elems::<F, PackF>(&interleaved_codewords);
 
         OrionCommitmentWithData {
-            interleaved_alphabet_trees,
-            commitment_tree,
-
+            interleaved_alphabet_tree,
             _phantom: PhantomData,
         }
     }
@@ -259,11 +243,10 @@ where
     let eval_codeword = orion_pcs.code_instance.encode(&opening.eval_row).unwrap();
     let eq_linear_combination = EqPolynomial::build_eq_x_r(&random_point[vars_for_col..]);
     let interleaved_codeword_ext = commit_with_data
-        .interleaved_alphabet_trees
+        .interleaved_alphabet_tree
+        .get_field_elems_from_compact_leaves::<F, PackF>()
         .iter()
-        .map(|t| t.get_field_elems_from_compact_leaves::<F, PackF>())
-        .flatten()
-        .map(EvalF::from)
+        .map(|&f| EvalF::from(f))
         .collect::<Vec<_>>();
 
     let eq_combined_codeword =
@@ -348,5 +331,6 @@ fn test_orion_pcs_full_e2e() {
     test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x8>();
     test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x64>();
     test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2_128>();
+    test_orion_pcs_full_e2e_generics::<M31, M31, M31x16>();
     test_orion_pcs_full_e2e_generics::<M31, M31Ext3, M31x16>();
 }

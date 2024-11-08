@@ -4,12 +4,11 @@
 use std::{cmp, iter, marker::PhantomData, ops::Mul};
 
 use arith::{Field, FieldSerde, FieldSerdeError, SimdField};
-use ark_std::log2;
+use ark_std::{iterable::Iterable, log2};
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use rand::seq::index;
 use thiserror::Error;
 use transcript::Transcript;
-use tree::LEAF_HASH_BYTES;
 
 /******************************
  * PCS ERROR AND RESULT SETUP *
@@ -360,8 +359,7 @@ pub struct OrionPCSImpl {
 
 #[derive(Clone)]
 pub struct OrionCommitmentWithData<F: Field + FieldSerde, PackF: SimdField<Scalar = F>> {
-    pub interleaved_alphabet_trees: Vec<tree::Tree>,
-    pub commitment_tree: tree::Tree,
+    pub interleaved_alphabet_tree: tree::Tree,
 
     pub _phantom: PhantomData<PackF>,
 }
@@ -375,17 +373,17 @@ where
 {
     #[inline]
     pub fn to_commitment(&self) -> OrionCommitment {
-        self.commitment_tree.root()
+        self.interleaved_alphabet_tree.root()
     }
 }
 
 type OrionProximityCodeword<F> = Vec<F>;
 
-pub struct OrionProof<F: Field + FieldSerde, EvalF: Field + FieldSerde> {
+pub struct OrionProof<EvalF: Field + FieldSerde> {
     pub eval_row: Vec<EvalF>,
     pub proximity_rows: Vec<OrionProximityCodeword<EvalF>>,
 
-    pub query_openings: Vec<(tree::Path, Vec<F>)>,
+    pub query_openings: Vec<tree::RangePath>,
 }
 
 impl OrionPCSImpl {
@@ -497,25 +495,12 @@ impl OrionPCSImpl {
 
         // NOTE: commit the interleaved codeword
         // we just directly commit to the packed field elements to leaves
-        let interleaved_alphabet_trees: Vec<_> = packed_interleaved_codewords
-            .chunks(packed_rows)
-            .map(tree::Tree::compact_new_with_packed_field_elems::<F, PackF>)
-            .collect();
-
-        let column_size_to_po2 = interleaved_alphabet_trees.len().next_power_of_two();
-        let mut commitment_leaves = vec![tree::Leaf::default(); column_size_to_po2];
-        interleaved_alphabet_trees
-            .iter()
-            .zip(commitment_leaves.iter_mut())
-            .for_each(|(tree, leaf): (&tree::Tree, &mut tree::Leaf)| {
-                let root = tree.root();
-                leaf.data[..LEAF_HASH_BYTES].copy_from_slice(root.as_bytes());
-            });
-        let commitment_tree = tree::Tree::new_with_leaves(commitment_leaves);
+        let interleaved_alphabet_tree = tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(
+            &packed_interleaved_codewords,
+        );
 
         Ok(OrionCommitmentWithData {
-            interleaved_alphabet_trees,
-            commitment_tree,
+            interleaved_alphabet_tree,
 
             _phantom: PhantomData,
         })
@@ -527,7 +512,7 @@ impl OrionPCSImpl {
         commitment_with_data: &OrionCommitmentWithData<F, PackF>,
         point: &[EvalF],
         transcript: &mut T,
-    ) -> OrionProof<F, EvalF>
+    ) -> OrionProof<EvalF>
     where
         F: Field + FieldSerde,
         PackF: SimdField<Scalar = F>,
@@ -569,17 +554,19 @@ impl OrionPCSImpl {
             .collect();
 
         // NOTE: MT opening for point queries
+        let leaf_range = row_num * F::FIELD_SIZE / (tree::LEAF_BYTES * 8);
         let query_num = self.query_complexity(ORION_PCS_SOUNDNESS_BITS);
         let mut query_points = transcript.generate_challenge_index_vector(query_num);
         let query_openings = query_points
             .iter_mut()
             .map(|qi| {
                 *qi %= self.code_len();
-                let path = commitment_with_data.commitment_tree.index_query(*qi);
-                let col = commitment_with_data.interleaved_alphabet_trees[*qi]
-                    .get_field_elems_from_compact_leaves::<F, PackF>();
+                let left = *qi * leaf_range;
+                let right = left + leaf_range - 1;
 
-                (path, col)
+                commitment_with_data
+                    .interleaved_alphabet_tree
+                    .range_query(left, right)
             })
             .collect();
 
@@ -595,7 +582,7 @@ impl OrionPCSImpl {
         commitment: &OrionCommitment,
         point: &[EvalF],
         evaluation: &EvalF,
-        proof: &OrionProof<F, EvalF>,
+        proof: &OrionProof<EvalF>,
         transcript: &mut T,
     ) -> bool
     where
@@ -628,16 +615,13 @@ impl OrionPCSImpl {
         });
 
         // NOTE: check consistency in MT in the opening trees and against the commitment tree
+        let leaf_range = row_num * F::FIELD_SIZE / (tree::LEAF_BYTES * 8);
         let mt_consistency =
             query_points
                 .iter()
                 .zip(proof.query_openings.iter())
-                .all(|(&qi, (path, col))| {
-                    let recomputed_tree = tree::Tree::compact_new_with_field_elems::<F, PackF>(col);
-
-                    qi == path.index
-                        && path.verify(commitment)
-                        && path.leaf.data[..LEAF_HASH_BYTES] == *recomputed_tree.root().as_bytes()
+                .all(|(&qi, range_path)| {
+                    range_path.verify(commitment) && qi == range_path.left / leaf_range
                 });
         if !mt_consistency {
             return false;
@@ -653,12 +637,16 @@ impl OrionPCSImpl {
             .zip(proof.proximity_rows.iter())
             .chain(iter::once((&eq_linear_combination, &proof.eval_row)))
             .all(|(rl, msg)| match self.code_instance.encode(msg) {
-                Ok(codeword) => query_points.iter().zip(proof.query_openings.iter()).all(
-                    |(&qi, (_, interleaved_alphabet))| {
-                        let alphabet = inner_product(interleaved_alphabet, rl, mul_ext_f);
-                        alphabet == codeword[qi]
-                    },
-                ),
+                Ok(codeword) => {
+                    query_points
+                        .iter()
+                        .zip(proof.query_openings.iter())
+                        .all(|(&qi, range_path)| {
+                            let interleaved_alphabet = range_path.unpack_field_elems::<F, PackF>();
+                            let alphabet = inner_product(&interleaved_alphabet, rl, mul_ext_f);
+                            alphabet == codeword[qi]
+                        })
+                }
                 _ => false,
             })
     }
