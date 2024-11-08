@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{EmptyType, PCS};
 use arith::{Field, FieldSerde};
 use polynomials::MultiLinearPoly;
@@ -9,14 +11,18 @@ pub struct RawMLParams {
 }
 
 // Raw commitment for multi-linear polynomials
-pub struct RawML {}
+pub struct RawML<F: Field + FieldSerde> {
+    pub _phantom: PhantomData<F>,
+}
 
-impl<F: Field + FieldSerde> PCS<F> for RawML {
+impl<F: Field + FieldSerde> PCS for RawML<F> {
     type Params = RawMLParams;
 
     type Poly = MultiLinearPoly<F>;
 
     type EvalPoint = Vec<F>;
+
+    type Eval = F;
 
     type SRS = EmptyType;
 
@@ -48,7 +54,7 @@ impl<F: Field + FieldSerde> PCS<F> for RawML {
         _proving_key: &Self::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-    ) -> (F, Self::Opening) {
+    ) -> (Self::Eval, Self::Opening) {
         assert!(1 << params.n_vars == poly.coeffs.len());
         (poly.evaluate_jolt(x), Self::Opening::default())
     }
@@ -58,7 +64,7 @@ impl<F: Field + FieldSerde> PCS<F> for RawML {
         _verifying_key: &Self::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
-        v: F,
+        v: Self::Eval,
         _opening: &Self::Opening,
     ) -> bool {
         assert!(1 << params.n_vars == commitment.len());

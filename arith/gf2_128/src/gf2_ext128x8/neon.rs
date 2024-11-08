@@ -390,6 +390,15 @@ impl From<GF2x8> for NeonGF2_128x8 {
     }
 }
 
+impl Mul<GF2x8> for NeonGF2_128x8 {
+    type Output = NeonGF2_128x8;
+
+    #[inline]
+    fn mul(self, rhs: GF2x8) -> Self::Output {
+        self.mul_by_base_field(&rhs)
+    }
+}
+
 impl Mul<GF2> for NeonGF2_128x8 {
     type Output = NeonGF2_128x8;
 

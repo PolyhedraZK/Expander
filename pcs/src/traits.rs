@@ -1,11 +1,12 @@
-use arith::{Field, FieldSerde};
+use arith::FieldSerde;
 use rand::RngCore;
 use std::fmt::Debug;
 
-pub trait PCS<F: Field + FieldSerde> {
+pub trait PCS {
     type Params: Clone + Debug;
     type Poly: Clone + Debug;
     type EvalPoint: Clone + Debug;
+    type Eval: Copy + Clone + Debug;
 
     type SRS: Clone + Debug + FieldSerde;
     type PKey: Clone + Debug + From<Self::SRS> + FieldSerde;
@@ -28,19 +29,19 @@ pub trait PCS<F: Field + FieldSerde> {
         proving_key: &Self::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-    ) -> (F, Self::Opening);
+    ) -> (Self::Eval, Self::Opening);
 
     fn verify(
         params: &Self::Params,
         verifying_key: &Self::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
-        v: F,
+        v: Self::Eval,
         opening: &Self::Opening,
     ) -> bool;
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct EmptyType {}
 
 impl FieldSerde for EmptyType {

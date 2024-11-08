@@ -712,6 +712,15 @@ impl Mul<GF2> for AVX512GF2_128x8 {
     }
 }
 
+impl Mul<GF2x8> for AVX512GF2_128x8 {
+    type Output = AVX512GF2_128x8;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2x8) -> Self::Output {
+        self.mul_by_base_field(&rhs)
+    }
+}
+
 impl Add<GF2> for AVX512GF2_128x8 {
     type Output = AVX512GF2_128x8;
     #[inline(always)]

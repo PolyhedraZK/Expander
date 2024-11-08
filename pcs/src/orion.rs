@@ -1,9 +1,9 @@
 //! Orion polynomial commitment scheme prototype implementaiton.
 //! Includes implementation for Orion Expander-Code.
 
-use std::{cmp, iter, marker::PhantomData};
+use std::{cmp, iter, marker::PhantomData, ops::Mul};
 
-use arith::{ExtensionField, Field, FieldSerde, FieldSerdeError, SimdField};
+use arith::{Field, FieldSerde, FieldSerdeError, SimdField};
 use ark_std::log2;
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use rand::seq::index;
@@ -381,9 +381,9 @@ where
 
 type OrionProximityCodeword<F> = Vec<F>;
 
-pub struct OrionProof<F: Field + FieldSerde, ExtF: ExtensionField<BaseField = F>> {
-    pub eval_row: Vec<ExtF>,
-    pub proximity_rows: Vec<OrionProximityCodeword<ExtF>>,
+pub struct OrionProof<F: Field + FieldSerde, EvalF: Field + FieldSerde> {
+    pub eval_row: Vec<EvalF>,
+    pub proximity_rows: Vec<OrionProximityCodeword<EvalF>>,
 
     pub query_openings: Vec<(tree::Path, Vec<F>)>,
 }
@@ -521,25 +521,25 @@ impl OrionPCSImpl {
         })
     }
 
-    pub fn open<F, PackF, ExtF, T>(
+    pub fn open<F, PackF, EvalF, T>(
         &self,
         poly: &MultiLinearPoly<F>,
         commitment_with_data: &OrionCommitmentWithData<F, PackF>,
-        point: &[ExtF],
+        point: &[EvalF],
         transcript: &mut T,
-    ) -> OrionProof<F, ExtF>
+    ) -> OrionProof<F, EvalF>
     where
         F: Field + FieldSerde,
         PackF: SimdField<Scalar = F>,
-        ExtF: ExtensionField<BaseField = F>,
-        T: Transcript<ExtF>,
+        EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+        T: Transcript<EvalF>,
     {
         let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
         // NOTE: working on evaluation response of tensor code IOP based PCS
         let mut poly_ext_field =
-            MultiLinearPoly::new(poly.coeffs.iter().cloned().map(ExtF::from).collect());
+            MultiLinearPoly::new(poly.coeffs.iter().cloned().map(EvalF::from).collect());
         point[num_of_vars_in_codeword..]
             .iter()
             .rev()
@@ -554,9 +554,9 @@ impl OrionPCSImpl {
 
         // NOTE: draw random linear combination out
         // and compose proximity response(s) of tensor code IOP based PCS
-        let mul_ext_f = |i: &F, ei: &ExtF| ei.mul_by_base_field(i);
+        let mul_ext_f = |i: &F, ei: &EvalF| *ei * *i;
         let proximity_repetitions =
-            self.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
+            self.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
         let proximity_rows: Vec<_> = (0..proximity_repetitions)
             .map(|_| {
                 let random_linear_combination =
@@ -564,7 +564,7 @@ impl OrionPCSImpl {
                 transposed_evaluations
                     .chunks(row_num)
                     .map(|col| inner_product(col, &random_linear_combination, mul_ext_f))
-                    .collect::<Vec<ExtF>>()
+                    .collect::<Vec<EvalF>>()
             })
             .collect();
 
@@ -590,19 +590,19 @@ impl OrionPCSImpl {
         }
     }
 
-    pub fn verify<F, PackF, ExtF, T>(
+    pub fn verify<F, PackF, EvalF, T>(
         &self,
         commitment: &OrionCommitment,
-        point: &[ExtF],
-        evaluation: &ExtF,
-        proof: &OrionProof<F, ExtF>,
+        point: &[EvalF],
+        evaluation: &EvalF,
+        proof: &OrionProof<F, EvalF>,
         transcript: &mut T,
     ) -> bool
     where
         F: Field + FieldSerde,
         PackF: SimdField<Scalar = F>,
-        ExtF: ExtensionField<BaseField = F>,
-        T: Transcript<ExtF>,
+        EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+        T: Transcript<EvalF>,
     {
         let (row_num, msg_size) = Self::row_col_from_variables(point.len());
         let num_of_vars_in_codeword = log2(msg_size) as usize;
@@ -617,8 +617,8 @@ impl OrionPCSImpl {
         // NOTE: working on proximity responses, draw random linear combinations
         // then draw query points from fiat shamir transcripts
         let proximity_test_num =
-            self.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
-        let random_linear_combinations: Vec<Vec<ExtF>> = (0..proximity_test_num)
+            self.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
+        let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_test_num)
             .map(|_| transcript.generate_challenge_field_elements(row_num))
             .collect();
         let query_num = self.query_complexity(ORION_PCS_SOUNDNESS_BITS);
@@ -647,7 +647,7 @@ impl OrionPCSImpl {
         // check againts all challenged indices by check alphabets against
         // linear combined interleaved alphabet
         let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
-        let mul_ext_f = |i: &F, ei: &ExtF| ei.mul_by_base_field(i);
+        let mul_ext_f = |i: &F, ei: &EvalF| *ei * *i;
         random_linear_combinations
             .iter()
             .zip(proof.proximity_rows.iter())

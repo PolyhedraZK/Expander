@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ops::Mul};
 
 use arith::{ExtensionField, Field, FieldSerde, SimdField};
 use ark_std::{log2, test_rng};
@@ -210,23 +210,29 @@ fn test_multilinear_poly_tensor_eval() {
     })
 }
 
-fn test_orion_pcs_open_generics<F, ExtF, PackF>()
+fn test_orion_pcs_open_generics<F, EvalF, PackF>()
 where
     F: Field + FieldSerde,
-    ExtF: ExtensionField<BaseField = F>,
+    EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
     PackF: SimdField<Scalar = F>,
 {
     let mut rng = test_rng();
     let num_of_vars = log2(EXAMPLE_ORION_CODE_PARAMETER.input_message_len) as usize * 2usize;
 
     let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
-    let random_poly_ext =
-        MultiLinearPoly::new(random_poly.coeffs.iter().cloned().map(ExtF::from).collect());
+    let random_poly_ext = MultiLinearPoly::new(
+        random_poly
+            .coeffs
+            .iter()
+            .cloned()
+            .map(EvalF::from)
+            .collect(),
+    );
     let random_point: Vec<_> = (0..num_of_vars)
-        .map(|_| ExtF::random_bool(&mut rng))
+        .map(|_| EvalF::random_bool(&mut rng))
         .collect();
 
-    let mut transcript: BytesHashTranscript<ExtF, Keccak256hasher> = BytesHashTranscript::new();
+    let mut transcript: BytesHashTranscript<EvalF, Keccak256hasher> = BytesHashTranscript::new();
     let mut transcript_cloned = transcript.clone();
 
     let orion_pcs =
@@ -257,7 +263,7 @@ where
         .iter()
         .map(|t| t.get_field_elems_from_compact_leaves::<F, PackF>())
         .flatten()
-        .map(ExtF::from)
+        .map(EvalF::from)
         .collect::<Vec<_>>();
 
     let eq_combined_codeword =
@@ -266,7 +272,7 @@ where
 
     // NOTE: compute proximity codewords
     let proximity_repetitions =
-        orion_pcs.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, ExtF::FIELD_SIZE);
+        orion_pcs.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
     assert_eq!(proximity_repetitions, opening.proximity_rows.len());
 
     opening.proximity_rows.iter().for_each(|proximity_row| {
@@ -288,24 +294,30 @@ fn test_orion_pcs_open() {
     test_orion_pcs_open_generics::<M31, M31Ext3, M31x16>()
 }
 
-fn test_orion_pcs_full_e2e_generics<F, ExtF, PackF>()
+fn test_orion_pcs_full_e2e_generics<F, EvalF, PackF>()
 where
     F: Field + FieldSerde,
-    ExtF: ExtensionField<BaseField = F>,
+    EvalF: Field + FieldSerde + Mul<F, Output = EvalF> + From<F>,
     PackF: SimdField<Scalar = F>,
 {
     let mut rng = test_rng();
     let num_of_vars = log2(EXAMPLE_ORION_CODE_PARAMETER.input_message_len) as usize * 2usize;
 
     let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
-    let random_poly_ext =
-        MultiLinearPoly::new(random_poly.coeffs.iter().cloned().map(ExtF::from).collect());
+    let random_poly_ext = MultiLinearPoly::new(
+        random_poly
+            .coeffs
+            .iter()
+            .cloned()
+            .map(EvalF::from)
+            .collect(),
+    );
     let random_point: Vec<_> = (0..num_of_vars)
-        .map(|_| ExtF::random_bool(&mut rng))
+        .map(|_| EvalF::random_bool(&mut rng))
         .collect();
     let expected_eval = random_poly_ext.evaluate_jolt(&random_point);
 
-    let mut transcript: BytesHashTranscript<ExtF, Keccak256hasher> = BytesHashTranscript::new();
+    let mut transcript: BytesHashTranscript<EvalF, Keccak256hasher> = BytesHashTranscript::new();
     let mut transcript_cloned = transcript.clone();
 
     let orion_pcs =
@@ -321,7 +333,7 @@ where
     );
 
     assert!(
-        orion_pcs.verify::<F, PackF, ExtF, BytesHashTranscript<ExtF, Keccak256hasher>>(
+        orion_pcs.verify::<F, PackF, EvalF, BytesHashTranscript<EvalF, Keccak256hasher>>(
             &commit_with_data.to_commitment(),
             &random_point,
             &expected_eval,
@@ -336,5 +348,5 @@ fn test_orion_pcs_full_e2e() {
     test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x8>();
     test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x64>();
     test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2_128>();
-    test_orion_pcs_full_e2e_generics::<M31, M31Ext3, M31x16>()
+    test_orion_pcs_full_e2e_generics::<M31, M31Ext3, M31x16>();
 }

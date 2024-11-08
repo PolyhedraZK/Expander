@@ -134,6 +134,15 @@ impl ExtensionField for M31Ext3x16 {
     }
 }
 
+impl Mul<M31x16> for M31Ext3x16 {
+    type Output = M31Ext3x16;
+
+    #[inline]
+    fn mul(self, rhs: M31x16) -> Self::Output {
+        self.mul_by_base_field(&rhs)
+    }
+}
+
 impl From<M31Ext3> for M31Ext3x16 {
     #[inline(always)]
     fn from(x: M31Ext3) -> Self {

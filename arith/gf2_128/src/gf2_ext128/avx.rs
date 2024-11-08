@@ -209,6 +209,15 @@ impl ExtensionField for AVXGF2_128 {
     }
 }
 
+impl Mul<GF2> for AVXGF2_128 {
+    type Output = AVXGF2_128;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2) -> Self::Output {
+        self.mul_by_base_field(&rhs)
+    }
+}
+
 impl From<GF2> for AVXGF2_128 {
     #[inline(always)]
     fn from(v: GF2) -> Self {
