@@ -5,7 +5,8 @@ use arith::{Field, FieldSerde, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
-    common_ancestor, convert_index_to_last_level, is_left_child, parent_index, Leaf, Node, Tree,
+    common_ancestor, convert_index_to_last_level, is_left_child, parent_index,
+    unpack_field_elems_from_bytes, Leaf, Node, Tree,
 };
 
 /// Represents a path in the Merkle tree, used for proving membership.
@@ -102,19 +103,7 @@ impl RangePath {
         F: Field + FieldSerde,
         PackF: SimdField<Scalar = F>,
     {
-        let bytes: Vec<_> = self
-            .leaves
-            .iter()
-            .flat_map(|l| l.data.iter().cloned())
-            .collect();
-
-        bytes
-            .chunks(PackF::SIZE)
-            .flat_map(|byte_slice| {
-                let pack = PackF::deserialize_from(byte_slice).unwrap();
-                pack.unpack()
-            })
-            .collect()
+        unpack_field_elems_from_bytes::<F, PackF>(&self.leaves)
     }
 
     #[inline]
@@ -122,13 +111,14 @@ impl RangePath {
         let sub_tree = Tree::new_with_leaves(self.leaves.clone());
 
         let tree_height = sub_tree.height() + self.path_nodes.len();
+        let mut current_node = sub_tree.root();
+
+        drop(sub_tree);
 
         let left_index_in_tree = convert_index_to_last_level(self.left, tree_height);
         let right_index_in_tree = convert_index_to_last_level(self.right, tree_height);
 
         let mut current_node_index = common_ancestor(left_index_in_tree, right_index_in_tree);
-
-        let mut current_node = sub_tree.root();
 
         self.path_nodes.iter().rev().for_each(|node| {
             if is_left_child(current_node_index) {

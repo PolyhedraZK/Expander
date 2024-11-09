@@ -244,7 +244,7 @@ where
     let eq_linear_combination = EqPolynomial::build_eq_x_r(&random_point[vars_for_col..]);
     let interleaved_codeword_ext = commit_with_data
         .interleaved_alphabet_tree
-        .get_field_elems_from_compact_leaves::<F, PackF>()
+        .unpack_field_elems::<F, PackF>()
         .iter()
         .map(|&f| EvalF::from(f))
         .collect::<Vec<_>>();

@@ -110,24 +110,12 @@ impl Tree {
 
     /// Get field elements out of leaves with compact serialization.
     #[inline]
-    pub fn get_field_elems_from_compact_leaves<F, PackF>(&self) -> Vec<F>
+    pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
     where
         F: Field + FieldSerde,
         PackF: SimdField<Scalar = F>,
     {
-        let bytes: Vec<_> = self
-            .leaves
-            .iter()
-            .flat_map(|l| l.data.iter().cloned())
-            .collect();
-
-        bytes
-            .chunks(PackF::SIZE)
-            .flat_map(|byte_slice| {
-                let pack = PackF::deserialize_from(byte_slice).unwrap();
-                pack.unpack()
-            })
-            .collect()
+        unpack_field_elems_from_bytes::<F, PackF>(&self.leaves)
     }
 
     /// Builds a tree with pre-hashed leaf nodes.
@@ -351,4 +339,18 @@ pub(crate) fn common_ancestor(left: usize, right: usize) -> usize {
 #[inline]
 pub(crate) fn is_left_child(index: usize) -> bool {
     index % 2 == 1
+}
+
+#[inline]
+pub(crate) fn unpack_field_elems_from_bytes<F, PackF>(leaves: &[Leaf]) -> Vec<F>
+where
+    F: Field + FieldSerde,
+    PackF: SimdField<Scalar = F>,
+{
+    let bytes: Vec<_> = leaves.iter().flat_map(|l| l.data.into_iter()).collect();
+
+    bytes
+        .chunks(PackF::SIZE)
+        .flat_map(|byte_slice| PackF::deserialize_from(byte_slice).unwrap().unpack())
+        .collect()
 }
