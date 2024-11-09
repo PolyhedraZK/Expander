@@ -914,7 +914,6 @@ dependencies = [
  "tiny-keccak",
  "tokio",
  "transcript",
- "tree",
  "tynm",
  "warp",
 ]
