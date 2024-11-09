@@ -34,7 +34,7 @@ fn tree_building_benchmark(c: &mut Criterion) {
                 })
             })
             .sample_size(10)
-            .measurement_time(Duration::from_secs(50));
+            .measurement_time(Duration::from_secs(5));
     }
 }
 
@@ -65,7 +65,7 @@ where
                 })
             })
             .sample_size(10)
-            .measurement_time(Duration::from_secs(50));
+            .measurement_time(Duration::from_secs(5));
     }
 }
 
@@ -100,7 +100,7 @@ where
                 })
             })
             .sample_size(10)
-            .measurement_time(Duration::from_secs(50));
+            .measurement_time(Duration::from_secs(5));
     }
 }
 
