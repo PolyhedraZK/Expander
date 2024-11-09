@@ -86,17 +86,13 @@ impl Tree {
         F: Field + FieldSerde,
         PackF: SimdField<Scalar = F>,
     {
-        let serialized_bytes: Vec<_> = field_elems
-            .iter()
-            .map(|&p| {
-                let mut buffer = Vec::new();
-                p.serialize_into(&mut buffer).unwrap();
-                buffer
-            })
-            .collect::<Vec<_>>()
-            .into_iter()
-            .flatten()
-            .collect();
+        let mut serialized_bytes: Vec<u8> = vec![0u8; PackF::SIZE * field_elems.len()];
+        serialized_bytes
+            .chunks_mut(PackF::SIZE)
+            .zip(field_elems.iter())
+            .for_each(|(unit, elem)| {
+                elem.serialize_into(unit).unwrap();
+            });
 
         assert!((serialized_bytes.len() / LEAF_BYTES).is_power_of_two());
 
