@@ -81,6 +81,15 @@ impl Path {
         }
     }
 
+    #[inline]
+    pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
+    where
+        F: Field + FieldSerde,
+        PackF: SimdField<Scalar = F>,
+    {
+        unpack_field_elems_from_bytes::<F, PackF>(&[self.leaf])
+    }
+
     /// Return the leaf of the path
     #[inline]
     pub fn leaf(&self) -> &Leaf {
@@ -96,7 +105,30 @@ pub struct RangePath {
     pub right: usize,
 }
 
+impl Display for RangePath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "leaf index range: [{}, {}]", self.left, self.right)?;
+
+        let position_list = self.position_list();
+        for ((i, node), is_right_node) in self.path_nodes.iter().enumerate().zip(position_list) {
+            writeln!(
+                f,
+                "{i}-th node, is right node {is_right_node}, sibling: {node}"
+            )?;
+        }
+
+        Ok(())
+    }
+}
+
 impl RangePath {
+    #[inline]
+    fn position_list(&'_ self) -> impl '_ + Iterator<Item = bool> {
+        let common_ancestor = common_ancestor(self.left, self.right);
+
+        (0..self.path_nodes.len() + 1).map(move |i| ((common_ancestor >> i) & 1) != 0)
+    }
+
     #[inline]
     pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
     where
