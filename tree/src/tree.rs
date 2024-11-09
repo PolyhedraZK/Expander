@@ -98,7 +98,7 @@ impl Tree {
 
         let leaves = serialized_bytes
             .chunks(LEAF_BYTES)
-            .map(|chunk| Leaf::new(chunk.try_into().unwrap()))
+            .map(move |chunk| Leaf::new(unsafe { chunk.try_into().unwrap_unchecked() }))
             .collect();
 
         Tree::new_with_leaves(leaves)
@@ -351,6 +351,10 @@ where
 
     bytes
         .chunks(PackF::SIZE)
-        .flat_map(|byte_slice| PackF::deserialize_from(byte_slice).unwrap().unpack())
+        .flat_map(move |byte_slice| unsafe {
+            PackF::deserialize_from(byte_slice)
+                .unwrap_unchecked()
+                .unpack()
+        })
         .collect()
 }
