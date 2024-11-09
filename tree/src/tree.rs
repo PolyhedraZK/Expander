@@ -343,7 +343,11 @@ where
     F: Field + FieldSerde,
     PackF: SimdField<Scalar = F>,
 {
-    let bytes: Vec<_> = leaves.iter().flat_map(|l| l.data.into_iter()).collect();
+    let mut bytes = vec![0u8; leaves.len() * LEAF_BYTES];
+    bytes
+        .chunks_mut(LEAF_BYTES)
+        .zip(leaves.iter())
+        .for_each(|(buffer, leaf)| buffer.copy_from_slice(&leaf.data[..]));
 
     bytes
         .chunks(PackF::SIZE)
