@@ -301,10 +301,7 @@ impl SimdField for NeonM31 {
         *self * packed_challenge
     }
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        M31_PACK_SIZE
-    }
+    const PACK_SIZE: usize = M31_PACK_SIZE;
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {

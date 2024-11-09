@@ -4,14 +4,13 @@ use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
 
 use super::GF2;
 
-/// A GF2x8 stores 8 bits of data.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
-pub struct GF2x8 {
-    pub v: u8,
+pub struct GF2x64 {
+    pub v: u64,
 }
 
-impl FieldSerde for GF2x8 {
-    const SERIALIZED_SIZE: usize = 1;
+impl FieldSerde for GF2x64 {
+    const SERIALIZED_SIZE: usize = 8;
 
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
@@ -23,41 +22,38 @@ impl FieldSerde for GF2x8 {
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
         let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
-        Ok(GF2x8 { v: u[0] })
+        Ok(GF2x64 {
+            v: u64::from_le_bytes(u),
+        })
     }
 
     #[inline]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> FieldSerdeResult<Self> {
-        unimplemented!("We don't have serialization in ecc for gf2x8")
-        // let mut u = [0u8; 32];
-        // reader.read_exact(&mut u)?;
-        // Ok(GF2x8 { v: u[0] })
+    fn try_deserialize_from_ecc_format<R: std::io::Read>(_reader: R) -> FieldSerdeResult<Self> {
+        unimplemented!("We don't have serialization in ecc for gf2x64")
     }
 }
 
-impl Field for GF2x8 {
-    // still will pack 8 bits into a u8
+impl Field for GF2x64 {
+    const NAME: &'static str = "Galois Field 2 SIMD 64";
 
-    const NAME: &'static str = "Galios Field 2 SIMD 8";
+    const SIZE: usize = 8;
 
-    const SIZE: usize = 1;
+    const FIELD_SIZE: usize = 1;
 
-    const FIELD_SIZE: usize = 1; // in bits
+    const ZERO: Self = GF2x64 { v: 0 };
 
-    const ZERO: Self = GF2x8 { v: 0 };
+    const ONE: Self = GF2x64 { v: !0u64 };
 
-    const ONE: Self = GF2x8 { v: 255 };
-
-    const INV_2: Self = GF2x8 { v: 0 }; // should not be used
+    const INV_2: Self = GF2x64 { v: 0 }; // NOTE: should not be used
 
     #[inline(always)]
     fn zero() -> Self {
-        GF2x8 { v: 0 }
+        GF2x64::ZERO
     }
 
     #[inline(always)]
     fn one() -> Self {
-        GF2x8 { v: 255 }
+        GF2x64::ONE
     }
 
     #[inline(always)]
@@ -67,16 +63,12 @@ impl Field for GF2x8 {
 
     #[inline(always)]
     fn random_unsafe(mut rng: impl rand::RngCore) -> Self {
-        GF2x8 {
-            v: (rng.next_u32() % 256) as u8,
-        }
+        GF2x64 { v: rng.next_u64() }
     }
 
     #[inline(always)]
     fn random_bool(mut rng: impl rand::RngCore) -> Self {
-        GF2x8 {
-            v: (rng.next_u32() % 256) as u8,
-        }
+        GF2x64 { v: rng.next_u64() }
     }
 
     #[inline(always)]
@@ -95,12 +87,16 @@ impl Field for GF2x8 {
 
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
-        self.v as u32 % 256
+        self.v as u32
     }
 
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        GF2x8 { v: bytes[0] }
+        let mut buf = [0u8; 8];
+        buf[..].copy_from_slice(&bytes[..8]);
+        GF2x64 {
+            v: u64::from_le_bytes(buf),
+        }
     }
 
     #[inline(always)]
@@ -114,161 +110,161 @@ impl Field for GF2x8 {
     }
 }
 
-impl Mul<&GF2x8> for GF2x8 {
-    type Output = GF2x8;
+impl Mul<&GF2x64> for GF2x64 {
+    type Output = GF2x64;
 
     #[inline(always)]
     #[allow(clippy::suspicious_arithmetic_impl)]
-    fn mul(self, rhs: &GF2x8) -> GF2x8 {
-        GF2x8 { v: self.v & rhs.v }
+    fn mul(self, rhs: &GF2x64) -> Self::Output {
+        GF2x64 { v: self.v & rhs.v }
     }
 }
 
-impl Mul<GF2x8> for GF2x8 {
-    type Output = GF2x8;
+impl Mul<GF2x64> for GF2x64 {
+    type Output = GF2x64;
 
     #[inline(always)]
     #[allow(clippy::suspicious_arithmetic_impl)]
-    fn mul(self, rhs: GF2x8) -> GF2x8 {
-        GF2x8 { v: self.v & rhs.v }
+    fn mul(self, rhs: GF2x64) -> GF2x64 {
+        GF2x64 { v: self.v & rhs.v }
     }
 }
 
-impl MulAssign<&GF2x8> for GF2x8 {
+impl MulAssign<&GF2x64> for GF2x64 {
     #[inline(always)]
     #[allow(clippy::suspicious_op_assign_impl)]
-    fn mul_assign(&mut self, rhs: &GF2x8) {
+    fn mul_assign(&mut self, rhs: &GF2x64) {
         self.v &= rhs.v;
     }
 }
 
-impl MulAssign<GF2x8> for GF2x8 {
+impl MulAssign<GF2x64> for GF2x64 {
     #[inline(always)]
     #[allow(clippy::suspicious_op_assign_impl)]
-    fn mul_assign(&mut self, rhs: GF2x8) {
+    fn mul_assign(&mut self, rhs: GF2x64) {
         self.v &= rhs.v;
     }
 }
 
-impl Sub for GF2x8 {
-    type Output = GF2x8;
+impl Sub for GF2x64 {
+    type Output = GF2x64;
 
     #[inline(always)]
     #[allow(clippy::suspicious_arithmetic_impl)]
-    fn sub(self, rhs: GF2x8) -> GF2x8 {
-        GF2x8 { v: self.v ^ rhs.v }
+    fn sub(self, rhs: GF2x64) -> GF2x64 {
+        GF2x64 { v: self.v ^ rhs.v }
     }
 }
 
-impl SubAssign for GF2x8 {
+impl SubAssign for GF2x64 {
     #[inline(always)]
     #[allow(clippy::suspicious_op_assign_impl)]
-    fn sub_assign(&mut self, rhs: GF2x8) {
+    fn sub_assign(&mut self, rhs: GF2x64) {
         self.v ^= rhs.v;
     }
 }
 
-impl Add for GF2x8 {
-    type Output = GF2x8;
+impl Add for GF2x64 {
+    type Output = GF2x64;
 
     #[inline(always)]
     #[allow(clippy::suspicious_arithmetic_impl)]
-    fn add(self, rhs: GF2x8) -> GF2x8 {
-        GF2x8 { v: self.v ^ rhs.v }
+    fn add(self, rhs: GF2x64) -> GF2x64 {
+        GF2x64 { v: self.v ^ rhs.v }
     }
 }
 
-impl AddAssign for GF2x8 {
+impl AddAssign for GF2x64 {
     #[inline(always)]
     #[allow(clippy::suspicious_op_assign_impl)]
-    fn add_assign(&mut self, rhs: GF2x8) {
+    fn add_assign(&mut self, rhs: GF2x64) {
         self.v ^= rhs.v;
     }
 }
 
-impl Add<&GF2x8> for GF2x8 {
-    type Output = GF2x8;
+impl Add<&GF2x64> for GF2x64 {
+    type Output = GF2x64;
 
     #[inline(always)]
     #[allow(clippy::suspicious_arithmetic_impl)]
-    fn add(self, rhs: &GF2x8) -> GF2x8 {
-        GF2x8 { v: self.v ^ rhs.v }
+    fn add(self, rhs: &GF2x64) -> GF2x64 {
+        GF2x64 { v: self.v ^ rhs.v }
     }
 }
 
-impl Sub<&GF2x8> for GF2x8 {
-    type Output = GF2x8;
+impl Sub<&GF2x64> for GF2x64 {
+    type Output = GF2x64;
 
     #[inline(always)]
     #[allow(clippy::suspicious_arithmetic_impl)]
-    fn sub(self, rhs: &GF2x8) -> GF2x8 {
-        GF2x8 { v: self.v ^ rhs.v }
+    fn sub(self, rhs: &GF2x64) -> GF2x64 {
+        GF2x64 { v: self.v ^ rhs.v }
     }
 }
 
-impl<T: std::borrow::Borrow<GF2x8>> std::iter::Sum<T> for GF2x8 {
+impl<T: std::borrow::Borrow<GF2x64>> std::iter::Sum<T> for GF2x64 {
     fn sum<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::zero(), |acc, item| acc + item.borrow())
     }
 }
 
-impl<T: std::borrow::Borrow<GF2x8>> std::iter::Product<T> for GF2x8 {
+impl<T: std::borrow::Borrow<GF2x64>> std::iter::Product<T> for GF2x64 {
     fn product<I: Iterator<Item = T>>(iter: I) -> Self {
         iter.fold(Self::one(), |acc, item| acc * item.borrow())
     }
 }
 
-impl Neg for GF2x8 {
-    type Output = GF2x8;
+impl Neg for GF2x64 {
+    type Output = GF2x64;
 
     #[inline(always)]
     #[allow(clippy::suspicious_arithmetic_impl)]
-    fn neg(self) -> GF2x8 {
-        GF2x8 { v: self.v }
+    fn neg(self) -> GF2x64 {
+        GF2x64 { v: self.v }
     }
 }
 
-impl AddAssign<&GF2x8> for GF2x8 {
+impl AddAssign<&GF2x64> for GF2x64 {
     #[inline(always)]
     #[allow(clippy::suspicious_op_assign_impl)]
-    fn add_assign(&mut self, rhs: &GF2x8) {
+    fn add_assign(&mut self, rhs: &GF2x64) {
         self.v ^= rhs.v;
     }
 }
 
-impl SubAssign<&GF2x8> for GF2x8 {
+impl SubAssign<&GF2x64> for GF2x64 {
     #[inline(always)]
     #[allow(clippy::suspicious_op_assign_impl)]
-    fn sub_assign(&mut self, rhs: &GF2x8) {
+    fn sub_assign(&mut self, rhs: &GF2x64) {
         self.v ^= rhs.v;
     }
 }
 
-impl From<u32> for GF2x8 {
+impl From<u32> for GF2x64 {
     #[inline(always)]
     fn from(v: u32) -> Self {
         assert!(v < 2);
         if v == 0 {
-            GF2x8 { v: 0 }
+            GF2x64 { v: 0 }
         } else {
-            GF2x8 { v: 0xFF }
+            GF2x64 { v: !0u64 }
         }
     }
 }
 
-impl From<GF2> for GF2x8 {
+impl From<GF2> for GF2x64 {
     #[inline(always)]
     fn from(v: GF2) -> Self {
         assert!(v.v < 2);
         if v.v == 0 {
-            GF2x8 { v: 0 }
+            GF2x64 { v: 0 }
         } else {
-            GF2x8 { v: 0xFF }
+            GF2x64 { v: !0u64 }
         }
     }
 }
 
-impl SimdField for GF2x8 {
+impl SimdField for GF2x64 {
     #[inline(always)]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
         if challenge.v == 0 {
@@ -281,9 +277,9 @@ impl SimdField for GF2x8 {
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == Self::PACK_SIZE);
-        let mut ret = 0u8;
+        let mut ret = 0u64;
         for (i, scalar) in base_vec.iter().enumerate() {
-            ret |= scalar.v << (7 - i);
+            ret |= (scalar.v as u64) << (Self::PACK_SIZE - 1 - i);
         }
         Self { v: ret }
     }
@@ -293,7 +289,7 @@ impl SimdField for GF2x8 {
         let mut ret = vec![];
         for i in 0..Self::PACK_SIZE {
             ret.push(Self::Scalar {
-                v: (self.v >> (7 - i)) & 1u8,
+                v: ((self.v >> (Self::PACK_SIZE - 1 - i)) & 1u64) as u8,
             });
         }
         ret
@@ -301,5 +297,5 @@ impl SimdField for GF2x8 {
 
     type Scalar = crate::GF2;
 
-    const PACK_SIZE: usize = 8;
+    const PACK_SIZE: usize = 64;
 }

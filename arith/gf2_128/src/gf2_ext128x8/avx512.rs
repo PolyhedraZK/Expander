@@ -448,14 +448,11 @@ impl SimdField for AVX512GF2_128x8 {
     }
     type Scalar = GF2_128;
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        8
-    }
+    const PACK_SIZE: usize = 8;
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == 8);
+        assert_eq!(base_vec.len(), Self::PACK_SIZE);
         let base_vec_array: [Self::Scalar; 8] = base_vec.try_into().unwrap();
         unsafe { transmute(base_vec_array) }
     }
@@ -712,6 +709,15 @@ impl Mul<GF2> for AVX512GF2_128x8 {
         } else {
             self
         }
+    }
+}
+
+impl Mul<GF2x8> for AVX512GF2_128x8 {
+    type Output = AVX512GF2_128x8;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2x8) -> Self::Output {
+        self.mul_by_base_field(&rhs)
     }
 }
 

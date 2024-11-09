@@ -2,8 +2,8 @@ use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use std::{arch::aarch64::*, mem::transmute};
 
-use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult};
-use gf2::GF2;
+use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, SimdField};
+use gf2::{GF2x64, GF2};
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128 {
@@ -203,6 +203,15 @@ impl ExtensionField for NeonGF2_128 {
     }
 }
 
+impl Mul<GF2> for NeonGF2_128 {
+    type Output = NeonGF2_128;
+
+    #[inline]
+    fn mul(self, rhs: GF2) -> Self::Output {
+        self.mul_by_base_field(&rhs)
+    }
+}
+
 impl From<GF2> for NeonGF2_128 {
     #[inline(always)]
     fn from(v: GF2) -> Self {
@@ -392,5 +401,43 @@ pub(crate) fn mul_by_x_internal(a: &uint32x4_t) -> uint32x4_t {
 
         // Reinterpret uint64x2_t back to uint32x4_t
         vreinterpretq_u32_u64(res)
+    }
+}
+
+impl SimdField for NeonGF2_128 {
+    type Scalar = GF2;
+
+    const PACK_SIZE: usize = 128;
+
+    #[inline(always)]
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
+        if challenge.v == 0 {
+            Self::ZERO
+        } else {
+            *self
+        }
+    }
+
+    #[inline(always)]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        assert_eq!(base_vec.len(), Self::PACK_SIZE);
+        let mut packed_to_gf2x64 = [GF2x64::ZERO; Self::PACK_SIZE / GF2x64::PACK_SIZE];
+        packed_to_gf2x64
+            .iter_mut()
+            .zip(base_vec.chunks(GF2x64::PACK_SIZE))
+            .for_each(|(gf2x64, pack)| *gf2x64 = GF2x64::pack(pack));
+
+        unsafe { transmute(packed_to_gf2x64) }
+    }
+
+    #[inline(always)]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        let packed_to_gf2x64: [GF2x64; Self::PACK_SIZE / GF2x64::PACK_SIZE] =
+            unsafe { transmute(*self) };
+
+        packed_to_gf2x64
+            .iter()
+            .flat_map(|packed| packed.unpack())
+            .collect()
     }
 }
