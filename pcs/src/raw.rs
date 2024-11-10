@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, marker::PhantomData};
+use std::marker::PhantomData;
 
 use crate::PolynomialCommitmentScheme;
 use arith::{Field, FieldSerde};
@@ -28,27 +28,29 @@ impl FieldSerde for EmptyType {
 }
 
 #[derive(Clone, Debug)]
-pub struct RawMLParams {
+pub struct RawMultilinearPCSPublicParams {
     pub n_vars: usize,
 }
 
 // Raw commitment for multi-linear polynomials
-pub struct RawML<F: Field + FieldSerde, T: Transcript<F>> {
+pub struct RawMultilinearPCS<F: Field + FieldSerde, T: Transcript<F>> {
     _phantom_f: PhantomData<F>,
     _phantom_t: PhantomData<T>,
 }
 
-impl<F: Field + FieldSerde, T: Transcript<F>> PolynomialCommitmentScheme for RawML<F, T> {
-    type PublicParams = RawMLParams;
+impl<F: Field + FieldSerde, T: Transcript<F>> PolynomialCommitmentScheme
+    for RawMultilinearPCS<F, T>
+{
+    type PublicParams = RawMultilinearPCSPublicParams;
 
     type Poly = MultiLinearPoly<F>;
 
     type EvalPoint = Vec<F>;
     type Eval = F;
 
-    type SRS = EmptyType;
-    type ProverKey = EmptyType;
-    type VerifierKey = EmptyType;
+    type SRS = Self::PublicParams;
+    type ProverKey = Self::PublicParams;
+    type VerifierKey = Self::PublicParams;
 
     type Commitment = Vec<F>;
     type CommitmentWithData = Vec<F>;
@@ -56,40 +58,34 @@ impl<F: Field + FieldSerde, T: Transcript<F>> PolynomialCommitmentScheme for Raw
 
     type FiatShamirTranscript = T;
 
-    fn gen_srs_for_testing(_rng: impl RngCore, _params: &Self::PublicParams) -> Self::SRS {
-        Self::SRS::default()
+    fn gen_srs_for_testing(_rng: impl RngCore, params: &Self::PublicParams) -> Self::SRS {
+        params.clone()
     }
 
-    fn commit(
-        params: &Self::PublicParams,
-        _proving_key: impl Borrow<Self::ProverKey>,
-        poly: &Self::Poly,
-    ) -> Self::Commitment {
-        assert!(1 << params.n_vars == poly.coeffs.len());
+    fn commit(proving_key: &Self::ProverKey, poly: &Self::Poly) -> Self::Commitment {
+        assert!(1 << proving_key.n_vars == poly.coeffs.len());
         poly.coeffs.clone()
     }
 
     fn open(
-        params: &Self::PublicParams,
-        _proving_key: impl Borrow<Self::ProverKey>,
+        prover_key: &Self::ProverKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         _transcript: &mut Self::FiatShamirTranscript,
     ) -> (Self::Eval, Self::OpeningProof) {
-        assert!(1 << params.n_vars == poly.coeffs.len());
+        assert!(1 << prover_key.n_vars == poly.coeffs.len());
         (poly.evaluate_jolt(x), Self::OpeningProof::default())
     }
 
     fn verify(
-        params: &Self::PublicParams,
-        _verifying_key: &Self::VerifierKey,
+        verifier_key: &Self::VerifierKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
         v: Self::Eval,
         _opening: &Self::OpeningProof,
         _transcript: &mut Self::FiatShamirTranscript,
     ) -> bool {
-        assert!(1 << params.n_vars == commitment.len());
+        assert!(1 << verifier_key.n_vars == commitment.len());
         let ml_poly = MultiLinearPoly::<F> {
             coeffs: commitment.clone(),
         };
