@@ -4,7 +4,7 @@ use crate::{EmptyType, PCS};
 use arith::{Field, FieldSerde};
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
-use transcript::{BytesHashTranscript, Keccak256hasher};
+use transcript::Transcript;
 
 #[derive(Clone, Debug)]
 pub struct RawMLParams {
@@ -12,11 +12,12 @@ pub struct RawMLParams {
 }
 
 // Raw commitment for multi-linear polynomials
-pub struct RawML<F: Field + FieldSerde> {
-    pub _phantom: PhantomData<F>,
+pub struct RawML<F: Field + FieldSerde, T: Transcript<F>> {
+    pub _phantom_f: PhantomData<F>,
+    pub _phantom_t: PhantomData<T>,
 }
 
-impl<F: Field + FieldSerde> PCS for RawML<F> {
+impl<F: Field + FieldSerde, T: Transcript<F>> PCS for RawML<F, T> {
     type Params = RawMLParams;
 
     type Poly = MultiLinearPoly<F>;
@@ -35,7 +36,7 @@ impl<F: Field + FieldSerde> PCS for RawML<F> {
 
     type Opening = EmptyType;
 
-    type FiatShamirTranscript = BytesHashTranscript<F, Keccak256hasher>;
+    type FiatShamirTranscript = T;
 
     fn gen_srs_for_testing(&mut self, _rng: impl RngCore, _params: &Self::Params) -> Self::SRS {
         Self::SRS::default()

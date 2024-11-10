@@ -319,7 +319,7 @@ where
         orion_pcs.verify::<F, PackF, EvalF, BytesHashTranscript<EvalF, Keccak256hasher>>(
             &commit_with_data.to_commitment(),
             &random_point,
-            &expected_eval,
+            expected_eval,
             &opening,
             &mut transcript_cloned
         )

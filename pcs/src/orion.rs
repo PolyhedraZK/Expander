@@ -581,7 +581,7 @@ impl OrionPCSImpl {
         &self,
         commitment: &OrionCommitment,
         point: &[EvalF],
-        evaluation: &EvalF,
+        evaluation: EvalF,
         proof: &OrionProof<EvalF>,
         transcript: &mut T,
     ) -> bool
@@ -597,7 +597,7 @@ impl OrionPCSImpl {
         // NOTE: working on evaluation response, evaluate the rest of the response
         let poly_half_evaled = MultiLinearPoly::new(proof.eval_row.clone());
         let final_eval = poly_half_evaled.evaluate_jolt(&point[..num_of_vars_in_codeword]);
-        if final_eval != *evaluation {
+        if final_eval != evaluation {
             return false;
         }
 

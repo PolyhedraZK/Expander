@@ -6,12 +6,14 @@ use arith::{BN254Fr, Field};
 use pcs::raw::{RawML, RawMLParams};
 use polynomials::MultiLinearPoly;
 use rand::thread_rng;
+use transcript::{BytesHashTranscript, Keccak256hasher};
 
 #[test]
 fn test_raw_pcs() {
     let params = RawMLParams { n_vars: 8 };
-    let mut raw_ml: RawML<BN254Fr> = RawML {
-        _phantom: PhantomData,
+    let mut raw_ml: RawML<BN254Fr, BytesHashTranscript<_, Keccak256hasher>> = RawML {
+        _phantom_f: PhantomData,
+        _phantom_t: PhantomData,
     };
     let mut rng = thread_rng();
     let poly = MultiLinearPoly::random(params.n_vars, &mut rng);
@@ -23,5 +25,5 @@ fn test_raw_pcs() {
         })
         .collect::<Vec<Vec<BN254Fr>>>();
 
-    common::test_pcs::<BN254Fr, RawML<_>>(&mut raw_ml, &params, &poly, &xs);
+    common::test_pcs::<BN254Fr, RawML<_, _>>(&mut raw_ml, &params, &poly, &xs);
 }
