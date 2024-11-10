@@ -3,7 +3,7 @@ use pcs::PolynomialCommitmentScheme;
 use rand::RngCore;
 use transcript::Transcript;
 
-pub fn test_pcs<F: Field + FieldSerde, P: PolynomialCommitmentScheme>(
+pub fn test_pcs_e2e<F: Field + FieldSerde, P: PolynomialCommitmentScheme>(
     params: &P::PublicParams,
     poly: &P::Poly,
     opening_points: &P::EvalPoint,
@@ -20,14 +20,20 @@ pub fn test_pcs<F: Field + FieldSerde, P: PolynomialCommitmentScheme>(
         let mut transcript = P::FiatShamirTranscript::new();
         let mut transcript_copy = transcript.clone();
 
-        let (v, opening) = P::open(&prover_key, poly, opening_points, &mut transcript);
+        let (eval, opening_proof) = P::open(
+            &prover_key,
+            poly,
+            opening_points,
+            &commitment_with_data,
+            &mut transcript,
+        );
 
         assert!(P::verify(
             &verifier_key,
             &commitment,
             opening_points,
-            v,
-            &opening,
+            eval,
+            &opening_proof,
             &mut transcript_copy
         ));
     }

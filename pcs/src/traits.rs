@@ -15,8 +15,8 @@ pub trait PolynomialCommitmentScheme {
     type VerifierKey: Clone + Debug + From<Self::SRS>;
 
     type CommitmentWithData: Clone + Debug;
-    type Commitment: Clone + Debug + FieldSerde + From<Self::CommitmentWithData>;
-    type OpeningProof: Clone + Debug + FieldSerde;
+    type Commitment: Clone + Debug + From<Self::CommitmentWithData>;
+    type OpeningProof: Clone + Debug;
 
     type FiatShamirTranscript: Transcript<Self::Eval>;
 
@@ -28,6 +28,7 @@ pub trait PolynomialCommitmentScheme {
         proving_key: &Self::ProverKey,
         poly: &Self::Poly,
         opening_point: &Self::EvalPoint,
+        commitment_with_data: &Self::CommitmentWithData,
         transcript: &mut Self::FiatShamirTranscript,
     ) -> (Self::Eval, Self::OpeningProof);
 

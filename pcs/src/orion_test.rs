@@ -9,10 +9,11 @@ use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 use crate::{
-    inner_product, transpose_in_place, OrionCode, OrionCodeParameter, ORION_PCS_SOUNDNESS_BITS,
+    inner_product, transpose_in_place, OrionCode, OrionCodeParameter, OrionCommitment,
+    ORION_PCS_SOUNDNESS_BITS,
 };
 
-use super::{OrionCommitmentWithData, OrionPCSImpl};
+use super::{OrionCommitmentWithData, OrionPublicParams};
 
 fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<F> {
     mat.chunks(combination.len())
@@ -101,7 +102,7 @@ fn test_orion_code() {
     test_orion_code_generic::<M31Ext3>();
 }
 
-impl OrionPCSImpl {
+impl OrionPublicParams {
     fn dumb_commit<F: Field + FieldSerde, PackF: SimdField<Scalar = F>>(
         &self,
         poly: &MultiLinearPoly<F>,
@@ -135,12 +136,16 @@ fn test_orion_commit_consistency_generic<F: Field + FieldSerde, PackF: SimdField
     let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
 
     let orion_pcs =
-        OrionPCSImpl::from_random(num_of_vars, EXAMPLE_ORION_CODE_PARAMETER, &mut rng).unwrap();
+        OrionPublicParams::from_random(num_of_vars, EXAMPLE_ORION_CODE_PARAMETER, &mut rng)
+            .unwrap();
 
     let real_commit = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
     let dumb_commit = orion_pcs.dumb_commit::<F, PackF>(&random_poly);
 
-    assert_eq!(real_commit.to_commitment(), dumb_commit.to_commitment());
+    let real_commitment: OrionCommitment = real_commit.into();
+    let dumb_commitment: OrionCommitment = dumb_commit.into();
+
+    assert_eq!(real_commitment, dumb_commitment);
 }
 
 #[test]
@@ -166,7 +171,7 @@ fn test_multilinear_poly_tensor_eval_generic<F: Field, ExtF: ExtensionField<Base
 
     let expected_eval = random_poly_ext.evaluate_jolt(&random_point);
 
-    let (_row_num, col_num) = OrionPCSImpl::row_col_from_variables(num_of_vars);
+    let (_row_num, col_num) = OrionPublicParams::row_col_from_variables(num_of_vars);
     // row for higher vars, cols for lower vars
     let vars_for_col = log2(col_num) as usize;
 
@@ -220,11 +225,12 @@ where
     let mut transcript_cloned = transcript.clone();
 
     let orion_pcs =
-        OrionPCSImpl::from_random(num_of_vars, EXAMPLE_ORION_CODE_PARAMETER, &mut rng).unwrap();
+        OrionPublicParams::from_random(num_of_vars, EXAMPLE_ORION_CODE_PARAMETER, &mut rng)
+            .unwrap();
 
     let commit_with_data = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
 
-    let opening = orion_pcs.open(
+    let (_, opening) = orion_pcs.open(
         &random_poly,
         &commit_with_data,
         &random_point,
@@ -232,7 +238,7 @@ where
     );
 
     // NOTE: evaluation consistency check
-    let (row_num, col_num) = OrionPCSImpl::row_col_from_variables(num_of_vars);
+    let (row_num, col_num) = OrionPublicParams::row_col_from_variables(num_of_vars);
     let vars_for_col = log2(col_num) as usize;
     let poly_half_evaled = MultiLinearPoly::new(opening.eval_row.clone());
     let actual_eval = poly_half_evaled.evaluate_jolt(&random_point[..vars_for_col]);
@@ -303,12 +309,13 @@ where
     let mut transcript: BytesHashTranscript<EvalF, Keccak256hasher> = BytesHashTranscript::new();
     let mut transcript_cloned = transcript.clone();
 
-    let orion_pcs =
-        OrionPCSImpl::from_random(num_of_vars, EXAMPLE_ORION_CODE_PARAMETER, &mut rng).unwrap();
+    let orion_pp =
+        OrionPublicParams::from_random(num_of_vars, EXAMPLE_ORION_CODE_PARAMETER, &mut rng)
+            .unwrap();
 
-    let commit_with_data = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
+    let commit_with_data = orion_pp.commit::<F, PackF>(&random_poly).unwrap();
 
-    let opening = orion_pcs.open(
+    let (_, opening) = orion_pp.open(
         &random_poly,
         &commit_with_data,
         &random_point,
@@ -316,8 +323,8 @@ where
     );
 
     assert!(
-        orion_pcs.verify::<F, PackF, EvalF, BytesHashTranscript<EvalF, Keccak256hasher>>(
-            &commit_with_data.to_commitment(),
+        orion_pp.verify::<F, PackF, EvalF, BytesHashTranscript<EvalF, Keccak256hasher>>(
+            &commit_with_data.into(),
             &random_point,
             expected_eval,
             &opening,

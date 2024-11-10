@@ -71,6 +71,7 @@ impl<F: Field + FieldSerde, T: Transcript<F>> PolynomialCommitmentScheme
         prover_key: &Self::ProverKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
+        _commitment_with_data: &Self::Commitment,
         _transcript: &mut Self::FiatShamirTranscript,
     ) -> (Self::Eval, Self::OpeningProof) {
         assert!(1 << prover_key.n_vars == poly.coeffs.len());

@@ -10,6 +10,8 @@ use rand::seq::index;
 use thiserror::Error;
 use transcript::Transcript;
 
+use crate::PolynomialCommitmentScheme;
+
 /******************************
  * PCS ERROR AND RESULT SETUP *
  ******************************/
@@ -33,7 +35,7 @@ type DiredtedEdge = usize;
 
 type DirectedNeighboring = Vec<DiredtedEdge>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct OrionExpanderGraph {
     // L R vertices size book keeping:
     // keep track of message length (l), and "compressed" code length (r)
@@ -152,7 +154,7 @@ impl OrionCodeParameter {
 // TODO: fix a set of Orion code parameters for message length ranging 2^5 - 2^15
 // together with the code distances, where we need for query number computation
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct OrionExpanderGraphPositioned {
     pub graph: OrionExpanderGraph,
 
@@ -199,7 +201,7 @@ impl OrionExpanderGraphPositioned {
 // (Spielman96), that relies on 2 lists of expander graphs serving as
 // error reduction code, and thus the linear error correction code derive
 // from the parity matrices corresponding to these expander graphs.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct OrionCode {
     pub params: OrionCodeParameter,
 
@@ -350,14 +352,13 @@ where
 
 pub const ORION_PCS_SOUNDNESS_BITS: usize = 128;
 
-#[derive(Clone)]
-pub struct OrionPCSImpl {
+#[derive(Clone, Debug)]
+pub struct OrionPublicParams {
     pub num_variables: usize,
-
     pub code_instance: OrionCode,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct OrionCommitmentWithData<F: Field + FieldSerde, PackF: SimdField<Scalar = F>> {
     pub interleaved_alphabet_tree: tree::Tree,
 
@@ -366,19 +367,19 @@ pub struct OrionCommitmentWithData<F: Field + FieldSerde, PackF: SimdField<Scala
 
 pub type OrionCommitment = tree::Node;
 
-impl<F, PackF> OrionCommitmentWithData<F, PackF>
+impl<F, PackF> From<OrionCommitmentWithData<F, PackF>> for OrionCommitment
 where
     F: Field + FieldSerde,
     PackF: SimdField<Scalar = F>,
 {
-    #[inline]
-    pub fn to_commitment(&self) -> OrionCommitment {
-        self.interleaved_alphabet_tree.root()
+    fn from(value: OrionCommitmentWithData<F, PackF>) -> Self {
+        value.interleaved_alphabet_tree.root()
     }
 }
 
 type OrionProximityCodeword<F> = Vec<F>;
 
+#[derive(Clone, Debug)]
 pub struct OrionProof<EvalF: Field + FieldSerde> {
     pub eval_row: Vec<EvalF>,
     pub proximity_rows: Vec<OrionProximityCodeword<EvalF>>,
@@ -386,7 +387,7 @@ pub struct OrionProof<EvalF: Field + FieldSerde> {
     pub query_openings: Vec<tree::RangePath>,
 }
 
-impl OrionPCSImpl {
+impl OrionPublicParams {
     #[inline(always)]
     pub(crate) fn row_col_from_variables(num_variables: usize) -> (usize, usize) {
         let poly_variables: usize = num_variables;
@@ -512,7 +513,7 @@ impl OrionPCSImpl {
         commitment_with_data: &OrionCommitmentWithData<F, PackF>,
         point: &[EvalF],
         transcript: &mut T,
-    ) -> OrionProof<EvalF>
+    ) -> (EvalF, OrionProof<EvalF>)
     where
         F: Field + FieldSerde,
         PackF: SimdField<Scalar = F>,
@@ -525,6 +526,8 @@ impl OrionPCSImpl {
         // NOTE: working on evaluation response of tensor code IOP based PCS
         let mut poly_ext_field =
             MultiLinearPoly::new(poly.coeffs.iter().cloned().map(EvalF::from).collect());
+        let eval = poly_ext_field.evaluate_jolt(point);
+
         point[num_of_vars_in_codeword..]
             .iter()
             .rev()
@@ -570,11 +573,14 @@ impl OrionPCSImpl {
             })
             .collect();
 
-        OrionProof {
-            eval_row,
-            proximity_rows,
-            query_openings,
-        }
+        (
+            eval,
+            OrionProof {
+                eval_row,
+                proximity_rows,
+                query_openings,
+            },
+        )
     }
 
     pub fn verify<F, PackF, EvalF, T>(
@@ -652,4 +658,88 @@ impl OrionPCSImpl {
     }
 }
 
-// TODO waiting on a unified multilinear PCS trait - align OrionPCSImpl against PCS trait
+/***************************************************
+ * POLYNOMIAL COMMITMENT TRAIT ALIGNMENT FOR ORION *
+ ***************************************************/
+
+pub struct OrionPCS<F, PackF, EvalF, T>
+where
+    F: Field + FieldSerde,
+    PackF: SimdField<Scalar = F>,
+    EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+    T: Transcript<EvalF>,
+{
+    _marker_f: PhantomData<F>,
+    _marker_pack_f: PhantomData<PackF>,
+    _marker_eval_f: PhantomData<EvalF>,
+    _marker_t: PhantomData<T>,
+}
+
+#[derive(Clone, Debug)]
+pub struct OrionPCSSetup {
+    pub num_vars: usize,
+}
+
+impl<F, PackF, EvalF, T> PolynomialCommitmentScheme for OrionPCS<F, PackF, EvalF, T>
+where
+    F: Field + FieldSerde,
+    PackF: SimdField<Scalar = F>,
+    EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+    T: Transcript<EvalF>,
+{
+    type PublicParams = OrionPCSSetup;
+
+    type Poly = MultiLinearPoly<F>;
+
+    type EvalPoint = Vec<EvalF>;
+    type Eval = EvalF;
+
+    type SRS = OrionPublicParams;
+    type ProverKey = Self::SRS;
+    type VerifierKey = Self::SRS;
+
+    type Commitment = OrionCommitment;
+    type CommitmentWithData = OrionCommitmentWithData<F, PackF>;
+    type OpeningProof = OrionProof<EvalF>;
+
+    type FiatShamirTranscript = T;
+
+    // TODO: chat with TC about concrete set of parameters and ways to derive them
+    fn gen_srs_for_testing(
+        #[allow(unused)] rng: impl rand::RngCore,
+        #[allow(unused)] params: &Self::PublicParams,
+    ) -> Self::SRS {
+        todo!()
+    }
+
+    fn commit(proving_key: &Self::ProverKey, poly: &Self::Poly) -> Self::CommitmentWithData {
+        proving_key.commit(poly).unwrap()
+    }
+
+    fn open(
+        proving_key: &Self::ProverKey,
+        poly: &Self::Poly,
+        opening_point: &Self::EvalPoint,
+        commitment_with_data: &Self::CommitmentWithData,
+        transcript: &mut Self::FiatShamirTranscript,
+    ) -> (Self::Eval, Self::OpeningProof) {
+        proving_key.open(poly, commitment_with_data, opening_point, transcript)
+    }
+
+    fn verify(
+        verifying_key: &Self::VerifierKey,
+        commitment: &Self::Commitment,
+        opening_point: &Self::EvalPoint,
+        evaluation: Self::Eval,
+        opening_proof: &Self::OpeningProof,
+        transcript: &mut Self::FiatShamirTranscript,
+    ) -> bool {
+        verifying_key.verify::<F, PackF, EvalF, T>(
+            commitment,
+            opening_point,
+            evaluation,
+            opening_proof,
+            transcript,
+        )
+    }
+}
