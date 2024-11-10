@@ -1,34 +1,35 @@
 use arith::{Field, FieldSerde};
-use pcs::PCS;
-use rand::thread_rng;
+use pcs::PolynomialCommitmentScheme;
+use rand::RngCore;
 use transcript::Transcript;
 
-pub fn test_pcs<F: Field + FieldSerde, P: PCS>(
-    pcs: &mut P,
-    params: &P::Params,
+pub fn test_pcs<F: Field + FieldSerde, P: PolynomialCommitmentScheme>(
+    params: &P::PublicParams,
     poly: &P::Poly,
-    xs: &[P::EvalPoint],
+    opening_points: &P::EvalPoint,
+    mut rng: impl RngCore,
 ) {
-    let mut rng = thread_rng();
-    let srs = pcs.gen_srs_for_testing(&mut rng, params);
+    let srs = P::gen_srs_for_testing(&mut rng, params);
     let proving_key = srs.clone().into();
     let verification_key = srs.clone().into();
 
-    let commitment = pcs.commit(params, &proving_key, poly);
+    let commitment_with_data = P::commit(params, &proving_key, poly);
+    let commitment = commitment_with_data.clone().into();
 
-    for x in xs {
-        let mut _transcript = P::FiatShamirTranscript::new();
-        let mut _transcript_copy = _transcript.clone();
+    {
+        let mut transcript = P::FiatShamirTranscript::new();
+        let mut transcript_copy = transcript.clone();
 
-        let (v, opening) = pcs.open(params, &proving_key, poly, x, &mut _transcript);
+        let (v, opening) = P::open(params, &proving_key, poly, opening_points, &mut transcript);
+
         assert!(P::verify(
             params,
             &verification_key,
             &commitment,
-            x,
+            opening_points,
             v,
             &opening,
-            &mut _transcript_copy
+            &mut transcript_copy
         ));
     }
 }

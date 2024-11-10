@@ -1,5 +1,5 @@
 mod traits;
-pub use traits::{EmptyType, PCS};
+pub use traits::PolynomialCommitmentScheme;
 
 pub mod raw;
 
