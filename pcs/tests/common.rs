@@ -1,6 +1,7 @@
 use arith::{Field, FieldSerde};
 use pcs::PCS;
 use rand::thread_rng;
+use transcript::Transcript;
 
 pub fn test_pcs<F: Field + FieldSerde, P: PCS>(
     pcs: &mut P,
@@ -16,14 +17,18 @@ pub fn test_pcs<F: Field + FieldSerde, P: PCS>(
     let commitment = pcs.commit(params, &proving_key, poly);
 
     for x in xs {
-        let (v, opening) = pcs.open(params, &proving_key, poly, x);
+        let mut _transcript = P::FiatShamirTranscript::new();
+        let mut _transcript_copy = _transcript.clone();
+
+        let (v, opening) = pcs.open(params, &proving_key, poly, x, &mut _transcript);
         assert!(P::verify(
             params,
             &verification_key,
             &commitment,
             x,
             v,
-            &opening
+            &opening,
+            &mut _transcript_copy
         ));
     }
 }

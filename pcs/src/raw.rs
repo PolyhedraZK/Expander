@@ -4,6 +4,7 @@ use crate::{EmptyType, PCS};
 use arith::{Field, FieldSerde};
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
+use transcript::{BytesHashTranscript, Keccak256hasher};
 
 #[derive(Clone, Debug)]
 pub struct RawMLParams {
@@ -34,6 +35,8 @@ impl<F: Field + FieldSerde> PCS for RawML<F> {
 
     type Opening = EmptyType;
 
+    type FiatShamirTranscript = BytesHashTranscript<F, Keccak256hasher>;
+
     fn gen_srs_for_testing(&mut self, _rng: impl RngCore, _params: &Self::Params) -> Self::SRS {
         Self::SRS::default()
     }
@@ -54,6 +57,7 @@ impl<F: Field + FieldSerde> PCS for RawML<F> {
         _proving_key: &Self::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
+        _transcript: &mut Self::FiatShamirTranscript,
     ) -> (Self::Eval, Self::Opening) {
         assert!(1 << params.n_vars == poly.coeffs.len());
         (poly.evaluate_jolt(x), Self::Opening::default())
@@ -66,6 +70,7 @@ impl<F: Field + FieldSerde> PCS for RawML<F> {
         x: &Self::EvalPoint,
         v: Self::Eval,
         _opening: &Self::Opening,
+        _transcript: &mut Self::FiatShamirTranscript,
     ) -> bool {
         assert!(1 << params.n_vars == commitment.len());
         let ml_poly = MultiLinearPoly::<F> {

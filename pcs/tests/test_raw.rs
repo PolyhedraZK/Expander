@@ -8,7 +8,7 @@ use polynomials::MultiLinearPoly;
 use rand::thread_rng;
 
 #[test]
-fn test_raw() {
+fn test_raw_pcs() {
     let params = RawMLParams { n_vars: 8 };
     let mut raw_ml: RawML<BN254Fr> = RawML {
         _phantom: PhantomData,

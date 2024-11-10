@@ -1,18 +1,20 @@
-use arith::FieldSerde;
+use arith::{Field, FieldSerde};
 use rand::RngCore;
 use std::fmt::Debug;
+use transcript::Transcript;
 
 pub trait PCS {
     type Params: Clone + Debug;
     type Poly: Clone + Debug;
     type EvalPoint: Clone + Debug;
-    type Eval: Copy + Clone + Debug;
+    type Eval: Field + FieldSerde;
 
     type SRS: Clone + Debug + FieldSerde;
     type PKey: Clone + Debug + From<Self::SRS> + FieldSerde;
     type VKey: Clone + Debug + From<Self::SRS> + FieldSerde;
     type Commitment: Clone + Debug + FieldSerde;
     type Opening: Clone + Debug + FieldSerde;
+    type FiatShamirTranscript: Transcript<Self::Eval>;
 
     fn gen_srs_for_testing(&mut self, rng: impl RngCore, params: &Self::Params) -> Self::SRS;
 
@@ -29,6 +31,7 @@ pub trait PCS {
         proving_key: &Self::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
+        transcript: &mut Self::FiatShamirTranscript,
     ) -> (Self::Eval, Self::Opening);
 
     fn verify(
@@ -38,6 +41,7 @@ pub trait PCS {
         x: &Self::EvalPoint,
         v: Self::Eval,
         opening: &Self::Opening,
+        transcript: &mut Self::FiatShamirTranscript,
     ) -> bool;
 }
 
