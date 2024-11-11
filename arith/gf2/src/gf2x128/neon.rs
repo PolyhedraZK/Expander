@@ -319,8 +319,6 @@ impl From<GF2> for NeonGF2x128 {
     }
 }
 
-// TODO: SimdField
-
 impl SimdField for NeonGF2x128 {
     type Scalar = GF2;
 

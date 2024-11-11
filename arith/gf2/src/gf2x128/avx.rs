@@ -59,7 +59,7 @@ impl Field for AVXGF2x128 {
     };
 
     const ONE: Self = AVXGF2x128 {
-        v: unsafe { transmute([!0u64, !0u64]) },
+        v: unsafe { transmute::<[u64; 2], __m128i>([!0u64, !0u64]) },
     };
 
     const INV_2: Self = AVXGF2x128 {
@@ -76,7 +76,7 @@ impl Field for AVXGF2x128 {
     #[inline(always)]
     fn one() -> Self {
         AVXGF2x128 {
-            v: unsafe { transmute([!0u64, !0u64]) },
+            v: unsafe { transmute::<[u64; 2], __m128i>([!0u64, !0u64]) },
         }
     }
 
