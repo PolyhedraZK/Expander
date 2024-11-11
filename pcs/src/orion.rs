@@ -359,7 +359,11 @@ pub struct OrionPublicParams {
 }
 
 #[derive(Clone, Debug)]
-pub struct OrionCommitmentWithData<F: Field + FieldSerde, PackF: SimdField<Scalar = F>> {
+pub struct OrionCommitmentWithData<F, PackF>
+where
+    F: Field + FieldSerde,
+    PackF: SimdField<Scalar = F>,
+{
     pub interleaved_alphabet_tree: tree::Tree,
 
     pub _phantom: PhantomData<PackF>,
@@ -453,10 +457,14 @@ impl OrionPublicParams {
         (soundness_bits as f64 / code_len_over_f_bits as f64).ceil() as usize
     }
 
-    pub fn commit<F: Field + FieldSerde, PackF: SimdField<Scalar = F>>(
+    pub fn commit<F, PackF>(
         &self,
         poly: &MultiLinearPoly<F>,
-    ) -> OrionResult<OrionCommitmentWithData<F, PackF>> {
+    ) -> OrionResult<OrionCommitmentWithData<F, PackF>>
+    where
+        F: Field + FieldSerde,
+        PackF: SimdField<Scalar = F>,
+    {
         let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
 
         // NOTE: pre transpose evaluations
