@@ -119,6 +119,11 @@ impl OrionPublicParams {
         transpose_in_place(&mut interleaved_codewords, &mut scratch, row_num);
         drop(scratch);
 
+        if !interleaved_codewords.len().is_power_of_two() {
+            let aligned_po2_len = interleaved_codewords.len().next_power_of_two();
+            interleaved_codewords.resize(aligned_po2_len, F::default());
+        }
+
         let interleaved_alphabet_tree =
             tree::Tree::compact_new_with_field_elems::<F, PackF>(&interleaved_codewords);
 
@@ -248,12 +253,13 @@ where
     // NOTE: compute evaluation codeword
     let eval_codeword = orion_pcs.code_instance.encode(&opening.eval_row).unwrap();
     let eq_linear_combination = EqPolynomial::build_eq_x_r(&random_point[vars_for_col..]);
-    let interleaved_codeword_ext = commit_with_data
+    let mut interleaved_codeword_ext = commit_with_data
         .interleaved_alphabet_tree
         .unpack_field_elems::<F, PackF>()
         .iter()
         .map(|&f| EvalF::from(f))
         .collect::<Vec<_>>();
+    interleaved_codeword_ext.resize(row_num * orion_pcs.code_len(), EvalF::ZERO);
 
     let eq_combined_codeword =
         column_combination(&interleaved_codeword_ext, &eq_linear_combination);

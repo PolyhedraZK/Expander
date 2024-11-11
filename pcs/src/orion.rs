@@ -496,6 +496,12 @@ impl OrionPublicParams {
 
         // NOTE: commit the interleaved codeword
         // we just directly commit to the packed field elements to leaves
+        // Also note, when codeword is not power of 2 length, pad to nearest po2
+        // to commit by merkle tree
+        if !packed_interleaved_codewords.len().is_power_of_two() {
+            let aligned_po2_len = packed_interleaved_codewords.len().next_power_of_two();
+            packed_interleaved_codewords.resize(aligned_po2_len, PackF::ZERO);
+        }
         let interleaved_alphabet_tree = tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(
             &packed_interleaved_codewords,
         );
