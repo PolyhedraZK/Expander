@@ -53,7 +53,7 @@ impl Field for NeonGF2x128 {
 
     const SIZE: usize = 128 / 8;
 
-    const FIELD_SIZE: usize = 128; // in bits
+    const FIELD_SIZE: usize = 1; // in bits
 
     const ZERO: Self = NeonGF2x128 {
         v: unsafe { zeroed() },
@@ -110,11 +110,10 @@ impl Field for NeonGF2x128 {
 
     #[inline(always)]
     fn exp(&self, exponent: u128) -> Self {
-        if exponent % 2 == 0 {
-            NeonGF2x128::ONE
-        } else {
-            *self
+        if exponent == 0 {
+            return Self::one();
         }
+        *self
     }
 
     #[inline(always)]

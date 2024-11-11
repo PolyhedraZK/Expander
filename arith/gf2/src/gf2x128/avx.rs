@@ -50,7 +50,7 @@ impl FieldSerde for AVXGF2x128 {
 impl Field for AVXGF2x128 {
     const NAME: &'static str = "Galios Field 2 SIMD 128";
 
-    const SIZE: usize = 16;
+    const SIZE: usize = 128 / 8;
 
     const FIELD_SIZE: usize = 1; // in bits
 
@@ -109,11 +109,10 @@ impl Field for AVXGF2x128 {
 
     #[inline(always)]
     fn exp(&self, exponent: u128) -> Self {
-        if exponent % 2 == 0 {
-            AVXGF2x128::ONE
-        } else {
-            *self
+        if exponent == 0 {
+            return Self::one();
         }
+        *self
     }
 
     #[inline(always)]
@@ -133,16 +132,6 @@ impl Field for AVXGF2x128 {
                 v: transmute::<[u8; 16], __m128i>(bytes[..16].try_into().unwrap()),
             }
         }
-    }
-
-    #[inline(always)]
-    fn mul_by_5(&self) -> Self {
-        *self
-    }
-
-    #[inline(always)]
-    fn mul_by_6(&self) -> Self {
-        Self::ZERO
     }
 }
 
