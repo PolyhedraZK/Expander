@@ -10,8 +10,9 @@ members = [
     "circuit", 
     "config", 
     "gkr", 
+    "pcs",
     "sumcheck",
-    "transcript"
+    "transcript",
 ]
 resolver = "2"
 

@@ -19,7 +19,6 @@ pub struct ProverScratchPad<C: GKRConfig> {
 
     pub eq_evals_at_rx: Vec<C::ChallengeField>,
     pub eq_evals_at_rz0: Vec<C::ChallengeField>,
-    pub eq_evals_at_rz1: Vec<C::ChallengeField>,
     pub eq_evals_at_r_simd0: Vec<C::ChallengeField>,
     pub eq_evals_at_r_mpi0: Vec<C::ChallengeField>,
     pub eq_evals_first_half: Vec<C::ChallengeField>,
@@ -27,6 +26,8 @@ pub struct ProverScratchPad<C: GKRConfig> {
 
     pub gate_exists_5: Vec<bool>,
     pub gate_exists_1: Vec<bool>,
+
+    pub phase2_coef: C::ChallengeField,
 }
 
 impl<C: GKRConfig> ProverScratchPad<C> {
@@ -45,7 +46,6 @@ impl<C: GKRConfig> ProverScratchPad<C> {
 
             eq_evals_at_rx: vec![C::ChallengeField::default(); max_input_num],
             eq_evals_at_rz0: vec![C::ChallengeField::default(); max_output_num],
-            eq_evals_at_rz1: vec![C::ChallengeField::default(); max_output_num],
             eq_evals_at_r_simd0: vec![C::ChallengeField::default(); C::get_field_pack_size()],
             eq_evals_at_r_mpi0: vec![C::ChallengeField::default(); mpi_world_size],
             eq_evals_first_half: vec![
@@ -65,6 +65,7 @@ impl<C: GKRConfig> ProverScratchPad<C> {
 
             gate_exists_5: vec![false; max_input_num],
             gate_exists_1: vec![false; max_input_num],
+            phase2_coef: C::ChallengeField::ZERO,
         }
     }
 }
@@ -72,7 +73,6 @@ impl<C: GKRConfig> ProverScratchPad<C> {
 pub struct VerifierScratchPad<C: GKRConfig> {
     // ====== for evaluating cst, add and mul ======
     pub eq_evals_at_rz0: Vec<C::ChallengeField>,
-    pub eq_evals_at_rz1: Vec<C::ChallengeField>,
     pub eq_evals_at_r_simd: Vec<C::ChallengeField>,
     pub eq_evals_at_r_mpi: Vec<C::ChallengeField>,
 
@@ -145,7 +145,6 @@ impl<C: GKRConfig> VerifierScratchPad<C> {
 
         Self {
             eq_evals_at_rz0: vec![C::ChallengeField::zero(); max_io_size],
-            eq_evals_at_rz1: vec![C::ChallengeField::zero(); max_io_size],
             eq_evals_at_r_simd: vec![C::ChallengeField::zero(); simd_size],
             eq_evals_at_r_mpi: vec![C::ChallengeField::zero(); config.mpi_config.world_size()],
 

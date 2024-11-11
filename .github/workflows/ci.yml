@@ -47,6 +47,7 @@ jobs:
           cargo run --bin=dev-setup --release
           cargo build --all-features --release
           cargo test --all-features --release --workspace
+          ./scripts/test_recursion.py
 
   gkr-e2e:
     name: Benchmark (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }}, ${{ matrix.field }})
