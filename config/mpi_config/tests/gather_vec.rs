@@ -1,5 +1,5 @@
 use arith::Field;
-use config::MPIConfig;
+use mpi_config::MPIConfig;
 use mersenne31::M31;
 
 #[test]

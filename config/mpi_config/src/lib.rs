@@ -7,7 +7,6 @@ use mpi::{
     topology::{Process, SimpleCommunicator},
     traits::*,
 };
-use transcript::Transcript;
 
 #[macro_export]
 macro_rules! root_println {
@@ -203,7 +202,7 @@ impl MPIConfig {
 
     /// Root process broadcase a value f into all the processes
     #[inline]
-    pub fn root_broadcast<F: Field>(&self, f: &mut F) {
+    pub fn root_broadcast_f<F: Field+FieldSerde>(&self, f: &mut F) {
         unsafe {
             if self.world_size == 1 {
             } else {
@@ -212,6 +211,11 @@ impl MPIConfig {
                 vec_u8.leak();
             }
         }
+    }
+
+    #[inline]
+    pub fn root_broadcast_bytes(&self, bytes: &mut Vec<u8>) {
+        self.root_process().broadcast_into(bytes);
     }
 
     /// sum up all local values
@@ -282,36 +286,22 @@ impl MPIConfig {
     pub fn barrier(&self) {
         self.world.unwrap().barrier();
     }
-
-    /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
-    pub fn transcript_sync_up<F, T>(&self, transcript: &mut T)
-    where
-        F: Field + FieldSerde,
-        T: Transcript<F>,
-    {
-        if self.world_size == 1 {
-        } else {
-            let mut state = transcript.hash_and_return_state();
-            self.root_process().broadcast_into(&mut state);
-            transcript.set_state(&state);
-        }
-    }
-
-    /// Transcript IO for MPI
-    #[inline]
-    pub fn transcript_io<F, T>(&self, ps: &[F], transcript: &mut T) -> F
-    where
-        F: Field + FieldSerde,
-        T: Transcript<F>,
-    {
-        assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
-        for p in ps {
-            transcript.append_field_element(p);
-        }
-        let mut r = transcript.generate_challenge_field_element();
-        self.root_broadcast(&mut r);
-        r
-    }
 }
 
 unsafe impl Send for MPIConfig {}
+
+// /// Transcript IO for MPI
+// #[inline]
+// pub fn transcript_io<F, T>(&self, ps: &[F], transcript: &mut T) -> F
+// where
+//     F: Field + FieldSerde,
+//     T: Transcript<F>,
+// {
+//     assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
+//     for p in ps {
+//         transcript.append_field_element(p);
+//     }
+//     let mut r = transcript.generate_challenge_field_element();
+//     self.root_broadcast(&mut r);
+//     r
+// }

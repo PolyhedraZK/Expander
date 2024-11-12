@@ -7,7 +7,9 @@ edition = "2021"
 arith = { path = "../arith" }
 gf2 = { path = "../arith/gf2" }
 gf2_128 = { path = "../arith/gf2_128" }
+gkr_field_config = { path = "./gkr_field_config"}
 mersenne31 = { path = "../arith/mersenne31" }
+mpi_config = { path = "./mpi_config" }
 transcript = { path = "../transcript" }
 
 

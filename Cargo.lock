@@ -548,9 +548,11 @@ dependencies = [
  "ark-std",
  "gf2",
  "gf2_128",
+ "gkr_field_config",
  "halo2curves",
  "mersenne31",
  "mpi",
+ "mpi_config",
  "transcript",
 ]
 
@@ -927,6 +929,17 @@ dependencies = [
  "transcript",
  "tynm",
  "warp",
+]
+
+[[package]]
+name = "gkr_field_config"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "gf2",
+ "gf2_128",
+ "mersenne31",
 ]
 
 [[package]]
@@ -1544,6 +1557,15 @@ dependencies = [
  "bindgen",
  "build-probe-mpi",
  "cc",
+]
+
+[[package]]
+name = "mpi_config"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "mersenne31",
+ "mpi",
 ]
 
 [[package]]
@@ -2302,6 +2324,7 @@ name = "transcript"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "mpi_config",
  "sha2",
  "tiny-keccak",
 ]

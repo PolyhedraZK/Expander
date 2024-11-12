@@ -1,10 +1,9 @@
-mod gkr_config;
-pub use gkr_config::*;
-
-mod mpi_config;
-pub use mpi_config::*;
-
 use arith::Field;
+use std::fmt::Debug;
+use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
+use transcript::Transcript;
+
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum PolynomialCommitmentType {
@@ -28,6 +27,12 @@ pub const SENTINEL_BN254: [u8; 32] = [
 pub const SENTINEL_GF2: [u8; 32] = [
     2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
+
+pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
+    type FieldConfig: GKRFieldConfig;
+
+    type Transcript: Transcript<<Self::FieldConfig as GKRFieldConfig>::ChallengeField>;
+}
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum GKRScheme {
@@ -58,7 +63,7 @@ pub struct Config<C: GKRConfig> {
 impl<C: GKRConfig> Config<C> {
     pub fn new(gkr_scheme: GKRScheme, mpi_config: MPIConfig) -> Self {
         Config {
-            field_size: C::ChallengeField::FIELD_SIZE,
+            field_size: <C::FieldConfig as GKRFieldConfig>::ChallengeField::FIELD_SIZE,
             security_bits: 100,
             #[cfg(feature = "grinding")]
             grinding_bits: 10,

@@ -6,6 +6,9 @@ pub use fiat_shamir_hash::{
 mod transcript;
 pub use transcript::{BytesHashTranscript, FieldHashTranscript, Transcript};
 
+mod transcript_utils;
+pub use transcript_utils::transcript_root_broadcast;
+
 mod proof;
 pub use proof::Proof;
 
