@@ -5,12 +5,12 @@ use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
 #[cfg(target_arch = "x86_64")]
 mod avx;
 #[cfg(target_arch = "x86_64")]
-use avx::pack;
+use avx::simd_pack_gf2x8;
 
 #[cfg(target_arch = "aarch64")]
 mod neon;
 #[cfg(target_arch = "aarch64")]
-use neon::pack;
+use neon::simd_pack_gf2x8;
 
 use super::GF2;
 
@@ -289,7 +289,7 @@ impl SimdField for GF2x8 {
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        pack(base_vec)
+        simd_pack_gf2x8(base_vec)
     }
 
     #[inline(always)]
