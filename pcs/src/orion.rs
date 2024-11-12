@@ -102,14 +102,8 @@ impl OrionExpanderGraph {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct OrionCodeParameter {
-    // empirical parameters for the expander code on input/output size
-    // NOTE: the derived code rate and invert code rate should preserve
-    // in the recursive code of smaller size that comes in later rounds
-    pub input_message_len: usize,
-    pub output_code_len: usize,
-
-    // parameter for graph g0, that maps n -> (\alpha n)
-    // alpha should be ranging in (0, 1)
+    // parameter for graph g0, that maps n -> (\alpha_g0 n)
+    // \alpha_g0 should be ranging in (0, 1)
     pub alpha_g0: f64,
     pub degree_g0: usize,
 
@@ -119,29 +113,25 @@ pub struct OrionCodeParameter {
     pub lenghth_threshold_g0s: usize,
 
     // parameter for graph g1, let the message in the middle has length L,
-    // then the graph g1 maps L -> ((rate_inv - 1) x n) - L
+    // then the graph g1 maps L -> (\alpha_g1 L)
+    pub alpha_g1: f64,
     pub degree_g1: usize,
 
-    // TODO: code distances
+    // code's relateive distance
     pub hamming_weight: f64,
 }
 
-impl OrionCodeParameter {
-    #[inline(always)]
-    pub fn code_rate(&self) -> f64 {
-        self.input_message_len as f64 / self.output_code_len as f64
-    }
+pub const ORION_CODE_PARAMETER_INSTANCE: OrionCodeParameter = OrionCodeParameter {
+    alpha_g0: 0.33,
+    degree_g0: 6,
 
-    #[inline(always)]
-    pub fn inv_code_rate(&self) -> f64 {
-        self.output_code_len as f64 / self.input_message_len as f64
-    }
+    lenghth_threshold_g0s: 12,
 
-    #[inline(always)]
-    pub fn hamming_weight(&self) -> f64 {
-        self.hamming_weight
-    }
-}
+    alpha_g1: 0.377,
+    degree_g1: 6,
+
+    hamming_weight: 0.07,
+};
 
 // ACKNOWLEDGEMENT: on alphabet being F2 binary case, we appreciate the help from
 // - Section 18 in essential coding theory
@@ -150,9 +140,6 @@ impl OrionCodeParameter {
 //   https://www.cs.cmu.edu/~venkatg/teaching/codingtheory/notes/notes8.pdf
 // - Druk-Ishai 2014
 //   https://dl.acm.org/doi/10.1145/2554797.2554815
-
-// TODO: fix a set of Orion code parameters for message length ranging 2^5 - 2^15
-// together with the code distances, where we need for query number computation
 
 #[derive(Clone, Debug)]
 pub struct OrionExpanderGraphPositioned {
@@ -205,6 +192,10 @@ impl OrionExpanderGraphPositioned {
 pub struct OrionCode {
     pub params: OrionCodeParameter,
 
+    // empirical parameters for this instance of expander code on input/codeword
+    pub msg_len: usize,
+    pub codeword_len: usize,
+
     // g0s (affecting left side alphabets of the codeword)
     // generated from the largest to the smallest
     pub g0s: Vec<OrionExpanderGraphPositioned>,
@@ -217,14 +208,23 @@ pub struct OrionCode {
 pub type OrionCodeword<F> = Vec<F>;
 
 impl OrionCode {
-    pub fn new(params: OrionCodeParameter, mut rng: impl rand::RngCore) -> Self {
-        let mut recursive_code_msg_code_starts: Vec<(usize, usize)> = Vec::new();
+    pub fn new(params: OrionCodeParameter, msg_len: usize, mut rng: impl rand::RngCore) -> Self {
+        // NOTE: sanity check - 1 / threshold_len > hamming_weight
+        // as was part of Druk-Ishai-14 distance proof by induction
+        assert!(1f64 / (params.lenghth_threshold_g0s as f64) > params.hamming_weight);
+
+        // NOTE: sanity check for both alpha_g0 and alpha_g1
+        assert!(0f64 < params.alpha_g0 && params.alpha_g0 < 1f64);
+        assert!(0f64 < params.alpha_g1 && params.alpha_g1 < 1f64);
+
+        // NOTE: the real deal of code instance generation starts here
+        let mut recursive_g0_output_starts: Vec<usize> = Vec::new();
 
         let mut g0s: Vec<OrionExpanderGraphPositioned> = Vec::new();
         let mut g1s: Vec<OrionExpanderGraphPositioned> = Vec::new();
 
         let mut g0_input_starts = 0;
-        let mut g0_output_starts = params.input_message_len;
+        let mut g0_output_starts = msg_len;
 
         // For Spielman code, we keep recurse down til a point to stop,
         // and either the next subcodeword is too short for threshold,
@@ -234,16 +234,17 @@ impl OrionCode {
         while g0_output_starts - g0_input_starts > stopping_g0_len {
             let n = g0_output_starts - g0_input_starts;
             let g0_output_len = (n as f64 * params.alpha_g0).round() as usize;
+            let degree_g0 = cmp::min(params.degree_g0, g0_output_len);
 
             g0s.push(OrionExpanderGraphPositioned::new(
                 g0_input_starts,
                 g0_output_starts,
                 g0_output_starts + g0_output_len - 1,
-                params.degree_g0,
+                degree_g0,
                 &mut rng,
             ));
 
-            recursive_code_msg_code_starts.push((g0_input_starts, g0_output_starts));
+            recursive_g0_output_starts.push(g0_output_starts);
 
             (g0_input_starts, g0_output_starts) =
                 (g0_output_starts, g0_output_starts + g0_output_len);
@@ -252,37 +253,45 @@ impl OrionCode {
         // After g0s are generated, we generate g1s
         let mut g1_output_starts = g0_output_starts;
 
-        while let Some((code_starts, g1_input_starts)) = recursive_code_msg_code_starts.pop() {
-            let code_input_len = g1_input_starts - code_starts;
-            let code_len = (code_input_len as f64 * params.inv_code_rate()).round() as usize;
+        while let Some(g1_input_starts) = recursive_g0_output_starts.pop() {
+            let n = g1_output_starts - g1_input_starts;
+            let g1_output_len = (n as f64 * params.alpha_g1).round() as usize;
+            let degree_g1 = cmp::min(params.degree_g1, g1_output_len);
 
             g1s.push(OrionExpanderGraphPositioned::new(
                 g1_input_starts,
                 g1_output_starts,
-                code_starts + code_len - 1,
-                params.degree_g1,
+                g1_output_starts + g1_output_len - 1,
+                degree_g1,
                 &mut rng,
             ));
 
-            g1_output_starts = code_starts + code_len;
+            g1_output_starts += g1_output_len;
         }
 
-        Self { params, g0s, g1s }
+        let codeword_len = g1_output_starts;
+        Self {
+            params,
+            msg_len,
+            codeword_len,
+            g0s,
+            g1s,
+        }
     }
 
     #[inline(always)]
     pub fn code_len(&self) -> usize {
-        self.params.output_code_len
+        self.codeword_len
     }
 
     #[inline(always)]
     pub fn msg_len(&self) -> usize {
-        self.params.input_message_len
+        self.msg_len
     }
 
     #[inline(always)]
     pub fn hamming_weight(&self) -> f64 {
-        self.params.hamming_weight()
+        self.params.hamming_weight
     }
 
     #[inline(always)]
@@ -420,19 +429,15 @@ impl OrionPublicParams {
 
     pub fn from_random(
         num_variables: usize,
-        // TODO: should be removed with a precomputed list of params
-        code_params: OrionCodeParameter,
+        code_param_instance: OrionCodeParameter,
         mut rng: impl rand::RngCore,
-    ) -> OrionResult<Self> {
+    ) -> Self {
         let (_, msg_size) = Self::row_col_from_variables(num_variables);
-        if msg_size != code_params.input_message_len {
-            return Err(OrionPCSError::ParameterUnmatchError);
-        }
 
-        Ok(Self {
+        Self {
             num_variables,
-            code_instance: OrionCode::new(code_params, &mut rng),
-        })
+            code_instance: OrionCode::new(code_param_instance, msg_size, &mut rng),
+        }
     }
 
     pub fn code_len(&self) -> usize {
@@ -692,6 +697,7 @@ where
 #[derive(Clone, Debug)]
 pub struct OrionPCSSetup {
     pub num_vars: usize,
+    pub code_parameter: OrionCodeParameter,
 }
 
 impl<F, PackF, EvalF, T> PolynomialCommitmentScheme for OrionPCS<F, PackF, EvalF, T>
@@ -718,12 +724,8 @@ where
 
     type FiatShamirTranscript = T;
 
-    // TODO: chat with TC about concrete set of parameters and ways to derive them
-    fn gen_srs_for_testing(
-        #[allow(unused)] rng: impl rand::RngCore,
-        #[allow(unused)] params: &Self::PublicParams,
-    ) -> Self::SRS {
-        todo!()
+    fn gen_srs_for_testing(rng: impl rand::RngCore, params: &Self::PublicParams) -> Self::SRS {
+        OrionPublicParams::from_random(params.num_vars, params.code_parameter, rng)
     }
 
     fn commit(proving_key: &Self::ProverKey, poly: &Self::Poly) -> Self::CommitmentWithData {

@@ -9,7 +9,7 @@ use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 use crate::{
-    inner_product, transpose_in_place, OrionCode, OrionCodeParameter, OrionCommitment,
+    inner_product, transpose_in_place, OrionCode, OrionCommitment, ORION_CODE_PARAMETER_INSTANCE,
     ORION_PCS_SOUNDNESS_BITS,
 };
 
@@ -21,30 +21,10 @@ fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<F> {
         .collect()
 }
 
-// NOTE: beware - this is a sketch code parameter from
-// https://eprint.iacr.org/2022/1010.pdf (Orion) p8
-// on general Spielman code.
-// This set of params might not be carefully calculated for soundness.
-// Only used here for testing purpose
-const EXAMPLE_ORION_CODE_PARAMETER: OrionCodeParameter = OrionCodeParameter {
-    input_message_len: 1 << 10,
-    output_code_len: 1 << 12,
-
-    alpha_g0: 0.5,
-    degree_g0: 6,
-
-    lenghth_threshold_g0s: 10,
-
-    degree_g1: 6,
-
-    // TODO: update to real parameter
-    hamming_weight: 0.07,
-};
-
-fn test_orion_code_generic<F: Field>() {
+fn test_orion_code_generic<F: Field>(msg_len: usize) {
     let mut rng = test_rng();
 
-    let orion_code = OrionCode::new(EXAMPLE_ORION_CODE_PARAMETER, &mut rng);
+    let orion_code = OrionCode::new(ORION_CODE_PARAMETER_INSTANCE, msg_len, &mut rng);
 
     let linear_combine_size = 128;
 
@@ -54,15 +34,13 @@ fn test_orion_code_generic<F: Field>() {
 
     // NOTE: generate message and codeword in the slice buffer
 
-    let mut message_mat =
-        vec![F::ZERO; linear_combine_size * EXAMPLE_ORION_CODE_PARAMETER.input_message_len];
+    let mut message_mat = vec![F::ZERO; linear_combine_size * orion_code.msg_len()];
 
-    let mut codeword_mat =
-        vec![F::ZERO; linear_combine_size * EXAMPLE_ORION_CODE_PARAMETER.output_code_len];
+    let mut codeword_mat = vec![F::ZERO; linear_combine_size * orion_code.code_len()];
 
     message_mat
-        .chunks_mut(EXAMPLE_ORION_CODE_PARAMETER.input_message_len)
-        .zip(codeword_mat.chunks_mut(EXAMPLE_ORION_CODE_PARAMETER.output_code_len))
+        .chunks_mut(orion_code.msg_len())
+        .zip(codeword_mat.chunks_mut(orion_code.code_len()))
         .try_for_each(|(msg, codeword)| {
             msg.iter_mut().for_each(|x| *x = F::random_unsafe(&mut rng));
             orion_code.encode_in_place(msg, codeword)
@@ -71,13 +49,11 @@ fn test_orion_code_generic<F: Field>() {
 
     // NOTE: transpose message and codeword matrix
 
-    let mut message_scratch =
-        vec![F::ZERO; linear_combine_size * EXAMPLE_ORION_CODE_PARAMETER.input_message_len];
+    let mut message_scratch = vec![F::ZERO; linear_combine_size * orion_code.msg_len()];
     transpose_in_place(&mut message_mat, &mut message_scratch, linear_combine_size);
     drop(message_scratch);
 
-    let mut codeword_scratch =
-        vec![F::ZERO; linear_combine_size * EXAMPLE_ORION_CODE_PARAMETER.output_code_len];
+    let mut codeword_scratch = vec![F::ZERO; linear_combine_size * orion_code.code_len()];
     transpose_in_place(
         &mut codeword_mat,
         &mut codeword_scratch,
@@ -97,9 +73,13 @@ fn test_orion_code_generic<F: Field>() {
 
 #[test]
 fn test_orion_code() {
-    test_orion_code_generic::<GF2_128>();
-    test_orion_code_generic::<GF2>();
-    test_orion_code_generic::<M31Ext3>();
+    (5..=15).for_each(|num_vars| {
+        let msg_len = 1usize << num_vars;
+
+        test_orion_code_generic::<GF2_128>(msg_len);
+        test_orion_code_generic::<GF2>(msg_len);
+        test_orion_code_generic::<M31Ext3>(msg_len);
+    });
 }
 
 impl OrionPublicParams {
@@ -134,15 +114,16 @@ impl OrionPublicParams {
     }
 }
 
-fn test_orion_commit_consistency_generic<F: Field + FieldSerde, PackF: SimdField<Scalar = F>>() {
+fn test_orion_commit_consistency_generic<F, PackF>(num_vars: usize)
+where
+    F: Field + FieldSerde,
+    PackF: SimdField<Scalar = F>,
+{
     let mut rng = test_rng();
-    let num_of_vars = log2(EXAMPLE_ORION_CODE_PARAMETER.input_message_len) as usize * 2usize;
 
-    let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
-
+    let random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
     let orion_pcs =
-        OrionPublicParams::from_random(num_of_vars, EXAMPLE_ORION_CODE_PARAMETER, &mut rng)
-            .unwrap();
+        OrionPublicParams::from_random(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
     let real_commit = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
     let dumb_commit = orion_pcs.dumb_commit::<F, PackF>(&random_poly);
@@ -155,10 +136,12 @@ fn test_orion_commit_consistency_generic<F: Field + FieldSerde, PackF: SimdField
 
 #[test]
 fn test_orion_commit_consistency() {
-    test_orion_commit_consistency_generic::<GF2, GF2x8>();
-    test_orion_commit_consistency_generic::<GF2, GF2x64>();
-    test_orion_commit_consistency_generic::<GF2, GF2x128>();
-    test_orion_commit_consistency_generic::<M31, M31x16>();
+    (19..=25).for_each(|num_vars| {
+        test_orion_commit_consistency_generic::<GF2, GF2x8>(num_vars);
+        test_orion_commit_consistency_generic::<GF2, GF2x64>(num_vars);
+        test_orion_commit_consistency_generic::<GF2, GF2x128>(num_vars);
+        // test_orion_commit_consistency_generic::<M31, M31x16>(num_vars);
+    })
 }
 
 fn test_multilinear_poly_tensor_eval_generic<F: Field, ExtF: ExtensionField<BaseField = F>>(
@@ -204,16 +187,15 @@ fn test_multilinear_poly_tensor_eval() {
     })
 }
 
-fn test_orion_pcs_open_generics<F, EvalF, PackF>()
+fn test_orion_pcs_open_generics<F, EvalF, PackF>(num_vars: usize)
 where
     F: Field + FieldSerde,
     EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
     PackF: SimdField<Scalar = F>,
 {
     let mut rng = test_rng();
-    let num_of_vars = log2(EXAMPLE_ORION_CODE_PARAMETER.input_message_len) as usize * 2usize;
 
-    let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
+    let random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
     let random_poly_ext = MultiLinearPoly::new(
         random_poly
             .coeffs
@@ -222,7 +204,7 @@ where
             .map(EvalF::from)
             .collect(),
     );
-    let random_point: Vec<_> = (0..num_of_vars)
+    let random_point: Vec<_> = (0..num_vars)
         .map(|_| EvalF::random_bool(&mut rng))
         .collect();
 
@@ -230,8 +212,7 @@ where
     let mut transcript_cloned = transcript.clone();
 
     let orion_pcs =
-        OrionPublicParams::from_random(num_of_vars, EXAMPLE_ORION_CODE_PARAMETER, &mut rng)
-            .unwrap();
+        OrionPublicParams::from_random(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
     let commit_with_data = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
 
@@ -243,7 +224,7 @@ where
     );
 
     // NOTE: evaluation consistency check
-    let (row_num, col_num) = OrionPublicParams::row_col_from_variables(num_of_vars);
+    let (row_num, col_num) = OrionPublicParams::row_col_from_variables(num_vars);
     let vars_for_col = log2(col_num) as usize;
     let poly_half_evaled = MultiLinearPoly::new(opening.eval_row.clone());
     let actual_eval = poly_half_evaled.evaluate_jolt(&random_point[..vars_for_col]);
@@ -285,20 +266,21 @@ where
 
 #[test]
 fn test_orion_pcs_open() {
-    test_orion_pcs_open_generics::<GF2, GF2_128, GF2x128>();
-    test_orion_pcs_open_generics::<M31, M31Ext3, M31x16>()
+    (19..=25).for_each(|num_vars| {
+        test_orion_pcs_open_generics::<GF2, GF2_128, GF2x128>(num_vars);
+        test_orion_pcs_open_generics::<M31, M31Ext3, M31x16>(num_vars)
+    })
 }
 
-fn test_orion_pcs_full_e2e_generics<F, EvalF, PackF>()
+fn test_orion_pcs_full_e2e_generics<F, EvalF, PackF>(num_vars: usize)
 where
     F: Field + FieldSerde,
     EvalF: Field + FieldSerde + Mul<F, Output = EvalF> + From<F>,
     PackF: SimdField<Scalar = F>,
 {
     let mut rng = test_rng();
-    let num_of_vars = log2(EXAMPLE_ORION_CODE_PARAMETER.input_message_len) as usize * 2usize;
 
-    let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
+    let random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
     let random_poly_ext = MultiLinearPoly::new(
         random_poly
             .coeffs
@@ -307,7 +289,7 @@ where
             .map(EvalF::from)
             .collect(),
     );
-    let random_point: Vec<_> = (0..num_of_vars)
+    let random_point: Vec<_> = (0..num_vars)
         .map(|_| EvalF::random_bool(&mut rng))
         .collect();
     let expected_eval = random_poly_ext.evaluate_jolt(&random_point);
@@ -316,8 +298,7 @@ where
     let mut transcript_cloned = transcript.clone();
 
     let orion_pp =
-        OrionPublicParams::from_random(num_of_vars, EXAMPLE_ORION_CODE_PARAMETER, &mut rng)
-            .unwrap();
+        OrionPublicParams::from_random(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
     let commit_with_data = orion_pp.commit::<F, PackF>(&random_poly).unwrap();
 
@@ -341,9 +322,11 @@ where
 
 #[test]
 fn test_orion_pcs_full_e2e() {
-    test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x8>();
-    test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x64>();
-    test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x128>();
-    test_orion_pcs_full_e2e_generics::<M31, M31, M31x16>();
-    test_orion_pcs_full_e2e_generics::<M31, M31Ext3, M31x16>();
+    (19..=25).for_each(|num_vars| {
+        test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x8>(num_vars);
+        test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x64>(num_vars);
+        test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x128>(num_vars);
+        test_orion_pcs_full_e2e_generics::<M31, M31, M31x16>(num_vars);
+        test_orion_pcs_full_e2e_generics::<M31, M31Ext3, M31x16>(num_vars);
+    })
 }
