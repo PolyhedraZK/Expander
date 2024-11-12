@@ -2,6 +2,16 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
 
+#[cfg(target_arch = "x86_64")]
+mod avx;
+#[cfg(target_arch = "x86_64")]
+use avx::pack;
+
+#[cfg(target_arch = "aarch64")]
+mod neon;
+#[cfg(target_arch = "aarch64")]
+use neon::pack;
+
 use super::GF2;
 
 /// A GF2x8 stores 8 bits of data.
@@ -279,12 +289,7 @@ impl SimdField for GF2x8 {
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == Self::PACK_SIZE);
-        let mut ret = 0u8;
-        for (i, scalar) in base_vec.iter().enumerate() {
-            ret |= scalar.v << (7 - i);
-        }
-        Self { v: ret }
+        pack(base_vec)
     }
 
     #[inline(always)]
