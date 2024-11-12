@@ -72,7 +72,7 @@ impl Tree {
         PackF: SimdField<Scalar = F>,
     {
         let packed_elems: Vec<PackF> = field_elems
-            .chunks(PackF::pack_size())
+            .chunks(PackF::PACK_SIZE)
             .map(SimdField::pack)
             .collect();
 

@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{fmt::Debug, marker::PhantomData};
 
 use arith::{Field, FieldSerde};
 
@@ -7,7 +7,7 @@ use crate::{
     Proof,
 };
 
-pub trait Transcript<F: Field + FieldSerde> {
+pub trait Transcript<F: Field + FieldSerde>: Clone + Debug {
     /// Create a new transcript.
     fn new() -> Self;
 
@@ -23,6 +23,18 @@ pub trait Transcript<F: Field + FieldSerde> {
     /// Generate a slice of random bytes of some fixed size
     /// Use this function when you need some randomness other than the native field
     fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8>;
+
+    /// Generate a list of positions that we want to open the polynomial at.
+    #[inline]
+    fn generate_challenge_index_vector(&mut self, num_queries: usize) -> Vec<usize> {
+        let mut challenges = Vec::with_capacity(num_queries);
+        let mut buf = [0u8; 8];
+        for _ in 0..num_queries {
+            buf.copy_from_slice(self.generate_challenge_u8_slice(8).as_slice());
+            challenges.push(usize::from_le_bytes(buf));
+        }
+        challenges
+    }
 
     /// Generate a challenge vector.
     #[inline]
