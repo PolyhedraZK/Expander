@@ -75,7 +75,7 @@ impl Field for NeonGF2_128x8 {
 
     const SIZE: usize = 16 * 8;
 
-    const FIELD_SIZE: usize = 128 * 8; // in bits
+    const FIELD_SIZE: usize = 128; // in bits
 
     const ZERO: Self = NeonGF2_128x8 {
         v: [unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) }; 8],
@@ -200,10 +200,8 @@ impl SimdField for NeonGF2_128x8 {
             ],
         }
     }
-    #[inline(always)]
-    fn pack_size() -> usize {
-        8
-    }
+
+    const PACK_SIZE: usize = 8;
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
@@ -389,6 +387,15 @@ impl From<GF2x8> for NeonGF2_128x8 {
                 unsafe { transmute::<[u32; 4], uint32x4_t>([v7, 0, 0, 0]) },
             ],
         }
+    }
+}
+
+impl Mul<GF2x8> for NeonGF2_128x8 {
+    type Output = NeonGF2_128x8;
+
+    #[inline]
+    fn mul(self, rhs: GF2x8) -> Self::Output {
+        self.mul_by_base_field(&rhs)
     }
 }
 

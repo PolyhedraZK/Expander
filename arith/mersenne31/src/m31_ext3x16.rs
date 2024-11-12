@@ -57,14 +57,11 @@ impl SimdField for M31Ext3x16 {
         *self * *challenge
     }
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        M31x16::pack_size()
-    }
+    const PACK_SIZE: usize = M31x16::PACK_SIZE;
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == Self::pack_size());
+        assert!(base_vec.len() == Self::PACK_SIZE);
         let mut v0s = vec![];
         let mut v1s = vec![];
         let mut v2s = vec![];
@@ -134,6 +131,15 @@ impl ExtensionField for M31Ext3x16 {
         Self {
             v: [self.v[2].mul_by_5(), self.v[0], self.v[1]],
         }
+    }
+}
+
+impl Mul<M31x16> for M31Ext3x16 {
+    type Output = M31Ext3x16;
+
+    #[inline]
+    fn mul(self, rhs: M31x16) -> Self::Output {
+        self.mul_by_base_field(&rhs)
     }
 }
 
