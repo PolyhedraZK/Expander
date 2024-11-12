@@ -5,6 +5,7 @@ use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gf2::{GF2x128, GF2x64, GF2};
 use gf2_128::GF2_128;
+use mersenne31::{M31Ext3, M31x16, M31};
 use pcs::{OrionPCS, OrionPCSSetup, PolynomialCommitmentScheme, ORION_CODE_PARAMETER_INSTANCE};
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
@@ -59,7 +60,10 @@ fn committing_benchmark_helper<F, PackF, EvalF, T>(
 fn orion_committing_benchmark(c: &mut Criterion) {
     committing_benchmark_helper::<GF2, GF2x128, GF2_128, BytesHashTranscript<_, Keccak256hasher>>(
         c, 19, 25,
-    )
+    );
+    committing_benchmark_helper::<M31, M31x16, M31Ext3, BytesHashTranscript<_, Keccak256hasher>>(
+        c, 15, 20,
+    );
 }
 
 fn opening_benchmark_helper<F, PackF, EvalF, T>(
@@ -114,14 +118,17 @@ fn opening_benchmark_helper<F, PackF, EvalF, T>(
                 },
             )
             .sample_size(10)
-            .measurement_time(Duration::from_secs(30));
+            .measurement_time(Duration::from_secs(50));
     }
 }
 
 fn orion_opening_benchmark(c: &mut Criterion) {
     opening_benchmark_helper::<GF2, GF2x64, GF2_128, BytesHashTranscript<_, Keccak256hasher>>(
         c, 19, 25,
-    )
+    );
+    opening_benchmark_helper::<M31, M31x16, M31Ext3, BytesHashTranscript<_, Keccak256hasher>>(
+        c, 15, 20,
+    );
 }
 
 criterion_group!(bench, orion_committing_benchmark, orion_opening_benchmark);
