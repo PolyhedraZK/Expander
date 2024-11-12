@@ -110,7 +110,7 @@ pub struct OrionCodeParameter {
     // parameter regarding graph generation for the code:
     // stopping condition when message is too short for the recursive code
     // in the next round.
-    pub lenghth_threshold_g0s: usize,
+    pub length_threshold_g0s: usize,
 
     // parameter for graph g1, let the message in the middle has length L,
     // then the graph g1 maps L -> (\alpha_g1 L)
@@ -121,16 +121,17 @@ pub struct OrionCodeParameter {
     pub hamming_weight: f64,
 }
 
+// NOTE: This instance of code derives from Orion paper Section 5.
 pub const ORION_CODE_PARAMETER_INSTANCE: OrionCodeParameter = OrionCodeParameter {
     alpha_g0: 0.33,
     degree_g0: 6,
 
-    lenghth_threshold_g0s: 12,
+    length_threshold_g0s: 12,
 
-    alpha_g1: 0.377,
+    alpha_g1: 0.337,
     degree_g1: 6,
 
-    hamming_weight: 0.07,
+    hamming_weight: 0.055,
 };
 
 // ACKNOWLEDGEMENT: on alphabet being F2 binary case, we appreciate the help from
@@ -211,7 +212,7 @@ impl OrionCode {
     pub fn new(params: OrionCodeParameter, msg_len: usize, mut rng: impl rand::RngCore) -> Self {
         // NOTE: sanity check - 1 / threshold_len > hamming_weight
         // as was part of Druk-Ishai-14 distance proof by induction
-        assert!(1f64 / (params.lenghth_threshold_g0s as f64) > params.hamming_weight);
+        assert!(1f64 / (params.length_threshold_g0s as f64) > params.hamming_weight);
 
         // NOTE: sanity check for both alpha_g0 and alpha_g1
         assert!(0f64 < params.alpha_g0 && params.alpha_g0 < 1f64);
@@ -226,12 +227,7 @@ impl OrionCode {
         let mut g0_input_starts = 0;
         let mut g0_output_starts = msg_len;
 
-        // For Spielman code, we keep recurse down til a point to stop,
-        // and either the next subcodeword is too short for threshold,
-        // or the next codeword is smaller than the expanding degree.
-        let stopping_g0_len = cmp::max(params.lenghth_threshold_g0s, params.degree_g0);
-
-        while g0_output_starts - g0_input_starts > stopping_g0_len {
+        while g0_output_starts - g0_input_starts > params.length_threshold_g0s {
             let n = g0_output_starts - g0_input_starts;
             let g0_output_len = (n as f64 * params.alpha_g0).round() as usize;
             let degree_g0 = cmp::min(params.degree_g0, g0_output_len);
@@ -471,6 +467,9 @@ impl OrionPublicParams {
         PackF: SimdField<Scalar = F>,
     {
         let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
+
+        // NOTE: defense programming - rows of alphabet should fit into at least smallest tree
+        assert!(row_num / PackF::PACK_SIZE * PackF::SIZE >= tree::LEAF_BYTES * 2);
 
         // NOTE: pre transpose evaluations
         let mut transposed_evaluations = poly.coeffs.clone();

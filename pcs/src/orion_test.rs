@@ -25,17 +25,13 @@ fn test_orion_code_generic<F: Field>(msg_len: usize) {
     let mut rng = test_rng();
 
     let orion_code = OrionCode::new(ORION_CODE_PARAMETER_INSTANCE, msg_len, &mut rng);
-
     let linear_combine_size = 128;
-
     let random_scalrs: Vec<_> = (0..linear_combine_size)
         .map(|_| F::random_unsafe(&mut rng))
         .collect();
 
     // NOTE: generate message and codeword in the slice buffer
-
     let mut message_mat = vec![F::ZERO; linear_combine_size * orion_code.msg_len()];
-
     let mut codeword_mat = vec![F::ZERO; linear_combine_size * orion_code.code_len()];
 
     message_mat
@@ -83,10 +79,11 @@ fn test_orion_code() {
 }
 
 impl OrionPublicParams {
-    fn dumb_commit<F: Field + FieldSerde, PackF: SimdField<Scalar = F>>(
-        &self,
-        poly: &MultiLinearPoly<F>,
-    ) -> OrionCommitmentWithData<F, PackF> {
+    fn dumb_commit<F, PackF>(&self, poly: &MultiLinearPoly<F>) -> OrionCommitmentWithData<F, PackF>
+    where
+        F: Field + FieldSerde,
+        PackF: SimdField<Scalar = F>,
+    {
         let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
 
         let mut interleaved_codewords: Vec<_> = poly
@@ -140,13 +137,17 @@ fn test_orion_commit_consistency() {
         test_orion_commit_consistency_generic::<GF2, GF2x8>(num_vars);
         test_orion_commit_consistency_generic::<GF2, GF2x64>(num_vars);
         test_orion_commit_consistency_generic::<GF2, GF2x128>(num_vars);
-        // test_orion_commit_consistency_generic::<M31, M31x16>(num_vars);
+    });
+    (9..=15).for_each(|num_vars| {
+        test_orion_commit_consistency_generic::<M31, M31x16>(num_vars);
     })
 }
 
-fn test_multilinear_poly_tensor_eval_generic<F: Field, ExtF: ExtensionField<BaseField = F>>(
-    num_of_vars: usize,
-) {
+fn test_multilinear_poly_tensor_eval_generic<F, ExtF>(num_of_vars: usize)
+where
+    F: Field,
+    ExtF: ExtensionField<BaseField = F>,
+{
     let mut rng = test_rng();
 
     let random_poly = MultiLinearPoly::<F>::random(num_of_vars, &mut rng);
@@ -266,10 +267,8 @@ where
 
 #[test]
 fn test_orion_pcs_open() {
-    (19..=25).for_each(|num_vars| {
-        test_orion_pcs_open_generics::<GF2, GF2_128, GF2x128>(num_vars);
-        test_orion_pcs_open_generics::<M31, M31Ext3, M31x16>(num_vars)
-    })
+    (19..=25).for_each(|num_vars| test_orion_pcs_open_generics::<GF2, GF2_128, GF2x128>(num_vars));
+    (9..=15).for_each(|num_vars| test_orion_pcs_open_generics::<M31, M31Ext3, M31x16>(num_vars))
 }
 
 fn test_orion_pcs_full_e2e_generics<F, EvalF, PackF>(num_vars: usize)
@@ -309,15 +308,13 @@ where
         &mut transcript,
     );
 
-    assert!(
-        orion_pp.verify::<F, PackF, EvalF, BytesHashTranscript<EvalF, Keccak256hasher>>(
-            &commit_with_data.into(),
-            &random_point,
-            expected_eval,
-            &opening,
-            &mut transcript_cloned
-        )
-    );
+    assert!(orion_pp.verify::<F, PackF, EvalF, _>(
+        &commit_with_data.into(),
+        &random_point,
+        expected_eval,
+        &opening,
+        &mut transcript_cloned
+    ));
 }
 
 #[test]
@@ -326,6 +323,8 @@ fn test_orion_pcs_full_e2e() {
         test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x8>(num_vars);
         test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x64>(num_vars);
         test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x128>(num_vars);
+    });
+    (9..=15).for_each(|num_vars| {
         test_orion_pcs_full_e2e_generics::<M31, M31, M31x16>(num_vars);
         test_orion_pcs_full_e2e_generics::<M31, M31Ext3, M31x16>(num_vars);
     })
