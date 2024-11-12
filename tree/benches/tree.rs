@@ -3,7 +3,7 @@ use std::time::Duration;
 use arith::{Field, FieldSerde, SimdField};
 use ark_std::{rand::RngCore, test_rng};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use gf2::{GF2x8, GF2};
+use gf2::{GF2x128, GF2x64, GF2x8, GF2};
 use mersenne31::{M31x16, M31};
 use tree::{Leaf, Tree, LEAF_BYTES};
 use tynm::type_name;
@@ -71,6 +71,8 @@ where
 
 fn compact_field_elem_tree_building_benchmark(c: &mut Criterion) {
     compact_field_elem_tree_building_benchmark_generic::<GF2, GF2x8>(c);
+    compact_field_elem_tree_building_benchmark_generic::<GF2, GF2x64>(c);
+    compact_field_elem_tree_building_benchmark_generic::<GF2, GF2x128>(c);
     compact_field_elem_tree_building_benchmark_generic::<M31, M31x16>(c)
 }
 
@@ -106,6 +108,7 @@ where
 
 fn compact_packed_field_elem_tree_building_benchmark(c: &mut Criterion) {
     compact_packed_field_elem_tree_building_benchmark_generic::<GF2, GF2x8>(c);
+    compact_packed_field_elem_tree_building_benchmark_generic::<GF2, GF2x64>(c);
 }
 
 criterion_group!(
