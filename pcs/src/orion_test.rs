@@ -2,7 +2,7 @@ use std::{marker::PhantomData, ops::Mul};
 
 use arith::{ExtensionField, Field, FieldSerde, SimdField};
 use ark_std::{log2, test_rng};
-use gf2::{GF2x64, GF2x8, GF2};
+use gf2::{GF2x128, GF2x64, GF2x8, GF2};
 use gf2_128::GF2_128;
 use mersenne31::{M31Ext3, M31x16, M31};
 use polynomials::{EqPolynomial, MultiLinearPoly};
@@ -157,7 +157,7 @@ fn test_orion_commit_consistency_generic<F: Field + FieldSerde, PackF: SimdField
 fn test_orion_commit_consistency() {
     test_orion_commit_consistency_generic::<GF2, GF2x8>();
     test_orion_commit_consistency_generic::<GF2, GF2x64>();
-    test_orion_commit_consistency_generic::<GF2, GF2_128>();
+    test_orion_commit_consistency_generic::<GF2, GF2x128>();
     test_orion_commit_consistency_generic::<M31, M31x16>();
 }
 
@@ -285,7 +285,7 @@ where
 
 #[test]
 fn test_orion_pcs_open() {
-    test_orion_pcs_open_generics::<GF2, GF2_128, GF2_128>();
+    test_orion_pcs_open_generics::<GF2, GF2_128, GF2x128>();
     test_orion_pcs_open_generics::<M31, M31Ext3, M31x16>()
 }
 
@@ -343,7 +343,7 @@ where
 fn test_orion_pcs_full_e2e() {
     test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x8>();
     test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x64>();
-    test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2_128>();
+    test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x128>();
     test_orion_pcs_full_e2e_generics::<M31, M31, M31x16>();
     test_orion_pcs_full_e2e_generics::<M31, M31Ext3, M31x16>();
 }

@@ -73,11 +73,10 @@ impl Field for GF2x64 {
 
     #[inline(always)]
     fn exp(&self, exponent: u128) -> Self {
-        if exponent % 2 == 0 {
-            Self::one()
-        } else {
-            *self
+        if exponent == 0 {
+            return Self::one();
         }
+        *self
     }
 
     #[inline(always)]
