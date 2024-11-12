@@ -1682,6 +1682,7 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "ark-std",
+ "criterion",
  "gf2",
  "gf2_128",
  "mersenne31",
@@ -1690,6 +1691,7 @@ dependencies = [
  "thiserror",
  "transcript",
  "tree",
+ "tynm",
 ]
 
 [[package]]

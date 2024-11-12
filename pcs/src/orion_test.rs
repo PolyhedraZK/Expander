@@ -206,7 +206,7 @@ where
             .collect(),
     );
     let random_point: Vec<_> = (0..num_vars)
-        .map(|_| EvalF::random_bool(&mut rng))
+        .map(|_| EvalF::random_unsafe(&mut rng))
         .collect();
 
     let mut transcript: BytesHashTranscript<EvalF, Keccak256hasher> = BytesHashTranscript::new();
@@ -289,7 +289,7 @@ where
             .collect(),
     );
     let random_point: Vec<_> = (0..num_vars)
-        .map(|_| EvalF::random_bool(&mut rng))
+        .map(|_| EvalF::random_unsafe(&mut rng))
         .collect();
     let expected_eval = random_poly_ext.evaluate_jolt(&random_point);
 
