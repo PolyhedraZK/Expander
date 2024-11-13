@@ -1,6 +1,6 @@
 use arith::{ExtensionField, Field};
 use circuit::{CircuitLayer, CoefType, GateAdd, GateConst, GateMul};
-use config::{FieldType, GKRConfig};
+use gkr_field_config::{FieldType, GKRFieldConfig};
 use polynomials::EqPolynomial;
 
 use crate::{scratch_pad::VerifierScratchPad, unpack_and_combine};
@@ -11,7 +11,7 @@ pub struct GKRVerifierHelper {}
 impl GKRVerifierHelper {
     #[allow(clippy::too_many_arguments)]
     #[inline(always)]
-    pub fn prepare_layer<C: GKRConfig>(
+    pub fn prepare_layer<C: GKRFieldConfig>(
         layer: &CircuitLayer<C>,
         alpha: &Option<C::ChallengeField>,
         rz0: &[C::ChallengeField],
@@ -64,7 +64,7 @@ impl GKRVerifierHelper {
     }
 
     #[inline(always)]
-    pub fn eval_cst<C: GKRConfig>(
+    pub fn eval_cst<C: GKRFieldConfig>(
         cst_gates: &[GateConst<C>],
         public_input: &[C::SimdCircuitField],
         sp: &VerifierScratchPad<C>,
@@ -108,7 +108,7 @@ impl GKRVerifierHelper {
     }
 
     #[inline(always)]
-    pub fn eval_add<C: GKRConfig>(
+    pub fn eval_add<C: GKRFieldConfig>(
         add_gates: &[GateAdd<C>],
         sp: &VerifierScratchPad<C>,
     ) -> C::ChallengeField {
@@ -124,7 +124,7 @@ impl GKRVerifierHelper {
     }
 
     #[inline(always)]
-    pub fn eval_mul<C: GKRConfig>(
+    pub fn eval_mul<C: GKRFieldConfig>(
         mul_gates: &[GateMul<C>],
         sp: &VerifierScratchPad<C>,
     ) -> C::ChallengeField {
@@ -141,7 +141,7 @@ impl GKRVerifierHelper {
     }
 
     #[inline(always)]
-    pub fn set_rx<C: GKRConfig>(rx: &[C::ChallengeField], sp: &mut VerifierScratchPad<C>) {
+    pub fn set_rx<C: GKRFieldConfig>(rx: &[C::ChallengeField], sp: &mut VerifierScratchPad<C>) {
         EqPolynomial::<C::ChallengeField>::eq_eval_at(
             rx,
             &C::ChallengeField::ONE,
@@ -152,7 +152,7 @@ impl GKRVerifierHelper {
     }
 
     #[inline(always)]
-    pub fn set_r_simd_xy<C: GKRConfig>(
+    pub fn set_r_simd_xy<C: GKRFieldConfig>(
         r_simd_xy: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
     ) {
@@ -163,7 +163,7 @@ impl GKRVerifierHelper {
     }
 
     #[inline(always)]
-    pub fn set_r_mpi_xy<C: GKRConfig>(
+    pub fn set_r_mpi_xy<C: GKRFieldConfig>(
         r_mpi_xy: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
     ) {
@@ -174,7 +174,7 @@ impl GKRVerifierHelper {
     }
 
     #[inline(always)]
-    pub fn set_ry<C: GKRConfig>(ry: &[C::ChallengeField], sp: &mut VerifierScratchPad<C>) {
+    pub fn set_ry<C: GKRFieldConfig>(ry: &[C::ChallengeField], sp: &mut VerifierScratchPad<C>) {
         EqPolynomial::<C::ChallengeField>::eq_eval_at(
             ry,
             &C::ChallengeField::ONE,
@@ -185,7 +185,7 @@ impl GKRVerifierHelper {
     }
 
     #[inline(always)]
-    pub fn degree_2_eval<C: GKRConfig>(
+    pub fn degree_2_eval<C: GKRFieldConfig>(
         ps: &[C::ChallengeField],
         x: C::ChallengeField,
         sp: &VerifierScratchPad<C>,
@@ -211,7 +211,7 @@ impl GKRVerifierHelper {
     }
 
     #[inline(always)]
-    pub fn degree_3_eval<C: GKRConfig>(
+    pub fn degree_3_eval<C: GKRFieldConfig>(
         vals: &[C::ChallengeField],
         x: C::ChallengeField,
         sp: &VerifierScratchPad<C>,
@@ -220,7 +220,7 @@ impl GKRVerifierHelper {
     }
 
     #[inline(always)]
-    fn lag_eval<C: GKRConfig>(
+    fn lag_eval<C: GKRFieldConfig>(
         vals: &[C::ChallengeField],
         x: C::ChallengeField,
         sp: &VerifierScratchPad<C>,

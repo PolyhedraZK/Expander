@@ -1,14 +1,14 @@
 use arith::Field;
 use circuit::CircuitLayer;
-use config::GKRConfig;
+use gkr_field_config::GKRFieldConfig;
 use polynomials::EqPolynomial;
 
 use crate::ProverScratchPad;
 
 use super::power_gate::SumcheckPowerGateHelper;
 
-// todo: Move D to GKRConfig
-pub(crate) struct SumcheckGkrSquareHelper<'a, C: GKRConfig, const D: usize> {
+// todo: Move D to GKRFieldConfig
+pub(crate) struct SumcheckGkrSquareHelper<'a, C: GKRFieldConfig, const D: usize> {
     pub(crate) rx: Vec<C::ChallengeField>,
 
     layer: &'a CircuitLayer<C>,
@@ -21,7 +21,7 @@ pub(crate) struct SumcheckGkrSquareHelper<'a, C: GKRConfig, const D: usize> {
     x_helper: SumcheckPowerGateHelper<D>,
 }
 
-impl<'a, C: GKRConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
+impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
     #[inline]
     pub(crate) fn new(
         layer: &'a CircuitLayer<C>,

@@ -289,19 +289,3 @@ impl MPIConfig {
 }
 
 unsafe impl Send for MPIConfig {}
-
-// /// Transcript IO for MPI
-// #[inline]
-// pub fn transcript_io<F, T>(&self, ps: &[F], transcript: &mut T) -> F
-// where
-//     F: Field + FieldSerde,
-//     T: Transcript<F>,
-// {
-//     assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
-//     for p in ps {
-//         transcript.append_field_element(p);
-//     }
-//     let mut r = transcript.generate_challenge_field_element();
-//     self.root_broadcast(&mut r);
-//     r
-// }

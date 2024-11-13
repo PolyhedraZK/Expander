@@ -3,6 +3,7 @@
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
+use gkr_field_config::GKRFieldConfig;
 use sumcheck::ProverScratchPad;
 use transcript::{
     BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, Proof, SHA256hasher,
