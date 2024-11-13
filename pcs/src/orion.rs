@@ -344,11 +344,38 @@ pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row
 }
 
 #[inline]
-pub(crate) fn inner_product<F0, F1>(l: &[F0], r: &[F1], mul: impl Fn(&F0, &F1) -> F1) -> F1
+pub(crate) fn simd_inner_prod<F0, F1, IPPackF0, IPPackF1>(
+    l: &[F0],
+    r: &[F1],
+    scratch_pl: &mut [IPPackF0],
+    scratch_pr: &mut [IPPackF1],
+) -> F1
 where
-    F1: std::iter::Sum,
+    F0: Field,
+    F1: Field + From<F0> + Mul<F0, Output = F1>,
+    IPPackF0: SimdField<Scalar = F0>,
+    IPPackF1: SimdField<Scalar = F1> + Mul<IPPackF0, Output = IPPackF1>,
 {
-    l.iter().zip(r.iter()).map(|(li, ri)| mul(li, ri)).sum()
+    assert_eq!(l.len() % IPPackF0::PACK_SIZE, 0);
+    assert_eq!(r.len() % IPPackF1::PACK_SIZE, 0);
+
+    scratch_pl
+        .iter_mut()
+        .zip(l.chunks(IPPackF0::PACK_SIZE))
+        .for_each(|(pl, ls)| *pl = IPPackF0::pack(ls));
+
+    scratch_pr
+        .iter_mut()
+        .zip(r.chunks(IPPackF1::PACK_SIZE))
+        .for_each(|(pr, rs)| *pr = IPPackF1::pack(rs));
+
+    let simd_sum: IPPackF1 = scratch_pl
+        .iter()
+        .zip(scratch_pr.iter())
+        .map(|(pl, pr)| *pr * *pl)
+        .sum();
+
+    simd_sum.unpack().iter().sum()
 }
 
 /**********************************************************
@@ -403,8 +430,6 @@ impl OrionPublicParams {
 
         let elems_for_smallest_tree = tree::leaf_adic::<F>() * 2;
 
-        // NOTE(Hang): rounding up here in halving the poly variable num
-        // up to discussion if we want to half by round down
         let row_num: usize = elems_for_smallest_tree;
         let msg_size: usize = (1 << poly_variables) / row_num;
 
@@ -470,9 +495,6 @@ impl OrionPublicParams {
     {
         let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
 
-        // NOTE: defense programming - rows of alphabet should fit into at least smallest tree
-        assert!(row_num / PackF::PACK_SIZE * PackF::SIZE >= tree::LEAF_BYTES * 2);
-
         // NOTE: pre transpose evaluations
         let mut transposed_evaluations = poly.coeffs.clone();
         let mut scratch = vec![F::ZERO; 1 << poly.get_num_vars()];
@@ -527,7 +549,7 @@ impl OrionPublicParams {
         })
     }
 
-    pub fn open<F, PackF, EvalF, T>(
+    pub fn open<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
         &self,
         poly: &MultiLinearPoly<F>,
         commitment_with_data: &OrionCommitmentWithData<F, PackF>,
@@ -538,8 +560,12 @@ impl OrionPublicParams {
         F: Field + FieldSerde,
         PackF: SimdField<Scalar = F>,
         EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+        IPPackF: SimdField<Scalar = F>,
+        IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
         T: Transcript<EvalF>,
     {
+        assert_eq!(IPPackEvalF::PACK_SIZE, IPPackF::PACK_SIZE);
+
         let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
@@ -549,6 +575,10 @@ impl OrionPublicParams {
         transpose_in_place(&mut transposed_evaluations, &mut scratch, row_num);
         drop(scratch);
 
+        // NOTE: prepare scratch space for both evals and proximity test
+        let mut scratch_pf = vec![IPPackF::ZERO; row_num / IPPackF::PACK_SIZE];
+        let mut scratch_pef = vec![IPPackEvalF::ZERO; row_num / IPPackEvalF::PACK_SIZE];
+
         // NOTE: working on evaluation response of tensor code IOP based PCS
         let eq_linear_comb = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
         let mut eval_row = vec![EvalF::ZERO; msg_size];
@@ -556,11 +586,21 @@ impl OrionPublicParams {
             .chunks(row_num)
             .zip(eval_row.iter_mut())
             .for_each(|(col_i, res_i)| {
-                *res_i = inner_product(col_i, &eq_linear_comb, |i, ei| *ei * *i);
+                *res_i = simd_inner_prod(col_i, &eq_linear_comb, &mut scratch_pf, &mut scratch_pef);
             });
 
+        // NOTE: working on evaluation on top of evaluation response
         let eq_linear_comb = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
-        let eval = inner_product(&eval_row, &eq_linear_comb, |i, ei| *ei * *i);
+        let mut scratch_msg_sized_0 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
+        let mut scratch_msg_sized_1 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
+        let eval = simd_inner_prod(
+            &eval_row,
+            &eq_linear_comb,
+            &mut scratch_msg_sized_0,
+            &mut scratch_msg_sized_1,
+        );
+        drop(scratch_msg_sized_0);
+        drop(scratch_msg_sized_1);
 
         // NOTE: draw random linear combination out
         // and compose proximity response(s) of tensor code IOP based PCS
@@ -569,15 +609,20 @@ impl OrionPublicParams {
         let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_repetitions];
 
         (0..proximity_repetitions).for_each(|rep_i| {
-            let random_linear_combination = transcript.generate_challenge_field_elements(row_num);
+            let random_coeffs = transcript.generate_challenge_field_elements(row_num);
 
             transposed_evaluations
                 .chunks(row_num)
                 .zip(proximity_rows[rep_i].iter_mut())
                 .for_each(|(col_i, res_i)| {
-                    *res_i = inner_product(col_i, &random_linear_combination, |i, ei| *ei * *i);
+                    *res_i =
+                        simd_inner_prod(col_i, &random_coeffs, &mut scratch_pf, &mut scratch_pef);
                 });
         });
+
+        // NOTE: scratch space for evals and proximity test life cycle finish
+        drop(scratch_pf);
+        drop(scratch_pef);
 
         // NOTE: MT opening for point queries
         let leaf_range = row_num * F::FIELD_SIZE / (tree::LEAF_BYTES * 8);
@@ -606,7 +651,7 @@ impl OrionPublicParams {
         )
     }
 
-    pub fn verify<F, PackF, EvalF, T>(
+    pub fn verify<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
         &self,
         commitment: &OrionCommitment,
         point: &[EvalF],
@@ -618,14 +663,25 @@ impl OrionPublicParams {
         F: Field + FieldSerde,
         PackF: SimdField<Scalar = F>,
         EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+        IPPackF: SimdField<Scalar = F>,
+        IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
         T: Transcript<EvalF>,
     {
         let (row_num, msg_size) = Self::row_col_from_variables::<F>(point.len());
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
         // NOTE: working on evaluation response, evaluate the rest of the response
-        let poly_half_evaled = MultiLinearPoly::new(proof.eval_row.clone());
-        let final_eval = poly_half_evaled.evaluate_jolt(&point[..num_of_vars_in_codeword]);
+        let eq_x_r = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
+        let mut scratch_msg_sized_0 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
+        let mut scratch_msg_sized_1 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
+        let final_eval = simd_inner_prod(
+            &proof.eval_row,
+            &eq_x_r,
+            &mut scratch_msg_sized_0,
+            &mut scratch_msg_sized_1,
+        );
+        drop(scratch_msg_sized_0);
+        drop(scratch_msg_sized_1);
         if final_eval != evaluation {
             return false;
         }
@@ -659,8 +715,10 @@ impl OrionPublicParams {
         // NOTE: encode the proximity/evaluation responses,
         // check againts all challenged indices by check alphabets against
         // linear combined interleaved alphabet
+        let mut scratch_pf = vec![IPPackF::ZERO; row_num / IPPackF::PACK_SIZE];
+        let mut scratch_pef = vec![IPPackEvalF::ZERO; row_num / IPPackEvalF::PACK_SIZE];
+
         let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
-        let mul_ext_f = |i: &F, ei: &EvalF| *ei * *i;
         random_linear_combinations
             .iter()
             .zip(proof.proximity_rows.iter())
@@ -672,7 +730,12 @@ impl OrionPublicParams {
                         .zip(proof.query_openings.iter())
                         .all(|(&qi, range_path)| {
                             let interleaved_alphabet = range_path.unpack_field_elems::<F, PackF>();
-                            let alphabet = inner_product(&interleaved_alphabet, rl, mul_ext_f);
+                            let alphabet = simd_inner_prod(
+                                &interleaved_alphabet,
+                                rl,
+                                &mut scratch_pf,
+                                &mut scratch_pef,
+                            );
                             alphabet == codeword[qi]
                         })
                 }
@@ -685,16 +748,20 @@ impl OrionPublicParams {
  * POLYNOMIAL COMMITMENT TRAIT ALIGNMENT FOR ORION *
  ***************************************************/
 
-pub struct OrionPCS<F, PackF, EvalF, T>
+pub struct OrionPCS<F, PackF, EvalF, IPPackF, IPPackEvalF, T>
 where
     F: Field + FieldSerde,
     PackF: SimdField<Scalar = F>,
     EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+    IPPackF: SimdField<Scalar = F>,
+    IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
     T: Transcript<EvalF>,
 {
     _marker_f: PhantomData<F>,
     _marker_pack_f: PhantomData<PackF>,
     _marker_eval_f: PhantomData<EvalF>,
+    _marker_pack_f0: PhantomData<IPPackF>,
+    _marker_pack_eval_f: PhantomData<IPPackEvalF>,
     _marker_t: PhantomData<T>,
 }
 
@@ -704,11 +771,14 @@ pub struct OrionPCSSetup {
     pub code_parameter: OrionCodeParameter,
 }
 
-impl<F, PackF, EvalF, T> PolynomialCommitmentScheme for OrionPCS<F, PackF, EvalF, T>
+impl<F, PackF, EvalF, IPPackF, IPPackEvalF, T> PolynomialCommitmentScheme
+    for OrionPCS<F, PackF, EvalF, IPPackF, IPPackEvalF, T>
 where
     F: Field + FieldSerde,
     PackF: SimdField<Scalar = F>,
     EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+    IPPackF: SimdField<Scalar = F>,
+    IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
     T: Transcript<EvalF>,
 {
     type PublicParams = OrionPCSSetup;
@@ -743,7 +813,12 @@ where
         commitment_with_data: &Self::CommitmentWithData,
         transcript: &mut Self::FiatShamirTranscript,
     ) -> (Self::Eval, Self::OpeningProof) {
-        proving_key.open(poly, commitment_with_data, opening_point, transcript)
+        proving_key.open::<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
+            poly,
+            commitment_with_data,
+            opening_point,
+            transcript,
+        )
     }
 
     fn verify(
@@ -754,7 +829,7 @@ where
         opening_proof: &Self::OpeningProof,
         transcript: &mut Self::FiatShamirTranscript,
     ) -> bool {
-        verifying_key.verify::<F, PackF, EvalF, T>(
+        verifying_key.verify::<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
             commitment,
             opening_point,
             evaluation,
