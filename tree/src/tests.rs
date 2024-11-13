@@ -1,15 +1,12 @@
-use std::mem::transmute;
-
 use ark_std::{rand::RngCore, test_rng};
-use babybear::BabyBearx16;
 
 use crate::{Leaf, Tree};
 
-fn random_leaf<R: RngCore>(rng: &mut R) -> Leaf<BabyBearx16> {
-    Leaf::new(unsafe {
+fn random_leaf<R: RngCore>(rng: &mut R) -> Leaf {
+    Leaf::new({
         let mut data = [0u8; 64];
         rng.fill_bytes(&mut data);
-        transmute::<[u8; 64], BabyBearx16>(data)
+        data
     })
 }
 
@@ -25,7 +22,7 @@ fn test_tree() {
     for height in 4..15 {
         // Generate random leaves for the tree
         // The number of leaves is 2^(height-1)
-        let leaves: Vec<Leaf<BabyBearx16>> = (0..(1 << (height - 1)))
+        let leaves: Vec<Leaf> = (0..(1 << (height - 1)))
             .map(|_| random_leaf(&mut rng))
             .collect();
 

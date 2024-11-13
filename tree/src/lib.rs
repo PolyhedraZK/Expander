@@ -13,5 +13,5 @@ pub use leaf::*;
 mod path;
 pub use path::*;
 
-// #[cfg(test)]
-// mod tests;
+#[cfg(test)]
+mod tests;
