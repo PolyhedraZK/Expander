@@ -398,19 +398,21 @@ pub struct OrionProof<EvalF: Field + FieldSerde> {
 
 impl OrionPublicParams {
     #[inline(always)]
-    pub(crate) fn row_col_from_variables(num_variables: usize) -> (usize, usize) {
+    pub(crate) fn row_col_from_variables<F: Field>(num_variables: usize) -> (usize, usize) {
         let poly_variables: usize = num_variables;
+
+        let elems_for_smallest_tree = tree::leaf_adic::<F>() * 2;
 
         // NOTE(Hang): rounding up here in halving the poly variable num
         // up to discussion if we want to half by round down
-        let row_num: usize = 1 << ((poly_variables + 1) / 2);
+        let row_num: usize = elems_for_smallest_tree;
         let msg_size: usize = (1 << poly_variables) / row_num;
 
         (row_num, msg_size)
     }
 
-    pub fn new(num_variables: usize, code_instance: OrionCode) -> OrionResult<Self> {
-        let (_, msg_size) = Self::row_col_from_variables(num_variables);
+    pub fn new<F: Field>(num_variables: usize, code_instance: OrionCode) -> OrionResult<Self> {
+        let (_, msg_size) = Self::row_col_from_variables::<F>(num_variables);
         if msg_size != code_instance.msg_len() {
             return Err(OrionPCSError::ParameterUnmatchError);
         }
@@ -423,12 +425,12 @@ impl OrionPublicParams {
         })
     }
 
-    pub fn from_random(
+    pub fn from_random<F: Field>(
         num_variables: usize,
         code_param_instance: OrionCodeParameter,
         mut rng: impl rand::RngCore,
     ) -> Self {
-        let (_, msg_size) = Self::row_col_from_variables(num_variables);
+        let (_, msg_size) = Self::row_col_from_variables::<F>(num_variables);
 
         Self {
             num_variables,
@@ -466,7 +468,7 @@ impl OrionPublicParams {
         F: Field + FieldSerde,
         PackF: SimdField<Scalar = F>,
     {
-        let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
+        let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
 
         // NOTE: defense programming - rows of alphabet should fit into at least smallest tree
         assert!(row_num / PackF::PACK_SIZE * PackF::SIZE >= tree::LEAF_BYTES * 2);
@@ -538,7 +540,7 @@ impl OrionPublicParams {
         EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
         T: Transcript<EvalF>,
     {
-        let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
+        let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
         // NOTE: working on evaluation response of tensor code IOP based PCS
@@ -615,7 +617,7 @@ impl OrionPublicParams {
         EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
         T: Transcript<EvalF>,
     {
-        let (row_num, msg_size) = Self::row_col_from_variables(point.len());
+        let (row_num, msg_size) = Self::row_col_from_variables::<F>(point.len());
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
         // NOTE: working on evaluation response, evaluate the rest of the response
@@ -724,7 +726,7 @@ where
     type FiatShamirTranscript = T;
 
     fn gen_srs_for_testing(rng: impl rand::RngCore, params: &Self::PublicParams) -> Self::SRS {
-        OrionPublicParams::from_random(params.num_vars, params.code_parameter, rng)
+        OrionPublicParams::from_random::<F>(params.num_vars, params.code_parameter, rng)
     }
 
     fn commit(proving_key: &Self::ProverKey, poly: &Self::Poly) -> Self::CommitmentWithData {

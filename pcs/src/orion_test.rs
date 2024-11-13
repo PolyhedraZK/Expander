@@ -84,7 +84,7 @@ impl OrionPublicParams {
         F: Field + FieldSerde,
         PackF: SimdField<Scalar = F>,
     {
-        let (row_num, msg_size) = Self::row_col_from_variables(poly.get_num_vars());
+        let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
 
         let mut interleaved_codewords: Vec<_> = poly
             .coeffs
@@ -120,7 +120,7 @@ where
 
     let random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
     let orion_pcs =
-        OrionPublicParams::from_random(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
+        OrionPublicParams::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
     let real_commit = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
     let dumb_commit = orion_pcs.dumb_commit::<F, PackF>(&random_poly);
@@ -160,7 +160,7 @@ where
 
     let expected_eval = random_poly_ext.evaluate_jolt(&random_point);
 
-    let (_row_num, col_num) = OrionPublicParams::row_col_from_variables(num_of_vars);
+    let (_row_num, col_num) = OrionPublicParams::row_col_from_variables::<F>(num_of_vars);
     // row for higher vars, cols for lower vars
     let vars_for_col = log2(col_num) as usize;
 
@@ -213,7 +213,7 @@ where
     let mut transcript_cloned = transcript.clone();
 
     let orion_pcs =
-        OrionPublicParams::from_random(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
+        OrionPublicParams::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
     let commit_with_data = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
 
@@ -225,7 +225,7 @@ where
     );
 
     // NOTE: evaluation consistency check
-    let (row_num, col_num) = OrionPublicParams::row_col_from_variables(num_vars);
+    let (row_num, col_num) = OrionPublicParams::row_col_from_variables::<F>(num_vars);
     let vars_for_col = log2(col_num) as usize;
     let poly_half_evaled = MultiLinearPoly::new(opening.eval_row.clone());
     let actual_eval = poly_half_evaled.evaluate_jolt(&random_point[..vars_for_col]);
@@ -297,7 +297,7 @@ where
     let mut transcript_cloned = transcript.clone();
 
     let orion_pp =
-        OrionPublicParams::from_random(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
+        OrionPublicParams::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
     let commit_with_data = orion_pp.commit::<F, PackF>(&random_poly).unwrap();
 
