@@ -2,6 +2,16 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
 
+#[cfg(target_arch = "x86_64")]
+mod avx;
+#[cfg(target_arch = "x86_64")]
+use avx::simd_pack_gf2x64;
+
+#[cfg(target_arch = "aarch64")]
+mod neon;
+#[cfg(target_arch = "aarch64")]
+use neon::simd_pack_gf2x64;
+
 use super::GF2;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -275,12 +285,7 @@ impl SimdField for GF2x64 {
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == Self::PACK_SIZE);
-        let mut ret = 0u64;
-        for (i, scalar) in base_vec.iter().enumerate() {
-            ret |= (scalar.v as u64) << (Self::PACK_SIZE - 1 - i);
-        }
-        Self { v: ret }
+        simd_pack_gf2x64(base_vec)
     }
 
     #[inline(always)]
