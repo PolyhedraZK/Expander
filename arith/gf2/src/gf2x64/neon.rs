@@ -25,16 +25,23 @@ fn simd_pack_gf2x8(base_vec: &[GF2]) -> u8 {
 }
 
 pub(crate) fn simd_pack_gf2x64(base_vec: &[GF2]) -> GF2x64 {
-    let b0 = simd_pack_gf2x8(&base_vec[0..8]);
-    let b1 = simd_pack_gf2x8(&base_vec[8..16]);
-    let b2 = simd_pack_gf2x8(&base_vec[16..24]);
-    let b3 = simd_pack_gf2x8(&base_vec[24..32]);
-    let b4 = simd_pack_gf2x8(&base_vec[32..40]);
-    let b5 = simd_pack_gf2x8(&base_vec[40..48]);
-    let b6 = simd_pack_gf2x8(&base_vec[48..56]);
-    let b7 = simd_pack_gf2x8(&base_vec[56..64]);
+    let b0 = simd_pack_gf2x8(&base_vec[0..8]) as u64;
+    let b1 = simd_pack_gf2x8(&base_vec[8..16]) as u64;
+    let b2 = simd_pack_gf2x8(&base_vec[16..24]) as u64;
+    let b3 = simd_pack_gf2x8(&base_vec[24..32]) as u64;
+    let b4 = simd_pack_gf2x8(&base_vec[32..40]) as u64;
+    let b5 = simd_pack_gf2x8(&base_vec[40..48]) as u64;
+    let b6 = simd_pack_gf2x8(&base_vec[48..56]) as u64;
+    let b7 = simd_pack_gf2x8(&base_vec[56..64]) as u64;
 
     GF2x64 {
-        v: unsafe { transmute::<[u8; 8], u64>([b0, b1, b2, b3, b4, b5, b6, b7]) },
+        v: (b0 << 56)
+            | (b1 << 48)
+            | (b2 << 40)
+            | (b3 << 32)
+            | (b4 << 24)
+            | (b5 << 16)
+            | (b6 << 8)
+            | b7,
     }
 }
