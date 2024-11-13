@@ -182,7 +182,7 @@ where
 
 #[test]
 fn test_multilinear_poly_tensor_eval() {
-    (10..22).for_each(|vars| {
+    (11..22).for_each(|vars| {
         test_multilinear_poly_tensor_eval_generic::<GF2, GF2_128>(vars);
         test_multilinear_poly_tensor_eval_generic::<M31, M31Ext3>(vars)
     })

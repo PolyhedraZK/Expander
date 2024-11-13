@@ -565,16 +565,18 @@ impl OrionPublicParams {
         let mul_ext_f = |i: &F, ei: &EvalF| *ei * *i;
         let proximity_repetitions =
             self.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
-        let proximity_rows: Vec<_> = (0..proximity_repetitions)
-            .map(|_| {
-                let random_linear_combination =
-                    transcript.generate_challenge_field_elements(row_num);
-                transposed_evaluations
-                    .chunks(row_num)
-                    .map(|col| inner_product(col, &random_linear_combination, mul_ext_f))
-                    .collect::<Vec<EvalF>>()
-            })
-            .collect();
+        let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_repetitions];
+
+        (0..proximity_repetitions).for_each(|rep_i| {
+            let random_linear_combination = transcript.generate_challenge_field_elements(row_num);
+
+            transposed_evaluations
+                .chunks(row_num)
+                .zip(proximity_rows[rep_i].iter_mut())
+                .for_each(|(col_i, res_i)| {
+                    *res_i = inner_product(col_i, &random_linear_combination, mul_ext_f);
+                });
+        });
 
         // NOTE: MT opening for point queries
         let leaf_range = row_num * F::FIELD_SIZE / (tree::LEAF_BYTES * 8);
