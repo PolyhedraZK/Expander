@@ -1,9 +1,8 @@
-use arith::{Field, FieldSerde};
 use pcs::PolynomialCommitmentScheme;
 use rand::RngCore;
 use transcript::Transcript;
 
-pub fn test_pcs_e2e<F: Field + FieldSerde, P: PolynomialCommitmentScheme>(
+pub fn test_pcs_e2e<P: PolynomialCommitmentScheme>(
     params: &P::PublicParams,
     poly: &P::Poly,
     opening_points: &P::EvalPoint,

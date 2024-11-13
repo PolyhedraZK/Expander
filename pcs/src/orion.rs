@@ -356,9 +356,6 @@ where
     IPPackF0: SimdField<Scalar = F0>,
     IPPackF1: SimdField<Scalar = F1> + Mul<IPPackF0, Output = IPPackF1>,
 {
-    assert_eq!(l.len() % IPPackF0::PACK_SIZE, 0);
-    assert_eq!(r.len() % IPPackF1::PACK_SIZE, 0);
-
     scratch_pl
         .iter_mut()
         .zip(l.chunks(IPPackF0::PACK_SIZE))

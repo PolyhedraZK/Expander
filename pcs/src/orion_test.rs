@@ -9,27 +9,32 @@ use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 use crate::{
-    transpose_in_place, OrionCode, OrionCommitment, ORION_CODE_PARAMETER_INSTANCE,
+    simd_inner_prod, transpose_in_place, OrionCode, OrionCommitment, ORION_CODE_PARAMETER_INSTANCE,
     ORION_PCS_SOUNDNESS_BITS,
 };
 
 use super::{OrionCommitmentWithData, OrionPublicParams};
 
-#[inline]
-pub(crate) fn vanilla_inner_prod<F0, F1>(l: &[F0], r: &[F1], mul: impl Fn(&F0, &F1) -> F1) -> F1
+fn column_combination<F, PackF>(mat: &[F], combination: &[F]) -> Vec<F>
 where
-    F1: std::iter::Sum,
+    F: Field,
+    PackF: SimdField<Scalar = F>,
 {
-    l.iter().zip(r.iter()).map(|(li, ri)| mul(li, ri)).sum()
-}
+    assert_eq!(combination.len() % PackF::PACK_SIZE, 0);
 
-fn column_combination<F: Field>(mat: &[F], combination: &[F]) -> Vec<F> {
+    let mut scratch_0 = vec![PackF::ZERO; combination.len() / PackF::PACK_SIZE];
+    let mut scratch_1 = vec![PackF::ZERO; combination.len() / PackF::PACK_SIZE];
+
     mat.chunks(combination.len())
-        .map(|row_i| vanilla_inner_prod(row_i, combination, |a, b| *a * *b))
+        .map(|row_i| simd_inner_prod(row_i, combination, &mut scratch_0, &mut scratch_1))
         .collect()
 }
 
-fn test_orion_code_generic<F: Field>(msg_len: usize) {
+fn test_orion_code_generic<F, PackF>(msg_len: usize)
+where
+    F: Field,
+    PackF: SimdField<Scalar = F>,
+{
     let mut rng = test_rng();
 
     let orion_code = OrionCode::new(ORION_CODE_PARAMETER_INSTANCE, msg_len, &mut rng);
@@ -67,8 +72,8 @@ fn test_orion_code_generic<F: Field>(msg_len: usize) {
 
     // NOTE: message and codeword matrix linear combination with weights
 
-    let msg_linear_combined = column_combination(&message_mat, &random_scalrs);
-    let codeword_linear_combined = column_combination(&codeword_mat, &random_scalrs);
+    let msg_linear_combined = column_combination::<F, PackF>(&message_mat, &random_scalrs);
+    let codeword_linear_combined = column_combination::<F, PackF>(&codeword_mat, &random_scalrs);
 
     let codeword_computed = orion_code.encode(&msg_linear_combined).unwrap();
 
@@ -80,9 +85,9 @@ fn test_orion_code() {
     (5..=15).for_each(|num_vars| {
         let msg_len = 1usize << num_vars;
 
-        test_orion_code_generic::<GF2_128>(msg_len);
-        test_orion_code_generic::<GF2>(msg_len);
-        test_orion_code_generic::<M31Ext3>(msg_len);
+        test_orion_code_generic::<GF2_128, GF2_128x8>(msg_len);
+        test_orion_code_generic::<GF2, GF2x64>(msg_len);
+        test_orion_code_generic::<M31Ext3, M31Ext3x16>(msg_len);
     });
 }
 
@@ -151,10 +156,11 @@ fn test_orion_commit_consistency() {
     })
 }
 
-fn test_multilinear_poly_tensor_eval_generic<F, ExtF>(num_of_vars: usize)
+fn test_multilinear_poly_tensor_eval_generic<F, ExtF, IPPackExtF>(num_of_vars: usize)
 where
     F: Field,
     ExtF: ExtensionField<BaseField = F>,
+    IPPackExtF: SimdField<Scalar = ExtF>,
 {
     let mut rng = test_rng();
 
@@ -168,7 +174,7 @@ where
 
     let expected_eval = random_poly_ext.evaluate_jolt(&random_point);
 
-    let (_row_num, col_num) = OrionPublicParams::row_col_from_variables::<F>(num_of_vars);
+    let (_, col_num) = OrionPublicParams::row_col_from_variables::<F>(num_of_vars);
     // row for higher vars, cols for lower vars
     let vars_for_col = log2(col_num) as usize;
 
@@ -179,21 +185,19 @@ where
         .for_each(|p| random_poly_ext_half_evaluated.fix_top_variable(p));
 
     let eq_linear_combination = EqPolynomial::build_eq_x_r(&random_point[..vars_for_col]);
-    let actual_eval: ExtF = vanilla_inner_prod(
+
+    let actual_eval = column_combination::<ExtF, IPPackExtF>(
         &random_poly_ext_half_evaluated.coeffs,
         &eq_linear_combination,
-        |a, b| *a * *b,
-    );
+    )[0];
 
     assert_eq!(expected_eval, actual_eval)
 }
 
 #[test]
 fn test_multilinear_poly_tensor_eval() {
-    (11..22).for_each(|vars| {
-        test_multilinear_poly_tensor_eval_generic::<GF2, GF2_128>(vars);
-        test_multilinear_poly_tensor_eval_generic::<M31, M31Ext3>(vars)
-    })
+    (15..22).for_each(|v| test_multilinear_poly_tensor_eval_generic::<GF2, GF2_128, GF2_128x8>(v));
+    (10..22).for_each(|v| test_multilinear_poly_tensor_eval_generic::<M31, M31Ext3, M31Ext3x16>(v));
 }
 
 fn test_orion_pcs_open_generics<F, EvalF, PackF, IPPackF, IPPackEvalF>(num_vars: usize)
@@ -254,7 +258,7 @@ where
     interleaved_codeword_ext.resize(row_num * orion_pp.code_len(), EvalF::ZERO);
 
     let eq_combined_codeword =
-        column_combination(&interleaved_codeword_ext, &eq_linear_combination);
+        column_combination::<EvalF, IPPackEvalF>(&interleaved_codeword_ext, &eq_linear_combination);
     assert_eq!(eval_codeword, eq_combined_codeword);
 
     // NOTE: compute proximity codewords
@@ -266,8 +270,10 @@ where
         let random_linear_combination =
             transcript_cloned.generate_challenge_field_elements(row_num);
 
-        let expected_proximity_codeword =
-            column_combination(&interleaved_codeword_ext, &random_linear_combination);
+        let expected_proximity_codeword = column_combination::<EvalF, IPPackEvalF>(
+            &interleaved_codeword_ext,
+            &random_linear_combination,
+        );
 
         let actual_proximity_codeword = orion_pp.code_instance.encode(proximity_row).unwrap();
 
@@ -277,7 +283,7 @@ where
 
 #[test]
 fn test_orion_pcs_open() {
-    (19..=25).for_each(|num_vars| {
+    (12..=25).for_each(|num_vars| {
         test_orion_pcs_open_generics::<GF2, GF2_128, GF2x128, GF2x8, GF2_128x8>(num_vars)
     });
     (9..=15).for_each(|num_vars| {

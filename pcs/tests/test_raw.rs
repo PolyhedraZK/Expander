@@ -17,9 +17,11 @@ fn test_raw_pcs() {
             .map(|_| BN254Fr::random_unsafe(&mut rng))
             .collect();
 
-        common::test_pcs_e2e::<
-            BN254Fr,
-            RawMultilinearPCS<_, BytesHashTranscript<_, Keccak256hasher>>,
-        >(&params, &poly, &opening_point, &mut rng);
+        common::test_pcs_e2e::<RawMultilinearPCS<_, BytesHashTranscript<_, Keccak256hasher>>>(
+            &params,
+            &poly,
+            &opening_point,
+            &mut rng,
+        );
     });
 }
