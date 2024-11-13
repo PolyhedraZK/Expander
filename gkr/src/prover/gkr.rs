@@ -3,14 +3,15 @@
 use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
-use config::{GKRConfig, MPIConfig};
+use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
 use polynomials::MultiLinearPoly;
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use transcript::Transcript;
 
 // FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_prove<C: GKRConfig, T: Transcript<C::ChallengeField>>(
+pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     circuit: &Circuit<C>,
     sp: &mut ProverScratchPad<C>,
     transcript: &mut T,
@@ -83,7 +84,7 @@ pub fn gkr_prove<C: GKRConfig, T: Transcript<C::ChallengeField>>(
         if rz1.is_some() {
             // TODO: try broadcast beta.unwrap directly
             let mut tmp = transcript.generate_challenge_field_element();
-            mpi_config.root_broadcast(&mut tmp);
+            mpi_config.root_broadcast_f(&mut tmp);
             alpha = Some(tmp)
         } else {
             alpha = None;

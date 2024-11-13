@@ -2,20 +2,19 @@
 
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
-use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
+use config::{Config, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use gkr_field_config::GKRFieldConfig;
 use sumcheck::ProverScratchPad;
 use transcript::{
-    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, Proof, SHA256hasher,
-    Transcript,
+    Proof, Transcript, transcript_root_broadcast,
 };
 
 use crate::{gkr_prove, gkr_square_prove, RawCommitment};
 
 #[cfg(feature = "grinding")]
-pub(crate) fn grind<C: GKRConfig, T: Transcript<C::ChallengeField>>(
-    transcript: &mut T,
-    config: &Config<C>,
+pub(crate) fn grind<Cfg: GKRConfig>(
+    transcript: &mut Cfg::Transcript,
+    config: &Config<Cfg>,
 ) {
     use arith::{Field, FieldSerde};
 
@@ -24,7 +23,7 @@ pub(crate) fn grind<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     let mut hash_bytes = vec![];
 
     // ceil(32/field_size)
-    let num_field_elements = (31 + C::ChallengeField::SIZE) / C::ChallengeField::SIZE;
+    let num_field_elements = (31 + <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::SIZE) / <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::SIZE;
 
     let initial_hash = transcript.generate_challenge_field_elements(num_field_elements);
     initial_hash
@@ -45,24 +44,20 @@ pub(crate) fn grind<C: GKRConfig, T: Transcript<C::ChallengeField>>(
 }
 
 #[derive(Default)]
-pub struct Prover<C: GKRConfig> {
-    config: Config<C>,
-    sp: ProverScratchPad<C>,
+pub struct Prover<Cfg: GKRConfig> {
+    config: Config<Cfg>,
+    sp: ProverScratchPad<Cfg::FieldConfig>,
 }
 
-impl<C: GKRConfig> Prover<C> {
-    pub fn new(config: &Config<C>) -> Self {
-        // assert_eq!(config.fs_hash, crate::config::FiatShamirHashType::SHA256);
-        assert_eq!(
-            config.polynomial_commitment_type,
-            PolynomialCommitmentType::Raw
-        );
+impl<Cfg: GKRConfig> Prover<Cfg> {
+    pub fn new(config: &Config<Cfg>) -> Self {
         Prover {
             config: config.clone(),
             sp: ProverScratchPad::default(),
         }
     }
-    pub fn prepare_mem(&mut self, c: &Circuit<C>) {
+
+    pub fn prepare_mem(&mut self, c: &Circuit<Cfg::FieldConfig>) {
         let max_num_input_var = c
             .layers
             .iter()
@@ -75,32 +70,30 @@ impl<C: GKRConfig> Prover<C> {
             .map(|layer| layer.output_var_num)
             .max()
             .unwrap();
-        self.sp = ProverScratchPad::<C>::new(
+        self.sp = ProverScratchPad::<Cfg::FieldConfig>::new(
             max_num_input_var,
             max_num_output_var,
             self.config.mpi_config.world_size(),
         );
     }
 
-    fn prove_internal<T>(
+    fn prove_internal(
         &mut self,
-        c: &mut Circuit<C>,
-        transcript: &mut T,
-    ) -> (C::ChallengeField, Proof)
-    where
-        T: Transcript<C::ChallengeField>,
+        c: &mut Circuit<Cfg::FieldConfig>,
+        transcript: &mut Cfg::Transcript,
+    ) -> (<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField, Proof)
     {
         let timer = start_timer!(|| "prove");
 
         // PC commit
         let commitment =
-            RawCommitment::<C>::mpi_new(&c.layers[0].input_vals, &self.config.mpi_config);
+            RawCommitment::<Cfg::FieldConfig>::mpi_new(&c.layers[0].input_vals, &self.config.mpi_config);
 
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         transcript.append_u8_slice(&buffer);
 
-        self.config.mpi_config.transcript_sync_up(transcript);
+        transcript_root_broadcast(transcript, &self.config.mpi_config);
 
         #[cfg(feature = "grinding")]
         grind::<C, T>(transcript, &self.config);
@@ -108,7 +101,7 @@ impl<C: GKRConfig> Prover<C> {
         c.fill_rnd_coefs(transcript);
         c.evaluate();
 
-        let mut claimed_v = C::ChallengeField::default();
+        let mut claimed_v = <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::default();
         let mut _rx = vec![];
         let mut _ry = None;
         let mut _rsimd = vec![];
@@ -134,23 +127,7 @@ impl<C: GKRConfig> Prover<C> {
         (claimed_v, transcript.finalize_and_get_proof())
     }
 
-    pub fn prove(&mut self, c: &mut Circuit<C>) -> (C::ChallengeField, Proof) {
-        match C::FIAT_SHAMIR_HASH {
-            FiatShamirHashType::Keccak256 => {
-                let mut transcript =
-                    BytesHashTranscript::<C::ChallengeField, Keccak256hasher>::new();
-                self.prove_internal(c, &mut transcript)
-            }
-            FiatShamirHashType::SHA256 => {
-                let mut transcript = BytesHashTranscript::<C::ChallengeField, SHA256hasher>::new();
-                self.prove_internal(c, &mut transcript)
-            }
-            FiatShamirHashType::MIMC5 => {
-                let mut transcript: FieldHashTranscript<<C as GKRConfig>::ChallengeField, _> =
-                    FieldHashTranscript::<C::ChallengeField, MIMCHasher<C::ChallengeField>>::new();
-                self.prove_internal(c, &mut transcript)
-            }
-            _ => unreachable!(),
-        }
+    pub fn prove(&mut self, c: &mut Circuit<Cfg::FieldConfig>) -> (<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField, Proof) {
+        self.prove_internal(c, &mut Cfg::Transcript::new())
     }
 }
