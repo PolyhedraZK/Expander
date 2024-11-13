@@ -543,26 +543,27 @@ impl OrionPublicParams {
         let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
-        // NOTE: working on evaluation response of tensor code IOP based PCS
-        let mut poly_ext_field =
-            MultiLinearPoly::new(poly.coeffs.iter().cloned().map(EvalF::from).collect());
-        let eval = poly_ext_field.evaluate_jolt(point);
-
-        point[num_of_vars_in_codeword..]
-            .iter()
-            .rev()
-            .for_each(|pt| poly_ext_field.fix_top_variable(pt));
-        let eval_row = poly_ext_field.coeffs;
-
-        // NOTE: transpose evaluations for random linear combination in proximity tests
+        // NOTE: transpose evaluations for linear combinations in evaulation/proximity tests
         let mut transposed_evaluations = poly.coeffs.clone();
         let mut scratch = vec![F::ZERO; 1 << poly.get_num_vars()];
         transpose_in_place(&mut transposed_evaluations, &mut scratch, row_num);
         drop(scratch);
 
+        // NOTE: working on evaluation response of tensor code IOP based PCS
+        let eq_linear_comb = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
+        let mut eval_row = vec![EvalF::ZERO; msg_size];
+        transposed_evaluations
+            .chunks(row_num)
+            .zip(eval_row.iter_mut())
+            .for_each(|(col_i, res_i)| {
+                *res_i = inner_product(col_i, &eq_linear_comb, |i, ei| *ei * *i);
+            });
+
+        let eq_linear_comb = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
+        let eval = inner_product(&eval_row, &eq_linear_comb, |i, ei| *ei * *i);
+
         // NOTE: draw random linear combination out
         // and compose proximity response(s) of tensor code IOP based PCS
-        let mul_ext_f = |i: &F, ei: &EvalF| *ei * *i;
         let proximity_repetitions =
             self.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
         let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_repetitions];
@@ -574,7 +575,7 @@ impl OrionPublicParams {
                 .chunks(row_num)
                 .zip(proximity_rows[rep_i].iter_mut())
                 .for_each(|(col_i, res_i)| {
-                    *res_i = inner_product(col_i, &random_linear_combination, mul_ext_f);
+                    *res_i = inner_product(col_i, &random_linear_combination, |i, ei| *ei * *i);
                 });
         });
 
