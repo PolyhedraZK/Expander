@@ -5,17 +5,12 @@ use circuit::Circuit;
 use config::{Config, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use gkr_field_config::GKRFieldConfig;
 use sumcheck::ProverScratchPad;
-use transcript::{
-    Proof, Transcript, transcript_root_broadcast,
-};
+use transcript::{transcript_root_broadcast, Proof, Transcript};
 
 use crate::{gkr_prove, gkr_square_prove, RawCommitment};
 
 #[cfg(feature = "grinding")]
-pub(crate) fn grind<Cfg: GKRConfig>(
-    transcript: &mut Cfg::Transcript,
-    config: &Config<Cfg>,
-) {
+pub(crate) fn grind<Cfg: GKRConfig>(transcript: &mut Cfg::Transcript, config: &Config<Cfg>) {
     use arith::{Field, FieldSerde};
 
     let timer = start_timer!(|| format!("grind {} bits", config.grinding_bits));
@@ -23,7 +18,8 @@ pub(crate) fn grind<Cfg: GKRConfig>(
     let mut hash_bytes = vec![];
 
     // ceil(32/field_size)
-    let num_field_elements = (31 + <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::SIZE) / <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::SIZE;
+    let num_field_elements = (31 + <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::SIZE)
+        / <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::SIZE;
 
     let initial_hash = transcript.generate_challenge_field_elements(num_field_elements);
     initial_hash
@@ -81,13 +77,14 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         &mut self,
         c: &mut Circuit<Cfg::FieldConfig>,
         transcript: &mut Cfg::Transcript,
-    ) -> (<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField, Proof)
-    {
+    ) -> (<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField, Proof) {
         let timer = start_timer!(|| "prove");
 
         // PC commit
-        let commitment =
-            RawCommitment::<Cfg::FieldConfig>::mpi_new(&c.layers[0].input_vals, &self.config.mpi_config);
+        let commitment = RawCommitment::<Cfg::FieldConfig>::mpi_new(
+            &c.layers[0].input_vals,
+            &self.config.mpi_config,
+        );
 
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
@@ -127,7 +124,10 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         (claimed_v, transcript.finalize_and_get_proof())
     }
 
-    pub fn prove(&mut self, c: &mut Circuit<Cfg::FieldConfig>) -> (<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField, Proof) {
+    pub fn prove(
+        &mut self,
+        c: &mut Circuit<Cfg::FieldConfig>,
+    ) -> (<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField, Proof) {
         self.prove_internal(c, &mut Cfg::Transcript::new())
     }
 }

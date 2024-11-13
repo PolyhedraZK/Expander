@@ -1,12 +1,9 @@
-use arith::{Field, FieldSerde};
 use crate::Transcript;
+use arith::{Field, FieldSerde};
 use mpi_config::MPIConfig;
 
 /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
-pub fn transcript_root_broadcast<F, T>(
-    transcript: &mut T,
-    mpi_config: &MPIConfig,
-)
+pub fn transcript_root_broadcast<F, T>(transcript: &mut T, mpi_config: &MPIConfig)
 where
     F: Field + FieldSerde,
     T: Transcript<F>,

@@ -202,7 +202,7 @@ impl MPIConfig {
 
     /// Root process broadcase a value f into all the processes
     #[inline]
-    pub fn root_broadcast_f<F: Field+FieldSerde>(&self, f: &mut F) {
+    pub fn root_broadcast_f<F: Field + FieldSerde>(&self, f: &mut F) {
         unsafe {
             if self.world_size == 1 {
             } else {

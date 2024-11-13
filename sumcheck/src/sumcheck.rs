@@ -6,8 +6,8 @@ use transcript::Transcript;
 
 use crate::{
     prover_helper::{SumcheckGkrSquareHelper, SumcheckGkrVanillaHelper},
-    ProverScratchPad,
     utils::transcript_io,
+    ProverScratchPad,
 };
 
 // FIXME
@@ -63,7 +63,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
     helper.prepare_mpi_var_vals();
     for i_var in 0..mpi_config.world_size().trailing_zeros() as usize {
         let evals = helper.poly_evals_at_r_mpi_var(i_var, 3);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config,&evals, transcript);
+        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
         helper.receive_r_mpi_var(i_var, r);
     }
 

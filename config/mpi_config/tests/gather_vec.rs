@@ -1,6 +1,6 @@
 use arith::Field;
-use mpi_config::MPIConfig;
 use mersenne31::M31;
+use mpi_config::MPIConfig;
 
 #[test]
 fn test_gather_vec() {

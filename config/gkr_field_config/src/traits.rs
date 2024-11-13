@@ -12,7 +12,7 @@ pub enum FieldType {
 pub trait GKRFieldConfig: Default + Debug + Clone + Send + Sync + 'static {
     /// Enum type for Self::Field
     const FIELD_TYPE: FieldType;
-    
+
     /// Field type for the circuit, e.g., M31
     type CircuitField: Field + FieldSerde + FieldForECC + Send;
 

@@ -1,6 +1,5 @@
-
-use arith::BN254Fr;
 use crate::{FieldType, GKRFieldConfig};
+use arith::BN254Fr;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BN254Config;

@@ -6,19 +6,18 @@ use std::{
 use arith::{Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
-use config::{Config, FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
+use config::{Config, GKRConfig, PolynomialCommitmentType};
+use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
-use transcript::{
-    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, Proof, SHA256hasher,
-    Transcript,
-};
+use transcript::{Proof, Transcript};
 
 #[cfg(feature = "grinding")]
 use crate::grind;
 use crate::RawCommitment;
 
 #[inline(always)]
-fn verify_sumcheck_step<C: GKRConfig, T: Transcript<C::ChallengeField>>(
+fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     mut proof_reader: impl Read,
     degree: usize,
     transcript: &mut T,
@@ -50,8 +49,8 @@ fn verify_sumcheck_step<C: GKRConfig, T: Transcript<C::ChallengeField>>(
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
-fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
-    config: &Config<C>,
+fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+    mpi_config: &MPIConfig,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
     rz0: &[C::ChallengeField],
@@ -114,7 +113,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     }
     GKRVerifierHelper::set_r_simd_xy(&r_simd_xy, sp);
 
-    for _i_var in 0..config.mpi_config.world_size().trailing_zeros() {
+    for _i_var in 0..mpi_config.world_size().trailing_zeros() {
         verified &= verify_sumcheck_step::<C, T>(
             &mut proof_reader,
             3,
@@ -161,8 +160,8 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
 
 // todo: FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
-    config: &Config<C>,
+pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+    mpi_config: &MPIConfig,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
     claimed_v: &C::ChallengeField,
@@ -178,7 +177,7 @@ pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     Option<C::ChallengeField>,
 ) {
     let timer = start_timer!(|| "gkr verify");
-    let mut sp = VerifierScratchPad::<C>::new(config, circuit);
+    let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
 
     let layer_num = circuit.layers.len();
     let mut rz0 = vec![];
@@ -214,7 +213,7 @@ pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
             claimed_v0,
             claimed_v1,
         ) = sumcheck_verify_gkr_layer(
-            config,
+            mpi_config,
             &circuit.layers[i],
             public_input,
             &rz0,
@@ -252,28 +251,29 @@ impl<C: GKRConfig> Default for Verifier<C> {
     }
 }
 
-impl<C: GKRConfig> Verifier<C> {
-    pub fn new(config: &Config<C>) -> Self {
+impl<Cfg: GKRConfig> Verifier<Cfg> {
+    pub fn new(config: &Config<Cfg>) -> Self {
         Verifier {
             config: config.clone(),
         }
     }
 
-    fn verify_internal<T: Transcript<C::ChallengeField>>(
+    pub fn verify(
         &self,
-        circuit: &mut Circuit<C>,
-        public_input: &[C::SimdCircuitField],
-        claimed_v: &C::ChallengeField,
+        circuit: &mut Circuit<Cfg::FieldConfig>,
+        public_input: &[<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField],
+        claimed_v: &<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField,
         proof: &Proof,
-        transcript: &mut T,
     ) -> bool {
         let timer = start_timer!(|| "verify");
+        let mut transcript = Cfg::Transcript::new();
 
         let poly_size =
             circuit.layers.first().unwrap().input_vals.len() * self.config.mpi_config.world_size();
         let mut cursor = Cursor::new(&proof.bytes);
 
-        let commitment = RawCommitment::<C>::deserialize_from(&mut cursor, poly_size);
+        let commitment =
+            RawCommitment::<Cfg::FieldConfig>::deserialize_from(&mut cursor, poly_size);
         transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
         if self.config.mpi_config.world_size() > 1 {
@@ -285,14 +285,14 @@ impl<C: GKRConfig> Verifier<C> {
         #[cfg(feature = "grinding")]
         grind::<C, T>(transcript, &self.config);
 
-        circuit.fill_rnd_coefs(transcript);
+        circuit.fill_rnd_coefs(&mut transcript);
 
         let (mut verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = gkr_verify(
-            &self.config,
+            &self.config.mpi_config,
             circuit,
             public_input,
             claimed_v,
-            transcript,
+            &mut transcript,
             &mut cursor,
         );
 
@@ -323,31 +323,5 @@ impl<C: GKRConfig> Verifier<C> {
         end_timer!(timer);
 
         verified
-    }
-
-    pub fn verify(
-        &self,
-        circuit: &mut Circuit<C>,
-        public_input: &[C::SimdCircuitField],
-        claimed_v: &C::ChallengeField,
-        proof: &Proof,
-    ) -> bool {
-        match C::FIAT_SHAMIR_HASH {
-            FiatShamirHashType::Keccak256 => {
-                let mut transcript =
-                    BytesHashTranscript::<C::ChallengeField, Keccak256hasher>::new();
-                self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
-            }
-            FiatShamirHashType::SHA256 => {
-                let mut transcript = BytesHashTranscript::<C::ChallengeField, SHA256hasher>::new();
-                self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
-            }
-            FiatShamirHashType::MIMC5 => {
-                let mut transcript =
-                    FieldHashTranscript::<C::ChallengeField, MIMCHasher<C::ChallengeField>>::new();
-                self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
-            }
-            _ => unreachable!(),
-        }
     }
 }
