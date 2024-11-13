@@ -2307,6 +2307,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "criterion",
+ "gf2",
+ "gf2_128",
+ "mersenne31",
+ "rayon",
+ "sha2",
+ "tynm",
+]
+
+[[package]]
 name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
