@@ -388,24 +388,24 @@ pub struct OrionPublicParams {
 }
 
 #[derive(Clone, Debug)]
-pub struct OrionCommitmentWithData<F, PackF>
+pub struct OrionCommitmentWithData<F, ComPackF>
 where
     F: Field + FieldSerde,
-    PackF: SimdField<Scalar = F>,
+    ComPackF: SimdField<Scalar = F>,
 {
     pub interleaved_alphabet_tree: tree::Tree,
 
-    pub _phantom: PhantomData<PackF>,
+    pub _phantom: PhantomData<ComPackF>,
 }
 
 pub type OrionCommitment = tree::Node;
 
-impl<F, PackF> From<OrionCommitmentWithData<F, PackF>> for OrionCommitment
+impl<F, ComPackF> From<OrionCommitmentWithData<F, ComPackF>> for OrionCommitment
 where
     F: Field + FieldSerde,
-    PackF: SimdField<Scalar = F>,
+    ComPackF: SimdField<Scalar = F>,
 {
-    fn from(value: OrionCommitmentWithData<F, PackF>) -> Self {
+    fn from(value: OrionCommitmentWithData<F, ComPackF>) -> Self {
         value.interleaved_alphabet_tree.root()
     }
 }
@@ -482,13 +482,13 @@ impl OrionPublicParams {
         (soundness_bits as f64 / code_len_over_f_bits as f64).ceil() as usize
     }
 
-    pub fn commit<F, PackF>(
+    pub fn commit<F, ComPackF>(
         &self,
         poly: &MultiLinearPoly<F>,
-    ) -> OrionResult<OrionCommitmentWithData<F, PackF>>
+    ) -> OrionResult<OrionCommitmentWithData<F, ComPackF>>
     where
         F: Field + FieldSerde,
-        PackF: SimdField<Scalar = F>,
+        ComPackF: SimdField<Scalar = F>,
     {
         let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
 
@@ -499,21 +499,21 @@ impl OrionPublicParams {
         drop(scratch);
 
         // NOTE: SIMD pack each row of transposed matrix
-        let mut packed_evals: Vec<PackF> = transposed_evaluations
-            .chunks(PackF::PACK_SIZE)
+        let mut packed_evals: Vec<ComPackF> = transposed_evaluations
+            .chunks(ComPackF::PACK_SIZE)
             .map(SimdField::pack)
             .collect();
         drop(transposed_evaluations);
 
         // NOTE: transpose back to rows of evaluations, but packed
-        let packed_rows = row_num / PackF::PACK_SIZE;
+        let packed_rows = row_num / ComPackF::PACK_SIZE;
 
-        let mut scratch = vec![PackF::ZERO; packed_rows * msg_size];
+        let mut scratch = vec![ComPackF::ZERO; packed_rows * msg_size];
         transpose_in_place(&mut packed_evals, &mut scratch, msg_size);
         drop(scratch);
 
         // NOTE: packed codeword buffer and encode over packed field
-        let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * self.code_len()];
+        let mut packed_interleaved_codewords = vec![ComPackF::ZERO; packed_rows * self.code_len()];
         packed_evals
             .chunks(msg_size)
             .zip(packed_interleaved_codewords.chunks_mut(self.code_len()))
@@ -523,7 +523,7 @@ impl OrionPublicParams {
         drop(packed_evals);
 
         // NOTE: transpose codeword s.t., the matrix has codewords being columns
-        let mut scratch = vec![PackF::ZERO; packed_rows * self.code_len()];
+        let mut scratch = vec![ComPackF::ZERO; packed_rows * self.code_len()];
         transpose_in_place(&mut packed_interleaved_codewords, &mut scratch, packed_rows);
         drop(scratch);
 
@@ -533,30 +533,30 @@ impl OrionPublicParams {
         // to commit by merkle tree
         if !packed_interleaved_codewords.len().is_power_of_two() {
             let aligned_po2_len = packed_interleaved_codewords.len().next_power_of_two();
-            packed_interleaved_codewords.resize(aligned_po2_len, PackF::ZERO);
+            packed_interleaved_codewords.resize(aligned_po2_len, ComPackF::ZERO);
         }
-        let interleaved_alphabet_tree = tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(
+        let mt = tree::Tree::compact_new_with_packed_field_elems::<F, ComPackF>(
             &packed_interleaved_codewords,
         );
 
         Ok(OrionCommitmentWithData {
-            interleaved_alphabet_tree,
+            interleaved_alphabet_tree: mt,
 
             _phantom: PhantomData,
         })
     }
 
-    pub fn open<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
+    pub fn open<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
         &self,
         poly: &MultiLinearPoly<F>,
-        commitment_with_data: &OrionCommitmentWithData<F, PackF>,
+        commitment_with_data: &OrionCommitmentWithData<F, ComPackF>,
         point: &[EvalF],
         transcript: &mut T,
     ) -> (EvalF, OrionProof<EvalF>)
     where
         F: Field + FieldSerde,
-        PackF: SimdField<Scalar = F>,
         EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+        ComPackF: SimdField<Scalar = F>,
         IPPackF: SimdField<Scalar = F>,
         IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
         T: Transcript<EvalF>,
@@ -648,7 +648,7 @@ impl OrionPublicParams {
         )
     }
 
-    pub fn verify<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
+    pub fn verify<F, ComPackF, EvalF, IPPackF, IPPackEvalF, T>(
         &self,
         commitment: &OrionCommitment,
         point: &[EvalF],
@@ -658,12 +658,14 @@ impl OrionPublicParams {
     ) -> bool
     where
         F: Field + FieldSerde,
-        PackF: SimdField<Scalar = F>,
+        ComPackF: SimdField<Scalar = F>,
         EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
         IPPackF: SimdField<Scalar = F>,
         IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
         T: Transcript<EvalF>,
     {
+        assert_eq!(IPPackF::PACK_SIZE, IPPackEvalF::PACK_SIZE);
+
         let (row_num, msg_size) = Self::row_col_from_variables::<F>(point.len());
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
@@ -726,7 +728,8 @@ impl OrionPublicParams {
                         .iter()
                         .zip(proof.query_openings.iter())
                         .all(|(&qi, range_path)| {
-                            let interleaved_alphabet = range_path.unpack_field_elems::<F, PackF>();
+                            let interleaved_alphabet =
+                                range_path.unpack_field_elems::<F, ComPackF>();
                             let alphabet = simd_inner_prod(
                                 &interleaved_alphabet,
                                 rl,
@@ -745,17 +748,17 @@ impl OrionPublicParams {
  * POLYNOMIAL COMMITMENT TRAIT ALIGNMENT FOR ORION *
  ***************************************************/
 
-pub struct OrionPCS<F, PackF, EvalF, IPPackF, IPPackEvalF, T>
+pub struct OrionPCS<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>
 where
     F: Field + FieldSerde,
-    PackF: SimdField<Scalar = F>,
     EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+    ComPackF: SimdField<Scalar = F>,
     IPPackF: SimdField<Scalar = F>,
     IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
     T: Transcript<EvalF>,
 {
     _marker_f: PhantomData<F>,
-    _marker_pack_f: PhantomData<PackF>,
+    _marker_pack_f: PhantomData<ComPackF>,
     _marker_eval_f: PhantomData<EvalF>,
     _marker_pack_f0: PhantomData<IPPackF>,
     _marker_pack_eval_f: PhantomData<IPPackEvalF>,
@@ -768,12 +771,12 @@ pub struct OrionPCSSetup {
     pub code_parameter: OrionCodeParameter,
 }
 
-impl<F, PackF, EvalF, IPPackF, IPPackEvalF, T> PolynomialCommitmentScheme
-    for OrionPCS<F, PackF, EvalF, IPPackF, IPPackEvalF, T>
+impl<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T> PolynomialCommitmentScheme
+    for OrionPCS<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>
 where
     F: Field + FieldSerde,
-    PackF: SimdField<Scalar = F>,
     EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+    ComPackF: SimdField<Scalar = F>,
     IPPackF: SimdField<Scalar = F>,
     IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
     T: Transcript<EvalF>,
@@ -790,7 +793,7 @@ where
     type VerifierKey = Self::SRS;
 
     type Commitment = OrionCommitment;
-    type CommitmentWithData = OrionCommitmentWithData<F, PackF>;
+    type CommitmentWithData = OrionCommitmentWithData<F, ComPackF>;
     type OpeningProof = OrionProof<EvalF>;
 
     type FiatShamirTranscript = T;
@@ -810,7 +813,7 @@ where
         commitment_with_data: &Self::CommitmentWithData,
         transcript: &mut Self::FiatShamirTranscript,
     ) -> (Self::Eval, Self::OpeningProof) {
-        proving_key.open::<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
+        proving_key.open::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
             poly,
             commitment_with_data,
             opening_point,
@@ -826,7 +829,7 @@ where
         opening_proof: &Self::OpeningProof,
         transcript: &mut Self::FiatShamirTranscript,
     ) -> bool {
-        verifying_key.verify::<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
+        verifying_key.verify::<F, ComPackF, EvalF, IPPackF, IPPackEvalF, T>(
             commitment,
             opening_point,
             evaluation,

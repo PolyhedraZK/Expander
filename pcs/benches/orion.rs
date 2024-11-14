@@ -11,22 +11,22 @@ use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 use tynm::type_name;
 
-fn committing_benchmark_helper<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
+fn committing_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
     c: &mut Criterion,
     lowest_num_vars: usize,
     highest_num_vars: usize,
 ) where
     F: Field + FieldSerde,
-    PackF: SimdField<Scalar = F>,
     EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+    ComPackF: SimdField<Scalar = F>,
     IPPackF: SimdField<Scalar = F>,
     IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
     T: Transcript<EvalF>,
 {
     let mut group = c.benchmark_group(format!(
-        "Orion PCS committing benchmarking: F = {}, PackF = {}",
+        "Orion PCS committing benchmarking: F = {}, ComPackF = {}",
         type_name::<F>(),
-        type_name::<PackF>(),
+        type_name::<ComPackF>(),
     ));
 
     let mut rng = test_rng();
@@ -34,7 +34,7 @@ fn committing_benchmark_helper<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
     for num_vars in lowest_num_vars..=highest_num_vars {
         let random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
 
-        let orion_pp = OrionPCS::<F, PackF, EvalF, IPPackF, IPPackEvalF, T>::gen_srs_for_testing(
+        let orion_pp = OrionPCS::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>::gen_srs_for_testing(
             &mut rng,
             &OrionPCSSetup {
                 num_vars,
@@ -48,7 +48,7 @@ fn committing_benchmark_helper<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
                 |b| {
                     b.iter(|| {
                         _ = black_box(
-                            OrionPCS::<F, PackF, EvalF, IPPackF, IPPackEvalF, T>::commit(
+                            OrionPCS::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>::commit(
                                 &orion_pp,
                                 &random_poly,
                             ),
@@ -64,39 +64,39 @@ fn committing_benchmark_helper<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
 fn orion_committing_benchmark(c: &mut Criterion) {
     committing_benchmark_helper::<
         GF2,
-        GF2x128,
         GF2_128,
+        GF2x128,
         GF2x8,
         GF2_128x8,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 19, 25);
     committing_benchmark_helper::<
         M31,
-        M31x16,
         M31Ext3,
+        M31x16,
         M31x16,
         M31Ext3x16,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 15, 20);
 }
 
-fn opening_benchmark_helper<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
+fn opening_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
     c: &mut Criterion,
     lowest_num_vars: usize,
     highest_num_vars: usize,
 ) where
     F: Field + FieldSerde,
-    PackF: SimdField<Scalar = F>,
     EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
+    ComPackF: SimdField<Scalar = F>,
     IPPackF: SimdField<Scalar = F>,
     IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
     T: Transcript<EvalF>,
 {
     let mut group = c.benchmark_group(format!(
-        "Orion PCS opening benchmarking: F = {}, EvalF = {}, PackF = {}",
+        "Orion PCS opening benchmarking: F = {}, EvalF = {}, ComPackF = {}",
         type_name::<F>(),
         type_name::<EvalF>(),
-        type_name::<PackF>(),
+        type_name::<ComPackF>(),
     ));
 
     let mut rng = test_rng();
@@ -108,7 +108,7 @@ fn opening_benchmark_helper<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
             .map(|_| EvalF::random_unsafe(&mut rng))
             .collect();
 
-        let orion_pp = OrionPCS::<F, PackF, EvalF, IPPackF, IPPackEvalF, T>::gen_srs_for_testing(
+        let orion_pp = OrionPCS::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>::gen_srs_for_testing(
             &mut rng,
             &OrionPCSSetup {
                 num_vars,
@@ -116,21 +116,25 @@ fn opening_benchmark_helper<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
             },
         );
 
-        let commitment_with_data =
-            OrionPCS::<F, PackF, EvalF, IPPackF, IPPackEvalF, T>::commit(&orion_pp, &random_poly);
+        let commitment_with_data = OrionPCS::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>::commit(
+            &orion_pp,
+            &random_poly,
+        );
 
         group
             .bench_function(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(OrionPCS::<F, PackF, EvalF, IPPackF, IPPackEvalF, T>::open(
-                            &orion_pp,
-                            &random_poly,
-                            &random_point,
-                            &commitment_with_data,
-                            &mut transcript,
-                        ))
+                        _ = black_box(
+                            OrionPCS::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>::open(
+                                &orion_pp,
+                                &random_poly,
+                                &random_point,
+                                &commitment_with_data,
+                                &mut transcript,
+                            ),
+                        )
                     })
                 },
             )
@@ -142,16 +146,16 @@ fn opening_benchmark_helper<F, PackF, EvalF, IPPackF, IPPackEvalF, T>(
 fn orion_opening_benchmark(c: &mut Criterion) {
     opening_benchmark_helper::<
         GF2,
-        GF2x64,
         GF2_128,
+        GF2x64,
         GF2x8,
         GF2_128x8,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 19, 25);
     opening_benchmark_helper::<
         M31,
-        M31x16,
         M31Ext3,
+        M31x16,
         M31x16,
         M31Ext3x16,
         BytesHashTranscript<_, Keccak256hasher>,

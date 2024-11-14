@@ -26,8 +26,8 @@ fn test_orion_pcs() {
         common::test_pcs_e2e::<
             OrionPCS<
                 GF2,
-                GF2x128,
                 GF2_128,
+                GF2x128,
                 GF2x8,
                 GF2_128x8,
                 BytesHashTranscript<_, Keccak256hasher>,

@@ -30,10 +30,10 @@ where
         .collect()
 }
 
-fn test_orion_code_generic<F, PackF>(msg_len: usize)
+fn test_orion_code_generic<F, ComPackF>(msg_len: usize)
 where
     F: Field,
-    PackF: SimdField<Scalar = F>,
+    ComPackF: SimdField<Scalar = F>,
 {
     let mut rng = test_rng();
 
@@ -72,8 +72,8 @@ where
 
     // NOTE: message and codeword matrix linear combination with weights
 
-    let msg_linear_combined = column_combination::<F, PackF>(&message_mat, &random_scalrs);
-    let codeword_linear_combined = column_combination::<F, PackF>(&codeword_mat, &random_scalrs);
+    let msg_linear_combined = column_combination::<F, ComPackF>(&message_mat, &random_scalrs);
+    let codeword_linear_combined = column_combination::<F, ComPackF>(&codeword_mat, &random_scalrs);
 
     let codeword_computed = orion_code.encode(&msg_linear_combined).unwrap();
 
@@ -92,10 +92,13 @@ fn test_orion_code() {
 }
 
 impl OrionPublicParams {
-    fn dumb_commit<F, PackF>(&self, poly: &MultiLinearPoly<F>) -> OrionCommitmentWithData<F, PackF>
+    fn dumb_commit<F, ComPackF>(
+        &self,
+        poly: &MultiLinearPoly<F>,
+    ) -> OrionCommitmentWithData<F, ComPackF>
     where
         F: Field + FieldSerde,
-        PackF: SimdField<Scalar = F>,
+        ComPackF: SimdField<Scalar = F>,
     {
         let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
 
@@ -115,7 +118,7 @@ impl OrionPublicParams {
         }
 
         let interleaved_alphabet_tree =
-            tree::Tree::compact_new_with_field_elems::<F, PackF>(&interleaved_codewords);
+            tree::Tree::compact_new_with_field_elems::<F, ComPackF>(&interleaved_codewords);
 
         OrionCommitmentWithData {
             interleaved_alphabet_tree,
@@ -124,10 +127,10 @@ impl OrionPublicParams {
     }
 }
 
-fn test_orion_commit_consistency_generic<F, PackF>(num_vars: usize)
+fn test_orion_commit_consistency_generic<F, ComPackF>(num_vars: usize)
 where
     F: Field + FieldSerde,
-    PackF: SimdField<Scalar = F>,
+    ComPackF: SimdField<Scalar = F>,
 {
     let mut rng = test_rng();
 
@@ -135,8 +138,8 @@ where
     let orion_pcs =
         OrionPublicParams::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
-    let real_commit = orion_pcs.commit::<F, PackF>(&random_poly).unwrap();
-    let dumb_commit = orion_pcs.dumb_commit::<F, PackF>(&random_poly);
+    let real_commit = orion_pcs.commit::<F, ComPackF>(&random_poly).unwrap();
+    let dumb_commit = orion_pcs.dumb_commit::<F, ComPackF>(&random_poly);
 
     let real_commitment: OrionCommitment = real_commit.into();
     let dumb_commitment: OrionCommitment = dumb_commit.into();
@@ -200,11 +203,11 @@ fn test_multilinear_poly_tensor_eval() {
     (10..22).for_each(|v| test_multilinear_poly_tensor_eval_generic::<M31, M31Ext3, M31Ext3x16>(v));
 }
 
-fn test_orion_pcs_open_generics<F, EvalF, PackF, IPPackF, IPPackEvalF>(num_vars: usize)
+fn test_orion_pcs_open_generics<F, EvalF, ComPackF, IPPackF, IPPackEvalF>(num_vars: usize)
 where
     F: Field + FieldSerde,
     EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
-    PackF: SimdField<Scalar = F>,
+    ComPackF: SimdField<Scalar = F>,
     IPPackF: SimdField<Scalar = F>,
     IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
 {
@@ -229,9 +232,9 @@ where
     let orion_pp =
         OrionPublicParams::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
-    let commit_with_data = orion_pp.commit::<F, PackF>(&random_poly).unwrap();
+    let commit_with_data = orion_pp.commit::<F, ComPackF>(&random_poly).unwrap();
 
-    let (_, opening) = orion_pp.open::<F, PackF, EvalF, IPPackF, IPPackEvalF, _>(
+    let (_, opening) = orion_pp.open::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, _>(
         &random_poly,
         &commit_with_data,
         &random_point,
@@ -251,7 +254,7 @@ where
     let eq_linear_combination = EqPolynomial::build_eq_x_r(&random_point[vars_for_col..]);
     let mut interleaved_codeword_ext = commit_with_data
         .interleaved_alphabet_tree
-        .unpack_field_elems::<F, PackF>()
+        .unpack_field_elems::<F, ComPackF>()
         .iter()
         .map(|&f| EvalF::from(f))
         .collect::<Vec<_>>();
@@ -291,11 +294,11 @@ fn test_orion_pcs_open() {
     })
 }
 
-fn test_orion_pcs_full_e2e_generics<F, EvalF, PackF, IPPackF, IPPackEvalF>(num_vars: usize)
+fn test_orion_pcs_full_e2e_generics<F, EvalF, ComPackF, IPPackF, IPPackEvalF>(num_vars: usize)
 where
     F: Field + FieldSerde,
     EvalF: Field + FieldSerde + Mul<F, Output = EvalF> + From<F>,
-    PackF: SimdField<Scalar = F>,
+    ComPackF: SimdField<Scalar = F>,
     IPPackF: SimdField<Scalar = F>,
     IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
 {
@@ -321,22 +324,24 @@ where
     let orion_pp =
         OrionPublicParams::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
-    let commit_with_data = orion_pp.commit::<F, PackF>(&random_poly).unwrap();
+    let commit_with_data = orion_pp.commit::<F, ComPackF>(&random_poly).unwrap();
 
-    let (_, opening) = orion_pp.open::<F, PackF, EvalF, IPPackF, IPPackEvalF, _>(
+    let (_, opening) = orion_pp.open::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, _>(
         &random_poly,
         &commit_with_data,
         &random_point,
         &mut transcript,
     );
 
-    assert!(orion_pp.verify::<F, PackF, EvalF, IPPackF, IPPackEvalF, _>(
-        &commit_with_data.into(),
-        &random_point,
-        expected_eval,
-        &opening,
-        &mut transcript_cloned
-    ));
+    assert!(
+        orion_pp.verify::<F, ComPackF, EvalF, IPPackF, IPPackEvalF, _>(
+            &commit_with_data.into(),
+            &random_point,
+            expected_eval,
+            &opening,
+            &mut transcript_cloned
+        )
+    );
 }
 
 #[test]
