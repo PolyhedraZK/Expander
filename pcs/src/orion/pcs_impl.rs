@@ -218,19 +218,6 @@ impl OrionPublicParams {
                 *res_i = simd_inner_prod(col_i, &eq_linear_comb, &mut scratch_pf, &mut scratch_pef);
             });
 
-        // NOTE: working on evaluation on top of evaluation response
-        let eq_linear_comb = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
-        let mut scratch_msg_sized_0 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
-        let mut scratch_msg_sized_1 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
-        let eval = simd_inner_prod(
-            &eval_row,
-            &eq_linear_comb,
-            &mut scratch_msg_sized_0,
-            &mut scratch_msg_sized_1,
-        );
-        drop(scratch_msg_sized_0);
-        drop(scratch_msg_sized_1);
-
         // NOTE: draw random linear combination out
         // and compose proximity response(s) of tensor code IOP based PCS
         let proximity_repetitions =
@@ -252,6 +239,20 @@ impl OrionPublicParams {
         // NOTE: scratch space for evals and proximity test life cycle finish
         drop(scratch_pf);
         drop(scratch_pef);
+
+        // NOTE: working on evaluation on top of evaluation response
+        // delayed the evaluation for potentially smaller cache usage
+        let eq_linear_comb = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
+        let mut scratch_msg_sized_0 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
+        let mut scratch_msg_sized_1 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
+        let eval = simd_inner_prod(
+            &eval_row,
+            &eq_linear_comb,
+            &mut scratch_msg_sized_0,
+            &mut scratch_msg_sized_1,
+        );
+        drop(scratch_msg_sized_0);
+        drop(scratch_msg_sized_1);
 
         // NOTE: MT opening for point queries
         let leaf_range = row_num * F::FIELD_SIZE / (tree::LEAF_BYTES * 8);
