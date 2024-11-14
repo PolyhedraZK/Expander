@@ -45,12 +45,10 @@ where
     }
 }
 
-type OrionProximityCodeword<F> = Vec<F>;
-
 #[derive(Clone, Debug)]
 pub struct OrionProof<EvalF: Field + FieldSerde> {
     pub eval_row: Vec<EvalF>,
-    pub proximity_rows: Vec<OrionProximityCodeword<EvalF>>,
+    pub proximity_rows: Vec<Vec<EvalF>>,
 
     pub query_openings: Vec<tree::RangePath>,
 }
