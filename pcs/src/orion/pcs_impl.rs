@@ -5,16 +5,16 @@ use ark_std::log2;
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::Transcript;
 
+use crate::PCS_SOUNDNESS_BITS;
+
 use super::{
-    orion_code::{OrionCode, OrionCodeParameter},
+    linear_code::{OrionCode, OrionCodeParameter},
     utils::{simd_inner_prod, transpose_in_place, OrionPCSError, OrionResult},
 };
 
 /**********************************************************
  * IMPLEMENTATIONS FOR ORION POLYNOMIAL COMMITMENT SCHEME *
  **********************************************************/
-
-pub const ORION_PCS_SOUNDNESS_BITS: usize = 128;
 
 #[derive(Clone, Debug)]
 pub struct OrionPublicParams {
@@ -176,7 +176,6 @@ impl OrionPublicParams {
 
         Ok(OrionCommitmentWithData {
             interleaved_alphabet_tree: mt,
-
             _phantom: PhantomData,
         })
     }
@@ -237,7 +236,7 @@ impl OrionPublicParams {
         // NOTE: draw random linear combination out
         // and compose proximity response(s) of tensor code IOP based PCS
         let proximity_repetitions =
-            self.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
+            self.proximity_repetition_num(PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
         let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_repetitions];
 
         (0..proximity_repetitions).for_each(|rep_i| {
@@ -258,7 +257,7 @@ impl OrionPublicParams {
 
         // NOTE: MT opening for point queries
         let leaf_range = row_num * F::FIELD_SIZE / (tree::LEAF_BYTES * 8);
-        let query_num = self.query_complexity(ORION_PCS_SOUNDNESS_BITS);
+        let query_num = self.query_complexity(PCS_SOUNDNESS_BITS);
         let mut query_points = transcript.generate_challenge_index_vector(query_num);
         let query_openings = query_points
             .iter_mut()
@@ -323,11 +322,11 @@ impl OrionPublicParams {
         // NOTE: working on proximity responses, draw random linear combinations
         // then draw query points from fiat shamir transcripts
         let proximity_test_num =
-            self.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
+            self.proximity_repetition_num(PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
         let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_test_num)
             .map(|_| transcript.generate_challenge_field_elements(row_num))
             .collect();
-        let query_num = self.query_complexity(ORION_PCS_SOUNDNESS_BITS);
+        let query_num = self.query_complexity(PCS_SOUNDNESS_BITS);
         let mut query_points = transcript.generate_challenge_index_vector(query_num);
         query_points.iter_mut().for_each(|qi| {
             *qi %= self.code_len();

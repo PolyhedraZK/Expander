@@ -8,12 +8,13 @@ use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
-use crate::orion::{
-    orion_code::{OrionCode, ORION_CODE_PARAMETER_INSTANCE},
-    pcs_impl::{
-        OrionCommitment, OrionCommitmentWithData, OrionPublicParams, ORION_PCS_SOUNDNESS_BITS,
+use crate::{
+    orion::{
+        linear_code::{OrionCode, ORION_CODE_PARAMETER_INSTANCE},
+        pcs_impl::{OrionCommitment, OrionCommitmentWithData, OrionPublicParams},
+        utils::{simd_inner_prod, transpose_in_place},
     },
-    utils::{simd_inner_prod, transpose_in_place},
+    PCS_SOUNDNESS_BITS,
 };
 
 fn column_combination<F, PackF>(mat: &[F], combination: &[F]) -> Vec<F>
@@ -58,7 +59,6 @@ where
         .unwrap();
 
     // NOTE: transpose message and codeword matrix
-
     let mut message_scratch = vec![F::ZERO; linear_combine_size * orion_code.msg_len()];
     transpose_in_place(&mut message_mat, &mut message_scratch, linear_combine_size);
     drop(message_scratch);
@@ -72,7 +72,6 @@ where
     drop(codeword_scratch);
 
     // NOTE: message and codeword matrix linear combination with weights
-
     let msg_linear_combined = column_combination::<F, ComPackF>(&message_mat, &random_scalrs);
     let codeword_linear_combined = column_combination::<F, ComPackF>(&codeword_mat, &random_scalrs);
 
@@ -153,9 +152,7 @@ fn test_orion_commit_consistency() {
         test_orion_commit_consistency_generic::<GF2, GF2x64>(num_vars);
         test_orion_commit_consistency_generic::<GF2, GF2x128>(num_vars);
     });
-    (9..=15).for_each(|num_vars| {
-        test_orion_commit_consistency_generic::<M31, M31x16>(num_vars);
-    })
+    (9..=15).for_each(test_orion_commit_consistency_generic::<M31, M31x16>)
 }
 
 fn test_multilinear_poly_tensor_eval_generic<F, ExtF, IPPackExtF>(num_of_vars: usize)
@@ -198,8 +195,8 @@ where
 
 #[test]
 fn test_multilinear_poly_tensor_eval() {
-    (15..22).for_each(|v| test_multilinear_poly_tensor_eval_generic::<GF2, GF2_128, GF2_128x8>(v));
-    (10..22).for_each(|v| test_multilinear_poly_tensor_eval_generic::<M31, M31Ext3, M31Ext3x16>(v));
+    (15..22).for_each(test_multilinear_poly_tensor_eval_generic::<GF2, GF2_128, GF2_128x8>);
+    (10..22).for_each(test_multilinear_poly_tensor_eval_generic::<M31, M31Ext3, M31Ext3x16>);
 }
 
 fn test_orion_pcs_open_generics<F, EvalF, ComPackF, IPPackF, IPPackEvalF>(num_vars: usize)
@@ -265,7 +262,7 @@ where
 
     // NOTE: compute proximity codewords
     let proximity_repetitions =
-        orion_pp.proximity_repetition_num(ORION_PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
+        orion_pp.proximity_repetition_num(PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
     assert_eq!(proximity_repetitions, opening.proximity_rows.len());
 
     opening.proximity_rows.iter().for_each(|proximity_row| {
@@ -285,10 +282,6 @@ where
 
 #[test]
 fn test_orion_pcs_open() {
-    (12..=25).for_each(|num_vars| {
-        test_orion_pcs_open_generics::<GF2, GF2_128, GF2x128, GF2x8, GF2_128x8>(num_vars)
-    });
-    (9..=15).for_each(|num_vars| {
-        test_orion_pcs_open_generics::<M31, M31Ext3, M31x16, M31x16, M31Ext3x16>(num_vars)
-    })
+    (12..=25).for_each(test_orion_pcs_open_generics::<GF2, GF2_128, GF2x128, GF2x8, GF2_128x8>);
+    (9..=15).for_each(test_orion_pcs_open_generics::<M31, M31Ext3, M31x16, M31x16, M31Ext3x16>)
 }

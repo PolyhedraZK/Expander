@@ -12,14 +12,11 @@ use crate::PolynomialCommitmentScheme;
 mod utils;
 pub use utils::{OrionPCSError, OrionResult};
 
-mod orion_code;
-pub use orion_code::{OrionCodeParameter, ORION_CODE_PARAMETER_INSTANCE};
+mod linear_code;
+pub use linear_code::{OrionCodeParameter, ORION_CODE_PARAMETER_INSTANCE};
 
 mod pcs_impl;
-pub use pcs_impl::{
-    OrionCommitment, OrionCommitmentWithData, OrionProof, OrionPublicParams,
-    ORION_PCS_SOUNDNESS_BITS,
-};
+pub use pcs_impl::{OrionCommitment, OrionCommitmentWithData, OrionProof, OrionPublicParams};
 
 #[cfg(test)]
 mod tests;
