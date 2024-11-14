@@ -69,7 +69,7 @@ fn orion_committing_benchmark(c: &mut Criterion) {
         GF2x8,
         GF2_128x8,
         BytesHashTranscript<_, Keccak256hasher>,
-    >(c, 19, 25);
+    >(c, 19, 30);
     committing_benchmark_helper::<
         M31,
         M31Ext3,
@@ -151,7 +151,7 @@ fn orion_opening_benchmark(c: &mut Criterion) {
         GF2x8,
         GF2_128x8,
         BytesHashTranscript<_, Keccak256hasher>,
-    >(c, 19, 25);
+    >(c, 19, 30);
     opening_benchmark_helper::<
         M31,
         M31Ext3,
