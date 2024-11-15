@@ -95,6 +95,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
 
 // FIXME
 #[allow(clippy::needless_range_loop)] // todo: remove
+#[allow(clippy::type_complexity)]
 pub fn sumcheck_prove_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],

@@ -262,6 +262,7 @@ impl GKRVerifierHelper {
     }
 
     #[inline(always)]
+    #[allow(clippy::needless_range_loop)]
     fn lag_eval<C: GKRFieldConfig>(
         vals: &[C::ChallengeField],
         x: C::ChallengeField,

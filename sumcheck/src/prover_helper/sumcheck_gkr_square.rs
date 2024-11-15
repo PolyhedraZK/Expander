@@ -119,7 +119,7 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
         let mut evals = self.mpi_helper.gkr2_poly_eval_at::<C, D>(
             var_idx,
             &self.sp.eq_evals_at_r_mpi0,
-            &mut self.sp.mpi_var_v_evals,
+            &self.sp.mpi_var_v_evals,
             self.sp.hg_evals_1[0],
             self.sp.hg_evals_5[0],
         );

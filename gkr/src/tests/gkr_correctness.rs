@@ -407,7 +407,7 @@ fn do_prove_verify<Cfg: GKRConfig>(config: Config<Cfg>, circuit: &mut Circuit<Cf
 
     // Prove
     let mut prover = Prover::new(&config);
-    prover.prepare_mem(&circuit);
+    prover.prepare_mem(circuit);
     let (claimed_v, proof) = prover.prove(circuit, &pcs_params, &pcs_proving_key, &mut pcs_scratch);
 
     // Verify if root process
