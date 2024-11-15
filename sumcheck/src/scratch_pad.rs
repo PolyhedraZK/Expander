@@ -151,8 +151,14 @@ impl<C: GKRFieldConfig> VerifierScratchPad<C> {
             eq_evals_at_rx: vec![C::ChallengeField::zero(); max_io_size],
             eq_evals_at_ry: vec![C::ChallengeField::zero(); max_io_size],
 
-            eq_evals_first_part: vec![C::ChallengeField::zero(); max_io_size],
-            eq_evals_second_part: vec![C::ChallengeField::zero(); max_io_size],
+            eq_evals_first_part: vec![
+                C::ChallengeField::zero();
+                max(max(max_io_size, simd_size), mpi_world_size)
+            ],
+            eq_evals_second_part: vec![
+                C::ChallengeField::zero();
+                max(max(max_io_size, simd_size), mpi_world_size)
+            ],
 
             r_simd: ptr::null(),
             r_mpi: ptr::null(),
