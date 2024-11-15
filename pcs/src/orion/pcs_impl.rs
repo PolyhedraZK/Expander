@@ -228,25 +228,21 @@ impl OrionPublicParams {
             .zip(eval_row.iter_mut())
             .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
 
-        luts.zeroize();
-
         // NOTE: draw random linear combination out
         // and compose proximity response(s) of tensor code IOP based PCS
         let proximity_repetitions =
             self.proximity_repetition_num(PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
         let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_repetitions];
 
-        (0..proximity_repetitions).for_each(|rep_i| {
+        proximity_rows.iter_mut().for_each(|row_buffer| {
             let random_coeffs = transcript.generate_challenge_field_elements(row_num);
 
             luts.build(&random_coeffs);
 
             packed_transposed_evaluations
                 .chunks(row_num / IPPackF::PACK_SIZE)
-                .zip(proximity_rows[rep_i].iter_mut())
+                .zip(row_buffer.iter_mut())
                 .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
-
-            luts.zeroize();
         });
 
         // NOTE: working on evaluation on top of evaluation response
@@ -358,8 +354,7 @@ impl OrionPublicParams {
         // NOTE: encode the proximity/evaluation responses,
         // check againts all challenged indices by check alphabets against
         // linear combined interleaved alphabet
-        let mut scratch_pf = vec![IPPackF::ZERO; row_num / IPPackF::PACK_SIZE];
-        let mut scratch_pef = vec![IPPackEvalF::ZERO; row_num / IPPackEvalF::PACK_SIZE];
+        let mut luts = LookupTables::<EvalF>::new(IPPackF::PACK_SIZE, row_num / IPPackF::PACK_SIZE);
         assert_eq!(row_num % IPPackF::PACK_SIZE, 0);
 
         let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
@@ -369,18 +364,19 @@ impl OrionPublicParams {
             .chain(iter::once((&eq_linear_combination, &proof.eval_row)))
             .all(|(rl, msg)| match self.code_instance.encode(msg) {
                 Ok(codeword) => {
+                    luts.build(rl);
+
                     query_points
                         .iter()
                         .zip(proof.query_openings.iter())
                         .all(|(&qi, range_path)| {
-                            let interleaved_alphabet =
-                                range_path.unpack_field_elems::<F, ComPackF>();
-                            let alphabet = simd_inner_prod(
-                                &interleaved_alphabet,
-                                rl,
-                                &mut scratch_pf,
-                                &mut scratch_pef,
-                            );
+                            let interleaved_alphabet: Vec<_> = range_path
+                                .unpack_field_elems::<F, ComPackF>()
+                                .chunks(IPPackF::PACK_SIZE)
+                                .map(IPPackF::pack)
+                                .collect();
+
+                            let alphabet = luts.lookup_and_sum(&interleaved_alphabet);
                             alphabet == codeword[qi]
                         })
                 }

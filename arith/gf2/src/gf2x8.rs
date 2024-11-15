@@ -94,7 +94,7 @@ impl Field for GF2x8 {
 
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
-        self.v as u32 % 256
+        self.v as u32
     }
 
     #[inline(always)]

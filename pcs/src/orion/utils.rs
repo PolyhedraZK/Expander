@@ -48,6 +48,10 @@ pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row
     mat.copy_from_slice(scratch);
 }
 
+/*********************
+ * LINEAR OPERATIONS *
+ *********************/
+
 #[inline]
 pub(crate) fn simd_inner_prod<F0, F1, IPPackF0, IPPackF1>(
     l: &[F0],
@@ -101,6 +105,8 @@ impl<F: Field> LookupTables<F> {
         assert_eq!(weights.len() % self.table_bits, 0);
         assert_eq!(weights.len() / self.table_bits, self.table_num);
 
+        self.zeroize();
+
         self.tables
             .iter_mut()
             .zip(weights.chunks(self.table_bits))
@@ -118,9 +124,7 @@ impl<F: Field> LookupTables<F> {
 
     #[inline]
     pub fn zeroize(&mut self) {
-        self.tables
-            .iter_mut()
-            .for_each(|lut| lut.iter_mut().for_each(|i| *i = F::ZERO));
+        self.tables.iter_mut().for_each(|lut| lut.fill(F::ZERO));
     }
 
     #[inline]

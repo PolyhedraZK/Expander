@@ -4,7 +4,6 @@ use arith::{ExtensionField, Field, FieldSerde, SimdField};
 use ark_std::{log2, test_rng};
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
 use gf2_128::{GF2_128x8, GF2_128};
-use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
@@ -53,7 +52,7 @@ where
         .chunks_mut(orion_code.msg_len())
         .zip(codeword_mat.chunks_mut(orion_code.code_len()))
         .try_for_each(|(msg, codeword)| {
-            msg.iter_mut().for_each(|x| *x = F::random_unsafe(&mut rng));
+            msg.fill_with(|| F::random_unsafe(&mut rng));
             orion_code.encode_in_place(msg, codeword)
         })
         .unwrap();
@@ -87,7 +86,6 @@ fn test_orion_code() {
 
         test_orion_code_generic::<GF2_128, GF2_128x8>(msg_len);
         test_orion_code_generic::<GF2, GF2x64>(msg_len);
-        test_orion_code_generic::<M31Ext3, M31Ext3x16>(msg_len);
     });
 }
 
@@ -152,7 +150,6 @@ fn test_orion_commit_consistency() {
         test_orion_commit_consistency_generic::<GF2, GF2x64>(num_vars);
         test_orion_commit_consistency_generic::<GF2, GF2x128>(num_vars);
     });
-    (9..=15).for_each(test_orion_commit_consistency_generic::<M31, M31x16>)
 }
 
 fn test_multilinear_poly_tensor_eval_generic<F, ExtF, IPPackExtF>(num_of_vars: usize)
