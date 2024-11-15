@@ -6,7 +6,7 @@ use config::FiatShamirHashType;
 use gkr_field_config::FieldType;
 
 use config::GKRConfig;
-use config_macros::declare_config;
+use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use transcript::{
     BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, SHA256hasher,
@@ -18,9 +18,9 @@ fn print_type_name<Cfg: GKRConfig>() {
 
 #[test]
 fn main() {
-    declare_config!(M31Sha256Config, FieldType::M31, FiatShamirHashType::SHA256);
-    declare_config!(BN254MIMCConfig, FieldType::BN254, FiatShamirHashType::MIMC5);
-    declare_config!(
+    declare_gkr_config!(M31Sha256Config, FieldType::M31, FiatShamirHashType::SHA256);
+    declare_gkr_config!(BN254MIMCConfig, FieldType::BN254, FiatShamirHashType::MIMC5);
+    declare_gkr_config!(
         GF2Keccak256Config,
         FieldType::GF2,
         FiatShamirHashType::Keccak256

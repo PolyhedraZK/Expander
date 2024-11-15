@@ -923,6 +923,7 @@ dependencies = [
  "circuit",
  "clap",
  "config",
+ "config_macros",
  "criterion",
  "env_logger",
  "ethnum",

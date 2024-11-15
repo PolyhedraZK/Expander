@@ -6,16 +6,33 @@ use std::{fs, panic};
 use arith::{Field, FieldSerde};
 use circuit::Circuit;
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme};
+use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::{root_println, MPIConfig};
 use rand::Rng;
 use sha2::Digest;
+use transcript::{BytesHashTranscript, FieldHashTranscript, SHA256hasher, Keccak256hasher, MIMCHasher};
 
 use crate::{utils::*, Prover, Verifier};
 
 #[test]
 fn test_gkr_correctness() {
     let mpi_config = MPIConfig::new();
+    declare_gkr_config!(C0, FieldType::GF2, FiatShamirHashType::SHA256);
+    declare_gkr_config!(C1, FieldType::M31, FiatShamirHashType::SHA256);
+    declare_gkr_config!(C2, FieldType::BN254, FiatShamirHashType::SHA256);
+    declare_gkr_config!(C3, FieldType::GF2, FiatShamirHashType::Keccak256);
+    declare_gkr_config!(C4, FieldType::M31, FiatShamirHashType::Keccak256);
+    declare_gkr_config!(C5, FieldType::BN254, FiatShamirHashType::Keccak256);
+    declare_gkr_config!(C6, FieldType::BN254, FiatShamirHashType::MIMC5);
+
+    test_gkr_correctness_helper(&Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()), None);
+    test_gkr_correctness_helper(&Config::<C1>::new(GKRScheme::Vanilla, mpi_config.clone()), None);
+    test_gkr_correctness_helper(&Config::<C2>::new(GKRScheme::Vanilla, mpi_config.clone()), None);
+    test_gkr_correctness_helper(&Config::<C3>::new(GKRScheme::Vanilla, mpi_config.clone()), None);
+    test_gkr_correctness_helper(&Config::<C4>::new(GKRScheme::Vanilla, mpi_config.clone()), None);
+    test_gkr_correctness_helper(&Config::<C5>::new(GKRScheme::Vanilla, mpi_config.clone()), None);
+    test_gkr_correctness_helper(&Config::<C6>::new(GKRScheme::Vanilla, mpi_config.clone()), Some("../data/gkr_proof.txt"));
 
     MPIConfig::finalize();
 }

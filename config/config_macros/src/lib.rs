@@ -78,12 +78,14 @@ fn parse_fiat_shamir_hash_type(
     }
 }
 
+
+/// Example usage: declare_gkr_config!(MyFavoriateConfigName, FieldType::M31, FiatShamirHashType::SHA256);
 #[proc_macro]
-pub fn declare_config(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    declare_config_impl(input)
+pub fn declare_gkr_config(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    declare_gkr_config_impl(input)
 }
 
-fn declare_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Parse the input tokens into our custom struct
     let ConfigLit {
         config_name,
