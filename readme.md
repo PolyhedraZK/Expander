@@ -28,7 +28,7 @@ This is the *rust version* of the "core" repo.
 
 For more technical introduction, visit our markdown files [here](https://github.com/PolyhedraZK/Expander-cpp/tree/master/docs/doc.md).
 
-And [here](./tests/gkr_correctness.rs) for an example on how to use the gkr lib.
+And [here](./gkr/src/tests/gkr_correctness.rs) for an example on how to use the gkr lib.
 
 This is a core repo for our prover, to write circuits on our prover, please visit [our compiler](https://github.com/PolyhedraZK/ExpanderCompilerCollection)
 
