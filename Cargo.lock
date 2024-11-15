@@ -558,6 +558,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "config_macros"
+version = "0.1.0"
+dependencies = [
+ "config",
+ "gkr_field_config",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
+ "transcript",
+]
+
+[[package]]
 name = "constant_time_eq"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

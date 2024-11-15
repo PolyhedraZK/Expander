@@ -193,7 +193,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         r_simd.push(transcript.generate_challenge_field_element());
     }
 
-    for _ in 0..config.mpi_config.world_size().trailing_zeros() {
+    for _ in 0..mpi_config.world_size().trailing_zeros() {
         r_mpi.push(transcript.generate_challenge_field_element());
     }
 

@@ -1,5 +1,5 @@
 use arith::Field;
-use gkr_field_config::GKRFieldConfig;
+use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 use std::fmt::Debug;
 use transcript::Transcript;
@@ -11,6 +11,16 @@ pub enum PolynomialCommitmentType {
     KZG,
     Orion,
     FRI,
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum FiatShamirHashType {
+    #[default]
+    SHA256,
+    Keccak256,
+    Poseidon,
+    Animoe,
+    MIMC5, // Note: use MIMC5 for bn254 ONLY
 }
 
 pub const SENTINEL_M31: [u8; 32] = [
@@ -28,8 +38,13 @@ pub const SENTINEL_GF2: [u8; 32] = [
 ];
 
 pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
+    /// Field config for gkr
     type FieldConfig: GKRFieldConfig;
 
+    /// Fiat Shamir hash type. This defines the transcript type to use
+    const FIAT_SHAMIR_HASH: FiatShamirHashType;
+
+    /// The transcript type
     type Transcript: Transcript<<Self::FieldConfig as GKRFieldConfig>::ChallengeField>;
 }
 
