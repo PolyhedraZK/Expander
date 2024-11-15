@@ -147,7 +147,20 @@ impl<C: GKRFieldConfig> VerifierScratchPad<C> {
         }
 
         let deg6_eval_at = if C::FIELD_TYPE == FieldType::GF2 {
-            panic!("GF2 not supported yet");
+            // TODO: Does this correctly define Lagrange poly for GF2?
+            [
+                C::ChallengeField::ZERO,
+                C::ChallengeField::ONE,
+                C::ChallengeField::X,
+                C::ChallengeField::X.mul_by_x(),
+                C::ChallengeField::X.mul_by_x().mul_by_x(),
+                C::ChallengeField::X.mul_by_x().mul_by_x().mul_by_x(),
+                C::ChallengeField::X
+                    .mul_by_x()
+                    .mul_by_x()
+                    .mul_by_x()
+                    .mul_by_x(),
+            ]
         } else {
             [
                 C::ChallengeField::ZERO,
