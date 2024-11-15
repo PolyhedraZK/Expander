@@ -1,4 +1,4 @@
-use std::{hint::black_box, ops::Mul, time::Duration};
+use std::{hint::black_box, ops::Mul};
 
 use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
@@ -56,8 +56,7 @@ fn committing_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
                     })
                 },
             )
-            .sample_size(10)
-            .measurement_time(Duration::from_secs(30));
+            .sample_size(10);
     }
 }
 
@@ -138,8 +137,7 @@ fn opening_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
                     })
                 },
             )
-            .sample_size(10)
-            .measurement_time(Duration::from_secs(50));
+            .sample_size(10);
     }
 }
 

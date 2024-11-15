@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use arith::{Field, FieldSerde, SimdField};
 use ark_std::{rand::RngCore, test_rng};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
@@ -33,8 +31,7 @@ fn tree_building_benchmark(c: &mut Criterion) {
                     Tree::new_with_leaves(leaves_benchmark.clone());
                 })
             })
-            .sample_size(10)
-            .measurement_time(Duration::from_secs(5));
+            .sample_size(10);
     }
 }
 
@@ -64,8 +61,7 @@ where
                     Tree::compact_new_with_field_elems::<F, PackF>(&field_elems_benchmark);
                 })
             })
-            .sample_size(10)
-            .measurement_time(Duration::from_secs(5));
+            .sample_size(10);
     }
 }
 
@@ -101,8 +97,7 @@ where
                     Tree::compact_new_with_packed_field_elems::<F, PackF>(&field_elems_benchmark);
                 })
             })
-            .sample_size(10)
-            .measurement_time(Duration::from_secs(5));
+            .sample_size(10);
     }
 }
 
