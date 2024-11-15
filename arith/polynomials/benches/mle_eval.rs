@@ -28,10 +28,11 @@ fn bench_mle_eval<F: Field>(c: &mut Criterion) {
         let label = format!("hyperplonk's mle eval, dim = {}", nv);
         c.bench_function(label.as_str(), |b| {
             b.iter(|| {
-                black_box({
+                {
                     let mut mle_eval = mle.clone();
                     mle_eval.fix_variables(point.as_ref())
-                })
+                };
+                black_box(())
             })
         });
 

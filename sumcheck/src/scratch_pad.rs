@@ -4,7 +4,6 @@ use std::{cmp::max, ptr};
 
 use arith::{ExtensionField, Field};
 use circuit::Circuit;
-use config::{Config, GKRConfig};
 use gkr_field_config::{FieldType, GKRFieldConfig};
 
 #[derive(Clone, Debug, Default)]

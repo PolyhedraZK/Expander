@@ -83,7 +83,9 @@ pub trait GKRFieldConfig: Default + Debug + Clone + Send + Sync + 'static {
     ) -> Self::Field {
         assert_eq!(1 << x.len(), evals.len());
 
-        let ret = if x.is_empty() {
+        
+
+        if x.is_empty() {
             Self::simd_circuit_field_into_field(&evals[0])
         } else {
             for i in 0..(evals.len() >> 1) {
@@ -104,8 +106,6 @@ pub trait GKRFieldConfig: Default + Debug + Clone + Send + Sync + 'static {
                 cur_eval_size >>= 1;
             }
             scratch[0]
-        };
-
-        ret
+        }
     }
 }

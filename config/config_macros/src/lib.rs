@@ -57,19 +57,19 @@ fn parse_fiat_shamir_hash_type(
     let field_type = format!("<{field_config} as GKRFieldConfig>::ChallengeField");
     match hash_type_str {
         "SHA256" => {
-            return (
+            (
                 "SHA256".to_owned(),
                 format!("BytesHashTranscript::<{field_type}, SHA256hasher>").to_owned(),
             )
         }
         "Keccak256" => {
-            return (
+            (
                 "Keccak256".to_owned(),
                 format!("BytesHashTranscript::<{field_type}, Keccak256hasher>").to_owned(),
             )
         }
         "MIMC5" => {
-            return (
+            (
                 "MIMC5".to_owned(),
                 format!("FieldHashTranscript::<{field_type}, MIMCHasher<{field_type}>>").to_owned(),
             )
