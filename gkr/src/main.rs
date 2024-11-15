@@ -5,14 +5,12 @@ use std::{
 
 use circuit::Circuit;
 use clap::Parser;
-use config::{
-    Config, GKRConfig, GKRScheme
-};
+use config::{Config, GKRConfig, GKRScheme};
 use config_macros::declare_gkr_config;
-use gkr_field_config::{BN254Config, GF2ExtConfig, M31ExtConfig, GKRFieldConfig};
+use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 
-use transcript::{BytesHashTranscript,SHA256hasher};
+use transcript::{BytesHashTranscript, SHA256hasher};
 
 use gkr::{
     utils::{
@@ -22,10 +20,10 @@ use gkr::{
     Prover,
 };
 
-#[allow(unused_imports)] // The FieldType import is used in the macro expansion
-use gkr_field_config::FieldType;
 #[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
 use config::FiatShamirHashType;
+#[allow(unused_imports)] // The FieldType import is used in the macro expansion
+use gkr_field_config::FieldType;
 
 /// ...
 #[derive(Parser, Debug)]
@@ -55,31 +53,31 @@ fn main() {
     let mpi_config = MPIConfig::new();
 
     declare_gkr_config!(M31ExtConfigSha2, FieldType::M31, FiatShamirHashType::SHA256);
-    declare_gkr_config!(BN254ConfigSha2, FieldType::BN254, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        BN254ConfigSha2,
+        FieldType::BN254,
+        FiatShamirHashType::SHA256
+    );
     declare_gkr_config!(GF2ExtConfigSha2, FieldType::GF2, FiatShamirHashType::SHA256);
 
     match args.field.as_str() {
         "m31ext3" => match args.scheme.as_str() {
-            "keccak" => 
-                run_benchmark::<M31ExtConfigSha2>(
-                    &args,
-                    Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()))
-            ,
-            "poseidon" => 
-                run_benchmark::<M31ExtConfigSha2>(
+            "keccak" => run_benchmark::<M31ExtConfigSha2>(
+                &args,
+                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+            ),
+            "poseidon" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
                 Config::<M31ExtConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),
             _ => unreachable!(),
         },
         "fr" => match args.scheme.as_str() {
-            "keccak" => 
-                run_benchmark::<BN254ConfigSha2>(
+            "keccak" => run_benchmark::<BN254ConfigSha2>(
                 &args,
                 Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
             ),
-            "poseidon" => 
-                run_benchmark::<BN254ConfigSha2>(
+            "poseidon" => run_benchmark::<BN254ConfigSha2>(
                 &args,
                 Config::<BN254ConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),

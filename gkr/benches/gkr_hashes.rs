@@ -9,16 +9,15 @@ use gkr::{
     },
     Prover,
 };
-use gkr_field_config::{BN254Config, M31ExtConfig, GKRFieldConfig};
+use gkr_field_config::{BN254Config, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 use std::hint::black_box;
 use transcript::{BytesHashTranscript, SHA256hasher};
 
-#[allow(unused_imports)] // The FieldType import is used in the macro expansion
-use gkr_field_config::FieldType;
 #[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
 use config::FiatShamirHashType;
-
+#[allow(unused_imports)] // The FieldType import is used in the macro expansion
+use gkr_field_config::FieldType;
 
 fn prover_run<Cfg: GKRConfig>(config: &Config<Cfg>, circuit: &mut Circuit<Cfg::FieldConfig>) {
     let mut prover = Prover::new(config);
@@ -45,7 +44,11 @@ fn benchmark_setup<Cfg: GKRConfig>(
 
 fn criterion_gkr_keccak(c: &mut Criterion) {
     declare_gkr_config!(M31ExtConfigSha2, FieldType::M31, FiatShamirHashType::SHA256);
-    declare_gkr_config!(BN254ConfigSha2, FieldType::BN254, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        BN254ConfigSha2,
+        FieldType::BN254,
+        FiatShamirHashType::SHA256
+    );
 
     let (m31_config, mut m31_circuit) = benchmark_setup::<M31ExtConfigSha2>(
         GKRScheme::Vanilla,
@@ -101,13 +104,18 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
 
 fn criterion_gkr_poseidon(c: &mut Criterion) {
     declare_gkr_config!(M31ExtConfigSha2, FieldType::M31, FiatShamirHashType::SHA256);
-    declare_gkr_config!(BN254ConfigSha2, FieldType::BN254, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        BN254ConfigSha2,
+        FieldType::BN254,
+        FiatShamirHashType::SHA256
+    );
 
     let (m31_config, mut m31_circuit) =
         benchmark_setup::<M31ExtConfigSha2>(GKRScheme::GkrSquare, POSEIDON_M31_CIRCUIT, None);
 
     let mut group = c.benchmark_group("single thread proving poseidon by GKR^2");
-    let num_poseidon_m31 = 120 * <M31ExtConfigSha2 as GKRConfig>::FieldConfig::get_field_pack_size();
+    let num_poseidon_m31 =
+        120 * <M31ExtConfigSha2 as GKRConfig>::FieldConfig::get_field_pack_size();
 
     group.bench_function(
         BenchmarkId::new(

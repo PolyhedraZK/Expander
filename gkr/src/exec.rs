@@ -7,23 +7,21 @@ use std::{
 
 use arith::{Field, FieldSerde, FieldSerdeError};
 use circuit::Circuit;
-use config::{
-    Config, GKRConfig, GKRScheme, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31,
-};
+use config::{Config, GKRConfig, GKRScheme, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
 use config_macros::declare_gkr_config;
-use gkr_field_config::{BN254Config, GF2ExtConfig, M31ExtConfig, GKRFieldConfig};
+use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 
-use transcript::{BytesHashTranscript, FieldHashTranscript, SHA256hasher, MIMCHasher};
+use transcript::{BytesHashTranscript, FieldHashTranscript, MIMCHasher, SHA256hasher};
 
 use log::{debug, info};
 use transcript::Proof;
 use warp::{http::StatusCode, reply, Filter};
 
-#[allow(unused_imports)] // The FieldType import is used in the macro expansion
-use gkr_field_config::FieldType;
 #[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
 use config::FiatShamirHashType;
+#[allow(unused_imports)] // The FieldType import is used in the macro expansion
+use gkr_field_config::FieldType;
 
 fn dump_proof_and_claimed_v<F: Field + FieldSerde>(
     proof: &Proof,
@@ -219,7 +217,11 @@ async fn main() {
     }
 
     declare_gkr_config!(M31ExtConfigSha2, FieldType::M31, FiatShamirHashType::SHA256);
-    declare_gkr_config!(BN254ConfigMIMC5, FieldType::BN254, FiatShamirHashType::MIMC5);
+    declare_gkr_config!(
+        BN254ConfigMIMC5,
+        FieldType::BN254,
+        FiatShamirHashType::MIMC5
+    );
     declare_gkr_config!(GF2ExtConfigSha2, FieldType::GF2, FiatShamirHashType::SHA256);
 
     let circuit_file = &args[2];

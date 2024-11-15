@@ -11,7 +11,9 @@ use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31
 use mpi_config::{root_println, MPIConfig};
 use rand::Rng;
 use sha2::Digest;
-use transcript::{BytesHashTranscript, FieldHashTranscript, SHA256hasher, Keccak256hasher, MIMCHasher};
+use transcript::{
+    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, SHA256hasher,
+};
 
 use crate::{utils::*, Prover, Verifier};
 
@@ -26,13 +28,34 @@ fn test_gkr_correctness() {
     declare_gkr_config!(C5, FieldType::BN254, FiatShamirHashType::Keccak256);
     declare_gkr_config!(C6, FieldType::BN254, FiatShamirHashType::MIMC5);
 
-    test_gkr_correctness_helper(&Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()), None);
-    test_gkr_correctness_helper(&Config::<C1>::new(GKRScheme::Vanilla, mpi_config.clone()), None);
-    test_gkr_correctness_helper(&Config::<C2>::new(GKRScheme::Vanilla, mpi_config.clone()), None);
-    test_gkr_correctness_helper(&Config::<C3>::new(GKRScheme::Vanilla, mpi_config.clone()), None);
-    test_gkr_correctness_helper(&Config::<C4>::new(GKRScheme::Vanilla, mpi_config.clone()), None);
-    test_gkr_correctness_helper(&Config::<C5>::new(GKRScheme::Vanilla, mpi_config.clone()), None);
-    test_gkr_correctness_helper(&Config::<C6>::new(GKRScheme::Vanilla, mpi_config.clone()), Some("../data/gkr_proof.txt"));
+    test_gkr_correctness_helper(
+        &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper(
+        &Config::<C1>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper(
+        &Config::<C2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper(
+        &Config::<C3>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper(
+        &Config::<C4>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper(
+        &Config::<C5>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper(
+        &Config::<C6>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        Some("../data/gkr_proof.txt"),
+    );
 
     MPIConfig::finalize();
 }

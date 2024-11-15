@@ -78,7 +78,6 @@ fn parse_fiat_shamir_hash_type(
     }
 }
 
-
 /// Example usage: declare_gkr_config!(MyFavoriateConfigName, FieldType::M31, FiatShamirHashType::SHA256);
 #[proc_macro]
 pub fn declare_gkr_config(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
