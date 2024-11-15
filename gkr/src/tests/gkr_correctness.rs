@@ -368,7 +368,7 @@ pub fn gkr_square_test_circuit<C: GKRFieldConfig>() -> Circuit<C> {
 }
 
 #[test]
-fn gkr_square_correctness() {
+fn gkr_square_correctness_test() {
     declare_gkr_config!(
         GkrConfigType,
         FieldType::M31,
@@ -377,18 +377,23 @@ fn gkr_square_correctness() {
     );
     env_logger::init();
     type GkrFieldConfigType = <GkrConfigType as GKRConfig>::FieldConfig;
+    let mpi_config = MPIConfig::new();
+    let config = Config::<GkrConfigType>::new(GKRScheme::GkrSquare, mpi_config.clone());
 
     let mut circuit = gkr_square_test_circuit::<GkrFieldConfigType>();
     // Set input layers with N_2_0 = 3, N_2_1 = 5, N_2_2 = 7,
     // and N_2_3 varying from 0 to 15
-    let final_vals = (0..16).map(|x| x.into()).collect::<Vec<_>>();
+    let mut final_vals = (0..16).map(|x| x.into()).collect::<Vec<_>>(); // Add variety for MPI participants
+    final_vals[0] += <GkrFieldConfigType as GKRFieldConfig>::CircuitField::from(
+        config.mpi_config.world_rank as u32,
+    );
     let final_vals = <GkrFieldConfigType as GKRFieldConfig>::SimdCircuitField::pack(&final_vals);
     circuit.layers[0].input_vals = vec![2.into(), 3.into(), 5.into(), final_vals];
     // Set public input PI[0] = 13
     circuit.public_input = vec![13.into()];
 
-    let config = Config::<GkrConfigType>::new(GKRScheme::GkrSquare, MPIConfig::default());
     do_prove_verify(config, &mut circuit);
+    MPIConfig::finalize();
 }
 
 fn do_prove_verify<Cfg: GKRConfig>(config: Config<Cfg>, circuit: &mut Circuit<Cfg::FieldConfig>) {
@@ -405,15 +410,17 @@ fn do_prove_verify<Cfg: GKRConfig>(config: Config<Cfg>, circuit: &mut Circuit<Cf
     prover.prepare_mem(&circuit);
     let (claimed_v, proof) = prover.prove(circuit, &pcs_params, &pcs_proving_key, &mut pcs_scratch);
 
-    // Verify
-    let verifier = Verifier::new(&config);
-    let public_input = circuit.public_input.clone();
-    assert!(verifier.verify(
-        circuit,
-        &public_input,
-        &claimed_v,
-        &pcs_params,
-        &pcs_verification_key,
-        &proof
-    ))
+    // Verify if root process
+    if config.mpi_config.is_root() {
+        let verifier = Verifier::new(&config);
+        let public_input = circuit.public_input.clone();
+        assert!(verifier.verify(
+            circuit,
+            &public_input,
+            &claimed_v,
+            &pcs_params,
+            &pcs_verification_key,
+            &proof
+        ))
+    }
 }
