@@ -73,12 +73,12 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         );
     }
 
-    fn prove_internal(
+    pub fn prove(
         &mut self,
         c: &mut Circuit<Cfg::FieldConfig>,
-        transcript: &mut Cfg::Transcript,
     ) -> (<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField, Proof) {
         let timer = start_timer!(|| "prove");
+        let mut transcript = Cfg::Transcript::new();
 
         // PC commit
         let commitment = RawCommitment::<Cfg::FieldConfig>::mpi_new(
@@ -90,12 +90,12 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         transcript.append_u8_slice(&buffer);
 
-        transcript_root_broadcast(transcript, &self.config.mpi_config);
+        transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
 
         #[cfg(feature = "grinding")]
-        grind::<C, T>(transcript, &self.config);
+        grind::<Cfg>(&mut transcript, &self.config);
 
-        c.fill_rnd_coefs(transcript);
+        c.fill_rnd_coefs(&mut transcript);
         c.evaluate();
 
         let mut claimed_v = <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::default();
@@ -105,10 +105,10 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         let mut _rmpi = vec![];
 
         if self.config.gkr_scheme == GKRScheme::GkrSquare {
-            (_, _rx) = gkr_square_prove(c, &mut self.sp, transcript);
+            (_, _rx) = gkr_square_prove(c, &mut self.sp, &mut transcript);
         } else {
             (claimed_v, _rx, _ry, _rsimd, _rmpi) =
-                gkr_prove(c, &mut self.sp, transcript, &self.config.mpi_config);
+                gkr_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
         }
 
         // open
@@ -122,12 +122,5 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         end_timer!(timer);
 
         (claimed_v, transcript.finalize_and_get_proof())
-    }
-
-    pub fn prove(
-        &mut self,
-        c: &mut Circuit<Cfg::FieldConfig>,
-    ) -> (<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField, Proof) {
-        self.prove_internal(c, &mut Cfg::Transcript::new())
     }
 }

@@ -283,7 +283,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
         #[cfg(feature = "grinding")]
-        grind::<C, T>(transcript, &self.config);
+        grind::<Cfg>(&mut transcript, &self.config);
 
         circuit.fill_rnd_coefs(&mut transcript);
 
