@@ -132,6 +132,7 @@ impl OrionPublicParams {
         drop(scratch);
 
         // NOTE: SIMD pack each row of transposed matrix
+        assert_eq!(transposed_evaluations.len() % ComPackF::PACK_SIZE, 0);
         let mut packed_evals: Vec<ComPackF> = transposed_evaluations
             .chunks(ComPackF::PACK_SIZE)
             .map(SimdField::pack)
@@ -140,6 +141,7 @@ impl OrionPublicParams {
 
         // NOTE: transpose back to rows of evaluations, but packed
         let packed_rows = row_num / ComPackF::PACK_SIZE;
+        assert_eq!(row_num % ComPackF::PACK_SIZE, 0);
 
         let mut scratch = vec![ComPackF::ZERO; packed_rows * msg_size];
         transpose_in_place(&mut packed_evals, &mut scratch, msg_size);
@@ -198,6 +200,8 @@ impl OrionPublicParams {
         let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
         let num_of_vars_in_codeword = log2(msg_size) as usize;
 
+        assert!(msg_size >= IPPackEvalF::PACK_SIZE);
+
         // NOTE: transpose evaluations for linear combinations in evaulation/proximity tests
         let mut transposed_evaluations = poly.coeffs.clone();
         let mut scratch = vec![F::ZERO; 1 << poly.get_num_vars()];
@@ -207,6 +211,7 @@ impl OrionPublicParams {
         // NOTE: prepare scratch space for both evals and proximity test
         let mut scratch_pf = vec![IPPackF::ZERO; row_num / IPPackF::PACK_SIZE];
         let mut scratch_pef = vec![IPPackEvalF::ZERO; row_num / IPPackEvalF::PACK_SIZE];
+        assert_eq!(row_num % IPPackF::PACK_SIZE, 0);
 
         // NOTE: working on evaluation response of tensor code IOP based PCS
         let eq_linear_comb = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
@@ -245,6 +250,7 @@ impl OrionPublicParams {
         let eq_linear_comb = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
         let mut scratch_msg_sized_0 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
         let mut scratch_msg_sized_1 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
+        assert_eq!(msg_size % IPPackEvalF::PACK_SIZE, 0);
         let eval = simd_inner_prod(
             &eval_row,
             &eq_linear_comb,
@@ -306,6 +312,7 @@ impl OrionPublicParams {
         let eq_x_r = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
         let mut scratch_msg_sized_0 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
         let mut scratch_msg_sized_1 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
+        assert_eq!(msg_size % IPPackEvalF::PACK_SIZE, 0);
         let final_eval = simd_inner_prod(
             &proof.eval_row,
             &eq_x_r,
@@ -349,6 +356,7 @@ impl OrionPublicParams {
         // linear combined interleaved alphabet
         let mut scratch_pf = vec![IPPackF::ZERO; row_num / IPPackF::PACK_SIZE];
         let mut scratch_pef = vec![IPPackEvalF::ZERO; row_num / IPPackEvalF::PACK_SIZE];
+        assert_eq!(row_num % IPPackF::PACK_SIZE, 0);
 
         let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
         random_linear_combinations

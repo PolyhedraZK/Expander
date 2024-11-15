@@ -282,6 +282,6 @@ where
 
 #[test]
 fn test_orion_pcs_open() {
-    (12..=25).for_each(test_orion_pcs_open_generics::<GF2, GF2_128, GF2x128, GF2x8, GF2_128x8>);
+    (13..=25).for_each(test_orion_pcs_open_generics::<GF2, GF2_128, GF2x128, GF2x8, GF2_128x8>);
     (9..=15).for_each(test_orion_pcs_open_generics::<M31, M31Ext3, M31x16, M31x16, M31Ext3x16>)
 }
