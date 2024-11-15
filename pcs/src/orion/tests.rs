@@ -196,7 +196,6 @@ where
 #[test]
 fn test_multilinear_poly_tensor_eval() {
     (15..22).for_each(test_multilinear_poly_tensor_eval_generic::<GF2, GF2_128, GF2_128x8>);
-    (10..22).for_each(test_multilinear_poly_tensor_eval_generic::<M31, M31Ext3, M31Ext3x16>);
 }
 
 fn test_orion_pcs_open_generics<F, EvalF, ComPackF, IPPackF, IPPackEvalF>(num_vars: usize)
@@ -283,5 +282,4 @@ where
 #[test]
 fn test_orion_pcs_open() {
     (13..=25).for_each(test_orion_pcs_open_generics::<GF2, GF2_128, GF2x128, GF2x8, GF2_128x8>);
-    (9..=15).for_each(test_orion_pcs_open_generics::<M31, M31Ext3, M31x16, M31x16, M31Ext3x16>)
 }

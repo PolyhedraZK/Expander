@@ -5,7 +5,7 @@ use ark_std::log2;
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::Transcript;
 
-use crate::PCS_SOUNDNESS_BITS;
+use crate::{orion::utils::LookupTables, PCS_SOUNDNESS_BITS};
 
 use super::{
     linear_code::{OrionCode, OrionCodeParameter},
@@ -208,20 +208,27 @@ impl OrionPublicParams {
         transpose_in_place(&mut transposed_evaluations, &mut scratch, row_num);
         drop(scratch);
 
-        // NOTE: prepare scratch space for both evals and proximity test
-        let mut scratch_pf = vec![IPPackF::ZERO; row_num / IPPackF::PACK_SIZE];
-        let mut scratch_pef = vec![IPPackEvalF::ZERO; row_num / IPPackEvalF::PACK_SIZE];
-        assert_eq!(row_num % IPPackF::PACK_SIZE, 0);
+        let mut packed_transposed_evaluations =
+            vec![IPPackF::ZERO; transposed_evaluations.len() / IPPackF::PACK_SIZE];
+        transposed_evaluations
+            .chunks(IPPackF::PACK_SIZE)
+            .zip(packed_transposed_evaluations.iter_mut())
+            .for_each(|(chunk, packed)| *packed = IPPackF::pack(chunk));
+
+        // NOTE: declare the look up tables for column sums
+        let mut luts = LookupTables::<EvalF>::new(IPPackF::PACK_SIZE, row_num / IPPackF::PACK_SIZE);
 
         // NOTE: working on evaluation response of tensor code IOP based PCS
         let eq_linear_comb = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
+        luts.build(&eq_linear_comb);
+
         let mut eval_row = vec![EvalF::ZERO; msg_size];
-        transposed_evaluations
-            .chunks(row_num)
+        packed_transposed_evaluations
+            .chunks(row_num / IPPackF::PACK_SIZE)
             .zip(eval_row.iter_mut())
-            .for_each(|(col_i, res_i)| {
-                *res_i = simd_inner_prod(col_i, &eq_linear_comb, &mut scratch_pf, &mut scratch_pef);
-            });
+            .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
+
+        luts.zeroize();
 
         // NOTE: draw random linear combination out
         // and compose proximity response(s) of tensor code IOP based PCS
@@ -232,18 +239,15 @@ impl OrionPublicParams {
         (0..proximity_repetitions).for_each(|rep_i| {
             let random_coeffs = transcript.generate_challenge_field_elements(row_num);
 
-            transposed_evaluations
-                .chunks(row_num)
-                .zip(proximity_rows[rep_i].iter_mut())
-                .for_each(|(col_i, res_i)| {
-                    *res_i =
-                        simd_inner_prod(col_i, &random_coeffs, &mut scratch_pf, &mut scratch_pef);
-                });
-        });
+            luts.build(&random_coeffs);
 
-        // NOTE: scratch space for evals and proximity test life cycle finish
-        drop(scratch_pf);
-        drop(scratch_pef);
+            packed_transposed_evaluations
+                .chunks(row_num / IPPackF::PACK_SIZE)
+                .zip(proximity_rows[rep_i].iter_mut())
+                .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
+
+            luts.zeroize();
+        });
 
         // NOTE: working on evaluation on top of evaluation response
         // delayed the evaluation for potentially smaller cache usage

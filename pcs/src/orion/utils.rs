@@ -79,3 +79,56 @@ where
 
     simd_sum.unpack().iter().sum()
 }
+
+pub(crate) struct LookupTables<F: Field> {
+    pub table_bits: usize,
+    pub table_num: usize,
+    pub tables: Vec<Vec<F>>,
+}
+
+impl<F: Field> LookupTables<F> {
+    #[inline]
+    pub fn new(table_bits: usize, table_num: usize) -> Self {
+        Self {
+            table_bits,
+            table_num,
+            tables: vec![vec![F::ZERO; 1 << table_bits]; table_num],
+        }
+    }
+
+    #[inline]
+    pub fn build(&mut self, weights: &[F]) {
+        assert_eq!(weights.len() % self.table_bits, 0);
+        assert_eq!(weights.len() / self.table_bits, self.table_num);
+
+        self.tables
+            .iter_mut()
+            .zip(weights.chunks(self.table_bits))
+            .for_each(|(lut_i, sub_weights)| {
+                sub_weights.iter().enumerate().for_each(|(i, weight_i)| {
+                    let bit_mask = 1 << (self.table_bits - i - 1);
+                    lut_i.iter_mut().enumerate().for_each(|(bit_map, li)| {
+                        if bit_map & bit_mask == bit_mask {
+                            *li += weight_i;
+                        }
+                    });
+                });
+            });
+    }
+
+    #[inline]
+    pub fn zeroize(&mut self) {
+        self.tables
+            .iter_mut()
+            .for_each(|lut| lut.iter_mut().for_each(|i| *i = F::ZERO));
+    }
+
+    #[inline]
+    pub fn lookup_and_sum<F0: Field>(&self, indices: &[F0]) -> F {
+        self.tables
+            .iter()
+            .zip(indices.iter())
+            .map(|(t_i, index)| t_i[index.as_u32_unchecked() as usize])
+            .sum()
+    }
+}

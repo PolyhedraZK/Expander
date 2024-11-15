@@ -86,7 +86,7 @@ impl Field for GF2x64 {
 
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
-        self.v as u32
+        unimplemented!()
     }
 
     #[inline(always)]

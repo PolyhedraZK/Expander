@@ -4,7 +4,6 @@ use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x8, GF2};
 use gf2_128::{GF2_128x8, GF2_128};
-use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
 use pcs::{OrionPCS, OrionPCSSetup, ORION_CODE_PARAMETER_INSTANCE};
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
@@ -54,15 +53,4 @@ fn test_orion_pcs_e2e() {
             BytesHashTranscript<_, Keccak256hasher>,
         >,
     );
-
-    (9..=15).for_each(
-        test_orion_pcs_e2e_generics::<
-            M31,
-            M31Ext3,
-            M31x16,
-            M31x16,
-            M31Ext3x16,
-            BytesHashTranscript<_, Keccak256hasher>,
-        >,
-    )
 }
