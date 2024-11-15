@@ -5,6 +5,9 @@ pub trait SimdField: From<Self::Scalar> + Field + FieldSerde {
     /// Field for the challenge. Can be self.
     type Scalar: Field + FieldSerde + Send;
 
+    /// Pack size (width) for the SIMD instruction
+    const PACK_SIZE: usize;
+
     /// scale self with the challenge
     fn scale(&self, challenge: &Self::Scalar) -> Self;
 
@@ -13,6 +16,4 @@ pub trait SimdField: From<Self::Scalar> + Field + FieldSerde {
 
     /// unpack into a vector.
     fn unpack(&self) -> Vec<Self::Scalar>;
-
-    fn pack_size() -> usize;
 }

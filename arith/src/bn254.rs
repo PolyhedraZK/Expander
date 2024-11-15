@@ -141,10 +141,7 @@ impl SimdField for Fr {
         vec![*self]
     }
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        1
-    }
+    const PACK_SIZE: usize = 1;
 }
 
 impl FieldSerde for Fr {

@@ -9,8 +9,14 @@ pub struct MultiLinearPoly<F: Field> {
 }
 
 impl<F: Field> MultiLinearPoly<F> {
-    /// Sample a random polynomials.
+    #[inline]
+    pub fn new(evals: Vec<F>) -> Self {
+        assert!(evals.len().is_power_of_two());
 
+        Self { coeffs: evals }
+    }
+
+    /// Sample a random polynomials.
     #[inline]
     pub fn random(nv: usize, mut rng: impl RngCore) -> Self {
         let coeff = (0..1 << nv).map(|_| F::random_unsafe(&mut rng)).collect();

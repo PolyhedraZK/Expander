@@ -6,7 +6,6 @@ use std::{
 };
 
 use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult};
-
 use gf2::GF2;
 
 #[derive(Debug, Clone, Copy)]
@@ -21,7 +20,9 @@ impl FieldSerde for AVXGF2_128 {
 
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        unsafe { writer.write_all(transmute::<__m128i, [u8; 16]>(self.v).as_ref())? };
+        unsafe {
+            writer.write_all(transmute::<__m128i, [u8; Self::SERIALIZED_SIZE]>(self.v).as_ref())?
+        };
         Ok(())
     }
 
@@ -205,6 +206,15 @@ impl ExtensionField for AVXGF2_128 {
 
             Self { v: res }
         }
+    }
+}
+
+impl Mul<GF2> for AVXGF2_128 {
+    type Output = AVXGF2_128;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2) -> Self::Output {
+        self.mul_by_base_field(&rhs)
     }
 }
 

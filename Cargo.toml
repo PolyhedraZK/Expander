@@ -16,6 +16,7 @@ members = [
     "pcs",
     "sumcheck",
     "transcript",
+    "tree"
 ]
 resolver = "2"
 

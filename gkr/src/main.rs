@@ -184,7 +184,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         })
         .collect::<Vec<_>>();
 
-    println!("We are now calculating average throughput, please wait for 1 minutes");
+    println!("We are now calculating average throughput, please wait for 5 seconds");
     for i in 0..args.repeats {
         thread::sleep(std::time::Duration::from_secs(5));
         let stop_time = std::time::Instant::now();

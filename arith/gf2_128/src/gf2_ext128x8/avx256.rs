@@ -473,10 +473,7 @@ impl SimdField for AVX256GF2_128x8 {
     }
     type Scalar = GF2_128;
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        8
-    }
+    const PACK_SIZE: usize = 8;
 
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == 8);
@@ -677,6 +674,15 @@ impl ExtensionField for AVX256GF2_128x8 {
                 mul_by_x_internal(self.data[3]),
             ],
         }
+    }
+}
+
+impl Mul<GF2x8> for AVX256GF2_128x8 {
+    type Output = AVX256GF2_128x8;
+
+    #[inline]
+    fn mul(self, rhs: GF2x8) -> Self::Output {
+        self.mul_by_base_field(&rhs)
     }
 }
 
