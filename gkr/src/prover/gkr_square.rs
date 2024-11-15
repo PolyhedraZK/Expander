@@ -19,6 +19,7 @@ pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     C::ChallengeField,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
+    Vec<C::ChallengeField>,
 ) {
     let timer = start_timer!(|| "gkr^2 prove");
     let layer_num = circuit.layers.len();
@@ -34,12 +35,6 @@ pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     }
     log::trace!("Initial r_simd: {:?}", r_simd);
 
-    // TODO: MPI support
-    assert_eq!(
-        mpi_config.world_size().trailing_zeros(),
-        0,
-        "MPI not supported yet"
-    );
     let mut r_mpi = vec![];
     for _ in 0..mpi_config.world_size().trailing_zeros() {
         r_mpi.push(transcript.generate_challenge_field_element());
@@ -69,8 +64,15 @@ pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     log::trace!("Claimed v: {:?}", claimed_v);
 
     for i in (0..layer_num).rev() {
-        (rz0, r_simd) =
-            sumcheck_prove_gkr_square_layer(&circuit.layers[i], &rz0, &r_simd, transcript, sp);
+        (rz0, r_simd, r_mpi) = sumcheck_prove_gkr_square_layer(
+            &circuit.layers[i],
+            &rz0,
+            &r_simd,
+            &r_mpi,
+            transcript,
+            sp,
+            mpi_config,
+        );
 
         log::trace!("Layer {} proved", i);
         log::trace!("rz0.0: {:?}", rz0[0]);
@@ -79,5 +81,5 @@ pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     }
 
     end_timer!(timer);
-    (claimed_v, rz0, r_simd)
+    (claimed_v, rz0, r_simd, r_mpi)
 }

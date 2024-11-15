@@ -99,26 +99,28 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::Chall
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
     r_simd: &[C::ChallengeField],
+    r_mpi: &[C::ChallengeField],
     transcript: &mut T,
     sp: &mut ProverScratchPad<C>,
-) -> (Vec<C::ChallengeField>, Vec<C::ChallengeField>) {
+    mpi_config: &MPIConfig,
+) -> (
+    Vec<C::ChallengeField>,
+    Vec<C::ChallengeField>,
+    Vec<C::ChallengeField>,
+) {
     const D: usize = 7;
-    let mut helper = SumcheckGkrSquareHelper::new(layer, rz0, r_simd, sp);
+    let mut helper =
+        SumcheckGkrSquareHelper::<C, D>::new(layer, rz0, r_simd, r_mpi, sp, mpi_config);
 
     helper.prepare_simd();
+    helper.prepare_mpi();
     helper.prepare_g_x_vals();
 
     // x-variable sumcheck rounds
     for i_var in 0..layer.input_var_num {
-        let evals: [C::ChallengeField; D] = helper.poly_evals_at_x(i_var);
-
-        for deg in 0..D {
-            transcript.append_field_element(&evals[deg]);
-        }
-        let r = transcript.generate_challenge_field_element();
-
+        let evals = helper.poly_evals_at_x(i_var);
+        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
         log::trace!("x i_var={} evals: {:?} r: {:?}", i_var, evals, r);
-
         helper.receive_x_challenge(i_var, r);
     }
 
@@ -128,19 +130,20 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::Chall
     // SIMD-variable sumcheck rounds
     for i_var in 0..helper.simd_var_num {
         let evals = helper.poly_evals_at_simd(i_var);
-
-        for deg in 0..D {
-            transcript.append_field_element(&evals[deg]);
-        }
-        let r = transcript.generate_challenge_field_element();
-
+        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
         log::trace!("SIMD i_var={} evals: {:?} r: {:?}", i_var, evals, r);
-
         helper.receive_simd_challenge(i_var, r);
+    }
+
+    helper.prepare_mpi_var_vals();
+    for i_var in 0..mpi_config.world_size().trailing_zeros() as usize {
+        let evals = helper.poly_evals_at_mpi(i_var);
+        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        helper.receive_mpi_challenge(i_var, r);
     }
 
     log::trace!("vx claim: {:?}", helper.vx_claim());
     transcript.append_field_element(&helper.vx_claim());
 
-    (helper.rx, helper.r_simd_var)
+    (helper.rx, helper.r_simd_var, helper.r_mpi_var)
 }

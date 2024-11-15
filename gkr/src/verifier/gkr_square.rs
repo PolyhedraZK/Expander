@@ -34,22 +34,15 @@ pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
         rz.push(transcript.generate_challenge_field_element());
     }
-    log::trace!("rz {:?}", rz);
-
     for _ in 0..C::get_field_pack_size().trailing_zeros() {
         r_simd.push(transcript.generate_challenge_field_element());
     }
-    log::trace!("r_simd {:?}", r_simd);
-
-    // TODO: MPI support
-    assert_eq!(
-        mpi_config.world_size().trailing_zeros(),
-        0,
-        "MPI not supported yet"
-    );
     for _ in 0..mpi_config.world_size().trailing_zeros() {
         r_mpi.push(transcript.generate_challenge_field_element());
     }
+    log::trace!("Initial rz0: {:?}", rz);
+    log::trace!("Initial r_simd: {:?}", r_simd);
+    log::trace!("Initial r_mpi: {:?}", r_mpi);
 
     let mut verified = true;
     let mut current_claim = *claimed_v;
@@ -69,6 +62,7 @@ pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             &mut sp,
             i == layer_num - 1,
         );
+        log::trace!("Layer {} verified? {}", i, cur_verified);
         verified &= cur_verified;
     }
     end_timer!(timer);
@@ -137,21 +131,21 @@ fn sumcheck_verify_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
     }
     GKRVerifierHelper::set_r_simd_xy(&r_simd_var, sp);
 
-    // TODO: nontrivial MPI support
     for _i_var in 0..mpi_config.world_size().trailing_zeros() {
         verified &= verify_sumcheck_step::<C, T>(
             &mut proof_reader,
-            3,
+            degree,
             transcript,
             &mut sum,
             &mut r_mpi_var,
             sp,
         );
-        // println!("{} mpi var, verified? {}", _i_var, verified);
+        log::trace!("{} mpi var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_r_mpi_xy(&r_mpi_var, sp);
 
     let v_claim = C::ChallengeField::deserialize_from(&mut proof_reader).unwrap();
+    log::trace!("v_claim: {:?}", v_claim);
 
     sum -= v_claim * GKRVerifierHelper::eval_pow_1(&layer.uni, sp)
         + v_claim.exp(5) * GKRVerifierHelper::eval_pow_5(&layer.uni, sp);

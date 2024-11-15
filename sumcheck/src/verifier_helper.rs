@@ -154,7 +154,7 @@ impl GKRVerifierHelper {
                     * C::challenge_mul_circuit_field(&sp.eq_evals_at_rx[gate.i_ids[0]], &gate.coef);
             }
         }
-        v * sp.eq_r_simd_r_simd_xy
+        v * sp.eq_r_simd_r_simd_xy * sp.eq_r_mpi_r_mpi_xy
     }
 
     #[inline(always)]
@@ -170,7 +170,7 @@ impl GKRVerifierHelper {
                     * C::challenge_mul_circuit_field(&sp.eq_evals_at_rx[gate.i_ids[0]], &gate.coef);
             }
         }
-        v * sp.eq_r_simd_r_simd_xy
+        v * sp.eq_r_simd_r_simd_xy * sp.eq_r_mpi_r_mpi_xy
     }
 
     #[inline(always)]
