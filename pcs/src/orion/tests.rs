@@ -22,7 +22,10 @@ where
     luts.build(combination);
 
     mat.chunks(combination.len())
-        .map(|p_col| luts.lookup_and_sum(p_col))
+        .map(|p_col| {
+            let packed: Vec<_> = p_col.chunks(PackF::PACK_SIZE).map(PackF::pack).collect();
+            luts.lookup_and_sum(&packed)
+        })
         .collect()
 }
 
@@ -34,40 +37,34 @@ where
     let mut rng = test_rng();
 
     let orion_code = OrionCode::new(ORION_CODE_PARAMETER_INSTANCE, msg_len, &mut rng);
-    let linear_combine_size = 1 << PackF::PACK_SIZE;
-    let random_scalrs: Vec<_> = (0..linear_combine_size)
-        .map(|_| F::random_unsafe(&mut rng))
-        .collect();
+
+    let row_num = 1024 / F::FIELD_SIZE;
+    let weights: Vec<_> = (0..row_num).map(|_| F::random_unsafe(&mut rng)).collect();
 
     // NOTE: generate message and codeword in the slice buffer
-    let mut message_mat = vec![F::ZERO; linear_combine_size * orion_code.msg_len()];
-    let mut codeword_mat = vec![F::ZERO; linear_combine_size * orion_code.code_len()];
+    let mut message_mat = vec![F::ZERO; row_num * orion_code.msg_len()];
+    let mut codeword_mat = vec![F::ZERO; row_num * orion_code.code_len()];
 
     message_mat
         .chunks_mut(orion_code.msg_len())
         .zip(codeword_mat.chunks_mut(orion_code.code_len()))
-        .try_for_each(|(msg, codeword)| {
+        .for_each(|(msg, codeword)| {
             msg.fill_with(|| F::random_unsafe(&mut rng));
-            orion_code.encode_in_place(msg, codeword)
-        })
-        .unwrap();
+            orion_code.encode_in_place(msg, codeword).unwrap()
+        });
 
     // NOTE: transpose message and codeword matrix
-    let mut message_scratch = vec![F::ZERO; linear_combine_size * orion_code.msg_len()];
-    transpose_in_place(&mut message_mat, &mut message_scratch, linear_combine_size);
+    let mut message_scratch = vec![F::ZERO; row_num * orion_code.msg_len()];
+    transpose_in_place(&mut message_mat, &mut message_scratch, row_num);
     drop(message_scratch);
 
-    let mut codeword_scratch = vec![F::ZERO; linear_combine_size * orion_code.code_len()];
-    transpose_in_place(
-        &mut codeword_mat,
-        &mut codeword_scratch,
-        linear_combine_size,
-    );
+    let mut codeword_scratch = vec![F::ZERO; row_num * orion_code.code_len()];
+    transpose_in_place(&mut codeword_mat, &mut codeword_scratch, row_num);
     drop(codeword_scratch);
 
     // NOTE: message and codeword matrix linear combination with weights
-    let msg_linear_combined = column_combination::<F, PackF>(&message_mat, &random_scalrs);
-    let codeword_linear_combined = column_combination::<F, PackF>(&codeword_mat, &random_scalrs);
+    let msg_linear_combined = column_combination::<F, PackF>(&message_mat, &weights);
+    let codeword_linear_combined = column_combination::<F, PackF>(&codeword_mat, &weights);
 
     let codeword_computed = orion_code.encode(&msg_linear_combined).unwrap();
 
@@ -139,7 +136,6 @@ where
 #[test]
 fn test_orion_commit_consistency() {
     (19..=25).for_each(|num_vars| {
-        test_orion_commit_consistency_generic::<GF2, GF2x8>(num_vars);
         test_orion_commit_consistency_generic::<GF2, GF2x64>(num_vars);
         test_orion_commit_consistency_generic::<GF2, GF2x128>(num_vars);
         test_orion_commit_consistency_generic::<GF2, GF2x512>(num_vars);

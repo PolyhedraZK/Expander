@@ -106,7 +106,7 @@ impl<F: Field> LookupTables<F> {
         assert_eq!(weights.len() % self.table_bits, 0);
         assert_eq!(weights.len() / self.table_bits, self.table_num);
 
-        self.zeroize();
+        self.tables.iter_mut().for_each(|lut| lut.fill(F::ZERO));
 
         self.tables
             .iter_mut()
@@ -124,12 +124,9 @@ impl<F: Field> LookupTables<F> {
     }
 
     #[inline]
-    pub fn zeroize(&mut self) {
-        self.tables.iter_mut().for_each(|lut| lut.fill(F::ZERO));
-    }
-
-    #[inline]
     pub fn lookup_and_sum<F0: Field>(&self, indices: &[F0]) -> F {
+        assert_eq!(indices.len(), self.table_num);
+
         self.tables
             .iter()
             .zip(indices.iter())
