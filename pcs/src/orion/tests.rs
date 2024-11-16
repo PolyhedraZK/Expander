@@ -8,7 +8,7 @@ use polynomials::MultiLinearPoly;
 use crate::orion::{
     linear_code::{OrionCode, ORION_CODE_PARAMETER_INSTANCE},
     pcs_impl::{OrionCommitment, OrionCommitmentWithData, OrionPublicParams},
-    utils::{transpose_in_place, SubsetSumLUTs},
+    utils::{transpose_in_place, SubsetSumLUTs, TensorIOPPCS},
 };
 
 fn column_combination<F, PackF>(mat: &[F], combination: &[F]) -> Vec<F>
@@ -95,7 +95,7 @@ where
         .flat_map(|msg| orion_pp.code_instance.encode(&msg).unwrap())
         .collect();
 
-    let mut scratch = vec![F::ZERO; row_num * orion_pp.code_len()];
+    let mut scratch = vec![F::ZERO; row_num * orion_pp.codeword_len()];
     transpose_in_place(&mut interleaved_codewords, &mut scratch, row_num);
     drop(scratch);
 

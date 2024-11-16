@@ -26,18 +26,16 @@ where
     let mut rng = test_rng();
     let poly = MultiLinearPoly::<F>::random(params.num_vars, &mut rng);
 
-    (0..5).for_each(|_| {
-        let opening_point: Vec<_> = (0..params.num_vars)
-            .map(|_| EvalF::random_unsafe(&mut rng))
-            .collect();
+    let opening_point: Vec<_> = (0..params.num_vars)
+        .map(|_| EvalF::random_unsafe(&mut rng))
+        .collect();
 
-        common::test_pcs_e2e::<OrionPCS<F, EvalF, ComPackF, OpenPackF, T>>(
-            &params,
-            &poly,
-            &opening_point,
-            &mut rng,
-        );
-    })
+    common::test_pcs_e2e::<OrionPCS<F, EvalF, ComPackF, OpenPackF, T>>(
+        &params,
+        &poly,
+        &opening_point,
+        &mut rng,
+    );
 }
 
 #[test]

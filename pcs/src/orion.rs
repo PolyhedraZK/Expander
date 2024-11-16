@@ -10,7 +10,7 @@ use transcript::Transcript;
 use crate::PolynomialCommitmentScheme;
 
 mod utils;
-pub use utils::{OrionPCSError, OrionResult};
+pub use utils::{OrionPCSError, OrionResult, SubsetSumLUTs, TensorIOPPCS};
 
 mod linear_code;
 pub use linear_code::{OrionCodeParameter, ORION_CODE_PARAMETER_INSTANCE};

@@ -8,7 +8,7 @@ use crate::{orion::utils::SubsetSumLUTs, PCS_SOUNDNESS_BITS};
 
 use super::{
     linear_code::{OrionCode, OrionCodeParameter},
-    utils::{transpose_in_place, OrionPCSError, OrionResult},
+    utils::{transpose_in_place, OrionPCSError, OrionResult, TensorIOPPCS},
 };
 
 /**********************************************************
@@ -19,6 +19,16 @@ use super::{
 pub struct OrionPublicParams {
     pub num_variables: usize,
     pub code_instance: OrionCode,
+}
+
+impl TensorIOPPCS for OrionPublicParams {
+    fn codeword_len(&self) -> usize {
+        self.code_instance.code_len()
+    }
+
+    fn hamming_weight(&self) -> f64 {
+        self.code_instance.hamming_weight()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -53,17 +63,6 @@ pub struct OrionProof<EvalF: Field + FieldSerde> {
 }
 
 impl OrionPublicParams {
-    pub(crate) fn row_col_from_variables<F: Field>(num_variables: usize) -> (usize, usize) {
-        let poly_variables: usize = num_variables;
-
-        let elems_for_smallest_tree = tree::leaf_adic::<F>() * 2;
-
-        let row_num: usize = elems_for_smallest_tree;
-        let msg_size: usize = (1 << poly_variables) / row_num;
-
-        (row_num, msg_size)
-    }
-
     pub fn new<F: Field>(num_variables: usize, code_instance: OrionCode) -> OrionResult<Self> {
         let (_, msg_size) = Self::row_col_from_variables::<F>(num_variables);
         if msg_size != code_instance.msg_len() {
@@ -89,28 +88,6 @@ impl OrionPublicParams {
             num_variables,
             code_instance: OrionCode::new(code_param_instance, msg_size, &mut rng),
         }
-    }
-
-    pub fn code_len(&self) -> usize {
-        self.code_instance.code_len()
-    }
-
-    pub fn query_complexity(&self, soundness_bits: usize) -> usize {
-        // NOTE: use Ligero (AHIV22) or Avg-case dist to a code (BKS18)
-        // version of avg case dist in unique decoding technique.
-        let avg_case_dist = self.code_instance.hamming_weight() / 3f64;
-        let sec_bits = -(1f64 - avg_case_dist).log2();
-
-        (soundness_bits as f64 / sec_bits).ceil() as usize
-    }
-
-    pub fn proximity_repetition_num(&self, soundness_bits: usize, field_size_bits: usize) -> usize {
-        // NOTE: use Ligero (AHIV22) or Avg-case dist to a code (BKS18)
-        // version of avg case dist in unique decoding technique.
-        // Here is the probability union bound
-        let code_len_over_f_bits = field_size_bits - self.code_instance.code_len().ilog2() as usize;
-
-        (soundness_bits as f64 / code_len_over_f_bits as f64).ceil() as usize
     }
 
     pub fn commit<F, ComPackF>(
@@ -146,17 +123,18 @@ impl OrionPublicParams {
         drop(scratch);
 
         // NOTE: packed codeword buffer and encode over packed field
-        let mut packed_interleaved_codewords = vec![ComPackF::ZERO; packed_rows * self.code_len()];
+        let mut packed_interleaved_codewords =
+            vec![ComPackF::ZERO; packed_rows * self.codeword_len()];
         packed_evals
             .chunks(msg_size)
-            .zip(packed_interleaved_codewords.chunks_mut(self.code_len()))
+            .zip(packed_interleaved_codewords.chunks_mut(self.codeword_len()))
             .try_for_each(|(evals, codeword)| {
                 self.code_instance.encode_in_place(evals, codeword)
             })?;
         drop(packed_evals);
 
         // NOTE: transpose codeword s.t., the matrix has codewords being columns
-        let mut scratch = vec![ComPackF::ZERO; packed_rows * self.code_len()];
+        let mut scratch = vec![ComPackF::ZERO; packed_rows * self.codeword_len()];
         transpose_in_place(&mut packed_interleaved_codewords, &mut scratch, packed_rows);
         drop(scratch);
 
@@ -225,9 +203,8 @@ impl OrionPublicParams {
 
         // NOTE: draw random linear combination out
         // and compose proximity response(s) of tensor code IOP based PCS
-        let proximity_repetitions =
-            self.proximity_repetition_num(PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
-        let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_repetitions];
+        let proximity_test_num = self.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
+        let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_test_num];
 
         proximity_rows.iter_mut().for_each(|row_buffer| {
             let random_coeffs = transcript.generate_challenge_field_elements(row_num);
@@ -238,6 +215,7 @@ impl OrionPublicParams {
                 .zip(row_buffer.iter_mut())
                 .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
         });
+        drop(luts);
 
         // NOTE: working on evaluation on top of evaluation response
         let mut scratch = vec![EvalF::ZERO; msg_size];
@@ -246,6 +224,7 @@ impl OrionPublicParams {
             &point[..num_of_vars_in_msg],
             &mut scratch,
         );
+        drop(scratch);
 
         // NOTE: MT opening for point queries
         let leaf_range = row_num / tree::leaf_adic::<F>();
@@ -254,7 +233,7 @@ impl OrionPublicParams {
         let query_openings = query_indices
             .iter()
             .map(|qi| {
-                let index = *qi % self.code_len();
+                let index = *qi % self.codeword_len();
                 let left = index * leaf_range;
                 let right = left + leaf_range - 1;
 
@@ -305,8 +284,7 @@ impl OrionPublicParams {
 
         // NOTE: working on proximity responses, draw random linear combinations
         // then draw query points from fiat shamir transcripts
-        let proximity_test_num =
-            self.proximity_repetition_num(PCS_SOUNDNESS_BITS, EvalF::FIELD_SIZE);
+        let proximity_test_num = self.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
         let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_test_num)
             .map(|_| transcript.generate_challenge_field_elements(row_num))
             .collect();
@@ -320,7 +298,7 @@ impl OrionPublicParams {
                 .iter()
                 .zip(proof.query_openings.iter())
                 .all(|(&qi, range_path)| {
-                    let index = qi % self.code_len();
+                    let index = qi % self.codeword_len();
                     range_path.verify(commitment) && index == range_path.left / leaf_range
                 });
         if !mt_consistency {
@@ -363,7 +341,7 @@ impl OrionPublicParams {
                     .iter()
                     .zip(packed_interleaved_alphabets.iter())
                     .all(|(&qi, interleaved_alphabet)| {
-                        let index = qi % self.code_len();
+                        let index = qi % self.codeword_len();
                         let alphabet = luts.lookup_and_sum(interleaved_alphabet);
                         alphabet == codeword[index]
                     })

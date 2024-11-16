@@ -1,5 +1,3 @@
-use std::ops::Mul;
-
 use arith::{Field, FieldSerdeError, SimdField};
 use thiserror::Error;
 
@@ -48,44 +46,48 @@ pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row
     mat.copy_from_slice(scratch);
 }
 
+/**********************************
+ * TENSOR IOP BASED PCS UTILITIES *
+ **********************************/
+
+pub trait TensorIOPPCS {
+    fn codeword_len(&self) -> usize;
+
+    fn hamming_weight(&self) -> f64;
+
+    fn row_col_from_variables<F: Field>(num_vars: usize) -> (usize, usize) {
+        let elems_for_smallest_tree = tree::leaf_adic::<F>() * 2;
+
+        let row_num: usize = elems_for_smallest_tree;
+        let msg_size: usize = (1 << num_vars) / row_num;
+
+        (row_num, msg_size)
+    }
+
+    fn query_complexity(&self, soundness_bits: usize) -> usize {
+        // NOTE: use Ligero (AHIV22) or Avg-case dist to a code (BKS18)
+        // version of avg case dist in unique decoding technique.
+        let avg_case_dist = self.hamming_weight() / 3f64;
+        let sec_bits = -(1f64 - avg_case_dist).log2();
+
+        (soundness_bits as f64 / sec_bits).ceil() as usize
+    }
+
+    fn proximity_repetitions<F: Field>(&self, soundness_bits: usize) -> usize {
+        // NOTE: use Ligero (AHIV22) or Avg-case dist to a code (BKS18)
+        // version of avg case dist in unique decoding technique.
+        // Here is the probability union bound
+        let single_run_soundness_bits = F::FIELD_SIZE - self.codeword_len().ilog2() as usize;
+
+        (soundness_bits as f64 / single_run_soundness_bits as f64).ceil() as usize
+    }
+}
+
 /*********************
  * LINEAR OPERATIONS *
  *********************/
 
-#[allow(unused)]
-#[inline]
-pub(crate) fn simd_inner_prod<F0, F1, IPPackF0, IPPackF1>(
-    l: &[F0],
-    r: &[F1],
-    scratch_pl: &mut [IPPackF0],
-    scratch_pr: &mut [IPPackF1],
-) -> F1
-where
-    F0: Field,
-    F1: Field + From<F0> + Mul<F0, Output = F1>,
-    IPPackF0: SimdField<Scalar = F0>,
-    IPPackF1: SimdField<Scalar = F1> + Mul<IPPackF0, Output = IPPackF1>,
-{
-    scratch_pl
-        .iter_mut()
-        .zip(l.chunks(IPPackF0::PACK_SIZE))
-        .for_each(|(pl, ls)| *pl = IPPackF0::pack(ls));
-
-    scratch_pr
-        .iter_mut()
-        .zip(r.chunks(IPPackF1::PACK_SIZE))
-        .for_each(|(pr, rs)| *pr = IPPackF1::pack(rs));
-
-    let simd_sum: IPPackF1 = scratch_pl
-        .iter()
-        .zip(scratch_pr.iter())
-        .map(|(pl, pr)| *pr * *pl)
-        .sum();
-
-    simd_sum.unpack().iter().sum()
-}
-
-pub(crate) struct SubsetSumLUTs<F: Field> {
+pub struct SubsetSumLUTs<F: Field> {
     pub entry_bits: usize,
     pub tables: Vec<Vec<F>>,
 }
