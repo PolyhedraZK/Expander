@@ -1,4 +1,4 @@
-// Galios field over 2^128
+// Galois field over 2^128
 // credit to intel for the original implementation
 // https://www.intel.com/content/dam/develop/external/us/en/documents/clmul-wp-rev-2-02-2014-04-20.pdf
 
@@ -43,7 +43,7 @@ impl FieldSerde for GF2 {
 impl Field for GF2 {
     // still will pack 8 bits into a u8
 
-    const NAME: &'static str = "Galios Field 2";
+    const NAME: &'static str = "Galois Field 2";
 
     const SIZE: usize = 1;
 

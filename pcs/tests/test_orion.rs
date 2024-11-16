@@ -2,7 +2,7 @@ use std::ops::Mul;
 
 use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
-use gf2::{GF2x128, GF2x8, GF2};
+use gf2::{GF2x512, GF2x8, GF2};
 use gf2_128::GF2_128;
 use pcs::{OrionPCS, OrionPCSSetup, ORION_CODE_PARAMETER_INSTANCE};
 use polynomials::MultiLinearPoly;
@@ -46,7 +46,7 @@ fn test_orion_pcs_e2e() {
         test_orion_pcs_e2e_generics::<
             GF2,
             GF2_128,
-            GF2x128,
+            GF2x512,
             GF2x8,
             BytesHashTranscript<_, Keccak256hasher>,
         >,

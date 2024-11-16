@@ -12,5 +12,8 @@ pub use gf2x64::GF2x64;
 mod gf2x128;
 pub use gf2x128::GF2x128;
 
+mod gf2x512;
+pub use gf2x512::GF2x512;
+
 #[cfg(test)]
 mod tests;

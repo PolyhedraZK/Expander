@@ -4,20 +4,26 @@ use arith::{Field, SimdField};
 
 use crate::{GF2x64, GF2};
 
-#[cfg(target_arch = "x86_64")]
-mod avx;
-#[cfg(target_arch = "x86_64")]
-pub type GF2x128 = avx::AVXGF2x128;
-
 #[cfg(target_arch = "aarch64")]
 mod neon;
 #[cfg(target_arch = "aarch64")]
-pub type GF2x128 = neon::NeonGF2x128;
+pub type GF2x512 = neon::NeonGF2x512;
 
-impl SimdField for GF2x128 {
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
+mod avx512;
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
+pub type GF2x512 = avx512::AVX512GF2x512;
+
+// Fallback, use avx2
+#[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
+mod avx256;
+#[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
+pub type GF2x512 = avx256::AVX256GF2x512;
+
+impl SimdField for GF2x512 {
     type Scalar = GF2;
 
-    const PACK_SIZE: usize = 128;
+    const PACK_SIZE: usize = 512;
 
     #[inline(always)]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
