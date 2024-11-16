@@ -4,7 +4,7 @@ use arith::{Field, FieldSerde, SimdField};
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::Transcript;
 
-use crate::{orion::utils::LookupTables, PCS_SOUNDNESS_BITS};
+use crate::{orion::utils::SubsetSumLUTs, PCS_SOUNDNESS_BITS};
 
 use super::{
     linear_code::{OrionCode, OrionCodeParameter},
@@ -193,7 +193,7 @@ impl OrionPublicParams {
         T: Transcript<EvalF>,
     {
         let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
-        let num_of_vars_in_codeword = msg_size.ilog2() as usize;
+        let num_of_vars_in_msg = msg_size.ilog2() as usize;
 
         // NOTE: transpose evaluations for linear combinations in evaulation/proximity tests
         let mut transposed_evaluations = poly.coeffs.clone();
@@ -210,13 +210,14 @@ impl OrionPublicParams {
         drop(transposed_evaluations);
 
         // NOTE: declare the look up tables for column sums
-        let mut luts = LookupTables::new(OpenPackF::PACK_SIZE, row_num / OpenPackF::PACK_SIZE);
+        let mut luts = SubsetSumLUTs::new(OpenPackF::PACK_SIZE, row_num / OpenPackF::PACK_SIZE);
 
         // NOTE: working on evaluation response of tensor code IOP based PCS
-        let eq_linear_comb = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
-        luts.build(&eq_linear_comb);
-
         let mut eval_row = vec![EvalF::ZERO; msg_size];
+
+        let eq_col_coeffs = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_msg..]);
+        luts.build(&eq_col_coeffs);
+
         packed_evals
             .chunks(row_num / OpenPackF::PACK_SIZE)
             .zip(eval_row.iter_mut())
@@ -230,7 +231,6 @@ impl OrionPublicParams {
 
         proximity_rows.iter_mut().for_each(|row_buffer| {
             let random_coeffs = transcript.generate_challenge_field_elements(row_num);
-
             luts.build(&random_coeffs);
 
             packed_evals
@@ -240,22 +240,22 @@ impl OrionPublicParams {
         });
 
         // NOTE: working on evaluation on top of evaluation response
-        let eq_xr = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
-        let eval = eval_row
-            .iter()
-            .zip(eq_xr.iter())
-            .map(|(&e, &r)| e * r)
-            .sum();
+        let mut scratch = vec![EvalF::ZERO; msg_size];
+        let eval = MultiLinearPoly::evaluate_with_buffer(
+            &eval_row,
+            &point[..num_of_vars_in_msg],
+            &mut scratch,
+        );
 
         // NOTE: MT opening for point queries
-        let leaf_range = row_num * F::FIELD_SIZE / (tree::LEAF_BYTES * 8);
+        let leaf_range = row_num / tree::leaf_adic::<F>();
         let query_num = self.query_complexity(PCS_SOUNDNESS_BITS);
-        let mut query_points = transcript.generate_challenge_index_vector(query_num);
-        let query_openings = query_points
-            .iter_mut()
+        let query_indices = transcript.generate_challenge_index_vector(query_num);
+        let query_openings = query_indices
+            .iter()
             .map(|qi| {
-                *qi %= self.code_len();
-                let left = *qi * leaf_range;
+                let index = *qi % self.code_len();
+                let left = index * leaf_range;
                 let right = left + leaf_range - 1;
 
                 commitment_with_data
@@ -290,16 +290,15 @@ impl OrionPublicParams {
         T: Transcript<EvalF>,
     {
         let (row_num, msg_size) = Self::row_col_from_variables::<F>(point.len());
-        let num_of_vars_in_codeword = msg_size.ilog2() as usize;
+        let num_of_vars_in_msg = msg_size.ilog2() as usize;
 
         // NOTE: working on evaluation response, evaluate the rest of the response
-        let eq_xr = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
-        let final_eval: EvalF = proof
-            .eval_row
-            .iter()
-            .zip(eq_xr.iter())
-            .map(|(&e, &r)| e * r)
-            .sum();
+        let mut scratch = vec![EvalF::ZERO; msg_size];
+        let final_eval = MultiLinearPoly::evaluate_with_buffer(
+            &proof.eval_row,
+            &point[..num_of_vars_in_msg],
+            &mut scratch,
+        );
         if final_eval != evaluation {
             return false;
         }
@@ -312,19 +311,17 @@ impl OrionPublicParams {
             .map(|_| transcript.generate_challenge_field_elements(row_num))
             .collect();
         let query_num = self.query_complexity(PCS_SOUNDNESS_BITS);
-        let mut query_points = transcript.generate_challenge_index_vector(query_num);
-        query_points.iter_mut().for_each(|qi| {
-            *qi %= self.code_len();
-        });
+        let query_indices = transcript.generate_challenge_index_vector(query_num);
 
         // NOTE: check consistency in MT in the opening trees and against the commitment tree
-        let leaf_range = row_num * F::FIELD_SIZE / (tree::LEAF_BYTES * 8);
+        let leaf_range = row_num / tree::leaf_adic::<F>();
         let mt_consistency =
-            query_points
+            query_indices
                 .iter()
                 .zip(proof.query_openings.iter())
                 .all(|(&qi, range_path)| {
-                    range_path.verify(commitment) && qi == range_path.left / leaf_range
+                    let index = qi % self.code_len();
+                    range_path.verify(commitment) && index == range_path.left / leaf_range
                 });
         if !mt_consistency {
             return false;
@@ -346,10 +343,10 @@ impl OrionPublicParams {
         // NOTE: encode the proximity/evaluation responses,
         // check againts all challenged indices by check alphabets against
         // linear combined interleaved alphabet
-        let mut luts = LookupTables::new(OpenPackF::PACK_SIZE, row_num / OpenPackF::PACK_SIZE);
+        let mut luts = SubsetSumLUTs::new(OpenPackF::PACK_SIZE, row_num / OpenPackF::PACK_SIZE);
         assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
 
-        let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
+        let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_msg..]);
         random_linear_combinations
             .iter()
             .zip(proof.proximity_rows.iter())
@@ -362,12 +359,13 @@ impl OrionPublicParams {
 
                 luts.build(rl);
 
-                query_points
+                query_indices
                     .iter()
                     .zip(packed_interleaved_alphabets.iter())
                     .all(|(&qi, interleaved_alphabet)| {
+                        let index = qi % self.code_len();
                         let alphabet = luts.lookup_and_sum(interleaved_alphabet);
-                        alphabet == codeword[qi]
+                        alphabet == codeword[index]
                     })
             })
     }

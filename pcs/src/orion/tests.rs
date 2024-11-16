@@ -8,7 +8,7 @@ use polynomials::MultiLinearPoly;
 use crate::orion::{
     linear_code::{OrionCode, ORION_CODE_PARAMETER_INSTANCE},
     pcs_impl::{OrionCommitment, OrionCommitmentWithData, OrionPublicParams},
-    utils::{transpose_in_place, LookupTables},
+    utils::{transpose_in_place, SubsetSumLUTs},
 };
 
 fn column_combination<F, PackF>(mat: &[F], combination: &[F]) -> Vec<F>
@@ -18,7 +18,7 @@ where
 {
     assert_eq!(combination.len() % PackF::PACK_SIZE, 0);
 
-    let mut luts = LookupTables::new(PackF::PACK_SIZE, combination.len() / PackF::PACK_SIZE);
+    let mut luts = SubsetSumLUTs::new(PackF::PACK_SIZE, combination.len() / PackF::PACK_SIZE);
     luts.build(combination);
 
     mat.chunks(combination.len())

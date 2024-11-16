@@ -85,35 +85,36 @@ where
     simd_sum.unpack().iter().sum()
 }
 
-pub(crate) struct LookupTables<F: Field> {
-    pub table_bits: usize,
-    pub table_num: usize,
+pub(crate) struct SubsetSumLUTs<F: Field> {
+    pub entry_bits: usize,
     pub tables: Vec<Vec<F>>,
 }
 
-impl<F: Field> LookupTables<F> {
+impl<F: Field> SubsetSumLUTs<F> {
     #[inline]
-    pub fn new(table_bits: usize, table_num: usize) -> Self {
+    pub fn new(entry_bits: usize, table_num: usize) -> Self {
+        assert!(entry_bits > 0 && table_num > 0);
+
         Self {
-            table_bits,
-            table_num,
-            tables: vec![vec![F::ZERO; 1 << table_bits]; table_num],
+            entry_bits,
+            tables: vec![vec![F::ZERO; 1 << entry_bits]; table_num],
         }
     }
 
     #[inline]
     pub fn build(&mut self, weights: &[F]) {
-        assert_eq!(weights.len() % self.table_bits, 0);
-        assert_eq!(weights.len() / self.table_bits, self.table_num);
+        assert_eq!(weights.len() % self.entry_bits, 0);
+        assert_eq!(weights.len() / self.entry_bits, self.tables.len());
 
         self.tables.iter_mut().for_each(|lut| lut.fill(F::ZERO));
 
+        // NOTE: we are assuming that the table is for {0, 1}-linear combination
         self.tables
             .iter_mut()
-            .zip(weights.chunks(self.table_bits))
+            .zip(weights.chunks(self.entry_bits))
             .for_each(|(lut_i, sub_weights)| {
                 sub_weights.iter().enumerate().for_each(|(i, weight_i)| {
-                    let bit_mask = 1 << (self.table_bits - i - 1);
+                    let bit_mask = 1 << (self.entry_bits - i - 1);
                     lut_i.iter_mut().enumerate().for_each(|(bit_map, li)| {
                         if bit_map & bit_mask == bit_mask {
                             *li += weight_i;
@@ -124,8 +125,17 @@ impl<F: Field> LookupTables<F> {
     }
 
     #[inline]
-    pub fn lookup_and_sum<F0: Field>(&self, indices: &[F0]) -> F {
-        assert_eq!(indices.len(), self.table_num);
+    pub fn lookup_and_sum<BitF, EntryF>(&self, indices: &[EntryF]) -> F
+    where
+        BitF: Field,
+        EntryF: SimdField<Scalar = BitF>,
+    {
+        // NOTE: at least the entry field elem should have a matching field size
+        // and the the entry field being a SIMD field with same packing size as
+        // the bits for the table entry
+        assert_eq!(EntryF::FIELD_SIZE, 1);
+        assert_eq!(EntryF::PACK_SIZE, self.entry_bits);
+        assert_eq!(indices.len(), self.tables.len());
 
         self.tables
             .iter()
