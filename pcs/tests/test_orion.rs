@@ -3,20 +3,19 @@ use std::ops::Mul;
 use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x8, GF2};
-use gf2_128::{GF2_128x8, GF2_128};
+use gf2_128::GF2_128;
 use pcs::{OrionPCS, OrionPCSSetup, ORION_CODE_PARAMETER_INSTANCE};
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 mod common;
 
-fn test_orion_pcs_e2e_generics<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(num_vars: usize)
+fn test_orion_pcs_e2e_generics<F, EvalF, ComPackF, OpenPackF, T>(num_vars: usize)
 where
     F: Field + FieldSerde,
     EvalF: Field + FieldSerde + Mul<F, Output = EvalF> + From<F>,
     ComPackF: SimdField<Scalar = F>,
-    IPPackF: SimdField<Scalar = F>,
-    IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
+    OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
     let params = OrionPCSSetup {
@@ -32,7 +31,7 @@ where
             .map(|_| EvalF::random_unsafe(&mut rng))
             .collect();
 
-        common::test_pcs_e2e::<OrionPCS<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>>(
+        common::test_pcs_e2e::<OrionPCS<F, EvalF, ComPackF, OpenPackF, T>>(
             &params,
             &poly,
             &opening_point,
@@ -49,7 +48,6 @@ fn test_orion_pcs_e2e() {
             GF2_128,
             GF2x128,
             GF2x8,
-            GF2_128x8,
             BytesHashTranscript<_, Keccak256hasher>,
         >,
     );

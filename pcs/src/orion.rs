@@ -25,20 +25,18 @@ mod tests;
  * POLYNOMIAL COMMITMENT TRAIT ALIGNMENT FOR ORION *
  ***************************************************/
 
-pub struct OrionPCS<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>
+pub struct OrionPCS<F, EvalF, ComPackF, OpenPackF, T>
 where
     F: Field + FieldSerde,
     EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
     ComPackF: SimdField<Scalar = F>,
-    IPPackF: SimdField<Scalar = F>,
-    IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
+    OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
     _marker_f: PhantomData<F>,
-    _marker_pack_f: PhantomData<ComPackF>,
     _marker_eval_f: PhantomData<EvalF>,
-    _marker_pack_f0: PhantomData<IPPackF>,
-    _marker_pack_eval_f: PhantomData<IPPackEvalF>,
+    _marker_commit_pack_f: PhantomData<ComPackF>,
+    _marker_open_pack_f: PhantomData<OpenPackF>,
     _marker_t: PhantomData<T>,
 }
 
@@ -48,14 +46,13 @@ pub struct OrionPCSSetup {
     pub code_parameter: OrionCodeParameter,
 }
 
-impl<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T> PolynomialCommitmentScheme
-    for OrionPCS<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>
+impl<F, EvalF, ComPackF, OpenPackF, T> PolynomialCommitmentScheme
+    for OrionPCS<F, EvalF, ComPackF, OpenPackF, T>
 where
     F: Field + FieldSerde,
     EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
     ComPackF: SimdField<Scalar = F>,
-    IPPackF: SimdField<Scalar = F>,
-    IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
+    OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
     type PublicParams = OrionPCSSetup;
@@ -90,7 +87,7 @@ where
         commitment_with_data: &Self::CommitmentWithData,
         transcript: &mut Self::FiatShamirTranscript,
     ) -> (Self::Eval, Self::OpeningProof) {
-        proving_key.open::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
+        proving_key.open::<F, EvalF, ComPackF, OpenPackF, T>(
             poly,
             commitment_with_data,
             opening_point,
@@ -106,7 +103,7 @@ where
         opening_proof: &Self::OpeningProof,
         transcript: &mut Self::FiatShamirTranscript,
     ) -> bool {
-        verifying_key.verify::<F, ComPackF, EvalF, IPPackF, IPPackEvalF, T>(
+        verifying_key.verify::<F, EvalF, ComPackF, OpenPackF, T>(
             commitment,
             opening_point,
             evaluation,

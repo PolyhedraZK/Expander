@@ -52,6 +52,7 @@ pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row
  * LINEAR OPERATIONS *
  *********************/
 
+#[allow(unused)]
 #[inline]
 pub(crate) fn simd_inner_prod<F0, F1, IPPackF0, IPPackF1>(
     l: &[F0],

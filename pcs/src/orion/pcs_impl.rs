@@ -1,7 +1,6 @@
 use std::{iter, marker::PhantomData, ops::Mul};
 
 use arith::{Field, FieldSerde, SimdField};
-use ark_std::log2;
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::Transcript;
 
@@ -9,7 +8,7 @@ use crate::{orion::utils::LookupTables, PCS_SOUNDNESS_BITS};
 
 use super::{
     linear_code::{OrionCode, OrionCodeParameter},
-    utils::{simd_inner_prod, transpose_in_place, OrionPCSError, OrionResult},
+    utils::{transpose_in_place, OrionPCSError, OrionResult},
 };
 
 /**********************************************************
@@ -54,7 +53,6 @@ pub struct OrionProof<EvalF: Field + FieldSerde> {
 }
 
 impl OrionPublicParams {
-    #[inline(always)]
     pub(crate) fn row_col_from_variables<F: Field>(num_variables: usize) -> (usize, usize) {
         let poly_variables: usize = num_variables;
 
@@ -110,7 +108,7 @@ impl OrionPublicParams {
         // NOTE: use Ligero (AHIV22) or Avg-case dist to a code (BKS18)
         // version of avg case dist in unique decoding technique.
         // Here is the probability union bound
-        let code_len_over_f_bits = field_size_bits - log2(self.code_instance.code_len()) as usize;
+        let code_len_over_f_bits = field_size_bits - self.code_instance.code_len().ilog2() as usize;
 
         (soundness_bits as f64 / code_len_over_f_bits as f64).ceil() as usize
     }
@@ -180,7 +178,7 @@ impl OrionPublicParams {
         })
     }
 
-    pub fn open<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
+    pub fn open<F, EvalF, ComPackF, OpenPackF, T>(
         &self,
         poly: &MultiLinearPoly<F>,
         commitment_with_data: &OrionCommitmentWithData<F, ComPackF>,
@@ -191,16 +189,11 @@ impl OrionPublicParams {
         F: Field + FieldSerde,
         EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
         ComPackF: SimdField<Scalar = F>,
-        IPPackF: SimdField<Scalar = F>,
-        IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
+        OpenPackF: SimdField<Scalar = F>,
         T: Transcript<EvalF>,
     {
-        assert_eq!(IPPackEvalF::PACK_SIZE, IPPackF::PACK_SIZE);
-
         let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
-        let num_of_vars_in_codeword = log2(msg_size) as usize;
-
-        assert!(msg_size >= IPPackEvalF::PACK_SIZE);
+        let num_of_vars_in_codeword = msg_size.ilog2() as usize;
 
         // NOTE: transpose evaluations for linear combinations in evaulation/proximity tests
         let mut transposed_evaluations = poly.coeffs.clone();
@@ -208,23 +201,24 @@ impl OrionPublicParams {
         transpose_in_place(&mut transposed_evaluations, &mut scratch, row_num);
         drop(scratch);
 
-        let mut packed_transposed_evaluations =
-            vec![IPPackF::ZERO; transposed_evaluations.len() / IPPackF::PACK_SIZE];
-        transposed_evaluations
-            .chunks(IPPackF::PACK_SIZE)
-            .zip(packed_transposed_evaluations.iter_mut())
-            .for_each(|(chunk, packed)| *packed = IPPackF::pack(chunk));
+        // NOTE: SIMD pack each row of transposed matrix
+        assert_eq!(transposed_evaluations.len() % OpenPackF::PACK_SIZE, 0);
+        let packed_evals: Vec<OpenPackF> = transposed_evaluations
+            .chunks(OpenPackF::PACK_SIZE)
+            .map(OpenPackF::pack)
+            .collect();
+        drop(transposed_evaluations);
 
         // NOTE: declare the look up tables for column sums
-        let mut luts = LookupTables::<EvalF>::new(IPPackF::PACK_SIZE, row_num / IPPackF::PACK_SIZE);
+        let mut luts = LookupTables::new(OpenPackF::PACK_SIZE, row_num / OpenPackF::PACK_SIZE);
 
         // NOTE: working on evaluation response of tensor code IOP based PCS
         let eq_linear_comb = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
         luts.build(&eq_linear_comb);
 
         let mut eval_row = vec![EvalF::ZERO; msg_size];
-        packed_transposed_evaluations
-            .chunks(row_num / IPPackF::PACK_SIZE)
+        packed_evals
+            .chunks(row_num / OpenPackF::PACK_SIZE)
             .zip(eval_row.iter_mut())
             .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
 
@@ -239,26 +233,19 @@ impl OrionPublicParams {
 
             luts.build(&random_coeffs);
 
-            packed_transposed_evaluations
-                .chunks(row_num / IPPackF::PACK_SIZE)
+            packed_evals
+                .chunks(row_num / OpenPackF::PACK_SIZE)
                 .zip(row_buffer.iter_mut())
                 .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
         });
 
         // NOTE: working on evaluation on top of evaluation response
-        // delayed the evaluation for potentially smaller cache usage
-        let eq_linear_comb = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
-        let mut scratch_msg_sized_0 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
-        let mut scratch_msg_sized_1 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
-        assert_eq!(msg_size % IPPackEvalF::PACK_SIZE, 0);
-        let eval = simd_inner_prod(
-            &eval_row,
-            &eq_linear_comb,
-            &mut scratch_msg_sized_0,
-            &mut scratch_msg_sized_1,
-        );
-        drop(scratch_msg_sized_0);
-        drop(scratch_msg_sized_1);
+        let eq_xr = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
+        let eval = eval_row
+            .iter()
+            .zip(eq_xr.iter())
+            .map(|(&e, &r)| e * r)
+            .sum();
 
         // NOTE: MT opening for point queries
         let leaf_range = row_num * F::FIELD_SIZE / (tree::LEAF_BYTES * 8);
@@ -287,7 +274,7 @@ impl OrionPublicParams {
         )
     }
 
-    pub fn verify<F, ComPackF, EvalF, IPPackF, IPPackEvalF, T>(
+    pub fn verify<F, EvalF, ComPackF, OpenPackF, T>(
         &self,
         commitment: &OrionCommitment,
         point: &[EvalF],
@@ -297,30 +284,22 @@ impl OrionPublicParams {
     ) -> bool
     where
         F: Field + FieldSerde,
-        ComPackF: SimdField<Scalar = F>,
         EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
-        IPPackF: SimdField<Scalar = F>,
-        IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
+        ComPackF: SimdField<Scalar = F>,
+        OpenPackF: SimdField<Scalar = F>,
         T: Transcript<EvalF>,
     {
-        assert_eq!(IPPackF::PACK_SIZE, IPPackEvalF::PACK_SIZE);
-
         let (row_num, msg_size) = Self::row_col_from_variables::<F>(point.len());
-        let num_of_vars_in_codeword = log2(msg_size) as usize;
+        let num_of_vars_in_codeword = msg_size.ilog2() as usize;
 
         // NOTE: working on evaluation response, evaluate the rest of the response
-        let eq_x_r = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
-        let mut scratch_msg_sized_0 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
-        let mut scratch_msg_sized_1 = vec![IPPackEvalF::ZERO; msg_size / IPPackEvalF::PACK_SIZE];
-        assert_eq!(msg_size % IPPackEvalF::PACK_SIZE, 0);
-        let final_eval = simd_inner_prod(
-            &proof.eval_row,
-            &eq_x_r,
-            &mut scratch_msg_sized_0,
-            &mut scratch_msg_sized_1,
-        );
-        drop(scratch_msg_sized_0);
-        drop(scratch_msg_sized_1);
+        let eq_xr = EqPolynomial::build_eq_x_r(&point[..num_of_vars_in_codeword]);
+        let final_eval: EvalF = proof
+            .eval_row
+            .iter()
+            .zip(eq_xr.iter())
+            .map(|(&e, &r)| e * r)
+            .sum();
         if final_eval != evaluation {
             return false;
         }
@@ -351,36 +330,45 @@ impl OrionPublicParams {
             return false;
         }
 
+        // NOTE: prepare the interleaved alphabets from the MT paths,
+        // but pack them back into look up table acceptable formats
+        let packed_interleaved_alphabets: Vec<_> = proof
+            .query_openings
+            .iter()
+            .map(|p| -> Vec<_> {
+                p.unpack_field_elems::<F, ComPackF>()
+                    .chunks(OpenPackF::PACK_SIZE)
+                    .map(OpenPackF::pack)
+                    .collect()
+            })
+            .collect();
+
         // NOTE: encode the proximity/evaluation responses,
         // check againts all challenged indices by check alphabets against
         // linear combined interleaved alphabet
-        let mut luts = LookupTables::<EvalF>::new(IPPackF::PACK_SIZE, row_num / IPPackF::PACK_SIZE);
-        assert_eq!(row_num % IPPackF::PACK_SIZE, 0);
+        let mut luts = LookupTables::new(OpenPackF::PACK_SIZE, row_num / OpenPackF::PACK_SIZE);
+        assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
 
         let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_codeword..]);
         random_linear_combinations
             .iter()
             .zip(proof.proximity_rows.iter())
             .chain(iter::once((&eq_linear_combination, &proof.eval_row)))
-            .all(|(rl, msg)| match self.code_instance.encode(msg) {
-                Ok(codeword) => {
-                    luts.build(rl);
+            .all(|(rl, msg)| {
+                let codeword = match self.code_instance.encode(msg) {
+                    Ok(c) => c,
+                    _ => return false,
+                };
 
-                    query_points
-                        .iter()
-                        .zip(proof.query_openings.iter())
-                        .all(|(&qi, range_path)| {
-                            let interleaved_alphabet: Vec<_> = range_path
-                                .unpack_field_elems::<F, ComPackF>()
-                                .chunks(IPPackF::PACK_SIZE)
-                                .map(IPPackF::pack)
-                                .collect();
+                luts.build(rl);
 
-                            let alphabet = luts.lookup_and_sum(&interleaved_alphabet);
-                            alphabet == codeword[qi]
-                        })
-                }
-                _ => false,
+                query_points
+                    .iter()
+                    .zip(packed_interleaved_alphabets.iter())
+                    .all(|(&qi, interleaved_alphabet)| {
+                        let alphabet = luts.lookup_and_sum(interleaved_alphabet);
+                        alphabet == codeword[qi]
+                    })
             })
     }
 }

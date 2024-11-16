@@ -4,13 +4,13 @@ use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
-use gf2_128::{GF2_128x8, GF2_128};
+use gf2_128::GF2_128;
 use pcs::{OrionPCS, OrionPCSSetup, PolynomialCommitmentScheme, ORION_CODE_PARAMETER_INSTANCE};
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 use tynm::type_name;
 
-fn committing_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
+fn committing_benchmark_helper<F, EvalF, ComPackF, IPPackF, T>(
     c: &mut Criterion,
     lowest_num_vars: usize,
     highest_num_vars: usize,
@@ -19,7 +19,6 @@ fn committing_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
     EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
     ComPackF: SimdField<Scalar = F>,
     IPPackF: SimdField<Scalar = F>,
-    IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
     T: Transcript<EvalF>,
 {
     let mut group = c.benchmark_group(format!(
@@ -33,7 +32,7 @@ fn committing_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
     for num_vars in lowest_num_vars..=highest_num_vars {
         let random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
 
-        let orion_pp = OrionPCS::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>::gen_srs_for_testing(
+        let orion_pp = OrionPCS::<F, EvalF, ComPackF, IPPackF, T>::gen_srs_for_testing(
             &mut rng,
             &OrionPCSSetup {
                 num_vars,
@@ -46,12 +45,10 @@ fn committing_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(
-                            OrionPCS::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>::commit(
-                                &orion_pp,
-                                &random_poly,
-                            ),
-                        )
+                        _ = black_box(OrionPCS::<F, EvalF, ComPackF, IPPackF, T>::commit(
+                            &orion_pp,
+                            &random_poly,
+                        ))
                     })
                 },
             )
@@ -65,12 +62,11 @@ fn orion_committing_benchmark(c: &mut Criterion) {
         GF2_128,
         GF2x128,
         GF2x8,
-        GF2_128x8,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 19, 30);
 }
 
-fn opening_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
+fn opening_benchmark_helper<F, EvalF, ComPackF, IPPackF, T>(
     c: &mut Criterion,
     lowest_num_vars: usize,
     highest_num_vars: usize,
@@ -79,7 +75,6 @@ fn opening_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
     EvalF: Field + FieldSerde + From<F> + Mul<F, Output = EvalF>,
     ComPackF: SimdField<Scalar = F>,
     IPPackF: SimdField<Scalar = F>,
-    IPPackEvalF: SimdField<Scalar = EvalF> + Mul<IPPackF, Output = IPPackEvalF>,
     T: Transcript<EvalF>,
 {
     let mut group = c.benchmark_group(format!(
@@ -98,7 +93,7 @@ fn opening_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
             .map(|_| EvalF::random_unsafe(&mut rng))
             .collect();
 
-        let orion_pp = OrionPCS::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>::gen_srs_for_testing(
+        let orion_pp = OrionPCS::<F, EvalF, ComPackF, IPPackF, T>::gen_srs_for_testing(
             &mut rng,
             &OrionPCSSetup {
                 num_vars,
@@ -106,25 +101,21 @@ fn opening_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
             },
         );
 
-        let commitment_with_data = OrionPCS::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>::commit(
-            &orion_pp,
-            &random_poly,
-        );
+        let commitment_with_data =
+            OrionPCS::<F, EvalF, ComPackF, IPPackF, T>::commit(&orion_pp, &random_poly);
 
         group
             .bench_function(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(
-                            OrionPCS::<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>::open(
-                                &orion_pp,
-                                &random_poly,
-                                &random_point,
-                                &commitment_with_data,
-                                &mut transcript,
-                            ),
-                        )
+                        _ = black_box(OrionPCS::<F, EvalF, ComPackF, IPPackF, T>::open(
+                            &orion_pp,
+                            &random_poly,
+                            &random_point,
+                            &commitment_with_data,
+                            &mut transcript,
+                        ))
                     })
                 },
             )
@@ -133,14 +124,9 @@ fn opening_benchmark_helper<F, EvalF, ComPackF, IPPackF, IPPackEvalF, T>(
 }
 
 fn orion_opening_benchmark(c: &mut Criterion) {
-    opening_benchmark_helper::<
-        GF2,
-        GF2_128,
-        GF2x64,
-        GF2x8,
-        GF2_128x8,
-        BytesHashTranscript<_, Keccak256hasher>,
-    >(c, 19, 30);
+    opening_benchmark_helper::<GF2, GF2_128, GF2x64, GF2x8, BytesHashTranscript<_, Keccak256hasher>>(
+        c, 19, 30,
+    );
 }
 
 criterion_group!(bench, orion_committing_benchmark, orion_opening_benchmark);
