@@ -188,7 +188,8 @@ impl OrionPublicParams {
         drop(transposed_evaluations);
 
         // NOTE: declare the look up tables for column sums
-        let mut luts = SubsetSumLUTs::new(OpenPackF::PACK_SIZE, row_num / OpenPackF::PACK_SIZE);
+        let packed_rows = row_num / OpenPackF::PACK_SIZE;
+        let mut luts = SubsetSumLUTs::new(OpenPackF::PACK_SIZE, packed_rows);
 
         // NOTE: working on evaluation response of tensor code IOP based PCS
         let mut eval_row = vec![EvalF::ZERO; msg_size];
@@ -197,7 +198,7 @@ impl OrionPublicParams {
         luts.build(&eq_col_coeffs);
 
         packed_evals
-            .chunks(row_num / OpenPackF::PACK_SIZE)
+            .chunks(packed_rows)
             .zip(eval_row.iter_mut())
             .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
 
@@ -211,7 +212,7 @@ impl OrionPublicParams {
             luts.build(&random_coeffs);
 
             packed_evals
-                .chunks(row_num / OpenPackF::PACK_SIZE)
+                .chunks(packed_rows)
                 .zip(row_buffer.iter_mut())
                 .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
         });
