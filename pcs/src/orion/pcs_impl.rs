@@ -4,11 +4,11 @@ use arith::{Field, FieldSerde, SimdField};
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::Transcript;
 
-use crate::{orion::utils::SubsetSumLUTs, PCS_SOUNDNESS_BITS};
+use crate::{traits::TensorCodeIOPPCS, PCS_SOUNDNESS_BITS};
 
 use super::{
     linear_code::{OrionCode, OrionCodeParameter},
-    utils::{transpose_in_place, OrionPCSError, OrionResult, TensorIOPPCS},
+    utils::{transpose_in_place, OrionPCSError, OrionResult, SubsetSumLUTs},
 };
 
 /**********************************************************
@@ -21,7 +21,7 @@ pub struct OrionPublicParams {
     pub code_instance: OrionCode,
 }
 
-impl TensorIOPPCS for OrionPublicParams {
+impl TensorCodeIOPPCS for OrionPublicParams {
     fn codeword_len(&self) -> usize {
         self.code_instance.code_len()
     }
@@ -38,7 +38,6 @@ where
     ComPackF: SimdField<Scalar = F>,
 {
     pub interleaved_alphabet_tree: tree::Tree,
-
     pub _phantom: PhantomData<ComPackF>,
 }
 

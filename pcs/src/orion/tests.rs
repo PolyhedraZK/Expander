@@ -5,10 +5,13 @@ use ark_std::test_rng;
 use gf2::{GF2x128, GF2x512, GF2x64, GF2x8, GF2};
 use polynomials::MultiLinearPoly;
 
-use crate::orion::{
-    linear_code::{OrionCode, ORION_CODE_PARAMETER_INSTANCE},
-    pcs_impl::{OrionCommitment, OrionCommitmentWithData, OrionPublicParams},
-    utils::{transpose_in_place, SubsetSumLUTs, TensorIOPPCS},
+use crate::{
+    orion::{
+        linear_code::{OrionCode, ORION_CODE_PARAMETER_INSTANCE},
+        pcs_impl::{OrionCommitment, OrionCommitmentWithData, OrionPublicParams},
+        utils::{transpose_in_place, SubsetSumLUTs},
+    },
+    traits::TensorCodeIOPPCS,
 };
 
 fn column_combination<F, PackF>(mat: &[F], combination: &[F]) -> Vec<F>
