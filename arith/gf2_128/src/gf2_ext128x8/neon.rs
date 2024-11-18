@@ -71,7 +71,7 @@ impl FieldSerde for NeonGF2_128x8 {
 }
 
 impl Field for NeonGF2_128x8 {
-    const NAME: &'static str = "Neon Galios Field 2 128x8";
+    const NAME: &'static str = "Neon Galois Field 2^128 SIMD 8";
 
     const SIZE: usize = 16 * 8;
 

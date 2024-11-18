@@ -94,7 +94,7 @@ const PACKED_INV_2: [__m256i; 4] = [_M256_INV_2, _M256_INV_2, _M256_INV_2, _M256
 
 // p(x) = x^128 + x^7 + x^2 + x + 1
 impl Field for AVX256GF2_128x8 {
-    const NAME: &'static str = "AVX256 Galios Field 2^128";
+    const NAME: &'static str = "AVX256 Galois Field 2^128 SIMD 8";
 
     // size in bytes
     const SIZE: usize = 512 * 2 / 8;
