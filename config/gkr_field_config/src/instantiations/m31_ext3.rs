@@ -1,24 +1,21 @@
 use arith::ExtensionField;
-use gf2::{GF2x8, GF2};
-use gf2_128::{GF2_128x8, GF2_128};
+use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
 
-use super::{FiatShamirHashType, FieldType, GKRConfig};
+use crate::{FieldType, GKRFieldConfig};
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct GF2ExtConfigSha2;
+pub struct M31ExtConfig;
 
-impl GKRConfig for GF2ExtConfigSha2 {
-    type CircuitField = GF2;
+impl GKRFieldConfig for M31ExtConfig {
+    const FIELD_TYPE: FieldType = FieldType::M31;
 
-    type SimdCircuitField = GF2x8;
+    type CircuitField = M31;
 
-    type ChallengeField = GF2_128;
+    type SimdCircuitField = M31x16;
 
-    type Field = GF2_128x8;
+    type ChallengeField = M31Ext3;
 
-    const FIAT_SHAMIR_HASH: FiatShamirHashType = FiatShamirHashType::SHA256;
-
-    const FIELD_TYPE: FieldType = FieldType::GF2;
+    type Field = M31Ext3x16;
 
     #[inline(always)]
     fn challenge_mul_circuit_field(
@@ -30,11 +27,15 @@ impl GKRConfig for GF2ExtConfigSha2 {
 
     #[inline(always)]
     fn field_mul_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
+        // directly multiply M31Ext3 with M31
+        // skipping the conversion M31 -> M31Ext3
         *a * *b
     }
 
     #[inline(always)]
     fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
+        // directly add M31Ext3 with M31
+        // skipping the conversion M31 -> M31Ext3
         *a + *b
     }
 
@@ -66,7 +67,6 @@ impl GKRConfig for GF2ExtConfigSha2 {
     ) -> Self::SimdCircuitField {
         Self::SimdCircuitField::from(*a) * *b
     }
-
     #[inline(always)]
     fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField {
         Self::SimdCircuitField::from(*a)
@@ -83,6 +83,12 @@ impl GKRConfig for GF2ExtConfigSha2 {
         b: &Self::ChallengeField,
     ) -> Self::Field {
         let b_simd_ext = Self::Field::from(*b);
-        b_simd_ext.mul_by_base_field(a)
+        Self::Field {
+            v: [
+                b_simd_ext.v[0] * a,
+                b_simd_ext.v[1] * a,
+                b_simd_ext.v[2] * a,
+            ],
+        }
     }
 }

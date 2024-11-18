@@ -1,0 +1,11 @@
+[package]
+name = "gkr_field_config"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arith = { path = "../../arith" }
+gf2 = { path = "../../arith/gf2" }
+gf2_128 = { path = "../../arith/gf2_128" }
+mersenne31 = { path = "../../arith/mersenne31" }
+ark-std.workspace = true

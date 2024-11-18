@@ -8,7 +8,10 @@ members = [
     "arith/polynomials",
     "bi-kzg", 
     "circuit", 
-    "config", 
+    "config", # gkr_field_config + pcs_config + transcript_config
+    "config/gkr_field_config", # definitions of all field types used in gkr and pcs
+    "config/mpi_config", # definitions of mpi communication toolkit
+    "config/config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
     "gkr", 
     "pcs",
     "sumcheck",

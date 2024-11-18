@@ -2,7 +2,7 @@
 //! to evaluate Mul gates
 
 use arith::{ExtensionField, Field, SimdField};
-use config::{FieldType, GKRConfig};
+use gkr_field_config::{FieldType, GKRFieldConfig};
 
 pub(crate) struct SumcheckProductGateHelper {
     var_num: usize,
@@ -24,7 +24,7 @@ impl SumcheckProductGateHelper {
     // Output:
     // - the univariate polynomial that prover sends to the verifier
     #[inline]
-    pub(crate) fn poly_eval_at<C: GKRConfig>(
+    pub(crate) fn poly_eval_at<C: GKRFieldConfig>(
         &self,
         var_idx: usize,
         degree: usize,
@@ -106,7 +106,7 @@ impl SumcheckProductGateHelper {
 
     // process the challenge and update the bookkeeping tables for f and h_g accordingly
     #[inline]
-    pub(crate) fn receive_challenge<C: GKRConfig>(
+    pub(crate) fn receive_challenge<C: GKRFieldConfig>(
         &mut self,
         var_idx: usize,
         r: C::ChallengeField,

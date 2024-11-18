@@ -3,11 +3,11 @@
 
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
-use config::GKRConfig;
+use gkr_field_config::GKRFieldConfig;
 use sumcheck::{sumcheck_prove_gkr_square_layer, ProverScratchPad};
 use transcript::Transcript;
 
-pub fn gkr_square_prove<C: GKRConfig, T: Transcript<C::ChallengeField>>(
+pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     circuit: &Circuit<C>,
     sp: &mut ProverScratchPad<C>,
     transcript: &mut T,

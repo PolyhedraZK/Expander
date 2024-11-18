@@ -4,10 +4,10 @@ use std::{cmp::max, ptr};
 
 use arith::{ExtensionField, Field};
 use circuit::Circuit;
-use config::{Config, FieldType, GKRConfig};
+use gkr_field_config::{FieldType, GKRFieldConfig};
 
 #[derive(Clone, Debug, Default)]
-pub struct ProverScratchPad<C: GKRConfig> {
+pub struct ProverScratchPad<C: GKRFieldConfig> {
     pub v_evals: Vec<C::Field>,
     pub hg_evals_5: Vec<C::ChallengeField>,
     pub hg_evals_1: Vec<C::ChallengeField>,
@@ -30,7 +30,7 @@ pub struct ProverScratchPad<C: GKRConfig> {
     pub phase2_coef: C::ChallengeField,
 }
 
-impl<C: GKRConfig> ProverScratchPad<C> {
+impl<C: GKRFieldConfig> ProverScratchPad<C> {
     pub fn new(max_num_input_var: usize, max_num_output_var: usize, mpi_world_size: usize) -> Self {
         let max_input_num = 1 << max_num_input_var;
         let max_output_num = 1 << max_num_output_var;
@@ -70,7 +70,7 @@ impl<C: GKRConfig> ProverScratchPad<C> {
     }
 }
 
-pub struct VerifierScratchPad<C: GKRConfig> {
+pub struct VerifierScratchPad<C: GKRFieldConfig> {
     // ====== for evaluating cst, add and mul ======
     pub eq_evals_at_rz0: Vec<C::ChallengeField>,
     pub eq_evals_at_r_simd: Vec<C::ChallengeField>,
@@ -93,8 +93,8 @@ pub struct VerifierScratchPad<C: GKRConfig> {
     pub deg3_lag_denoms_inv: [C::ChallengeField; 4],
 }
 
-impl<C: GKRConfig> VerifierScratchPad<C> {
-    pub fn new(config: &Config<C>, circuit: &Circuit<C>) -> Self {
+impl<C: GKRFieldConfig> VerifierScratchPad<C> {
+    pub fn new(circuit: &Circuit<C>, mpi_world_size: usize) -> Self {
         let mut max_num_var = circuit
             .layers
             .iter()
@@ -146,13 +146,19 @@ impl<C: GKRConfig> VerifierScratchPad<C> {
         Self {
             eq_evals_at_rz0: vec![C::ChallengeField::zero(); max_io_size],
             eq_evals_at_r_simd: vec![C::ChallengeField::zero(); simd_size],
-            eq_evals_at_r_mpi: vec![C::ChallengeField::zero(); config.mpi_config.world_size()],
+            eq_evals_at_r_mpi: vec![C::ChallengeField::zero(); mpi_world_size],
 
             eq_evals_at_rx: vec![C::ChallengeField::zero(); max_io_size],
             eq_evals_at_ry: vec![C::ChallengeField::zero(); max_io_size],
 
-            eq_evals_first_part: vec![C::ChallengeField::zero(); max_io_size],
-            eq_evals_second_part: vec![C::ChallengeField::zero(); max_io_size],
+            eq_evals_first_part: vec![
+                C::ChallengeField::zero();
+                max(max(max_io_size, simd_size), mpi_world_size)
+            ],
+            eq_evals_second_part: vec![
+                C::ChallengeField::zero();
+                max(max(max_io_size, simd_size), mpi_world_size)
+            ],
 
             r_simd: ptr::null(),
             r_mpi: ptr::null(),

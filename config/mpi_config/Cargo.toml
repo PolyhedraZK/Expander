@@ -1,0 +1,11 @@
+[package]
+name = "mpi_config"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arith = { path = "../../arith" }
+mpi.workspace = true
+
+[dev-dependencies]
+mersenne31 = { path = "../../arith/mersenne31"}

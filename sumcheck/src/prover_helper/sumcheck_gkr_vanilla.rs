@@ -1,13 +1,14 @@
 use arith::{Field, SimdField};
 use circuit::CircuitLayer;
-use config::{GKRConfig, MPIConfig};
+use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
 use polynomials::EqPolynomial;
 
 use crate::{unpack_and_combine, ProverScratchPad};
 
 use super::{product_gate::SumcheckProductGateHelper, simd_gate::SumcheckSimdProdGateHelper};
 
-pub(crate) struct SumcheckGkrVanillaHelper<'a, C: GKRConfig> {
+pub(crate) struct SumcheckGkrVanillaHelper<'a, C: GKRFieldConfig> {
     pub(crate) rx: Vec<C::ChallengeField>,
     pub(crate) ry: Vec<C::ChallengeField>,
     pub(crate) r_simd_var: Vec<C::ChallengeField>,
@@ -33,7 +34,7 @@ pub(crate) struct SumcheckGkrVanillaHelper<'a, C: GKRConfig> {
 }
 
 /// internal helper functions
-impl<'a, C: GKRConfig> SumcheckGkrVanillaHelper<'a, C> {
+impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
     #[inline(always)]
     fn xy_helper_receive_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
         self.xy_helper.receive_challenge::<C>(
@@ -49,7 +50,7 @@ impl<'a, C: GKRConfig> SumcheckGkrVanillaHelper<'a, C> {
 
 /// Helper functions to be called
 #[allow(clippy::too_many_arguments)]
-impl<'a, C: GKRConfig> SumcheckGkrVanillaHelper<'a, C> {
+impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
     #[inline]
     pub(crate) fn new(
         layer: &'a CircuitLayer<C>,
@@ -340,7 +341,7 @@ impl<'a, C: GKRConfig> SumcheckGkrVanillaHelper<'a, C> {
     #[inline]
     pub(crate) fn prepare_y_vals(&mut self) {
         let mut v_rx_rsimd_rw = self.sp.mpi_var_v_evals[0];
-        self.mpi_config.root_broadcast(&mut v_rx_rsimd_rw);
+        self.mpi_config.root_broadcast_f(&mut v_rx_rsimd_rw);
 
         let mul = &self.layer.mul;
         let eq_evals_at_rz0 = &self.sp.eq_evals_at_rz0;
