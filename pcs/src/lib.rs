@@ -1,8 +1,7 @@
-
 mod traits;
-pub use traits::{PCS, PCSForGKR, SRS};
-
-mod raw;
+pub use traits::{GKRChallenge, PCSForGKR, PCS, SRS};
 
 mod utils;
 use utils::PCSEmptyType;
+
+pub mod raw;

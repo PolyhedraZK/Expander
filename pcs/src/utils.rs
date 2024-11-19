@@ -1,6 +1,5 @@
-
-use arith::FieldSerde;
 use crate::SRS;
+use arith::FieldSerde;
 
 #[derive(Clone, Debug, Default)]
 pub struct PCSEmptyType {}
