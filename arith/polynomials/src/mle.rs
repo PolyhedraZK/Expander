@@ -3,7 +3,7 @@ use ark_std::{log2, rand::RngCore};
 
 use crate::EqPolynomial;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct MultiLinearPoly<F: Field> {
     pub coeffs: Vec<F>,
 }
