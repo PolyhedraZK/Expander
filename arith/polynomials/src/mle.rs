@@ -24,6 +24,9 @@ impl<F: Field> MultiLinearPoly<F> {
     }
 
     #[inline]
+    /// # Safety
+    /// The returned MultiLinearPoly should not be mutable in order not to mess up the original vector
+    /// 
     /// PCS may take MultiLinearPoly as input
     /// However, it is inefficient to copy the entire vector to create a new MultiLinearPoly
     /// Here we introduce a wrap function to reuse the memory space assigned to the original vector
@@ -37,7 +40,6 @@ impl<F: Field> MultiLinearPoly<F> {
     ///
     /// mle_wrapper.wrapper_self_destroy() // please do not use drop here, it's incorrect
     ///
-    /// # Safety: The returned MultiLinearPoly should not be mutable in order not to mess up the original vector
     pub unsafe fn wrap_around(coeffs: &Vec<F>) -> Self {
         Self {
             coeffs: Vec::from_raw_parts(coeffs.as_ptr() as *mut F, coeffs.len(), coeffs.capacity()),
