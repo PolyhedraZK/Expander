@@ -1,14 +1,18 @@
 mod common;
 
 use arith::{BN254Fr, Field};
-use pcs::raw::{RawML, RawMLParams};
+use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use mpi_config::MPIConfig;
+use pcs::{
+    raw::{RawML, RawMLGKR, RawMLGKRParams, RawMLParams},
+    GKRChallenge,
+};
 use polynomials::MultiLinearPoly;
 use rand::thread_rng;
 
 #[test]
 fn test_raw() {
     let params = RawMLParams { n_vars: 8 };
-    let mut raw_ml = RawML {};
     let mut rng = thread_rng();
     let poly = MultiLinearPoly::random(params.n_vars, &mut rng);
     let xs = (0..100)
@@ -19,5 +23,35 @@ fn test_raw() {
         })
         .collect::<Vec<Vec<BN254Fr>>>();
 
-    common::test_pcs::<BN254Fr, RawML>(&mut raw_ml, &params, &poly, &xs);
+    common::test_pcs::<BN254Fr, RawML>(&params, &poly, &xs);
+}
+
+fn test_raw_gkr_helper<C: GKRFieldConfig>() {
+    let params = RawMLGKRParams {
+        n_local_vars: 8,
+        mpi_config: MPIConfig::new(),
+    };
+    let mut rng = thread_rng();
+    let poly = MultiLinearPoly::<C::SimdCircuitField>::random(params.n_local_vars, &mut rng);
+    let xs = (0..100)
+        .map(|_| GKRChallenge::<C> {
+            x: (0..params.n_local_vars)
+                .map(|_| C::ChallengeField::random_unsafe(&mut rng))
+                .collect::<Vec<C::ChallengeField>>(),
+            x_simd: (0..C::get_field_pack_size().trailing_zeros())
+                .map(|_| C::ChallengeField::random_unsafe(&mut rng))
+                .collect::<Vec<C::ChallengeField>>(),
+            x_mpi: (0..params.mpi_config.world_size().trailing_zeros())
+                .map(|_| C::ChallengeField::random_unsafe(&mut rng))
+                .collect::<Vec<C::ChallengeField>>(),
+        })
+        .collect::<Vec<GKRChallenge<C>>>();
+    common::test_gkr_pcs::<C, RawMLGKR<C>>(&params, &poly, &xs);
+}
+
+#[test]
+fn test_raw_gkr() {
+    test_raw_gkr_helper::<M31ExtConfig>();
+    test_raw_gkr_helper::<GF2ExtConfig>();
+    test_raw_gkr_helper::<BN254Config>();
 }
