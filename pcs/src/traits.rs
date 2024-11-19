@@ -47,7 +47,7 @@ pub(crate) trait TensorCodeIOPPCS {
 
     fn hamming_weight(&self) -> f64;
 
-    fn row_col_from_variables<F: Field>(num_vars: usize) -> (usize, usize) {
+    fn evals_shape<F: Field>(num_vars: usize) -> (usize, usize) {
         let elems_for_smallest_tree = tree::leaf_adic::<F>() * 2;
 
         let row_num: usize = elems_for_smallest_tree;

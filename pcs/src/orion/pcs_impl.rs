@@ -63,7 +63,7 @@ pub struct OrionProof<EvalF: Field + FieldSerde> {
 
 impl OrionPublicParams {
     pub fn new<F: Field>(num_variables: usize, code_instance: OrionCode) -> OrionResult<Self> {
-        let (_, msg_size) = Self::row_col_from_variables::<F>(num_variables);
+        let (_, msg_size) = Self::evals_shape::<F>(num_variables);
         if msg_size != code_instance.msg_len() {
             return Err(OrionPCSError::ParameterUnmatchError);
         }
@@ -81,7 +81,7 @@ impl OrionPublicParams {
         code_param_instance: OrionCodeParameter,
         mut rng: impl rand::RngCore,
     ) -> Self {
-        let (_, msg_size) = Self::row_col_from_variables::<F>(num_variables);
+        let (_, msg_size) = Self::evals_shape::<F>(num_variables);
 
         Self {
             num_variables,
@@ -97,7 +97,7 @@ impl OrionPublicParams {
         F: Field + FieldSerde,
         ComPackF: SimdField<Scalar = F>,
     {
-        let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
+        let (row_num, msg_size) = Self::evals_shape::<F>(poly.get_num_vars());
 
         // NOTE: pre transpose evaluations
         let mut transposed_evaluations = poly.coeffs.clone();
@@ -169,7 +169,7 @@ impl OrionPublicParams {
         OpenPackF: SimdField<Scalar = F>,
         T: Transcript<EvalF>,
     {
-        let (row_num, msg_size) = Self::row_col_from_variables::<F>(poly.get_num_vars());
+        let (row_num, msg_size) = Self::evals_shape::<F>(poly.get_num_vars());
         let num_of_vars_in_msg = msg_size.ilog2() as usize;
 
         // NOTE: transpose evaluations for linear combinations in evaulation/proximity tests
@@ -268,7 +268,7 @@ impl OrionPublicParams {
         OpenPackF: SimdField<Scalar = F>,
         T: Transcript<EvalF>,
     {
-        let (row_num, msg_size) = Self::row_col_from_variables::<F>(point.len());
+        let (row_num, msg_size) = Self::evals_shape::<F>(point.len());
         let num_of_vars_in_msg = msg_size.ilog2() as usize;
 
         // NOTE: working on evaluation response, evaluate the rest of the response

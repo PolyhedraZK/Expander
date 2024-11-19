@@ -90,7 +90,7 @@ where
     F: Field + FieldSerde,
     ComPackF: SimdField<Scalar = F>,
 {
-    let (row_num, msg_size) = OrionPublicParams::row_col_from_variables::<F>(poly.get_num_vars());
+    let (row_num, msg_size) = OrionPublicParams::evals_shape::<F>(poly.get_num_vars());
 
     let mut interleaved_codewords: Vec<_> = poly
         .coeffs
