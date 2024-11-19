@@ -1,38 +1,53 @@
 use arith::{Field, FieldSerde};
+use gkr_field_config::GKRFieldConfig;
+use polynomials::MultiLinearPoly;
 use rand::RngCore;
 use std::fmt::Debug;
 
+pub trait SRS {
+    type PKey: Clone + Debug + FieldSerde;
+    type VKey: Clone + Debug + FieldSerde;
+
+    /// Convert the SRS into proving and verifying keys.
+    /// Comsuming self by default.
+    fn into_keys(self) -> (Self::PKey, Self::VKey);
+}
+
+/// Standard Polynomial commitment scheme (PCS) trait.
 pub trait PCS<F: Field + FieldSerde> {
-    type Params: Clone + Debug;
-    type Poly: Clone + Debug;
-    type EvalPoint: Clone + Debug;
+    const NAME: &'static str;
 
-    type SRS: Clone + Debug + FieldSerde;
-    type PKey: Clone + Debug + From<Self::SRS> + FieldSerde;
-    type VKey: Clone + Debug + From<Self::SRS> + FieldSerde;
-    type Commitment: Clone + Debug + FieldSerde;
-    type Opening: Clone + Debug + FieldSerde;
+    type Params: Clone + Debug + Default;
+    type Poly: Clone + Debug + Default;
+    type EvalPoint: Clone + Debug + Default;
+    type ScratchPad: Clone + Debug + Default;
 
-    fn gen_srs_for_testing(&mut self, rng: impl RngCore, params: &Self::Params) -> Self::SRS;
+    type SRS: Clone + Debug + Default + FieldSerde + SRS;
+    type Commitment: Clone + Debug + Default + FieldSerde;
+    type Opening: Clone + Debug + Default + FieldSerde;
 
+    /// Generate a random structured reference string (SRS) for testing purposes.
+    /// Use self as the first argument to save some potential intermediate state.
+    fn gen_srs_for_testing(params: &Self::Params, rng: impl RngCore) -> Self::SRS;
+
+    /// Commit to a polynomial.
     fn commit(
-        &mut self,
-        params: &Self::Params,
-        proving_key: &Self::PKey,
+        proving_key: &<Self::SRS as SRS>::PKey,
         poly: &Self::Poly,
+        scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment;
 
+    /// Open the polynomial at a point.
     fn open(
-        &mut self,
-        params: &Self::Params,
-        proving_key: &Self::PKey,
+        proving_key: &<Self::SRS as SRS>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
+        scratch_pad: &mut Self::ScratchPad,
     ) -> (F, Self::Opening);
 
+    /// Verify the opening of a polynomial at a point.
     fn verify(
-        params: &Self::Params,
-        verifying_key: &Self::VKey,
+        verifying_key: &<Self::SRS as SRS>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
         v: F,
@@ -40,23 +55,15 @@ pub trait PCS<F: Field + FieldSerde> {
     ) -> bool;
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct EmptyType {}
-
-impl FieldSerde for EmptyType {
-    const SERIALIZED_SIZE: usize = 0;
-
-    fn serialize_into<W: std::io::Write>(&self, _writer: W) -> arith::FieldSerdeResult<()> {
-        Ok(())
-    }
-
-    fn deserialize_from<R: std::io::Read>(_reader: R) -> arith::FieldSerdeResult<Self> {
-        Ok(Self {})
-    }
-
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(
-        _reader: R,
-    ) -> arith::FieldSerdeResult<Self> {
-        unimplemented!()
-    }
+pub trait PCSForGKR<C: GKRFieldConfig>:
+    PCS<
+    C::ChallengeField,
+    Poly = MultiLinearPoly<C::SimdCircuitField>,
+    EvalPoint = (
+        Vec<C::ChallengeField>, // x
+        Vec<C::ChallengeField>, // x_simd
+        Vec<C::ChallengeField>, // x_mpi
+    ),
+>
+{
 }

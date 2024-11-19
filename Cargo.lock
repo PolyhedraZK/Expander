@@ -1719,8 +1719,11 @@ name = "pcs"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "gkr_field_config",
+ "mpi_config",
  "polynomials",
  "rand",
+ "transcript",
 ]
 
 [[package]]

@@ -1,9 +1,11 @@
-use crate::{EmptyType, PCS};
+/// Raw commitment for multi-linear polynomials
+
+use crate::{PCSEmptyType, PCS, PCSForGKR};
 use arith::{Field, FieldSerde};
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RawMLParams {
     pub n_vars: usize,
 }
@@ -12,21 +14,18 @@ pub struct RawMLParams {
 pub struct RawML {}
 
 impl<F: Field + FieldSerde> PCS<F> for RawML {
+    const NAME: &'static str = "RawML";
+
     type Params = RawMLParams;
 
     type Poly = MultiLinearPoly<F>;
 
     type EvalPoint = Vec<F>;
 
-    type SRS = EmptyType;
-
-    type PKey = EmptyType;
-
-    type VKey = EmptyType;
-
+    type SRS = PCSEmptyType;
     type Commitment = Vec<F>;
 
-    type Opening = EmptyType;
+    type Opening = PCSEmptyType;
 
     fn gen_srs_for_testing(&mut self, _rng: impl RngCore, _params: &Self::Params) -> Self::SRS {
         Self::SRS::default()
