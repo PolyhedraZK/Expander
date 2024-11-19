@@ -1,4 +1,4 @@
-use crate::SRS;
+use crate::StructuredReferenceString;
 use arith::FieldSerde;
 
 #[derive(Clone, Debug, Default)]
@@ -22,7 +22,7 @@ impl FieldSerde for PCSEmptyType {
     }
 }
 
-impl SRS for PCSEmptyType {
+impl StructuredReferenceString for PCSEmptyType {
     type PKey = PCSEmptyType;
     type VKey = PCSEmptyType;
 

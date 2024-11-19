@@ -4,7 +4,7 @@ use polynomials::MultiLinearPoly;
 use rand::RngCore;
 use std::fmt::Debug;
 
-pub trait SRS {
+pub trait StructuredReferenceString {
     type PKey: Clone + Debug + FieldSerde;
     type VKey: Clone + Debug + FieldSerde;
 
@@ -14,7 +14,7 @@ pub trait SRS {
 }
 
 /// Standard Polynomial commitment scheme (PCS) trait.
-pub trait PCS<F: Field + FieldSerde> {
+pub trait PolynomialCommitmentScheme<F: Field + FieldSerde> {
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default;
@@ -22,7 +22,7 @@ pub trait PCS<F: Field + FieldSerde> {
     type EvalPoint: Clone + Debug + Default;
     type ScratchPad: Clone + Debug + Default;
 
-    type SRS: Clone + Debug + Default + FieldSerde + SRS;
+    type SRS: Clone + Debug + Default + FieldSerde + StructuredReferenceString;
     type Commitment: Clone + Debug + Default + FieldSerde;
     type Opening: Clone + Debug + Default + FieldSerde;
 
@@ -36,7 +36,7 @@ pub trait PCS<F: Field + FieldSerde> {
     /// Commit to a polynomial.
     fn commit(
         params: &Self::Params,
-        proving_key: &<Self::SRS as SRS>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment;
@@ -44,7 +44,7 @@ pub trait PCS<F: Field + FieldSerde> {
     /// Open the polynomial at a point.
     fn open(
         params: &Self::Params,
-        proving_key: &<Self::SRS as SRS>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &mut Self::ScratchPad,
@@ -53,7 +53,7 @@ pub trait PCS<F: Field + FieldSerde> {
     /// Verify the opening of a polynomial at a point.
     fn verify(
         params: &Self::Params,
-        verifying_key: &<Self::SRS as SRS>::VKey,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
         v: F,
@@ -61,19 +61,19 @@ pub trait PCS<F: Field + FieldSerde> {
     ) -> bool;
 }
 
-pub struct GKRChallenge<C: GKRFieldConfig> {
+pub struct ExpanderGKRChallenge<C: GKRFieldConfig> {
     pub x: Vec<C::ChallengeField>,
     pub x_simd: Vec<C::ChallengeField>,
     pub x_mpi: Vec<C::ChallengeField>,
 }
 
-pub trait PCSForGKR<C: GKRFieldConfig> {
+pub trait PCSForExpanderGKR<C: GKRFieldConfig> {
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default;
     type ScratchPad: Clone + Debug + Default;
 
-    type SRS: Clone + Debug + Default + FieldSerde + SRS;
+    type SRS: Clone + Debug + Default + FieldSerde + StructuredReferenceString;
     type Commitment: Clone + Debug + Default + FieldSerde;
     type Opening: Clone + Debug + Default + FieldSerde;
 
@@ -87,7 +87,7 @@ pub trait PCSForGKR<C: GKRFieldConfig> {
     /// Commit to a polynomial.
     fn commit(
         params: &Self::Params,
-        proving_key: &<Self::SRS as SRS>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &MultiLinearPoly<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment;
@@ -95,18 +95,18 @@ pub trait PCSForGKR<C: GKRFieldConfig> {
     /// Open the polynomial at a point.
     fn open(
         params: &Self::Params,
-        proving_key: &<Self::SRS as SRS>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &MultiLinearPoly<C::SimdCircuitField>,
-        x: &GKRChallenge<C>,
+        x: &ExpanderGKRChallenge<C>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Opening;
 
     /// Verify the opening of a polynomial at a point.
     fn verify(
         params: &Self::Params,
-        verifying_key: &<Self::SRS as SRS>::VKey,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &GKRChallenge<C>,
+        x: &ExpanderGKRChallenge<C>,
         v: C::ChallengeField,
         opening: &Self::Opening,
     ) -> bool;

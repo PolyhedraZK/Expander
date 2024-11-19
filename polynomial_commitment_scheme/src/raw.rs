@@ -1,5 +1,5 @@
 /// Raw commitment for multi-linear polynomials
-use crate::{GKRChallenge, PCSEmptyType, PCSForGKR, PCS, SRS};
+use crate::{ExpanderGKRChallenge, PCSEmptyType, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString};
 use arith::{Field, FieldSerde, SimdField};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
@@ -7,23 +7,23 @@ use polynomials::MultiLinearPoly;
 use rand::RngCore;
 
 #[derive(Clone, Debug, Default)]
-pub struct RawMLParams {
+pub struct RawMultiLinearParams {
     pub n_vars: usize,
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct RawMLScratchPad<F: Field + FieldSerde> {
+pub struct RawMultiLinearScratchPad<F: Field + FieldSerde> {
     pub eval_buffer: Vec<F>,
 }
 
 // Raw commitment for multi-linear polynomials
-pub struct RawML {}
+pub struct RawMultiLinear {}
 
-impl<F: Field + FieldSerde> PCS<F> for RawML {
-    const NAME: &'static str = "RawML";
+impl<F: Field + FieldSerde> PolynomialCommitmentScheme<F> for RawMultiLinear {
+    const NAME: &'static str = "RawMultiLinear";
 
-    type Params = RawMLParams;
-    type ScratchPad = RawMLScratchPad<F>;
+    type Params = RawMultiLinearParams;
+    type ScratchPad = RawMultiLinearScratchPad<F>;
 
     type Poly = MultiLinearPoly<F>;
 
@@ -46,7 +46,7 @@ impl<F: Field + FieldSerde> PCS<F> for RawML {
 
     fn commit(
         params: &Self::Params,
-        _proving_key: &<Self::SRS as SRS>::PKey,
+        _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
@@ -56,7 +56,7 @@ impl<F: Field + FieldSerde> PCS<F> for RawML {
 
     fn open(
         params: &Self::Params,
-        _proving_key: &<Self::SRS as SRS>::PKey,
+        _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &mut Self::ScratchPad,
@@ -74,7 +74,7 @@ impl<F: Field + FieldSerde> PCS<F> for RawML {
 
     fn verify(
         params: &Self::Params,
-        _verifying_key: &<Self::SRS as SRS>::VKey,
+        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
         v: F,
@@ -92,22 +92,22 @@ impl<F: Field + FieldSerde> PCS<F> for RawML {
 // =================================================================================================
 
 #[derive(Clone, Debug, Default)]
-pub struct RawMLGKRParams {
+pub struct RawExpanderGKRParams {
     pub n_local_vars: usize,
     pub mpi_config: MPIConfig,
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct RawMLGKRScratchPad {}
+pub struct RawExpanderGKRScratchPad {}
 
-pub struct RawMLGKR<C: GKRFieldConfig> {
+pub struct RawExpanderGKR<C: GKRFieldConfig> {
     _phantom: std::marker::PhantomData<C>,
 }
 
-impl<C: GKRFieldConfig> PCSForGKR<C> for RawMLGKR<C> {
-    const NAME: &'static str = "RawMLGKR";
+impl<C: GKRFieldConfig> PCSForExpanderGKR<C> for RawExpanderGKR<C> {
+    const NAME: &'static str = "RawExpanderGKR";
 
-    type Params = RawMLGKRParams;
+    type Params = RawExpanderGKRParams;
 
     // type Poly = MultiLinearPoly<C::SimdCircuitField>;
 
@@ -117,7 +117,7 @@ impl<C: GKRFieldConfig> PCSForGKR<C> for RawMLGKR<C> {
     //     Vec<C::ChallengeField>, // x_mpi
     // );
 
-    type ScratchPad = RawMLGKRScratchPad;
+    type ScratchPad = RawExpanderGKRScratchPad;
 
     type SRS = PCSEmptyType;
 
@@ -130,12 +130,12 @@ impl<C: GKRFieldConfig> PCSForGKR<C> for RawMLGKR<C> {
     }
 
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {
-        RawMLGKRScratchPad {}
+        RawExpanderGKRScratchPad {}
     }
 
     fn commit(
         params: &Self::Params,
-        _proving_key: &<Self::SRS as SRS>::PKey,
+        _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &MultiLinearPoly<C::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
@@ -157,9 +157,9 @@ impl<C: GKRFieldConfig> PCSForGKR<C> for RawMLGKR<C> {
 
     fn open(
         _params: &Self::Params,
-        _proving_key: &<Self::SRS as SRS>::PKey,
+        _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         _poly: &MultiLinearPoly<C::SimdCircuitField>,
-        _x: &GKRChallenge<C>,
+        _x: &ExpanderGKRChallenge<C>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Opening {
         // For GKR, we don't need the evaluation result
@@ -168,18 +168,18 @@ impl<C: GKRFieldConfig> PCSForGKR<C> for RawMLGKR<C> {
 
     fn verify(
         _params: &Self::Params,
-        _verifying_key: &<Self::SRS as SRS>::VKey,
+        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &GKRChallenge<C>,
+        x: &ExpanderGKRChallenge<C>,
         v: C::ChallengeField,
         _opening: &Self::Opening,
     ) -> bool {
-        let GKRChallenge::<C> { x, x_simd, x_mpi } = x;
+        let ExpanderGKRChallenge::<C> { x, x_simd, x_mpi } = x;
         Self::eval(commitment, x, x_simd, x_mpi) == v
     }
 }
 
-impl<C: GKRFieldConfig> RawMLGKR<C> {
+impl<C: GKRFieldConfig> RawExpanderGKR<C> {
     pub fn eval_local(
         vals: &[C::SimdCircuitField],
         x: &[C::ChallengeField],

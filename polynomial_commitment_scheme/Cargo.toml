@@ -1,5 +1,5 @@
 [package]
-name = "pcs"
+name = "polynomial_commitment_scheme"
 version = "0.1.0"
 edition = "2021"
 
