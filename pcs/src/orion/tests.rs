@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
-use gf2::{GF2x128, GF2x512, GF2x64, GF2x8, GF2};
+use gf2::{GF2x128, GF2x64, GF2x8, GF2};
 use polynomials::MultiLinearPoly;
 
 use crate::{
@@ -141,6 +141,5 @@ fn test_orion_commit_consistency() {
     (19..=25).for_each(|num_vars| {
         test_orion_commit_consistency_generic::<GF2, GF2x64>(num_vars);
         test_orion_commit_consistency_generic::<GF2, GF2x128>(num_vars);
-        test_orion_commit_consistency_generic::<GF2, GF2x512>(num_vars);
     });
 }

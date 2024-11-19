@@ -3,7 +3,7 @@ use std::{hint::black_box, ops::Mul};
 use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use gf2::{GF2x512, GF2x8, GF2};
+use gf2::{GF2x128, GF2x8, GF2};
 use gf2_128::GF2_128;
 use pcs::{OrionPCS, OrionPCSSetup, PolynomialCommitmentScheme, ORION_CODE_PARAMETER_INSTANCE};
 use polynomials::MultiLinearPoly;
@@ -60,7 +60,7 @@ fn orion_committing_benchmark(c: &mut Criterion) {
     committing_benchmark_helper::<
         GF2,
         GF2_128,
-        GF2x512,
+        GF2x128,
         GF2x8,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 19, 30);
@@ -124,7 +124,7 @@ fn opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
 }
 
 fn orion_opening_benchmark(c: &mut Criterion) {
-    opening_benchmark_helper::<GF2, GF2_128, GF2x512, GF2x8, BytesHashTranscript<_, Keccak256hasher>>(
+    opening_benchmark_helper::<GF2, GF2_128, GF2x128, GF2x8, BytesHashTranscript<_, Keccak256hasher>>(
         c, 19, 30,
     );
 }
