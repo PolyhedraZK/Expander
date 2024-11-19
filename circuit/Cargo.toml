@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 arith = { path = "../arith" }
 config = { path = "../config" }
+gkr_field_config = { path = "../config/gkr_field_config" }
 transcript = { path = "../transcript" }
 
 ark-std.workspace = true

@@ -1,23 +1,6 @@
-mod bn254_keccak;
-mod bn254_mimc;
-mod bn254_sha2;
-mod gf2_ext_keccak;
-mod gf2_ext_sha2;
-mod m31_ext_keccak;
-mod m31_ext_sha2;
-
 use std::fmt::Debug;
 
 use arith::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
-use ark_std::{end_timer, start_timer};
-
-pub use bn254_keccak::BN254ConfigKeccak;
-pub use bn254_mimc::BN254ConfigMIMC5;
-pub use bn254_sha2::BN254ConfigSha2;
-pub use gf2_ext_keccak::GF2ExtConfigKeccak;
-pub use gf2_ext_sha2::GF2ExtConfigSha2;
-pub use m31_ext_keccak::M31ExtConfigKeccak;
-pub use m31_ext_sha2::M31ExtConfigSha2;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldType {
@@ -26,17 +9,10 @@ pub enum FieldType {
     GF2,
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
-pub enum FiatShamirHashType {
-    #[default]
-    SHA256,
-    Keccak256,
-    Poseidon,
-    Animoe,
-    MIMC5, // Note: use MIMC5 for bn254 ONLY
-}
+pub trait GKRFieldConfig: Default + Debug + Clone + Send + Sync + 'static {
+    /// Enum type for Self::Field
+    const FIELD_TYPE: FieldType;
 
-pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
     /// Field type for the circuit, e.g., M31
     type CircuitField: Field + FieldSerde + FieldForECC + Send;
 
@@ -50,12 +26,6 @@ pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
 
     /// Simd field for circuit, e.g., M31x16
     type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + FieldSerde + Send;
-
-    /// Fiat Shamir hash type
-    const FIAT_SHAMIR_HASH: FiatShamirHashType;
-
-    /// Enum type for Self::Field
-    const FIELD_TYPE: FieldType;
 
     /// API to allow for multiplications between the challenge and the circuit field
     fn challenge_mul_circuit_field(
@@ -111,10 +81,9 @@ pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
         x: &[Self::ChallengeField],
         scratch: &mut [Self::Field],
     ) -> Self::Field {
-        let timer = start_timer!(|| format!("eval mle with {} vars", x.len()));
         assert_eq!(1 << x.len(), evals.len());
 
-        let ret = if x.is_empty() {
+        if x.is_empty() {
             Self::simd_circuit_field_into_field(&evals[0])
         } else {
             for i in 0..(evals.len() >> 1) {
@@ -135,9 +104,6 @@ pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
                 cur_eval_size >>= 1;
             }
             scratch[0]
-        };
-        end_timer!(timer);
-
-        ret
+        }
     }
 }

@@ -5,10 +5,13 @@ use std::{
 
 use circuit::Circuit;
 use clap::Parser;
-use config::{
-    BN254ConfigSha2, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2,
-    MPIConfig,
-};
+use config::{Config, GKRConfig, GKRScheme};
+use config_macros::declare_gkr_config;
+use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use mpi_config::MPIConfig;
+
+use transcript::{BytesHashTranscript, SHA256hasher};
+
 use gkr::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
@@ -16,6 +19,11 @@ use gkr::{
     },
     Prover,
 };
+
+#[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
+use config::FiatShamirHashType;
+#[allow(unused_imports)] // The FieldType import is used in the macro expansion
+use gkr_field_config::FieldType;
 
 /// ...
 #[derive(Parser, Debug)]
@@ -43,6 +51,14 @@ fn main() {
     print_info(&args);
 
     let mpi_config = MPIConfig::new();
+
+    declare_gkr_config!(M31ExtConfigSha2, FieldType::M31, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        BN254ConfigSha2,
+        FieldType::BN254,
+        FiatShamirHashType::SHA256
+    );
+    declare_gkr_config!(GF2ExtConfigSha2, FieldType::GF2, FiatShamirHashType::SHA256);
 
     match args.field.as_str() {
         "m31ext3" => match args.scheme.as_str() {
@@ -84,21 +100,21 @@ fn main() {
     MPIConfig::finalize();
 }
 
-fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
+fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let partial_proof_cnts = (0..args.threads)
         .map(|_| Arc::new(Mutex::new(0)))
         .collect::<Vec<_>>();
-    let pack_size = C::get_field_pack_size();
+    let pack_size = Cfg::FieldConfig::get_field_pack_size();
 
     // load circuit
     let mut circuit_template = match args.scheme.as_str() {
-        "keccak" => match C::FIELD_TYPE {
-            FieldType::GF2 => Circuit::<C>::load_circuit(KECCAK_GF2_CIRCUIT),
-            FieldType::M31 => Circuit::<C>::load_circuit(KECCAK_M31_CIRCUIT),
-            FieldType::BN254 => Circuit::<C>::load_circuit(KECCAK_BN254_CIRCUIT),
+        "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
+            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit(KECCAK_GF2_CIRCUIT),
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit(KECCAK_M31_CIRCUIT),
+            FieldType::BN254 => Circuit::<Cfg::FieldConfig>::load_circuit(KECCAK_BN254_CIRCUIT),
         },
-        "poseidon" => match C::FIELD_TYPE {
-            FieldType::M31 => Circuit::<C>::load_circuit(POSEIDON_M31_CIRCUIT),
+        "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit(POSEIDON_M31_CIRCUIT),
             _ => unreachable!("not supported"),
         },
 
@@ -106,12 +122,12 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
     };
 
     let witness_path = match args.scheme.as_str() {
-        "keccak" => match C::FIELD_TYPE {
+        "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::GF2 => KECCAK_GF2_WITNESS,
             FieldType::M31 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
         },
-        "poseidon" => match C::FIELD_TYPE {
+        "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31 => POSEIDON_M31_WITNESS,
             _ => unreachable!("not supported"),
         },
@@ -120,7 +136,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
 
     match args.scheme.as_str() {
         "keccak" => circuit_template.load_witness_file(witness_path),
-        "poseidon" => match C::FIELD_TYPE {
+        "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31 => circuit_template.load_non_simd_witness_file(witness_path),
             _ => unreachable!("not supported"),
         },
@@ -128,7 +144,7 @@ fn run_benchmark<C: GKRConfig>(args: &Args, config: Config<C>) {
         _ => unreachable!(),
     };
 
-    let circuit_copy_size: usize = match (C::FIELD_TYPE, args.scheme.as_str()) {
+    let circuit_copy_size: usize = match (Cfg::FieldConfig::FIELD_TYPE, args.scheme.as_str()) {
         (FieldType::GF2, "keccak") => 1,
         (FieldType::M31, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,

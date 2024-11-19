@@ -3,7 +3,7 @@ use std::{any::TypeId, fs};
 
 use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
-use config::GKRConfig;
+use gkr_field_config::GKRFieldConfig;
 use transcript::Transcript;
 
 use crate::*;
@@ -16,7 +16,7 @@ pub struct StructureInfo {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct CircuitLayer<C: GKRConfig> {
+pub struct CircuitLayer<C: GKRFieldConfig> {
     pub input_var_num: usize,
     pub output_var_num: usize,
 
@@ -31,7 +31,7 @@ pub struct CircuitLayer<C: GKRConfig> {
     pub structure_info: StructureInfo,
 }
 
-impl<C: GKRConfig> CircuitLayer<C> {
+impl<C: GKRFieldConfig> CircuitLayer<C> {
     #[inline]
     pub fn evaluate(
         &self,
@@ -115,7 +115,7 @@ impl<C: GKRConfig> CircuitLayer<C> {
 }
 
 #[derive(Debug, Default)]
-pub struct Circuit<C: GKRConfig> {
+pub struct Circuit<C: GKRFieldConfig> {
     pub layers: Vec<CircuitLayer<C>>,
     pub public_input: Vec<C::SimdCircuitField>,
     pub expected_num_output_zeros: usize,
@@ -124,7 +124,7 @@ pub struct Circuit<C: GKRConfig> {
     pub rnd_coefs: Vec<*mut C::CircuitField>, // unsafe
 }
 
-impl<C: GKRConfig> Clone for Circuit<C> {
+impl<C: GKRFieldConfig> Clone for Circuit<C> {
     fn clone(&self) -> Circuit<C> {
         let mut ret = Circuit::<C> {
             layers: self.layers.clone(),
@@ -139,9 +139,9 @@ impl<C: GKRConfig> Clone for Circuit<C> {
     }
 }
 
-unsafe impl<C> Send for Circuit<C> where C: GKRConfig {}
+unsafe impl<C> Send for Circuit<C> where C: GKRFieldConfig {}
 
-impl<C: GKRConfig> Circuit<C> {
+impl<C: GKRFieldConfig> Circuit<C> {
     pub fn load_circuit(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
         rc.flatten()
@@ -220,7 +220,7 @@ impl<C: GKRConfig> Circuit<C> {
     }
 }
 
-impl<C: GKRConfig> Circuit<C> {
+impl<C: GKRFieldConfig> Circuit<C> {
     pub fn log_input_size(&self) -> usize {
         self.layers[0].input_var_num
     }

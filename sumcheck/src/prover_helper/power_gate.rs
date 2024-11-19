@@ -2,7 +2,7 @@
 //! to evaluate power gates
 
 use arith::{Field, SimdField};
-use config::GKRConfig;
+use gkr_field_config::GKRFieldConfig;
 
 pub(crate) struct SumcheckPowerGateHelper<const D: usize> {
     var_num: usize,
@@ -20,7 +20,7 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
     }
 
     // Function to interpolate a quadratic polynomial and update an array of points
-    fn interpolate_3<C: GKRConfig>(p_add: &[C::Field; 3], p: &mut [C::Field; D]) {
+    fn interpolate_3<C: GKRFieldConfig>(p_add: &[C::Field; 3], p: &mut [C::Field; D]) {
         // Calculate coefficients for the interpolating polynomial
         let p_add_coef_0 = p_add[0];
         let p_add_coef_2 = C::field_mul_circuit_field(
@@ -48,7 +48,7 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn poly_eval_at<C: GKRConfig>(
+    pub(crate) fn poly_eval_at<C: GKRFieldConfig>(
         &self,
         var_idx: usize,
         bk_f: &[C::Field],
@@ -165,7 +165,7 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn receive_challenge<C: GKRConfig>(
+    pub(crate) fn receive_challenge<C: GKRFieldConfig>(
         &mut self,
         var_idx: usize,
         r: C::ChallengeField,

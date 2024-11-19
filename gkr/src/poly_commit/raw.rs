@@ -4,17 +4,18 @@
 use std::io::{Read, Write};
 
 use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
-use config::{GKRConfig, MPIConfig};
+use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
 use polynomials::MultiLinearPoly;
 
 #[derive(Default)]
 pub struct RawOpening {}
 
-pub struct RawCommitment<C: GKRConfig> {
+pub struct RawCommitment<C: GKRFieldConfig> {
     pub poly_vals: Vec<C::SimdCircuitField>,
 }
 
-impl<C: GKRConfig> RawCommitment<C> {
+impl<C: GKRFieldConfig> RawCommitment<C> {
     #[inline]
     pub fn size(&self) -> usize {
         self.poly_vals.len() * C::SimdCircuitField::SIZE
@@ -37,7 +38,7 @@ impl<C: GKRConfig> RawCommitment<C> {
     }
 }
 
-impl<C: GKRConfig> RawCommitment<C> {
+impl<C: GKRFieldConfig> RawCommitment<C> {
     #[inline]
     pub fn new(poly_vals: &[C::SimdCircuitField]) -> Self {
         RawCommitment {

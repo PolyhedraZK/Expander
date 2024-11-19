@@ -7,13 +7,21 @@ use std::{
 
 use arith::{Field, FieldSerde, FieldSerdeError};
 use circuit::Circuit;
-use config::{
-    BN254ConfigMIMC5, Config, FieldType, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigSha2,
-    MPIConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31,
-};
+use config::{Config, GKRConfig, GKRScheme, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
+use config_macros::declare_gkr_config;
+use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use mpi_config::MPIConfig;
+
+use transcript::{BytesHashTranscript, FieldHashTranscript, MIMCHasher, SHA256hasher};
+
 use log::{debug, info};
 use transcript::Proof;
 use warp::{http::StatusCode, reply, Filter};
+
+#[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
+use config::FiatShamirHashType;
+#[allow(unused_imports)] // The FieldType import is used in the macro expansion
+use gkr_field_config::FieldType;
 
 fn dump_proof_and_claimed_v<F: Field + FieldSerde>(
     proof: &Proof,
@@ -53,17 +61,17 @@ fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     }
 }
 
-async fn run_command<'a, C: GKRConfig>(
+async fn run_command<'a, Cfg: GKRConfig>(
     command: &str,
     circuit_file: &str,
-    config: Config<C>,
+    config: Config<Cfg>,
     args: &[String],
 ) {
     match command {
         "prove" => {
             let witness_file = &args[3];
             let output_file = &args[4];
-            let mut circuit = Circuit::<C>::load_circuit(circuit_file);
+            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
             circuit.load_witness_file(witness_file);
             let mut prover = gkr::Prover::new(&config);
             prover.prepare_mem(&circuit);
@@ -78,7 +86,7 @@ async fn run_command<'a, C: GKRConfig>(
         "verify" => {
             let witness_file = &args[3];
             let output_file = &args[4];
-            let mut circuit = Circuit::<C>::load_circuit(circuit_file);
+            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
             circuit.load_witness_file(witness_file);
 
             // Repeating the same public input for mpi_size times
@@ -108,7 +116,7 @@ async fn run_command<'a, C: GKRConfig>(
                 .try_into()
                 .unwrap();
             let port = args[4].parse().unwrap();
-            let circuit = Circuit::<C>::load_circuit(circuit_file);
+            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
             let mut prover = gkr::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let verifier = gkr::Verifier::new(&config);
@@ -207,6 +215,14 @@ async fn main() {
         assert!(mpi_config.world_size == 1); // verifier should not be run with mpiexec
         mpi_config.world_size = args[5].parse::<i32>().expect("Parsing mpi size fails");
     }
+
+    declare_gkr_config!(M31ExtConfigSha2, FieldType::M31, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        BN254ConfigMIMC5,
+        FieldType::BN254,
+        FiatShamirHashType::MIMC5
+    );
+    declare_gkr_config!(GF2ExtConfigSha2, FieldType::GF2, FiatShamirHashType::SHA256);
 
     let circuit_file = &args[2];
     let field_type = detect_field_type_from_circuit_file(circuit_file);

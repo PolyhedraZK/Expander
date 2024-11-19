@@ -1,0 +1,16 @@
+[package]
+name = "config_macros"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+config = { path = ".." }
+gkr_field_config = { path = "../gkr_field_config" }
+transcript = { path = "../../transcript" }
+
+syn = "2.0"       # For parsing Rust code
+quote = "1.0"     # For generating code
+proc-macro2 = "1.0"  # For working with tokens
+
+[lib]
+proc-macro=true

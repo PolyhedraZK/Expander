@@ -478,6 +478,7 @@ dependencies = [
  "ark-std",
  "config",
  "ethnum",
+ "gkr_field_config",
  "log",
  "thiserror",
  "transcript",
@@ -548,9 +549,23 @@ dependencies = [
  "ark-std",
  "gf2",
  "gf2_128",
+ "gkr_field_config",
  "halo2curves",
  "mersenne31",
  "mpi",
+ "mpi_config",
+ "transcript",
+]
+
+[[package]]
+name = "config_macros"
+version = "0.1.0"
+dependencies = [
+ "config",
+ "gkr_field_config",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
  "transcript",
 ]
 
@@ -908,15 +923,18 @@ dependencies = [
  "circuit",
  "clap",
  "config",
+ "config_macros",
  "criterion",
  "env_logger",
  "ethnum",
  "gf2",
  "gf2_128",
+ "gkr_field_config",
  "halo2curves",
  "log",
  "mersenne31",
  "mpi",
+ "mpi_config",
  "polynomials",
  "rand",
  "sha2",
@@ -927,6 +945,17 @@ dependencies = [
  "transcript",
  "tynm",
  "warp",
+]
+
+[[package]]
+name = "gkr_field_config"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "gf2",
+ "gf2_128",
+ "mersenne31",
 ]
 
 [[package]]
@@ -1547,6 +1576,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mpi_config"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "mersenne31",
+ "mpi",
+]
+
+[[package]]
 name = "multer"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2133,7 +2171,9 @@ dependencies = [
  "circuit",
  "config",
  "env_logger",
+ "gkr_field_config",
  "log",
+ "mpi_config",
  "polynomials",
  "transcript",
 ]
@@ -2311,6 +2351,7 @@ name = "transcript"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "mpi_config",
  "sha2",
  "tiny-keccak",
 ]
