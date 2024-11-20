@@ -26,7 +26,7 @@ impl<F: Field> MultiLinearPoly<F> {
     #[inline]
     /// # Safety
     /// The returned MultiLinearPoly should not be mutable in order not to mess up the original vector
-    /// 
+    ///
     /// PCS may take MultiLinearPoly as input
     /// However, it is inefficient to copy the entire vector to create a new MultiLinearPoly
     /// Here we introduce a wrap function to reuse the memory space assigned to the original vector

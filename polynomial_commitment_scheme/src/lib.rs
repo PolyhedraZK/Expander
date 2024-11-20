@@ -1,5 +1,7 @@
 mod traits;
-pub use traits::{ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString};
+pub use traits::{
+    ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,
+};
 
 mod utils;
 use utils::PCSEmptyType;

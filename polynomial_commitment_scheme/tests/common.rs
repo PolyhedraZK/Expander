@@ -1,7 +1,10 @@
 use arith::{Field, FieldSerde};
 use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
 use polynomial_commitment_scheme::raw::RawExpanderGKR;
-use polynomial_commitment_scheme::{ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString};
+use polynomial_commitment_scheme::{
+    ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,
+};
 use polynomials::MultiLinearPoly;
 use rand::thread_rng;
 
@@ -32,27 +35,44 @@ pub fn test_pcs<F: Field + FieldSerde, P: PolynomialCommitmentScheme<F>>(
 
 pub fn test_gkr_pcs<C: GKRFieldConfig, P: PCSForExpanderGKR<C>>(
     params: &P::Params,
+    mpi_config: &MPIConfig,
     poly: &MultiLinearPoly<C::SimdCircuitField>,
     xs: &[ExpanderGKRChallenge<C>],
 ) {
     let mut rng = thread_rng();
-    let srs = P::gen_srs_for_testing(params, &mut rng);
+    let srs = P::gen_srs_for_testing(params, mpi_config, &mut rng);
     let (proving_key, verification_key) = srs.into_keys();
-    let mut scratch_pad = P::init_scratch_pad(params);
+    let mut scratch_pad = P::init_scratch_pad(params, mpi_config);
 
-    let commitment = P::commit(params, &proving_key, poly, &mut scratch_pad);
+    let commitment = P::commit(params, mpi_config, &proving_key, poly, &mut scratch_pad);
+
+    // PCSForExpanderGKR does not require an evaluation value for the opening function
+    // We use RawExpanderGKR as the golden standard for the evaluation value
+    // Note this test will almost always pass for RawExpanderGKR, so make sure it is correct
+    let mut coeffs_gathered = if mpi_config.is_root() {
+        vec![C::SimdCircuitField::ZERO; poly.coeffs.len() * mpi_config.world_size()]
+    } else {
+        vec![]
+    };
+    mpi_config.gather_vec(&poly.coeffs, &mut coeffs_gathered);
 
     for xx in xs {
         let ExpanderGKRChallenge { x, x_simd, x_mpi } = xx;
-        let v = RawExpanderGKR::<C>::eval(&poly.coeffs, x, x_simd, x_mpi); // this will always pass for RawExpanderGKR, so make sure it is correct
-        let opening = P::open(params, &proving_key, poly, xx, &mut scratch_pad);
-        assert!(P::verify(
-            params,
-            &verification_key,
-            &commitment,
-            xx,
-            v,
-            &opening
-        ));
+        let opening = P::open(params, mpi_config, &proving_key, poly, xx, &mut scratch_pad);
+
+        if mpi_config.is_root() {
+            // this will always pass for RawExpanderGKR, so make sure it is correct
+            let v = RawExpanderGKR::<C>::eval(&coeffs_gathered, x, x_simd, x_mpi);
+
+            assert!(P::verify(
+                params,
+                mpi_config,
+                &verification_key,
+                &commitment,
+                xx,
+                v,
+                &opening
+            ));
+        }
     }
 }
