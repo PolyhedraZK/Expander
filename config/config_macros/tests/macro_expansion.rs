@@ -8,7 +8,7 @@ use gkr_field_config::FieldType;
 use config::GKRConfig;
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use polynomial_commitment_scheme::raw::RawExpanderGKR;
+use poly_commit::raw::RawExpanderGKR;
 use transcript::{
     BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, SHA256hasher,
 };

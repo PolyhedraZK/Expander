@@ -554,7 +554,7 @@ dependencies = [
  "mersenne31",
  "mpi",
  "mpi_config",
- "polynomial_commitment_scheme",
+ "poly_commit",
  "transcript",
 ]
 
@@ -564,7 +564,7 @@ version = "0.1.0"
 dependencies = [
  "config",
  "gkr_field_config",
- "polynomial_commitment_scheme",
+ "poly_commit",
  "proc-macro2",
  "quote",
  "syn 2.0.87",
@@ -937,7 +937,7 @@ dependencies = [
  "mersenne31",
  "mpi",
  "mpi_config",
- "polynomial_commitment_scheme",
+ "poly_commit",
  "polynomials",
  "rand",
  "sha2",
@@ -1790,7 +1790,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "polynomial_commitment_scheme"
+name = "poly_commit"
 version = "0.1.0"
 dependencies = [
  "arith",

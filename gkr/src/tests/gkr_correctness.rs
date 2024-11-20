@@ -9,8 +9,8 @@ use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitm
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::{root_println, MPIConfig};
-use polynomial_commitment_scheme::expander_pcs_init_unsafe;
-use polynomial_commitment_scheme::raw::RawExpanderGKR;
+use poly_commit::expander_pcs_init_testing_only;
+use poly_commit::raw::RawExpanderGKR;
 use rand::Rng;
 use sha2::Digest;
 use transcript::{
@@ -146,7 +146,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
     prover.prepare_mem(&circuit);
 
     let (pcs_params, pcs_proving_key, pcs_verification_key, mut pcs_scratch) =
-        expander_pcs_init_unsafe::<Cfg::FieldConfig, Cfg::PCS>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit.log_input_size(),
             &config.mpi_config,
         );

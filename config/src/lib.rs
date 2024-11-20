@@ -1,7 +1,7 @@
 use arith::Field;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomial_commitment_scheme::PCSForExpanderGKR;
+use poly_commit::PCSForExpanderGKR;
 use std::fmt::Debug;
 use transcript::Transcript;
 
@@ -52,7 +52,7 @@ pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
     const PCS_TYPE: PolynomialCommitmentType;
 
     /// The specific Polynomial Commitment type
-    type PCS: PCSForExpanderGKR<Self::FieldConfig>;
+    type PCS: PCSForExpanderGKR<Self::FieldConfig, Self::Transcript>;
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

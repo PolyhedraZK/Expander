@@ -8,6 +8,7 @@ use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
+use transcript::Transcript;
 
 #[derive(Clone, Debug, Default)]
 pub struct RawMultiLinearParams {
@@ -102,11 +103,13 @@ pub struct RawExpanderGKRParams {
 #[derive(Clone, Debug, Default)]
 pub struct RawExpanderGKRScratchPad {}
 
-pub struct RawExpanderGKR<C: GKRFieldConfig> {
-    _phantom: std::marker::PhantomData<C>,
+pub struct RawExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
+    _phantom: std::marker::PhantomData<(C, T)>,
 }
 
-impl<C: GKRFieldConfig> PCSForExpanderGKR<C> for RawExpanderGKR<C> {
+impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T>
+    for RawExpanderGKR<C, T>
+{
     const NAME: &'static str = "RawExpanderGKR";
 
     type Params = RawExpanderGKRParams;
@@ -173,6 +176,7 @@ impl<C: GKRFieldConfig> PCSForExpanderGKR<C> for RawExpanderGKR<C> {
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         _poly: &MultiLinearPoly<C::SimdCircuitField>,
         _x: &ExpanderGKRChallenge<C>,
+        _transcript: &mut T,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Opening {
         // For GKR, we don't need the evaluation result
@@ -186,6 +190,7 @@ impl<C: GKRFieldConfig> PCSForExpanderGKR<C> for RawExpanderGKR<C> {
         commitment: &Self::Commitment,
         x: &ExpanderGKRChallenge<C>,
         v: C::ChallengeField,
+        _transcript: &mut T,
         _opening: &Self::Opening,
     ) -> bool {
         assert!(mpi_config.is_root()); // Only the root will verify
@@ -194,7 +199,7 @@ impl<C: GKRFieldConfig> PCSForExpanderGKR<C> for RawExpanderGKR<C> {
     }
 }
 
-impl<C: GKRFieldConfig> RawExpanderGKR<C> {
+impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> RawExpanderGKR<C, T> {
     pub fn eval_local(
         vals: &[C::SimdCircuitField],
         x: &[C::ChallengeField],

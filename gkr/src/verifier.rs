@@ -9,9 +9,7 @@ use circuit::{Circuit, CircuitLayer};
 use config::{Config, GKRConfig};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomial_commitment_scheme::{
-    ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString,
-};
+use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
 use transcript::{Proof, Transcript};
 
@@ -265,8 +263,8 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         circuit: &mut Circuit<Cfg::FieldConfig>,
         public_input: &[<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField],
         claimed_v: &<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField,
-        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Params,
-        pcs_verification_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
+        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
+        pcs_verification_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::VKey,
         proof: &Proof,
     ) -> bool {
         let timer = start_timer!(|| "verify");
@@ -275,7 +273,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         let mut cursor = Cursor::new(&proof.bytes);
 
         let commitment =
-            <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Commitment::deserialize_from(
+            <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Commitment::deserialize_from(
                 &mut cursor,
             )
             .unwrap();
@@ -318,6 +316,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                 x_mpi: r_mpi.clone(),
             },
             &claimed_v0,
+            &mut transcript,
             &mut cursor,
         );
 
@@ -332,6 +331,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                     x_mpi: r_mpi,
                 },
                 &claimed_v1.unwrap(),
+                &mut transcript,
                 &mut cursor,
             );
         }
@@ -343,27 +343,37 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
 }
 
 impl<Cfg: GKRConfig> Verifier<Cfg> {
+    #[allow(clippy::too_many_arguments)]
     fn get_pcs_opening_from_proof_and_verify(
         &self,
-        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Params,
-        pcs_verification_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
-        commitment: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Commitment,
+        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
+        pcs_verification_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::VKey,
+        commitment: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Commitment,
         open_at: &ExpanderGKRChallenge<Cfg::FieldConfig>,
         v: &<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField,
+        transcript: &mut Cfg::Transcript,
         proof_reader: impl Read,
     ) -> bool {
-        let opening = <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Opening::deserialize_from(
+        let opening = <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Opening::deserialize_from(
             proof_reader,
         )
         .unwrap();
-        Cfg::PCS::verify(
+
+        let verified = Cfg::PCS::verify(
             pcs_params,
             &self.config.mpi_config,
             pcs_verification_key,
             commitment,
             open_at,
             *v,
+            transcript,
             &opening,
-        )
+        );
+
+        let mut buffer = vec![];
+        opening.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
+        transcript.append_u8_slice(&buffer);
+
+        verified
     }
 }

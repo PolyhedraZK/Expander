@@ -15,7 +15,7 @@ use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 
-use polynomial_commitment_scheme::{expander_pcs_init_unsafe, raw::RawExpanderGKR};
+use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
 use transcript::{BytesHashTranscript, FieldHashTranscript, MIMCHasher, SHA256hasher};
 
 use log::{debug, info};
@@ -81,7 +81,7 @@ async fn run_command<'a, Cfg: GKRConfig>(
             prover.prepare_mem(&circuit);
             // TODO: Read PCS  setup from files
             let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
-                expander_pcs_init_unsafe::<Cfg::FieldConfig, Cfg::PCS>(
+                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
                     circuit.log_input_size(),
                     &config.mpi_config,
                 );
@@ -122,7 +122,7 @@ async fn run_command<'a, Cfg: GKRConfig>(
 
             // TODO: Read PCS  setup from files
             let (pcs_params, _pcs_proving_key, pcs_verification_key, mut _pcs_scratch) =
-                expander_pcs_init_unsafe::<Cfg::FieldConfig, Cfg::PCS>(
+                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
                     circuit.log_input_size(),
                     &config.mpi_config,
                 );
@@ -153,7 +153,7 @@ async fn run_command<'a, Cfg: GKRConfig>(
 
             // TODO: Read PCS  setup from files
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
-                expander_pcs_init_unsafe::<Cfg::FieldConfig, Cfg::PCS>(
+                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
                     circuit.log_input_size(),
                     &config.mpi_config,
                 );

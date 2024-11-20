@@ -5,9 +5,7 @@ use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
-use polynomial_commitment_scheme::{
-    ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString,
-};
+use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use polynomials::MultiLinearPoly;
 use sumcheck::ProverScratchPad;
 use transcript::{transcript_root_broadcast, Proof, Transcript};
@@ -81,9 +79,9 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
     pub fn prove(
         &mut self,
         c: &mut Circuit<Cfg::FieldConfig>,
-        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Params,
-        pcs_proving_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
-        pcs_scratch: &mut <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::ScratchPad,
+        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
+        pcs_proving_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::PKey,
+        pcs_scratch: &mut <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::ScratchPad,
     ) -> (<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField, Proof) {
         let timer = start_timer!(|| "prove");
         let mut transcript = Cfg::Transcript::new();
@@ -165,9 +163,9 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         &self,
         input_layer_mle: &MultiLinearPoly<<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField>,
         open_at: &ExpanderGKRChallenge<Cfg::FieldConfig>,
-        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Params,
-        pcs_proving_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
-        pcs_scratch: &mut <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::ScratchPad,
+        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
+        pcs_proving_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::PKey,
+        pcs_scratch: &mut <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::ScratchPad,
         transcript: &mut Cfg::Transcript,
     ) {
         let opening = Cfg::PCS::open(
@@ -176,6 +174,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
             pcs_proving_key,
             input_layer_mle,
             open_at,
+            transcript,
             pcs_scratch,
         );
         let mut buffer = vec![];

@@ -1,12 +1,13 @@
 use arith::{Field, FieldSerde};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomial_commitment_scheme::raw::RawExpanderGKR;
-use polynomial_commitment_scheme::{
+use poly_commit::raw::RawExpanderGKR;
+use poly_commit::{
     ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,
 };
 use polynomials::MultiLinearPoly;
 use rand::thread_rng;
+use transcript::Transcript;
 
 pub fn test_pcs<F: Field + FieldSerde, P: PolynomialCommitmentScheme<F>>(
     params: &P::Params,
@@ -33,9 +34,14 @@ pub fn test_pcs<F: Field + FieldSerde, P: PolynomialCommitmentScheme<F>>(
     }
 }
 
-pub fn test_gkr_pcs<C: GKRFieldConfig, P: PCSForExpanderGKR<C>>(
+pub fn test_gkr_pcs<
+    C: GKRFieldConfig,
+    T: Transcript<C::ChallengeField>,
+    P: PCSForExpanderGKR<C, T>,
+>(
     params: &P::Params,
     mpi_config: &MPIConfig,
+    transcript: &mut T,
     poly: &MultiLinearPoly<C::SimdCircuitField>,
     xs: &[ExpanderGKRChallenge<C>],
 ) {
@@ -58,11 +64,19 @@ pub fn test_gkr_pcs<C: GKRFieldConfig, P: PCSForExpanderGKR<C>>(
 
     for xx in xs {
         let ExpanderGKRChallenge { x, x_simd, x_mpi } = xx;
-        let opening = P::open(params, mpi_config, &proving_key, poly, xx, &mut scratch_pad);
+        let opening = P::open(
+            params,
+            mpi_config,
+            &proving_key,
+            poly,
+            xx,
+            transcript,
+            &mut scratch_pad,
+        );
 
         if mpi_config.is_root() {
             // this will always pass for RawExpanderGKR, so make sure it is correct
-            let v = RawExpanderGKR::<C>::eval(&coeffs_gathered, x, x_simd, x_mpi);
+            let v = RawExpanderGKR::<C, T>::eval(&coeffs_gathered, x, x_simd, x_mpi);
 
             assert!(P::verify(
                 params,
@@ -71,6 +85,7 @@ pub fn test_gkr_pcs<C: GKRFieldConfig, P: PCSForExpanderGKR<C>>(
                 &commitment,
                 xx,
                 v,
+                transcript,
                 &opening
             ));
         }

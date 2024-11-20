@@ -11,8 +11,8 @@ use gkr::{
 };
 use gkr_field_config::{BN254Config, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
-use polynomial_commitment_scheme::{
-    expander_pcs_init_unsafe, raw::RawExpanderGKR, PCSForExpanderGKR, StructuredReferenceString,
+use poly_commit::{
+    expander_pcs_init_testing_only, raw::RawExpanderGKR, PCSForExpanderGKR, StructuredReferenceString,
 };
 use std::hint::black_box;
 use transcript::{BytesHashTranscript, SHA256hasher};
@@ -25,9 +25,9 @@ use gkr_field_config::FieldType;
 fn prover_run<Cfg: GKRConfig>(
     config: &Config<Cfg>,
     circuit: &mut Circuit<Cfg::FieldConfig>,
-    pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Params,
-    pcs_proving_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
-    pcs_scratch: &mut <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::ScratchPad,
+    pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
+    pcs_proving_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::PKey,
+    pcs_scratch: &mut <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::ScratchPad,
 ) {
     let mut prover = Prover::new(config);
     prover.prepare_mem(circuit);
@@ -41,10 +41,10 @@ fn benchmark_setup<Cfg: GKRConfig>(
 ) -> (
     Config<Cfg>,
     Circuit<Cfg::FieldConfig>,
-    <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Params,
-    <<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
-    <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::ScratchPad,
-) {
+    <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
+    <<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::PKey,
+    <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::ScratchPad,
+){
     let config = Config::<Cfg>::new(scheme, MPIConfig::new());
     let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
 
@@ -55,7 +55,7 @@ fn benchmark_setup<Cfg: GKRConfig>(
     }
 
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
-        expander_pcs_init_unsafe::<Cfg::FieldConfig, Cfg::PCS>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit.log_input_size(),
             &config.mpi_config,
         );

@@ -4,6 +4,7 @@ use mpi_config::MPIConfig;
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
 use std::fmt::Debug;
+use transcript::Transcript;
 
 pub trait StructuredReferenceString {
     type PKey: Clone + Debug + FieldSerde + Send;
@@ -68,7 +69,7 @@ pub struct ExpanderGKRChallenge<C: GKRFieldConfig> {
     pub x_mpi: Vec<C::ChallengeField>,
 }
 
-pub trait PCSForExpanderGKR<C: GKRFieldConfig> {
+pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default + Send;
@@ -108,10 +109,12 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig> {
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &MultiLinearPoly<C::SimdCircuitField>,
         x: &ExpanderGKRChallenge<C>,
+        transcript: &mut T, // add transcript here to allow interactive arguments
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Opening;
 
     /// Verify the opening of a polynomial at a point. This should only be called on the root process.
+    #[allow(clippy::too_many_arguments)]
     fn verify(
         params: &Self::Params,
         mpi_config: &MPIConfig,
@@ -119,6 +122,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig> {
         commitment: &Self::Commitment,
         x: &ExpanderGKRChallenge<C>,
         v: C::ChallengeField,
+        transcript: &mut T, // add transcript here to allow interactive arguments
         opening: &Self::Opening,
     ) -> bool;
 }
