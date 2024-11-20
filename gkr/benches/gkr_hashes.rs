@@ -12,7 +12,8 @@ use gkr::{
 use gkr_field_config::{BN254Config, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 use poly_commit::{
-    expander_pcs_init_testing_only, raw::RawExpanderGKR, PCSForExpanderGKR, StructuredReferenceString,
+    expander_pcs_init_testing_only, raw::RawExpanderGKR, PCSForExpanderGKR,
+    StructuredReferenceString,
 };
 use std::hint::black_box;
 use transcript::{BytesHashTranscript, SHA256hasher};
