@@ -11,25 +11,40 @@ use gkr::{
 };
 use gkr_field_config::{BN254Config, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
+use polynomial_commitment_scheme::{
+    expander_pcs_init_unsafe, raw::RawExpanderGKR, PCSForExpanderGKR, StructuredReferenceString,
+};
 use std::hint::black_box;
 use transcript::{BytesHashTranscript, SHA256hasher};
 
 #[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
-use config::FiatShamirHashType;
+use config::{FiatShamirHashType, PolynomialCommitmentType};
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
 use gkr_field_config::FieldType;
 
-fn prover_run<Cfg: GKRConfig>(config: &Config<Cfg>, circuit: &mut Circuit<Cfg::FieldConfig>) {
+fn prover_run<Cfg: GKRConfig>(
+    config: &Config<Cfg>,
+    circuit: &mut Circuit<Cfg::FieldConfig>,
+    pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Params,
+    pcs_proving_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
+    pcs_scratch: &mut <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::ScratchPad,
+) {
     let mut prover = Prover::new(config);
     prover.prepare_mem(circuit);
-    prover.prove(circuit);
+    prover.prove(circuit, pcs_params, pcs_proving_key, pcs_scratch);
 }
 
 fn benchmark_setup<Cfg: GKRConfig>(
     scheme: GKRScheme,
     circuit_file: &str,
     witness_file: Option<&str>,
-) -> (Config<Cfg>, Circuit<Cfg::FieldConfig>) {
+) -> (
+    Config<Cfg>,
+    Circuit<Cfg::FieldConfig>,
+    <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Params,
+    <<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
+    <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::ScratchPad,
+) {
     let config = Config::<Cfg>::new(scheme, MPIConfig::new());
     let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
 
@@ -39,23 +54,42 @@ fn benchmark_setup<Cfg: GKRConfig>(
         circuit.set_random_input_for_test();
     }
 
-    (config, circuit)
+    let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
+        expander_pcs_init_unsafe::<Cfg::FieldConfig, Cfg::PCS>(
+            circuit.log_input_size(),
+            &config.mpi_config,
+        );
+
+    (config, circuit, pcs_params, pcs_proving_key, pcs_scratch)
 }
 
 fn criterion_gkr_keccak(c: &mut Criterion) {
-    declare_gkr_config!(M31ExtConfigSha2, FieldType::M31, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        M31ExtConfigSha2,
+        FieldType::M31,
+        FiatShamirHashType::SHA256,
+        PCSCommitmentType::Raw
+    );
     declare_gkr_config!(
         BN254ConfigSha2,
         FieldType::BN254,
-        FiatShamirHashType::SHA256
+        FiatShamirHashType::SHA256,
+        PCSCommitmentType::Raw
     );
 
-    let (m31_config, mut m31_circuit) = benchmark_setup::<M31ExtConfigSha2>(
-        GKRScheme::Vanilla,
-        KECCAK_M31_CIRCUIT,
-        Some(KECCAK_M31_WITNESS),
-    );
-    let (bn254_config, mut bn254_circuit) = benchmark_setup::<BN254ConfigSha2>(
+    let (m31_config, mut m31_circuit, m31_pcs_params, m31_pcs_proving_key, mut m31_pcs_scratch) =
+        benchmark_setup::<M31ExtConfigSha2>(
+            GKRScheme::Vanilla,
+            KECCAK_M31_CIRCUIT,
+            Some(KECCAK_M31_WITNESS),
+        );
+    let (
+        bn254_config,
+        mut bn254_circuit,
+        bn254_pcs_params,
+        bn254_pcs_proving_key,
+        mut bn254_pcs_scratch,
+    ) = benchmark_setup::<BN254ConfigSha2>(
         GKRScheme::Vanilla,
         KECCAK_BN254_CIRCUIT,
         Some(KECCAK_BN254_WITNESS),
@@ -76,7 +110,13 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
         |b| {
             b.iter(|| {
                 {
-                    prover_run(&m31_config, &mut m31_circuit);
+                    prover_run(
+                        &m31_config,
+                        &mut m31_circuit,
+                        &m31_pcs_params,
+                        &m31_pcs_proving_key,
+                        &mut m31_pcs_scratch,
+                    );
                     black_box(())
                 };
             })
@@ -94,7 +134,13 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
         |b| {
             b.iter(|| {
                 {
-                    prover_run(&bn254_config, &mut bn254_circuit);
+                    prover_run(
+                        &bn254_config,
+                        &mut bn254_circuit,
+                        &bn254_pcs_params,
+                        &bn254_pcs_proving_key,
+                        &mut bn254_pcs_scratch,
+                    );
                     black_box(())
                 };
             })
@@ -103,14 +149,20 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
 }
 
 fn criterion_gkr_poseidon(c: &mut Criterion) {
-    declare_gkr_config!(M31ExtConfigSha2, FieldType::M31, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        M31ExtConfigSha2,
+        FieldType::M31,
+        FiatShamirHashType::SHA256,
+        PCSCommitmentType::Raw
+    );
     declare_gkr_config!(
         BN254ConfigSha2,
         FieldType::BN254,
-        FiatShamirHashType::SHA256
+        FiatShamirHashType::SHA256,
+        PCSCommitmentType::Raw
     );
 
-    let (m31_config, mut m31_circuit) =
+    let (m31_config, mut m31_circuit, pcs_params, pcs_proving_key, mut pcs_scratch) =
         benchmark_setup::<M31ExtConfigSha2>(GKRScheme::GkrSquare, POSEIDON_M31_CIRCUIT, None);
 
     let mut group = c.benchmark_group("single thread proving poseidon by GKR^2");
@@ -128,7 +180,13 @@ fn criterion_gkr_poseidon(c: &mut Criterion) {
         |b| {
             b.iter(|| {
                 {
-                    prover_run(&m31_config, &mut m31_circuit);
+                    prover_run(
+                        &m31_config,
+                        &mut m31_circuit,
+                        &pcs_params,
+                        &pcs_proving_key,
+                        &mut pcs_scratch,
+                    );
                     black_box(())
                 };
             })

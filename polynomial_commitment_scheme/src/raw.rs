@@ -135,6 +135,12 @@ impl<C: GKRFieldConfig> PCSForExpanderGKR<C> for RawExpanderGKR<C> {
         Self::SRS::default()
     }
 
+    fn gen_params(n_input_vars: usize) -> Self::Params {
+        RawExpanderGKRParams {
+            n_local_vars: n_input_vars,
+        }
+    }
+
     fn init_scratch_pad(_params: &Self::Params, _mpi_config: &MPIConfig) -> Self::ScratchPad {
         RawExpanderGKRScratchPad {}
     }

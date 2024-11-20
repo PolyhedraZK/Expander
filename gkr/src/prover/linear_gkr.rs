@@ -1,13 +1,18 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
+use arith::FieldSerde;
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
-use config::{Config, GKRConfig, GKRScheme, PolynomialCommitmentType};
+use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
+use polynomial_commitment_scheme::{
+    ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString,
+};
+use polynomials::MultiLinearPoly;
 use sumcheck::ProverScratchPad;
 use transcript::{transcript_root_broadcast, Proof, Transcript};
 
-use crate::{gkr_prove, gkr_square_prove, RawCommitment};
+use crate::{gkr_prove, gkr_square_prove};
 
 #[cfg(feature = "grinding")]
 pub(crate) fn grind<Cfg: GKRConfig>(transcript: &mut Cfg::Transcript, config: &Config<Cfg>) {
@@ -76,19 +81,26 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
     pub fn prove(
         &mut self,
         c: &mut Circuit<Cfg::FieldConfig>,
+        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Params,
+        pcs_proving_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
+        pcs_scratch: &mut <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::ScratchPad,
     ) -> (<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField, Proof) {
         let timer = start_timer!(|| "prove");
         let mut transcript = Cfg::Transcript::new();
 
         // PC commit
-        let commitment = RawCommitment::<Cfg::FieldConfig>::mpi_new(
-            &c.layers[0].input_vals,
+        let mle_wrapper = unsafe { MultiLinearPoly::wrap_around(&c.layers[0].input_vals) };
+        let commitment = Cfg::PCS::commit(
+            pcs_params,
             &self.config.mpi_config,
+            pcs_proving_key,
+            &mle_wrapper,
+            pcs_scratch,
         );
-
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         transcript.append_u8_slice(&buffer);
+        mle_wrapper.wrapper_self_detroy();
 
         transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
 
@@ -99,28 +111,75 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         c.evaluate();
 
         let mut claimed_v = <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::default();
-        let mut _rx = vec![];
-        let mut _ry = None;
-        let mut _rsimd = vec![];
-        let mut _rmpi = vec![];
+        let rx;
+        let mut ry = None;
+        let mut rsimd = vec![];
+        let mut rmpi = vec![];
 
         if self.config.gkr_scheme == GKRScheme::GkrSquare {
-            (_, _rx) = gkr_square_prove(c, &mut self.sp, &mut transcript);
+            (_, rx) = gkr_square_prove(c, &mut self.sp, &mut transcript);
         } else {
-            (claimed_v, _rx, _ry, _rsimd, _rmpi) =
+            (claimed_v, rx, ry, rsimd, rmpi) =
                 gkr_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
         }
 
+        let mle_wrapper = unsafe { MultiLinearPoly::wrap_around(&c.layers[0].input_vals) };
         // open
-        match self.config.polynomial_commitment_type {
-            PolynomialCommitmentType::Raw => {
-                // no need to update transcript
-            }
-            _ => todo!(),
+        self.prove_input_layer_claim(
+            &mle_wrapper,
+            &ExpanderGKRChallenge {
+                x: rx,
+                x_simd: rsimd.clone(),
+                x_mpi: rmpi.clone(),
+            },
+            pcs_params,
+            pcs_proving_key,
+            pcs_scratch,
+            &mut transcript,
+        );
+
+        if let Some(ry) = ry {
+            self.prove_input_layer_claim(
+                &mle_wrapper,
+                &ExpanderGKRChallenge {
+                    x: ry,
+                    x_simd: rsimd,
+                    x_mpi: rmpi,
+                },
+                pcs_params,
+                pcs_proving_key,
+                pcs_scratch,
+                &mut transcript,
+            );
         }
+        mle_wrapper.wrapper_self_detroy();
 
         end_timer!(timer);
 
         (claimed_v, transcript.finalize_and_get_proof())
+    }
+}
+
+impl<Cfg: GKRConfig> Prover<Cfg> {
+    fn prove_input_layer_claim(
+        &self,
+        input_layer_mle: &MultiLinearPoly<<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField>,
+        open_at: &ExpanderGKRChallenge<Cfg::FieldConfig>,
+        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::Params,
+        pcs_proving_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
+        pcs_scratch: &mut <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig>>::ScratchPad,
+        transcript: &mut Cfg::Transcript,
+    ) {
+        let opening = Cfg::PCS::open(
+            pcs_params,
+            &self.config.mpi_config,
+            pcs_proving_key,
+            input_layer_mle,
+            open_at,
+            pcs_scratch,
+        );
+        let mut buffer = vec![];
+        opening.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
+        transcript.append_u8_slice(&buffer);
     }
 }

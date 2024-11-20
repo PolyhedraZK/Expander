@@ -5,10 +5,12 @@ use std::{fs, panic};
 
 use arith::{Field, FieldSerde};
 use circuit::Circuit;
-use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme};
+use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::{root_println, MPIConfig};
+use polynomial_commitment_scheme::expander_pcs_init_unsafe;
+use polynomial_commitment_scheme::raw::RawExpanderGKR;
 use rand::Rng;
 use sha2::Digest;
 use transcript::{
@@ -20,13 +22,48 @@ use crate::{utils::*, Prover, Verifier};
 #[test]
 fn test_gkr_correctness() {
     let mpi_config = MPIConfig::new();
-    declare_gkr_config!(C0, FieldType::GF2, FiatShamirHashType::SHA256);
-    declare_gkr_config!(C1, FieldType::M31, FiatShamirHashType::SHA256);
-    declare_gkr_config!(C2, FieldType::BN254, FiatShamirHashType::SHA256);
-    declare_gkr_config!(C3, FieldType::GF2, FiatShamirHashType::Keccak256);
-    declare_gkr_config!(C4, FieldType::M31, FiatShamirHashType::Keccak256);
-    declare_gkr_config!(C5, FieldType::BN254, FiatShamirHashType::Keccak256);
-    declare_gkr_config!(C6, FieldType::BN254, FiatShamirHashType::MIMC5);
+    declare_gkr_config!(
+        C0,
+        FieldType::GF2,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C1,
+        FieldType::M31,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C2,
+        FieldType::BN254,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C3,
+        FieldType::GF2,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C4,
+        FieldType::M31,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C5,
+        FieldType::BN254,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C6,
+        FieldType::BN254,
+        FiatShamirHashType::MIMC5,
+        PolynomialCommitmentType::Raw
+    );
 
     test_gkr_correctness_helper(
         &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
@@ -108,8 +145,19 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
     let mut prover = Prover::new(config);
     prover.prepare_mem(&circuit);
 
+    let (pcs_params, pcs_proving_key, pcs_verification_key, mut pcs_scratch) =
+        expander_pcs_init_unsafe::<Cfg::FieldConfig, Cfg::PCS>(
+            circuit.log_input_size(),
+            &config.mpi_config,
+        );
+
     let proving_start = Instant::now();
-    let (claimed_v, proof) = prover.prove(&mut circuit);
+    let (claimed_v, proof) = prover.prove(
+        &mut circuit,
+        &pcs_params,
+        &pcs_proving_key,
+        &mut pcs_scratch,
+    );
     root_println!(
         config.mpi_config,
         "Proving time: {} μs",
@@ -158,7 +206,14 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         let verifier = Verifier::new(config);
         println!("Verifier created.");
         let verification_start = Instant::now();
-        assert!(verifier.verify(&mut circuit, &public_input_gathered, &claimed_v, &proof));
+        assert!(verifier.verify(
+            &mut circuit,
+            &public_input_gathered,
+            &claimed_v,
+            &pcs_params,
+            &pcs_verification_key,
+            &proof
+        ));
         println!(
             "Verification time: {} μs",
             verification_start.elapsed().as_micros()
@@ -172,7 +227,14 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
 
         // Catch the panic and treat it as returning `false`
         let result = panic::catch_unwind(AssertUnwindSafe(|| {
-            verifier.verify(&mut circuit, &public_input_gathered, &claimed_v, &bad_proof)
+            verifier.verify(
+                &mut circuit,
+                &public_input_gathered,
+                &claimed_v,
+                &pcs_params,
+                &pcs_verification_key,
+                &bad_proof,
+            )
         }));
 
         let final_result = result.unwrap_or_default();

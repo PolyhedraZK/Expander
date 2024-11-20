@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 config = { path = ".." }
 gkr_field_config = { path = "../gkr_field_config" }
+polynomial_commitment_scheme = { path = "../../polynomial_commitment_scheme" }
 transcript = { path = "../../transcript" }
 
 syn = "2.0"       # For parsing Rust code

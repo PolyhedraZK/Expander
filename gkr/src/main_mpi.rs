@@ -5,6 +5,7 @@ use config_macros::declare_gkr_config;
 use mpi_config::MPIConfig;
 
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use polynomial_commitment_scheme::{expander_pcs_init_unsafe, raw::RawExpanderGKR};
 use transcript::{BytesHashTranscript, SHA256hasher};
 
 use gkr::{
@@ -15,8 +16,9 @@ use gkr::{
     Prover,
 };
 
-#[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
-use config::FiatShamirHashType;
+#[allow(unused_imports)]
+// The FiatShamirHashType and PolynomialCommitmentType import is used in the macro expansion
+use config::{FiatShamirHashType, PolynomialCommitmentType};
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
 use gkr_field_config::FieldType;
 
@@ -43,13 +45,24 @@ fn main() {
 
     let mpi_config = MPIConfig::new();
 
-    declare_gkr_config!(M31ExtConfigSha2, FieldType::M31, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        M31ExtConfigSha2,
+        FieldType::M31,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
     declare_gkr_config!(
         BN254ConfigSha2,
         FieldType::BN254,
-        FiatShamirHashType::SHA256
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
     );
-    declare_gkr_config!(GF2ExtConfigSha2, FieldType::GF2, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        GF2ExtConfigSha2,
+        FieldType::GF2,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
 
     match args.field.as_str() {
         "m31ext3" => match args.scheme.as_str() {
@@ -139,6 +152,14 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         _ => unreachable!(),
     };
 
+    let mut prover = Prover::new(&config);
+    prover.prepare_mem(&circuit);
+    let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
+        expander_pcs_init_unsafe::<Cfg::FieldConfig, Cfg::PCS>(
+            circuit.log_input_size(),
+            &config.mpi_config,
+        );
+
     const N_PROOF: usize = 1000;
 
     println!("We are now calculating average throughput, please wait until {N_PROOF} proofs are computed");
@@ -146,9 +167,12 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         config.mpi_config.barrier(); // wait until everyone is here
         let start_time = std::time::Instant::now();
         for _j in 0..N_PROOF {
-            let mut prover = Prover::new(&config);
-            prover.prepare_mem(&circuit);
-            prover.prove(&mut circuit);
+            prover.prove(
+                &mut circuit,
+                &pcs_params,
+                &pcs_proving_key,
+                &mut pcs_scratch,
+            );
         }
         let stop_time = std::time::Instant::now();
         let duration = stop_time.duration_since(start_time);

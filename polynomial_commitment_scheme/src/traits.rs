@@ -6,8 +6,8 @@ use rand::RngCore;
 use std::fmt::Debug;
 
 pub trait StructuredReferenceString {
-    type PKey: Clone + Debug + FieldSerde;
-    type VKey: Clone + Debug + FieldSerde;
+    type PKey: Clone + Debug + FieldSerde + Send;
+    type VKey: Clone + Debug + FieldSerde + Send;
 
     /// Convert the SRS into proving and verifying keys.
     /// Comsuming self by default.
@@ -71,8 +71,8 @@ pub struct ExpanderGKRChallenge<C: GKRFieldConfig> {
 pub trait PCSForExpanderGKR<C: GKRFieldConfig> {
     const NAME: &'static str;
 
-    type Params: Clone + Debug + Default;
-    type ScratchPad: Clone + Debug + Default;
+    type Params: Clone + Debug + Default + Send;
+    type ScratchPad: Clone + Debug + Default + Send;
 
     type SRS: Clone + Debug + Default + FieldSerde + StructuredReferenceString;
     type Commitment: Clone + Debug + Default + FieldSerde;
@@ -85,6 +85,8 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig> {
         mpi_config: &MPIConfig,
         rng: impl RngCore,
     ) -> Self::SRS;
+
+    fn gen_params(n_input_vars: usize) -> Self::Params;
 
     /// Initialize the scratch pad.
     /// Each process returns its own scratch pad.
