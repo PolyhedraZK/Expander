@@ -3,7 +3,7 @@ use std::io::Cursor;
 use ark_std::{end_timer, start_timer};
 use rand::RngCore;
 
-use crate::{Field, FieldSerde};
+use crate::Field;
 
 #[allow(clippy::eq_op)]
 pub(crate) fn commutativity_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
@@ -187,7 +187,7 @@ pub(crate) fn random_expansion_tests<F: Field, R: RngCore>(mut rng: R, type_name
     end_timer!(start);
 }
 
-pub(crate) fn random_serde_tests<F: Field + FieldSerde, R: RngCore>(mut rng: R, type_name: String) {
+pub(crate) fn random_serde_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     let _message = format!("serde {}", type_name);
     let start = start_timer!(|| _message);
     for _ in 0..1000 {

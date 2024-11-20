@@ -2,7 +2,7 @@ use arith::{Field, FieldSerde};
 use rand::RngCore;
 use std::fmt::Debug;
 
-pub trait PCS<F: Field + FieldSerde> {
+pub trait PCS<F: Field> {
     type Params: Clone + Debug;
     type Poly: Clone + Debug;
     type EvalPoint: Clone + Debug;

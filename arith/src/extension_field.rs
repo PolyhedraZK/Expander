@@ -1,14 +1,12 @@
 use std::ops::Mul;
 
-use crate::{Field, FieldSerde};
+use crate::Field;
 
 /// Configurations for Extension Field over
 /// - either the Binomial polynomial x^DEGREE - W
 /// - or the AES polynomial x^128 + x^7 + x^2 + x + 1
 //
-pub trait ExtensionField:
-    Mul<Self::BaseField> + From<Self::BaseField> + Field + FieldSerde
-{
+pub trait ExtensionField: Mul<Self::BaseField> + From<Self::BaseField> + Field {
     /// Degree of the Extension
     const DEGREE: usize;
 
@@ -19,7 +17,7 @@ pub trait ExtensionField:
     const X: Self;
 
     /// Base field for the extension
-    type BaseField: Field + FieldSerde + Send;
+    type BaseField: Field + Send;
 
     /// Multiply the extension field with the base field
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self;

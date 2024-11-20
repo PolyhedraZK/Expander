@@ -1,5 +1,5 @@
 use crate::{EmptyType, PCS};
-use arith::{Field, FieldSerde};
+use arith::Field;
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
 
@@ -11,7 +11,7 @@ pub struct RawMLParams {
 // Raw commitment for multi-linear polynomials
 pub struct RawML {}
 
-impl<F: Field + FieldSerde> PCS<F> for RawML {
+impl<F: Field> PCS<F> for RawML {
     type Params = RawMLParams;
 
     type Poly = MultiLinearPoly<F>;

@@ -1,8 +1,8 @@
-use arith::{Field, FieldSerde};
+use arith::Field;
 use pcs::PCS;
 use rand::thread_rng;
 
-pub fn test_pcs<F: Field + FieldSerde, P: PCS<F>>(
+pub fn test_pcs<F: Field, P: PCS<F>>(
     pcs: &mut P,
     params: &P::Params,
     poly: &P::Poly,

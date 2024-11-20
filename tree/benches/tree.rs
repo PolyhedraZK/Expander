@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use arith::{Field, FieldSerde, SimdField};
+use arith::{Field, SimdField};
 use ark_std::{rand::RngCore, test_rng};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
@@ -40,7 +40,7 @@ fn tree_building_benchmark(c: &mut Criterion) {
 
 fn compact_field_elem_tree_building_benchmark_generic<F, PackF>(c: &mut Criterion)
 where
-    F: Field + FieldSerde,
+    F: Field,
     PackF: SimdField<Scalar = F>,
 {
     let mut group = c.benchmark_group(format!(
@@ -78,7 +78,7 @@ fn compact_field_elem_tree_building_benchmark(c: &mut Criterion) {
 
 fn compact_packed_field_elem_tree_building_benchmark_generic<F, PackF>(c: &mut Criterion)
 where
-    F: Field + FieldSerde,
+    F: Field,
     PackF: SimdField<Scalar = F>,
 {
     let mut group = c.benchmark_group(format!(

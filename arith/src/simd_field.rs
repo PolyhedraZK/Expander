@@ -1,9 +1,9 @@
-use crate::{Field, FieldSerde};
+use crate::Field;
 
 /// Configurations for the SimdField.
-pub trait SimdField: From<Self::Scalar> + Field + FieldSerde {
+pub trait SimdField: From<Self::Scalar> + Field {
     /// Field for the challenge. Can be self.
-    type Scalar: Field + FieldSerde + Send;
+    type Scalar: Field + Send;
 
     /// Pack size (width) for the SIMD instruction
     const PACK_SIZE: usize;
