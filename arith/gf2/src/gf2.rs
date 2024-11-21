@@ -33,11 +33,6 @@ impl FieldSerde for GF2 {
         reader.read_exact(&mut u)?;
         Ok(GF2 { v: u[0] % 2 })
     }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(reader: R) -> FieldSerdeResult<Self> {
-        Self::deserialize_from(reader)
-    }
 }
 
 impl Field for GF2 {

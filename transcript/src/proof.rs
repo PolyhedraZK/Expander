@@ -32,8 +32,4 @@ impl FieldSerde for Proof {
         reader.read_exact(&mut proof).unwrap();
         Ok(Self { bytes: proof })
     }
-
-    fn try_deserialize_from_ecc_format<R: Read>(_reader: R) -> FieldSerdeResult<Self> {
-        unimplemented!("not implemented for Proof")
-    }
 }
