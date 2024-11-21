@@ -6,15 +6,15 @@ use std::{
 use arith::{Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
-use config::{Config, GKRConfig, PolynomialCommitmentType};
+use config::{Config, GKRConfig};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
+use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
 use transcript::{Proof, Transcript};
 
 #[cfg(feature = "grinding")]
 use crate::grind;
-use crate::RawCommitment;
 
 #[inline(always)]
 fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
@@ -263,18 +263,26 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         circuit: &mut Circuit<Cfg::FieldConfig>,
         public_input: &[<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField],
         claimed_v: &<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField,
+        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
+        pcs_verification_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::VKey,
         proof: &Proof,
     ) -> bool {
         let timer = start_timer!(|| "verify");
         let mut transcript = Cfg::Transcript::new();
 
-        let poly_size =
-            circuit.layers.first().unwrap().input_vals.len() * self.config.mpi_config.world_size();
         let mut cursor = Cursor::new(&proof.bytes);
 
         let commitment =
-            RawCommitment::<Cfg::FieldConfig>::deserialize_from(&mut cursor, poly_size);
-        transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
+            <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Commitment::deserialize_from(
+                &mut cursor,
+            )
+            .unwrap();
+        let mut buffer = vec![];
+        commitment.serialize_into(&mut buffer).unwrap();
+        transcript.append_u8_slice(&buffer);
+
+        // TODO: Implement a trait containing the size function, and use the following line to avoid unnecessary deserialization and serialization
+        // transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
         if self.config.mpi_config.world_size() > 1 {
             let _ = transcript.hash_and_return_state(); // Trigger an additional hash
@@ -298,29 +306,73 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
 
         log::info!("GKR verification: {}", verified);
 
-        match self.config.polynomial_commitment_type {
-            PolynomialCommitmentType::Raw => {
-                // for Raw, no need to load from proof
-                log::trace!("rz0.size() = {}", rz0.len());
-                log::trace!("Poly_vals.size() = {}", commitment.poly_vals.len());
+        verified &= self.get_pcs_opening_from_proof_and_verify(
+            pcs_params,
+            pcs_verification_key,
+            &commitment,
+            &ExpanderGKRChallenge {
+                x: rz0,
+                x_simd: r_simd.clone(),
+                x_mpi: r_mpi.clone(),
+            },
+            &claimed_v0,
+            &mut transcript,
+            &mut cursor,
+        );
 
-                let v1 = commitment.mpi_verify(&rz0, &r_simd, &r_mpi, claimed_v0);
-                verified &= v1;
-
-                if rz1.is_some() {
-                    let v2 = commitment.mpi_verify(
-                        rz1.as_ref().unwrap(),
-                        &r_simd,
-                        &r_mpi,
-                        claimed_v1.unwrap(),
-                    );
-                    verified &= v2;
-                }
-            }
-            _ => todo!(),
+        if let Some(rz1) = rz1 {
+            verified &= self.get_pcs_opening_from_proof_and_verify(
+                pcs_params,
+                pcs_verification_key,
+                &commitment,
+                &ExpanderGKRChallenge {
+                    x: rz1,
+                    x_simd: r_simd,
+                    x_mpi: r_mpi,
+                },
+                &claimed_v1.unwrap(),
+                &mut transcript,
+                &mut cursor,
+            );
         }
 
         end_timer!(timer);
+
+        verified
+    }
+}
+
+impl<Cfg: GKRConfig> Verifier<Cfg> {
+    #[allow(clippy::too_many_arguments)]
+    fn get_pcs_opening_from_proof_and_verify(
+        &self,
+        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
+        pcs_verification_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::VKey,
+        commitment: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Commitment,
+        open_at: &ExpanderGKRChallenge<Cfg::FieldConfig>,
+        v: &<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField,
+        transcript: &mut Cfg::Transcript,
+        proof_reader: impl Read,
+    ) -> bool {
+        let opening = <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Opening::deserialize_from(
+            proof_reader,
+        )
+        .unwrap();
+
+        let verified = Cfg::PCS::verify(
+            pcs_params,
+            &self.config.mpi_config,
+            pcs_verification_key,
+            commitment,
+            open_at,
+            *v,
+            transcript,
+            &opening,
+        );
+
+        let mut buffer = vec![];
+        opening.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
+        transcript.append_u8_slice(&buffer);
 
         verified
     }

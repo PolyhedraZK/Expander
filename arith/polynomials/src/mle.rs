@@ -3,7 +3,7 @@ use ark_std::{log2, rand::RngCore};
 
 use crate::EqPolynomial;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct MultiLinearPoly<F: Field> {
     pub coeffs: Vec<F>,
 }
@@ -21,6 +21,33 @@ impl<F: Field> MultiLinearPoly<F> {
     pub fn random(nv: usize, mut rng: impl RngCore) -> Self {
         let coeff = (0..1 << nv).map(|_| F::random_unsafe(&mut rng)).collect();
         Self { coeffs: coeff }
+    }
+
+    #[inline]
+    /// # Safety
+    /// The returned MultiLinearPoly should not be mutable in order not to mess up the original vector
+    ///
+    /// PCS may take MultiLinearPoly as input
+    /// However, it is inefficient to copy the entire vector to create a new MultiLinearPoly
+    /// Here we introduce a wrap function to reuse the memory space assigned to the original vector
+    /// This is unsafe, and it is recommended to destroy the wrapper immediately after use
+    /// Example Usage:
+    ///
+    /// let vs = vec![F::ONE; 999999];
+    /// let mle_wrapper = MultiLinearPoly::<F>::wrap_around(&vs); // no extensive memory copy here
+    ///
+    /// // do something to mle
+    ///
+    /// mle_wrapper.wrapper_self_destroy() // please do not use drop here, it's incorrect
+    ///
+    pub unsafe fn wrap_around(coeffs: &Vec<F>) -> Self {
+        Self {
+            coeffs: Vec::from_raw_parts(coeffs.as_ptr() as *mut F, coeffs.len(), coeffs.capacity()),
+        }
+    }
+
+    pub fn wrapper_self_detroy(self) {
+        self.coeffs.leak();
     }
 
     #[inline]

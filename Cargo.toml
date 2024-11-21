@@ -13,7 +13,7 @@ members = [
     "config/mpi_config", # definitions of mpi communication toolkit
     "config/config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
     "gkr", 
-    "pcs",
+    "poly_commit",
     "sumcheck",
     "transcript",
     "tree"
