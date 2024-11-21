@@ -1,9 +1,11 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ops::Mul};
 
 use arith::{Field, FieldSerde, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
+use gf2_128::GF2_128;
 use polynomials::MultiLinearPoly;
+use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 use crate::{
     orion::{
@@ -141,5 +143,60 @@ fn test_orion_commit_consistency() {
     (19..=25).for_each(|num_vars| {
         test_orion_commit_consistency_generic::<GF2, GF2x64>(num_vars);
         test_orion_commit_consistency_generic::<GF2, GF2x128>(num_vars);
+    });
+}
+
+fn test_orion_pcs_full_e2e_generics<F, EvalF, ComPackF, OpenPackF>(num_vars: usize)
+where
+    F: Field + FieldSerde,
+    EvalF: Field + FieldSerde + Mul<F, Output = EvalF> + From<F>,
+    ComPackF: SimdField<Scalar = F>,
+    OpenPackF: SimdField<Scalar = F>,
+{
+    let mut rng = test_rng();
+
+    let random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
+    let random_poly_ext = MultiLinearPoly::new(
+        random_poly
+            .coeffs
+            .iter()
+            .cloned()
+            .map(EvalF::from)
+            .collect(),
+    );
+    let random_point: Vec<_> = (0..num_vars)
+        .map(|_| EvalF::random_unsafe(&mut rng))
+        .collect();
+    let expected_eval = random_poly_ext.evaluate_jolt(&random_point);
+
+    let mut transcript: BytesHashTranscript<EvalF, Keccak256hasher> = BytesHashTranscript::new();
+    let mut transcript_cloned = transcript.clone();
+
+    let orion_pp =
+        OrionPublicParams::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
+
+    let commit_with_data = orion_pp.commit::<F, ComPackF>(&random_poly).unwrap();
+
+    let (_, opening) = orion_pp.open::<F, EvalF, ComPackF, OpenPackF, _>(
+        &random_poly,
+        &commit_with_data,
+        &random_point,
+        &mut transcript,
+    );
+
+    assert!(orion_pp.verify::<F, EvalF, ComPackF, OpenPackF, _>(
+        &commit_with_data.into(),
+        &random_point,
+        expected_eval,
+        &opening,
+        &mut transcript_cloned
+    ));
+}
+
+#[test]
+fn test_orion_pcs_full_e2e() {
+    (19..=25).for_each(|num_vars| {
+        test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x64, GF2x8>(num_vars);
+        test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x128, GF2x8>(num_vars);
     });
 }

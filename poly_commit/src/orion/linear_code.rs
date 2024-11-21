@@ -9,9 +9,9 @@ use super::{OrionPCSError, OrionResult};
  * IMPLEMENTATIONS FOR ORION EXPANDER GRAPH *
  ********************************************/
 
-type DiredtedEdge = usize;
+type DirectedEdge = usize;
 
-type DirectedNeighboring = Vec<DiredtedEdge>;
+type DirectedNeighboring = Vec<DirectedEdge>;
 
 #[derive(Clone, Debug)]
 pub struct OrionExpanderGraph {

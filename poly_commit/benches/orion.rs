@@ -5,7 +5,7 @@ use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gf2::{GF2x128, GF2x8, GF2};
 use gf2_128::GF2_128;
-use pcs::{OrionPCS, OrionPCSSetup, PolynomialCommitmentScheme, ORION_CODE_PARAMETER_INSTANCE};
+use poly_commit::{OrionPublicParams, ORION_CODE_PARAMETER_INSTANCE};
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 use tynm::type_name;
@@ -32,25 +32,13 @@ fn committing_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
     for num_vars in lowest_num_vars..=highest_num_vars {
         let random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
 
-        let orion_pp = OrionPCS::<F, EvalF, ComPackF, OpenPackF, T>::gen_srs_for_testing(
-            &mut rng,
-            &OrionPCSSetup {
-                num_vars,
-                code_parameter: ORION_CODE_PARAMETER_INSTANCE,
-            },
-        );
+        let orion_pp =
+            OrionPublicParams::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
         group
             .bench_function(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
-                |b| {
-                    b.iter(|| {
-                        _ = black_box(OrionPCS::<F, EvalF, ComPackF, OpenPackF, T>::commit(
-                            &orion_pp,
-                            &random_poly,
-                        ))
-                    })
-                },
+                |b| b.iter(|| _ = black_box(orion_pp.commit::<F, ComPackF>(&random_poly).unwrap())),
             )
             .sample_size(10);
     }
@@ -93,27 +81,20 @@ fn opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
             .map(|_| EvalF::random_unsafe(&mut rng))
             .collect();
 
-        let orion_pp = OrionPCS::<F, EvalF, ComPackF, OpenPackF, T>::gen_srs_for_testing(
-            &mut rng,
-            &OrionPCSSetup {
-                num_vars,
-                code_parameter: ORION_CODE_PARAMETER_INSTANCE,
-            },
-        );
+        let orion_pp =
+            OrionPublicParams::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
-        let commitment_with_data =
-            OrionPCS::<F, EvalF, ComPackF, OpenPackF, T>::commit(&orion_pp, &random_poly);
+        let commitment_with_data = orion_pp.commit::<F, ComPackF>(&random_poly).unwrap();
 
         group
             .bench_function(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(OrionPCS::<F, EvalF, ComPackF, OpenPackF, T>::open(
-                            &orion_pp,
+                        _ = black_box(orion_pp.open::<F, EvalF, ComPackF, OpenPackF, T>(
                             &random_poly,
-                            &random_point,
                             &commitment_with_data,
+                            &random_point,
                             &mut transcript,
                         ))
                     })

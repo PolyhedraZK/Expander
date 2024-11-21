@@ -39,8 +39,13 @@ pub fn expander_pcs_init_testing_only<
     )
 }
 
+pub const PCS_SOUNDNESS_BITS: usize = 128;
+
 mod utils;
 use transcript::Transcript;
 use utils::PCSEmptyType;
 
 pub mod raw;
+
+pub mod orion;
+pub use self::orion::*;

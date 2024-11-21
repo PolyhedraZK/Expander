@@ -15,7 +15,6 @@ members = [
     "gkr",
     "poly_commit",
     "sumcheck",
-    "tree",
     "transcript",
     "tree"
 ]
