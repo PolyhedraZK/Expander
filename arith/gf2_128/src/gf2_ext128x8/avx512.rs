@@ -80,7 +80,7 @@ const PACKED_INV_2: [__m512i; 2] = [_M512_INV_2, _M512_INV_2]; // Should not be 
 
 // p(x) = x^128 + x^7 + x^2 + x + 1
 impl Field for AVX512GF2_128x8 {
-    const NAME: &'static str = "AVX512 Galios Field 2^128";
+    const NAME: &'static str = "AVX512 Galois Field 2^128 SIMD 8";
 
     // size in bytes
     const SIZE: usize = 512 * 2 / 8;
@@ -386,7 +386,7 @@ impl Debug for AVX512GF2_128x8 {
         let mut data = [0u8; 128];
         unsafe {
             _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data[0]);
-            _mm512_storeu_si512((data.as_mut_ptr() as *mut i32).offset(16), self.data[0]);
+            _mm512_storeu_si512((data.as_mut_ptr() as *mut i32).offset(16), self.data[1]);
         }
         f.debug_struct("AVX512GF2_128x8")
             .field("data", &data)

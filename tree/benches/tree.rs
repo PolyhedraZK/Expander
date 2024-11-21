@@ -1,10 +1,7 @@
-use std::time::Duration;
-
 use arith::{Field, SimdField};
 use ark_std::{rand::RngCore, test_rng};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use gf2::{GF2x128, GF2x64, GF2x8, GF2};
-use mersenne31::{M31x16, M31};
+use gf2::{GF2x128, GF2};
 use tree::{Leaf, Tree, LEAF_BYTES};
 use tynm::type_name;
 
@@ -33,8 +30,7 @@ fn tree_building_benchmark(c: &mut Criterion) {
                     Tree::new_with_leaves(leaves_benchmark.clone());
                 })
             })
-            .sample_size(10)
-            .measurement_time(Duration::from_secs(5));
+            .sample_size(10);
     }
 }
 
@@ -64,16 +60,12 @@ where
                     Tree::compact_new_with_field_elems::<F, PackF>(&field_elems_benchmark);
                 })
             })
-            .sample_size(10)
-            .measurement_time(Duration::from_secs(5));
+            .sample_size(10);
     }
 }
 
 fn compact_field_elem_tree_building_benchmark(c: &mut Criterion) {
-    compact_field_elem_tree_building_benchmark_generic::<GF2, GF2x8>(c);
-    compact_field_elem_tree_building_benchmark_generic::<GF2, GF2x64>(c);
     compact_field_elem_tree_building_benchmark_generic::<GF2, GF2x128>(c);
-    compact_field_elem_tree_building_benchmark_generic::<M31, M31x16>(c)
 }
 
 fn compact_packed_field_elem_tree_building_benchmark_generic<F, PackF>(c: &mut Criterion)
@@ -101,14 +93,12 @@ where
                     Tree::compact_new_with_packed_field_elems::<F, PackF>(&field_elems_benchmark);
                 })
             })
-            .sample_size(10)
-            .measurement_time(Duration::from_secs(5));
+            .sample_size(10);
     }
 }
 
 fn compact_packed_field_elem_tree_building_benchmark(c: &mut Criterion) {
-    compact_packed_field_elem_tree_building_benchmark_generic::<GF2, GF2x8>(c);
-    compact_packed_field_elem_tree_building_benchmark_generic::<GF2, GF2x64>(c);
+    compact_packed_field_elem_tree_building_benchmark_generic::<GF2, GF2x128>(c);
 }
 
 criterion_group!(

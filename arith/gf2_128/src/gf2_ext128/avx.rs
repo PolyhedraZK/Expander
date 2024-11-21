@@ -39,7 +39,7 @@ impl FieldSerde for AVXGF2_128 {
 }
 
 impl Field for AVXGF2_128 {
-    const NAME: &'static str = "Galios Field 2^128";
+    const NAME: &'static str = "AVX Galois Field 2^128";
 
     const SIZE: usize = 128 / 8;
 
