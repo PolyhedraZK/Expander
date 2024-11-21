@@ -46,11 +46,6 @@ impl FieldSerde for M31 {
         v = mod_reduce_u32(v);
         Ok(M31 { v })
     }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(reader: R) -> FieldSerdeResult<Self> {
-        Self::deserialize_from(reader)
-    }
 }
 
 impl M31 {

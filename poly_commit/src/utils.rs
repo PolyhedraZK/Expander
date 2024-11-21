@@ -14,12 +14,6 @@ impl FieldSerde for PCSEmptyType {
     fn deserialize_from<R: std::io::Read>(_reader: R) -> arith::FieldSerdeResult<Self> {
         Ok(Self {})
     }
-
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(
-        _reader: R,
-    ) -> arith::FieldSerdeResult<Self> {
-        unimplemented!()
-    }
 }
 
 impl StructuredReferenceString for PCSEmptyType {

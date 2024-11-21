@@ -162,11 +162,6 @@ impl FieldSerde for Fr {
             None => Err(FieldSerdeError::DeserializeError),
         }
     }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(reader: R) -> FieldSerdeResult<Self> {
-        Self::deserialize_from(reader)
-    }
 }
 
 impl ExtensionField for Fr {

@@ -26,11 +26,6 @@ impl FieldSerde for GF2x64 {
             v: u64::from_le_bytes(u),
         })
     }
-
-    #[inline]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(_reader: R) -> FieldSerdeResult<Self> {
-        unimplemented!("We don't have serialization in ecc for gf2x64")
-    }
 }
 
 impl Field for GF2x64 {

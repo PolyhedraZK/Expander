@@ -1,18 +1,18 @@
 [workspace]
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
-    "arith/gf2",    
+    "arith/gf2",
     "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31",
     "arith/polynomials",
-    "bi-kzg", 
-    "circuit", 
+    "bi-kzg",
+    "circuit",
     "config", # gkr_field_config + pcs_config + transcript_config
     "config/gkr_field_config", # definitions of all field types used in gkr and pcs
     "config/mpi_config", # definitions of mpi communication toolkit
     "config/config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
-    "gkr", 
+    "gkr",
     "poly_commit",
     "sumcheck",
     "transcript",

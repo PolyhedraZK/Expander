@@ -1,4 +1,4 @@
-use arith::{Field, FieldSerde};
+use arith::Field;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use poly_commit::raw::RawExpanderGKR;
@@ -9,7 +9,7 @@ use polynomials::MultiLinearPoly;
 use rand::thread_rng;
 use transcript::Transcript;
 
-pub fn test_pcs<F: Field + FieldSerde, P: PolynomialCommitmentScheme<F>>(
+pub fn test_pcs<F: Field, P: PolynomialCommitmentScheme<F>>(
     params: &P::Params,
     poly: &P::Poly,
     xs: &[P::EvalPoint],

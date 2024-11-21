@@ -25,14 +25,6 @@ impl FieldSerde for GF2x8 {
         reader.read_exact(&mut u)?;
         Ok(GF2x8 { v: u[0] })
     }
-
-    #[inline]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> FieldSerdeResult<Self> {
-        unimplemented!("We don't have serialization in ecc for gf2x8")
-        // let mut u = [0u8; 32];
-        // reader.read_exact(&mut u)?;
-        // Ok(GF2x8 { v: u[0] })
-    }
 }
 
 impl Field for GF2x8 {

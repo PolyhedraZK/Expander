@@ -16,7 +16,7 @@ pub trait StructuredReferenceString {
 }
 
 /// Standard Polynomial commitment scheme (PCS) trait.
-pub trait PolynomialCommitmentScheme<F: Field + FieldSerde> {
+pub trait PolynomialCommitmentScheme<F: Field> {
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default;

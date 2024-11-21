@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
 
-use arith::{Field, FieldSerde, SimdField};
+use arith::{Field, SimdField};
 use ark_std::{end_timer, log2, start_timer};
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
@@ -68,7 +68,7 @@ impl Tree {
     #[inline]
     pub fn compact_new_with_field_elems<F, PackF>(field_elems: &[F]) -> Self
     where
-        F: Field + FieldSerde,
+        F: Field,
         PackF: SimdField<Scalar = F>,
     {
         let packed_elems: Vec<PackF> = field_elems
@@ -83,7 +83,7 @@ impl Tree {
     #[inline]
     pub fn compact_new_with_packed_field_elems<F, PackF>(field_elems: &[PackF]) -> Self
     where
-        F: Field + FieldSerde,
+        F: Field,
         PackF: SimdField<Scalar = F>,
     {
         let mut serialized_bytes: Vec<u8> = vec![0u8; PackF::SIZE * field_elems.len()];
@@ -108,7 +108,7 @@ impl Tree {
     #[inline]
     pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
     where
-        F: Field + FieldSerde,
+        F: Field,
         PackF: SimdField<Scalar = F>,
     {
         unpack_field_elems_from_bytes::<F, PackF>(&self.leaves)
@@ -340,7 +340,7 @@ pub(crate) fn is_left_child(index: usize) -> bool {
 #[inline]
 pub(crate) fn unpack_field_elems_from_bytes<F, PackF>(leaves: &[Leaf]) -> Vec<F>
 where
-    F: Field + FieldSerde,
+    F: Field,
     PackF: SimdField<Scalar = F>,
 {
     let mut bytes = vec![0u8; leaves.len() * LEAF_BYTES];

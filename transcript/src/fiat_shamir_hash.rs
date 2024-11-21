@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use arith::{Field, FieldSerde};
+use arith::Field;
 
 pub mod sha2_256;
 pub use sha2_256::*;
@@ -25,7 +25,7 @@ pub trait FiatShamirBytesHash: Clone + Debug {
     fn hash_inplace(buffer: &mut [u8]);
 }
 
-pub trait FiatShamirFieldHash<F: Field + FieldSerde>: Clone + Debug {
+pub trait FiatShamirFieldHash<F: Field>: Clone + Debug {
     /// Create a new hash instance.
     fn new() -> Self;
 

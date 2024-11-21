@@ -21,9 +21,6 @@ pub trait FieldSerde: Sized {
 
     /// deserialize bytes into field
     fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self>;
-
-    /// deserialize bytes into field following ecc format
-    fn try_deserialize_from_ecc_format<R: Read>(reader: R) -> FieldSerdeResult<Self>;
 }
 
 macro_rules! field_serde_for_integer {
@@ -43,10 +40,6 @@ macro_rules! field_serde_for_integer {
                 let mut buffer = [0u8; Self::SERIALIZED_SIZE];
                 reader.read_exact(&mut buffer)?;
                 Ok($int_type::from_le_bytes(buffer))
-            }
-
-            fn try_deserialize_from_ecc_format<R: Read>(_reader: R) -> FieldSerdeResult<Self> {
-                unimplemented!("not implemented")
             }
         }
     };
@@ -75,10 +68,6 @@ impl<V: FieldSerde> FieldSerde for Vec<V> {
         }
         Ok(v)
     }
-
-    fn try_deserialize_from_ecc_format<R: Read>(_reader: R) -> FieldSerdeResult<Self> {
-        unimplemented!()
-    }
 }
 
 // Consider use const generics after it gets stable
@@ -101,9 +90,5 @@ impl FieldSerde for [u64; 4] {
             *r = u64::from_le_bytes(buffer);
         }
         Ok(ret)
-    }
-
-    fn try_deserialize_from_ecc_format<R: Read>(_reader: R) -> FieldSerdeResult<Self> {
-        unimplemented!()
     }
 }

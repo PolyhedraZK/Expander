@@ -27,7 +27,7 @@ use config::FiatShamirHashType;
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
 use gkr_field_config::FieldType;
 
-fn dump_proof_and_claimed_v<F: Field + FieldSerde>(
+fn dump_proof_and_claimed_v<F: Field>(
     proof: &Proof,
     claimed_v: &F,
 ) -> Result<Vec<u8>, FieldSerdeError> {
@@ -39,9 +39,7 @@ fn dump_proof_and_claimed_v<F: Field + FieldSerde>(
     Ok(bytes)
 }
 
-fn load_proof_and_claimed_v<F: Field + FieldSerde>(
-    bytes: &[u8],
-) -> Result<(Proof, F), FieldSerdeError> {
+fn load_proof_and_claimed_v<F: Field>(bytes: &[u8]) -> Result<(Proof, F), FieldSerdeError> {
     let mut cursor = Cursor::new(bytes);
 
     let proof = Proof::deserialize_from(&mut cursor)?;

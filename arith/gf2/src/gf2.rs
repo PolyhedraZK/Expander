@@ -2,7 +2,6 @@
 // credit to intel for the original implementation
 // https://www.intel.com/content/dam/develop/external/us/en/documents/clmul-wp-rev-2-02-2014-04-20.pdf
 
-use std::io::Read;
 use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
@@ -32,11 +31,6 @@ impl FieldSerde for GF2 {
         let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
         Ok(GF2 { v: u[0] % 2 })
-    }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(reader: R) -> FieldSerdeResult<Self> {
-        Self::deserialize_from(reader)
     }
 }
 
