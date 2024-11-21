@@ -2,7 +2,6 @@
 // credit to intel for the original implementation
 // https://www.intel.com/content/dam/develop/external/us/en/documents/clmul-wp-rev-2-02-2014-04-20.pdf
 
-use std::io::Read;
 use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
