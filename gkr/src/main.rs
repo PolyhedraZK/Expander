@@ -10,6 +10,7 @@ use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 
+use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
 use transcript::{BytesHashTranscript, SHA256hasher};
 
 use gkr::{
@@ -20,8 +21,9 @@ use gkr::{
     Prover,
 };
 
-#[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
-use config::FiatShamirHashType;
+#[allow(unused_imports)]
+// The FiatShamirHashType and PolynomialCommitmentType import is used in the macro expansion
+use config::{FiatShamirHashType, PolynomialCommitmentType};
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
 use gkr_field_config::FieldType;
 
@@ -52,13 +54,24 @@ fn main() {
 
     let mpi_config = MPIConfig::new();
 
-    declare_gkr_config!(M31ExtConfigSha2, FieldType::M31, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        M31ExtConfigSha2,
+        FieldType::M31,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
     declare_gkr_config!(
         BN254ConfigSha2,
         FieldType::BN254,
-        FiatShamirHashType::SHA256
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
     );
-    declare_gkr_config!(GF2ExtConfigSha2, FieldType::GF2, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        GF2ExtConfigSha2,
+        FieldType::GF2,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
 
     match args.field.as_str() {
         "m31ext3" => match args.scheme.as_str() {
@@ -162,6 +175,12 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
 
     println!("Circuit loaded!");
 
+    let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
+            circuit_template.log_input_size(),
+            &config.mpi_config,
+        );
+
     let start_time = std::time::Instant::now();
     let _ = circuits
         .into_iter()
@@ -169,12 +188,15 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         .map(|(i, mut c)| {
             let partial_proof_cnt = partial_proof_cnts[i].clone();
             let local_config = config.clone();
+            let pcs_params = pcs_params.clone();
+            let pcs_proving_key = pcs_proving_key.clone();
+            let mut pcs_scratch = pcs_scratch.clone();
             thread::spawn(move || {
+                // bench func
+                let mut prover = Prover::new(&local_config);
+                prover.prepare_mem(&c);
                 loop {
-                    // bench func
-                    let mut prover = Prover::new(&local_config);
-                    prover.prepare_mem(&c);
-                    prover.prove(&mut c);
+                    prover.prove(&mut c, &pcs_params, &pcs_proving_key, &mut pcs_scratch);
                     // update cnt
                     let mut cnt = partial_proof_cnt.lock().unwrap();
                     let proof_cnt_this_round = circuit_copy_size * pack_size;
