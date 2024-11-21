@@ -64,6 +64,8 @@ pub fn test_gkr_pcs<
 
     for xx in xs {
         let ExpanderGKRChallenge { x, x_simd, x_mpi } = xx;
+
+        transcript.lock_proof();
         let opening = P::open(
             params,
             mpi_config,
@@ -73,11 +75,13 @@ pub fn test_gkr_pcs<
             transcript,
             &mut scratch_pad,
         );
+        transcript.unlock_proof();
 
         if mpi_config.is_root() {
             // this will always pass for RawExpanderGKR, so make sure it is correct
             let v = RawExpanderGKR::<C, T>::eval(&coeffs_gathered, x, x_simd, x_mpi);
 
+            transcript.lock_proof();
             assert!(P::verify(
                 params,
                 mpi_config,
@@ -88,6 +92,7 @@ pub fn test_gkr_pcs<
                 transcript,
                 &opening
             ));
+            transcript.unlock_proof();
         }
     }
 }
