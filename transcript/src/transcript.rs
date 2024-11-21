@@ -1,13 +1,13 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use arith::{Field, FieldSerde};
+use arith::Field;
 
 use crate::{
     fiat_shamir_hash::{FiatShamirBytesHash, FiatShamirFieldHash},
     Proof,
 };
 
-pub trait Transcript<F: Field + FieldSerde>: Clone + Debug {
+pub trait Transcript<F: Field>: Clone + Debug {
     /// Create a new transcript.
     fn new() -> Self;
 
@@ -66,7 +66,7 @@ pub trait Transcript<F: Field + FieldSerde>: Clone + Debug {
 }
 
 #[derive(Clone, Default, Debug, PartialEq)]
-pub struct BytesHashTranscript<F: Field + FieldSerde, H: FiatShamirBytesHash> {
+pub struct BytesHashTranscript<F: Field, H: FiatShamirBytesHash> {
     phantom: PhantomData<(F, H)>,
 
     /// The digest bytes.
@@ -83,7 +83,7 @@ pub struct BytesHashTranscript<F: Field + FieldSerde, H: FiatShamirBytesHash> {
     proof_locked_at: usize,
 }
 
-impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, H> {
+impl<F: Field, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, H> {
     fn new() -> Self {
         Self {
             phantom: PhantomData,
@@ -159,7 +159,7 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashT
     }
 }
 
-impl<F: Field + FieldSerde, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
+impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
     /// Hash the input into the output.
     pub fn hash_to_digest(&mut self) {
         let hash_end_index = self.proof.bytes.len();
@@ -176,7 +176,7 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FieldHashTranscript<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> {
+pub struct FieldHashTranscript<F: Field, H: FiatShamirFieldHash<F>> {
     /// Internal hasher, it's a little costly to create a new hasher
     pub hasher: H,
 
@@ -193,7 +193,7 @@ pub struct FieldHashTranscript<F: Field + FieldSerde, H: FiatShamirFieldHash<F>>
     pub proof_locked: bool,
 }
 
-impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<F, H> {
+impl<F: Field, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<F, H> {
     #[inline(always)]
     fn new() -> Self {
         Self {
@@ -279,7 +279,7 @@ impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHa
     }
 }
 
-impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> FieldHashTranscript<F, H> {
+impl<F: Field, H: FiatShamirFieldHash<F>> FieldHashTranscript<F, H> {
     pub fn hash_to_digest(&mut self) {
         if !self.data_pool.is_empty() {
             self.digest = self.hasher.hash(&self.data_pool);

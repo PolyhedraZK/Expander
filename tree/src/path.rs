@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
 
-use arith::{Field, FieldSerde, SimdField};
+use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
@@ -84,7 +84,7 @@ impl Path {
     #[inline]
     pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
     where
-        F: Field + FieldSerde,
+        F: Field,
         PackF: SimdField<Scalar = F>,
     {
         unpack_field_elems_from_bytes::<F, PackF>(&[self.leaf])
@@ -132,7 +132,7 @@ impl RangePath {
     #[inline]
     pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
     where
-        F: Field + FieldSerde,
+        F: Field,
         PackF: SimdField<Scalar = F>,
     {
         unpack_field_elems_from_bytes::<F, PackF>(&self.leaves)

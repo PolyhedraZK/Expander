@@ -52,22 +52,6 @@ impl FieldSerde for NeonGF2_128x8 {
         });
         Ok(res)
     }
-
-    #[inline]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> FieldSerdeResult<Self>
-    where
-        Self: Sized,
-    {
-        unimplemented!("We don't have a serialization for gf2_128 in ecc yet.")
-
-        // let mut res = Self::zero();
-        // res.v.iter_mut().for_each(|vv| {
-        //     let mut u = [0u8; 32];
-        //     reader.read_exact(&mut u).unwrap();
-        //     *vv = unsafe { transmute::<[u8; 16], uint32x4_t>(u[..16].try_into().unwrap()) };
-        // });
-        // Ok(res)
-    }
 }
 
 impl Field for NeonGF2_128x8 {

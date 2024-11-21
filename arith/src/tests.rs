@@ -6,7 +6,7 @@ use field::{
 };
 use rand::RngCore;
 
-use crate::{ExtensionField, Field, FieldSerde, SimdField};
+use crate::{ExtensionField, Field, SimdField};
 
 #[cfg(test)]
 mod bn254;
@@ -94,7 +94,7 @@ pub fn random_extension_field_tests<F: ExtensionField>(_name: String) {
     }
 }
 
-pub fn random_field_tests<F: Field + FieldSerde>(type_name: String) {
+pub fn random_field_tests<F: Field>(type_name: String) {
     let mut rng = test_rng();
 
     random_multiplication_tests::<F, _>(&mut rng, type_name.clone());

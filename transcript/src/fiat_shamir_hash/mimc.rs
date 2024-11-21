@@ -1,4 +1,4 @@
-use arith::{Field, FieldSerde};
+use arith::Field;
 
 use tiny_keccak::{Hasher, Keccak};
 
@@ -15,7 +15,7 @@ pub struct MIMCHasher<F: Field> {
     constants: MIMCConstants<F>,
 }
 
-impl<F: Field + FieldSerde> FiatShamirFieldHash<F> for MIMCHasher<F> {
+impl<F: Field> FiatShamirFieldHash<F> for MIMCHasher<F> {
     fn new() -> Self {
         Self {
             constants: generate_mimc_constants::<F>(),
@@ -32,7 +32,7 @@ impl<F: Field + FieldSerde> FiatShamirFieldHash<F> for MIMCHasher<F> {
     }
 }
 
-impl<F: Field + FieldSerde> MIMCHasher<F> {
+impl<F: Field> MIMCHasher<F> {
     #[inline(always)]
     pub fn pow5(x: F) -> F {
         let x2 = x * x;

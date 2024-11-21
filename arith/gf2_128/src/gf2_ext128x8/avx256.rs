@@ -69,18 +69,6 @@ impl FieldSerde for AVX256GF2_128x8 {
             })
         }
     }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> FieldSerdeResult<Self> {
-        unimplemented!("We don't have a serialization for gf2_128 in ecc yet.")
-
-        // let mut buf = [0u8; 32];
-        // reader.read_exact(&mut buf)?;
-        // let data: __m128i = unsafe { _mm_loadu_si128(buf.as_ptr() as *const __m128i) };
-        // Ok(Self {
-        //     data: Self::pack_full(data),
-        // })
-    }
 }
 
 const PACKED_0: [__m256i; 4] = [

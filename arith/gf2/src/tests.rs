@@ -1,9 +1,7 @@
 use ark_std::test_rng;
 use std::io::Cursor;
 
-use arith::{
-    random_field_tests, random_inversion_tests, random_simd_field_tests, Field, FieldSerde,
-};
+use arith::{random_field_tests, random_inversion_tests, random_simd_field_tests, Field};
 
 use crate::{GF2x128, GF2x64, GF2x8, GF2};
 
@@ -27,7 +25,7 @@ fn test_simd_field() {
     random_simd_field_tests::<GF2x128>("Vectorized GF2 len 128".to_string());
 }
 
-fn custom_serde_vectorize_gf2<F: Field + FieldSerde>() {
+fn custom_serde_vectorize_gf2<F: Field>() {
     let a = F::from(0);
     let mut buffer = vec![];
     assert!(a.serialize_into(&mut buffer).is_ok());

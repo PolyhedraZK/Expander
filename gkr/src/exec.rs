@@ -7,11 +7,15 @@ use std::{
 
 use arith::{Field, FieldSerde, FieldSerdeError};
 use circuit::Circuit;
-use config::{Config, GKRConfig, GKRScheme, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
+use config::{
+    Config, GKRConfig, GKRScheme, PolynomialCommitmentType, SENTINEL_BN254, SENTINEL_GF2,
+    SENTINEL_M31,
+};
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 
+use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
 use transcript::{BytesHashTranscript, FieldHashTranscript, MIMCHasher, SHA256hasher};
 
 use log::{debug, info};
@@ -23,7 +27,7 @@ use config::FiatShamirHashType;
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
 use gkr_field_config::FieldType;
 
-fn dump_proof_and_claimed_v<F: Field + FieldSerde>(
+fn dump_proof_and_claimed_v<F: Field>(
     proof: &Proof,
     claimed_v: &F,
 ) -> Result<Vec<u8>, FieldSerdeError> {
@@ -35,9 +39,7 @@ fn dump_proof_and_claimed_v<F: Field + FieldSerde>(
     Ok(bytes)
 }
 
-fn load_proof_and_claimed_v<F: Field + FieldSerde>(
-    bytes: &[u8],
-) -> Result<(Proof, F), FieldSerdeError> {
+fn load_proof_and_claimed_v<F: Field>(bytes: &[u8]) -> Result<(Proof, F), FieldSerdeError> {
     let mut cursor = Cursor::new(bytes);
 
     let proof = Proof::deserialize_from(&mut cursor)?;
@@ -75,7 +77,19 @@ async fn run_command<'a, Cfg: GKRConfig>(
             circuit.load_witness_file(witness_file);
             let mut prover = gkr::Prover::new(&config);
             prover.prepare_mem(&circuit);
-            let (claimed_v, proof) = prover.prove(&mut circuit);
+            // TODO: Read PCS  setup from files
+            let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
+                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
+                    circuit.log_input_size(),
+                    &config.mpi_config,
+                );
+
+            let (claimed_v, proof) = prover.prove(
+                &mut circuit,
+                &pcs_params,
+                &pcs_proving_key,
+                &mut pcs_scratch,
+            );
 
             if config.mpi_config.is_root() {
                 let bytes = dump_proof_and_claimed_v(&proof, &claimed_v)
@@ -103,9 +117,23 @@ async fn run_command<'a, Cfg: GKRConfig>(
             let bytes = fs::read(output_file).expect("Unable to read proof from file.");
             let (proof, claimed_v) =
                 load_proof_and_claimed_v(&bytes).expect("Unable to deserialize proof.");
+
+            // TODO: Read PCS  setup from files
+            let (pcs_params, _pcs_proving_key, pcs_verification_key, mut _pcs_scratch) =
+                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
+                    circuit.log_input_size(),
+                    &config.mpi_config,
+                );
             let verifier = gkr::Verifier::new(&config);
             let public_input = circuit.public_input.clone();
-            assert!(verifier.verify(&mut circuit, &public_input, &claimed_v, &proof));
+            assert!(verifier.verify(
+                &mut circuit,
+                &public_input,
+                &claimed_v,
+                &pcs_params,
+                &pcs_verification_key,
+                &proof
+            ));
             println!("success");
         }
         "serve" => {
@@ -120,10 +148,24 @@ async fn run_command<'a, Cfg: GKRConfig>(
             let mut prover = gkr::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let verifier = gkr::Verifier::new(&config);
+
+            // TODO: Read PCS  setup from files
+            let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
+                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
+                    circuit.log_input_size(),
+                    &config.mpi_config,
+                );
+
             let circuit = Arc::new(Mutex::new(circuit));
             let circuit_clone_for_verifier = circuit.clone();
             let prover = Arc::new(Mutex::new(prover));
             let verifier = Arc::new(Mutex::new(verifier));
+            let pcs_params = Arc::new(Mutex::new(pcs_params));
+            let pcs_params_clone_for_verifier = pcs_params.clone();
+            let pcs_proving_key = Arc::new(Mutex::new(pcs_proving_key));
+            let pcs_verification_key = Arc::new(Mutex::new(pcs_verification_key));
+            let pcs_scratch = Arc::new(Mutex::new(pcs_scratch));
+
             let ready_time = chrono::offset::Utc::now();
             let ready = warp::path("ready").map(move || {
                 info!("Received ready request.");
@@ -137,8 +179,17 @@ async fn run_command<'a, Cfg: GKRConfig>(
                         let witness_bytes: Vec<u8> = bytes.to_vec();
                         let mut circuit = circuit.lock().unwrap();
                         let mut prover = prover.lock().unwrap();
+                        let pcs_params = pcs_params.lock().unwrap();
+                        let pcs_proving_key = pcs_proving_key.lock().unwrap();
+                        let mut pcs_scratch = pcs_scratch.lock().unwrap();
+
                         circuit.load_witness_bytes(&witness_bytes, true);
-                        let (claimed_v, proof) = prover.prove(&mut circuit);
+                        let (claimed_v, proof) = prover.prove(
+                            &mut circuit,
+                            &pcs_params,
+                            &pcs_proving_key,
+                            &mut pcs_scratch,
+                        );
                         reply::with_status(
                             dump_proof_and_claimed_v(&proof, &claimed_v).unwrap(),
                             StatusCode::OK,
@@ -163,10 +214,18 @@ async fn run_command<'a, Cfg: GKRConfig>(
 
                         let mut circuit = circuit_clone_for_verifier.lock().unwrap();
                         let verifier = verifier.lock().unwrap();
+                        let pcs_verification_key = pcs_verification_key.lock().unwrap();
                         circuit.load_witness_bytes(witness_bytes, true);
                         let public_input = circuit.public_input.clone();
                         let (proof, claimed_v) = load_proof_and_claimed_v(proof_bytes).unwrap();
-                        if verifier.verify(&mut circuit, &public_input, &claimed_v, &proof) {
+                        if verifier.verify(
+                            &mut circuit,
+                            &public_input,
+                            &claimed_v,
+                            &pcs_params_clone_for_verifier.lock().unwrap(),
+                            &pcs_verification_key,
+                            &proof,
+                        ) {
                             "success".to_string()
                         } else {
                             "failure".to_string()
@@ -216,13 +275,24 @@ async fn main() {
         mpi_config.world_size = args[5].parse::<i32>().expect("Parsing mpi size fails");
     }
 
-    declare_gkr_config!(M31ExtConfigSha2, FieldType::M31, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        M31ExtConfigSha2,
+        FieldType::M31,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
     declare_gkr_config!(
         BN254ConfigMIMC5,
         FieldType::BN254,
-        FiatShamirHashType::MIMC5
+        FiatShamirHashType::MIMC5,
+        PolynomialCommitmentType::Raw
     );
-    declare_gkr_config!(GF2ExtConfigSha2, FieldType::GF2, FiatShamirHashType::SHA256);
+    declare_gkr_config!(
+        GF2ExtConfigSha2,
+        FieldType::GF2,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
 
     let circuit_file = &args[2];
     let field_type = detect_field_type_from_circuit_file(circuit_file);

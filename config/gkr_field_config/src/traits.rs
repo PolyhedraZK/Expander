@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use arith::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
+use arith::{ExtensionField, Field, FieldForECC, SimdField};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldType {
@@ -14,7 +14,7 @@ pub trait GKRFieldConfig: Default + Debug + Clone + Send + Sync + 'static {
     const FIELD_TYPE: FieldType;
 
     /// Field type for the circuit, e.g., M31
-    type CircuitField: Field + FieldSerde + FieldForECC + Send;
+    type CircuitField: Field + FieldForECC + Send;
 
     /// Field type for the challenge, e.g., M31Ext3
     type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send;
@@ -25,7 +25,7 @@ pub trait GKRFieldConfig: Default + Debug + Clone + Send + Sync + 'static {
         + Send;
 
     /// Simd field for circuit, e.g., M31x16
-    type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + FieldSerde + Send;
+    type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + Send;
 
     /// API to allow for multiplications between the challenge and the circuit field
     fn challenge_mul_circuit_field(

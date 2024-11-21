@@ -7,6 +7,8 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
+use crate::FieldSerde;
+
 /// Field definitions.
 pub trait Field:
     Copy
@@ -32,6 +34,7 @@ pub trait Field:
     + for<'a> AddAssign<&'a Self>
     + for<'a> SubAssign<&'a Self>
     + for<'a> MulAssign<&'a Self>
+    + FieldSerde
 {
     /// name
     const NAME: &'static str;

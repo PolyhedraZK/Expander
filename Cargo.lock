@@ -554,6 +554,7 @@ dependencies = [
  "mersenne31",
  "mpi",
  "mpi_config",
+ "poly_commit",
  "transcript",
 ]
 
@@ -563,6 +564,7 @@ version = "0.1.0"
 dependencies = [
  "config",
  "gkr_field_config",
+ "poly_commit",
  "proc-macro2",
  "quote",
  "syn 2.0.87",
@@ -935,6 +937,7 @@ dependencies = [
  "mersenne31",
  "mpi",
  "mpi_config",
+ "poly_commit",
  "polynomials",
  "rand",
  "sha2",
@@ -1715,24 +1718,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
-name = "pcs"
-version = "0.1.0"
-dependencies = [
- "arith",
- "ark-std",
- "criterion",
- "gf2",
- "gf2_128",
- "mersenne31",
- "polynomials",
- "rand",
- "thiserror",
- "transcript",
- "tree",
- "tynm",
-]
-
-[[package]]
 name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1802,6 +1787,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51bae2ac328883f7acdfea3d66a7c35751187f870bc81f94563733a154d7a670"
 dependencies = [
  "plotters-backend",
+]
+
+[[package]]
+name = "poly_commit"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "gkr_field_config",
+ "mpi_config",
+ "polynomials",
+ "rand",
+ "transcript",
 ]
 
 [[package]]
@@ -2365,7 +2362,6 @@ dependencies = [
  "criterion",
  "gf2",
  "gf2_128",
- "mersenne31",
  "rayon",
  "sha2",
  "tynm",

@@ -57,7 +57,7 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for Gate<C, INPUT_N
         let (coef_type, coef) = match coef_type_u8 {
             1 => (
                 CoefType::Constant,
-                C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
+                C::CircuitField::deserialize_from(&mut reader).unwrap(),
             ),
             2 => (CoefType::Random, C::CircuitField::ZERO),
             3 => {
@@ -102,7 +102,7 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for CustomGateWrapp
         let (coef_type, coef) = match coef_type_u8 {
             1 => (
                 CoefType::Constant,
-                C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
+                C::CircuitField::deserialize_from(&mut reader).unwrap(),
             ),
             2 => (CoefType::Random, C::CircuitField::ZERO),
             3 => {

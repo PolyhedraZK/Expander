@@ -37,16 +37,6 @@ impl FieldSerde for M31Ext3x16 {
             ],
         })
     }
-
-    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        Ok(Self {
-            v: [
-                M31x16::try_deserialize_from_ecc_format(&mut reader)?,
-                M31x16::zero(),
-                M31x16::zero(),
-            ],
-        })
-    }
 }
 
 impl SimdField for M31Ext3x16 {

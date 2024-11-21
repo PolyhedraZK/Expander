@@ -8,6 +8,7 @@ struct ConfigLit {
     config_name: Ident,
     field_expr: ExprPath,
     fiat_shamir_hash_type_expr: ExprPath,
+    polynomial_commitment_type: ExprPath,
 }
 
 // Implement parsing for our custom input format
@@ -18,10 +19,14 @@ impl Parse for ConfigLit {
         let field_expr: ExprPath = input.parse()?;
         input.parse::<Token![,]>()?;
         let fiat_shamir_hash_type_expr: ExprPath = input.parse()?;
+        input.parse::<Token![,]>()?;
+        let polynomial_commitment_type: ExprPath = input.parse()?;
+        let _ = input.parse::<Token![,]>(); // Optional trailing comma
         Ok(ConfigLit {
             config_name,
             field_expr,
             fiat_shamir_hash_type_expr,
+            polynomial_commitment_type,
         })
     }
 }
@@ -72,7 +77,28 @@ fn parse_fiat_shamir_hash_type(
     }
 }
 
-/// Example usage: declare_gkr_config!(MyFavoriateConfigName, FieldType::M31, FiatShamirHashType::SHA256);
+fn parse_polynomial_commitment_type(
+    field_config: &str,
+    transcript_type: &str,
+    polynomial_commitment_type: ExprPath,
+) -> (String, String) {
+    let binding = polynomial_commitment_type
+        .path
+        .segments
+        .last()
+        .expect("Empty path for polynomial commitment type");
+
+    let pcs_type_str = binding.ident.to_string();
+    match pcs_type_str.as_str() {
+        "Raw" => (
+            "Raw".to_owned(),
+            format!("RawExpanderGKR::<{field_config}, {transcript_type}>").to_owned(),
+        ),
+        _ => panic!("Unknown polynomial commitment type in config macro expansion"),
+    }
+}
+
+/// Example usage: declare_gkr_config!(MyFavoriateConfigName, FieldType::M31, FiatShamirHashType::SHA256, PolynomialCommitmentType::Raw);
 #[proc_macro]
 pub fn declare_gkr_config(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     declare_gkr_config_impl(input)
@@ -84,15 +110,24 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
         config_name,
         field_expr,
         fiat_shamir_hash_type_expr,
+        polynomial_commitment_type,
     } = parse_macro_input!(input as ConfigLit);
 
     let (_field_type, field_config) = parse_field_type(field_expr);
     let (fiat_shamir_hash_type, transcript_type) =
         parse_fiat_shamir_hash_type(field_config.as_str(), fiat_shamir_hash_type_expr);
+    let (polynomial_commitment_enum, polynomial_commitment_type) = parse_polynomial_commitment_type(
+        field_config.as_str(),
+        &transcript_type,
+        polynomial_commitment_type,
+    );
 
     let field_config = format_ident!("{field_config}");
     let fiat_shamir_hash_type = format_ident!("{fiat_shamir_hash_type}");
     let transcript_type_expr = syn::parse_str::<syn::Type>(&transcript_type).unwrap();
+    let polynomial_commitment_enum = format_ident!("{polynomial_commitment_enum}");
+    let polynomial_commitment_type_expr =
+        syn::parse_str::<syn::Type>(&polynomial_commitment_type).unwrap();
 
     let ret: TokenStream = quote! {
         #[derive(Default, Debug, Clone, PartialEq)]
@@ -102,6 +137,8 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
             type FieldConfig = #field_config;
             const FIAT_SHAMIR_HASH: FiatShamirHashType = FiatShamirHashType::#fiat_shamir_hash_type;
             type Transcript = #transcript_type_expr;
+            const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::#polynomial_commitment_enum;
+            type PCS = #polynomial_commitment_type_expr;
         }
     };
 
