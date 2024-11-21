@@ -30,7 +30,7 @@ impl FieldSerde for GF2x8 {
 impl Field for GF2x8 {
     // still will pack 8 bits into a u8
 
-    const NAME: &'static str = "Galios Field 2 SIMD 8";
+    const NAME: &'static str = "Galois Field 2 SIMD 8";
 
     const SIZE: usize = 1;
 
@@ -86,7 +86,7 @@ impl Field for GF2x8 {
 
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
-        self.v as u32 % 256
+        self.v as u32
     }
 
     #[inline(always)]

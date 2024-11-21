@@ -2362,7 +2362,6 @@ dependencies = [
  "criterion",
  "gf2",
  "gf2_128",
- "mersenne31",
  "rayon",
  "sha2",
  "tynm",
