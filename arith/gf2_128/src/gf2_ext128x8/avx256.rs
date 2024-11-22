@@ -635,7 +635,8 @@ impl ExtensionField for AVX256GF2_128x8 {
                 // Get the most significant bit of each 64-bit part
                 let msb = _mm256_srli_epi64(data, 63);
 
-                // Move the MSB from the high 64 bits to the LSB of the low 64 bits for each 128-bit element
+                // Move the MSB from the high 64 bits to the LSB of the low 64 bits
+                // for each 128-bit element
                 let msb_moved = _mm256_bslli_epi128(msb, 8);
 
                 // Combine the shifted value with the moved msb

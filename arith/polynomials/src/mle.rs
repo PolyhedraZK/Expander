@@ -25,7 +25,8 @@ impl<F: Field> MultiLinearPoly<F> {
 
     #[inline]
     /// # Safety
-    /// The returned MultiLinearPoly should not be mutable in order not to mess up the original vector
+    /// The returned MultiLinearPoly should not be mutable in order not to
+    /// mess up the original vector
     ///
     /// PCS may take MultiLinearPoly as input
     /// However, it is inefficient to copy the entire vector to create a new MultiLinearPoly
@@ -39,7 +40,6 @@ impl<F: Field> MultiLinearPoly<F> {
     /// // do something to mle
     ///
     /// mle_wrapper.wrapper_self_destroy() // please do not use drop here, it's incorrect
-    ///
     pub unsafe fn wrap_around(coeffs: &Vec<F>) -> Self {
         Self {
             coeffs: Vec::from_raw_parts(coeffs.as_ptr() as *mut F, coeffs.len(), coeffs.capacity()),
@@ -144,7 +144,8 @@ impl<F: Field> MultiLinearPoly<F> {
     #[inline]
     /// Expander's implementation
     /// Generic method to evaluate a multilinear polynomial.
-    /// This is the preferred method to evaluate a multilinear polynomial as it does not require additional memory.
+    /// This is the preferred method to evaluate a multilinear polynomial
+    /// as it does not require additional memory.
     pub fn evaluate_with_buffer(evals: &[F], point: &[F], scratch: &mut [F]) -> F {
         assert_eq!(1 << point.len(), evals.len());
         assert_eq!(evals.len(), scratch.len());

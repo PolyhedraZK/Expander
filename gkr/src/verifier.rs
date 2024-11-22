@@ -281,7 +281,8 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         commitment.serialize_into(&mut buffer).unwrap();
         transcript.append_u8_slice(&buffer);
 
-        // TODO: Implement a trait containing the size function, and use the following line to avoid unnecessary deserialization and serialization
+        // TODO: Implement a trait containing the size function,
+        // and use the following line to avoid unnecessary deserialization and serialization
         // transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
         if self.config.mpi_config.world_size() > 1 {
