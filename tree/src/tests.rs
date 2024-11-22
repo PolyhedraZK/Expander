@@ -1,6 +1,9 @@
+use std::io::Cursor;
+
+use arith::FieldSerde;
 use ark_std::{rand::RngCore, test_rng};
 
-use crate::{Leaf, Tree};
+use crate::{Leaf, Path, Tree};
 
 fn random_leaf<R: RngCore>(rng: &mut R) -> Leaf {
     Leaf::new({
@@ -46,10 +49,16 @@ fn test_tree() {
             println!("tree {}\n", tree);
             println!("path {}\n", proof);
 
+            // Serialize and deserialize the proof
+            let mut buffer: Vec<u8> = Vec::new();
+            proof.serialize_into(&mut buffer).unwrap();
+            let mut cursor = Cursor::new(buffer);
+            let deserialized_proof = Path::deserialize_from(&mut cursor).unwrap();
+
             // Verify the proof
             // This checks that the leaf at the given index is indeed part of the tree
             // with the given root, using the generated proof
-            assert!(proof.verify(&root,));
+            assert!(deserialized_proof.verify(&root));
         }
     }
 }

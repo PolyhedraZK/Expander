@@ -98,7 +98,13 @@ fn parse_polynomial_commitment_type(
     }
 }
 
-/// Example usage: declare_gkr_config!(MyFavoriateConfigName, FieldType::M31, FiatShamirHashType::SHA256, PolynomialCommitmentType::Raw);
+/// Example usage:
+/// declare_gkr_config!(
+///     MyFavoriateConfigName,
+///     FieldType::M31,
+///     FiatShamirHashType::SHA256,
+///     PolynomialCommitmentType::Raw
+/// );
 #[proc_macro]
 pub fn declare_gkr_config(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     declare_gkr_config_impl(input)

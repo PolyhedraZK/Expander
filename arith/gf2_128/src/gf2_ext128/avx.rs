@@ -68,7 +68,8 @@ impl Field for AVXGF2_128 {
     fn one() -> Self {
         AVXGF2_128 {
             // 1 in the first bit
-            v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) }, // TODO check bit order
+            // TODO check bit order
+            v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) },
         }
     }
 

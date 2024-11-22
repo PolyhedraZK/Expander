@@ -57,7 +57,8 @@ where
         let omega_0 = primitive_root_of_unity(supported_n);
         let omega_1 = primitive_root_of_unity(supported_m);
 
-        // computes the vector of L_i^N(tau_0) * L_j^M(tau_1) for i in 0..supported_n and j in 0..supported_m
+        // computes the vector of L_i^N(tau_0) * L_j^M(tau_1)
+        // for i in 0..supported_n and j in 0..supported_m
         let (lagrange_tau_0, lagrange_scalars) = {
             let powers_of_omega_0 = powers_of_field_elements(&omega_0, supported_n);
             let lagrange_tau_0 = lagrange_coefficients(&powers_of_omega_0, &tau_0);

@@ -32,7 +32,7 @@ jobs:
         run: python3 ./scripts/install.py
       - name: Set RUSTFLAGS for AVX
         if: matrix.feature != ''
-        run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV  
+        run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV
       - name: Prepare binary
         run: cargo build --release --bin expander-exec
       - name: Upload release asset
