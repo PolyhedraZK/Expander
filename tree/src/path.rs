@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
 
-use arith::{Field, SimdField};
+use arith::{Field, FieldSerde, SimdField};
 use ark_std::{end_timer, start_timer};
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Represents a path in the Merkle tree, used for proving membership.
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, FieldSerde)]
 pub struct Path {
     pub leaf: Leaf,
     pub(crate) path_nodes: Vec<Node>,
@@ -97,7 +97,7 @@ impl Path {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, FieldSerde)]
 pub struct RangePath {
     pub leaves: Vec<Leaf>,
     pub(crate) path_nodes: Vec<Node>,

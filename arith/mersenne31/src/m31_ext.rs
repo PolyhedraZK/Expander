@@ -19,8 +19,6 @@ pub struct M31Ext3 {
 field_common!(M31Ext3);
 
 impl FieldSerde for M31Ext3 {
-    const SERIALIZED_SIZE: usize = (32 / 8) * 3;
-
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         self.v[0].serialize_into(&mut writer)?;

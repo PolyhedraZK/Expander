@@ -1,20 +1,9 @@
-use crate::StructuredReferenceString;
 use arith::FieldSerde;
 
-#[derive(Clone, Debug, Default)]
+use crate::StructuredReferenceString;
+
+#[derive(Clone, Debug, Default, FieldSerde)]
 pub struct PCSEmptyType {}
-
-impl FieldSerde for PCSEmptyType {
-    const SERIALIZED_SIZE: usize = 0;
-
-    fn serialize_into<W: std::io::Write>(&self, _writer: W) -> arith::FieldSerdeResult<()> {
-        Ok(())
-    }
-
-    fn deserialize_from<R: std::io::Read>(_reader: R) -> arith::FieldSerdeResult<Self> {
-        Ok(Self {})
-    }
-}
 
 impl StructuredReferenceString for PCSEmptyType {
     type PKey = PCSEmptyType;

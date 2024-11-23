@@ -44,8 +44,6 @@ impl AVXM31 {
 field_common!(AVXM31);
 
 impl FieldSerde for AVXM31 {
-    const SERIALIZED_SIZE: usize = 512 / 8;
-
     #[inline(always)]
     /// serialize self into bytes
     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
@@ -57,10 +55,10 @@ impl FieldSerde for AVXM31 {
     /// deserialize bytes into field
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut data = [0; Self::SERIALIZED_SIZE];
+        let mut data = [0; Self::SIZE];
         reader.read_exact(&mut data)?;
         unsafe {
-            let mut value = transmute::<[u8; Self::SERIALIZED_SIZE], [__m256i; 2]>(data);
+            let mut value = transmute::<[u8; Self::SIZE], [__m256i; 2]>(data);
             value = mod_reduce_epi32_2(value);
             Ok(AVXM31 { v: value })
         }

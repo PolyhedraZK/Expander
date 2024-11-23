@@ -1,30 +1,13 @@
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{Field, FieldSerde, SimdField};
 
 use super::GF2;
 
 /// A GF2x8 stores 8 bits of data.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, FieldSerde)]
 pub struct GF2x8 {
     pub v: u8,
-}
-
-impl FieldSerde for GF2x8 {
-    const SERIALIZED_SIZE: usize = 1;
-
-    #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        writer.write_all(self.v.to_le_bytes().as_ref())?;
-        Ok(())
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut u = [0u8; Self::SERIALIZED_SIZE];
-        reader.read_exact(&mut u)?;
-        Ok(GF2x8 { v: u[0] })
-    }
 }
 
 impl Field for GF2x8 {

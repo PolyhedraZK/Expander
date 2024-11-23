@@ -1,31 +1,12 @@
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{Field, FieldSerde, SimdField};
 
 use super::GF2;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, FieldSerde)]
 pub struct GF2x64 {
     pub v: u64,
-}
-
-impl FieldSerde for GF2x64 {
-    const SERIALIZED_SIZE: usize = 8;
-
-    #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        writer.write_all(self.v.to_le_bytes().as_ref())?;
-        Ok(())
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut u = [0u8; Self::SERIALIZED_SIZE];
-        reader.read_exact(&mut u)?;
-        Ok(GF2x64 {
-            v: u64::from_le_bytes(u),
-        })
-    }
 }
 
 impl Field for GF2x64 {

@@ -14,23 +14,19 @@ pub struct AVXGF2x128 {
 }
 
 impl FieldSerde for AVXGF2x128 {
-    const SERIALIZED_SIZE: usize = 16;
-
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        unsafe {
-            writer.write_all(transmute::<__m128i, [u8; Self::SERIALIZED_SIZE]>(self.v).as_ref())?
-        };
+        unsafe { writer.write_all(transmute::<__m128i, [u8; Self::SIZE]>(self.v).as_ref())? };
         Ok(())
     }
 
     #[inline(always)]
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut u = [0u8; Self::SERIALIZED_SIZE];
+        let mut u = [0u8; Self::SIZE];
         reader.read_exact(&mut u)?;
         unsafe {
             Ok(AVXGF2x128 {
-                v: transmute::<[u8; Self::SERIALIZED_SIZE], __m128i>(u),
+                v: transmute::<[u8; Self::SIZE], __m128i>(u),
             })
         }
     }

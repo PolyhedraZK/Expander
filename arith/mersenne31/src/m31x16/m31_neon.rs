@@ -52,8 +52,6 @@ impl NeonM31 {
 }
 
 impl FieldSerde for NeonM31 {
-    const SERIALIZED_SIZE: usize = (128 / 8) * 4;
-
     #[inline(always)]
     /// serialize self into bytes
     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {

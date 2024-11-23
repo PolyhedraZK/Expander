@@ -15,6 +15,8 @@ pub use simd_field::*;
 mod serde;
 pub use serde::*;
 
+pub use serialize_derive::*;
+
 mod macros;
 
 mod benches;

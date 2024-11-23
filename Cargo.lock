@@ -120,6 +120,7 @@ dependencies = [
  "log",
  "rand",
  "raw-cpuid",
+ "serialize-derive",
  "sha2",
  "thiserror",
  "tynm",
@@ -2060,6 +2061,15 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "serialize-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
 ]
 
 [[package]]

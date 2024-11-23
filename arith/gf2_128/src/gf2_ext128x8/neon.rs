@@ -30,8 +30,6 @@ impl PartialEq for NeonGF2_128x8 {
 }
 
 impl FieldSerde for NeonGF2_128x8 {
-    const SERIALIZED_SIZE: usize = 128;
-
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         self.v.iter().for_each(|&vv| {

@@ -145,8 +145,6 @@ impl SimdField for Fr {
 }
 
 impl FieldSerde for Fr {
-    const SERIALIZED_SIZE: usize = 32;
-
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         writer.write_all(self.to_bytes().as_ref())?;
@@ -155,7 +153,7 @@ impl FieldSerde for Fr {
 
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut buffer = [0u8; Self::SERIALIZED_SIZE];
+        let mut buffer = [0u8; Self::SIZE];
         reader.read_exact(&mut buffer)?;
         match Fr::from_bytes(&buffer).into_option() {
             Some(v) => Ok(v),
