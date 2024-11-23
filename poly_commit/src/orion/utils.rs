@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::{traits::TensorCodeIOPPCS, StructuredReferenceString};
 
-use super::linear_code::OrionCode;
+use super::linear_code::{OrionCode, OrionCodeParameter};
 
 /*
  * PCS ERROR AND RESULT SETUP
@@ -49,6 +49,35 @@ impl StructuredReferenceString for OrionSRS {
 
     fn into_keys(self) -> (Self::PKey, Self::VKey) {
         (self.clone(), self.clone())
+    }
+}
+
+impl OrionSRS {
+    pub fn new<F: Field>(num_variables: usize, code_instance: OrionCode) -> OrionResult<Self> {
+        let (_, msg_size) = Self::evals_shape::<F>(num_variables);
+        if msg_size != code_instance.msg_len() {
+            return Err(OrionPCSError::ParameterUnmatchError);
+        }
+
+        // NOTE: we just move the instance of code,
+        // don't think the instance of expander code will be used elsewhere
+        Ok(Self {
+            num_variables,
+            code_instance,
+        })
+    }
+
+    pub fn from_random<F: Field>(
+        num_variables: usize,
+        code_param_instance: OrionCodeParameter,
+        mut rng: impl rand::RngCore,
+    ) -> Self {
+        let (_, msg_size) = Self::evals_shape::<F>(num_variables);
+
+        Self {
+            num_variables,
+            code_instance: OrionCode::new(code_param_instance, msg_size, &mut rng),
+        }
     }
 }
 

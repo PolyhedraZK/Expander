@@ -5,7 +5,7 @@ use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gf2::{GF2x128, GF2x8, GF2};
 use gf2_128::GF2_128;
-use poly_commit::{OrionSRS, OrionScratchPad, ORION_CODE_PARAMETER_INSTANCE};
+use poly_commit::*;
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 use tynm::type_name;
@@ -28,26 +28,17 @@ fn committing_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
     ));
 
     let mut rng = test_rng();
-    let mut orion_scratch = OrionScratchPad::default();
+    let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
 
     for num_vars in lowest_num_vars..=highest_num_vars {
         let poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
 
-        let orion_srs =
-            OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
+        let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
         group
             .bench_function(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
-                |b| {
-                    b.iter(|| {
-                        _ = black_box(
-                            orion_srs
-                                .commit::<F, ComPackF>(&poly, &mut orion_scratch)
-                                .unwrap(),
-                        )
-                    })
-                },
+                |b| b.iter(|| _ = black_box(orion_commit(&srs, &poly, &mut scratch_pad).unwrap())),
             )
             .sample_size(10);
     }
@@ -83,7 +74,7 @@ fn opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
 
     let mut rng = test_rng();
     let mut transcript = T::new();
-    let mut orion_scratch = OrionScratchPad::default();
+    let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
 
     for num_vars in lowest_num_vars..=highest_num_vars {
         let poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
@@ -91,23 +82,21 @@ fn opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
             .map(|_| EvalF::random_unsafe(&mut rng))
             .collect();
 
-        let orion_srs =
-            OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
+        let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
-        let _orion_commitment = orion_srs
-            .commit::<F, ComPackF>(&poly, &mut orion_scratch)
-            .unwrap();
+        let _commitment = orion_commit(&srs, &poly, &mut scratch_pad).unwrap();
 
         group
             .bench_function(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(orion_srs.open::<F, EvalF, ComPackF, OpenPackF, T>(
+                        _ = black_box(orion_open::<F, EvalF, ComPackF, OpenPackF, T>(
+                            &srs,
                             &poly,
                             &eval_point,
                             &mut transcript,
-                            &orion_scratch,
+                            &scratch_pad,
                         ))
                     })
                 },

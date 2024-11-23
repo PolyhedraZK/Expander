@@ -10,6 +10,7 @@ use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 use crate::{
     orion::{
         linear_code::{OrionCode, ORION_CODE_PARAMETER_INSTANCE},
+        pcs_impl::*,
         utils::*,
     },
     traits::TensorCodeIOPPCS,
@@ -119,15 +120,11 @@ where
     let mut rng = test_rng();
 
     let random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
-    let orion_pcs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
+    let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
+    let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
 
-    let mut orion_scratch = OrionScratchPad::default();
-
-    let real_commitment = orion_pcs
-        .commit::<F, ComPackF>(&random_poly, &mut orion_scratch)
-        .unwrap();
-
-    let dumb_commitment = dumb_commit::<F, ComPackF>(&orion_pcs, &random_poly);
+    let real_commitment = orion_commit(&srs, &random_poly, &mut scratch_pad).unwrap();
+    let dumb_commitment = dumb_commit::<F, ComPackF>(&srs, &random_poly);
 
     assert_eq!(real_commitment, dumb_commitment);
 }
@@ -166,27 +163,25 @@ where
     let mut transcript: BytesHashTranscript<EvalF, Keccak256hasher> = BytesHashTranscript::new();
     let mut transcript_cloned = transcript.clone();
 
-    let orion_srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
+    let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
+    let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
+    let commitment = orion_commit(&srs, &random_poly, &mut scratch_pad).unwrap();
 
-    let mut orion_scratch = OrionScratchPad::default();
-
-    let orion_commitment = orion_srs
-        .commit::<F, ComPackF>(&random_poly, &mut orion_scratch)
-        .unwrap();
-
-    let (_, opening) = orion_srs.open::<F, EvalF, ComPackF, OpenPackF, _>(
+    let (_, opening) = orion_open::<F, EvalF, ComPackF, OpenPackF, _>(
+        &srs,
         &random_poly,
         &random_point,
         &mut transcript,
-        &orion_scratch,
+        &scratch_pad,
     );
 
-    assert!(orion_srs.verify::<F, EvalF, ComPackF, OpenPackF, _>(
-        &orion_commitment,
+    assert!(orion_verify::<F, EvalF, ComPackF, OpenPackF, _>(
+        &srs,
+        &commitment,
         &random_point,
         expected_eval,
+        &mut transcript_cloned,
         &opening,
-        &mut transcript_cloned
     ));
 }
 
