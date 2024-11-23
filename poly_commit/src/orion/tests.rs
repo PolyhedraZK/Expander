@@ -123,7 +123,7 @@ where
     let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
     let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
 
-    let real_commitment = orion_commit(&srs, &random_poly, &mut scratch_pad).unwrap();
+    let real_commitment = orion_commit_base(&srs, &random_poly, &mut scratch_pad).unwrap();
     let dumb_commitment = dumb_commit::<F, ComPackF>(&srs, &random_poly);
 
     assert_eq!(real_commitment, dumb_commitment);
@@ -165,7 +165,7 @@ where
 
     let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
     let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
-    let commitment = orion_commit(&srs, &random_poly, &mut scratch_pad).unwrap();
+    let commitment = orion_commit_base(&srs, &random_poly, &mut scratch_pad).unwrap();
 
     let (_, opening) = orion_open::<F, EvalF, ComPackF, OpenPackF, _>(
         &srs,

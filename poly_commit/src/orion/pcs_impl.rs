@@ -9,49 +9,96 @@ use crate::{traits::TensorCodeIOPPCS, PCS_SOUNDNESS_BITS};
 
 use super::utils::*;
 
-pub fn orion_commit<F, ComPackF>(
-    pk: &OrionSRS,
-    poly: &MultiLinearPoly<F>,
-    scratch_pad: &mut OrionScratchPad<F, ComPackF>,
-) -> OrionResult<OrionCommitment>
+#[inline(always)]
+fn transpose_and_pack<F, PackF>(
+    evaluations: &mut [F],
+    row_num: usize,
+    msg_size: usize,
+) -> Vec<PackF>
 where
     F: Field,
-    ComPackF: SimdField<Scalar = F>,
+    PackF: SimdField<Scalar = F>,
 {
-    let (row_num, msg_size) = OrionSRS::evals_shape::<F>(poly.get_num_vars());
-
     // NOTE: pre transpose evaluations
-    let mut transposed_evaluations = poly.coeffs.clone();
-    let mut scratch = vec![F::ZERO; 1 << poly.get_num_vars()];
-    transpose_in_place(&mut transposed_evaluations, &mut scratch, row_num);
+    let mut scratch = vec![F::ZERO; evaluations.len()];
+    transpose_in_place(evaluations, &mut scratch, row_num);
     drop(scratch);
 
     // NOTE: SIMD pack each row of transposed matrix
-    assert_eq!(transposed_evaluations.len() % ComPackF::PACK_SIZE, 0);
-    let mut packed_evals: Vec<ComPackF> = transposed_evaluations
-        .chunks(ComPackF::PACK_SIZE)
+    assert_eq!(evaluations.len() % PackF::PACK_SIZE, 0);
+    let mut packed_evals: Vec<PackF> = evaluations
+        .chunks(PackF::PACK_SIZE)
         .map(SimdField::pack)
         .collect();
-    drop(transposed_evaluations);
 
     // NOTE: transpose back to rows of evaluations, but packed
-    let packed_rows = row_num / ComPackF::PACK_SIZE;
-    assert_eq!(row_num % ComPackF::PACK_SIZE, 0);
+    let packed_rows = row_num / PackF::PACK_SIZE;
+    assert_eq!(row_num % PackF::PACK_SIZE, 0);
 
-    let mut scratch = vec![ComPackF::ZERO; packed_rows * msg_size];
+    let mut scratch = vec![PackF::ZERO; packed_rows * msg_size];
     transpose_in_place(&mut packed_evals, &mut scratch, msg_size);
     drop(scratch);
 
+    packed_evals
+}
+
+#[inline(always)]
+fn transpose_and_pack_from_simd<F, CircuitF, PackF>(
+    evaluations: &mut [CircuitF],
+    row_num: usize,
+    msg_size: usize,
+) -> Vec<PackF>
+where
+    F: Field,
+    CircuitF: SimdField<Scalar = F>,
+    PackF: SimdField<Scalar = F>,
+{
+    // NOTE: pre transpose evaluations
+    let mut scratch = vec![CircuitF::ZERO; evaluations.len()];
+    transpose_in_place(evaluations, &mut scratch, row_num);
+    drop(scratch);
+
+    // NOTE: SIMD pack each row of transposed matrix
+    let relative_pack_size = PackF::PACK_SIZE / CircuitF::PACK_SIZE;
+    assert_eq!(PackF::PACK_SIZE % CircuitF::PACK_SIZE, 0);
+    assert_eq!(evaluations.len() % relative_pack_size, 0);
+    let mut packed_evals: Vec<PackF> = evaluations
+        .chunks(relative_pack_size)
+        .map(SimdField::pack_from_simd)
+        .collect();
+
+    // NOTE: transpose back to rows of evaluations, but packed
+    let packed_rows = row_num / relative_pack_size;
+    assert_eq!(row_num % relative_pack_size, 0);
+
+    let mut scratch = vec![PackF::ZERO; packed_rows * msg_size];
+    transpose_in_place(&mut packed_evals, &mut scratch, msg_size);
+    drop(scratch);
+
+    packed_evals
+}
+
+#[inline(always)]
+fn commit_encoded<F, PackF>(
+    pk: &OrionSRS,
+    packed_evals: &[PackF],
+    scratch_pad: &mut OrionScratchPad<F, PackF>,
+    packed_rows: usize,
+    msg_size: usize,
+) -> OrionResult<OrionCommitment>
+where
+    F: Field,
+    PackF: SimdField<Scalar = F>,
+{
     // NOTE: packed codeword buffer and encode over packed field
-    let mut packed_interleaved_codewords = vec![ComPackF::ZERO; packed_rows * pk.codeword_len()];
+    let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
     packed_evals
         .chunks(msg_size)
         .zip(packed_interleaved_codewords.chunks_mut(pk.codeword_len()))
         .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
-    drop(packed_evals);
 
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
-    let mut scratch = vec![ComPackF::ZERO; packed_rows * pk.codeword_len()];
+    let mut scratch = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
     transpose_in_place(&mut packed_interleaved_codewords, &mut scratch, packed_rows);
     drop(scratch);
 
@@ -61,14 +108,51 @@ where
     // to commit by merkle tree
     if !packed_interleaved_codewords.len().is_power_of_two() {
         let aligned_po2_len = packed_interleaved_codewords.len().next_power_of_two();
-        packed_interleaved_codewords.resize(aligned_po2_len, ComPackF::ZERO);
+        packed_interleaved_codewords.resize(aligned_po2_len, PackF::ZERO);
     }
-    scratch_pad.interleaved_alphabet_commitment = tree::Tree::compact_new_with_packed_field_elems::<
-        F,
-        ComPackF,
-    >(packed_interleaved_codewords);
+    scratch_pad.interleaved_alphabet_commitment =
+        tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(packed_interleaved_codewords);
 
     Ok(scratch_pad.interleaved_alphabet_commitment.root())
+}
+
+pub fn orion_commit_base<F, ComPackF>(
+    pk: &OrionSRS,
+    poly: &MultiLinearPoly<F>,
+    scratch_pad: &mut OrionScratchPad<F, ComPackF>,
+) -> OrionResult<OrionCommitment>
+where
+    F: Field,
+    ComPackF: SimdField<Scalar = F>,
+{
+    let (row_num, msg_size) = OrionSRS::evals_shape::<F>(poly.get_num_vars());
+    let packed_rows = row_num / ComPackF::PACK_SIZE;
+    let mut evals = poly.coeffs.clone();
+
+    let packed_evals = transpose_and_pack(&mut evals, row_num, msg_size);
+
+    commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
+}
+
+pub fn orion_commit_simd_field<F, CircuitF, ComPackF>(
+    pk: &OrionSRS,
+    poly: &MultiLinearPoly<CircuitF>,
+    scratch_pad: &mut OrionScratchPad<F, ComPackF>,
+) -> OrionResult<OrionCommitment>
+where
+    F: Field,
+    CircuitF: SimdField<Scalar = F>,
+    ComPackF: SimdField<Scalar = F>,
+{
+    let (row_num, msg_size) = OrionSRS::evals_shape::<CircuitF>(poly.get_num_vars());
+    let relative_pack_size = ComPackF::PACK_SIZE / CircuitF::PACK_SIZE;
+    let packed_rows = row_num / relative_pack_size;
+    let mut evals = poly.coeffs.clone();
+
+    let packed_evals =
+        transpose_and_pack_from_simd::<F, CircuitF, ComPackF>(&mut evals, row_num, msg_size);
+
+    commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
 }
 
 pub fn orion_open<F, EvalF, ComPackF, OpenPackF, T>(

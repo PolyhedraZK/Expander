@@ -38,7 +38,11 @@ fn committing_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
         group
             .bench_function(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
-                |b| b.iter(|| _ = black_box(orion_commit(&srs, &poly, &mut scratch_pad).unwrap())),
+                |b| {
+                    b.iter(|| {
+                        _ = black_box(orion_commit_base(&srs, &poly, &mut scratch_pad).unwrap())
+                    })
+                },
             )
             .sample_size(10);
     }
@@ -84,7 +88,7 @@ fn opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
 
         let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
-        let _commitment = orion_commit(&srs, &poly, &mut scratch_pad).unwrap();
+        let _commitment = orion_commit_base(&srs, &poly, &mut scratch_pad).unwrap();
 
         group
             .bench_function(
