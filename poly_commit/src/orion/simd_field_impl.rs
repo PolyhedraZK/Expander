@@ -1,3 +1,4 @@
+use std::iter;
 use std::ops::Mul;
 
 use arith::{Field, SimdField};
@@ -6,7 +7,7 @@ use transcript::Transcript;
 
 use crate::{
     orion::{
-        utils::{commit_encoded, orion_mt_openings, transpose_in_place},
+        utils::{commit_encoded, orion_mt_openings, orion_mt_verify, transpose_in_place},
         OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
     },
     traits::TensorCodeIOPPCS,
@@ -128,6 +129,7 @@ where
     // NOTE: declare the look up tables for column sums
     let tables_num = row_num / OpenPackF::PACK_SIZE;
     let mut luts = SubsetSumLUTs::<EvalF>::new(OpenPackF::PACK_SIZE, tables_num);
+    assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
 
     // NOTE: working on evaluation response of tensor code IOP based PCS
     let mut eval_row = vec![SimdEvalF::ZERO; msg_size];
@@ -164,4 +166,100 @@ where
         proximity_rows,
         query_openings,
     }
+}
+
+pub fn orion_verify_simd_field<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T>(
+    vk: &OrionSRS,
+    commitment: &OrionCommitment,
+    point: &[EvalF],
+    evaluation: EvalF,
+    transcript: &mut T,
+    proof: &OrionProof<SimdEvalF>,
+) -> bool
+where
+    F: Field,
+    SimdF: SimdField<Scalar = F>,
+    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    SimdEvalF: SimdField<Scalar = EvalF>,
+    ComPackF: SimdField<Scalar = F>,
+    OpenPackF: SimdField<Scalar = F>,
+    T: Transcript<EvalF>,
+{
+    let (row_num, msg_size) = OrionSRS::evals_shape::<SimdF>(point.len());
+    let num_vars_in_msg = msg_size.ilog2() as usize;
+
+    // NOTE: working on evaluation response, evaluate the rest of the response
+    let eval_unpacked: Vec<_> = proof.eval_row.iter().flat_map(|e| e.unpack()).collect();
+    let mut scratch = vec![EvalF::ZERO; msg_size * SimdEvalF::PACK_SIZE];
+    let final_eval = MultiLinearPoly::evaluate_with_buffer(
+        &eval_unpacked,
+        &point[..num_vars_in_msg],
+        &mut scratch,
+    );
+    if final_eval != evaluation {
+        return false;
+    }
+
+    // NOTE: working on proximity responses, draw random linear combinations
+    // then draw query points from fiat shamir transcripts
+    let proximity_test_num = vk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
+    let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_test_num)
+        .map(|_| transcript.generate_challenge_field_elements(row_num))
+        .collect();
+    let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
+    let query_indices = transcript.generate_challenge_index_vector(query_num);
+
+    // NOTE: check consistency in MT in the opening trees and against the commitment tree
+    if !orion_mt_verify(vk, &query_indices, &proof.query_openings, commitment) {
+        return false;
+    }
+
+    // NOTE: prepare the interleaved alphabets from the MT paths,
+    // but reshuffle the packed elements into another direction
+    let mut scratch = vec![F::ZERO; SimdF::PACK_SIZE * OpenPackF::PACK_SIZE];
+    let shuffled_interleaved_alphabet: Vec<Vec<OpenPackF>> = proof
+        .query_openings
+        .iter()
+        .map(|c| -> Vec<_> {
+            let mut unpacked = c.unpack_field_elems::<F, ComPackF>();
+            unpacked
+                .chunks_mut(SimdF::PACK_SIZE * OpenPackF::PACK_SIZE)
+                .flat_map(|circuit_simd_chunk| -> Vec<OpenPackF> {
+                    transpose_in_place(circuit_simd_chunk, &mut scratch, SimdF::PACK_SIZE);
+                    circuit_simd_chunk
+                        .chunks(OpenPackF::PACK_SIZE)
+                        .map(OpenPackF::pack)
+                        .collect()
+                })
+                .collect()
+        })
+        .collect();
+
+    // NOTE: declare the look up tables for column sums
+    let tables_num = row_num / OpenPackF::PACK_SIZE;
+    let mut luts = SubsetSumLUTs::<EvalF>::new(OpenPackF::PACK_SIZE, tables_num);
+    assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
+
+    let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_vars_in_msg..]);
+    random_linear_combinations
+        .iter()
+        .zip(proof.proximity_rows.iter())
+        .chain(iter::once((&eq_linear_combination, &proof.eval_row)))
+        .all(|(rl, msg)| {
+            let codeword = match vk.code_instance.encode(msg) {
+                Ok(c) => c,
+                _ => return false,
+            };
+
+            luts.build(rl);
+
+            query_indices
+                .iter()
+                .zip(shuffled_interleaved_alphabet.iter())
+                .all(|(&qi, interleaved_alphabet)| {
+                    let index = qi % vk.codeword_len();
+                    let alphabet: SimdEvalF = luts.lookup_and_sum_simd(interleaved_alphabet);
+                    alphabet == codeword[index]
+                })
+        })
 }

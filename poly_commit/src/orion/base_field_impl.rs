@@ -7,7 +7,7 @@ use transcript::Transcript;
 
 use crate::{
     orion::{
-        utils::{commit_encoded, orion_mt_openings, transpose_in_place},
+        utils::{commit_encoded, orion_mt_openings, orion_mt_verify, transpose_in_place},
         OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
     },
     traits::TensorCodeIOPPCS,
@@ -86,6 +86,7 @@ where
     // NOTE: declare the look up tables for column sums
     let table_num = row_num / OpenPackF::PACK_SIZE;
     let mut luts = SubsetSumLUTs::<EvalF>::new(OpenPackF::PACK_SIZE, table_num);
+    assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
 
     // NOTE: working on evaluation response of tensor code IOP based PCS
     let mut eval_row = vec![EvalF::ZERO; msg_size];
@@ -175,16 +176,7 @@ where
     let query_indices = transcript.generate_challenge_index_vector(query_num);
 
     // NOTE: check consistency in MT in the opening trees and against the commitment tree
-    let leaf_range = row_num / tree::leaf_adic::<F>();
-    let mt_consistency =
-        query_indices
-            .iter()
-            .zip(proof.query_openings.iter())
-            .all(|(&qi, range_path)| {
-                let index = qi % vk.codeword_len();
-                range_path.verify(commitment) && index == range_path.left / leaf_range
-            });
-    if !mt_consistency {
+    if !orion_mt_verify(vk, &query_indices, &proof.query_openings, commitment) {
         return false;
     }
 
@@ -204,7 +196,8 @@ where
     // NOTE: encode the proximity/evaluation responses,
     // check againts all challenged indices by check alphabets against
     // linear combined interleaved alphabet
-    let mut luts = SubsetSumLUTs::new(OpenPackF::PACK_SIZE, row_num / OpenPackF::PACK_SIZE);
+    let tables_num = row_num / OpenPackF::PACK_SIZE;
+    let mut luts = SubsetSumLUTs::new(OpenPackF::PACK_SIZE, tables_num);
     assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
 
     let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_vars_in_msg..]);

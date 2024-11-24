@@ -13,7 +13,9 @@ pub use base_field_impl::{
 };
 
 mod simd_field_impl;
-pub use simd_field_impl::{orion_commit_simd_field, orion_open_simd_field};
+pub use simd_field_impl::{
+    orion_commit_simd_field, orion_open_simd_field, orion_verify_simd_field,
+};
 
 mod serde;
 

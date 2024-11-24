@@ -171,6 +171,23 @@ where
         .collect()
 }
 
+#[inline(always)]
+pub(crate) fn orion_mt_verify(
+    vk: &OrionSRS,
+    query_indices: &[usize],
+    range_openings: &[tree::RangePath],
+    root: &OrionCommitment,
+) -> bool {
+    let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING;
+    query_indices
+        .iter()
+        .zip(range_openings.iter())
+        .all(|(&qi, range_path)| {
+            let index = qi % vk.codeword_len();
+            range_path.verify(root) && index == range_path.left / leaves_in_range_opening
+        })
+}
+
 /*
  * IMPLEMENTATIONS FOR MATRIX TRANSPOSE
  */
