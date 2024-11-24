@@ -9,6 +9,7 @@ use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 use crate::{
     orion::{
+        base_field_impl::{orion_commit_base_field, orion_open_base_field},
         linear_code::{OrionCode, ORION_CODE_PARAMETER_INSTANCE},
         pcs_impl::*,
         utils::*,
@@ -123,7 +124,7 @@ where
     let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
     let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
 
-    let real_commitment = orion_commit_base(&srs, &random_poly, &mut scratch_pad).unwrap();
+    let real_commitment = orion_commit_base_field(&srs, &random_poly, &mut scratch_pad).unwrap();
     let dumb_commitment = dumb_commit::<F, ComPackF>(&srs, &random_poly);
 
     assert_eq!(real_commitment, dumb_commitment);
@@ -165,9 +166,9 @@ where
 
     let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
     let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
-    let commitment = orion_commit_base(&srs, &random_poly, &mut scratch_pad).unwrap();
+    let commitment = orion_commit_base_field(&srs, &random_poly, &mut scratch_pad).unwrap();
 
-    let (_, opening) = orion_open::<F, EvalF, ComPackF, OpenPackF, _>(
+    let (_, opening) = orion_open_base_field::<F, EvalF, ComPackF, OpenPackF, _>(
         &srs,
         &random_poly,
         &random_point,
