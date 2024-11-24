@@ -6,8 +6,7 @@ use transcript::Transcript;
 
 use crate::{
     orion::{
-        pcs_impl::{commit_encoded, orion_mt_openings},
-        utils::transpose_in_place,
+        utils::{commit_encoded, orion_mt_openings, transpose_in_place},
         OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
     },
     traits::TensorCodeIOPPCS,

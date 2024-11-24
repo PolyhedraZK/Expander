@@ -9,9 +9,8 @@ use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 use crate::{
     orion::{
-        base_field_impl::{orion_commit_base_field, orion_open_base_field},
+        base_field_impl::*,
         linear_code::{OrionCode, ORION_CODE_PARAMETER_INSTANCE},
-        pcs_impl::*,
         utils::*,
     },
     traits::TensorCodeIOPPCS,
@@ -85,7 +84,10 @@ fn test_orion_code() {
     });
 }
 
-fn dumb_commit<F, ComPackF>(orion_srs: &OrionSRS, poly: &MultiLinearPoly<F>) -> OrionCommitment
+fn dumb_commit_base_field<F, ComPackF>(
+    orion_srs: &OrionSRS,
+    poly: &MultiLinearPoly<F>,
+) -> OrionCommitment
 where
     F: Field,
     ComPackF: SimdField<Scalar = F>,
@@ -113,7 +115,7 @@ where
     interleaved_alphabet_tree.root()
 }
 
-fn test_orion_commit_consistency_generic<F, ComPackF>(num_vars: usize)
+fn test_orion_commit_base_field_consistency_generic<F, ComPackF>(num_vars: usize)
 where
     F: Field,
     ComPackF: SimdField<Scalar = F>,
@@ -125,16 +127,16 @@ where
     let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
 
     let real_commitment = orion_commit_base_field(&srs, &random_poly, &mut scratch_pad).unwrap();
-    let dumb_commitment = dumb_commit::<F, ComPackF>(&srs, &random_poly);
+    let dumb_commitment = dumb_commit_base_field::<F, ComPackF>(&srs, &random_poly);
 
     assert_eq!(real_commitment, dumb_commitment);
 }
 
 #[test]
-fn test_orion_commit_consistency() {
+fn test_orion_commit_base_field_consistency() {
     (19..=25).for_each(|num_vars| {
-        test_orion_commit_consistency_generic::<GF2, GF2x64>(num_vars);
-        test_orion_commit_consistency_generic::<GF2, GF2x128>(num_vars);
+        test_orion_commit_base_field_consistency_generic::<GF2, GF2x64>(num_vars);
+        test_orion_commit_base_field_consistency_generic::<GF2, GF2x128>(num_vars);
     });
 }
 
@@ -176,7 +178,7 @@ where
         &scratch_pad,
     );
 
-    assert!(orion_verify::<F, EvalF, ComPackF, OpenPackF, _>(
+    assert!(orion_verify_base_field::<F, EvalF, ComPackF, OpenPackF, _>(
         &srs,
         &commitment,
         &random_point,

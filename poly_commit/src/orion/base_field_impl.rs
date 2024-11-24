@@ -1,3 +1,4 @@
+use std::iter;
 use std::ops::Mul;
 
 use arith::{Field, SimdField};
@@ -6,8 +7,7 @@ use transcript::Transcript;
 
 use crate::{
     orion::{
-        pcs_impl::{commit_encoded, orion_mt_openings},
-        utils::transpose_in_place,
+        utils::{commit_encoded, orion_mt_openings, transpose_in_place},
         OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
     },
     traits::TensorCodeIOPPCS,
@@ -134,4 +134,99 @@ where
             query_openings,
         },
     )
+}
+
+pub fn orion_verify_base_field<F, EvalF, ComPackF, OpenPackF, T>(
+    vk: &OrionSRS,
+    commitment: &OrionCommitment,
+    point: &[EvalF],
+    evaluation: EvalF,
+    transcript: &mut T,
+    proof: &OrionProof<EvalF>,
+) -> bool
+where
+    F: Field,
+    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    ComPackF: SimdField<Scalar = F>,
+    OpenPackF: SimdField<Scalar = F>,
+    T: Transcript<EvalF>,
+{
+    let (row_num, msg_size) = OrionSRS::evals_shape::<F>(point.len());
+    let num_vars_in_msg = msg_size.ilog2() as usize;
+
+    // NOTE: working on evaluation response, evaluate the rest of the response
+    let mut scratch = vec![EvalF::ZERO; msg_size];
+    let final_eval = MultiLinearPoly::evaluate_with_buffer(
+        &proof.eval_row,
+        &point[..num_vars_in_msg],
+        &mut scratch,
+    );
+    if final_eval != evaluation {
+        return false;
+    }
+
+    // NOTE: working on proximity responses, draw random linear combinations
+    // then draw query points from fiat shamir transcripts
+    let proximity_test_num = vk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
+    let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_test_num)
+        .map(|_| transcript.generate_challenge_field_elements(row_num))
+        .collect();
+    let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
+    let query_indices = transcript.generate_challenge_index_vector(query_num);
+
+    // NOTE: check consistency in MT in the opening trees and against the commitment tree
+    let leaf_range = row_num / tree::leaf_adic::<F>();
+    let mt_consistency =
+        query_indices
+            .iter()
+            .zip(proof.query_openings.iter())
+            .all(|(&qi, range_path)| {
+                let index = qi % vk.codeword_len();
+                range_path.verify(commitment) && index == range_path.left / leaf_range
+            });
+    if !mt_consistency {
+        return false;
+    }
+
+    // NOTE: prepare the interleaved alphabets from the MT paths,
+    // but pack them back into look up table acceptable formats
+    let packed_interleaved_alphabets: Vec<_> = proof
+        .query_openings
+        .iter()
+        .map(|p| -> Vec<_> {
+            p.unpack_field_elems::<F, ComPackF>()
+                .chunks(OpenPackF::PACK_SIZE)
+                .map(OpenPackF::pack)
+                .collect()
+        })
+        .collect();
+
+    // NOTE: encode the proximity/evaluation responses,
+    // check againts all challenged indices by check alphabets against
+    // linear combined interleaved alphabet
+    let mut luts = SubsetSumLUTs::new(OpenPackF::PACK_SIZE, row_num / OpenPackF::PACK_SIZE);
+    assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
+
+    let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_vars_in_msg..]);
+    random_linear_combinations
+        .iter()
+        .zip(proof.proximity_rows.iter())
+        .chain(iter::once((&eq_linear_combination, &proof.eval_row)))
+        .all(|(rl, msg)| {
+            let codeword = match vk.code_instance.encode(msg) {
+                Ok(c) => c,
+                _ => return false,
+            };
+
+            luts.build(rl);
+
+            query_indices
+                .iter()
+                .zip(packed_interleaved_alphabets.iter())
+                .all(|(&qi, interleaved_alphabet)| {
+                    let index = qi % vk.codeword_len();
+                    let alphabet = luts.lookup_and_sum(interleaved_alphabet);
+                    alphabet == codeword[index]
+                })
+        })
 }
