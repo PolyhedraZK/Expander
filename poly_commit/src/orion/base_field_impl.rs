@@ -197,7 +197,7 @@ where
     // check againts all challenged indices by check alphabets against
     // linear combined interleaved alphabet
     let tables_num = row_num / OpenPackF::PACK_SIZE;
-    let mut luts = SubsetSumLUTs::new(OpenPackF::PACK_SIZE, tables_num);
+    let mut luts = SubsetSumLUTs::<EvalF>::new(OpenPackF::PACK_SIZE, tables_num);
     assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
 
     let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_vars_in_msg..]);

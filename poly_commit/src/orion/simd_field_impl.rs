@@ -221,11 +221,10 @@ where
         .query_openings
         .iter()
         .map(|c| -> Vec<_> {
-            let mut unpacked = c.unpack_field_elems::<F, ComPackF>();
-            unpacked
+            c.unpack_field_elems::<F, ComPackF>()
                 .chunks_mut(SimdF::PACK_SIZE * OpenPackF::PACK_SIZE)
                 .flat_map(|circuit_simd_chunk| -> Vec<OpenPackF> {
-                    transpose_in_place(circuit_simd_chunk, &mut scratch, SimdF::PACK_SIZE);
+                    transpose_in_place(circuit_simd_chunk, &mut scratch, OpenPackF::PACK_SIZE);
                     circuit_simd_chunk
                         .chunks(OpenPackF::PACK_SIZE)
                         .map(OpenPackF::pack)
