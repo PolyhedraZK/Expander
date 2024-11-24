@@ -50,7 +50,6 @@ where
 #[inline(always)]
 pub(crate) fn orion_mt_openings<F, EvalF, ComPackF, T>(
     pk: &OrionSRS,
-    leaf_range: usize,
     transcript: &mut T,
     scratch_pad: &OrionScratchPad<F, ComPackF>,
 ) -> Vec<tree::RangePath>
@@ -60,6 +59,8 @@ where
     ComPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
+    let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING;
+
     // NOTE: MT opening for point queries
     let query_num = pk.query_complexity(PCS_SOUNDNESS_BITS);
     let query_indices = transcript.generate_challenge_index_vector(query_num);
@@ -67,8 +68,8 @@ where
         .iter()
         .map(|qi| {
             let index = *qi % pk.codeword_len();
-            let left = index * leaf_range;
-            let right = left + leaf_range - 1;
+            let left = index * leaves_in_range_opening;
+            let right = left + leaves_in_range_opening - 1;
 
             scratch_pad
                 .interleaved_alphabet_commitment

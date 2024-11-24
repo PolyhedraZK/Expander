@@ -8,12 +8,11 @@ use crate::{
     orion::{
         pcs_impl::{commit_encoded, orion_mt_openings},
         utils::transpose_in_place,
+        OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
     },
     traits::TensorCodeIOPPCS,
     SubsetSumLUTs, PCS_SOUNDNESS_BITS,
 };
-
-use super::{OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad};
 
 #[inline(always)]
 fn transpose_and_pack<F, PackF>(evaluations: &mut [F], row_num: usize) -> Vec<PackF>
@@ -75,7 +74,7 @@ where
     T: Transcript<EvalF>,
 {
     let (row_num, msg_size) = OrionSRS::evals_shape::<F>(poly.get_num_vars());
-    let num_of_vars_in_msg = msg_size.ilog2() as usize;
+    let num_vars_in_row = row_num.ilog2() as usize;
 
     // NOTE: transpose evaluations for linear combinations in evaulation/proximity tests
     let mut evals = poly.coeffs.clone();
@@ -85,17 +84,17 @@ where
     drop(evals);
 
     // NOTE: declare the look up tables for column sums
-    let packed_rows = row_num / OpenPackF::PACK_SIZE;
-    let mut luts = SubsetSumLUTs::new(OpenPackF::PACK_SIZE, packed_rows);
+    let table_num = row_num / OpenPackF::PACK_SIZE;
+    let mut luts = SubsetSumLUTs::<EvalF>::new(OpenPackF::PACK_SIZE, table_num);
 
     // NOTE: working on evaluation response of tensor code IOP based PCS
     let mut eval_row = vec![EvalF::ZERO; msg_size];
 
-    let eq_col_coeffs = EqPolynomial::build_eq_x_r(&point[num_of_vars_in_msg..]);
+    let eq_col_coeffs = EqPolynomial::build_eq_x_r(&point[point.len() - num_vars_in_row..]);
     luts.build(&eq_col_coeffs);
 
     packed_evals
-        .chunks(packed_rows)
+        .chunks(table_num)
         .zip(eval_row.iter_mut())
         .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
 
@@ -109,7 +108,7 @@ where
         luts.build(&random_coeffs);
 
         packed_evals
-            .chunks(packed_rows)
+            .chunks(table_num)
             .zip(row_buffer.iter_mut())
             .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
     });
@@ -119,14 +118,13 @@ where
     let mut scratch = vec![EvalF::ZERO; msg_size];
     let eval = MultiLinearPoly::evaluate_with_buffer(
         &eval_row,
-        &point[..num_of_vars_in_msg],
+        &point[..point.len() - num_vars_in_row],
         &mut scratch,
     );
     drop(scratch);
 
     // NOTE: MT opening for point queries
-    let leaf_range = row_num / tree::leaf_adic::<F>();
-    let query_openings = orion_mt_openings(pk, leaf_range, transcript, scratch_pad);
+    let query_openings = orion_mt_openings(pk, transcript, scratch_pad);
 
     (
         eval,

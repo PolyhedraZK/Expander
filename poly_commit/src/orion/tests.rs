@@ -138,7 +138,7 @@ fn test_orion_commit_consistency() {
     });
 }
 
-fn test_orion_pcs_full_e2e_generics<F, EvalF, ComPackF, OpenPackF>(num_vars: usize)
+fn test_orion_pcs_base_full_e2e_generics<F, EvalF, ComPackF, OpenPackF>(num_vars: usize)
 where
     F: Field,
     EvalF: Field + Mul<F, Output = EvalF> + From<F>,
@@ -187,9 +187,9 @@ where
 }
 
 #[test]
-fn test_orion_pcs_full_e2e() {
+fn test_orion_pcs_base_full_e2e() {
     (19..=25).for_each(|num_vars| {
-        test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x64, GF2x8>(num_vars);
-        test_orion_pcs_full_e2e_generics::<GF2, GF2_128, GF2x128, GF2x8>(num_vars);
+        test_orion_pcs_base_full_e2e_generics::<GF2, GF2_128, GF2x64, GF2x8>(num_vars);
+        test_orion_pcs_base_full_e2e_generics::<GF2, GF2_128, GF2x128, GF2x8>(num_vars);
     });
 }

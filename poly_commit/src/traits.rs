@@ -145,12 +145,14 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
 }
 
 pub(crate) trait TensorCodeIOPPCS {
+    const LEAVES_IN_RANGE_OPENING: usize = 2;
+
     fn codeword_len(&self) -> usize;
 
     fn hamming_weight(&self) -> f64;
 
     fn evals_shape<F: Field>(num_vars: usize) -> (usize, usize) {
-        let elems_for_smallest_tree = tree::leaf_adic::<F>() * 2;
+        let elems_for_smallest_tree = tree::leaf_adic::<F>() * Self::LEAVES_IN_RANGE_OPENING;
 
         let row_num: usize = elems_for_smallest_tree;
         let msg_size: usize = (1 << num_vars) / row_num;

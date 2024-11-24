@@ -193,4 +193,29 @@ impl<F: Field> SubsetSumLUTs<F> {
             .map(|(t_i, index)| t_i[index.as_u32_unchecked() as usize])
             .sum()
     }
+
+    #[inline]
+    pub fn lookup_and_sum_simd<BitF, EntryF, SimdF>(&self, simd_indices: &[EntryF]) -> SimdF
+    where
+        BitF: Field,
+        EntryF: SimdField<Scalar = BitF>,
+        SimdF: SimdField<Scalar = F>,
+    {
+        assert_eq!(EntryF::FIELD_SIZE, 1);
+        assert_eq!(EntryF::PACK_SIZE, self.entry_bits);
+        assert_eq!(simd_indices.len(), self.tables.len() * SimdF::PACK_SIZE);
+
+        let mut elts = vec![F::ZERO; SimdF::PACK_SIZE];
+
+        self.tables
+            .iter()
+            .zip(simd_indices.chunks(SimdF::PACK_SIZE))
+            .for_each(|(t_i, indices)| {
+                elts.iter_mut()
+                    .zip(indices.iter())
+                    .for_each(|(elem, index)| *elem += t_i[index.as_u32_unchecked() as usize])
+            });
+
+        SimdF::pack(&elts)
+    }
 }
