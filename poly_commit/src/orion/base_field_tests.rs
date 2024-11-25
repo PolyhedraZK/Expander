@@ -106,7 +106,7 @@ where
 
     if !interleaved_codewords.len().is_power_of_two() {
         let aligned_po2_len = interleaved_codewords.len().next_power_of_two();
-        interleaved_codewords.resize(aligned_po2_len, F::default());
+        interleaved_codewords.resize(aligned_po2_len, F::ZERO);
     }
 
     let interleaved_alphabet_tree =

@@ -30,7 +30,7 @@ where
     let relative_pack_size = PackF::PACK_SIZE / SimdF::PACK_SIZE;
     evaluations
         .chunks(relative_pack_size)
-        .map(SimdField::pack_from_simd)
+        .map(PackF::pack_from_simd)
         .collect()
 }
 
