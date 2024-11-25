@@ -1,7 +1,11 @@
+use std::ops::Mul;
+
 use arith::{Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
+use gf2_128::{GF2_128x8, GF2_128};
 use polynomials::MultiLinearPoly;
+use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 use crate::{
     orion::{simd_field_impl::*, utils::*},
@@ -68,7 +72,36 @@ where
 #[test]
 fn test_orion_commit_simd_field_consistency() {
     (16..=22).for_each(|num_vars| {
+        test_orion_commit_simd_field_consistency_generic::<GF2, GF2x8, GF2x8>(num_vars);
         test_orion_commit_simd_field_consistency_generic::<GF2, GF2x8, GF2x64>(num_vars);
         test_orion_commit_simd_field_consistency_generic::<GF2, GF2x8, GF2x128>(num_vars);
     });
+}
+
+fn test_orion_pcs_simd_full_e2e_generics<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T>(
+    _num_vars: usize,
+) where
+    F: Field,
+    SimdF: SimdField<Scalar = F>,
+    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    SimdEvalF: SimdField<Scalar = EvalF>,
+    ComPackF: SimdField<Scalar = F>,
+    OpenPackF: SimdField<Scalar = F>,
+    T: Transcript<EvalF>,
+{
+}
+
+#[test]
+fn test_orion_pcs_simd_full_e2e() {
+    (16..=22).for_each(|num_vars| {
+        test_orion_pcs_simd_full_e2e_generics::<
+            GF2,
+            GF2x8,
+            GF2_128,
+            GF2_128x8,
+            GF2x128,
+            GF2x8,
+            BytesHashTranscript<_, Keccak256hasher>,
+        >(num_vars);
+    })
 }
