@@ -12,12 +12,15 @@ pub use base_field_impl::{
     orion_commit_base_field, orion_open_base_field, orion_verify_base_field,
 };
 
+#[cfg(test)]
+mod base_field_tests;
+
 mod simd_field_impl;
 pub use simd_field_impl::{
     orion_commit_simd_field, orion_open_simd_field, orion_verify_simd_field,
 };
 
-mod serde;
-
 #[cfg(test)]
-mod tests;
+mod simd_field_tests;
+
+mod serde;
