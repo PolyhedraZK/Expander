@@ -79,14 +79,8 @@ where
     let mut rng = test_rng();
 
     let random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
-    let random_poly_ext = MultiLinearPoly::new(
-        random_poly
-            .coeffs
-            .iter()
-            .cloned()
-            .map(EvalF::from)
-            .collect(),
-    );
+    let random_poly_ext =
+        MultiLinearPoly::new(random_poly.coeffs.iter().map(|t| EvalF::from(*t)).collect());
     let random_point: Vec<_> = (0..num_vars)
         .map(|_| EvalF::random_unsafe(&mut rng))
         .collect();
