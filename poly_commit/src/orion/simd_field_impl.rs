@@ -44,7 +44,13 @@ where
     SimdF: SimdField<Scalar = F>,
     ComPackF: SimdField<Scalar = F>,
 {
-    let (row_num, msg_size) = OrionSRS::evals_shape::<SimdF>(poly.get_num_vars());
+    let (row_num, msg_size) = {
+        let num_vars = poly.get_num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
+        let (row_field_elems, msg_size) = OrionSRS::evals_shape::<F>(num_vars);
+        let row_num = row_field_elems / SimdF::PACK_SIZE;
+        (row_num, msg_size)
+    };
+
     let relative_pack_size = ComPackF::PACK_SIZE / SimdF::PACK_SIZE;
     assert_eq!(ComPackF::PACK_SIZE % SimdF::PACK_SIZE, 0);
 
@@ -102,7 +108,7 @@ pub fn orion_open_simd_field<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T>
     poly: &MultiLinearPoly<SimdF>,
     point: &[EvalF],
     transcript: &mut T,
-    scratch_pad: &mut OrionScratchPad<F, ComPackF>,
+    scratch_pad: &OrionScratchPad<F, ComPackF>,
 ) -> OrionProof<SimdEvalF>
 where
     F: Field,
@@ -115,7 +121,15 @@ where
 {
     assert_eq!(SimdF::PACK_SIZE, SimdEvalF::PACK_SIZE);
 
-    let (row_num, msg_size) = OrionSRS::evals_shape::<SimdF>(poly.get_num_vars());
+    let (row_num, msg_size) = {
+        let num_vars = poly.get_num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
+        assert_eq!(num_vars, point.len());
+
+        let (row_field_elems, msg_size) = OrionSRS::evals_shape::<F>(num_vars);
+        let row_num = row_field_elems / SimdF::PACK_SIZE;
+        (row_num, msg_size)
+    };
+
     let num_vars_in_row = row_num.ilog2() as usize;
 
     // NOTE: transpose and shuffle evaluations (repack evaluations in another direction)
@@ -134,8 +148,8 @@ where
     // NOTE: working on evaluation response of tensor code IOP based PCS
     let mut eval_row = vec![SimdEvalF::ZERO; msg_size];
 
-    let eq_col_coeffs = EqPolynomial::build_eq_x_r(&point[point.len() - num_vars_in_row..]);
-    luts.build(&eq_col_coeffs);
+    let eq_coeffs = EqPolynomial::build_eq_x_r(&point[point.len() - num_vars_in_row..]);
+    luts.build(&eq_coeffs);
 
     packed_shuffled_evals
         .chunks(tables_num * SimdEvalF::PACK_SIZE)
@@ -185,15 +199,20 @@ where
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
-    let (row_num, msg_size) = OrionSRS::evals_shape::<SimdF>(point.len());
-    let num_vars_in_msg = msg_size.ilog2() as usize;
+    let (row_num, msg_size) = {
+        let (row_field_elems, msg_size) = OrionSRS::evals_shape::<F>(point.len());
+        let row_num = row_field_elems / SimdF::PACK_SIZE;
+        (row_num, msg_size)
+    };
+
+    let num_vars_in_row = row_num.ilog2() as usize;
 
     // NOTE: working on evaluation response, evaluate the rest of the response
     let eval_unpacked: Vec<_> = proof.eval_row.iter().flat_map(|e| e.unpack()).collect();
     let mut scratch = vec![EvalF::ZERO; msg_size * SimdEvalF::PACK_SIZE];
     let final_eval = MultiLinearPoly::evaluate_with_buffer(
         &eval_unpacked,
-        &point[..num_vars_in_msg],
+        &point[..point.len() - num_vars_in_row],
         &mut scratch,
     );
     if final_eval != evaluation {
@@ -239,7 +258,7 @@ where
     let mut luts = SubsetSumLUTs::<EvalF>::new(OpenPackF::PACK_SIZE, tables_num);
     assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
 
-    let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_vars_in_msg..]);
+    let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[point.len() - num_vars_in_row..]);
     random_linear_combinations
         .iter()
         .zip(proof.proximity_rows.iter())
