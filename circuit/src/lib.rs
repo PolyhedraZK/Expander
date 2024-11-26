@@ -1,11 +1,11 @@
-mod gates;
-pub use gates::*;
-
 mod ecc_circuit;
 pub use ecc_circuit::*;
 
-mod expander_circuit;
-pub use expander_circuit::*;
+mod layered;
+pub use layered::*;
+
+mod cross_layered;
+pub use cross_layered::*;
 
 mod witness;
 pub use witness::*;
