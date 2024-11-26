@@ -9,7 +9,7 @@ use polynomials::MultiLinearPoly;
 use rand::thread_rng;
 use transcript::Transcript;
 
-pub fn test_pcs<F: Field, P: PolynomialCommitmentScheme<F>>(
+pub fn test_pcs<F: Field, T: Transcript<F>, P: PolynomialCommitmentScheme<F, T>>(
     params: &P::Params,
     poly: &P::Poly,
     xs: &[P::EvalPoint],
@@ -17,19 +17,28 @@ pub fn test_pcs<F: Field, P: PolynomialCommitmentScheme<F>>(
     let mut rng = thread_rng();
     let srs = P::gen_srs_for_testing(params, &mut rng);
     let (proving_key, verification_key) = srs.into_keys();
+    let mut transcript = T::new();
     let mut scratch_pad = P::init_scratch_pad(params);
 
     let commitment = P::commit(params, &proving_key, poly, &mut scratch_pad);
 
     for x in xs {
-        let (v, opening) = P::open(params, &proving_key, poly, x, &mut scratch_pad);
+        let (v, opening) = P::open(
+            params,
+            &proving_key,
+            poly,
+            x,
+            &mut scratch_pad,
+            &mut transcript,
+        );
         assert!(P::verify(
             params,
             &verification_key,
             &commitment,
             x,
             v,
-            &opening
+            &opening,
+            &mut transcript
         ));
     }
 }

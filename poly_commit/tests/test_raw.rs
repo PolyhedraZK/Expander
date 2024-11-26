@@ -9,7 +9,7 @@ use poly_commit::{
 };
 use polynomials::MultiLinearPoly;
 use rand::thread_rng;
-use transcript::{BytesHashTranscript, SHA256hasher, Transcript};
+use transcript::{BytesHashTranscript, Keccak256hasher, SHA256hasher, Transcript};
 
 #[test]
 fn test_raw() {
@@ -24,7 +24,9 @@ fn test_raw() {
         })
         .collect::<Vec<Vec<BN254Fr>>>();
 
-    common::test_pcs::<BN254Fr, RawMultiLinear>(&params, &poly, &xs);
+    common::test_pcs::<BN254Fr, BytesHashTranscript<_, Keccak256hasher>, RawMultiLinear>(
+        &params, &poly, &xs,
+    );
 }
 
 fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(

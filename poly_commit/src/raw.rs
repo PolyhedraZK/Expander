@@ -23,7 +23,7 @@ pub struct RawMultiLinearScratchPad<F: Field> {
 // Raw commitment for multi-linear polynomials
 pub struct RawMultiLinear {}
 
-impl<F: Field> PolynomialCommitmentScheme<F> for RawMultiLinear {
+impl<F: Field, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for RawMultiLinear {
     const NAME: &'static str = "RawMultiLinear";
 
     type Params = RawMultiLinearParams;
@@ -64,6 +64,7 @@ impl<F: Field> PolynomialCommitmentScheme<F> for RawMultiLinear {
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &mut Self::ScratchPad,
+        _transcript: &mut T,
     ) -> (F, Self::Opening) {
         assert!(x.len() == params.n_vars);
         (
@@ -83,6 +84,7 @@ impl<F: Field> PolynomialCommitmentScheme<F> for RawMultiLinear {
         x: &Self::EvalPoint,
         v: F,
         _opening: &Self::Opening,
+        _transcript: &mut T,
     ) -> bool {
         assert!(x.len() == params.n_vars);
         MultiLinearPoly::<F>::evaluate_with_buffer(

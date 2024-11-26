@@ -16,7 +16,7 @@ pub trait StructuredReferenceString {
 }
 
 /// Standard Polynomial commitment scheme (PCS) trait.
-pub trait PolynomialCommitmentScheme<F: Field> {
+pub trait PolynomialCommitmentScheme<F: Field, T: Transcript<F>> {
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default;
@@ -50,6 +50,7 @@ pub trait PolynomialCommitmentScheme<F: Field> {
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &mut Self::ScratchPad,
+        transcript: &mut T,
     ) -> (F, Self::Opening);
 
     /// Verify the opening of a polynomial at a point.
@@ -60,6 +61,7 @@ pub trait PolynomialCommitmentScheme<F: Field> {
         x: &Self::EvalPoint,
         v: F,
         opening: &Self::Opening,
+        transcript: &mut T,
     ) -> bool;
 }
 

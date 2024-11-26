@@ -78,24 +78,26 @@ where
 {
     let mut rng = test_rng();
 
-    let random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
-    let random_poly_ext =
-        MultiLinearPoly::new(random_poly.coeffs.iter().map(|t| EvalF::from(*t)).collect());
+    let poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
+    let poly_ext_coeffs: Vec<_> = poly.coeffs.iter().map(|t| EvalF::from(*t)).collect();
     let random_point: Vec<_> = (0..num_vars)
         .map(|_| EvalF::random_unsafe(&mut rng))
         .collect();
-    let expected_eval = random_poly_ext.evaluate_jolt(&random_point);
+    let mut scratch = vec![EvalF::ZERO; 1 << num_vars];
+    let expected_eval =
+        MultiLinearPoly::evaluate_with_buffer(&poly_ext_coeffs, &random_point, &mut scratch);
+    drop(scratch);
 
     let mut transcript: BytesHashTranscript<EvalF, Keccak256hasher> = BytesHashTranscript::new();
     let mut transcript_cloned = transcript.clone();
 
     let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
     let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
-    let commitment = orion_commit_base_field(&srs, &random_poly, &mut scratch_pad).unwrap();
+    let commitment = orion_commit_base_field(&srs, &poly, &mut scratch_pad).unwrap();
 
     let (_, opening) = orion_open_base_field::<F, EvalF, ComPackF, OpenPackF, _>(
         &srs,
-        &random_poly,
+        &poly,
         &random_point,
         &mut transcript,
         &scratch_pad,

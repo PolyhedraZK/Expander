@@ -4,7 +4,7 @@ use arith::{Field, FieldSerdeError, SimdField};
 use thiserror::Error;
 use transcript::Transcript;
 
-use crate::{traits::TensorCodeIOPPCS, StructuredReferenceString, PCS_SOUNDNESS_BITS};
+use crate::{traits::TensorCodeIOPPCS, PCS_SOUNDNESS_BITS};
 
 use super::linear_code::{OrionCode, OrionCodeParameter};
 
@@ -27,7 +27,7 @@ pub type OrionResult<T> = std::result::Result<T, OrionPCSError>;
  * RELEVANT TYPES SETUP
  */
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct OrionSRS {
     pub num_variables: usize,
     pub code_instance: OrionCode,
@@ -40,16 +40,6 @@ impl TensorCodeIOPPCS for OrionSRS {
 
     fn hamming_weight(&self) -> f64 {
         self.code_instance.hamming_weight()
-    }
-}
-
-impl StructuredReferenceString for OrionSRS {
-    type PKey = OrionSRS;
-
-    type VKey = OrionSRS;
-
-    fn into_keys(self) -> (Self::PKey, Self::VKey) {
-        (self.clone(), self.clone())
     }
 }
 
