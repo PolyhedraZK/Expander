@@ -131,6 +131,7 @@ where
     };
 
     let num_vars_in_row = row_num.ilog2() as usize;
+    let num_vars_in_unpacked_msg = point.len() - num_vars_in_row;
 
     // NOTE: transpose and shuffle evaluations (repack evaluations in another direction)
     // for linear combinations in evaulation/proximity tests
@@ -148,7 +149,7 @@ where
     // NOTE: working on evaluation response of tensor code IOP based PCS
     let mut eval_row = vec![SimdEvalF::ZERO; msg_size];
 
-    let eq_coeffs = EqPolynomial::build_eq_x_r(&point[point.len() - num_vars_in_row..]);
+    let eq_coeffs = EqPolynomial::build_eq_x_r(&point[num_vars_in_unpacked_msg..]);
     luts.build(&eq_coeffs);
 
     packed_shuffled_evals
@@ -206,13 +207,14 @@ where
     };
 
     let num_vars_in_row = row_num.ilog2() as usize;
+    let num_vars_in_unpacked_msg = point.len() - num_vars_in_row;
 
     // NOTE: working on evaluation response, evaluate the rest of the response
     let eval_unpacked: Vec<_> = proof.eval_row.iter().flat_map(|e| e.unpack()).collect();
     let mut scratch = vec![EvalF::ZERO; msg_size * SimdEvalF::PACK_SIZE];
     let final_eval = MultiLinearPoly::evaluate_with_buffer(
         &eval_unpacked,
-        &point[..point.len() - num_vars_in_row],
+        &point[..num_vars_in_unpacked_msg],
         &mut scratch,
     );
     if final_eval != evaluation {
@@ -258,7 +260,7 @@ where
     let mut luts = SubsetSumLUTs::<EvalF>::new(OpenPackF::PACK_SIZE, tables_num);
     assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
 
-    let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[point.len() - num_vars_in_row..]);
+    let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_vars_in_unpacked_msg..]);
     random_linear_combinations
         .iter()
         .zip(proof.proximity_rows.iter())

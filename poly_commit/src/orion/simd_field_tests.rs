@@ -155,6 +155,9 @@ fn test_orion_pcs_simd_full_e2e_generics<F, SimdF, EvalF, SimdEvalF, ComPackF, O
 #[test]
 fn test_orion_pcs_simd_full_e2e() {
     (16..=22).for_each(|num_vars| {
+        test_orion_pcs_simd_full_e2e_generics::<GF2, GF2x8, GF2_128, GF2_128x8, GF2x64, GF2x8>(
+            num_vars,
+        );
         test_orion_pcs_simd_full_e2e_generics::<GF2, GF2x8, GF2_128, GF2_128x8, GF2x128, GF2x8>(
             num_vars,
         );
