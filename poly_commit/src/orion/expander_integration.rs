@@ -106,12 +106,11 @@ where
     }
 }
 
-pub struct OrionSIMDFieldPCS<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T>
+pub struct OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF, OpenPackF, T>
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
-    SimdEvalF: SimdField<Scalar = EvalF>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
@@ -119,19 +118,17 @@ where
     _marker_f: PhantomData<F>,
     _marker_simd_f: PhantomData<SimdF>,
     _marker_eval_f: PhantomData<EvalF>,
-    _marker_simd_eval_f: PhantomData<SimdEvalF>,
     _marker_commit_f: PhantomData<ComPackF>,
     _marker_open_f: PhantomData<OpenPackF>,
     _marker_t: PhantomData<T>,
 }
 
-impl<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T> PolynomialCommitmentScheme<EvalF, T>
-    for OrionSIMDFieldPCS<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T>
+impl<F, SimdF, EvalF, ComPackF, OpenPackF, T> PolynomialCommitmentScheme<EvalF, T>
+    for OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF, OpenPackF, T>
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
-    SimdEvalF: SimdField<Scalar = EvalF>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
@@ -145,7 +142,7 @@ where
 
     type SRS = OrionSRS;
     type Commitment = OrionCommitment;
-    type Opening = OrionProof<SimdEvalF>;
+    type Opening = OrionProof<EvalF>;
 
     // NOTE: here we say the number of variables is the sum of 2 following things:
     // - number of variables of the multilinear polynomial
@@ -175,7 +172,7 @@ where
         scratch_pad: &mut Self::ScratchPad,
         transcript: &mut T,
     ) -> (EvalF, Self::Opening) {
-        let opening = orion_open_simd_field::<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T>(
+        let opening = orion_open_simd_field::<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
             proving_key,
             poly,
             x,
@@ -205,7 +202,7 @@ where
         opening: &Self::Opening,
         transcript: &mut T,
     ) -> bool {
-        orion_verify_simd_field::<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T>(
+        orion_verify_simd_field::<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
             verifying_key,
             commitment,
             x,
@@ -216,12 +213,12 @@ where
     }
 }
 
-impl<C, SimdEvalF, ComPackF, OpenPackF, T> PCSForExpanderGKR<C, T>
+// TODO ...
+impl<C, ComPackF, OpenPackF, T> PCSForExpanderGKR<C, T>
     for OrionSIMDFieldPCS<
         C::CircuitField,
         C::SimdCircuitField,
         C::ChallengeField,
-        SimdEvalF,
         ComPackF,
         OpenPackF,
         T,
@@ -229,7 +226,6 @@ impl<C, SimdEvalF, ComPackF, OpenPackF, T> PCSForExpanderGKR<C, T>
 where
     C: GKRFieldConfig,
     T: Transcript<C::ChallengeField>,
-    SimdEvalF: SimdField<Scalar = C::ChallengeField>,
     ComPackF: SimdField<Scalar = C::CircuitField>,
     OpenPackF: SimdField<Scalar = C::CircuitField>,
 {
@@ -239,7 +235,7 @@ where
     type ScratchPad = OrionScratchPad<C::CircuitField, ComPackF>;
 
     type Commitment = OrionCommitment;
-    type Opening = OrionProof<SimdEvalF>;
+    type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
 
     #[allow(unused)]

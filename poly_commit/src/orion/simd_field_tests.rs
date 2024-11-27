@@ -1,7 +1,7 @@
 use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
-use gf2_128::{GF2_128x8, GF2_128};
+use gf2_128::GF2_128;
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
@@ -83,13 +83,11 @@ fn test_orion_commit_simd_field_consistency() {
     });
 }
 
-fn test_orion_pcs_simd_full_e2e_generics<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF>(
-    num_vars: usize,
-) where
+fn test_orion_pcs_simd_full_e2e_generics<F, SimdF, EvalF, ComPackF, OpenPackF>(num_vars: usize)
+where
     F: Field,
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
-    SimdEvalF: SimdField<Scalar = EvalF>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
 {
@@ -124,7 +122,7 @@ fn test_orion_pcs_simd_full_e2e_generics<F, SimdF, EvalF, SimdEvalF, ComPackF, O
 
     let commitment = orion_commit_simd_field(&srs, &random_poly, &mut scratch_pad).unwrap();
 
-    let opening = orion_open_simd_field::<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, _>(
+    let opening = orion_open_simd_field::<F, SimdF, EvalF, ComPackF, OpenPackF, _>(
         &srs,
         &random_poly,
         &random_point,
@@ -136,7 +134,6 @@ fn test_orion_pcs_simd_full_e2e_generics<F, SimdF, EvalF, SimdEvalF, ComPackF, O
         F,
         SimdF,
         EvalF,
-        SimdEvalF,
         ComPackF,
         OpenPackF,
         _,
@@ -153,11 +150,7 @@ fn test_orion_pcs_simd_full_e2e_generics<F, SimdF, EvalF, SimdEvalF, ComPackF, O
 #[test]
 fn test_orion_pcs_simd_full_e2e() {
     (16..=22).for_each(|num_vars| {
-        test_orion_pcs_simd_full_e2e_generics::<GF2, GF2x8, GF2_128, GF2_128x8, GF2x64, GF2x8>(
-            num_vars,
-        );
-        test_orion_pcs_simd_full_e2e_generics::<GF2, GF2x8, GF2_128, GF2_128x8, GF2x128, GF2x8>(
-            num_vars,
-        );
+        test_orion_pcs_simd_full_e2e_generics::<GF2, GF2x8, GF2_128, GF2x64, GF2x8>(num_vars);
+        test_orion_pcs_simd_full_e2e_generics::<GF2, GF2x8, GF2_128, GF2x128, GF2x8>(num_vars);
     })
 }

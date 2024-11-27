@@ -86,13 +86,13 @@ where
     drop(scratch);
 
     // NOTE: reshuffle the transposed matrix, from SIMD over row to SIMD over col
-    let mut scratch = vec![F::ZERO; SimdF::PACK_SIZE * PackF::PACK_SIZE];
+    let mut scratch = vec![F::ZERO; SimdF::PACK_SIZE * row_num];
     evaluations
-        .chunks(PackF::PACK_SIZE)
-        .flat_map(|circuit_simd_chunk| -> Vec<PackF> {
-            let mut temp: Vec<F> = circuit_simd_chunk.iter().flat_map(|c| c.unpack()).collect();
-            transpose_in_place(&mut temp, &mut scratch, PackF::PACK_SIZE);
-            temp.chunks(PackF::PACK_SIZE).map(PackF::pack).collect()
+        .chunks(row_num)
+        .flat_map(|row_simds| -> Vec<_> {
+            let mut elts: Vec<_> = row_simds.iter().flat_map(|f| f.unpack()).collect();
+            transpose_in_place(&mut elts, &mut scratch, row_num);
+            elts.chunks(PackF::PACK_SIZE).map(PackF::pack).collect()
         })
         .collect()
 }
@@ -102,24 +102,21 @@ where
 // as this directly plug into GKR argument system.
 // In that context, there is no need to evaluate,
 // as evaluation statement can be reduced on the verifier side.
-pub fn orion_open_simd_field<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T>(
+pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
     pk: &OrionSRS,
     poly: &MultiLinearPoly<SimdF>,
     point: &[EvalF],
     transcript: &mut T,
     scratch_pad: &OrionScratchPad<F, ComPackF>,
-) -> OrionProof<SimdEvalF>
+) -> OrionProof<EvalF>
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
-    SimdEvalF: SimdField<Scalar = EvalF>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
-    assert_eq!(SimdF::PACK_SIZE, SimdEvalF::PACK_SIZE);
-
     let (row_num, msg_size) = {
         let num_vars = poly.get_num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars, point.len());
@@ -146,29 +143,30 @@ where
     assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
 
     // NOTE: working on evaluation response of tensor code IOP based PCS
-    let mut eval_row = vec![SimdEvalF::ZERO; msg_size];
+    let mut eval_row = vec![EvalF::ZERO; msg_size * SimdF::PACK_SIZE];
 
     let eq_coeffs = EqPolynomial::build_eq_x_r(&point[num_vars_in_unpacked_msg..]);
     luts.build(&eq_coeffs);
 
     packed_shuffled_evals
-        .chunks(tables_num * SimdEvalF::PACK_SIZE)
+        .chunks(tables_num)
         .zip(eval_row.iter_mut())
-        .for_each(|(p_col, res)| *res = luts.lookup_and_sum_simd(p_col));
+        .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
 
     // NOTE: draw random linear combination out
     // and compose proximity response(s) of tensor code IOP based PCS
     let proximity_test_num = pk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
-    let mut proximity_rows = vec![vec![SimdEvalF::ZERO; msg_size]; proximity_test_num];
+    let mut proximity_rows =
+        vec![vec![EvalF::ZERO; msg_size * SimdF::PACK_SIZE]; proximity_test_num];
 
     proximity_rows.iter_mut().for_each(|row_buffer| {
         let random_coeffs = transcript.generate_challenge_field_elements(row_num);
         luts.build(&random_coeffs);
 
         packed_shuffled_evals
-            .chunks(tables_num * SimdEvalF::PACK_SIZE)
+            .chunks(tables_num)
             .zip(row_buffer.iter_mut())
-            .for_each(|(p_col, res)| *res = luts.lookup_and_sum_simd(p_col));
+            .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
     });
     drop(luts);
 
@@ -182,19 +180,18 @@ where
     }
 }
 
-pub fn orion_verify_simd_field<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T>(
+pub fn orion_verify_simd_field<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
     point: &[EvalF],
     evaluation: EvalF,
     transcript: &mut T,
-    proof: &OrionProof<SimdEvalF>,
+    proof: &OrionProof<EvalF>,
 ) -> bool
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
-    SimdEvalF: SimdField<Scalar = EvalF>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
@@ -209,13 +206,13 @@ where
     let num_vars_in_unpacked_msg = point.len() - num_vars_in_row;
 
     // NOTE: working on evaluation response, evaluate the rest of the response
-    let eval_unpacked: Vec<_> = proof.eval_row.iter().flat_map(|e| e.unpack()).collect();
-    let mut scratch = vec![EvalF::ZERO; msg_size * SimdEvalF::PACK_SIZE];
+    let mut scratch = vec![EvalF::ZERO; msg_size * SimdF::PACK_SIZE];
     let final_eval = MultiLinearPoly::evaluate_with_buffer(
-        &eval_unpacked,
+        &proof.eval_row,
         &point[..num_vars_in_unpacked_msg],
         &mut scratch,
     );
+
     if final_eval != evaluation {
         return false;
     }
@@ -236,20 +233,15 @@ where
 
     // NOTE: prepare the interleaved alphabets from the MT paths,
     // but reshuffle the packed elements into another direction
-    let mut scratch = vec![F::ZERO; SimdF::PACK_SIZE * OpenPackF::PACK_SIZE];
+    let mut scratch = vec![F::ZERO; SimdF::PACK_SIZE * row_num];
     let shuffled_interleaved_alphabet: Vec<Vec<OpenPackF>> = proof
         .query_openings
         .iter()
         .map(|c| -> Vec<_> {
-            c.unpack_field_elems::<F, ComPackF>()
-                .chunks_mut(SimdF::PACK_SIZE * OpenPackF::PACK_SIZE)
-                .flat_map(|circuit_simd_chunk| -> Vec<OpenPackF> {
-                    transpose_in_place(circuit_simd_chunk, &mut scratch, OpenPackF::PACK_SIZE);
-                    circuit_simd_chunk
-                        .chunks(OpenPackF::PACK_SIZE)
-                        .map(OpenPackF::pack)
-                        .collect()
-                })
+            let mut elts = c.unpack_field_elems::<F, ComPackF>();
+            transpose_in_place(&mut elts, &mut scratch, row_num);
+            elts.chunks(OpenPackF::PACK_SIZE)
+                .map(OpenPackF::pack)
                 .collect()
         })
         .collect();
@@ -260,15 +252,20 @@ where
     assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
 
     let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_vars_in_unpacked_msg..]);
+    let mut scratch_msg = vec![EvalF::ZERO; SimdF::PACK_SIZE * msg_size];
+    let mut scratch_codeword = vec![EvalF::ZERO; SimdF::PACK_SIZE * vk.codeword_len()];
     random_linear_combinations
         .iter()
         .zip(proof.proximity_rows.iter())
         .chain(iter::once((&eq_linear_combination, &proof.eval_row)))
         .all(|(rl, msg)| {
-            let codeword = match vk.code_instance.encode(msg) {
-                Ok(c) => c,
-                _ => return false,
-            };
+            let mut msg_cloned = msg.clone();
+            transpose_in_place(&mut msg_cloned, &mut scratch_msg, msg_size);
+            let mut codeword: Vec<_> = msg_cloned
+                .chunks(msg_size)
+                .flat_map(|m| vk.code_instance.encode(m).unwrap())
+                .collect();
+            transpose_in_place(&mut codeword, &mut scratch_codeword, SimdF::PACK_SIZE);
 
             luts.build(rl);
 
@@ -277,8 +274,13 @@ where
                 .zip(shuffled_interleaved_alphabet.iter())
                 .all(|(&qi, interleaved_alphabet)| {
                     let index = qi % vk.codeword_len();
-                    let alphabet: SimdEvalF = luts.lookup_and_sum_simd(interleaved_alphabet);
-                    alphabet == codeword[index]
+
+                    (index * SimdF::PACK_SIZE..(index + 1) * SimdF::PACK_SIZE)
+                        .zip(interleaved_alphabet.chunks(tables_num))
+                        .all(|(i, packed_index)| {
+                            let alphabet = luts.lookup_and_sum(packed_index);
+                            alphabet == codeword[i]
+                        })
                 })
         })
 }

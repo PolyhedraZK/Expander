@@ -4,7 +4,7 @@ use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gf2::{GF2x128, GF2x8, GF2};
-use gf2_128::{GF2_128x8, GF2_128};
+use gf2_128::GF2_128;
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
@@ -162,7 +162,7 @@ fn orion_base_field_opening_benchmark(c: &mut Criterion) {
     >(c, 19, 30);
 }
 
-fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T>(
+fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
     c: &mut Criterion,
     lowest_num_vars: usize,
     highest_num_vars: usize,
@@ -170,7 +170,6 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, SimdEvalF, ComPackF, Ope
     F: Field,
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
-    SimdEvalF: SimdField<Scalar = EvalF>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
@@ -212,7 +211,6 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, SimdEvalF, ComPackF, Ope
                             F,
                             SimdF,
                             EvalF,
-                            SimdEvalF,
                             ComPackF,
                             OpenPackF,
                             T,
@@ -231,7 +229,6 @@ fn orion_simd_field_opening_benchmark(c: &mut Criterion) {
         GF2,
         GF2x8,
         GF2_128,
-        GF2_128x8,
         GF2x128,
         GF2x8,
         BytesHashTranscript<_, Keccak256hasher>,
