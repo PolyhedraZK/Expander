@@ -130,21 +130,16 @@ where
         &scratch_pad,
     );
 
-    assert!(orion_verify_simd_field::<
-        F,
-        SimdF,
-        EvalF,
-        ComPackF,
-        OpenPackF,
-        _,
-    >(
-        &srs,
-        &commitment,
-        &random_point,
-        expected_eval,
-        &mut transcript_cloned,
-        &opening
-    ));
+    assert!(
+        orion_verify_simd_field::<F, SimdF, _, ComPackF, OpenPackF, _>(
+            &srs,
+            &commitment,
+            &random_point,
+            expected_eval,
+            &mut transcript_cloned,
+            &opening
+        )
+    );
 }
 
 #[test]

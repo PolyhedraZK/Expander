@@ -5,7 +5,10 @@ use gkr_field_config::GKRFieldConfig;
 use polynomials::MultiLinearPoly;
 use transcript::Transcript;
 
-use crate::{orion::*, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString};
+use crate::{
+    orion::*, traits::TensorCodeIOPPCS, PCSForExpanderGKR, PolynomialCommitmentScheme,
+    StructuredReferenceString,
+};
 
 impl StructuredReferenceString for OrionSRS {
     type PKey = OrionSRS;
@@ -180,14 +183,18 @@ where
             scratch_pad,
         );
 
-        let poly_ext_coeffs: Vec<_> = poly
-            .coeffs
-            .iter()
-            .flat_map(|p| -> Vec<_> { p.unpack().iter().map(|t| EvalF::from(*t)).collect() })
-            .collect();
+        let real_num_vars = poly.get_num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
+        let num_vars_in_msg = {
+            let (_, m) = <Self::SRS as TensorCodeIOPPCS>::evals_shape::<F>(real_num_vars);
+            m + SimdF::PACK_SIZE.ilog2() as usize
+        };
 
-        let mut scratch = vec![EvalF::ZERO; 1 << poly.get_num_vars()];
-        let eval = MultiLinearPoly::evaluate_with_buffer(&poly_ext_coeffs, x, &mut scratch);
+        let mut scratch = vec![EvalF::ZERO; 1 << num_vars_in_msg];
+        let eval = MultiLinearPoly::evaluate_with_buffer(
+            &opening.eval_row,
+            &x[..num_vars_in_msg],
+            &mut scratch,
+        );
         drop(scratch);
 
         (eval, opening)
