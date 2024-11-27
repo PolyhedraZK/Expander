@@ -1,6 +1,4 @@
-use std::ops::Mul;
-
-use arith::{Field, SimdField};
+use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
 use gf2_128::{GF2_128x8, GF2_128};
@@ -90,7 +88,7 @@ fn test_orion_pcs_simd_full_e2e_generics<F, SimdF, EvalF, SimdEvalF, ComPackF, O
 ) where
     F: Field,
     SimdF: SimdField<Scalar = F>,
-    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    EvalF: ExtensionField<BaseField = F>,
     SimdEvalF: SimdField<Scalar = EvalF>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,

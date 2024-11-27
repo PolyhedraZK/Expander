@@ -1,6 +1,6 @@
-use std::{hint::black_box, ops::Mul};
+use std::hint::black_box;
 
-use arith::{Field, SimdField};
+use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gf2::{GF2x128, GF2x8, GF2};
@@ -106,7 +106,7 @@ fn base_field_opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
     highest_num_vars: usize,
 ) where
     F: Field,
-    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
@@ -169,7 +169,7 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, SimdEvalF, ComPackF, Ope
 ) where
     F: Field,
     SimdF: SimdField<Scalar = F>,
-    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    EvalF: ExtensionField<BaseField = F>,
     SimdEvalF: SimdField<Scalar = EvalF>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,

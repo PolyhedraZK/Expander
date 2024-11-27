@@ -1,7 +1,6 @@
 use std::iter;
-use std::ops::Mul;
 
-use arith::{Field, SimdField};
+use arith::{ExtensionField, Field, SimdField};
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::Transcript;
 
@@ -68,7 +67,7 @@ pub fn orion_open_base_field<F, EvalF, ComPackF, OpenPackF, T>(
 ) -> (EvalF, OrionProof<EvalF>)
 where
     F: Field,
-    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
@@ -147,7 +146,7 @@ pub fn orion_verify_base_field<F, EvalF, ComPackF, OpenPackF, T>(
 ) -> bool
 where
     F: Field,
-    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,

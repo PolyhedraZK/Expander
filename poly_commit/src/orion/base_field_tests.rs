@@ -1,6 +1,4 @@
-use std::ops::Mul;
-
-use arith::{Field, SimdField};
+use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
 use gf2_128::GF2_128;
@@ -72,7 +70,7 @@ fn test_orion_commit_base_field_consistency() {
 fn test_orion_pcs_base_full_e2e_generics<F, EvalF, ComPackF, OpenPackF>(num_vars: usize)
 where
     F: Field,
-    EvalF: Field + Mul<F, Output = EvalF> + From<F>,
+    EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
 {

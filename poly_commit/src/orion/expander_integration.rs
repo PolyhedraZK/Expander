@@ -1,20 +1,11 @@
 use std::marker::PhantomData;
-use std::ops::Mul;
 
-use arith::{Field, SimdField};
+use arith::{ExtensionField, Field, SimdField};
+use gkr_field_config::GKRFieldConfig;
 use polynomials::MultiLinearPoly;
 use transcript::Transcript;
 
-use crate::{
-    orion::{OrionCommitment, OrionProof, OrionSRS, OrionScratchPad},
-    orion_commit_base_field, orion_open_simd_field, PolynomialCommitmentScheme,
-    StructuredReferenceString, ORION_CODE_PARAMETER_INSTANCE,
-};
-
-use super::{
-    orion_commit_simd_field, orion_open_base_field, orion_verify_base_field,
-    orion_verify_simd_field,
-};
+use crate::{orion::*, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString};
 
 impl StructuredReferenceString for OrionSRS {
     type PKey = OrionSRS;
@@ -29,7 +20,7 @@ impl StructuredReferenceString for OrionSRS {
 pub struct OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF, T>
 where
     F: Field,
-    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
@@ -45,7 +36,7 @@ impl<F, EvalF, ComPackF, OpenPackF, T> PolynomialCommitmentScheme<EvalF, T>
     for OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF, T>
 where
     F: Field,
-    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
@@ -119,7 +110,7 @@ pub struct OrionSIMDFieldPCS<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T>
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
-    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    EvalF: ExtensionField<BaseField = F>,
     SimdEvalF: SimdField<Scalar = EvalF>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
@@ -139,7 +130,7 @@ impl<F, SimdF, EvalF, SimdEvalF, ComPackF, OpenPackF, T> PolynomialCommitmentSch
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
-    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    EvalF: ExtensionField<BaseField = F>,
     SimdEvalF: SimdField<Scalar = EvalF>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
@@ -222,5 +213,92 @@ where
             transcript,
             opening,
         )
+    }
+}
+
+impl<C, SimdEvalF, ComPackF, OpenPackF, T> PCSForExpanderGKR<C, T>
+    for OrionSIMDFieldPCS<
+        C::CircuitField,
+        C::SimdCircuitField,
+        C::ChallengeField,
+        SimdEvalF,
+        ComPackF,
+        OpenPackF,
+        T,
+    >
+where
+    C: GKRFieldConfig,
+    T: Transcript<C::ChallengeField>,
+    SimdEvalF: SimdField<Scalar = C::ChallengeField>,
+    ComPackF: SimdField<Scalar = C::CircuitField>,
+    OpenPackF: SimdField<Scalar = C::CircuitField>,
+{
+    const NAME: &'static str = "OrionSIMDPCSForExpanderGKR";
+
+    type Params = usize;
+    type ScratchPad = OrionScratchPad<C::CircuitField, ComPackF>;
+
+    type Commitment = OrionCommitment;
+    type Opening = OrionProof<SimdEvalF>;
+    type SRS = OrionSRS;
+
+    #[allow(unused)]
+    fn gen_params(n_input_vars: usize) -> Self::Params {
+        todo!()
+    }
+
+    #[allow(unused)]
+    fn gen_srs_for_testing(
+        params: &Self::Params,
+        mpi_config: &mpi_config::MPIConfig,
+        rng: impl rand::RngCore,
+    ) -> Self::SRS {
+        todo!()
+    }
+
+    #[allow(unused)]
+    fn init_scratch_pad(
+        params: &Self::Params,
+        mpi_config: &mpi_config::MPIConfig,
+    ) -> Self::ScratchPad {
+        todo!()
+    }
+
+    #[allow(unused)]
+    fn commit(
+        params: &Self::Params,
+        mpi_config: &mpi_config::MPIConfig,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        poly: &MultiLinearPoly<<C as GKRFieldConfig>::SimdCircuitField>,
+        scratch_pad: &mut Self::ScratchPad,
+    ) -> Self::Commitment {
+        todo!()
+    }
+
+    #[allow(unused)]
+    fn open(
+        params: &Self::Params,
+        mpi_config: &mpi_config::MPIConfig,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        poly: &MultiLinearPoly<<C as GKRFieldConfig>::SimdCircuitField>,
+        x: &crate::ExpanderGKRChallenge<C>,
+        transcript: &mut T, // add transcript here to allow interactive arguments
+        scratch_pad: &mut Self::ScratchPad,
+    ) -> Self::Opening {
+        todo!()
+    }
+
+    #[allow(unused)]
+    fn verify(
+        params: &Self::Params,
+        mpi_config: &mpi_config::MPIConfig,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        commitment: &Self::Commitment,
+        x: &crate::ExpanderGKRChallenge<C>,
+        v: <C as GKRFieldConfig>::ChallengeField,
+        transcript: &mut T, // add transcript here to allow interactive arguments
+        opening: &Self::Opening,
+    ) -> bool {
+        todo!()
     }
 }

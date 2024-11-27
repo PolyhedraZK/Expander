@@ -1,6 +1,6 @@
-use std::{marker::PhantomData, ops::Mul};
+use std::marker::PhantomData;
 
-use arith::{Field, FieldSerdeError, SimdField};
+use arith::{ExtensionField, Field, FieldSerdeError, SimdField};
 use thiserror::Error;
 use transcript::Transcript;
 
@@ -85,6 +85,13 @@ where
     pub _phantom: PhantomData<ComPackF>,
 }
 
+unsafe impl<F, ComPackF> Send for OrionScratchPad<F, ComPackF>
+where
+    F: Field,
+    ComPackF: SimdField<Scalar = F>,
+{
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct OrionProof<EvalF: Field> {
     pub eval_row: Vec<EvalF>,
@@ -138,7 +145,7 @@ pub(crate) fn orion_mt_openings<F, EvalF, ComPackF, T>(
 ) -> Vec<tree::RangePath>
 where
     F: Field,
-    EvalF: Field + From<F> + Mul<F, Output = EvalF>,
+    EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
