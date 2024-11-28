@@ -44,6 +44,7 @@ pub fn test_pcs<F: Field, T: Transcript<F>, P: PolynomialCommitmentScheme<F, T>>
     }
 }
 
+#[allow(unused)]
 pub fn test_gkr_pcs<
     C: GKRFieldConfig,
     T: Transcript<C::ChallengeField>,

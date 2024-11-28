@@ -8,6 +8,8 @@ use poly_commit::*;
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher};
 
+const TEST_REPETITION: usize = 3;
+
 fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF>()
 where
     F: Field,
@@ -16,10 +18,9 @@ where
     OpenPackF: SimdField<Scalar = F>,
 {
     let mut rng = test_rng();
-    let test_repetition = 3;
 
     (19..=25).for_each(|num_vars| {
-        let xs: Vec<_> = (0..test_repetition)
+        let xs: Vec<_> = (0..TEST_REPETITION)
             .map(|_| -> Vec<EvalF> {
                 (0..num_vars)
                     .map(|_| EvalF::random_unsafe(&mut rng))
@@ -57,11 +58,10 @@ where
     OpenPackF: SimdField<Scalar = F>,
 {
     let mut rng = test_rng();
-    let test_repetition = 3;
 
     (16..=22).for_each(|num_vars| {
         let real_num_vars = num_vars + SimdF::PACK_SIZE.ilog2() as usize;
-        let xs: Vec<_> = (0..test_repetition)
+        let xs: Vec<_> = (0..TEST_REPETITION)
             .map(|_| -> Vec<EvalF> {
                 (0..real_num_vars)
                     .map(|_| EvalF::random_unsafe(&mut rng))
