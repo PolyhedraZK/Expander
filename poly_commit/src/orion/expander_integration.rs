@@ -2,17 +2,17 @@ use std::marker::PhantomData;
 
 use arith::{ExtensionField, Field, SimdField};
 use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
 use polynomials::MultiLinearPoly;
 use transcript::Transcript;
 
 use crate::{
-    orion::*, traits::TensorCodeIOPPCS, PCSForExpanderGKR, PolynomialCommitmentScheme,
-    StructuredReferenceString,
+    orion::*, traits::TensorCodeIOPPCS, ExpanderGKRChallenge, PCSForExpanderGKR,
+    PolynomialCommitmentScheme, StructuredReferenceString,
 };
 
 impl StructuredReferenceString for OrionSRS {
     type PKey = OrionSRS;
-
     type VKey = OrionSRS;
 
     fn into_keys(self) -> (Self::PKey, Self::VKey) {
@@ -232,9 +232,9 @@ impl<C, ComPackF, OpenPackF, T> PCSForExpanderGKR<C, T>
     >
 where
     C: GKRFieldConfig,
-    T: Transcript<C::ChallengeField>,
     ComPackF: SimdField<Scalar = C::CircuitField>,
     OpenPackF: SimdField<Scalar = C::CircuitField>,
+    T: Transcript<C::ChallengeField>,
 {
     const NAME: &'static str = "OrionSIMDPCSForExpanderGKR";
 
@@ -253,55 +253,94 @@ where
     #[allow(unused)]
     fn gen_srs_for_testing(
         params: &Self::Params,
-        mpi_config: &mpi_config::MPIConfig,
+        mpi_config: &MPIConfig,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
         todo!()
     }
 
-    #[allow(unused)]
-    fn init_scratch_pad(
-        params: &Self::Params,
-        mpi_config: &mpi_config::MPIConfig,
-    ) -> Self::ScratchPad {
-        todo!()
+    fn init_scratch_pad(_params: &Self::Params, _mpi_config: &MPIConfig) -> Self::ScratchPad {
+        Self::ScratchPad::default()
     }
 
-    #[allow(unused)]
     fn commit(
-        params: &Self::Params,
-        mpi_config: &mpi_config::MPIConfig,
+        _params: &Self::Params,
+        mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &MultiLinearPoly<<C as GKRFieldConfig>::SimdCircuitField>,
+        poly: &MultiLinearPoly<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
-        todo!()
+        let commitment = orion_commit_simd_field(proving_key, poly, scratch_pad).unwrap();
+        if mpi_config.world_size == 1 {
+            return commitment;
+        }
+
+        let local_buffer = vec![commitment.clone()];
+        let mut buffer = match mpi_config.is_root() {
+            true => vec![Self::Commitment::default(); mpi_config.world_size()],
+            _ => Vec::new(),
+        };
+        mpi_config.gather_vec(&local_buffer, &mut buffer);
+
+        let mut root = Self::Commitment::default();
+        if mpi_config.is_root() {
+            let final_tree_height = 1 + buffer.len().ilog2() as u32;
+            let (internals, _) = tree::Tree::new_with_leaf_nodes(buffer.clone(), final_tree_height);
+            root = internals[0];
+        }
+        mpi_config.root_broadcast_f(&mut root);
+        root
     }
 
-    #[allow(unused)]
     fn open(
-        params: &Self::Params,
-        mpi_config: &mpi_config::MPIConfig,
+        _params: &Self::Params,
+        mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &MultiLinearPoly<<C as GKRFieldConfig>::SimdCircuitField>,
-        x: &crate::ExpanderGKRChallenge<C>,
+        poly: &MultiLinearPoly<C::SimdCircuitField>,
+        eval_point: &ExpanderGKRChallenge<C>,
         transcript: &mut T, // add transcript here to allow interactive arguments
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Opening {
+        let local_xs = eval_point.local_xs();
+        let local_opening = orion_open_simd_field::<
+            C::CircuitField,
+            C::SimdCircuitField,
+            C::ChallengeField,
+            ComPackF,
+            OpenPackF,
+            T,
+        >(proving_key, poly, &local_xs, transcript, scratch_pad);
+        if mpi_config.world_size == 1 {
+            return local_opening;
+        }
+
+        // TODO ... is x_mpi right of (earlier evaluated than) x_simd and x?
+
         todo!()
     }
 
-    #[allow(unused)]
     fn verify(
-        params: &Self::Params,
-        mpi_config: &mpi_config::MPIConfig,
+        _params: &Self::Params,
+        mpi_config: &MPIConfig,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &crate::ExpanderGKRChallenge<C>,
-        v: <C as GKRFieldConfig>::ChallengeField,
+        eval_point: &ExpanderGKRChallenge<C>,
+        v: C::ChallengeField,
         transcript: &mut T, // add transcript here to allow interactive arguments
         opening: &Self::Opening,
     ) -> bool {
+        let local_xs = eval_point.local_xs();
+        if mpi_config.world_size == 1 {
+            return orion_verify_simd_field::<
+                C::CircuitField,
+                C::SimdCircuitField,
+                C::ChallengeField,
+                ComPackF,
+                OpenPackF,
+                T,
+            >(verifying_key, commitment, &local_xs, v, transcript, opening);
+        }
+
         todo!()
     }
 }

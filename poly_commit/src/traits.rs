@@ -71,6 +71,15 @@ pub struct ExpanderGKRChallenge<C: GKRFieldConfig> {
     pub x_mpi: Vec<C::ChallengeField>,
 }
 
+impl<C: GKRFieldConfig> ExpanderGKRChallenge<C> {
+    pub fn local_xs(&self) -> Vec<C::ChallengeField> {
+        let mut local_xs = Vec::with_capacity(self.x_simd.len() + self.x.len());
+        local_xs[..self.x_simd.len()].copy_from_slice(&self.x_simd);
+        local_xs[self.x_simd.len()..].copy_from_slice(&self.x);
+        local_xs
+    }
+}
+
 pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
     const NAME: &'static str;
 

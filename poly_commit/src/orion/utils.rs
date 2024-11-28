@@ -85,12 +85,7 @@ where
     pub _phantom: PhantomData<ComPackF>,
 }
 
-unsafe impl<F, ComPackF> Send for OrionScratchPad<F, ComPackF>
-where
-    F: Field,
-    ComPackF: SimdField<Scalar = F>,
-{
-}
+unsafe impl<F: Field, ComPackF: SimdField<Scalar = F>> Send for OrionScratchPad<F, ComPackF> {}
 
 #[derive(Clone, Debug, Default)]
 pub struct OrionProof<EvalF: Field> {
