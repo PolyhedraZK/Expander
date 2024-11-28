@@ -207,16 +207,15 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
                 ),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(orion_open_simd_field::<
-                            F,
-                            SimdF,
-                            EvalF,
-                            ComPackF,
-                            OpenPackF,
-                            T,
-                        >(
-                            &srs, &poly, &eval_point, &mut transcript, &scratch_pad
-                        ))
+                        _ = black_box(
+                            orion_open_simd_field::<F, SimdF, _, ComPackF, OpenPackF, T>(
+                                &srs,
+                                &poly,
+                                &eval_point,
+                                &mut transcript,
+                                &scratch_pad,
+                            ),
+                        )
                     })
                 },
             )
