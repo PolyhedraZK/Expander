@@ -23,6 +23,7 @@ pub fn test_pcs<F: Field, T: Transcript<F>, P: PolynomialCommitmentScheme<F, T>>
     let commitment = P::commit(params, &proving_key, poly, &mut scratch_pad);
 
     for x in xs {
+        let mut transcript_cloned = transcript.clone();
         let (v, opening) = P::open(
             params,
             &proving_key,
@@ -38,7 +39,7 @@ pub fn test_pcs<F: Field, T: Transcript<F>, P: PolynomialCommitmentScheme<F, T>>
             x,
             v,
             &opening,
-            &mut transcript
+            &mut transcript_cloned
         ));
     }
 }

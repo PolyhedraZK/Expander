@@ -186,7 +186,7 @@ where
         let real_num_vars = poly.get_num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
         let num_vars_in_msg = {
             let (_, m) = <Self::SRS as TensorCodeIOPPCS>::evals_shape::<F>(real_num_vars);
-            m + SimdF::PACK_SIZE.ilog2() as usize
+            (m.ilog2() + SimdF::PACK_SIZE.ilog2()) as usize
         };
 
         let mut scratch = vec![EvalF::ZERO; 1 << num_vars_in_msg];
@@ -275,7 +275,7 @@ where
             return commitment;
         }
 
-        let local_buffer = vec![commitment.clone()];
+        let local_buffer = vec![commitment];
         let mut buffer = match mpi_config.is_root() {
             true => vec![Self::Commitment::default(); mpi_config.world_size()],
             _ => Vec::new(),
@@ -284,7 +284,7 @@ where
 
         let mut root = Self::Commitment::default();
         if mpi_config.is_root() {
-            let final_tree_height = 1 + buffer.len().ilog2() as u32;
+            let final_tree_height = 1 + buffer.len().ilog2();
             let (internals, _) = tree::Tree::new_with_leaf_nodes(buffer.clone(), final_tree_height);
             root = internals[0];
         }

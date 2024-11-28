@@ -1,9 +1,7 @@
-use arith::{ExtensionField, Field, SimdField};
+use arith::{Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
-use gf2_128::GF2_128;
 use polynomials::MultiLinearPoly;
-use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 use crate::{
     orion::{simd_field_impl::*, utils::*},
@@ -81,71 +79,4 @@ fn test_orion_commit_simd_field_consistency() {
         test_orion_commit_simd_field_consistency_generic::<GF2, GF2x8, GF2x64>(num_vars);
         test_orion_commit_simd_field_consistency_generic::<GF2, GF2x8, GF2x128>(num_vars);
     });
-}
-
-fn test_orion_pcs_simd_full_e2e_generics<F, SimdF, EvalF, ComPackF, OpenPackF>(num_vars: usize)
-where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
-{
-    let mut rng = test_rng();
-
-    let random_poly = MultiLinearPoly::<SimdF>::random(num_vars, &mut rng);
-    let random_poly_unpacked = MultiLinearPoly::<EvalF>::new(
-        random_poly
-            .coeffs
-            .iter()
-            .flat_map(|p| -> Vec<_> { p.unpack().iter().map(|t| EvalF::from(*t)).collect() })
-            .collect(),
-    );
-    let real_num_vars = num_vars + SimdF::PACK_SIZE.ilog2() as usize;
-    let random_point: Vec<_> = (0..real_num_vars)
-        .map(|_| EvalF::random_unsafe(&mut rng))
-        .collect();
-
-    let mut scratch = vec![EvalF::ZERO; random_poly_unpacked.coeffs.len()];
-    let expected_eval = MultiLinearPoly::evaluate_with_buffer(
-        &random_poly_unpacked.coeffs,
-        &random_point,
-        &mut scratch,
-    );
-    drop(scratch);
-
-    let srs =
-        OrionSRS::from_random::<SimdF>(real_num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
-    let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
-    let mut transcript: BytesHashTranscript<EvalF, Keccak256hasher> = BytesHashTranscript::new();
-    let mut transcript_cloned = transcript.clone();
-
-    let commitment = orion_commit_simd_field(&srs, &random_poly, &mut scratch_pad).unwrap();
-
-    let opening = orion_open_simd_field::<F, SimdF, EvalF, ComPackF, OpenPackF, _>(
-        &srs,
-        &random_poly,
-        &random_point,
-        &mut transcript,
-        &scratch_pad,
-    );
-
-    assert!(
-        orion_verify_simd_field::<F, SimdF, _, ComPackF, OpenPackF, _>(
-            &srs,
-            &commitment,
-            &random_point,
-            expected_eval,
-            &mut transcript_cloned,
-            &opening
-        )
-    );
-}
-
-#[test]
-fn test_orion_pcs_simd_full_e2e() {
-    (16..=22).for_each(|num_vars| {
-        test_orion_pcs_simd_full_e2e_generics::<GF2, GF2x8, GF2_128, GF2x64, GF2x8>(num_vars);
-        test_orion_pcs_simd_full_e2e_generics::<GF2, GF2x8, GF2_128, GF2x128, GF2x8>(num_vars);
-    })
 }
