@@ -26,7 +26,8 @@ pub use simd_field_impl::{
 #[cfg(test)]
 mod simd_field_tests;
 
-mod expander_integration;
-pub use expander_integration::{OrionBaseFieldPCS, OrionSIMDFieldPCS};
+mod pcs_for_expander_gkr;
+mod pcs_trait_impl;
+pub use pcs_trait_impl::{OrionBaseFieldPCS, OrionSIMDFieldPCS};
 
 mod serde;
