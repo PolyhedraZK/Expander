@@ -64,22 +64,24 @@ where
     }
 
     fn commit(
-        _params: &Self::Params,
+        params: &Self::Params,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
+        assert_eq!(*params, proving_key.num_vars);
         orion_commit_base_field(proving_key, poly, scratch_pad).unwrap()
     }
 
     fn open(
-        _params: &Self::Params,
+        params: &Self::Params,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &mut Self::ScratchPad,
         transcript: &mut T,
     ) -> (EvalF, Self::Opening) {
+        assert_eq!(*params, proving_key.num_vars);
         orion_open_base_field::<F, EvalF, ComPackF, OpenPackF, T>(
             proving_key,
             poly,
@@ -90,7 +92,7 @@ where
     }
 
     fn verify(
-        _params: &Self::Params,
+        params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
@@ -98,6 +100,7 @@ where
         opening: &Self::Opening,
         transcript: &mut T,
     ) -> bool {
+        assert_eq!(*params, verifying_key.num_vars);
         orion_verify_base_field::<F, EvalF, ComPackF, OpenPackF, T>(
             verifying_key,
             commitment,
@@ -159,22 +162,32 @@ where
     }
 
     fn commit(
-        _params: &Self::Params,
+        params: &Self::Params,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
+        assert_eq!(*params, proving_key.num_vars);
+        assert_eq!(
+            poly.get_num_vars(),
+            proving_key.num_vars - SimdF::PACK_SIZE.ilog2() as usize
+        );
         orion_commit_simd_field(proving_key, poly, scratch_pad).unwrap()
     }
 
     fn open(
-        _params: &Self::Params,
+        params: &Self::Params,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &mut Self::ScratchPad,
         transcript: &mut T,
     ) -> (EvalF, Self::Opening) {
+        assert_eq!(*params, proving_key.num_vars);
+        assert_eq!(
+            poly.get_num_vars(),
+            proving_key.num_vars - SimdF::PACK_SIZE.ilog2() as usize
+        );
         let opening = orion_open_simd_field::<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
             proving_key,
             poly,
@@ -201,7 +214,7 @@ where
     }
 
     fn verify(
-        _params: &Self::Params,
+        params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
@@ -209,6 +222,8 @@ where
         opening: &Self::Opening,
         transcript: &mut T,
     ) -> bool {
+        assert_eq!(*params, verifying_key.num_vars);
+        assert_eq!(x.len(), verifying_key.num_vars);
         orion_verify_simd_field::<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
             verifying_key,
             commitment,
@@ -220,7 +235,6 @@ where
     }
 }
 
-// TODO ...
 impl<C, ComPackF, OpenPackF, T> PCSForExpanderGKR<C, T>
     for OrionSIMDFieldPCS<
         C::CircuitField,
@@ -315,6 +329,7 @@ where
         }
 
         // TODO ... is x_mpi right of (earlier evaluated than) x_simd and x?
+        // seems so.
 
         todo!()
     }
@@ -340,6 +355,8 @@ where
                 T,
             >(verifying_key, commitment, &local_xs, v, transcript, opening);
         }
+
+        // TODO ... decide open and verify in distributed settings
 
         todo!()
     }

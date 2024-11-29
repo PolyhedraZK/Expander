@@ -29,7 +29,7 @@ pub type OrionResult<T> = std::result::Result<T, OrionPCSError>;
 
 #[derive(Clone, Debug, Default)]
 pub struct OrionSRS {
-    pub num_variables: usize,
+    pub num_vars: usize,
     pub code_instance: OrionCode,
 }
 
@@ -44,8 +44,8 @@ impl TensorCodeIOPPCS for OrionSRS {
 }
 
 impl OrionSRS {
-    pub fn new<F: Field>(num_variables: usize, code_instance: OrionCode) -> OrionResult<Self> {
-        let (_, msg_size) = Self::evals_shape::<F>(num_variables);
+    pub fn new<F: Field>(num_vars: usize, code_instance: OrionCode) -> OrionResult<Self> {
+        let (_, msg_size) = Self::evals_shape::<F>(num_vars);
         if msg_size != code_instance.msg_len() {
             return Err(OrionPCSError::ParameterUnmatchError);
         }
@@ -53,7 +53,7 @@ impl OrionSRS {
         // NOTE: we just move the instance of code,
         // don't think the instance of expander code will be used elsewhere
         Ok(Self {
-            num_variables,
+            num_vars,
             code_instance,
         })
     }
@@ -66,7 +66,7 @@ impl OrionSRS {
         let (_, msg_size) = Self::evals_shape::<F>(num_variables);
 
         Self {
-            num_variables,
+            num_vars: num_variables,
             code_instance: OrionCode::new(code_param_instance, msg_size, &mut rng),
         }
     }

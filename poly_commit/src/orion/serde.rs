@@ -86,7 +86,7 @@ impl FieldSerde for OrionSRS {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        self.num_variables.serialize_into(&mut writer)?;
+        self.num_vars.serialize_into(&mut writer)?;
         self.code_instance.serialize_into(&mut writer)?;
         Ok(())
     }
@@ -95,7 +95,7 @@ impl FieldSerde for OrionSRS {
         let num_variables = usize::deserialize_from(&mut reader)?;
         let code_instance = OrionCode::deserialize_from(&mut reader)?;
         Ok(Self {
-            num_variables,
+            num_vars: num_variables,
             code_instance,
         })
     }
