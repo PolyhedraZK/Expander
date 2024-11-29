@@ -75,6 +75,7 @@ pub fn test_gkr_pcs<
 
     for xx in xs {
         let ExpanderGKRChallenge { x, x_simd, x_mpi } = xx;
+        let mut transcript_cloned = transcript.clone();
 
         transcript.lock_proof();
         let opening = P::open(
@@ -100,7 +101,7 @@ pub fn test_gkr_pcs<
                 &commitment,
                 xx,
                 v,
-                transcript,
+                &mut transcript_cloned,
                 &opening
             ));
             transcript.unlock_proof();

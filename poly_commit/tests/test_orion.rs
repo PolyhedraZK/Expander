@@ -59,16 +59,16 @@ where
 {
     let mut rng = test_rng();
 
-    (16..=22).for_each(|num_vars| {
-        let real_num_vars = num_vars + SimdF::PACK_SIZE.ilog2() as usize;
+    (19..=25).for_each(|num_vars| {
+        let poly_num_vars = num_vars - SimdF::PACK_SIZE.ilog2() as usize;
         let xs: Vec<_> = (0..TEST_REPETITION)
             .map(|_| -> Vec<EvalF> {
-                (0..real_num_vars)
+                (0..num_vars)
                     .map(|_| EvalF::random_unsafe(&mut rng))
                     .collect()
             })
             .collect();
-        let poly = MultiLinearPoly::<SimdF>::random(num_vars, &mut rng);
+        let poly = MultiLinearPoly::<SimdF>::random(poly_num_vars, &mut rng);
 
         common::test_pcs::<
             EvalF,
@@ -81,7 +81,7 @@ where
                 OpenPackF,
                 BytesHashTranscript<EvalF, Keccak256hasher>,
             >,
-        >(&real_num_vars, &poly, &xs);
+        >(&num_vars, &poly, &xs);
     })
 }
 
