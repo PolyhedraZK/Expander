@@ -1,6 +1,4 @@
-use std::io::Cursor;
-
-use arith::{Field, FieldSerde, SimdField};
+use arith::SimdField;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::{EqPolynomial, MultiLinearPoly};
@@ -69,20 +67,18 @@ where
         }
 
         let local_buffer = vec![commitment];
-        let mut buffer = match mpi_config.is_root() {
-            true => vec![Self::Commitment::default(); mpi_config.world_size()],
-            _ => Vec::new(),
-        };
+        let mut buffer = vec![Self::Commitment::default(); mpi_config.world_size()];
         mpi_config.gather_vec(&local_buffer, &mut buffer);
 
-        let mut root = Self::Commitment::default();
-        if mpi_config.is_root() {
-            let final_tree_height = 1 + buffer.len().ilog2();
-            let (internals, _) = tree::Tree::new_with_leaf_nodes(buffer.clone(), final_tree_height);
-            root = internals[0];
+        // NOTE: Hang also assume that, linear GKR will take over the commitment
+        // and force sync transcript hash state of subordinate machines to be the same.
+        if !mpi_config.is_root() {
+            return commitment;
         }
-        mpi_config.root_broadcast_f(&mut root);
-        root
+
+        let final_tree_height = 1 + buffer.len().ilog2();
+        let (internals, _) = tree::Tree::new_with_leaf_nodes(buffer.clone(), final_tree_height);
+        internals[0]
     }
 
     fn open(
@@ -110,23 +106,40 @@ where
             return local_opening;
         }
 
+        // NOTE: sample MPI linear combination coeffs for proximity rows and eval row
         let mpi_random_coeffs: Vec<_> = (0..local_opening.proximity_rows.len())
             .map(|_| transcript.generate_challenge_field_elements(mpi_config.world_size()))
             .collect();
         let mpi_eq_coeffs = EqPolynomial::build_eq_x_r(&eval_point.x_mpi);
 
-        let mut combined_eval_row = local_opening.eval_row.clone();
-        mpi_linear_combine(mpi_config, &mut combined_eval_row, &mpi_eq_coeffs);
+        // NOTE: eval row combine from MPI
+        let eval_row = mpi_config.coef_combine_vec(&local_opening.eval_row, &mpi_eq_coeffs);
 
-        let mut combined_proximity_rows = local_opening.proximity_rows.clone();
-        combined_proximity_rows
-            .iter_mut()
+        // NOTE: proximity rows combine from MPI
+        let proximity_rows = local_opening
+            .proximity_rows
+            .iter()
             .zip(mpi_random_coeffs.iter())
-            .for_each(|(row, weights)| mpi_linear_combine(mpi_config, row, weights));
+            .map(|(row, weights)| mpi_config.coef_combine_vec(row, weights))
+            .collect();
 
-        // TODO gather all merkle paths
+        // NOTE: gather all merkle paths
+        let mut query_openings = vec![
+            tree::RangePath::default();
+            mpi_config.world_size() * local_opening.query_openings.len()
+        ];
+        mpi_config.gather_vec(&local_opening.query_openings, &mut query_openings);
 
-        todo!()
+        if !mpi_config.is_root() {
+            return local_opening;
+        }
+
+        // NOTE: we only care about the root machine's opening as final proof, Hang assume.
+        OrionProof {
+            eval_row,
+            proximity_rows,
+            query_openings,
+        }
     }
 
     fn verify(
@@ -142,8 +155,6 @@ where
         let num_vars_each_core = *params - mpi_config.world_size();
         assert_eq!(num_vars_each_core, verifying_key.num_vars);
 
-        // TODO only verify the gathered orion opening
-
         let local_xs = eval_point.local_xs();
         if mpi_config.world_size == 1 {
             return orion_verify_simd_field::<
@@ -156,21 +167,9 @@ where
             >(verifying_key, commitment, &local_xs, v, transcript, opening);
         }
 
-        // TODO ... decide open and verify in distributed settings
+        // NOTE: we now assume that the input opening is from the root machine,
+        // as proofs from other machines are typically undefined
 
         todo!()
     }
-}
-
-fn mpi_linear_combine<F: Field>(mpi_comm: &MPIConfig, local_vec: &mut Vec<F>, weights: &[F]) {
-    let combined = mpi_comm.coef_combine_vec(local_vec, weights);
-
-    let mut bytes: Vec<u8> = Vec::new();
-    combined.serialize_into(&mut bytes).unwrap();
-    mpi_comm.root_broadcast_bytes(&mut bytes);
-
-    let cursor = Cursor::new(bytes);
-    let final_res = <Vec<F> as FieldSerde>::deserialize_from(cursor).unwrap();
-
-    local_vec.copy_from_slice(&final_res);
 }

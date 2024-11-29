@@ -82,6 +82,11 @@ impl Path {
     }
 
     #[inline]
+    pub fn root(&self) -> Node {
+        self.path_nodes[0]
+    }
+
+    #[inline]
     pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
     where
         F: Field,
@@ -127,6 +132,11 @@ impl RangePath {
         let common_ancestor = common_ancestor(self.left, self.right);
 
         (0..self.path_nodes.len() + 1).map(move |i| ((common_ancestor >> i) & 1) != 0)
+    }
+
+    #[inline]
+    pub fn root(&self) -> Node {
+        self.path_nodes[0]
     }
 
     #[inline]
