@@ -1799,6 +1799,7 @@ dependencies = [
  "gf2",
  "gf2_128",
  "gkr_field_config",
+ "itertools 0.13.0",
  "mersenne31",
  "mpi_config",
  "polynomials",
