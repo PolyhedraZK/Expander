@@ -167,8 +167,8 @@ where
 
     // NOTE: working on proximity responses, draw random linear combinations
     // then draw query points from fiat shamir transcripts
-    let proximity_test_num = vk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
-    let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_test_num)
+    let proximity_reps = vk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
+    let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_reps)
         .map(|_| transcript.generate_challenge_field_elements(row_num))
         .collect();
     let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);

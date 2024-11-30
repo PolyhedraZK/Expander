@@ -78,6 +78,10 @@ impl<C: GKRFieldConfig> ExpanderGKRChallenge<C> {
         local_xs[self.x_simd.len()..].copy_from_slice(&self.x);
         local_xs
     }
+
+    pub fn num_vars(&self) -> usize {
+        self.x.len() + self.x_simd.len() + self.x_mpi.len()
+    }
 }
 
 pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
