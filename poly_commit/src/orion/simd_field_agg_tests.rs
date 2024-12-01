@@ -6,12 +6,14 @@ use gf2::{GF2x128, GF2x8};
 use gf2_128::GF2_128;
 use gkr_field_config::{GF2ExtConfig, GKRFieldConfig};
 use itertools::izip;
-use polynomials::{EqPolynomial, MultiLinearPoly};
-use simd_field_agg_impl::orion_verify_simd_field_aggregated;
+use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
-use utils::transpose_in_place;
 
-use crate::{orion::*, traits::TensorCodeIOPPCS, ExpanderGKRChallenge, PCS_SOUNDNESS_BITS};
+use crate::{
+    orion::{simd_field_agg_impl::*, *},
+    traits::TensorCodeIOPPCS,
+    ExpanderGKRChallenge,
+};
 
 #[derive(Clone)]
 struct DistributedCommitter<F, EvalF, ComPackF, T>
@@ -122,61 +124,34 @@ fn test_orion_simd_aggregate_verify_helper<C, ComPackF, OpenPackF, T>(
     })
     .collect();
 
-    let paths: Vec<_> = openings
-        .iter()
-        .flat_map(|o| o.query_openings.clone())
-        .collect();
-
     let mut aggregator_transcript = committee[0].transcript.clone();
-    let proximity_reps = srs.proximity_repetitions::<C::ChallengeField>(PCS_SOUNDNESS_BITS);
-    let mut scratch = vec![C::ChallengeField::ZERO; num_parties * openings[0].eval_row.len()];
-
-    let aggregated_proximity_rows: Vec<Vec<C::ChallengeField>> = (0..proximity_reps)
-        .map(|i| {
-            let weights = aggregator_transcript.generate_challenge_field_elements(num_parties);
-            let mut rows: Vec<_> = openings
-                .iter()
-                .flat_map(|o| o.proximity_rows[i].clone())
-                .collect();
-            transpose_in_place(&mut rows, &mut scratch, num_parties);
-            rows.chunks(num_parties)
-                .map(|c| izip!(c, &weights).map(|(&l, &r)| l * r).sum())
-                .collect()
-        })
-        .collect();
-
-    let aggregated_eval_row: Vec<C::ChallengeField> = {
-        let eq_worlds_coeffs = EqPolynomial::build_eq_x_r(&gkr_challenge.x_mpi);
-        let mut rows: Vec<_> = openings.iter().flat_map(|o| o.eval_row.clone()).collect();
-        transpose_in_place(&mut rows, &mut scratch, num_parties);
-        rows.chunks(num_parties)
-            .map(|c| izip!(c, &eq_worlds_coeffs).map(|(&l, &r)| l * r).sum())
-            .collect()
-    };
-
-    let final_expected_eval = MultiLinearPoly::evaluate_with_buffer(
-        &aggregated_eval_row,
-        &gkr_challenge.local_xs()[..num_vars_in_unpacked_msg],
-        &mut scratch[..aggregated_eval_row.len()],
+    let aggregated_proof = orion_proof_aggregate::<C, ComPackF, OpenPackF, T>(
+        &openings,
+        &gkr_challenge.x_mpi,
+        &mut aggregator_transcript,
     );
 
-    let agregated_proof = OrionProof {
-        eval_row: aggregated_eval_row,
-        proximity_rows: aggregated_proximity_rows,
-        query_openings: paths,
-    };
+    let mut scratch = vec![C::ChallengeField::ZERO; 1 << num_vars_in_unpacked_msg];
+    let final_expected_eval = MultiLinearPoly::evaluate_with_buffer(
+        &aggregated_proof.eval_row,
+        &gkr_challenge.local_xs()[..num_vars_in_unpacked_msg],
+        &mut scratch,
+    );
 
-    let res = orion_verify_simd_field_aggregated::<C, ComPackF, OpenPackF, T>(
+    assert!(orion_verify_simd_field_aggregated::<
+        C,
+        ComPackF,
+        OpenPackF,
+        T,
+    >(
         num_parties,
         &srs,
         &final_commitment,
         &gkr_challenge,
         final_expected_eval,
         &mut verifier_transcript,
-        &agregated_proof,
-    );
-
-    assert!(res);
+        &aggregated_proof,
+    ));
 }
 
 #[test]

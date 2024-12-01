@@ -11,6 +11,57 @@ use crate::{
     OrionSRS, PCS_SOUNDNESS_BITS,
 };
 
+#[allow(unused)]
+pub(crate) fn orion_proof_aggregate<C, ComPackF, OpenPackF, T>(
+    openings: &[OrionProof<C::ChallengeField>],
+    x_mpi: &[C::ChallengeField],
+    transcript: &mut T,
+) -> OrionProof<C::ChallengeField>
+where
+    C: GKRFieldConfig,
+    ComPackF: SimdField<Scalar = C::CircuitField>,
+    OpenPackF: SimdField<Scalar = C::CircuitField>,
+    T: Transcript<C::ChallengeField>,
+{
+    let paths = openings
+        .iter()
+        .flat_map(|o| o.query_openings.clone())
+        .collect();
+    let num_parties = 1 << x_mpi.len();
+
+    let proximity_reps = openings[0].proximity_rows.len();
+    let mut scratch = vec![C::ChallengeField::ZERO; num_parties * openings[0].eval_row.len()];
+
+    let aggregated_proximity_rows = (0..proximity_reps)
+        .map(|i| {
+            let weights = transcript.generate_challenge_field_elements(num_parties);
+            let mut rows: Vec<_> = openings
+                .iter()
+                .flat_map(|o| o.proximity_rows[i].clone())
+                .collect();
+            transpose_in_place(&mut rows, &mut scratch, num_parties);
+            rows.chunks(num_parties)
+                .map(|c| izip!(c, &weights).map(|(&l, &r)| l * r).sum())
+                .collect()
+        })
+        .collect();
+
+    let aggregated_eval_row: Vec<_> = {
+        let eq_worlds_coeffs = EqPolynomial::build_eq_x_r(x_mpi);
+        let mut rows: Vec<_> = openings.iter().flat_map(|o| o.eval_row.clone()).collect();
+        transpose_in_place(&mut rows, &mut scratch, num_parties);
+        rows.chunks(num_parties)
+            .map(|c| izip!(c, &eq_worlds_coeffs).map(|(&l, &r)| l * r).sum())
+            .collect()
+    };
+
+    OrionProof {
+        eval_row: aggregated_eval_row,
+        proximity_rows: aggregated_proximity_rows,
+        query_openings: paths,
+    }
+}
+
 pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF, OpenPackF, T>(
     mpi_world_size: usize,
     vk: &OrionSRS,
