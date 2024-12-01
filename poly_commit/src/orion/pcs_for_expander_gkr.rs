@@ -42,7 +42,7 @@ where
         mpi_config: &MPIConfig,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
-        let num_vars_each_core = *params - mpi_config.world_size();
+        let num_vars_each_core = *params - mpi_config.world_size().ilog2() as usize;
         OrionSRS::from_random::<C::CircuitField>(
             num_vars_each_core,
             ORION_CODE_PARAMETER_INSTANCE,

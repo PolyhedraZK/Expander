@@ -83,7 +83,21 @@ impl Path {
 
     #[inline]
     pub fn root(&self) -> Node {
-        self.path_nodes[0]
+        let position_list = self.position_list().collect::<Vec<_>>();
+        // let leaf_node = self.leaf.leaf_hash(hasher);
+        let leaf_node = self.leaf.leaf_hash();
+        let mut current_node = leaf_node;
+
+        // Traverse the path from leaf to root
+        for (i, node) in self.path_nodes.iter().rev().enumerate() {
+            if position_list[i] {
+                current_node = Node::node_hash(node, &current_node)
+            } else {
+                current_node = Node::node_hash(&current_node, node)
+            };
+        }
+
+        current_node
     }
 
     #[inline]
@@ -136,20 +150,6 @@ impl RangePath {
 
     #[inline]
     pub fn root(&self) -> Node {
-        self.path_nodes[0]
-    }
-
-    #[inline]
-    pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
-    where
-        F: Field,
-        PackF: SimdField<Scalar = F>,
-    {
-        unpack_field_elems_from_bytes::<F, PackF>(&self.leaves)
-    }
-
-    #[inline]
-    pub fn verify(&self, root: &Node) -> bool {
         let sub_tree = Tree::new_with_leaves(self.leaves.clone());
 
         let tree_height = sub_tree.height() + self.path_nodes.len();
@@ -172,6 +172,20 @@ impl RangePath {
             current_node_index = parent_index(current_node_index).unwrap();
         });
 
-        current_node == *root
+        current_node
+    }
+
+    #[inline]
+    pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
+    where
+        F: Field,
+        PackF: SimdField<Scalar = F>,
+    {
+        unpack_field_elems_from_bytes::<F, PackF>(&self.leaves)
+    }
+
+    #[inline]
+    pub fn verify(&self, root: &Node) -> bool {
+        self.root() == *root
     }
 }

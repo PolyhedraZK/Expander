@@ -1,6 +1,7 @@
 use std::iter;
 
 use arith::{ExtensionField, Field, SimdField};
+use itertools::izip;
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::Transcript;
 
@@ -93,9 +94,7 @@ where
     let eq_col_coeffs = EqPolynomial::build_eq_x_r(&point[point.len() - num_vars_in_row..]);
     luts.build(&eq_col_coeffs);
 
-    packed_evals
-        .chunks(table_num)
-        .zip(eval_row.iter_mut())
+    izip!(packed_evals.chunks(table_num), &mut eval_row)
         .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
 
     // NOTE: draw random linear combination out
@@ -107,9 +106,7 @@ where
         let random_coeffs = transcript.generate_challenge_field_elements(row_num);
         luts.build(&random_coeffs);
 
-        packed_evals
-            .chunks(table_num)
-            .zip(row_buffer.iter_mut())
+        izip!(packed_evals.chunks(table_num), row_buffer)
             .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
     });
     drop(luts);
@@ -200,9 +197,8 @@ where
     assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
 
     let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_vars_in_msg..]);
-    random_linear_combinations
-        .iter()
-        .zip(proof.proximity_rows.iter())
+
+    izip!(&random_linear_combinations, &proof.proximity_rows)
         .chain(iter::once((&eq_linear_combination, &proof.eval_row)))
         .all(|(rl, msg)| {
             let codeword = match vk.code_instance.encode(msg) {
@@ -212,13 +208,12 @@ where
 
             luts.build(rl);
 
-            query_indices
-                .iter()
-                .zip(packed_interleaved_alphabets.iter())
-                .all(|(&qi, interleaved_alphabet)| {
+            izip!(&query_indices, &packed_interleaved_alphabets).all(
+                |(qi, interleaved_alphabet)| {
                     let index = qi % vk.codeword_len();
                     let alphabet = luts.lookup_and_sum(interleaved_alphabet);
                     alphabet == codeword[index]
-                })
+                },
+            )
         })
 }

@@ -78,7 +78,7 @@ where
         })
         .unzip();
 
-    if !mt_verifications.iter().all(|v| *v) {
+    if !itertools::all(&mt_verifications, |v| *v) {
         return false;
     }
 
@@ -108,6 +108,8 @@ where
     let mut luts = SubsetSumLUTs::<C::ChallengeField>::new(OpenPackF::PACK_SIZE, table_num);
     assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
 
+    let mut scratch_q =
+        vec![C::ChallengeField::ZERO; mpi_world_size * C::SimdCircuitField::PACK_SIZE * query_num];
     let mut codeword =
         vec![C::ChallengeField::ZERO; C::SimdCircuitField::PACK_SIZE * vk.codeword_len()];
 
@@ -132,10 +134,10 @@ where
                     .collect()
             })
             .collect();
-        transpose_in_place(&mut each_world_alphabets, &mut scratch, mpi_world_size);
+        transpose_in_place(&mut each_world_alphabets, &mut scratch_q, mpi_world_size);
         let actual_alphabets: Vec<_> = each_world_alphabets
             .chunks(mpi_world_size)
-            .map(|rs| inner_prod(rs, worlds_coeffs))
+            .map(|rs| izip!(rs, worlds_coeffs).map(|(&l, &r)| l * r).sum())
             .collect();
 
         // NOTE: compute SIMD codewords from the message
@@ -145,10 +147,11 @@ where
             &mut scratch[..C::SimdCircuitField::PACK_SIZE * msg_size],
             msg_size,
         );
-        msg_cloned
-            .chunks(msg_size)
-            .zip(codeword.chunks_mut(vk.codeword_len()))
-            .for_each(|(msg, c)| vk.code_instance.encode_in_place(msg, c).unwrap());
+        izip!(
+            msg_cloned.chunks(msg_size),
+            codeword.chunks_mut(vk.codeword_len())
+        )
+        .for_each(|(msg, c)| vk.code_instance.encode_in_place(msg, c).unwrap());
         transpose_in_place(
             &mut codeword,
             &mut scratch[..C::SimdCircuitField::PACK_SIZE * vk.codeword_len()],
@@ -156,24 +159,17 @@ where
         );
 
         // NOTE: check actual SIMD alphabets against expected SIMD alphabets
-        query_indices
-            .iter()
-            .zip(actual_alphabets.chunks(C::SimdCircuitField::PACK_SIZE))
-            .all(|(qi, actual_alphabets)| {
-                let index = qi % vk.codeword_len();
+        izip!(
+            &query_indices,
+            actual_alphabets.chunks(C::SimdCircuitField::PACK_SIZE)
+        )
+        .all(|(qi, actual_alphabets)| {
+            let index = qi % vk.codeword_len();
 
-                let simd_starts = index * C::SimdCircuitField::PACK_SIZE;
-                let simd_ends = (index + 1) * C::SimdCircuitField::PACK_SIZE;
+            let simd_starts = index * C::SimdCircuitField::PACK_SIZE;
+            let simd_ends = (index + 1) * C::SimdCircuitField::PACK_SIZE;
 
-                codeword[simd_starts..simd_ends]
-                    .iter()
-                    .zip(actual_alphabets.iter())
-                    .all(|(ec, ac)| ec == ac)
-            })
+            izip!(&codeword[simd_starts..simd_ends], actual_alphabets).all(|(ec, ac)| ec == ac)
+        })
     })
-}
-
-#[inline]
-fn inner_prod<F: Field>(ls: &[F], rs: &[F]) -> F {
-    ls.iter().zip(rs.iter()).map(|(&l, &r)| r * l).sum()
 }

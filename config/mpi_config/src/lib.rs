@@ -202,11 +202,11 @@ impl MPIConfig {
 
     /// Root process broadcase a value f into all the processes
     #[inline]
-    pub fn root_broadcast_f<F: Sized + Clone>(&self, f: &mut F) {
+    pub fn root_broadcast_f<F: Field>(&self, f: &mut F) {
         unsafe {
             if self.world_size == 1 {
             } else {
-                let mut vec_u8 = Self::elem_to_u8_bytes(f, size_of::<F>());
+                let mut vec_u8 = Self::elem_to_u8_bytes(f, F::SIZE);
                 self.root_process().broadcast_into(&mut vec_u8);
                 vec_u8.leak();
             }

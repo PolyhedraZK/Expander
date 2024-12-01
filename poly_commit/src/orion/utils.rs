@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use arith::{ExtensionField, Field, FieldSerdeError, SimdField};
+use itertools::izip;
 use thiserror::Error;
 use transcript::Transcript;
 
@@ -108,10 +109,11 @@ where
 {
     // NOTE: packed codeword buffer and encode over packed field
     let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
-    packed_evals
-        .chunks(msg_size)
-        .zip(packed_interleaved_codewords.chunks_mut(pk.codeword_len()))
-        .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
+    izip!(
+        packed_evals.chunks(msg_size),
+        packed_interleaved_codewords.chunks_mut(pk.codeword_len())
+    )
+    .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
 
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
     let mut scratch = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
@@ -171,13 +173,10 @@ pub(crate) fn orion_mt_verify(
     root: &OrionCommitment,
 ) -> bool {
     let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING;
-    query_indices
-        .iter()
-        .zip(range_openings.iter())
-        .all(|(&qi, range_path)| {
-            let index = qi % vk.codeword_len();
-            range_path.verify(root) && index == range_path.left / leaves_in_range_opening
-        })
+    izip!(query_indices, range_openings).all(|(&qi, range_path)| {
+        let index = qi % vk.codeword_len();
+        range_path.verify(root) && index == range_path.left / leaves_in_range_opening
+    })
 }
 
 /*
@@ -238,10 +237,8 @@ impl<F: Field> SubsetSumLUTs<F> {
         self.tables.iter_mut().for_each(|lut| lut.fill(F::ZERO));
 
         // NOTE: we are assuming that the table is for {0, 1}-linear combination
-        self.tables
-            .iter_mut()
-            .zip(weights.chunks(self.entry_bits))
-            .for_each(|(lut_i, sub_weights)| {
+        izip!(&mut self.tables, weights.chunks(self.entry_bits)).for_each(
+            |(lut_i, sub_weights)| {
                 sub_weights.iter().enumerate().for_each(|(i, weight_i)| {
                     let bit_mask = 1 << (self.entry_bits - i - 1);
                     lut_i.iter_mut().enumerate().for_each(|(bit_map, li)| {
@@ -250,7 +247,8 @@ impl<F: Field> SubsetSumLUTs<F> {
                         }
                     });
                 });
-            });
+            },
+        );
     }
 
     #[inline]
@@ -266,9 +264,7 @@ impl<F: Field> SubsetSumLUTs<F> {
         assert_eq!(EntryF::PACK_SIZE, self.entry_bits);
         assert_eq!(indices.len(), self.tables.len());
 
-        self.tables
-            .iter()
-            .zip(indices.iter())
+        izip!(&self.tables, indices)
             .map(|(t_i, index)| t_i[index.as_u32_unchecked() as usize])
             .sum()
     }

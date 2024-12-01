@@ -1,6 +1,7 @@
 use std::iter;
 
 use arith::{ExtensionField, Field, SimdField};
+use itertools::izip;
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::Transcript;
 
@@ -148,9 +149,7 @@ where
     let eq_coeffs = EqPolynomial::build_eq_x_r(&point[num_vars_in_unpacked_msg..]);
     luts.build(&eq_coeffs);
 
-    packed_shuffled_evals
-        .chunks(tables_num)
-        .zip(eval_row.iter_mut())
+    izip!(packed_shuffled_evals.chunks(tables_num), &mut eval_row)
         .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
 
     // NOTE: draw random linear combination out
@@ -163,9 +162,7 @@ where
         let random_coeffs = transcript.generate_challenge_field_elements(row_num);
         luts.build(&random_coeffs);
 
-        packed_shuffled_evals
-            .chunks(tables_num)
-            .zip(row_buffer.iter_mut())
+        izip!(packed_shuffled_evals.chunks(tables_num), row_buffer)
             .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
     });
     drop(luts);
@@ -254,9 +251,8 @@ where
     let eq_linear_combination = EqPolynomial::build_eq_x_r(&point[num_vars_in_unpacked_msg..]);
     let mut scratch_msg = vec![EvalF::ZERO; SimdF::PACK_SIZE * msg_size];
     let mut scratch_codeword = vec![EvalF::ZERO; SimdF::PACK_SIZE * vk.codeword_len()];
-    random_linear_combinations
-        .iter()
-        .zip(proof.proximity_rows.iter())
+
+    izip!(&random_linear_combinations, &proof.proximity_rows)
         .chain(iter::once((&eq_linear_combination, &proof.eval_row)))
         .all(|(rl, msg)| {
             let mut msg_cloned = msg.clone();
@@ -269,18 +265,22 @@ where
 
             luts.build(rl);
 
-            query_indices
-                .iter()
-                .zip(shuffled_interleaved_alphabet.iter())
-                .all(|(&qi, interleaved_alphabet)| {
+            izip!(&query_indices, &shuffled_interleaved_alphabet).all(
+                |(&qi, interleaved_alphabet)| {
                     let index = qi % vk.codeword_len();
 
-                    (index * SimdF::PACK_SIZE..(index + 1) * SimdF::PACK_SIZE)
-                        .zip(interleaved_alphabet.chunks(tables_num))
-                        .all(|(i, packed_index)| {
-                            let alphabet = luts.lookup_and_sum(packed_index);
-                            alphabet == codeword[i]
-                        })
-                })
+                    let simd_starts = index * SimdF::PACK_SIZE;
+                    let simd_ends = (index + 1) * SimdF::PACK_SIZE;
+
+                    izip!(
+                        &codeword[simd_starts..simd_ends],
+                        interleaved_alphabet.chunks(tables_num)
+                    )
+                    .all(|(expected_alphabet, packed_index)| {
+                        let alphabet = luts.lookup_and_sum(packed_index);
+                        alphabet == *expected_alphabet
+                    })
+                },
+            )
         })
 }
