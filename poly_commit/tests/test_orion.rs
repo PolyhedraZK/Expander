@@ -4,6 +4,7 @@ use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
 use gf2_128::GF2_128;
+use mpi_config::MPIConfig;
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher};
@@ -89,4 +90,14 @@ where
 fn test_orion_simd_field_pcs_full_e2e() {
     test_orion_simd_field_pcs_generics::<GF2, GF2x8, GF2_128, GF2x64, GF2x8>();
     test_orion_simd_field_pcs_generics::<GF2, GF2x8, GF2_128, GF2x128, GF2x8>();
+}
+
+#[test]
+fn test_orion_for_gkr_expander() {
+    #[allow(unused)]
+    let mpi_config = MPIConfig::new();
+
+    // TODO ...
+
+    MPIConfig::finalize()
 }

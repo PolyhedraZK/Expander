@@ -12,15 +12,13 @@ use crate::{
 };
 
 #[allow(unused)]
-pub(crate) fn orion_proof_aggregate<C, ComPackF, OpenPackF, T>(
+pub(crate) fn orion_proof_aggregate<C, T>(
     openings: &[OrionProof<C::ChallengeField>],
     x_mpi: &[C::ChallengeField],
     transcript: &mut T,
 ) -> OrionProof<C::ChallengeField>
 where
     C: GKRFieldConfig,
-    ComPackF: SimdField<Scalar = C::CircuitField>,
-    OpenPackF: SimdField<Scalar = C::CircuitField>,
     T: Transcript<C::ChallengeField>,
 {
     let paths = openings

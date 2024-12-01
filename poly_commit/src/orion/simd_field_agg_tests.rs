@@ -125,11 +125,8 @@ fn test_orion_simd_aggregate_verify_helper<C, ComPackF, OpenPackF, T>(
     .collect();
 
     let mut aggregator_transcript = committee[0].transcript.clone();
-    let aggregated_proof = orion_proof_aggregate::<C, ComPackF, OpenPackF, T>(
-        &openings,
-        &gkr_challenge.x_mpi,
-        &mut aggregator_transcript,
-    );
+    let aggregated_proof =
+        orion_proof_aggregate::<C, T>(&openings, &gkr_challenge.x_mpi, &mut aggregator_transcript);
 
     let mut scratch = vec![C::ChallengeField::ZERO; 1 << num_vars_in_unpacked_msg];
     let final_expected_eval = MultiLinearPoly::evaluate_with_buffer(
