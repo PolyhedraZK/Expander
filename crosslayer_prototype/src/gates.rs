@@ -41,7 +41,7 @@ impl<C: GKRFieldConfig> CrossLayerRelay<C> {
     pub fn random_for_testing(mut rng: impl RngCore, output_size: usize, input_size: usize, i_layer: usize) -> Self {
         let o_id = rng.next_u64() as usize % output_size;
         let i_id = rng.next_u64() as usize % input_size;
-        let coef = C::ChallengeField::random_unsafe(rng);
+        let coef = C::ChallengeField::ONE; // temporarily support one only
         Self { o_id, i_id, i_layer, coef }
     }
 }

@@ -21,7 +21,6 @@ pub fn transcript_io<F: Field + FieldSerde, T: Transcript<F>>(ps: &[F], transcri
 pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     layer: &GenericLayer<C>,
     rz0: &[C::ChallengeField],
-    r_relays: &[(usize, Vec<C::ChallengeField>)],
     connections: &CrossLayerConnections,
     circuit_vals: &CrossLayerCircuitEvals<C>,
     transcript: &mut T,
@@ -31,12 +30,9 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
     Vec<C::ChallengeField>,
     Vec<(usize, Vec<C::ChallengeField>)>,
 ) {
-    let alpha = transcript.generate_challenge_field_element();
-
     let mut helper = CrossLayerScatterHelper::new(
         layer,
         rz0,
-        r_relays,
         connections,
         circuit_vals,
         sp
@@ -48,8 +44,8 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
         let evals = helper.poly_evals_at_rx(i_var, 2);
         let r = transcript_io::<C::ChallengeField, T>( &evals, transcript);
         let finished_relay_layers = helper.receive_rx(i_var, r);
-        for (i_layer, claim) in finished_relay_layers {
-            transcript.append_field_element(&claim);
+        for (_i_layer, claim) in finished_relay_layers {
+            transcript.append_field_element(&claim); // The verifier needs to substract the relay claims by itself
         }
     }
 
@@ -66,10 +62,7 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
     let vy_claim = helper.vy_claim();
     transcript.append_field_element(&vy_claim);
 
-    let rx = helper.rx;
-    let ry = helper.ry;
-
-    (rx, ry, helper.r_relays_next)
+    (helper.rx, helper.ry, helper.r_relays_next)
 }
 
 
@@ -83,11 +76,16 @@ pub fn sumcheck_prove_gather_layer<C: GKRFieldConfig, T: Transcript<C::Challenge
     transcript: &mut T,
     sp: &mut CrossLayerProverScratchPad<C>,
 ) -> (Vec<C::ChallengeField>, C::ChallengeField) {
+    let alpha = transcript.generate_challenge_field_element();
+    let betas = transcript.generate_challenge_field_elements(r_relays.len());
+
     let mut helper = CrossLayerGatherHelper::new(
         layer,
         rz0,
         rz1,
         r_relays,
+        &alpha,
+        &betas,
         connections,
         circuit_vals,
         sp,

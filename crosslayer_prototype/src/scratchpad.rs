@@ -8,12 +8,15 @@ use gkr_field_config::GKRFieldConfig;
 #[derive(Clone, Debug, Default)]
 pub struct CrossLayerProverScratchPad<C: GKRFieldConfig> {
     pub v_evals: Vec<C::ChallengeField>,
-    pub hg_evals_5: Vec<C::ChallengeField>,
-    pub hg_evals_1: Vec<C::ChallengeField>,
     pub hg_evals: Vec<C::ChallengeField>,
+
+    pub cross_layer_sizes: Vec<usize>,
+    pub cross_layer_evals: Vec<Vec<C::ChallengeField>>,
+    pub cross_layer_hg_evals: Vec<Vec<C::ChallengeField>>,
 
     pub eq_evals_at_rx: Vec<C::ChallengeField>,
     pub eq_evals_at_rz0: Vec<C::ChallengeField>,
+    pub eq_evals_at_rz1: Vec<C::ChallengeField>,
     
     pub eq_evals_first_half: Vec<C::ChallengeField>,
     pub eq_evals_second_half: Vec<C::ChallengeField>,
@@ -27,12 +30,16 @@ impl<C: GKRFieldConfig> CrossLayerProverScratchPad<C> {
         let max_output_num = 1 << max_num_output_var;
         CrossLayerProverScratchPad {
             v_evals: vec![C::ChallengeField::default(); max_input_num],
-            hg_evals_5: vec![C::ChallengeField::default(); max_input_num],
-            hg_evals_1: vec![C::ChallengeField::default(); max_input_num],
             hg_evals: vec![C::ChallengeField::default(); max_input_num],
+
+            // To be initialized in the sumcheck protocol
+            cross_layer_sizes: vec![], 
+            cross_layer_evals: vec![], 
+            cross_layer_hg_evals: vec![], 
            
             eq_evals_at_rx: vec![C::ChallengeField::default(); max_input_num],
             eq_evals_at_rz0: vec![C::ChallengeField::default(); max_output_num],
+            eq_evals_at_rz1: vec![C::ChallengeField::default(); max_output_num],
             eq_evals_first_half: vec![
                 C::ChallengeField::default();
                 max(

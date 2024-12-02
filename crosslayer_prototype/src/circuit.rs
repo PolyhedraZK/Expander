@@ -115,11 +115,23 @@ impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
     }
 
     pub fn max_num_input_var(&self) -> usize {
-        self.layers.iter().map(|layer| layer.input_layer_size.trailing_zeros() as usize).max().unwrap()
+        self.layers.iter().map(|layer| 
+            if layer.input_layer_size > 0 {
+                layer.input_layer_size.trailing_zeros() as usize
+            } else {
+                0
+            }
+        ).max().unwrap()
     }
 
     pub fn max_num_output_var(&self) -> usize {
-        self.layers.iter().map(|layer| layer.layer_size.trailing_zeros() as usize).max().unwrap()
+        self.layers.iter().map(|layer| 
+            if layer.layer_size > 0 {
+                layer.layer_size.trailing_zeros() as usize
+            } else {
+                0
+            }
+        ).max().unwrap()
     }
 }
 
@@ -134,9 +146,9 @@ impl CrossLayerConnections {
     pub fn parse_circuit<C: GKRFieldConfig>(c: &CrossLayerCircuit<C>) -> Self {
         let mut connections = vec![vec![vec![]; c.layers.len()]; c.layers.len()];
 
-        for o in 1..c.layers.len() {
-            for gate in &c.layers[o].relay_gates {
-                connections[o][gate.i_layer].push((gate.o_id, gate.i_id));
+        for o_layer in 1..c.layers.len() {
+            for gate in &c.layers[o_layer].relay_gates {
+                connections[o_layer][gate.i_layer].push((gate.o_id, gate.i_id));
             }
         }
 
