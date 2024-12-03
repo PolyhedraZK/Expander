@@ -1,4 +1,6 @@
-use arith::SimdField;
+use std::io::Cursor;
+
+use arith::{FieldSerde, SimdField};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::{EqPolynomial, MultiLinearPoly};
@@ -61,11 +63,14 @@ where
         poly: &MultiLinearPoly<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
-        let num_vars_each_core = *params - mpi_config.world_size();
+        let num_vars_each_core = *params - mpi_config.world_size().ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
         let commitment = orion_commit_simd_field(proving_key, poly, scratch_pad).unwrap();
-        if mpi_config.world_size == 1 {
+
+        // NOTE: Hang also assume that, linear GKR will take over the commitment
+        // and force sync transcript hash state of subordinate machines to be the same.
+        if mpi_config.world_size() == 1 {
             return commitment;
         }
 
@@ -73,8 +78,6 @@ where
         let mut buffer = vec![Self::Commitment::default(); mpi_config.world_size()];
         mpi_config.gather_vec(&local_buffer, &mut buffer);
 
-        // NOTE: Hang also assume that, linear GKR will take over the commitment
-        // and force sync transcript hash state of subordinate machines to be the same.
         if !mpi_config.is_root() {
             return commitment;
         }
@@ -93,7 +96,7 @@ where
         transcript: &mut T, // add transcript here to allow interactive arguments
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Opening {
-        let num_vars_each_core = *params - mpi_config.world_size();
+        let num_vars_each_core = *params - mpi_config.world_size().ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
         let local_xs = eval_point.local_xs();
@@ -105,7 +108,7 @@ where
             OpenPackF,
             T,
         >(proving_key, poly, &local_xs, transcript, scratch_pad);
-        if mpi_config.world_size == 1 {
+        if mpi_config.world_size() == 1 {
             return local_opening;
         }
 
@@ -124,12 +127,28 @@ where
             })
             .collect();
 
+        // NOTE: local query openings serialized to bytes
+        let mut local_query_openings_serialized = Vec::new();
+        local_opening
+            .query_openings
+            .serialize_into(&mut local_query_openings_serialized)
+            .unwrap();
+
         // NOTE: gather all merkle paths
-        let mut query_openings = vec![
-            tree::RangePath::default();
-            mpi_config.world_size() * local_opening.query_openings.len()
-        ];
-        mpi_config.gather_vec(&local_opening.query_openings, &mut query_openings);
+        let mut query_openings_serialized =
+            vec![0u8; mpi_config.world_size() * local_query_openings_serialized.len()];
+        mpi_config.gather_vec(
+            &local_query_openings_serialized,
+            &mut query_openings_serialized,
+        );
+
+        let query_openings: Vec<tree::RangePath> = query_openings_serialized
+            .chunks(local_query_openings_serialized.len())
+            .flat_map(|bs| {
+                let mut read_cursor = Cursor::new(bs);
+                Vec::deserialize_from(&mut read_cursor).unwrap()
+            })
+            .collect();
 
         if !mpi_config.is_root() {
             return local_opening;
@@ -155,7 +174,7 @@ where
     ) -> bool {
         assert_eq!(*params, eval_point.num_vars());
 
-        if mpi_config.world_size == 1 {
+        if mpi_config.world_size == 1 || !mpi_config.is_root() {
             return orion_verify_simd_field::<
                 C::CircuitField,
                 C::SimdCircuitField,

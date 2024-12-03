@@ -49,7 +49,9 @@ fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
                 .collect::<Vec<C::ChallengeField>>(),
         })
         .collect::<Vec<ExpanderGKRChallenge<C>>>();
-    common::test_gkr_pcs::<C, T, RawExpanderGKR<C, T>>(&params, mpi_config, transcript, &poly, &xs);
+    common::test_pcs_for_expander_gkr::<C, T, RawExpanderGKR<C, T>>(
+        &params, mpi_config, transcript, &poly, &xs,
+    );
 }
 
 #[test]

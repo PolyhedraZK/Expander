@@ -1,4 +1,5 @@
 use arith::Field;
+use ark_std::test_rng;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use poly_commit::raw::RawExpanderGKR;
@@ -45,7 +46,7 @@ pub fn test_pcs<F: Field, T: Transcript<F>, P: PolynomialCommitmentScheme<F, T>>
 }
 
 #[allow(unused)]
-pub fn test_gkr_pcs<
+pub fn test_pcs_for_expander_gkr<
     C: GKRFieldConfig,
     T: Transcript<C::ChallengeField>,
     P: PCSForExpanderGKR<C, T>,
@@ -56,7 +57,7 @@ pub fn test_gkr_pcs<
     poly: &MultiLinearPoly<C::SimdCircuitField>,
     xs: &[ExpanderGKRChallenge<C>],
 ) {
-    let mut rng = thread_rng();
+    let mut rng = test_rng();
     let srs = P::gen_srs_for_testing(params, mpi_config, &mut rng);
     let (proving_key, verification_key) = srs.into_keys();
     let mut scratch_pad = P::init_scratch_pad(params, mpi_config);
