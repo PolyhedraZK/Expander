@@ -134,6 +134,14 @@ where
             .serialize_into(&mut local_query_openings_serialized)
             .unwrap();
 
+        // NOTE: Hang does not think this is a good move, but this is mostly
+        // working with MPI behavior, so we align local MT openings serialization
+        // against power-of-2 bytes length.
+        local_query_openings_serialized.resize(
+            local_query_openings_serialized.len().next_power_of_two(),
+            0u8,
+        );
+
         // NOTE: gather all merkle paths
         let mut query_openings_serialized =
             vec![0u8; mpi_config.world_size() * local_query_openings_serialized.len()];
