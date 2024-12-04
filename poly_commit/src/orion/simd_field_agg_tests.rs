@@ -10,7 +10,7 @@ use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 use crate::{
-    orion::{simd_field_agg_impl::*, *},
+    orion::{simd_field_agg_impl::*, utils::*, *},
     traits::TensorCodeIOPPCS,
     ExpanderGKRChallenge,
 };
@@ -27,6 +27,47 @@ where
     pub transcript: T,
 
     _phantom: PhantomData<EvalF>,
+}
+
+fn orion_proof_aggregate<C, T>(
+    openings: &[OrionProof<C::ChallengeField>],
+    x_mpi: &[C::ChallengeField],
+) -> OrionProof<C::ChallengeField>
+where
+    C: GKRFieldConfig,
+    T: Transcript<C::ChallengeField>,
+{
+    let paths = openings
+        .iter()
+        .flat_map(|o| o.query_openings.clone())
+        .collect();
+    let num_parties = 1 << x_mpi.len();
+
+    let proximity_reps = openings[0].proximity_rows.len();
+    let mut scratch = vec![C::ChallengeField::ZERO; num_parties * openings[0].eval_row.len()];
+
+    let aggregated_proximity_rows = (0..proximity_reps)
+        .map(|i| {
+            let mut rows: Vec<_> = openings
+                .iter()
+                .flat_map(|o| o.proximity_rows[i].clone())
+                .collect();
+            transpose_in_place(&mut rows, &mut scratch, num_parties);
+            rows.chunks(num_parties).map(|c| c.iter().sum()).collect()
+        })
+        .collect();
+
+    let aggregated_eval_row: Vec<_> = {
+        let mut rows: Vec<_> = openings.iter().flat_map(|o| o.eval_row.clone()).collect();
+        transpose_in_place(&mut rows, &mut scratch, num_parties);
+        rows.chunks(num_parties).map(|c| c.iter().sum()).collect()
+    };
+
+    OrionProof {
+        eval_row: aggregated_eval_row,
+        proximity_rows: aggregated_proximity_rows,
+        query_openings: paths,
+    }
 }
 
 fn test_orion_simd_aggregate_verify_helper<C, ComPackF, OpenPackF, T>(
@@ -97,7 +138,7 @@ fn test_orion_simd_aggregate_verify_helper<C, ComPackF, OpenPackF, T>(
         .collect();
 
         let final_tree_height = 1 + roots.len().ilog2();
-        let (internals, _) = tree::Tree::new_with_leaf_nodes(roots, final_tree_height);
+        let (internals, _) = tree::Tree::new_with_leaf_nodes(roots.clone(), final_tree_height);
         internals[0]
     };
 
@@ -105,28 +146,22 @@ fn test_orion_simd_aggregate_verify_helper<C, ComPackF, OpenPackF, T>(
         &mut committee,
         global_poly.coeffs.chunks(1 << local_real_num_vars)
     )
-    .map(|(committer, eval_slice)| {
+    .enumerate()
+    .map(|(i, (committer, eval_slice))| {
         let cloned_poly = MultiLinearPoly::new(eval_slice.to_vec());
-        orion_open_simd_field::<
-            C::CircuitField,
-            C::SimdCircuitField,
-            C::ChallengeField,
-            ComPackF,
-            OpenPackF,
-            T,
-        >(
+        orion_open_simd_field_mpi::<C, ComPackF, OpenPackF, T>(
+            num_parties,
+            i,
             &srs,
             &cloned_poly,
-            &gkr_challenge.local_xs(),
+            &gkr_challenge,
             &mut committer.transcript,
             &committer.scratch_pad,
         )
     })
     .collect();
 
-    let mut aggregator_transcript = committee[0].transcript.clone();
-    let aggregated_proof =
-        orion_proof_aggregate::<C, T>(&openings, &gkr_challenge.x_mpi, &mut aggregator_transcript);
+    let aggregated_proof = orion_proof_aggregate::<C, T>(&openings, &gkr_challenge.x_mpi);
 
     let mut scratch = vec![C::ChallengeField::ZERO; 1 << num_vars_in_unpacked_msg];
     let final_expected_eval = MultiLinearPoly::evaluate_with_buffer(

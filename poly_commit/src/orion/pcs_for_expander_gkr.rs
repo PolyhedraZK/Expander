@@ -3,7 +3,7 @@ use std::io::Cursor;
 use arith::{FieldSerde, SimdField};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomials::{EqPolynomial, MultiLinearPoly};
+use polynomials::MultiLinearPoly;
 use transcript::Transcript;
 
 use crate::{
@@ -100,31 +100,36 @@ where
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
         let local_xs = eval_point.local_xs();
-        let local_opening = orion_open_simd_field::<
-            C::CircuitField,
-            C::SimdCircuitField,
-            C::ChallengeField,
-            ComPackF,
-            OpenPackF,
-            T,
-        >(proving_key, poly, &local_xs, transcript, scratch_pad);
         if mpi_config.world_size() == 1 {
-            return local_opening;
+            return orion_open_simd_field::<
+                C::CircuitField,
+                C::SimdCircuitField,
+                C::ChallengeField,
+                ComPackF,
+                OpenPackF,
+                T,
+            >(proving_key, poly, &local_xs, transcript, scratch_pad);
         }
 
+        let local_opening = orion_open_simd_field_mpi::<C, ComPackF, OpenPackF, T>(
+            mpi_config.world_size(),
+            mpi_config.world_rank(),
+            proving_key,
+            poly,
+            eval_point,
+            transcript,
+            scratch_pad,
+        );
+
         // NOTE: eval row combine from MPI
-        let mpi_eq_coeffs = EqPolynomial::build_eq_x_r(&eval_point.x_mpi);
-        let eval_row = mpi_config.coef_combine_vec(&local_opening.eval_row, &mpi_eq_coeffs);
+        let eval_row = mpi_config.sum_vec(&local_opening.eval_row);
 
         // NOTE: sample MPI linear combination coeffs for proximity rows,
         // and proximity rows combine with MPI
         let proximity_rows = local_opening
             .proximity_rows
             .iter()
-            .map(|row| {
-                let weights = transcript.generate_challenge_field_elements(mpi_config.world_size());
-                mpi_config.coef_combine_vec(row, &weights)
-            })
+            .map(|v| mpi_config.sum_vec(v))
             .collect();
 
         // NOTE: local query openings serialized to bytes
@@ -182,7 +187,7 @@ where
     ) -> bool {
         assert_eq!(*params, eval_point.num_vars());
 
-        if mpi_config.world_size == 1 || !mpi_config.is_root() {
+        if mpi_config.world_size() == 1 {
             return orion_verify_simd_field::<
                 C::CircuitField,
                 C::SimdCircuitField,
@@ -194,6 +199,19 @@ where
                 verifying_key,
                 commitment,
                 &eval_point.local_xs(),
+                eval,
+                transcript,
+                opening,
+            );
+        }
+
+        if !mpi_config.is_root() {
+            return orion_verify_simd_field_mpi::<C, ComPackF, OpenPackF, T>(
+                mpi_config.world_size(),
+                mpi_config.world_rank(),
+                verifying_key,
+                commitment,
+                eval_point,
                 eval,
                 transcript,
                 opening,

@@ -209,6 +209,35 @@ pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row
     mat.copy_from_slice(scratch);
 }
 
+#[inline(always)]
+pub(crate) fn transpose_and_shuffle_simd<F, SimdF, PackF>(
+    evaluations: &mut [SimdF],
+    row_num: usize,
+) -> Vec<PackF>
+where
+    F: Field,
+    SimdF: SimdField<Scalar = F>,
+    PackF: SimdField<Scalar = F>,
+{
+    assert_eq!(evaluations.len() * SimdF::PACK_SIZE % PackF::PACK_SIZE, 0);
+
+    // NOTE: pre transpose evaluations
+    let mut scratch = vec![SimdF::ZERO; evaluations.len()];
+    transpose_in_place(evaluations, &mut scratch, row_num);
+    drop(scratch);
+
+    // NOTE: reshuffle the transposed matrix, from SIMD over row to SIMD over col
+    let mut scratch = vec![F::ZERO; SimdF::PACK_SIZE * row_num];
+    evaluations
+        .chunks(row_num)
+        .flat_map(|row_simds| -> Vec<_> {
+            let mut elts: Vec<_> = row_simds.iter().flat_map(|f| f.unpack()).collect();
+            transpose_in_place(&mut elts, &mut scratch, row_num);
+            elts.chunks(PackF::PACK_SIZE).map(PackF::pack).collect()
+        })
+        .collect()
+}
+
 /*
  * LINEAR OPERATIONS
  */
