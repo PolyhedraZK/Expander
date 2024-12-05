@@ -4,7 +4,14 @@ use std::fmt::Debug;
 
 use arith::Field;
 
+pub enum Communicator {
+    MPI,
+    Rayon,
+}
+
 pub trait ExpanderComm: Clone + Debug {
+    const COMMUNICATOR: Communicator;
+
     fn new(world_size: usize) -> Self;
 
     fn finalize();

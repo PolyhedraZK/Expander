@@ -135,6 +135,8 @@ impl MPICommunicator {
 /// MPI toolkit:
 impl ExpanderComm for MPICommunicator {
 
+    const COMMUNICATOR: crate::Communicator = crate::Communicator::MPI;
+
     #[inline]
     fn finalize() {
         unsafe { ffi::MPI_Finalize() };
