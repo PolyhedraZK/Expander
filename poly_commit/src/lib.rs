@@ -1,6 +1,6 @@
 mod traits;
-use gkr_field_config::GKRFieldConfig;
 use communicator::MPICommunicator;
+use gkr_field_config::GKRFieldConfig;
 use rand::thread_rng;
 pub use traits::{
     ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,

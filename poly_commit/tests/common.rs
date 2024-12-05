@@ -1,6 +1,6 @@
 use arith::Field;
+use communicator::{ExpanderComm, MPICommunicator};
 use gkr_field_config::GKRFieldConfig;
-use communicator::{MPICommunicator, ExpanderComm};
 use poly_commit::raw::RawExpanderGKR;
 use poly_commit::{
     ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,

@@ -4,8 +4,8 @@ use crate::{
     StructuredReferenceString,
 };
 use arith::{Field, SimdField};
+use communicator::{ExpanderComm, MPICommunicator};
 use gkr_field_config::GKRFieldConfig;
-use communicator::{MPICommunicator, ExpanderComm};
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
 use transcript::Transcript;

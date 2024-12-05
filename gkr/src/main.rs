@@ -5,10 +5,10 @@ use std::{
 
 use circuit::Circuit;
 use clap::Parser;
+use communicator::{ExpanderComm, MPICommunicator};
 use config::{Config, GKRConfig, GKRScheme};
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use communicator::{MPICommunicator, ExpanderComm};
 
 use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
 use transcript::{BytesHashTranscript, SHA256hasher};
@@ -215,8 +215,8 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         for cnt in &partial_proof_cnts {
             total_proof_cnt += *cnt.lock().unwrap();
         }
-        let throughput = total_proof_cnt as f64 / duration.as_secs_f64()
-            * (config.comm.world_size() as f64);
+        let throughput =
+            total_proof_cnt as f64 / duration.as_secs_f64() * (config.comm.world_size() as f64);
         println!("{}-bench: throughput: {} hashes/s", i, throughput.round());
     }
 }

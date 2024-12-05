@@ -1,7 +1,7 @@
 use arith::{Field, SimdField};
 use circuit::CircuitLayer;
+use communicator::{ExpanderComm, MPICommunicator};
 use gkr_field_config::GKRFieldConfig;
-use communicator::{MPICommunicator, ExpanderComm};
 use polynomials::EqPolynomial;
 
 use crate::{unpack_and_combine, ProverScratchPad};
@@ -84,7 +84,7 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
             xy_helper: SumcheckProductGateHelper::new(layer.input_var_num),
             simd_var_helper: SumcheckSimdProdGateHelper::new(simd_var_num),
             mpi_var_helper: SumcheckSimdProdGateHelper::new(
-                mpi_comm.world_size().trailing_zeros() as usize,
+                mpi_comm.world_size().trailing_zeros() as usize
             ),
             mpi_comm,
             is_output_layer,

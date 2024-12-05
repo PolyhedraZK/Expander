@@ -1,9 +1,16 @@
-
-use std::{cmp, env, ffi::{c_int, CString}, fmt::Debug, process::exit};
+use std::{
+    cmp, env,
+    ffi::{c_int, CString},
+    fmt::Debug,
+    process::exit,
+};
 
 use arith::Field;
 use mpi::{
-    ffi::{self, MPI_Comm_rank, MPI_Comm_size, MPI_Comm_spawn, MPI_Finalize, MPI_Init, RSMPI_COMM_NULL, RSMPI_COMM_WORLD, RSMPI_INFO_NULL},
+    ffi::{
+        self, MPI_Comm_rank, MPI_Comm_size, MPI_Comm_spawn, MPI_Finalize, MPI_Init,
+        RSMPI_COMM_NULL, RSMPI_COMM_WORLD, RSMPI_INFO_NULL,
+    },
     topology::{Process, SimpleCommunicator},
     traits::*,
 };
@@ -63,10 +70,16 @@ impl MPICommunicator {
     #[allow(static_mut_refs)]
     unsafe fn init(world_size: usize) {
         let args: Vec<String> = env::args().collect();
-        let args_vec_cstring = args.iter().map(|arg| CString::new(arg.as_str()).unwrap()).collect::<Vec<_>>();
-        let mut args_vec_ptr = args_vec_cstring.iter().map(|cstring| cstring.as_ptr() as *mut i8).collect::<Vec<_>>();
+        let args_vec_cstring = args
+            .iter()
+            .map(|arg| CString::new(arg.as_str()).unwrap())
+            .collect::<Vec<_>>();
+        let mut args_vec_ptr = args_vec_cstring
+            .iter()
+            .map(|cstring| cstring.as_ptr() as *mut i8)
+            .collect::<Vec<_>>();
         let args_ptr_ptr = args_vec_ptr.as_mut_ptr();
-        
+
         let mut argc: c_int = args.len() as c_int;
         let mut argv = if argc > 1 {
             args_ptr_ptr
@@ -80,7 +93,8 @@ impl MPICommunicator {
         MPI_Comm_rank(RSMPI_COMM_WORLD, &mut rank);
         MPI_Comm_size(RSMPI_COMM_WORLD, &mut size);
 
-        // If the user explicitly run with "mpiexec" or "mpirun", we will use the world size specified there, no matter what the config says
+        // If the user explicitly run with "mpiexec" or "mpirun", we will use the world size
+        // specified there, no matter what the config says
         if size > 1 {
             if world_size != size as usize {
                 println!("Warning: MPI size mismatch. The config specifies {} processes, but the MPI size is {}", world_size, size);
@@ -89,8 +103,9 @@ impl MPICommunicator {
             WORLD = Some(SimpleCommunicator::world());
         }
 
-        // If the user did not run with 'mpiexec' but the config says world_size > 1, we will spawn the processes for the user
-        if world_size > 1 { 
+        // If the user did not run with 'mpiexec' but the config says world_size > 1, we will spawn
+        // the processes for the user
+        if world_size > 1 {
             let command = CString::new(args[0].clone()).unwrap();
             let mut child = RSMPI_COMM_NULL;
             const MPI_ERRCODES_IGNORE: *mut c_int = std::ptr::null_mut();
@@ -134,7 +149,6 @@ impl MPICommunicator {
 
 /// MPI toolkit:
 impl ExpanderComm for MPICommunicator {
-
     const COMMUNICATOR: crate::Communicator = crate::Communicator::MPI;
 
     #[inline]
@@ -144,8 +158,8 @@ impl ExpanderComm for MPICommunicator {
 
     #[allow(static_mut_refs)]
     fn new(world_size: usize) -> Self {
-        unsafe  {
-            if !MPI_INITIALIZED  {
+        unsafe {
+            if !MPI_INITIALIZED {
                 Self::init(world_size);
                 MPI_INITIALIZED = true;
             }

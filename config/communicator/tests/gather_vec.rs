@@ -1,6 +1,6 @@
 use arith::Field;
-use mersenne31::M31;
 use communicator::{ExpanderComm, MPICommunicator};
+use mersenne31::M31;
 
 #[test]
 fn test_gather_vec() {

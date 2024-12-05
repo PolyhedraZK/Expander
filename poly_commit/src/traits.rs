@@ -1,6 +1,6 @@
 use arith::{Field, FieldSerde};
-use gkr_field_config::GKRFieldConfig;
 use communicator::MPICommunicator;
+use gkr_field_config::GKRFieldConfig;
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
 use std::fmt::Debug;

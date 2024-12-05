@@ -7,13 +7,13 @@ use std::{
 
 use arith::{Field, FieldSerde, FieldSerdeError};
 use circuit::Circuit;
+use communicator::{ExpanderComm, MPICommunicator};
 use config::{
     Config, GKRConfig, GKRScheme, PolynomialCommitmentType, SENTINEL_BN254, SENTINEL_GF2,
     SENTINEL_M31,
 };
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use communicator::{MPICommunicator, ExpanderComm};
 
 use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
 use transcript::{BytesHashTranscript, FieldHashTranscript, MIMCHasher, SHA256hasher};

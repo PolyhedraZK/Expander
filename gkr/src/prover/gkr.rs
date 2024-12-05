@@ -3,8 +3,8 @@
 use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
+use communicator::{ExpanderComm, MPICommunicator};
 use gkr_field_config::GKRFieldConfig;
-use communicator::{MPICommunicator, ExpanderComm};
 use polynomials::MultiLinearPoly;
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use transcript::Transcript;
@@ -54,8 +54,7 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     );
 
     let claimed_v = if mpi_comm.is_root() {
-        let mut claimed_v_gathering_buffer =
-            vec![C::ChallengeField::zero(); mpi_comm.world_size()];
+        let mut claimed_v_gathering_buffer = vec![C::ChallengeField::zero(); mpi_comm.world_size()];
         mpi_comm.gather_vec(&vec![claimed_v_local], &mut claimed_v_gathering_buffer);
         MultiLinearPoly::evaluate_with_buffer(
             &claimed_v_gathering_buffer,

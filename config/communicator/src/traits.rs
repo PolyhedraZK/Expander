@@ -1,5 +1,3 @@
-
-
 use std::fmt::Debug;
 
 use arith::Field;
@@ -16,7 +14,7 @@ pub trait ExpanderComm: Clone + Debug {
 
     fn finalize();
 
-    // Create a new communicator for the verifier. 
+    // Create a new communicator for the verifier.
     fn new_for_verifier(world_size: i32) -> Self;
 
     /// Gather all local values to the root process

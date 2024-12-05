@@ -1,6 +1,6 @@
 use crate::Transcript;
 use arith::Field;
-use communicator::{MPICommunicator, ExpanderComm};
+use communicator::{ExpanderComm, MPICommunicator};
 
 /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
 pub fn transcript_root_broadcast<F, T>(transcript: &mut T, mpi_comm: &MPICommunicator)

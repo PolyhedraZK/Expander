@@ -1,8 +1,8 @@
 mod common;
 
 use arith::{BN254Fr, Field};
+use communicator::{ExpanderComm, MPICommunicator};
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use communicator::{MPICommunicator, ExpanderComm};
 use poly_commit::{
     raw::{RawExpanderGKR, RawExpanderGKRParams, RawMultiLinear, RawMultiLinearParams},
     ExpanderGKRChallenge,

@@ -1,7 +1,7 @@
 use arith::FieldSerde;
 use circuit::CircuitLayer;
+use communicator::{ExpanderComm, MPICommunicator};
 use gkr_field_config::GKRFieldConfig;
-use communicator::{MPICommunicator, ExpanderComm};
 use transcript::Transcript;
 
 use crate::{

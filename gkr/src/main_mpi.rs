@@ -1,8 +1,8 @@
 use circuit::Circuit;
 use clap::Parser;
+use communicator::{ExpanderComm, MPICommunicator};
 use config::{Config, GKRConfig, GKRScheme};
 use config_macros::declare_gkr_config;
-use communicator::{MPICommunicator, ExpanderComm};
 
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};

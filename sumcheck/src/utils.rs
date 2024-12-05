@@ -1,5 +1,5 @@
 use arith::{Field, SimdField};
-use communicator::{MPICommunicator, ExpanderComm};
+use communicator::{ExpanderComm, MPICommunicator};
 use transcript::Transcript;
 
 // #[inline(always)]

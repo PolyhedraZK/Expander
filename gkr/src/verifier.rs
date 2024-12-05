@@ -6,9 +6,9 @@ use std::{
 use arith::{Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
+use communicator::{ExpanderComm, MPICommunicator};
 use config::{Config, GKRConfig};
 use gkr_field_config::GKRFieldConfig;
-use communicator::{MPICommunicator, ExpanderComm};
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
 use transcript::{Proof, Transcript};

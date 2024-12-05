@@ -5,10 +5,10 @@ use std::{fs, panic};
 
 use arith::{Field, FieldSerde};
 use circuit::Circuit;
+use communicator::{root_println, ExpanderComm, MPICommunicator};
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use communicator::{root_println, MPICommunicator, ExpanderComm};
 use poly_commit::expander_pcs_init_testing_only;
 use poly_commit::raw::RawExpanderGKR;
 use rand::Rng;

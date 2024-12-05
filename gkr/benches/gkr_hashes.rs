@@ -1,4 +1,5 @@
 use circuit::Circuit;
+use communicator::{ExpanderComm, MPICommunicator};
 use config::{Config, GKRConfig, GKRScheme};
 use config_macros::declare_gkr_config;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
@@ -10,7 +11,6 @@ use gkr::{
     Prover,
 };
 use gkr_field_config::{BN254Config, GKRFieldConfig, M31ExtConfig};
-use communicator::{MPICommunicator, ExpanderComm};
 use poly_commit::{
     expander_pcs_init_testing_only, raw::RawExpanderGKR, PCSForExpanderGKR,
     StructuredReferenceString,
