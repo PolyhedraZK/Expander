@@ -68,16 +68,19 @@ where
         .map(|_| transcript.generate_challenge_field_elements(mpi_world_size))
         .collect();
 
-    // NOTE: check all merkle paths, and check merkle roots against commitment
-    let roots: Vec<_> = proof
-        .query_openings
-        .chunks(query_num)
-        .map(|qs| qs[0].root())
-        .collect();
+    let final_root = {
+        // NOTE: check all merkle paths, and check merkle roots against commitment
+        let roots: Vec<_> = proof
+            .query_openings
+            .chunks(query_num)
+            .map(|qs| qs[0].root())
+            .collect();
 
-    let final_tree_height = 1 + roots.len().ilog2();
-    let (internals, _) = tree::Tree::new_with_leaf_nodes(roots, final_tree_height);
-    if internals[0] != *commitment {
+        let final_tree_height = 1 + roots.len().ilog2();
+        let (internals, _) = tree::Tree::new_with_leaf_nodes(roots, final_tree_height);
+        internals[0]
+    };
+    if final_root != *commitment {
         return false;
     }
 
