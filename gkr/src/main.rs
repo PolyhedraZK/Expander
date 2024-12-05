@@ -11,6 +11,7 @@ use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 
 use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
+use rand::thread_rng;
 use transcript::{BytesHashTranscript, SHA256hasher};
 
 use gkr::{
@@ -175,10 +176,12 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
 
     println!("Circuit loaded!");
 
+    let mut rng = thread_rng();
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit_template.log_input_size(),
             &config.mpi_config,
+            &mut rng,
         );
 
     let start_time = std::time::Instant::now();

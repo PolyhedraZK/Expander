@@ -1,7 +1,6 @@
 mod traits;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use rand::thread_rng;
 pub use traits::{
     ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,
 };
@@ -14,13 +13,13 @@ pub fn expander_pcs_init_testing_only<
 >(
     n_input_vars: usize,
     mpi_config: &MPIConfig,
+    mut rng: impl rand::RngCore,
 ) -> (
     PCS::Params,
     <PCS::SRS as StructuredReferenceString>::PKey,
     <PCS::SRS as StructuredReferenceString>::VKey,
     PCS::ScratchPad,
 ) {
-    let mut rng = thread_rng();
     let pcs_params = <PCS as PCSForExpanderGKR<FieldConfig, T>>::gen_params(n_input_vars);
     let pcs_setup = <PCS as PCSForExpanderGKR<FieldConfig, T>>::gen_srs_for_testing(
         &pcs_params,

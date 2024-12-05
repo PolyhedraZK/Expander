@@ -26,7 +26,7 @@ where
     OpenPackF: SimdField<Scalar = C::CircuitField>,
     T: Transcript<C::ChallengeField>,
 {
-    const NAME: &'static str = "OrionSIMDPCSForExpanderGKR";
+    const NAME: &'static str = "OrionPCSForExpanderGKR";
 
     type Params = usize;
     type ScratchPad = OrionScratchPad<C::CircuitField, ComPackF>;
