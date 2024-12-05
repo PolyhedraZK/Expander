@@ -77,33 +77,33 @@ fn main() {
         "m31ext3" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, &&mpi_comm.clone()),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, &mpi_comm.clone()),
             ),
             "poseidon" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::GkrSquare, &&mpi_comm.clone()),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::GkrSquare, &mpi_comm.clone()),
             ),
             _ => unreachable!(),
         },
         "fr" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<BN254ConfigSha2>(
                 &args,
-                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, &&mpi_comm.clone()),
+                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, &mpi_comm.clone()),
             ),
             "poseidon" => run_benchmark::<BN254ConfigSha2>(
                 &args,
-                Config::<BN254ConfigSha2>::new(GKRScheme::GkrSquare, &&mpi_comm.clone()),
+                Config::<BN254ConfigSha2>::new(GKRScheme::GkrSquare, &mpi_comm.clone()),
             ),
             _ => unreachable!(),
         },
         "gf2ext128" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<GF2ExtConfigSha2>(
                 &args,
-                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, &&mpi_comm.clone()),
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, &mpi_comm.clone()),
             ),
             "poseidon" => run_benchmark::<GF2ExtConfigSha2>(
                 &args,
-                Config::<GF2ExtConfigSha2>::new(GKRScheme::GkrSquare, &&mpi_comm.clone()),
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::GkrSquare, &mpi_comm.clone()),
             ),
             _ => unreachable!(),
         },

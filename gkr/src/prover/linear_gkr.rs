@@ -3,7 +3,7 @@
 use arith::FieldSerde;
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
-use communicator::{ExpanderComm, MPICommunicator};
+use communicator::ExpanderComm;
 use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};

@@ -1,6 +1,6 @@
 use arith::Field;
 use gkr_field_config::GKRFieldConfig;
-use communicator::{ExpanderComm, MPICommunicator};
+use communicator::MPICommunicator;
 use poly_commit::PCSForExpanderGKR;
 use std::fmt::Debug;
 use transcript::Transcript;

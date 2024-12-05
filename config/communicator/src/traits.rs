@@ -20,6 +20,7 @@ pub trait ExpanderComm: Clone + Debug {
     fn new_for_verifier(world_size: i32) -> Self;
 
     /// Gather all local values to the root process
+    #[allow(clippy::ptr_arg)] // must be vector here
     fn gather_vec<F: Field>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<F>);
 
     /// Root process broadcase a value f into all the processes
@@ -33,10 +34,10 @@ pub trait ExpanderComm: Clone + Debug {
         if self.world_size() == 1 {
             local_vec.clone()
         } else if self.is_root() {
-            let mut global_vec = vec![F::ZERO; local_vec.len() * (self.world_size() as usize)];
+            let mut global_vec = vec![F::ZERO; local_vec.len() * self.world_size()];
             self.gather_vec(local_vec, &mut global_vec);
             for i in 0..local_vec.len() {
-                for j in 1..(self.world_size() as usize) {
+                for j in 1..self.world_size() {
                     global_vec[i] = global_vec[i] + global_vec[j * local_vec.len() + i];
                 }
             }
