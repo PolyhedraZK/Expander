@@ -177,9 +177,8 @@ pub(crate) trait TensorCodeIOPPCS {
     }
 
     fn query_complexity(&self, soundness_bits: usize) -> usize {
-        // NOTE: use Ligero (AHIV22) or Avg-case dist to a code (BKS18)
-        // version of avg case dist in unique decoding technique.
-        let avg_case_dist = self.hamming_weight() / 3f64;
+        // NOTE: use Ligero (AHIV22) appendix C argument.
+        let avg_case_dist = self.hamming_weight() / 2f64;
         let sec_bits = -(1f64 - avg_case_dist).log2();
 
         (soundness_bits as f64 / sec_bits).ceil() as usize
