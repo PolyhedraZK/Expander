@@ -65,6 +65,7 @@ pub trait PolynomialCommitmentScheme<F: Field, T: Transcript<F>> {
     ) -> bool;
 }
 
+#[derive(Debug, Clone)]
 pub struct ExpanderGKRChallenge<C: GKRFieldConfig> {
     pub x: Vec<C::ChallengeField>,
     pub x_simd: Vec<C::ChallengeField>,

@@ -8,7 +8,6 @@ use gkr_field_config::{GF2ExtConfig, GKRFieldConfig};
 use mpi_config::MPIConfig;
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
-use raw::RawExpanderGKR;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 const TEST_REPETITION: usize = 3;
@@ -111,17 +110,6 @@ where
         MultiLinearPoly::<C::SimdCircuitField>::random(num_vars - num_vars_in_simd, &mut rng);
 
     // NOTE generate srs for each party, and shared challenge point in each party
-    let srs =
-        <OrionSIMDFieldPCS<
-            C::CircuitField,
-            C::SimdCircuitField,
-            C::ChallengeField,
-            ComPackF,
-            OpenPackF,
-            T,
-        > as PCSForExpanderGKR<C, T>>::gen_srs_for_testing(&num_vars, &mpi_config, &mut rng);
-    let (pk, vk) = srs.into_keys();
-
     let challenge_point = ExpanderGKRChallenge::<C> {
         x_mpi: (0..num_vars_in_mpi)
             .map(|_| C::ChallengeField::random_unsafe(&mut rng))
@@ -134,31 +122,11 @@ where
             .collect(),
     };
 
-    let mut scratch_pad =
-        <OrionSIMDFieldPCS<
-            C::CircuitField,
-            C::SimdCircuitField,
-            C::ChallengeField,
-            ComPackF,
-            OpenPackF,
-            T,
-        > as PCSForExpanderGKR<C, T>>::init_scratch_pad(&num_vars, &mpi_config);
-
-    let mut local_prover_transcript = T::new();
-    let mut local_verifier_transcript = T::new();
-
-    let expected_global_eval = RawExpanderGKR::<C, T>::eval(
-        &poly.coeffs,
-        &challenge_point.x,
-        &challenge_point.x_simd,
-        &challenge_point.x_mpi,
-    );
+    let mut transcript = T::new();
 
     dbg!(poly.get_num_vars(), poly.coeffs[0]);
-    dbg!(pk.num_vars);
     dbg!(&challenge_point.x_mpi);
     dbg!(mpi_config.world_size(), mpi_config.world_rank());
-    dbg!(expected_global_eval);
 
     // NOTE separate polynomial into different pieces by mpi rank
     let poly_vars_stride = (1 << poly.get_num_vars()) / mpi_config.world_size();
@@ -166,74 +134,26 @@ where
     let poly_coeff_ends = poly_coeff_starts + poly_vars_stride;
     let local_poly = MultiLinearPoly::new(poly.coeffs[poly_coeff_starts..poly_coeff_ends].to_vec());
 
-    let expected_local_eval = RawExpanderGKR::<C, T>::eval_local(
-        &local_poly.coeffs,
-        &challenge_point.x,
-        &challenge_point.x_simd,
-    );
-
     dbg!(local_poly.get_num_vars(), local_poly.coeffs[0]);
 
-    // NOTE commit polynomial in different parts
-    let commitment = <OrionSIMDFieldPCS<
-        C::CircuitField,
-        C::SimdCircuitField,
-        C::ChallengeField,
-        ComPackF,
-        OpenPackF,
+    common::test_pcs_for_expander_gkr::<
+        C,
         T,
-    > as PCSForExpanderGKR<C, T>>::commit(
+        OrionSIMDFieldPCS<
+            C::CircuitField,
+            C::SimdCircuitField,
+            C::ChallengeField,
+            ComPackF,
+            OpenPackF,
+            T,
+        >,
+    >(
         &num_vars,
         &mpi_config,
-        &pk,
+        &mut transcript,
         &local_poly,
-        &mut scratch_pad,
+        &vec![challenge_point],
     );
-    dbg!(commitment);
-
-    // NOTE: open polynomial in different parts
-    let opening = <OrionSIMDFieldPCS<
-        C::CircuitField,
-        C::SimdCircuitField,
-        C::ChallengeField,
-        ComPackF,
-        OpenPackF,
-        T,
-    > as PCSForExpanderGKR<C, T>>::open(
-        &num_vars,
-        &mpi_config,
-        &pk,
-        &local_poly,
-        &challenge_point,
-        &mut local_prover_transcript,
-        &mut scratch_pad,
-    );
-    dbg!(opening.query_openings.len());
-
-    // NOTE verify polynomial in different parts
-    let pass = <OrionSIMDFieldPCS<
-        C::CircuitField,
-        C::SimdCircuitField,
-        C::ChallengeField,
-        ComPackF,
-        OpenPackF,
-        T,
-    > as PCSForExpanderGKR<C, T>>::verify(
-        &num_vars,
-        &mpi_config,
-        &vk,
-        &commitment,
-        &challenge_point,
-        if mpi_config.is_root() {
-            expected_global_eval
-        } else {
-            expected_local_eval
-        },
-        &mut local_verifier_transcript,
-        &opening,
-    );
-
-    assert!(pass);
 
     MPIConfig::finalize()
 }
