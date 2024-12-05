@@ -10,7 +10,7 @@ use gkr::{
     Prover,
 };
 use gkr_field_config::{BN254Config, GKRFieldConfig, M31ExtConfig};
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 use poly_commit::{
     expander_pcs_init_testing_only, raw::RawExpanderGKR, PCSForExpanderGKR,
     StructuredReferenceString,
@@ -46,7 +46,7 @@ fn benchmark_setup<Cfg: GKRConfig>(
     <<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::PKey,
     <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::ScratchPad,
 ){
-    let config = Config::<Cfg>::new(scheme, MPIConfig::new());
+    let config = Config::<Cfg>::new(scheme, &MPICommunicator::new(1));
     let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
 
     if let Some(witness_file) = witness_file {
@@ -58,7 +58,7 @@ fn benchmark_setup<Cfg: GKRConfig>(
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit.log_input_size(),
-            &config.mpi_config,
+            &config.comm,
         );
 
     (config, circuit, pcs_params, pcs_proving_key, pcs_scratch)

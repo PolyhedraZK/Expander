@@ -8,7 +8,7 @@ use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
 use config::{Config, GKRConfig};
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
 use transcript::{Proof, Transcript};
@@ -50,7 +50,7 @@ fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
 fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    mpi_config: &MPIConfig,
+    mpi_comm: &MPICommunicator,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
     rz0: &[C::ChallengeField],
@@ -113,7 +113,7 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
     }
     GKRVerifierHelper::set_r_simd_xy(&r_simd_xy, sp);
 
-    for _i_var in 0..mpi_config.world_size().trailing_zeros() {
+    for _i_var in 0..mpi_comm.world_size().trailing_zeros() {
         verified &= verify_sumcheck_step::<C, T>(
             &mut proof_reader,
             3,
@@ -161,7 +161,7 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
 // todo: FIXME
 #[allow(clippy::type_complexity)]
 pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    mpi_config: &MPIConfig,
+    mpi_comm: &MPICommunicator,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
     claimed_v: &C::ChallengeField,
@@ -177,7 +177,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     Option<C::ChallengeField>,
 ) {
     let timer = start_timer!(|| "gkr verify");
-    let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
+    let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_comm.world_size());
 
     let layer_num = circuit.layers.len();
     let mut rz0 = vec![];
@@ -193,7 +193,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         r_simd.push(transcript.generate_challenge_field_element());
     }
 
-    for _ in 0..mpi_config.world_size().trailing_zeros() {
+    for _ in 0..mpi_comm.world_size().trailing_zeros() {
         r_mpi.push(transcript.generate_challenge_field_element());
     }
 
@@ -213,7 +213,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             claimed_v0,
             claimed_v1,
         ) = sumcheck_verify_gkr_layer(
-            mpi_config,
+            mpi_comm,
             &circuit.layers[i],
             public_input,
             &rz0,
@@ -285,7 +285,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         // and use the following line to avoid unnecessary deserialization and serialization
         // transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
-        if self.config.mpi_config.world_size() > 1 {
+        if self.config.comm.world_size() > 1 {
             let _ = transcript.hash_and_return_state(); // Trigger an additional hash
         }
 
@@ -297,7 +297,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         circuit.fill_rnd_coefs(&mut transcript);
 
         let (mut verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = gkr_verify(
-            &self.config.mpi_config,
+            &self.config.comm,
             circuit,
             public_input,
             claimed_v,
@@ -362,7 +362,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
 
         let verified = Cfg::PCS::verify(
             pcs_params,
-            &self.config.mpi_config,
+            &self.config.comm,
             pcs_verification_key,
             commitment,
             open_at,

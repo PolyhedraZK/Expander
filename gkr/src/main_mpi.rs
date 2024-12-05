@@ -2,7 +2,7 @@ use circuit::Circuit;
 use clap::Parser;
 use config::{Config, GKRConfig, GKRScheme};
 use config_macros::declare_gkr_config;
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
@@ -43,7 +43,7 @@ fn main() {
     let args = Args::parse();
     print_info(&args);
 
-    let mpi_config = MPIConfig::new();
+    let mpi_comm = MPICommunicator::new(1);
 
     declare_gkr_config!(
         M31ExtConfigSha2,
@@ -68,40 +68,40 @@ fn main() {
         "m31ext3" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, &mpi_comm.clone()),
             ),
             "poseidon" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::GkrSquare, &mpi_comm.clone()),
             ),
             _ => unreachable!(),
         },
         "fr" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<BN254ConfigSha2>(
                 &args,
-                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, &mpi_comm.clone()),
             ),
             "poseidon" => run_benchmark::<BN254ConfigSha2>(
                 &args,
-                Config::<BN254ConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                Config::<BN254ConfigSha2>::new(GKRScheme::GkrSquare, &mpi_comm.clone()),
             ),
             _ => unreachable!(),
         },
         "gf2ext128" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<GF2ExtConfigSha2>(
                 &args,
-                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, &mpi_comm.clone()),
             ),
             "poseidon" => run_benchmark::<GF2ExtConfigSha2>(
                 &args,
-                Config::<GF2ExtConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::GkrSquare, &mpi_comm.clone()),
             ),
             _ => unreachable!(),
         },
         _ => unreachable!(),
     };
 
-    MPIConfig::finalize();
+    MPICommunicator::finalize();
 }
 
 fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
@@ -157,14 +157,14 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit.log_input_size(),
-            &config.mpi_config,
+            &config.comm,
         );
 
     const N_PROOF: usize = 1000;
 
     println!("We are now calculating average throughput, please wait until {N_PROOF} proofs are computed");
     for i in 0..args.repeats {
-        config.mpi_config.barrier(); // wait until everyone is here
+        config.comm.barrier(); // wait until everyone is here
         let start_time = std::time::Instant::now();
         for _j in 0..N_PROOF {
             prover.prove(
@@ -176,7 +176,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         }
         let stop_time = std::time::Instant::now();
         let duration = stop_time.duration_since(start_time);
-        let throughput = (N_PROOF * circuit_copy_size * pack_size * config.mpi_config.world_size())
+        let throughput = (N_PROOF * circuit_copy_size * pack_size * config.comm.world_size())
             as f64
             / duration.as_secs_f64();
         println!("{}-bench: throughput: {} hashes/s", i, throughput.round());

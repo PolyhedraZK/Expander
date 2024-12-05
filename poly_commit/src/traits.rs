@@ -1,6 +1,6 @@
 use arith::{Field, FieldSerde};
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
 use std::fmt::Debug;
@@ -83,7 +83,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
     /// Each process should return the SAME GLOBAL SRS.
     fn gen_srs_for_testing(
         params: &Self::Params,
-        mpi_config: &MPIConfig,
+        mpi_comm: &MPICommunicator,
         rng: impl RngCore,
     ) -> Self::SRS;
 
@@ -91,13 +91,13 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
 
     /// Initialize the scratch pad.
     /// Each process returns its own scratch pad.
-    fn init_scratch_pad(params: &Self::Params, mpi_config: &MPIConfig) -> Self::ScratchPad;
+    fn init_scratch_pad(params: &Self::Params, mpi_comm: &MPICommunicator) -> Self::ScratchPad;
 
     /// Commit to a polynomial. Root process returns the commitment, other processes can return
     /// arbitrary value.
     fn commit(
         params: &Self::Params,
-        mpi_config: &MPIConfig,
+        mpi_comm: &MPICommunicator,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &MultiLinearPoly<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
@@ -121,7 +121,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
     /// verify function as well.
     fn open(
         params: &Self::Params,
-        mpi_config: &MPIConfig,
+        mpi_comm: &MPICommunicator,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &MultiLinearPoly<C::SimdCircuitField>,
         x: &ExpanderGKRChallenge<C>,
@@ -134,7 +134,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
     #[allow(clippy::too_many_arguments)]
     fn verify(
         params: &Self::Params,
-        mpi_config: &MPIConfig,
+        mpi_comm: &MPICommunicator,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &ExpanderGKRChallenge<C>,

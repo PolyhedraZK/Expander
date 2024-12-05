@@ -1,6 +1,6 @@
 use arith::Field;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use communicator::{ExpanderComm, MPICommunicator};
 use poly_commit::PCSForExpanderGKR;
 use std::fmt::Debug;
 use transcript::Transcript;
@@ -78,11 +78,11 @@ pub struct Config<C: GKRConfig> {
     // Whether to use GKR^2
     pub gkr_scheme: GKRScheme,
     // mpi config
-    pub mpi_config: MPIConfig,
+    pub comm: MPICommunicator,
 }
 
 impl<C: GKRConfig> Config<C> {
-    pub fn new(gkr_scheme: GKRScheme, mpi_config: MPIConfig) -> Self {
+    pub fn new(gkr_scheme: GKRScheme, comm: &MPICommunicator) -> Self {
         Config {
             field_size: <C::FieldConfig as GKRFieldConfig>::ChallengeField::FIELD_SIZE,
             security_bits: 100,
@@ -91,7 +91,7 @@ impl<C: GKRConfig> Config<C> {
             polynomial_commitment_type: PolynomialCommitmentType::Raw,
             gkr_config: C::default(),
             gkr_scheme,
-            mpi_config,
+            comm: comm.clone(),
         }
     }
 }

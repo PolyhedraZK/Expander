@@ -2,7 +2,7 @@ mod common;
 
 use arith::{BN254Fr, Field};
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 use poly_commit::{
     raw::{RawExpanderGKR, RawExpanderGKRParams, RawMultiLinear, RawMultiLinearParams},
     ExpanderGKRChallenge,
@@ -28,7 +28,7 @@ fn test_raw() {
 }
 
 fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    mpi_config: &MPIConfig,
+    mpi_comm: &MPICommunicator,
     transcript: &mut T,
 ) {
     let params = RawExpanderGKRParams { n_local_vars: 8 };
@@ -42,27 +42,27 @@ fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             x_simd: (0..C::get_field_pack_size().trailing_zeros())
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
-            x_mpi: (0..mpi_config.world_size().trailing_zeros())
+            x_mpi: (0..mpi_comm.world_size().trailing_zeros())
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
         })
         .collect::<Vec<ExpanderGKRChallenge<C>>>();
-    common::test_gkr_pcs::<C, T, RawExpanderGKR<C, T>>(&params, mpi_config, transcript, &poly, &xs);
+    common::test_gkr_pcs::<C, T, RawExpanderGKR<C, T>>(&params, mpi_comm, transcript, &poly, &xs);
 }
 
 #[test]
 fn test_raw_gkr() {
-    let mpi_config = MPIConfig::new();
+    let mpi_comm = MPICommunicator::new(1);
 
     type TM31 = BytesHashTranscript<<M31ExtConfig as GKRFieldConfig>::ChallengeField, SHA256hasher>;
-    test_raw_gkr_helper::<M31ExtConfig, TM31>(&mpi_config, &mut TM31::new());
+    test_raw_gkr_helper::<M31ExtConfig, TM31>(&mpi_comm, &mut TM31::new());
 
     type TGF2 = BytesHashTranscript<<GF2ExtConfig as GKRFieldConfig>::ChallengeField, SHA256hasher>;
-    test_raw_gkr_helper::<GF2ExtConfig, TGF2>(&mpi_config, &mut TGF2::new());
+    test_raw_gkr_helper::<GF2ExtConfig, TGF2>(&mpi_comm, &mut TGF2::new());
 
     type TBN254 =
         BytesHashTranscript<<BN254Config as GKRFieldConfig>::ChallengeField, SHA256hasher>;
-    test_raw_gkr_helper::<BN254Config, TBN254>(&mpi_config, &mut TBN254::new());
+    test_raw_gkr_helper::<BN254Config, TBN254>(&mpi_comm, &mut TBN254::new());
 
-    MPIConfig::finalize();
+    MPICommunicator::finalize();
 }

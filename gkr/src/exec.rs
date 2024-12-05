@@ -13,7 +13,7 @@ use config::{
 };
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 
 use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
 use transcript::{BytesHashTranscript, FieldHashTranscript, MIMCHasher, SHA256hasher};
@@ -81,7 +81,7 @@ async fn run_command<'a, Cfg: GKRConfig>(
             let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
                 expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
                     circuit.log_input_size(),
-                    &config.mpi_config,
+                    &config.comm,
                 );
 
             let (claimed_v, proof) = prover.prove(
@@ -91,7 +91,7 @@ async fn run_command<'a, Cfg: GKRConfig>(
                 &mut pcs_scratch,
             );
 
-            if config.mpi_config.is_root() {
+            if config.comm.is_root() {
                 let bytes = dump_proof_and_claimed_v(&proof, &claimed_v)
                     .expect("Unable to serialize proof.");
                 fs::write(output_file, bytes).expect("Unable to write proof to file.");
@@ -122,7 +122,7 @@ async fn run_command<'a, Cfg: GKRConfig>(
             let (pcs_params, _pcs_proving_key, pcs_verification_key, mut _pcs_scratch) =
                 expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
                     circuit.log_input_size(),
-                    &config.mpi_config,
+                    &config.comm,
                 );
             let verifier = gkr::Verifier::new(&config);
             let public_input = circuit.public_input.clone();
@@ -153,7 +153,7 @@ async fn run_command<'a, Cfg: GKRConfig>(
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
                 expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
                     circuit.log_input_size(),
-                    &config.mpi_config,
+                    &config.comm,
                 );
 
             let circuit = Arc::new(Mutex::new(circuit));
@@ -251,7 +251,7 @@ async fn main() {
     // expander-exec prove <input:circuit_file> <input:witness_file> <output:proof>
     // expander-exec verify <input:circuit_file> <input:witness_file> <input:proof> <input:mpi_size>
     // expander-exec serve <input:circuit_file> <input:ip> <input:port>
-    let mut mpi_config = MPIConfig::new();
+    let mut mpi_comm = MPICommunicator::new(1);
 
     let args = std::env::args().collect::<Vec<String>>();
     if args.len() < 5 {
@@ -271,8 +271,8 @@ async fn main() {
     }
 
     if command == "verify" && args.len() > 5 {
-        assert!(mpi_config.world_size == 1); // verifier should not be run with mpiexec
-        mpi_config.world_size = args[5].parse::<i32>().expect("Parsing mpi size fails");
+        assert!(mpi_comm.world_size == 1); // verifier should not be run with mpiexec
+        mpi_comm.world_size = args[5].parse::<i32>().expect("Parsing mpi size fails");
     }
 
     declare_gkr_config!(
@@ -302,7 +302,7 @@ async fn main() {
             run_command::<M31ExtConfigSha2>(
                 command,
                 circuit_file,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, &mpi_comm.clone()),
                 &args,
             )
             .await;
@@ -311,7 +311,7 @@ async fn main() {
             run_command::<BN254ConfigMIMC5>(
                 command,
                 circuit_file,
-                Config::<BN254ConfigMIMC5>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<BN254ConfigMIMC5>::new(GKRScheme::Vanilla, &mpi_comm.clone()),
                 &args,
             )
             .await;
@@ -320,12 +320,12 @@ async fn main() {
             run_command::<GF2ExtConfigSha2>(
                 command,
                 circuit_file,
-                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, &mpi_comm.clone()),
                 &args,
             )
             .await
         }
     }
 
-    MPIConfig::finalize();
+    MPICommunicator::finalize();
 }

@@ -8,7 +8,7 @@ arith = { path = "../arith" }
 circuit = { path = "../circuit" }
 config = { path = "../config" }
 gkr_field_config = { path = "../config/gkr_field_config" }
-mpi_config = { path = "../config/mpi_config" }
+communicator = { path = "../config/communicator" }
 polynomials = { path = "../arith/polynomials" }
 transcript = { path = "../transcript" }
 

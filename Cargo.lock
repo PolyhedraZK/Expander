@@ -542,18 +542,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 
 [[package]]
+name = "communicator"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "mersenne31",
+ "mpi",
+]
+
+[[package]]
 name = "config"
 version = "0.1.0"
 dependencies = [
  "arith",
  "ark-std",
+ "communicator",
  "gf2",
  "gf2_128",
  "gkr_field_config",
  "halo2curves",
  "mersenne31",
  "mpi",
- "mpi_config",
  "poly_commit",
  "transcript",
 ]
@@ -924,6 +933,7 @@ dependencies = [
  "chrono",
  "circuit",
  "clap",
+ "communicator",
  "config",
  "config_macros",
  "criterion",
@@ -936,7 +946,6 @@ dependencies = [
  "log",
  "mersenne31",
  "mpi",
- "mpi_config",
  "poly_commit",
  "polynomials",
  "rand",
@@ -1579,15 +1588,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mpi_config"
-version = "0.1.0"
-dependencies = [
- "arith",
- "mersenne31",
- "mpi",
-]
-
-[[package]]
 name = "multer"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1794,8 +1794,8 @@ name = "poly_commit"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "communicator",
  "gkr_field_config",
- "mpi_config",
  "polynomials",
  "rand",
  "transcript",
@@ -2166,11 +2166,11 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "circuit",
+ "communicator",
  "config",
  "env_logger",
  "gkr_field_config",
  "log",
- "mpi_config",
  "polynomials",
  "transcript",
 ]
@@ -2348,7 +2348,7 @@ name = "transcript"
 version = "0.1.0"
 dependencies = [
  "arith",
- "mpi_config",
+ "communicator",
  "sha2",
  "tiny-keccak",
 ]

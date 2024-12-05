@@ -1,7 +1,7 @@
 use arith::{Field, SimdField};
 use circuit::CircuitLayer;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 use polynomials::EqPolynomial;
 
 use crate::{unpack_and_combine, ProverScratchPad};
@@ -29,7 +29,7 @@ pub(crate) struct SumcheckGkrVanillaHelper<'a, C: GKRFieldConfig> {
     simd_var_helper: SumcheckSimdProdGateHelper,
     mpi_var_helper: SumcheckSimdProdGateHelper,
 
-    mpi_config: &'a MPIConfig,
+    mpi_comm: &'a MPICommunicator,
     is_output_layer: bool,
 }
 
@@ -60,7 +60,7 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
         r_mpi: &'a [C::ChallengeField],
         alpha: Option<C::ChallengeField>,
         sp: &'a mut ProverScratchPad<C>,
-        mpi_config: &'a MPIConfig,
+        mpi_comm: &'a MPICommunicator,
         is_output_layer: bool,
     ) -> Self {
         let simd_var_num = C::get_field_pack_size().trailing_zeros() as usize;
@@ -84,9 +84,9 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
             xy_helper: SumcheckProductGateHelper::new(layer.input_var_num),
             simd_var_helper: SumcheckSimdProdGateHelper::new(simd_var_num),
             mpi_var_helper: SumcheckSimdProdGateHelper::new(
-                mpi_config.world_size().trailing_zeros() as usize,
+                mpi_comm.world_size().trailing_zeros() as usize,
             ),
-            mpi_config,
+            mpi_comm,
             is_output_layer,
         }
     }
@@ -114,9 +114,9 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
 
         // MPI
         let global_vals = self
-            .mpi_config
+            .mpi_comm
             .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0);
-        if self.mpi_config.is_root() {
+        if self.mpi_comm.is_root() {
             global_vals.try_into().unwrap()
         } else {
             [C::ChallengeField::ZERO; 3]
@@ -137,9 +137,9 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
             &mut self.sp.simd_var_hg_evals,
         );
         let global_vals = self
-            .mpi_config
+            .mpi_comm
             .coef_combine_vec(&local_vals.to_vec(), &self.sp.eq_evals_at_r_mpi0);
-        if self.mpi_config.is_root() {
+        if self.mpi_comm.is_root() {
             global_vals.try_into().unwrap()
         } else {
             [C::ChallengeField::ZERO; 4]
@@ -151,7 +151,7 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
         var_idx: usize,
         degree: usize,
     ) -> [C::ChallengeField; 4] {
-        assert!(var_idx < self.mpi_config.world_size().trailing_zeros() as usize);
+        assert!(var_idx < self.mpi_comm.world_size().trailing_zeros() as usize);
         self.mpi_var_helper.poly_eval_at::<C>(
             var_idx,
             degree,
@@ -222,9 +222,9 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
     pub(crate) fn vy_claim(&self) -> C::ChallengeField {
         let vy_local = unpack_and_combine(&self.sp.v_evals[0], &self.sp.eq_evals_at_r_simd0);
         let summation = self
-            .mpi_config
+            .mpi_comm
             .coef_combine_vec(&vec![vy_local], &self.sp.eq_evals_at_r_mpi0);
-        if self.mpi_config.is_root() {
+        if self.mpi_comm.is_root() {
             summation[0]
         } else {
             C::ChallengeField::ZERO
@@ -328,11 +328,11 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
 
     #[inline]
     pub(crate) fn prepare_mpi_var_vals(&mut self) {
-        self.mpi_config.gather_vec(
+        self.mpi_comm.gather_vec(
             &vec![self.sp.simd_var_v_evals[0]],
             &mut self.sp.mpi_var_v_evals,
         );
-        self.mpi_config.gather_vec(
+        self.mpi_comm.gather_vec(
             &vec![self.sp.simd_var_hg_evals[0] * self.sp.eq_evals_at_r_simd0[0]],
             &mut self.sp.mpi_var_hg_evals,
         );
@@ -341,7 +341,7 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
     #[inline]
     pub(crate) fn prepare_y_vals(&mut self) {
         let mut v_rx_rsimd_rw = self.sp.mpi_var_v_evals[0];
-        self.mpi_config.root_broadcast_f(&mut v_rx_rsimd_rw);
+        self.mpi_comm.root_broadcast_f(&mut v_rx_rsimd_rw);
 
         let mul = &self.layer.mul;
         let eq_evals_at_rz0 = &self.sp.eq_evals_at_rz0;

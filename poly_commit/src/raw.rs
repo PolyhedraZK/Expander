@@ -5,7 +5,7 @@ use crate::{
 };
 use arith::{Field, SimdField};
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
 use transcript::Transcript;
@@ -132,7 +132,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
 
     fn gen_srs_for_testing(
         _params: &Self::Params,
-        _mpi_config: &MPIConfig,
+        _mpi_comm: &MPICommunicator,
         _rng: impl RngCore,
     ) -> Self::SRS {
         Self::SRS::default()
@@ -144,35 +144,35 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         }
     }
 
-    fn init_scratch_pad(_params: &Self::Params, _mpi_config: &MPIConfig) -> Self::ScratchPad {
+    fn init_scratch_pad(_params: &Self::Params, _mpi_comm: &MPICommunicator) -> Self::ScratchPad {
         RawExpanderGKRScratchPad {}
     }
 
     fn commit(
         params: &Self::Params,
-        mpi_config: &MPIConfig,
+        mpi_comm: &MPICommunicator,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &MultiLinearPoly<C::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
         assert!(poly.coeffs.len() == 1 << params.n_local_vars);
-        if mpi_config.world_size() == 1 {
+        if mpi_comm.world_size() == 1 {
             poly.coeffs.clone()
         } else {
-            let mut buffer = if mpi_config.is_root() {
-                vec![C::SimdCircuitField::zero(); poly.coeffs.len() * mpi_config.world_size()]
+            let mut buffer = if mpi_comm.is_root() {
+                vec![C::SimdCircuitField::zero(); poly.coeffs.len() * mpi_comm.world_size()]
             } else {
                 vec![]
             };
 
-            mpi_config.gather_vec(&poly.coeffs, &mut buffer);
+            mpi_comm.gather_vec(&poly.coeffs, &mut buffer);
             buffer
         }
     }
 
     fn open(
         _params: &Self::Params,
-        _mpi_config: &MPIConfig,
+        _mpi_comm: &MPICommunicator,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         _poly: &MultiLinearPoly<C::SimdCircuitField>,
         _x: &ExpanderGKRChallenge<C>,
@@ -185,7 +185,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
 
     fn verify(
         _params: &Self::Params,
-        mpi_config: &MPIConfig,
+        mpi_comm: &MPICommunicator,
         _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &ExpanderGKRChallenge<C>,
@@ -193,7 +193,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _transcript: &mut T,
         _opening: &Self::Opening,
     ) -> bool {
-        assert!(mpi_config.is_root()); // Only the root will verify
+        assert!(mpi_comm.is_root()); // Only the root will verify
         let ExpanderGKRChallenge::<C> { x, x_simd, x_mpi } = x;
         Self::eval(commitment, x, x_simd, x_mpi) == v
     }

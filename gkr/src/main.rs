@@ -8,7 +8,7 @@ use clap::Parser;
 use config::{Config, GKRConfig, GKRScheme};
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 
 use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
 use transcript::{BytesHashTranscript, SHA256hasher};
@@ -52,7 +52,7 @@ fn main() {
     let args = Args::parse();
     print_info(&args);
 
-    let mpi_config = MPIConfig::new();
+    let mpi_comm = MPICommunicator::new(1);
 
     declare_gkr_config!(
         M31ExtConfigSha2,
@@ -77,40 +77,40 @@ fn main() {
         "m31ext3" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, &&mpi_comm.clone()),
             ),
             "poseidon" => run_benchmark::<M31ExtConfigSha2>(
                 &args,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                Config::<M31ExtConfigSha2>::new(GKRScheme::GkrSquare, &&mpi_comm.clone()),
             ),
             _ => unreachable!(),
         },
         "fr" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<BN254ConfigSha2>(
                 &args,
-                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, &&mpi_comm.clone()),
             ),
             "poseidon" => run_benchmark::<BN254ConfigSha2>(
                 &args,
-                Config::<BN254ConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                Config::<BN254ConfigSha2>::new(GKRScheme::GkrSquare, &&mpi_comm.clone()),
             ),
             _ => unreachable!(),
         },
         "gf2ext128" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<GF2ExtConfigSha2>(
                 &args,
-                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, &&mpi_comm.clone()),
             ),
             "poseidon" => run_benchmark::<GF2ExtConfigSha2>(
                 &args,
-                Config::<GF2ExtConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                Config::<GF2ExtConfigSha2>::new(GKRScheme::GkrSquare, &&mpi_comm.clone()),
             ),
             _ => unreachable!(),
         },
         _ => unreachable!(),
     };
 
-    MPIConfig::finalize();
+    MPICommunicator::finalize();
 }
 
 fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
@@ -178,7 +178,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit_template.log_input_size(),
-            &config.mpi_config,
+            &config.comm,
         );
 
     let start_time = std::time::Instant::now();
@@ -216,7 +216,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
             total_proof_cnt += *cnt.lock().unwrap();
         }
         let throughput = total_proof_cnt as f64 / duration.as_secs_f64()
-            * (config.mpi_config.world_size() as f64);
+            * (config.comm.world_size() as f64);
         println!("{}-bench: throughput: {} hashes/s", i, throughput.round());
     }
 }

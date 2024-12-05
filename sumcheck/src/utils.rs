@@ -1,5 +1,5 @@
 use arith::{Field, SimdField};
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 use transcript::Transcript;
 
 // #[inline(always)]
@@ -25,7 +25,7 @@ pub fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar 
 
 /// Transcript IO between sumcheck steps
 #[inline]
-pub fn transcript_io<F, T>(mpi_config: &MPIConfig, ps: &[F], transcript: &mut T) -> F
+pub fn transcript_io<F, T>(mpi_comm: &MPICommunicator, ps: &[F], transcript: &mut T) -> F
 where
     F: Field,
     T: Transcript<F>,
@@ -35,6 +35,6 @@ where
         transcript.append_field_element(p);
     }
     let mut r = transcript.generate_challenge_field_element();
-    mpi_config.root_broadcast_f(&mut r);
+    mpi_comm.root_broadcast_f(&mut r);
     r
 }

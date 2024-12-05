@@ -3,6 +3,7 @@
 use arith::FieldSerde;
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
+use communicator::{ExpanderComm, MPICommunicator};
 use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
@@ -72,7 +73,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         self.sp = ProverScratchPad::<Cfg::FieldConfig>::new(
             max_num_input_var,
             max_num_output_var,
-            self.config.mpi_config.world_size(),
+            self.config.comm.world_size(),
         );
     }
 
@@ -90,7 +91,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         let mle_wrapper = unsafe { MultiLinearPoly::wrap_around(&c.layers[0].input_vals) };
         let commitment = Cfg::PCS::commit(
             pcs_params,
-            &self.config.mpi_config,
+            &self.config.comm,
             pcs_proving_key,
             &mle_wrapper,
             pcs_scratch,
@@ -100,7 +101,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         transcript.append_u8_slice(&buffer);
         mle_wrapper.wrapper_self_detroy();
 
-        transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
+        transcript_root_broadcast(&mut transcript, &self.config.comm);
 
         #[cfg(feature = "grinding")]
         grind::<Cfg>(&mut transcript, &self.config);
@@ -118,7 +119,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
             (_, rx) = gkr_square_prove(c, &mut self.sp, &mut transcript);
         } else {
             (claimed_v, rx, ry, rsimd, rmpi) =
-                gkr_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
+                gkr_prove(c, &mut self.sp, &mut transcript, &self.config.comm);
         }
 
         let mle_wrapper = unsafe { MultiLinearPoly::wrap_around(&c.layers[0].input_vals) };
@@ -170,7 +171,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
     ) {
         let opening = Cfg::PCS::open(
             pcs_params,
-            &self.config.mpi_config,
+            &self.config.comm,
             pcs_proving_key,
             input_layer_mle,
             open_at,

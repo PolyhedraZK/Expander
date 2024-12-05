@@ -4,7 +4,7 @@ use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 use polynomials::MultiLinearPoly;
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use transcript::Transcript;
@@ -15,7 +15,7 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     circuit: &Circuit<C>,
     sp: &mut ProverScratchPad<C>,
     transcript: &mut T,
-    mpi_config: &MPIConfig,
+    mpi_comm: &MPICommunicator,
 ) -> (
     C::ChallengeField,
     Vec<C::ChallengeField>,
@@ -38,7 +38,7 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         r_simd.push(transcript.generate_challenge_field_element());
     }
 
-    for _ in 0..mpi_config.world_size().trailing_zeros() {
+    for _ in 0..mpi_comm.world_size().trailing_zeros() {
         r_mpi.push(transcript.generate_challenge_field_element());
     }
 
@@ -53,17 +53,17 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         &mut sp.eq_evals_at_r_simd0,
     );
 
-    let claimed_v = if mpi_config.is_root() {
+    let claimed_v = if mpi_comm.is_root() {
         let mut claimed_v_gathering_buffer =
-            vec![C::ChallengeField::zero(); mpi_config.world_size()];
-        mpi_config.gather_vec(&vec![claimed_v_local], &mut claimed_v_gathering_buffer);
+            vec![C::ChallengeField::zero(); mpi_comm.world_size()];
+        mpi_comm.gather_vec(&vec![claimed_v_local], &mut claimed_v_gathering_buffer);
         MultiLinearPoly::evaluate_with_buffer(
             &claimed_v_gathering_buffer,
             &r_mpi,
             &mut sp.eq_evals_at_r_mpi0,
         )
     } else {
-        mpi_config.gather_vec(&vec![claimed_v_local], &mut vec![]);
+        mpi_comm.gather_vec(&vec![claimed_v_local], &mut vec![]);
         C::ChallengeField::zero()
     };
 
@@ -77,14 +77,14 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             alpha,
             transcript,
             sp,
-            mpi_config,
+            mpi_comm,
             i == layer_num - 1,
         );
 
         if rz1.is_some() {
             // TODO: try broadcast beta.unwrap directly
             let mut tmp = transcript.generate_challenge_field_element();
-            mpi_config.root_broadcast_f(&mut tmp);
+            mpi_comm.root_broadcast_f(&mut tmp);
             alpha = Some(tmp)
         } else {
             alpha = None;

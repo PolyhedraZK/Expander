@@ -1,7 +1,7 @@
 use arith::FieldSerde;
 use circuit::CircuitLayer;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 use transcript::Transcript;
 
 use crate::{
@@ -22,7 +22,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
     alpha: Option<C::ChallengeField>,
     transcript: &mut T,
     sp: &mut ProverScratchPad<C>,
-    mpi_config: &MPIConfig,
+    mpi_comm: &MPICommunicator,
     is_output_layer: bool,
 ) -> (
     Vec<C::ChallengeField>,
@@ -38,7 +38,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
         r_mpi,
         alpha,
         sp,
-        mpi_config,
+        mpi_comm,
         is_output_layer,
     );
 
@@ -49,21 +49,21 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
     helper.prepare_x_vals();
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        let r = transcript_io::<C::ChallengeField, T>(mpi_comm, &evals, transcript);
         helper.receive_rx(i_var, r);
     }
 
     helper.prepare_simd_var_vals();
     for i_var in 0..helper.simd_var_num {
         let evals = helper.poly_evals_at_r_simd_var(i_var, 3);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        let r = transcript_io::<C::ChallengeField, T>(mpi_comm, &evals, transcript);
         helper.receive_r_simd_var(i_var, r);
     }
 
     helper.prepare_mpi_var_vals();
-    for i_var in 0..mpi_config.world_size().trailing_zeros() as usize {
+    for i_var in 0..mpi_comm.world_size().trailing_zeros() as usize {
         let evals = helper.poly_evals_at_r_mpi_var(i_var, 3);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        let r = transcript_io::<C::ChallengeField, T>(mpi_comm, &evals, transcript);
         helper.receive_r_mpi_var(i_var, r);
     }
 
@@ -75,7 +75,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
         helper.prepare_y_vals();
         for i_var in 0..helper.input_var_num {
             let evals = helper.poly_evals_at_ry(i_var, 2);
-            let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+            let r = transcript_io::<C::ChallengeField, T>(mpi_comm, &evals, transcript);
             helper.receive_ry(i_var, r);
         }
         let vy_claim = helper.vy_claim();

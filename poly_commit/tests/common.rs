@@ -1,6 +1,6 @@
 use arith::Field;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use communicator::{MPICommunicator, ExpanderComm};
 use poly_commit::raw::RawExpanderGKR;
 use poly_commit::{
     ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,
@@ -40,33 +40,33 @@ pub fn test_gkr_pcs<
     P: PCSForExpanderGKR<C, T>,
 >(
     params: &P::Params,
-    mpi_config: &MPIConfig,
+    mpi_comm: &MPICommunicator,
     transcript: &mut T,
     poly: &MultiLinearPoly<C::SimdCircuitField>,
     xs: &[ExpanderGKRChallenge<C>],
 ) {
     let mut rng = thread_rng();
-    let srs = P::gen_srs_for_testing(params, mpi_config, &mut rng);
+    let srs = P::gen_srs_for_testing(params, mpi_comm, &mut rng);
     let (proving_key, verification_key) = srs.into_keys();
-    let mut scratch_pad = P::init_scratch_pad(params, mpi_config);
+    let mut scratch_pad = P::init_scratch_pad(params, mpi_comm);
 
-    let commitment = P::commit(params, mpi_config, &proving_key, poly, &mut scratch_pad);
+    let commitment = P::commit(params, mpi_comm, &proving_key, poly, &mut scratch_pad);
 
     // PCSForExpanderGKR does not require an evaluation value for the opening function
     // We use RawExpanderGKR as the golden standard for the evaluation value
     // Note this test will almost always pass for RawExpanderGKR, so make sure it is correct
-    let mut coeffs_gathered = if mpi_config.is_root() {
-        vec![C::SimdCircuitField::ZERO; poly.coeffs.len() * mpi_config.world_size()]
+    let mut coeffs_gathered = if mpi_comm.is_root() {
+        vec![C::SimdCircuitField::ZERO; poly.coeffs.len() * mpi_comm.world_size()]
     } else {
         vec![]
     };
-    mpi_config.gather_vec(&poly.coeffs, &mut coeffs_gathered);
+    mpi_comm.gather_vec(&poly.coeffs, &mut coeffs_gathered);
 
     for xx in xs {
         let ExpanderGKRChallenge { x, x_simd, x_mpi } = xx;
         let opening = P::open(
             params,
-            mpi_config,
+            mpi_comm,
             &proving_key,
             poly,
             xx,
@@ -74,13 +74,13 @@ pub fn test_gkr_pcs<
             &mut scratch_pad,
         );
 
-        if mpi_config.is_root() {
+        if mpi_comm.is_root() {
             // this will always pass for RawExpanderGKR, so make sure it is correct
             let v = RawExpanderGKR::<C, T>::eval(&coeffs_gathered, x, x_simd, x_mpi);
 
             assert!(P::verify(
                 params,
-                mpi_config,
+                mpi_comm,
                 &verification_key,
                 &commitment,
                 xx,

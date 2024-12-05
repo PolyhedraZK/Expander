@@ -9,7 +9,7 @@ gf2 = { path = "../arith/gf2" }
 gf2_128 = { path = "../arith/gf2_128" }
 gkr_field_config = { path = "./gkr_field_config"}
 mersenne31 = { path = "../arith/mersenne31" }
-mpi_config = { path = "./mpi_config" }
+communicator = { path = "./communicator" }
 poly_commit = { path = "../poly_commit" }
 transcript = { path = "../transcript" }
 

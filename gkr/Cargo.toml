@@ -8,7 +8,7 @@ arith = { path = "../arith" }
 config = { path = "../config" }
 config_macros = { path = "../config/config_macros" }
 gkr_field_config = { path = "../config/gkr_field_config" }
-mpi_config = { path = "../config/mpi_config" }
+communicator = { path = "../config/communicator" }
 circuit = { path = "../circuit" }
 gf2 = { path = "../arith/gf2" }
 gf2_128 = { path = "../arith/gf2_128" }
