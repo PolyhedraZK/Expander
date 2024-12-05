@@ -6,7 +6,10 @@ use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::Transcript;
 
 use crate::{
-    orion::{utils::*, OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad},
+    orion::{
+        utils::{commit_encoded, orion_mt_openings, orion_mt_verify, transpose_in_place},
+        OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
+    },
     traits::TensorCodeIOPPCS,
     SubsetSumLUTs, PCS_SOUNDNESS_BITS,
 };
@@ -68,6 +71,33 @@ where
     commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
 }
 
+#[inline(always)]
+fn transpose_and_shuffle_simd<F, SimdF, PackF>(
+    evaluations: &mut [SimdF],
+    row_num: usize,
+) -> Vec<PackF>
+where
+    F: Field,
+    SimdF: SimdField<Scalar = F>,
+    PackF: SimdField<Scalar = F>,
+{
+    // NOTE: pre transpose evaluations
+    let mut scratch = vec![SimdF::ZERO; evaluations.len()];
+    transpose_in_place(evaluations, &mut scratch, row_num);
+    drop(scratch);
+
+    // NOTE: reshuffle the transposed matrix, from SIMD over row to SIMD over col
+    let mut scratch = vec![F::ZERO; SimdF::PACK_SIZE * row_num];
+    evaluations
+        .chunks(row_num)
+        .flat_map(|row_simds| -> Vec<_> {
+            let mut elts: Vec<_> = row_simds.iter().flat_map(|f| f.unpack()).collect();
+            transpose_in_place(&mut elts, &mut scratch, row_num);
+            elts.chunks(PackF::PACK_SIZE).map(PackF::pack).collect()
+        })
+        .collect()
+}
+
 // NOTE: this implementation doesn't quite align with opening for
 // multilinear polynomials over base field,
 // as this directly plug into GKR argument system.
@@ -103,6 +133,8 @@ where
     // NOTE: transpose and shuffle evaluations (repack evaluations in another direction)
     // for linear combinations in evaulation/proximity tests
     let mut evals = poly.coeffs.clone();
+    assert_eq!(evals.len() * SimdF::PACK_SIZE % OpenPackF::PACK_SIZE, 0);
+
     let packed_shuffled_evals: Vec<OpenPackF> = transpose_and_shuffle_simd(&mut evals, row_num);
     drop(evals);
 
@@ -122,8 +154,9 @@ where
 
     // NOTE: draw random linear combination out
     // and compose proximity response(s) of tensor code IOP based PCS
-    let proximity_reps = pk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
-    let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size * SimdF::PACK_SIZE]; proximity_reps];
+    let proximity_test_num = pk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
+    let mut proximity_rows =
+        vec![vec![EvalF::ZERO; msg_size * SimdF::PACK_SIZE]; proximity_test_num];
 
     proximity_rows.iter_mut().for_each(|row_buffer| {
         let random_coeffs = transcript.generate_challenge_field_elements(row_num);
