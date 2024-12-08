@@ -102,12 +102,12 @@ impl<F: Field> MultiLinearPoly<F> {
 
     /// Evaluate the polynomial at the top variable
     #[inline]
-    pub fn fix_top_variable(&mut self, r: &F) {
+    pub fn fix_top_variable(&mut self, r: F) {
         let n = self.coeffs.len() / 2;
         let (left, right) = self.coeffs.split_at_mut(n);
 
         left.iter_mut().zip(right.iter()).for_each(|(a, b)| {
-            *a += *r * (*b - *a);
+            *a += r * (*b - *a);
         });
         self.coeffs.truncate(n);
     }
@@ -121,7 +121,7 @@ impl<F: Field> MultiLinearPoly<F> {
         partial_point
             .iter()
             .rev() // need to reverse the order of the point
-            .for_each(|point| self.fix_top_variable(point));
+            .for_each(|point| self.fix_top_variable(*point));
     }
 
     /// Jolt's implementation
