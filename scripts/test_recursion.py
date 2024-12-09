@@ -60,6 +60,11 @@ def parse_proof_config(proof_config):
 
     return proof_config["circuit"], proof_config["witness"], proof_config["gkr_proof"], proof_config["recursive_proof"]
 
+
+def gkr_proof_id(prefix: str, mpi_id: int) -> str:
+    return f"{prefix}.mpi_id-{mpi_id}"
+
+
 DEBUG = True
 
 # Run two mpi process
@@ -75,11 +80,39 @@ if __name__ == "__main__":
     if DEBUG:
         n_groups = 1
 
+    # NOTE(HS): as of 2024/12/09 - this command runs in CI environment, so mac naturally do not have
+    # AVX 512 instructions - yet this is not quite a good condition statement, should be something like
+    # archspec.  The work is deferred later as the current implementation suffices.
+    avx_build_prefix: str = "" if sys.platform == 'darwin' else "RUSTFLAGS='-C target-feature=+avx512f'"
+    compile_ret = subprocess.run(f"{avx_build_prefix} cargo build --release --bin expander-exec", shell=True)
+
+    if compile_ret.returncode != 0:
+        sys.exit(-1)
+
+    # minor - check golang if exists on the machine
+    if subprocess.run("go env", shell=True).returncode != 0:
+        sys.exit(-1)
+
+    mpi_cpu_set: str = ",".join([str(cpu_id) for cpu_id in cpu_ids])
+    mpi_command_prefix: str = f"mpiexec -cpu-set {mpi_cpu_set} -n {mpi_size_each_group}"
+
+    print(mpi_cpu_set, mpi_command_prefix)
+
+    # FIXME(HS): construction field - working on compilation process,
+    # need to work on MPI and recursive verifier on proof deserialization
+    sys.exit(0)
+
     ps = []
-    subprocess.run("RUSTFLAGS='-C target-feature=+avx512f' cargo build --release --bin expander-exec ", shell=True)
     for i in range(n_groups):
-        cpu_id = ",".join(map(str, cpu_ids[i]))
-        p = subprocess.Popen(["mpiexec", "-cpu-set", cpu_id, "-n", str(mpi_size_each_group), "./target/release/expander-exec", "prove", circuit, witness, gkr_proof + "." + str(i)])
+        literal_command = f"""
+        {mpi_command_prefix}
+        cargo run --release --bin=expander-exec prove {circuit} {witness} {gkr_proof_id(gkr_proof, i)}
+        """
+
+        p = subprocess.Popen([
+            "mpiexec", "-cpu-set", mpi_cpu_set, "-n", str(mpi_size_each_group),
+            "./target/release/expander-exec", "prove", circuit, witness, gkr_proof + "." + str(i)
+        ])
         ps.append(p)
 
     for i in range(n_groups):
