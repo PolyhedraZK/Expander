@@ -165,7 +165,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
                 vec![]
             };
 
-            mpi_config.gather_vec(&poly.hypercube_basis(), &mut buffer);
+            mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
             buffer
         }
     }

@@ -15,6 +15,8 @@ pub trait MultilinearExtension<F: Field>: Index<usize, Output = F> {
 
     fn hypercube_basis(&self) -> Vec<F>;
 
+    fn hypercube_basis_ref(&self) -> &Vec<F>;
+
     fn interpolate_over_hypercube(&self) -> Vec<F>;
 }
 
@@ -47,6 +49,10 @@ impl<'a, F: Field> MultilinearExtension<F> for RefMultiLinearPoly<'a, F> {
 
     fn hypercube_basis(&self) -> Vec<F> {
         self.coeffs.clone()
+    }
+
+    fn hypercube_basis_ref(&self) -> &Vec<F> {
+        self.coeffs
     }
 
     fn interpolate_over_hypercube(&self) -> Vec<F> {
@@ -104,6 +110,10 @@ impl<'a, F: Field> MultilinearExtension<F> for MutRefMultiLinearPoly<'a, F> {
 
     fn hypercube_basis(&self) -> Vec<F> {
         self.coeffs.clone()
+    }
+
+    fn hypercube_basis_ref(&self) -> &Vec<F> {
+        self.coeffs
     }
 
     fn interpolate_over_hypercube(&self) -> Vec<F> {

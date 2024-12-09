@@ -161,6 +161,10 @@ impl<F: Field> MultilinearExtension<F> for MultiLinearPoly<F> {
         self.coeffs.clone()
     }
 
+    fn hypercube_basis_ref(&self) -> &Vec<F> {
+        &self.coeffs
+    }
+
     fn evaluate_with_buffer(&self, point: &[F], scratch: &mut [F]) -> F {
         Self::evaluate_with_buffer(&self.coeffs, point, scratch)
     }

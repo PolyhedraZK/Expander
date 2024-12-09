@@ -60,7 +60,7 @@ pub fn test_gkr_pcs<
     } else {
         vec![]
     };
-    mpi_config.gather_vec(&poly.hypercube_basis(), &mut coeffs_gathered);
+    mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut coeffs_gathered);
 
     for xx in xs {
         let ExpanderGKRChallenge { x, x_simd, x_mpi } = xx;
