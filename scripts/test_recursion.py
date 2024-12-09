@@ -55,6 +55,7 @@ def parse_proof_config(proof_config):
     if field not in ["gf2ext128", "m31ext3", "fr"]:
         sys.exit("Unrecognized field, gkr now only supports gf2ext128, m31ext3 and fr")
 
+    # FIXME(HS): working on M31 proof stuff now?
     if field != "fr":
         sys.exit("Recursive proof only supports fr now")
 
@@ -65,7 +66,7 @@ def gkr_proof_id(prefix: str, mpi_id: int) -> str:
     return f"{prefix}.mpi_id-{mpi_id}"
 
 
-DEBUG = True
+DEBUG = False
 
 # Run two mpi process
 if __name__ == "__main__":
@@ -93,32 +94,30 @@ if __name__ == "__main__":
     if subprocess.run("go env", shell=True).returncode != 0:
         sys.exit(-1)
 
-    mpi_cpu_set: str = ",".join([str(cpu_id) for cpu_id in cpu_ids])
-    mpi_command_prefix: str = f"mpiexec -cpu-set {mpi_cpu_set} -n {mpi_size_each_group}"
+    # local function for mpi running prove process for each sub proof
+    def mpi_prove(mpi_index: int) -> subprocess.Popen:
+        mpi_cpus: str = ",".join([str(cpu_id) for cpu_id in cpu_ids[mpi_index]])
+        mpi_command_prefix: str = f"mpiexec -cpu-set {mpi_cpus} -n {mpi_size_each_group}"
 
-    print(mpi_cpu_set, mpi_command_prefix)
+        literal_command = f"""
+        {mpi_command_prefix}
+        ./target/release/expander-exec prove {circuit} {witness} {gkr_proof_id(gkr_proof, mpi_index)}
+        """.split()
+
+        print(' '.join(literal_command))
+
+        return subprocess.Popen(literal_command)
+
+    ps: list[subprocess.Popen] = [mpi_prove(i) for i in range(n_groups)]
+    ps_rets: list[int] = [p.wait() for p in ps]
+    if not all([r == 0 for r in ps_rets]):
+        sys.exit(-1)
+
+    print("gkr prove done.")
 
     # FIXME(HS): construction field - working on compilation process,
     # need to work on MPI and recursive verifier on proof deserialization
     sys.exit(0)
-
-    ps = []
-    for i in range(n_groups):
-        literal_command = f"""
-        {mpi_command_prefix}
-        cargo run --release --bin=expander-exec prove {circuit} {witness} {gkr_proof_id(gkr_proof, i)}
-        """
-
-        p = subprocess.Popen([
-            "mpiexec", "-cpu-set", mpi_cpu_set, "-n", str(mpi_size_each_group),
-            "./target/release/expander-exec", "prove", circuit, witness, gkr_proof + "." + str(i)
-        ])
-        ps.append(p)
-
-    for i in range(n_groups):
-        ps[i].wait()
-
-    print("gkr prove done.")
 
     for i in range(n_groups):
         subprocess.run(
