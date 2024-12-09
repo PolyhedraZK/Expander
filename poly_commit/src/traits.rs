@@ -99,7 +99,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
         params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &'_ dyn MultilinearExtension<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment;
 
@@ -123,7 +123,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
         params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &'_ dyn MultilinearExtension<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<C::SimdCircuitField>,
         x: &ExpanderGKRChallenge<C>,
         transcript: &mut T, // add transcript here to allow interactive arguments
         scratch_pad: &mut Self::ScratchPad,

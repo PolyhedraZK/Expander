@@ -152,7 +152,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         params: &Self::Params,
         mpi_config: &MPIConfig,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &'_ dyn MultilinearExtension<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
         assert!(poly.num_vars() == params.n_local_vars);
@@ -174,7 +174,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _params: &Self::Params,
         _mpi_config: &MPIConfig,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        _poly: &'_ dyn MultilinearExtension<C::SimdCircuitField>,
+        _poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _x: &ExpanderGKRChallenge<C>,
         _transcript: &mut T,
         _scratch_pad: &mut Self::ScratchPad,

@@ -161,9 +161,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
 impl<Cfg: GKRConfig> Prover<Cfg> {
     fn prove_input_layer_claim(
         &self,
-        inputs: &'_ dyn MultilinearExtension<
-            <Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField,
-        >,
+        inputs: &impl MultilinearExtension<<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField>,
         open_at: &ExpanderGKRChallenge<Cfg::FieldConfig>,
         pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
         pcs_proving_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::PKey,

@@ -42,7 +42,7 @@ pub fn test_gkr_pcs<
     params: &P::Params,
     mpi_config: &MPIConfig,
     transcript: &mut T,
-    poly: &'_ dyn MultilinearExtension<C::SimdCircuitField>,
+    poly: &impl MultilinearExtension<C::SimdCircuitField>,
     xs: &[ExpanderGKRChallenge<C>],
 ) {
     let mut rng = thread_rng();
