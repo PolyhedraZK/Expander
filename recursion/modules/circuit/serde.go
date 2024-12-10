@@ -6,20 +6,20 @@ import (
 	"math/bits"
 	"os"
 
-	ecc_bn254 "github.com/PolyhedraZK/ExpanderCompilerCollection/ecgo/field/bn254"
 	"github.com/consensys/gnark/frontend"
 )
 
 type InputBuf struct {
-	data []byte
+	data      []byte
+	fieldEnum ECCFieldEnum
 }
 
-func NewInputBuf(file_name string) *InputBuf {
-	data, err := os.ReadFile(file_name)
+func NewInputBuf(fileName string, fieldEnum ECCFieldEnum) *InputBuf {
+	data, err := os.ReadFile(fileName)
 	if err != nil {
 		panic("Unable to open file")
 	}
-	return &InputBuf{data: data}
+	return &InputBuf{data: data, fieldEnum: fieldEnum}
 }
 
 func (buf *InputBuf) Step(n_bytes uint) {
@@ -46,7 +46,10 @@ func (buf *InputBuf) ReadUint8() uint8 {
 	return x
 }
 
-const N_FIELD_BYTES uint = 32
+// LEADING_FIELD_BYTES is the first 32 bytes in the beginning of
+// the circuit/witness file, standing for the modulus of the field that
+// the circuit runs over, tied to the GKR proof
+const LEADING_FIELD_BYTES uint = 32
 
 func (buf *InputBuf) ReadField(field_size_in_bytes uint) *big.Int {
 
@@ -61,7 +64,13 @@ func (buf *InputBuf) ReadField(field_size_in_bytes uint) *big.Int {
 	return x
 }
 
+// FIXME(HS): error propogation no panic
 func (buf *InputBuf) ReadGate(input_num uint) Gate {
+	fieldBytes, err := buf.fieldEnum.FieldBytes()
+	if err != nil {
+		panic(err.Error())
+	}
+
 	var i_ids []uint
 	for i := uint(0); i < input_num; i++ {
 		i_ids = append(i_ids, buf.ReadUint())
@@ -73,7 +82,7 @@ func (buf *InputBuf) ReadGate(input_num uint) Gate {
 	switch coef_type_u8 {
 	case 1:
 		coef.CoefType = Constant
-		coef.Value = *buf.ReadField(N_FIELD_BYTES)
+		coef.Value = *buf.ReadField(fieldBytes)
 		coef.RandomValue = 0 // This will not be used, but gnark will complain if this value is nil
 	case 2:
 		coef.CoefType = Random
@@ -127,6 +136,7 @@ func (buf *InputBuf) ReadSegment() Segment {
 	}
 
 	n_child_seg := buf.ReadUint()
+	println("n_child_seg", n_child_seg)
 	var child_segs []ChildSegInfo
 	for i := uint(0); i < n_child_seg; i++ {
 		child_segs = append(child_segs, buf.ReadChildSegInfo())
@@ -167,23 +177,34 @@ func (buf *InputBuf) ReadSegment() Segment {
 
 const VERSION_NUM uint = 3914834606642317635 // b'CIRCUIT6'
 
+// FIXME(HS): error propogation no panic
 func (buf *InputBuf) ReadECCCircuit() *ECCCircuit {
 	version_num := buf.ReadUint()
 	if version_num != VERSION_NUM {
 		panic("Incorrect version of circuit serialization")
 	}
 
-	// FIXME(HS) make it possible for m31 or gf2 too
-	field_mod := buf.ReadField(N_FIELD_BYTES)
-	if field_mod.Cmp(ecc_bn254.ScalarField) != 0 {
-		panic("Support bn254 fr only, incorrect field mod detected")
+	fieldMod := buf.ReadField(LEADING_FIELD_BYTES)
+	expectedFieldModulus, err := buf.fieldEnum.FieldModulus()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	if fieldMod.Cmp(expectedFieldModulus) != 0 {
+		panic("Incorrect field mod detected")
 	}
 
 	num_public_inputs := buf.ReadUint()
 	num_outputs := buf.ReadUint()
 	expected_num_output_zeros := buf.ReadUint()
 
+	println(
+		"num_pub_inputs, num_outputs, expected_num_output_zeros",
+		num_public_inputs, num_outputs, expected_num_output_zeros,
+	)
+
 	n_segments := buf.ReadUint()
+	println("n_segments", n_segments)
 	var segments []Segment
 	for i := uint(0); i < n_segments; i++ {
 		segments = append(segments, buf.ReadSegment())
@@ -205,20 +226,30 @@ func (buf *InputBuf) ReadECCCircuit() *ECCCircuit {
 	}
 }
 
+// FIXME(HS): error propogation no panic
 func (buf *InputBuf) ReadWitness() *Witness {
 	num_witnesses := buf.ReadUint()
 	num_private_inputs_per_witness := buf.ReadUint()
 	num_public_inputs_per_witness := buf.ReadUint()
 
-	// FIXME(HS) make it possible for m31 or gf2 too
-	modulus := buf.ReadField(N_FIELD_BYTES)
-	if modulus.Cmp(ecc_bn254.ScalarField) != 0 {
-		panic("Support bn254 fr only, incorrect field mod detected")
+	fieldBytes, err := buf.fieldEnum.FieldBytes()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	fieldMod := buf.ReadField(LEADING_FIELD_BYTES)
+	expectedFieldModulus, err := buf.fieldEnum.FieldModulus()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	if fieldMod.Cmp(expectedFieldModulus) != 0 {
+		panic("Incorrect field mod detected")
 	}
 
 	var values []big.Int
 	for i := 0; i < int(num_witnesses*(num_private_inputs_per_witness+num_public_inputs_per_witness)); i++ {
-		values = append(values, *buf.ReadField(N_FIELD_BYTES))
+		values = append(values, *buf.ReadField(fieldBytes))
 	}
 
 	return &Witness{
@@ -229,14 +260,20 @@ func (buf *InputBuf) ReadWitness() *Witness {
 	}
 }
 
+// FIXME(HS) raw proof deserialization
 func (buf *InputBuf) ReadProof() *Proof {
+	fieldBytes, err := buf.fieldEnum.FieldBytes()
+	if err != nil {
+		panic(err.Error())
+	}
+
 	elems := make([]frontend.Variable, 0)
 	_ = buf.ReadUint64()
 	for buf.Len() > 0 {
-		if buf.Len() < N_FIELD_BYTES {
+		if buf.Len() < fieldBytes {
 			panic("Trailing bytes, proof parsing fails")
 		}
-		elems = append(elems, buf.ReadField(N_FIELD_BYTES))
+		elems = append(elems, buf.ReadField(fieldBytes))
 	}
 	return &Proof{
 		Idx:   0,
@@ -244,16 +281,21 @@ func (buf *InputBuf) ReadProof() *Proof {
 	}
 }
 
-// TODO pass in circuit field type
+// TODO pack up read circuit arguments into a struct
 
 // TODO:
 // Verifier should not have access to the private part of witness, consider separating the witness
-func ReadCircuit(circuit_filename string, witness_filename string, mpi_size uint) (*Circuit, [][]frontend.Variable) {
-	circuit_input_buf := NewInputBuf(circuit_filename)
+func ReadCircuit(
+	circuit_filename string,
+	witness_filename string,
+	fieldEnum ECCFieldEnum,
+	mpi_size uint,
+) (*Circuit, [][]frontend.Variable) {
+	circuit_input_buf := NewInputBuf(circuit_filename, fieldEnum)
 	ecc_circuit := circuit_input_buf.ReadECCCircuit()
 	expander_circuit := ecc_circuit.Flatten()
 
-	witness_input_buf := NewInputBuf(witness_filename)
+	witness_input_buf := NewInputBuf(witness_filename, fieldEnum)
 	witness := witness_input_buf.ReadWitness()
 
 	// Now the witness only takes into account the simd size
@@ -273,7 +315,7 @@ func ReadCircuit(circuit_filename string, witness_filename string, mpi_size uint
 	return expander_circuit, private_input
 }
 
-func ReadProof(proof_filename string) *Proof {
-	proof_input_buf := NewInputBuf(proof_filename)
+func ReadProof(proof_filename string, fieldEnum ECCFieldEnum) *Proof {
+	proof_input_buf := NewInputBuf(proof_filename, fieldEnum)
 	return proof_input_buf.ReadProof()
 }

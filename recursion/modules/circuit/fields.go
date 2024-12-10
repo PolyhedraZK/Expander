@@ -9,14 +9,19 @@ import (
 	ecc_m31 "github.com/PolyhedraZK/ExpanderCompilerCollection/ecgo/field/m31"
 )
 
+// ECCFieldEnum is the enum value which indicates the field that GKR proof relies on
 type ECCFieldEnum uint
 
 const (
+	// ECCBN254 is the ECCFieldEnum for BN254 field
 	ECCBN254 ECCFieldEnum = iota
+	// ECCM31 is the ECCFieldEnum for Mersenne31 field
 	ECCM31
+	// ECCGF2 is the ECCFieldEnum for Galois2 field
 	ECCGF2
 )
 
+// FieldModulus finds the modulus for the base field tied to the ECC field enum
 func (f ECCFieldEnum) FieldModulus() (modulus *big.Int, err error) {
 	switch f {
 	case ECCBN254:
@@ -31,6 +36,7 @@ func (f ECCFieldEnum) FieldModulus() (modulus *big.Int, err error) {
 	return
 }
 
+// FieldBytes finds the bytes of the base field modulus tied to the ECC field enum
 func (f ECCFieldEnum) FieldBytes() (field_bytes uint, err error) {
 	var fieldModulus *big.Int
 
