@@ -1,4 +1,10 @@
-![Expander](https://expander.polyhedra.network/assets/static/logo-with-text.16d5af29.svg)
+<div align="center" style="width: 100%;">
+  <img 
+    src="https://expander.polyhedra.network/assets/static/logo-with-text.16d5af29.svg" 
+    alt="Expander Logo"
+    style="width: 400px; height: auto;"
+  />
+</div>
 
 # Expander
 
