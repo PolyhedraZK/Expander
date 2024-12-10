@@ -1,4 +1,4 @@
-![Expander](https://github.com/PolyhedraZK/Expander-cpp/blob/master/data/logo.jpg)
+![Expander](https://expander.polyhedra.network/assets/static/logo-with-text.16d5af29.svg)
 
 # Expander
 
