@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 
+	// "github.com/PolyhedraZK/ExpanderCompilerCollection/field/m31"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
@@ -74,9 +75,11 @@ type CircuitForTest struct {
 	pathToCircuit string
 	pathToWitness string
 	fieldSimd     uint
+	field         *big.Int
 }
 
 func (c CircuitForTest) load_circuit_and_witness() (*Circuit, [][]frontend.Variable) {
+	// TODO field size? bytes?
 	return ReadCircuit(c.pathToCircuit, c.pathToWitness, c.fieldSimd)
 }
 
@@ -85,7 +88,14 @@ func TestCircuitEvaluation(t *testing.T) {
 		pathToCircuit: "../../../data/circuit_bn254.txt",
 		pathToWitness: "../../../data/witness_bn254.txt",
 		fieldSimd:     1,
+		field:         ecc.BN254.ScalarField(),
 	})
+	// testCircuitEvaluationHelper(t, CircuitForTest{
+	// 	pathToCircuit: "../../../data/circuit_m31.txt",
+	// 	pathToWitness: "../../../data/witness_m31.txt",
+	// 	fieldSimd:     1,
+	// 	field:         m31.ScalarField,
+	// })
 }
 
 func testCircuitEvaluationHelper(t *testing.T, circuitForTest CircuitForTest) {
@@ -112,8 +122,7 @@ func testCircuitEvaluationHelper(t *testing.T, circuitForTest CircuitForTest) {
 		Circuit:      *circuit,
 		PrivateInput: private_input_empty,
 	}
-	// TODO ... front end scalar field?
-	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &evaluation)
+	r1cs, err := frontend.Compile(circuitForTest.field, r1cs.NewBuilder, &evaluation)
 	require.NoError(t, err, "Unable to generate r1cs")
 
 	println("Nb Constraints: ", r1cs.GetNbConstraints())
