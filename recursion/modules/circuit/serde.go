@@ -6,6 +6,7 @@ import (
 	"math/bits"
 	"os"
 
+	ecc_bn254 "github.com/PolyhedraZK/ExpanderCompilerCollection/ecgo/field/bn254"
 	"github.com/consensys/gnark/frontend"
 )
 
@@ -172,9 +173,9 @@ func (buf *InputBuf) ReadECCCircuit() *ECCCircuit {
 		panic("Incorrect version of circuit serialization")
 	}
 
+	// FIXME(HS) make it possible for m31 or gf2 too
 	field_mod := buf.ReadField(N_FIELD_BYTES)
-	bn254_fr_mod, _ := big.NewInt(0).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
-	if field_mod.Cmp(bn254_fr_mod) != 0 {
+	if field_mod.Cmp(ecc_bn254.ScalarField) != 0 {
 		panic("Support bn254 fr only, incorrect field mod detected")
 	}
 
@@ -208,9 +209,10 @@ func (buf *InputBuf) ReadWitness() *Witness {
 	num_witnesses := buf.ReadUint()
 	num_private_inputs_per_witness := buf.ReadUint()
 	num_public_inputs_per_witness := buf.ReadUint()
+
+	// FIXME(HS) make it possible for m31 or gf2 too
 	modulus := buf.ReadField(N_FIELD_BYTES)
-	bn254_fr_modulus, _ := big.NewInt(0).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
-	if modulus.Cmp(bn254_fr_modulus) != 0 {
+	if modulus.Cmp(ecc_bn254.ScalarField) != 0 {
 		panic("Support bn254 fr only, incorrect field mod detected")
 	}
 
@@ -241,6 +243,8 @@ func (buf *InputBuf) ReadProof() *Proof {
 		Elems: elems,
 	}
 }
+
+// TODO pass in circuit field type
 
 // TODO:
 // Verifier should not have access to the private part of witness, consider separating the witness

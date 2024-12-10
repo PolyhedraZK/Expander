@@ -74,21 +74,21 @@ func (e *Evaluation) Define(api frontend.API) error {
 type CircuitForTest struct {
 	pathToCircuit string
 	pathToWitness string
-	fieldSimd     uint
-	field         *big.Int
+	mpiSize       uint
+	fieldEnum     ECCFieldEnum
 }
 
 func (c CircuitForTest) load_circuit_and_witness() (*Circuit, [][]frontend.Variable) {
 	// TODO field size? bytes?
-	return ReadCircuit(c.pathToCircuit, c.pathToWitness, c.fieldSimd)
+	return ReadCircuit(c.pathToCircuit, c.pathToWitness, c.mpiSize)
 }
 
 func TestCircuitEvaluation(t *testing.T) {
 	testCircuitEvaluationHelper(t, CircuitForTest{
 		pathToCircuit: "../../../data/circuit_bn254.txt",
 		pathToWitness: "../../../data/witness_bn254.txt",
-		fieldSimd:     1,
-		field:         ecc.BN254.ScalarField(),
+		mpiSize:       1,
+		fieldEnum:     ECCBN254,
 	})
 	// testCircuitEvaluationHelper(t, CircuitForTest{
 	// 	pathToCircuit: "../../../data/circuit_m31.txt",
@@ -100,6 +100,8 @@ func TestCircuitEvaluation(t *testing.T) {
 
 func testCircuitEvaluationHelper(t *testing.T, circuitForTest CircuitForTest) {
 	circuit, private_input := circuitForTest.load_circuit_and_witness()
+	fieldModulus, err := circuitForTest.fieldEnum.FieldModulus()
+	require.NoError(t, err)
 
 	println(circuit.ExpectedNumOutputZeros)
 	for i := 0; i < len(circuit.PublicInput[0]); i++ {
@@ -122,7 +124,7 @@ func testCircuitEvaluationHelper(t *testing.T, circuitForTest CircuitForTest) {
 		Circuit:      *circuit,
 		PrivateInput: private_input_empty,
 	}
-	r1cs, err := frontend.Compile(circuitForTest.field, r1cs.NewBuilder, &evaluation)
+	r1cs, err := frontend.Compile(fieldModulus, r1cs.NewBuilder, &evaluation)
 	require.NoError(t, err, "Unable to generate r1cs")
 
 	println("Nb Constraints: ", r1cs.GetNbConstraints())
