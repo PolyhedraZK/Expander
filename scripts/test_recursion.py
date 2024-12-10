@@ -3,128 +3,153 @@
 # Run the script from the root repo of Expander
 
 import os
+import psutil
 import sys
-import json
 import subprocess
 
-MPI_CONFIG = '''
-{
-    "n_groups": 2,
-    "mpi_size_each_group": 2,
-    "cpu_ids":
-        [
-            [0, 1],
-            [2, 3]
-        ]
-}
-'''
+from dataclasses import dataclass
+from enum import Enum
+from typing import Final
 
-PROOF_CONFIG = '''
-{
-    "field": "fr",
-    "circuit": "data/circuit_bn254.txt",
-    "witness": "data/witness_bn254.txt",
-    "gkr_proof": "data/gkr_proof.txt",
-    "recursive_proof": "data/recursive_proof.txt"
-}
-'''
+
+class RecursiveProofField(Enum):
+    GF2 = "gf2ext128"
+    M31 = "m31ext3"
+    FR = "fr"
+
+
+@dataclass
+class MPIConfig:
+    cpu_ids: list[int]
+
+    def __post_init__(self):
+        mpi_group_size: int = len(self.cpu_ids)
+        if mpi_group_size & (mpi_group_size - 1) != 0 or mpi_group_size == 0:
+            raise Exception("mpi cpu group size should be a power of 2")
+
+        if len(set(self.cpu_ids)) != len(self.cpu_ids):
+            raise Exception("mpi cpu id contains duplications")
+
+        physical_cpus = psutil.cpu_count(logical=False)
+        if physical_cpus is None:
+            raise Exception("hmmm your physical cpu count cannot be found")
+
+        sorted_cpu_ids = sorted(self.cpu_ids)
+        if sorted_cpu_ids[0] < 0 or sorted_cpu_ids[-1] >= physical_cpus:
+            raise Exception(f"mpi cpu id should be in range [0, {physical_cpus}]")
+
+    def cpus(self) -> int:
+        return len(self.cpu_ids)
+
+    def cpu_set_str(self) -> str:
+        return ",".join([str(cpu_id) for cpu_id in self.cpu_ids])
+
+    def mpi_prefix(self) -> str:
+        return f"mpiexec -cpu-set {self.cpu_set_str()} -n {self.cpus()}"
+
+
+MPI_CONFIG: Final[MPIConfig] = MPIConfig(
+    cpu_ids=[0, 1]
+)
+
+
+@dataclass
+class ProofConfig:
+    field: RecursiveProofField
+    circuit: str
+    witness: str
+    gkr_proof_prefix: str
+    recursive_proof: str
+
+
+PROOF_CONFIG: Final[ProofConfig] = ProofConfig(
+    field=RecursiveProofField.FR,
+    circuit="data/circuit_bn254.txt",
+    witness="data/witness_bn254.txt",
+    # circuit="data/circuit_m31.txt",
+    # witness="data/witness_m31.txt",
+    gkr_proof_prefix="data/gkr_proof.txt",
+    recursive_proof="data/recursive_proof.txt"
+)
+
 
 def change_working_dir():
     cwd = os.getcwd()
     if "Expander/scripts" in cwd:
         os.chdir("..")
 
-def parse_mpi_config(mpi_config):
-    n_groups = mpi_config["n_groups"]
-    mpi_size_each_group = mpi_config["mpi_size_each_group"]
-    cpu_ids = mpi_config["cpu_ids"]
 
-    if n_groups != len(cpu_ids):
-        sys.exit("Lack/Too much cpu specifications.")
-
-    # TODO: Check there are enough cpus on the machine
-    for i in range(n_groups):
-        if len(cpu_ids[i]) != mpi_size_each_group:
-            sys.exit(f"Cpu ids are not correct for group {i}")
-
-    return n_groups, mpi_size_each_group, cpu_ids
-
-def parse_proof_config(proof_config):
-    field = proof_config["field"]
-
-    if field not in ["gf2ext128", "m31ext3", "fr"]:
-        sys.exit("Unrecognized field, gkr now only supports gf2ext128, m31ext3 and fr")
-
-    # FIXME(HS): working on M31 proof stuff now?
-    if field != "fr":
-        sys.exit("Recursive proof only supports fr now")
-
-    return proof_config["circuit"], proof_config["witness"], proof_config["gkr_proof"], proof_config["recursive_proof"]
+def gkr_proof_file(prefix: str, cpu_ids: list[int]) -> str:
+    concatenated_cpu_ids = "-".join([str(i) for i in cpu_ids])
+    return f"{prefix}.mpi-cpus-{concatenated_cpu_ids}"
 
 
-def gkr_proof_id(prefix: str, mpi_id: int) -> str:
-    return f"{prefix}.mpi_id-{mpi_id}"
-
-
-DEBUG = False
-
-# Run two mpi process
-if __name__ == "__main__":
-    change_working_dir()
-
-    mpi_config = json.loads(MPI_CONFIG)
-    n_groups, mpi_size_each_group, cpu_ids = parse_mpi_config(mpi_config)
-
-    proof_config = json.loads(PROOF_CONFIG)
-    circuit, witness, gkr_proof, recursive_proof = parse_proof_config(proof_config)
-
-    if DEBUG:
-        n_groups = 1
-
-    # NOTE(HS): as of 2024/12/09 - this command runs in CI environment, so mac naturally do not have
-    # AVX 512 instructions - yet this is not quite a good condition statement, should be something like
-    # archspec.  The work is deferred later as the current implementation suffices.
-    avx_build_prefix: str = "" if sys.platform == 'darwin' else "RUSTFLAGS='-C target-feature=+avx512f'"
-    compile_ret = subprocess.run(f"{avx_build_prefix} cargo build --release --bin expander-exec", shell=True)
+def expander_compile():
+    # NOTE(HS): as of 2024/12/09
+    # this command runs in CI environment, so mac naturally do not have
+    # AVX 512 instructions - yet this is not quite a good condition statement,
+    # should be something like archspec.
+    # The work is deferred later as the current implementation suffices.
+    avx_build_prefix: str = \
+        "" if sys.platform == 'darwin' else "RUSTFLAGS='-C target-feature=+avx512f'"
+    compile_ret = subprocess.run(
+        f"{avx_build_prefix} cargo build --release --bin expander-exec",
+        shell=True
+    )
 
     if compile_ret.returncode != 0:
-        sys.exit(-1)
+        raise Exception("build process is not returning 0")
 
-    # minor - check golang if exists on the machine
-    if subprocess.run("go env", shell=True).returncode != 0:
-        sys.exit(-1)
 
-    # local function for mpi running prove process for each sub proof
-    def mpi_prove(mpi_index: int) -> subprocess.Popen:
-        mpi_cpus: str = ",".join([str(cpu_id) for cpu_id in cpu_ids[mpi_index]])
-        mpi_command_prefix: str = f"mpiexec -cpu-set {mpi_cpus} -n {mpi_size_each_group}"
+def gkr_prove_check() -> str:
+    proof_file: str = gkr_proof_file(PROOF_CONFIG.gkr_proof_prefix, MPI_CONFIG.cpu_ids)
+    prove_command_suffix: str = \
+        f"./target/release/expander-exec prove \
+        {PROOF_CONFIG.circuit} {PROOF_CONFIG.witness} {proof_file}"
 
-        literal_command = f"""
-        {mpi_command_prefix}
-        ./target/release/expander-exec prove {circuit} {witness} {gkr_proof_id(gkr_proof, mpi_index)}
-        """.split()
+    prove_command: str = ' '.join(f"{MPI_CONFIG.mpi_prefix()} {prove_command_suffix}".split())
+    print(prove_command)
 
-        print(' '.join(literal_command))
-
-        return subprocess.Popen(literal_command)
-
-    ps: list[subprocess.Popen] = [mpi_prove(i) for i in range(n_groups)]
-    ps_rets: list[int] = [p.wait() for p in ps]
-    if not all([r == 0 for r in ps_rets]):
-        sys.exit(-1)
+    if subprocess.run(prove_command, shell=True).returncode != 0:
+        raise Exception("prove process is not returning with 0")
 
     print("gkr prove done.")
+    return proof_file
+
+
+def vanilla_gkr_verify_check():
+    vanilla_verify_comand: str = \
+        f"./target/release/expander-exec prove \
+        {PROOF_CONFIG.circuit} {PROOF_CONFIG.witness} {proof_file} {MPI_CONFIG.cpus()}"
+    vanilla_verify_comand = ' '.join(vanilla_verify_comand.split())
+    print(vanilla_verify_comand)
+
+    if subprocess.run(vanilla_verify_comand, shell=True).returncode != 0:
+        raise Exception("vanilla verify process is not returning with 0")
+
+    print("gkr vanilla verify done.")
+
+
+if __name__ == "__main__":
+    # minor - check golang if exists on the machine
+    if subprocess.run("go env", shell=True).returncode != 0:
+        raise Exception("golang support missing")
+
+    change_working_dir()
+    expander_compile()
+    proof_file = gkr_prove_check()
+    vanilla_gkr_verify_check()
 
     # FIXME(HS): construction field - working on compilation process,
     # need to work on MPI and recursive verifier on proof deserialization
     sys.exit(0)
 
-    for i in range(n_groups):
-        subprocess.run(
-            f'''
-                cd recursion
-                go run main.go -circuit={"../" + circuit} -witness={"../" + witness} -gkr_proof={"../" + gkr_proof + "." + str(i)} -recursive_proof={"../" + recursive_proof + "." + str(i)} -mpi_size={mpi_size_each_group}
-                cd ..
-            ''',
-            shell=True,
-        )
+    # TODO fix golang recursive verifier and use this chunk of code
+    subprocess.run(
+        f'''
+        cd recursion
+        go run main.go -circuit={"../" + circuit} -witness={"../" + witness} -gkr_proof={"../" + gkr_proof + "." + str(i)} -recursive_proof={"../" + recursive_proof + "." + str(i)} -mpi_size={mpi_size_each_group}
+        cd ..
+        ''',
+        shell=True,
+    )
