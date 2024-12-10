@@ -9,6 +9,7 @@ import (
 	"ExpanderVerifierCircuit/modules/verifier"
 
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/spf13/cobra"
 
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
@@ -32,6 +33,20 @@ func checkFileExists(filePath string) bool {
 	_, error := os.Stat(filePath)
 	//return !os.IsNotExist(err)
 	return !errors.Is(error, os.ErrNotExist)
+}
+
+// TODO cobra command line configuration
+func init() {
+	// TODO ...
+}
+
+var groth16Cmd = &cobra.Command{
+	Use:   "groth16",
+	Short: "Convert a single GKR proof into a Groth16 proof",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		cmd.HelpFunc()(cmd, args)
+	},
 }
 
 func testGroth16() {
