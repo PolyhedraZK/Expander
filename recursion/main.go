@@ -68,7 +68,8 @@ func testGroth16() {
 	}
 
 	// FIXME(HS): currently tied to only BN254
-	original_circuit, _, err := circuit.ReadCircuit(*circuit_file, *witness_file, circuit.ECCBN254, *mpi_size)
+	groth16CircuitRel := circuit.NewCircuitRelation(*circuit_file, *witness_file, circuit.ECCBN254, *mpi_size)
+	original_circuit, _, err := circuit.ReadCircuit(groth16CircuitRel)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -95,7 +96,7 @@ func testGroth16() {
 
 	// witness definition
 	// FIXME(HS): currently tied to only BN254
-	original_circuit, _, err = circuit.ReadCircuit(*circuit_file, *witness_file, circuit.ECCBN254, *mpi_size)
+	original_circuit, _, err = circuit.ReadCircuit(groth16CircuitRel)
 	if err != nil {
 		panic(err.Error())
 	}

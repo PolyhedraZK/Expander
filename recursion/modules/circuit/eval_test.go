@@ -70,31 +70,20 @@ func (e *Evaluation) Define(api gnarkFrontend.API) error {
 	return nil
 }
 
-type CircuitForTest struct {
-	pathToCircuit string
-	pathToWitness string
-	mpiSize       uint
-	fieldEnum     ECCFieldEnum
-}
-
-func (c CircuitForTest) load_circuit_and_witness() (*Circuit, [][]gnarkFrontend.Variable, error) {
-	return ReadCircuit(c.pathToCircuit, c.pathToWitness, c.fieldEnum, c.mpiSize)
-}
-
 func TestCircuitEvaluation(t *testing.T) {
-	testCircuitEvaluationHelper(t, CircuitForTest{
+	testCircuitEvaluationHelper(t, CircuitRelation{
 		pathToCircuit: "../../../data/circuit_bn254.txt",
 		pathToWitness: "../../../data/witness_bn254.txt",
 		mpiSize:       1,
 		fieldEnum:     ECCBN254,
 	})
-	// testCircuitEvaluationHelper(t, CircuitForTest{
+	// testCircuitEvaluationHelper(t, CircuitRelation{
 	// 	pathToCircuit: "../../../data/circuit_m31.txt",
 	// 	pathToWitness: "../../../data/witness_m31.txt",
 	// 	mpiSize:       1,
 	// 	fieldEnum:     ECCM31,
 	// })
-	// testCircuitEvaluationHelper(t, CircuitForTest{
+	// testCircuitEvaluationHelper(t, CircuitRelation{
 	// 	pathToCircuit: "../../../data/circuit_gf2.txt",
 	// 	pathToWitness: "../../../data/witness_gf2.txt",
 	// 	mpiSize:       1,
@@ -102,8 +91,8 @@ func TestCircuitEvaluation(t *testing.T) {
 	// })
 }
 
-func testCircuitEvaluationHelper(t *testing.T, circuitForTest CircuitForTest) {
-	circuit, private_input, err := circuitForTest.load_circuit_and_witness()
+func testCircuitEvaluationHelper(t *testing.T, circuitForTest CircuitRelation) {
+	circuit, private_input, err := ReadCircuit(circuitForTest)
 	require.NoError(t, err)
 	fieldModulus, err := circuitForTest.fieldEnum.FieldModulus()
 	require.NoError(t, err)
@@ -142,7 +131,7 @@ func testCircuitEvaluationHelper(t *testing.T, circuitForTest CircuitForTest) {
 	println("Nb Public Witness:", r1cs.GetNbPublicVariables())
 
 	// Correct Witness
-	circuit, private_input, err = circuitForTest.load_circuit_and_witness()
+	circuit, private_input, err = ReadCircuit(circuitForTest)
 	require.NoError(t, err)
 
 	assignment := Evaluation{
@@ -156,7 +145,7 @@ func testCircuitEvaluationHelper(t *testing.T, circuitForTest CircuitForTest) {
 	require.NoError(t, err, "R1CS not satisfied")
 
 	// Incorrect witness
-	circuit, private_input, err = circuitForTest.load_circuit_and_witness()
+	circuit, private_input, err = ReadCircuit(circuitForTest)
 	require.NoError(t, err)
 
 	ri := rand.Intn(len(private_input))

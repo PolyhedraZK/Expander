@@ -300,17 +300,33 @@ func (buf *InputBuf) ReadProof() (proof *Proof, err error) {
 	return
 }
 
-// TODO pack up read circuit arguments into a struct
+// CircuitRelation stands for a pair of satisfying circuit-witness together with
+// the field that the circuit runs on and the SIMD size (TODO? simd or mpi?)
+type CircuitRelation struct {
+	pathToCircuit string
+	pathToWitness string
+	fieldEnum     ECCFieldEnum
+	mpiSize       uint
+}
+
+func NewCircuitRelation(
+	pathToCircuit string,
+	pathToWitness string,
+	fieldEnum ECCFieldEnum,
+	mpiSize uint,
+) CircuitRelation {
+	return CircuitRelation{
+		pathToCircuit: pathToCircuit,
+		pathToWitness: pathToWitness,
+		fieldEnum:     fieldEnum,
+		mpiSize:       mpiSize,
+	}
+}
 
 // TODO:
 // Verifier should not have access to the private part of witness, consider separating the witness
-func ReadCircuit(
-	circuit_filename string,
-	witness_filename string,
-	fieldEnum ECCFieldEnum,
-	mpi_size uint,
-) (expander_circuit *Circuit, private_input [][]frontend.Variable, err error) {
-	circuit_input_buf, err := NewInputBuf(circuit_filename, fieldEnum)
+func ReadCircuit(circuitRel CircuitRelation) (expander_circuit *Circuit, private_input [][]frontend.Variable, err error) {
+	circuit_input_buf, err := NewInputBuf(circuitRel.pathToCircuit, circuitRel.fieldEnum)
 	if err != nil {
 		return
 	}
@@ -322,7 +338,7 @@ func ReadCircuit(
 
 	expander_circuit = ecc_circuit.Flatten()
 
-	witness_input_buf, err := NewInputBuf(witness_filename, fieldEnum)
+	witness_input_buf, err := NewInputBuf(circuitRel.pathToWitness, circuitRel.fieldEnum)
 	if err != nil {
 		return
 	}
@@ -334,9 +350,9 @@ func ReadCircuit(
 	// Now the witness only takes into account the simd size
 	// We're repeating the witness for each mpi
 	// TODO: fix this later
-	witness.NumWitnesses *= mpi_size
+	witness.NumWitnesses *= circuitRel.mpiSize
 	n_witness_per_mpi_node := len(witness.Values)
-	for i := 1; i < int(mpi_size); i++ {
+	for i := 1; i < int(circuitRel.mpiSize); i++ {
 		for j := 0; j < int(n_witness_per_mpi_node); j++ {
 			witness.Values = append(witness.Values, witness.Values[j])
 		}
