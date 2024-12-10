@@ -7,6 +7,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/rand"
 )
 
@@ -69,8 +70,26 @@ func (e *Evaluation) Define(api frontend.API) error {
 	return nil
 }
 
+type CircuitForTest struct {
+	pathToCircuit string
+	pathToWitness string
+	fieldSimd     uint
+}
+
+func (c CircuitForTest) load_circuit_and_witness() (*Circuit, [][]frontend.Variable) {
+	return ReadCircuit(c.pathToCircuit, c.pathToWitness, c.fieldSimd)
+}
+
 func TestCircuitEvaluation(t *testing.T) {
-	circuit, private_input := ReadCircuit("../../../data/circuit.txt", "../../../data/witness.txt", 1)
+	testCircuitEvaluationHelper(t, CircuitForTest{
+		pathToCircuit: "../../../data/circuit_bn254.txt",
+		pathToWitness: "../../../data/witness_bn254.txt",
+		fieldSimd:     1,
+	})
+}
+
+func testCircuitEvaluationHelper(t *testing.T, circuitForTest CircuitForTest) {
+	circuit, private_input := circuitForTest.load_circuit_and_witness()
 
 	println(circuit.ExpectedNumOutputZeros)
 	for i := 0; i < len(circuit.PublicInput[0]); i++ {
@@ -93,10 +112,9 @@ func TestCircuitEvaluation(t *testing.T) {
 		Circuit:      *circuit,
 		PrivateInput: private_input_empty,
 	}
-	r1cs, r1cs_err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &evaluation)
-	if r1cs_err != nil {
-		panic("Unable to generate r1cs")
-	}
+	// TODO ... front end scalar field?
+	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &evaluation)
+	require.NoError(t, err, "Unable to generate r1cs")
 
 	println("Nb Constraints: ", r1cs.GetNbConstraints())
 	println("Nb Internal Witnesss: ", r1cs.GetNbInternalVariables())
@@ -104,24 +122,20 @@ func TestCircuitEvaluation(t *testing.T) {
 	println("Nb Public Witness:", r1cs.GetNbPublicVariables())
 
 	// Correct Witness
-	circuit, private_input = ReadCircuit("../../../data/circuit.txt", "../../../data/witness.txt", 1)
+	circuit, private_input = circuitForTest.load_circuit_and_witness()
 
 	assignment := Evaluation{
 		Circuit:      *circuit,
 		PrivateInput: private_input,
 	}
-	witness, witness_err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
-	if witness_err != nil {
-		panic("Unable to solve witness")
-	}
+	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+	require.NoError(t, err, "Unable to solve witness")
 
-	err := r1cs.IsSolved(witness)
-	if err != nil {
-		panic("R1CS not satisfied")
-	}
+	err = r1cs.IsSolved(witness)
+	require.NoError(t, err, "R1CS not satisfied")
 
 	// Incorrect witness
-	circuit, private_input = ReadCircuit("../../../data/circuit.txt", "../../../data/witness.txt", 1)
+	circuit, private_input = circuitForTest.load_circuit_and_witness()
 	ri := rand.Intn(len(private_input))
 	rj := rand.Intn(len(private_input[0]))
 	private_input[ri][rj] = 147258369 // this should make the evaluation incorrect
@@ -130,12 +144,9 @@ func TestCircuitEvaluation(t *testing.T) {
 		Circuit:      *circuit,
 		PrivateInput: private_input,
 	}
-	witness, witness_err = frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
-	if witness_err != nil {
-		panic("Unable to solve witness")
-	}
+	witness, err = frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+	require.NoError(t, err, "Unable to solve witness")
+
 	err = r1cs.IsSolved(witness)
-	if err == nil {
-		panic("Incorrect witness should not be marked as solved")
-	}
+	require.Error(t, err, "Incorrect witness should not be marked as solved")
 }
