@@ -68,8 +68,16 @@ func testGroth16() {
 	}
 
 	// FIXME(HS): currently tied to only BN254
-	original_circuit, _ := circuit.ReadCircuit(*circuit_file, *witness_file, circuit.ECCBN254, *mpi_size)
-	proof := circuit.ReadProof(*gkr_proof_file, circuit.ECCBN254)
+	original_circuit, _, err := circuit.ReadCircuit(*circuit_file, *witness_file, circuit.ECCBN254, *mpi_size)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	proof, err := circuit.ReadProof(*gkr_proof_file, circuit.ECCBN254)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	original_circuit.PrintStats()
 
 	verifier_circuit := VerifierCircuit{
@@ -87,7 +95,11 @@ func testGroth16() {
 
 	// witness definition
 	// FIXME(HS): currently tied to only BN254
-	original_circuit, _ = circuit.ReadCircuit(*circuit_file, *witness_file, circuit.ECCBN254, *mpi_size)
+	original_circuit, _, err = circuit.ReadCircuit(*circuit_file, *witness_file, circuit.ECCBN254, *mpi_size)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	assignment := VerifierCircuit{
 		MpiSize:         *mpi_size,
 		SimdSize:        *simd_size,
@@ -102,7 +114,7 @@ func testGroth16() {
 	}
 
 	println("Checking satisfiability...")
-	err := r1cs.IsSolved(witness)
+	err = r1cs.IsSolved(witness)
 	if err != nil {
 		panic("R1CS not satisfied.")
 	}
