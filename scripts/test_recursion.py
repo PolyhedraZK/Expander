@@ -101,13 +101,13 @@ def expander_compile():
         raise Exception("build process is not returning 0")
 
 
-def gkr_prove_check() -> str:
-    proof_file: str = gkr_proof_file(PROOF_CONFIG.gkr_proof_prefix, MPI_CONFIG.cpu_ids)
+def gkr_prove(proof_config: ProofConfig, mpi_config: MPIConfig) -> str:
+    proof_file: str = gkr_proof_file(proof_config.gkr_proof_prefix, mpi_config.cpu_ids)
     prove_command_suffix: str = \
         f"./target/release/expander-exec prove \
-        {PROOF_CONFIG.circuit} {PROOF_CONFIG.witness} {proof_file}"
+        {proof_config.circuit} {proof_config.witness} {proof_file}"
 
-    prove_command: str = ' '.join(f"{MPI_CONFIG.mpi_prefix()} {prove_command_suffix}".split())
+    prove_command: str = ' '.join(f"{mpi_config.mpi_prefix()} {prove_command_suffix}".split())
     print(prove_command)
 
     if subprocess.run(prove_command, shell=True).returncode != 0:
@@ -117,10 +117,10 @@ def gkr_prove_check() -> str:
     return proof_file
 
 
-def vanilla_gkr_verify_check():
+def vanilla_gkr_verify_check(proof_config: ProofConfig, mpi_config: MPIConfig):
     vanilla_verify_comand: str = \
         f"./target/release/expander-exec prove \
-        {PROOF_CONFIG.circuit} {PROOF_CONFIG.witness} {proof_file} {MPI_CONFIG.cpus()}"
+        {proof_config.circuit} {proof_config.witness} {proof_file} {mpi_config.cpus()}"
     vanilla_verify_comand = ' '.join(vanilla_verify_comand.split())
     print(vanilla_verify_comand)
 
@@ -137,8 +137,8 @@ if __name__ == "__main__":
 
     change_working_dir()
     expander_compile()
-    proof_file = gkr_prove_check()
-    vanilla_gkr_verify_check()
+    proof_file = gkr_prove(PROOF_CONFIG, MPI_CONFIG)
+    vanilla_gkr_verify_check(PROOF_CONFIG, MPI_CONFIG)
 
     # FIXME(HS): construction field - working on compilation process,
     # need to work on MPI and recursive verifier on proof deserialization
