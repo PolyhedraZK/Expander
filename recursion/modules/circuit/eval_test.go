@@ -77,11 +77,11 @@ func readCircuitForCompile(t *testing.T, circuitRel CircuitRelation) Evaluation 
 	circuit, privateInput, err := ReadCircuit(circuitRel)
 	require.NoError(t, err)
 
-	emptyPublicInput := make([][]frontend.Variable, len(circuit.PublicInput))
-	for i := 0; i < len(emptyPublicInput); i++ {
-		emptyPublicInput[i] = make([]frontend.Variable, len(circuit.PublicInput[0]))
+	emptyPubInput := make([][]frontend.Variable, len(circuit.PublicInput))
+	for i := 0; i < len(emptyPubInput); i++ {
+		emptyPubInput[i] = make([]frontend.Variable, len(circuit.PublicInput[0]))
 	}
-	circuit.PublicInput = emptyPublicInput
+	circuit.PublicInput = emptyPubInput
 
 	emptyPrivateInput := make([][]frontend.Variable, len(privateInput))
 	for i := 0; i < len(emptyPrivateInput); i++ {
@@ -106,17 +106,17 @@ func readCircuitForAssignment(t *testing.T, circuitRel CircuitRelation) Evaluati
 
 func TestCircuitGnarkEvaluation(t *testing.T) {
 	testCircuitGnarkEvaluationHelper(t, CircuitRelation{
-		pathToCircuit: "../../../data/circuit_bn254.txt",
-		pathToWitness: "../../../data/witness_bn254.txt",
-		mpiSize:       1,
-		fieldEnum:     ECCBN254,
+		CircuitPath: "../../../data/circuit_bn254.txt",
+		WitnessPath: "../../../data/witness_bn254.txt",
+		MPISize:     1,
+		FieldEnum:   ECCBN254,
 	})
 }
 
-func testCircuitGnarkEvaluationHelper(t *testing.T, circuitForTest CircuitRelation) {
-	evaluation := readCircuitForCompile(t, circuitForTest)
+func testCircuitGnarkEvaluationHelper(t *testing.T, testcase CircuitRelation) {
+	evaluation := readCircuitForCompile(t, testcase)
 
-	fieldModulus, err := circuitForTest.fieldEnum.FieldModulus()
+	fieldModulus, err := testcase.FieldEnum.FieldModulus()
 	require.NoError(t, err)
 
 	r1cs, err := frontend.Compile(fieldModulus, r1cs.NewBuilder, &evaluation)
@@ -128,7 +128,7 @@ func testCircuitGnarkEvaluationHelper(t *testing.T, circuitForTest CircuitRelati
 	println("Nb Public Witness:", r1cs.GetNbPublicVariables())
 
 	// Correct Witness
-	assignment := readCircuitForAssignment(t, circuitForTest)
+	assignment := readCircuitForAssignment(t, testcase)
 	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
 	require.NoError(t, err, "Unable to solve witness")
 
@@ -142,7 +142,7 @@ func testCircuitGnarkEvaluationHelper(t *testing.T, circuitForTest CircuitRelati
 	require.NoError(t, err, "R1CS not satisfied")
 
 	// Incorrect witness
-	circuit, privateInput, err := ReadCircuit(circuitForTest)
+	circuit, privateInput, err := ReadCircuit(testcase)
 	require.NoError(t, err)
 
 	ri := rand.Intn(len(privateInput))
@@ -163,29 +163,33 @@ func testCircuitGnarkEvaluationHelper(t *testing.T, circuitForTest CircuitRelati
 func TestCircuitLayeredEvaluation(t *testing.T) {
 	testcases := []CircuitRelation{
 		{
-			pathToCircuit: "../../../data/circuit_bn254.txt",
-			pathToWitness: "../../../data/witness_bn254.txt",
-			mpiSize:       1,
-			fieldEnum:     ECCBN254,
+			CircuitPath: "../../../data/circuit_bn254.txt",
+			WitnessPath: "../../../data/witness_bn254.txt",
+			MPISize:     1,
+			FieldEnum:   ECCBN254,
 		},
 		// NOTE(HS) as of 2024/12/11, the compilation process of m31 circuit
 		// takes more than 50GB of RAM, so run with cautious
 		{
-			pathToCircuit: "../../../data/circuit_m31.txt",
-			pathToWitness: "../../../data/witness_m31.txt",
-			mpiSize:       1,
-			fieldEnum:     ECCM31,
+			CircuitPath: "../../../data/circuit_m31.txt",
+			WitnessPath: "../../../data/witness_m31.txt",
+			MPISize:     1,
+			FieldEnum:   ECCM31,
 		},
 		{
-			pathToCircuit: "../../../data/circuit_gf2.txt",
-			pathToWitness: "../../../data/witness_gf2.txt",
-			mpiSize:       1,
-			fieldEnum:     ECCGF2,
+			CircuitPath: "../../../data/circuit_gf2.txt",
+			WitnessPath: "../../../data/witness_gf2.txt",
+			MPISize:     1,
+			FieldEnum:   ECCGF2,
 		},
 	}
 
 	for _, testcase := range testcases {
-		t.Run(fmt.Sprintf("Layered circuit load and test for %s", testcase.pathToCircuit),
+		t.Run(
+			fmt.Sprintf(
+				"Layered circuit load and test for %s",
+				testcase.CircuitPath,
+			),
 			func(t *testing.T) {
 				testCircuitLayeredEvaluationHelper(t, testcase)
 			},
@@ -193,10 +197,10 @@ func TestCircuitLayeredEvaluation(t *testing.T) {
 	}
 }
 
-func testCircuitLayeredEvaluationHelper(t *testing.T, circuitRel CircuitRelation) {
-	evaluation := readCircuitForCompile(t, circuitRel)
+func testCircuitLayeredEvaluationHelper(t *testing.T, testcase CircuitRelation) {
+	evaluation := readCircuitForCompile(t, testcase)
 
-	fieldModulus, err := circuitRel.fieldEnum.FieldModulus()
+	fieldModulus, err := testcase.FieldEnum.FieldModulus()
 	require.NoError(t, err)
 
 	eccCompilationResult, err := ecgo.Compile(fieldModulus, &evaluation)
@@ -206,7 +210,7 @@ func testCircuitLayeredEvaluationHelper(t *testing.T, circuitRel CircuitRelation
 	inputSolver := eccCompilationResult.GetInputSolver()
 
 	// NOTE: get correct witness
-	assignment := readCircuitForAssignment(t, circuitRel)
+	assignment := readCircuitForAssignment(t, testcase)
 
 	witness, err := inputSolver.SolveInputAuto(&assignment)
 	require.NoError(t, err, "ECGO witness resolve error")
