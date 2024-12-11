@@ -1,7 +1,7 @@
 package circuit
 
 import (
-	"math/big"
+	"fmt"
 	"testing"
 
 	"github.com/PolyhedraZK/ExpanderCompilerCollection/ecgo"
@@ -11,36 +11,41 @@ import (
 )
 
 func TestCircuitLayeredEvaluation(t *testing.T) {
-	testCircuitLayeredEvaluationHelper(t, CircuitRelation{
-		pathToCircuit: "../../../data/circuit_bn254.txt",
-		pathToWitness: "../../../data/witness_bn254.txt",
-		mpiSize:       1,
-		fieldEnum:     ECCBN254,
-	})
-	// testCircuitLayeredEvaluationHelper(t, CircuitRelation{
-	// 	pathToCircuit: "../../../data/circuit_m31.txt",
-	// 	pathToWitness: "../../../data/witness_m31.txt",
-	// 	mpiSize:       1,
-	// 	fieldEnum:     ECCM31,
-	// })
-	testCircuitLayeredEvaluationHelper(t, CircuitRelation{
-		pathToCircuit: "../../../data/circuit_gf2.txt",
-		pathToWitness: "../../../data/witness_gf2.txt",
-		mpiSize:       1,
-		fieldEnum:     ECCGF2,
-	})
+	testcases := []CircuitRelation{
+		{
+			pathToCircuit: "../../../data/circuit_bn254.txt",
+			pathToWitness: "../../../data/witness_bn254.txt",
+			mpiSize:       1,
+			fieldEnum:     ECCBN254,
+		},
+		// NOTE(HS) as of 2024/12/11, the compilation process of m31 circuit
+		// takes more than 50GB of RAM, so run with cautious
+		{
+			pathToCircuit: "../../../data/circuit_m31.txt",
+			pathToWitness: "../../../data/witness_m31.txt",
+			mpiSize:       1,
+			fieldEnum:     ECCM31,
+		},
+		{
+			pathToCircuit: "../../../data/circuit_gf2.txt",
+			pathToWitness: "../../../data/witness_gf2.txt",
+			mpiSize:       1,
+			fieldEnum:     ECCGF2,
+		},
+	}
+
+	for _, testcase := range testcases {
+		t.Run(fmt.Sprintf("Layered circuit load and test for %s", testcase.pathToCircuit),
+			func(t *testing.T) {
+				testCircuitLayeredEvaluationHelper(t, testcase)
+			},
+		)
+	}
 }
 
 func testCircuitLayeredEvaluationHelper(t *testing.T, circuitRel CircuitRelation) {
 	circuit, privateInput, err := ReadCircuit(circuitRel)
 	require.NoError(t, err)
-
-	println(circuit.ExpectedNumOutputZeros)
-	for i := 0; i < len(circuit.PublicInput[0]); i++ {
-		v, cast := circuit.PublicInput[0][i].(big.Int)
-		require.True(t, cast)
-		println("Public Input", v.String())
-	}
 
 	emptyPublicInput := make([][]frontend.Variable, len(circuit.PublicInput))
 	for i := 0; i < len(emptyPublicInput); i++ {

@@ -49,7 +49,6 @@ func (buf *InputBuf) ReadUint8() uint8 {
 }
 
 func (buf *InputBuf) ReadField(field_size_in_bytes uint) *big.Int {
-
 	// little endian to big endian
 	for i := uint(0); i < field_size_in_bytes/2; i++ {
 		buf.data[i], buf.data[field_size_in_bytes-i-1] =
@@ -278,6 +277,7 @@ func (buf *InputBuf) ReadProof() (proof *Proof, err error) {
 	}
 
 	elems := make([]frontend.Variable, 0)
+	// TODO FIXME (HS) Raw proof serialization part
 	_ = buf.ReadUint64()
 	for buf.Len() > 0 {
 		if buf.Len() < fieldBytes {
