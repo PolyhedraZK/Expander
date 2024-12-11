@@ -48,11 +48,6 @@ func (buf *InputBuf) ReadUint8() uint8 {
 	return x
 }
 
-// LEADING_FIELD_BYTES is the first 32 bytes in the beginning of
-// the circuit/witness file, standing for the modulus of the field that
-// the circuit runs over, tied to the GKR proof
-const LEADING_FIELD_BYTES uint = 32
-
 func (buf *InputBuf) ReadField(field_size_in_bytes uint) *big.Int {
 
 	// little endian to big endian
@@ -190,8 +185,6 @@ func (buf *InputBuf) ReadSegment() (segment Segment, err error) {
 	}
 	return
 }
-
-const VERSION_NUM uint = 3914834606642317635 // b'CIRCUIT6'
 
 func (buf *InputBuf) ReadECCCircuit() (circuit *ECCCircuit, err error) {
 	version_num := buf.ReadUint()

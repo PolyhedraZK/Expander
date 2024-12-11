@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/PolyhedraZK/ExpanderCompilerCollection/ecgo"
+	ecgoTest "github.com/PolyhedraZK/ExpanderCompilerCollection/ecgo/test"
 	"github.com/consensys/gnark/frontend"
 	"github.com/stretchr/testify/require"
 )
@@ -19,21 +20,19 @@ func TestCircuitLayeredEvaluation(t *testing.T) {
 	// testCircuitLayeredEvaluationHelper(t, CircuitRelation{
 	// 	pathToCircuit: "../../../data/circuit_m31.txt",
 	// 	pathToWitness: "../../../data/witness_m31.txt",
-	// 	mpiSize:       8,
+	// 	mpiSize:       1,
 	// 	fieldEnum:     ECCM31,
 	// })
-	// testCircuitLayeredEvaluationHelper(t, CircuitRelation{
-	// 	pathToCircuit: "../../../data/circuit_gf2.txt",
-	// 	pathToWitness: "../../../data/witness_gf2.txt",
-	// 	mpiSize:       8,
-	// 	fieldEnum:     ECCGF2,
-	// })
+	testCircuitLayeredEvaluationHelper(t, CircuitRelation{
+		pathToCircuit: "../../../data/circuit_gf2.txt",
+		pathToWitness: "../../../data/witness_gf2.txt",
+		mpiSize:       1,
+		fieldEnum:     ECCGF2,
+	})
 }
 
 func testCircuitLayeredEvaluationHelper(t *testing.T, circuitRel CircuitRelation) {
-	circuit, private_input, err := ReadCircuit(circuitRel)
-	require.NoError(t, err)
-	fieldModulus, err := circuitRel.fieldEnum.FieldModulus()
+	circuit, privateInput, err := ReadCircuit(circuitRel)
 	require.NoError(t, err)
 
 	println(circuit.ExpectedNumOutputZeros)
@@ -43,22 +42,42 @@ func testCircuitLayeredEvaluationHelper(t *testing.T, circuitRel CircuitRelation
 		println("Public Input", v.String())
 	}
 
-	public_input_empty := make([][]frontend.Variable, len(circuit.PublicInput))
-	for i := 0; i < len(public_input_empty); i++ {
-		public_input_empty[i] = make([]frontend.Variable, len(circuit.PublicInput[0]))
+	emptyPublicInput := make([][]frontend.Variable, len(circuit.PublicInput))
+	for i := 0; i < len(emptyPublicInput); i++ {
+		emptyPublicInput[i] = make([]frontend.Variable, len(circuit.PublicInput[0]))
 	}
-	circuit.PublicInput = public_input_empty
+	circuit.PublicInput = emptyPublicInput
 
-	private_input_empty := make([][]frontend.Variable, len(private_input))
-	for i := 0; i < len(private_input_empty); i++ {
-		private_input_empty[i] = make([]frontend.Variable, len(private_input[0]))
+	emptyPrivateInput := make([][]frontend.Variable, len(privateInput))
+	for i := 0; i < len(emptyPrivateInput); i++ {
+		emptyPrivateInput[i] = make([]frontend.Variable, len(privateInput[0]))
 	}
 
 	evaluation := Evaluation{
 		Circuit:      *circuit,
-		PrivateInput: private_input_empty,
+		PrivateInput: emptyPrivateInput,
 	}
 
-	_, err = ecgo.Compile(fieldModulus, &evaluation)
+	fieldModulus, err := circuitRel.fieldEnum.FieldModulus()
+	require.NoError(t, err)
+
+	eccCompilationResult, err := ecgo.Compile(fieldModulus, &evaluation)
 	require.NoError(t, err, "ECGO compilation error")
+
+	layeredCircuit := eccCompilationResult.GetLayeredCircuit()
+	inputSolver := eccCompilationResult.GetInputSolver()
+
+	// NOTE: get correct witness
+	circuit, privateInput, err = ReadCircuit(circuitRel)
+	require.NoError(t, err)
+
+	assignment := Evaluation{
+		Circuit:      *circuit,
+		PrivateInput: privateInput,
+	}
+
+	witness, err := inputSolver.SolveInputAuto(&assignment)
+	require.NoError(t, err, "ECGO witness resolve error")
+
+	require.True(t, ecgoTest.CheckCircuit(layeredCircuit, witness))
 }
