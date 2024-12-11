@@ -24,8 +24,6 @@ impl<F: Field> FieldSerde for RawCommitment<F> {
         let fr_embedded = BN254Fr::from_u256(u256_embedded);
         fr_embedded.serialize_into(&mut writer)?;
 
-        println!("{}", self.evals.len());
-
         for v in self.evals.iter() {
             v.serialize_into(&mut writer)?;
         }

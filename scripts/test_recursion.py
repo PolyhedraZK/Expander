@@ -119,7 +119,7 @@ def gkr_prove(proof_config: ProofConfig, mpi_config: MPIConfig) -> str:
 
 def vanilla_gkr_verify_check(proof_config: ProofConfig, mpi_config: MPIConfig):
     vanilla_verify_comand: str = \
-        f"./target/release/expander-exec prove \
+        f"./target/release/expander-exec verify \
         {proof_config.circuit} {proof_config.witness} {proof_path} {mpi_config.cpus()}"
     vanilla_verify_comand = ' '.join(vanilla_verify_comand.split())
     print(vanilla_verify_comand)
