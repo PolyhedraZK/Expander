@@ -73,6 +73,37 @@ func (e *Evaluation) Define(api frontend.API) error {
 	return nil
 }
 
+func readCircuitForCompile(t *testing.T, circuitRel CircuitRelation) Evaluation {
+	circuit, privateInput, err := ReadCircuit(circuitRel)
+	require.NoError(t, err)
+
+	emptyPublicInput := make([][]frontend.Variable, len(circuit.PublicInput))
+	for i := 0; i < len(emptyPublicInput); i++ {
+		emptyPublicInput[i] = make([]frontend.Variable, len(circuit.PublicInput[0]))
+	}
+	circuit.PublicInput = emptyPublicInput
+
+	emptyPrivateInput := make([][]frontend.Variable, len(privateInput))
+	for i := 0; i < len(emptyPrivateInput); i++ {
+		emptyPrivateInput[i] = make([]frontend.Variable, len(privateInput[0]))
+	}
+
+	return Evaluation{
+		Circuit:      *circuit,
+		PrivateInput: emptyPrivateInput,
+	}
+}
+
+func readCircuitForAssignment(t *testing.T, circuitRel CircuitRelation) Evaluation {
+	circuit, privateInput, err := ReadCircuit(circuitRel)
+	require.NoError(t, err)
+
+	return Evaluation{
+		Circuit:      *circuit,
+		PrivateInput: privateInput,
+	}
+}
+
 func TestCircuitGnarkEvaluation(t *testing.T) {
 	testCircuitGnarkEvaluationHelper(t, CircuitRelation{
 		pathToCircuit: "../../../data/circuit_bn254.txt",
@@ -83,32 +114,10 @@ func TestCircuitGnarkEvaluation(t *testing.T) {
 }
 
 func testCircuitGnarkEvaluationHelper(t *testing.T, circuitForTest CircuitRelation) {
-	circuit, private_input, err := ReadCircuit(circuitForTest)
-	require.NoError(t, err)
+	evaluation := readCircuitForCompile(t, circuitForTest)
+
 	fieldModulus, err := circuitForTest.fieldEnum.FieldModulus()
 	require.NoError(t, err)
-
-	println(circuit.ExpectedNumOutputZeros)
-	for i := 0; i < len(circuit.PublicInput[0]); i++ {
-		v, _ := circuit.PublicInput[0][i].(big.Int)
-		println("Public Input", v.String())
-	}
-
-	public_input_empty := make([][]frontend.Variable, len(circuit.PublicInput))
-	for i := 0; i < len(public_input_empty); i++ {
-		public_input_empty[i] = make([]frontend.Variable, len(circuit.PublicInput[0]))
-	}
-	circuit.PublicInput = public_input_empty
-
-	private_input_empty := make([][]frontend.Variable, len(private_input))
-	for i := 0; i < len(private_input_empty); i++ {
-		private_input_empty[i] = make([]frontend.Variable, len(private_input[0]))
-	}
-
-	evaluation := Evaluation{
-		Circuit:      *circuit,
-		PrivateInput: private_input_empty,
-	}
 
 	r1cs, err := frontend.Compile(fieldModulus, r1cs.NewBuilder, &evaluation)
 	require.NoError(t, err, "Unable to generate r1cs")
@@ -119,30 +128,30 @@ func testCircuitGnarkEvaluationHelper(t *testing.T, circuitForTest CircuitRelati
 	println("Nb Public Witness:", r1cs.GetNbPublicVariables())
 
 	// Correct Witness
-	circuit, private_input, err = ReadCircuit(circuitForTest)
-	require.NoError(t, err)
-
-	assignment := Evaluation{
-		Circuit:      *circuit,
-		PrivateInput: private_input,
-	}
+	assignment := readCircuitForAssignment(t, circuitForTest)
 	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
 	require.NoError(t, err, "Unable to solve witness")
+
+	println("Num of public input", assignment.Circuit.ExpectedNumOutputZeros)
+	for i := 0; i < len(assignment.Circuit.PublicInput[0]); i++ {
+		v, _ := assignment.Circuit.PublicInput[0][i].(big.Int)
+		println("Public Input", v.String())
+	}
 
 	err = r1cs.IsSolved(witness)
 	require.NoError(t, err, "R1CS not satisfied")
 
 	// Incorrect witness
-	circuit, private_input, err = ReadCircuit(circuitForTest)
+	circuit, privateInput, err := ReadCircuit(circuitForTest)
 	require.NoError(t, err)
 
-	ri := rand.Intn(len(private_input))
-	rj := rand.Intn(len(private_input[0]))
-	private_input[ri][rj] = 147258369 // this should make the evaluation incorrect
+	ri := rand.Intn(len(privateInput))
+	rj := rand.Intn(len(privateInput[0]))
+	privateInput[ri][rj] = 147258369 // this should make the evaluation incorrect
 
 	assignment = Evaluation{
 		Circuit:      *circuit,
-		PrivateInput: private_input,
+		PrivateInput: privateInput,
 	}
 	witness, err = frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
 	require.NoError(t, err, "Unable to solve witness")
@@ -185,24 +194,7 @@ func TestCircuitLayeredEvaluation(t *testing.T) {
 }
 
 func testCircuitLayeredEvaluationHelper(t *testing.T, circuitRel CircuitRelation) {
-	circuit, privateInput, err := ReadCircuit(circuitRel)
-	require.NoError(t, err)
-
-	emptyPublicInput := make([][]frontend.Variable, len(circuit.PublicInput))
-	for i := 0; i < len(emptyPublicInput); i++ {
-		emptyPublicInput[i] = make([]frontend.Variable, len(circuit.PublicInput[0]))
-	}
-	circuit.PublicInput = emptyPublicInput
-
-	emptyPrivateInput := make([][]frontend.Variable, len(privateInput))
-	for i := 0; i < len(emptyPrivateInput); i++ {
-		emptyPrivateInput[i] = make([]frontend.Variable, len(privateInput[0]))
-	}
-
-	evaluation := Evaluation{
-		Circuit:      *circuit,
-		PrivateInput: emptyPrivateInput,
-	}
+	evaluation := readCircuitForCompile(t, circuitRel)
 
 	fieldModulus, err := circuitRel.fieldEnum.FieldModulus()
 	require.NoError(t, err)
@@ -214,13 +206,7 @@ func testCircuitLayeredEvaluationHelper(t *testing.T, circuitRel CircuitRelation
 	inputSolver := eccCompilationResult.GetInputSolver()
 
 	// NOTE: get correct witness
-	circuit, privateInput, err = ReadCircuit(circuitRel)
-	require.NoError(t, err)
-
-	assignment := Evaluation{
-		Circuit:      *circuit,
-		PrivateInput: privateInput,
-	}
+	assignment := readCircuitForAssignment(t, circuitRel)
 
 	witness, err := inputSolver.SolveInputAuto(&assignment)
 	require.NoError(t, err, "ECGO witness resolve error")
