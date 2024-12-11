@@ -19,13 +19,23 @@ import (
 type VerifierCircuit struct {
 	MpiSize         uint
 	SimdSize        uint
+	FieldEnum       circuit.ECCFieldEnum
 	OriginalCircuit circuit.Circuit
 	Proof           circuit.Proof // private input
 }
 
 // Define declares the circuit constraints
 func (circuit *VerifierCircuit) Define(api frontend.API) error {
-	verifier.Verify(api, &circuit.OriginalCircuit, circuit.OriginalCircuit.PublicInput, 0, circuit.SimdSize, circuit.MpiSize, &circuit.Proof)
+	verifier.Verify(
+		api,
+		&circuit.OriginalCircuit,
+		circuit.OriginalCircuit.PublicInput,
+		0,
+		circuit.SimdSize,
+		circuit.MpiSize,
+		circuit.FieldEnum,
+		&circuit.Proof,
+	)
 	return nil
 }
 
@@ -109,6 +119,7 @@ func testGroth16() {
 	assignment := VerifierCircuit{
 		MpiSize:         *mpi_size,
 		SimdSize:        *simd_size,
+		FieldEnum:       circuit.ECCBN254,
 		OriginalCircuit: *original_circuit,
 		Proof:           *proof,
 	}

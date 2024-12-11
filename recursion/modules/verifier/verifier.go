@@ -241,11 +241,12 @@ func GKRVerify(
 
 func Verify(
 	api frontend.API,
-	circuit *circuit.Circuit,
+	originalCircuit *circuit.Circuit,
 	public_input [][]frontend.Variable,
 	claimed_v frontend.Variable,
 	simd_size uint,
 	mpi_size uint,
+	fieldEnum circuit.ECCFieldEnum,
 	proof *circuit.Proof,
 ) {
 	var transcript, err = transcript.NewTranscript(api)
@@ -254,13 +255,27 @@ func Verify(
 	}
 
 	// Only supports RawCommitment now
-	circuit_input_size := uint(1) << circuit.Layers[0].InputLenLog
+	circuit_input_size := uint(1) << originalCircuit.Layers[0].InputLenLog
+
+	fieldBytes, err := fieldEnum.FieldBytes()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// NOTE(HS) maybe I should read the elements for raw comm length
+	// and comapre with the circuit input size... but this one suffices for now
+	rawCommLengthElems := circuit.LEADING_FIELD_BYTES / fieldBytes
+	for i := 0; i < int(rawCommLengthElems); i++ {
+		transcript.AppendF(proof.Next())
+	}
+
 	vals := make([]frontend.Variable, 0)
 	for i := uint(0); i < circuit_input_size*mpi_size; i++ {
 		vals = append(vals, proof.Next())
 		transcript.AppendF(vals[i])
 	}
 
+	// TODO(HS) maybe I should just new raw comms from proof?
 	raw_commitment := polycommit.NewRawCommitment(vals)
 
 	// Trigger an additional hash
@@ -271,12 +286,12 @@ func Verify(
 	log.Println("#Hashes for input: ", transcript.GetCount())
 	transcript.ResetCount()
 
-	circuit.FillRndCoef(&transcript)
+	originalCircuit.FillRndCoef(&transcript)
 
 	log.Println("#Hashes for random gate: ", transcript.GetCount())
 	transcript.ResetCount()
 
-	var rx, ry, r_simd, r_mpi, claimed_v0, claimed_v1 = GKRVerify(api, circuit, public_input, claimed_v, simd_size, mpi_size, &transcript, proof)
+	var rx, ry, r_simd, r_mpi, claimed_v0, claimed_v1 = GKRVerify(api, originalCircuit, public_input, claimed_v, simd_size, mpi_size, &transcript, proof)
 
 	log.Println("#Hashes for gkr challenge: ", transcript.GetCount())
 	transcript.ResetCount()
