@@ -1794,6 +1794,7 @@ name = "poly_commit"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "ethnum",
  "gkr_field_config",
  "mpi_config",
  "polynomials",

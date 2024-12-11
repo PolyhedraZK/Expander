@@ -120,7 +120,7 @@ def gkr_prove(proof_config: ProofConfig, mpi_config: MPIConfig) -> str:
 def vanilla_gkr_verify_check(proof_config: ProofConfig, mpi_config: MPIConfig):
     vanilla_verify_comand: str = \
         f"./target/release/expander-exec prove \
-        {proof_config.circuit} {proof_config.witness} {proof_file} {mpi_config.cpus()}"
+        {proof_config.circuit} {proof_config.witness} {proof_path} {mpi_config.cpus()}"
     vanilla_verify_comand = ' '.join(vanilla_verify_comand.split())
     print(vanilla_verify_comand)
 
@@ -137,18 +137,18 @@ if __name__ == "__main__":
 
     change_working_dir()
     expander_compile()
-    proof_file = gkr_prove(PROOF_CONFIG, MPI_CONFIG)
+    proof_path = gkr_prove(PROOF_CONFIG, MPI_CONFIG)
     vanilla_gkr_verify_check(PROOF_CONFIG, MPI_CONFIG)
 
     # FIXME(HS): construction field - working on compilation process,
     # need to work on MPI and recursive verifier on proof deserialization
-    sys.exit(0)
+    # sys.exit(0)
 
     # TODO fix golang recursive verifier and use this chunk of code
     subprocess.run(
         f'''
         cd recursion
-        go run main.go -circuit={"../" + circuit} -witness={"../" + witness} -gkr_proof={"../" + gkr_proof + "." + str(i)} -recursive_proof={"../" + recursive_proof + "." + str(i)} -mpi_size={mpi_size_each_group}
+        go run main.go -circuit={"../" + PROOF_CONFIG.circuit} -witness={"../" + PROOF_CONFIG.witness} -gkr_proof={"../" + proof_path} -recursive_proof={"../" + PROOF_CONFIG.recursive_proof} -mpi_size={len(MPI_CONFIG.cpu_ids)}
         cd ..
         ''',
         shell=True,
