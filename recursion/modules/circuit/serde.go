@@ -286,8 +286,6 @@ func (buf *InputBuf) ReadWitness() (witness *Witness, err error) {
 func (buf *InputBuf) ReadProof() (proof *Proof, err error) {
 	var elem frontend.Variable
 	elems := make([]frontend.Variable, 0)
-	// TODO FIXME (HS) Raw proof deserialization part
-	// TODO maybe start with a pcs deserialition?
 	_ = buf.ReadUint64()
 	for buf.Len() > 0 {
 		if elem, err = buf.ReadField(); err != nil {

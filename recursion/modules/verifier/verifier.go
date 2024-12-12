@@ -244,8 +244,8 @@ func Verify(
 	originalCircuit *circuit.Circuit,
 	public_input [][]frontend.Variable,
 	claimed_v frontend.Variable,
-	simd_size uint,
-	mpi_size uint,
+	simdSize uint,
+	mpiSize uint,
 	fieldEnum circuit.ECCFieldEnum,
 	proof *circuit.Proof,
 ) {
@@ -255,31 +255,23 @@ func Verify(
 	}
 
 	// Only supports RawCommitment now
-	circuit_input_size := uint(1) << originalCircuit.Layers[0].InputLenLog
+	circuitInputSize := uint(1) << originalCircuit.Layers[0].InputLenLog
 
-	fieldBytes, err := fieldEnum.FieldBytes()
+	// NOTE(HS) for now just raw commitment scheme
+	polyCom, err := polycommit.NewCommitment(
+		polycommit.RawCommitmentScheme,
+		fieldEnum,
+		circuitInputSize, mpiSize,
+		proof,
+		&transcript,
+	)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	// NOTE(HS) maybe I should read the elements for raw comm length
-	// and comapre with the circuit input size... but this one suffices for now
-	rawCommLengthElems := circuit.LEADING_FIELD_BYTES / fieldBytes
-	for i := 0; i < int(rawCommLengthElems); i++ {
-		transcript.AppendF(proof.Next())
-	}
-
-	vals := make([]frontend.Variable, 0)
-	for i := uint(0); i < circuit_input_size*mpi_size; i++ {
-		vals = append(vals, proof.Next())
-		transcript.AppendF(vals[i])
-	}
-
-	// TODO(HS) maybe I should just new raw comms from proof?
-	raw_commitment := polycommit.NewRawCommitment(vals)
-
 	// Trigger an additional hash
-	if mpi_size > 1 {
+	// TODO(HS) check if the trigger is log to mpiSize?
+	if mpiSize > 1 {
 		_ = transcript.ChallengeF()
 	}
 
@@ -291,7 +283,16 @@ func Verify(
 	log.Println("#Hashes for random gate: ", transcript.GetCount())
 	transcript.ResetCount()
 
-	var rx, ry, r_simd, r_mpi, claimed_v0, claimed_v1 = GKRVerify(api, originalCircuit, public_input, claimed_v, simd_size, mpi_size, &transcript, proof)
+	var rx, ry, r_simd, r_mpi, claimed_v0, claimed_v1 = GKRVerify(
+		api,
+		originalCircuit,
+		public_input,
+		claimed_v,
+		simdSize,
+		mpiSize,
+		&transcript,
+		proof,
+	)
 
 	log.Println("#Hashes for gkr challenge: ", transcript.GetCount())
 	transcript.ResetCount()
@@ -304,6 +305,6 @@ func Verify(
 	rx = append(rx, r_mpi...)
 	ry = append(ry, r_mpi...)
 
-	raw_commitment.Verify(api, rx, claimed_v0)
-	raw_commitment.Verify(api, ry, claimed_v1)
+	polyCom.Verify(api, rx, claimed_v0)
+	polyCom.Verify(api, ry, claimed_v1)
 }

@@ -150,6 +150,7 @@ func testGroth16() {
 			vk_file, _ := os.OpenFile(*groth16_vk_file, os.O_RDONLY, 0444)
 			vk.ReadFrom(vk_file)
 		} else {
+			// TODO write to file system
 			println("Groth16 generating setup from scratch...")
 			pk, vk, setup_err = groth16.Setup(r1cs)
 

@@ -40,6 +40,12 @@ func (T *Transcript) AppendF(f frontend.Variable) {
 	T.t = append(T.t, f)
 }
 
+func (T *Transcript) AppendFs(fs ...frontend.Variable) {
+	for _, f := range fs {
+		T.AppendF(f)
+	}
+}
+
 func (T *Transcript) ChallengeF() frontend.Variable {
 	T.hasher.Reset()
 	if len(T.t) > 0 {

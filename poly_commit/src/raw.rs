@@ -89,7 +89,7 @@ impl<F: Field> PolynomialCommitmentScheme<F> for RawMultilinearPCS {
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
         assert!(poly.coeffs.len() == 1 << params.n_vars);
-        RawCommitment {
+        Self::Commitment {
             evals: poly.coeffs.clone(),
         }
     }

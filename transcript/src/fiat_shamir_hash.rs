@@ -11,6 +11,10 @@ pub use keccak_256::*;
 pub mod mimc;
 pub use mimc::*;
 
+pub mod poseidon;
+#[allow(unused)]
+pub use poseidon::*;
+
 pub trait FiatShamirBytesHash: Clone + Debug {
     /// The size of the hash output in bytes.
     const DIGEST_SIZE: usize;
