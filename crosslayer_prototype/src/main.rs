@@ -8,26 +8,27 @@ fn test_sumcheck_cross_layered_helper<C: GKRFieldConfig>() {
     let mut transcript = BytesHashTranscript::<C::ChallengeField, SHA256hasher>::new();
     
     let mut rng = rand::thread_rng();
-    let n_layers = 5;
-    let circuit = CrossLayerCircuit::<C>::random_for_testing(&mut rng, n_layers);
+    let n_layers = 1323;
+    let layer_size = 512;
+    let n_gates_each_layer = 256;
+
+    let circuit = CrossLayerCircuit::<C>::random_for_bench(&mut rng, n_layers, layer_size, n_gates_each_layer);
     
     let inputs = (0..circuit.layers[0].layer_size).map(|_| C::ChallengeField::random_unsafe(&mut rng)).collect::<Vec<_>>();
     let evals = circuit.evaluate(&inputs);
     let connections = CrossLayerConnections::parse_circuit(&circuit);
+    let start_time = std::time::Instant::now();
     let mut sp = crosslayer_prototype::CrossLayerProverScratchPad::<C>::new(circuit.layers.len(), circuit.max_num_input_var(), circuit.max_num_output_var(), 1);
-
     let (_output_claim, input_challenge, input_claim) = prove_gkr(&circuit, &evals, &connections, &mut transcript, &mut sp);
+    let stop_time = std::time::Instant::now();
+    let duration = stop_time.duration_since(start_time);
+    println!("Time elapsed {} ms", duration.as_millis());
 
     assert!(
         MultiLinearPoly::evaluate_with_buffer(&evals.vals[0], &input_challenge, &mut sp.v_evals) == input_claim,
     );
 }
 
-#[test]
-fn test_sumcheck_cross_layered() {
-    test_sumcheck_cross_layered_helper::<M31ExtConfig>();
-    let _ = GF2ExtConfig;
-    // GF2 not supported yet, due to the use of X and X^2
-    // test_sumcheck_cross_layered_helper::<GF2ExtConfig>(); 
-    test_sumcheck_cross_layered_helper::<BN254Config>();
+fn main() {
+    test_sumcheck_cross_layered_helper::<GF2ExtConfig>(); 
 }

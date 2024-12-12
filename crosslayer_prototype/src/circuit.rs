@@ -18,6 +18,36 @@ pub struct GenericLayer<C: GKRFieldConfig> {
 }
 
 impl<C: GKRFieldConfig> GenericLayer<C> {
+    pub fn random_for_bench(mut rng: impl RngCore, layer_id: usize, layer_sizes: &[usize], n_gates_per_layer: usize) -> Self {
+        if layer_id == 0 {
+            return Self::default();
+        }
+
+        let output_size = layer_sizes[layer_id];
+        let input_size = layer_sizes[layer_id - 1];
+        let mut layer = GenericLayer::<C> { layer_id, layer_size: output_size, input_layer_size: input_size, ..Default::default() };
+
+        for _ in 0..n_gates_per_layer {
+            let gate_type = rng.next_u64() as usize % 9;
+            if gate_type < 4 {
+                let gate = SimpleGateAdd::random_for_testing(&mut rng, output_size, input_size);
+                layer.add_gates.push(gate);
+            } else if gate_type < 6 {
+                let i_layer = rng.next_u64() as usize % layer_id;
+                let gate = CrossLayerRelay::random_for_testing(&mut rng, output_size, layer_sizes[i_layer], i_layer);
+                layer.relay_gates.push(gate);
+            } else if gate_type < 8 {
+                let gate = SimpleGateMul::random_for_testing(&mut rng, output_size, input_size);
+                layer.mul_gates.push(gate);
+            } else {
+                let gate = SimpleGateConst::random_for_testing(&mut rng, output_size, input_size);
+                layer.const_gates.push(gate);
+            }
+        }
+
+        layer
+    }
+
     pub fn random_for_testing(mut rng: impl RngCore, layer_id: usize, layer_sizes: &[usize]) -> Self {
         if layer_id == 0 {
             return Self::default();
@@ -67,6 +97,22 @@ pub struct CrossLayerCircuit<C: GKRFieldConfig> {
 }
 
 impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
+    pub fn random_for_bench(mut rng: impl RngCore, n_layers: usize, size_of_each_layer: usize, n_gates_each_layer: usize) -> Self{
+        let layer_sizes = vec![size_of_each_layer; n_layers];
+        let mut circuit = Self::default();
+        circuit.layers.push(GenericLayer::<C> {
+            layer_id: 0,
+            layer_size: layer_sizes[0],
+            ..Default::default()
+        });
+
+        for i in 1..layer_sizes.len() {
+            let layer = GenericLayer::<C>::random_for_bench(&mut rng, i, &layer_sizes, n_gates_each_layer);
+            circuit.layers.push(layer);
+        }
+        circuit
+    }
+
     pub fn random_for_testing(mut rng: impl RngCore, n_layers: usize) -> Self {
         let layer_sizes = (0..n_layers).map(|i_layer| 1usize << (n_layers - 1 - i_layer)).collect::<Vec<_>>();
 

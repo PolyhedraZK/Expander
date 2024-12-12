@@ -101,5 +101,7 @@ pub fn sumcheck_prove_gather_layer<C: GKRFieldConfig, T: Transcript<C::Challenge
     let vx_claim = helper.vx_claim();
     transcript.append_field_element(&vx_claim);
 
+    // No variable Y in gathering layer
+
     (helper.rx, vx_claim)
 }

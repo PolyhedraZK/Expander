@@ -147,7 +147,7 @@ impl<F: Field> MultiLinearPoly<F> {
     /// This is the preferred method to evaluate a multilinear polynomial as it does not require additional memory.
     pub fn evaluate_with_buffer(evals: &[F], point: &[F], scratch: &mut [F]) -> F {
         assert_eq!(1 << point.len(), evals.len());
-        assert_eq!(evals.len(), scratch.len());
+        assert!(scratch.len() >= evals.len());
 
         if point.is_empty() {
             evals[0]

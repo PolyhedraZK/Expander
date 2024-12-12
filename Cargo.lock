@@ -674,6 +674,7 @@ dependencies = [
  "log",
  "polynomials",
  "rand",
+ "thiserror",
  "transcript",
 ]
 

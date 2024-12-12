@@ -13,3 +13,4 @@ transcript = { path = "../transcript" }
 env_logger.workspace = true
 log.workspace = true
 rand.workspace = true
+thiserror.workspace = true

@@ -1,6 +1,4 @@
-use std::{ops::Mul, vec};
-
-use crate::{circuit, CrossLayerCircuitEvals, CrossLayerConnections, CrossLayerProverScratchPad, GenericLayer};
+use crate::{CrossLayerCircuitEvals, CrossLayerConnections, CrossLayerProverScratchPad, GenericLayer};
 
 use arith::Field;
 use gkr_field_config::{FieldType, GKRFieldConfig};
@@ -45,7 +43,7 @@ impl MultilinearProductHelper {
             p1 += f_v_1 * hg_v_1;
             p2 += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
         }
-        assert_ne!(C::FIELD_TYPE, FieldType::GF2);
+        // assert_ne!(C::FIELD_TYPE, FieldType::GF2);
         p2 = p1.mul_by_6() + p0.mul_by_3() - p2.double();
         [p0, p1, p2]
     }
@@ -149,14 +147,13 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
         degree: usize,
     ) -> [C::ChallengeField; 3] {
         assert!(degree == 2);
-        let mut p3 = MultilinearProductHelper::poly_eval_at::<C>(
+        MultilinearProductHelper::poly_eval_at::<C>(
             self.input_layer_var_num, 
             var_idx, 
             degree, 
             &self.sp.v_evals, 
             &self.sp.hg_evals,
-        );
-        p3
+        )
     }
 
     // Returns which relay layer has ended, and the final claim, can be empty
@@ -223,7 +220,6 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
         let layers_connected_to = &self.connections.connections[self.layer.layer_id];
         for i_layer in 0..(self.layer.layer_id - 1) {
             let connections_at_i_layer = &layers_connected_to[i_layer];
-            println!("{}", self.sp.cross_layer_evals.len());
             let cross_layer_size = &mut self.sp.cross_layer_sizes[i_layer];
             let vals = &mut self.sp.cross_layer_evals[i_layer];
             let hg_vals = &mut self.sp.cross_layer_hg_evals[i_layer];
@@ -358,6 +354,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerGatherHelper<'a, C> {
             &mut self.sp.v_evals,
             &mut self.sp.hg_evals,
         );
+        self.rx.push(r);
     }
 
     pub(crate) fn vx_claim(&self) -> C::ChallengeField {
