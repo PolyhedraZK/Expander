@@ -2,6 +2,7 @@ package polycommit
 
 import (
 	"ExpanderVerifierCircuit/modules/circuit"
+	"ExpanderVerifierCircuit/modules/fields"
 	"ExpanderVerifierCircuit/modules/transcript"
 
 	"github.com/consensys/gnark/frontend"
@@ -43,10 +44,10 @@ func (c *RawCommitment) Verify(
 }
 
 func NewRawPolyCommitment(
-	fieldEnum circuit.ECCFieldEnum,
+	fieldEnum fields.ECCFieldEnum,
 	comLen uint,
 	proof *circuit.Proof,
-	transcript *transcript.Transcript,
+	transcript *transcript.MiMCTranscript,
 ) (rawComm *RawCommitment, err error) {
 	fieldBytes, err := fieldEnum.FieldBytes()
 	if err != nil {

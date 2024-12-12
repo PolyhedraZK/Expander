@@ -1,6 +1,7 @@
 package circuit
 
 import (
+	"ExpanderVerifierCircuit/modules/fields"
 	"encoding/binary"
 	"fmt"
 	"math/big"
@@ -13,10 +14,10 @@ import (
 
 type InputBuf struct {
 	data      []byte
-	fieldEnum ECCFieldEnum
+	fieldEnum fields.ECCFieldEnum
 }
 
-func NewInputBuf(fileName string, fieldEnum ECCFieldEnum) (*InputBuf, error) {
+func NewInputBuf(fileName string, fieldEnum fields.ECCFieldEnum) (*InputBuf, error) {
 	data, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, err
@@ -305,7 +306,7 @@ func (buf *InputBuf) ReadProof() (proof *Proof, err error) {
 type CircuitRelation struct {
 	CircuitPath string
 	WitnessPath string
-	FieldEnum   ECCFieldEnum
+	FieldEnum   fields.ECCFieldEnum
 	MPISize     uint
 }
 
@@ -350,7 +351,7 @@ func ReadCircuit(circuitRel CircuitRelation) (expanderCircuit *Circuit, privInpu
 	return
 }
 
-func ReadProofFile(proofFile string, fieldEnum ECCFieldEnum) (*Proof, error) {
+func ReadProofFile(proofFile string, fieldEnum fields.ECCFieldEnum) (*Proof, error) {
 	proofBuf, err := NewInputBuf(proofFile, fieldEnum)
 	if err != nil {
 		return nil, err

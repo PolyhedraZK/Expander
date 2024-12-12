@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"ExpanderVerifierCircuit/modules/circuit"
+	"ExpanderVerifierCircuit/modules/fields"
 	"ExpanderVerifierCircuit/modules/verifier"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -19,7 +20,7 @@ import (
 type VerifierCircuit struct {
 	MpiSize         uint
 	SimdSize        uint
-	FieldEnum       circuit.ECCFieldEnum
+	FieldEnum       fields.ECCFieldEnum
 	OriginalCircuit circuit.Circuit
 	Proof           circuit.Proof // private input
 }
@@ -81,7 +82,7 @@ func testGroth16() {
 	groth16CircuitRel := circuit.CircuitRelation{
 		CircuitPath: *circuit_file,
 		WitnessPath: *witness_file,
-		FieldEnum:   circuit.ECCBN254,
+		FieldEnum:   fields.ECCBN254,
 		MPISize:     *mpi_size,
 	}
 	original_circuit, _, err := circuit.ReadCircuit(groth16CircuitRel)
@@ -89,7 +90,7 @@ func testGroth16() {
 		panic(err.Error())
 	}
 
-	proof, err := circuit.ReadProofFile(*gkr_proof_file, circuit.ECCBN254)
+	proof, err := circuit.ReadProofFile(*gkr_proof_file, fields.ECCBN254)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -119,7 +120,7 @@ func testGroth16() {
 	assignment := VerifierCircuit{
 		MpiSize:         *mpi_size,
 		SimdSize:        *simd_size,
-		FieldEnum:       circuit.ECCBN254,
+		FieldEnum:       fields.ECCBN254,
 		OriginalCircuit: *original_circuit,
 		Proof:           *proof,
 	}

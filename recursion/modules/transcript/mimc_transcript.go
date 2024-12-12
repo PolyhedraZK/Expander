@@ -6,7 +6,7 @@ import (
 	"github.com/consensys/gnark/std/hash/mimc"
 )
 
-type Transcript struct {
+type MiMCTranscript struct {
 	api frontend.API
 
 	// The hash function
@@ -22,31 +22,29 @@ type Transcript struct {
 	count uint
 }
 
-func NewTranscript(api frontend.API) (Transcript, error) {
+func NewMiMCTranscript(api frontend.API) (*MiMCTranscript, error) {
 	mimc, err := mimc.NewMiMC(api)
-	T := Transcript{
+	T := MiMCTranscript{
 		api:    api,
 		t:      []frontend.Variable{},
 		hasher: &mimc,
-		state:  0,
-		count:  0,
 	}
 
-	return T, err
+	return &T, err
 }
 
-func (T *Transcript) AppendF(f frontend.Variable) {
+func (T *MiMCTranscript) AppendF(f frontend.Variable) {
 	T.count++
 	T.t = append(T.t, f)
 }
 
-func (T *Transcript) AppendFs(fs ...frontend.Variable) {
+func (T *MiMCTranscript) AppendFs(fs ...frontend.Variable) {
 	for _, f := range fs {
 		T.AppendF(f)
 	}
 }
 
-func (T *Transcript) ChallengeF() frontend.Variable {
+func (T *MiMCTranscript) ChallengeF() frontend.Variable {
 	T.hasher.Reset()
 	if len(T.t) > 0 {
 		for i := 0; i < len(T.t); i++ {
@@ -61,7 +59,7 @@ func (T *Transcript) ChallengeF() frontend.Variable {
 	return T.state
 }
 
-func (T *Transcript) ChallengeFs(n uint) []frontend.Variable {
+func (T *MiMCTranscript) ChallengeFs(n uint) []frontend.Variable {
 	cs := make([]frontend.Variable, n)
 	for i := uint(0); i < n; i++ {
 		cs[i] = T.ChallengeF()
@@ -69,14 +67,14 @@ func (T *Transcript) ChallengeFs(n uint) []frontend.Variable {
 	return cs
 }
 
-func (T *Transcript) GetState() frontend.Variable {
+func (T *MiMCTranscript) GetState() frontend.Variable {
 	return T.state
 }
 
-func (T *Transcript) GetCount() uint {
+func (T *MiMCTranscript) GetCount() uint {
 	return T.count
 }
 
-func (T *Transcript) ResetCount() {
+func (T *MiMCTranscript) ResetCount() {
 	T.count = 0
 }

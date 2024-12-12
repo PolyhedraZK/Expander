@@ -63,7 +63,7 @@ type Circuit struct {
 	ExpectedNumOutputZeros uint
 }
 
-func (l *Layer) FillRndCoef(transcript *transcript.Transcript) {
+func (l *Layer) FillRndCoef(transcript *transcript.MiMCTranscript) {
 	for i := 0; i < len(l.Mul); i++ {
 		if l.Mul[i].Coef.CoefType == Random {
 			l.Mul[i].Coef.RandomValue = transcript.ChallengeF()
@@ -83,7 +83,7 @@ func (l *Layer) FillRndCoef(transcript *transcript.Transcript) {
 	}
 }
 
-func (c *Circuit) FillRndCoef(transcript *transcript.Transcript) {
+func (c *Circuit) FillRndCoef(transcript *transcript.MiMCTranscript) {
 	for i := 0; i < len(c.Layers); i++ {
 		c.Layers[i].FillRndCoef(transcript)
 	}

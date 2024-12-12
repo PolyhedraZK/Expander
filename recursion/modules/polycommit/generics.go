@@ -1,9 +1,11 @@
 package polycommit
 
 import (
-	"ExpanderVerifierCircuit/modules/circuit"
-	"ExpanderVerifierCircuit/modules/transcript"
 	"fmt"
+
+	"ExpanderVerifierCircuit/modules/circuit"
+	"ExpanderVerifierCircuit/modules/fields"
+	"ExpanderVerifierCircuit/modules/transcript"
 
 	"github.com/consensys/gnark/frontend"
 )
@@ -20,15 +22,22 @@ const (
 // PolynomialCommitment interface for GKR recursive verifier,
 // only Verify method matters to me
 type PolynomialCommitment interface {
+	// Verify checks against commitment the opening point and eval
+	// TODO(HS) for now this matches with raw commitment,
+	// later we should add polynomial commitment opening to the interface
 	Verify(api frontend.API, r []frontend.Variable, y frontend.Variable)
 }
 
+// NewCommitment is the general interface for verifier circuit to extract a
+// polynomial commitment out of the proof stream.  The side effect is adding the
+// commitment frontend.Variables into the transcript, and polynomial commitment
+// elements are read from proof data stream.
 func NewCommitment(
 	schemeEnum PolynomialCommitmentEnum,
-	fieldEnum circuit.ECCFieldEnum,
+	fieldEnum fields.ECCFieldEnum,
 	circuitInputSize, mpiSize uint,
 	proof *circuit.Proof,
-	transcript *transcript.Transcript,
+	transcript *transcript.MiMCTranscript,
 ) (comm PolynomialCommitment, err error) {
 	switch schemeEnum {
 	case RawCommitmentScheme:

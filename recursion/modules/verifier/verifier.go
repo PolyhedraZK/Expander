@@ -2,6 +2,7 @@ package verifier
 
 import (
 	"ExpanderVerifierCircuit/modules/circuit"
+	"ExpanderVerifierCircuit/modules/fields"
 	"ExpanderVerifierCircuit/modules/polycommit"
 	"ExpanderVerifierCircuit/modules/transcript"
 	"log"
@@ -14,7 +15,7 @@ func SumcheckStepVerify(
 	api frontend.API,
 	proof *circuit.Proof,
 	degree uint,
-	transcript *transcript.Transcript,
+	transcript *transcript.MiMCTranscript,
 	claimed_sum frontend.Variable,
 	randomness_vec []frontend.Variable,
 	sp *ScratchPad,
@@ -50,7 +51,7 @@ func SumcheckLayerVerify(
 	claimed_v1 frontend.Variable,
 	alpha frontend.Variable,
 	proof *circuit.Proof,
-	transcript *transcript.Transcript,
+	transcript *transcript.MiMCTranscript,
 	sp *ScratchPad,
 	is_output_layer bool,
 ) (
@@ -170,7 +171,7 @@ func GKRVerify(
 	claimed_v frontend.Variable,
 	simd_size uint,
 	mpi_size uint,
-	transcript *transcript.Transcript,
+	transcript *transcript.MiMCTranscript,
 	proof *circuit.Proof,
 ) (
 	[]frontend.Variable,
@@ -246,10 +247,10 @@ func Verify(
 	claimed_v frontend.Variable,
 	simdSize uint,
 	mpiSize uint,
-	fieldEnum circuit.ECCFieldEnum,
+	fieldEnum fields.ECCFieldEnum,
 	proof *circuit.Proof,
 ) {
-	var transcript, err = transcript.NewTranscript(api)
+	fsTranscript, err := transcript.NewMiMCTranscript(api)
 	if err != nil {
 		panic("Err in transcript init")
 	}
@@ -263,25 +264,24 @@ func Verify(
 		fieldEnum,
 		circuitInputSize, mpiSize,
 		proof,
-		&transcript,
+		fsTranscript,
 	)
 	if err != nil {
 		panic(err.Error())
 	}
 
 	// Trigger an additional hash
-	// TODO(HS) check if the trigger is log to mpiSize?
 	if mpiSize > 1 {
-		_ = transcript.ChallengeF()
+		_ = fsTranscript.ChallengeF()
 	}
 
-	log.Println("#Hashes for input: ", transcript.GetCount())
-	transcript.ResetCount()
+	log.Println("#Hashes for input: ", fsTranscript.GetCount())
+	fsTranscript.ResetCount()
 
-	originalCircuit.FillRndCoef(&transcript)
+	originalCircuit.FillRndCoef(fsTranscript)
 
-	log.Println("#Hashes for random gate: ", transcript.GetCount())
-	transcript.ResetCount()
+	log.Println("#Hashes for random gate: ", fsTranscript.GetCount())
+	fsTranscript.ResetCount()
 
 	var rx, ry, r_simd, r_mpi, claimed_v0, claimed_v1 = GKRVerify(
 		api,
@@ -290,12 +290,12 @@ func Verify(
 		claimed_v,
 		simdSize,
 		mpiSize,
-		&transcript,
+		fsTranscript,
 		proof,
 	)
 
-	log.Println("#Hashes for gkr challenge: ", transcript.GetCount())
-	transcript.ResetCount()
+	log.Println("#Hashes for gkr challenge: ", fsTranscript.GetCount())
+	fsTranscript.ResetCount()
 
 	// TODO(HS) remove this after I work on M31?
 	if len(r_simd) > 0 {
