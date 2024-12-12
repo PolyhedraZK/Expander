@@ -47,7 +47,7 @@ func NewRawPolyCommitment(
 	fieldEnum fields.ECCFieldEnum,
 	comLen uint,
 	proof *circuit.Proof,
-	transcript *transcript.MiMCTranscript,
+	fsTranscript transcript.Transcript,
 ) (rawComm *RawCommitment, err error) {
 	fieldBytes, err := fieldEnum.FieldBytes()
 	if err != nil {
@@ -61,7 +61,7 @@ func NewRawPolyCommitment(
 	for i := 0; i < int(rawComLengthElemNum); i++ {
 		rawComLengthElems[i] = proof.Next()
 	}
-	transcript.AppendFs(rawComLengthElems...)
+	fsTranscript.AppendFs(rawComLengthElems...)
 
 	// TODO(HS) should we compare rawComLen against rawComLengthElemNum
 
@@ -70,7 +70,7 @@ func NewRawPolyCommitment(
 	for i := uint(0); i < comLen; i++ {
 		vals[i] = proof.Next()
 	}
-	transcript.AppendFs(vals...)
+	fsTranscript.AppendFs(vals...)
 
 	rawComm = &RawCommitment{Vals: vals}
 	return

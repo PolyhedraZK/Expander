@@ -6,6 +6,7 @@ import (
 	"ExpanderVerifierCircuit/modules/fields"
 
 	"github.com/consensys/gnark/frontend"
+	gnarkHash "github.com/consensys/gnark/std/hash"
 )
 
 // Transcript interface describes the Fiat-Shamir transcript behaviors
@@ -26,17 +27,35 @@ type Transcript interface {
 	ResetCount()
 }
 
+// FieldHasherTranscript is the transcript constructed from field hasher, can be
+// instantiated by MiMC or Poseidon hash for BN254 or Mersenne31
+type FieldHasherTranscript struct {
+	api frontend.API
+
+	// The hash function
+	hasher gnarkHash.FieldHasher
+
+	// The values to feed the hash function
+	t []frontend.Variable
+
+	// The state
+	state frontend.Variable
+
+	// helper field: counting, irrelevant to circuit
+	count uint
+}
+
 // NewTranscript is the enter point to construct a new instance of transcript,
 // that is decided by the field element tied to the transcript
-func NewTranscript(
-	api frontend.API,
-	fieldEnum fields.ECCFieldEnum,
-) (Transcript, error) {
+func NewTranscript(api frontend.API, fieldEnum fields.ECCFieldEnum) (Transcript, error) {
 	switch fieldEnum {
 	case fields.ECCBN254:
 		return NewMiMCTranscript(api)
 	case fields.ECCM31:
 		// TODO(HS) finish Poseidon hash based transcript ...
+		fallthrough
+	case fields.ECCGF2:
+		// TODO galois 2 transcript TBD
 		fallthrough
 	default:
 		return nil,

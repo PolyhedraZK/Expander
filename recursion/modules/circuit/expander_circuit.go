@@ -63,29 +63,29 @@ type Circuit struct {
 	ExpectedNumOutputZeros uint
 }
 
-func (l *Layer) FillRndCoef(transcript *transcript.MiMCTranscript) {
+func (l *Layer) FillRndCoef(fsTranscript transcript.Transcript) {
 	for i := 0; i < len(l.Mul); i++ {
 		if l.Mul[i].Coef.CoefType == Random {
-			l.Mul[i].Coef.RandomValue = transcript.ChallengeF()
+			l.Mul[i].Coef.RandomValue = fsTranscript.ChallengeF()
 		}
 	}
 
 	for i := 0; i < len(l.Add); i++ {
 		if l.Add[i].Coef.CoefType == Random {
-			l.Add[i].Coef.RandomValue = transcript.ChallengeF()
+			l.Add[i].Coef.RandomValue = fsTranscript.ChallengeF()
 		}
 	}
 
 	for i := 0; i < len(l.Cst); i++ {
 		if l.Cst[i].Coef.CoefType == Random {
-			l.Cst[i].Coef.RandomValue = transcript.ChallengeF()
+			l.Cst[i].Coef.RandomValue = fsTranscript.ChallengeF()
 		}
 	}
 }
 
-func (c *Circuit) FillRndCoef(transcript *transcript.MiMCTranscript) {
+func (c *Circuit) FillRndCoef(fsTranscript transcript.Transcript) {
 	for i := 0; i < len(c.Layers); i++ {
-		c.Layers[i].FillRndCoef(transcript)
+		c.Layers[i].FillRndCoef(fsTranscript)
 	}
 }
 

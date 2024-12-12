@@ -15,7 +15,7 @@ func SumcheckStepVerify(
 	api frontend.API,
 	proof *circuit.Proof,
 	degree uint,
-	transcript *transcript.MiMCTranscript,
+	fsTranscript transcript.Transcript,
 	claimed_sum frontend.Variable,
 	randomness_vec []frontend.Variable,
 	sp *ScratchPad,
@@ -23,10 +23,10 @@ func SumcheckStepVerify(
 	var ps = make([]frontend.Variable, 0)
 	for i := uint(0); i < (degree + 1); i++ {
 		ps = append(ps, proof.Next())
-		transcript.AppendF(ps[i])
+		fsTranscript.AppendF(ps[i])
 	}
 
-	var r = transcript.ChallengeF()
+	var r = fsTranscript.ChallengeF()
 	randomness_vec = append(randomness_vec, r)
 	api.AssertIsEqual(api.Add(ps[0], ps[1]), claimed_sum)
 
@@ -51,7 +51,7 @@ func SumcheckLayerVerify(
 	claimed_v1 frontend.Variable,
 	alpha frontend.Variable,
 	proof *circuit.Proof,
-	transcript *transcript.MiMCTranscript,
+	fsTranscript transcript.Transcript,
 	sp *ScratchPad,
 	is_output_layer bool,
 ) (
@@ -93,7 +93,7 @@ func SumcheckLayerVerify(
 			api,
 			proof,
 			2,
-			transcript,
+			fsTranscript,
 			sum,
 			rx,
 			sp,
@@ -106,7 +106,7 @@ func SumcheckLayerVerify(
 			api,
 			proof,
 			3,
-			transcript,
+			fsTranscript,
 			sum,
 			r_simd_xy,
 			sp,
@@ -119,7 +119,7 @@ func SumcheckLayerVerify(
 			api,
 			proof,
 			3,
-			transcript,
+			fsTranscript,
 			sum,
 			r_mpi_xy,
 			sp,
@@ -132,7 +132,7 @@ func SumcheckLayerVerify(
 		vx_claim,
 		EvalAdd(api, layer.Add, sp),
 	))
-	transcript.AppendF(vx_claim)
+	fsTranscript.AppendF(vx_claim)
 
 	var vy_claim frontend.Variable = nil
 	if layer.StructureInfo.MaxDegreeOne {
@@ -144,7 +144,7 @@ func SumcheckLayerVerify(
 				api,
 				proof,
 				2,
-				transcript,
+				fsTranscript,
 				sum,
 				ry,
 				sp,
@@ -153,7 +153,7 @@ func SumcheckLayerVerify(
 		SetRY(api, ry, sp)
 
 		vy_claim = proof.Next()
-		transcript.AppendF(vy_claim)
+		fsTranscript.AppendF(vy_claim)
 		api.AssertIsEqual(sum, api.Mul(
 			vx_claim,
 			vy_claim,
@@ -171,7 +171,7 @@ func GKRVerify(
 	claimed_v frontend.Variable,
 	simd_size uint,
 	mpi_size uint,
-	transcript *transcript.MiMCTranscript,
+	transcript transcript.Transcript,
 	proof *circuit.Proof,
 ) (
 	[]frontend.Variable,

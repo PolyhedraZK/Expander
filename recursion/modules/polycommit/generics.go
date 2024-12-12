@@ -37,7 +37,7 @@ func NewCommitment(
 	fieldEnum fields.ECCFieldEnum,
 	circuitInputSize, mpiSize uint,
 	proof *circuit.Proof,
-	transcript *transcript.MiMCTranscript,
+	transcript transcript.Transcript,
 ) (comm PolynomialCommitment, err error) {
 	switch schemeEnum {
 	case RawCommitmentScheme:
