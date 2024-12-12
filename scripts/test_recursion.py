@@ -140,16 +140,18 @@ if __name__ == "__main__":
     proof_path = gkr_prove(PROOF_CONFIG, MPI_CONFIG)
     vanilla_gkr_verify_check(PROOF_CONFIG, MPI_CONFIG)
 
-    # FIXME(HS): construction field - working on compilation process,
-    # need to work on MPI and recursive verifier on proof deserialization
-    # sys.exit(0)
+    os.chdir("./recursion")
+    bn254_gkr_to_gnark_command = ' '.join(f'''
+    go run main.go
+    -circuit=../{PROOF_CONFIG.circuit}
+    -witness=../{PROOF_CONFIG.witness}
+    -gkr_proof=../{proof_path}
+    -recursive_proof=../{PROOF_CONFIG.recursive_proof}
+    -mpi_size={MPI_CONFIG.cpus()}
+    '''.strip().split())
 
-    # TODO fix golang recursive verifier and use this chunk of code
-    subprocess.run(
-        f'''
-        cd recursion
-        go run main.go -circuit={"../" + PROOF_CONFIG.circuit} -witness={"../" + PROOF_CONFIG.witness} -gkr_proof={"../" + proof_path} -recursive_proof={"../" + PROOF_CONFIG.recursive_proof} -mpi_size={len(MPI_CONFIG.cpu_ids)}
-        cd ..
-        ''',
-        shell=True,
-    )
+    print(bn254_gkr_to_gnark_command)
+    if subprocess.run(bn254_gkr_to_gnark_command, shell=True).returncode != 0:
+        raise Exception("recursion proof is not proving correctly")
+
+    os.chdir("..")
