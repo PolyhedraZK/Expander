@@ -296,6 +296,7 @@ func Verify(
 	log.Println("#Hashes for gkr challenge: ", transcript.GetCount())
 	transcript.ResetCount()
 
+	// TODO(HS) remove this after I work on M31?
 	if len(r_simd) > 0 {
 		panic("Simd not supported yet.")
 	}

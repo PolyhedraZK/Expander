@@ -135,7 +135,11 @@ def gkr_prove(proof_config: ProofConfig, mpi_config: MPIConfig) -> str:
     return proof_file
 
 
-def vanilla_gkr_verify_check(proof_config: ProofConfig, proof_path: str, mpi_config: MPIConfig):
+def vanilla_gkr_verify_check(
+        proof_config: ProofConfig,
+        proof_path: str,
+        mpi_config: MPIConfig
+):
     vanilla_verify_comand: str = \
         f"./target/release/expander-exec verify \
         {proof_config.circuit} {proof_config.witness} {proof_path} {mpi_config.cpus()}"
@@ -148,13 +152,16 @@ def vanilla_gkr_verify_check(proof_config: ProofConfig, proof_path: str, mpi_con
     print("gkr vanilla verify done.")
 
 
-def test_bn254_gkr_to_groth16_recursion(proof_config: ProofConfig, mpi_config: MPIConfig):
+def test_bn254_gkr_to_groth16_recursion(
+        proof_config: ProofConfig,
+        mpi_config: MPIConfig
+):
     proof_path = gkr_prove(proof_config, mpi_config)
     vanilla_gkr_verify_check(proof_config, proof_path, mpi_config)
 
     @in_recursion_dir
     def test_bn254_gkr_to_groth16_recursion_payload():
-        bn254_gkr_to_gnark_command = ' '.join(f'''
+        bn254_gkr_to_gnark_cmd = ' '.join(f'''
         go run main.go
         -circuit=../{proof_config.circuit}
         -witness=../{proof_config.witness}
@@ -163,14 +170,17 @@ def test_bn254_gkr_to_groth16_recursion(proof_config: ProofConfig, mpi_config: M
         -mpi_size={mpi_config.cpus()}
         '''.strip().split())
 
-        print(bn254_gkr_to_gnark_command)
-        if subprocess.run(bn254_gkr_to_gnark_command, shell=True).returncode != 0:
+        print(bn254_gkr_to_gnark_cmd)
+        if subprocess.run(bn254_gkr_to_gnark_cmd, shell=True).returncode != 0:
             raise Exception("recursion proof is not proving correctly")
 
     test_bn254_gkr_to_groth16_recursion_payload()
 
 
-def test_m31_gkr_to_gkr_recursion(proof_config: ProofConfig, mpi_config: MPIConfig):
+def test_m31_gkr_to_gkr_recursion(
+        proof_config: ProofConfig,
+        mpi_config: MPIConfig
+):
     proof_path = gkr_prove(proof_config, mpi_config)
     vanilla_gkr_verify_check(proof_config, proof_path, mpi_config)
 
@@ -191,5 +201,11 @@ if __name__ == "__main__":
     expander_compile()
 
     # List of recursion test starts here
-    test_bn254_gkr_to_groth16_recursion(BN254_GKR_TO_GROTH16_RECURSION_PROOF_CONFIG, MPI_CONFIG)
-    test_m31_gkr_to_gkr_recursion(M31_GKR_TO_GKR_RECURSION_PROOF_CONFIG, MPI_CONFIG)
+    test_bn254_gkr_to_groth16_recursion(
+        BN254_GKR_TO_GROTH16_RECURSION_PROOF_CONFIG,
+        MPI_CONFIG
+    )
+    test_m31_gkr_to_gkr_recursion(
+        M31_GKR_TO_GKR_RECURSION_PROOF_CONFIG,
+        MPI_CONFIG
+    )
