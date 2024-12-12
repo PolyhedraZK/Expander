@@ -37,12 +37,12 @@ func NewCommitment(
 	fieldEnum fields.ECCFieldEnum,
 	circuitInputSize, mpiSize uint,
 	proof *circuit.Proof,
-	transcript transcript.Transcript,
+	fsTranscript transcript.Transcript,
 ) (comm PolynomialCommitment, err error) {
 	switch schemeEnum {
 	case RawCommitmentScheme:
 		comLen := circuitInputSize * mpiSize
-		comm, err = NewRawPolyCommitment(fieldEnum, comLen, proof, transcript)
+		comm, err = NewRawPolyCommitment(fieldEnum, comLen, proof, fsTranscript)
 	default:
 		err = fmt.Errorf("Unknown polynomial commitment scheme %d", schemeEnum)
 	}

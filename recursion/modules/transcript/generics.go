@@ -47,18 +47,17 @@ type FieldHasherTranscript struct {
 
 // NewTranscript is the enter point to construct a new instance of transcript,
 // that is decided by the field element tied to the transcript
-func NewTranscript(api frontend.API, fieldEnum fields.ECCFieldEnum) (Transcript, error) {
+func NewTranscript(api frontend.API, fieldEnum fields.ECCFieldEnum) (t Transcript, err error) {
 	switch fieldEnum {
 	case fields.ECCBN254:
-		return NewMiMCTranscript(api)
+		t, err = NewMiMCTranscript(api)
 	case fields.ECCM31:
-		// TODO(HS) finish Poseidon hash based transcript ...
-		fallthrough
+		t, err = NewPoseidonTranscript(api)
 	case fields.ECCGF2:
 		// TODO galois 2 transcript TBD
 		fallthrough
 	default:
-		return nil,
-			fmt.Errorf("unsupported transcript from field type %d", fieldEnum)
+		err = fmt.Errorf("unsupported transcript from field type %d", fieldEnum)
 	}
+	return
 }

@@ -171,7 +171,7 @@ func GKRVerify(
 	claimed_v frontend.Variable,
 	simd_size uint,
 	mpi_size uint,
-	transcript transcript.Transcript,
+	fsTranscript transcript.Transcript,
 	proof *circuit.Proof,
 ) (
 	[]frontend.Variable,
@@ -193,15 +193,15 @@ func GKRVerify(
 	var r_mpi = make([]frontend.Variable, 0)
 
 	for i := 0; i < int(circuit.Layers[len(circuit.Layers)-1].OutputLenLog); i++ {
-		rz0 = append(rz0, transcript.ChallengeF())
+		rz0 = append(rz0, fsTranscript.ChallengeF())
 	}
 
 	for i := 0; i < bits.TrailingZeros(simd_size); i++ {
-		r_simd = append(r_simd, transcript.ChallengeF())
+		r_simd = append(r_simd, fsTranscript.ChallengeF())
 	}
 
 	for i := 0; i < bits.TrailingZeros(mpi_size); i++ {
-		r_mpi = append(r_mpi, transcript.ChallengeF())
+		r_mpi = append(r_mpi, fsTranscript.ChallengeF())
 	}
 
 	var alpha frontend.Variable = nil
@@ -221,13 +221,13 @@ func GKRVerify(
 			claimed_v1,
 			alpha,
 			proof,
-			transcript,
+			fsTranscript,
 			sp,
 			i == n_layers-1,
 		)
 
 		if rz1 != nil && claimed_v1 != nil {
-			alpha = transcript.ChallengeF()
+			alpha = fsTranscript.ChallengeF()
 		} else {
 			alpha = nil
 		}
