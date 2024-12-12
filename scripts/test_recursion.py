@@ -9,9 +9,11 @@ import subprocess
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Final
+from typing import Any, Callable, Final
 
 
+# TODO will need to pass it into recursion circuit for field info,
+# now recursion circuit only supports bn254 gkr->groth16 recursion
 class RecursiveProofField(Enum):
     GF2 = "gf2ext128"
     M31 = "m31ext3"
@@ -62,13 +64,20 @@ class ProofConfig:
     recursive_proof: str
 
 
-PROOF_CONFIG: Final[ProofConfig] = ProofConfig(
+BN254_GKR_TO_GROTH16_RECURSION_PROOF_CONFIG: Final[ProofConfig] = ProofConfig(
     field=RecursiveProofField.FR,
     circuit="data/circuit_bn254.txt",
     witness="data/witness_bn254.txt",
-    # circuit="data/circuit_m31.txt",
-    # witness="data/witness_m31.txt",
-    gkr_proof_prefix="data/gkr_proof.txt",
+    gkr_proof_prefix="data/bn254_gkr_proof.txt",
+    recursive_proof="data/recursive_proof.txt"
+)
+
+
+M31_GKR_TO_GKR_RECURSION_PROOF_CONFIG: Final[ProofConfig] = ProofConfig(
+    field=RecursiveProofField.M31,
+    circuit="data/circuit_m31.txt",
+    witness="data/witness_m31.txt",
+    gkr_proof_prefix="data/m31_gkr_proof.txt",
     recursive_proof="data/recursive_proof.txt"
 )
 
@@ -77,6 +86,15 @@ def change_working_dir():
     cwd = os.getcwd()
     if "Expander/scripts" in cwd:
         os.chdir("..")
+
+
+def in_recursion_dir(closure: Callable[..., Any]):
+    def wrapped():
+        os.chdir("./recursion")
+        closure()
+        os.chdir("..")
+
+    return wrapped
 
 
 def gkr_proof_file(prefix: str, cpu_ids: list[int]) -> str:
@@ -117,7 +135,7 @@ def gkr_prove(proof_config: ProofConfig, mpi_config: MPIConfig) -> str:
     return proof_file
 
 
-def vanilla_gkr_verify_check(proof_config: ProofConfig, mpi_config: MPIConfig):
+def vanilla_gkr_verify_check(proof_config: ProofConfig, proof_path: str, mpi_config: MPIConfig):
     vanilla_verify_comand: str = \
         f"./target/release/expander-exec verify \
         {proof_config.circuit} {proof_config.witness} {proof_path} {mpi_config.cpus()}"
@@ -130,6 +148,40 @@ def vanilla_gkr_verify_check(proof_config: ProofConfig, mpi_config: MPIConfig):
     print("gkr vanilla verify done.")
 
 
+def test_bn254_gkr_to_groth16_recursion(proof_config: ProofConfig, mpi_config: MPIConfig):
+    proof_path = gkr_prove(proof_config, mpi_config)
+    vanilla_gkr_verify_check(proof_config, proof_path, mpi_config)
+
+    @in_recursion_dir
+    def test_bn254_gkr_to_groth16_recursion_payload():
+        bn254_gkr_to_gnark_command = ' '.join(f'''
+        go run main.go
+        -circuit=../{proof_config.circuit}
+        -witness=../{proof_config.witness}
+        -gkr_proof=../{proof_path}
+        -recursive_proof=../{proof_config.recursive_proof}
+        -mpi_size={mpi_config.cpus()}
+        '''.strip().split())
+
+        print(bn254_gkr_to_gnark_command)
+        if subprocess.run(bn254_gkr_to_gnark_command, shell=True).returncode != 0:
+            raise Exception("recursion proof is not proving correctly")
+
+    test_bn254_gkr_to_groth16_recursion_payload()
+
+
+def test_m31_gkr_to_gkr_recursion(proof_config: ProofConfig, mpi_config: MPIConfig):
+    proof_path = gkr_prove(proof_config, mpi_config)
+    vanilla_gkr_verify_check(proof_config, proof_path, mpi_config)
+
+    @in_recursion_dir
+    def test_m31_gkr_to_gkr_recursion_payload():
+        # TODO m31 dev TBD
+        pass
+
+    test_m31_gkr_to_gkr_recursion_payload()
+
+
 if __name__ == "__main__":
     # minor - check golang if exists on the machine
     if subprocess.run("go env", shell=True).returncode != 0:
@@ -137,21 +189,7 @@ if __name__ == "__main__":
 
     change_working_dir()
     expander_compile()
-    proof_path = gkr_prove(PROOF_CONFIG, MPI_CONFIG)
-    vanilla_gkr_verify_check(PROOF_CONFIG, MPI_CONFIG)
 
-    os.chdir("./recursion")
-    bn254_gkr_to_gnark_command = ' '.join(f'''
-    go run main.go
-    -circuit=../{PROOF_CONFIG.circuit}
-    -witness=../{PROOF_CONFIG.witness}
-    -gkr_proof=../{proof_path}
-    -recursive_proof=../{PROOF_CONFIG.recursive_proof}
-    -mpi_size={MPI_CONFIG.cpus()}
-    '''.strip().split())
-
-    print(bn254_gkr_to_gnark_command)
-    if subprocess.run(bn254_gkr_to_gnark_command, shell=True).returncode != 0:
-        raise Exception("recursion proof is not proving correctly")
-
-    os.chdir("..")
+    # List of recursion test starts here
+    test_bn254_gkr_to_groth16_recursion(BN254_GKR_TO_GROTH16_RECURSION_PROOF_CONFIG, MPI_CONFIG)
+    test_m31_gkr_to_gkr_recursion(M31_GKR_TO_GKR_RECURSION_PROOF_CONFIG, MPI_CONFIG)
