@@ -1813,6 +1813,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "poseidon"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "criterion",
+ "mersenne31",
+ "rand",
+]
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -14,9 +14,10 @@ members = [
     "config/config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
     "gkr",
     "poly_commit",
+    "poseidon",
     "sumcheck",
     "transcript",
-    "tree"
+    "tree",
 ]
 resolver = "2"
 
