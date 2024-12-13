@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use arith::Field;
+use arith::{ExtensionField, Field};
 
 pub mod sha2_256;
 pub use sha2_256::*;
@@ -29,10 +29,12 @@ pub trait FiatShamirBytesHash: Clone + Debug {
     fn hash_inplace(buffer: &mut [u8]);
 }
 
-pub trait FiatShamirFieldHash<F: Field>: Clone + Debug {
+pub trait FiatShamirFieldHash<F: Field, ExtF: ExtensionField<BaseField = F>>:
+    Clone + Debug
+{
     /// Create a new hash instance.
     fn new() -> Self;
 
     /// hash a vector of field element and return the hash result
-    fn hash(&self, input: &[F]) -> F;
+    fn hash(&self, input: &[ExtF]) -> ExtF;
 }

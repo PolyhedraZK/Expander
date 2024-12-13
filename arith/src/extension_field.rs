@@ -27,4 +27,6 @@ pub trait ExtensionField: Mul<Self::BaseField> + From<Self::BaseField> + Field {
 
     /// Multiply the extension field element by x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
     fn mul_by_x(&self) -> Self;
+
+    // TODO(HS) to limbs
 }

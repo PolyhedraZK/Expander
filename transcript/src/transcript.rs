@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use arith::Field;
+use arith::{ExtensionField, Field};
 
 use crate::{
     fiat_shamir_hash::{FiatShamirBytesHash, FiatShamirFieldHash},
@@ -176,36 +176,42 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FieldHashTranscript<F: Field, H: FiatShamirFieldHash<F>> {
+pub struct FieldHashTranscript<
+    F: Field,
+    ExtF: ExtensionField<BaseField = F>,
+    H: FiatShamirFieldHash<F, ExtF>,
+> {
     /// Internal hasher, it's a little costly to create a new hasher
     pub hasher: H,
 
     /// The digest bytes.
-    pub digest: F,
+    pub digest: ExtF,
 
     /// The proof bytes
     pub proof: Proof,
 
     /// The data to be hashed
-    pub data_pool: Vec<F>,
+    pub data_pool: Vec<ExtF>,
 
     /// Proof locked or not
     pub proof_locked: bool,
 }
 
-impl<F: Field, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<F, H> {
+impl<F: Field, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash<F, ExtF>>
+    Transcript<ExtF> for FieldHashTranscript<F, ExtF, H>
+{
     #[inline(always)]
     fn new() -> Self {
         Self {
             hasher: H::new(),
-            digest: F::default(),
+            digest: ExtF::default(),
             proof: Proof::default(),
             data_pool: vec![],
             proof_locked: false,
         }
     }
 
-    fn append_field_element(&mut self, f: &F) {
+    fn append_field_element(&mut self, f: &ExtF) {
         let mut buffer = vec![];
         f.serialize_into(&mut buffer).unwrap();
         if !self.proof_locked {
@@ -221,7 +227,7 @@ impl<F: Field, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<
         let buffer_size = buffer.len();
         let mut cur = 0;
         while cur + 32 <= buffer_size {
-            self.data_pool.push(F::from_uniform_bytes(
+            self.data_pool.push(ExtF::from_uniform_bytes(
                 buffer[cur..cur + 32].try_into().unwrap(),
             ));
             cur += 32
@@ -230,12 +236,13 @@ impl<F: Field, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<
         if cur < buffer_size {
             let mut buffer_last = buffer[cur..].to_vec();
             buffer_last.resize(32, 0);
-            self.data_pool
-                .push(F::from_uniform_bytes(buffer_last[..].try_into().unwrap()));
+            self.data_pool.push(ExtF::from_uniform_bytes(
+                buffer_last[..].try_into().unwrap(),
+            ));
         }
     }
 
-    fn generate_challenge_field_element(&mut self) -> F {
+    fn generate_challenge_field_element(&mut self) -> ExtF {
         self.hash_to_digest();
         self.digest
     }
@@ -265,7 +272,7 @@ impl<F: Field, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<
 
     fn set_state(&mut self, state: &[u8]) {
         self.data_pool.clear();
-        self.digest = F::deserialize_from(state).unwrap();
+        self.digest = ExtF::deserialize_from(state).unwrap();
     }
 
     fn lock_proof(&mut self) {
@@ -279,7 +286,9 @@ impl<F: Field, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<
     }
 }
 
-impl<F: Field, H: FiatShamirFieldHash<F>> FieldHashTranscript<F, H> {
+impl<F: Field, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash<F, ExtF>>
+    FieldHashTranscript<F, ExtF, H>
+{
     pub fn hash_to_digest(&mut self) {
         if !self.data_pool.is_empty() {
             self.digest = self.hasher.hash(&self.data_pool);
