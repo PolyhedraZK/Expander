@@ -1,5 +1,7 @@
-mod m31;
-pub use m31::{PoseidonM31Params, PoseidonM31State};
+mod poseidon;
+pub use poseidon::{PoseidonParams, PoseidonState};
+
+mod m31x16;
 
 #[cfg(test)]
 mod tests;

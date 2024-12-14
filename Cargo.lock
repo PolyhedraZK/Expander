@@ -1821,6 +1821,7 @@ dependencies = [
  "criterion",
  "mersenne31",
  "rand",
+ "tiny-keccak",
 ]
 
 [[package]]
@@ -2361,6 +2362,7 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "mpi_config",
+ "poseidon",
  "sha2",
  "tiny-keccak",
 ]

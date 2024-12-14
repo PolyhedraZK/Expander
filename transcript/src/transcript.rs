@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use arith::{ExtensionField, Field};
+use arith::{ExtensionField, Field, FieldForECC};
 
 use crate::{
     fiat_shamir_hash::{FiatShamirBytesHash, FiatShamirFieldHash},
@@ -177,7 +177,7 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FieldHashTranscript<
-    F: Field,
+    F: FieldForECC,
     ExtF: ExtensionField<BaseField = F>,
     H: FiatShamirFieldHash<F, ExtF>,
 > {
@@ -197,7 +197,7 @@ pub struct FieldHashTranscript<
     pub proof_locked: bool,
 }
 
-impl<F: Field, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash<F, ExtF>>
+impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash<F, ExtF>>
     Transcript<ExtF> for FieldHashTranscript<F, ExtF, H>
 {
     #[inline(always)]
@@ -286,7 +286,7 @@ impl<F: Field, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash<F, Ex
     }
 }
 
-impl<F: Field, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash<F, ExtF>>
+impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash<F, ExtF>>
     FieldHashTranscript<F, ExtF, H>
 {
     pub fn hash_to_digest(&mut self) {

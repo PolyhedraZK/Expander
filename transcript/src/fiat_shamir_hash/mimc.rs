@@ -1,4 +1,4 @@
-use arith::{ExtensionField, Field};
+use arith::{ExtensionField, Field, FieldForECC};
 
 use tiny_keccak::{Hasher, Keccak};
 
@@ -15,7 +15,7 @@ pub struct MIMCHasher<F: Field, ExtF: ExtensionField<BaseField = F>> {
     constants: MIMCConstants<ExtF>,
 }
 
-impl<F: Field, ExtF: ExtensionField<BaseField = F>> FiatShamirFieldHash<F, ExtF>
+impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>> FiatShamirFieldHash<F, ExtF>
     for MIMCHasher<F, ExtF>
 {
     fn new() -> Self {
@@ -54,16 +54,6 @@ impl<F: Field, ExtF: ExtensionField<BaseField = F>> MIMCHasher<F, ExtF> {
 
 const SEED: &str = "seed";
 pub fn generate_mimc_constants<F: Field>() -> MIMCConstants<F> {
-    let mut keccak = Keccak::v256();
-    let mut h = [0u8; 32];
-    keccak.update(SEED.as_bytes());
-    keccak.finalize(&mut h);
-    let mut keccak = Keccak::v256();
-    let mut h_iv = [0u8; 32];
-    let seed_iv = format!("{}{}", SEED, "_iv");
-    keccak.update(seed_iv.as_bytes());
-    keccak.finalize(&mut h_iv);
-
     let n_rounds: i64 = 110;
     let cts = get_constants(SEED, n_rounds);
     MIMCConstants::<F> { cts, n_rounds }

@@ -178,7 +178,7 @@ impl<C: GKRFieldConfig> FromEccSerde for RecursiveCircuit<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let version_num = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
         assert_eq!(version_num, VERSION_NUM);
-        let expected_mod = <C::CircuitField as FieldForECC>::modulus();
+        let expected_mod = <C::CircuitField as FieldForECC>::MODULUS;
         let mut field_mod = [0u8; 32];
         reader.read_exact(&mut field_mod).unwrap();
         let read_mod = ethnum::U256::from_le_bytes(field_mod);

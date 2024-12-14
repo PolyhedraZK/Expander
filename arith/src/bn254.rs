@@ -111,11 +111,10 @@ impl Field for Fr {
 }
 
 impl FieldForECC for Fr {
-    fn modulus() -> ethnum::U256 {
-        MODULUS
-    }
+    const MODULUS: ethnum::U256 = MODULUS;
+
     fn from_u256(x: ethnum::U256) -> Self {
-        Fr::from_bytes(&(x % Fr::modulus()).to_le_bytes()).unwrap()
+        Fr::from_bytes(&(x % MODULUS).to_le_bytes()).unwrap()
     }
     fn to_u256(&self) -> ethnum::U256 {
         ethnum::U256::from_le_bytes(self.to_bytes())
