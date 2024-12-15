@@ -175,6 +175,8 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
     }
 }
 
+// TODO(HS) abstraction should be more like F, ExtF, HashState, H
+// where H is FiatShamirFieldHash<F, HashState> and HashState can extract out ExtF
 #[derive(Clone, Debug, PartialEq)]
 pub struct FieldHashTranscript<
     F: FieldForECC,
@@ -184,12 +186,14 @@ pub struct FieldHashTranscript<
     /// Internal hasher, it's a little costly to create a new hasher
     pub hasher: H,
 
+    // TODO(HS) maybe unpack state here?
     /// The digest bytes.
     pub digest: ExtF,
 
     /// The proof bytes
     pub proof: Proof,
 
+    // TODO(HS) maybe unpack state here?
     /// The data to be hashed
     pub data_pool: Vec<ExtF>,
 

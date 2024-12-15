@@ -29,6 +29,7 @@ pub trait FiatShamirBytesHash: Clone + Debug {
     fn hash_inplace(buffer: &mut [u8]);
 }
 
+// TODO(HS) should hash to some hash state rather than extf
 pub trait FiatShamirFieldHash<F: FieldForECC, ExtF: ExtensionField<BaseField = F>>:
     Clone + Debug
 {

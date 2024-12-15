@@ -189,4 +189,18 @@ impl ExtensionField for Fr {
     fn mul_by_x(&self) -> Self {
         unimplemented!("mul_by_x for Fr doesn't make sense")
     }
+
+    /// Construct a new instance of extension field from coefficients
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        if limbs.len() < Self::DEGREE {
+            Self::zero()
+        } else {
+            limbs[0]
+        }
+    }
+
+    /// Extract polynomial field coefficients from the extension field instance
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        vec![*self]
+    }
 }
