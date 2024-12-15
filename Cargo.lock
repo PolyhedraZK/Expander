@@ -1051,6 +1051,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a9bfc1af68b1726ea47d3d5109de126281def866b33970e10fbab11b5dafab3"
 
 [[package]]
+name = "hasher"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "criterion",
+ "mersenne31",
+ "rand",
+ "sha2",
+ "tiny-keccak",
+]
+
+[[package]]
 name = "headers"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1813,18 +1826,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "poseidon"
-version = "0.1.0"
-dependencies = [
- "arith",
- "ark-std",
- "criterion",
- "mersenne31",
- "rand",
- "tiny-keccak",
-]
-
-[[package]]
 name = "ppv-lite86"
 version = "0.2.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2362,7 +2363,6 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "mpi_config",
- "poseidon",
  "sha2",
  "tiny-keccak",
 ]

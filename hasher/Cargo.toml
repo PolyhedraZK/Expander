@@ -1,5 +1,5 @@
 [package]
-name = "poseidon"
+name = "hasher"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,6 +9,8 @@ mersenne31 = { path = "../arith/mersenne31" }
 
 ark-std.workspace = true
 rand.workspace = true
+
+sha2.workspace = true
 tiny-keccak.workspace = true
 
 [dev-dependencies]

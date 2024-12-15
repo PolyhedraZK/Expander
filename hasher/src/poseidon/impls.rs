@@ -4,33 +4,15 @@ use std::{
 };
 
 use arith::{Field, FieldForECC};
-use mersenne31::{M31x16, M31};
+use mersenne31::M31;
 use tiny_keccak::{Hasher, Keccak};
 
-const fn compile_time_gcd(mut a: usize, mut b: usize) -> usize {
-    while b != 0 {
-        let temp = b;
-        b = a % b;
-        a = temp;
-    }
-    a
-}
+use crate::FieldHasherState;
 
-const fn compile_time_alpha<F: FieldForECC>() -> usize {
-    let modulus = F::MODULUS.as_usize();
+use super::{compile_time_alpha, PoseidonM31x16Ext3};
 
-    let mut alpha: usize = 5;
-    while compile_time_gcd(alpha, modulus) != 1 {
-        alpha += 2
-    }
-    alpha
-}
-
-pub trait PoseidonState<F: FieldForECC>:
-    Sized
-    + Clone
-    + Copy
-    + Default
+pub trait PoseidonState<F: FieldForECC, OF: Field>:
+    FieldHasherState<InputF = F, Output = OF>
     + Add<Self, Output = Self>
     + AddAssign<Self>
     + Mul<Self, Output = Self>
@@ -38,15 +20,11 @@ pub trait PoseidonState<F: FieldForECC>:
 {
     const SBOX_EXP: usize = compile_time_alpha::<F>();
 
-    const STATE_WIDTH: usize;
-
     fn apply_mds_matrix(&mut self, mds_matrix: &[Self]);
 
     fn full_round_sbox(&mut self);
 
     fn partial_round_sbox(&mut self);
-
-    fn from_elems(elems: &[F]) -> Self;
 
     fn mds_matrix() -> Vec<Self>;
 
@@ -54,10 +32,11 @@ pub trait PoseidonState<F: FieldForECC>:
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct PoseidonParams<BaseF, State>
+pub struct PoseidonParams<BaseF, OutputF, State>
 where
     BaseF: FieldForECC,
-    State: PoseidonState<BaseF>,
+    OutputF: Field,
+    State: PoseidonState<BaseF, OutputF>,
 {
     pub half_full_rounds: usize,
     pub partial_rounds: usize,
@@ -66,11 +45,14 @@ where
     pub round_constants: Vec<State>,
 
     _phantom_base_field: PhantomData<BaseF>,
+    _phantom_output_field: PhantomData<OutputF>,
 }
 
 const POSEIDON_SEED: &str = "poseidon_seed";
 
-pub fn get_constants<F: FieldForECC, State: PoseidonState<F>>(round_num: usize) -> Vec<State> {
+fn get_constants<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>>(
+    round_num: usize,
+) -> Vec<State> {
     let seed = format!("{POSEIDON_SEED}_{}_{}", F::NAME, State::STATE_WIDTH);
 
     let mut keccak = Keccak::v256();
@@ -93,7 +75,7 @@ pub fn get_constants<F: FieldForECC, State: PoseidonState<F>>(round_num: usize) 
         .collect()
 }
 
-impl<F: FieldForECC, State: PoseidonState<F>> PoseidonParams<F, State> {
+impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>> PoseidonParams<F, OF, State> {
     pub(crate) fn full_parameterized_new(half_full_rounds: usize, partial_rounds: usize) -> Self {
         let total_rounds = 2 * half_full_rounds + partial_rounds;
 
@@ -102,15 +84,16 @@ impl<F: FieldForECC, State: PoseidonState<F>> PoseidonParams<F, State> {
             partial_rounds,
 
             mds_matrix: State::mds_matrix(),
-            round_constants: get_constants::<F, State>(total_rounds),
+            round_constants: get_constants::<F, OF, State>(total_rounds),
 
             _phantom_base_field: PhantomData,
+            _phantom_output_field: PhantomData,
         }
     }
 
     pub fn new() -> Self {
         match (F::NAME, State::STATE_WIDTH) {
-            (M31::NAME, M31x16::STATE_WIDTH) => Self::full_parameterized_new(4, 22),
+            (M31::NAME, PoseidonM31x16Ext3::STATE_WIDTH) => Self::full_parameterized_new(4, 22),
             _ => unimplemented!("unimplemented as types for Poseidon instantiation unsupported"),
         }
     }
