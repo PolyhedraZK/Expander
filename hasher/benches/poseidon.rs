@@ -1,6 +1,6 @@
 use arith::Field;
 use criterion::{criterion_group, criterion_main, Criterion};
-use hasher::{FieldHasherState, PoseidonM31x16Ext3, PoseidonParams};
+use hasher::{FieldHasher, FieldHasherState, PoseidonM31x16Ext3, PoseidonParams};
 use mersenne31::{M31Ext3, M31};
 
 const REPEAT: usize = 1000;

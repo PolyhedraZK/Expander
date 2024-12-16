@@ -9,6 +9,7 @@ mersenne31 = { path = "../arith/mersenne31" }
 
 ark-std.workspace = true
 rand.workspace = true
+halo2curves.workspace = true
 
 sha2.workspace = true
 tiny-keccak.workspace = true

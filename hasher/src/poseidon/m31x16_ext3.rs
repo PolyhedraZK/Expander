@@ -17,16 +17,23 @@ pub struct PoseidonM31x16Ext3(M31x16);
 impl FieldHasherState for PoseidonM31x16Ext3 {
     type InputF = M31;
 
-    type Output = M31Ext3;
+    type OutputF = M31Ext3;
 
     const STATE_WIDTH: usize = 16;
 
     fn from_elems(elems: &[Self::InputF]) -> Self {
-        Self(M31x16::pack(elems))
+        assert!(elems.len() <= Self::STATE_WIDTH);
+        let mut local_copy = elems.to_vec();
+        local_copy.resize(Self::STATE_WIDTH, Self::InputF::ZERO);
+        Self(M31x16::pack(&local_copy))
     }
 
-    fn digest(&self) -> Self::Output {
-        Self::Output::from_limbs(&self.0.unpack())
+    fn to_elems(&self) -> Vec<Self::InputF> {
+        self.0.unpack()
+    }
+
+    fn digest(&self) -> Self::OutputF {
+        Self::OutputF::from_limbs(&self.0.unpack())
     }
 }
 
@@ -44,6 +51,12 @@ impl AddAssign for PoseidonM31x16Ext3 {
     }
 }
 
+impl<'a> AddAssign<&'a Self> for PoseidonM31x16Ext3 {
+    fn add_assign(&mut self, rhs: &'a Self) {
+        self.0 += rhs.0
+    }
+}
+
 impl Mul for PoseidonM31x16Ext3 {
     type Output = PoseidonM31x16Ext3;
 
@@ -54,6 +67,12 @@ impl Mul for PoseidonM31x16Ext3 {
 
 impl MulAssign for PoseidonM31x16Ext3 {
     fn mul_assign(&mut self, rhs: Self) {
+        self.0 *= rhs.0
+    }
+}
+
+impl<'a> MulAssign<&'a Self> for PoseidonM31x16Ext3 {
+    fn mul_assign(&mut self, rhs: &'a Self) {
         self.0 *= rhs.0
     }
 }
