@@ -8,9 +8,6 @@ use mersenne31::{M31Ext3, M31x16, M31};
 
 use crate::{FieldHasherState, PoseidonState};
 
-const MATRIX_CIRC_MDS_16_SML_ROW: [u32; 16] =
-    [1, 1, 51, 1, 11, 17, 2, 1, 101, 63, 15, 2, 67, 22, 13, 3];
-
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct PoseidonM31x16Ext3(M31x16);
 
@@ -20,6 +17,8 @@ impl FieldHasherState for PoseidonM31x16Ext3 {
     type OutputF = M31Ext3;
 
     const STATE_WIDTH: usize = 16;
+
+    const NAME: &'static str = "Poseidon M31x16 Field Hasher State";
 
     fn from_elems(elems: &[Self::InputF]) -> Self {
         assert!(elems.len() <= Self::STATE_WIDTH);
@@ -98,27 +97,18 @@ impl PoseidonState<M31, M31Ext3> for PoseidonM31x16Ext3 {
     }
 
     fn full_round_sbox(&mut self) {
-        self.0 = self.0.exp(Self::SBOX_EXP as u128);
+        self.0 = self.0.exp(Self::SBOX_POW as u128);
     }
 
     fn partial_round_sbox(&mut self) {
         let mut buf = unsafe { transmute::<M31x16, [M31; Self::STATE_WIDTH]>(self.0) };
-        buf[0] = buf[0].exp(Self::SBOX_EXP as u128);
+        buf[0] = buf[0].exp(Self::SBOX_POW as u128);
         self.0 = unsafe { transmute::<[M31; Self::STATE_WIDTH], M31x16>(buf) };
     }
 
-    fn mds_matrix() -> Vec<Self> {
-        let doubled_buffer: Vec<_> = [
-            MATRIX_CIRC_MDS_16_SML_ROW.as_slice(),
-            MATRIX_CIRC_MDS_16_SML_ROW.as_slice(),
-        ]
-        .concat()
-        .iter()
-        .map(|t| From::from(*t))
-        .collect();
-
-        (0..Self::STATE_WIDTH)
-            .map(|i| Self::from_elems(&doubled_buffer[i..i + Self::STATE_WIDTH]))
-            .collect()
+    fn indexed_digest(&self, index: usize) -> M31Ext3 {
+        M31Ext3::from_limbs(
+            &self.to_elems()[index * Self::OUTPUT_ELEM_DEG..(index + 1) * Self::OUTPUT_ELEM_DEG],
+        )
     }
 }

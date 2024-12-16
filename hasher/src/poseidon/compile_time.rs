@@ -1,6 +1,6 @@
 use arith::FieldForECC;
 
-pub const fn compile_time_gcd(mut a: usize, mut b: usize) -> usize {
+pub(crate) const fn compile_time_gcd(mut a: usize, mut b: usize) -> usize {
     while b != 0 {
         let temp = b;
         b = a % b;
@@ -9,7 +9,7 @@ pub const fn compile_time_gcd(mut a: usize, mut b: usize) -> usize {
     a
 }
 
-pub const fn compile_time_alpha<F: FieldForECC>() -> usize {
+pub(crate) const fn compile_time_alpha<F: FieldForECC>() -> usize {
     let modulus = F::MODULUS.as_usize();
 
     let mut alpha: usize = 5;

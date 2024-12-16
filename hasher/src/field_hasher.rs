@@ -19,6 +19,9 @@ pub trait FieldHasherState: Debug + Sized + Default + Clone + Copy + PartialEq {
     /// construct the field hasher state.
     const STATE_WIDTH: usize;
 
+    /// NAME, say what should we call this particular FieldHasherState instantiation.
+    const NAME: &'static str;
+
     /// OUTPUT_ELEM_DEG assumes output element is an extension field of input element,
     /// then this constant computes over the ratio of output field element size over the field size
     /// of the input field ones.
@@ -75,7 +78,7 @@ pub trait FieldHasher<HasherState: FieldHasherState>: Default + Debug + Clone {
 ///
 /// The behavior is mainly absorb inputs and squeeze an output field element.
 /// The behavior relies on the underlying HasherState and the Hasher.
-pub trait FieldHasherSponge<HasherState: FieldHasherState, Hasher: FieldHasher<HasherState>>:
+pub trait FieldHasherSponge<State: FieldHasherState, Hasher: FieldHasher<State>>:
     Default + Debug + Clone
 {
     /// NAME, what family of instances of sponge hash function should be called.
@@ -88,8 +91,8 @@ pub trait FieldHasherSponge<HasherState: FieldHasherState, Hasher: FieldHasher<H
     ///
     /// NOTE: the expected behavior is, if there are at most STATE_WIDTH elements not absorbed into
     /// a digests, but they should be absorbed into a hash digest by the end of squeeze.
-    fn update(&mut self, inputs: &[HasherState::InputF]);
+    fn update(&mut self, inputs: &[State::InputF]);
 
     /// squeeze forces to absorb all current hasher state and outputs a digest over OutputF.
-    fn squeeze(&mut self) -> HasherState::OutputF;
+    fn squeeze(&mut self) -> State::OutputF;
 }

@@ -7,9 +7,9 @@ use arith::{Field, FieldForECC};
 use mersenne31::M31;
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::{FieldHasher, FieldHasherSponge, FieldHasherState};
+use crate::{FieldHasher, FieldHasherSponge, FieldHasherState, PoseidonM31x16Ext3};
 
-use super::{compile_time_alpha, PoseidonM31x16Ext3};
+use super::compile_time::compile_time_alpha;
 
 pub trait PoseidonState<F: FieldForECC, OF: Field>:
     FieldHasherState<InputF = F, OutputF = OF>
@@ -20,26 +20,31 @@ pub trait PoseidonState<F: FieldForECC, OF: Field>:
     + MulAssign<Self>
     + for<'a> MulAssign<&'a Self>
 {
-    const SBOX_EXP: usize = compile_time_alpha::<F>();
+    /// SBOX_POW is the lowest exponential pow for poseidon sbox.
+    const SBOX_POW: usize = compile_time_alpha::<F>();
 
+    /// CAPACITY is the nubmer of output field elements (field here stands for InputF).
+    ///
+    /// We ensure (roughly) the collision resilience is 128 bits by FIELD_SIZE, i.e.,
+    /// how many bits we need to store a field element.
     const CAPACITY: usize = 128 / F::FIELD_SIZE * 2;
 
+    /// RATE is the number of input elements in a round of sponge absorbing.
+    /// The invariant here is RATE + CAPACITY = STATE_WIDTH
     const RATE: usize = Self::STATE_WIDTH - Self::CAPACITY;
 
+    /// apply_mds_matrix applies MDS matrix back to the Poseidon state.
     fn apply_mds_matrix(&mut self, mds_matrix: &[Self]);
 
+    /// full_round_sbox applies x -> x^(sbox_exp) to all elements in the state.
     fn full_round_sbox(&mut self);
 
+    /// partial_round_sbox applies x -> x^(sbox_exp) to the first element in the state.
     fn partial_round_sbox(&mut self);
 
-    // NOTE(HS) this is not quite a good place for MDS matrix generation here
-    // as it should be something like passing in state width and field, we generate
-    // a viable MDS instance...   but I am just tired of writing stuffs at this point,
-    // and the method appears here just like me existing in this place without proper reason.
-    // forgive me for me being nihilstic being myself here.
-    // btw this method is only called in parameter generation, and will not be invoked in the
-    // real deal of proving/hashing process, so yall chill.
-    fn mds_matrix() -> Vec<Self>;
+    /// index_digest index into the state and take a range of elements from the state,
+    /// fit into the output state by the ratio of output field size / input field size.
+    fn indexed_digest(&self, index: usize) -> OF;
 }
 
 #[derive(Debug, Clone, Default)]
@@ -86,6 +91,33 @@ fn get_constants<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>>(
         .collect()
 }
 
+const MATRIX_CIRC_MDS_8_SML_ROW: [u32; 8] = [7, 1, 3, 8, 8, 3, 4, 9];
+
+const MATRIX_CIRC_MDS_12_SML_ROW: [u32; 12] = [1, 1, 2, 1, 8, 9, 10, 7, 5, 9, 4, 10];
+
+const MATRIX_CIRC_MDS_16_SML_ROW: [u32; 16] =
+    [1, 1, 51, 1, 11, 17, 2, 1, 101, 63, 15, 2, 67, 22, 13, 3];
+
+fn get_mds_matrix<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>>() -> Vec<State> {
+    let mds_first_row: &[u32] = match State::STATE_WIDTH {
+        8 => &MATRIX_CIRC_MDS_8_SML_ROW,
+        12 => &MATRIX_CIRC_MDS_12_SML_ROW,
+        16 => &MATRIX_CIRC_MDS_16_SML_ROW,
+        _ => unimplemented!("unsupported state width for MDS matrix"),
+    };
+
+    let buffer: Vec<_> = [mds_first_row, mds_first_row]
+        .concat()
+        .iter()
+        .cloned()
+        .map(From::from)
+        .collect();
+
+    (0..State::STATE_WIDTH)
+        .map(|i| State::from_elems(&buffer[i..i + State::STATE_WIDTH]))
+        .collect()
+}
+
 impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>> PoseidonParams<F, OF, State> {
     pub(crate) fn parameterized_new(half_full_rounds: usize, partial_rounds: usize) -> Self {
         let total_rounds = 2 * half_full_rounds + partial_rounds;
@@ -94,7 +126,7 @@ impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>> PoseidonParams<F, O
             half_full_rounds,
             partial_rounds,
 
-            mds_matrix: State::mds_matrix(),
+            mds_matrix: get_mds_matrix::<F, OF, State>(),
             round_constants: get_constants::<F, OF, State>(total_rounds),
 
             _phantom_base_field: PhantomData,
@@ -175,19 +207,18 @@ impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>>
         absorb_tbd.extend_from_slice(inputs);
         self.absorbing.clear();
 
-        for chunk in absorb_tbd.chunks(State::RATE) {
+        absorb_tbd.chunks(State::RATE).for_each(|chunk| {
             if chunk.len() < State::RATE {
                 self.absorbing = chunk.to_vec()
             } else {
-                let mut unpacked_msg =
-                    vec![<State as FieldHasherState>::InputF::ZERO; State::STATE_WIDTH];
+                let mut unpacked_msg = State::default().to_elems();
                 unpacked_msg[State::CAPACITY..].copy_from_slice(chunk);
                 let new_state = State::from_elems(&unpacked_msg);
 
                 self.absorbed += new_state;
                 self.params.permute(&mut self.absorbed);
             }
-        }
+        })
     }
 
     fn squeeze(&mut self) -> <State as FieldHasherState>::OutputF {
@@ -205,15 +236,8 @@ impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>>
 
         let next_output_index = self.output_index + State::OUTPUT_ELEM_DEG;
         if next_output_index <= State::CAPACITY {
-            let absorbed_unpacked = self.absorbed.to_elems();
-            let mut phony_unpacked = absorbed_unpacked[self.output_index..].to_vec();
-            phony_unpacked.resize(
-                State::STATE_WIDTH,
-                <State as FieldHasherState>::InputF::ZERO,
-            );
-            let phony_absorbed = State::from_elems(&phony_unpacked);
-            self.output_index = next_output_index;
-            phony_absorbed.digest()
+            self.absorbed
+                .indexed_digest(self.output_index / State::OUTPUT_ELEM_DEG)
         } else {
             self.output_index = 0;
             self.params.permute(&mut self.absorbed);

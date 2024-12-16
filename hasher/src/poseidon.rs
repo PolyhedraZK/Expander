@@ -1,5 +1,4 @@
 mod compile_time;
-pub use compile_time::{compile_time_alpha, compile_time_gcd};
 
 mod impls;
 pub use impls::{PoseidonParams, PoseidonState};
