@@ -222,7 +222,7 @@ impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>>
     }
 
     fn squeeze(&mut self) -> <State as FieldHasherState>::OutputF {
-        if self.absorbing.is_empty() {
+        if !self.absorbing.is_empty() {
             let mut tailing_elems =
                 vec![<State as FieldHasherState>::InputF::ZERO; State::STATE_WIDTH];
             tailing_elems[State::CAPACITY..State::CAPACITY + self.absorbing.len()]
@@ -232,16 +232,18 @@ impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>>
             self.absorbed += new_state;
             self.params.permute(&mut self.absorbed);
             self.output_index = 0;
+            self.absorbing.clear();
         }
 
-        let next_output_index = self.output_index + State::OUTPUT_ELEM_DEG;
-        if next_output_index <= State::CAPACITY {
-            self.absorbed
-                .indexed_digest(self.output_index / State::OUTPUT_ELEM_DEG)
-        } else {
-            self.output_index = 0;
-            self.params.permute(&mut self.absorbed);
-            self.squeeze()
+        let next_output_starts = self.output_index + State::OUTPUT_ELEM_DEG;
+        if next_output_starts <= State::CAPACITY {
+            let digest_index = self.output_index / State::OUTPUT_ELEM_DEG;
+            let res = self.absorbed.indexed_digest(digest_index);
+            self.output_index = next_output_starts;
+            return res;
         }
+        self.output_index = 0;
+        self.params.permute(&mut self.absorbed);
+        self.squeeze()
     }
 }
