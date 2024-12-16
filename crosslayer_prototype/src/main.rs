@@ -1,5 +1,5 @@
 use arith::Field;
-use crosslayer_prototype::{CrossLayerCircuit, CrossLayerConnections, prove_gkr};
+use crosslayer_prototype::{prove_gkr, CrossLayerCircuit, CrossLayerConnections, CrossLayerRecursiveCircuit};
 use gkr_field_config::{GKRFieldConfig, M31ExtConfig, GF2ExtConfig, BN254Config};
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, SHA256hasher, Transcript};
@@ -8,12 +8,11 @@ fn test_sumcheck_cross_layered_helper<C: GKRFieldConfig>() {
     let mut transcript = BytesHashTranscript::<C::ChallengeField, SHA256hasher>::new();
     
     let mut rng = rand::thread_rng();
-    let n_layers = 1323;
-    let layer_size = 512;
-    let n_gates_each_layer = 256;
 
-    let circuit = CrossLayerCircuit::<C>::random_for_bench(&mut rng, n_layers, layer_size, n_gates_each_layer);
+    let circuit = CrossLayerRecursiveCircuit::<C>::load("./data/sha256_circuit_gf2.txt").unwrap().flatten();
     
+    println!("n_layers: {}", circuit.layers.len());
+
     let inputs = (0..circuit.layers[0].layer_size).map(|_| C::ChallengeField::random_unsafe(&mut rng)).collect::<Vec<_>>();
     let evals = circuit.evaluate(&inputs);
     let connections = CrossLayerConnections::parse_circuit(&circuit);

@@ -11,6 +11,7 @@ polynomials = { path = "../arith/polynomials" }
 transcript = { path = "../transcript" }
 
 env_logger.workspace = true
+ethnum.workspace = true
 log.workspace = true
 rand.workspace = true
 thiserror.workspace = true

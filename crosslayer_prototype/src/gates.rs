@@ -2,17 +2,27 @@ use arith::Field;
 use gkr_field_config::GKRFieldConfig;
 use rand::RngCore;
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub enum CoefType {
+    #[default]
+    Constant,
+    Random,
+    PublicInput(usize),
+}
+
+
 /// A gate whose inputs are from different layers.
 #[derive(Debug, Clone)]
 pub struct SimpleGate<C: GKRFieldConfig, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
     pub o_id: usize,
+    pub coef_type: CoefType,
     pub coef: C::ChallengeField,
 }
 
 pub type SimpleGateMul<C> = SimpleGate<C, 2>;
 pub type SimpleGateAdd<C> = SimpleGate<C, 1>;
-pub type SimpleGateConst<C> = SimpleGate<C, 0>;
+pub type SimpleGateCst<C> = SimpleGate<C, 0>;
 
 impl<C: GKRFieldConfig, const INPUT_NUM: usize> SimpleGate<C, INPUT_NUM> {
     /// located layer refers to the layer where the output of the gate is.
@@ -24,8 +34,9 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> SimpleGate<C, INPUT_NUM> {
         }
 
         let o_id = rng.next_u64() as usize % output_size;
+        let coef_type = CoefType::Constant;
         let coef = C::ChallengeField::random_unsafe(rng);
-        Self { i_ids, o_id, coef }
+        Self { i_ids, o_id, coef_type, coef }
     }
 }
 

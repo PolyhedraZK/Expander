@@ -1,7 +1,7 @@
 use arith::Field;
 use gkr_field_config::GKRFieldConfig;
 use rand::RngCore;
-use crate::gates::{SimpleGateAdd, SimpleGateConst, SimpleGateMul};
+use crate::gates::{SimpleGateAdd, SimpleGateCst, SimpleGateMul};
 
 use super::CrossLayerRelay;
 
@@ -13,7 +13,7 @@ pub struct GenericLayer<C: GKRFieldConfig> {
 
     pub add_gates: Vec<SimpleGateAdd<C>>,
     pub mul_gates: Vec<SimpleGateMul<C>>,
-    pub const_gates: Vec<SimpleGateConst<C>>,
+    pub const_gates: Vec<SimpleGateCst<C>>,
     pub relay_gates: Vec<CrossLayerRelay<C>>,
 }
 
@@ -40,7 +40,7 @@ impl<C: GKRFieldConfig> GenericLayer<C> {
                 let gate = SimpleGateMul::random_for_testing(&mut rng, output_size, input_size);
                 layer.mul_gates.push(gate);
             } else {
-                let gate = SimpleGateConst::random_for_testing(&mut rng, output_size, input_size);
+                let gate = SimpleGateCst::random_for_testing(&mut rng, output_size, input_size);
                 layer.const_gates.push(gate);
             }
         }
@@ -70,7 +70,7 @@ impl<C: GKRFieldConfig> GenericLayer<C> {
                     layer.mul_gates.push(gate);
                 },
                 2 => {
-                    let gate = SimpleGateConst::random_for_testing(&mut rng, output_size, input_size);
+                    let gate = SimpleGateCst::random_for_testing(&mut rng, output_size, input_size);
                     layer.const_gates.push(gate);
                 },
                 3 => {
@@ -200,4 +200,13 @@ impl CrossLayerConnections {
 
         CrossLayerConnections { connections }
     }
+}
+
+// A direct copy of the witness struct from ecc
+#[derive(Debug, Clone)]
+pub struct Witness<C: GKRFieldConfig> {
+    pub num_witnesses: usize,
+    pub num_private_inputs_per_witness: usize,
+    pub num_public_inputs_per_witness: usize,
+    pub values: Vec<C::CircuitField>,
 }

@@ -670,6 +670,7 @@ dependencies = [
  "arith",
  "config",
  "env_logger",
+ "ethnum",
  "gkr_field_config",
  "log",
  "polynomials",

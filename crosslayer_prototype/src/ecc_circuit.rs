@@ -25,12 +25,12 @@ pub type CrossLayerChildSpec = (SegmentId, Vec<Allocation>);
 
 #[derive(Default)]
 pub struct CrossLayerSegment<C: GKRFieldConfig> {
-    pub i_var_num: CrossLayerInputSize,
-    pub o_var_num: usize,
+    pub input_size: CrossLayerInputSize,
+    pub output_size: usize,
     pub child_segs: Vec<CrossLayerChildSpec>,
     pub gate_muls: Vec<SimpleGateMul<C>>,
     pub gate_adds: Vec<SimpleGateAdd<C>>,
-    pub gate_consts: Vec<SimpleGateConst<C>>,
+    pub gate_csts: Vec<SimpleGateCst<C>>,
     pub gate_relay: Vec<CrossLayerRelay<C>>,
 }
 
@@ -39,7 +39,7 @@ impl<C: GKRFieldConfig> CrossLayerSegment<C> {
     pub fn contain_gates(&self) -> bool {
         !self.gate_muls.is_empty()
             || !self.gate_adds.is_empty()
-            || !self.gate_consts.is_empty()
+            || !self.gate_csts.is_empty()
             || !self.gate_relay.is_empty()
     }
 
@@ -54,7 +54,7 @@ impl<C: GKRFieldConfig> CrossLayerSegment<C> {
             ret.insert(
                 cur_id,
                 vec![Allocation {
-                    i_offset: vec![0; self.i_var_num.len()],
+                    i_offset: vec![0; self.input_size.len()],
                     o_offset: 0,
                 }],
             );
@@ -92,7 +92,7 @@ impl<C: GKRFieldConfig> CrossLayerRecursiveCircuit<C> {
         let file_bytes = fs::read(filename)?;
         let _cursor = Cursor::new(file_bytes);
 
-        Ok(Self::default())
+        Ok(Self::deserialize_from(_cursor))
     }
 
     pub fn flatten(&self) -> CrossLayerCircuit<C> {
@@ -104,8 +104,8 @@ impl<C: GKRFieldConfig> CrossLayerRecursiveCircuit<C> {
             let leaves = layer_seg.scan_leaf_segments(self, *seg_id);
             let mut ret_layer = GenericLayer::<C> {
                 layer_id: i,
-                layer_size: 1 << layer_seg.o_var_num,
-                input_layer_size: 1 << layer_seg.i_var_num[0],
+                layer_size: layer_seg.output_size,
+                input_layer_size: layer_seg.input_size[0],
                 ..Default::default()
             };
             for (leaf_seg_id, leaf_allocs) in leaves {
@@ -124,14 +124,17 @@ impl<C: GKRFieldConfig> CrossLayerRecursiveCircuit<C> {
                         gate.o_id += alloc.o_offset;
                         ret_layer.add_gates.push(gate);
                     }
-                    for gate in &leaf_seg.gate_consts {
+                    for gate in &leaf_seg.gate_csts {
                         let mut gate = gate.clone();
                         gate.o_id += alloc.o_offset;
                         ret_layer.const_gates.push(gate);
                     }
                     for gate in &leaf_seg.gate_relay {
                         let mut gate = gate.clone();
-                        gate.i_id += alloc.i_offset[i - gate.i_layer - 1];
+                        gate.i_id += alloc.i_offset[gate.i_layer];
+                        gate.o_id += alloc.o_offset;
+                        // this is due to how offset is represented in ecc
+                        gate.i_layer = ret_layer.layer_id - gate.i_layer - 1; 
                         ret_layer.relay_gates.push(gate);
                     }
                 }
