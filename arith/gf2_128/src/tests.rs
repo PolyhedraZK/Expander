@@ -1,10 +1,11 @@
 use std::io::Cursor;
 
 use arith::{
-    random_extension_field_tests, random_field_tests, random_inversion_tests,
-    random_simd_field_tests, FieldSerde,
+    random_extension_field_tests, random_field_tests, random_from_limbs_to_limbs_tests,
+    random_inversion_tests, random_simd_field_tests, FieldSerde,
 };
 use ark_std::test_rng;
+use gf2::{GF2x8, GF2};
 
 #[cfg(target_arch = "aarch64")]
 use crate::gf2_ext128::neon::{gfadd, gfmul};
@@ -26,6 +27,9 @@ fn test_ext_field() {
 
     let mut rng = test_rng();
     random_inversion_tests::<GF2_128, _>(&mut rng, "GF2_128".to_string());
+
+    random_from_limbs_to_limbs_tests::<GF2, GF2_128>("GF2 Ext128".to_string());
+    random_from_limbs_to_limbs_tests::<GF2x8, GF2_128x8>("Simd GF2 Ext128".to_string());
 }
 
 #[test]
