@@ -6,7 +6,7 @@ use crate::{
 use arith::{Field, SimdField};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomials::MultiLinearPoly;
+use polynomials::{MultiLinearPoly, MultilinearExtension};
 use rand::RngCore;
 use transcript::Transcript;
 
@@ -152,20 +152,20 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         params: &Self::Params,
         mpi_config: &MPIConfig,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &MultiLinearPoly<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
-        assert!(poly.coeffs.len() == 1 << params.n_local_vars);
+        assert!(poly.num_vars() == params.n_local_vars);
         if mpi_config.world_size() == 1 {
-            poly.coeffs.clone()
+            poly.hypercube_basis()
         } else {
             let mut buffer = if mpi_config.is_root() {
-                vec![C::SimdCircuitField::zero(); poly.coeffs.len() * mpi_config.world_size()]
+                vec![C::SimdCircuitField::zero(); poly.hypercube_size() * mpi_config.world_size()]
             } else {
                 vec![]
             };
 
-            mpi_config.gather_vec(&poly.coeffs, &mut buffer);
+            mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
             buffer
         }
     }
@@ -174,7 +174,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _params: &Self::Params,
         _mpi_config: &MPIConfig,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        _poly: &MultiLinearPoly<C::SimdCircuitField>,
+        _poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _x: &ExpanderGKRChallenge<C>,
         _transcript: &mut T,
         _scratch_pad: &mut Self::ScratchPad,
