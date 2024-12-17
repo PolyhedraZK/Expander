@@ -1,12 +1,13 @@
 use crate::Transcript;
-use arith::Field;
+use arith::{ExtensionField, Field};
 use mpi_config::MPIConfig;
 
 /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
-pub fn transcript_root_broadcast<F, T>(transcript: &mut T, mpi_config: &MPIConfig)
+pub fn transcript_root_broadcast<BaseF, ChallengeF, T>(transcript: &mut T, mpi_config: &MPIConfig)
 where
-    F: Field,
-    T: Transcript<F>,
+    BaseF: Field,
+    ChallengeF: ExtensionField<BaseField = BaseF>,
+    T: Transcript<BaseF, ChallengeF>,
 {
     if mpi_config.world_size > 1 {
         let mut state = transcript.hash_and_return_state();

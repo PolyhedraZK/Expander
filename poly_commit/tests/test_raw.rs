@@ -27,7 +27,7 @@ fn test_raw() {
     common::test_pcs::<BN254Fr, RawMultiLinear>(&params, &poly, &xs);
 }
 
-fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::CircuitField, C::ChallengeField>>(
     mpi_config: &MPIConfig,
     transcript: &mut T,
 ) {

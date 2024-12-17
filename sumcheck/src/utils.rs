@@ -1,4 +1,4 @@
-use arith::{Field, SimdField};
+use arith::{ExtensionField, Field, SimdField};
 use mpi_config::MPIConfig;
 use transcript::Transcript;
 
@@ -25,10 +25,15 @@ pub fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar 
 
 /// Transcript IO between sumcheck steps
 #[inline]
-pub fn transcript_io<F, T>(mpi_config: &MPIConfig, ps: &[F], transcript: &mut T) -> F
+pub fn transcript_io<BaseF, ChallengeF, T>(
+    mpi_config: &MPIConfig,
+    ps: &[ChallengeF],
+    transcript: &mut T,
+) -> ChallengeF
 where
-    F: Field,
-    T: Transcript<F>,
+    BaseF: Field,
+    ChallengeF: ExtensionField<BaseField = BaseF>,
+    T: Transcript<BaseF, ChallengeF>,
 {
     assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
     for p in ps {

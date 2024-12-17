@@ -69,7 +69,7 @@ pub struct ExpanderGKRChallenge<C: GKRFieldConfig> {
     pub x_mpi: Vec<C::ChallengeField>,
 }
 
-pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
+pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::CircuitField, C::ChallengeField>> {
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default + Send;

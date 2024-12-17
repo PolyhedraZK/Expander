@@ -7,18 +7,20 @@ use crate::{
     Proof,
 };
 
-pub trait Transcript<F: Field>: Clone + Debug {
+pub trait Transcript<BaseF: Field, ChallengeF: ExtensionField<BaseField = BaseF>>:
+    Clone + Debug
+{
     /// Create a new transcript.
     fn new() -> Self;
 
     /// Append a field element to the transcript.
-    fn append_field_element(&mut self, f: &F);
+    fn append_field_element(&mut self, f: &ChallengeF);
 
     /// Append a slice of bytes
     fn append_u8_slice(&mut self, buffer: &[u8]);
 
     /// Generate a challenge.
-    fn generate_challenge_field_element(&mut self) -> F;
+    fn generate_challenge_field_element(&mut self) -> ChallengeF;
 
     /// Generate a slice of random bytes of some fixed size
     /// Use this function when you need some randomness other than the native field
@@ -38,7 +40,7 @@ pub trait Transcript<F: Field>: Clone + Debug {
 
     /// Generate a challenge vector.
     #[inline]
-    fn generate_challenge_field_elements(&mut self, n: usize) -> Vec<F> {
+    fn generate_challenge_field_elements(&mut self, n: usize) -> Vec<ChallengeF> {
         let mut challenges = Vec::with_capacity(n);
         for _ in 0..n {
             challenges.push(self.generate_challenge_field_element());
@@ -83,7 +85,9 @@ pub struct BytesHashTranscript<F: Field, H: FiatShamirBytesHash> {
     proof_locked_at: usize,
 }
 
-impl<F: Field, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, H> {
+impl<BaseF: Field, ChallengeF: ExtensionField<BaseField = BaseF>, H: FiatShamirBytesHash>
+    Transcript<BaseF, ChallengeF> for BytesHashTranscript<ChallengeF, H>
+{
     fn new() -> Self {
         Self {
             phantom: PhantomData,
@@ -95,7 +99,7 @@ impl<F: Field, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, 
         }
     }
 
-    fn append_field_element(&mut self, f: &F) {
+    fn append_field_element(&mut self, f: &ChallengeF) {
         let mut buf = vec![];
         f.serialize_into(&mut buf).unwrap();
         self.append_u8_slice(&buf);
@@ -107,10 +111,10 @@ impl<F: Field, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, 
     }
 
     /// Generate a challenge.
-    fn generate_challenge_field_element(&mut self) -> F {
+    fn generate_challenge_field_element(&mut self) -> ChallengeF {
         self.hash_to_digest();
-        assert!(F::SIZE <= H::DIGEST_SIZE);
-        F::from_uniform_bytes(&self.digest.clone().try_into().unwrap())
+        assert!(ChallengeF::SIZE <= H::DIGEST_SIZE);
+        ChallengeF::from_uniform_bytes(&self.digest.clone().try_into().unwrap())
     }
 
     fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
@@ -201,7 +205,8 @@ pub struct FieldHashTranscript<
     pub proof_locked: bool,
 }
 
-impl<BaseF, ChallengeF, H> Transcript<ChallengeF> for FieldHashTranscript<BaseF, ChallengeF, H>
+impl<BaseF, ChallengeF, H> Transcript<BaseF, ChallengeF>
+    for FieldHashTranscript<BaseF, ChallengeF, H>
 where
     BaseF: Field,
     ChallengeF: ExtensionField<BaseField = BaseF>,
