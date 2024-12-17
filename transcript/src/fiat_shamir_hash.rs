@@ -11,10 +11,6 @@ pub use keccak_256::*;
 pub mod mimc;
 pub use mimc::*;
 
-pub mod poseidon;
-#[allow(unused)]
-pub use poseidon::*;
-
 pub trait FiatShamirBytesHash: Clone + Debug {
     /// The size of the hash output in bytes.
     const DIGEST_SIZE: usize;
@@ -29,6 +25,7 @@ pub trait FiatShamirBytesHash: Clone + Debug {
     fn hash_inplace(buffer: &mut [u8]);
 }
 
+// TODO(HS) actually we should change this to FiatShamirSponge
 // TODO(HS) should hash to some hash state rather than extf
 pub trait FiatShamirFieldHash<F: FieldForECC, ExtF: ExtensionField<BaseField = F>>:
     Clone + Debug

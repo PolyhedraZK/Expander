@@ -4,7 +4,7 @@ use arith::{Field, FieldForECC};
 use halo2curves::bn256::Fr;
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::{FieldHasherSponge, FieldHasherState};
+use crate::{FiatShamirSponge, FieldHasherState};
 
 pub trait MiMCState<F: Field>:
     Field + FieldHasherState<InputF = F, OutputF = F> + From<F> + Into<F>
@@ -40,14 +40,14 @@ fn get_constants<F: Field, State: MiMCState<F>>(n_rounds: usize) -> Vec<State> {
 // NOTE(HS) we skip the FieldHasher implementation for MiMC, as essentially it is a block cipher.
 
 #[derive(Debug, Clone, Default)]
-pub struct MiMCHasherSponge<F: Field, State: MiMCState<F>> {
+pub struct MiMCSponge<F: Field, State: MiMCState<F>> {
     pub constants: Vec<State>,
     pub absorbed: State,
 
     _phantom: PhantomData<F>,
 }
 
-impl<F: Field, State: MiMCState<F>> MiMCHasherSponge<F, State> {
+impl<F: Field, State: MiMCState<F>> MiMCSponge<F, State> {
     #[inline(always)]
     pub fn pow5(x: F) -> F {
         let x2 = x * x;
@@ -65,8 +65,8 @@ impl<F: Field, State: MiMCState<F>> MiMCHasherSponge<F, State> {
     }
 }
 
-impl<F: FieldForECC, State: MiMCState<F>> FieldHasherSponge<State> for MiMCHasherSponge<F, State> {
-    const NAME: &'static str = "MiMC Field Hasher";
+impl<F: FieldForECC, State: MiMCState<F>> FiatShamirSponge<State> for MiMCSponge<F, State> {
+    const NAME: &'static str = "MiMC Fiat-Shamir Sponge";
 
     fn new() -> Self {
         Self {

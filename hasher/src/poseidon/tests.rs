@@ -22,7 +22,7 @@ fn test_poseidon_hash_m31x16ext3() {
 
 #[test]
 fn test_poseidon_sponge_m31x16ext3() {
-    let mut sponge_bob = PoseidonHasherSponge::<M31, M31Ext3, PoseidonM31x16Ext3>::new();
+    let mut sponge_bob = PoseidonSponge::<M31, M31Ext3, PoseidonM31x16Ext3>::new();
 
     (0..PoseidonM31x16Ext3::RATE).for_each(|i| {
         sponge_bob.update(&[M31::from(114514)]);

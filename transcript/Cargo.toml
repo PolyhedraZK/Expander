@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 arith = { path = "../arith" }
 mpi_config = { path = "../config/mpi_config" }
+hasher = { path = "../hasher" }
 
 sha2.workspace = true
 tiny-keccak.workspace = true

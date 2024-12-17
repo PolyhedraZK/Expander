@@ -77,15 +77,15 @@ pub trait FieldHasher<State: FieldHasherState>: Default + Debug + Clone {
     }
 }
 
-/// FieldHasherSponge is the sponge hash function meant to be used in the Fiat-Shamir transcript.
+/// FiatShamirSponge is the sponge hash function meant to be used in the Fiat-Shamir transcript.
 ///
 /// The behavior is mainly absorb inputs and squeeze an output field element.
 /// The behavior relies on the underlying HasherState and the Hasher.
-pub trait FieldHasherSponge<State: FieldHasherState>: Default + Debug + Clone {
+pub trait FiatShamirSponge<State: FieldHasherState>: Default + Debug + Clone {
     /// NAME, what family of instances of sponge hash function should be called.
     const NAME: &'static str;
 
-    /// new constructs a new instance of FieldHasherSponge.
+    /// new constructs a new instance of FiatShamirSponge.
     fn new() -> Self;
 
     /// update takes in a list of inputs and absorbs into internal sponge hasher state.

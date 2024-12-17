@@ -7,7 +7,7 @@ use arith::{Field, FieldForECC};
 use mersenne31::M31;
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::{FieldHasher, FieldHasherSponge, FieldHasherState, PoseidonM31x16Ext3};
+use crate::{FiatShamirSponge, FieldHasher, FieldHasherState, PoseidonM31x16Ext3};
 
 use super::compile_time::compile_time_alpha;
 
@@ -171,7 +171,7 @@ impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>> FieldHasher<State>
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct PoseidonHasherSponge<InputF, OutputF, State>
+pub struct PoseidonSponge<InputF, OutputF, State>
 where
     InputF: FieldForECC,
     OutputF: Field,
@@ -187,10 +187,10 @@ where
     _phantom: PhantomData<OutputF>,
 }
 
-impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>> FieldHasherSponge<State>
-    for PoseidonHasherSponge<F, OF, State>
+impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>> FiatShamirSponge<State>
+    for PoseidonSponge<F, OF, State>
 {
-    const NAME: &'static str = "Poseidon Field Hasher Sponge";
+    const NAME: &'static str = "Poseidon Fiat-Shamir Sponge";
 
     fn new() -> Self {
         Self {

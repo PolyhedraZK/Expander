@@ -1,8 +1,6 @@
 use halo2curves::bn256::Fr;
 
-use crate::FieldHasherState;
-
-use super::impls::MiMCState;
+use crate::{FieldHasherState, MiMCState};
 
 impl FieldHasherState for Fr {
     type InputF = Fr;

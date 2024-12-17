@@ -1,4 +1,7 @@
 mod impls;
-pub use impls::MiMCHasherSponge;
+pub use impls::{MiMCSponge, MiMCState};
 
 mod fr;
+
+#[cfg(test)]
+mod tests;
