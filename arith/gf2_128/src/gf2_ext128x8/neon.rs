@@ -7,6 +7,7 @@ use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, S
 use gf2::{GF2x8, GF2};
 
 use crate::gf2_ext128::neon::{gfadd, gfmul, mul_by_x_internal, NeonGF2_128};
+use crate::GF2_128;
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128x8 {
@@ -344,6 +345,46 @@ impl ExtensionField for NeonGF2_128x8 {
         res.v[6] = mul_by_x_internal(&self.v[6]);
         res.v[7] = mul_by_x_internal(&self.v[7]);
         res
+    }
+
+    #[inline(always)]
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        let mut local_limbs = limbs.to_vec();
+        local_limbs.resize(Self::DEGREE, Self::BaseField::ZERO);
+
+        let mut buffer = vec![GF2::ZERO; Self::DEGREE * Self::PACK_SIZE];
+
+        local_limbs.iter().enumerate().for_each(|(ith_limb, limb)| {
+            let unpacked = limb.unpack();
+            unpacked.iter().enumerate().for_each(|(ith_gf2, gf2_val)| {
+                buffer[ith_gf2 * Self::DEGREE + ith_limb] = *gf2_val;
+            });
+        });
+
+        let gf2_128s: Vec<_> = buffer
+            .chunks(Self::DEGREE)
+            .map(GF2_128::from_limbs)
+            .collect();
+
+        Self::pack(&gf2_128s)
+    }
+
+    #[inline(always)]
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        let gf2_128s = self.unpack();
+
+        let mut buffer = vec![GF2::ZERO; Self::DEGREE * Self::PACK_SIZE];
+        gf2_128s
+            .iter()
+            .enumerate()
+            .for_each(|(ith_gf2_128, gf2_128_val)| {
+                let limbs = gf2_128_val.to_limbs();
+                limbs.iter().enumerate().for_each(|(ith_limb, limb)| {
+                    buffer[ith_limb * Self::PACK_SIZE + ith_gf2_128] = *limb;
+                })
+            });
+
+        buffer.chunks(Self::PACK_SIZE).map(GF2x8::pack).collect()
     }
 }
 

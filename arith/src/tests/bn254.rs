@@ -1,7 +1,10 @@
 use ark_std::test_rng;
 use halo2curves::bn256::Fr;
 
-use super::{random_field_tests, random_inversion_tests, random_simd_field_tests};
+use super::{
+    random_field_tests, random_from_limbs_to_limbs_tests, random_inversion_tests,
+    random_simd_field_tests,
+};
 
 #[test]
 fn test_field() {
@@ -10,4 +13,5 @@ fn test_field() {
 
     let mut rng = test_rng();
     random_inversion_tests::<Fr, _>(&mut rng, "bn254::Fr".to_string());
+    random_from_limbs_to_limbs_tests::<Fr, Fr>("bn254::Fr".to_string());
 }

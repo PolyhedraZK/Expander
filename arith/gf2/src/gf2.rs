@@ -118,9 +118,8 @@ impl Field for GF2 {
 }
 
 impl FieldForECC for GF2 {
-    fn modulus() -> ethnum::U256 {
-        ethnum::U256::from(MOD)
-    }
+    const MODULUS: ethnum::U256 = ethnum::U256::new(MOD as u128);
+
     fn from_u256(x: ethnum::U256) -> Self {
         GF2 {
             v: (x.as_u32() & 1) as u8,

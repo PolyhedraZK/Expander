@@ -8,6 +8,7 @@ use std::{
 };
 
 use arith::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField};
+use ark_std::Zero;
 use rand::{Rng, RngCore};
 
 use crate::{m31::M31_MOD, M31};
@@ -212,8 +213,19 @@ impl Field for NeonM31 {
         self.mul_by_2()
     }
 
-    fn exp(&self, _exponent: u128) -> Self {
-        todo!()
+    fn exp(&self, exponent: u128) -> Self {
+        let mut e = exponent;
+        let mut res = Self::one();
+        let mut t = *self;
+        while !e.is_zero() {
+            let b = e & 1;
+            if b == 1 {
+                res *= t;
+            }
+            t = t * t;
+            e >>= 1;
+        }
+        res
     }
 
     #[inline(always)]

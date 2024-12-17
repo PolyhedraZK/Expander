@@ -27,4 +27,12 @@ pub trait ExtensionField: Mul<Self::BaseField> + From<Self::BaseField> + Field {
 
     /// Multiply the extension field element by x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
     fn mul_by_x(&self) -> Self;
+
+    /// Extract polynomial field coefficients from the extension field instance
+    /// The order should be from coefficients with low degree to coefficients with high degrees
+    fn to_limbs(&self) -> Vec<Self::BaseField>;
+
+    /// Construct a new instance of extension field from coefficients
+    /// The order should be from coefficients with low degree to coefficients with high degrees
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self;
 }
