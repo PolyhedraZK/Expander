@@ -7,6 +7,7 @@ use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, S
 use gf2::{GF2x8, GF2};
 
 use crate::gf2_ext128::neon::{gfadd, gfmul, mul_by_x_internal, NeonGF2_128};
+use crate::GF2_128;
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128x8 {
