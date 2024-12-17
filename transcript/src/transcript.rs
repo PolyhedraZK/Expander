@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use arith::{ExtensionField, Field, FieldForECC};
+use arith::{ExtensionField, Field};
 
 use crate::{
     fiat_shamir_hash::{FiatShamirBytesHash, FiatShamirFieldHash},
@@ -177,45 +177,45 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
 
 // TODO(HS) abstraction should be more like F, ExtF, HashState, H
 // where H is FiatShamirFieldHash<F, HashState> and HashState can extract out ExtF
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Default, Clone, Debug, PartialEq)]
 pub struct FieldHashTranscript<
-    F: FieldForECC,
-    ExtF: ExtensionField<BaseField = F>,
-    H: FiatShamirFieldHash<F, ExtF>,
+    BaseF: Field,
+    ChallengeF: ExtensionField<BaseField = BaseF>,
+    H: FiatShamirFieldHash<BaseF, ChallengeF>,
 > {
     /// Internal hasher, it's a little costly to create a new hasher
-    pub hasher: H,
+    pub fiat_shamir_sponge: H,
 
     // TODO(HS) maybe unpack state here?
     /// The digest bytes.
-    pub digest: ExtF,
+    pub digest: ChallengeF,
 
     /// The proof bytes
     pub proof: Proof,
 
     // TODO(HS) maybe unpack state here?
     /// The data to be hashed
-    pub data_pool: Vec<ExtF>,
+    pub data_pool: Vec<ChallengeF>,
 
     /// Proof locked or not
     pub proof_locked: bool,
 }
 
-impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash<F, ExtF>>
-    Transcript<ExtF> for FieldHashTranscript<F, ExtF, H>
+impl<BaseF, ChallengeF, H> Transcript<ChallengeF> for FieldHashTranscript<BaseF, ChallengeF, H>
+where
+    BaseF: Field,
+    ChallengeF: ExtensionField<BaseField = BaseF>,
+    H: FiatShamirFieldHash<BaseF, ChallengeF>,
 {
     #[inline(always)]
     fn new() -> Self {
         Self {
-            hasher: H::new(),
-            digest: ExtF::default(),
-            proof: Proof::default(),
-            data_pool: vec![],
-            proof_locked: false,
+            fiat_shamir_sponge: H::new(),
+            ..Default::default()
         }
     }
 
-    fn append_field_element(&mut self, f: &ExtF) {
+    fn append_field_element(&mut self, f: &ChallengeF) {
         let mut buffer = vec![];
         f.serialize_into(&mut buffer).unwrap();
         if !self.proof_locked {
@@ -231,7 +231,7 @@ impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash
         let buffer_size = buffer.len();
         let mut cur = 0;
         while cur + 32 <= buffer_size {
-            self.data_pool.push(ExtF::from_uniform_bytes(
+            self.data_pool.push(ChallengeF::from_uniform_bytes(
                 buffer[cur..cur + 32].try_into().unwrap(),
             ));
             cur += 32
@@ -240,13 +240,13 @@ impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash
         if cur < buffer_size {
             let mut buffer_last = buffer[cur..].to_vec();
             buffer_last.resize(32, 0);
-            self.data_pool.push(ExtF::from_uniform_bytes(
+            self.data_pool.push(ChallengeF::from_uniform_bytes(
                 buffer_last[..].try_into().unwrap(),
             ));
         }
     }
 
-    fn generate_challenge_field_element(&mut self) -> ExtF {
+    fn generate_challenge_field_element(&mut self) -> ChallengeF {
         self.hash_to_digest();
         self.digest
     }
@@ -276,7 +276,7 @@ impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash
 
     fn set_state(&mut self, state: &[u8]) {
         self.data_pool.clear();
-        self.digest = ExtF::deserialize_from(state).unwrap();
+        self.digest = ChallengeF::deserialize_from(state).unwrap();
     }
 
     fn lock_proof(&mut self) {
@@ -290,15 +290,18 @@ impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash
     }
 }
 
-impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>, H: FiatShamirFieldHash<F, ExtF>>
-    FieldHashTranscript<F, ExtF, H>
+impl<BaseF, ChallengeF, H> FieldHashTranscript<BaseF, ChallengeF, H>
+where
+    BaseF: Field,
+    ChallengeF: ExtensionField<BaseField = BaseF>,
+    H: FiatShamirFieldHash<BaseF, ChallengeF>,
 {
     pub fn hash_to_digest(&mut self) {
         if !self.data_pool.is_empty() {
-            self.digest = self.hasher.hash(&self.data_pool);
+            self.digest = self.fiat_shamir_sponge.hash(&self.data_pool);
             self.data_pool.clear();
         } else {
-            self.digest = self.hasher.hash(&[self.digest]);
+            self.digest = self.fiat_shamir_sponge.hash(&[self.digest]);
         }
     }
 }
