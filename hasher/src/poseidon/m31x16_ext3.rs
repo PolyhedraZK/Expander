@@ -42,7 +42,7 @@ impl FieldSerde for PoseidonM31x16Ext3 {
 
     fn deserialize_from<R: Read>(reader: R) -> arith::FieldSerdeResult<Self> {
         let m31x16 = M31x16::deserialize_from(reader)?;
-        Ok(Self { 0: m31x16 })
+        Ok(Self(m31x16))
     }
 
     fn serialize_into<W: Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
