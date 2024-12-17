@@ -1,4 +1,4 @@
 mod impls;
-pub use impls::{MIMCConstants, MIMCHasher};
+pub use impls::MiMCHasherSponge;
 
 mod fr;

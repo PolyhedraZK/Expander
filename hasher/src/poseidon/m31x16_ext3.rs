@@ -18,7 +18,7 @@ impl FieldHasherState for PoseidonM31x16Ext3 {
 
     const STATE_WIDTH: usize = 16;
 
-    const NAME: &'static str = "Poseidon M31x16 Field Hasher State";
+    const STATE_NAME: &'static str = "Poseidon M31x16 Field Hasher State";
 
     fn from_elems(elems: &[Self::InputF]) -> Self {
         assert!(elems.len() <= Self::STATE_WIDTH);

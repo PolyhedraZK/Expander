@@ -187,8 +187,8 @@ where
     _phantom: PhantomData<OutputF>,
 }
 
-impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>>
-    FieldHasherSponge<State, PoseidonParams<F, OF, State>> for PoseidonHasherSponge<F, OF, State>
+impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>> FieldHasherSponge<State>
+    for PoseidonHasherSponge<F, OF, State>
 {
     const NAME: &'static str = "Poseidon Field Hasher Sponge";
 

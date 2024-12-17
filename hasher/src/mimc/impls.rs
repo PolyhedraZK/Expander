@@ -1,52 +1,53 @@
+use std::marker::PhantomData;
+
 use arith::{Field, FieldForECC};
+use halo2curves::bn256::Fr;
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::{FieldHasher, FieldHasherState};
+use crate::{FieldHasherSponge, FieldHasherState};
 
-// TODO ... MIMC implementation
-
-#[derive(Debug, Clone, Default)]
-pub struct MIMCConstants<F: Field> {
-    pub cts: Vec<F>,
-    pub n_rounds: i64,
+pub trait MiMCState<F: Field>:
+    Field + FieldHasherState<InputF = F, OutputF = F> + From<F> + Into<F>
+{
 }
 
-const SEED: &str = "seed";
-fn generate_mimc_constants<F: Field>() -> MIMCConstants<F> {
-    let n_rounds: i64 = 110;
-    let cts = get_constants(SEED, n_rounds);
-    MIMCConstants::<F> { cts, n_rounds }
-}
+const MIMC_SEED: &str = "seed";
 
-fn get_constants<F: Field>(seed: &str, n_rounds: i64) -> Vec<F> {
-    let mut cts: Vec<F> = Vec::new();
-
+fn get_constants<F: Field, State: MiMCState<F>>(n_rounds: usize) -> Vec<State> {
     let mut keccak = Keccak::v256();
     let mut h = [0u8; 32];
-    keccak.update(seed.as_bytes());
+    keccak.update(MIMC_SEED.as_bytes());
     keccak.finalize(&mut h);
 
-    for _ in 0..n_rounds {
-        let mut keccak = Keccak::v256();
-        keccak.update(&h);
-        keccak.finalize(&mut h);
+    (0..n_rounds)
+        .map(|_| {
+            let mut keccak = Keccak::v256();
+            keccak.update(&h);
+            keccak.finalize(&mut h);
 
-        // big endian -> little endian, in order to match the one in gnark
-        // or probably we can change the implementation there
-        let mut h_reverse = h;
-        h_reverse.reverse();
+            // NOTE(ZF, HS): the behavior of gnark is taking the 256-bit hash
+            // and store as big-endian mode, while our rust-runtime takes the same
+            // 256-bit hash and store as little-endian mode.  The way to go for now
+            // is to reverse the order to ensure the behavior matches on both ends.
+            let mut h_reverse = h;
+            h_reverse.reverse();
 
-        cts.push(F::from_uniform_bytes(&h_reverse));
-    }
-    cts
+            State::from_uniform_bytes(&h_reverse)
+        })
+        .collect()
 }
+
+// NOTE(HS) we skip the FieldHasher implementation for MiMC, as essentially it is a block cipher.
 
 #[derive(Debug, Clone, Default)]
-pub struct MIMCHasher<F: Field> {
-    pub constants: MIMCConstants<F>,
+pub struct MiMCHasherSponge<F: Field, State: MiMCState<F>> {
+    pub constants: Vec<State>,
+    pub absorbed: State,
+
+    _phantom: PhantomData<F>,
 }
 
-impl<F: Field> MIMCHasher<F> {
+impl<F: Field, State: MiMCState<F>> MiMCHasherSponge<F, State> {
     #[inline(always)]
     pub fn pow5(x: F) -> F {
         let x2 = x * x;
@@ -57,34 +58,34 @@ impl<F: Field> MIMCHasher<F> {
     pub fn mimc5_hash(&self, h: &F, x_in: &F) -> F {
         let mut x = *x_in;
 
-        for i in 0..self.constants.n_rounds as usize {
-            x = Self::pow5(x + h + self.constants.cts[i]);
-        }
+        self.constants.iter().for_each(|ct| {
+            x = Self::pow5(x + h + (*ct).into());
+        });
         x + h
     }
 }
 
-impl<F: FieldForECC, HashState: FieldHasherState<InputF = F, OutputF = F>> FieldHasher<HashState>
-    for MIMCHasher<F>
-{
+impl<F: FieldForECC, State: MiMCState<F>> FieldHasherSponge<State> for MiMCHasherSponge<F, State> {
     const NAME: &'static str = "MiMC Field Hasher";
 
     fn new() -> Self {
         Self {
-            constants: generate_mimc_constants::<F>(),
+            constants: match State::STATE_NAME {
+                Fr::STATE_NAME => get_constants::<F, State>(110),
+                _ => unimplemented!("unsupported curve for MiMC"),
+            },
+            ..Default::default()
         }
     }
 
-    fn permute(&self, _state: &mut HashState) {
-        todo!()
+    fn update(&mut self, input: &[<State as FieldHasherState>::InputF]) {
+        input.iter().for_each(|a| {
+            let r = self.mimc5_hash(&self.absorbed.into(), a);
+            self.absorbed = (self.absorbed.into() + r + a).into();
+        })
     }
 
-    fn hash(&self, input: &[F]) -> F {
-        let mut h = F::ZERO;
-        for a in input {
-            let r = self.mimc5_hash(&h, a);
-            h += r + a;
-        }
-        h
+    fn squeeze(&mut self) -> <State as FieldHasherState>::OutputF {
+        self.absorbed.digest()
     }
 }

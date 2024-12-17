@@ -2,6 +2,8 @@ use halo2curves::bn256::Fr;
 
 use crate::FieldHasherState;
 
+use super::impls::MiMCState;
+
 impl FieldHasherState for Fr {
     type InputF = Fr;
 
@@ -9,7 +11,7 @@ impl FieldHasherState for Fr {
 
     const STATE_WIDTH: usize = 1;
 
-    const NAME: &'static str = "MiMC BN254 Fr Field Hasher State";
+    const STATE_NAME: &'static str = "MiMC BN254 Fr Field Hasher State";
 
     fn from_elems(elems: &[Self::InputF]) -> Self {
         assert_eq!(elems.len(), Self::STATE_WIDTH);
@@ -24,3 +26,5 @@ impl FieldHasherState for Fr {
         *self
     }
 }
+
+impl MiMCState<Fr> for Fr {}
