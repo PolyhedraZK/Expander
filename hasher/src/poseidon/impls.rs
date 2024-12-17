@@ -221,8 +221,12 @@ impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>> FiatShamirSponge<St
         })
     }
 
+    fn is_squeezed(&self) -> bool {
+        self.absorbing.is_empty()
+    }
+
     fn squeeze(&mut self) -> <State as FieldHasherState>::OutputF {
-        if !self.absorbing.is_empty() {
+        if !self.is_squeezed() {
             let mut tailing_elems =
                 vec![<State as FieldHasherState>::InputF::ZERO; State::STATE_WIDTH];
             tailing_elems[State::CAPACITY..State::CAPACITY + self.absorbing.len()]

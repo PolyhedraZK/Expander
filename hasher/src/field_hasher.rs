@@ -96,4 +96,7 @@ pub trait FiatShamirSponge<State: FieldHasherState>: Default + Debug + Clone {
 
     /// squeeze forces to absorb all current hasher state and outputs a digest over OutputF.
     fn squeeze(&mut self) -> State::OutputF;
+
+    /// is_squeezed checks if the sponge function has absorbed but not hashed elements.
+    fn is_squeezed(&self) -> bool;
 }
