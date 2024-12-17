@@ -47,7 +47,7 @@ pub trait PoseidonState<F: FieldForECC, OF: Field>:
     fn indexed_digest(&self, index: usize) -> OF;
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct PoseidonParams<InputF, OutputF, State>
 where
     InputF: FieldForECC,
@@ -170,7 +170,7 @@ impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>> FieldHasher<State>
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct PoseidonSponge<InputF, OutputF, State>
 where
     InputF: FieldForECC,

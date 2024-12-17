@@ -39,7 +39,7 @@ fn get_constants<F: Field, State: MiMCState<F>>(n_rounds: usize) -> Vec<State> {
 
 // NOTE(HS) we skip the FieldHasher implementation for MiMC, as essentially it is a block cipher.
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct MiMCSponge<F: Field, State: MiMCState<F>> {
     pub constants: Vec<State>,
     pub absorbed: State,

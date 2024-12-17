@@ -42,7 +42,7 @@ pub trait FieldHasherState: Debug + Sized + Default + Clone + Copy + PartialEq {
 
 /// FieldHasher depicts the behavior of a field hasher, that takes in a bunch of field elems
 /// and spits out an output field element.
-pub trait FieldHasher<State: FieldHasherState>: Default + Debug + Clone {
+pub trait FieldHasher<State: FieldHasherState>: Default + Debug + Clone + PartialEq {
     /// NAME, say what is this family of instances of field hasher called
     const NAME: &'static str;
 
@@ -81,7 +81,7 @@ pub trait FieldHasher<State: FieldHasherState>: Default + Debug + Clone {
 ///
 /// The behavior is mainly absorb inputs and squeeze an output field element.
 /// The behavior relies on the underlying HasherState and the Hasher.
-pub trait FiatShamirSponge<State: FieldHasherState>: Default + Debug + Clone {
+pub trait FiatShamirSponge<State: FieldHasherState>: Default + Debug + Clone + PartialEq {
     /// NAME, what family of instances of sponge hash function should be called.
     const NAME: &'static str;
 
