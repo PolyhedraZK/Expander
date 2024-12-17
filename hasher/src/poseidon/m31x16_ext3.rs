@@ -1,9 +1,10 @@
 use std::{
+    io::{Read, Write},
     mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign},
 };
 
-use arith::{ExtensionField, Field, FieldForECC, SimdField};
+use arith::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
 use mersenne31::{M31Ext3, M31x16, M31};
 
 use crate::{FieldHasherState, PoseidonState};
@@ -33,6 +34,19 @@ impl FieldHasherState for PoseidonM31x16Ext3 {
 
     fn digest(&self) -> Self::OutputF {
         Self::OutputF::from_limbs(&self.0.unpack())
+    }
+}
+
+impl FieldSerde for PoseidonM31x16Ext3 {
+    const SERIALIZED_SIZE: usize = M31x16::SERIALIZED_SIZE;
+
+    fn deserialize_from<R: Read>(reader: R) -> arith::FieldSerdeResult<Self> {
+        let m31x16 = M31x16::deserialize_from(reader)?;
+        Ok(Self(m31x16))
+    }
+
+    fn serialize_into<W: Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
+        self.0.serialize_into(writer)
     }
 }
 

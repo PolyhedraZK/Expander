@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use arith::{ExtensionField, FieldForECC};
+use arith::{ExtensionField, Field};
 
 pub mod sha2_256;
 pub use sha2_256::*;
@@ -27,8 +27,8 @@ pub trait FiatShamirBytesHash: Clone + Debug {
 
 // TODO(HS) actually we should change this to FiatShamirSponge
 // TODO(HS) should hash to some hash state rather than extf
-pub trait FiatShamirFieldHash<F: FieldForECC, ExtF: ExtensionField<BaseField = F>>:
-    Clone + Debug
+pub trait FiatShamirFieldHash<F: Field, ExtF: ExtensionField<BaseField = F>>:
+    Clone + Debug + Default
 {
     /// Create a new hash instance.
     fn new() -> Self;
