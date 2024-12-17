@@ -15,7 +15,7 @@ pub struct MIMCHasher<F: Field, ExtF: ExtensionField<BaseField = F>> {
     constants: MIMCConstants<ExtF>,
 }
 
-impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>> FiatShamirFieldHash<F, ExtF>
+impl<F: FieldForECC + Into<ExtF>, ExtF: ExtensionField<BaseField = F>> FiatShamirFieldHash<F, ExtF>
     for MIMCHasher<F, ExtF>
 {
     fn new() -> Self {
@@ -24,11 +24,12 @@ impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>> FiatShamirFieldHash<F,
         }
     }
 
-    fn hash(&self, input: &[ExtF]) -> ExtF {
+    fn hash(&self, input: &[F]) -> ExtF {
         let mut h = ExtF::ZERO;
         for a in input {
-            let r = self.mimc5_hash(&h, a);
-            h += r + a;
+            let r = self.mimc5_hash(&h, &(*a).into());
+            let ra: ExtF = r + (*a).into();
+            h += ra;
         }
         h
     }
