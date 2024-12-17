@@ -6,9 +6,11 @@ import (
 	"os"
 
 	"ExpanderVerifierCircuit/modules/circuit"
+	"ExpanderVerifierCircuit/modules/fields"
 	"ExpanderVerifierCircuit/modules/verifier"
 
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/spf13/cobra"
 
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/frontend"
@@ -18,13 +20,23 @@ import (
 type VerifierCircuit struct {
 	MpiSize         uint
 	SimdSize        uint
+	FieldEnum       fields.ECCFieldEnum
 	OriginalCircuit circuit.Circuit
 	Proof           circuit.Proof // private input
 }
 
 // Define declares the circuit constraints
 func (circuit *VerifierCircuit) Define(api frontend.API) error {
-	verifier.Verify(api, &circuit.OriginalCircuit, circuit.OriginalCircuit.PublicInput, 0, circuit.SimdSize, circuit.MpiSize, &circuit.Proof)
+	verifier.Verify(
+		api,
+		&circuit.OriginalCircuit,
+		circuit.OriginalCircuit.PublicInput,
+		0,
+		circuit.SimdSize,
+		circuit.MpiSize,
+		circuit.FieldEnum,
+		&circuit.Proof,
+	)
 	return nil
 }
 
@@ -32,6 +44,20 @@ func checkFileExists(filePath string) bool {
 	_, error := os.Stat(filePath)
 	//return !os.IsNotExist(err)
 	return !errors.Is(error, os.ErrNotExist)
+}
+
+// TODO cobra command line configuration
+func init() {
+	// TODO ...
+}
+
+var groth16Cmd = &cobra.Command{
+	Use:   "groth16",
+	Short: "Convert a single GKR proof into a Groth16 proof",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		cmd.HelpFunc()(cmd, args)
+	},
 }
 
 func testGroth16() {
@@ -52,8 +78,23 @@ func testGroth16() {
 		panic("For bn254, Expander only implements simd size 1, so it must be 1 here")
 	}
 
-	original_circuit, _ := circuit.ReadCircuit(*circuit_file, *witness_file, *mpi_size)
-	proof := circuit.ReadProof(*gkr_proof_file)
+	// FIXME(HS): currently tied to only BN254
+	groth16CircuitRel := circuit.CircuitRelation{
+		CircuitPath: *circuit_file,
+		WitnessPath: *witness_file,
+		FieldEnum:   fields.ECCBN254,
+		MPISize:     *mpi_size,
+	}
+	original_circuit, _, err := circuit.ReadCircuit(groth16CircuitRel)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	proof, err := circuit.ReadProofFile(*gkr_proof_file, fields.ECCBN254)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	original_circuit.PrintStats()
 
 	verifier_circuit := VerifierCircuit{
@@ -70,10 +111,16 @@ func testGroth16() {
 	println("Nb Public Witness:", r1cs.GetNbPublicVariables())
 
 	// witness definition
-	original_circuit, _ = circuit.ReadCircuit(*circuit_file, *witness_file, *mpi_size)
+	// FIXME(HS): currently tied to only BN254
+	original_circuit, _, err = circuit.ReadCircuit(groth16CircuitRel)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	assignment := VerifierCircuit{
 		MpiSize:         *mpi_size,
 		SimdSize:        *simd_size,
+		FieldEnum:       fields.ECCBN254,
 		OriginalCircuit: *original_circuit,
 		Proof:           *proof,
 	}
@@ -85,7 +132,7 @@ func testGroth16() {
 	}
 
 	println("Checking satisfiability...")
-	err := r1cs.IsSolved(witness)
+	err = r1cs.IsSolved(witness)
 	if err != nil {
 		panic("R1CS not satisfied.")
 	}
@@ -104,6 +151,7 @@ func testGroth16() {
 			vk_file, _ := os.OpenFile(*groth16_vk_file, os.O_RDONLY, 0444)
 			vk.ReadFrom(vk_file)
 		} else {
+			// TODO write to file system
 			println("Groth16 generating setup from scratch...")
 			pk, vk, setup_err = groth16.Setup(r1cs)
 

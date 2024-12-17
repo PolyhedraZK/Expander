@@ -275,6 +275,7 @@ async fn main() {
         mpi_config.world_size = args[5].parse::<i32>().expect("Parsing mpi size fails");
     }
 
+    // TODO(HS) change m31ext config to use poseidon transcript?
     declare_gkr_config!(
         M31ExtConfigSha2,
         FieldType::M31,

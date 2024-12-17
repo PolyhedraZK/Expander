@@ -30,7 +30,7 @@ const MIMC5_BN254_ONT: [u8; 32] = [
 
 #[test]
 fn check_mimc5_aligned() {
-    let mimc = MIMCHasher::<BN254Fr>::new();
+    let mimc = MIMCHasher::<BN254Fr, BN254Fr>::new();
     let input = BN254Fr::from(MIMC5_BN254_IN);
     let output = mimc.hash(&[input]);
     assert_eq!(

@@ -13,24 +13,34 @@ type Witness struct {
 	Values                     []big.Int
 }
 
-func (w *Witness) ToPubPri() ([][]frontend.Variable, [][]frontend.Variable) {
-	public_input := make([][]frontend.Variable, w.NumWitnesses)
-	private_input := make([][]frontend.Variable, w.NumWitnesses)
+// PubInput stores the circuit public inputs
+type PubInput = []frontend.Variable
 
-	witness_size := w.NumPrivateInputsPerWitness + w.NumPublicInputsPerWitness
-	for i := uint(0); i < w.NumWitnesses; i++ {
-		start_idx := i * witness_size
-		private_input[i] = make([]frontend.Variable, 0)
-		for j := uint(0); j < w.NumPrivateInputsPerWitness; j++ {
-			private_input[i] = append(private_input[i], w.Values[start_idx+j])
+// PrivInput stores the circuit private inputs
+type PrivInput = []frontend.Variable
+
+// ToPubPrivInputs separate the Witness object into public inputs and private outputs
+// Witness object stands for multiple instances of circuit inputs, and thus the
+// output of public/private inputs are concatenations of each public/private inputs
+func (w *Witness) ToPubPrivInputs() (pubInputs []PubInput, privInputs []PrivInput) {
+	pubInputs = make([]PubInput, w.NumWitnesses)
+	privInputs = make([]PrivInput, w.NumWitnesses)
+
+	witnessSize := w.NumPrivateInputsPerWitness + w.NumPublicInputsPerWitness
+
+	for ithWitness := uint(0); ithWitness < w.NumWitnesses; ithWitness++ {
+		startIndex := ithWitness * witnessSize
+		privInputs[ithWitness] = make([]frontend.Variable, w.NumPrivateInputsPerWitness)
+		for i := uint(0); i < w.NumPrivateInputsPerWitness; i++ {
+			privInputs[ithWitness][i] = w.Values[startIndex+i]
 		}
 
-		start_idx += w.NumPrivateInputsPerWitness
-		public_input[i] = make([]frontend.Variable, 0)
-		for j := uint(0); j < w.NumPublicInputsPerWitness; j++ {
-			public_input[i] = append(public_input[i], w.Values[start_idx+j])
+		startIndex += w.NumPrivateInputsPerWitness
+		pubInputs[ithWitness] = make([]frontend.Variable, w.NumPublicInputsPerWitness)
+		for i := uint(0); i < w.NumPublicInputsPerWitness; i++ {
+			pubInputs[ithWitness][i] = w.Values[startIndex+i]
 		}
 	}
 
-	return public_input, private_input
+	return
 }
