@@ -184,7 +184,7 @@ pub struct FieldHashTranscript<
     H: FiatShamirFieldHash<BaseF, ChallengeF>,
 > {
     /// Internal hasher, it's a little costly to create a new hasher
-    pub fiat_shamir_sponge: H,
+    pub fs_sponge: H,
 
     // TODO(HS) maybe unpack state here?
     /// The digest bytes.
@@ -210,7 +210,7 @@ where
     #[inline(always)]
     fn new() -> Self {
         Self {
-            fiat_shamir_sponge: H::new(),
+            fs_sponge: H::new(),
             ..Default::default()
         }
     }
@@ -298,10 +298,10 @@ where
 {
     pub fn hash_to_digest(&mut self) {
         if !self.data_pool.is_empty() {
-            self.digest = self.fiat_shamir_sponge.hash(&self.data_pool);
+            self.digest = self.fs_sponge.hash(&self.data_pool);
             self.data_pool.clear();
         } else {
-            self.digest = self.fiat_shamir_sponge.hash(&[self.digest]);
+            self.digest = self.fs_sponge.hash(&[self.digest]);
         }
     }
 }
