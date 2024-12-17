@@ -227,6 +227,7 @@ where
         if !self.proof_locked {
             self.proof.bytes.extend_from_slice(&buffer);
         }
+        // TODO(HS) fs_sponge update
         f.to_limbs().iter().for_each(|l| self.data_pool.push(*l));
     }
 
@@ -238,6 +239,7 @@ where
         buffer_local.resize(buffer_local.len().next_multiple_of(32), 0u8);
         buffer_local.chunks_exact(32).for_each(|chunk_32| {
             let c = ChallengeF::from_uniform_bytes(chunk_32.try_into().unwrap());
+            // TODO(HS) fs_sponge update
             c.to_limbs().iter().for_each(|l| self.data_pool.push(*l));
         });
     }
@@ -264,6 +266,7 @@ where
     }
 
     fn hash_and_return_state(&mut self) -> Vec<u8> {
+        // TODO(HS) fs_sponge.squeeze_state
         self.hash_to_digest();
         let mut state = vec![];
         self.digest.serialize_into(&mut state).unwrap();
@@ -271,7 +274,8 @@ where
     }
 
     fn set_state(&mut self, state: &[u8]) {
-        self.data_pool.clear();
+        assert!(self.data_pool.is_empty());
+        // TODO(HS) fs_sponge.set_state
         self.digest = ChallengeF::deserialize_from(state).unwrap();
     }
 
