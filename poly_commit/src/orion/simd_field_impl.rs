@@ -2,7 +2,7 @@ use std::iter;
 
 use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
-use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension};
+use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 use transcript::Transcript;
 
 use crate::{
@@ -204,11 +204,8 @@ where
 
     // NOTE: working on evaluation response, evaluate the rest of the response
     let mut scratch = vec![EvalF::ZERO; msg_size * SimdF::PACK_SIZE];
-    let final_eval = MultiLinearPoly::evaluate_with_buffer(
-        &proof.eval_row,
-        &point[..num_vars_in_unpacked_msg],
-        &mut scratch,
-    );
+    let final_eval = RefMultiLinearPoly::from_ref(&proof.eval_row)
+        .evaluate_with_buffer(&point[..num_vars_in_unpacked_msg], &mut scratch);
 
     if final_eval != evaluation {
         return false;

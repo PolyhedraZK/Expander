@@ -3,7 +3,7 @@ use std::iter;
 use arith::{Field, SimdField};
 use gkr_field_config::GKRFieldConfig;
 use itertools::izip;
-use polynomials::{EqPolynomial, MultiLinearPoly};
+use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 use transcript::Transcript;
 
 use crate::{
@@ -45,8 +45,7 @@ where
     // NOTE: working on evaluation response
     let mut scratch =
         vec![C::ChallengeField::ZERO; mpi_world_size * C::SimdCircuitField::PACK_SIZE * msg_size];
-    let final_eval = MultiLinearPoly::evaluate_with_buffer(
-        &proof.eval_row,
+    let final_eval = RefMultiLinearPoly::from_ref(&proof.eval_row).evaluate_with_buffer(
         &local_xs[..num_vars_in_unpacked_msg],
         &mut scratch[..C::SimdCircuitField::PACK_SIZE * msg_size],
     );

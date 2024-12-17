@@ -2,7 +2,7 @@ use std::iter;
 
 use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
-use polynomials::{EqPolynomial, MultiLinearPoly};
+use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 use transcript::Transcript;
 
 use crate::{
@@ -34,18 +34,18 @@ where
 
 pub fn orion_commit_base_field<F, ComPackF>(
     pk: &OrionSRS,
-    poly: &MultiLinearPoly<F>,
+    poly: &impl MultilinearExtension<F>,
     scratch_pad: &mut OrionScratchPad<F, ComPackF>,
 ) -> OrionResult<OrionCommitment>
 where
     F: Field,
     ComPackF: SimdField<Scalar = F>,
 {
-    let (row_num, msg_size) = OrionSRS::evals_shape::<F>(poly.get_num_vars());
+    let (row_num, msg_size) = OrionSRS::evals_shape::<F>(poly.num_vars());
     let packed_rows = row_num / ComPackF::PACK_SIZE;
     assert_eq!(row_num % ComPackF::PACK_SIZE, 0);
 
-    let mut evals = poly.coeffs.clone();
+    let mut evals = poly.hypercube_basis();
     assert_eq!(evals.len() % ComPackF::PACK_SIZE, 0);
 
     let mut packed_evals: Vec<ComPackF> = transpose_and_pack(&mut evals, row_num);
@@ -61,7 +61,7 @@ where
 
 pub fn orion_open_base_field<F, EvalF, ComPackF, OpenPackF, T>(
     pk: &OrionSRS,
-    poly: &MultiLinearPoly<F>,
+    poly: &impl MultilinearExtension<F>,
     point: &[EvalF],
     transcript: &mut T,
     scratch_pad: &OrionScratchPad<F, ComPackF>,
@@ -73,11 +73,11 @@ where
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
-    let (row_num, msg_size) = OrionSRS::evals_shape::<F>(poly.get_num_vars());
+    let (row_num, msg_size) = OrionSRS::evals_shape::<F>(poly.num_vars());
     let num_vars_in_row = row_num.ilog2() as usize;
 
     // NOTE: transpose evaluations for linear combinations in evaulation/proximity tests
-    let mut evals = poly.coeffs.clone();
+    let mut evals = poly.hypercube_basis();
     assert_eq!(evals.len() % OpenPackF::PACK_SIZE, 0);
 
     let packed_evals: Vec<OpenPackF> = transpose_and_pack(&mut evals, row_num);
@@ -113,11 +113,8 @@ where
 
     // NOTE: working on evaluation on top of evaluation response
     let mut scratch = vec![EvalF::ZERO; msg_size];
-    let eval = MultiLinearPoly::evaluate_with_buffer(
-        &eval_row,
-        &point[..point.len() - num_vars_in_row],
-        &mut scratch,
-    );
+    let eval = RefMultiLinearPoly::from_ref(&eval_row)
+        .evaluate_with_buffer(&point[..point.len() - num_vars_in_row], &mut scratch);
     drop(scratch);
 
     // NOTE: MT opening for point queries
@@ -153,11 +150,9 @@ where
 
     // NOTE: working on evaluation response, evaluate the rest of the response
     let mut scratch = vec![EvalF::ZERO; msg_size];
-    let final_eval = MultiLinearPoly::evaluate_with_buffer(
-        &proof.eval_row,
-        &point[..num_vars_in_msg],
-        &mut scratch,
-    );
+    let final_eval = RefMultiLinearPoly::from_ref(&proof.eval_row)
+        .evaluate_with_buffer(&point[..num_vars_in_msg], &mut scratch);
+
     if final_eval != evaluation {
         return false;
     }
