@@ -92,4 +92,14 @@ impl<F: FieldForECC, State: MiMCState<F>> FiatShamirSponge<State> for MiMCSponge
     fn squeeze(&mut self) -> <State as FieldHasherState>::OutputF {
         self.absorbed.digest()
     }
+
+    fn state(&self) -> State {
+        assert!(self.is_squeezed());
+        self.absorbed
+    }
+
+    fn state_mut(&mut self) -> &mut State {
+        assert!(self.is_squeezed());
+        &mut self.absorbed
+    }
 }
