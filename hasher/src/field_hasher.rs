@@ -1,6 +1,6 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, io::Cursor};
 
-use arith::{ExtensionField, Field};
+use arith::{ExtensionField, Field, FieldSerde};
 
 /// FieldHasherState depicts the field hasher's state as the hasher taking in field element.
 ///
@@ -8,7 +8,9 @@ use arith::{ExtensionField, Field};
 /// state width, namely how many field elements needed to construct the field hasher state from
 /// input field elements, a method to construct the state from input elems, and a digest method
 /// to squeeze the output from the hash state.
-pub trait FieldHasherState: Debug + Sized + Default + Clone + Copy + PartialEq {
+pub trait FieldHasherState:
+    Debug + Sized + Default + Clone + Copy + PartialEq + FieldSerde
+{
     /// InputF type of the input field elements into the field hasher.
     type InputF: Field;
 
@@ -99,4 +101,25 @@ pub trait FiatShamirSponge<State: FieldHasherState>: Default + Debug + Clone + P
 
     /// is_squeezed checks if the sponge function has absorbed but not hashed elements.
     fn is_squeezed(&self) -> bool;
+
+    /// state is the current sponge state of the sponge function.
+    fn state(&self) -> State;
+
+    /// state_mut is the mut reference to the current sponge state.
+    fn state_mut(&mut self) -> &mut State;
+
+    /// serialize_state serializes the current sponge state into u8 slice, typically used broadcast.
+    fn serialize_state(&self) -> Vec<u8> {
+        let mut buffer = Vec::new();
+        self.state().serialize_into(&mut buffer).unwrap();
+        buffer
+    }
+
+    /// deserialize_state_to_self sets the state against the serialized state, typically used in
+    /// broadcast.
+    fn deserialize_state_to_self(&mut self, state: &[u8]) {
+        let buffer = state.to_vec();
+        let mut cursor = Cursor::new(buffer);
+        *self.state_mut() = State::deserialize_from(&mut cursor).unwrap();
+    }
 }
