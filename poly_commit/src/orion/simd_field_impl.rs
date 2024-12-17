@@ -2,7 +2,7 @@ use std::iter;
 
 use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
-use polynomials::{EqPolynomial, MultiLinearPoly};
+use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension};
 use transcript::Transcript;
 
 use crate::{
@@ -36,7 +36,7 @@ where
 
 pub fn orion_commit_simd_field<F, SimdF, ComPackF>(
     pk: &OrionSRS,
-    poly: &MultiLinearPoly<SimdF>,
+    poly: &impl MultilinearExtension<SimdF>,
     scratch_pad: &mut OrionScratchPad<F, ComPackF>,
 ) -> OrionResult<OrionCommitment>
 where
@@ -45,7 +45,7 @@ where
     ComPackF: SimdField<Scalar = F>,
 {
     let (row_num, msg_size) = {
-        let num_vars = poly.get_num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
+        let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
         let (row_field_elems, msg_size) = OrionSRS::evals_shape::<F>(num_vars);
         let row_num = row_field_elems / SimdF::PACK_SIZE;
         (row_num, msg_size)
@@ -57,7 +57,7 @@ where
     let packed_rows = row_num / relative_pack_size;
     assert_eq!(row_num % relative_pack_size, 0);
 
-    let mut evals = poly.coeffs.clone();
+    let mut evals = poly.hypercube_basis();
     assert_eq!(evals.len() % relative_pack_size, 0);
 
     let mut packed_evals = transpose_and_pack_simd::<F, SimdF, ComPackF>(&mut evals, row_num);
@@ -105,7 +105,7 @@ where
 // as evaluation statement can be reduced on the verifier side.
 pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
     pk: &OrionSRS,
-    poly: &MultiLinearPoly<SimdF>,
+    poly: &impl MultilinearExtension<SimdF>,
     point: &[EvalF],
     transcript: &mut T,
     scratch_pad: &OrionScratchPad<F, ComPackF>,
@@ -119,7 +119,7 @@ where
     T: Transcript<EvalF>,
 {
     let (row_num, msg_size) = {
-        let num_vars = poly.get_num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
+        let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars, point.len());
 
         let (row_field_elems, msg_size) = OrionSRS::evals_shape::<F>(num_vars);
@@ -132,7 +132,7 @@ where
 
     // NOTE: transpose and shuffle evaluations (repack evaluations in another direction)
     // for linear combinations in evaulation/proximity tests
-    let mut evals = poly.coeffs.clone();
+    let mut evals = poly.hypercube_basis();
     assert_eq!(evals.len() * SimdF::PACK_SIZE % OpenPackF::PACK_SIZE, 0);
 
     let packed_shuffled_evals: Vec<OpenPackF> = transpose_and_shuffle_simd(&mut evals, row_num);

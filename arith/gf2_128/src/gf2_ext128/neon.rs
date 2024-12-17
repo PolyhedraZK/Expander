@@ -187,6 +187,45 @@ impl ExtensionField for NeonGF2_128 {
             v: mul_by_x_internal(&self.v),
         }
     }
+
+    #[inline(always)]
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        let mut local_limbs = limbs.to_vec();
+        local_limbs.resize(Self::DEGREE, Self::BaseField::ZERO);
+
+        let mut u32_lanes = [0u32; 4];
+        local_limbs
+            .chunks(32)
+            .zip(u32_lanes.iter_mut())
+            .for_each(|(limbs_by_32, u32_lane)| {
+                limbs_by_32.iter().enumerate().for_each(|(ith_limb, limb)| {
+                    *u32_lane |= (limb.v as u32) << ith_limb;
+                });
+            });
+
+        Self {
+            v: unsafe { transmute::<[u32; 4], uint32x4_t>(u32_lanes) },
+        }
+    }
+
+    #[inline(always)]
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        let mut u32_extracted: [u32; 4] = unsafe { transmute(self.v) };
+
+        let mut res = vec![Self::BaseField::ZERO; 128];
+        u32_extracted
+            .iter_mut()
+            .enumerate()
+            .for_each(|(ith_u32, u32_lane)| {
+                (0..32).for_each(|ith_bit| {
+                    let res_index = ith_bit + ith_u32 * 32;
+                    res[res_index] = From::from(*u32_lane);
+                    *u32_lane >>= 1;
+                })
+            });
+
+        res
+    }
 }
 
 impl Mul<GF2> for NeonGF2_128 {

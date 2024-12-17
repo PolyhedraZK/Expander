@@ -1,10 +1,10 @@
 use std::io::Cursor;
 
-use arith::Field;
 use arith::{
     random_extension_field_tests, random_field_tests, random_inversion_tests,
     random_simd_field_tests, FieldSerde,
 };
+use arith::{random_from_limbs_to_limbs_tests, Field};
 use ark_std::test_rng;
 
 use crate::M31Ext3;
@@ -75,6 +75,8 @@ fn test_ext_field() {
     random_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
     random_extension_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
     random_simd_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
+    random_from_limbs_to_limbs_tests::<M31, M31Ext3>("M31 Ext3".to_string());
+    random_from_limbs_to_limbs_tests::<M31x16, M31Ext3x16>("Simd M31 Ext3".to_string());
 }
 
 /// Compare to test vectors generated in SageMath
