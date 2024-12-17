@@ -7,7 +7,7 @@ use poly_commit::{
     raw::{RawExpanderGKR, RawExpanderGKRParams, RawMultiLinearParams, RawMultilinearPCS},
     ExpanderGKRChallenge,
 };
-use polynomials::MultiLinearPoly;
+use polynomials::{MultiLinearPoly, RefMultiLinearPoly};
 use rand::thread_rng;
 use transcript::{BytesHashTranscript, SHA256hasher, Transcript};
 
@@ -33,7 +33,10 @@ fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 ) {
     let params = RawExpanderGKRParams { n_local_vars: 8 };
     let mut rng = thread_rng();
-    let poly = MultiLinearPoly::<C::SimdCircuitField>::random(params.n_local_vars, &mut rng);
+    let hypercube_basis = (0..(1 << params.n_local_vars))
+        .map(|_| C::SimdCircuitField::random_unsafe(&mut rng))
+        .collect();
+    let poly = RefMultiLinearPoly::from_ref(&hypercube_basis);
     let xs = (0..100)
         .map(|_| ExpanderGKRChallenge::<C> {
             x: (0..params.n_local_vars)
