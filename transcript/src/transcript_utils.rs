@@ -8,8 +8,7 @@ where
     F: Field,
     T: Transcript<F>,
 {
-    if mpi_config.world_size == 1 {
-    } else {
+    if mpi_config.world_size > 1 {
         let mut state = transcript.hash_and_return_state();
         mpi_config.root_broadcast_bytes(&mut state);
         transcript.set_state(&state);

@@ -71,7 +71,8 @@ fn parse_fiat_shamir_hash_type(
         ),
         "MIMC5" => (
             "MIMC5".to_owned(),
-            format!("FieldHashTranscript::<{field_type}, MIMCHasher<{field_type}>>").to_owned(),
+            format!("FieldHashTranscript::<{field_type}, {field_type}, MIMCHasher<{field_type}, {field_type}>>")
+                .to_owned(),
         ),
         _ => panic!("Unknown hash type"),
     }

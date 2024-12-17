@@ -1,4 +1,4 @@
-use arith::Field;
+use arith::{ExtensionField, Field, FieldForECC};
 
 use tiny_keccak::{Hasher, Keccak};
 
@@ -11,19 +11,21 @@ pub struct MIMCConstants<F: Field> {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct MIMCHasher<F: Field> {
-    constants: MIMCConstants<F>,
+pub struct MIMCHasher<F: Field, ExtF: ExtensionField<BaseField = F>> {
+    constants: MIMCConstants<ExtF>,
 }
 
-impl<F: Field> FiatShamirFieldHash<F> for MIMCHasher<F> {
+impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>> FiatShamirFieldHash<F, ExtF>
+    for MIMCHasher<F, ExtF>
+{
     fn new() -> Self {
         Self {
-            constants: generate_mimc_constants::<F>(),
+            constants: generate_mimc_constants::<ExtF>(),
         }
     }
 
-    fn hash(&self, input: &[F]) -> F {
-        let mut h: F = F::ZERO;
+    fn hash(&self, input: &[ExtF]) -> ExtF {
+        let mut h = ExtF::ZERO;
         for a in input {
             let r = self.mimc5_hash(&h, a);
             h += r + a;
@@ -32,15 +34,15 @@ impl<F: Field> FiatShamirFieldHash<F> for MIMCHasher<F> {
     }
 }
 
-impl<F: Field> MIMCHasher<F> {
+impl<F: Field, ExtF: ExtensionField<BaseField = F>> MIMCHasher<F, ExtF> {
     #[inline(always)]
-    pub fn pow5(x: F) -> F {
+    pub fn pow5(x: ExtF) -> ExtF {
         let x2 = x * x;
         let x4 = x2 * x2;
         x4 * x
     }
 
-    pub fn mimc5_hash(&self, h: &F, x_in: &F) -> F {
+    pub fn mimc5_hash(&self, h: &ExtF, x_in: &ExtF) -> ExtF {
         let mut x = *x_in;
 
         for i in 0..self.constants.n_rounds as usize {
@@ -52,16 +54,6 @@ impl<F: Field> MIMCHasher<F> {
 
 const SEED: &str = "seed";
 pub fn generate_mimc_constants<F: Field>() -> MIMCConstants<F> {
-    let mut keccak = Keccak::v256();
-    let mut h = [0u8; 32];
-    keccak.update(SEED.as_bytes());
-    keccak.finalize(&mut h);
-    let mut keccak = Keccak::v256();
-    let mut h_iv = [0u8; 32];
-    let seed_iv = format!("{}{}", SEED, "_iv");
-    keccak.update(seed_iv.as_bytes());
-    keccak.finalize(&mut h_iv);
-
     let n_rounds: i64 = 110;
     let cts = get_constants(SEED, n_rounds);
     MIMCConstants::<F> { cts, n_rounds }
