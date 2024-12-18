@@ -7,8 +7,9 @@ use gkr_field_config::FieldType;
 
 use config::GKRConfig;
 use config_macros::declare_gkr_config;
+use gf2::GF2x128;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use poly_commit::raw::RawExpanderGKR;
+use poly_commit::{orion::OrionSIMDFieldPCS, raw::RawExpanderGKR};
 use transcript::{
     BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, SHA256hasher,
 };
@@ -37,8 +38,15 @@ fn main() {
         FiatShamirHashType::Keccak256,
         PolynomialCommitmentType::Raw
     );
+    declare_gkr_config!(
+        GF2Keccak256OrionConfig,
+        FieldType::GF2,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Orion
+    );
 
     print_type_name::<M31Sha256Config>();
     print_type_name::<BN254MIMCConfig>();
     print_type_name::<GF2Keccak256Config>();
+    print_type_name::<GF2Keccak256OrionConfig>();
 }
