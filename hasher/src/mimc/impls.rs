@@ -93,7 +93,8 @@ impl<F: FieldForECC, State: MiMCState<F>> FiatShamirSponge<State> for MiMCSponge
             self.is_observed = true;
             result
         } else {
-            self.absorbed = self.mimc5_hash(&F::ZERO, &self.absorbed.into()).into();
+            let pad = self.mimc5_hash(&F::ZERO, &self.absorbed.into());
+            self.absorbed = self.absorbed + Into::<State>::into(pad);
             self.absorbed.digest()
         }
     }
