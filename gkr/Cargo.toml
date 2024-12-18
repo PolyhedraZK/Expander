@@ -17,6 +17,7 @@ poly_commit = { path = "../poly_commit" }
 polynomials = { path = "../arith/polynomials" }
 sumcheck = { path = "../sumcheck" }
 transcript = { path = "../transcript" }
+hasher = { path = "../hasher/" }
 
 ark-std.workspace = true
 clap.workspace = true

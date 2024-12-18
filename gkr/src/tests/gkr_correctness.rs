@@ -8,14 +8,13 @@ use circuit::Circuit;
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use hasher::MiMCFrTranscriptSponge;
 use mpi_config::{root_println, MPIConfig};
 use poly_commit::expander_pcs_init_testing_only;
 use poly_commit::raw::RawExpanderGKR;
 use rand::Rng;
 use sha2::Digest;
-use transcript::{
-    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, SHA256hasher,
-};
+use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
 
 use crate::{utils::*, Prover, Verifier};
 

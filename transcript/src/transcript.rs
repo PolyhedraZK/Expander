@@ -1,11 +1,9 @@
 use std::{fmt::Debug, marker::PhantomData};
 
 use arith::{ExtensionField, Field};
+use hasher::{FiatShamirSponge, FieldHasherState};
 
-use crate::{
-    fiat_shamir_hash::{FiatShamirBytesHash, FiatShamirFieldHash},
-    Proof,
-};
+use crate::{fiat_shamir_hash::FiatShamirBytesHash, Proof};
 
 pub trait Transcript<BaseF: Field, ChallengeF: ExtensionField<BaseField = BaseF>>:
     Clone + Debug
@@ -179,44 +177,38 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
     }
 }
 
-// TODO(HS) abstraction should be more like F, ExtF, HashState, H
-// where H is FiatShamirFieldHash<F, HashState> and HashState can extract out ExtF
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct FieldHashTranscript<BaseF, ChallengeF, H>
+pub struct FieldHashTranscript<BaseF, ChallengeF, State, Sponge>
 where
     BaseF: Field,
     ChallengeF: ExtensionField<BaseField = BaseF>,
-    H: FiatShamirFieldHash<BaseF, ChallengeF>,
+    State: FieldHasherState<InputF = BaseF, OutputF = ChallengeF>,
+    Sponge: FiatShamirSponge<State>,
 {
     /// Internal hasher, it's a little costly to create a new hasher
-    pub fs_sponge: H,
-
-    // TODO(HS) maybe unpack state here?
-    /// The digest bytes.
-    pub digest: ChallengeF,
+    pub fs_sponge: Sponge,
 
     /// The proof bytes
     pub proof: Proof,
 
-    // TODO(HS) maybe unpack state here?
-    /// The data to be hashed
-    pub data_pool: Vec<BaseF>,
-
     /// Proof locked or not
     pub proof_locked: bool,
+
+    _phantom: PhantomData<State>,
 }
 
-impl<BaseF, ChallengeF, H> Transcript<BaseF, ChallengeF>
-    for FieldHashTranscript<BaseF, ChallengeF, H>
+impl<BaseF, ChallengeF, State, Sponge> Transcript<BaseF, ChallengeF>
+    for FieldHashTranscript<BaseF, ChallengeF, State, Sponge>
 where
     BaseF: Field,
     ChallengeF: ExtensionField<BaseField = BaseF>,
-    H: FiatShamirFieldHash<BaseF, ChallengeF>,
+    State: FieldHasherState<InputF = BaseF, OutputF = ChallengeF>,
+    Sponge: FiatShamirSponge<State>,
 {
     #[inline(always)]
     fn new() -> Self {
         Self {
-            fs_sponge: H::new(),
+            fs_sponge: Sponge::new(),
             ..Default::default()
         }
     }
@@ -227,8 +219,7 @@ where
         if !self.proof_locked {
             self.proof.bytes.extend_from_slice(&buffer);
         }
-        // TODO(HS) fs_sponge update
-        f.to_limbs().iter().for_each(|l| self.data_pool.push(*l));
+        self.fs_sponge.update(&f.to_limbs());
     }
 
     fn append_u8_slice(&mut self, buffer: &[u8]) {
@@ -239,22 +230,20 @@ where
         buffer_local.resize(buffer_local.len().next_multiple_of(32), 0u8);
         buffer_local.chunks_exact(32).for_each(|chunk_32| {
             let c = ChallengeF::from_uniform_bytes(chunk_32.try_into().unwrap());
-            // TODO(HS) fs_sponge update
-            c.to_limbs().iter().for_each(|l| self.data_pool.push(*l));
+            self.fs_sponge.update(&c.to_limbs());
         });
     }
 
     fn generate_challenge_field_element(&mut self) -> ChallengeF {
-        self.hash_to_digest();
-        self.digest
+        self.fs_sponge.squeeze()
     }
 
     fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
         let mut bytes = vec![];
         let mut buf = vec![];
         while bytes.len() < n_bytes {
-            self.hash_to_digest();
-            self.digest.serialize_into(&mut buf).unwrap();
+            let digest = self.fs_sponge.squeeze();
+            digest.serialize_into(&mut buf).unwrap();
             bytes.extend_from_slice(&buf);
         }
         bytes.resize(n_bytes, 0);
@@ -266,17 +255,15 @@ where
     }
 
     fn hash_and_return_state(&mut self) -> Vec<u8> {
-        // TODO(HS) fs_sponge.squeeze_state
-        self.hash_to_digest();
-        let mut state = vec![];
-        self.digest.serialize_into(&mut state).unwrap();
-        state
+        let state = self.fs_sponge.squeeze_state();
+        let mut state_buffer = vec![];
+        state.serialize_into(&mut state_buffer).unwrap();
+        state_buffer
     }
 
     fn set_state(&mut self, state: &[u8]) {
-        assert!(self.data_pool.is_empty());
-        // TODO(HS) fs_sponge.set_state
-        self.digest = ChallengeF::deserialize_from(state).unwrap();
+        let new_state = State::deserialize_from(state).unwrap();
+        self.fs_sponge.set_state(new_state)
     }
 
     fn lock_proof(&mut self) {
@@ -287,21 +274,5 @@ where
     fn unlock_proof(&mut self) {
         assert!(self.proof_locked);
         self.proof_locked = false;
-    }
-}
-
-impl<BaseF, ChallengeF, H> FieldHashTranscript<BaseF, ChallengeF, H>
-where
-    BaseF: Field,
-    ChallengeF: ExtensionField<BaseField = BaseF>,
-    H: FiatShamirFieldHash<BaseF, ChallengeF>,
-{
-    pub fn hash_to_digest(&mut self) {
-        if !self.data_pool.is_empty() {
-            self.digest = self.fs_sponge.hash(&self.data_pool);
-            self.data_pool.clear();
-        } else {
-            self.digest = self.fs_sponge.hash(&self.digest.to_limbs());
-        }
     }
 }
