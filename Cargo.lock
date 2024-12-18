@@ -563,6 +563,7 @@ name = "config_macros"
 version = "0.1.0"
 dependencies = [
  "config",
+ "gf2",
  "gkr_field_config",
  "poly_commit",
  "proc-macro2",
@@ -940,6 +941,7 @@ dependencies = [
  "poly_commit",
  "polynomials",
  "rand",
+ "rand_chacha",
  "sha2",
  "sumcheck",
  "thiserror",

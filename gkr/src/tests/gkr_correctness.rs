@@ -11,13 +11,16 @@ use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31
 use mpi_config::{root_println, MPIConfig};
 use poly_commit::expander_pcs_init_testing_only;
 use poly_commit::raw::RawExpanderGKR;
-use rand::{thread_rng, Rng};
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha12Rng;
 use sha2::Digest;
 use transcript::{
     BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, SHA256hasher,
 };
 
 use crate::{utils::*, Prover, Verifier};
+
+const PCS_TESTING_SEED_U64: u64 = 114514;
 
 #[test]
 fn test_gkr_correctness() {
@@ -145,7 +148,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
     let mut prover = Prover::new(config);
     prover.prepare_mem(&circuit);
 
-    let mut rng = thread_rng();
+    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
     let (pcs_params, pcs_proving_key, pcs_verification_key, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit.log_input_size(),
