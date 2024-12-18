@@ -60,6 +60,7 @@ fn parse_fiat_shamir_hash_type(
 
     let binding = hash_enum.ident.to_string();
     let hash_type_str = binding.as_str();
+    let circuit_f = format!("<{field_config} as GKRFieldConfig>::CircuitField");
     let challenge_f = format!("<{field_config} as GKRFieldConfig>::ChallengeField");
     match (hash_type_str, field_type) {
         ("SHA256", _) => (
@@ -70,7 +71,10 @@ fn parse_fiat_shamir_hash_type(
             "Keccak256".to_owned(),
             format!("BytesHashTranscript::<{challenge_f}, Keccak256hasher>").to_owned(),
         ),
-		// TODO(HS) Poseidon M31 setup
+		("Poseidon", "M31") => (
+			"Poseidon".to_owned(),
+			format!("FieldHashTranscript::<{circuit_f}, {challenge_f}, PoseidonM31x16Ext3, PoseidonM31TranscriptSponge>").to_owned(),
+		),
         ("MIMC5", "BN254") => (
             "MIMC5".to_owned(),
             format!("FieldHashTranscript::<{challenge_f}, {challenge_f}, {challenge_f}, MiMCFrTranscriptSponge>")
