@@ -17,7 +17,7 @@ use transcript::{Proof, Transcript};
 use crate::grind;
 
 #[inline(always)]
-fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::CircuitField, C::ChallengeField>>(
     mut proof_reader: impl Read,
     degree: usize,
     transcript: &mut T,
@@ -49,7 +49,10 @@ fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
-fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+fn sumcheck_verify_gkr_layer<
+    C: GKRFieldConfig,
+    T: Transcript<C::CircuitField, C::ChallengeField>,
+>(
     mpi_config: &MPIConfig,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
@@ -160,7 +163,7 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
 
 // todo: FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::CircuitField, C::ChallengeField>>(
     mpi_config: &MPIConfig,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],

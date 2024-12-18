@@ -13,7 +13,10 @@ use crate::{
 // FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
-pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn sumcheck_prove_gkr_layer<
+    C: GKRFieldConfig,
+    T: Transcript<C::CircuitField, C::ChallengeField>,
+>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
     rz1: &Option<Vec<C::ChallengeField>>,
@@ -49,21 +52,24 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
     helper.prepare_x_vals();
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        let r =
+            transcript_io::<C::CircuitField, C::ChallengeField, T>(mpi_config, &evals, transcript);
         helper.receive_rx(i_var, r);
     }
 
     helper.prepare_simd_var_vals();
     for i_var in 0..helper.simd_var_num {
         let evals = helper.poly_evals_at_r_simd_var(i_var, 3);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        let r =
+            transcript_io::<C::CircuitField, C::ChallengeField, T>(mpi_config, &evals, transcript);
         helper.receive_r_simd_var(i_var, r);
     }
 
     helper.prepare_mpi_var_vals();
     for i_var in 0..mpi_config.world_size().trailing_zeros() as usize {
         let evals = helper.poly_evals_at_r_mpi_var(i_var, 3);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        let r =
+            transcript_io::<C::CircuitField, C::ChallengeField, T>(mpi_config, &evals, transcript);
         helper.receive_r_mpi_var(i_var, r);
     }
 
@@ -75,7 +81,9 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
         helper.prepare_y_vals();
         for i_var in 0..helper.input_var_num {
             let evals = helper.poly_evals_at_ry(i_var, 2);
-            let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+            let r = transcript_io::<C::CircuitField, C::ChallengeField, T>(
+                mpi_config, &evals, transcript,
+            );
             helper.receive_ry(i_var, r);
         }
         let vy_claim = helper.vy_claim();
@@ -96,7 +104,10 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
 
 // FIXME
 #[allow(clippy::needless_range_loop)] // todo: remove
-pub fn sumcheck_prove_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn sumcheck_prove_gkr_square_layer<
+    C: GKRFieldConfig,
+    T: Transcript<C::CircuitField, C::ChallengeField>,
+>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
     transcript: &mut T,

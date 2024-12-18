@@ -1,24 +1,24 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use arith::Field;
+use arith::{ExtensionField, Field};
+use hasher::{FiatShamirSponge, FieldHasherState};
 
-use crate::{
-    fiat_shamir_hash::{FiatShamirBytesHash, FiatShamirFieldHash},
-    Proof,
-};
+use crate::{fiat_shamir_hash::FiatShamirBytesHash, Proof};
 
-pub trait Transcript<F: Field>: Clone + Debug {
+pub trait Transcript<BaseF: Field, ChallengeF: ExtensionField<BaseField = BaseF>>:
+    Clone + Debug
+{
     /// Create a new transcript.
     fn new() -> Self;
 
     /// Append a field element to the transcript.
-    fn append_field_element(&mut self, f: &F);
+    fn append_field_element(&mut self, f: &ChallengeF);
 
     /// Append a slice of bytes
     fn append_u8_slice(&mut self, buffer: &[u8]);
 
     /// Generate a challenge.
-    fn generate_challenge_field_element(&mut self) -> F;
+    fn generate_challenge_field_element(&mut self) -> ChallengeF;
 
     /// Generate a slice of random bytes of some fixed size
     /// Use this function when you need some randomness other than the native field
@@ -38,7 +38,7 @@ pub trait Transcript<F: Field>: Clone + Debug {
 
     /// Generate a challenge vector.
     #[inline]
-    fn generate_challenge_field_elements(&mut self, n: usize) -> Vec<F> {
+    fn generate_challenge_field_elements(&mut self, n: usize) -> Vec<ChallengeF> {
         let mut challenges = Vec::with_capacity(n);
         for _ in 0..n {
             challenges.push(self.generate_challenge_field_element());
@@ -83,7 +83,9 @@ pub struct BytesHashTranscript<F: Field, H: FiatShamirBytesHash> {
     proof_locked_at: usize,
 }
 
-impl<F: Field, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, H> {
+impl<BaseF: Field, ChallengeF: ExtensionField<BaseField = BaseF>, H: FiatShamirBytesHash>
+    Transcript<BaseF, ChallengeF> for BytesHashTranscript<ChallengeF, H>
+{
     fn new() -> Self {
         Self {
             phantom: PhantomData,
@@ -95,7 +97,7 @@ impl<F: Field, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, 
         }
     }
 
-    fn append_field_element(&mut self, f: &F) {
+    fn append_field_element(&mut self, f: &ChallengeF) {
         let mut buf = vec![];
         f.serialize_into(&mut buf).unwrap();
         self.append_u8_slice(&buf);
@@ -107,10 +109,10 @@ impl<F: Field, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, 
     }
 
     /// Generate a challenge.
-    fn generate_challenge_field_element(&mut self) -> F {
+    fn generate_challenge_field_element(&mut self) -> ChallengeF {
         self.hash_to_digest();
-        assert!(F::SIZE <= H::DIGEST_SIZE);
-        F::from_uniform_bytes(&self.digest.clone().try_into().unwrap())
+        assert!(ChallengeF::SIZE <= H::DIGEST_SIZE);
+        ChallengeF::from_uniform_bytes(&self.digest.clone().try_into().unwrap())
     }
 
     fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
@@ -175,77 +177,73 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct FieldHashTranscript<F: Field, H: FiatShamirFieldHash<F>> {
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct FieldHashTranscript<BaseF, ChallengeF, State, Sponge>
+where
+    BaseF: Field,
+    ChallengeF: ExtensionField<BaseField = BaseF>,
+    State: FieldHasherState<InputF = BaseF, OutputF = ChallengeF>,
+    Sponge: FiatShamirSponge<State>,
+{
     /// Internal hasher, it's a little costly to create a new hasher
-    pub hasher: H,
-
-    /// The digest bytes.
-    pub digest: F,
+    pub fs_sponge: Sponge,
 
     /// The proof bytes
     pub proof: Proof,
 
-    /// The data to be hashed
-    pub data_pool: Vec<F>,
-
     /// Proof locked or not
     pub proof_locked: bool,
+
+    _phantom: PhantomData<State>,
 }
 
-impl<F: Field, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<F, H> {
+impl<BaseF, ChallengeF, State, Sponge> Transcript<BaseF, ChallengeF>
+    for FieldHashTranscript<BaseF, ChallengeF, State, Sponge>
+where
+    BaseF: Field,
+    ChallengeF: ExtensionField<BaseField = BaseF>,
+    State: FieldHasherState<InputF = BaseF, OutputF = ChallengeF>,
+    Sponge: FiatShamirSponge<State>,
+{
     #[inline(always)]
     fn new() -> Self {
         Self {
-            hasher: H::new(),
-            digest: F::default(),
-            proof: Proof::default(),
-            data_pool: vec![],
-            proof_locked: false,
+            fs_sponge: Sponge::new(),
+            ..Default::default()
         }
     }
 
-    fn append_field_element(&mut self, f: &F) {
+    fn append_field_element(&mut self, f: &ChallengeF) {
         let mut buffer = vec![];
         f.serialize_into(&mut buffer).unwrap();
         if !self.proof_locked {
             self.proof.bytes.extend_from_slice(&buffer);
         }
-        self.data_pool.push(*f);
+        self.fs_sponge.update(&f.to_limbs());
     }
 
     fn append_u8_slice(&mut self, buffer: &[u8]) {
         if !self.proof_locked {
             self.proof.bytes.extend_from_slice(buffer);
         }
-        let buffer_size = buffer.len();
-        let mut cur = 0;
-        while cur + 32 <= buffer_size {
-            self.data_pool.push(F::from_uniform_bytes(
-                buffer[cur..cur + 32].try_into().unwrap(),
-            ));
-            cur += 32
-        }
-
-        if cur < buffer_size {
-            let mut buffer_last = buffer[cur..].to_vec();
-            buffer_last.resize(32, 0);
-            self.data_pool
-                .push(F::from_uniform_bytes(buffer_last[..].try_into().unwrap()));
-        }
+        let mut buffer_local = buffer.to_vec();
+        buffer_local.resize(buffer_local.len().next_multiple_of(32), 0u8);
+        buffer_local.chunks_exact(32).for_each(|chunk_32| {
+            let c = ChallengeF::from_uniform_bytes(chunk_32.try_into().unwrap());
+            self.fs_sponge.update(&c.to_limbs());
+        });
     }
 
-    fn generate_challenge_field_element(&mut self) -> F {
-        self.hash_to_digest();
-        self.digest
+    fn generate_challenge_field_element(&mut self) -> ChallengeF {
+        self.fs_sponge.squeeze()
     }
 
     fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
         let mut bytes = vec![];
         let mut buf = vec![];
         while bytes.len() < n_bytes {
-            self.hash_to_digest();
-            self.digest.serialize_into(&mut buf).unwrap();
+            let digest = self.fs_sponge.squeeze();
+            digest.serialize_into(&mut buf).unwrap();
             bytes.extend_from_slice(&buf);
         }
         bytes.resize(n_bytes, 0);
@@ -257,15 +255,15 @@ impl<F: Field, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<
     }
 
     fn hash_and_return_state(&mut self) -> Vec<u8> {
-        self.hash_to_digest();
-        let mut state = vec![];
-        self.digest.serialize_into(&mut state).unwrap();
-        state
+        let state = self.fs_sponge.squeeze_state();
+        let mut state_buffer = vec![];
+        state.serialize_into(&mut state_buffer).unwrap();
+        state_buffer
     }
 
     fn set_state(&mut self, state: &[u8]) {
-        self.data_pool.clear();
-        self.digest = F::deserialize_from(state).unwrap();
+        let new_state = State::deserialize_from(state).unwrap();
+        self.fs_sponge.set_state(new_state)
     }
 
     fn lock_proof(&mut self) {
@@ -276,16 +274,5 @@ impl<F: Field, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<
     fn unlock_proof(&mut self) {
         assert!(self.proof_locked);
         self.proof_locked = false;
-    }
-}
-
-impl<F: Field, H: FiatShamirFieldHash<F>> FieldHashTranscript<F, H> {
-    pub fn hash_to_digest(&mut self) {
-        if !self.data_pool.is_empty() {
-            self.digest = self.hasher.hash(&self.data_pool);
-            self.data_pool.clear();
-        } else {
-            self.digest = self.hasher.hash(&[self.digest]);
-        }
     }
 }

@@ -564,6 +564,7 @@ version = "0.1.0"
 dependencies = [
  "config",
  "gkr_field_config",
+ "hasher",
  "poly_commit",
  "proc-macro2",
  "quote",
@@ -933,6 +934,7 @@ dependencies = [
  "gf2_128",
  "gkr_field_config",
  "halo2curves",
+ "hasher",
  "log",
  "mersenne31",
  "mpi",
@@ -1049,6 +1051,20 @@ name = "hashbrown"
 version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a9bfc1af68b1726ea47d3d5109de126281def866b33970e10fbab11b5dafab3"
+
+[[package]]
+name = "hasher"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "criterion",
+ "halo2curves",
+ "mersenne31",
+ "rand",
+ "sha2",
+ "tiny-keccak",
+]
 
 [[package]]
 name = "headers"
@@ -2348,6 +2364,7 @@ name = "transcript"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "hasher",
  "mpi_config",
  "sha2",
  "tiny-keccak",
