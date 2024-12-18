@@ -16,6 +16,8 @@ use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 
 use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
+use rand::SeedableRng;
+use rand_chacha::ChaCha12Rng;
 use transcript::{BytesHashTranscript, FieldHashTranscript, MIMCHasher, SHA256hasher};
 
 use log::{debug, info};
@@ -63,6 +65,8 @@ fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     }
 }
 
+const PCS_TESTING_SEED_U64: u64 = 114514;
+
 async fn run_command<'a, Cfg: GKRConfig>(
     command: &str,
     circuit_file: &str,
@@ -78,10 +82,14 @@ async fn run_command<'a, Cfg: GKRConfig>(
             let mut prover = gkr::Prover::new(&config);
             prover.prepare_mem(&circuit);
             // TODO: Read PCS  setup from files
+
+            let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
+
             let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
                 expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
                     circuit.log_input_size(),
                     &config.mpi_config,
+                    &mut rng,
                 );
 
             let (claimed_v, proof) = prover.prove(
@@ -119,10 +127,13 @@ async fn run_command<'a, Cfg: GKRConfig>(
                 load_proof_and_claimed_v(&bytes).expect("Unable to deserialize proof.");
 
             // TODO: Read PCS  setup from files
+            let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
+
             let (pcs_params, _pcs_proving_key, pcs_verification_key, mut _pcs_scratch) =
                 expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
                     circuit.log_input_size(),
                     &config.mpi_config,
+                    &mut rng,
                 );
             let verifier = gkr::Verifier::new(&config);
             let public_input = circuit.public_input.clone();
@@ -150,10 +161,12 @@ async fn run_command<'a, Cfg: GKRConfig>(
             let verifier = gkr::Verifier::new(&config);
 
             // TODO: Read PCS  setup from files
+            let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
                 expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
                     circuit.log_input_size(),
                     &config.mpi_config,
+                    &mut rng,
                 );
 
             let circuit = Arc::new(Mutex::new(circuit));
