@@ -168,6 +168,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         pcs_scratch: &mut <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::ScratchPad,
         transcript: &mut Cfg::Transcript,
     ) {
+        transcript.lock_proof();
         let opening = Cfg::PCS::open(
             pcs_params,
             &self.config.mpi_config,
@@ -177,6 +178,8 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
             transcript,
             pcs_scratch,
         );
+        transcript.unlock_proof();
+
         let mut buffer = vec![];
         opening.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         transcript.append_u8_slice(&buffer);
