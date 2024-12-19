@@ -75,6 +75,7 @@ pub(crate) struct CrossLayerScatterHelper<'a, C: GKRFieldConfig> {
 
     layer: &'a GenericLayer<C>,
     rz0: &'a [C::ChallengeField],
+    r_simd: &'a [C::ChallengeField],
     connections: &'a CrossLayerConnections,
     circuit_vals: &'a CrossLayerCircuitEvals<C>,
     sp: &'a mut CrossLayerProverScratchPad<C>,
@@ -87,6 +88,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
     pub(crate) fn new(
         layer: &'a GenericLayer<C>,
         rz0: &'a [C::ChallengeField],
+        r_simd: &'a [C::ChallengeField],
         connections: &'a CrossLayerConnections,
         circuit_vals: &'a CrossLayerCircuitEvals<C>,
         sp: &'a mut CrossLayerProverScratchPad<C>,
@@ -99,6 +101,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
 
             layer,
             rz0,
+            r_simd,
             connections,
             circuit_vals,
             sp,
@@ -212,6 +215,17 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
     }
 
     #[inline]
+    pub(crate) fn prepare_simd(&mut self) {
+        EqPolynomial::<C::ChallengeField>::eq_eval_at(
+            self.r_simd,
+            &C::ChallengeField::one(),
+            &mut self.sp.eq_evals_at_r_simd0,
+            &mut self.sp.eq_evals_first_half,
+            &mut self.sp.eq_evals_second_half,
+        );
+    }
+
+    #[inline]
     pub(crate) fn prepare_x_vals(&mut self) {
         let eq_evals_at_rz = &mut self.sp.eq_evals_at_rz0;
         EqPolynomial::eq_eval_at(self.rz0, &C::ChallengeField::ONE, eq_evals_at_rz, &mut self.sp.eq_evals_first_half, &mut self.sp.eq_evals_second_half);
@@ -229,11 +243,11 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
             
             if !connections_at_i_layer.is_empty() {
                 *cross_layer_size = connections_at_i_layer.len().next_power_of_two();
-                vals.resize(*cross_layer_size, C::ChallengeField::ZERO);
-                hg_vals.resize(*cross_layer_size, C::ChallengeField::ZERO);
+                vals.resize(*cross_layer_size, C::Field::ZERO);
+                hg_vals.resize(*cross_layer_size, C::Field::ZERO);
 
                 for (idx, (o_id, i_id)) in connections_at_i_layer.into_iter().enumerate() {
-                    vals[idx] = self.circuit_vals.vals[i_layer][*i_id];
+                    vals[idx] = C::simd_circuit_field_into_field(&self.circuit_vals.vals[i_layer][*i_id]);
                     hg_vals[idx] = eq_evals_at_rz[*o_id];
                 }    
             }

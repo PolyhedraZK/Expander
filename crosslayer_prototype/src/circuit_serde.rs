@@ -50,7 +50,7 @@ pub struct ECCCrossLayerGate<C: GKRFieldConfig, const INPUT_NUM: usize> {
     pub i_ids: [(usize, usize); INPUT_NUM], // (layer_offset, gate_offset)
     pub o_id: usize,
     pub coef_type: CoefType,
-    pub coef: C::ChallengeField,
+    pub coef: C::CircuitField,
 }
 
 impl<C, const INPUT_NUM: usize> ECCCrossLayerGate<C, INPUT_NUM>
@@ -122,7 +122,7 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for ECCCrossLayerGa
             i_ids,
             o_id,
             coef_type,
-            coef: coef.into(),
+            coef,
         }
     }
 }
@@ -180,7 +180,7 @@ impl<C: GKRFieldConfig> FromEccSerde for CrossLayerSegment<C> {
             gate_muls,
             gate_adds,
             gate_csts,
-            gate_relay: vec![],
+            gate_relay,
         }
     }
 }

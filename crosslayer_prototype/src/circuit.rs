@@ -88,7 +88,7 @@ impl<C: GKRFieldConfig> GenericLayer<C> {
 
 #[derive(Debug, Clone, Default)]
 pub struct CrossLayerCircuitEvals<C: GKRFieldConfig> {
-    pub vals: Vec<Vec<C::ChallengeField>>,
+    pub vals: Vec<Vec<C::SimdCircuitField>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -130,28 +130,28 @@ impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
         circuit
     }
 
-    pub fn evaluate(&self, input: &[C::ChallengeField]) -> CrossLayerCircuitEvals<C> {
+    pub fn evaluate(&self, input: &[C::SimdCircuitField]) -> CrossLayerCircuitEvals<C> {
         let mut vals = Vec::with_capacity(self.layers.len());
         vals.push(input.to_vec());
 
         for i_layer in 1..self.layers.len() {
             let layer = &self.layers[i_layer];
-            let mut new_layer_vals = vec![C::ChallengeField::zero(); layer.layer_size];
+            let mut new_layer_vals = vec![C::SimdCircuitField::zero(); layer.layer_size];
 
             for gate in &layer.add_gates {
-                new_layer_vals[gate.o_id] += vals[i_layer - 1][gate.i_ids[0]] * gate.coef;
+                new_layer_vals[gate.o_id] += C::circuit_field_mul_simd_circuit_field(&gate.coef, &vals[i_layer - 1][gate.i_ids[0]]);
             }
 
             for gate in &layer.mul_gates {
-                new_layer_vals[gate.o_id] += vals[i_layer - 1][gate.i_ids[0]] * vals[i_layer - 1][gate.i_ids[1]] * gate.coef;
+                new_layer_vals[gate.o_id] += C::circuit_field_mul_simd_circuit_field(&gate.coef, &(vals[i_layer - 1][gate.i_ids[0]] * vals[i_layer - 1][gate.i_ids[1]]));
             }
 
             for gate in &layer.const_gates {
-                new_layer_vals[gate.o_id] += gate.coef;
+                new_layer_vals[gate.o_id] += C::SimdCircuitField::from(gate.coef);
             }
 
             for gate in &layer.relay_gates {
-                new_layer_vals[gate.o_id] += vals[gate.i_layer][gate.i_id] * gate.coef;
+                new_layer_vals[gate.o_id] += C::circuit_field_mul_simd_circuit_field(&gate.coef, &vals[gate.i_layer][gate.i_id]);
             }
 
             vals.push(new_layer_vals);
@@ -178,6 +178,26 @@ impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
                 0
             }
         ).max().unwrap()
+    }
+
+    pub fn print_stats(&self) {
+        let mut n_add_gates = 0;
+        let mut n_mul_gates = 0;
+        let mut n_const_gates = 0;
+        let mut n_relay_gates = 0;
+
+        for layer in &self.layers {
+            n_add_gates += layer.add_gates.len();
+            n_mul_gates += layer.mul_gates.len();
+            n_const_gates += layer.const_gates.len();
+            n_relay_gates += layer.relay_gates.len();
+        }
+
+        println!("Number of layers: {}", self.layers.len());
+        println!("Number of add gates: {}", n_add_gates);
+        println!("Number of mul gates: {}", n_mul_gates);
+        println!("Number of const gates: {}", n_const_gates);
+        println!("Number of relay gates: {}", n_relay_gates);
     }
 }
 

@@ -17,7 +17,7 @@ pub struct SimpleGate<C: GKRFieldConfig, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
     pub o_id: usize,
     pub coef_type: CoefType,
-    pub coef: C::ChallengeField,
+    pub coef: C::CircuitField,
 }
 
 pub type SimpleGateMul<C> = SimpleGate<C, 2>;
@@ -35,7 +35,7 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> SimpleGate<C, INPUT_NUM> {
 
         let o_id = rng.next_u64() as usize % output_size;
         let coef_type = CoefType::Constant;
-        let coef = C::ChallengeField::random_unsafe(rng);
+        let coef = C::CircuitField::random_unsafe(rng);
         Self { i_ids, o_id, coef_type, coef }
     }
 }
@@ -45,14 +45,14 @@ pub struct CrossLayerRelay<C: GKRFieldConfig> {
     pub o_id: usize,
     pub i_id: usize,
     pub i_layer: usize,
-    pub coef: C::ChallengeField,
+    pub coef: C::CircuitField,
 }
 
 impl<C: GKRFieldConfig> CrossLayerRelay<C> {
     pub fn random_for_testing(mut rng: impl RngCore, output_size: usize, input_size: usize, i_layer: usize) -> Self {
         let o_id = rng.next_u64() as usize % output_size;
         let i_id = rng.next_u64() as usize % input_size;
-        let coef = C::ChallengeField::ONE; // temporarily support one only
+        let coef = C::CircuitField::ONE; // temporarily support one only
         Self { o_id, i_id, i_layer, coef }
     }
 }

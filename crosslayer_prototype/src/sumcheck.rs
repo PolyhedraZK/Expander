@@ -21,6 +21,7 @@ pub fn transcript_io<F: Field + FieldSerde, T: Transcript<F>>(ps: &[F], transcri
 pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     layer: &GenericLayer<C>,
     rz0: &[C::ChallengeField],
+    r_simd: &[C::ChallengeField],
     connections: &CrossLayerConnections,
     circuit_vals: &CrossLayerCircuitEvals<C>,
     transcript: &mut T,
@@ -33,10 +34,13 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
     let mut helper = CrossLayerScatterHelper::new(
         layer,
         rz0,
+        r_simd,
         connections,
         circuit_vals,
-        sp
+        sp,
     );
+
+    helper.prepare_simd();
 
     // gkr phase 1 over variable x
     helper.prepare_x_vals();

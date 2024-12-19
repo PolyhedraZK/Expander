@@ -97,13 +97,22 @@ impl<C: GKRFieldConfig> CrossLayerRecursiveCircuit<C> {
 
     pub fn flatten(&self) -> CrossLayerCircuit<C> {
         let mut ret = CrossLayerCircuit::<C>::default();
+        
+        // denote the input layer as layer 0 here
+        assert!(self.segments[self.layers[0]].input_size.len() == 1);
+        ret.layers.push(GenericLayer::<C> {
+            layer_id: 0,
+            layer_size: self.segments[self.layers[0]].input_size[0],
+            input_layer_size: 0,
+            ..Default::default()
+        });
 
         // layer-by-layer conversion
         for (i, seg_id) in self.layers.iter().enumerate() {
             let layer_seg = &self.segments[*seg_id];
             let leaves = layer_seg.scan_leaf_segments(self, *seg_id);
             let mut ret_layer = GenericLayer::<C> {
-                layer_id: i,
+                layer_id: i + 1,
                 layer_size: layer_seg.output_size,
                 input_layer_size: layer_seg.input_size[0],
                 ..Default::default()
