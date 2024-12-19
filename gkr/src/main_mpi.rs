@@ -6,6 +6,8 @@ use mpi_config::MPIConfig;
 
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
+use rand::SeedableRng;
+use rand_chacha::ChaCha12Rng;
 use transcript::{BytesHashTranscript, SHA256hasher};
 
 use gkr::{
@@ -104,6 +106,8 @@ fn main() {
     MPIConfig::finalize();
 }
 
+const PCS_TESTING_SEED_U64: u64 = 114514;
+
 fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let pack_size = Cfg::FieldConfig::get_field_pack_size();
 
@@ -154,10 +158,13 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
 
     let mut prover = Prover::new(&config);
     prover.prepare_mem(&circuit);
+
+    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
     let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit.log_input_size(),
             &config.mpi_config,
+            &mut rng,
         );
 
     const N_PROOF: usize = 1000;

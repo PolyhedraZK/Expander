@@ -7,17 +7,20 @@ use arith::{Field, FieldSerde};
 use circuit::Circuit;
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
+use gf2::GF2x128;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::{root_println, MPIConfig};
-use poly_commit::expander_pcs_init_testing_only;
-use poly_commit::raw::RawExpanderGKR;
-use rand::Rng;
+use poly_commit::{expander_pcs_init_testing_only, OrionSIMDFieldPCS, RawExpanderGKR};
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha12Rng;
 use sha2::Digest;
 use transcript::{
     BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, SHA256hasher,
 };
 
 use crate::{utils::*, Prover, Verifier};
+
+const PCS_TESTING_SEED_U64: u64 = 114514;
 
 #[test]
 fn test_gkr_correctness() {
@@ -64,6 +67,12 @@ fn test_gkr_correctness() {
         FiatShamirHashType::MIMC5,
         PolynomialCommitmentType::Raw
     );
+    declare_gkr_config!(
+        C7,
+        FieldType::GF2,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Orion,
+    );
 
     test_gkr_correctness_helper(
         &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
@@ -92,6 +101,10 @@ fn test_gkr_correctness() {
     test_gkr_correctness_helper(
         &Config::<C6>::new(GKRScheme::Vanilla, mpi_config.clone()),
         Some("../data/gkr_proof.txt"),
+    );
+    test_gkr_correctness_helper(
+        &Config::<C7>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
     );
 
     MPIConfig::finalize();
@@ -145,10 +158,12 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
     let mut prover = Prover::new(config);
     prover.prepare_mem(&circuit);
 
+    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
     let (pcs_params, pcs_proving_key, pcs_verification_key, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit.log_input_size(),
             &config.mpi_config,
+            &mut rng,
         );
 
     let proving_start = Instant::now();

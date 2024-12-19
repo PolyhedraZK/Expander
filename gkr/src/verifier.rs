@@ -360,6 +360,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         )
         .unwrap();
 
+        transcript.lock_proof();
         let verified = Cfg::PCS::verify(
             pcs_params,
             &self.config.mpi_config,
@@ -370,6 +371,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             transcript,
             &opening,
         );
+        transcript.unlock_proof();
 
         let mut buffer = vec![];
         opening.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
