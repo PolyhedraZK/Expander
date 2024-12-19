@@ -9,6 +9,7 @@ mod utils;
 pub use utils::{expander_pcs_init_testing_only, PCSEmptyType};
 
 pub mod raw;
+pub use raw::RawExpanderGKR;
 
 pub mod orion;
-pub use self::orion::*;
+pub use orion::*;

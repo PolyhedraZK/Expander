@@ -9,7 +9,7 @@ use config::GKRConfig;
 use config_macros::declare_gkr_config;
 use gf2::GF2x128;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use poly_commit::{orion::OrionSIMDFieldPCS, raw::RawExpanderGKR};
+use poly_commit::{OrionSIMDFieldPCS, RawExpanderGKR};
 use transcript::{
     BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, SHA256hasher,
 };
