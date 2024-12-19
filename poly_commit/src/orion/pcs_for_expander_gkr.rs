@@ -35,16 +35,18 @@ where
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
 
+    /// NOTE(HS): this is actually number of variables in polynomial,
+    /// ignoring the variables for MPI parties and SIMD field element
     fn gen_params(n_input_vars: usize) -> Self::Params {
         n_input_vars
     }
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        mpi_config: &MPIConfig,
+        #[allow(unused)] mpi_config: &MPIConfig,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
-        let num_vars_each_core = *params - mpi_config.world_size().ilog2() as usize;
+        let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         OrionSRS::from_random::<C::CircuitField>(
             num_vars_each_core,
             ORION_CODE_PARAMETER_INSTANCE,
@@ -63,7 +65,7 @@ where
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
-        let num_vars_each_core = *params - mpi_config.world_size().ilog2() as usize;
+        let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
         let commitment = orion_commit_simd_field(proving_key, poly, scratch_pad).unwrap();
@@ -96,7 +98,7 @@ where
         transcript: &mut T, // add transcript here to allow interactive arguments
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Opening {
-        let num_vars_each_core = *params - mpi_config.world_size().ilog2() as usize;
+        let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
         let local_xs = eval_point.local_xs();
@@ -174,7 +176,10 @@ where
         transcript: &mut T, // add transcript here to allow interactive arguments
         opening: &Self::Opening,
     ) -> bool {
-        assert_eq!(*params, eval_point.num_vars());
+        let global_poly_num_vars = *params
+            + mpi_config.world_size().ilog2() as usize
+            + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
+        assert_eq!(global_poly_num_vars, eval_point.num_vars());
 
         if mpi_config.world_size() == 1 || !mpi_config.is_root() {
             return orion_verify_simd_field::<

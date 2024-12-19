@@ -103,6 +103,8 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
         rng: impl RngCore,
     ) -> Self::SRS;
 
+    /// n_input_vars is with respect to the multilinear poly on each machine in MPI,
+    /// also ignore the number of variables stacked in the SIMD field.
     fn gen_params(n_input_vars: usize) -> Self::Params;
 
     /// Initialize the scratch pad.

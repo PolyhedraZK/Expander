@@ -93,7 +93,7 @@ fn test_orion_simd_field_pcs_full_e2e() {
     test_orion_simd_field_pcs_generics::<GF2, GF2x8, GF2_128, GF2x128, GF2x8>();
 }
 
-fn test_orion_for_expander_gkr_generics<C, ComPackF, OpenPackF, T>(num_vars: usize)
+fn test_orion_for_expander_gkr_generics<C, ComPackF, OpenPackF, T>(total_num_vars: usize)
 where
     C: GKRFieldConfig,
     ComPackF: SimdField<Scalar = C::CircuitField>,
@@ -106,8 +106,11 @@ where
     // NOTE: generate global random polynomial
     let num_vars_in_simd = C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
     let num_vars_in_mpi = mpi_config.world_size().ilog2() as usize;
-    let poly =
-        MultiLinearPoly::<C::SimdCircuitField>::random(num_vars - num_vars_in_simd, &mut rng);
+    let num_vars_in_each_poly = total_num_vars - num_vars_in_mpi - num_vars_in_simd;
+    let num_vars_in_global_poly = total_num_vars - num_vars_in_simd;
+
+    let global_poly =
+        MultiLinearPoly::<C::SimdCircuitField>::random(num_vars_in_global_poly, &mut rng);
 
     // NOTE generate srs for each party, and shared challenge point in each party
     let challenge_point = ExpanderGKRChallenge::<C> {
@@ -117,22 +120,23 @@ where
         x_simd: (0..num_vars_in_simd)
             .map(|_| C::ChallengeField::random_unsafe(&mut rng))
             .collect(),
-        x: (0..(num_vars - num_vars_in_mpi - num_vars_in_simd))
+        x: (0..num_vars_in_each_poly)
             .map(|_| C::ChallengeField::random_unsafe(&mut rng))
             .collect(),
     };
 
     let mut transcript = T::new();
 
-    dbg!(poly.get_num_vars(), poly.coeffs[0]);
+    dbg!(global_poly.get_num_vars(), global_poly.coeffs[0]);
     dbg!(&challenge_point.x_mpi);
     dbg!(mpi_config.world_size(), mpi_config.world_rank());
 
     // NOTE separate polynomial into different pieces by mpi rank
-    let poly_vars_stride = (1 << poly.get_num_vars()) / mpi_config.world_size();
+    let poly_vars_stride = (1 << global_poly.get_num_vars()) / mpi_config.world_size();
     let poly_coeff_starts = mpi_config.world_rank() * poly_vars_stride;
     let poly_coeff_ends = poly_coeff_starts + poly_vars_stride;
-    let local_poly = MultiLinearPoly::new(poly.coeffs[poly_coeff_starts..poly_coeff_ends].to_vec());
+    let local_poly =
+        MultiLinearPoly::new(global_poly.coeffs[poly_coeff_starts..poly_coeff_ends].to_vec());
 
     dbg!(local_poly.get_num_vars(), local_poly.coeffs[0]);
 
@@ -148,7 +152,7 @@ where
             T,
         >,
     >(
-        &num_vars,
+        &num_vars_in_each_poly,
         &mpi_config,
         &mut transcript,
         &local_poly,
