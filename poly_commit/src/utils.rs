@@ -1,8 +1,9 @@
-use crate::{PCSForExpanderGKR, StructuredReferenceString};
 use arith::FieldSerde;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use transcript::Transcript;
+
+use crate::{PCSForExpanderGKR, StructuredReferenceString};
 
 #[derive(Clone, Debug, Default)]
 pub struct PCSEmptyType {}
