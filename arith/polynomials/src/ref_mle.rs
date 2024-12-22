@@ -9,6 +9,7 @@ pub trait MultilinearExtension<F: Field>: Index<usize, Output = F> {
 
     fn num_vars(&self) -> usize;
 
+    #[inline(always)]
     fn hypercube_size(&self) -> usize {
         1 << self.num_vars()
     }
@@ -26,7 +27,7 @@ pub struct RefMultiLinearPoly<'ref_life, F: Field> {
 }
 
 impl<'ref_life, 'outer: 'ref_life, F: Field> RefMultiLinearPoly<'ref_life, F> {
-    #[inline]
+    #[inline(always)]
     pub fn from_ref(evals: &'outer Vec<F>) -> Self {
         Self { coeffs: evals }
     }
@@ -35,6 +36,7 @@ impl<'ref_life, 'outer: 'ref_life, F: Field> RefMultiLinearPoly<'ref_life, F> {
 impl<'a, F: Field> Index<usize> for RefMultiLinearPoly<'a, F> {
     type Output = F;
 
+    #[inline(always)]
     fn index(&self, index: usize) -> &Self::Output {
         assert!(index < self.hypercube_size());
         &self.coeffs[index]
@@ -42,23 +44,28 @@ impl<'a, F: Field> Index<usize> for RefMultiLinearPoly<'a, F> {
 }
 
 impl<'a, F: Field> MultilinearExtension<F> for RefMultiLinearPoly<'a, F> {
+    #[inline(always)]
     fn num_vars(&self) -> usize {
         assert!(self.coeffs.len().is_power_of_two());
         self.coeffs.len().ilog2() as usize
     }
 
+    #[inline(always)]
     fn hypercube_basis(&self) -> Vec<F> {
         self.coeffs.clone()
     }
 
+    #[inline(always)]
     fn hypercube_basis_ref(&self) -> &Vec<F> {
         self.coeffs
     }
 
+    #[inline(always)]
     fn interpolate_over_hypercube(&self) -> Vec<F> {
         MultiLinearPoly::interpolate_over_hypercube_impl(self.coeffs)
     }
 
+    #[inline(always)]
     fn evaluate_with_buffer(&self, point: &[F], scratch: &mut [F]) -> F {
         MultiLinearPoly::evaluate_with_buffer(self.coeffs, point, scratch)
     }
@@ -80,7 +87,7 @@ pub struct MutRefMultiLinearPoly<'ref_life, F: Field> {
 }
 
 impl<'ref_life, 'outer_mut: 'ref_life, F: Field> MutRefMultiLinearPoly<'ref_life, F> {
-    #[inline]
+    #[inline(always)]
     pub fn from_ref(evals: &'outer_mut mut Vec<F>) -> Self {
         Self { coeffs: evals }
     }
@@ -89,6 +96,7 @@ impl<'ref_life, 'outer_mut: 'ref_life, F: Field> MutRefMultiLinearPoly<'ref_life
 impl<'a, F: Field> Index<usize> for MutRefMultiLinearPoly<'a, F> {
     type Output = F;
 
+    #[inline(always)]
     fn index(&self, index: usize) -> &Self::Output {
         assert!(index < self.hypercube_size());
         &self.coeffs[index]
@@ -96,6 +104,7 @@ impl<'a, F: Field> Index<usize> for MutRefMultiLinearPoly<'a, F> {
 }
 
 impl<'a, F: Field> IndexMut<usize> for MutRefMultiLinearPoly<'a, F> {
+    #[inline(always)]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         assert!(index < self.hypercube_size());
         &mut self.coeffs[index]
@@ -103,29 +112,35 @@ impl<'a, F: Field> IndexMut<usize> for MutRefMultiLinearPoly<'a, F> {
 }
 
 impl<'a, F: Field> MultilinearExtension<F> for MutRefMultiLinearPoly<'a, F> {
+    #[inline(always)]
     fn num_vars(&self) -> usize {
         assert!(self.coeffs.len().is_power_of_two());
         self.coeffs.len().ilog2() as usize
     }
 
+    #[inline(always)]
     fn hypercube_basis(&self) -> Vec<F> {
         self.coeffs.clone()
     }
 
+    #[inline(always)]
     fn hypercube_basis_ref(&self) -> &Vec<F> {
         self.coeffs
     }
 
+    #[inline(always)]
     fn interpolate_over_hypercube(&self) -> Vec<F> {
         MultiLinearPoly::interpolate_over_hypercube_impl(self.coeffs)
     }
 
+    #[inline(always)]
     fn evaluate_with_buffer(&self, point: &[F], scratch: &mut [F]) -> F {
         MultiLinearPoly::evaluate_with_buffer(self.coeffs, point, scratch)
     }
 }
 
 impl<'a, F: Field> MutableMultilinearExtension<F> for MutRefMultiLinearPoly<'a, F> {
+    #[inline(always)]
     fn fix_top_variable<AF: Field + Mul<F, Output = F>>(&mut self, r: AF) {
         let n = self.hypercube_size() / 2;
         let (left, right) = self.coeffs.split_at_mut(n);
@@ -136,12 +151,14 @@ impl<'a, F: Field> MutableMultilinearExtension<F> for MutRefMultiLinearPoly<'a, 
         self.coeffs.truncate(n)
     }
 
+    #[inline(always)]
     fn fix_variables<AF: Field + Mul<F, Output = F>>(&mut self, vars: &[AF]) {
         // evaluate single variable of partial point from left to right
         // need to reverse the order of the point
         vars.iter().rev().for_each(|p| self.fix_top_variable(*p))
     }
 
+    #[inline(always)]
     fn interpolate_over_hypercube_in_place(&mut self) {
         let num_vars = self.num_vars();
         for i in 1..=num_vars {
