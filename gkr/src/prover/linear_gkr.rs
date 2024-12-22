@@ -122,6 +122,8 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
                 gkr_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
         }
 
+        transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
+
         // open
         let mle_ref = RefMultiLinearPoly::from_ref(&c.layers[0].input_vals);
         self.prove_input_layer_claim(

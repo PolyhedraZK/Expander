@@ -307,6 +307,10 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
 
         log::info!("GKR verification: {}", verified);
 
+        if self.config.mpi_config.world_size() > 1 {
+            let _ = transcript.hash_and_return_state(); // Trigger an additional hash
+        }
+
         verified &= self.get_pcs_opening_from_proof_and_verify(
             pcs_params,
             pcs_verification_key,
