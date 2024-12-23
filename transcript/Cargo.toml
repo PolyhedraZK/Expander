@@ -10,6 +10,4 @@ hasher = { path = "../hasher" }
 
 sha2.workspace = true
 tiny-keccak.workspace = true
-
-[dev-dependencies]
 halo2curves.workspace = true

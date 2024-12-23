@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use arith::{ExtensionField, FiatShamirFieldHasher, Field};
+use arith::{ExtensionField, FiatShamirFieldHasher, Field, FieldSerde};
 
 use crate::{fiat_shamir_hash::FiatShamirBytesHash, Proof};
 
@@ -172,8 +172,6 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
     }
 }
 
-// TODO(HS) abstraction should be more like F, ExtF, HashState, H
-// where H is FiatShamirFieldHash<F, HashState> and HashState can extract out ExtF
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct FieldHashTranscript<ChallengeF, H>
 where
@@ -183,9 +181,11 @@ where
     /// Internal hasher, it's a little costly to create a new hasher
     pub hasher: H,
 
-    // TODO(HS) maybe unpack state here?
-    /// The digest bytes.
-    pub digest: ChallengeF,
+    /// The hash state, a vec of base field elems up to H::STATE_CAPACITY.
+    pub hash_state: Vec<ChallengeF::BaseField>,
+
+    /// The index pointing into hash state, for the next unconsumed base field hash elem.
+    pub next_unconsumed: usize,
 
     /// The proof bytes
     pub proof: Proof,
@@ -232,18 +232,45 @@ where
     }
 
     fn generate_challenge_field_element(&mut self) -> ChallengeF {
-        self.hash_to_digest();
-        self.digest
+        if !self.data_pool.is_empty() {
+            self.hash_state = self.hasher.hash(&self.data_pool);
+            self.data_pool.clear();
+            self.next_unconsumed = 0;
+        }
+
+        if ChallengeF::DEGREE + self.next_unconsumed <= H::STATE_CAPACITY {
+            let challenge_f = ChallengeF::from_limbs(&self.hash_state[self.next_unconsumed..]);
+            self.next_unconsumed += ChallengeF::DEGREE;
+            return challenge_f;
+        }
+
+        let mut ext_limbs = Vec::new();
+        if self.next_unconsumed < H::STATE_CAPACITY {
+            ext_limbs.extend_from_slice(&self.hash_state[self.next_unconsumed..]);
+        }
+        let remaining_base_elems = ChallengeF::DEGREE - ext_limbs.len();
+
+        self.hash_state = self.hasher.hash(&self.hash_state);
+        ext_limbs.extend_from_slice(&self.hash_state[..remaining_base_elems]);
+        self.next_unconsumed = remaining_base_elems;
+
+        ChallengeF::from_limbs(&ext_limbs)
     }
 
     fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
-        let mut bytes = vec![];
-        let mut buf = vec![];
-        while bytes.len() < n_bytes {
-            self.hash_to_digest();
-            self.digest.serialize_into(&mut buf).unwrap();
-            bytes.extend_from_slice(&buf);
-        }
+        let base_field_elems_num =
+            (n_bytes + ChallengeF::BaseField::SIZE - 1) / ChallengeF::BaseField::SIZE;
+        let elems = self.generate_challenge_field_elements(base_field_elems_num);
+
+        let mut bytes = elems
+            .iter()
+            .flat_map(|e| {
+                let mut buffer = Vec::new();
+                e.serialize_into(&mut buffer).unwrap();
+                buffer
+            })
+            .collect::<Vec<_>>();
+
         bytes.resize(n_bytes, 0);
         bytes
     }
@@ -252,16 +279,27 @@ where
         self.proof.clone()
     }
 
+    // NOTE(HS) the hash_and_return_state and set_state are always called together
+    // mainly to sync up the MPI transcripts to a same transaction hash state.
     fn hash_and_return_state(&mut self) -> Vec<u8> {
-        self.hash_to_digest();
+        if !self.data_pool.is_empty() {
+            self.hash_state = self.hasher.hash(&self.data_pool);
+            self.data_pool.clear();
+        } else {
+            self.hash_state = self.hasher.hash(&self.hash_state);
+        }
+
         let mut state = vec![];
-        self.digest.serialize_into(&mut state).unwrap();
+        self.hash_state.serialize_into(&mut state).unwrap();
         state
     }
 
     fn set_state(&mut self, state: &[u8]) {
-        self.data_pool.clear();
-        self.digest = ChallengeF::deserialize_from(state).unwrap();
+        assert!(self.data_pool.is_empty());
+        // NOTE(HS) since we broadcasted, then all the hash state base field elems
+        // are being observed, then all of them are consumed
+        self.next_unconsumed = H::STATE_CAPACITY;
+        self.hash_state = Vec::deserialize_from(state).unwrap();
     }
 
     fn lock_proof(&mut self) {
@@ -272,20 +310,5 @@ where
     fn unlock_proof(&mut self) {
         assert!(self.proof_locked);
         self.proof_locked = false;
-    }
-}
-
-impl<ChallengeF, H> FieldHashTranscript<ChallengeF, H>
-where
-    ChallengeF: ExtensionField,
-    H: FiatShamirFieldHasher<ChallengeF::BaseField>,
-{
-    pub fn hash_to_digest(&mut self) {
-        if !self.data_pool.is_empty() {
-            self.digest = self.hasher.hash(&self.data_pool).into();
-            self.data_pool.clear();
-        } else {
-            self.digest = self.hasher.hash(&self.digest.to_limbs()).into();
-        }
     }
 }

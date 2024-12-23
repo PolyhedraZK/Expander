@@ -1,29 +1,34 @@
 use arith::{FiatShamirFieldHasher, Field};
+use halo2curves::bn256::Fr;
 
 use tiny_keccak::{Hasher, Keccak};
 
 #[derive(Debug, Clone, Default)]
-pub struct MIMCHasher<F: Field> {
+pub struct MiMC5FiatShamirHasher<F: Field> {
     constants: Vec<F>,
 }
 
-impl<F: Field> FiatShamirFieldHasher<F> for MIMCHasher<F> {
+impl<F: Field> FiatShamirFieldHasher<F> for MiMC5FiatShamirHasher<F> {
+    const NAME: &'static str = "MiMC5_Field_Hasher";
+
+    const STATE_CAPACITY: usize = 1;
+
     fn new() -> Self {
         let constants = generate_mimc_constants::<F>();
         Self { constants }
     }
 
-    fn hash(&self, input: &[F]) -> F {
+    fn hash(&self, input: &[F]) -> Vec<F> {
         let mut h = F::ZERO;
         for a in input {
             let r = self.mimc5_hash(&h, a);
             h += r + a;
         }
-        h
+        vec![h]
     }
 }
 
-impl<F: Field> MIMCHasher<F> {
+impl<F: Field> MiMC5FiatShamirHasher<F> {
     #[inline(always)]
     pub fn pow5(x: F) -> F {
         let x2 = x * x;
@@ -45,7 +50,10 @@ impl<F: Field> MIMCHasher<F> {
 const SEED: &str = "seed";
 
 pub fn generate_mimc_constants<F: Field>() -> Vec<F> {
-    let n_rounds: usize = 110;
+    let n_rounds: usize = match F::NAME {
+        Fr::NAME => 110,
+        _ => unimplemented!("unimplemented rounds for MiMC5 Field Hasher"),
+    };
     get_constants(SEED, n_rounds)
 }
 

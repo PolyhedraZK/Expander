@@ -3,13 +3,15 @@ use std::fmt::Debug;
 use crate::Field;
 
 pub trait FiatShamirFieldHasher<F: Field>: Clone + Debug + Default {
-    // TODO(HS) Hash name
+    /// Name for the field hasher
+    const NAME: &'static str;
 
-    // TODO(HS) Hash state?
+    /// The state capacity, or how many field elements squeezed in a hash
+    const STATE_CAPACITY: usize;
 
     /// Create a new hash instance.
     fn new() -> Self;
 
     /// hash a vector of field element and return the hash result
-    fn hash(&self, input: &[F]) -> F;
+    fn hash(&self, input: &[F]) -> Vec<F>;
 }

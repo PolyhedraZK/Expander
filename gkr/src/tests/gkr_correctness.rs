@@ -15,7 +15,7 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha12Rng;
 use sha2::Digest;
 use transcript::{
-    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, SHA256hasher,
+    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MiMC5FiatShamirHasher, SHA256hasher,
 };
 
 use crate::{utils::*, Prover, Verifier};

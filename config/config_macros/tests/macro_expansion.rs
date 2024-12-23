@@ -10,7 +10,7 @@ use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use poly_commit::raw::RawExpanderGKR;
 use transcript::{
-    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, SHA256hasher,
+    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MiMC5FiatShamirHasher, SHA256hasher,
 };
 
 fn print_type_name<Cfg: GKRConfig>() {
