@@ -262,17 +262,13 @@ where
             (n_bytes + ChallengeF::BaseField::SIZE - 1) / ChallengeF::BaseField::SIZE;
         let elems = self.generate_challenge_field_elements(base_field_elems_num);
 
-        let mut bytes = elems
-            .iter()
-            .flat_map(|e| {
-                let mut buffer = Vec::new();
-                e.serialize_into(&mut buffer).unwrap();
-                buffer
-            })
-            .collect::<Vec<_>>();
+        let mut res = vec![0u8; base_field_elems_num * ChallengeF::BaseField::SIZE];
+        res.chunks_mut(ChallengeF::BaseField::SIZE)
+            .zip(elems.iter())
+            .for_each(|(mut buffer, e)| e.serialize_into(&mut buffer).unwrap());
+        res.resize(n_bytes, 0);
 
-        bytes.resize(n_bytes, 0);
-        bytes
+        res
     }
 
     fn finalize_and_get_proof(&self) -> Proof {
