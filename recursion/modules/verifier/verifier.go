@@ -253,6 +253,9 @@ func Verify(
 		panic("Err in transcript init")
 	}
 
+	// NOTE(HS) raw commitment 256 bit length, which fits into a BN254 elem
+	transcript.AppendF(proof.Next())
+
 	// Only supports RawCommitment now
 	circuit_input_size := uint(1) << circuit.Layers[0].InputLenLog
 	vals := make([]frontend.Variable, 0)

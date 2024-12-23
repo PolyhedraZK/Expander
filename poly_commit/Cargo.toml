@@ -11,3 +11,4 @@ polynomials = { path = "../arith/polynomials"}
 transcript = { path = "../transcript" }
 
 rand.workspace = true
+ethnum.workspace = true
