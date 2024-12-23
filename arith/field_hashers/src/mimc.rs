@@ -20,10 +20,10 @@ impl<F: Field> FiatShamirFieldHasher<F> for MiMC5FiatShamirHasher<F> {
 
     fn hash(&self, input: &[F]) -> Vec<F> {
         let mut h = F::ZERO;
-        for a in input {
+        input.iter().for_each(|a| {
             let r = self.mimc5_hash(&h, a);
             h += r + a;
-        }
+        });
         vec![h]
     }
 }

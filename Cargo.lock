@@ -563,6 +563,7 @@ name = "config_macros"
 version = "0.1.0"
 dependencies = [
  "config",
+ "field_hashers",
  "gkr_field_config",
  "poly_commit",
  "proc-macro2",
@@ -795,6 +796,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "field_hashers"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "halo2curves",
+ "tiny-keccak",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -929,6 +939,7 @@ dependencies = [
  "criterion",
  "env_logger",
  "ethnum",
+ "field_hashers",
  "gf2",
  "gf2_128",
  "gkr_field_config",
@@ -1050,20 +1061,6 @@ name = "hashbrown"
 version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a9bfc1af68b1726ea47d3d5109de126281def866b33970e10fbab11b5dafab3"
-
-[[package]]
-name = "hasher"
-version = "0.1.0"
-dependencies = [
- "arith",
- "ark-std",
- "criterion",
- "halo2curves",
- "mersenne31",
- "rand",
- "sha2",
- "tiny-keccak",
-]
 
 [[package]]
 name = "headers"
@@ -2364,8 +2361,6 @@ name = "transcript"
 version = "0.1.0"
 dependencies = [
  "arith",
- "halo2curves",
- "hasher",
  "mpi_config",
  "sha2",
  "tiny-keccak",

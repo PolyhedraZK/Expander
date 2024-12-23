@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 config = { path = ".." }
+field_hashers = { path = "../../arith/field_hashers" }
 gkr_field_config = { path = "../gkr_field_config" }
 poly_commit = { path = "../../poly_commit" }
 transcript = { path = "../../transcript" }

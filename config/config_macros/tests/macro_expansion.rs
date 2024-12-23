@@ -7,11 +7,10 @@ use gkr_field_config::FieldType;
 
 use config::GKRConfig;
 use config_macros::declare_gkr_config;
+use field_hashers::MiMC5FiatShamirHasher;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use poly_commit::raw::RawExpanderGKR;
-use transcript::{
-    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MiMC5FiatShamirHasher, SHA256hasher,
-};
+use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
 
 fn print_type_name<Cfg: GKRConfig>() {
     println!("{}", type_name::<Cfg>());
