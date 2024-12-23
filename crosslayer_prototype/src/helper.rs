@@ -126,16 +126,22 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
         // [0, layer_id - 2]
         for i_layer in 0..(self.layer.layer_id - 1) {
             let cross_layer_size = self.sp.cross_layer_sizes[i_layer];
-            if cross_layer_size > 0 && var_idx < cross_layer_size.trailing_zeros() as usize {
-                let p3_at_layer_i = MultilinearProductHelper::poly_eval_at::<C>(
-                    cross_layer_size.trailing_zeros() as usize,
-                    var_idx, 
-                    degree, 
-                    &self.sp.cross_layer_evals[i_layer], 
-                    &self.sp.cross_layer_hg_evals[i_layer],
-                );
-                for i in 0..3 {
-                    p3[i] += p3_at_layer_i[i]; // TODO: Need a random coefficient here.
+            if cross_layer_size > 0 {
+                if var_idx < cross_layer_size.trailing_zeros() as usize {
+                    let p3_at_layer_i = MultilinearProductHelper::poly_eval_at::<C>(
+                        cross_layer_size.trailing_zeros() as usize,
+                        var_idx, 
+                        degree, 
+                        &self.sp.cross_layer_evals[i_layer], 
+                        &self.sp.cross_layer_hg_evals[i_layer],
+                    );
+                    for i in 0..3 {
+                        p3[i] += p3_at_layer_i[i]; 
+                    }
+                } else {
+                    for i in 0..3 {
+                        p3[i] += self.sp.cross_layer_completed_values[i_layer];
+                    }
                 }
             }
         }
@@ -173,19 +179,22 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
         let mut ret = vec![];
         for i_layer in 0..(self.layer.layer_id - 1) {
             let cross_layer_size = self.sp.cross_layer_sizes[i_layer];
-            if cross_layer_size > 0 && var_idx < cross_layer_size.trailing_zeros() as usize {
-                MultilinearProductHelper::receive_challenge::<C>(
-                    cross_layer_size.trailing_zeros() as usize,
-                    var_idx,
-                    r,
-                    &mut self.sp.cross_layer_evals[i_layer],
-                    &mut self.sp.cross_layer_hg_evals[i_layer],
-                );
-            }
+            if cross_layer_size > 0 {
+                if var_idx < cross_layer_size.trailing_zeros() as usize {                    
+                    MultilinearProductHelper::receive_challenge::<C>(
+                        cross_layer_size.trailing_zeros() as usize,
+                        var_idx,
+                        r,
+                        &mut self.sp.cross_layer_evals[i_layer],
+                        &mut self.sp.cross_layer_hg_evals[i_layer],
+                    );
 
-            if var_idx == cross_layer_size.trailing_zeros() as usize {
-                ret.push((i_layer, self.sp.cross_layer_evals[i_layer][0]));
-                self.r_relays_next.push((i_layer, self.rx.clone()));
+                    if var_idx == cross_layer_size.trailing_zeros() as usize - 1 {
+                        self.sp.cross_layer_completed_values[i_layer] = self.sp.cross_layer_evals[i_layer][0] * self.sp.cross_layer_hg_evals[i_layer][0];
+                    }
+                } else {
+                    self.sp.cross_layer_completed_values[i_layer] *= r;
+                }
             }
         }
 
@@ -263,15 +272,13 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
         }
 
         for g in mul.iter() {
-            let r = eq_evals_at_rz[g.o_id] * g.coef;
-            hg_vals[g.i_ids[0]] += vals[g.i_ids[1]] * r;
+            let r = C::challenge_mul_circuit_field(&eq_evals_at_rz[g.o_id], &g.coef);
+            hg_vals[g.i_ids[0]] += C::simd_circuit_field_mul_challenge_field(&vals[g.i_ids[1]], &r);
         }
 
         for g in add.iter() {
-            hg_vals[g.i_ids[0]] += eq_evals_at_rz[g.o_id] * g.coef;
+            hg_vals[g.i_ids[0]] += C::challenge_mul_circuit_field(&eq_evals_at_rz[g.o_id], &g.coef).into();
         }
-
-        self.sp.v_evals = vals.clone(); // TODO: Remove unnecessary clone
     }
 
     #[inline]

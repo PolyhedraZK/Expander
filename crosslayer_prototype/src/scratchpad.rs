@@ -13,6 +13,7 @@ pub struct CrossLayerProverScratchPad<C: GKRFieldConfig> {
     pub cross_layer_sizes: Vec<usize>,
     pub cross_layer_evals: Vec<Vec<C::Field>>,
     pub cross_layer_hg_evals: Vec<Vec<C::Field>>,
+    pub cross_layer_completed_values: Vec<C::Field>,
 
     pub simd_var_v_evals: Vec<C::ChallengeField>,
     pub simd_var_hg_evals: Vec<C::ChallengeField>,
@@ -43,7 +44,8 @@ impl<C: GKRFieldConfig> CrossLayerProverScratchPad<C> {
             cross_layer_sizes: vec![0; n_layers], 
             cross_layer_evals: vec![vec![]; n_layers], 
             cross_layer_hg_evals: vec![vec![]; n_layers], 
-           
+            cross_layer_completed_values: vec![C::Field::ONE; n_layers],
+
             eq_evals_at_rx: vec![C::ChallengeField::default(); max_input_num],
             eq_evals_at_rz0: vec![C::ChallengeField::default(); max_output_num],
             eq_evals_at_rz1: vec![C::ChallengeField::default(); max_output_num],

@@ -47,14 +47,13 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
     for i_var in 0..helper.input_layer_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
         let r = transcript_io::<C::ChallengeField, T>( &evals, transcript);
-        let finished_relay_layers = helper.receive_rx(i_var, r);
-        for (_i_layer, claim) in finished_relay_layers {
-            transcript.append_field_element(&claim); // The verifier needs to substract the relay claims by itself
-        }
+        helper.receive_rx(i_var, r);
     }
 
-    let vx_claim = helper.vx_claim();
-    transcript.append_field_element(&vx_claim);
+    let vx_claims: Vec<(usize, C::ChallengeField)> = helper.vx_claims();
+    for (_i_layer, claim) in vx_claims {
+        transcript.append_field_element(&claim);
+    }
 
     // gkr phase 2 over variable y
     helper.prepare_y_vals();
