@@ -221,8 +221,12 @@ impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>> FiatShamirSponge<St
         })
     }
 
+    fn is_squeezed(&self) -> bool {
+        self.absorbing.is_empty()
+    }
+
     fn squeeze(&mut self) -> <State as FieldHasherState>::OutputF {
-        if !self.absorbing.is_empty() {
+        if !self.is_squeezed() {
             let mut tailing_elems =
                 vec![<State as FieldHasherState>::InputF::ZERO; State::STATE_WIDTH];
             tailing_elems[State::CAPACITY..State::CAPACITY + self.absorbing.len()]
@@ -247,45 +251,13 @@ impl<F: FieldForECC, OF: Field, State: PoseidonState<F, OF>> FiatShamirSponge<St
         self.squeeze()
     }
 
-    fn squeeze_state(&mut self) -> State {
-        if !self.absorbing.is_empty() {
-            let mut tailing_elems =
-                vec![<State as FieldHasherState>::InputF::ZERO; State::STATE_WIDTH];
-            tailing_elems[State::CAPACITY..State::CAPACITY + self.absorbing.len()]
-                .copy_from_slice(&self.absorbing);
-            let new_state = State::from_elems(&tailing_elems);
-            self.absorbing.clear();
-
-            self.absorbed += new_state;
-            self.params.permute(&mut self.absorbed);
-
-            let res = self.absorbed;
-            self.params.permute(&mut self.absorbed);
-            self.output_index = 0;
-
-            return res;
-        }
-
-        if self.output_index != 0 {
-            self.params.permute(&mut self.absorbed);
-
-            let res = self.absorbed;
-            self.params.permute(&mut self.absorbed);
-            self.output_index = 0;
-
-            return res;
-        }
-
-        let res = self.absorbed;
-        self.params.permute(&mut self.absorbed);
-        self.output_index = 0;
-
-        res
+    fn state(&self) -> State {
+        assert!(self.is_squeezed());
+        self.absorbed
     }
 
-    fn set_state(&mut self, state: State) {
-        assert!(self.absorbing.is_empty());
-        self.absorbed = state;
-        self.output_index = 0;
+    fn state_mut(&mut self) -> &mut State {
+        assert!(self.is_squeezed());
+        &mut self.absorbed
     }
 }

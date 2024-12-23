@@ -43,7 +43,6 @@ fn get_constants<F: Field, State: MiMCState<F>>(n_rounds: usize) -> Vec<State> {
 pub struct MiMCSponge<F: Field, State: MiMCState<F>> {
     pub constants: Vec<State>,
     pub absorbed: State,
-    pub is_observed: bool,
 
     _phantom: PhantomData<F>,
 }
@@ -86,21 +85,21 @@ impl<F: FieldForECC, State: MiMCState<F>> FiatShamirSponge<State> for MiMCSponge
         })
     }
 
+    fn is_squeezed(&self) -> bool {
+        true
+    }
+
     fn squeeze(&mut self) -> <State as FieldHasherState>::OutputF {
-        if !self.is_observed {
-            self.absorbed.digest()
-        } else {
-            self.absorbed = self.mimc5_hash(&F::ZERO, &self.absorbed.into()).into();
-            self.absorbed.digest()
-        }
+        self.absorbed.digest()
     }
 
-    fn squeeze_state(&mut self) -> State {
-        self.squeeze().into()
+    fn state(&self) -> State {
+        assert!(self.is_squeezed());
+        self.absorbed
     }
 
-    fn set_state(&mut self, state: State) {
-        self.absorbed = state;
-        self.is_observed = false;
+    fn state_mut(&mut self) -> &mut State {
+        assert!(self.is_squeezed());
+        &mut self.absorbed
     }
 }
