@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use arith::{ExtensionField, FiatShamirFieldHash, Field};
+use arith::{ExtensionField, FiatShamirFieldHasher, Field};
 
 use crate::{fiat_shamir_hash::FiatShamirBytesHash, Proof};
 
@@ -178,7 +178,7 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
 pub struct FieldHashTranscript<ChallengeF, H>
 where
     ChallengeF: ExtensionField,
-    H: FiatShamirFieldHash<ChallengeF::BaseField>,
+    H: FiatShamirFieldHasher<ChallengeF::BaseField>,
 {
     /// Internal hasher, it's a little costly to create a new hasher
     pub hasher: H,
@@ -200,7 +200,7 @@ where
 impl<ChallengeF, H> Transcript<ChallengeF> for FieldHashTranscript<ChallengeF, H>
 where
     ChallengeF: ExtensionField,
-    H: FiatShamirFieldHash<ChallengeF::BaseField>,
+    H: FiatShamirFieldHasher<ChallengeF::BaseField>,
 {
     #[inline(always)]
     fn new() -> Self {
@@ -278,7 +278,7 @@ where
 impl<ChallengeF, H> FieldHashTranscript<ChallengeF, H>
 where
     ChallengeF: ExtensionField,
-    H: FiatShamirFieldHash<ChallengeF::BaseField>,
+    H: FiatShamirFieldHasher<ChallengeF::BaseField>,
 {
     pub fn hash_to_digest(&mut self) {
         if !self.data_pool.is_empty() {

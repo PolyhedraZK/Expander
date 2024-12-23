@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::Field;
 
-pub trait FiatShamirFieldHash<F: Field>: Clone + Debug + Default {
+pub trait FiatShamirFieldHasher<F: Field>: Clone + Debug + Default {
     // TODO(HS) Hash name
 
     // TODO(HS) Hash state?

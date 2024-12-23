@@ -1,4 +1,4 @@
-use arith::{FiatShamirFieldHash, Field};
+use arith::{FiatShamirFieldHasher, Field};
 
 use tiny_keccak::{Hasher, Keccak};
 
@@ -7,11 +7,10 @@ pub struct MIMCHasher<F: Field> {
     constants: Vec<F>,
 }
 
-impl<F: Field> FiatShamirFieldHash<F> for MIMCHasher<F> {
+impl<F: Field> FiatShamirFieldHasher<F> for MIMCHasher<F> {
     fn new() -> Self {
-        Self {
-            constants: generate_mimc_constants::<F>(),
-        }
+        let constants = generate_mimc_constants::<F>();
+        Self { constants }
     }
 
     fn hash(&self, input: &[F]) -> F {
@@ -32,6 +31,7 @@ impl<F: Field> MIMCHasher<F> {
         x4 * x
     }
 
+    #[inline(always)]
     pub fn mimc5_hash(&self, h: &F, x_in: &F) -> F {
         let mut x = *x_in;
 
@@ -43,30 +43,30 @@ impl<F: Field> MIMCHasher<F> {
 }
 
 const SEED: &str = "seed";
+
 pub fn generate_mimc_constants<F: Field>() -> Vec<F> {
-    let n_rounds: i64 = 110;
+    let n_rounds: usize = 110;
     get_constants(SEED, n_rounds)
 }
 
-pub fn get_constants<F: Field>(seed: &str, n_rounds: i64) -> Vec<F> {
-    let mut cts: Vec<F> = Vec::new();
-
+pub fn get_constants<F: Field>(seed: &str, n_rounds: usize) -> Vec<F> {
     let mut keccak = Keccak::v256();
     let mut h = [0u8; 32];
     keccak.update(seed.as_bytes());
     keccak.finalize(&mut h);
 
-    for _ in 0..n_rounds {
-        let mut keccak = Keccak::v256();
-        keccak.update(&h);
-        keccak.finalize(&mut h);
+    (0..n_rounds)
+        .map(|_| {
+            let mut keccak = Keccak::v256();
+            keccak.update(&h);
+            keccak.finalize(&mut h);
 
-        // big endian -> little endian, in order to match the one in gnark
-        // or probably we can change the implementation there
-        let mut h_reverse = h;
-        h_reverse.reverse();
+            // big endian -> little endian, in order to match the one in gnark
+            // or probably we can change the implementation there
+            let mut h_reverse = h;
+            h_reverse.reverse();
 
-        cts.push(F::from_uniform_bytes(&h_reverse));
-    }
-    cts
+            F::from_uniform_bytes(&h_reverse)
+        })
+        .collect()
 }

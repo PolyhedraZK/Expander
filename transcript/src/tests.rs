@@ -1,5 +1,5 @@
 use crate::fiat_shamir_hash::MIMCHasher;
-use arith::{BN254Fr, FiatShamirFieldHash, FieldSerde};
+use arith::{BN254Fr, FiatShamirFieldHasher, FieldSerde};
 use halo2curves::bn256::Fr;
 use sha2::{Digest, Sha256};
 
