@@ -1,29 +1,21 @@
-use arith::{ExtensionField, Field};
+use arith::{FiatShamirFieldHash, Field};
 
 use tiny_keccak::{Hasher, Keccak};
 
-use super::FiatShamirFieldHash;
-
 #[derive(Debug, Clone, Default)]
-pub struct MIMCConstants<F: Field> {
-    cts: Vec<F>,
-    n_rounds: i64,
+pub struct MIMCHasher<F: Field> {
+    constants: Vec<F>,
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct MIMCHasher<ExtF: ExtensionField> {
-    constants: MIMCConstants<ExtF>,
-}
-
-impl<ExtF: ExtensionField> FiatShamirFieldHash<ExtF> for MIMCHasher<ExtF> {
+impl<F: Field> FiatShamirFieldHash<F> for MIMCHasher<F> {
     fn new() -> Self {
         Self {
-            constants: generate_mimc_constants::<ExtF>(),
+            constants: generate_mimc_constants::<F>(),
         }
     }
 
-    fn hash(&self, input: &[ExtF]) -> ExtF {
-        let mut h = ExtF::ZERO;
+    fn hash(&self, input: &[F]) -> F {
+        let mut h = F::ZERO;
         for a in input {
             let r = self.mimc5_hash(&h, a);
             h += r + a;
@@ -32,29 +24,28 @@ impl<ExtF: ExtensionField> FiatShamirFieldHash<ExtF> for MIMCHasher<ExtF> {
     }
 }
 
-impl<ExtF: ExtensionField> MIMCHasher<ExtF> {
+impl<F: Field> MIMCHasher<F> {
     #[inline(always)]
-    pub fn pow5(x: ExtF) -> ExtF {
+    pub fn pow5(x: F) -> F {
         let x2 = x * x;
         let x4 = x2 * x2;
         x4 * x
     }
 
-    pub fn mimc5_hash(&self, h: &ExtF, x_in: &ExtF) -> ExtF {
+    pub fn mimc5_hash(&self, h: &F, x_in: &F) -> F {
         let mut x = *x_in;
 
-        for i in 0..self.constants.n_rounds as usize {
-            x = Self::pow5(x + h + self.constants.cts[i]);
-        }
+        self.constants.iter().for_each(|c| {
+            x = Self::pow5(x + h + c);
+        });
         x + h
     }
 }
 
 const SEED: &str = "seed";
-pub fn generate_mimc_constants<F: Field>() -> MIMCConstants<F> {
+pub fn generate_mimc_constants<F: Field>() -> Vec<F> {
     let n_rounds: i64 = 110;
-    let cts = get_constants(SEED, n_rounds);
-    MIMCConstants::<F> { cts, n_rounds }
+    get_constants(SEED, n_rounds)
 }
 
 pub fn get_constants<F: Field>(seed: &str, n_rounds: i64) -> Vec<F> {
