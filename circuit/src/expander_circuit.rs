@@ -278,10 +278,7 @@ impl<C: GKRFieldConfig> Circuit<C> {
         self.rnd_coefs_identified = true;
     }
 
-    pub fn fill_rnd_coefs<T: Transcript<C::CircuitField, C::ChallengeField>>(
-        &mut self,
-        transcript: &mut T,
-    ) {
+    pub fn fill_rnd_coefs<T: Transcript<C::ChallengeField>>(&mut self, transcript: &mut T) {
         assert!(self.rnd_coefs_identified);
 
         if TypeId::of::<C::ChallengeField>() == TypeId::of::<C::CircuitField>() {

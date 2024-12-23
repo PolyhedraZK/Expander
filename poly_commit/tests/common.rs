@@ -36,7 +36,7 @@ pub fn test_pcs<F: Field, P: PolynomialCommitmentScheme<F>>(
 
 pub fn test_gkr_pcs<
     C: GKRFieldConfig,
-    T: Transcript<C::CircuitField, C::ChallengeField>,
+    T: Transcript<C::ChallengeField>,
     P: PCSForExpanderGKR<C, T>,
 >(
     params: &P::Params,

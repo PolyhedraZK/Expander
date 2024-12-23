@@ -11,7 +11,7 @@ use transcript::Transcript;
 
 // FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::CircuitField, C::ChallengeField>>(
+pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     circuit: &Circuit<C>,
     sp: &mut ProverScratchPad<C>,
     transcript: &mut T,

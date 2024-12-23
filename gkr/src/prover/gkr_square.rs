@@ -7,7 +7,7 @@ use gkr_field_config::GKRFieldConfig;
 use sumcheck::{sumcheck_prove_gkr_square_layer, ProverScratchPad};
 use transcript::Transcript;
 
-pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::CircuitField, C::ChallengeField>>(
+pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     circuit: &Circuit<C>,
     sp: &mut ProverScratchPad<C>,
     transcript: &mut T,

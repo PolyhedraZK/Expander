@@ -9,7 +9,7 @@ pub use traits::{
 #[allow(clippy::type_complexity)]
 pub fn expander_pcs_init_testing_only<
     FieldConfig: GKRFieldConfig,
-    T: Transcript<FieldConfig::CircuitField, FieldConfig::ChallengeField>,
+    T: Transcript<FieldConfig::ChallengeField>,
     PCS: PCSForExpanderGKR<FieldConfig, T>,
 >(
     n_input_vars: usize,

@@ -103,11 +103,11 @@ pub struct RawExpanderGKRParams {
 #[derive(Clone, Debug, Default)]
 pub struct RawExpanderGKRScratchPad {}
 
-pub struct RawExpanderGKR<C: GKRFieldConfig, T: Transcript<C::CircuitField, C::ChallengeField>> {
+pub struct RawExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
     _phantom: std::marker::PhantomData<(C, T)>,
 }
 
-impl<C: GKRFieldConfig, T: Transcript<C::CircuitField, C::ChallengeField>> PCSForExpanderGKR<C, T>
+impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T>
     for RawExpanderGKR<C, T>
 {
     const NAME: &'static str = "RawExpanderGKR";
@@ -199,7 +199,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::CircuitField, C::ChallengeField>> PCSFo
     }
 }
 
-impl<C: GKRFieldConfig, T: Transcript<C::CircuitField, C::ChallengeField>> RawExpanderGKR<C, T> {
+impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> RawExpanderGKR<C, T> {
     pub fn eval_local(
         vals: &[C::SimdCircuitField],
         x: &[C::ChallengeField],
