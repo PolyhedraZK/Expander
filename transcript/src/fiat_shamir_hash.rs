@@ -34,5 +34,5 @@ pub trait FiatShamirFieldHash<F: Field, ExtF: ExtensionField<BaseField = F>>:
     fn new() -> Self;
 
     /// hash a vector of field element and return the hash result
-    fn hash(&self, input: &[F]) -> ExtF;
+    fn hash(&self, input: &[ExtF]) -> ExtF;
 }

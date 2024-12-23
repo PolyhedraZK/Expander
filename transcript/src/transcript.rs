@@ -182,12 +182,11 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
 // TODO(HS) abstraction should be more like F, ExtF, HashState, H
 // where H is FiatShamirFieldHash<F, HashState> and HashState can extract out ExtF
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct FieldHashTranscript<BaseF, ChallengeF, H>
-where
+pub struct FieldHashTranscript<
     BaseF: Field,
     ChallengeF: ExtensionField<BaseField = BaseF>,
     H: FiatShamirFieldHash<BaseF, ChallengeF>,
-{
+> {
     /// Internal hasher, it's a little costly to create a new hasher
     pub fs_sponge: H,
 
@@ -200,7 +199,7 @@ where
 
     // TODO(HS) maybe unpack state here?
     /// The data to be hashed
-    pub data_pool: Vec<BaseF>,
+    pub data_pool: Vec<ChallengeF>,
 
     /// Proof locked or not
     pub proof_locked: bool,
@@ -227,19 +226,29 @@ where
         if !self.proof_locked {
             self.proof.bytes.extend_from_slice(&buffer);
         }
-        f.to_limbs().iter().for_each(|l| self.data_pool.push(*l));
+        self.data_pool.push(*f);
     }
 
     fn append_u8_slice(&mut self, buffer: &[u8]) {
         if !self.proof_locked {
             self.proof.bytes.extend_from_slice(buffer);
         }
-        let mut buffer_local = buffer.to_vec();
-        buffer_local.resize(buffer_local.len().next_multiple_of(32), 0u8);
-        buffer_local.chunks_exact(32).for_each(|chunk_32| {
-            let c = ChallengeF::from_uniform_bytes(chunk_32.try_into().unwrap());
-            c.to_limbs().iter().for_each(|l| self.data_pool.push(*l));
-        });
+        let buffer_size = buffer.len();
+        let mut cur = 0;
+        while cur + 32 <= buffer_size {
+            self.data_pool.push(ChallengeF::from_uniform_bytes(
+                buffer[cur..cur + 32].try_into().unwrap(),
+            ));
+            cur += 32
+        }
+
+        if cur < buffer_size {
+            let mut buffer_last = buffer[cur..].to_vec();
+            buffer_last.resize(32, 0);
+            self.data_pool.push(ChallengeF::from_uniform_bytes(
+                buffer_last[..].try_into().unwrap(),
+            ));
+        }
     }
 
     fn generate_challenge_field_element(&mut self) -> ChallengeF {
@@ -297,7 +306,7 @@ where
             self.digest = self.fs_sponge.hash(&self.data_pool);
             self.data_pool.clear();
         } else {
-            self.digest = self.fs_sponge.hash(&self.digest.to_limbs());
+            self.digest = self.fs_sponge.hash(&[self.digest]);
         }
     }
 }
