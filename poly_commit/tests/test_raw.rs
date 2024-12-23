@@ -4,7 +4,7 @@ use arith::{BN254Fr, Field};
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 use poly_commit::{
-    raw::{RawExpanderGKR, RawExpanderGKRParams, RawMultiLinear, RawMultiLinearParams},
+    raw::{RawExpanderGKR, RawExpanderGKRParams, RawMultiLinearPCS, RawMultiLinearParams},
     ExpanderGKRChallenge,
 };
 use polynomials::{MultiLinearPoly, RefMultiLinearPoly};
@@ -24,7 +24,7 @@ fn test_raw() {
         })
         .collect::<Vec<Vec<BN254Fr>>>();
 
-    common::test_pcs::<BN254Fr, BytesHashTranscript<_, Keccak256hasher>, RawMultiLinear>(
+    common::test_pcs::<BN254Fr, BytesHashTranscript<_, Keccak256hasher>, RawMultiLinearPCS>(
         &params, &poly, &xs,
     );
 }

@@ -1798,6 +1798,7 @@ dependencies = [
  "arith",
  "ark-std",
  "criterion",
+ "ethnum",
  "gf2",
  "gf2_128",
  "gkr_field_config",

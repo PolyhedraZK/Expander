@@ -12,6 +12,7 @@ transcript = { path = "../transcript" }
 tree = { path = "../tree" }
 
 rand.workspace = true
+ethnum.workspace = true
 ark-std.workspace = true
 thiserror.workspace = true
 itertools.workspace = true
