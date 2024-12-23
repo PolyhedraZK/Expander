@@ -940,6 +940,7 @@ dependencies = [
  "poly_commit",
  "polynomials",
  "rand",
+ "rand_chacha",
  "sha2",
  "sumcheck",
  "thiserror",
