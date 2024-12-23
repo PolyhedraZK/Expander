@@ -2363,6 +2363,7 @@ name = "transcript"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "halo2curves",
  "hasher",
  "mpi_config",
  "sha2",

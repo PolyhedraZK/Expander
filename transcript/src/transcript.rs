@@ -178,13 +178,9 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
 // TODO(HS) abstraction should be more like F, ExtF, HashState, H
 // where H is FiatShamirFieldHash<F, HashState> and HashState can extract out ExtF
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct FieldHashTranscript<
-    BaseF: Field,
-    ChallengeF: ExtensionField<BaseField = BaseF>,
-    H: FiatShamirFieldHash<BaseF, ChallengeF>,
-> {
+pub struct FieldHashTranscript<ChallengeF: ExtensionField, H: FiatShamirFieldHash<ChallengeF>> {
     /// Internal hasher, it's a little costly to create a new hasher
-    pub fs_sponge: H,
+    pub hasher: H,
 
     // TODO(HS) maybe unpack state here?
     /// The digest bytes.
@@ -201,16 +197,16 @@ pub struct FieldHashTranscript<
     pub proof_locked: bool,
 }
 
-impl<BaseF, ChallengeF, H> Transcript<ChallengeF> for FieldHashTranscript<BaseF, ChallengeF, H>
+impl<BaseF, ChallengeF, H> Transcript<ChallengeF> for FieldHashTranscript<ChallengeF, H>
 where
     BaseF: Field,
     ChallengeF: ExtensionField<BaseField = BaseF>,
-    H: FiatShamirFieldHash<BaseF, ChallengeF>,
+    H: FiatShamirFieldHash<ChallengeF>,
 {
     #[inline(always)]
     fn new() -> Self {
         Self {
-            fs_sponge: H::new(),
+            hasher: H::new(),
             ..Default::default()
         }
     }
@@ -290,18 +286,17 @@ where
     }
 }
 
-impl<BaseF, ChallengeF, H> FieldHashTranscript<BaseF, ChallengeF, H>
+impl<ChallengeF, H> FieldHashTranscript<ChallengeF, H>
 where
-    BaseF: Field,
-    ChallengeF: ExtensionField<BaseField = BaseF>,
-    H: FiatShamirFieldHash<BaseF, ChallengeF>,
+    ChallengeF: ExtensionField,
+    H: FiatShamirFieldHash<ChallengeF>,
 {
     pub fn hash_to_digest(&mut self) {
         if !self.data_pool.is_empty() {
-            self.digest = self.fs_sponge.hash(&self.data_pool);
+            self.digest = self.hasher.hash(&self.data_pool);
             self.data_pool.clear();
         } else {
-            self.digest = self.fs_sponge.hash(&[self.digest]);
+            self.digest = self.hasher.hash(&[self.digest]);
         }
     }
 }

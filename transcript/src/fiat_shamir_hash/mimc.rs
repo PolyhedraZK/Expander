@@ -1,4 +1,4 @@
-use arith::{ExtensionField, Field, FieldForECC};
+use arith::{ExtensionField, Field};
 
 use tiny_keccak::{Hasher, Keccak};
 
@@ -11,13 +11,11 @@ pub struct MIMCConstants<F: Field> {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct MIMCHasher<F: Field, ExtF: ExtensionField<BaseField = F>> {
+pub struct MIMCHasher<ExtF: ExtensionField> {
     constants: MIMCConstants<ExtF>,
 }
 
-impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>> FiatShamirFieldHash<F, ExtF>
-    for MIMCHasher<F, ExtF>
-{
+impl<ExtF: ExtensionField> FiatShamirFieldHash<ExtF> for MIMCHasher<ExtF> {
     fn new() -> Self {
         Self {
             constants: generate_mimc_constants::<ExtF>(),
@@ -34,7 +32,7 @@ impl<F: FieldForECC, ExtF: ExtensionField<BaseField = F>> FiatShamirFieldHash<F,
     }
 }
 
-impl<F: Field, ExtF: ExtensionField<BaseField = F>> MIMCHasher<F, ExtF> {
+impl<ExtF: ExtensionField> MIMCHasher<ExtF> {
     #[inline(always)]
     pub fn pow5(x: ExtF) -> ExtF {
         let x2 = x * x;
