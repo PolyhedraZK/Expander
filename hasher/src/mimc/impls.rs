@@ -80,7 +80,6 @@ impl<F: FieldForECC, State: MiMCState<F>> FiatShamirSponge<State> for MiMCSponge
     }
 
     fn update(&mut self, input: &[<State as FieldHasherState>::InputF]) {
-        self.is_observed = false;
         input.iter().for_each(|a| {
             let r = self.mimc5_hash(&self.absorbed.into(), a);
             self.absorbed = (self.absorbed.into() + r + a).into();
@@ -89,9 +88,7 @@ impl<F: FieldForECC, State: MiMCState<F>> FiatShamirSponge<State> for MiMCSponge
 
     fn squeeze(&mut self) -> <State as FieldHasherState>::OutputF {
         if !self.is_observed {
-            let result = self.absorbed.digest();
-            self.is_observed = true;
-            result
+            self.absorbed.digest()
         } else {
             self.absorbed = self.mimc5_hash(&F::ZERO, &self.absorbed.into()).into();
             self.absorbed.digest()
@@ -104,6 +101,6 @@ impl<F: FieldForECC, State: MiMCState<F>> FiatShamirSponge<State> for MiMCSponge
 
     fn set_state(&mut self, state: State) {
         self.absorbed = state;
-        self.is_observed = true;
+        self.is_observed = false;
     }
 }

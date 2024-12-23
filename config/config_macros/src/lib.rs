@@ -71,9 +71,10 @@ fn parse_fiat_shamir_hash_type(
             format!("BytesHashTranscript::<{challenge_f}, Keccak256hasher>").to_owned(),
         ),
 		// TODO(HS) Poseidon M31 setup
+		// TODO(HS) MiMC5 BN254 change interface
         ("MIMC5", "BN254") => (
             "MIMC5".to_owned(),
-            format!("FieldHashTranscript::<{challenge_f}, {challenge_f}, {challenge_f}, MiMCFrTranscriptSponge>")
+            format!("FieldHashTranscript::<{challenge_f}, {challenge_f}, MIMCHasher<{challenge_f}, {challenge_f}>>")
                 .to_owned(),
         ),
         _ => panic!("Unknown hash type"),

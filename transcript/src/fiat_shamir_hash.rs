@@ -1,10 +1,15 @@
 use std::fmt::Debug;
 
+use arith::{ExtensionField, Field};
+
 pub mod sha2_256;
 pub use sha2_256::*;
 
 pub mod keccak_256;
 pub use keccak_256::*;
+
+pub mod mimc;
+pub use mimc::*;
 
 pub trait FiatShamirBytesHash: Clone + Debug {
     /// The size of the hash output in bytes.
@@ -18,4 +23,16 @@ pub trait FiatShamirBytesHash: Clone + Debug {
 
     /// Hash the input in place.
     fn hash_inplace(buffer: &mut [u8]);
+}
+
+// TODO(HS) actually we should change this to FiatShamirSponge
+// TODO(HS) should hash to some hash state rather than extf
+pub trait FiatShamirFieldHash<F: Field, ExtF: ExtensionField<BaseField = F>>:
+    Clone + Debug + Default
+{
+    /// Create a new hash instance.
+    fn new() -> Self;
+
+    /// hash a vector of field element and return the hash result
+    fn hash(&self, input: &[F]) -> ExtF;
 }

@@ -564,7 +564,6 @@ version = "0.1.0"
 dependencies = [
  "config",
  "gkr_field_config",
- "hasher",
  "poly_commit",
  "proc-macro2",
  "quote",
@@ -934,7 +933,6 @@ dependencies = [
  "gf2_128",
  "gkr_field_config",
  "halo2curves",
- "hasher",
  "log",
  "mersenne31",
  "mpi",

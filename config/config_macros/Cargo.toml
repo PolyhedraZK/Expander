@@ -8,7 +8,6 @@ config = { path = ".." }
 gkr_field_config = { path = "../gkr_field_config" }
 poly_commit = { path = "../../poly_commit" }
 transcript = { path = "../../transcript" }
-hasher = { path = "../../hasher" }
 
 syn = "2.0"       # For parsing Rust code
 quote = "1.0"     # For generating code
