@@ -565,6 +565,7 @@ dependencies = [
  "config",
  "field_hashers",
  "gkr_field_config",
+ "mersenne31",
  "poly_commit",
  "proc-macro2",
  "quote",
@@ -1512,6 +1513,7 @@ dependencies = [
  "cfg-if",
  "criterion",
  "ethnum",
+ "field_hashers",
  "halo2curves",
  "log",
  "rand",
@@ -2361,6 +2363,7 @@ name = "transcript"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "field_hashers",
  "mpi_config",
  "sha2",
  "tiny-keccak",

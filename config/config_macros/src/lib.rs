@@ -70,8 +70,10 @@ fn parse_fiat_shamir_hash_type(
             "Keccak256".to_owned(),
             format!("BytesHashTranscript::<{challenge_f}, Keccak256hasher>").to_owned(),
         ),
-        // TODO(HS) Poseidon M31 setup
-        // TODO(HS) MiMC5 BN254 change interface
+        ("Poseidon", "M31") => (
+            "Poseidon".to_owned(),
+            format!("FieldHashTranscript::<{challenge_f}, PoseidonPermutation<M31x16>>").to_owned(),
+        ),
         ("MIMC5", "BN254") => (
             "MIMC5".to_owned(),
             format!("FieldHashTranscript::<{challenge_f}, MiMC5FiatShamirHasher<{challenge_f}>>")

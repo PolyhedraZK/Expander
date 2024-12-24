@@ -14,5 +14,8 @@ syn = "2.0"       # For parsing Rust code
 quote = "1.0"     # For generating code
 proc-macro2 = "1.0"  # For working with tokens
 
+[dev-dependencies]
+mersenne31 = { path = "../../arith/mersenne31/" }
+
 [lib]
 proc-macro=true

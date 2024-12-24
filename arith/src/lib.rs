@@ -17,9 +17,6 @@ pub use serde::*;
 
 mod macros;
 
-mod symmetric;
-pub use symmetric::*;
-
 mod benches;
 pub use benches::*;
 

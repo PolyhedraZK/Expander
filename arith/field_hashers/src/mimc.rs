@@ -1,7 +1,8 @@
-use arith::{FiatShamirFieldHasher, Field};
+use arith::Field;
 use halo2curves::bn256::Fr;
-
 use tiny_keccak::{Hasher, Keccak};
+
+use crate::FiatShamirFieldHasher;
 
 #[derive(Debug, Clone, Default)]
 pub struct MiMC5FiatShamirHasher<F: Field> {
@@ -18,7 +19,7 @@ impl<F: Field> FiatShamirFieldHasher<F> for MiMC5FiatShamirHasher<F> {
         Self { constants }
     }
 
-    fn hash(&self, input: &[F]) -> Vec<F> {
+    fn hash_to_state(&self, input: &[F]) -> Vec<F> {
         let mut h = F::ZERO;
         input.iter().for_each(|a| {
             let r = self.mimc5_hash(&h, a);

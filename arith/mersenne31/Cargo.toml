@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../" }
+field_hashers = { path = "../field_hashers" }
 
 ark-std.workspace = true
 halo2curves.workspace = true

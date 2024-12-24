@@ -1,6 +1,7 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use arith::{ExtensionField, FiatShamirFieldHasher, Field, FieldSerde};
+use arith::{ExtensionField, Field, FieldSerde};
+use field_hashers::FiatShamirFieldHasher;
 
 use crate::{fiat_shamir_hash::FiatShamirBytesHash, Proof};
 
@@ -233,7 +234,7 @@ where
 
     fn generate_challenge_field_element(&mut self) -> ChallengeF {
         if !self.data_pool.is_empty() {
-            self.hash_state = self.hasher.hash(&self.data_pool);
+            self.hash_state = self.hasher.hash_to_state(&self.data_pool);
             self.data_pool.clear();
             self.next_unconsumed = 0;
         }
@@ -246,11 +247,11 @@ where
 
         let mut ext_limbs = Vec::new();
         if self.next_unconsumed < H::STATE_CAPACITY {
-            ext_limbs.extend_from_slice(&self.hash_state[self.next_unconsumed..]);
+            ext_limbs.extend_from_slice(&self.hash_state[self.next_unconsumed..H::STATE_CAPACITY]);
         }
         let remaining_base_elems = ChallengeF::DEGREE - ext_limbs.len();
 
-        self.hash_state = self.hasher.hash(&self.hash_state);
+        self.hash_state = self.hasher.hash_to_state(&self.hash_state);
         ext_limbs.extend_from_slice(&self.hash_state[..remaining_base_elems]);
         self.next_unconsumed = remaining_base_elems;
 
@@ -262,10 +263,13 @@ where
             (n_bytes + ChallengeF::BaseField::SIZE - 1) / ChallengeF::BaseField::SIZE;
         let elems = self.generate_challenge_field_elements(base_field_elems_num);
 
-        let mut res = vec![0u8; base_field_elems_num * ChallengeF::BaseField::SIZE];
-        res.chunks_mut(ChallengeF::BaseField::SIZE)
-            .zip(elems.iter())
-            .for_each(|(mut buffer, e)| e.serialize_into(&mut buffer).unwrap());
+        let mut res = Vec::new();
+        let mut buffer = Vec::new();
+
+        elems.iter().for_each(|t| {
+            t.serialize_into(&mut buffer).unwrap();
+            res.extend_from_slice(&buffer);
+        });
         res.resize(n_bytes, 0);
 
         res
@@ -279,10 +283,10 @@ where
     // mainly to sync up the MPI transcripts to a same transaction hash state.
     fn hash_and_return_state(&mut self) -> Vec<u8> {
         if !self.data_pool.is_empty() {
-            self.hash_state = self.hasher.hash(&self.data_pool);
+            self.hash_state = self.hasher.hash_to_state(&self.data_pool);
             self.data_pool.clear();
         } else {
-            self.hash_state = self.hasher.hash(&self.hash_state);
+            self.hash_state = self.hasher.hash_to_state(&self.hash_state);
         }
 
         let mut state = vec![];

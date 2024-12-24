@@ -8,6 +8,9 @@ pub use m31::M31;
 mod m31x16;
 pub use m31x16::M31x16;
 
+/// Poseidon over Mersenne-31
+mod poseidon;
+
 /// Degree 3 extension field for Mersenne-31
 mod m31_ext;
 pub use m31_ext::M31Ext3;

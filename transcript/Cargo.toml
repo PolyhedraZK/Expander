@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
+field_hashers = { path = "../arith/field_hashers" }
 mpi_config = { path = "../config/mpi_config" }
 
 sha2.workspace = true

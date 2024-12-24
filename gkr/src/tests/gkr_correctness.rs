@@ -7,8 +7,9 @@ use arith::{Field, FieldSerde};
 use circuit::Circuit;
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
-use field_hashers::MiMC5FiatShamirHasher;
+use field_hashers::{MiMC5FiatShamirHasher, PoseidonPermutation};
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use mersenne31::M31x16;
 use mpi_config::{root_println, MPIConfig};
 use poly_commit::expander_pcs_init_testing_only;
 use poly_commit::raw::RawExpanderGKR;
@@ -66,6 +67,12 @@ fn test_gkr_correctness() {
         FiatShamirHashType::MIMC5,
         PolynomialCommitmentType::Raw
     );
+    declare_gkr_config!(
+        C8,
+        FieldType::M31,
+        FiatShamirHashType::Poseidon,
+        PolynomialCommitmentType::Raw,
+    );
 
     test_gkr_correctness_helper(
         &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
@@ -94,6 +101,10 @@ fn test_gkr_correctness() {
     test_gkr_correctness_helper(
         &Config::<C6>::new(GKRScheme::Vanilla, mpi_config.clone()),
         Some("../data/gkr_proof.txt"),
+    );
+    test_gkr_correctness_helper(
+        &Config::<C8>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
     );
 
     MPIConfig::finalize();

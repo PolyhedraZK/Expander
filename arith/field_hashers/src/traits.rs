@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::Field;
+use arith::Field;
 
 pub trait FiatShamirFieldHasher<F: Field>: Clone + Debug + Default {
     /// Name for the field hasher
@@ -13,5 +13,5 @@ pub trait FiatShamirFieldHasher<F: Field>: Clone + Debug + Default {
     fn new() -> Self;
 
     /// hash a vector of field element and return the hash result
-    fn hash(&self, input: &[F]) -> Vec<F>;
+    fn hash_to_state(&self, input: &[F]) -> Vec<F>;
 }
