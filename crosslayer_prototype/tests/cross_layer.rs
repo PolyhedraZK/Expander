@@ -22,7 +22,7 @@ fn test_sumcheck_cross_layered_helper<C: GKRFieldConfig>() {
         1,
     );
 
-    let (_output_claim, input_challenge, input_claim) =
+    let (_output_claim, _input_challenge, _input_claim) =
         prove_gkr(&circuit, &evals, &connections, &mut transcript, &mut sp);
 }
 
