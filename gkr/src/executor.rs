@@ -73,7 +73,7 @@ pub fn prove<Cfg: GKRConfig>(
     Proof,
 ) {
     let mut prover = crate::Prover::new(config);
-    prover.prepare_mem(&circuit);
+    prover.prepare_mem(circuit);
     // TODO: Read PCS setup from files
 
     let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
@@ -85,12 +85,7 @@ pub fn prove<Cfg: GKRConfig>(
             &mut rng,
         );
 
-    prover.prove(
-        &mut circuit,
-        &pcs_params,
-        &pcs_proving_key,
-        &mut pcs_scratch,
-    )
+    prover.prove(circuit, &pcs_params, &pcs_proving_key, &mut pcs_scratch)
 }
 
 pub fn verify<Cfg: GKRConfig>(
@@ -111,12 +106,12 @@ pub fn verify<Cfg: GKRConfig>(
     let verifier = crate::Verifier::new(config);
     let public_input = circuit.public_input.clone();
     verifier.verify(
-        &mut circuit,
+        circuit,
         &public_input,
-        &claimed_v,
+        claimed_v,
         &pcs_params,
         &pcs_verification_key,
-        &proof,
+        proof,
     )
 }
 
