@@ -67,7 +67,7 @@ where
                     o_id: self.o_id,
                     i_id: self.i_ids[0].1,
                     i_layer: self.i_ids[0].0,
-                    coef: self.coef.clone(),
+                    coef: self.coef,
                 }),
             )
         } else {
@@ -81,7 +81,7 @@ where
                 i_ids,
                 o_id: self.o_id,
                 coef_type: self.coef_type.clone(),
-                coef: self.coef.clone(),
+                coef: self.coef,
             };
             (Some(gate), None)
         }

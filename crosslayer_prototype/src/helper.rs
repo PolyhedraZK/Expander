@@ -364,9 +364,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
                     }
                 } else {
                     // for extra bits in sumcheck, we require it to be 1
-                    self.sp.cross_layer_completed_values[i_layer] = C::Field::from(
-                        C::challenge_mul_field(&r, &self.sp.cross_layer_completed_values[i_layer]),
-                    );
+                    self.sp.cross_layer_completed_values[i_layer] = C::challenge_mul_field(&r, &self.sp.cross_layer_completed_values[i_layer]);
                 }
             }
         }
@@ -421,7 +419,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
     pub(crate) fn vy_claim(&self) -> C::ChallengeField {
         unpack_and_combine(
             &self.sp.v_evals[0],
-            &self.sp.eq_evals_at_r_simd_at_layer[self.layer.layer_id].as_slice(),
+            self.sp.eq_evals_at_r_simd_at_layer[self.layer.layer_id].as_slice(),
         )
     }
 
@@ -473,7 +471,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
                 vals.resize(*cross_layer_size, C::Field::ZERO);
                 hg_vals.resize(*cross_layer_size, C::Field::ZERO);
 
-                for (idx, (o_id, i_id)) in connections_at_i_layer.into_iter().enumerate() {
+                for (idx, (o_id, i_id)) in connections_at_i_layer.iter().enumerate() {
                     cir_vals[idx] = self.circuit_vals.vals[i_layer][*i_id];
                     // Do nothing to vals[idx] here, it will be processed later in folding
                     hg_vals[idx] = C::Field::from(eq_evals_at_rz[*o_id]);
@@ -659,7 +657,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerGatherHelper<'a, C> {
         // second claim from the previous layer
         EqPolynomial::eq_eval_at(
             self.rz1,
-            &self.alpha,
+            self.alpha,
             eq_evals_at_rz,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,

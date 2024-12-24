@@ -1,5 +1,5 @@
 use gkr_field_config::GKRFieldConfig;
-use std::{cmp::max, collections::HashMap, fs, io::Cursor};
+use std::{collections::HashMap, fs, io::Cursor};
 
 use crate::*;
 
@@ -67,7 +67,7 @@ impl<C: GKRFieldConfig> CrossLayerSegment<C> {
         for (child_seg_id, child_allocs) in &self.child_segs {
             let leaves = rc.segments[*child_seg_id].scan_leaf_segments(rc, *child_seg_id);
             for (leaf_seg_id, leaf_allocs) in leaves {
-                ret.entry(leaf_seg_id).or_insert_with(Vec::new);
+                ret.entry(leaf_seg_id).or_default();
                 for child_alloc in child_allocs {
                     for leaf_alloc in &leaf_allocs {
                         ret.get_mut(&leaf_seg_id).unwrap().push(Allocation {

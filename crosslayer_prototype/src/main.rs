@@ -1,9 +1,8 @@
 use arith::Field;
 use crosslayer_prototype::{
-    prove_gkr, CrossLayerCircuit, CrossLayerConnections, CrossLayerRecursiveCircuit,
+    prove_gkr, CrossLayerConnections, CrossLayerRecursiveCircuit,
 };
-use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use polynomials::MultiLinearPoly;
+use gkr_field_config::{GF2ExtConfig, GKRFieldConfig};
 use transcript::{BytesHashTranscript, SHA256hasher, Transcript};
 
 fn test_sumcheck_cross_layered_helper<C: GKRFieldConfig>() {
