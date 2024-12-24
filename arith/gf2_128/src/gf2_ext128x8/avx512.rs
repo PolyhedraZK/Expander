@@ -638,7 +638,8 @@ impl ExtensionField for AVX512GF2_128x8 {
                 // Get the most significant bit of each 64-bit part
                 let msb = _mm512_srli_epi64(data, 63);
 
-                // Move the MSB from the high 64 bits to the LSB of the low 64 bits for each 128-bit element
+                // Move the MSB from the high 64 bits to the LSB of the low 64 bits
+                // for each 128-bit element
                 let msb_moved = _mm512_bslli_epi128(msb, 8);
 
                 // Combine the shifted value with the moved msb
@@ -663,6 +664,46 @@ impl ExtensionField for AVX512GF2_128x8 {
                 mul_by_x_internal(self.data[1]),
             ],
         }
+    }
+
+    #[inline(always)]
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        let mut local_limbs = limbs.to_vec();
+        local_limbs.resize(Self::DEGREE, Self::BaseField::ZERO);
+
+        let mut buffer = vec![GF2::ZERO; Self::DEGREE * Self::PACK_SIZE];
+
+        local_limbs.iter().enumerate().for_each(|(ith_limb, limb)| {
+            let unpacked = limb.unpack();
+            unpacked.iter().enumerate().for_each(|(ith_gf2, gf2_val)| {
+                buffer[ith_gf2 * Self::DEGREE + ith_limb] = *gf2_val;
+            });
+        });
+
+        let gf2_128s: Vec<_> = buffer
+            .chunks(Self::DEGREE)
+            .map(GF2_128::from_limbs)
+            .collect();
+
+        Self::pack(&gf2_128s)
+    }
+
+    #[inline(always)]
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        let gf2_128s = self.unpack();
+
+        let mut buffer = vec![GF2::ZERO; Self::DEGREE * Self::PACK_SIZE];
+        gf2_128s
+            .iter()
+            .enumerate()
+            .for_each(|(ith_gf2_128, gf2_128_val)| {
+                let limbs = gf2_128_val.to_limbs();
+                limbs.iter().enumerate().for_each(|(ith_limb, limb)| {
+                    buffer[ith_limb * Self::PACK_SIZE + ith_gf2_128] = *limb;
+                })
+            });
+
+        buffer.chunks(Self::PACK_SIZE).map(GF2x8::pack).collect()
     }
 }
 

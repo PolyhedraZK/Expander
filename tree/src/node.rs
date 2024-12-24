@@ -1,5 +1,4 @@
-use std::fmt;
-use std::fmt::Display;
+use std::{fmt, fmt::Display};
 
 use sha2::{Digest, Sha512_256};
 

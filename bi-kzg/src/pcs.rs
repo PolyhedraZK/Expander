@@ -56,7 +56,8 @@ pub trait PolynomialCommitmentScheme {
         point: &Self::Point,
     ) -> (Self::Proof, Self::Evaluation);
 
-    /// Input a list of polynomials, and a same number of points, compute a multi-opening for all the polynomials.
+    /// Input a list of polynomials, and a same number of points,
+    /// compute a multi-opening for all the polynomials.
     fn multi_open(
         _prover_param: impl Borrow<Self::ProverParam>,
         _polynomials: &[Self::Polynomial],

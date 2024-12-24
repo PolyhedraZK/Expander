@@ -122,6 +122,22 @@ impl ExtensionField for M31Ext3x16 {
             v: [self.v[2].mul_by_5(), self.v[0], self.v[1]],
         }
     }
+
+    #[inline(always)]
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        let mut v = [Self::BaseField::default(); Self::DEGREE];
+        if limbs.len() < Self::DEGREE {
+            v[..limbs.len()].copy_from_slice(limbs)
+        } else {
+            v.copy_from_slice(&limbs[..Self::DEGREE])
+        }
+        Self { v }
+    }
+
+    #[inline(always)]
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        vec![self.v[0], self.v[1], self.v[2]]
+    }
 }
 
 impl Mul<M31x16> for M31Ext3x16 {

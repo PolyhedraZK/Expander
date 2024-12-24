@@ -1,7 +1,7 @@
 use arith::{Field, FieldSerde};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomials::MultiLinearPoly;
+use polynomials::MultilinearExtension;
 use rand::RngCore;
 use std::fmt::Debug;
 use transcript::Transcript;
@@ -93,32 +93,44 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
     /// Each process returns its own scratch pad.
     fn init_scratch_pad(params: &Self::Params, mpi_config: &MPIConfig) -> Self::ScratchPad;
 
-    /// Commit to a polynomial. Root process returns the commitment, other processes can return arbitrary value.
+    /// Commit to a polynomial. Root process returns the commitment, other processes can return
+    /// arbitrary value.
     fn commit(
         params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &MultiLinearPoly<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment;
 
-    /// Open the polynomial at a point. Root process returns the opening, other processes can return arbitrary value.
-    /// Note: In GKR, We'll add the opening proof to the transcript after calling this function.
-    ///     However, if the open function itself is a multi-round interactive argument, `transcript.append_field_element` is likely to be used within the function.
-    ///     By default, `transcript.append_field_element` will add the field element to the proof, which means the field element is added twice.
-    ///     A temporary solution is to add a `transcript.lock_proof()` at the beginning of the open function and a `transcript.unlock_proof()` at the end of the open function.
-    ///     In this case, the `lock/unlock` function must be added at the beginning and end of the verify function as well.
+    /// Open the polynomial at a point.
+    /// Root process returns the opening, other processes can return arbitrary value.
+    ///
+    /// Note(ZF): In GKR, We'll add the opening proof to the transcript after
+    /// calling this function.
+    /// However, if the open function itself is a multi-round interactive argument,
+    /// `transcript.append_field_element` is likely to be used within the function.
+    ///
+    /// By default, `transcript.append_field_element` will add the field element to the proof,
+    /// which means the field element is added twice.
+    ///
+    /// A temporary solution is to add a `transcript.lock_proof()` at the beginning of the open
+    /// function and a `transcript.unlock_proof()` at the end of the open function.
+    ///
+    /// In this case, the `lock/unlock` function must be added at the beginning and end of the
+    /// verify function as well.
     fn open(
         params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &MultiLinearPoly<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<C::SimdCircuitField>,
         x: &ExpanderGKRChallenge<C>,
         transcript: &mut T, // add transcript here to allow interactive arguments
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Opening;
 
-    /// Verify the opening of a polynomial at a point. This should only be called on the root process.
+    /// Verify the opening of a polynomial at a point.
+    /// This should only be called on the root process.
     #[allow(clippy::too_many_arguments)]
     fn verify(
         params: &Self::Params,

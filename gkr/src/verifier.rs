@@ -281,7 +281,8 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         commitment.serialize_into(&mut buffer).unwrap();
         transcript.append_u8_slice(&buffer);
 
-        // TODO: Implement a trait containing the size function, and use the following line to avoid unnecessary deserialization and serialization
+        // TODO: Implement a trait containing the size function,
+        // and use the following line to avoid unnecessary deserialization and serialization
         // transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
         if self.config.mpi_config.world_size() > 1 {
@@ -359,6 +360,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         )
         .unwrap();
 
+        transcript.lock_proof();
         let verified = Cfg::PCS::verify(
             pcs_params,
             &self.config.mpi_config,
@@ -369,6 +371,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             transcript,
             &opening,
         );
+        transcript.unlock_proof();
 
         let mut buffer = vec![];
         opening.serialize_into(&mut buffer).unwrap(); // TODO: error propagation

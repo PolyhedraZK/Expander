@@ -958,6 +958,7 @@ dependencies = [
  "poly_commit",
  "polynomials",
  "rand",
+ "rand_chacha",
  "sha2",
  "sumcheck",
  "thiserror",
@@ -1812,6 +1813,7 @@ name = "poly_commit"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "ethnum",
  "gkr_field_config",
  "mpi_config",
  "polynomials",

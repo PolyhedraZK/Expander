@@ -8,7 +8,7 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelI
 use crate::{Leaf, Node, Path, RangePath, LEAF_BYTES};
 
 /// Represents a Merkle tree structure.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct Tree {
     pub nodes: Vec<Node>,
     pub leaves: Vec<Leaf>,
@@ -66,7 +66,7 @@ impl Tree {
     /// Create a tree with compact serialization of field elements as leaves,
     /// by taking advantage of PackF
     #[inline]
-    pub fn compact_new_with_field_elems<F, PackF>(field_elems: &[F]) -> Self
+    pub fn compact_new_with_field_elems<F, PackF>(field_elems: Vec<F>) -> Self
     where
         F: Field,
         PackF: SimdField<Scalar = F>,
@@ -76,12 +76,12 @@ impl Tree {
             .map(SimdField::pack)
             .collect();
 
-        Self::compact_new_with_packed_field_elems(&packed_elems)
+        Self::compact_new_with_packed_field_elems(packed_elems)
     }
 
     /// Create a tree with compact serialization of *packed* field elements as leaves.
     #[inline]
-    pub fn compact_new_with_packed_field_elems<F, PackF>(field_elems: &[PackF]) -> Self
+    pub fn compact_new_with_packed_field_elems<F, PackF>(field_elems: Vec<PackF>) -> Self
     where
         F: Field,
         PackF: SimdField<Scalar = F>,

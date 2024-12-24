@@ -3,12 +3,47 @@ use crate::{
     ExpanderGKRChallenge, PCSEmptyType, PCSForExpanderGKR, PolynomialCommitmentScheme,
     StructuredReferenceString,
 };
-use arith::{Field, SimdField};
+use arith::{BN254Fr, Field, FieldForECC, FieldSerde, FieldSerdeResult, SimdField};
+use ethnum::U256;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomials::MultiLinearPoly;
+use polynomials::{MultiLinearPoly, MultilinearExtension};
 use rand::RngCore;
 use transcript::Transcript;
+
+#[derive(Clone, Debug, Default)]
+pub struct RawCommitment<F: Field> {
+    pub evals: Vec<F>,
+}
+
+impl<F: Field> FieldSerde for RawCommitment<F> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        let u256_embedded = U256::from(self.evals.len() as u64);
+        let fr_embedded = BN254Fr::from_u256(u256_embedded);
+        fr_embedded.serialize_into(&mut writer)?;
+
+        self.evals
+            .iter()
+            .try_for_each(|v| v.serialize_into(&mut writer))?;
+
+        Ok(())
+    }
+
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+        let mut v = Self::default();
+
+        let fr_embedded = BN254Fr::deserialize_from(&mut reader)?;
+        let u256_embedded = fr_embedded.to_u256();
+        let len = u256_embedded.as_usize();
+
+        for _ in 0..len {
+            v.evals.push(F::deserialize_from(&mut reader)?);
+        }
+        Ok(v)
+    }
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct RawMultiLinearParams {
@@ -21,9 +56,9 @@ pub struct RawMultiLinearScratchPad<F: Field> {
 }
 
 // Raw commitment for multi-linear polynomials
-pub struct RawMultiLinear {}
+pub struct RawMultiLinearPCS {}
 
-impl<F: Field> PolynomialCommitmentScheme<F> for RawMultiLinear {
+impl<F: Field> PolynomialCommitmentScheme<F> for RawMultiLinearPCS {
     const NAME: &'static str = "RawMultiLinear";
 
     type Params = RawMultiLinearParams;
@@ -34,7 +69,7 @@ impl<F: Field> PolynomialCommitmentScheme<F> for RawMultiLinear {
     type EvalPoint = Vec<F>;
 
     type SRS = PCSEmptyType;
-    type Commitment = Vec<F>;
+    type Commitment = RawCommitment<F>;
 
     type Opening = PCSEmptyType;
 
@@ -55,7 +90,9 @@ impl<F: Field> PolynomialCommitmentScheme<F> for RawMultiLinear {
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
         assert!(poly.coeffs.len() == 1 << params.n_vars);
-        poly.coeffs.clone()
+        Self::Commitment {
+            evals: poly.coeffs.clone(),
+        }
     }
 
     fn open(
@@ -86,9 +123,9 @@ impl<F: Field> PolynomialCommitmentScheme<F> for RawMultiLinear {
     ) -> bool {
         assert!(x.len() == params.n_vars);
         MultiLinearPoly::<F>::evaluate_with_buffer(
-            commitment,
+            &commitment.evals,
             x,
-            &mut vec![F::ZERO; commitment.len()],
+            &mut vec![F::ZERO; commitment.evals.len()],
         ) == v
     }
 }
@@ -126,7 +163,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
 
     type SRS = PCSEmptyType;
 
-    type Commitment = Vec<C::SimdCircuitField>;
+    type Commitment = RawCommitment<C::SimdCircuitField>;
 
     type Opening = PCSEmptyType;
 
@@ -152,29 +189,30 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         params: &Self::Params,
         mpi_config: &MPIConfig,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &MultiLinearPoly<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
-        assert!(poly.coeffs.len() == 1 << params.n_local_vars);
-        if mpi_config.world_size() == 1 {
-            poly.coeffs.clone()
+        assert!(poly.num_vars() == params.n_local_vars);
+        let evals = if mpi_config.world_size() == 1 {
+            poly.hypercube_basis()
         } else {
             let mut buffer = if mpi_config.is_root() {
-                vec![C::SimdCircuitField::zero(); poly.coeffs.len() * mpi_config.world_size()]
+                vec![C::SimdCircuitField::zero(); poly.hypercube_size() * mpi_config.world_size()]
             } else {
                 vec![]
             };
 
-            mpi_config.gather_vec(&poly.coeffs, &mut buffer);
+            mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
             buffer
-        }
+        };
+        Self::Commitment { evals }
     }
 
     fn open(
         _params: &Self::Params,
         _mpi_config: &MPIConfig,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        _poly: &MultiLinearPoly<C::SimdCircuitField>,
+        _poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _x: &ExpanderGKRChallenge<C>,
         _transcript: &mut T,
         _scratch_pad: &mut Self::ScratchPad,
@@ -195,7 +233,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
     ) -> bool {
         assert!(mpi_config.is_root()); // Only the root will verify
         let ExpanderGKRChallenge::<C> { x, x_simd, x_mpi } = x;
-        Self::eval(commitment, x, x_simd, x_mpi) == v
+        Self::eval(&commitment.evals, x, x_simd, x_mpi) == v
     }
 }
 

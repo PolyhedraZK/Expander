@@ -68,7 +68,8 @@ impl Field for AVXGF2_128 {
     fn one() -> Self {
         AVXGF2_128 {
             // 1 in the first bit
-            v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) }, // TODO check bit order
+            // TODO check bit order
+            v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) },
         }
     }
 
@@ -166,7 +167,7 @@ impl ExtensionField for AVXGF2_128 {
         res
     }
 
-    #[inline]
+    #[inline(always)]
     fn mul_by_x(&self) -> Self {
         unsafe {
             // Shift left by 1 bit
@@ -195,6 +196,45 @@ impl ExtensionField for AVXGF2_128 {
 
             Self { v: res }
         }
+    }
+
+    #[inline(always)]
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        let mut local_limbs = limbs.to_vec();
+        local_limbs.resize(Self::DEGREE, Self::BaseField::ZERO);
+
+        let mut u32_lanes = [0u32; 4];
+        local_limbs
+            .chunks(32)
+            .zip(u32_lanes.iter_mut())
+            .for_each(|(limbs_by_32, u32_lane)| {
+                limbs_by_32.iter().enumerate().for_each(|(ith_limb, limb)| {
+                    *u32_lane |= (limb.v as u32) << ith_limb;
+                });
+            });
+
+        Self {
+            v: unsafe { transmute::<[u32; 4], __m128i>(u32_lanes) },
+        }
+    }
+
+    #[inline(always)]
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        let mut u32_extracted: [u32; 4] = unsafe { transmute(self.v) };
+
+        let mut res = vec![Self::BaseField::ZERO; Self::DEGREE];
+        u32_extracted
+            .iter_mut()
+            .enumerate()
+            .for_each(|(ith_u32, u32_lane)| {
+                (0..32).for_each(|ith_bit| {
+                    let res_index = ith_bit + ith_u32 * 32;
+                    res[res_index] = From::from(*u32_lane);
+                    *u32_lane >>= 1;
+                })
+            });
+
+        res
     }
 }
 

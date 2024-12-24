@@ -21,7 +21,6 @@ members = [
 ]
 resolver = "2"
 
-
 [workspace.dependencies]
 ark-std = "0.4"
 ark-bn254 = "0.4.0"
@@ -47,3 +46,4 @@ tynm = { version = "0.1.6", default-features = false }
 warp = "0.3.7"
 thiserror = "1.0.63"
 ethnum = "1.5.0"
+rand_chacha = "0.3.1"

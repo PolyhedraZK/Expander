@@ -57,7 +57,7 @@ where
                 let field_elems_benchmark = field_elems[..(1 << i) * num_of_elems_in_leaf].to_vec();
 
                 b.iter(|| {
-                    Tree::compact_new_with_field_elems::<F, PackF>(&field_elems_benchmark);
+                    Tree::compact_new_with_field_elems::<F, PackF>(field_elems_benchmark.clone());
                 })
             })
             .sample_size(10);
@@ -90,7 +90,9 @@ where
                 let field_elems_benchmark = field_elems[..(1 << i) * num_of_elems_in_leaf].to_vec();
 
                 b.iter(|| {
-                    Tree::compact_new_with_packed_field_elems::<F, PackF>(&field_elems_benchmark);
+                    Tree::compact_new_with_packed_field_elems::<F, PackF>(
+                        field_elems_benchmark.clone(),
+                    );
                 })
             })
             .sample_size(10);
