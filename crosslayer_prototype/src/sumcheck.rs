@@ -70,6 +70,7 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
     (helper.rx, helper.ry, helper.r_relays_next)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn sumcheck_prove_gather_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     layer: &GenericLayer<C>,
     rz0: &[C::ChallengeField],

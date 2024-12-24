@@ -72,9 +72,9 @@ where
             )
         } else {
             let mut i_ids = [0; INPUT_NUM];
-            for i in 0..INPUT_NUM {
+            for (i, i_id) in i_ids.iter_mut().enumerate() {
                 let (_layer_offset, gate_offset) = self.i_ids[i];
-                i_ids[i] = gate_offset;
+                *i_id = gate_offset;
             }
 
             let gate = SimpleGate {

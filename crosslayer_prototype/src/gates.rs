@@ -32,8 +32,8 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> SimpleGate<C, INPUT_NUM> {
         input_size: usize,
     ) -> Self {
         let mut i_ids = [0; INPUT_NUM];
-        for i in 0..INPUT_NUM {
-            i_ids[i] = rng.next_u64() as usize % input_size;
+        for input in i_ids.iter_mut() {
+            *input = rng.next_u64() as usize % input_size;
         }
 
         let o_id = rng.next_u64() as usize % output_size;

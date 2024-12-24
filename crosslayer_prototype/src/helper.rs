@@ -274,8 +274,8 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
                         p3[i] += p3_at_layer_i[i];
                     }
                 } else {
-                    for i in 0..3 {
-                        p3[i] += self.sp.cross_layer_completed_values[i_layer];
+                    for p in p3.iter_mut() {
+                        *p += self.sp.cross_layer_completed_values[i_layer];
                     }
                 }
             }
@@ -453,6 +453,8 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
 
         // processing the relay layers
         let layers_connected_to = &self.connections.connections[self.layer.layer_id];
+        
+        #[allow(clippy::needless_range_loop)]
         for i_layer in 0..(self.layer.layer_id - 1) {
             let connections_at_i_layer = &layers_connected_to[i_layer];
             let cross_layer_size = &mut self.sp.cross_layer_sizes[i_layer];
@@ -575,6 +577,8 @@ pub(crate) struct CrossLayerGatherHelper<'a, C: GKRFieldConfig> {
     pub(crate) cur_layer_var_num: usize,
 }
 
+
+#[allow(clippy::too_many_arguments)]
 impl<'a, C: GKRFieldConfig> CrossLayerGatherHelper<'a, C> {
     pub fn new(
         layer: &'a GenericLayer<C>,

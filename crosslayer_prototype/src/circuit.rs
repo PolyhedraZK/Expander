@@ -266,6 +266,7 @@ impl CrossLayerConnections {
     pub fn parse_circuit<C: GKRFieldConfig>(c: &CrossLayerCircuit<C>) -> Self {
         let mut connections = vec![vec![vec![]; c.layers.len()]; c.layers.len()];
 
+        #[allow(clippy::needless_range_loop)]
         for o_layer in 1..c.layers.len() {
             for gate in &c.layers[o_layer].relay_gates {
                 connections[o_layer][gate.i_layer].push((gate.o_id, gate.i_id));
