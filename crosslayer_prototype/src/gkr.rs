@@ -1,4 +1,4 @@
-use arith::Field;
+use arith::{Field, SimdField};
 use gkr_field_config::GKRFieldConfig;
 use polynomials::MultiLinearPoly;
 use transcript::Transcript;
@@ -16,7 +16,13 @@ pub fn prove_gkr<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 
     let final_layer_vals = circuit_vals.vals.last().unwrap();
     let mut rz0 = transcript.generate_challenge_field_elements(final_layer_vals.len().trailing_zeros() as usize);
-    let output_claim = MultiLinearPoly::evaluate_with_buffer(final_layer_vals, &rz0, &mut sp.v_evals);
+    let r_simd = transcript.generate_challenge_field_elements(C::get_field_pack_size().trailing_zeros() as usize);
+    let output_claim = C::eval_circuit_vals_at_challenge(final_layer_vals, &rz0, &mut sp.v_evals);
+    let output_claim = MultiLinearPoly::<C::ChallengeField>::evaluate_with_buffer(
+        &output_claim.unpack(),
+        &r_simd,
+        &mut sp.eq_evals_at_r_simd,
+    );
 
     // The second challenge from the previous layer
     let mut rz1;
@@ -32,7 +38,7 @@ pub fn prove_gkr<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 
     for i in (1..circuit.layers.len()).rev() {
         let layer = &circuit.layers[i];
-        (rz0, rz1, r_relays) = sumcheck_prove_scatter_layer(layer, &rz0, connections, circuit_vals, transcript, sp);
+        (rz0, rz1, r_relays) = sumcheck_prove_scatter_layer(layer, &rz0, &r_simd, connections, circuit_vals, transcript, sp);
         for (input_layer, r) in r_relays {
             r_relays_all[input_layer].push((i, r));
         }

@@ -1,5 +1,4 @@
 
-use arith::FieldSerde;
 use gkr_field_config::GKRFieldConfig;
 use std::{cmp::max, collections::HashMap, fs, io::Cursor};
 

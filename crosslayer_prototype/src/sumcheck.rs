@@ -7,7 +7,7 @@ use crate::{CrossLayerCircuitEvals, CrossLayerConnections, CrossLayerGatherHelpe
 
 #[inline]
 pub fn transcript_io<F: Field + FieldSerde, T: Transcript<F>>(ps: &[F], transcript: &mut T) -> F {
-    assert!(ps.len() == 3);
+    assert!(ps.len() == 3 || ps.len() == 4);
     for p in ps {
         transcript.append_field_element(p);
     }
@@ -48,6 +48,13 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
         let evals = helper.poly_evals_at_rx(i_var, 2);
         let r = transcript_io::<C::ChallengeField, T>( &evals, transcript);
         helper.receive_rx(i_var, r);
+    }
+
+    helper.prepare_simd_var_vals();
+    for i_var in 0..C::get_field_pack_size().trailing_zeros() as usize {
+        let evals = helper.poly_evals_at_r_simd_var(i_var, 3);
+        let r = transcript_io::<C::ChallengeField, T>(&evals, transcript);
+        helper.receive_r_simd_var(i_var, r);
     }
 
     let vx_claims: Vec<(usize, C::ChallengeField)> = helper.vx_claims();

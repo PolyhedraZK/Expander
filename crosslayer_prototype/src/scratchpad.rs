@@ -11,9 +11,11 @@ pub struct CrossLayerProverScratchPad<C: GKRFieldConfig> {
     pub hg_evals: Vec<C::Field>,
 
     pub cross_layer_sizes: Vec<usize>,
+    pub cross_layer_circuit_vals: Vec<Vec<C::SimdCircuitField>>,
     pub cross_layer_evals: Vec<Vec<C::Field>>,
     pub cross_layer_hg_evals: Vec<Vec<C::Field>>,
     pub cross_layer_completed_values: Vec<C::Field>,
+    pub eq_evals_at_r_simd_at_layer: Vec<Vec<C::ChallengeField>>,
 
     pub simd_var_v_evals: Vec<C::ChallengeField>,
     pub simd_var_hg_evals: Vec<C::ChallengeField>,
@@ -22,7 +24,7 @@ pub struct CrossLayerProverScratchPad<C: GKRFieldConfig> {
     pub eq_evals_at_rz0: Vec<C::ChallengeField>,
     pub eq_evals_at_rz1: Vec<C::ChallengeField>,
     pub eq_evals_at_r_simd: Vec<C::ChallengeField>,
-    
+
     pub eq_evals_first_half: Vec<C::ChallengeField>,
     pub eq_evals_second_half: Vec<C::ChallengeField>,
 
@@ -42,9 +44,11 @@ impl<C: GKRFieldConfig> CrossLayerProverScratchPad<C> {
 
             // To be initialized in the sumcheck protocol
             cross_layer_sizes: vec![0; n_layers], 
+            cross_layer_circuit_vals: vec![vec![]; n_layers],
             cross_layer_evals: vec![vec![]; n_layers], 
             cross_layer_hg_evals: vec![vec![]; n_layers], 
             cross_layer_completed_values: vec![C::Field::ONE; n_layers],
+            eq_evals_at_r_simd_at_layer: vec![vec![C::ChallengeField::ONE; C::get_field_pack_size()]; n_layers],
 
             eq_evals_at_rx: vec![C::ChallengeField::default(); max_input_num],
             eq_evals_at_rz0: vec![C::ChallengeField::default(); max_output_num],
