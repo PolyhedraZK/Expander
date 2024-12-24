@@ -72,7 +72,8 @@ fn parse_fiat_shamir_hash_type(
         ),
         ("Poseidon", "M31") => (
             "Poseidon".to_owned(),
-            format!("FieldHashTranscript::<{challenge_f}, PoseidonPermutation<M31x16>>").to_owned(),
+            format!("FieldHashTranscript::<{challenge_f}, PoseidonFiatShamirHasher<M31x16>>")
+                .to_owned(),
         ),
         ("MIMC5", "BN254") => (
             "MIMC5".to_owned(),

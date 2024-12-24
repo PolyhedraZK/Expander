@@ -1,4 +1,4 @@
 mod compile_time;
 
 mod impls;
-pub use impls::{PoseidonPermutation, PoseidonStateTrait};
+pub use impls::{PoseidonFiatShamirHasher, PoseidonStateTrait};

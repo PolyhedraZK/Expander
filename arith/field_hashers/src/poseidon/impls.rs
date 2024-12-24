@@ -146,6 +146,15 @@ fn get_mds_matrix<State: PoseidonStateTrait>() -> Vec<State> {
 }
 
 impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
+    fn new() -> Self {
+        let total_rounds = State::FULL_ROUNDS + State::PARTIAL_ROUNDS;
+
+        Self {
+            mds_matrix: get_mds_matrix::<State>(),
+            round_constants: get_constants::<State>(total_rounds),
+        }
+    }
+
     fn permute(&self, state: &mut State) {
         let half_full_rounds = State::FULL_ROUNDS / 2;
         let partial_ends = State::FULL_ROUNDS / 2 + State::PARTIAL_ROUNDS;
@@ -176,12 +185,7 @@ impl<State: PoseidonStateTrait> FiatShamirFieldHasher<State::ElemT> for Poseidon
     const STATE_CAPACITY: usize = State::CAPACITY;
 
     fn new() -> Self {
-        let total_rounds = State::FULL_ROUNDS + State::PARTIAL_ROUNDS;
-
-        Self {
-            mds_matrix: get_mds_matrix::<State>(),
-            round_constants: get_constants::<State>(total_rounds),
-        }
+        Self::new()
     }
 
     fn hash_to_state(&self, input: &[State::ElemT]) -> Vec<State::ElemT> {
@@ -202,3 +206,5 @@ impl<State: PoseidonStateTrait> FiatShamirFieldHasher<State::ElemT> for Poseidon
         res.to_elems()
     }
 }
+
+pub type PoseidonFiatShamirHasher<State> = PoseidonPermutation<State>;

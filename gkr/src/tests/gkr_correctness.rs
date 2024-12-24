@@ -7,7 +7,7 @@ use arith::{Field, FieldSerde};
 use circuit::Circuit;
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
-use field_hashers::{MiMC5FiatShamirHasher, PoseidonPermutation};
+use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mersenne31::M31x16;
 use mpi_config::{root_println, MPIConfig};

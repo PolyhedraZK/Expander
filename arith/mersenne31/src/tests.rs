@@ -6,7 +6,7 @@ use arith::{
 };
 use arith::{random_from_limbs_to_limbs_tests, Field};
 use ark_std::test_rng;
-use field_hashers::{FiatShamirFieldHasher, PoseidonPermutation, PoseidonStateTrait};
+use field_hashers::{FiatShamirFieldHasher, PoseidonFiatShamirHasher, PoseidonStateTrait};
 
 use crate::M31Ext3;
 use crate::M31Ext3x16;
@@ -114,7 +114,7 @@ fn test_vectors() {
 
 #[test]
 fn test_poseidon_m31_fiat_shamir_hash() {
-    let perm = PoseidonPermutation::<M31x16>::new();
+    let perm = PoseidonFiatShamirHasher::<M31x16>::new();
 
     {
         let state_elems: [M31; M31x16::RATE] = [M31::from(114514); M31x16::RATE];

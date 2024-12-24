@@ -8,4 +8,4 @@ pub use mimc::MiMC5FiatShamirHasher;
 mod mimc_test;
 
 mod poseidon;
-pub use poseidon::{PoseidonPermutation, PoseidonStateTrait};
+pub use poseidon::{PoseidonFiatShamirHasher, PoseidonStateTrait};
