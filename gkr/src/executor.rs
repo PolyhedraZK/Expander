@@ -66,7 +66,7 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
 const PCS_TESTING_SEED_U64: u64 = 114514;
 
 pub fn prove<Cfg: GKRConfig>(
-    mut circuit: &mut Circuit<Cfg::FieldConfig>,
+    circuit: &mut Circuit<Cfg::FieldConfig>,
     config: &Config<Cfg>,
 ) -> (
     <<Cfg as GKRConfig>::FieldConfig as GKRFieldConfig>::ChallengeField,
@@ -89,7 +89,7 @@ pub fn prove<Cfg: GKRConfig>(
 }
 
 pub fn verify<Cfg: GKRConfig>(
-    mut circuit: &mut Circuit<Cfg::FieldConfig>,
+    circuit: &mut Circuit<Cfg::FieldConfig>,
     config: &Config<Cfg>,
     proof: &Proof,
     claimed_v: &<<Cfg as GKRConfig>::FieldConfig as GKRFieldConfig>::ChallengeField,
