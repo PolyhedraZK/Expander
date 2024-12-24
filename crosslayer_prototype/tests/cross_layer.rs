@@ -29,8 +29,6 @@ fn test_sumcheck_cross_layered_helper<C: GKRFieldConfig>() {
 #[test]
 fn test_sumcheck_cross_layered() {
     test_sumcheck_cross_layered_helper::<M31ExtConfig>();
-    let _ = GF2ExtConfig;
-    // GF2 not supported yet, due to the use of X and X^2
-    // test_sumcheck_cross_layered_helper::<GF2ExtConfig>();
+    test_sumcheck_cross_layered_helper::<GF2ExtConfig>();
     test_sumcheck_cross_layered_helper::<BN254Config>();
 }
