@@ -1,4 +1,3 @@
-
 use gkr_field_config::GKRFieldConfig;
 use std::{cmp::max, collections::HashMap, fs, io::Cursor};
 
@@ -10,9 +9,16 @@ pub type CrossLayerInputOffset = Vec<usize>;
 
 // This function is used to add the offset of the parent segment and that of its children
 // It is now required that the two offsets cross the same number of layers
-fn offset_add(offset_1: &CrossLayerInputOffset, offset_2: &CrossLayerInputOffset) -> CrossLayerInputOffset {
+fn offset_add(
+    offset_1: &CrossLayerInputOffset,
+    offset_2: &CrossLayerInputOffset,
+) -> CrossLayerInputOffset {
     assert_eq!(offset_1.len(), offset_2.len());
-    offset_1.iter().zip(offset_2).map(|(o1, o2)| o1 + o2).collect()
+    offset_1
+        .iter()
+        .zip(offset_2)
+        .map(|(o1, o2)| o1 + o2)
+        .collect()
 }
 
 pub struct Allocation {
@@ -96,7 +102,7 @@ impl<C: GKRFieldConfig> CrossLayerRecursiveCircuit<C> {
 
     pub fn flatten(&self) -> CrossLayerCircuit<C> {
         let mut ret = CrossLayerCircuit::<C>::default();
-        
+
         // denote the input layer as layer 0 here
         assert!(self.segments[self.layers[0]].input_size.len() == 1);
         ret.layers.push(GenericLayer::<C> {
@@ -142,7 +148,7 @@ impl<C: GKRFieldConfig> CrossLayerRecursiveCircuit<C> {
                         gate.i_id += alloc.i_offset[gate.i_layer];
                         gate.o_id += alloc.o_offset;
                         // this is due to how offset is represented in ecc
-                        gate.i_layer = ret_layer.layer_id - gate.i_layer - 1; 
+                        gate.i_layer = ret_layer.layer_id - gate.i_layer - 1;
                         ret_layer.relay_gates.push(gate);
                     }
                 }

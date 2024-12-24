@@ -1,7 +1,7 @@
+use crate::gates::{SimpleGateAdd, SimpleGateCst, SimpleGateMul};
 use arith::Field;
 use gkr_field_config::GKRFieldConfig;
 use rand::RngCore;
-use crate::gates::{SimpleGateAdd, SimpleGateCst, SimpleGateMul};
 
 use super::CrossLayerRelay;
 
@@ -18,14 +18,24 @@ pub struct GenericLayer<C: GKRFieldConfig> {
 }
 
 impl<C: GKRFieldConfig> GenericLayer<C> {
-    pub fn random_for_bench(mut rng: impl RngCore, layer_id: usize, layer_sizes: &[usize], n_gates_per_layer: usize) -> Self {
+    pub fn random_for_bench(
+        mut rng: impl RngCore,
+        layer_id: usize,
+        layer_sizes: &[usize],
+        n_gates_per_layer: usize,
+    ) -> Self {
         if layer_id == 0 {
             return Self::default();
         }
 
         let output_size = layer_sizes[layer_id];
         let input_size = layer_sizes[layer_id - 1];
-        let mut layer = GenericLayer::<C> { layer_id, layer_size: output_size, input_layer_size: input_size, ..Default::default() };
+        let mut layer = GenericLayer::<C> {
+            layer_id,
+            layer_size: output_size,
+            input_layer_size: input_size,
+            ..Default::default()
+        };
 
         for _ in 0..n_gates_per_layer {
             let gate_type = rng.next_u64() as usize % 9;
@@ -34,7 +44,12 @@ impl<C: GKRFieldConfig> GenericLayer<C> {
                 layer.add_gates.push(gate);
             } else if gate_type < 6 {
                 let i_layer = rng.next_u64() as usize % layer_id;
-                let gate = CrossLayerRelay::random_for_testing(&mut rng, output_size, layer_sizes[i_layer], i_layer);
+                let gate = CrossLayerRelay::random_for_testing(
+                    &mut rng,
+                    output_size,
+                    layer_sizes[i_layer],
+                    i_layer,
+                );
                 layer.relay_gates.push(gate);
             } else if gate_type < 8 {
                 let gate = SimpleGateMul::random_for_testing(&mut rng, output_size, input_size);
@@ -48,13 +63,22 @@ impl<C: GKRFieldConfig> GenericLayer<C> {
         layer
     }
 
-    pub fn random_for_testing(mut rng: impl RngCore, layer_id: usize, layer_sizes: &[usize]) -> Self {
+    pub fn random_for_testing(
+        mut rng: impl RngCore,
+        layer_id: usize,
+        layer_sizes: &[usize],
+    ) -> Self {
         if layer_id == 0 {
             return Self::default();
         }
         let output_size = layer_sizes[layer_id];
         let input_size = layer_sizes[layer_id - 1];
-        let mut layer = GenericLayer::<C> { layer_id, layer_size: output_size, input_layer_size: input_size, ..Default::default() };
+        let mut layer = GenericLayer::<C> {
+            layer_id,
+            layer_size: output_size,
+            input_layer_size: input_size,
+            ..Default::default()
+        };
 
         let n_gates = output_size * 2; // Not necessarily 2, just for testing
 
@@ -64,20 +88,25 @@ impl<C: GKRFieldConfig> GenericLayer<C> {
                 0 => {
                     let gate = SimpleGateAdd::random_for_testing(&mut rng, output_size, input_size);
                     layer.add_gates.push(gate);
-                },
+                }
                 1 => {
                     let gate = SimpleGateMul::random_for_testing(&mut rng, output_size, input_size);
                     layer.mul_gates.push(gate);
-                },
+                }
                 2 => {
                     let gate = SimpleGateCst::random_for_testing(&mut rng, output_size, input_size);
                     layer.const_gates.push(gate);
-                },
+                }
                 3 => {
                     let i_layer = rng.next_u64() as usize % layer_id;
-                    let gate = CrossLayerRelay::random_for_testing(&mut rng, output_size, layer_sizes[i_layer], i_layer);
+                    let gate = CrossLayerRelay::random_for_testing(
+                        &mut rng,
+                        output_size,
+                        layer_sizes[i_layer],
+                        i_layer,
+                    );
                     layer.relay_gates.push(gate);
-                },
+                }
                 _ => unreachable!(),
             }
         }
@@ -97,7 +126,12 @@ pub struct CrossLayerCircuit<C: GKRFieldConfig> {
 }
 
 impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
-    pub fn random_for_bench(mut rng: impl RngCore, n_layers: usize, size_of_each_layer: usize, n_gates_each_layer: usize) -> Self{
+    pub fn random_for_bench(
+        mut rng: impl RngCore,
+        n_layers: usize,
+        size_of_each_layer: usize,
+        n_gates_each_layer: usize,
+    ) -> Self {
         let layer_sizes = vec![size_of_each_layer; n_layers];
         let mut circuit = Self::default();
         circuit.layers.push(GenericLayer::<C> {
@@ -107,14 +141,17 @@ impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
         });
 
         for i in 1..layer_sizes.len() {
-            let layer = GenericLayer::<C>::random_for_bench(&mut rng, i, &layer_sizes, n_gates_each_layer);
+            let layer =
+                GenericLayer::<C>::random_for_bench(&mut rng, i, &layer_sizes, n_gates_each_layer);
             circuit.layers.push(layer);
         }
         circuit
     }
 
     pub fn random_for_testing(mut rng: impl RngCore, n_layers: usize) -> Self {
-        let layer_sizes = (0..n_layers).map(|i_layer| 1usize << (n_layers - 1 - i_layer)).collect::<Vec<_>>();
+        let layer_sizes = (0..n_layers)
+            .map(|i_layer| 1usize << (n_layers - 1 - i_layer))
+            .collect::<Vec<_>>();
 
         let mut circuit = Self::default();
         circuit.layers.push(GenericLayer::<C> {
@@ -139,11 +176,17 @@ impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
             let mut new_layer_vals = vec![C::SimdCircuitField::zero(); layer.layer_size];
 
             for gate in &layer.add_gates {
-                new_layer_vals[gate.o_id] += C::circuit_field_mul_simd_circuit_field(&gate.coef, &vals[i_layer - 1][gate.i_ids[0]]);
+                new_layer_vals[gate.o_id] += C::circuit_field_mul_simd_circuit_field(
+                    &gate.coef,
+                    &vals[i_layer - 1][gate.i_ids[0]],
+                );
             }
 
             for gate in &layer.mul_gates {
-                new_layer_vals[gate.o_id] += C::circuit_field_mul_simd_circuit_field(&gate.coef, &(vals[i_layer - 1][gate.i_ids[0]] * vals[i_layer - 1][gate.i_ids[1]]));
+                new_layer_vals[gate.o_id] += C::circuit_field_mul_simd_circuit_field(
+                    &gate.coef,
+                    &(vals[i_layer - 1][gate.i_ids[0]] * vals[i_layer - 1][gate.i_ids[1]]),
+                );
             }
 
             for gate in &layer.const_gates {
@@ -151,7 +194,10 @@ impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
             }
 
             for gate in &layer.relay_gates {
-                new_layer_vals[gate.o_id] += C::circuit_field_mul_simd_circuit_field(&gate.coef, &vals[gate.i_layer][gate.i_id]);
+                new_layer_vals[gate.o_id] += C::circuit_field_mul_simd_circuit_field(
+                    &gate.coef,
+                    &vals[gate.i_layer][gate.i_id],
+                );
             }
 
             vals.push(new_layer_vals);
@@ -161,23 +207,31 @@ impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
     }
 
     pub fn max_num_input_var(&self) -> usize {
-        self.layers.iter().map(|layer| 
-            if layer.input_layer_size > 0 {
-                layer.input_layer_size.trailing_zeros() as usize
-            } else {
-                0
-            }
-        ).max().unwrap()
+        self.layers
+            .iter()
+            .map(|layer| {
+                if layer.input_layer_size > 0 {
+                    layer.input_layer_size.trailing_zeros() as usize
+                } else {
+                    0
+                }
+            })
+            .max()
+            .unwrap()
     }
 
     pub fn max_num_output_var(&self) -> usize {
-        self.layers.iter().map(|layer| 
-            if layer.layer_size > 0 {
-                layer.layer_size.trailing_zeros() as usize
-            } else {
-                0
-            }
-        ).max().unwrap()
+        self.layers
+            .iter()
+            .map(|layer| {
+                if layer.layer_size > 0 {
+                    layer.layer_size.trailing_zeros() as usize
+                } else {
+                    0
+                }
+            })
+            .max()
+            .unwrap()
     }
 
     pub fn print_stats(&self) {

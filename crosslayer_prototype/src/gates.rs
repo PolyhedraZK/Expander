@@ -10,7 +10,6 @@ pub enum CoefType {
     PublicInput(usize),
 }
 
-
 /// A gate whose inputs are from different layers.
 #[derive(Debug, Clone)]
 pub struct SimpleGate<C: GKRFieldConfig, const INPUT_NUM: usize> {
@@ -27,7 +26,11 @@ pub type SimpleGateCst<C> = SimpleGate<C, 0>;
 impl<C: GKRFieldConfig, const INPUT_NUM: usize> SimpleGate<C, INPUT_NUM> {
     /// located layer refers to the layer where the output of the gate is.
     /// layer_sizes is the number of nodes in each layer.
-    pub fn random_for_testing(mut rng: impl RngCore, output_size: usize, input_size: usize) -> Self {
+    pub fn random_for_testing(
+        mut rng: impl RngCore,
+        output_size: usize,
+        input_size: usize,
+    ) -> Self {
         let mut i_ids = [0; INPUT_NUM];
         for i in 0..INPUT_NUM {
             i_ids[i] = rng.next_u64() as usize % input_size;
@@ -36,7 +39,12 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> SimpleGate<C, INPUT_NUM> {
         let o_id = rng.next_u64() as usize % output_size;
         let coef_type = CoefType::Constant;
         let coef = C::CircuitField::random_unsafe(rng);
-        Self { i_ids, o_id, coef_type, coef }
+        Self {
+            i_ids,
+            o_id,
+            coef_type,
+            coef,
+        }
     }
 }
 
@@ -49,11 +57,20 @@ pub struct CrossLayerRelay<C: GKRFieldConfig> {
 }
 
 impl<C: GKRFieldConfig> CrossLayerRelay<C> {
-    pub fn random_for_testing(mut rng: impl RngCore, output_size: usize, input_size: usize, i_layer: usize) -> Self {
+    pub fn random_for_testing(
+        mut rng: impl RngCore,
+        output_size: usize,
+        input_size: usize,
+        i_layer: usize,
+    ) -> Self {
         let o_id = rng.next_u64() as usize % output_size;
         let i_id = rng.next_u64() as usize % input_size;
         let coef = C::CircuitField::ONE; // temporarily support one only
-        Self { o_id, i_id, i_layer, coef }
+        Self {
+            o_id,
+            i_id,
+            i_layer,
+            coef,
+        }
     }
 }
-

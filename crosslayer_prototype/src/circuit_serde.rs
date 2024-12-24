@@ -57,7 +57,9 @@ impl<C, const INPUT_NUM: usize> ECCCrossLayerGate<C, INPUT_NUM>
 where
     C: GKRFieldConfig,
 {
-    pub fn to_simple_gate_or_relay(&self) -> (Option<SimpleGate<C, INPUT_NUM>>, Option<CrossLayerRelay<C>>) {
+    pub fn to_simple_gate_or_relay(
+        &self,
+    ) -> (Option<SimpleGate<C, INPUT_NUM>>, Option<CrossLayerRelay<C>>) {
         if INPUT_NUM == 1 && self.i_ids[0].0 != 0 {
             (
                 None,
@@ -68,7 +70,7 @@ where
                     coef: self.coef.clone(),
                 }),
             )
-        } else {       
+        } else {
             let mut i_ids = [0; INPUT_NUM];
             for i in 0..INPUT_NUM {
                 let (_layer_offset, gate_offset) = self.i_ids[i];
@@ -130,7 +132,7 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for ECCCrossLayerGa
 impl FromEccSerde for Allocation {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         Self {
-            i_offset: <Vec::<usize> as FieldSerde>::deserialize_from(&mut reader).unwrap(),
+            i_offset: <Vec<usize> as FieldSerde>::deserialize_from(&mut reader).unwrap(),
             o_offset: <usize as FieldSerde>::deserialize_from(&mut reader).unwrap(),
         }
     }
@@ -138,7 +140,7 @@ impl FromEccSerde for Allocation {
 
 impl<C: GKRFieldConfig> FromEccSerde for CrossLayerSegment<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let input_size = <Vec::<usize> as FieldSerde>::deserialize_from(&mut reader).unwrap();
+        let input_size = <Vec<usize> as FieldSerde>::deserialize_from(&mut reader).unwrap();
         let output_size = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
         assert!(input_size.iter().all(|&x| x.is_power_of_two()));
         assert!(output_size.is_power_of_two());

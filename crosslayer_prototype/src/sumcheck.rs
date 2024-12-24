@@ -2,8 +2,10 @@ use arith::{Field, FieldSerde};
 use gkr_field_config::GKRFieldConfig;
 use transcript::Transcript;
 
-use crate::{CrossLayerCircuitEvals, CrossLayerConnections, CrossLayerGatherHelper, CrossLayerProverScratchPad, CrossLayerScatterHelper, GenericLayer};
-
+use crate::{
+    CrossLayerCircuitEvals, CrossLayerConnections, CrossLayerGatherHelper,
+    CrossLayerProverScratchPad, CrossLayerScatterHelper, GenericLayer,
+};
 
 #[inline]
 pub fn transcript_io<F: Field + FieldSerde, T: Transcript<F>>(ps: &[F], transcript: &mut T) -> F {
@@ -13,7 +15,6 @@ pub fn transcript_io<F: Field + FieldSerde, T: Transcript<F>>(ps: &[F], transcri
     }
     transcript.generate_challenge_field_element()
 }
-
 
 // FIXME
 #[allow(clippy::too_many_arguments)]
@@ -31,14 +32,8 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
     Vec<C::ChallengeField>,
     Vec<(usize, Vec<C::ChallengeField>)>,
 ) {
-    let mut helper = CrossLayerScatterHelper::new(
-        layer,
-        rz0,
-        r_simd,
-        connections,
-        circuit_vals,
-        sp,
-    );
+    let mut helper =
+        CrossLayerScatterHelper::new(layer, rz0, r_simd, connections, circuit_vals, sp);
 
     helper.prepare_simd();
 
@@ -46,7 +41,7 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
     helper.prepare_x_vals();
     for i_var in 0..helper.input_layer_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
-        let r = transcript_io::<C::ChallengeField, T>( &evals, transcript);
+        let r = transcript_io::<C::ChallengeField, T>(&evals, transcript);
         helper.receive_rx(i_var, r);
     }
 
@@ -74,7 +69,6 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
 
     (helper.rx, helper.ry, helper.r_relays_next)
 }
-
 
 pub fn sumcheck_prove_gather_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     layer: &GenericLayer<C>,
@@ -104,7 +98,7 @@ pub fn sumcheck_prove_gather_layer<C: GKRFieldConfig, T: Transcript<C::Challenge
     helper.prepare_x_vals();
     for i_var in 0..helper.cur_layer_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
-        let r = transcript_io::<C::ChallengeField, T>( &evals, transcript);
+        let r = transcript_io::<C::ChallengeField, T>(&evals, transcript);
         helper.receive_rx(i_var, r);
     }
 
