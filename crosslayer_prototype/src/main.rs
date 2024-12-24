@@ -1,7 +1,5 @@
 use arith::Field;
-use crosslayer_prototype::{
-    prove_gkr, CrossLayerConnections, CrossLayerRecursiveCircuit,
-};
+use crosslayer_prototype::{prove_gkr, CrossLayerConnections, CrossLayerRecursiveCircuit};
 use gkr_field_config::{GF2ExtConfig, GKRFieldConfig};
 use transcript::{BytesHashTranscript, SHA256hasher, Transcript};
 

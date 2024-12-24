@@ -364,7 +364,8 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
                     }
                 } else {
                     // for extra bits in sumcheck, we require it to be 1
-                    self.sp.cross_layer_completed_values[i_layer] = C::challenge_mul_field(&r, &self.sp.cross_layer_completed_values[i_layer]);
+                    self.sp.cross_layer_completed_values[i_layer] =
+                        C::challenge_mul_field(&r, &self.sp.cross_layer_completed_values[i_layer]);
                 }
             }
         }
@@ -399,7 +400,8 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
     }
 
     pub(crate) fn vx_claims(&self) -> Vec<(usize, C::ChallengeField)> {
-        // TODO-Optimization: Maybe it's better to reduce simd for each relay layer individually and return the result
+        // TODO-Optimization: Maybe it's better to reduce simd for each relay layer individually and
+        // return the result
         let mut claims = vec![(
             self.layer.layer_id - 1,
             unpack_and_combine(&self.sp.v_evals[0], &self.r_simd_next),
@@ -453,7 +455,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
 
         // processing the relay layers
         let layers_connected_to = &self.connections.connections[self.layer.layer_id];
-        
+
         #[allow(clippy::needless_range_loop)]
         for i_layer in 0..(self.layer.layer_id - 1) {
             let connections_at_i_layer = &layers_connected_to[i_layer];
@@ -568,7 +570,8 @@ pub(crate) struct CrossLayerGatherHelper<'a, C: GKRFieldConfig> {
     rz1: &'a [C::ChallengeField],
     r_relays: &'a [(usize, Vec<C::ChallengeField>)],
     alpha: &'a C::ChallengeField, // alpha is the random value multiplied to V(rz1)
-    betas: &'a [C::ChallengeField], // betas random value multiplied to the claims from the previous non-zero relay layer
+    betas: &'a [C::ChallengeField], /* betas random value multiplied to the claims from the
+                                   * previous non-zero relay layer */
     connections: &'a CrossLayerConnections,
     circuit_vals: &'a CrossLayerCircuitEvals<C>,
 
@@ -576,7 +579,6 @@ pub(crate) struct CrossLayerGatherHelper<'a, C: GKRFieldConfig> {
 
     pub(crate) cur_layer_var_num: usize,
 }
-
 
 #[allow(clippy::too_many_arguments)]
 impl<'a, C: GKRFieldConfig> CrossLayerGatherHelper<'a, C> {

@@ -255,11 +255,13 @@ impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
     }
 }
 
-// CrossLayerConnections is a struct that stores the connections between the gates of different layers
-// TODO-Optimization: This does not seem to be memory efficient
+// CrossLayerConnections is a struct that stores the connections between the gates of different
+// layers TODO-Optimization: This does not seem to be memory efficient
 #[derive(Debug, Clone, Default)]
 pub struct CrossLayerConnections {
-    pub connections: Vec<Vec<Vec<(usize, usize)>>>, // connections[i][j] = (k, l) means output layer i, gate k is connected to input layer j, gate l
+    pub connections: Vec<Vec<Vec<(usize, usize)>>>, /* connections[i][j] = (k, l) means output
+                                                     * layer i, gate k is connected to input
+                                                     * layer j, gate l */
 }
 
 impl CrossLayerConnections {
