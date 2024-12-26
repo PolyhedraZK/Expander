@@ -6,7 +6,7 @@ use mpi_config::MPIConfig;
 fn test_gather_vec() {
     const TEST_SIZE: usize = (1 << 10) + 1;
 
-    let mpi_config = MPIConfig::new();
+    let mut mpi_config = MPIConfig::new();
     let mut local_vec = vec![M31::ZERO; TEST_SIZE];
     for i in 0..TEST_SIZE {
         local_vec[i] = M31::from((mpi_config.world_rank() * TEST_SIZE + i) as u32);

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 arith = { path = "../../arith" }
 mpi.workspace = true
+rayon.workspace = true
 
 [dev-dependencies]
 mersenne31 = { path = "../../arith/mersenne31"}
