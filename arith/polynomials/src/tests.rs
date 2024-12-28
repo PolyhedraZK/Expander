@@ -14,10 +14,17 @@ fn test_scaled_eq_xr() {
         let mut eq_x_r1 = vec![Fr::zero(); 1 << nv];
         EqPolynomial::<Fr>::build_eq_x_r_with_buf(r.as_ref(), &scalar, &mut eq_x_r1);
 
+        // expander 2
+        let mut eq_x_r2 = vec![Fr::zero(); 1 << nv];
+        let mut buf1 = vec![Fr::zero(); 1 << (nv - 1)];
+        let mut buf2 = vec![Fr::zero(); 1 << (nv - 1)];
+        EqPolynomial::<Fr>::eq_eval_at(r.as_ref(), &scalar, &mut eq_x_r2, &mut buf1, &mut buf2);
+
         // jolt
-        let eq_x_r2 = EqPolynomial::<Fr>::scaled_evals_jolt(r.as_ref(), &scalar);
+        let eq_x_r3 = EqPolynomial::<Fr>::scaled_evals_jolt(r.as_ref(), &scalar);
 
         assert_eq!(eq_x_r1, eq_x_r2);
+        assert_eq!(eq_x_r1, eq_x_r3);
     }
 }
 

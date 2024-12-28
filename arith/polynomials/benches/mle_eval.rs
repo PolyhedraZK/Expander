@@ -8,7 +8,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use halo2curves::bn256::Fr;
 use polynomials::{EqPolynomial, MultiLinearPoly};
 
-const RANGE: Range<usize> = 9..10;
+const RANGE: Range<usize> = 11..19;
 
 fn bench_mle_eval<F: Field>(c: &mut Criterion) {
     let mut rng = test_rng();
@@ -112,13 +112,34 @@ fn bench_scaled_eq_xr<F: Field>(c: &mut Criterion) {
                 })
             })
         });
+
+        let label = format!(
+            "expander's scaled eq_xr with additional buffer, dim = {}",
+            nv
+        );
+        c.bench_function(label.as_str(), |b| {
+            b.iter(|| {
+                black_box({
+                    let mut eq_x_r2 = vec![F::zero(); 1 << nv];
+                    let mut buf1 = vec![F::zero(); 1 << (nv - 1)];
+                    let mut buf2 = vec![F::zero(); 1 << (nv - 1)];
+                    EqPolynomial::<F>::eq_eval_at(
+                        point.as_ref(),
+                        &scalar,
+                        &mut eq_x_r2,
+                        &mut buf1,
+                        &mut buf2,
+                    );
+                })
+            })
+        });
     }
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    bench_mle_eval::<Fr>(c);
+    // bench_mle_eval::<Fr>(c);
     bench_eq_xr::<Fr>(c);
-    bench_scaled_eq_xr::<Fr>(c);
+    // bench_scaled_eq_xr::<Fr>(c);
 }
 
 criterion_group!(benches, criterion_benchmark);

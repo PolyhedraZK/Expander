@@ -1,5 +1,6 @@
 use arith::Field;
 use ark_std::{end_timer, start_timer};
+use rayon::{iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator}, slice::ParallelSliceMut};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EqPolynomial<F> {
@@ -16,7 +17,7 @@ impl<F: Field> EqPolynomial<F> {
         sqrt_n_1st: &mut [F],
         sqrt_n_2nd: &mut [F],
     ) {
-        let timer = start_timer!(|| format!("par_eq_eval_at with {} var", 1 << r.len()));
+        let timer = start_timer!(|| format!("eq_eval_at with {} var", 1 << r.len()));
         let first_half_bits = r.len() / 2;
         let first_half_mask = (1 << first_half_bits) - 1;
         Self::build_eq_x_r_with_buf(&r[0..first_half_bits], mul_factor, sqrt_n_1st);
@@ -27,9 +28,10 @@ impl<F: Field> EqPolynomial<F> {
             iter::{IndexedParallelIterator, ParallelIterator},
             slice::ParallelSliceMut,
         };
-        // this 12 is quite arbitrary -- benched from my local machine with amd 7950x3d and 16 threads
+        // this 12 is quite arbitrary -- benched from my local machine with amd 7950x3d and 16
+        // threads
         if r.len() >= 12 {
-            let timer = start_timer!(|| "par_eq_eval_at");
+            let timer = start_timer!(|| "parallel");
             let chunk_size = (1 << r.len()) / rayon::current_num_threads();
             eq_evals[0..1 << r.len()]
                 .par_chunks_mut(chunk_size)
@@ -43,7 +45,7 @@ impl<F: Field> EqPolynomial<F> {
                 });
             end_timer!(timer);
         } else {
-            let timer = start_timer!(|| "eq_eval_at");
+            let timer = start_timer!(|| "single thread");
             for (i, eq_eval) in eq_evals.iter_mut().enumerate().take(1 << r.len()) {
                 let first_half = i & first_half_mask;
                 let second_half = i >> first_half_bits;
@@ -52,6 +54,7 @@ impl<F: Field> EqPolynomial<F> {
             end_timer!(timer);
         }
 
+        // single thread version; for reference
         // for (i, eq_eval) in eq_evals.iter_mut().enumerate().take(1 << r.len()) {
         //     let first_half = i & first_half_mask;
         //     let second_half = i >> first_half_bits;
@@ -63,6 +66,7 @@ impl<F: Field> EqPolynomial<F> {
     #[inline]
     /// Expander's method of computing Eq(x, r)
     pub fn build_eq_x_r_with_buf(r: &[F], mul_factor: &F, eq_evals: &mut [F]) {
+        let timer = start_timer!(|| format!("build_eq_x_r_with_buf with {} var", r.len()));
         eq_evals[0] = *mul_factor;
         let mut cur_eval_num = 1;
 
@@ -73,6 +77,7 @@ impl<F: Field> EqPolynomial<F> {
             }
             cur_eval_num <<= 1;
         }
+        end_timer!(timer);
     }
 
     #[inline]
@@ -211,15 +216,40 @@ impl<F: Field> EqPolynomial<F> {
             // *buf = res;
 
             let mut res = vec![F::zero(); buf.len() << 1];
-            res.iter_mut().enumerate().for_each(|(i, val)| {
-                let bi = buf[i >> 1];
-                let tmp = r[0] * bi;
-                if i & 1 == 0 {
-                    *val = bi - tmp;
-                } else {
-                    *val = tmp;
-                }
-            });
+            if r.len() >= 12 {
+                let chunk_size = buf.len() / rayon::current_num_threads();
+                res.par_chunks_mut(chunk_size).enumerate().for_each(|(i, chunk)| {
+                    chunk.iter_mut().enumerate().for_each(|(j, val)| {
+                        let bi = buf[(i * chunk_size + j)>>1];
+                        let tmp = r[0] * bi;
+                        if j & 1 == 0 {
+                            *val = bi - tmp;
+                        } else {
+                            *val = tmp;
+                        }
+                    });
+                });
+
+                // res.par_iter_mut().enumerate().for_each(|(i, val)| {
+                //     let bi = buf[i >> 1];
+                //     let tmp = r[0] * bi;
+                //     if i & 1 == 0 {
+                //         *val = bi - tmp;
+                //     } else {
+                //         *val = tmp;
+                //     }
+                // });
+            } else {
+                res.iter_mut().enumerate().for_each(|(i, val)| {
+                    let bi = buf[i >> 1];
+                    let tmp = r[0] * bi;
+                    if i & 1 == 0 {
+                        *val = bi - tmp;
+                    } else {
+                        *val = tmp;
+                    }
+                });
+            }
             *buf = res;
         }
     }
