@@ -11,10 +11,13 @@ use crate::FieldSerde;
 
 /// Field definitions.
 pub trait Field:
-    Copy
+    Sized
+    + Copy
     + Clone
     + Debug
     + Default
+    + Send
+    + Sync
     + PartialEq
     + From<u32>
     + Neg<Output = Self>

@@ -17,7 +17,7 @@ pub trait GKRFieldConfig: Default + Debug + Clone + Send + Sync + 'static {
     type CircuitField: Field + FieldForECC + Send;
 
     /// Field type for the challenge, e.g., M31Ext3
-    type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send;
+    type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send + Sync;
 
     /// Main field type for the scheme, e.g., M31Ext3x16
     type Field: ExtensionField<BaseField = Self::SimdCircuitField>

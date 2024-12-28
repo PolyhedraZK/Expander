@@ -17,6 +17,9 @@ pub struct Gate<C: GKRFieldConfig, const INPUT_NUM: usize> {
     pub gate_type: usize,
 }
 
+// unsafe
+// impl<C: GKRFieldConfig, const INPUT_NUM: usize> Send for Gate<C,   INPUT_NUM> {}
+
 pub type GateMul<C> = Gate<C, 2>;
 pub type GateAdd<C> = Gate<C, 1>;
 pub type GateUni<C> = Gate<C, 1>;

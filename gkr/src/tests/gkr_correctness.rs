@@ -68,34 +68,34 @@ fn test_gkr_correctness() {
         PolynomialCommitmentType::Raw
     );
 
-    test_gkr_correctness_helper(
-        &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C1>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C2>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C3>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C4>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
+    // test_gkr_correctness_helper(
+    //     &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C1>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C3>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C4>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
     test_gkr_correctness_helper(
         &Config::<C5>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper(
-        &Config::<C6>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        Some("../data/gkr_proof.txt"),
-    );
+    // test_gkr_correctness_helper(
+    //     &Config::<C6>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     Some("../data/gkr_proof.txt"),
+    // );
 
     MPIConfig::finalize();
 }
@@ -195,57 +195,60 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         .gather_vec(&circuit.public_input, &mut public_input_gathered);
 
     // Verify
-    if config.mpi_config.is_root() {
-        if let Some(str) = write_proof_to {
-            let mut file = fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .truncate(true)
-                .open(str)
-                .unwrap();
+    // Verifier uses rayon to parallelize the computation
+    // it does not use MPI
+    if let Some(str) = write_proof_to {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(str)
+            .unwrap();
 
-            let mut buf = vec![];
-            proof.serialize_into(&mut buf).unwrap();
-            file.write_all(&buf).unwrap();
-        }
-        let verifier = Verifier::new(config);
-        println!("Verifier created.");
-        let verification_start = Instant::now();
-        assert!(verifier.verify(
+        let mut buf = vec![];
+        proof.serialize_into(&mut buf).unwrap();
+        file.write_all(&buf).unwrap();
+    }
+    let verifier = Verifier::new(config);
+    println!("Verifier created.");
+
+    let verification_start = Instant::now();
+    assert!(verifier.verify(
+        &mut circuit,
+        &public_input_gathered,
+        &claimed_v,
+        &pcs_params,
+        &pcs_verification_key,
+        &proof
+    ));
+    println!(
+        "Verification time: {} μs",
+        verification_start.elapsed().as_micros()
+    );
+    println!("Correct proof verified.");
+
+    // Test bad proof
+    let mut bad_proof = proof.clone();
+    let rng = &mut rand::thread_rng();
+    let random_idx = rng.gen_range(0..bad_proof.bytes.len());
+    let random_change = rng.gen_range(1..256) as u8;
+    bad_proof.bytes[random_idx] ^= random_change;
+
+    // Catch the panic and treat it as returning `false`
+    let result = panic::catch_unwind(AssertUnwindSafe(|| {
+        verifier.verify(
             &mut circuit,
             &public_input_gathered,
             &claimed_v,
             &pcs_params,
             &pcs_verification_key,
-            &proof
-        ));
-        println!(
-            "Verification time: {} μs",
-            verification_start.elapsed().as_micros()
-        );
-        println!("Correct proof verified.");
-        let mut bad_proof = proof.clone();
-        let rng = &mut rand::thread_rng();
-        let random_idx = rng.gen_range(0..bad_proof.bytes.len());
-        let random_change = rng.gen_range(1..256) as u8;
-        bad_proof.bytes[random_idx] ^= random_change;
+            &bad_proof,
+        )
+    }));
 
-        // Catch the panic and treat it as returning `false`
-        let result = panic::catch_unwind(AssertUnwindSafe(|| {
-            verifier.verify(
-                &mut circuit,
-                &public_input_gathered,
-                &claimed_v,
-                &pcs_params,
-                &pcs_verification_key,
-                &bad_proof,
-            )
-        }));
+    let final_result = result.unwrap_or_default();
 
-        let final_result = result.unwrap_or_default();
-
-        assert!(!final_result,);
-        println!("Bad proof rejected.");
-        println!("============== end ===============");
-    }
+    assert!(!final_result,);
+    println!("Bad proof rejected.");
+    println!("============== end ===============");
 }

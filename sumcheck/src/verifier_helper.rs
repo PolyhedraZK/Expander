@@ -1,7 +1,10 @@
 use arith::{ExtensionField, Field};
+use ark_std::{end_timer, start_timer};
 use circuit::{CircuitLayer, CoefType, GateAdd, GateConst, GateMul};
 use gkr_field_config::{FieldType, GKRFieldConfig};
 use polynomials::EqPolynomial;
+use rayon::iter::IntoParallelRefIterator;
+use rayon::iter::ParallelIterator;
 
 use crate::{scratch_pad::VerifierScratchPad, unpack_and_combine};
 
@@ -128,15 +131,34 @@ impl GKRVerifierHelper {
         mul_gates: &[GateMul<C>],
         sp: &VerifierScratchPad<C>,
     ) -> C::ChallengeField {
-        let mut v = C::ChallengeField::zero();
-        for mul_gate in mul_gates {
-            let tmp = sp.eq_evals_at_rx[mul_gate.i_ids[0]]
-                * C::challenge_mul_circuit_field(
-                    &sp.eq_evals_at_ry[mul_gate.i_ids[1]],
+        let timer = start_timer!(|| format!("eval mul with {} gates", mul_gates.len()));
+
+        // let mut v = C::ChallengeField::zero();
+
+        // mul_gates.iter().for_each(|mul_gate| {
+        //     let tmp = sp.eq_evals_at_rx[mul_gate.i_ids[0]]
+        //         * C::challenge_mul_circuit_field( &sp.eq_evals_at_ry[mul_gate.i_ids[1]],
+        //           &mul_gate.coef,
+        //         );
+        //     v += sp.eq_evals_at_rz0[mul_gate.o_id] * tmp;
+        // });
+
+        let eq_evals_at_rx = sp.eq_evals_at_rx.clone();
+        let eq_evals_at_ry = sp.eq_evals_at_ry.clone();
+        let eq_evals_at_rz0 = sp.eq_evals_at_rz0.clone();
+        let v: C::ChallengeField = mul_gates
+            .par_iter()
+            .map(|mul_gate| {
+                let t = C::challenge_mul_circuit_field(
+                    &eq_evals_at_ry[mul_gate.i_ids[1]],
                     &mul_gate.coef,
                 );
-            v += sp.eq_evals_at_rz0[mul_gate.o_id] * tmp;
-        }
+
+                eq_evals_at_rz0[mul_gate.o_id] * eq_evals_at_rx[mul_gate.i_ids[0]] * t
+            })
+            .sum();
+
+        end_timer!(timer);
         v * sp.eq_r_simd_r_simd_xy * sp.eq_r_mpi_r_mpi_xy
     }
 

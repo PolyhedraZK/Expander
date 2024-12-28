@@ -12,5 +12,7 @@ mpi_config = { path = "../config/mpi_config" }
 polynomials = { path = "../arith/polynomials" }
 transcript = { path = "../transcript" }
 
+ark-std.workspace = true
 env_logger.workspace = true
 log.workspace = true
+rayon.workspace = true

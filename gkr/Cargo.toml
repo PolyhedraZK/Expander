@@ -29,6 +29,7 @@ halo2curves.workspace = true
 thiserror.workspace = true
 ethnum.workspace = true
 rand_chacha.workspace = true
+rayon.workspace = true
 
 # for the server
 bytes.workspace = true
@@ -54,8 +55,10 @@ name = "dev-setup"
 path = "src/utils.rs"
 
 [features]
-default = []
-# default = [ "grinding" ]
+default = [ 
+    # "ark-std/print-trace"
+    # "grinding"
+    ]
 grinding = [ "config/grinding" ]
 
 

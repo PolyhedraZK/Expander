@@ -9,6 +9,7 @@ arith = { path = "../" }
 ark-std.workspace = true
 criterion.workspace = true
 halo2curves.workspace = true
+rayon.workspace = true
 
 [[bench]]
 name = "mle_eval"

@@ -1,4 +1,5 @@
 use arith::Field;
+use ark_std::{end_timer, start_timer};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EqPolynomial<F> {
@@ -15,16 +16,48 @@ impl<F: Field> EqPolynomial<F> {
         sqrt_n_1st: &mut [F],
         sqrt_n_2nd: &mut [F],
     ) {
+        let timer = start_timer!(|| format!("par_eq_eval_at with {} var", 1 << r.len()));
         let first_half_bits = r.len() / 2;
         let first_half_mask = (1 << first_half_bits) - 1;
         Self::build_eq_x_r_with_buf(&r[0..first_half_bits], mul_factor, sqrt_n_1st);
         Self::build_eq_x_r_with_buf(&r[first_half_bits..], &F::one(), sqrt_n_2nd);
 
-        for (i, eq_eval) in eq_evals.iter_mut().enumerate().take(1 << r.len()) {
-            let first_half = i & first_half_mask;
-            let second_half = i >> first_half_bits;
-            *eq_eval = sqrt_n_1st[first_half] * sqrt_n_2nd[second_half];
+        // Somehow this parallel version is just a tiny bit faster than the serial version
+        use rayon::{
+            iter::{IndexedParallelIterator, ParallelIterator},
+            slice::ParallelSliceMut,
+        };
+        // this 12 is quite arbitrary -- benched from my local machine with amd 7950x3d and 16 threads
+        if r.len() >= 12 {
+            let timer = start_timer!(|| "par_eq_eval_at");
+            let chunk_size = (1 << r.len()) / rayon::current_num_threads();
+            eq_evals[0..1 << r.len()]
+                .par_chunks_mut(chunk_size)
+                .enumerate()
+                .for_each(|(i, chunk)| {
+                    chunk.iter_mut().enumerate().for_each(|(j, eq_eval)| {
+                        let first_half = (i * chunk_size + j) & first_half_mask;
+                        let second_half = (i * chunk_size + j) >> first_half_bits;
+                        *eq_eval = sqrt_n_1st[first_half] * sqrt_n_2nd[second_half];
+                    });
+                });
+            end_timer!(timer);
+        } else {
+            let timer = start_timer!(|| "eq_eval_at");
+            for (i, eq_eval) in eq_evals.iter_mut().enumerate().take(1 << r.len()) {
+                let first_half = i & first_half_mask;
+                let second_half = i >> first_half_bits;
+                *eq_eval = sqrt_n_1st[first_half] * sqrt_n_2nd[second_half];
+            }
+            end_timer!(timer);
         }
+
+        // for (i, eq_eval) in eq_evals.iter_mut().enumerate().take(1 << r.len()) {
+        //     let first_half = i & first_half_mask;
+        //     let second_half = i >> first_half_bits;
+        //     *eq_eval = sqrt_n_1st[first_half] * sqrt_n_2nd[second_half];
+        // }
+        end_timer!(timer);
     }
 
     #[inline]
@@ -39,6 +72,26 @@ impl<F: Field> EqPolynomial<F> {
                 eq_evals[j] -= eq_evals[j + cur_eval_num];
             }
             cur_eval_num <<= 1;
+        }
+    }
+
+    #[inline]
+    pub fn par_eq_eval_at(
+        r: &[F],
+        mul_factor: &F,
+        eq_evals: &mut [F],
+        sqrt_n_1st: &mut [F],
+        sqrt_n_2nd: &mut [F],
+    ) {
+        let first_half_bits = r.len() / 2;
+        let first_half_mask = (1 << first_half_bits) - 1;
+        Self::build_eq_x_r_with_buf(&r[0..first_half_bits], mul_factor, sqrt_n_1st);
+        Self::build_eq_x_r_with_buf(&r[first_half_bits..], &F::one(), sqrt_n_2nd);
+
+        for (i, eq_eval) in eq_evals.iter_mut().enumerate().take(1 << r.len()) {
+            let first_half = i & first_half_mask;
+            let second_half = i >> first_half_bits;
+            *eq_eval = sqrt_n_1st[first_half] * sqrt_n_2nd[second_half];
         }
     }
 
@@ -128,12 +181,6 @@ impl<F: Field> EqPolynomial<F> {
         let xy = *x * y;
         xy + xy - x - y + F::one()
     }
-
-    // #[inline(always)]
-    // fn eq_3(x: &F, y: &F, z: &F) -> F {
-    //     // TODO: extend this
-    //     *x * y * z + (F::one() - x) * (F::one() - y) * (F::one() - z)
-    // }
 
     /// Hyperplonk's method of computing Eq(x, r)
     ///

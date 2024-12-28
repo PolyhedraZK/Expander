@@ -73,19 +73,29 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
     C::ChallengeField,
     Option<C::ChallengeField>,
 ) {
+    let timer = start_timer!(|| "sumcheck verify gkr layer");
     assert_eq!(rz1.is_none(), claimed_v1.is_none());
     assert_eq!(rz1.is_none(), alpha.is_none());
 
+    let timer2 = start_timer!(|| "prepare layer");
     GKRVerifierHelper::prepare_layer(layer, &alpha, rz0, rz1, r_simd, r_mpi, sp, is_output_layer);
+    end_timer!(timer2);
 
+    let timer2 = start_timer!(|| "get trailing zeros");
     let var_num = layer.input_var_num;
     let simd_var_num = C::get_field_pack_size().trailing_zeros() as usize;
+    end_timer!(timer2);
+
+    let timer2 = start_timer!(|| "compute sum");
     let mut sum = claimed_v0;
     if claimed_v1.is_some() && alpha.is_some() {
         sum += claimed_v1.unwrap() * alpha.unwrap();
     }
+    end_timer!(timer2);
 
+    let timer2 = start_timer!(|| "eval constant gate");
     sum -= GKRVerifierHelper::eval_cst(&layer.const_, public_input, sp);
+    end_timer!(timer2);
 
     let mut rx = vec![];
     let mut ry = None;
@@ -93,13 +103,18 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
     let mut r_mpi_xy = vec![];
     let mut verified = true;
 
+    let timer2 = start_timer!(|| "verify sumcheck step");
     for _i_var in 0..var_num {
         verified &=
             verify_sumcheck_step::<C, T>(&mut proof_reader, 2, transcript, &mut sum, &mut rx, sp);
-        // println!("x {} var, verified? {}", _i_var, verified);
     }
-    GKRVerifierHelper::set_rx(&rx, sp);
+    end_timer!(timer2);
 
+    let timer2 = start_timer!(|| "set rx");
+    GKRVerifierHelper::set_rx(&rx, sp);
+    end_timer!(timer2);
+
+    let timer2 = start_timer!(|| "verify simd sumcheck step");
     for _i_var in 0..simd_var_num {
         verified &= verify_sumcheck_step::<C, T>(
             &mut proof_reader,
@@ -109,10 +124,14 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
             &mut r_simd_xy,
             sp,
         );
-        // println!("{} simd var, verified? {}", _i_var, verified);
     }
-    GKRVerifierHelper::set_r_simd_xy(&r_simd_xy, sp);
+    end_timer!(timer2);
 
+    let timer2 = start_timer!(|| "set r_simd_xy");
+    GKRVerifierHelper::set_r_simd_xy(&r_simd_xy, sp);
+    end_timer!(timer2);
+
+    let timer2 = start_timer!(|| "verify mpi sumcheck step");
     for _i_var in 0..mpi_config.world_size().trailing_zeros() {
         verified &= verify_sumcheck_step::<C, T>(
             &mut proof_reader,
@@ -122,17 +141,25 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
             &mut r_mpi_xy,
             sp,
         );
-        // println!("{} mpi var, verified? {}", _i_var, verified);
     }
-    GKRVerifierHelper::set_r_mpi_xy(&r_mpi_xy, sp);
+    end_timer!(timer2);
 
+    let timer2 = start_timer!(|| "set r_mpi_xy");
+    GKRVerifierHelper::set_r_mpi_xy(&r_mpi_xy, sp);
+    end_timer!(timer2);
+
+    let timer2 = start_timer!(|| "vx claim");
     let vx_claim = C::ChallengeField::deserialize_from(&mut proof_reader).unwrap();
 
     sum -= vx_claim * GKRVerifierHelper::eval_add(&layer.add, sp);
     transcript.append_field_element(&vx_claim);
+    end_timer!(timer2);
 
+    let timer2 = start_timer!(|| "vy claim");
     let vy_claim = if !layer.structure_info.max_degree_one {
         ry = Some(vec![]);
+        let timer3 = start_timer!(|| "verify sumcheck step");
+
         for _i_var in 0..var_num {
             verified &= verify_sumcheck_step::<C, T>(
                 &mut proof_reader,
@@ -142,9 +169,12 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
                 ry.as_mut().unwrap(),
                 sp,
             );
-            // println!("y {} var, verified? {}", _i_var, verified);
         }
+        end_timer!(timer3);
+
+        let timer3 = start_timer!(|| "set ry");
         GKRVerifierHelper::set_ry(ry.as_ref().unwrap(), sp);
+        end_timer!(timer3);
 
         let vy_claim = C::ChallengeField::deserialize_from(&mut proof_reader).unwrap();
         transcript.append_field_element(&vy_claim);
@@ -154,7 +184,8 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
         verified &= sum == C::ChallengeField::ZERO;
         None
     };
-
+    end_timer!(timer2);
+    end_timer!(timer);
     (verified, rx, ry, r_simd_xy, r_mpi_xy, vx_claim, vy_claim)
 }
 
@@ -176,6 +207,11 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     C::ChallengeField,
     Option<C::ChallengeField>,
 ) {
+    println!(
+        "current number of threads: {}",
+        rayon::current_num_threads()
+    );
+
     let timer = start_timer!(|| "gkr verify");
     let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
 
@@ -304,9 +340,9 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             &mut transcript,
             &mut cursor,
         );
-
         log::info!("GKR verification: {}", verified);
 
+        let timer2 = start_timer!(|| "pcs verify");
         verified &= self.get_pcs_opening_from_proof_and_verify(
             pcs_params,
             pcs_verification_key,
@@ -320,7 +356,9 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             &mut transcript,
             &mut cursor,
         );
+        end_timer!(timer2);
 
+        let timer2 = start_timer!(|| "pcs verify");
         if let Some(rz1) = rz1 {
             verified &= self.get_pcs_opening_from_proof_and_verify(
                 pcs_params,
@@ -337,6 +375,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             );
         }
 
+        end_timer!(timer2);
         end_timer!(timer);
 
         verified
