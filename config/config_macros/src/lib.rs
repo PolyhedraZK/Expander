@@ -1,10 +1,11 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{parse_macro_input, ExprPath, Ident, Token};
+use syn::{parse_macro_input, ExprPath, Ident, Token, Visibility};
 
 // Define a struct to parse our custom input format
 struct ConfigLit {
+    visibility: Visibility,
     config_name: Ident,
     field_expr: ExprPath,
     fiat_shamir_hash_type_expr: ExprPath,
@@ -14,6 +15,7 @@ struct ConfigLit {
 // Implement parsing for our custom input format
 impl Parse for ConfigLit {
     fn parse(input: ParseStream) -> Result<Self> {
+        let visibility: Visibility = input.parse()?;
         let config_name: Ident = input.parse()?;
         input.parse::<Token![,]>()?;
         let field_expr: ExprPath = input.parse()?;
@@ -23,6 +25,7 @@ impl Parse for ConfigLit {
         let polynomial_commitment_type: ExprPath = input.parse()?;
         let _ = input.parse::<Token![,]>(); // Optional trailing comma
         Ok(ConfigLit {
+            visibility,
             config_name,
             field_expr,
             fiat_shamir_hash_type_expr,
@@ -107,7 +110,7 @@ fn parse_polynomial_commitment_type(
 
 /// Example usage:
 /// declare_gkr_config!(
-///     MyFavoriateConfigName,
+///     pub MyFavoriateConfigName,
 ///     FieldType::M31,
 ///     FiatShamirHashType::SHA256,
 ///     PolynomialCommitmentType::Raw
@@ -120,6 +123,7 @@ pub fn declare_gkr_config(input: proc_macro::TokenStream) -> proc_macro::TokenSt
 fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Parse the input tokens into our custom struct
     let ConfigLit {
+        visibility,
         config_name,
         field_expr,
         fiat_shamir_hash_type_expr,
@@ -144,7 +148,7 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
 
     let ret: TokenStream = quote! {
         #[derive(Default, Debug, Clone, PartialEq)]
-        struct #config_name;
+        #visibility struct #config_name;
 
         impl GKRConfig for #config_name {
             type FieldConfig = #field_config;
