@@ -8,5 +8,7 @@ pub use verifier::*;
 
 pub mod utils;
 
+pub mod executor;
+
 #[cfg(test)]
 mod tests;
