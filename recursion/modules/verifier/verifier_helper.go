@@ -2,18 +2,16 @@ package verifier
 
 import (
 	"ExpanderVerifierCircuit/modules/circuit"
+	"ExpanderVerifierCircuit/modules/fields"
 
 	"github.com/consensys/gnark/frontend"
 )
 
 func PrepareLayer(
-	api frontend.API,
+	api fields.ArithmeticEngine,
 	layer *circuit.Layer,
-	alpha frontend.Variable,
-	rz0 []frontend.Variable,
-	rz1 []frontend.Variable,
-	r_simd []frontend.Variable,
-	r_mpi []frontend.Variable,
+	alpha []frontend.Variable,
+	rz0, rz1, r_simd, r_mpi [][]frontend.Variable,
 	sp *ScratchPad,
 	is_output_layer bool,
 ) {
@@ -21,7 +19,7 @@ func PrepareLayer(
 		EqEvalsAtEfficient(
 			api,
 			rz0,
-			1,
+			api.One(),
 			sp.EqEvalsAtRz0,
 			sp.EqEvalsFirstPart,
 			sp.EqEvalsSecondPart,
@@ -32,9 +30,9 @@ func PrepareLayer(
 		copy(sp.EqEvalsAtRz0[:output_len], sp.EqEvalsAtRx[:output_len])
 		if rz1 != nil && alpha != nil {
 			for i := 0; i < 1<<layer.OutputLenLog; i++ {
-				sp.EqEvalsAtRz0[i] = api.Add(
+				sp.EqEvalsAtRz0[i] = api.ExtensionAdd(
 					sp.EqEvalsAtRz0[i],
-					api.Mul(alpha, sp.EqEvalsAtRy[i]),
+					api.ExtensionMul(alpha, sp.EqEvalsAtRy[i]),
 				)
 			}
 		}
@@ -43,7 +41,7 @@ func PrepareLayer(
 	EqEvalsAtEfficient(
 		api,
 		r_simd,
-		1,
+		api.One(),
 		sp.EqEvalsAtRSimd,
 		sp.EqEvalsFirstPart,
 		sp.EqEvalsSecondPart,
@@ -53,36 +51,34 @@ func PrepareLayer(
 	EqEvalsAtEfficient(
 		api,
 		r_mpi,
-		1,
+		api.One(),
 		sp.EqEvalsAtRMpi,
 		sp.EqEvalsFirstPart,
 		sp.EqEvalsSecondPart,
 		sp.EqEvalsCount,
 	)
 
-	sp.RSimd = &r_simd
-	sp.RMpi = &r_mpi
+	sp.RSimd = r_simd
+	sp.RMpi = r_mpi
 }
 
 func EvalCst(
-	api frontend.API,
+	api fields.ArithmeticEngine,
 	cst_gates []circuit.Gate,
 	public_input [][]frontend.Variable,
 	sp *ScratchPad,
-) frontend.Variable {
-	var v frontend.Variable = 0
+) []frontend.Variable {
+
+	v := api.Zero()
 
 	var mpi_size = len(sp.EqEvalsAtRMpi)
 	var simd_size = len(sp.EqEvalsAtRSimd)
 
-	if simd_size != 1 {
-		panic("Only support mpi size 1 and simd size 1 for now")
-	}
-
 	for i := 0; i < len(cst_gates); i++ {
 		var cst_gate circuit.Gate = cst_gates[i]
 
-		var tmp frontend.Variable = 0
+		tmp := api.Zero()
+
 		switch cst_gate.Coef.CoefType {
 		case circuit.PublicInput:
 			n_witnesses := len(public_input)
@@ -90,69 +86,77 @@ func EvalCst(
 				panic("Incompatible n_witnesses with mpi and simd size")
 			}
 			input_idx := cst_gate.Coef.InputIdx
-			vals := make([]frontend.Variable, n_witnesses)
+			vals := make([][]frontend.Variable, n_witnesses)
 			for j := 0; j < n_witnesses; j++ {
-				vals[j] = public_input[j][input_idx]
+				vals[j] = api.ToExtension(public_input[j][input_idx])
 			}
 
 			tmp = CombineWithSimdMpi(api, vals, sp.EqEvalsAtRSimd, sp.EqEvalsAtRMpi)
-			tmp = api.Mul(tmp, sp.EqEvalsAtRz0[cst_gate.OId])
+			tmp = api.ExtensionMul(tmp, sp.EqEvalsAtRz0[cst_gate.OId])
 		default:
-			coef_value := cst_gate.Coef.GetActualLocalValue()
-			tmp = api.Mul(sp.EqEvalsAtRz0[cst_gate.OId], coef_value)
+			coef_value := api.ToExtension(cst_gate.Coef.GetActualLocalValue())
+			tmp = api.ExtensionMul(sp.EqEvalsAtRz0[cst_gate.OId], coef_value)
 		}
 
-		v = api.Add(v, tmp)
+		v = api.ExtensionAdd(v, tmp)
 	}
 	return v
 }
 
 func EvalAdd(
-	api frontend.API,
+	api fields.ArithmeticEngine,
 	add_gates []circuit.Gate,
 	sp *ScratchPad,
-) frontend.Variable {
-	var v frontend.Variable = 0
+) []frontend.Variable {
+
+	v := api.Zero()
+
 	for i := 0; i < len(add_gates); i++ {
 		var add_gate = add_gates[i]
-		v = api.Add(
+		v = api.ExtensionAdd(
 			v,
-			api.Mul(sp.EqEvalsAtRz0[add_gate.OId], sp.EqEvalsAtRx[add_gate.IIds[0]], add_gate.Coef.GetActualLocalValue()),
-		)
-	}
-	return api.Mul(v, sp.EqRSimdRSimdXY, sp.EqRMpiRMpiXY)
-}
-
-func EvalMul(
-	api frontend.API,
-	mul_gates []circuit.Gate,
-	sp *ScratchPad,
-) frontend.Variable {
-	var v frontend.Variable = 0
-	for i := 0; i < len(mul_gates); i++ {
-		var mul_gate = mul_gates[i]
-		v = api.Add(
-			v,
-			api.Mul(
-				sp.EqEvalsAtRz0[mul_gate.OId],
-				sp.EqEvalsAtRx[mul_gate.IIds[0]],
-				sp.EqEvalsAtRy[mul_gate.IIds[1]],
-				mul_gate.Coef.GetActualLocalValue(),
+			api.ExtensionMul(
+				sp.EqEvalsAtRz0[add_gate.OId],
+				sp.EqEvalsAtRx[add_gate.IIds[0]],
+				api.ToExtension(add_gate.Coef.GetActualLocalValue()),
 			),
 		)
 	}
-	return api.Mul(v, sp.EqRSimdRSimdXY, sp.EqRMpiRMpiXY)
+	return api.ExtensionMul(v, sp.EqRSimdRSimdXY, sp.EqRMpiRMpiXY)
+}
+
+func EvalMul(
+	api fields.ArithmeticEngine,
+	mul_gates []circuit.Gate,
+	sp *ScratchPad,
+) []frontend.Variable {
+
+	v := api.Zero()
+
+	for i := 0; i < len(mul_gates); i++ {
+		var mul_gate = mul_gates[i]
+		v = api.ExtensionAdd(
+			v,
+			api.ExtensionMul(
+				sp.EqEvalsAtRz0[mul_gate.OId],
+				sp.EqEvalsAtRx[mul_gate.IIds[0]],
+				sp.EqEvalsAtRy[mul_gate.IIds[1]],
+				api.ToExtension(mul_gate.Coef.GetActualLocalValue()),
+			),
+		)
+	}
+	return api.ExtensionMul(v, sp.EqRSimdRSimdXY, sp.EqRMpiRMpiXY)
 }
 
 func SetRx(
-	api frontend.API,
-	rx []frontend.Variable,
+	api fields.ArithmeticEngine,
+	rx [][]frontend.Variable,
 	sp *ScratchPad,
 ) {
 	EqEvalsAtEfficient(
 		api,
 		rx,
-		1,
+		api.One(),
 		sp.EqEvalsAtRx,
 		sp.EqEvalsFirstPart,
 		sp.EqEvalsSecondPart,
@@ -161,30 +165,30 @@ func SetRx(
 }
 
 func SetRSimdXY(
-	api frontend.API,
-	r_simd_xy []frontend.Variable,
+	api fields.ArithmeticEngine,
+	r_simd_xy [][]frontend.Variable,
 	sp *ScratchPad,
 ) {
-	sp.EqRSimdRSimdXY = EqVec(api, *sp.RSimd, r_simd_xy)
+	sp.EqRSimdRSimdXY = EqVec(api, sp.RSimd, r_simd_xy)
 }
 
 func SetRMPIXY(
-	api frontend.API,
-	r_mpi_xy []frontend.Variable,
+	api fields.ArithmeticEngine,
+	r_mpi_xy [][]frontend.Variable,
 	sp *ScratchPad,
 ) {
-	sp.EqRMpiRMpiXY = EqVec(api, *sp.RMpi, r_mpi_xy)
+	sp.EqRMpiRMpiXY = EqVec(api, sp.RMpi, r_mpi_xy)
 }
 
 func SetRY(
-	api frontend.API,
-	r_y []frontend.Variable,
+	api fields.ArithmeticEngine,
+	r_y [][]frontend.Variable,
 	sp *ScratchPad,
 ) {
 	EqEvalsAtEfficient(
 		api,
 		r_y,
-		1,
+		api.One(),
 		sp.EqEvalsAtRy,
 		sp.EqEvalsFirstPart,
 		sp.EqEvalsSecondPart,
@@ -193,56 +197,68 @@ func SetRY(
 }
 
 func Degree2Eval(
-	api frontend.API,
-	p []frontend.Variable, // lag vals at x=0, 1, 2
-	x frontend.Variable,
-	sp *ScratchPad,
-) frontend.Variable {
-	var c0 = p[0]
-	var c2 = api.Mul(
-		sp.Inv2,
-		api.Sub(api.Add(p[2], p[0]), p[1], p[1]),
+	api fields.ArithmeticEngine,
+	lagrangeEvals [][]frontend.Variable, // lagrange evals at x=0, 1, 2
+	evalPoint []frontend.Variable,
+	sp ScratchPad,
+) []frontend.Variable {
+	c0 := lagrangeEvals[0]
+
+	c2 := api.ExtensionSub(
+		api.ExtensionAdd(lagrangeEvals[2], lagrangeEvals[0]),
+		lagrangeEvals[1],
+		lagrangeEvals[1],
 	)
-	var c1 = api.Sub(p[1], p[0], c2)
-	return api.Add(
-		api.Mul(
-			api.Add(api.Mul(c2, x), c1),
-			x,
+	c2 = api.ExtensionMul(c2, api.ToExtension(sp.Inv2))
+
+	c1 := api.ExtensionSub(lagrangeEvals[1], lagrangeEvals[0], c2)
+
+	return api.ExtensionAdd(
+		api.ExtensionMul(
+			api.ExtensionAdd(api.ExtensionMul(c2, evalPoint), c1),
+			evalPoint,
 		),
 		c0,
 	)
 }
 
 func Degree3Eval(
-	api frontend.API,
-	p []frontend.Variable, // lag vals at x=0, 1, 2, 3
-	x frontend.Variable,
-	sp *ScratchPad,
-) frontend.Variable {
-	return LagEval(api, p, x, sp)
+	api fields.ArithmeticEngine,
+	lagrangeEvals [][]frontend.Variable, // lagrange evals at x=0, 1, 2, 3
+	evalPoint []frontend.Variable,
+	sp ScratchPad,
+) []frontend.Variable {
+	return LagEval(api, lagrangeEvals, evalPoint, sp)
 }
 
 func LagEval(
-	api frontend.API,
-	vals []frontend.Variable,
-	x frontend.Variable,
-	sp *ScratchPad,
-) frontend.Variable {
-	if len(vals) != len(sp.Deg3EvalAt) {
-		panic("Incorrect length in LagEval")
-	}
+	api fields.ArithmeticEngine,
+	lagrangeEvals [][]frontend.Variable,
+	evalPoint []frontend.Variable,
+	sp ScratchPad,
+) []frontend.Variable {
+	res := api.Zero()
 
-	var v frontend.Variable = 0
-	for i := 0; i < len(vals); i++ {
-		var numerator frontend.Variable = 1
-		for j := 0; j < len(vals); j++ {
+	for i := range lagrangeEvals {
+		lagEval := api.One()
+
+		for j := range lagrangeEvals {
 			if j == i {
 				continue
 			}
-
-			numerator = api.Mul(numerator, api.Sub(x, sp.Deg3EvalAt[j]))
+			lagEval = api.ExtensionMul(
+				lagEval,
+				api.ExtensionSub(evalPoint, api.ToExtension(sp.Deg3EvalAt[j])),
+			)
 		}
-		v = api.Add(v, api.Mul(numerator, sp.Deg3LagDenomsInv[i], vals[i]))
+
+		lagEval = api.ExtensionMul(
+			lagEval,
+			lagrangeEvals[i],
+			api.ToExtension(sp.Deg3LagDenomsInv[i]),
+		)
+		res = api.ExtensionAdd(res, lagEval)
 	}
-	return v
+
+	return res
 }
