@@ -1,10 +1,12 @@
-use arith::SimdField;
+use arith::{Field, SimdField};
 use field_hashers::PoseidonStateTrait;
 
 use crate::{M31x16, M31};
 
 impl PoseidonStateTrait for M31x16 {
     type ElemT = M31;
+
+    const SBOX_POW: usize = 5;
 
     const FULL_ROUNDS: usize = 8;
 
@@ -18,5 +20,9 @@ impl PoseidonStateTrait for M31x16 {
 
     fn to_elems(&self) -> Vec<Self::ElemT> {
         self.unpack()
+    }
+
+    fn full_round_sbox(&mut self) {
+        *self = self.exp(Self::SBOX_POW as u128);
     }
 }

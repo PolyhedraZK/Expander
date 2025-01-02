@@ -270,7 +270,7 @@ where
             t.serialize_into(&mut buffer).unwrap();
             res.extend_from_slice(&buffer);
         });
-        res.resize(n_bytes, 0);
+        res.truncate(n_bytes);
 
         res
     }

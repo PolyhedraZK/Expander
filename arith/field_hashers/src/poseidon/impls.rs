@@ -6,7 +6,6 @@ use std::{
 use arith::{Field, FieldForECC};
 use tiny_keccak::{Hasher, Keccak};
 
-use super::compile_time::compile_time_sbox_alpha;
 use crate::FiatShamirFieldHasher;
 
 pub trait PoseidonStateTrait:
@@ -26,8 +25,9 @@ pub trait PoseidonStateTrait:
     /// ElemT is the element (base field) type constructing the poseidon state instance.
     type ElemT: FieldForECC;
 
-    /// SBOX_POW is the lowest exponential pow for poseidon sbox.
-    const SBOX_POW: usize = compile_time_sbox_alpha::<Self::ElemT>();
+    /// SBOX_POW is a pow \alpha for poseidon sbox, that \alpha >= 3 and gcd(\alpha, p - 1) = 1,
+    /// where p is the modulus of the prime field ElemT.
+    const SBOX_POW: usize;
 
     /// FULL_ROUNDS in a poseidon permutation.
     const FULL_ROUNDS: usize;
@@ -38,7 +38,7 @@ pub trait PoseidonStateTrait:
     /// STATE_WIDTH stands for the number of field elements that build up a poseidon state.
     const STATE_WIDTH: usize;
 
-    /// CAPACITY is the nubmer of output field elements (field here stands for InputF).
+    /// CAPACITY is the number of output field elements (field here stands for InputF).
     ///
     /// We ensure (roughly) the collision resilience is 128 bits by FIELD_SIZE, i.e.,
     /// how many bits we need to store a field element.
