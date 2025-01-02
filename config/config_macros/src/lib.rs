@@ -51,6 +51,7 @@ fn parse_field_type(field_expr: ExprPath) -> (String, String) {
 
 // Check if the hash type is one of the supported types and return the corresponding enum
 fn parse_fiat_shamir_hash_type(
+    field_type: &str,
     field_config: &str,
     fiat_shamir_hash_type: ExprPath,
 ) -> (String, String) {
@@ -62,19 +63,25 @@ fn parse_fiat_shamir_hash_type(
 
     let binding = hash_enum.ident.to_string();
     let hash_type_str = binding.as_str();
-    let field_type = format!("<{field_config} as GKRFieldConfig>::ChallengeField");
-    match hash_type_str {
-        "SHA256" => (
+    let challenge_f = format!("<{field_config} as GKRFieldConfig>::ChallengeField");
+    match (hash_type_str, field_type) {
+        ("SHA256", _) => (
             "SHA256".to_owned(),
-            format!("BytesHashTranscript::<{field_type}, SHA256hasher>").to_owned(),
+            format!("BytesHashTranscript::<{challenge_f}, SHA256hasher>").to_owned(),
         ),
-        "Keccak256" => (
+        ("Keccak256", _) => (
             "Keccak256".to_owned(),
-            format!("BytesHashTranscript::<{field_type}, Keccak256hasher>").to_owned(),
+            format!("BytesHashTranscript::<{challenge_f}, Keccak256hasher>").to_owned(),
         ),
-        "MIMC5" => (
+        ("Poseidon", "M31") => (
+            "Poseidon".to_owned(),
+            format!("FieldHashTranscript::<{challenge_f}, PoseidonFiatShamirHasher<M31x16>>")
+                .to_owned(),
+        ),
+        ("MIMC5", "BN254") => (
             "MIMC5".to_owned(),
-            format!("FieldHashTranscript::<{field_type}, MIMCHasher<{field_type}>>").to_owned(),
+            format!("FieldHashTranscript::<{challenge_f}, MiMC5FiatShamirHasher<{challenge_f}>>")
+                .to_owned(),
         ),
         _ => panic!("Unknown hash type"),
     }
@@ -141,7 +148,7 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
 
     let (field_type, field_config) = parse_field_type(field_expr);
     let (fiat_shamir_hash_type, transcript_type) =
-        parse_fiat_shamir_hash_type(field_config.as_str(), fiat_shamir_hash_type_expr);
+        parse_fiat_shamir_hash_type(&field_type, &field_config, fiat_shamir_hash_type_expr);
     let (polynomial_commitment_enum, polynomial_commitment_type) = parse_polynomial_commitment_type(
         &field_type,
         &field_config,

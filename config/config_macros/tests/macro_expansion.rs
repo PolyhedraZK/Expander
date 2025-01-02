@@ -7,12 +7,12 @@ use gkr_field_config::FieldType;
 
 use config::GKRConfig;
 use config_macros::declare_gkr_config;
+use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use mersenne31::M31x16;
 use poly_commit::{OrionSIMDFieldPCS, RawExpanderGKR};
-use transcript::{
-    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, SHA256hasher,
-};
+use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
 
 fn print_type_name<Cfg: GKRConfig>() {
     println!("{}", type_name::<Cfg>());
@@ -24,6 +24,12 @@ fn main() {
         M31Sha256Config,
         FieldType::M31,
         FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        M31PoseidonConfig,
+        FieldType::M31,
+        FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Raw
     );
     declare_gkr_config!(

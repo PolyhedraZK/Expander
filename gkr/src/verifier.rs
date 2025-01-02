@@ -286,7 +286,8 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         // transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
         if self.config.mpi_config.world_size() > 1 {
-            let _ = transcript.hash_and_return_state(); // Trigger an additional hash
+            let state = transcript.hash_and_return_state(); // Trigger an additional hash
+            transcript.set_state(&state);
         }
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?

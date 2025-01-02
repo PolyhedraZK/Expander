@@ -7,16 +7,16 @@ use arith::{Field, FieldSerde};
 use circuit::Circuit;
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
+use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use mersenne31::M31x16;
 use mpi_config::{root_println, MPIConfig};
 use poly_commit::{expander_pcs_init_testing_only, OrionSIMDFieldPCS, RawExpanderGKR};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha12Rng;
 use sha2::Digest;
-use transcript::{
-    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, SHA256hasher,
-};
+use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
 
 use crate::{utils::*, Prover, Verifier};
 
@@ -73,6 +73,12 @@ fn test_gkr_correctness() {
         FiatShamirHashType::Keccak256,
         PolynomialCommitmentType::Orion,
     );
+    declare_gkr_config!(
+        C8,
+        FieldType::M31,
+        FiatShamirHashType::Poseidon,
+        PolynomialCommitmentType::Raw,
+    );
 
     test_gkr_correctness_helper(
         &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
@@ -104,6 +110,10 @@ fn test_gkr_correctness() {
     );
     test_gkr_correctness_helper(
         &Config::<C7>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper(
+        &Config::<C8>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
 

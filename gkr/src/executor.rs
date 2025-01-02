@@ -11,12 +11,14 @@ use config::{
     Config, GKRConfig, PolynomialCommitmentType, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31,
 };
 use config_macros::declare_gkr_config;
+use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use mersenne31::M31x16;
 use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR, OrionSIMDFieldPCS};
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
-use transcript::{BytesHashTranscript, FieldHashTranscript, MIMCHasher, SHA256hasher};
+use transcript::{BytesHashTranscript, FieldHashTranscript, SHA256hasher};
 
 use log::info;
 use transcript::Proof;
@@ -275,7 +277,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(
 declare_gkr_config!(
     pub M31ExtConfigSha2,
     FieldType::M31,
-    FiatShamirHashType::SHA256,
+    FiatShamirHashType::Poseidon,
     PolynomialCommitmentType::Raw
 );
 declare_gkr_config!(
