@@ -1,4 +1,4 @@
-use arith::{Field, SimdField};
+use arith::{ExtensionField, SimdField};
 use mpi_config::MPIConfig;
 use transcript::Transcript;
 
@@ -27,7 +27,7 @@ pub fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar 
 #[inline]
 pub fn transcript_io<F, T>(mpi_config: &MPIConfig, ps: &[F], transcript: &mut T) -> F
 where
-    F: Field,
+    F: ExtensionField,
     T: Transcript<F>,
 {
     assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
