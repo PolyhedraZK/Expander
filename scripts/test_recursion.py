@@ -3,7 +3,7 @@
 # Run the script from the root repo of Expander
 
 import os
-import psutil
+# import psutil
 import sys
 import subprocess
 
@@ -32,13 +32,13 @@ class MPIConfig:
         if len(set(self.cpu_ids)) != len(self.cpu_ids):
             raise Exception("mpi cpu id contains duplications")
 
-        physical_cpus = psutil.cpu_count(logical=False)
-        if physical_cpus is None:
-            raise Exception("hmmm your physical cpu count cannot be found")
+        # physical_cpus = psutil.cpu_count(logical=False)
+        # if physical_cpus is None:
+        #     raise Exception("hmmm your physical cpu count cannot be found")
 
-        sorted_cpu_ids = sorted(self.cpu_ids)
-        if sorted_cpu_ids[0] < 0 or sorted_cpu_ids[-1] >= physical_cpus:
-            raise Exception(f"mpi cpu id should be in range [0, {physical_cpus}]")
+        # sorted_cpu_ids = sorted(self.cpu_ids)
+        # if sorted_cpu_ids[0] < 0 or sorted_cpu_ids[-1] >= physical_cpus:
+        #     raise Exception(f"mpi cpu id should be in range [0, {physical_cpus}]")
 
     def cpus(self) -> int:
         return len(self.cpu_ids)

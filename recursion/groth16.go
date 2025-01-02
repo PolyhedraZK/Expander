@@ -47,7 +47,6 @@ func Groth16RecursionImpl() {
 		panic(err.Error())
 	}
 
-	// TODO(HS) read maybe more than just a single proof file, but rather multiple GKR proofs?
 	proof, err := circuit.ReadProofFile(gkrProofFiles[0], fields.ECCBN254)
 	if err != nil {
 		panic(err.Error())
@@ -100,6 +99,10 @@ func Groth16RecursionImpl() {
 	vk := groth16.NewVerifyingKey(ecc.BN254)
 	groth16Proof := groth16.NewProof(ecc.BN254)
 
+	var pkFile *os.File = nil
+	var vkFile *os.File = nil
+	var proofFile *os.File = nil
+
 	switch groth16Mode {
 	case "setup":
 		println("Groth16 generating setup from scratch...")
@@ -107,21 +110,20 @@ func Groth16RecursionImpl() {
 			panic(err.Error())
 		}
 
-		pkFile, err := os.OpenFile(groth16CRSFile, os.O_WRONLY|os.O_CREATE, 0644)
-		if err != nil {
+		if pkFile, err = os.OpenFile(groth16CRSFile,
+			os.O_WRONLY|os.O_CREATE, 0644); err != nil {
 			panic(err.Error())
 		}
 		pk.WriteTo(pkFile)
 
-		vkFile, err := os.OpenFile(groth16VKFile, os.O_WRONLY|os.O_CREATE, 0644)
-		if err != nil {
+		if vkFile, err = os.OpenFile(groth16VKFile,
+			os.O_WRONLY|os.O_CREATE, 0644); err != nil {
 			panic(err.Error())
 		}
 		vk.WriteTo(vkFile)
 	case "prove":
 		println("Groth16 reading CRS from file...")
-		pkFile, err := os.OpenFile(groth16CRSFile, os.O_RDONLY, 0444)
-		if err != nil {
+		if pkFile, err = os.OpenFile(groth16CRSFile, os.O_RDONLY, 0444); err != nil {
 			panic(err.Error())
 		}
 		pk.ReadFrom(pkFile)
@@ -131,24 +133,22 @@ func Groth16RecursionImpl() {
 			panic("Groth16 fails")
 		}
 
-		file, err := os.OpenFile(recursiveProofFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-		if err != nil {
+		if proofFile, err = os.OpenFile(recursiveProofFile,
+			os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644); err != nil {
 			panic(err.Error())
 		}
-		groth16Proof.WriteTo(file)
+		groth16Proof.WriteTo(proofFile)
 	case "verify":
 		println("Groth16 reading vk from file...")
-		vkFile, err := os.OpenFile(groth16VKFile, os.O_RDONLY, 0444)
-		if err != nil {
+		if vkFile, err = os.OpenFile(groth16VKFile, os.O_RDONLY, 0444); err != nil {
 			panic(err.Error())
 		}
 		vk.ReadFrom(vkFile)
 
-		file, err := os.OpenFile(recursiveProofFile, os.O_RDONLY, 0444)
-		if err != nil {
+		if proofFile, err = os.OpenFile(recursiveProofFile, os.O_RDONLY, 0444); err != nil {
 			panic(err.Error())
 		}
-		groth16Proof.ReadFrom(file)
+		groth16Proof.ReadFrom(proofFile)
 
 		publicWitness, err := witness.Public()
 		if err != nil {
