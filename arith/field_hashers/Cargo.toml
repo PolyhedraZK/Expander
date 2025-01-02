@@ -1,0 +1,10 @@
+[package]
+name = "field_hashers"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arith = { path = "../" }
+
+tiny-keccak.workspace = true
+halo2curves.workspace = true
