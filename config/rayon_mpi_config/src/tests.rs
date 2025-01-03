@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use serial_test::serial;
 
 use crate::{AtomicVec, MPIConfig};
 
 // Example usage
 #[test]
+#[serial]
 fn test_single_thread() {
     let global_data: Arc<[u8]> = Arc::from((0..1024).map(|i| i as u8).collect::<Vec<u8>>());
 
@@ -21,6 +23,7 @@ fn test_single_thread() {
 }
 
 #[test]
+#[serial]
 // Assuming we have the MPIConfig and AtomicVec from previous example
 fn test_parallel_processing() {
     // Create some test data for global memory
@@ -99,6 +102,7 @@ fn test_parallel_processing() {
 }
 
 #[test]
+#[serial]
 fn test_cross_thread_communication() {
     // Create global data
     let global_data: Arc<[u8]> = Arc::from((0..16).map(|i| i as u8).collect::<Vec<u8>>());
@@ -119,14 +123,13 @@ fn test_cross_thread_communication() {
         .map(|i| vec![i as u8 + 1; data_len])
         .collect::<Vec<_>>();
 
-
     // write to its own memory, and read from all others
     (0..num_threads).into_par_iter().for_each(|rank| {
         let config = &configs[rank];
 
-        let data = vec![rank as u8; data_len];
+        let data = vec![rank as u8 + 1; data_len];
         let start = config.local_len();
-        let end = start + num_threads;
+        let end = start + data_len;
 
         config.append_local(&data).expect("Failed to append");
 
@@ -141,6 +144,7 @@ fn test_cross_thread_communication() {
 }
 
 #[test]
+#[serial]
 fn test_incremental_updates() {
     let global_data = Arc::<[u8]>::from(vec![0u8; 64]);
     let num_threads = rayon::current_num_threads();

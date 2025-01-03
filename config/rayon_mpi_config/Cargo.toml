@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 rayon.workspace = true
+
+[dev-dependencies]
+serial_test.workspace = true
