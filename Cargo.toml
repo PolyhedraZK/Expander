@@ -13,6 +13,7 @@ members = [
     "config/gkr_field_config", # definitions of all field types used in gkr and pcs
     "config/mpi_config", # definitions of mpi communication toolkit
     "config/config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
+    "config/rayon_mpi_config", # definitions of mpi communication toolkit via rayon backend
     "gkr",
     "poly_commit",
     "sumcheck",
