@@ -25,7 +25,7 @@ fn test_single_thread() {
 fn test_parallel_processing() {
     // Create some test data for global memory
     let global_data: Arc<[u8]> = Arc::from((0..1024).map(|i| i as u8).collect::<Vec<u8>>());
-    let num_threads = 16usize;
+    let num_threads = rayon::current_num_threads();
 
     // Create configs for all threads
     let configs = (0..num_threads)
@@ -102,7 +102,7 @@ fn test_parallel_processing() {
 fn test_cross_thread_communication() {
     // Create global data
     let global_data: Arc<[u8]> = Arc::from((0..16).map(|i| i as u8).collect::<Vec<u8>>());
-    let num_threads = 4; // Use 4 threads for testing
+    let num_threads = rayon::current_num_threads();
 
     // Create configs for all threads
     let configs: Vec<_> = (0..num_threads)
@@ -139,7 +139,7 @@ fn test_cross_thread_communication() {
 #[test]
 fn test_incremental_updates() {
     let global_data = Arc::<[u8]>::from(vec![0u8; 64]);
-    let num_threads = 16;
+    let num_threads = rayon::current_num_threads();
     let data_len = 4;
 
     let expected_result = (0..num_threads)
