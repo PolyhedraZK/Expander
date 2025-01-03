@@ -201,7 +201,7 @@ impl MPIConfig {
         }
     }
 
-    /// Root process broadcase a value f into all the processes
+    /// Root process broadcast a value f into all the processes
     #[inline]
     pub fn root_broadcast<F: Field>(&self, f: &mut F) {
         unsafe {
