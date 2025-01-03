@@ -17,7 +17,14 @@ mod mpi_config;
 pub use mpi_config::MPIConfig;
 
 /// Max number of std::hint::spin_loop() we will do before panicking
-// TODO: for ARMs this number may need to be adjusted
+#[cfg(target_arch = "aarch64")]
+const MAX_WAIT_CYCLES: usize = 1000000 * 140; // Multiply by 140 since ARM yield is ~1-2 cycles vs x86 PAUSE ~140 cycles
+
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+const MAX_WAIT_CYCLES: usize = 1000000;
+
+// Fallback for other architectures
+#[cfg(not(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")))]
 const MAX_WAIT_CYCLES: usize = 1000000;
 
 #[cfg(test)]
