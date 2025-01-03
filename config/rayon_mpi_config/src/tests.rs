@@ -103,6 +103,7 @@ fn test_cross_thread_communication() {
     // Create global data
     let global_data: Arc<[u8]> = Arc::from((0..16).map(|i| i as u8).collect::<Vec<u8>>());
     let num_threads = rayon::current_num_threads();
+    let data_len = 4;
 
     // Create configs for all threads
     let configs: Vec<_> = (0..num_threads)
@@ -114,13 +115,16 @@ fn test_cross_thread_communication() {
         })
         .collect();
 
-    let expected_result = vec![vec![0; 4], vec![1; 4], vec![2; 4], vec![3; 4]];
+    let expected_result = (0..num_threads)
+        .map(|i| vec![i as u8 + 1; data_len])
+        .collect::<Vec<_>>();
+
 
     // write to its own memory, and read from all others
     (0..num_threads).into_par_iter().for_each(|rank| {
         let config = &configs[rank];
 
-        let data = vec![rank as u8; num_threads as usize];
+        let data = vec![rank as u8; data_len];
         let start = config.local_len();
         let end = start + num_threads;
 
@@ -130,7 +134,7 @@ fn test_cross_thread_communication() {
         assert_eq!(results.len(), num_threads as usize);
 
         for (i, result) in results.iter().enumerate() {
-            assert_eq!(result.len(), num_threads as usize);
+            assert_eq!(result.len(), data_len);
             assert_eq!(result, &expected_result[i]);
         }
     });
