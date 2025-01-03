@@ -69,7 +69,7 @@ namespace gkr{
             end = std::chrono::high_resolution_clock::now();
             timer.prepare_time += (double) std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
-            // Polynomial Evluation
+            // Polynomial Evaluation
             F evals[3];
             helper.poly_evals_at(i_var, 2, evals, timer);
 
