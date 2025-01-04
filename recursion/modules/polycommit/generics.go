@@ -39,7 +39,7 @@ func NewCommitment(
 ) PolynomialCommitment {
 	switch schemeEnum {
 	case RawCommitmentScheme:
-		comLen := circuitInputSize * mpiSize
+		comLen := circuitInputSize * mpiSize * fieldEnum.SIMDPackSize()
 		return NewRawPolyCommitment(fieldEnum, comLen, proof, fsTranscript)
 	default:
 		panic("Unknown polynomial commitment scheme")
