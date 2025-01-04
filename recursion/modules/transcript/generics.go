@@ -127,7 +127,7 @@ func (t *FieldHasherTranscript) ChallengeF() []frontend.Variable {
 	if t.nextUnconsumed < t.hasher.StateCapacity() {
 		sampledChallenge = append(
 			sampledChallenge,
-			t.hashState[t.nextUnconsumed:t.hasher.StateCapacity()],
+			t.hashState[t.nextUnconsumed:t.hasher.StateCapacity()]...,
 		)
 	}
 	remainingElems := t.ChallengeFieldDegree() - uint(len(sampledChallenge))

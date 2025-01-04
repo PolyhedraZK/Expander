@@ -162,6 +162,9 @@ func poseidonM31x16HashToState(
 
 	absorbBuffer := make([]frontend.Variable, numChunks*poseidonM31x16Rate)
 	copy(absorbBuffer, fs)
+	for i := len(fs); i < len(absorbBuffer); i++ {
+		absorbBuffer[i] = 0
+	}
 
 	res := make([]frontend.Variable, 16)
 	for i := 0; i < 16; i++ {
