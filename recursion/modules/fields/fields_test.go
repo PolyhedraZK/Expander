@@ -44,19 +44,28 @@ func TestM31Ext3Arithmetic(t *testing.T) {
 	require.NoError(t, err, "ggs compile circuit error")
 	layeredCircuit := circuitCompileResult.GetLayeredCircuit()
 
-	m31Assignment := ExtensionFieldTestingCircuit{
-		FieldEnum: ECCM31,
-		LHS:       []frontend.Variable{1, 2, 3},
-		RHS:       []frontend.Variable{4, 5, 6},
-		Expected:  []frontend.Variable{139, 103, 28},
-	}
-	inputSolver := circuitCompileResult.GetInputSolver()
-	witness, err := inputSolver.SolveInput(&m31Assignment, 0)
-	require.NoError(t, err, "ggs solving witness error")
+	for _, testcase := range []ExtensionFieldTestingCircuit{
+		{
+			FieldEnum: ECCM31,
+			LHS:       []frontend.Variable{1, 2, 3},
+			RHS:       []frontend.Variable{4, 5, 6},
+			Expected:  []frontend.Variable{139, 103, 28},
+		},
+		{
+			FieldEnum: ECCM31,
+			LHS:       []frontend.Variable{1, 2, 3},
+			RHS:       []frontend.Variable{1279570927, 2027416670, 696388467},
+			Expected:  []frontend.Variable{1, 0, 0},
+		},
+	} {
+		inputSolver := circuitCompileResult.GetInputSolver()
+		witness, err := inputSolver.SolveInput(&testcase, 0)
+		require.NoError(t, err, "ggs solving witness error")
 
-	require.True(
-		t,
-		test.CheckCircuit(layeredCircuit, witness),
-		"ggs check circuit error",
-	)
+		require.True(
+			t,
+			test.CheckCircuit(layeredCircuit, witness),
+			"ggs check circuit error",
+		)
+	}
 }

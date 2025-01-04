@@ -46,16 +46,16 @@ func NewScratchPad(
 	maxIOSize := uint(1) << maxNumVars
 
 	sp := ScratchPad{
-		EqEvalsAtRz0:   make([][]frontend.Variable, maxIOSize),
-		EqEvalsAtRz1:   make([][]frontend.Variable, maxIOSize),
-		EqEvalsAtRSimd: make([][]frontend.Variable, api.SIMDPackSize()),
-		EqEvalsAtRMpi:  make([][]frontend.Variable, mpiSize),
+		EqEvalsAtRz0:   api.Zeroes(maxIOSize),
+		EqEvalsAtRz1:   api.Zeroes(maxIOSize),
+		EqEvalsAtRSimd: api.Zeroes(api.SIMDPackSize()),
+		EqEvalsAtRMpi:  api.Zeroes(mpiSize),
 
-		EqEvalsAtRx: make([][]frontend.Variable, maxIOSize),
-		EqEvalsAtRy: make([][]frontend.Variable, maxIOSize),
+		EqEvalsAtRx: api.Zeroes(maxIOSize),
+		EqEvalsAtRy: api.Zeroes(maxIOSize),
 
-		EqEvalsFirstPart:  make([][]frontend.Variable, maxIOSize),
-		EqEvalsSecondPart: make([][]frontend.Variable, maxIOSize),
+		EqEvalsFirstPart:  api.Zeroes(maxIOSize),
+		EqEvalsSecondPart: api.Zeroes(maxIOSize),
 
 		Inv2:       api.Inverse(2),
 		Deg3EvalAt: [4]frontend.Variable{0, 1, 2, 3},

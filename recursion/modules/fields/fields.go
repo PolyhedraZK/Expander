@@ -88,6 +88,7 @@ func (engine *ArithmeticEngine) AssertEq(
 	}
 }
 
+// Zero returns extension field zero instance.
 func (engine *ArithmeticEngine) Zero() []frontend.Variable {
 	degree := engine.ChallengeFieldDegree()
 	zero := make([]frontend.Variable, degree)
@@ -95,6 +96,16 @@ func (engine *ArithmeticEngine) Zero() []frontend.Variable {
 		zero[i] = 0
 	}
 	return zero
+}
+
+// Zeroes returns a slice of extension field zero instances.
+func (engine *ArithmeticEngine) Zeroes(num uint) [][]frontend.Variable {
+	res := make([][]frontend.Variable, num)
+	for i := uint(0); i < num; i++ {
+		res[i] = engine.Zero()
+	}
+
+	return res
 }
 
 // One returns extension field one instance.
@@ -206,7 +217,7 @@ func (engine *ArithmeticEngine) ExtensionMul(
 func (engine *ArithmeticEngine) pairwiseExtensionMul(
 	e0 []frontend.Variable, e1 []frontend.Variable) []frontend.Variable {
 
-	res := make([]frontend.Variable, engine.ChallengeFieldDegree())
+	res := engine.Zero()
 
 	switch engine.ECCFieldEnum {
 	case ECCBN254:
