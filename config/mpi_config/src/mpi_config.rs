@@ -9,11 +9,13 @@ use crate::{ThreadConfig, MAX_WAIT_CYCLES};
 /// 3. All threads have the same global memory
 /// 4. IMPORTANT!!! The threads are synchronized by the caller; within each period of time, all
 ///    threads write a same amount of data
-#[derive(Debug)]
+///
+/// The config struct only uses pointers so we avoid cloning of all data
+#[derive(Debug, Clone)]
 pub struct MPIConfig {
-    pub world_size: i32,
-    pub global_memory: Arc<[u8]>,
-    pub threads: Vec<ThreadConfig>,
+    pub world_size: i32,            // Number of threads
+    pub global_memory: Arc<[u8]>,   // Global memory shared by all threads
+    pub threads: Vec<ThreadConfig>, // Local memory for each thread
 }
 
 impl Default for MPIConfig {
@@ -53,9 +55,18 @@ impl MPIConfig {
         self.world_size
     }
 
+    #[inline]
+    /// check the caller's thread is the root thread
+    pub fn is_root(&self) -> bool {
+        rayon::current_thread_index().unwrap() == 0
+    }
+
     /// Sync with all threads' local memory by waiting until there is new data to read from all
     /// threads.
     /// Returns a vector of slices, one for each thread's new data
+    ///
+    /// The threads are synchronized by the caller; within each period of time, all
+    /// threads write a same amount of data
     pub fn sync(&self, start: usize, end: usize) -> Vec<&[u8]> {
         let total = self.threads.len();
         let mut pending = (0..total).collect::<Vec<_>>();

@@ -10,5 +10,6 @@ mpi_config = { path = "../config/mpi_config" }
 polynomials = { path = "../arith/polynomials"}
 transcript = { path = "../transcript" }
 
-rand.workspace = true
 ethnum.workspace = true
+rand.workspace = true
+rayon.workspace = true

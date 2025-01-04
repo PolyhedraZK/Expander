@@ -192,26 +192,25 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
-        todo!()
-        // assert!(poly.num_vars() == params.n_local_vars);
-        // let evals = if mpi_config.world_size() == 1 {
-        //     poly.hypercube_basis()
-        // } else {
-        //     // if  mpi_config.is_root() {
-        //     let start = mpi_config.local_memory.len();
-        //     let end = start + poly.hypercube_size();
-        //     let buffer = MPIConfig::sync_all(threads, start, end)
+        assert!(poly.num_vars() == params.n_local_vars);
+        let evals = if mpi_config.world_size() == 1 {
+            poly.hypercube_basis()
+        } else {
+            // read the last poly.hypercube_size() from each thread
+            let end = mpi_config.threads[0].size();
+            let start = end - poly.hypercube_size();
+            let payloads = mpi_config.sync(start, end); // read #thread payloads
 
-        //     let mut buffer = if mpi_config.is_root() {
-        //         vec![C::SimdCircuitField::zero(); poly.hypercube_size() *
-        // mpi_config.world_size()]     } else {
-        //         vec![]
-        //     };
-
-        //     mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
-        //     buffer
-        // };
-        // Self::Commitment { evals }
+            payloads
+                .iter()
+                .flat_map(|payload| {
+                    payload
+                        .chunks_exact(C::SimdCircuitField::SIZE)
+                        .map(|chunk| C::SimdCircuitField::deserialize_from(chunk).unwrap())
+                })
+                .collect()
+        };
+        Self::Commitment { evals }
     }
 
     fn open(

@@ -9,10 +9,10 @@ use crate::AtomicVec;
 /// 3. All threads have the same global memory
 /// 4. IMPORTANT!!! The threads are synchronized by the caller; within each period of time, all
 ///    threads write a same amount of data
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ThreadConfig {
-    pub world_rank: i32,
-    pub local_memory: Arc<AtomicVec<u8>>,
+    pub world_rank: i32,                  // indexer for the thread
+    pub local_memory: Arc<AtomicVec<u8>>, // local memory for the thread
 }
 
 impl Default for ThreadConfig {

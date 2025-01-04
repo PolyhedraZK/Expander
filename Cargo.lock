@@ -1866,6 +1866,7 @@ dependencies = [
  "mpi_config",
  "polynomials",
  "rand",
+ "rayon",
  "transcript",
 ]
 
