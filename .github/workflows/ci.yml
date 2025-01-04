@@ -55,8 +55,6 @@ jobs:
       matrix:
         include:
           - os: 7950x3d
-            feature: avx2
-          - os: 7950x3d
             feature: avx512f
     steps:
       - uses: actions/checkout@v4

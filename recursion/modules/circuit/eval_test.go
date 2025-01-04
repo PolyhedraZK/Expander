@@ -21,6 +21,8 @@ type Evaluation struct {
 }
 
 func (e *Evaluation) Define(api frontend.API) error {
+	// NOTE(HS) commenting out the api println as it is not supported in ecgo
+	// - reactivate after we have such functionality
 	// api.Println("Definition start")
 	n_witnesses := len(e.PrivateInput)
 	for i := 0; i < n_witnesses; i++ {
