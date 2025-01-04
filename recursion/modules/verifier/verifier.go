@@ -264,11 +264,13 @@ func Verify(
 		fsTranscript,
 	)
 
+	// TODO(HS) MPI Fiat-Shamir sync randomness rewrite
 	// Trigger an additional hash
 	if mpiSize > 1 {
 		_ = fsTranscript.ChallengeF()
 	}
 
+	// TODO(HS) fix inconsistency between MPI and single process settings
 	log.Println("#Hashes for input: ", fsTranscript.GetCount())
 	fsTranscript.ResetCount()
 
@@ -290,12 +292,10 @@ func Verify(
 	log.Println("#Hashes for gkr challenge: ", fsTranscript.GetCount())
 	fsTranscript.ResetCount()
 
-	// TODO(HS) remove this after I work on M31?
-	if len(r_simd) > 0 {
-		panic("Simd not supported yet.")
-	}
-
+	rx = append(rx, r_simd...)
 	rx = append(rx, r_mpi...)
+
+	ry = append(ry, r_simd...)
 	ry = append(ry, r_mpi...)
 
 	polyCom.Verify(api, rx, claimed_v0)

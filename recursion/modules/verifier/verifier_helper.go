@@ -83,6 +83,7 @@ func EvalCst(
 		case circuit.PublicInput:
 			n_witnesses := len(public_input)
 			if n_witnesses != mpi_size*simd_size {
+				// TODO(HS) is this invariant needed here?
 				panic("Incompatible n_witnesses with mpi and simd size")
 			}
 			input_idx := cst_gate.Coef.InputIdx
