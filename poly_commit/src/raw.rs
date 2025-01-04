@@ -192,20 +192,26 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
-        assert!(poly.num_vars() == params.n_local_vars);
-        let evals = if mpi_config.world_size() == 1 {
-            poly.hypercube_basis()
-        } else {
-            let mut buffer = if mpi_config.is_root() {
-                vec![C::SimdCircuitField::zero(); poly.hypercube_size() * mpi_config.world_size()]
-            } else {
-                vec![]
-            };
+        todo!()
+        // assert!(poly.num_vars() == params.n_local_vars);
+        // let evals = if mpi_config.world_size() == 1 {
+        //     poly.hypercube_basis()
+        // } else {
+        //     // if  mpi_config.is_root() {
+        //     let start = mpi_config.local_memory.len();
+        //     let end = start + poly.hypercube_size();
+        //     let buffer = MPIConfig::sync_all(threads, start, end)
 
-            mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
-            buffer
-        };
-        Self::Commitment { evals }
+        //     let mut buffer = if mpi_config.is_root() {
+        //         vec![C::SimdCircuitField::zero(); poly.hypercube_size() *
+        // mpi_config.world_size()]     } else {
+        //         vec![]
+        //     };
+
+        //     mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
+        //     buffer
+        // };
+        // Self::Commitment { evals }
     }
 
     fn open(

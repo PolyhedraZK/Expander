@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rayon.workspace = true
+arith = { path = "../../arith" }
+mpi.workspace = true
 
 [dev-dependencies]
-serial_test.workspace = true
+mersenne31 = { path = "../../arith/mersenne31"}

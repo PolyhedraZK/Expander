@@ -11,6 +11,7 @@ pub struct AtomicVec<T> {
 }
 
 impl<T: Clone> AtomicVec<T> {
+    #[inline]
     pub fn new(capacity: usize) -> Self {
         let mut data = Vec::with_capacity(capacity);
         // Pre-fill with default values to avoid reallocation
@@ -46,6 +47,7 @@ impl<T: Clone> AtomicVec<T> {
     }
 
     /// Read a slice of data
+    #[inline]
     pub fn get_slice(&self, start: usize, end: usize) -> Option<&[T]> {
         let current_len = self.len.load(Ordering::Acquire);
         if start >= current_len || end > current_len || start > end {
@@ -59,11 +61,13 @@ impl<T: Clone> AtomicVec<T> {
     }
 
     /// Get current length
+    #[inline]
     pub fn len(&self) -> usize {
         self.len.load(Ordering::Acquire)
     }
 
     /// Check if empty
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }

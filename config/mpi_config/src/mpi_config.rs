@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{AtomicVec, MAX_WAIT_CYCLES};
+use crate::{ThreadConfig, MAX_WAIT_CYCLES};
 
 /// Configuration for MPI
 /// Assumptions
@@ -12,82 +12,63 @@ use crate::{AtomicVec, MAX_WAIT_CYCLES};
 #[derive(Debug)]
 pub struct MPIConfig {
     pub world_size: i32,
-    pub world_rank: i32,
     pub global_memory: Arc<[u8]>,
-    pub local_memory: Arc<AtomicVec<u8>>,
+    pub threads: Vec<ThreadConfig>,
 }
 
 impl Default for MPIConfig {
+    #[inline]
     fn default() -> Self {
         Self {
             world_size: 1,
-            world_rank: 0,
             global_memory: Arc::from(vec![]),
-            local_memory: Arc::new(AtomicVec::new(0)),
+            threads: vec![],
         }
     }
 }
 
 impl PartialEq for MPIConfig {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
-        // equality is based on rank and size
+        // equality is based on size
         // it doesn't check the memory are consistent
-        self.world_rank == other.world_rank && self.world_size == other.world_size
+        self.world_size == other.world_size
     }
 }
 
 impl MPIConfig {
-    pub fn new(
-        world_size: i32,
-        world_rank: i32,
-        global_data: Arc<[u8]>,
-        buffer_size: usize,
-    ) -> Self {
+    #[inline]
+    pub fn new(world_size: i32, global_data: Arc<[u8]>, buffer_size: usize) -> Self {
         Self {
             world_size,
-            world_rank,
             global_memory: global_data,
-            local_memory: Arc::new(AtomicVec::new(buffer_size)),
+            threads: (0..world_size)
+                .map(|rank| ThreadConfig::new(rank, buffer_size))
+                .collect(),
         }
     }
 
-    pub fn append_local(&self, data: &[u8]) -> Result<usize, &'static str> {
-        self.local_memory
-            .append(data)
-            .ok_or("Failed to append: insufficient capacity")
-    }
-
-    pub fn read_local(&self, start: usize, end: usize) -> &[u8] {
-        self.local_memory
-            .get_slice(start, end)
-            .ok_or(format!(
-                "failed to read between {start} and {end} for slice of length {}",
-                self.local_memory.len()
-            ))
-            .unwrap()
-    }
-
-    /// Get the length of local memory
-    pub fn local_len(&self) -> usize {
-        self.local_memory.len()
+    #[inline]
+    pub fn world_size(&self) -> i32 {
+        self.world_size
     }
 
     /// Sync with all threads' local memory by waiting until there is new data to read from all
     /// threads.
     /// Returns a vector of slices, one for each thread's new data
-    pub fn sync_all<'a>(threads: &'a [MPIConfig], start: usize, end: usize) -> Vec<&'a [u8]> {
-        let total = threads.len();
+    pub fn sync(&self, start: usize, end: usize) -> Vec<&[u8]> {
+        let total = self.threads.len();
         let mut pending = (0..total).collect::<Vec<_>>();
-        let mut results: Vec<&'a [u8]> = vec![&[]; total];
+        let mut results: Vec<&[u8]> = vec![&[]; total];
         let mut wait_cycles = 0;
 
         // Keep going until we've read from all threads
         while !pending.is_empty() {
             // Use retain to avoid re-checking already synced threads
             pending.retain(|&i| {
-                let len = threads[i].local_len();
+                let len = self.threads[i].size();
                 if len >= end {
-                    results[i] = threads[i].read_local(start, end);
+                    results[i] = self.threads[i].read(start, end);
                     false // Remove from pending
                 } else {
                     true // Keep in pending
