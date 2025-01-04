@@ -1,7 +1,7 @@
+use std::fs;
 use std::io::Cursor;
-use std::{any::TypeId, fs};
 
-use arith::{Field, FieldSerde, SimdField};
+use arith::{Field, SimdField};
 use ark_std::test_rng;
 use gkr_field_config::GKRFieldConfig;
 use transcript::Transcript;
@@ -281,24 +281,11 @@ impl<C: GKRFieldConfig> Circuit<C> {
     pub fn fill_rnd_coefs<T: Transcript<C::ChallengeField>>(&mut self, transcript: &mut T) {
         assert!(self.rnd_coefs_identified);
 
-        if TypeId::of::<C::ChallengeField>() == TypeId::of::<C::CircuitField>() {
-            for &rnd_coef_ptr in &self.rnd_coefs {
-                unsafe {
-                    *(rnd_coef_ptr as *mut C::ChallengeField) =
-                        transcript.generate_challenge_field_element();
-                }
-            }
-        } else {
-            let n_bytes_required = C::CircuitField::SIZE * self.rnd_coefs.len();
-            let challenge_bytes = transcript.generate_challenge_u8_slice(n_bytes_required);
-            let mut cursor = Cursor::new(challenge_bytes);
-
-            for &rnd_coef_ptr in &self.rnd_coefs {
-                unsafe {
-                    *rnd_coef_ptr = C::CircuitField::deserialize_from(&mut cursor).unwrap();
-                }
-            }
-        }
+        let sampled_circuit_fs = transcript.generate_circuit_field_elements(self.rnd_coefs.len());
+        self.rnd_coefs
+            .iter()
+            .zip(sampled_circuit_fs.iter())
+            .for_each(|(&r, sr)| unsafe { *r = *sr });
     }
 
     pub fn identify_structure_info(&mut self) {
