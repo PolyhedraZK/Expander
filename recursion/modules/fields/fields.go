@@ -44,7 +44,9 @@ func (f ECCFieldEnum) SIMDPackSize() uint {
 	switch f {
 	case ECCBN254:
 		return 1
-	case ECCM31, ECCGF2:
+	case ECCM31:
+		return 16
+	case ECCGF2:
 		return 8
 	default:
 		panic("bruh wyd here, you aint ecc field enum yo?")
