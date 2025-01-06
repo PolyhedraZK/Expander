@@ -75,8 +75,8 @@ BN254_GKR_TO_GROTH16_RECURSION_PROOF_CONFIG: Final[ProofConfig] = ProofConfig(
 
 M31_GKR_TO_GKR_RECURSION_PROOF_CONFIG: Final[ProofConfig] = ProofConfig(
     field=RecursiveProofField.M31,
-    circuit="data/circuit_m31.txt",
-    witness="data/witness_m31.txt",
+    circuit="data/small_circuit_m31.txt",
+    witness="data/small_witness_m31.txt",
     gkr_proof_prefix="data/m31_gkr_proof.txt",
     # recursive_proof="data/recursive_proof.txt"
 )

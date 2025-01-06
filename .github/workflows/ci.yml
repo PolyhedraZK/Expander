@@ -71,9 +71,10 @@ jobs:
           python3 ./scripts/install.py
           mpiexec --version
           cargo run --bin=dev-setup --release
-          ./scripts/test_recursion.py
           cd ./recursion
           go test ./... -v
+          cd ..
+          ./scripts/test_recursion.py
 
   gkr-e2e:
     name: Benchmark (${{ matrix.os }}${{ matrix.feature != '' && format(', {0}', matrix.feature) || '' }}, ${{ matrix.field }})
