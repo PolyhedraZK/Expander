@@ -141,6 +141,13 @@ impl MPIConfig {
                 let len = self.threads[i].size();
                 if len >= end {
                     results[i] = self.threads[i].read(start, end);
+                    // println!(
+                    //     "[Thread {}] read from thread {}: {} to {}",
+                    //     rayon::current_thread_index().unwrap(),
+                    //     i,
+                    //     start,
+                    //     end
+                    // );
                     false // Remove from pending
                 } else {
                     true // Keep in pending
@@ -157,7 +164,11 @@ impl MPIConfig {
                 std::hint::spin_loop();
                 wait_cycles += 1;
                 if wait_cycles > MAX_WAIT_CYCLES {
-                    panic!("Exceeded max wait cycles");
+                    panic!(
+                        "[Thread {}] exceeded max wait cycles\nPending list: {:?}",
+                        rayon::current_thread_index().unwrap(),
+                        pending
+                    );
                 }
             }
         }

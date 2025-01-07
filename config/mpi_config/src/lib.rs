@@ -24,7 +24,7 @@ pub use thread_config::ThreadConfig;
 const MAX_WAIT_CYCLES: usize = 1000000 * 140; // Multiply by 140 since ARM yield is ~1-2 cycles vs x86 PAUSE ~140 cycles
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-const MAX_WAIT_CYCLES: usize = 1000000;
+const MAX_WAIT_CYCLES: usize = 100000000;
 
 // Fallback for other architectures
 #[cfg(not(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64")))]
@@ -39,5 +39,13 @@ macro_rules! root_println {
         if $config.is_root() {
             println!($($arg)*);
         }
+    };
+}
+
+#[macro_export]
+macro_rules! thread_println {
+    ($config: expr, $($arg:tt)*) => {
+        print!("[Thread {}] ", $config.current_thread().world_rank);
+        println!($($arg)*);
     };
 }

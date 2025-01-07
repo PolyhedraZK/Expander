@@ -6,7 +6,7 @@ use crate::{
 use arith::{BN254Fr, Field, FieldForECC, FieldSerde, FieldSerdeResult, SimdField};
 use ethnum::U256;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use mpi_config::{thread_println, MPIConfig};
 use polynomials::{MultiLinearPoly, MultilinearExtension};
 use rand::RngCore;
 use transcript::Transcript;
@@ -199,21 +199,12 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
             // read the last poly.hypercube_size() from each thread
             let start = mpi_config.current_thread().size();
             let end = start + poly.serialized_size();
+            mpi_config.append_local_fields(&poly.hypercube_basis());
 
-            poly.hypercube_basis()
-                .iter()
-                .for_each(|f| mpi_config.append_local_field(f));
-
-            let payloads = mpi_config.read_all(start, end); // read #thread payloads
-
+            // thread_println!(mpi_config, "start: {}, end: {}", start, end);
+            let payloads = mpi_config.read_all_field_flat(start, end); // read #thread payloads
+                                                                       // thread_println!(mpi_config, "payloads: {:?}", payloads.len());
             payloads
-                .iter()
-                .flat_map(|payload| {
-                    payload
-                        .chunks_exact(C::SimdCircuitField::SIZE)
-                        .map(|chunk| C::SimdCircuitField::deserialize_from(chunk).unwrap())
-                })
-                .collect()
         };
         Self::Commitment { evals }
     }

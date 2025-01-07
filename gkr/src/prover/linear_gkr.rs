@@ -5,6 +5,7 @@ use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
+use mpi_config::root_println;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use polynomials::{MultilinearExtension, RefMultiLinearPoly};
 use sumcheck::ProverScratchPad;
@@ -97,6 +98,8 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
                 pcs_scratch,
             )
         };
+        root_println!(self.config.mpi_config, "PC commit done");
+
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         transcript.append_u8_slice(&buffer);
