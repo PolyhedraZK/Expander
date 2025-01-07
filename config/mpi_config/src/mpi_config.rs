@@ -71,14 +71,51 @@ impl MPIConfig {
     }
 
     #[inline]
+    /// Get the current thread
+    pub fn current_thread_mut(&mut self) -> &mut ThreadConfig {
+        let index = rayon::current_thread_index().unwrap();
+        &mut self.threads[index]
+    }
+
+    #[inline]
     /// Get the size of the current local memory
     pub fn current_size(&self) -> usize {
         self.current_thread().size()
     }
 
+    #[inline]
+    /// Check if the current thread is synced
+    pub fn is_current_thread_synced(&self) -> bool {
+        self.current_thread().is_synced()
+    }
+
+    #[inline]
+    /// Check if all threads are synced
+    pub fn are_all_threads_synced(&self) -> bool {
+        self.threads.iter().all(|t| t.is_synced())
+    }
+
+    #[inline]
+    /// Sync up the current thread
+    /// Returns a vector of slices, one for each thread's new data
+    pub fn sync_up(&mut self) -> Vec<&[u8]> {
+        if self.is_current_thread_synced() {
+            return vec![];
+        }
+
+        let start = self.current_thread().last_synced;
+        let end = self.current_thread().size();
+        // update the pointer to the latest index
+        self.current_thread_mut().last_synced = end;
+        let result = self.read_all(start, end);
+
+        result
+    }
+
     /// Read all threads' local memory by waiting until there is new data to read from all
     /// threads.
     /// Returns a vector of slices, one for each thread's new data
+    /// Update the sync pointer of the current thread
     ///
     /// The threads are synchronized by the caller; within each period of time, all
     /// threads write a same amount of data

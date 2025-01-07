@@ -17,6 +17,7 @@ use crate::AtomicVec;
 pub struct ThreadConfig {
     pub world_rank: i32,                  // indexer for the thread
     pub local_memory: Arc<AtomicVec<u8>>, // local memory for the thread
+    pub last_synced: usize,               // last synced index
 }
 
 impl Default for ThreadConfig {
@@ -25,6 +26,7 @@ impl Default for ThreadConfig {
         Self {
             world_rank: 0,
             local_memory: Arc::new(AtomicVec::new(0)),
+            last_synced: 0,
         }
     }
 }
@@ -44,12 +46,18 @@ impl ThreadConfig {
         Self {
             world_rank,
             local_memory: Arc::new(AtomicVec::new(buffer_size)),
+            last_synced: 0,
         }
     }
 
     #[inline]
     pub fn is_root(&self) -> bool {
         self.world_rank == 0
+    }
+
+    #[inline]
+    pub fn is_synced(&self) -> bool {
+        self.last_synced == self.local_memory.len()
     }
 
     #[inline]

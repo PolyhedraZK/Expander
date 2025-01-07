@@ -1,7 +1,4 @@
-use std::vec;
-
 use arith::{Field, SimdField};
-use mpi_config::MPIConfig;
 use transcript::Transcript;
 
 // #[inline(always)]
@@ -26,6 +23,9 @@ pub fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar 
 }
 
 /// Transcript IO between sumcheck steps
+///
+/// The thread will push the generated challenge field element to its local memory.
+/// The caller is responsible for syncing up this field element.
 #[inline]
 pub fn transcript_io<F, T>(
     // mpi_config: &MPIConfig,
@@ -40,9 +40,5 @@ where
     for p in ps {
         transcript.append_field_element(p);
     }
-    // let mut r =
     transcript.generate_challenge_field_element()
-
-    // mpi_config.root_broadcast_f(&mut r);
-    // r
 }

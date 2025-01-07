@@ -347,7 +347,7 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
 
     #[inline]
     pub(crate) fn prepare_y_vals(&mut self) {
-        let mut v_rx_rsimd_rw = self.sp.mpi_var_v_evals[0];
+        let v_rx_rsimd_rw = self.sp.mpi_var_v_evals[0];
         // self.mpi_config.root_broadcast_f(&mut v_rx_rsimd_rw);
 
         let mul = &self.layer.mul;
