@@ -41,8 +41,22 @@ func EvalMultilinear(
 }
 
 func (c *RawCommitment) Verify(
-	api fields.ArithmeticEngine, r [][]frontend.Variable, y []frontend.Variable) {
-	api.AssertEq(EvalMultilinear(api, c.Vals, r), y)
+	api fields.ArithmeticEngine,
+	rs, rSIMD, rMPI [][]frontend.Variable,
+	y []frontend.Variable,
+) {
+	totalNumVars := len(rs) + len(rSIMD) + len(rMPI)
+
+	if 1<<len(rSIMD) != api.SIMDPackSize() {
+		panic("Inconsistent SIMD length with randomness")
+	}
+
+	challengePoint := make([][]frontend.Variable, totalNumVars)
+	copy(challengePoint, rSIMD)
+	copy(challengePoint[len(rSIMD):], rs)
+	copy(challengePoint[len(rSIMD)+len(rs):], rMPI)
+
+	api.AssertEq(EvalMultilinear(api, c.Vals, challengePoint), y)
 }
 
 func NewRawPolyCommitment(

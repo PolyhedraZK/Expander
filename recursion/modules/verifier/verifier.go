@@ -264,14 +264,15 @@ func Verify(
 		fsTranscript,
 	)
 
-	// TODO(HS) MPI Fiat-Shamir sync randomness rewrite
-	// Trigger an additional hash
+	// NOTE: MPI Fiat-Shamir sync randomness
 	if mpiSize > 1 {
-		_ = fsTranscript.ChallengeF()
+		newState := fsTranscript.HashAndReturnState()
+		fsTranscript.SetState(newState)
 	}
 
-	// TODO(HS) fix inconsistency between MPI and single process settings
-	log.Println("#Hashes for input: ", fsTranscript.GetCount())
+	if mpiSize > 1 {
+		log.Println("#Hashes for input: ", fsTranscript.GetCount())
+	}
 	fsTranscript.ResetCount()
 
 	originalCircuit.FillRndCoef(fsTranscript)
@@ -292,12 +293,9 @@ func Verify(
 	log.Println("#Hashes for gkr challenge: ", fsTranscript.GetCount())
 	fsTranscript.ResetCount()
 
-	rx = append(rx, r_simd...)
-	rx = append(rx, r_mpi...)
+	polyCom.Verify(api, rx, r_simd, r_mpi, claimed_v0)
 
-	ry = append(ry, r_simd...)
-	ry = append(ry, r_mpi...)
-
-	polyCom.Verify(api, rx, claimed_v0)
-	polyCom.Verify(api, ry, claimed_v1)
+	if ry != nil {
+		polyCom.Verify(api, ry, r_simd, r_mpi, claimed_v1)
+	}
 }

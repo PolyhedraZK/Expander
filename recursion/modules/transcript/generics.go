@@ -141,7 +141,27 @@ func (t *FieldHasherTranscript) ChallengeF() []frontend.Variable {
 	return sampledChallenge
 }
 
-// TODO(HS) hash to state / set state? need after poseidon m31
+func (t *FieldHasherTranscript) HashAndReturnState() []frontend.Variable {
+	var newCount uint = 0
+
+	if len(t.dataPool) != 0 {
+		t.hashState, newCount = t.hasher.HashToState(t.dataPool...)
+
+		t.count += newCount
+		t.dataPool = nil
+	} else {
+		t.hashState, newCount = t.hasher.HashToState(t.hashState...)
+
+		t.count += newCount
+	}
+
+	return t.hashState
+}
+
+func (t *FieldHasherTranscript) SetState(newHashState []frontend.Variable) {
+	t.nextUnconsumed = t.hasher.StateCapacity()
+	t.hashState = newHashState
+}
 
 func (t *FieldHasherTranscript) GetCount() uint {
 	return t.count

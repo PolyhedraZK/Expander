@@ -23,7 +23,11 @@ type PolynomialCommitment interface {
 	// Verify checks against commitment the opening point and eval
 	// TODO(HS) for now this matches with raw commitment,
 	// later we should add polynomial commitment opening to the interface
-	Verify(arithmeticEngine fields.ArithmeticEngine, r [][]frontend.Variable, y []frontend.Variable)
+	Verify(
+		api fields.ArithmeticEngine,
+		rs, rSIMD, rMPI [][]frontend.Variable,
+		y []frontend.Variable,
+	)
 }
 
 // NewCommitment is the general interface for verifier circuit to extract a

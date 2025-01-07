@@ -5,6 +5,7 @@ import (
 	"ExpanderVerifierCircuit/modules/fields"
 
 	"github.com/PolyhedraZK/ExpanderCompilerCollection/ecgo"
+	ecgoTest "github.com/PolyhedraZK/ExpanderCompilerCollection/ecgo/test"
 	"github.com/spf13/cobra"
 )
 
@@ -48,10 +49,32 @@ func Mersenne31RecursionImpl() {
 		OriginalCircuit: *originalCircuit,
 		Proof:           *proof.PlaceHolder(),
 	}
-	_, err = ecgo.Compile(fields.ECCM31.FieldModulus(), &m31RecursionCircuit)
+	m31Compilation, err := ecgo.Compile(fields.ECCM31.FieldModulus(), &m31RecursionCircuit)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	// TODO circuit input witness
+	// witness definition
+	originalCircuit, _, err = circuit.ReadCircuit(circuitRel)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	assignment := VerifierCircuit{
+		MpiSize:         mpiSize,
+		FieldEnum:       fields.ECCM31,
+		OriginalCircuit: *originalCircuit,
+		Proof:           *proof,
+	}
+
+	println("Solving witness...")
+	inputSolver := m31Compilation.GetInputSolver()
+	witness, err := inputSolver.SolveInput(&assignment, 0)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	println("Checking satisfiability...")
+	layeredCircuit := m31Compilation.GetLayeredCircuit()
+	println(ecgoTest.CheckCircuit(layeredCircuit, witness))
 }

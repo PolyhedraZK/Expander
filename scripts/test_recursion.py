@@ -185,8 +185,17 @@ def test_m31_gkr_to_gkr_recursion(
 
     @in_recursion_dir
     def test_m31_gkr_to_gkr_recursion_payload():
-        # TODO m31 dev TBD
-        pass
+        m31_gkr_cmd = ' '.join(f'''
+        go run . mersenne31
+        --circuit-file ../{proof_config.circuit}
+        --witness-files ../{proof_config.witness}
+        --gkr-proofs ../{proof_path}
+        --mpi-size {mpi_config.cpus()}
+        '''.strip().split())
+
+        print(m31_gkr_cmd)
+        if subprocess.run(m31_gkr_cmd, shell=True).returncode != 0:
+            raise Exception("recursion proof is not proving correctly")
 
     test_m31_gkr_to_gkr_recursion_payload()
 
