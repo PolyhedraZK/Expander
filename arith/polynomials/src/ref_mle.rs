@@ -9,6 +9,7 @@ pub trait MultilinearExtension<F: Field>: Index<usize, Output = F> {
 
     fn num_vars(&self) -> usize;
 
+    #[inline]
     fn hypercube_size(&self) -> usize {
         1 << self.num_vars()
     }
@@ -18,6 +19,11 @@ pub trait MultilinearExtension<F: Field>: Index<usize, Output = F> {
     fn hypercube_basis_ref(&self) -> &Vec<F>;
 
     fn interpolate_over_hypercube(&self) -> Vec<F>;
+
+    #[inline]
+    fn serialized_size(&self) -> usize {
+        self.hypercube_size() * F::SIZE
+    }
 }
 
 #[derive(Debug, Clone)]

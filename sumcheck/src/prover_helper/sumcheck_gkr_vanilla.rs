@@ -329,14 +329,20 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
     #[inline]
     pub(crate) fn prepare_mpi_var_vals(&mut self) {
         let start = self.mpi_config.current_size();
-        self.mpi_config.append_local_field(&self.sp.simd_var_v_evals[0]);
+        self.mpi_config
+            .append_local_field(&self.sp.simd_var_v_evals[0]);
         let end = self.mpi_config.current_size();
-        self.sp.mpi_var_v_evals = self.mpi_config.read_all_field_flat::<C::ChallengeField>(start, end);
+        self.sp.mpi_var_v_evals = self
+            .mpi_config
+            .read_all_field_flat::<C::ChallengeField>(start, end);
 
         let start = self.mpi_config.current_size();
-        self.mpi_config.append_local_field(&(self.sp.simd_var_hg_evals[0] * self.sp.eq_evals_at_r_simd0[0]));
+        self.mpi_config
+            .append_local_field(&(self.sp.simd_var_hg_evals[0] * self.sp.eq_evals_at_r_simd0[0]));
         let end = self.mpi_config.current_size();
-        self.sp.mpi_var_hg_evals = self.mpi_config.read_all_field_flat::<C::ChallengeField>(start, end);
+        self.sp.mpi_var_hg_evals = self
+            .mpi_config
+            .read_all_field_flat::<C::ChallengeField>(start, end);
     }
 
     #[inline]

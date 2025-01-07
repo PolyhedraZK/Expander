@@ -13,3 +13,7 @@ transcript = { path = "../transcript" }
 ethnum.workspace = true
 rand.workspace = true
 rayon.workspace = true
+
+
+[dev-dependencies]
+serial_test.workspace = true

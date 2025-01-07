@@ -197,8 +197,13 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
             poly.hypercube_basis()
         } else {
             // read the last poly.hypercube_size() from each thread
-            let end = mpi_config.threads[0].size();
-            let start = end - poly.hypercube_size();
+            let start = mpi_config.current_thread().size();
+            let end = start + poly.serialized_size();
+
+            poly.hypercube_basis()
+                .iter()
+                .for_each(|f| mpi_config.append_local_field(f));
+
             let payloads = mpi_config.read_all(start, end); // read #thread payloads
 
             payloads
@@ -228,7 +233,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
 
     fn verify(
         _params: &Self::Params,
-        mpi_config: &MPIConfig,
+        _mpi_config: &MPIConfig,
         _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &ExpanderGKRChallenge<C>,
@@ -236,7 +241,6 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _transcript: &mut T,
         _opening: &Self::Opening,
     ) -> bool {
-        assert!(mpi_config.is_root()); // Only the root will verify
         let ExpanderGKRChallenge::<C> { x, x_simd, x_mpi } = x;
         Self::eval(&commitment.evals, x, x_simd, x_mpi) == v
     }

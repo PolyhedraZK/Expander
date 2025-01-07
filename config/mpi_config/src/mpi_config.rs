@@ -135,10 +135,7 @@ impl MPIConfig {
     pub fn read_all_field_flat<F: Field>(&self, start: usize, end: usize) -> Vec<F> {
         let data = self.read_all(start, end);
         data.iter()
-            .flat_map(|x| {
-                x.chunks(F::SIZE)
-                    .map(|y| F::deserialize_from(y).unwrap())
-            })
+            .flat_map(|x| x.chunks(F::SIZE).map(|y| F::deserialize_from(y).unwrap()))
             .collect()
     }
 
@@ -189,5 +186,17 @@ impl MPIConfig {
 
             result
         }
+    }
+
+    #[inline]
+    /// Finalize function does nothing except for a minimal sanity check
+    /// that all threads have the same amount of data
+    pub fn finalize(&self) {
+        let len = self.threads[0].size();
+        self.threads.iter().skip(1).for_each(|t| {
+            assert_eq!(t.size(), len);
+        });
+
+        // do nothing
     }
 }
