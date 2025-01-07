@@ -9,6 +9,10 @@ use crate::AtomicVec;
 /// 3. All threads have the same global memory
 /// 4. IMPORTANT!!! The threads are synchronized by the caller; within each period of time, all
 ///    threads write a same amount of data
+///
+/// A further optimization (TODO):
+/// - we can have a buffer for bytes, and a buffer for field elements, this should avoid the need of
+///   field (de)serializations between threads
 #[derive(Debug, Clone)]
 pub struct ThreadConfig {
     pub world_rank: i32,                  // indexer for the thread

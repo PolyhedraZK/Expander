@@ -1650,6 +1650,7 @@ dependencies = [
 name = "mpi_config"
 version = "0.1.0"
 dependencies = [
+ "arith",
  "rayon",
  "serial_test",
 ]

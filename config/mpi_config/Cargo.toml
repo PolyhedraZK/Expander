@@ -6,5 +6,7 @@ edition = "2021"
 [dependencies]
 rayon.workspace = true
 
+arith = { path = "../../arith" }
+
 [dev-dependencies]
 serial_test.workspace = true

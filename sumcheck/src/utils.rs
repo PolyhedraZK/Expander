@@ -1,3 +1,5 @@
+use std::vec;
+
 use arith::{Field, SimdField};
 use mpi_config::MPIConfig;
 use transcript::Transcript;
@@ -25,7 +27,11 @@ pub fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar 
 
 /// Transcript IO between sumcheck steps
 #[inline]
-pub fn transcript_io<F, T>(mpi_config: &MPIConfig, ps: &[F], transcript: &mut T) -> F
+pub fn transcript_io<F, T>(
+    // mpi_config: &MPIConfig,
+    ps: &[F],
+    transcript: &mut T,
+) -> F
 where
     F: Field,
     T: Transcript<F>,
@@ -34,7 +40,9 @@ where
     for p in ps {
         transcript.append_field_element(p);
     }
-    let mut r = transcript.generate_challenge_field_element();
-    mpi_config.root_broadcast_f(&mut r);
-    r
+    // let mut r =
+    transcript.generate_challenge_field_element()
+
+    // mpi_config.root_broadcast_f(&mut r);
+    // r
 }

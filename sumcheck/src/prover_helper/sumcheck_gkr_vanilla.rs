@@ -328,20 +328,21 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
 
     #[inline]
     pub(crate) fn prepare_mpi_var_vals(&mut self) {
-        self.mpi_config.gather_vec(
-            &vec![self.sp.simd_var_v_evals[0]],
-            &mut self.sp.mpi_var_v_evals,
-        );
-        self.mpi_config.gather_vec(
-            &vec![self.sp.simd_var_hg_evals[0] * self.sp.eq_evals_at_r_simd0[0]],
-            &mut self.sp.mpi_var_hg_evals,
-        );
+        let start = self.mpi_config.current_size();
+        self.mpi_config.append_local_field(&self.sp.simd_var_v_evals[0]);
+        let end = self.mpi_config.current_size();
+        self.sp.mpi_var_v_evals = self.mpi_config.read_all_field_flat::<C::ChallengeField>(start, end);
+
+        let start = self.mpi_config.current_size();
+        self.mpi_config.append_local_field(&(self.sp.simd_var_hg_evals[0] * self.sp.eq_evals_at_r_simd0[0]));
+        let end = self.mpi_config.current_size();
+        self.sp.mpi_var_hg_evals = self.mpi_config.read_all_field_flat::<C::ChallengeField>(start, end);
     }
 
     #[inline]
     pub(crate) fn prepare_y_vals(&mut self) {
         let mut v_rx_rsimd_rw = self.sp.mpi_var_v_evals[0];
-        self.mpi_config.root_broadcast_f(&mut v_rx_rsimd_rw);
+        // self.mpi_config.root_broadcast_f(&mut v_rx_rsimd_rw);
 
         let mul = &self.layer.mul;
         let eq_evals_at_rz0 = &self.sp.eq_evals_at_rz0;

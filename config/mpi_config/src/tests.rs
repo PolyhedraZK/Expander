@@ -114,7 +114,7 @@ fn test_cross_thread_communication() {
 
         thread.append(&data).expect("Failed to append");
 
-        let results = mpi_config.sync(start, end);
+        let results = mpi_config.read_all(start, end);
         assert_eq!(results.len(), num_threads as usize);
 
         for (i, result) in results.iter().enumerate() {
@@ -151,7 +151,7 @@ fn test_incremental_updates() {
 
             thread.append(&data).expect("Failed to append");
 
-            let results = mpi_config.sync(start, end);
+            let results = mpi_config.read_all(start, end);
             assert_eq!(results.len(), num_threads as usize);
 
             println!("Thread {} iteration {}: {:?}", rank, i, results);

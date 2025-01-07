@@ -199,7 +199,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
             // read the last poly.hypercube_size() from each thread
             let end = mpi_config.threads[0].size();
             let start = end - poly.hypercube_size();
-            let payloads = mpi_config.sync(start, end); // read #thread payloads
+            let payloads = mpi_config.read_all(start, end); // read #thread payloads
 
             payloads
                 .iter()

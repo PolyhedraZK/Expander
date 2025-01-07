@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use arith::Field;
+
 use crate::{ThreadConfig, MAX_WAIT_CYCLES};
 
 /// Configuration for MPI
@@ -61,13 +63,26 @@ impl MPIConfig {
         rayon::current_thread_index().unwrap() == 0
     }
 
-    /// Sync with all threads' local memory by waiting until there is new data to read from all
+    #[inline]
+    /// Get the current thread
+    pub fn current_thread(&self) -> &ThreadConfig {
+        let index = rayon::current_thread_index().unwrap();
+        &self.threads[index]
+    }
+
+    #[inline]
+    /// Get the size of the current local memory
+    pub fn current_size(&self) -> usize {
+        self.current_thread().size()
+    }
+
+    /// Read all threads' local memory by waiting until there is new data to read from all
     /// threads.
     /// Returns a vector of slices, one for each thread's new data
     ///
     /// The threads are synchronized by the caller; within each period of time, all
     /// threads write a same amount of data
-    pub fn sync(&self, start: usize, end: usize) -> Vec<&[u8]> {
+    pub fn read_all(&self, start: usize, end: usize) -> Vec<&[u8]> {
         let total = self.threads.len();
         let mut pending = (0..total).collect::<Vec<_>>();
         let mut results: Vec<&[u8]> = vec![&[]; total];
@@ -101,5 +116,78 @@ impl MPIConfig {
             }
         }
         results
+    }
+
+    #[inline]
+    // todo: add a field buffer to the thread config so we can avoid field (de)serialization
+    pub fn read_all_field<F: Field>(&self, start: usize, end: usize) -> Vec<Vec<F>> {
+        let data = self.read_all(start, end);
+        data.iter()
+            .map(|x| {
+                x.chunks(F::SIZE)
+                    .map(|y| F::deserialize_from(y).unwrap())
+                    .collect()
+            })
+            .collect()
+    }
+
+    #[inline]
+    pub fn read_all_field_flat<F: Field>(&self, start: usize, end: usize) -> Vec<F> {
+        let data = self.read_all(start, end);
+        data.iter()
+            .flat_map(|x| {
+                x.chunks(F::SIZE)
+                    .map(|y| F::deserialize_from(y).unwrap())
+            })
+            .collect()
+    }
+
+    #[inline]
+    /// Append data to the current thread's local memory
+    pub fn append_local(&self, data: &[u8]) {
+        let thread = self.current_thread();
+        thread.append(data).expect("Failed to append");
+    }
+
+    #[inline]
+    /// Append data to the current thread's local memory
+    pub fn append_local_field<F: Field>(&self, f: &F) {
+        let mut data = vec![];
+        f.serialize_into(&mut data).unwrap();
+        self.append_local(&data);
+    }
+
+    /// coefficient has a length of mpi_world_size
+    #[inline]
+    pub fn coef_combine_vec<F: Field>(&self, local_vec: &Vec<F>, coefficient: &[F]) -> Vec<F> {
+        if self.world_size == 1 {
+            // Warning: literally, it should be coefficient[0] * local_vec
+            // but coefficient[0] is always one in our use case of self.world_size = 1
+            local_vec.clone()
+        } else {
+            // write local vector to the buffer, then sync up all threads
+            let start = self.current_thread().size();
+            let data = local_vec
+                .iter()
+                .flat_map(|&x| {
+                    let mut buf = vec![];
+                    x.serialize_into(&mut buf).unwrap();
+                    buf
+                })
+                .collect::<Vec<u8>>();
+            self.append_local(&data);
+            let end = self.current_thread().size();
+            let all_fields = self.read_all_field::<F>(start, end);
+
+            // build the result via linear combination
+            let mut result = vec![F::zero(); local_vec.len()];
+            for i in 0..local_vec.len() {
+                for j in 0..(self.world_size as usize) {
+                    result[i] += all_fields[j][i] * coefficient[j];
+                }
+            }
+
+            result
+        }
     }
 }
