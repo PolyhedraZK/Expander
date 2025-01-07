@@ -328,6 +328,8 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
 
     #[inline]
     pub(crate) fn prepare_mpi_var_vals(&mut self) {
+        // assert!(self.mpi_config.is_current_thread_synced());
+
         let start = self.mpi_config.current_size();
         self.mpi_config
             .append_local_field(&self.sp.simd_var_v_evals[0]);

@@ -32,3 +32,12 @@ const MAX_WAIT_CYCLES: usize = 1000000;
 
 #[cfg(test)]
 mod tests;
+
+#[macro_export]
+macro_rules! root_println {
+    ($config: expr, $($arg:tt)*) => {
+        if $config.is_root() {
+            println!($($arg)*);
+        }
+    };
+}

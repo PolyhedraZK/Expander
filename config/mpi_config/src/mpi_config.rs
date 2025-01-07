@@ -42,6 +42,15 @@ impl PartialEq for MPIConfig {
 
 impl MPIConfig {
     #[inline]
+    pub fn single_thread() -> Self {
+        Self {
+            world_size: 1,
+            global_memory: Arc::from(vec![]),
+            threads: vec![ThreadConfig::new(0, 1024 * 1024)],
+        }
+    }
+
+    #[inline]
     pub fn new(world_size: i32, global_data: Arc<[u8]>, buffer_size: usize) -> Self {
         Self {
             world_size,
@@ -83,34 +92,34 @@ impl MPIConfig {
         self.current_thread().size()
     }
 
-    #[inline]
-    /// Check if the current thread is synced
-    pub fn is_current_thread_synced(&self) -> bool {
-        self.current_thread().is_synced()
-    }
+    // #[inline]
+    // /// Check if the current thread is synced
+    // pub fn is_current_thread_synced(&self) -> bool {
+    //     self.current_thread().is_synced()
+    // }
 
-    #[inline]
-    /// Check if all threads are synced
-    pub fn are_all_threads_synced(&self) -> bool {
-        self.threads.iter().all(|t| t.is_synced())
-    }
+    // #[inline]
+    // /// Check if all threads are synced
+    // pub fn are_all_threads_synced(&self) -> bool {
+    //     self.threads.iter().all(|t| t.is_synced())
+    // }
 
-    #[inline]
-    /// Sync up the current thread
-    /// Returns a vector of slices, one for each thread's new data
-    pub fn sync_up(&mut self) -> Vec<&[u8]> {
-        if self.is_current_thread_synced() {
-            return vec![];
-        }
+    // #[inline]
+    // /// Sync up the current thread
+    // /// Returns a vector of slices, one for each thread's new data
+    // pub fn sync_up(&mut self) -> Vec<&[u8]> {
+    //     if self.is_current_thread_synced() {
+    //         return vec![];
+    //     }
 
-        let start = self.current_thread().last_synced;
-        let end = self.current_thread().size();
-        // update the pointer to the latest index
-        self.current_thread_mut().last_synced = end;
-        let result = self.read_all(start, end);
+    //     let start = self.current_thread().last_synced;
+    //     let end = self.current_thread().size();
+    //     // update the pointer to the latest index
+    //     self.current_thread_mut().last_synced = end;
+    //     let result = self.read_all(start, end);
 
-        result
-    }
+    //     result
+    // }
 
     /// Read all threads' local memory by waiting until there is new data to read from all
     /// threads.
@@ -169,6 +178,7 @@ impl MPIConfig {
     }
 
     #[inline]
+    // todo: add a field buffer to the thread config so we can avoid field (de)serialization
     pub fn read_all_field_flat<F: Field>(&self, start: usize, end: usize) -> Vec<F> {
         let data = self.read_all(start, end);
         data.iter()
@@ -188,6 +198,20 @@ impl MPIConfig {
     pub fn append_local_field<F: Field>(&self, f: &F) {
         let mut data = vec![];
         f.serialize_into(&mut data).unwrap();
+        self.append_local(&data);
+    }
+
+    #[inline]
+    /// Append data to the current thread's local memory
+    pub fn append_local_fields<F: Field>(&self, f: &[F]) {
+        let data = f
+            .iter()
+            .flat_map(|x| {
+                let mut buf = vec![];
+                x.serialize_into(&mut buf).unwrap();
+                buf
+            })
+            .collect::<Vec<u8>>();
         self.append_local(&data);
     }
 
