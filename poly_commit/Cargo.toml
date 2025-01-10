@@ -10,6 +10,7 @@ mpi_config = { path = "../config/mpi_config" }
 polynomials = { path = "../arith/polynomials"}
 transcript = { path = "../transcript" }
 tree = { path = "../tree" }
+gf2 = { path = "../arith/gf2" }
 
 rand.workspace = true
 ethnum.workspace = true
@@ -18,7 +19,6 @@ thiserror.workspace = true
 itertools.workspace = true
 
 [dev-dependencies]
-gf2 = { path = "../arith/gf2" }
 gf2_128 = { path = "../arith/gf2_128" }
 mersenne31 = { path = "../arith/mersenne31" }
 
