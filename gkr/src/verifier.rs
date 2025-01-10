@@ -286,7 +286,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         // transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
         if self.config.mpi_config.world_size() > 1 {
-            let state = transcript.hash_and_return_state(); // Trigger an additional hash
+            let state = transcript.hash_and_return_state(); // Sync up the Fiat-Shamir randomness
             transcript.set_state(&state);
         }
 
@@ -309,7 +309,8 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         log::info!("GKR verification: {}", verified);
 
         if self.config.mpi_config.world_size() > 1 {
-            let _ = transcript.hash_and_return_state(); // Trigger an additional hash
+            let state = transcript.hash_and_return_state(); // Sync up the Fiat-Shamir randomness
+            transcript.set_state(&state);
         }
 
         verified &= self.get_pcs_opening_from_proof_and_verify(
