@@ -5,6 +5,7 @@ use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gf2::{GF2x128, GF2x8, GF2};
 use gf2_128::GF2_128;
+use mersenne31::{M31Ext3, M31x16, M31};
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
@@ -49,6 +50,7 @@ fn base_field_committing_benchmark_helper<F, ComPackF>(
 
 fn orion_base_field_committing_benchmark(c: &mut Criterion) {
     base_field_committing_benchmark_helper::<GF2, GF2x128>(c, 19, 30);
+    base_field_committing_benchmark_helper::<M31, M31x16>(c, 19, 26);
 }
 
 fn simd_field_committing_benchmark_helper<F, SimdF, ComPackF>(
@@ -160,6 +162,13 @@ fn orion_base_field_opening_benchmark(c: &mut Criterion) {
         GF2x8,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 19, 30);
+    base_field_opening_benchmark_helper::<
+        M31,
+        M31Ext3,
+        M31x16,
+        M31x16,
+        BytesHashTranscript<_, Keccak256hasher>,
+    >(c, 19, 26);
 }
 
 fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
