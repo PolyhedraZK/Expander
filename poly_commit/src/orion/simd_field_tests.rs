@@ -1,6 +1,7 @@
 use arith::{Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
+use mersenne31::{M31x16, M31};
 use polynomials::MultiLinearPoly;
 
 use crate::{
@@ -79,4 +80,8 @@ fn test_orion_commit_simd_field_consistency() {
         test_orion_commit_simd_field_consistency_generic::<GF2, GF2x8, GF2x64>(num_vars);
         test_orion_commit_simd_field_consistency_generic::<GF2, GF2x8, GF2x128>(num_vars);
     });
+
+    (12..=18).for_each(|num_vars| {
+        test_orion_commit_simd_field_consistency_generic::<M31, M31x16, M31x16>(num_vars)
+    })
 }
