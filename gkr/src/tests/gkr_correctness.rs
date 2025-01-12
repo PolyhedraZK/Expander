@@ -12,7 +12,7 @@ use gf2::GF2x128;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mersenne31::M31x16;
 use mpi_config::{root_println, MPIConfig};
-use poly_commit::{expander_pcs_init_testing_only, OrionSIMDFieldPCS, RawExpanderGKR};
+use poly_commit::{expander_pcs_init_testing_only, OrionPCSForGKR, RawExpanderGKR};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha12Rng;
 use sha2::Digest;

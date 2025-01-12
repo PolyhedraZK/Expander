@@ -1,6 +1,7 @@
 use std::iter;
 
 use arith::{Field, SimdField};
+use gf2::GF2;
 use gkr_field_config::GKRFieldConfig;
 use itertools::izip;
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
@@ -11,7 +12,7 @@ use crate::{
     OrionSRS, PCS_SOUNDNESS_BITS,
 };
 
-pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF, OpenPackF, T>(
+pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF, T>(
     mpi_world_size: usize,
     vk: &OrionSRS,
     commitment: &OrionCommitment,
@@ -23,7 +24,6 @@ pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF, OpenPackF, T>(
 where
     C: GKRFieldConfig,
     ComPackF: SimdField<Scalar = C::CircuitField>,
-    OpenPackF: SimdField<Scalar = C::CircuitField>,
     T: Transcript<C::ChallengeField>,
 {
     let local_num_vars = eval_point.num_vars() - mpi_world_size.ilog2() as usize;
@@ -35,19 +35,16 @@ where
         (row_num, msg_size)
     };
 
-    let num_vars_in_local_rows = row_num.ilog2() as usize;
-    let num_vars_in_unpacked_msg = local_num_vars - num_vars_in_local_rows;
-    let local_xs = eval_point.local_xs();
+    let num_vars_in_simd = C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
+    let num_vars_in_msg = msg_size.ilog2() as usize;
 
-    let eq_local_coeffs = EqPolynomial::build_eq_x_r(&local_xs[num_vars_in_unpacked_msg..]);
-    let eq_worlds_coeffs = EqPolynomial::build_eq_x_r(&eval_point.x_mpi);
+    let global_xs = eval_point.global_xs();
 
     // NOTE: working on evaluation response
-    let mut scratch =
-        vec![C::ChallengeField::ZERO; mpi_world_size * C::SimdCircuitField::PACK_SIZE * msg_size];
+    let mut scratch = vec![C::ChallengeField::ZERO; msg_size];
     let final_eval = RefMultiLinearPoly::from_ref(&proof.eval_row).evaluate_with_buffer(
-        &local_xs[..num_vars_in_unpacked_msg],
-        &mut scratch[..C::SimdCircuitField::PACK_SIZE * msg_size],
+        &global_xs[num_vars_in_simd..num_vars_in_simd + num_vars_in_msg],
+        &mut scratch,
     );
     if final_eval != eval {
         return false;
@@ -57,7 +54,9 @@ where
     // then draw query points from fiat shamir transcripts
     let proximity_reps = vk.proximity_repetitions::<C::ChallengeField>(PCS_SOUNDNESS_BITS);
     let proximity_local_coeffs: Vec<Vec<C::ChallengeField>> = (0..proximity_reps)
-        .map(|_| transcript.generate_challenge_field_elements(row_num))
+        .map(|_| {
+            transcript.generate_challenge_field_elements(row_num * C::SimdCircuitField::PACK_SIZE)
+        })
         .collect();
 
     let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
@@ -67,104 +66,93 @@ where
         .map(|_| transcript.generate_challenge_field_elements(mpi_world_size))
         .collect();
 
+    // NOTE: work on the Merkle tree path validity
+    let roots: Vec<_> = proof
+        .query_openings
+        .chunks(query_num)
+        .map(|qs| qs[0].root())
+        .collect();
+
     let final_root = {
         // NOTE: check all merkle paths, and check merkle roots against commitment
-        let roots: Vec<_> = proof
-            .query_openings
-            .chunks(query_num)
-            .map(|qs| qs[0].root())
-            .collect();
-
         let final_tree_height = 1 + roots.len().ilog2();
-        let (internals, _) = tree::Tree::new_with_leaf_nodes(roots, final_tree_height);
+        let (internals, _) = tree::Tree::new_with_leaf_nodes(roots.clone(), final_tree_height);
         internals[0]
     };
     if final_root != *commitment {
         return false;
     }
 
-    // NOTE: prepare the interleaved alphabets from the MT paths,
-    // but reshuffle the packed elements into another direction
-    let mut scratch_f = vec![C::CircuitField::ZERO; C::SimdCircuitField::PACK_SIZE * row_num];
-    let shuffled_interleaved_alphabet: Vec<_> = proof
+    if izip!(proof.query_openings.chunks(query_num), &roots)
+        .any(|(range_openings, root)| !orion_mt_verify(vk, &query_indices, range_openings, root))
+    {
+        return false;
+    }
+
+    // NOTE: prepare the interleaved alphabets from the MT paths
+    let mut packed_interleaved_alphabets: Vec<Vec<C::SimdCircuitField>> =
+        vec![Vec::new(); query_num];
+
+    let concatenated_packed_interleaved_alphabets: Vec<_> = proof
         .query_openings
         .iter()
         .map(|c| -> Vec<_> {
-            let mut elts = c.unpack_field_elems::<C::CircuitField, ComPackF>();
-            transpose_in_place(&mut elts, &mut scratch_f, row_num);
-            elts.chunks(OpenPackF::PACK_SIZE)
-                .map(OpenPackF::pack)
+            let elts = c.unpack_field_elems::<C::CircuitField, ComPackF>();
+            elts.chunks(C::SimdCircuitField::PACK_SIZE)
+                .map(C::SimdCircuitField::pack)
+                .collect()
+        })
+        .collect();
+
+    concatenated_packed_interleaved_alphabets
+        .chunks(query_num)
+        .for_each(|alphabets| {
+            izip!(&mut packed_interleaved_alphabets, alphabets)
+                .for_each(|(packed, alphabet)| packed.extend_from_slice(alphabet))
+        });
+
+    let mut eq_vars = vec![C::ChallengeField::ZERO; eval_point.num_vars() - num_vars_in_msg];
+    eq_vars[..num_vars_in_simd].copy_from_slice(&global_xs[..num_vars_in_simd]);
+    eq_vars[num_vars_in_simd..].copy_from_slice(&global_xs[num_vars_in_simd + num_vars_in_msg..]);
+
+    let eq_col_coeffs = EqPolynomial::build_eq_x_r(&eq_vars);
+
+    let proximity_coeffs: Vec<Vec<C::ChallengeField>> = (0..proximity_reps)
+        .map(|i| {
+            proximity_worlds_coeffs[i]
+                .iter()
+                .flat_map(|w| {
+                    proximity_local_coeffs[i]
+                        .iter()
+                        .map(|l| *l * *w)
+                        .collect::<Vec<_>>()
+                })
                 .collect()
         })
         .collect();
 
     // NOTE: decide if expected alphabet matches actual responses
-    let table_num = row_num / OpenPackF::PACK_SIZE;
-    let mut luts = SubsetSumLUTs::<C::ChallengeField>::new(OpenPackF::PACK_SIZE, table_num);
-    assert_eq!(row_num % OpenPackF::PACK_SIZE, 0);
+    izip!(&proximity_coeffs, &proof.proximity_rows)
+        .chain(iter::once((&eq_col_coeffs, &proof.eval_row)))
+        .all(|(rl, msg)| {
+            let codeword = match vk.code_instance.encode(msg) {
+                Ok(c) => c,
+                _ => return false,
+            };
 
-    let mut scratch_q =
-        vec![C::ChallengeField::ZERO; mpi_world_size * C::SimdCircuitField::PACK_SIZE * query_num];
-    let mut codeword =
-        vec![C::ChallengeField::ZERO; C::SimdCircuitField::PACK_SIZE * vk.codeword_len()];
-
-    izip!(
-        &proximity_local_coeffs,
-        &proximity_worlds_coeffs,
-        &proof.proximity_rows
-    )
-    .chain(iter::once((
-        &eq_local_coeffs,
-        &eq_worlds_coeffs,
-        &proof.eval_row,
-    )))
-    .all(|(local_coeffs, worlds_coeffs, msg)| {
-        // NOTE: compute final actual alphabets cross worlds
-        luts.build(local_coeffs);
-        let mut each_world_alphabets: Vec<_> = shuffled_interleaved_alphabet
-            .iter()
-            .flat_map(|c| -> Vec<_> {
-                c.chunks(table_num)
-                    .map(|ts| luts.lookup_and_sum(ts))
-                    .collect()
-            })
-            .collect();
-        transpose_in_place(&mut each_world_alphabets, &mut scratch_q, mpi_world_size);
-        let actual_alphabets: Vec<_> = each_world_alphabets
-            .chunks(mpi_world_size)
-            .map(|rs| izip!(rs, worlds_coeffs).map(|(&l, &r)| l * r).sum())
-            .collect();
-
-        // NOTE: compute SIMD codewords from the message
-        let mut msg_cloned = msg.clone();
-        transpose_in_place(
-            &mut msg_cloned,
-            &mut scratch[..C::SimdCircuitField::PACK_SIZE * msg_size],
-            msg_size,
-        );
-        izip!(
-            msg_cloned.chunks(msg_size),
-            codeword.chunks_mut(vk.codeword_len())
-        )
-        .for_each(|(msg, c)| vk.code_instance.encode_in_place(msg, c).unwrap());
-        transpose_in_place(
-            &mut codeword,
-            &mut scratch[..C::SimdCircuitField::PACK_SIZE * vk.codeword_len()],
-            C::SimdCircuitField::PACK_SIZE,
-        );
-
-        // NOTE: check actual SIMD alphabets against expected SIMD alphabets
-        izip!(
-            &query_indices,
-            actual_alphabets.chunks(C::SimdCircuitField::PACK_SIZE)
-        )
-        .all(|(qi, actual_alphabets)| {
-            let index = qi % vk.codeword_len();
-
-            let simd_starts = index * C::SimdCircuitField::PACK_SIZE;
-            let simd_ends = (index + 1) * C::SimdCircuitField::PACK_SIZE;
-
-            izip!(&codeword[simd_starts..simd_ends], actual_alphabets).all(|(ec, ac)| ec == ac)
+            match C::CircuitField::NAME {
+                GF2::NAME => lut_verify_alphabet_check(
+                    &codeword,
+                    rl,
+                    &query_indices,
+                    &packed_interleaved_alphabets,
+                ),
+                _ => simd_verify_alphabet_check(
+                    &codeword,
+                    rl,
+                    &query_indices,
+                    &packed_interleaved_alphabets,
+                ),
+            }
         })
-    })
 }

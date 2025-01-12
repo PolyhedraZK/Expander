@@ -171,7 +171,7 @@ fn orion_base_field_opening_benchmark(c: &mut Criterion) {
     >(c, 19, 26);
 }
 
-fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
+fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, T>(
     c: &mut Criterion,
     lowest_num_vars: usize,
     highest_num_vars: usize,
@@ -180,15 +180,13 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
     let mut group = c.benchmark_group(format!(
-        "Orion PCS SIMD field opening: SIMD-F = {}, EvalF = {}, ComPackF = {}, OpenPackF = {}",
+        "Orion PCS SIMD field opening: SIMD-F = {}, EvalF = {}, ComPackF = {}",
         type_name::<SimdF>(),
         type_name::<EvalF>(),
         type_name::<ComPackF>(),
-        type_name::<OpenPackF>()
     ));
 
     let mut rng = test_rng();
@@ -216,15 +214,13 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, OpenPackF, T>(
                 ),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(
-                            orion_open_simd_field::<F, SimdF, _, ComPackF, OpenPackF, T>(
-                                &srs,
-                                &poly,
-                                &eval_point,
-                                &mut transcript,
-                                &scratch_pad,
-                            ),
-                        )
+                        _ = black_box(orion_open_simd_field::<F, SimdF, _, ComPackF, T>(
+                            &srs,
+                            &poly,
+                            &eval_point,
+                            &mut transcript,
+                            &scratch_pad,
+                        ))
                     })
                 },
             )
@@ -238,7 +234,6 @@ fn orion_simd_field_opening_benchmark(c: &mut Criterion) {
         GF2x8,
         GF2_128,
         GF2x128,
-        GF2x8,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 19, 30);
 }

@@ -209,8 +209,49 @@ pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row
     mat.copy_from_slice(scratch);
 }
 
+#[inline(always)]
+pub(crate) fn transpose_and_pack<F, SimdF>(evaluations: &mut [F], row_num: usize) -> Vec<SimdF>
+where
+    F: Field,
+    SimdF: SimdField<Scalar = F>,
+{
+    // NOTE: pre transpose evaluations
+    let mut scratch = vec![F::ZERO; evaluations.len()];
+    transpose_in_place(evaluations, &mut scratch, row_num);
+    drop(scratch);
+
+    // NOTE: SIMD pack each row of transposed matrix
+    evaluations
+        .chunks(SimdF::PACK_SIZE)
+        .map(SimdField::pack)
+        .collect()
+}
+
+#[inline(always)]
+pub(crate) fn transpose_and_pack_simd<F, SimdF, PackF>(
+    evaluations: &mut [SimdF],
+    row_num: usize,
+) -> Vec<PackF>
+where
+    F: Field,
+    SimdF: SimdField<Scalar = F>,
+    PackF: SimdField<Scalar = F>,
+{
+    // NOTE: pre transpose evaluations
+    let mut scratch = vec![SimdF::ZERO; evaluations.len()];
+    transpose_in_place(evaluations, &mut scratch, row_num);
+    drop(scratch);
+
+    // NOTE: SIMD pack each row of transposed matrix
+    let relative_pack_size = PackF::PACK_SIZE / SimdF::PACK_SIZE;
+    evaluations
+        .chunks(relative_pack_size)
+        .map(PackF::pack_from_simd)
+        .collect()
+}
+
 /*
- * LINEAR OPERATIONS
+ * LINEAR OPERATIONS FOR GF2 (LOOKUP TABLE BASED)
  */
 
 pub struct SubsetSumLUTs<F: Field> {
@@ -271,6 +312,73 @@ impl<F: Field> SubsetSumLUTs<F> {
 }
 
 #[inline(always)]
+pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
+    row_num: usize,
+    packed_evals: &[SimdF],
+    eq_col_coeffs: &[EvalF],
+    eval_row: &mut [EvalF],
+    proximity_rows: &mut [Vec<EvalF>],
+    transcript: &mut T,
+) where
+    F: Field,
+    EvalF: ExtensionField<BaseField = F>,
+    SimdF: SimdField<Scalar = F>,
+    T: Transcript<EvalF>,
+{
+    // NOTE: declare the look up tables for column sums
+    let table_num = row_num / SimdF::PACK_SIZE;
+    let mut luts = SubsetSumLUTs::<EvalF>::new(SimdF::PACK_SIZE, table_num);
+    assert_eq!(row_num % SimdF::PACK_SIZE, 0);
+
+    // NOTE: working on evaluation response of tensor code IOP based PCS
+    luts.build(eq_col_coeffs);
+
+    izip!(packed_evals.chunks(table_num), eval_row)
+        .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
+
+    // NOTE: draw random linear combination out
+    // and compose proximity response(s) of tensor code IOP based PCS
+    proximity_rows.iter_mut().for_each(|row_buffer| {
+        let random_coeffs = transcript.generate_challenge_field_elements(row_num);
+        luts.build(&random_coeffs);
+
+        izip!(packed_evals.chunks(table_num), row_buffer)
+            .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
+    });
+    drop(luts);
+}
+
+#[inline(always)]
+pub(crate) fn lut_verify_alphabet_check<F, SimdF, ExtF>(
+    codeword: &[ExtF],
+    fixed_rl: &[ExtF],
+    query_indices: &[usize],
+    packed_interleaved_alphabets: &[Vec<SimdF>],
+) -> bool
+where
+    F: Field,
+    SimdF: SimdField<Scalar = F>,
+    ExtF: ExtensionField<BaseField = F>,
+{
+    // NOTE: build up lookup table
+    let tables_num = fixed_rl.len() / SimdF::PACK_SIZE;
+    assert_eq!(fixed_rl.len() % SimdF::PACK_SIZE, 0);
+    let mut luts = SubsetSumLUTs::<ExtF>::new(SimdF::PACK_SIZE, tables_num);
+
+    luts.build(fixed_rl);
+
+    izip!(query_indices, packed_interleaved_alphabets).all(|(qi, interleaved_alphabet)| {
+        let index = qi % codeword.len();
+        let alphabet = luts.lookup_and_sum(interleaved_alphabet);
+        alphabet == codeword[index]
+    })
+}
+
+/*
+ * LINEAR OPERATIONS FOR MERSENNE31 (SIMD BASED)
+ */
+
+#[inline(always)]
 pub(crate) fn simd_inner_product<F, SimdF>(lhs: &[SimdF], rhs: &[SimdF]) -> F
 where
     F: Field,
@@ -301,4 +409,66 @@ where
         .for_each(|(e, simd_ext_limb)| *e = simd_inner_product(simd_ext_limb, simd_base_elems));
 
     ExtF::from_limbs(&ext_limbs)
+}
+
+#[inline(always)]
+pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
+    row_num: usize,
+    packed_evals: &[SimdF],
+    eq_col_coeffs: &[EvalF],
+    eval_row: &mut [EvalF],
+    proximity_rows: &mut [Vec<EvalF>],
+    transcript: &mut T,
+) where
+    F: Field,
+    EvalF: ExtensionField<BaseField = F>,
+    SimdF: SimdField<Scalar = F>,
+    T: Transcript<EvalF>,
+{
+    // NOTE: check SIMD inner product numbers for column sums
+    let simd_inner_prods = row_num / SimdF::PACK_SIZE;
+    assert_eq!(row_num % SimdF::PACK_SIZE, 0);
+
+    // NOTE: working on evaluation response of tensor code IOP based PCS
+    let mut eq_col_coeffs_limbs: Vec<_> = eq_col_coeffs.iter().flat_map(|e| e.to_limbs()).collect();
+    let eq_col_simd_limbs: Vec<_> = transpose_and_pack(&mut eq_col_coeffs_limbs, row_num);
+
+    izip!(packed_evals.chunks(simd_inner_prods), eval_row)
+        .for_each(|(p_col, res)| *res = simd_ext_base_inner_prod(&eq_col_simd_limbs, p_col));
+
+    // NOTE: draw random linear combination out
+    // and compose proximity response(s) of tensor code IOP based PCS
+    proximity_rows.iter_mut().for_each(|row_buffer| {
+        let random_coeffs = transcript.generate_challenge_field_elements(row_num);
+        let mut proximity_limbs: Vec<_> = random_coeffs.iter().flat_map(|e| e.to_limbs()).collect();
+        let proximity_simd_limbs: Vec<_> = transpose_and_pack(&mut proximity_limbs, row_num);
+
+        izip!(packed_evals.chunks(simd_inner_prods), row_buffer)
+            .for_each(|(p_col, res)| *res = simd_ext_base_inner_prod(&proximity_simd_limbs, p_col));
+    });
+}
+
+#[inline(always)]
+pub(crate) fn simd_verify_alphabet_check<F, SimdF, ExtF>(
+    codeword: &[ExtF],
+    fixed_rl: &[ExtF],
+    query_indices: &[usize],
+    packed_interleaved_alphabets: &[Vec<SimdF>],
+) -> bool
+where
+    F: Field,
+    SimdF: SimdField<Scalar = F>,
+    ExtF: ExtensionField<BaseField = F>,
+{
+    // NOTE: check SIMD inner product numbers for column sums
+    assert_eq!(fixed_rl.len() % SimdF::PACK_SIZE, 0);
+
+    let mut rl_limbs: Vec<_> = fixed_rl.iter().flat_map(|e| e.to_limbs()).collect();
+    let rl_simd_limbs: Vec<SimdF> = transpose_and_pack(&mut rl_limbs, fixed_rl.len());
+
+    izip!(query_indices, packed_interleaved_alphabets).all(|(qi, interleaved_alphabet)| {
+        let index = qi % codeword.len();
+        let alphabet: ExtF = simd_ext_base_inner_prod(&rl_simd_limbs, interleaved_alphabet);
+        alphabet == codeword[index]
+    })
 }

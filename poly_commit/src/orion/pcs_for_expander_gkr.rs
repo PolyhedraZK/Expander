@@ -11,19 +11,11 @@ use crate::{
     ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString,
 };
 
-impl<C, ComPackF, OpenPackF, T> PCSForExpanderGKR<C, T>
-    for OrionSIMDFieldPCS<
-        C::CircuitField,
-        C::SimdCircuitField,
-        C::ChallengeField,
-        ComPackF,
-        OpenPackF,
-        T,
-    >
+impl<C, ComPackF, T> PCSForExpanderGKR<C, T>
+    for OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF, T>
 where
     C: GKRFieldConfig,
     ComPackF: SimdField<Scalar = C::CircuitField>,
-    OpenPackF: SimdField<Scalar = C::CircuitField>,
     T: Transcript<C::ChallengeField>,
 {
     const NAME: &'static str = "OrionPCSForExpanderGKR";
@@ -107,7 +99,6 @@ where
             C::SimdCircuitField,
             C::ChallengeField,
             ComPackF,
-            OpenPackF,
             T,
         >(proving_key, poly, &local_xs, transcript, scratch_pad);
         if mpi_config.world_size() == 1 {
@@ -187,7 +178,6 @@ where
                 C::SimdCircuitField,
                 C::ChallengeField,
                 ComPackF,
-                OpenPackF,
                 T,
             >(
                 verifying_key,
@@ -201,7 +191,7 @@ where
 
         // NOTE: we now assume that the input opening is from the root machine,
         // as proofs from other machines are typically undefined
-        orion_verify_simd_field_aggregated::<C, ComPackF, OpenPackF, T>(
+        orion_verify_simd_field_aggregated::<C, ComPackF, T>(
             mpi_config.world_size(),
             verifying_key,
             commitment,
@@ -212,3 +202,11 @@ where
         )
     }
 }
+
+pub type OrionPCSForGKR<C, ComPack, T> = OrionSIMDFieldPCS<
+    <C as GKRFieldConfig>::CircuitField,
+    <C as GKRFieldConfig>::SimdCircuitField,
+    <C as GKRFieldConfig>::ChallengeField,
+    ComPack,
+    T,
+>;

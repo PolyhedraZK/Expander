@@ -80,6 +80,13 @@ impl<C: GKRFieldConfig> ExpanderGKRChallenge<C> {
         local_xs
     }
 
+    pub fn global_xs(&self) -> Vec<C::ChallengeField> {
+        let mut global_xs = vec![C::ChallengeField::ZERO; self.num_vars()];
+        global_xs[..self.x_simd.len() + self.x.len()].copy_from_slice(&self.local_xs());
+        global_xs[self.x_simd.len() + self.x.len()..].copy_from_slice(&self.x_mpi);
+        global_xs
+    }
+
     pub fn num_vars(&self) -> usize {
         self.x.len() + self.x_simd.len() + self.x_mpi.len()
     }

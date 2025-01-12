@@ -107,18 +107,11 @@ fn parse_polynomial_commitment_type(
         ),
         ("Orion", "GF2") => (
             "Orion".to_owned(),
-            format!(
-                "
-OrionSIMDFieldPCS::<
-    <{field_config} as GKRFieldConfig>::CircuitField,
-    <{field_config} as GKRFieldConfig>::SimdCircuitField,
-    <{field_config} as GKRFieldConfig>::ChallengeField,
-    GF2x128,
-    <{field_config} as GKRFieldConfig>::SimdCircuitField,
-    {transcript_type}
->"
-            )
-            .to_owned(),
+            format!("OrionPCSForGKR::<{field_config}, GF2x128, {transcript_type}>").to_owned(),
+        ),
+        ("Orion", "M31") => (
+            "Orion".to_owned(),
+            format!("OrionPCSForGKR::<{field_config}, M31x16, {transcript_type}>").to_owned(),
         ),
         _ => panic!("Unknown polynomial commitment type in config macro expansion"),
     }

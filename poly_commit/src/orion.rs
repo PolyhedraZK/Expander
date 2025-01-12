@@ -32,6 +32,8 @@ mod simd_field_agg_impl;
 mod simd_field_agg_tests;
 
 mod pcs_for_expander_gkr;
+pub use pcs_for_expander_gkr::OrionPCSForGKR;
+
 mod pcs_trait_impl;
 pub use pcs_trait_impl::{OrionBaseFieldPCS, OrionSIMDFieldPCS};
 

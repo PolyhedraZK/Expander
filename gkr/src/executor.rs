@@ -15,7 +15,7 @@ use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mersenne31::M31x16;
-use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR, OrionSIMDFieldPCS};
+use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR, OrionPCSForGKR};
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
 use transcript::{BytesHashTranscript, FieldHashTranscript, SHA256hasher};
