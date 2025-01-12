@@ -83,13 +83,15 @@ where
         return false;
     }
 
-    if izip!(proof.query_openings.chunks(query_num), &roots)
-        .any(|(range_openings, root)| !orion_mt_verify(vk, &query_indices, range_openings, root))
-    {
+    if !orion_mt_verify(
+        vk,
+        &query_indices,
+        &proof.query_openings[..query_num],
+        &roots[0],
+    ) {
         return false;
     }
 
-    // NOTE: prepare the interleaved alphabets from the MT paths
     let mut packed_interleaved_alphabets: Vec<Vec<C::SimdCircuitField>> =
         vec![Vec::new(); query_num];
 

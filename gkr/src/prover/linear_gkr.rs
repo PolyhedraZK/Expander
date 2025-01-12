@@ -140,6 +140,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         );
 
         if let Some(ry) = ry {
+            transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
             self.prove_input_layer_claim(
                 &mle_ref,
                 &ExpanderGKRChallenge {

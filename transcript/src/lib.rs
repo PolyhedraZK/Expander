@@ -5,7 +5,7 @@ mod transcript;
 pub use transcript::{BytesHashTranscript, FieldHashTranscript, Transcript};
 
 mod transcript_utils;
-pub use transcript_utils::transcript_root_broadcast;
+pub use transcript_utils::{transcript_root_broadcast, transcript_verifier_sync};
 
 mod proof;
 pub use proof::Proof;

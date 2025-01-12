@@ -79,6 +79,12 @@ fn test_gkr_correctness() {
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Raw,
     );
+    declare_gkr_config!(
+        C9,
+        FieldType::M31,
+        FiatShamirHashType::Poseidon,
+        PolynomialCommitmentType::Orion,
+    );
 
     test_gkr_correctness_helper(
         &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
@@ -114,6 +120,10 @@ fn test_gkr_correctness() {
     );
     test_gkr_correctness_helper(
         &Config::<C8>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper(
+        &Config::<C9>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
 
