@@ -50,7 +50,7 @@ fn base_field_committing_benchmark_helper<F, ComPackF>(
 
 fn orion_base_field_committing_benchmark(c: &mut Criterion) {
     base_field_committing_benchmark_helper::<GF2, GF2x128>(c, 19, 30);
-    base_field_committing_benchmark_helper::<M31, M31x16>(c, 19, 26);
+    base_field_committing_benchmark_helper::<M31, M31x16>(c, 19, 27);
 }
 
 fn simd_field_committing_benchmark_helper<F, SimdF, ComPackF>(
@@ -100,6 +100,7 @@ fn simd_field_committing_benchmark_helper<F, SimdF, ComPackF>(
 
 fn orion_simd_field_committing_benchmark(c: &mut Criterion) {
     simd_field_committing_benchmark_helper::<GF2, GF2x8, GF2x128>(c, 19, 30);
+    simd_field_committing_benchmark_helper::<M31, M31x16, M31x16>(c, 19, 27);
 }
 
 fn base_field_opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
@@ -236,6 +237,13 @@ fn orion_simd_field_opening_benchmark(c: &mut Criterion) {
         GF2x128,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 19, 30);
+    simd_field_opening_benchmark_helper::<
+        M31,
+        M31x16,
+        M31Ext3,
+        M31x16,
+        BytesHashTranscript<_, Keccak256hasher>,
+    >(c, 19, 27);
 }
 
 criterion_group!(
