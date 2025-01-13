@@ -247,7 +247,7 @@ func (buf *InputBuf) ReadProof() *Proof {
 func ReadCircuit(circuit_filename string, witness_filename string, mpi_size uint) (*Circuit, [][]frontend.Variable) {
 	circuit_input_buf := NewInputBuf(circuit_filename)
 	ecc_circuit := circuit_input_buf.ReadECCCircuit()
-	expander_circuit := ecc_circuit.Flatten()
+	layered_circuit := ecc_circuit.Flatten()
 
 	witness_input_buf := NewInputBuf(witness_filename)
 	witness := witness_input_buf.ReadWitness()
@@ -264,9 +264,9 @@ func ReadCircuit(circuit_filename string, witness_filename string, mpi_size uint
 	}
 
 	public_input, private_input := witness.ToPubPri()
-	expander_circuit.PublicInput = public_input
+	layered_circuit.PublicInput = public_input
 
-	return expander_circuit, private_input
+	return layered_circuit, private_input
 }
 
 func ReadProof(proof_filename string) *Proof {
