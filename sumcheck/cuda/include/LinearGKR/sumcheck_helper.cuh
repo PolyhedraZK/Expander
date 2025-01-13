@@ -7,6 +7,127 @@
 #define MAX_RESULT_LEN  32
 
 namespace gkr{
+    // Try to acquire the lock until it succeeds
+    __device__ void acquire_lock(uint32_t* lock_threadId, uint32_t x, uint32_t thread_index) {
+        uint32_t old;
+        do {
+            old = atomicCAS(&lock_threadId[x], UINT32_MAX, thread_index);
+        } while (old != UINT32_MAX);
+        // Exit acquire after lock get
+    }
+
+    // Release the lock when update finished
+    __device__ void release_lock(uint32_t* lock_threadId, uint32_t x) {
+        atomicExch(&lock_threadId[x], UINT32_MAX);
+    }
+
+    // Accumulate the HG for add
+    template<typename F, typename F_primitive>
+    __global__
+    void build_gx_add(      // Input
+            const Gate<F_primitive, 1>* __restrict__ d_gate_sparse_evals,
+            const F_primitive*          __restrict__ d_eq_evals_rz1,
+            // Output
+            F*                    __restrict__ d_hg_vals,
+            bool*                 __restrict__ d_gate_exists,
+            // Lock
+            uint32_t *            __restrict__ d_lock_threadId,
+            // Loop trip count
+            uint32_t sparse_evals_len){
+        // Calculate the loop variable
+        uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i < sparse_evals_len){
+            const Gate<F_primitive, 1> &gate = d_gate_sparse_evals[i];
+            uint32_t x = gate.i_ids[0];
+            uint32_t z = gate.o_id;
+            F coef = gate.coef;
+            F_primitive eq_z = d_eq_evals_rz1[z];
+            // Acquire lock
+            acquire_lock(d_lock_threadId, x, i);
+            // Do accumulation atomically
+            F old_hg_val = d_hg_vals[x];
+            F new_hg_val = old_hg_val + (coef * eq_z);
+            d_hg_vals[x] = new_hg_val;
+            d_gate_exists[x] = true;
+            // Release lock
+            release_lock(d_lock_threadId, x);
+        }
+    }
+
+    // Accumulate the HG for mult
+    template<typename F, typename F_primitive>
+    __global__
+    void build_gx_mult(      // Input
+                       const Gate<F_primitive, 2>* __restrict__ d_gate_sparse_evals,
+                       const F*                    __restrict__ d_val_evals,
+                       const F_primitive*          __restrict__ d_eq_evals_rz1,
+                             // Output
+                             F*                    __restrict__ d_hg_vals,
+                             bool*                 __restrict__ d_gate_exists,
+                             // Lock
+                             uint32_t *            __restrict__ d_lock_threadId,
+                             // Loop trip count
+                             uint32_t sparse_evals_len){
+        // Calculate the loop variable
+        uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i < sparse_evals_len){
+            // Read gate
+            const Gate<F_primitive, 2> &gate = d_gate_sparse_evals[i];
+            uint32_t x = gate.i_ids[0];
+            uint32_t y = gate.i_ids[1];
+            uint32_t z = gate.o_id;
+            F coef     = gate.coef;
+            F val_y    = d_val_evals[y];
+            F_primitive eq_z = d_eq_evals_rz1[z];
+            // Acquire lock from x
+            acquire_lock(d_lock_threadId, x, i);
+            // Update the hg_vals
+            F old_hg_val = d_hg_vals[x];
+            F new_hg_val = old_hg_val + val_y * (coef * eq_z);
+            d_hg_vals[x] = new_hg_val;
+            d_gate_exists[x] = true;
+            // After update, release the lock to X
+            release_lock(d_lock_threadId, x);
+        }
+    }
+
+    // Accumulate the Hg for phase 2 of mult
+    template<typename F, typename F_primitive>
+    __global__
+    void build_hy_mult(      // Input
+            const Gate<F_primitive, 2>* __restrict__ d_gate_sparse_evals,
+            const F_primitive*          __restrict__ d_eq_rx,
+            const F_primitive*          __restrict__ d_eq_evals_rz1,
+            const F*                    __restrict__ d_v_rx,
+            // Output
+            F*                    __restrict__ d_hg_vals,
+            bool*                 __restrict__ d_gate_exists,
+            // Lock
+            uint32_t *            __restrict__ d_lock_threadId,
+            // Loop trip count
+            uint32_t sparse_evals_len){
+        // Calculate the loop variable
+        uint32_t i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i < sparse_evals_len){
+            const Gate<F_primitive, 2> &gate = d_gate_sparse_evals[i];
+            uint32_t x = gate.i_ids[0];
+            uint32_t y = gate.i_ids[1];
+            uint32_t z = gate.o_id;
+            F v_rx = *d_v_rx;
+            F_primitive rz1_z = d_eq_evals_rz1[z];
+            F_primitive rx_x  = d_eq_rx[x];
+            F coef            = gate.coef;
+            // Acquire lock
+            acquire_lock(d_lock_threadId, y, i);
+            // Do actual compute
+            F old_hg_val = d_hg_vals[y];
+            F new_hg_val = old_hg_val + (v_rx * rz1_z * rx_x * coef); // g(y) += eq(rz, z) * eq(rx, x) * v(y) * coef
+            d_hg_vals[y] = new_hg_val;
+            d_gate_exists[y] = true;
+            // Release lock
+            release_lock(d_lock_threadId, y);
+        }
+    }
 
     // CUDA Kernel for Sum-check
     template<typename F, typename F_primitive>
@@ -365,6 +486,16 @@ namespace gkr{
         }
     };
 
+    template <typename  F_primitive>
+    __global__
+    void vecadd(const F_primitive* __restrict__ d_A,
+                const F_primitive* __restrict__ d_B,
+                F_primitive* __restrict__ d_C,
+                uint32_t len){
+        uint32_t i = blockDim.x * blockIdx.x + threadIdx.x;
+        if(i < len) d_C[i] = d_A[i] + d_B[i];
+    }
+
     template<typename F, typename F_primitive>
     class SumcheckGKRHelper{
     public:
@@ -377,6 +508,12 @@ namespace gkr{
         SumcheckMultiLinearProdHelper<F, F_primitive> x_helper, y_helper;
         uint32_t nb_input_vars;
         uint32_t nb_output_vars;
+
+        // CUDA managed memory
+        F_primitive*          d_eq_evals_rz1;
+        F*                    d_hg_vals;
+        bool*                 d_gate_exists;
+        uint32_t *            d_lock_threadId;
 
         void _prepare_g_x_vals(
                 const F_primitive* rz1, const uint32_t & rz1_len,
@@ -392,6 +529,8 @@ namespace gkr{
             for(int i = 0; i < vals.evals_len; i++){ hg_vals[i] = 0; }
             for(int i = 0; i < vals.evals_len; i++){ gate_exists[i] = false; }
 
+            // CPU @ 2^28, 1.45s
+            // GPU (with cross prod eq) @ 2 ^ 28, 0.49s
             auto start = std::chrono::high_resolution_clock::now();
             _eq_evals_at(rz1, rz1_len, alpha, pad_ptr->eq_evals_at_rz1, pad_ptr -> eq_evals_first_half, pad_ptr -> eq_evals_second_half);
             _eq_evals_at(rz2, rz2_len, beta, pad_ptr->eq_evals_at_rz2, pad_ptr -> eq_evals_first_half, pad_ptr -> eq_evals_second_half);
@@ -401,36 +540,120 @@ namespace gkr{
             auto total = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
             std::cout << "    - phase 1: two eq evals \t" << (float) total.count() / 1000.0 << "\ts" << std::endl;
 
+            // CPU @ 2^28, 0.85s
+            // GPU (with vecadd) @ 2 ^ 28, 0.289s
             start = std::chrono::high_resolution_clock::now();
-            for (int i = 0; i < (1 << rz1_len); ++i){
-                eq_evals_at_rz1[i] = eq_evals_at_rz1[i] + eq_evals_at_rz2[i];
+            if(useGPU){
+                // Prepare CUDA parameters
+                uint32_t num_thread = 128;
+                uint32_t num_block = ((1 << rz1_len) + num_thread - 1) / num_thread;
+                // Malloc CUDA
+                F_primitive* d_A;
+                F_primitive* d_B;
+                F_primitive* d_C;
+                cudaMalloc((void **)&d_A, sizeof(F_primitive) * (1 << rz1_len));
+                cudaMalloc((void **)&d_B, sizeof(F_primitive) * (1 << rz1_len));
+                cudaMalloc((void **)&d_C, sizeof(F_primitive) * (1 << rz1_len));
+                // Move to GPU
+                cudaMemcpy(d_A, eq_evals_at_rz1, sizeof(F_primitive) * (1 << rz1_len), cudaMemcpyHostToDevice);
+                cudaMemcpy(d_B, eq_evals_at_rz2, sizeof(F_primitive) * (1 << rz1_len), cudaMemcpyHostToDevice);
+                // Launch kernel
+                vecadd<<<num_block, num_thread>>>(d_A, d_B, d_C, 1 << rz1_len);
+                // Copy back
+                cudaMemcpy(eq_evals_at_rz1, d_C, sizeof(F_primitive) * (1 << rz1_len), cudaMemcpyDeviceToHost);
+                // Free
+                cudaFree(d_A);cudaFree(d_B);cudaFree(d_C);
+            }else{
+                for (int i = 0; i < (1 << rz1_len); ++i){
+                    eq_evals_at_rz1[i] = eq_evals_at_rz1[i] + eq_evals_at_rz2[i];
+                }
             }
             end = std::chrono::high_resolution_clock::now();
             total = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
             std::cout << "    - phase 1: vec addition \t" << (float) total.count() / 1000.0 << "\ts" << std::endl;
 
+            // CPU @ 2^28, 0.49s
             start = std::chrono::high_resolution_clock::now();
-            for(long unsigned int i = 0; i < mul.sparse_evals_len; i++){
-                // g(x) += eq(rz, z) * v(y) * coef
-                const Gate<F_primitive, 2> &gate = mul.sparse_evals[i];
-                uint32_t x = gate.i_ids[0];
-                uint32_t y = gate.i_ids[1];
-                uint32_t z = gate.o_id;
-                hg_vals[x] += vals.evals[y] * (gate.coef * eq_evals_at_rz1[z]);
-                gate_exists[x] = true;
+            if(useGPU){
+                // Define CUDA kernel variables
+                Gate<F_primitive, 2>* d_mult_sparse_evals;
+                F*                    d_val_evals;
+                // Malloc CUDA region
+                cudaMalloc((void **)&d_mult_sparse_evals, sizeof(Gate<F_primitive, 2>) * mul.sparse_evals_len);
+                cudaMalloc((void **)&d_val_evals,         sizeof(F) * vals.evals_len);
+                cudaMalloc((void **)&d_eq_evals_rz1,      sizeof(F_primitive) * (1 << rz1_len));
+                cudaMalloc((void **)&d_hg_vals, sizeof(F) * vals.evals_len);
+                cudaMalloc((void **)&d_gate_exists, sizeof(bool) * vals.evals_len);
+                cudaMalloc((void **)&d_lock_threadId, sizeof(uint32_t) * vals.evals_len);
+                // Transfer data to GPU
+                cudaMemcpy(d_mult_sparse_evals, mul.sparse_evals, sizeof(Gate<F_primitive, 2>) * mul.sparse_evals_len, cudaMemcpyHostToDevice);
+                cudaMemcpy(d_val_evals, vals.evals, sizeof(F) * vals.evals_len, cudaMemcpyHostToDevice);
+                cudaMemcpy(d_eq_evals_rz1, eq_evals_at_rz1, sizeof(F_primitive) * (1 << rz1_len), cudaMemcpyHostToDevice);
+                cudaMemset(d_hg_vals, 0x00, sizeof(F) * vals.evals_len);              // HG init
+                cudaMemset(d_gate_exists, 0x0, sizeof(bool) * vals.evals_len);        // gate exists init
+                cudaMemset(d_lock_threadId, 0xFF, vals.evals_len * sizeof(uint32_t)); // Init locks
+                // Start CUDA kernel
+                uint32_t num_thread = 128;
+                uint32_t num_block = (mul.sparse_evals_len + num_thread - 1) / num_thread;
+                build_gx_mult<<<num_block, num_thread>>>(
+                        d_mult_sparse_evals, d_val_evals, d_eq_evals_rz1,
+                        d_hg_vals, d_gate_exists, d_lock_threadId,
+                        mul.sparse_evals_len);
+                cudaDeviceSynchronize();
+                // Transfer result back to CPU
+                cudaMemcpy(hg_vals, d_hg_vals, sizeof(F) * vals.evals_len, cudaMemcpyDeviceToHost);
+                cudaMemcpy(gate_exists, d_gate_exists, sizeof(bool) * vals.evals_len, cudaMemcpyDeviceToHost);
+                // Release and free GPU memory
+                cudaFree(d_mult_sparse_evals);
+                cudaFree(d_val_evals);
+            }else{
+                for(long unsigned int i = 0; i < mul.sparse_evals_len; i++){
+                    // g(x) += eq(rz, z) * v(y) * coef
+                    const Gate<F_primitive, 2> &gate = mul.sparse_evals[i];
+                    uint32_t x = gate.i_ids[0];
+                    uint32_t y = gate.i_ids[1];
+                    uint32_t z = gate.o_id;
+                    hg_vals[x] += vals.evals[y] * (gate.coef * eq_evals_at_rz1[z]);
+                    gate_exists[x] = true;
+                }
             }
             end = std::chrono::high_resolution_clock::now();
             total = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
             std::cout << "    - phase 1: build gx(mult) \t" << (float) total.count() / 1000.0 << "\ts" << std::endl;
 
+            // CPU @ 2^28, 1.2s
             start = std::chrono::high_resolution_clock::now();
-            for(long unsigned int i = 0; i < add.sparse_evals_len; i++){
-                // g(x) += eq(rz, x) * coef
-                const Gate<F_primitive, 1> &gate = add.sparse_evals[i];
-                uint32_t x = gate.i_ids[0];
-                uint32_t z = gate.o_id;
-                hg_vals[x] += gate.coef * eq_evals_at_rz1[z];
-                gate_exists[x] = true;
+            if(useGPU){
+                // Define CUDA kernel variables
+                Gate<F_primitive, 1>* d_add_sparse_evals;
+                // Malloc CUDA region
+                cudaMalloc((void **)&d_add_sparse_evals, sizeof(Gate<F_primitive, 1>) * add.sparse_evals_len);
+                // Transfer data to GPU
+                cudaMemcpy(d_add_sparse_evals, add.sparse_evals, sizeof(Gate<F_primitive, 1>) * add.sparse_evals_len, cudaMemcpyHostToDevice);
+                // Start CUDA kernel
+                uint32_t num_thread = 128;
+                uint32_t num_block = (add.sparse_evals_len + num_thread - 1) / num_thread;
+                build_gx_add<<<num_block, num_thread>>>(d_add_sparse_evals, d_eq_evals_rz1,
+                                                        d_hg_vals, d_gate_exists, d_lock_threadId, add.sparse_evals_len);
+                cudaDeviceSynchronize();
+                // Transfer result back to CPU
+                cudaMemcpy(hg_vals, d_hg_vals, sizeof(F) * vals.evals_len, cudaMemcpyDeviceToHost);
+                cudaMemcpy(gate_exists, d_gate_exists, sizeof(bool) * vals.evals_len, cudaMemcpyDeviceToHost);
+                // Release and free CUDA memory
+                cudaFree(d_add_sparse_evals);
+                cudaFree(d_eq_evals_rz1);
+                cudaFree(d_hg_vals);
+                cudaFree(d_gate_exists);
+                cudaFree(d_lock_threadId);
+            }else{
+                for(long unsigned int i = 0; i < add.sparse_evals_len; i++){
+                    // g(x) += eq(rz, x) * coef
+                    const Gate<F_primitive, 1> &gate = add.sparse_evals[i];
+                    uint32_t x = gate.i_ids[0];
+                    uint32_t z = gate.o_id;
+                    hg_vals[x] += gate.coef * eq_evals_at_rz1[z];
+                    gate_exists[x] = true;
+                }
             }
             end = std::chrono::high_resolution_clock::now();
             total = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -453,14 +676,59 @@ namespace gkr{
             _eq_evals_at(rx, rx_len, F_primitive::one(), pad_ptr->eq_evals_at_rx, pad_ptr -> eq_evals_first_half, pad_ptr -> eq_evals_second_half);
             F_primitive const* eq_evals_at_rx = pad_ptr->eq_evals_at_rx;
 
-            for(int i = 0; i < mul.sparse_evals_len; i++){
-                const Gate<F_primitive, 2> &gate = mul.sparse_evals[i];
-                // g(y) += eq(rz, z) * eq(rx, x) * v(y) * coef
-                uint32_t x = gate.i_ids[0];
-                uint32_t y = gate.i_ids[1];
-                uint32_t z = gate.o_id;
-                hg_vals[y] += v_rx * (eq_evals_at_rz1[z] * eq_evals_at_rx[x] * gate.coef);
-                gate_exists[y] = true;
+            if(useGPU){
+                // Define CUDA kernel variables
+                Gate<F_primitive, 2>* d_mult_sparse_evals;
+                F_primitive*          d_eq_rx;
+                F*                    d_v_rx;
+                // Malloc CUDA region
+                cudaMalloc((void **)&d_mult_sparse_evals,              sizeof(Gate<F_primitive, 2>) * mul.sparse_evals_len);
+                cudaMalloc((void **)&d_eq_rx,             sizeof(F_primitive)          * (1 << rx_len));
+                cudaMalloc((void **)&d_v_rx,              sizeof(F)                    * 1);
+                cudaMalloc((void **)&d_eq_evals_rz1,      sizeof(F_primitive)          * (1 << rx_len));
+                cudaMalloc((void **)&d_hg_vals,           sizeof(F)                    * (1 << rx_len));
+                cudaMalloc((void **)&d_gate_exists,       sizeof(bool)                 * (1 << rx_len));
+                cudaMalloc((void **)&d_lock_threadId,     sizeof(uint32_t)             * (1 << rx_len));
+                // Transfer data to CUDA
+                cudaMemcpy(d_mult_sparse_evals, mul.sparse_evals, sizeof(Gate<F_primitive, 2>) * mul.sparse_evals_len, cudaMemcpyHostToDevice);
+                cudaMemcpy(d_eq_rx, eq_evals_at_rx, sizeof(F_primitive)          * (1 << rx_len), cudaMemcpyHostToDevice);
+                cudaMemcpy(d_v_rx, &v_rx, sizeof(F), cudaMemcpyHostToDevice);
+                cudaMemcpy(d_eq_evals_rz1, eq_evals_at_rz1, sizeof(F_primitive)          * (1 << rx_len), cudaMemcpyHostToDevice);
+                cudaMemset(d_hg_vals, 0x00, sizeof(F) * (1 << rx_len) );              // HG init
+                cudaMemset(d_gate_exists, 0x0, sizeof(bool) * (1 << rx_len) );        // gate exists init
+                cudaMemset(d_lock_threadId, 0xFF, sizeof(uint32_t) * (1 << rx_len)); // Init locks
+                // Start Kernel
+                uint32_t num_thread = 128;
+                uint32_t num_block = (mul.sparse_evals_len + num_thread - 1) / num_thread;
+                build_hy_mult<<<num_block, num_thread>>>(
+                        d_mult_sparse_evals, d_eq_rx, d_eq_evals_rz1, d_v_rx,
+                        d_hg_vals, d_gate_exists,
+                        d_lock_threadId,
+                        mul.sparse_evals_len
+                        );
+                cudaDeviceSynchronize();
+                // Transfer result back
+                cudaMemcpy(hg_vals, d_hg_vals, sizeof(F) * (1 << rx_len), cudaMemcpyDeviceToHost);
+                cudaMemcpy(gate_exists, d_gate_exists, sizeof(bool) * (1 << rx_len), cudaMemcpyDeviceToHost);
+                // Cleanup CUDA memory region
+                cudaFree(d_mult_sparse_evals);
+                cudaFree(d_eq_rx);
+                cudaFree(d_v_rx);
+                cudaFree(d_eq_evals_rz1);
+                cudaFree(d_hg_vals);
+                cudaFree(d_gate_exists);
+                cudaFree(d_lock_threadId);
+            }else{
+                for(int i = 0; i < mul.sparse_evals_len; i++){
+                    const Gate<F_primitive, 2> &gate = mul.sparse_evals[i];
+                    // g(y) += eq(rz, z) * eq(rx, x) * v(y) * coef
+                    uint32_t x = gate.i_ids[0];
+                    uint32_t y = gate.i_ids[1];
+                    uint32_t z = gate.o_id;
+
+                    hg_vals[y] += v_rx * (eq_evals_at_rz1[z] * eq_evals_at_rx[x] * gate.coef);
+                    gate_exists[y] = true;
+                }
             }
             auto end = std::chrono::high_resolution_clock::now();
             auto total = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
