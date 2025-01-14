@@ -1,5 +1,10 @@
 name: Run Benchmarks
 
+env:
+  RUSTFLAGS: "-Dwarnings -C target-cpu=native"
+  RUST_BACKTRACE: 1
+  ACTIONS_RUNNER_DEBUG: true
+
 on:
   push:
   pull_request:
@@ -29,6 +34,8 @@ jobs:
       run: cargo install cargo-criterion
     - name: Install mpi
       run: python3 ./scripts/install.py
+    - name: Install build dependencies
+      run: sudo apt-get install -y build-essential  
     - name: Setup
       run: cargo run --bin=dev-setup --release
     - name: Run benchmark
