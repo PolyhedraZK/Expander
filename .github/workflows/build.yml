@@ -6,6 +6,7 @@ on:
 env:
   RUSTFLAGS: "-Dwarnings -C target-cpu=native"
   RUST_BACKTRACE: 1
+  ACTIONS_RUNNER_DEBUG: true
 
 jobs:
   build:
