@@ -29,6 +29,8 @@ jobs:
       run: cargo install cargo-criterion
     - name: Install mpi
       run: python3 ./scripts/install.py
+    - name: Install build dependencies
+      run: sudo apt-get install -y build-essential  
     - name: Setup
       run: cargo run --bin=dev-setup --release
     - name: Run benchmark
