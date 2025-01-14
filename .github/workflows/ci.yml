@@ -85,7 +85,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           # The prefix cache key, this can be changed to start a new cache manually.
-          prefix-key: "mpi-v5.0.5" # update me if brew formula changes to a new version
+          prefix-key: "mpi-v5.0.6" # update me if brew formula changes to a new version
       - name: Set RUSTFLAGS for AVX
         if: matrix.feature != ''
         run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV
