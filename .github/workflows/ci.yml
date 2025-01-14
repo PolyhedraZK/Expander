@@ -40,13 +40,19 @@ jobs:
       - name: Set RUSTFLAGS for AVX
         if: matrix.feature != ''
         run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV  
-      - name: Build and Test
+      - name: Setup
         run: |
           python3 ./scripts/install.py
           mpiexec --version
+      - name: download data
+        run: |
           cargo run --bin=dev-setup --release
+      - name: Unit Tests
+        run: |
           cargo build --all-features --release
           cargo test --all-features --release --workspace
+      - name: E2E Test
+        run: |   
           ./scripts/test_recursion.py
 
   gkr-e2e:
