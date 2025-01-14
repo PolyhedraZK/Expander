@@ -29,7 +29,6 @@ jobs:
           if [ "${{ matrix.os }}" == "macos-latest" ]; then
             brew install gcc make
           else
-            sudo apt-get update
             sudo apt-get install -y build-essential
           fi
         shell: bash
