@@ -15,6 +15,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - name: Setup Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
       - run: python3 ./scripts/install.py
       - run: cargo fmt --all -- --check
       - run: cargo clippy --all
@@ -35,8 +39,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          # The prefix cache key, this can be changed to start a new cache manually.
-          prefix-key: "mpi-v5.0.6" # update me if brew formula changes to a new version
+          prefix-key: "mpi-v5.0.6"
+      - name: Setup Dependencies
+        run: |
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            brew install gcc make
+          else
+            sudo apt-get update
+            sudo apt-get install -y build-essential
+          fi
       - name: Set RUSTFLAGS for AVX
         if: matrix.feature != ''
         run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV  
@@ -90,8 +101,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          # The prefix cache key, this can be changed to start a new cache manually.
-          prefix-key: "mpi-v5.0.6" # update me if brew formula changes to a new version
+          prefix-key: "mpi-v5.0.6"
+      - name: Setup Dependencies
+        run: |
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            brew install gcc make
+          else
+            sudo apt-get update
+            sudo apt-get install -y build-essential
+          fi
       - name: Set RUSTFLAGS for AVX
         if: matrix.feature != ''
         run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV

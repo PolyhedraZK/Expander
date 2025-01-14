@@ -23,18 +23,33 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Setup Dependencies
+        run: |
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            brew install gcc make
+          else
+            sudo apt-get update
+            sudo apt-get install -y build-essential
+          fi
+        shell: bash
+        
       - uses: dtolnay/rust-toolchain@stable
+      
       - uses: Swatinem/rust-cache@v2
         with:
-          # The prefix cache key, this can be changed to start a new cache manually.
-          prefix-key: "mpi-v5.0.6" # update me if brew formula changes to a new version
+          prefix-key: "mpi-v5.0.6"
+          
       - name: Install MPI
         run: python3 ./scripts/install.py
+        
       - name: Set RUSTFLAGS for AVX
         if: matrix.feature != ''
         run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV
+        
       - name: Prepare binary
         run: cargo build --release --bin expander-exec
+        
       - name: Upload release asset
         uses: actions/github-script@v6
         with:
