@@ -82,7 +82,7 @@ if __name__ == "__main__":
     is_macos = platform.system() == "Darwin"
 
     if is_macos:
-        subprocess.run("RUSTFLAGS='-C target-feature=+avx512f' cargo build --release --bin expander-exec ", shell=True)
+        subprocess.run("RUSTFLAGS='-C target-feature=+avx2' cargo build --release --bin expander-exec ", shell=True)
     else:
         subprocess.run("RUSTFLAGS='-C' cargo build --release --bin expander-exec ", shell=True)
 
