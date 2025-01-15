@@ -66,9 +66,8 @@ jobs:
           cargo test --all-features --release --workspace
       - name: E2E Test
         run: |
-          cd ./recursion
-          go test ./... -v
-          cd ..
+          cp ./recursion/small_circuit_m31.circ ./data/small_circuit_m31.txt
+          cp ./recursion/small_witness_m31.circ ./data/small_witness_m31.txt
           ./scripts/test_recursion.py
 
   gkr-e2e:

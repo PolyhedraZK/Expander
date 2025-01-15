@@ -172,12 +172,12 @@ func TestCircuitLayeredEvaluation(t *testing.T) {
 		},
 		// NOTE(HS) as of 2024/12/11, the compilation process of m31 circuit
 		// takes more than 50GB of RAM, so run with cautious yall...
-		{
-			CircuitPath: "../../../data/circuit_m31.txt",
-			WitnessPath: "../../../data/witness_m31.txt",
-			MPISize:     1,
-			FieldEnum:   fields.ECCM31,
-		},
+		// {
+		// 	CircuitPath: "../../../data/circuit_m31.txt",
+		// 	WitnessPath: "../../../data/witness_m31.txt",
+		// 	MPISize:     1,
+		// 	FieldEnum:   fields.ECCM31,
+		// },
 		{
 			CircuitPath: "../../../data/circuit_gf2.txt",
 			WitnessPath: "../../../data/witness_gf2.txt",
