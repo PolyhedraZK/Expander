@@ -27,12 +27,6 @@ jobs:
       - name: Setup Dependencies
         run: sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
 
-      - name: Setup MPI
-        run: |
-          python3 ./scripts/install.py
-          mpiexec --version
-        
-
       - name: Check formatting
         run: cargo fmt --all -- --check
         
@@ -69,11 +63,6 @@ jobs:
             sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
           fi
           mpiexec --version
-
-      # - name: Setup MPI
-      #   run: |
-      #     python3 ./scripts/install.py
-      #     mpiexec --version
       
       - name: Download test data
         run: cargo run --bin=dev-setup --release
