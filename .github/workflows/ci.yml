@@ -23,6 +23,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+
+      - name: Setup Dependencies
+        run: sudo apt-get install -y build-essential
           
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -52,6 +55,14 @@ jobs:
         with:
           prefix-key: "mpi-v5.0.6"
       
+      - name: Setup Dependencies
+        run: |
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            brew install gcc make
+          else
+            sudo apt-get install -y build-essential
+          fi
+
       # - name: Setup MPI
       #   run: |
       #     python3 ./scripts/install.py
