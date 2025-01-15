@@ -25,8 +25,8 @@ jobs:
           components: rustfmt, clippy
 
       - name: Setup Dependencies
-        run: sudo apt-get install -y build-essential
-        
+        run: sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
+
       - name: Setup MPI
         run: |
           python3 ./scripts/install.py
@@ -64,15 +64,16 @@ jobs:
       - name: Setup Dependencies
         run: |
           if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            brew install gcc make
+            brew install gcc make openmpi
           else
-            sudo apt-get install -y build-essential
+            sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
           fi
-
-      - name: Setup MPI
-        run: |
-          python3 ./scripts/install.py
           mpiexec --version
+
+      # - name: Setup MPI
+      #   run: |
+      #     python3 ./scripts/install.py
+      #     mpiexec --version
       
       - name: Download test data
         run: cargo run --bin=dev-setup --release
