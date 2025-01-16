@@ -81,4 +81,4 @@ jobs:
           cargo run --bin=dev-setup --release
           cargo run --bin=gkr --release -- -t 4 -f gf2ext128
           cargo run --bin=gkr --release -- -t 4 -f m31ext3
-          cargo run --bin=gkr --release -- -t 4 -f bn254
+          cargo run --bin=gkr --release -- -t 4 -f fr
