@@ -75,3 +75,10 @@ jobs:
       
       - name: Run E2E tests
         run: ./scripts/test_recursion.py
+
+      - name: Run benchmarks
+        run: |
+          cargo run --bin=dev-setup --release
+          cargo run --bin=gkr --release -- -t 4 -f gf2ext128
+          cargo run --bin=gkr --release -- -t 4 -f m31ext3
+          cargo run --bin=gkr --release -- -t 4 -f bn265
