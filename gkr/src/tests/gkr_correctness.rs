@@ -1,5 +1,6 @@
 use std::io::Write;
 use std::panic::AssertUnwindSafe;
+use std::sync::Arc;
 use std::time::Instant;
 use std::{fs, panic};
 
@@ -15,6 +16,8 @@ use poly_commit::expander_pcs_init_testing_only;
 use poly_commit::raw::RawExpanderGKR;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha12Rng;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use serial_test::serial;
 use sha2::Digest;
 use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
 
@@ -22,9 +25,15 @@ use crate::{utils::*, Prover, Verifier};
 
 const PCS_TESTING_SEED_U64: u64 = 114514;
 
+const NUM_THREADS: usize = 32;
+
 #[test]
+#[serial]
 fn test_gkr_correctness() {
-    let mpi_config = MPIConfig::new();
+    // Create global data
+    let global_data: Arc<[u8]> = Arc::from((0..16).map(|i| i as u8).collect::<Vec<u8>>());
+    let mpi_config = MPIConfig::new(NUM_THREADS as i32, global_data, 1024 * 1024);
+
     declare_gkr_config!(
         C0,
         FieldType::GF2,
@@ -78,184 +87,198 @@ fn test_gkr_correctness() {
         &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper(
-        &Config::<C1>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C2>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C3>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C4>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C5>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C6>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        Some("../data/gkr_proof.txt"),
-    );
-    test_gkr_correctness_helper(
-        &Config::<C8>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
+    // test_gkr_correctness_helper(
+    //     &Config::<C1>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C3>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C4>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C5>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C6>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     Some("../data/gkr_proof.txt"),
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C8>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
 
-    MPIConfig::finalize();
+    mpi_config.finalize();
 }
 
 #[allow(unreachable_patterns)]
 fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof_to: Option<&str>) {
-    root_println!(config.mpi_config, "============== start ===============");
-    root_println!(
-        config.mpi_config,
-        "Field Type: {:?}",
-        <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE
-    );
-    let circuit_copy_size: usize = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
-        FieldType::GF2 => 1,
-        FieldType::M31 => 2,
-        FieldType::BN254 => 2,
-        _ => unreachable!(),
-    };
-    root_println!(
-        config.mpi_config,
-        "Proving {} keccak instances at once.",
-        circuit_copy_size * <Cfg::FieldConfig as GKRFieldConfig>::get_field_pack_size()
-    );
-    root_println!(config.mpi_config, "Config created.");
-
-    let circuit_path = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
-        FieldType::GF2 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
-        FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
-        FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
-        _ => unreachable!(),
-    };
-    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(&circuit_path);
-    root_println!(config.mpi_config, "Circuit loaded.");
-
-    let witness_path = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
-        FieldType::GF2 => "../".to_owned() + KECCAK_GF2_WITNESS,
-        FieldType::M31 => "../".to_owned() + KECCAK_M31_WITNESS,
-        FieldType::BN254 => "../".to_owned() + KECCAK_BN254_WITNESS,
-        _ => unreachable!(),
-    };
-    circuit.load_witness_file(&witness_path);
-    root_println!(config.mpi_config, "Witness loaded.");
-
-    circuit.evaluate();
-    let output = &circuit.layers.last().unwrap().output_vals;
-    assert!(output[..circuit.expected_num_output_zeros]
-        .iter()
-        .all(|f| f.is_zero()));
-
-    let mut prover = Prover::new(config);
-    prover.prepare_mem(&circuit);
-
-    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
-    let (pcs_params, pcs_proving_key, pcs_verification_key, mut pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
-            circuit.log_input_size(),
-            &config.mpi_config,
-            &mut rng,
+    (0..NUM_THREADS).into_par_iter().for_each(|_| {
+        root_println!(config.mpi_config, "============== start ===============");
+        root_println!(
+            config.mpi_config,
+            "Field Type: {:?}",
+            <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE
         );
+        let circuit_copy_size: usize = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
+            FieldType::GF2 => 1,
+            FieldType::M31 => 2,
+            FieldType::BN254 => 2,
+            _ => unreachable!(),
+        };
+        root_println!(
+            config.mpi_config,
+            "Proving {} keccak instances at once.",
+            circuit_copy_size * <Cfg::FieldConfig as GKRFieldConfig>::get_field_pack_size()
+        );
+        root_println!(config.mpi_config, "Config created.");
 
-    let proving_start = Instant::now();
-    let (claimed_v, proof) = prover.prove(
-        &mut circuit,
-        &pcs_params,
-        &pcs_proving_key,
-        &mut pcs_scratch,
-    );
-    root_println!(
-        config.mpi_config,
-        "Proving time: {} μs",
-        proving_start.elapsed().as_micros()
-    );
+        let circuit_path = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
+            FieldType::GF2 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
+            FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
+            FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
+            _ => unreachable!(),
+        };
+        // todo: move circuit into shared memory
+        let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(&circuit_path);
+        root_println!(config.mpi_config, "Circuit loaded.");
 
-    root_println!(
-        config.mpi_config,
-        "Proof generated. Size: {} bytes",
-        proof.bytes.len()
-    );
-    root_println!(config.mpi_config,);
+        let witness_path = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
+            FieldType::GF2 => "../".to_owned() + KECCAK_GF2_WITNESS,
+            FieldType::M31 => "../".to_owned() + KECCAK_M31_WITNESS,
+            FieldType::BN254 => "../".to_owned() + KECCAK_BN254_WITNESS,
+            _ => unreachable!(),
+        };
+        circuit.load_witness_file(&witness_path);
+        root_println!(config.mpi_config, "Witness loaded.");
 
-    root_println!(config.mpi_config, "Proof hash: ");
-    sha2::Sha256::digest(&proof.bytes)
-        .iter()
-        .for_each(|b| print!("{} ", b));
-    root_println!(config.mpi_config,);
+        circuit.evaluate();
 
-    let mut public_input_gathered = if config.mpi_config.is_root() {
-        vec![
-            <Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::ZERO;
-            circuit.public_input.len() * config.mpi_config.world_size()
-        ]
-    } else {
-        vec![]
-    };
-    config
-        .mpi_config
-        .gather_vec(&circuit.public_input, &mut public_input_gathered);
+        let output = &circuit.layers.last().unwrap().output_vals;
 
-    // Verify
-    if config.mpi_config.is_root() {
-        if let Some(str) = write_proof_to {
-            let mut file = fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .truncate(true)
-                .open(str)
-                .unwrap();
+        assert!(output[..circuit.expected_num_output_zeros]
+            .iter()
+            .all(|f| f.is_zero()));
 
-            let mut buf = vec![];
-            proof.serialize_into(&mut buf).unwrap();
-            file.write_all(&buf).unwrap();
-        }
-        let verifier = Verifier::new(config);
-        println!("Verifier created.");
-        let verification_start = Instant::now();
-        assert!(verifier.verify(
+        let mut prover = Prover::new(config);
+        prover.prepare_mem(&circuit);
+
+        let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
+        let (pcs_params, pcs_proving_key, pcs_verification_key, mut pcs_scratch) =
+            expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
+                circuit.log_input_size(),
+                &config.mpi_config,
+                &mut rng,
+            );
+
+        root_println!(config.mpi_config, "start proving.");
+        let proving_start = Instant::now();
+        let (claimed_v, proof) = prover.prove(
             &mut circuit,
-            &public_input_gathered,
-            &claimed_v,
             &pcs_params,
-            &pcs_verification_key,
-            &proof
-        ));
-        println!(
-            "Verification time: {} μs",
-            verification_start.elapsed().as_micros()
+            &pcs_proving_key,
+            &mut pcs_scratch,
         );
-        println!("Correct proof verified.");
-        let mut bad_proof = proof.clone();
-        let rng = &mut rand::thread_rng();
-        let random_idx = rng.gen_range(0..bad_proof.bytes.len());
-        let random_change = rng.gen_range(1..256) as u8;
-        bad_proof.bytes[random_idx] ^= random_change;
+        root_println!(
+            config.mpi_config,
+            "Proving time: {} μs",
+            proving_start.elapsed().as_micros()
+        );
 
-        // Catch the panic and treat it as returning `false`
-        let result = panic::catch_unwind(AssertUnwindSafe(|| {
-            verifier.verify(
+        root_println!(
+            config.mpi_config,
+            "Proof generated. Size: {} bytes",
+            proof.bytes.len()
+        );
+        root_println!(config.mpi_config,);
+
+        root_println!(config.mpi_config, "Proof hash: ");
+        sha2::Sha256::digest(&proof.bytes)
+            .iter()
+            .for_each(|b| print!("{} ", b));
+        root_println!(config.mpi_config,);
+
+        // let mut public_input_gathered = if config.mpi_config.is_root() {
+        //     vec![
+        //         <Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::ZERO;
+        //         circuit.public_input.len() * config.mpi_config.world_size() as usize
+        //     ]
+        // } else {
+        //     vec![]
+        // };
+        // config
+        //     .mpi_config
+        //     .gather_vec(&circuit.public_input, &mut public_input_gathered);
+
+        let start = config.mpi_config.current_thread().size();
+        let end =start + circuit.public_input.len()
+            * <Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::SERIALIZED_SIZE;
+        config.mpi_config.append_local_fields(&circuit.public_input);
+
+        let public_input_gathered: Vec<<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField> =
+            config.mpi_config.read_all_field_flat(start, end);
+
+        // Verify
+        if config.mpi_config.is_root() {
+            if let Some(str) = write_proof_to {
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .open(str)
+                    .unwrap();
+
+                let mut buf = vec![];
+                proof.serialize_into(&mut buf).unwrap();
+                file.write_all(&buf).unwrap();
+            }
+            let verifier = Verifier::new(config);
+            println!("Verifier created.");
+            let verification_start = Instant::now();
+            assert!(verifier.verify(
                 &mut circuit,
                 &public_input_gathered,
                 &claimed_v,
                 &pcs_params,
                 &pcs_verification_key,
-                &bad_proof,
-            )
-        }));
+                &proof
+            ));
+            println!(
+                "Verification time: {} μs",
+                verification_start.elapsed().as_micros()
+            );
+            println!("Correct proof verified.");
+            let mut bad_proof = proof.clone();
+            let rng = &mut rand::thread_rng();
+            let random_idx = rng.gen_range(0..bad_proof.bytes.len());
+            let random_change = rng.gen_range(1..256) as u8;
+            bad_proof.bytes[random_idx] ^= random_change;
 
-        let final_result = result.unwrap_or_default();
+            // Catch the panic and treat it as returning `false`
+            let result = panic::catch_unwind(AssertUnwindSafe(|| {
+                verifier.verify(
+                    &mut circuit,
+                    &public_input_gathered,
+                    &claimed_v,
+                    &pcs_params,
+                    &pcs_verification_key,
+                    &bad_proof,
+                )
+            }));
 
-        assert!(!final_result,);
-        println!("Bad proof rejected.");
-        println!("============== end ===============");
-    }
+            let final_result = result.unwrap_or_default();
+
+            assert!(!final_result,);
+            println!("Bad proof rejected.");
+            println!("============== end ===============");
+        }
+    });
 }

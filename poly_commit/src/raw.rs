@@ -6,7 +6,7 @@ use crate::{
 use arith::{BN254Fr, Field, FieldForECC, FieldSerde, FieldSerdeResult, SimdField};
 use ethnum::U256;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use mpi_config::{thread_println, MPIConfig};
 use polynomials::{MultiLinearPoly, MultilinearExtension};
 use rand::RngCore;
 use transcript::Transcript;
@@ -196,14 +196,15 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         let evals = if mpi_config.world_size() == 1 {
             poly.hypercube_basis()
         } else {
-            let mut buffer = if mpi_config.is_root() {
-                vec![C::SimdCircuitField::zero(); poly.hypercube_size() * mpi_config.world_size()]
-            } else {
-                vec![]
-            };
+            // read the last poly.hypercube_size() from each thread
+            let start = mpi_config.current_thread().size();
+            let end = start + poly.serialized_size();
+            mpi_config.append_local_fields(&poly.hypercube_basis());
 
-            mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
-            buffer
+            // thread_println!(mpi_config, "start: {}, end: {}", start, end);
+            let payloads = mpi_config.read_all_field_flat(start, end); // read #thread payloads
+                                                                       // thread_println!(mpi_config, "payloads: {:?}", payloads.len());
+            payloads
         };
         Self::Commitment { evals }
     }
@@ -223,7 +224,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
 
     fn verify(
         _params: &Self::Params,
-        mpi_config: &MPIConfig,
+        _mpi_config: &MPIConfig,
         _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &ExpanderGKRChallenge<C>,
@@ -231,7 +232,6 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _transcript: &mut T,
         _opening: &Self::Opening,
     ) -> bool {
-        assert!(mpi_config.is_root()); // Only the root will verify
         let ExpanderGKRChallenge::<C> { x, x_simd, x_mpi } = x;
         Self::eval(&commitment.evals, x, x_simd, x_mpi) == v
     }

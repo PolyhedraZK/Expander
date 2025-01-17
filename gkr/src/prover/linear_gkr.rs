@@ -5,10 +5,11 @@ use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
+use mpi_config::root_println;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use polynomials::{MultilinearExtension, RefMultiLinearPoly};
 use sumcheck::ProverScratchPad;
-use transcript::{transcript_root_broadcast, Proof, Transcript};
+use transcript::{Proof, Transcript};
 
 use crate::{gkr_prove, gkr_square_prove};
 
@@ -72,7 +73,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         self.sp = ProverScratchPad::<Cfg::FieldConfig>::new(
             max_num_input_var,
             max_num_output_var,
-            self.config.mpi_config.world_size(),
+            self.config.mpi_config.world_size() as usize,
         );
     }
 
@@ -97,11 +98,13 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
                 pcs_scratch,
             )
         };
+        root_println!(self.config.mpi_config, "PC commit done");
+
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
         transcript.append_u8_slice(&buffer);
 
-        transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
+        // transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
 
         #[cfg(feature = "grinding")]
         grind::<Cfg>(&mut transcript, &self.config);

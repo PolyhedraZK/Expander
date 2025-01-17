@@ -7,8 +7,8 @@ use std::fmt::Debug;
 use transcript::Transcript;
 
 pub trait StructuredReferenceString {
-    type PKey: Clone + Debug + FieldSerde + Send;
-    type VKey: Clone + Debug + FieldSerde + Send;
+    type PKey: Clone + Debug + FieldSerde + Send + Sync;
+    type VKey: Clone + Debug + FieldSerde + Send + Sync;
 
     /// Convert the SRS into proving and verifying keys.
     /// Comsuming self by default.
@@ -72,7 +72,7 @@ pub struct ExpanderGKRChallenge<C: GKRFieldConfig> {
 pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
     const NAME: &'static str;
 
-    type Params: Clone + Debug + Default + Send;
+    type Params: Clone + Debug + Default + Send + Sync;
     type ScratchPad: Clone + Debug + Default + Send;
 
     type SRS: Clone + Debug + Default + FieldSerde + StructuredReferenceString;

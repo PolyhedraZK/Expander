@@ -177,7 +177,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     Option<C::ChallengeField>,
 ) {
     let timer = start_timer!(|| "gkr verify");
-    let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
+    let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size() as usize);
 
     let layer_num = circuit.layers.len();
     let mut rz0 = vec![];

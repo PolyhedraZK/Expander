@@ -54,7 +54,7 @@ fn main() {
     let args = Args::parse();
     print_info(&args);
 
-    let mpi_config = MPIConfig::new();
+    let mpi_config = MPIConfig::single_thread();
 
     declare_gkr_config!(
         M31ExtConfigSha2,
@@ -112,7 +112,7 @@ fn main() {
         _ => unreachable!(),
     };
 
-    MPIConfig::finalize();
+    mpi_config.finalize();
 }
 
 const PCS_TESTING_SEED_U64: u64 = 114514;

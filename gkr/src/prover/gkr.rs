@@ -53,19 +53,29 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         &mut sp.eq_evals_at_r_simd0,
     );
 
-    let claimed_v = if mpi_config.is_root() {
-        let mut claimed_v_gathering_buffer =
-            vec![C::ChallengeField::zero(); mpi_config.world_size()];
-        mpi_config.gather_vec(&vec![claimed_v_local], &mut claimed_v_gathering_buffer);
-        MultiLinearPoly::evaluate_with_buffer(
-            &claimed_v_gathering_buffer,
-            &r_mpi,
-            &mut sp.eq_evals_at_r_mpi0,
-        )
-    } else {
-        mpi_config.gather_vec(&vec![claimed_v_local], &mut vec![]);
-        C::ChallengeField::zero()
-    };
+    let start = mpi_config.current_size();
+    let end = start + C::ChallengeField::SIZE;
+    mpi_config.append_local_field(&claimed_v_local);
+    let claimed_v_gathering_buffer = mpi_config.read_all_field_flat(start, end);
+    let claimed_v = MultiLinearPoly::evaluate_with_buffer(
+        &claimed_v_gathering_buffer,
+        &r_mpi,
+        &mut sp.eq_evals_at_r_mpi0,
+    );
+
+    // let claimed_v = if mpi_config.is_root() {
+    //     let mut claimed_v_gathering_buffer =
+    //         vec![C::ChallengeField::zero(); mpi_config.world_size() as usize];
+    //     mpi_config.gather_vec(&vec![claimed_v_local], &mut claimed_v_gathering_buffer);
+    //     MultiLinearPoly::evaluate_with_buffer(
+    //         &claimed_v_gathering_buffer,
+    //         &r_mpi,
+    //         &mut sp.eq_evals_at_r_mpi0,
+    //     )
+    // } else {
+    //     mpi_config.gather_vec(&vec![claimed_v_local], &mut vec![]);
+    //     C::ChallengeField::zero()
+    // };
 
     for i in (0..layer_num).rev() {
         (rz0, rz1, r_simd, r_mpi) = sumcheck_prove_gkr_layer(
@@ -84,7 +94,7 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         if rz1.is_some() {
             // TODO: try broadcast beta.unwrap directly
             let mut tmp = transcript.generate_challenge_field_element();
-            mpi_config.root_broadcast_f(&mut tmp);
+            // mpi_config.root_broadcast_f(&mut tmp);
             alpha = Some(tmp)
         } else {
             alpha = None;
