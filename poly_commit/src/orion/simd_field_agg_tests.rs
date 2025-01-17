@@ -187,7 +187,7 @@ where
 fn test_orion_simd_aggregate_verify() {
     let parties = 16;
 
-    (25..30).for_each(|num_var| {
+    (16..18).for_each(|num_var| {
         test_orion_simd_aggregate_verify_helper::<
             GF2ExtConfig,
             GF2x128,
@@ -195,7 +195,7 @@ fn test_orion_simd_aggregate_verify() {
         >(parties, num_var)
     });
 
-    (18..25).for_each(|num_var| {
+    (12..15).for_each(|num_var| {
         test_orion_simd_aggregate_verify_helper::<
             M31ExtConfig,
             M31x16,

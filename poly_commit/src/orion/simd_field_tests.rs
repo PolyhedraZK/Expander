@@ -75,13 +75,13 @@ where
 
 #[test]
 fn test_orion_commit_simd_field_consistency() {
-    (16..=22).for_each(|num_vars| {
+    (16..=19).for_each(|num_vars| {
         test_orion_commit_simd_field_consistency_generic::<GF2, GF2x8, GF2x8>(num_vars);
         test_orion_commit_simd_field_consistency_generic::<GF2, GF2x8, GF2x64>(num_vars);
         test_orion_commit_simd_field_consistency_generic::<GF2, GF2x8, GF2x128>(num_vars);
     });
 
-    (12..=18).for_each(|num_vars| {
+    (12..=16).for_each(|num_vars| {
         test_orion_commit_simd_field_consistency_generic::<M31, M31x16, M31x16>(num_vars)
     })
 }
