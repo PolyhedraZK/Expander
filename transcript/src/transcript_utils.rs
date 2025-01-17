@@ -15,8 +15,11 @@ where
     }
 }
 
-/// sync verifier transcript state. incurs an additional hash if self.world_size > 1
-/// corresponding part to the transcript_root_broadcast on verifier side
+/// Correspondence to 'transcript_root_broadcast' from the verifier side.
+///
+/// Note: Currently, the verifier is assumed to run on a single core with no mpi sync,
+/// the word 'sync' here refers to the verifier syncing up with the prover's transcript state,
+/// which is updated by 'transcript_root_broadcast' if mpi_size > 1.
 pub fn transcript_verifier_sync<F, T>(transcript: &mut T, mpi_config: &MPIConfig)
 where
     F: Field,
