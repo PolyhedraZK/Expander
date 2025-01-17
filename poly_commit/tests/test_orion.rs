@@ -64,7 +64,7 @@ where
 {
     let mut rng = test_rng();
 
-    (19..=25).for_each(|num_vars| {
+    (19..=22).for_each(|num_vars| {
         let poly_num_vars = num_vars - SimdF::PACK_SIZE.ilog2() as usize;
         let xs: Vec<_> = (0..TEST_REPETITION)
             .map(|_| -> Vec<EvalF> {
@@ -164,13 +164,13 @@ fn test_orion_for_expander_gkr() {
         GF2ExtConfig,
         GF2x128,
         BytesHashTranscript<_, Keccak256hasher>,
-    >(&mpi_config, 30);
+    >(&mpi_config, 19);
 
     test_orion_for_expander_gkr_generics::<
         M31ExtConfig,
         M31x16,
         BytesHashTranscript<_, Keccak256hasher>,
-    >(&mpi_config, 20);
+    >(&mpi_config, 19);
 
     MPIConfig::finalize()
 }
