@@ -1,5 +1,5 @@
 use arith::{ExtensionField, Field};
-use circuit::{CircuitLayer, CoefType, GateAdd, GateConst, GateMul};
+use circuit::{CircuitLayer, CoefType, GateAdd, GateConst, GateMul, GateUni};
 use gkr_field_config::{FieldType, GKRFieldConfig};
 use polynomials::EqPolynomial;
 
@@ -140,6 +140,39 @@ impl GKRVerifierHelper {
         v * sp.eq_r_simd_r_simd_xy * sp.eq_r_mpi_r_mpi_xy
     }
 
+    /// GKR2 equivalent of `eval_add`. (Note that GKR2 uses pow1 gates instead of add gates)
+    #[inline(always)]
+    pub fn eval_pow_1<C: GKRFieldConfig>(
+        gates: &[GateUni<C>],
+        sp: &VerifierScratchPad<C>,
+    ) -> C::ChallengeField {
+        let mut v = C::ChallengeField::zero();
+        for gate in gates {
+            // Gates of type 12346 represent an add gate
+            if gate.gate_type == 12346 {
+                v += sp.eq_evals_at_rz0[gate.o_id]
+                    * C::challenge_mul_circuit_field(&sp.eq_evals_at_rx[gate.i_ids[0]], &gate.coef);
+            }
+        }
+        v * sp.eq_r_simd_r_simd_xy * sp.eq_r_mpi_r_mpi_xy
+    }
+
+    #[inline(always)]
+    pub fn eval_pow_5<C: GKRFieldConfig>(
+        gates: &[GateUni<C>],
+        sp: &VerifierScratchPad<C>,
+    ) -> C::ChallengeField {
+        let mut v = C::ChallengeField::zero();
+        for gate in gates {
+            // Gates of type 12345 represent a pow5 gate
+            if gate.gate_type == 12345 {
+                v += sp.eq_evals_at_rz0[gate.o_id]
+                    * C::challenge_mul_circuit_field(&sp.eq_evals_at_rx[gate.i_ids[0]], &gate.coef);
+            }
+        }
+        v * sp.eq_r_simd_r_simd_xy * sp.eq_r_mpi_r_mpi_xy
+    }
+
     #[inline(always)]
     pub fn set_rx<C: GKRFieldConfig>(rx: &[C::ChallengeField], sp: &mut VerifierScratchPad<C>) {
         EqPolynomial::<C::ChallengeField>::eq_eval_at(
@@ -220,12 +253,26 @@ impl GKRVerifierHelper {
     }
 
     #[inline(always)]
+    pub fn degree_6_eval<C: GKRFieldConfig>(
+        vals: &[C::ChallengeField],
+        x: C::ChallengeField,
+        sp: &VerifierScratchPad<C>,
+    ) -> C::ChallengeField {
+        Self::lag_eval(vals, x, sp)
+    }
+
+    #[inline(always)]
+    #[allow(clippy::needless_range_loop)]
     fn lag_eval<C: GKRFieldConfig>(
         vals: &[C::ChallengeField],
         x: C::ChallengeField,
         sp: &VerifierScratchPad<C>,
     ) -> C::ChallengeField {
-        assert_eq!(sp.deg3_eval_at.len(), vals.len());
+        let (evals, lag_denoms_inv) = match vals.len() {
+            4 => (sp.deg3_eval_at.to_vec(), sp.deg3_lag_denoms_inv.to_vec()),
+            7 => (sp.deg6_eval_at.to_vec(), sp.deg6_lag_denoms_inv.to_vec()),
+            _ => panic!("unsupported degree"),
+        };
 
         let mut v = C::ChallengeField::ZERO;
         for i in 0..vals.len() {
@@ -234,9 +281,9 @@ impl GKRVerifierHelper {
                 if j == i {
                     continue;
                 }
-                numerator *= x - sp.deg3_eval_at[j];
+                numerator *= x - evals[j];
             }
-            v += numerator * sp.deg3_lag_denoms_inv[i] * vals[i];
+            v += numerator * lag_denoms_inv[i] * vals[i];
         }
         v
     }
