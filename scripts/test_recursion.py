@@ -3,8 +3,6 @@
 # Run the script from the root repo of Expander
 
 import os
-# import psutil
-import sys
 import subprocess
 
 from dataclasses import dataclass
@@ -103,17 +101,7 @@ def gkr_proof_file(prefix: str, cpu_ids: list[int]) -> str:
 
 
 def expander_compile():
-    # NOTE(HS): as of 2024/12/09
-    # this command runs in CI environment, so mac naturally do not have
-    # AVX 512 instructions - yet this is not quite a good condition statement,
-    # should be something like archspec.
-    # The work is deferred later as the current implementation suffices.
-    avx_build_prefix: str = \
-        "" if sys.platform == 'darwin' else "RUSTFLAGS='-C target-feature=+avx512f'"
-    compile_ret = subprocess.run(
-        f"{avx_build_prefix} cargo build --release --bin expander-exec",
-        shell=True
-    )
+    compile_ret = subprocess.run("cargo build --release --bin expander-exec ", shell=True)
 
     if compile_ret.returncode != 0:
         raise Exception("build process is not returning 0")
