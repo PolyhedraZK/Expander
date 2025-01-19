@@ -5,7 +5,6 @@
 import os
 import sys
 import json
-import platform
 import subprocess
 
 MPI_CONFIG = '''
@@ -78,13 +77,7 @@ if __name__ == "__main__":
 
     ps = []
 
-    # Detect platform
-    is_macos = platform.system() == "Darwin"
-
-    if is_macos:
-        subprocess.run("RUSTFLAGS='-C target-feature=+avx2' cargo build --release --bin expander-exec ", shell=True)
-    else:
-        subprocess.run("RUSTFLAGS='-C' cargo build --release --bin expander-exec ", shell=True)
+    subprocess.run("cargo build --release --bin expander-exec ", shell=True)
 
     for i in range(n_groups):
         cpu_id = ",".join(map(str, cpu_ids[i]))
