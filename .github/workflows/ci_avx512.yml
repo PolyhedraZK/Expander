@@ -50,10 +50,7 @@ jobs:
         run: cargo test --all-features --release --workspace
       
       - name: Run E2E tests
-        run: |
-          cp ./recursion/small_circuit_m31.circ ./data/small_circuit_m31.txt
-          cp ./recursion/small_witness_m31.circ ./data/small_witness_m31.txt
-          ./scripts/test_recursion.py
+        run: ./scripts/test_recursion.py
 
       - name: Run benchmarks
         run: |

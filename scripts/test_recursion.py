@@ -3,6 +3,7 @@
 # Run the script from the root repo of Expander
 
 import os
+import shutil
 import subprocess
 
 from dataclasses import dataclass
@@ -101,9 +102,7 @@ def gkr_proof_file(prefix: str, cpu_ids: list[int]) -> str:
 
 
 def expander_compile():
-    compile_ret = subprocess.run("cargo build --release --bin expander-exec ", shell=True)
-
-    if compile_ret.returncode != 0:
+    if subprocess.run("cargo build --release --bin expander-exec", shell=True).returncode != 0:
         raise Exception("build process is not returning 0")
 
 
@@ -168,6 +167,9 @@ def test_m31_gkr_to_gkr_recursion(
         proof_config: ProofConfig,
         mpi_config: MPIConfig
 ):
+    shutil.copyfile("./scripts/small_circuit_m31.circ", "./data/small_circuit_m31.txt")
+    shutil.copyfile("./scripts/small_witness_m31.circ", "./data/small_witness_m31.txt")
+
     proof_path = gkr_prove(proof_config, mpi_config)
     vanilla_gkr_verify_check(proof_config, proof_path, mpi_config)
 
