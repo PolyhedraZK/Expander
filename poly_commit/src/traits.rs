@@ -16,7 +16,7 @@ pub trait StructuredReferenceString {
 }
 
 /// Standard Polynomial commitment scheme (PCS) trait.
-pub trait PolynomialCommitmentScheme<F: Field> {
+pub trait PolynomialCommitmentScheme<F: Field, T: Transcript<F>> {
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default;
@@ -50,6 +50,7 @@ pub trait PolynomialCommitmentScheme<F: Field> {
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &mut Self::ScratchPad,
+        transcript: &mut T,
     ) -> (F, Self::Opening);
 
     /// Verify the opening of a polynomial at a point.
@@ -60,13 +61,35 @@ pub trait PolynomialCommitmentScheme<F: Field> {
         x: &Self::EvalPoint,
         v: F,
         opening: &Self::Opening,
+        transcript: &mut T,
     ) -> bool;
 }
 
+#[derive(Debug, Clone)]
 pub struct ExpanderGKRChallenge<C: GKRFieldConfig> {
     pub x: Vec<C::ChallengeField>,
     pub x_simd: Vec<C::ChallengeField>,
     pub x_mpi: Vec<C::ChallengeField>,
+}
+
+impl<C: GKRFieldConfig> ExpanderGKRChallenge<C> {
+    pub fn local_xs(&self) -> Vec<C::ChallengeField> {
+        let mut local_xs = vec![C::ChallengeField::ZERO; self.x_simd.len() + self.x.len()];
+        local_xs[..self.x_simd.len()].copy_from_slice(&self.x_simd);
+        local_xs[self.x_simd.len()..].copy_from_slice(&self.x);
+        local_xs
+    }
+
+    pub fn global_xs(&self) -> Vec<C::ChallengeField> {
+        let mut global_xs = vec![C::ChallengeField::ZERO; self.num_vars()];
+        global_xs[..self.x_simd.len() + self.x.len()].copy_from_slice(&self.local_xs());
+        global_xs[self.x_simd.len() + self.x.len()..].copy_from_slice(&self.x_mpi);
+        global_xs
+    }
+
+    pub fn num_vars(&self) -> usize {
+        self.x.len() + self.x_simd.len() + self.x_mpi.len()
+    }
 }
 
 pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
@@ -87,6 +110,8 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
         rng: impl RngCore,
     ) -> Self::SRS;
 
+    /// n_input_vars is with respect to the multilinear poly on each machine in MPI,
+    /// also ignore the number of variables stacked in the SIMD field.
     fn gen_params(n_input_vars: usize) -> Self::Params;
 
     /// Initialize the scratch pad.
@@ -142,4 +167,38 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
         transcript: &mut T, // add transcript here to allow interactive arguments
         opening: &Self::Opening,
     ) -> bool;
+}
+
+pub(crate) trait TensorCodeIOPPCS {
+    const LEAVES_IN_RANGE_OPENING: usize = 2;
+
+    fn codeword_len(&self) -> usize;
+
+    fn minimum_hamming_weight(&self) -> f64;
+
+    fn evals_shape<F: Field>(num_vars: usize) -> (usize, usize) {
+        let elems_for_smallest_tree = tree::leaf_adic::<F>() * Self::LEAVES_IN_RANGE_OPENING;
+
+        let row_num: usize = elems_for_smallest_tree;
+        let msg_size: usize = (1 << num_vars) / row_num;
+
+        (row_num, msg_size)
+    }
+
+    fn query_complexity(&self, soundness_bits: usize) -> usize {
+        // NOTE: use Ligero (AHIV22) appendix C argument.
+        let avg_case_dist = self.minimum_hamming_weight() / 2f64;
+        let sec_bits = -(1f64 - avg_case_dist).log2();
+
+        (soundness_bits as f64 / sec_bits).ceil() as usize
+    }
+
+    fn proximity_repetitions<F: Field>(&self, soundness_bits: usize) -> usize {
+        // NOTE: use Ligero (AHIV22) or Avg-case dist to a code (BKS18)
+        // version of avg case dist in unique decoding technique.
+        // Here is the probability union bound
+        let single_run_soundness_bits = F::FIELD_SIZE - self.codeword_len().ilog2() as usize;
+
+        (soundness_bits as f64 / single_run_soundness_bits as f64).ceil() as usize
+    }
 }

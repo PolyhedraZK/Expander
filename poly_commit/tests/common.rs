@@ -1,4 +1,5 @@
 use arith::Field;
+use ark_std::test_rng;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use poly_commit::raw::RawExpanderGKR;
@@ -9,7 +10,7 @@ use polynomials::MultilinearExtension;
 use rand::thread_rng;
 use transcript::Transcript;
 
-pub fn test_pcs<F: Field, P: PolynomialCommitmentScheme<F>>(
+pub fn test_pcs<F: Field, T: Transcript<F>, P: PolynomialCommitmentScheme<F, T>>(
     params: &P::Params,
     poly: &P::Poly,
     xs: &[P::EvalPoint],
@@ -17,24 +18,35 @@ pub fn test_pcs<F: Field, P: PolynomialCommitmentScheme<F>>(
     let mut rng = thread_rng();
     let srs = P::gen_srs_for_testing(params, &mut rng);
     let (proving_key, verification_key) = srs.into_keys();
+    let mut transcript = T::new();
     let mut scratch_pad = P::init_scratch_pad(params);
 
     let commitment = P::commit(params, &proving_key, poly, &mut scratch_pad);
 
     for x in xs {
-        let (v, opening) = P::open(params, &proving_key, poly, x, &mut scratch_pad);
+        let mut transcript_cloned = transcript.clone();
+        let (v, opening) = P::open(
+            params,
+            &proving_key,
+            poly,
+            x,
+            &mut scratch_pad,
+            &mut transcript,
+        );
         assert!(P::verify(
             params,
             &verification_key,
             &commitment,
             x,
             v,
-            &opening
+            &opening,
+            &mut transcript_cloned
         ));
     }
 }
 
-pub fn test_gkr_pcs<
+#[allow(unused)]
+pub fn test_pcs_for_expander_gkr<
     C: GKRFieldConfig,
     T: Transcript<C::ChallengeField>,
     P: PCSForExpanderGKR<C, T>,
@@ -45,7 +57,7 @@ pub fn test_gkr_pcs<
     poly: &impl MultilinearExtension<C::SimdCircuitField>,
     xs: &[ExpanderGKRChallenge<C>],
 ) {
-    let mut rng = thread_rng();
+    let mut rng = test_rng();
     let srs = P::gen_srs_for_testing(params, mpi_config, &mut rng);
     let (proving_key, verification_key) = srs.into_keys();
     let mut scratch_pad = P::init_scratch_pad(params, mpi_config);
@@ -64,6 +76,9 @@ pub fn test_gkr_pcs<
 
     for xx in xs {
         let ExpanderGKRChallenge { x, x_simd, x_mpi } = xx;
+        let mut transcript_cloned = transcript.clone();
+
+        transcript.lock_proof();
         let opening = P::open(
             params,
             mpi_config,
@@ -73,11 +88,13 @@ pub fn test_gkr_pcs<
             transcript,
             &mut scratch_pad,
         );
+        transcript.unlock_proof();
 
         if mpi_config.is_root() {
             // this will always pass for RawExpanderGKR, so make sure it is correct
             let v = RawExpanderGKR::<C, T>::eval(&coeffs_gathered, x, x_simd, x_mpi);
 
+            transcript.lock_proof();
             assert!(P::verify(
                 params,
                 mpi_config,
@@ -85,9 +102,10 @@ pub fn test_gkr_pcs<
                 &commitment,
                 xx,
                 v,
-                transcript,
+                &mut transcript_cloned,
                 &opening
             ));
+            transcript.unlock_proof();
         }
     }
 }
