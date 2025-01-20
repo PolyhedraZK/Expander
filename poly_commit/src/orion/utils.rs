@@ -39,7 +39,7 @@ impl TensorCodeIOPPCS for OrionSRS {
         self.code_instance.code_len()
     }
 
-    fn hamming_weight(&self) -> f64 {
+    fn minimum_hamming_weight(&self) -> f64 {
         self.code_instance.hamming_weight()
     }
 }

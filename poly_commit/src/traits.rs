@@ -174,7 +174,7 @@ pub(crate) trait TensorCodeIOPPCS {
 
     fn codeword_len(&self) -> usize;
 
-    fn hamming_weight(&self) -> f64;
+    fn minimum_hamming_weight(&self) -> f64;
 
     fn evals_shape<F: Field>(num_vars: usize) -> (usize, usize) {
         let elems_for_smallest_tree = tree::leaf_adic::<F>() * Self::LEAVES_IN_RANGE_OPENING;
@@ -187,7 +187,7 @@ pub(crate) trait TensorCodeIOPPCS {
 
     fn query_complexity(&self, soundness_bits: usize) -> usize {
         // NOTE: use Ligero (AHIV22) appendix C argument.
-        let avg_case_dist = self.hamming_weight() / 2f64;
+        let avg_case_dist = self.minimum_hamming_weight() / 2f64;
         let sec_bits = -(1f64 - avg_case_dist).log2();
 
         (soundness_bits as f64 / sec_bits).ceil() as usize
