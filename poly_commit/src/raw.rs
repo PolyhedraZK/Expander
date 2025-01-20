@@ -3,7 +3,7 @@ use crate::{
     ExpanderGKRChallenge, PCSEmptyType, PCSForExpanderGKR, PolynomialCommitmentScheme,
     StructuredReferenceString,
 };
-use arith::{BN254Fr, Field, FieldForECC, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{BN254Fr, ExtensionField, Field, FieldForECC, FieldSerde, FieldSerdeResult, SimdField};
 use ethnum::U256;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
@@ -58,7 +58,7 @@ pub struct RawMultiLinearScratchPad<F: Field> {
 // Raw commitment for multi-linear polynomials
 pub struct RawMultiLinearPCS {}
 
-impl<F: Field, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for RawMultiLinearPCS {
+impl<F: ExtensionField, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for RawMultiLinearPCS {
     const NAME: &'static str = "RawMultiLinear";
 
     type Params = RawMultiLinearParams;
