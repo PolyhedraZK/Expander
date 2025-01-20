@@ -1,4 +1,4 @@
-use arith::{Field, FieldSerde};
+use arith::{ExtensionField, Field, FieldSerde};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::MultilinearExtension;
@@ -16,7 +16,7 @@ pub trait StructuredReferenceString {
 }
 
 /// Standard Polynomial commitment scheme (PCS) trait.
-pub trait PolynomialCommitmentScheme<F: Field, T: Transcript<F>> {
+pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default;
