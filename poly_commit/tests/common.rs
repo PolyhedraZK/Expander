@@ -1,4 +1,4 @@
-use arith::Field;
+use arith::{ExtensionField, Field};
 use ark_std::test_rng;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
@@ -10,7 +10,7 @@ use polynomials::MultilinearExtension;
 use rand::thread_rng;
 use transcript::Transcript;
 
-pub fn test_pcs<F: Field, T: Transcript<F>, P: PolynomialCommitmentScheme<F, T>>(
+pub fn test_pcs<F: ExtensionField, T: Transcript<F>, P: PolynomialCommitmentScheme<F, T>>(
     params: &P::Params,
     poly: &P::Poly,
     xs: &[P::EvalPoint],

@@ -1,12 +1,17 @@
 package circuit
 
 import (
+	"ExpanderVerifierCircuit/modules/fields"
+	"fmt"
 	"math/big"
 	"testing"
 
+	"github.com/PolyhedraZK/ExpanderCompilerCollection/ecgo"
+	ecgoTest "github.com/PolyhedraZK/ExpanderCompilerCollection/ecgo/test"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/exp/rand"
 )
 
@@ -16,7 +21,9 @@ type Evaluation struct {
 }
 
 func (e *Evaluation) Define(api frontend.API) error {
-	api.Println("Definition start")
+	// NOTE(HS) commenting out the api println as it is not supported in ecgo
+	// - reactivate after we have such functionality
+	// api.Println("Definition start")
 	n_witnesses := len(e.PrivateInput)
 	for i := 0; i < n_witnesses; i++ {
 		cur_input := e.PrivateInput[i]
@@ -59,9 +66,9 @@ func (e *Evaluation) Define(api frontend.API) error {
 			cur_input = cur_output
 		}
 
-		api.Println("wit: #", i)
+		// api.Println("wit: #", i)
 		for j := uint(0); j < e.Circuit.ExpectedNumOutputZeros; j++ {
-			api.Println(cur_input[j])
+			// api.Println(cur_input[j])
 			api.AssertIsEqual(cur_input[j], 0)
 		}
 	}
@@ -69,34 +76,53 @@ func (e *Evaluation) Define(api frontend.API) error {
 	return nil
 }
 
-func TestCircuitEvaluation(t *testing.T) {
-	circuit, private_input := ReadCircuit("../../../data/circuit.txt", "../../../data/witness.txt", 1)
+func readCircuitForCompile(t *testing.T, circuitRel CircuitRelation) Evaluation {
+	circuit, privateInput, err := ReadCircuit(circuitRel)
+	require.NoError(t, err)
 
-	println(circuit.ExpectedNumOutputZeros)
-	for i := 0; i < len(circuit.PublicInput[0]); i++ {
-		v, _ := circuit.PublicInput[0][i].(big.Int)
-		println("Public Input", v.String())
+	emptyPubInput := make([][]frontend.Variable, len(circuit.PublicInput))
+	for i := 0; i < len(emptyPubInput); i++ {
+		emptyPubInput[i] = make([]frontend.Variable, len(circuit.PublicInput[0]))
+	}
+	circuit.PublicInput = emptyPubInput
+
+	emptyPrivateInput := make([][]frontend.Variable, len(privateInput))
+	for i := 0; i < len(emptyPrivateInput); i++ {
+		emptyPrivateInput[i] = make([]frontend.Variable, len(privateInput[0]))
 	}
 
-	public_input_empty := make([][]frontend.Variable, len(circuit.PublicInput))
-	for i := 0; i < len(public_input_empty); i++ {
-		public_input_empty[i] = make([]frontend.Variable, len(circuit.PublicInput[0]))
-	}
-	circuit.PublicInput = public_input_empty
-
-	private_input_empty := make([][]frontend.Variable, len(private_input))
-	for i := 0; i < len(private_input_empty); i++ {
-		private_input_empty[i] = make([]frontend.Variable, len(private_input[0]))
-	}
-
-	evaluation := Evaluation{
+	return Evaluation{
 		Circuit:      *circuit,
-		PrivateInput: private_input_empty,
+		PrivateInput: emptyPrivateInput,
 	}
-	r1cs, r1cs_err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &evaluation)
-	if r1cs_err != nil {
-		panic("Unable to generate r1cs")
+}
+
+func readCircuitForAssignment(t *testing.T, circuitRel CircuitRelation) Evaluation {
+	circuit, privateInput, err := ReadCircuit(circuitRel)
+	require.NoError(t, err)
+
+	return Evaluation{
+		Circuit:      *circuit,
+		PrivateInput: privateInput,
 	}
+}
+
+func TestCircuitGnarkEvaluation(t *testing.T) {
+	testCircuitGnarkEvaluationHelper(t, CircuitRelation{
+		CircuitPath: "../../../data/circuit_bn254.txt",
+		WitnessPath: "../../../data/witness_bn254.txt",
+		MPISize:     1,
+		FieldEnum:   fields.ECCBN254,
+	})
+}
+
+func testCircuitGnarkEvaluationHelper(t *testing.T, testcase CircuitRelation) {
+	evaluation := readCircuitForCompile(t, testcase)
+
+	fieldModulus := testcase.FieldEnum.FieldModulus()
+
+	r1cs, err := frontend.Compile(fieldModulus, r1cs.NewBuilder, &evaluation)
+	require.NoError(t, err, "Unable to generate r1cs")
 
 	println("Nb Constraints: ", r1cs.GetNbConstraints())
 	println("Nb Internal Witnesss: ", r1cs.GetNbInternalVariables())
@@ -104,38 +130,91 @@ func TestCircuitEvaluation(t *testing.T) {
 	println("Nb Public Witness:", r1cs.GetNbPublicVariables())
 
 	// Correct Witness
-	circuit, private_input = ReadCircuit("../../../data/circuit.txt", "../../../data/witness.txt", 1)
+	assignment := readCircuitForAssignment(t, testcase)
+	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+	require.NoError(t, err, "Unable to solve witness")
 
-	assignment := Evaluation{
-		Circuit:      *circuit,
-		PrivateInput: private_input,
-	}
-	witness, witness_err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
-	if witness_err != nil {
-		panic("Unable to solve witness")
+	println("Num of public input", assignment.Circuit.ExpectedNumOutputZeros)
+	for i := 0; i < len(assignment.Circuit.PublicInput[0]); i++ {
+		v, _ := assignment.Circuit.PublicInput[0][i].(big.Int)
+		println("Public Input", v.String())
 	}
 
-	err := r1cs.IsSolved(witness)
-	if err != nil {
-		panic("R1CS not satisfied")
-	}
+	err = r1cs.IsSolved(witness)
+	require.NoError(t, err, "R1CS not satisfied")
 
 	// Incorrect witness
-	circuit, private_input = ReadCircuit("../../../data/circuit.txt", "../../../data/witness.txt", 1)
-	ri := rand.Intn(len(private_input))
-	rj := rand.Intn(len(private_input[0]))
-	private_input[ri][rj] = 147258369 // this should make the evaluation incorrect
+	circuit, privateInput, err := ReadCircuit(testcase)
+	require.NoError(t, err)
+
+	ri := rand.Intn(len(privateInput))
+	rj := rand.Intn(len(privateInput[0]))
+	privateInput[ri][rj] = 147258369 // this should make the evaluation incorrect
 
 	assignment = Evaluation{
 		Circuit:      *circuit,
-		PrivateInput: private_input,
+		PrivateInput: privateInput,
 	}
-	witness, witness_err = frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
-	if witness_err != nil {
-		panic("Unable to solve witness")
-	}
+	witness, err = frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+	require.NoError(t, err, "Unable to solve witness")
+
 	err = r1cs.IsSolved(witness)
-	if err == nil {
-		panic("Incorrect witness should not be marked as solved")
+	require.Error(t, err, "Incorrect witness should not be marked as solved")
+}
+
+func TestCircuitLayeredEvaluation(t *testing.T) {
+	testcases := []CircuitRelation{
+		{
+			CircuitPath: "../../../data/circuit_bn254.txt",
+			WitnessPath: "../../../data/witness_bn254.txt",
+			MPISize:     1,
+			FieldEnum:   fields.ECCBN254,
+		},
+		// NOTE(HS) as of 2024/12/11, the compilation process of m31 circuit
+		// takes more than 50GB of RAM, so run with cautious yall...
+		// {
+		// 	CircuitPath: "../../../data/circuit_m31.txt",
+		// 	WitnessPath: "../../../data/witness_m31.txt",
+		// 	MPISize:     1,
+		// 	FieldEnum:   fields.ECCM31,
+		// },
+		{
+			CircuitPath: "../../../data/circuit_gf2.txt",
+			WitnessPath: "../../../data/witness_gf2.txt",
+			MPISize:     1,
+			FieldEnum:   fields.ECCGF2,
+		},
 	}
+
+	for _, testcase := range testcases {
+		t.Run(
+			fmt.Sprintf(
+				"Layered circuit load and test for %s",
+				testcase.CircuitPath,
+			),
+			func(t *testing.T) {
+				testCircuitLayeredEvaluationHelper(t, testcase)
+			},
+		)
+	}
+}
+
+func testCircuitLayeredEvaluationHelper(t *testing.T, testcase CircuitRelation) {
+	evaluation := readCircuitForCompile(t, testcase)
+
+	fieldModulus := testcase.FieldEnum.FieldModulus()
+
+	eccCompilationResult, err := ecgo.Compile(fieldModulus, &evaluation)
+	require.NoError(t, err, "ECGO compilation error")
+
+	layeredCircuit := eccCompilationResult.GetLayeredCircuit()
+	inputSolver := eccCompilationResult.GetInputSolver()
+
+	// NOTE: get correct witness
+	assignment := readCircuitForAssignment(t, testcase)
+
+	witness, err := inputSolver.SolveInputAuto(&assignment)
+	require.NoError(t, err, "ECGO witness resolve error")
+
+	require.True(t, ecgoTest.CheckCircuit(layeredCircuit, witness))
 }

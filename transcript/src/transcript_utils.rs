@@ -1,11 +1,11 @@
 use crate::Transcript;
-use arith::Field;
+use arith::ExtensionField;
 use mpi_config::MPIConfig;
 
 /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
 pub fn transcript_root_broadcast<F, T>(transcript: &mut T, mpi_config: &MPIConfig)
 where
-    F: Field,
+    F: ExtensionField,
     T: Transcript<F>,
 {
     if mpi_config.world_size > 1 {
@@ -22,7 +22,7 @@ where
 /// which is updated by 'transcript_root_broadcast' if mpi_size > 1.
 pub fn transcript_verifier_sync<F, T>(transcript: &mut T, mpi_config: &MPIConfig)
 where
-    F: Field,
+    F: ExtensionField,
     T: Transcript<F>,
 {
     if mpi_config.world_size() > 1 {
