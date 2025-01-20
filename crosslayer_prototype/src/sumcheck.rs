@@ -1,4 +1,4 @@
-use arith::{Field, FieldSerde};
+use arith::ExtensionField;
 use gkr_field_config::GKRFieldConfig;
 use transcript::Transcript;
 
@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[inline]
-pub fn transcript_io<F: Field + FieldSerde, T: Transcript<F>>(ps: &[F], transcript: &mut T) -> F {
+pub fn transcript_io<F: ExtensionField, T: Transcript<F>>(ps: &[F], transcript: &mut T) -> F {
     assert!(ps.len() == 3 || ps.len() == 4);
     for p in ps {
         transcript.append_field_element(p);

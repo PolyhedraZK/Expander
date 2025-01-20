@@ -5,7 +5,7 @@ use field_hashers::FiatShamirFieldHasher;
 
 use crate::{fiat_shamir_hash::FiatShamirBytesHash, Proof};
 
-pub trait Transcript<F: Field>: Clone + Debug {
+pub trait Transcript<F: ExtensionField>: Clone + Debug {
     /// Create a new transcript.
     fn new() -> Self;
 
@@ -14,6 +14,16 @@ pub trait Transcript<F: Field>: Clone + Debug {
 
     /// Append a slice of bytes
     fn append_u8_slice(&mut self, buffer: &[u8]);
+
+    /// Generate a circuit field element.
+    fn generate_circuit_field_element(&mut self) -> F::BaseField;
+
+    /// Generate a slice of random circuit fields.
+    fn generate_circuit_field_elements(&mut self, num_elems: usize) -> Vec<F::BaseField> {
+        let mut circuit_fs = Vec::with_capacity(num_elems);
+        (0..num_elems).for_each(|_| circuit_fs.push(self.generate_circuit_field_element()));
+        circuit_fs
+    }
 
     /// Generate a challenge.
     fn generate_challenge_field_element(&mut self) -> F;
@@ -81,7 +91,7 @@ pub struct BytesHashTranscript<F: Field, H: FiatShamirBytesHash> {
     proof_locked_at: usize,
 }
 
-impl<F: Field, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, H> {
+impl<F: ExtensionField, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, H> {
     fn new() -> Self {
         Self {
             phantom: PhantomData,
@@ -104,6 +114,23 @@ impl<F: Field, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, 
         self.proof.bytes.extend_from_slice(buffer);
     }
 
+    /// Generate a random circuit field.
+    fn generate_circuit_field_element(&mut self) -> <F as ExtensionField>::BaseField {
+        // NOTE(HS) fast path for BN254 sampling - notice that the deserialize from for BN254
+        // does not self correct the sampling bytes, we instead use challenge field sampling
+        // and cast it back to base field for BN254 case - maybe traverse back and unify the impls.
+        if F::DEGREE == 1 {
+            let challenge_fs = self.generate_challenge_field_element();
+            return challenge_fs.to_limbs()[0];
+        }
+
+        let bytes_sampled = self.generate_challenge_u8_slice(32);
+        let mut buffer = [0u8; 32];
+        buffer[..32].copy_from_slice(&bytes_sampled);
+
+        <F as ExtensionField>::BaseField::from_uniform_bytes(&buffer)
+    }
+
     /// Generate a challenge.
     fn generate_challenge_field_element(&mut self) -> F {
         self.hash_to_digest();
@@ -121,7 +148,7 @@ impl<F: Field, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, 
             cur_n_bytes += H::DIGEST_SIZE;
         }
 
-        ret.resize(n_bytes, 0);
+        ret.truncate(n_bytes);
         ret
     }
 
@@ -230,6 +257,26 @@ where
             let challenge_f = ChallengeF::from_uniform_bytes(chunk_32.try_into().unwrap());
             self.data_pool.extend_from_slice(&challenge_f.to_limbs());
         });
+    }
+
+    fn generate_circuit_field_element(&mut self) -> <ChallengeF as ExtensionField>::BaseField {
+        if !self.data_pool.is_empty() {
+            self.hash_state = self.hasher.hash_to_state(&self.data_pool);
+            self.data_pool.clear();
+            self.next_unconsumed = 0;
+        }
+
+        if self.next_unconsumed < H::STATE_CAPACITY {
+            let circuit_f = self.hash_state[self.next_unconsumed];
+            self.next_unconsumed += 1;
+            return circuit_f;
+        }
+
+        self.hash_state = self.hasher.hash_to_state(&self.hash_state);
+        let circuit_f = self.hash_state[0];
+        self.next_unconsumed = 1;
+
+        circuit_f
     }
 
     fn generate_challenge_field_element(&mut self) -> ChallengeF {
