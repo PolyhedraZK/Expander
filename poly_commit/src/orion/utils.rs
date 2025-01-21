@@ -485,6 +485,12 @@ mod tests {
 
     #[test]
     fn test_lut_simd_inner_prod_consistency() {
+        if cfg!(target_endian = "big") {
+            println!("This is a BigEndian system.")
+        } else {
+            println!("This is a LittleEndian system.")
+        }
+
         let mut rng = test_rng();
 
         let weights: Vec<_> = (0..8).map(|_| GF2_128::random_unsafe(&mut rng)).collect();
