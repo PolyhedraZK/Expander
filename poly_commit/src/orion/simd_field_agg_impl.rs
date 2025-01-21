@@ -1,6 +1,7 @@
 use std::iter;
 
 use arith::{Field, SimdField};
+use gf2::GF2;
 use gkr_field_config::GKRFieldConfig;
 use itertools::izip;
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
@@ -141,6 +142,19 @@ where
                 _ => return false,
             };
 
-            simd_verify_alphabet_check(&codeword, rl, &query_indices, &packed_interleaved_alphabets)
+            match C::CircuitField::NAME {
+                GF2::NAME => lut_verify_alphabet_check(
+                    &codeword,
+                    rl,
+                    &query_indices,
+                    &packed_interleaved_alphabets,
+                ),
+                _ => simd_verify_alphabet_check(
+                    &codeword,
+                    rl,
+                    &query_indices,
+                    &packed_interleaved_alphabets,
+                ),
+            }
         })
 }
