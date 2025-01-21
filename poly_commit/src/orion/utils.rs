@@ -479,22 +479,15 @@ mod tests {
     use ark_std::test_rng;
     use gf2::{GF2x8, GF2};
     use gf2_128::{GF2_128x8, GF2_128};
-    use itertools::Itertools;
 
     use super::SubsetSumLUTs;
 
     #[test]
     fn test_lut_simd_inner_prod_consistency() {
-        if cfg!(target_endian = "big") {
-            println!("This is a BigEndian system.")
-        } else {
-            println!("This is a LittleEndian system.")
-        }
-
         let mut rng = test_rng();
 
         let weights: Vec<_> = (0..8).map(|_| GF2_128::random_unsafe(&mut rng)).collect();
-        let bases: Vec<_> = (0..8).map(|_| GF2::random_unsafe(&mut rng)).collect_vec();
+        let bases: Vec<_> = (0..8).map(|_| GF2::random_unsafe(&mut rng)).collect();
 
         let simd_weights = GF2_128x8::pack(&weights);
         let simd_bases = GF2x8::pack(&bases);
