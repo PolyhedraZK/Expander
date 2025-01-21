@@ -479,6 +479,7 @@ mod tests {
     use ark_std::test_rng;
     use gf2::{GF2x8, GF2};
     use gf2_128::{GF2_128x8, GF2_128};
+    use itertools::izip;
 
     use super::SubsetSumLUTs;
 
@@ -493,6 +494,11 @@ mod tests {
         let simd_bases = GF2x8::pack(&bases);
 
         let expected_simd_inner_prod: GF2_128 = (simd_weights * simd_bases).unpack().iter().sum();
+
+        let expected_vanilla_inner_prod: GF2_128 =
+            izip!(&weights, &bases).map(|(w, b)| *w * *b).sum();
+
+        assert_eq!(expected_simd_inner_prod, expected_vanilla_inner_prod);
 
         let mut table = SubsetSumLUTs::new(8, 1);
         table.build(&weights);
