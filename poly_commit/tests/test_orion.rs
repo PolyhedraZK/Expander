@@ -4,7 +4,7 @@ use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
 use gf2_128::GF2_128;
-use gkr_field_config::{GKRFieldConfig, M31ExtConfig};
+use gkr_field_config::{GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mersenne31::{M31Ext3, M31x16, M31};
 use mpi_config::MPIConfig;
 use poly_commit::*;
@@ -162,13 +162,11 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
 fn test_orion_for_expander_gkr() {
     let mpi_config = MPIConfig::new();
 
-    /*
-        test_orion_for_expander_gkr_generics::<
-            GF2ExtConfig,
-            GF2x128,
-            BytesHashTranscript<_, Keccak256hasher>,
-        >(&mpi_config, 16);
-    */
+    test_orion_for_expander_gkr_generics::<
+        GF2ExtConfig,
+        GF2x128,
+        BytesHashTranscript<_, Keccak256hasher>,
+    >(&mpi_config, 16);
 
     test_orion_for_expander_gkr_generics::<
         M31ExtConfig,
