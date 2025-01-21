@@ -227,6 +227,29 @@ where
         .collect()
 }
 
+#[inline(always)]
+pub(crate) fn transpose_and_pack_simd<F, SimdF, PackF>(
+    evaluations: &mut [SimdF],
+    row_num: usize,
+) -> Vec<PackF>
+where
+    F: Field,
+    SimdF: SimdField<Scalar = F>,
+    PackF: SimdField<Scalar = F>,
+{
+    // NOTE: pre transpose evaluations
+    let mut scratch = vec![SimdF::ZERO; evaluations.len()];
+    transpose_in_place(evaluations, &mut scratch, row_num);
+    drop(scratch);
+
+    // NOTE: SIMD pack each row of transposed matrix
+    let relative_pack_size = PackF::PACK_SIZE / SimdF::PACK_SIZE;
+    evaluations
+        .chunks(relative_pack_size)
+        .map(PackF::pack_from_simd)
+        .collect()
+}
+
 /*
  * LINEAR OPERATIONS FOR GF2 (LOOKUP TABLE BASED)
  */

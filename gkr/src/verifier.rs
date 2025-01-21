@@ -11,7 +11,7 @@ use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
-use transcript::{Proof, Transcript};
+use transcript::{transcript_verifier_sync, Proof, Transcript};
 
 #[cfg(feature = "grinding")]
 use crate::grind;
@@ -285,10 +285,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         // and use the following line to avoid unnecessary deserialization and serialization
         // transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
-        if self.config.mpi_config.world_size() > 1 {
-            let state = transcript.hash_and_return_state(); // Trigger an additional hash
-            transcript.set_state(&state);
-        }
+        transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
@@ -308,6 +305,8 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
 
         log::info!("GKR verification: {}", verified);
 
+        transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
+
         verified &= self.get_pcs_opening_from_proof_and_verify(
             pcs_params,
             pcs_verification_key,
@@ -323,6 +322,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         );
 
         if let Some(rz1) = rz1 {
+            transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
             verified &= self.get_pcs_opening_from_proof_and_verify(
                 pcs_params,
                 pcs_verification_key,

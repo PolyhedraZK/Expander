@@ -18,7 +18,15 @@ pub use base_field_impl::{
 #[cfg(test)]
 mod base_field_tests;
 
+mod simd_field_impl;
+pub use simd_field_impl::{
+    orion_commit_simd_field, orion_open_simd_field, orion_verify_simd_field,
+};
+
+#[cfg(test)]
+mod simd_field_tests;
+
 mod pcs_trait_impl;
-pub use pcs_trait_impl::OrionBaseFieldPCS;
+pub use pcs_trait_impl::{OrionBaseFieldPCS, OrionSIMDFieldPCS};
 
 mod serde;
