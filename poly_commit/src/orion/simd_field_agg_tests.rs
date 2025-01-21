@@ -2,7 +2,9 @@ use std::marker::PhantomData;
 
 use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
-use gkr_field_config::{GKRFieldConfig, M31ExtConfig};
+use gf2::GF2x128;
+use gf2_128::GF2_128;
+use gkr_field_config::{GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use itertools::izip;
 use mersenne31::{M31Ext3, M31x16};
 use polynomials::{EqPolynomial, MultiLinearPoly};
@@ -184,15 +186,15 @@ where
 #[test]
 fn test_orion_simd_aggregate_verify() {
     let parties = 16;
-    /*
-        (16..18).for_each(|num_var| {
-            test_orion_simd_aggregate_verify_helper::<
-                GF2ExtConfig,
-                GF2x128,
-                BytesHashTranscript<GF2_128, Keccak256hasher>,
-            >(parties, num_var)
-        });
-    */
+
+    (16..18).for_each(|num_var| {
+        test_orion_simd_aggregate_verify_helper::<
+            GF2ExtConfig,
+            GF2x128,
+            BytesHashTranscript<GF2_128, Keccak256hasher>,
+        >(parties, num_var)
+    });
+
     (12..15).for_each(|num_var| {
         test_orion_simd_aggregate_verify_helper::<
             M31ExtConfig,

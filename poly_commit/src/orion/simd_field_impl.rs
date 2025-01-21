@@ -1,7 +1,6 @@
 use std::iter;
 
 use arith::{ExtensionField, Field, SimdField};
-use gf2::GF2;
 use itertools::izip;
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 use transcript::Transcript;
@@ -99,24 +98,14 @@ where
     let proximity_test_num = pk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
     let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_test_num];
 
-    match F::NAME {
-        GF2::NAME => lut_open_linear_combine(
-            row_num * SimdF::PACK_SIZE,
-            &packed_evals,
-            &eq_col_coeffs,
-            &mut eval_row,
-            &mut proximity_rows,
-            transcript,
-        ),
-        _ => simd_open_linear_combine(
-            row_num * SimdF::PACK_SIZE,
-            &packed_evals,
-            &eq_col_coeffs,
-            &mut eval_row,
-            &mut proximity_rows,
-            transcript,
-        ),
-    }
+    simd_open_linear_combine(
+        row_num * SimdF::PACK_SIZE,
+        &packed_evals,
+        &eq_col_coeffs,
+        &mut eval_row,
+        &mut proximity_rows,
+        transcript,
+    );
 
     // NOTE: MT opening for point queries
     let query_openings = orion_mt_openings(pk, transcript, scratch_pad);
@@ -203,19 +192,6 @@ where
                 _ => return false,
             };
 
-            match F::NAME {
-                GF2::NAME => lut_verify_alphabet_check(
-                    &codeword,
-                    rl,
-                    &query_indices,
-                    &packed_interleaved_alphabets,
-                ),
-                _ => simd_verify_alphabet_check(
-                    &codeword,
-                    rl,
-                    &query_indices,
-                    &packed_interleaved_alphabets,
-                ),
-            }
+            simd_verify_alphabet_check(&codeword, rl, &query_indices, &packed_interleaved_alphabets)
         })
 }
