@@ -596,10 +596,10 @@ impl ExtensionField for AVX256GF2_128x8 {
         let v7 = -((base.v & 1u8) as i64);
 
         let mut res = *self;
-        res.data[0] = unsafe { _mm256_and_si256(res.data[0], _mm256_set_epi64x(v0, v0, v2, v2)) };
-        res.data[1] = unsafe { _mm256_and_si256(res.data[1], _mm256_set_epi64x(v4, v4, v6, v6)) };
-        res.data[2] = unsafe { _mm256_and_si256(res.data[2], _mm256_set_epi64x(v1, v1, v3, v3)) };
-        res.data[3] = unsafe { _mm256_and_si256(res.data[3], _mm256_set_epi64x(v5, v5, v7, v7)) };
+        res.data[0] = unsafe { _mm256_and_si256(res.data[0], _mm256_set_epi64x(v1, v1, v0, v0)) };
+        res.data[1] = unsafe { _mm256_and_si256(res.data[1], _mm256_set_epi64x(v3, v3, v2, v2)) };
+        res.data[2] = unsafe { _mm256_and_si256(res.data[2], _mm256_set_epi64x(v5, v5, v4, v4)) };
+        res.data[3] = unsafe { _mm256_and_si256(res.data[3], _mm256_set_epi64x(v7, v7, v6, v6)) };
 
         res
     }
@@ -616,10 +616,10 @@ impl ExtensionField for AVX256GF2_128x8 {
         let v7 = (base.v & 1u8) as i64;
 
         let mut res = *self;
-        res.data[0] = unsafe { _mm256_xor_si256(res.data[0], _mm256_set_epi64x(0, v0, 0, v2)) };
-        res.data[1] = unsafe { _mm256_xor_si256(res.data[1], _mm256_set_epi64x(0, v4, 0, v6)) };
-        res.data[2] = unsafe { _mm256_xor_si256(res.data[2], _mm256_set_epi64x(0, v1, 0, v3)) };
-        res.data[3] = unsafe { _mm256_xor_si256(res.data[3], _mm256_set_epi64x(0, v5, 0, v7)) };
+        res.data[0] = unsafe { _mm256_xor_si256(res.data[0], _mm256_set_epi64x(0, v1, 0, v0)) };
+        res.data[1] = unsafe { _mm256_xor_si256(res.data[1], _mm256_set_epi64x(0, v3, 0, v2)) };
+        res.data[2] = unsafe { _mm256_xor_si256(res.data[2], _mm256_set_epi64x(0, v5, 0, v4)) };
+        res.data[3] = unsafe { _mm256_xor_si256(res.data[3], _mm256_set_epi64x(0, v7, 0, v6)) };
 
         res
     }
@@ -729,10 +729,10 @@ impl From<GF2x8> for AVX256GF2_128x8 {
 
         AVX256GF2_128x8 {
             data: [
-                unsafe { _mm256_set_epi64x(0, v0, 0, v2) }, // even
-                unsafe { _mm256_set_epi64x(0, v4, 0, v6) }, // even
-                unsafe { _mm256_set_epi64x(0, v1, 0, v3) }, // odd
-                unsafe { _mm256_set_epi64x(0, v5, 0, v7) }, // odd
+                unsafe { _mm256_set_epi64x(0, v1, 0, v0) },
+                unsafe { _mm256_set_epi64x(0, v3, 0, v2) },
+                unsafe { _mm256_set_epi64x(0, v5, 0, v4) },
+                unsafe { _mm256_set_epi64x(0, v7, 0, v6) },
             ],
         }
     }
