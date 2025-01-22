@@ -67,7 +67,13 @@ jobs:
             sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
           fi
           mpiexec --version
-      
+          cd ~
+          git clone https://github.com/PolyhedraZK/ExpanderCompilerCollection.git
+          cd ExpanderCompilerCollection
+          mkdir -p ~/.cache/ExpanderCompilerCollection
+          cargo build --release
+          cp target/release/libec_go_lib.* ~/.cache/ExpanderCompilerCollection/
+
       - name: Download test data
         run: cargo run --bin=dev-setup --release
       
