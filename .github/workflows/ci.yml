@@ -41,7 +41,7 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-          # - os: ubuntu-latest
+          - os: ubuntu-latest
 
     steps:
       - name: Checkout code
