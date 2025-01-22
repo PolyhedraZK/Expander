@@ -12,9 +12,10 @@ use config::{
 };
 use config_macros::declare_gkr_config;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
+use gf2::GF2x128;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mersenne31::M31x16;
-use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
+use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR, OrionPCSForGKR};
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
 use transcript::{BytesHashTranscript, FieldHashTranscript, SHA256hasher};
@@ -289,5 +290,5 @@ declare_gkr_config!(
     pub GF2ExtConfigSha2,
     FieldType::GF2,
     FiatShamirHashType::SHA256,
-    PolynomialCommitmentType::Raw
+    PolynomialCommitmentType::Orion
 );

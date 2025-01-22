@@ -472,3 +472,39 @@ where
         alphabet == codeword[index]
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use arith::{Field, SimdField};
+    use ark_std::test_rng;
+    use gf2::{GF2x8, GF2};
+    use gf2_128::{GF2_128x8, GF2_128};
+    use itertools::izip;
+
+    use super::SubsetSumLUTs;
+
+    #[test]
+    fn test_lut_simd_inner_prod_consistency() {
+        let mut rng = test_rng();
+
+        let weights: Vec<_> = (0..8).map(|_| GF2_128::random_unsafe(&mut rng)).collect();
+        let bases: Vec<_> = (0..8).map(|_| GF2::random_unsafe(&mut rng)).collect();
+
+        let simd_weights = GF2_128x8::pack(&weights);
+        let simd_bases = GF2x8::pack(&bases);
+
+        let expected_simd_inner_prod: GF2_128 = (simd_weights * simd_bases).unpack().iter().sum();
+
+        let expected_vanilla_inner_prod: GF2_128 =
+            izip!(&weights, &bases).map(|(w, b)| *w * *b).sum();
+
+        assert_eq!(expected_simd_inner_prod, expected_vanilla_inner_prod);
+
+        let mut table = SubsetSumLUTs::new(8, 1);
+        table.build(&weights);
+
+        let actual_lut_inner_prod = table.lookup_and_sum(&vec![simd_bases]);
+
+        assert_eq!(expected_simd_inner_prod, actual_lut_inner_prod)
+    }
+}

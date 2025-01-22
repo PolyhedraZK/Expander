@@ -565,6 +565,7 @@ version = "0.1.0"
 dependencies = [
  "config",
  "field_hashers",
+ "gf2",
  "gkr_field_config",
  "mersenne31",
  "poly_commit",

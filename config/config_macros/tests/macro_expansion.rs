@@ -8,9 +8,10 @@ use gkr_field_config::FieldType;
 use config::GKRConfig;
 use config_macros::declare_gkr_config;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
+use gf2::GF2x128;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mersenne31::M31x16;
-use poly_commit::raw::RawExpanderGKR;
+use poly_commit::{OrionPCSForGKR, RawExpanderGKR};
 use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
 
 fn print_type_name<Cfg: GKRConfig>() {
@@ -26,10 +27,16 @@ fn main() {
         PolynomialCommitmentType::Raw
     );
     declare_gkr_config!(
-        M31PoseidonConfig,
+        M31PoseidonRawConfig,
         FieldType::M31,
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        M31PoseidonOrionConfig,
+        FieldType::M31,
+        FiatShamirHashType::Poseidon,
+        PolynomialCommitmentType::Orion
     );
     declare_gkr_config!(
         BN254MIMCConfig,
@@ -43,8 +50,17 @@ fn main() {
         FiatShamirHashType::Keccak256,
         PolynomialCommitmentType::Raw
     );
+    declare_gkr_config!(
+        GF2Keccak256OrionConfig,
+        FieldType::GF2,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Orion
+    );
 
     print_type_name::<M31Sha256Config>();
+    print_type_name::<M31PoseidonRawConfig>();
+    print_type_name::<M31PoseidonOrionConfig>();
     print_type_name::<BN254MIMCConfig>();
     print_type_name::<GF2Keccak256Config>();
+    print_type_name::<GF2Keccak256OrionConfig>();
 }

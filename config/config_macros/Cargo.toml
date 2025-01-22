@@ -15,6 +15,7 @@ quote = "1.0"     # For generating code
 proc-macro2 = "1.0"  # For working with tokens
 
 [dev-dependencies]
+gf2 = { path = "../../arith/gf2" }
 mersenne31 = { path = "../../arith/mersenne31/" }
 
 [lib]
