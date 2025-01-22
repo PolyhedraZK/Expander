@@ -70,7 +70,9 @@ jobs:
           cd ~
           git clone https://github.com/PolyhedraZK/ExpanderCompilerCollection.git
           cd ExpanderCompilerCollection
-          ./build-rust.sh
+          mkdir -p ~/.cache/ExpanderCompilerCollection
+          cargo build --release
+          cp target/release/libec_go_lib.* ~/.cache/ExpanderCompilerCollection/
 
       - name: Download test data
         run: cargo run --bin=dev-setup --release
