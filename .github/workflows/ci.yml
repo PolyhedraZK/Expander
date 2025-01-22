@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -29,7 +29,7 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt --all -- --check
-        
+
       - name: Run clippy
         run: cargo clippy --all
 
@@ -42,14 +42,14 @@ jobs:
         include:
           - os: macos-latest
           # - os: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -67,22 +67,23 @@ jobs:
             sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
           fi
           mpiexec --version
+
+      - name: Setup ECC Library
+        run: |
           cd ~
-          git clone https://github.com/PolyhedraZK/ExpanderCompilerCollection.git
+          git clone -b dev https://github.com/PolyhedraZK/ExpanderCompilerCollection.git
           cd ExpanderCompilerCollection
-          mkdir -p ~/.cache/ExpanderCompilerCollection
-          cargo build --release
-          cp target/release/libec_go_lib.* ~/.cache/ExpanderCompilerCollection/
+          ./build-rust.sh
 
       - name: Download test data
         run: cargo run --bin=dev-setup --release
-      
+
       - name: Build project
         run: cargo build --all-features --release
-      
+
       - name: Run unit tests
         run: cargo test --all-features --release --workspace
-      
+
       - name: Run E2E tests
         run: ./scripts/test_recursion.py
 
