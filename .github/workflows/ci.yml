@@ -93,7 +93,6 @@ jobs:
       - name: Run benchmarks on Github Workflows
         if: matrix.os != '7950x3d'
         run: |
-          cargo run --bin=dev-setup --release
           cargo run --bin=gkr --release -- -t 4 -f gf2ext128
           cargo run --bin=gkr --release -- -t 4 -f m31ext3
           cargo run --bin=gkr --release -- -t 4 -f fr
@@ -101,7 +100,6 @@ jobs:
       - name: Run benchmarks on AVX512 7950x3d
         if: matrix.os == '7950x3d'
         run: |
-          cargo run --bin=dev-setup --release
           cargo run --bin=gkr --release -- -t 16 -f gf2ext128
           cargo run --bin=gkr --release -- -t 16 -f m31ext3
           cargo run --bin=gkr --release -- -t 16 -f fr
