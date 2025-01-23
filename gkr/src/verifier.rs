@@ -282,7 +282,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
 
         // this function will iteratively hash the commitment, and append the final hash output
         // to the transcript. this introduces a decent circuit depth for the FS transform.
-        // 
+        //
         // note that this function is almost identical to grind, expect that grind uses a
         // fixed hasher, where as this function uses the transcript hasher
         let pcs_verified = transcript.append_commitment_and_check_digest(&buffer, &mut cursor);
