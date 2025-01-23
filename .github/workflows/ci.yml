@@ -42,6 +42,8 @@ jobs:
         include:
           - os: macos-latest
           - os: ubuntu-latest
+          - os: 7950x3d
+            feature: avx512f
 
     steps:
       - name: Checkout code
@@ -56,21 +58,22 @@ jobs:
           prefix-key: "mpi-v5.0.6"
 
       - uses: actions/setup-go@v5
+        if: matrix.os != '7950x3d'
         with:
           go-version: '>=1.22.0'
 
-      - name: Setup Dependencies
-        run: |
-          if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            brew install gcc make openmpi
-          else
-            sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
-          fi
-          mpiexec --version
+      - name: Setup Dependencies for MacOS workflow
+        if: matrix.os == 'macos-latest'
+        run: brew install gcc make openmpi
+
+      - name: Setup Dependencies for Ubuntu workflow
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
 
       - name: Setup ECC Library
         run: |
           cd ~
+          rm -rf ExpanderCompilerCollection
           git clone -b dev https://github.com/PolyhedraZK/ExpanderCompilerCollection.git
           cd ExpanderCompilerCollection
           ./build-rust.sh
@@ -87,9 +90,18 @@ jobs:
       - name: Run E2E tests
         run: ./scripts/test_recursion.py
 
-      - name: Run benchmarks
+      - name: Run benchmarks on Github Workflows
+        if: matrix.os != '7950x3d'
         run: |
           cargo run --bin=dev-setup --release
           cargo run --bin=gkr --release -- -t 4 -f gf2ext128
           cargo run --bin=gkr --release -- -t 4 -f m31ext3
           cargo run --bin=gkr --release -- -t 4 -f fr
+
+      - name: Run benchmarks on AVX512 7950x3d
+        if: matrix.os == '7950x3d'
+        run: |
+          cargo run --bin=dev-setup --release
+          cargo run --bin=gkr --release -- -t 16 -f gf2ext128
+          cargo run --bin=gkr --release -- -t 16 -f m31ext3
+          cargo run --bin=gkr --release -- -t 16 -f fr
