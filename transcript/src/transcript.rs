@@ -295,9 +295,9 @@ where
         // When appending the initial commitment, we hash the commitment bytes
         // for sufficient number of times, so that the FS hash has a sufficient circuit depth
         let mut challenge = self.generate_challenge_field_element().to_limbs();
-        let mut hasher = H::new();
+        let hasher = H::new();
         for _ in 0..PCS_DIGEST_LOOP {
-            challenge = H::hash_to_state(&mut hasher, &challenge);
+            challenge = hasher.hash_to_state(&challenge);
         }
 
         let mut digest_bytes = vec![];
@@ -314,9 +314,9 @@ where
         // When appending the initial commitment, we hash the commitment bytes
         // for sufficient number of times, so that the FS hash has a sufficient circuit depth
         let mut challenge = self.generate_challenge_field_element().to_limbs();
-        let mut hasher = H::new();
+        let hasher = H::new();
         for _ in 0..PCS_DIGEST_LOOP {
-            challenge = H::hash_to_state(&mut hasher, &challenge);
+            challenge = hasher.hash_to_state(&challenge);
         }
         let mut digest_bytes = vec![];
         challenge.serialize_into(&mut digest_bytes).unwrap();
