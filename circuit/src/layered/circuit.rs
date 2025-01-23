@@ -282,6 +282,7 @@ impl<C: GKRFieldConfig> Circuit<C> {
         assert!(self.rnd_coefs_identified);
 
         let sampled_circuit_fs = transcript.generate_circuit_field_elements(self.rnd_coefs.len());
+        // println!("sampled_circuit_fs: {:?}", sampled_circuit_fs);
         self.rnd_coefs
             .iter()
             .zip(sampled_circuit_fs.iter())

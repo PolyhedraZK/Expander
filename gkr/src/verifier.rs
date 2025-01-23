@@ -279,7 +279,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             .unwrap();
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap();
-        transcript.append_u8_slice(&buffer);
+        let pcs_verified = transcript.append_commitment_and_check_digest(&buffer, &mut cursor);
 
         // TODO: Implement a trait containing the size function,
         // and use the following line to avoid unnecessary deserialization and serialization
@@ -303,7 +303,8 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             &mut cursor,
         );
 
-        log::info!("GKR verification: {}", verified);
+        verified &= pcs_verified;
+        println!("GKR verification: {}", verified);
 
         transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
 

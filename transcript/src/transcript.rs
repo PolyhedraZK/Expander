@@ -1,13 +1,30 @@
-use std::{fmt::Debug, marker::PhantomData};
+use std::{fmt::Debug, io::Read, marker::PhantomData};
 
 use arith::{ExtensionField, Field, FieldSerde};
 use field_hashers::FiatShamirFieldHasher;
 
 use crate::{fiat_shamir_hash::FiatShamirBytesHash, Proof};
 
+// When appending the initial commitment, we hash the commitment bytes
+// for sufficient number of times, so that the FS hash has a sufficient circuit depth
+const PCS_DIGEST_LOOP: usize = 1000;
+
 pub trait Transcript<F: ExtensionField>: Clone + Debug {
     /// Create a new transcript.
     fn new() -> Self;
+
+    /// Append a polynomial commitment to the transcript
+    /// called by the prover
+    fn append_commitment(&mut self, commitment_bytes: &[u8]);
+
+    /// Append a polynomial commitment to the transcript
+    /// check that the pcs digest in the proof is correct
+    /// called by the verifier
+    fn append_commitment_and_check_digest<R: Read>(
+        &mut self,
+        commitment_bytes: &[u8],
+        proof_reader: &mut R,
+    ) -> bool;
 
     /// Append a field element to the transcript.
     fn append_field_element(&mut self, f: &F);
@@ -101,6 +118,41 @@ impl<F: ExtensionField, H: FiatShamirBytesHash> Transcript<F> for BytesHashTrans
             proof_locked: false,
             proof_locked_at: 0,
         }
+    }
+
+    fn append_commitment(&mut self, commitment_bytes: &[u8]) {
+        self.append_u8_slice(commitment_bytes);
+        // When appending the initial commitment, we hash the commitment bytes
+        // for sufficient number of times, so that the FS hash has a sufficient circuit depth
+        let mut digest = [0u8; 32];
+        H::hash(&mut digest, commitment_bytes);
+        for _ in 0..PCS_DIGEST_LOOP {
+            H::hash_inplace(&mut digest);
+        }
+        self.append_u8_slice(&digest);
+    }
+
+    /// check that the pcs digest in the proof is correct
+    fn append_commitment_and_check_digest<R: Read>(
+        &mut self,
+        commitment_bytes: &[u8],
+        proof_reader: &mut R,
+    ) -> bool {
+        self.append_u8_slice(commitment_bytes);
+        // When appending the initial commitment, we hash the commitment bytes
+        // for sufficient number of times, so that the FS hash has a sufficient circuit depth
+        let mut digest = [0u8; 32];
+        H::hash(&mut digest, commitment_bytes);
+        for _ in 0..PCS_DIGEST_LOOP {
+            H::hash_inplace(&mut digest);
+        }
+        self.append_u8_slice(&digest);
+
+        // check that digest matches the proof
+        let mut pcs_digest = [0u8; 32];
+        proof_reader.read_exact(&mut pcs_digest).unwrap();
+
+        digest == pcs_digest
     }
 
     fn append_field_element(&mut self, f: &F) {
@@ -236,6 +288,45 @@ where
             hasher: H::new(),
             ..Default::default()
         }
+    }
+
+    fn append_commitment(&mut self, commitment_bytes: &[u8]) {
+        self.append_u8_slice(commitment_bytes);
+        // When appending the initial commitment, we hash the commitment bytes
+        // for sufficient number of times, so that the FS hash has a sufficient circuit depth
+        let mut challenge = self.generate_challenge_field_element().to_limbs();
+        let mut hasher = H::new();
+        for _ in 0..PCS_DIGEST_LOOP {
+            challenge = H::hash_to_state(&mut hasher, &challenge);
+        }
+
+        let mut digest_bytes = vec![];
+        challenge.serialize_into(&mut digest_bytes).unwrap();
+        self.append_u8_slice(&digest_bytes);
+    }
+
+    fn append_commitment_and_check_digest<R: Read>(
+        &mut self,
+        commitment_bytes: &[u8],
+        proof_reader: &mut R,
+    ) -> bool {
+        self.append_u8_slice(commitment_bytes);
+        // When appending the initial commitment, we hash the commitment bytes
+        // for sufficient number of times, so that the FS hash has a sufficient circuit depth
+        let mut challenge = self.generate_challenge_field_element().to_limbs();
+        let mut hasher = H::new();
+        for _ in 0..PCS_DIGEST_LOOP {
+            challenge = H::hash_to_state(&mut hasher, &challenge);
+        }
+        let mut digest_bytes = vec![];
+        challenge.serialize_into(&mut digest_bytes).unwrap();
+        self.append_u8_slice(&digest_bytes);
+
+        // check that digest matches the proof
+        let challenge_from_proof =
+            Vec::<ChallengeF::BaseField>::deserialize_from(proof_reader).unwrap();
+
+        challenge_from_proof == challenge
     }
 
     fn append_field_element(&mut self, f: &ChallengeF) {
