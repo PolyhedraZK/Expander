@@ -99,7 +99,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         };
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
-        transcript.append_u8_slice(&buffer);
+        transcript.append_commitment(&buffer);
 
         transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
 

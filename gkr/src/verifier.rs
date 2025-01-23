@@ -279,7 +279,14 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             .unwrap();
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap();
-        transcript.append_u8_slice(&buffer);
+
+        // this function will iteratively hash the commitment, and append the final hash output
+        // to the transcript. this introduces a decent circuit depth for the FS transform.
+        //
+        // note that this function is almost identical to grind, expect that grind uses a
+        // fixed hasher, where as this function uses the transcript hasher
+        let pcs_verified = transcript.append_commitment_and_check_digest(&buffer, &mut cursor);
+        log::info!("pcs verification: {}", pcs_verified);
 
         // TODO: Implement a trait containing the size function,
         // and use the following line to avoid unnecessary deserialization and serialization
@@ -303,6 +310,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             &mut cursor,
         );
 
+        verified &= pcs_verified;
         log::info!("GKR verification: {}", verified);
 
         transcript_verifier_sync(&mut transcript, &self.config.mpi_config);

@@ -58,7 +58,7 @@ path = "src/utils.rs"
 default = []
 # default = [ "grinding" ]
 grinding = [ "config/grinding" ]
-
+recursion = [ "transcript/recursion" ]
 
 [[bench]]
 name = "gkr-hashes"

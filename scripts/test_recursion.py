@@ -102,7 +102,7 @@ def gkr_proof_file(prefix: str, cpu_ids: list[int]) -> str:
 
 
 def expander_compile():
-    if subprocess.run("cargo build --release --bin expander-exec", shell=True).returncode != 0:
+    if subprocess.run("cargo build --release --bin expander-exec --features=recursion", shell=True).returncode != 0:
         raise Exception("build process is not returning 0")
 
 
