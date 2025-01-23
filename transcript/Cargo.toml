@@ -10,3 +10,6 @@ mpi_config = { path = "../config/mpi_config" }
 
 sha2.workspace = true
 tiny-keccak.workspace = true
+
+[features]
+recursion = []
