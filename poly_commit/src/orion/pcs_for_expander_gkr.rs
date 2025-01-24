@@ -88,7 +88,7 @@ where
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         eval_point: &ExpanderGKRChallenge<C>,
         transcript: &mut T, // add transcript here to allow interactive arguments
-        scratch_pad: &mut Self::ScratchPad,
+        scratch_pad: &Self::ScratchPad,
     ) -> Self::Opening {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
