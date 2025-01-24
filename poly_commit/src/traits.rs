@@ -49,7 +49,7 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        scratch_pad: &mut Self::ScratchPad,
+        scratch_pad: &Self::ScratchPad,
         transcript: &mut T,
     ) -> (F, Self::Opening);
 
@@ -151,7 +151,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         x: &ExpanderGKRChallenge<C>,
         transcript: &mut T, // add transcript here to allow interactive arguments
-        scratch_pad: &mut Self::ScratchPad,
+        scratch_pad: &Self::ScratchPad,
     ) -> Self::Opening;
 
     /// Verify the opening of a polynomial at a point.
