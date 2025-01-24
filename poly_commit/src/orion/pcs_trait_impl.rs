@@ -75,7 +75,7 @@ where
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        scratch_pad: &mut Self::ScratchPad,
+        scratch_pad: &Self::ScratchPad,
         transcript: &mut T,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);
@@ -174,7 +174,7 @@ where
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        scratch_pad: &mut Self::ScratchPad,
+        scratch_pad: &Self::ScratchPad,
         transcript: &mut T,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);

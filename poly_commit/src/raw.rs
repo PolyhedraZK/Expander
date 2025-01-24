@@ -100,16 +100,12 @@ impl<F: ExtensionField, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for R
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        scratch_pad: &mut Self::ScratchPad,
+        _scratch_pad: &Self::ScratchPad,
         _transcript: &mut T,
     ) -> (F, Self::Opening) {
         assert!(x.len() == params.n_vars);
         (
-            MultiLinearPoly::<F>::evaluate_with_buffer(
-                &poly.coeffs,
-                x,
-                &mut scratch_pad.eval_buffer,
-            ),
+            MultiLinearPoly::<F>::evaluate_jolt(poly, x),
             Self::Opening::default(),
         )
     }
@@ -217,7 +213,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _x: &ExpanderGKRChallenge<C>,
         _transcript: &mut T,
-        _scratch_pad: &mut Self::ScratchPad,
+        _scratch_pad: &Self::ScratchPad,
     ) -> Self::Opening {
         // For GKR, we don't need the evaluation result
         Self::Opening::default()
