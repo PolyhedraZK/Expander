@@ -21,35 +21,32 @@ jobs:
           - os: 7950x3d
             feature: avx512f
             binary_name: expander-linux-avx512
+
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Dependencies
-        run: |
-          if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            brew install gcc make
-          else
-            sudo apt-get install -y build-essential
-          fi
-        shell: bash
-        
+
+      - name: Setup Dependencies for MacOS workflow
+        if: matrix.os == 'macos-latest'
+        run: brew install gcc make openmpi
+
       - uses: dtolnay/rust-toolchain@stable
-      
+
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: "mpi-v5.0.6"
-          
-      - name: Install MPI
+
+      - name: Install MPI for MacOS workflow
+        if: matrix.os == 'macos-latest'
         run: python3 ./scripts/install.py
-        
+
       - name: Set RUSTFLAGS for AVX
-        if: matrix.feature != ''
+        if: matrix.feature != 'macos-latest'
         run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV
-        
+
       - name: Prepare binary
         run: cargo build --release --bin expander-exec
-        
+
       - name: Upload release asset
         uses: actions/github-script@v6
         with:
