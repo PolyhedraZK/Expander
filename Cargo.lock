@@ -478,7 +478,9 @@ dependencies = [
  "ark-std",
  "config",
  "ethnum",
+ "gkr_field_config",
  "log",
+ "rand",
  "thiserror",
  "transcript",
 ]
@@ -548,9 +550,28 @@ dependencies = [
  "ark-std",
  "gf2",
  "gf2_128",
+ "gkr_field_config",
  "halo2curves",
  "mersenne31",
  "mpi",
+ "mpi_config",
+ "poly_commit",
+ "transcript",
+]
+
+[[package]]
+name = "config_macros"
+version = "0.1.0"
+dependencies = [
+ "config",
+ "field_hashers",
+ "gf2",
+ "gkr_field_config",
+ "mersenne31",
+ "poly_commit",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
  "transcript",
 ]
 
@@ -644,6 +665,23 @@ name = "crossbeam-utils"
 version = "0.8.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22ec99545bb0ed0ea7bb9b8e1e9122ea386ff8a48c0922e43f36d45ab09e0e80"
+
+[[package]]
+name = "crosslayer_prototype"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "config",
+ "env_logger",
+ "ethnum",
+ "gkr_field_config",
+ "log",
+ "polynomials",
+ "rand",
+ "sumcheck",
+ "thiserror",
+ "transcript",
+]
 
 [[package]]
 name = "crunchy"
@@ -778,6 +816,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "field_hashers"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "halo2curves",
+ "tiny-keccak",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -908,17 +955,23 @@ dependencies = [
  "circuit",
  "clap",
  "config",
+ "config_macros",
  "criterion",
  "env_logger",
  "ethnum",
+ "field_hashers",
  "gf2",
  "gf2_128",
+ "gkr_field_config",
  "halo2curves",
  "log",
  "mersenne31",
  "mpi",
+ "mpi_config",
+ "poly_commit",
  "polynomials",
  "rand",
+ "rand_chacha",
  "sha2",
  "sumcheck",
  "thiserror",
@@ -927,6 +980,17 @@ dependencies = [
  "transcript",
  "tynm",
  "warp",
+]
+
+[[package]]
+name = "gkr_field_config"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "gf2",
+ "gf2_128",
+ "mersenne31",
 ]
 
 [[package]]
@@ -1468,6 +1532,7 @@ dependencies = [
  "cfg-if",
  "criterion",
  "ethnum",
+ "field_hashers",
  "halo2curves",
  "log",
  "rand",
@@ -1544,6 +1609,15 @@ dependencies = [
  "bindgen",
  "build-probe-mpi",
  "cc",
+]
+
+[[package]]
+name = "mpi_config"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "mersenne31",
+ "mpi",
 ]
 
 [[package]]
@@ -1677,15 +1751,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
-name = "pcs"
-version = "0.1.0"
-dependencies = [
- "arith",
- "polynomials",
- "rand",
-]
-
-[[package]]
 name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1755,6 +1820,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51bae2ac328883f7acdfea3d66a7c35751187f870bc81f94563733a154d7a670"
 dependencies = [
  "plotters-backend",
+]
+
+[[package]]
+name = "poly_commit"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "criterion",
+ "ethnum",
+ "gf2",
+ "gf2_128",
+ "gkr_field_config",
+ "itertools 0.13.0",
+ "mersenne31",
+ "mpi_config",
+ "polynomials",
+ "rand",
+ "thiserror",
+ "transcript",
+ "tree",
+ "tynm",
 ]
 
 [[package]]
@@ -2124,7 +2211,9 @@ dependencies = [
  "circuit",
  "config",
  "env_logger",
+ "gkr_field_config",
  "log",
+ "mpi_config",
  "polynomials",
  "transcript",
 ]
@@ -2302,8 +2391,24 @@ name = "transcript"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "field_hashers",
+ "mpi_config",
  "sha2",
  "tiny-keccak",
+]
+
+[[package]]
+name = "tree"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "criterion",
+ "gf2",
+ "gf2_128",
+ "rayon",
+ "sha2",
+ "tynm",
 ]
 
 [[package]]

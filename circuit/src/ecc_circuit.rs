@@ -1,4 +1,4 @@
-use config::GKRConfig;
+use gkr_field_config::GKRFieldConfig;
 use std::{cmp::max, collections::HashMap, fs, io::Cursor};
 
 use crate::*;
@@ -12,7 +12,7 @@ pub struct Allocation {
 }
 
 #[derive(Default)]
-pub struct Segment<C: GKRConfig> {
+pub struct Segment<C: GKRFieldConfig> {
     pub i_var_num: usize,
     pub o_var_num: usize,
     pub child_segs: Vec<(SegmentId, Vec<Allocation>)>,
@@ -22,7 +22,7 @@ pub struct Segment<C: GKRConfig> {
     pub gate_uni: Vec<GateUni<C>>,
 }
 
-impl<C: GKRConfig> Segment<C> {
+impl<C: GKRFieldConfig> Segment<C> {
     #[inline]
     pub fn contain_gates(&self) -> bool {
         !self.gate_muls.is_empty()
@@ -66,7 +66,7 @@ impl<C: GKRConfig> Segment<C> {
 }
 
 #[derive(Default)]
-pub struct RecursiveCircuit<C: GKRConfig> {
+pub struct RecursiveCircuit<C: GKRFieldConfig> {
     pub num_public_inputs: usize,
     pub num_outputs: usize,
     pub expected_num_output_zeros: usize,
@@ -75,7 +75,7 @@ pub struct RecursiveCircuit<C: GKRConfig> {
     pub layers: Vec<SegmentId>,
 }
 
-impl<C: GKRConfig> RecursiveCircuit<C> {
+impl<C: GKRFieldConfig> RecursiveCircuit<C> {
     pub fn load(filename: &str) -> std::result::Result<Self, CircuitError> {
         let file_bytes = fs::read(filename)?;
         let cursor = Cursor::new(file_bytes);

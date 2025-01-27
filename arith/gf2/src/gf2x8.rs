@@ -25,20 +25,12 @@ impl FieldSerde for GF2x8 {
         reader.read_exact(&mut u)?;
         Ok(GF2x8 { v: u[0] })
     }
-
-    #[inline]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> FieldSerdeResult<Self> {
-        unimplemented!("We don't have serialization in ecc for gf2x8")
-        // let mut u = [0u8; 32];
-        // reader.read_exact(&mut u)?;
-        // Ok(GF2x8 { v: u[0] })
-    }
 }
 
 impl Field for GF2x8 {
     // still will pack 8 bits into a u8
 
-    const NAME: &'static str = "Galios Field 2 SIMD";
+    const NAME: &'static str = "Galois Field 2 SIMD 8";
 
     const SIZE: usize = 1;
 
@@ -81,11 +73,10 @@ impl Field for GF2x8 {
 
     #[inline(always)]
     fn exp(&self, exponent: u128) -> Self {
-        if exponent % 2 == 0 {
-            Self::one()
-        } else {
-            *self
+        if exponent == 0 {
+            return Self::one();
         }
+        *self
     }
 
     #[inline(always)]
@@ -95,7 +86,7 @@ impl Field for GF2x8 {
 
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
-        self.v as u32 % 256
+        self.v as u32
     }
 
     #[inline(always)]
@@ -279,13 +270,8 @@ impl SimdField for GF2x8 {
     }
 
     #[inline(always)]
-    fn pack_size() -> usize {
-        8
-    }
-
-    #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == Self::pack_size());
+        assert!(base_vec.len() == Self::PACK_SIZE);
         let mut ret = 0u8;
         for (i, scalar) in base_vec.iter().enumerate() {
             ret |= scalar.v << (7 - i);
@@ -296,7 +282,7 @@ impl SimdField for GF2x8 {
     #[inline(always)]
     fn unpack(&self) -> Vec<Self::Scalar> {
         let mut ret = vec![];
-        for i in 0..Self::pack_size() {
+        for i in 0..Self::PACK_SIZE {
             ret.push(Self::Scalar {
                 v: (self.v >> (7 - i)) & 1u8,
             });
@@ -305,4 +291,6 @@ impl SimdField for GF2x8 {
     }
 
     type Scalar = crate::GF2;
+
+    const PACK_SIZE: usize = 8;
 }

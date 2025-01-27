@@ -58,18 +58,6 @@ impl FieldSerde for AVX512GF2_128x8 {
             })
         }
     }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> FieldSerdeResult<Self> {
-        unimplemented!("We don't have a serialization for gf2_128 in ecc yet.")
-
-        // let mut buf = [0u8; 32];
-        // reader.read_exact(&mut buf)?;
-        // let data: __m128i = unsafe { _mm_loadu_si128(buf.as_ptr() as *const __m128i) };
-        // Ok(Self {
-        //     data: Self::pack_full(data),
-        // })
-    }
 }
 
 const PACKED_0: [__m512i; 2] = [
@@ -92,7 +80,7 @@ const PACKED_INV_2: [__m512i; 2] = [_M512_INV_2, _M512_INV_2]; // Should not be 
 
 // p(x) = x^128 + x^7 + x^2 + x + 1
 impl Field for AVX512GF2_128x8 {
-    const NAME: &'static str = "AVX512 Galios Field 2^128";
+    const NAME: &'static str = "AVX512 Galois Field 2^128 SIMD 8";
 
     // size in bytes
     const SIZE: usize = 512 * 2 / 8;
@@ -398,7 +386,7 @@ impl Debug for AVX512GF2_128x8 {
         let mut data = [0u8; 128];
         unsafe {
             _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data[0]);
-            _mm512_storeu_si512((data.as_mut_ptr() as *mut i32).offset(16), self.data[0]);
+            _mm512_storeu_si512((data.as_mut_ptr() as *mut i32).offset(16), self.data[1]);
         }
         f.debug_struct("AVX512GF2_128x8")
             .field("data", &data)
@@ -448,14 +436,11 @@ impl SimdField for AVX512GF2_128x8 {
     }
     type Scalar = GF2_128;
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        8
-    }
+    const PACK_SIZE: usize = 8;
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == 8);
+        assert_eq!(base_vec.len(), Self::PACK_SIZE);
         let base_vec_array: [Self::Scalar; 8] = base_vec.try_into().unwrap();
         unsafe { transmute(base_vec_array) }
     }
@@ -653,7 +638,8 @@ impl ExtensionField for AVX512GF2_128x8 {
                 // Get the most significant bit of each 64-bit part
                 let msb = _mm512_srli_epi64(data, 63);
 
-                // Move the MSB from the high 64 bits to the LSB of the low 64 bits for each 128-bit element
+                // Move the MSB from the high 64 bits to the LSB of the low 64 bits
+                // for each 128-bit element
                 let msb_moved = _mm512_bslli_epi128(msb, 8);
 
                 // Combine the shifted value with the moved msb
@@ -678,6 +664,46 @@ impl ExtensionField for AVX512GF2_128x8 {
                 mul_by_x_internal(self.data[1]),
             ],
         }
+    }
+
+    #[inline(always)]
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        let mut local_limbs = limbs.to_vec();
+        local_limbs.resize(Self::DEGREE, Self::BaseField::ZERO);
+
+        let mut buffer = vec![GF2::ZERO; Self::DEGREE * Self::PACK_SIZE];
+
+        local_limbs.iter().enumerate().for_each(|(ith_limb, limb)| {
+            let unpacked = limb.unpack();
+            unpacked.iter().enumerate().for_each(|(ith_gf2, gf2_val)| {
+                buffer[ith_gf2 * Self::DEGREE + ith_limb] = *gf2_val;
+            });
+        });
+
+        let gf2_128s: Vec<_> = buffer
+            .chunks(Self::DEGREE)
+            .map(GF2_128::from_limbs)
+            .collect();
+
+        Self::pack(&gf2_128s)
+    }
+
+    #[inline(always)]
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        let gf2_128s = self.unpack();
+
+        let mut buffer = vec![GF2::ZERO; Self::DEGREE * Self::PACK_SIZE];
+        gf2_128s
+            .iter()
+            .enumerate()
+            .for_each(|(ith_gf2_128, gf2_128_val)| {
+                let limbs = gf2_128_val.to_limbs();
+                limbs.iter().enumerate().for_each(|(ith_limb, limb)| {
+                    buffer[ith_limb * Self::PACK_SIZE + ith_gf2_128] = *limb;
+                })
+            });
+
+        buffer.chunks(Self::PACK_SIZE).map(GF2x8::pack).collect()
     }
 }
 
@@ -712,6 +738,15 @@ impl Mul<GF2> for AVX512GF2_128x8 {
         } else {
             self
         }
+    }
+}
+
+impl Mul<GF2x8> for AVX512GF2_128x8 {
+    type Output = AVX512GF2_128x8;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2x8) -> Self::Output {
+        self.mul_by_base_field(&rhs)
     }
 }
 

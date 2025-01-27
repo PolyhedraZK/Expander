@@ -11,7 +11,7 @@ def parse_criterion_output(input_file):
                     benchmark_id = data['id']
                     median_time = data['median']['estimate']
                     original_unit = data['median']['unit']
-                    
+
                     # Convert to seconds
                     if original_unit == 'ns':
                         median_time_s = median_time * 1e-9
@@ -21,7 +21,7 @@ def parse_criterion_output(input_file):
                         median_time_s = median_time * 1e-3
                     else:  # Assume it's already in seconds
                         median_time_s = median_time
-                    
+
                     results[benchmark_id] = {
                         "median_time": median_time_s
                     }

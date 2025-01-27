@@ -1,10 +1,9 @@
-mod gkr_config;
-pub use gkr_config::*;
-
-mod mpi_config;
-pub use mpi_config::*;
-
 use arith::Field;
+use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
+use poly_commit::PCSForExpanderGKR;
+use std::fmt::Debug;
+use transcript::Transcript;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum PolynomialCommitmentType {
@@ -13,6 +12,16 @@ pub enum PolynomialCommitmentType {
     KZG,
     Orion,
     FRI,
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum FiatShamirHashType {
+    #[default]
+    SHA256,
+    Keccak256,
+    Poseidon,
+    Animoe,
+    MIMC5, // Note: use MIMC5 for bn254 ONLY
 }
 
 pub const SENTINEL_M31: [u8; 32] = [
@@ -28,6 +37,23 @@ pub const SENTINEL_BN254: [u8; 32] = [
 pub const SENTINEL_GF2: [u8; 32] = [
     2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
+
+pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
+    /// Field config for gkr
+    type FieldConfig: GKRFieldConfig;
+
+    /// Fiat Shamir hash type. This defines the transcript type to use
+    const FIAT_SHAMIR_HASH: FiatShamirHashType;
+
+    /// The transcript type
+    type Transcript: Transcript<<Self::FieldConfig as GKRFieldConfig>::ChallengeField>;
+
+    /// The Polynomial Commitment type
+    const PCS_TYPE: PolynomialCommitmentType;
+
+    /// The specific Polynomial Commitment type
+    type PCS: PCSForExpanderGKR<Self::FieldConfig, Self::Transcript>;
+}
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum GKRScheme {
@@ -58,7 +84,7 @@ pub struct Config<C: GKRConfig> {
 impl<C: GKRConfig> Config<C> {
     pub fn new(gkr_scheme: GKRScheme, mpi_config: MPIConfig) -> Self {
         Config {
-            field_size: C::ChallengeField::FIELD_SIZE,
+            field_size: <C::FieldConfig as GKRFieldConfig>::ChallengeField::FIELD_SIZE,
             security_bits: 100,
             #[cfg(feature = "grinding")]
             grinding_bits: 10,

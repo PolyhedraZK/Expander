@@ -40,17 +40,6 @@ impl FieldSerde for M31Ext3 {
             ],
         })
     }
-
-    #[inline]
-    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut buf = [0u8; 32];
-        reader.read_exact(&mut buf)?;
-        assert!(
-            buf.iter().skip(4).all(|&x| x == 0),
-            "non-zero byte found in witness byte"
-        );
-        Ok(Self::from(u32::from_le_bytes(buf[..4].try_into().unwrap())))
-    }
 }
 
 impl Field for M31Ext3 {
@@ -204,6 +193,33 @@ impl ExtensionField for M31Ext3 {
         Self {
             v: [self.v[2].mul_by_5(), self.v[0], self.v[1]],
         }
+    }
+
+    /// Extract polynomial field coefficients from the extension field instance
+    #[inline(always)]
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        vec![self.v[0], self.v[1], self.v[2]]
+    }
+
+    /// Construct a new instance of extension field from coefficients
+    #[inline(always)]
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        let mut v = [Self::BaseField::default(); Self::DEGREE];
+        if limbs.len() < Self::DEGREE {
+            v[..limbs.len()].copy_from_slice(limbs)
+        } else {
+            v.copy_from_slice(&limbs[..Self::DEGREE])
+        }
+        Self { v }
+    }
+}
+
+impl Mul<M31> for M31Ext3 {
+    type Output = M31Ext3;
+
+    #[inline(always)]
+    fn mul(self, rhs: M31) -> Self::Output {
+        self.mul_by_base_field(&rhs)
     }
 }
 

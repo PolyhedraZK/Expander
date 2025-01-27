@@ -21,40 +21,34 @@ pub trait FieldSerde: Sized {
 
     /// deserialize bytes into field
     fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self>;
-
-    /// deserialize bytes into field following ecc format
-    fn try_deserialize_from_ecc_format<R: Read>(reader: R) -> FieldSerdeResult<Self>;
 }
 
-macro_rules! field_serde_for_integer {
+macro_rules! field_serde_for_number {
     ($int_type: ident, $size_in_bytes: expr) => {
         impl FieldSerde for $int_type {
             /// size of the serialized bytes
             const SERIALIZED_SIZE: usize = $size_in_bytes;
 
-            /// serialize u64 into bytes
+            /// serialize number into bytes
             fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
                 writer.write_all(&self.to_le_bytes())?;
                 Ok(())
             }
 
-            /// deserialize bytes into u64
+            /// deserialize bytes into number
             fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
                 let mut buffer = [0u8; Self::SERIALIZED_SIZE];
                 reader.read_exact(&mut buffer)?;
                 Ok($int_type::from_le_bytes(buffer))
             }
-
-            fn try_deserialize_from_ecc_format<R: Read>(_reader: R) -> FieldSerdeResult<Self> {
-                unimplemented!("not implemented")
-            }
         }
     };
 }
 
-field_serde_for_integer!(u64, 8);
-field_serde_for_integer!(usize, 8);
-field_serde_for_integer!(u8, 1);
+field_serde_for_number!(u64, 8);
+field_serde_for_number!(usize, 8);
+field_serde_for_number!(u8, 1);
+field_serde_for_number!(f64, 8);
 
 impl<V: FieldSerde> FieldSerde for Vec<V> {
     const SERIALIZED_SIZE: usize = unimplemented!();
@@ -74,10 +68,6 @@ impl<V: FieldSerde> FieldSerde for Vec<V> {
             v.push(V::deserialize_from(&mut reader)?);
         }
         Ok(v)
-    }
-
-    fn try_deserialize_from_ecc_format<R: Read>(_reader: R) -> FieldSerdeResult<Self> {
-        unimplemented!()
     }
 }
 
@@ -101,9 +91,5 @@ impl FieldSerde for [u64; 4] {
             *r = u64::from_le_bytes(buffer);
         }
         Ok(ret)
-    }
-
-    fn try_deserialize_from_ecc_format<R: Read>(_reader: R) -> FieldSerdeResult<Self> {
-        unimplemented!()
     }
 }

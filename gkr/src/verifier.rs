@@ -6,19 +6,18 @@ use std::{
 use arith::{Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
-use config::{Config, FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
+use config::{Config, GKRConfig};
+use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
+use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
-use transcript::{
-    BytesHashTranscript, FieldHashTranscript, Keccak256hasher, MIMCHasher, Proof, SHA256hasher,
-    Transcript,
-};
+use transcript::{transcript_verifier_sync, Proof, Transcript};
 
 #[cfg(feature = "grinding")]
 use crate::grind;
-use crate::RawCommitment;
 
 #[inline(always)]
-fn verify_sumcheck_step<C: GKRConfig, T: Transcript<C::ChallengeField>>(
+fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     mut proof_reader: impl Read,
     degree: usize,
     transcript: &mut T,
@@ -50,8 +49,8 @@ fn verify_sumcheck_step<C: GKRConfig, T: Transcript<C::ChallengeField>>(
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
-fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
-    config: &Config<C>,
+fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+    mpi_config: &MPIConfig,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
     rz0: &[C::ChallengeField],
@@ -114,7 +113,7 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     }
     GKRVerifierHelper::set_r_simd_xy(&r_simd_xy, sp);
 
-    for _i_var in 0..config.mpi_config.world_size().trailing_zeros() {
+    for _i_var in 0..mpi_config.world_size().trailing_zeros() {
         verified &= verify_sumcheck_step::<C, T>(
             &mut proof_reader,
             3,
@@ -161,8 +160,8 @@ fn sumcheck_verify_gkr_layer<C: GKRConfig, T: Transcript<C::ChallengeField>>(
 
 // todo: FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
-    config: &Config<C>,
+pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+    mpi_config: &MPIConfig,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
     claimed_v: &C::ChallengeField,
@@ -178,7 +177,7 @@ pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
     Option<C::ChallengeField>,
 ) {
     let timer = start_timer!(|| "gkr verify");
-    let mut sp = VerifierScratchPad::<C>::new(config, circuit);
+    let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
 
     let layer_num = circuit.layers.len();
     let mut rz0 = vec![];
@@ -194,7 +193,7 @@ pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
         r_simd.push(transcript.generate_challenge_field_element());
     }
 
-    for _ in 0..config.mpi_config.world_size().trailing_zeros() {
+    for _ in 0..mpi_config.world_size().trailing_zeros() {
         r_mpi.push(transcript.generate_challenge_field_element());
     }
 
@@ -214,7 +213,7 @@ pub fn gkr_verify<C: GKRConfig, T: Transcript<C::ChallengeField>>(
             claimed_v0,
             claimed_v1,
         ) = sumcheck_verify_gkr_layer(
-            config,
+            mpi_config,
             &circuit.layers[i],
             public_input,
             &rz0,
@@ -252,102 +251,141 @@ impl<C: GKRConfig> Default for Verifier<C> {
     }
 }
 
-impl<C: GKRConfig> Verifier<C> {
-    pub fn new(config: &Config<C>) -> Self {
+impl<Cfg: GKRConfig> Verifier<Cfg> {
+    pub fn new(config: &Config<Cfg>) -> Self {
         Verifier {
             config: config.clone(),
         }
     }
 
-    fn verify_internal<T: Transcript<C::ChallengeField>>(
+    pub fn verify(
         &self,
-        circuit: &mut Circuit<C>,
-        public_input: &[C::SimdCircuitField],
-        claimed_v: &C::ChallengeField,
+        circuit: &mut Circuit<Cfg::FieldConfig>,
+        public_input: &[<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField],
+        claimed_v: &<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField,
+        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
+        pcs_verification_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::VKey,
         proof: &Proof,
-        transcript: &mut T,
     ) -> bool {
         let timer = start_timer!(|| "verify");
+        let mut transcript = Cfg::Transcript::new();
 
-        let poly_size =
-            circuit.layers.first().unwrap().input_vals.len() * self.config.mpi_config.world_size();
         let mut cursor = Cursor::new(&proof.bytes);
 
-        let commitment = RawCommitment::<C>::deserialize_from(&mut cursor, poly_size);
-        transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
+        let commitment =
+            <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Commitment::deserialize_from(
+                &mut cursor,
+            )
+            .unwrap();
+        let mut buffer = vec![];
+        commitment.serialize_into(&mut buffer).unwrap();
 
-        if self.config.mpi_config.world_size() > 1 {
-            let _ = transcript.hash_and_return_state(); // Trigger an additional hash
-        }
+        // this function will iteratively hash the commitment, and append the final hash output
+        // to the transcript. this introduces a decent circuit depth for the FS transform.
+        //
+        // note that this function is almost identical to grind, expect that grind uses a
+        // fixed hasher, where as this function uses the transcript hasher
+        let pcs_verified = transcript.append_commitment_and_check_digest(&buffer, &mut cursor);
+        log::info!("pcs verification: {}", pcs_verified);
+
+        // TODO: Implement a trait containing the size function,
+        // and use the following line to avoid unnecessary deserialization and serialization
+        // transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
+
+        transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
         #[cfg(feature = "grinding")]
-        grind::<C, T>(transcript, &self.config);
+        grind::<Cfg>(&mut transcript, &self.config);
 
-        circuit.fill_rnd_coefs(transcript);
+        circuit.fill_rnd_coefs(&mut transcript);
 
         let (mut verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = gkr_verify(
-            &self.config,
+            &self.config.mpi_config,
             circuit,
             public_input,
             claimed_v,
-            transcript,
+            &mut transcript,
             &mut cursor,
         );
 
+        verified &= pcs_verified;
         log::info!("GKR verification: {}", verified);
 
-        match self.config.polynomial_commitment_type {
-            PolynomialCommitmentType::Raw => {
-                // for Raw, no need to load from proof
-                log::trace!("rz0.size() = {}", rz0.len());
-                log::trace!("Poly_vals.size() = {}", commitment.poly_vals.len());
+        transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
 
-                let v1 = commitment.mpi_verify(&rz0, &r_simd, &r_mpi, claimed_v0);
-                verified &= v1;
+        verified &= self.get_pcs_opening_from_proof_and_verify(
+            pcs_params,
+            pcs_verification_key,
+            &commitment,
+            &ExpanderGKRChallenge {
+                x: rz0,
+                x_simd: r_simd.clone(),
+                x_mpi: r_mpi.clone(),
+            },
+            &claimed_v0,
+            &mut transcript,
+            &mut cursor,
+        );
 
-                if rz1.is_some() {
-                    let v2 = commitment.mpi_verify(
-                        rz1.as_ref().unwrap(),
-                        &r_simd,
-                        &r_mpi,
-                        claimed_v1.unwrap(),
-                    );
-                    verified &= v2;
-                }
-            }
-            _ => todo!(),
+        if let Some(rz1) = rz1 {
+            transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
+            verified &= self.get_pcs_opening_from_proof_and_verify(
+                pcs_params,
+                pcs_verification_key,
+                &commitment,
+                &ExpanderGKRChallenge {
+                    x: rz1,
+                    x_simd: r_simd,
+                    x_mpi: r_mpi,
+                },
+                &claimed_v1.unwrap(),
+                &mut transcript,
+                &mut cursor,
+            );
         }
 
         end_timer!(timer);
 
         verified
     }
+}
 
-    pub fn verify(
+impl<Cfg: GKRConfig> Verifier<Cfg> {
+    #[allow(clippy::too_many_arguments)]
+    fn get_pcs_opening_from_proof_and_verify(
         &self,
-        circuit: &mut Circuit<C>,
-        public_input: &[C::SimdCircuitField],
-        claimed_v: &C::ChallengeField,
-        proof: &Proof,
+        pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
+        pcs_verification_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::VKey,
+        commitment: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Commitment,
+        open_at: &ExpanderGKRChallenge<Cfg::FieldConfig>,
+        v: &<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField,
+        transcript: &mut Cfg::Transcript,
+        proof_reader: impl Read,
     ) -> bool {
-        match C::FIAT_SHAMIR_HASH {
-            FiatShamirHashType::Keccak256 => {
-                let mut transcript =
-                    BytesHashTranscript::<C::ChallengeField, Keccak256hasher>::new();
-                self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
-            }
-            FiatShamirHashType::SHA256 => {
-                let mut transcript = BytesHashTranscript::<C::ChallengeField, SHA256hasher>::new();
-                self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
-            }
-            FiatShamirHashType::MIMC5 => {
-                let mut transcript =
-                    FieldHashTranscript::<C::ChallengeField, MIMCHasher<C::ChallengeField>>::new();
-                self.verify_internal(circuit, public_input, claimed_v, proof, &mut transcript)
-            }
-            _ => unreachable!(),
-        }
+        let opening = <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Opening::deserialize_from(
+            proof_reader,
+        )
+        .unwrap();
+
+        transcript.lock_proof();
+        let verified = Cfg::PCS::verify(
+            pcs_params,
+            &self.config.mpi_config,
+            pcs_verification_key,
+            commitment,
+            open_at,
+            *v,
+            transcript,
+            &opening,
+        );
+        transcript.unlock_proof();
+
+        let mut buffer = vec![];
+        opening.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
+        transcript.append_u8_slice(&buffer);
+
+        verified
     }
 }

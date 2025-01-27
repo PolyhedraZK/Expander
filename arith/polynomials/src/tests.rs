@@ -74,6 +74,51 @@ fn test_eq_xr() {
     }
 }
 
+#[test]
+fn test_ref_multilinear_poly() {
+    let mut rng = test_rng();
+    for nv in 4..=10 {
+        let es_len = 1 << nv;
+        let es: Vec<Fr> = (0..es_len).map(|_| Fr::random_unsafe(&mut rng)).collect();
+        let point: Vec<Fr> = (0..nv).map(|_| Fr::random_unsafe(&mut rng)).collect();
+        let mut scratch = vec![Fr::ZERO; es_len];
+
+        let mle_from_ref = RefMultiLinearPoly::<Fr>::from_ref(&es);
+
+        let actual_eval = mle_from_ref.evaluate_with_buffer(&point, &mut scratch);
+        let expect_eval = MultiLinearPoly::evaluate_with_buffer(&es, &point, &mut scratch);
+
+        drop(mle_from_ref);
+
+        assert_eq!(actual_eval, expect_eval);
+
+        drop(es);
+    }
+}
+
+#[test]
+fn test_mut_ref_multilinear_poly() {
+    let mut rng = test_rng();
+    for nv in 4..=10 {
+        let es_len = 1 << nv;
+        let mut es: Vec<Fr> = (0..es_len).map(|_| Fr::random_unsafe(&mut rng)).collect();
+        let es_cloned = es.clone();
+        let point: Vec<Fr> = (0..nv).map(|_| Fr::random_unsafe(&mut rng)).collect();
+        let mut scratch = vec![Fr::ZERO; es_len];
+
+        let mut mle_from_mut_ref = MutRefMultiLinearPoly::<Fr>::from_ref(&mut es);
+
+        mle_from_mut_ref.fix_variables(&point);
+        let expect_eval = MultiLinearPoly::evaluate_with_buffer(&es_cloned, &point, &mut scratch);
+
+        drop(mle_from_mut_ref);
+
+        assert_eq!(es[0], expect_eval);
+
+        drop(es);
+    }
+}
+
 /// Naive method to build eq(x, r).
 /// Only used for testing purpose.
 // Evaluate

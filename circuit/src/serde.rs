@@ -1,5 +1,5 @@
 use arith::{Field, FieldForECC, FieldSerde, FieldSerdeError};
-use config::GKRConfig;
+use gkr_field_config::GKRFieldConfig;
 use std::{io::Read, vec};
 use thiserror::Error;
 
@@ -44,7 +44,7 @@ impl FromEccSerde for usize {
     }
 }
 
-impl<C: GKRConfig, const INPUT_NUM: usize> FromEccSerde for Gate<C, INPUT_NUM> {
+impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for Gate<C, INPUT_NUM> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let mut i_ids = [0usize; INPUT_NUM];
         for id in &mut i_ids {
@@ -57,7 +57,7 @@ impl<C: GKRConfig, const INPUT_NUM: usize> FromEccSerde for Gate<C, INPUT_NUM> {
         let (coef_type, coef) = match coef_type_u8 {
             1 => (
                 CoefType::Constant,
-                C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
+                C::CircuitField::deserialize_from(&mut reader).unwrap(),
             ),
             2 => (CoefType::Random, C::CircuitField::ZERO),
             3 => {
@@ -85,11 +85,11 @@ impl<C: GKRConfig, const INPUT_NUM: usize> FromEccSerde for Gate<C, INPUT_NUM> {
     }
 }
 
-pub struct CustomGateWrapper<C: GKRConfig, const INPUT_NUM: usize> {
+pub struct CustomGateWrapper<C: GKRFieldConfig, const INPUT_NUM: usize> {
     pub custom_gate: Gate<C, INPUT_NUM>,
 }
 
-impl<C: GKRConfig, const INPUT_NUM: usize> FromEccSerde for CustomGateWrapper<C, INPUT_NUM> {
+impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for CustomGateWrapper<C, INPUT_NUM> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let gate_type = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
         let i_ids: [usize; INPUT_NUM] = <Vec<usize> as FromEccSerde>::deserialize_from(&mut reader)
@@ -102,7 +102,7 @@ impl<C: GKRConfig, const INPUT_NUM: usize> FromEccSerde for CustomGateWrapper<C,
         let (coef_type, coef) = match coef_type_u8 {
             1 => (
                 CoefType::Constant,
-                C::CircuitField::try_deserialize_from_ecc_format(&mut reader).unwrap(),
+                C::CircuitField::deserialize_from(&mut reader).unwrap(),
             ),
             2 => (CoefType::Random, C::CircuitField::ZERO),
             3 => {
@@ -141,7 +141,7 @@ impl FromEccSerde for Allocation {
     }
 }
 
-impl<C: GKRConfig> FromEccSerde for Segment<C> {
+impl<C: GKRFieldConfig> FromEccSerde for Segment<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let i_len = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
         let o_len = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
@@ -174,11 +174,11 @@ impl<C: GKRConfig> FromEccSerde for Segment<C> {
 
 const VERSION_NUM: usize = 3914834606642317635; // b'CIRCUIT6'
 
-impl<C: GKRConfig> FromEccSerde for RecursiveCircuit<C> {
+impl<C: GKRFieldConfig> FromEccSerde for RecursiveCircuit<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let version_num = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
         assert_eq!(version_num, VERSION_NUM);
-        let expected_mod = <C::CircuitField as FieldForECC>::modulus();
+        let expected_mod = <C::CircuitField as FieldForECC>::MODULUS;
         let mut field_mod = [0u8; 32];
         reader.read_exact(&mut field_mod).unwrap();
         let read_mod = ethnum::U256::from_le_bytes(field_mod);
@@ -196,7 +196,7 @@ impl<C: GKRConfig> FromEccSerde for RecursiveCircuit<C> {
     }
 }
 
-impl<C: GKRConfig> FromEccSerde for Witness<C> {
+impl<C: GKRFieldConfig> FromEccSerde for Witness<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let num_witnesses = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
         let num_private_inputs_per_witness =

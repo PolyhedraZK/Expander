@@ -1,15 +1,32 @@
-use std::marker::PhantomData;
+use std::{fmt::Debug, io::Read, marker::PhantomData};
 
-use arith::{Field, FieldSerde};
+use arith::{ExtensionField, Field, FieldSerde};
+use field_hashers::FiatShamirFieldHasher;
 
-use crate::{
-    fiat_shamir_hash::{FiatShamirBytesHash, FiatShamirFieldHash},
-    Proof,
-};
+use crate::{fiat_shamir_hash::FiatShamirBytesHash, Proof};
 
-pub trait Transcript<F: Field + FieldSerde> {
+// When appending the initial commitment, we hash the commitment bytes
+// for sufficient number of times, so that the FS hash has a sufficient circuit depth
+
+#[cfg(not(feature = "recursion"))]
+const PCS_DIGEST_LOOP: usize = 1000;
+
+pub trait Transcript<F: ExtensionField>: Clone + Debug {
     /// Create a new transcript.
     fn new() -> Self;
+
+    /// Append a polynomial commitment to the transcript
+    /// called by the prover
+    fn append_commitment(&mut self, commitment_bytes: &[u8]);
+
+    /// Append a polynomial commitment to the transcript
+    /// check that the pcs digest in the proof is correct
+    /// called by the verifier
+    fn append_commitment_and_check_digest<R: Read>(
+        &mut self,
+        commitment_bytes: &[u8],
+        proof_reader: &mut R,
+    ) -> bool;
 
     /// Append a field element to the transcript.
     fn append_field_element(&mut self, f: &F);
@@ -17,12 +34,34 @@ pub trait Transcript<F: Field + FieldSerde> {
     /// Append a slice of bytes
     fn append_u8_slice(&mut self, buffer: &[u8]);
 
+    /// Generate a circuit field element.
+    fn generate_circuit_field_element(&mut self) -> F::BaseField;
+
+    /// Generate a slice of random circuit fields.
+    fn generate_circuit_field_elements(&mut self, num_elems: usize) -> Vec<F::BaseField> {
+        let mut circuit_fs = Vec::with_capacity(num_elems);
+        (0..num_elems).for_each(|_| circuit_fs.push(self.generate_circuit_field_element()));
+        circuit_fs
+    }
+
     /// Generate a challenge.
     fn generate_challenge_field_element(&mut self) -> F;
 
     /// Generate a slice of random bytes of some fixed size
     /// Use this function when you need some randomness other than the native field
     fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8>;
+
+    /// Generate a list of positions that we want to open the polynomial at.
+    #[inline]
+    fn generate_challenge_index_vector(&mut self, num_queries: usize) -> Vec<usize> {
+        let mut challenges = Vec::with_capacity(num_queries);
+        let mut buf = [0u8; 8];
+        for _ in 0..num_queries {
+            buf.copy_from_slice(self.generate_challenge_u8_slice(8).as_slice());
+            challenges.push(usize::from_le_bytes(buf));
+        }
+        challenges
+    }
 
     /// Generate a challenge vector.
     #[inline]
@@ -54,7 +93,7 @@ pub trait Transcript<F: Field + FieldSerde> {
 }
 
 #[derive(Clone, Default, Debug, PartialEq)]
-pub struct BytesHashTranscript<F: Field + FieldSerde, H: FiatShamirBytesHash> {
+pub struct BytesHashTranscript<F: Field, H: FiatShamirBytesHash> {
     phantom: PhantomData<(F, H)>,
 
     /// The digest bytes.
@@ -71,7 +110,7 @@ pub struct BytesHashTranscript<F: Field + FieldSerde, H: FiatShamirBytesHash> {
     proof_locked_at: usize,
 }
 
-impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, H> {
+impl<F: ExtensionField, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, H> {
     fn new() -> Self {
         Self {
             phantom: PhantomData,
@@ -83,6 +122,53 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashT
         }
     }
 
+    #[inline]
+    fn append_commitment(&mut self, commitment_bytes: &[u8]) {
+        self.append_u8_slice(commitment_bytes);
+
+        #[cfg(not(feature = "recursion"))]
+        {
+            // When appending the initial commitment, we hash the commitment bytes
+            // for sufficient number of times, so that the FS hash has a sufficient circuit depth
+            let mut digest = [0u8; 32];
+            H::hash(&mut digest, commitment_bytes);
+            for _ in 0..PCS_DIGEST_LOOP {
+                H::hash_inplace(&mut digest);
+            }
+            self.append_u8_slice(&digest);
+        }
+    }
+
+    #[inline]
+    /// check that the pcs digest in the proof is correct
+    fn append_commitment_and_check_digest<R: Read>(
+        &mut self,
+        commitment_bytes: &[u8],
+        _proof_reader: &mut R,
+    ) -> bool {
+        self.append_u8_slice(commitment_bytes);
+
+        #[cfg(not(feature = "recursion"))]
+        {
+            // When appending the initial commitment, we hash the commitment bytes
+            // for sufficient number of times, so that the FS hash has a sufficient circuit depth
+            let mut digest = [0u8; 32];
+            H::hash(&mut digest, commitment_bytes);
+            for _ in 0..PCS_DIGEST_LOOP {
+                H::hash_inplace(&mut digest);
+            }
+            self.append_u8_slice(&digest);
+
+            // check that digest matches the proof
+            let mut pcs_digest = [0u8; 32];
+            _proof_reader.read_exact(&mut pcs_digest).unwrap();
+
+            digest == pcs_digest
+        }
+        #[cfg(feature = "recursion")]
+        true
+    }
+
     fn append_field_element(&mut self, f: &F) {
         let mut buf = vec![];
         f.serialize_into(&mut buf).unwrap();
@@ -92,6 +178,23 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashT
     /// Append a byte slice to the transcript.
     fn append_u8_slice(&mut self, buffer: &[u8]) {
         self.proof.bytes.extend_from_slice(buffer);
+    }
+
+    /// Generate a random circuit field.
+    fn generate_circuit_field_element(&mut self) -> <F as ExtensionField>::BaseField {
+        // NOTE(HS) fast path for BN254 sampling - notice that the deserialize from for BN254
+        // does not self correct the sampling bytes, we instead use challenge field sampling
+        // and cast it back to base field for BN254 case - maybe traverse back and unify the impls.
+        if F::DEGREE == 1 {
+            let challenge_fs = self.generate_challenge_field_element();
+            return challenge_fs.to_limbs()[0];
+        }
+
+        let bytes_sampled = self.generate_challenge_u8_slice(32);
+        let mut buffer = [0u8; 32];
+        buffer[..32].copy_from_slice(&bytes_sampled);
+
+        <F as ExtensionField>::BaseField::from_uniform_bytes(&buffer)
     }
 
     /// Generate a challenge.
@@ -111,7 +214,7 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashT
             cur_n_bytes += H::DIGEST_SIZE;
         }
 
-        ret.resize(n_bytes, 0);
+        ret.truncate(n_bytes);
         ret
     }
 
@@ -147,7 +250,7 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> Transcript<F> for BytesHashT
     }
 }
 
-impl<F: Field + FieldSerde, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
+impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
     /// Hash the input into the output.
     pub fn hash_to_digest(&mut self) {
         let hash_end_index = self.proof.bytes.len();
@@ -163,97 +266,205 @@ impl<F: Field + FieldSerde, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct FieldHashTranscript<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> {
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct FieldHashTranscript<ChallengeF, H>
+where
+    ChallengeF: ExtensionField,
+    H: FiatShamirFieldHasher<ChallengeF::BaseField>,
+{
     /// Internal hasher, it's a little costly to create a new hasher
     pub hasher: H,
 
-    /// The digest bytes.
-    pub digest: F,
+    /// The hash state, a vec of base field elems up to H::STATE_CAPACITY.
+    pub hash_state: Vec<ChallengeF::BaseField>,
+
+    /// The index pointing into hash state, for the next unconsumed base field hash elem.
+    pub next_unconsumed: usize,
 
     /// The proof bytes
     pub proof: Proof,
 
     /// The data to be hashed
-    pub data_pool: Vec<F>,
+    pub data_pool: Vec<ChallengeF::BaseField>,
 
     /// Proof locked or not
     pub proof_locked: bool,
 }
 
-impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHashTranscript<F, H> {
+impl<ChallengeF, H> Transcript<ChallengeF> for FieldHashTranscript<ChallengeF, H>
+where
+    ChallengeF: ExtensionField,
+    H: FiatShamirFieldHasher<ChallengeF::BaseField>,
+{
     #[inline(always)]
     fn new() -> Self {
         Self {
             hasher: H::new(),
-            digest: F::default(),
-            proof: Proof::default(),
-            data_pool: vec![],
-            proof_locked: false,
+            ..Default::default()
         }
     }
 
-    fn append_field_element(&mut self, f: &F) {
-        let mut buffer = vec![];
-        f.serialize_into(&mut buffer).unwrap();
+    #[inline]
+    fn append_commitment(&mut self, commitment_bytes: &[u8]) {
+        self.append_u8_slice(commitment_bytes);
+
+        #[cfg(not(feature = "recursion"))]
+        {
+            // When appending the initial commitment, we hash the commitment bytes
+            // for sufficient number of times, so that the FS hash has a sufficient circuit depth
+            let mut challenge = self.generate_challenge_field_element().to_limbs();
+            let hasher = H::new();
+            for _ in 0..PCS_DIGEST_LOOP {
+                challenge = hasher.hash_to_state(&challenge);
+            }
+
+            let mut digest_bytes = vec![];
+            challenge.serialize_into(&mut digest_bytes).unwrap();
+            self.append_u8_slice(&digest_bytes);
+        }
+    }
+
+    #[inline]
+    fn append_commitment_and_check_digest<R: Read>(
+        &mut self,
+        commitment_bytes: &[u8],
+        _proof_reader: &mut R,
+    ) -> bool {
+        self.append_u8_slice(commitment_bytes);
+
+        #[cfg(not(feature = "recursion"))]
+        {
+            // When appending the initial commitment, we hash the commitment bytes
+            // for sufficient number of times, so that the FS hash has a sufficient circuit depth
+            let mut challenge = self.generate_challenge_field_element().to_limbs();
+            let hasher = H::new();
+            for _ in 0..PCS_DIGEST_LOOP {
+                challenge = hasher.hash_to_state(&challenge);
+            }
+            let mut digest_bytes = vec![];
+            challenge.serialize_into(&mut digest_bytes).unwrap();
+            self.append_u8_slice(&digest_bytes);
+
+            // check that digest matches the proof
+            let challenge_from_proof =
+                Vec::<ChallengeF::BaseField>::deserialize_from(_proof_reader).unwrap();
+
+            challenge_from_proof == challenge
+        }
+
+        #[cfg(feature = "recursion")]
+        true
+    }
+
+    fn append_field_element(&mut self, f: &ChallengeF) {
         if !self.proof_locked {
+            let mut buffer = vec![];
+            f.serialize_into(&mut buffer).unwrap();
             self.proof.bytes.extend_from_slice(&buffer);
         }
-        self.data_pool.push(*f);
+        self.data_pool.extend_from_slice(&f.to_limbs());
     }
 
     fn append_u8_slice(&mut self, buffer: &[u8]) {
         if !self.proof_locked {
             self.proof.bytes.extend_from_slice(buffer);
         }
-        let buffer_size = buffer.len();
-        let mut cur = 0;
-        while cur + 32 <= buffer_size {
-            self.data_pool.push(F::from_uniform_bytes(
-                buffer[cur..cur + 32].try_into().unwrap(),
-            ));
-            cur += 32
-        }
-
-        if cur < buffer_size {
-            let mut buffer_last = buffer[cur..].to_vec();
-            buffer_last.resize(32, 0);
-            self.data_pool
-                .push(F::from_uniform_bytes(buffer_last[..].try_into().unwrap()));
-        }
+        let mut local_buffer = buffer.to_vec();
+        local_buffer.resize(local_buffer.len().next_multiple_of(32), 0u8);
+        local_buffer.chunks(32).for_each(|chunk_32| {
+            let challenge_f = ChallengeF::from_uniform_bytes(chunk_32.try_into().unwrap());
+            self.data_pool.extend_from_slice(&challenge_f.to_limbs());
+        });
     }
 
-    fn generate_challenge_field_element(&mut self) -> F {
-        self.hash_to_digest();
-        self.digest
+    fn generate_circuit_field_element(&mut self) -> <ChallengeF as ExtensionField>::BaseField {
+        if !self.data_pool.is_empty() {
+            self.hash_state = self.hasher.hash_to_state(&self.data_pool);
+            self.data_pool.clear();
+            self.next_unconsumed = 0;
+        }
+
+        if self.next_unconsumed < H::STATE_CAPACITY {
+            let circuit_f = self.hash_state[self.next_unconsumed];
+            self.next_unconsumed += 1;
+            return circuit_f;
+        }
+
+        self.hash_state = self.hasher.hash_to_state(&self.hash_state);
+        let circuit_f = self.hash_state[0];
+        self.next_unconsumed = 1;
+
+        circuit_f
+    }
+
+    fn generate_challenge_field_element(&mut self) -> ChallengeF {
+        if !self.data_pool.is_empty() {
+            self.hash_state = self.hasher.hash_to_state(&self.data_pool);
+            self.data_pool.clear();
+            self.next_unconsumed = 0;
+        }
+
+        if ChallengeF::DEGREE + self.next_unconsumed <= H::STATE_CAPACITY {
+            let challenge_f = ChallengeF::from_limbs(&self.hash_state[self.next_unconsumed..]);
+            self.next_unconsumed += ChallengeF::DEGREE;
+            return challenge_f;
+        }
+
+        let mut ext_limbs = Vec::new();
+        if self.next_unconsumed < H::STATE_CAPACITY {
+            ext_limbs.extend_from_slice(&self.hash_state[self.next_unconsumed..H::STATE_CAPACITY]);
+        }
+        let remaining_base_elems = ChallengeF::DEGREE - ext_limbs.len();
+
+        self.hash_state = self.hasher.hash_to_state(&self.hash_state);
+        ext_limbs.extend_from_slice(&self.hash_state[..remaining_base_elems]);
+        self.next_unconsumed = remaining_base_elems;
+
+        ChallengeF::from_limbs(&ext_limbs)
     }
 
     fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
-        let mut bytes = vec![];
-        let mut buf = vec![];
-        while bytes.len() < n_bytes {
-            self.hash_to_digest();
-            self.digest.serialize_into(&mut buf).unwrap();
-            bytes.extend_from_slice(&buf);
-        }
-        bytes.resize(n_bytes, 0);
-        bytes
+        let base_field_elems_num =
+            (n_bytes + ChallengeF::BaseField::SIZE - 1) / ChallengeF::BaseField::SIZE;
+        let elems = self.generate_challenge_field_elements(base_field_elems_num);
+
+        let mut res = Vec::new();
+        let mut buffer = Vec::new();
+
+        elems.iter().for_each(|t| {
+            t.serialize_into(&mut buffer).unwrap();
+            res.extend_from_slice(&buffer);
+        });
+        res.truncate(n_bytes);
+
+        res
     }
 
     fn finalize_and_get_proof(&self) -> Proof {
         self.proof.clone()
     }
 
+    // NOTE(HS) the hash_and_return_state and set_state are always called together
+    // mainly to sync up the MPI transcripts to a same transaction hash state.
     fn hash_and_return_state(&mut self) -> Vec<u8> {
-        self.hash_to_digest();
+        if !self.data_pool.is_empty() {
+            self.hash_state = self.hasher.hash_to_state(&self.data_pool);
+            self.data_pool.clear();
+        } else {
+            self.hash_state = self.hasher.hash_to_state(&self.hash_state);
+        }
+
         let mut state = vec![];
-        self.digest.serialize_into(&mut state).unwrap();
+        self.hash_state.serialize_into(&mut state).unwrap();
         state
     }
 
     fn set_state(&mut self, state: &[u8]) {
-        self.data_pool.clear();
-        self.digest = F::deserialize_from(state).unwrap();
+        assert!(self.data_pool.is_empty());
+        // NOTE(HS) since we broadcasted, then all the hash state base field elems
+        // are being observed, then all of them are consumed
+        self.next_unconsumed = H::STATE_CAPACITY;
+        self.hash_state = Vec::deserialize_from(state).unwrap();
     }
 
     fn lock_proof(&mut self) {
@@ -264,16 +475,5 @@ impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> Transcript<F> for FieldHa
     fn unlock_proof(&mut self) {
         assert!(self.proof_locked);
         self.proof_locked = false;
-    }
-}
-
-impl<F: Field + FieldSerde, H: FiatShamirFieldHash<F>> FieldHashTranscript<F, H> {
-    pub fn hash_to_digest(&mut self) {
-        if !self.data_pool.is_empty() {
-            self.digest = self.hasher.hash(&self.data_pool);
-            self.data_pool.clear();
-        } else {
-            self.digest = self.hasher.hash(&[self.digest]);
-        }
     }
 }

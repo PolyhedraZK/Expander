@@ -5,57 +5,140 @@ use std::{fs, panic};
 
 use arith::{Field, FieldSerde};
 use circuit::Circuit;
-use config::{
-    root_println, BN254ConfigKeccak, BN254ConfigMIMC5, BN254ConfigSha2, Config, FieldType,
-    GF2ExtConfigKeccak, GF2ExtConfigSha2, GKRConfig, GKRScheme, M31ExtConfigKeccak,
-    M31ExtConfigSha2, MPIConfig,
-};
-use rand::Rng;
+use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
+use config_macros::declare_gkr_config;
+use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
+use gf2::GF2x128;
+use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use mersenne31::M31x16;
+use mpi_config::{root_println, MPIConfig};
+use poly_commit::{expander_pcs_init_testing_only, OrionPCSForGKR, RawExpanderGKR};
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha12Rng;
 use sha2::Digest;
+use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
 
 use crate::{utils::*, Prover, Verifier};
+
+const PCS_TESTING_SEED_U64: u64 = 114514;
 
 #[test]
 fn test_gkr_correctness() {
     let mpi_config = MPIConfig::new();
+    declare_gkr_config!(
+        C0,
+        FieldType::GF2,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C1,
+        FieldType::M31,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C2,
+        FieldType::BN254,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C3,
+        FieldType::GF2,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C4,
+        FieldType::M31,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C5,
+        FieldType::BN254,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C6,
+        FieldType::BN254,
+        FiatShamirHashType::MIMC5,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C7,
+        FieldType::GF2,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Orion,
+    );
+    declare_gkr_config!(
+        C8,
+        FieldType::M31,
+        FiatShamirHashType::Poseidon,
+        PolynomialCommitmentType::Raw,
+    );
+    declare_gkr_config!(
+        C9,
+        FieldType::M31,
+        FiatShamirHashType::Poseidon,
+        PolynomialCommitmentType::Orion,
+    );
 
-    test_gkr_correctness_helper::<GF2ExtConfigSha2>(
-        &Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    test_gkr_correctness_helper(
+        &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper::<GF2ExtConfigKeccak>(
-        &Config::<GF2ExtConfigKeccak>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    test_gkr_correctness_helper(
+        &Config::<C1>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper::<M31ExtConfigSha2>(
-        &Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    test_gkr_correctness_helper(
+        &Config::<C2>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper::<M31ExtConfigKeccak>(
-        &Config::<M31ExtConfigKeccak>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    test_gkr_correctness_helper(
+        &Config::<C3>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper::<BN254ConfigSha2>(
-        &Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    test_gkr_correctness_helper(
+        &Config::<C4>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper::<BN254ConfigKeccak>(
-        &Config::<BN254ConfigKeccak>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    test_gkr_correctness_helper(
+        &Config::<C5>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
-    test_gkr_correctness_helper::<BN254ConfigMIMC5>(
-        &Config::<BN254ConfigMIMC5>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    test_gkr_correctness_helper(
+        &Config::<C6>::new(GKRScheme::Vanilla, mpi_config.clone()),
         Some("../data/gkr_proof.txt"),
+    );
+    test_gkr_correctness_helper(
+        &Config::<C7>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper(
+        &Config::<C8>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper(
+        &Config::<C9>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
     );
 
     MPIConfig::finalize();
 }
 
 #[allow(unreachable_patterns)]
-fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>, write_proof_to: Option<&str>) {
+fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof_to: Option<&str>) {
     root_println!(config.mpi_config, "============== start ===============");
-    root_println!(config.mpi_config, "Field Type: {:?}", C::FIELD_TYPE);
-    let circuit_copy_size: usize = match C::FIELD_TYPE {
+    root_println!(
+        config.mpi_config,
+        "Field Type: {:?}",
+        <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE
+    );
+    let circuit_copy_size: usize = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
         FieldType::GF2 => 1,
         FieldType::M31 => 2,
         FieldType::BN254 => 2,
@@ -64,20 +147,20 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>, write_proof_to:
     root_println!(
         config.mpi_config,
         "Proving {} keccak instances at once.",
-        circuit_copy_size * C::get_field_pack_size()
+        circuit_copy_size * <Cfg::FieldConfig as GKRFieldConfig>::get_field_pack_size()
     );
     root_println!(config.mpi_config, "Config created.");
 
-    let circuit_path = match C::FIELD_TYPE {
+    let circuit_path = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
         FieldType::GF2 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
         FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
         _ => unreachable!(),
     };
-    let mut circuit = Circuit::<C>::load_circuit(&circuit_path);
+    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(&circuit_path);
     root_println!(config.mpi_config, "Circuit loaded.");
 
-    let witness_path = match C::FIELD_TYPE {
+    let witness_path = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
         FieldType::GF2 => "../".to_owned() + KECCAK_GF2_WITNESS,
         FieldType::M31 => "../".to_owned() + KECCAK_M31_WITNESS,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_WITNESS,
@@ -95,8 +178,21 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>, write_proof_to:
     let mut prover = Prover::new(config);
     prover.prepare_mem(&circuit);
 
+    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
+    let (pcs_params, pcs_proving_key, pcs_verification_key, mut pcs_scratch) =
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
+            circuit.log_input_size(),
+            &config.mpi_config,
+            &mut rng,
+        );
+
     let proving_start = Instant::now();
-    let (claimed_v, proof) = prover.prove(&mut circuit);
+    let (claimed_v, proof) = prover.prove(
+        &mut circuit,
+        &pcs_params,
+        &pcs_proving_key,
+        &mut pcs_scratch,
+    );
     root_println!(
         config.mpi_config,
         "Proving time: {} μs",
@@ -117,7 +213,10 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>, write_proof_to:
     root_println!(config.mpi_config,);
 
     let mut public_input_gathered = if config.mpi_config.is_root() {
-        vec![C::SimdCircuitField::ZERO; circuit.public_input.len() * config.mpi_config.world_size()]
+        vec![
+            <Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::ZERO;
+            circuit.public_input.len() * config.mpi_config.world_size()
+        ]
     } else {
         vec![]
     };
@@ -142,7 +241,14 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>, write_proof_to:
         let verifier = Verifier::new(config);
         println!("Verifier created.");
         let verification_start = Instant::now();
-        assert!(verifier.verify(&mut circuit, &public_input_gathered, &claimed_v, &proof));
+        assert!(verifier.verify(
+            &mut circuit,
+            &public_input_gathered,
+            &claimed_v,
+            &pcs_params,
+            &pcs_verification_key,
+            &proof
+        ));
         println!(
             "Verification time: {} μs",
             verification_start.elapsed().as_micros()
@@ -156,7 +262,14 @@ fn test_gkr_correctness_helper<C: GKRConfig>(config: &Config<C>, write_proof_to:
 
         // Catch the panic and treat it as returning `false`
         let result = panic::catch_unwind(AssertUnwindSafe(|| {
-            verifier.verify(&mut circuit, &public_input_gathered, &claimed_v, &bad_proof)
+            verifier.verify(
+                &mut circuit,
+                &public_input_gathered,
+                &claimed_v,
+                &pcs_params,
+                &pcs_verification_key,
+                &bad_proof,
+            )
         }));
 
         let final_result = result.unwrap_or_default();

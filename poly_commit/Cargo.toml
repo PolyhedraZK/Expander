@@ -1,0 +1,30 @@
+[package]
+name = "poly_commit"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arith = { path = "../arith" }
+gkr_field_config = { path = "../config/gkr_field_config" }
+mpi_config = { path = "../config/mpi_config" }
+polynomials = { path = "../arith/polynomials"}
+transcript = { path = "../transcript" }
+tree = { path = "../tree" }
+gf2 = { path = "../arith/gf2" }
+
+rand.workspace = true
+ethnum.workspace = true
+ark-std.workspace = true
+thiserror.workspace = true
+itertools.workspace = true
+
+[dev-dependencies]
+gf2_128 = { path = "../arith/gf2_128" }
+mersenne31 = { path = "../arith/mersenne31" }
+
+tynm.workspace = true
+criterion.workspace = true
+
+[[bench]]
+name = "orion"
+harness = false

@@ -77,7 +77,8 @@ pub fn best_fft_vec_in_place<F: PrimeField>(a: &mut [F], omega: F, log_n: u32, l
         let rk = bitreverse(k, log_m as usize);
 
         if k < rk {
-            // `a_vec_ptrs.swap(rk, k)` doesn't work here as it only swaps the pointers not the actual data
+            // `a_vec_ptrs.swap(rk, k)` doesn't work here as it only swaps the pointers
+            // not the actual data
             deep_swap_chunks(&mut a_vec_ptrs, rk, k);
         }
     }

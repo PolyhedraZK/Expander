@@ -111,11 +111,10 @@ impl Field for Fr {
 }
 
 impl FieldForECC for Fr {
-    fn modulus() -> ethnum::U256 {
-        MODULUS
-    }
+    const MODULUS: ethnum::U256 = MODULUS;
+
     fn from_u256(x: ethnum::U256) -> Self {
-        Fr::from_bytes(&(x % Fr::modulus()).to_le_bytes()).unwrap()
+        Fr::from_bytes(&(x % MODULUS).to_le_bytes()).unwrap()
     }
     fn to_u256(&self) -> ethnum::U256 {
         ethnum::U256::from_le_bytes(self.to_bytes())
@@ -141,10 +140,7 @@ impl SimdField for Fr {
         vec![*self]
     }
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        1
-    }
+    const PACK_SIZE: usize = 1;
 }
 
 impl FieldSerde for Fr {
@@ -164,11 +160,6 @@ impl FieldSerde for Fr {
             Some(v) => Ok(v),
             None => Err(FieldSerdeError::DeserializeError),
         }
-    }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(reader: R) -> FieldSerdeResult<Self> {
-        Self::deserialize_from(reader)
     }
 }
 
@@ -197,5 +188,19 @@ impl ExtensionField for Fr {
     /// Multiply the extension field by x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
     fn mul_by_x(&self) -> Self {
         unimplemented!("mul_by_x for Fr doesn't make sense")
+    }
+
+    /// Construct a new instance of extension field from coefficients
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        if limbs.len() < Self::DEGREE {
+            Self::zero()
+        } else {
+            limbs[0]
+        }
+    }
+
+    /// Extract polynomial field coefficients from the extension field instance
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        vec![*self]
     }
 }

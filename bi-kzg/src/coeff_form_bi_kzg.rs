@@ -71,7 +71,8 @@ where
             (omega_0, omega_1)
         };
 
-        // computes the vector of L_i^N(tau_0) * L_j^M(tau_1) for i in 0..supported_n and j in 0..supported_m
+        // computes the vector of L_i^N(tau_0) * L_j^M(tau_1)
+        // for i in 0..supported_n and j in 0..supported_m
         let (scalars, lagrange_scalars) = {
             let powers_of_omega_0 = powers_of_field_elements(&omega_0, supported_n);
             let powers_of_tau_0 = powers_of_field_elements(&tau_0, supported_n);

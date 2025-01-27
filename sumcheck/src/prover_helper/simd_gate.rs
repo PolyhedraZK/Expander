@@ -1,8 +1,9 @@
 //! This module implements helper functions for the prover side of the sumcheck protocol
-//! to evaluate SIMD gates. A SIMD gate is a gate that merges all elements in a SIMD into a single one.
+//! to evaluate SIMD gates.
+//! A SIMD gate is a gate that merges all elements in a SIMD into a single one.
 
 use arith::{ExtensionField, Field};
-use config::{FieldType, GKRConfig};
+use gkr_field_config::{FieldType, GKRFieldConfig};
 
 pub(crate) struct SumcheckSimdProdGateHelper {
     var_num: usize,
@@ -15,7 +16,7 @@ impl SumcheckSimdProdGateHelper {
     }
 
     #[inline]
-    pub(crate) fn poly_eval_at<C: GKRConfig>(
+    pub(crate) fn poly_eval_at<C: GKRFieldConfig>(
         &self,
         var_idx: usize,
         degree: usize,
@@ -82,7 +83,7 @@ impl SumcheckSimdProdGateHelper {
     }
 
     #[inline]
-    pub(crate) fn receive_challenge<C: GKRConfig>(
+    pub(crate) fn receive_challenge<C: GKRFieldConfig>(
         &mut self,
         var_idx: usize,
         r: C::ChallengeField,

@@ -46,11 +46,6 @@ impl FieldSerde for M31 {
         v = mod_reduce_u32(v);
         Ok(M31 { v })
     }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(reader: R) -> FieldSerdeResult<Self> {
-        Self::deserialize_from(reader)
-    }
 }
 
 impl M31 {
@@ -146,9 +141,8 @@ impl Field for M31 {
 }
 
 impl FieldForECC for M31 {
-    fn modulus() -> ethnum::U256 {
-        ethnum::U256::from(M31_MOD)
-    }
+    const MODULUS: ethnum::U256 = ethnum::U256::new(M31_MOD as u128);
+
     fn from_u256(x: ethnum::U256) -> Self {
         M31 {
             v: (x % ethnum::U256::from(M31_MOD)).as_u32(),

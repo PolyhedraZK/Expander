@@ -8,7 +8,7 @@ use std::{
 };
 
 use arith::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField};
-use ark_std::iterable::Iterable;
+use ark_std::Zero;
 use rand::{Rng, RngCore};
 
 use crate::m31::{M31, M31_MOD};
@@ -60,19 +60,6 @@ impl FieldSerde for AVXM31 {
             value = mod_reduce_epi32(value);
             Ok(AVXM31 { v: value })
         }
-    }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut buf = [0u8; 32];
-        reader.read_exact(&mut buf)?;
-        assert!(
-            buf.iter().skip(4).all(|x| x == 0),
-            "non-zero byte found in witness byte"
-        );
-        Ok(Self::pack_full(
-            u32::from_le_bytes(buf[..4].try_into().unwrap()).into(),
-        ))
     }
 }
 
@@ -174,8 +161,19 @@ impl Field for AVXM31 {
         }
     }
 
-    fn exp(&self, _exponent: u128) -> Self {
-        unimplemented!("exp not implemented for AVXM31")
+    fn exp(&self, exponent: u128) -> Self {
+        let mut e = exponent;
+        let mut res = Self::one();
+        let mut t = *self;
+        while !e.is_zero() {
+            let b = e & 1;
+            if b == 1 {
+                res *= t;
+            }
+            t = t * t;
+            e >>= 1;
+        }
+        res
     }
 
     #[inline(always)]
@@ -234,10 +232,7 @@ impl SimdField for AVXM31 {
         *self * *challenge
     }
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        M31_PACK_SIZE
-    }
+    const PACK_SIZE: usize = M31_PACK_SIZE;
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
@@ -267,7 +262,7 @@ impl Debug for AVXM31 {
             _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.v);
         }
         // if all data is the same, print only one
-        if data.iter().all(|x| x == data[0]) {
+        if data.iter().all(|&x| x == data[0]) {
             write!(
                 f,
                 "mm512i<8 x {}>",

@@ -1,101 +1,110 @@
 package verifier
 
 import (
-	"ExpanderVerifierCircuit/modules/circuit"
-	"ExpanderVerifierCircuit/modules/polycommit"
-	"ExpanderVerifierCircuit/modules/transcript"
 	"log"
 	"math/bits"
+
+	"ExpanderVerifierCircuit/modules/circuit"
+	"ExpanderVerifierCircuit/modules/fields"
+	"ExpanderVerifierCircuit/modules/polycommit"
+	"ExpanderVerifierCircuit/modules/transcript"
 
 	"github.com/consensys/gnark/frontend"
 )
 
 func SumcheckStepVerify(
-	api frontend.API,
+	api fields.ArithmeticEngine,
 	proof *circuit.Proof,
 	degree uint,
-	transcript *transcript.Transcript,
-	claimed_sum frontend.Variable,
-	randomness_vec []frontend.Variable,
-	sp *ScratchPad,
-) (frontend.Variable, []frontend.Variable) {
-	var ps = make([]frontend.Variable, 0)
-	for i := uint(0); i < (degree + 1); i++ {
-		ps = append(ps, proof.Next())
-		transcript.AppendF(ps[i])
+	fsTranscript *transcript.FieldHasherTranscript,
+	claimedEval []frontend.Variable,
+	randomPoints [][]frontend.Variable,
+	sp ScratchPad,
+) ([]frontend.Variable, [][]frontend.Variable) {
+
+	ps := make([][]frontend.Variable, degree+1)
+	for i := uint(0); i <= degree; i++ {
+		ps[i] = proof.NextChallengeF(api)
+		fsTranscript.AppendFs(ps[i]...)
 	}
 
-	var r = transcript.ChallengeF()
-	randomness_vec = append(randomness_vec, r)
-	api.AssertIsEqual(api.Add(ps[0], ps[1]), claimed_sum)
+	api.AssertEq(api.ExtensionAdd(ps[0], ps[1]), claimedEval)
 
-	if degree == 2 {
-		return Degree2Eval(api, ps, r, sp), randomness_vec
-	} else if degree == 3 {
-		return Degree3Eval(api, ps, r, sp), randomness_vec
-	} else {
-		panic("Incorrect Degree")
+	randomPoint := fsTranscript.ChallengeF()
+	randomPoints = append(randomPoints, randomPoint)
+
+	switch degree {
+	case 2:
+		claimedEval = Degree2Eval(api, ps, randomPoint, sp)
+	case 3:
+		claimedEval = Degree3Eval(api, ps, randomPoint, sp)
+	default:
+		panic("Degree unsupported")
 	}
+
+	return claimedEval, randomPoints
 }
 
 func SumcheckLayerVerify(
-	api frontend.API,
+	api fields.ArithmeticEngine,
 	layer *circuit.Layer,
-	public_input [][]frontend.Variable,
-	rz0 []frontend.Variable,
-	rz1 []frontend.Variable,
-	r_simd []frontend.Variable,
-	r_mpi []frontend.Variable,
-	claimed_v0 frontend.Variable,
-	claimed_v1 frontend.Variable,
-	alpha frontend.Variable,
+	// NOTE(HS) this is SIMD circuit field
+	publicInput [][]frontend.Variable,
+
+	rz0, rz1, rSIMD, rMPI [][]frontend.Variable,
+
+	claimedV0, claimedV1, alpha []frontend.Variable,
+
 	proof *circuit.Proof,
-	transcript *transcript.Transcript,
+	fsTranscript *transcript.FieldHasherTranscript,
 	sp *ScratchPad,
-	is_output_layer bool,
+	isOutputLayer bool,
 ) (
-	[]frontend.Variable,
-	[]frontend.Variable,
-	[]frontend.Variable,
-	[]frontend.Variable,
-	frontend.Variable,
-	frontend.Variable,
+	rx, ry, r_simd_xy, r_mpi_xy [][]frontend.Variable,
+	vx_claim, vy_claim []frontend.Variable,
 ) {
+
 	PrepareLayer(
 		api,
 		layer,
 		alpha,
 		rz0,
 		rz1,
-		r_simd,
-		r_mpi,
+		rSIMD,
+		rMPI,
 		sp,
-		is_output_layer,
+		isOutputLayer,
 	)
 
 	var var_num = layer.InputLenLog
-	var simd_var_num = len(r_simd)
-	var mpi_var_num = len(r_mpi)
-	var sum = claimed_v0
-	if alpha != nil && claimed_v1 != nil {
-		sum = api.Add(sum, api.Mul(alpha, claimed_v1))
-	}
-	sum = api.Sub(sum, EvalCst(api, layer.Cst, public_input, sp))
+	var simd_var_num = len(rSIMD)
+	var mpi_var_num = len(rMPI)
+	var sum = claimedV0
 
-	var rx = make([]frontend.Variable, 0)
-	var ry []frontend.Variable = nil
-	var r_simd_xy = make([]frontend.Variable, 0)
-	var r_mpi_xy = make([]frontend.Variable, 0)
+	if alpha != nil && claimedV1 != nil {
+		sum = api.ExtensionAdd(
+			sum,
+			api.ExtensionMul(
+				alpha,
+				claimedV1,
+			),
+		)
+	}
+
+	sum = api.ExtensionSub(
+		sum,
+		EvalCst(api, layer.Cst, publicInput, sp),
+	)
 
 	for i := uint(0); i < var_num; i++ {
 		sum, rx = SumcheckStepVerify(
 			api,
 			proof,
 			2,
-			transcript,
+			fsTranscript,
 			sum,
 			rx,
-			sp,
+			*sp,
 		)
 	}
 	SetRx(api, rx, sp)
@@ -105,10 +114,10 @@ func SumcheckLayerVerify(
 			api,
 			proof,
 			3,
-			transcript,
+			fsTranscript,
 			sum,
 			r_simd_xy,
-			sp,
+			*sp,
 		)
 	}
 	SetRSimdXY(api, r_simd_xy, sp)
@@ -118,115 +127,108 @@ func SumcheckLayerVerify(
 			api,
 			proof,
 			3,
-			transcript,
+			fsTranscript,
 			sum,
 			r_mpi_xy,
-			sp,
+			*sp,
 		)
 	}
 	SetRMPIXY(api, r_mpi_xy, sp)
 
-	var vx_claim = proof.Next()
-	sum = api.Sub(sum, api.Mul(
-		vx_claim,
-		EvalAdd(api, layer.Add, sp),
-	))
-	transcript.AppendF(vx_claim)
+	vx_claim = proof.NextChallengeF(api)
+	sum = api.ExtensionSub(
+		sum,
+		api.ExtensionMul(
+			vx_claim,
+			EvalAdd(api, layer.Add, sp),
+		),
+	)
+	fsTranscript.AppendFs(vx_claim...)
 
-	var vy_claim frontend.Variable = nil
 	if layer.StructureInfo.MaxDegreeOne {
-		api.AssertIsEqual(sum, 0)
+		api.AssertEq(sum, api.Zero())
 	} else {
-		ry = make([]frontend.Variable, 0)
 		for i := uint(0); i < var_num; i++ {
 			sum, ry = SumcheckStepVerify(
 				api,
 				proof,
 				2,
-				transcript,
+				fsTranscript,
 				sum,
 				ry,
-				sp,
+				*sp,
 			)
 		}
 		SetRY(api, ry, sp)
 
-		vy_claim = proof.Next()
-		transcript.AppendF(vy_claim)
-		api.AssertIsEqual(sum, api.Mul(
-			vx_claim,
-			vy_claim,
-			EvalMul(api, layer.Mul, sp),
-		))
+		vy_claim = proof.NextChallengeF(api)
+		fsTranscript.AppendFs(vy_claim...)
+		api.AssertEq(
+			sum,
+			api.ExtensionMul(
+				vx_claim,
+				vy_claim,
+				EvalMul(api, layer.Mul, sp),
+			),
+		)
 	}
 
-	return rx, ry, r_simd_xy, r_mpi_xy, vx_claim, vy_claim
+	return
 }
 
 func GKRVerify(
-	api frontend.API,
+	api fields.ArithmeticEngine,
 	circuit *circuit.Circuit,
 	public_input [][]frontend.Variable,
-	claimed_v frontend.Variable,
-	simd_size uint,
-	mpi_size uint,
-	transcript *transcript.Transcript,
+	claimed_v []frontend.Variable,
+	mpiSize uint,
+	fsTranscript *transcript.FieldHasherTranscript,
 	proof *circuit.Proof,
 ) (
-	[]frontend.Variable,
-	[]frontend.Variable,
-	[]frontend.Variable,
-	[]frontend.Variable,
-	frontend.Variable,
-	frontend.Variable,
+	rz0, rz1, rSIMD, rMPI [][]frontend.Variable,
+	claimedV0, claimedV1 []frontend.Variable,
 ) {
-	var sp, err = NewScratchPad(api, circuit, simd_size, mpi_size)
-	if err != nil {
-		panic("Error init scratch pad")
-	}
+	simdSize := api.SIMDPackSize()
+	sp := NewScratchPad(api, circuit, mpiSize)
 
-	var n_layers = len(circuit.Layers)
-	var rz0 = make([]frontend.Variable, 0)
-	var rz1 []frontend.Variable = nil
-	var r_simd = make([]frontend.Variable, 0)
-	var r_mpi = make([]frontend.Variable, 0)
+	layerNum := len(circuit.Layers)
 
 	for i := 0; i < int(circuit.Layers[len(circuit.Layers)-1].OutputLenLog); i++ {
-		rz0 = append(rz0, transcript.ChallengeF())
+		rz0 = append(rz0, fsTranscript.ChallengeF())
 	}
 
-	for i := 0; i < bits.TrailingZeros(simd_size); i++ {
-		r_simd = append(r_simd, transcript.ChallengeF())
+	for i := 0; i < bits.TrailingZeros(simdSize); i++ {
+		rSIMD = append(rSIMD, fsTranscript.ChallengeF())
 	}
 
-	for i := 0; i < bits.TrailingZeros(mpi_size); i++ {
-		r_mpi = append(r_mpi, transcript.ChallengeF())
+	for i := 0; i < bits.TrailingZeros(mpiSize); i++ {
+		rMPI = append(rMPI, fsTranscript.ChallengeF())
 	}
 
-	var alpha frontend.Variable = nil
-	var claimed_v0 = claimed_v
-	var claimed_v1 frontend.Variable = nil
+	var alpha []frontend.Variable = nil
+	claimedV0 = claimed_v
+	claimedV1 = nil
 
-	for i := n_layers - 1; i >= 0; i-- {
-		rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1 = SumcheckLayerVerify(
+	for i := layerNum - 1; i >= 0; i-- {
+		rz0, rz1, rSIMD, rMPI, claimedV0, claimedV1 = SumcheckLayerVerify(
 			api,
 			&circuit.Layers[i],
 			public_input,
 			rz0,
 			rz1,
-			r_simd,
-			r_mpi,
-			claimed_v0,
-			claimed_v1,
+			rSIMD,
+			rMPI,
+			claimedV0,
+			claimedV1,
 			alpha,
 			proof,
-			transcript,
-			sp,
-			i == n_layers-1,
+			fsTranscript,
+			&sp,
+			i == layerNum-1,
 		)
 
-		if rz1 != nil && claimed_v1 != nil {
-			alpha = transcript.ChallengeF()
+		if rz1 != nil && claimedV1 != nil {
+			alpha = fsTranscript.ChallengeF()
 		} else {
 			alpha = nil
 		}
@@ -236,58 +238,64 @@ func GKRVerify(
 		log.Println("Eq Evals Size", size, " Count: ", count)
 	}
 
-	return rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1
+	return
 }
 
 func Verify(
-	api frontend.API,
-	circuit *circuit.Circuit,
+	api fields.ArithmeticEngine,
+	fieldEnum fields.ECCFieldEnum,
+	originalCircuit *circuit.Circuit,
 	public_input [][]frontend.Variable,
-	claimed_v frontend.Variable,
-	simd_size uint,
-	mpi_size uint,
+	claimed_v []frontend.Variable,
+	mpiSize uint,
 	proof *circuit.Proof,
 ) {
-	var transcript, err = transcript.NewTranscript(api)
-	if err != nil {
-		panic("Err in transcript init")
-	}
+	fsTranscript := transcript.NewTranscript(api)
 
 	// Only supports RawCommitment now
-	circuit_input_size := uint(1) << circuit.Layers[0].InputLenLog
-	vals := make([]frontend.Variable, 0)
-	for i := uint(0); i < circuit_input_size*mpi_size; i++ {
-		vals = append(vals, proof.Next())
-		transcript.AppendF(vals[i])
+	circuitInputSize := uint(1) << originalCircuit.Layers[0].InputLenLog
+
+	// NOTE(HS) for now just raw commitment scheme
+	polyCom := polycommit.NewCommitment(
+		polycommit.RawCommitmentScheme,
+		fieldEnum,
+		circuitInputSize, mpiSize,
+		proof,
+		fsTranscript,
+	)
+
+	// NOTE: MPI Fiat-Shamir sync randomness
+	if mpiSize > 1 {
+		newState := fsTranscript.HashAndReturnState()
+		fsTranscript.SetState(newState)
 	}
 
-	raw_commitment := polycommit.NewRawCommitment(vals)
-
-	// Trigger an additional hash
-	if mpi_size > 1 {
-		_ = transcript.ChallengeF()
+	if mpiSize > 1 {
+		log.Println("#Hashes for input: ", fsTranscript.GetCount())
 	}
+	fsTranscript.ResetCount()
 
-	log.Println("#Hashes for input: ", transcript.GetCount())
-	transcript.ResetCount()
+	originalCircuit.FillRndCoef(fsTranscript)
 
-	circuit.FillRndCoef(&transcript)
+	log.Println("#Hashes for random gate: ", fsTranscript.GetCount())
+	fsTranscript.ResetCount()
 
-	log.Println("#Hashes for random gate: ", transcript.GetCount())
-	transcript.ResetCount()
+	var rx, ry, r_simd, r_mpi, claimed_v0, claimed_v1 = GKRVerify(
+		api,
+		originalCircuit,
+		public_input,
+		claimed_v,
+		mpiSize,
+		fsTranscript,
+		proof,
+	)
 
-	var rx, ry, r_simd, r_mpi, claimed_v0, claimed_v1 = GKRVerify(api, circuit, public_input, claimed_v, simd_size, mpi_size, &transcript, proof)
+	log.Println("#Hashes for gkr challenge: ", fsTranscript.GetCount())
+	fsTranscript.ResetCount()
 
-	log.Println("#Hashes for gkr challenge: ", transcript.GetCount())
-	transcript.ResetCount()
+	polyCom.Verify(api, rx, r_simd, r_mpi, claimed_v0)
 
-	if len(r_simd) > 0 {
-		panic("Simd not supported yet.")
+	if ry != nil {
+		polyCom.Verify(api, ry, r_simd, r_mpi, claimed_v1)
 	}
-
-	rx = append(rx, r_mpi...)
-	ry = append(ry, r_mpi...)
-
-	raw_commitment.Verify(api, rx, claimed_v0)
-	raw_commitment.Verify(api, ry, claimed_v1)
 }

@@ -1,0 +1,22 @@
+[package]
+name = "config_macros"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+config = { path = ".." }
+field_hashers = { path = "../../arith/field_hashers" }
+gkr_field_config = { path = "../gkr_field_config" }
+poly_commit = { path = "../../poly_commit" }
+transcript = { path = "../../transcript" }
+
+syn = "2.0"       # For parsing Rust code
+quote = "1.0"     # For generating code
+proc-macro2 = "1.0"  # For working with tokens
+
+[dev-dependencies]
+gf2 = { path = "../../arith/gf2" }
+mersenne31 = { path = "../../arith/mersenne31/" }
+
+[lib]
+proc-macro=true

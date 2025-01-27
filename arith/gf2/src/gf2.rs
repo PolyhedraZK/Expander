@@ -1,8 +1,7 @@
-// Galios field over 2^128
+// Galois field over 2^128
 // credit to intel for the original implementation
 // https://www.intel.com/content/dam/develop/external/us/en/documents/clmul-wp-rev-2-02-2014-04-20.pdf
 
-use std::io::Read;
 use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
@@ -33,17 +32,12 @@ impl FieldSerde for GF2 {
         reader.read_exact(&mut u)?;
         Ok(GF2 { v: u[0] % 2 })
     }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(reader: R) -> FieldSerdeResult<Self> {
-        Self::deserialize_from(reader)
-    }
 }
 
 impl Field for GF2 {
     // still will pack 8 bits into a u8
 
-    const NAME: &'static str = "Galios Field 2";
+    const NAME: &'static str = "Galois Field 2";
 
     const SIZE: usize = 1;
 
@@ -124,9 +118,8 @@ impl Field for GF2 {
 }
 
 impl FieldForECC for GF2 {
-    fn modulus() -> ethnum::U256 {
-        ethnum::U256::from(MOD)
-    }
+    const MODULUS: ethnum::U256 = ethnum::U256::new(MOD as u128);
+
     fn from_u256(x: ethnum::U256) -> Self {
         GF2 {
             v: (x.as_u32() & 1) as u8,

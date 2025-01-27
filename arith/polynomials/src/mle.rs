@@ -1,16 +1,24 @@
+use std::ops::{Index, IndexMut, Mul};
+
 use arith::Field;
 use ark_std::{log2, rand::RngCore};
 
-use crate::EqPolynomial;
+use crate::{EqPolynomial, MultilinearExtension, MutableMultilinearExtension};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct MultiLinearPoly<F: Field> {
     pub coeffs: Vec<F>,
 }
 
 impl<F: Field> MultiLinearPoly<F> {
-    /// Sample a random polynomials.
+    #[inline]
+    pub fn new(evals: Vec<F>) -> Self {
+        assert!(evals.len().is_power_of_two());
 
+        Self { coeffs: evals }
+    }
+
+    /// Sample a random polynomials.
     #[inline]
     pub fn random(nv: usize, mut rng: impl RngCore) -> Self {
         let coeff = (0..1 << nv).map(|_| F::random_unsafe(&mut rng)).collect();
@@ -69,12 +77,12 @@ impl<F: Field> MultiLinearPoly<F> {
 
     /// Evaluate the polynomial at the top variable
     #[inline]
-    pub fn fix_top_variable(&mut self, r: &F) {
+    pub fn fix_top_variable<AF: Field + Mul<F, Output = F>>(&mut self, r: AF) {
         let n = self.coeffs.len() / 2;
         let (left, right) = self.coeffs.split_at_mut(n);
 
         left.iter_mut().zip(right.iter()).for_each(|(a, b)| {
-            *a += *r * (*b - *a);
+            *a += r * (*b - *a);
         });
         self.coeffs.truncate(n);
     }
@@ -83,12 +91,12 @@ impl<F: Field> MultiLinearPoly<F> {
     /// Evaluate the polynomial at a set of variables, from bottom to top
     /// This is equivalent to `evaluate` when partial_point.len() = nv
     #[inline]
-    pub fn fix_variables(&mut self, partial_point: &[F]) {
+    pub fn fix_variables<AF: Field + Mul<F, Output = F>>(&mut self, partial_point: &[AF]) {
         // evaluate single variable of partial point from left to right
         partial_point
             .iter()
             .rev() // need to reverse the order of the point
-            .for_each(|point| self.fix_top_variable(point));
+            .for_each(|point| self.fix_top_variable(*point));
     }
 
     /// Jolt's implementation
@@ -111,10 +119,11 @@ impl<F: Field> MultiLinearPoly<F> {
     #[inline]
     /// Expander's implementation
     /// Generic method to evaluate a multilinear polynomial.
-    /// This is the preferred method to evaluate a multilinear polynomial as it does not require additional memory.
+    /// This is the preferred method to evaluate a multilinear polynomial
+    /// as it does not require additional memory.
     pub fn evaluate_with_buffer(evals: &[F], point: &[F], scratch: &mut [F]) -> F {
         assert_eq!(1 << point.len(), evals.len());
-        assert_eq!(evals.len(), scratch.len());
+        assert!(scratch.len() >= evals.len());
 
         if point.is_empty() {
             evals[0]
@@ -131,6 +140,68 @@ impl<F: Field> MultiLinearPoly<F> {
                 cur_eval_size >>= 1;
             }
             scratch[0]
+        }
+    }
+}
+
+impl<F: Field> Index<usize> for MultiLinearPoly<F> {
+    type Output = F;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.coeffs[index]
+    }
+}
+
+impl<F: Field> MultilinearExtension<F> for MultiLinearPoly<F> {
+    fn num_vars(&self) -> usize {
+        self.get_num_vars()
+    }
+
+    fn hypercube_basis(&self) -> Vec<F> {
+        self.coeffs.clone()
+    }
+
+    fn hypercube_basis_ref(&self) -> &Vec<F> {
+        &self.coeffs
+    }
+
+    fn evaluate_with_buffer(&self, point: &[F], scratch: &mut [F]) -> F {
+        Self::evaluate_with_buffer(&self.coeffs, point, scratch)
+    }
+
+    fn interpolate_over_hypercube(&self) -> Vec<F> {
+        self.interpolate_over_hypercube()
+    }
+}
+
+impl<F: Field> IndexMut<usize> for MultiLinearPoly<F> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.coeffs[index]
+    }
+}
+
+impl<F: Field> MutableMultilinearExtension<F> for MultiLinearPoly<F> {
+    fn fix_top_variable<AF: Field + std::ops::Mul<F, Output = F>>(&mut self, r: AF) {
+        self.fix_top_variable(r)
+    }
+
+    fn fix_variables<AF: Field + std::ops::Mul<F, Output = F>>(&mut self, vars: &[AF]) {
+        self.fix_variables(vars)
+    }
+
+    fn interpolate_over_hypercube_in_place(&mut self) {
+        let num_vars = self.num_vars();
+        for i in 1..=num_vars {
+            let chunk_size = 1 << i;
+
+            self.coeffs.chunks_mut(chunk_size).for_each(|chunk| {
+                let half_chunk = chunk_size >> 1;
+                let (left, right) = chunk.split_at_mut(half_chunk);
+                right
+                    .iter_mut()
+                    .zip(left.iter())
+                    .for_each(|(a, b)| *a -= *b);
+            })
         }
     }
 }

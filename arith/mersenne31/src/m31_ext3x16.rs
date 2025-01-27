@@ -37,16 +37,6 @@ impl FieldSerde for M31Ext3x16 {
             ],
         })
     }
-
-    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        Ok(Self {
-            v: [
-                M31x16::try_deserialize_from_ecc_format(&mut reader)?,
-                M31x16::zero(),
-                M31x16::zero(),
-            ],
-        })
-    }
 }
 
 impl SimdField for M31Ext3x16 {
@@ -57,14 +47,11 @@ impl SimdField for M31Ext3x16 {
         *self * *challenge
     }
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        M31x16::pack_size()
-    }
+    const PACK_SIZE: usize = M31x16::PACK_SIZE;
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == Self::pack_size());
+        assert!(base_vec.len() == Self::PACK_SIZE);
         let mut v0s = vec![];
         let mut v1s = vec![];
         let mut v2s = vec![];
@@ -134,6 +121,31 @@ impl ExtensionField for M31Ext3x16 {
         Self {
             v: [self.v[2].mul_by_5(), self.v[0], self.v[1]],
         }
+    }
+
+    #[inline(always)]
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        let mut v = [Self::BaseField::default(); Self::DEGREE];
+        if limbs.len() < Self::DEGREE {
+            v[..limbs.len()].copy_from_slice(limbs)
+        } else {
+            v.copy_from_slice(&limbs[..Self::DEGREE])
+        }
+        Self { v }
+    }
+
+    #[inline(always)]
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        vec![self.v[0], self.v[1], self.v[2]]
+    }
+}
+
+impl Mul<M31x16> for M31Ext3x16 {
+    type Output = M31Ext3x16;
+
+    #[inline]
+    fn mul(self, rhs: M31x16) -> Self::Output {
+        self.mul_by_base_field(&rhs)
     }
 }
 

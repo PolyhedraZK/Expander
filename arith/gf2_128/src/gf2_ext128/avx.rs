@@ -6,7 +6,6 @@ use std::{
 };
 
 use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult};
-
 use gf2::GF2;
 
 #[derive(Debug, Clone, Copy)]
@@ -21,7 +20,9 @@ impl FieldSerde for AVXGF2_128 {
 
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        unsafe { writer.write_all(transmute::<__m128i, [u8; 16]>(self.v).as_ref())? };
+        unsafe {
+            writer.write_all(transmute::<__m128i, [u8; Self::SERIALIZED_SIZE]>(self.v).as_ref())?
+        };
         Ok(())
     }
 
@@ -35,21 +36,10 @@ impl FieldSerde for AVXGF2_128 {
             })
         }
     }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut u = [0u8; 32];
-        reader.read_exact(&mut u)?;
-        Ok(unsafe {
-            AVXGF2_128 {
-                v: transmute::<[u8; 16], __m128i>(u[..16].try_into().unwrap()),
-            }
-        })
-    }
 }
 
 impl Field for AVXGF2_128 {
-    const NAME: &'static str = "Galios Field 2^128";
+    const NAME: &'static str = "AVX Galois Field 2^128";
 
     const SIZE: usize = 128 / 8;
 
@@ -78,7 +68,8 @@ impl Field for AVXGF2_128 {
     fn one() -> Self {
         AVXGF2_128 {
             // 1 in the first bit
-            v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) }, // TODO check bit order
+            // TODO check bit order
+            v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) },
         }
     }
 
@@ -176,7 +167,7 @@ impl ExtensionField for AVXGF2_128 {
         res
     }
 
-    #[inline]
+    #[inline(always)]
     fn mul_by_x(&self) -> Self {
         unsafe {
             // Shift left by 1 bit
@@ -205,6 +196,54 @@ impl ExtensionField for AVXGF2_128 {
 
             Self { v: res }
         }
+    }
+
+    #[inline(always)]
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        let mut local_limbs = limbs.to_vec();
+        local_limbs.resize(Self::DEGREE, Self::BaseField::ZERO);
+
+        let mut u32_lanes = [0u32; 4];
+        local_limbs
+            .chunks(32)
+            .zip(u32_lanes.iter_mut())
+            .for_each(|(limbs_by_32, u32_lane)| {
+                limbs_by_32.iter().enumerate().for_each(|(ith_limb, limb)| {
+                    *u32_lane |= (limb.v as u32) << ith_limb;
+                });
+            });
+
+        Self {
+            v: unsafe { transmute::<[u32; 4], __m128i>(u32_lanes) },
+        }
+    }
+
+    #[inline(always)]
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        let mut u32_extracted: [u32; 4] = unsafe { transmute(self.v) };
+
+        let mut res = vec![Self::BaseField::ZERO; Self::DEGREE];
+        u32_extracted
+            .iter_mut()
+            .enumerate()
+            .for_each(|(ith_u32, u32_lane)| {
+                (0..32).for_each(|ith_bit| {
+                    let res_index = ith_bit + ith_u32 * 32;
+                    res[res_index] = From::from(*u32_lane);
+                    *u32_lane >>= 1;
+                })
+            });
+
+        res
+    }
+}
+
+impl Mul<GF2> for AVXGF2_128 {
+    type Output = AVXGF2_128;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2) -> Self::Output {
+        self.mul_by_base_field(&rhs)
     }
 }
 

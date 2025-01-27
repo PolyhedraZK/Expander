@@ -8,6 +8,7 @@ use std::{
 };
 
 use arith::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField};
+use ark_std::Zero;
 use rand::{Rng, RngCore};
 
 use crate::{m31::M31_MOD, M31};
@@ -72,22 +73,6 @@ impl FieldSerde for NeonM31 {
                 v: transmute::<[u8; 64], [uint32x4_t; 4]>(data),
             })
         }
-    }
-
-    #[inline]
-    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self>
-    where
-        Self: Sized,
-    {
-        let mut buf = [0u8; 32];
-        reader.read_exact(&mut buf)?;
-        assert!(
-            buf.iter().skip(4).all(|&x| x == 0),
-            "non-zero byte found in witness byte"
-        );
-        Ok(Self::pack_full(
-            u32::from_le_bytes(buf[..4].try_into().unwrap()).into(),
-        ))
     }
 }
 
@@ -228,8 +213,19 @@ impl Field for NeonM31 {
         self.mul_by_2()
     }
 
-    fn exp(&self, _exponent: u128) -> Self {
-        todo!()
+    fn exp(&self, exponent: u128) -> Self {
+        let mut e = exponent;
+        let mut res = Self::one();
+        let mut t = *self;
+        while !e.is_zero() {
+            let b = e & 1;
+            if b == 1 {
+                res *= t;
+            }
+            t = t * t;
+            e >>= 1;
+        }
+        res
     }
 
     #[inline(always)]
@@ -301,10 +297,7 @@ impl SimdField for NeonM31 {
         *self * packed_challenge
     }
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        M31_PACK_SIZE
-    }
+    const PACK_SIZE: usize = M31_PACK_SIZE;
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {

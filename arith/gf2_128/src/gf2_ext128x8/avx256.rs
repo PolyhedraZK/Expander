@@ -69,18 +69,6 @@ impl FieldSerde for AVX256GF2_128x8 {
             })
         }
     }
-
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut _reader: R) -> FieldSerdeResult<Self> {
-        unimplemented!("We don't have a serialization for gf2_128 in ecc yet.")
-
-        // let mut buf = [0u8; 32];
-        // reader.read_exact(&mut buf)?;
-        // let data: __m128i = unsafe { _mm_loadu_si128(buf.as_ptr() as *const __m128i) };
-        // Ok(Self {
-        //     data: Self::pack_full(data),
-        // })
-    }
 }
 
 const PACKED_0: [__m256i; 4] = [
@@ -94,7 +82,7 @@ const PACKED_INV_2: [__m256i; 4] = [_M256_INV_2, _M256_INV_2, _M256_INV_2, _M256
 
 // p(x) = x^128 + x^7 + x^2 + x + 1
 impl Field for AVX256GF2_128x8 {
-    const NAME: &'static str = "AVX256 Galios Field 2^128";
+    const NAME: &'static str = "AVX256 Galois Field 2^128 SIMD 8";
 
     // size in bytes
     const SIZE: usize = 512 * 2 / 8;
@@ -473,10 +461,7 @@ impl SimdField for AVX256GF2_128x8 {
     }
     type Scalar = GF2_128;
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        8
-    }
+    const PACK_SIZE: usize = 8;
 
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == 8);
@@ -611,10 +596,10 @@ impl ExtensionField for AVX256GF2_128x8 {
         let v7 = -((base.v & 1u8) as i64);
 
         let mut res = *self;
-        res.data[0] = unsafe { _mm256_and_si256(res.data[0], _mm256_set_epi64x(v0, v0, v2, v2)) };
-        res.data[1] = unsafe { _mm256_and_si256(res.data[1], _mm256_set_epi64x(v4, v4, v6, v6)) };
-        res.data[2] = unsafe { _mm256_and_si256(res.data[2], _mm256_set_epi64x(v1, v1, v3, v3)) };
-        res.data[3] = unsafe { _mm256_and_si256(res.data[3], _mm256_set_epi64x(v5, v5, v7, v7)) };
+        res.data[0] = unsafe { _mm256_and_si256(res.data[0], _mm256_set_epi64x(v1, v1, v0, v0)) };
+        res.data[1] = unsafe { _mm256_and_si256(res.data[1], _mm256_set_epi64x(v3, v3, v2, v2)) };
+        res.data[2] = unsafe { _mm256_and_si256(res.data[2], _mm256_set_epi64x(v5, v5, v4, v4)) };
+        res.data[3] = unsafe { _mm256_and_si256(res.data[3], _mm256_set_epi64x(v7, v7, v6, v6)) };
 
         res
     }
@@ -631,10 +616,10 @@ impl ExtensionField for AVX256GF2_128x8 {
         let v7 = (base.v & 1u8) as i64;
 
         let mut res = *self;
-        res.data[0] = unsafe { _mm256_xor_si256(res.data[0], _mm256_set_epi64x(0, v0, 0, v2)) };
-        res.data[1] = unsafe { _mm256_xor_si256(res.data[1], _mm256_set_epi64x(0, v4, 0, v6)) };
-        res.data[2] = unsafe { _mm256_xor_si256(res.data[2], _mm256_set_epi64x(0, v1, 0, v3)) };
-        res.data[3] = unsafe { _mm256_xor_si256(res.data[3], _mm256_set_epi64x(0, v5, 0, v7)) };
+        res.data[0] = unsafe { _mm256_xor_si256(res.data[0], _mm256_set_epi64x(0, v1, 0, v0)) };
+        res.data[1] = unsafe { _mm256_xor_si256(res.data[1], _mm256_set_epi64x(0, v3, 0, v2)) };
+        res.data[2] = unsafe { _mm256_xor_si256(res.data[2], _mm256_set_epi64x(0, v5, 0, v4)) };
+        res.data[3] = unsafe { _mm256_xor_si256(res.data[3], _mm256_set_epi64x(0, v7, 0, v6)) };
 
         res
     }
@@ -650,7 +635,8 @@ impl ExtensionField for AVX256GF2_128x8 {
                 // Get the most significant bit of each 64-bit part
                 let msb = _mm256_srli_epi64(data, 63);
 
-                // Move the MSB from the high 64 bits to the LSB of the low 64 bits for each 128-bit element
+                // Move the MSB from the high 64 bits to the LSB of the low 64 bits
+                // for each 128-bit element
                 let msb_moved = _mm256_bslli_epi128(msb, 8);
 
                 // Combine the shifted value with the moved msb
@@ -678,6 +664,55 @@ impl ExtensionField for AVX256GF2_128x8 {
             ],
         }
     }
+
+    #[inline(always)]
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        let mut local_limbs = limbs.to_vec();
+        local_limbs.resize(Self::DEGREE, Self::BaseField::ZERO);
+
+        let mut buffer = vec![GF2::ZERO; Self::DEGREE * Self::PACK_SIZE];
+
+        local_limbs.iter().enumerate().for_each(|(ith_limb, limb)| {
+            let unpacked = limb.unpack();
+            unpacked.iter().enumerate().for_each(|(ith_gf2, gf2_val)| {
+                buffer[ith_gf2 * Self::DEGREE + ith_limb] = *gf2_val;
+            });
+        });
+
+        let gf2_128s: Vec<_> = buffer
+            .chunks(Self::DEGREE)
+            .map(GF2_128::from_limbs)
+            .collect();
+
+        Self::pack(&gf2_128s)
+    }
+
+    #[inline(always)]
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        let gf2_128s = self.unpack();
+
+        let mut buffer = vec![GF2::ZERO; Self::DEGREE * Self::PACK_SIZE];
+        gf2_128s
+            .iter()
+            .enumerate()
+            .for_each(|(ith_gf2_128, gf2_128_val)| {
+                let limbs = gf2_128_val.to_limbs();
+                limbs.iter().enumerate().for_each(|(ith_limb, limb)| {
+                    buffer[ith_limb * Self::PACK_SIZE + ith_gf2_128] = *limb;
+                })
+            });
+
+        buffer.chunks(Self::PACK_SIZE).map(GF2x8::pack).collect()
+    }
+}
+
+impl Mul<GF2x8> for AVX256GF2_128x8 {
+    type Output = AVX256GF2_128x8;
+
+    #[inline]
+    fn mul(self, rhs: GF2x8) -> Self::Output {
+        self.mul_by_base_field(&rhs)
+    }
 }
 
 impl From<GF2x8> for AVX256GF2_128x8 {
@@ -694,10 +729,10 @@ impl From<GF2x8> for AVX256GF2_128x8 {
 
         AVX256GF2_128x8 {
             data: [
-                unsafe { _mm256_set_epi64x(0, v0, 0, v2) }, // even
-                unsafe { _mm256_set_epi64x(0, v4, 0, v6) }, // even
-                unsafe { _mm256_set_epi64x(0, v1, 0, v3) }, // odd
-                unsafe { _mm256_set_epi64x(0, v5, 0, v7) }, // odd
+                unsafe { _mm256_set_epi64x(0, v1, 0, v0) },
+                unsafe { _mm256_set_epi64x(0, v3, 0, v2) },
+                unsafe { _mm256_set_epi64x(0, v5, 0, v4) },
+                unsafe { _mm256_set_epi64x(0, v7, 0, v6) },
             ],
         }
     }

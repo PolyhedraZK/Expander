@@ -50,24 +50,10 @@ impl FieldSerde for NeonGF2_128 {
             })
         }
     }
-
-    #[inline]
-    fn try_deserialize_from_ecc_format<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self>
-    where
-        Self: Sized,
-    {
-        let mut u = [0u8; 32];
-        reader.read_exact(&mut u)?;
-        Ok(unsafe {
-            NeonGF2_128 {
-                v: transmute::<[u8; 16], uint32x4_t>(u[..16].try_into().unwrap()),
-            }
-        })
-    }
 }
 
 impl Field for NeonGF2_128 {
-    const NAME: &'static str = "Galios Field 2^128";
+    const NAME: &'static str = "Neon Galois Field 2^128";
 
     const SIZE: usize = 128 / 8;
 
@@ -200,6 +186,54 @@ impl ExtensionField for NeonGF2_128 {
         Self {
             v: mul_by_x_internal(&self.v),
         }
+    }
+
+    #[inline(always)]
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        let mut local_limbs = limbs.to_vec();
+        local_limbs.resize(Self::DEGREE, Self::BaseField::ZERO);
+
+        let mut u32_lanes = [0u32; 4];
+        local_limbs
+            .chunks(32)
+            .zip(u32_lanes.iter_mut())
+            .for_each(|(limbs_by_32, u32_lane)| {
+                limbs_by_32.iter().enumerate().for_each(|(ith_limb, limb)| {
+                    *u32_lane |= (limb.v as u32) << ith_limb;
+                });
+            });
+
+        Self {
+            v: unsafe { transmute::<[u32; 4], uint32x4_t>(u32_lanes) },
+        }
+    }
+
+    #[inline(always)]
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        let mut u32_extracted: [u32; 4] = unsafe { transmute(self.v) };
+
+        let mut res = vec![Self::BaseField::ZERO; 128];
+        u32_extracted
+            .iter_mut()
+            .enumerate()
+            .for_each(|(ith_u32, u32_lane)| {
+                (0..32).for_each(|ith_bit| {
+                    let res_index = ith_bit + ith_u32 * 32;
+                    res[res_index] = From::from(*u32_lane);
+                    *u32_lane >>= 1;
+                })
+            });
+
+        res
+    }
+}
+
+impl Mul<GF2> for NeonGF2_128 {
+    type Output = NeonGF2_128;
+
+    #[inline]
+    fn mul(self, rhs: GF2) -> Self::Output {
+        self.mul_by_base_field(&rhs)
     }
 }
 

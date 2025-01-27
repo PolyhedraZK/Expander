@@ -1,0 +1,69 @@
+name: E2E Tests
+
+env:
+  RUSTFLAGS: "-Dwarnings -C target-cpu=native"
+  RUST_BACKTRACE: 1
+  ACTIONS_RUNNER_DEBUG: true
+
+on:
+  schedule:
+    # This will run the workflow every day at 2:00 AM UTC
+    - cron: '0 2 * * *'
+
+  pull_request:
+    branches:
+    # not to be run on DEV branch to save resources
+      - main
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: 7950x3d
+
+    steps:
+    - uses: actions/checkout@v4  # Updated to v4
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: nightly-2024-09-01
+        components: rustfmt, clippy
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        # The prefix cache key, this can be changed to start a new cache manually.
+        prefix-key: "mpi-v5.0.6" # update me if brew formula changes to a new version
+
+    - name: Run tests
+      run: |
+        mkdir -p tmp/data
+        cd tmp
+
+        # ECC part
+        git clone https://github.com/PolyhedraZK/ExpanderCompilerCollection.git
+        cd ExpanderCompilerCollection
+        git switch dev
+        cargo test --release
+        cp expander_compiler/*.txt ../data
+
+        go run ecgo/examples/poseidon_m31/main.go
+        cp *.txt ../data
+
+        cd ../
+
+        # Expander part
+        git clone https://github.com/PolyhedraZK/Expander.git
+        cd Expander
+        git switch dev
+
+        mkdir data
+        mv ../data/*.txt data/
+        ls -l data
+
+        # Run local tests
+        RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo +nightly run --release --bin=gkr -- -s keccak -f gf2ext128 -t 16
+        RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo +nightly run --release --bin=gkr -- -s keccak -f m31ext3 -t 16
+        RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo +nightly run --release --bin=gkr -- -s keccak -f fr -t 16
+        RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo +nightly run --release --bin=gkr -- -s poseidon -f m31ext3 -t 16
