@@ -87,3 +87,43 @@ impl<E: Engine> From<&LagrangeFormBiKZGSRS<E>> for BiKZGVerifierParam<E> {
         }
     }
 }
+
+/// Structured reference string for univariate KZG polynomial commitment scheme.
+/// The univariate polynomial here is of coefficient form.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct CoefFormUniKZGSRS<E: Engine> {
+    /// power of \tau times the generators of G1, yielding
+    /// \{ \[\tau^i\]_1 \}_{i \in \[0, 2^n - 1\]}
+    pub powers_of_tau: Vec<E::G1Affine>,
+    /// \tau times the generator of G2, [\tau]_2.
+    pub tau_g2: E::G2Affine,
+}
+
+/// Univariate KZG PCS verifier's params.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub struct UniKZGVerifierParams<E: Engine> {
+    /// \tau times the generator of G2, [\tau]_2.
+    pub tau_g2: E::G2Affine,
+}
+
+/// Univariate KZG commitment.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub struct UniKZGCommitment<E: Engine> {
+    /// Univariate KZG commitment, polynomial evaluated at \tau times G1 generator.
+    pub com: E::G1Affine,
+}
+
+/// Univariate KZG opening.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub struct UniKZGOpening<E: Engine> {
+    /// Univariate KZG opening, (f(x) - y) / (x - \alpha) evaluated at \tau times G1 generator.
+    pub opening: E::G1Affine,
+}
+
+impl<E: Engine> From<&CoefFormUniKZGSRS<E>> for UniKZGVerifierParams<E> {
+    fn from(value: &CoefFormUniKZGSRS<E>) -> Self {
+        Self {
+            tau_g2: value.tau_g2,
+        }
+    }
+}
