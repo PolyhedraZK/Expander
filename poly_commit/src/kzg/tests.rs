@@ -5,7 +5,9 @@ use halo2curves::{
 
 use crate::{coeff_form_uni_kzg_verify, univariate_degree_one_quotient, UniKZGVerifierParams};
 
-use super::{coeff_form_uni_kzg_commit, coeff_form_uni_kzg_opening, generate_srs_for_testing};
+use super::{
+    coeff_form_uni_kzg_commit, coeff_form_uni_kzg_open, generate_coef_form_uni_kzg_srs_for_testing,
+};
 
 #[test]
 fn test_univariate_degree_one_quotient() {
@@ -87,14 +89,27 @@ fn test_coefficient_form_univariate_kzg_e2e() {
         Fr::from(28u64),
         Fr::from(1u64),
     ];
-
-    let srs = generate_srs_for_testing::<Bn256>(8);
-    let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
-    let com = coeff_form_uni_kzg_commit(&srs, &poly);
-
     let alpha = Fr::from(3u64);
     let eval = Fr::from(604800u64);
 
-    let opening = coeff_form_uni_kzg_opening(&srs, &poly, alpha, eval);
+    let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn256>(8);
+    let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
+    let com = coeff_form_uni_kzg_commit(&srs, &poly);
+
+    let opening = coeff_form_uni_kzg_open(&srs, &poly, alpha, eval);
+    assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
+}
+
+#[test]
+fn test_coefficient_form_univariate_kzg_constant_e2e() {
+    let poly = vec![Fr::from(100u64)];
+    let alpha = Fr::from(3u64);
+    let eval = Fr::from(100u64);
+
+    let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn256>(8);
+    let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
+    let com = coeff_form_uni_kzg_commit(&srs, &poly);
+
+    let opening = coeff_form_uni_kzg_open(&srs, &poly, alpha, eval);
     assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
 }

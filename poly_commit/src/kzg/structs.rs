@@ -106,20 +106,6 @@ pub struct UniKZGVerifierParams<E: Engine> {
     pub tau_g2: E::G2Affine,
 }
 
-/// Univariate KZG commitment.
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct UniKZGCommitment<E: Engine> {
-    /// Univariate KZG commitment, polynomial evaluated at \tau times G1 generator.
-    pub com: E::G1Affine,
-}
-
-/// Univariate KZG opening.
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct UniKZGOpening<E: Engine> {
-    /// Univariate KZG opening, (f(x) - y) / (x - \alpha) evaluated at \tau times G1 generator.
-    pub opening: E::G1Affine,
-}
-
 impl<E: Engine> From<&CoefFormUniKZGSRS<E>> for UniKZGVerifierParams<E> {
     fn from(value: &CoefFormUniKZGSRS<E>) -> Self {
         Self {

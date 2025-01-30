@@ -1,4 +1,5 @@
 use halo2curves::ff::{Field, PrimeField};
+use itertools::izip;
 
 pub fn primitive_root_of_unity<F: PrimeField>(group_size: usize) -> F {
     let omega = F::ROOT_OF_UNITY;
@@ -38,4 +39,30 @@ pub(crate) fn univariate_degree_one_quotient<F: Field>(coeffs: &[F], alpha: F) -
     final_div_coeffs.resize(coeffs.len(), F::ZERO);
 
     (final_div_coeffs, final_remainder)
+}
+
+pub(crate) fn univariate_evaluate<F: Field>(coeffs: &[F], power_series: &[F]) -> F {
+    assert!(coeffs.len() <= power_series.len());
+
+    izip!(coeffs, power_series).map(|(c, p)| *c * *p).sum()
+}
+
+pub(crate) fn even_odd_coeffs_separate<F: Field>(coeffs: &[F]) -> (Vec<F>, Vec<F>) {
+    assert!(coeffs.len().is_power_of_two());
+
+    let mut even = Vec::with_capacity(coeffs.len() >> 1);
+    let mut odd = Vec::with_capacity(coeffs.len() >> 1);
+
+    coeffs.chunks(2).for_each(|eo: &[F]| {
+        even.push(eo[0]);
+        odd.push(eo[1]);
+    });
+
+    (even, odd)
+}
+
+pub(crate) fn merge_coeffs<F: Field>(evens: Vec<F>, odds: Vec<F>, alpha: F) -> Vec<F> {
+    assert_eq!(evens.len(), odds.len());
+
+    izip!(&evens, &odds).map(|(e, o)| *e + alpha * *o).collect()
 }

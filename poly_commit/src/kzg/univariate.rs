@@ -9,9 +9,11 @@ use halo2curves::{
 
 use crate::{powers_of_field_elements, univariate_degree_one_quotient};
 
-use super::{CoefFormUniKZGSRS, UniKZGCommitment, UniKZGOpening, UniKZGVerifierParams};
+use super::{CoefFormUniKZGSRS, UniKZGVerifierParams};
 
-pub fn generate_srs_for_testing<E: MultiMillerLoop>(length: usize) -> CoefFormUniKZGSRS<E>
+pub fn generate_coef_form_uni_kzg_srs_for_testing<E: MultiMillerLoop>(
+    length: usize,
+) -> CoefFormUniKZGSRS<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {
@@ -47,44 +49,38 @@ where
 pub fn coeff_form_uni_kzg_commit<E: MultiMillerLoop>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &[E::Fr],
-) -> UniKZGCommitment<E>
+) -> E::G1
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {
-    assert_eq!(srs.powers_of_tau.len(), coeffs.len());
+    assert!(srs.powers_of_tau.len() >= coeffs.len());
 
-    let com = best_multiexp(coeffs, srs.powers_of_tau.as_slice());
-
-    UniKZGCommitment { com: com.into() }
+    best_multiexp(coeffs, &srs.powers_of_tau[..coeffs.len()])
 }
 
-pub fn coeff_form_uni_kzg_opening<E: MultiMillerLoop>(
+pub fn coeff_form_uni_kzg_open<E: MultiMillerLoop>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &[E::Fr],
     alpha: E::Fr,
     eval: E::Fr,
-) -> UniKZGOpening<E>
+) -> E::G1
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {
-    assert_eq!(srs.powers_of_tau.len(), coeffs.len());
+    assert!(srs.powers_of_tau.len() >= coeffs.len());
 
     let (div, remainder) = univariate_degree_one_quotient(coeffs, alpha);
     assert_eq!(remainder, eval);
 
-    let opening = best_multiexp(&div, srs.powers_of_tau.as_slice());
-
-    UniKZGOpening {
-        opening: opening.into(),
-    }
+    best_multiexp(&div, &srs.powers_of_tau[..div.len()])
 }
 
 pub fn coeff_form_uni_kzg_verify<E: MultiMillerLoop>(
     vk: UniKZGVerifierParams<E>,
-    comm: UniKZGCommitment<E>,
+    comm: E::G1,
     alpha: E::Fr,
     eval: E::Fr,
-    opening: UniKZGOpening<E>,
+    opening: E::G1,
 ) -> bool
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
@@ -94,11 +90,11 @@ where
 
     let gt_result = E::multi_miller_loop(&[
         (
-            &opening.opening,
+            &opening.to_affine(),
             &(vk.tau_g2.to_curve() - g2_alpha).to_affine().into(),
         ),
         (
-            &(g1_eval - comm.com).into(),
+            &(g1_eval - comm.to_affine()).into(),
             &E::G2Affine::generator().into(),
         ),
     ]);
