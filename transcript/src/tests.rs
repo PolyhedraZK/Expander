@@ -13,5 +13,5 @@ const EXAMPLE_OUT: [u8; 32] = [
 fn check_sha256_aligned() {
     let out = Sha256::digest(EXAMPLE_IN);
     println!("{:?}", out);
-    assert_eq!(out, EXAMPLE_OUT.into());
+    assert_eq!(out, EXAMPLE_OUT);
 }
