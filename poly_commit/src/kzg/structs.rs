@@ -113,3 +113,13 @@ impl<E: Engine> From<&CoefFormUniKZGSRS<E>> for UniKZGVerifierParams<E> {
         }
     }
 }
+
+#[derive(Debug, Default)]
+pub struct HyperKZGOpening<E: Engine> {
+    pub folded_oracle_commitments: Vec<E::G1>,
+    pub f_beta2: E::Fr,
+    pub evals_at_beta: Vec<E::Fr>,
+    pub evals_at_neg_beta: Vec<E::Fr>,
+    pub beta_commitment: E::G1,
+    pub tau_vanishing_commitment: E::G1,
+}

@@ -60,9 +60,3 @@ pub(crate) fn even_odd_coeffs_separate<F: Field>(coeffs: &[F]) -> (Vec<F>, Vec<F
 
     (even, odd)
 }
-
-pub(crate) fn merge_coeffs<F: Field>(evens: Vec<F>, odds: Vec<F>, alpha: F) -> Vec<F> {
-    assert_eq!(evens.len(), odds.len());
-
-    izip!(&evens, &odds).map(|(e, o)| *e + alpha * *o).collect()
-}
