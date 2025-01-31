@@ -22,6 +22,7 @@ halo2curves.workspace = true
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
 mersenne31 = { path = "../arith/mersenne31" }
+field_hashers = { path = "../arith/field_hashers" }
 
 tynm.workspace = true
 criterion.workspace = true

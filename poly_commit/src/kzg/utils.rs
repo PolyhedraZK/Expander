@@ -42,8 +42,6 @@ pub(crate) fn univariate_degree_one_quotient<F: Field>(coeffs: &[F], alpha: F) -
 }
 
 pub(crate) fn univariate_evaluate<F: Field>(coeffs: &[F], power_series: &[F]) -> F {
-    assert!(coeffs.len() <= power_series.len());
-
     izip!(coeffs, power_series).map(|(c, p)| *c * *p).sum()
 }
 

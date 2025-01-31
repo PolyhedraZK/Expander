@@ -10,13 +10,38 @@ use crate::{
     univariate_degree_one_quotient, univariate_evaluate,
 };
 
-use super::{CoefFormUniKZGSRS, HyperKZGOpening};
+use super::{coeff_form_uni_kzg_verify, CoefFormUniKZGSRS, HyperKZGOpening, UniKZGVerifierParams};
+
+fn coeff_form_degree2_lagrange<F: Field>(roots: [F; 3], evals: [F; 3]) -> [F; 3] {
+    let [r0, r1, r2] = roots;
+    let [e0, e1, e2] = evals;
+
+    let r0_nom = [r1 * r2, -r1 - r2, F::ONE];
+    let r0_denom_inv = ((r0 - r1) * (r0 - r2)).invert().unwrap();
+    let r0_weight = r0_denom_inv * e0;
+
+    let r1_nom = [r0 * r2, -r0 - r2, F::ONE];
+    let r1_denom_inv = ((r1 - r0) * (r1 - r2)).invert().unwrap();
+    let r1_weight = r1_denom_inv * e1;
+
+    let r2_nom = [r0 * r1, -r0 - r1, F::ONE];
+    let r2_denom_inv = ((r2 - r0) * (r2 - r1)).invert().unwrap();
+    let r2_weight = r2_denom_inv * e2;
+
+    let combine = |a, b, c| a * r0_weight + b * r1_weight + c * r2_weight;
+
+    [
+        combine(r0_nom[0], r1_nom[0], r2_nom[0]),
+        combine(r0_nom[1], r1_nom[1], r2_nom[1]),
+        combine(r0_nom[2], r1_nom[2], r2_nom[2]),
+    ]
+}
 
 pub fn coeff_form_uni_hyperkzg_open<E: MultiMillerLoop, T: Transcript<E::Fr>>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &Vec<E::Fr>,
     alphas: &[E::Fr],
-    _eval: E::Fr,
+    eval: E::Fr,
     fs_transcript: &mut T,
 ) -> HyperKZGOpening<E>
 where
@@ -42,6 +67,16 @@ where
             (folded_oracle_commit, local_coeffs.clone())
         })
         .unzip();
+
+    {
+        let degree_1 = &folded_oracle_coeffs[folded_oracle_coeffs.len() - 1];
+        assert_eq!(degree_1.len(), 2);
+        let last_alpha = alphas[alphas.len() - 1];
+        assert_eq!(
+            degree_1[0] * (E::Fr::ONE - last_alpha) + degree_1[1] * last_alpha,
+            eval
+        );
+    }
 
     let beta = fs_transcript.generate_challenge_field_element();
     let beta2 = beta * beta;
@@ -95,31 +130,9 @@ where
         });
         f
     };
-    let lagrange_degree2: Vec<E::Fr> = {
-        let l_beta_nom = [-beta2 * beta, -beta2 + beta, E::Fr::ONE];
-        let l_beta_denom_inv: E::Fr = ((beta - beta2) * (beta + beta)).invert().unwrap();
-        let l_beta: Vec<E::Fr> = l_beta_nom.iter().map(|i| *i * l_beta_denom_inv).collect();
 
-        let l_neg_beta_norm = [beta2 * beta, -beta2 - beta, E::Fr::ONE];
-        let l_neg_beta_denom_inv: E::Fr = ((beta2 - beta) * (beta2 + beta)).invert().unwrap();
-        let l_neg_beta: Vec<E::Fr> = l_neg_beta_norm
-            .iter()
-            .map(|i| *i * l_neg_beta_denom_inv)
-            .collect();
-
-        let l_beta2_norm = [-beta2, E::Fr::ZERO, E::Fr::ONE];
-        let l_beta2_denom_inv: E::Fr = ((beta + beta2) * (beta + beta)).invert().unwrap();
-        let l_beta2: Vec<E::Fr> = l_beta2_norm
-            .iter()
-            .map(|i| *i * l_beta2_denom_inv)
-            .collect();
-
-        izip!(l_beta, l_neg_beta, l_beta2)
-            .map(|(l_beta_i, l_neg_beta_i, l_beta2_i)| {
-                l_beta_i * v_beta + l_neg_beta_i * v_neg_beta + l_beta2_i * v_beta2
-            })
-            .collect()
-    };
+    let lagrange_degree2 =
+        coeff_form_degree2_lagrange([beta, -beta, beta2], [v_beta, v_neg_beta, v_beta2]);
     let f_gamma_quotient = {
         let mut nom = f_gamma.clone();
         izip!(&mut nom, &lagrange_degree2).for_each(|(n, l)| *n -= l);
@@ -163,4 +176,75 @@ where
         beta_commitment: f_gamma_quotient_com,
         tau_vanishing_commitment: vanishing_at_tau_commitment,
     }
+}
+
+pub fn coeff_form_uni_hyperkzg_verify<E: MultiMillerLoop, T: Transcript<E::Fr>>(
+    vk: UniKZGVerifierParams<E>,
+    comm: E::G1,
+    alphas: &[E::Fr],
+    eval: E::Fr,
+    opening: &HyperKZGOpening<E>,
+    fs_transcript: &mut T,
+) -> bool
+where
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::Fr: ExtensionField,
+{
+    opening
+        .folded_oracle_commitments
+        .iter()
+        .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
+
+    let beta = fs_transcript.generate_challenge_field_element();
+    let beta2 = beta * beta;
+    let beta_inv = beta.invert().unwrap();
+    let two_inv = E::Fr::ONE.double().invert().unwrap();
+
+    fs_transcript.append_field_element(&opening.f_beta2);
+    let mut beta2_evals = vec![opening.f_beta2];
+    izip!(&opening.evals_at_beta, &opening.evals_at_neg_beta, alphas).for_each(
+        |(beta_eval, neg_beta_eval, alpha)| {
+            let beta2_eval = (*beta_eval + *neg_beta_eval) * two_inv * (E::Fr::ONE - alpha)
+                + (*beta_eval - *neg_beta_eval) * two_inv * beta_inv * alpha;
+
+            beta2_evals.push(beta2_eval);
+
+            fs_transcript.append_field_element(beta_eval);
+            fs_transcript.append_field_element(neg_beta_eval);
+        },
+    );
+
+    if beta2_evals[beta2_evals.len() - 1] != eval {
+        return false;
+    }
+
+    let gamma = fs_transcript.generate_challenge_field_element();
+    let gamma_pow_series = powers_of_field_elements(&gamma, alphas.len());
+    let v_beta = univariate_evaluate(&opening.evals_at_beta, &gamma_pow_series);
+    let v_neg_beta = univariate_evaluate(&opening.evals_at_neg_beta, &gamma_pow_series);
+    let v_beta2 = univariate_evaluate(&beta2_evals, &gamma_pow_series);
+    let lagrange_degree2 =
+        coeff_form_degree2_lagrange([beta, -beta, beta2], [v_beta, v_neg_beta, v_beta2]);
+
+    let commitment_agg: E::G1 = izip!(
+        iter::once(&comm).chain(opening.folded_oracle_commitments.iter()),
+        gamma_pow_series
+    )
+    .map(|(c, a)| *c * a)
+    .sum();
+
+    fs_transcript.append_u8_slice(opening.beta_commitment.to_bytes().as_ref());
+    let tau = fs_transcript.generate_challenge_field_element();
+
+    let q_weight = (tau - beta) * (tau - beta2) * (tau + beta);
+    let lagrange_eval =
+        lagrange_degree2[0] + lagrange_degree2[1] * tau + lagrange_degree2[2] * tau * tau;
+
+    coeff_form_uni_kzg_verify(
+        vk,
+        commitment_agg - opening.beta_commitment * q_weight,
+        tau,
+        lagrange_eval,
+        opening.tau_vanishing_commitment,
+    )
 }

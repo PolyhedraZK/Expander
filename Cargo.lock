@@ -1842,6 +1842,7 @@ dependencies = [
  "ark-std",
  "criterion",
  "ethnum",
+ "field_hashers",
  "gf2",
  "gf2_128",
  "gkr_field_config",
