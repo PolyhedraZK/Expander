@@ -1,4 +1,5 @@
 use arith::BN254Fr;
+use ark_std::test_rng;
 use field_hashers::MiMC5FiatShamirHasher;
 use halo2curves::{
     bn256::{Bn256, Fr},
@@ -123,37 +124,31 @@ fn test_coefficient_form_univariate_kzg_constant_e2e() {
 
 #[test]
 fn test_hyperkzg_e2e() {
-    let multilinear = MultiLinearPoly::new(vec![
-        Fr::from(1u64),
-        Fr::from(2u64),
-        Fr::from(3u64),
-        Fr::from(4u64),
-        Fr::from(5u64),
-        Fr::from(6u64),
-        Fr::from(7u64),
-        Fr::from(8u64),
-    ]);
-    let alphas = vec![Fr::from(2u64), Fr::from(4u64), Fr::from(8u64)];
-    let eval = multilinear.evaluate_jolt(&alphas);
+    let mut rng = test_rng();
+    let max_vars = 15;
+    let max_length = 1 << max_vars;
 
-    dbg!(eval);
+    let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn256>(max_length);
+    (2..max_vars).for_each(|vars| {
+        let multilinear = MultiLinearPoly::random(vars, &mut rng);
+        let alphas: Vec<Fr> = (0..vars).map(|_| Fr::random(&mut rng)).collect();
+        let eval = multilinear.evaluate_jolt(&alphas);
 
-    let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn256>(8);
-    let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
-    let com = coeff_form_uni_kzg_commit(&srs, &multilinear.coeffs);
-    let mut fs_transcript = FieldHashTranscript::<BN254Fr, MiMC5FiatShamirHasher<BN254Fr>>::new();
+        let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
+        let com = coeff_form_uni_kzg_commit(&srs, &multilinear.coeffs);
+        let mut fs_transcript =
+            FieldHashTranscript::<BN254Fr, MiMC5FiatShamirHasher<BN254Fr>>::new();
 
-    let opening =
-        coeff_form_uni_hyperkzg_open(&srs, &multilinear.coeffs, &alphas, eval, &mut fs_transcript);
+        let opening =
+            coeff_form_uni_hyperkzg_open(&srs, &multilinear.coeffs, &alphas, &mut fs_transcript);
 
-    dbg!(&opening);
-
-    assert!(coeff_form_uni_hyperkzg_verify(
-        vk,
-        com,
-        &alphas,
-        eval,
-        &opening,
-        &mut fs_transcript
-    ))
+        assert!(coeff_form_uni_hyperkzg_verify(
+            vk,
+            com,
+            &alphas,
+            eval,
+            &opening,
+            &mut fs_transcript
+        ))
+    });
 }

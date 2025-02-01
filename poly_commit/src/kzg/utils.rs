@@ -1,3 +1,5 @@
+use std::{iter::Sum, ops::Mul};
+
 use halo2curves::ff::{Field, PrimeField};
 use itertools::izip;
 
@@ -11,6 +13,7 @@ pub fn primitive_root_of_unity<F: PrimeField>(group_size: usize) -> F {
     omega
 }
 
+#[inline(always)]
 pub(crate) fn powers_of_field_elements<F: Field>(x: &F, n: usize) -> Vec<F> {
     let mut powers = vec![F::ONE];
     let mut cur = *x;
@@ -23,6 +26,7 @@ pub(crate) fn powers_of_field_elements<F: Field>(x: &F, n: usize) -> Vec<F> {
 
 /// Given a univariate polynomial of coefficient form f(X) = c0 + c1 X + ... + cn X^n
 /// and perform the division f(X) / (X - \alpha).
+#[inline(always)]
 pub(crate) fn univariate_degree_one_quotient<F: Field>(coeffs: &[F], alpha: F) -> (Vec<F>, F) {
     let mut div_coeffs = coeffs.to_vec();
 
@@ -41,7 +45,28 @@ pub(crate) fn univariate_degree_one_quotient<F: Field>(coeffs: &[F], alpha: F) -
     (final_div_coeffs, final_remainder)
 }
 
-pub(crate) fn univariate_evaluate<F: Field>(coeffs: &[F], power_series: &[F]) -> F {
+#[inline(always)]
+pub(crate) fn univariate_roots_quotient<F: Field>(mut coeffs: Vec<F>, roots: &[F]) -> Vec<F> {
+    roots.iter().enumerate().for_each(|(ith_root, r)| {
+        for i in ((1 + ith_root)..coeffs.len()).rev() {
+            // c X^n = c X^n - c \alpha X^(n - 1) + c \alpha X^(n - 1)
+            //       = c (X - \alpha) X^(n - 1) + c \alpha X^(n - 1)
+
+            let remainder = coeffs[i] * r;
+            coeffs[i - 1] += remainder;
+        }
+
+        assert_eq!(coeffs[ith_root], F::ZERO);
+    });
+
+    coeffs[roots.len()..].to_owned()
+}
+
+#[inline(always)]
+pub(crate) fn univariate_evaluate<F: Mul<F1, Output = F> + Sum + Copy, F1: Field>(
+    coeffs: &[F],
+    power_series: &[F1],
+) -> F {
     izip!(coeffs, power_series).map(|(c, p)| *c * *p).sum()
 }
 
@@ -57,4 +82,11 @@ pub(crate) fn even_odd_coeffs_separate<F: Field>(coeffs: &[F]) -> (Vec<F>, Vec<F
     });
 
     (even, odd)
+}
+
+#[inline(always)]
+pub(crate) fn polynomial_add<F: Field>(coeffs: &mut [F], weight: F, another_coeffs: &[F]) {
+    assert!(coeffs.len() >= another_coeffs.len());
+
+    izip!(coeffs, another_coeffs).for_each(|(c, a)| *c += weight * *a);
 }

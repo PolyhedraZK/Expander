@@ -6,12 +6,16 @@ use itertools::izip;
 use transcript::Transcript;
 
 use crate::{
-    coeff_form_uni_kzg_commit, even_odd_coeffs_separate, powers_of_field_elements,
-    univariate_degree_one_quotient, univariate_evaluate,
+    coeff_form_uni_kzg_commit, even_odd_coeffs_separate, polynomial_add, powers_of_field_elements,
+    univariate_evaluate,
 };
 
-use super::{coeff_form_uni_kzg_verify, CoefFormUniKZGSRS, HyperKZGOpening, UniKZGVerifierParams};
+use super::{
+    coeff_form_uni_kzg_verify, univariate_roots_quotient, CoefFormUniKZGSRS, HyperKZGOpening,
+    UniKZGVerifierParams,
+};
 
+#[inline(always)]
 fn coeff_form_degree2_lagrange<F: Field>(roots: [F; 3], evals: [F; 3]) -> [F; 3] {
     let [r0, r1, r2] = roots;
     let [e0, e1, e2] = evals;
@@ -41,7 +45,6 @@ pub fn coeff_form_uni_hyperkzg_open<E: MultiMillerLoop, T: Transcript<E::Fr>>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &Vec<E::Fr>,
     alphas: &[E::Fr],
-    eval: E::Fr,
     fs_transcript: &mut T,
 ) -> HyperKZGOpening<E>
 where
@@ -68,16 +71,6 @@ where
         })
         .unzip();
 
-    {
-        let degree_1 = &folded_oracle_coeffs[folded_oracle_coeffs.len() - 1];
-        assert_eq!(degree_1.len(), 2);
-        let last_alpha = alphas[alphas.len() - 1];
-        assert_eq!(
-            degree_1[0] * (E::Fr::ONE - last_alpha) + degree_1[1] * last_alpha,
-            eval
-        );
-    }
-
     let beta = fs_transcript.generate_challenge_field_element();
     let beta2 = beta * beta;
     let beta_inv = beta.invert().unwrap();
@@ -97,17 +90,15 @@ where
         iter::once(coeffs).chain(folded_oracle_coeffs.iter()),
         alphas
     )
-    .enumerate()
-    .map(|(i, (cs, alpha))| {
+    .map(|(cs, alpha)| {
         let beta_eval = univariate_evaluate(cs, &beta_pow_series);
         let neg_beta_eval = univariate_evaluate(cs, &neg_beta_pow_series);
 
-        if i < alphas.len() - 1 {
-            let beta2_eval = (beta_eval + neg_beta_eval) * two_inv * (E::Fr::ONE - alpha)
-                + (beta_eval - neg_beta_eval) * two_inv * beta_inv * alpha;
+        let beta2_eval = two_inv
+            * ((beta_eval + neg_beta_eval) * (E::Fr::ONE - alpha)
+                + (beta_eval - neg_beta_eval) * beta_inv * alpha);
 
-            beta2_evals.push(beta2_eval);
-        }
+        beta2_evals.push(beta2_eval);
 
         fs_transcript.append_field_element(&beta_eval);
         fs_transcript.append_field_element(&neg_beta_eval);
@@ -123,11 +114,8 @@ where
     let v_beta2 = univariate_evaluate(&beta2_evals, &gamma_pow_series);
     let f_gamma = {
         let mut f = coeffs.clone();
-        izip!(&gamma_pow_series[1..], &folded_oracle_coeffs).for_each(|(gamma_i, folded_f)| {
-            izip!(&mut f, folded_f).for_each(|(f_i, folded_f_i)| {
-                *f_i += *folded_f_i * *gamma_i;
-            });
-        });
+        izip!(&gamma_pow_series[1..], &folded_oracle_coeffs)
+            .for_each(|(gamma_i, folded_f)| polynomial_add(&mut f, *gamma_i, folded_f));
         f
     };
 
@@ -135,18 +123,8 @@ where
         coeff_form_degree2_lagrange([beta, -beta, beta2], [v_beta, v_neg_beta, v_beta2]);
     let f_gamma_quotient = {
         let mut nom = f_gamma.clone();
-        izip!(&mut nom, &lagrange_degree2).for_each(|(n, l)| *n -= l);
-
-        let (nom_1, remainder_1) = univariate_degree_one_quotient(&nom, beta);
-        assert_eq!(remainder_1, E::Fr::ZERO);
-
-        let (nom_2, remainder_2) = univariate_degree_one_quotient(&nom_1, beta2);
-        assert_eq!(remainder_2, E::Fr::ZERO);
-
-        let (nom_3, remainder_3) = univariate_degree_one_quotient(&nom_2, -beta);
-        assert_eq!(remainder_3, E::Fr::ZERO);
-
-        nom_3
+        polynomial_add(&mut nom, -E::Fr::ONE, &lagrange_degree2);
+        univariate_roots_quotient(nom, &[beta, beta2, -beta])
     };
     let f_gamma_quotient_com = coeff_form_uni_kzg_commit(srs, &f_gamma_quotient);
     fs_transcript.append_u8_slice(f_gamma_quotient_com.to_bytes().as_ref());
@@ -159,12 +137,8 @@ where
 
         let mut poly = f_gamma.clone();
         poly[0] -= lagrange_degree2_at_tau;
-        izip!(&mut poly, &f_gamma_quotient).for_each(|(p, f)| *p -= *f * f_gamma_denom);
-
-        let (quotient, remainder) = univariate_degree_one_quotient(&poly, tau);
-        assert_eq!(remainder, E::Fr::ZERO);
-
-        quotient
+        polynomial_add(&mut poly, -f_gamma_denom, &f_gamma_quotient);
+        univariate_roots_quotient(poly, &[tau])
     };
     let vanishing_at_tau_commitment = coeff_form_uni_kzg_commit(srs, &vanishing_at_tau);
 
@@ -204,8 +178,9 @@ where
     let mut beta2_evals = vec![opening.f_beta2];
     izip!(&opening.evals_at_beta, &opening.evals_at_neg_beta, alphas).for_each(
         |(beta_eval, neg_beta_eval, alpha)| {
-            let beta2_eval = (*beta_eval + *neg_beta_eval) * two_inv * (E::Fr::ONE - alpha)
-                + (*beta_eval - *neg_beta_eval) * two_inv * beta_inv * alpha;
+            let beta2_eval = two_inv
+                * ((*beta_eval + *neg_beta_eval) * (E::Fr::ONE - alpha)
+                    + (*beta_eval - *neg_beta_eval) * beta_inv * alpha);
 
             beta2_evals.push(beta2_eval);
 
@@ -226,12 +201,8 @@ where
     let lagrange_degree2 =
         coeff_form_degree2_lagrange([beta, -beta, beta2], [v_beta, v_neg_beta, v_beta2]);
 
-    let commitment_agg: E::G1 = izip!(
-        iter::once(&comm).chain(opening.folded_oracle_commitments.iter()),
-        gamma_pow_series
-    )
-    .map(|(c, a)| *c * a)
-    .sum();
+    let commitment_agg: E::G1 =
+        comm + univariate_evaluate(&opening.folded_oracle_commitments, &gamma_pow_series[1..]);
 
     fs_transcript.append_u8_slice(opening.beta_commitment.to_bytes().as_ref());
     let tau = fs_transcript.generate_challenge_field_element();
