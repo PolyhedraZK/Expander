@@ -5,15 +5,7 @@ use halo2curves::{ff::Field, group::GroupEncoding, pairing::MultiMillerLoop, Cur
 use itertools::izip;
 use transcript::Transcript;
 
-use crate::{
-    coeff_form_uni_kzg_commit, even_odd_coeffs_separate, polynomial_add, powers_of_field_elements,
-    univariate_evaluate,
-};
-
-use super::{
-    coeff_form_uni_kzg_verify, univariate_roots_quotient, CoefFormUniKZGSRS, HyperKZGOpening,
-    UniKZGVerifierParams,
-};
+use crate::*;
 
 #[inline(always)]
 fn coeff_form_degree2_lagrange<F: Field>(roots: [F; 3], evals: [F; 3]) -> [F; 3] {
@@ -75,11 +67,11 @@ where
     let beta2 = beta * beta;
     let beta_inv = beta.invert().unwrap();
     let two_inv = E::Fr::ONE.double().invert().unwrap();
-    let beta_pow_series = powers_of_field_elements(&beta, coeffs.len());
-    let neg_beta_pow_series = powers_of_field_elements(&(-beta), coeffs.len());
+    let beta_pow_series = powers_series(&beta, coeffs.len());
+    let neg_beta_pow_series = powers_series(&(-beta), coeffs.len());
 
     let beta2_eval = {
-        let beta2_pow_series = powers_of_field_elements(&beta2, coeffs.len());
+        let beta2_pow_series = powers_series(&beta2, coeffs.len());
         univariate_evaluate(coeffs, &beta2_pow_series)
     };
 
@@ -108,7 +100,7 @@ where
     .unzip();
 
     let gamma = fs_transcript.generate_challenge_field_element();
-    let gamma_pow_series = powers_of_field_elements(&gamma, alphas.len());
+    let gamma_pow_series = powers_series(&gamma, alphas.len());
     let v_beta = univariate_evaluate(&beta_evals, &gamma_pow_series);
     let v_neg_beta = univariate_evaluate(&neg_beta_evals, &gamma_pow_series);
     let v_beta2 = univariate_evaluate(&beta2_evals, &gamma_pow_series);
@@ -194,7 +186,7 @@ where
     }
 
     let gamma = fs_transcript.generate_challenge_field_element();
-    let gamma_pow_series = powers_of_field_elements(&gamma, alphas.len());
+    let gamma_pow_series = powers_series(&gamma, alphas.len());
     let v_beta = univariate_evaluate(&opening.evals_at_beta, &gamma_pow_series);
     let v_neg_beta = univariate_evaluate(&opening.evals_at_neg_beta, &gamma_pow_series);
     let v_beta2 = univariate_evaluate(&beta2_evals, &gamma_pow_series);

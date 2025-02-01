@@ -7,7 +7,7 @@ use halo2curves::{
     CurveAffine,
 };
 
-use crate::{powers_of_field_elements, univariate_degree_one_quotient};
+use crate::{powers_series, univariate_degree_one_quotient};
 
 use super::{CoefFormUniKZGSRS, UniKZGVerifierParams};
 
@@ -23,7 +23,7 @@ where
     let tau = E::Fr::random(&mut rng);
     let g1 = E::G1Affine::generator();
 
-    let tau_geometric_progression = powers_of_field_elements(&tau, length);
+    let tau_geometric_progression = powers_series(&tau, length);
 
     let g1_prog = g1.to_curve();
     let coeff_bases = {
