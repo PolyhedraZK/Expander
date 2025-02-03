@@ -11,6 +11,7 @@ use crate::{powers_series, univariate_degree_one_quotient};
 
 use super::{CoefFormUniKZGSRS, UniKZGVerifierParams};
 
+#[inline(always)]
 pub fn generate_coef_form_uni_kzg_srs_for_testing<E: MultiMillerLoop>(
     length: usize,
 ) -> CoefFormUniKZGSRS<E>
@@ -46,6 +47,7 @@ where
     }
 }
 
+#[inline(always)]
 pub fn coeff_form_uni_kzg_commit<E: MultiMillerLoop>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &[E::Fr],
@@ -58,6 +60,7 @@ where
     best_multiexp(coeffs, &srs.powers_of_tau[..coeffs.len()])
 }
 
+#[inline(always)]
 pub fn coeff_form_uni_kzg_open<E: MultiMillerLoop>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &[E::Fr],
@@ -75,6 +78,7 @@ where
     best_multiexp(&div, &srs.powers_of_tau[..div.len()])
 }
 
+#[inline(always)]
 pub fn coeff_form_uni_kzg_verify<E: MultiMillerLoop>(
     vk: UniKZGVerifierParams<E>,
     comm: E::G1,
