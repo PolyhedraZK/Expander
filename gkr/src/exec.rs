@@ -3,12 +3,10 @@ use mpi_config::MPIConfig;
 
 use log::debug;
 
-#[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
-use config::FiatShamirHashType;
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
 use gkr_field_config::FieldType;
 
-use gkr::executor::*;
+use gkr::{executor::*, gkr_configs::*};
 
 #[tokio::main]
 async fn main() {
@@ -45,28 +43,28 @@ async fn main() {
     debug!("field type: {:?}", field_type);
     match field_type {
         FieldType::M31 => {
-            run_command::<M31ExtConfigSha2>(
+            run_command::<M31ExtConfigPoseidonOrion>(
                 command,
                 circuit_file,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<M31ExtConfigPoseidonOrion>::new(GKRScheme::Vanilla, mpi_config.clone()),
                 &args,
             )
             .await;
         }
         FieldType::BN254 => {
-            run_command::<BN254ConfigMIMC5>(
+            run_command::<BN254ConfigMIMC5Raw>(
                 command,
                 circuit_file,
-                Config::<BN254ConfigMIMC5>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<BN254ConfigMIMC5Raw>::new(GKRScheme::Vanilla, mpi_config.clone()),
                 &args,
             )
             .await;
         }
         FieldType::GF2 => {
-            run_command::<GF2ExtConfigSha2>(
+            run_command::<GF2ExtConfigSha2Orion>(
                 command,
                 circuit_file,
-                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::<GF2ExtConfigSha2Orion>::new(GKRScheme::Vanilla, mpi_config.clone()),
                 &args,
             )
             .await

@@ -7,25 +7,16 @@ use std::{
 
 use arith::{Field, FieldSerde, FieldSerdeError};
 use circuit::Circuit;
-use config::{
-    Config, GKRConfig, PolynomialCommitmentType, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31,
-};
-use config_macros::declare_gkr_config;
-use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
-use gf2::GF2x128;
-use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use mersenne31::M31x16;
-use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR, OrionPCSForGKR};
+use config::{Config, GKRConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
+use gkr_field_config::GKRFieldConfig;
+use poly_commit::expander_pcs_init_testing_only;
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
-use transcript::{BytesHashTranscript, FieldHashTranscript, SHA256hasher};
 
 use log::info;
 use transcript::Proof;
 use warp::{http::StatusCode, reply, Filter};
 
-#[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
-use config::FiatShamirHashType;
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
 use gkr_field_config::FieldType;
 
@@ -273,22 +264,3 @@ pub async fn run_command<'a, Cfg: GKRConfig>(
         }
     }
 }
-
-declare_gkr_config!(
-    pub M31ExtConfigSha2,
-    FieldType::M31,
-    FiatShamirHashType::Poseidon,
-    PolynomialCommitmentType::Raw
-);
-declare_gkr_config!(
-    pub BN254ConfigMIMC5,
-    FieldType::BN254,
-    FiatShamirHashType::MIMC5,
-    PolynomialCommitmentType::Raw
-);
-declare_gkr_config!(
-    pub GF2ExtConfigSha2,
-    FieldType::GF2,
-    FiatShamirHashType::SHA256,
-    PolynomialCommitmentType::Orion
-);

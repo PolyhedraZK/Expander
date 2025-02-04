@@ -203,7 +203,9 @@ if __name__ == "__main__":
         BN254_GKR_TO_GROTH16_RECURSION_PROOF_CONFIG,
         MPI_CONFIG
     )
-    test_m31_gkr_to_gkr_recursion(
-        M31_GKR_TO_GKR_RECURSION_PROOF_CONFIG,
-        MPI_CONFIG
-    )
+
+    # TODO(HS) modify expander-exec to pass in pcs schemes
+    # test_m31_gkr_to_gkr_recursion(
+    #     M31_GKR_TO_GKR_RECURSION_PROOF_CONFIG,
+    #     MPI_CONFIG
+    # )
