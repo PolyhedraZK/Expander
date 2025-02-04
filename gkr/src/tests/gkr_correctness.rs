@@ -82,7 +82,7 @@ fn test_gkr_correctness() {
     declare_gkr_config!(
         C9,
         FieldType::M31,
-        FiatShamirHashType::Poseidon,
+        FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Orion,
     );
 

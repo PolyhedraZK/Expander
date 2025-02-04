@@ -18,7 +18,7 @@ use gkr::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
         KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
-    BN254ConfigMIMC5Raw, GF2ExtConfigSha2Orion, M31ExtConfigPoseidonOrion, Prover,
+    BN254ConfigMIMC5Raw, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, Prover,
 };
 
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
@@ -53,35 +53,35 @@ fn main() {
 
     match args.field.as_str() {
         "m31ext3" => match args.scheme.as_str() {
-            "keccak" => run_benchmark::<M31ExtConfigPoseidonOrion>(
+            "keccak" => run_benchmark::<M31ExtConfigSha2Orion>(
                 &args,
-                Config::<M31ExtConfigPoseidonOrion>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
             ),
-            "poseidon" => run_benchmark::<M31ExtConfigPoseidonOrion>(
+            "poseidon" => run_benchmark::<M31ExtConfigSha2Orion>(
                 &args,
-                Config::<M31ExtConfigPoseidonOrion>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),
             _ => unreachable!(),
         },
         "fr" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<BN254ConfigMIMC5Raw>(
                 &args,
-                Config::<BN254ConfigMIMC5Raw>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
             ),
             "poseidon" => run_benchmark::<BN254ConfigMIMC5Raw>(
                 &args,
-                Config::<BN254ConfigMIMC5Raw>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),
             _ => unreachable!(),
         },
         "gf2ext128" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<GF2ExtConfigSha2Orion>(
                 &args,
-                Config::<GF2ExtConfigSha2Orion>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
             ),
             "poseidon" => run_benchmark::<GF2ExtConfigSha2Orion>(
                 &args,
-                Config::<GF2ExtConfigSha2Orion>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),
             _ => unreachable!(),
         },

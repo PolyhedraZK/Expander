@@ -8,6 +8,8 @@ use gkr_field_config::FieldType;
 
 use gkr::{executor::*, gkr_configs::*};
 
+// TODO(HS) clap command here - parse out prove/verify/serve for files and pcs
+
 #[tokio::main]
 async fn main() {
     // examples:
@@ -41,12 +43,13 @@ async fn main() {
     let circuit_file = &args[2];
     let field_type = detect_field_type_from_circuit_file(circuit_file);
     debug!("field type: {:?}", field_type);
+
     match field_type {
         FieldType::M31 => {
             run_command::<M31ExtConfigPoseidonOrion>(
                 command,
                 circuit_file,
-                Config::<M31ExtConfigPoseidonOrion>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
                 &args,
             )
             .await;
@@ -55,7 +58,7 @@ async fn main() {
             run_command::<BN254ConfigMIMC5Raw>(
                 command,
                 circuit_file,
-                Config::<BN254ConfigMIMC5Raw>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
                 &args,
             )
             .await;
@@ -64,7 +67,7 @@ async fn main() {
             run_command::<GF2ExtConfigSha2Orion>(
                 command,
                 circuit_file,
-                Config::<GF2ExtConfigSha2Orion>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
                 &args,
             )
             .await
