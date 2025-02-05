@@ -2406,7 +2406,6 @@ dependencies = [
  "criterion",
  "gf2",
  "gf2_128",
- "rayon",
  "sha2",
  "tynm",
 ]
