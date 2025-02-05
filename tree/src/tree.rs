@@ -3,7 +3,6 @@ use std::fmt::{Debug, Display};
 
 use arith::{Field, SimdField};
 use ark_std::{end_timer, log2, start_timer};
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::{Leaf, Node, Path, RangePath, LEAF_BYTES};
 
@@ -146,7 +145,7 @@ impl Tree {
             let upper_bound = left_child_index(start_index);
 
             non_leaf_nodes
-                .par_iter_mut()
+                .iter_mut()
                 .enumerate()
                 .take(upper_bound)
                 .skip(start_index)
@@ -166,7 +165,7 @@ impl Tree {
         for &start_index in &level_indices {
             let upper_bound = left_child_index(start_index);
             let mut buf = non_leaf_nodes[start_index..upper_bound].to_vec();
-            buf.par_iter_mut().enumerate().for_each(|(index, node)| {
+            buf.iter_mut().enumerate().for_each(|(index, node)| {
                 *node = Node::node_hash(
                     &non_leaf_nodes[left_child_index(index + start_index)],
                     &non_leaf_nodes[right_child_index(index + start_index)],
