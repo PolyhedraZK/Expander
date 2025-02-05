@@ -13,10 +13,10 @@ mpi_config = { path = "./mpi_config" }
 poly_commit = { path = "../poly_commit" }
 transcript = { path = "../transcript" }
 
-
 ark-std.workspace = true
 halo2curves.workspace = true
 mpi.workspace = true
+thiserror.workspace = true
 
 [features]
 default = []

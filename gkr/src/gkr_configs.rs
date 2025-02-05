@@ -19,22 +19,10 @@ declare_gkr_config!(
     PolynomialCommitmentType::Orion
 );
 declare_gkr_config!(
-    pub M31ExtConfigPoseidonRaw,
-    FieldType::M31,
-    FiatShamirHashType::Poseidon,
-    PolynomialCommitmentType::Raw
-);
-declare_gkr_config!(
     pub M31ExtConfigSha2Orion,
     FieldType::M31,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Orion
-);
-declare_gkr_config!(
-    pub M31ExtConfigSha2Raw,
-    FieldType::M31,
-    FiatShamirHashType::SHA256,
-    PolynomialCommitmentType::Raw
 );
 
 declare_gkr_config!(
@@ -55,10 +43,4 @@ declare_gkr_config!(
     FieldType::GF2,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Orion
-);
-declare_gkr_config!(
-    pub GF2ExtConfigSha2Raw,
-    FieldType::GF2,
-    FiatShamirHashType::SHA256,
-    PolynomialCommitmentType::Raw
 );
