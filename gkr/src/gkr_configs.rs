@@ -1,4 +1,4 @@
-use config::{GKRConfig, PolynomialCommitmentType};
+use config::{FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
@@ -6,11 +6,6 @@ use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mersenne31::M31x16;
 use poly_commit::{raw::RawExpanderGKR, OrionPCSForGKR};
 use transcript::{BytesHashTranscript, FieldHashTranscript, SHA256hasher};
-
-#[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
-use config::FiatShamirHashType;
-#[allow(unused_imports)] // The FieldType import is used in the macro expansion
-use gkr_field_config::FieldType;
 
 declare_gkr_config!(
     pub M31ExtConfigPoseidonRaw,
