@@ -556,6 +556,7 @@ dependencies = [
  "mpi",
  "mpi_config",
  "poly_commit",
+ "thiserror",
  "transcript",
 ]
 
