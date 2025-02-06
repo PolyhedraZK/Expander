@@ -71,7 +71,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
     transcript.append_field_element(&vx_claim);
 
     // gkr phase 2 over variable y
-    if !layer.structure_info.max_degree_one {
+    if !layer.structure_info.skip_sumcheck_phase_two {
         helper.prepare_y_vals();
         for i_var in 0..helper.input_var_num {
             let evals = helper.poly_evals_at_ry(i_var, 2);
@@ -83,7 +83,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
     }
 
     let rx = helper.rx;
-    let ry = if !layer.structure_info.max_degree_one {
+    let ry = if !layer.structure_info.skip_sumcheck_phase_two {
         Some(helper.ry)
     } else {
         None

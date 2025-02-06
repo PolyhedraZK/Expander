@@ -127,7 +127,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(
         "prove" => {
             let witness_file = &args[3];
             let output_file = &args[4];
-            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
+            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(circuit_file);
             circuit.load_witness_file(witness_file);
 
             let (claimed_v, proof) = prove(&mut circuit, &config);
@@ -141,7 +141,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(
         "verify" => {
             let witness_file = &args[3];
             let output_file = &args[4];
-            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
+            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(circuit_file);
             circuit.load_witness_file(witness_file);
 
             // Repeating the same public input for mpi_size times
@@ -171,7 +171,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(
                 .try_into()
                 .unwrap();
             let port = args[4].parse().unwrap();
-            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
+            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(circuit_file);
             let mut prover = crate::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let verifier = crate::Verifier::new(&config);

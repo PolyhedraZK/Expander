@@ -140,8 +140,6 @@ impl<C: GKRFieldConfig> RecursiveCircuit<C> {
             ret.layers.push(ret_layer);
         }
 
-        ret.identify_rnd_coefs();
-        ret.identify_structure_info();
         ret
     }
 }

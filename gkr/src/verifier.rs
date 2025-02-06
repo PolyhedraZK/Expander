@@ -131,7 +131,7 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
     sum -= vx_claim * GKRVerifierHelper::eval_add(&layer.add, sp);
     transcript.append_field_element(&vx_claim);
 
-    let vy_claim = if !layer.structure_info.max_degree_one {
+    let vy_claim = if !layer.structure_info.skip_sumcheck_phase_two {
         ry = Some(vec![]);
         for _i_var in 0..var_num {
             verified &= verify_sumcheck_step::<C, T>(

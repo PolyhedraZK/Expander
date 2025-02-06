@@ -127,12 +127,16 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     // load circuit
     let mut circuit_template = match args.scheme.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit(KECCAK_GF2_CIRCUIT),
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit(KECCAK_M31_CIRCUIT),
-            FieldType::BN254 => Circuit::<Cfg::FieldConfig>::load_circuit(KECCAK_BN254_CIRCUIT),
+            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GF2_CIRCUIT),
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_M31_CIRCUIT),
+            FieldType::BN254 => {
+                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_BN254_CIRCUIT)
+            }
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit(POSEIDON_M31_CIRCUIT),
+            FieldType::M31 => {
+                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(POSEIDON_M31_CIRCUIT)
+            }
             _ => unreachable!("not supported"),
         },
 
