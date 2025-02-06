@@ -60,7 +60,7 @@ default = []
 # default = [ "grinding" ]
 grinding = [ "config/grinding" ]
 recursion = [ "transcript/recursion" ]
-profile = [ "utils/profile" ]
+profile = [ "utils/profile", "sumcheck/profile" ]
 
 [[bench]]
 name = "gkr-hashes"

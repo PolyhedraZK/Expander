@@ -83,7 +83,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         pcs_proving_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::PKey,
         pcs_scratch: &mut <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::ScratchPad,
     ) -> (<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField, Proof) {
-        let timer = Timer::new("prover", self.config.mpi_config.is_root());
+        let proving_timer = Timer::new("prover", self.config.mpi_config.is_root());
         let mut transcript = Cfg::Transcript::new();
 
         let pcs_commit_timer = Timer::new("pcs commit", self.config.mpi_config.is_root());
@@ -161,9 +161,12 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         }
 
         pcs_open_timer.stop();
-        timer.stop();
 
-        (claimed_v, transcript.finalize_and_get_proof())
+        let proof = transcript.finalize_and_get_proof();
+        proving_timer.print(&format!("Proof size {} bytes", proof.bytes.len()));
+        proving_timer.stop();
+
+        (claimed_v, proof)
     }
 }
 

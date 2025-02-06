@@ -2227,6 +2227,7 @@ dependencies = [
  "mpi_config",
  "polynomials",
  "transcript",
+ "utils",
 ]
 
 [[package]]
