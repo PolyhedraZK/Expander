@@ -59,6 +59,8 @@ class ProofConfig:
     field: RecursiveProofField
     circuit: str
     witness: str
+    fs_hash_scheme: str
+    pcs_scheme: str
     gkr_proof_prefix: str
     # recursive_proof: str
 
@@ -67,6 +69,8 @@ BN254_GKR_TO_GROTH16_RECURSION_PROOF_CONFIG: Final[ProofConfig] = ProofConfig(
     field=RecursiveProofField.FR,
     circuit="data/circuit_bn254.txt",
     witness="data/witness_bn254.txt",
+    fs_hash_scheme="MIMC5",
+    pcs_scheme="Raw",
     gkr_proof_prefix="data/bn254_gkr_proof.txt",
     # recursive_proof="data/recursive_proof.txt"
 )
@@ -76,6 +80,8 @@ M31_GKR_TO_GKR_RECURSION_PROOF_CONFIG: Final[ProofConfig] = ProofConfig(
     field=RecursiveProofField.M31,
     circuit="data/small_circuit_m31.txt",
     witness="data/small_witness_m31.txt",
+    fs_hash_scheme="Poseidon",
+    pcs_scheme="Raw",
     gkr_proof_prefix="data/m31_gkr_proof.txt",
     # recursive_proof="data/recursive_proof.txt"
 )
@@ -109,8 +115,9 @@ def expander_compile():
 def gkr_prove(proof_config: ProofConfig, mpi_config: MPIConfig) -> str:
     proof_file: str = gkr_proof_file(proof_config.gkr_proof_prefix, mpi_config.cpu_ids)
     prove_command_suffix: str = \
-        f"./target/release/expander-exec prove \
-        {proof_config.circuit} {proof_config.witness} {proof_file}"
+        f"./target/release/expander-exec \
+        -f {proof_config.fs_hash_scheme} -p {proof_config.pcs_scheme} -c {proof_config.circuit} \
+        prove -w {proof_config.witness} -o {proof_file}"
 
     prove_command: str = ' '.join(f"{mpi_config.mpi_prefix()} {prove_command_suffix}".split())
     print(prove_command)
@@ -128,8 +135,9 @@ def vanilla_gkr_verify_check(
         mpi_config: MPIConfig
 ):
     vanilla_verify_comand: str = \
-        f"./target/release/expander-exec verify \
-        {proof_config.circuit} {proof_config.witness} {proof_path} {mpi_config.cpus()}"
+        f"./target/release/expander-exec \
+        -f {proof_config.fs_hash_scheme} -p {proof_config.pcs_scheme} -c {proof_config.circuit} \
+        verify -w {proof_config.witness} -i {proof_path} -m {mpi_config.cpus()}"
     vanilla_verify_comand = ' '.join(vanilla_verify_comand.split())
     print(vanilla_verify_comand)
 
@@ -204,8 +212,7 @@ if __name__ == "__main__":
         MPI_CONFIG
     )
 
-    # TODO(HS) modify expander-exec to pass in pcs schemes
-    # test_m31_gkr_to_gkr_recursion(
-    #     M31_GKR_TO_GKR_RECURSION_PROOF_CONFIG,
-    #     MPI_CONFIG
-    # )
+    test_m31_gkr_to_gkr_recursion(
+        M31_GKR_TO_GKR_RECURSION_PROOF_CONFIG,
+        MPI_CONFIG
+    )

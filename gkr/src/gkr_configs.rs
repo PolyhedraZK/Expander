@@ -13,10 +13,10 @@ use config::FiatShamirHashType;
 use gkr_field_config::FieldType;
 
 declare_gkr_config!(
-    pub M31ExtConfigPoseidonOrion,
+    pub M31ExtConfigPoseidonRaw,
     FieldType::M31,
     FiatShamirHashType::Poseidon,
-    PolynomialCommitmentType::Orion
+    PolynomialCommitmentType::Raw
 );
 declare_gkr_config!(
     pub M31ExtConfigSha2Orion,

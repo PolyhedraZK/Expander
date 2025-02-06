@@ -1,77 +1,83 @@
-use config::{Config, GKRScheme};
-use mpi_config::MPIConfig;
+use std::str::FromStr;
 
-use log::debug;
+use clap::Parser;
+use config::{Config, FiatShamirHashType, GKRScheme, PolynomialCommitmentType};
+use mpi_config::MPIConfig;
 
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
 use gkr_field_config::FieldType;
 
 use gkr::{executor::*, gkr_configs::*};
 
-// TODO(HS) clap command here - parse out prove/verify/serve for files and pcs
-
 #[tokio::main]
 async fn main() {
-    // examples:
-    // expander-exec prove <input:circuit_file> <input:witness_file> <output:proof>
-    // expander-exec verify <input:circuit_file> <input:witness_file> <input:proof> <input:mpi_size>
-    // expander-exec serve <input:circuit_file> <input:ip> <input:port>
+    let expander_exec_args = ExpanderExecArgs::try_parse().unwrap();
+
+    // TODO(HS) better pretty print and error message handling
+    println!("{:?}", expander_exec_args);
+
+    let fs_hash_type = FiatShamirHashType::from_str(&expander_exec_args.fiat_shamir_hash).unwrap();
+    let pcs_type =
+        PolynomialCommitmentType::from_str(&expander_exec_args.poly_commitment_scheme).unwrap();
+
+    println!("Fiat-Shamir Hash Type: {:?}", &fs_hash_type);
+    println!("Polynomial Commitment Scheme Type: {:?}", &pcs_type);
+
     let mut mpi_config = MPIConfig::new();
 
-    let args = std::env::args().collect::<Vec<String>>();
-    if args.len() < 5 {
-        println!(
-            "Usage: expander-exec prove <input:circuit_file> <input:witness_file> <output:proof>"
-        );
-        println!(
-            "Usage: expander-exec verify <input:circuit_file> <input:witness_file> <input:proof> <input:mpi_size>"
-        );
-        println!("Usage: expander-exec serve <input:circuit_file> <input:host> <input:port>");
-        return;
-    }
-    let command = &args[1];
-    if command != "prove" && command != "verify" && command != "serve" {
-        println!("Invalid command.");
-        return;
+    if let ExpanderExecSubCommand::Verify {
+        witness_file: _,
+        input_proof_file: _,
+        mpi_size,
+    } = &expander_exec_args.subcommands
+    {
+        assert_eq!(mpi_config.world_size, 1);
+        mpi_config.world_size = *mpi_size as i32;
     }
 
-    if command == "verify" && args.len() > 5 {
-        assert!(mpi_config.world_size == 1); // verifier should not be run with mpiexec
-        mpi_config.world_size = args[5].parse::<i32>().expect("Parsing mpi size fails");
-    }
+    let field_type = detect_field_type_from_circuit_file(&expander_exec_args.circuit_file);
+    println!("field type: {:?}", field_type);
 
-    let circuit_file = &args[2];
-    let field_type = detect_field_type_from_circuit_file(circuit_file);
-    debug!("field type: {:?}", field_type);
-
-    match field_type {
-        FieldType::M31 => {
-            run_command::<M31ExtConfigPoseidonOrion>(
-                command,
-                circuit_file,
+    match (fs_hash_type.clone(), pcs_type.clone(), field_type.clone()) {
+        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::M31) => {
+            run_command::<M31ExtConfigSha2Orion>(
+                &expander_exec_args,
                 Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-                &args,
             )
             .await;
         }
-        FieldType::BN254 => {
+        (FiatShamirHashType::Poseidon, PolynomialCommitmentType::Raw, FieldType::M31) => {
+            run_command::<M31ExtConfigPoseidonRaw>(
+                &expander_exec_args,
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+            )
+            .await;
+        }
+        (FiatShamirHashType::MIMC5, PolynomialCommitmentType::Raw, FieldType::BN254) => {
             run_command::<BN254ConfigMIMC5Raw>(
-                command,
-                circuit_file,
+                &expander_exec_args,
                 Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-                &args,
             )
             .await;
         }
-        FieldType::GF2 => {
-            run_command::<GF2ExtConfigSha2Orion>(
-                command,
-                circuit_file,
+        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Raw, FieldType::BN254) => {
+            run_command::<BN254ConfigSha2Raw>(
+                &expander_exec_args,
                 Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-                &args,
             )
-            .await
+            .await;
         }
+        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::GF2) => {
+            run_command::<GF2ExtConfigSha2Orion>(
+                &expander_exec_args,
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+            )
+            .await;
+        }
+        _ => panic!(
+            "FS: {:?}, PCS: {:?}, Field: {:?} setting is not yet integrated in expander-exec",
+            fs_hash_type, pcs_type, field_type
+        ),
     }
 
     MPIConfig::finalize();
