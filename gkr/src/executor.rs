@@ -9,6 +9,7 @@ use arith::{Field, FieldSerde, FieldSerdeError};
 use circuit::Circuit;
 use clap::{Parser, Subcommand};
 use config::{Config, GKRConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
+use gkr_field_config::FieldType;
 use gkr_field_config::GKRFieldConfig;
 use poly_commit::expander_pcs_init_testing_only;
 use rand::SeedableRng;
@@ -18,18 +19,15 @@ use log::info;
 use transcript::Proof;
 use warp::{http::StatusCode, reply, Filter};
 
-#[allow(unused_imports)] // The FieldType import is used in the macro expansion
-use gkr_field_config::FieldType;
-
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct ExpanderExecArgs {
     /// Fiat-Shamir Hash: SHA256, or Poseidon, or MiMC5
-    #[arg(short, long, default_value = "SHA256")]
+    #[arg(short, long)]
     pub fiat_shamir_hash: String,
 
     /// Polynomial Commitment Scheme: Raw, or Orion
-    #[arg(short, long, default_value = "Raw")]
+    #[arg(short, long)]
     pub poly_commitment_scheme: String,
 
     /// Circuit File Path
