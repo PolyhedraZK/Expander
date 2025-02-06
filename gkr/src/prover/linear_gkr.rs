@@ -86,7 +86,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         let timer = Timer::new("prover", self.config.mpi_config.is_root());
         let mut transcript = Cfg::Transcript::new();
 
-        let pcs_commit_timer = Timer::new("pcs commitment", self.config.mpi_config.is_root());
+        let pcs_commit_timer = Timer::new("pcs commit", self.config.mpi_config.is_root());
         // PC commit
         let commitment = {
             let mle_ref = RefMultiLinearPoly::from_ref(&c.layers[0].input_vals);

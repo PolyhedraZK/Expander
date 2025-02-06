@@ -345,7 +345,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                 &mut cursor,
             );
         }
-        
+
         timer.stop();
 
         verified

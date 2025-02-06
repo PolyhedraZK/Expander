@@ -1,8 +1,7 @@
 #[cfg(feature = "profile")]
-use utils::timer::Timer;
-#[cfg(feature = "profile")]
 use std::thread;
-
+#[cfg(feature = "profile")]
+use utils::timer::Timer;
 
 #[cfg(feature = "profile")]
 #[test]
