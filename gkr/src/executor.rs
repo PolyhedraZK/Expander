@@ -7,27 +7,72 @@ use std::{
 
 use arith::{Field, FieldSerde, FieldSerdeError};
 use circuit::Circuit;
-use config::{
-    Config, GKRConfig, PolynomialCommitmentType, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31,
-};
-use config_macros::declare_gkr_config;
-use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
-use gf2::GF2x128;
-use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use mersenne31::M31x16;
-use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR, OrionPCSForGKR};
+use clap::{Parser, Subcommand};
+use config::{Config, GKRConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
+use gkr_field_config::FieldType;
+use gkr_field_config::GKRFieldConfig;
+use poly_commit::expander_pcs_init_testing_only;
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
-use transcript::{BytesHashTranscript, FieldHashTranscript, SHA256hasher};
 
 use log::info;
 use transcript::Proof;
 use warp::{http::StatusCode, reply, Filter};
 
-#[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
-use config::FiatShamirHashType;
-#[allow(unused_imports)] // The FieldType import is used in the macro expansion
-use gkr_field_config::FieldType;
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+pub struct ExpanderExecArgs {
+    /// Fiat-Shamir Hash: SHA256, or Poseidon, or MiMC5
+    #[arg(short, long)]
+    pub fiat_shamir_hash: String,
+
+    /// Polynomial Commitment Scheme: Raw, or Orion
+    #[arg(short, long)]
+    pub poly_commitment_scheme: String,
+
+    /// Circuit File Path
+    #[arg(short, long)]
+    pub circuit_file: String,
+
+    /// Prove, Verify, or Serve subcommands
+    #[clap(subcommand)]
+    pub subcommands: ExpanderExecSubCommand,
+}
+
+#[derive(Debug, Subcommand, Clone)]
+pub enum ExpanderExecSubCommand {
+    Prove {
+        /// Witness File Path
+        #[arg(short, long)]
+        witness_file: String,
+
+        /// Output Proof Path
+        #[arg(short, long)]
+        output_proof_file: String,
+    },
+    Verify {
+        /// Witness File Path
+        #[arg(short, long)]
+        witness_file: String,
+
+        /// Output Proof Path
+        #[arg(short, long)]
+        input_proof_file: String,
+
+        /// MPI size
+        #[arg(short, long, default_value_t = 1)]
+        mpi_size: u32,
+    },
+    Serve {
+        /// IP host
+        #[arg(short, long)]
+        host_ip: String,
+
+        /// IP Port
+        #[arg(short, long)]
+        port: u16,
+    },
+}
 
 pub fn dump_proof_and_claimed_v<F: Field>(
     proof: &Proof,
@@ -117,45 +162,43 @@ pub fn verify<Cfg: GKRConfig>(
     )
 }
 
-pub async fn run_command<'a, Cfg: GKRConfig>(
-    command: &str,
-    circuit_file: &str,
-    config: Config<Cfg>,
-    args: &[String],
-) {
-    match command {
-        "prove" => {
-            let witness_file = &args[3];
-            let output_file = &args[4];
-            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
-            circuit.load_witness_file(witness_file);
+pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config: Config<Cfg>) {
+    let subcommands = command.subcommands.clone();
+
+    match subcommands {
+        ExpanderExecSubCommand::Prove {
+            witness_file,
+            output_proof_file,
+        } => {
+            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(&command.circuit_file);
+            circuit.load_witness_file(&witness_file);
 
             let (claimed_v, proof) = prove(&mut circuit, &config);
 
             if config.mpi_config.is_root() {
                 let bytes = dump_proof_and_claimed_v(&proof, &claimed_v)
                     .expect("Unable to serialize proof.");
-                fs::write(output_file, bytes).expect("Unable to write proof to file.");
+                fs::write(output_proof_file, bytes).expect("Unable to write proof to file.");
             }
         }
-        "verify" => {
-            let witness_file = &args[3];
-            let output_file = &args[4];
-            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
-            circuit.load_witness_file(witness_file);
+        ExpanderExecSubCommand::Verify {
+            witness_file,
+            input_proof_file,
+            mpi_size,
+        } => {
+            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(&command.circuit_file);
+            circuit.load_witness_file(&witness_file);
 
             // Repeating the same public input for mpi_size times
             // TODO: Fix this, use real input
-            if args.len() > 5 {
-                let mpi_size = args[5].parse::<i32>().unwrap();
-                let n_public_input_per_mpi = circuit.public_input.len();
-                for _ in 1..mpi_size {
-                    circuit
-                        .public_input
-                        .append(&mut circuit.public_input[..n_public_input_per_mpi].to_owned());
-                }
+            let n_public_input_per_mpi = circuit.public_input.len();
+            for _ in 1..mpi_size {
+                circuit
+                    .public_input
+                    .append(&mut circuit.public_input[..n_public_input_per_mpi].to_owned());
             }
-            let bytes = fs::read(output_file).expect("Unable to read proof from file.");
+
+            let bytes = fs::read(&input_proof_file).expect("Unable to read proof from file.");
             let (proof, claimed_v) =
                 load_proof_and_claimed_v(&bytes).expect("Unable to deserialize proof.");
 
@@ -163,15 +206,14 @@ pub async fn run_command<'a, Cfg: GKRConfig>(
 
             println!("success");
         }
-        "serve" => {
-            let host: [u8; 4] = args[3]
+        ExpanderExecSubCommand::Serve { host_ip, port } => {
+            let host: [u8; 4] = host_ip
                 .split('.')
                 .map(|s| s.parse().unwrap())
                 .collect::<Vec<u8>>()
                 .try_into()
                 .unwrap();
-            let port = args[4].parse().unwrap();
-            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
+            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit(&command.circuit_file);
             let mut prover = crate::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let verifier = crate::Verifier::new(&config);
@@ -268,27 +310,5 @@ pub async fn run_command<'a, Cfg: GKRConfig>(
             .run((host, port))
             .await;
         }
-        _ => {
-            println!("Invalid command.");
-        }
     }
 }
-
-declare_gkr_config!(
-    pub M31ExtConfigSha2,
-    FieldType::M31,
-    FiatShamirHashType::Poseidon,
-    PolynomialCommitmentType::Raw
-);
-declare_gkr_config!(
-    pub BN254ConfigMIMC5,
-    FieldType::BN254,
-    FiatShamirHashType::MIMC5,
-    PolynomialCommitmentType::Raw
-);
-declare_gkr_config!(
-    pub GF2ExtConfigSha2,
-    FieldType::GF2,
-    FiatShamirHashType::SHA256,
-    PolynomialCommitmentType::Orion
-);
