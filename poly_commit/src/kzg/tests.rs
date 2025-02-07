@@ -2,20 +2,14 @@ use arith::BN254Fr;
 use ark_std::test_rng;
 use field_hashers::MiMC5FiatShamirHasher;
 use halo2curves::{
-    bn256::{Bn256, Fr},
+    bn256::{Bn256, Fr, G1},
     ff::Field,
 };
+use itertools::izip;
 use polynomials::MultiLinearPoly;
 use transcript::{FieldHashTranscript, Transcript};
 
-use crate::{
-    coeff_form_uni_hyperkzg_open, coeff_form_uni_hyperkzg_verify, coeff_form_uni_kzg_verify,
-    univariate_degree_one_quotient, UniKZGVerifierParams,
-};
-
-use super::{
-    coeff_form_uni_kzg_commit, coeff_form_uni_kzg_open, generate_coef_form_uni_kzg_srs_for_testing,
-};
+use crate::*;
 
 #[test]
 fn test_univariate_degree_one_quotient() {
@@ -120,6 +114,52 @@ fn test_coefficient_form_univariate_kzg_constant_e2e() {
 
     let opening = coeff_form_uni_kzg_open(&srs, &poly, alpha, eval);
     assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
+}
+
+#[test]
+fn test_coefficient_form_bivariate_kzg_e2e() {
+    let x_degree = 15;
+    let y_degree = 7;
+
+    let party_srs: Vec<CoefFormBiKZGLocalSRS<Bn256>> = (0..=y_degree)
+        .map(|rank| {
+            generate_coef_form_bi_kzg_local_srs_for_testing(x_degree + 1, y_degree + 1, rank)
+        })
+        .collect();
+
+    let mut rng = test_rng();
+    let xy_coeffs: Vec<Vec<Fr>> = (0..=y_degree)
+        .map(|_| (0..=x_degree).map(|_| Fr::random(&mut rng)).collect())
+        .collect();
+
+    let commitments: Vec<_> = izip!(&party_srs, &xy_coeffs)
+        .map(|(srs, x_coeffs)| coeff_form_uni_kzg_commit(&srs.tau_x_srs, x_coeffs))
+        .collect();
+
+    let global_commitment: G1 = commitments.iter().sum();
+
+    let alpha = Fr::random(&mut rng);
+    let evals_and_opens: Vec<(Fr, G1)> = izip!(&party_srs, &xy_coeffs)
+        .map(|(srs, x_coeffs)| coeff_form_uni_kzg_open_eval(&srs.tau_x_srs, x_coeffs, alpha))
+        .collect();
+
+    let beta = Fr::random(&mut rng);
+    let beta_geometric_progression = powers_series(&beta, y_degree + 1);
+    let evals: Vec<Fr> = evals_and_opens.iter().map(|(e, _)| *e).collect();
+    let final_eval = univariate_evaluate(&evals, &beta_geometric_progression);
+
+    let final_opening =
+        coeff_form_bi_kzg_open_leader(&party_srs[0], &evals_and_opens, beta, final_eval);
+
+    let vk: BiKZGVerifierParam<Bn256> = From::from(&party_srs[0]);
+    assert!(coeff_form_bi_kzg_verify(
+        vk,
+        global_commitment,
+        alpha,
+        beta,
+        final_eval,
+        final_opening,
+    ));
 }
 
 #[test]

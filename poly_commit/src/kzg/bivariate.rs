@@ -24,7 +24,7 @@ where
 {
     assert!(local_length.is_power_of_two());
     assert!(distributed_parties.is_power_of_two());
-    assert!(party_rank < distributed_parties && 0 < party_rank);
+    assert!(party_rank < distributed_parties);
 
     let mut rng = test_rng();
     let tau_x = E::Fr::random(&mut rng);
