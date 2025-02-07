@@ -4,7 +4,6 @@ use std::{
 };
 
 use arith::{Field, FieldSerde};
-use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
 use config::{Config, GKRConfig};
 use gkr_field_config::GKRFieldConfig;
@@ -12,6 +11,7 @@ use mpi_config::MPIConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
 use transcript::{transcript_verifier_sync, Proof, Transcript};
+use utils::timer::Timer;
 
 #[cfg(feature = "grinding")]
 use crate::grind;
@@ -176,7 +176,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     C::ChallengeField,
     Option<C::ChallengeField>,
 ) {
-    let timer = start_timer!(|| "gkr verify");
+    let timer = Timer::new("gkr_verify", true);
     let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
 
     let layer_num = circuit.layers.len();
@@ -235,7 +235,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             None
         };
     }
-    end_timer!(timer);
+    timer.stop();
     (verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1)
 }
 
@@ -267,7 +267,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         pcs_verification_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::VKey,
         proof: &Proof,
     ) -> bool {
-        let timer = start_timer!(|| "verify");
+        let timer = Timer::new("verify", true);
         let mut transcript = Cfg::Transcript::new();
 
         let mut cursor = Cursor::new(&proof.bytes);
@@ -346,7 +346,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             );
         }
 
-        end_timer!(timer);
+        timer.stop();
 
         verified
     }

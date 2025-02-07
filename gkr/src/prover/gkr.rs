@@ -1,13 +1,13 @@
 //! This module implements the core GKR IOP.
 
 use arith::{Field, SimdField};
-use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::MultiLinearPoly;
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use transcript::Transcript;
+use utils::timer::Timer;
 
 // FIXME
 #[allow(clippy::type_complexity)]
@@ -23,7 +23,6 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
 ) {
-    let timer = start_timer!(|| "gkr prove");
     let layer_num = circuit.layers.len();
 
     let mut rz0 = vec![];
@@ -68,6 +67,15 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     };
 
     for i in (0..layer_num).rev() {
+        let timer = Timer::new(
+            &format!(
+                "Sumcheck Layer {}, n_vars {}, one phase only? {}",
+                i,
+                &circuit.layers[i].input_var_num,
+                &circuit.layers[i].structure_info.max_degree_one
+            ),
+            mpi_config.is_root(),
+        );
         (rz0, rz1, r_simd, r_mpi) = sumcheck_prove_gkr_layer(
             &circuit.layers[i],
             &rz0,
@@ -89,8 +97,8 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         } else {
             alpha = None;
         }
+        timer.stop();
     }
 
-    end_timer!(timer);
     (claimed_v, rz0, rz1, r_simd, r_mpi)
 }

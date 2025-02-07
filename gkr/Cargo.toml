@@ -18,6 +18,7 @@ poly_commit = { path = "../poly_commit" }
 polynomials = { path = "../arith/polynomials" }
 sumcheck = { path = "../sumcheck" }
 transcript = { path = "../transcript" }
+utils = { path = "../utils" }
 
 ark-std.workspace = true
 clap.workspace = true
@@ -59,6 +60,7 @@ default = []
 # default = [ "grinding" ]
 grinding = [ "config/grinding" ]
 recursion = [ "transcript/recursion" ]
+profile = [ "utils/profile", "sumcheck/profile" ]
 
 [[bench]]
 name = "gkr-hashes"
