@@ -1,4 +1,3 @@
-use ark_std::test_rng;
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, Group},
@@ -7,20 +6,18 @@ use halo2curves::{
     CurveAffine,
 };
 
-use crate::{powers_series, univariate_degree_one_quotient, univariate_evaluate};
-
-use super::{CoefFormUniKZGSRS, UniKZGVerifierParams};
+use crate::*;
 
 #[inline(always)]
 pub fn generate_coef_form_uni_kzg_srs_for_testing<E: MultiMillerLoop>(
     length: usize,
+    mut rng: impl rand::RngCore,
 ) -> CoefFormUniKZGSRS<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {
     assert!(length.is_power_of_two());
 
-    let mut rng = test_rng();
     let tau = E::Fr::random(&mut rng);
     let g1 = E::G1Affine::generator();
 
@@ -51,31 +48,13 @@ where
 pub fn coeff_form_uni_kzg_commit<E: MultiMillerLoop>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &[E::Fr],
-) -> E::G1
+) -> E::G1Affine
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
-    best_multiexp(coeffs, &srs.powers_of_tau[..coeffs.len()])
-}
-
-#[inline(always)]
-pub fn coeff_form_uni_kzg_open<E: MultiMillerLoop>(
-    srs: &CoefFormUniKZGSRS<E>,
-    coeffs: &[E::Fr],
-    alpha: E::Fr,
-    eval: E::Fr,
-) -> E::G1
-where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-{
-    assert!(srs.powers_of_tau.len() >= coeffs.len());
-
-    let (div, remainder) = univariate_degree_one_quotient(coeffs, alpha);
-    assert_eq!(remainder, eval);
-
-    best_multiexp(&div, &srs.powers_of_tau[..div.len()])
+    best_multiexp(coeffs, &srs.powers_of_tau[..coeffs.len()]).into()
 }
 
 #[inline(always)]
@@ -83,28 +62,25 @@ pub fn coeff_form_uni_kzg_open_eval<E: MultiMillerLoop>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &[E::Fr],
     alpha: E::Fr,
-) -> (E::Fr, E::G1)
+) -> (E::Fr, E::G1Affine)
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
-    let alpha_geometric_progression = powers_series(&alpha, coeffs.len());
-    let eval = univariate_evaluate(coeffs, &alpha_geometric_progression);
+    let (div, eval) = univariate_degree_one_quotient(coeffs, alpha);
+    let opening = best_multiexp(&div, &srs.powers_of_tau[..div.len()]).into();
 
-    let (div, remainder) = univariate_degree_one_quotient(coeffs, alpha);
-    assert_eq!(remainder, eval);
-
-    (eval, best_multiexp(&div, &srs.powers_of_tau[..div.len()]))
+    (eval, opening)
 }
 
 #[inline(always)]
 pub fn coeff_form_uni_kzg_verify<E: MultiMillerLoop>(
     vk: UniKZGVerifierParams<E>,
-    comm: E::G1,
+    comm: E::G1Affine,
     alpha: E::Fr,
     eval: E::Fr,
-    opening: E::G1,
+    opening: E::G1Affine,
 ) -> bool
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
@@ -114,13 +90,10 @@ where
 
     let gt_result = E::multi_miller_loop(&[
         (
-            &opening.to_affine(),
+            &opening,
             &(vk.tau_g2.to_curve() - g2_alpha).to_affine().into(),
         ),
-        (
-            &(g1_eval - comm.to_affine()).into(),
-            &E::G2Affine::generator().into(),
-        ),
+        (&(g1_eval - comm).into(), &E::G2Affine::generator().into()),
     ]);
 
     gt_result.final_exponentiation().is_identity().into()

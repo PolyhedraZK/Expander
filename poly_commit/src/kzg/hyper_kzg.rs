@@ -1,7 +1,12 @@
 use std::iter;
 
 use arith::ExtensionField;
-use halo2curves::{ff::Field, group::GroupEncoding, pairing::MultiMillerLoop, CurveAffine};
+use halo2curves::{
+    ff::Field,
+    group::{prime::PrimeCurveAffine, GroupEncoding},
+    pairing::MultiMillerLoop,
+    CurveAffine,
+};
 use itertools::izip;
 use transcript::Transcript;
 
@@ -38,14 +43,14 @@ pub fn coeff_form_uni_hyperkzg_open<E: MultiMillerLoop, T: Transcript<E::Fr>>(
     coeffs: &Vec<E::Fr>,
     alphas: &[E::Fr],
     fs_transcript: &mut T,
-) -> HyperKZGOpening<E>
+) -> (E::Fr, HyperKZGOpening<E>)
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
 {
     let mut local_coeffs = coeffs.to_vec();
 
-    let (folded_oracle_commits, folded_oracle_coeffs): (Vec<E::G1>, Vec<Vec<E::Fr>>) = alphas
+    let (folded_oracle_commits, folded_oracle_coeffs): (Vec<E::G1Affine>, Vec<Vec<E::Fr>>) = alphas
         [..alphas.len() - 1]
         .iter()
         .map(|alpha| {
@@ -134,19 +139,22 @@ where
     };
     let vanishing_at_tau_commitment = coeff_form_uni_kzg_commit(srs, &vanishing_at_tau);
 
-    HyperKZGOpening {
-        folded_oracle_commitments: folded_oracle_commits,
-        f_beta2: beta2_eval,
-        evals_at_beta: beta_evals,
-        evals_at_neg_beta: neg_beta_evals,
-        beta_commitment: f_gamma_quotient_com,
-        tau_vanishing_commitment: vanishing_at_tau_commitment,
-    }
+    (
+        beta2_evals[beta2_evals.len() - 1],
+        HyperKZGOpening {
+            folded_oracle_commitments: folded_oracle_commits,
+            f_beta2: beta2_eval,
+            evals_at_beta: beta_evals,
+            evals_at_neg_beta: neg_beta_evals,
+            beta_commitment: f_gamma_quotient_com,
+            tau_vanishing_commitment: vanishing_at_tau_commitment,
+        },
+    )
 }
 
 pub fn coeff_form_uni_hyperkzg_verify<E: MultiMillerLoop, T: Transcript<E::Fr>>(
     vk: UniKZGVerifierParams<E>,
-    comm: E::G1,
+    comm: E::G1Affine,
     alphas: &[E::Fr],
     eval: E::Fr,
     opening: &HyperKZGOpening<E>,
@@ -193,8 +201,13 @@ where
     let lagrange_degree2 =
         coeff_form_degree2_lagrange([beta, -beta, beta2], [v_beta, v_neg_beta, v_beta2]);
 
-    let commitment_agg: E::G1 =
-        comm + univariate_evaluate(&opening.folded_oracle_commitments, &gamma_pow_series[1..]);
+    let folded_g1_oracle_comms: Vec<E::G1> = opening
+        .folded_oracle_commitments
+        .iter()
+        .map(|c| c.to_curve())
+        .collect();
+    let commitment_agg_g1: E::G1 =
+        comm.to_curve() + univariate_evaluate(&folded_g1_oracle_comms, &gamma_pow_series[1..]);
 
     fs_transcript.append_u8_slice(opening.beta_commitment.to_bytes().as_ref());
     let tau = fs_transcript.generate_challenge_field_element();
@@ -205,7 +218,7 @@ where
 
     coeff_form_uni_kzg_verify(
         vk,
-        commitment_agg - opening.beta_commitment * q_weight,
+        (commitment_agg_g1 - opening.beta_commitment.to_curve() * q_weight).into(),
         tau,
         lagrange_eval,
         opening.tau_vanishing_commitment,

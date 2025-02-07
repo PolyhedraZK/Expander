@@ -10,8 +10,10 @@ pub use univariate::*;
 mod bivariate;
 pub use bivariate::*;
 
-mod hyperkzg;
-pub use hyperkzg::*;
+mod hyper_kzg;
+pub use hyper_kzg::*;
+
+mod pcs_trait_impl;
 
 #[cfg(test)]
 mod tests;

@@ -1,4 +1,3 @@
-use ark_std::test_rng;
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, Group},
@@ -7,17 +6,14 @@ use halo2curves::{
     CurveAffine,
 };
 
-use crate::{
-    powers_series, univariate_degree_one_quotient, CoefFormBiKZGLocalSRS, CoefFormUniKZGSRS,
-};
-
-use super::{BiKZGProof, BiKZGVerifierParam};
+use crate::*;
 
 #[inline(always)]
 pub fn generate_coef_form_bi_kzg_local_srs_for_testing<E: MultiMillerLoop>(
     local_length: usize,
     distributed_parties: usize,
     party_rank: usize,
+    mut rng: impl rand::RngCore,
 ) -> CoefFormBiKZGLocalSRS<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
@@ -26,7 +22,6 @@ where
     assert!(distributed_parties.is_power_of_two());
     assert!(party_rank < distributed_parties);
 
-    let mut rng = test_rng();
     let tau_x = E::Fr::random(&mut rng);
     let tau_y = E::Fr::random(&mut rng);
 
@@ -83,33 +78,34 @@ where
 #[inline(always)]
 pub fn coeff_form_bi_kzg_open_leader<E: MultiMillerLoop>(
     srs: &CoefFormBiKZGLocalSRS<E>,
-    evals_and_opens: &[(E::Fr, E::G1)],
+    evals_and_opens: &[(E::Fr, E::G1Affine)],
     beta: E::Fr,
-    eval: E::Fr,
-) -> BiKZGProof<E>
+) -> (E::Fr, BiKZGProof<E>)
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {
     assert_eq!(srs.tau_y_srs.powers_of_tau.len(), evals_and_opens.len());
 
-    let x_open: E::G1 = evals_and_opens.iter().map(|(_, o)| o).sum();
+    let x_open: E::G1 = evals_and_opens.iter().map(|(_, o)| o.to_curve()).sum();
     let gammas: Vec<E::Fr> = evals_and_opens.iter().map(|(e, _)| *e).collect();
 
-    let (div, remainder) = univariate_degree_one_quotient(&gammas, beta);
-    assert_eq!(remainder, eval);
+    let (div, eval) = univariate_degree_one_quotient(&gammas, beta);
 
     let y_open = best_multiexp(&div, &srs.tau_y_srs.powers_of_tau[..div.len()]);
 
-    BiKZGProof {
-        quotient_x: x_open.into(),
-        quotient_y: y_open.into(),
-    }
+    (
+        eval,
+        BiKZGProof {
+            quotient_x: x_open.into(),
+            quotient_y: y_open.into(),
+        },
+    )
 }
 
 #[inline(always)]
 pub fn coeff_form_bi_kzg_verify<E: MultiMillerLoop>(
     vk: BiKZGVerifierParam<E>,
-    comm: E::G1,
+    comm: E::G1Affine,
     alpha: E::Fr,
     beta: E::Fr,
     eval: E::Fr,
@@ -131,10 +127,7 @@ where
             &opening.quotient_y,
             &(vk.tau_y_g2.to_curve() - g2_beta).to_affine().into(),
         ),
-        (
-            &(g1_eval - comm.to_affine()).into(),
-            &E::G2Affine::generator().into(),
-        ),
+        (&(g1_eval - comm).into(), &E::G2Affine::generator().into()),
     ]);
 
     gt_result.final_exponentiation().is_identity().into()
