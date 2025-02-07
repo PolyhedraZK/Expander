@@ -7,7 +7,7 @@ use halo2curves::{
     CurveAffine,
 };
 
-use crate::{powers_series, univariate_degree_one_quotient};
+use crate::{powers_series, univariate_degree_one_quotient, univariate_evaluate};
 
 use super::{CoefFormUniKZGSRS, UniKZGVerifierParams};
 
@@ -76,6 +76,26 @@ where
     assert_eq!(remainder, eval);
 
     best_multiexp(&div, &srs.powers_of_tau[..div.len()])
+}
+
+#[inline(always)]
+pub fn coeff_form_uni_kzg_open_eval<E: MultiMillerLoop>(
+    srs: &CoefFormUniKZGSRS<E>,
+    coeffs: &[E::Fr],
+    alpha: E::Fr,
+) -> (E::Fr, E::G1)
+where
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+{
+    assert!(srs.powers_of_tau.len() >= coeffs.len());
+
+    let alpha_geometric_progression = powers_series(&alpha, coeffs.len());
+    let eval = univariate_evaluate(coeffs, &alpha_geometric_progression);
+
+    let (div, remainder) = univariate_degree_one_quotient(coeffs, alpha);
+    assert_eq!(remainder, eval);
+
+    (eval, best_multiexp(&div, &srs.powers_of_tau[..div.len()]))
 }
 
 #[inline(always)]
