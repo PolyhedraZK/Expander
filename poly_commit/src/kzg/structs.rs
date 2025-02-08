@@ -15,15 +15,18 @@ where
     }
 }
 
-impl<E: Engine> FieldSerde for KZGCommitment<E> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
+impl<E: Engine> FieldSerde for KZGCommitment<E>
+where
+    E::G1Affine: FieldSerde,
+{
+    const SERIALIZED_SIZE: usize = <E::G1Affine as FieldSerde>::SERIALIZED_SIZE;
 
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
-        todo!()
+    fn serialize_into<W: std::io::Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
+        self.0.serialize_into(writer)
     }
 
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
-        todo!()
+    fn deserialize_from<R: std::io::Read>(reader: R) -> arith::FieldSerdeResult<Self> {
+        Ok(Self(<E::G1Affine as FieldSerde>::deserialize_from(reader)?))
     }
 }
 
@@ -50,19 +53,33 @@ where
     }
 }
 
-impl<E: Engine> FieldSerde for CoefFormUniKZGSRS<E> {
+impl<E: Engine> FieldSerde for CoefFormUniKZGSRS<E>
+where
+    E::G1Affine: FieldSerde,
+    E::G2Affine: FieldSerde,
+{
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
-        todo!()
+        self.powers_of_tau.serialize_into(&mut writer)?;
+        self.tau_g2.serialize_into(&mut writer)
     }
 
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
-        todo!()
+        let powers_of_tau: Vec<E::G1Affine> = Vec::deserialize_from(&mut reader)?;
+        let tau_g2: E::G2Affine = E::G2Affine::deserialize_from(&mut reader)?;
+        Ok(Self {
+            powers_of_tau,
+            tau_g2,
+        })
     }
 }
 
-impl<E: Engine> StructuredReferenceString for CoefFormUniKZGSRS<E> {
+impl<E: Engine> StructuredReferenceString for CoefFormUniKZGSRS<E>
+where
+    <E as Engine>::G1Affine: FieldSerde,
+    <E as Engine>::G2Affine: FieldSerde,
+{
     type PKey = CoefFormUniKZGSRS<E>;
     type VKey = UniKZGVerifierParams<E>;
 
@@ -78,15 +95,20 @@ pub struct UniKZGVerifierParams<E: Engine> {
     pub tau_g2: E::G2Affine,
 }
 
-impl<E: Engine> FieldSerde for UniKZGVerifierParams<E> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
+impl<E: Engine> FieldSerde for UniKZGVerifierParams<E>
+where
+    E::G2Affine: FieldSerde,
+{
+    const SERIALIZED_SIZE: usize = <E::G2Affine as FieldSerde>::SERIALIZED_SIZE;
 
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
-        todo!()
+    fn serialize_into<W: std::io::Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
+        self.tau_g2.serialize_into(writer)
     }
 
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
-        todo!()
+    fn deserialize_from<R: std::io::Read>(reader: R) -> arith::FieldSerdeResult<Self> {
+        Ok(Self {
+            tau_g2: <E::G2Affine as FieldSerde>::deserialize_from(reader)?,
+        })
     }
 }
 
@@ -113,19 +135,50 @@ where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {
     fn default() -> Self {
-        todo!()
+        Self {
+            folded_oracle_commitments: Vec::default(),
+            f_beta2: E::Fr::default(),
+            evals_at_beta: Vec::default(),
+            evals_at_neg_beta: Vec::default(),
+            beta_commitment: E::G1Affine::default(),
+            tau_vanishing_commitment: E::G1Affine::default(),
+        }
     }
 }
 
-impl<E: Engine> FieldSerde for HyperKZGOpening<E> {
+impl<E: Engine> FieldSerde for HyperKZGOpening<E>
+where
+    E::Fr: FieldSerde,
+    E::G1Affine: FieldSerde,
+    E::G2Affine: FieldSerde,
+{
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
-        todo!()
+        self.folded_oracle_commitments.serialize_into(&mut writer)?;
+        self.f_beta2.serialize_into(&mut writer)?;
+        self.evals_at_beta.serialize_into(&mut writer)?;
+        self.evals_at_neg_beta.serialize_into(&mut writer)?;
+        self.beta_commitment.serialize_into(&mut writer)?;
+        self.tau_vanishing_commitment.serialize_into(&mut writer)
     }
 
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
-        todo!()
+        let folded_oracle_commitments: Vec<E::G1Affine> = Vec::deserialize_from(&mut reader)?;
+        let f_beta2: E::Fr = E::Fr::deserialize_from(&mut reader)?;
+        let evals_at_beta: Vec<E::Fr> = Vec::deserialize_from(&mut reader)?;
+        let evals_at_neg_beta: Vec<E::Fr> = Vec::deserialize_from(&mut reader)?;
+        let beta_commitment: E::G1Affine = E::G1Affine::deserialize_from(&mut reader)?;
+        let tau_vanishing_commitment: E::G1Affine = E::G1Affine::deserialize_from(&mut reader)?;
+
+        Ok(Self {
+            folded_oracle_commitments,
+            f_beta2,
+            evals_at_beta,
+            evals_at_neg_beta,
+            beta_commitment,
+            tau_vanishing_commitment,
+        })
     }
 }
 

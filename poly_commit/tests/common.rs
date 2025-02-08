@@ -45,6 +45,7 @@ pub fn test_pcs<F: ExtensionField, T: Transcript<F>, P: PolynomialCommitmentSche
     }
 }
 
+#[allow(unused)]
 pub fn test_pcs_for_expander_gkr<
     C: GKRFieldConfig,
     T: Transcript<C::ChallengeField>,

@@ -7,7 +7,7 @@ use transcript::Transcript;
 
 use crate::*;
 
-pub struct HyperKZG<E, T>
+pub struct HyperKZGPCS<E, T>
 where
     E: Engine,
     E::Fr: ExtensionField,
@@ -17,8 +17,8 @@ where
     _marker_t: PhantomData<T>,
 }
 
-impl<T: Transcript<BN254Fr>> PolynomialCommitmentScheme<BN254Fr, T> for HyperKZG<Bn256, T> {
-    const NAME: &'static str = "HyperKZG";
+impl<T: Transcript<BN254Fr>> PolynomialCommitmentScheme<BN254Fr, T> for HyperKZGPCS<Bn256, T> {
+    const NAME: &'static str = "HyperKZGPCS";
 
     type Params = usize;
     type Poly = MultiLinearPoly<BN254Fr>;

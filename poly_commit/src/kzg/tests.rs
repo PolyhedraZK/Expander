@@ -171,7 +171,7 @@ fn test_coefficient_form_bivariate_kzg_e2e() {
 }
 
 #[test]
-fn test_hyperkzg_e2e() {
+fn test_hyperkzg_functionality_e2e() {
     let mut rng = test_rng();
     let max_vars = 15;
     let max_length = 1 << max_vars;
