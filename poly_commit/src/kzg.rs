@@ -14,7 +14,7 @@ mod hyper_kzg;
 pub use hyper_kzg::*;
 
 mod pcs_trait_impl;
-pub use pcs_trait_impl::*;
+pub use pcs_trait_impl::HyperKZGPCS;
 
 #[cfg(test)]
 mod tests;

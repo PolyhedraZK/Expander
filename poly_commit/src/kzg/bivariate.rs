@@ -5,6 +5,7 @@ use halo2curves::{
     pairing::{MillerLoopResult, MultiMillerLoop},
     CurveAffine,
 };
+use itertools::izip;
 
 use crate::*;
 
@@ -32,11 +33,9 @@ where
 
     let g1_prog = g1.to_curve();
     let x_coeff_bases = {
-        let mut proj_bases = vec![E::G1::identity(); local_length];
-        proj_bases.iter_mut().enumerate().for_each(|(i, base)| {
-            *base =
-                g1_prog * tau_y_geometric_progression[party_rank] * tau_x_geometric_progression[i]
-        });
+        let mut proj_bases = vec![g1_prog; local_length];
+        izip!(&mut proj_bases, &tau_x_geometric_progression)
+            .for_each(|(b, tau_xi)| *b *= *tau_xi * tau_y_geometric_progression[party_rank]);
 
         let mut g_bases = vec![E::G1Affine::default(); local_length];
         E::G1::batch_normalize(&proj_bases, &mut g_bases);
@@ -51,11 +50,8 @@ where
     };
 
     let y_coeff_bases = {
-        let mut proj_bases = vec![E::G1::identity(); distributed_parties];
-        proj_bases
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, base)| *base = g1_prog * tau_y_geometric_progression[i]);
+        let mut proj_bases = vec![g1_prog; distributed_parties];
+        izip!(&mut proj_bases, &tau_y_geometric_progression).for_each(|(b, tau_yi)| *b *= *tau_yi);
 
         let mut g_bases = vec![E::G1Affine::default(); distributed_parties];
         E::G1::batch_normalize(&proj_bases, &mut g_bases);
