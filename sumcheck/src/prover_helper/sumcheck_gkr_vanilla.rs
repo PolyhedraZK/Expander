@@ -43,7 +43,6 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
             &mut self.sp.v_evals,
             &mut self.sp.hg_evals,
             &self.layer.input_vals,
-            &mut self.sp.gate_exists_5,
         );
     }
 }
@@ -103,7 +102,6 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
             &self.sp.v_evals,
             &self.sp.hg_evals,
             &self.layer.input_vals,
-            &self.sp.gate_exists_5,
         );
 
         // SIMD
@@ -264,15 +262,10 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
         let add = &self.layer.add;
         let vals = &self.layer.input_vals;
         let eq_evals_at_rz0 = &mut self.sp.eq_evals_at_rz0;
-        let gate_exists = &mut self.sp.gate_exists_5;
         let hg_vals = &mut self.sp.hg_evals;
         // hg_vals[0..vals.len()].fill(F::zero()); // FIXED: consider memset unsafe?
         unsafe {
             std::ptr::write_bytes(hg_vals.as_mut_ptr(), 0, vals.len());
-        }
-        // gate_exists[0..vals.len()].fill(false); // FIXED: consider memset unsafe?
-        unsafe {
-            std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, vals.len());
         }
 
         assert_eq!(self.rz1.is_none(), self.alpha.is_none());
@@ -307,8 +300,6 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
         for g in mul.iter() {
             let r = C::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
             hg_vals[g.i_ids[0]] += C::simd_circuit_field_mul_challenge_field(&vals[g.i_ids[1]], &r);
-
-            gate_exists[g.i_ids[0]] = true;
         }
 
         for g in add.iter() {
@@ -316,7 +307,6 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
                 &eq_evals_at_rz0[g.o_id],
                 &g.coef,
             ));
-            gate_exists[g.i_ids[0]] = true;
         }
     }
 
@@ -346,16 +336,11 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
         let mul = &self.layer.mul;
         let eq_evals_at_rz0 = &self.sp.eq_evals_at_rz0;
         let eq_evals_at_rx = &mut self.sp.eq_evals_at_rx;
-        let gate_exists = &mut self.sp.gate_exists_5;
         let hg_vals = &mut self.sp.hg_evals;
         let fill_len = 1 << self.rx.len();
         // hg_vals[0..fill_len].fill(F::zero()); // FIXED: consider memset unsafe?
         unsafe {
             std::ptr::write_bytes(hg_vals.as_mut_ptr(), 0, fill_len);
-        }
-        // gate_exists[0..fill_len].fill(false); // FIXED: consider memset unsafe?
-        unsafe {
-            std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, fill_len);
         }
 
         // TODO-Optimization: For root process, _eq_vec does not have to be recomputed
@@ -395,7 +380,6 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
                 &(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
                 &g.coef,
             ));
-            gate_exists[g.i_ids[1]] = true;
         }
     }
 }

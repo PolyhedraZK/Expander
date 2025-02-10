@@ -31,7 +31,6 @@ impl SumcheckProductGateHelper {
         bk_f: &[C::Field],
         bk_hg: &[C::Field],
         init_v: &[C::SimdCircuitField],
-        gate_exists: &[bool],
     ) -> [C::Field; 3] {
         assert_eq!(degree, 2);
 
@@ -49,10 +48,6 @@ impl SumcheckProductGateHelper {
             // this is the first layer, we are able to accelerate by
             // avoiding the extension field operations
             for i in 0..eval_size {
-                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                    continue;
-                }
-
                 let f_v_0 = init_v[i * 2];
                 let f_v_1 = init_v[i * 2 + 1];
                 let hg_v_0 = bk_hg[i * 2];
@@ -71,10 +66,6 @@ impl SumcheckProductGateHelper {
         } else {
             // for the rest of layers we use extension field operations.
             for i in 0..eval_size {
-                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                    continue;
-                }
-
                 let f_v_0 = bk_f[i * 2];
                 let f_v_1 = bk_f[i * 2 + 1];
                 let hg_v_0 = bk_hg[i * 2];
@@ -113,48 +104,25 @@ impl SumcheckProductGateHelper {
         bk_f: &mut [C::Field],
         bk_hg: &mut [C::Field],
         init_v: &[C::SimdCircuitField],
-        gate_exists: &mut [bool],
     ) {
         assert!(var_idx < self.var_num);
 
         let eval_size = 1 << (self.var_num - var_idx - 1);
         if var_idx == 0 {
             for i in 0..eval_size {
-                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                    gate_exists[i] = false;
-
-                    bk_f[i] = C::field_add_simd_circuit_field(
-                        &C::simd_circuit_field_mul_challenge_field(
-                            &(init_v[2 * i + 1] - init_v[2 * i]),
-                            &r,
-                        ),
-                        &init_v[2 * i],
-                    );
-                    bk_hg[i] = C::Field::zero();
-                } else {
-                    gate_exists[i] = true;
-
-                    bk_f[i] = C::field_add_simd_circuit_field(
-                        &C::simd_circuit_field_mul_challenge_field(
-                            &(init_v[2 * i + 1] - init_v[2 * i]),
-                            &r,
-                        ),
-                        &init_v[2 * i],
-                    );
-                    bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
-                }
+                bk_f[i] = C::field_add_simd_circuit_field(
+                    &C::simd_circuit_field_mul_challenge_field(
+                        &(init_v[2 * i + 1] - init_v[2 * i]),
+                        &r,
+                    ),
+                    &init_v[2 * i],
+                );
+                bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
             }
         } else {
             for i in 0..eval_size {
-                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                    gate_exists[i] = false;
-                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
-                    bk_hg[i] = C::Field::zero();
-                } else {
-                    gate_exists[i] = true;
-                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
-                    bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
-                }
+                bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
+                bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
             }
         }
     }
