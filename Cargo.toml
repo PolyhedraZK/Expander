@@ -18,7 +18,8 @@ members = [
     "sumcheck",
     "crosslayer_prototype",
     "transcript",
-    "tree"
+    "tree",
+    "utils",
 ]
 resolver = "2"
 
