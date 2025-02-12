@@ -1,4 +1,9 @@
+use field_hashers::PoseidonFiatShamirHasher;
+use mersenne31::{M31Ext3, M31x16, M31};
 use sha2::{Digest, Sha256};
+
+use crate::transcript::Transcript;
+use crate::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher};
 
 const EXAMPLE_IN: [u8; 32] = [
     40, 75, 185, 12, 169, 4, 108, 43, 211, 74, 219, 14, 2, 133, 97, 27, 200, 245, 110, 1, 253, 219,
@@ -14,4 +19,86 @@ fn check_sha256_aligned() {
     let out = Sha256::digest(EXAMPLE_IN);
     println!("{:?}", out);
     assert_eq!(out, EXAMPLE_OUT.into());
+}
+
+#[test]
+fn check_transcript_state() {
+    {
+        let mut transcript = BytesHashTranscript::<M31Ext3, Keccak256hasher>::new();
+
+        transcript.append_field_element(&M31Ext3 {
+            v: [M31::from(1), M31::from(2), M31::from(3)],
+        });
+        let f = transcript.generate_challenge_field_element();
+
+        transcript.append_field_element(&M31Ext3 {
+            v: [M31::from(1), M31::from(2), M31::from(3)],
+        });
+        let f2 = transcript.generate_challenge_field_element();
+
+        transcript.append_field_element(&M31Ext3 {
+            v: [M31::from(1), M31::from(2), M31::from(3)],
+        });
+        let f3 = transcript.generate_challenge_field_element();
+
+        assert_ne!(f, f2);
+        assert_ne!(f, f2);
+        assert_ne!(f2, f3);
+    }
+    {
+        let mut transcript = BytesHashTranscript::<M31Ext3, Keccak256hasher>::new();
+
+        transcript.append_u8_slice(b"input");
+        let f = transcript.generate_challenge_field_element();
+
+        transcript.append_u8_slice(b"input");
+        let f2 = transcript.generate_challenge_field_element();
+
+        transcript.append_u8_slice(b"input");
+        let f3 = transcript.generate_challenge_field_element();
+
+        assert_ne!(f, f2);
+        assert_ne!(f, f2);
+        assert_ne!(f2, f3);
+    }
+    {
+        let mut transcript =
+            FieldHashTranscript::<M31Ext3, PoseidonFiatShamirHasher<M31x16>>::new();
+
+        transcript.append_field_element(&M31Ext3 {
+            v: [M31::from(1), M31::from(2), M31::from(3)],
+        });
+        let f = transcript.generate_challenge_field_element();
+
+        transcript.append_field_element(&M31Ext3 {
+            v: [M31::from(1), M31::from(2), M31::from(3)],
+        });
+        let f2 = transcript.generate_challenge_field_element();
+
+        transcript.append_field_element(&M31Ext3 {
+            v: [M31::from(1), M31::from(2), M31::from(3)],
+        });
+        let f3 = transcript.generate_challenge_field_element();
+
+        assert_ne!(f, f2);
+        assert_ne!(f, f2);
+        assert_ne!(f2, f3);
+    }
+    {
+        let mut transcript =
+            FieldHashTranscript::<M31Ext3, PoseidonFiatShamirHasher<M31x16>>::new();
+
+        transcript.append_u8_slice(b"input");
+        let f = transcript.generate_challenge_field_element();
+
+        transcript.append_u8_slice(b"input");
+        let f2 = transcript.generate_challenge_field_element();
+
+        transcript.append_u8_slice(b"input");
+        let f3 = transcript.generate_challenge_field_element();
+
+        assert_ne!(f, f2);
+        assert_ne!(f, f2);
+        assert_ne!(f2, f3);
+    }
 }

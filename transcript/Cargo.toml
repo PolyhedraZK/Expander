@@ -11,5 +11,8 @@ mpi_config = { path = "../config/mpi_config" }
 sha2.workspace = true
 tiny-keccak.workspace = true
 
+[dev-dependencies]
+mersenne31 = { path = "../arith/mersenne31" }
+
 [features]
 recursion = []
