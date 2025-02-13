@@ -170,9 +170,9 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
             witness_file,
             output_proof_file,
         } => {
-            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(&command.circuit_file);
+            let mut circuit =
+                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&command.circuit_file);
             circuit.load_witness_file(&witness_file);
-
             let (claimed_v, proof) = prove(&mut circuit, &config);
 
             if config.mpi_config.is_root() {
@@ -186,9 +186,9 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
             input_proof_file,
             mpi_size,
         } => {
-            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(&command.circuit_file);
+            let mut circuit =
+                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&command.circuit_file);
             circuit.load_witness_file(&witness_file);
-
             // Repeating the same public input for mpi_size times
             // TODO: Fix this, use real input
             let n_public_input_per_mpi = circuit.public_input.len();
@@ -213,7 +213,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
                 .collect::<Vec<u8>>()
                 .try_into()
                 .unwrap();
-            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit(&command.circuit_file);
+            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&command.circuit_file);
             let mut prover = crate::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let verifier = crate::Verifier::new(&config);

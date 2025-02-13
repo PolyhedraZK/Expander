@@ -72,7 +72,7 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
                 "Sumcheck Layer {}, n_vars {}, one phase only? {}",
                 i,
                 &circuit.layers[i].input_var_num,
-                &circuit.layers[i].structure_info.max_degree_one
+                &circuit.layers[i].structure_info.skip_sumcheck_phase_two,
             ),
             mpi_config.is_root(),
         );
