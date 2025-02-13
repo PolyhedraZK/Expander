@@ -42,7 +42,7 @@ fn check_transcript_state() {
         let f3 = transcript.generate_challenge_field_element();
 
         assert_ne!(f, f2);
-        assert_ne!(f, f2);
+        assert_ne!(f, f3);
         assert_ne!(f2, f3);
     }
     {
@@ -58,7 +58,7 @@ fn check_transcript_state() {
         let f3 = transcript.generate_challenge_field_element();
 
         assert_ne!(f, f2);
-        assert_ne!(f, f2);
+        assert_ne!(f, f3);
         assert_ne!(f2, f3);
     }
     {
@@ -81,7 +81,7 @@ fn check_transcript_state() {
         let f3 = transcript.generate_challenge_field_element();
 
         assert_ne!(f, f2);
-        assert_ne!(f, f2);
+        assert_ne!(f, f3);
         assert_ne!(f2, f3);
     }
     {
@@ -98,7 +98,7 @@ fn check_transcript_state() {
         let f3 = transcript.generate_challenge_field_element();
 
         assert_ne!(f, f2);
-        assert_ne!(f, f2);
+        assert_ne!(f, f3);
         assert_ne!(f2, f3);
     }
 }
