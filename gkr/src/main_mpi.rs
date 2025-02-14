@@ -42,25 +42,6 @@ fn main() {
 
     let mpi_config = MPIConfig::new();
 
-    declare_gkr_config!(
-        M31ExtConfigSha2,
-        FieldType::M31,
-        FiatShamirHashType::SHA256,
-        PolynomialCommitmentType::Raw
-    );
-    declare_gkr_config!(
-        BN254ConfigSha2,
-        FieldType::BN254,
-        FiatShamirHashType::SHA256,
-        PolynomialCommitmentType::Raw
-    );
-    declare_gkr_config!(
-        GF2ExtConfigSha2,
-        FieldType::GF2,
-        FiatShamirHashType::SHA256,
-        PolynomialCommitmentType::Orion
-    );
-
     match args.field.as_str() {
         "m31ext3" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<M31ExtConfigSha2Orion>(

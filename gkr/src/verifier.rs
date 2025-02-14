@@ -13,7 +13,6 @@ use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
 use transcript::{transcript_verifier_sync, Proof, Transcript};
 use utils::timer::Timer;
 
-
 #[cfg(feature = "grinding")]
 use crate::grind;
 
