@@ -92,7 +92,6 @@ def change_working_dir():
     if "Expander/scripts" in cwd:
         os.chdir("..")
 
-
 def in_recursion_dir(closure: Callable[..., Any]):
     def wrapped():
         os.chdir("./recursion")
@@ -127,7 +126,6 @@ def gkr_prove(proof_config: ProofConfig, mpi_config: MPIConfig) -> str:
 
     print("gkr prove done.")
     return proof_file
-
 
 def vanilla_gkr_verify_check(
         proof_config: ProofConfig,
@@ -202,7 +200,6 @@ if __name__ == "__main__":
     # minor - check golang if exists on the machine
     if subprocess.run("go env", shell=True).returncode != 0:
         raise Exception("golang support missing")
-
     change_working_dir()
     expander_compile()
 
@@ -211,7 +208,6 @@ if __name__ == "__main__":
         BN254_GKR_TO_GROTH16_RECURSION_PROOF_CONFIG,
         MPI_CONFIG
     )
-
     test_m31_gkr_to_gkr_recursion(
         M31_GKR_TO_GKR_RECURSION_PROOF_CONFIG,
         MPI_CONFIG

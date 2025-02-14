@@ -146,6 +146,7 @@ impl Tree {
 
             non_leaf_nodes
                 .iter_mut()
+
                 .enumerate()
                 .take(upper_bound)
                 .skip(start_index)
@@ -166,6 +167,7 @@ impl Tree {
             let upper_bound = left_child_index(start_index);
             let mut buf = non_leaf_nodes[start_index..upper_bound].to_vec();
             buf.iter_mut().enumerate().for_each(|(index, node)| {
+
                 *node = Node::node_hash(
                     &non_leaf_nodes[left_child_index(index + start_index)],
                     &non_leaf_nodes[right_child_index(index + start_index)],
