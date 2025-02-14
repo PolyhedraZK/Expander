@@ -1,5 +1,3 @@
-mod utils;
-
 mod pedersen;
 pub use pedersen::PedersenParams;
 
