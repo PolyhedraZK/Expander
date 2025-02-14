@@ -157,7 +157,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
         _ => unreachable!(),
     };
-    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(&circuit_path);
+    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_path);
     root_println!(config.mpi_config, "Circuit loaded.");
 
     let witness_path = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {

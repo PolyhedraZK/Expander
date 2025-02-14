@@ -11,6 +11,10 @@ gkr_field_config = { path = "../config/gkr_field_config" }
 mpi_config = { path = "../config/mpi_config" }
 polynomials = { path = "../arith/polynomials" }
 transcript = { path = "../transcript" }
+utils = { path = "../utils" }
 
 env_logger.workspace = true
 log.workspace = true
+
+[features]
+profile = [ "utils/profile" ]

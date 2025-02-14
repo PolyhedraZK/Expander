@@ -119,6 +119,15 @@ To test the service started by `expander-exec serve`, you can use the following 
 python ./scripts/test_http.py  # need "requests" package
 ```
 
+## Profiling
+To get more fine-grained information about the running time, you can enable the `gkr/profile` feature, i.e.
+
+```sh
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release --features gkr/profile -- prove ./data/circuit_m31.txt ./data/witness_m31.txt ./data/out_m31.bin
+```
+
+Note that enabling the `profile` feature will slightly reduce the overall performance so it is recommended not to enable it when benchmarking.
+
 ## How to contribute?
 
 Thank you for your interest in contributing to our project! We seek contributors with a robust background in cryptography and programming, aiming to improve and expand the capabilities of our proof generation system.
