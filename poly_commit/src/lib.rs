@@ -13,3 +13,6 @@ pub use raw::RawExpanderGKR;
 
 pub mod orion;
 pub use orion::*;
+
+pub mod hyrax;
+pub use hyrax::*;
