@@ -15,9 +15,10 @@ pub(crate) fn hyrax_setup<C: CurveAffine + FieldSerde>(
     rng: impl rand::RngCore,
 ) -> PedersenParams<C>
 where
-    C::Scalar: PrimeField<Repr = [u8; 32]>,
+    C::Scalar: PrimeField,
 {
-    let pedersen_length = (local_vars + 1) / 2;
+    let pedersen_vars = (local_vars + 1) / 2;
+    let pedersen_length = 1 << pedersen_vars;
 
     pedersen_setup(pedersen_length, rng)
 }
@@ -44,8 +45,8 @@ pub(crate) fn hyrax_commit<C: CurveAffine + FieldSerde>(
     randomness: &mut Vec<C::Scalar>,
 ) -> HyraxCommitment<C>
 where
-    C::Scalar: ExtensionField + PrimeField<Repr = [u8; 32]>,
-    C::ScalarExt: ExtensionField,
+    C::Scalar: ExtensionField + PrimeField,
+    C::ScalarExt: ExtensionField + PrimeField,
 {
     let vars = mle_poly.num_vars();
     let pedersen_vars = (vars + 1) / 2;
@@ -72,8 +73,8 @@ pub(crate) fn hyrax_open<C, T>(
 where
     C: CurveAffine + FieldSerde,
     T: Transcript<C::Scalar>,
-    C::Scalar: ExtensionField + PrimeField<Repr = [u8; 32]>,
-    C::ScalarExt: ExtensionField,
+    C::Scalar: ExtensionField + PrimeField,
+    C::ScalarExt: ExtensionField + PrimeField,
 {
     let vars = mle_poly.num_vars();
     let pedersen_vars = (vars + 1) / 2;
@@ -115,8 +116,8 @@ pub(crate) fn hyrax_verify<C, T>(
 where
     C: CurveAffine + FieldSerde,
     T: Transcript<C::Scalar>,
-    C::Scalar: ExtensionField + PrimeField<Repr = [u8; 32]>,
-    C::ScalarExt: ExtensionField,
+    C::Scalar: ExtensionField + PrimeField,
+    C::ScalarExt: ExtensionField + PrimeField,
 {
     let vars = eval_point.len();
     let pedersen_vars = (vars + 1) / 2;
