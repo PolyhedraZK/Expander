@@ -1,21 +1,31 @@
 use arith::FieldSerde;
-use halo2curves::{ff::PrimeField, group::Curve, msm, CurveAffine};
+use halo2curves::{
+    ff::{Field, PrimeField},
+    group::Curve,
+    msm, CurveAffine,
+};
+use rand::thread_rng;
 
 use crate::StructuredReferenceString;
 
 #[derive(Clone, Debug, Default)]
-pub struct PedersenParams<C: CurveAffine + FieldSerde>(pub Vec<C>);
+pub struct PedersenParams<C: CurveAffine + FieldSerde> {
+    pub bases: Vec<C>,
+    pub h: C,
+}
 
 impl<C: CurveAffine + FieldSerde> FieldSerde for PedersenParams<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
-    fn serialize_into<W: std::io::Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
-        self.0.serialize_into(writer)
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
+        self.bases.serialize_into(&mut writer)?;
+        self.h.serialize_into(&mut writer)
     }
 
-    fn deserialize_from<R: std::io::Read>(reader: R) -> arith::FieldSerdeResult<Self> {
-        let buffer: Vec<C> = Vec::deserialize_from(reader)?;
-        Ok(Self(buffer))
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
+        let bases: Vec<C> = Vec::deserialize_from(&mut reader)?;
+        let h = C::deserialize_from(&mut reader)?;
+        Ok(Self { bases, h })
     }
 }
 
@@ -33,27 +43,49 @@ pub(crate) fn pedersen_setup<C: CurveAffine + FieldSerde>(
     mut rng: impl rand::RngCore,
 ) -> PedersenParams<C>
 where
-    C::Scalar: PrimeField<Repr = [u8; 32]>,
+    C::Scalar: PrimeField,
 {
-    let mut buffer = [0u8; 32];
-    let bases: Vec<C> = (0..length)
+    let bases: Vec<C> = (0..=length)
         .map(|_| {
-            rng.fill_bytes(&mut buffer);
-            let scalar = C::Scalar::from_repr(buffer).unwrap();
+            let scalar = C::Scalar::random(&mut rng);
             (C::generator() * scalar).to_affine()
         })
         .collect();
 
-    PedersenParams(bases)
+    PedersenParams {
+        h: bases[0],
+        bases: bases[1..].to_vec(),
+    }
 }
 
-pub(crate) fn pedersen_vector_commit<C: CurveAffine + FieldSerde>(
+pub(crate) fn pedersen_commit<C: CurveAffine + FieldSerde>(
     params: &PedersenParams<C>,
     coeffs: &[C::Scalar],
-) -> C {
-    let mut what = C::default().to_curve();
+) -> (C, C::Scalar)
+where
+    C::Scalar: PrimeField,
+{
+    // NOTE(HS) we want some randomness in pedersen masking, but not from transcript.
+    let r: C::Scalar = {
+        let mut rng = thread_rng();
+        C::Scalar::random(&mut rng)
+    };
 
-    msm::multiexp_serial(coeffs, &params.0, &mut what);
+    let what = pedersen_commit_deterministic(params, coeffs, r);
+    (what, r)
+}
+
+pub(crate) fn pedersen_commit_deterministic<C: CurveAffine + FieldSerde>(
+    params: &PedersenParams<C>,
+    coeffs: &[C::Scalar],
+    r: C::Scalar,
+) -> C
+where
+    C::Scalar: PrimeField,
+{
+    let mut what = C::default().to_curve();
+    msm::multiexp_serial(coeffs, &params.bases[..coeffs.len()], &mut what);
+    msm::multiexp_serial(&[r], &[params.h], &mut what);
 
     what.to_affine()
 }

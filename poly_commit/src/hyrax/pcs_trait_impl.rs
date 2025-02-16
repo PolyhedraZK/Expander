@@ -33,13 +33,15 @@ where
     type Params = usize;
     type Poly = MultiLinearPoly<C::Scalar>;
     type EvalPoint = Vec<C::Scalar>;
-    type ScratchPad = ();
+    type ScratchPad = Vec<C::Scalar>;
 
     type SRS = PedersenParams<C>;
     type Commitment = HyraxCommitment<C>;
     type Opening = PedersenIPAProof<C>;
 
-    fn init_scratch_pad(#[allow(unused)] params: &Self::Params) -> Self::ScratchPad {}
+    fn init_scratch_pad(#[allow(unused)] params: &Self::Params) -> Self::ScratchPad {
+        Vec::new()
+    }
 
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
         hyrax_setup(*params, rng)
@@ -49,9 +51,9 @@ where
         #[allow(unused)] params: &Self::Params,
         proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
         poly: &Self::Poly,
-        #[allow(unused)] scratch_pad: &mut Self::ScratchPad,
+        scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
-        hyrax_commit(proving_key, poly)
+        hyrax_commit(proving_key, poly, scratch_pad)
     }
 
     fn open(
@@ -59,10 +61,10 @@ where
         proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        #[allow(unused)] scratch_pad: &Self::ScratchPad,
+        scratch_pad: &Self::ScratchPad,
         transcript: &mut T,
     ) -> (C::Scalar, Self::Opening) {
-        hyrax_open(proving_key, poly, x, transcript)
+        hyrax_open(proving_key, poly, x, scratch_pad, transcript)
     }
 
     fn verify(
