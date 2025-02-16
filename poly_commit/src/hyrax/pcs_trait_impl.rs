@@ -25,8 +25,8 @@ impl<C, T> PolynomialCommitmentScheme<C::Scalar, T> for HyraxPCS<C, T>
 where
     C: CurveAffine + FieldSerde,
     T: Transcript<C::Scalar>,
-    C::Scalar: ExtensionField + PrimeField<Repr = [u8; 32]>,
-    C::ScalarExt: ExtensionField + PrimeField<Repr = [u8; 32]>,
+    C::Scalar: ExtensionField + PrimeField,
+    C::ScalarExt: ExtensionField + PrimeField,
 {
     const NAME: &'static str = "HyraxPCS";
 

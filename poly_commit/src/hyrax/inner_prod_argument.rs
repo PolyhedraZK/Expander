@@ -172,9 +172,10 @@ mod test {
     use itertools::izip;
     use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
-    use crate::hyrax::pedersen::{pedersen_commit, pedersen_setup};
-
-    use super::{pedersen_ipa_prove, pedersen_ipa_verify};
+    use crate::hyrax::{
+        inner_prod_argument::{pedersen_ipa_prove, pedersen_ipa_verify},
+        pedersen::{pedersen_commit, pedersen_setup},
+    };
 
     const IPA_VEC_LEN: usize = 1024;
 
