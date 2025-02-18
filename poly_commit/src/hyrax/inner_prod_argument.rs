@@ -36,7 +36,11 @@ where
         self.com_r.serialize_into(&mut writer)?;
         self.com_zero.serialize_into(&mut writer)?;
         self.com_ip_ry.serialize_into(&mut writer)?;
-        self.sigma_3rd_masked_r_mu_x.serialize_into(&mut writer)
+        self.sigma_3rd_masked_r_mu_x.serialize_into(&mut writer)?;
+        self.sigma_3rd_masked_r_mu_x_randomness
+            .serialize_into(&mut writer)?;
+        self.sigma_3rd_masked_eval_randomness
+            .serialize_into(&mut writer)
     }
 
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {

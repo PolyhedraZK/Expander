@@ -10,9 +10,10 @@ use config_macros::declare_gkr_config;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use halo2curves::bn256::G1Affine;
 use mersenne31::M31x16;
 use mpi_config::{root_println, MPIConfig};
-use poly_commit::{expander_pcs_init_testing_only, OrionPCSForGKR, RawExpanderGKR};
+use poly_commit::{expander_pcs_init_testing_only, HyraxPCS, OrionPCSForGKR, RawExpanderGKR};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha12Rng;
 use sha2::Digest;
@@ -85,6 +86,12 @@ fn test_gkr_correctness() {
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Orion,
     );
+    declare_gkr_config!(
+        C10,
+        FieldType::BN254,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Hyrax
+    );
 
     test_gkr_correctness_helper(
         &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
@@ -124,6 +131,10 @@ fn test_gkr_correctness() {
     );
     test_gkr_correctness_helper(
         &Config::<C9>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper(
+        &Config::<C10>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
 
