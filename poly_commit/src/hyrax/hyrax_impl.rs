@@ -1,6 +1,5 @@
 use arith::{ExtensionField, FieldSerde};
-use halo2curves::{ff::PrimeField, CurveAffine};
-use itertools::izip;
+use halo2curves::{ff::PrimeField, msm, CurveAffine};
 use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension, RefMultiLinearPoly};
 use transcript::Transcript;
 
@@ -125,9 +124,9 @@ where
     assert_eq!(pedersen_len, params.bases.len());
 
     let eq_combination: Vec<C::Scalar> = EqPolynomial::build_eq_x_r(&eval_point[pedersen_vars..]);
-    let row_comm_g1: C::Curve = izip!(&comm.0, &eq_combination).map(|(c, e)| *c * *e).sum();
-    let row_comm: C = row_comm_g1.into();
+    let mut row_comm = C::Curve::default();
+    msm::multiexp_serial(&eq_combination, &comm.0, &mut row_comm);
 
     let row_eqs = EqPolynomial::build_eq_x_r(&eval_point[..pedersen_vars]);
-    pedersen_ipa_verify(params, row_comm, proof, &row_eqs, eval, transcript)
+    pedersen_ipa_verify(params, row_comm.into(), proof, &row_eqs, eval, transcript)
 }
