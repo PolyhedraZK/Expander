@@ -1,6 +1,8 @@
+use std::hint::black_box;
+
 use arith::{BN254Fr, Field};
 use ark_std::test_rng;
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use halo2curves::bn256::G1Affine;
 use poly_commit::{HyraxPCS, PolynomialCommitmentScheme};
 use polynomials::MultiLinearPoly;
@@ -80,10 +82,7 @@ fn hyrax_opening_benchmark_helper(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(HyraxPCS::<
-                            G1Affine,
-                            BytesHashTranscript<BN254Fr, Keccak256hasher>,
-                        >::open(
+                        _ = black_box(HyraxPCS::<G1Affine, _>::open(
                             &num_vars,
                             &srs,
                             &poly,
