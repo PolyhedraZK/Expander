@@ -61,14 +61,14 @@ where
             return local_commit;
         }
 
-        let mut global_commit: Vec<C> = if !mpi_config.is_single_process() && mpi_config.is_root() {
-            vec![C::default(); mpi_config.world_size() * (1 << poly.num_vars())]
+        let mut global_commit: Vec<C> = if mpi_config.is_root() {
+            vec![C::default(); mpi_config.world_size() * local_commit.0.len()]
         } else {
             vec![]
         };
 
+        mpi_config.gather_vec(&local_commit.0, &mut global_commit);
         if mpi_config.is_root() {
-            mpi_config.gather_vec(&local_commit.0, &mut global_commit);
             return HyraxCommitment(global_commit);
         }
 
