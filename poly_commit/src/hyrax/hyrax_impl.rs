@@ -1,12 +1,10 @@
 use arith::{ExtensionField, FieldSerde};
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
 use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension, RefMultiLinearPoly};
-use transcript::Transcript;
 
 use crate::hyrax::{
-    inner_prod_argument::{pedersen_ipa_prove, pedersen_ipa_verify},
     pedersen::{pedersen_commit, pedersen_setup},
-    PedersenIPAProof, PedersenParams,
+    PedersenParams,
 };
 
 pub(crate) fn hyrax_setup<C: CurveAffine + FieldSerde>(
@@ -41,7 +39,6 @@ impl<C: CurveAffine + FieldSerde> FieldSerde for HyraxCommitment<C> {
 pub(crate) fn hyrax_commit<C: CurveAffine + FieldSerde>(
     params: &PedersenParams<C>,
     mle_poly: &impl MultilinearExtension<C::Scalar>,
-    randomness: &mut Vec<C::Scalar>,
 ) -> HyraxCommitment<C>
 where
     C::Scalar: ExtensionField + PrimeField,
@@ -52,26 +49,22 @@ where
     let pedersen_len = 1usize << pedersen_vars;
     assert_eq!(pedersen_len, params.bases.len());
 
-    let (commitments, rs): (Vec<C>, Vec<C::Scalar>) = mle_poly
+    let commitments: Vec<C> = mle_poly
         .hypercube_basis_ref()
         .chunks(pedersen_len)
         .map(|sub_hypercube| pedersen_commit(params, sub_hypercube))
-        .unzip();
-    *randomness = rs;
+        .collect();
 
     HyraxCommitment(commitments)
 }
 
-pub(crate) fn hyrax_open<C, T>(
+pub(crate) fn hyrax_open<C>(
     params: &PedersenParams<C>,
     mle_poly: &impl MultilinearExtension<C::Scalar>,
     eval_point: &[C::Scalar],
-    commit_randomness: &Vec<C::Scalar>,
-    transcript: &mut T,
-) -> (C::Scalar, PedersenIPAProof<C>)
+) -> (C::Scalar, Vec<C::Scalar>)
 where
     C: CurveAffine + FieldSerde,
-    T: Transcript<C::Scalar>,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
@@ -88,33 +81,19 @@ where
 
     let mut buffer = vec![C::Scalar::default(); local_mle.coeffs.len()];
     let final_eval = local_mle.evaluate_with_buffer(&eval_point[..pedersen_vars], &mut buffer);
-    let final_com_randomness = RefMultiLinearPoly::from_ref(commit_randomness)
-        .evaluate_with_buffer(&eval_point[pedersen_vars..], &mut buffer);
-    let row_eqs = EqPolynomial::build_eq_x_r(&eval_point[..pedersen_vars]);
 
-    (
-        final_eval,
-        pedersen_ipa_prove(
-            params,
-            &local_mle.coeffs,
-            &row_eqs,
-            final_com_randomness,
-            transcript,
-        ),
-    )
+    (final_eval, local_mle.coeffs)
 }
 
-pub(crate) fn hyrax_verify<C, T>(
+pub(crate) fn hyrax_verify<C>(
     params: &PedersenParams<C>,
     comm: &HyraxCommitment<C>,
     eval_point: &[C::Scalar],
     eval: C::Scalar,
-    proof: &PedersenIPAProof<C>,
-    transcript: &mut T,
+    proof: &Vec<C::Scalar>,
 ) -> bool
 where
     C: CurveAffine + FieldSerde,
-    T: Transcript<C::Scalar>,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
@@ -127,6 +106,12 @@ where
     let mut row_comm = C::Curve::default();
     msm::multiexp_serial(&eq_combination, &comm.0, &mut row_comm);
 
-    let row_eqs = EqPolynomial::build_eq_x_r(&eval_point[..pedersen_vars]);
-    pedersen_ipa_verify(params, row_comm.into(), proof, &row_eqs, eval, transcript)
+    if pedersen_commit(params, proof) != row_comm.into() {
+        return false;
+    }
+
+    let mut scratch = vec![C::Scalar::default(); proof.len()];
+    RefMultiLinearPoly::from_ref(proof)
+        .evaluate_with_buffer(&eval_point[..pedersen_vars], &mut scratch)
+        == eval
 }

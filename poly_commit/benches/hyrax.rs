@@ -16,7 +16,7 @@ fn hyrax_committing_benchmark_helper(
     let mut group = c.benchmark_group("Hyrax PCS committing");
 
     let mut rng = test_rng();
-    let mut scratch_pad = Vec::new();
+    let mut scratch_pad = ();
 
     for num_vars in lowest_num_vars..=highest_num_vars {
         let poly = MultiLinearPoly::<BN254Fr>::random(num_vars, &mut rng);
@@ -57,7 +57,7 @@ fn hyrax_opening_benchmark_helper(
 
     let mut rng = test_rng();
     let mut transcript = BytesHashTranscript::<BN254Fr, Keccak256hasher>::new();
-    let mut scratch_pad = Vec::new();
+    let mut scratch_pad = ();
 
     for num_vars in lowest_num_vars..=highest_num_vars {
         let poly = MultiLinearPoly::<BN254Fr>::random(num_vars, &mut rng);

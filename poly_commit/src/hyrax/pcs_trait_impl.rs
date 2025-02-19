@@ -7,7 +7,7 @@ use transcript::Transcript;
 
 use crate::{
     hyrax::hyrax_impl::{hyrax_commit, hyrax_open, hyrax_setup, hyrax_verify},
-    HyraxCommitment, PedersenIPAProof, PedersenParams, PolynomialCommitmentScheme,
+    HyraxCommitment, PedersenParams, PolynomialCommitmentScheme,
 };
 
 pub struct HyraxPCS<C, T>
@@ -33,15 +33,13 @@ where
     type Params = usize;
     type Poly = MultiLinearPoly<C::Scalar>;
     type EvalPoint = Vec<C::Scalar>;
-    type ScratchPad = Vec<C::Scalar>;
+    type ScratchPad = ();
 
     type SRS = PedersenParams<C>;
     type Commitment = HyraxCommitment<C>;
-    type Opening = PedersenIPAProof<C>;
+    type Opening = Vec<C::Scalar>;
 
-    fn init_scratch_pad(#[allow(unused)] params: &Self::Params) -> Self::ScratchPad {
-        Vec::new()
-    }
+    fn init_scratch_pad(#[allow(unused)] params: &Self::Params) -> Self::ScratchPad {}
 
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
         hyrax_setup(*params, rng)
@@ -51,9 +49,9 @@ where
         #[allow(unused)] params: &Self::Params,
         proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
         poly: &Self::Poly,
-        scratch_pad: &mut Self::ScratchPad,
+        #[allow(unused)] scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
-        hyrax_commit(proving_key, poly, scratch_pad)
+        hyrax_commit(proving_key, poly)
     }
 
     fn open(
@@ -61,10 +59,10 @@ where
         proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        scratch_pad: &Self::ScratchPad,
-        transcript: &mut T,
+        #[allow(unused)] scratch_pad: &Self::ScratchPad,
+        #[allow(unused)] transcript: &mut T,
     ) -> (C::Scalar, Self::Opening) {
-        hyrax_open(proving_key, poly, x, scratch_pad, transcript)
+        hyrax_open(proving_key, poly, x)
     }
 
     fn verify(
@@ -74,8 +72,8 @@ where
         x: &Self::EvalPoint,
         v: C::Scalar,
         opening: &Self::Opening,
-        transcript: &mut T,
+        #[allow(unused)] transcript: &mut T,
     ) -> bool {
-        hyrax_verify(verifying_key, commitment, x, v, opening, transcript)
+        hyrax_verify(verifying_key, commitment, x, v, opening)
     }
 }
