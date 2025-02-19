@@ -1,7 +1,7 @@
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, Group},
-    msm::best_multiexp,
+    msm,
     pairing::{MillerLoopResult, MultiMillerLoop},
     CurveAffine,
 };
@@ -87,7 +87,8 @@ where
 
     let (div, eval) = univariate_degree_one_quotient(&gammas, beta);
 
-    let y_open = best_multiexp(&div, &srs.tau_y_srs.powers_of_tau[..div.len()]);
+    let mut y_open = E::G1::generator() * E::Fr::ZERO;
+    msm::multiexp_serial(&div, &srs.tau_y_srs.powers_of_tau[..div.len()], &mut y_open);
 
     (
         eval,
