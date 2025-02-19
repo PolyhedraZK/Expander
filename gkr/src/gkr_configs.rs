@@ -35,10 +35,18 @@ declare_gkr_config!(
     FiatShamirHashType::MIMC5,
     PolynomialCommitmentType::Raw
 );
+
 declare_gkr_config!(
     pub BN254ConfigSha2Raw,
     FieldType::BN254,
     FiatShamirHashType::SHA256,
+    PolynomialCommitmentType::Raw
+);
+
+declare_gkr_config!(
+    pub BN254ConfigKeccakRaw,
+    FieldType::BN254,
+    FiatShamirHashType::Keccak256,
     PolynomialCommitmentType::Raw
 );
 
