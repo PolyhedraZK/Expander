@@ -176,6 +176,10 @@ impl FieldSerde for G1Affine {
 
     fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self> {
         let bytes: Vec<u8> = Vec::deserialize_from(reader)?;
+        if bytes.len() != Self::SERIALIZED_SIZE {
+            return Err(FieldSerdeError::DeserializeError);
+        }
+
         let mut encoding = <Self as GroupEncoding>::Repr::default();
         encoding.as_mut().copy_from_slice(bytes.as_ref());
         match G1Affine::from_bytes(&encoding).into_option() {
@@ -195,6 +199,10 @@ impl FieldSerde for G2Affine {
 
     fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self> {
         let bytes: Vec<u8> = Vec::deserialize_from(reader)?;
+        if bytes.len() != Self::SERIALIZED_SIZE {
+            return Err(FieldSerdeError::DeserializeError);
+        }
+
         let mut encoding = <Self as GroupEncoding>::Repr::default();
         encoding.as_mut().copy_from_slice(bytes.as_ref());
         match G2Affine::from_bytes(&encoding).into_option() {

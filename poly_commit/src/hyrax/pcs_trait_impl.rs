@@ -7,7 +7,7 @@ use transcript::Transcript;
 
 use crate::{
     hyrax::hyrax_impl::{hyrax_commit, hyrax_open, hyrax_setup, hyrax_verify},
-    HyraxCommitment, PedersenParams, PolynomialCommitmentScheme,
+    HyraxCommitment, HyraxOpening, PedersenParams, PolynomialCommitmentScheme,
 };
 
 pub struct HyraxPCS<C, T>
@@ -37,7 +37,7 @@ where
 
     type SRS = PedersenParams<C>;
     type Commitment = HyraxCommitment<C>;
-    type Opening = Vec<C::Scalar>;
+    type Opening = HyraxOpening<C>;
 
     fn init_scratch_pad(#[allow(unused)] params: &Self::Params) -> Self::ScratchPad {}
 

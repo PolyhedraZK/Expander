@@ -12,7 +12,7 @@ use crate::{
         hyrax_impl::{hyrax_commit, hyrax_open, hyrax_setup, hyrax_verify},
         pedersen::pedersen_commit,
     },
-    HyraxCommitment, HyraxPCS, PCSForExpanderGKR, PedersenParams,
+    HyraxCommitment, HyraxOpening, HyraxPCS, PCSForExpanderGKR, PedersenParams,
 };
 
 impl<G, C, T> PCSForExpanderGKR<G, T> for HyraxPCS<C, T>
@@ -29,7 +29,7 @@ where
     type ScratchPad = ();
 
     type Commitment = HyraxCommitment<C>;
-    type Opening = Vec<C::Scalar>;
+    type Opening = HyraxOpening<C>;
     type SRS = PedersenParams<C>;
 
     fn gen_params(n_input_vars: usize) -> Self::Params {
@@ -105,10 +105,10 @@ where
         let combined_coeffs = mpi_config.coef_combine_vec(&local_basis, &eq_mpi_vars);
 
         if mpi_config.is_root() {
-            return combined_coeffs;
+            return HyraxOpening(combined_coeffs);
         }
 
-        local_basis
+        HyraxOpening(local_basis)
     }
 
     fn verify(
@@ -138,12 +138,12 @@ where
         let mut row_comm = C::Curve::default();
         msm::multiexp_serial(&eq_combination, &commitment.0, &mut row_comm);
 
-        if pedersen_commit(verifying_key, opening) != row_comm.into() {
+        if pedersen_commit(verifying_key, &opening.0) != row_comm.into() {
             return false;
         }
 
-        let mut scratch = vec![C::Scalar::default(); opening.len()];
-        v == RefMultiLinearPoly::from_ref(opening)
+        let mut scratch = vec![C::Scalar::default(); opening.0.len()];
+        v == RefMultiLinearPoly::from_ref(&opening.0)
             .evaluate_with_buffer(&local_vars[..pedersen_vars], &mut scratch)
     }
 }

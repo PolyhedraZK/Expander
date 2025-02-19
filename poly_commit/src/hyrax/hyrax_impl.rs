@@ -26,6 +26,9 @@ where
 #[derive(Clone, Debug, Default)]
 pub struct HyraxCommitment<C: CurveAffine + FieldSerde>(pub Vec<C>);
 
+#[derive(Clone, Debug, Default)]
+pub struct HyraxOpening<C: CurveAffine + FieldSerde>(pub Vec<C::Scalar>);
+
 impl<C: CurveAffine + FieldSerde> FieldSerde for HyraxCommitment<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
@@ -35,6 +38,22 @@ impl<C: CurveAffine + FieldSerde> FieldSerde for HyraxCommitment<C> {
 
     fn deserialize_from<R: std::io::Read>(reader: R) -> arith::FieldSerdeResult<Self> {
         let buffer: Vec<C> = Vec::deserialize_from(reader)?;
+        Ok(Self(buffer))
+    }
+}
+
+impl<C: CurveAffine + FieldSerde> FieldSerde for HyraxOpening<C>
+where
+    C::Scalar: FieldSerde,
+{
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: std::io::Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
+        self.0.serialize_into(writer)
+    }
+
+    fn deserialize_from<R: std::io::Read>(reader: R) -> arith::FieldSerdeResult<Self> {
+        let buffer: Vec<C::Scalar> = Vec::deserialize_from(reader)?;
         Ok(Self(buffer))
     }
 }
@@ -61,11 +80,12 @@ where
     HyraxCommitment(commitments)
 }
 
+// NOTE(HS) the hyrax opening returns an eval and an opening against the eval_point on input.
 pub(crate) fn hyrax_open<C>(
     params: &PedersenParams<C>,
     mle_poly: &impl MultilinearExtension<C::Scalar>,
     eval_point: &[C::Scalar],
-) -> (C::Scalar, Vec<C::Scalar>)
+) -> (C::Scalar, HyraxOpening<C>)
 where
     C: CurveAffine + FieldSerde,
     C::Scalar: ExtensionField + PrimeField,
@@ -83,7 +103,7 @@ where
     let mut buffer = vec![C::Scalar::default(); local_mle.coeffs.len()];
     let final_eval = local_mle.evaluate_with_buffer(&eval_point[..pedersen_vars], &mut buffer);
 
-    (final_eval, local_basis)
+    (final_eval, HyraxOpening(local_basis))
 }
 
 pub(crate) fn hyrax_verify<C>(
@@ -91,7 +111,7 @@ pub(crate) fn hyrax_verify<C>(
     comm: &HyraxCommitment<C>,
     eval_point: &[C::Scalar],
     eval: C::Scalar,
-    proof: &Vec<C::Scalar>,
+    proof: &HyraxOpening<C>,
 ) -> bool
 where
     C: CurveAffine + FieldSerde,
@@ -107,11 +127,11 @@ where
     let mut row_comm = C::Curve::default();
     msm::multiexp_serial(&eq_combination, &comm.0, &mut row_comm);
 
-    if pedersen_commit(params, proof) != row_comm.into() {
+    if pedersen_commit(params, &proof.0) != row_comm.into() {
         return false;
     }
 
-    let mut scratch = vec![C::Scalar::default(); proof.len()];
-    eval == RefMultiLinearPoly::from_ref(proof)
+    let mut scratch = vec![C::Scalar::default(); proof.0.len()];
+    eval == RefMultiLinearPoly::from_ref(&proof.0)
         .evaluate_with_buffer(&eval_point[..pedersen_vars], &mut scratch)
 }

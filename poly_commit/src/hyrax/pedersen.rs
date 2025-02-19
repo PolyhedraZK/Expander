@@ -41,12 +41,15 @@ pub(crate) fn pedersen_setup<C: CurveAffine + FieldSerde>(
 where
     C::Scalar: PrimeField,
 {
-    let bases: Vec<C> = (0..length)
+    let proj_bases: Vec<C::Curve> = (0..length)
         .map(|_| {
             let scalar = C::Scalar::random(&mut rng);
-            (C::generator() * scalar).to_affine()
+            C::generator() * scalar
         })
         .collect();
+
+    let mut bases = vec![C::default(); length];
+    C::Curve::batch_normalize(&proj_bases, &mut bases);
 
     PedersenParams { bases }
 }
