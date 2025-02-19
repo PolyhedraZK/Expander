@@ -255,10 +255,12 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
     pub fn hash_to_digest(&mut self) {
         let hash_end_index = self.proof.bytes.len();
         if hash_end_index > self.hash_start_index {
-            H::hash(
-                &mut self.digest,
+            let hash_input = [
                 &self.proof.bytes[self.hash_start_index..hash_end_index],
-            );
+                &self.digest,
+            ]
+            .concat();
+            H::hash(&mut self.digest, &hash_input);
             self.hash_start_index = hash_end_index;
         } else {
             H::hash_inplace(&mut self.digest);
@@ -380,7 +382,8 @@ where
     fn generate_circuit_field_element(&mut self) -> <ChallengeF as ExtensionField>::BaseField {
         if !self.data_pool.is_empty() {
             self.hash_state = self.hasher.hash_to_state(&self.data_pool);
-            self.data_pool.clear();
+            // reset the data_pool from the output of last hash
+            self.data_pool = self.hash_state.clone();
             self.next_unconsumed = 0;
         }
 
@@ -400,7 +403,8 @@ where
     fn generate_challenge_field_element(&mut self) -> ChallengeF {
         if !self.data_pool.is_empty() {
             self.hash_state = self.hasher.hash_to_state(&self.data_pool);
-            self.data_pool.clear();
+            // reset the data_pool from the output of last hash
+            self.data_pool = self.hash_state.clone();
             self.next_unconsumed = 0;
         }
 
@@ -449,7 +453,8 @@ where
     fn hash_and_return_state(&mut self) -> Vec<u8> {
         if !self.data_pool.is_empty() {
             self.hash_state = self.hasher.hash_to_state(&self.data_pool);
-            self.data_pool.clear();
+
+            self.data_pool = self.hash_state.clone();
         } else {
             self.hash_state = self.hasher.hash_to_state(&self.hash_state);
         }

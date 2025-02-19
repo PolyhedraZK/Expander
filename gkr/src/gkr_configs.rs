@@ -5,6 +5,7 @@ use gf2::GF2x128;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mersenne31::M31x16;
 use poly_commit::{raw::RawExpanderGKR, OrionPCSForGKR};
+use transcript::Keccak256hasher;
 use transcript::{BytesHashTranscript, FieldHashTranscript, SHA256hasher};
 
 // ============== M31 ==============
@@ -14,6 +15,14 @@ declare_gkr_config!(
     FiatShamirHashType::Poseidon,
     PolynomialCommitmentType::Raw
 );
+
+declare_gkr_config!(
+    pub M31ExtConfigKeccakRaw,
+    FieldType::M31,
+    FiatShamirHashType::Keccak256,
+    PolynomialCommitmentType::Raw
+);
+
 declare_gkr_config!(
     pub M31ExtConfigSha2Orion,
     FieldType::M31,
@@ -34,6 +43,7 @@ declare_gkr_config!(
     FiatShamirHashType::MIMC5,
     PolynomialCommitmentType::Raw
 );
+
 declare_gkr_config!(
     pub BN254ConfigSha2Raw,
     FieldType::BN254,
@@ -42,6 +52,13 @@ declare_gkr_config!(
 );
 
 // ============== GF2 ==============
+declare_gkr_config!(
+    pub BN254ConfigKeccakRaw,
+    FieldType::BN254,
+    FiatShamirHashType::Keccak256,
+    PolynomialCommitmentType::Raw
+);
+
 declare_gkr_config!(
     pub GF2ExtConfigSha2Orion,
     FieldType::GF2,
