@@ -70,23 +70,35 @@ pub(crate) fn univariate_evaluate<F: Mul<F1, Output = F> + Sum + Copy, F1: Field
     izip!(coeffs, power_series).map(|(c, p)| *c * *p).sum()
 }
 
-pub(crate) fn even_odd_coeffs_separate<F: Field>(coeffs: &[F]) -> (Vec<F>, Vec<F>) {
-    assert!(coeffs.len().is_power_of_two());
-
-    let mut even = Vec::with_capacity(coeffs.len() >> 1);
-    let mut odd = Vec::with_capacity(coeffs.len() >> 1);
-
-    coeffs.chunks(2).for_each(|eo: &[F]| {
-        even.push(eo[0]);
-        odd.push(eo[1]);
-    });
-
-    (even, odd)
-}
-
 #[inline(always)]
 pub(crate) fn polynomial_add<F: Field>(coeffs: &mut [F], weight: F, another_coeffs: &[F]) {
     assert!(coeffs.len() >= another_coeffs.len());
 
     izip!(coeffs, another_coeffs).for_each(|(c, a)| *c += weight * *a);
+}
+
+#[inline(always)]
+pub(crate) fn coeff_form_degree2_lagrange<F: Field>(roots: [F; 3], evals: [F; 3]) -> [F; 3] {
+    let [r0, r1, r2] = roots;
+    let [e0, e1, e2] = evals;
+
+    let r0_nom = [r1 * r2, -r1 - r2, F::ONE];
+    let r0_denom_inv = ((r0 - r1) * (r0 - r2)).invert().unwrap();
+    let r0_weight = r0_denom_inv * e0;
+
+    let r1_nom = [r0 * r2, -r0 - r2, F::ONE];
+    let r1_denom_inv = ((r1 - r0) * (r1 - r2)).invert().unwrap();
+    let r1_weight = r1_denom_inv * e1;
+
+    let r2_nom = [r0 * r1, -r0 - r1, F::ONE];
+    let r2_denom_inv = ((r2 - r0) * (r2 - r1)).invert().unwrap();
+    let r2_weight = r2_denom_inv * e2;
+
+    let combine = |a, b, c| a * r0_weight + b * r1_weight + c * r2_weight;
+
+    [
+        combine(r0_nom[0], r1_nom[0], r2_nom[0]),
+        combine(r0_nom[1], r1_nom[1], r2_nom[1]),
+        combine(r0_nom[2], r1_nom[2], r2_nom[2]),
+    ]
 }

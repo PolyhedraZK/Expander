@@ -33,9 +33,8 @@ where
 
     let g1_prog = g1.to_curve();
     let x_coeff_bases = {
-        let mut proj_bases = vec![g1_prog; local_length];
-        izip!(&mut proj_bases, &tau_x_geometric_progression)
-            .for_each(|(b, tau_xi)| *b *= *tau_xi * tau_y_geometric_progression[party_rank]);
+        let mut proj_bases = vec![g1_prog * tau_y_geometric_progression[party_rank]; local_length];
+        izip!(&mut proj_bases, &tau_x_geometric_progression).for_each(|(b, tau_xi)| *b *= *tau_xi);
 
         let mut g_bases = vec![E::G1Affine::default(); local_length];
         E::G1::batch_normalize(&proj_bases, &mut g_bases);

@@ -10,7 +10,7 @@ use itertools::izip;
 use crate::*;
 
 #[inline(always)]
-pub fn generate_coef_form_uni_kzg_srs_for_testing<E: MultiMillerLoop>(
+pub(crate) fn generate_coef_form_uni_kzg_srs_for_testing<E: MultiMillerLoop>(
     length: usize,
     mut rng: impl rand::RngCore,
 ) -> CoefFormUniKZGSRS<E>
@@ -43,7 +43,7 @@ where
 }
 
 #[inline(always)]
-pub fn coeff_form_uni_kzg_commit<E: MultiMillerLoop>(
+pub(crate) fn coeff_form_uni_kzg_commit<E: MultiMillerLoop>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &[E::Fr],
 ) -> E::G1Affine
@@ -76,7 +76,7 @@ where
 }
 
 #[inline(always)]
-pub fn coeff_form_uni_kzg_verify<E: MultiMillerLoop>(
+pub(crate) fn coeff_form_uni_kzg_verify<E: MultiMillerLoop>(
     vk: UniKZGVerifierParams<E>,
     comm: E::G1Affine,
     alpha: E::Fr,

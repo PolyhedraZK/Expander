@@ -11,6 +11,7 @@ use polynomials::MultiLinearPoly;
 use transcript::{FieldHashTranscript, Transcript};
 
 use crate::*;
+use kzg::hyper_kzg::*;
 
 #[test]
 fn test_univariate_degree_one_quotient() {

@@ -6,6 +6,7 @@ use polynomials::MultiLinearPoly;
 use transcript::Transcript;
 
 use crate::*;
+use kzg::hyper_kzg::*;
 
 pub struct HyperKZGPCS<E, T>
 where

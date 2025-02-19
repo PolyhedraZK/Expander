@@ -13,32 +13,7 @@ use transcript::Transcript;
 use crate::*;
 
 #[inline(always)]
-fn coeff_form_degree2_lagrange<F: Field>(roots: [F; 3], evals: [F; 3]) -> [F; 3] {
-    let [r0, r1, r2] = roots;
-    let [e0, e1, e2] = evals;
-
-    let r0_nom = [r1 * r2, -r1 - r2, F::ONE];
-    let r0_denom_inv = ((r0 - r1) * (r0 - r2)).invert().unwrap();
-    let r0_weight = r0_denom_inv * e0;
-
-    let r1_nom = [r0 * r2, -r0 - r2, F::ONE];
-    let r1_denom_inv = ((r1 - r0) * (r1 - r2)).invert().unwrap();
-    let r1_weight = r1_denom_inv * e1;
-
-    let r2_nom = [r0 * r1, -r0 - r1, F::ONE];
-    let r2_denom_inv = ((r2 - r0) * (r2 - r1)).invert().unwrap();
-    let r2_weight = r2_denom_inv * e2;
-
-    let combine = |a, b, c| a * r0_weight + b * r1_weight + c * r2_weight;
-
-    [
-        combine(r0_nom[0], r1_nom[0], r2_nom[0]),
-        combine(r0_nom[1], r1_nom[1], r2_nom[1]),
-        combine(r0_nom[2], r1_nom[2], r2_nom[2]),
-    ]
-}
-
-pub fn coeff_form_uni_hyperkzg_open<E: MultiMillerLoop, T: Transcript<E::Fr>>(
+pub(crate) fn coeff_form_uni_hyperkzg_open<E: MultiMillerLoop, T: Transcript<E::Fr>>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &Vec<E::Fr>,
     alphas: &[E::Fr],
@@ -54,10 +29,9 @@ where
         [..alphas.len() - 1]
         .iter()
         .map(|alpha| {
-            let (evens, odds) = even_odd_coeffs_separate(&local_coeffs);
-
-            local_coeffs = izip!(&evens, &odds)
-                .map(|(e, o)| (E::Fr::ONE - alpha) * e + *alpha * *o)
+            local_coeffs = local_coeffs
+                .chunks(2)
+                .map(|c| (E::Fr::ONE - alpha) * c[0] + *alpha * c[1])
                 .collect();
 
             let folded_oracle_commit = coeff_form_uni_kzg_commit(srs, &local_coeffs);
@@ -83,26 +57,24 @@ where
     fs_transcript.append_field_element(&beta2_eval);
     let mut beta2_evals = vec![beta2_eval];
 
-    let (beta_evals, neg_beta_evals): (Vec<E::Fr>, Vec<E::Fr>) = izip!(
-        iter::once(coeffs).chain(folded_oracle_coeffs.iter()),
-        alphas
-    )
-    .map(|(cs, alpha)| {
-        let beta_eval = univariate_evaluate(cs, &beta_pow_series);
-        let neg_beta_eval = univariate_evaluate(cs, &neg_beta_pow_series);
+    let (beta_evals, neg_beta_evals): (Vec<E::Fr>, Vec<E::Fr>) =
+        izip!(iter::once(coeffs).chain(&folded_oracle_coeffs), alphas)
+            .map(|(cs, alpha)| {
+                let beta_eval = univariate_evaluate(cs, &beta_pow_series);
+                let neg_beta_eval = univariate_evaluate(cs, &neg_beta_pow_series);
 
-        let beta2_eval = two_inv
-            * ((beta_eval + neg_beta_eval) * (E::Fr::ONE - alpha)
-                + (beta_eval - neg_beta_eval) * beta_inv * alpha);
+                let beta2_eval = two_inv
+                    * ((beta_eval + neg_beta_eval) * (E::Fr::ONE - alpha)
+                        + (beta_eval - neg_beta_eval) * beta_inv * alpha);
 
-        beta2_evals.push(beta2_eval);
+                beta2_evals.push(beta2_eval);
 
-        fs_transcript.append_field_element(&beta_eval);
-        fs_transcript.append_field_element(&neg_beta_eval);
+                fs_transcript.append_field_element(&beta_eval);
+                fs_transcript.append_field_element(&neg_beta_eval);
 
-        (beta_eval, neg_beta_eval)
-    })
-    .unzip();
+                (beta_eval, neg_beta_eval)
+            })
+            .unzip();
 
     let gamma = fs_transcript.generate_challenge_field_element();
     let gamma_pow_series = powers_series(&gamma, alphas.len());
@@ -152,7 +124,8 @@ where
     )
 }
 
-pub fn coeff_form_uni_hyperkzg_verify<E: MultiMillerLoop, T: Transcript<E::Fr>>(
+#[inline(always)]
+pub(crate) fn coeff_form_uni_hyperkzg_verify<E: MultiMillerLoop, T: Transcript<E::Fr>>(
     vk: UniKZGVerifierParams<E>,
     comm: E::G1Affine,
     alphas: &[E::Fr],
