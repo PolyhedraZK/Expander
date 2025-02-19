@@ -13,7 +13,7 @@ use gkr::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
         KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
-    BN254ConfigSha2Raw, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, Prover,
+    BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, Prover,
 };
 
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
@@ -55,11 +55,11 @@ fn main() {
             _ => unreachable!(),
         },
         "fr" => match args.scheme.as_str() {
-            "keccak" => run_benchmark::<BN254ConfigSha2Raw>(
+            "keccak" => run_benchmark::<BN254ConfigSha2Hyrax>(
                 &args,
                 Config::new(GKRScheme::Vanilla, mpi_config.clone()),
             ),
-            "poseidon" => run_benchmark::<BN254ConfigSha2Raw>(
+            "poseidon" => run_benchmark::<BN254ConfigSha2Hyrax>(
                 &args,
                 Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),

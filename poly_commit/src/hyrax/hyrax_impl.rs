@@ -1,6 +1,9 @@
 use arith::{ExtensionField, FieldSerde};
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
-use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension, RefMultiLinearPoly};
+use polynomials::{
+    EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
+    RefMultiLinearPoly,
+};
 
 use crate::hyrax::{
     pedersen::{pedersen_commit, pedersen_setup},
@@ -73,16 +76,14 @@ where
     let pedersen_len = 1usize << pedersen_vars;
     assert_eq!(pedersen_len, params.bases.len());
 
-    let mut local_mle = MultiLinearPoly::new(mle_poly.hypercube_basis());
-    eval_point[pedersen_vars..]
-        .iter()
-        .rev()
-        .for_each(|e| local_mle.fix_top_variable(*e));
+    let mut local_basis = mle_poly.hypercube_basis();
+    let mut local_mle = MutRefMultiLinearPoly::from_ref(&mut local_basis);
+    local_mle.fix_variables(&eval_point[pedersen_vars..]);
 
     let mut buffer = vec![C::Scalar::default(); local_mle.coeffs.len()];
     let final_eval = local_mle.evaluate_with_buffer(&eval_point[..pedersen_vars], &mut buffer);
 
-    (final_eval, local_mle.coeffs)
+    (final_eval, local_basis)
 }
 
 pub(crate) fn hyrax_verify<C>(
@@ -111,7 +112,6 @@ where
     }
 
     let mut scratch = vec![C::Scalar::default(); proof.len()];
-    RefMultiLinearPoly::from_ref(proof)
+    eval == RefMultiLinearPoly::from_ref(proof)
         .evaluate_with_buffer(&eval_point[..pedersen_vars], &mut scratch)
-        == eval
 }

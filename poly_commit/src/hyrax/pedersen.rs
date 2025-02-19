@@ -59,7 +59,7 @@ where
     C::Scalar: PrimeField,
 {
     let mut what = C::default().to_curve();
-    msm::multiexp_serial(coeffs, &params.bases[..coeffs.len()], &mut what);
+    msm::multiexp_serial(coeffs, &params.bases, &mut what);
 
     what.to_affine()
 }

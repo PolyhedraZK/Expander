@@ -1,7 +1,10 @@
 use arith::{ExtensionField, FieldSerde};
 use gkr_field_config::GKRFieldConfig;
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
-use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension, RefMultiLinearPoly};
+use polynomials::{
+    EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
+    RefMultiLinearPoly,
+};
 use transcript::Transcript;
 
 use crate::{
@@ -94,20 +97,18 @@ where
         assert_eq!(pedersen_len, proving_key.bases.len());
 
         let local_vars = x.local_xs();
-        let mut local_mle = MultiLinearPoly::new(poly.hypercube_basis());
-        local_vars[pedersen_vars..]
-            .iter()
-            .rev()
-            .for_each(|e| local_mle.fix_top_variable(*e));
+        let mut local_basis = poly.hypercube_basis();
+        let mut local_mle = MutRefMultiLinearPoly::from_ref(&mut local_basis);
+        local_mle.fix_variables(&local_vars[pedersen_vars..]);
 
         let eq_mpi_vars = EqPolynomial::build_eq_x_r(&x.x_mpi);
-        let combined_coeffs = mpi_config.coef_combine_vec(&local_mle.coeffs, &eq_mpi_vars);
+        let combined_coeffs = mpi_config.coef_combine_vec(&local_basis, &eq_mpi_vars);
 
         if mpi_config.is_root() {
             return combined_coeffs;
         }
 
-        local_mle.coeffs
+        local_basis
     }
 
     fn verify(
@@ -142,8 +143,7 @@ where
         }
 
         let mut scratch = vec![C::Scalar::default(); opening.len()];
-        RefMultiLinearPoly::from_ref(opening)
+        v == RefMultiLinearPoly::from_ref(opening)
             .evaluate_with_buffer(&local_vars[..pedersen_vars], &mut scratch)
-            == v
     }
 }
