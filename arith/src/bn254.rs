@@ -1,7 +1,10 @@
 use std::io::{Read, Write};
 
-use halo2curves::ff::{Field as Halo2Field, FromUniformBytes};
-use halo2curves::{bn256::Fr, ff::PrimeField};
+use halo2curves::{
+    bn256::{Fr, G1Affine, G2Affine},
+    ff::{Field as Halo2Field, FromUniformBytes, PrimeField},
+    group::GroupEncoding,
+};
 use rand::RngCore;
 
 use crate::serde::{FieldSerdeError, FieldSerdeResult};
@@ -158,6 +161,52 @@ impl FieldSerde for Fr {
         reader.read_exact(&mut buffer)?;
         match Fr::from_bytes(&buffer).into_option() {
             Some(v) => Ok(v),
+            None => Err(FieldSerdeError::DeserializeError),
+        }
+    }
+}
+
+impl FieldSerde for G1Affine {
+    const SERIALIZED_SIZE: usize = 32;
+
+    fn serialize_into<W: Write>(&self, writer: W) -> FieldSerdeResult<()> {
+        let bytes = self.to_bytes().as_ref().to_vec();
+        bytes.serialize_into(writer)
+    }
+
+    fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self> {
+        let bytes: Vec<u8> = Vec::deserialize_from(reader)?;
+        if bytes.len() != Self::SERIALIZED_SIZE {
+            return Err(FieldSerdeError::DeserializeError);
+        }
+
+        let mut encoding = <Self as GroupEncoding>::Repr::default();
+        encoding.as_mut().copy_from_slice(bytes.as_ref());
+        match G1Affine::from_bytes(&encoding).into_option() {
+            Some(a) => Ok(a),
+            None => Err(FieldSerdeError::DeserializeError),
+        }
+    }
+}
+
+impl FieldSerde for G2Affine {
+    const SERIALIZED_SIZE: usize = 64;
+
+    fn serialize_into<W: Write>(&self, writer: W) -> FieldSerdeResult<()> {
+        let bytes = self.to_bytes().as_ref().to_vec();
+        bytes.serialize_into(writer)
+    }
+
+    fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self> {
+        let bytes: Vec<u8> = Vec::deserialize_from(reader)?;
+        if bytes.len() != Self::SERIALIZED_SIZE {
+            return Err(FieldSerdeError::DeserializeError);
+        }
+
+        let mut encoding = <Self as GroupEncoding>::Repr::default();
+        encoding.as_mut().copy_from_slice(bytes.as_ref());
+        match G2Affine::from_bytes(&encoding).into_option() {
+            Some(a) => Ok(a),
             None => Err(FieldSerdeError::DeserializeError),
         }
     }

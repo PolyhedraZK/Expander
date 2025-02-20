@@ -263,6 +263,11 @@ impl MPIConfig {
     }
 
     #[inline(always)]
+    pub fn is_single_process(&self) -> bool {
+        self.world_size == 1
+    }
+
+    #[inline(always)]
     pub fn world_size(&self) -> usize {
         self.world_size as usize
     }
