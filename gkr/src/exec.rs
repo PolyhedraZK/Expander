@@ -65,6 +65,13 @@ async fn main() {
             )
             .await;
         }
+        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Hyrax, FieldType::BN254) => {
+            run_command::<BN254ConfigSha2Hyrax>(
+                &expander_exec_args,
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+            )
+            .await;
+        }
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::GF2) => {
             run_command::<GF2ExtConfigSha2Orion>(
                 &expander_exec_args,

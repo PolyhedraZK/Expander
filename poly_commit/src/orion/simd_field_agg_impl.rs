@@ -83,12 +83,9 @@ where
         return false;
     }
 
-    if !orion_mt_verify(
-        vk,
-        &query_indices,
-        &proof.query_openings[..query_num],
-        &roots[0],
-    ) {
+    if izip!(proof.query_openings.chunks(query_num), &roots)
+        .any(|(paths, r)| !orion_mt_verify(vk, &query_indices, paths, r))
+    {
         return false;
     }
 
