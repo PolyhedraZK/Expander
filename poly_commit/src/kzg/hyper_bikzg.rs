@@ -3,22 +3,21 @@ use std::iter;
 use arith::ExtensionField;
 use halo2curves::{ff::Field, pairing::MultiMillerLoop, CurveAffine};
 use itertools::izip;
-use transcript::Transcript;
 
 use crate::*;
 
 //NOTE(HS): the algorithm port for HyperKZG to "HyperBiKZG" is sketched here:
 // https://drive.google.com/file/d/1NcRnqdwFLcLi77DvSZH28QwslTuBVyb4/
 
+#[allow(unused)]
 #[inline(always)]
-pub(crate) fn coeff_form_hyper_bikzg_poly_oracles_local<E, T>(
+pub(crate) fn coeff_form_hyper_bikzg_poly_oracles_local<E>(
     srs: &CoefFormBiKZGLocalSRS<E>,
-    coeffs: &Vec<E::Fr>,
+    coeffs: &[E::Fr],
     local_alphas: &[E::Fr],
 ) -> (Vec<E::G1Affine>, Vec<Vec<E::Fr>>)
 where
     E: MultiMillerLoop,
-    T: Transcript<E::Fr>,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
 {
@@ -39,8 +38,10 @@ where
         .unzip()
 }
 
+#[allow(unused)]
+#[allow(clippy::type_complexity)]
 #[inline(always)]
-pub(crate) fn coeff_form_hyper_bikzg_pm_beta_evals_local<E, T>(
+pub(crate) fn coeff_form_hyper_bikzg_pm_beta_evals_local<E>(
     coeffs: &Vec<E::Fr>,
     folded_oracle_coeffs: &[Vec<E::Fr>],
     local_alphas: &[E::Fr],
@@ -48,7 +49,6 @@ pub(crate) fn coeff_form_hyper_bikzg_pm_beta_evals_local<E, T>(
 ) -> (Vec<E::Fr>, Vec<E::Fr>, Vec<E::Fr>)
 where
     E: MultiMillerLoop,
-    T: Transcript<E::Fr>,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
 {
@@ -81,9 +81,11 @@ where
             })
             .unzip();
 
+    // TODO(HS) complex type simplify
     (beta2_evals, beta_evals, neg_beta_evals)
 }
 
+#[allow(unused)]
 #[derive(Debug, Default)]
 pub(crate) struct PosNegBetaLocalEvals<E: MultiMillerLoop> {
     pub(crate) beta2_eval: E::Fr,
@@ -91,6 +93,7 @@ pub(crate) struct PosNegBetaLocalEvals<E: MultiMillerLoop> {
     pub(crate) neg_beta_evals: Vec<E::Fr>,
 }
 
+#[allow(unused)]
 #[derive(Debug, Default)]
 pub(crate) struct PosNegBetaGlobalEvals<E: MultiMillerLoop> {
     pub(crate) beta_x2_beta_y2_eval: E::Fr,
@@ -106,8 +109,9 @@ pub(crate) struct PosNegBetaGlobalEvals<E: MultiMillerLoop> {
     pub(crate) beta_neg_x_beta_neg_y_evals: Vec<E::Fr>,
 }
 
+#[allow(unused)]
 pub(crate) fn leader_evals_beta_y_interpolate<E>(
-    pos_neg_beta_parties_evals: &Vec<PosNegBetaLocalEvals<E>>,
+    pos_neg_beta_parties_evals: &[PosNegBetaLocalEvals<E>],
     beta: E::Fr,
     pos_neg_beta_global_evals: &mut PosNegBetaGlobalEvals<E>,
 ) where
@@ -115,18 +119,19 @@ pub(crate) fn leader_evals_beta_y_interpolate<E>(
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
 {
+    todo!()
 }
 
+#[allow(unused)]
 #[inline(always)]
-pub(crate) fn coeff_form_hyper_bikzg_pm_beta_evals_leader<E, T>(
-    pos_neg_beta_parties_evals: &Vec<PosNegBetaLocalEvals<E>>,
+pub(crate) fn coeff_form_hyper_bikzg_pm_beta_evals_leader<E>(
+    pos_neg_beta_parties_evals: &[PosNegBetaLocalEvals<E>],
     folded_oracle_coeffs: &[Vec<E::Fr>],
     mpi_alphas: &[E::Fr],
     beta: E::Fr,
 ) -> PosNegBetaGlobalEvals<E>
 where
     E: MultiMillerLoop,
-    T: Transcript<E::Fr>,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
 {
