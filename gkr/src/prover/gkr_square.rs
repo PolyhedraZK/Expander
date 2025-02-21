@@ -4,6 +4,7 @@
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use gkr_field_config::GKRFieldConfig;
+use polynomials::MultiLinearPolyExpander;
 use sumcheck::{sumcheck_prove_gkr_square_layer, ProverScratchPad};
 use transcript::Transcript;
 
@@ -21,7 +22,11 @@ pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     }
 
     let circuit_output = &circuit.layers.last().unwrap().output_vals;
-    let claimed_v = C::eval_circuit_vals_at_challenge(circuit_output, &rz0, &mut sp.hg_evals);
+    let claimed_v = MultiLinearPolyExpander::<C>::eval_circuit_vals_at_challenge(
+        circuit_output,
+        &rz0,
+        &mut sp.hg_evals,
+    );
 
     for i in (0..layer_num).rev() {
         rz0 = sumcheck_prove_gkr_square_layer(&circuit.layers[i], &rz0, transcript, sp);

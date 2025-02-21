@@ -1,7 +1,13 @@
-use std::ops::{Index, IndexMut, Mul};
+use std::{
+    cmp,
+    marker::PhantomData,
+    ops::{Index, IndexMut, Mul},
+};
 
-use arith::Field;
+use arith::{Field, SimdField};
 use ark_std::{log2, rand::RngCore};
+use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
 
 use crate::{EqPolynomial, MultilinearExtension, MutableMultilinearExtension};
 
@@ -203,5 +209,129 @@ impl<F: Field> MutableMultilinearExtension<F> for MultiLinearPoly<F> {
                     .for_each(|(a, b)| *a -= *b);
             })
         }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct MultiLinearPolyExpander<C: GKRFieldConfig> {
+    _config: PhantomData<C>,
+}
+
+/// Some dedicated mle implementations for GKRFieldConfig
+/// Take into consideration the simd challenge and the mpi challenge
+///
+/// This is more efficient than the generic implementation by avoiding
+/// unnecessary conversions between field types
+impl<C: GKRFieldConfig> MultiLinearPolyExpander<C> {
+    pub fn new() -> Self {
+        Self {
+            _config: PhantomData,
+        }
+    }
+
+    #[inline]
+    pub fn eval_circuit_vals_at_challenge(
+        evals: &[C::SimdCircuitField],
+        x: &[C::ChallengeField],
+        scratch: &mut [C::Field],
+    ) -> C::Field {
+        assert_eq!(1 << x.len(), evals.len());
+        assert!(scratch.len() >= evals.len());
+
+        if x.is_empty() {
+            C::simd_circuit_field_into_field(&evals[0])
+        } else {
+            for i in 0..(evals.len() >> 1) {
+                scratch[i] = C::field_add_simd_circuit_field(
+                    &C::simd_circuit_field_mul_challenge_field(
+                        &(evals[i * 2 + 1] - evals[i * 2]),
+                        &x[0],
+                    ),
+                    &evals[i * 2],
+                );
+            }
+
+            let mut cur_eval_size = evals.len() >> 2;
+            for r in x.iter().skip(1) {
+                for i in 0..cur_eval_size {
+                    scratch[i] = scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]).scale(r);
+                }
+                cur_eval_size >>= 1;
+            }
+            scratch[0]
+        }
+    }
+
+    /// This assumes each mpi core hold their own evals, and collectively
+    /// compute the global evaluation.
+    /// Mostly used by the prover run with `mpiexec`
+    #[inline]
+    pub fn collectively_eval_circuit_vals_at_expander_challenge(
+        local_evals: &[C::SimdCircuitField],
+        x: &[C::ChallengeField],
+        x_simd: &[C::ChallengeField],
+        x_mpi: &[C::ChallengeField],
+        scratch_field: &mut [C::Field],
+        scratch_challenge_field: &mut [C::ChallengeField],
+        mpi_config: &MPIConfig,
+    ) -> C::ChallengeField {
+        assert!(scratch_challenge_field.len() >= 1 << cmp::max(x_simd.len(), x_mpi.len()));
+
+        let local_simd = Self::eval_circuit_vals_at_challenge(local_evals, x, scratch_field);
+        let local_simd_unpacked = local_simd.unpack();
+        let local_v = MultiLinearPoly::evaluate_with_buffer(
+            &local_simd_unpacked,
+            x_simd,
+            scratch_challenge_field,
+        );
+
+        let global_v = if mpi_config.is_root() {
+            let mut claimed_v_gathering_buffer =
+                vec![C::ChallengeField::zero(); mpi_config.world_size()];
+            mpi_config.gather_vec(&vec![local_v], &mut claimed_v_gathering_buffer);
+            MultiLinearPoly::evaluate_with_buffer(
+                &claimed_v_gathering_buffer,
+                &x_mpi,
+                scratch_challenge_field,
+            )
+        } else {
+            mpi_config.gather_vec(&vec![local_v], &mut vec![]);
+            C::ChallengeField::zero()
+        };
+
+        global_v
+    }
+
+    /// This assumes only a single core holds all the evals, and evaluate it locally
+    /// mostly used by the verifier
+    #[inline]
+    pub fn single_core_eval_circuit_vals_at_expander_challenge(
+        global_vals: &[C::SimdCircuitField],
+        x: &[C::ChallengeField],
+        x_simd: &[C::ChallengeField],
+        x_mpi: &[C::ChallengeField],
+    ) -> C::ChallengeField {
+        let local_poly_size = global_vals.len() >> x_mpi.len();
+        assert_eq!(local_poly_size, 1 << x.len());
+
+        let mut scratch_field = vec![C::Field::default(); local_poly_size];
+        let mut scratch_challenge_field =
+            vec![C::ChallengeField::default(); 1 << cmp::max(x_simd.len(), x_mpi.len())];
+        let local_evals = global_vals
+            .chunks(local_poly_size)
+            .map(|local_vals| {
+                let local_simd =
+                    Self::eval_circuit_vals_at_challenge(local_vals, x, &mut scratch_field);
+                let local_simd_unpacked = local_simd.unpack();
+                MultiLinearPoly::evaluate_with_buffer(
+                    &local_simd_unpacked,
+                    x_simd,
+                    &mut scratch_challenge_field,
+                )
+            })
+            .collect::<Vec<C::ChallengeField>>();
+
+        let mut scratch = vec![C::ChallengeField::default(); local_evals.len()];
+        MultiLinearPoly::evaluate_with_buffer(&local_evals, x_mpi, &mut scratch)
     }
 }
