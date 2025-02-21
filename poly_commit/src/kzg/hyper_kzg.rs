@@ -13,20 +13,19 @@ use transcript::Transcript;
 use crate::*;
 
 #[inline(always)]
-pub(crate) fn coeff_form_uni_hyperkzg_open<E: MultiMillerLoop, T: Transcript<E::Fr>>(
+pub(crate) fn coeff_form_hyperkzg_local_poly_oracles<E>(
     srs: &CoefFormUniKZGSRS<E>,
-    coeffs: &Vec<E::Fr>,
-    alphas: &[E::Fr],
-    fs_transcript: &mut T,
-) -> (E::Fr, HyperKZGOpening<E>)
+    coeffs: &[E::Fr],
+    local_alphas: &[E::Fr],
+) -> (Vec<E::G1Affine>, Vec<Vec<E::Fr>>)
 where
+    E: MultiMillerLoop,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
 {
     let mut local_coeffs = coeffs.to_vec();
 
-    let (folded_oracle_commits, folded_oracle_coeffs): (Vec<E::G1Affine>, Vec<Vec<E::Fr>>) = alphas
-        [..alphas.len() - 1]
+    local_alphas[..local_alphas.len() - 1]
         .iter()
         .map(|alpha| {
             local_coeffs = local_coeffs
@@ -36,13 +35,23 @@ where
 
             let folded_oracle_commit = coeff_form_uni_kzg_commit(srs, &local_coeffs);
 
-            fs_transcript.append_u8_slice(folded_oracle_commit.to_bytes().as_ref());
-
             (folded_oracle_commit, local_coeffs.clone())
         })
-        .unzip();
+        .unzip()
+}
 
-    let beta = fs_transcript.generate_challenge_field_element();
+#[inline(always)]
+pub(crate) fn coeff_form_hyperkzg_local_evals<E>(
+    coeffs: &Vec<E::Fr>,
+    folded_oracle_coeffs: &[Vec<E::Fr>],
+    local_alphas: &[E::Fr],
+    beta: E::Fr,
+) -> HyperKZGLocalEvals<E>
+where
+    E: MultiMillerLoop,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::Fr: ExtensionField,
+{
     let beta2 = beta * beta;
     let beta_inv = beta.invert().unwrap();
     let two_inv = E::Fr::ONE.double().invert().unwrap();
@@ -54,11 +63,9 @@ where
         univariate_evaluate(coeffs, &beta2_pow_series)
     };
 
-    fs_transcript.append_field_element(&beta2_eval);
-
     let mut local_evals = HyperKZGLocalEvals::<E>::new_from_beta2_evals(beta2_eval);
 
-    izip!(iter::once(coeffs).chain(&folded_oracle_coeffs), alphas).for_each(|(cs, alpha)| {
+    izip!(iter::once(coeffs).chain(folded_oracle_coeffs), local_alphas).for_each(|(cs, alpha)| {
         let beta_eval = univariate_evaluate(cs, &beta_pow_series);
         let neg_beta_eval = univariate_evaluate(cs, &neg_beta_pow_series);
 
@@ -69,10 +76,35 @@ where
         local_evals.beta2_evals.push(beta2_eval);
         local_evals.pos_beta_evals.push(beta_eval);
         local_evals.neg_beta_evals.push(neg_beta_eval);
-
-        fs_transcript.append_field_element(&beta_eval);
-        fs_transcript.append_field_element(&neg_beta_eval);
     });
+
+    local_evals
+}
+
+#[inline(always)]
+pub(crate) fn coeff_form_uni_hyperkzg_open<E: MultiMillerLoop, T: Transcript<E::Fr>>(
+    srs: &CoefFormUniKZGSRS<E>,
+    coeffs: &Vec<E::Fr>,
+    alphas: &[E::Fr],
+    fs_transcript: &mut T,
+) -> (E::Fr, HyperKZGOpening<E>)
+where
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::Fr: ExtensionField,
+{
+    let (folded_oracle_commits, folded_oracle_coeffs) =
+        coeff_form_hyperkzg_local_poly_oracles(srs, coeffs, alphas);
+
+    folded_oracle_commits.iter().for_each(|f| {
+        fs_transcript.append_u8_slice(f.to_bytes().as_ref());
+    });
+
+    let beta = fs_transcript.generate_challenge_field_element();
+    let beta2 = beta * beta;
+
+    let local_evals =
+        coeff_form_hyperkzg_local_evals::<E>(coeffs, &folded_oracle_coeffs, alphas, beta);
+    local_evals.append_to_transcript(fs_transcript);
 
     let gamma = fs_transcript.generate_challenge_field_element();
 
@@ -112,7 +144,7 @@ where
         local_evals.multilinear_final_eval(),
         HyperKZGOpening {
             folded_oracle_commitments: folded_oracle_commits,
-            f_beta2: beta2_eval,
+            f_beta2: local_evals.beta2_evals[0],
             evals_at_beta: local_evals.pos_beta_evals,
             evals_at_neg_beta: local_evals.neg_beta_evals,
             beta_commitment: f_gamma_quotient_com,

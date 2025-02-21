@@ -1,5 +1,7 @@
-use arith::FieldSerde;
+use arith::{ExtensionField, FieldSerde};
 use halo2curves::{pairing::Engine, CurveAffine};
+use itertools::izip;
+use transcript::Transcript;
 
 use crate::*;
 
@@ -216,8 +218,8 @@ pub struct BiKZGProof<E: Engine> {
 #[derive(Clone, Debug)]
 pub(crate) struct HyperKZGLocalEvals<E: Engine> {
     pub(crate) beta2_evals: Vec<E::Fr>,
-    pub(crate) neg_beta_evals: Vec<E::Fr>,
     pub(crate) pos_beta_evals: Vec<E::Fr>,
+    pub(crate) neg_beta_evals: Vec<E::Fr>,
 }
 
 impl<E: Engine> HyperKZGLocalEvals<E> {
@@ -255,5 +257,35 @@ impl<E: Engine> HyperKZGLocalEvals<E> {
     // multilinear polynomial eval, as it folds to univariate poly of degree 0.
     pub(crate) fn multilinear_final_eval(&self) -> E::Fr {
         self.beta2_evals[self.beta2_evals.len() - 1]
+    }
+
+    pub(crate) fn append_to_transcript<T>(&self, fs_transcript: &mut T)
+    where
+        T: Transcript<E::Fr>,
+        E::Fr: ExtensionField,
+    {
+        fs_transcript.append_field_element(&self.beta2_evals[0]);
+        izip!(&self.pos_beta_evals, &self.neg_beta_evals).for_each(|(beta_eval, neg_beta_eval)| {
+            fs_transcript.append_field_element(beta_eval);
+            fs_transcript.append_field_element(neg_beta_eval);
+        });
+    }
+}
+
+#[allow(unused)]
+#[derive(Clone, Debug)]
+pub(crate) struct HyperKZGExportedLocalEvals<E: Engine> {
+    pub(crate) beta2_eval: E::Fr,
+    pub(crate) pos_beta_evals: Vec<E::Fr>,
+    pub(crate) neg_beta_evals: Vec<E::Fr>,
+}
+
+impl<E: Engine> From<HyperKZGLocalEvals<E>> for HyperKZGExportedLocalEvals<E> {
+    fn from(value: HyperKZGLocalEvals<E>) -> Self {
+        Self {
+            beta2_eval: value.beta2_evals[0],
+            pos_beta_evals: value.pos_beta_evals,
+            neg_beta_evals: value.neg_beta_evals,
+        }
     }
 }
