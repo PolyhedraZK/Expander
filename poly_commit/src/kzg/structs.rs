@@ -1,7 +1,7 @@
 use arith::FieldSerde;
 use halo2curves::{pairing::Engine, CurveAffine};
 
-use crate::StructuredReferenceString;
+use crate::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KZGCommitment<E: Engine>(pub E::G1Affine);
@@ -211,4 +211,49 @@ impl<E: Engine> From<&CoefFormBiKZGLocalSRS<E>> for BiKZGVerifierParam<E> {
 pub struct BiKZGProof<E: Engine> {
     pub quotient_x: E::G1Affine,
     pub quotient_y: E::G1Affine,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct HyperKZGLocalEvals<E: Engine> {
+    pub(crate) beta2_evals: Vec<E::Fr>,
+    pub(crate) neg_beta_evals: Vec<E::Fr>,
+    pub(crate) pos_beta_evals: Vec<E::Fr>,
+}
+
+impl<E: Engine> HyperKZGLocalEvals<E> {
+    pub(crate) fn new_from_beta2_evals(beta2_eval: E::Fr) -> Self {
+        Self {
+            beta2_evals: vec![beta2_eval],
+            pos_beta_evals: Vec::new(),
+            neg_beta_evals: Vec::new(),
+        }
+    }
+
+    // NOTE(HS) introduce a gamma <- RO, s.t., we aggregate the evaluations
+    // with the power series of gamma through linear combination.
+    //
+    // THE ASSUMPTION here is: pos/neg beta evals are from polynomial oracles
+    // that are folded until degree being 1, i.e., 2 coefficients, while the
+    // beta2 evals folds one step more, that the polynomial eventually has
+    // degree 0, and thus we assume that beta2_evals is one element more than
+    // pos/neg beta evals.
+    //
+    // The return order is the evals at beta2, beta, and -beta.
+    pub(crate) fn gamma_aggregate_evals(&self, gamma: E::Fr) -> (E::Fr, E::Fr, E::Fr) {
+        assert_eq!(self.pos_beta_evals.len(), self.neg_beta_evals.len());
+        assert_eq!(self.pos_beta_evals.len() + 1, self.beta2_evals.len());
+
+        let gamma_pow_series = powers_series(&gamma, self.pos_beta_evals.len());
+        let v_beta2 = univariate_evaluate(&self.beta2_evals, &gamma_pow_series);
+        let v_beta = univariate_evaluate(&self.pos_beta_evals, &gamma_pow_series);
+        let v_neg_beta = univariate_evaluate(&self.neg_beta_evals, &gamma_pow_series);
+
+        (v_beta2, v_beta, v_neg_beta)
+    }
+
+    // NOTE(HS) the same assumption applies here, that last beta2 eval is the
+    // multilinear polynomial eval, as it folds to univariate poly of degree 0.
+    pub(crate) fn multilinear_final_eval(&self) -> E::Fr {
+        self.beta2_evals[self.beta2_evals.len() - 1]
+    }
 }

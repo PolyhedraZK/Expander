@@ -55,33 +55,30 @@ where
     };
 
     fs_transcript.append_field_element(&beta2_eval);
-    let mut beta2_evals = vec![beta2_eval];
 
-    let (beta_evals, neg_beta_evals): (Vec<E::Fr>, Vec<E::Fr>) =
-        izip!(iter::once(coeffs).chain(&folded_oracle_coeffs), alphas)
-            .map(|(cs, alpha)| {
-                let beta_eval = univariate_evaluate(cs, &beta_pow_series);
-                let neg_beta_eval = univariate_evaluate(cs, &neg_beta_pow_series);
+    let mut local_evals = HyperKZGLocalEvals::<E>::new_from_beta2_evals(beta2_eval);
 
-                let beta2_eval = two_inv
-                    * ((beta_eval + neg_beta_eval) * (E::Fr::ONE - alpha)
-                        + (beta_eval - neg_beta_eval) * beta_inv * alpha);
+    izip!(iter::once(coeffs).chain(&folded_oracle_coeffs), alphas).for_each(|(cs, alpha)| {
+        let beta_eval = univariate_evaluate(cs, &beta_pow_series);
+        let neg_beta_eval = univariate_evaluate(cs, &neg_beta_pow_series);
 
-                beta2_evals.push(beta2_eval);
+        let beta2_eval = two_inv
+            * ((beta_eval + neg_beta_eval) * (E::Fr::ONE - alpha)
+                + (beta_eval - neg_beta_eval) * beta_inv * alpha);
 
-                fs_transcript.append_field_element(&beta_eval);
-                fs_transcript.append_field_element(&neg_beta_eval);
+        local_evals.beta2_evals.push(beta2_eval);
+        local_evals.pos_beta_evals.push(beta_eval);
+        local_evals.neg_beta_evals.push(neg_beta_eval);
 
-                (beta_eval, neg_beta_eval)
-            })
-            .unzip();
+        fs_transcript.append_field_element(&beta_eval);
+        fs_transcript.append_field_element(&neg_beta_eval);
+    });
 
     let gamma = fs_transcript.generate_challenge_field_element();
-    let gamma_pow_series = powers_series(&gamma, alphas.len());
-    let v_beta = univariate_evaluate(&beta_evals, &gamma_pow_series);
-    let v_neg_beta = univariate_evaluate(&neg_beta_evals, &gamma_pow_series);
-    let v_beta2 = univariate_evaluate(&beta2_evals, &gamma_pow_series);
+
+    let (v_beta2, v_beta, v_neg_beta) = local_evals.gamma_aggregate_evals(gamma);
     let f_gamma = {
+        let gamma_pow_series = powers_series(&gamma, alphas.len());
         let mut f = coeffs.clone();
         izip!(&gamma_pow_series[1..], &folded_oracle_coeffs)
             .for_each(|(gamma_i, folded_f)| polynomial_add(&mut f, *gamma_i, folded_f));
@@ -112,12 +109,12 @@ where
     let vanishing_at_tau_commitment = coeff_form_uni_kzg_commit(srs, &vanishing_at_tau);
 
     (
-        beta2_evals[beta2_evals.len() - 1],
+        local_evals.multilinear_final_eval(),
         HyperKZGOpening {
             folded_oracle_commitments: folded_oracle_commits,
             f_beta2: beta2_eval,
-            evals_at_beta: beta_evals,
-            evals_at_neg_beta: neg_beta_evals,
+            evals_at_beta: local_evals.pos_beta_evals,
+            evals_at_neg_beta: local_evals.neg_beta_evals,
             beta_commitment: f_gamma_quotient_com,
             tau_vanishing_commitment: vanishing_at_tau_commitment,
         },
