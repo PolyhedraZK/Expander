@@ -233,7 +233,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         let ExpanderGKRChallenge::<C> { x, x_simd, x_mpi } = x;
         let v_target =
             MultiLinearPolyExpander::<C>::single_core_eval_circuit_vals_at_expander_challenge(
-                global_vals,
+                &commitment.evals,
                 x,
                 x_simd,
                 x_mpi,

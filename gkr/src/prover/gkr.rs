@@ -1,10 +1,9 @@
 //! This module implements the core GKR IOP.
 
-use arith::{Field, SimdField};
 use circuit::Circuit;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomials::{MultiLinearPoly, MultiLinearPolyExpander};
+use polynomials::MultiLinearPolyExpander;
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use transcript::Transcript;
 use utils::timer::Timer;
@@ -44,15 +43,16 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     let mut alpha = None;
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
-    let claimed_v = MultiLinearPolyExpander::<C>::eval_circuit_vals_at_expander_challenge(
-        output_vals,
-        &rz0,
-        &r_simd,
-        &r_mpi,
-        &mut sp.hg_evals,
-        &mut sp.eq_evals_first_half, // confusing name here..
-        mpi_config,
-    );
+    let claimed_v =
+        MultiLinearPolyExpander::<C>::collectively_eval_circuit_vals_at_expander_challenge(
+            output_vals,
+            &rz0,
+            &r_simd,
+            &r_mpi,
+            &mut sp.hg_evals,
+            &mut sp.eq_evals_first_half, // confusing name here..
+            mpi_config,
+        );
 
     for i in (0..layer_num).rev() {
         let timer = Timer::new(
