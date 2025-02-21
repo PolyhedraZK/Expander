@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 use arith::{ExtensionField, FieldSerde};
 use halo2curves::{pairing::Engine, CurveAffine};
 use itertools::izip;
@@ -253,6 +255,16 @@ impl<E: Engine> HyperKZGLocalEvals<E> {
         (v_beta2, v_beta, v_neg_beta)
     }
 
+    pub(crate) fn interpolate_degree2_aggregated_evals(
+        &self,
+        beta: E::Fr,
+        gamma: E::Fr,
+    ) -> [E::Fr; 3] {
+        let beta2 = beta * beta;
+        let (v_beta2, v_beta, v_neg_beta) = self.gamma_aggregate_evals(gamma);
+        coeff_form_degree2_lagrange([beta, -beta, beta2], [v_beta, v_neg_beta, v_beta2])
+    }
+
     // NOTE(HS) the same assumption applies here, that last beta2 eval is the
     // multilinear polynomial eval, as it folds to univariate poly of degree 0.
     pub(crate) fn multilinear_final_eval(&self) -> E::Fr {
@@ -275,17 +287,115 @@ impl<E: Engine> HyperKZGLocalEvals<E> {
 #[allow(unused)]
 #[derive(Clone, Debug)]
 pub(crate) struct HyperKZGExportedLocalEvals<E: Engine> {
-    pub(crate) beta2_eval: E::Fr,
-    pub(crate) pos_beta_evals: Vec<E::Fr>,
-    pub(crate) neg_beta_evals: Vec<E::Fr>,
+    pub(crate) beta_x2_eval: E::Fr,
+    pub(crate) pos_beta_x_evals: Vec<E::Fr>,
+    pub(crate) neg_beta_x_evals: Vec<E::Fr>,
+}
+
+#[allow(unused)]
+impl<E: Engine> HyperKZGExportedLocalEvals<E> {
+    pub(crate) fn new(evals_num: usize) -> Self {
+        Self {
+            beta_x2_eval: E::Fr::default(),
+            pos_beta_x_evals: vec![E::Fr::default(); evals_num],
+            neg_beta_x_evals: vec![E::Fr::default(); evals_num],
+        }
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.pos_beta_x_evals.len() + self.neg_beta_x_evals.len() + 1
+    }
+}
+
+impl<E: Engine> Index<usize> for HyperKZGExportedLocalEvals<E> {
+    type Output = E::Fr;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        assert_eq!(self.pos_beta_x_evals.len(), self.neg_beta_x_evals.len());
+        assert!(!self.pos_beta_x_evals.is_empty());
+
+        let evals_len = self.pos_beta_x_evals.len();
+
+        if index < evals_len {
+            &self.pos_beta_x_evals[index]
+        } else if index < 2 * evals_len {
+            &self.neg_beta_x_evals[index - evals_len]
+        } else if index == 2 * evals_len {
+            &self.beta_x2_eval
+        } else {
+            unreachable!()
+        }
+    }
+}
+
+impl<E: Engine> IndexMut<usize> for HyperKZGExportedLocalEvals<E> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        assert_eq!(self.pos_beta_x_evals.len(), self.neg_beta_x_evals.len());
+        assert!(!self.pos_beta_x_evals.is_empty());
+
+        let evals_len = self.pos_beta_x_evals.len();
+
+        if index < evals_len {
+            &mut self.pos_beta_x_evals[index]
+        } else if index < 2 * evals_len {
+            &mut self.neg_beta_x_evals[index - evals_len]
+        } else if index == 2 * evals_len {
+            &mut self.beta_x2_eval
+        } else {
+            unreachable!()
+        }
+    }
 }
 
 impl<E: Engine> From<HyperKZGLocalEvals<E>> for HyperKZGExportedLocalEvals<E> {
     fn from(value: HyperKZGLocalEvals<E>) -> Self {
         Self {
-            beta2_eval: value.beta2_evals[0],
-            pos_beta_evals: value.pos_beta_evals,
-            neg_beta_evals: value.neg_beta_evals,
+            beta_x2_eval: value.beta2_evals[0],
+            pos_beta_x_evals: value.pos_beta_evals,
+            neg_beta_x_evals: value.neg_beta_evals,
         }
+    }
+}
+
+#[allow(unused)]
+#[derive(Clone, Debug)]
+pub(crate) struct HyperKZGAggregatedEvals<E: Engine> {
+    pub(crate) beta_y2_evals: HyperKZGExportedLocalEvals<E>,
+    pub(crate) pos_beta_y_evals: HyperKZGExportedLocalEvals<E>,
+    pub(crate) neg_beta_y_evals: HyperKZGExportedLocalEvals<E>,
+}
+
+#[allow(unused)]
+impl<E: Engine> HyperKZGAggregatedEvals<E> {
+    pub(crate) fn new_from_exported_evals(
+        exported_evals: &[HyperKZGExportedLocalEvals<E>],
+        beta_y: E::Fr,
+    ) -> Self {
+        let evals_len = exported_evals[0].pos_beta_x_evals.len();
+        let num_local_evals = exported_evals[0].len();
+        let num_parties = exported_evals.len();
+
+        assert!(num_parties >= 2 && num_parties.is_power_of_two());
+
+        let mut aggregated = Self {
+            beta_y2_evals: HyperKZGExportedLocalEvals::new(evals_len),
+            pos_beta_y_evals: HyperKZGExportedLocalEvals::new(evals_len),
+            neg_beta_y_evals: HyperKZGExportedLocalEvals::new(evals_len),
+        };
+
+        let beta_y2 = beta_y * beta_y;
+        let beta_y2_pow_series = powers_series(&beta_y2, num_parties);
+        let pos_beta_y_pow_series = powers_series(&beta_y, num_parties);
+        let neg_beta_y_pow_series = powers_series(&(-beta_y2), num_parties);
+
+        (0..num_local_evals).for_each(|i| {
+            let y_poly: Vec<E::Fr> = exported_evals.iter().map(|e| e[i]).collect();
+
+            aggregated.beta_y2_evals[i] = univariate_evaluate(&y_poly, &beta_y2_pow_series);
+            aggregated.pos_beta_y_evals[i] = univariate_evaluate(&y_poly, &pos_beta_y_pow_series);
+            aggregated.neg_beta_y_evals[i] = univariate_evaluate(&y_poly, &neg_beta_y_pow_series);
+        });
+
+        aggregated
     }
 }

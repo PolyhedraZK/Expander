@@ -82,6 +82,24 @@ where
 }
 
 #[inline(always)]
+pub(crate) fn coeff_form_hyperkzg_local_oracle_polys_aggregate<E>(
+    coeffs: &[E::Fr],
+    folded_oracle_coeffs: &[Vec<E::Fr>],
+    gamma: E::Fr,
+) -> Vec<E::Fr>
+where
+    E: MultiMillerLoop,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::Fr: ExtensionField,
+{
+    let gamma_pow_series = powers_series(&gamma, folded_oracle_coeffs.len() + 1);
+    let mut f = coeffs.to_vec();
+    izip!(&gamma_pow_series[1..], folded_oracle_coeffs)
+        .for_each(|(gamma_i, folded_f)| polynomial_add(&mut f, *gamma_i, folded_f));
+    f
+}
+
+#[inline(always)]
 pub(crate) fn coeff_form_uni_hyperkzg_open<E: MultiMillerLoop, T: Transcript<E::Fr>>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &Vec<E::Fr>,
@@ -108,23 +126,16 @@ where
 
     let gamma = fs_transcript.generate_challenge_field_element();
 
-    let (v_beta2, v_beta, v_neg_beta) = local_evals.gamma_aggregate_evals(gamma);
-    let f_gamma = {
-        let gamma_pow_series = powers_series(&gamma, alphas.len());
-        let mut f = coeffs.clone();
-        izip!(&gamma_pow_series[1..], &folded_oracle_coeffs)
-            .for_each(|(gamma_i, folded_f)| polynomial_add(&mut f, *gamma_i, folded_f));
-        f
-    };
-
-    let lagrange_degree2 =
-        coeff_form_degree2_lagrange([beta, -beta, beta2], [v_beta, v_neg_beta, v_beta2]);
+    let mut f_gamma =
+        coeff_form_hyperkzg_local_oracle_polys_aggregate::<E>(coeffs, &folded_oracle_coeffs, gamma);
+    let lagrange_degree2 = local_evals.interpolate_degree2_aggregated_evals(beta, gamma);
     let f_gamma_quotient = {
         let mut nom = f_gamma.clone();
         polynomial_add(&mut nom, -E::Fr::ONE, &lagrange_degree2);
         univariate_roots_quotient(nom, &[beta, beta2, -beta])
     };
     let f_gamma_quotient_com = coeff_form_uni_kzg_commit(srs, &f_gamma_quotient);
+
     fs_transcript.append_u8_slice(f_gamma_quotient_com.to_bytes().as_ref());
 
     let tau = fs_transcript.generate_challenge_field_element();
@@ -133,10 +144,10 @@ where
         let lagrange_degree2_at_tau =
             lagrange_degree2[0] + lagrange_degree2[1] * tau + lagrange_degree2[2] * tau * tau;
 
-        let mut poly = f_gamma.clone();
-        poly[0] -= lagrange_degree2_at_tau;
-        polynomial_add(&mut poly, -f_gamma_denom, &f_gamma_quotient);
-        univariate_roots_quotient(poly, &[tau])
+        polynomial_add(&mut f_gamma, -f_gamma_denom, &f_gamma_quotient);
+        let (coeffs, remainder) = univariate_degree_one_quotient(&f_gamma, tau);
+        assert_eq!(lagrange_degree2_at_tau, remainder);
+        coeffs
     };
     let vanishing_at_tau_commitment = coeff_form_uni_kzg_commit(srs, &vanishing_at_tau);
 
