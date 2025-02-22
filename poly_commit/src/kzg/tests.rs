@@ -348,12 +348,53 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
         .collect();
 
     // TODO(HS) interpolate at beta_y, beta_y2, -beta_y on lagrange_degree2_delta_x
+    let lagrange_degree2_delta_y = {
+        let pos_beta_y_pow_series = powers_series(&beta_y, lagrange_degree2_delta_x.len());
+        let neg_beta_y_pow_series = powers_series(&(-beta_y), lagrange_degree2_delta_x.len());
+        let beta_y2_pow_series = powers_series(&(beta_y * beta_y), lagrange_degree2_delta_x.len());
+        let at_pos_beta_y = univariate_evaluate(&lagrange_degree2_delta_x, &pos_beta_y_pow_series);
+        let at_neg_beta_y = univariate_evaluate(&lagrange_degree2_delta_x, &neg_beta_y_pow_series);
+        let at_beta_y2 = univariate_evaluate(&lagrange_degree2_delta_x, &beta_y2_pow_series);
+        coeff_form_degree2_lagrange(
+            [beta_y, -beta_y, beta_y * beta_y],
+            [at_pos_beta_y, at_neg_beta_y, at_beta_y2],
+        )
+    };
+
     // TODO(HS) vanish over the three beta_y points above, then commit Q_y
+    let f_gamma_quotient_y = {
+        let mut nom = lagrange_degree2_delta_x.clone();
+        polynomial_add(&mut nom, -E::Fr::ONE, &lagrange_degree2_delta_y);
+        univariate_roots_quotient(nom, &[beta_y, -beta_y, beta_y * beta_y])
+    };
+    let f_gamma_quotient_com_y =
+        coeff_form_uni_kzg_commit(&srs_s[0].tau_y_srs, &f_gamma_quotient_y);
+
     // TODO(HS) sample from RO for delta_y
+    fs_transcript.append_u8_slice(f_gamma_quotient_com_y.to_bytes().as_ref());
+
+    let delta_y = fs_transcript.generate_challenge_field_element();
 
     // TODO(HS) f_gamma_s - (delta_x - beta_x) ... (delta_x - beta_x2) f_gamma_quotient_s
-    //                    - (delta_y - beta_u) ... (delta_y - beta_y2) lagrange_quotient_y
-    // TODO(HS) bivariate KZG opening
+    //                    - (delta_y - beta_y) ... (delta_y - beta_y2) lagrange_quotient_y
+    let delta_x_denom = (delta_x - beta_x) * (delta_x - beta_x * beta_x) * (delta_x + beta_x);
+    let delta_y_denom = (delta_y - beta_y) * (delta_y - beta_y * beta_y) * (delta_y + beta_y);
 
+    izip!(&mut f_gamma_s, &f_gamma_quotient_s, &f_gamma_quotient_y).for_each(
+        |(f_gamma, f_gamma_quotient, f_gamma_quotient_y_i)| {
+            polynomial_add(f_gamma, -delta_x_denom, &f_gamma_quotient);
+            f_gamma[0] -= *f_gamma_quotient_y_i;
+        },
+    );
+
+    // TODO(HS) bivariate KZG opening
+    let evals_and_opens: Vec<(E::Fr, E::G1Affine)> = izip!(srs_s, &f_gamma_s)
+        .map(|(srs, x_coeffs)| coeff_form_uni_kzg_open_eval(&srs.tau_x_srs, x_coeffs, delta_x))
+        .collect();
+
+    let (final_eval, final_opening) =
+        coeff_form_bi_kzg_open_leader(&srs_s[0], &evals_and_opens, delta_y);
+
+    // TODO(HS) verify openings one by one
     todo!()
 }
