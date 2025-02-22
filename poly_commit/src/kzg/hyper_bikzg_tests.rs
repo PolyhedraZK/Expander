@@ -1,209 +1,17 @@
 use std::iter::once;
 
-use arith::{BN254Fr, ExtensionField};
-use ark_std::test_rng;
-use field_hashers::MiMC5FiatShamirHasher;
+use arith::ExtensionField;
 use halo2curves::{
-    bn256::{Bn256, Fr, G1Affine, G1},
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, GroupEncoding},
     pairing::MultiMillerLoop,
     CurveAffine,
 };
 use itertools::izip;
-use polynomials::MultiLinearPoly;
-use transcript::{FieldHashTranscript, Transcript};
+use transcript::Transcript;
 
 use crate::*;
 use kzg::hyper_kzg::*;
-
-#[test]
-fn test_univariate_degree_one_quotient() {
-    {
-        // x^3 + 1 = (x + 1)(x^2 - x + 1)
-        let poly = vec![
-            Fr::from(1u64),
-            Fr::from(0u64),
-            Fr::from(0u64),
-            Fr::from(1u64),
-        ];
-        let point = -Fr::from(1u64);
-        let (div, remainder) = univariate_degree_one_quotient(&poly, point);
-        assert_eq!(
-            div,
-            vec![
-                Fr::from(1u64),
-                -Fr::from(1u64),
-                Fr::from(1u64),
-                Fr::from(0u64)
-            ]
-        );
-        assert_eq!(remainder, Fr::ZERO)
-    }
-    {
-        // x^3 - 1 = (x-1)(x^2 + x + 1)
-        let poly = vec![
-            -Fr::from(1u64),
-            Fr::from(0u64),
-            Fr::from(0u64),
-            Fr::from(1u64),
-        ];
-        let point = Fr::from(1u64);
-        let (div, remainder) = univariate_degree_one_quotient(&poly, point);
-        assert_eq!(
-            div,
-            vec![
-                Fr::from(1u64),
-                Fr::from(1u64),
-                Fr::from(1u64),
-                Fr::from(0u64)
-            ]
-        );
-        assert_eq!(remainder, Fr::ZERO)
-    }
-    {
-        // x^3 + 6x^2 + 11x + 6 = (x + 1)(x + 2)(x + 3)
-        let poly = vec![
-            Fr::from(6u64),
-            Fr::from(11u64),
-            Fr::from(6u64),
-            Fr::from(1u64),
-        ];
-        let point = Fr::from(1u64);
-        let (div, remainder) = univariate_degree_one_quotient(&poly, point);
-        assert_eq!(
-            div,
-            vec![
-                Fr::from(18u64),
-                Fr::from(7u64),
-                Fr::from(1u64),
-                Fr::from(0u64),
-            ]
-        );
-        assert_eq!(remainder, Fr::from(24u64))
-    }
-}
-
-#[test]
-fn test_coefficient_form_univariate_kzg_e2e() {
-    // \prod_{i \in [1, 7]} (x + i)
-    let poly = vec![
-        Fr::from(5040u32),
-        Fr::from(13068u64),
-        Fr::from(13132u64),
-        Fr::from(6769u64),
-        Fr::from(1960u64),
-        Fr::from(322u64),
-        Fr::from(28u64),
-        Fr::from(1u64),
-    ];
-    let alpha = Fr::from(3u64);
-    let eval = Fr::from(604800u64);
-
-    let mut rng = test_rng();
-    let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn256>(8, &mut rng);
-    let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
-    let com = coeff_form_uni_kzg_commit(&srs, &poly);
-
-    let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
-    assert_eq!(actual_eval, eval);
-    assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
-}
-
-#[test]
-fn test_coefficient_form_univariate_kzg_constant_e2e() {
-    let poly = vec![Fr::from(100u64)];
-    let alpha = Fr::from(3u64);
-    let eval = Fr::from(100u64);
-
-    let mut rng = test_rng();
-    let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn256>(8, &mut rng);
-    let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
-    let com = coeff_form_uni_kzg_commit(&srs, &poly);
-
-    let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
-    assert_eq!(actual_eval, eval);
-    assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
-}
-
-#[test]
-fn test_coefficient_form_bivariate_kzg_e2e() {
-    let x_degree = 15;
-    let y_degree = 7;
-
-    let party_srs: Vec<CoefFormBiKZGLocalSRS<Bn256>> = (0..=y_degree)
-        .map(|rank| {
-            let mut rng = test_rng();
-            generate_coef_form_bi_kzg_local_srs_for_testing(
-                x_degree + 1,
-                y_degree + 1,
-                rank,
-                &mut rng,
-            )
-        })
-        .collect();
-
-    let mut rng = test_rng();
-    let xy_coeffs: Vec<Vec<Fr>> = (0..=y_degree)
-        .map(|_| (0..=x_degree).map(|_| Fr::random(&mut rng)).collect())
-        .collect();
-
-    let commitments: Vec<_> = izip!(&party_srs, &xy_coeffs)
-        .map(|(srs, x_coeffs)| coeff_form_uni_kzg_commit(&srs.tau_x_srs, x_coeffs))
-        .collect();
-
-    let global_commitment_g1: G1 = commitments.iter().map(|c| c.to_curve()).sum::<G1>();
-    let global_commitment: G1Affine = global_commitment_g1.to_affine();
-
-    let alpha = Fr::random(&mut rng);
-    let evals_and_opens: Vec<(Fr, G1Affine)> = izip!(&party_srs, &xy_coeffs)
-        .map(|(srs, x_coeffs)| coeff_form_uni_kzg_open_eval(&srs.tau_x_srs, x_coeffs, alpha))
-        .collect();
-
-    let beta = Fr::random(&mut rng);
-    let (final_eval, final_opening) =
-        coeff_form_bi_kzg_open_leader(&party_srs[0], &evals_and_opens, beta);
-
-    let vk: BiKZGVerifierParam<Bn256> = From::from(&party_srs[0]);
-    assert!(coeff_form_bi_kzg_verify(
-        vk,
-        global_commitment,
-        alpha,
-        beta,
-        final_eval,
-        final_opening,
-    ));
-}
-
-#[test]
-fn test_hyperkzg_functionality_e2e() {
-    let mut rng = test_rng();
-    let max_vars = 15;
-    let max_length = 1 << max_vars;
-
-    let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn256>(max_length, &mut rng);
-    (2..max_vars).for_each(|vars| {
-        let multilinear = MultiLinearPoly::random(vars, &mut rng);
-        let alphas: Vec<Fr> = (0..vars).map(|_| Fr::random(&mut rng)).collect();
-
-        let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
-        let com = coeff_form_uni_kzg_commit(&srs, &multilinear.coeffs);
-        let mut fs_transcript =
-            FieldHashTranscript::<BN254Fr, MiMC5FiatShamirHasher<BN254Fr>>::new();
-
-        let (eval, opening) =
-            coeff_form_uni_hyperkzg_open(&srs, &multilinear.coeffs, &alphas, &mut fs_transcript);
-
-        assert!(coeff_form_uni_hyperkzg_verify(
-            vk,
-            com,
-            &alphas,
-            eval,
-            &opening,
-            &mut fs_transcript
-        ))
-    });
-}
 
 #[allow(unused)]
 fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>>(
@@ -216,6 +24,13 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
 {
+    let commitments: Vec<_> = izip!(srs_s, coeffs_s)
+        .map(|(srs, x_coeffs)| coeff_form_uni_kzg_commit(&srs.tau_x_srs, x_coeffs))
+        .collect();
+
+    let global_commitment_g1: E::G1 = commitments.iter().map(|c| c.to_curve()).sum();
+    let global_commitment: E::G1Affine = global_commitment_g1.to_affine();
+
     let (folded_oracle_commits_s, folded_oracle_coeffs_s): (
         Vec<Vec<E::G1Affine>>,
         Vec<Vec<Vec<E::Fr>>>,
@@ -383,7 +198,7 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
     izip!(&mut f_gamma_s, &f_gamma_quotient_s, &f_gamma_quotient_y).for_each(
         |(f_gamma, f_gamma_quotient, f_gamma_quotient_y_i)| {
             polynomial_add(f_gamma, -delta_x_denom, &f_gamma_quotient);
-            f_gamma[0] -= *f_gamma_quotient_y_i;
+            f_gamma[0] -= *f_gamma_quotient_y_i * delta_y_denom;
         },
     );
 
@@ -396,5 +211,13 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
         coeff_form_bi_kzg_open_leader(&srs_s[0], &evals_and_opens, delta_y);
 
     // TODO(HS) verify openings one by one
-    todo!()
+    let vk: BiKZGVerifierParam<E> = From::from(&srs_s[0]);
+    coeff_form_bi_kzg_verify(
+        vk,
+        global_commitment,
+        delta_x,
+        delta_y,
+        final_eval,
+        final_opening,
+    );
 }

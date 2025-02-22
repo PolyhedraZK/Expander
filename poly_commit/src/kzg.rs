@@ -17,4 +17,7 @@ mod pcs_trait_impl;
 pub use pcs_trait_impl::HyperKZGPCS;
 
 #[cfg(test)]
-mod tests;
+mod basic_tests;
+
+#[cfg(test)]
+mod hyper_bikzg_tests;
