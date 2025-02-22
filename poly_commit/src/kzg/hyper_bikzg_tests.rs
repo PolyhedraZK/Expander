@@ -75,8 +75,6 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
             fs_transcript.append_u8_slice(f.to_bytes().as_ref());
         });
 
-    // TODO(HS) need a aggregated commitments
-
     let beta_x = fs_transcript.generate_challenge_field_element();
     let beta_y = fs_transcript.generate_challenge_field_element();
 
@@ -249,7 +247,7 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
     // NOTE(HS) verify openings one by one
     let vk: BiKZGVerifierParam<E> = From::from(&srs_s[0]);
 
-    // TODO(HS) compute out the commitment aggregated
+    // NOTE(HS) compute out the commitment aggregated
     let com_r = aggregated_oracle_commitment.to_curve()
         - (f_gamma_quotient_com_x * delta_x_denom)
         - (f_gamma_quotient_com_y * delta_y_denom);
@@ -258,6 +256,7 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
         + lagrange_degree2_delta_y[2] * delta_y * delta_y;
 
     dbg!(degree_2_final_eval);
+    assert_eq!(degree_2_final_eval, final_eval);
 
     let what = coeff_form_bi_kzg_verify(
         vk,
@@ -268,15 +267,16 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
         final_opening,
     );
     dbg!(what);
+    assert!(what);
 }
 
 #[test]
 fn test_hyper_bikzg_single_process_simulated_e2e() {
-    let x_degree = 15;
-    let x_vars = 4;
+    let x_degree = 31;
+    let x_vars = 5;
 
-    let y_degree = 7;
-    let y_vars = 3;
+    let y_degree = 15;
+    let y_vars = 4;
 
     let mut rng = test_rng();
     let local_alphas: Vec<_> = (0..x_vars).map(|_| Fr::random(&mut rng)).collect();

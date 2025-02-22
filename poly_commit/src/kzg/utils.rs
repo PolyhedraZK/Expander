@@ -71,8 +71,10 @@ pub(crate) fn univariate_evaluate<F: Mul<F1, Output = F> + Sum + Copy, F1: Field
 }
 
 #[inline(always)]
-pub(crate) fn polynomial_add<F: Field>(coeffs: &mut [F], weight: F, another_coeffs: &[F]) {
-    assert!(coeffs.len() >= another_coeffs.len());
+pub(crate) fn polynomial_add<F: Field>(coeffs: &mut Vec<F>, weight: F, another_coeffs: &[F]) {
+    if coeffs.len() < another_coeffs.len() {
+        coeffs.resize(another_coeffs.len(), F::ZERO);
+    }
 
     izip!(coeffs, another_coeffs).for_each(|(c, a)| *c += weight * *a);
 }
