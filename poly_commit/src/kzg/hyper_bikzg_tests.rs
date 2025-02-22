@@ -1,19 +1,20 @@
 use std::iter::once;
 
 use arith::ExtensionField;
+use ark_std::test_rng;
+use field_hashers::MiMC5FiatShamirHasher;
 use halo2curves::{
+    bn256::{Bn256, Fr},
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, GroupEncoding},
     pairing::MultiMillerLoop,
     CurveAffine,
 };
 use itertools::izip;
-use transcript::Transcript;
+use transcript::{FieldHashTranscript, Transcript};
 
 use crate::*;
-use kzg::hyper_kzg::*;
 
-#[allow(unused)]
 fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>>(
     srs_s: &[CoefFormBiKZGLocalSRS<E>],
     coeffs_s: &[Vec<E::Fr>],
@@ -74,8 +75,12 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
             fs_transcript.append_u8_slice(f.to_bytes().as_ref());
         });
 
+    // TODO(HS) need a aggregated commitments
+
     let beta_x = fs_transcript.generate_challenge_field_element();
     let beta_y = fs_transcript.generate_challenge_field_element();
+
+    dbg!(beta_x, beta_y);
 
     let local_evals_s: Vec<HyperKZGLocalEvals<E>> = izip!(coeffs_s, &folded_oracle_coeffs_s)
         .map(|(coeffs, folded_oracle_coeffs)| {
@@ -110,6 +115,34 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
 
     let gamma = fs_transcript.generate_challenge_field_element();
 
+    dbg!(gamma);
+
+    let aggregated_oracle_commitment: E::G1Affine = {
+        let gamma_power_series = powers_series(&gamma, local_alphas.len() + mpi_alphas.len() + 1);
+
+        let com_g1: E::G1 = izip!(
+            once(&global_commitment)
+                .chain(&folded_x_commits)
+                .chain(once(&folded_y_oracle))
+                .chain(&folded_mpi_oracle_commits_s),
+            &gamma_power_series
+        )
+        .map(|(com, g)| com.to_curve() * g)
+        .sum();
+
+        com_g1.into()
+    };
+
+    let f_gamma_global = {
+        let gamma_n = gamma.pow_vartime([local_alphas.len() as u64]);
+        let mut temp = coeff_form_hyperkzg_local_oracle_polys_aggregate::<E>(
+            &final_evals,
+            &folded_mpi_oracle_coeffs_s,
+            gamma,
+        );
+        temp.iter_mut().for_each(|t| *t *= gamma_n);
+        temp
+    };
     let mut f_gamma_s: Vec<Vec<E::Fr>> = {
         let mut f_gamma_s_local: Vec<Vec<E::Fr>> = izip!(coeffs_s, folded_oracle_coeffs_s)
             .map(|(coeffs, folded_oracle_coeffs)| {
@@ -121,24 +154,20 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
             })
             .collect();
 
-        let f_gamma_global = coeff_form_hyperkzg_local_oracle_polys_aggregate::<E>(
-            &final_evals,
-            &folded_mpi_oracle_coeffs_s,
-            gamma,
-        );
-
-        let gamma_n = gamma.pow_vartime([local_alphas.len() as u64]);
-
         izip!(&mut f_gamma_s_local, &f_gamma_global)
-            .for_each(|(f_g, f_global)| f_g[0] += *f_global * gamma_n);
+            .for_each(|(f_g, f_global)| f_g[0] += *f_global);
 
         f_gamma_s_local
     };
 
-    let lagrange_degree2_s: Vec<[E::Fr; 3]> = local_evals_s
-        .iter()
-        .map(|l| l.interpolate_degree2_aggregated_evals(beta_x, gamma))
+    let lagrange_degree2_s: Vec<[E::Fr; 3]> = izip!(local_evals_s, &f_gamma_global)
+        .map(|(l, g)| {
+            let mut local_degree_2 = l.interpolate_degree2_aggregated_evals(beta_x, gamma);
+            local_degree_2[0] += g;
+            local_degree_2
+        })
         .collect();
+
     let f_gamma_quotient_s: Vec<Vec<E::Fr>> = izip!(&f_gamma_s, &lagrange_degree2_s)
         .map(|(f_gamma, lagrange_degree2)| {
             let mut nom = f_gamma.clone();
@@ -157,12 +186,14 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
 
     let delta_x = fs_transcript.generate_challenge_field_element();
 
+    dbg!(delta_x);
+
     let lagrange_degree2_delta_x: Vec<E::Fr> = lagrange_degree2_s
         .iter()
         .map(|l| l[0] + l[1] * delta_x + l[2] * delta_x * delta_x)
         .collect();
 
-    // TODO(HS) interpolate at beta_y, beta_y2, -beta_y on lagrange_degree2_delta_x
+    // NOTE(HS) interpolate at beta_y, beta_y2, -beta_y on lagrange_degree2_delta_x
     let lagrange_degree2_delta_y = {
         let pos_beta_y_pow_series = powers_series(&beta_y, lagrange_degree2_delta_x.len());
         let neg_beta_y_pow_series = powers_series(&(-beta_y), lagrange_degree2_delta_x.len());
@@ -176,21 +207,24 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
         )
     };
 
-    // TODO(HS) vanish over the three beta_y points above, then commit Q_y
-    let f_gamma_quotient_y = {
+    // NOTE(HS) vanish over the three beta_y points above, then commit Q_y
+    let mut f_gamma_quotient_y = {
         let mut nom = lagrange_degree2_delta_x.clone();
         polynomial_add(&mut nom, -E::Fr::ONE, &lagrange_degree2_delta_y);
         univariate_roots_quotient(nom, &[beta_y, -beta_y, beta_y * beta_y])
     };
+    f_gamma_quotient_y.resize(lagrange_degree2_delta_x.len(), E::Fr::ZERO);
     let f_gamma_quotient_com_y =
         coeff_form_uni_kzg_commit(&srs_s[0].tau_y_srs, &f_gamma_quotient_y);
 
-    // TODO(HS) sample from RO for delta_y
+    dbg!(f_gamma_quotient_y.len());
+
+    // NOTE(HS) sample from RO for delta_y
     fs_transcript.append_u8_slice(f_gamma_quotient_com_y.to_bytes().as_ref());
 
     let delta_y = fs_transcript.generate_challenge_field_element();
 
-    // TODO(HS) f_gamma_s - (delta_x - beta_x) ... (delta_x - beta_x2) f_gamma_quotient_s
+    // NOTE(HS) f_gamma_s - (delta_x - beta_x) ... (delta_x - beta_x2) f_gamma_quotient_s
     //                    - (delta_y - beta_y) ... (delta_y - beta_y2) lagrange_quotient_y
     let delta_x_denom = (delta_x - beta_x) * (delta_x - beta_x * beta_x) * (delta_x + beta_x);
     let delta_y_denom = (delta_y - beta_y) * (delta_y - beta_y * beta_y) * (delta_y + beta_y);
@@ -202,7 +236,7 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
         },
     );
 
-    // TODO(HS) bivariate KZG opening
+    // NOTE(HS) bivariate KZG opening
     let evals_and_opens: Vec<(E::Fr, E::G1Affine)> = izip!(srs_s, &f_gamma_s)
         .map(|(srs, x_coeffs)| coeff_form_uni_kzg_open_eval(&srs.tau_x_srs, x_coeffs, delta_x))
         .collect();
@@ -210,14 +244,67 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
     let (final_eval, final_opening) =
         coeff_form_bi_kzg_open_leader(&srs_s[0], &evals_and_opens, delta_y);
 
-    // TODO(HS) verify openings one by one
+    dbg!(final_eval);
+
+    // NOTE(HS) verify openings one by one
     let vk: BiKZGVerifierParam<E> = From::from(&srs_s[0]);
-    coeff_form_bi_kzg_verify(
+
+    // TODO(HS) compute out the commitment aggregated
+    let com_r = aggregated_oracle_commitment.to_curve()
+        - (f_gamma_quotient_com_x * delta_x_denom)
+        - (f_gamma_quotient_com_y * delta_y_denom);
+    let degree_2_final_eval = lagrange_degree2_delta_y[0]
+        + lagrange_degree2_delta_y[1] * delta_y
+        + lagrange_degree2_delta_y[2] * delta_y * delta_y;
+
+    dbg!(degree_2_final_eval);
+
+    let what = coeff_form_bi_kzg_verify(
         vk,
-        global_commitment,
+        com_r.to_affine(),
         delta_x,
         delta_y,
-        final_eval,
+        degree_2_final_eval,
         final_opening,
+    );
+    dbg!(what);
+}
+
+#[test]
+fn test_hyper_bikzg_single_process_simulated_e2e() {
+    let x_degree = 15;
+    let x_vars = 4;
+
+    let y_degree = 7;
+    let y_vars = 3;
+
+    let mut rng = test_rng();
+    let local_alphas: Vec<_> = (0..x_vars).map(|_| Fr::random(&mut rng)).collect();
+    let mpi_alphas: Vec<_> = (0..y_vars).map(|_| Fr::random(&mut rng)).collect();
+
+    let party_srs: Vec<CoefFormBiKZGLocalSRS<Bn256>> = (0..=y_degree)
+        .map(|rank| {
+            let mut rng = test_rng();
+            generate_coef_form_bi_kzg_local_srs_for_testing(
+                x_degree + 1,
+                y_degree + 1,
+                rank,
+                &mut rng,
+            )
+        })
+        .collect();
+
+    let xy_coeffs: Vec<Vec<Fr>> = (0..=y_degree)
+        .map(|_| (0..=x_degree).map(|_| Fr::random(&mut rng)).collect())
+        .collect();
+
+    let mut fs_transcript = FieldHashTranscript::<Fr, MiMC5FiatShamirHasher<Fr>>::new();
+
+    coeff_form_hyper_bikzg_open_simulate(
+        &party_srs,
+        &xy_coeffs,
+        &local_alphas,
+        &mpi_alphas,
+        &mut fs_transcript,
     );
 }

@@ -100,7 +100,7 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn coeff_form_uni_hyperkzg_open<E: MultiMillerLoop, T: Transcript<E::Fr>>(
+pub fn coeff_form_uni_hyperkzg_open<E: MultiMillerLoop, T: Transcript<E::Fr>>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &Vec<E::Fr>,
     alphas: &[E::Fr],
@@ -165,7 +165,7 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn coeff_form_uni_hyperkzg_verify<E: MultiMillerLoop, T: Transcript<E::Fr>>(
+pub fn coeff_form_uni_hyperkzg_verify<E: MultiMillerLoop, T: Transcript<E::Fr>>(
     vk: UniKZGVerifierParams<E>,
     comm: E::G1Affine,
     alphas: &[E::Fr],
@@ -236,4 +236,53 @@ where
         lagrange_eval,
         opening.tau_vanishing_commitment,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use arith::BN254Fr;
+    use ark_std::test_rng;
+    use field_hashers::MiMC5FiatShamirHasher;
+    use halo2curves::{
+        bn256::{Bn256, Fr},
+        ff::Field,
+    };
+    use polynomials::MultiLinearPoly;
+    use transcript::{FieldHashTranscript, Transcript};
+
+    use crate::*;
+
+    #[test]
+    fn test_hyperkzg_functionality_e2e() {
+        let mut rng = test_rng();
+        let max_vars = 15;
+        let max_length = 1 << max_vars;
+
+        let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn256>(max_length, &mut rng);
+        (2..max_vars).for_each(|vars| {
+            let multilinear = MultiLinearPoly::random(vars, &mut rng);
+            let alphas: Vec<Fr> = (0..vars).map(|_| Fr::random(&mut rng)).collect();
+
+            let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
+            let com = coeff_form_uni_kzg_commit(&srs, &multilinear.coeffs);
+            let mut fs_transcript =
+                FieldHashTranscript::<BN254Fr, MiMC5FiatShamirHasher<BN254Fr>>::new();
+
+            let (eval, opening) = coeff_form_uni_hyperkzg_open(
+                &srs,
+                &multilinear.coeffs,
+                &alphas,
+                &mut fs_transcript,
+            );
+
+            assert!(coeff_form_uni_hyperkzg_verify(
+                vk,
+                com,
+                &alphas,
+                eval,
+                &opening,
+                &mut fs_transcript
+            ))
+        });
+    }
 }

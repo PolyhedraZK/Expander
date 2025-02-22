@@ -102,3 +102,77 @@ pub(crate) fn coeff_form_degree2_lagrange<F: Field>(roots: [F; 3], evals: [F; 3]
         combine(r0_nom[2], r1_nom[2], r2_nom[2]),
     ]
 }
+
+#[cfg(test)]
+mod test {
+    use halo2curves::{bn256::Fr, ff::Field};
+
+    use crate::*;
+
+    #[test]
+    fn test_univariate_degree_one_quotient() {
+        {
+            // x^3 + 1 = (x + 1)(x^2 - x + 1)
+            let poly = vec![
+                Fr::from(1u64),
+                Fr::from(0u64),
+                Fr::from(0u64),
+                Fr::from(1u64),
+            ];
+            let point = -Fr::from(1u64);
+            let (div, remainder) = univariate_degree_one_quotient(&poly, point);
+            assert_eq!(
+                div,
+                vec![
+                    Fr::from(1u64),
+                    -Fr::from(1u64),
+                    Fr::from(1u64),
+                    Fr::from(0u64)
+                ]
+            );
+            assert_eq!(remainder, Fr::ZERO)
+        }
+        {
+            // x^3 - 1 = (x-1)(x^2 + x + 1)
+            let poly = vec![
+                -Fr::from(1u64),
+                Fr::from(0u64),
+                Fr::from(0u64),
+                Fr::from(1u64),
+            ];
+            let point = Fr::from(1u64);
+            let (div, remainder) = univariate_degree_one_quotient(&poly, point);
+            assert_eq!(
+                div,
+                vec![
+                    Fr::from(1u64),
+                    Fr::from(1u64),
+                    Fr::from(1u64),
+                    Fr::from(0u64)
+                ]
+            );
+            assert_eq!(remainder, Fr::ZERO)
+        }
+        {
+            // x^3 + 6x^2 + 11x + 6 = (x + 1)(x + 2)(x + 3)
+            let poly = vec![
+                Fr::from(6u64),
+                Fr::from(11u64),
+                Fr::from(6u64),
+                Fr::from(1u64),
+            ];
+            let point = Fr::from(1u64);
+            let (div, remainder) = univariate_degree_one_quotient(&poly, point);
+            assert_eq!(
+                div,
+                vec![
+                    Fr::from(18u64),
+                    Fr::from(7u64),
+                    Fr::from(1u64),
+                    Fr::from(0u64),
+                ]
+            );
+            assert_eq!(remainder, Fr::from(24u64))
+        }
+    }
+}

@@ -99,3 +99,53 @@ where
 
     gt_result.final_exponentiation().is_identity().into()
 }
+
+#[cfg(test)]
+mod tests {
+    use ark_std::test_rng;
+    use halo2curves::bn256::{Bn256, Fr};
+
+    use crate::*;
+
+    #[test]
+    fn test_coefficient_form_univariate_kzg_e2e() {
+        // \prod_{i \in [1, 7]} (x + i)
+        let poly = vec![
+            Fr::from(5040u32),
+            Fr::from(13068u64),
+            Fr::from(13132u64),
+            Fr::from(6769u64),
+            Fr::from(1960u64),
+            Fr::from(322u64),
+            Fr::from(28u64),
+            Fr::from(1u64),
+        ];
+        let alpha = Fr::from(3u64);
+        let eval = Fr::from(604800u64);
+
+        let mut rng = test_rng();
+        let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn256>(8, &mut rng);
+        let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
+        let com = coeff_form_uni_kzg_commit(&srs, &poly);
+
+        let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
+        assert_eq!(actual_eval, eval);
+        assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
+    }
+
+    #[test]
+    fn test_coefficient_form_univariate_kzg_constant_e2e() {
+        let poly = vec![Fr::from(100u64)];
+        let alpha = Fr::from(3u64);
+        let eval = Fr::from(100u64);
+
+        let mut rng = test_rng();
+        let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn256>(8, &mut rng);
+        let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
+        let com = coeff_form_uni_kzg_commit(&srs, &poly);
+
+        let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
+        assert_eq!(actual_eval, eval);
+        assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
+    }
+}

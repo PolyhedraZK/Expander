@@ -128,3 +128,65 @@ where
 
     gt_result.final_exponentiation().is_identity().into()
 }
+
+#[cfg(test)]
+mod tests {
+    use ark_std::test_rng;
+    use halo2curves::{
+        bn256::{Bn256, Fr, G1Affine, G1},
+        ff::Field,
+        group::{prime::PrimeCurveAffine, Curve},
+    };
+    use itertools::izip;
+
+    use crate::*;
+
+    #[test]
+    fn test_coefficient_form_bivariate_kzg_e2e() {
+        let x_degree = 15;
+        let y_degree = 7;
+
+        let party_srs: Vec<CoefFormBiKZGLocalSRS<Bn256>> = (0..=y_degree)
+            .map(|rank| {
+                let mut rng = test_rng();
+                generate_coef_form_bi_kzg_local_srs_for_testing(
+                    x_degree + 1,
+                    y_degree + 1,
+                    rank,
+                    &mut rng,
+                )
+            })
+            .collect();
+
+        let mut rng = test_rng();
+        let xy_coeffs: Vec<Vec<Fr>> = (0..=y_degree)
+            .map(|_| (0..=x_degree).map(|_| Fr::random(&mut rng)).collect())
+            .collect();
+
+        let commitments: Vec<_> = izip!(&party_srs, &xy_coeffs)
+            .map(|(srs, x_coeffs)| coeff_form_uni_kzg_commit(&srs.tau_x_srs, x_coeffs))
+            .collect();
+
+        let global_commitment_g1: G1 = commitments.iter().map(|c| c.to_curve()).sum::<G1>();
+        let global_commitment: G1Affine = global_commitment_g1.to_affine();
+
+        let alpha = Fr::random(&mut rng);
+        let evals_and_opens: Vec<(Fr, G1Affine)> = izip!(&party_srs, &xy_coeffs)
+            .map(|(srs, x_coeffs)| coeff_form_uni_kzg_open_eval(&srs.tau_x_srs, x_coeffs, alpha))
+            .collect();
+
+        let beta = Fr::random(&mut rng);
+        let (final_eval, final_opening) =
+            coeff_form_bi_kzg_open_leader(&party_srs[0], &evals_and_opens, beta);
+
+        let vk: BiKZGVerifierParam<Bn256> = From::from(&party_srs[0]);
+        assert!(coeff_form_bi_kzg_verify(
+            vk,
+            global_commitment,
+            alpha,
+            beta,
+            final_eval,
+            final_opening,
+        ));
+    }
+}
