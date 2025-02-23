@@ -34,7 +34,7 @@ pub(crate) struct SumcheckGkrVanillaHelper<'a, C: GKRFieldConfig> {
 }
 
 /// internal helper functions
-impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
+impl<C: GKRFieldConfig> SumcheckGkrVanillaHelper<'_, C> {
     #[inline(always)]
     fn xy_helper_receive_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
         self.xy_helper.receive_challenge::<C>(

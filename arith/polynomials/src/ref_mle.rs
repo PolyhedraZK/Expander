@@ -33,7 +33,7 @@ impl<'ref_life, 'outer: 'ref_life, F: Field> RefMultiLinearPoly<'ref_life, F> {
     }
 }
 
-impl<'a, F: Field> Index<usize> for RefMultiLinearPoly<'a, F> {
+impl<F: Field> Index<usize> for RefMultiLinearPoly<'_, F> {
     type Output = F;
 
     #[inline(always)]
@@ -43,7 +43,7 @@ impl<'a, F: Field> Index<usize> for RefMultiLinearPoly<'a, F> {
     }
 }
 
-impl<'a, F: Field> MultilinearExtension<F> for RefMultiLinearPoly<'a, F> {
+impl<F: Field> MultilinearExtension<F> for RefMultiLinearPoly<'_, F> {
     #[inline(always)]
     fn num_vars(&self) -> usize {
         assert!(self.coeffs.len().is_power_of_two());
@@ -93,7 +93,7 @@ impl<'ref_life, 'outer_mut: 'ref_life, F: Field> MutRefMultiLinearPoly<'ref_life
     }
 }
 
-impl<'a, F: Field> Index<usize> for MutRefMultiLinearPoly<'a, F> {
+impl<F: Field> Index<usize> for MutRefMultiLinearPoly<'_, F> {
     type Output = F;
 
     #[inline(always)]
@@ -103,7 +103,7 @@ impl<'a, F: Field> Index<usize> for MutRefMultiLinearPoly<'a, F> {
     }
 }
 
-impl<'a, F: Field> IndexMut<usize> for MutRefMultiLinearPoly<'a, F> {
+impl<F: Field> IndexMut<usize> for MutRefMultiLinearPoly<'_, F> {
     #[inline(always)]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         assert!(index < self.hypercube_size());
@@ -111,7 +111,7 @@ impl<'a, F: Field> IndexMut<usize> for MutRefMultiLinearPoly<'a, F> {
     }
 }
 
-impl<'a, F: Field> MultilinearExtension<F> for MutRefMultiLinearPoly<'a, F> {
+impl<F: Field> MultilinearExtension<F> for MutRefMultiLinearPoly<'_, F> {
     #[inline(always)]
     fn num_vars(&self) -> usize {
         assert!(self.coeffs.len().is_power_of_two());
@@ -139,7 +139,7 @@ impl<'a, F: Field> MultilinearExtension<F> for MutRefMultiLinearPoly<'a, F> {
     }
 }
 
-impl<'a, F: Field> MutableMultilinearExtension<F> for MutRefMultiLinearPoly<'a, F> {
+impl<F: Field> MutableMultilinearExtension<F> for MutRefMultiLinearPoly<'_, F> {
     #[inline(always)]
     fn fix_top_variable<AF: Field + Mul<F, Output = F>>(&mut self, r: AF) {
         let n = self.hypercube_size() / 2;

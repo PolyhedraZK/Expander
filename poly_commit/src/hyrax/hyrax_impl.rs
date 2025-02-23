@@ -17,7 +17,7 @@ pub(crate) fn hyrax_setup<C: CurveAffine + FieldSerde>(
 where
     C::Scalar: PrimeField,
 {
-    let pedersen_vars = (local_vars + 1) / 2;
+    let pedersen_vars = local_vars.div_ceil(2);
     let pedersen_length = 1 << pedersen_vars;
 
     pedersen_setup(pedersen_length, rng)
@@ -67,7 +67,7 @@ where
     C::ScalarExt: ExtensionField + PrimeField,
 {
     let vars = mle_poly.num_vars();
-    let pedersen_vars = (vars + 1) / 2;
+    let pedersen_vars = vars.div_ceil(2);
     let pedersen_len = 1usize << pedersen_vars;
     assert_eq!(pedersen_len, params.bases.len());
 
@@ -92,7 +92,7 @@ where
     C::ScalarExt: ExtensionField + PrimeField,
 {
     let vars = mle_poly.num_vars();
-    let pedersen_vars = (vars + 1) / 2;
+    let pedersen_vars = vars.div_ceil(2);
     let pedersen_len = 1usize << pedersen_vars;
     assert_eq!(pedersen_len, params.bases.len());
 
@@ -119,7 +119,7 @@ where
     C::ScalarExt: ExtensionField + PrimeField,
 {
     let vars = eval_point.len();
-    let pedersen_vars = (vars + 1) / 2;
+    let pedersen_vars = vars.div_ceil(2);
     let pedersen_len = 1usize << pedersen_vars;
     assert_eq!(pedersen_len, params.bases.len());
 

@@ -162,7 +162,7 @@ pub fn verify<Cfg: GKRConfig>(
     )
 }
 
-pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config: Config<Cfg>) {
+pub async fn run_command<Cfg: GKRConfig>(command: &ExpanderExecArgs, config: Config<Cfg>) {
     let subcommands = command.subcommands.clone();
 
     match subcommands {

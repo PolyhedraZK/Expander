@@ -35,7 +35,7 @@ impl Tree {
         Self::new_with_leaves(leaves)
     }
 
-    /// Builds a tree with the given leaves.
+    // Builds a tree with the given leaves.
     // #[inline]
     // pub fn new_with_field_elements(leave_elems: &[F]) -> Self {
     //     let leaves = leave_elems
