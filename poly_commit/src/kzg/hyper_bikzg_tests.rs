@@ -1,4 +1,4 @@
-use std::iter::once;
+use std::iter;
 
 use arith::ExtensionField;
 use ark_std::test_rng;
@@ -64,16 +64,14 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
 
     let folded_y_oracle = coeff_form_uni_kzg_commit(&srs_s[0].tau_y_srs, &final_evals);
 
-    let (folded_mpi_oracle_commits_s, folded_mpi_oracle_coeffs_s) =
+    let (folded_mpi_oracle_coms, folded_mpi_oracle_coeffs_s) =
         coeff_form_hyperkzg_local_poly_oracles(&srs_s[0].tau_y_srs, &final_evals, mpi_alphas);
 
     folded_x_commits
         .iter()
-        .chain(once(&folded_y_oracle))
-        .chain(&folded_mpi_oracle_commits_s)
-        .for_each(|f| {
-            fs_transcript.append_u8_slice(f.to_bytes().as_ref());
-        });
+        .chain(iter::once(&folded_y_oracle))
+        .chain(&folded_mpi_oracle_coms)
+        .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
 
     let beta_x = fs_transcript.generate_challenge_field_element();
     let beta_y = fs_transcript.generate_challenge_field_element();
@@ -114,22 +112,6 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
     let gamma = fs_transcript.generate_challenge_field_element();
 
     dbg!(gamma);
-
-    let aggregated_oracle_commitment: E::G1Affine = {
-        let gamma_power_series = powers_series(&gamma, local_alphas.len() + mpi_alphas.len() + 1);
-
-        let com_g1: E::G1 = izip!(
-            once(&global_commitment)
-                .chain(&folded_x_commits)
-                .chain(once(&folded_y_oracle))
-                .chain(&folded_mpi_oracle_commits_s),
-            &gamma_power_series
-        )
-        .map(|(com, g)| com.to_curve() * g)
-        .sum();
-
-        com_g1.into()
-    };
 
     let f_gamma_global = {
         let gamma_n = gamma.pow_vartime([local_alphas.len() as u64]);
@@ -246,6 +228,22 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
 
     // NOTE(HS) verify openings one by one
     let vk: BiKZGVerifierParam<E> = From::from(&srs_s[0]);
+
+    let aggregated_oracle_commitment: E::G1Affine = {
+        let gamma_power_series = powers_series(&gamma, local_alphas.len() + mpi_alphas.len() + 1);
+
+        let com_g1: E::G1 = izip!(
+            iter::once(&global_commitment)
+                .chain(&folded_x_commits)
+                .chain(iter::once(&folded_y_oracle))
+                .chain(&folded_mpi_oracle_coms),
+            &gamma_power_series
+        )
+        .map(|(com, g)| com.to_curve() * g)
+        .sum();
+
+        com_g1.into()
+    };
 
     // NOTE(HS) compute out the commitment aggregated
     let com_r = aggregated_oracle_commitment.to_curve()

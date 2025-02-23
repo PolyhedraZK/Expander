@@ -14,6 +14,7 @@ mod hyper_kzg;
 pub use hyper_kzg::*;
 
 mod hyper_bikzg;
+pub use hyper_bikzg::*;
 
 #[cfg(test)]
 mod hyper_bikzg_tests;
