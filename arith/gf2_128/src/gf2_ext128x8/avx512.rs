@@ -36,8 +36,8 @@ impl FieldSerde for AVX512GF2_128x8 {
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
         unsafe {
             let mut data = [0u8; 128];
-            _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data[0]);
-            _mm512_storeu_si512((data.as_mut_ptr() as *mut i32).offset(16), self.data[1]);
+            _mm512_storeu_si512(data.as_mut_ptr() as *mut __m512i, self.data[0]);
+            _mm512_storeu_si512((data.as_mut_ptr() as *mut __m512i).offset(1), self.data[1]);
             writer.write_all(&data)?;
         }
         Ok(())
@@ -385,8 +385,8 @@ impl Debug for AVX512GF2_128x8 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut data = [0u8; 128];
         unsafe {
-            _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data[0]);
-            _mm512_storeu_si512((data.as_mut_ptr() as *mut i32).offset(16), self.data[1]);
+            _mm512_storeu_si512(data.as_mut_ptr() as *mut __m512i, self.data[0]);
+            _mm512_storeu_si512((data.as_mut_ptr() as *mut __m512i).offset(1), self.data[1]);
         }
         f.debug_struct("AVX512GF2_128x8")
             .field("data", &data)
