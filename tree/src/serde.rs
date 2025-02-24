@@ -2,7 +2,7 @@ use std::io::{Read, Write};
 
 use arith::{FieldSerde, FieldSerdeResult};
 
-use crate::{Leaf, Node, Path, RangePath, LEAF_BYTES, LEAF_HASH_BYTES};
+use crate::{Leaf, Node, Path, RangePath, Tree, LEAF_BYTES, LEAF_HASH_BYTES};
 
 impl FieldSerde for Leaf {
     const SERIALIZED_SIZE: usize = LEAF_BYTES;
@@ -80,5 +80,21 @@ impl FieldSerde for RangePath {
             path_nodes,
             leaves,
         })
+    }
+}
+
+impl FieldSerde for Tree {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        self.nodes.serialize_into(&mut writer)?;
+        self.leaves.serialize_into(&mut writer)
+    }
+
+    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+        let nodes = Vec::deserialize_from(&mut reader)?;
+        let leaves = Vec::deserialize_from(&mut reader)?;
+
+        Ok(Self { nodes, leaves })
     }
 }

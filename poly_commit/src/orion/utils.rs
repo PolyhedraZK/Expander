@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use arith::{ExtensionField, Field, FieldSerdeError, SimdField};
+use arith::{ExtensionField, Field, FieldSerde, FieldSerdeError, SimdField};
 use itertools::izip;
 use thiserror::Error;
 use transcript::Transcript;
@@ -75,7 +75,6 @@ impl OrionSRS {
 
 pub type OrionCommitment = tree::Node;
 
-// TODO: maybe prepare memory API for transpose in commit and open?
 #[derive(Clone, Debug, Default)]
 pub struct OrionScratchPad<F, ComPackF>
 where
@@ -87,6 +86,23 @@ where
 }
 
 unsafe impl<F: Field, ComPackF: SimdField<Scalar = F>> Send for OrionScratchPad<F, ComPackF> {}
+
+impl<F: Field, ComPackF: SimdField<Scalar = F>> FieldSerde for OrionScratchPad<F, ComPackF> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: std::io::Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
+        self.interleaved_alphabet_commitment.serialize_into(writer)
+    }
+
+    fn deserialize_from<R: std::io::Read>(reader: R) -> arith::FieldSerdeResult<Self> {
+        let interleaved_alphabet_commitment = tree::Tree::deserialize_from(reader)?;
+
+        Ok(Self {
+            interleaved_alphabet_commitment,
+            _phantom: PhantomData,
+        })
+    }
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct OrionProof<EvalF: Field> {
