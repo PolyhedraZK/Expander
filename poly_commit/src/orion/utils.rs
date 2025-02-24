@@ -82,7 +82,8 @@ where
     ComPackF: SimdField<Scalar = F>,
 {
     pub interleaved_alphabet_commitment: tree::Tree,
-    pub _phantom: PhantomData<ComPackF>,
+
+    _phantom: PhantomData<ComPackF>,
 }
 
 unsafe impl<F: Field, ComPackF: SimdField<Scalar = F>> Send for OrionScratchPad<F, ComPackF> {}
