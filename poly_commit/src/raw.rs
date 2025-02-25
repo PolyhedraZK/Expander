@@ -7,7 +7,7 @@ use arith::{BN254Fr, ExtensionField, Field, FieldForECC, FieldSerde, FieldSerdeR
 use ethnum::U256;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomials::{MultiLinearPoly, MultilinearExtension};
+use polynomials::{MultiLinearPoly, MultiLinearPolyExpander, MultilinearExtension};
 use rand::RngCore;
 use transcript::Transcript;
 
@@ -231,36 +231,13 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
     ) -> bool {
         assert!(mpi_config.is_root()); // Only the root will verify
         let ExpanderGKRChallenge::<C> { x, x_simd, x_mpi } = x;
-        Self::eval(&commitment.evals, x, x_simd, x_mpi) == v
-    }
-}
-
-impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> RawExpanderGKR<C, T> {
-    pub fn eval_local(
-        vals: &[C::SimdCircuitField],
-        x: &[C::ChallengeField],
-        x_simd: &[C::ChallengeField],
-    ) -> C::ChallengeField {
-        let mut scratch = vec![C::Field::default(); vals.len()];
-        let y_simd = C::eval_circuit_vals_at_challenge(vals, x, &mut scratch);
-        let y_simd_unpacked = y_simd.unpack();
-        let mut scratch = vec![C::ChallengeField::default(); y_simd_unpacked.len()];
-        MultiLinearPoly::evaluate_with_buffer(&y_simd_unpacked, x_simd, &mut scratch)
-    }
-
-    pub fn eval(
-        vals: &[C::SimdCircuitField],
-        x: &[C::ChallengeField],
-        x_simd: &[C::ChallengeField],
-        x_mpi: &[C::ChallengeField],
-    ) -> C::ChallengeField {
-        let local_poly_size = vals.len() >> x_mpi.len();
-        let local_evals = vals
-            .chunks(local_poly_size)
-            .map(|local_vals| Self::eval_local(local_vals, x, x_simd))
-            .collect::<Vec<C::ChallengeField>>();
-
-        let mut scratch = vec![C::ChallengeField::default(); local_evals.len()];
-        MultiLinearPoly::evaluate_with_buffer(&local_evals, x_mpi, &mut scratch)
+        let v_target =
+            MultiLinearPolyExpander::<C>::single_core_eval_circuit_vals_at_expander_challenge(
+                &commitment.evals,
+                x,
+                x_simd,
+                x_mpi,
+            );
+        v == v_target
     }
 }

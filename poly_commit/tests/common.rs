@@ -6,7 +6,7 @@ use poly_commit::raw::RawExpanderGKR;
 use poly_commit::{
     ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,
 };
-use polynomials::MultilinearExtension;
+use polynomials::{MultiLinearPolyExpander, MultilinearExtension};
 use rand::thread_rng;
 use transcript::Transcript;
 
@@ -91,7 +91,13 @@ pub fn test_pcs_for_expander_gkr<
 
         if mpi_config.is_root() {
             // this will always pass for RawExpanderGKR, so make sure it is correct
-            let v = RawExpanderGKR::<C, T>::eval(&coeffs_gathered, x, x_simd, x_mpi);
+            let v =
+                MultiLinearPolyExpander::<C>::single_core_eval_circuit_vals_at_expander_challenge(
+                    &coeffs_gathered,
+                    x,
+                    x_simd,
+                    x_mpi,
+                );
 
             transcript.lock_proof();
             assert!(P::verify(

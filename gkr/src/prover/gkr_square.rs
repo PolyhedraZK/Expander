@@ -6,7 +6,7 @@ use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomials::MultiLinearPoly;
+use polynomials::MultiLinearPolyExpander;
 use sumcheck::{sumcheck_prove_gkr_square_layer, ProverScratchPad};
 use transcript::Transcript;
 
@@ -42,26 +42,17 @@ pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     }
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
-    let claimed_v_simd = C::eval_circuit_vals_at_challenge(output_vals, &rz0, &mut sp.hg_evals);
-    let claimed_v_local = MultiLinearPoly::<C::ChallengeField>::evaluate_with_buffer(
-        &claimed_v_simd.unpack(),
-        &r_simd,
-        &mut sp.eq_evals_at_r_simd0,
-    );
-
-    let claimed_v = if mpi_config.is_root() {
-        let mut claimed_v_gathering_buffer =
-            vec![C::ChallengeField::zero(); mpi_config.world_size()];
-        mpi_config.gather_vec(&vec![claimed_v_local], &mut claimed_v_gathering_buffer);
-        MultiLinearPoly::evaluate_with_buffer(
-            &claimed_v_gathering_buffer,
+    let claimed_v =
+        MultiLinearPolyExpander::<C>::collectively_eval_circuit_vals_at_expander_challenge(
+            output_vals,
+            &rz0,
+            &r_simd,
             &r_mpi,
-            &mut sp.eq_evals_at_r_mpi0,
-        )
-    } else {
-        mpi_config.gather_vec(&vec![claimed_v_local], &mut vec![]);
-        C::ChallengeField::zero()
-    };
+            &mut sp.hg_evals,
+            &mut sp.eq_evals_first_half, // confusing name here..
+            mpi_config,
+        );
+
     log::trace!("Claimed v: {:?}", claimed_v);
 
     for i in (0..layer_num).rev() {

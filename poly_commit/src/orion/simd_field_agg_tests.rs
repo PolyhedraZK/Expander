@@ -7,7 +7,7 @@ use gf2_128::GF2_128;
 use gkr_field_config::{GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use itertools::izip;
 use mersenne31::{M31Ext3, M31x16};
-use polynomials::{EqPolynomial, MultiLinearPoly};
+use polynomials::{EqPolynomial, MultiLinearPoly, MultiLinearPolyExpander};
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 use crate::{
@@ -165,12 +165,13 @@ where
     let aggregated_proof =
         orion_proof_aggregate::<C, T>(&openings, &gkr_challenge.x_mpi, &mut aggregator_transcript);
 
-    let final_expected_eval = RawExpanderGKR::<C, T>::eval(
-        &global_poly.coeffs,
-        &gkr_challenge.x,
-        &gkr_challenge.x_simd,
-        &gkr_challenge.x_mpi,
-    );
+    let final_expected_eval =
+        MultiLinearPolyExpander::<C>::single_core_eval_circuit_vals_at_expander_challenge(
+            &global_poly.coeffs,
+            &gkr_challenge.x,
+            &gkr_challenge.x_simd,
+            &gkr_challenge.x_mpi,
+        );
 
     assert!(orion_verify_simd_field_aggregated::<C, ComPackF, T>(
         num_parties,
