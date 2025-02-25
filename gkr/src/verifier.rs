@@ -340,7 +340,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
 
                 if let Some(rz1) = rz1 {
                     transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
-            verified &= self.get_pcs_opening_from_proof_and_verify(
+                    verified &= self.get_pcs_opening_from_proof_and_verify(
                         pcs_params,
                         pcs_verification_key,
                         &commitment,
