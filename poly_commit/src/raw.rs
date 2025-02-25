@@ -3,7 +3,7 @@ use crate::{
     ExpanderGKRChallenge, PCSEmptyType, PCSForExpanderGKR, PolynomialCommitmentScheme,
     StructuredReferenceString,
 };
-use arith::{BN254Fr, ExtensionField, Field, FieldForECC, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{BN254Fr, ExtensionField, Field, FieldForECC, FieldSerde, FieldSerdeResult};
 use ethnum::U256;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;

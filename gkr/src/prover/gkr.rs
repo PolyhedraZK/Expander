@@ -1,10 +1,9 @@
 //! This module implements the core GKR IOP.
 
-use arith::{Field, SimdField};
 use circuit::Circuit;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomials::{MultiLinearPoly, MultiLinearPolyExpander};
+use polynomials::MultiLinearPolyExpander;
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use transcript::Transcript;
 use utils::timer::Timer;

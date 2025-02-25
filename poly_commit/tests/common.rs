@@ -2,7 +2,6 @@ use arith::{ExtensionField, Field};
 use ark_std::test_rng;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use poly_commit::raw::RawExpanderGKR;
 use poly_commit::{
     ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,
 };

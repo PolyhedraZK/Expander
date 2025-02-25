@@ -285,21 +285,21 @@ impl<C: GKRFieldConfig> MultiLinearPolyExpander<C> {
             scratch_challenge_field,
         );
 
-        let global_v = if mpi_config.is_root() {
+        
+
+        if mpi_config.is_root() {
             let mut claimed_v_gathering_buffer =
                 vec![C::ChallengeField::zero(); mpi_config.world_size()];
             mpi_config.gather_vec(&vec![local_v], &mut claimed_v_gathering_buffer);
             MultiLinearPoly::evaluate_with_buffer(
                 &claimed_v_gathering_buffer,
-                &x_mpi,
+                x_mpi,
                 scratch_challenge_field,
             )
         } else {
             mpi_config.gather_vec(&vec![local_v], &mut vec![]);
             C::ChallengeField::zero()
-        };
-
-        global_v
+        }
     }
 
     /// This assumes only a single core holds all the evals, and evaluate it locally

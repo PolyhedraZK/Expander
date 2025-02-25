@@ -12,7 +12,7 @@ use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 use crate::{
     orion::{simd_field_agg_impl::*, utils::*, *},
-    ExpanderGKRChallenge, RawExpanderGKR,
+    ExpanderGKRChallenge,
 };
 
 #[derive(Clone)]
