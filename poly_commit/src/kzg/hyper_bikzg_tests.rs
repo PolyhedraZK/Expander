@@ -29,9 +29,6 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
         .map(|(srs, x_coeffs)| coeff_form_uni_kzg_commit(&srs.tau_x_srs, x_coeffs))
         .collect();
 
-    let global_commitment_g1: E::G1 = commitments.iter().map(|c| c.to_curve()).sum();
-    let global_commitment: E::G1Affine = global_commitment_g1.to_affine();
-
     let (folded_oracle_commits_s, folded_oracle_coeffs_s): (
         Vec<Vec<E::G1Affine>>,
         Vec<Vec<Vec<E::Fr>>>,
@@ -228,6 +225,11 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
 
     // NOTE(HS) verify openings one by one
     let vk: BiKZGVerifierParam<E> = From::from(&srs_s[0]);
+
+    let global_commitment: E::G1Affine = {
+        let global_commitment_g1: E::G1 = commitments.iter().map(|c| c.to_curve()).sum();
+        global_commitment_g1.to_affine()
+    };
 
     let aggregated_oracle_commitment: E::G1Affine = {
         let gamma_power_series = powers_series(&gamma, local_alphas.len() + mpi_alphas.len() + 1);

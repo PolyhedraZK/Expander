@@ -224,6 +224,16 @@ pub(crate) struct HyperKZGLocalEvals<E: Engine> {
     pub(crate) neg_beta_evals: Vec<E::Fr>,
 }
 
+impl<E: Engine> Default for HyperKZGLocalEvals<E> {
+    fn default() -> Self {
+        Self {
+            beta2_evals: Vec::default(),
+            pos_beta_evals: Vec::default(),
+            neg_beta_evals: Vec::default(),
+        }
+    }
+}
+
 impl<E: Engine> HyperKZGLocalEvals<E> {
     pub(crate) fn new_from_beta2_evals(beta2_eval: E::Fr) -> Self {
         Self {
