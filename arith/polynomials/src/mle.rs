@@ -285,8 +285,6 @@ impl<C: GKRFieldConfig> MultiLinearPolyExpander<C> {
             scratch_challenge_field,
         );
 
-        
-
         if mpi_config.is_root() {
             let mut claimed_v_gathering_buffer =
                 vec![C::ChallengeField::zero(); mpi_config.world_size()];
