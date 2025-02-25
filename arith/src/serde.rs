@@ -23,6 +23,18 @@ pub trait FieldSerde: Sized {
     fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self>;
 }
 
+impl FieldSerde for () {
+    const SERIALIZED_SIZE: usize = 0;
+
+    fn serialize_into<W: std::io::Write>(&self, _writer: W) -> FieldSerdeResult<()> {
+        Ok(())
+    }
+
+    fn deserialize_from<R: std::io::Read>(_reader: R) -> FieldSerdeResult<Self> {
+        Ok(())
+    }
+}
+
 macro_rules! field_serde_for_number {
     ($int_type: ident, $size_in_bytes: expr) => {
         impl FieldSerde for $int_type {

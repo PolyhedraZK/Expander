@@ -22,7 +22,7 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
     type Params: Clone + Debug + Default;
     type Poly: Clone + Debug + Default;
     type EvalPoint: Clone + Debug + Default;
-    type ScratchPad: Clone + Debug + Default;
+    type ScratchPad: Clone + Debug + Default + FieldSerde;
 
     type SRS: Clone + Debug + Default + FieldSerde + StructuredReferenceString;
     type Commitment: Clone + Debug + Default + FieldSerde;
@@ -96,7 +96,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default + Send;
-    type ScratchPad: Clone + Debug + Default + Send;
+    type ScratchPad: Clone + Debug + Default + Send + FieldSerde;
 
     type SRS: Clone + Debug + Default + FieldSerde + StructuredReferenceString;
     type Commitment: Clone + Debug + Default + FieldSerde;

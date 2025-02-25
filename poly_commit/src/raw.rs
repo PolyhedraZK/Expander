@@ -62,7 +62,7 @@ impl<F: ExtensionField, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for R
     const NAME: &'static str = "RawMultiLinear";
 
     type Params = RawMultiLinearParams;
-    type ScratchPad = RawMultiLinearScratchPad<F>;
+    type ScratchPad = ();
 
     type Poly = MultiLinearPoly<F>;
 
@@ -77,11 +77,7 @@ impl<F: ExtensionField, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for R
         Self::SRS::default()
     }
 
-    fn init_scratch_pad(params: &Self::Params) -> Self::ScratchPad {
-        Self::ScratchPad {
-            eval_buffer: vec![F::ZERO; 1 << params.n_vars],
-        }
-    }
+    fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
 
     fn commit(
         params: &Self::Params,
@@ -135,9 +131,6 @@ pub struct RawExpanderGKRParams {
     pub n_local_vars: usize,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct RawExpanderGKRScratchPad {}
-
 pub struct RawExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
     _phantom: std::marker::PhantomData<(C, T)>,
 }
@@ -157,7 +150,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
     //     Vec<C::ChallengeField>, // x_mpi
     // );
 
-    type ScratchPad = RawExpanderGKRScratchPad;
+    type ScratchPad = ();
 
     type SRS = PCSEmptyType;
 
@@ -179,9 +172,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         }
     }
 
-    fn init_scratch_pad(_params: &Self::Params, _mpi_config: &MPIConfig) -> Self::ScratchPad {
-        RawExpanderGKRScratchPad {}
-    }
+    fn init_scratch_pad(_params: &Self::Params, _mpi_config: &MPIConfig) -> Self::ScratchPad {}
 
     fn commit(
         params: &Self::Params,
