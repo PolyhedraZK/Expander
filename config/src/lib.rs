@@ -2,16 +2,39 @@ use arith::Field;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use poly_commit::PCSForExpanderGKR;
-use std::fmt::Debug;
+use std::{fmt::Debug, str::FromStr};
+use thiserror::Error;
 use transcript::Transcript;
+
+#[derive(Debug, Error)]
+pub enum ConfigEnumFromStrError {
+    #[error("Unknown string `{0}` for config enum deserialize")]
+    SerializationError(String),
+}
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum PolynomialCommitmentType {
     #[default]
     Raw,
     KZG,
+    Hyrax,
     Orion,
     FRI,
+}
+
+impl FromStr for PolynomialCommitmentType {
+    type Err = ConfigEnumFromStrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Raw" => Ok(PolynomialCommitmentType::Raw),
+            "KZG" => Ok(PolynomialCommitmentType::KZG),
+            "Hyrax" => Ok(PolynomialCommitmentType::Hyrax),
+            "Orion" => Ok(PolynomialCommitmentType::Orion),
+            "FRI" => Ok(PolynomialCommitmentType::FRI),
+            _ => Err(ConfigEnumFromStrError::SerializationError(s.to_string())),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -22,6 +45,21 @@ pub enum FiatShamirHashType {
     Poseidon,
     Animoe,
     MIMC5, // Note: use MIMC5 for bn254 ONLY
+}
+
+impl FromStr for FiatShamirHashType {
+    type Err = ConfigEnumFromStrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "SHA256" => Ok(FiatShamirHashType::SHA256),
+            "Keccak256" => Ok(FiatShamirHashType::Keccak256),
+            "Poseidon" => Ok(FiatShamirHashType::Poseidon),
+            "Animoe" => Ok(FiatShamirHashType::Animoe),
+            "MIMC5" => Ok(FiatShamirHashType::MIMC5),
+            _ => Err(ConfigEnumFromStrError::SerializationError(s.to_string())),
+        }
+    }
 }
 
 pub const SENTINEL_M31: [u8; 32] = [

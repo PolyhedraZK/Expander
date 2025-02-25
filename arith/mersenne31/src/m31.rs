@@ -141,9 +141,8 @@ impl Field for M31 {
 }
 
 impl FieldForECC for M31 {
-    fn modulus() -> ethnum::U256 {
-        ethnum::U256::from(M31_MOD)
-    }
+    const MODULUS: ethnum::U256 = ethnum::U256::new(M31_MOD as u128);
+
     fn from_u256(x: ethnum::U256) -> Self {
         M31 {
             v: (x % ethnum::U256::from(M31_MOD)).as_u32(),

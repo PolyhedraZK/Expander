@@ -1,7 +1,10 @@
 use std::io::{Read, Write};
 
-use halo2curves::ff::{Field as Halo2Field, FromUniformBytes};
-use halo2curves::{bn256::Fr, ff::PrimeField};
+use halo2curves::{
+    bn256::{Fr, G1Affine, G2Affine},
+    ff::{Field as Halo2Field, FromUniformBytes, PrimeField},
+    group::GroupEncoding,
+};
 use rand::RngCore;
 
 use crate::serde::{FieldSerdeError, FieldSerdeResult};
@@ -111,11 +114,10 @@ impl Field for Fr {
 }
 
 impl FieldForECC for Fr {
-    fn modulus() -> ethnum::U256 {
-        MODULUS
-    }
+    const MODULUS: ethnum::U256 = MODULUS;
+
     fn from_u256(x: ethnum::U256) -> Self {
-        Fr::from_bytes(&(x % Fr::modulus()).to_le_bytes()).unwrap()
+        Fr::from_bytes(&(x % MODULUS).to_le_bytes()).unwrap()
     }
     fn to_u256(&self) -> ethnum::U256 {
         ethnum::U256::from_le_bytes(self.to_bytes())
@@ -164,6 +166,52 @@ impl FieldSerde for Fr {
     }
 }
 
+impl FieldSerde for G1Affine {
+    const SERIALIZED_SIZE: usize = 32;
+
+    fn serialize_into<W: Write>(&self, writer: W) -> FieldSerdeResult<()> {
+        let bytes = self.to_bytes().as_ref().to_vec();
+        bytes.serialize_into(writer)
+    }
+
+    fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self> {
+        let bytes: Vec<u8> = Vec::deserialize_from(reader)?;
+        if bytes.len() != Self::SERIALIZED_SIZE {
+            return Err(FieldSerdeError::DeserializeError);
+        }
+
+        let mut encoding = <Self as GroupEncoding>::Repr::default();
+        encoding.as_mut().copy_from_slice(bytes.as_ref());
+        match G1Affine::from_bytes(&encoding).into_option() {
+            Some(a) => Ok(a),
+            None => Err(FieldSerdeError::DeserializeError),
+        }
+    }
+}
+
+impl FieldSerde for G2Affine {
+    const SERIALIZED_SIZE: usize = 64;
+
+    fn serialize_into<W: Write>(&self, writer: W) -> FieldSerdeResult<()> {
+        let bytes = self.to_bytes().as_ref().to_vec();
+        bytes.serialize_into(writer)
+    }
+
+    fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self> {
+        let bytes: Vec<u8> = Vec::deserialize_from(reader)?;
+        if bytes.len() != Self::SERIALIZED_SIZE {
+            return Err(FieldSerdeError::DeserializeError);
+        }
+
+        let mut encoding = <Self as GroupEncoding>::Repr::default();
+        encoding.as_mut().copy_from_slice(bytes.as_ref());
+        match G2Affine::from_bytes(&encoding).into_option() {
+            Some(a) => Ok(a),
+            None => Err(FieldSerdeError::DeserializeError),
+        }
+    }
+}
+
 impl ExtensionField for Fr {
     const DEGREE: usize = 1;
 
@@ -189,5 +237,19 @@ impl ExtensionField for Fr {
     /// Multiply the extension field by x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
     fn mul_by_x(&self) -> Self {
         unimplemented!("mul_by_x for Fr doesn't make sense")
+    }
+
+    /// Construct a new instance of extension field from coefficients
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        if limbs.len() < Self::DEGREE {
+            Self::zero()
+        } else {
+            limbs[0]
+        }
+    }
+
+    /// Extract polynomial field coefficients from the extension field instance
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        vec![*self]
     }
 }

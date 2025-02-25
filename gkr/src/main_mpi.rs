@@ -1,24 +1,21 @@
 use circuit::Circuit;
 use clap::Parser;
 use config::{Config, GKRConfig, GKRScheme};
-use config_macros::declare_gkr_config;
 use mpi_config::MPIConfig;
 
-use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
-use transcript::{BytesHashTranscript, SHA256hasher};
+use gkr_field_config::GKRFieldConfig;
+use poly_commit::expander_pcs_init_testing_only;
+use rand::SeedableRng;
+use rand_chacha::ChaCha12Rng;
 
 use gkr::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
         KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
-    Prover,
+    BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, Prover,
 };
 
-#[allow(unused_imports)]
-// The FiatShamirHashType and PolynomialCommitmentType import is used in the macro expansion
-use config::{FiatShamirHashType, PolynomialCommitmentType};
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
 use gkr_field_config::FieldType;
 
@@ -45,56 +42,37 @@ fn main() {
 
     let mpi_config = MPIConfig::new();
 
-    declare_gkr_config!(
-        M31ExtConfigSha2,
-        FieldType::M31,
-        FiatShamirHashType::SHA256,
-        PolynomialCommitmentType::Raw
-    );
-    declare_gkr_config!(
-        BN254ConfigSha2,
-        FieldType::BN254,
-        FiatShamirHashType::SHA256,
-        PolynomialCommitmentType::Raw
-    );
-    declare_gkr_config!(
-        GF2ExtConfigSha2,
-        FieldType::GF2,
-        FiatShamirHashType::SHA256,
-        PolynomialCommitmentType::Raw
-    );
-
     match args.field.as_str() {
         "m31ext3" => match args.scheme.as_str() {
-            "keccak" => run_benchmark::<M31ExtConfigSha2>(
+            "keccak" => run_benchmark::<M31ExtConfigSha2Orion>(
                 &args,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
             ),
-            "poseidon" => run_benchmark::<M31ExtConfigSha2>(
+            "poseidon" => run_benchmark::<M31ExtConfigSha2Orion>(
                 &args,
-                Config::<M31ExtConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),
             _ => unreachable!(),
         },
         "fr" => match args.scheme.as_str() {
-            "keccak" => run_benchmark::<BN254ConfigSha2>(
+            "keccak" => run_benchmark::<BN254ConfigSha2Hyrax>(
                 &args,
-                Config::<BN254ConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
             ),
-            "poseidon" => run_benchmark::<BN254ConfigSha2>(
+            "poseidon" => run_benchmark::<BN254ConfigSha2Hyrax>(
                 &args,
-                Config::<BN254ConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),
             _ => unreachable!(),
         },
         "gf2ext128" => match args.scheme.as_str() {
-            "keccak" => run_benchmark::<GF2ExtConfigSha2>(
+            "keccak" => run_benchmark::<GF2ExtConfigSha2Orion>(
                 &args,
-                Config::<GF2ExtConfigSha2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
             ),
-            "poseidon" => run_benchmark::<GF2ExtConfigSha2>(
+            "poseidon" => run_benchmark::<GF2ExtConfigSha2Orion>(
                 &args,
-                Config::<GF2ExtConfigSha2>::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),
             _ => unreachable!(),
         },
@@ -104,18 +82,24 @@ fn main() {
     MPIConfig::finalize();
 }
 
+const PCS_TESTING_SEED_U64: u64 = 114514;
+
 fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let pack_size = Cfg::FieldConfig::get_field_pack_size();
 
     // load circuit
     let mut circuit = match args.scheme.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit(KECCAK_GF2_CIRCUIT),
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit(KECCAK_M31_CIRCUIT),
-            FieldType::BN254 => Circuit::<Cfg::FieldConfig>::load_circuit(KECCAK_BN254_CIRCUIT),
+            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GF2_CIRCUIT),
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_M31_CIRCUIT),
+            FieldType::BN254 => {
+                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_BN254_CIRCUIT)
+            }
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit(POSEIDON_M31_CIRCUIT),
+            FieldType::M31 => {
+                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(POSEIDON_M31_CIRCUIT)
+            }
             _ => unreachable!(),
         },
         _ => unreachable!(),
@@ -154,10 +138,13 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
 
     let mut prover = Prover::new(&config);
     prover.prepare_mem(&circuit);
+
+    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
     let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit.log_input_size(),
             &config.mpi_config,
+            &mut rng,
         );
 
     const N_PROOF: usize = 1000;

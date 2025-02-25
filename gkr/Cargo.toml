@@ -7,6 +7,7 @@ edition = "2021"
 arith = { path = "../arith" }
 config = { path = "../config" }
 config_macros = { path = "../config/config_macros" }
+field_hashers = { path = "../arith/field_hashers" }
 gkr_field_config = { path = "../config/gkr_field_config" }
 mpi_config = { path = "../config/mpi_config" }
 circuit = { path = "../circuit" }
@@ -17,6 +18,7 @@ poly_commit = { path = "../poly_commit" }
 polynomials = { path = "../arith/polynomials" }
 sumcheck = { path = "../sumcheck" }
 transcript = { path = "../transcript" }
+utils = { path = "../utils" }
 
 ark-std.workspace = true
 clap.workspace = true
@@ -28,6 +30,7 @@ sha2.workspace = true
 halo2curves.workspace = true
 thiserror.workspace = true
 ethnum.workspace = true
+rand_chacha.workspace = true
 
 # for the server
 bytes.workspace = true
@@ -56,7 +59,8 @@ path = "src/utils.rs"
 default = []
 # default = [ "grinding" ]
 grinding = [ "config/grinding" ]
-
+recursion = [ "transcript/recursion" ]
+profile = [ "utils/profile", "sumcheck/profile" ]
 
 [[bench]]
 name = "gkr-hashes"

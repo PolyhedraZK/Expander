@@ -134,16 +134,16 @@ impl MPIConfig {
 
     /// Return an u8 vector sharing THE SAME MEMORY SLOT with the input.
     #[inline]
-    unsafe fn vec_to_u8_bytes<F: Field>(vec: &Vec<F>) -> Vec<u8> {
+    unsafe fn vec_to_u8_bytes<F: Sized>(vec: &Vec<F>) -> Vec<u8> {
         Vec::<u8>::from_raw_parts(
             vec.as_ptr() as *mut u8,
-            vec.len() * F::SIZE,
-            vec.capacity() * F::SIZE,
+            vec.len() * size_of::<F>(),
+            vec.capacity() * size_of::<F>(),
         )
     }
 
     #[allow(clippy::collapsible_else_if)]
-    pub fn gather_vec<F: Field>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<F>) {
+    pub fn gather_vec<F: Sized + Clone>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<F>) {
         unsafe {
             if self.world_size == 1 {
                 *global_vec = local_vec.clone()
@@ -260,6 +260,11 @@ impl MPIConfig {
             self.gather_vec(local_vec, &mut vec![]);
             vec![]
         }
+    }
+
+    #[inline(always)]
+    pub fn is_single_process(&self) -> bool {
+        self.world_size == 1
     }
 
     #[inline(always)]

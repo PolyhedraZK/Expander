@@ -4,14 +4,14 @@ use std::{
 };
 
 use arith::{Field, FieldSerde};
-use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
 use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
-use transcript::{Proof, Transcript};
+use transcript::{transcript_verifier_sync, Proof, Transcript};
+use utils::timer::Timer;
 
 #[cfg(feature = "grinding")]
 use crate::grind;
@@ -138,7 +138,7 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
     sum -= vx_claim * GKRVerifierHelper::eval_add(&layer.add, sp);
     transcript.append_field_element(&vx_claim);
 
-    let vy_claim = if !layer.structure_info.max_degree_one {
+    let vy_claim = if !layer.structure_info.skip_sumcheck_phase_two {
         ry = Some(vec![]);
         for _i_var in 0..var_num {
             verified &= verify_sumcheck_step::<C, T>(
@@ -183,7 +183,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     C::ChallengeField,
     Option<C::ChallengeField>,
 ) {
-    let timer = start_timer!(|| "gkr verify");
+    let timer = Timer::new("gkr_verify", true);
     let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
 
     let layer_num = circuit.layers.len();
@@ -242,7 +242,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             None
         };
     }
-    end_timer!(timer);
+    timer.stop();
     (verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1)
 }
 
@@ -274,7 +274,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         pcs_verification_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::VKey,
         proof: &Proof,
     ) -> bool {
-        let timer = start_timer!(|| "verify");
+        let timer = Timer::new("verify", true);
         let mut transcript = Cfg::Transcript::new();
 
         let mut cursor = Cursor::new(&proof.bytes);
@@ -286,15 +286,20 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             .unwrap();
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap();
-        transcript.append_u8_slice(&buffer);
+
+        // this function will iteratively hash the commitment, and append the final hash output
+        // to the transcript. this introduces a decent circuit depth for the FS transform.
+        //
+        // note that this function is almost identical to grind, except that grind uses a
+        // fixed hasher, where as this function uses the transcript hasher
+        let pcs_verified = transcript.append_commitment_and_check_digest(&buffer, &mut cursor);
+        log::info!("pcs verification: {}", pcs_verified);
 
         // TODO: Implement a trait containing the size function,
         // and use the following line to avoid unnecessary deserialization and serialization
         // transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
-        if self.config.mpi_config.world_size() > 1 {
-            let _ = transcript.hash_and_return_state(); // Trigger an additional hash
-        }
+        transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
@@ -314,7 +319,10 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                     &mut cursor,
                 );
 
+                verified &= pcs_verified;
                 log::info!("GKR verification: {}", verified);
+
+                transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
 
                 verified &= self.get_pcs_opening_from_proof_and_verify(
                     pcs_params,
@@ -331,7 +339,8 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                 );
 
                 if let Some(rz1) = rz1 {
-                    verified &= self.get_pcs_opening_from_proof_and_verify(
+                    transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
+            verified &= self.get_pcs_opening_from_proof_and_verify(
                         pcs_params,
                         pcs_verification_key,
                         &commitment,
@@ -377,7 +386,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             }
         };
 
-        end_timer!(timer);
+        timer.stop();
 
         verified
     }
@@ -400,6 +409,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         )
         .unwrap();
 
+        transcript.lock_proof();
         let verified = Cfg::PCS::verify(
             pcs_params,
             &self.config.mpi_config,
@@ -410,6 +420,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             transcript,
             &opening,
         );
+        transcript.unlock_proof();
 
         let mut buffer = vec![];
         opening.serialize_into(&mut buffer).unwrap(); // TODO: error propagation

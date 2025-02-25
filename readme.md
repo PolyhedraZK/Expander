@@ -1,4 +1,10 @@
-![Expander](https://github.com/PolyhedraZK/Expander-cpp/blob/master/data/logo.jpg)
+<div align="center" style="width: 100%;">
+  <img 
+    src="https://expander.polyhedra.network/assets/static/logo-with-text.16d5af29.svg" 
+    alt="Expander Logo"
+    style="width: 400px; height: auto;"
+  />
+</div>
 
 # Expander
 
@@ -28,7 +34,7 @@ This is the *rust version* of the "core" repo.
 
 For more technical introduction, visit our markdown files [here](https://github.com/PolyhedraZK/Expander-cpp/tree/master/docs/doc.md).
 
-And [here](./tests/gkr_correctness.rs) for an example on how to use the gkr lib.
+And [here](./gkr/src/tests/gkr_correctness.rs) for an example on how to use the gkr lib.
 
 This is a core repo for our prover, to write circuits on our prover, please visit [our compiler](https://github.com/PolyhedraZK/ExpanderCompilerCollection)
 
@@ -112,6 +118,15 @@ To test the service started by `expander-exec serve`, you can use the following 
 ```sh
 python ./scripts/test_http.py  # need "requests" package
 ```
+
+## Profiling
+To get more fine-grained information about the running time, you can enable the `gkr/profile` feature, i.e.
+
+```sh
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release --features gkr/profile -- prove ./data/circuit_m31.txt ./data/witness_m31.txt ./data/out_m31.bin
+```
+
+Note that enabling the `profile` feature will slightly reduce the overall performance so it is recommended not to enable it when benchmarking.
 
 ## How to contribute?
 

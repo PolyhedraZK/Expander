@@ -1,37 +1,87 @@
 package polycommit
 
-import "github.com/consensys/gnark/frontend"
+import (
+	"ExpanderVerifierCircuit/modules/circuit"
+	"ExpanderVerifierCircuit/modules/fields"
+	"ExpanderVerifierCircuit/modules/transcript"
+
+	"github.com/consensys/gnark/frontend"
+)
 
 type RawCommitment struct {
 	Vals []frontend.Variable
 }
 
-func EvalMultilinear(api frontend.API, vs []frontend.Variable, r []frontend.Variable) frontend.Variable {
+func EvalMultilinear(
+	api fields.ArithmeticEngine,
+	// NOTE(HS) base field evals
+	vs []frontend.Variable,
+	// NOTE(HS) extension field eval point
+	r [][]frontend.Variable,
+) []frontend.Variable {
 	if 1<<len(r) != len(vs) {
 		panic("Inconsistent length of vals and randomness in eval multi-linear")
 	}
 
-	scratch := make([]frontend.Variable, len(vs))
-	copy(scratch, vs)
+	buf := make([][]frontend.Variable, len(vs))
+	for i, v := range vs {
+		buf[i] = api.ToExtension(v)
+	}
 
-	cur_eval_size := len(vs) >> 1
 	for i := 0; i < len(r); i++ {
-		for j := 0; j < cur_eval_size; j++ {
-			scratch[j] = api.Add(scratch[2*j], api.Mul(
-				api.Sub(scratch[2*j+1], scratch[2*j]),
-				r[i],
-			))
+		halfHypercubeSize := len(vs) >> (i + 1)
+		for j := 0; j < halfHypercubeSize; j++ {
+			buf[j] = api.ExtensionAdd(
+				buf[2*j],
+				api.ExtensionMul(api.ExtensionSub(buf[2*j+1], buf[2*j]), r[i]),
+			)
 		}
 	}
-	return scratch[0]
+	return buf[0]
 }
 
-func (c *RawCommitment) Verify(api frontend.API, r []frontend.Variable, y frontend.Variable) {
-	api.AssertIsEqual(EvalMultilinear(api, c.Vals, r), y)
-}
+func (c *RawCommitment) Verify(
+	api fields.ArithmeticEngine,
+	rs, rSIMD, rMPI [][]frontend.Variable,
+	y []frontend.Variable,
+) {
+	totalNumVars := len(rs) + len(rSIMD) + len(rMPI)
 
-func NewRawCommitment(vals []frontend.Variable) *RawCommitment {
-	return &RawCommitment{
-		Vals: vals,
+	if 1<<len(rSIMD) != api.SIMDPackSize() {
+		panic("Inconsistent SIMD length with randomness")
 	}
+
+	challengePoint := make([][]frontend.Variable, totalNumVars)
+	copy(challengePoint, rSIMD)
+	copy(challengePoint[len(rSIMD):], rs)
+	copy(challengePoint[len(rSIMD)+len(rs):], rMPI)
+
+	api.AssertEq(EvalMultilinear(api, c.Vals, challengePoint), y)
+}
+
+func NewRawPolyCommitment(
+	fieldEnum fields.ECCFieldEnum,
+	comLen uint,
+	proof *circuit.Proof,
+	fsTranscript *transcript.FieldHasherTranscript,
+) *RawCommitment {
+	// NOTE(HS) maybe I should read the elements for raw comm length
+	// and comapre with the circuit input size... but this one suffices for now
+	rawComLengthElemNum := circuit.RAW_COMMITMENT_LENGTH_BYTES / fieldEnum.FieldBytes()
+	rawComLengthElems := make([]frontend.Variable, rawComLengthElemNum)
+	for i := 0; i < int(rawComLengthElemNum); i++ {
+		rawComLengthElems[i] = proof.Next()
+	}
+	fsTranscript.AppendFs(rawComLengthElems...)
+
+	// TODO(HS) should we compare rawComLen against rawComLengthElemNum
+
+	// raw commitment add to transcript
+	vals := make([]frontend.Variable, comLen)
+	for i := uint(0); i < comLen; i++ {
+		vals[i] = proof.Next()
+	}
+	fsTranscript.AppendFs(vals...)
+
+	return &RawCommitment{Vals: vals}
 }

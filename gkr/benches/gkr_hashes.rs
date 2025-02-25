@@ -15,6 +15,7 @@ use poly_commit::{
     expander_pcs_init_testing_only, raw::RawExpanderGKR, PCSForExpanderGKR,
     StructuredReferenceString,
 };
+use rand::thread_rng;
 use std::hint::black_box;
 use transcript::{BytesHashTranscript, SHA256hasher};
 
@@ -47,7 +48,7 @@ fn benchmark_setup<Cfg: GKRConfig>(
     <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::ScratchPad,
 ){
     let config = Config::<Cfg>::new(scheme, MPIConfig::new());
-    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(circuit_file);
+    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(circuit_file);
 
     if let Some(witness_file) = witness_file {
         circuit.load_witness_file(witness_file);
@@ -55,10 +56,12 @@ fn benchmark_setup<Cfg: GKRConfig>(
         circuit.set_random_input_for_test();
     }
 
+    let mut rng = thread_rng();
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit.log_input_size(),
             &config.mpi_config,
+            &mut rng,
         );
 
     (config, circuit, pcs_params, pcs_proving_key, pcs_scratch)

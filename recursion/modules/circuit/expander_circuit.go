@@ -1,9 +1,10 @@
 package circuit
 
 import (
-	"ExpanderVerifierCircuit/modules/transcript"
 	"log"
 	"math/big"
+
+	"ExpanderVerifierCircuit/modules/transcript"
 
 	"github.com/consensys/gnark/frontend"
 )
@@ -63,29 +64,29 @@ type Circuit struct {
 	ExpectedNumOutputZeros uint
 }
 
-func (l *Layer) FillRndCoef(transcript *transcript.Transcript) {
+func (l *Layer) FillRndCoef(fsTranscript *transcript.FieldHasherTranscript) {
 	for i := 0; i < len(l.Mul); i++ {
 		if l.Mul[i].Coef.CoefType == Random {
-			l.Mul[i].Coef.RandomValue = transcript.ChallengeF()
+			l.Mul[i].Coef.RandomValue = fsTranscript.CircuitF()
 		}
 	}
 
 	for i := 0; i < len(l.Add); i++ {
 		if l.Add[i].Coef.CoefType == Random {
-			l.Add[i].Coef.RandomValue = transcript.ChallengeF()
+			l.Add[i].Coef.RandomValue = fsTranscript.CircuitF()
 		}
 	}
 
 	for i := 0; i < len(l.Cst); i++ {
 		if l.Cst[i].Coef.CoefType == Random {
-			l.Cst[i].Coef.RandomValue = transcript.ChallengeF()
+			l.Cst[i].Coef.RandomValue = fsTranscript.CircuitF()
 		}
 	}
 }
 
-func (c *Circuit) FillRndCoef(transcript *transcript.Transcript) {
+func (c *Circuit) FillRndCoef(fsTranscript *transcript.FieldHasherTranscript) {
 	for i := 0; i < len(c.Layers); i++ {
-		c.Layers[i].FillRndCoef(transcript)
+		c.Layers[i].FillRndCoef(fsTranscript)
 	}
 }
 

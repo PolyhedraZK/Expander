@@ -16,7 +16,7 @@ fn tree_building_benchmark(c: &mut Criterion) {
         .map(|_| {
             Leaf::new({
                 rng.fill_bytes(&mut data_buffer);
-                data_buffer.clone()
+                data_buffer
             })
         })
         .collect();

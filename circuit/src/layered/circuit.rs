@@ -1,8 +1,9 @@
+use std::fs;
 use std::io::Cursor;
-use std::{any::TypeId, fs};
 
-use arith::{Field, FieldSerde, SimdField};
+use arith::{Field, SimdField};
 use ark_std::test_rng;
+use config::GKRConfig;
 use gkr_field_config::GKRFieldConfig;
 use transcript::Transcript;
 
@@ -10,9 +11,9 @@ use crate::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct StructureInfo {
-    // this var name is a bit misleading -- the power5 gate's max degree is > 1.
-    // this is really try to see if we need to use two phase GKR or not
-    pub max_degree_one: bool,
+    // If a layer contains only linear combination of fan-in-one gates, we can skip the second
+    // phase of sumcheck e.g. y = a + b + c, and y = a^5 + b^5 + c^5
+    pub skip_sumcheck_phase_two: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -110,7 +111,7 @@ impl<C: GKRFieldConfig> CircuitLayer<C> {
 
     #[inline]
     pub fn identify_structure_info(&mut self) {
-        self.structure_info.max_degree_one = self.mul.is_empty();
+        self.structure_info.skip_sumcheck_phase_two = self.mul.is_empty();
     }
 }
 
@@ -142,9 +143,25 @@ impl<C: GKRFieldConfig> Clone for Circuit<C> {
 unsafe impl<C> Send for Circuit<C> where C: GKRFieldConfig {}
 
 impl<C: GKRFieldConfig> Circuit<C> {
-    pub fn load_circuit(filename: &str) -> Self {
+    pub fn load_circuit<Cfg: GKRConfig<FieldConfig = C>>(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
-        rc.flatten()
+        let mut circuit = rc.flatten();
+
+        circuit.identify_rnd_coefs();
+        circuit.identify_structure_info();
+
+        // If there will be two claims for the input
+        // Introduce an extra relay layer before the input layer
+        if !circuit.layers[0].structure_info.skip_sumcheck_phase_two {
+            match Cfg::PCS_TYPE {
+                // Raw PCS costs nothing in opening, so no need to add relay layer
+                // But we can probably add it in the future for verifier's convenience
+                config::PolynomialCommitmentType::Raw => (),
+                _ => circuit.add_input_relay_layer(),
+            }
+        }
+
+        circuit
     }
 
     pub fn load_non_simd_witness_file(&mut self, filename: &str) {
@@ -281,29 +298,43 @@ impl<C: GKRFieldConfig> Circuit<C> {
     pub fn fill_rnd_coefs<T: Transcript<C::ChallengeField>>(&mut self, transcript: &mut T) {
         assert!(self.rnd_coefs_identified);
 
-        if TypeId::of::<C::ChallengeField>() == TypeId::of::<C::CircuitField>() {
-            for &rnd_coef_ptr in &self.rnd_coefs {
-                unsafe {
-                    *(rnd_coef_ptr as *mut C::ChallengeField) =
-                        transcript.generate_challenge_field_element();
-                }
-            }
-        } else {
-            let n_bytes_required = C::CircuitField::SIZE * self.rnd_coefs.len();
-            let challenge_bytes = transcript.generate_challenge_u8_slice(n_bytes_required);
-            let mut cursor = Cursor::new(challenge_bytes);
-
-            for &rnd_coef_ptr in &self.rnd_coefs {
-                unsafe {
-                    *rnd_coef_ptr = C::CircuitField::deserialize_from(&mut cursor).unwrap();
-                }
-            }
-        }
+        let sampled_circuit_fs = transcript.generate_circuit_field_elements(self.rnd_coefs.len());
+        self.rnd_coefs
+            .iter()
+            .zip(sampled_circuit_fs.iter())
+            .for_each(|(&r, sr)| unsafe { *r = *sr });
     }
 
     pub fn identify_structure_info(&mut self) {
         for layer in &mut self.layers {
             layer.identify_structure_info();
         }
+    }
+
+    /// Add a layer before the input layer that contains only relays
+    /// The purpose is to make the input layer contain only addition gates,
+    /// and thus reduces the number of input claims from 2 to 1,
+    /// saving the PCS opening time.
+    pub fn add_input_relay_layer(&mut self) {
+        let input_var_num = self.layers[0].input_var_num;
+        let mut input_relay_layer = CircuitLayer::<C> {
+            input_var_num,
+            output_var_num: input_var_num,
+            ..Default::default()
+        };
+
+        for i in 0..(1 << input_var_num) {
+            input_relay_layer.add.push(GateAdd {
+                i_ids: [i],
+                o_id: i,
+                coef: C::CircuitField::ONE,
+                coef_type: CoefType::Constant,
+                gate_type: 0,
+            });
+        }
+
+        input_relay_layer.structure_info.skip_sumcheck_phase_two = true;
+
+        self.layers.insert(0, input_relay_layer);
     }
 }

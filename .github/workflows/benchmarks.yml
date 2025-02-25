@@ -1,8 +1,11 @@
 name: Run Benchmarks
 
-on:
-  push:
-  pull_request:
+env:
+  RUSTFLAGS: "-Dwarnings -C target-cpu=native"
+  RUST_BACKTRACE: 1
+  ACTIONS_RUNNER_DEBUG: true
+
+on: [push]
 
 jobs:
   benchmark:
@@ -11,8 +14,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - name: Set up Python
-      run: python3 --version
     - name: update toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -27,15 +28,13 @@ jobs:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
     - name: Install criterion
       run: cargo install cargo-criterion
-    - name: Install mpi
-      run: python3 ./scripts/install.py
-    - name: Setup
+    - name: Setup data
       run: cargo run --bin=dev-setup --release
     - name: Run benchmark
       run: RUSTFLAGS="-C target-cpu=native" cargo criterion --message-format=json > benchmark_results.json
     - name: Clean benchmark results
       run: |
-        wget https://raw.githubusercontent.com/PolyhedraZK/Expander-rs/main/scripts/parse_benchmark_result.py
+        wget https://raw.githubusercontent.com/PolyhedraZK/Expander/main/scripts/parse_benchmark_result.py
         python3 parse_benchmark_result.py benchmark_results.json benchmark_results_clean.json
     - name: Upload benchmark results to Google Cloud Storage
       run: |
