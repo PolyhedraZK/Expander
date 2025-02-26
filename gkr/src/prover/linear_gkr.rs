@@ -111,15 +111,13 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         c.fill_rnd_coefs(&mut transcript);
         c.evaluate();
 
-        let mut claimed_v = <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::default();
-        let rx;
+        let (claimed_v, rx, rsimd, rmpi);
         let mut ry = None;
-        let mut rsimd = vec![];
-        let mut rmpi = vec![];
 
         let gkr_prove_timer = Timer::new("gkr prove", self.config.mpi_config.is_root());
         if self.config.gkr_scheme == GKRScheme::GkrSquare {
-            (_, rx) = gkr_square_prove(c, &mut self.sp, &mut transcript);
+            (claimed_v, rx, rsimd, rmpi) =
+                gkr_square_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
         } else {
             (claimed_v, rx, ry, rsimd, rmpi) =
                 gkr_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);

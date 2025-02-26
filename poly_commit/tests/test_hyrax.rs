@@ -72,10 +72,10 @@ fn test_hyrax_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_va
         HyraxPCS<G1Affine, BytesHashTranscript<BN254Fr, Keccak256hasher>>,
     >(
         &num_vars_in_each_poly,
-        &mpi_config_ref,
+        mpi_config_ref,
         &mut transcript,
         &local_poly,
-        &vec![challenge_point],
+        &[challenge_point],
     );
 }
 

@@ -1865,7 +1865,9 @@ dependencies = [
  "arith",
  "ark-std",
  "criterion",
+ "gkr_field_config",
  "halo2curves",
+ "mpi_config",
 ]
 
 [[package]]

@@ -5,7 +5,7 @@ use std::{
 
 use arith::{Field, FieldSerde};
 use circuit::{Circuit, CircuitLayer};
-use config::{Config, GKRConfig};
+use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
@@ -15,6 +15,9 @@ use utils::timer::Timer;
 
 #[cfg(feature = "grinding")]
 use crate::grind;
+
+mod gkr_square;
+pub use gkr_square::gkr_square_verify;
 
 #[inline(always)]
 fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
@@ -40,6 +43,10 @@ fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         *claimed_sum = GKRVerifierHelper::degree_2_eval(&ps, r, sp);
     } else if degree == 3 {
         *claimed_sum = GKRVerifierHelper::degree_3_eval(&ps, r, sp);
+    } else if degree == 6 {
+        *claimed_sum = GKRVerifierHelper::degree_6_eval(&ps, r, sp);
+    } else {
+        panic!("unsupported degree");
     }
 
     verified
@@ -283,7 +290,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         // this function will iteratively hash the commitment, and append the final hash output
         // to the transcript. this introduces a decent circuit depth for the FS transform.
         //
-        // note that this function is almost identical to grind, expect that grind uses a
+        // note that this function is almost identical to grind, except that grind uses a
         // fixed hasher, where as this function uses the transcript hasher
         let pcs_verified = transcript.append_commitment_and_check_digest(&buffer, &mut cursor);
         log::info!("pcs verification: {}", pcs_verified);
@@ -301,50 +308,83 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
 
         circuit.fill_rnd_coefs(&mut transcript);
 
-        let (mut verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = gkr_verify(
-            &self.config.mpi_config,
-            circuit,
-            public_input,
-            claimed_v,
-            &mut transcript,
-            &mut cursor,
-        );
+        let verified = match self.config.gkr_scheme {
+            GKRScheme::Vanilla => {
+                let (mut verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = gkr_verify(
+                    &self.config.mpi_config,
+                    circuit,
+                    public_input,
+                    claimed_v,
+                    &mut transcript,
+                    &mut cursor,
+                );
 
-        verified &= pcs_verified;
-        log::info!("GKR verification: {}", verified);
+                verified &= pcs_verified;
+                log::info!("GKR verification: {}", verified);
 
-        transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
+                transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
 
-        verified &= self.get_pcs_opening_from_proof_and_verify(
-            pcs_params,
-            pcs_verification_key,
-            &commitment,
-            &ExpanderGKRChallenge {
-                x: rz0,
-                x_simd: r_simd.clone(),
-                x_mpi: r_mpi.clone(),
-            },
-            &claimed_v0,
-            &mut transcript,
-            &mut cursor,
-        );
+                verified &= self.get_pcs_opening_from_proof_and_verify(
+                    pcs_params,
+                    pcs_verification_key,
+                    &commitment,
+                    &ExpanderGKRChallenge {
+                        x: rz0,
+                        x_simd: r_simd.clone(),
+                        x_mpi: r_mpi.clone(),
+                    },
+                    &claimed_v0,
+                    &mut transcript,
+                    &mut cursor,
+                );
 
-        if let Some(rz1) = rz1 {
-            transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
-            verified &= self.get_pcs_opening_from_proof_and_verify(
-                pcs_params,
-                pcs_verification_key,
-                &commitment,
-                &ExpanderGKRChallenge {
-                    x: rz1,
-                    x_simd: r_simd,
-                    x_mpi: r_mpi,
-                },
-                &claimed_v1.unwrap(),
-                &mut transcript,
-                &mut cursor,
-            );
-        }
+                if let Some(rz1) = rz1 {
+                    transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
+                    verified &= self.get_pcs_opening_from_proof_and_verify(
+                        pcs_params,
+                        pcs_verification_key,
+                        &commitment,
+                        &ExpanderGKRChallenge {
+                            x: rz1,
+                            x_simd: r_simd,
+                            x_mpi: r_mpi,
+                        },
+                        &claimed_v1.unwrap(),
+                        &mut transcript,
+                        &mut cursor,
+                    );
+                }
+
+                verified
+            }
+            GKRScheme::GkrSquare => {
+                let (mut verified, rz, r_simd, r_mpi, claimed_v) = gkr_square_verify(
+                    &self.config.mpi_config,
+                    circuit,
+                    public_input,
+                    claimed_v,
+                    &mut transcript,
+                    &mut cursor,
+                );
+
+                log::info!("GKR verification: {}", verified);
+
+                verified &= self.get_pcs_opening_from_proof_and_verify(
+                    pcs_params,
+                    pcs_verification_key,
+                    &commitment,
+                    &ExpanderGKRChallenge {
+                        x: rz,
+                        x_simd: r_simd.clone(),
+                        x_mpi: r_mpi.clone(),
+                    },
+                    &claimed_v,
+                    &mut transcript,
+                    &mut cursor,
+                );
+                verified
+            }
+        };
 
         timer.stop();
 

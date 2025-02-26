@@ -1,6 +1,6 @@
 use arith::{Field, SimdField};
 use gkr_field_config::GKRFieldConfig;
-use polynomials::MultiLinearPoly;
+use polynomials::{MultiLinearPoly, MultiLinearPolyExpander};
 use transcript::Transcript;
 
 use crate::sumcheck::{sumcheck_prove_gather_layer, sumcheck_prove_scatter_layer};
@@ -18,7 +18,11 @@ pub fn prove_gkr<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         .generate_challenge_field_elements(final_layer_vals.len().trailing_zeros() as usize);
     let r_simd = transcript
         .generate_challenge_field_elements(C::get_field_pack_size().trailing_zeros() as usize);
-    let output_claim = C::eval_circuit_vals_at_challenge(final_layer_vals, &rz0, &mut sp.v_evals);
+    let output_claim = MultiLinearPolyExpander::<C>::eval_circuit_vals_at_challenge(
+        final_layer_vals,
+        &rz0,
+        &mut sp.v_evals,
+    );
     let output_claim = MultiLinearPoly::<C::ChallengeField>::evaluate_with_buffer(
         &output_claim.unpack(),
         &r_simd,

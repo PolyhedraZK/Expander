@@ -30,7 +30,11 @@ where
     F: ExtensionField,
     T: Transcript<F>,
 {
-    assert!(ps.len() == 3 || ps.len() == 4); // 3 for x, y; 4 for simd var
+    // 3 for x, y; 4 for simd var; 7 for pow5, 9 for pow7
+    assert!(
+        ps.len() == 3 || ps.len() == 4 || ps.len() == 7 || ps.len() == 9,
+        "Unexpected polynomial size"
+    );
     for p in ps {
         transcript.append_field_element(p);
     }
