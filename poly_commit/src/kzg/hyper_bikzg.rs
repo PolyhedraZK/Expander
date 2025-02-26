@@ -193,18 +193,20 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
     }
 
     // TODO(HS) can be improved to broadcast a vec, returning a coeff to each party
-    let mut serialized_y_coeffs: Vec<u8> = Vec::new();
-    if mpi_config.is_root() {
-        leader_gamma_aggregated_y_coeffs
-            .serialize_into(&mut serialized_y_coeffs)
-            .unwrap();
-    }
+    {
+        let mut serialized_y_coeffs: Vec<u8> = Vec::new();
+        if mpi_config.is_root() {
+            leader_gamma_aggregated_y_coeffs
+                .serialize_into(&mut serialized_y_coeffs)
+                .unwrap();
+        }
 
-    mpi_config.root_broadcast_bytes(&mut serialized_y_coeffs);
-    leader_gamma_aggregated_y_coeffs = {
-        let mut cursor = Cursor::new(serialized_y_coeffs);
-        Vec::deserialize_from(&mut cursor).unwrap()
-    };
+        mpi_config.root_broadcast_bytes(&mut serialized_y_coeffs);
+        leader_gamma_aggregated_y_coeffs = {
+            let mut cursor = Cursor::new(serialized_y_coeffs);
+            Vec::deserialize_from(&mut cursor).unwrap()
+        };
+    }
 
     //
     // Local party compute the linear combined folded coeffs at x with gamma,
@@ -332,19 +334,21 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
     //
 
     // TODO(HS) can be better if the root only send corresponding coeffs to the parties
-    let mut serialized_y_quotient_coeffs: Vec<u8> = Vec::new();
-    if mpi_config.is_root() {
-        leader_quotient_y_coeffs
-            .serialize_into(&mut serialized_y_quotient_coeffs)
-            .unwrap();
-    }
+    {
+        let mut serialized_y_quotient_coeffs: Vec<u8> = Vec::new();
+        if mpi_config.is_root() {
+            leader_quotient_y_coeffs
+                .serialize_into(&mut serialized_y_quotient_coeffs)
+                .unwrap();
+        }
 
-    mpi_config.root_broadcast_bytes(&mut serialized_y_quotient_coeffs);
-    leader_quotient_y_coeffs = {
-        let mut cursor = Cursor::new(serialized_y_quotient_coeffs);
-        Vec::deserialize_from(&mut cursor).unwrap()
-    };
-    leader_quotient_y_coeffs.resize(mpi_config.world_size(), E::Fr::ZERO);
+        mpi_config.root_broadcast_bytes(&mut serialized_y_quotient_coeffs);
+        leader_quotient_y_coeffs = {
+            let mut cursor = Cursor::new(serialized_y_quotient_coeffs);
+            Vec::deserialize_from(&mut cursor).unwrap()
+        };
+        leader_quotient_y_coeffs.resize(mpi_config.world_size(), E::Fr::ZERO);
+    }
 
     //
     // Final step for local - trip off the prior quotients at x and y on \pm beta and beta^2
@@ -364,7 +368,7 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
     local_gamma_aggregated_x_coeffs[0] -= leader_quotient_y_coeffs[mpi_config.world_rank()];
 
     //
-    // BiKZG commti to the last bivariate poly
+    // BiKZG commit to the last bivariate poly
     //
 
     let mut gathered_eval_opens: Vec<(E::Fr, E::G1Affine)> = Vec::new();

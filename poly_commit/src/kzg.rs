@@ -1,8 +1,11 @@
-mod structs;
-pub use structs::*;
-
 mod utils;
-pub use utils::*;
+pub(crate) use utils::*;
+
+mod kzg_structs;
+pub use kzg_structs::*;
+
+mod hyper_kzg_structs;
+pub use hyper_kzg_structs::*;
 
 mod univariate;
 pub use univariate::*;
