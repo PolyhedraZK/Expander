@@ -44,7 +44,7 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
     let local_final_eval_at_x = {
         let last_coeffs = local_folded_x_oracle_coeffs.last().unwrap().clone();
         let last_alpha = local_alphas[local_alphas.len() - 1];
-        last_coeffs[0] * (E::Fr::ONE - last_alpha) * last_coeffs[0] + last_alpha * last_coeffs[1]
+        (E::Fr::ONE - last_alpha) * last_coeffs[0] + last_alpha * last_coeffs[1]
     };
 
     //

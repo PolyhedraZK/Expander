@@ -52,10 +52,10 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
     let final_evals: Vec<E::Fr> = folded_oracle_coeffs_s
         .iter()
         .map(|coeffs| {
-            let final_coeffs = coeffs[coeffs.len() - 1].clone();
+            let final_coeffs = coeffs.last().unwrap().clone();
             let final_alpha = local_alphas[local_alphas.len() - 1];
-            final_coeffs[0] * (E::Fr::ONE - final_alpha) * final_coeffs[0]
-                + final_alpha * final_coeffs[1]
+
+            (E::Fr::ONE - final_alpha) * final_coeffs[0] + final_alpha * final_coeffs[1]
         })
         .collect();
 
