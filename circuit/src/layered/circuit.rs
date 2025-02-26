@@ -145,23 +145,7 @@ unsafe impl<C> Send for Circuit<C> where C: GKRFieldConfig {}
 impl<C: GKRFieldConfig> Circuit<C> {
     pub fn load_circuit<Cfg: GKRConfig<FieldConfig = C>>(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
-        let mut circuit = rc.flatten();
-
-        circuit.identify_rnd_coefs();
-        circuit.identify_structure_info();
-
-        // If there will be two claims for the input
-        // Introduce an extra relay layer before the input layer
-        if !circuit.layers[0].structure_info.skip_sumcheck_phase_two {
-            match Cfg::PCS_TYPE {
-                // Raw PCS costs nothing in opening, so no need to add relay layer
-                // But we can probably add it in the future for verifier's convenience
-                config::PolynomialCommitmentType::Raw => (),
-                _ => circuit.add_input_relay_layer(),
-            }
-        }
-
-        circuit
+        rc.flatten::<Cfg>()
     }
 
     pub fn load_non_simd_witness_file(&mut self, filename: &str) {
@@ -285,6 +269,22 @@ impl<C: GKRFieldConfig> Circuit<C> {
                 .take(10)
                 .collect::<Vec<_>>()
         );
+    }
+
+    pub fn pre_process_gkr<Cfg: GKRConfig<FieldConfig = C>>(&mut self) {
+        self.identify_rnd_coefs();
+        self.identify_structure_info();
+
+        // If there will be two claims for the input
+        // Introduce an extra relay layer before the input layer
+        if !self.layers[0].structure_info.skip_sumcheck_phase_two {
+            match Cfg::PCS_TYPE {
+                // Raw PCS costs nothing in opening, so no need to add relay layer
+                // But we can probably add it in the future for verifier's convenience
+                config::PolynomialCommitmentType::Raw => (),
+                _ => self.add_input_relay_layer(),
+            }
+        }
     }
 
     pub fn identify_rnd_coefs(&mut self) {

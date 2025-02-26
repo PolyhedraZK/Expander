@@ -1,3 +1,4 @@
+use config::GKRConfig;
 use gkr_field_config::GKRFieldConfig;
 use std::{cmp::max, collections::HashMap, fs, io::Cursor};
 
@@ -83,7 +84,7 @@ impl<C: GKRFieldConfig> RecursiveCircuit<C> {
         Ok(Self::deserialize_from(cursor))
     }
 
-    pub fn flatten(&self) -> Circuit<C> {
+    pub fn flatten<Cfg: GKRConfig<FieldConfig = C>>(&self) -> Circuit<C> {
         let mut ret = Circuit::<C> {
             expected_num_output_zeros: self.expected_num_output_zeros,
             ..Default::default()
@@ -139,6 +140,8 @@ impl<C: GKRFieldConfig> RecursiveCircuit<C> {
             );
             ret.layers.push(ret_layer);
         }
+
+        ret.pre_process_gkr::<Cfg>();
 
         ret
     }
