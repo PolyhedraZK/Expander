@@ -155,16 +155,8 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
             &root_gathering_exported_folded_x_evals,
             beta_y,
         );
-        local_evals
-            .beta_y2_evals
-            .append_to_transcript(fs_transcript);
-        local_evals
-            .pos_beta_y_evals
-            .append_to_transcript(fs_transcript);
-        local_evals
-            .neg_beta_y_evals
-            .append_to_transcript(fs_transcript);
 
+        local_evals.append_to_transcript(fs_transcript);
         root_folded_y_evals.append_to_transcript(fs_transcript);
     }
 
@@ -357,7 +349,6 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
     // NOTE(HS) f_gamma_s - (delta_x - beta_x) ... (delta_x - beta_x2) f_gamma_quotient_s
     //                    - (delta_y - beta_y) ... (delta_y - beta_y2) lagrange_quotient_y
     let delta_x_denom = (delta_x - beta_x) * (delta_x - beta_x * beta_x) * (delta_x + beta_x);
-    #[allow(unused)]
     let delta_y_denom = (delta_y - beta_y) * (delta_y - beta_y * beta_y) * (delta_y + beta_y);
 
     polynomial_add(
@@ -365,7 +356,8 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
         -delta_x_denom,
         &local_gamma_aggregated_x_quotient,
     );
-    local_gamma_aggregated_x_coeffs[0] -= leader_quotient_y_coeffs[mpi_config.world_rank()];
+    local_gamma_aggregated_x_coeffs[0] -=
+        delta_y_denom * leader_quotient_y_coeffs[mpi_config.world_rank()];
 
     //
     // BiKZG commit to the last bivariate poly

@@ -4,14 +4,14 @@ pub(crate) use utils::*;
 mod kzg_structs;
 pub use kzg_structs::*;
 
-mod hyper_kzg_structs;
-pub use hyper_kzg_structs::*;
-
 mod univariate;
 pub use univariate::*;
 
 mod bivariate;
 pub use bivariate::*;
+
+mod hyper_kzg_structs;
+pub use hyper_kzg_structs::*;
 
 mod hyper_kzg;
 pub use hyper_kzg::*;

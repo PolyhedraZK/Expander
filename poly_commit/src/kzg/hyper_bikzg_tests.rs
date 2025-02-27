@@ -88,15 +88,8 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
 
     let aggregated_evals =
         HyperKZGAggregatedEvals::new_from_exported_evals(&exported_local_evals_s, beta_y);
-    aggregated_evals
-        .beta_y2_evals
-        .append_to_transcript(fs_transcript);
-    aggregated_evals
-        .pos_beta_y_evals
-        .append_to_transcript(fs_transcript);
-    aggregated_evals
-        .neg_beta_y_evals
-        .append_to_transcript(fs_transcript);
+
+    aggregated_evals.append_to_transcript(fs_transcript);
 
     let root_evals: HyperKZGLocalEvals<E> = coeff_form_hyperkzg_local_evals(
         &final_evals,

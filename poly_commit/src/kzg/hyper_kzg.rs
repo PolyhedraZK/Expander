@@ -155,9 +155,7 @@ where
         local_evals.multilinear_final_eval(),
         HyperKZGOpening {
             folded_oracle_commitments: folded_oracle_commits,
-            f_beta2: local_evals.beta2_evals[0],
-            evals_at_beta: local_evals.pos_beta_evals,
-            evals_at_neg_beta: local_evals.neg_beta_evals,
+            evals_at_x: local_evals.into(),
             beta_commitment: f_gamma_quotient_com,
             tau_vanishing_commitment: vanishing_at_tau_commitment,
         },
@@ -184,33 +182,21 @@ where
 
     let beta = fs_transcript.generate_challenge_field_element();
     let beta2 = beta * beta;
-    let beta_inv = beta.invert().unwrap();
-    let two_inv = E::Fr::ONE.double().invert().unwrap();
 
-    fs_transcript.append_field_element(&opening.f_beta2);
-    let mut beta2_evals = vec![opening.f_beta2];
-    izip!(&opening.evals_at_beta, &opening.evals_at_neg_beta, alphas).for_each(
-        |(beta_eval, neg_beta_eval, alpha)| {
-            let beta2_eval = two_inv
-                * ((*beta_eval + *neg_beta_eval) * (E::Fr::ONE - alpha)
-                    + (*beta_eval - *neg_beta_eval) * beta_inv * alpha);
+    let local_evals =
+        HyperKZGLocalEvals::<E>::new_from_exported_evals(&opening.evals_at_x, alphas, beta);
 
-            beta2_evals.push(beta2_eval);
+    opening.evals_at_x.append_to_transcript(fs_transcript);
 
-            fs_transcript.append_field_element(beta_eval);
-            fs_transcript.append_field_element(neg_beta_eval);
-        },
-    );
-
-    if beta2_evals[beta2_evals.len() - 1] != eval {
+    if local_evals.multilinear_final_eval() != eval {
         return false;
     }
 
     let gamma = fs_transcript.generate_challenge_field_element();
     let gamma_pow_series = powers_series(&gamma, alphas.len());
-    let v_beta = univariate_evaluate(&opening.evals_at_beta, &gamma_pow_series);
-    let v_neg_beta = univariate_evaluate(&opening.evals_at_neg_beta, &gamma_pow_series);
-    let v_beta2 = univariate_evaluate(&beta2_evals, &gamma_pow_series);
+    let v_beta = univariate_evaluate(&local_evals.pos_beta_evals, &gamma_pow_series);
+    let v_neg_beta = univariate_evaluate(&local_evals.neg_beta_evals, &gamma_pow_series);
+    let v_beta2 = univariate_evaluate(&local_evals.beta2_evals, &gamma_pow_series);
     let lagrange_degree2 =
         coeff_form_degree2_lagrange([beta, -beta, beta2], [v_beta, v_neg_beta, v_beta2]);
 
