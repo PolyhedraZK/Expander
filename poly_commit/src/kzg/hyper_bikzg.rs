@@ -17,6 +17,8 @@ use transcript::{transcript_root_broadcast, Transcript};
 
 use crate::*;
 
+// TODO(HS) separate out commit, open, strip out verification
+
 pub fn coeff_form_hyper_bikzg_open<E, T>(
     srs: &CoefFormBiKZGLocalSRS<E>,
     mpi_config: &MPIConfig,
