@@ -5,6 +5,7 @@ use arith::{Field, SimdField};
 use ark_std::test_rng;
 use config::GKRConfig;
 use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
 use transcript::Transcript;
 
 use crate::*;
@@ -148,27 +149,40 @@ impl<C: GKRFieldConfig> Circuit<C> {
         rc.flatten::<Cfg>()
     }
 
-    pub fn load_non_simd_witness_file(&mut self, filename: &str) {
+    pub fn load_single_witness_and_padding_testing_only(
+        &mut self,
+        filename: &str,
+        mpi_config: &MPIConfig,
+    ) {
         let file_bytes = fs::read(filename).unwrap();
-        self.load_witness_bytes(&file_bytes, true);
+        self.load_witness_bytes(&file_bytes, mpi_config, true);
     }
 
-    pub fn load_witness_file(&mut self, filename: &str) {
+    pub fn load_witness_file(&mut self, filename: &str, mpi_config: &MPIConfig) {
         let file_bytes = fs::read(filename).unwrap();
-        self.load_witness_bytes(&file_bytes, false);
+        self.load_witness_bytes(&file_bytes, mpi_config, false);
     }
 
-    pub fn load_witness_bytes(&mut self, file_bytes: &[u8], allow_padding: bool) {
+    pub fn load_witness_bytes(
+        &mut self,
+        file_bytes: &[u8],
+        mpi_config: &MPIConfig,
+        allow_padding: bool,
+    ) {
         let cursor = Cursor::new(file_bytes);
-        let witness = Witness::<C>::deserialize_from(cursor);
+        let mut witness = Witness::<C>::deserialize_from(cursor);
 
+        // sizes for a single piece of witness
         let private_input_size = 1 << self.log_input_size();
         let public_input_size = witness.num_public_inputs_per_witness;
         let total_size = private_input_size + public_input_size;
-
         assert_eq!(witness.num_private_inputs_per_witness, private_input_size);
+
+        // the number of witnesses should be equal to the number of MPI processes * simd width
+        let desired_number_of_witnesses = C::get_field_pack_size() * mpi_config.world_size();
+
         #[allow(clippy::comparison_chain)]
-        if witness.num_witnesses < C::get_field_pack_size() {
+        if witness.num_witnesses < desired_number_of_witnesses {
             if !allow_padding {
                 panic!(
                     "Not enough witness, expected {}, got {}",
@@ -178,19 +192,30 @@ impl<C: GKRFieldConfig> Circuit<C> {
             } else {
                 println!(
                     "Warning: padding witnesses, expected {}, got {}",
-                    C::get_field_pack_size(),
-                    witness.num_witnesses
+                    desired_number_of_witnesses, witness.num_witnesses
                 );
+                let padding_vec = witness.values[0..total_size].to_vec();
+                for _ in witness.num_witnesses..desired_number_of_witnesses {
+                    witness.values.extend_from_slice(&padding_vec);
+                }
+                witness.num_witnesses = desired_number_of_witnesses;
             }
-        } else if witness.num_witnesses > C::get_field_pack_size() {
+        } else if witness.num_witnesses > desired_number_of_witnesses {
             println!(
                 "Warning: dropping additional witnesses, expected {}, got {}",
-                C::get_field_pack_size(),
-                witness.num_witnesses
+                desired_number_of_witnesses, witness.num_witnesses
             );
+            witness
+                .values
+                .truncate(desired_number_of_witnesses * total_size);
+            witness.num_witnesses = desired_number_of_witnesses;
+        } else {
+            println!("Witnesses size is correct");
         }
 
-        let input = &witness.values;
+        let rank = mpi_config.world_rank();
+        let input = &witness.values[rank * total_size * C::get_field_pack_size()
+            ..(rank + 1) * total_size * C::get_field_pack_size()];
         let private_input = &mut self.layers[0].input_vals;
         let public_input = &mut self.public_input;
 

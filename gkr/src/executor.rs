@@ -11,6 +11,7 @@ use clap::{Parser, Subcommand};
 use config::{Config, GKRConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
 use gkr_field_config::FieldType;
 use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
 use poly_commit::expander_pcs_init_testing_only;
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
@@ -172,7 +173,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
         } => {
             let mut circuit =
                 Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&command.circuit_file);
-            circuit.load_witness_file(&witness_file);
+            circuit.load_witness_file(&witness_file, &config.mpi_config);
             let (claimed_v, proof) = prove(&mut circuit, &config);
 
             if config.mpi_config.is_root() {
@@ -188,7 +189,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
         } => {
             let mut circuit =
                 Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&command.circuit_file);
-            circuit.load_witness_file(&witness_file);
+            circuit.load_witness_file(&witness_file, &config.mpi_config);
             // Repeating the same public input for mpi_size times
             // TODO: Fix this, use real input
             let n_public_input_per_mpi = circuit.public_input.len();
@@ -254,7 +255,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
                         let pcs_proving_key = pcs_proving_key.lock().unwrap();
                         let mut pcs_scratch = pcs_scratch.lock().unwrap();
 
-                        circuit.load_witness_bytes(&witness_bytes, true);
+                        circuit.load_witness_bytes(&witness_bytes, &MPIConfig::new(), true);
                         let (claimed_v, proof) = prover.prove(
                             &mut circuit,
                             &pcs_params,
@@ -286,7 +287,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
                         let mut circuit = circuit_clone_for_verifier.lock().unwrap();
                         let verifier = verifier.lock().unwrap();
                         let pcs_verification_key = pcs_verification_key.lock().unwrap();
-                        circuit.load_witness_bytes(witness_bytes, true);
+                        circuit.load_witness_bytes(witness_bytes, &MPIConfig::new(), true);
                         let public_input = circuit.public_input.clone();
                         let (proof, claimed_v) = load_proof_and_claimed_v(proof_bytes).unwrap();
                         if verifier.verify(
