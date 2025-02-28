@@ -1,6 +1,8 @@
 mod utils;
 pub(crate) use utils::*;
 
+mod serde;
+
 mod kzg_structs;
 pub use kzg_structs::*;
 

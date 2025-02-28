@@ -15,21 +15,6 @@ where
     }
 }
 
-impl<E: Engine> FieldSerde for KZGCommitment<E>
-where
-    E::G1Affine: FieldSerde,
-{
-    const SERIALIZED_SIZE: usize = <E::G1Affine as FieldSerde>::SERIALIZED_SIZE;
-
-    fn serialize_into<W: std::io::Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
-        self.0.serialize_into(writer)
-    }
-
-    fn deserialize_from<R: std::io::Read>(reader: R) -> arith::FieldSerdeResult<Self> {
-        Ok(Self(<E::G1Affine as FieldSerde>::deserialize_from(reader)?))
-    }
-}
-
 /// Structured reference string for univariate KZG polynomial commitment scheme.
 /// The univariate polynomial here is of coefficient form.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -53,28 +38,6 @@ where
     }
 }
 
-impl<E: Engine> FieldSerde for CoefFormUniKZGSRS<E>
-where
-    E::G1Affine: FieldSerde,
-    E::G2Affine: FieldSerde,
-{
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
-        self.powers_of_tau.serialize_into(&mut writer)?;
-        self.tau_g2.serialize_into(&mut writer)
-    }
-
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
-        let powers_of_tau: Vec<E::G1Affine> = Vec::deserialize_from(&mut reader)?;
-        let tau_g2: E::G2Affine = E::G2Affine::deserialize_from(&mut reader)?;
-        Ok(Self {
-            powers_of_tau,
-            tau_g2,
-        })
-    }
-}
-
 impl<E: Engine> StructuredReferenceString for CoefFormUniKZGSRS<E>
 where
     <E as Engine>::G1Affine: FieldSerde,
@@ -93,23 +56,6 @@ where
 pub struct UniKZGVerifierParams<E: Engine> {
     /// \tau over G2
     pub tau_g2: E::G2Affine,
-}
-
-impl<E: Engine> FieldSerde for UniKZGVerifierParams<E>
-where
-    E::G2Affine: FieldSerde,
-{
-    const SERIALIZED_SIZE: usize = <E::G2Affine as FieldSerde>::SERIALIZED_SIZE;
-
-    fn serialize_into<W: std::io::Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
-        self.tau_g2.serialize_into(writer)
-    }
-
-    fn deserialize_from<R: std::io::Read>(reader: R) -> arith::FieldSerdeResult<Self> {
-        Ok(Self {
-            tau_g2: <E::G2Affine as FieldSerde>::deserialize_from(reader)?,
-        })
-    }
 }
 
 impl<E: Engine> From<&CoefFormUniKZGSRS<E>> for UniKZGVerifierParams<E> {

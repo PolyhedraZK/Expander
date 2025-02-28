@@ -110,10 +110,10 @@ where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
 {
-    let (folded_oracle_commits, folded_oracle_coeffs) =
+    let (folded_oracle_commitments, folded_oracle_coeffs) =
         coeff_form_hyperkzg_local_poly_oracles(srs, coeffs, alphas);
 
-    folded_oracle_commits.iter().for_each(|f| {
+    folded_oracle_commitments.iter().for_each(|f| {
         fs_transcript.append_u8_slice(f.to_bytes().as_ref());
     });
 
@@ -134,9 +134,9 @@ where
         polynomial_add(&mut nom, -E::Fr::ONE, &lagrange_degree2);
         univariate_roots_quotient(nom, &[beta, beta2, -beta])
     };
-    let f_gamma_quotient_com = coeff_form_uni_kzg_commit(srs, &f_gamma_quotient);
+    let beta_x_commitment = coeff_form_uni_kzg_commit(srs, &f_gamma_quotient);
 
-    fs_transcript.append_u8_slice(f_gamma_quotient_com.to_bytes().as_ref());
+    fs_transcript.append_u8_slice(beta_x_commitment.to_bytes().as_ref());
 
     let tau = fs_transcript.generate_challenge_field_element();
     let vanishing_at_tau = {
@@ -149,15 +149,15 @@ where
         assert_eq!(lagrange_degree2_at_tau, remainder);
         coeffs
     };
-    let vanishing_at_tau_commitment = coeff_form_uni_kzg_commit(srs, &vanishing_at_tau);
+    let quotient_delta_x_commitment = coeff_form_uni_kzg_commit(srs, &vanishing_at_tau);
 
     (
         local_evals.multilinear_final_eval(),
         HyperKZGOpening {
-            folded_oracle_commitments: folded_oracle_commits,
+            folded_oracle_commitments,
             evals_at_x: local_evals.into(),
-            beta_commitment: f_gamma_quotient_com,
-            tau_vanishing_commitment: vanishing_at_tau_commitment,
+            beta_x_commitment,
+            quotient_delta_x_commitment,
         },
     )
 }
@@ -208,7 +208,7 @@ where
     let commitment_agg_g1: E::G1 =
         comm.to_curve() + univariate_evaluate(&folded_g1_oracle_comms, &gamma_pow_series[1..]);
 
-    fs_transcript.append_u8_slice(opening.beta_commitment.to_bytes().as_ref());
+    fs_transcript.append_u8_slice(opening.beta_x_commitment.to_bytes().as_ref());
     let tau = fs_transcript.generate_challenge_field_element();
 
     let q_weight = (tau - beta) * (tau - beta2) * (tau + beta);
@@ -217,10 +217,10 @@ where
 
     coeff_form_uni_kzg_verify(
         vk,
-        (commitment_agg_g1 - opening.beta_commitment.to_curve() * q_weight).into(),
+        (commitment_agg_g1 - opening.beta_x_commitment.to_curve() * q_weight).into(),
         tau,
         lagrange_eval,
-        opening.tau_vanishing_commitment,
+        opening.quotient_delta_x_commitment,
     )
 }
 

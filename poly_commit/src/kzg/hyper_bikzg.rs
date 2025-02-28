@@ -25,7 +25,7 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
     mpi_alphas: &[E::Fr],
     fs_transcript: &mut T,
 ) where
-    E: MultiMillerLoop,
+    E: MultiMillerLoop + Default,
     T: Transcript<E::Fr>,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,

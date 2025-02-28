@@ -88,10 +88,8 @@ where
         })
         .collect();
 
-    let exported_local_evals_s: Vec<_> = local_evals_s
-        .iter()
-        .map(|w| Into::<HyperKZGExportedLocalEvals<E>>::into(w.clone()))
-        .collect();
+    let exported_local_evals_s: Vec<HyperKZGExportedLocalEvals<E>> =
+        local_evals_s.iter().cloned().map(Into::into).collect();
 
     let aggregated_evals =
         HyperKZGAggregatedEvals::new_from_exported_evals(&exported_local_evals_s, beta_y);
@@ -367,17 +365,10 @@ where
 
     dbg!(delta_x);
 
-    let at_beta_y2 = aggregated_beta_y2_locals[0]
-        + aggregated_beta_y2_locals[1] * delta_x
-        + aggregated_beta_y2_locals[2] * delta_x * delta_x;
-
-    let at_beta_y = aggregated_pos_beta_y_locals[0]
-        + aggregated_pos_beta_y_locals[1] * delta_x
-        + aggregated_pos_beta_y_locals[2] * delta_x * delta_x;
-
-    let at_neg_beta_y = aggregated_neg_beta_y_locals[0]
-        + aggregated_neg_beta_y_locals[1] * delta_x
-        + aggregated_neg_beta_y_locals[2] * delta_x * delta_x;
+    let delta_x_pow_series = powers_series(&delta_x, 3);
+    let at_beta_y2 = univariate_evaluate(&aggregated_beta_y2_locals, &delta_x_pow_series);
+    let at_beta_y = univariate_evaluate(&aggregated_pos_beta_y_locals, &delta_x_pow_series);
+    let at_neg_beta_y = univariate_evaluate(&aggregated_neg_beta_y_locals, &delta_x_pow_series);
 
     dbg!(at_beta_y2, at_beta_y, at_neg_beta_y);
 
@@ -394,9 +385,8 @@ where
 
     dbg!(delta_y);
 
-    let degree_2_final_eval = lagrange_degree2_delta_y[0]
-        + lagrange_degree2_delta_y[1] * delta_y
-        + lagrange_degree2_delta_y[2] * delta_y * delta_y;
+    let delta_y_pow_series = powers_series(&delta_y, 3);
+    let degree_2_final_eval = univariate_evaluate(&lagrange_degree2_delta_y, &delta_y_pow_series);
 
     dbg!(degree_2_final_eval);
 

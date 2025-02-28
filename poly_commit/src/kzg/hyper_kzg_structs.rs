@@ -1,7 +1,7 @@
 use std::ops::{Index, IndexMut};
 
-use arith::{ExtensionField, FieldSerde};
-use halo2curves::{ff::Field, pairing::Engine, CurveAffine};
+use arith::ExtensionField;
+use halo2curves::{ff::Field, pairing::Engine};
 use itertools::izip;
 use transcript::Transcript;
 
@@ -14,35 +14,7 @@ pub struct HyperKZGExportedLocalEvals<E: Engine> {
     pub neg_beta_x_evals: Vec<E::Fr>,
 }
 
-impl<E: Engine> FieldSerde for HyperKZGExportedLocalEvals<E>
-where
-    E::Fr: FieldSerde,
-{
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
-        self.beta_x2_eval.serialize_into(&mut writer)?;
-        self.pos_beta_x_evals.serialize_into(&mut writer)?;
-        self.neg_beta_x_evals.serialize_into(&mut writer)
-    }
-
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
-        let beta_x2_eval: E::Fr = E::Fr::deserialize_from(&mut reader)?;
-        let pos_beta_x_evals: Vec<E::Fr> = Vec::deserialize_from(&mut reader)?;
-        let neg_beta_x_evals: Vec<E::Fr> = Vec::deserialize_from(&mut reader)?;
-
-        Ok(Self {
-            beta_x2_eval,
-            pos_beta_x_evals,
-            neg_beta_x_evals,
-        })
-    }
-}
-
-impl<E: Engine> Default for HyperKZGExportedLocalEvals<E>
-where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-{
+impl<E: Engine> Default for HyperKZGExportedLocalEvals<E> {
     fn default() -> Self {
         Self {
             beta_x2_eval: E::Fr::default(),
@@ -81,74 +53,41 @@ impl<E: Engine> HyperKZGExportedLocalEvals<E> {
 }
 
 #[derive(Clone, Debug)]
-pub struct HyperKZGOpening<E: Engine> {
+pub struct HyperKZGOpening<E: Engine>
+where
+    E::G1Affine: Default,
+{
     pub folded_oracle_commitments: Vec<E::G1Affine>,
     pub evals_at_x: HyperKZGExportedLocalEvals<E>,
-    pub beta_commitment: E::G1Affine,
-    pub tau_vanishing_commitment: E::G1Affine,
+    pub beta_x_commitment: E::G1Affine,
+    pub quotient_delta_x_commitment: E::G1Affine,
 }
 
 impl<E: Engine> Default for HyperKZGOpening<E>
 where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G1Affine: Default,
 {
     fn default() -> Self {
         Self {
             folded_oracle_commitments: Vec::default(),
             evals_at_x: HyperKZGExportedLocalEvals::<E>::default(),
-            beta_commitment: E::G1Affine::default(),
-            tau_vanishing_commitment: E::G1Affine::default(),
+            beta_x_commitment: E::G1Affine::default(),
+            quotient_delta_x_commitment: E::G1Affine::default(),
         }
     }
 }
 
-impl<E: Engine> FieldSerde for HyperKZGOpening<E>
-where
-    E::Fr: FieldSerde,
-    E::G1Affine: FieldSerde,
-{
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
-        self.folded_oracle_commitments.serialize_into(&mut writer)?;
-        self.evals_at_x.serialize_into(&mut writer)?;
-        self.beta_commitment.serialize_into(&mut writer)?;
-        self.tau_vanishing_commitment.serialize_into(&mut writer)
-    }
-
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
-        let folded_oracle_commitments: Vec<E::G1Affine> = Vec::deserialize_from(&mut reader)?;
-        let evals_at_x = HyperKZGExportedLocalEvals::<E>::deserialize_from(&mut reader)?;
-        let beta_commitment: E::G1Affine = E::G1Affine::deserialize_from(&mut reader)?;
-        let tau_vanishing_commitment: E::G1Affine = E::G1Affine::deserialize_from(&mut reader)?;
-
-        Ok(Self {
-            folded_oracle_commitments,
-            evals_at_x,
-            beta_commitment,
-            tau_vanishing_commitment,
-        })
-    }
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct HyperKZGLocalEvals<E: Engine> {
     pub(crate) beta2_evals: Vec<E::Fr>,
     pub(crate) pos_beta_evals: Vec<E::Fr>,
     pub(crate) neg_beta_evals: Vec<E::Fr>,
 }
 
-impl<E: Engine> Default for HyperKZGLocalEvals<E> {
-    fn default() -> Self {
-        Self {
-            beta2_evals: Vec::default(),
-            pos_beta_evals: Vec::default(),
-            neg_beta_evals: Vec::default(),
-        }
-    }
-}
-
-impl<E: Engine> HyperKZGLocalEvals<E> {
+impl<E: Engine> HyperKZGLocalEvals<E>
+where
+    E::Fr: ExtensionField,
+{
     pub(crate) fn new_from_beta2_evals(beta2_eval: E::Fr) -> Self {
         Self {
             beta2_evals: vec![beta2_eval],
@@ -226,7 +165,6 @@ impl<E: Engine> HyperKZGLocalEvals<E> {
     pub(crate) fn append_to_transcript<T>(&self, fs_transcript: &mut T)
     where
         T: Transcript<E::Fr>,
-        E::Fr: ExtensionField,
     {
         fs_transcript.append_field_element(&self.beta2_evals[0]);
         izip!(&self.pos_beta_evals, &self.neg_beta_evals).for_each(|(beta_eval, neg_beta_eval)| {
@@ -293,10 +231,7 @@ pub struct HyperKZGAggregatedEvals<E: Engine> {
     pub neg_beta_y_evals: HyperKZGExportedLocalEvals<E>,
 }
 
-impl<E: Engine> Default for HyperKZGAggregatedEvals<E>
-where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-{
+impl<E: Engine> Default for HyperKZGAggregatedEvals<E> {
     fn default() -> Self {
         Self {
             beta_y2_evals: HyperKZGExportedLocalEvals::<E>::default(),
@@ -306,32 +241,10 @@ where
     }
 }
 
-impl<E: Engine> FieldSerde for HyperKZGAggregatedEvals<E>
+impl<E: Engine> HyperKZGAggregatedEvals<E>
 where
-    E::Fr: FieldSerde,
+    E::Fr: ExtensionField,
 {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
-        self.beta_y2_evals.serialize_into(&mut writer)?;
-        self.pos_beta_y_evals.serialize_into(&mut writer)?;
-        self.neg_beta_y_evals.serialize_into(&mut writer)
-    }
-
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
-        let beta_y2_evals = HyperKZGExportedLocalEvals::<E>::deserialize_from(&mut reader)?;
-        let pos_beta_y_evals = HyperKZGExportedLocalEvals::<E>::deserialize_from(&mut reader)?;
-        let neg_beta_y_evals = HyperKZGExportedLocalEvals::<E>::deserialize_from(&mut reader)?;
-
-        Ok(Self {
-            beta_y2_evals,
-            pos_beta_y_evals,
-            neg_beta_y_evals,
-        })
-    }
-}
-
-impl<E: Engine> HyperKZGAggregatedEvals<E> {
     pub(crate) fn new_from_exported_evals(
         exported_evals: &[HyperKZGExportedLocalEvals<E>],
         beta_y: E::Fr,
@@ -367,7 +280,6 @@ impl<E: Engine> HyperKZGAggregatedEvals<E> {
     pub(crate) fn append_to_transcript<T>(&self, fs_transcript: &mut T)
     where
         T: Transcript<E::Fr>,
-        E::Fr: ExtensionField,
     {
         self.beta_y2_evals.append_to_transcript(fs_transcript);
         self.pos_beta_y_evals.append_to_transcript(fs_transcript);
@@ -391,7 +303,7 @@ pub struct HyperBiKZGOpening<E: Engine> {
 
 impl<E: Engine> Default for HyperBiKZGOpening<E>
 where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G1Affine: Default,
 {
     fn default() -> Self {
         Self {
@@ -406,54 +318,6 @@ where
             quotient_delta_x_commitment: E::G1Affine::default(),
             quotient_delta_y_commitment: E::G1Affine::default(),
         }
-    }
-}
-
-impl<E: Engine> FieldSerde for HyperBiKZGOpening<E>
-where
-    E::Fr: FieldSerde,
-    E::G1Affine: FieldSerde,
-{
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
-        self.folded_oracle_commitments.serialize_into(&mut writer)?;
-
-        self.aggregated_evals.serialize_into(&mut writer)?;
-        self.leader_evals.serialize_into(&mut writer)?;
-
-        self.beta_x_commitment.serialize_into(&mut writer)?;
-        self.beta_y_commitment.serialize_into(&mut writer)?;
-
-        self.quotient_delta_x_commitment
-            .serialize_into(&mut writer)?;
-        self.quotient_delta_y_commitment.serialize_into(&mut writer)
-    }
-
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
-        let folded_oracle_commitments: Vec<E::G1Affine> = Vec::deserialize_from(&mut reader)?;
-
-        let aggregated_evals = HyperKZGAggregatedEvals::<E>::deserialize_from(&mut reader)?;
-        let leader_evals = HyperKZGExportedLocalEvals::<E>::deserialize_from(&mut reader)?;
-
-        let beta_x_commitment = E::G1Affine::deserialize_from(&mut reader)?;
-        let beta_y_commitment = E::G1Affine::deserialize_from(&mut reader)?;
-
-        let quotient_delta_x_commitment = E::G1Affine::deserialize_from(&mut reader)?;
-        let quotient_delta_y_commitment = E::G1Affine::deserialize_from(&mut reader)?;
-
-        Ok(Self {
-            folded_oracle_commitments,
-
-            aggregated_evals,
-            leader_evals,
-
-            beta_x_commitment,
-            beta_y_commitment,
-
-            quotient_delta_x_commitment,
-            quotient_delta_y_commitment,
-        })
     }
 }
 
