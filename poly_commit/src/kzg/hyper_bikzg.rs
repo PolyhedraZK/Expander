@@ -424,3 +424,13 @@ where
 
     hyper_bikzg_opening
 }
+
+pub fn coeff_form_hyper_bikzg_verify<E, T>() -> bool
+where
+    E: MultiMillerLoop + Default,
+    T: Transcript<E::Fr>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + FieldSerde,
+    E::Fr: ExtensionField,
+{
+    todo!()
+}

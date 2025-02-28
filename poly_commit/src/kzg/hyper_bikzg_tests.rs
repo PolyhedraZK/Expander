@@ -16,6 +16,8 @@ use transcript::{FieldHashTranscript, Transcript};
 
 use crate::*;
 
+// NOTE(HS) we are assuming that the mpi_alpha is non zero, i.e., not a single-party setting.
+
 fn coeff_form_hyper_bikzg_open_simulate<E, T>(
     srs_s: &[CoefFormBiKZGLocalSRS<E>],
     coeffs_s: &[Vec<E::Fr>],
@@ -44,8 +46,8 @@ where
 
     let final_evals_at_x: Vec<E::Fr> = folded_x_oracle_coeffs_s
         .iter()
-        .map(|coeffs| {
-            let final_coeffs = coeffs.last().unwrap().clone();
+        .map(|folded_x_oracle_coeffs| {
+            let final_coeffs = folded_x_oracle_coeffs.last().unwrap().clone();
             let final_alpha = local_alphas[local_alphas.len() - 1];
 
             (E::Fr::ONE - final_alpha) * final_coeffs[0] + final_alpha * final_coeffs[1]
@@ -483,12 +485,12 @@ where
 #[test]
 fn test_hyper_bikzg_single_process_simulated_e2e() {
     let (x_degree, x_vars) = {
-        let x_vars = 13;
+        let x_vars = 12;
         ((1 << x_vars) - 1, x_vars)
     };
 
     let (y_degree, y_vars) = {
-        let y_vars = 4;
+        let y_vars = 3;
         ((1 << y_vars) - 1, y_vars)
     };
 

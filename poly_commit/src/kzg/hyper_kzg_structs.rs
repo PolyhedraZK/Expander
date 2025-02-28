@@ -321,4 +321,32 @@ where
     }
 }
 
-// TODO(HS) from HyperKZG opening to HyperBiKZG opening
+impl<E: Engine> From<HyperBiKZGOpening<E>> for HyperKZGOpening<E>
+where
+    E::G1Affine: Default,
+{
+    fn from(value: HyperBiKZGOpening<E>) -> Self {
+        Self {
+            folded_oracle_commitments: value.folded_oracle_commitments,
+            evals_at_x: value.leader_evals,
+            beta_x_commitment: value.beta_x_commitment,
+            quotient_delta_x_commitment: value.quotient_delta_x_commitment,
+        }
+    }
+}
+
+impl<E: Engine> From<HyperKZGOpening<E>> for HyperBiKZGOpening<E>
+where
+    E::G1Affine: Default,
+{
+    fn from(value: HyperKZGOpening<E>) -> Self {
+        Self {
+            folded_oracle_commitments: value.folded_oracle_commitments,
+            leader_evals: value.evals_at_x,
+            beta_x_commitment: value.beta_x_commitment,
+            quotient_delta_x_commitment: value.quotient_delta_x_commitment,
+
+            ..Default::default()
+        }
+    }
+}
