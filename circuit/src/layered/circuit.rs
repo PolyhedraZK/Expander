@@ -149,7 +149,7 @@ impl<C: GKRFieldConfig> Circuit<C> {
         rc.flatten::<Cfg>()
     }
 
-    pub fn load_single_witness_and_padding_testing_only(
+    pub fn load_witness_allow_padding_testing_only(
         &mut self,
         filename: &str,
         mpi_config: &MPIConfig,
@@ -201,8 +201,7 @@ impl<C: GKRFieldConfig> Circuit<C> {
             if !allow_padding_for_testing {
                 panic!(
                     "Not enough witness, expected {}, got {}",
-                    desired_number_of_witnesses,
-                    witness.num_witnesses
+                    desired_number_of_witnesses, witness.num_witnesses
                 );
             } else {
                 println!(

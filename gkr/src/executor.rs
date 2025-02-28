@@ -187,7 +187,10 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
             input_proof_file,
             mpi_size,
         } => {
-            assert!(config.mpi_config.world_size() == 1, "Do not run verifier with mpiexec.");
+            assert!(
+                config.mpi_config.world_size() == 1,
+                "Do not run verifier with mpiexec."
+            );
             config.mpi_config.world_size = mpi_size as i32;
 
             let mut circuit =
@@ -203,7 +206,10 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
             println!("success");
         }
         ExpanderExecSubCommand::Serve { host_ip, port } => {
-            assert!(config.mpi_config.world_size() == 1, "Serve mode is not compatible with mpi for now.");
+            assert!(
+                config.mpi_config.world_size() == 1,
+                "Serve mode is not compatible with mpi for now."
+            );
             let host: [u8; 4] = host_ip
                 .split('.')
                 .map(|s| s.parse().unwrap())
