@@ -4,31 +4,31 @@ use arith::ExtensionField;
 use ark_std::test_rng;
 use field_hashers::MiMC5FiatShamirHasher;
 use halo2curves::{
-    bn256::{Bn256, Fr},
+    bn256::{Bn256, Fr, G1Affine, G1},
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, GroupEncoding},
     pairing::MultiMillerLoop,
     CurveAffine,
 };
 use itertools::izip;
+use polynomials::MultiLinearPoly;
 use transcript::{FieldHashTranscript, Transcript};
 
 use crate::*;
 
-fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>>(
+fn coeff_form_hyper_bikzg_open_simulate<E, T>(
     srs_s: &[CoefFormBiKZGLocalSRS<E>],
     coeffs_s: &[Vec<E::Fr>],
     local_alphas: &[E::Fr],
     mpi_alphas: &[E::Fr],
     fs_transcript: &mut T,
-) where
+) -> HyperBiKZGOpening<E>
+where
+    E: MultiMillerLoop,
+    T: Transcript<E::Fr>,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
 {
-    let commitments: Vec<_> = izip!(srs_s, coeffs_s)
-        .map(|(srs, x_coeffs)| coeff_form_uni_kzg_commit(&srs.tau_x_srs, x_coeffs))
-        .collect();
-
     let (folded_oracle_commits_s, folded_oracle_coeffs_s): (
         Vec<Vec<E::G1Affine>>,
         Vec<Vec<Vec<E::Fr>>>,
@@ -64,6 +64,13 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
     let (folded_mpi_oracle_coms, folded_mpi_oracle_coeffs_s) =
         coeff_form_hyperkzg_local_poly_oracles(&srs_s[0].tau_y_srs, &final_evals, mpi_alphas);
 
+    let folded_oracle_commitments = {
+        let mut temp = folded_x_commits.clone();
+        temp.push(folded_y_oracle);
+        temp.extend_from_slice(&folded_mpi_oracle_coms);
+        temp
+    };
+
     folded_x_commits
         .iter()
         .chain(iter::once(&folded_y_oracle))
@@ -98,6 +105,9 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
         beta_y,
     );
     root_evals.append_to_transcript(fs_transcript);
+
+    // NOTE(HS) check if the final eval of root evals match with mle poly evaluation
+    dbg!(&root_evals.multilinear_final_eval());
 
     let gamma = fs_transcript.generate_challenge_field_element();
 
@@ -150,6 +160,7 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
             coeff_form_uni_kzg_commit(&srs.tau_x_srs, f_gamma_quotient).to_curve()
         })
         .collect();
+
     let f_gamma_quotient_com_x: E::G1Affine = f_gamma_quotient_com_s.iter().sum::<E::G1>().into();
 
     fs_transcript.append_u8_slice(f_gamma_quotient_com_x.to_bytes().as_ref());
@@ -171,11 +182,16 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
         let at_pos_beta_y = univariate_evaluate(&lagrange_degree2_delta_x, &pos_beta_y_pow_series);
         let at_neg_beta_y = univariate_evaluate(&lagrange_degree2_delta_x, &neg_beta_y_pow_series);
         let at_beta_y2 = univariate_evaluate(&lagrange_degree2_delta_x, &beta_y2_pow_series);
+
+        dbg!(at_pos_beta_y, at_neg_beta_y, at_beta_y2);
+
         coeff_form_degree2_lagrange(
             [beta_y, -beta_y, beta_y * beta_y],
             [at_pos_beta_y, at_neg_beta_y, at_beta_y2],
         )
     };
+
+    dbg!(lagrange_degree2_delta_y);
 
     // NOTE(HS) vanish over the three beta_y points above, then commit Q_y
     let mut f_gamma_quotient_y = {
@@ -184,6 +200,7 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
         univariate_roots_quotient(nom, &[beta_y, -beta_y, beta_y * beta_y])
     };
     f_gamma_quotient_y.resize(lagrange_degree2_delta_x.len(), E::Fr::ZERO);
+
     let f_gamma_quotient_com_y =
         coeff_form_uni_kzg_commit(&srs_s[0].tau_y_srs, &f_gamma_quotient_y);
 
@@ -193,6 +210,8 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
     fs_transcript.append_u8_slice(f_gamma_quotient_com_y.to_bytes().as_ref());
 
     let delta_y = fs_transcript.generate_challenge_field_element();
+
+    dbg!(delta_y);
 
     // NOTE(HS) f_gamma_s - (delta_x - beta_x) ... (delta_x - beta_x2) f_gamma_quotient_s
     //                    - (delta_y - beta_y) ... (delta_y - beta_y2) lagrange_quotient_y
@@ -211,27 +230,108 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
         .map(|(srs, x_coeffs)| coeff_form_uni_kzg_open_eval(&srs.tau_x_srs, x_coeffs, delta_x))
         .collect();
 
-    let (final_eval, final_opening) =
-        coeff_form_bi_kzg_open_leader(&srs_s[0], &evals_and_opens, delta_y);
+    let (_, final_opening) = coeff_form_bi_kzg_open_leader(&srs_s[0], &evals_and_opens, delta_y);
 
-    dbg!(final_eval);
+    HyperBiKZGOpening {
+        folded_oracle_commitments,
+        aggregated_evals,
+        leader_evals: root_evals.into(),
+        beta_x_commitment: f_gamma_quotient_com_x,
+        beta_y_commitment: f_gamma_quotient_com_y,
+        quotient_delta_x_commitment: final_opening.quotient_x,
+        quotient_delta_y_commitment: final_opening.quotient_y,
+    }
+}
 
-    // NOTE(HS) verify openings one by one
-    let vk: BiKZGVerifierParam<E> = From::from(&srs_s[0]);
+fn coeff_form_hyper_bikzg_verify_simulate<E, T>(
+    vk: &BiKZGVerifierParam<E>,
+    local_alphas: &[E::Fr],
+    mpi_alphas: &[E::Fr],
+    eval: E::Fr,
+    commitment: E::G1Affine,
+    opening: &HyperBiKZGOpening<E>,
+    fs_transcript: &mut T,
+) -> bool
+where
+    E: MultiMillerLoop,
+    T: Transcript<E::Fr>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::Fr: ExtensionField,
+{
+    opening
+        .folded_oracle_commitments
+        .iter()
+        .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
 
-    let global_commitment: E::G1Affine = {
-        let global_commitment_g1: E::G1 = commitments.iter().map(|c| c.to_curve()).sum();
-        global_commitment_g1.to_affine()
-    };
+    let beta_x = fs_transcript.generate_challenge_field_element();
+    let beta_y = fs_transcript.generate_challenge_field_element();
+
+    dbg!(beta_x, beta_y);
+
+    // NOTE(HS) evaluation checks
+
+    let beta_y2_local = HyperKZGLocalEvals::new_from_exported_evals(
+        &opening.aggregated_evals.beta_y2_evals,
+        local_alphas,
+        beta_x,
+    );
+
+    let pos_beta_y_local = HyperKZGLocalEvals::new_from_exported_evals(
+        &opening.aggregated_evals.pos_beta_y_evals,
+        local_alphas,
+        beta_x,
+    );
+
+    let neg_beta_y_local = HyperKZGLocalEvals::new_from_exported_evals(
+        &opening.aggregated_evals.neg_beta_y_evals,
+        local_alphas,
+        beta_x,
+    );
+
+    let beta_y2_final_eval = beta_y2_local.multilinear_final_eval();
+    let pos_beta_y_final_eval = pos_beta_y_local.multilinear_final_eval();
+    let neg_beta_y_final_eval = neg_beta_y_local.multilinear_final_eval();
+
+    dbg!(
+        &beta_y2_final_eval,
+        &pos_beta_y_final_eval,
+        &neg_beta_y_final_eval
+    );
+
+    dbg!(
+        &opening.leader_evals.beta_x2_eval,
+        &opening.leader_evals.pos_beta_x_evals[0],
+        &opening.leader_evals.neg_beta_x_evals[0]
+    );
+
+    if beta_y2_final_eval != opening.leader_evals.beta_x2_eval {
+        return false;
+    }
+    if pos_beta_y_final_eval != opening.leader_evals.pos_beta_x_evals[0] {
+        return false;
+    }
+    if neg_beta_y_final_eval != opening.leader_evals.neg_beta_x_evals[0] {
+        return false;
+    }
+
+    let local_final_eval =
+        HyperKZGLocalEvals::new_from_exported_evals(&opening.leader_evals, mpi_alphas, beta_y);
+    if eval != local_final_eval.multilinear_final_eval() {
+        return false;
+    }
+
+    opening.aggregated_evals.append_to_transcript(fs_transcript);
+    opening.leader_evals.append_to_transcript(fs_transcript);
+
+    let gamma = fs_transcript.generate_challenge_field_element();
+
+    dbg!(gamma);
 
     let aggregated_oracle_commitment: E::G1Affine = {
         let gamma_power_series = powers_series(&gamma, local_alphas.len() + mpi_alphas.len() + 1);
 
         let com_g1: E::G1 = izip!(
-            iter::once(&global_commitment)
-                .chain(&folded_x_commits)
-                .chain(iter::once(&folded_y_oracle))
-                .chain(&folded_mpi_oracle_coms),
+            iter::once(&commitment).chain(&opening.folded_oracle_commitments),
             &gamma_power_series
         )
         .map(|(com, g)| com.to_curve() * g)
@@ -239,20 +339,85 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
 
         com_g1.into()
     };
+    dbg!(aggregated_oracle_commitment);
 
-    // NOTE(HS) compute out the commitment aggregated
-    let com_r = aggregated_oracle_commitment.to_curve()
-        - (f_gamma_quotient_com_x * delta_x_denom)
-        - (f_gamma_quotient_com_y * delta_y_denom);
+    // NOTE(HS) aggregate lagrange degree 2 polys
+    let (y_beta2, y_beta, y_neg_beta) = {
+        let gamma_n = gamma.pow_vartime([local_alphas.len() as u64]);
+        let (v_beta2, v_beta, v_neg_beta) = local_final_eval.gamma_aggregate_evals(gamma);
+
+        (v_beta2 * gamma_n, v_beta * gamma_n, v_neg_beta * gamma_n)
+    };
+
+    let mut aggregated_beta_y2_locals =
+        beta_y2_local.interpolate_degree2_aggregated_evals(beta_x, gamma);
+    aggregated_beta_y2_locals[0] += y_beta2;
+
+    let mut aggregated_pos_beta_y_locals =
+        pos_beta_y_local.interpolate_degree2_aggregated_evals(beta_x, gamma);
+    aggregated_pos_beta_y_locals[0] += y_beta;
+
+    let mut aggregated_neg_beta_y_locals =
+        neg_beta_y_local.interpolate_degree2_aggregated_evals(beta_x, gamma);
+    aggregated_neg_beta_y_locals[0] += y_neg_beta;
+
+    fs_transcript.append_u8_slice(opening.beta_x_commitment.to_bytes().as_ref());
+
+    let delta_x = fs_transcript.generate_challenge_field_element();
+
+    dbg!(delta_x);
+
+    let at_beta_y2 = aggregated_beta_y2_locals[0]
+        + aggregated_beta_y2_locals[1] * delta_x
+        + aggregated_beta_y2_locals[2] * delta_x * delta_x;
+
+    let at_beta_y = aggregated_pos_beta_y_locals[0]
+        + aggregated_pos_beta_y_locals[1] * delta_x
+        + aggregated_pos_beta_y_locals[2] * delta_x * delta_x;
+
+    let at_neg_beta_y = aggregated_neg_beta_y_locals[0]
+        + aggregated_neg_beta_y_locals[1] * delta_x
+        + aggregated_neg_beta_y_locals[2] * delta_x * delta_x;
+
+    dbg!(at_beta_y2, at_beta_y, at_neg_beta_y);
+
+    let lagrange_degree2_delta_y = coeff_form_degree2_lagrange(
+        [beta_y, -beta_y, beta_y * beta_y],
+        [at_beta_y, at_neg_beta_y, at_beta_y2],
+    );
+
+    dbg!(lagrange_degree2_delta_y);
+
+    fs_transcript.append_u8_slice(opening.beta_y_commitment.to_bytes().as_ref());
+
+    let delta_y = fs_transcript.generate_challenge_field_element();
+
+    dbg!(delta_y);
+
     let degree_2_final_eval = lagrange_degree2_delta_y[0]
         + lagrange_degree2_delta_y[1] * delta_y
         + lagrange_degree2_delta_y[2] * delta_y * delta_y;
 
     dbg!(degree_2_final_eval);
-    assert_eq!(degree_2_final_eval, final_eval);
+
+    // NOTE(HS) f_gamma_s - (delta_x - beta_x) ... (delta_x - beta_x2) f_gamma_quotient_s
+    //                    - (delta_y - beta_y) ... (delta_y - beta_y2) lagrange_quotient_y
+    let delta_x_denom = (delta_x - beta_x) * (delta_x - beta_x * beta_x) * (delta_x + beta_x);
+    let delta_y_denom = (delta_y - beta_y) * (delta_y - beta_y * beta_y) * (delta_y + beta_y);
+
+    let com_r = aggregated_oracle_commitment.to_curve()
+        - (opening.beta_x_commitment * delta_x_denom)
+        - (opening.beta_y_commitment * delta_y_denom);
+
+    dbg!(com_r);
+
+    let final_opening = BiKZGProof {
+        quotient_x: opening.quotient_delta_x_commitment,
+        quotient_y: opening.quotient_delta_y_commitment,
+    };
 
     let what = coeff_form_bi_kzg_verify(
-        vk,
+        vk.clone(),
         com_r.to_affine(),
         delta_x,
         delta_y,
@@ -260,29 +425,35 @@ fn coeff_form_hyper_bikzg_open_simulate<E: MultiMillerLoop, T: Transcript<E::Fr>
         final_opening,
     );
     dbg!(what);
-    assert!(what);
+
+    what
 }
 
 #[test]
 fn test_hyper_bikzg_single_process_simulated_e2e() {
-    let x_degree = 31;
-    let x_vars = 5;
+    let (x_degree, x_vars) = {
+        let x_vars = 10;
+        ((1 << x_vars) - 1, x_vars)
+    };
 
-    let y_degree = 15;
-    let y_vars = 4;
+    let (y_degree, y_vars) = {
+        let y_vars = 4;
+        ((1 << y_vars) - 1, y_vars)
+    };
 
     let mut rng = test_rng();
+
     let local_alphas: Vec<_> = (0..x_vars).map(|_| Fr::random(&mut rng)).collect();
     let mpi_alphas: Vec<_> = (0..y_vars).map(|_| Fr::random(&mut rng)).collect();
 
     let party_srs: Vec<CoefFormBiKZGLocalSRS<Bn256>> = (0..=y_degree)
         .map(|rank| {
-            let mut rng = test_rng();
+            let mut srs_rng = test_rng();
             generate_coef_form_bi_kzg_local_srs_for_testing(
                 x_degree + 1,
                 y_degree + 1,
                 rank,
-                &mut rng,
+                &mut srs_rng,
             )
         })
         .collect();
@@ -291,13 +462,51 @@ fn test_hyper_bikzg_single_process_simulated_e2e() {
         .map(|_| (0..=x_degree).map(|_| Fr::random(&mut rng)).collect())
         .collect();
 
-    let mut fs_transcript = FieldHashTranscript::<Fr, MiMC5FiatShamirHasher<Fr>>::new();
+    let all_alphas = {
+        let mut alphas = local_alphas.clone();
+        alphas.extend_from_slice(&mpi_alphas);
 
-    coeff_form_hyper_bikzg_open_simulate(
+        alphas
+    };
+
+    let eval = {
+        let global_poly_coeffs: Vec<_> = xy_coeffs.clone().into_iter().flatten().collect();
+        let global_poly = MultiLinearPoly::new(global_poly_coeffs);
+        global_poly.evaluate_jolt(&all_alphas)
+    };
+
+    dbg!(eval);
+
+    let global_commitment: G1Affine = {
+        let commitments: Vec<_> = izip!(&party_srs, &xy_coeffs)
+            .map(|(srs, x_coeffs)| coeff_form_uni_kzg_commit(&srs.tau_x_srs, x_coeffs))
+            .collect();
+
+        let global_commitment_g1: G1 = commitments.iter().map(|c| c.to_curve()).sum();
+        global_commitment_g1.to_affine()
+    };
+
+    let mut fs_transcript = FieldHashTranscript::<Fr, MiMC5FiatShamirHasher<Fr>>::new();
+    let mut verifier_transcript = fs_transcript.clone();
+
+    let opening = coeff_form_hyper_bikzg_open_simulate(
         &party_srs,
         &xy_coeffs,
         &local_alphas,
         &mpi_alphas,
         &mut fs_transcript,
     );
+
+    let vk: BiKZGVerifierParam<Bn256> = From::from(&party_srs[0]);
+    let what = coeff_form_hyper_bikzg_verify_simulate(
+        &vk,
+        &local_alphas,
+        &mpi_alphas,
+        eval,
+        global_commitment,
+        &opening,
+        &mut verifier_transcript,
+    );
+
+    assert!(what);
 }

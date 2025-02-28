@@ -351,7 +351,7 @@ impl<E: Engine> HyperKZGAggregatedEvals<E> {
         let beta_y2 = beta_y * beta_y;
         let beta_y2_pow_series = powers_series(&beta_y2, num_parties);
         let pos_beta_y_pow_series = powers_series(&beta_y, num_parties);
-        let neg_beta_y_pow_series = powers_series(&(-beta_y2), num_parties);
+        let neg_beta_y_pow_series = powers_series(&(-beta_y), num_parties);
 
         (0..num_local_evals).for_each(|i| {
             let y_poly: Vec<E::Fr> = exported_evals.iter().map(|e| e[i]).collect();
