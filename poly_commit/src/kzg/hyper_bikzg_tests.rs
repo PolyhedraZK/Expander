@@ -29,7 +29,11 @@ where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
 {
-    let (folded_oracle_commits_s, folded_oracle_coeffs_s): (
+    //
+    // Locally fold local variables, then commit to construct the poly oracles
+    //
+
+    let (folded_x_oracle_commits_s, folded_x_oracle_coeffs_s): (
         Vec<Vec<E::G1Affine>>,
         Vec<Vec<Vec<E::Fr>>>,
     ) = izip!(srs_s, coeffs_s)
@@ -38,18 +42,7 @@ where
         })
         .unzip();
 
-    let folded_x_commits: Vec<E::G1Affine> = (0..local_alphas.len() - 1)
-        .map(|i| {
-            let ith_fold_commits: E::G1 = folded_oracle_commits_s
-                .iter()
-                .map(|f| f[i].to_curve())
-                .sum();
-
-            ith_fold_commits.to_affine()
-        })
-        .collect();
-
-    let final_evals: Vec<E::Fr> = folded_oracle_coeffs_s
+    let final_evals_at_x: Vec<E::Fr> = folded_x_oracle_coeffs_s
         .iter()
         .map(|coeffs| {
             let final_coeffs = coeffs.last().unwrap().clone();
@@ -59,22 +52,45 @@ where
         })
         .collect();
 
-    let folded_y_oracle = coeff_form_uni_kzg_commit(&srs_s[0].tau_y_srs, &final_evals);
+    //
+    // Leader party collect oracle commitments, sum them up for folded oracles
+    //
 
-    let (folded_mpi_oracle_coms, folded_mpi_oracle_coeffs_s) =
-        coeff_form_hyperkzg_local_poly_oracles(&srs_s[0].tau_y_srs, &final_evals, mpi_alphas);
+    let folded_x_oracle_commits: Vec<E::G1Affine> = (0..local_alphas.len() - 1)
+        .map(|i| {
+            let ith_fold_commits: E::G1 = folded_x_oracle_commits_s
+                .iter()
+                .map(|f| f[i].to_curve())
+                .sum();
+
+            ith_fold_commits.to_affine()
+        })
+        .collect();
+
+    let y_oracle_commit = coeff_form_uni_kzg_commit(&srs_s[0].tau_y_srs, &final_evals_at_x);
+
+    //
+    // The leader party continues on folding over "final_evals" over only y variables.
+    //
+
+    let (folded_y_oracle_commits, folded_y_oracle_coeffs_s) =
+        coeff_form_hyperkzg_local_poly_oracles(&srs_s[0].tau_y_srs, &final_evals_at_x, mpi_alphas);
+
+    //
+    // The leader party feeds all folded oracles into RO, then sync party's transcript state
+    //
 
     let folded_oracle_commitments = {
-        let mut temp = folded_x_commits.clone();
-        temp.push(folded_y_oracle);
-        temp.extend_from_slice(&folded_mpi_oracle_coms);
+        let mut temp = folded_x_oracle_commits.clone();
+        temp.push(y_oracle_commit);
+        temp.extend_from_slice(&folded_y_oracle_commits);
         temp
     };
 
-    folded_x_commits
+    folded_x_oracle_commits
         .iter()
-        .chain(iter::once(&folded_y_oracle))
-        .chain(&folded_mpi_oracle_coms)
+        .chain(iter::once(&y_oracle_commit))
+        .chain(&folded_y_oracle_commits)
         .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
 
     let beta_x = fs_transcript.generate_challenge_field_element();
@@ -82,26 +98,40 @@ where
 
     dbg!(beta_x, beta_y);
 
-    let local_evals_s: Vec<HyperKZGLocalEvals<E>> = izip!(coeffs_s, &folded_oracle_coeffs_s)
+    //
+    // Local parties run HyperKZG evals at beta_x, -beta_x, beta_x^2 over folded coeffs
+    //
+
+    let folded_x_evals_s: Vec<HyperKZGLocalEvals<E>> = izip!(coeffs_s, &folded_x_oracle_coeffs_s)
         .map(|(coeffs, folded_oracle_coeffs)| {
             coeff_form_hyperkzg_local_evals(coeffs, folded_oracle_coeffs, local_alphas, beta_x)
         })
         .collect();
 
-    let exported_local_evals_s: Vec<HyperKZGExportedLocalEvals<E>> =
-        local_evals_s.iter().cloned().map(Into::into).collect();
+    let exported_folded_x_evals_s: Vec<HyperKZGExportedLocalEvals<E>> =
+        folded_x_evals_s.iter().cloned().map(Into::into).collect();
+
+    //
+    // Leader aggregates all local exported evaluations (at x) by evaluating at y
+    // by three points: beta_y, -beta_y, beta_y^2, then fold the final evals at x,
+    // which is degree 0 for variable x, along variable y.
+    //
 
     let aggregated_evals =
-        HyperKZGAggregatedEvals::new_from_exported_evals(&exported_local_evals_s, beta_y);
-
-    aggregated_evals.append_to_transcript(fs_transcript);
+        HyperKZGAggregatedEvals::new_from_exported_evals(&exported_folded_x_evals_s, beta_y);
 
     let root_evals: HyperKZGLocalEvals<E> = coeff_form_hyperkzg_local_evals(
-        &final_evals,
-        &folded_mpi_oracle_coeffs_s,
+        &final_evals_at_x,
+        &folded_y_oracle_coeffs_s,
         mpi_alphas,
         beta_y,
     );
+
+    //
+    // The leader party feeds all evals into RO, then sync party's transcript state
+    //
+
+    aggregated_evals.append_to_transcript(fs_transcript);
     root_evals.append_to_transcript(fs_transcript);
 
     // NOTE(HS) check if the final eval of root evals match with mle poly evaluation
@@ -111,18 +141,31 @@ where
 
     dbg!(gamma);
 
+    //
+    // The leader party linear combines folded coeffs at y with gamma,
+    // then broadcast the coeffs back to local.
+    //
+
     let f_gamma_global = {
         let gamma_n = gamma.pow_vartime([local_alphas.len() as u64]);
         let mut temp = coeff_form_hyperkzg_local_oracle_polys_aggregate::<E>(
-            &final_evals,
-            &folded_mpi_oracle_coeffs_s,
+            &final_evals_at_x,
+            &folded_y_oracle_coeffs_s,
             gamma,
         );
         temp.iter_mut().for_each(|t| *t *= gamma_n);
         temp
     };
+
+    //
+    // Local party compute the linear combined folded coeffs at x with gamma,
+    // then the degree2 Lagrange over beta_x, -beta_x, beta_x^2,
+    // then vanish the local aggregated x coeffs at the three points above,
+    // and commit to the final quotient poly
+    //
+
     let mut f_gamma_s: Vec<Vec<E::Fr>> = {
-        let mut f_gamma_s_local: Vec<Vec<E::Fr>> = izip!(coeffs_s, folded_oracle_coeffs_s)
+        let mut f_gamma_s_local: Vec<Vec<E::Fr>> = izip!(coeffs_s, folded_x_oracle_coeffs_s)
             .map(|(coeffs, folded_oracle_coeffs)| {
                 coeff_form_hyperkzg_local_oracle_polys_aggregate::<E>(
                     coeffs,
@@ -138,7 +181,7 @@ where
         f_gamma_s_local
     };
 
-    let lagrange_degree2_s: Vec<[E::Fr; 3]> = izip!(local_evals_s, &f_gamma_global)
+    let lagrange_degree2_s: Vec<[E::Fr; 3]> = izip!(folded_x_evals_s, &f_gamma_global)
         .map(|(l, g)| {
             let mut local_degree_2 = l.interpolate_degree2_aggregated_evals(beta_x, gamma);
             local_degree_2[0] += g;
@@ -159,6 +202,11 @@ where
         })
         .collect();
 
+    //
+    // Leader collect all the quotient commitment at x, sum it up and feed it to RO,
+    // then sync transcript state
+    //
+
     let f_gamma_quotient_com_x: E::G1Affine = f_gamma_quotient_com_s.iter().sum::<E::G1>().into();
 
     fs_transcript.append_u8_slice(f_gamma_quotient_com_x.to_bytes().as_ref());
@@ -167,10 +215,20 @@ where
 
     dbg!(delta_x);
 
+    //
+    // Locally compute the Lagrange-degree2 interpolation at delta_x, pool at leader
+    //
+
     let lagrange_degree2_delta_x: Vec<E::Fr> = lagrange_degree2_s
         .iter()
         .map(|l| l[0] + l[1] * delta_x + l[2] * delta_x * delta_x)
         .collect();
+
+    //
+    // Leader does similar thing - quotient at beta_y, -beta_y, beta_y^2,
+    // commit the quotient polynomial commitment at y, feed it to RO,
+    // then sync transcript state
+    //
 
     // NOTE(HS) interpolate at beta_y, beta_y2, -beta_y on lagrange_degree2_delta_x
     let lagrange_degree2_delta_y = {
@@ -210,6 +268,10 @@ where
     let delta_y = fs_transcript.generate_challenge_field_element();
 
     dbg!(delta_y);
+
+    //
+    // Final step for local - trip off the prior quotients at x and y on \pm beta and beta^2
+    //
 
     // NOTE(HS) f_gamma_s - (delta_x - beta_x) ... (delta_x - beta_x2) f_gamma_quotient_s
     //                    - (delta_y - beta_y) ... (delta_y - beta_y2) lagrange_quotient_y
@@ -337,7 +399,6 @@ where
 
         com_g1.into()
     };
-    dbg!(aggregated_oracle_commitment);
 
     // NOTE(HS) aggregate lagrange degree 2 polys
     let (y_beta2, y_beta, y_neg_beta) = {
@@ -422,7 +483,7 @@ where
 #[test]
 fn test_hyper_bikzg_single_process_simulated_e2e() {
     let (x_degree, x_vars) = {
-        let x_vars = 10;
+        let x_vars = 13;
         ((1 << x_vars) - 1, x_vars)
     };
 
