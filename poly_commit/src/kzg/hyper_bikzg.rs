@@ -24,10 +24,11 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
     local_alphas: &[E::Fr],
     mpi_alphas: &[E::Fr],
     fs_transcript: &mut T,
-) where
+) -> HyperBiKZGOpening<E>
+where
     E: MultiMillerLoop + Default,
     T: Transcript<E::Fr>,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + FieldSerde,
     E::Fr: ExtensionField,
 {
     //
@@ -300,7 +301,6 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
     //
 
     let mut leader_quotient_y_coeffs: Vec<E::Fr> = Vec::new();
-    #[allow(unused)]
     let mut leader_quotient_y_commitment: E::G1Affine = E::G1Affine::default();
 
     if mpi_config.is_root() {
@@ -328,7 +328,6 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
             polynomial_add(&mut nom, -E::Fr::ONE, &lagrange_degree2_delta_y);
             univariate_roots_quotient(nom, &[beta_y, -beta_y, beta_y * beta_y])
         };
-        leader_quotient_y_coeffs.resize(num_y_coeffs, E::Fr::ZERO);
 
         leader_quotient_y_commitment =
             coeff_form_uni_kzg_commit(&srs.tau_y_srs, &leader_quotient_y_coeffs);
@@ -388,21 +387,40 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
 
     mpi_config.gather_vec(&vec![local_eval_open], &mut gathered_eval_opens);
 
-    // TODO(HS) root broadcast the proof out and everyone have a copy can just verify
-    let mut _final_opening = BiKZGProof::<E>::default();
-    let mut _hyper_bikzg_opening = HyperBiKZGOpening::<E>::default();
+    let mut hyper_bikzg_opening = HyperBiKZGOpening::<E>::default();
 
     if mpi_config.is_root() {
-        (_, _final_opening) = coeff_form_bi_kzg_open_leader(srs, &gathered_eval_opens, delta_y);
+        let (_, final_opening) = coeff_form_bi_kzg_open_leader(srs, &gathered_eval_opens, delta_y);
 
-        _hyper_bikzg_opening = HyperBiKZGOpening {
+        hyper_bikzg_opening = HyperBiKZGOpening {
             folded_oracle_commitments,
             aggregated_evals: root_aggregated_x_evals,
             leader_evals: root_folded_y_evals.into(),
             beta_x_commitment: gamma_aggregated_x_quotient_commitment,
             beta_y_commitment: leader_quotient_y_commitment,
-            quotient_delta_x_commitment: _final_opening.quotient_x,
-            quotient_delta_y_commitment: _final_opening.quotient_y,
+            quotient_delta_x_commitment: final_opening.quotient_x,
+            quotient_delta_y_commitment: final_opening.quotient_y,
         };
     }
+
+    //
+    // Root broadcast out the whole hyperkzg proof out to locals
+    //
+
+    {
+        let mut serialized_hyper_bikzg_opening: Vec<u8> = Vec::new();
+        if mpi_config.is_root() {
+            hyper_bikzg_opening
+                .serialize_into(&mut serialized_hyper_bikzg_opening)
+                .unwrap();
+        }
+
+        mpi_config.root_broadcast_bytes(&mut serialized_hyper_bikzg_opening);
+        hyper_bikzg_opening = {
+            let mut cursor = Cursor::new(serialized_hyper_bikzg_opening);
+            HyperBiKZGOpening::deserialize_from(&mut cursor).unwrap()
+        };
+    }
+
+    hyper_bikzg_opening
 }
