@@ -132,7 +132,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     };
 
     match args.scheme.as_str() {
-        "keccak" => circuit_template.load_witness_file(witness_path, &config.mpi_config),
+        "keccak" => circuit_template.prover_load_witness_file(witness_path, &config.mpi_config),
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31 => circuit_template
                 .load_single_witness_and_padding_testing_only(witness_path, &config.mpi_config),
