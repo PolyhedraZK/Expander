@@ -118,15 +118,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         _ => unreachable!(),
     };
 
-    match args.scheme.as_str() {
-        "keccak" => circuit.load_witness_file(witness_path),
-        "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => circuit.load_non_simd_witness_file(witness_path),
-            _ => unreachable!("not supported"),
-        },
-
-        _ => unreachable!(),
-    };
+    circuit.load_witness_allow_padding_testing_only(witness_path, &config.mpi_config);
 
     let circuit_copy_size: usize = match (Cfg::FieldConfig::FIELD_TYPE, args.scheme.as_str()) {
         (FieldType::GF2, "keccak") => 1,

@@ -14,7 +14,7 @@ async fn main() {
     let pcs_type =
         PolynomialCommitmentType::from_str(&expander_exec_args.poly_commitment_scheme).unwrap();
 
-    let mut mpi_config = MPIConfig::new();
+    let mpi_config = MPIConfig::new();
 
     root_println!(mpi_config, "Fiat-Shamir Hash Type: {:?}", &fs_hash_type);
     root_println!(
@@ -22,16 +22,6 @@ async fn main() {
         "Polynomial Commitment Scheme Type: {:?}",
         &pcs_type
     );
-
-    if let ExpanderExecSubCommand::Verify {
-        witness_file: _,
-        input_proof_file: _,
-        mpi_size,
-    } = &expander_exec_args.subcommands
-    {
-        assert_eq!(mpi_config.world_size, 1);
-        mpi_config.world_size = *mpi_size as i32;
-    }
 
     let field_type = detect_field_type_from_circuit_file(&expander_exec_args.circuit_file);
     root_println!(&mpi_config, "field type: {:?}", field_type);
@@ -74,6 +64,13 @@ async fn main() {
         }
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::GF2) => {
             run_command::<GF2ExtConfigSha2Orion>(
+                &expander_exec_args,
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+            )
+            .await;
+        }
+        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Raw, FieldType::GF2) => {
+            run_command::<GF2ExtConfigSha2Raw>(
                 &expander_exec_args,
                 Config::new(GKRScheme::Vanilla, mpi_config.clone()),
             )

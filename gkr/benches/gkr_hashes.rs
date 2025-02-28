@@ -51,7 +51,7 @@ fn benchmark_setup<Cfg: GKRConfig>(
     let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(circuit_file);
 
     if let Some(witness_file) = witness_file {
-        circuit.load_witness_file(witness_file);
+        circuit.prover_load_witness_file(witness_file, &config.mpi_config);
     } else {
         circuit.set_random_input_for_test();
     }

@@ -329,17 +329,6 @@ func ReadCircuit(circuitRel CircuitRelation) (expanderCircuit *Circuit, privInpu
 		return
 	}
 
-	// Now the witness only takes into account the simd size
-	// We're repeating the witness for each mpi
-	// TODO: fix this later
-	witness.NumWitnesses *= circuitRel.MPISize
-	n_witness_per_mpi_node := len(witness.Values)
-	for i := 1; i < int(circuitRel.MPISize); i++ {
-		for j := 0; j < int(n_witness_per_mpi_node); j++ {
-			witness.Values = append(witness.Values, witness.Values[j])
-		}
-	}
-
 	pubInputs, privInputs := witness.ToPubPrivInputs()
 	expanderCircuit.PublicInput = pubInputs
 
