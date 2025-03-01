@@ -9,7 +9,10 @@ use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
-use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
+use sumcheck::{
+    GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DEGREE,
+    SUMCHECK_GKR_SQUARE_DEGREE,
+};
 use transcript::{transcript_verifier_sync, Proof, Transcript};
 use utils::timer::Timer;
 
@@ -39,11 +42,13 @@ fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 
     let verified = (ps[0] + ps[1]) == *claimed_sum;
 
-    if degree == 2 {
+    // This assumes SUMCHECK_GKR_DEGREE == 2, SUMCHECK_GKR_SIMD_MPI_DEGREE == 3,
+    // SUMCHECK_GKR_SQUARE_DEGREE == 6
+    if degree == SUMCHECK_GKR_DEGREE {
         *claimed_sum = GKRVerifierHelper::degree_2_eval(&ps, r, sp);
-    } else if degree == 3 {
+    } else if degree == SUMCHECK_GKR_SIMD_MPI_DEGREE {
         *claimed_sum = GKRVerifierHelper::degree_3_eval(&ps, r, sp);
-    } else if degree == 6 {
+    } else if degree == SUMCHECK_GKR_SQUARE_DEGREE {
         *claimed_sum = GKRVerifierHelper::degree_6_eval(&ps, r, sp);
     } else {
         panic!("unsupported degree");
@@ -101,8 +106,14 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
     let mut verified = true;
 
     for _i_var in 0..var_num {
-        verified &=
-            verify_sumcheck_step::<C, T>(&mut proof_reader, 2, transcript, &mut sum, &mut rx, sp);
+        verified &= verify_sumcheck_step::<C, T>(
+            &mut proof_reader,
+            SUMCHECK_GKR_DEGREE,
+            transcript,
+            &mut sum,
+            &mut rx,
+            sp,
+        );
         // println!("x {} var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_rx(&rx, sp);
@@ -110,7 +121,7 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
     for _i_var in 0..simd_var_num {
         verified &= verify_sumcheck_step::<C, T>(
             &mut proof_reader,
-            3,
+            SUMCHECK_GKR_SIMD_MPI_DEGREE,
             transcript,
             &mut sum,
             &mut r_simd_xy,
@@ -123,7 +134,7 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
     for _i_var in 0..mpi_config.world_size().trailing_zeros() {
         verified &= verify_sumcheck_step::<C, T>(
             &mut proof_reader,
-            3,
+            SUMCHECK_GKR_SIMD_MPI_DEGREE,
             transcript,
             &mut sum,
             &mut r_mpi_xy,
@@ -143,7 +154,7 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
         for _i_var in 0..var_num {
             verified &= verify_sumcheck_step::<C, T>(
                 &mut proof_reader,
-                2,
+                SUMCHECK_GKR_DEGREE,
                 transcript,
                 &mut sum,
                 ry.as_mut().unwrap(),

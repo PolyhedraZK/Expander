@@ -2,10 +2,10 @@ use super::verify_sumcheck_step;
 use arith::{Field, FieldSerde};
 use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
-use gkr_field_config::GKRFieldConfig;
+use gkr_field_config::{FieldType, GKRFieldConfig};
 use mpi_config::MPIConfig;
 use std::{io::Read, vec};
-use sumcheck::{GKRVerifierHelper, VerifierScratchPad};
+use sumcheck::{GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_SQUARE_DEGREE};
 use transcript::Transcript;
 
 #[allow(clippy::type_complexity)]
@@ -98,7 +98,7 @@ fn sumcheck_verify_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
     C::ChallengeField,
 ) {
     // GKR2 with Power5 gate has degree 6 polynomial
-    let degree = 6;
+    let degree = SUMCHECK_GKR_SQUARE_DEGREE;
 
     GKRVerifierHelper::prepare_layer(layer, &None, rz, &None, r_simd, r_mpi, sp, is_output_layer);
 

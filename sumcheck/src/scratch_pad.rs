@@ -146,11 +146,6 @@ impl<C: GKRFieldConfig> VerifierScratchPad<C> {
             deg3_lag_denoms_inv[i] = denominator.inv().unwrap();
         }
 
-        assert_ne!(
-            C::FIELD_TYPE,
-            FieldType::GF2,
-            "GF2 is not supported in GKR^2"
-        );
         let deg6_eval_at = [
             C::ChallengeField::ZERO,
             C::ChallengeField::ONE,

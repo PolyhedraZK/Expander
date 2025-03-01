@@ -1,7 +1,6 @@
 // an implementation of the GKR^2 protocol
 //! This module implements the core GKR^2 IOP.
 
-use arith::Field;
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
 use gkr_field_config::{FieldType, GKRFieldConfig};
