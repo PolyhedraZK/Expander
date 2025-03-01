@@ -146,32 +146,20 @@ impl<C: GKRFieldConfig> VerifierScratchPad<C> {
             deg3_lag_denoms_inv[i] = denominator.inv().unwrap();
         }
 
-        let deg6_eval_at = if C::FIELD_TYPE == FieldType::GF2 {
-            // TODO: Does this correctly define Lagrange poly for GF2?
-            [
-                C::ChallengeField::ZERO,
-                C::ChallengeField::ONE,
-                C::ChallengeField::X,
-                C::ChallengeField::X.mul_by_x(),
-                C::ChallengeField::X.mul_by_x().mul_by_x(),
-                C::ChallengeField::X.mul_by_x().mul_by_x().mul_by_x(),
-                C::ChallengeField::X
-                    .mul_by_x()
-                    .mul_by_x()
-                    .mul_by_x()
-                    .mul_by_x(),
-            ]
-        } else {
-            [
-                C::ChallengeField::ZERO,
-                C::ChallengeField::ONE,
-                C::ChallengeField::from(2),
-                C::ChallengeField::from(3),
-                C::ChallengeField::from(4),
-                C::ChallengeField::from(5),
-                C::ChallengeField::from(6),
-            ]
-        };
+        assert_ne!(
+            C::FIELD_TYPE,
+            FieldType::GF2,
+            "GF2 is not supported in GKR^2"
+        );
+        let deg6_eval_at = [
+            C::ChallengeField::ZERO,
+            C::ChallengeField::ONE,
+            C::ChallengeField::from(2),
+            C::ChallengeField::from(3),
+            C::ChallengeField::from(4),
+            C::ChallengeField::from(5),
+            C::ChallengeField::from(6),
+        ];
 
         let mut deg6_lag_denoms_inv = [C::ChallengeField::ZERO; 7];
         for i in 0..7 {

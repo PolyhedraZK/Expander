@@ -19,8 +19,6 @@ pub(crate) struct SumcheckGkrSquareHelper<'a, C: GKRFieldConfig, const D: usize>
     r_simd: &'a [C::ChallengeField],
     r_mpi: &'a [C::ChallengeField],
 
-    _input_var_num: usize,
-    _output_var_num: usize,
     pub(crate) simd_var_num: usize,
 
     x_helper: SumcheckPowerGateHelper<D>,
@@ -53,8 +51,6 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
             r_simd,
             r_mpi,
 
-            _input_var_num: layer.input_var_num,
-            _output_var_num: layer.output_var_num,
             simd_var_num,
 
             x_helper: SumcheckPowerGateHelper::new(layer.input_var_num),
@@ -84,34 +80,29 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
             .map(|p| unpack_and_combine(p, &self.sp.eq_evals_at_r_simd0))
             .collect::<Vec<C::ChallengeField>>();
 
-        // MPI
-        let global_vals = self
-            .mpi_config
-            .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0);
-        if self.mpi_config.is_root() {
-            global_vals.try_into().unwrap()
-        } else {
-            [C::ChallengeField::ZERO; D]
-        }
+        self.mpi_config
+            .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0)
+            .try_into()
+            .unwrap()
     }
 
     #[inline]
     pub(crate) fn poly_evals_at_simd(&self, var_idx: usize) -> [C::ChallengeField; D] {
-        let local_vals = self.simd_helper.gkr2_poly_eval_at::<C, D>(
-            var_idx,
-            &self.sp.eq_evals_at_r_simd0,
-            &self.sp.simd_var_v_evals,
-            self.sp.hg_evals_1[0],
-            self.sp.hg_evals_5[0],
-        );
-        let global_vals = self
-            .mpi_config
-            .coef_combine_vec(&local_vals.to_vec(), &self.sp.eq_evals_at_r_mpi0);
-        if self.mpi_config.is_root() {
-            global_vals.try_into().unwrap()
-        } else {
-            [C::ChallengeField::ZERO; D]
-        }
+        let local_vals = self
+            .simd_helper
+            .gkr2_poly_eval_at::<C, D>(
+                var_idx,
+                &self.sp.eq_evals_at_r_simd0,
+                &self.sp.simd_var_v_evals,
+                self.sp.hg_evals_1[0],
+                self.sp.hg_evals_5[0],
+            )
+            .to_vec();
+
+        self.mpi_config
+            .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0)
+            .try_into()
+            .unwrap()
     }
 
     pub(crate) fn poly_evals_at_mpi(&mut self, var_idx: usize) -> [C::ChallengeField; D] {

@@ -258,7 +258,7 @@ impl MPIConfig {
             ret
         } else {
             self.gather_vec(local_vec, &mut vec![]);
-            vec![]
+            vec![F::ZERO; local_vec.len()]
         }
     }
 

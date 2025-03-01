@@ -23,6 +23,12 @@ pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     Vec<C::ChallengeField>,
     C::ChallengeField,
 ) {
+    assert_ne!(
+        C::FIELD_TYPE,
+        FieldType::GF2,
+        "GF2 is not supported in GKR^2"
+    );
+
     let timer = start_timer!(|| "gkr verify");
     let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
 

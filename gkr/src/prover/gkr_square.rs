@@ -1,9 +1,10 @@
 // an implementation of the GKR^2 protocol
 //! This module implements the core GKR^2 IOP.
 
+use arith::Field;
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
-use gkr_field_config::GKRFieldConfig;
+use gkr_field_config::{FieldType, GKRFieldConfig};
 use mpi_config::MPIConfig;
 use polynomials::MultiLinearPolyExpander;
 use sumcheck::{sumcheck_prove_gkr_square_layer, ProverScratchPad};
@@ -21,6 +22,11 @@ pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
 ) {
+    assert_ne!(
+        C::FIELD_TYPE,
+        FieldType::GF2,
+        "GF2 is not supported in GKR^2"
+    );
     let timer = start_timer!(|| "gkr^2 prove");
     let layer_num = circuit.layers.len();
 
