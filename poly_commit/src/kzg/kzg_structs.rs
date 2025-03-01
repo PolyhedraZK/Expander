@@ -90,6 +90,14 @@ impl<E: Engine> From<&CoefFormBiKZGLocalSRS<E>> for BiKZGVerifierParam<E> {
     }
 }
 
+impl<E: Engine> From<&BiKZGVerifierParam<E>> for UniKZGVerifierParams<E> {
+    fn from(value: &BiKZGVerifierParam<E>) -> Self {
+        Self {
+            tau_g2: value.tau_x_g2,
+        }
+    }
+}
+
 /// Proof for Bi-KZG polynomial commitment scheme.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct BiKZGProof<E: Engine> {

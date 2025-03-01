@@ -16,7 +16,11 @@ use transcript::{FieldHashTranscript, Transcript};
 
 use crate::*;
 
-// NOTE(HS) we are assuming that the mpi_alpha is non zero, i.e., not a single-party setting.
+// NOTE(HS) the motivation of introducing an implementation of simulated version is that
+// the MPI parallelization is not yet appearing in the CI at this moment (2025/02/28),
+// so we hand rolled a version of single-process simulated distributed HyperBiKZG for the
+// parallelized PCS opening testing, which gives a reference for the real deal of HyperBiKZG
+// implementation of opening and verifying.
 
 fn coeff_form_hyper_bikzg_open_simulate<E, T>(
     srs_s: &[CoefFormBiKZGLocalSRS<E>],
@@ -31,6 +35,18 @@ where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
 {
+    // NOTE(HS) deteriorate to vanilla HyperKZG if mpi_alphas is empty, namely single party setting
+    if mpi_alphas.is_empty() {
+        let (_, hyperkzg_opening) = coeff_form_uni_hyperkzg_open(
+            &srs_s[0].tau_x_srs,
+            &coeffs_s[0],
+            local_alphas,
+            fs_transcript,
+        );
+
+        return hyperkzg_opening.into();
+    }
+
     //
     // Locally fold local variables, then commit to construct the poly oracles
     //
@@ -320,6 +336,23 @@ where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
 {
+    // NOTE(HS) deteriorate to vanilla HyperKZG verify if mpi_alphas is empty
+    if mpi_alphas.is_empty() {
+        let hyper_bikzg_opening = opening.clone();
+        let hyper_kzg_opening: HyperKZGOpening<E> = hyper_bikzg_opening.into();
+
+        let what = coeff_form_uni_hyperkzg_verify(
+            vk.into(),
+            commitment,
+            local_alphas,
+            eval,
+            &hyper_kzg_opening,
+            fs_transcript,
+        );
+
+        return what;
+    }
+
     opening
         .folded_oracle_commitments
         .iter()
