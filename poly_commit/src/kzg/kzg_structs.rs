@@ -90,6 +90,31 @@ impl<E: Engine> From<&CoefFormBiKZGLocalSRS<E>> for BiKZGVerifierParam<E> {
     }
 }
 
+impl<E: Engine> Default for CoefFormBiKZGLocalSRS<E>
+where
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+{
+    fn default() -> Self {
+        Self {
+            tau_x_srs: CoefFormUniKZGSRS::default(),
+            tau_y_srs: CoefFormUniKZGSRS::default(),
+        }
+    }
+}
+
+impl<E: Engine> StructuredReferenceString for CoefFormBiKZGLocalSRS<E>
+where
+    <E as Engine>::G1Affine: FieldSerde,
+    <E as Engine>::G2Affine: FieldSerde,
+{
+    type PKey = CoefFormBiKZGLocalSRS<E>;
+    type VKey = BiKZGVerifierParam<E>;
+
+    fn into_keys(self) -> (Self::PKey, Self::VKey) {
+        (self.clone(), From::from(&self))
+    }
+}
+
 impl<E: Engine> From<&BiKZGVerifierParam<E>> for UniKZGVerifierParams<E> {
     fn from(value: &BiKZGVerifierParam<E>) -> Self {
         Self {

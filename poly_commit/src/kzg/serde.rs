@@ -57,6 +57,48 @@ where
     }
 }
 
+impl<E: Engine> FieldSerde for CoefFormBiKZGLocalSRS<E>
+where
+    E::G1Affine: FieldSerde,
+    E::G2Affine: FieldSerde,
+{
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
+        self.tau_x_srs.serialize_into(&mut writer)?;
+        self.tau_y_srs.serialize_into(&mut writer)
+    }
+
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
+        let tau_x_srs = CoefFormUniKZGSRS::deserialize_from(&mut reader)?;
+        let tau_y_srs = CoefFormUniKZGSRS::deserialize_from(&mut reader)?;
+
+        Ok(Self {
+            tau_x_srs,
+            tau_y_srs,
+        })
+    }
+}
+
+impl<E: Engine> FieldSerde for BiKZGVerifierParam<E>
+where
+    E::G2Affine: FieldSerde,
+{
+    const SERIALIZED_SIZE: usize = 2 * <E::G2Affine as FieldSerde>::SERIALIZED_SIZE;
+
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
+        self.tau_x_g2.serialize_into(&mut writer)?;
+        self.tau_y_g2.serialize_into(&mut writer)
+    }
+
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
+        let tau_x_g2 = E::G2Affine::deserialize_from(&mut reader)?;
+        let tau_y_g2 = E::G2Affine::deserialize_from(&mut reader)?;
+
+        Ok(Self { tau_x_g2, tau_y_g2 })
+    }
+}
+
 impl<E: Engine> FieldSerde for HyperKZGExportedLocalEvals<E>
 where
     E::Fr: FieldSerde,
