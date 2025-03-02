@@ -113,14 +113,10 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
             .collect::<Vec<C::ChallengeField>>();
 
         // MPI
-        let global_vals = self
-            .mpi_config
-            .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0);
-        if self.mpi_config.is_root() {
-            global_vals.try_into().unwrap()
-        } else {
-            [C::ChallengeField::ZERO; 3]
-        }
+        self.mpi_config
+            .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0)
+            .try_into()
+            .unwrap()
     }
 
     pub(crate) fn poly_evals_at_r_simd_var(
@@ -129,21 +125,21 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
         degree: usize,
     ) -> [C::ChallengeField; 4] {
         assert!(var_idx < self.simd_var_num);
-        let local_vals = self.simd_var_helper.poly_eval_at::<C>(
-            var_idx,
-            degree,
-            &mut self.sp.eq_evals_at_r_simd0,
-            &mut self.sp.simd_var_v_evals,
-            &mut self.sp.simd_var_hg_evals,
-        );
-        let global_vals = self
-            .mpi_config
-            .coef_combine_vec(&local_vals.to_vec(), &self.sp.eq_evals_at_r_mpi0);
-        if self.mpi_config.is_root() {
-            global_vals.try_into().unwrap()
-        } else {
-            [C::ChallengeField::ZERO; 4]
-        }
+        let local_vals = self
+            .simd_var_helper
+            .poly_eval_at::<C>(
+                var_idx,
+                degree,
+                &mut self.sp.eq_evals_at_r_simd0,
+                &mut self.sp.simd_var_v_evals,
+                &mut self.sp.simd_var_hg_evals,
+            )
+            .to_vec();
+
+        self.mpi_config
+            .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0)
+            .try_into()
+            .unwrap()
     }
 
     pub(crate) fn poly_evals_at_r_mpi_var(
@@ -221,14 +217,8 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
     #[inline(always)]
     pub(crate) fn vy_claim(&self) -> C::ChallengeField {
         let vy_local = unpack_and_combine(&self.sp.v_evals[0], &self.sp.eq_evals_at_r_simd0);
-        let summation = self
-            .mpi_config
-            .coef_combine_vec(&vec![vy_local], &self.sp.eq_evals_at_r_mpi0);
-        if self.mpi_config.is_root() {
-            summation[0]
-        } else {
-            C::ChallengeField::ZERO
-        }
+        self.mpi_config
+            .coef_combine_vec(&vec![vy_local], &self.sp.eq_evals_at_r_mpi0)[0]
     }
 
     #[inline]
