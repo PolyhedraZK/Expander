@@ -520,7 +520,7 @@ mod tests {
         let mut table = SubsetSumLUTs::new(8, 1);
         table.build(&weights);
 
-        let actual_lut_inner_prod = table.lookup_and_sum(&vec![simd_bases]);
+        let actual_lut_inner_prod = table.lookup_and_sum(&[simd_bases]);
 
         assert_eq!(expected_simd_inner_prod, actual_lut_inner_prod)
     }
