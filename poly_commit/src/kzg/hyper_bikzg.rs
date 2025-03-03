@@ -26,7 +26,7 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
     fs_transcript: &mut T,
 ) -> HyperBiKZGOpening<E>
 where
-    E: MultiMillerLoop + Default,
+    E: MultiMillerLoop,
     T: Transcript<E::Fr>,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + FieldSerde,
     E::Fr: ExtensionField,
@@ -450,7 +450,7 @@ pub fn coeff_form_hyper_bikzg_verify<E, T>(
     fs_transcript: &mut T,
 ) -> bool
 where
-    E: MultiMillerLoop + Default,
+    E: MultiMillerLoop,
     T: Transcript<E::Fr>,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + FieldSerde,
     E::Fr: ExtensionField,

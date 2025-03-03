@@ -77,11 +77,21 @@ where
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub(crate) struct HyperKZGLocalEvals<E: Engine> {
     pub(crate) beta2_evals: Vec<E::Fr>,
     pub(crate) pos_beta_evals: Vec<E::Fr>,
     pub(crate) neg_beta_evals: Vec<E::Fr>,
+}
+
+impl<E: Engine> Default for HyperKZGLocalEvals<E> {
+    fn default() -> Self {
+        Self {
+            beta2_evals: Vec::default(),
+            pos_beta_evals: Vec::default(),
+            neg_beta_evals: Vec::default(),
+        }
+    }
 }
 
 impl<E: Engine> HyperKZGLocalEvals<E>

@@ -1,7 +1,11 @@
 use std::marker::PhantomData;
 
-use arith::{BN254Fr, ExtensionField};
-use halo2curves::{bn256::Bn256, pairing::Engine};
+use arith::{ExtensionField, FieldSerde};
+use halo2curves::{
+    ff::PrimeField,
+    pairing::{Engine, MultiMillerLoop},
+    CurveAffine,
+};
 use polynomials::MultiLinearPoly;
 use transcript::Transcript;
 
@@ -18,17 +22,24 @@ where
     _marker_t: PhantomData<T>,
 }
 
-impl<T: Transcript<BN254Fr>> PolynomialCommitmentScheme<BN254Fr, T> for HyperKZGPCS<Bn256, T> {
+impl<E, T> PolynomialCommitmentScheme<E::Fr, T> for HyperKZGPCS<E, T>
+where
+    E: Engine + MultiMillerLoop,
+    E::Fr: ExtensionField + PrimeField,
+    E::G1Affine: FieldSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: FieldSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    T: Transcript<E::Fr>,
+{
     const NAME: &'static str = "HyperKZGPCS";
 
     type Params = usize;
-    type Poly = MultiLinearPoly<BN254Fr>;
-    type EvalPoint = Vec<BN254Fr>;
+    type Poly = MultiLinearPoly<E::Fr>;
+    type EvalPoint = Vec<E::Fr>;
     type ScratchPad = ();
 
-    type SRS = CoefFormUniKZGSRS<Bn256>;
-    type Commitment = KZGCommitment<Bn256>;
-    type Opening = HyperKZGOpening<Bn256>;
+    type SRS = CoefFormUniKZGSRS<E>;
+    type Commitment = KZGCommitment<E>;
+    type Opening = HyperKZGOpening<E>;
 
     fn init_scratch_pad(#[allow(unused)] params: &Self::Params) -> Self::ScratchPad {}
 
@@ -53,7 +64,7 @@ impl<T: Transcript<BN254Fr>> PolynomialCommitmentScheme<BN254Fr, T> for HyperKZG
         x: &Self::EvalPoint,
         #[allow(unused)] scratch_pad: &Self::ScratchPad,
         transcript: &mut T,
-    ) -> (BN254Fr, Self::Opening) {
+    ) -> (E::Fr, Self::Opening) {
         coeff_form_uni_hyperkzg_open(proving_key, &poly.coeffs, x, transcript)
     }
 
@@ -62,7 +73,7 @@ impl<T: Transcript<BN254Fr>> PolynomialCommitmentScheme<BN254Fr, T> for HyperKZG
         verifying_key: &<Self::SRS as crate::StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
-        v: BN254Fr,
+        v: E::Fr,
         opening: &Self::Opening,
         transcript: &mut T,
     ) -> bool {

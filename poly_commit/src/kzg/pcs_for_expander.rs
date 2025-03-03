@@ -15,7 +15,7 @@ use crate::*;
 impl<G, E, T> PCSForExpanderGKR<G, T> for HyperKZGPCS<E, T>
 where
     G: GKRFieldConfig<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
-    E: Engine + MultiMillerLoop + Default,
+    E: Engine + MultiMillerLoop,
     E::Fr: ExtensionField + PrimeField,
     E::G1Affine: FieldSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: FieldSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
@@ -23,14 +23,10 @@ where
 {
     const NAME: &'static str = "HyperKZGPCSForExpander";
 
-    type Commitment = E::G1Affine;
-
+    type Commitment = KZGCommitment<E>;
     type Opening = HyperBiKZGOpening<E>;
-
     type Params = usize;
-
     type SRS = CoefFormBiKZGLocalSRS<E>;
-
     type ScratchPad = ();
 
     fn init_scratch_pad(
@@ -66,7 +62,7 @@ where
             coeff_form_uni_kzg_commit(&proving_key.tau_x_srs, poly.hypercube_basis_ref());
 
         if mpi_config.is_single_process() {
-            return local_commitment;
+            return KZGCommitment(local_commitment);
         }
 
         let mut root_gathering_commits: Vec<E::G1Affine> = Vec::new();
@@ -96,7 +92,7 @@ where
             };
         }
 
-        final_commit
+        KZGCommitment(final_commit)
     }
 
     fn open(
@@ -134,7 +130,7 @@ where
             &x.local_xs(),
             &x.x_mpi,
             v,
-            *commitment,
+            commitment.0,
             opening,
             transcript,
         )
