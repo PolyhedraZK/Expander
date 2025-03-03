@@ -34,3 +34,7 @@ harness = false
 [[bench]]
 name = "hyrax"
 harness = false
+
+[[bench]]
+name = "kzg"
+harness = false
