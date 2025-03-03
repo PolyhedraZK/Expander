@@ -65,7 +65,8 @@ where
             return KZGCommitment(local_commitment);
         }
 
-        let mut root_gathering_commits: Vec<E::G1Affine> = Vec::new();
+        let mut root_gathering_commits: Vec<E::G1Affine> =
+            vec![E::G1Affine::default(); mpi_config.world_size()];
         mpi_config.gather_vec(&vec![local_commitment], &mut root_gathering_commits);
 
         let mut final_commit = E::G1Affine::default();
@@ -79,11 +80,9 @@ where
 
         {
             let mut serialized_commitment: Vec<u8> = Vec::new();
-            if mpi_config.is_root() {
-                final_commit
-                    .serialize_into(&mut serialized_commitment)
-                    .unwrap();
-            }
+            final_commit
+                .serialize_into(&mut serialized_commitment)
+                .unwrap();
 
             mpi_config.root_broadcast_bytes(&mut serialized_commitment);
             final_commit = {

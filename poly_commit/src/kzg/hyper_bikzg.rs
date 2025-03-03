@@ -6,7 +6,7 @@ use std::{io::Cursor, iter};
 use arith::{ExtensionField, FieldSerde};
 use halo2curves::{
     ff::Field,
-    group::{prime::PrimeCurveAffine, Curve, GroupEncoding},
+    group::{prime::PrimeCurveAffine, Curve, Group, GroupEncoding},
     pairing::MultiMillerLoop,
     CurveAffine,
 };
@@ -65,8 +65,9 @@ where
     // Leader party gathering evals and oracle commitments
     //
 
-    let mut root_gathering_folded_oracle_commits: Vec<E::G1Affine> = Vec::new();
-    let mut final_evals_at_x: Vec<E::Fr> = Vec::new();
+    let mut root_gathering_folded_oracle_commits: Vec<E::G1Affine> =
+        vec![E::G1Affine::default(); mpi_config.world_size() * local_folded_x_oracle_commits.len()];
+    let mut final_evals_at_x: Vec<E::Fr> = vec![E::Fr::ZERO; mpi_config.world_size()];
 
     mpi_config.gather_vec(
         &local_folded_x_oracle_commits,
@@ -152,14 +153,33 @@ where
     // Collect all exported local folded evals at x to the leader party
     //
 
-    let mut root_gathering_exported_folded_x_evals: Vec<HyperKZGExportedLocalEvals<E>> = Vec::new();
+    let mut root_gathering_exported_folded_x_evals: Vec<HyperKZGExportedLocalEvals<E>> =
+        vec![local_exported_folded_x_evals.clone(); mpi_config.world_size()];
     let mut root_aggregated_x_evals = HyperKZGAggregatedEvals::<E>::default();
     let mut root_folded_y_evals = HyperKZGLocalEvals::<E>::default();
 
-    mpi_config.gather_vec(
-        &vec![local_exported_folded_x_evals],
-        &mut root_gathering_exported_folded_x_evals,
-    );
+    {
+        let mut local_exported_folded_x_evals_bytes: Vec<u8> = Vec::new();
+        local_exported_folded_x_evals
+            .serialize_into(&mut local_exported_folded_x_evals_bytes)
+            .unwrap();
+
+        let mut gathering_buffer =
+            vec![0u8; mpi_config.world_size() * local_exported_folded_x_evals_bytes.len()];
+
+        mpi_config.gather_vec(&local_exported_folded_x_evals_bytes, &mut gathering_buffer);
+
+        if mpi_config.is_root() {
+            izip!(
+                &mut root_gathering_exported_folded_x_evals,
+                gathering_buffer.chunks(local_exported_folded_x_evals_bytes.len())
+            )
+            .for_each(|(es, bs)| {
+                let mut cursor = Cursor::new(bs.to_vec());
+                *es = HyperKZGExportedLocalEvals::<E>::deserialize_from(&mut cursor).unwrap();
+            })
+        }
+    }
 
     //
     // Leader aggregates all local exported evaluations (at x) by evaluating at y
@@ -199,7 +219,8 @@ where
     // then broadcast the coeffs back to local.
     //
 
-    let mut leader_gamma_aggregated_y_coeffs: Vec<E::Fr> = Vec::new();
+    let mut leader_gamma_aggregated_y_coeffs: Vec<E::Fr> =
+        vec![E::Fr::ZERO; mpi_config.world_size()];
 
     if mpi_config.is_root() {
         leader_gamma_aggregated_y_coeffs = {
@@ -217,11 +238,9 @@ where
     // TODO(HS) can be improved to broadcast a vec, returning a coeff to each party
     {
         let mut serialized_y_coeffs: Vec<u8> = Vec::new();
-        if mpi_config.is_root() {
-            leader_gamma_aggregated_y_coeffs
-                .serialize_into(&mut serialized_y_coeffs)
-                .unwrap();
-        }
+        leader_gamma_aggregated_y_coeffs
+            .serialize_into(&mut serialized_y_coeffs)
+            .unwrap();
 
         mpi_config.root_broadcast_bytes(&mut serialized_y_coeffs);
         leader_gamma_aggregated_y_coeffs = {
@@ -270,7 +289,8 @@ where
     // then sync transcript state
     //
 
-    let mut root_gathering_gamma_aggregated_x_quotient_commitment_g1s: Vec<E::G1> = Vec::new();
+    let mut root_gathering_gamma_aggregated_x_quotient_commitment_g1s: Vec<E::G1> =
+        vec![E::G1::generator(); mpi_config.world_size()];
     mpi_config.gather_vec(
         &vec![local_gamma_aggregated_x_quotient_commitment_g1],
         &mut root_gathering_gamma_aggregated_x_quotient_commitment_g1s,
@@ -296,7 +316,7 @@ where
     // Locally compute the Lagrange-degree2 interpolation at delta_x, pool at leader
     //
 
-    let mut degree2_evals_at_delta_x: Vec<E::Fr> = Vec::new();
+    let mut degree2_evals_at_delta_x: Vec<E::Fr> = vec![E::Fr::ZERO; mpi_config.world_size()];
 
     let local_degree2_eval_at_delta_x = local_lagrange_degree2_at_x[0]
         + local_lagrange_degree2_at_x[1] * delta_x
@@ -313,7 +333,7 @@ where
     // then sync transcript state
     //
 
-    let mut leader_quotient_y_coeffs: Vec<E::Fr> = Vec::new();
+    let mut leader_quotient_y_coeffs: Vec<E::Fr> = vec![E::Fr::ZERO; mpi_config.world_size()];
     let mut leader_quotient_y_commitment: E::G1Affine = E::G1Affine::default();
 
     if mpi_config.is_root() {
@@ -359,11 +379,9 @@ where
     // TODO(HS) can be better if the root only send corresponding coeffs to the parties
     {
         let mut serialized_y_quotient_coeffs: Vec<u8> = Vec::new();
-        if mpi_config.is_root() {
-            leader_quotient_y_coeffs
-                .serialize_into(&mut serialized_y_quotient_coeffs)
-                .unwrap();
-        }
+        leader_quotient_y_coeffs
+            .serialize_into(&mut serialized_y_quotient_coeffs)
+            .unwrap();
 
         mpi_config.root_broadcast_bytes(&mut serialized_y_quotient_coeffs);
         leader_quotient_y_coeffs = {
@@ -394,7 +412,8 @@ where
     // BiKZG commit to the last bivariate poly
     //
 
-    let mut gathered_eval_opens: Vec<(E::Fr, E::G1Affine)> = Vec::new();
+    let mut gathered_eval_opens: Vec<(E::Fr, E::G1Affine)> =
+        vec![(E::Fr::ZERO, E::G1Affine::default()); mpi_config.world_size()];
     let local_eval_open =
         coeff_form_uni_kzg_open_eval(&srs.tau_x_srs, &local_gamma_aggregated_x_coeffs, delta_x);
 
@@ -422,12 +441,20 @@ where
 
     {
         let mut serialized_hyper_bikzg_opening: Vec<u8> = Vec::new();
-        if mpi_config.is_root() {
-            hyper_bikzg_opening
-                .serialize_into(&mut serialized_hyper_bikzg_opening)
-                .unwrap();
-        }
+        hyper_bikzg_opening
+            .serialize_into(&mut serialized_hyper_bikzg_opening)
+            .unwrap();
 
+        let mut byte_len = serialized_hyper_bikzg_opening.len();
+        let mut byte_len_u8s: Vec<u8> = Vec::new();
+        byte_len.serialize_into(&mut byte_len_u8s).unwrap();
+        mpi_config.root_broadcast_bytes(&mut byte_len_u8s);
+        byte_len = {
+            let mut cursor = Cursor::new(byte_len_u8s);
+            usize::deserialize_from(&mut cursor).unwrap()
+        };
+
+        serialized_hyper_bikzg_opening.resize(byte_len, 0u8);
         mpi_config.root_broadcast_bytes(&mut serialized_hyper_bikzg_opening);
         hyper_bikzg_opening = {
             let mut cursor = Cursor::new(serialized_hyper_bikzg_opening);
