@@ -58,6 +58,8 @@ impl Field for AVXGF2_128 {
         v: unsafe { std::mem::zeroed() },
     }; // should not be used
 
+    const MODULUS: [u64; 4] = [0, 0, 0, 0]; // should not be used
+
     #[inline(always)]
     fn zero() -> Self {
         AVXGF2_128 {

@@ -1,7 +1,7 @@
-use arith::{Field, FieldForECC};
+use arith::Field;
 use gkr_field_config::GKRFieldConfig;
 use serdes::{ArithSerde, SerdeError};
-use std::{io::Read, vec};
+use std::{io::Read, mem::transmute, vec};
 use thiserror::Error;
 
 use super::{Allocation, CoefType, Gate, RecursiveCircuit, Segment, Witness};
@@ -179,12 +179,12 @@ impl<C: GKRFieldConfig> FromEccSerde for RecursiveCircuit<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let version_num = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
         assert_eq!(version_num, VERSION_NUM);
-        let expected_mod = <C::CircuitField as FieldForECC>::MODULUS;
-        let mut field_mod = [0u8; 32];
-        reader.read_exact(&mut field_mod).unwrap();
-        let read_mod = ethnum::U256::from_le_bytes(field_mod);
-        assert_eq!(expected_mod, read_mod);
-
+        let expected_mod = <C::CircuitField as Field>::MODULUS;
+        let mut read_mod = [0u8; 32];
+        reader.read_exact(&mut read_mod).unwrap();
+        unsafe {
+            assert_eq!(transmute::<[u64; 4], [u8; 32]>(expected_mod), read_mod);
+        }
         RecursiveCircuit {
             num_public_inputs: <usize as ArithSerde>::deserialize_from(&mut reader).unwrap(),
             num_outputs: <usize as ArithSerde>::deserialize_from(&mut reader).unwrap(),

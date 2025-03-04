@@ -4,7 +4,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field, FieldForECC};
+use arith::{field_common, Field};
 use ark_std::Zero;
 use rand::RngCore;
 use serdes::{ArithSerde, SerdeResult};
@@ -76,6 +76,8 @@ impl Field for M31 {
 
     const FIELD_SIZE: usize = 32;
 
+    const MODULUS: [u64; 4] = [M31_MOD as u64, 0, 0, 0];
+
     #[inline(always)]
     fn zero() -> Self {
         M31 { v: 0 }
@@ -138,19 +140,6 @@ impl Field for M31 {
     #[inline(always)]
     fn mul_by_6(&self) -> Self {
         *self * Self { v: 6 }
-    }
-}
-
-impl FieldForECC for M31 {
-    const MODULUS: ethnum::U256 = ethnum::U256::new(M31_MOD as u128);
-
-    fn from_u256(x: ethnum::U256) -> Self {
-        M31 {
-            v: (x % ethnum::U256::from(M31_MOD)).as_u32(),
-        }
-    }
-    fn to_u256(&self) -> ethnum::U256 {
-        ethnum::U256::from(mod_reduce_u32(self.v))
     }
 }
 

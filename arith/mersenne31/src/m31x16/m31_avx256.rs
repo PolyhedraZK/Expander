@@ -89,6 +89,8 @@ impl Field for AVXM31 {
 
     const FIELD_SIZE: usize = 32;
 
+    const MODULUS: [u64; 4] = M31::MODULUS;
+
     #[inline(always)]
     fn zero() -> Self {
         AVXM31 {

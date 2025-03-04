@@ -95,6 +95,8 @@ impl Field for NeonM31 {
         v: [PACKED_INV_2; 4],
     };
 
+    const MODULUS: [u64; 4] = M31::MODULUS;
+
     #[inline(always)]
     fn zero() -> Self {
         Self { v: [PACKED_0; 4] }

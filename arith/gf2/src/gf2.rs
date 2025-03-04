@@ -6,7 +6,7 @@ use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use arith::field_common;
-use arith::{Field, FieldForECC};
+use arith::Field;
 use serdes::{ArithSerde, SerdeResult};
 
 pub const MOD: u32 = 2;
@@ -49,6 +49,8 @@ impl Field for GF2 {
     const ONE: Self = GF2 { v: 1 };
 
     const INV_2: Self = GF2 { v: 0 }; // should not be used
+
+    const MODULUS: [u64; 4] = [MOD as u64, 0, 0, 0];
 
     #[inline(always)]
     fn zero() -> Self {
@@ -115,19 +117,6 @@ impl Field for GF2 {
     #[inline(always)]
     fn mul_by_6(&self) -> Self {
         Self::ZERO
-    }
-}
-
-impl FieldForECC for GF2 {
-    const MODULUS: ethnum::U256 = ethnum::U256::new(MOD as u128);
-
-    fn from_u256(x: ethnum::U256) -> Self {
-        GF2 {
-            v: (x.as_u32() & 1) as u8,
-        }
-    }
-    fn to_u256(&self) -> ethnum::U256 {
-        ethnum::U256::from(self.v as u32)
     }
 }
 

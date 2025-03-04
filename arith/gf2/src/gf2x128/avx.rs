@@ -56,6 +56,8 @@ impl Field for AVXGF2x128 {
         v: unsafe { zeroed() },
     }; // should not be used
 
+    const MODULUS: [u64; 4] = [0, 0, 0, 0]; // should not be used
+
     #[inline(always)]
     fn zero() -> Self {
         AVXGF2x128 {

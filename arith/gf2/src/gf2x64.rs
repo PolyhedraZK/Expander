@@ -42,6 +42,8 @@ impl Field for GF2x64 {
 
     const INV_2: Self = GF2x64 { v: 0 }; // NOTE: should not be used
 
+    const MODULUS: [u64; 4] = [0, 0, 0, 0]; // should not be used
+
     #[inline(always)]
     fn zero() -> Self {
         GF2x64::ZERO

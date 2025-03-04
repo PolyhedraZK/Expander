@@ -62,6 +62,8 @@ impl Field for M31Ext3 {
         v: [M31::INV_2, M31 { v: 0 }, M31 { v: 0 }],
     };
 
+    const MODULUS: [u64; 4] = M31::MODULUS;
+
     #[inline(always)]
     fn zero() -> Self {
         M31Ext3 {

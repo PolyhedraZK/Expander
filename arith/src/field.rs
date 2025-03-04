@@ -3,7 +3,6 @@ use serdes::ArithSerde;
 
 use std::{
     fmt::Debug,
-    hash::Hash,
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -52,6 +51,9 @@ pub trait Field:
 
     /// Inverse of 2
     const INV_2: Self;
+
+    /// MODULUS
+    const MODULUS: [u64; 4];
 
     // ====================================
     // constants
@@ -127,12 +129,4 @@ pub trait Field:
         let t = self.mul_by_3();
         t + t
     }
-}
-
-pub trait FieldForECC: Field + Hash + Eq + PartialOrd + Ord {
-    const MODULUS: ethnum::U256;
-
-    fn from_u256(x: ethnum::U256) -> Self;
-
-    fn to_u256(&self) -> ethnum::U256;
 }
