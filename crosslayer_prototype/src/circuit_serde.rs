@@ -1,5 +1,6 @@
-use arith::{Field, FieldForECC, FieldSerde, FieldSerdeError};
+use arith::{Field, FieldForECC};
 use gkr_field_config::GKRFieldConfig;
+use serdes::{FieldSerde, SerdeError};
 use std::{io::Read, vec};
 use thiserror::Error;
 
@@ -9,7 +10,7 @@ use crate::{CrossLayerRelay, SegmentId, SimpleGate};
 #[derive(Debug, Error)]
 pub enum CircuitError {
     #[error("field serde error: {0:?}")]
-    FieldSerdeError(#[from] FieldSerdeError),
+    SerdeError(#[from] SerdeError),
 
     #[error("other error: {0:?}")]
     OtherError(#[from] std::io::Error),

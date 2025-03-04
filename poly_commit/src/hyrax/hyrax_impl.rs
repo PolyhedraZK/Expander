@@ -1,9 +1,10 @@
-use arith::{ExtensionField, FieldSerde};
+use arith::ExtensionField;
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
 };
+use serdes::FieldSerde;
 
 use crate::hyrax::{
     pedersen::{pedersen_commit, pedersen_setup},
@@ -32,11 +33,11 @@ pub struct HyraxOpening<C: CurveAffine + FieldSerde>(pub Vec<C::Scalar>);
 impl<C: CurveAffine + FieldSerde> FieldSerde for HyraxCommitment<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
-    fn serialize_into<W: std::io::Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
         self.0.serialize_into(writer)
     }
 
-    fn deserialize_from<R: std::io::Read>(reader: R) -> arith::FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(reader: R) -> serdes::SerdeResult<Self> {
         let buffer: Vec<C> = Vec::deserialize_from(reader)?;
         Ok(Self(buffer))
     }
@@ -48,11 +49,11 @@ where
 {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
-    fn serialize_into<W: std::io::Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
         self.0.serialize_into(writer)
     }
 
-    fn deserialize_from<R: std::io::Read>(reader: R) -> arith::FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(reader: R) -> serdes::SerdeResult<Self> {
         let buffer: Vec<C::Scalar> = Vec::deserialize_from(reader)?;
         Ok(Self(buffer))
     }

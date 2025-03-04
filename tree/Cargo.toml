@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
+serdes = { path = "../serdes" }
 
 # babybear = { path = "../arith/babybear" }
 # poseidon = { path = "../poseidon" }

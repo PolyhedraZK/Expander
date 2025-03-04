@@ -4,7 +4,8 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{Field, FieldSerde, FieldSerdeResult};
+use arith::Field;
+use serdes::{FieldSerde, SerdeResult};
 
 use crate::GF2;
 
@@ -17,7 +18,7 @@ impl FieldSerde for AVXGF2x128 {
     const SERIALIZED_SIZE: usize = 16;
 
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe {
             writer.write_all(transmute::<__m128i, [u8; Self::SERIALIZED_SIZE]>(self.v).as_ref())?
         };
@@ -25,7 +26,7 @@ impl FieldSerde for AVXGF2x128 {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
         let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
         unsafe {

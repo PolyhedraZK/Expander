@@ -1,10 +1,11 @@
-use arith::{ExtensionField, FieldSerde};
+use arith::ExtensionField;
 use gkr_field_config::GKRFieldConfig;
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
 };
+use serdes::FieldSerde;
 use transcript::Transcript;
 
 use crate::{

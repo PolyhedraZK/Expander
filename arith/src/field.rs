@@ -1,4 +1,5 @@
 use rand::RngCore;
+use serdes::FieldSerde;
 
 use std::{
     fmt::Debug,
@@ -6,8 +7,6 @@ use std::{
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
-
-use crate::FieldSerde;
 
 /// Field definitions.
 pub trait Field:

@@ -2,11 +2,12 @@ use std::io::Cursor;
 
 use arith::{
     random_extension_field_tests, random_field_tests, random_inversion_tests,
-    random_simd_field_tests, FieldSerde,
+    random_simd_field_tests,
 };
 use arith::{random_from_limbs_to_limbs_tests, Field};
 use ark_std::test_rng;
 use field_hashers::{FiatShamirFieldHasher, PoseidonFiatShamirHasher, PoseidonStateTrait};
+use serdes::FieldSerde;
 
 use crate::M31Ext3;
 use crate::M31Ext3x16;

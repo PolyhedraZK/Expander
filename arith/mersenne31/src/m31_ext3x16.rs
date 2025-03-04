@@ -4,7 +4,8 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{field_common, ExtensionField, Field, SimdField};
+use serdes::{FieldSerde, SerdeResult};
 
 use crate::{m31::M31, M31Ext3, M31x16};
 
@@ -19,7 +20,7 @@ impl FieldSerde for M31Ext3x16 {
     const SERIALIZED_SIZE: usize = (512 / 8) * 3;
 
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.v[0].serialize_into(&mut writer)?;
         self.v[1].serialize_into(&mut writer)?;
         self.v[2].serialize_into(&mut writer)
@@ -28,7 +29,7 @@ impl FieldSerde for M31Ext3x16 {
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         Ok(Self {
             v: [
                 M31x16::deserialize_from(&mut reader)?,

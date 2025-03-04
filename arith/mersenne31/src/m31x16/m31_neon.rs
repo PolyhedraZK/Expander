@@ -7,7 +7,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{field_common, Field, FieldSerde, SerdeResult, SimdField};
 use ark_std::Zero;
 use rand::{Rng, RngCore};
 
@@ -57,7 +57,7 @@ impl FieldSerde for NeonM31 {
 
     #[inline(always)]
     /// serialize self into bytes
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         let data = unsafe { transmute::<[uint32x4_t; 4], [u8; 64]>(self.v) };
         writer.write_all(&data)?;
         Ok(())
@@ -65,7 +65,7 @@ impl FieldSerde for NeonM31 {
 
     /// deserialize bytes into field
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let mut data = [0; 64];
         reader.read_exact(&mut data)?;
         unsafe {

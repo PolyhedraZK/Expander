@@ -1,8 +1,9 @@
-use arith::{ExtensionField, Field, FieldSerde};
+use arith::{ExtensionField, Field};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::MultilinearExtension;
 use rand::RngCore;
+use serdes::FieldSerde;
 use std::fmt::Debug;
 use transcript::Transcript;
 

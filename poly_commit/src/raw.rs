@@ -3,12 +3,13 @@ use crate::{
     ExpanderGKRChallenge, PCSEmptyType, PCSForExpanderGKR, PolynomialCommitmentScheme,
     StructuredReferenceString,
 };
-use arith::{BN254Fr, ExtensionField, Field, FieldForECC, FieldSerde, FieldSerdeResult};
+use arith::{BN254Fr, ExtensionField, Field, FieldForECC};
 use ethnum::U256;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::{MultiLinearPoly, MultiLinearPolyExpander, MultilinearExtension};
 use rand::RngCore;
+use serdes::{FieldSerde, SerdeResult};
 use transcript::Transcript;
 
 #[derive(Clone, Debug, Default)]
@@ -19,7 +20,7 @@ pub struct RawCommitment<F: Field> {
 impl<F: Field> FieldSerde for RawCommitment<F> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         let u256_embedded = U256::from(self.evals.len() as u64);
         let fr_embedded = BN254Fr::from_u256(u256_embedded);
         fr_embedded.serialize_into(&mut writer)?;
@@ -31,7 +32,7 @@ impl<F: Field> FieldSerde for RawCommitment<F> {
         Ok(())
     }
 
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
         let mut v = Self::default();
 
         let fr_embedded = BN254Fr::deserialize_from(&mut reader)?;

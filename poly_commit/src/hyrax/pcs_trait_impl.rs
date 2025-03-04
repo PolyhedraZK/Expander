@@ -1,8 +1,9 @@
 use std::marker::PhantomData;
 
-use arith::{ExtensionField, FieldSerde};
+use arith::ExtensionField;
 use halo2curves::{ff::PrimeField, CurveAffine};
 use polynomials::MultiLinearPoly;
+use serdes::FieldSerde;
 use transcript::Transcript;
 
 use crate::{

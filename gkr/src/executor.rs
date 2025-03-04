@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use arith::{Field, FieldSerde, FieldSerdeError};
+use arith::Field;
 use circuit::Circuit;
 use clap::{Parser, Subcommand};
 use config::{Config, GKRConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
@@ -14,6 +14,7 @@ use gkr_field_config::GKRFieldConfig;
 use poly_commit::expander_pcs_init_testing_only;
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
+use serdes::{FieldSerde, SerdeError};
 
 use log::info;
 use transcript::Proof;
@@ -77,7 +78,7 @@ pub enum ExpanderExecSubCommand {
 pub fn dump_proof_and_claimed_v<F: Field>(
     proof: &Proof,
     claimed_v: &F,
-) -> Result<Vec<u8>, FieldSerdeError> {
+) -> Result<Vec<u8>, SerdeError> {
     let mut bytes = Vec::new();
 
     proof.serialize_into(&mut bytes)?;
@@ -86,7 +87,7 @@ pub fn dump_proof_and_claimed_v<F: Field>(
     Ok(bytes)
 }
 
-pub fn load_proof_and_claimed_v<F: Field>(bytes: &[u8]) -> Result<(Proof, F), FieldSerdeError> {
+pub fn load_proof_and_claimed_v<F: Field>(bytes: &[u8]) -> Result<(Proof, F), SerdeError> {
     let mut cursor = Cursor::new(bytes);
 
     let proof = Proof::deserialize_from(&mut cursor)?;

@@ -7,9 +7,10 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{field_common, Field, SimdField};
 use ark_std::Zero;
 use rand::{Rng, RngCore};
+use serdes::{FieldSerde, SerdeResult};
 
 use crate::m31::{M31, M31_MOD};
 
@@ -44,7 +45,7 @@ impl FieldSerde for AVXM31 {
 
     #[inline(always)]
     /// serialize self into bytes
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         let data = unsafe { transmute::<__m512i, [u8; 64]>(self.v) };
         writer.write_all(&data)?;
         Ok(())
@@ -52,7 +53,7 @@ impl FieldSerde for AVXM31 {
 
     /// deserialize bytes into field
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let mut data = [0; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut data)?;
         unsafe {

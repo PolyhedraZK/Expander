@@ -4,7 +4,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{Field, FieldSerde, FieldSerdeResult};
+use arith::{Field, FieldSerde, SerdeResult};
 
 use crate::GF2;
 
@@ -17,13 +17,13 @@ impl FieldSerde for NeonGF2x128 {
     const SERIALIZED_SIZE: usize = 16;
 
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe { writer.write_all(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref())? };
         Ok(())
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
         let mut u = [0u8; 16];
         reader.read_exact(&mut u)?;
         unsafe {

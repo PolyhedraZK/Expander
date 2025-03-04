@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
-use arith::{ExtensionField, Field, FieldSerde, FieldSerdeError, SimdField};
+use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
+use serdes::{FieldSerde, SerdeError};
 use thiserror::Error;
 use transcript::Transcript;
 
@@ -19,7 +20,7 @@ pub enum OrionPCSError {
     ParameterUnmatchError,
 
     #[error("field serde error")]
-    SerializationError(#[from] FieldSerdeError),
+    SerializationError(#[from] SerdeError),
 }
 
 pub type OrionResult<T> = std::result::Result<T, OrionPCSError>;
@@ -91,11 +92,11 @@ unsafe impl<F: Field, ComPackF: SimdField<Scalar = F>> Send for OrionScratchPad<
 impl<F: Field, ComPackF: SimdField<Scalar = F>> FieldSerde for OrionScratchPad<F, ComPackF> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
-    fn serialize_into<W: std::io::Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
         self.interleaved_alphabet_commitment.serialize_into(writer)
     }
 
-    fn deserialize_from<R: std::io::Read>(reader: R) -> arith::FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(reader: R) -> serdes::SerdeResult<Self> {
         let interleaved_alphabet_commitment = tree::Tree::deserialize_from(reader)?;
 
         Ok(Self {

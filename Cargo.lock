@@ -120,8 +120,8 @@ dependencies = [
  "log",
  "rand",
  "raw-cpuid",
+ "serdes",
  "sha2",
- "thiserror",
  "tynm",
 ]
 
@@ -481,6 +481,7 @@ dependencies = [
  "gkr_field_config",
  "log",
  "rand",
+ "serdes",
  "thiserror",
  "transcript",
 ]
@@ -689,6 +690,7 @@ dependencies = [
  "log",
  "polynomials",
  "rand",
+ "serdes",
  "sumcheck",
  "thiserror",
  "transcript",
@@ -832,6 +834,7 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "halo2curves",
+ "serdes",
  "tiny-keccak",
 ]
 
@@ -932,6 +935,7 @@ dependencies = [
  "log",
  "rand",
  "raw-cpuid",
+ "serdes",
  "sha2",
  "thiserror",
  "tynm",
@@ -946,6 +950,7 @@ dependencies = [
  "criterion",
  "gf2",
  "rand",
+ "serdes",
  "tynm",
 ]
 
@@ -983,6 +988,7 @@ dependencies = [
  "polynomials",
  "rand",
  "rand_chacha",
+ "serdes",
  "sha2",
  "sumcheck",
  "thiserror",
@@ -1549,6 +1555,7 @@ dependencies = [
  "log",
  "rand",
  "raw-cpuid",
+ "serdes",
  "sha2",
  "thiserror",
  "tynm",
@@ -1852,6 +1859,7 @@ dependencies = [
  "mpi_config",
  "polynomials",
  "rand",
+ "serdes",
  "thiserror",
  "transcript",
  "tree",
@@ -2119,6 +2127,14 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "serdes"
+version = "0.1.0"
+dependencies = [
+ "halo2curves",
+ "thiserror",
 ]
 
 [[package]]
@@ -2410,6 +2426,7 @@ dependencies = [
  "arith",
  "field_hashers",
  "mpi_config",
+ "serdes",
  "sha2",
  "tiny-keccak",
 ]
@@ -2423,6 +2440,7 @@ dependencies = [
  "criterion",
  "gf2",
  "gf2_128",
+ "serdes",
  "sha2",
  "tynm",
 ]

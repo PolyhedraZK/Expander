@@ -1,6 +1,6 @@
-use arith::FieldSerde;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
+use serdes::FieldSerde;
 use transcript::Transcript;
 
 use crate::{PCSForExpanderGKR, StructuredReferenceString};
@@ -11,11 +11,11 @@ pub struct PCSEmptyType {}
 impl FieldSerde for PCSEmptyType {
     const SERIALIZED_SIZE: usize = 0;
 
-    fn serialize_into<W: std::io::Write>(&self, _writer: W) -> arith::FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, _writer: W) -> serdes::SerdeResult<()> {
         Ok(())
     }
 
-    fn deserialize_from<R: std::io::Read>(_reader: R) -> arith::FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(_reader: R) -> serdes::SerdeResult<Self> {
         Ok(Self {})
     }
 }
