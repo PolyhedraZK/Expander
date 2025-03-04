@@ -2133,6 +2133,7 @@ dependencies = [
 name = "serdes"
 version = "0.1.0"
 dependencies = [
+ "ethnum",
  "halo2curves",
  "thiserror",
 ]

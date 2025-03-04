@@ -1,5 +1,7 @@
 use std::io::{Read, Write};
 
+use ethnum::U256;
+
 use crate::{ArithSerde, SerdeResult};
 
 /// Serde for Expander types such as proofs, witnesses and circuits.
@@ -37,5 +39,18 @@ impl ExpSerde for () {
 
     fn deserialize_from<R: std::io::Read>(_reader: R) -> SerdeResult<Self> {
         Ok(())
+    }
+}
+
+impl ExpSerde for U256 {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        writer.write_all(&self.to_le_bytes())?;
+        Ok(())
+    }
+
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let mut bytes = [0u8; 32];
+        reader.read_exact(&mut bytes)?;
+        Ok(Self::from_le_bytes(bytes))
     }
 }
