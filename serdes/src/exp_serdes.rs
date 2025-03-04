@@ -1,4 +1,8 @@
-use std::io::{Read, Write};
+use std::{
+    collections::HashMap,
+    hash::Hash,
+    io::{Read, Write},
+};
 
 use ethnum::U256;
 
@@ -52,5 +56,27 @@ impl ExpSerde for U256 {
         let mut bytes = [0u8; 32];
         reader.read_exact(&mut bytes)?;
         Ok(Self::from_le_bytes(bytes))
+    }
+}
+
+impl<K: ExpSerde + Eq + Hash, V: ExpSerde> ExpSerde for HashMap<K, V> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        self.len().serialize_into(&mut writer)?;
+        for (k, v) in self.iter() {
+            k.serialize_into(&mut writer)?;
+            v.serialize_into(&mut writer)?;
+        }
+        Ok(())
+    }
+
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let len = usize::deserialize_from(&mut reader)?;
+        let mut map = HashMap::with_capacity(len);
+        for _ in 0..len {
+            let k = K::deserialize_from(&mut reader)?;
+            let v = V::deserialize_from(&mut reader)?;
+            map.insert(k, v);
+        }
+        Ok(map)
     }
 }
