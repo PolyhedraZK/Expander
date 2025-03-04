@@ -75,6 +75,8 @@ impl Field for NeonGF2_128x8 {
         v: [unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) }; 8],
     }; // should not be used
 
+    const MODULUS: [u64; 4] = [0, 0, 0, 0]; // not used
+
     #[inline(always)]
     fn zero() -> Self {
         NeonGF2_128x8 {

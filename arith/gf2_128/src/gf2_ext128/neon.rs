@@ -72,6 +72,8 @@ impl Field for NeonGF2_128 {
         v: unsafe { std::mem::zeroed() },
     }; // should not be used
 
+    const MODULUS: [u64; 4] = [0x0, 0, 0, 0]; // should not be used
+
     #[inline(always)]
     fn zero() -> Self {
         NeonGF2_128 {

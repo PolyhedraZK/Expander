@@ -101,6 +101,8 @@ impl Field for AVX256GF2_128x8 {
 
     const FIELD_SIZE: usize = 128;
 
+    const MODULUS: [u64; 4] = [0, 0, 0, 0]; // not used
+
     #[inline(always)]
     fn zero() -> Self {
         unsafe {
