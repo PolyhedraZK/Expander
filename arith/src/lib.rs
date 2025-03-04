@@ -12,9 +12,6 @@ pub use bn254::*;
 mod simd_field;
 pub use simd_field::*;
 
-mod serde;
-pub use serde::*;
-
 mod macros;
 
 mod benches;

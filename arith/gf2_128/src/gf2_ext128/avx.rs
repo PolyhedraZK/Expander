@@ -5,8 +5,9 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult};
+use arith::{field_common, ExtensionField, Field};
 use gf2::GF2;
+use serdes::{ArithSerde, SerdeResult};
 
 #[derive(Debug, Clone, Copy)]
 pub struct AVXGF2_128 {
@@ -15,11 +16,11 @@ pub struct AVXGF2_128 {
 
 field_common!(AVXGF2_128);
 
-impl FieldSerde for AVXGF2_128 {
+impl ArithSerde for AVXGF2_128 {
     const SERIALIZED_SIZE: usize = 16;
 
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe {
             writer.write_all(transmute::<__m128i, [u8; Self::SERIALIZED_SIZE]>(self.v).as_ref())?
         };
@@ -27,7 +28,7 @@ impl FieldSerde for AVXGF2_128 {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
         let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
         unsafe {
@@ -56,6 +57,8 @@ impl Field for AVXGF2_128 {
     const INV_2: Self = AVXGF2_128 {
         v: unsafe { std::mem::zeroed() },
     }; // should not be used
+
+    const MODULUS: [u64; 4] = [0, 0, 0, 0]; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {

@@ -1,6 +1,6 @@
 mod common;
 
-use arith::{BN254Fr, Field};
+use arith::{Field, Fr};
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 use poly_commit::{
@@ -19,12 +19,12 @@ fn test_raw() {
     let xs = (0..100)
         .map(|_| {
             (0..params.n_vars)
-                .map(|_| BN254Fr::random_unsafe(&mut rng))
-                .collect::<Vec<BN254Fr>>()
+                .map(|_| Fr::random_unsafe(&mut rng))
+                .collect::<Vec<Fr>>()
         })
-        .collect::<Vec<Vec<BN254Fr>>>();
+        .collect::<Vec<Vec<Fr>>>();
 
-    common::test_pcs::<BN254Fr, BytesHashTranscript<_, Keccak256hasher>, RawMultiLinearPCS>(
+    common::test_pcs::<Fr, BytesHashTranscript<_, Keccak256hasher>, RawMultiLinearPCS>(
         &params, &poly, &xs,
     );
 }

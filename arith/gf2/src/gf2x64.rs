@@ -1,6 +1,7 @@
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{Field, SimdField};
+use serdes::{ArithSerde, SerdeResult};
 
 use super::GF2;
 
@@ -9,17 +10,17 @@ pub struct GF2x64 {
     pub v: u64,
 }
 
-impl FieldSerde for GF2x64 {
+impl ArithSerde for GF2x64 {
     const SERIALIZED_SIZE: usize = 8;
 
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         writer.write_all(self.v.to_le_bytes().as_ref())?;
         Ok(())
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
         let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
         Ok(GF2x64 {
@@ -40,6 +41,8 @@ impl Field for GF2x64 {
     const ONE: Self = GF2x64 { v: !0u64 };
 
     const INV_2: Self = GF2x64 { v: 0 }; // NOTE: should not be used
+
+    const MODULUS: [u64; 4] = [0, 0, 0, 0]; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {

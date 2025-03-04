@@ -1,21 +1,9 @@
-use std::io::{Read, Write};
-
-use halo2curves::{
-    bn256::{Fr, G1Affine, G2Affine},
-    ff::{Field as Halo2Field, FromUniformBytes, PrimeField},
-    group::GroupEncoding,
-};
+use halo2curves::ff::{Field as Halo2Field, FromUniformBytes, PrimeField};
 use rand::RngCore;
 
-use crate::serde::{FieldSerdeError, FieldSerdeResult};
-use crate::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
+use crate::{ExtensionField, Field, SimdField};
 
-const MODULUS: ethnum::U256 = ethnum::U256([
-    0x2833e84879b9709143e1f593f0000001,
-    0x30644e72e131a029b85045b68181585d,
-]);
-
-pub use halo2curves::bn256::Fr as BN254Fr;
+pub use halo2curves::bn256::Fr;
 
 impl Field for Fr {
     /// name
@@ -34,6 +22,14 @@ impl Field for Fr {
 
     /// Inverse of 2
     const INV_2: Self = Fr::TWO_INV;
+
+    /// MODULUS in [u64; 4]
+    const MODULUS: [u64; 4] = [
+        0x43e1f593f0000001,
+        0x2833e84879b97091,
+        0xb85045b68181585d,
+        0x30644e72e131a029,
+    ];
 
     // ====================================
     // constants
@@ -113,17 +109,6 @@ impl Field for Fr {
     }
 }
 
-impl FieldForECC for Fr {
-    const MODULUS: ethnum::U256 = MODULUS;
-
-    fn from_u256(x: ethnum::U256) -> Self {
-        Fr::from_bytes(&(x % MODULUS).to_le_bytes()).unwrap()
-    }
-    fn to_u256(&self) -> ethnum::U256 {
-        ethnum::U256::from_le_bytes(self.to_bytes())
-    }
-}
-
 impl SimdField for Fr {
     type Scalar = Self;
 
@@ -144,72 +129,6 @@ impl SimdField for Fr {
     }
 
     const PACK_SIZE: usize = 1;
-}
-
-impl FieldSerde for Fr {
-    const SERIALIZED_SIZE: usize = 32;
-
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        writer.write_all(self.to_bytes().as_ref())?;
-        Ok(())
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut buffer = [0u8; Self::SERIALIZED_SIZE];
-        reader.read_exact(&mut buffer)?;
-        match Fr::from_bytes(&buffer).into_option() {
-            Some(v) => Ok(v),
-            None => Err(FieldSerdeError::DeserializeError),
-        }
-    }
-}
-
-impl FieldSerde for G1Affine {
-    const SERIALIZED_SIZE: usize = 32;
-
-    fn serialize_into<W: Write>(&self, writer: W) -> FieldSerdeResult<()> {
-        let bytes = self.to_bytes().as_ref().to_vec();
-        bytes.serialize_into(writer)
-    }
-
-    fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self> {
-        let bytes: Vec<u8> = Vec::deserialize_from(reader)?;
-        if bytes.len() != Self::SERIALIZED_SIZE {
-            return Err(FieldSerdeError::DeserializeError);
-        }
-
-        let mut encoding = <Self as GroupEncoding>::Repr::default();
-        encoding.as_mut().copy_from_slice(bytes.as_ref());
-        match G1Affine::from_bytes(&encoding).into_option() {
-            Some(a) => Ok(a),
-            None => Err(FieldSerdeError::DeserializeError),
-        }
-    }
-}
-
-impl FieldSerde for G2Affine {
-    const SERIALIZED_SIZE: usize = 64;
-
-    fn serialize_into<W: Write>(&self, writer: W) -> FieldSerdeResult<()> {
-        let bytes = self.to_bytes().as_ref().to_vec();
-        bytes.serialize_into(writer)
-    }
-
-    fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self> {
-        let bytes: Vec<u8> = Vec::deserialize_from(reader)?;
-        if bytes.len() != Self::SERIALIZED_SIZE {
-            return Err(FieldSerdeError::DeserializeError);
-        }
-
-        let mut encoding = <Self as GroupEncoding>::Repr::default();
-        encoding.as_mut().copy_from_slice(bytes.as_ref());
-        match G2Affine::from_bytes(&encoding).into_option() {
-            Some(a) => Ok(a),
-            None => Err(FieldSerdeError::DeserializeError),
-        }
-    }
 }
 
 impl ExtensionField for Fr {

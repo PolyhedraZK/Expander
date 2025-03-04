@@ -3,8 +3,9 @@ use std::iter::{Product, Sum};
 use std::mem::transmute;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{field_common, ExtensionField, Field, SimdField};
 use gf2::{GF2x8, GF2};
+use serdes::{ArithSerde, SerdeResult};
 
 use crate::gf2_ext128::neon::{gfadd, gfmul, mul_by_x_internal, NeonGF2_128};
 use crate::GF2_128;
@@ -30,11 +31,11 @@ impl PartialEq for NeonGF2_128x8 {
     }
 }
 
-impl FieldSerde for NeonGF2_128x8 {
+impl ArithSerde for NeonGF2_128x8 {
     const SERIALIZED_SIZE: usize = 128;
 
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.v.iter().for_each(|&vv| {
             writer
                 .write_all(unsafe { transmute::<uint32x4_t, [u8; 16]>(vv) }.as_ref())
@@ -44,7 +45,7 @@ impl FieldSerde for NeonGF2_128x8 {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
         let mut res = Self::zero();
         res.v.iter_mut().for_each(|vv| {
             let mut u = [0u8; 16];
@@ -73,6 +74,8 @@ impl Field for NeonGF2_128x8 {
     const INV_2: Self = NeonGF2_128x8 {
         v: [unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) }; 8],
     }; // should not be used
+
+    const MODULUS: [u64; 4] = [0, 0, 0, 0]; // not used
 
     #[inline(always)]
     fn zero() -> Self {

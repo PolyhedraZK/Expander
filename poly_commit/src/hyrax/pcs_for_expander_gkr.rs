@@ -1,10 +1,11 @@
-use arith::{ExtensionField, FieldSerde};
+use arith::ExtensionField;
 use gkr_field_config::GKRFieldConfig;
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
 };
+use serdes::ArithSerde;
 use transcript::Transcript;
 
 use crate::{
@@ -18,7 +19,7 @@ use crate::{
 impl<G, C, T> PCSForExpanderGKR<G, T> for HyraxPCS<C, T>
 where
     G: GKRFieldConfig<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
-    C: CurveAffine + FieldSerde,
+    C: CurveAffine + ArithSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
     T: Transcript<G::ChallengeField>,

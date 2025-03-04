@@ -4,9 +4,10 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field, FieldForECC, FieldSerde, FieldSerdeResult};
+use arith::{field_common, Field};
 use ark_std::Zero;
 use rand::RngCore;
+use serdes::{ArithSerde, SerdeResult};
 
 pub const M31_MOD: u32 = 2147483647;
 
@@ -27,11 +28,11 @@ pub struct M31 {
 
 field_common!(M31);
 
-impl FieldSerde for M31 {
+impl ArithSerde for M31 {
     const SERIALIZED_SIZE: usize = 32 / 8;
 
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         writer.write_all(self.v.to_le_bytes().as_ref())?;
         Ok(())
     }
@@ -39,7 +40,7 @@ impl FieldSerde for M31 {
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
         let mut v = u32::from_le_bytes(u);
@@ -74,6 +75,8 @@ impl Field for M31 {
     const INV_2: M31 = M31 { v: 1 << 30 };
 
     const FIELD_SIZE: usize = 32;
+
+    const MODULUS: [u64; 4] = [M31_MOD as u64, 0, 0, 0];
 
     #[inline(always)]
     fn zero() -> Self {
@@ -137,19 +140,6 @@ impl Field for M31 {
     #[inline(always)]
     fn mul_by_6(&self) -> Self {
         *self * Self { v: 6 }
-    }
-}
-
-impl FieldForECC for M31 {
-    const MODULUS: ethnum::U256 = ethnum::U256::new(M31_MOD as u128);
-
-    fn from_u256(x: ethnum::U256) -> Self {
-        M31 {
-            v: (x % ethnum::U256::from(M31_MOD)).as_u32(),
-        }
-    }
-    fn to_u256(&self) -> ethnum::U256 {
-        ethnum::U256::from(mod_reduce_u32(self.v))
     }
 }
 
