@@ -12,6 +12,11 @@ env:
   RUST_BACKTRACE: 1
   ACTIONS_RUNNER_DEBUG: true
 
+# Cancel all previous runs of the same workflow
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint

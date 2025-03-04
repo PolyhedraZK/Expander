@@ -5,7 +5,7 @@ use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use polynomials::{MultilinearExtension, RefMultiLinearPoly};
-use serdes::{ArithSerde, ExpSerde};
+use serdes::ExpSerde;
 use sumcheck::ProverScratchPad;
 use transcript::{transcript_root_broadcast, Proof, Transcript};
 use utils::timer::Timer;
@@ -15,6 +15,7 @@ use crate::{gkr_prove, gkr_square_prove};
 #[cfg(feature = "grinding")]
 pub(crate) fn grind<Cfg: GKRConfig>(transcript: &mut Cfg::Transcript, config: &Config<Cfg>) {
     use arith::Field;
+    use serdes::ArithSerde;
 
     let timer = Timer::new("grinding", config.mpi_config.is_root());
 
