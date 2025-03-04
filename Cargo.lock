@@ -578,6 +578,7 @@ dependencies = [
  "field_hashers",
  "gf2",
  "gkr_field_config",
+ "halo2curves",
  "mersenne31",
  "poly_commit",
  "proc-macro2",
