@@ -47,9 +47,7 @@ impl ExpSerde for Node {
     }
 }
 
-impl ArithSerde for Path {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
+impl ExpSerde for Path {
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.index.serialize_into(&mut writer)?;
         <Vec<Node> as ArithSerde>::serialize_into(&self.path_nodes, &mut writer)?;
@@ -70,9 +68,7 @@ impl ArithSerde for Path {
     }
 }
 
-impl ArithSerde for RangePath {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
+impl ExpSerde for RangePath {
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.left.serialize_into(&mut writer)?;
         self.right.serialize_into(&mut writer)?;
@@ -96,9 +92,7 @@ impl ArithSerde for RangePath {
     }
 }
 
-impl ArithSerde for Tree {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
+impl ExpSerde for Tree {
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         <Vec<Node> as ArithSerde>::serialize_into(&self.nodes, &mut writer)?;
         self.leaves.serialize_into(&mut writer)

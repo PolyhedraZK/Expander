@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
-use serdes::{ArithSerde, ExpSerde, SerdeError};
+use serdes::{ExpSerde, SerdeError};
 use thiserror::Error;
 use transcript::Transcript;
 

@@ -110,7 +110,7 @@ impl<F: Field> ExpSerde for OrionProof<F> {
         let proximity_rows: Vec<Vec<F>> =
             <Vec<Vec<F>> as ArithSerde>::deserialize_from(&mut reader)?;
         let query_openings: Vec<tree::RangePath> =
-            <Vec<tree::RangePath> as ArithSerde>::deserialize_from(&mut reader)?;
+            <Vec<tree::RangePath> as ExpSerde>::deserialize_from(&mut reader)?;
         Ok(OrionProof {
             eval_row,
             proximity_rows,
