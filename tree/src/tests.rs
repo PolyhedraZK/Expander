@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
 use ark_std::{rand::RngCore, test_rng};
-use serdes::FieldSerde;
+use serdes::ArithSerde;
 
 use crate::{Leaf, Path, Tree};
 

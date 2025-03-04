@@ -9,7 +9,7 @@ use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::{MultiLinearPoly, MultiLinearPolyExpander, MultilinearExtension};
 use rand::RngCore;
-use serdes::{FieldSerde, SerdeResult};
+use serdes::{ArithSerde, SerdeResult};
 use transcript::Transcript;
 
 #[derive(Clone, Debug, Default)]
@@ -17,7 +17,7 @@ pub struct RawCommitment<F: Field> {
     pub evals: Vec<F>,
 }
 
-impl<F: Field> FieldSerde for RawCommitment<F> {
+impl<F: Field> ArithSerde for RawCommitment<F> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {

@@ -14,7 +14,7 @@ use gkr_field_config::GKRFieldConfig;
 use poly_commit::expander_pcs_init_testing_only;
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
-use serdes::{FieldSerde, SerdeError};
+use serdes::{ArithSerde, SerdeError};
 
 use log::info;
 use transcript::Proof;

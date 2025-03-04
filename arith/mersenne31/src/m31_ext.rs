@@ -8,7 +8,7 @@ use std::{
 
 use arith::ExtensionField;
 use arith::{field_common, Field};
-use serdes::{FieldSerde, SerdeResult};
+use serdes::{ArithSerde, SerdeResult};
 
 use crate::m31::{mod_reduce_u32, M31};
 
@@ -19,7 +19,7 @@ pub struct M31Ext3 {
 
 field_common!(M31Ext3);
 
-impl FieldSerde for M31Ext3 {
+impl ArithSerde for M31Ext3 {
     const SERIALIZED_SIZE: usize = (32 / 8) * 3;
 
     #[inline(always)]

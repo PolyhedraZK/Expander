@@ -1,6 +1,6 @@
 use arith::{Field, FieldForECC};
 use gkr_field_config::GKRFieldConfig;
-use serdes::{FieldSerde, SerdeError};
+use serdes::{ArithSerde, SerdeError};
 use std::{io::Read, vec};
 use thiserror::Error;
 
@@ -21,7 +21,7 @@ pub trait FromEccSerde {
 
 impl<T: FromEccSerde> FromEccSerde for Vec<T> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let vec_len = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
+        let vec_len = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
         let mut ret = vec![];
         for _ in 0..vec_len {
             ret.push(T::deserialize_from(&mut reader));
@@ -41,7 +41,7 @@ impl<T1: FromEccSerde, T2: FromEccSerde> FromEccSerde for (T1, T2) {
 
 impl FromEccSerde for usize {
     fn deserialize_from<R: Read>(reader: R) -> Self {
-        <usize as FieldSerde>::deserialize_from(reader).unwrap()
+        <usize as ArithSerde>::deserialize_from(reader).unwrap()
     }
 }
 
@@ -93,11 +93,11 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for ECCCrossLayerGa
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let mut i_ids = [(0usize, 0usize); INPUT_NUM];
         for (layer_offset, gate_offset) in &mut i_ids {
-            *layer_offset = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
-            *gate_offset = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
+            *layer_offset = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
+            *gate_offset = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
         }
 
-        let o_id = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
+        let o_id = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
 
         let coef_type_u8 = u8::deserialize_from(&mut reader).unwrap();
         let (coef_type, coef) = match coef_type_u8 {
@@ -113,7 +113,7 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for ECCCrossLayerGa
 
                 (
                     CoefType::PublicInput(
-                        <usize as FieldSerde>::deserialize_from(&mut reader).unwrap(),
+                        <usize as ArithSerde>::deserialize_from(&mut reader).unwrap(),
                     ),
                     C::CircuitField::ZERO,
                 )
@@ -133,16 +133,16 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for ECCCrossLayerGa
 impl FromEccSerde for Allocation {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         Self {
-            i_offset: <Vec<usize> as FieldSerde>::deserialize_from(&mut reader).unwrap(),
-            o_offset: <usize as FieldSerde>::deserialize_from(&mut reader).unwrap(),
+            i_offset: <Vec<usize> as ArithSerde>::deserialize_from(&mut reader).unwrap(),
+            o_offset: <usize as ArithSerde>::deserialize_from(&mut reader).unwrap(),
         }
     }
 }
 
 impl<C: GKRFieldConfig> FromEccSerde for CrossLayerSegment<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let input_size = <Vec<usize> as FieldSerde>::deserialize_from(&mut reader).unwrap();
-        let output_size = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
+        let input_size = <Vec<usize> as ArithSerde>::deserialize_from(&mut reader).unwrap();
+        let output_size = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
         assert!(input_size.iter().all(|&x| x.is_power_of_two()));
         assert!(output_size.is_power_of_two());
 
@@ -173,7 +173,7 @@ impl<C: GKRFieldConfig> FromEccSerde for CrossLayerSegment<C> {
             .map(|gate| gate.to_simple_gate_or_relay().0.unwrap())
             .collect();
 
-        let custom_gates_size = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
+        let custom_gates_size = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
         assert_eq!(custom_gates_size, 0);
 
         CrossLayerSegment {
@@ -192,7 +192,7 @@ const VERSION_NUM: usize = 3914834606642317635; // b'CIRCUIT6'
 
 impl<C: GKRFieldConfig> FromEccSerde for CrossLayerRecursiveCircuit<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let version_num = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
+        let version_num = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
         assert_eq!(version_num, VERSION_NUM);
         let expected_mod = <C::CircuitField as FieldForECC>::MODULUS;
         let mut field_mod = [0u8; 32];
@@ -201,9 +201,9 @@ impl<C: GKRFieldConfig> FromEccSerde for CrossLayerRecursiveCircuit<C> {
         assert_eq!(expected_mod, read_mod);
 
         CrossLayerRecursiveCircuit {
-            num_public_inputs: <usize as FieldSerde>::deserialize_from(&mut reader).unwrap(),
-            num_outputs: <usize as FieldSerde>::deserialize_from(&mut reader).unwrap(),
-            expected_num_output_zeros: <usize as FieldSerde>::deserialize_from(&mut reader)
+            num_public_inputs: <usize as ArithSerde>::deserialize_from(&mut reader).unwrap(),
+            num_outputs: <usize as ArithSerde>::deserialize_from(&mut reader).unwrap(),
+            expected_num_output_zeros: <usize as ArithSerde>::deserialize_from(&mut reader)
                 .unwrap(),
 
             segments: Vec::<CrossLayerSegment<C>>::deserialize_from(&mut reader),
@@ -214,11 +214,11 @@ impl<C: GKRFieldConfig> FromEccSerde for CrossLayerRecursiveCircuit<C> {
 
 impl<C: GKRFieldConfig> FromEccSerde for Witness<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let num_witnesses = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
+        let num_witnesses = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
         let num_private_inputs_per_witness =
-            <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
+            <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
         let num_public_inputs_per_witness =
-            <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
+            <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
         let _modulus = <[u64; 4]>::deserialize_from(&mut reader).unwrap();
 
         let mut values = vec![];

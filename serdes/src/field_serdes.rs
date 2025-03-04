@@ -7,8 +7,8 @@ use halo2curves::{
 
 use crate::{SerdeError, SerdeResult};
 
-/// Serde for Fields
-pub trait FieldSerde: Sized {
+/// Serde for Arithmetic types such as field and group operations
+pub trait ArithSerde: Sized {
     const SERIALIZED_SIZE: usize;
 
     /// serialize self into bytes
@@ -18,7 +18,7 @@ pub trait FieldSerde: Sized {
     fn deserialize_from<R: Read>(reader: R) -> SerdeResult<Self>;
 }
 
-impl FieldSerde for () {
+impl ArithSerde for () {
     const SERIALIZED_SIZE: usize = 0;
 
     fn serialize_into<W: std::io::Write>(&self, _writer: W) -> SerdeResult<()> {
@@ -32,7 +32,7 @@ impl FieldSerde for () {
 
 macro_rules! field_serde_for_number {
     ($int_type: ident, $size_in_bytes: expr) => {
-        impl FieldSerde for $int_type {
+        impl ArithSerde for $int_type {
             /// size of the serialized bytes
             const SERIALIZED_SIZE: usize = $size_in_bytes;
 
@@ -57,7 +57,7 @@ field_serde_for_number!(usize, 8);
 field_serde_for_number!(u8, 1);
 field_serde_for_number!(f64, 8);
 
-impl<V: FieldSerde> FieldSerde for Vec<V> {
+impl<V: ArithSerde> ArithSerde for Vec<V> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -79,7 +79,7 @@ impl<V: FieldSerde> FieldSerde for Vec<V> {
 }
 
 // Consider use const generics after it gets stable
-impl FieldSerde for [u64; 4] {
+impl ArithSerde for [u64; 4] {
     const SERIALIZED_SIZE: usize = 32;
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -101,7 +101,7 @@ impl FieldSerde for [u64; 4] {
     }
 }
 
-impl FieldSerde for Fr {
+impl ArithSerde for Fr {
     const SERIALIZED_SIZE: usize = 32;
 
     #[inline(always)]
@@ -121,7 +121,7 @@ impl FieldSerde for Fr {
     }
 }
 
-impl FieldSerde for G1Affine {
+impl ArithSerde for G1Affine {
     const SERIALIZED_SIZE: usize = 32;
 
     fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {
@@ -144,7 +144,7 @@ impl FieldSerde for G1Affine {
     }
 }
 
-impl FieldSerde for G2Affine {
+impl ArithSerde for G2Affine {
     const SERIALIZED_SIZE: usize = 64;
 
     fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {

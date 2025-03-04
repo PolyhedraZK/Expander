@@ -5,7 +5,7 @@ use std::{
 };
 
 use arith::{field_common, ExtensionField, Field, SimdField};
-use serdes::{FieldSerde, SerdeResult};
+use serdes::{ArithSerde, SerdeResult};
 
 use crate::{m31::M31, M31Ext3, M31x16};
 
@@ -16,7 +16,7 @@ pub struct M31Ext3x16 {
 
 field_common!(M31Ext3x16);
 
-impl FieldSerde for M31Ext3x16 {
+impl ArithSerde for M31Ext3x16 {
     const SERIALIZED_SIZE: usize = (512 / 8) * 3;
 
     #[inline(always)]

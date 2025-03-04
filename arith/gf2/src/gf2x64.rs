@@ -1,7 +1,7 @@
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use arith::{Field, SimdField};
-use serdes::{FieldSerde, SerdeResult};
+use serdes::{ArithSerde, SerdeResult};
 
 use super::GF2;
 
@@ -10,7 +10,7 @@ pub struct GF2x64 {
     pub v: u64,
 }
 
-impl FieldSerde for GF2x64 {
+impl ArithSerde for GF2x64 {
     const SERIALIZED_SIZE: usize = 8;
 
     #[inline(always)]

@@ -1,14 +1,14 @@
 use std::io::{Read, Write};
 
 use arith::Field;
-use serdes::{FieldSerde, SerdeResult};
+use serdes::{ArithSerde, SerdeResult};
 
 use crate::orion::{
     linear_code::*,
     utils::{OrionProof, OrionSRS},
 };
 
-impl FieldSerde for OrionExpanderGraph {
+impl ArithSerde for OrionExpanderGraph {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -30,7 +30,7 @@ impl FieldSerde for OrionExpanderGraph {
     }
 }
 
-impl FieldSerde for OrionExpanderGraphPositioned {
+impl ArithSerde for OrionExpanderGraphPositioned {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -55,7 +55,7 @@ impl FieldSerde for OrionExpanderGraphPositioned {
     }
 }
 
-impl FieldSerde for OrionCode {
+impl ArithSerde for OrionCode {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -83,7 +83,7 @@ impl FieldSerde for OrionCode {
     }
 }
 
-impl FieldSerde for OrionSRS {
+impl ArithSerde for OrionSRS {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -102,7 +102,7 @@ impl FieldSerde for OrionSRS {
     }
 }
 
-impl<F: Field> FieldSerde for OrionProof<F> {
+impl<F: Field> ArithSerde for OrionProof<F> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {

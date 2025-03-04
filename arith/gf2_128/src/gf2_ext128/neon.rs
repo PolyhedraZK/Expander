@@ -2,7 +2,7 @@ use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use std::{arch::aarch64::*, mem::transmute};
 
-use arith::{field_common, ExtensionField, Field, FieldSerde, SerdeResult};
+use arith::{field_common, ArithSerde, ExtensionField, Field, SerdeResult};
 use gf2::GF2;
 
 #[derive(Clone, Copy, Debug)]
@@ -31,7 +31,7 @@ fn sub_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
     add_internal(a, b)
 }
 
-impl FieldSerde for NeonGF2_128 {
+impl ArithSerde for NeonGF2_128 {
     const SERIALIZED_SIZE: usize = 16;
 
     #[inline(always)]

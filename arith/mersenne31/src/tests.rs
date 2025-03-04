@@ -7,7 +7,7 @@ use arith::{
 use arith::{random_from_limbs_to_limbs_tests, Field};
 use ark_std::test_rng;
 use field_hashers::{FiatShamirFieldHasher, PoseidonFiatShamirHasher, PoseidonStateTrait};
-use serdes::FieldSerde;
+use serdes::ArithSerde;
 
 use crate::M31Ext3;
 use crate::M31Ext3x16;

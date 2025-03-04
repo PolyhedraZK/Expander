@@ -10,7 +10,7 @@ use std::{
 use arith::{field_common, Field, SimdField};
 use ark_std::Zero;
 use rand::{Rng, RngCore};
-use serdes::{FieldSerde, SerdeResult};
+use serdes::{ArithSerde, SerdeResult};
 
 use crate::m31::{M31, M31_MOD};
 
@@ -40,7 +40,7 @@ impl AVXM31 {
 
 field_common!(AVXM31);
 
-impl FieldSerde for AVXM31 {
+impl ArithSerde for AVXM31 {
     const SERIALIZED_SIZE: usize = 512 / 8;
 
     #[inline(always)]

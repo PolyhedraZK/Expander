@@ -1,10 +1,10 @@
 use std::io::{Read, Write};
 
-use serdes::{FieldSerde, SerdeResult};
+use serdes::{ArithSerde, SerdeResult};
 
 use crate::{Leaf, Node, Path, RangePath, Tree, LEAF_BYTES, LEAF_HASH_BYTES};
 
-impl FieldSerde for Leaf {
+impl ArithSerde for Leaf {
     const SERIALIZED_SIZE: usize = LEAF_BYTES;
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -19,7 +19,7 @@ impl FieldSerde for Leaf {
     }
 }
 
-impl FieldSerde for Node {
+impl ArithSerde for Node {
     const SERIALIZED_SIZE: usize = LEAF_HASH_BYTES;
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -34,7 +34,7 @@ impl FieldSerde for Node {
     }
 }
 
-impl FieldSerde for Path {
+impl ArithSerde for Path {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -57,7 +57,7 @@ impl FieldSerde for Path {
     }
 }
 
-impl FieldSerde for RangePath {
+impl ArithSerde for RangePath {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -83,7 +83,7 @@ impl FieldSerde for RangePath {
     }
 }
 
-impl FieldSerde for Tree {
+impl ArithSerde for Tree {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {

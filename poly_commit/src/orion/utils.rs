@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
-use serdes::{FieldSerde, SerdeError};
+use serdes::{ArithSerde, SerdeError};
 use thiserror::Error;
 use transcript::Transcript;
 
@@ -89,7 +89,7 @@ where
 
 unsafe impl<F: Field, ComPackF: SimdField<Scalar = F>> Send for OrionScratchPad<F, ComPackF> {}
 
-impl<F: Field, ComPackF: SimdField<Scalar = F>> FieldSerde for OrionScratchPad<F, ComPackF> {
+impl<F: Field, ComPackF: SimdField<Scalar = F>> ArithSerde for OrionScratchPad<F, ComPackF> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {

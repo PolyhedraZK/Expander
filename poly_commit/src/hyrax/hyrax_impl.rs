@@ -4,14 +4,14 @@ use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
 };
-use serdes::FieldSerde;
+use serdes::ArithSerde;
 
 use crate::hyrax::{
     pedersen::{pedersen_commit, pedersen_setup},
     PedersenParams,
 };
 
-pub(crate) fn hyrax_setup<C: CurveAffine + FieldSerde>(
+pub(crate) fn hyrax_setup<C: CurveAffine + ArithSerde>(
     local_vars: usize,
     rng: impl rand::RngCore,
 ) -> PedersenParams<C>
@@ -25,12 +25,12 @@ where
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct HyraxCommitment<C: CurveAffine + FieldSerde>(pub Vec<C>);
+pub struct HyraxCommitment<C: CurveAffine + ArithSerde>(pub Vec<C>);
 
 #[derive(Clone, Debug, Default)]
-pub struct HyraxOpening<C: CurveAffine + FieldSerde>(pub Vec<C::Scalar>);
+pub struct HyraxOpening<C: CurveAffine + ArithSerde>(pub Vec<C::Scalar>);
 
-impl<C: CurveAffine + FieldSerde> FieldSerde for HyraxCommitment<C> {
+impl<C: CurveAffine + ArithSerde> ArithSerde for HyraxCommitment<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
@@ -43,9 +43,9 @@ impl<C: CurveAffine + FieldSerde> FieldSerde for HyraxCommitment<C> {
     }
 }
 
-impl<C: CurveAffine + FieldSerde> FieldSerde for HyraxOpening<C>
+impl<C: CurveAffine + ArithSerde> ArithSerde for HyraxOpening<C>
 where
-    C::Scalar: FieldSerde,
+    C::Scalar: ArithSerde,
 {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
@@ -59,7 +59,7 @@ where
     }
 }
 
-pub(crate) fn hyrax_commit<C: CurveAffine + FieldSerde>(
+pub(crate) fn hyrax_commit<C: CurveAffine + ArithSerde>(
     params: &PedersenParams<C>,
     mle_poly: &impl MultilinearExtension<C::Scalar>,
 ) -> HyraxCommitment<C>
@@ -88,7 +88,7 @@ pub(crate) fn hyrax_open<C>(
     eval_point: &[C::Scalar],
 ) -> (C::Scalar, HyraxOpening<C>)
 where
-    C: CurveAffine + FieldSerde,
+    C: CurveAffine + ArithSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
@@ -115,7 +115,7 @@ pub(crate) fn hyrax_verify<C>(
     proof: &HyraxOpening<C>,
 ) -> bool
 where
-    C: CurveAffine + FieldSerde,
+    C: CurveAffine + ArithSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {

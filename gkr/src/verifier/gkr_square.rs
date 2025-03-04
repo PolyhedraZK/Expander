@@ -4,7 +4,7 @@ use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
 use gkr_field_config::{FieldType, GKRFieldConfig};
 use mpi_config::MPIConfig;
-use serdes::FieldSerde;
+use serdes::ArithSerde;
 use std::{io::Read, vec};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_SQUARE_DEGREE};
 use transcript::Transcript;

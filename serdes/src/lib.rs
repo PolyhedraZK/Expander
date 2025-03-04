@@ -1,6 +1,7 @@
 mod error;
+mod exp_serdes;
 mod field_serdes;
-mod serdes;
 
 pub use error::{SerdeError, SerdeResult};
-pub use field_serdes::FieldSerde;
+pub use exp_serdes::ExpSerde;
+pub use field_serdes::ArithSerde;

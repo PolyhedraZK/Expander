@@ -4,7 +4,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{Field, FieldSerde, SerdeResult};
+use arith::{ArithSerde, Field, SerdeResult};
 
 use crate::GF2;
 
@@ -13,7 +13,7 @@ pub struct NeonGF2x128 {
     pub(crate) v: uint32x4_t,
 }
 
-impl FieldSerde for NeonGF2x128 {
+impl ArithSerde for NeonGF2x128 {
     const SERIALIZED_SIZE: usize = 16;
 
     #[inline(always)]

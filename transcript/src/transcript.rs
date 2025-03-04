@@ -2,7 +2,7 @@ use std::{fmt::Debug, io::Read, marker::PhantomData};
 
 use arith::{ExtensionField, Field};
 use field_hashers::FiatShamirFieldHasher;
-use serdes::FieldSerde;
+use serdes::ArithSerde;
 
 use crate::{fiat_shamir_hash::FiatShamirBytesHash, Proof};
 

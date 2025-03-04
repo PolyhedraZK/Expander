@@ -1,6 +1,6 @@
 use arith::BN254Fr;
 use halo2curves::bn256::Fr;
-use serdes::FieldSerde;
+use serdes::ArithSerde;
 
 use crate::{FiatShamirFieldHasher, MiMC5FiatShamirHasher};
 

@@ -3,8 +3,9 @@ use std::iter::{Product, Sum};
 use std::mem::transmute;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use arith::{field_common, ExtensionField, Field, FieldSerde, SerdeResult, SimdField};
+use arith::{field_common, ExtensionField, Field, SimdField};
 use gf2::{GF2x8, GF2};
+use serdes::{ArithSerde, SerdeResult};
 
 use crate::gf2_ext128::neon::{gfadd, gfmul, mul_by_x_internal, NeonGF2_128};
 use crate::GF2_128;
@@ -30,7 +31,7 @@ impl PartialEq for NeonGF2_128x8 {
     }
 }
 
-impl FieldSerde for NeonGF2_128x8 {
+impl ArithSerde for NeonGF2_128x8 {
     const SERIALIZED_SIZE: usize = 128;
 
     #[inline(always)]

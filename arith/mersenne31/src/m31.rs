@@ -7,7 +7,7 @@ use std::{
 use arith::{field_common, Field, FieldForECC};
 use ark_std::Zero;
 use rand::RngCore;
-use serdes::{FieldSerde, SerdeResult};
+use serdes::{ArithSerde, SerdeResult};
 
 pub const M31_MOD: u32 = 2147483647;
 
@@ -28,7 +28,7 @@ pub struct M31 {
 
 field_common!(M31);
 
-impl FieldSerde for M31 {
+impl ArithSerde for M31 {
     const SERIALIZED_SIZE: usize = 32 / 8;
 
     #[inline(always)]

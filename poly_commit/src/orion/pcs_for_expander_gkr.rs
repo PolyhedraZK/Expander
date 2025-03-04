@@ -4,7 +4,7 @@ use arith::SimdField;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::{EqPolynomial, MultilinearExtension};
-use serdes::FieldSerde;
+use serdes::ArithSerde;
 use transcript::Transcript;
 
 use crate::{

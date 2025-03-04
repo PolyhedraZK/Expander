@@ -5,7 +5,7 @@ use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use polynomials::{MultilinearExtension, RefMultiLinearPoly};
-use serdes::FieldSerde;
+use serdes::ArithSerde;
 use sumcheck::ProverScratchPad;
 use transcript::{transcript_root_broadcast, Proof, Transcript};
 use utils::timer::Timer;
