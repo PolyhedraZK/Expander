@@ -3,7 +3,7 @@ use halo2curves::{
     group::Curve,
     msm, CurveAffine,
 };
-use serdes::ArithSerde;
+use serdes::{ArithSerde, ExpSerde};
 
 use crate::StructuredReferenceString;
 
@@ -12,15 +12,13 @@ pub struct PedersenParams<C: CurveAffine + ArithSerde> {
     pub bases: Vec<C>,
 }
 
-impl<C: CurveAffine + ArithSerde> ArithSerde for PedersenParams<C> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
+impl<C: CurveAffine + ArithSerde> ExpSerde for PedersenParams<C> {
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> serdes::SerdeResult<()> {
         self.bases.serialize_into(&mut writer)
     }
 
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> serdes::SerdeResult<Self> {
-        let bases: Vec<C> = Vec::deserialize_from(&mut reader)?;
+        let bases: Vec<C> = <Vec<C> as ArithSerde>::deserialize_from(&mut reader)?;
         Ok(Self { bases })
     }
 }

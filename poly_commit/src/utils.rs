@@ -1,6 +1,6 @@
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use serdes::ArithSerde;
+use serdes::ExpSerde;
 use transcript::Transcript;
 
 use crate::{PCSForExpanderGKR, StructuredReferenceString};
@@ -8,9 +8,7 @@ use crate::{PCSForExpanderGKR, StructuredReferenceString};
 #[derive(Clone, Debug, Default)]
 pub struct PCSEmptyType {}
 
-impl ArithSerde for PCSEmptyType {
-    const SERIALIZED_SIZE: usize = 0;
-
+impl ExpSerde for PCSEmptyType {
     fn serialize_into<W: std::io::Write>(&self, _writer: W) -> serdes::SerdeResult<()> {
         Ok(())
     }

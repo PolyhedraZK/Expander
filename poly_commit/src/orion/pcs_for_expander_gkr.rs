@@ -142,7 +142,7 @@ where
             .chunks(local_mt_paths_serialized.len())
             .flat_map(|bs| {
                 let mut read_cursor = Cursor::new(bs);
-                Vec::deserialize_from(&mut read_cursor).unwrap()
+                <Vec<tree::RangePath> as ArithSerde>::deserialize_from(&mut read_cursor).unwrap()
             })
             .collect();
 

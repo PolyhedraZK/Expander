@@ -1,16 +1,14 @@
 use std::io::{Read, Write};
 
 use arith::Field;
-use serdes::{ArithSerde, SerdeResult};
+use serdes::{ArithSerde, ExpSerde, SerdeResult};
 
 use crate::orion::{
     linear_code::*,
     utils::{OrionProof, OrionSRS},
 };
 
-impl ArithSerde for OrionExpanderGraph {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
+impl ExpSerde for OrionExpanderGraph {
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.l_vertices_size.serialize_into(&mut writer)?;
         self.r_vertices_size.serialize_into(&mut writer)?;
@@ -21,7 +19,8 @@ impl ArithSerde for OrionExpanderGraph {
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let l_vertices_size = usize::deserialize_from(&mut reader)?;
         let r_vertices_size = usize::deserialize_from(&mut reader)?;
-        let neighborings: Vec<DirectedNeighboring> = Vec::deserialize_from(&mut reader)?;
+        let neighborings: Vec<DirectedNeighboring> =
+            <Vec<DirectedNeighboring> as ArithSerde>::deserialize_from(&mut reader)?;
         Ok(Self {
             l_vertices_size,
             r_vertices_size,
@@ -30,9 +29,7 @@ impl ArithSerde for OrionExpanderGraph {
     }
 }
 
-impl ArithSerde for OrionExpanderGraphPositioned {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
+impl ExpSerde for OrionExpanderGraphPositioned {
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.input_starts.serialize_into(&mut writer)?;
         self.output_starts.serialize_into(&mut writer)?;
@@ -55,9 +52,7 @@ impl ArithSerde for OrionExpanderGraphPositioned {
     }
 }
 
-impl ArithSerde for OrionCode {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
+impl ExpSerde for OrionCode {
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.hamming_weight.serialize_into(&mut writer)?;
         self.msg_len.serialize_into(&mut writer)?;
@@ -71,8 +66,10 @@ impl ArithSerde for OrionCode {
         let hamming_weight = f64::deserialize_from(&mut reader)?;
         let msg_len = usize::deserialize_from(&mut reader)?;
         let codeword_len = usize::deserialize_from(&mut reader)?;
-        let g0s: Vec<OrionExpanderGraphPositioned> = Vec::deserialize_from(&mut reader)?;
-        let g1s: Vec<OrionExpanderGraphPositioned> = Vec::deserialize_from(&mut reader)?;
+        let g0s: Vec<OrionExpanderGraphPositioned> =
+            <Vec<OrionExpanderGraphPositioned> as ExpSerde>::deserialize_from(&mut reader)?;
+        let g1s: Vec<OrionExpanderGraphPositioned> =
+            <Vec<OrionExpanderGraphPositioned> as ExpSerde>::deserialize_from(&mut reader)?;
         Ok(Self {
             hamming_weight,
             msg_len,
@@ -83,9 +80,7 @@ impl ArithSerde for OrionCode {
     }
 }
 
-impl ArithSerde for OrionSRS {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
+impl ExpSerde for OrionSRS {
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.num_vars.serialize_into(&mut writer)?;
         self.code_instance.serialize_into(&mut writer)?;
@@ -102,9 +97,7 @@ impl ArithSerde for OrionSRS {
     }
 }
 
-impl<F: Field> ArithSerde for OrionProof<F> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
+impl<F: Field> ExpSerde for OrionProof<F> {
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.eval_row.serialize_into(&mut writer)?;
         self.proximity_rows.serialize_into(&mut writer)?;
@@ -113,9 +106,11 @@ impl<F: Field> ArithSerde for OrionProof<F> {
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let eval_row: Vec<F> = Vec::deserialize_from(&mut reader)?;
-        let proximity_rows: Vec<Vec<F>> = Vec::deserialize_from(&mut reader)?;
-        let query_openings: Vec<tree::RangePath> = Vec::deserialize_from(&mut reader)?;
+        let eval_row: Vec<F> = <Vec<F> as ArithSerde>::deserialize_from(&mut reader)?;
+        let proximity_rows: Vec<Vec<F>> =
+            <Vec<Vec<F>> as ArithSerde>::deserialize_from(&mut reader)?;
+        let query_openings: Vec<tree::RangePath> =
+            <Vec<tree::RangePath> as ArithSerde>::deserialize_from(&mut reader)?;
         Ok(OrionProof {
             eval_row,
             proximity_rows,

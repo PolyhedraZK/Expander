@@ -30,7 +30,7 @@ impl ArithSerde for () {
     }
 }
 
-macro_rules! field_serde_for_number {
+macro_rules! arith_serde_for_number {
     ($int_type: ident, $size_in_bytes: expr) => {
         impl ArithSerde for $int_type {
             /// size of the serialized bytes
@@ -52,10 +52,10 @@ macro_rules! field_serde_for_number {
     };
 }
 
-field_serde_for_number!(u64, 8);
-field_serde_for_number!(usize, 8);
-field_serde_for_number!(u8, 1);
-field_serde_for_number!(f64, 8);
+arith_serde_for_number!(u64, 8);
+arith_serde_for_number!(usize, 8);
+arith_serde_for_number!(u8, 1);
+arith_serde_for_number!(f64, 8);
 
 impl<V: ArithSerde> ArithSerde for Vec<V> {
     const SERIALIZED_SIZE: usize = unimplemented!();

@@ -3,13 +3,13 @@ use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::MultilinearExtension;
 use rand::RngCore;
-use serdes::ArithSerde;
+use serdes::ExpSerde;
 use std::fmt::Debug;
 use transcript::Transcript;
 
 pub trait StructuredReferenceString {
-    type PKey: Clone + Debug + ArithSerde + Send;
-    type VKey: Clone + Debug + ArithSerde + Send;
+    type PKey: Clone + Debug + ExpSerde + Send;
+    type VKey: Clone + Debug + ExpSerde + Send;
 
     /// Convert the SRS into proving and verifying keys.
     /// Comsuming self by default.
@@ -23,11 +23,11 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
     type Params: Clone + Debug + Default;
     type Poly: Clone + Debug + Default;
     type EvalPoint: Clone + Debug + Default;
-    type ScratchPad: Clone + Debug + Default + ArithSerde;
+    type ScratchPad: Clone + Debug + Default + ExpSerde;
 
-    type SRS: Clone + Debug + Default + ArithSerde + StructuredReferenceString;
-    type Commitment: Clone + Debug + Default + ArithSerde;
-    type Opening: Clone + Debug + Default + ArithSerde;
+    type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString;
+    type Commitment: Clone + Debug + Default + ExpSerde;
+    type Opening: Clone + Debug + Default + ExpSerde;
 
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Use self as the first argument to save some potential intermediate state.
@@ -97,11 +97,11 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default + Send;
-    type ScratchPad: Clone + Debug + Default + Send + ArithSerde;
+    type ScratchPad: Clone + Debug + Default + Send + ExpSerde;
 
-    type SRS: Clone + Debug + Default + ArithSerde + StructuredReferenceString;
-    type Commitment: Clone + Debug + Default + ArithSerde;
-    type Opening: Clone + Debug + Default + ArithSerde;
+    type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString;
+    type Commitment: Clone + Debug + Default + ExpSerde;
+    type Opening: Clone + Debug + Default + ExpSerde;
 
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Each process should return the SAME GLOBAL SRS.

@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 
-use serdes::{ArithSerde, SerdeResult};
+use serdes::{ArithSerde, ExpSerde, SerdeResult};
 
 use crate::{Leaf, Node, Path, RangePath, Tree, LEAF_BYTES, LEAF_HASH_BYTES};
 
@@ -34,19 +34,32 @@ impl ArithSerde for Node {
     }
 }
 
+impl ExpSerde for Node {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        writer.write_all(self.as_bytes())?;
+        Ok(())
+    }
+
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let mut data = [0u8; LEAF_HASH_BYTES];
+        reader.read_exact(&mut data)?;
+        Ok(Node { data })
+    }
+}
+
 impl ArithSerde for Path {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.index.serialize_into(&mut writer)?;
-        self.path_nodes.serialize_into(&mut writer)?;
+        <Vec<Node> as ArithSerde>::serialize_into(&self.path_nodes, &mut writer)?;
         self.leaf.serialize_into(&mut writer)?;
         Ok(())
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let index = usize::deserialize_from(&mut reader)?;
-        let path_nodes: Vec<Node> = Vec::deserialize_from(&mut reader)?;
+        let path_nodes: Vec<Node> = <Vec<Node> as ArithSerde>::deserialize_from(&mut reader)?;
         let leaf = Leaf::deserialize_from(&mut reader)?;
 
         Ok(Path {
@@ -63,7 +76,7 @@ impl ArithSerde for RangePath {
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.left.serialize_into(&mut writer)?;
         self.right.serialize_into(&mut writer)?;
-        self.path_nodes.serialize_into(&mut writer)?;
+        <Vec<Node> as ArithSerde>::serialize_into(&self.path_nodes, &mut writer)?;
         self.leaves.serialize_into(&mut writer)?;
         Ok(())
     }
@@ -71,8 +84,8 @@ impl ArithSerde for RangePath {
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let left = usize::deserialize_from(&mut reader)?;
         let right = usize::deserialize_from(&mut reader)?;
-        let path_nodes: Vec<Node> = Vec::deserialize_from(&mut reader)?;
-        let leaves: Vec<Leaf> = Vec::deserialize_from(&mut reader)?;
+        let path_nodes: Vec<Node> = <Vec<Node> as ArithSerde>::deserialize_from(&mut reader)?;
+        let leaves: Vec<Leaf> = <Vec<Leaf> as ArithSerde>::deserialize_from(&mut reader)?;
 
         Ok(RangePath {
             left,
@@ -87,13 +100,13 @@ impl ArithSerde for Tree {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        self.nodes.serialize_into(&mut writer)?;
+        <Vec<Node> as ArithSerde>::serialize_into(&self.nodes, &mut writer)?;
         self.leaves.serialize_into(&mut writer)
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let nodes = Vec::deserialize_from(&mut reader)?;
-        let leaves = Vec::deserialize_from(&mut reader)?;
+        let nodes: Vec<Node> = <Vec<Node> as ArithSerde>::deserialize_from(&mut reader)?;
+        let leaves: Vec<Leaf> = <Vec<Leaf> as ArithSerde>::deserialize_from(&mut reader)?;
 
         Ok(Self { nodes, leaves })
     }

@@ -4,7 +4,8 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{ArithSerde, Field, SerdeResult};
+use arith::Field;
+use serdes::{ArithSerde, SerdeResult};
 
 use crate::GF2;
 

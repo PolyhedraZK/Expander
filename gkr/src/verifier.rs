@@ -9,7 +9,7 @@ use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
-use serdes::ArithSerde;
+use serdes::{ArithSerde, ExpSerde};
 use sumcheck::{
     GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DEGREE,
     SUMCHECK_GKR_SQUARE_DEGREE,
@@ -292,7 +292,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         let mut cursor = Cursor::new(&proof.bytes);
 
         let commitment =
-            <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Commitment::deserialize_from(
+            <<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Commitment as ExpSerde>::deserialize_from(
                 &mut cursor,
             )
             .unwrap();
