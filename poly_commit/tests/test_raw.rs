@@ -4,7 +4,7 @@ use arith::{BN254Fr, Field};
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::MPIConfig;
 use poly_commit::{
-    raw::{RawExpanderGKR, RawExpanderGKRParams, RawMultiLinearPCS, RawMultiLinearParams},
+    raw::{RawExpanderGKR, RawMultiLinearPCS},
     ExpanderGKRChallenge,
 };
 use polynomials::{MultiLinearPoly, RefMultiLinearPoly};
@@ -13,12 +13,13 @@ use transcript::{BytesHashTranscript, Keccak256hasher, SHA256hasher, Transcript}
 
 #[test]
 fn test_raw() {
-    let params = RawMultiLinearParams { n_vars: 8 };
+    // NOTE(HS) 8 variables
+    let params = 8;
     let mut rng = thread_rng();
-    let poly = MultiLinearPoly::random(params.n_vars, &mut rng);
+    let poly = MultiLinearPoly::random(params, &mut rng);
     let xs = (0..100)
         .map(|_| {
-            (0..params.n_vars)
+            (0..params)
                 .map(|_| BN254Fr::random_unsafe(&mut rng))
                 .collect::<Vec<BN254Fr>>()
         })
@@ -33,15 +34,16 @@ fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     mpi_config: &MPIConfig,
     transcript: &mut T,
 ) {
-    let params = RawExpanderGKRParams { n_local_vars: 8 };
+    // NOTE(HS) local variables being 8
+    let params = 8;
     let mut rng = thread_rng();
-    let hypercube_basis = (0..(1 << params.n_local_vars))
+    let hypercube_basis = (0..(1 << params))
         .map(|_| C::SimdCircuitField::random_unsafe(&mut rng))
         .collect();
     let poly = RefMultiLinearPoly::from_ref(&hypercube_basis);
     let xs = (0..100)
         .map(|_| ExpanderGKRChallenge::<C> {
-            x: (0..params.n_local_vars)
+            x: (0..params)
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
             x_simd: (0..C::get_field_pack_size().trailing_zeros())
