@@ -2409,6 +2409,7 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "field_hashers",
+ "mersenne31",
  "mpi_config",
  "sha2",
  "tiny-keccak",
