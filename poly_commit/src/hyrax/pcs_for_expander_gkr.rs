@@ -63,18 +63,13 @@ where
             return local_commit;
         }
 
-        let mut global_commit: Vec<C> = if mpi_config.is_root() {
-            vec![C::default(); mpi_config.world_size() * local_commit.0.len()]
-        } else {
-            vec![]
-        };
+        let mut global_commit: Vec<C> =
+            vec![C::default(); mpi_config.world_size() * local_commit.0.len()];
 
         mpi_config.gather_vec(&local_commit.0, &mut global_commit);
-        if mpi_config.is_root() {
-            return HyraxCommitment(global_commit);
-        }
+        mpi_config.root_broadcast_vec(&mut global_commit);
 
-        local_commit
+        HyraxCommitment(global_commit)
     }
 
     fn open(
@@ -102,18 +97,16 @@ where
         local_mle.fix_variables(&local_vars[pedersen_vars..]);
 
         let eq_mpi_vars = EqPolynomial::build_eq_x_r(&x.x_mpi);
-        let combined_coeffs = mpi_config.coef_combine_vec(&local_basis, &eq_mpi_vars);
+        let mut combined_coeffs = mpi_config.coef_combine_vec(&local_basis, &eq_mpi_vars);
 
-        if mpi_config.is_root() {
-            return HyraxOpening(combined_coeffs);
-        }
+        mpi_config.root_broadcast_vec(&mut combined_coeffs);
 
-        HyraxOpening(local_basis)
+        HyraxOpening(combined_coeffs)
     }
 
     fn verify(
         #[allow(unused)] params: &Self::Params,
-        mpi_config: &mpi_config::MPIConfig,
+        #[allow(unused)] mpi_config: &mpi_config::MPIConfig,
         verifying_key: &<Self::SRS as crate::StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &crate::ExpanderGKRChallenge<G>,
@@ -121,7 +114,7 @@ where
         #[allow(unused)] transcript: &mut T, // add transcript here to allow interactive arguments
         opening: &Self::Opening,
     ) -> bool {
-        if mpi_config.is_single_process() || !mpi_config.is_root() {
+        if x.x_mpi.is_empty() {
             return hyrax_verify(verifying_key, commitment, &x.local_xs(), v, opening);
         }
 
