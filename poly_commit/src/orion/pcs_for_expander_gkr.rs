@@ -35,7 +35,7 @@ where
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        #[allow(unused)] mpi_config: &MPIConfig,
+        _mpi_config: &MPIConfig,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
@@ -64,7 +64,7 @@ where
 
         // NOTE: Hang also assume that, linear GKR will take over the commitment
         // and force sync transcript hash state of subordinate machines to be the same.
-        if mpi_config.world_size() == 1 {
+        if mpi_config.is_single_process() {
             return commitment;
         }
 
@@ -72,22 +72,24 @@ where
         let mut buffer = vec![Self::Commitment::default(); mpi_config.world_size()];
         mpi_config.gather_vec(&local_buffer, &mut buffer);
 
-        if !mpi_config.is_root() {
-            return commitment;
-        }
-
         let final_tree_height = 1 + buffer.len().ilog2();
-        let (internals, _) = tree::Tree::new_with_leaf_nodes(buffer.clone(), final_tree_height);
-        internals[0]
+        let (internals, _) = tree::Tree::new_with_leaf_nodes(buffer, final_tree_height);
+        let mut mt_root = internals[0];
+
+        let mut serialized_root_u8s: Vec<u8> = Vec::new();
+        mpi_config.root_broadcast_object_with_buffer(&mut mt_root, &mut serialized_root_u8s);
+
+        mt_root
     }
 
+    // TODO(HS) rearrange the MT over interleaved codeword, s.t., we have smaller proof size
     fn open(
         params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         eval_point: &ExpanderGKRChallenge<C>,
-        transcript: &mut T, // add transcript here to allow interactive arguments
+        transcript: &mut T,
         scratch_pad: &Self::ScratchPad,
     ) -> Self::Opening {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
@@ -101,7 +103,7 @@ where
             ComPackF,
             T,
         >(proving_key, poly, &local_xs, transcript, scratch_pad);
-        if mpi_config.world_size() == 1 {
+        if mpi_config.is_single_process() {
             return local_opening;
         }
 
@@ -136,6 +138,7 @@ where
         let mut mt_paths_serialized =
             vec![0u8; mpi_config.world_size() * local_mt_paths_serialized.len()];
         mpi_config.gather_vec(&local_mt_paths_serialized, &mut mt_paths_serialized);
+        mpi_config.root_broadcast_bytes(&mut mt_paths_serialized);
 
         let query_openings: Vec<tree::RangePath> = mt_paths_serialized
             .chunks(local_mt_paths_serialized.len())
@@ -144,10 +147,6 @@ where
                 Vec::deserialize_from(&mut read_cursor).unwrap()
             })
             .collect();
-
-        if !mpi_config.is_root() {
-            return local_opening;
-        }
 
         // NOTE: we only care about the root machine's opening as final proof, Hang assume.
         OrionProof {
@@ -158,8 +157,7 @@ where
     }
 
     fn verify(
-        params: &Self::Params,
-        mpi_config: &MPIConfig,
+        _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         eval_point: &ExpanderGKRChallenge<C>,
@@ -167,12 +165,7 @@ where
         transcript: &mut T, // add transcript here to allow interactive arguments
         opening: &Self::Opening,
     ) -> bool {
-        let global_poly_num_vars = *params
-            + mpi_config.world_size().ilog2() as usize
-            + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
-        assert_eq!(global_poly_num_vars, eval_point.num_vars());
-
-        if mpi_config.world_size() == 1 || !mpi_config.is_root() {
+        if eval_point.x_mpi.is_empty() {
             return orion_verify_simd_field::<
                 C::CircuitField,
                 C::SimdCircuitField,
@@ -192,7 +185,6 @@ where
         // NOTE: we now assume that the input opening is from the root machine,
         // as proofs from other machines are typically undefined
         orion_verify_simd_field_aggregated::<C, ComPackF, T>(
-            mpi_config.world_size(),
             verifying_key,
             commitment,
             eval_point,

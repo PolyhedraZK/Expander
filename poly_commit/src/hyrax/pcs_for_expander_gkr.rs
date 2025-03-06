@@ -103,7 +103,6 @@ where
 
     fn verify(
         _params: &Self::Params,
-        _mpi_config: &MPIConfig,
         verifying_key: &<Self::SRS as crate::StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &crate::ExpanderGKRChallenge<G>,

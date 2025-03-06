@@ -159,8 +159,6 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
     #[allow(clippy::too_many_arguments)]
     fn verify(
         params: &Self::Params,
-        // TODO(HS) remove this from verifier
-        mpi_config: &MPIConfig,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &ExpanderGKRChallenge<C>,
