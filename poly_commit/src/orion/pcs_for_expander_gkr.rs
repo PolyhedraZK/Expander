@@ -72,14 +72,13 @@ where
         let mut buffer = vec![Self::Commitment::default(); mpi_config.world_size()];
         mpi_config.gather_vec(&local_buffer, &mut buffer);
 
+        if !mpi_config.is_root() {
+            return commitment;
+        }
+
         let final_tree_height = 1 + buffer.len().ilog2();
-        let (internals, _) = tree::Tree::new_with_leaf_nodes(buffer, final_tree_height);
-        let mut mt_root = internals[0];
-
-        let mut serialized_root_u8s: Vec<u8> = Vec::new();
-        mpi_config.root_broadcast_object_with_buffer(&mut mt_root, &mut serialized_root_u8s);
-
-        mt_root
+        let (internals, _) = tree::Tree::new_with_leaf_nodes(buffer.clone(), final_tree_height);
+        internals[0]
     }
 
     // TODO(HS) rearrange the MT over interleaved codeword, s.t., we have smaller proof size
@@ -129,16 +128,10 @@ where
             .serialize_into(&mut local_mt_paths_serialized)
             .unwrap();
 
-        // NOTE: Hang does not think this is a good move, but this is mostly
-        // working with MPI behavior, so we align local MT openings serialization
-        // against power-of-2 bytes length.
-        local_mt_paths_serialized.resize(local_mt_paths_serialized.len().next_power_of_two(), 0u8);
-
         // NOTE: gather all merkle paths
         let mut mt_paths_serialized =
             vec![0u8; mpi_config.world_size() * local_mt_paths_serialized.len()];
         mpi_config.gather_vec(&local_mt_paths_serialized, &mut mt_paths_serialized);
-        mpi_config.root_broadcast_bytes(&mut mt_paths_serialized);
 
         let query_openings: Vec<tree::RangePath> = mt_paths_serialized
             .chunks(local_mt_paths_serialized.len())
@@ -147,6 +140,10 @@ where
                 Vec::deserialize_from(&mut read_cursor).unwrap()
             })
             .collect();
+
+        if !mpi_config.is_root() {
+            return local_opening;
+        }
 
         // NOTE: we only care about the root machine's opening as final proof, Hang assume.
         OrionProof {

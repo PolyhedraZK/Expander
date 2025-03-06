@@ -1,6 +1,6 @@
-use std::{cmp, fmt::Debug, io::Cursor};
+use std::{cmp, fmt::Debug};
 
-use arith::{Field, FieldSerde};
+use arith::Field;
 use mpi::{
     environment::Universe,
     ffi,
@@ -169,19 +169,23 @@ impl MPIConfig {
                         for i in 0..n_chunks {
                             let local_start = i * Self::CHUNK_SIZE;
                             let local_end = cmp::min(local_start + Self::CHUNK_SIZE, local_n_bytes);
+                            let actual_chunk_size = local_end - local_start;
+                            if actual_chunk_size < Self::CHUNK_SIZE {
+                                chunk_buffer_u8.resize(actual_chunk_size * self.world_size(), 0u8);
+                            }
+
                             self.root_process().gather_into_root(
                                 &local_vec_u8[local_start..local_end],
                                 &mut chunk_buffer_u8,
                             );
 
                             // distribute the data to where they belong to in global vec
-                            let actual_chunk_size = local_end - local_start;
                             for j in 0..self.world_size() {
                                 let global_start = j * local_n_bytes + local_start;
                                 let global_end = global_start + actual_chunk_size;
                                 global_vec_u8[global_start..global_end].copy_from_slice(
-                                    &chunk_buffer_u8[j * Self::CHUNK_SIZE
-                                        ..j * Self::CHUNK_SIZE + actual_chunk_size],
+                                    &chunk_buffer_u8
+                                        [j * actual_chunk_size..(j + 1) * actual_chunk_size],
                                 );
                             }
                         }
@@ -216,72 +220,6 @@ impl MPIConfig {
     #[inline]
     pub fn root_broadcast_bytes(&self, bytes: &mut Vec<u8>) {
         self.root_process().broadcast_into(bytes);
-    }
-
-    // TODO(HS) talk about assumption of v being preallocated lenth with same length
-    #[inline]
-    pub fn root_broadcast_vec<T: FieldSerde>(&self, v: &mut Vec<T>) {
-        if self.is_single_process() {
-            return;
-        }
-
-        let mut serialized_buffer: Vec<u8> = Vec::new();
-        v.serialize_into(&mut serialized_buffer).unwrap();
-
-        self.root_broadcast_object_with_buffer(v, &mut serialized_buffer);
-    }
-
-    // TODO(HS) talk about the catch of 2 rounds of MPI communication, 1st round notify serialized
-    // buffer length
-    #[inline]
-    pub fn root_broadcast_object<T: FieldSerde>(&self, t: &mut T) {
-        if self.is_single_process() {
-            return;
-        }
-
-        let mut serialized_buffer: Vec<u8> = Vec::new();
-        t.serialize_into(&mut serialized_buffer).unwrap();
-
-        let mut buffer_len = serialized_buffer.len();
-        let mut buffer_len_u8s: Vec<u8> = Vec::new();
-        buffer_len.serialize_into(&mut buffer_len_u8s).unwrap();
-        self.root_broadcast_bytes(&mut buffer_len_u8s);
-        buffer_len = {
-            let mut cursor = Cursor::new(buffer_len_u8s);
-            usize::deserialize_from(&mut cursor).unwrap()
-        };
-
-        serialized_buffer.resize(buffer_len, 0u8);
-        self.root_broadcast_bytes(&mut serialized_buffer);
-
-        if !self.is_root() {
-            *t = {
-                let mut cursor = Cursor::new(serialized_buffer);
-                T::deserialize_from(&mut cursor).unwrap()
-            }
-        }
-    }
-
-    // TODO(HS) talk about assumption of t serialized into buffer, buffer is preallocated with space
-    #[inline]
-    pub fn root_broadcast_object_with_buffer<T: FieldSerde>(
-        &self,
-        t: &mut T,
-        buffer: &mut Vec<u8>,
-    ) {
-        if self.is_single_process() {
-            return;
-        }
-
-        t.serialize_into(&mut *buffer).unwrap();
-        self.root_broadcast_bytes(buffer);
-
-        if !self.is_root() {
-            *t = {
-                let mut cursor = Cursor::new(buffer);
-                T::deserialize_from(&mut cursor).unwrap()
-            }
-        }
     }
 
     /// sum up all local values

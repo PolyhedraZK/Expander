@@ -60,13 +60,18 @@ where
             return local_commit;
         }
 
-        let mut global_commit: Vec<C> =
-            vec![C::default(); mpi_config.world_size() * local_commit.0.len()];
+        let mut global_commit: Vec<C> = if mpi_config.is_root() {
+            vec![C::default(); mpi_config.world_size() * local_commit.0.len()]
+        } else {
+            vec![]
+        };
 
         mpi_config.gather_vec(&local_commit.0, &mut global_commit);
-        mpi_config.root_broadcast_vec(&mut global_commit);
+        if mpi_config.is_root() {
+            return HyraxCommitment(global_commit);
+        }
 
-        HyraxCommitment(global_commit)
+        local_commit
     }
 
     fn open(
@@ -94,11 +99,13 @@ where
         local_mle.fix_variables(&local_vars[pedersen_vars..]);
 
         let eq_mpi_vars = EqPolynomial::build_eq_x_r(&x.x_mpi);
-        let mut combined_coeffs = mpi_config.coef_combine_vec(&local_basis, &eq_mpi_vars);
+        let combined_coeffs = mpi_config.coef_combine_vec(&local_basis, &eq_mpi_vars);
 
-        mpi_config.root_broadcast_vec(&mut combined_coeffs);
+        if mpi_config.is_root() {
+            return HyraxOpening(combined_coeffs);
+        }
 
-        HyraxOpening(combined_coeffs)
+        HyraxOpening(local_basis)
     }
 
     fn verify(

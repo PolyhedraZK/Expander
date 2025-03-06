@@ -172,10 +172,13 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
             };
         }
 
-        let mut buffer =
-            vec![C::SimdCircuitField::ZERO; poly.hypercube_size() * mpi_config.world_size()];
+        let mut buffer = if mpi_config.is_root() {
+            vec![C::SimdCircuitField::zero(); poly.hypercube_size() * mpi_config.world_size()]
+        } else {
+            vec![]
+        };
+
         mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
-        mpi_config.root_broadcast_vec(&mut buffer);
 
         Self::Commitment { evals: buffer }
     }
