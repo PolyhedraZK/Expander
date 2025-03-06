@@ -35,6 +35,7 @@ pub trait Field:
     + for<'a> SubAssign<&'a Self>
     + for<'a> MulAssign<&'a Self>
     + FieldSerde
+    + Sized
 {
     /// name
     const NAME: &'static str;

@@ -10,7 +10,13 @@ gkr_field_config = { path = "../config/gkr_field_config" }
 transcript = { path = "../transcript" }
 
 ark-std.workspace = true
+bytes.workspace = true
 ethnum.workspace = true
 log.workspace = true
 rand.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+mpi_config = { path = "../config/mpi_config" }
+config_macros = { path = "../config/config_macros" }
+poly_commit = { path = "../poly_commit" }
