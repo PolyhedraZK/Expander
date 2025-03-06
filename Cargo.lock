@@ -480,6 +480,7 @@ dependencies = [
  "ethnum",
  "gkr_field_config",
  "log",
+ "mpi_config",
  "rand",
  "thiserror",
  "transcript",
@@ -2409,6 +2410,7 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "field_hashers",
+ "mersenne31",
  "mpi_config",
  "sha2",
  "tiny-keccak",
