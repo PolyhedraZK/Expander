@@ -480,6 +480,7 @@ dependencies = [
  "ethnum",
  "gkr_field_config",
  "log",
+ "mpi_config",
  "rand",
  "thiserror",
  "transcript",
