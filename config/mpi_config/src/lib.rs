@@ -8,6 +8,9 @@ use mpi::{
     traits::*,
 };
 
+use std::os::raw::c_void;
+use mpi::ffi::*;
+
 #[macro_export]
 macro_rules! root_println {
     ($config: expr, $($arg:tt)*) => {
@@ -290,6 +293,10 @@ impl MPIConfig {
     #[inline(always)]
     pub fn barrier(&self) {
         self.world.unwrap().barrier();
+    }
+
+    pub fn create_shared_mem(&self, n_bytes: usize) -> *const u8 {
+        unimplemented!()
     }
 }
 
