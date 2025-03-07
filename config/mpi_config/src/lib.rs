@@ -1,3 +1,6 @@
+pub mod shared_mem;
+use shared_mem::SharedMemory;
+
 use std::{cmp, fmt::Debug};
 
 use arith::Field;
@@ -8,8 +11,8 @@ use mpi::{
     traits::*,
 };
 
-use std::os::raw::c_void;
 use mpi::ffi::*;
+use std::os::raw::c_void;
 
 #[macro_export]
 macro_rules! root_println {
@@ -70,16 +73,6 @@ impl PartialEq for MPIConfig {
     fn eq(&self, other: &Self) -> bool {
         self.world_rank == other.world_rank && self.world_size == other.world_size
     }
-}
-
-pub trait SharedMemory {
-    fn bytes_size(&self) -> usize;
-
-    fn to_memory(&self, ptr: &mut *mut u8);
-
-    fn from_memory(ptr: &mut *mut u8) -> Self;
-
-    fn self_destroy(self);
 }
 
 /// MPI toolkit:
@@ -305,7 +298,7 @@ impl MPIConfig {
         self.world.unwrap().barrier();
     }
 
-    pub fn create_shared_mem(&self, n_bytes: usize) -> *mut u8 {
+    pub fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, *mut ompi_win_t) {
         let window_size = if self.is_root() { n_bytes } else { 0 };
         let mut baseptr: *mut c_void = std::ptr::null_mut();
         let mut window = std::ptr::null_mut();
@@ -335,14 +328,30 @@ impl MPIConfig {
             }
         }
 
-        baseptr as *mut u8
+        (baseptr as *mut u8, window)
     }
 
-    pub fn consume_obj_and_create_shared<T: SharedMemory>(&self, obj: T) -> T {
-        let n_bytes = obj.bytes_size();
-        let mut ptr = self.create_shared_mem(n_bytes);
-        obj.to_memory(&mut ptr);
-        T::from_memory(&mut ptr)
+    pub fn consume_obj_and_create_shared<T: SharedMemory>(&self, obj: Option<T>) -> (T, *mut ompi_win_t) {
+        assert!(!self.is_root() || obj.is_some());
+
+        if self.is_root() {
+            let obj = obj.unwrap();
+            let n_bytes = obj.bytes_size();
+            let (mut ptr, window) = self.create_shared_mem(n_bytes);
+            let mut ptr_clone = ptr.clone();
+            obj.to_memory(&mut ptr_clone);
+
+            (T::from_memory(&mut ptr), window)
+        } else {
+            let (mut ptr, window) = self.create_shared_mem(0);
+            (T::from_memory(&mut ptr), window)
+        }
+    }
+
+    pub fn free_shared_mem(&self, window: &mut *mut ompi_win_t) {
+        unsafe {
+            MPI_Win_free(window as *mut *mut ompi_win_t);
+        }
     }
 }
 

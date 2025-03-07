@@ -7,6 +7,7 @@ edition = "2021"
 arith = { path = "../arith" }
 config = { path = "../config" }
 gkr_field_config = { path = "../config/gkr_field_config" }
+mpi_config = { path = "../config/mpi_config" }
 transcript = { path = "../transcript" }
 
 ark-std.workspace = true
@@ -17,6 +18,5 @@ rand.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-mpi_config = { path = "../config/mpi_config" }
 config_macros = { path = "../config/config_macros" }
 poly_commit = { path = "../poly_commit" }

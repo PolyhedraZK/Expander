@@ -1,92 +1,17 @@
-use std::ptr::copy_nonoverlapping;
-
 use super::circuit::{Circuit, CircuitLayer, StructureInfo};
 use super::gates::{GateAdd, GateConst, GateMul, GateUni};
 use gkr_field_config::GKRFieldConfig;
-
-pub trait SharedMemory {
-    fn bytes_size(&self) -> usize;
-
-    fn to_memory(&self, ptr: &mut *mut u8);
-
-    fn from_memory(ptr: &mut *mut u8) -> Self;
-}
-
-impl SharedMemory for usize {
-
-    fn bytes_size(&self) -> usize {
-        8
-    }
-
-    fn to_memory(&self, ptr: &mut *mut u8) {
-        unsafe {
-            (*ptr as *mut usize).write(*self);
-            *ptr = ptr.add(8);
-        }
-    }
-
-    fn from_memory(ptr: &mut *mut u8) -> Self {
-        unsafe {
-            let ret = (*ptr as *mut usize).read();
-            *ptr = ptr.add(8);
-            ret
-        }
-    }
-}
-
-impl SharedMemory for u8 {
-
-    fn bytes_size(&self) -> usize {
-        1
-    }
-
-    fn to_memory(&self, ptr: &mut *mut u8) {
-        unsafe {
-            ptr.write(*self);
-            *ptr = ptr.add(1);
-        }
-    }
-
-    fn from_memory(ptr: &mut *mut u8) -> Self {
-        unsafe {
-            let ret = ptr.read();
-            *ptr = ptr.add(1);
-            ret
-        }
-    }
-}
-
-impl<T: Sized> SharedMemory for Vec<T> {
-
-    fn bytes_size(&self) -> usize {
-        8 + self.len() * std::mem::size_of::<T>()
-    }
-
-    fn to_memory(&self, ptr: &mut *mut u8) {
-        unsafe {
-            let len = self.len();
-            len.to_memory(ptr);
-
-            copy_nonoverlapping(self.as_ptr(), *ptr as *mut T, len);
-            *ptr = ptr.add(len * std::mem::size_of::<T>());
-        }
-    }
-
-    fn from_memory(ptr: &mut *mut u8) -> Self {
-        unsafe {
-            let len = usize::from_memory(ptr);
-            let ret = Vec::<T>::from_raw_parts(*ptr as *mut T, len, len);
-            *ptr = ptr.add(len * std::mem::size_of::<T>());
-            ret
-        }
-    }
-}
+use mpi_config::shared_mem::SharedMemory;
 
 impl<C: GKRFieldConfig> SharedMemory for CircuitLayer<C> {
     fn bytes_size(&self) -> usize {
-        8 + 8 + self.mul.bytes_size() + self.add.bytes_size() + self.const_.bytes_size() + self.uni.bytes_size()
+        8 + 8
+            + self.mul.bytes_size()
+            + self.add.bytes_size()
+            + self.const_.bytes_size()
+            + self.uni.bytes_size()
     }
-    
+
     fn to_memory(&self, ptr: &mut *mut u8) {
         self.input_var_num.to_memory(ptr);
         self.output_var_num.to_memory(ptr);
@@ -119,12 +44,22 @@ impl<C: GKRFieldConfig> SharedMemory for CircuitLayer<C> {
             structure_info: StructureInfo::default(),
         }
     }
+
+    fn self_destroy(self) {
+        self.mul.self_destroy();
+        self.add.self_destroy();
+        self.const_.self_destroy();
+        self.uni.self_destroy();
+    }
 }
 
 impl<C: GKRFieldConfig> SharedMemory for Circuit<C> {
-
     fn bytes_size(&self) -> usize {
-        8 + self.layers.iter().map(|layer| layer.bytes_size()).sum::<usize>()
+        8 + self
+            .layers
+            .iter()
+            .map(|layer| layer.bytes_size())
+            .sum::<usize>()
     }
 
     fn to_memory(&self, ptr: &mut *mut u8) {
@@ -135,7 +70,9 @@ impl<C: GKRFieldConfig> SharedMemory for Circuit<C> {
 
     fn from_memory(ptr: &mut *mut u8) -> Self {
         let len = usize::from_memory(ptr);
-        let layers = (0..len).map(|_| CircuitLayer::<C>::from_memory(ptr)).collect();
+        let layers = (0..len)
+            .map(|_| CircuitLayer::<C>::from_memory(ptr))
+            .collect();
 
         Circuit {
             layers,
@@ -146,5 +83,9 @@ impl<C: GKRFieldConfig> SharedMemory for Circuit<C> {
             rnd_coefs_identified: false,
             rnd_coefs: vec![],
         }
+    }
+
+    fn self_destroy(self) {
+        self.layers.into_iter().for_each(|layer| layer.self_destroy());
     }
 }

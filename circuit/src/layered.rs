@@ -1,7 +1,7 @@
 mod circuit;
-mod share_mem;
 mod gates;
 mod serde;
+mod share_mem;
 
 pub use circuit::*;
 pub use gates::*;
