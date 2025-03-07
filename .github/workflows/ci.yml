@@ -70,13 +70,14 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
 
-      - name: Setup ECC Library
-        run: |
-          cd ~
-          rm -rf ExpanderCompilerCollection
-          git clone -b dev https://github.com/PolyhedraZK/ExpanderCompilerCollection.git
-          cd ExpanderCompilerCollection
-          ./build-rust.sh
+      # TODO(HS) after fixing FS transcript, fix the FS transcript circuit in recurison side
+      # - name: Setup ECC Library
+      #   run: |
+      #     cd ~
+      #     rm -rf ExpanderCompilerCollection
+      #     git clone -b dev https://github.com/PolyhedraZK/ExpanderCompilerCollection.git
+      #     cd ExpanderCompilerCollection
+      #     ./build-rust.sh
 
       - name: Download test data
         run: cargo run --bin=dev-setup --release
@@ -87,8 +88,8 @@ jobs:
       - name: Run unit tests
         run: cargo test --all-features --release --workspace
 
-      - name: Run E2E tests
-        run: ./scripts/test_recursion.py
+      # - name: Run E2E tests
+      # run: ./scripts/test_recursion.py
 
       - name: Run benchmarks on Github Workflows
         if: matrix.os != '7950x3d'

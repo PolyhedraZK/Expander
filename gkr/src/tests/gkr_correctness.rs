@@ -189,7 +189,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_WITNESS,
         _ => unreachable!(),
     };
-    circuit.load_witness_file(&witness_path);
+    circuit.load_witness_allow_padding_testing_only(&witness_path, &config.mpi_config);
     root_println!(config.mpi_config, "Witness loaded.");
 
     circuit.evaluate();
