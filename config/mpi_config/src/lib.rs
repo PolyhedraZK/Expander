@@ -72,6 +72,16 @@ impl PartialEq for MPIConfig {
     }
 }
 
+pub trait SharedMemory {
+    fn bytes_size(&self) -> usize;
+
+    fn to_memory(&self, ptr: &mut *mut u8);
+
+    fn from_memory(ptr: &mut *mut u8) -> Self;
+
+    fn self_destroy(self);
+}
+
 /// MPI toolkit:
 impl MPIConfig {
     const ROOT_RANK: i32 = 0;
@@ -295,8 +305,44 @@ impl MPIConfig {
         self.world.unwrap().barrier();
     }
 
-    pub fn create_shared_mem(&self, n_bytes: usize) -> *const u8 {
-        unimplemented!()
+    pub fn create_shared_mem(&self, n_bytes: usize) -> *mut u8 {
+        let window_size = if self.is_root() { n_bytes } else { 0 };
+        let mut baseptr: *mut c_void = std::ptr::null_mut();
+        let mut window = std::ptr::null_mut();
+        unsafe {
+            MPI_Win_allocate_shared(
+                window_size as isize,
+                1,
+                RSMPI_INFO_NULL,
+                RSMPI_COMM_WORLD,
+                &mut baseptr as *mut *mut c_void as *mut c_void,
+                &mut window,
+            );
+            MPI_Barrier(RSMPI_COMM_WORLD);
+
+            if !self.is_root() {
+                let mut size = 0;
+                let mut disp_unit = 0;
+                let mut query_baseptr: *mut c_void = std::ptr::null_mut();
+                MPI_Win_shared_query(
+                    window,
+                    0,
+                    &mut size,
+                    &mut disp_unit,
+                    &mut query_baseptr as *mut *mut c_void as *mut c_void,
+                );
+                baseptr = query_baseptr;
+            }
+        }
+
+        baseptr as *mut u8
+    }
+
+    pub fn consume_obj_and_create_shared<T: SharedMemory>(&self, obj: T) -> T {
+        let n_bytes = obj.bytes_size();
+        let mut ptr = self.create_shared_mem(n_bytes);
+        obj.to_memory(&mut ptr);
+        T::from_memory(&mut ptr)
     }
 }
 
