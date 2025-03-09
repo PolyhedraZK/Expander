@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   benchmark:
+    needs: [lint, build-and-test]
     runs-on: 7950x3d
     steps:
     - uses: actions/checkout@v4
