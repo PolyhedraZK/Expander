@@ -64,9 +64,7 @@ jobs:
 
       - name: Setup Dependencies for MacOS workflow
         if: matrix.os == 'macos-latest'
-        run: |
-          brew update
-          brew install gcc make openmpi
+        run: brew install gcc make openmpi
 
       - name: Setup Dependencies for Ubuntu workflow
         if: matrix.os == 'ubuntu-latest'
