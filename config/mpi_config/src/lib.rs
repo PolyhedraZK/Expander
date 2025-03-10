@@ -1,7 +1,7 @@
 pub mod shared_mem;
 use shared_mem::SharedMemory;
 
-use std::{cmp, fmt::Debug, thread::sleep, time::Duration};
+use std::{cmp, fmt::Debug};
 
 use arith::Field;
 use mpi::{

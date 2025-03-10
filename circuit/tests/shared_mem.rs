@@ -3,7 +3,7 @@ use circuit::Circuit;
 use config::{FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use mpi_config::{root_println, shared_mem::SharedMemory, MPIConfig};
+use mpi_config::{shared_mem::SharedMemory, MPIConfig};
 use poly_commit::RawExpanderGKR;
 use transcript::{BytesHashTranscript, SHA256hasher};
 
