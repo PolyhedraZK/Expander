@@ -1,7 +1,7 @@
 pub mod shared_mem;
 use shared_mem::SharedMemory;
 
-use std::{cmp, fmt::Debug};
+use std::{cmp, fmt::Debug, thread::sleep, time::Duration};
 
 use arith::Field;
 use mpi::{
@@ -307,11 +307,11 @@ impl MPIConfig {
                 window_size as isize,
                 1,
                 RSMPI_INFO_NULL,
-                RSMPI_COMM_WORLD,
+                self.world.unwrap().as_raw(),
                 &mut baseptr as *mut *mut c_void as *mut c_void,
                 &mut window,
             );
-            MPI_Barrier(RSMPI_COMM_WORLD);
+            self.barrier();
 
             if !self.is_root() {
                 let mut size = 0;
@@ -331,19 +331,23 @@ impl MPIConfig {
         (baseptr as *mut u8, window)
     }
 
-    pub fn consume_obj_and_create_shared<T: SharedMemory>(&self, obj: Option<T>) -> (T, *mut ompi_win_t) {
+    pub fn consume_obj_and_create_shared<T: SharedMemory>(
+        &self,
+        obj: Option<T>,
+    ) -> (T, *mut ompi_win_t) {
         assert!(!self.is_root() || obj.is_some());
 
         if self.is_root() {
             let obj = obj.unwrap();
             let n_bytes = obj.bytes_size();
             let (mut ptr, window) = self.create_shared_mem(n_bytes);
-            let mut ptr_clone = ptr.clone();
-            obj.to_memory(&mut ptr_clone);
-
+            let mut ptr_copy = ptr;
+            obj.to_memory(&mut ptr_copy);
+            self.barrier();
             (T::from_memory(&mut ptr), window)
         } else {
             let (mut ptr, window) = self.create_shared_mem(0);
+            self.barrier(); // wait for root to write data
             (T::from_memory(&mut ptr), window)
         }
     }

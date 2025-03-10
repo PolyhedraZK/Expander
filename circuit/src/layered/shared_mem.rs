@@ -86,6 +86,8 @@ impl<C: GKRFieldConfig> SharedMemory for Circuit<C> {
     }
 
     fn self_destroy(self) {
-        self.layers.into_iter().for_each(|layer| layer.self_destroy());
+        self.layers
+            .into_iter()
+            .for_each(|layer| layer.self_destroy());
     }
 }

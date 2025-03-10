@@ -105,3 +105,19 @@ impl FieldSerde for [u64; 4] {
         Ok(ret)
     }
 }
+
+impl<T1: FieldSerde, T2: FieldSerde> FieldSerde for (T1, T2) {
+    const SERIALIZED_SIZE: usize = T1::SERIALIZED_SIZE + T2::SERIALIZED_SIZE;
+
+    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+        self.0.serialize_into(&mut writer)?;
+        self.1.serialize_into(&mut writer)?;
+        Ok(())
+    }
+
+    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+        let t1 = T1::deserialize_from(&mut reader)?;
+        let t2 = T2::deserialize_from(&mut reader)?;
+        Ok((t1, t2))
+    }
+}

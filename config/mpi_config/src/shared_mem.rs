@@ -84,3 +84,25 @@ impl<T: Copy> SharedMemory for Vec<T> {
         self.leak();
     }
 }
+
+impl<T1: SharedMemory, T2: SharedMemory> SharedMemory for (T1, T2) {
+    fn bytes_size(&self) -> usize {
+        self.0.bytes_size() + self.1.bytes_size()
+    }
+
+    fn to_memory(&self, ptr: &mut *mut u8) {
+        self.0.to_memory(ptr);
+        self.1.to_memory(ptr);
+    }
+
+    fn from_memory(ptr: &mut *mut u8) -> Self {
+        let t1 = T1::from_memory(ptr);
+        let t2 = T2::from_memory(ptr);
+        (t1, t2)
+    }
+
+    fn self_destroy(self) {
+        self.0.self_destroy();
+        self.1.self_destroy();
+    }
+}

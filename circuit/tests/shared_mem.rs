@@ -40,9 +40,11 @@ fn load_circuit<Cfg: GKRConfig>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::F
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
         _ => unreachable!(),
     };
-    
+
     if mpi_config.is_root() {
-        Some(Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_path))
+        Some(Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(
+            &circuit_path,
+        ))
     } else {
         None
     }
@@ -51,20 +53,37 @@ fn load_circuit<Cfg: GKRConfig>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::F
 #[test]
 fn test_shared_mem() {
     let mpi_config = MPIConfig::new();
-    test_shared_mem_helper(&mpi_config, 123u8);
-    test_shared_mem_helper(&mpi_config, 456789usize);
-    test_shared_mem_helper(&mpi_config, vec![1usize, 2, 3]);
+    test_shared_mem_helper(&mpi_config, Some(123u8));
+    test_shared_mem_helper(&mpi_config, Some(456789usize));
+    test_shared_mem_helper(&mpi_config, Some(vec![1u8, 2, 3]));
+    test_shared_mem_helper(&mpi_config, Some(vec![4usize, 5, 6]));
+    test_shared_mem_helper(&mpi_config, Some((7u8, 8usize)));
+    test_shared_mem_helper(&mpi_config, Some((9usize, 10u8)));
+
+    let circuit = load_circuit::<M31ExtConfigSha2Raw>(&mpi_config);
+    test_shared_mem_helper(&mpi_config, circuit);
+    let circuit = load_circuit::<GF2ExtConfigSha2Raw>(&mpi_config);
+    test_shared_mem_helper(&mpi_config, circuit);
+    let circuit = load_circuit::<BN254ConfigSha2Raw>(&mpi_config);
+    test_shared_mem_helper(&mpi_config, circuit);
+
     MPIConfig::finalize();
 }
 
 #[allow(unreachable_patterns)]
-fn test_shared_mem_helper<T: SharedMemory+FieldSerde>(mpi_config: &MPIConfig, t: T) {
+fn test_shared_mem_helper<T: SharedMemory + FieldSerde + std::fmt::Debug>(
+    mpi_config: &MPIConfig,
+    t: Option<T>,
+) {
     let mut original_serialization = vec![];
     let (data, mut window) = if mpi_config.is_root() {
-        t.serialize_into(&mut original_serialization).unwrap();
-        mpi_config.consume_obj_and_create_shared(Some(t))
+        t.as_ref()
+            .unwrap()
+            .serialize_into(&mut original_serialization)
+            .unwrap();
+        mpi_config.consume_obj_and_create_shared(t)
     } else {
-        mpi_config.consume_obj_and_create_shared(None)
+        mpi_config.consume_obj_and_create_shared(t)
     };
 
     let mut shared_serialization = vec![];
@@ -77,9 +96,18 @@ fn test_shared_mem_helper<T: SharedMemory+FieldSerde>(mpi_config: &MPIConfig, t:
     };
     mpi_config.gather_vec(&shared_serialization, &mut gathered_bytes);
     if mpi_config.is_root() {
-        gathered_bytes.chunks_exact_mut(original_serialization.len()).for_each(|chunk| {
-            assert_eq!(chunk, &original_serialization[..]);
-        });
+        gathered_bytes
+            .chunks_exact_mut(original_serialization.len())
+            .enumerate()
+            .for_each(|(i, chunk)| {
+                assert_eq!(
+                    chunk,
+                    &original_serialization[..],
+                    "rank {} not consistent",
+                    i
+                );
+            });
     }
+    data.self_destroy();
     mpi_config.free_shared_mem(&mut window);
 }
