@@ -317,7 +317,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         #[cfg(feature = "grinding")]
         grind::<Cfg>(&mut transcript, &self.config);
 
-        circuit.fill_rnd_coefs(&mut transcript);
+        circuit.fill_rnd_coefs(&mut transcript, &self.config.mpi_config);
 
         let verified = match self.config.gkr_scheme {
             GKRScheme::Vanilla => {

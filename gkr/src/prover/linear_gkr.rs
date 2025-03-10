@@ -108,7 +108,7 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         #[cfg(feature = "grinding")]
         grind::<Cfg>(&mut transcript, &self.config);
 
-        c.fill_rnd_coefs(&mut transcript);
+        c.fill_rnd_coefs(&mut transcript, &self.config.mpi_config);
         c.evaluate();
 
         let (claimed_v, rx, rsimd, rmpi);

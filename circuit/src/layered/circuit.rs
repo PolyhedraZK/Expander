@@ -5,6 +5,8 @@ use arith::{Field, SimdField};
 use ark_std::test_rng;
 use config::GKRConfig;
 use gkr_field_config::GKRFieldConfig;
+use mpi::ffi::ompi_win_t;
+use mpi_config::MPIConfig;
 use transcript::Transcript;
 
 use crate::*;
@@ -146,6 +148,21 @@ impl<C: GKRFieldConfig> Circuit<C> {
     pub fn load_circuit<Cfg: GKRConfig<FieldConfig = C>>(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
         rc.flatten::<Cfg>()
+    }
+
+    pub fn load_circuit_shared<Cfg: GKRConfig<FieldConfig = C>>(
+        filename: &str,
+        mpi_config: &MPIConfig,
+    ) -> (Self, *mut ompi_win_t) {
+        let circuit = if mpi_config.is_root() {
+            Some(Self::load_circuit::<Cfg>(filename))
+        } else {
+            None
+        };
+
+        let (mut circuit, window) = mpi_config.consume_obj_and_create_shared(circuit);
+        circuit.pre_process_gkr::<Cfg>();
+        (circuit, window)
     }
 
     pub fn load_non_simd_witness_file(&mut self, filename: &str) {
@@ -295,14 +312,20 @@ impl<C: GKRFieldConfig> Circuit<C> {
         self.rnd_coefs_identified = true;
     }
 
-    pub fn fill_rnd_coefs<T: Transcript<C::ChallengeField>>(&mut self, transcript: &mut T) {
+    pub fn fill_rnd_coefs<T: Transcript<C::ChallengeField>>(
+        &mut self,
+        transcript: &mut T,
+        mpi_config: &MPIConfig,
+    ) {
         assert!(self.rnd_coefs_identified);
-
-        let sampled_circuit_fs = transcript.generate_circuit_field_elements(self.rnd_coefs.len());
-        self.rnd_coefs
-            .iter()
-            .zip(sampled_circuit_fs.iter())
-            .for_each(|(&r, sr)| unsafe { *r = *sr });
+        if mpi_config.is_root() {
+            let sampled_circuit_fs =
+                transcript.generate_circuit_field_elements(self.rnd_coefs.len());
+            self.rnd_coefs
+                .iter()
+                .zip(sampled_circuit_fs.iter())
+                .for_each(|(&r, sr)| unsafe { *r = *sr });
+        }
     }
 
     pub fn identify_structure_info(&mut self) {

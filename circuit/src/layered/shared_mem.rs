@@ -66,6 +66,7 @@ impl<C: GKRFieldConfig> SharedMemory for Circuit<C> {
         let len = self.layers.len();
         len.to_memory(ptr);
         self.layers.iter().for_each(|layer| layer.to_memory(ptr));
+        self.expected_num_output_zeros.to_memory(ptr);
     }
 
     fn from_memory(ptr: &mut *mut u8) -> Self {
@@ -73,12 +74,13 @@ impl<C: GKRFieldConfig> SharedMemory for Circuit<C> {
         let layers = (0..len)
             .map(|_| CircuitLayer::<C>::from_memory(ptr))
             .collect();
+        let expected_num_output_zeros = usize::from_memory(ptr);
 
         Circuit {
             layers,
 
             public_input: vec![],
-            expected_num_output_zeros: 0,
+            expected_num_output_zeros,
 
             rnd_coefs_identified: false,
             rnd_coefs: vec![],
