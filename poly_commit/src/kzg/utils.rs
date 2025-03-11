@@ -106,6 +106,7 @@ pub(crate) fn univariate_degree_b_quotient<F: Field>(
 pub(crate) fn univariate_fft_serial<F: PrimeField>(coeffs: &mut [F]) {
     assert!(coeffs.len().is_power_of_two());
 
+    // TODO(HS) FFT real deal here
     todo!()
 }
 

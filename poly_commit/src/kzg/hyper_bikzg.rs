@@ -467,7 +467,6 @@ where
 
 #[allow(clippy::too_many_arguments)]
 pub fn coeff_form_hyper_bikzg_verify<E, T>(
-    mpi_config: &MPIConfig,
     vk: &BiKZGVerifierParam<E>,
     local_alphas: &[E::Fr],
     mpi_alphas: &[E::Fr],
@@ -499,13 +498,15 @@ where
         return what;
     }
 
+    let mpi_world_size = 1 << mpi_alphas.len();
+
     opening
         .folded_oracle_commitments
         .iter()
         .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
 
     // NOTE(HS) transcript MPI thing ...
-    transcript_verifier_sync(fs_transcript, mpi_config);
+    transcript_verifier_sync(fs_transcript, mpi_world_size);
 
     let beta_x = fs_transcript.generate_challenge_field_element();
     let beta_y = fs_transcript.generate_challenge_field_element();
@@ -568,7 +569,7 @@ where
     opening.leader_evals.append_to_transcript(fs_transcript);
 
     // NOTE(HS) transcript MPI thing ...
-    transcript_verifier_sync(fs_transcript, mpi_config);
+    transcript_verifier_sync(fs_transcript, mpi_world_size);
 
     let gamma = fs_transcript.generate_challenge_field_element();
 
@@ -610,7 +611,7 @@ where
     fs_transcript.append_u8_slice(opening.beta_x_commitment.to_bytes().as_ref());
 
     // NOTE(HS) transcript MPI thing ...
-    transcript_verifier_sync(fs_transcript, mpi_config);
+    transcript_verifier_sync(fs_transcript, mpi_world_size);
 
     let delta_x = fs_transcript.generate_challenge_field_element();
 
@@ -633,7 +634,7 @@ where
     fs_transcript.append_u8_slice(opening.beta_y_commitment.to_bytes().as_ref());
 
     // NOTE(HS) transcript MPI thing ...
-    transcript_verifier_sync(fs_transcript, mpi_config);
+    transcript_verifier_sync(fs_transcript, mpi_world_size);
 
     let delta_y = fs_transcript.generate_challenge_field_element();
 

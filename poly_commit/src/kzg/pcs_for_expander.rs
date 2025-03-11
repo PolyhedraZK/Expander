@@ -115,7 +115,6 @@ where
 
     fn verify(
         #[allow(unused)] params: &Self::Params,
-        mpi_config: &mpi_config::MPIConfig,
         verifying_key: &<Self::SRS as crate::StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &crate::ExpanderGKRChallenge<G>,
@@ -124,7 +123,6 @@ where
         opening: &Self::Opening,
     ) -> bool {
         coeff_form_hyper_bikzg_verify(
-            mpi_config,
             verifying_key,
             &x.local_xs(),
             &x.x_mpi,
