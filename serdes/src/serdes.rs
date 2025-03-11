@@ -1,5 +1,6 @@
 use std::io::{Read, Write};
 
+use ethnum::U256;
 use halo2curves::{
     bn256::{Fr, G1Affine, G2Affine},
     group::GroupEncoding,
@@ -34,6 +35,8 @@ exp_serde_for_number!(u64, 8);
 exp_serde_for_number!(usize, 8);
 exp_serde_for_number!(u8, 1);
 exp_serde_for_number!(f64, 8);
+exp_serde_for_number!(u128, 16);
+exp_serde_for_number!(U256, 32);
 
 impl<V: ExpSerde> ExpSerde for Vec<V> {
     const SERIALIZED_SIZE: usize = unimplemented!();
