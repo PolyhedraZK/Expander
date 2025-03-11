@@ -1,31 +1,15 @@
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use serdes::ExpSerde;
 use transcript::Transcript;
 
 use crate::{PCSForExpanderGKR, StructuredReferenceString};
 
-#[derive(Clone, Debug, Default)]
-pub struct PCSEmptyType {}
-
-impl ExpSerde for PCSEmptyType {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
-    fn serialize_into<W: std::io::Write>(&self, _writer: W) -> serdes::SerdeResult<()> {
-        Ok(())
-    }
-
-    fn deserialize_from<R: std::io::Read>(_reader: R) -> serdes::SerdeResult<Self> {
-        Ok(Self {})
-    }
-}
-
-impl StructuredReferenceString for PCSEmptyType {
-    type PKey = PCSEmptyType;
-    type VKey = PCSEmptyType;
+impl StructuredReferenceString for () {
+    type PKey = ();
+    type VKey = ();
 
     fn into_keys(self) -> (Self::PKey, Self::VKey) {
-        (Self {}, Self {})
+        ((), ())
     }
 }
 
