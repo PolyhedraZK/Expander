@@ -1,6 +1,6 @@
 use std::{iter::Sum, ops::Mul};
 
-use halo2curves::ff::Field;
+use halo2curves::ff::{Field, PrimeField};
 use itertools::izip;
 
 #[inline(always)]
@@ -58,6 +58,62 @@ pub(crate) fn univariate_evaluate<F: Mul<F1, Output = F> + Sum + Copy, F1: Field
     power_series: &[F1],
 ) -> F {
     izip!(coeffs, power_series).map(|(c, p)| *c * *p).sum()
+}
+
+// NOTE(HS) used by mercury verifier only
+#[allow(unused)]
+#[inline(always)]
+pub(crate) fn univariate_evaluate_at_eq_coeffs_univariate_poly<F: Field>(
+    eq_vars: &[F],
+    univariate_x: F,
+) -> F {
+    let mut x_pow = univariate_x;
+    let mut res = F::ONE;
+
+    eq_vars.iter().for_each(|u_i| {
+        res *= ((F::ONE - u_i) + x_pow * u_i);
+        x_pow = x_pow * x_pow
+    });
+
+    res
+}
+
+// NOTE(HS) used by mercury prover only, perform division f(X) = q(X) (X^b - \alpha) + r(X)
+#[allow(unused)]
+#[inline(always)]
+pub(crate) fn univariate_degree_b_quotient<F: Field>(
+    coeffs: &[F],
+    degree_b: usize,
+    alpha: F,
+) -> (Vec<F>, Vec<F>) {
+    assert!(coeffs.len() >= degree_b);
+
+    let mut local_coeffs = coeffs.to_vec();
+
+    (degree_b..coeffs.len()).rev().for_each(|degree| {
+        let remainder = alpha * local_coeffs[degree];
+        local_coeffs[degree - degree_b] += remainder;
+    });
+
+    let quotient = local_coeffs[degree_b..].to_owned();
+    let remainder = local_coeffs[..degree_b].to_owned();
+
+    (quotient, remainder)
+}
+
+#[allow(unused)]
+#[inline(always)]
+pub(crate) fn univariate_fft_serial<F: PrimeField>(coeffs: &mut [F]) {
+    assert!(coeffs.len().is_power_of_two());
+
+    todo!()
+}
+
+#[allow(unused)]
+#[inline(always)]
+pub(crate) fn univariate_ifft_serial<F: PrimeField>(evals: &mut [F]) {
+    evals[1..].reverse();
+    univariate_fft_serial(evals);
 }
 
 #[inline(always)]
