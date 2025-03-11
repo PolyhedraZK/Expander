@@ -145,11 +145,18 @@ impl<C: GKRFieldConfig> Clone for Circuit<C> {
 unsafe impl<C> Send for Circuit<C> where C: GKRFieldConfig {}
 
 impl<C: GKRFieldConfig> Circuit<C> {
+    // Load a circuit from a file and flatten it
+    // Used for single-thread prover or verifier
     pub fn load_circuit_independent<Cfg: GKRConfig<FieldConfig = C>>(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
         rc.flatten::<Cfg>()
     }
 
+    // The root process loads a circuit from a file and shares it with other processes
+    // with shared memory
+    // Used in the mpi case, ok if mpi_size = 1
+    // circuit.discard_control_of_shared_mem() and mpi_config.free_shared_mem(window) should be called
+    // before the end of the program
     pub fn load_circuit_shared<Cfg: GKRConfig<FieldConfig = C>>(
         filename: &str,
         mpi_config: &MPIConfig,

@@ -48,7 +48,7 @@ fn benchmark_setup<Cfg: GKRConfig>(
     <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::ScratchPad,
 ){
     let config = Config::<Cfg>::new(scheme, MPIConfig::new());
-    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(circuit_file);
+    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit_independent::<Cfg>(circuit_file);
 
     if let Some(witness_file) = witness_file {
         circuit.prover_load_witness_file(witness_file, &config.mpi_config);
