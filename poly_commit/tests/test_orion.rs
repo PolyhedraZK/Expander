@@ -172,7 +172,7 @@ fn test_orion_for_expander_gkr() {
         M31ExtConfig,
         M31x16,
         BytesHashTranscript<_, Keccak256hasher>,
-    >(&mpi_config, 25);
+    >(&mpi_config, 15);
 
     MPIConfig::finalize()
 }

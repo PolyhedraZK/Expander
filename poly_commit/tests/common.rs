@@ -101,6 +101,7 @@ pub fn test_pcs_for_expander_gkr<
             transcript.lock_proof();
             assert!(P::verify(
                 params,
+                mpi_config,
                 &verification_key,
                 &commitment,
                 xx,

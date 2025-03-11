@@ -423,6 +423,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         transcript.lock_proof();
         let verified = Cfg::PCS::verify(
             pcs_params,
+            &self.config.mpi_config,
             pcs_verification_key,
             commitment,
             open_at,

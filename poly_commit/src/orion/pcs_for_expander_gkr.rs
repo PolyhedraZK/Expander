@@ -35,7 +35,7 @@ where
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        _mpi_config: &MPIConfig,
+        #[allow(unused)] mpi_config: &MPIConfig,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
@@ -64,7 +64,7 @@ where
 
         // NOTE: Hang also assume that, linear GKR will take over the commitment
         // and force sync transcript hash state of subordinate machines to be the same.
-        if mpi_config.is_single_process() {
+        if mpi_config.world_size() == 1 {
             return commitment;
         }
 
@@ -81,14 +81,13 @@ where
         internals[0]
     }
 
-    // TODO(HS) rearrange the MT over interleaved codeword, s.t., we have smaller proof size
     fn open(
         params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         eval_point: &ExpanderGKRChallenge<C>,
-        transcript: &mut T,
+        transcript: &mut T, // add transcript here to allow interactive arguments
         scratch_pad: &Self::ScratchPad,
     ) -> Self::Opening {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
@@ -102,7 +101,7 @@ where
             ComPackF,
             T,
         >(proving_key, poly, &local_xs, transcript, scratch_pad);
-        if mpi_config.is_single_process() {
+        if mpi_config.world_size() == 1 {
             return local_opening;
         }
 
@@ -127,6 +126,11 @@ where
             .query_openings
             .serialize_into(&mut local_mt_paths_serialized)
             .unwrap();
+
+        // NOTE: Hang does not think this is a good move, but this is mostly
+        // working with MPI behavior, so we align local MT openings serialization
+        // against power-of-2 bytes length.
+        local_mt_paths_serialized.resize(local_mt_paths_serialized.len().next_power_of_two(), 0u8);
 
         // NOTE: gather all merkle paths
         let mut mt_paths_serialized =
@@ -154,7 +158,8 @@ where
     }
 
     fn verify(
-        _params: &Self::Params,
+        params: &Self::Params,
+        mpi_config: &MPIConfig,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         eval_point: &ExpanderGKRChallenge<C>,
@@ -162,7 +167,12 @@ where
         transcript: &mut T, // add transcript here to allow interactive arguments
         opening: &Self::Opening,
     ) -> bool {
-        if eval_point.x_mpi.is_empty() {
+        let global_poly_num_vars = *params
+            + mpi_config.world_size().ilog2() as usize
+            + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
+        assert_eq!(global_poly_num_vars, eval_point.num_vars());
+
+        if mpi_config.world_size() == 1 || !mpi_config.is_root() {
             return orion_verify_simd_field::<
                 C::CircuitField,
                 C::SimdCircuitField,
@@ -182,6 +192,7 @@ where
         // NOTE: we now assume that the input opening is from the root machine,
         // as proofs from other machines are typically undefined
         orion_verify_simd_field_aggregated::<C, ComPackF, T>(
+            mpi_config.world_size(),
             verifying_key,
             commitment,
             eval_point,

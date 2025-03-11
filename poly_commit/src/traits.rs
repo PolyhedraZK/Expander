@@ -144,34 +144,27 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
     ///
     /// In this case, the `lock/unlock` function must be added at the beginning and end of the
     /// verify function as well.
-    ///
-    /// NOTE(HS): We introduce MPI for the sake of parallelism, s.t., we can accelerate
-    /// the opening algorithm.  In such case, only the PCS opening at the root matters,
-    /// while opening from the subordinate parties are not used, at a scope of whole GKR
-    /// argument system.
     fn open(
         params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         x: &ExpanderGKRChallenge<C>,
-        transcript: &mut T,
+        transcript: &mut T, // add transcript here to allow interactive arguments
         scratch_pad: &Self::ScratchPad,
     ) -> Self::Opening;
 
     /// Verify the opening of a polynomial at a point.
     /// This should only be called on the root process.
-    ///
-    /// NOTE(HS): Again, corresponding to the comments in opening, the PCS opening reaching
-    /// this verify algorithm should be the one at the MPI root, rather than the ones from
-    /// any other subordinate MPI parties.
+    #[allow(clippy::too_many_arguments)]
     fn verify(
         params: &Self::Params,
+        mpi_config: &MPIConfig,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &ExpanderGKRChallenge<C>,
         v: C::ChallengeField,
-        transcript: &mut T,
+        transcript: &mut T, // add transcript here to allow interactive arguments
         opening: &Self::Opening,
     ) -> bool;
 }

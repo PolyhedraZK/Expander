@@ -6,7 +6,7 @@ pub use traits::{
 pub const PCS_SOUNDNESS_BITS: usize = 128;
 
 mod utils;
-pub use utils::expander_pcs_init_testing_only;
+pub use utils::{expander_pcs_init_testing_only, PCSEmptyType};
 
 pub mod raw;
 pub use raw::RawExpanderGKR;

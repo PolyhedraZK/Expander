@@ -169,23 +169,19 @@ impl MPIConfig {
                         for i in 0..n_chunks {
                             let local_start = i * Self::CHUNK_SIZE;
                             let local_end = cmp::min(local_start + Self::CHUNK_SIZE, local_n_bytes);
-                            let actual_chunk_size = local_end - local_start;
-                            if actual_chunk_size < Self::CHUNK_SIZE {
-                                chunk_buffer_u8.resize(actual_chunk_size * self.world_size(), 0u8);
-                            }
-
                             self.root_process().gather_into_root(
                                 &local_vec_u8[local_start..local_end],
                                 &mut chunk_buffer_u8,
                             );
 
                             // distribute the data to where they belong to in global vec
+                            let actual_chunk_size = local_end - local_start;
                             for j in 0..self.world_size() {
                                 let global_start = j * local_n_bytes + local_start;
                                 let global_end = global_start + actual_chunk_size;
                                 global_vec_u8[global_start..global_end].copy_from_slice(
-                                    &chunk_buffer_u8
-                                        [j * actual_chunk_size..(j + 1) * actual_chunk_size],
+                                    &chunk_buffer_u8[j * Self::CHUNK_SIZE
+                                        ..j * Self::CHUNK_SIZE + actual_chunk_size],
                                 );
                             }
                         }
@@ -204,7 +200,7 @@ impl MPIConfig {
         }
     }
 
-    /// Root process broadcast a value f into all the processes
+    /// Root process broadcase a value f into all the processes
     #[inline]
     pub fn root_broadcast_f<F: Field>(&self, f: &mut F) {
         unsafe {

@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF, T>(
+    mpi_world_size: usize,
     vk: &OrionSRS,
     commitment: &OrionCommitment,
     eval_point: &ExpanderGKRChallenge<C>,
@@ -25,8 +26,7 @@ where
     ComPackF: SimdField<Scalar = C::CircuitField>,
     T: Transcript<C::ChallengeField>,
 {
-    let mpi_world_size = 1 << eval_point.x_mpi.len();
-    let local_num_vars = eval_point.num_vars() - eval_point.x_mpi.len();
+    let local_num_vars = eval_point.num_vars() - mpi_world_size.ilog2() as usize;
     assert_eq!(local_num_vars, vk.num_vars);
 
     let (row_num, msg_size) = {

@@ -1,7 +1,6 @@
 use arith::{ExtensionField, FieldSerde};
 use gkr_field_config::GKRFieldConfig;
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
-use mpi_config::MPIConfig;
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
@@ -37,22 +36,26 @@ where
         n_input_vars
     }
 
-    fn init_scratch_pad(_params: &Self::Params, _mpi_config: &MPIConfig) -> Self::ScratchPad {}
+    fn init_scratch_pad(
+        #[allow(unused)] params: &Self::Params,
+        #[allow(unused)] mpi_config: &mpi_config::MPIConfig,
+    ) -> Self::ScratchPad {
+    }
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        _mpi_config: &MPIConfig,
+        #[allow(unused)] mpi_config: &mpi_config::MPIConfig,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
         hyrax_setup(*params, rng)
     }
 
     fn commit(
-        _params: &Self::Params,
-        mpi_config: &MPIConfig,
+        #[allow(unused)] params: &Self::Params,
+        mpi_config: &mpi_config::MPIConfig,
         proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
-        _scratch_pad: &mut Self::ScratchPad,
+        #[allow(unused)] scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
         let local_commit = hyrax_commit(proving_key, poly);
 
@@ -75,13 +78,13 @@ where
     }
 
     fn open(
-        _params: &Self::Params,
-        mpi_config: &MPIConfig,
+        #[allow(unused)] params: &Self::Params,
+        mpi_config: &mpi_config::MPIConfig,
         proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
         x: &crate::ExpanderGKRChallenge<G>,
-        _transcript: &mut T,
-        _scratch_pad: &Self::ScratchPad,
+        #[allow(unused)] transcript: &mut T, // add transcript here to allow interactive arguments
+        #[allow(unused)] scratch_pad: &Self::ScratchPad,
     ) -> Self::Opening {
         if mpi_config.is_single_process() {
             let (_, open) = hyrax_open(proving_key, poly, &x.local_xs());
@@ -109,15 +112,16 @@ where
     }
 
     fn verify(
-        _params: &Self::Params,
+        #[allow(unused)] params: &Self::Params,
+        mpi_config: &mpi_config::MPIConfig,
         verifying_key: &<Self::SRS as crate::StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &crate::ExpanderGKRChallenge<G>,
         v: <G as GKRFieldConfig>::ChallengeField,
-        _transcript: &mut T,
+        #[allow(unused)] transcript: &mut T, // add transcript here to allow interactive arguments
         opening: &Self::Opening,
     ) -> bool {
-        if x.x_mpi.is_empty() {
+        if mpi_config.is_single_process() || !mpi_config.is_root() {
             return hyrax_verify(verifying_key, commitment, &x.local_xs(), v, opening);
         }
 
