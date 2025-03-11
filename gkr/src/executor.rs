@@ -11,6 +11,7 @@ use clap::{Parser, Subcommand};
 use config::{Config, GKRConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
 use gkr_field_config::FieldType;
 use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
 use poly_commit::expander_pcs_init_testing_only;
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
@@ -24,16 +25,12 @@ use warp::{http::StatusCode, reply, Filter};
 #[command(author, version, about, long_about = None)]
 pub struct ExpanderExecArgs {
     /// Fiat-Shamir Hash: SHA256, or Poseidon, or MiMC5
-    #[arg(short, long)]
+    #[arg(short, long, default_value = "SHA256")]
     pub fiat_shamir_hash: String,
 
     /// Polynomial Commitment Scheme: Raw, or Orion
-    #[arg(short, long)]
+    #[arg(short, long, default_value = "Raw")]
     pub poly_commitment_scheme: String,
-
-    /// Circuit File Path
-    #[arg(short, long)]
-    pub circuit_file: String,
 
     /// Prove, Verify, or Serve subcommands
     #[clap(subcommand)]
@@ -43,6 +40,10 @@ pub struct ExpanderExecArgs {
 #[derive(Debug, Subcommand, Clone)]
 pub enum ExpanderExecSubCommand {
     Prove {
+        /// Circuit File Path
+        #[arg(short, long)]
+        circuit_file: String,
+
         /// Witness File Path
         #[arg(short, long)]
         witness_file: String,
@@ -52,6 +53,10 @@ pub enum ExpanderExecSubCommand {
         output_proof_file: String,
     },
     Verify {
+        /// Circuit File Path
+        #[arg(short, long)]
+        circuit_file: String,
+
         /// Witness File Path
         #[arg(short, long)]
         witness_file: String,
@@ -65,6 +70,10 @@ pub enum ExpanderExecSubCommand {
         mpi_size: u32,
     },
     Serve {
+        /// Circuit File Path
+        #[arg(short, long)]
+        circuit_file: String,
+
         /// IP host
         #[arg(short, long)]
         host_ip: String,
@@ -163,17 +172,17 @@ pub fn verify<Cfg: GKRConfig>(
     )
 }
 
-pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config: Config<Cfg>) {
+pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut config: Config<Cfg>) {
     let subcommands = command.subcommands.clone();
 
     match subcommands {
         ExpanderExecSubCommand::Prove {
+            circuit_file,
             witness_file,
             output_proof_file,
         } => {
-            let mut circuit =
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&command.circuit_file);
-            circuit.load_witness_file(&witness_file);
+            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_file);
+            circuit.prover_load_witness_file(&witness_file, &config.mpi_config);
             let (claimed_v, proof) = prove(&mut circuit, &config);
 
             if config.mpi_config.is_root() {
@@ -183,21 +192,19 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
             }
         }
         ExpanderExecSubCommand::Verify {
+            circuit_file,
             witness_file,
             input_proof_file,
             mpi_size,
         } => {
-            let mut circuit =
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&command.circuit_file);
-            circuit.load_witness_file(&witness_file);
-            // Repeating the same public input for mpi_size times
-            // TODO: Fix this, use real input
-            let n_public_input_per_mpi = circuit.public_input.len();
-            for _ in 1..mpi_size {
-                circuit
-                    .public_input
-                    .append(&mut circuit.public_input[..n_public_input_per_mpi].to_owned());
-            }
+            assert!(
+                config.mpi_config.world_size() == 1,
+                "Do not run verifier with mpiexec."
+            );
+            config.mpi_config.world_size = mpi_size as i32;
+
+            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_file);
+            circuit.verifier_load_witness_file(&witness_file, &config.mpi_config);
 
             let bytes = fs::read(&input_proof_file).expect("Unable to read proof from file.");
             let (proof, claimed_v) =
@@ -207,19 +214,28 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
 
             println!("success");
         }
-        ExpanderExecSubCommand::Serve { host_ip, port } => {
+        ExpanderExecSubCommand::Serve {
+            circuit_file,
+            host_ip,
+            port,
+        } => {
+            assert!(
+                config.mpi_config.world_size() == 1,
+                "Serve mode is not compatible with mpi for now."
+            );
             let host: [u8; 4] = host_ip
                 .split('.')
                 .map(|s| s.parse().unwrap())
                 .collect::<Vec<u8>>()
                 .try_into()
                 .unwrap();
-            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&command.circuit_file);
+
+            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_file);
             let mut prover = crate::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let verifier = crate::Verifier::new(&config);
 
-            // TODO: Read PCS  setup from files
+            // TODO: Read PCS setup from files
             let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
                 expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
@@ -255,7 +271,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
                         let pcs_proving_key = pcs_proving_key.lock().unwrap();
                         let mut pcs_scratch = pcs_scratch.lock().unwrap();
 
-                        circuit.load_witness_bytes(&witness_bytes, true);
+                        circuit.load_witness_bytes(&witness_bytes, &MPIConfig::new(), true, true);
                         let (claimed_v, proof) = prover.prove(
                             &mut circuit,
                             &pcs_params,
@@ -287,7 +303,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
                         let mut circuit = circuit_clone_for_verifier.lock().unwrap();
                         let verifier = verifier.lock().unwrap();
                         let pcs_verification_key = pcs_verification_key.lock().unwrap();
-                        circuit.load_witness_bytes(witness_bytes, true);
+                        circuit.load_witness_bytes(witness_bytes, &MPIConfig::new(), false, true);
                         let public_input = circuit.public_input.clone();
                         let (proof, claimed_v) = load_proof_and_claimed_v(proof_bytes).unwrap();
                         if verifier.verify(
