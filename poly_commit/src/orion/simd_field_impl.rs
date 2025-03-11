@@ -71,9 +71,6 @@ where
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;
 
-    // NOTE: transpose SIMD evaluations for linear combinations in evaulation/proximity tests
-    let packed_evals = poly.hypercube_basis();
-
     // NOTE: pre-compute the eq linear combine coeffs for linear combination
     let eq_col_coeffs = {
         let mut eq_vars = point[..num_vars_in_com_simd].to_vec();
@@ -90,7 +87,7 @@ where
     match F::NAME {
         GF2::NAME => lut_open_linear_combine(
             ComPackF::PACK_SIZE,
-            &packed_evals,
+            poly.hypercube_basis_ref(),
             &eq_col_coeffs,
             &mut eval_row,
             &mut proximity_rows,
@@ -98,7 +95,7 @@ where
         ),
         _ => simd_open_linear_combine(
             ComPackF::PACK_SIZE,
-            &packed_evals,
+            poly.hypercube_basis_ref(),
             &eq_col_coeffs,
             &mut eval_row,
             &mut proximity_rows,

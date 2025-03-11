@@ -47,8 +47,6 @@ where
         &mut scratch,
     );
     if final_eval != eval {
-        dbg!("bet it is in final eval failed");
-
         return false;
     }
 

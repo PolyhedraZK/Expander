@@ -50,7 +50,7 @@ where
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;
 
-    // NOTE: transpose evaluations for linear combinations in evaulation/proximity tests
+    // NOTE: pack evaluations for linear combinations in evaulation/proximity tests
     assert_eq!(poly.hypercube_size() % OpenPackF::PACK_SIZE, 0);
     let packed_evals: Vec<OpenPackF> = pack_from_base(poly.hypercube_basis_ref());
 
@@ -85,6 +85,7 @@ where
             transcript,
         ),
     }
+    drop(packed_evals);
 
     // NOTE: working on evaluation on top of evaluation response
     let mut scratch = vec![EvalF::ZERO; msg_size];

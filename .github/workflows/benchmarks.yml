@@ -7,6 +7,11 @@ env:
 
 on: [push]
 
+# Cancel all previous runs of the same workflow
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   benchmark:
     runs-on: 7950x3d
