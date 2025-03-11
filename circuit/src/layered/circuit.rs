@@ -5,8 +5,8 @@ use arith::{Field, SimdField};
 use ark_std::test_rng;
 use config::GKRConfig;
 use gkr_field_config::GKRFieldConfig;
+use mpi_config::{root_println, MPIConfig};
 use mpi::ffi::ompi_win_t;
-use mpi_config::MPIConfig;
 use transcript::Transcript;
 
 use crate::*;
@@ -165,49 +165,97 @@ impl<C: GKRFieldConfig> Circuit<C> {
         (circuit, window)
     }
 
-    pub fn load_non_simd_witness_file(&mut self, filename: &str) {
+    pub fn load_witness_allow_padding_testing_only(
+        &mut self,
+        filename: &str,
+        mpi_config: &MPIConfig,
+    ) {
         let file_bytes = fs::read(filename).unwrap();
-        self.load_witness_bytes(&file_bytes, true);
+        self.load_witness_bytes(&file_bytes, mpi_config, true, true);
     }
 
-    pub fn load_witness_file(&mut self, filename: &str) {
-        let file_bytes = fs::read(filename).unwrap();
-        self.load_witness_bytes(&file_bytes, false);
+    pub fn prover_load_witness_file(&mut self, filename: &str, mpi_config: &MPIConfig) {
+        let file_bytes = fs::read(filename)
+            .unwrap_or_else(|_| panic!("Failed to read witness file: {}", filename));
+        self.load_witness_bytes(&file_bytes, mpi_config, true, false);
     }
 
-    pub fn load_witness_bytes(&mut self, file_bytes: &[u8], allow_padding: bool) {
+    pub fn verifier_load_witness_file(&mut self, filename: &str, mpi_config: &MPIConfig) {
+        let file_bytes = fs::read(filename)
+            .unwrap_or_else(|_| panic!("Failed to read witness file: {}", filename));
+        self.load_witness_bytes(&file_bytes, mpi_config, false, false);
+    }
+
+    pub fn load_witness_bytes(
+        &mut self,
+        file_bytes: &[u8],
+        mpi_config: &MPIConfig,
+        is_prover: bool,
+        allow_padding_for_testing: bool, // TODO: Consider remove this
+    ) {
         let cursor = Cursor::new(file_bytes);
-        let witness = Witness::<C>::deserialize_from(cursor);
+        let mut witness = Witness::<C>::deserialize_from(cursor);
 
+        // sizes for a single piece of witness
         let private_input_size = 1 << self.log_input_size();
         let public_input_size = witness.num_public_inputs_per_witness;
         let total_size = private_input_size + public_input_size;
-
         assert_eq!(witness.num_private_inputs_per_witness, private_input_size);
+        root_println!(
+            mpi_config,
+            "Witness loaded: {} private inputs, {} public inputs, x{} witnesses",
+            private_input_size,
+            public_input_size,
+            witness.num_witnesses
+        );
+
+        // the number of witnesses should be equal to the number of MPI processes * simd width
+        let desired_number_of_witnesses = C::get_field_pack_size() * mpi_config.world_size();
+
         #[allow(clippy::comparison_chain)]
-        if witness.num_witnesses < C::get_field_pack_size() {
-            if !allow_padding {
+        if witness.num_witnesses < desired_number_of_witnesses {
+            if !allow_padding_for_testing {
                 panic!(
                     "Not enough witness, expected {}, got {}",
-                    C::get_field_pack_size(),
-                    witness.num_witnesses
+                    desired_number_of_witnesses, witness.num_witnesses
                 );
             } else {
                 println!(
                     "Warning: padding witnesses, expected {}, got {}",
-                    C::get_field_pack_size(),
-                    witness.num_witnesses
+                    desired_number_of_witnesses, witness.num_witnesses
                 );
+                let padding_vec = witness.values[0..total_size].to_vec();
+                for _ in witness.num_witnesses..desired_number_of_witnesses {
+                    witness.values.extend_from_slice(&padding_vec);
+                }
+                witness.num_witnesses = desired_number_of_witnesses;
             }
-        } else if witness.num_witnesses > C::get_field_pack_size() {
+        } else if witness.num_witnesses > desired_number_of_witnesses {
             println!(
                 "Warning: dropping additional witnesses, expected {}, got {}",
-                C::get_field_pack_size(),
-                witness.num_witnesses
+                desired_number_of_witnesses, witness.num_witnesses
             );
+            witness
+                .values
+                .truncate(desired_number_of_witnesses * total_size);
+            witness.num_witnesses = desired_number_of_witnesses;
         }
 
-        let input = &witness.values;
+        if is_prover {
+            self.prover_process_witness(witness, mpi_config);
+        } else {
+            self.verifier_process_witness(witness, mpi_config);
+        }
+    }
+
+    pub fn prover_process_witness(&mut self, witness: Witness<C>, mpi_config: &MPIConfig) {
+        let rank = mpi_config.world_rank();
+        let private_input_size = 1 << self.log_input_size();
+        let public_input_size = witness.num_public_inputs_per_witness;
+        let total_size =
+            witness.num_private_inputs_per_witness + witness.num_public_inputs_per_witness;
+        let input = &witness.values[rank * total_size * C::get_field_pack_size()
+            ..(rank + 1) * total_size * C::get_field_pack_size()];
         let private_input = &mut self.layers[0].input_vals;
         let public_input = &mut self.public_input;
 
@@ -216,24 +264,41 @@ impl<C: GKRFieldConfig> Circuit<C> {
 
         for i in 0..private_input_size {
             let mut private_wit_i = vec![];
-            for j in 0..C::get_field_pack_size().min(witness.num_witnesses) {
+            for j in 0..C::get_field_pack_size() {
                 private_wit_i.push(input[j * total_size + i]);
-            }
-            while private_wit_i.len() < C::get_field_pack_size() {
-                private_wit_i.push(private_wit_i[0]);
             }
             private_input.push(C::SimdCircuitField::pack(&private_wit_i));
         }
 
         for i in 0..public_input_size {
             let mut public_wit_i = vec![];
-            for j in 0..C::get_field_pack_size().min(witness.num_witnesses) {
+            for j in 0..C::get_field_pack_size() {
                 public_wit_i.push(input[j * total_size + private_input_size + i]);
             }
-            while public_wit_i.len() < C::get_field_pack_size() {
-                public_wit_i.push(public_wit_i[0]);
-            }
             public_input.push(C::SimdCircuitField::pack(&public_wit_i));
+        }
+    }
+
+    pub fn verifier_process_witness(&mut self, witness: Witness<C>, mpi_config: &MPIConfig) {
+        let private_input_size = 1 << self.log_input_size();
+        let public_input_size = witness.num_public_inputs_per_witness;
+        let total_size =
+            witness.num_private_inputs_per_witness + witness.num_public_inputs_per_witness;
+
+        let public_input = &mut self.public_input;
+        public_input.clear();
+
+        for i_rank in 0..mpi_config.world_size() {
+            let input = &witness.values[i_rank * total_size * C::get_field_pack_size()
+                ..(i_rank + 1) * total_size * C::get_field_pack_size()];
+
+            for i in 0..public_input_size {
+                let mut public_wit_i = vec![];
+                for j in 0..C::get_field_pack_size() {
+                    public_wit_i.push(input[j * total_size + private_input_size + i]);
+                }
+                public_input.push(C::SimdCircuitField::pack(&public_wit_i));
+            }
         }
     }
 }
