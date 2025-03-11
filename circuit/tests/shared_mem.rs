@@ -33,6 +33,7 @@ declare_gkr_config!(
     PolynomialCommitmentType::Raw
 );
 
+#[allow(unreachable_patterns)]
 fn load_circuit<Cfg: GKRConfig>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::FieldConfig>> {
     let circuit_path = match <Cfg as GKRConfig>::FieldConfig::FIELD_TYPE {
         FieldType::GF2 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
@@ -42,9 +43,7 @@ fn load_circuit<Cfg: GKRConfig>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::F
     };
 
     if mpi_config.is_root() {
-        Some(Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(
-            &circuit_path,
-        ))
+        Some(Circuit::<Cfg::FieldConfig>::load_circuit_independent::<Cfg>(&circuit_path))
     } else {
         None
     }

@@ -60,6 +60,7 @@ impl<C: GKRFieldConfig> SharedMemory for Circuit<C> {
             .iter()
             .map(|layer| layer.bytes_size())
             .sum::<usize>()
+            + 8
     }
 
     fn to_memory(&self, ptr: &mut *mut u8) {

@@ -11,6 +11,7 @@ use clap::{Parser, Subcommand};
 use config::{Config, GKRConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
 use gkr_field_config::FieldType;
 use gkr_field_config::GKRFieldConfig;
+use mpi_config::shared_mem::SharedMemory;
 use poly_commit::expander_pcs_init_testing_only;
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
@@ -170,8 +171,10 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
             witness_file,
             output_proof_file,
         } => {
-            let mut circuit =
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&command.circuit_file);
+            let (mut circuit, mut window) = Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(
+                &command.circuit_file,
+                &config.mpi_config,
+            );
             circuit.load_witness_file(&witness_file);
             let (claimed_v, proof) = prove(&mut circuit, &config);
 
@@ -180,6 +183,8 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
                     .expect("Unable to serialize proof.");
                 fs::write(output_proof_file, bytes).expect("Unable to write proof to file.");
             }
+            circuit.self_destroy();
+            config.mpi_config.free_shared_mem(&mut window);
         }
         ExpanderExecSubCommand::Verify {
             witness_file,
@@ -187,7 +192,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
             mpi_size,
         } => {
             let mut circuit =
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&command.circuit_file);
+                Circuit::<Cfg::FieldConfig>::load_circuit_independent::<Cfg>(&command.circuit_file);
             circuit.load_witness_file(&witness_file);
             // Repeating the same public input for mpi_size times
             // TODO: Fix this, use real input
@@ -207,13 +212,18 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
             println!("success");
         }
         ExpanderExecSubCommand::Serve { host_ip, port } => {
+            // This is not actively maintained, and may not work as expected.
             let host: [u8; 4] = host_ip
                 .split('.')
                 .map(|s| s.parse().unwrap())
                 .collect::<Vec<u8>>()
                 .try_into()
                 .unwrap();
-            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&command.circuit_file);
+            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(
+                &command.circuit_file,
+                &config.mpi_config,
+            )
+            .0;
             let mut prover = crate::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let verifier = crate::Verifier::new(&config);

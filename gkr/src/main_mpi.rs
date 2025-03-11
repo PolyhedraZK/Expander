@@ -1,7 +1,7 @@
 use circuit::Circuit;
 use clap::Parser;
 use config::{Config, GKRConfig, GKRScheme};
-use mpi_config::MPIConfig;
+use mpi_config::{shared_mem::SharedMemory, MPIConfig};
 
 use gkr_field_config::GKRFieldConfig;
 use poly_commit::expander_pcs_init_testing_only;
@@ -88,18 +88,26 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let pack_size = Cfg::FieldConfig::get_field_pack_size();
 
     // load circuit
-    let mut circuit = match args.scheme.as_str() {
+    let (mut circuit, mut window) = match args.scheme.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GF2_CIRCUIT),
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_M31_CIRCUIT),
-            FieldType::BN254 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_BN254_CIRCUIT)
-            }
+            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(
+                KECCAK_GF2_CIRCUIT,
+                &config.mpi_config,
+            ),
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(
+                KECCAK_M31_CIRCUIT,
+                &config.mpi_config,
+            ),
+            FieldType::BN254 => Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(
+                KECCAK_BN254_CIRCUIT,
+                &config.mpi_config,
+            ),
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(POSEIDON_M31_CIRCUIT)
-            }
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(
+                POSEIDON_M31_CIRCUIT,
+                &config.mpi_config,
+            ),
             _ => unreachable!(),
         },
         _ => unreachable!(),
@@ -168,6 +176,8 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
             / duration.as_secs_f64();
         println!("{}-bench: throughput: {} hashes/s", i, throughput.round());
     }
+    circuit.self_destroy();
+    config.mpi_config.free_shared_mem(&mut window);
 }
 
 fn print_info(args: &Args) {

@@ -145,7 +145,7 @@ impl<C: GKRFieldConfig> Clone for Circuit<C> {
 unsafe impl<C> Send for Circuit<C> where C: GKRFieldConfig {}
 
 impl<C: GKRFieldConfig> Circuit<C> {
-    pub fn load_circuit<Cfg: GKRConfig<FieldConfig = C>>(filename: &str) -> Self {
+    pub fn load_circuit_independent<Cfg: GKRConfig<FieldConfig = C>>(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
         rc.flatten::<Cfg>()
     }
@@ -155,7 +155,7 @@ impl<C: GKRFieldConfig> Circuit<C> {
         mpi_config: &MPIConfig,
     ) -> (Self, *mut ompi_win_t) {
         let circuit = if mpi_config.is_root() {
-            Some(Self::load_circuit::<Cfg>(filename))
+            Some(Self::load_circuit_independent::<Cfg>(filename))
         } else {
             None
         };
