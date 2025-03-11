@@ -328,12 +328,8 @@ pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
     .for_each(|(eq_chunk, packed_evals_chunk)| {
         luts.build(eq_chunk);
 
-        packed_evals_chunk
-            .chunks(table_num)
-            .enumerate()
-            .for_each(|(i, p_col)| {
-                eval_row[i] += luts.lookup_and_sum(p_col);
-            });
+        izip!(packed_evals_chunk.chunks(table_num), &mut *eval_row)
+            .for_each(|(p_col, eval)| *eval += luts.lookup_and_sum(p_col));
     });
 
     // NOTE: draw random linear combination out
@@ -348,12 +344,11 @@ pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
         .for_each(|(random_chunk, packed_evals_chunk)| {
             luts.build(random_chunk);
 
-            packed_evals_chunk
-                .chunks(table_num)
-                .enumerate()
-                .for_each(|(i, p_col)| {
-                    row_buffer[i] += luts.lookup_and_sum(p_col);
-                });
+            izip!(packed_evals_chunk.chunks(table_num), &mut *row_buffer).for_each(
+                |(p_col, prox_resp)| {
+                    *prox_resp += luts.lookup_and_sum(p_col);
+                },
+            );
         });
     });
     drop(luts);
@@ -475,12 +470,11 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
         let mut eq_col_coeffs_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
         let eq_col_simd_limbs = transpose_and_pack(&mut eq_col_coeffs_limbs, com_pack_size);
 
-        packed_evals_chunk
-            .chunks(simd_inner_prods)
-            .enumerate()
-            .for_each(|(i, p_col)| {
-                eval_row[i] += simd_ext_base_inner_prod::<_, EvalF, _>(&eq_col_simd_limbs, p_col);
-            });
+        izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *eval_row).for_each(
+            |(p_col, eval)| {
+                *eval += simd_ext_base_inner_prod::<_, EvalF, _>(&eq_col_simd_limbs, p_col)
+            },
+        );
     });
 
     // NOTE: draw random linear combination out
@@ -497,13 +491,13 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
                 rand_chunk.iter().flat_map(|e| e.to_limbs()).collect();
             let rand_simd_limbs = transpose_and_pack(&mut rand_coeffs_limbs, com_pack_size);
 
-            packed_evals_chunk
-                .chunks(simd_inner_prods)
-                .enumerate()
-                .for_each(|(i, p_col)| {
-                    row_buffer[i] +=
-                        simd_ext_base_inner_prod::<_, EvalF, _>(&rand_simd_limbs, p_col);
-                });
+            izip!(
+                packed_evals_chunk.chunks(simd_inner_prods),
+                &mut *row_buffer
+            )
+            .for_each(|(p_col, prox)| {
+                *prox += simd_ext_base_inner_prod::<_, EvalF, _>(&rand_simd_limbs, p_col)
+            });
         });
     });
 }
