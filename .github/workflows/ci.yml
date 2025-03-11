@@ -12,6 +12,11 @@ env:
   RUST_BACKTRACE: 1
   ACTIONS_RUNNER_DEBUG: true
 
+# Cancel all previous runs of the same workflow
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint
@@ -55,7 +60,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: "mpi-v5.0.7.0"
+          prefix-key: "mpi-v5.0.7"
 
       - uses: actions/setup-go@v5
         if: matrix.os != '7950x3d'
