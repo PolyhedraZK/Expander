@@ -90,6 +90,8 @@ where
 unsafe impl<F: Field, ComPackF: SimdField<Scalar = F>> Send for OrionScratchPad<F, ComPackF> {}
 
 impl<F: Field, ComPackF: SimdField<Scalar = F>> ExpSerde for OrionScratchPad<F, ComPackF> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
         self.interleaved_alphabet_commitment.serialize_into(writer)
     }

@@ -7,7 +7,7 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use arith::field_common;
 use arith::Field;
-use serdes::{ArithSerde, SerdeResult};
+use serdes::{ExpSerde, SerdeResult};
 
 pub const MOD: u32 = 2;
 
@@ -18,7 +18,7 @@ pub struct GF2 {
 
 field_common!(GF2);
 
-impl ArithSerde for GF2 {
+impl ExpSerde for GF2 {
     const SERIALIZED_SIZE: usize = 1;
 
     #[inline(always)]

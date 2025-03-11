@@ -5,7 +5,7 @@ use std::{
 };
 
 use arith::Field;
-use serdes::{ArithSerde, SerdeResult};
+use serdes::{ExpSerde, SerdeResult};
 
 use crate::GF2;
 
@@ -14,7 +14,7 @@ pub struct AVXGF2x128 {
     pub v: __m128i,
 }
 
-impl ArithSerde for AVXGF2x128 {
+impl ExpSerde for AVXGF2x128 {
     const SERIALIZED_SIZE: usize = 16;
 
     #[inline(always)]

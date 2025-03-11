@@ -15,7 +15,7 @@ use crate::{gkr_prove, gkr_square_prove};
 #[cfg(feature = "grinding")]
 pub(crate) fn grind<Cfg: GKRConfig>(transcript: &mut Cfg::Transcript, config: &Config<Cfg>) {
     use arith::Field;
-    use serdes::ArithSerde;
+    use serdes::ExpSerde;
 
     let timer = Timer::new("grinding", config.mpi_config.is_root());
 

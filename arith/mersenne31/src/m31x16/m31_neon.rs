@@ -10,7 +10,7 @@ use std::{
 use arith::{field_common, Field, SimdField};
 use ark_std::Zero;
 use rand::{Rng, RngCore};
-use serdes::{ArithSerde, SerdeResult};
+use serdes::{ExpSerde, SerdeResult};
 
 use crate::{m31::M31_MOD, M31};
 
@@ -53,7 +53,7 @@ impl NeonM31 {
     }
 }
 
-impl ArithSerde for NeonM31 {
+impl ExpSerde for NeonM31 {
     const SERIALIZED_SIZE: usize = (128 / 8) * 4;
 
     #[inline(always)]

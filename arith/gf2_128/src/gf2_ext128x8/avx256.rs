@@ -8,7 +8,7 @@ use std::{
 
 use arith::{field_common, ExtensionField, Field, SimdField};
 use gf2::{GF2x8, GF2};
-use serdes::{ArithSerde, SerdeError, SerdeResult};
+use serdes::{ExpSerde, SerdeError, SerdeResult};
 
 use crate::GF2_128;
 
@@ -35,7 +35,7 @@ impl AVX256GF2_128x8 {
     }
 }
 
-impl ArithSerde for AVX256GF2_128x8 {
+impl ExpSerde for AVX256GF2_128x8 {
     const SERIALIZED_SIZE: usize = 512 * 2 / 8;
 
     #[inline(always)]

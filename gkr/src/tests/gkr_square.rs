@@ -3,7 +3,7 @@ use std::panic::AssertUnwindSafe;
 use std::time::Instant;
 use std::{fs, panic};
 
-use arith::{Field, ArithSerde, SimdField};
+use arith::{Field, ExpSerde, SimdField};
 use circuit::{Circuit, CircuitLayer, CoefType, GateConst, GateUni};
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;

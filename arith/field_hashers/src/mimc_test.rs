@@ -1,5 +1,5 @@
 use arith::Fr;
-use serdes::ArithSerde;
+use serdes::ExpSerde;
 
 use crate::{FiatShamirFieldHasher, MiMC5FiatShamirHasher};
 

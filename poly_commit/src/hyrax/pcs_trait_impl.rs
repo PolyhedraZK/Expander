@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use arith::ExtensionField;
 use halo2curves::{ff::PrimeField, CurveAffine};
 use polynomials::MultiLinearPoly;
-use serdes::ArithSerde;
+use serdes::ExpSerde;
 use transcript::Transcript;
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
 
 pub struct HyraxPCS<C, T>
 where
-    C: CurveAffine + ArithSerde,
+    C: CurveAffine + ExpSerde,
     T: Transcript<C::Scalar>,
     C::Scalar: ExtensionField,
     C::ScalarExt: ExtensionField,
@@ -24,7 +24,7 @@ where
 
 impl<C, T> PolynomialCommitmentScheme<C::Scalar, T> for HyraxPCS<C, T>
 where
-    C: CurveAffine + ArithSerde,
+    C: CurveAffine + ExpSerde,
     T: Transcript<C::Scalar>,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,

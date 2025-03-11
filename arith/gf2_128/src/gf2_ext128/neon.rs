@@ -4,7 +4,7 @@ use std::{arch::aarch64::*, mem::transmute};
 
 use arith::{field_common, ExtensionField, Field};
 use gf2::GF2;
-use serdes::{ArithSerde, SerdeResult};
+use serdes::{ExpSerde, SerdeResult};
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128 {
@@ -32,7 +32,7 @@ fn sub_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
     add_internal(a, b)
 }
 
-impl ArithSerde for NeonGF2_128 {
+impl ExpSerde for NeonGF2_128 {
     const SERIALIZED_SIZE: usize = 16;
 
     #[inline(always)]

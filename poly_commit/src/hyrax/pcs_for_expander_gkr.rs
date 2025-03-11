@@ -5,7 +5,7 @@ use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
 };
-use serdes::ArithSerde;
+use serdes::ExpSerde;
 use transcript::Transcript;
 
 use crate::{
@@ -19,7 +19,7 @@ use crate::{
 impl<G, C, T> PCSForExpanderGKR<G, T> for HyraxPCS<C, T>
 where
     G: GKRFieldConfig<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
-    C: CurveAffine + ArithSerde,
+    C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
     T: Transcript<G::ChallengeField>,

@@ -1,6 +1,6 @@
 use arith::Field;
 use gkr_field_config::GKRFieldConfig;
-use serdes::{ArithSerde, SerdeError};
+use serdes::{ExpSerde, SerdeError};
 use std::{io::Read, mem::transmute, vec};
 use thiserror::Error;
 
@@ -21,7 +21,7 @@ pub trait FromEccSerde {
 
 impl<T: FromEccSerde> FromEccSerde for Vec<T> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let vec_len = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
+        let vec_len = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
         let mut ret = vec![];
         for _ in 0..vec_len {
             ret.push(T::deserialize_from(&mut reader));
@@ -41,7 +41,7 @@ impl<T1: FromEccSerde, T2: FromEccSerde> FromEccSerde for (T1, T2) {
 
 impl FromEccSerde for usize {
     fn deserialize_from<R: Read>(reader: R) -> Self {
-        <usize as ArithSerde>::deserialize_from(reader).unwrap()
+        <usize as ExpSerde>::deserialize_from(reader).unwrap()
     }
 }
 
@@ -49,10 +49,10 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for Gate<C, INPUT_N
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let mut i_ids = [0usize; INPUT_NUM];
         for id in &mut i_ids {
-            *id = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
+            *id = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
         }
 
-        let o_id = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
+        let o_id = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
 
         let coef_type_u8 = u8::deserialize_from(&mut reader).unwrap();
         let (coef_type, coef) = match coef_type_u8 {
@@ -68,7 +68,7 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for Gate<C, INPUT_N
 
                 (
                     CoefType::PublicInput(
-                        <usize as ArithSerde>::deserialize_from(&mut reader).unwrap(),
+                        <usize as ExpSerde>::deserialize_from(&mut reader).unwrap(),
                     ),
                     C::CircuitField::ZERO,
                 )
@@ -92,12 +92,12 @@ pub struct CustomGateWrapper<C: GKRFieldConfig, const INPUT_NUM: usize> {
 
 impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for CustomGateWrapper<C, INPUT_NUM> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let gate_type = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
+        let gate_type = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
         let i_ids: [usize; INPUT_NUM] = <Vec<usize> as FromEccSerde>::deserialize_from(&mut reader)
             .try_into()
             .unwrap();
 
-        let o_id = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
+        let o_id = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
 
         let coef_type_u8 = u8::deserialize_from(&mut reader).unwrap();
         let (coef_type, coef) = match coef_type_u8 {
@@ -113,7 +113,7 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for CustomGateWrapp
 
                 (
                     CoefType::PublicInput(
-                        <usize as ArithSerde>::deserialize_from(&mut reader).unwrap(),
+                        <usize as ExpSerde>::deserialize_from(&mut reader).unwrap(),
                     ),
                     C::CircuitField::ZERO,
                 )
@@ -136,16 +136,16 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for CustomGateWrapp
 impl FromEccSerde for Allocation {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         Self {
-            i_offset: <usize as ArithSerde>::deserialize_from(&mut reader).unwrap(),
-            o_offset: <usize as ArithSerde>::deserialize_from(&mut reader).unwrap(),
+            i_offset: <usize as ExpSerde>::deserialize_from(&mut reader).unwrap(),
+            o_offset: <usize as ExpSerde>::deserialize_from(&mut reader).unwrap(),
         }
     }
 }
 
 impl<C: GKRFieldConfig> FromEccSerde for Segment<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let i_len = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
-        let o_len = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
+        let i_len = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
+        let o_len = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
         assert!(i_len.is_power_of_two());
         assert!(o_len.is_power_of_two());
 
@@ -155,7 +155,7 @@ impl<C: GKRFieldConfig> FromEccSerde for Segment<C> {
         let gate_consts = Vec::<GateConst<C>>::deserialize_from(&mut reader);
 
         let mut gate_uni = vec![];
-        let len = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
+        let len = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
         for _ in 0..len {
             let uni = CustomGateWrapper::<C, 1>::deserialize_from(&mut reader).custom_gate;
             gate_uni.push(uni);
@@ -177,7 +177,7 @@ const VERSION_NUM: usize = 3914834606642317635; // b'CIRCUIT6'
 
 impl<C: GKRFieldConfig> FromEccSerde for RecursiveCircuit<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let version_num = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
+        let version_num = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
         assert_eq!(version_num, VERSION_NUM);
         let expected_mod = <C::CircuitField as Field>::MODULUS;
         let mut read_mod = [0u8; 32];
@@ -186,10 +186,9 @@ impl<C: GKRFieldConfig> FromEccSerde for RecursiveCircuit<C> {
             assert_eq!(transmute::<[u64; 4], [u8; 32]>(expected_mod), read_mod);
         }
         RecursiveCircuit {
-            num_public_inputs: <usize as ArithSerde>::deserialize_from(&mut reader).unwrap(),
-            num_outputs: <usize as ArithSerde>::deserialize_from(&mut reader).unwrap(),
-            expected_num_output_zeros: <usize as ArithSerde>::deserialize_from(&mut reader)
-                .unwrap(),
+            num_public_inputs: <usize as ExpSerde>::deserialize_from(&mut reader).unwrap(),
+            num_outputs: <usize as ExpSerde>::deserialize_from(&mut reader).unwrap(),
+            expected_num_output_zeros: <usize as ExpSerde>::deserialize_from(&mut reader).unwrap(),
 
             segments: Vec::<Segment<C>>::deserialize_from(&mut reader),
             layers: <Vec<usize> as FromEccSerde>::deserialize_from(&mut reader),
@@ -199,11 +198,11 @@ impl<C: GKRFieldConfig> FromEccSerde for RecursiveCircuit<C> {
 
 impl<C: GKRFieldConfig> FromEccSerde for Witness<C> {
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let num_witnesses = <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
+        let num_witnesses = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
         let num_private_inputs_per_witness =
-            <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
+            <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
         let num_public_inputs_per_witness =
-            <usize as ArithSerde>::deserialize_from(&mut reader).unwrap();
+            <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
         let _modulus = <[u64; 4]>::deserialize_from(&mut reader).unwrap();
 
         let mut values = vec![];

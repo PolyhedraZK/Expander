@@ -7,7 +7,7 @@ use std::{
 
 use arith::{field_common, ExtensionField, Field};
 use gf2::GF2;
-use serdes::{ArithSerde, SerdeResult};
+use serdes::{ExpSerde, SerdeResult};
 
 #[derive(Debug, Clone, Copy)]
 pub struct AVXGF2_128 {
@@ -16,7 +16,7 @@ pub struct AVXGF2_128 {
 
 field_common!(AVXGF2_128);
 
-impl ArithSerde for AVXGF2_128 {
+impl ExpSerde for AVXGF2_128 {
     const SERIALIZED_SIZE: usize = 16;
 
     #[inline(always)]

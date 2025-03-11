@@ -1,5 +1,5 @@
 use rand::RngCore;
-use serdes::ArithSerde;
+use serdes::ExpSerde;
 
 use std::{
     fmt::Debug,
@@ -32,7 +32,7 @@ pub trait Field:
     + for<'a> AddAssign<&'a Self>
     + for<'a> SubAssign<&'a Self>
     + for<'a> MulAssign<&'a Self>
-    + ArithSerde
+    + ExpSerde
 {
     /// name
     const NAME: &'static str;

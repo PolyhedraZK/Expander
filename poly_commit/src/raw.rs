@@ -8,7 +8,7 @@ use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::{MultiLinearPoly, MultiLinearPolyExpander, MultilinearExtension};
 use rand::RngCore;
-use serdes::{ArithSerde, ExpSerde, SerdeResult};
+use serdes::{ExpSerde, SerdeResult};
 use transcript::Transcript;
 
 #[derive(Clone, Debug, Default)]
@@ -17,6 +17,8 @@ pub struct RawCommitment<F: Field> {
 }
 
 impl<F: Field> ExpSerde for RawCommitment<F> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         let len = self.evals.len();
         writer.write_all(len.to_le_bytes().as_ref())?;

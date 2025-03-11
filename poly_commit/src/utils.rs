@@ -9,6 +9,8 @@ use crate::{PCSForExpanderGKR, StructuredReferenceString};
 pub struct PCSEmptyType {}
 
 impl ExpSerde for PCSEmptyType {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
     fn serialize_into<W: std::io::Write>(&self, _writer: W) -> serdes::SerdeResult<()> {
         Ok(())
     }

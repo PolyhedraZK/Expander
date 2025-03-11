@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 
-use serdes::{ArithSerde, SerdeResult};
+use serdes::{ExpSerde, SerdeResult};
 
 /// Proof. In the serialized mode.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -15,7 +15,7 @@ impl Proof {
     }
 }
 
-impl ArithSerde for Proof {
+impl ExpSerde for Proof {
     const SERIALIZED_SIZE: usize = panic!("not implemented for Proof");
 
     #[inline(always)]

@@ -5,10 +5,10 @@ use halo2curves::{
     group::GroupEncoding,
 };
 
-use crate::{SerdeError, SerdeResult};
+use crate::{exp_serde_for_number, SerdeError, SerdeResult};
 
 /// Serde for Arithmetic types such as field and group operations
-pub trait ArithSerde: Sized {
+pub trait ExpSerde: Sized {
     const SERIALIZED_SIZE: usize;
 
     /// serialize self into bytes
@@ -18,7 +18,7 @@ pub trait ArithSerde: Sized {
     fn deserialize_from<R: Read>(reader: R) -> SerdeResult<Self>;
 }
 
-impl ArithSerde for () {
+impl ExpSerde for () {
     const SERIALIZED_SIZE: usize = 0;
 
     fn serialize_into<W: std::io::Write>(&self, _writer: W) -> SerdeResult<()> {
@@ -30,34 +30,12 @@ impl ArithSerde for () {
     }
 }
 
-macro_rules! arith_serde_for_number {
-    ($int_type: ident, $size_in_bytes: expr) => {
-        impl ArithSerde for $int_type {
-            /// size of the serialized bytes
-            const SERIALIZED_SIZE: usize = $size_in_bytes;
+exp_serde_for_number!(u64, 8);
+exp_serde_for_number!(usize, 8);
+exp_serde_for_number!(u8, 1);
+exp_serde_for_number!(f64, 8);
 
-            /// serialize number into bytes
-            fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-                writer.write_all(&self.to_le_bytes())?;
-                Ok(())
-            }
-
-            /// deserialize bytes into number
-            fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-                let mut buffer = [0u8; Self::SERIALIZED_SIZE];
-                reader.read_exact(&mut buffer)?;
-                Ok($int_type::from_le_bytes(buffer))
-            }
-        }
-    };
-}
-
-arith_serde_for_number!(u64, 8);
-arith_serde_for_number!(usize, 8);
-arith_serde_for_number!(u8, 1);
-arith_serde_for_number!(f64, 8);
-
-impl<V: ArithSerde> ArithSerde for Vec<V> {
+impl<V: ExpSerde> ExpSerde for Vec<V> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -79,7 +57,7 @@ impl<V: ArithSerde> ArithSerde for Vec<V> {
 }
 
 // Consider use const generics after it gets stable
-impl ArithSerde for [u64; 4] {
+impl ExpSerde for [u64; 4] {
     const SERIALIZED_SIZE: usize = 32;
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -101,7 +79,7 @@ impl ArithSerde for [u64; 4] {
     }
 }
 
-impl ArithSerde for Fr {
+impl ExpSerde for Fr {
     const SERIALIZED_SIZE: usize = 32;
 
     #[inline(always)]
@@ -121,7 +99,7 @@ impl ArithSerde for Fr {
     }
 }
 
-impl ArithSerde for G1Affine {
+impl ExpSerde for G1Affine {
     const SERIALIZED_SIZE: usize = 32;
 
     fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {
@@ -144,7 +122,7 @@ impl ArithSerde for G1Affine {
     }
 }
 
-impl ArithSerde for G2Affine {
+impl ExpSerde for G2Affine {
     const SERIALIZED_SIZE: usize = 64;
 
     fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {
@@ -167,7 +145,7 @@ impl ArithSerde for G2Affine {
     }
 }
 
-impl<T1: ArithSerde, T2: ArithSerde> ArithSerde for (T1, T2) {
+impl<T1: ExpSerde, T2: ExpSerde> ExpSerde for (T1, T2) {
     const SERIALIZED_SIZE: usize = T1::SERIALIZED_SIZE + T2::SERIALIZED_SIZE;
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
