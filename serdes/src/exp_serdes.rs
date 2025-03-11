@@ -80,3 +80,17 @@ impl<K: ExpSerde + Eq + Hash, V: ExpSerde> ExpSerde for HashMap<K, V> {
         Ok(map)
     }
 }
+
+impl<T1: ExpSerde, T2: ExpSerde> ExpSerde for (T1, T2) {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        self.0.serialize_into(&mut writer)?;
+        self.1.serialize_into(&mut writer)?;
+        Ok(())
+    }
+
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let t1 = T1::deserialize_from(&mut reader)?;
+        let t2 = T2::deserialize_from(&mut reader)?;
+        Ok((t1, t2))
+    }
+}
