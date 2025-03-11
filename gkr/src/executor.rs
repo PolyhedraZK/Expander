@@ -183,7 +183,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, config:
                     .expect("Unable to serialize proof.");
                 fs::write(output_proof_file, bytes).expect("Unable to write proof to file.");
             }
-            circuit.self_destroy();
+            circuit.discard_control_of_shared_mem();
             config.mpi_config.free_shared_mem(&mut window);
         }
         ExpanderExecSubCommand::Verify {

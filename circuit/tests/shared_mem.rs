@@ -107,6 +107,6 @@ fn test_shared_mem_helper<T: SharedMemory + FieldSerde + std::fmt::Debug>(
                 );
             });
     }
-    data.self_destroy();
+    data.discard_control_of_shared_mem();
     mpi_config.free_shared_mem(&mut window);
 }

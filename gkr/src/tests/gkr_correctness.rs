@@ -292,6 +292,6 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         println!("============== end ===============");
     }
 
-    circuit.self_destroy();
+    circuit.discard_control_of_shared_mem();
     config.mpi_config.free_shared_mem(&mut window);
 }

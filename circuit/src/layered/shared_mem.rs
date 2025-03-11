@@ -45,11 +45,11 @@ impl<C: GKRFieldConfig> SharedMemory for CircuitLayer<C> {
         }
     }
 
-    fn self_destroy(self) {
-        self.mul.self_destroy();
-        self.add.self_destroy();
-        self.const_.self_destroy();
-        self.uni.self_destroy();
+    fn discard_control_of_shared_mem(self) {
+        self.mul.discard_control_of_shared_mem();
+        self.add.discard_control_of_shared_mem();
+        self.const_.discard_control_of_shared_mem();
+        self.uni.discard_control_of_shared_mem();
     }
 }
 
@@ -88,9 +88,9 @@ impl<C: GKRFieldConfig> SharedMemory for Circuit<C> {
         }
     }
 
-    fn self_destroy(self) {
+    fn discard_control_of_shared_mem(self) {
         self.layers
             .into_iter()
-            .for_each(|layer| layer.self_destroy());
+            .for_each(|layer| layer.discard_control_of_shared_mem());
     }
 }

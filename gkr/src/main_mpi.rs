@@ -176,7 +176,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
             / duration.as_secs_f64();
         println!("{}-bench: throughput: {} hashes/s", i, throughput.round());
     }
-    circuit.self_destroy();
+    circuit.discard_control_of_shared_mem();
     config.mpi_config.free_shared_mem(&mut window);
 }
 

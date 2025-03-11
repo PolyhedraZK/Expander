@@ -7,7 +7,7 @@ pub trait SharedMemory {
 
     fn from_memory(ptr: &mut *mut u8) -> Self;
 
-    fn self_destroy(self);
+    fn discard_control_of_shared_mem(self);
 }
 
 impl SharedMemory for usize {
@@ -30,7 +30,7 @@ impl SharedMemory for usize {
         }
     }
 
-    fn self_destroy(self) {}
+    fn discard_control_of_shared_mem(self) {}
 }
 
 impl SharedMemory for u8 {
@@ -53,7 +53,7 @@ impl SharedMemory for u8 {
         }
     }
 
-    fn self_destroy(self) {}
+    fn discard_control_of_shared_mem(self) {}
 }
 
 impl<T: Copy> SharedMemory for Vec<T> {
@@ -80,7 +80,7 @@ impl<T: Copy> SharedMemory for Vec<T> {
         }
     }
 
-    fn self_destroy(self) {
+    fn discard_control_of_shared_mem(self) {
         self.leak();
     }
 }
@@ -101,8 +101,8 @@ impl<T1: SharedMemory, T2: SharedMemory> SharedMemory for (T1, T2) {
         (t1, t2)
     }
 
-    fn self_destroy(self) {
-        self.0.self_destroy();
-        self.1.self_destroy();
+    fn discard_control_of_shared_mem(self) {
+        self.0.discard_control_of_shared_mem();
+        self.1.discard_control_of_shared_mem();
     }
 }
