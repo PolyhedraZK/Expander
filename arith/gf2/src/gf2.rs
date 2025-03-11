@@ -119,6 +119,19 @@ impl Field for GF2 {
     fn mul_by_6(&self) -> Self {
         Self::ZERO
     }
+
+    #[inline(always)]
+    fn to_u256(&self) -> U256 {
+        U256([self.v as u128, 0])
+    }
+
+    #[inline(always)]
+    fn from_u256(value: U256) -> Self {
+        // unsafe -- we assume the value is in the field
+        GF2 {
+            v: (value.0[0] % 2) as u8,
+        }
+    }
 }
 
 impl Neg for GF2 {

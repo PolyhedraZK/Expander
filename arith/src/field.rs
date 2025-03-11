@@ -78,6 +78,26 @@ pub trait Field:
     /// create a random boolean element from rng
     fn random_bool(rng: impl RngCore) -> Self;
 
+    /// expose the element as u32.
+    fn as_u32_unchecked(&self) -> u32;
+
+    /// sample from a 32 bytes
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;
+
+    /// convert to u256
+    // todo: a cleaner way to do this is to trait bound Into<U256>
+    // but this requires modifications on ff or ethnum crate
+    fn to_u256(&self) -> U256 {
+        unimplemented!()
+    }
+
+    /// convert from u256
+    // todo: a cleaner way to do this is to trait bound From<U256>
+    // but this requires modifications on ff or ethnum crate
+    fn from_u256(_: U256) -> Self {
+        unimplemented!()
+    }
+
     // ====================================
     // arithmetic
     // ====================================
@@ -97,12 +117,6 @@ pub trait Field:
 
     /// find the inverse of the element; return None if not exist
     fn inv(&self) -> Option<Self>;
-
-    /// expose the element as u32.
-    fn as_u32_unchecked(&self) -> u32;
-
-    /// sample from a 32 bytes
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;
 
     /// multiply by 2
     #[inline(always)]

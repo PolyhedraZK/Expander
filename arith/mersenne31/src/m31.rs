@@ -94,14 +94,30 @@ impl Field for M31 {
         self.v == 0 || self.v == M31_MOD
     }
 
+    #[inline(always)]
     fn random_unsafe(mut rng: impl RngCore) -> Self {
         rng.next_u32().into()
     }
 
+    #[inline(always)]
     fn random_bool(mut rng: impl RngCore) -> Self {
         (rng.next_u32() & 1).into()
     }
 
+    #[inline(always)]
+    fn to_u256(&self) -> U256 {
+        U256([self.v as u128, 0])
+    }
+
+    #[inline(always)]
+    fn from_u256(value: U256) -> Self {
+        // unsafe -- we don't check if the value is in the field
+        M31 {
+            v: value.0[0] as u32,
+        }
+    }
+
+    #[inline]
     fn exp(&self, exponent: u128) -> Self {
         let mut e = exponent;
         let mut res = Self::one();
@@ -117,6 +133,7 @@ impl Field for M31 {
         res
     }
 
+    #[inline(always)]
     fn inv(&self) -> Option<Self> {
         self.try_inverse()
     }

@@ -68,6 +68,32 @@ impl Field for Fr {
         Self::from((rng.next_u32() & 1) as u64)
     }
 
+    /// expose the element as u32.
+    fn as_u32_unchecked(&self) -> u32 {
+        todo!()
+    }
+
+    #[inline(always)]
+    // TODO: better implementation
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+        <Fr as FromUniformBytes<64>>::from_uniform_bytes(
+            &[bytes.as_slice(), [0u8; 32].as_slice()]
+                .concat()
+                .try_into()
+                .unwrap(),
+        )
+    }
+
+    #[inline(always)]
+    fn from_u256(x: ethnum::U256) -> Self {
+        Fr::from_bytes(&(x % MODULUS).to_le_bytes()).unwrap()
+    }
+
+    #[inline(always)]
+    fn to_u256(&self) -> ethnum::U256 {
+        ethnum::U256::from_le_bytes(self.to_bytes())
+    }
+
     // ====================================
     // arithmetics
     // ====================================
@@ -84,6 +110,7 @@ impl Field for Fr {
     }
 
     /// Exp
+    #[inline(always)]
     fn exp(&self, _exponent: u128) -> Self {
         unimplemented!()
     }
@@ -92,21 +119,6 @@ impl Field for Fr {
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
         self.invert().into()
-    }
-
-    /// expose the element as u32.
-    fn as_u32_unchecked(&self) -> u32 {
-        todo!()
-    }
-
-    // TODO: better implementation
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        <Fr as FromUniformBytes<64>>::from_uniform_bytes(
-            &[bytes.as_slice(), [0u8; 32].as_slice()]
-                .concat()
-                .try_into()
-                .unwrap(),
-        )
     }
 }
 
@@ -145,21 +157,25 @@ impl ExtensionField for Fr {
     type BaseField = Self;
 
     /// Multiply the extension field with the base field
+    #[inline(always)]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
         self * base
     }
 
     /// Add the extension field with the base field
+    #[inline(always)]
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
         self + base
     }
 
     /// Multiply the extension field by x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
+    #[inline(always)]
     fn mul_by_x(&self) -> Self {
         unimplemented!("mul_by_x for Fr doesn't make sense")
     }
 
     /// Construct a new instance of extension field from coefficients
+    #[inline(always)]
     fn from_limbs(limbs: &[Self::BaseField]) -> Self {
         if limbs.len() < Self::DEGREE {
             Self::zero()
@@ -169,6 +185,7 @@ impl ExtensionField for Fr {
     }
 
     /// Extract polynomial field coefficients from the extension field instance
+    #[inline(always)]
     fn to_limbs(&self) -> Vec<Self::BaseField> {
         vec![*self]
     }
