@@ -10,8 +10,9 @@ use config_macros::declare_gkr_config;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use halo2curves::bn256::Bn256;
 use mersenne31::M31x16;
-use poly_commit::{OrionPCSForGKR, RawExpanderGKR};
+use poly_commit::{HyperKZGPCS, OrionPCSForGKR, RawExpanderGKR};
 use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
 
 fn print_type_name<Cfg: GKRConfig>() {
@@ -45,6 +46,12 @@ fn main() {
         PolynomialCommitmentType::Raw
     );
     declare_gkr_config!(
+        BN254MIMCKZGConfig,
+        FieldType::BN254,
+        FiatShamirHashType::MIMC5,
+        PolynomialCommitmentType::KZG
+    );
+    declare_gkr_config!(
         GF2Keccak256Config,
         FieldType::GF2,
         FiatShamirHashType::Keccak256,
@@ -61,6 +68,7 @@ fn main() {
     print_type_name::<M31PoseidonRawConfig>();
     print_type_name::<M31PoseidonOrionConfig>();
     print_type_name::<BN254MIMCConfig>();
+    print_type_name::<BN254MIMCKZGConfig>();
     print_type_name::<GF2Keccak256Config>();
     print_type_name::<GF2Keccak256OrionConfig>();
 }
