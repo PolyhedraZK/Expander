@@ -101,17 +101,17 @@ RUSTFLAGS="-C target-cpu=native" cargo test --release -- --nocapture
 Usage:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- prove <input:circuit_file> <input:witness_file> <output:proof>
-RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- verify <input:circuit_file> <input:witness_file> <input:proof>
-RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- serve <input:circuit_file> <input:ip> <input:port>
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- prove -c <circuit_file> -w <witness_file> -o <output_proof_file>
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- verify -c <circuit_file> -w <witness_file> -i <input_proof_file>
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- serve -c <circuit_file> -h <host_ip> -p <port>
 ```
 
 Example:
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- prove ./data/circuit_m31.txt ./data/witness_m31.txt ./data/out_m31.bin
-RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- verify ./data/circuit_m31.txt ./data/witness_m31.txt ./data/out_m31.bin
-RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- serve ./data/circuit_m31.txt 127.0.0.1 3030
+RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- prove -c ./data/circuit_m31.txt -w ./data/witness_m31.txt -o ./data/out_m31.bin
+RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- verify -c ./data/circuit_m31.txt -w ./data/witness_m31.txt -i ./data/out_m31.bin
+RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- serve -c ./data/circuit_m31.txt -h 127.0.0.1 -p 3030
 ```
 
 To test the service started by `expander-exec serve`, you can use the following command:
@@ -123,7 +123,7 @@ python ./scripts/test_http.py  # need "requests" package
 To get more fine-grained information about the running time, you can enable the `gkr/profile` feature, i.e.
 
 ```sh
-RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release --features gkr/profile -- prove ./data/circuit_m31.txt ./data/witness_m31.txt ./data/out_m31.bin
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release --features gkr/profile -- prove -c ./data/circuit_m31.txt -w ./data/witness_m31.txt -o ./data/out_m31.bin
 ```
 
 Note that enabling the `profile` feature will slightly reduce the overall performance so it is recommended not to enable it when benchmarking.
