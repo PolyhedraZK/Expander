@@ -1,3 +1,4 @@
+use ethnum::U256;
 use rand::RngCore;
 use serdes::ExpSerde;
 
@@ -53,7 +54,7 @@ pub trait Field:
     const INV_2: Self;
 
     /// MODULUS
-    const MODULUS: [u64; 4];
+    const MODULUS: U256;
 
     // ====================================
     // constants

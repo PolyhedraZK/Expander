@@ -6,6 +6,7 @@ use std::{
 
 use arith::{field_common, Field};
 use ark_std::Zero;
+use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
 
@@ -76,7 +77,7 @@ impl Field for M31 {
 
     const FIELD_SIZE: usize = 32;
 
-    const MODULUS: [u64; 4] = [M31_MOD as u64, 0, 0, 0];
+    const MODULUS: U256 = U256([M31_MOD as u128, 0]);
 
     #[inline(always)]
     fn zero() -> Self {

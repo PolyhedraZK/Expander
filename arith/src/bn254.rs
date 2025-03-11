@@ -1,9 +1,15 @@
+use ethnum::U256;
 use halo2curves::ff::{Field as Halo2Field, FromUniformBytes, PrimeField};
 use rand::RngCore;
 
 use crate::{ExtensionField, Field, SimdField};
 
 pub use halo2curves::bn256::Fr;
+
+const MODULUS: U256 = U256([
+    0x2833e84879b9709143e1f593f0000001,
+    0x30644e72e131a029b85045b68181585d,
+]);
 
 impl Field for Fr {
     /// name
@@ -24,12 +30,7 @@ impl Field for Fr {
     const INV_2: Self = Fr::TWO_INV;
 
     /// MODULUS in [u64; 4]
-    const MODULUS: [u64; 4] = [
-        0x43e1f593f0000001,
-        0x2833e84879b97091,
-        0xb85045b68181585d,
-        0x30644e72e131a029,
-    ];
+    const MODULUS: U256 = MODULUS;
 
     // ====================================
     // constants

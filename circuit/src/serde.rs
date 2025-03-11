@@ -1,7 +1,7 @@
 use arith::Field;
 use gkr_field_config::GKRFieldConfig;
 use serdes::{ExpSerde, SerdeError};
-use std::{io::Read, mem::transmute, vec};
+use std::{io::Read, vec};
 use thiserror::Error;
 
 use super::{Allocation, CoefType, Gate, RecursiveCircuit, Segment, Witness};
@@ -182,9 +182,8 @@ impl<C: GKRFieldConfig> FromEccSerde for RecursiveCircuit<C> {
         let expected_mod = <C::CircuitField as Field>::MODULUS;
         let mut read_mod = [0u8; 32];
         reader.read_exact(&mut read_mod).unwrap();
-        unsafe {
-            assert_eq!(transmute::<[u64; 4], [u8; 32]>(expected_mod), read_mod);
-        }
+        assert_eq!(read_mod, expected_mod.to_le_bytes());
+
         RecursiveCircuit {
             num_public_inputs: <usize as ExpSerde>::deserialize_from(&mut reader).unwrap(),
             num_outputs: <usize as ExpSerde>::deserialize_from(&mut reader).unwrap(),

@@ -950,6 +950,7 @@ dependencies = [
  "arith",
  "ark-std",
  "criterion",
+ "ethnum",
  "gf2",
  "rand",
  "serdes",

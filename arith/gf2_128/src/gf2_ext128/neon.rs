@@ -3,6 +3,7 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use std::{arch::aarch64::*, mem::transmute};
 
 use arith::{field_common, ExtensionField, Field};
+use ethnum::U256;
 use gf2::GF2;
 use serdes::{ExpSerde, SerdeResult};
 
@@ -72,7 +73,7 @@ impl Field for NeonGF2_128 {
         v: unsafe { std::mem::zeroed() },
     }; // should not be used
 
-    const MODULUS: [u64; 4] = [0x0, 0, 0, 0]; // should not be used
+    const MODULUS: U256 = U256::ZERO; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {

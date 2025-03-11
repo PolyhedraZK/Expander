@@ -9,6 +9,7 @@ use std::{
 
 use arith::{field_common, Field, SimdField};
 use ark_std::Zero;
+use ethnum::U256;
 use rand::{Rng, RngCore};
 use serdes::{ExpSerde, SerdeResult};
 
@@ -89,7 +90,7 @@ impl Field for AVXM31 {
 
     const FIELD_SIZE: usize = 32;
 
-    const MODULUS: [u64; 4] = M31::MODULUS;
+    const MODULUS: U256 = M31::MODULUS;
 
     #[inline(always)]
     fn zero() -> Self {

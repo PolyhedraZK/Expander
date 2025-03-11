@@ -7,6 +7,7 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use arith::field_common;
 use arith::Field;
+use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
 
 pub const MOD: u32 = 2;
@@ -50,7 +51,7 @@ impl Field for GF2 {
 
     const INV_2: Self = GF2 { v: 0 }; // should not be used
 
-    const MODULUS: [u64; 4] = [MOD as u64, 0, 0, 0];
+    const MODULUS: U256 = U256([MOD as u128, 0]);
 
     #[inline(always)]
     fn zero() -> Self {

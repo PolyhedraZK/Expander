@@ -1,3 +1,4 @@
+use ethnum::U256;
 use rand::RngCore;
 use std::{
     io::{Read, Write},
@@ -62,7 +63,7 @@ impl Field for M31Ext3 {
         v: [M31::INV_2, M31 { v: 0 }, M31 { v: 0 }],
     };
 
-    const MODULUS: [u64; 4] = M31::MODULUS;
+    const MODULUS: U256 = M31::MODULUS;
 
     #[inline(always)]
     fn zero() -> Self {

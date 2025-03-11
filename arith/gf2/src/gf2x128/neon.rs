@@ -5,6 +5,7 @@ use std::{
 };
 
 use arith::Field;
+use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
 
 use crate::GF2;
@@ -54,7 +55,7 @@ impl Field for NeonGF2x128 {
         v: unsafe { zeroed() },
     }; // should not be used
 
-    const MODULUS: [u64; 4] = [0, 0, 0, 0]; // should not be used
+    const MODULUS: U256 = U256::ZERO; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {

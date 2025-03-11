@@ -4,6 +4,7 @@ use std::mem::transmute;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use arith::{field_common, ExtensionField, Field, SimdField};
+use ethnum::U256;
 use gf2::{GF2x8, GF2};
 use serdes::{ExpSerde, SerdeResult};
 
@@ -75,7 +76,7 @@ impl Field for NeonGF2_128x8 {
         v: [unsafe { transmute::<[u32; 4], uint32x4_t>([0, 0, 0, 0]) }; 8],
     }; // should not be used
 
-    const MODULUS: [u64; 4] = [0, 0, 0, 0]; // not used
+    const MODULUS: U256 = U256::ZERO; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {

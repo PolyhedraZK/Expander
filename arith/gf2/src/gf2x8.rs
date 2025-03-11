@@ -1,6 +1,7 @@
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use arith::{Field, SimdField};
+use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
 
 use super::GF2;
@@ -43,7 +44,7 @@ impl Field for GF2x8 {
 
     const INV_2: Self = GF2x8 { v: 0 }; // should not be used
 
-    const MODULUS: [u64; 4] = [0, 0, 0, 0]; // should not be used
+    const MODULUS: U256 = U256::ZERO; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {

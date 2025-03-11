@@ -7,6 +7,7 @@ use std::{
 };
 
 use arith::{field_common, ExtensionField, Field, SimdField};
+use ethnum::U256;
 use gf2::{GF2x8, GF2};
 use serdes::{ExpSerde, SerdeError, SerdeResult};
 
@@ -97,7 +98,7 @@ impl Field for AVX512GF2_128x8 {
 
     const FIELD_SIZE: usize = 128;
 
-    const MODULUS: [u64; 4] = [0, 0, 0, 0]; // should not be used
+    const MODULUS: U256 = U256::ZERO; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {
