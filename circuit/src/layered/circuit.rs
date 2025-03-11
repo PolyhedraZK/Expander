@@ -5,8 +5,8 @@ use arith::{Field, SimdField};
 use ark_std::test_rng;
 use config::GKRConfig;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::{root_println, MPIConfig};
 use mpi::ffi::ompi_win_t;
+use mpi_config::{root_println, MPIConfig};
 use transcript::Transcript;
 
 use crate::*;

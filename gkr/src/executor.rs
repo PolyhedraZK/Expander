@@ -11,7 +11,7 @@ use clap::{Parser, Subcommand};
 use config::{Config, GKRConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
 use gkr_field_config::FieldType;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::{MPIConfig, shared_mem::SharedMemory};
+use mpi_config::{shared_mem::SharedMemory, MPIConfig};
 
 use poly_commit::expander_pcs_init_testing_only;
 use rand::SeedableRng;
