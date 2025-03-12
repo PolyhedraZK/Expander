@@ -89,7 +89,7 @@ RUSTFLAGS="-C target-cpu=native" cargo run --release --bin gkr -- -f fr -t 16
 
 ## Correctness test
 
-[Here](./tests/gkr_correctness.rs) we provide a test case for end-to-end proof generation and verification.
+[Here](.gkr/src/tests/gkr_correctness.rs) we provide a test case for end-to-end proof generation and verification.
 To check the correctness, run the follow standard Rust test command:
 
 ```sh
