@@ -1,4 +1,8 @@
-use std::io::{Read, Write};
+use std::{
+    collections::HashMap,
+    hash::Hash,
+    io::{Read, Write},
+};
 
 use ethnum::U256;
 use halo2curves::{
@@ -178,5 +182,29 @@ impl<T1: ExpSerde, T2: ExpSerde> ExpSerde for (T1, T2) {
         let t1 = T1::deserialize_from(&mut reader)?;
         let t2 = T2::deserialize_from(&mut reader)?;
         Ok((t1, t2))
+    }
+}
+
+impl<K: ExpSerde + Eq + Hash, V: ExpSerde> ExpSerde for HashMap<K, V> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        self.len().serialize_into(&mut writer)?;
+        for (k, v) in self.iter() {
+            k.serialize_into(&mut writer)?;
+            v.serialize_into(&mut writer)?;
+        }
+        Ok(())
+    }
+
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let len = usize::deserialize_from(&mut reader)?;
+        let mut map = HashMap::with_capacity(len);
+        for _ in 0..len {
+            let k = K::deserialize_from(&mut reader)?;
+            let v = V::deserialize_from(&mut reader)?;
+            map.insert(k, v);
+        }
+        Ok(map)
     }
 }
