@@ -138,28 +138,28 @@ where
         internals[0]
     };
 
-    let openings: Vec<_> = izip!(
-        &mut committee,
-        global_poly.coeffs.chunks(1 << local_real_num_vars)
-    )
-    .map(|(committer, eval_slice)| {
-        let cloned_poly = MultiLinearPoly::new(eval_slice.to_vec());
-        orion_open_simd_field::<
-            C::CircuitField,
-            C::SimdCircuitField,
-            C::ChallengeField,
-            ComPackF,
-            C::Field,
-            T,
-        >(
-            &srs,
-            &cloned_poly,
-            &gkr_challenge.local_xs(),
-            &mut committer.transcript,
-            &committer.scratch_pad,
+    let openings: Vec<_> =
+        izip!(
+            &mut committee,
+            global_poly.coeffs.chunks(1 << local_real_num_vars)
         )
-    })
-    .collect();
+        .map(|(committer, eval_slice)| {
+            let cloned_poly = MultiLinearPoly::new(eval_slice.to_vec());
+            orion_open_simd_field::<
+                C::CircuitField,
+                C::SimdCircuitField,
+                C::ChallengeField,
+                ComPackF,
+                T,
+            >(
+                &srs,
+                &cloned_poly,
+                &gkr_challenge.local_xs(),
+                &mut committer.transcript,
+                &committer.scratch_pad,
+            )
+        })
+        .collect();
 
     let mut aggregator_transcript = committee[0].transcript.clone();
     let aggregated_proof =

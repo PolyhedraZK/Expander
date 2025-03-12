@@ -12,14 +12,7 @@ use crate::{
 };
 
 impl<C, ComPackF, T> PCSForExpanderGKR<C, T>
-    for OrionSIMDFieldPCS<
-        C::CircuitField,
-        C::SimdCircuitField,
-        C::ChallengeField,
-        ComPackF,
-        C::Field,
-        T,
-    >
+    for OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF, T>
 where
     C: GKRFieldConfig,
     ComPackF: SimdField<Scalar = C::CircuitField>,
@@ -107,7 +100,6 @@ where
             C::SimdCircuitField,
             C::ChallengeField,
             ComPackF,
-            C::Field,
             T,
         >(proving_key, poly, &local_xs, transcript, scratch_pad);
         if mpi_config.is_single_process() {
@@ -176,7 +168,6 @@ where
                 C::SimdCircuitField,
                 C::ChallengeField,
                 ComPackF,
-                C::Field,
                 T,
             >(
                 verifying_key,
@@ -206,6 +197,5 @@ pub type OrionPCSForGKR<C, ComPack, T> = OrionSIMDFieldPCS<
     <C as GKRFieldConfig>::SimdCircuitField,
     <C as GKRFieldConfig>::ChallengeField,
     ComPack,
-    <C as GKRFieldConfig>::Field,
     T,
 >;

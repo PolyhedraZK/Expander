@@ -147,7 +147,7 @@ where
                     &query_indices,
                     &packed_interleaved_alphabets,
                 ),
-                _ => simd_verify_alphabet_check::<_, _, _, C::Field>(
+                _ => simd_verify_alphabet_check(
                     &codeword,
                     rl,
                     &query_indices,

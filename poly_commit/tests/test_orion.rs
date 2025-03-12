@@ -3,9 +3,9 @@ mod common;
 use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
-use gf2_128::{GF2_128x8, GF2_128};
+use gf2_128::GF2_128;
 use gkr_field_config::{GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
+use mersenne31::{M31Ext3, M31x16, M31};
 use mpi_config::MPIConfig;
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
@@ -13,7 +13,7 @@ use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
 
 const TEST_REPETITION: usize = 3;
 
-fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF, SimdEvalF>(
+fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF>(
     num_vars_start: usize,
     num_vars_end: usize,
 ) where
@@ -21,7 +21,6 @@ fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF, SimdEvalF>(
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
-    SimdEvalF: SimdField<Scalar = EvalF> + ExtensionField<BaseField = OpenPackF>,
 {
     let mut rng = test_rng();
 
@@ -43,7 +42,6 @@ fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF, SimdEvalF>(
                 EvalF,
                 ComPackF,
                 OpenPackF,
-                SimdEvalF,
                 BytesHashTranscript<EvalF, Keccak256hasher>,
             >,
         >(&num_vars, &poly, &xs);
@@ -52,12 +50,12 @@ fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF, SimdEvalF>(
 
 #[test]
 fn test_orion_base_field_pcs_full_e2e() {
-    test_orion_base_field_pcs_generics::<GF2, GF2_128, GF2x64, GF2x8, GF2_128x8>(19, 25);
-    test_orion_base_field_pcs_generics::<GF2, GF2_128, GF2x128, GF2x8, GF2_128x8>(19, 25);
-    test_orion_base_field_pcs_generics::<M31, M31Ext3, M31x16, M31x16, M31Ext3x16>(16, 22)
+    test_orion_base_field_pcs_generics::<GF2, GF2_128, GF2x64, GF2x8>(19, 25);
+    test_orion_base_field_pcs_generics::<GF2, GF2_128, GF2x128, GF2x8>(19, 25);
+    test_orion_base_field_pcs_generics::<M31, M31Ext3, M31x16, M31x16>(16, 22)
 }
 
-fn test_orion_simd_field_pcs_generics<F, SimdF, EvalF, ComPackF, SimdEvalF>(
+fn test_orion_simd_field_pcs_generics<F, SimdF, EvalF, ComPackF>(
     num_vars_start: usize,
     num_vars_end: usize,
 ) where
@@ -65,7 +63,6 @@ fn test_orion_simd_field_pcs_generics<F, SimdF, EvalF, ComPackF, SimdEvalF>(
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    SimdEvalF: SimdField<Scalar = EvalF> + ExtensionField<BaseField = SimdF>,
 {
     let mut rng = test_rng();
 
@@ -88,7 +85,6 @@ fn test_orion_simd_field_pcs_generics<F, SimdF, EvalF, ComPackF, SimdEvalF>(
                 SimdF,
                 EvalF,
                 ComPackF,
-                SimdEvalF,
                 BytesHashTranscript<EvalF, Keccak256hasher>,
             >,
         >(&num_vars, &poly, &xs);
@@ -97,9 +93,9 @@ fn test_orion_simd_field_pcs_generics<F, SimdF, EvalF, ComPackF, SimdEvalF>(
 
 #[test]
 fn test_orion_simd_field_pcs_full_e2e() {
-    test_orion_simd_field_pcs_generics::<GF2, GF2x8, GF2_128, GF2x64, GF2_128x8>(19, 25);
-    test_orion_simd_field_pcs_generics::<GF2, GF2x8, GF2_128, GF2x128, GF2_128x8>(19, 25);
-    test_orion_simd_field_pcs_generics::<M31, M31x16, M31Ext3, M31x16, M31Ext3x16>(16, 22);
+    test_orion_simd_field_pcs_generics::<GF2, GF2x8, GF2_128, GF2x64>(19, 25);
+    test_orion_simd_field_pcs_generics::<GF2, GF2x8, GF2_128, GF2x128>(19, 25);
+    test_orion_simd_field_pcs_generics::<M31, M31x16, M31Ext3, M31x16>(16, 22);
 }
 
 fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
@@ -152,14 +148,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     common::test_pcs_for_expander_gkr::<
         C,
         T,
-        OrionSIMDFieldPCS<
-            C::CircuitField,
-            C::SimdCircuitField,
-            C::ChallengeField,
-            ComPackF,
-            C::Field,
-            T,
-        >,
+        OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF, T>,
     >(
         &num_vars_in_each_poly,
         mpi_config_ref,

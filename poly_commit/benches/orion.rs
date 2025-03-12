@@ -4,8 +4,8 @@ use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gf2::{GF2x128, GF2x8, GF2};
-use gf2_128::{GF2_128x8, GF2_128};
-use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
+use gf2_128::GF2_128;
+use mersenne31::{M31Ext3, M31x16, M31};
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
 use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
@@ -103,7 +103,7 @@ fn orion_simd_field_committing_benchmark(c: &mut Criterion) {
     simd_field_committing_benchmark_helper::<M31, M31x16, M31x16>(c, 19, 27);
 }
 
-fn base_field_opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, SimdEvalF, T>(
+fn base_field_opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
     c: &mut Criterion,
     lowest_num_vars: usize,
     highest_num_vars: usize,
@@ -112,7 +112,6 @@ fn base_field_opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, SimdEvalF,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
-    SimdEvalF: SimdField<Scalar = EvalF> + ExtensionField<BaseField = OpenPackF>,
     T: Transcript<EvalF>,
 {
     let mut group = c.benchmark_group(format!(
@@ -142,15 +141,12 @@ fn base_field_opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, SimdEvalF,
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(orion_open_base_field::<
-                            F,
-                            EvalF,
-                            ComPackF,
-                            OpenPackF,
-                            SimdEvalF,
-                            T,
-                        >(
-                            &srs, &poly, &eval_point, &mut transcript, &scratch_pad
+                        _ = black_box(orion_open_base_field::<F, EvalF, ComPackF, OpenPackF, T>(
+                            &srs,
+                            &poly,
+                            &eval_point,
+                            &mut transcript,
+                            &scratch_pad,
                         ))
                     })
                 },
@@ -165,7 +161,6 @@ fn orion_base_field_opening_benchmark(c: &mut Criterion) {
         GF2_128,
         GF2x128,
         GF2x8,
-        GF2_128x8,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 19, 30);
     base_field_opening_benchmark_helper::<
@@ -173,12 +168,11 @@ fn orion_base_field_opening_benchmark(c: &mut Criterion) {
         M31Ext3,
         M31x16,
         M31x16,
-        M31Ext3x16,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 19, 26);
 }
 
-fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, SimdEvalF, T>(
+fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, T>(
     c: &mut Criterion,
     lowest_num_vars: usize,
     highest_num_vars: usize,
@@ -187,7 +181,6 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, SimdEvalF, T>(
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    SimdEvalF: SimdField<Scalar = EvalF> + ExtensionField<BaseField = SimdF>,
     T: Transcript<EvalF>,
 {
     let mut group = c.benchmark_group(format!(
@@ -222,15 +215,13 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, SimdEvalF, T>(
                 ),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(
-                            orion_open_simd_field::<F, SimdF, _, ComPackF, SimdEvalF, T>(
-                                &srs,
-                                &poly,
-                                &eval_point,
-                                &mut transcript,
-                                &scratch_pad,
-                            ),
-                        )
+                        _ = black_box(orion_open_simd_field::<F, SimdF, _, ComPackF, T>(
+                            &srs,
+                            &poly,
+                            &eval_point,
+                            &mut transcript,
+                            &scratch_pad,
+                        ))
                     })
                 },
             )
@@ -244,7 +235,6 @@ fn orion_simd_field_opening_benchmark(c: &mut Criterion) {
         GF2x8,
         GF2_128,
         GF2x128,
-        GF2_128x8,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 19, 32);
     simd_field_opening_benchmark_helper::<
@@ -252,7 +242,6 @@ fn orion_simd_field_opening_benchmark(c: &mut Criterion) {
         M31x16,
         M31Ext3,
         M31x16,
-        M31Ext3x16,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 19, 27);
 }
