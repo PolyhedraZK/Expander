@@ -35,16 +35,8 @@ where
     let packed_rows = row_num / relative_pack_size;
     assert_eq!(row_num % relative_pack_size, 0);
 
-    let mut evals = poly.hypercube_basis();
-    assert_eq!(evals.len() % relative_pack_size, 0);
-
-    let mut packed_evals = transpose_and_pack_simd::<F, SimdF, ComPackF>(&mut evals, row_num);
-    drop(evals);
-
-    // NOTE: transpose back to rows of evaluations, but packed
-    let mut scratch = vec![ComPackF::ZERO; packed_rows * msg_size];
-    transpose_in_place(&mut packed_evals, &mut scratch, msg_size);
-    drop(scratch);
+    assert_eq!(poly.hypercube_size() % relative_pack_size, 0);
+    let packed_evals = pack_simd::<F, SimdF, ComPackF>(poly.hypercube_basis_ref());
 
     commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
 }
@@ -68,30 +60,23 @@ where
     ComPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
-    let (row_num, msg_size) = {
+    let msg_size = {
         let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars, point.len());
 
-        let (row_field_elems, msg_size) = OrionSRS::evals_shape::<F>(num_vars);
-        let row_num = row_field_elems / SimdF::PACK_SIZE;
-        (row_num, msg_size)
+        let (_, msg_size) = OrionSRS::evals_shape::<F>(num_vars);
+        msg_size
     };
 
-    let num_vars_in_row = row_num.ilog2() as usize;
-    let num_vars_in_simd = SimdF::PACK_SIZE.ilog2() as usize;
-
-    // NOTE: transpose SIMD evaluations for linear combinations in evaulation/proximity tests
-    let mut packed_evals = poly.hypercube_basis();
-
-    let mut scratch = vec![SimdF::ZERO; packed_evals.len()];
-    transpose_in_place(&mut packed_evals, &mut scratch, row_num);
-    drop(scratch);
+    let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
+    let num_vars_in_msg = msg_size.ilog2() as usize;
 
     // NOTE: pre-compute the eq linear combine coeffs for linear combination
-    let mut eq_vars = vec![EvalF::ZERO; num_vars_in_row + num_vars_in_simd];
-    eq_vars[..num_vars_in_simd].copy_from_slice(&point[..num_vars_in_simd]);
-    eq_vars[num_vars_in_simd..].copy_from_slice(&point[point.len() - num_vars_in_row..]);
-    let eq_col_coeffs = EqPolynomial::build_eq_x_r(&eq_vars);
+    let eq_col_coeffs = {
+        let mut eq_vars = point[..num_vars_in_com_simd].to_vec();
+        eq_vars.extend_from_slice(&point[num_vars_in_com_simd + num_vars_in_msg..]);
+        EqPolynomial::build_eq_x_r(&eq_vars)
+    };
 
     // NOTE: pre-declare the spaces for returning evaluation and proximity queries
     let mut eval_row = vec![EvalF::ZERO; msg_size];
@@ -101,16 +86,16 @@ where
 
     match F::NAME {
         GF2::NAME => lut_open_linear_combine(
-            row_num * SimdF::PACK_SIZE,
-            &packed_evals,
+            ComPackF::PACK_SIZE,
+            poly.hypercube_basis_ref(),
             &eq_col_coeffs,
             &mut eval_row,
             &mut proximity_rows,
             transcript,
         ),
         _ => simd_open_linear_combine(
-            row_num * SimdF::PACK_SIZE,
-            &packed_evals,
+            ComPackF::PACK_SIZE,
+            poly.hypercube_basis_ref(),
             &eq_col_coeffs,
             &mut eval_row,
             &mut proximity_rows,
@@ -149,14 +134,13 @@ where
         (row_num, msg_size)
     };
 
-    let num_vars_in_row = row_num.ilog2() as usize;
+    let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;
-    let num_vars_in_simd = SimdF::PACK_SIZE.ilog2() as usize;
 
     // NOTE: working on evaluation response, evaluate the rest of the response
     let mut scratch = vec![EvalF::ZERO; msg_size];
     let final_eval = RefMultiLinearPoly::from_ref(&proof.eval_row).evaluate_with_buffer(
-        &point[num_vars_in_simd..num_vars_in_simd + num_vars_in_msg],
+        &point[num_vars_in_com_simd..num_vars_in_com_simd + num_vars_in_msg],
         &mut scratch,
     );
 
@@ -190,13 +174,14 @@ where
         })
         .collect();
 
-    let mut eq_vars = vec![EvalF::ZERO; num_vars_in_row + num_vars_in_simd];
-    eq_vars[..num_vars_in_simd].copy_from_slice(&point[..num_vars_in_simd]);
-    eq_vars[num_vars_in_simd..].copy_from_slice(&point[point.len() - num_vars_in_row..]);
-    let eq_linear_combination = EqPolynomial::build_eq_x_r(&eq_vars);
+    let eq_col_coeffs = {
+        let mut eq_vars = point[..num_vars_in_com_simd].to_vec();
+        eq_vars.extend_from_slice(&point[num_vars_in_com_simd + num_vars_in_msg..]);
+        EqPolynomial::build_eq_x_r(&eq_vars)
+    };
 
     izip!(&random_linear_combinations, &proof.proximity_rows)
-        .chain(iter::once((&eq_linear_combination, &proof.eval_row)))
+        .chain(iter::once((&eq_col_coeffs, &proof.eval_row)))
         .all(|(rl, msg)| {
             let codeword = match vk.code_instance.encode(msg) {
                 Ok(c) => c,

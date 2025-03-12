@@ -20,23 +20,34 @@ where
 {
     let (row_num, msg_size) = OrionSRS::evals_shape::<F>(poly.get_num_vars());
 
-    let mut interleaved_codewords: Vec<_> = poly
-        .coeffs
-        .chunks(msg_size)
-        .flat_map(|msg| orion_srs.code_instance.encode(msg).unwrap())
-        .collect();
+    let mut interleaved_codeword = {
+        let mut rows_of_codeword: Vec<_> = poly
+            .coeffs
+            .chunks(msg_size * ComPackF::PACK_SIZE)
+            .flat_map(|chunk| -> Vec<_> {
+                let mut chunk_local = chunk.to_vec();
+                let mut scratch = chunk_local.clone();
+                transpose_in_place(&mut chunk_local, &mut scratch, msg_size);
 
-    let mut scratch = vec![F::ZERO; row_num * orion_srs.codeword_len()];
-    transpose_in_place(&mut interleaved_codewords, &mut scratch, row_num);
-    drop(scratch);
+                chunk_local
+                    .chunks(msg_size)
+                    .flat_map(|c| orion_srs.code_instance.encode(c).unwrap())
+                    .collect()
+            })
+            .collect();
+        let mut scratch = rows_of_codeword.clone();
+        transpose_in_place(&mut rows_of_codeword, &mut scratch, row_num);
 
-    if !interleaved_codewords.len().is_power_of_two() {
-        let aligned_po2_len = interleaved_codewords.len().next_power_of_two();
-        interleaved_codewords.resize(aligned_po2_len, F::ZERO);
+        rows_of_codeword
+    };
+
+    if !interleaved_codeword.len().is_power_of_two() {
+        let aligned_po2_len = interleaved_codeword.len().next_power_of_two();
+        interleaved_codeword.resize(aligned_po2_len, F::ZERO);
     }
 
     let interleaved_alphabet_tree =
-        tree::Tree::compact_new_with_field_elems::<F, ComPackF>(interleaved_codewords);
+        tree::Tree::compact_new_with_field_elems::<F, ComPackF>(interleaved_codeword);
 
     interleaved_alphabet_tree.root()
 }
