@@ -50,12 +50,7 @@ impl ExpSerde for bool {
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let byte = u8::deserialize_from(&mut reader)?;
-        match byte {
-            0 => Ok(false),
-            1 => Ok(true),
-            _ => Err(SerdeError::DeserializeError),
-        }
+        u8::deserialize_from(&mut reader).map(|u| u != 0)
     }
 }
 
