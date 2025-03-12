@@ -385,63 +385,26 @@ where
  */
 
 #[inline(always)]
-pub(crate) fn simd_inner_product<F, SimdF>(lhs: &[SimdF], rhs: &[SimdF]) -> F
+fn simd_base_ext_inner_prod<F, ExtF, SimdF, SimdExtF>(
+    simd_base_elems: &[SimdF],
+    simd_ext_elems: &[SimdExtF],
+) -> ExtF
 where
     F: Field,
+    ExtF: ExtensionField<BaseField = F>,
     SimdF: SimdField<Scalar = F>,
+    SimdExtF: SimdField<Scalar = ExtF> + ExtensionField<BaseField = SimdF>,
 {
-    assert_eq!(lhs.len(), rhs.len());
-
-    let simd_sum: SimdF = izip!(lhs, rhs).map(|(a, b)| *a * b).sum();
+    assert_eq!(simd_base_elems.len(), simd_ext_elems.len());
+    let simd_sum: SimdExtF = izip!(simd_ext_elems, simd_base_elems)
+        .map(|(ext_i, b_i)| ext_i.mul_by_base_field(b_i))
+        .sum();
 
     simd_sum.unpack().iter().sum()
 }
 
 #[inline(always)]
-pub(crate) fn simd_ext_base_inner_prod<F, ExtF, SimdF>(
-    simd_ext_limbs: &[SimdF],
-    simd_base_elems: &[SimdF],
-) -> ExtF
-where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    ExtF: ExtensionField<BaseField = F>,
-{
-    assert_eq!(simd_ext_limbs.len(), simd_base_elems.len() * ExtF::DEGREE);
-
-    let mut ext_limbs = vec![F::ZERO; ExtF::DEGREE];
-
-    izip!(&mut ext_limbs, simd_ext_limbs.chunks(simd_base_elems.len()))
-        .for_each(|(e, simd_ext_limb)| *e = simd_inner_product(simd_ext_limb, simd_base_elems));
-
-    ExtF::from_limbs(&ext_limbs)
-}
-
-// NOTE(HS) this is only a helper function for SIMD inner product between
-// extension fields with SIMD base fields - motivation here is decompose extension fields
-// into base field limbs, decompose them, then reSIMD pack them.
-// This method is applied column-wise, i.e., the data size is the same as linear combination
-// size, which should be in total 1024 bits at this point (2025/03/11).
-#[inline(always)]
-fn transpose_and_pack<F, SimdF>(evaluations: &mut [F], row_num: usize) -> Vec<SimdF>
-where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-{
-    // NOTE: pre transpose evaluations
-    let mut scratch = vec![F::ZERO; evaluations.len()];
-    transpose_in_place(evaluations, &mut scratch, row_num);
-    drop(scratch);
-
-    // NOTE: SIMD pack each row of transposed matrix
-    evaluations
-        .chunks(SimdF::PACK_SIZE)
-        .map(SimdField::pack)
-        .collect()
-}
-
-#[inline(always)]
-pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
+pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, SimdEvalF, T>(
     com_pack_size: usize,
     packed_evals: &[SimdF],
     eq_col_coeffs: &[EvalF],
@@ -452,6 +415,7 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
     F: Field,
     EvalF: ExtensionField<BaseField = F>,
     SimdF: SimdField<Scalar = F>,
+    SimdEvalF: SimdField<Scalar = EvalF> + ExtensionField<BaseField = SimdF>,
     T: Transcript<EvalF>,
 {
     // NOTE: check SIMD inner product numbers for column sums
@@ -462,48 +426,38 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
     let packed_row_size = combination_size / com_pack_size;
 
     // NOTE: working on evaluation response of tensor code IOP based PCS
+    let packed_eqs = pack_from_base::<EvalF, SimdEvalF>(eq_col_coeffs);
     izip!(
-        eq_col_coeffs.chunks(com_pack_size),
+        packed_eqs.chunks(simd_inner_prods),
         packed_evals.chunks(packed_evals.len() / packed_row_size)
     )
     .for_each(|(eq_chunk, packed_evals_chunk)| {
-        let mut eq_col_coeffs_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
-        let eq_col_simd_limbs = transpose_and_pack(&mut eq_col_coeffs_limbs, com_pack_size);
-
-        izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *eval_row).for_each(
-            |(p_col, eval)| {
-                *eval += simd_ext_base_inner_prod::<_, EvalF, _>(&eq_col_simd_limbs, p_col)
-            },
-        );
+        izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *eval_row)
+            .for_each(|(p_col, eval)| *eval += simd_base_ext_inner_prod(p_col, eq_chunk));
     });
 
     // NOTE: draw random linear combination out
     // and compose proximity response(s) of tensor code IOP based PCS
     proximity_rows.iter_mut().for_each(|row_buffer| {
         let random_coeffs = transcript.generate_challenge_field_elements(combination_size);
+        let packed_rand = pack_from_base::<EvalF, SimdEvalF>(&random_coeffs);
 
         izip!(
-            random_coeffs.chunks(com_pack_size),
+            packed_rand.chunks(simd_inner_prods),
             packed_evals.chunks(packed_evals.len() / packed_row_size)
         )
         .for_each(|(rand_chunk, packed_evals_chunk)| {
-            let mut rand_coeffs_limbs: Vec<_> =
-                rand_chunk.iter().flat_map(|e| e.to_limbs()).collect();
-            let rand_simd_limbs = transpose_and_pack(&mut rand_coeffs_limbs, com_pack_size);
-
             izip!(
                 packed_evals_chunk.chunks(simd_inner_prods),
                 &mut *row_buffer
             )
-            .for_each(|(p_col, prox)| {
-                *prox += simd_ext_base_inner_prod::<_, EvalF, _>(&rand_simd_limbs, p_col)
-            });
+            .for_each(|(p_col, prox)| *prox += simd_base_ext_inner_prod(p_col, rand_chunk));
         });
     });
 }
 
 #[inline(always)]
-pub(crate) fn simd_verify_alphabet_check<F, SimdF, ExtF>(
+pub(crate) fn simd_verify_alphabet_check<F, SimdF, ExtF, SimdExtF>(
     codeword: &[ExtF],
     fixed_rl: &[ExtF],
     query_indices: &[usize],
@@ -513,16 +467,16 @@ where
     F: Field,
     SimdF: SimdField<Scalar = F>,
     ExtF: ExtensionField<BaseField = F>,
+    SimdExtF: SimdField<Scalar = ExtF> + ExtensionField<BaseField = SimdF>,
 {
     // NOTE: check SIMD inner product numbers for column sums
     assert_eq!(fixed_rl.len() % SimdF::PACK_SIZE, 0);
 
-    let mut rl_limbs: Vec<_> = fixed_rl.iter().flat_map(|e| e.to_limbs()).collect();
-    let rl_simd_limbs: Vec<SimdF> = transpose_and_pack(&mut rl_limbs, fixed_rl.len());
+    let packed_comb = pack_from_base::<ExtF, SimdExtF>(fixed_rl);
 
     izip!(query_indices, packed_interleaved_alphabets).all(|(qi, interleaved_alphabet)| {
         let index = qi % codeword.len();
-        let alphabet: ExtF = simd_ext_base_inner_prod(&rl_simd_limbs, interleaved_alphabet);
+        let alphabet = simd_base_ext_inner_prod(interleaved_alphabet, &packed_comb);
         alphabet == codeword[index]
     })
 }

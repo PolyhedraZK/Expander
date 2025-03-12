@@ -46,7 +46,7 @@ where
 // as this directly plug into GKR argument system.
 // In that context, there is no need to evaluate,
 // as evaluation statement can be reduced on the verifier side.
-pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF, T>(
+pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF, SimdEvalF, T>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
     point: &[EvalF],
@@ -58,6 +58,7 @@ where
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
+    SimdEvalF: SimdField<Scalar = EvalF> + ExtensionField<BaseField = SimdF>,
     T: Transcript<EvalF>,
 {
     let msg_size = {
@@ -93,7 +94,7 @@ where
             &mut proximity_rows,
             transcript,
         ),
-        _ => simd_open_linear_combine(
+        _ => simd_open_linear_combine::<F, EvalF, SimdF, SimdEvalF, T>(
             ComPackF::PACK_SIZE,
             poly.hypercube_basis_ref(),
             &eq_col_coeffs,
@@ -113,7 +114,7 @@ where
     }
 }
 
-pub fn orion_verify_simd_field<F, SimdF, EvalF, ComPackF, T>(
+pub fn orion_verify_simd_field<F, SimdF, EvalF, ComPackF, SimdEvalF, T>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
     point: &[EvalF],
@@ -126,6 +127,7 @@ where
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
+    SimdEvalF: SimdField<Scalar = EvalF> + ExtensionField<BaseField = SimdF>,
     T: Transcript<EvalF>,
 {
     let (row_num, msg_size) = {
@@ -195,7 +197,7 @@ where
                     &query_indices,
                     &packed_interleaved_alphabets,
                 ),
-                _ => simd_verify_alphabet_check(
+                _ => simd_verify_alphabet_check::<F, SimdF, EvalF, SimdEvalF>(
                     &codeword,
                     rl,
                     &query_indices,

@@ -31,7 +31,7 @@ where
     commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
 }
 
-pub fn orion_open_base_field<F, EvalF, ComPackF, OpenPackF, T>(
+pub fn orion_open_base_field<F, EvalF, ComPackF, OpenPackF, SimdEvalF, T>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<F>,
     point: &[EvalF],
@@ -43,6 +43,7 @@ where
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
+    SimdEvalF: SimdField<Scalar = EvalF> + ExtensionField<BaseField = OpenPackF>,
     T: Transcript<EvalF>,
 {
     let (_, msg_size) = OrionSRS::evals_shape::<F>(poly.num_vars());
@@ -76,7 +77,7 @@ where
             &mut proximity_rows,
             transcript,
         ),
-        _ => simd_open_linear_combine(
+        _ => simd_open_linear_combine::<F, EvalF, OpenPackF, SimdEvalF, T>(
             ComPackF::PACK_SIZE,
             &packed_evals,
             &eq_col_coeffs,
@@ -108,7 +109,7 @@ where
     )
 }
 
-pub fn orion_verify_base_field<F, EvalF, ComPackF, OpenPackF, T>(
+pub fn orion_verify_base_field<F, EvalF, ComPackF, OpenPackF, SimdEvalF, T>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
     point: &[EvalF],
@@ -121,6 +122,7 @@ where
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
+    SimdEvalF: SimdField<Scalar = EvalF> + ExtensionField<BaseField = OpenPackF>,
     T: Transcript<EvalF>,
 {
     let (row_num, msg_size) = OrionSRS::evals_shape::<F>(point.len());
@@ -187,7 +189,7 @@ where
                     &query_indices,
                     &packed_interleaved_alphabets,
                 ),
-                _ => simd_verify_alphabet_check(
+                _ => simd_verify_alphabet_check::<F, OpenPackF, EvalF, SimdEvalF>(
                     &codeword,
                     rl,
                     &query_indices,
