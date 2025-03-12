@@ -23,7 +23,14 @@ async fn main() {
         &pcs_type
     );
 
-    let field_type = detect_field_type_from_circuit_file(&expander_exec_args.circuit_file);
+    // Get circuit_file based on subcommand
+    let circuit_file = match &expander_exec_args.subcommands {
+        ExpanderExecSubCommand::Prove { circuit_file, .. } => circuit_file,
+        ExpanderExecSubCommand::Verify { circuit_file, .. } => circuit_file,
+        ExpanderExecSubCommand::Serve { circuit_file, .. } => circuit_file,
+    };
+
+    let field_type = detect_field_type_from_circuit_file(circuit_file);
     root_println!(&mpi_config, "field type: {:?}", field_type);
 
     match (fs_hash_type.clone(), pcs_type.clone(), field_type.clone()) {
