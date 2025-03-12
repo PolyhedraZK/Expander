@@ -268,6 +268,8 @@ impl PartialEq for NeonGF2_128 {
     }
 }
 
+impl Eq for NeonGF2_128 {}
+
 impl Neg for NeonGF2_128 {
     type Output = Self;
 

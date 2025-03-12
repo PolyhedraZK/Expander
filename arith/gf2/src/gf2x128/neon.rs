@@ -308,9 +308,9 @@ impl From<GF2> for NeonGF2x128 {
     }
 }
 
-impl std::hash::Hash for AVXGF2x128 {
+impl std::hash::Hash for NeonGF2x128 {
     #[inline(always)]
-    fn hash<H: Hasher>(&self, state: &mut H) {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         unsafe {
             state.write(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref());
         }

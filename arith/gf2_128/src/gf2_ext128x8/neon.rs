@@ -32,7 +32,7 @@ impl PartialEq for NeonGF2_128x8 {
     }
 }
 
-impl Eq for AVX512GF2_128x8 {}
+impl Eq for NeonGF2_128x8 {}
 
 impl ExpSerde for NeonGF2_128x8 {
     const SERIALIZED_SIZE: usize = 128;
@@ -459,6 +459,15 @@ impl Add<GF2> for NeonGF2_128x8 {
                 unsafe { gfadd(self.v[6], rhs_extended) },
                 unsafe { gfadd(self.v[7], rhs_extended) },
             ],
+        }
+    }
+}
+
+impl std::hash::Hash for NeonGF2_128x8 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<[uint32x4_t; 8], [u8; 128]>(self.v).as_ref());
         }
     }
 }

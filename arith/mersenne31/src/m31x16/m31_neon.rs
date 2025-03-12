@@ -369,7 +369,7 @@ impl PartialEq for NeonM31 {
     }
 }
 
-impl Eq for AVXM31 {}
+impl Eq for NeonM31 {}
 
 impl Mul<&M31> for NeonM31 {
     type Output = NeonM31;
@@ -467,4 +467,13 @@ fn mul_internal(a: &NeonM31, b: &NeonM31) -> NeonM31 {
         };
     }
     res
+}
+
+impl std::hash::Hash for NeonM31 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<[uint32x4_t; 4], [u8; 64]>(self.v).as_ref());
+        }
+    }
 }
