@@ -382,20 +382,7 @@ where
  */
 
 #[inline(always)]
-pub(crate) fn simd_inner_product<F, SimdF>(lhs: &[SimdF], rhs: &[SimdF]) -> F
-where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-{
-    assert_eq!(lhs.len(), rhs.len());
-
-    let simd_sum: SimdF = izip!(lhs, rhs).map(|(a, b)| *a * b).sum();
-
-    simd_sum.unpack().iter().sum()
-}
-
-#[inline(always)]
-pub(crate) fn simd_ext_base_inner_prod<F, ExtF, SimdF>(
+fn simd_ext_base_inner_prod<F, ExtF, SimdF>(
     simd_ext_limbs: &[SimdF],
     simd_base_elems: &[SimdF],
 ) -> ExtF
@@ -408,8 +395,14 @@ where
 
     let mut ext_limbs = vec![F::ZERO; ExtF::DEGREE];
 
-    izip!(&mut ext_limbs, simd_ext_limbs.chunks(simd_base_elems.len()))
-        .for_each(|(e, simd_ext_limb)| *e = simd_inner_product(simd_ext_limb, simd_base_elems));
+    izip!(&mut ext_limbs, simd_ext_limbs.chunks(simd_base_elems.len())).for_each(
+        |(e, simd_ext_limb)| {
+            let simd_sum: SimdF = izip!(simd_ext_limb, simd_base_elems)
+                .map(|(a, b)| *a * b)
+                .sum();
+            *e = simd_sum.unpack().iter().sum()
+        },
+    );
 
     ExtF::from_limbs(&ext_limbs)
 }
