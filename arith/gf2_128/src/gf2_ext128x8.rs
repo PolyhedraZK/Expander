@@ -17,7 +17,7 @@ pub type GF2_128x8 = avx256::AVX256GF2_128x8;
 impl Ord for GF2_128x8 {
     #[inline(always)]
     fn cmp(&self, _: &Self) -> std::cmp::Ordering {
-        unimplemented!("PartialOrd for GF2_128x8 is not supported")
+        unimplemented!("Ord for GF2_128x8 is not supported")
     }
 }
 

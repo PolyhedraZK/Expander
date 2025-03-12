@@ -10,21 +10,12 @@ use serdes::{ExpSerde, SerdeResult};
 
 use crate::{m31::M31, M31Ext3, M31x16};
 
-#[derive(Debug, Clone, Copy, Default, Hash)]
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct M31Ext3x16 {
     pub v: [M31x16; 3],
 }
 
 field_common!(M31Ext3x16);
-
-impl PartialEq for M31Ext3x16 {
-    #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        self.v[0] == other.v[0] && self.v[1] == other.v[1] && self.v[2] == other.v[2]
-    }
-}
-
-impl Eq for M31Ext3x16 {}
 
 impl ExpSerde for M31Ext3x16 {
     const SERIALIZED_SIZE: usize = (512 / 8) * 3;
@@ -380,7 +371,7 @@ fn square_internal(a: &[M31x16; 3]) -> [M31x16; 3] {
 impl Ord for M31Ext3x16 {
     #[inline(always)]
     fn cmp(&self, _: &Self) -> std::cmp::Ordering {
-        unimplemented!("PartialOrd for M31Ext3x16 is not supported")
+        unimplemented!("Ord for M31Ext3x16 is not supported")
     }
 }
 

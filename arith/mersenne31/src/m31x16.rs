@@ -21,7 +21,7 @@ pub type M31x16 = m31_avx256::AVXM31;
 impl Ord for M31x16 {
     #[inline(always)]
     fn cmp(&self, _: &Self) -> std::cmp::Ordering {
-        unimplemented!("PartialOrd for M31x16 is not supported")
+        unimplemented!("Ord for M31x16 is not supported")
     }
 }
 

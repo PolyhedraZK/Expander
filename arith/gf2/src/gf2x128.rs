@@ -59,7 +59,7 @@ impl Eq for GF2x128 {}
 impl Ord for GF2x128 {
     #[inline(always)]
     fn cmp(&self, _: &Self) -> std::cmp::Ordering {
-        unimplemented!("PartialOrd for GF2x128 is not supported")
+        unimplemented!("Ord for GF2x128 is not supported")
     }
 }
 

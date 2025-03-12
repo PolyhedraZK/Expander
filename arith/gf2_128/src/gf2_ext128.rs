@@ -11,7 +11,7 @@ pub type GF2_128 = avx::AVXGF2_128;
 impl Ord for GF2_128 {
     #[inline(always)]
     fn cmp(&self, _: &Self) -> std::cmp::Ordering {
-        unimplemented!("PartialOrd for GF2_128 is not supported")
+        unimplemented!("Ord for GF2_128 is not supported")
     }
 }
 

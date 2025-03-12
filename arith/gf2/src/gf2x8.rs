@@ -302,7 +302,7 @@ impl SimdField for GF2x8 {
 impl Ord for GF2x8 {
     #[inline(always)]
     fn cmp(&self, _: &Self) -> std::cmp::Ordering {
-        unimplemented!("PartialOrd for GF2x8 is not supported")
+        unimplemented!("Ord for GF2x8 is not supported")
     }
 }
 
