@@ -13,12 +13,21 @@ use serdes::{ExpSerde, SerdeResult};
 
 use crate::m31::{mod_reduce_u32, M31};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone, Copy, Default, Hash)]
 pub struct M31Ext3 {
     pub v: [M31; 3],
 }
 
 field_common!(M31Ext3);
+
+impl PartialEq for M31Ext3 {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.v[0] == other.v[0] && self.v[1] == other.v[1] && self.v[2] == other.v[2]
+    }
+}
+
+impl Eq for M31Ext3 {}
 
 impl ExpSerde for M31Ext3 {
     const SERIALIZED_SIZE: usize = (32 / 8) * 3;
