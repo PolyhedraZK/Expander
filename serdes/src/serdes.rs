@@ -38,6 +38,23 @@ exp_serde_for_number!(f64, 8);
 exp_serde_for_number!(u128, 16);
 exp_serde_for_number!(U256, 32);
 
+impl ExpSerde for bool {
+    const SERIALIZED_SIZE: usize = 1;
+
+    fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {
+        (*self as u8).serialize_into(writer)
+    }
+
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let byte = u8::deserialize_from(&mut reader)?;
+        match byte {
+            0 => Ok(false),
+            1 => Ok(true),
+            _ => Err(SerdeError::DeserializeError),
+        }
+    }
+}
+
 impl<V: ExpSerde> ExpSerde for Vec<V> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
