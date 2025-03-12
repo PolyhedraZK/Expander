@@ -247,7 +247,7 @@ pub struct SubsetSumLUTs<F: Field> {
 }
 
 impl<F: Field> SubsetSumLUTs<F> {
-    #[inline]
+    #[inline(always)]
     pub fn new(entry_bits: usize, table_num: usize) -> Self {
         assert!(entry_bits > 0 && table_num > 0);
 
@@ -257,7 +257,7 @@ impl<F: Field> SubsetSumLUTs<F> {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn build(&mut self, weights: &[F]) {
         assert_eq!(weights.len() % self.entry_bits, 0);
         assert_eq!(weights.len() / self.entry_bits, self.tables.len());
@@ -279,7 +279,7 @@ impl<F: Field> SubsetSumLUTs<F> {
         );
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn lookup_and_sum<BitF, EntryF>(&self, indices: &[EntryF]) -> F
     where
         BitF: Field,
@@ -344,11 +344,8 @@ pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
         .for_each(|(random_chunk, packed_evals_chunk)| {
             luts.build(random_chunk);
 
-            izip!(packed_evals_chunk.chunks(table_num), &mut *row_buffer).for_each(
-                |(p_col, prox_resp)| {
-                    *prox_resp += luts.lookup_and_sum(p_col);
-                },
-            );
+            izip!(packed_evals_chunk.chunks(table_num), &mut *row_buffer)
+                .for_each(|(p_col, prox)| *prox += luts.lookup_and_sum(p_col));
         });
     });
     drop(luts);
