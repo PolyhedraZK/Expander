@@ -437,6 +437,8 @@ impl PartialEq for AVX256GF2_128x8 {
     }
 }
 
+impl Eq for AVX256GF2_128x8 {}
+
 impl Default for AVX256GF2_128x8 {
     #[inline(always)]
     fn default() -> Self {
@@ -763,6 +765,15 @@ impl Add<GF2> for AVX256GF2_128x8 {
                 unsafe { _mm256_xor_si256(self.data[2], rhs_extended) },
                 unsafe { _mm256_xor_si256(self.data[3], rhs_extended) },
             ],
+        }
+    }
+}
+
+impl std::hash::Hash for AVX256GF2_128x8 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<[__m256i; 4], [u8; 128]>(self.data).as_ref());
         }
     }
 }

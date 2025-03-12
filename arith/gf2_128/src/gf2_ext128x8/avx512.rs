@@ -405,6 +405,8 @@ impl PartialEq for AVX512GF2_128x8 {
     }
 }
 
+impl Eq for AVX512GF2_128x8 {}
+
 impl Default for AVX512GF2_128x8 {
     #[inline(always)]
     fn default() -> Self {
@@ -760,6 +762,15 @@ impl Add<GF2> for AVX512GF2_128x8 {
                 unsafe { _mm512_xor_si512(self.data[0], rhs_extended) },
                 unsafe { _mm512_xor_si512(self.data[1], rhs_extended) },
             ],
+        }
+    }
+}
+
+impl std::hash::Hash for AVX512GF2_128x8 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<[__m512i; 2], [u8; 128]>(self.data).as_ref());
         }
     }
 }

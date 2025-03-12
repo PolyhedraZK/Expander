@@ -1,5 +1,6 @@
 use std::{
     arch::x86_64::*,
+    hash::Hasher,
     mem::{transmute, zeroed},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -304,6 +305,15 @@ impl From<GF2> for AVXGF2x128 {
             AVXGF2x128::ZERO
         } else {
             AVXGF2x128::ONE
+        }
+    }
+}
+
+impl std::hash::Hash for AVXGF2x128 {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<__m128i, [u8; 16]>(self.v).as_ref());
         }
     }
 }

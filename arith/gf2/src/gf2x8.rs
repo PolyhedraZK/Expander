@@ -7,7 +7,7 @@ use serdes::{ExpSerde, SerdeResult};
 use super::GF2;
 
 /// A GF2x8 stores 8 bits of data.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct GF2x8 {
     pub v: u8,
 }
@@ -297,4 +297,18 @@ impl SimdField for GF2x8 {
     type Scalar = crate::GF2;
 
     const PACK_SIZE: usize = 8;
+}
+
+impl Ord for GF2x8 {
+    #[inline(always)]
+    fn cmp(&self, _: &Self) -> std::cmp::Ordering {
+        unimplemented!("PartialOrd for GF2x8 is not supported")
+    }
+}
+
+impl PartialOrd for GF2x8 {
+    #[inline(always)]
+    fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
+        unimplemented!("PartialOrd for GF2x8 is not supported")
+    }
 }

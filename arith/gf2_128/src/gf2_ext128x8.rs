@@ -13,3 +13,17 @@ pub type GF2_128x8 = avx512::AVX512GF2_128x8;
 mod avx256;
 #[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
 pub type GF2_128x8 = avx256::AVX256GF2_128x8;
+
+impl Ord for GF2_128x8 {
+    #[inline(always)]
+    fn cmp(&self, _: &Self) -> std::cmp::Ordering {
+        unimplemented!("PartialOrd for GF2_128x8 is not supported")
+    }
+}
+
+impl PartialOrd for GF2_128x8 {
+    #[inline(always)]
+    fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
+        unimplemented!("PartialOrd for GF2_128x8 is not supported")
+    }
+}

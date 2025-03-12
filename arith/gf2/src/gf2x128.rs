@@ -53,3 +53,19 @@ impl SimdField for GF2x128 {
             .collect()
     }
 }
+
+impl Eq for GF2x128 {}
+
+impl Ord for GF2x128 {
+    #[inline(always)]
+    fn cmp(&self, _: &Self) -> std::cmp::Ordering {
+        unimplemented!("PartialOrd for GF2x128 is not supported")
+    }
+}
+
+impl PartialOrd for GF2x128 {
+    #[inline(always)]
+    fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
+        unimplemented!("PartialOrd for GF2x128 is not supported")
+    }
+}

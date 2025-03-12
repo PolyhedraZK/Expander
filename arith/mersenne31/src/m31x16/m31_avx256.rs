@@ -344,6 +344,8 @@ impl PartialEq for AVXM31 {
     }
 }
 
+impl Eq for AVXM31 {}
+
 #[inline]
 #[must_use]
 fn movehdup_epi32(a: __m256i) -> __m256i {
@@ -518,5 +520,14 @@ fn mul_internal(a: &AVXM31, b: &AVXM31) -> AVXM31 {
             res[i] = add(prod_lo, prod_hi);
         }
         AVXM31 { v: res }
+    }
+}
+
+impl std::hash::Hash for AVXM31 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<[__m256i; 2], [u8; 64]>(self.v).as_ref());
+        }
     }
 }

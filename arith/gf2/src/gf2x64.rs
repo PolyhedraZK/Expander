@@ -6,7 +6,7 @@ use serdes::{ExpSerde, SerdeResult};
 
 use super::GF2;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct GF2x64 {
     pub v: u64,
 }
@@ -296,4 +296,18 @@ impl SimdField for GF2x64 {
     type Scalar = crate::GF2;
 
     const PACK_SIZE: usize = 64;
+}
+
+impl Ord for GF2x64 {
+    #[inline(always)]
+    fn cmp(&self, _: &Self) -> std::cmp::Ordering {
+        unimplemented!("PartialOrd for GF2x64 is not supported")
+    }
+}
+
+impl PartialOrd for GF2x64 {
+    #[inline(always)]
+    fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
+        unimplemented!("PartialOrd for GF2x64 is not supported")
+    }
 }

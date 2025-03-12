@@ -32,6 +32,8 @@ impl PartialEq for NeonGF2_128x8 {
     }
 }
 
+impl Eq for AVX512GF2_128x8 {}
+
 impl ExpSerde for NeonGF2_128x8 {
     const SERIALIZED_SIZE: usize = 128;
 

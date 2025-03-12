@@ -4,6 +4,7 @@ use serdes::ExpSerde;
 
 use std::{
     fmt::Debug,
+    hash::Hash,
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -34,6 +35,10 @@ pub trait Field:
     + for<'a> SubAssign<&'a Self>
     + for<'a> MulAssign<&'a Self>
     + ExpSerde
+    + Hash
+    + Eq
+    + PartialOrd
+    + Ord
 {
     /// name
     const NAME: &'static str;

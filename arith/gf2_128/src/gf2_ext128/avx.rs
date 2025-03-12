@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use std::iter::{Product, Sum};
 use std::{
     arch::x86_64::*,
@@ -323,6 +324,8 @@ impl PartialEq for AVXGF2_128 {
     }
 }
 
+impl Eq for AVXGF2_128 {}
+
 impl Neg for AVXGF2_128 {
     type Output = Self;
 
@@ -359,5 +362,14 @@ fn sub_internal(a: &AVXGF2_128, b: &AVXGF2_128) -> AVXGF2_128 {
 fn mul_internal(a: &AVXGF2_128, b: &AVXGF2_128) -> AVXGF2_128 {
     AVXGF2_128 {
         v: unsafe { gfmul(a.v, b.v) },
+    }
+}
+
+impl Hash for AVXGF2_128 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<__m128i, [u8; 16]>(self.v).as_ref());
+        }
     }
 }

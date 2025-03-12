@@ -432,3 +432,12 @@ pub(crate) fn mul_by_x_internal(a: &uint32x4_t) -> uint32x4_t {
         vreinterpretq_u32_u64(res)
     }
 }
+
+impl std::hash::Hash for NeonGF2_128 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref());
+        }
+    }
+}

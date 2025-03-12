@@ -1,6 +1,7 @@
 use std::{
     arch::x86_64::*,
     fmt::Debug,
+    hash::Hash,
     io::{Read, Write},
     iter::{Product, Sum},
     mem::transmute,
@@ -298,6 +299,8 @@ impl PartialEq for AVXM31 {
     }
 }
 
+impl Eq for AVXM31 {}
+
 #[inline]
 #[must_use]
 fn mask_movehdup_epi32(src: __m512i, k: __mmask16, a: __m512i) -> __m512i {
@@ -447,5 +450,14 @@ fn mul_internal(a: &AVXM31, b: &AVXM31) -> AVXM31 {
         // Standard addition of two 31-bit values.
         let res = add(prod_lo, prod_hi);
         AVXM31 { v: res }
+    }
+}
+
+impl Hash for AVXM31 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<__m512i, [u8; 64]>(self.v).as_ref());
+        }
     }
 }

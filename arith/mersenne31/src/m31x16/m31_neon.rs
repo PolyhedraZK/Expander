@@ -369,6 +369,8 @@ impl PartialEq for NeonM31 {
     }
 }
 
+impl Eq for AVXM31 {}
+
 impl Mul<&M31> for NeonM31 {
     type Output = NeonM31;
     #[inline(always)]

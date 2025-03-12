@@ -13,7 +13,7 @@ use serdes::{ExpSerde, SerdeResult};
 
 use crate::m31::{mod_reduce_u32, M31};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Hash, Eq)]
 pub struct M31Ext3 {
     pub v: [M31; 3],
 }
@@ -355,4 +355,18 @@ fn square_internal(a: &[M31; 3]) -> [M31; 3] {
     res[1] = a[0] * a[1].double() + M31 { v: 5 } * a[2].square();
     res[2] = a[0] * a[2].double() + a[1].square();
     res
+}
+
+impl Ord for M31Ext3 {
+    #[inline(always)]
+    fn cmp(&self, _: &Self) -> std::cmp::Ordering {
+        unimplemented!("PartialOrd for M31Ext3 is not supported")
+    }
+}
+
+impl PartialOrd for M31Ext3 {
+    #[inline(always)]
+    fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
+        unimplemented!("PartialOrd for M31Ext3 is not supported")
+    }
 }
