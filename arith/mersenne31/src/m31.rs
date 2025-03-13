@@ -113,7 +113,7 @@ impl Field for M31 {
     fn from_u256(value: U256) -> Self {
         // unsafe -- we don't check if the value is in the field
         M31 {
-            v: value.0[0] as u32,
+            v: mod_reduce_i64(value.0[0] as i64) as u32,
         }
     }
 
