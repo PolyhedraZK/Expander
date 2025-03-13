@@ -13,8 +13,19 @@ use serdes::{ExpSerde, SerdeResult};
 pub const M31_MOD: u32 = 2147483647;
 
 #[inline]
+// if x = MOD this will return MOD instead of 0
+// for absolute reduction, use mod_reduce_safe
 pub(crate) fn mod_reduce_u32(x: u32) -> u32 {
     (x & M31_MOD) + (x >> 31)
+}
+
+pub(crate) fn mod_reduce_u32_safe(x: u32) -> u32 {
+    let x = (x & M31_MOD) + (x >> 31);
+    if x == M31_MOD {
+        0
+    } else {
+        x
+    }
 }
 
 #[inline]
@@ -30,7 +41,7 @@ pub struct M31 {
 impl PartialEq for M31 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        mod_reduce_u32(self.v) == mod_reduce_u32(other.v)
+        mod_reduce_u32_safe(self.v) == mod_reduce_u32_safe(other.v)
     }
 }
 

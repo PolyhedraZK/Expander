@@ -9,6 +9,7 @@ use ark_std::test_rng;
 use field_hashers::{FiatShamirFieldHasher, PoseidonFiatShamirHasher, PoseidonStateTrait};
 use serdes::ExpSerde;
 
+use crate::m31::mod_reduce_u32;
 use crate::M31Ext3;
 use crate::M31Ext3x16;
 use crate::{M31x16, M31};
@@ -163,5 +164,19 @@ fn test_poseidon_m31_fiat_shamir_hash() {
             M31 { v: 535675968 },
         ];
         assert_eq!(actual_output, expected_output);
+    }
+}
+
+#[test]
+fn check_normalized_eq() {
+    {
+        let a = M31 { v: 0 };
+        let b = M31 { v: (1 << 31) - 1 };
+        assert_eq!(a, b);
+    }
+    {
+        let a = M31 { v: 1 };
+        let b = M31 { v: 1 << 31 };
+        assert_eq!(a, b);
     }
 }
