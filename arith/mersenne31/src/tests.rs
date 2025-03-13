@@ -9,7 +9,6 @@ use ark_std::test_rng;
 use field_hashers::{FiatShamirFieldHasher, PoseidonFiatShamirHasher, PoseidonStateTrait};
 use serdes::ExpSerde;
 
-use crate::m31::mod_reduce_u32;
 use crate::M31Ext3;
 use crate::M31Ext3x16;
 use crate::{M31x16, M31};
