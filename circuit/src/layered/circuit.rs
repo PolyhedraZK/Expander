@@ -133,7 +133,9 @@ impl<C: GKRFieldConfig> Clone for Circuit<C> {
             layers: self.layers.clone(),
             public_input: self.public_input.clone(),
             expected_num_output_zeros: self.expected_num_output_zeros,
-            ..Default::default()
+
+            rnd_coefs_identified: false,
+            rnd_coefs: vec![],
         };
 
         if self.rnd_coefs_identified {
