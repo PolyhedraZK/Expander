@@ -363,8 +363,17 @@ impl Default for NeonM31 {
 impl PartialEq for NeonM31 {
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            transmute::<[uint32x4_t; 4], [u32; 16]>(reduce_sum(self.v))
-                == transmute::<[uint32x4_t; 4], [u32; 16]>(reduce_sum(other.v))
+            transmute::<[uint32x4_t; 4], [u32; 16]>([
+                reduce_sum(self.v[0]),
+                reduce_sum(self.v[1]),
+                reduce_sum(self.v[2]),
+                reduce_sum(self.v[3]),
+            ]) == transmute::<[uint32x4_t; 4], [u32; 16]>([
+                reduce_sum(other.v[0]),
+                reduce_sum(other.v[1]),
+                reduce_sum(other.v[2]),
+                reduce_sum(other.v[3]),
+            ])
         }
     }
 }
