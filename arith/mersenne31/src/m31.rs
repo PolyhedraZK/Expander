@@ -33,7 +33,7 @@ fn mod_reduce_i64(x: i64) -> i64 {
     (x & M31_MOD as i64) + (x >> 31)
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialOrd, Ord)]
 pub struct M31 {
     pub v: u32,
 }
@@ -262,4 +262,11 @@ fn mul_internal(a: &M31, b: &M31) -> M31 {
         vv -= M31_MOD as i64;
     }
     M31 { v: vv as u32 }
+}
+
+impl std::hash::Hash for M31 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write_u32(self.v);
+    }
 }

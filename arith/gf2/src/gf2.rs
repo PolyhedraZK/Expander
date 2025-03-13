@@ -12,7 +12,7 @@ use serdes::{ExpSerde, SerdeResult};
 
 pub const MOD: u32 = 2;
 
-#[derive(Debug, Clone, Copy, Default, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialOrd, Ord)]
 pub struct GF2 {
     pub v: u8,
 }
@@ -180,4 +180,11 @@ fn sub_internal(a: &GF2, b: &GF2) -> GF2 {
 #[inline(always)]
 fn mul_internal(a: &GF2, b: &GF2) -> GF2 {
     GF2 { v: a.v & b.v }
+}
+
+impl std::hash::Hash for GF2 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write_u8(self.v);
+    }
 }
