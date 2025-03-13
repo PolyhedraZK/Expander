@@ -167,7 +167,7 @@ impl<C: GKRFieldConfig> Circuit<C> {
 
     // The root process loads a circuit from a file and shares it with other processes
     // with shared memory
-    // Used in the mpi case, ok if mpi_size = 1
+    // Used in the mpi case, ok if mpi_size = 1, but
     // circuit.discard_control_of_shared_mem() and mpi_config.free_shared_mem(window) should be
     // called before the end of the program
     pub fn prover_load_circuit<Cfg: GKRConfig<FieldConfig = C>>(

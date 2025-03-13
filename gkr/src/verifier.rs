@@ -7,7 +7,6 @@ use arith::{Field, FieldSerde};
 use circuit::{Circuit, CircuitLayer};
 use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use sumcheck::{
     GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DEGREE,
@@ -62,7 +61,7 @@ fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
 fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    mpi_config: &MPIConfig,
+    proving_time_mpi_size: usize,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
     rz0: &[C::ChallengeField],
@@ -131,7 +130,7 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
     }
     GKRVerifierHelper::set_r_simd_xy(&r_simd_xy, sp);
 
-    for _i_var in 0..mpi_config.world_size().trailing_zeros() {
+    for _i_var in 0..proving_time_mpi_size.trailing_zeros() {
         verified &= verify_sumcheck_step::<C, T>(
             &mut proof_reader,
             SUMCHECK_GKR_SIMD_MPI_DEGREE,
@@ -179,7 +178,7 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
 // todo: FIXME
 #[allow(clippy::type_complexity)]
 pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    mpi_config: &MPIConfig,
+    proving_time_mpi_size: usize,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
     claimed_v: &C::ChallengeField,
@@ -195,7 +194,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     Option<C::ChallengeField>,
 ) {
     let timer = Timer::new("gkr_verify", true);
-    let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
+    let mut sp = VerifierScratchPad::<C>::new(circuit, proving_time_mpi_size);
 
     let layer_num = circuit.layers.len();
     let mut rz0 = vec![];
@@ -211,7 +210,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         r_simd.push(transcript.generate_challenge_field_element());
     }
 
-    for _ in 0..mpi_config.world_size().trailing_zeros() {
+    for _ in 0..proving_time_mpi_size.trailing_zeros() {
         r_mpi.push(transcript.generate_challenge_field_element());
     }
 
@@ -231,7 +230,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             claimed_v0,
             claimed_v1,
         ) = sumcheck_verify_gkr_layer(
-            mpi_config,
+            proving_time_mpi_size,
             &circuit.layers[i],
             public_input,
             &rz0,
@@ -271,6 +270,7 @@ impl<C: GKRConfig> Default for Verifier<C> {
 
 impl<Cfg: GKRConfig> Verifier<Cfg> {
     pub fn new(config: &Config<Cfg>) -> Self {
+        assert!(config.mpi_config.is_root());
         Verifier {
             config: config.clone(),
         }
@@ -286,6 +286,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         proof: &Proof,
     ) -> bool {
         let timer = Timer::new("verify", true);
+        let proving_time_mpi_size = self.config.mpi_config.world_size();
         let mut transcript = Cfg::Transcript::new();
 
         let mut cursor = Cursor::new(&proof.bytes);
@@ -312,12 +313,12 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         grind::<Cfg>(&mut transcript, &self.config);
 
         circuit.fill_rnd_coefs(&mut transcript);
-        transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
+        transcript_verifier_sync(&mut transcript, proving_time_mpi_size);
 
         let verified = match self.config.gkr_scheme {
             GKRScheme::Vanilla => {
                 let (mut verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = gkr_verify(
-                    &self.config.mpi_config,
+                    proving_time_mpi_size,
                     circuit,
                     public_input,
                     claimed_v,
@@ -328,7 +329,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                 verified &= pcs_verified;
                 log::info!("GKR verification: {}", verified);
 
-                transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
+                transcript_verifier_sync(&mut transcript, proving_time_mpi_size);
 
                 verified &= self.get_pcs_opening_from_proof_and_verify(
                     pcs_params,
@@ -345,7 +346,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                 );
 
                 if let Some(rz1) = rz1 {
-                    transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
+                    transcript_verifier_sync(&mut transcript, proving_time_mpi_size);
                     verified &= self.get_pcs_opening_from_proof_and_verify(
                         pcs_params,
                         pcs_verification_key,
@@ -365,7 +366,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             }
             GKRScheme::GkrSquare => {
                 let (mut verified, rz, r_simd, r_mpi, claimed_v) = gkr_square_verify(
-                    &self.config.mpi_config,
+                    proving_time_mpi_size,
                     circuit,
                     public_input,
                     claimed_v,
