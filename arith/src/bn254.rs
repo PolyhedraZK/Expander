@@ -7,8 +7,10 @@ use halo2curves::{
 };
 use rand::RngCore;
 
-use crate::serde::{FieldSerdeError, FieldSerdeResult};
-use crate::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
+use crate::{
+    serde::{FieldSerdeError, FieldSerdeResult},
+    ExtensionField, FFTField, Field, FieldForECC, FieldSerde, SimdField,
+};
 
 const MODULUS: ethnum::U256 = ethnum::U256([
     0x2833e84879b9709143e1f593f0000001,
@@ -251,5 +253,22 @@ impl ExtensionField for Fr {
     /// Extract polynomial field coefficients from the extension field instance
     fn to_limbs(&self) -> Vec<Self::BaseField> {
         vec![*self]
+    }
+}
+
+impl FFTField for Fr {
+    const TWO_ADICITY: usize = <Self as PrimeField>::S as usize;
+
+    fn root_of_unity() -> Self {
+        <Self as PrimeField>::ROOT_OF_UNITY
+    }
+
+    fn two_adic_generator(bits: usize) -> Self {
+        let mut res = <Self as FFTField>::root_of_unity();
+        for _ in bits..Self::TWO_ADICITY {
+            res = res.square();
+        }
+
+        res
     }
 }

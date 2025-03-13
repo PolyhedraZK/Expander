@@ -5,7 +5,7 @@ pub trait FFTField: Field {
 
     fn root_of_unity() -> Self;
 
-    fn primitive_po2_root_of_unity(bits: usize) -> Self;
+    fn two_adic_generator(bits: usize) -> Self;
 
     #[inline(always)]
     fn fft(poly: &[Self]) -> Vec<Self> {
@@ -24,7 +24,7 @@ pub trait FFTField: Field {
     #[inline(always)]
     fn fft_in_place(poly: &mut [Self]) {
         let po2_mul_subgroup_bits = poly.len().ilog2() as usize;
-        let omega = Self::primitive_po2_root_of_unity(po2_mul_subgroup_bits);
+        let omega = Self::two_adic_generator(po2_mul_subgroup_bits);
 
         radix2_fft_single_threaded(poly, omega)
     }
@@ -32,7 +32,7 @@ pub trait FFTField: Field {
     #[inline(always)]
     fn ifft_in_place(evals: &mut [Self]) {
         let po2_mul_subgroup_bits = evals.len().ilog2() as usize;
-        let omega = Self::primitive_po2_root_of_unity(po2_mul_subgroup_bits);
+        let omega = Self::two_adic_generator(po2_mul_subgroup_bits);
         let omega_inv = omega.inv().unwrap();
 
         evals[1..].reverse();
