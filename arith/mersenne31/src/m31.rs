@@ -131,9 +131,46 @@ impl Field for M31 {
 
     #[inline(always)]
     fn from_u256(value: U256) -> Self {
-        // unsafe -- we don't check if the value is in the field
-        M31 {
-            v: mod_reduce_i64(value.0[0] as i64) as u32,
+        // Extract the words from the U256
+        let (high, low) = value.into_words();
+
+        // Convert to i64 for safer arithmetic operations
+        let mut accumulator: i64 = 0;
+
+        // Process low 128 bits in 31-bit chunks
+        for i in 0..5 {
+            let shift = i * 31;
+            if shift < 128 {
+                let mask = if shift + 31 <= 128 {
+                    (1u128 << 31) - 1
+                } else {
+                    (1u128 << (128 - shift)) - 1
+                };
+                let chunk = ((low >> shift) & mask) as i64;
+                accumulator = mod_reduce_i64(accumulator + chunk);
+            }
+        }
+
+        // Process high 128 bits in 31-bit chunks
+        for i in 0..5 {
+            let shift = i * 31;
+            if shift < 128 {
+                let mask = if shift + 31 <= 128 {
+                    (1u128 << 31) - 1
+                } else {
+                    (1u128 << (128 - shift)) - 1
+                };
+                let chunk = ((high >> shift) & mask) as i64;
+                // The high word chunks need to be multiplied by 2^128 mod M31_MOD, which is 16
+                accumulator = mod_reduce_i64(accumulator + (chunk * 16));
+            }
+        }
+
+        // Final reduction to ensure the result is in the correct range
+        let result = accumulator as u32;
+
+        Self {
+            v: mod_reduce_u32_safe(result),
         }
     }
 

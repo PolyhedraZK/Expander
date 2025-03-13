@@ -6,9 +6,11 @@ use arith::{
 };
 use arith::{random_from_limbs_to_limbs_tests, Field};
 use ark_std::test_rng;
+use ethnum::U256;
 use field_hashers::{FiatShamirFieldHasher, PoseidonFiatShamirHasher, PoseidonStateTrait};
 use serdes::ExpSerde;
 
+use crate::m31::{mod_reduce_u32_safe, M31_MOD};
 use crate::M31Ext3;
 use crate::M31Ext3x16;
 use crate::{M31x16, M31};
@@ -178,4 +180,30 @@ fn check_normalized_eq() {
         let b = M31 { v: 1 << 31 };
         assert_eq!(a, b);
     }
+}
+
+#[test]
+fn test_mod_u256_small_values() {
+    // Test with values less than M31_MOD
+    assert_eq!(M31::from_u256(U256::new(42)), M31 { v: 42 });
+    assert_eq!(M31::from_u256(U256::new(1000000)), M31 { v: 1000000 });
+
+    // Test with value equal to M31_MOD
+    assert_eq!(M31::from_u256(U256::new(M31_MOD as u128)), M31 { v: 0 });
+
+    // Test with value slightly larger than M31_MOD
+    assert_eq!(M31::from_u256(U256::new(M31_MOD as u128 + 1)), M31 { v: 1 });
+}
+
+#[test]
+fn test_mod_u256_large_values() {
+    // Test with a value that spans both low and high words
+    // ethnum::U256 uses big-endian representation by default
+    let large_value = U256::from_words(1, 0); // 2^128
+    assert_eq!(M31::from_u256(large_value), M31 { v: 16 }); // 2^128 mod (2^31-1) = 16
+
+    // Test with maximum possible value
+    let max_value = U256::from_words(u128::MAX, u128::MAX);
+    let expected = mod_reduce_u32_safe(255); // Theoretical result based on powers of 2
+    assert_eq!(M31::from_u256(max_value), M31 { v: expected });
 }
