@@ -1,7 +1,11 @@
 #![cfg_attr(target_arch = "x86_64", feature(stdarch_x86_avx512))]
+#![feature(slice_swap_unchecked)]
 
 mod field;
 pub use field::*;
+
+mod fft_field;
+pub use fft_field::*;
 
 mod extension_field;
 pub use extension_field::*;
