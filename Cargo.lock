@@ -118,6 +118,7 @@ dependencies = [
  "criterion",
  "ethnum",
  "halo2curves",
+ "itertools 0.13.0",
  "log",
  "rand",
  "raw-cpuid",

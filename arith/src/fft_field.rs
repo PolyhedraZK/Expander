@@ -121,6 +121,7 @@ pub fn radix2_fft_single_threaded<F: FFTField>(coeffs: &mut [F], omega: F) {
 mod fft_test {
     use ark_std::test_rng;
     use halo2curves::bn256::Fr;
+    use itertools::izip;
 
     use crate::{FFTField, Field};
 
@@ -137,10 +138,7 @@ mod fft_test {
             Fr::fft_in_place(&mut coeffs);
             Fr::ifft_in_place(&mut coeffs);
 
-            coeffs
-                .iter()
-                .zip(&coeffs_cloned)
-                .for_each(|(a, b)| assert_eq!(a, b));
+            izip!(&coeffs, &coeffs_cloned).for_each(|(a, b)| assert_eq!(a, b));
         });
     }
 }
@@ -224,8 +222,7 @@ mod bit_reverse_test {
 
     #[test]
     fn test_lut_bit_reverse() {
-        (1..33).for_each(|width| {
-            dbg!(width);
+        (1..31).for_each(|width| {
             (0..((1 << width) - 1))
                 .for_each(|i| assert_eq!(bit_reverse(bit_reverse(i, width), width), i))
         })
