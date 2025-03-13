@@ -297,9 +297,13 @@ impl MPIConfig {
         self.world.unwrap().process_at_rank(Self::ROOT_RANK)
     }
 
+    // Barrier is designed for mpi use only
+    // There might be some issues if used with multi-threading
     #[inline(always)]
     pub fn barrier(&self) {
-        self.world.unwrap().barrier();
+        if self.world_size > 1 {
+            self.world.unwrap().barrier();
+        }
     }
 
     pub fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, *mut ompi_win_t) {
