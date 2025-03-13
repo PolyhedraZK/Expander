@@ -35,8 +35,11 @@ pub trait FFTField: Field {
         let omega = Self::two_adic_generator(po2_mul_subgroup_bits);
         let omega_inv = omega.inv().unwrap();
 
-        evals[1..].reverse();
-        radix2_fft_single_threaded(evals, omega_inv)
+        // TODO(HS) not good if the FFT size is larger than 2^32
+        let n_inv = Self::from(evals.len() as u32).inv().unwrap();
+
+        radix2_fft_single_threaded(evals, omega_inv);
+        evals.iter_mut().for_each(|x| *x *= n_inv);
     }
 }
 
@@ -78,7 +81,7 @@ pub fn radix2_fft_single_threaded<F: FFTField>(coeffs: &mut [F], omega: F) {
 
     let twiddles_and_strides = {
         let mut twiddle = omega;
-        let mut stride = 1usize;
+        let mut stride = n >> 1;
 
         let mut res = vec![];
 
@@ -86,7 +89,7 @@ pub fn radix2_fft_single_threaded<F: FFTField>(coeffs: &mut [F], omega: F) {
             res.push((twiddle, stride));
 
             twiddle = twiddle * twiddle;
-            stride *= 2;
+            stride >>= 1;
         }
 
         res.reverse();
@@ -112,6 +115,34 @@ pub fn radix2_fft_single_threaded<F: FFTField>(coeffs: &mut [F], omega: F) {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod fft_test {
+    use ark_std::test_rng;
+    use halo2curves::bn256::Fr;
+
+    use crate::{FFTField, Field};
+
+    #[test]
+    fn test_bn254_fft() {
+        let mut rng = test_rng();
+
+        (1..10).for_each(|bits| {
+            let length = 1 << bits;
+
+            let mut coeffs: Vec<_> = (0..length).map(|_| Fr::random_unsafe(&mut rng)).collect();
+            let coeffs_cloned = coeffs.clone();
+
+            Fr::fft_in_place(&mut coeffs);
+            Fr::ifft_in_place(&mut coeffs);
+
+            coeffs
+                .iter()
+                .zip(&coeffs_cloned)
+                .for_each(|(a, b)| assert_eq!(a, b));
+        });
+    }
 }
 
 // NOTE(HS) acknowledge to https://github.com/EugeneGonzalez/bit_reverse
