@@ -337,8 +337,14 @@ impl PartialEq for AVXM31 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let cmp0 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(self.v[0], other.v[0]));
-            let cmp1 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(self.v[1], other.v[1]));
+            let cmp0 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(
+                mod_reduce_epi32(self.v[0]),
+                mod_reduce_epi32(other.v[0]),
+            ));
+            let cmp1 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(
+                mod_reduce_epi32(self.v[1]),
+                mod_reduce_epi32(other.v[1]),
+            ));
             (cmp0 & cmp1) == !0i32
         }
     }

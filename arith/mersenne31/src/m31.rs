@@ -22,10 +22,19 @@ fn mod_reduce_i64(x: i64) -> i64 {
     (x & M31_MOD as i64) + (x >> 31)
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialOrd, Ord, Hash)]
 pub struct M31 {
     pub v: u32,
 }
+
+impl PartialEq for M31 {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        mod_reduce_u32(self.v) == mod_reduce_u32(other.v)
+    }
+}
+
+impl Eq for M31 {}
 
 field_common!(M31);
 

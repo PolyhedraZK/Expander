@@ -293,7 +293,7 @@ impl PartialEq for AVXM31 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let pcmp = _mm512_cmpeq_epi32_mask(self.v, other.v);
+            let pcmp = _mm512_cmpeq_epi32_mask(mod_reduce_epi32(self.v), mod_reduce_epi32(other.v));
             pcmp == 0xFFFF
         }
     }

@@ -12,10 +12,19 @@ use serdes::{ExpSerde, SerdeResult};
 
 pub const MOD: u32 = 2;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialOrd, Ord, Hash)]
 pub struct GF2 {
     pub v: u8,
 }
+
+impl PartialEq for GF2 {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        self.v & 1 == other.v & 1
+    }
+}
+
+impl Eq for GF2 {}
 
 field_common!(GF2);
 
