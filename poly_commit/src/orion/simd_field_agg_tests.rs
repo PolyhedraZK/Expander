@@ -174,7 +174,6 @@ where
         );
 
     assert!(orion_verify_simd_field_aggregated::<C, ComPackF, T>(
-        num_parties,
         &srs,
         &final_commitment,
         &gkr_challenge,

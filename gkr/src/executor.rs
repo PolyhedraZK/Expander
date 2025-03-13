@@ -32,10 +32,6 @@ pub struct ExpanderExecArgs {
     #[arg(short, long, default_value = "Raw")]
     pub poly_commitment_scheme: String,
 
-    /// Circuit File Path
-    #[arg(short, long)]
-    pub circuit_file: String,
-
     /// Prove, Verify, or Serve subcommands
     #[clap(subcommand)]
     pub subcommands: ExpanderExecSubCommand,
@@ -44,6 +40,10 @@ pub struct ExpanderExecArgs {
 #[derive(Debug, Subcommand, Clone)]
 pub enum ExpanderExecSubCommand {
     Prove {
+        /// Circuit File Path
+        #[arg(short, long)]
+        circuit_file: String,
+
         /// Witness File Path
         #[arg(short, long)]
         witness_file: String,
@@ -53,6 +53,10 @@ pub enum ExpanderExecSubCommand {
         output_proof_file: String,
     },
     Verify {
+        /// Circuit File Path
+        #[arg(short, long)]
+        circuit_file: String,
+
         /// Witness File Path
         #[arg(short, long)]
         witness_file: String,
@@ -66,6 +70,10 @@ pub enum ExpanderExecSubCommand {
         mpi_size: u32,
     },
     Serve {
+        /// Circuit File Path
+        #[arg(short, long)]
+        circuit_file: String,
+
         /// IP host
         #[arg(short, long)]
         host_ip: String,
@@ -169,11 +177,12 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
 
     match subcommands {
         ExpanderExecSubCommand::Prove {
+            circuit_file,
             witness_file,
             output_proof_file,
         } => {
             let (mut circuit, mut window) = Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
-                &command.circuit_file,
+                &circuit_file,
                 &config.mpi_config,
             );
             circuit.prover_load_witness_file(&witness_file, &config.mpi_config);
@@ -188,6 +197,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
             config.mpi_config.free_shared_mem(&mut window);
         }
         ExpanderExecSubCommand::Verify {
+            circuit_file,
             witness_file,
             input_proof_file,
             mpi_size,
@@ -199,7 +209,8 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
             config.mpi_config.world_size = mpi_size as i32;
 
             let mut circuit =
-                Circuit::<Cfg::FieldConfig>::verifier_load_circuit::<Cfg>(&command.circuit_file);
+                Circuit::<Cfg::FieldConfig>::verifier_load_circuit::<Cfg>(&circuit_file);
+
             circuit.verifier_load_witness_file(&witness_file, &config.mpi_config);
 
             let bytes = fs::read(&input_proof_file).expect("Unable to read proof from file.");
@@ -210,8 +221,11 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
 
             println!("success");
         }
-        ExpanderExecSubCommand::Serve { host_ip, port } => {
-            // This is not actively maintained, and may not work as expected.
+        ExpanderExecSubCommand::Serve {
+            circuit_file,
+            host_ip,
+            port,
+        } => {
             assert!(
                 config.mpi_config.world_size() == 1,
                 "Serve mode is not compatible with mpi for now."
@@ -223,14 +237,14 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
                 .try_into()
                 .unwrap();
             let (circuit, _) = Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
-                &command.circuit_file,
+                &circuit_file,
                 &config.mpi_config,
             );
             let mut prover = crate::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let verifier = crate::Verifier::new(&config);
 
-            // TODO: Read PCS  setup from files
+            // TODO: Read PCS setup from files
             let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
                 expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
