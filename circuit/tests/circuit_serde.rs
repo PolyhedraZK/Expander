@@ -56,7 +56,8 @@ fn test_circuit_serde_helper<Cfg: GKRConfig>(mpi_config: &MPIConfig) {
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
         _ => unreachable!(),
     };
-    let circuit = Circuit::<Cfg::FieldConfig>::load_circuit_independent::<Cfg>(&circuit_path);
+    let circuit =
+        Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(&circuit_path);
     root_println!(mpi_config, "Circuit loaded.");
 
     let mut buffer = vec![];

@@ -141,8 +141,6 @@ impl<C: GKRFieldConfig> RecursiveCircuit<C> {
             ret.layers.push(ret_layer);
         }
 
-        ret.pre_process_gkr::<Cfg>();
-
         ret
     }
 }

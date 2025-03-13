@@ -306,18 +306,13 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         let pcs_verified = transcript.append_commitment_and_check_digest(&buffer, &mut cursor);
         log::info!("pcs verification: {}", pcs_verified);
 
-        // TODO: Implement a trait containing the size function,
-        // and use the following line to avoid unnecessary deserialization and serialization
-        // transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
-
-        transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
-
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
         #[cfg(feature = "grinding")]
         grind::<Cfg>(&mut transcript, &self.config);
 
-        circuit.fill_rnd_coefs(&mut transcript, &self.config.mpi_config);
+        circuit.fill_rnd_coefs(&mut transcript);
+        transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
 
         let verified = match self.config.gkr_scheme {
             GKRScheme::Vanilla => {

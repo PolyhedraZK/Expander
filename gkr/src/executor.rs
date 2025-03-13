@@ -172,7 +172,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
             witness_file,
             output_proof_file,
         } => {
-            let (mut circuit, mut window) = Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(
+            let (mut circuit, mut window) = Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 &command.circuit_file,
                 &config.mpi_config,
             );
@@ -199,7 +199,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
             config.mpi_config.world_size = mpi_size as i32;
 
             let mut circuit =
-                Circuit::<Cfg::FieldConfig>::load_circuit_independent::<Cfg>(&command.circuit_file);
+                Circuit::<Cfg::FieldConfig>::verifier_load_circuit::<Cfg>(&command.circuit_file);
             circuit.verifier_load_witness_file(&witness_file, &config.mpi_config);
 
             let bytes = fs::read(&input_proof_file).expect("Unable to read proof from file.");
@@ -222,11 +222,10 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
                 .collect::<Vec<u8>>()
                 .try_into()
                 .unwrap();
-            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(
+            let (circuit, _) = Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 &command.circuit_file,
                 &config.mpi_config,
-            )
-            .0;
+            );
             let mut prover = crate::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let verifier = crate::Verifier::new(&config);

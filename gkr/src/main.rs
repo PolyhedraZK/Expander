@@ -100,27 +100,30 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let pack_size = Cfg::FieldConfig::get_field_pack_size();
 
     // load circuit
-    let mut circuit_template = match args.scheme.as_str() {
-        "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit_independent::<Cfg>(KECCAK_GF2_CIRCUIT)
-            }
-            FieldType::M31 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit_independent::<Cfg>(KECCAK_M31_CIRCUIT)
-            }
-            FieldType::BN254 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit_independent::<Cfg>(KECCAK_BN254_CIRCUIT)
-            }
-        },
-        "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit_independent::<Cfg>(POSEIDON_M31_CIRCUIT)
-            }
-            _ => unreachable!("not supported"),
-        },
+    let mut circuit_template =
+        match args.scheme.as_str() {
+            "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
+                FieldType::GF2 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(KECCAK_GF2_CIRCUIT),
+                FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(KECCAK_M31_CIRCUIT),
+                FieldType::BN254 => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_BN254_CIRCUIT,
+                    )
+                }
+            },
+            "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
+                FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(POSEIDON_M31_CIRCUIT),
+                _ => unreachable!("not supported"),
+            },
 
-        _ => unreachable!(),
-    };
+            _ => unreachable!(),
+        };
 
     let witness_path = match args.scheme.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {

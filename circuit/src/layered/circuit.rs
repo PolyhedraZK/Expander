@@ -132,6 +132,7 @@ impl<C: GKRFieldConfig> Clone for Circuit<C> {
         let mut ret = Circuit::<C> {
             layers: self.layers.clone(),
             public_input: self.public_input.clone(),
+            expected_num_output_zeros: self.expected_num_output_zeros,
             ..Default::default()
         };
 
@@ -146,10 +147,22 @@ unsafe impl<C> Send for Circuit<C> where C: GKRFieldConfig {}
 
 impl<C: GKRFieldConfig> Circuit<C> {
     // Load a circuit from a file and flatten it
-    // Used for single-thread prover or verifier
-    pub fn load_circuit_independent<Cfg: GKRConfig<FieldConfig = C>>(filename: &str) -> Self {
+    // Used for verifier
+    pub fn verifier_load_circuit<Cfg: GKRConfig<FieldConfig = C>>(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
-        rc.flatten::<Cfg>()
+        let mut c = rc.flatten::<Cfg>();
+        c.pre_process_gkr::<Cfg>();
+        c
+    }
+
+    // Used for prover with mpi_size = 1.
+    // This avoids the overhead of shared memory
+    // No need to call discard_control_of_shared_mem() and free_shared_mem(window) after this
+    #[inline(always)]
+    pub fn single_thread_prover_load_circuit<Cfg: GKRConfig<FieldConfig = C>>(
+        filename: &str,
+    ) -> Self {
+        Self::verifier_load_circuit::<Cfg>(filename)
     }
 
     // The root process loads a circuit from a file and shares it with other processes
@@ -157,12 +170,14 @@ impl<C: GKRFieldConfig> Circuit<C> {
     // Used in the mpi case, ok if mpi_size = 1
     // circuit.discard_control_of_shared_mem() and mpi_config.free_shared_mem(window) should be
     // called before the end of the program
-    pub fn load_circuit_shared<Cfg: GKRConfig<FieldConfig = C>>(
+    pub fn prover_load_circuit<Cfg: GKRConfig<FieldConfig = C>>(
         filename: &str,
         mpi_config: &MPIConfig,
     ) -> (Self, *mut ompi_win_t) {
         let circuit = if mpi_config.is_root() {
-            Some(Self::load_circuit_independent::<Cfg>(filename))
+            let rc = RecursiveCircuit::<C>::load(filename).unwrap();
+            let circuit = rc.flatten::<Cfg>();
+            Some(circuit)
         } else {
             None
         };
@@ -384,20 +399,13 @@ impl<C: GKRFieldConfig> Circuit<C> {
         self.rnd_coefs_identified = true;
     }
 
-    pub fn fill_rnd_coefs<T: Transcript<C::ChallengeField>>(
-        &mut self,
-        transcript: &mut T,
-        mpi_config: &MPIConfig,
-    ) {
+    pub fn fill_rnd_coefs<T: Transcript<C::ChallengeField>>(&mut self, transcript: &mut T) {
         assert!(self.rnd_coefs_identified);
-        if mpi_config.is_root() {
-            let sampled_circuit_fs =
-                transcript.generate_circuit_field_elements(self.rnd_coefs.len());
-            self.rnd_coefs
-                .iter()
-                .zip(sampled_circuit_fs.iter())
-                .for_each(|(&r, sr)| unsafe { *r = *sr });
-        }
+        let sampled_circuit_fs = transcript.generate_circuit_field_elements(self.rnd_coefs.len());
+        self.rnd_coefs
+            .iter()
+            .zip(sampled_circuit_fs.iter())
+            .for_each(|(&r, sr)| unsafe { *r = *sr });
     }
 
     pub fn identify_structure_info(&mut self) {

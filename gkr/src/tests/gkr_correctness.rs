@@ -170,7 +170,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         _ => unreachable!(),
     };
     let (mut circuit, mut window) =
-        Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(&circuit_path, &config.mpi_config);
+        Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_path, &config.mpi_config);
     root_println!(config.mpi_config, "Circuit loaded.");
 
     let witness_path = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {

@@ -90,21 +90,21 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     // load circuit
     let (mut circuit, mut window) = match args.scheme.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(
+            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 KECCAK_GF2_CIRCUIT,
                 &config.mpi_config,
             ),
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 KECCAK_M31_CIRCUIT,
                 &config.mpi_config,
             ),
-            FieldType::BN254 => Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(
+            FieldType::BN254 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 KECCAK_BN254_CIRCUIT,
                 &config.mpi_config,
             ),
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit_shared::<Cfg>(
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 POSEIDON_M31_CIRCUIT,
                 &config.mpi_config,
             ),
