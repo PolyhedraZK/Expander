@@ -89,8 +89,8 @@ impl Field for Fr {
     }
 
     /// Exp
-    fn exp(&self, _exponent: u128) -> Self {
-        unimplemented!()
+    fn exp(&self, exp: u128) -> Self {
+        self.pow_vartime([exp as u64])
     }
 
     /// find the inverse of the element; return None if not exist

@@ -1883,6 +1883,7 @@ dependencies = [
  "gkr_field_config",
  "halo2curves",
  "mpi_config",
+ "rand",
 ]
 
 [[package]]
