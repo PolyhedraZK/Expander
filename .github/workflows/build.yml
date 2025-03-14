@@ -8,6 +8,11 @@ env:
   RUST_BACKTRACE: 1
   ACTIONS_RUNNER_DEBUG: true
 
+# Cancel all previous runs of the same workflow
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     strategy:
@@ -34,14 +39,14 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: "mpi-v5.0.6"
+          prefix-key: "mpi-v5.0.7"
 
       - name: Install MPI for MacOS workflow
         if: matrix.os == 'macos-latest'
         run: python3 ./scripts/install.py
 
       - name: Set RUSTFLAGS for AVX
-        if: matrix.feature != 'macos-latest'
+        if: matrix.os != 'macos-latest'
         run: echo "RUSTFLAGS=$RUSTFLAGS -C target-feature=+${{ matrix.feature }}" >> $GITHUB_ENV
 
       - name: Prepare binary

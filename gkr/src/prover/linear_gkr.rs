@@ -1,11 +1,11 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::FieldSerde;
 use circuit::Circuit;
 use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use polynomials::{MultilinearExtension, RefMultiLinearPoly};
+use serdes::ExpSerde;
 use sumcheck::ProverScratchPad;
 use transcript::{transcript_root_broadcast, Proof, Transcript};
 use utils::timer::Timer;
@@ -14,7 +14,8 @@ use crate::{gkr_prove, gkr_square_prove};
 
 #[cfg(feature = "grinding")]
 pub(crate) fn grind<Cfg: GKRConfig>(transcript: &mut Cfg::Transcript, config: &Config<Cfg>) {
-    use arith::{Field, FieldSerde};
+    use arith::Field;
+    use serdes::ExpSerde;
 
     let timer = Timer::new("grinding", config.mpi_config.is_root());
 
@@ -111,15 +112,13 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         c.fill_rnd_coefs(&mut transcript);
         c.evaluate();
 
-        let mut claimed_v = <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::default();
-        let rx;
+        let (claimed_v, rx, rsimd, rmpi);
         let mut ry = None;
-        let mut rsimd = vec![];
-        let mut rmpi = vec![];
 
         let gkr_prove_timer = Timer::new("gkr prove", self.config.mpi_config.is_root());
         if self.config.gkr_scheme == GKRScheme::GkrSquare {
-            (_, rx) = gkr_square_prove(c, &mut self.sp, &mut transcript);
+            (claimed_v, rx, rsimd, rmpi) =
+                gkr_square_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
         } else {
             (claimed_v, rx, ry, rsimd, rmpi) =
                 gkr_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);

@@ -17,6 +17,7 @@ pub enum PolynomialCommitmentType {
     #[default]
     Raw,
     KZG,
+    Hyrax,
     Orion,
     FRI,
 }
@@ -28,6 +29,7 @@ impl FromStr for PolynomialCommitmentType {
         match s {
             "Raw" => Ok(PolynomialCommitmentType::Raw),
             "KZG" => Ok(PolynomialCommitmentType::KZG),
+            "Hyrax" => Ok(PolynomialCommitmentType::Hyrax),
             "Orion" => Ok(PolynomialCommitmentType::Orion),
             "FRI" => Ok(PolynomialCommitmentType::FRI),
             _ => Err(ConfigEnumFromStrError::SerializationError(s.to_string())),

@@ -4,7 +4,9 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{Field, FieldSerde, FieldSerdeResult};
+use arith::Field;
+use ethnum::U256;
+use serdes::{ExpSerde, SerdeResult};
 
 use crate::GF2;
 
@@ -13,17 +15,17 @@ pub struct NeonGF2x128 {
     pub(crate) v: uint32x4_t,
 }
 
-impl FieldSerde for NeonGF2x128 {
+impl ExpSerde for NeonGF2x128 {
     const SERIALIZED_SIZE: usize = 16;
 
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe { writer.write_all(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref())? };
         Ok(())
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
         let mut u = [0u8; 16];
         reader.read_exact(&mut u)?;
         unsafe {
@@ -52,6 +54,8 @@ impl Field for NeonGF2x128 {
     const INV_2: Self = NeonGF2x128 {
         v: unsafe { zeroed() },
     }; // should not be used
+
+    const MODULUS: U256 = U256::ZERO; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {
@@ -300,6 +304,15 @@ impl From<GF2> for NeonGF2x128 {
             NeonGF2x128::ZERO
         } else {
             NeonGF2x128::ONE
+        }
+    }
+}
+
+impl std::hash::Hash for NeonGF2x128 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref());
         }
     }
 }

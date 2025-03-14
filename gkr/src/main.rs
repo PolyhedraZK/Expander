@@ -18,7 +18,7 @@ use gkr::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
         KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
-    BN254ConfigSha2Raw, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, Prover,
+    BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, Prover,
 };
 
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
@@ -64,11 +64,11 @@ fn main() {
             _ => unreachable!(),
         },
         "fr" => match args.scheme.as_str() {
-            "keccak" => run_benchmark::<BN254ConfigSha2Raw>(
+            "keccak" => run_benchmark::<BN254ConfigSha2Hyrax>(
                 &args,
                 Config::new(GKRScheme::Vanilla, mpi_config.clone()),
             ),
-            "poseidon" => run_benchmark::<BN254ConfigSha2Raw>(
+            "poseidon" => run_benchmark::<BN254ConfigSha2Hyrax>(
                 &args,
                 Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
             ),
@@ -102,12 +102,16 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     // load circuit
     let mut circuit_template = match args.scheme.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit(KECCAK_GF2_CIRCUIT),
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit(KECCAK_M31_CIRCUIT),
-            FieldType::BN254 => Circuit::<Cfg::FieldConfig>::load_circuit(KECCAK_BN254_CIRCUIT),
+            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GF2_CIRCUIT),
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_M31_CIRCUIT),
+            FieldType::BN254 => {
+                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_BN254_CIRCUIT)
+            }
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit(POSEIDON_M31_CIRCUIT),
+            FieldType::M31 => {
+                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(POSEIDON_M31_CIRCUIT)
+            }
             _ => unreachable!("not supported"),
         },
 
@@ -127,15 +131,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         _ => unreachable!(),
     };
 
-    match args.scheme.as_str() {
-        "keccak" => circuit_template.load_witness_file(witness_path),
-        "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => circuit_template.load_non_simd_witness_file(witness_path),
-            _ => unreachable!("not supported"),
-        },
-
-        _ => unreachable!(),
-    };
+    circuit_template.load_witness_allow_padding_testing_only(witness_path, &config.mpi_config);
 
     let circuit_copy_size: usize = match (Cfg::FieldConfig::FIELD_TYPE, args.scheme.as_str()) {
         (FieldType::GF2, "keccak") => 1,

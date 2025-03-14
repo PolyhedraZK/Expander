@@ -1,7 +1,8 @@
 use std::{fmt::Debug, io::Read, marker::PhantomData};
 
-use arith::{ExtensionField, Field, FieldSerde};
+use arith::{ExtensionField, Field};
 use field_hashers::FiatShamirFieldHasher;
+use serdes::ExpSerde;
 
 use crate::{fiat_shamir_hash::FiatShamirBytesHash, Proof};
 
@@ -165,6 +166,7 @@ impl<F: ExtensionField, H: FiatShamirBytesHash> Transcript<F> for BytesHashTrans
 
             digest == pcs_digest
         }
+
         #[cfg(feature = "recursion")]
         true
     }
@@ -255,12 +257,13 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
     pub fn hash_to_digest(&mut self) {
         let hash_end_index = self.proof.bytes.len();
         if hash_end_index > self.hash_start_index {
-            let hash_input = [
-                &self.proof.bytes[self.hash_start_index..hash_end_index],
-                &self.digest,
-            ]
-            .concat();
-            H::hash(&mut self.digest, &hash_input);
+            let hash_inputs = {
+                let mut res = self.digest.clone();
+                res.extend_from_slice(&self.proof.bytes[self.hash_start_index..hash_end_index]);
+                res
+            };
+
+            H::hash(&mut self.digest, &hash_inputs);
             self.hash_start_index = hash_end_index;
         } else {
             H::hash_inplace(&mut self.digest);
@@ -381,9 +384,9 @@ where
 
     fn generate_circuit_field_element(&mut self) -> <ChallengeF as ExtensionField>::BaseField {
         if !self.data_pool.is_empty() {
-            self.hash_state = self.hasher.hash_to_state(&self.data_pool);
-            // reset the data_pool from the output of last hash
-            self.data_pool = self.hash_state.clone();
+            self.hash_state.extend_from_slice(&self.data_pool);
+            self.hash_state = self.hasher.hash_to_state(&self.hash_state);
+            self.data_pool.clear();
             self.next_unconsumed = 0;
         }
 
@@ -402,9 +405,9 @@ where
 
     fn generate_challenge_field_element(&mut self) -> ChallengeF {
         if !self.data_pool.is_empty() {
-            self.hash_state = self.hasher.hash_to_state(&self.data_pool);
-            // reset the data_pool from the output of last hash
-            self.data_pool = self.hash_state.clone();
+            self.hash_state.extend_from_slice(&self.data_pool);
+            self.hash_state = self.hasher.hash_to_state(&self.hash_state);
+            self.data_pool.clear();
             self.next_unconsumed = 0;
         }
 

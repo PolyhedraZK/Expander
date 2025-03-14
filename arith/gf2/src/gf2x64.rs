@@ -1,25 +1,27 @@
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use arith::{Field, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{Field, SimdField};
+use ethnum::U256;
+use serdes::{ExpSerde, SerdeResult};
 
 use super::GF2;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct GF2x64 {
     pub v: u64,
 }
 
-impl FieldSerde for GF2x64 {
+impl ExpSerde for GF2x64 {
     const SERIALIZED_SIZE: usize = 8;
 
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         writer.write_all(self.v.to_le_bytes().as_ref())?;
         Ok(())
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
         let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
         Ok(GF2x64 {
@@ -40,6 +42,8 @@ impl Field for GF2x64 {
     const ONE: Self = GF2x64 { v: !0u64 };
 
     const INV_2: Self = GF2x64 { v: 0 }; // NOTE: should not be used
+
+    const MODULUS: U256 = U256::ZERO; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {
@@ -292,4 +296,19 @@ impl SimdField for GF2x64 {
     type Scalar = crate::GF2;
 
     const PACK_SIZE: usize = 64;
+}
+
+impl Ord for GF2x64 {
+    #[inline(always)]
+    fn cmp(&self, _: &Self) -> std::cmp::Ordering {
+        unimplemented!("Ord for GF2x64 is not supported")
+    }
+}
+
+#[allow(clippy::non_canonical_partial_ord_impl)]
+impl PartialOrd for GF2x64 {
+    #[inline(always)]
+    fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
+        unimplemented!("PartialOrd for GF2x64 is not supported")
+    }
 }

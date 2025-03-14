@@ -12,6 +12,5 @@ pub mod executor;
 
 pub mod gkr_configs;
 pub use gkr_configs::*;
-
 #[cfg(test)]
 mod tests;

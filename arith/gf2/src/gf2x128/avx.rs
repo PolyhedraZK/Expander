@@ -1,10 +1,13 @@
 use std::{
     arch::x86_64::*,
+    hash::Hasher,
     mem::{transmute, zeroed},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{Field, FieldSerde, FieldSerdeResult};
+use arith::Field;
+use ethnum::U256;
+use serdes::{ExpSerde, SerdeResult};
 
 use crate::GF2;
 
@@ -13,11 +16,11 @@ pub struct AVXGF2x128 {
     pub v: __m128i,
 }
 
-impl FieldSerde for AVXGF2x128 {
+impl ExpSerde for AVXGF2x128 {
     const SERIALIZED_SIZE: usize = 16;
 
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe {
             writer.write_all(transmute::<__m128i, [u8; Self::SERIALIZED_SIZE]>(self.v).as_ref())?
         };
@@ -25,7 +28,7 @@ impl FieldSerde for AVXGF2x128 {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
         let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
         unsafe {
@@ -54,6 +57,8 @@ impl Field for AVXGF2x128 {
     const INV_2: Self = AVXGF2x128 {
         v: unsafe { zeroed() },
     }; // should not be used
+
+    const MODULUS: U256 = U256::ZERO; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {
@@ -300,6 +305,15 @@ impl From<GF2> for AVXGF2x128 {
             AVXGF2x128::ZERO
         } else {
             AVXGF2x128::ONE
+        }
+    }
+}
+
+impl std::hash::Hash for AVXGF2x128 {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<__m128i, [u8; 16]>(self.v).as_ref());
         }
     }
 }

@@ -105,6 +105,10 @@ fn parse_polynomial_commitment_type(
             "Raw".to_owned(),
             format!("RawExpanderGKR::<{field_config}, {transcript_type}>").to_owned(),
         ),
+        ("Hyrax", "BN254") => (
+            "Hyrax".to_owned(),
+            format!("HyraxPCS::<G1Affine, {transcript_type}>").to_owned(),
+        ),
         ("Orion", "GF2") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, GF2x128, {transcript_type}>").to_owned(),

@@ -23,7 +23,7 @@ where
     let mut interleaved_codewords: Vec<_> = poly
         .coeffs
         .chunks(msg_size)
-        .flat_map(|msg| orion_srs.code_instance.encode(&msg).unwrap())
+        .flat_map(|msg| orion_srs.code_instance.encode(msg).unwrap())
         .collect();
 
     let mut scratch = vec![F::ZERO; row_num * orion_srs.codeword_len()];

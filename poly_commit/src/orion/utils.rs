@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
-use arith::{ExtensionField, Field, FieldSerdeError, SimdField};
+use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
+use serdes::{ExpSerde, SerdeError};
 use thiserror::Error;
 use transcript::Transcript;
 
@@ -19,7 +20,7 @@ pub enum OrionPCSError {
     ParameterUnmatchError,
 
     #[error("field serde error")]
-    SerializationError(#[from] FieldSerdeError),
+    SerializationError(#[from] SerdeError),
 }
 
 pub type OrionResult<T> = std::result::Result<T, OrionPCSError>;
@@ -75,7 +76,6 @@ impl OrionSRS {
 
 pub type OrionCommitment = tree::Node;
 
-// TODO: maybe prepare memory API for transpose in commit and open?
 #[derive(Clone, Debug, Default)]
 pub struct OrionScratchPad<F, ComPackF>
 where
@@ -83,10 +83,28 @@ where
     ComPackF: SimdField<Scalar = F>,
 {
     pub interleaved_alphabet_commitment: tree::Tree,
-    pub _phantom: PhantomData<ComPackF>,
+
+    _phantom: PhantomData<ComPackF>,
 }
 
 unsafe impl<F: Field, ComPackF: SimdField<Scalar = F>> Send for OrionScratchPad<F, ComPackF> {}
+
+impl<F: Field, ComPackF: SimdField<Scalar = F>> ExpSerde for OrionScratchPad<F, ComPackF> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
+        self.interleaved_alphabet_commitment.serialize_into(writer)
+    }
+
+    fn deserialize_from<R: std::io::Read>(reader: R) -> serdes::SerdeResult<Self> {
+        let interleaved_alphabet_commitment = tree::Tree::deserialize_from(reader)?;
+
+        Ok(Self {
+            interleaved_alphabet_commitment,
+            _phantom: PhantomData,
+        })
+    }
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct OrionProof<EvalF: Field> {
@@ -503,7 +521,7 @@ mod tests {
         let mut table = SubsetSumLUTs::new(8, 1);
         table.build(&weights);
 
-        let actual_lut_inner_prod = table.lookup_and_sum(&vec![simd_bases]);
+        let actual_lut_inner_prod = table.lookup_and_sum(&[simd_bases]);
 
         assert_eq!(expected_simd_inner_prod, actual_lut_inner_prod)
     }

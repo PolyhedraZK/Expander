@@ -3,18 +3,20 @@ use std::panic::AssertUnwindSafe;
 use std::time::Instant;
 use std::{fs, panic};
 
-use arith::{Field, FieldSerde};
+use arith::Field;
 use circuit::Circuit;
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use halo2curves::bn256::G1Affine;
 use mersenne31::M31x16;
 use mpi_config::{root_println, MPIConfig};
-use poly_commit::{expander_pcs_init_testing_only, OrionPCSForGKR, RawExpanderGKR};
+use poly_commit::{expander_pcs_init_testing_only, HyraxPCS, OrionPCSForGKR, RawExpanderGKR};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha12Rng;
+use serdes::ExpSerde;
 use sha2::Digest;
 use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
 
@@ -85,6 +87,12 @@ fn test_gkr_correctness() {
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Orion,
     );
+    declare_gkr_config!(
+        C10,
+        FieldType::BN254,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Hyrax
+    );
 
     test_gkr_correctness_helper(
         &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
@@ -126,6 +134,10 @@ fn test_gkr_correctness() {
         &Config::<C9>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
+    test_gkr_correctness_helper(
+        &Config::<C10>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
 
     MPIConfig::finalize();
 }
@@ -157,7 +169,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
         _ => unreachable!(),
     };
-    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit(&circuit_path);
+    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_path);
     root_println!(config.mpi_config, "Circuit loaded.");
 
     let witness_path = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
@@ -166,7 +178,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_WITNESS,
         _ => unreachable!(),
     };
-    circuit.load_witness_file(&witness_path);
+    circuit.load_witness_allow_padding_testing_only(&witness_path, &config.mpi_config);
     root_println!(config.mpi_config, "Witness loaded.");
 
     circuit.evaluate();

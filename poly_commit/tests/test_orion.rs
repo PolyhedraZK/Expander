@@ -151,10 +151,10 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
         OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF, T>,
     >(
         &num_vars_in_each_poly,
-        &mpi_config_ref,
+        mpi_config_ref,
         &mut transcript,
         &local_poly,
-        &vec![challenge_point],
+        &[challenge_point],
     );
 }
 
@@ -172,7 +172,7 @@ fn test_orion_for_expander_gkr() {
         M31ExtConfig,
         M31x16,
         BytesHashTranscript<_, Keccak256hasher>,
-    >(&mpi_config, 15);
+    >(&mpi_config, 25);
 
     MPIConfig::finalize()
 }
