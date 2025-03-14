@@ -21,6 +21,9 @@ pub use serde::*;
 
 mod macros;
 
+mod utils;
+pub use utils::*;
+
 mod benches;
 pub use benches::*;
 

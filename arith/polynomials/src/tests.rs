@@ -1,5 +1,5 @@
 use super::*;
-use arith::Field;
+use arith::{FFTField, Field};
 use ark_std::test_rng;
 use halo2curves::bn256::Fr;
 
@@ -166,4 +166,30 @@ fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
         i >>= 1;
     }
     res
+}
+
+#[test]
+fn test_univariate_poly_evaluation() {
+    let mut rng = test_rng();
+
+    let po2 = 1024;
+    let bits = 10;
+    let point = Fr::random_unsafe(&mut rng);
+
+    let univariate = UnivariatePoly::random(po2 - 1, &mut rng);
+    let evaluation = univariate.evaluate(point);
+
+    let lagrange = univariate.clone().fft();
+    let another_evaluatopm = lagrange.evaluate(point);
+
+    assert_eq!(another_evaluatopm, evaluation);
+
+    // NOTE(HS) now we test point being on the smooth multiplicative subgroup
+    let omega = Fr::two_adic_generator(bits);
+    let omega_i = omega.exp(893 as u128);
+
+    let evaluation = univariate.evaluate(omega_i);
+    let another_evaluation = lagrange.evaluate(omega_i);
+
+    assert_eq!(another_evaluation, evaluation);
 }

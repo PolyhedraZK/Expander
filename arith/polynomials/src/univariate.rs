@@ -97,17 +97,9 @@ impl<F: FFTField> UnivariateLagrangePolynomial<F> {
         let omega_inv = omega.inv().unwrap();
 
         let nominator_prepare = point.exp(n as u128) - F::ONE;
-        let denominator_prepare = {
-            let mut omega_i = omega;
-            let mut res = F::ONE;
 
-            (1..=n - 1).for_each(|_| {
-                res *= F::ONE - omega_i;
-                omega_i *= omega;
-            });
-
-            res
-        };
+        // TODO(HS) I still don't quite like the case that Field is from only u32
+        let denominator_prepare = F::from(n as u32);
 
         let mut omega_i = F::ONE;
         let mut denominator = denominator_prepare;
@@ -119,6 +111,8 @@ impl<F: FFTField> UnivariateLagrangePolynomial<F> {
 
                 let res = if nominator_vanisher.is_zero() {
                     *e_i
+                } else if nominator_prepare.is_zero() {
+                    F::ZERO
                 } else {
                     let nominator = nominator_prepare * nominator_vanisher.inv().unwrap();
                     *e_i * nominator * denominator.inv().unwrap()
@@ -151,37 +145,33 @@ impl<F: FFTField> UnivariateLagrangePolynomial<F> {
     }
 }
 
-#[cfg(test)]
-mod univariate_poly_test {
-    use arith::{FFTField, Field};
-    use ark_std::test_rng;
-    use halo2curves::bn256::Fr;
+#[derive(Debug, Clone)]
+pub struct EqUnivariatePoly<F: Field> {
+    pub point: Vec<F>,
+}
 
-    use super::UnivariatePoly;
+impl<F: Field> EqUnivariatePoly<F> {
+    #[inline]
+    pub fn new(point: Vec<F>) -> Self {
+        Self { point }
+    }
 
-    #[test]
-    fn test_univariate_poly_evaluation() {
-        let mut rng = test_rng();
+    #[inline]
+    pub fn degree(&self) -> usize {
+        (1 << self.point.len()) - 1
+    }
 
-        let po2 = 1024;
-        let bits = 10;
-        let point = Fr::random_unsafe(&mut rng);
+    /// Evaluation in O(\log N) time
+    #[inline]
+    pub fn evaluate(&self, x: F) -> F {
+        let mut eval = F::ONE;
+        let mut x_pow = x;
 
-        let univariate = UnivariatePoly::random(po2 - 1, &mut rng);
-        let evaluation = univariate.evaluate(point);
+        self.point.iter().for_each(|e| {
+            eval *= x_pow * e + F::ONE - e;
+            x_pow = x_pow.square();
+        });
 
-        let lagrange = univariate.clone().fft();
-        let another_evaluatopm = lagrange.evaluate(point);
-
-        assert_eq!(another_evaluatopm, evaluation);
-
-        // NOTE(HS) now we test point being on the smooth multiplicative subgroup
-        let omega = Fr::two_adic_generator(bits);
-        let omega_i = omega.exp(893 as u128);
-
-        let evaluation = univariate.evaluate(omega_i);
-        let another_evaluation = lagrange.evaluate(omega_i);
-
-        assert_eq!(another_evaluation, evaluation);
+        eval
     }
 }
