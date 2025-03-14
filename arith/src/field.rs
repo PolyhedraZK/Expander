@@ -1,4 +1,6 @@
+use ethnum::U256;
 use rand::RngCore;
+use serdes::ExpSerde;
 
 use std::{
     fmt::Debug,
@@ -6,8 +8,6 @@ use std::{
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
-
-use crate::FieldSerde;
 
 /// Field definitions.
 pub trait Field:
@@ -34,7 +34,11 @@ pub trait Field:
     + for<'a> AddAssign<&'a Self>
     + for<'a> SubAssign<&'a Self>
     + for<'a> MulAssign<&'a Self>
-    + FieldSerde
+    + ExpSerde
+    + Hash
+    + Eq
+    + PartialOrd
+    + Ord
 {
     /// name
     const NAME: &'static str;
@@ -53,6 +57,9 @@ pub trait Field:
 
     /// Inverse of 2
     const INV_2: Self;
+
+    /// MODULUS
+    const MODULUS: U256;
 
     // ====================================
     // constants
@@ -76,6 +83,26 @@ pub trait Field:
     /// create a random boolean element from rng
     fn random_bool(rng: impl RngCore) -> Self;
 
+    /// expose the element as u32.
+    fn as_u32_unchecked(&self) -> u32;
+
+    /// sample from a 32 bytes
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;
+
+    /// convert to u256
+    // todo: a cleaner way to do this is to trait bound Into<U256>
+    // but this requires modifications on ff or ethnum crate
+    fn to_u256(&self) -> U256 {
+        unimplemented!()
+    }
+
+    /// convert from u256
+    // todo: a cleaner way to do this is to trait bound From<U256>
+    // but this requires modifications on ff or ethnum crate
+    fn from_u256(_: U256) -> Self {
+        unimplemented!()
+    }
+
     // ====================================
     // arithmetic
     // ====================================
@@ -95,12 +122,6 @@ pub trait Field:
 
     /// find the inverse of the element; return None if not exist
     fn inv(&self) -> Option<Self>;
-
-    /// expose the element as u32.
-    fn as_u32_unchecked(&self) -> u32;
-
-    /// sample from a 32 bytes
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;
 
     /// multiply by 2
     #[inline(always)]
@@ -128,12 +149,4 @@ pub trait Field:
         let t = self.mul_by_3();
         t + t
     }
-}
-
-pub trait FieldForECC: Field + Hash + Eq + PartialOrd + Ord {
-    const MODULUS: ethnum::U256;
-
-    fn from_u256(x: ethnum::U256) -> Self;
-
-    fn to_u256(&self) -> ethnum::U256;
 }

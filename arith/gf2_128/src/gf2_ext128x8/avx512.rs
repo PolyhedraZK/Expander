@@ -6,10 +6,10 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{
-    field_common, ExtensionField, Field, FieldSerde, FieldSerdeError, FieldSerdeResult, SimdField,
-};
+use arith::{field_common, ExtensionField, Field, SimdField};
+use ethnum::U256;
 use gf2::{GF2x8, GF2};
+use serdes::{ExpSerde, SerdeError, SerdeResult};
 
 use crate::GF2_128;
 
@@ -29,11 +29,11 @@ impl AVX512GF2_128x8 {
     }
 }
 
-impl FieldSerde for AVX512GF2_128x8 {
+impl ExpSerde for AVX512GF2_128x8 {
     const SERIALIZED_SIZE: usize = 512 * 2 / 8;
 
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe {
             let mut data = [0u8; 128];
             _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data[0]);
@@ -44,9 +44,7 @@ impl FieldSerde for AVX512GF2_128x8 {
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(
-        mut reader: R,
-    ) -> Result<AVX512GF2_128x8, FieldSerdeError> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> Result<AVX512GF2_128x8, SerdeError> {
         let mut data = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut data).unwrap();
         unsafe {
@@ -99,6 +97,8 @@ impl Field for AVX512GF2_128x8 {
     const INV_2: Self = Self { data: PACKED_INV_2 };
 
     const FIELD_SIZE: usize = 128;
+
+    const MODULUS: U256 = U256::ZERO; // should not be used
 
     #[inline(always)]
     fn zero() -> Self {
@@ -404,6 +404,8 @@ impl PartialEq for AVX512GF2_128x8 {
         }
     }
 }
+
+impl Eq for AVX512GF2_128x8 {}
 
 impl Default for AVX512GF2_128x8 {
     #[inline(always)]
@@ -760,6 +762,15 @@ impl Add<GF2> for AVX512GF2_128x8 {
                 unsafe { _mm512_xor_si512(self.data[0], rhs_extended) },
                 unsafe { _mm512_xor_si512(self.data[1], rhs_extended) },
             ],
+        }
+    }
+}
+
+impl std::hash::Hash for AVX512GF2_128x8 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<[__m512i; 2], [u8; 128]>(self.data).as_ref());
         }
     }
 }
