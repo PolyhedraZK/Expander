@@ -2,8 +2,10 @@ use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use std::{arch::aarch64::*, mem::transmute};
 
-use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult};
+use arith::{field_common, ExtensionField, Field};
+use ethnum::U256;
 use gf2::GF2;
+use serdes::{ExpSerde, SerdeResult};
 
 #[derive(Clone, Copy, Debug)]
 pub struct NeonGF2_128 {
@@ -31,17 +33,17 @@ fn sub_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
     add_internal(a, b)
 }
 
-impl FieldSerde for NeonGF2_128 {
+impl ExpSerde for NeonGF2_128 {
     const SERIALIZED_SIZE: usize = 16;
 
     #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe { writer.write_all(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref())? };
         Ok(())
     }
 
     #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
         let mut u = [0u8; 16];
         reader.read_exact(&mut u)?;
         unsafe {
@@ -69,7 +71,9 @@ impl Field for NeonGF2_128 {
 
     const INV_2: Self = NeonGF2_128 {
         v: unsafe { std::mem::zeroed() },
-    }; // should not be used
+    };
+
+    const MODULUS: U256 = unimplemented!(); // should not be used
 
     #[inline(always)]
     fn zero() -> Self {
@@ -264,6 +268,8 @@ impl PartialEq for NeonGF2_128 {
     }
 }
 
+impl Eq for NeonGF2_128 {}
+
 impl Neg for NeonGF2_128 {
     type Output = Self;
 
@@ -426,5 +432,14 @@ pub(crate) fn mul_by_x_internal(a: &uint32x4_t) -> uint32x4_t {
 
         // Reinterpret uint64x2_t back to uint32x4_t
         vreinterpretq_u32_u64(res)
+    }
+}
+
+impl std::hash::Hash for NeonGF2_128 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref());
+        }
     }
 }

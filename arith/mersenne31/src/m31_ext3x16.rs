@@ -4,22 +4,24 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, ExtensionField, Field, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{field_common, ExtensionField, Field, SimdField};
+use ethnum::U256;
+use serdes::{ExpSerde, SerdeResult};
 
 use crate::{m31::M31, M31Ext3, M31x16};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct M31Ext3x16 {
     pub v: [M31x16; 3],
 }
 
 field_common!(M31Ext3x16);
 
-impl FieldSerde for M31Ext3x16 {
+impl ExpSerde for M31Ext3x16 {
     const SERIALIZED_SIZE: usize = (512 / 8) * 3;
 
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.v[0].serialize_into(&mut writer)?;
         self.v[1].serialize_into(&mut writer)?;
         self.v[2].serialize_into(&mut writer)
@@ -28,7 +30,7 @@ impl FieldSerde for M31Ext3x16 {
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         Ok(Self {
             v: [
                 M31x16::deserialize_from(&mut reader)?,
@@ -184,6 +186,8 @@ impl Field for M31Ext3x16 {
     const INV_2: Self = Self {
         v: [M31x16::INV_2, M31x16::ZERO, M31x16::ZERO],
     };
+
+    const MODULUS: U256 = M31::MODULUS;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -362,4 +366,19 @@ fn square_internal(a: &[M31x16; 3]) -> [M31x16; 3] {
     res[1] = a[0] * a[1].double() + a[2] * a2_w;
     res[2] = a[0] * a[2].double() + a[1] * a[1];
     res
+}
+
+impl Ord for M31Ext3x16 {
+    #[inline(always)]
+    fn cmp(&self, _: &Self) -> std::cmp::Ordering {
+        unimplemented!("Ord for M31Ext3x16 is not supported")
+    }
+}
+
+#[allow(clippy::non_canonical_partial_ord_impl)]
+impl PartialOrd for M31Ext3x16 {
+    #[inline(always)]
+    fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
+        unimplemented!("PartialOrd for M31Ext3x16 is not supported")
+    }
 }
