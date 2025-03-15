@@ -18,8 +18,12 @@ raw-cpuid = "11.1.0"
 cfg-if = "1.0"
 
 [dev-dependencies]
+itertools.workspace = true
 
 [[bench]]
 name = "fr"
 harness = false
 
+[[bench]]
+name = "utils"
+harness = false
