@@ -53,11 +53,11 @@ where
         proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
-    ) -> Self::Commitment {
+    ) -> Option<Self::Commitment> {
         let local_commit = hyrax_commit(proving_key, poly);
 
         if mpi_config.is_single_process() {
-            return local_commit;
+            return local_commit.into();
         }
 
         let mut global_commit: Vec<C> = if mpi_config.is_root() {
@@ -67,11 +67,11 @@ where
         };
 
         mpi_config.gather_vec(&local_commit.0, &mut global_commit);
-        if mpi_config.is_root() {
-            return HyraxCommitment(global_commit);
+        if !mpi_config.is_root() {
+            return None;
         }
 
-        local_commit
+        HyraxCommitment(global_commit).into()
     }
 
     fn open(
@@ -82,10 +82,10 @@ where
         x: &crate::ExpanderGKRChallenge<G>,
         _transcript: &mut T,
         _scratch_pad: &Self::ScratchPad,
-    ) -> Self::Opening {
+    ) -> Option<Self::Opening> {
         if mpi_config.is_single_process() {
             let (_, open) = hyrax_open(proving_key, poly, &x.local_xs());
-            return open;
+            return open.into();
         }
 
         let local_num_vars = poly.num_vars();
@@ -101,11 +101,11 @@ where
         let eq_mpi_vars = EqPolynomial::build_eq_x_r(&x.x_mpi);
         let combined_coeffs = mpi_config.coef_combine_vec(&local_basis, &eq_mpi_vars);
 
-        if mpi_config.is_root() {
-            return HyraxOpening(combined_coeffs);
+        if !mpi_config.is_root() {
+            return None;
         }
 
-        HyraxOpening(local_basis)
+        HyraxOpening(combined_coeffs).into()
     }
 
     fn verify(
