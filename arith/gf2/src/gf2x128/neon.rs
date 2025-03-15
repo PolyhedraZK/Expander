@@ -51,7 +51,9 @@ impl Field for NeonGF2x128 {
         v: unsafe { transmute::<[u64; 2], uint32x4_t>([!0u64, !0u64]) },
     };
 
-    const INV_2: Self = unimplemented!(); // should not be used
+    const INV_2: Self = NeonGF2x128 {
+        v: unsafe { zeroed() },
+    };
 
     const MODULUS: U256 = unimplemented!(); // should not be used
 
