@@ -98,9 +98,12 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
                 pcs_scratch,
             )
         };
-        let mut buffer = vec![];
-        commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
-        transcript.append_commitment(&buffer);
+
+        if self.config.mpi_config.is_root() {
+            let mut buffer = vec![];
+            commitment.unwrap().serialize_into(&mut buffer).unwrap(); // TODO: error propagation
+            transcript.append_commitment(&buffer);
+        }
         pcs_commit_timer.stop();
 
         transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
@@ -190,8 +193,10 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         );
         transcript.unlock_proof();
 
-        let mut buffer = vec![];
-        opening.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
-        transcript.append_u8_slice(&buffer);
+        if self.config.mpi_config.is_root() {
+            let mut buffer = vec![];
+            opening.unwrap().serialize_into(&mut buffer).unwrap(); // TODO: error propagation
+            transcript.append_u8_slice(&buffer);
+        }
     }
 }

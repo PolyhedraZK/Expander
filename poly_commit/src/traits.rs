@@ -126,7 +126,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
-    ) -> Self::Commitment;
+    ) -> Option<Self::Commitment>;
 
     /// Open the polynomial at a point.
     /// Root process returns the opening, other processes can return arbitrary value.
@@ -157,7 +157,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
         x: &ExpanderGKRChallenge<C>,
         transcript: &mut T,
         scratch_pad: &Self::ScratchPad,
-    ) -> Self::Opening;
+    ) -> Option<Self::Opening>;
 
     /// Verify the opening of a polynomial at a point.
     /// This should only be called on the root process.
