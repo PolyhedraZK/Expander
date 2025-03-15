@@ -100,9 +100,9 @@ impl Field for AVX256GF2_128x8 {
 
     const INV_2: Self = Self { data: PACKED_INV_2 };
 
-    const FIELD_SIZE: usize = 128;
+    const MODULUS: U256 = unimplemented!(); // should not be used
 
-    const MODULUS: unimplemented!(); // should not be used
+    const FIELD_SIZE: usize = 128;
 
     #[inline(always)]
     fn zero() -> Self {
