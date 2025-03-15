@@ -54,7 +54,9 @@ impl Field for AVXGF2x128 {
         v: unsafe { transmute::<[u64; 2], __m128i>([!0u64, !0u64]) },
     };
 
-    const INV_2: Self = unimplemented!(); // should not be used
+    const INV_2: Self = AVXGF2x128 {
+        v: unsafe { zeroed() },
+    };
 
     const MODULUS: U256 = unimplemented!(); // should not be used
 

@@ -58,7 +58,7 @@ impl Field for GF2 {
 
     const ONE: Self = GF2 { v: 1 };
 
-    const INV_2: Self = unimplemented!(); // should not be used
+    const INV_2: Self = GF2 { v: 0 };
 
     const MODULUS: U256 = U256([MOD as u128, 0]);
 
