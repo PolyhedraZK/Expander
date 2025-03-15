@@ -42,9 +42,9 @@ impl Field for GF2x8 {
 
     const ONE: Self = GF2x8 { v: 255 };
 
-    const INV_2: Self = GF2x8 { v: 0 }; // should not be used
+    const INV_2: Self = unimplemented!(); // should not be used
 
-    const MODULUS: U256 = U256::ZERO; // should not be used
+    const MODULUS: U256 = unimplemented!(); // should not be used
 
     #[inline(always)]
     fn zero() -> Self {

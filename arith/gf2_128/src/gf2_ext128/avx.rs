@@ -56,11 +56,9 @@ impl Field for AVXGF2_128 {
         v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) },
     };
 
-    const INV_2: Self = AVXGF2_128 {
-        v: unsafe { std::mem::zeroed() },
-    }; // should not be used
+    const INV_2: Self = unimplemented!(); // should not be used
 
-    const MODULUS: U256 = U256::ZERO; // should not be used
+    const MODULUS: U256 = unimplemented!(); // should not be used
 
     #[inline(always)]
     fn zero() -> Self {

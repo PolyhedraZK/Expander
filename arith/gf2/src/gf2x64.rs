@@ -41,9 +41,9 @@ impl Field for GF2x64 {
 
     const ONE: Self = GF2x64 { v: !0u64 };
 
-    const INV_2: Self = GF2x64 { v: 0 }; // NOTE: should not be used
+    const INV_2: Self = unimplemented!(); // NOTE: should not be used
 
-    const MODULUS: U256 = U256::ZERO; // should not be used
+    const MODULUS: U256 = unimplemented!(); // should not be used
 
     #[inline(always)]
     fn zero() -> Self {
