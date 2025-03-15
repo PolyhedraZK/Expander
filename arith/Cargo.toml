@@ -24,3 +24,6 @@ itertools.workspace = true
 name = "fr"
 harness = false
 
+[[bench]]
+name = "utils"
+harness = false
