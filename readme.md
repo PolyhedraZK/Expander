@@ -8,6 +8,8 @@
 
 # Expander
 
+[![Build](https://github.com/PolyhedraZK/Expander/actions/workflows/ci.yml/badge.svg)](https://github.com/PolyhedraZK/Expander/actions)
+
 <div align="center">
   <h3>
     <a href="https://eprint.iacr.org/2019/317">
