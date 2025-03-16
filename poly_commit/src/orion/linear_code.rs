@@ -1,6 +1,7 @@
 use std::cmp;
 
 use arith::Field;
+use itertools::izip;
 use rand::seq::index;
 
 use super::{OrionPCSError, OrionResult};
@@ -63,12 +64,9 @@ impl OrionExpanderGraph {
             return Err(OrionPCSError::ParameterUnmatchError);
         }
 
-        r_vertices
-            .iter_mut()
-            .zip(self.neighborings.iter())
-            .for_each(|(ri, ni)| {
-                *ri = ni.iter().map(|&edge_i| l_vertices[edge_i]).sum();
-            });
+        izip!(r_vertices, &self.neighborings).for_each(|(ri, ni)| {
+            *ri = ni.iter().map(|&edge_i| l_vertices[edge_i]).sum();
+        });
 
         Ok(())
     }
