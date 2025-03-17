@@ -9,6 +9,7 @@
 # Expander
 
 [![Build](https://github.com/PolyhedraZK/Expander/actions/workflows/ci.yml/badge.svg)](https://github.com/PolyhedraZK/Expander/actions)
+[![License](https://img.shields.io/github/license/PolyhedraZK/Expander)](https://github.com/PolyhedraZK/Expander/blob/main/LICENSE)
 
 <div align="center">
   <h3>
