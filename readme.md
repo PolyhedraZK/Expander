@@ -30,8 +30,6 @@
 
 Expander is a proof generation backend for Polyhedra Network. It aims to support fast proof generation.
 
-This is the *rust version* of the "core" repo.
-
 For more technical introduction, visit our markdown files [here](https://github.com/PolyhedraZK/Expander-cpp/tree/master/docs/doc.md).
 
 And [here](./gkr/src/tests/gkr_correctness.rs) for an example on how to use the gkr lib.
@@ -46,7 +44,7 @@ Additionally, please take a look at our circuit compiler: https://github.com/Pol
 
 This compiler is your entry point for using our prover; the repository you have is primarily the core executor, not the developer frontend. Our product pipeline is as follows:
 
-`Your circuit code -> Expander Compiler -> circuit.txt & witness.txt -> Expander-rs -> proof `
+`Your circuit code -> Expander Compiler -> circuit.txt & witness.txt -> Expander -> proof `
 
 Please note that the witness generation process is not yet optimal, and we are actively working on improving it.
 
@@ -112,6 +110,11 @@ Example:
 RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- prove -c ./data/circuit_m31.txt -w ./data/witness_m31.txt -o ./data/out_m31.bin
 RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- verify -c ./data/circuit_m31.txt -w ./data/witness_m31.txt -i ./data/out_m31.bin
 RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- serve -c ./data/circuit_m31.txt -h 127.0.0.1 -p 3030
+```
+
+To change the hash function used in the fiat-shamir transform,  use`-f [SHA256|Poseidon|MiMC5]`. To change the polynomial commitment scheme, use `-p [Raw|Orion]`. There options are put before the `prove/verify` command, for example:
+```sh
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- -f SHA256 -p Raw prove -c <circuit_file> -w <witness_file> -o <output_proof_file>
 ```
 
 To test the service started by `expander-exec serve`, you can use the following command:
