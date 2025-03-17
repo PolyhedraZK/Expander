@@ -1,11 +1,11 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::FieldSerde;
+use arith::{Field, FieldSerde};
 use circuit::Circuit;
 use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
-use polynomials::{MultilinearExtension, RefMultiLinearPoly};
+use polynomials::{MultilinearExtension, MutRefMultiLinearPoly};
 use sumcheck::ProverScratchPad;
 use transcript::{transcript_root_broadcast, Proof, Transcript};
 use utils::timer::Timer;
@@ -89,14 +89,23 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         let pcs_commit_timer = Timer::new("pcs commit", self.config.mpi_config.is_root());
         // PC commit
         let commitment = {
-            let mle_ref = RefMultiLinearPoly::from_ref(&c.layers[0].input_vals);
-            Cfg::PCS::commit(
+            let original_input_vars = c.log_input_size();
+            let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
+            if original_input_vars < Cfg::PCS::MINIMUM_SUPPORTED_VARS {
+                mle_ref.lift_to_n_vars(Cfg::PCS::MINIMUM_SUPPORTED_VARS)
+            }
+
+            let commit = Cfg::PCS::commit(
                 pcs_params,
                 &self.config.mpi_config,
                 pcs_proving_key,
                 &mle_ref,
                 pcs_scratch,
-            )
+            );
+
+            mle_ref.lift_to_n_vars(original_input_vars);
+
+            commit
         };
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap(); // TODO: error propagation
@@ -128,10 +137,10 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
 
         let pcs_open_timer = Timer::new("pcs open", self.config.mpi_config.is_root());
         // open
-        let mle_ref = RefMultiLinearPoly::from_ref(&c.layers[0].input_vals);
+        let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
         self.prove_input_layer_claim(
-            &mle_ref,
-            &ExpanderGKRChallenge {
+            &mut mle_ref,
+            &mut ExpanderGKRChallenge {
                 x: rx,
                 x_simd: rsimd.clone(),
                 x_mpi: rmpi.clone(),
@@ -145,8 +154,8 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         if let Some(ry) = ry {
             transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
             self.prove_input_layer_claim(
-                &mle_ref,
-                &ExpanderGKRChallenge {
+                &mut mle_ref,
+                &mut ExpanderGKRChallenge {
                     x: ry,
                     x_simd: rsimd,
                     x_mpi: rmpi,
@@ -171,13 +180,22 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
 impl<Cfg: GKRConfig> Prover<Cfg> {
     fn prove_input_layer_claim(
         &self,
-        inputs: &impl MultilinearExtension<<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField>,
-        open_at: &ExpanderGKRChallenge<Cfg::FieldConfig>,
+        inputs: &mut MutRefMultiLinearPoly<<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField>,
+        open_at: &mut ExpanderGKRChallenge<Cfg::FieldConfig>,
         pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
         pcs_proving_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::PKey,
         pcs_scratch: &mut <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::ScratchPad,
         transcript: &mut Cfg::Transcript,
     ) {
+        let original_input_vars = inputs.num_vars();
+        if original_input_vars < Cfg::PCS::MINIMUM_SUPPORTED_VARS {
+            inputs.lift_to_n_vars(Cfg::PCS::MINIMUM_SUPPORTED_VARS);
+            open_at.x.resize(
+                Cfg::PCS::MINIMUM_SUPPORTED_VARS,
+                <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::ZERO,
+            )
+        }
+
         transcript.lock_proof();
         let opening = Cfg::PCS::open(
             pcs_params,
@@ -189,6 +207,12 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
             pcs_scratch,
         );
         transcript.unlock_proof();
+
+        inputs.lift_to_n_vars(original_input_vars);
+        open_at.x.resize(
+            original_input_vars,
+            <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::ZERO,
+        );
 
         let mut buffer = vec![];
         opening.serialize_into(&mut buffer).unwrap(); // TODO: error propagation

@@ -8,6 +8,7 @@ use transcript::Transcript;
 
 use crate::{
     orion::{simd_field_agg_impl::*, *},
+    traits::TensorCodeIOPPCS,
     ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString,
 };
 
@@ -26,6 +27,11 @@ where
     type Commitment = OrionCommitment;
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
+
+    const MINIMUM_SUPPORTED_VARS: usize = (tree::leaf_adic::<C::CircuitField>()
+        * Self::SRS::LEAVES_IN_RANGE_OPENING
+        / C::SimdCircuitField::PACK_SIZE)
+        .ilog2() as usize;
 
     /// NOTE(HS): this is actually number of variables in polynomial,
     /// ignoring the variables for MPI parties and SIMD field element

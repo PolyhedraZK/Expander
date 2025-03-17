@@ -339,7 +339,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                     pcs_params,
                     pcs_verification_key,
                     &commitment,
-                    &ExpanderGKRChallenge {
+                    &mut ExpanderGKRChallenge {
                         x: rz0,
                         x_simd: r_simd.clone(),
                         x_mpi: r_mpi.clone(),
@@ -355,7 +355,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                         pcs_params,
                         pcs_verification_key,
                         &commitment,
-                        &ExpanderGKRChallenge {
+                        &mut ExpanderGKRChallenge {
                             x: rz1,
                             x_simd: r_simd,
                             x_mpi: r_mpi,
@@ -384,7 +384,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                     pcs_params,
                     pcs_verification_key,
                     &commitment,
-                    &ExpanderGKRChallenge {
+                    &mut ExpanderGKRChallenge {
                         x: rz,
                         x_simd: r_simd.clone(),
                         x_mpi: r_mpi.clone(),
@@ -410,7 +410,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         pcs_params: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Params,
         pcs_verification_key: &<<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::SRS as StructuredReferenceString>::VKey,
         commitment: &<Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Commitment,
-        open_at: &ExpanderGKRChallenge<Cfg::FieldConfig>,
+        open_at: &mut ExpanderGKRChallenge<Cfg::FieldConfig>,
         v: &<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField,
         transcript: &mut Cfg::Transcript,
         proof_reader: impl Read,
@@ -418,7 +418,14 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         let opening = <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Opening::deserialize_from(
             proof_reader,
         )
-        .unwrap();
+			.unwrap();
+
+        if open_at.x.len() < Cfg::PCS::MINIMUM_SUPPORTED_VARS {
+            open_at.x.resize(
+                Cfg::PCS::MINIMUM_SUPPORTED_VARS,
+                <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::ZERO,
+            )
+        }
 
         transcript.lock_proof();
         let verified = Cfg::PCS::verify(

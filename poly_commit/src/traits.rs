@@ -28,6 +28,9 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
     type Commitment: Clone + Debug + Default + FieldSerde;
     type Opening: Clone + Debug + Default + FieldSerde;
 
+    // TODO(HS) minimum supported variables
+    const MINIMUM_SUPPORTED_VARS: usize = 0;
+
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Use self as the first argument to save some potential intermediate state.
     fn gen_srs_for_testing(params: &Self::Params, rng: impl RngCore) -> Self::SRS;
@@ -101,6 +104,9 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
     type SRS: Clone + Debug + Default + FieldSerde + StructuredReferenceString;
     type Commitment: Clone + Debug + Default + FieldSerde;
     type Opening: Clone + Debug + Default + FieldSerde;
+
+    // TODO(HS) minimum supported variables
+    const MINIMUM_SUPPORTED_VARS: usize = 0;
 
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Each process should return the SAME GLOBAL SRS.

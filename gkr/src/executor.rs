@@ -12,7 +12,7 @@ use config::{Config, GKRConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
 use gkr_field_config::FieldType;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use poly_commit::expander_pcs_init_testing_only;
+use poly_commit::{expander_pcs_init_testing_only, PCSForExpanderGKR};
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
 
@@ -121,6 +121,21 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
 
 const PCS_TESTING_SEED_U64: u64 = 114514;
 
+fn input_poly_vars_calibration<Cfg: GKRConfig>(actual_poly_vars: usize) -> usize {
+    if actual_poly_vars < Cfg::PCS::MINIMUM_SUPPORTED_VARS {
+        eprintln!(
+            "{} over {} has minimum supported local vars {}, but input poly has vars {}.",
+            Cfg::PCS::NAME,
+            <Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::NAME,
+            Cfg::PCS::MINIMUM_SUPPORTED_VARS,
+            actual_poly_vars,
+        );
+        return Cfg::PCS::MINIMUM_SUPPORTED_VARS;
+    }
+
+    actual_poly_vars
+}
+
 pub fn prove<Cfg: GKRConfig>(
     circuit: &mut Circuit<Cfg::FieldConfig>,
     config: &Config<Cfg>,
@@ -134,9 +149,10 @@ pub fn prove<Cfg: GKRConfig>(
 
     let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
 
-    let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
+    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
+    let (pcs_params, pcs_proving_key, _, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
-            circuit.log_input_size(),
+            minimum_poly_vars,
             &config.mpi_config,
             &mut rng,
         );
@@ -153,9 +169,10 @@ pub fn verify<Cfg: GKRConfig>(
     // TODO: Read PCS setup from files
     let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
 
-    let (pcs_params, _pcs_proving_key, pcs_verification_key, mut _pcs_scratch) =
+    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
+    let (pcs_params, _, pcs_verification_key, mut _pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
-            circuit.log_input_size(),
+            minimum_poly_vars,
             &config.mpi_config,
             &mut rng,
         );
