@@ -12,6 +12,12 @@ use transcript::{BytesHashTranscript, FieldHashTranscript, SHA256hasher};
 
 // ============== M31 ==============
 declare_gkr_config!(
+    pub M31ConfigSha2Raw,
+    FieldType::M31,
+    FiatShamirHashType::SHA256,
+    PolynomialCommitmentType::Raw
+);
+declare_gkr_config!(
     pub M31ExtConfigPoseidonRaw,
     FieldType::M31,
     FiatShamirHashType::Poseidon,

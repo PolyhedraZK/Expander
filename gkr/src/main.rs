@@ -62,6 +62,21 @@ fn main() {
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
+        "m31" => match pcs_type {
+            PolynomialCommitmentType::Raw => match args.circuit.as_str() {
+                "keccak" => run_benchmark::<M31ExtConfigSha2Raw>(
+                    &args,
+                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+                ),
+                "poseidon" => run_benchmark::<M31ExtConfigSha2Raw>(
+                    &args,
+                    Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
+                ),
+                _ => unreachable!(),
+            },
+            _ => unreachable!("Unsupported PCS type for M31"),
+        },
+
         "m31ext3" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
                 "keccak" => run_benchmark::<M31ExtConfigSha2Raw>(
