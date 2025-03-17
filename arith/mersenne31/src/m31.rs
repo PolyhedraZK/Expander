@@ -4,15 +4,28 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field, FieldForECC, FieldSerde, FieldSerdeResult};
+use arith::{field_common, Field};
 use ark_std::Zero;
+use ethnum::U256;
 use rand::RngCore;
+use serdes::{ExpSerde, SerdeResult};
 
 pub const M31_MOD: u32 = 2147483647;
 
 #[inline]
+// if x = MOD this will return MOD instead of 0
+// for absolute reduction, use mod_reduce_safe
 pub(crate) fn mod_reduce_u32(x: u32) -> u32 {
     (x & M31_MOD) + (x >> 31)
+}
+
+pub(crate) fn mod_reduce_u32_safe(x: u32) -> u32 {
+    let x = (x & M31_MOD) + (x >> 31);
+    if x == M31_MOD {
+        0
+    } else {
+        x
+    }
 }
 
 #[inline]
@@ -20,18 +33,27 @@ fn mod_reduce_i64(x: i64) -> i64 {
     (x & M31_MOD as i64) + (x >> 31)
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialOrd, Ord)]
 pub struct M31 {
     pub v: u32,
 }
 
+impl PartialEq for M31 {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        mod_reduce_u32_safe(self.v) == mod_reduce_u32_safe(other.v)
+    }
+}
+
+impl Eq for M31 {}
+
 field_common!(M31);
 
-impl FieldSerde for M31 {
+impl ExpSerde for M31 {
     const SERIALIZED_SIZE: usize = 32 / 8;
 
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         writer.write_all(self.v.to_le_bytes().as_ref())?;
         Ok(())
     }
@@ -39,7 +61,7 @@ impl FieldSerde for M31 {
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
         let mut v = u32::from_le_bytes(u);
@@ -75,6 +97,8 @@ impl Field for M31 {
 
     const FIELD_SIZE: usize = 32;
 
+    const MODULUS: U256 = U256([M31_MOD as u128, 0]);
+
     #[inline(always)]
     fn zero() -> Self {
         M31 { v: 0 }
@@ -90,14 +114,67 @@ impl Field for M31 {
         self.v == 0 || self.v == M31_MOD
     }
 
+    #[inline(always)]
     fn random_unsafe(mut rng: impl RngCore) -> Self {
         rng.next_u32().into()
     }
 
+    #[inline(always)]
     fn random_bool(mut rng: impl RngCore) -> Self {
         (rng.next_u32() & 1).into()
     }
 
+    #[inline(always)]
+    fn to_u256(&self) -> U256 {
+        U256([self.v as u128, 0])
+    }
+
+    #[inline(always)]
+    fn from_u256(value: U256) -> Self {
+        // Extract the words from the U256
+        let (high, low) = value.into_words();
+
+        // Convert to i64 for safer arithmetic operations
+        let mut accumulator: i64 = 0;
+
+        // Process low 128 bits in 31-bit chunks
+        for i in 0..5 {
+            let shift = i * 31;
+            if shift < 128 {
+                let mask = if shift + 31 <= 128 {
+                    (1u128 << 31) - 1
+                } else {
+                    (1u128 << (128 - shift)) - 1
+                };
+                let chunk = ((low >> shift) & mask) as i64;
+                accumulator = mod_reduce_i64(accumulator + chunk);
+            }
+        }
+
+        // Process high 128 bits in 31-bit chunks
+        for i in 0..5 {
+            let shift = i * 31;
+            if shift < 128 {
+                let mask = if shift + 31 <= 128 {
+                    (1u128 << 31) - 1
+                } else {
+                    (1u128 << (128 - shift)) - 1
+                };
+                let chunk = ((high >> shift) & mask) as i64;
+                // The high word chunks need to be multiplied by 2^128 mod M31_MOD, which is 16
+                accumulator = mod_reduce_i64(accumulator + (chunk * 16));
+            }
+        }
+
+        // Final reduction to ensure the result is in the correct range
+        let result = accumulator as u32;
+
+        Self {
+            v: mod_reduce_u32_safe(result),
+        }
+    }
+
+    #[inline]
     fn exp(&self, exponent: u128) -> Self {
         let mut e = exponent;
         let mut res = Self::one();
@@ -113,6 +190,7 @@ impl Field for M31 {
         res
     }
 
+    #[inline(always)]
     fn inv(&self) -> Option<Self> {
         self.try_inverse()
     }
@@ -137,19 +215,6 @@ impl Field for M31 {
     #[inline(always)]
     fn mul_by_6(&self) -> Self {
         *self * Self { v: 6 }
-    }
-}
-
-impl FieldForECC for M31 {
-    const MODULUS: ethnum::U256 = ethnum::U256::new(M31_MOD as u128);
-
-    fn from_u256(x: ethnum::U256) -> Self {
-        M31 {
-            v: (x % ethnum::U256::from(M31_MOD)).as_u32(),
-        }
-    }
-    fn to_u256(&self) -> ethnum::U256 {
-        ethnum::U256::from(mod_reduce_u32(self.v))
     }
 }
 
@@ -234,4 +299,11 @@ fn mul_internal(a: &M31, b: &M31) -> M31 {
         vv -= M31_MOD as i64;
     }
     M31 { v: vv as u32 }
+}
+
+impl std::hash::Hash for M31 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write_u32(self.v);
+    }
 }

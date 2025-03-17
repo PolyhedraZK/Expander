@@ -1,31 +1,31 @@
-use arith::FieldSerde;
 use halo2curves::{
     ff::{Field, PrimeField},
     group::Curve,
     msm, CurveAffine,
 };
+use serdes::ExpSerde;
 
 use crate::StructuredReferenceString;
 
 #[derive(Clone, Debug, Default)]
-pub struct PedersenParams<C: CurveAffine + FieldSerde> {
+pub struct PedersenParams<C: CurveAffine + ExpSerde> {
     pub bases: Vec<C>,
 }
 
-impl<C: CurveAffine + FieldSerde> FieldSerde for PedersenParams<C> {
+impl<C: CurveAffine + ExpSerde> ExpSerde for PedersenParams<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> arith::FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> serdes::SerdeResult<()> {
         self.bases.serialize_into(&mut writer)
     }
 
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> arith::FieldSerdeResult<Self> {
-        let bases: Vec<C> = Vec::deserialize_from(&mut reader)?;
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> serdes::SerdeResult<Self> {
+        let bases: Vec<C> = <Vec<C> as ExpSerde>::deserialize_from(&mut reader)?;
         Ok(Self { bases })
     }
 }
 
-impl<C: CurveAffine + FieldSerde> StructuredReferenceString for PedersenParams<C> {
+impl<C: CurveAffine + ExpSerde> StructuredReferenceString for PedersenParams<C> {
     type PKey = Self;
     type VKey = Self;
 
@@ -34,7 +34,7 @@ impl<C: CurveAffine + FieldSerde> StructuredReferenceString for PedersenParams<C
     }
 }
 
-pub(crate) fn pedersen_setup<C: CurveAffine + FieldSerde>(
+pub(crate) fn pedersen_setup<C: CurveAffine + ExpSerde>(
     length: usize,
     mut rng: impl rand::RngCore,
 ) -> PedersenParams<C>
@@ -54,7 +54,7 @@ where
     PedersenParams { bases }
 }
 
-pub(crate) fn pedersen_commit<C: CurveAffine + FieldSerde>(
+pub(crate) fn pedersen_commit<C: CurveAffine + ExpSerde>(
     params: &PedersenParams<C>,
     coeffs: &[C::Scalar],
 ) -> C

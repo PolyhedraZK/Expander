@@ -1,7 +1,8 @@
 use std::{fmt::Debug, io::Read, marker::PhantomData};
 
-use arith::{ExtensionField, Field, FieldSerde};
+use arith::{ExtensionField, Field};
 use field_hashers::FiatShamirFieldHasher;
+use serdes::ExpSerde;
 
 use crate::{fiat_shamir_hash::FiatShamirBytesHash, Proof};
 
@@ -455,7 +456,8 @@ where
     fn hash_and_return_state(&mut self) -> Vec<u8> {
         if !self.data_pool.is_empty() {
             self.hash_state = self.hasher.hash_to_state(&self.data_pool);
-            self.data_pool.clear();
+
+            self.data_pool = self.hash_state.clone();
         } else {
             self.hash_state = self.hasher.hash_to_state(&self.hash_state);
         }

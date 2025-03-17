@@ -9,6 +9,7 @@ config = { path = "../config" }
 gkr_field_config = { path = "../config/gkr_field_config" }
 polynomials = { path = "../arith/polynomials" }
 sumcheck = { path = "../sumcheck" }
+serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
 
 env_logger.workspace = true
