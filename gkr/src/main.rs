@@ -18,7 +18,7 @@ use gkr::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
         KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
-    BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, Prover,
+    BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ConfigSha2Raw, M31ExtConfigSha2Orion, Prover,
 };
 
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
@@ -52,6 +52,13 @@ fn main() {
     let mpi_config = MPIConfig::new();
 
     match args.field.as_str() {
+        "m31" => match args.scheme.as_str() {
+            "keccak" => run_benchmark::<M31ConfigSha2Raw>(
+                &args,
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+            ),
+            _ => unreachable!(),
+        },
         "m31ext3" => match args.scheme.as_str() {
             "keccak" => run_benchmark::<M31ExtConfigSha2Orion>(
                 &args,
