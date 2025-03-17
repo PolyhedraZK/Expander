@@ -418,9 +418,17 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         let opening = <Cfg::PCS as PCSForExpanderGKR<Cfg::FieldConfig, Cfg::Transcript>>::Opening::deserialize_from(
             proof_reader,
         )
-			.unwrap();
+		.unwrap();
 
         if open_at.x.len() < Cfg::PCS::MINIMUM_NUM_VARS {
+            eprintln!(
+				"{} over {} has minimum supported local vars {}, but challenge has vars {}, pad to {} vars in verifying.",
+				Cfg::PCS::NAME,
+				<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::NAME,
+				Cfg::PCS::MINIMUM_NUM_VARS,
+				open_at.x.len(),
+				Cfg::PCS::MINIMUM_NUM_VARS,
+			);
             open_at.x.resize(
                 Cfg::PCS::MINIMUM_NUM_VARS,
                 <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::ZERO,

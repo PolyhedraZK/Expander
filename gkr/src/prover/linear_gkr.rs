@@ -92,6 +92,14 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
             let original_input_vars = c.log_input_size();
             let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
             if original_input_vars < Cfg::PCS::MINIMUM_NUM_VARS {
+                eprintln!(
+					"{} over {} has minimum supported local vars {}, but input poly has vars {}, pad to {} vars in commiting.",
+					Cfg::PCS::NAME,
+					<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::NAME,
+					Cfg::PCS::MINIMUM_NUM_VARS,
+					original_input_vars,
+					Cfg::PCS::MINIMUM_NUM_VARS,
+				);
                 mle_ref.lift_to_n_vars(Cfg::PCS::MINIMUM_NUM_VARS)
             }
 
@@ -189,6 +197,14 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
     ) {
         let original_input_vars = inputs.num_vars();
         if original_input_vars < Cfg::PCS::MINIMUM_NUM_VARS {
+            eprintln!(
+				"{} over {} has minimum supported local vars {}, but input poly has vars {}, pad to {} vars in opening.",
+				Cfg::PCS::NAME,
+				<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::NAME,
+				Cfg::PCS::MINIMUM_NUM_VARS,
+				original_input_vars,
+				Cfg::PCS::MINIMUM_NUM_VARS,
+			);
             inputs.lift_to_n_vars(Cfg::PCS::MINIMUM_NUM_VARS);
             open_at.x.resize(
                 Cfg::PCS::MINIMUM_NUM_VARS,
