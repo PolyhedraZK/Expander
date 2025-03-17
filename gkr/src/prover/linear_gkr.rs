@@ -91,8 +91,8 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         let commitment = {
             let original_input_vars = c.log_input_size();
             let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
-            if original_input_vars < Cfg::PCS::MINIMUM_SUPPORTED_VARS {
-                mle_ref.lift_to_n_vars(Cfg::PCS::MINIMUM_SUPPORTED_VARS)
+            if original_input_vars < Cfg::PCS::MINIMUM_NUM_VARS {
+                mle_ref.lift_to_n_vars(Cfg::PCS::MINIMUM_NUM_VARS)
             }
 
             let commit = Cfg::PCS::commit(
@@ -188,10 +188,10 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         transcript: &mut Cfg::Transcript,
     ) {
         let original_input_vars = inputs.num_vars();
-        if original_input_vars < Cfg::PCS::MINIMUM_SUPPORTED_VARS {
-            inputs.lift_to_n_vars(Cfg::PCS::MINIMUM_SUPPORTED_VARS);
+        if original_input_vars < Cfg::PCS::MINIMUM_NUM_VARS {
+            inputs.lift_to_n_vars(Cfg::PCS::MINIMUM_NUM_VARS);
             open_at.x.resize(
-                Cfg::PCS::MINIMUM_SUPPORTED_VARS,
+                Cfg::PCS::MINIMUM_NUM_VARS,
                 <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::ZERO,
             )
         }

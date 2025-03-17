@@ -52,7 +52,7 @@ where
     type Commitment = OrionCommitment;
     type Opening = OrionProof<EvalF>;
 
-    const MINIMUM_SUPPORTED_VARS: usize =
+    const MINIMUM_NUM_VARS: usize =
         (Self::SRS::LEAVES_IN_RANGE_OPENING * tree::leaf_adic::<F>()).ilog2() as usize;
 
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
@@ -147,7 +147,7 @@ where
     type Commitment = OrionCommitment;
     type Opening = OrionProof<EvalF>;
 
-    const MINIMUM_SUPPORTED_VARS: usize =
+    const MINIMUM_NUM_VARS: usize =
         (Self::SRS::LEAVES_IN_RANGE_OPENING * tree::leaf_adic::<F>() / SimdF::PACK_SIZE).ilog2()
             as usize;
 

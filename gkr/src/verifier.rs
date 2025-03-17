@@ -420,9 +420,9 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         )
 			.unwrap();
 
-        if open_at.x.len() < Cfg::PCS::MINIMUM_SUPPORTED_VARS {
+        if open_at.x.len() < Cfg::PCS::MINIMUM_NUM_VARS {
             open_at.x.resize(
-                Cfg::PCS::MINIMUM_SUPPORTED_VARS,
+                Cfg::PCS::MINIMUM_NUM_VARS,
                 <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::ZERO,
             )
         }

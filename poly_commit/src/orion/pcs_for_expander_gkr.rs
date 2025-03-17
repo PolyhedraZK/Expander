@@ -28,7 +28,7 @@ where
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
 
-    const MINIMUM_SUPPORTED_VARS: usize = (tree::leaf_adic::<C::CircuitField>()
+    const MINIMUM_NUM_VARS: usize = (tree::leaf_adic::<C::CircuitField>()
         * Self::SRS::LEAVES_IN_RANGE_OPENING
         / C::SimdCircuitField::PACK_SIZE)
         .ilog2() as usize;

@@ -122,15 +122,15 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
 const PCS_TESTING_SEED_U64: u64 = 114514;
 
 fn input_poly_vars_calibration<Cfg: GKRConfig>(actual_poly_vars: usize) -> usize {
-    if actual_poly_vars < Cfg::PCS::MINIMUM_SUPPORTED_VARS {
+    if actual_poly_vars < Cfg::PCS::MINIMUM_NUM_VARS {
         eprintln!(
             "{} over {} has minimum supported local vars {}, but input poly has vars {}.",
             Cfg::PCS::NAME,
             <Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::NAME,
-            Cfg::PCS::MINIMUM_SUPPORTED_VARS,
+            Cfg::PCS::MINIMUM_NUM_VARS,
             actual_poly_vars,
         );
-        return Cfg::PCS::MINIMUM_SUPPORTED_VARS;
+        return Cfg::PCS::MINIMUM_NUM_VARS;
     }
 
     actual_poly_vars
