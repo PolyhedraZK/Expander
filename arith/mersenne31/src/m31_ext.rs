@@ -6,8 +6,8 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::ExtensionField;
 use arith::{field_common, Field, FieldSerde, FieldSerdeResult};
+use arith::{ExtensionField, SimdField};
 
 use crate::m31::{mod_reduce_u32, M31};
 
@@ -351,4 +351,26 @@ fn square_internal(a: &[M31; 3]) -> [M31; 3] {
     res[1] = a[0] * a[1].double() + M31 { v: 5 } * a[2].square();
     res[2] = a[0] * a[2].double() + a[1].square();
     res
+}
+
+impl SimdField for M31Ext3 {
+    type Scalar = Self;
+
+    const PACK_SIZE: usize = 1;
+
+    #[inline(always)]
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
+        *self * challenge
+    }
+
+    #[inline(always)]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        assert_eq!(base_vec.len(), 1);
+        base_vec[0]
+    }
+
+    #[inline(always)]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        vec![*self]
+    }
 }

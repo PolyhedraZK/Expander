@@ -45,7 +45,6 @@ fn test_avx_version() {
 #[test]
 fn test_base_field() {
     random_field_tests::<M31>("M31".to_string());
-    random_simd_field_tests::<M31>("M31".to_string());
 
     let mut rng = test_rng();
     random_inversion_tests::<M31, _>(&mut rng, "M31".to_string());
@@ -74,6 +73,7 @@ fn test_simd_field() {
 fn test_ext_field() {
     random_field_tests::<M31Ext3>("M31 Ext3".to_string());
     random_extension_field_tests::<M31Ext3>("M31 Ext3".to_string());
+    random_simd_field_tests::<M31Ext3>("M31 Ext3".to_string());
     random_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
     random_extension_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
     random_simd_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
