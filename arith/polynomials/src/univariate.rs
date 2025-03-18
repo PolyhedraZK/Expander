@@ -1,6 +1,7 @@
-use std::ops::{Index, IndexMut};
+use std::ops::{AddAssign, Index, IndexMut, MulAssign};
 
 use arith::{FFTField, Field};
+use itertools::izip;
 
 #[derive(Debug, Clone, Default)]
 pub struct UnivariatePoly<F: Field> {
@@ -69,6 +70,57 @@ impl<F: Field> UnivariatePoly<F> {
             eval += *t
         });
         eval
+    }
+
+    #[inline(always)]
+    pub fn degree_one_quotient(&self, alpha: F) -> (Self, F) {
+        let mut div_coeffs = self.coeffs.to_vec();
+
+        for i in (1..=self.degree()).rev() {
+            // c X^n = c X^n - c \alpha X^(n - 1) + c \alpha X^(n - 1)
+            //       = c (X - \alpha) X^(n - 1) + c \alpha X^(n - 1)
+
+            let remainder = div_coeffs[i] * alpha;
+            div_coeffs[i - 1] += remainder;
+        }
+
+        let final_remainder = div_coeffs[0];
+        let final_div_coeffs = div_coeffs[1..].to_owned();
+
+        (Self::new(final_div_coeffs), final_remainder)
+    }
+
+    #[inline(always)]
+    pub fn root_vanishing_quotient(&mut self, root: F) {
+        for i in (1..=self.degree()).rev() {
+            // c X^n = c X^n - c \alpha X^(n - 1) + c \alpha X^(n - 1)
+            //       = c (X - \alpha) X^(n - 1) + c \alpha X^(n - 1)
+
+            let remainder = self.coeffs[i] * root;
+            self.coeffs[i - 1] += remainder;
+        }
+
+        assert_eq!(self.coeffs[0], F::ZERO);
+
+        self.coeffs = self.coeffs[1..].to_owned();
+    }
+}
+
+impl<F: Field> MulAssign<F> for UnivariatePoly<F> {
+    #[inline(always)]
+    fn mul_assign(&mut self, rhs: F) {
+        self.coeffs.iter_mut().for_each(|c| *c *= rhs)
+    }
+}
+
+impl<F: Field> AddAssign<&Self> for UnivariatePoly<F> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: &Self) {
+        if rhs.coeffs.len() > self.coeffs.len() {
+            self.coeffs.resize(rhs.coeffs.len(), F::ZERO);
+        }
+
+        izip!(&mut self.coeffs, &rhs.coeffs).for_each(|(c, r)| *c += r);
     }
 }
 
