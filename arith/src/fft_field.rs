@@ -1,6 +1,6 @@
 use crate::{bit_reverse, Field};
 
-pub trait FFTField: Field {
+pub trait FFTField: Field + From<u64> {
     const TWO_ADICITY: usize;
 
     fn root_of_unity() -> Self;
@@ -35,8 +35,7 @@ pub trait FFTField: Field {
         let omega = Self::two_adic_generator(po2_mul_subgroup_bits);
         let omega_inv = omega.inv().unwrap();
 
-        // TODO(HS) not good if the FFT size is larger than 2^32
-        let n_inv = Self::from(evals.len() as u32).inv().unwrap();
+        let n_inv = Self::from(evals.len() as u64).inv().unwrap();
 
         radix2_fft_single_threaded(evals, omega_inv);
         evals.iter_mut().for_each(|x| *x *= n_inv);

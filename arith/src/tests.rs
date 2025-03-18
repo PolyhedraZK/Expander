@@ -235,7 +235,7 @@ pub fn random_fft_field_tests<F: Field + FFTField>(_name: String) {
             a[degree - 1] = F::one();
             b[0] = F::one();
             b[1] = F::one();
-            c[0] = F::from(2);
+            c[0] = F::from(2u64);
             c[1] = F::one();
             c[degree - 1] = F::one();
 

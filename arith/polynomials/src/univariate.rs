@@ -47,8 +47,6 @@ impl<F: Field> UnivariatePoly<F> {
         Self { coeffs }
     }
 
-    // TODO(HS) maybe new ref from ref coeffs, new mut ref from mut ref coeffs?
-
     /// Sample a random polynomials.
     #[inline]
     pub fn random(degree: usize, mut rng: impl rand::RngCore) -> Self {
@@ -131,8 +129,6 @@ impl<F: FFTField> UnivariateLagrangePolynomial<F> {
         Self { evals }
     }
 
-    // TODO(HS) maybe new ref from ref eval, new mut ref from mut ref evals?
-
     #[inline]
     pub fn random(degree: usize, mut rng: impl rand::RngCore) -> Self {
         assert!((degree + 1).is_power_of_two());
@@ -148,9 +144,7 @@ impl<F: FFTField> UnivariateLagrangePolynomial<F> {
         let omega_inv = omega.inv().unwrap();
 
         let nominator_prepare = point.exp(n as u128) - F::ONE;
-
-        // TODO(HS) I still don't quite like the case that Field is from only u32
-        let denominator_prepare = F::from(n as u32);
+        let denominator_prepare = F::from(n as u64);
 
         let mut omega_i = F::ONE;
         let mut denominator = denominator_prepare;
