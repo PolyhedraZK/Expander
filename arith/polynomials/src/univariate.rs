@@ -56,11 +56,6 @@ impl<F: Field> UnivariatePoly<F> {
         Self { coeffs }
     }
 
-    #[inline]
-    pub fn degree(&self) -> usize {
-        self.coeffs.len() - 1
-    }
-
     /// Evaluation by Horner's rule
     #[inline]
     pub fn evaluate(&self, point: F) -> F {
@@ -76,7 +71,7 @@ impl<F: Field> UnivariatePoly<F> {
     pub fn degree_one_quotient(&self, alpha: F) -> (Self, F) {
         let mut div_coeffs = self.coeffs.to_vec();
 
-        for i in (1..=self.degree()).rev() {
+        for i in (1..self.coeffs.len()).rev() {
             // c X^n = c X^n - c \alpha X^(n - 1) + c \alpha X^(n - 1)
             //       = c (X - \alpha) X^(n - 1) + c \alpha X^(n - 1)
 
@@ -85,24 +80,28 @@ impl<F: Field> UnivariatePoly<F> {
         }
 
         let final_remainder = div_coeffs[0];
-        let final_div_coeffs = div_coeffs[1..].to_owned();
+        let mut final_div_coeffs = div_coeffs[1..].to_owned();
+        final_div_coeffs.resize(self.coeffs.len(), F::ZERO);
 
         (Self::new(final_div_coeffs), final_remainder)
     }
 
     #[inline(always)]
-    pub fn root_vanishing_quotient(&mut self, root: F) {
-        for i in (1..=self.degree()).rev() {
-            // c X^n = c X^n - c \alpha X^(n - 1) + c \alpha X^(n - 1)
-            //       = c (X - \alpha) X^(n - 1) + c \alpha X^(n - 1)
+    pub fn root_vanishing_quotient(&mut self, roots: &[F]) {
+        roots.iter().enumerate().for_each(|(ith_root, r)| {
+            for i in (1 + ith_root..self.coeffs.len()).rev() {
+                // c X^n = c X^n - c \alpha X^(n - 1) + c \alpha X^(n - 1)
+                //       = c (X - \alpha) X^(n - 1) + c \alpha X^(n - 1)
 
-            let remainder = self.coeffs[i] * root;
-            self.coeffs[i - 1] += remainder;
-        }
+                let remainder = self.coeffs[i] * r;
+                self.coeffs[i - 1] += remainder;
+            }
 
-        assert_eq!(self.coeffs[0], F::ZERO);
+            assert_eq!(self.coeffs[ith_root], F::ZERO);
+        });
 
-        self.coeffs = self.coeffs[1..].to_owned();
+        self.coeffs = self.coeffs[roots.len()..].to_owned();
+        self.coeffs.resize(self.coeffs.len() + roots.len(), F::ZERO);
     }
 }
 
