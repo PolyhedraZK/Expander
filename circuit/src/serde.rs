@@ -149,9 +149,9 @@ impl<C: GKRFieldConfig> FromEccSerde for Segment<C> {
         assert!(o_len.is_power_of_two());
 
         let child_segs = Vec::<(SegmentId, Vec<Allocation>)>::deserialize_from(&mut reader);
-        let gate_muls = Vec::<GateMul<C>>::deserialize_from(&mut reader);
-        let gate_adds = Vec::<GateAdd<C>>::deserialize_from(&mut reader);
-        let gate_consts = Vec::<GateConst<C>>::deserialize_from(&mut reader);
+        let gate_muls = <Vec<GateMul<C>> as FromEccSerde>::deserialize_from(&mut reader);
+        let gate_adds = <Vec<GateAdd<C>> as FromEccSerde>::deserialize_from(&mut reader);
+        let gate_consts = <Vec<GateConst<C>> as FromEccSerde>::deserialize_from(&mut reader);
 
         let mut gate_uni = vec![];
         let len = <usize as FieldSerde>::deserialize_from(&mut reader).unwrap();
