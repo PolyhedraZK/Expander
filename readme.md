@@ -8,7 +8,7 @@
 
 # Expander
 
-[![](https://img.shields.io/github/contributors/PolyhedraZK/Expander)](https://github.com/PolyhedraZK/Expander/graphs/contributors)
+[![Contributors](https://img.shields.io/github/contributors/PolyhedraZK/Expander)](https://github.com/PolyhedraZK/Expander/graphs/contributors)
 [![Build](https://github.com/PolyhedraZK/Expander/actions/workflows/ci.yml/badge.svg)](https://github.com/PolyhedraZK/Expander/actions)
 [![License](https://img.shields.io/github/license/PolyhedraZK/Expander)](https://github.com/PolyhedraZK/Expander/blob/main/LICENSE)
 
