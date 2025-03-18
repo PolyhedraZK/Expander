@@ -12,7 +12,7 @@ use crate::{
 
 fn dumb_commit_base_field<F, ComPackF>(
     orion_srs: &OrionSRS,
-    poly: &MultiLinearPoly<F>,
+    poly: &mut MultiLinearPoly<F>,
 ) -> OrionCommitment
 where
     F: Field,
@@ -21,20 +21,20 @@ where
     let (row_num, msg_size) = OrionSRS::evals_shape::<F>(poly.get_num_vars());
 
     let mut interleaved_codeword = {
+        let mut scratch = vec![F::ZERO; msg_size * ComPackF::PACK_SIZE];
         let mut rows_of_codeword: Vec<_> = poly
             .coeffs
-            .chunks(msg_size * ComPackF::PACK_SIZE)
+            .chunks_mut(msg_size * ComPackF::PACK_SIZE)
             .flat_map(|chunk| -> Vec<_> {
-                let mut chunk_local = chunk.to_vec();
-                let mut scratch = chunk_local.clone();
-                transpose_in_place(&mut chunk_local, &mut scratch, msg_size);
+                transpose_in_place(chunk, &mut scratch, msg_size);
 
-                chunk_local
+                chunk
                     .chunks(msg_size)
                     .flat_map(|c| orion_srs.code_instance.encode(c).unwrap())
                     .collect()
             })
             .collect();
+
         let mut scratch = rows_of_codeword.clone();
         transpose_in_place(&mut rows_of_codeword, &mut scratch, row_num);
 
@@ -59,12 +59,12 @@ where
 {
     let mut rng = test_rng();
 
-    let random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
+    let mut random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
     let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
     let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
 
     let real_commitment = orion_commit_base_field(&srs, &random_poly, &mut scratch_pad).unwrap();
-    let dumb_commitment = dumb_commit_base_field::<F, ComPackF>(&srs, &random_poly);
+    let dumb_commitment = dumb_commit_base_field::<F, ComPackF>(&srs, &mut random_poly);
 
     assert_eq!(real_commitment, dumb_commitment);
 }
