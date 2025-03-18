@@ -1,5 +1,5 @@
 use arith::ExtensionField;
-use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
+use mersenne31::{M31Ext3, M31};
 
 use crate::{FieldType, GKRFieldConfig};
 
@@ -11,11 +11,11 @@ impl GKRFieldConfig for M31ExtConfig {
 
     type CircuitField = M31;
 
-    type SimdCircuitField = M31x16;
+    type SimdCircuitField = M31;
 
     type ChallengeField = M31Ext3;
 
-    type Field = M31Ext3x16;
+    type Field = M31Ext3;
 
     #[inline(always)]
     fn challenge_mul_circuit_field(
