@@ -10,7 +10,7 @@ use halo2curves::{
     pairing::MultiMillerLoop,
     CurveAffine,
 };
-use itertools::izip;
+use itertools::{chain, izip};
 use mpi_config::MPIConfig;
 use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
@@ -127,11 +127,12 @@ where
             temp
         };
 
-        folded_x_oracle_commits
-            .iter()
-            .chain(iter::once(&y_oracle_commit))
-            .chain(&folded_y_oracle_commits)
-            .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
+        chain!(
+            &folded_x_oracle_commits,
+            iter::once(&y_oracle_commit),
+            &folded_y_oracle_commits,
+        )
+        .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
     }
 
     transcript_root_broadcast(fs_transcript, mpi_config);

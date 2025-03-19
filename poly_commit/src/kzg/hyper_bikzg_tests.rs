@@ -10,7 +10,7 @@ use halo2curves::{
     pairing::MultiMillerLoop,
     CurveAffine,
 };
-use itertools::izip;
+use itertools::{chain, izip};
 use polynomials::MultiLinearPoly;
 use transcript::{FieldHashTranscript, Transcript};
 
@@ -105,11 +105,12 @@ where
         temp
     };
 
-    folded_x_oracle_commits
-        .iter()
-        .chain(iter::once(&y_oracle_commit))
-        .chain(&folded_y_oracle_commits)
-        .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
+    chain!(
+        &folded_x_oracle_commits,
+        iter::once(&y_oracle_commit),
+        &folded_y_oracle_commits,
+    )
+    .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
 
     let beta_x = fs_transcript.generate_challenge_field_element();
     let beta_y = fs_transcript.generate_challenge_field_element();
