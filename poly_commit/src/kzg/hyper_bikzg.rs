@@ -95,7 +95,9 @@ where
                     .for_each(|(x_com_i, oracle_i)| *x_com_i += oracle_i.to_curve())
             });
 
-        folded_x_oracle_commits = folded_x_coms_g1.iter().map(|f| f.to_affine()).collect();
+        folded_x_oracle_commits = vec![E::G1Affine::default(); folded_x_coms_g1.len()];
+        E::G1::batch_normalize(&folded_x_coms_g1, &mut folded_x_oracle_commits);
+
         y_oracle_commit = coeff_form_uni_kzg_commit(&srs.tau_y_srs, &final_evals_at_x);
     }
 
