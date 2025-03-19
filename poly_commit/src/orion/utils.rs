@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
+use serdes::SerdeError;
 use thiserror::Error;
 use transcript::Transcript;
 
@@ -19,7 +20,7 @@ pub enum OrionPCSError {
     ParameterUnmatchError,
 
     #[error("field serde error")]
-    SerializationError(#[from] arith::FieldSerdeError),
+    SerializationError(#[from] SerdeError),
 }
 
 pub type OrionResult<T> = std::result::Result<T, OrionPCSError>;

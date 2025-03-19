@@ -8,6 +8,9 @@
 
 # Expander
 
+[![Build](https://github.com/PolyhedraZK/Expander/actions/workflows/ci.yml/badge.svg)](https://github.com/PolyhedraZK/Expander/actions)
+[![License](https://img.shields.io/github/license/PolyhedraZK/Expander)](https://github.com/PolyhedraZK/Expander/blob/main/LICENSE)
+
 <div align="center">
   <h3>
     <a href="https://eprint.iacr.org/2019/317">
@@ -30,8 +33,6 @@
 
 Expander is a proof generation backend for Polyhedra Network. It aims to support fast proof generation.
 
-This is the *rust version* of the "core" repo.
-
 For more technical introduction, visit our markdown files [here](https://github.com/PolyhedraZK/Expander-cpp/tree/master/docs/doc.md).
 
 And [here](./gkr/src/tests/gkr_correctness.rs) for an example on how to use the gkr lib.
@@ -46,7 +47,7 @@ Additionally, please take a look at our circuit compiler: https://github.com/Pol
 
 This compiler is your entry point for using our prover; the repository you have is primarily the core executor, not the developer frontend. Our product pipeline is as follows:
 
-`Your circuit code -> Expander Compiler -> circuit.txt & witness.txt -> Expander-rs -> proof `
+`Your circuit code -> Expander Compiler -> circuit.txt & witness.txt -> Expander -> proof `
 
 Please note that the witness generation process is not yet optimal, and we are actively working on improving it.
 
@@ -89,7 +90,7 @@ RUSTFLAGS="-C target-cpu=native" cargo run --release --bin gkr -- -f fr -t 16
 
 ## Correctness test
 
-[Here](./tests/gkr_correctness.rs) we provide a test case for end-to-end proof generation and verification.
+[Here](./gkr/src/tests/gkr_correctness.rs) we provide a test case for end-to-end proof generation and verification.
 To check the correctness, run the follow standard Rust test command:
 
 ```sh
@@ -113,6 +114,12 @@ RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --re
 RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- verify -c ./data/circuit_m31.txt -w ./data/witness_m31.txt -i ./data/out_m31.bin
 RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- serve -c ./data/circuit_m31.txt -h 127.0.0.1 -p 3030
 ```
+
+To change the hash function used in the fiat-shamir transform,  use`-f [SHA256|Poseidon|MiMC5]`. To change the polynomial commitment scheme, use `-p [Raw|Orion]`. These options are placed before the `prove/verify` command, for example:
+```sh
+RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- -f SHA256 -p Raw prove -c <circuit_file> -w <witness_file> -o <output_proof_file>
+```
+Note that the hash function and the polynomial commitment scheme should be the same in the process of proving and verifying, otherwise the verification would fail.
 
 To test the service started by `expander-exec serve`, you can use the following command:
 ```sh
