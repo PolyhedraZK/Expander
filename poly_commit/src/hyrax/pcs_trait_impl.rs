@@ -40,40 +40,40 @@ where
     type Commitment = HyraxCommitment<C>;
     type Opening = HyraxOpening<C>;
 
-    fn init_scratch_pad(#[allow(unused)] params: &Self::Params) -> Self::ScratchPad {}
+    fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
 
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
         hyrax_setup(*params, rng)
     }
 
     fn commit(
-        #[allow(unused)] params: &Self::Params,
+        _params: &Self::Params,
         proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
         poly: &Self::Poly,
-        #[allow(unused)] scratch_pad: &mut Self::ScratchPad,
+        _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
         hyrax_commit(proving_key, poly)
     }
 
     fn open(
-        #[allow(unused)] params: &Self::Params,
+        _params: &Self::Params,
         proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        #[allow(unused)] scratch_pad: &Self::ScratchPad,
-        #[allow(unused)] transcript: &mut T,
+        _scratch_pad: &Self::ScratchPad,
+        _transcript: &mut T,
     ) -> (C::Scalar, Self::Opening) {
         hyrax_open(proving_key, poly, x)
     }
 
     fn verify(
-        #[allow(unused)] params: &Self::Params,
+        _params: &Self::Params,
         verifying_key: &<Self::SRS as crate::StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
         v: C::Scalar,
         opening: &Self::Opening,
-        #[allow(unused)] transcript: &mut T,
+        _transcript: &mut T,
     ) -> bool {
         hyrax_verify(verifying_key, commitment, x, v, opening)
     }

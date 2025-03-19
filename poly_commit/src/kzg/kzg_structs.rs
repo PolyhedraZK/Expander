@@ -75,7 +75,7 @@ pub struct CoefFormBiKZGLocalSRS<E: Engine> {
 /// Bivariate KZG PCS verifier's params.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Default)]
 pub struct BiKZGVerifierParam<E: Engine> {
-    /// tau_0 over G2.
+    /// tau_x over G2.
     pub tau_x_g2: E::G2Affine,
     /// tau_y over G2.
     pub tau_y_g2: E::G2Affine,

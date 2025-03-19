@@ -14,7 +14,8 @@ use crate::{
         hyrax_impl::{hyrax_commit, hyrax_open, hyrax_setup, hyrax_verify},
         pedersen::pedersen_commit,
     },
-    HyraxCommitment, HyraxOpening, HyraxPCS, PCSForExpanderGKR, PedersenParams,
+    ExpanderGKRChallenge, HyraxCommitment, HyraxOpening, HyraxPCS, PCSForExpanderGKR,
+    PedersenParams, StructuredReferenceString,
 };
 
 impl<G, C, T> PCSForExpanderGKR<G, T> for HyraxPCS<C, T>
@@ -51,7 +52,7 @@ where
     fn commit(
         _params: &Self::Params,
         mpi_config: &MPIConfig,
-        proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
@@ -78,9 +79,9 @@ where
     fn open(
         _params: &Self::Params,
         mpi_config: &MPIConfig,
-        proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
-        x: &crate::ExpanderGKRChallenge<G>,
+        x: &ExpanderGKRChallenge<G>,
         _transcript: &mut T,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
@@ -111,9 +112,9 @@ where
 
     fn verify(
         _params: &Self::Params,
-        verifying_key: &<Self::SRS as crate::StructuredReferenceString>::VKey,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &crate::ExpanderGKRChallenge<G>,
+        x: &ExpanderGKRChallenge<G>,
         v: <G as GKRFieldConfig>::ChallengeField,
         _transcript: &mut T,
         opening: &Self::Opening,

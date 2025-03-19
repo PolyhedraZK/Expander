@@ -29,8 +29,8 @@ where
     type ScratchPad = ();
 
     fn init_scratch_pad(
-        #[allow(unused)] params: &Self::Params,
-        #[allow(unused)] mpi_config: &mpi_config::MPIConfig,
+        _params: &Self::Params,
+        _mpi_config: &mpi_config::MPIConfig,
     ) -> Self::ScratchPad {
     }
 
@@ -51,11 +51,11 @@ where
     }
 
     fn commit(
-        #[allow(unused)] params: &Self::Params,
+        _params: &Self::Params,
         mpi_config: &mpi_config::MPIConfig,
-        proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
-        #[allow(unused)] scratch_pad: &mut Self::ScratchPad,
+        _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         let local_commitment =
             coeff_form_uni_kzg_commit(&proving_key.tau_x_srs, poly.hypercube_basis_ref());
@@ -82,13 +82,13 @@ where
     }
 
     fn open(
-        #[allow(unused)] params: &Self::Params,
+        _params: &Self::Params,
         mpi_config: &mpi_config::MPIConfig,
-        proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
-        x: &crate::ExpanderGKRChallenge<G>,
-        transcript: &mut T, // add transcript here to allow interactive arguments
-        #[allow(unused)] scratch_pad: &Self::ScratchPad,
+        x: &ExpanderGKRChallenge<G>,
+        transcript: &mut T,
+        _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
         coeff_form_hyper_bikzg_open(
             proving_key,
@@ -101,12 +101,12 @@ where
     }
 
     fn verify(
-        #[allow(unused)] params: &Self::Params,
-        verifying_key: &<Self::SRS as crate::StructuredReferenceString>::VKey,
+        _params: &Self::Params,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &crate::ExpanderGKRChallenge<G>,
+        x: &ExpanderGKRChallenge<G>,
         v: <G as GKRFieldConfig>::ChallengeField,
-        transcript: &mut T, // add transcript here to allow interactive arguments
+        transcript: &mut T,
         opening: &Self::Opening,
     ) -> bool {
         coeff_form_hyper_bikzg_verify(

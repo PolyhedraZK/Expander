@@ -42,7 +42,7 @@ where
     type Commitment = KZGCommitment<E>;
     type Opening = HyperKZGOpening<E>;
 
-    fn init_scratch_pad(#[allow(unused)] params: &Self::Params) -> Self::ScratchPad {}
+    fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
 
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
         let length = 1 << params;
@@ -50,27 +50,27 @@ where
     }
 
     fn commit(
-        #[allow(unused)] params: &Self::Params,
+        _params: &Self::Params,
         proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
         poly: &Self::Poly,
-        #[allow(unused)] scratch_pad: &mut Self::ScratchPad,
+        _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
         KZGCommitment(coeff_form_uni_kzg_commit(proving_key, &poly.coeffs))
     }
 
     fn open(
-        #[allow(unused)] params: &Self::Params,
+        _params: &Self::Params,
         proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        #[allow(unused)] scratch_pad: &Self::ScratchPad,
+        _scratch_pad: &Self::ScratchPad,
         transcript: &mut T,
     ) -> (E::Fr, Self::Opening) {
         coeff_form_uni_hyperkzg_open(proving_key, &poly.coeffs, x, transcript)
     }
 
     fn verify(
-        #[allow(unused)] params: &Self::Params,
+        _params: &Self::Params,
         verifying_key: &<Self::SRS as crate::StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
