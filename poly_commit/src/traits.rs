@@ -29,6 +29,11 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
     type Commitment: Clone + Debug + Default + ExpSerde;
     type Opening: Clone + Debug + Default + ExpSerde;
 
+    /// Minimum number of variables supported in this PCS implementation,
+    /// that such constraint exists for PCSs like Orion,
+    /// but for Raw and Hyrax, polys of any size works.
+    const MINIMUM_NUM_VARS: usize = 0;
+
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Use self as the first argument to save some potential intermediate state.
     fn gen_srs_for_testing(params: &Self::Params, rng: impl RngCore) -> Self::SRS;
@@ -102,6 +107,11 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
     type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString;
     type Commitment: Clone + Debug + Default + ExpSerde;
     type Opening: Clone + Debug + Default + ExpSerde;
+
+    /// Minimum number of variables supported in this PCS implementation,
+    /// that such constraint exists for PCSs like Orion,
+    /// but for Raw and Hyrax, polys of any size works.
+    const MINIMUM_NUM_VARS: usize = 0;
 
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Each process should return the SAME GLOBAL SRS.
