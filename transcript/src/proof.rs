@@ -1,6 +1,6 @@
 use std::io::{Read, Write};
 
-use arith::{FieldSerde, FieldSerdeResult};
+use serdes::{ExpSerde, SerdeResult};
 
 /// Proof. In the serialized mode.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -15,18 +15,18 @@ impl Proof {
     }
 }
 
-impl FieldSerde for Proof {
+impl ExpSerde for Proof {
     const SERIALIZED_SIZE: usize = panic!("not implemented for Proof");
 
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         (self.bytes.len() as u64).serialize_into(&mut writer)?;
         writer.write_all(&self.bytes)?;
         Ok(())
     }
 
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let proof_len = u64::deserialize_from(&mut reader)? as usize;
         let mut proof = vec![0u8; proof_len];
         reader.read_exact(&mut proof).unwrap();

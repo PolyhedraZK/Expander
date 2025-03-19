@@ -1,13 +1,15 @@
 use std::io::Cursor;
 
-use arith::{FieldSerde, SimdField};
+use arith::SimdField;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::{EqPolynomial, MultilinearExtension};
+use serdes::ExpSerde;
 use transcript::Transcript;
 
 use crate::{
     orion::{simd_field_agg_impl::*, *},
+    traits::TensorCodeIOPPCS,
     ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString,
 };
 
@@ -26,6 +28,11 @@ where
     type Commitment = OrionCommitment;
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
+
+    const MINIMUM_NUM_VARS: usize = (tree::leaf_adic::<C::CircuitField>()
+        * Self::SRS::LEAVES_IN_RANGE_OPENING
+        / C::SimdCircuitField::PACK_SIZE)
+        .ilog2() as usize;
 
     /// NOTE(HS): this is actually number of variables in polynomial,
     /// ignoring the variables for MPI parties and SIMD field element
@@ -56,7 +63,7 @@ where
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
-    ) -> Self::Commitment {
+    ) -> Option<Self::Commitment> {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
@@ -65,7 +72,7 @@ where
         // NOTE: Hang also assume that, linear GKR will take over the commitment
         // and force sync transcript hash state of subordinate machines to be the same.
         if mpi_config.is_single_process() {
-            return commitment;
+            return commitment.into();
         }
 
         let local_buffer = vec![commitment];
@@ -73,12 +80,12 @@ where
         mpi_config.gather_vec(&local_buffer, &mut buffer);
 
         if !mpi_config.is_root() {
-            return commitment;
+            return None;
         }
 
         let final_tree_height = 1 + buffer.len().ilog2();
         let (internals, _) = tree::Tree::new_with_leaf_nodes(buffer.clone(), final_tree_height);
-        internals[0]
+        internals[0].into()
     }
 
     // TODO(HS) rearrange the MT over interleaved codeword, s.t., we have smaller proof size
@@ -90,7 +97,7 @@ where
         eval_point: &ExpanderGKRChallenge<C>,
         transcript: &mut T,
         scratch_pad: &Self::ScratchPad,
-    ) -> Self::Opening {
+    ) -> Option<Self::Opening> {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
@@ -103,7 +110,7 @@ where
             T,
         >(proving_key, poly, &local_xs, transcript, scratch_pad);
         if mpi_config.is_single_process() {
-            return local_opening;
+            return local_opening.into();
         }
 
         // NOTE: eval row combine from MPI
@@ -137,12 +144,12 @@ where
             .chunks(local_mt_paths_serialized.len())
             .flat_map(|bs| {
                 let mut read_cursor = Cursor::new(bs);
-                Vec::deserialize_from(&mut read_cursor).unwrap()
+                <Vec<tree::RangePath> as ExpSerde>::deserialize_from(&mut read_cursor).unwrap()
             })
             .collect();
 
         if !mpi_config.is_root() {
-            return local_opening;
+            return None;
         }
 
         // NOTE: we only care about the root machine's opening as final proof, Hang assume.
@@ -151,6 +158,7 @@ where
             proximity_rows,
             query_openings,
         }
+        .into()
     }
 
     fn verify(
