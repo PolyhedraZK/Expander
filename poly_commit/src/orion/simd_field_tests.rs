@@ -26,14 +26,24 @@ where
         (row_num, msg_size)
     };
 
-    let mut interleaved_codewords: Vec<_> = poly
-        .coeffs
+    let relative_pack_size = ComPackF::PACK_SIZE / SimdF::PACK_SIZE;
+    let packed_rows = row_num / relative_pack_size;
+
+    let mut local_coeffs = poly.coeffs.clone();
+    let mut scratch = local_coeffs.clone();
+    transpose_in_place(
+        &mut local_coeffs,
+        &mut scratch,
+        poly.coeffs.len() / relative_pack_size,
+    );
+
+    let mut interleaved_codewords: Vec<_> = local_coeffs
         .chunks(msg_size)
         .flat_map(|msg| orion_srs.code_instance.encode(msg).unwrap())
         .collect();
 
     let mut scratch = vec![SimdF::ZERO; row_num * orion_srs.codeword_len()];
-    transpose_in_place(&mut interleaved_codewords, &mut scratch, row_num);
+    transpose_in_place(&mut interleaved_codewords, &mut scratch, relative_pack_size);
     drop(scratch);
 
     let mut packed_interleaved_codeword: Vec<_> = interleaved_codewords
@@ -41,6 +51,10 @@ where
         .map(ComPackF::pack_from_simd)
         .collect();
     drop(interleaved_codewords);
+
+    let mut scratch = vec![ComPackF::ZERO; packed_rows * orion_srs.codeword_len()];
+    transpose_in_place(&mut packed_interleaved_codeword, &mut scratch, packed_rows);
+    drop(scratch);
 
     if !packed_interleaved_codeword.len().is_power_of_two() {
         let aligned_po2_len = packed_interleaved_codeword.len().next_power_of_two();

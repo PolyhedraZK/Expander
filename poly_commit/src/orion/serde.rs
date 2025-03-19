@@ -1,11 +1,14 @@
-use std::io::{Read, Write};
+use std::{
+    io::{Read, Write},
+    marker::PhantomData,
+};
 
-use arith::Field;
+use arith::{Field, SimdField};
 use serdes::{ExpSerde, SerdeResult};
 
 use crate::orion::{
     linear_code::*,
-    utils::{OrionProof, OrionSRS},
+    utils::{OrionProof, OrionSRS, OrionScratchPad},
 };
 
 impl ExpSerde for OrionExpanderGraph {
@@ -124,6 +127,23 @@ impl<F: Field> ExpSerde for OrionProof<F> {
             eval_row,
             proximity_rows,
             query_openings,
+        })
+    }
+}
+
+impl<F: Field, ComPackF: SimdField<Scalar = F>> ExpSerde for OrionScratchPad<F, ComPackF> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: std::io::Write>(&self, writer: W) -> SerdeResult<()> {
+        self.interleaved_alphabet_commitment.serialize_into(writer)
+    }
+
+    fn deserialize_from<R: std::io::Read>(reader: R) -> SerdeResult<Self> {
+        let interleaved_alphabet_commitment = tree::Tree::deserialize_from(reader)?;
+
+        Ok(Self {
+            interleaved_alphabet_commitment,
+            _phantom: PhantomData,
         })
     }
 }
