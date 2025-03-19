@@ -3,7 +3,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign},
 };
 
-use arith::{Field, FieldForECC};
+use arith::Field;
 use tiny_keccak::{Hasher, Keccak};
 
 use crate::FiatShamirFieldHasher;
@@ -23,7 +23,7 @@ pub trait PoseidonStateTrait:
     + for<'a> MulAssign<&'a Self>
 {
     /// ElemT is the element (base field) type constructing the poseidon state instance.
-    type ElemT: FieldForECC;
+    type ElemT: Field;
 
     /// SBOX_POW is a pow \alpha for poseidon sbox, that \alpha >= 3 and gcd(\alpha, p - 1) = 1,
     /// where p is the modulus of the prime field ElemT.

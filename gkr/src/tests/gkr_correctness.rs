@@ -3,7 +3,7 @@ use std::panic::AssertUnwindSafe;
 use std::time::Instant;
 use std::{fs, panic};
 
-use arith::{Field, FieldSerde};
+use arith::Field;
 use circuit::Circuit;
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
@@ -18,6 +18,7 @@ use poly_commit::{
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha12Rng;
+use serdes::ExpSerde;
 use sha2::Digest;
 use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
 
