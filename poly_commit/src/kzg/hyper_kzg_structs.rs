@@ -1,27 +1,19 @@
 use std::ops::{Index, IndexMut};
 
 use arith::ExtensionField;
+use derivative::Derivative;
 use halo2curves::{ff::Field, pairing::Engine};
 use itertools::izip;
 use transcript::Transcript;
 
 use crate::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(Default(bound = ""))]
 pub struct HyperKZGExportedLocalEvals<E: Engine> {
     pub beta_x2_eval: E::Fr,
     pub pos_beta_x_evals: Vec<E::Fr>,
     pub neg_beta_x_evals: Vec<E::Fr>,
-}
-
-impl<E: Engine> Default for HyperKZGExportedLocalEvals<E> {
-    fn default() -> Self {
-        Self {
-            beta_x2_eval: E::Fr::default(),
-            pos_beta_x_evals: Vec::default(),
-            neg_beta_x_evals: Vec::default(),
-        }
-    }
 }
 
 impl<E: Engine> HyperKZGExportedLocalEvals<E> {
@@ -52,7 +44,8 @@ impl<E: Engine> HyperKZGExportedLocalEvals<E> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(Default(bound = ""))]
 pub struct HyperKZGOpening<E: Engine>
 where
     E::G1Affine: Default,
@@ -63,35 +56,12 @@ where
     pub quotient_delta_x_commitment: E::G1Affine,
 }
 
-impl<E: Engine> Default for HyperKZGOpening<E>
-where
-    E::G1Affine: Default,
-{
-    fn default() -> Self {
-        Self {
-            folded_oracle_commitments: Vec::default(),
-            evals_at_x: HyperKZGExportedLocalEvals::<E>::default(),
-            beta_x_commitment: E::G1Affine::default(),
-            quotient_delta_x_commitment: E::G1Affine::default(),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(Default(bound = ""))]
 pub(crate) struct HyperKZGLocalEvals<E: Engine> {
     pub(crate) beta2_evals: Vec<E::Fr>,
     pub(crate) pos_beta_evals: Vec<E::Fr>,
     pub(crate) neg_beta_evals: Vec<E::Fr>,
-}
-
-impl<E: Engine> Default for HyperKZGLocalEvals<E> {
-    fn default() -> Self {
-        Self {
-            beta2_evals: Vec::default(),
-            pos_beta_evals: Vec::default(),
-            neg_beta_evals: Vec::default(),
-        }
-    }
 }
 
 impl<E: Engine> HyperKZGLocalEvals<E>
@@ -234,21 +204,12 @@ impl<E: Engine> From<HyperKZGLocalEvals<E>> for HyperKZGExportedLocalEvals<E> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(Default(bound = ""))]
 pub struct HyperKZGAggregatedEvals<E: Engine> {
     pub beta_y2_evals: HyperKZGExportedLocalEvals<E>,
     pub pos_beta_y_evals: HyperKZGExportedLocalEvals<E>,
     pub neg_beta_y_evals: HyperKZGExportedLocalEvals<E>,
-}
-
-impl<E: Engine> Default for HyperKZGAggregatedEvals<E> {
-    fn default() -> Self {
-        Self {
-            beta_y2_evals: HyperKZGExportedLocalEvals::<E>::default(),
-            pos_beta_y_evals: HyperKZGExportedLocalEvals::<E>::default(),
-            neg_beta_y_evals: HyperKZGExportedLocalEvals::<E>::default(),
-        }
-    }
 }
 
 impl<E: Engine> HyperKZGAggregatedEvals<E>
@@ -297,8 +258,12 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct HyperBiKZGOpening<E: Engine> {
+#[derive(Debug, Clone, Derivative)]
+#[derivative(Default(bound = ""))]
+pub struct HyperBiKZGOpening<E: Engine>
+where
+    E::G1Affine: Default,
+{
     pub folded_oracle_commitments: Vec<E::G1Affine>,
 
     pub aggregated_evals: HyperKZGAggregatedEvals<E>,
@@ -309,26 +274,6 @@ pub struct HyperBiKZGOpening<E: Engine> {
 
     pub quotient_delta_x_commitment: E::G1Affine,
     pub quotient_delta_y_commitment: E::G1Affine,
-}
-
-impl<E: Engine> Default for HyperBiKZGOpening<E>
-where
-    E::G1Affine: Default,
-{
-    fn default() -> Self {
-        Self {
-            folded_oracle_commitments: Vec::default(),
-
-            aggregated_evals: HyperKZGAggregatedEvals::<E>::default(),
-            leader_evals: HyperKZGExportedLocalEvals::<E>::default(),
-
-            beta_x_commitment: E::G1Affine::default(),
-            beta_y_commitment: E::G1Affine::default(),
-
-            quotient_delta_x_commitment: E::G1Affine::default(),
-            quotient_delta_y_commitment: E::G1Affine::default(),
-        }
-    }
 }
 
 impl<E: Engine> From<HyperBiKZGOpening<E>> for HyperKZGOpening<E>

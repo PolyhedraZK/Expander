@@ -1864,6 +1864,7 @@ dependencies = [
  "arith",
  "ark-std",
  "criterion",
+ "derivative",
  "ethnum",
  "field_hashers",
  "gf2",
