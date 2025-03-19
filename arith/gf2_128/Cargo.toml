@@ -6,10 +6,11 @@ edition = "2021"
 [dependencies]
 arith = { path = "../" }
 gf2 ={ path = "../gf2" }
+serdes = { path = "../../serdes" }
 
 ark-std.workspace = true
+ethnum.workspace = true
 rand.workspace = true
-
 
 [dev-dependencies]
 tynm.workspace = true
