@@ -98,7 +98,7 @@ impl<F: Field> UnivariatePoly<F> {
             assert_eq!(self.coeffs[ith_root], F::ZERO);
         });
 
-        self.coeffs = self.coeffs[roots.len()..].to_owned();
+        self.coeffs.drain(0..roots.len());
         self.coeffs.resize(self.coeffs.len() + roots.len(), F::ZERO);
     }
 }
