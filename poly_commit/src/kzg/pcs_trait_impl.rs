@@ -1,12 +1,13 @@
 use std::marker::PhantomData;
 
-use arith::{ExtensionField, FieldSerde};
+use arith::ExtensionField;
 use halo2curves::{
     ff::PrimeField,
     pairing::{Engine, MultiMillerLoop},
     CurveAffine,
 };
 use polynomials::MultiLinearPoly;
+use serdes::ExpSerde;
 use transcript::Transcript;
 
 use crate::*;
@@ -26,8 +27,8 @@ impl<E, T> PolynomialCommitmentScheme<E::Fr, T> for HyperKZGPCS<E, T>
 where
     E: Engine + MultiMillerLoop,
     E::Fr: ExtensionField + PrimeField,
-    E::G1Affine: FieldSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: FieldSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     T: Transcript<E::Fr>,
 {
     const NAME: &'static str = "HyperKZGPCS";

@@ -1,6 +1,6 @@
 mod common;
 
-use arith::{BN254Fr, Field};
+use arith::{Field, Fr};
 use ark_std::test_rng;
 use gkr_field_config::BN254Config;
 use halo2curves::bn256::Bn256;
@@ -16,18 +16,14 @@ fn test_hyperkzg_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
 
     (num_vars_start..=num_vars_end).for_each(|num_vars| {
         let xs: Vec<_> = (0..TEST_REPETITION)
-            .map(|_| -> Vec<BN254Fr> {
-                (0..num_vars)
-                    .map(|_| BN254Fr::random_unsafe(&mut rng))
-                    .collect()
-            })
+            .map(|_| -> Vec<Fr> { (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect() })
             .collect();
-        let poly = MultiLinearPoly::<BN254Fr>::random(num_vars, &mut rng);
+        let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
         common::test_pcs::<
-            BN254Fr,
-            BytesHashTranscript<BN254Fr, Keccak256hasher>,
-            HyperKZGPCS<Bn256, BytesHashTranscript<BN254Fr, Keccak256hasher>>,
+            Fr,
+            BytesHashTranscript<Fr, Keccak256hasher>,
+            HyperKZGPCS<Bn256, BytesHashTranscript<Fr, Keccak256hasher>>,
         >(&num_vars, &poly, &xs);
     })
 }
@@ -44,18 +40,18 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
     let num_vars_in_mpi = mpi_config_ref.world_size().ilog2() as usize;
     let num_vars_in_each_poly = total_num_vars - num_vars_in_mpi;
 
-    let global_poly = MultiLinearPoly::<BN254Fr>::random(total_num_vars, &mut rng);
+    let global_poly = MultiLinearPoly::<Fr>::random(total_num_vars, &mut rng);
     let challenge_point = ExpanderGKRChallenge::<BN254Config> {
         x_mpi: (0..num_vars_in_mpi)
-            .map(|_| BN254Fr::random_unsafe(&mut rng))
+            .map(|_| Fr::random_unsafe(&mut rng))
             .collect(),
         x_simd: Vec::new(),
         x: (0..num_vars_in_each_poly)
-            .map(|_| BN254Fr::random_unsafe(&mut rng))
+            .map(|_| Fr::random_unsafe(&mut rng))
             .collect(),
     };
 
-    let mut transcript = BytesHashTranscript::<BN254Fr, Keccak256hasher>::new();
+    let mut transcript = BytesHashTranscript::<Fr, Keccak256hasher>::new();
 
     // NOTE separate polynomial into different pieces by mpi rank
     let poly_vars_stride = (1 << global_poly.get_num_vars()) / mpi_config_ref.world_size();
@@ -68,8 +64,8 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
 
     common::test_pcs_for_expander_gkr::<
         BN254Config,
-        BytesHashTranscript<BN254Fr, Keccak256hasher>,
-        HyperKZGPCS<Bn256, BytesHashTranscript<BN254Fr, Keccak256hasher>>,
+        BytesHashTranscript<Fr, Keccak256hasher>,
+        HyperKZGPCS<Bn256, BytesHashTranscript<Fr, Keccak256hasher>>,
     >(
         &num_vars_in_each_poly,
         mpi_config_ref,

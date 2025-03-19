@@ -3,7 +3,7 @@
 
 use std::{io::Cursor, iter};
 
-use arith::{ExtensionField, FieldSerde};
+use arith::ExtensionField;
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, Group, GroupEncoding},
@@ -13,6 +13,7 @@ use halo2curves::{
 use itertools::izip;
 use mpi_config::MPIConfig;
 use polynomials::MultilinearExtension;
+use serdes::ExpSerde;
 use transcript::{transcript_root_broadcast, transcript_verifier_sync, Transcript};
 
 use crate::*;
@@ -28,7 +29,7 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
 where
     E: MultiMillerLoop,
     T: Transcript<E::Fr>,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + FieldSerde,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
     E::Fr: ExtensionField,
 {
     // NOTE(HS) deteriorate to vanilla HyperKZG if mpi_alphas is empty, namely single party setting
@@ -478,7 +479,7 @@ pub fn coeff_form_hyper_bikzg_verify<E, T>(
 where
     E: MultiMillerLoop,
     T: Transcript<E::Fr>,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + FieldSerde,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
     E::Fr: ExtensionField,
 {
     // NOTE(HS) deteriorate to vanilla HyperKZG verify if mpi_alphas is empty

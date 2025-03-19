@@ -1,6 +1,6 @@
 use std::hint::black_box;
 
-use arith::{BN254Fr, Field};
+use arith::{Field, Fr};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use halo2curves::bn256::Bn256;
@@ -19,10 +19,10 @@ fn hyperkzg_committing_benchmark_helper(
     let mut scratch_pad = ();
 
     for num_vars in lowest_num_vars..=highest_num_vars {
-        let poly = MultiLinearPoly::<BN254Fr>::random(num_vars, &mut rng);
+        let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
         let srs =
-            HyperKZGPCS::<Bn256, BytesHashTranscript<BN254Fr, Keccak256hasher>>::gen_srs_for_testing(
+            HyperKZGPCS::<Bn256, BytesHashTranscript<Fr, Keccak256hasher>>::gen_srs_for_testing(
                 &num_vars, &mut rng,
             );
 
@@ -31,12 +31,14 @@ fn hyperkzg_committing_benchmark_helper(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(HyperKZGPCS::<
-                            Bn256,
-                            BytesHashTranscript<BN254Fr, Keccak256hasher>,
-                        >::commit(
-                            &num_vars, &srs, &poly, &mut scratch_pad
-                        ))
+                        _ = black_box(
+                            HyperKZGPCS::<Bn256, BytesHashTranscript<Fr, Keccak256hasher>>::commit(
+                                &num_vars,
+                                &srs,
+                                &poly,
+                                &mut scratch_pad,
+                            ),
+                        )
                     })
                 },
             )
@@ -56,21 +58,19 @@ fn hyperkzg_opening_benchmark_helper(
     let mut group = c.benchmark_group("HyperKZG PCS opening");
 
     let mut rng = test_rng();
-    let mut transcript = BytesHashTranscript::<BN254Fr, Keccak256hasher>::new();
+    let mut transcript = BytesHashTranscript::<Fr, Keccak256hasher>::new();
     let mut scratch_pad = ();
 
     for num_vars in lowest_num_vars..=highest_num_vars {
-        let poly = MultiLinearPoly::<BN254Fr>::random(num_vars, &mut rng);
+        let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
         let srs =
-            HyperKZGPCS::<Bn256, BytesHashTranscript<BN254Fr, Keccak256hasher>>::gen_srs_for_testing(
+            HyperKZGPCS::<Bn256, BytesHashTranscript<Fr, Keccak256hasher>>::gen_srs_for_testing(
                 &num_vars, &mut rng,
             );
-        let eval_point: Vec<_> = (0..num_vars)
-            .map(|_| BN254Fr::random_unsafe(&mut rng))
-            .collect();
+        let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
 
-        let _ = HyperKZGPCS::<Bn256, BytesHashTranscript<BN254Fr, Keccak256hasher>>::commit(
+        let _ = HyperKZGPCS::<Bn256, BytesHashTranscript<Fr, Keccak256hasher>>::commit(
             &num_vars,
             &srs,
             &poly,

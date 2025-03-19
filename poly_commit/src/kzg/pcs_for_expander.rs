@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use arith::{ExtensionField, FieldSerde};
+use arith::ExtensionField;
 use gkr_field_config::GKRFieldConfig;
 use halo2curves::{
     ff::PrimeField,
@@ -8,6 +8,7 @@ use halo2curves::{
     pairing::{Engine, MultiMillerLoop},
     CurveAffine,
 };
+use serdes::ExpSerde;
 use transcript::Transcript;
 
 use crate::*;
@@ -17,8 +18,8 @@ where
     G: GKRFieldConfig<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
     E: Engine + MultiMillerLoop,
     E::Fr: ExtensionField + PrimeField,
-    E::G1Affine: FieldSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: FieldSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     T: Transcript<G::ChallengeField>,
 {
     const NAME: &'static str = "HyperKZGPCSForExpander";

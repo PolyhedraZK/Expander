@@ -1,5 +1,5 @@
-use arith::FieldSerde;
 use halo2curves::{pairing::Engine, CurveAffine};
+use serdes::ExpSerde;
 
 use crate::StructuredReferenceString;
 
@@ -40,8 +40,8 @@ where
 
 impl<E: Engine> StructuredReferenceString for CoefFormUniKZGSRS<E>
 where
-    <E as Engine>::G1Affine: FieldSerde,
-    <E as Engine>::G2Affine: FieldSerde,
+    <E as Engine>::G1Affine: ExpSerde,
+    <E as Engine>::G2Affine: ExpSerde,
 {
     type PKey = CoefFormUniKZGSRS<E>;
     type VKey = UniKZGVerifierParams<E>;
@@ -104,8 +104,8 @@ where
 
 impl<E: Engine> StructuredReferenceString for CoefFormBiKZGLocalSRS<E>
 where
-    <E as Engine>::G1Affine: FieldSerde,
-    <E as Engine>::G2Affine: FieldSerde,
+    <E as Engine>::G1Affine: ExpSerde,
+    <E as Engine>::G2Affine: ExpSerde,
 {
     type PKey = CoefFormBiKZGLocalSRS<E>;
     type VKey = BiKZGVerifierParam<E>;
