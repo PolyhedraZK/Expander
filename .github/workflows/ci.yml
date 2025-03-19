@@ -60,7 +60,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: "mpi-v5.0.7 whatever prefix make mac build work"
+          prefix-key: "mpi-v5.0.7"
 
       - uses: actions/setup-go@v5
         if: matrix.os != '7950x3d'
