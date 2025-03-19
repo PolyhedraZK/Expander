@@ -52,6 +52,9 @@ where
     type Commitment = OrionCommitment;
     type Opening = OrionProof<EvalF>;
 
+    const MINIMUM_NUM_VARS: usize =
+        (Self::SRS::LEAVES_IN_RANGE_OPENING * tree::leaf_adic::<F>()).ilog2() as usize;
+
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
         OrionSRS::from_random::<F>(*params, ORION_CODE_PARAMETER_INSTANCE, rng)
     }
@@ -144,6 +147,10 @@ where
     type Commitment = OrionCommitment;
     type Opening = OrionProof<EvalF>;
 
+    const MINIMUM_NUM_VARS: usize = (Self::SRS::LEAVES_IN_RANGE_OPENING * tree::leaf_adic::<F>()
+        / SimdF::PACK_SIZE)
+        .ilog2() as usize;
+
     // NOTE: here we say the number of variables is the sum of 2 following things:
     // - number of variables of the multilinear polynomial
     // - number of variables reside in the SIMD field - e.g., 3 vars for a SIMD 8 field
@@ -195,13 +202,13 @@ where
             let (_, m) = <Self::SRS as TensorCodeIOPPCS>::evals_shape::<F>(real_num_vars);
             m.ilog2() as usize
         };
-        let num_vars_in_simd = SimdF::PACK_SIZE.ilog2() as usize;
+        let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
 
         // NOTE: working on evaluation response, evaluate the rest of the response
         let mut scratch = vec![EvalF::ZERO; opening.eval_row.len()];
         let eval = MultiLinearPoly::evaluate_with_buffer(
             &opening.eval_row,
-            &x[num_vars_in_simd..num_vars_in_simd + num_vars_in_msg],
+            &x[num_vars_in_com_simd..num_vars_in_com_simd + num_vars_in_msg],
             &mut scratch,
         );
         drop(scratch);

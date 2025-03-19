@@ -35,7 +35,7 @@ where
         (row_num, msg_size)
     };
 
-    let num_vars_in_simd = C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
+    let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;
 
     let global_xs = eval_point.global_xs();
@@ -43,7 +43,7 @@ where
     // NOTE: working on evaluation response
     let mut scratch = vec![C::ChallengeField::ZERO; msg_size];
     let final_eval = RefMultiLinearPoly::from_ref(&proof.eval_row).evaluate_with_buffer(
-        &global_xs[num_vars_in_simd..num_vars_in_simd + num_vars_in_msg],
+        &global_xs[num_vars_in_com_simd..num_vars_in_com_simd + num_vars_in_msg],
         &mut scratch,
     );
     if final_eval != eval {
@@ -111,8 +111,9 @@ where
         });
 
     let mut eq_vars = vec![C::ChallengeField::ZERO; eval_point.num_vars() - num_vars_in_msg];
-    eq_vars[..num_vars_in_simd].copy_from_slice(&global_xs[..num_vars_in_simd]);
-    eq_vars[num_vars_in_simd..].copy_from_slice(&global_xs[num_vars_in_simd + num_vars_in_msg..]);
+    eq_vars[..num_vars_in_com_simd].copy_from_slice(&global_xs[..num_vars_in_com_simd]);
+    eq_vars[num_vars_in_com_simd..]
+        .copy_from_slice(&global_xs[num_vars_in_com_simd + num_vars_in_msg..]);
 
     let eq_col_coeffs = EqPolynomial::build_eq_x_r(&eq_vars);
 
