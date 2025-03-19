@@ -161,13 +161,14 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
-    ) -> Self::Commitment {
+    ) -> Option<Self::Commitment> {
         assert!(poly.num_vars() == *params);
 
         if mpi_config.is_single_process() {
             return Self::Commitment {
                 evals: poly.hypercube_basis(),
-            };
+            }
+            .into();
         }
 
         let mut buffer = if mpi_config.is_root() {
@@ -178,7 +179,11 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
 
         mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
 
-        Self::Commitment { evals: buffer }
+        if !mpi_config.is_root() {
+            return None;
+        }
+
+        Self::Commitment { evals: buffer }.into()
     }
 
     fn open(
@@ -189,7 +194,8 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _x: &ExpanderGKRChallenge<C>,
         _transcript: &mut T,
         _scratch_pad: &Self::ScratchPad,
-    ) -> Self::Opening {
+    ) -> Option<Self::Opening> {
+        Some(())
     }
 
     fn verify(

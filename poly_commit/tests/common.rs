@@ -102,11 +102,11 @@ pub fn test_pcs_for_expander_gkr<
             assert!(P::verify(
                 params,
                 &verification_key,
-                &commitment,
+                &commitment.clone().unwrap(),
                 xx,
                 v,
                 &mut transcript_cloned,
-                &opening
+                &opening.unwrap()
             ));
             transcript.unlock_proof();
         }
