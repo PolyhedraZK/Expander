@@ -25,7 +25,7 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
     local_alphas: &[E::Fr],
     mpi_alphas: &[E::Fr],
     fs_transcript: &mut T,
-) -> HyperBiKZGOpening<E>
+) -> Option<HyperBiKZGOpening<E>>
 where
     E: MultiMillerLoop,
     T: Transcript<E::Fr>,
@@ -42,7 +42,8 @@ where
             fs_transcript,
         );
 
-        return hyperkzg_opening.into();
+        let hyper_bikzg_opening: HyperBiKZGOpening<E> = hyperkzg_opening.into();
+        return hyper_bikzg_opening.into();
     }
 
     //
@@ -420,50 +421,22 @@ where
 
     mpi_config.gather_vec(&vec![local_eval_open], &mut gathered_eval_opens);
 
-    let mut hyper_bikzg_opening = HyperBiKZGOpening::<E>::default();
-
-    if mpi_config.is_root() {
-        let (_, final_opening) = coeff_form_bi_kzg_open_leader(srs, &gathered_eval_opens, delta_y);
-
-        hyper_bikzg_opening = HyperBiKZGOpening {
-            folded_oracle_commitments,
-            aggregated_evals: root_aggregated_x_evals,
-            leader_evals: root_folded_y_evals.into(),
-            beta_x_commitment: gamma_aggregated_x_quotient_commitment,
-            beta_y_commitment: leader_quotient_y_commitment,
-            quotient_delta_x_commitment: final_opening.quotient_x,
-            quotient_delta_y_commitment: final_opening.quotient_y,
-        };
+    if !mpi_config.is_root() {
+        return None;
     }
 
-    //
-    // Root broadcast out the whole hyperkzg proof out to locals
-    //
+    let (_, final_opening) = coeff_form_bi_kzg_open_leader(srs, &gathered_eval_opens, delta_y);
 
-    {
-        let mut serialized_hyper_bikzg_opening: Vec<u8> = Vec::new();
-        hyper_bikzg_opening
-            .serialize_into(&mut serialized_hyper_bikzg_opening)
-            .unwrap();
-
-        let mut byte_len = serialized_hyper_bikzg_opening.len();
-        let mut byte_len_u8s: Vec<u8> = Vec::new();
-        byte_len.serialize_into(&mut byte_len_u8s).unwrap();
-        mpi_config.root_broadcast_bytes(&mut byte_len_u8s);
-        byte_len = {
-            let mut cursor = Cursor::new(byte_len_u8s);
-            usize::deserialize_from(&mut cursor).unwrap()
-        };
-
-        serialized_hyper_bikzg_opening.resize(byte_len, 0u8);
-        mpi_config.root_broadcast_bytes(&mut serialized_hyper_bikzg_opening);
-        hyper_bikzg_opening = {
-            let mut cursor = Cursor::new(serialized_hyper_bikzg_opening);
-            HyperBiKZGOpening::deserialize_from(&mut cursor).unwrap()
-        };
+    HyperBiKZGOpening {
+        folded_oracle_commitments,
+        aggregated_evals: root_aggregated_x_evals,
+        leader_evals: root_folded_y_evals.into(),
+        beta_x_commitment: gamma_aggregated_x_quotient_commitment,
+        beta_y_commitment: leader_quotient_y_commitment,
+        quotient_delta_x_commitment: final_opening.quotient_x,
+        quotient_delta_y_commitment: final_opening.quotient_y,
     }
-
-    hyper_bikzg_opening
+    .into()
 }
 
 #[allow(clippy::too_many_arguments)]

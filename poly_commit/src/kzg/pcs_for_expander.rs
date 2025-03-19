@@ -1,5 +1,3 @@
-use std::io::Cursor;
-
 use arith::ExtensionField;
 use gkr_field_config::GKRFieldConfig;
 use halo2curves::{
@@ -58,41 +56,29 @@ where
         proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
         #[allow(unused)] scratch_pad: &mut Self::ScratchPad,
-    ) -> Self::Commitment {
+    ) -> Option<Self::Commitment> {
         let local_commitment =
             coeff_form_uni_kzg_commit(&proving_key.tau_x_srs, poly.hypercube_basis_ref());
 
         if mpi_config.is_single_process() {
-            return KZGCommitment(local_commitment);
+            return KZGCommitment(local_commitment).into();
         }
 
         let mut root_gathering_commits: Vec<E::G1Affine> =
             vec![E::G1Affine::default(); mpi_config.world_size()];
         mpi_config.gather_vec(&vec![local_commitment], &mut root_gathering_commits);
 
-        let mut final_commit = E::G1Affine::default();
-        if mpi_config.is_root() {
-            final_commit = root_gathering_commits
-                .iter()
-                .map(|c| c.to_curve())
-                .sum::<E::G1>()
-                .into();
+        if !mpi_config.is_root() {
+            return None;
         }
 
-        {
-            let mut serialized_commitment: Vec<u8> = Vec::new();
-            final_commit
-                .serialize_into(&mut serialized_commitment)
-                .unwrap();
+        let final_commit = root_gathering_commits
+            .iter()
+            .map(|c| c.to_curve())
+            .sum::<E::G1>()
+            .into();
 
-            mpi_config.root_broadcast_bytes(&mut serialized_commitment);
-            final_commit = {
-                let mut cursor = Cursor::new(serialized_commitment);
-                E::G1Affine::deserialize_from(&mut cursor).unwrap()
-            };
-        }
-
-        KZGCommitment(final_commit)
+        KZGCommitment(final_commit).into()
     }
 
     fn open(
@@ -103,7 +89,7 @@ where
         x: &crate::ExpanderGKRChallenge<G>,
         transcript: &mut T, // add transcript here to allow interactive arguments
         #[allow(unused)] scratch_pad: &Self::ScratchPad,
-    ) -> Self::Opening {
+    ) -> Option<Self::Opening> {
         coeff_form_hyper_bikzg_open(
             proving_key,
             mpi_config,
