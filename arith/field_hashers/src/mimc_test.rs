@@ -1,5 +1,5 @@
-use arith::{BN254Fr, FieldSerde};
-use halo2curves::bn256::Fr;
+use arith::Fr;
+use serdes::ExpSerde;
 
 use crate::{FiatShamirFieldHasher, MiMC5FiatShamirHasher};
 
@@ -16,7 +16,7 @@ const MIMC5_BN254_ONT: [u8; 32] = [
 #[test]
 fn check_mimc5_aligned() {
     let mimc = MiMC5FiatShamirHasher::<Fr>::new();
-    let input = BN254Fr::from(MIMC5_BN254_IN);
+    let input = Fr::from(MIMC5_BN254_IN);
     let output = mimc.hash_to_state(&[input]);
 
     assert_eq!(output.len(), MiMC5FiatShamirHasher::<Fr>::STATE_CAPACITY);

@@ -1,9 +1,10 @@
 use std::io::Cursor;
 
-use arith::{FieldSerde, SimdField};
+use arith::SimdField;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::{EqPolynomial, MultilinearExtension};
+use serdes::ExpSerde;
 use transcript::Transcript;
 
 use crate::{
@@ -143,7 +144,7 @@ where
             .chunks(local_mt_paths_serialized.len())
             .flat_map(|bs| {
                 let mut read_cursor = Cursor::new(bs);
-                Vec::deserialize_from(&mut read_cursor).unwrap()
+                <Vec<tree::RangePath> as ExpSerde>::deserialize_from(&mut read_cursor).unwrap()
             })
             .collect();
 

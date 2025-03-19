@@ -1,11 +1,12 @@
 //! This module implements the whole GKR prover, including the IOP and PCS.
 
-use arith::{Field, FieldSerde};
+use arith::Field;
 use circuit::Circuit;
 use config::{Config, GKRConfig, GKRScheme};
 use gkr_field_config::GKRFieldConfig;
 use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use polynomials::{MultilinearExtension, MutRefMultiLinearPoly};
+use serdes::ExpSerde;
 use sumcheck::ProverScratchPad;
 use transcript::{transcript_root_broadcast, Proof, Transcript};
 use utils::timer::Timer;
@@ -14,7 +15,8 @@ use crate::{gkr_prove, gkr_square_prove};
 
 #[cfg(feature = "grinding")]
 pub(crate) fn grind<Cfg: GKRConfig>(transcript: &mut Cfg::Transcript, config: &Config<Cfg>) {
-    use arith::{Field, FieldSerde};
+    use arith::Field;
+    use serdes::ExpSerde;
 
     let timer = Timer::new("grinding", config.mpi_config.is_root());
 
