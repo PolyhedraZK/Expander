@@ -311,7 +311,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         // and use the following line to avoid unnecessary deserialization and serialization
         // transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
 
-        transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
+        transcript_verifier_sync(&mut transcript, self.config.mpi_config.world_size());
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
@@ -334,7 +334,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                 verified &= pcs_verified;
                 log::info!("GKR verification: {}", verified);
 
-                transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
+                transcript_verifier_sync(&mut transcript, self.config.mpi_config.world_size());
 
                 verified &= self.get_pcs_opening_from_proof_and_verify(
                     pcs_params,
@@ -351,7 +351,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                 );
 
                 if let Some(rz1) = rz1 {
-                    transcript_verifier_sync(&mut transcript, &self.config.mpi_config);
+                    transcript_verifier_sync(&mut transcript, self.config.mpi_config.world_size());
                     verified &= self.get_pcs_opening_from_proof_and_verify(
                         pcs_params,
                         pcs_verification_key,
