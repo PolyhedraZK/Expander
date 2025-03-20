@@ -115,7 +115,7 @@ RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --re
 RUSTFLAGS="-C target-cpu=native" mpiexec -n 1 cargo run --bin expander-exec --release -- serve -c ./data/circuit_m31.txt -h 127.0.0.1 -p 3030
 ```
 
-To change the hash function used in the fiat-shamir transform,  use`-f [SHA256|Poseidon|MiMC5]`. To change the polynomial commitment scheme, use `-p [Raw|Orion]`. These options are placed before the `prove/verify` command, for example:
+To change the hash function used in the fiat-shamir transform,  use`-f [SHA256|Poseidon|MiMC5]`. To change the polynomial commitment scheme, use `-p [Raw|Orion|Hyrax|KZG]`. These options are placed before the `prove/verify` command, for example:
 ```sh
 RUSTFLAGS="-C target-cpu=native" cargo run --bin expander-exec --release -- -f SHA256 -p Raw prove -c <circuit_file> -w <witness_file> -o <output_proof_file>
 ```
