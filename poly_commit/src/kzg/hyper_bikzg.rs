@@ -490,7 +490,7 @@ where
     let beta_x = fs_transcript.generate_challenge_field_element();
     let beta_y = fs_transcript.generate_challenge_field_element();
 
-    dbg!(beta_x, beta_y);
+    // dbg!(beta_x, beta_y);
 
     // NOTE(HS) evaluation checks
 
@@ -516,17 +516,17 @@ where
     let pos_beta_y_final_eval = pos_beta_y_local.multilinear_final_eval();
     let neg_beta_y_final_eval = neg_beta_y_local.multilinear_final_eval();
 
-    dbg!(
-        &beta_y2_final_eval,
-        &pos_beta_y_final_eval,
-        &neg_beta_y_final_eval
-    );
+    // dbg!(
+    //     &beta_y2_final_eval,
+    //     &pos_beta_y_final_eval,
+    //     &neg_beta_y_final_eval
+    // );
 
-    dbg!(
-        &opening.leader_evals.beta_x2_eval,
-        &opening.leader_evals.pos_beta_x_evals[0],
-        &opening.leader_evals.neg_beta_x_evals[0]
-    );
+    // dbg!(
+    //     &opening.leader_evals.beta_x2_eval,
+    //     &opening.leader_evals.pos_beta_x_evals[0],
+    //     &opening.leader_evals.neg_beta_x_evals[0]
+    // );
 
     if beta_y2_final_eval != opening.leader_evals.beta_x2_eval {
         return false;
@@ -552,7 +552,7 @@ where
 
     let gamma = fs_transcript.generate_challenge_field_element();
 
-    dbg!(gamma);
+    // dbg!(gamma);
 
     let aggregated_oracle_commitment: E::G1Affine = {
         let gamma_power_series = powers_series(&gamma, local_alphas.len() + mpi_alphas.len() + 1);
@@ -594,21 +594,21 @@ where
 
     let delta_x = fs_transcript.generate_challenge_field_element();
 
-    dbg!(delta_x);
+    // dbg!(delta_x);
 
     let delta_x_pow_series = powers_series(&delta_x, 3);
     let at_beta_y2 = univariate_evaluate(&aggregated_beta_y2_locals, &delta_x_pow_series);
     let at_beta_y = univariate_evaluate(&aggregated_pos_beta_y_locals, &delta_x_pow_series);
     let at_neg_beta_y = univariate_evaluate(&aggregated_neg_beta_y_locals, &delta_x_pow_series);
 
-    dbg!(at_beta_y2, at_beta_y, at_neg_beta_y);
+    // dbg!(at_beta_y2, at_beta_y, at_neg_beta_y);
 
     let lagrange_degree2_delta_y = coeff_form_degree2_lagrange(
         [beta_y, -beta_y, beta_y * beta_y],
         [at_beta_y, at_neg_beta_y, at_beta_y2],
     );
 
-    dbg!(lagrange_degree2_delta_y);
+    // dbg!(lagrange_degree2_delta_y);
 
     fs_transcript.append_u8_slice(opening.beta_y_commitment.to_bytes().as_ref());
 
@@ -617,12 +617,12 @@ where
 
     let delta_y = fs_transcript.generate_challenge_field_element();
 
-    dbg!(delta_y);
+    // dbg!(delta_y);
 
     let delta_y_pow_series = powers_series(&delta_y, 3);
     let degree_2_final_eval = univariate_evaluate(&lagrange_degree2_delta_y, &delta_y_pow_series);
 
-    dbg!(degree_2_final_eval);
+    // dbg!(degree_2_final_eval);
 
     // NOTE(HS) f_gamma_s - (delta_x - beta_x) ... (delta_x - beta_x2) f_gamma_quotient_s
     //                    - (delta_y - beta_y) ... (delta_y - beta_y2) lagrange_quotient_y
@@ -633,22 +633,19 @@ where
         - (opening.beta_x_commitment * delta_x_denom)
         - (opening.beta_y_commitment * delta_y_denom);
 
-    dbg!(com_r);
+    // dbg!(com_r);
 
     let final_opening = BiKZGProof {
         quotient_x: opening.quotient_delta_x_commitment,
         quotient_y: opening.quotient_delta_y_commitment,
     };
 
-    let what = coeff_form_bi_kzg_verify(
+    coeff_form_bi_kzg_verify(
         vk.clone(),
         com_r.to_affine(),
         delta_x,
         delta_y,
         degree_2_final_eval,
         final_opening,
-    );
-    dbg!(what);
-
-    what
+    )
 }
