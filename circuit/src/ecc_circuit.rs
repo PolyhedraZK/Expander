@@ -1,5 +1,6 @@
 use config::GKRConfig;
 use gkr_field_config::GKRFieldConfig;
+use serdes::{ExpSerde, SerdeResult};
 use std::{cmp::max, collections::HashMap, fs, io::Cursor};
 
 use crate::*;
@@ -77,11 +78,11 @@ pub struct RecursiveCircuit<C: GKRFieldConfig> {
 }
 
 impl<C: GKRFieldConfig> RecursiveCircuit<C> {
-    pub fn load(filename: &str) -> std::result::Result<Self, CircuitError> {
+    pub fn load(filename: &str) -> SerdeResult<Self> {
         let file_bytes = fs::read(filename)?;
         let cursor = Cursor::new(file_bytes);
 
-        Ok(Self::deserialize_from(cursor))
+        <Self as ExpSerde>::deserialize_from(cursor)
     }
 
     pub fn flatten<Cfg: GKRConfig<FieldConfig = C>>(&self) -> Circuit<C> {

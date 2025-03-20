@@ -1,15 +1,18 @@
 use std::{
     arch::x86_64::*,
     fmt::Debug,
+    hash::Hash,
     io::{Read, Write},
     iter::{Product, Sum},
     mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{field_common, Field, SimdField};
 use ark_std::Zero;
+use ethnum::U256;
 use rand::{Rng, RngCore};
+use serdes::{ExpSerde, SerdeResult};
 
 use crate::m31::{M31, M31_MOD};
 
@@ -39,12 +42,12 @@ impl AVXM31 {
 
 field_common!(AVXM31);
 
-impl FieldSerde for AVXM31 {
+impl ExpSerde for AVXM31 {
     const SERIALIZED_SIZE: usize = 512 / 8;
 
     #[inline(always)]
     /// serialize self into bytes
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         let data = unsafe { transmute::<__m512i, [u8; 64]>(self.v) };
         writer.write_all(&data)?;
         Ok(())
@@ -52,7 +55,7 @@ impl FieldSerde for AVXM31 {
 
     /// deserialize bytes into field
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let mut data = [0; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut data)?;
         unsafe {
@@ -78,6 +81,8 @@ impl Field for AVXM31 {
     const INV_2: Self = Self { v: PACKED_INV_2 };
 
     const FIELD_SIZE: usize = 32;
+
+    const MODULUS: U256 = U256([M31_MOD as u128, 0]);
 
     #[inline(always)]
     fn zero() -> Self {
@@ -288,11 +293,13 @@ impl PartialEq for AVXM31 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let pcmp = _mm512_cmpeq_epi32_mask(self.v, other.v);
+            let pcmp = _mm512_cmpeq_epi32_mask(mod_reduce_epi32(self.v), mod_reduce_epi32(other.v));
             pcmp == 0xFFFF
         }
     }
 }
+
+impl Eq for AVXM31 {}
 
 #[inline]
 #[must_use]
@@ -443,5 +450,14 @@ fn mul_internal(a: &AVXM31, b: &AVXM31) -> AVXM31 {
         // Standard addition of two 31-bit values.
         let res = add(prod_lo, prod_hi);
         AVXM31 { v: res }
+    }
+}
+
+impl Hash for AVXM31 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<__m512i, [u8; 64]>(self.v).as_ref());
+        }
     }
 }

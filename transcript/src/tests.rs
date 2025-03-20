@@ -1,4 +1,4 @@
-use arith::{BN254Fr, ExtensionField};
+use arith::{ExtensionField, Fr};
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use mersenne31::{M31Ext3, M31x16};
 use sha2::{Digest, Sha256};
@@ -67,15 +67,13 @@ where
 fn test_transcript_expected_behavior() {
     test_transcript_expected_behavior_helper::<M31Ext3, BytesHashTranscript<_, Keccak256hasher>>();
     test_transcript_expected_behavior_helper::<M31Ext3, BytesHashTranscript<_, SHA256hasher>>();
-    test_transcript_expected_behavior_helper::<BN254Fr, BytesHashTranscript<_, Keccak256hasher>>();
-    test_transcript_expected_behavior_helper::<BN254Fr, BytesHashTranscript<_, SHA256hasher>>();
+    test_transcript_expected_behavior_helper::<Fr, BytesHashTranscript<_, Keccak256hasher>>();
+    test_transcript_expected_behavior_helper::<Fr, BytesHashTranscript<_, SHA256hasher>>();
 
     test_transcript_expected_behavior_helper::<
         M31Ext3,
         FieldHashTranscript<_, PoseidonFiatShamirHasher<M31x16>>,
     >();
-    test_transcript_expected_behavior_helper::<
-        BN254Fr,
-        FieldHashTranscript<_, MiMC5FiatShamirHasher<_>>,
-    >();
+    test_transcript_expected_behavior_helper::<Fr, FieldHashTranscript<_, MiMC5FiatShamirHasher<_>>>(
+    );
 }

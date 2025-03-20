@@ -1,13 +1,15 @@
 use std::io::Cursor;
 
-use arith::{FieldSerde, SimdField};
+use arith::SimdField;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::{EqPolynomial, MultilinearExtension};
+use serdes::ExpSerde;
 use transcript::Transcript;
 
 use crate::{
     orion::{simd_field_agg_impl::*, *},
+    traits::TensorCodeIOPPCS,
     ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString,
 };
 
@@ -26,6 +28,11 @@ where
     type Commitment = OrionCommitment;
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
+
+    const MINIMUM_NUM_VARS: usize = (tree::leaf_adic::<C::CircuitField>()
+        * Self::SRS::LEAVES_IN_RANGE_OPENING
+        / C::SimdCircuitField::PACK_SIZE)
+        .ilog2() as usize;
 
     /// NOTE(HS): this is actually number of variables in polynomial,
     /// ignoring the variables for MPI parties and SIMD field element
@@ -137,7 +144,7 @@ where
             .chunks(local_mt_paths_serialized.len())
             .flat_map(|bs| {
                 let mut read_cursor = Cursor::new(bs);
-                Vec::deserialize_from(&mut read_cursor).unwrap()
+                <Vec<tree::RangePath> as ExpSerde>::deserialize_from(&mut read_cursor).unwrap()
             })
             .collect();
 
