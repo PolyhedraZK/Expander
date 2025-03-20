@@ -267,6 +267,15 @@ impl MPIConfig {
     }
 
     #[inline(always)]
+    pub fn all_to_all_transpose<F: Field + Equivalence>(&self, row: &mut Vec<F>) {
+        assert_eq!(row.len() % self.world_size(), 0);
+
+        let mut recv_buf = vec![F::ZERO; row.len()];
+        self.world.unwrap().all_to_all_into(row, &mut recv_buf);
+        row.iter_mut().zip(&recv_buf).for_each(|(r, rc)| *r = *rc);
+    }
+
+    #[inline(always)]
     pub fn is_single_process(&self) -> bool {
         self.world_size == 1
     }

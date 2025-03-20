@@ -6,6 +6,126 @@ use crate::traits::TensorCodeIOPPCS;
 
 use super::{utils::transpose_in_place, OrionCommitment, OrionResult, OrionSRS, OrionScratchPad};
 
+/*
+When it comes to MPI assisted multi-process matrix transpose, we can consider the following scenario
+
+p(0):     **************** **************** **************** ... ****************
+          elems 0          elems 1          elems 2              elems n - 1
+
+p(1):     **************** **************** **************** ... ****************
+          elems 0          elems 1          elems 2              elems n - 1
+
+...
+
+p(n - 1): **************** **************** **************** ... ****************
+          elems 0          elems 1          elems 2              elems n - 1
+
+eventually we want the transpose result looking like following:
+
+p(0):     ******************** ******************** ******************** ... ********************
+          elems 0 (p(0))       elems 0 (p(1))       elems 0 (p(2))           elems 0 (p(n - 1))
+
+p(1):     ******************** ******************** ******************** ... ********************
+          elems 1 (p(0))       elems 1 (p(1))       elems 1 (p(2))           elems 1 (p(n - 1))
+
+...
+
+p(n - 1): ******************** ******************** ******************** ... ********************
+          elems n - 1 (p(0))   elems n - 1 (p(1))   elems n - 1 (p(2))       elems n - 1 (p(n - 1))
+
+In the Orion scenario, the codeword originally look like following in the RAM:
+
+p(0):    *-*-*-*-*-*-*-*-*-*- .... -*
+
+         *-*-*-*-*-*-*-*-*-*- .... -*
+
+p(1):    *-*-*-*-*-*-*-*-*-*- .... -*
+
+         *-*-*-*-*-*-*-*-*-*- .... -*
+
+...
+
+p(n - 1): *-*-*-*-*-*-*-*-*-*- .... -*
+
+          *-*-*-*-*-*-*-*-*-*- .... -*
+
+a local transpose on each process allows for visiting in interleaved codeword order:
+
+p(0):     * * * * * * * * * *  ....  *
+          |/|/|/|/|/|/|/|/|/|  .... /|
+          * * * * * * * * * *  ....  *
+
+p(1):     * * * * * * * * * *  ....  *
+          |/|/|/|/|/|/|/|/|/|  .... /|
+          * * * * * * * * * *  ....  *
+
+...
+
+p(n - 1): * * * * * * * * * *  ....  *
+          |/|/|/|/|/|/|/|/|/|  .... /|
+          * * * * * * * * * *  ....  *
+
+a global MPI ALL TO ALL rewinds the order into the following:
+
+          p(0)        p(1)        p(2)     p(n - 1)
+          * * * *     * * * *     * *  ....  *
+          |/|/|/|     |/|/|/|     |/|  .... /|
+          * * * *     * * * *     * *  ....  *
+               /           /
+              /           /
+             /           /
+            /           /
+           /           /           /
+          * * * *     * * * *     * *  ....  *
+          |/|/|/|     |/|/|/|     |/|  .... /|
+          * * * *     * * * *     * *  ....  *
+               /           /
+              /           /
+             /           /
+            /           /
+           /           /           /
+          * * * *     * * * *     * *  ....  *
+          |/|/|/|     |/|/|/|     |/|  .... /|
+          * * * *     * * * *     * *  ....  *
+
+rearrange each row of interleaved codeword on each process, we have:
+
+          p(0)        p(1)        p(2)     p(n - 1)
+          *-*-*-*     *-*-*-*     *-*- .... -*
+          *-*-*-*     *-*-*-*     *-*- .... -*
+               /           /
+              /           /
+             /           /
+            /           /
+           /           /           /
+          *-*-*-*     *-*-*-*     *-*- .... -*
+          *-*-*-*     *-*-*-*     *-*- .... -*
+               /           /
+              /           /
+             /           /
+            /           /
+           /           /           /
+          *-*-*-*     *-*-*-*     *-*- .... -*
+          *-*-*-*     *-*-*-*     *-*- .... -*
+
+eventually, a final transpose each row lead to results of ordering by *WHOLE* interleaved alphabet:
+
+          p(0)                    p(1)                 ....
+          *     *     *     *     *     *     *     *
+          |    /|    /|    /|     |    /|    /|    /|
+          *   / *   / *   / *     *   / *   / *   / *
+          |  /  |  /  |  /  |     |  /  |  /  |  /  |
+          * /   * /   * /   *     * /   * /   * /   *
+          |/    |/    |/    |     |/    |/    |/    |
+          *     *     *     *     *     *     *     *
+
+After all these, we can go onwards to MT commitment, and later open alphabets lies in one of the parties.
+*/
+
+#[allow(unused)]
+#[inline(always)]
+pub(crate) fn mpi_spread_out_interleaved_alphabets() {}
+
 #[allow(unused)]
 #[inline(always)]
 pub(crate) fn mpi_commit_encoded<F, PackF>(
