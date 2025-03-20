@@ -1,7 +1,7 @@
 use std::cmp;
 
 use arith::Field;
-use itertools::izip;
+use itertools::{chain, izip};
 use rand::seq::index;
 
 use super::{OrionPCSError, OrionResult};
@@ -285,9 +285,6 @@ impl OrionCode {
         buffer[..self.msg_len()].copy_from_slice(msg);
         let mut scratch = vec![F::ZERO; self.code_len()];
 
-        self.g0s
-            .iter()
-            .chain(self.g1s.iter())
-            .try_for_each(|g| g.expander_mul(buffer, &mut scratch))
+        chain!(&self.g0s, &self.g1s).try_for_each(|g| g.expander_mul(buffer, &mut scratch))
     }
 }

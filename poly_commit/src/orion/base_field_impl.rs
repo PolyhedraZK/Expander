@@ -2,7 +2,7 @@ use std::iter;
 
 use arith::{ExtensionField, Field, SimdField};
 use gf2::GF2;
-use itertools::izip;
+use itertools::{chain, izip};
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 use transcript::Transcript;
 
@@ -172,27 +172,29 @@ where
         EqPolynomial::build_eq_x_r(&eq_vars)
     };
 
-    izip!(&random_linear_combinations, &proof.proximity_rows)
-        .chain(iter::once((&eq_col_coeffs, &proof.eval_row)))
-        .all(|(rl, msg)| {
-            let codeword = match vk.code_instance.encode(msg) {
-                Ok(c) => c,
-                _ => return false,
-            };
+    chain!(
+        izip!(&random_linear_combinations, &proof.proximity_rows),
+        iter::once((&eq_col_coeffs, &proof.eval_row))
+    )
+    .all(|(rl, msg)| {
+        let codeword = match vk.code_instance.encode(msg) {
+            Ok(c) => c,
+            _ => return false,
+        };
 
-            match F::NAME {
-                GF2::NAME => lut_verify_alphabet_check(
-                    &codeword,
-                    rl,
-                    &query_indices,
-                    &packed_interleaved_alphabets,
-                ),
-                _ => simd_verify_alphabet_check(
-                    &codeword,
-                    rl,
-                    &query_indices,
-                    &packed_interleaved_alphabets,
-                ),
-            }
-        })
+        match F::NAME {
+            GF2::NAME => lut_verify_alphabet_check(
+                &codeword,
+                rl,
+                &query_indices,
+                &packed_interleaved_alphabets,
+            ),
+            _ => simd_verify_alphabet_check(
+                &codeword,
+                rl,
+                &query_indices,
+                &packed_interleaved_alphabets,
+            ),
+        }
+    })
 }

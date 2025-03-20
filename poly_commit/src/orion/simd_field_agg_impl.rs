@@ -3,7 +3,7 @@ use std::iter;
 use arith::{Field, SimdField};
 use gf2::GF2;
 use gkr_field_config::GKRFieldConfig;
-use itertools::izip;
+use itertools::{chain, izip};
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 use transcript::Transcript;
 
@@ -132,27 +132,29 @@ where
         .collect();
 
     // NOTE: decide if expected alphabet matches actual responses
-    izip!(&proximity_coeffs, &proof.proximity_rows)
-        .chain(iter::once((&eq_col_coeffs, &proof.eval_row)))
-        .all(|(rl, msg)| {
-            let codeword = match vk.code_instance.encode(msg) {
-                Ok(c) => c,
-                _ => return false,
-            };
+    chain!(
+        izip!(&proximity_coeffs, &proof.proximity_rows),
+        iter::once((&eq_col_coeffs, &proof.eval_row))
+    )
+    .all(|(rl, msg)| {
+        let codeword = match vk.code_instance.encode(msg) {
+            Ok(c) => c,
+            _ => return false,
+        };
 
-            match C::CircuitField::NAME {
-                GF2::NAME => lut_verify_alphabet_check(
-                    &codeword,
-                    rl,
-                    &query_indices,
-                    &packed_interleaved_alphabets,
-                ),
-                _ => simd_verify_alphabet_check(
-                    &codeword,
-                    rl,
-                    &query_indices,
-                    &packed_interleaved_alphabets,
-                ),
-            }
-        })
+        match C::CircuitField::NAME {
+            GF2::NAME => lut_verify_alphabet_check(
+                &codeword,
+                rl,
+                &query_indices,
+                &packed_interleaved_alphabets,
+            ),
+            _ => simd_verify_alphabet_check(
+                &codeword,
+                rl,
+                &query_indices,
+                &packed_interleaved_alphabets,
+            ),
+        }
+    })
 }
