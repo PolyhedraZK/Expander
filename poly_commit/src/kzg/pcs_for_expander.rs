@@ -66,19 +66,15 @@ where
             return KZGCommitment(local_commitment).into();
         }
 
-        let mut root_gathering_commits: Vec<E::G1Affine> =
-            vec![E::G1Affine::default(); mpi_config.world_size()];
-        mpi_config.gather_vec(&vec![local_commitment], &mut root_gathering_commits);
+        let local_g1 = local_commitment.to_curve();
+        let mut root_gathering_commits: Vec<E::G1> = vec![local_g1; mpi_config.world_size()];
+        mpi_config.gather_vec(&vec![local_g1], &mut root_gathering_commits);
 
         if !mpi_config.is_root() {
             return None;
         }
 
-        let final_commit = root_gathering_commits
-            .iter()
-            .map(|c| c.to_curve())
-            .sum::<E::G1>()
-            .into();
+        let final_commit = root_gathering_commits.iter().sum::<E::G1>().into();
 
         KZGCommitment(final_commit).into()
     }

@@ -42,6 +42,8 @@ where
     type Commitment = KZGCommitment<E>;
     type Opening = HyperKZGOpening<E>;
 
+    const MINIMUM_NUM_VARS: usize = 1;
+
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
 
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
