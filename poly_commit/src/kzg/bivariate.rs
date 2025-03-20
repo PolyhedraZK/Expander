@@ -18,6 +18,7 @@ pub fn generate_coef_form_bi_kzg_local_srs_for_testing<E: MultiMillerLoop>(
 ) -> CoefFormBiKZGLocalSRS<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
     assert!(local_length.is_power_of_two());
     assert!(distributed_parties.is_power_of_two());
@@ -78,6 +79,7 @@ pub fn coeff_form_bi_kzg_open_leader<E: MultiMillerLoop>(
 ) -> (E::Fr, BiKZGProof<E>)
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
     assert_eq!(srs.tau_y_srs.powers_of_tau.len(), evals_and_opens.len());
 
@@ -109,6 +111,7 @@ pub fn coeff_form_bi_kzg_verify<E: MultiMillerLoop>(
 ) -> bool
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
     let g1_eval: E::G1Affine = (E::G1Affine::generator() * eval).into();
     let g2_alpha: E::G2 = E::G2Affine::generator() * alpha;

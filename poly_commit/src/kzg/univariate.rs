@@ -16,6 +16,7 @@ pub(crate) fn generate_coef_form_uni_kzg_srs_for_testing<E: MultiMillerLoop>(
 ) -> CoefFormUniKZGSRS<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
     assert!(length.is_power_of_two());
 
@@ -49,6 +50,7 @@ pub(crate) fn coeff_form_uni_kzg_commit<E: MultiMillerLoop>(
 ) -> E::G1Affine
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
@@ -65,6 +67,7 @@ pub fn coeff_form_uni_kzg_open_eval<E: MultiMillerLoop>(
 ) -> (E::Fr, E::G1Affine)
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 

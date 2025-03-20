@@ -21,6 +21,7 @@ pub(crate) fn coeff_form_hyperkzg_local_poly_oracles<E>(
 where
     E: MultiMillerLoop,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     E::Fr: ExtensionField,
 {
     let mut local_coeffs = coeffs.to_vec();
@@ -109,6 +110,7 @@ pub fn coeff_form_uni_hyperkzg_open<E, T>(
 where
     E: MultiMillerLoop,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     E::Fr: ExtensionField,
     T: Transcript<E::Fr>,
 {

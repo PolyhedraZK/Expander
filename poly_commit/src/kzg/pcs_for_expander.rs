@@ -28,6 +28,8 @@ where
     type SRS = CoefFormBiKZGLocalSRS<E>;
     type ScratchPad = ();
 
+    const MINIMUM_NUM_VARS: usize = 1;
+
     fn init_scratch_pad(
         _params: &Self::Params,
         _mpi_config: &mpi_config::MPIConfig,

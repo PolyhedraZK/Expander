@@ -30,6 +30,7 @@ where
     E: MultiMillerLoop,
     T: Transcript<E::Fr>,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     E::Fr: ExtensionField,
 {
     // NOTE(HS) deteriorate to vanilla HyperKZG if mpi_alphas is empty, namely single party setting
@@ -456,6 +457,7 @@ where
     E: MultiMillerLoop,
     T: Transcript<E::Fr>,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     E::Fr: ExtensionField,
 {
     // NOTE(HS) deteriorate to vanilla HyperKZG verify if mpi_alphas is empty

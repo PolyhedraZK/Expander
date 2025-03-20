@@ -1,11 +1,11 @@
-use halo2curves::pairing::Engine;
+use halo2curves::{pairing::Engine, CurveAffine};
 use serdes::{ExpSerde, SerdeResult};
 
 use crate::*;
 
 impl<E: Engine> ExpSerde for KZGCommitment<E>
 where
-    E::G1Affine: ExpSerde,
+    E::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {
     const SERIALIZED_SIZE: usize = <E::G1Affine as ExpSerde>::SERIALIZED_SIZE;
 
@@ -20,8 +20,8 @@ where
 
 impl<E: Engine> ExpSerde for CoefFormUniKZGSRS<E>
 where
-    E::G1Affine: ExpSerde,
-    E::G2Affine: ExpSerde,
+    E::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
@@ -59,8 +59,8 @@ where
 
 impl<E: Engine> ExpSerde for CoefFormBiKZGLocalSRS<E>
 where
-    E::G1Affine: ExpSerde,
-    E::G2Affine: ExpSerde,
+    E::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
@@ -82,7 +82,7 @@ where
 
 impl<E: Engine> ExpSerde for BiKZGVerifierParam<E>
 where
-    E::G2Affine: ExpSerde,
+    E::G2Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
     const SERIALIZED_SIZE: usize = 2 * <E::G2Affine as ExpSerde>::SERIALIZED_SIZE;
 
