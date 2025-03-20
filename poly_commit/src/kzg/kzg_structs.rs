@@ -34,7 +34,8 @@ where
     type VKey = UniKZGVerifierParams<E>;
 
     fn into_keys(self) -> (Self::PKey, Self::VKey) {
-        (self.clone(), From::from(&self))
+        let vk: Self::VKey = From::from(&self);
+        (self, vk)
     }
 }
 
@@ -99,7 +100,8 @@ where
     type VKey = BiKZGVerifierParam<E>;
 
     fn into_keys(self) -> (Self::PKey, Self::VKey) {
-        (self.clone(), From::from(&self))
+        let vk: Self::VKey = From::from(&self);
+        (self, vk)
     }
 }
 
