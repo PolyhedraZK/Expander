@@ -2,7 +2,7 @@ use ethnum::U256;
 use halo2curves::ff::{Field as Halo2Field, FromUniformBytes, PrimeField};
 use rand::RngCore;
 
-use crate::{ExtensionField, Field, SimdField};
+use crate::{ExtensionField, FFTField, Field, SimdField};
 
 pub use halo2curves::bn256::Fr;
 
@@ -111,8 +111,8 @@ impl Field for Fr {
 
     /// Exp
     #[inline(always)]
-    fn exp(&self, _exponent: u128) -> Self {
-        unimplemented!()
+    fn exp(&self, exp: u128) -> Self {
+        self.pow_vartime([exp as u64])
     }
 
     /// find the inverse of the element; return None if not exist
@@ -188,5 +188,22 @@ impl ExtensionField for Fr {
     #[inline(always)]
     fn to_limbs(&self) -> Vec<Self::BaseField> {
         vec![*self]
+    }
+}
+
+impl FFTField for Fr {
+    const TWO_ADICITY: usize = <Self as PrimeField>::S as usize;
+
+    fn root_of_unity() -> Self {
+        <Self as PrimeField>::ROOT_OF_UNITY
+    }
+
+    fn two_adic_generator(bits: usize) -> Self {
+        let mut res = <Self as FFTField>::root_of_unity();
+        for _ in bits..Self::TWO_ADICITY {
+            res = res.square();
+        }
+
+        res
     }
 }

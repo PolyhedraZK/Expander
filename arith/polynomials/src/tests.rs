@@ -1,5 +1,5 @@
 use super::*;
-use arith::Field;
+use arith::{FFTField, Field};
 use ark_std::test_rng;
 use halo2curves::bn256::Fr;
 
@@ -166,4 +166,82 @@ fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
         i >>= 1;
     }
     res
+}
+
+#[test]
+fn test_univariate_poly_evaluation() {
+    let mut rng = test_rng();
+
+    let po2 = 1024;
+    let bits = 10;
+    let point = Fr::random_unsafe(&mut rng);
+
+    let univariate = UnivariatePoly::random(po2 - 1, &mut rng);
+    let evaluation = univariate.evaluate(point);
+
+    let lagrange = univariate.clone().fft();
+    let another_evaluatopm = lagrange.evaluate(point);
+
+    assert_eq!(another_evaluatopm, evaluation);
+
+    // NOTE(HS) now we test point being on the smooth multiplicative subgroup
+    let omega = Fr::two_adic_generator(bits);
+    let omega_i = omega.exp(893 as u128);
+
+    let evaluation = univariate.evaluate(omega_i);
+    let another_evaluation = lagrange.evaluate(omega_i);
+
+    assert_eq!(another_evaluation, evaluation);
+}
+
+#[test]
+fn test_univariate_degree_one_quotient() {
+    {
+        // x^3 + 1 = (x + 1)(x^2 - x + 1)
+        let mut poly = UnivariatePoly::new(vec![Fr::ONE, Fr::ZERO, Fr::ZERO, Fr::ONE]);
+        let point = -Fr::from(1u64);
+        poly.root_vanishing_quotient(&[point]);
+
+        assert_eq!(poly.coeffs, vec![Fr::ONE, -Fr::ONE, Fr::ONE, Fr::ZERO]);
+    }
+    {
+        // x^3 - 1 = (x-1)(x^2 + x + 1)
+        let poly = UnivariatePoly::new(vec![-Fr::ONE, Fr::ZERO, Fr::ZERO, Fr::ONE]);
+        let point = Fr::from(1u64);
+        let (div, remainder) = poly.degree_one_quotient(point);
+        assert_eq!(div.coeffs, vec![Fr::ONE, Fr::ONE, Fr::ONE, Fr::ZERO]);
+        assert_eq!(remainder, Fr::ZERO)
+    }
+    {
+        // x^3 + 6x^2 + 11x + 6 = (x + 1)(x + 2)(x + 3)
+        let poly = UnivariatePoly::new(vec![
+            Fr::from(6u64),
+            Fr::from(11u64),
+            Fr::from(6u64),
+            Fr::from(1u64),
+        ]);
+        let point = Fr::from(1u64);
+        let (div, remainder) = poly.degree_one_quotient(point);
+        assert_eq!(
+            div.coeffs,
+            vec![
+                Fr::from(18u64),
+                Fr::from(7u64),
+                Fr::from(1u64),
+                Fr::from(0u64),
+            ]
+        );
+        assert_eq!(remainder, Fr::from(24u64))
+    }
+    {
+        // x^3 + 6x^2 + 11x + 6 = (x + 1)(x + 2)(x + 3)
+        let mut poly = UnivariatePoly::new(vec![
+            Fr::from(6u64),
+            Fr::from(11u64),
+            Fr::from(6u64),
+            Fr::from(1u64),
+        ]);
+        poly.root_vanishing_quotient(&[-Fr::ONE, -Fr::from(2u64), -Fr::from(3u64)]);
+        assert_eq!(poly.coeffs, vec![Fr::ONE, Fr::ZERO, Fr::ZERO, Fr::ZERO]);
+    }
 }
