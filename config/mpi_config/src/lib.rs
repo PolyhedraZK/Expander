@@ -266,13 +266,50 @@ impl MPIConfig {
         }
     }
 
-    #[inline(always)]
-    pub fn all_to_all_transpose<F: Field + Equivalence>(&self, row: &mut Vec<F>) {
-        assert_eq!(row.len() % self.world_size(), 0);
+    /*
+    When it comes to MPI assisted multi-process matrix transpose, we can consider the following scenario
 
-        let mut recv_buf = vec![F::ZERO; row.len()];
-        self.world.unwrap().all_to_all_into(row, &mut recv_buf);
-        row.iter_mut().zip(&recv_buf).for_each(|(r, rc)| *r = *rc);
+    p(0):     **************** **************** **************** ... ****************
+              elems 0          elems 1          elems 2              elems n - 1
+
+    p(1):     **************** **************** **************** ... ****************
+              elems 0          elems 1          elems 2              elems n - 1
+
+    ...
+
+    p(n - 1): **************** **************** **************** ... ****************
+              elems 0          elems 1          elems 2              elems n - 1
+
+    eventually we want the transpose result looking like following:
+
+    p(0):     ******************** ******************** ******************** ... ********************
+              elems 0 (p(0))       elems 0 (p(1))       elems 0 (p(2))           elems 0 (p(n - 1))
+
+    p(1):     ******************** ******************** ******************** ... ********************
+              elems 1 (p(0))       elems 1 (p(1))       elems 1 (p(2))           elems 1 (p(n - 1))
+
+    ...
+
+    p(n - 1): ******************** ******************** ******************** ... ********************
+              elems n - 1 (p(0))   elems n - 1 (p(1))   elems n - 1 (p(2))       elems n - 1 (p(n - 1))
+         */
+
+    #[inline(always)]
+    pub fn all_to_all_transpose<F: Field>(&self, row: &mut [F]) {
+        let row_as_u8_len = F::SIZE * row.len();
+        assert_eq!(row_as_u8_len % self.world_size(), 0);
+
+        let mut recv_u8s = vec![0u8; row_as_u8_len];
+
+        let send_u8s: &[u8] =
+            unsafe { std::slice::from_raw_parts(row.as_ptr() as *const u8, row_as_u8_len) };
+
+        self.world.unwrap().all_to_all_into(send_u8s, &mut recv_u8s);
+
+        unsafe {
+            let dst_ptr = row.as_mut_ptr() as *mut u8;
+            std::ptr::copy_nonoverlapping(recv_u8s.as_ptr(), dst_ptr, recv_u8s.len());
+        }
     }
 
     #[inline(always)]

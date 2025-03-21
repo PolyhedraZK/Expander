@@ -1651,6 +1651,9 @@ name = "mpi_config"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "ark-std",
+ "gf2",
+ "itertools 0.13.0",
  "mersenne31",
  "mpi",
 ]

@@ -8,4 +8,7 @@ arith = { path = "../../arith" }
 mpi.workspace = true
 
 [dev-dependencies]
+ark-std.workspace = true
+itertools.workspace = true
 mersenne31 = { path = "../../arith/mersenne31"}
+gf2 = { path = "../../arith/gf2" }

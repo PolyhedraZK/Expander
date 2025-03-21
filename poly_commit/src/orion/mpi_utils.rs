@@ -7,32 +7,6 @@ use crate::traits::TensorCodeIOPPCS;
 use super::{utils::transpose_in_place, OrionCommitment, OrionResult, OrionSRS, OrionScratchPad};
 
 /*
-When it comes to MPI assisted multi-process matrix transpose, we can consider the following scenario
-
-p(0):     **************** **************** **************** ... ****************
-          elems 0          elems 1          elems 2              elems n - 1
-
-p(1):     **************** **************** **************** ... ****************
-          elems 0          elems 1          elems 2              elems n - 1
-
-...
-
-p(n - 1): **************** **************** **************** ... ****************
-          elems 0          elems 1          elems 2              elems n - 1
-
-eventually we want the transpose result looking like following:
-
-p(0):     ******************** ******************** ******************** ... ********************
-          elems 0 (p(0))       elems 0 (p(1))       elems 0 (p(2))           elems 0 (p(n - 1))
-
-p(1):     ******************** ******************** ******************** ... ********************
-          elems 1 (p(0))       elems 1 (p(1))       elems 1 (p(2))           elems 1 (p(n - 1))
-
-...
-
-p(n - 1): ******************** ******************** ******************** ... ********************
-          elems n - 1 (p(0))   elems n - 1 (p(1))   elems n - 1 (p(2))       elems n - 1 (p(n - 1))
-
 In the Orion scenario, the codeword originally look like following in the RAM:
 
 p(0):    *-*-*-*-*-*-*-*-*-*- .... -*
@@ -120,11 +94,18 @@ eventually, a final transpose each row lead to results of ordering by *WHOLE* in
           *     *     *     *     *     *     *     *
 
 After all these, we can go onwards to MT commitment, and later open alphabets lies in one of the parties.
-*/
+
+TODO(HS) now we are still assuming that we dont have the 2^31 limit
+
+ */
 
 #[allow(unused)]
 #[inline(always)]
-pub(crate) fn mpi_spread_out_interleaved_alphabets() {}
+pub(crate) fn mpi_spread_out_interleaved_alphabets(
+    mpi_config: &MPIConfig,
+    // TODO(HS) ...
+) {
+}
 
 #[allow(unused)]
 #[inline(always)]
