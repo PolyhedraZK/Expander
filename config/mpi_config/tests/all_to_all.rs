@@ -6,8 +6,7 @@ use mersenne31::{M31x16, M31};
 use mpi_config::MPIConfig;
 
 fn test_all_to_all_transpose_helper<F: Field>(mpi_config: &MPIConfig) {
-    // TODO(HS) need to take care of the case when matrix is >= 2^25, M31x16 case
-    const TEST_MATRIX_LEN: usize = 1 << 24;
+    const TEST_MATRIX_LEN: usize = 1 << 27;
 
     dbg!(F::NAME);
     dbg!(F::SIZE);

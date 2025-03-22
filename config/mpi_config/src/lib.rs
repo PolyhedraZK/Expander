@@ -1,6 +1,7 @@
 use std::{cmp, fmt::Debug};
 
 use arith::Field;
+use itertools::izip;
 use mpi::{
     environment::Universe,
     ffi,
@@ -296,20 +297,72 @@ impl MPIConfig {
 
     #[inline(always)]
     pub fn all_to_all_transpose<F: Field>(&self, row: &mut [F]) {
+        // NOTE(HS) MPI has some upper limit for send buffer size, pre declare here and use later
+        const SEND_BUFFER_MAX: usize = 1 << 27;
+
         let row_as_u8_len = F::SIZE * row.len();
         assert_eq!(row_as_u8_len % self.world_size(), 0);
 
-        let mut recv_u8s = vec![0u8; row_as_u8_len];
+        // NOTE(HS) Fast path, if we are working over a small matrix transpose not reaching
+        // communication size threshold, do this.
+        if row_as_u8_len <= SEND_BUFFER_MAX {
+            let mut recv_u8s = vec![0u8; row_as_u8_len];
 
-        let send_u8s: &[u8] =
-            unsafe { std::slice::from_raw_parts(row.as_ptr() as *const u8, row_as_u8_len) };
+            let send_u8s: &[u8] =
+                unsafe { std::slice::from_raw_parts(row.as_ptr() as *const u8, row_as_u8_len) };
 
-        self.world.unwrap().all_to_all_into(send_u8s, &mut recv_u8s);
+            self.world.unwrap().all_to_all_into(send_u8s, &mut recv_u8s);
 
-        unsafe {
-            let dst_ptr = row.as_mut_ptr() as *mut u8;
-            std::ptr::copy_nonoverlapping(recv_u8s.as_ptr(), dst_ptr, recv_u8s.len());
+            unsafe {
+                let dst_ptr = row.as_mut_ptr() as *mut u8;
+                std::ptr::copy_nonoverlapping(recv_u8s.as_ptr(), dst_ptr, recv_u8s.len());
+            }
+
+            return;
         }
+
+        let all_to_all_num = row_as_u8_len / SEND_BUFFER_MAX;
+        assert_eq!(row_as_u8_len % SEND_BUFFER_MAX, 0);
+
+        let num_elems_per_swap = SEND_BUFFER_MAX / F::SIZE;
+        assert_eq!(SEND_BUFFER_MAX % F::SIZE, 0);
+
+        let interleaved_stride_len = num_elems_per_swap / self.world_size();
+        assert_eq!(num_elems_per_swap % self.world_size(), 0);
+
+        let mut send_buf = vec![F::ZERO; num_elems_per_swap];
+        let mut recv_u8s = vec![0u8; SEND_BUFFER_MAX];
+
+        (0..all_to_all_num).for_each(|ith_all_to_all| {
+            let copy_starts = ith_all_to_all * interleaved_stride_len;
+            let copy_ends = copy_starts + interleaved_stride_len;
+
+            izip!(
+                row.chunks(interleaved_stride_len * all_to_all_num),
+                send_buf.chunks_mut(interleaved_stride_len)
+            )
+            .for_each(|(row_chunk, send_chunk)| {
+                send_chunk.copy_from_slice(&row_chunk[copy_starts..copy_ends]);
+            });
+
+            let send_u8s: &[u8] = unsafe {
+                std::slice::from_raw_parts(send_buf.as_ptr() as *const u8, SEND_BUFFER_MAX)
+            };
+
+            self.world.unwrap().all_to_all_into(send_u8s, &mut recv_u8s);
+
+            let recv_buf: &[F] = unsafe {
+                std::slice::from_raw_parts(recv_u8s.as_ptr() as *const F, num_elems_per_swap)
+            };
+
+            izip!(
+                row.chunks_mut(interleaved_stride_len * all_to_all_num),
+                recv_buf.chunks(interleaved_stride_len)
+            )
+            .for_each(|(row_chunk, recv_chunk)| {
+                row_chunk[copy_starts..copy_ends].copy_from_slice(recv_chunk);
+            });
+        });
     }
 
     #[inline(always)]
