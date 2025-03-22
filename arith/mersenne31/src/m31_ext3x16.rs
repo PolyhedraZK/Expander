@@ -81,6 +81,18 @@ impl SimdField for M31Ext3x16 {
             .map(|((v0, v1), v2)| M31Ext3 { v: [v0, v1, v2] })
             .collect()
     }
+
+    #[inline(always)]
+    fn horizontal_sum(&self) -> Self::Scalar {
+        let limbs = self.to_limbs();
+        Self::Scalar {
+            v: [
+                limbs[0].horizontal_sum(),
+                limbs[1].horizontal_sum(),
+                limbs[2].horizontal_sum(),
+            ],
+        }
+    }
 }
 
 impl From<M31x16> for M31Ext3x16 {

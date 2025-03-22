@@ -401,7 +401,7 @@ where
             let simd_sum: SimdF = izip!(simd_ext_limb, simd_base_elems)
                 .map(|(a, b)| *a * b)
                 .sum();
-            *e = simd_sum.unpack().iter().sum()
+            *e = simd_sum.horizontal_sum();
         },
     );
 
@@ -538,7 +538,7 @@ mod tests {
         let simd_weights = GF2_128x8::pack(&weights);
         let simd_bases = GF2x8::pack(&bases);
 
-        let expected_simd_inner_prod: GF2_128 = (simd_weights * simd_bases).unpack().iter().sum();
+        let expected_simd_inner_prod: GF2_128 = (simd_weights * simd_bases).horizontal_sum();
 
         let expected_vanilla_inner_prod: GF2_128 =
             izip!(&weights, &bases).map(|(w, b)| *w * *b).sum();

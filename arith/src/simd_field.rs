@@ -33,4 +33,9 @@ pub trait SimdField: From<Self::Scalar> + Field {
 
     /// unpack into a vector.
     fn unpack(&self) -> Vec<Self::Scalar>;
+
+    /// horizontally sum all packed scalars
+    fn horizontal_sum(&self) -> Self::Scalar {
+        self.unpack().iter().sum()
+    }
 }

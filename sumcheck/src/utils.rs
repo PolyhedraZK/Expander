@@ -15,6 +15,11 @@ use transcript::Transcript;
 /// Output
 /// - p0 * c0 + ... + pn * cn
 pub fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar {
+    if coef.len() >= F::PACK_SIZE {
+        let coef_packed = F::pack(&coef[..F::PACK_SIZE]);
+        return (coef_packed * p).horizontal_sum();
+    }
+
     let p_unpacked = p.unpack();
     p_unpacked
         .into_iter()
