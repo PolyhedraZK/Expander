@@ -94,20 +94,8 @@ eventually, a final transpose each row lead to results of ordering by *WHOLE* in
           *     *     *     *     *     *     *     *
 
 After all these, we can go onwards to MT commitment, and later open alphabets lies in one of the parties.
-
-TODO(HS) now we are still assuming that we dont have the 2^31 limit
-
  */
 
-#[allow(unused)]
-#[inline(always)]
-pub(crate) fn mpi_spread_out_interleaved_alphabets(
-    mpi_config: &MPIConfig,
-    // TODO(HS) ...
-) {
-}
-
-#[allow(unused)]
 #[inline(always)]
 pub(crate) fn mpi_commit_encoded<F, PackF>(
     mpi_config: &MPIConfig,
@@ -142,6 +130,40 @@ where
         let aligned_po2_len = packed_interleaved_codewords.len().next_power_of_two();
         packed_interleaved_codewords.resize(aligned_po2_len, PackF::ZERO);
     }
+
+    // NOTE: ALL-TO-ALL transpose go get other world's slice of codeword
+    mpi_config.all_to_all_transpose(&mut packed_interleaved_codewords);
+
+    let codeword_po2_len = pk.codeword_len().next_power_of_two();
+    let codeword_this_world_len = packed_rows * codeword_po2_len;
+    assert_eq!(packed_interleaved_codewords.len(), codeword_this_world_len);
+
+    {
+        let codeword_chunk_per_world_len = codeword_this_world_len / mpi_config.world_size();
+        assert_eq!(codeword_this_world_len % mpi_config.world_size(), 0);
+
+        let codeword_po2_per_world_len = codeword_po2_len / mpi_config.world_size();
+        assert_eq!(codeword_po2_len % mpi_config.world_size(), 0);
+
+        // NOTE: now transpose back to row order of each world's codeword slice
+        let mut scratch = vec![PackF::ZERO; codeword_chunk_per_world_len];
+        packed_interleaved_codewords
+            .chunks_mut(codeword_chunk_per_world_len)
+            .for_each(|c| transpose_in_place(c, &mut scratch, codeword_po2_per_world_len));
+        drop(scratch);
+    }
+
+    // NOTE: transpose back into column order of the codeword slice
+    {
+        let mut scratch = vec![PackF::ZERO; codeword_this_world_len];
+        transpose_in_place(
+            &mut packed_interleaved_codewords,
+            &mut scratch,
+            packed_rows * mpi_config.world_size(),
+        );
+        drop(scratch);
+    }
+
     scratch_pad.interleaved_alphabet_commitment =
         tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(packed_interleaved_codewords);
 

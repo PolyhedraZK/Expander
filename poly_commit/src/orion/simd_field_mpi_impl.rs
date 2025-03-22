@@ -8,7 +8,14 @@ use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 use transcript::Transcript;
 
 use crate::{
-    orion::{utils::*, OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad},
+    orion::{
+        mpi_utils::mpi_commit_encoded,
+        utils::{
+            lut_open_linear_combine, lut_verify_alphabet_check, orion_mt_openings, orion_mt_verify,
+            pack_simd, simd_open_linear_combine, simd_verify_alphabet_check,
+        },
+        OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
+    },
     traits::TensorCodeIOPPCS,
     PCS_SOUNDNESS_BITS,
 };
@@ -41,7 +48,14 @@ where
     assert_eq!(poly.hypercube_size() % relative_pack_size, 0);
     let packed_evals = pack_simd::<F, SimdF, ComPackF>(poly.hypercube_basis_ref());
 
-    commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
+    mpi_commit_encoded(
+        mpi_config,
+        pk,
+        &packed_evals,
+        scratch_pad,
+        packed_rows,
+        msg_size,
+    )
 }
 
 #[allow(unused)]
