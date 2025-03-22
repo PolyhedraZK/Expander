@@ -117,20 +117,24 @@ where
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
 
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
-    let mut scratch = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
-    transpose_in_place(&mut packed_interleaved_codewords, &mut scratch, packed_rows);
-    drop(scratch);
+    let mut interleaved_alphabets = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
+    transpose(
+        &packed_interleaved_codewords,
+        &mut interleaved_alphabets,
+        packed_rows,
+    );
+    drop(packed_interleaved_codewords);
 
     // NOTE: commit the interleaved codeword
     // we just directly commit to the packed field elements to leaves
     // Also note, when codeword is not power of 2 length, pad to nearest po2
     // to commit by merkle tree
-    if !packed_interleaved_codewords.len().is_power_of_two() {
-        let aligned_po2_len = packed_interleaved_codewords.len().next_power_of_two();
-        packed_interleaved_codewords.resize(aligned_po2_len, PackF::ZERO);
+    if !interleaved_alphabets.len().is_power_of_two() {
+        let aligned_po2_len = interleaved_alphabets.len().next_power_of_two();
+        interleaved_alphabets.resize(aligned_po2_len, PackF::ZERO);
     }
     scratch_pad.interleaved_alphabet_commitment =
-        tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(packed_interleaved_codewords);
+        tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(interleaved_alphabets);
 
     Ok(scratch_pad.interleaved_alphabet_commitment.root())
 }
@@ -190,23 +194,33 @@ pub(crate) const fn cache_batch_size<F: Sized>() -> usize {
 }
 
 #[inline(always)]
-pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row_num: usize) {
+pub(crate) fn transpose<F: Field>(mat: &[F], out: &mut [F], row_num: usize) {
     let col_num = mat.len() / row_num;
     let batch_size = cache_batch_size::<F>();
+    let mut batch_srt = 0;
 
-    mat.chunks(batch_size)
-        .enumerate()
-        .for_each(|(i, ith_batch)| {
-            let batch_srt = batch_size * i;
+    mat.chunks(batch_size).for_each(|ith_batch| {
+        let (mut src_y, mut src_x) = (batch_srt / col_num, batch_srt % col_num);
 
-            ith_batch.iter().enumerate().for_each(|(j, &elem_j)| {
-                let src = batch_srt + j;
-                let dst = (src / col_num) + (src % col_num) * row_num;
+        ith_batch.iter().for_each(|elem_j| {
+            let dst = src_y + src_x * row_num;
+            out[dst] = *elem_j;
 
-                scratch[dst] = elem_j;
-            })
+            src_x += 1;
+            if src_x >= col_num {
+                src_x = 0;
+                src_y += 1;
+            }
         });
 
+        batch_srt += batch_size
+    });
+}
+
+#[allow(unused)]
+#[inline(always)]
+pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row_num: usize) {
+    transpose(mat, scratch, row_num);
     mat.copy_from_slice(scratch);
 }
 
@@ -260,8 +274,7 @@ impl<F: Field> SubsetSumLUTs<F> {
 
     #[inline(always)]
     pub fn build(&mut self, weights: &[F]) {
-        assert_eq!(weights.len() % self.entry_bits, 0);
-        assert_eq!(weights.len() / self.entry_bits, self.tables.len());
+        assert_eq!(weights.len(), self.entry_bits * self.tables.len());
 
         self.tables.iter_mut().for_each(|lut| lut.fill(F::ZERO));
 
@@ -414,18 +427,17 @@ where
 // This method is applied column-wise, i.e., the data size is the same as linear combination
 // size, which should be in total 1024 bits at this point (2025/03/11).
 #[inline(always)]
-fn transpose_and_pack<F, SimdF>(evaluations: &mut [F], row_num: usize) -> Vec<SimdF>
+fn transpose_and_pack<F, SimdF>(evaluations: &[F], row_num: usize) -> Vec<SimdF>
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
 {
     // NOTE: pre transpose evaluations
-    let mut scratch = vec![F::ZERO; evaluations.len()];
-    transpose_in_place(evaluations, &mut scratch, row_num);
-    drop(scratch);
+    let mut evaluations_transposed = vec![F::ZERO; evaluations.len()];
+    transpose(evaluations, &mut evaluations_transposed, row_num);
 
     // NOTE: SIMD pack each row of transposed matrix
-    evaluations
+    evaluations_transposed
         .chunks(SimdF::PACK_SIZE)
         .map(SimdField::pack)
         .collect()
@@ -458,8 +470,8 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
         packed_evals.chunks(packed_evals.len() / packed_row_size)
     )
     .for_each(|(eq_chunk, packed_evals_chunk)| {
-        let mut eq_col_coeffs_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
-        let eq_col_simd_limbs = transpose_and_pack(&mut eq_col_coeffs_limbs, com_pack_size);
+        let eq_col_coeffs_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
+        let eq_col_simd_limbs = transpose_and_pack(&eq_col_coeffs_limbs, com_pack_size);
 
         izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *eval_row).for_each(
             |(p_col, eval)| {
@@ -478,9 +490,8 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
             packed_evals.chunks(packed_evals.len() / packed_row_size)
         )
         .for_each(|(rand_chunk, packed_evals_chunk)| {
-            let mut rand_coeffs_limbs: Vec<_> =
-                rand_chunk.iter().flat_map(|e| e.to_limbs()).collect();
-            let rand_simd_limbs = transpose_and_pack(&mut rand_coeffs_limbs, com_pack_size);
+            let rand_coeffs_limbs: Vec<_> = rand_chunk.iter().flat_map(|e| e.to_limbs()).collect();
+            let rand_simd_limbs = transpose_and_pack(&rand_coeffs_limbs, com_pack_size);
 
             izip!(
                 packed_evals_chunk.chunks(simd_inner_prods),
@@ -508,8 +519,8 @@ where
     // NOTE: check SIMD inner product numbers for column sums
     assert_eq!(fixed_rl.len() % SimdF::PACK_SIZE, 0);
 
-    let mut rl_limbs: Vec<_> = fixed_rl.iter().flat_map(|e| e.to_limbs()).collect();
-    let rl_simd_limbs: Vec<SimdF> = transpose_and_pack(&mut rl_limbs, fixed_rl.len());
+    let rl_limbs: Vec<_> = fixed_rl.iter().flat_map(|e| e.to_limbs()).collect();
+    let rl_simd_limbs: Vec<SimdF> = transpose_and_pack(&rl_limbs, fixed_rl.len());
 
     izip!(query_indices, packed_interleaved_alphabets).all(|(qi, interleaved_alphabet)| {
         let index = qi % codeword.len();
