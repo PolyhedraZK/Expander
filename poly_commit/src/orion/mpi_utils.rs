@@ -1,6 +1,10 @@
+use std::io::Cursor;
+
 use arith::{Field, SimdField};
 use itertools::izip;
 use mpi_config::MPIConfig;
+use serdes::ExpSerde;
+use tree::{Leaf, Node, Tree};
 
 use crate::traits::TensorCodeIOPPCS;
 
@@ -168,4 +172,47 @@ where
         tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(packed_interleaved_codewords);
 
     Ok(scratch_pad.interleaved_alphabet_commitment.root())
+}
+
+#[inline(always)]
+pub(crate) fn mpi_compute_root_merkle_tree<F, PackF>(
+    mpi_config: &MPIConfig,
+    local_commitment: Node,
+    scratch_pad: &mut OrionScratchPad<F, PackF>,
+) -> OrionResult<Node>
+where
+    F: Field,
+    PackF: SimdField<Scalar = F>,
+{
+    let mut leaves = vec![tree::Node::default(); mpi_config.world_size()];
+    mpi_config.gather_vec(&vec![local_commitment], &mut leaves);
+
+    {
+        let mut leaves_bytes: Vec<u8> = Vec::new();
+        if mpi_config.is_root() {
+            leaves.serialize_into(&mut leaves_bytes)?;
+        }
+        mpi_config.root_broadcast_bytes(&mut leaves_bytes);
+
+        if !mpi_config.is_root() {
+            let mut cursor = Cursor::new(leaves_bytes);
+            leaves = Vec::deserialize_from(&mut cursor)?;
+        }
+    }
+
+    let root = {
+        let height = 1 + leaves.len().ilog2();
+        let (internal, leaves) = tree::Tree::new_with_leaf_nodes(leaves, height);
+        let dummy_tree = Tree {
+            nodes: [internal, leaves].concat(),
+            leaves: vec![Leaf::default(); mpi_config.world_size()],
+        };
+
+        let dummy_path = dummy_tree.gen_proof(mpi_config.world_rank(), height as usize);
+        scratch_pad.path_prefix = dummy_path.path_nodes;
+
+        dummy_tree.root()
+    };
+
+    Ok(root)
 }

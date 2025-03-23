@@ -5,6 +5,7 @@ use std::{
 
 use arith::{Field, SimdField};
 use serdes::{ExpSerde, SerdeResult};
+use tree::Node;
 
 use crate::orion::{
     linear_code::*,
@@ -134,15 +135,19 @@ impl<F: Field> ExpSerde for OrionProof<F> {
 impl<F: Field, ComPackF: SimdField<Scalar = F>> ExpSerde for OrionScratchPad<F, ComPackF> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
-    fn serialize_into<W: std::io::Write>(&self, writer: W) -> SerdeResult<()> {
-        self.interleaved_alphabet_commitment.serialize_into(writer)
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
+        self.interleaved_alphabet_commitment
+            .serialize_into(&mut writer)?;
+        self.path_prefix.serialize_into(writer)
     }
 
-    fn deserialize_from<R: std::io::Read>(reader: R) -> SerdeResult<Self> {
-        let interleaved_alphabet_commitment = tree::Tree::deserialize_from(reader)?;
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
+        let interleaved_alphabet_commitment = tree::Tree::deserialize_from(&mut reader)?;
+        let path_prefix: Vec<Node> = Vec::deserialize_from(&mut reader)?;
 
         Ok(Self {
             interleaved_alphabet_commitment,
+            path_prefix,
             _phantom: PhantomData,
         })
     }

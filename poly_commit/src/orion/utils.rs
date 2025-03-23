@@ -5,6 +5,7 @@ use itertools::izip;
 use serdes::SerdeError;
 use thiserror::Error;
 use transcript::Transcript;
+use tree::Node;
 
 use crate::{traits::TensorCodeIOPPCS, PCS_SOUNDNESS_BITS};
 
@@ -74,7 +75,7 @@ impl OrionSRS {
     }
 }
 
-pub type OrionCommitment = tree::Node;
+pub type OrionCommitment = Node;
 
 #[derive(Clone, Debug, Default)]
 pub struct OrionScratchPad<F, ComPackF>
@@ -83,7 +84,7 @@ where
     ComPackF: SimdField<Scalar = F>,
 {
     pub interleaved_alphabet_commitment: tree::Tree,
-
+    pub path_prefix: Vec<tree::Node>,
     pub(crate) _phantom: PhantomData<ComPackF>,
 }
 

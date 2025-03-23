@@ -9,7 +9,7 @@ use transcript::Transcript;
 
 use crate::{
     orion::{
-        mpi_utils::mpi_commit_encoded,
+        mpi_utils::{mpi_commit_encoded, mpi_compute_root_merkle_tree},
         utils::{
             lut_open_linear_combine, lut_verify_alphabet_check, orion_mt_openings, orion_mt_verify,
             pack_simd, simd_open_linear_combine, simd_verify_alphabet_check,
@@ -48,14 +48,16 @@ where
     assert_eq!(poly.hypercube_size() % relative_pack_size, 0);
     let packed_evals = pack_simd::<F, SimdF, ComPackF>(poly.hypercube_basis_ref());
 
-    mpi_commit_encoded(
+    let local_commitment = mpi_commit_encoded(
         mpi_config,
         pk,
         &packed_evals,
         scratch_pad,
         packed_rows,
         msg_size,
-    )
+    )?;
+
+    mpi_compute_root_merkle_tree(mpi_config, local_commitment, scratch_pad)
 }
 
 #[allow(unused)]
