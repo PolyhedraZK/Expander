@@ -113,7 +113,7 @@ dependencies = [
 name = "arith"
 version = "0.1.0"
 dependencies = [
- "ark-std",
+ "ark-std 0.4.0",
  "cfg-if",
  "criterion",
  "ethnum",
@@ -135,7 +135,7 @@ checksum = "a22f4561524cd949590d78d7d4c5df8f592430d221f7f3c9497bbafd8972120f"
 dependencies = [
  "ark-ec",
  "ark-ff",
- "ark-std",
+ "ark-std 0.4.0",
 ]
 
 [[package]]
@@ -147,7 +147,7 @@ dependencies = [
  "ark-ff",
  "ark-poly",
  "ark-serialize",
- "ark-std",
+ "ark-std 0.4.0",
  "derivative",
  "hashbrown 0.13.2",
  "itertools 0.10.5",
@@ -165,7 +165,7 @@ dependencies = [
  "ark-ff-asm",
  "ark-ff-macros",
  "ark-serialize",
- "ark-std",
+ "ark-std 0.4.0",
  "derivative",
  "digest",
  "itertools 0.10.5",
@@ -207,7 +207,7 @@ checksum = "d320bfc44ee185d899ccbadfa8bc31aab923ce1558716e1997a1e74057fe86bf"
 dependencies = [
  "ark-ff",
  "ark-serialize",
- "ark-std",
+ "ark-std 0.4.0",
  "derivative",
  "hashbrown 0.13.2",
 ]
@@ -219,7 +219,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "adb7b85a02b83d2f22f89bd5cac66c9c89474240cb6207cb1efc16d098e822a5"
 dependencies = [
  "ark-serialize-derive",
- "ark-std",
+ "ark-std 0.4.0",
  "digest",
  "num-bigint",
 ]
@@ -233,6 +233,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "ark-std"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1df2c09229cbc5a028b1d70e00fdb2acee28b1055dfb5ca73eea49c5a25c4e7c"
+dependencies = [
+ "num-traits",
+ "rand",
 ]
 
 [[package]]
@@ -292,7 +302,7 @@ dependencies = [
  "ark-bn254",
  "ark-ec",
  "ark-ff",
- "ark-std",
+ "ark-std 0.4.0",
  "clap",
  "criterion",
  "halo2curves",
@@ -477,7 +487,7 @@ name = "circuit"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "config",
  "ethnum",
  "gkr_field_config",
@@ -561,7 +571,7 @@ name = "config"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "gf2",
  "gf2_128",
  "gkr_field_config",
@@ -930,7 +940,7 @@ name = "gf2"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "cfg-if",
  "criterion",
  "ethnum",
@@ -949,7 +959,7 @@ name = "gf2_128"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "criterion",
  "ethnum",
  "gf2",
@@ -969,7 +979,7 @@ name = "gkr"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "bytes",
  "chrono",
  "circuit",
@@ -1009,7 +1019,7 @@ name = "gkr_field_config"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "gf2",
  "gf2_128",
  "mersenne31",
@@ -1024,6 +1034,13 @@ checksum = "a8d1add55171497b4705a648c6b583acafb01d58050a51727785f0b2c8e0a2b2"
 [[package]]
 name = "goldilocks"
 version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std 0.3.0",
+ "ethnum",
+ "rand",
+ "serdes",
+]
 
 [[package]]
 name = "group"
@@ -1563,7 +1580,7 @@ name = "mersenne31"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "cfg-if",
  "criterion",
  "ethnum",
@@ -1862,7 +1879,7 @@ name = "poly_commit"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "criterion",
  "ethnum",
  "field_hashers",
@@ -1887,7 +1904,7 @@ name = "polynomials"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "criterion",
  "gkr_field_config",
  "halo2curves",
@@ -2477,7 +2494,7 @@ name = "tree"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "criterion",
  "gf2",
  "gf2_128",
