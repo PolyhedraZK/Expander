@@ -20,25 +20,24 @@ use crate::{Goldilocks, EPSILON, GOLDILOCKS_MOD};
 const LO_32_BITS_MASK: __mmask8 = unsafe { transmute(0b0101u8) };
 
 /// Number of Goldilocks elements in each __m256i element
-const GOLDILOCKS_PACK_SIZE: usize = 4;
+const GOLDILOCKS_PACK_SIZE: usize = 8;
 
 /// Packed field order
-const PACKED_GOLDILOCKS_MOD: __m256i = unsafe { transmute([GOLDILOCKS_MOD; GOLDILOCKS_PACK_SIZE]) };
+const PACKED_GOLDILOCKS_MOD: __m256i = unsafe { transmute([GOLDILOCKS_MOD; 4]) };
 
 /// Packed epsilon (i.e., 2^64 % modulus)
-const PACKED_EPSILON: __m256i = unsafe { transmute([EPSILON; GOLDILOCKS_PACK_SIZE]) };
+const PACKED_EPSILON: __m256i = unsafe { transmute([EPSILON; 4]) };
 
 /// Packed zero
-const PACKED_0: __m256i = unsafe { transmute([0u64; GOLDILOCKS_PACK_SIZE]) };
+const PACKED_0: __m256i = unsafe { transmute([0u64; 4]) };
 
 /// Packed inverse of 2
-const PACKED_INV_2: __m256i = unsafe { transmute([0x7FFFFFFF80000001u64; GOLDILOCKS_PACK_SIZE]) };
+const PACKED_INV_2: __m256i = unsafe { transmute([0x7FFFFFFF80000001u64; 4]) };
 
 #[derive(Debug, Clone, Copy)]
 pub struct AVXGoldilocks {
     // using two __m256i to simulate a __m512i
-    pub v0: __m256i, // lower 4 elements
-    pub v1: __m256i, // upper 4 elements
+    pub v: [__m256i; 2],
 }
 
 impl Default for AVXGoldilocks {
@@ -51,10 +50,8 @@ impl PartialEq for AVXGoldilocks {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let pcmp0 =
-                _mm256_cmpeq_epi32_mask(mod_reduce_epi64(self.v0), mod_reduce_epi64(other.v0));
-            let pcmp1 =
-                _mm256_cmpeq_epi32_mask(mod_reduce_epi64(self.v1), mod_reduce_epi64(other.v1));
+            let pcmp0 = _mm256_cmpeq_epi32_mask(mod_reduce_epi64(self.v[0]), mod_reduce_epi64(other.v[0]));
+            let pcmp1 = _mm256_cmpeq_epi32_mask(mod_reduce_epi64(self.v[1]), mod_reduce_epi64(other.v[1]));
             pcmp0 == 0xFF && pcmp1 == 0xFF
         }
     }
@@ -66,8 +63,8 @@ impl Hash for AVXGoldilocks {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         unsafe {
-            state.write(transmute::<__m256i, [u8; 32]>(self.v0).as_ref());
-            state.write(transmute::<__m256i, [u8; 32]>(self.v1).as_ref());
+            state.write(transmute::<__m256i, [u8; 32]>(self.v[0]).as_ref());
+            state.write(transmute::<__m256i, [u8; 32]>(self.v[1]).as_ref());
         }
     }
 }
@@ -80,8 +77,10 @@ impl Neg for AVXGoldilocks {
             self
         } else {
             Self {
-                v0: unsafe { _mm256_sub_epi64(PACKED_GOLDILOCKS_MOD, self.v0) },
-                v1: unsafe { _mm256_sub_epi64(PACKED_GOLDILOCKS_MOD, self.v1) },
+                v: [
+                    unsafe { _mm256_sub_epi64(PACKED_GOLDILOCKS_MOD, self.v[0]) },
+                    unsafe { _mm256_sub_epi64(PACKED_GOLDILOCKS_MOD, self.v[1]) },
+                ],
             }
         }
     }
@@ -91,8 +90,10 @@ impl From<u32> for AVXGoldilocks {
     #[inline(always)]
     fn from(x: u32) -> Self {
         Self {
-            v0: unsafe { _mm256_set1_epi64x(x as i64) },
-            v1: unsafe { _mm256_set1_epi64x(x as i64) },
+            v: [
+                unsafe { _mm256_set1_epi64x(x as i64) },
+                unsafe { _mm256_set1_epi64x(x as i64) },
+            ],
         }
     }
 }
@@ -101,8 +102,10 @@ impl From<u64> for AVXGoldilocks {
     #[inline(always)]
     fn from(x: u64) -> Self {
         Self {
-            v0: unsafe { _mm256_set1_epi64x(x as i64) },
-            v1: unsafe { _mm256_set1_epi64x(x as i64) },
+            v: [
+                unsafe { _mm256_set1_epi64x(x as i64) },
+                unsafe { _mm256_set1_epi64x(x as i64) },
+            ],
         }
     }
 }
@@ -111,8 +114,10 @@ impl From<Goldilocks> for AVXGoldilocks {
     #[inline(always)]
     fn from(x: Goldilocks) -> Self {
         Self {
-            v0: unsafe { _mm256_set1_epi64x(x.v as u64 as i64) },
-            v1: unsafe { _mm256_set1_epi64x(x.v as u64 as i64) },
+            v: [
+                unsafe { _mm256_set1_epi64x(x.v as u64 as i64) },
+                unsafe { _mm256_set1_epi64x(x.v as u64 as i64) },
+            ],
         }
     }
 }
@@ -132,21 +137,21 @@ field_common!(AVXGoldilocks);
 impl Field for AVXGoldilocks {
     const NAME: &'static str = "AVXGoldilocks";
 
-    const SIZE: usize = GOLDILOCKS_PACK_SIZE * 2 * 8; // 8 elements total (4 per register)
+    const SIZE: usize = GOLDILOCKS_PACK_SIZE * 8;
 
     const ZERO: Self = Self {
-        v0: PACKED_0,
-        v1: PACKED_0,
+        v: [PACKED_0, PACKED_0],
     };
 
     const ONE: Self = Self {
-        v0: unsafe { transmute::<[u64; 4], __m256i>([1; GOLDILOCKS_PACK_SIZE]) },
-        v1: unsafe { transmute::<[u64; 4], __m256i>([1; GOLDILOCKS_PACK_SIZE]) },
+        v: [
+            unsafe { transmute::<[u64; 4], __m256i>([1; 4]) },
+            unsafe { transmute::<[u64; 4], __m256i>([1; 4]) },
+        ],
     };
 
     const INV_2: Self = Self {
-        v0: PACKED_INV_2,
-        v1: PACKED_INV_2,
+        v: [PACKED_INV_2, PACKED_INV_2],
     };
 
     const FIELD_SIZE: usize = 64;
@@ -166,8 +171,8 @@ impl Field for AVXGoldilocks {
     #[inline(always)]
     fn is_zero(&self) -> bool {
         unsafe {
-            _mm256_test_epi64_mask(self.v0, self.v0) == 0
-                && _mm256_test_epi64_mask(self.v1, self.v1) == 0
+            _mm256_test_epi64_mask(self.v[0], self.v[0]) == 0
+                && _mm256_test_epi64_mask(self.v[1], self.v[1]) == 0
         }
     }
 
@@ -188,7 +193,7 @@ impl Field for AVXGoldilocks {
             );
             v0 = mod_reduce_epi64(v0);
             v1 = mod_reduce_epi64(v1);
-            Self { v0, v1 }
+            Self { v: [v0, v1] }
         }
     }
 
@@ -207,17 +212,16 @@ impl Field for AVXGoldilocks {
                 rng.gen::<bool>() as i64,
                 rng.gen::<bool>() as i64,
             );
-            Self { v0, v1 }
+            Self { v: [v0, v1] }
         }
     }
 
     #[inline(always)]
     fn square(&self) -> Self {
-        let (hi0, lo0) = square64(self.v0);
-        let (hi1, lo1) = square64(self.v1);
+        let (hi0, lo0) = square64(self.v[0]);
+        let (hi1, lo1) = square64(self.v[1]);
         AVXGoldilocks {
-            v0: reduce128((hi0, lo0)),
-            v1: reduce128((hi1, lo1)),
+            v: [reduce128((hi0, lo0)), reduce128((hi1, lo1))],
         }
     }
 
@@ -241,13 +245,13 @@ impl Field for AVXGoldilocks {
     fn inv(&self) -> Option<Self> {
         // slow, should not be used in production
         let mut goldilocks_vec1 =
-            unsafe { transmute::<__m256i, [Goldilocks; GOLDILOCKS_PACK_SIZE]>(self.v0) };
+            unsafe { transmute::<__m256i, [Goldilocks; 4]>(self.v[0]) };
         let is_non_zero = goldilocks_vec1.iter().all(|x| !x.is_zero());
         if !is_non_zero {
             return None;
         }
         let mut goldilocks_vec2 =
-            unsafe { transmute::<__m256i, [Goldilocks; GOLDILOCKS_PACK_SIZE]>(self.v1) };
+            unsafe { transmute::<__m256i, [Goldilocks; 4]>(self.v[1]) };
         let is_non_zero = goldilocks_vec2.iter().all(|x| !x.is_zero());
         if !is_non_zero {
             return None;
@@ -261,10 +265,10 @@ impl Field for AVXGoldilocks {
             .for_each(|x| *x = x.inv().unwrap()); // safe unwrap
 
         let v0 =
-            unsafe { transmute::<[Goldilocks; GOLDILOCKS_PACK_SIZE], __m256i>(goldilocks_vec1) };
+            unsafe { transmute::<[Goldilocks; 4], __m256i>(goldilocks_vec1) };
         let v1 =
-            unsafe { transmute::<[Goldilocks; GOLDILOCKS_PACK_SIZE], __m256i>(goldilocks_vec2) };
-        Some(Self { v0, v1 })
+            unsafe { transmute::<[Goldilocks; 4], __m256i>(goldilocks_vec2) };
+        Some(Self { v: [v0, v1] })
     }
 
     #[inline(always)]
@@ -276,8 +280,10 @@ impl Field for AVXGoldilocks {
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         let m = Goldilocks::from_uniform_bytes(bytes);
         Self {
-            v0: unsafe { _mm256_set1_epi64x(m.v as i64) },
-            v1: unsafe { _mm256_set1_epi64x(m.v as i64) },
+            v: [
+                unsafe { _mm256_set1_epi64x(m.v as i64) },
+                unsafe { _mm256_set1_epi64x(m.v as i64) },
+            ],
         }
     }
 
@@ -285,8 +291,10 @@ impl Field for AVXGoldilocks {
     fn mul_by_5(&self) -> Self {
         *self
             * Self {
-                v0: unsafe { _mm256_set1_epi64x(5) },
-                v1: unsafe { _mm256_set1_epi64x(5) },
+                v: [
+                    unsafe { _mm256_set1_epi64x(5) },
+                    unsafe { _mm256_set1_epi64x(5) },
+                ],
             }
     }
 
@@ -294,8 +302,10 @@ impl Field for AVXGoldilocks {
     fn mul_by_6(&self) -> Self {
         *self
             * Self {
-                v0: unsafe { _mm256_set1_epi64x(6) },
-                v1: unsafe { _mm256_set1_epi64x(6) },
+                v: [
+                    unsafe { _mm256_set1_epi64x(6) },
+                    unsafe { _mm256_set1_epi64x(6) },
+                ],
             }
     }
 }
@@ -305,19 +315,21 @@ impl FFTField for AVXGoldilocks {
 
     fn root_of_unity() -> Self {
         Self {
-            v0: unsafe { _mm256_set1_epi64x(0x185629dcda58878c) },
-            v1: unsafe { _mm256_set1_epi64x(0x185629dcda58878c) },
+            v: [
+                unsafe { _mm256_set1_epi64x(0x185629dcda58878c) },
+                unsafe { _mm256_set1_epi64x(0x185629dcda58878c) },
+            ],
         }
     }
 }
 
 impl ExpSerde for AVXGoldilocks {
-    const SERIALIZED_SIZE: usize = GOLDILOCKS_PACK_SIZE * 2 * 8; // 64 bytes total
+    const SERIALIZED_SIZE: usize = GOLDILOCKS_PACK_SIZE * 8; // 64 bytes total
 
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        let data0 = unsafe { transmute::<__m256i, [u8; 32]>(self.v0) };
-        let data1 = unsafe { transmute::<__m256i, [u8; 32]>(self.v1) };
+        let data0 = unsafe { transmute::<__m256i, [u8; 32]>(self.v[0]) };
+        let data1 = unsafe { transmute::<__m256i, [u8; 32]>(self.v[1]) };
         writer.write_all(&data0)?;
         writer.write_all(&data1)?;
         Ok(())
@@ -332,7 +344,7 @@ impl ExpSerde for AVXGoldilocks {
         unsafe {
             let v0 = transmute::<[u8; 32], __m256i>(data0);
             let v1 = transmute::<[u8; 32], __m256i>(data1);
-            Ok(Self { v0, v1 })
+            Ok(Self { v: [v0, v1] })
         }
     }
 }
@@ -351,17 +363,19 @@ impl SimdField for AVXGoldilocks {
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert_eq!(base_vec.len(), Self::PACK_SIZE);
         let ret: [Self::Scalar; Self::PACK_SIZE] = base_vec.try_into().unwrap();
-        let v0 = unsafe { transmute::<[Self::Scalar; Self::PACK_SIZE], __m256i>(ret) };
-        let v1 = unsafe { transmute::<[Self::Scalar; Self::PACK_SIZE], __m256i>(ret) };
-        Self { v0, v1 }
+        let v0 = unsafe { transmute::<[Self::Scalar; 4], __m256i>(ret[..4].try_into().unwrap()) };
+        let v1 = unsafe { transmute::<[Self::Scalar; 4], __m256i>(ret[4..].try_into().unwrap()) };
+        Self { v: [v0, v1] }
     }
 
     #[inline(always)]
     fn unpack(&self) -> Vec<Self::Scalar> {
-        let ret = unsafe {
-            transmute::<[__m256i; 2], [Self::Scalar; Self::PACK_SIZE]>([self.v0, self.v1])
-        };
-        ret.to_vec()
+        let ret0 = unsafe { transmute::<__m256i, [Self::Scalar; 4]>(self.v[0]) };
+        let ret1 = unsafe { transmute::<__m256i, [Self::Scalar; 4]>(self.v[1]) };
+        let mut ret = Vec::with_capacity(Self::PACK_SIZE);
+        ret.extend_from_slice(&ret0);
+        ret.extend_from_slice(&ret1);
+        ret
     }
 }
 
@@ -374,26 +388,29 @@ unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
 #[inline(always)]
 fn add_internal(a: &AVXGoldilocks, b: &AVXGoldilocks) -> AVXGoldilocks {
     AVXGoldilocks {
-        v0: add_no_double_overflow_64_64(a.v0, canonicalize(b.v0)),
-        v1: add_no_double_overflow_64_64(a.v1, canonicalize(b.v1)),
+        v: [
+            add_no_double_overflow_64_64(a.v[0], canonicalize(b.v[0])),
+            add_no_double_overflow_64_64(a.v[1], canonicalize(b.v[1])),
+        ],
     }
 }
 
 #[inline(always)]
 fn sub_internal(a: &AVXGoldilocks, b: &AVXGoldilocks) -> AVXGoldilocks {
     AVXGoldilocks {
-        v0: sub_no_double_overflow_64_64(a.v0, canonicalize(b.v0)),
-        v1: sub_no_double_overflow_64_64(a.v1, canonicalize(b.v1)),
+        v: [
+            sub_no_double_overflow_64_64(a.v[0], canonicalize(b.v[0])),
+            sub_no_double_overflow_64_64(a.v[1], canonicalize(b.v[1])),
+        ],
     }
 }
 
 #[inline]
 fn mul_internal(x: &AVXGoldilocks, y: &AVXGoldilocks) -> AVXGoldilocks {
-    let (hi0, lo0) = mul64_64(x.v0, y.v0);
-    let (hi1, lo1) = mul64_64(x.v1, y.v1);
+    let (hi0, lo0) = mul64_64(x.v[0], y.v[0]);
+    let (hi1, lo1) = mul64_64(x.v[1], y.v[1]);
     AVXGoldilocks {
-        v0: reduce128((hi0, lo0)),
-        v1: reduce128((hi1, lo1)),
+        v: [reduce128((hi0, lo0)), reduce128((hi1, lo1))],
     }
 }
 
