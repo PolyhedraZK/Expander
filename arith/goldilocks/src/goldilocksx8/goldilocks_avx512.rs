@@ -50,8 +50,11 @@ impl PartialEq for AVXGoldilocks {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let pcmp = _mm512_cmpeq_epi32_mask(mod_reduce_epi64(self.v), mod_reduce_epi64(other.v));
-            pcmp == 0xFFFF
+            let pcmp = _mm512_cmpeq_epi64_mask(
+                p3_instructions::canonicalize(self.v),
+                p3_instructions::canonicalize(other.v),
+            );
+            pcmp == 0xFF
         }
     }
 }

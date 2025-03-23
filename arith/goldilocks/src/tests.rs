@@ -1,15 +1,46 @@
 use crate::{
-    goldilocks::mod_reduce_u64, Goldilocks, GoldilocksExt2, Goldilocksx8, EPSILON, GOLDILOCKS_MOD,
+    goldilocks::mod_reduce_u64, Goldilocks, GoldilocksExt2, GoldilocksExt2x8, Goldilocksx8,
+    EPSILON, GOLDILOCKS_MOD,
 };
 
 use arith::{
     random_extension_field_tests, random_field_tests, random_from_limbs_to_limbs_tests,
-    random_inversion_tests, random_simd_field_tests, ExtensionField, Field,
+    random_inversion_tests, random_simd_field_tests, ExtensionField, Field, SimdField,
 };
 use ark_std::test_rng;
 use ethnum::U256;
 use rand::thread_rng;
 use serdes::ExpSerde;
+
+fn get_avx_version() -> &'static str {
+    if cfg!(all(target_arch = "x86_64", target_feature = "avx512f")) {
+        return "AVX512";
+    } else if cfg!(all(
+        target_arch = "x86_64",
+        not(target_feature = "avx512f"),
+        target_feature = "avx2"
+    )) {
+        return "AVX2 (256-bit)";
+    } else if cfg!(target_arch = "aarch64") {
+        return "arm64";
+    }
+    "Unknown"
+}
+
+#[test]
+fn test_avx_version() {
+    let avx_version = get_avx_version();
+    println!("Current AVX version: {}", avx_version);
+    assert!([
+        "arm64",
+        "AVX512",
+        "AVX2 (256-bit)",
+        "AVX (256-bit)",
+        "No AVX (Fallback)",
+        "Not x86_64 architecture"
+    ]
+    .contains(&avx_version));
+}
 
 #[test]
 fn test_base_field() {
@@ -24,9 +55,11 @@ fn test_ext_field() {
     random_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
     random_extension_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
     random_from_limbs_to_limbs_tests::<Goldilocks, GoldilocksExt2>("Goldilocks Ext2".to_string());
-
-    let mut rng = test_rng();
-    random_inversion_tests::<GoldilocksExt2, _>(&mut rng, "Goldilocks Ext2".to_string());
+    random_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
+    random_extension_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
+    random_from_limbs_to_limbs_tests::<Goldilocksx8, GoldilocksExt2x8>(
+        "Goldilocks Ext2x8".to_string(),
+    );
 }
 
 #[test]
@@ -196,4 +229,33 @@ fn test_edge_cases() {
     assert!(GoldilocksExt2::zero().inv().is_none());
     let x = GoldilocksExt2::X;
     assert_eq!(x * x, GoldilocksExt2::from(Goldilocks::from(7u32)));
+}
+
+#[test]
+fn test_ext2x8_simd_field() {
+    random_field_tests::<GoldilocksExt2x8>("GoldilocksExt2x8".to_string());
+    random_simd_field_tests::<GoldilocksExt2x8>("GoldilocksExt2x8".to_string());
+
+    let mut rng = test_rng();
+    random_inversion_tests::<GoldilocksExt2x8, _>(&mut rng, "GoldilocksExt2x8".to_string());
+
+    // Test pack/unpack
+    let a = GoldilocksExt2x8::random_unsafe(thread_rng());
+    let packed = GoldilocksExt2x8::pack(&[a]);
+    assert_eq!(packed, a);
+    let unpacked = packed.unpack();
+    assert_eq!(unpacked.len(), 1);
+    assert_eq!(unpacked[0], a);
+
+    // Test scale
+    let b = GoldilocksExt2x8::random_unsafe(thread_rng());
+    let scaled = a.scale(&b);
+    assert_eq!(scaled, a * b);
+
+    // Test serialization
+    let mut buffer = vec![];
+    assert!(a.serialize_into(&mut buffer).is_ok());
+    let deserialized = GoldilocksExt2x8::deserialize_from(buffer.as_slice());
+    assert!(deserialized.is_ok());
+    assert_eq!(deserialized.unwrap(), a);
 }

@@ -50,10 +50,14 @@ impl PartialEq for AVXGoldilocks {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let pcmp0 =
-                _mm256_cmpeq_epi64_mask(mod_reduce_epi64(self.v[0]), mod_reduce_epi64(other.v[0]));
-            let pcmp1 =
-                _mm256_cmpeq_epi64_mask(mod_reduce_epi64(self.v[1]), mod_reduce_epi64(other.v[1]));
+            let pcmp0 = _mm256_cmpeq_epi64_mask(
+                p3_instructions::canonicalize_s(self.v[0]),
+                p3_instructions::canonicalize_s(other.v[0]),
+            );
+            let pcmp1 = _mm256_cmpeq_epi64_mask(
+                p3_instructions::canonicalize_s(self.v[1]),
+                p3_instructions::canonicalize_s(other.v[1]),
+            );
             pcmp0 == 0xF && pcmp1 == 0xF
         }
     }
@@ -461,7 +465,7 @@ mod p3_instructions {
     ///   value). The returned value is similarly shifted by 1 << 63 (i.e. we return y_s = y +
     /// (1<<63),   where 0 <= y < FIELD_ORDER).
     #[inline]
-    unsafe fn canonicalize_s(x_s: __m256i) -> __m256i {
+    pub(super) unsafe fn canonicalize_s(x_s: __m256i) -> __m256i {
         unsafe {
             // If x >= FIELD_ORDER then corresponding mask bits are all 0; otherwise all 1.
             let mask = _mm256_cmpgt_epi64(SHIFTED_PACKED_GOLDILOCKS_MOD, x_s);
