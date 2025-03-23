@@ -3,9 +3,9 @@ use config_macros::declare_gkr_config;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use halo2curves::bn256::G1Affine;
+use halo2curves::bn256::{Bn256, G1Affine};
 use mersenne31::M31x16;
-use poly_commit::{raw::RawExpanderGKR, HyraxPCS, OrionPCSForGKR};
+use poly_commit::{raw::RawExpanderGKR, HyperKZGPCS, HyraxPCS, OrionPCSForGKR};
 use transcript::{BytesHashTranscript, FieldHashTranscript, SHA256hasher};
 
 // ============== M31 ==============
@@ -46,6 +46,12 @@ declare_gkr_config!(
     FieldType::BN254,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Hyrax
+);
+declare_gkr_config!(
+    pub BN254ConfigMIMC5KZG,
+    FieldType::BN254,
+    FiatShamirHashType::MIMC5,
+    PolynomialCommitmentType::KZG
 );
 
 // ============== GF2 ==============

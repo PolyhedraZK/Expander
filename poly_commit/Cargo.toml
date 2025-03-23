@@ -19,6 +19,7 @@ ark-std.workspace = true
 thiserror.workspace = true
 itertools.workspace = true
 halo2curves.workspace = true
+derivative.workspace = true
 
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
@@ -34,4 +35,8 @@ harness = false
 
 [[bench]]
 name = "hyrax"
+harness = false
+
+[[bench]]
+name = "kzg"
 harness = false

@@ -315,6 +315,18 @@ impl SimdField for NeonM31 {
         let ret = unsafe { transmute::<[uint32x4_t; 4], [Self::Scalar; M31_PACK_SIZE]>(self.v) };
         ret.to_vec()
     }
+
+    #[inline(always)]
+    fn horizontal_sum(&self) -> Self::Scalar {
+        let ret = unsafe { transmute::<[uint32x4_t; 4], [Self::Scalar; M31_PACK_SIZE]>(self.v) };
+        let mut buffer = ret.iter().map(|r| r.v as u64).sum::<u64>();
+        buffer = (buffer & M31_MOD as u64) + (buffer >> 31);
+        if buffer == M31_MOD as u64 {
+            Self::Scalar::ZERO
+        } else {
+            Self::Scalar { v: buffer as u32 }
+        }
+    }
 }
 
 impl From<M31> for NeonM31 {
