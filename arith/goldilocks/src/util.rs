@@ -67,7 +67,8 @@ pub(crate) unsafe fn add_no_canonicalize_trashing_input(x: u64, y: u64) -> u64 {
 #[inline(always)]
 #[cfg(not(target_arch = "x86_64"))]
 pub(crate) unsafe fn add_no_canonicalize_trashing_input(x: u64, y: u64) -> u64 {
-    use crate::fp::EPSILON;
+    use crate::EPSILON;
+
 
     let (res_wrapped, carry) = x.overflowing_add(y);
     // Below cannot overflow unless the assumption if x + y < 2**64 + ORDER is incorrect.
