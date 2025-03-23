@@ -1037,6 +1037,7 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "ark-std 0.3.0",
+ "criterion",
  "ethnum",
  "rand",
  "serdes",
