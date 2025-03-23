@@ -10,7 +10,9 @@ use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::util::{add_no_canonicalize_trashing_input, assume, branch_hint, split};
+use crate::util::{
+    add_no_canonicalize_trashing_input, assume, branch_hint, split, try_inverse_u64,
+};
 
 // Goldilocks field modulus: 2^64 - 2^32 + 1
 pub const GOLDILOCKS_MOD: u64 = 0xFFFFFFFF00000001;
@@ -214,13 +216,12 @@ impl Goldilocks {
 
     #[inline(always)]
     fn try_inverse(&self) -> Option<Self> {
-        if self.is_zero() {
-            None
-        } else {
-            // Fermat's little theorem: a^(p-1) = 1 mod p
-            // Therefore: a^(-1) = a^(p-2) mod p
-            Some(self.exp((GOLDILOCKS_MOD - 2) as u128))
-        }
+        try_inverse_u64(&self.v).map(|v| Goldilocks { v })
+    }
+
+    #[inline(always)]
+    pub fn mul_by_7(&self) -> Self {
+        *self * Self { v: 7 }
     }
 }
 
