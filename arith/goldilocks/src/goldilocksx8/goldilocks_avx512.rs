@@ -196,9 +196,11 @@ impl Field for AVXGoldilocks {
 
     #[inline(always)]
     fn square(&self) -> Self {
-        let (hi, lo) = square64(self.v);
-        AVXGoldilocks {
-            v: reduce128((hi, lo)),
+        unsafe {
+            let (hi, lo) = p3_instructions::square64(self.v);
+            AVXGoldilocks {
+                v: p3_instructions::reduce128((hi, lo)),
+            }
         }
     }
 
@@ -336,125 +338,104 @@ unsafe fn mod_reduce_epi64(x: __m512i) -> __m512i {
 #[inline(always)]
 fn add_internal(a: &AVXGoldilocks, b: &AVXGoldilocks) -> AVXGoldilocks {
     AVXGoldilocks {
-        v: add_no_double_overflow_64_64(a.v, canonicalize(b.v)),
+        v: unsafe {
+            p3_instructions::add_no_double_overflow_64_64(a.v, p3_instructions::canonicalize(b.v))
+        },
     }
 }
 
 #[inline(always)]
 fn sub_internal(a: &AVXGoldilocks, b: &AVXGoldilocks) -> AVXGoldilocks {
     AVXGoldilocks {
-        v: sub_no_double_overflow_64_64(a.v, canonicalize(b.v)),
+        v: unsafe {
+            p3_instructions::sub_no_double_overflow_64_64(a.v, p3_instructions::canonicalize(b.v))
+        },
     }
 }
 
 #[inline]
 fn mul_internal(x: &AVXGoldilocks, y: &AVXGoldilocks) -> AVXGoldilocks {
-    let (hi0, lo0) = mul64_64(x.v, y.v);
-    let res = reduce128((hi0, lo0));
-    AVXGoldilocks { v: res }
-}
-
-#[inline]
-fn canonicalize(x: __m512i) -> __m512i {
     unsafe {
-        let mask = _mm512_cmpge_epu64_mask(x, PACKED_GOLDILOCKS_MOD);
-        _mm512_mask_sub_epi64(x, mask, x, PACKED_GOLDILOCKS_MOD)
+        let (hi0, lo0) = p3_instructions::mul64_64(x.v, y.v);
+        let res = p3_instructions::reduce128((hi0, lo0));
+        AVXGoldilocks { v: res }
     }
 }
 
-#[inline]
-fn mul64_64(x: __m512i, y: __m512i) -> (__m512i, __m512i) {
-    unsafe {
-        // We want to move the high 32 bits to the low position. The multiplication instruction
-        // ignores the high 32 bits, so it's ok to just duplicate it into the low position.
-        // This duplication can be done on port 5; bitshifts run on port 0, competing with
-        // multiplication.   This instruction is only provided for 32-bit floats, not
-        // integers. Idk why Intel makes the distinction; the casts are free and it
-        // guarantees that the exact bit pattern is preserved. Using a swizzle instruction
-        // of the wrong domain (float vs int) does not increase latency since Haswell.
+/// instructions adopted from Plonky3 https://github.com/Plonky3/Plonky3/blob/main/goldilocks/src/x86_64_avx512/packing.rs
+mod p3_instructions {
+    use super::*;
+
+    #[inline]
+    pub(super) unsafe fn canonicalize(x: __m512i) -> __m512i {
+        let mask = _mm512_cmpge_epu64_mask(x, PACKED_GOLDILOCKS_MOD);
+        _mm512_mask_sub_epi64(x, mask, x, PACKED_GOLDILOCKS_MOD)
+    }
+
+    #[inline]
+    pub(super) unsafe fn add_no_double_overflow_64_64(x: __m512i, y: __m512i) -> __m512i {
+        let res_wrapped = _mm512_add_epi64(x, y);
+        let mask = _mm512_cmplt_epu64_mask(res_wrapped, y); // mask set if add overflowed
+        _mm512_mask_sub_epi64(res_wrapped, mask, res_wrapped, PACKED_GOLDILOCKS_MOD)
+    }
+
+    #[inline]
+    pub(super) unsafe fn sub_no_double_overflow_64_64(x: __m512i, y: __m512i) -> __m512i {
+        let mask = _mm512_cmplt_epu64_mask(x, y); // mask set if sub will underflow (x < y)
+        let res_wrapped = _mm512_sub_epi64(x, y);
+        _mm512_mask_add_epi64(res_wrapped, mask, res_wrapped, PACKED_GOLDILOCKS_MOD)
+    }
+
+    #[inline]
+    pub(super) unsafe fn mul64_64(x: __m512i, y: __m512i) -> (__m512i, __m512i) {
         let x_hi = _mm512_castps_si512(_mm512_movehdup_ps(_mm512_castsi512_ps(x)));
         let y_hi = _mm512_castps_si512(_mm512_movehdup_ps(_mm512_castsi512_ps(y)));
 
-        // All four pairwise multiplications
         let mul_ll = _mm512_mul_epu32(x, y);
         let mul_lh = _mm512_mul_epu32(x, y_hi);
         let mul_hl = _mm512_mul_epu32(x_hi, y);
         let mul_hh = _mm512_mul_epu32(x_hi, y_hi);
 
-        // Bignum addition
-        // Extract high 32 bits of mul_ll and add to mul_hl. This cannot overflow.
         let mul_ll_hi = _mm512_srli_epi64::<32>(mul_ll);
         let t0 = _mm512_add_epi64(mul_hl, mul_ll_hi);
-        // Extract low 32 bits of t0 and add to mul_lh. Again, this cannot overflow.
-        // Also, extract high 32 bits of t0 and add to mul_hh.
         let t0_lo = _mm512_and_si512(t0, PACKED_EPSILON);
         let t0_hi = _mm512_srli_epi64::<32>(t0);
         let t1 = _mm512_add_epi64(mul_lh, t0_lo);
         let t2 = _mm512_add_epi64(mul_hh, t0_hi);
-        // Lastly, extract the high 32 bits of t1 and add to t2.
         let t1_hi = _mm512_srli_epi64::<32>(t1);
         let res_hi = _mm512_add_epi64(t2, t1_hi);
 
-        // Form res_lo by combining the low half of mul_ll with the low half of t1 (shifted into
-        // high position).
         let t1_lo = _mm512_castps_si512(_mm512_moveldup_ps(_mm512_castsi512_ps(t1)));
         let res_lo = _mm512_mask_blend_epi32(LO_32_BITS_MASK, t1_lo, mul_ll);
 
         (res_hi, res_lo)
     }
-}
 
-#[inline]
-fn reduce128(x: (__m512i, __m512i)) -> __m512i {
-    unsafe {
-        let (hi0, lo0) = x;
-        let hi_hi0 = _mm512_srli_epi64::<32>(hi0);
-        let lo1 = sub_no_double_overflow_64_64(lo0, hi_hi0);
-        let t1 = _mm512_mul_epu32(hi0, PACKED_EPSILON);
-        add_no_double_overflow_64_64(lo1, t1)
-    }
-}
-
-#[inline]
-fn sub_no_double_overflow_64_64(x: __m512i, y: __m512i) -> __m512i {
-    unsafe {
-        let mask = _mm512_cmplt_epu64_mask(x, y); // mask set if sub will underflow (x < y)
-        let res_wrapped = _mm512_sub_epi64(x, y);
-        _mm512_mask_add_epi64(res_wrapped, mask, res_wrapped, PACKED_GOLDILOCKS_MOD)
-    }
-}
-
-#[inline]
-fn add_no_double_overflow_64_64(x: __m512i, y: __m512i) -> __m512i {
-    unsafe {
-        let res_wrapped = _mm512_add_epi64(x, y);
-        let mask = _mm512_cmplt_epu64_mask(res_wrapped, y); // mask set if add overflowed
-        _mm512_mask_sub_epi64(res_wrapped, mask, res_wrapped, PACKED_GOLDILOCKS_MOD)
-    }
-}
-
-#[inline]
-fn square64(x: __m512i) -> (__m512i, __m512i) {
-    unsafe {
-        // Get high 32 bits of x. See comment in mul64_64_s.
+    #[inline]
+    pub(super) unsafe fn square64(x: __m512i) -> (__m512i, __m512i) {
         let x_hi = _mm512_castps_si512(_mm512_movehdup_ps(_mm512_castsi512_ps(x)));
 
-        // All pairwise multiplications.
         let mul_ll = _mm512_mul_epu32(x, x);
         let mul_lh = _mm512_mul_epu32(x, x_hi);
         let mul_hh = _mm512_mul_epu32(x_hi, x_hi);
 
-        // Bignum addition, but mul_lh is shifted by 33 bits (not 32).
         let mul_ll_hi = _mm512_srli_epi64::<33>(mul_ll);
         let t0 = _mm512_add_epi64(mul_lh, mul_ll_hi);
         let t0_hi = _mm512_srli_epi64::<31>(t0);
         let res_hi = _mm512_add_epi64(mul_hh, t0_hi);
 
-        // Form low result by adding the mul_ll and the low 31 bits of mul_lh (shifted to the high
-        // position).
         let mul_lh_lo = _mm512_slli_epi64::<33>(mul_lh);
         let res_lo = _mm512_add_epi64(mul_ll, mul_lh_lo);
 
         (res_hi, res_lo)
+    }
+
+    #[inline]
+    pub(super) unsafe fn reduce128(x: (__m512i, __m512i)) -> __m512i {
+        let (hi0, lo0) = x;
+        let hi_hi0 = _mm512_srli_epi64::<32>(hi0);
+        let lo1 = sub_no_double_overflow_64_64(lo0, hi_hi0);
+        let t1 = _mm512_mul_epu32(hi0, PACKED_EPSILON);
+        add_no_double_overflow_64_64(lo1, t1)
     }
 }
