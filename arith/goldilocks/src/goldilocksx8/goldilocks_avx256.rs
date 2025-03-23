@@ -88,8 +88,8 @@ impl From<u32> for AVXGoldilocks {
     fn from(x: u32) -> Self {
         Self {
             v: [
-                unsafe { p3_instructions::shift(unsafe { _mm256_set1_epi64x(x as i64) }) },
-                unsafe { p3_instructions::shift(unsafe { _mm256_set1_epi64x(x as i64) }) },
+                unsafe { p3_instructions::shift(_mm256_set1_epi64x(x as i64)) },
+                unsafe { p3_instructions::shift(_mm256_set1_epi64x(x as i64)) },
             ],
         }
     }
@@ -110,8 +110,8 @@ impl From<Goldilocks> for AVXGoldilocks {
     #[inline(always)]
     fn from(x: Goldilocks) -> Self {
         Self {
-            v: [unsafe { _mm256_set1_epi64x(x.v as u64 as i64) }, unsafe {
-                _mm256_set1_epi64x(x.v as u64 as i64)
+            v: [unsafe { _mm256_set1_epi64x(x.v as i64) }, unsafe {
+                _mm256_set1_epi64x(x.v as i64)
             }],
         }
     }
@@ -409,7 +409,6 @@ fn mul_internal(x: &AVXGoldilocks, y: &AVXGoldilocks) -> AVXGoldilocks {
 /// instructions adopted from Plonky3 https://github.com/Plonky3/Plonky3/blob/main/goldilocks/src/x86_64_avx2/packing.rs
 mod p3_instructions {
     use super::*;
-    use std::arch::x86_64::*;
 
     // Resources:
     // 1. Intel Intrinsics Guide for explanation of each intrinsic: https://software.intel.com/sites/landingpage/IntrinsicsGuide/
@@ -637,17 +636,5 @@ mod p3_instructions {
             let lo2_s = add_small_64s_64_s(lo1_s, t1);
             shift(lo2_s)
         }
-    }
-
-    /// Multiply two integers modulo FIELD_ORDER.
-    #[inline]
-    pub(super) unsafe fn mul(x: __m256i, y: __m256i) -> __m256i {
-        unsafe { reduce128(mul64_64(x, y)) }
-    }
-
-    /// Square an integer modulo FIELD_ORDER.
-    #[inline]
-    pub(super) unsafe fn square(x: __m256i) -> __m256i {
-        unsafe { reduce128(square64(x)) }
     }
 }

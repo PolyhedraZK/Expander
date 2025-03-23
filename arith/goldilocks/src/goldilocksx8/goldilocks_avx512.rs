@@ -103,7 +103,7 @@ impl From<Goldilocks> for AVXGoldilocks {
     #[inline(always)]
     fn from(x: Goldilocks) -> Self {
         Self {
-            v: unsafe { _mm512_set1_epi64(x.v as u64 as i64) },
+            v: unsafe { _mm512_set1_epi64(x.v as i64) },
         }
     }
 }
