@@ -1,5 +1,17 @@
+use std::hint::black_box;
+
 use arith::bit_reverse;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+
+// bit reverse function from halo2
+fn halo2_bit_reverse(mut n: usize, l: usize) -> usize {
+    let mut r = 0;
+    for _ in 0..l {
+        r = (r << 1) | (n & 1);
+        n >>= 1;
+    }
+    r
+}
 
 fn bit_reverse_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("bit-reverse");
@@ -13,7 +25,12 @@ fn bit_reverse_benchmark(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new(format!("benchmark {bits}-bits bit-reverse"), bits),
             &input,
-            |b, i| b.iter(|| bit_reverse(*i, bits)),
+            |b, i| b.iter(|| black_box(bit_reverse(*i, bits))),
+        );
+        group.bench_with_input(
+            BenchmarkId::new(format!("benchmark {bits}-bits halo2 bit-reverse"), bits),
+            &input,
+            |b, i| b.iter(|| black_box(halo2_bit_reverse(*i, bits))),
         );
     }
 }
