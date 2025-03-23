@@ -302,12 +302,4 @@ impl FFTField for Goldilocks {
             v: 0x185629dcda58878c,
         } // 5 is a primitive root of order 2^32
     }
-
-    fn two_adic_generator(bits: usize) -> Self {
-        let mut g = Self::root_of_unity();
-        for _ in bits..32 {
-            g = g.square();
-        }
-        g
-    }
 }

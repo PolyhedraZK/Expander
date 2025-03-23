@@ -1,8 +1,10 @@
-use crate::{goldilocks::mod_reduce_u64, Goldilocks, GoldilocksExt2, EPSILON, GOLDILOCKS_MOD};
+use crate::{
+    goldilocks::mod_reduce_u64, Goldilocks, GoldilocksExt2, Goldilocksx8, EPSILON, GOLDILOCKS_MOD,
+};
 
 use arith::{
     random_extension_field_tests, random_field_tests, random_from_limbs_to_limbs_tests,
-    random_inversion_tests, ExtensionField, Field,
+    random_inversion_tests, random_simd_field_tests, ExtensionField, Field,
 };
 use ark_std::test_rng;
 use ethnum::U256;
@@ -25,6 +27,24 @@ fn test_ext_field() {
 
     let mut rng = test_rng();
     random_inversion_tests::<GoldilocksExt2, _>(&mut rng, "Goldilocks Ext2".to_string());
+}
+
+#[test]
+fn test_simd_field() {
+    random_field_tests::<Goldilocksx8>("Goldilocksx8".to_string());
+
+    let mut rng = test_rng();
+    random_inversion_tests::<Goldilocksx8, _>(&mut rng, "Goldilocksx8".to_string());
+
+    random_simd_field_tests::<Goldilocksx8>("Goldilocksx8".to_string());
+
+    let a = Goldilocksx8::from(256u32 + 2);
+    let mut buffer = vec![];
+    assert!(a.serialize_into(&mut buffer).is_ok());
+    let b = Goldilocksx8::deserialize_from(buffer.as_slice());
+    assert!(b.is_ok());
+    let b = b.unwrap();
+    assert_eq!(a, b);
 }
 
 /// Compare to test vectors for extension field arithmetic

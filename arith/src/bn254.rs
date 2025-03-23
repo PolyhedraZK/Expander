@@ -197,13 +197,4 @@ impl FFTField for Fr {
     fn root_of_unity() -> Self {
         <Self as PrimeField>::ROOT_OF_UNITY
     }
-
-    fn two_adic_generator(bits: usize) -> Self {
-        let mut res = <Self as FFTField>::root_of_unity();
-        for _ in bits..Self::TWO_ADICITY {
-            res = res.square();
-        }
-
-        res
-    }
 }

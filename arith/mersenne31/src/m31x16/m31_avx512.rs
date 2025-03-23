@@ -60,7 +60,7 @@ impl ExpSerde for AVXM31 {
         reader.read_exact(&mut data)?;
         unsafe {
             let mut value = transmute::<[u8; Self::SERIALIZED_SIZE], __m512i>(data);
-            value = mod_reduce_epi32(value);
+            value = mod_reduce_epi32(value); // ZZ: this step seems unnecessary
             Ok(AVXM31 { v: value })
         }
     }
@@ -86,9 +86,7 @@ impl Field for AVXM31 {
 
     #[inline(always)]
     fn zero() -> Self {
-        AVXM31 {
-            v: unsafe { _mm512_set1_epi32(0) },
-        }
+        AVXM31 { v: PACKED_0 }
     }
 
     #[inline(always)]
