@@ -301,18 +301,17 @@ impl<F: Field> SubsetSumLUTs<F> {
 }
 
 #[inline(always)]
-pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
+pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF>(
     com_pack_size: usize,
     packed_evals: &[SimdF],
     eq_col_coeffs: &[EvalF],
     eval_row: &mut [EvalF],
+    rand_col_coeffs: &[Vec<EvalF>],
     proximity_rows: &mut [Vec<EvalF>],
-    transcript: &mut T,
 ) where
     F: Field,
     EvalF: ExtensionField<BaseField = F>,
     SimdF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     // NOTE: declare the look up tables for column sums
     let table_num = com_pack_size / SimdF::PACK_SIZE;
@@ -334,11 +333,8 @@ pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
             .for_each(|(p_col, eval)| *eval += luts.lookup_and_sum(p_col));
     });
 
-    // NOTE: draw random linear combination out
-    // and compose proximity response(s) of tensor code IOP based PCS
-    proximity_rows.iter_mut().for_each(|row_buffer| {
-        let random_coeffs = transcript.generate_challenge_field_elements(combination_size);
-
+    // NOTE: compose proximity response(s) of tensor code IOP based PCS
+    izip!(proximity_rows, rand_col_coeffs).for_each(|(row_buffer, random_coeffs)| {
         izip!(
             random_coeffs.chunks(com_pack_size),
             packed_evals.chunks(packed_evals.len() / packed_row_size)
@@ -433,18 +429,17 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
+pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
     com_pack_size: usize,
     packed_evals: &[SimdF],
     eq_col_coeffs: &[EvalF],
     eval_row: &mut [EvalF],
+    rand_col_coeffs: &[Vec<EvalF>],
     proximity_rows: &mut [Vec<EvalF>],
-    transcript: &mut T,
 ) where
     F: Field,
     EvalF: ExtensionField<BaseField = F>,
     SimdF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     // NOTE: check SIMD inner product numbers for column sums
     let simd_inner_prods = com_pack_size / SimdF::PACK_SIZE;
@@ -469,11 +464,8 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
         );
     });
 
-    // NOTE: draw random linear combination out
-    // and compose proximity response(s) of tensor code IOP based PCS
-    proximity_rows.iter_mut().for_each(|row_buffer| {
-        let random_coeffs = transcript.generate_challenge_field_elements(combination_size);
-
+    // NOTE: compose proximity response(s) of tensor code IOP based PCS
+    izip!(proximity_rows, rand_col_coeffs).for_each(|(row_buffer, random_coeffs)| {
         izip!(
             random_coeffs.chunks(com_pack_size),
             packed_evals.chunks(packed_evals.len() / packed_row_size)

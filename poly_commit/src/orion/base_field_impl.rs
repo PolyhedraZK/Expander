@@ -67,22 +67,26 @@ where
     let proximity_test_num = pk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
     let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_test_num];
 
+    let random_col_coeffs: Vec<Vec<EvalF>> = (0..proximity_test_num)
+        .map(|_| transcript.generate_challenge_field_elements(eq_col_coeffs.len()))
+        .collect();
+
     match F::NAME {
         GF2::NAME => lut_open_linear_combine(
             ComPackF::PACK_SIZE,
             &packed_evals,
             &eq_col_coeffs,
             &mut eval_row,
+            &random_col_coeffs,
             &mut proximity_rows,
-            transcript,
         ),
         _ => simd_open_linear_combine(
             ComPackF::PACK_SIZE,
             &packed_evals,
             &eq_col_coeffs,
             &mut eval_row,
+            &random_col_coeffs,
             &mut proximity_rows,
-            transcript,
         ),
     }
     drop(packed_evals);

@@ -1,12 +1,13 @@
-use std::io::Cursor;
+use std::io::{Cursor, StdoutLock};
 
-use arith::{Field, SimdField};
+use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
 use mpi_config::MPIConfig;
 use serdes::ExpSerde;
-use tree::{Leaf, Node, Tree};
+use transcript::Transcript;
+use tree::{Leaf, Node, Path, Tree};
 
-use crate::traits::TensorCodeIOPPCS;
+use crate::{traits::TensorCodeIOPPCS, PCS_SOUNDNESS_BITS};
 
 use super::{utils::transpose_in_place, OrionCommitment, OrionResult, OrionSRS, OrionScratchPad};
 
@@ -215,4 +216,64 @@ where
     };
 
     Ok(root)
+}
+
+#[inline(always)]
+pub(crate) fn mpi_merkle_tree_opening<F, EvalF, PackF, T>(
+    mpi_config: &MPIConfig,
+    pk: &OrionSRS,
+    scratch_pad: &OrionScratchPad<F, PackF>,
+    transcript: &mut T,
+) -> Option<Vec<Path>>
+where
+    F: Field,
+    EvalF: ExtensionField<BaseField = F>,
+    PackF: SimdField<Scalar = F>,
+    T: Transcript<EvalF>,
+{
+    let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING * mpi_config.world_size();
+
+    // NOTE: MT opening for point queries
+    let query_num = pk.query_complexity(PCS_SOUNDNESS_BITS);
+    let query_indices = transcript.generate_challenge_index_vector(query_num);
+
+    let index_range_per_world = pk.codeword_len().next_power_of_two() / mpi_config.world_size();
+    let index_starts_this_world = index_range_per_world * mpi_config.world_rank();
+    let index_ends_this_world = index_starts_this_world + index_range_per_world;
+
+    let mut local_paths: Vec<(Path, usize)> = Vec::new();
+
+    query_indices.iter().for_each(|q| {
+        let index = *q % pk.codeword_len();
+        if index_starts_this_world <= index && index < index_ends_this_world {
+            // TODO range opening
+
+            todo!()
+        }
+    });
+
+    /*
+        query_indices
+            .iter()
+            .map(|qi| {
+                let index = *qi % pk.codeword_len();
+                let left = index * leaves_in_range_opening;
+                let right = left + leaves_in_range_opening - 1;
+
+                scratch_pad
+                    .interleaved_alphabet_commitment
+                    .range_query(left, right)
+            })
+            .collect();
+    */
+
+    // TODO gather v
+
+    if !mpi_config.is_root() {
+        return None;
+    }
+
+    // TODO root process rearrange ordering
+
+    todo!()
 }

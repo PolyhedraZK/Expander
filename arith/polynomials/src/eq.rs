@@ -118,6 +118,24 @@ impl<F: Field> EqPolynomial<F> {
         }
         evals
     }
+
+    #[inline]
+    pub fn ith_eq_vec_elem(r: &[F], mut index: usize) -> F {
+        assert!(index < (1 << r.len()));
+
+        let mut eval = F::ZERO;
+        r.iter().for_each(|r_i| {
+            if index & 1 == 1 {
+                eval *= r_i;
+            } else {
+                eval *= F::ONE - r_i;
+            }
+
+            index >>= 1;
+        });
+
+        eval
+    }
 }
 
 // Private functions
