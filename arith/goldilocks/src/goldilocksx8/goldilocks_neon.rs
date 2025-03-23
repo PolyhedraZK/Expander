@@ -143,34 +143,10 @@ impl Field for NeonGoldilocks {
         unsafe {
             NeonGoldilocks {
                 v: [
-                    vld1q_u64(
-                        [
-                            rng.gen::<bool>() as u64,
-                            rng.gen::<bool>() as u64,
-                        ]
-                        .as_ptr(),
-                    ),
-                    vld1q_u64(
-                        [
-                            rng.gen::<bool>() as u64,
-                            rng.gen::<bool>() as u64,
-                        ]
-                        .as_ptr(),
-                    ),
-                    vld1q_u64(
-                        [
-                            rng.gen::<bool>() as u64,
-                            rng.gen::<bool>() as u64,
-                        ]
-                        .as_ptr(),
-                    ),
-                    vld1q_u64(
-                        [
-                            rng.gen::<bool>() as u64,
-                            rng.gen::<bool>() as u64,
-                        ]
-                        .as_ptr(),
-                    ),
+                    vld1q_u64([rng.gen::<bool>() as u64, rng.gen::<bool>() as u64].as_ptr()),
+                    vld1q_u64([rng.gen::<bool>() as u64, rng.gen::<bool>() as u64].as_ptr()),
+                    vld1q_u64([rng.gen::<bool>() as u64, rng.gen::<bool>() as u64].as_ptr()),
+                    vld1q_u64([rng.gen::<bool>() as u64, rng.gen::<bool>() as u64].as_ptr()),
                 ],
             }
         }
@@ -201,7 +177,9 @@ impl Field for NeonGoldilocks {
             return None;
         }
 
-        goldilocks_vec.iter_mut().for_each(|x| *x = x.inv().unwrap()); // safe unwrap
+        goldilocks_vec
+            .iter_mut()
+            .for_each(|x| *x = x.inv().unwrap()); // safe unwrap
         Some(Self {
             v: unsafe { transmute::<[Goldilocks; 8], [uint64x2_t; 4]>(goldilocks_vec) },
         })
@@ -248,7 +226,8 @@ impl SimdField for NeonGoldilocks {
 
     #[inline(always)]
     fn unpack(&self) -> Vec<Self::Scalar> {
-        let ret = unsafe { transmute::<[uint64x2_t; 4], [Self::Scalar; GOLDILOCKS_PACK_SIZE]>(self.v) };
+        let ret =
+            unsafe { transmute::<[uint64x2_t; 4], [Self::Scalar; GOLDILOCKS_PACK_SIZE]>(self.v) };
         ret.to_vec()
     }
 }
@@ -271,10 +250,7 @@ impl Debug for NeonGoldilocks {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for &v in self.v.iter() {
             unsafe {
-                let data = [
-                    vgetq_lane_u64(v, 0),
-                    vgetq_lane_u64(v, 1),
-                ];
+                let data = [vgetq_lane_u64(v, 0), vgetq_lane_u64(v, 1)];
                 // if all data is the same, print only one
                 if data.iter().all(|&x| x == data[0]) {
                     write!(
@@ -304,7 +280,8 @@ impl Default for NeonGoldilocks {
 impl PartialEq for NeonGoldilocks {
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            transmute::<[uint64x2_t; 4], [u64; 8]>(self.v) == transmute::<[uint64x2_t; 4], [u64; 8]>(other.v)
+            transmute::<[uint64x2_t; 4], [u64; 8]>(self.v)
+                == transmute::<[uint64x2_t; 4], [u64; 8]>(other.v)
         }
     }
 }
@@ -359,14 +336,18 @@ fn add_internal(a: &NeonGoldilocks, b: &NeonGoldilocks) -> NeonGoldilocks {
             // Extract values
             let a_vals = [vgetq_lane_u64(a.v[i], 0), vgetq_lane_u64(a.v[i], 1)];
             let b_vals = [vgetq_lane_u64(b.v[i], 0), vgetq_lane_u64(b.v[i], 1)];
-            
+
             // Perform addition and modular reduction
             let mut res_vals = [0u64; 2];
             for j in 0..2 {
                 let sum = a_vals[j].wrapping_add(b_vals[j]);
-                res_vals[j] = if sum >= GOLDILOCKS_MOD { sum - GOLDILOCKS_MOD } else { sum };
+                res_vals[j] = if sum >= GOLDILOCKS_MOD {
+                    sum - GOLDILOCKS_MOD
+                } else {
+                    sum
+                };
             }
-            
+
             // Pack results back
             res.v[i] = vld1q_u64(res_vals.as_ptr());
         }
@@ -382,7 +363,7 @@ fn sub_internal(a: &NeonGoldilocks, b: &NeonGoldilocks) -> NeonGoldilocks {
             // Extract values
             let a_vals = [vgetq_lane_u64(a.v[i], 0), vgetq_lane_u64(a.v[i], 1)];
             let b_vals = [vgetq_lane_u64(b.v[i], 0), vgetq_lane_u64(b.v[i], 1)];
-            
+
             // Perform subtraction and modular reduction
             let mut res_vals = [0u64; 2];
             for j in 0..2 {
@@ -393,7 +374,7 @@ fn sub_internal(a: &NeonGoldilocks, b: &NeonGoldilocks) -> NeonGoldilocks {
                 };
                 res_vals[j] = diff;
             }
-            
+
             // Pack results back
             res.v[i] = vld1q_u64(res_vals.as_ptr());
         }
@@ -409,7 +390,7 @@ fn mul_internal(a: &NeonGoldilocks, b: &NeonGoldilocks) -> NeonGoldilocks {
             // Extract values to perform multiplication
             let a_vals = [vgetq_lane_u64(a.v[i], 0), vgetq_lane_u64(a.v[i], 1)];
             let b_vals = [vgetq_lane_u64(b.v[i], 0), vgetq_lane_u64(b.v[i], 1)];
-            
+
             // Perform multiplication and modular reduction
             let mut res_vals = [0u64; 2];
             for j in 0..2 {
@@ -417,9 +398,13 @@ fn mul_internal(a: &NeonGoldilocks, b: &NeonGoldilocks) -> NeonGoldilocks {
                 let prod_hi = (prod >> 32) & 0xFFFFFFFF;
                 let prod_lo = prod & 0xFFFFFFFF;
                 let t = prod_lo.wrapping_sub(prod_hi.wrapping_mul(GOLDILOCKS_MOD));
-                res_vals[j] = if t >= GOLDILOCKS_MOD { t - GOLDILOCKS_MOD } else { t };
+                res_vals[j] = if t >= GOLDILOCKS_MOD {
+                    t - GOLDILOCKS_MOD
+                } else {
+                    t
+                };
             }
-            
+
             // Pack results back into NEON vector
             res.v[i] = vld1q_u64(res_vals.as_ptr());
         }
@@ -435,4 +420,3 @@ impl Hash for NeonGoldilocks {
         }
     }
 }
-

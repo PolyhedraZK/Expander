@@ -15,4 +15,4 @@ fn field_benchmark(c: &mut Criterion) {
 }
 
 criterion_group!(bench, ext_by_base_benchmark, field_benchmark);
-criterion_main!(bench); 
+criterion_main!(bench);

@@ -7,7 +7,7 @@ pub trait FFTField: Field + From<u64> {
 
     fn two_adic_generator(bits: usize) -> Self {
         let mut g = Self::root_of_unity();
-        for _ in bits..32 {
+        for _ in bits..Self::TWO_ADICITY {
             g = g.square();
         }
         g
