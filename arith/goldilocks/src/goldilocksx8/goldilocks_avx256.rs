@@ -34,8 +34,6 @@ const PACKED_0: __m256i = unsafe { transmute([0u64; 4]) };
 /// Packed inverse of 2
 const PACKED_INV_2: __m256i = unsafe { transmute([0x7FFFFFFF80000001u64; 4]) };
 
-const SIGN_BIT: __m256i = unsafe { transmute([i64::MIN; 4]) };
-
 #[derive(Debug, Clone, Copy)]
 pub struct AVXGoldilocks {
     // using two __m256i to simulate a __m512i
@@ -78,10 +76,9 @@ impl Neg for AVXGoldilocks {
     #[inline(always)]
     fn neg(self) -> Self::Output {
         Self {
-            v: [
-                unsafe { P3Instructions::neg(self.v[0]) },
-                unsafe { P3Instructions::neg(self.v[1]) },
-            ],
+            v: [unsafe { p3_instructions::neg(self.v[0]) }, unsafe {
+                p3_instructions::neg(self.v[1])
+            }],
         }
     }
 }
@@ -91,8 +88,8 @@ impl From<u32> for AVXGoldilocks {
     fn from(x: u32) -> Self {
         Self {
             v: [
-                unsafe { P3Instructions::shift(unsafe { _mm256_set1_epi64x(x as i64) }) },
-                unsafe { P3Instructions::shift(unsafe { _mm256_set1_epi64x(x as i64) }) },
+                unsafe { p3_instructions::shift(unsafe { _mm256_set1_epi64x(x as i64) }) },
+                unsafe { p3_instructions::shift(unsafe { _mm256_set1_epi64x(x as i64) }) },
             ],
         }
     }
@@ -171,12 +168,12 @@ impl Field for AVXGoldilocks {
         let eq1 = unsafe {
             let pcmp = _mm256_cmpeq_epi64_mask(self.v[0], PACKED_0);
             let pcmp2 = _mm256_cmpeq_epi64_mask(self.v[0], PACKED_GOLDILOCKS_MOD);
-            (pcmp | pcmp2) == 0xFF
+            (pcmp | pcmp2) == 0xF
         };
         let eq2 = unsafe {
             let pcmp = _mm256_cmpeq_epi64_mask(self.v[1], PACKED_0);
             let pcmp2 = _mm256_cmpeq_epi64_mask(self.v[1], PACKED_GOLDILOCKS_MOD);
-            (pcmp | pcmp2) == 0xFF
+            (pcmp | pcmp2) == 0xF
         };
         eq1 && eq2
     }
@@ -223,13 +220,12 @@ impl Field for AVXGoldilocks {
 
     #[inline(always)]
     fn square(&self) -> Self {
-        let (hi0, lo0) = unsafe { P3Instructions::square64(self.v[0]) };
-        let (hi1, lo1) = unsafe { P3Instructions::square64(self.v[1]) };
+        let (hi0, lo0) = unsafe { p3_instructions::square64(self.v[0]) };
+        let (hi1, lo1) = unsafe { p3_instructions::square64(self.v[1]) };
         AVXGoldilocks {
-            v: [
-                unsafe { P3Instructions::reduce128((hi0, lo0)) },
-                unsafe { P3Instructions::reduce128((hi1, lo1)) },
-            ],
+            v: [unsafe { p3_instructions::reduce128((hi0, lo0)) }, unsafe {
+                p3_instructions::reduce128((hi1, lo1))
+            }],
         }
     }
 
@@ -387,34 +383,33 @@ unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
 
 #[inline(always)]
 fn add_internal(a: &AVXGoldilocks, b: &AVXGoldilocks) -> AVXGoldilocks {
-    let v0 = unsafe { P3Instructions::add(a.v[0], b.v[0]) };
-    let v1 = unsafe { P3Instructions::add(a.v[1], b.v[1]) };
+    let v0 = unsafe { p3_instructions::add(a.v[0], b.v[0]) };
+    let v1 = unsafe { p3_instructions::add(a.v[1], b.v[1]) };
     AVXGoldilocks { v: [v0, v1] }
 }
 
 #[inline(always)]
 fn sub_internal(a: &AVXGoldilocks, b: &AVXGoldilocks) -> AVXGoldilocks {
-    let v0 = unsafe { P3Instructions::sub(a.v[0], b.v[0]) };
-    let v1 = unsafe { P3Instructions::sub(a.v[1], b.v[1]) };
+    let v0 = unsafe { p3_instructions::sub(a.v[0], b.v[0]) };
+    let v1 = unsafe { p3_instructions::sub(a.v[1], b.v[1]) };
     AVXGoldilocks { v: [v0, v1] }
 }
 
 #[inline]
 fn mul_internal(x: &AVXGoldilocks, y: &AVXGoldilocks) -> AVXGoldilocks {
-    let (hi0, lo0) = unsafe { P3Instructions::mul64_64(x.v[0], y.v[0]) };
-    let (hi1, lo1) = unsafe { P3Instructions::mul64_64(x.v[1], y.v[1]) };
+    let (hi0, lo0) = unsafe { p3_instructions::mul64_64(x.v[0], y.v[0]) };
+    let (hi1, lo1) = unsafe { p3_instructions::mul64_64(x.v[1], y.v[1]) };
     AVXGoldilocks {
-        v: [
-            unsafe { P3Instructions::reduce128((hi0, lo0)) },
-            unsafe { P3Instructions::reduce128((hi1, lo1)) },
-        ],
+        v: [unsafe { p3_instructions::reduce128((hi0, lo0)) }, unsafe {
+            p3_instructions::reduce128((hi1, lo1))
+        }],
     }
 }
 
 /// instructions adopted from Plonky3 https://github.com/Plonky3/Plonky3/blob/main/goldilocks/src/x86_64_avx2/packing.rs
-mod P3Instructions {
-    use std::arch::x86_64::*;
+mod p3_instructions {
     use super::*;
+    use std::arch::x86_64::*;
 
     // Resources:
     // 1. Intel Intrinsics Guide for explanation of each intrinsic: https://software.intel.com/sites/landingpage/IntrinsicsGuide/
@@ -450,6 +445,8 @@ mod P3Instructions {
     //    res_lo_s <s tmp_lo_s vii. res_lo = shift(res_lo_s) viii. res_hi = tmp_hi + c_hi -
     //    res_carry_mask Notice that the above 3-value addition still only requires two calls to
     //    shift, just like our 2-value addition.
+
+    const SIGN_BIT: __m256i = unsafe { transmute([i64::MIN; 4]) };
 
     /// Add 2^63 with overflow. Needed to emulate unsigned comparisons (see point 3. in
     /// packed_prime_field.rs).
@@ -653,35 +650,4 @@ mod P3Instructions {
     pub(super) unsafe fn square(x: __m256i) -> __m256i {
         unsafe { reduce128(square64(x)) }
     }
-
-    // #[inline]
-    // pub(super) unsafe fn interleave1(x: __m256i, y: __m256i) -> (__m256i, __m256i) {
-    //     unsafe {
-    //         let a = _mm256_unpacklo_epi64(x, y);
-    //         let b = _mm256_unpackhi_epi64(x, y);
-    //         (a, b)
-    //     }
-    // }
-
-    // #[inline]
-    // pub(super) unsafe fn interleave2(x: __m256i, y: __m256i) -> (__m256i, __m256i) {
-    //     unsafe {
-    //         let y_lo = _mm256_castsi256_si128(y); // This has 0 cost.
-
-    //         // 1 places y_lo in the high half of x; 0 would place it in the lower half.
-    //         let a = _mm256_inserti128_si256::<1>(x, y_lo);
-    //         // NB: _mm256_permute2x128_si256 could be used here as well but
-    // _mm256_inserti128_si256         // has lower latency on Zen 3 processors.
-
-    //         // Each nibble of the constant has the following semantics:
-    //         // 0 => src1[low 128 bits]
-    //         // 1 => src1[high 128 bits]
-    //         // 2 => src2[low 128 bits]
-    //         // 3 => src2[high 128 bits]
-    //         // The low (resp. high) nibble chooses the low (resp. high) 128 bits of the result.
-    //         let b = _mm256_permute2x128_si256::<0x31>(x, y);
-
-    //         (a, b)
-    //     }
-    // }
 }
