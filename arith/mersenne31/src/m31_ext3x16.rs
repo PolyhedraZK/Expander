@@ -249,10 +249,6 @@ impl Field for M31Ext3x16 {
         }
     }
 
-    fn exp(&self, _exponent: u128) -> Self {
-        unimplemented!()
-    }
-
     fn inv(&self) -> Option<Self> {
         unimplemented!()
     }

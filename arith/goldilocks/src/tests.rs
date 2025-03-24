@@ -1,8 +1,3 @@
-use crate::{
-    goldilocks::mod_reduce_u64, Goldilocks, GoldilocksExt2, GoldilocksExt2x8, Goldilocksx8,
-    EPSILON, GOLDILOCKS_MOD,
-};
-
 use arith::{
     random_extension_field_tests, random_field_tests, random_from_limbs_to_limbs_tests,
     random_inversion_tests, random_simd_field_tests, ExtensionField, Field,
@@ -11,6 +6,11 @@ use ark_std::test_rng;
 use ethnum::U256;
 use rand::thread_rng;
 use serdes::ExpSerde;
+
+use crate::{
+    goldilocks::mod_reduce_u64, Goldilocks, GoldilocksExt2, GoldilocksExt2x8, Goldilocksx8,
+    EPSILON, GOLDILOCKS_MOD,
+};
 
 fn get_avx_version() -> &'static str {
     if cfg!(all(target_arch = "x86_64", target_feature = "avx512f")) {

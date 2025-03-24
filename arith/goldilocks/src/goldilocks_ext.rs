@@ -5,7 +5,6 @@ use std::{
 };
 
 use arith::{field_common, ExtensionField, Field};
-use ark_std::Zero;
 use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
@@ -92,21 +91,6 @@ impl Field for GoldilocksExt2 {
         GoldilocksExt2 {
             v: [Goldilocks::random_bool(&mut rng), Goldilocks::zero()],
         }
-    }
-
-    fn exp(&self, exponent: u128) -> Self {
-        let mut e = exponent;
-        let mut res = Self::one();
-        let mut t = *self;
-        while !e.is_zero() {
-            let b = e & 1;
-            if b == 1 {
-                res *= t;
-            }
-            t = t * t;
-            e >>= 1;
-        }
-        res
     }
 
     fn inv(&self) -> Option<Self> {

@@ -1,5 +1,5 @@
 use std::{
-    hash::{Hash, Hasher},
+    hash::Hash,
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -14,7 +14,7 @@ use crate::{Goldilocks, GoldilocksExt2, Goldilocksx8};
 
 /// Degree-2 extension of Goldilocks field with 8-element SIMD operations
 /// Represents elements as a + bX where X^2 = 7
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
 pub struct GoldilocksExt2x8 {
     pub c0: Goldilocksx8, // constant term
     pub c1: Goldilocksx8, // coefficient of X
@@ -233,25 +233,8 @@ impl Field for GoldilocksExt2x8 {
         square_internal(self)
     }
 
-    #[inline]
-    fn exp(&self, _exponent: u128) -> Self {
-        unimplemented!()
-    }
-
     fn inv(&self) -> Option<Self> {
         unimplemented!()
-    }
-}
-
-impl Add<GoldilocksExt2> for GoldilocksExt2x8 {
-    type Output = Self;
-
-    #[inline]
-    fn add(self, rhs: GoldilocksExt2) -> Self::Output {
-        Self {
-            c0: self.c0 + Goldilocksx8::from(rhs.v[0]),
-            c1: self.c1 + Goldilocksx8::from(rhs.v[1]),
-        }
     }
 }
 
@@ -263,11 +246,10 @@ impl Mul<GoldilocksExt2> for GoldilocksExt2x8 {
         // (a0 + a1*x) * (b0 + b1*x) mod (x^2 - 7)
         // = a0*b0 + (a0*b1 + a1*b0)*x + a1*b1*x^2 mod (x^2 - 7)
         // = (a0*b0 + 7*a1*b1) + (a0*b1 + a1*b0)*x
-        let seven = Goldilocksx8::from(7u32);
+        let seven = Goldilocks::from(7u32);
         Self {
-            c0: self.c0 * Goldilocksx8::from(rhs.v[0])
-                + self.c1 * Goldilocksx8::from(rhs.v[1]) * seven,
-            c1: self.c0 * Goldilocksx8::from(rhs.v[1]) + self.c1 * Goldilocksx8::from(rhs.v[0]),
+            c0: self.c0 * rhs.v[0] + self.c1 * rhs.v[1] * seven,
+            c1: self.c0 * rhs.v[1] + self.c1 * rhs.v[0],
         }
     }
 }
@@ -368,12 +350,5 @@ impl PartialOrd for GoldilocksExt2x8 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for GoldilocksExt2x8 is not supported")
-    }
-}
-
-impl Hash for GoldilocksExt2x8 {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.c0.hash(state);
-        self.c1.hash(state);
     }
 }
