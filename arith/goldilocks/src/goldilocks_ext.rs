@@ -142,20 +142,26 @@ impl Field for GoldilocksExt2 {
 
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        let mut v = u64::from_le_bytes(bytes[..8].try_into().unwrap());
-        v = mod_reduce_u64(v);
+        let mut v1 = u64::from_le_bytes(bytes[..8].try_into().unwrap());
+        v1 = mod_reduce_u64(v1);
+        let mut v2 = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
+        v2 = mod_reduce_u64(v2);
+
         GoldilocksExt2 {
-            v: [Goldilocks { v }, Goldilocks::zero()],
+            v: [Goldilocks { v: v1 }, Goldilocks { v: v2 }],
         }
     }
 }
 
 impl ExtensionField for GoldilocksExt2 {
     const DEGREE: usize = 2;
+
     const W: u32 = 7; // x^2 - 7 is the irreducible polynomial
+
     const X: Self = GoldilocksExt2 {
         v: [Goldilocks::ZERO, Goldilocks::ONE],
     };
+
     type BaseField = Goldilocks;
 
     #[inline(always)]
@@ -225,6 +231,31 @@ impl Neg for GoldilocksExt2 {
     }
 }
 
+impl From<u32> for GoldilocksExt2 {
+    #[inline(always)]
+    fn from(x: u32) -> Self {
+        GoldilocksExt2 {
+            v: [Goldilocks::from(x), Goldilocks::zero()],
+        }
+    }
+}
+
+impl GoldilocksExt2 {
+    #[inline(always)]
+    pub fn to_base_field(&self) -> Goldilocks {
+        assert!(
+            self.v[1].is_zero(),
+            "GoldilocksExt2 cannot be converted to base field"
+        );
+        self.to_base_field_unsafe()
+    }
+
+    #[inline(always)]
+    pub fn to_base_field_unsafe(&self) -> Goldilocks {
+        self.v[0]
+    }
+}
+
 impl From<u64> for GoldilocksExt2 {
     #[inline(always)]
     fn from(x: u64) -> Self {
@@ -263,22 +294,6 @@ impl From<&GoldilocksExt2> for Goldilocks {
     #[inline(always)]
     fn from(x: &GoldilocksExt2) -> Self {
         x.to_base_field()
-    }
-}
-
-impl GoldilocksExt2 {
-    #[inline(always)]
-    pub fn to_base_field(&self) -> Goldilocks {
-        assert!(
-            self.v[1].is_zero(),
-            "GoldilocksExt2 cannot be converted to base field"
-        );
-        self.to_base_field_unsafe()
-    }
-
-    #[inline(always)]
-    pub fn to_base_field_unsafe(&self) -> Goldilocks {
-        self.v[0]
     }
 }
 
@@ -333,14 +348,6 @@ impl PartialOrd for GoldilocksExt2 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for GoldilocksExt2 is not supported")
-    }
-}
-
-impl From<u32> for GoldilocksExt2 {
-    fn from(a: u32) -> Self {
-        Self {
-            v: [Goldilocks::from(a), Goldilocks::ZERO],
-        }
     }
 }
 

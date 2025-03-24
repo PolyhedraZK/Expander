@@ -4,21 +4,23 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{ExtensionField, Field, SimdField};
+use arith::{field_common, ExtensionField, Field, SimdField};
 
 use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeError};
 
-use crate::{GoldilocksExt2, Goldilocksx8};
+use crate::{Goldilocks, GoldilocksExt2, Goldilocksx8};
 
 /// Degree-2 extension of Goldilocks field with 8-element SIMD operations
 /// Represents elements as a + bX where X^2 = 7
-#[derive(Copy, Clone, Debug, Default, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct GoldilocksExt2x8 {
     pub c0: Goldilocksx8, // constant term
     pub c1: Goldilocksx8, // coefficient of X
 }
+
+field_common!(GoldilocksExt2x8);
 
 impl ExpSerde for GoldilocksExt2x8 {
     const SERIALIZED_SIZE: usize = 32;
@@ -42,176 +44,133 @@ impl ExpSerde for GoldilocksExt2x8 {
     }
 }
 
-impl GoldilocksExt2x8 {
-    pub fn new(c0: Goldilocksx8, c1: Goldilocksx8) -> Self {
-        Self { c0, c1 }
-    }
-}
+impl SimdField for GoldilocksExt2x8 {
+    type Scalar = GoldilocksExt2;
 
-impl PartialEq for GoldilocksExt2x8 {
-    fn eq(&self, other: &Self) -> bool {
-        self.c0 == other.c0 && self.c1 == other.c1
-    }
-}
-
-impl Eq for GoldilocksExt2x8 {}
-
-impl<'a> Add<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
-    type Output = Self;
+    const PACK_SIZE: usize = Goldilocksx8::PACK_SIZE;
 
     #[inline]
-    fn add(self, rhs: &'a Self) -> Self::Output {
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
+        *self * *challenge
+    }
+
+    #[inline]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        assert!(base_vec.len() == Self::PACK_SIZE);
+        let mut v0s = vec![];
+        let mut v1s = vec![];
+        for scalar in base_vec {
+            v0s.push(scalar.v[0]);
+            v1s.push(scalar.v[1]);
+        }
         Self {
-            c0: self.c0 + rhs.c0,
-            c1: self.c1 + rhs.c1,
+            c0: Goldilocksx8::pack(&v0s),
+            c1: Goldilocksx8::pack(&v1s),
+        }
+    }
+
+    #[inline]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        let v0s = self.c0.unpack();
+        let v1s = self.c1.unpack();
+        v0s.into_iter()
+            .zip(v1s)
+            .map(|(v0, v1)| GoldilocksExt2 { v: [v0, v1] })
+            .collect()
+    }
+}
+
+impl From<Goldilocksx8> for GoldilocksExt2x8 {
+    #[inline]
+    fn from(x: Goldilocksx8) -> Self {
+        Self {
+            c0: x,
+            c1: Goldilocksx8::ZERO,
         }
     }
 }
 
-impl Add for GoldilocksExt2x8 {
-    type Output = Self;
+impl ExtensionField for GoldilocksExt2x8 {
+    type BaseField = Goldilocksx8;
+
+    const DEGREE: usize = 2;
+
+    const W: u32 = 7;
+
+    const X: Self = Self {
+        c0: Goldilocksx8::ZERO,
+        c1: Goldilocksx8::ONE,
+    };
 
     #[inline]
-    #[allow(clippy::op_ref)]
-    fn add(self, rhs: Self) -> Self::Output {
-        self + &rhs
-    }
-}
-
-impl<'a> AddAssign<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
-    #[inline]
-    fn add_assign(&mut self, rhs: &'a Self) {
-        *self = *self + rhs;
-    }
-}
-
-impl AddAssign for GoldilocksExt2x8 {
-    #[inline]
-    fn add_assign(&mut self, rhs: Self) {
-        *self += &rhs;
-    }
-}
-
-impl<'a> Sum<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
-    fn sum<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
-        iter.fold(Self::zero(), |acc, x| acc + x)
-    }
-}
-
-impl Sum for GoldilocksExt2x8 {
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(Self::zero(), |acc, x| acc + x)
-    }
-}
-
-impl<'a> Sub<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
-    type Output = Self;
-
-    #[inline]
-    fn sub(self, rhs: &'a Self) -> Self::Output {
+    fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
         Self {
-            c0: self.c0 - rhs.c0,
-            c1: self.c1 - rhs.c1,
+            c0: self.c0 * base,
+            c1: self.c1 * base,
         }
     }
-}
-
-impl Sub for GoldilocksExt2x8 {
-    type Output = Self;
 
     #[inline]
-    #[allow(clippy::op_ref)]
-    fn sub(self, rhs: Self) -> Self::Output {
-        self - &rhs
-    }
-}
-
-impl<'a> SubAssign<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
-    #[inline]
-    fn sub_assign(&mut self, rhs: &'a Self) {
-        *self = *self - rhs;
-    }
-}
-
-impl SubAssign for GoldilocksExt2x8 {
-    #[inline]
-    fn sub_assign(&mut self, rhs: Self) {
-        *self -= &rhs;
-    }
-}
-
-impl Neg for GoldilocksExt2x8 {
-    type Output = Self;
-
-    #[inline]
-    fn neg(self) -> Self::Output {
+    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
         Self {
-            c0: -self.c0,
-            c1: -self.c1,
+            c0: self.c0 + base,
+            c1: self.c1,
         }
     }
-}
-
-impl<'a> Mul<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
-    type Output = Self;
 
     #[inline]
-    fn mul(self, rhs: &'a Self) -> Self::Output {
-        // (a + bX)(c + dX) = ac + (ad + bc)X + bdX^2
+    fn mul_by_x(&self) -> Self {
+        // (a + bX) * X = aX + bX^2
         // where X^2 = 7
-        // = (ac + 7bd) + (ad + bc)X
-        let ac = self.c0 * rhs.c0;
-        let bd = self.c1 * rhs.c1;
-        let ad = self.c0 * rhs.c1;
-        let bc = self.c1 * rhs.c0;
+        // = 7b + aX
         Self {
-            c0: ac + bd * Goldilocksx8::from(7u64),
-            c1: ad + bc,
+            c0: self.c1 * Goldilocksx8::from(7u32),
+            c1: self.c0,
+        }
+    }
+
+    #[inline]
+    fn to_limbs(&self) -> Vec<Self::BaseField> {
+        vec![self.c0, self.c1]
+    }
+
+    #[inline]
+    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
+        assert!(limbs.len() >= 2);
+        Self {
+            c0: limbs[0],
+            c1: limbs[1],
         }
     }
 }
 
-impl Mul for GoldilocksExt2x8 {
+impl Mul<Goldilocksx8> for GoldilocksExt2x8 {
     type Output = Self;
 
     #[inline]
-    #[allow(clippy::op_ref)]
-    fn mul(self, rhs: Self) -> Self::Output {
-        self * &rhs
+    fn mul(self, rhs: Goldilocksx8) -> Self {
+        self.mul_by_base_field(&rhs)
     }
 }
 
-impl<'a> MulAssign<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
+impl From<GoldilocksExt2> for GoldilocksExt2x8 {
     #[inline]
-    fn mul_assign(&mut self, rhs: &'a Self) {
-        *self = *self * rhs;
-    }
-}
-
-impl MulAssign for GoldilocksExt2x8 {
-    #[inline]
-    fn mul_assign(&mut self, rhs: Self) {
-        *self *= &rhs;
-    }
-}
-
-impl<'a> Product<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
-    fn product<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
-        iter.fold(Self::one(), |acc, x| acc * x)
-    }
-}
-
-impl Product for GoldilocksExt2x8 {
-    fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(Self::one(), |acc, x| acc * x)
+    fn from(x: GoldilocksExt2) -> Self {
+        Self {
+            c0: Goldilocksx8::pack_full(x.v[0]),
+            c1: Goldilocksx8::pack_full(x.v[1]),
+        }
     }
 }
 
 impl Field for GoldilocksExt2x8 {
     const NAME: &'static str = "Goldilocks Extension Field 2x8";
-    const SIZE: usize = 32;
-    const FIELD_SIZE: usize = 0xFFFFFFFF00000001;
-    const MODULUS: U256 = U256([0xFFFFFFFF00000001, 0]);
+
+    const SIZE: usize = 512 / 8 * 2;
+
+    const FIELD_SIZE: usize = 64 * 2;
+
+    const MODULUS: U256 = Goldilocks::MODULUS;
 
     const ZERO: Self = Self {
         c0: Goldilocksx8::ZERO,
@@ -261,134 +220,26 @@ impl Field for GoldilocksExt2x8 {
 
     #[inline]
     fn as_u32_unchecked(&self) -> u32 {
-        self.c0.as_u32_unchecked()
+        unimplemented!("self is a vector, cannot convert to u32")
     }
 
     #[inline]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        let mut c0_bytes = [0u8; 32];
-        let mut c1_bytes = [0u8; 32];
-        c0_bytes[..16].copy_from_slice(&bytes[..16]);
-        c1_bytes[..16].copy_from_slice(&bytes[16..]);
-        Self {
-            c0: Goldilocksx8::from_uniform_bytes(&c0_bytes),
-            c1: Goldilocksx8::from_uniform_bytes(&c1_bytes),
-        }
+    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
+        unimplemented!("vec m31: cannot convert from 32 bytes")
     }
 
     #[inline]
-    fn exp(&self, exponent: u128) -> Self {
-        let mut base = *self;
-        let mut result = Self::one();
-        let mut exp = exponent;
-
-        while exp != 0 {
-            if exp & 1 == 1 {
-                result *= &base;
-            }
-            base *= base;
-            exp >>= 1;
-        }
-        result
+    fn square(&self) -> Self {
+        square_internal(self)
     }
 
     #[inline]
+    fn exp(&self, _exponent: u128) -> Self {
+        unimplemented!()
+    }
+
     fn inv(&self) -> Option<Self> {
-        if self.is_zero() {
-            None
-        } else {
-            // For a + bX where X^2 = 7, the inverse is:
-            // (a - bX) / (a^2 - 7b^2)
-            let a2 = self.c0.square();
-            let b2 = self.c1.square();
-            let inv_norm = (a2 - b2 * Goldilocksx8::from(7u32)).inv()?;
-            Some(Self {
-                c0: self.c0 * inv_norm,
-                c1: -self.c1 * inv_norm,
-            })
-        }
-    }
-}
-
-impl ExtensionField for GoldilocksExt2x8 {
-    type BaseField = Goldilocksx8;
-
-    const DEGREE: usize = 2;
-    const W: u32 = 7;
-    const X: Self = Self {
-        c0: Goldilocksx8::ZERO,
-        c1: Goldilocksx8::ONE,
-    };
-
-    #[inline]
-    fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
-        Self {
-            c0: self.c0 * base,
-            c1: self.c1 * base,
-        }
-    }
-
-    #[inline]
-    fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
-        Self {
-            c0: self.c0 + base,
-            c1: self.c1,
-        }
-    }
-
-    #[inline]
-    fn mul_by_x(&self) -> Self {
-        // (a + bX) * X = aX + bX^2
-        // where X^2 = 7
-        // = 7b + aX
-        Self {
-            c0: self.c1 * Goldilocksx8::from(7u32),
-            c1: self.c0,
-        }
-    }
-
-    #[inline]
-    fn to_limbs(&self) -> Vec<Self::BaseField> {
-        vec![self.c0, self.c1]
-    }
-
-    #[inline]
-    fn from_limbs(limbs: &[Self::BaseField]) -> Self {
-        assert!(limbs.len() >= 2);
-        Self {
-            c0: limbs[0],
-            c1: limbs[1],
-        }
-    }
-}
-
-impl From<u32> for GoldilocksExt2x8 {
-    #[inline]
-    fn from(value: u32) -> Self {
-        Self {
-            c0: Goldilocksx8::from(value),
-            c1: Goldilocksx8::ZERO,
-        }
-    }
-}
-
-impl From<Goldilocksx8> for GoldilocksExt2x8 {
-    #[inline]
-    fn from(x: Goldilocksx8) -> Self {
-        Self {
-            c0: x,
-            c1: Goldilocksx8::ZERO,
-        }
-    }
-}
-
-impl From<GoldilocksExt2> for GoldilocksExt2x8 {
-    #[inline]
-    fn from(x: GoldilocksExt2) -> Self {
-        Self {
-            c0: Goldilocksx8::from(x.v[0]),
-            c1: Goldilocksx8::from(x.v[1]),
-        }
+        unimplemented!()
     }
 }
 
@@ -409,60 +260,286 @@ impl Mul<GoldilocksExt2> for GoldilocksExt2x8 {
     }
 }
 
-impl Mul<Goldilocksx8> for GoldilocksExt2x8 {
+impl Mul<Goldilocks> for GoldilocksExt2x8 {
     type Output = Self;
 
     #[inline]
-    fn mul(self, rhs: Goldilocksx8) -> Self {
-        self.mul_by_base_field(&rhs)
-    }
-}
-
-impl<'a> Mul<&'a GoldilocksExt2> for GoldilocksExt2x8 {
-    type Output = Self;
-
-    #[inline]
-    fn mul(self, rhs: &'a GoldilocksExt2) -> Self {
-        let rhs_simd = Self::from(*rhs);
-        self * rhs_simd
-    }
-}
-
-impl SimdField for GoldilocksExt2x8 {
-    type Scalar = GoldilocksExt2;
-
-    const PACK_SIZE: usize = Goldilocksx8::PACK_SIZE;
-
-    #[inline]
-    fn scale(&self, challenge: &Self::Scalar) -> Self {
-        *self * challenge
-    }
-
-    #[inline]
-    fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == Self::PACK_SIZE);
-        let mut v0s = vec![];
-        let mut v1s = vec![];
-        for scalar in base_vec {
-            v0s.push(scalar.v[0]);
-            v1s.push(scalar.v[1]);
-        }
+    fn mul(self, rhs: Goldilocks) -> Self {
         Self {
-            c0: Goldilocksx8::pack(&v0s),
-            c1: Goldilocksx8::pack(&v1s),
+            c0: self.c0 * rhs,
+            c1: self.c1 * rhs,
         }
     }
+}
 
-    #[inline]
-    fn unpack(&self) -> Vec<Self::Scalar> {
-        let v0s = self.c0.unpack();
-        let v1s = self.c1.unpack();
-        v0s.into_iter()
-            .zip(v1s)
-            .map(|(v0, v1)| GoldilocksExt2 { v: [v0, v1] })
-            .collect()
+impl Add<Goldilocks> for GoldilocksExt2x8 {
+    type Output = GoldilocksExt2x8;
+    #[inline(always)]
+    fn add(self, rhs: Goldilocks) -> Self::Output {
+        GoldilocksExt2x8 {
+            // Goldilocksx8 + Goldilocks
+            c0: self.c0 + rhs,
+            c1: self.c1,
+        }
     }
 }
+
+impl Neg for GoldilocksExt2x8 {
+    type Output = Self;
+
+    #[inline]
+    fn neg(self) -> Self::Output {
+        Self {
+            c0: -self.c0,
+            c1: -self.c1,
+        }
+    }
+}
+
+impl From<u32> for GoldilocksExt2x8 {
+    #[inline]
+    fn from(value: u32) -> Self {
+        Self {
+            c0: Goldilocksx8::from(value),
+            c1: Goldilocksx8::ZERO,
+        }
+    }
+}
+
+#[inline(always)]
+fn add_internal(a: &GoldilocksExt2x8, b: &GoldilocksExt2x8) -> GoldilocksExt2x8 {
+    GoldilocksExt2x8 {
+        c0: a.c0 + b.c0,
+        c1: a.c1 + b.c1,
+    }
+}
+
+#[inline(always)]
+fn sub_internal(a: &GoldilocksExt2x8, b: &GoldilocksExt2x8) -> GoldilocksExt2x8 {
+    GoldilocksExt2x8 {
+        c0: a.c0 - b.c0,
+        c1: a.c1 - b.c1,
+    }
+}
+
+#[inline(always)]
+fn mul_internal(a: &GoldilocksExt2x8, b: &GoldilocksExt2x8) -> GoldilocksExt2x8 {
+    // (a + bX)(c + dX) = ac + (ad + bc)X + bdX^2
+    // where X^2 = 7
+    // = (ac + 7bd) + (ad + bc)X
+    let ac = a.c0 * b.c0;
+    let bd = a.c1 * b.c1;
+    let ad = a.c0 * b.c1;
+    let bc = a.c1 * b.c0;
+    GoldilocksExt2x8 {
+        c0: ac + bd * Goldilocksx8::from(7u64),
+        c1: ad + bc,
+    }
+}
+
+#[inline(always)]
+fn square_internal(a: &GoldilocksExt2x8) -> GoldilocksExt2x8 {
+    let a2_w = a.c1.mul_by_5();
+    let mut res = [Goldilocksx8::default(); 2];
+    res[0] = a.c0.square() + a.c1 * a2_w.double();
+    res[1] = a.c0 * a.c1.double() + a.c1 * a2_w;
+    GoldilocksExt2x8 {
+        c0: res[0],
+        c1: res[1],
+    }
+}
+
+impl Ord for GoldilocksExt2x8 {
+    #[inline(always)]
+    fn cmp(&self, _: &Self) -> std::cmp::Ordering {
+        unimplemented!("Ord for GoldilocksExt2x8 is not supported")
+    }
+}
+
+#[allow(clippy::non_canonical_partial_ord_impl)]
+impl PartialOrd for GoldilocksExt2x8 {
+    #[inline(always)]
+    fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
+        unimplemented!("PartialOrd for GoldilocksExt2x8 is not supported")
+    }
+}
+
+// /////////
+// ///
+// ///
+// ///
+// ///
+// ///
+// ///
+// ///
+// ///
+// ///
+// ///
+// ///
+// ///
+
+// impl GoldilocksExt2x8 {
+//     pub fn new(c0: Goldilocksx8, c1: Goldilocksx8) -> Self {
+//         Self { c0, c1 }
+//     }
+// }
+
+// impl PartialEq for GoldilocksExt2x8 {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.c0 == other.c0 && self.c1 == other.c1
+//     }
+// }
+
+// impl Eq for GoldilocksExt2x8 {}
+
+// impl<'a> Add<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
+//     type Output = Self;
+
+//     #[inline]
+//     fn add(self, rhs: &'a Self) -> Self::Output {
+//         Self {
+//             c0: self.c0 + rhs.c0,
+//             c1: self.c1 + rhs.c1,
+//         }
+//     }
+// }
+
+// impl Add for GoldilocksExt2x8 {
+//     type Output = Self;
+
+//     #[inline]
+//     #[allow(clippy::op_ref)]
+//     fn add(self, rhs: Self) -> Self::Output {
+//         self + &rhs
+//     }
+// }
+
+// impl<'a> AddAssign<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
+//     #[inline]
+//     fn add_assign(&mut self, rhs: &'a Self) {
+//         *self = *self + rhs;
+//     }
+// }
+
+// impl AddAssign for GoldilocksExt2x8 {
+//     #[inline]
+//     fn add_assign(&mut self, rhs: Self) {
+//         *self += &rhs;
+//     }
+// }
+
+// impl<'a> Sum<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
+//     fn sum<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
+//         iter.fold(Self::zero(), |acc, x| acc + x)
+//     }
+// }
+
+// impl Sum for GoldilocksExt2x8 {
+//     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+//         iter.fold(Self::zero(), |acc, x| acc + x)
+//     }
+// }
+
+// impl<'a> Sub<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
+//     type Output = Self;
+
+//     #[inline]
+//     fn sub(self, rhs: &'a Self) -> Self::Output {
+//         Self {
+//             c0: self.c0 - rhs.c0,
+//             c1: self.c1 - rhs.c1,
+//         }
+//     }
+// }
+
+// impl Sub for GoldilocksExt2x8 {
+//     type Output = Self;
+
+//     #[inline]
+//     #[allow(clippy::op_ref)]
+//     fn sub(self, rhs: Self) -> Self::Output {
+//         self - &rhs
+//     }
+// }
+
+// impl<'a> SubAssign<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
+//     #[inline]
+//     fn sub_assign(&mut self, rhs: &'a Self) {
+//         *self = *self - rhs;
+//     }
+// }
+
+// impl SubAssign for GoldilocksExt2x8 {
+//     #[inline]
+//     fn sub_assign(&mut self, rhs: Self) {
+//         *self -= &rhs;
+//     }
+// }
+
+// impl<'a> Mul<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
+//     type Output = Self;
+
+//     #[inline]
+//     fn mul(self, rhs: &'a Self) -> Self::Output {
+//         // (a + bX)(c + dX) = ac + (ad + bc)X + bdX^2
+//         // where X^2 = 7
+//         // = (ac + 7bd) + (ad + bc)X
+//         let ac = self.c0 * rhs.c0;
+//         let bd = self.c1 * rhs.c1;
+//         let ad = self.c0 * rhs.c1;
+//         let bc = self.c1 * rhs.c0;
+//         Self {
+//             c0: ac + bd * Goldilocksx8::from(7u64),
+//             c1: ad + bc,
+//         }
+//     }
+// }
+
+// impl Mul for GoldilocksExt2x8 {
+//     type Output = Self;
+
+//     #[inline]
+//     #[allow(clippy::op_ref)]
+//     fn mul(self, rhs: Self) -> Self::Output {
+//         self * &rhs
+//     }
+// }
+
+// impl<'a> MulAssign<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
+//     #[inline]
+//     fn mul_assign(&mut self, rhs: &'a Self) {
+//         *self = *self * rhs;
+//     }
+// }
+
+// impl MulAssign for GoldilocksExt2x8 {
+//     #[inline]
+//     fn mul_assign(&mut self, rhs: Self) {
+//         *self *= &rhs;
+//     }
+// }
+
+// impl<'a> Product<&'a GoldilocksExt2x8> for GoldilocksExt2x8 {
+//     fn product<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
+//         iter.fold(Self::one(), |acc, x| acc * x)
+//     }
+// }
+
+// impl Product for GoldilocksExt2x8 {
+//     fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
+//         iter.fold(Self::one(), |acc, x| acc * x)
+//     }
+// }
+
+// impl<'a> Mul<&'a GoldilocksExt2> for GoldilocksExt2x8 {
+//     type Output = Self;
+
+//     #[inline]
+//     fn mul(self, rhs: &'a GoldilocksExt2) -> Self {
+//         let rhs_simd = Self::from(*rhs);
+//         self * rhs_simd
+//     }
+// }
 
 impl Hash for GoldilocksExt2x8 {
     fn hash<H: Hasher>(&self, state: &mut H) {

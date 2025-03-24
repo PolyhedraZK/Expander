@@ -40,93 +40,44 @@ pub struct AVXGoldilocks {
     pub v: __m512i,
 }
 
-impl Default for AVXGoldilocks {
-    fn default() -> Self {
-        Self::zero()
-    }
-}
-
-impl PartialEq for AVXGoldilocks {
+impl AVXGoldilocks {
     #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
+    pub fn pack_full(x: Goldilocks) -> Self {
         unsafe {
-            let pcmp = _mm512_cmpeq_epi64_mask(
-                p3_instructions::canonicalize(self.v),
-                p3_instructions::canonicalize(other.v),
-            );
-            pcmp == 0xFF
-        }
-    }
-}
-
-impl Eq for AVXGoldilocks {}
-
-impl Hash for AVXGoldilocks {
-    #[inline(always)]
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        unsafe {
-            state.write(transmute::<__m512i, [u8; 64]>(self.v).as_ref());
-        }
-    }
-}
-
-impl Neg for AVXGoldilocks {
-    type Output = Self;
-    #[inline(always)]
-    fn neg(self) -> Self::Output {
-        if self.is_zero() {
-            self
-        } else {
             Self {
-                v: unsafe { _mm512_sub_epi64(PACKED_GOLDILOCKS_MOD, self.v) },
+                v: _mm512_set1_epi64(x.v as i64),
             }
         }
     }
 }
 
-impl From<u32> for AVXGoldilocks {
-    #[inline(always)]
-    fn from(x: u32) -> Self {
-        Self {
-            v: unsafe { _mm512_set1_epi64(x as i64) },
-        }
-    }
-}
-
-impl From<u64> for AVXGoldilocks {
-    #[inline(always)]
-    fn from(x: u64) -> Self {
-        Self {
-            v: unsafe { _mm512_set1_epi64(x as i64) },
-        }
-    }
-}
-
-impl From<Goldilocks> for AVXGoldilocks {
-    #[inline(always)]
-    fn from(x: Goldilocks) -> Self {
-        Self {
-            v: unsafe { _mm512_set1_epi64(x.v as i64) },
-        }
-    }
-}
-
-impl Mul<Goldilocks> for AVXGoldilocks {
-    type Output = Self;
-
-    #[inline(always)]
-    fn mul(self, rhs: Goldilocks) -> Self::Output {
-        let rhs_packed = Self::from(rhs);
-        self * rhs_packed
-    }
-}
-
 field_common!(AVXGoldilocks);
+
+impl ExpSerde for AVXGoldilocks {
+    const SERIALIZED_SIZE: usize = GOLDILOCKS_PACK_SIZE * 8;
+
+    #[inline(always)]
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        let data = unsafe { transmute::<__m512i, [u8; 64]>(self.v) };
+        writer.write_all(&data)?;
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let mut data = [0; Self::SERIALIZED_SIZE];
+        reader.read_exact(&mut data)?;
+        unsafe {
+            let value = transmute::<[u8; Self::SERIALIZED_SIZE], __m512i>(data);
+            Ok(Self { v: value })
+        }
+    }
+}
 
 impl Field for AVXGoldilocks {
     const NAME: &'static str = "AVXGoldilocks";
 
-    const SIZE: usize = GOLDILOCKS_PACK_SIZE * 8;
+    const SIZE: usize = 512 / 8;
 
     const ZERO: Self = Self { v: PACKED_0 };
 
@@ -271,20 +222,6 @@ impl Field for AVXGoldilocks {
     }
 }
 
-impl FFTField for AVXGoldilocks {
-    const TWO_ADICITY: usize = 32;
-
-    /// The `2^s` root of unity.
-    ///
-    /// It can be calculated by exponentiating `Self::MULTIPLICATIVE_GENERATOR` by `t`,
-    /// where `t = (modulus - 1) >> Self::S`.
-    fn root_of_unity() -> Self {
-        Self {
-            v: unsafe { _mm512_set1_epi64(0x185629dcda58878c) },
-        }
-    }
-}
-
 impl SimdField for AVXGoldilocks {
     type Scalar = Goldilocks;
 
@@ -309,23 +246,116 @@ impl SimdField for AVXGoldilocks {
     }
 }
 
-impl ExpSerde for AVXGoldilocks {
-    const SERIALIZED_SIZE: usize = GOLDILOCKS_PACK_SIZE * 8;
-
+impl From<Goldilocks> for AVXGoldilocks {
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        let data = unsafe { transmute::<__m512i, [u8; 64]>(self.v) };
-        writer.write_all(&data)?;
-        Ok(())
+    fn from(x: Goldilocks) -> Self {
+        Self {
+            v: unsafe { _mm512_set1_epi64(x.v as i64) },
+        }
     }
+}
+
+impl Default for AVXGoldilocks {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
+impl PartialEq for AVXGoldilocks {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        unsafe {
+            let pcmp = _mm512_cmpeq_epi64_mask(
+                p3_instructions::canonicalize(self.v),
+                p3_instructions::canonicalize(other.v),
+            );
+            pcmp == 0xFF
+        }
+    }
+}
+
+impl Eq for AVXGoldilocks {}
+
+impl Mul<&Goldilocks> for AVXGoldilocks {
+    type Output = Self;
 
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut data = [0; Self::SERIALIZED_SIZE];
-        reader.read_exact(&mut data)?;
+    fn mul(self, rhs: &Goldilocks) -> Self::Output {
+        // ZZ: better implementation?
+        let rhs_packed = Self::from(*rhs);
+        self * rhs_packed
+    }
+}
+
+impl Mul<Goldilocks> for AVXGoldilocks {
+    type Output = Self;
+
+    #[inline(always)]
+    fn mul(self, rhs: Goldilocks) -> Self::Output {
+        self * &rhs
+    }
+}
+
+impl Add<Goldilocks> for AVXGoldilocks {
+    type Output = AVXGoldilocks;
+    #[inline(always)]
+    #[allow(clippy::op_ref)]
+    fn add(self, rhs: Goldilocks) -> Self::Output {
+        self + AVXGoldilocks::pack_full(rhs)
+    }
+}
+
+impl Hash for AVXGoldilocks {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         unsafe {
-            let value = transmute::<[u8; Self::SERIALIZED_SIZE], __m512i>(data);
-            Ok(Self { v: value })
+            state.write(transmute::<__m512i, [u8; 64]>(self.v).as_ref());
+        }
+    }
+}
+
+impl Neg for AVXGoldilocks {
+    type Output = Self;
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        if self.is_zero() {
+            self
+        } else {
+            Self {
+                v: unsafe { _mm512_sub_epi64(PACKED_GOLDILOCKS_MOD, self.v) },
+            }
+        }
+    }
+}
+
+impl From<u32> for AVXGoldilocks {
+    #[inline(always)]
+    fn from(x: u32) -> Self {
+        Self {
+            v: unsafe { _mm512_set1_epi64(x as i64) },
+        }
+    }
+}
+
+impl From<u64> for AVXGoldilocks {
+    #[inline(always)]
+    fn from(x: u64) -> Self {
+        Self {
+            v: unsafe { _mm512_set1_epi64(x as i64) },
+        }
+    }
+}
+
+impl FFTField for AVXGoldilocks {
+    const TWO_ADICITY: usize = 32;
+
+    /// The `2^s` root of unity.
+    ///
+    /// It can be calculated by exponentiating `Self::MULTIPLICATIVE_GENERATOR` by `t`,
+    /// where `t = (modulus - 1) >> Self::S`.
+    fn root_of_unity() -> Self {
+        Self {
+            v: unsafe { _mm512_set1_epi64(0x185629dcda58878c) },
         }
     }
 }

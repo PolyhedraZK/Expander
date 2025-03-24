@@ -63,27 +63,33 @@ impl ExpSerde for Goldilocks {
     }
 }
 
-impl Goldilocks {
-    #[inline(always)]
-    pub fn unsafe_add(&self, rhs: &Self) -> Self {
-        Self { v: self.v + rhs.v }
-    }
+// impl Goldilocks {
+//     #[inline(always)]
+//     pub fn unsafe_add(&self, rhs: &Self) -> Self {
+//         Self { v: self.v + rhs.v }
+//     }
 
-    #[inline(always)]
-    pub fn unsafe_double(&self) -> Self {
-        Self { v: self.v << 1 }
-    }
-}
+//     #[inline(always)]
+//     pub fn unsafe_double(&self) -> Self {
+//         Self { v: self.v << 1 }
+//     }
+// }
 
 impl Field for Goldilocks {
     const NAME: &'static str = "Goldilocks";
+
     const SIZE: usize = 64 / 8;
+
     const ZERO: Self = Goldilocks { v: 0 };
+
     const ONE: Self = Goldilocks { v: 1 };
+
     const INV_2: Self = Goldilocks {
         v: 0x7FFFFFFF80000001,
     }; // (2^63 - 2^31 + 1)
+
     const FIELD_SIZE: usize = 64;
+
     const MODULUS: U256 = U256([GOLDILOCKS_MOD as u128, 0]);
 
     #[inline(always)]
@@ -174,13 +180,7 @@ impl Neg for Goldilocks {
     type Output = Goldilocks;
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        Goldilocks {
-            v: if self.v == 0 {
-                0
-            } else {
-                GOLDILOCKS_MOD - self.v
-            },
-        }
+        Goldilocks::ZERO - self
     }
 }
 
@@ -198,7 +198,7 @@ impl From<u64> for Goldilocks {
             v: if x < GOLDILOCKS_MOD {
                 x
             } else {
-                x % GOLDILOCKS_MOD
+                x - GOLDILOCKS_MOD
             },
         }
     }
@@ -225,6 +225,7 @@ impl Goldilocks {
     }
 }
 
+#[inline(always)]
 /// credit: plonky2
 fn add_internal(a: &Goldilocks, b: &Goldilocks) -> Goldilocks {
     let (sum, over) = a.v.overflowing_add(b.v);
@@ -243,6 +244,7 @@ fn add_internal(a: &Goldilocks, b: &Goldilocks) -> Goldilocks {
     Goldilocks { v: sum }
 }
 
+#[inline(always)]
 fn sub_internal(a: &Goldilocks, b: &Goldilocks) -> Goldilocks {
     let (diff, under) = a.v.overflowing_sub(b.v);
     let (mut diff, under) = diff.overflowing_sub((under as u64) * EPSILON);
@@ -261,6 +263,7 @@ fn sub_internal(a: &Goldilocks, b: &Goldilocks) -> Goldilocks {
     Goldilocks { v: diff }
 }
 
+#[inline(always)]
 fn mul_internal(a: &Goldilocks, b: &Goldilocks) -> Goldilocks {
     reduce128((a.v as u128) * (b.v as u128))
 }
@@ -297,6 +300,7 @@ impl FFTField for Goldilocks {
     ///
     /// It can be calculated by exponentiating `Self::MULTIPLICATIVE_GENERATOR` by `t`,
     /// where `t = (modulus - 1) >> Self::S`.
+    #[inline(always)]
     fn root_of_unity() -> Self {
         Goldilocks {
             v: 0x185629dcda58878c,

@@ -40,6 +40,45 @@ pub struct AVXGoldilocks {
     pub v: [__m256i; 2],
 }
 
+impl AVXGoldilocks {
+    #[inline(always)]
+    pub fn pack_full(x: Goldilocks) -> Self {
+        unsafe {
+            Self {
+                v: [_mm256_set1_epi64(x.v as i64), _mm256_set1_epi64(x.v as i64)],
+            }
+        }
+    }
+}
+
+field_common!(AVXGoldilocks);
+
+impl ExpSerde for AVXGoldilocks {
+    const SERIALIZED_SIZE: usize = GOLDILOCKS_PACK_SIZE * 8; // 64 bytes total
+
+    #[inline(always)]
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        let data0 = unsafe { transmute::<__m256i, [u8; 32]>(self.v[0]) };
+        let data1 = unsafe { transmute::<__m256i, [u8; 32]>(self.v[1]) };
+        writer.write_all(&data0)?;
+        writer.write_all(&data1)?;
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let mut data0 = [0; 32];
+        let mut data1 = [0; 32];
+        reader.read_exact(&mut data0)?;
+        reader.read_exact(&mut data1)?;
+        unsafe {
+            let v0 = transmute::<[u8; 32], __m256i>(data0);
+            let v1 = transmute::<[u8; 32], __m256i>(data1);
+            Ok(Self { v: [v0, v1] })
+        }
+    }
+}
+
 impl Default for AVXGoldilocks {
     fn default() -> Self {
         Self::zero()
@@ -130,8 +169,6 @@ impl Mul<Goldilocks> for AVXGoldilocks {
         self * rhs_packed
     }
 }
-
-field_common!(AVXGoldilocks);
 
 impl Field for AVXGoldilocks {
     const NAME: &'static str = "AVXGoldilocks";
@@ -319,32 +356,6 @@ impl FFTField for AVXGoldilocks {
             v: [unsafe { _mm256_set1_epi64x(0x185629dcda58878c) }, unsafe {
                 _mm256_set1_epi64x(0x185629dcda58878c)
             }],
-        }
-    }
-}
-
-impl ExpSerde for AVXGoldilocks {
-    const SERIALIZED_SIZE: usize = GOLDILOCKS_PACK_SIZE * 8; // 64 bytes total
-
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        let data0 = unsafe { transmute::<__m256i, [u8; 32]>(self.v[0]) };
-        let data1 = unsafe { transmute::<__m256i, [u8; 32]>(self.v[1]) };
-        writer.write_all(&data0)?;
-        writer.write_all(&data1)?;
-        Ok(())
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut data0 = [0; 32];
-        let mut data1 = [0; 32];
-        reader.read_exact(&mut data0)?;
-        reader.read_exact(&mut data1)?;
-        unsafe {
-            let v0 = transmute::<[u8; 32], __m256i>(data0);
-            let v1 = transmute::<[u8; 32], __m256i>(data1);
-            Ok(Self { v: [v0, v1] })
         }
     }
 }

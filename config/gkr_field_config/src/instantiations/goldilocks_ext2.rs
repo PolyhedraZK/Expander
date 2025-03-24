@@ -27,12 +27,12 @@ impl GKRFieldConfig for GoldilocksExtConfig {
 
     #[inline(always)]
     fn field_mul_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
-        a.mul_by_base_field(&Goldilocksx8::from(*b))
+        *a * *b
     }
 
     #[inline(always)]
     fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
-        a.add_by_base_field(&Goldilocksx8::from(*b))
+        *a + *b
     }
 
     #[inline(always)]

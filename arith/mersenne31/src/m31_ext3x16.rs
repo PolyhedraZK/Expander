@@ -44,12 +44,12 @@ impl ExpSerde for M31Ext3x16 {
 impl SimdField for M31Ext3x16 {
     type Scalar = M31Ext3;
 
+    const PACK_SIZE: usize = M31x16::PACK_SIZE;
+
     #[inline]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
         *self * *challenge
     }
-
-    const PACK_SIZE: usize = M31x16::PACK_SIZE;
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
