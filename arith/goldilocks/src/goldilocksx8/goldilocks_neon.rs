@@ -123,9 +123,10 @@ impl Field for NeonGoldilocks {
 
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
-        if self.is_zero() {
+        if self.v.iter().any(|x| x.is_zero()) {
             return None;
         }
+
         let mut res = Self::zero();
         for i in 0..8 {
             res.v[i] = self.v[i].inv()?;
@@ -214,9 +215,8 @@ impl Mul<&Goldilocks> for NeonGoldilocks {
 
     #[inline(always)]
     fn mul(self, rhs: &Goldilocks) -> Self::Output {
-        // ZZ: better implementation?
-        let rhs_packed = Self::from(*rhs);
-        self * rhs_packed
+        let res = self.v.map(|x| x * rhs);
+        Self { v: res }
     }
 }
 
@@ -234,7 +234,8 @@ impl Add<Goldilocks> for NeonGoldilocks {
     type Output = NeonGoldilocks;
     #[inline(always)]
     fn add(self, rhs: Goldilocks) -> Self::Output {
-        self + NeonGoldilocks::pack_full(rhs)
+        let res = self.v.map(|x| x * rhs);
+        Self { v: res }
     }
 }
 
