@@ -9,7 +9,9 @@ use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitm
 use config_macros::declare_gkr_config;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
-use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use gkr_field_config::{
+    BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, GoldilocksExtConfig, M31ExtConfig,
+};
 use halo2curves::bn256::{Bn256, G1Affine};
 use mersenne31::M31x16;
 use mpi_config::{root_println, MPIConfig};
@@ -101,6 +103,12 @@ fn test_gkr_correctness() {
         FiatShamirHashType::MIMC5,
         PolynomialCommitmentType::KZG
     );
+    declare_gkr_config!(
+        C12,
+        FieldType::Goldilocks,
+        FiatShamirHashType::Keccak256,
+        PolynomialCommitmentType::Raw
+    );
 
     test_gkr_correctness_helper(
         &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
@@ -148,6 +156,10 @@ fn test_gkr_correctness() {
     );
     test_gkr_correctness_helper(
         &Config::<C11>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+    test_gkr_correctness_helper(
+        &Config::<C12>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
 
