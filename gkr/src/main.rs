@@ -19,7 +19,8 @@ use gkr::{
         KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT,
         KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
-    BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, Prover,
+    BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2Orion,
+    Prover,
 };
 
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
@@ -86,6 +87,13 @@ fn main() {
             ),
             _ => unreachable!(),
         },
+        "goldilocks" => match args.scheme.as_str() {
+            "keccak" => run_benchmark::<GoldilocksExtConfigSha2Raw>(
+                &args,
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+            ),
+            _ => unreachable!(),
+        },
         _ => unreachable!(),
     };
 
@@ -143,6 +151,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         (FieldType::M31, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
         (FieldType::M31, "poseidon") => 120,
+        (FieldType::Goldilocks, "keccak") => 2,
         _ => unreachable!(),
     };
 

@@ -213,7 +213,7 @@ impl Field for AVX256GF2_128x8 {
         ];
         Self { data }
     }
-    
+
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
         if self.is_zero() {

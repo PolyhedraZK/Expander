@@ -251,7 +251,7 @@ impl FFTField for Goldilocks {
     }
 }
 
-mod p2_instructions {
+pub(crate) mod p2_instructions {
     //! Credit: the majority of the code is borrowed or inspired from Plonky2 with modifications.
 
     use std::arch::asm;
@@ -264,7 +264,7 @@ mod p2_instructions {
     /// Reduces to a 64-bit value. The result might not be in canonical form; it could be in between
     /// the field order and `2^64`.
     #[inline]
-    pub(super) fn reduce128(x: u128) -> Goldilocks {
+    pub(crate) fn reduce128(x: u128) -> Goldilocks {
         let (x_lo, x_hi) = split(x); // This is a no-op
         let x_hi_hi = x_hi >> 32;
         let x_hi_lo = x_hi & EPSILON;
