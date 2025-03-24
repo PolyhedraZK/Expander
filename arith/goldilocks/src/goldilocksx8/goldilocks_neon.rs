@@ -37,9 +37,7 @@ impl ExpSerde for NeonGoldilocks {
 
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        for elem in &self.v {
-            writer.write_all(&elem.v.to_le_bytes())?;
-        }
+        self.v.serialize_into(&mut writer)?;
         Ok(())
     }
 

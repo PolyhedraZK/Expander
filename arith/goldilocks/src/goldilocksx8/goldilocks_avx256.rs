@@ -60,8 +60,8 @@ impl ExpSerde for AVXGoldilocks {
 
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        let data0 = unsafe { transmute::<__m256i, [u8; 32]>(self.v[0]) };
-        let data1 = unsafe { transmute::<__m256i, [u8; 32]>(self.v[1]) };
+        let data0 = unsafe { transmute::<__m256i, [u8; 32]>(mod_reduce_epi64(self.v[0])) };
+        let data1 = unsafe { transmute::<__m256i, [u8; 32]>(mod_reduce_epi64(self.v[1])) };
         writer.write_all(&data0)?;
         writer.write_all(&data1)?;
         Ok(())

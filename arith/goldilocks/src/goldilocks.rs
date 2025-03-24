@@ -46,7 +46,9 @@ impl ExpSerde for Goldilocks {
 
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        writer.write_all(self.v.to_le_bytes().as_ref())?;
+        // normalize the element: both 0 and Modulus are valid internal representations
+        let v = mod_reduce_u64(self.v);
+        writer.write_all(&v.to_le_bytes())?;
         Ok(())
     }
 
