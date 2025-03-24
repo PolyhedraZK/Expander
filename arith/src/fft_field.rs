@@ -1,3 +1,5 @@
+use itertools::izip;
+
 use crate::{bit_reverse, Field};
 
 pub trait FFTField: Field + From<u64> {
@@ -84,42 +86,40 @@ pub fn radix2_fft_single_threaded<F: FFTField>(coeffs: &mut [F], omega: F) {
     let n = coeffs.len();
     let log_n = n.ilog2() as usize;
 
-    let twiddles_and_strides = {
-        let mut twiddle = omega;
-        let mut stride = n >> 1;
+    // precompute twiddle factors
+    let twiddles: Vec<_> = (0..(n / 2))
+        .scan(F::ONE, |w, _| {
+            let tw = *w;
+            *w *= &omega;
+            Some(tw)
+        })
+        .collect();
 
-        let mut res = vec![];
+    let mut chunk = 2_usize;
+    let mut twiddle_chunk = n / 2;
+    for _ in 0..log_n {
+        coeffs.chunks_mut(chunk).for_each(|coeffs| {
+            let (left, right) = coeffs.split_at_mut(chunk / 2);
 
-        for _ in 0..log_n {
-            res.push((twiddle, stride));
+            // case when twiddle factor is one
+            let (a, left) = left.split_at_mut(1);
+            let (b, right) = right.split_at_mut(1);
+            let t = b[0];
+            b[0] = a[0];
+            a[0] += &t;
+            b[0] -= &t;
 
-            twiddle = twiddle * twiddle;
-            stride >>= 1;
-        }
-
-        res.reverse();
-        res
-    };
-
-    twiddles_and_strides.iter().for_each(|(twiddle, stride)| {
-        for left_most_index in (0..n).step_by(2 * stride) {
-            let mut p = F::ONE;
-
-            for i in 0..*stride {
-                let left = coeffs[left_most_index + i];
-                let right = coeffs[left_most_index + stride + i];
-
-                let t = p * right;
-
-                coeffs[left_most_index + stride + i] = left;
-
-                coeffs[left_most_index + i] += t;
-                coeffs[left_most_index + stride + i] -= t;
-
-                p *= twiddle;
-            }
-        }
-    });
+            izip!(left, right).enumerate().for_each(|(i, (a, b))| {
+                let mut t = *b;
+                t *= &twiddles[(i + 1) * twiddle_chunk];
+                *b = *a;
+                *a += &t;
+                *b -= &t;
+            });
+        });
+        chunk *= 2;
+        twiddle_chunk /= 2;
+    }
 }
 
 #[cfg(test)]

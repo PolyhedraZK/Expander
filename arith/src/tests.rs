@@ -193,7 +193,6 @@ pub fn random_simd_field_tests<F: SimdField>(_name: String) {
     }
 }
 
-// NOTE(HS) Acknowledge to @zhenfeizhang as he first prototyped this testing for FFT
 pub fn random_fft_field_tests<F: Field + FFTField>(_name: String) {
     let mut rng = test_rng();
 

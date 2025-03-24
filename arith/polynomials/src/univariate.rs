@@ -65,6 +65,8 @@ impl<F: Field> UnivariatePoly<F> {
         eval
     }
 
+    /// Performing a polynomial division by f(X) / (X - \alpha),
+    /// returning quotient q(X) and remainder r satisfying q(X) (X - \alpha) + r == f(X).
     #[inline(always)]
     pub fn degree_one_quotient(&self, alpha: F) -> (Self, F) {
         let mut div_coeffs = self.coeffs.to_vec();
@@ -84,6 +86,9 @@ impl<F: Field> UnivariatePoly<F> {
         (Self::new(final_div_coeffs), final_remainder)
     }
 
+    /// Performing a series of polynomial divisions f(X) / \prod_{r \in R} (X - r),
+    /// where R is the roots.
+    /// NOTE: we assume that f(X) vanishes over these roots.
     #[inline(always)]
     pub fn root_vanishing_quotient(&mut self, roots: &[F]) {
         roots.iter().enumerate().for_each(|(ith_root, r)| {
