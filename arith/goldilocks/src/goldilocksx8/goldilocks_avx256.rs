@@ -350,6 +350,7 @@ impl From<u32> for AVXGoldilocks {
 impl From<u64> for AVXGoldilocks {
     #[inline(always)]
     fn from(x: u64) -> Self {
+        let x = if x < GOLDILOCKS_MOD { x } else { x - GOLDILOCKS_MOD };
         Self {
             v: [unsafe { _mm256_set1_epi64x(x as i64) }, unsafe {
                 _mm256_set1_epi64x(x as i64)

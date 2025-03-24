@@ -8,7 +8,6 @@ use std::{
 };
 
 use arith::{field_common, Field, SimdField};
-use ark_std::Zero;
 use ethnum::U256;
 use rand::{Rng, RngCore};
 use serdes::{ExpSerde, SerdeResult};

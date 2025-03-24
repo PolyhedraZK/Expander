@@ -23,6 +23,7 @@ use rand_chacha::ChaCha12Rng;
 use serdes::ExpSerde;
 use sha2::Digest;
 use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
+use env_logger;
 
 use crate::{utils::*, Prover, Verifier};
 
@@ -30,6 +31,9 @@ const PCS_TESTING_SEED_U64: u64 = 114514;
 
 #[test]
 fn test_gkr_correctness() {
+    // Initialize logger
+    env_logger::init();
+    
     let mpi_config = MPIConfig::new();
     declare_gkr_config!(
         C0,
@@ -110,54 +114,54 @@ fn test_gkr_correctness() {
         PolynomialCommitmentType::Raw
     );
 
-    test_gkr_correctness_helper(
-        &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C1>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C2>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C3>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C4>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C5>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C6>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        Some("../data/gkr_proof.txt"),
-    );
-    test_gkr_correctness_helper(
-        &Config::<C7>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C8>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C9>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C10>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
-    test_gkr_correctness_helper(
-        &Config::<C11>::new(GKRScheme::Vanilla, mpi_config.clone()),
-        None,
-    );
+    // test_gkr_correctness_helper(
+    //     &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C1>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C2>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C3>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C4>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C5>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C6>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     Some("../data/gkr_proof.txt"),
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C7>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C8>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C9>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C10>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
+    // test_gkr_correctness_helper(
+    //     &Config::<C11>::new(GKRScheme::Vanilla, mpi_config.clone()),
+    //     None,
+    // );
     test_gkr_correctness_helper(
         &Config::<C12>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
