@@ -142,7 +142,7 @@ where
     eval_row = mpi_config.sum_vec(&eval_row);
     proximity_rows = proximity_rows
         .iter()
-        .map(|row| mpi_config.sum_vec(&row))
+        .map(|r| mpi_config.sum_vec(r))
         .collect();
 
     // TODO(HS) now do MPI MT opening

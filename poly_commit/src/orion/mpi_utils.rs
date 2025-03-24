@@ -1,5 +1,3 @@
-use std::io::{Cursor, StdoutLock};
-
 use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
 use mpi_config::MPIConfig;
@@ -196,8 +194,7 @@ where
         mpi_config.root_broadcast_bytes(&mut leaves_bytes);
 
         if !mpi_config.is_root() {
-            let mut cursor = Cursor::new(leaves_bytes);
-            leaves = Vec::deserialize_from(&mut cursor)?;
+            leaves = Vec::deserialize_from(leaves_bytes.as_slice())?;
         }
     }
 
@@ -218,6 +215,7 @@ where
     Ok(root)
 }
 
+#[allow(unused)]
 #[inline(always)]
 pub(crate) fn mpi_merkle_tree_opening<F, EvalF, PackF, T>(
     mpi_config: &MPIConfig,
