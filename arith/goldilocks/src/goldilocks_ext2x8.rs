@@ -10,7 +10,7 @@ use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeError};
 
-use crate::Goldilocksx8;
+use crate::{GoldilocksExt2, Goldilocksx8};
 
 /// Degree-2 extension of Goldilocks field with 8-element SIMD operations
 /// Represents elements as a + bX where X^2 = 7
@@ -382,6 +382,33 @@ impl From<Goldilocksx8> for GoldilocksExt2x8 {
     }
 }
 
+impl From<GoldilocksExt2> for GoldilocksExt2x8 {
+    #[inline]
+    fn from(x: GoldilocksExt2) -> Self {
+        Self {
+            c0: Goldilocksx8::from(x.v[0]),
+            c1: Goldilocksx8::from(x.v[1]),
+        }
+    }
+}
+
+impl Mul<GoldilocksExt2> for GoldilocksExt2x8 {
+    type Output = Self;
+
+    #[inline]
+    fn mul(self, rhs: GoldilocksExt2) -> Self {
+        // (a0 + a1*x) * (b0 + b1*x) mod (x^2 - 7)
+        // = a0*b0 + (a0*b1 + a1*b0)*x + a1*b1*x^2 mod (x^2 - 7)
+        // = (a0*b0 + 7*a1*b1) + (a0*b1 + a1*b0)*x
+        let seven = Goldilocksx8::from(7u32);
+        Self {
+            c0: self.c0 * Goldilocksx8::from(rhs.v[0])
+                + self.c1 * Goldilocksx8::from(rhs.v[1]) * seven,
+            c1: self.c0 * Goldilocksx8::from(rhs.v[1]) + self.c1 * Goldilocksx8::from(rhs.v[0]),
+        }
+    }
+}
+
 impl Mul<Goldilocksx8> for GoldilocksExt2x8 {
     type Output = Self;
 
@@ -391,10 +418,20 @@ impl Mul<Goldilocksx8> for GoldilocksExt2x8 {
     }
 }
 
-impl SimdField for GoldilocksExt2x8 {
-    type Scalar = Self;
+impl<'a> Mul<&'a GoldilocksExt2> for GoldilocksExt2x8 {
+    type Output = Self;
 
-    const PACK_SIZE: usize = 1;
+    #[inline]
+    fn mul(self, rhs: &'a GoldilocksExt2) -> Self {
+        let rhs_simd = Self::from(*rhs);
+        self * rhs_simd
+    }
+}
+
+impl SimdField for GoldilocksExt2x8 {
+    type Scalar = GoldilocksExt2;
+
+    const PACK_SIZE: usize = Goldilocksx8::PACK_SIZE;
 
     #[inline]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
@@ -403,13 +440,27 @@ impl SimdField for GoldilocksExt2x8 {
 
     #[inline]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert_eq!(base_vec.len(), Self::PACK_SIZE);
-        base_vec[0]
+        assert!(base_vec.len() == Self::PACK_SIZE);
+        let mut v0s = vec![];
+        let mut v1s = vec![];
+        for scalar in base_vec {
+            v0s.push(scalar.v[0]);
+            v1s.push(scalar.v[1]);
+        }
+        Self {
+            c0: Goldilocksx8::pack(&v0s),
+            c1: Goldilocksx8::pack(&v1s),
+        }
     }
 
     #[inline]
     fn unpack(&self) -> Vec<Self::Scalar> {
-        vec![*self]
+        let v0s = self.c0.unpack();
+        let v1s = self.c1.unpack();
+        v0s.into_iter()
+            .zip(v1s)
+            .map(|(v0, v1)| GoldilocksExt2 { v: [v0, v1] })
+            .collect()
     }
 }
 

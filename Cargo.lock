@@ -1023,6 +1023,7 @@ dependencies = [
  "ark-std 0.4.0",
  "gf2",
  "gf2_128",
+ "goldilocks",
  "mersenne31",
 ]
 

@@ -241,16 +241,15 @@ fn test_ext2x8_simd_field() {
 
     // Test pack/unpack
     let a = GoldilocksExt2x8::random_unsafe(thread_rng());
-    let packed = GoldilocksExt2x8::pack(&[a]);
-    assert_eq!(packed, a);
+    let scalar = GoldilocksExt2::random_unsafe(thread_rng());
+    let packed = GoldilocksExt2x8::pack(&[scalar; 8]);
     let unpacked = packed.unpack();
-    assert_eq!(unpacked.len(), 1);
-    assert_eq!(unpacked[0], a);
+    assert_eq!(unpacked.len(), 8);
+    assert_eq!(unpacked[0], scalar);
 
     // Test scale
-    let b = GoldilocksExt2x8::random_unsafe(thread_rng());
-    let scaled = a.scale(&b);
-    assert_eq!(scaled, a * b);
+    let scaled = a.scale(&scalar);
+    assert_eq!(scaled, a * scalar);
 
     // Test serialization
     let mut buffer = vec![];

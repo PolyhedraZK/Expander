@@ -16,7 +16,8 @@ use rand_chacha::ChaCha12Rng;
 use gkr::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
-        KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
+        KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT,
+        KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
     BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, Prover,
 };
@@ -107,6 +108,9 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
             FieldType::BN254 => {
                 Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_BN254_CIRCUIT)
             }
+            FieldType::Goldilocks => {
+                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GOLDILOCKS_CIRCUIT)
+            }
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31 => {
@@ -123,6 +127,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
             FieldType::GF2 => KECCAK_GF2_WITNESS,
             FieldType::M31 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
+            FieldType::Goldilocks => KECCAK_GOLDILOCKS_WITNESS,
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31 => POSEIDON_M31_WITNESS,
