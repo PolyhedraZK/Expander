@@ -297,8 +297,12 @@ impl MPIConfig {
 
     #[inline(always)]
     pub fn all_to_all_transpose<F: Field>(&self, row: &mut [F]) {
+        // TODO(HS) declare what is assumed in this method
+
+        assert!(row.len().is_power_of_two());
+
         // NOTE(HS) MPI has some upper limit for send buffer size, pre declare here and use later
-        const SEND_BUFFER_MAX: usize = 1 << 27;
+        const SEND_BUFFER_MAX: usize = 1 << 22;
 
         let row_as_u8_len = F::SIZE * row.len();
         assert_eq!(row_as_u8_len % self.world_size(), 0);
