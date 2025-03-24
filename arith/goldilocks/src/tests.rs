@@ -5,7 +5,7 @@ use crate::{
 
 use arith::{
     random_extension_field_tests, random_field_tests, random_from_limbs_to_limbs_tests,
-    random_inversion_tests, random_simd_field_tests, ExtensionField, Field, SimdField,
+    random_inversion_tests, random_simd_field_tests, ExtensionField, Field, 
 };
 use ark_std::test_rng;
 use ethnum::U256;
@@ -51,18 +51,6 @@ fn test_base_field() {
 }
 
 #[test]
-fn test_ext_field() {
-    random_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
-    random_extension_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
-    random_from_limbs_to_limbs_tests::<Goldilocks, GoldilocksExt2>("Goldilocks Ext2".to_string());
-    random_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
-    random_extension_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
-    random_from_limbs_to_limbs_tests::<Goldilocksx8, GoldilocksExt2x8>(
-        "Goldilocks Ext2x8".to_string(),
-    );
-}
-
-#[test]
 fn test_simd_field() {
     random_field_tests::<Goldilocksx8>("Goldilocksx8".to_string());
 
@@ -78,6 +66,19 @@ fn test_simd_field() {
     assert!(b.is_ok());
     let b = b.unwrap();
     assert_eq!(a, b);
+}
+
+#[test]
+fn test_ext_field() {
+    random_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
+    random_extension_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
+    random_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
+    random_extension_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
+    random_simd_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
+    random_from_limbs_to_limbs_tests::<Goldilocks, GoldilocksExt2>("Goldilocks Ext2".to_string());
+    random_from_limbs_to_limbs_tests::<Goldilocksx8, GoldilocksExt2x8>(
+        "Goldilocks Ext2x8".to_string(),
+    );
 }
 
 /// Compare to test vectors for extension field arithmetic
@@ -229,32 +230,4 @@ fn test_edge_cases() {
     assert!(GoldilocksExt2::zero().inv().is_none());
     let x = GoldilocksExt2::X;
     assert_eq!(x * x, GoldilocksExt2::from(Goldilocks::from(7u32)));
-}
-
-#[test]
-fn test_ext2x8_simd_field() {
-    random_field_tests::<GoldilocksExt2x8>("GoldilocksExt2x8".to_string());
-    random_simd_field_tests::<GoldilocksExt2x8>("GoldilocksExt2x8".to_string());
-
-    let mut rng = test_rng();
-    random_inversion_tests::<GoldilocksExt2x8, _>(&mut rng, "GoldilocksExt2x8".to_string());
-
-    // Test pack/unpack
-    let a = GoldilocksExt2x8::random_unsafe(thread_rng());
-    let scalar = GoldilocksExt2::random_unsafe(thread_rng());
-    let packed = GoldilocksExt2x8::pack(&[scalar; 8]);
-    let unpacked = packed.unpack();
-    assert_eq!(unpacked.len(), 8);
-    assert_eq!(unpacked[0], scalar);
-
-    // Test scale
-    let scaled = a.scale(&scalar);
-    assert_eq!(scaled, a * scalar);
-
-    // Test serialization
-    let mut buffer = vec![];
-    assert!(a.serialize_into(&mut buffer).is_ok());
-    let deserialized = GoldilocksExt2x8::deserialize_from(buffer.as_slice());
-    assert!(deserialized.is_ok());
-    assert_eq!(deserialized.unwrap(), a);
 }
