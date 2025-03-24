@@ -106,7 +106,7 @@ fn test_gkr_correctness() {
     declare_gkr_config!(
         C12,
         FieldType::Goldilocks,
-        FiatShamirHashType::Keccak256,
+        FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw
     );
 

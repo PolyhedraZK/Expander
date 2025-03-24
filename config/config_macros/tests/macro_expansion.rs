@@ -66,9 +66,9 @@ fn main() {
         PolynomialCommitmentType::Orion
     );
     declare_gkr_config!(
-        GoldilocksKeccak256Config,
+        GoldilocksSHA256Config,
         FieldType::Goldilocks,
-        FiatShamirHashType::Keccak256,
+        FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw
     );
 
@@ -79,5 +79,5 @@ fn main() {
     print_type_name::<BN254MIMCKZGConfig>();
     print_type_name::<GF2Keccak256Config>();
     print_type_name::<GF2Keccak256OrionConfig>();
-    print_type_name::<GoldilocksKeccak256Config>();
+    print_type_name::<GoldilocksSHA256Config>();
 }

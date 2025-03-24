@@ -243,11 +243,23 @@ impl Field for GoldilocksExt2x8 {
     }
 }
 
+impl Add<GoldilocksExt2> for GoldilocksExt2x8 {
+    type Output = Self;
+
+    #[inline]
+    fn add(self, rhs: GoldilocksExt2) -> Self::Output {
+        Self {
+            c0: self.c0 + Goldilocksx8::from(rhs.v[0]),
+            c1: self.c1 + Goldilocksx8::from(rhs.v[1]),
+        }
+    }
+}
+
 impl Mul<GoldilocksExt2> for GoldilocksExt2x8 {
     type Output = Self;
 
     #[inline]
-    fn mul(self, rhs: GoldilocksExt2) -> Self {
+    fn mul(self, rhs: GoldilocksExt2) -> Self::Output {
         // (a0 + a1*x) * (b0 + b1*x) mod (x^2 - 7)
         // = a0*b0 + (a0*b1 + a1*b0)*x + a1*b1*x^2 mod (x^2 - 7)
         // = (a0*b0 + 7*a1*b1) + (a0*b1 + a1*b0)*x
