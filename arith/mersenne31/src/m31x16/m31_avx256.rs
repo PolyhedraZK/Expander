@@ -284,15 +284,29 @@ impl SimdField for AVXM31 {
 
     const PACK_SIZE: usize = M31_PACK_SIZE;
 
+    #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert_eq!(base_vec.len(), M31_PACK_SIZE);
         let ret: [Self::Scalar; M31_PACK_SIZE] = base_vec.try_into().unwrap();
         unsafe { transmute(ret) }
     }
 
+    #[inline(always)]
     fn unpack(&self) -> Vec<Self::Scalar> {
         let ret = unsafe { transmute::<[__m256i; 2], [Self::Scalar; M31_PACK_SIZE]>(self.v) };
         ret.to_vec()
+    }
+
+    #[inline(always)]
+    fn horizontal_sum(&self) -> Self::Scalar {
+        let ret = unsafe { transmute::<[__m256i; 2], [Self::Scalar; M31_PACK_SIZE]>(self.v) };
+        let mut buffer = ret.iter().map(|r| r.v as u64).sum::<u64>();
+        buffer = (buffer & M31_MOD as u64) + (buffer >> 31);
+        if buffer == M31_MOD as u64 {
+            Self::Scalar::ZERO
+        } else {
+            Self::Scalar { v: buffer as u32 }
+        }
     }
 }
 

@@ -16,3 +16,6 @@ pub use orion::*;
 
 pub mod hyrax;
 pub use hyrax::*;
+
+pub mod kzg;
+pub use kzg::*;
