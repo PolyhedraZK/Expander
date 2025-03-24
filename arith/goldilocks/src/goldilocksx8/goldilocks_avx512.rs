@@ -8,16 +8,12 @@ use std::{
 };
 
 use arith::{field_common, FFTField, Field, SimdField};
-use ark_std::Zero;
 use ethnum::U256;
 use rand::Rng;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
 
 use crate::{Goldilocks, EPSILON, GOLDILOCKS_MOD};
-
-#[allow(clippy::useless_transmute)]
-const LO_32_BITS_MASK: __mmask16 = unsafe { transmute(0b0101010101010101u16) };
 
 /// Number of Goldilocks elements in each __m512i element
 const GOLDILOCKS_PACK_SIZE: usize = 8;
@@ -159,22 +155,6 @@ impl Field for AVXGoldilocks {
     }
 
     #[inline(always)]
-    fn exp(&self, exponent: u128) -> Self {
-        let mut e = exponent;
-        let mut res = Self::one();
-        let mut t = *self;
-        while !e.is_zero() {
-            let b = e & 1;
-            if b == 1 {
-                res *= t;
-            }
-            t = t * t;
-            e >>= 1;
-        }
-        res
-    }
-
-    #[inline(always)]
     fn inv(&self) -> Option<Self> {
         // slow, should not be used in production
         let mut goldilocks_vec =
@@ -203,22 +183,6 @@ impl Field for AVXGoldilocks {
         Self {
             v: unsafe { _mm512_set1_epi64(m.v as i64) },
         }
-    }
-
-    #[inline(always)]
-    fn mul_by_5(&self) -> Self {
-        *self
-            * Self {
-                v: unsafe { _mm512_set1_epi64(5) },
-            }
-    }
-
-    #[inline(always)]
-    fn mul_by_6(&self) -> Self {
-        *self
-            * Self {
-                v: unsafe { _mm512_set1_epi64(6) },
-            }
     }
 }
 
@@ -265,10 +229,7 @@ impl PartialEq for AVXGoldilocks {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let pcmp = _mm512_cmpeq_epi64_mask(
-                p3_instructions::canonicalize(self.v),
-                p3_instructions::canonicalize(other.v),
-            );
+            let pcmp = _mm512_cmpeq_epi64_mask(mod_reduce_epi64(self.v), mod_reduce_epi64(other.v));
             pcmp == 0xFF
         }
     }
@@ -291,6 +252,7 @@ impl Mul<Goldilocks> for AVXGoldilocks {
     type Output = Self;
 
     #[inline(always)]
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: Goldilocks) -> Self::Output {
         self * &rhs
     }
@@ -299,7 +261,6 @@ impl Mul<Goldilocks> for AVXGoldilocks {
 impl Add<Goldilocks> for AVXGoldilocks {
     type Output = AVXGoldilocks;
     #[inline(always)]
-    #[allow(clippy::op_ref)]
     fn add(self, rhs: Goldilocks) -> Self::Output {
         self + AVXGoldilocks::pack_full(rhs)
     }
@@ -340,9 +301,7 @@ impl From<u32> for AVXGoldilocks {
 impl From<u64> for AVXGoldilocks {
     #[inline(always)]
     fn from(x: u64) -> Self {
-        Self {
-            v: unsafe { _mm512_set1_epi64(x as i64) },
-        }
+        Self::pack_full(Goldilocks::from(x))
     }
 }
 
@@ -398,6 +357,9 @@ fn mul_internal(x: &AVXGoldilocks, y: &AVXGoldilocks) -> AVXGoldilocks {
 /// instructions adopted from Plonky3 https://github.com/Plonky3/Plonky3/blob/main/goldilocks/src/x86_64_avx512/packing.rs
 mod p3_instructions {
     use super::*;
+
+    #[allow(clippy::useless_transmute)]
+    const LO_32_BITS_MASK: __mmask16 = unsafe { transmute(0b0101010101010101u16) };
 
     #[inline]
     pub(super) unsafe fn canonicalize(x: __m512i) -> __m512i {

@@ -5,7 +5,7 @@ use crate::{
 
 use arith::{
     random_extension_field_tests, random_field_tests, random_from_limbs_to_limbs_tests,
-    random_inversion_tests, random_simd_field_tests, ExtensionField, Field, 
+    random_inversion_tests, random_simd_field_tests, ExtensionField, Field,
 };
 use ark_std::test_rng;
 use ethnum::U256;

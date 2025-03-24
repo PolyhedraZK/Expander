@@ -5,7 +5,6 @@ use std::{
 };
 
 use arith::{field_common, FFTField, Field};
-use ark_std::Zero;
 use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
@@ -63,18 +62,6 @@ impl ExpSerde for Goldilocks {
     }
 }
 
-// impl Goldilocks {
-//     #[inline(always)]
-//     pub fn unsafe_add(&self, rhs: &Self) -> Self {
-//         Self { v: self.v + rhs.v }
-//     }
-
-//     #[inline(always)]
-//     pub fn unsafe_double(&self) -> Self {
-//         Self { v: self.v << 1 }
-//     }
-// }
-
 impl Field for Goldilocks {
     const NAME: &'static str = "Goldilocks";
 
@@ -124,28 +111,13 @@ impl Field for Goldilocks {
 
     #[inline(always)]
     fn from_u256(value: U256) -> Self {
+        assert!(value < Self::MODULUS);
         // TODO: this is a hack to get the low 64 bits of the u256
         // TODO: we should remove the assumption that the top bits are 0s
         let (_high, low) = value.into_words();
         let mut v = low as u64;
         v = mod_reduce_u64(v);
         Goldilocks { v }
-    }
-
-    #[inline]
-    fn exp(&self, exponent: u128) -> Self {
-        let mut e = exponent;
-        let mut res = Self::one();
-        let mut t = *self;
-        while !e.is_zero() {
-            let b = e & 1;
-            if b == 1 {
-                res *= t;
-            }
-            t = t * t;
-            e >>= 1;
-        }
-        res
     }
 
     #[inline(always)]
@@ -155,6 +127,7 @@ impl Field for Goldilocks {
 
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
+        assert!(self.v <= u32::MAX as u64);
         self.v as u32
     }
 
@@ -163,16 +136,6 @@ impl Field for Goldilocks {
         let mut v = u64::from_le_bytes(bytes[..8].try_into().unwrap());
         v = mod_reduce_u64(v);
         Goldilocks { v }
-    }
-
-    #[inline(always)]
-    fn mul_by_5(&self) -> Self {
-        *self * Self { v: 5 }
-    }
-
-    #[inline(always)]
-    fn mul_by_6(&self) -> Self {
-        *self * Self { v: 6 }
     }
 }
 

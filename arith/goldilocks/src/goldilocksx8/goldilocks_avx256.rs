@@ -8,7 +8,6 @@ use std::{
 };
 
 use arith::{field_common, FFTField, Field, SimdField};
-use ark_std::Zero;
 use ethnum::U256;
 use rand::Rng;
 use rand::RngCore;
@@ -16,7 +15,7 @@ use serdes::{ExpSerde, SerdeResult};
 
 use crate::{Goldilocks, EPSILON, GOLDILOCKS_MOD};
 
-/// Number of Goldilocks elements in each __m256i element
+/// Number of Goldilocks elements in [__m256i; 2] elements
 const GOLDILOCKS_PACK_SIZE: usize = 8;
 
 /// Packed field order
@@ -45,7 +44,10 @@ impl AVXGoldilocks {
     pub fn pack_full(x: Goldilocks) -> Self {
         unsafe {
             Self {
-                v: [_mm256_set1_epi64(x.v as i64), _mm256_set1_epi64(x.v as i64)],
+                v: [
+                    _mm256_set1_epi64x(x.v as i64),
+                    _mm256_set1_epi64x(x.v as i64),
+                ],
             }
         }
     }
@@ -79,101 +81,10 @@ impl ExpSerde for AVXGoldilocks {
     }
 }
 
-impl Default for AVXGoldilocks {
-    fn default() -> Self {
-        Self::zero()
-    }
-}
-
-impl PartialEq for AVXGoldilocks {
-    #[inline(always)]
-    fn eq(&self, other: &Self) -> bool {
-        unsafe {
-            let pcmp0 = _mm256_cmpeq_epi64_mask(
-                p3_instructions::canonicalize_s(self.v[0]),
-                p3_instructions::canonicalize_s(other.v[0]),
-            );
-            let pcmp1 = _mm256_cmpeq_epi64_mask(
-                p3_instructions::canonicalize_s(self.v[1]),
-                p3_instructions::canonicalize_s(other.v[1]),
-            );
-            pcmp0 == 0xF && pcmp1 == 0xF
-        }
-    }
-}
-
-impl Eq for AVXGoldilocks {}
-
-impl Hash for AVXGoldilocks {
-    #[inline(always)]
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        unsafe {
-            state.write(transmute::<__m256i, [u8; 32]>(self.v[0]).as_ref());
-            state.write(transmute::<__m256i, [u8; 32]>(self.v[1]).as_ref());
-        }
-    }
-}
-
-impl Neg for AVXGoldilocks {
-    type Output = Self;
-    #[inline(always)]
-    fn neg(self) -> Self::Output {
-        Self {
-            v: [unsafe { p3_instructions::neg(self.v[0]) }, unsafe {
-                p3_instructions::neg(self.v[1])
-            }],
-        }
-    }
-}
-
-impl From<u32> for AVXGoldilocks {
-    #[inline(always)]
-    fn from(x: u32) -> Self {
-        Self {
-            v: [
-                unsafe { p3_instructions::shift(_mm256_set1_epi64x(x as i64)) },
-                unsafe { p3_instructions::shift(_mm256_set1_epi64x(x as i64)) },
-            ],
-        }
-    }
-}
-
-impl From<u64> for AVXGoldilocks {
-    #[inline(always)]
-    fn from(x: u64) -> Self {
-        Self {
-            v: [unsafe { _mm256_set1_epi64x(x as i64) }, unsafe {
-                _mm256_set1_epi64x(x as i64)
-            }],
-        }
-    }
-}
-
-impl From<Goldilocks> for AVXGoldilocks {
-    #[inline(always)]
-    fn from(x: Goldilocks) -> Self {
-        Self {
-            v: [unsafe { _mm256_set1_epi64x(x.v as i64) }, unsafe {
-                _mm256_set1_epi64x(x.v as i64)
-            }],
-        }
-    }
-}
-
-impl Mul<Goldilocks> for AVXGoldilocks {
-    type Output = Self;
-
-    #[inline(always)]
-    fn mul(self, rhs: Goldilocks) -> Self::Output {
-        let rhs_packed = Self::from(rhs);
-        self * rhs_packed
-    }
-}
-
 impl Field for AVXGoldilocks {
     const NAME: &'static str = "AVXGoldilocks";
 
-    const SIZE: usize = GOLDILOCKS_PACK_SIZE * 8;
+    const SIZE: usize = 512 / 8;
 
     const ZERO: Self = Self {
         v: [PACKED_0, PACKED_0],
@@ -271,22 +182,6 @@ impl Field for AVXGoldilocks {
     }
 
     #[inline(always)]
-    fn exp(&self, exponent: u128) -> Self {
-        let mut e = exponent;
-        let mut res = Self::one();
-        let mut t = *self;
-        while !e.is_zero() {
-            let b = e & 1;
-            if b == 1 {
-                res *= t;
-            }
-            t = t * t;
-            e >>= 1;
-        }
-        res
-    }
-
-    #[inline(always)]
     fn inv(&self) -> Option<Self> {
         // slow, should not be used in production
         let mut goldilocks_vec1 = unsafe { transmute::<__m256i, [Goldilocks; 4]>(self.v[0]) };
@@ -326,38 +221,6 @@ impl Field for AVXGoldilocks {
             }],
         }
     }
-
-    #[inline(always)]
-    fn mul_by_5(&self) -> Self {
-        *self
-            * Self {
-                v: [unsafe { _mm256_set1_epi64x(5) }, unsafe {
-                    _mm256_set1_epi64x(5)
-                }],
-            }
-    }
-
-    #[inline(always)]
-    fn mul_by_6(&self) -> Self {
-        *self
-            * Self {
-                v: [unsafe { _mm256_set1_epi64x(6) }, unsafe {
-                    _mm256_set1_epi64x(6)
-                }],
-            }
-    }
-}
-
-impl FFTField for AVXGoldilocks {
-    const TWO_ADICITY: usize = 32;
-
-    fn root_of_unity() -> Self {
-        Self {
-            v: [unsafe { _mm256_set1_epi64x(0x185629dcda58878c) }, unsafe {
-                _mm256_set1_epi64x(0x185629dcda58878c)
-            }],
-        }
-    }
 }
 
 impl SimdField for AVXGoldilocks {
@@ -387,6 +250,123 @@ impl SimdField for AVXGoldilocks {
         ret.extend_from_slice(&ret0);
         ret.extend_from_slice(&ret1);
         ret
+    }
+}
+
+impl From<Goldilocks> for AVXGoldilocks {
+    #[inline(always)]
+    fn from(x: Goldilocks) -> Self {
+        Self {
+            v: [unsafe { _mm256_set1_epi64x(x.v as i64) }, unsafe {
+                _mm256_set1_epi64x(x.v as i64)
+            }],
+        }
+    }
+}
+
+impl Default for AVXGoldilocks {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
+impl PartialEq for AVXGoldilocks {
+    #[inline(always)]
+    fn eq(&self, other: &Self) -> bool {
+        unsafe {
+            let pcmp0 =
+                _mm256_cmpeq_epi64_mask(mod_reduce_epi64(self.v[0]), mod_reduce_epi64(other.v[0]));
+            let pcmp1 =
+                _mm256_cmpeq_epi64_mask(mod_reduce_epi64(self.v[1]), mod_reduce_epi64(other.v[1]));
+            pcmp0 == 0xF && pcmp1 == 0xF
+        }
+    }
+}
+
+impl Eq for AVXGoldilocks {}
+
+impl Mul<&Goldilocks> for AVXGoldilocks {
+    type Output = Self;
+
+    #[inline(always)]
+    fn mul(self, rhs: &Goldilocks) -> Self::Output {
+        let rhs_packed = Self::from(*rhs);
+        self * rhs_packed
+    }
+}
+
+impl Mul<Goldilocks> for AVXGoldilocks {
+    type Output = Self;
+
+    #[inline(always)]
+    #[allow(clippy::op_ref)]
+    fn mul(self, rhs: Goldilocks) -> Self::Output {
+        self * &rhs
+    }
+}
+
+impl Add<Goldilocks> for AVXGoldilocks {
+    type Output = AVXGoldilocks;
+    #[inline(always)]
+    fn add(self, rhs: Goldilocks) -> Self::Output {
+        self + AVXGoldilocks::pack_full(rhs)
+    }
+}
+
+impl Hash for AVXGoldilocks {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<__m256i, [u8; 32]>(self.v[0]).as_ref());
+            state.write(transmute::<__m256i, [u8; 32]>(self.v[1]).as_ref());
+        }
+    }
+}
+
+impl Neg for AVXGoldilocks {
+    type Output = Self;
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        Self {
+            v: [unsafe { p3_instructions::neg(self.v[0]) }, unsafe {
+                p3_instructions::neg(self.v[1])
+            }],
+        }
+    }
+}
+
+impl From<u32> for AVXGoldilocks {
+    #[inline(always)]
+    fn from(x: u32) -> Self {
+        Self {
+            v: [
+                unsafe { p3_instructions::shift(_mm256_set1_epi64x(x as i64)) },
+                unsafe { p3_instructions::shift(_mm256_set1_epi64x(x as i64)) },
+            ],
+        }
+    }
+}
+
+impl From<u64> for AVXGoldilocks {
+    #[inline(always)]
+    fn from(x: u64) -> Self {
+        Self {
+            v: [unsafe { _mm256_set1_epi64x(x as i64) }, unsafe {
+                _mm256_set1_epi64x(x as i64)
+            }],
+        }
+    }
+}
+
+impl FFTField for AVXGoldilocks {
+    const TWO_ADICITY: usize = 32;
+
+    fn root_of_unity() -> Self {
+        Self {
+            v: [unsafe { _mm256_set1_epi64x(0x185629dcda58878c) }, unsafe {
+                _mm256_set1_epi64x(0x185629dcda58878c)
+            }],
+        }
     }
 }
 
