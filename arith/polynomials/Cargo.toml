@@ -11,6 +11,8 @@ mpi_config = { path = "../../config/mpi_config" }
 ark-std.workspace = true
 criterion.workspace = true
 halo2curves.workspace = true
+rand.workspace = true
+itertools.workspace = true
 
 [[bench]]
 name = "mle_eval"
