@@ -16,8 +16,5 @@ pub use goldilocksx8::Goldilocksx8;
 mod goldilocks_ext2x8;
 pub use goldilocks_ext2x8::GoldilocksExt2x8;
 
-/// Utility functions
-mod util;
-
 #[cfg(test)]
 mod tests;
