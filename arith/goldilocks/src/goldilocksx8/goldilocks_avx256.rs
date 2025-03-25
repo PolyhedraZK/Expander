@@ -118,15 +118,22 @@ impl Field for AVXGoldilocks {
     fn is_zero(&self) -> bool {
         // value is either zero or 0x7FFFFFFF
         let eq1 = unsafe {
-            let pcmp = _mm256_cmpeq_epi64_mask(self.v[0], PACKED_0);
-            let pcmp2 = _mm256_cmpeq_epi64_mask(self.v[0], PACKED_GOLDILOCKS_MOD);
-            (pcmp | pcmp2) == 0xF
+            // Replace _mm256_cmpeq_epi64_mask with _mm256_cmpeq_epi64
+            let pcmp_zero = _mm256_cmpeq_epi64(self.v[0], PACKED_0);
+            let pcmp_mod = _mm256_cmpeq_epi64(self.v[0], PACKED_GOLDILOCKS_MOD);
+            // Combine the results using OR
+            let result = _mm256_or_si256(pcmp_zero, pcmp_mod);
+            // Check if all bits are set (equivalent to mask == 0xF)
+            _mm256_testc_si256(result, _mm256_set1_epi64x(-1)) != 0
         };
+        
         let eq2 = unsafe {
-            let pcmp = _mm256_cmpeq_epi64_mask(self.v[1], PACKED_0);
-            let pcmp2 = _mm256_cmpeq_epi64_mask(self.v[1], PACKED_GOLDILOCKS_MOD);
-            (pcmp | pcmp2) == 0xF
+            let pcmp_zero = _mm256_cmpeq_epi64(self.v[1], PACKED_0);
+            let pcmp_mod = _mm256_cmpeq_epi64(self.v[1], PACKED_GOLDILOCKS_MOD);
+            let result = _mm256_or_si256(pcmp_zero, pcmp_mod);
+            _mm256_testc_si256(result, _mm256_set1_epi64x(-1)) != 0
         };
+        
         eq1 && eq2
     }
 
@@ -274,11 +281,19 @@ impl PartialEq for AVXGoldilocks {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let pcmp0 =
-                _mm256_cmpeq_epi64_mask(mod_reduce_epi64(self.v[0]), mod_reduce_epi64(other.v[0]));
-            let pcmp1 =
-                _mm256_cmpeq_epi64_mask(mod_reduce_epi64(self.v[1]), mod_reduce_epi64(other.v[1]));
-            pcmp0 == 0xF && pcmp1 == 0xF
+            let v0_eq = _mm256_cmpeq_epi64(
+                mod_reduce_epi64(self.v[0]), 
+                mod_reduce_epi64(other.v[0])
+            );
+            
+            let v1_eq = _mm256_cmpeq_epi64(
+                mod_reduce_epi64(self.v[1]), 
+                mod_reduce_epi64(other.v[1])
+            );
+            
+            // Check if all elements are equal
+            _mm256_testc_si256(v0_eq, _mm256_set1_epi64x(-1)) != 0 && 
+            _mm256_testc_si256(v1_eq, _mm256_set1_epi64x(-1)) != 0
         }
     }
 }
@@ -372,7 +387,7 @@ unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
         // Use the shift trick to convert unsigned comparison to signed comparison
         let x_s = p3_instructions::shift(x);
         let mod_s = SHIFTED_PACKED_GOLDILOCKS_MOD;
-        // If x >= GOLDILOCKS_MOD then mask will be 0, else -1
+        // Use _mm256_cmpgt_epi64 instead of mask-returning version
         let mask = _mm256_cmpgt_epi64(mod_s, x_s);
         // If mask is 0 (x >= mod), subtract mod; if mask is -1 (x < mod), subtract 0
         let to_sub = _mm256_andnot_si256(mask, PACKED_GOLDILOCKS_MOD);
