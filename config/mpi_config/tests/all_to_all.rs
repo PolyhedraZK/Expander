@@ -6,7 +6,7 @@ use mersenne31::{M31Ext3, M31x16, M31};
 use mpi_config::MPIConfig;
 
 fn test_all_to_all_transpose_helper<F: Field>(mpi_config: &MPIConfig) {
-    const TEST_MATRIX_LEN: usize = 1 << 22;
+    const TEST_MATRIX_LEN: usize = 1 << 23;
 
     dbg!(F::NAME);
     dbg!(F::SIZE);

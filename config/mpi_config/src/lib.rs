@@ -267,42 +267,16 @@ impl MPIConfig {
         }
     }
 
-    /*
-    When it comes to MPI assisted multi-process matrix transpose, we can consider the following scenario
-
-    p(0):     **************** **************** **************** ... ****************
-              elems 0          elems 1          elems 2              elems n - 1
-
-    p(1):     **************** **************** **************** ... ****************
-              elems 0          elems 1          elems 2              elems n - 1
-
-    ...
-
-    p(n - 1): **************** **************** **************** ... ****************
-              elems 0          elems 1          elems 2              elems n - 1
-
-    eventually we want the transpose result looking like following:
-
-    p(0):     ******************** ******************** ******************** ... ********************
-              elems 0 (p(0))       elems 0 (p(1))       elems 0 (p(2))           elems 0 (p(n - 1))
-
-    p(1):     ******************** ******************** ******************** ... ********************
-              elems 1 (p(0))       elems 1 (p(1))       elems 1 (p(2))           elems 1 (p(n - 1))
-
-    ...
-
-    p(n - 1): ******************** ******************** ******************** ... ********************
-              elems n - 1 (p(0))   elems n - 1 (p(1))   elems n - 1 (p(2))       elems n - 1 (p(n - 1))
-         */
-
+    /// perform an all to all transpose,
+    /// supposing the current party holds a row in a matrix with row number being MPI parties.
     #[inline(always)]
-    pub fn all_to_all_transpose<F: Field>(&self, row: &mut [F]) {
+    pub fn all_to_all_transpose<F: Sized>(&self, row: &mut [F]) {
+        assert_eq!(row.len() % self.world_size(), 0);
+
         // NOTE(HS) MPI has some upper limit for send buffer size, pre declare here and use later
         const SEND_BUFFER_MAX: usize = 1 << 22;
 
-        let row_as_u8_len = F::SIZE * row.len();
-        assert_eq!(row_as_u8_len % self.world_size(), 0);
-
+        let row_as_u8_len = size_of::<F>() * row.len();
         let row_u8s: &mut [u8] =
             unsafe { std::slice::from_raw_parts_mut(row.as_mut_ptr() as *mut u8, row_as_u8_len) };
 
