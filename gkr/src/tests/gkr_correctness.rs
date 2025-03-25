@@ -30,7 +30,6 @@ const PCS_TESTING_SEED_U64: u64 = 114514;
 
 #[test]
 fn test_gkr_correctness() {
-
     let mpi_config = MPIConfig::new();
     declare_gkr_config!(
         C0,
