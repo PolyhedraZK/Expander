@@ -202,7 +202,7 @@ where
     // then draw query points from fiat shamir transcripts
     let proximity_reps = vk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
 
-    let local_random_coeffs: Vec<_> = (0..proximity_reps)
+    let random_coeffs: Vec<_> = (0..proximity_reps)
         .map(|_| {
             let num_vars = point.len() - num_vars_in_msg + mpi_point.len();
             let randomness = transcript.generate_challenge_field_elements(num_vars);
@@ -210,17 +210,14 @@ where
         })
         .collect();
 
-    let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_reps)
-        .map(|_| transcript.generate_challenge_field_elements(row_num * SimdF::PACK_SIZE))
-        .collect();
-
     let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
     let query_indices = transcript.generate_challenge_index_vector(query_num);
 
     // NOTE: check consistency in MT in the opening trees and against the commitment tree
+    let world_size = 1 << mpi_point.len();
     if !orion_mt_verify(
         vk,
-        (1 << mpi_point.len()),
+        world_size,
         &query_indices,
         &proof.query_openings,
         commitment,
@@ -242,11 +239,12 @@ where
     let eq_col_coeffs = {
         let mut eq_vars = point[..num_vars_in_com_simd].to_vec();
         eq_vars.extend_from_slice(&point[num_vars_in_com_simd + num_vars_in_msg..]);
+        eq_vars.extend_from_slice(mpi_point);
         EqPolynomial::build_eq_x_r(&eq_vars)
     };
 
     chain!(
-        izip!(&random_linear_combinations, &proof.proximity_rows),
+        izip!(&random_coeffs, &proof.proximity_rows),
         iter::once((&eq_col_coeffs, &proof.eval_row))
     )
     .all(|(rl, msg)| {
