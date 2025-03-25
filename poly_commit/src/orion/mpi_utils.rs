@@ -7,9 +7,11 @@ use serdes::ExpSerde;
 use transcript::Transcript;
 use tree::{Leaf, Node, RangePath, Tree};
 
-use crate::{traits::TensorCodeIOPPCS, PCS_SOUNDNESS_BITS};
-
-use super::{utils::transpose_in_place, OrionCommitment, OrionResult, OrionSRS, OrionScratchPad};
+use crate::{
+    orion::{utils::transpose_in_place, OrionCommitment, OrionResult, OrionSRS, OrionScratchPad},
+    traits::TensorCodeIOPPCS,
+    PCS_SOUNDNESS_BITS,
+};
 
 /*
 In the Orion scenario, the codeword originally look like following in the RAM:
@@ -217,7 +219,6 @@ where
     Ok(root)
 }
 
-#[allow(unused)]
 #[inline(always)]
 pub(crate) fn orion_mpi_mt_openings<F, EvalF, PackF, T>(
     mpi_config: &MPIConfig,

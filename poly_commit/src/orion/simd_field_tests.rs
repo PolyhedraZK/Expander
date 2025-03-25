@@ -5,7 +5,10 @@ use mersenne31::{M31x16, M31};
 use polynomials::MultiLinearPoly;
 
 use crate::{
-    orion::{simd_field_impl::*, utils::*},
+    orion::{
+        simd_field_impl::orion_commit_simd_field, utils::transpose_in_place, OrionCommitment,
+        OrionSRS, OrionScratchPad,
+    },
     traits::TensorCodeIOPPCS,
     ORION_CODE_PARAMETER_INSTANCE,
 };

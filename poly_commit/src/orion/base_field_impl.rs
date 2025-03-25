@@ -7,7 +7,13 @@ use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 use transcript::Transcript;
 
 use crate::{
-    orion::{utils::*, OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad},
+    orion::{
+        utils::{
+            commit_encoded, lut_open_linear_combine, lut_verify_alphabet_check, orion_mt_openings,
+            orion_mt_verify, pack_from_base, simd_open_linear_combine, simd_verify_alphabet_check,
+        },
+        OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
+    },
     traits::TensorCodeIOPPCS,
     PCS_SOUNDNESS_BITS,
 };
@@ -153,7 +159,7 @@ where
     let query_indices = transcript.generate_challenge_index_vector(query_num);
 
     // NOTE: check consistency in MT in the opening trees and against the commitment tree
-    if !orion_mt_verify(vk, &query_indices, &proof.query_openings, commitment) {
+    if !orion_mt_verify(vk, 1, &query_indices, &proof.query_openings, commitment) {
         return false;
     }
 

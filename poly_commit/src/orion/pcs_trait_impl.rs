@@ -5,7 +5,17 @@ use polynomials::MultiLinearPoly;
 use transcript::Transcript;
 
 use crate::{
-    orion::*, traits::TensorCodeIOPPCS, PolynomialCommitmentScheme, StructuredReferenceString,
+    orion::{
+        base_field_impl::{
+            orion_commit_base_field, orion_open_base_field, orion_verify_base_field,
+        },
+        simd_field_impl::{
+            orion_commit_simd_field, orion_open_simd_field, orion_verify_simd_field,
+        },
+        OrionCommitment, OrionProof, OrionSRS, OrionScratchPad, ORION_CODE_PARAMETER_INSTANCE,
+    },
+    traits::TensorCodeIOPPCS,
+    PolynomialCommitmentScheme, StructuredReferenceString,
 };
 
 impl StructuredReferenceString for OrionSRS {

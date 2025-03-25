@@ -209,7 +209,13 @@ where
     let query_indices = transcript.generate_challenge_index_vector(query_num);
 
     // NOTE: check consistency in MT in the opening trees and against the commitment tree
-    if !orion_mt_verify(vk, &query_indices, &proof.query_openings, commitment) {
+    if !orion_mt_verify(
+        vk,
+        world_size,
+        &query_indices,
+        &proof.query_openings,
+        commitment,
+    ) {
         return false;
     }
 

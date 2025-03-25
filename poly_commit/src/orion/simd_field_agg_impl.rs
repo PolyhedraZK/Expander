@@ -84,7 +84,7 @@ where
     }
 
     if izip!(proof.query_openings.chunks(query_num), &roots)
-        .any(|(paths, r)| !orion_mt_verify(vk, &query_indices, paths, r))
+        .any(|(paths, r)| !orion_mt_verify(vk, 1, &query_indices, paths, r))
     {
         return false;
     }

@@ -8,7 +8,14 @@ use serdes::ExpSerde;
 use transcript::Transcript;
 
 use crate::{
-    orion::{simd_field_agg_impl::*, *},
+    orion::{
+        simd_field_agg_impl::orion_verify_simd_field_aggregated,
+        simd_field_impl::{
+            orion_commit_simd_field, orion_open_simd_field, orion_verify_simd_field,
+        },
+        OrionCommitment, OrionProof, OrionSIMDFieldPCS, OrionSRS, OrionScratchPad,
+        ORION_CODE_PARAMETER_INSTANCE,
+    },
     traits::TensorCodeIOPPCS,
     ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString,
 };

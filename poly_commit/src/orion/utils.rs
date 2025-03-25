@@ -7,9 +7,11 @@ use thiserror::Error;
 use transcript::Transcript;
 use tree::Node;
 
-use crate::{traits::TensorCodeIOPPCS, PCS_SOUNDNESS_BITS};
-
-use super::linear_code::{OrionCode, OrionCodeParameter};
+use crate::{
+    orion::linear_code::{OrionCode, OrionCodeParameter},
+    traits::TensorCodeIOPPCS,
+    PCS_SOUNDNESS_BITS,
+};
 
 /*
  * PCS ERROR AND RESULT SETUP
@@ -84,7 +86,7 @@ where
     ComPackF: SimdField<Scalar = F>,
 {
     pub interleaved_alphabet_commitment: tree::Tree,
-    pub path_prefix: Vec<tree::Node>,
+    pub path_prefix: Vec<Node>,
     pub(crate) _phantom: PhantomData<ComPackF>,
 }
 
@@ -174,11 +176,12 @@ where
 #[inline(always)]
 pub(crate) fn orion_mt_verify(
     vk: &OrionSRS,
+    world_size: usize,
     query_indices: &[usize],
     range_openings: &[tree::RangePath],
     root: &OrionCommitment,
 ) -> bool {
-    let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING;
+    let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING * world_size;
     izip!(query_indices, range_openings).all(|(&qi, range_path)| {
         let index = qi % vk.codeword_len();
         range_path.verify(root) && index == range_path.left / leaves_in_range_opening
@@ -530,7 +533,7 @@ mod tests {
     use gf2_128::{GF2_128x8, GF2_128};
     use itertools::izip;
 
-    use super::SubsetSumLUTs;
+    use crate::orion::utils::SubsetSumLUTs;
 
     #[test]
     fn test_lut_simd_inner_prod_consistency() {

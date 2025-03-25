@@ -5,7 +5,10 @@ use mersenne31::{M31x16, M31};
 use polynomials::MultiLinearPoly;
 
 use crate::{
-    orion::{base_field_impl::*, utils::*},
+    orion::{
+        base_field_impl::orion_commit_base_field, utils::transpose_in_place, OrionCommitment,
+        OrionSRS, OrionScratchPad,
+    },
     traits::TensorCodeIOPPCS,
     ORION_CODE_PARAMETER_INSTANCE,
 };
