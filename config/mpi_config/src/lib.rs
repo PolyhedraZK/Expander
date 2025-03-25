@@ -3,11 +3,13 @@ use std::{cmp, fmt::Debug};
 use arith::Field;
 use itertools::izip;
 use mpi::{
+    datatype::PartitionMut,
     environment::Universe,
     ffi,
     topology::{Process, SimpleCommunicator},
     traits::*,
 };
+use serdes::ExpSerde;
 
 #[macro_export]
 macro_rules! root_println {
@@ -319,6 +321,41 @@ impl MPIConfig {
 
             copy_starts += send_buffer_size_per_world;
         });
+    }
+
+    #[inline(always)]
+    pub fn gather_varlen_vec<F: ExpSerde>(&self, elems: &Vec<F>, global_elems: &mut Vec<Vec<F>>) {
+        let mut elems_bytes: Vec<u8> = Vec::new();
+        elems.serialize_into(&mut elems_bytes).unwrap();
+
+        let mut byte_lengths = vec![0i32; self.world_size()];
+        self.gather_vec(&vec![elems_bytes.len() as i32], &mut byte_lengths);
+
+        let all_elems_bytes_len = byte_lengths.iter().sum::<i32>() as usize;
+        let mut all_elems_bytes: Vec<u8> = vec![0u8; all_elems_bytes_len];
+
+        if !self.is_root() {
+            self.root_process().gather_varcount_into(&elems_bytes);
+        } else {
+            let displs = byte_lengths
+                .iter()
+                .scan(0, |s, i| {
+                    let srt = *s;
+                    *s += i;
+                    Some(srt)
+                })
+                .collect::<Vec<_>>();
+
+            let mut partition = PartitionMut::new(&mut all_elems_bytes, byte_lengths, &displs[..]);
+
+            self.root_process()
+                .gather_varcount_into_root(&elems_bytes, &mut partition);
+
+            *global_elems = displs
+                .iter()
+                .map(|&srt| Vec::deserialize_from(&all_elems_bytes[srt as usize..]).unwrap())
+                .collect();
+        }
     }
 
     #[inline(always)]

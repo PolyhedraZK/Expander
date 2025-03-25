@@ -1657,6 +1657,7 @@ dependencies = [
  "itertools 0.13.0",
  "mersenne31",
  "mpi",
+ "serdes",
 ]
 
 [[package]]
