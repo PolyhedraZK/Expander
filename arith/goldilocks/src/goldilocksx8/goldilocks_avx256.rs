@@ -126,14 +126,14 @@ impl Field for AVXGoldilocks {
             // Check if all bits are set (equivalent to mask == 0xF)
             _mm256_testc_si256(result, _mm256_set1_epi64x(-1)) != 0
         };
-        
+
         let eq2 = unsafe {
             let pcmp_zero = _mm256_cmpeq_epi64(self.v[1], PACKED_0);
             let pcmp_mod = _mm256_cmpeq_epi64(self.v[1], PACKED_GOLDILOCKS_MOD);
             let result = _mm256_or_si256(pcmp_zero, pcmp_mod);
             _mm256_testc_si256(result, _mm256_set1_epi64x(-1)) != 0
         };
-        
+
         eq1 && eq2
     }
 
@@ -281,19 +281,15 @@ impl PartialEq for AVXGoldilocks {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let v0_eq = _mm256_cmpeq_epi64(
-                mod_reduce_epi64(self.v[0]), 
-                mod_reduce_epi64(other.v[0])
-            );
-            
-            let v1_eq = _mm256_cmpeq_epi64(
-                mod_reduce_epi64(self.v[1]), 
-                mod_reduce_epi64(other.v[1])
-            );
-            
+            let v0_eq =
+                _mm256_cmpeq_epi64(mod_reduce_epi64(self.v[0]), mod_reduce_epi64(other.v[0]));
+
+            let v1_eq =
+                _mm256_cmpeq_epi64(mod_reduce_epi64(self.v[1]), mod_reduce_epi64(other.v[1]));
+
             // Check if all elements are equal
-            _mm256_testc_si256(v0_eq, _mm256_set1_epi64x(-1)) != 0 && 
-            _mm256_testc_si256(v1_eq, _mm256_set1_epi64x(-1)) != 0
+            _mm256_testc_si256(v0_eq, _mm256_set1_epi64x(-1)) != 0
+                && _mm256_testc_si256(v1_eq, _mm256_set1_epi64x(-1)) != 0
         }
     }
 }
