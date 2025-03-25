@@ -173,7 +173,6 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
         verified &= sum == C::ChallengeField::ZERO;
         None
     };
-    log::info!("vy claim: {:?}", vy_claim);
     (verified, rx, ry, r_simd_xy, r_mpi_xy, vx_claim, vy_claim)
 }
 
@@ -247,12 +246,6 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             &mut sp,
             i == layer_num - 1,
         );
-
-        log::info!("layer {}", i);
-        log::info!("rz0 is {:?}", rz0);
-        log::info!("rz1 is {:?}", rz1);
-        log::info!("r_simd is {:?}", r_simd);
-        log::info!("r_mpi is {:?}", r_mpi);
 
         verified &= cur_verified;
         alpha = if rz1.is_some() {

@@ -87,7 +87,6 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
             helper.receive_ry(i_var, r);
         }
         let vy_claim = helper.vy_claim();
-        log::info!("vy claim: {:?}", vy_claim);
         transcript.append_field_element(&vy_claim);
     }
 

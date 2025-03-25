@@ -77,12 +77,6 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             i == layer_num - 1,
         );
 
-        log::info!("layer {}", i);
-        log::info!("rz0 is {:?}", rz0);
-        log::info!("rz1 is {:?}", rz1);
-        log::info!("r_simd is {:?}", r_simd);
-        log::info!("r_mpi is {:?}", r_mpi);
-
         if rz1.is_some() {
             // TODO: try broadcast beta.unwrap directly
             let mut tmp = transcript.generate_challenge_field_element();

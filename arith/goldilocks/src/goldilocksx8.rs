@@ -1,6 +1,7 @@
 // A Goldilocksx8 stores 512 bits of data.
 // With AVX it stores a single __m512i element.
-// With NEON it stores four uint32x4_t elements.
+// With NEON it stores 8 u64 elements.
+// NEON doesn't use and arm instructions and can be used as a fallback for other architectures.
 
 #[cfg(target_arch = "aarch64")]
 mod goldilocks_neon;
