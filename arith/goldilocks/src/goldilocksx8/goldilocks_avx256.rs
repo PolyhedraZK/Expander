@@ -377,8 +377,16 @@ impl FFTField for AVXGoldilocks {
 
 #[inline]
 unsafe fn mod_reduce_epi64(x: __m256i) -> __m256i {
-    let mask = _mm256_cmpgt_epu64_mask(x, PACKED_GOLDILOCKS_MOD);
-    _mm256_mask_sub_epi64(x, mask, x, PACKED_GOLDILOCKS_MOD)
+    unsafe {
+        // Use the shift trick to convert unsigned comparison to signed comparison
+        let x_s = p3_instructions::shift(x);
+        let mod_s = SHIFTED_PACKED_GOLDILOCKS_MOD;
+        // If x >= GOLDILOCKS_MOD then mask will be 0, else -1
+        let mask = _mm256_cmpgt_epi64(mod_s, x_s);
+        // If mask is 0 (x >= mod), subtract mod; if mask is -1 (x < mod), subtract 0
+        let to_sub = _mm256_andnot_si256(mask, PACKED_GOLDILOCKS_MOD);
+        _mm256_sub_epi64(x, to_sub)
+    }
 }
 
 #[inline(always)]
