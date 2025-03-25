@@ -2,11 +2,11 @@ use arith::Field;
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8};
 use itertools::izip;
-use mersenne31::{M31x16, M31};
+use mersenne31::{M31Ext3, M31x16, M31};
 use mpi_config::MPIConfig;
 
 fn test_all_to_all_transpose_helper<F: Field>(mpi_config: &MPIConfig) {
-    const TEST_MATRIX_LEN: usize = 1 << 25;
+    const TEST_MATRIX_LEN: usize = 1 << 22;
 
     dbg!(F::NAME);
     dbg!(F::SIZE);
@@ -52,6 +52,7 @@ fn test_all_to_all_transpose() {
 
     test_all_to_all_transpose_helper::<M31x16>(&mpi_config);
     test_all_to_all_transpose_helper::<M31>(&mpi_config);
+    test_all_to_all_transpose_helper::<M31Ext3>(&mpi_config);
 
     MPIConfig::finalize();
 }

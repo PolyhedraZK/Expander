@@ -297,75 +297,53 @@ impl MPIConfig {
 
     #[inline(always)]
     pub fn all_to_all_transpose<F: Field>(&self, row: &mut [F]) {
-        // TODO(HS) declare what is assumed in this method
-
-        assert!(row.len().is_power_of_two());
-
         // NOTE(HS) MPI has some upper limit for send buffer size, pre declare here and use later
         const SEND_BUFFER_MAX: usize = 1 << 22;
 
         let row_as_u8_len = F::SIZE * row.len();
         assert_eq!(row_as_u8_len % self.world_size(), 0);
 
-        // NOTE(HS) Fast path, if we are working over a small matrix transpose not reaching
-        // communication size threshold, do this.
-        if row_as_u8_len <= SEND_BUFFER_MAX {
-            let mut recv_u8s = vec![0u8; row_as_u8_len];
+        let row_u8s: &mut [u8] =
+            unsafe { std::slice::from_raw_parts_mut(row.as_mut_ptr() as *mut u8, row_as_u8_len) };
 
-            let send_u8s: &[u8] =
-                unsafe { std::slice::from_raw_parts(row.as_ptr() as *const u8, row_as_u8_len) };
+        let num_of_bytes_per_world = row_as_u8_len / self.world_size();
+        let num_of_transposes = row_as_u8_len.div_ceil(SEND_BUFFER_MAX);
 
-            self.world.unwrap().all_to_all_into(send_u8s, &mut recv_u8s);
+        let mut send = vec![0u8; SEND_BUFFER_MAX];
+        let mut recv = vec![0u8; SEND_BUFFER_MAX];
 
-            unsafe {
-                let dst_ptr = row.as_mut_ptr() as *mut u8;
-                std::ptr::copy_nonoverlapping(recv_u8s.as_ptr(), dst_ptr, recv_u8s.len());
+        let mut send_buffer_size = SEND_BUFFER_MAX;
+        let mut copy_starts = 0;
+
+        (0..num_of_transposes).for_each(|ith_transpose| {
+            if ith_transpose == num_of_transposes - 1 {
+                send_buffer_size = (num_of_bytes_per_world - copy_starts) * self.world_size();
+                send.resize(send_buffer_size, 0u8);
+                recv.resize(send_buffer_size, 0u8);
             }
 
-            return;
-        }
-
-        let all_to_all_num = row_as_u8_len / SEND_BUFFER_MAX;
-        assert_eq!(row_as_u8_len % SEND_BUFFER_MAX, 0);
-
-        let num_elems_per_swap = SEND_BUFFER_MAX / F::SIZE;
-        assert_eq!(SEND_BUFFER_MAX % F::SIZE, 0);
-
-        let interleaved_stride_len = num_elems_per_swap / self.world_size();
-        assert_eq!(num_elems_per_swap % self.world_size(), 0);
-
-        let mut send_buf = vec![F::ZERO; num_elems_per_swap];
-        let mut recv_u8s = vec![0u8; SEND_BUFFER_MAX];
-
-        (0..all_to_all_num).for_each(|ith_all_to_all| {
-            let copy_starts = ith_all_to_all * interleaved_stride_len;
-            let copy_ends = copy_starts + interleaved_stride_len;
+            let send_buffer_size_per_world = send_buffer_size / self.world_size();
+            let copy_ends = copy_starts + send_buffer_size_per_world;
 
             izip!(
-                row.chunks(interleaved_stride_len * all_to_all_num),
-                send_buf.chunks_mut(interleaved_stride_len)
+                row_u8s.chunks(num_of_bytes_per_world),
+                send.chunks_mut(send_buffer_size_per_world)
             )
             .for_each(|(row_chunk, send_chunk)| {
                 send_chunk.copy_from_slice(&row_chunk[copy_starts..copy_ends]);
             });
 
-            let send_u8s: &[u8] = unsafe {
-                std::slice::from_raw_parts(send_buf.as_ptr() as *const u8, SEND_BUFFER_MAX)
-            };
-
-            self.world.unwrap().all_to_all_into(send_u8s, &mut recv_u8s);
-
-            let recv_buf: &[F] = unsafe {
-                std::slice::from_raw_parts(recv_u8s.as_ptr() as *const F, num_elems_per_swap)
-            };
+            self.world.unwrap().all_to_all_into(&send, &mut recv);
 
             izip!(
-                row.chunks_mut(interleaved_stride_len * all_to_all_num),
-                recv_buf.chunks(interleaved_stride_len)
+                row_u8s.chunks_mut(num_of_bytes_per_world),
+                recv.chunks(send_buffer_size_per_world)
             )
             .for_each(|(row_chunk, recv_chunk)| {
                 row_chunk[copy_starts..copy_ends].copy_from_slice(recv_chunk);
             });
+
+            copy_starts += send_buffer_size_per_world;
         });
     }
 
