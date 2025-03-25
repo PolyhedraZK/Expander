@@ -1,3 +1,5 @@
+// TODO(HS) remove all of the old aggregation
+
 use std::iter;
 
 use arith::{Field, SimdField};

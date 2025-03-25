@@ -178,7 +178,7 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn mpi_compute_root_merkle_tree<F, PackF>(
+pub(crate) fn orion_mpi_compute_mt_root<F, PackF>(
     mpi_config: &MPIConfig,
     local_commitment: Node,
     scratch_pad: &mut OrionScratchPad<F, PackF>,

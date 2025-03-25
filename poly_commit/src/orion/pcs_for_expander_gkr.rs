@@ -1,5 +1,3 @@
-use std::io::Cursor;
-
 use arith::SimdField;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
@@ -149,10 +147,7 @@ where
 
         let query_openings: Vec<tree::RangePath> = mt_paths_serialized
             .chunks(local_mt_paths_serialized.len())
-            .flat_map(|bs| {
-                let mut read_cursor = Cursor::new(bs);
-                <Vec<tree::RangePath> as ExpSerde>::deserialize_from(&mut read_cursor).unwrap()
-            })
+            .flat_map(|bs| Vec::deserialize_from(bs.to_vec().as_slice()).unwrap())
             .collect();
 
         if !mpi_config.is_root() {

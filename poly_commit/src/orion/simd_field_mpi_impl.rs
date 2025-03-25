@@ -9,7 +9,7 @@ use transcript::Transcript;
 
 use crate::{
     orion::{
-        mpi_utils::{mpi_commit_encoded, mpi_compute_root_merkle_tree, orion_mpi_mt_openings},
+        mpi_utils::{mpi_commit_encoded, orion_mpi_compute_mt_root, orion_mpi_mt_openings},
         utils::{
             lut_open_linear_combine, lut_verify_alphabet_check, orion_mt_verify, pack_simd,
             simd_open_linear_combine, simd_verify_alphabet_check,
@@ -58,7 +58,7 @@ where
         msg_size,
     )?;
 
-    mpi_compute_root_merkle_tree(mpi_config, local_commitment, scratch_pad)
+    orion_mpi_compute_mt_root(mpi_config, local_commitment, scratch_pad)
 }
 
 #[allow(unused)]
@@ -163,10 +163,10 @@ where
 #[allow(unused)]
 #[inline(always)]
 pub(crate) fn orion_mpi_verify_simd_field<F, SimdF, EvalF, ComPackF, T>(
-    world_size: usize,
     vk: &OrionSRS,
     commitment: &OrionCommitment,
     point: &[EvalF],
+    mpi_point: &[EvalF],
     evaluation: EvalF,
     transcript: &mut T,
     proof: &OrionProof<EvalF>,
@@ -201,6 +201,15 @@ where
     // NOTE: working on proximity responses, draw random linear combinations
     // then draw query points from fiat shamir transcripts
     let proximity_reps = vk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
+
+    let local_random_coeffs: Vec<_> = (0..proximity_reps)
+        .map(|_| {
+            let num_vars = point.len() - num_vars_in_msg + mpi_point.len();
+            let randomness = transcript.generate_challenge_field_elements(num_vars);
+            EqPolynomial::build_eq_x_r(&randomness)
+        })
+        .collect();
+
     let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_reps)
         .map(|_| transcript.generate_challenge_field_elements(row_num * SimdF::PACK_SIZE))
         .collect();
@@ -211,7 +220,7 @@ where
     // NOTE: check consistency in MT in the opening trees and against the commitment tree
     if !orion_mt_verify(
         vk,
-        world_size,
+        (1 << mpi_point.len()),
         &query_indices,
         &proof.query_openings,
         commitment,

@@ -1,3 +1,5 @@
+// TODO(HS) remove all of the old aggregation
+
 use std::marker::PhantomData;
 
 use arith::{ExtensionField, Field, SimdField};

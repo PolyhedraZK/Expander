@@ -8,7 +8,9 @@ use serdes::{ExpSerde, SerdeResult};
 use tree::Node;
 
 use crate::orion::{
-    linear_code::*,
+    linear_code::{
+        DirectedNeighboring, OrionCode, OrionExpanderGraph, OrionExpanderGraphPositioned,
+    },
     utils::{OrionProof, OrionSRS, OrionScratchPad},
 };
 
@@ -25,8 +27,7 @@ impl ExpSerde for OrionExpanderGraph {
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let l_vertices_size = usize::deserialize_from(&mut reader)?;
         let r_vertices_size = usize::deserialize_from(&mut reader)?;
-        let neighborings: Vec<DirectedNeighboring> =
-            <Vec<DirectedNeighboring> as ExpSerde>::deserialize_from(&mut reader)?;
+        let neighborings: Vec<DirectedNeighboring> = Vec::deserialize_from(&mut reader)?;
         Ok(Self {
             l_vertices_size,
             r_vertices_size,
@@ -76,10 +77,8 @@ impl ExpSerde for OrionCode {
         let hamming_weight = f64::deserialize_from(&mut reader)?;
         let msg_len = usize::deserialize_from(&mut reader)?;
         let codeword_len = usize::deserialize_from(&mut reader)?;
-        let g0s: Vec<OrionExpanderGraphPositioned> =
-            <Vec<OrionExpanderGraphPositioned> as ExpSerde>::deserialize_from(&mut reader)?;
-        let g1s: Vec<OrionExpanderGraphPositioned> =
-            <Vec<OrionExpanderGraphPositioned> as ExpSerde>::deserialize_from(&mut reader)?;
+        let g0s: Vec<OrionExpanderGraphPositioned> = Vec::deserialize_from(&mut reader)?;
+        let g1s: Vec<OrionExpanderGraphPositioned> = Vec::deserialize_from(&mut reader)?;
         Ok(Self {
             hamming_weight,
             msg_len,
@@ -120,10 +119,9 @@ impl<F: Field> ExpSerde for OrionProof<F> {
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let eval_row: Vec<F> = <Vec<F> as ExpSerde>::deserialize_from(&mut reader)?;
-        let proximity_rows: Vec<Vec<F>> = <Vec<Vec<F>> as ExpSerde>::deserialize_from(&mut reader)?;
-        let query_openings: Vec<tree::RangePath> =
-            <Vec<tree::RangePath> as ExpSerde>::deserialize_from(&mut reader)?;
+        let eval_row: Vec<F> = Vec::deserialize_from(&mut reader)?;
+        let proximity_rows: Vec<Vec<F>> = Vec::deserialize_from(&mut reader)?;
+        let query_openings: Vec<tree::RangePath> = Vec::deserialize_from(&mut reader)?;
         Ok(OrionProof {
             eval_row,
             proximity_rows,
