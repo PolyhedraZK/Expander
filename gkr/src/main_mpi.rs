@@ -1,7 +1,7 @@
 use circuit::Circuit;
 use clap::Parser;
 use config::{Config, GKRConfig, GKRScheme, PolynomialCommitmentType};
-use mpi_config::{MPIConfig, root_println};
+use mpi_config::{root_println, MPIConfig};
 use std::str::FromStr;
 
 use gkr_field_config::GKRFieldConfig;
@@ -254,7 +254,12 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         let throughput = (N_PROOF * circuit_copy_size * pack_size * config.mpi_config.world_size())
             as f64
             / duration.as_secs_f64();
-        root_println!(config.mpi_config, "{}-bench: throughput: {} hashes/s", i, throughput.round());
+        root_println!(
+            config.mpi_config,
+            "{}-bench: throughput: {} hashes/s",
+            i,
+            throughput.round()
+        );
     }
 }
 
