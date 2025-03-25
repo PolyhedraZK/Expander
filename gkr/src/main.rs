@@ -247,7 +247,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         let pcs_proving_key = pcs_proving_key.clone();
         let mut pcs_scratch = pcs_scratch.clone();
         let mut prover = Prover::new(&local_config);
-        prover.prepare_mem(&mut local_circuit);
+        prover.prepare_mem(&local_circuit);
 
         let (claim, proof) = prover.prove(
             &mut local_circuit,
