@@ -102,6 +102,9 @@ pub fn dev_env_data_setup() {
 
     download_and_store(POSEIDON_WITNESS_M31_URL, POSEIDON_M31_WITNESS);
     // download_and_store(POSEIDON_WITNESS_BN254_URL, POSEIDON_BN254_WITNESS);
+
+    download_and_store(KECCAK_CIRCUIT_GOLDILOCKS_URL, KECCAK_GOLDILOCKS_CIRCUIT);
+    download_and_store(KECCAK_WITNESS_GOLDILOCKS_URL, KECCAK_GOLDILOCKS_WITNESS);
 }
 
 #[allow(dead_code)]
