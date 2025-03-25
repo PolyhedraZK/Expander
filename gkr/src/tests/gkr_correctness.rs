@@ -7,7 +7,6 @@ use arith::Field;
 use circuit::Circuit;
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
-use env_logger;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{
@@ -31,8 +30,6 @@ const PCS_TESTING_SEED_U64: u64 = 114514;
 
 #[test]
 fn test_gkr_correctness() {
-    // Initialize logger
-    env_logger::init();
 
     let mpi_config = MPIConfig::new();
     declare_gkr_config!(
