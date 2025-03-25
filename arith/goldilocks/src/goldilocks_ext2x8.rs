@@ -124,7 +124,7 @@ impl ExtensionField for GoldilocksExt2x8 {
         // where X^2 = 7
         // = 7b + aX
         Self {
-            c0: self.c1 * Goldilocksx8::from(7u32),
+            c0: self.c1 * Goldilocksx8::pack_full(Goldilocks { v: 7u64 }),
             c1: self.c0,
         }
     }
