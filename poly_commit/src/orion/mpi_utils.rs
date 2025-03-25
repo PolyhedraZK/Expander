@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
 use mpi_config::MPIConfig;
@@ -217,7 +219,7 @@ where
 
 #[allow(unused)]
 #[inline(always)]
-pub(crate) fn mpi_merkle_tree_opening<F, EvalF, PackF, T>(
+pub(crate) fn orion_mpi_mt_openings<F, EvalF, PackF, T>(
     mpi_config: &MPIConfig,
     pk: &OrionSRS,
     scratch_pad: &OrionScratchPad<F, PackF>,
@@ -243,7 +245,7 @@ where
     let index_starts_this_world = index_range_per_world * mpi_config.world_rank();
     let index_ends_this_world = index_starts_this_world + index_range_per_world;
 
-    let local_paths: Vec<(RangePath, usize)> = query_indices
+    let local_paths: Vec<RangePath> = query_indices
         .iter()
         .filter(|&&index| index_starts_this_world <= index && index < index_ends_this_world)
         .map(|index| {
@@ -253,18 +255,27 @@ where
                 .range_query(left, left + leaves_in_range_opening - 1);
 
             range_opening.prefix_with(&scratch_pad.path_prefix, mpi_config.world_rank());
-
-            (range_opening, *index)
+            range_opening
         })
         .collect();
 
-    // TODO gather v
+    let mut global_paths: Vec<Vec<RangePath>> = Vec::new();
+    mpi_config.gather_varlen_vec(&local_paths, &mut global_paths);
 
     if !mpi_config.is_root() {
         return None;
     }
 
-    // TODO root process rearrange ordering
+    let mut global_paths_deque: Vec<VecDeque<RangePath>> =
+        global_paths.into_iter().map(VecDeque::from).collect();
 
-    todo!()
+    let flattened_paths: Vec<RangePath> = query_indices
+        .iter()
+        .map(|q| {
+            let which_world = q / index_range_per_world;
+            global_paths_deque[which_world].pop_front().unwrap()
+        })
+        .collect();
+
+    flattened_paths.into()
 }

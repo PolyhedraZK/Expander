@@ -278,7 +278,7 @@ impl MPIConfig {
         // NOTE(HS) MPI has some upper limit for send buffer size, pre declare here and use later
         const SEND_BUFFER_MAX: usize = 1 << 22;
 
-        let row_as_u8_len = size_of::<F>() * row.len();
+        let row_as_u8_len = size_of_val(row);
         let row_u8s: &mut [u8] =
             unsafe { std::slice::from_raw_parts_mut(row.as_mut_ptr() as *mut u8, row_as_u8_len) };
 

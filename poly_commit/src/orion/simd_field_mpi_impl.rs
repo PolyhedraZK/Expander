@@ -9,10 +9,10 @@ use transcript::Transcript;
 
 use crate::{
     orion::{
-        mpi_utils::{mpi_commit_encoded, mpi_compute_root_merkle_tree},
+        mpi_utils::{mpi_commit_encoded, mpi_compute_root_merkle_tree, orion_mpi_mt_openings},
         utils::{
-            lut_open_linear_combine, lut_verify_alphabet_check, orion_mt_openings, orion_mt_verify,
-            pack_simd, simd_open_linear_combine, simd_verify_alphabet_check,
+            lut_open_linear_combine, lut_verify_alphabet_check, orion_mt_verify, pack_simd,
+            simd_open_linear_combine, simd_verify_alphabet_check,
         },
         OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
     },
@@ -145,9 +145,8 @@ where
         .map(|r| mpi_config.sum_vec(r))
         .collect();
 
-    // TODO(HS) now do MPI MT opening
     // NOTE: MT opening for point queries
-    let query_openings = orion_mt_openings(pk, transcript, scratch_pad);
+    let query_openings = orion_mpi_mt_openings(mpi_config, pk, scratch_pad, transcript);
 
     if !mpi_config.is_root() {
         return None;
@@ -156,7 +155,7 @@ where
     OrionProof {
         eval_row,
         proximity_rows,
-        query_openings,
+        query_openings: query_openings.unwrap(),
     }
     .into()
 }
