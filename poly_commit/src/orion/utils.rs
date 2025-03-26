@@ -221,7 +221,6 @@ pub(crate) fn transpose<F: Field>(mat: &[F], out: &mut [F], row_num: usize) {
     });
 }
 
-#[allow(unused)]
 #[inline(always)]
 pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row_num: usize) {
     transpose(mat, scratch, row_num);

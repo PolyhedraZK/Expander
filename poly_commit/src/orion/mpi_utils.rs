@@ -177,7 +177,7 @@ where
     drop(packed_interleaved_codewords);
 
     scratch_pad.interleaved_alphabet_commitment =
-        Tree::compact_new_with_packed_field_elems::<_, PackF>(packed_interleaved_codeword_chunk);
+        Tree::compact_new_with_packed_field_elems(packed_interleaved_codeword_chunk);
 
     Ok(scratch_pad.interleaved_alphabet_commitment.root())
 }

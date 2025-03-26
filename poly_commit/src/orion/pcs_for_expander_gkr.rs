@@ -74,18 +74,10 @@ where
         // NOTE: Hang also assume that, linear GKR will take over the commitment
         // and force sync transcript hash state of subordinate machines to be the same.
         if mpi_config.is_single_process() {
-            let commitment = orion_commit_simd_field(proving_key, poly, scratch_pad).unwrap();
-            return commitment.into();
+            return orion_commit_simd_field(proving_key, poly, scratch_pad).ok();
         }
 
-        let final_commitment =
-            orion_mpi_commit_simd_field(mpi_config, proving_key, poly, scratch_pad).unwrap();
-
-        if !mpi_config.is_root() {
-            return None;
-        }
-
-        final_commitment.into()
+        orion_mpi_commit_simd_field(mpi_config, proving_key, poly, scratch_pad).ok()
     }
 
     fn open(
@@ -100,26 +92,23 @@ where
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
-        let local_xs = eval_point.local_xs();
-        let mpi_xs = eval_point.x_mpi.clone();
-
         if mpi_config.is_single_process() {
-            let local_opening = orion_open_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
+            return orion_open_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
                 proving_key,
                 poly,
-                &local_xs,
+                &eval_point.local_xs(),
                 transcript,
                 scratch_pad,
-            );
-            return local_opening.into();
+            )
+            .into();
         }
 
         orion_mpi_open_simd_field(
             mpi_config,
             proving_key,
             poly,
-            &local_xs,
-            &mpi_xs,
+            &eval_point.local_xs(),
+            &eval_point.x_mpi,
             transcript,
             scratch_pad,
         )
@@ -131,7 +120,7 @@ where
         commitment: &Self::Commitment,
         eval_point: &ExpanderGKRChallenge<C>,
         eval: C::ChallengeField,
-        transcript: &mut T, // add transcript here to allow interactive arguments
+        transcript: &mut T,
         opening: &Self::Opening,
     ) -> bool {
         orion_verify_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
