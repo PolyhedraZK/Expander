@@ -1,0 +1,18 @@
+[package]
+name = "gkr_engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arith = { path = "../arith" }
+gf2 = { path = "../arith/gf2" }
+gf2_128 = { path = "../arith/gf2_128" }
+goldilocks = { path = "../arith/goldilocks" }
+mersenne31 = { path = "../arith/mersenne31" }
+polynomials = { path = "../arith/polynomials"}
+serdes = { path = "../serdes" }
+
+mpi.workspace = true
+rand.workspace = true
+
+[dev-dependencies]
