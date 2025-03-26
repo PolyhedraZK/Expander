@@ -203,3 +203,26 @@ impl<K: ExpSerde + Eq + Hash, V: ExpSerde> ExpSerde for HashMap<K, V> {
         Ok(map)
     }
 }
+
+impl<T: ExpSerde> ExpSerde for Option<T> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        match self {
+            Some(v) => {
+                true.serialize_into(&mut writer)?;
+                v.serialize_into(&mut writer)
+            }
+            None => false.serialize_into(&mut writer),
+        }
+    }
+
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let has_value = bool::deserialize_from(&mut reader)?;
+        if has_value {
+            Ok(Some(T::deserialize_from(&mut reader)?))
+        } else {
+            Ok(None)
+        }
+    }
+}
