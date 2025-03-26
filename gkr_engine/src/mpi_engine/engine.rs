@@ -268,11 +268,6 @@ impl MPIEngine for MPIConfig {
     }
 
     #[inline(always)]
-    fn is_root(&self) -> bool {
-        self.world_rank == Self::ROOT_RANK
-    }
-
-    #[inline(always)]
     fn root_process(&self) -> Process {
         self.world.unwrap().process_at_rank(Self::ROOT_RANK)
     }
