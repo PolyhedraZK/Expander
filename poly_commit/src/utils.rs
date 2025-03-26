@@ -1,5 +1,7 @@
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
+use rand::SeedableRng;
+use rand_chacha::ChaCha12Rng;
 use transcript::Transcript;
 
 use crate::{PCSForExpanderGKR, StructuredReferenceString};
@@ -13,6 +15,8 @@ impl StructuredReferenceString for () {
     }
 }
 
+const PCS_TESTING_SEED_U64: u64 = 114514;
+
 #[allow(clippy::type_complexity)]
 pub fn expander_pcs_init_testing_only<
     FieldConfig: GKRFieldConfig,
@@ -21,13 +25,14 @@ pub fn expander_pcs_init_testing_only<
 >(
     n_input_vars: usize,
     mpi_config: &MPIConfig,
-    mut rng: impl rand::RngCore,
 ) -> (
     PCS::Params,
     <PCS::SRS as StructuredReferenceString>::PKey,
     <PCS::SRS as StructuredReferenceString>::VKey,
     PCS::ScratchPad,
 ) {
+    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
+
     let pcs_params = <PCS as PCSForExpanderGKR<FieldConfig, T>>::gen_params(n_input_vars);
     let pcs_setup = <PCS as PCSForExpanderGKR<FieldConfig, T>>::gen_srs_for_testing(
         &pcs_params,
