@@ -119,22 +119,23 @@ impl<F: Field> EqPolynomial<F> {
         evals
     }
 
+    /// Given an r for eq(x, r), while x \in {0, 1}^\ell represented by index,
+    /// use O(\ell) time to evalutate eq(x, r).
     #[inline]
     pub fn ith_eq_vec_elem(r: &[F], mut index: usize) -> F {
         assert!(index < (1 << r.len()));
 
-        let mut eval = F::ONE;
-        r.iter().for_each(|r_i| {
-            if index & 1 == 1 {
-                eval *= r_i;
-            } else {
-                eval *= F::ONE - r_i;
-            }
+        r.iter()
+            .map(|r_i| {
+                let mut term = *r_i;
+                if index & 1 == 0 {
+                    term = F::ONE - term;
+                }
 
-            index >>= 1;
-        });
-
-        eval
+                index >>= 1;
+                term
+            })
+            .product()
     }
 }
 
