@@ -8,7 +8,10 @@ use transcript::Transcript;
 use tree::{Leaf, Node, RangePath, Tree};
 
 use crate::{
-    orion::{utils::transpose_in_place, OrionCommitment, OrionResult, OrionSRS, OrionScratchPad},
+    orion::{
+        utils::{transpose, transpose_in_place},
+        OrionCommitment, OrionResult, OrionSRS, OrionScratchPad,
+    },
     traits::TensorCodeIOPPCS,
     PCS_SOUNDNESS_BITS,
 };
@@ -117,17 +120,21 @@ where
     PackF: SimdField<Scalar = F>,
 {
     // NOTE: packed codeword buffer and encode over packed field
-    let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
+    let mut packed_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
     izip!(
         packed_evals.chunks(msg_size),
-        packed_interleaved_codewords.chunks_mut(pk.codeword_len())
+        packed_codewords.chunks_mut(pk.codeword_len())
     )
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
 
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
-    let mut scratch = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
-    transpose_in_place(&mut packed_interleaved_codewords, &mut scratch, packed_rows);
-    drop(scratch);
+    let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
+    transpose(
+        &packed_codewords,
+        &mut packed_interleaved_codewords,
+        packed_rows,
+    );
+    drop(packed_codewords);
 
     // NOTE: commit the interleaved codeword
     // we just directly commit to the packed field elements to leaves
@@ -161,18 +168,16 @@ where
     }
 
     // NOTE: transpose back into column order of the codeword slice
-    {
-        let mut scratch = vec![PackF::ZERO; codeword_this_world_len];
-        transpose_in_place(
-            &mut packed_interleaved_codewords,
-            &mut scratch,
-            packed_rows * mpi_config.world_size(),
-        );
-        drop(scratch);
-    }
+    let mut packed_interleaved_codeword_chunk = vec![PackF::ZERO; codeword_this_world_len];
+    transpose(
+        &packed_interleaved_codewords,
+        &mut packed_interleaved_codeword_chunk,
+        packed_rows * mpi_config.world_size(),
+    );
+    drop(packed_interleaved_codewords);
 
     scratch_pad.interleaved_alphabet_commitment =
-        tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(packed_interleaved_codewords);
+        Tree::compact_new_with_packed_field_elems::<_, PackF>(packed_interleaved_codeword_chunk);
 
     Ok(scratch_pad.interleaved_alphabet_commitment.root())
 }
