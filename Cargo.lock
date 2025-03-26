@@ -1876,7 +1876,6 @@ dependencies = [
  "mpi_config",
  "polynomials",
  "rand",
- "rand_chacha",
  "serdes",
  "thiserror",
  "transcript",
