@@ -32,10 +32,14 @@ where
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
 
-    const MINIMUM_NUM_VARS: usize = (tree::leaf_adic::<C::CircuitField>()
-        * Self::SRS::LEAVES_IN_RANGE_OPENING
-        / C::SimdCircuitField::PACK_SIZE)
-        .ilog2() as usize;
+    fn minimum_num_vars(world_size: usize) -> usize {
+        let circuit_field_elems_per_leaf = tree::leaf_adic::<C::CircuitField>();
+        let leaves_per_mt_opening = Self::SRS::LEAVES_IN_RANGE_OPENING * world_size;
+
+        let circuit_field_elems_per_mt_opening =
+            leaves_per_mt_opening * circuit_field_elems_per_leaf;
+        (circuit_field_elems_per_mt_opening / C::SimdCircuitField::PACK_SIZE).ilog2() as usize
+    }
 
     /// NOTE(HS): this is actually number of variables in polynomial,
     /// ignoring the variables for MPI parties and SIMD field element

@@ -13,8 +13,6 @@ use gkr_field_config::FieldType;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use poly_commit::{expander_pcs_init_testing_only, PCSForExpanderGKR};
-use rand::SeedableRng;
-use rand_chacha::ChaCha12Rng;
 use serdes::{ExpSerde, SerdeError};
 
 use log::info;
@@ -120,18 +118,20 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     }
 }
 
-const PCS_TESTING_SEED_U64: u64 = 114514;
-
-fn input_poly_vars_calibration<Cfg: GKRConfig>(actual_poly_vars: usize) -> usize {
-    if actual_poly_vars < Cfg::PCS::MINIMUM_NUM_VARS {
+pub(crate) fn input_poly_vars_calibration<Cfg: GKRConfig>(
+    actual_poly_vars: usize,
+    world_size: usize,
+) -> usize {
+    let minimum_vars_for_pcs = Cfg::PCS::minimum_num_vars(world_size);
+    if actual_poly_vars < minimum_vars_for_pcs {
         eprintln!(
             "{} over {} has minimum supported local vars {}, but input poly has vars {}.",
             Cfg::PCS::NAME,
             <Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::NAME,
-            Cfg::PCS::MINIMUM_NUM_VARS,
+            minimum_vars_for_pcs,
             actual_poly_vars,
         );
-        return Cfg::PCS::MINIMUM_NUM_VARS;
+        return minimum_vars_for_pcs;
     }
 
     actual_poly_vars
@@ -146,16 +146,16 @@ pub fn prove<Cfg: GKRConfig>(
 ) {
     let mut prover = crate::Prover::new(config);
     prover.prepare_mem(circuit);
+
+    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(
+        circuit.log_input_size(),
+        config.mpi_config.world_size(),
+    );
     // TODO: Read PCS setup from files
-
-    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
-
-    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
     let (pcs_params, pcs_proving_key, _, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             minimum_poly_vars,
             &config.mpi_config,
-            &mut rng,
         );
 
     prover.prove(circuit, &pcs_params, &pcs_proving_key, &mut pcs_scratch)
@@ -167,15 +167,15 @@ pub fn verify<Cfg: GKRConfig>(
     proof: &Proof,
     claimed_v: &<<Cfg as GKRConfig>::FieldConfig as GKRFieldConfig>::ChallengeField,
 ) -> bool {
+    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(
+        circuit.log_input_size(),
+        config.mpi_config.world_size(),
+    );
     // TODO: Read PCS setup from files
-    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
-
-    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
     let (pcs_params, _, pcs_verification_key, mut _pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             minimum_poly_vars,
             &config.mpi_config,
-            &mut rng,
         );
     let verifier = crate::Verifier::new(config);
     let public_input = circuit.public_input.clone();
@@ -253,12 +253,10 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
             let verifier = crate::Verifier::new(&config);
 
             // TODO: Read PCS setup from files
-            let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
                 expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
                     circuit.log_input_size(),
                     &config.mpi_config,
-                    &mut rng,
                 );
 
             let circuit = Arc::new(Mutex::new(circuit));

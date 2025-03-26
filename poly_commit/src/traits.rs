@@ -111,7 +111,9 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
     /// Minimum number of variables supported in this PCS implementation,
     /// that such constraint exists for PCSs like Orion,
     /// but for Raw and Hyrax, polys of any size works.
-    const MINIMUM_NUM_VARS: usize = 0;
+    fn minimum_num_vars(_world_size: usize) -> usize {
+        0
+    }
 
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Each process should return the SAME GLOBAL SRS.

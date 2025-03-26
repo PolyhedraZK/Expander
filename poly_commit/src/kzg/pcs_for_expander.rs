@@ -28,7 +28,9 @@ where
     type SRS = CoefFormBiKZGLocalSRS<E>;
     type ScratchPad = ();
 
-    const MINIMUM_NUM_VARS: usize = 1;
+    fn minimum_num_vars(_world_size: usize) -> usize {
+        1
+    }
 
     fn init_scratch_pad(
         _params: &Self::Params,

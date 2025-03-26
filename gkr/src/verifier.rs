@@ -421,17 +421,19 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         )
 		.unwrap();
 
-        if open_at.x.len() < Cfg::PCS::MINIMUM_NUM_VARS {
+        let world_size = 1 << open_at.x_mpi.len();
+        let minimum_vars_for_pcs = Cfg::PCS::minimum_num_vars(world_size);
+        if open_at.x.len() < minimum_vars_for_pcs {
             eprintln!(
 				"{} over {} has minimum supported local vars {}, but challenge has vars {}, pad to {} vars in verifying.",
 				Cfg::PCS::NAME,
 				<Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::NAME,
-				Cfg::PCS::MINIMUM_NUM_VARS,
+				minimum_vars_for_pcs,
 				open_at.x.len(),
-				Cfg::PCS::MINIMUM_NUM_VARS,
+				minimum_vars_for_pcs,
 			);
             open_at.x.resize(
-                Cfg::PCS::MINIMUM_NUM_VARS,
+                minimum_vars_for_pcs,
                 <Cfg::FieldConfig as GKRFieldConfig>::ChallengeField::ZERO,
             )
         }
