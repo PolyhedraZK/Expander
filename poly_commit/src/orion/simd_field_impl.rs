@@ -1,6 +1,6 @@
 use arith::{ExtensionField, Field, SimdField};
 use gf2::GF2;
-use polynomials::{EqPolynomial, MultilinearExtension};
+use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 use transcript::Transcript;
 
 use crate::{
@@ -45,11 +45,6 @@ where
     commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
 }
 
-// NOTE: this implementation doesn't quite align with opening for
-// multilinear polynomials over base field,
-// as this directly plug into GKR argument system.
-// In that context, there is no need to evaluate,
-// as evaluation statement can be reduced on the verifier side.
 #[inline(always)]
 pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF, T>(
     pk: &OrionSRS,
@@ -57,7 +52,7 @@ pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF, T>(
     point: &[EvalF],
     transcript: &mut T,
     scratch_pad: &OrionScratchPad<F, ComPackF>,
-) -> OrionProof<EvalF>
+) -> (EvalF, OrionProof<EvalF>)
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
@@ -115,12 +110,23 @@ where
         ),
     }
 
+    // NOTE: working on evaluation response, evaluate the rest of the response
+    let mut scratch = vec![EvalF::ZERO; msg_size];
+    let eval = RefMultiLinearPoly::from_ref(&eval_row).evaluate_with_buffer(
+        &point[num_vars_in_com_simd..num_vars_in_com_simd + num_vars_in_msg],
+        &mut scratch,
+    );
+    drop(scratch);
+
     // NOTE: MT opening for point queries
     let query_openings = orion_mt_openings(pk, transcript, scratch_pad);
 
-    OrionProof {
-        eval_row,
-        proximity_rows,
-        query_openings,
-    }
+    (
+        eval,
+        OrionProof {
+            eval_row,
+            proximity_rows,
+            query_openings,
+        },
+    )
 }

@@ -92,14 +92,14 @@ where
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
         if mpi_config.is_single_process() {
-            return orion_open_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
+            let (_, opening) = orion_open_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
                 proving_key,
                 poly,
                 &eval_point.local_xs(),
                 transcript,
                 scratch_pad,
-            )
-            .into();
+            );
+            return opening.into();
         }
 
         orion_mpi_open_simd_field(
