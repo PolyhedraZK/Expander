@@ -145,10 +145,7 @@ where
     ComPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
-    let msg_size = {
-        let (_, msg_size) = OrionSRS::evals_shape::<F>(point.len());
-        msg_size
-    };
+    let (_, msg_size) = OrionSRS::evals_shape::<F>(point.len());
 
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;

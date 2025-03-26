@@ -73,8 +73,11 @@ where
     let proximity_test_num = pk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
     let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_test_num];
 
-    let random_col_coeffs: Vec<Vec<EvalF>> = (0..proximity_test_num)
-        .map(|_| transcript.generate_challenge_field_elements(eq_col_coeffs.len()))
+    let random_col_coeffs: Vec<_> = (0..proximity_test_num)
+        .map(|_| {
+            let rand = transcript.generate_challenge_field_elements(point.len() - num_vars_in_msg);
+            EqPolynomial::build_eq_x_r(&rand)
+        })
         .collect();
 
     match F::NAME {
@@ -133,7 +136,7 @@ where
     OpenPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
-    let (row_num, msg_size) = OrionSRS::evals_shape::<F>(point.len());
+    let (_, msg_size) = OrionSRS::evals_shape::<F>(point.len());
 
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;
@@ -153,7 +156,10 @@ where
     // then draw query points from fiat shamir transcripts
     let proximity_reps = vk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
     let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_reps)
-        .map(|_| transcript.generate_challenge_field_elements(row_num))
+        .map(|_| {
+            let rand = transcript.generate_challenge_field_elements(point.len() - num_vars_in_msg);
+            EqPolynomial::build_eq_x_r(&rand)
+        })
         .collect();
     let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
     let query_indices = transcript.generate_challenge_index_vector(query_num);
