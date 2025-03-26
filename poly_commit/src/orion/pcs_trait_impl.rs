@@ -6,12 +6,8 @@ use transcript::Transcript;
 
 use crate::{
     orion::{
-        base_field_impl::{
-            orion_commit_base_field, orion_open_base_field, orion_verify_base_field,
-        },
-        simd_field_impl::{
-            orion_commit_simd_field, orion_open_simd_field, orion_verify_simd_field,
-        },
+        base_field_impl::{orion_commit_base_field, orion_open_base_field},
+        simd_field_impl::{orion_commit_simd_field, orion_open_simd_field, orion_verify},
         OrionCommitment, OrionProof, OrionSRS, OrionScratchPad, ORION_CODE_PARAMETER_INSTANCE,
     },
     traits::TensorCodeIOPPCS,
@@ -92,7 +88,7 @@ where
         transcript: &mut T,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);
-        orion_open_base_field::<F, EvalF, ComPackF, OpenPackF, T>(
+        orion_open_base_field::<_, _, ComPackF, OpenPackF, _>(
             proving_key,
             poly,
             x,
@@ -111,10 +107,11 @@ where
         transcript: &mut T,
     ) -> bool {
         assert_eq!(*params, verifying_key.num_vars);
-        orion_verify_base_field::<F, EvalF, ComPackF, OpenPackF, T>(
+        orion_verify::<_, OpenPackF, _, ComPackF, _>(
             verifying_key,
             commitment,
             x,
+            &[],
             v,
             transcript,
             opening,
@@ -237,7 +234,7 @@ where
     ) -> bool {
         assert_eq!(*params, verifying_key.num_vars);
         assert_eq!(x.len(), verifying_key.num_vars);
-        orion_verify_simd_field::<F, SimdF, EvalF, ComPackF, T>(
+        orion_verify::<_, SimdF, _, ComPackF, _>(
             verifying_key,
             commitment,
             x,

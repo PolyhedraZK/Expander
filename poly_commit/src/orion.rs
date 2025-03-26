@@ -11,17 +11,13 @@ pub use linear_code::{OrionCodeParameter, ORION_CODE_PARAMETER_INSTANCE};
 mod linear_code_tests;
 
 mod base_field_impl;
-pub use base_field_impl::{
-    orion_commit_base_field, orion_open_base_field, orion_verify_base_field,
-};
+pub use base_field_impl::{orion_commit_base_field, orion_open_base_field};
 
 #[cfg(test)]
 mod base_field_tests;
 
 mod simd_field_impl;
-pub use simd_field_impl::{
-    orion_commit_simd_field, orion_open_simd_field, orion_verify_simd_field,
-};
+pub use simd_field_impl::{orion_commit_simd_field, orion_open_simd_field, orion_verify};
 
 #[cfg(test)]
 mod simd_field_tests;

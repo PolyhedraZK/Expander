@@ -129,7 +129,7 @@ where
 }
 
 #[inline(always)]
-pub fn orion_verify_simd_field<F, SimdF, EvalF, ComPackF, T>(
+pub fn orion_verify<F, SimdF, EvalF, ComPackF, T>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
     point: &[EvalF],

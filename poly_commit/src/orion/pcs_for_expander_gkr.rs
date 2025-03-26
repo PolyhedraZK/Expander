@@ -6,9 +6,7 @@ use transcript::Transcript;
 
 use crate::{
     orion::{
-        simd_field_impl::{
-            orion_commit_simd_field, orion_open_simd_field, orion_verify_simd_field,
-        },
+        simd_field_impl::{orion_commit_simd_field, orion_open_simd_field, orion_verify},
         simd_field_mpi_impl::{orion_mpi_commit_simd_field, orion_mpi_open_simd_field},
         OrionCommitment, OrionProof, OrionSIMDFieldPCS, OrionSRS, OrionScratchPad,
         ORION_CODE_PARAMETER_INSTANCE,
@@ -123,7 +121,7 @@ where
         transcript: &mut T,
         opening: &Self::Opening,
     ) -> bool {
-        orion_verify_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
+        orion_verify::<_, C::SimdCircuitField, _, ComPackF, _>(
             verifying_key,
             commitment,
             &eval_point.local_xs(),

@@ -1,16 +1,13 @@
-use std::iter;
-
 use arith::{ExtensionField, Field, SimdField};
 use gf2::GF2;
-use itertools::{chain, izip};
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 use transcript::Transcript;
 
 use crate::{
     orion::{
         utils::{
-            commit_encoded, lut_open_linear_combine, lut_verify_alphabet_check, orion_mt_openings,
-            orion_mt_verify, pack_from_base, simd_open_linear_combine, simd_verify_alphabet_check,
+            commit_encoded, lut_open_linear_combine, orion_mt_openings, pack_from_base,
+            simd_open_linear_combine,
         },
         OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
     },
@@ -18,6 +15,7 @@ use crate::{
     PCS_SOUNDNESS_BITS,
 };
 
+#[inline(always)]
 pub fn orion_commit_base_field<F, ComPackF>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<F>,
@@ -37,6 +35,7 @@ where
     commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
 }
 
+#[inline(always)]
 pub fn orion_open_base_field<F, EvalF, ComPackF, OpenPackF, T>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<F>,
@@ -119,98 +118,4 @@ where
             query_openings,
         },
     )
-}
-
-pub fn orion_verify_base_field<F, EvalF, ComPackF, OpenPackF, T>(
-    vk: &OrionSRS,
-    commitment: &OrionCommitment,
-    point: &[EvalF],
-    evaluation: EvalF,
-    transcript: &mut T,
-    proof: &OrionProof<EvalF>,
-) -> bool
-where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
-{
-    let (_, msg_size) = OrionSRS::evals_shape::<F>(point.len());
-
-    let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
-    let num_vars_in_msg = msg_size.ilog2() as usize;
-
-    // NOTE: working on evaluation response, evaluate the rest of the response
-    let mut scratch = vec![EvalF::ZERO; msg_size];
-    let final_eval = RefMultiLinearPoly::from_ref(&proof.eval_row).evaluate_with_buffer(
-        &point[num_vars_in_com_simd..num_vars_in_com_simd + num_vars_in_msg],
-        &mut scratch,
-    );
-
-    if final_eval != evaluation {
-        return false;
-    }
-
-    // NOTE: working on proximity responses, draw random linear combinations
-    // then draw query points from fiat shamir transcripts
-    let proximity_reps = vk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
-    let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_reps)
-        .map(|_| {
-            let rand = transcript.generate_challenge_field_elements(point.len() - num_vars_in_msg);
-            EqPolynomial::build_eq_x_r(&rand)
-        })
-        .collect();
-    let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
-    let query_indices = transcript.generate_challenge_index_vector(query_num);
-
-    // NOTE: check consistency in MT in the opening trees and against the commitment tree
-    if !orion_mt_verify(vk, 1, &query_indices, &proof.query_openings, commitment) {
-        return false;
-    }
-
-    // NOTE: prepare the interleaved alphabets from the MT paths,
-    // but pack them back into look up table acceptable formats
-    let packed_interleaved_alphabets: Vec<_> = proof
-        .query_openings
-        .iter()
-        .map(|p| -> Vec<_> {
-            p.unpack_field_elems::<F, ComPackF>()
-                .chunks(OpenPackF::PACK_SIZE)
-                .map(OpenPackF::pack)
-                .collect()
-        })
-        .collect();
-
-    let eq_col_coeffs = {
-        let mut eq_vars = point[..num_vars_in_com_simd].to_vec();
-        eq_vars.extend_from_slice(&point[num_vars_in_com_simd + num_vars_in_msg..]);
-        EqPolynomial::build_eq_x_r(&eq_vars)
-    };
-
-    chain!(
-        izip!(&random_linear_combinations, &proof.proximity_rows),
-        iter::once((&eq_col_coeffs, &proof.eval_row))
-    )
-    .all(|(rl, msg)| {
-        let codeword = match vk.code_instance.encode(msg) {
-            Ok(c) => c,
-            _ => return false,
-        };
-
-        match F::NAME {
-            GF2::NAME => lut_verify_alphabet_check(
-                &codeword,
-                rl,
-                &query_indices,
-                &packed_interleaved_alphabets,
-            ),
-            _ => simd_verify_alphabet_check(
-                &codeword,
-                rl,
-                &query_indices,
-                &packed_interleaved_alphabets,
-            ),
-        }
-    })
 }
