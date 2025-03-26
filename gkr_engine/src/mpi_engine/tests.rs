@@ -1,7 +1,7 @@
 use arith::Field;
 use mersenne31::M31;
 
-use crate::{MPIEngine, MPIConfig};
+use crate::{MPIConfig, MPIEngine};
 
 #[test]
 fn test_gather_vec() {

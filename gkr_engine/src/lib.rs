@@ -15,14 +15,61 @@
 mod field_engine;
 mod mpi_engine;
 mod poly_commit;
+mod transcript;
 
 pub use field_engine::*;
 pub use mpi_engine::*;
 pub use poly_commit::*;
+pub use transcript::*;
 
+/// Core trait defining the configuration types for a GKR protocol implementation.
+///
+/// This trait serves as the main configuration interface for the GKR protocol, specifying the required
+/// types for field operations, MPI communication, transcript generation, and polynomial commitment schemes.
+///
+/// # Associated Types
+///
+/// * `FieldConfig` - Configuration for field arithmetic operations, implementing `FieldEngine`
+/// * `MPIConfig` - Configuration for distributed computing operations, implementing `MPIEngine`
+/// * `TranscriptConfig` - Configuration for transcript generation, implementing `Transcript` over the challenge field
+/// * `PCSConfig` - Configuration for polynomial commitment scheme, implementing `PCSForExpanderGKR`
+///
+/// # Usage
+///
+/// This trait is typically implemented by configuration structs that define the complete
+/// setup for running the GKR protocol in a distributed environment.
+///
+/// # Example
+/// ```ignore
+/// struct MyGKRConfig;
+///
+/// impl GKREngine for MyGKRConfig {
+///     type FieldConfig = MyFieldConfig;
+///     type MPIConfig = MyMPIConfig;
+///     type TranscriptConfig = MyTranscriptConfig;
+///     type PCSConfig = MyPCSConfig;
+/// }
+/// ```
 pub trait GKREngine {
-    type FieldEngine: FieldEngine;
-    // type MPIEngine: MPIEngine;
-    // type Transcript: Transcript<Self::FieldEngine::ChallengeField>;
-    type PCS: PCSForExpanderGKR<Self::FieldEngine>;
+    /// Configuration for field arithmetic operations
+    type FieldConfig: FieldEngine;
+
+    /// Configuration for distributed computing operations
+    type MPIConfig: MPIEngine;
+
+    /// Configuration for transcript generation over the challenge field
+    type TranscriptConfig: Transcript<<Self::FieldConfig as FieldEngine>::ChallengeField>;
+
+    /// Configuration for polynomial commitment scheme
+    type PCSConfig: PCSForExpanderGKR<Self::FieldConfig>;
+}
+
+
+pub struct M31ExtConfigPoseidonRaw;
+
+impl GKREngine for M31ExtConfigPoseidonRaw {
+    type FieldConfig = M31ExtConfig;
+    type MPIConfig = MPIConfig;
+    type TranscriptConfig = Transcript<M31Ext3>;
+    type PCSConfig = PCSConfig;
 }
