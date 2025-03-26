@@ -15,7 +15,7 @@ use crate::{
 };
 
 #[inline(always)]
-pub(crate) fn orion_mpi_commit_simd_field<F, SimdF, ComPackF>(
+pub fn orion_mpi_commit_simd_field<F, SimdF, ComPackF>(
     mpi_config: &MPIConfig,
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
@@ -55,7 +55,7 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn orion_mpi_open_simd_field<F, SimdF, EvalF, ComPackF, T>(
+pub fn orion_mpi_open_simd_field<F, SimdF, EvalF, ComPackF, T>(
     mpi_config: &MPIConfig,
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,

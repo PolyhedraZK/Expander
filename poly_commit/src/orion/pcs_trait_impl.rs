@@ -7,7 +7,8 @@ use transcript::Transcript;
 use crate::{
     orion::{
         base_field_impl::{orion_commit_base_field, orion_open_base_field},
-        simd_field_impl::{orion_commit_simd_field, orion_open_simd_field, orion_verify},
+        simd_field_impl::{orion_commit_simd_field, orion_open_simd_field},
+        verify::orion_verify,
         OrionCommitment, OrionProof, OrionSRS, OrionScratchPad, ORION_CODE_PARAMETER_INSTANCE,
     },
     traits::TensorCodeIOPPCS,

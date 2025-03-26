@@ -6,8 +6,9 @@ use transcript::Transcript;
 
 use crate::{
     orion::{
-        simd_field_impl::{orion_commit_simd_field, orion_open_simd_field, orion_verify},
+        simd_field_impl::{orion_commit_simd_field, orion_open_simd_field},
         simd_field_mpi_impl::{orion_mpi_commit_simd_field, orion_mpi_open_simd_field},
+        verify::orion_verify,
         OrionCommitment, OrionProof, OrionSIMDFieldPCS, OrionSRS, OrionScratchPad,
         ORION_CODE_PARAMETER_INSTANCE,
     },
