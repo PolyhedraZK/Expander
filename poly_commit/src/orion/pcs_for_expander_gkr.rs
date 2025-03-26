@@ -1,15 +1,16 @@
 use arith::SimdField;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomials::{EqPolynomial, MultilinearExtension};
-use serdes::ExpSerde;
+use polynomials::MultilinearExtension;
 use transcript::Transcript;
 
 use crate::{
     orion::{
-        simd_field_agg_impl::orion_verify_simd_field_aggregated,
         simd_field_impl::{
             orion_commit_simd_field, orion_open_simd_field, orion_verify_simd_field,
+        },
+        simd_field_mpi_impl::{
+            orion_mpi_commit_simd_field, orion_mpi_open_simd_field, orion_mpi_verify_simd_field,
         },
         OrionCommitment, OrionProof, OrionSIMDFieldPCS, OrionSRS, OrionScratchPad,
         ORION_CODE_PARAMETER_INSTANCE,
@@ -72,28 +73,23 @@ where
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
-        let commitment = orion_commit_simd_field(proving_key, poly, scratch_pad).unwrap();
-
         // NOTE: Hang also assume that, linear GKR will take over the commitment
         // and force sync transcript hash state of subordinate machines to be the same.
         if mpi_config.is_single_process() {
+            let commitment = orion_commit_simd_field(proving_key, poly, scratch_pad).unwrap();
             return commitment.into();
         }
 
-        let local_buffer = vec![commitment];
-        let mut buffer = vec![Self::Commitment::default(); mpi_config.world_size()];
-        mpi_config.gather_vec(&local_buffer, &mut buffer);
+        let final_commitment =
+            orion_mpi_commit_simd_field(mpi_config, proving_key, poly, scratch_pad).unwrap();
 
         if !mpi_config.is_root() {
             return None;
         }
 
-        let final_tree_height = 1 + buffer.len().ilog2();
-        let (internals, _) = tree::Tree::new_with_leaf_nodes(buffer.clone(), final_tree_height);
-        internals[0].into()
+        final_commitment.into()
     }
 
-    // TODO(HS) rearrange the MT over interleaved codeword, s.t., we have smaller proof size
     fn open(
         params: &Self::Params,
         mpi_config: &MPIConfig,
@@ -107,60 +103,28 @@ where
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
         let local_xs = eval_point.local_xs();
-        let local_opening = orion_open_simd_field::<
-            C::CircuitField,
-            C::SimdCircuitField,
-            C::ChallengeField,
-            ComPackF,
-            T,
-        >(proving_key, poly, &local_xs, transcript, scratch_pad);
+        let mpi_xs = eval_point.x_mpi.clone();
+
         if mpi_config.is_single_process() {
+            let local_opening = orion_open_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
+                proving_key,
+                poly,
+                &local_xs,
+                transcript,
+                scratch_pad,
+            );
             return local_opening.into();
         }
 
-        // NOTE: eval row combine from MPI
-        let mpi_eq_coeffs = EqPolynomial::build_eq_x_r(&eval_point.x_mpi);
-        let eval_row = mpi_config.coef_combine_vec(&local_opening.eval_row, &mpi_eq_coeffs);
-
-        // NOTE: sample MPI linear combination coeffs for proximity rows,
-        // and proximity rows combine with MPI
-        let proximity_rows = local_opening
-            .proximity_rows
-            .iter()
-            .map(|row| {
-                let weights = transcript.generate_challenge_field_elements(mpi_config.world_size());
-                mpi_config.coef_combine_vec(row, &weights)
-            })
-            .collect();
-
-        // NOTE: local query openings serialized to bytes
-        let mut local_mt_paths_serialized = Vec::new();
-        local_opening
-            .query_openings
-            .serialize_into(&mut local_mt_paths_serialized)
-            .unwrap();
-
-        // NOTE: gather all merkle paths
-        let mut mt_paths_serialized =
-            vec![0u8; mpi_config.world_size() * local_mt_paths_serialized.len()];
-        mpi_config.gather_vec(&local_mt_paths_serialized, &mut mt_paths_serialized);
-
-        let query_openings: Vec<tree::RangePath> = mt_paths_serialized
-            .chunks(local_mt_paths_serialized.len())
-            .flat_map(|bs| Vec::deserialize_from(bs.to_vec().as_slice()).unwrap())
-            .collect();
-
-        if !mpi_config.is_root() {
-            return None;
-        }
-
-        // NOTE: we only care about the root machine's opening as final proof, Hang assume.
-        OrionProof {
-            eval_row,
-            proximity_rows,
-            query_openings,
-        }
-        .into()
+        orion_mpi_open_simd_field(
+            mpi_config,
+            proving_key,
+            poly,
+            &local_xs,
+            &mpi_xs,
+            transcript,
+            scratch_pad,
+        )
     }
 
     fn verify(
@@ -173,13 +137,7 @@ where
         opening: &Self::Opening,
     ) -> bool {
         if eval_point.x_mpi.is_empty() {
-            return orion_verify_simd_field::<
-                C::CircuitField,
-                C::SimdCircuitField,
-                C::ChallengeField,
-                ComPackF,
-                T,
-            >(
+            return orion_verify_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
                 verifying_key,
                 commitment,
                 &eval_point.local_xs(),
@@ -189,12 +147,11 @@ where
             );
         }
 
-        // NOTE: we now assume that the input opening is from the root machine,
-        // as proofs from other machines are typically undefined
-        orion_verify_simd_field_aggregated::<C, ComPackF, T>(
+        orion_mpi_verify_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
             verifying_key,
             commitment,
-            eval_point,
+            &eval_point.local_xs(),
+            &eval_point.x_mpi,
             eval,
             transcript,
             opening,

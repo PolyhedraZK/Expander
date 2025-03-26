@@ -29,11 +29,6 @@ mod simd_field_tests;
 mod pcs_trait_impl;
 pub use pcs_trait_impl::{OrionBaseFieldPCS, OrionSIMDFieldPCS};
 
-mod simd_field_agg_impl;
-
-#[cfg(test)]
-mod simd_field_agg_tests;
-
 mod mpi_utils;
 mod simd_field_mpi_impl;
 

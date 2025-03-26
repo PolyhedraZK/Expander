@@ -20,7 +20,6 @@ use crate::{
     PCS_SOUNDNESS_BITS,
 };
 
-#[allow(unused)]
 #[inline(always)]
 pub(crate) fn orion_mpi_commit_simd_field<F, SimdF, ComPackF>(
     mpi_config: &MPIConfig,
@@ -61,7 +60,6 @@ where
     orion_mpi_compute_mt_root(mpi_config, local_commitment, scratch_pad)
 }
 
-#[allow(unused)]
 #[inline(always)]
 pub(crate) fn orion_mpi_open_simd_field<F, SimdF, EvalF, ComPackF, T>(
     mpi_config: &MPIConfig,
@@ -160,7 +158,6 @@ where
     .into()
 }
 
-#[allow(unused)]
 #[inline(always)]
 pub(crate) fn orion_mpi_verify_simd_field<F, SimdF, EvalF, ComPackF, T>(
     vk: &OrionSRS,
@@ -178,10 +175,9 @@ where
     ComPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
-    let (row_num, msg_size) = {
-        let (row_field_elems, msg_size) = OrionSRS::evals_shape::<F>(point.len());
-        let row_num = row_field_elems / SimdF::PACK_SIZE;
-        (row_num, msg_size)
+    let msg_size = {
+        let (_, msg_size) = OrionSRS::evals_shape::<F>(point.len());
+        msg_size
     };
 
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;

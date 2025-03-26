@@ -192,9 +192,7 @@ where
 
     {
         let mut leaves_bytes: Vec<u8> = Vec::new();
-        if mpi_config.is_root() {
-            leaves.serialize_into(&mut leaves_bytes)?;
-        }
+        leaves.serialize_into(&mut leaves_bytes)?;
         mpi_config.root_broadcast_bytes(&mut leaves_bytes);
 
         if !mpi_config.is_root() {

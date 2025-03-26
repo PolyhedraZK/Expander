@@ -123,7 +123,7 @@ impl<F: Field> EqPolynomial<F> {
     pub fn ith_eq_vec_elem(r: &[F], mut index: usize) -> F {
         assert!(index < (1 << r.len()));
 
-        let mut eval = F::ZERO;
+        let mut eval = F::ONE;
         r.iter().for_each(|r_i| {
             if index & 1 == 1 {
                 eval *= r_i;
