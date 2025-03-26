@@ -9,9 +9,7 @@ use crate::{
         simd_field_impl::{
             orion_commit_simd_field, orion_open_simd_field, orion_verify_simd_field,
         },
-        simd_field_mpi_impl::{
-            orion_mpi_commit_simd_field, orion_mpi_open_simd_field, orion_mpi_verify_simd_field,
-        },
+        simd_field_mpi_impl::{orion_mpi_commit_simd_field, orion_mpi_open_simd_field},
         OrionCommitment, OrionProof, OrionSIMDFieldPCS, OrionSRS, OrionScratchPad,
         ORION_CODE_PARAMETER_INSTANCE,
     },
@@ -136,18 +134,7 @@ where
         transcript: &mut T, // add transcript here to allow interactive arguments
         opening: &Self::Opening,
     ) -> bool {
-        if eval_point.x_mpi.is_empty() {
-            return orion_verify_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
-                verifying_key,
-                commitment,
-                &eval_point.local_xs(),
-                eval,
-                transcript,
-                opening,
-            );
-        }
-
-        orion_mpi_verify_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
+        orion_verify_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
             verifying_key,
             commitment,
             &eval_point.local_xs(),

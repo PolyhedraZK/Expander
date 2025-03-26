@@ -241,6 +241,7 @@ where
             verifying_key,
             commitment,
             x,
+            &[],
             v,
             transcript,
             opening,

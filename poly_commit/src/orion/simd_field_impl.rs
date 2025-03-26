@@ -18,6 +18,7 @@ use crate::{
     PCS_SOUNDNESS_BITS,
 };
 
+#[inline(always)]
 pub fn orion_commit_simd_field<F, SimdF, ComPackF>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
@@ -52,6 +53,7 @@ where
 // as this directly plug into GKR argument system.
 // In that context, there is no need to evaluate,
 // as evaluation statement can be reduced on the verifier side.
+#[inline(always)]
 pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF, T>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
@@ -90,8 +92,11 @@ where
     let proximity_test_num = pk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
     let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_test_num];
 
-    let random_col_coeffs: Vec<Vec<EvalF>> = (0..proximity_test_num)
-        .map(|_| transcript.generate_challenge_field_elements(eq_col_coeffs.len()))
+    let random_col_coeffs: Vec<_> = (0..proximity_test_num)
+        .map(|_| {
+            let rand = transcript.generate_challenge_field_elements(point.len() - num_vars_in_msg);
+            EqPolynomial::build_eq_x_r(&rand)
+        })
         .collect();
 
     match F::NAME {
@@ -123,10 +128,12 @@ where
     }
 }
 
+#[inline(always)]
 pub fn orion_verify_simd_field<F, SimdF, EvalF, ComPackF, T>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
     point: &[EvalF],
+    mpi_point: &[EvalF],
     evaluation: EvalF,
     transcript: &mut T,
     proof: &OrionProof<EvalF>,
@@ -138,10 +145,9 @@ where
     ComPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
-    let (row_num, msg_size) = {
-        let (row_field_elems, msg_size) = OrionSRS::evals_shape::<F>(point.len());
-        let row_num = row_field_elems / SimdF::PACK_SIZE;
-        (row_num, msg_size)
+    let msg_size = {
+        let (_, msg_size) = OrionSRS::evals_shape::<F>(point.len());
+        msg_size
     };
 
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
@@ -161,15 +167,26 @@ where
     // NOTE: working on proximity responses, draw random linear combinations
     // then draw query points from fiat shamir transcripts
     let proximity_reps = vk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
-    let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_reps)
-        .map(|_| transcript.generate_challenge_field_elements(row_num * SimdF::PACK_SIZE))
+    let random_linear_combinations: Vec<_> = (0..proximity_reps)
+        .map(|_| {
+            let num_vars = point.len() - num_vars_in_msg + mpi_point.len();
+            let rand = transcript.generate_challenge_field_elements(num_vars);
+            EqPolynomial::build_eq_x_r(&rand)
+        })
         .collect();
 
     let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
     let query_indices = transcript.generate_challenge_index_vector(query_num);
 
     // NOTE: check consistency in MT in the opening trees and against the commitment tree
-    if !orion_mt_verify(vk, 1, &query_indices, &proof.query_openings, commitment) {
+    let world_size = 1 << mpi_point.len();
+    if !orion_mt_verify(
+        vk,
+        world_size,
+        &query_indices,
+        &proof.query_openings,
+        commitment,
+    ) {
         return false;
     }
 
@@ -187,6 +204,7 @@ where
     let eq_col_coeffs = {
         let mut eq_vars = point[..num_vars_in_com_simd].to_vec();
         eq_vars.extend_from_slice(&point[num_vars_in_com_simd + num_vars_in_msg..]);
+        eq_vars.extend_from_slice(mpi_point);
         EqPolynomial::build_eq_x_r(&eq_vars)
     };
 
