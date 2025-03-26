@@ -6,6 +6,18 @@ edition = "2021"
 [dependencies]
 colored = { version = "2.0.0", default-features = false, optional = true}
 
+ark-std.workspace = true
+halo2curves.workspace = true
+
+arith = { path = "../arith" }
+
+[dev-dependencies]
+criterion.workspace = true
+
 [features]
 default = []
 profile = [ "dep:colored" ]
+
+[[bench]]
+name = "small_scalar_msm"
+harness = false

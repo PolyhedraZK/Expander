@@ -70,7 +70,8 @@ impl Field for Fr {
 
     /// expose the element as u32.
     fn as_u32_unchecked(&self) -> u32 {
-        todo!()
+        // assert!(*self < Fr::from(u32::MAX));
+        self.to_repr().as_slice()[0] as u32
     }
 
     #[inline(always)]
