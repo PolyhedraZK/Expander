@@ -18,6 +18,7 @@ mod poly_commit;
 mod transcript;
 
 pub use field_engine::*;
+use mersenne31::M31Ext3;
 pub use mpi_engine::*;
 pub use poly_commit::*;
 pub use transcript::*;
@@ -70,6 +71,6 @@ pub struct M31ExtConfigPoseidonRaw;
 impl GKREngine for M31ExtConfigPoseidonRaw {
     type FieldConfig = M31ExtConfig;
     type MPIConfig = MPIConfig;
-    type TranscriptConfig = Transcript<M31Ext3>;
+    type TranscriptConfig = BytesHashTranscript<M31Ext3, PoseidonHasher>;
     type PCSConfig = PCSConfig;
 }
