@@ -34,9 +34,6 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
     pub(crate) fn new(
         layer: &'a CircuitLayer<F>,
         challenge: &'a ExpanderSingleVarChallenge<F>,
-        // rz0: &'a [F::ChallengeField],
-        // r_simd: &'a [F::ChallengeField],
-        // r_mpi: &'a [F::ChallengeField],
         sp: &'a mut ProverScratchPad<F>,
         mpi_config: &'a MPIConfig,
     ) -> Self {
@@ -221,7 +218,7 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
             std::ptr::write_bytes(gate_exists_1.as_mut_ptr(), 0, vals.len());
         }
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
-            &self.challenge.rz_0,
+            &self.challenge.rz,
             &F::ChallengeField::one(),
             eq_evals_at_rz0,
             &mut self.sp.eq_evals_first_half,

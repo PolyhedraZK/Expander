@@ -99,9 +99,9 @@ where
         .collect();
 
     let gkr_challenge: ExpanderSingleVarChallenge<C> = ExpanderSingleVarChallenge {
-        rz: eval_point[num_vars - world_num_vars..].to_vec(),
-        r_simd: eval_point[simd_num_vars..num_vars - world_num_vars].to_vec(),
-        r_mpi: eval_point[..simd_num_vars].to_vec(),
+        r_mpi: eval_point[num_vars - world_num_vars..].to_vec(),
+        rz: eval_point[simd_num_vars..num_vars - world_num_vars].to_vec(),
+        r_simd: eval_point[..simd_num_vars].to_vec(),
     };
 
     let mut committee = vec![
@@ -156,13 +156,8 @@ where
     let aggregated_proof =
         orion_proof_aggregate::<C, T>(&openings, &gkr_challenge.r_mpi, &mut aggregator_transcript);
 
-    let final_expected_eval = C::single_core_eval_circuit_vals_at_expander_challenge(
-        &global_poly.coeffs,
-        &gkr_challenge,
-        // &gkr_challenge.rz,
-        // &gkr_challenge.r_simd,
-        // &gkr_challenge.r_mpi,
-    );
+    let final_expected_eval =
+        C::single_core_eval_circuit_vals_at_expander_challenge(&global_poly.coeffs, &gkr_challenge);
 
     assert!(orion_verify_simd_field_aggregated::<C, ComPackF>(
         &srs,

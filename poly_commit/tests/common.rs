@@ -72,7 +72,6 @@ pub fn test_pcs_for_expander_gkr<
     mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut coeffs_gathered);
 
     for xx in xs {
-        let ExpanderSingleVarChallenge { rz, r_simd, r_mpi } = xx;
         let mut transcript_cloned = transcript.clone();
 
         transcript.lock_proof();
@@ -89,13 +88,7 @@ pub fn test_pcs_for_expander_gkr<
 
         if mpi_config.is_root() {
             // this will always pass for RawExpanderGKR, so make sure it is correct
-            let v = C::single_core_eval_circuit_vals_at_expander_challenge(
-                &coeffs_gathered,
-                    xx
-                // x,
-                // x_simd,
-                // x_mpi,
-            );
+            let v = C::single_core_eval_circuit_vals_at_expander_challenge(&coeffs_gathered, xx);
 
             transcript.lock_proof();
             assert!(P::verify(

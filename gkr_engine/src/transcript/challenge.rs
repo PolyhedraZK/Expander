@@ -2,7 +2,7 @@ use arith::Field;
 
 use crate::FieldEngine;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ExpanderDualVarChallenge<C: FieldEngine> {
     /// random challenge for the x variable
     pub rz_0: Vec<C::ChallengeField>,
@@ -14,7 +14,7 @@ pub struct ExpanderDualVarChallenge<C: FieldEngine> {
     pub r_mpi: Vec<C::ChallengeField>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ExpanderSingleVarChallenge<C: FieldEngine> {
     /// random challenge for the main body of the circuit
     pub rz: Vec<C::ChallengeField>,
@@ -25,6 +25,22 @@ pub struct ExpanderSingleVarChallenge<C: FieldEngine> {
 }
 
 impl<C: FieldEngine> ExpanderSingleVarChallenge<C> {
+    pub fn empty() -> Self {
+        Self {
+            rz: vec![],
+            r_simd: vec![],
+            r_mpi: vec![],
+        }
+    }
+
+    pub fn new(
+        rz: Vec<C::ChallengeField>,
+        r_simd: Vec<C::ChallengeField>,
+        r_mpi: Vec<C::ChallengeField>,
+    ) -> Self {
+        Self { rz, r_simd, r_mpi }
+    }
+
     pub fn local_xs(&self) -> Vec<C::ChallengeField> {
         let mut local_xs = vec![C::ChallengeField::ZERO; self.r_simd.len() + self.rz.len()];
         local_xs[..self.r_simd.len()].copy_from_slice(&self.r_simd);
@@ -45,6 +61,15 @@ impl<C: FieldEngine> ExpanderSingleVarChallenge<C> {
 }
 
 impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
+    pub fn empty() -> Self {
+        Self {
+            rz_0: vec![],
+            rz_1: None,
+            r_simd: vec![],
+            r_mpi: vec![],
+        }
+    }
+
     pub fn new(
         rz_0: Vec<C::ChallengeField>,
         rz_1: Option<Vec<C::ChallengeField>>,
@@ -74,6 +99,15 @@ impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
             rz: self.rz_1.clone().unwrap(),
             r_simd: self.r_simd.clone(),
             r_mpi: self.r_mpi.clone(),
+        }
+    }
+
+    pub fn from_single_var_challenge(challenge: &ExpanderSingleVarChallenge<C>) -> Self {
+        Self {
+            rz_0: challenge.rz.clone(),
+            rz_1: None,
+            r_simd: challenge.r_simd.clone(),
+            r_mpi: challenge.r_mpi.clone(),
         }
     }
 }

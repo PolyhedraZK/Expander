@@ -1,5 +1,8 @@
 use circuit::CircuitLayer;
-use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIConfig, MPIEngine, Transcript};
+use gkr_engine::{
+    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
+    Transcript,
+};
 
 use crate::{
     prover_helper::{SumcheckGkrSquareHelper, SumcheckGkrVanillaHelper},
@@ -21,37 +24,15 @@ pub const SUMCHECK_GKR_SQUARE_DEGREE: usize = 6;
 #[allow(clippy::type_complexity)]
 pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>>(
     layer: &CircuitLayer<F>,
-    challenge: &ExpanderDualVarChallenge<F>,
-
-    // rz0: &[F::ChallengeField],
-    // rz1: &Option<Vec<F::ChallengeField>>,
-    // r_simd: &[F::ChallengeField],
-    // r_mpi: &[F::ChallengeField],
+    challenge: &mut ExpanderDualVarChallenge<F>,
     alpha: Option<F::ChallengeField>,
     transcript: &mut T,
     sp: &mut ProverScratchPad<F>,
     mpi_config: &MPIConfig,
     is_output_layer: bool,
-) -> ExpanderDualVarChallenge<F>
-// (
-//     Vec<F::ChallengeField>,
-//     Option<Vec<F::ChallengeField>>,
-//     Vec<F::ChallengeField>,
-//     Vec<F::ChallengeField>,
-// )
-{
-    let mut helper = SumcheckGkrVanillaHelper::new(
-        layer,
-        challenge,
-        // rz0,
-        // rz1,
-        // r_simd,
-        // r_mpi,
-        alpha,
-        sp,
-        mpi_config,
-        is_output_layer,
-    );
+) {
+    let mut helper =
+        SumcheckGkrVanillaHelper::new(layer, challenge, alpha, sp, mpi_config, is_output_layer);
 
     helper.prepare_simd();
     helper.prepare_mpi();
@@ -102,7 +83,7 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>
     let r_simd = helper.r_simd_var;
     let r_mpi = helper.r_mpi_var;
 
-    ExpanderDualVarChallenge::new(rx, ry, r_simd, r_mpi)
+    *challenge = ExpanderDualVarChallenge::new(rx, ry, r_simd, r_mpi);
 }
 
 // FIXME
@@ -110,20 +91,13 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>
 #[allow(clippy::type_complexity)]
 pub fn sumcheck_prove_gkr_square_layer<F: FieldEngine, T: Transcript<F::ChallengeField>>(
     layer: &CircuitLayer<F>,
-    rz0: &[F::ChallengeField],
-    r_simd: &[F::ChallengeField],
-    r_mpi: &[F::ChallengeField],
+    challenge: &mut ExpanderSingleVarChallenge<F>,
     transcript: &mut T,
     sp: &mut ProverScratchPad<F>,
     mpi_config: &MPIConfig,
-) -> (
-    Vec<F::ChallengeField>,
-    Vec<F::ChallengeField>,
-    Vec<F::ChallengeField>,
 ) {
     const D: usize = SUMCHECK_GKR_SQUARE_DEGREE + 1;
-    let mut helper =
-        SumcheckGkrSquareHelper::<F, D>::new(layer, rz0, r_simd, r_mpi, sp, mpi_config);
+    let mut helper = SumcheckGkrSquareHelper::<F, D>::new(layer, challenge, sp, mpi_config);
 
     helper.prepare_simd();
     helper.prepare_mpi();
@@ -158,5 +132,5 @@ pub fn sumcheck_prove_gkr_square_layer<F: FieldEngine, T: Transcript<F::Challeng
     log::trace!("vx claim: {:?}", helper.vx_claim());
     transcript.append_field_element(&helper.vx_claim());
 
-    (helper.rx, helper.r_simd_var, helper.r_mpi_var)
+    *challenge = ExpanderSingleVarChallenge::new(helper.rx, helper.r_simd_var, helper.r_mpi_var);
 }

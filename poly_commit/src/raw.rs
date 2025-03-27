@@ -1,5 +1,3 @@
-use std::sync::mpsc::channel;
-
 /// Raw commitment for multi-linear polynomials
 use arith::{ExtensionField, Field};
 use ethnum::U256;
@@ -201,14 +199,8 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
         _transcript: &mut impl Transcript<C::ChallengeField>,
         _opening: &Self::Opening,
     ) -> bool {
-        // let ExpanderSingleVarChallenge::<C> { rz, r_simd, r_mpi } = x;
-        let v_target = C::single_core_eval_circuit_vals_at_expander_challenge(
-            &commitment.evals,
-            &challenge,
-            // rz,
-            // r_simd,
-            // r_mpi,
-        );
+        let v_target =
+            C::single_core_eval_circuit_vals_at_expander_challenge(&commitment.evals, challenge);
         v == v_target
     }
 }

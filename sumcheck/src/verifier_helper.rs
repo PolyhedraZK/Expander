@@ -1,6 +1,6 @@
 use arith::{ExtensionField, Field};
 use circuit::{CircuitLayer, CoefType, GateAdd, GateConst, GateMul, GateUni};
-use gkr_engine::{FieldEngine, FieldType};
+use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, FieldType};
 use polynomials::EqPolynomial;
 
 use crate::{scratch_pad::VerifierScratchPad, unpack_and_combine};
@@ -16,19 +16,15 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
     pub fn prepare_layer(
         layer: &CircuitLayer<F>,
         alpha: &Option<F::ChallengeField>,
-        // todo: use GKRChallenge
-        rz0: &[F::ChallengeField],
-        rz1: &Option<Vec<F::ChallengeField>>,
-        r_simd: &Vec<F::ChallengeField>,
-        r_mpi: &Vec<F::ChallengeField>,
+        challenge: &ExpanderDualVarChallenge<F>,
         sp: &mut VerifierScratchPad<F>,
         is_output_layer: bool,
     ) {
-        assert_eq!(alpha.is_none(), rz1.is_none());
+        assert_eq!(alpha.is_none(), challenge.rz_1.is_none());
 
         if is_output_layer {
             EqPolynomial::<F::ChallengeField>::eq_eval_at(
-                rz0,
+                &challenge.rz_0,
                 &F::ChallengeField::ONE,
                 &mut sp.eq_evals_at_rz0,
                 &mut sp.eq_evals_first_part,
@@ -36,9 +32,9 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
             );
         } else {
             // use results from previous layer
-            let output_len = 1 << rz0.len();
+            let output_len = 1 << challenge.rz_0.len();
             sp.eq_evals_at_rz0[..output_len].copy_from_slice(&sp.eq_evals_at_rx[..output_len]);
-            if alpha.is_some() && rz1.is_some() {
+            if alpha.is_some() && challenge.rz_1.is_some() {
                 let alpha = alpha.unwrap();
                 for i in 0..(1usize << layer.output_var_num) {
                     sp.eq_evals_at_rz0[i] += alpha * sp.eq_evals_at_ry[i];
@@ -47,7 +43,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
         }
 
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
-            r_simd,
+            &challenge.r_simd,
             &F::ChallengeField::ONE,
             &mut sp.eq_evals_at_r_simd,
             &mut sp.eq_evals_first_part,
@@ -55,15 +51,15 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
         );
 
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
-            r_mpi,
+            &challenge.r_mpi,
             &F::ChallengeField::ONE,
             &mut sp.eq_evals_at_r_mpi,
             &mut sp.eq_evals_first_part,
             &mut sp.eq_evals_second_part,
         );
 
-        sp.r_simd = r_simd;
-        sp.r_mpi = r_mpi;
+        sp.r_simd = &challenge.r_simd;
+        sp.r_mpi = &challenge.r_mpi;
     }
 
     #[inline(always)]
