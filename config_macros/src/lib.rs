@@ -110,11 +110,8 @@ fn parse_polynomial_commitment_type(
             "Raw".to_owned(),
             format!("RawExpanderGKR::<{field_config}>").to_owned(),
         ),
-        ("Hyrax", "BN254") => (
-            "Hyrax".to_owned(),
-            format!("HyraxPCS::<G1Affine>").to_owned(),
-        ),
-        ("KZG", "BN254") => ("KZG".to_owned(), format!("HyperKZGPCS::<Bn256>").to_owned()),
+        ("Hyrax", "BN254") => ("Hyrax".to_string(), "HyraxPCS::<G1Affine>".to_string()),
+        ("KZG", "BN254") => ("KZG".to_owned(), "HyperKZGPCS::<Bn256>".to_string()),
         ("Orion", "GF2") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, GF2x128, {transcript_type}>").to_owned(),

@@ -194,10 +194,8 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
 
     #[inline]
     pub(crate) fn prepare_mpi_var_vals(&mut self) {
-        self.mpi_config.gather_vec(
-            &vec![self.sp.simd_var_v_evals[0]],
-            &mut self.sp.mpi_var_v_evals,
-        );
+        self.mpi_config
+            .gather_vec(&[self.sp.simd_var_v_evals[0]], &mut self.sp.mpi_var_v_evals);
     }
 
     #[inline]

@@ -56,8 +56,8 @@ name = "dev-setup"
 path = "src/utils.rs"
 
 [features]
-# default = []
-default = [ "grinding" ]
+default = []
+# default = [ "grinding" ]
 grinding = [ ]
 recursion = [ "transcript/recursion" ]
 profile = [ "utils/profile", "sumcheck/profile" ]

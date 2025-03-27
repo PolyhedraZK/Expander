@@ -129,10 +129,10 @@ impl MPIEngine for MPIConfig {
     }
 
     #[allow(clippy::collapsible_else_if)]
-    fn gather_vec<F: Sized + Clone>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<F>) {
+    fn gather_vec<F: Sized + Clone>(&self, local_vec: &[F], global_vec: &mut Vec<F>) {
         unsafe {
             if self.world_size == 1 {
-                *global_vec = local_vec.clone()
+                *global_vec = local_vec.to_vec()
             } else {
                 assert!(!self.is_root() || global_vec.len() == local_vec.len() * self.world_size());
 
@@ -210,9 +210,9 @@ impl MPIEngine for MPIConfig {
 
     /// sum up all local values
     #[inline]
-    fn sum_vec<F: Field>(&self, local_vec: &Vec<F>) -> Vec<F> {
+    fn sum_vec<F: Field>(&self, local_vec: &[F]) -> Vec<F> {
         if self.world_size == 1 {
-            local_vec.clone()
+            local_vec.to_vec()
         } else if self.world_rank == Self::ROOT_RANK {
             let mut global_vec = vec![F::ZERO; local_vec.len() * (self.world_size as usize)];
             self.gather_vec(local_vec, &mut global_vec);
@@ -231,11 +231,11 @@ impl MPIEngine for MPIConfig {
 
     /// coef has a length of mpi_world_size
     #[inline]
-    fn coef_combine_vec<F: Field>(&self, local_vec: &Vec<F>, coef: &[F]) -> Vec<F> {
+    fn coef_combine_vec<F: Field>(&self, local_vec: &[F], coef: &[F]) -> Vec<F> {
         if self.world_size == 1 {
             // Warning: literally, it should be coef[0] * local_vec
             // but coef[0] is always one in our use case of self.world_size = 1
-            local_vec.clone()
+            local_vec.to_vec()
         } else if self.world_rank == Self::ROOT_RANK {
             let mut global_vec = vec![F::ZERO; local_vec.len() * (self.world_size as usize)];
             let mut ret = vec![F::ZERO; local_vec.len()];
@@ -288,10 +288,10 @@ unsafe fn transmute_elem_to_u8_bytes<V: Sized>(elem: &V, byte_size: usize) -> Ve
 
 /// Return an u8 vector sharing THE SAME MEMORY SLOT with the input.
 #[inline]
-unsafe fn transmute_vec_to_u8_bytes<F: Sized>(vec: &Vec<F>) -> Vec<u8> {
+unsafe fn transmute_vec_to_u8_bytes<F: Sized>(vec: &[F]) -> Vec<u8> {
     Vec::<u8>::from_raw_parts(
         vec.as_ptr() as *mut u8,
-        vec.len() * size_of::<F>(),
-        vec.capacity() * size_of::<F>(),
+        std::mem::size_of_val(vec),
+        std::mem::size_of_val(vec),
     )
 }

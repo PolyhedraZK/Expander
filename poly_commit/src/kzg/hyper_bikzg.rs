@@ -75,7 +75,7 @@ where
         &local_folded_x_oracle_commits,
         &mut root_gathering_folded_oracle_commits,
     );
-    mpi_engine.gather_vec(&vec![local_final_eval_at_x], &mut final_evals_at_x);
+    mpi_engine.gather_vec(&[local_final_eval_at_x], &mut final_evals_at_x);
 
     //
     // Leader party collect oracle commitments, sum them up for folded oracles
@@ -297,7 +297,7 @@ where
     let mut root_gathering_gamma_aggregated_x_quotient_commitment_g1s: Vec<E::G1> =
         vec![E::G1::generator(); mpi_engine.world_size()];
     mpi_engine.gather_vec(
-        &vec![local_gamma_aggregated_x_quotient_commitment_g1],
+        &[local_gamma_aggregated_x_quotient_commitment_g1],
         &mut root_gathering_gamma_aggregated_x_quotient_commitment_g1s,
     );
 
@@ -328,7 +328,7 @@ where
         + local_lagrange_degree2_at_x[2] * delta_x * delta_x;
 
     mpi_engine.gather_vec(
-        &vec![local_degree2_eval_at_delta_x],
+        &[local_degree2_eval_at_delta_x],
         &mut degree2_evals_at_delta_x,
     );
 
@@ -422,7 +422,7 @@ where
     let local_eval_open =
         coeff_form_uni_kzg_open_eval(&srs.tau_x_srs, &local_gamma_aggregated_x_coeffs, delta_x);
 
-    mpi_engine.gather_vec(&vec![local_eval_open], &mut gathered_eval_opens);
+    mpi_engine.gather_vec(&[local_eval_open], &mut gathered_eval_opens);
 
     if !mpi_engine.is_root() {
         return None;

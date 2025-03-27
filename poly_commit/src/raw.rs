@@ -139,16 +139,13 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
         _mpi_engine: &impl MPIEngine,
         _rng: impl RngCore,
     ) -> Self::SRS {
-        ()
     }
 
     fn gen_params(n_input_vars: usize) -> Self::Params {
         n_input_vars
     }
 
-    fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {
-        ()
-    }
+    fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
     fn commit(
         params: &Self::Params,

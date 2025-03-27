@@ -2,7 +2,9 @@ use std::str::FromStr;
 
 use clap::Parser;
 use gkr::{executor::*, gkr_configs::*};
-use gkr_engine::{FiatShamirHashType, FieldType, MPIConfig, PolynomialCommitmentType};
+use gkr_engine::{
+    root_println, FiatShamirHashType, FieldType, MPIConfig, MPIEngine, PolynomialCommitmentType,
+};
 
 #[tokio::main]
 async fn main() {
@@ -12,7 +14,7 @@ async fn main() {
     let pcs_type =
         PolynomialCommitmentType::from_str(&expander_exec_args.poly_commitment_scheme).unwrap();
 
-    let mpi_config = MPIConfig::new();
+    let mpi_config = MPIConfig::prover_new();
 
     root_println!(mpi_config, "Fiat-Shamir Hash Type: {:?}", &fs_hash_type);
     root_println!(
@@ -33,60 +35,28 @@ async fn main() {
 
     match (fs_hash_type.clone(), pcs_type.clone(), field_type.clone()) {
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::M31) => {
-            run_command::<M31ExtConfigSha2Orion>(
-                &expander_exec_args,
-                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-            )
-            .await;
+            run_command::<M31ExtConfigSha2OrionVanilla>(&expander_exec_args).await;
         }
         (FiatShamirHashType::Poseidon, PolynomialCommitmentType::Raw, FieldType::M31) => {
-            run_command::<M31ExtConfigPoseidonRaw>(
-                &expander_exec_args,
-                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-            )
-            .await;
+            run_command::<M31ExtConfigPoseidonRawVanilla>(&expander_exec_args).await;
         }
         (FiatShamirHashType::MIMC5, PolynomialCommitmentType::Raw, FieldType::BN254) => {
-            run_command::<BN254ConfigMIMC5Raw>(
-                &expander_exec_args,
-                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-            )
-            .await;
+            run_command::<BN254ConfigMIMC5Raw>(&expander_exec_args).await;
         }
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Raw, FieldType::BN254) => {
-            run_command::<BN254ConfigSha2Raw>(
-                &expander_exec_args,
-                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-            )
-            .await;
+            run_command::<BN254ConfigSha2Raw>(&expander_exec_args).await;
         }
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Hyrax, FieldType::BN254) => {
-            run_command::<BN254ConfigSha2Hyrax>(
-                &expander_exec_args,
-                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-            )
-            .await;
+            run_command::<BN254ConfigSha2Hyrax>(&expander_exec_args).await;
         }
         (FiatShamirHashType::MIMC5, PolynomialCommitmentType::KZG, FieldType::BN254) => {
-            run_command::<BN254ConfigMIMC5KZG>(
-                &expander_exec_args,
-                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-            )
-            .await;
+            run_command::<BN254ConfigMIMC5KZG>(&expander_exec_args).await;
         }
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::GF2) => {
-            run_command::<GF2ExtConfigSha2Orion>(
-                &expander_exec_args,
-                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-            )
-            .await;
+            run_command::<GF2ExtConfigSha2Orion>(&expander_exec_args).await;
         }
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Raw, FieldType::GF2) => {
-            run_command::<GF2ExtConfigSha2Raw>(
-                &expander_exec_args,
-                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-            )
-            .await;
+            run_command::<GF2ExtConfigSha2Raw>(&expander_exec_args).await;
         }
         _ => panic!(
             "FS: {:?}, PCS: {:?}, Field: {:?} setting is not yet integrated in expander-exec",

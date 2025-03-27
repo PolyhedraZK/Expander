@@ -67,7 +67,7 @@ where
 
         let local_g1 = local_commitment.to_curve();
         let mut root_gathering_commits: Vec<E::G1> = vec![local_g1; mpi_engine.world_size()];
-        mpi_engine.gather_vec(&vec![local_g1], &mut root_gathering_commits);
+        mpi_engine.gather_vec(&[local_g1], &mut root_gathering_commits);
 
         if !mpi_engine.is_root() {
             return None;

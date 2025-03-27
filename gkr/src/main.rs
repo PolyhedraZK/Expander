@@ -9,7 +9,6 @@ use clap::Parser;
 
 use gkr_engine::{
     ExpanderPCS, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType,
-    StructuredReferenceString,
 };
 use poly_commit::expander_pcs_init_testing_only;
 use rand::SeedableRng;
@@ -121,9 +120,6 @@ const PCS_TESTING_SEED_U64: u64 = 114514;
 
 fn run_benchmark<'a, Cfg: GKREngine>(args: &'a Args, mpi_config: MPIConfig)
 where
-    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params: 'static,
-    <<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey:
-        'static,
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad: 'a,
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad: 'static,
 {

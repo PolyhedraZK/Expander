@@ -34,7 +34,7 @@ pub trait MPIEngine {
     /// # Behavior
     /// - Root process receives all vectors
     /// - Non-root processes send their vectors but don't modify global_vec
-    fn gather_vec<F: Sized + Clone>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<F>);
+    fn gather_vec<F: Sized + Clone>(&self, local_vec: &[F], global_vec: &mut Vec<F>);
 
     /// Broadcast a field element from root process to all processes
     ///
@@ -63,7 +63,7 @@ pub trait MPIEngine {
     ///
     /// # Returns
     /// A vector containing the sum of corresponding elements from all processes
-    fn sum_vec<F: Field>(&self, local_vec: &Vec<F>) -> Vec<F>;
+    fn sum_vec<F: Field>(&self, local_vec: &[F]) -> Vec<F>;
 
     /// Combines vectors from all MPI processes using weighted coefficients
     ///
@@ -79,7 +79,7 @@ pub trait MPIEngine {
     /// # Implementation
     /// Root process gathers all vectors and computes the weighted sum.
     /// Non-root processes participate in gathering but return zero vectors.
-    fn coef_combine_vec<F: Field>(&self, local_vec: &Vec<F>, coef: &[F]) -> Vec<F>;
+    fn coef_combine_vec<F: Field>(&self, local_vec: &[F], coef: &[F]) -> Vec<F>;
 
     /// Check if there is only one process in the MPI world
     fn is_single_process(&self) -> bool;

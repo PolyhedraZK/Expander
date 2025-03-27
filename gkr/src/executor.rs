@@ -13,7 +13,7 @@ use gkr_engine::{
     M31ExtConfig, MPIConfig, MPIEngine, Proof,
 };
 use log::info;
-use poly_commit::{expander_pcs_init_testing_only, PolynomialCommitmentScheme};
+use poly_commit::expander_pcs_init_testing_only;
 use rand::SeedableRng;
 use rand_chacha::ChaCha12Rng;
 use serdes::{ExpSerde, SerdeError};
@@ -190,7 +190,7 @@ pub fn verify<Cfg: GKREngine>(
     )
 }
 
-pub async fn run_command<'a, Cfg: GKREngine>(command: &ExpanderExecArgs) {
+pub async fn run_command<'a, Cfg: GKREngine + 'static>(command: &ExpanderExecArgs) {
     let subcommands = command.subcommands.clone();
 
     match subcommands {
@@ -250,7 +250,7 @@ pub async fn run_command<'a, Cfg: GKREngine>(command: &ExpanderExecArgs) {
             port,
         } => {
             let mpi_config = MPIConfig::prover_new();
-            let prover = Prover::<Cfg>::new(mpi_config);
+            let prover = Prover::<Cfg>::new(mpi_config.clone());
 
             assert!(
                 prover.mpi_config.world_size() == 1,

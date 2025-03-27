@@ -217,7 +217,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
     pub(crate) fn vy_claim(&self) -> F::ChallengeField {
         let vy_local = unpack_and_combine(&self.sp.v_evals[0], &self.sp.eq_evals_at_r_simd0);
         self.mpi_config
-            .coef_combine_vec(&vec![vy_local], &self.sp.eq_evals_at_r_mpi0)[0]
+            .coef_combine_vec(&[vy_local], &self.sp.eq_evals_at_r_mpi0)[0]
     }
 
     #[inline]
@@ -317,12 +317,10 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
 
     #[inline]
     pub(crate) fn prepare_mpi_var_vals(&mut self) {
+        self.mpi_config
+            .gather_vec(&[self.sp.simd_var_v_evals[0]], &mut self.sp.mpi_var_v_evals);
         self.mpi_config.gather_vec(
-            &vec![self.sp.simd_var_v_evals[0]],
-            &mut self.sp.mpi_var_v_evals,
-        );
-        self.mpi_config.gather_vec(
-            &vec![self.sp.simd_var_hg_evals[0] * self.sp.eq_evals_at_r_simd0[0]],
+            &[self.sp.simd_var_hg_evals[0] * self.sp.eq_evals_at_r_simd0[0]],
             &mut self.sp.mpi_var_hg_evals,
         );
     }

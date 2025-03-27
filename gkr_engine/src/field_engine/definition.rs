@@ -148,14 +148,14 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
         if mpi_config.is_root() {
             let mut claimed_v_gathering_buffer =
                 vec![Self::ChallengeField::zero(); mpi_config.world_size()];
-            mpi_config.gather_vec(&vec![local_v], &mut claimed_v_gathering_buffer);
+            mpi_config.gather_vec(&[local_v], &mut claimed_v_gathering_buffer);
             MultiLinearPoly::evaluate_with_buffer(
                 &claimed_v_gathering_buffer,
                 x_mpi,
                 scratch_challenge_field,
             )
         } else {
-            mpi_config.gather_vec(&vec![local_v], &mut vec![]);
+            mpi_config.gather_vec(&[local_v], &mut vec![]);
             Self::ChallengeField::zero()
         }
     }

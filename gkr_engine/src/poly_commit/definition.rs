@@ -6,8 +6,8 @@ use std::{fmt::Debug, str::FromStr};
 use crate::{ExpErrors, ExpanderChallenge, FieldEngine, MPIEngine, Transcript};
 
 pub trait StructuredReferenceString {
-    type PKey: Clone + Debug + ExpSerde + Send;
-    type VKey: Clone + Debug + ExpSerde + Send;
+    type PKey: Clone + Debug + ExpSerde + Send + Sync + 'static;
+    type VKey: Clone + Debug + ExpSerde + Send + Sync + 'static;
 
     /// Convert the SRS into proving and verifying keys.
     /// Comsuming self by default.
@@ -19,10 +19,10 @@ pub trait ExpanderPCS<F: FieldEngine> {
 
     const PCS_TYPE: PolynomialCommitmentType;
 
-    type Params: Clone + Debug + Default + Send + Sync;
-    type ScratchPad: Clone + Debug + Default + Send + ExpSerde;
+    type Params: Clone + Debug + Default + Send + Sync + 'static;
+    type ScratchPad: Clone + Debug + Default + Send + ExpSerde + Sync;
 
-    type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString;
+    type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString + Send + Sync;
     type Commitment: Clone + Debug + Default + ExpSerde;
     type Opening: Clone + Debug + Default + ExpSerde;
 

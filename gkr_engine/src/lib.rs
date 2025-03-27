@@ -58,7 +58,7 @@ pub use transcript::*;
 ///     const SCHEME: GKRScheme = GKRScheme::Vanilla;
 /// }
 /// ```
-pub trait GKREngine: Send {
+pub trait GKREngine: Send + Sync {
     /// Configuration for field arithmetic operations
     type FieldConfig: FieldEngine;
 
