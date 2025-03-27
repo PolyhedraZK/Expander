@@ -117,11 +117,7 @@ impl<C: GKRFieldConfig> FieldSerde for Circuit<C> {
         Ok(Circuit {
             layers,
 
-            public_input: vec![],
-            expected_num_output_zeros: 0,
-
-            rnd_coefs_identified: false,
-            rnd_coefs: vec![],
+            ..Default::default()
         })
     }
 }
