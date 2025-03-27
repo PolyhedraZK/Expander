@@ -16,15 +16,15 @@ mod errors;
 mod field_engine;
 mod mpi_engine;
 mod poly_commit;
-mod transcript;
 mod scheme;
+mod transcript;
 
 pub use errors::*;
 pub use field_engine::*;
 pub use mpi_engine::*;
 pub use poly_commit::*;
-pub use transcript::*;
 pub use scheme::*;
+pub use transcript::*;
 /// Core trait defining the configuration types for a GKR protocol implementation.
 ///
 /// This trait serves as the main configuration interface for the GKR protocol, specifying the
@@ -38,7 +38,7 @@ pub use scheme::*;
 /// * `TranscriptConfig` - Configuration for transcript generation, implementing `Transcript` over
 ///   the challenge field
 /// * `PCSConfig` - Configuration for polynomial commitment scheme, implementing `PCSForExpanderGKR`
-/// * `SchemeConfig` - Configuration for the GKR scheme, candidates are `GKRScheme::Vanilla` and
+/// * `Scheme` - Identifier for the GKR scheme, candidates are `GKRScheme::Vanilla` and
 ///   `GKRScheme::GkrSquare`
 ///
 /// # Usage
@@ -58,7 +58,7 @@ pub use scheme::*;
 ///     const SCHEME: GKRScheme = GKRScheme::Vanilla;
 /// }
 /// ```
-pub trait GKREngine {
+pub trait GKREngine: Send {
     /// Configuration for field arithmetic operations
     type FieldConfig: FieldEngine;
 

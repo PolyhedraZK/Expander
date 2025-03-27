@@ -1,11 +1,7 @@
-use gkr_engine::{ExpanderPCS, FieldEngine, MPIConfig, StructuredReferenceString, Transcript};
+use gkr_engine::{ExpanderPCS, FieldEngine, MPIConfig, StructuredReferenceString};
 
 #[allow(clippy::type_complexity)]
-pub fn expander_pcs_init_testing_only<
-    FieldConfig: FieldEngine,
-    T: Transcript<FieldConfig::ChallengeField>,
-    PCS: ExpanderPCS<FieldConfig>,
->(
+pub fn expander_pcs_init_testing_only<FieldConfig: FieldEngine, PCS: ExpanderPCS<FieldConfig>>(
     n_input_vars: usize,
     mpi_config: &MPIConfig,
     mut rng: impl rand::RngCore,

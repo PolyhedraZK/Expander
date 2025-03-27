@@ -43,22 +43,22 @@ tiny-keccak.workspace = true
 [dev-dependencies]
 criterion = "0.5.1"
 
-[[bin]]
-name = "gkr-mpi"
-path = "src/main_mpi.rs"
+# [[bin]]
+# name = "gkr-mpi"
+# path = "src/main_mpi.rs"
 
-[[bin]]
-name = "expander-exec"
-path = "src/exec.rs"
+# [[bin]]
+# name = "expander-exec"
+# path = "src/exec.rs"
 
 [[bin]]
 name = "dev-setup"
 path = "src/utils.rs"
 
 [features]
-default = []
-# default = [ "grinding" ]
-# grinding = [ "gkr_engine/grinding" ]
+# default = []
+default = [ "grinding" ]
+grinding = [ ]
 recursion = [ "transcript/recursion" ]
 profile = [ "utils/profile", "sumcheck/profile" ]
 

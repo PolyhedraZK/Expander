@@ -10,6 +10,11 @@ pub struct GF2ExtConfig;
 impl FieldEngine for GF2ExtConfig {
     const FIELD_TYPE: FieldType = FieldType::GF2;
 
+    const SENTINEL: [u8; 32] = [
+        2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0,
+    ];
+
     type CircuitField = GF2;
 
     type SimdCircuitField = GF2x8;

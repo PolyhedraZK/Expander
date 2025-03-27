@@ -19,6 +19,9 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
     /// Enum type for Self::Field
     const FIELD_TYPE: FieldType;
 
+    /// Sentinel value for the field type; this is the order of the field
+    const SENTINEL: [u8; 32];
+
     /// Field type for the circuit, e.g., M31
     type CircuitField: Field + Send;
 

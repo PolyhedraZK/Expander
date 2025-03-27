@@ -9,6 +9,11 @@ pub struct M31ExtConfig;
 impl FieldEngine for M31ExtConfig {
     const FIELD_TYPE: FieldType = FieldType::M31;
 
+    const SENTINEL: [u8; 32] = [
+        255, 255, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0,
+    ];
+
     type CircuitField = M31;
 
     type SimdCircuitField = M31x16;

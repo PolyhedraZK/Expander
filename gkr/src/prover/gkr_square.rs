@@ -3,26 +3,23 @@
 
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
-use gkr_field_config::{FieldType, GKRFieldConfig};
-use mpi_config::MPIConfig;
-use polynomials::MultiLinearPolyExpander;
+use gkr_engine::{FieldEngine, FieldType, MPIConfig, MPIEngine, Transcript};
 use sumcheck::{sumcheck_prove_gkr_square_layer, ProverScratchPad};
-use transcript::Transcript;
 
 #[allow(clippy::type_complexity)]
-pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    circuit: &Circuit<C>,
-    sp: &mut ProverScratchPad<C>,
-    transcript: &mut T,
+pub fn gkr_square_prove<F: FieldEngine>(
+    circuit: &Circuit<F>,
+    sp: &mut ProverScratchPad<F>,
+    transcript: &mut impl Transcript<F::ChallengeField>,
     mpi_config: &MPIConfig,
 ) -> (
-    C::ChallengeField,
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
+    F::ChallengeField,
+    Vec<F::ChallengeField>,
+    Vec<F::ChallengeField>,
+    Vec<F::ChallengeField>,
 ) {
     assert_ne!(
-        C::FIELD_TYPE,
+        F::FIELD_TYPE,
         FieldType::GF2,
         "GF2 is not supported in GKR^2"
     );
@@ -35,7 +32,7 @@ pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     }
 
     let mut r_simd = vec![];
-    for _i in 0..C::get_field_pack_size().trailing_zeros() {
+    for _i in 0..F::get_field_pack_size().trailing_zeros() {
         r_simd.push(transcript.generate_challenge_field_element());
     }
     log::trace!("Initial r_simd: {:?}", r_simd);
@@ -46,16 +43,15 @@ pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     }
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
-    let claimed_v =
-        MultiLinearPolyExpander::<C>::collectively_eval_circuit_vals_at_expander_challenge(
-            output_vals,
-            &rz0,
-            &r_simd,
-            &r_mpi,
-            &mut sp.hg_evals,
-            &mut sp.eq_evals_first_half, // confusing name here..
-            mpi_config,
-        );
+    let claimed_v = F::collectively_eval_circuit_vals_at_expander_challenge(
+        output_vals,
+        &rz0,
+        &r_simd,
+        &r_mpi,
+        &mut sp.hg_evals,
+        &mut sp.eq_evals_first_half, // confusing name here..
+        mpi_config,
+    );
 
     log::trace!("Claimed v: {:?}", claimed_v);
 

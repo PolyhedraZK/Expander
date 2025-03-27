@@ -9,6 +9,11 @@ pub struct GoldilocksExtConfig;
 impl FieldEngine for GoldilocksExtConfig {
     const FIELD_TYPE: FieldType = FieldType::Goldilocks;
 
+    const SENTINEL: [u8; 32] = [
+        1, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0,
+    ];
+
     type CircuitField = Goldilocks;
 
     type SimdCircuitField = Goldilocksx8;
