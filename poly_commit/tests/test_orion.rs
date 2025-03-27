@@ -4,12 +4,14 @@ use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
 use gf2_128::GF2_128;
-use gkr_field_config::{GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use gkr_engine::{
+    ExpanderChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, MPIConfig, MPIEngine, Transcript,
+};
+use gkr_hashers::Keccak256hasher;
 use mersenne31::{M31Ext3, M31x16, M31};
-use mpi_config::MPIConfig;
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
-use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
+use transcript::BytesHashTranscript;
 
 const TEST_REPETITION: usize = 3;
 
@@ -102,7 +104,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     mpi_config_ref: &MPIConfig,
     total_num_vars: usize,
 ) where
-    C: GKRFieldConfig,
+    C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
     T: Transcript<C::ChallengeField>,
 {
@@ -118,7 +120,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
         MultiLinearPoly::<C::SimdCircuitField>::random(num_vars_in_global_poly, &mut rng);
 
     // NOTE generate srs for each party, and shared challenge point in each party
-    let challenge_point = ExpanderGKRChallenge::<C> {
+    let challenge_point = ExpanderChallenge::<C> {
         x_mpi: (0..num_vars_in_mpi)
             .map(|_| C::ChallengeField::random_unsafe(&mut rng))
             .collect(),
@@ -160,7 +162,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
 
 #[test]
 fn test_orion_for_expander_gkr() {
-    let mpi_config = MPIConfig::new();
+    let mpi_config = MPIConfig::prover_new();
 
     test_orion_for_expander_gkr_generics::<
         GF2ExtConfig,

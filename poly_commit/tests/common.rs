@@ -1,15 +1,14 @@
 use arith::{ExtensionField, Field};
 use ark_std::test_rng;
-use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
-use poly_commit::{
-    ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,
+use gkr_engine::{
+    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIConfig, MPIEngine, StructuredReferenceString,
+    Transcript,
 };
-use polynomials::{MultiLinearPolyExpander, MultilinearExtension};
+use poly_commit::PolynomialCommitmentScheme;
+use polynomials::MultilinearExtension;
 use rand::thread_rng;
-use transcript::Transcript;
 
-pub fn test_pcs<F: ExtensionField, T: Transcript<F>, P: PolynomialCommitmentScheme<F, T>>(
+pub fn test_pcs<F: ExtensionField, T: Transcript<F>, P: PolynomialCommitmentScheme<F>>(
     params: &P::Params,
     poly: &P::Poly,
     xs: &[P::EvalPoint],
@@ -45,15 +44,15 @@ pub fn test_pcs<F: ExtensionField, T: Transcript<F>, P: PolynomialCommitmentSche
 }
 
 pub fn test_pcs_for_expander_gkr<
-    C: GKRFieldConfig,
+    C: FieldEngine,
     T: Transcript<C::ChallengeField>,
-    P: PCSForExpanderGKR<C, T>,
+    P: ExpanderPCS<C>,
 >(
     params: &P::Params,
     mpi_config: &MPIConfig,
     transcript: &mut T,
     poly: &impl MultilinearExtension<C::SimdCircuitField>,
-    xs: &[ExpanderGKRChallenge<C>],
+    xs: &[ExpanderChallenge<C>],
 ) {
     let mut rng = test_rng();
     let srs = P::gen_srs_for_testing(params, mpi_config, &mut rng);
@@ -73,7 +72,7 @@ pub fn test_pcs_for_expander_gkr<
     mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut coeffs_gathered);
 
     for xx in xs {
-        let ExpanderGKRChallenge { x, x_simd, x_mpi } = xx;
+        let ExpanderChallenge { x, x_simd, x_mpi } = xx;
         let mut transcript_cloned = transcript.clone();
 
         transcript.lock_proof();
@@ -90,13 +89,12 @@ pub fn test_pcs_for_expander_gkr<
 
         if mpi_config.is_root() {
             // this will always pass for RawExpanderGKR, so make sure it is correct
-            let v =
-                MultiLinearPolyExpander::<C>::single_core_eval_circuit_vals_at_expander_challenge(
-                    &coeffs_gathered,
-                    x,
-                    x_simd,
-                    x_mpi,
-                );
+            let v = C::single_core_eval_circuit_vals_at_expander_challenge(
+                &coeffs_gathered,
+                x,
+                x_simd,
+                x_mpi,
+            );
 
             transcript.lock_proof();
             assert!(P::verify(

@@ -1,6 +1,6 @@
 use arith::ExtensionField;
 use gkr_engine::{
-    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIConfig, MPIEngine, StructuredReferenceString, Transcript
+    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, StructuredReferenceString, Transcript,
 };
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
 use polynomials::{
@@ -17,13 +17,12 @@ use crate::{
     HyraxCommitment, HyraxOpening, HyraxPCS, PedersenParams,
 };
 
-impl<G, C, T> ExpanderPCS<G> for HyraxPCS<C, T>
+impl<G, C> ExpanderPCS<G> for HyraxPCS<C>
 where
     G: FieldEngine<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
     C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
-    T: Transcript<G::ChallengeField>,
 {
     const NAME: &'static str = "HyraxPCSForExpanderGKR";
 
@@ -38,11 +37,11 @@ where
         n_input_vars
     }
 
-    fn init_scratch_pad(_params: &Self::Params, _mpi_config: &MPIConfig) -> Self::ScratchPad {}
+    fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        _mpi_config: &MPIConfig,
+        _mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
         hyrax_setup(*params, rng)
@@ -50,25 +49,25 @@ where
 
     fn commit(
         _params: &Self::Params,
-        mpi_config: &MPIConfig,
+        mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         let local_commit = hyrax_commit(proving_key, poly);
 
-        if mpi_config.is_single_process() {
+        if mpi_engine.is_single_process() {
             return local_commit.into();
         }
 
-        let mut global_commit: Vec<C> = if mpi_config.is_root() {
-            vec![C::default(); mpi_config.world_size() * local_commit.0.len()]
+        let mut global_commit: Vec<C> = if mpi_engine.is_root() {
+            vec![C::default(); mpi_engine.world_size() * local_commit.0.len()]
         } else {
             vec![]
         };
 
-        mpi_config.gather_vec(&local_commit.0, &mut global_commit);
-        if !mpi_config.is_root() {
+        mpi_engine.gather_vec(&local_commit.0, &mut global_commit);
+        if !mpi_engine.is_root() {
             return None;
         }
 
@@ -77,14 +76,14 @@ where
 
     fn open(
         _params: &Self::Params,
-        mpi_config: &MPIConfig,
+        mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
         x: &ExpanderChallenge<G>,
-        _transcript: &mut T,
+        _transcript: &mut impl Transcript<G::ChallengeField>,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
-        if mpi_config.is_single_process() {
+        if mpi_engine.is_single_process() {
             let (_, open) = hyrax_open(proving_key, poly, &x.local_xs());
             return open.into();
         }
@@ -100,9 +99,9 @@ where
         local_mle.fix_variables(&local_vars[pedersen_vars..]);
 
         let eq_mpi_vars = EqPolynomial::build_eq_x_r(&x.x_mpi);
-        let combined_coeffs = mpi_config.coef_combine_vec(&local_basis, &eq_mpi_vars);
+        let combined_coeffs = mpi_engine.coef_combine_vec(&local_basis, &eq_mpi_vars);
 
-        if !mpi_config.is_root() {
+        if !mpi_engine.is_root() {
             return None;
         }
 
@@ -115,7 +114,7 @@ where
         commitment: &Self::Commitment,
         x: &ExpanderChallenge<G>,
         v: <G as FieldEngine>::ChallengeField,
-        _transcript: &mut T,
+        _transcript: &mut impl Transcript<G::ChallengeField>,
         opening: &Self::Opening,
     ) -> bool {
         if x.x_mpi.is_empty() {

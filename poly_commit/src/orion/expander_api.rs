@@ -2,10 +2,10 @@ use std::io::Cursor;
 
 use arith::SimdField;
 use gkr_engine::{
-    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIConfig, MPIEngine, StructuredReferenceString,
-    Transcript,
+    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, StructuredReferenceString, Transcript,
 };
 use polynomials::{EqPolynomial, MultilinearExtension};
+use rand::RngCore;
 use serdes::ExpSerde;
 
 use crate::{
@@ -42,8 +42,8 @@ where
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        _mpi_config: &MPIConfig,
-        rng: impl rand::RngCore,
+        _mpi_engine: &impl MPIEngine,
+        rng: impl RngCore,
     ) -> Self::SRS {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         OrionSRS::from_random::<C::CircuitField>(
@@ -53,13 +53,13 @@ where
         )
     }
 
-    fn init_scratch_pad(_params: &Self::Params, _mpi_config: &MPIConfig) -> Self::ScratchPad {
+    fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {
         Self::ScratchPad::default()
     }
 
     fn commit(
         params: &Self::Params,
-        mpi_config: &MPIConfig,
+        mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
@@ -71,15 +71,15 @@ where
 
         // NOTE: Hang also assume that, linear GKR will take over the commitment
         // and force sync transcript hash state of subordinate machines to be the same.
-        if mpi_config.is_single_process() {
+        if mpi_engine.is_single_process() {
             return commitment.into();
         }
 
         let local_buffer = vec![commitment];
-        let mut buffer = vec![Self::Commitment::default(); mpi_config.world_size()];
-        mpi_config.gather_vec(&local_buffer, &mut buffer);
+        let mut buffer = vec![Self::Commitment::default(); mpi_engine.world_size()];
+        mpi_engine.gather_vec(&local_buffer, &mut buffer);
 
-        if !mpi_config.is_root() {
+        if !mpi_engine.is_root() {
             return None;
         }
 
@@ -91,11 +91,11 @@ where
     // TODO(HS) rearrange the MT over interleaved codeword, s.t., we have smaller proof size
     fn open(
         params: &Self::Params,
-        mpi_config: &MPIConfig,
+        mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         eval_point: &ExpanderChallenge<C>,
-        transcript: &mut T,
+        transcript: &mut impl Transcript<C::ChallengeField>,
         scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
@@ -107,15 +107,14 @@ where
             C::SimdCircuitField,
             C::ChallengeField,
             ComPackF,
-            T,
         >(proving_key, poly, &local_xs, transcript, scratch_pad);
-        if mpi_config.is_single_process() {
+        if mpi_engine.is_single_process() {
             return local_opening.into();
         }
 
         // NOTE: eval row combine from MPI
         let mpi_eq_coeffs = EqPolynomial::build_eq_x_r(&eval_point.x_mpi);
-        let eval_row = mpi_config.coef_combine_vec(&local_opening.eval_row, &mpi_eq_coeffs);
+        let eval_row = mpi_engine.coef_combine_vec(&local_opening.eval_row, &mpi_eq_coeffs);
 
         // NOTE: sample MPI linear combination coeffs for proximity rows,
         // and proximity rows combine with MPI
@@ -123,8 +122,8 @@ where
             .proximity_rows
             .iter()
             .map(|row| {
-                let weights = transcript.generate_challenge_field_elements(mpi_config.world_size());
-                mpi_config.coef_combine_vec(row, &weights)
+                let weights = transcript.generate_challenge_field_elements(mpi_engine.world_size());
+                mpi_engine.coef_combine_vec(row, &weights)
             })
             .collect();
 
@@ -137,8 +136,8 @@ where
 
         // NOTE: gather all merkle paths
         let mut mt_paths_serialized =
-            vec![0u8; mpi_config.world_size() * local_mt_paths_serialized.len()];
-        mpi_config.gather_vec(&local_mt_paths_serialized, &mut mt_paths_serialized);
+            vec![0u8; mpi_engine.world_size() * local_mt_paths_serialized.len()];
+        mpi_engine.gather_vec(&local_mt_paths_serialized, &mut mt_paths_serialized);
 
         let query_openings: Vec<tree::RangePath> = mt_paths_serialized
             .chunks(local_mt_paths_serialized.len())
@@ -148,7 +147,7 @@ where
             })
             .collect();
 
-        if !mpi_config.is_root() {
+        if !mpi_engine.is_root() {
             return None;
         }
 
@@ -167,7 +166,8 @@ where
         commitment: &Self::Commitment,
         eval_point: &ExpanderChallenge<C>,
         eval: C::ChallengeField,
-        transcript: &mut T, // add transcript here to allow interactive arguments
+        transcript: &mut impl Transcript<C::ChallengeField>, /* add transcript here to allow
+                                                              * interactive arguments */
         opening: &Self::Opening,
     ) -> bool {
         if eval_point.x_mpi.is_empty() {
@@ -176,7 +176,6 @@ where
                 C::SimdCircuitField,
                 C::ChallengeField,
                 ComPackF,
-                T,
             >(
                 verifying_key,
                 commitment,
@@ -189,7 +188,7 @@ where
 
         // NOTE: we now assume that the input opening is from the root machine,
         // as proofs from other machines are typically undefined
-        orion_verify_simd_field_aggregated::<C, ComPackF, T>(
+        orion_verify_simd_field_aggregated::<C, ComPackF>(
             verifying_key,
             commitment,
             eval_point,

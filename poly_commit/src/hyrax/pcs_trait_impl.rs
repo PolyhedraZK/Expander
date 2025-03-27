@@ -11,21 +11,18 @@ use crate::{
     HyraxCommitment, HyraxOpening, PedersenParams, PolynomialCommitmentScheme,
 };
 
-pub struct HyraxPCS<C, T>
+pub struct HyraxPCS<C>
 where
     C: CurveAffine + ExpSerde,
-    T: Transcript<C::Scalar>,
     C::Scalar: ExtensionField,
     C::ScalarExt: ExtensionField,
 {
     _phantom_c: PhantomData<C>,
-    _phantom_t: PhantomData<T>,
 }
 
-impl<C, T> PolynomialCommitmentScheme<C::Scalar, T> for HyraxPCS<C, T>
+impl<C> PolynomialCommitmentScheme<C::Scalar> for HyraxPCS<C>
 where
     C: CurveAffine + ExpSerde,
-    T: Transcript<C::Scalar>,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
@@ -61,7 +58,7 @@ where
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         _scratch_pad: &Self::ScratchPad,
-        _transcript: &mut T,
+        _transcript: &mut impl Transcript<C::Scalar>,
     ) -> (C::Scalar, Self::Opening) {
         hyrax_open(proving_key, poly, x)
     }
@@ -73,7 +70,7 @@ where
         x: &Self::EvalPoint,
         v: C::Scalar,
         opening: &Self::Opening,
-        _transcript: &mut T,
+        _transcript: &mut impl Transcript<C::Scalar>,
     ) -> bool {
         hyrax_verify(verifying_key, commitment, x, v, opening)
     }

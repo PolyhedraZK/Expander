@@ -2,12 +2,12 @@ mod common;
 
 use arith::{Field, Fr};
 use ark_std::test_rng;
-use gkr_field_config::BN254Config;
+use gkr_engine::{BN254Config, ExpanderChallenge, MPIConfig, MPIEngine, Transcript};
+use gkr_hashers::Keccak256hasher;
 use halo2curves::bn256::G1Affine;
-use mpi_config::MPIConfig;
-use poly_commit::{ExpanderGKRChallenge, HyraxPCS};
+use poly_commit::HyraxPCS;
 use polynomials::MultiLinearPoly;
-use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
+use transcript::BytesHashTranscript;
 
 const TEST_REPETITION: usize = 3;
 
@@ -20,11 +20,9 @@ fn test_hyrax_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
             .collect();
         let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
-        common::test_pcs::<
-            Fr,
-            BytesHashTranscript<Fr, Keccak256hasher>,
-            HyraxPCS<G1Affine, BytesHashTranscript<Fr, Keccak256hasher>>,
-        >(&num_vars, &poly, &xs);
+        common::test_pcs::<Fr, BytesHashTranscript<Fr, Keccak256hasher>, HyraxPCS<G1Affine>>(
+            &num_vars, &poly, &xs,
+        );
     })
 }
 
@@ -41,7 +39,7 @@ fn test_hyrax_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_va
     let num_vars_in_each_poly = total_num_vars - num_vars_in_mpi;
 
     let global_poly = MultiLinearPoly::<Fr>::random(total_num_vars, &mut rng);
-    let challenge_point = ExpanderGKRChallenge::<BN254Config> {
+    let challenge_point = ExpanderChallenge::<BN254Config> {
         x_mpi: (0..num_vars_in_mpi)
             .map(|_| Fr::random_unsafe(&mut rng))
             .collect(),
@@ -65,7 +63,7 @@ fn test_hyrax_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_va
     common::test_pcs_for_expander_gkr::<
         BN254Config,
         BytesHashTranscript<Fr, Keccak256hasher>,
-        HyraxPCS<G1Affine, BytesHashTranscript<Fr, Keccak256hasher>>,
+        HyraxPCS<G1Affine>,
     >(
         &num_vars_in_each_poly,
         mpi_config_ref,
@@ -77,7 +75,7 @@ fn test_hyrax_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_va
 
 #[test]
 fn test_hyrax_for_expander_gkr() {
-    let mpi_config = MPIConfig::new();
+    let mpi_config = MPIConfig::prover_new();
 
     test_hyrax_for_expander_gkr_generics(&mpi_config, 19);
 

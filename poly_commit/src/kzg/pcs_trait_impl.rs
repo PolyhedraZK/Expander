@@ -13,23 +13,20 @@ use serdes::ExpSerde;
 use crate::*;
 use kzg::hyper_kzg::*;
 
-pub struct HyperKZGPCS<E, T>
+pub struct HyperKZGPCS<E>
 where
     E: Engine,
     E::Fr: ExtensionField,
-    T: Transcript<E::Fr>,
 {
     _marker_e: PhantomData<E>,
-    _marker_t: PhantomData<T>,
 }
 
-impl<E, T> PolynomialCommitmentScheme<E::Fr, T> for HyperKZGPCS<E, T>
+impl<E> PolynomialCommitmentScheme<E::Fr> for HyperKZGPCS<E>
 where
     E: Engine + MultiMillerLoop,
     E::Fr: ExtensionField + PrimeField,
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
-    T: Transcript<E::Fr>,
 {
     const NAME: &'static str = "HyperKZGPCS";
 
@@ -66,7 +63,7 @@ where
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         _scratch_pad: &Self::ScratchPad,
-        transcript: &mut T,
+        transcript: &mut impl Transcript<E::Fr>,
     ) -> (E::Fr, Self::Opening) {
         coeff_form_uni_hyperkzg_open(proving_key, &poly.coeffs, x, transcript)
     }
@@ -78,7 +75,7 @@ where
         x: &Self::EvalPoint,
         v: E::Fr,
         opening: &Self::Opening,
-        transcript: &mut T,
+        transcript: &mut impl Transcript<E::Fr>,
     ) -> bool {
         coeff_form_uni_hyperkzg_verify(
             verifying_key.clone(),

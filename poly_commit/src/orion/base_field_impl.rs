@@ -31,11 +31,11 @@ where
     commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
 }
 
-pub fn orion_open_base_field<F, EvalF, ComPackF, OpenPackF, T>(
+pub fn orion_open_base_field<F, EvalF, ComPackF, OpenPackF>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<F>,
     point: &[EvalF],
-    transcript: &mut T,
+    transcript: &mut impl Transcript<EvalF>,
     scratch_pad: &OrionScratchPad<F, ComPackF>,
 ) -> (EvalF, OrionProof<EvalF>)
 where
@@ -43,7 +43,6 @@ where
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     let (_, msg_size) = OrionSRS::evals_shape::<F>(poly.num_vars());
 
@@ -108,12 +107,12 @@ where
     )
 }
 
-pub fn orion_verify_base_field<F, EvalF, ComPackF, OpenPackF, T>(
+pub fn orion_verify_base_field<F, EvalF, ComPackF, OpenPackF>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
     point: &[EvalF],
     evaluation: EvalF,
-    transcript: &mut T,
+    transcript: &mut impl Transcript<EvalF>,
     proof: &OrionProof<EvalF>,
 ) -> bool
 where
@@ -121,7 +120,6 @@ where
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     let (row_num, msg_size) = OrionSRS::evals_shape::<F>(point.len());
 

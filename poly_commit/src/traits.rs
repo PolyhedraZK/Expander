@@ -5,7 +5,7 @@ use serdes::ExpSerde;
 use std::fmt::Debug;
 
 /// Standard Polynomial commitment scheme (PCS) trait.
-pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
+pub trait PolynomialCommitmentScheme<F: ExtensionField> {
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default;
@@ -44,7 +44,7 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &Self::ScratchPad,
-        transcript: &mut T,
+        transcript: &mut impl Transcript<F>,
     ) -> (F, Self::Opening);
 
     /// Verify the opening of a polynomial at a point.
@@ -55,7 +55,7 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
         x: &Self::EvalPoint,
         v: F,
         opening: &Self::Opening,
-        transcript: &mut T,
+        transcript: &mut impl Transcript<F>,
     ) -> bool;
 }
 

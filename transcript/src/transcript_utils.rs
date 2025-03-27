@@ -1,15 +1,16 @@
 use arith::ExtensionField;
-use gkr_engine::{MPIConfig, MPIEngine, Transcript};
+use gkr_engine::{MPIEngine, Transcript};
 
 /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
-pub fn transcript_root_broadcast<F, T>(transcript: &mut T, mpi_config: &MPIConfig)
-where
+pub fn transcript_root_broadcast<F>(
+    transcript: &mut impl Transcript<F>,
+    mpi_engine: &impl MPIEngine,
+) where
     F: ExtensionField,
-    T: Transcript<F>,
 {
-    if mpi_config.world_size > 1 {
+    if mpi_engine.world_size() > 1 {
         let mut state = transcript.hash_and_return_state();
-        mpi_config.root_broadcast_bytes(&mut state);
+        mpi_engine.root_broadcast_bytes(&mut state);
         transcript.set_state(&state);
     }
 }

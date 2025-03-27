@@ -11,18 +11,17 @@ use crate::{
     PCS_SOUNDNESS_BITS,
 };
 
-pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF, T>(
+pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
     eval_point: &ExpanderChallenge<C>,
     eval: C::ChallengeField,
-    transcript: &mut T,
+    transcript: &mut impl Transcript<C::ChallengeField>,
     proof: &OrionProof<C::ChallengeField>,
 ) -> bool
 where
     C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
-    T: Transcript<C::ChallengeField>,
 {
     let mpi_world_size = 1 << eval_point.x_mpi.len();
     let local_num_vars = eval_point.num_vars() - eval_point.x_mpi.len();
