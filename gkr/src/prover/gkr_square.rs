@@ -3,7 +3,9 @@
 
 use ark_std::{end_timer, start_timer};
 use circuit::Circuit;
-use gkr_engine::{FieldEngine, FieldType, MPIConfig, MPIEngine, Transcript};
+use gkr_engine::{
+    ExpanderSingleVarChallenge, FieldEngine, FieldType, MPIConfig, MPIEngine, Transcript,
+};
 use sumcheck::{sumcheck_prove_gkr_square_layer, ProverScratchPad};
 
 #[allow(clippy::type_complexity)]
@@ -12,12 +14,7 @@ pub fn gkr_square_prove<F: FieldEngine>(
     sp: &mut ProverScratchPad<F>,
     transcript: &mut impl Transcript<F::ChallengeField>,
     mpi_config: &MPIConfig,
-) -> (
-    F::ChallengeField,
-    Vec<F::ChallengeField>,
-    Vec<F::ChallengeField>,
-    Vec<F::ChallengeField>,
-) {
+) -> (F::ChallengeField, ExpanderSingleVarChallenge<F>) {
     assert_ne!(
         F::FIELD_TYPE,
         FieldType::GF2,
@@ -26,28 +23,18 @@ pub fn gkr_square_prove<F: FieldEngine>(
     let timer = start_timer!(|| "gkr^2 prove");
     let layer_num = circuit.layers.len();
 
-    let mut rz0 = vec![];
-    for _i in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.generate_challenge_field_element());
-    }
-
-    let mut r_simd = vec![];
-    for _i in 0..F::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.generate_challenge_field_element());
-    }
-    log::trace!("Initial r_simd: {:?}", r_simd);
-
-    let mut r_mpi = vec![];
-    for _ in 0..mpi_config.world_size().trailing_zeros() {
-        r_mpi.push(transcript.generate_challenge_field_element());
-    }
+    let mut challenge = ExpanderSingleVarChallenge::empty();
+    challenge.rz =
+        transcript.generate_challenge_field_elements(circuit.layers.last().unwrap().output_var_num);
+    challenge.r_simd = transcript
+        .generate_challenge_field_elements(F::get_field_pack_size().trailing_zeros() as usize);
+    challenge.r_mpi = transcript
+        .generate_challenge_field_elements(mpi_config.world_size().trailing_zeros() as usize);
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
     let claimed_v = F::collectively_eval_circuit_vals_at_expander_challenge(
         output_vals,
-        &rz0,
-        &r_simd,
-        &r_mpi,
+        &challenge,
         &mut sp.hg_evals,
         &mut sp.eq_evals_first_half, // confusing name here..
         mpi_config,
@@ -56,22 +43,20 @@ pub fn gkr_square_prove<F: FieldEngine>(
     log::trace!("Claimed v: {:?}", claimed_v);
 
     for i in (0..layer_num).rev() {
-        (rz0, r_simd, r_mpi) = sumcheck_prove_gkr_square_layer(
+        sumcheck_prove_gkr_square_layer(
             &circuit.layers[i],
-            &rz0,
-            &r_simd,
-            &r_mpi,
+            &mut challenge,
             transcript,
             sp,
             mpi_config,
         );
 
         log::trace!("Layer {} proved", i);
-        log::trace!("rz0.0: {:?}", rz0[0]);
-        log::trace!("rz0.1: {:?}", rz0[1]);
-        log::trace!("rz0.2: {:?}", rz0[2]);
+        log::trace!("rz0.0: {:?}", challenge.rz[0]);
+        log::trace!("rz0.1: {:?}", challenge.rz[1]);
+        log::trace!("rz0.2: {:?}", challenge.rz[2]);
     }
 
     end_timer!(timer);
-    (claimed_v, rz0, r_simd, r_mpi)
+    (claimed_v, challenge)
 }

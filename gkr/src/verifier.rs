@@ -7,8 +7,8 @@ use std::{
 use arith::Field;
 use circuit::{Circuit, CircuitLayer};
 use gkr_engine::{
-    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine, GKRScheme, MPIConfig,
-    MPIEngine, Proof, StructuredReferenceString, Transcript,
+    ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
+    GKRScheme, MPIConfig, MPIEngine, Proof, StructuredReferenceString, Transcript,
 };
 use serdes::ExpSerde;
 use sumcheck::{
@@ -65,44 +65,32 @@ fn verify_sumcheck_step<F: FieldEngine>(
     verified
 }
 
-// todo: FIXME
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::type_complexity)]
-#[allow(clippy::unnecessary_unwrap)]
 fn sumcheck_verify_gkr_layer<F: FieldEngine>(
     mpi_config: &MPIConfig,
     layer: &CircuitLayer<F>,
     public_input: &[F::SimdCircuitField],
-    rz0: &[F::ChallengeField],
-    rz1: &Option<Vec<F::ChallengeField>>,
-    r_simd: &Vec<F::ChallengeField>,
-    r_mpi: &Vec<F::ChallengeField>,
-    claimed_v0: F::ChallengeField,
-    claimed_v1: Option<F::ChallengeField>,
+    challenge: &mut ExpanderDualVarChallenge<F>,
+    claimed_v0: &mut F::ChallengeField,
+    claimed_v1: &mut Option<F::ChallengeField>,
     alpha: Option<F::ChallengeField>,
     mut proof_reader: impl Read,
     transcript: &mut impl Transcript<F::ChallengeField>,
     sp: &mut VerifierScratchPad<F>,
     is_output_layer: bool,
-) -> (
-    bool,
-    Vec<F::ChallengeField>,
-    Option<Vec<F::ChallengeField>>,
-    Vec<F::ChallengeField>,
-    Vec<F::ChallengeField>,
-    F::ChallengeField,
-    Option<F::ChallengeField>,
-) {
-    assert_eq!(rz1.is_none(), claimed_v1.is_none());
-    assert_eq!(rz1.is_none(), alpha.is_none());
+) -> bool {
+    assert_eq!(challenge.rz_1.is_none(), claimed_v1.is_none());
+    assert_eq!(challenge.rz_1.is_none(), alpha.is_none());
 
-    GKRVerifierHelper::prepare_layer(layer, &alpha, rz0, rz1, r_simd, r_mpi, sp, is_output_layer);
+    GKRVerifierHelper::prepare_layer(layer, &alpha, challenge, sp, is_output_layer);
 
     let var_num = layer.input_var_num;
     let simd_var_num = F::get_field_pack_size().trailing_zeros() as usize;
-    let mut sum = claimed_v0;
-    if claimed_v1.is_some() && alpha.is_some() {
-        sum += claimed_v1.unwrap() * alpha.unwrap();
+    let mut sum = *claimed_v0;
+    if let Some(v1) = claimed_v1 {
+        if let Some(a) = alpha {
+            sum += *v1 * a;
+        }
     }
 
     sum -= GKRVerifierHelper::eval_cst(&layer.const_, public_input, sp);
@@ -122,7 +110,6 @@ fn sumcheck_verify_gkr_layer<F: FieldEngine>(
             &mut rx,
             sp,
         );
-        // println!("x {} var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_rx(&rx, sp);
 
@@ -135,7 +122,6 @@ fn sumcheck_verify_gkr_layer<F: FieldEngine>(
             &mut r_simd_xy,
             sp,
         );
-        // println!("{} simd var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_r_simd_xy(&r_simd_xy, sp);
 
@@ -148,7 +134,6 @@ fn sumcheck_verify_gkr_layer<F: FieldEngine>(
             &mut r_mpi_xy,
             sp,
         );
-        // println!("{} mpi var, verified? {}", _i_var, verified);
     }
     GKRVerifierHelper::set_r_mpi_xy(&r_mpi_xy, sp);
 
@@ -168,7 +153,6 @@ fn sumcheck_verify_gkr_layer<F: FieldEngine>(
                 ry.as_mut().unwrap(),
                 sp,
             );
-            // println!("y {} var, verified? {}", _i_var, verified);
         }
         GKRVerifierHelper::set_ry(ry.as_ref().unwrap(), sp);
 
@@ -180,7 +164,12 @@ fn sumcheck_verify_gkr_layer<F: FieldEngine>(
         verified &= sum == F::ChallengeField::ZERO;
         None
     };
-    (verified, rx, ry, r_simd_xy, r_mpi_xy, vx_claim, vy_claim)
+
+    *challenge = ExpanderDualVarChallenge::new(rx, ry, r_simd_xy, r_mpi_xy);
+    *claimed_v0 = vx_claim;
+    *claimed_v1 = vy_claim;
+
+    verified
 }
 
 // todo: FIXME
@@ -194,10 +183,7 @@ pub fn gkr_verify<F: FieldEngine>(
     mut proof_reader: impl Read,
 ) -> (
     bool,
-    Vec<F::ChallengeField>,
-    Option<Vec<F::ChallengeField>>,
-    Vec<F::ChallengeField>,
-    Vec<F::ChallengeField>,
+    ExpanderDualVarChallenge<F>,
     F::ChallengeField,
     Option<F::ChallengeField>,
 ) {
@@ -205,22 +191,17 @@ pub fn gkr_verify<F: FieldEngine>(
     let mut sp = VerifierScratchPad::<F>::new(circuit, mpi_config.world_size());
 
     let layer_num = circuit.layers.len();
-    let mut rz0 = vec![];
-    let mut rz1 = None;
-    let mut r_simd = vec![];
-    let mut r_mpi = vec![];
 
-    for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.generate_challenge_field_element());
-    }
+    let mut challenge = ExpanderDualVarChallenge::empty();
 
-    for _ in 0..F::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.generate_challenge_field_element());
-    }
+    challenge.rz_0 =
+        transcript.generate_challenge_field_elements(circuit.layers.last().unwrap().output_var_num);
 
-    for _ in 0..mpi_config.world_size().trailing_zeros() {
-        r_mpi.push(transcript.generate_challenge_field_element());
-    }
+    challenge.r_simd = transcript
+        .generate_challenge_field_elements(F::get_field_pack_size().trailing_zeros() as usize);
+
+    challenge.r_mpi = transcript
+        .generate_challenge_field_elements(mpi_config.world_size().trailing_zeros() as usize);
 
     let mut alpha = None;
     let mut claimed_v0 = *claimed_v;
@@ -228,25 +209,13 @@ pub fn gkr_verify<F: FieldEngine>(
 
     let mut verified = true;
     for i in (0..layer_num).rev() {
-        let cur_verified;
-        (
-            cur_verified,
-            rz0,
-            rz1,
-            r_simd,
-            r_mpi,
-            claimed_v0,
-            claimed_v1,
-        ) = sumcheck_verify_gkr_layer(
+        let cur_verified = sumcheck_verify_gkr_layer(
             mpi_config,
             &circuit.layers[i],
             public_input,
-            &rz0,
-            &rz1,
-            &r_simd,
-            &r_mpi,
-            claimed_v0,
-            claimed_v1,
+            &mut challenge,
+            &mut claimed_v0,
+            &mut claimed_v1,
             alpha,
             &mut proof_reader,
             transcript,
@@ -255,14 +224,21 @@ pub fn gkr_verify<F: FieldEngine>(
         );
 
         verified &= cur_verified;
-        alpha = if rz1.is_some() {
+        alpha = if challenge.rz_1.is_some() {
             Some(transcript.generate_challenge_field_element())
         } else {
             None
         };
     }
     timer.stop();
-    (verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1)
+    let challenge = ExpanderDualVarChallenge::new(
+        challenge.rz_0,
+        challenge.rz_1,
+        challenge.r_simd,
+        challenge.r_mpi,
+    );
+
+    (verified, challenge, claimed_v0, claimed_v1)
 }
 
 impl<Cfg: GKREngine> Verifier<Cfg> {
@@ -318,7 +294,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
 
         let verified = match Cfg::SCHEME {
             GKRScheme::Vanilla => {
-                let (mut verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = gkr_verify(
+                let (mut verified, challenge, claimed_v0, claimed_v1) = gkr_verify(
                     &self.mpi_config,
                     circuit,
                     public_input,
@@ -332,31 +308,27 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
 
                 transcript_verifier_sync(&mut transcript, self.mpi_config.world_size());
 
+                let mut challenge_x = challenge.challenge_x();
+
                 verified &= self.get_pcs_opening_from_proof_and_verify(
                     pcs_params,
                     pcs_verification_key,
                     &commitment,
-                    &mut ExpanderSingleVarChallenge {
-                        x: rz0,
-                        x_simd: r_simd.clone(),
-                        x_mpi: r_mpi.clone(),
-                    },
+                    &mut challenge_x,
                     &claimed_v0,
                     &mut transcript,
                     &mut cursor,
                 );
 
-                if let Some(rz1) = rz1 {
+                if challenge.rz_1.is_some() {
                     transcript_verifier_sync(&mut transcript, self.mpi_config.world_size());
+
+                    let mut challenge_y = challenge.challenge_y();
                     verified &= self.get_pcs_opening_from_proof_and_verify(
                         pcs_params,
                         pcs_verification_key,
                         &commitment,
-                        &mut ExpanderSingleVarChallenge {
-                            x: rz1,
-                            x_simd: r_simd,
-                            x_mpi: r_mpi,
-                        },
+                        &mut challenge_y,
                         &claimed_v1.unwrap(),
                         &mut transcript,
                         &mut cursor,
@@ -366,7 +338,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                 verified
             }
             GKRScheme::GkrSquare => {
-                let (mut verified, rz, r_simd, r_mpi, claimed_v) = gkr_square_verify(
+                let (mut verified, mut challenge, claimed_v) = gkr_square_verify(
                     &self.mpi_config,
                     circuit,
                     public_input,
@@ -381,11 +353,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                     pcs_params,
                     pcs_verification_key,
                     &commitment,
-                    &mut ExpanderSingleVarChallenge {
-                        x: rz,
-                        x_simd: r_simd.clone(),
-                        x_mpi: r_mpi.clone(),
-                    },
+                    &mut challenge,
                     &claimed_v,
                     &mut transcript,
                     &mut cursor,
@@ -417,16 +385,16 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         )
         .unwrap();
 
-        if open_at.x.len() < <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::MINIMUM_NUM_VARS {
+        if open_at.rz.len() < <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::MINIMUM_NUM_VARS {
             eprintln!(
 				"{} over {} has minimum supported local vars {}, but challenge has vars {}, pad to {} vars in verifying.",
 				Cfg::PCSConfig::NAME,
 				<Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
 				Cfg::PCSConfig::MINIMUM_NUM_VARS,
-				open_at.x.len(),
+				open_at.rz.len(),
 				Cfg::PCSConfig::MINIMUM_NUM_VARS,
 			);
-            open_at.x.resize(
+            open_at.rz.resize(
                 <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::MINIMUM_NUM_VARS,
                 <Cfg::FieldConfig as FieldEngine>::ChallengeField::ZERO,
             )

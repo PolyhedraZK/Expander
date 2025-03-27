@@ -1,7 +1,7 @@
 //! This module implements the core GKR IOP.
 
 use circuit::Circuit;
-use gkr_engine::{FieldEngine, MPIConfig, MPIEngine, Transcript};
+use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIConfig, MPIEngine, Transcript};
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use utils::timer::Timer;
 
@@ -12,39 +12,26 @@ pub fn gkr_prove<F: FieldEngine>(
     sp: &mut ProverScratchPad<F>,
     transcript: &mut impl Transcript<F::ChallengeField>,
     mpi_config: &MPIConfig,
-) -> (
-    F::ChallengeField,
-    Vec<F::ChallengeField>,
-    Option<Vec<F::ChallengeField>>,
-    Vec<F::ChallengeField>,
-    Vec<F::ChallengeField>,
-) {
+) -> (F::ChallengeField, ExpanderDualVarChallenge<F>) {
     let layer_num = circuit.layers.len();
 
-    let mut rz0 = vec![];
-    let mut rz1 = None;
-    let mut r_simd = vec![];
-    let mut r_mpi = vec![];
-    for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.generate_challenge_field_element());
-    }
+    let mut challenge = ExpanderDualVarChallenge::empty();
 
-    for _ in 0..F::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.generate_challenge_field_element());
-    }
+    challenge.rz_0 =
+        transcript.generate_challenge_field_elements(circuit.layers.last().unwrap().output_var_num);
 
-    for _ in 0..mpi_config.world_size().trailing_zeros() {
-        r_mpi.push(transcript.generate_challenge_field_element());
-    }
+    challenge.r_simd = transcript
+        .generate_challenge_field_elements(F::get_field_pack_size().trailing_zeros() as usize);
+
+    challenge.r_mpi = transcript
+        .generate_challenge_field_elements(mpi_config.world_size().trailing_zeros() as usize);
 
     let mut alpha = None;
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
     let claimed_v = F::collectively_eval_circuit_vals_at_expander_challenge(
         output_vals,
-        &rz0,
-        &r_simd,
-        &r_mpi,
+        &challenge.challenge_x(),
         &mut sp.hg_evals,
         &mut sp.eq_evals_first_half, // confusing name here..
         mpi_config,
@@ -60,12 +47,10 @@ pub fn gkr_prove<F: FieldEngine>(
             ),
             mpi_config.is_root(),
         );
-        (rz0, rz1, r_simd, r_mpi) = sumcheck_prove_gkr_layer(
+
+        sumcheck_prove_gkr_layer(
             &circuit.layers[i],
-            &rz0,
-            &rz1,
-            &r_simd,
-            &r_mpi,
+            &mut challenge,
             alpha,
             transcript,
             sp,
@@ -73,7 +58,7 @@ pub fn gkr_prove<F: FieldEngine>(
             i == layer_num - 1,
         );
 
-        if rz1.is_some() {
+        if challenge.rz_1.is_some() {
             // TODO: try broadcast beta.unwrap directly
             let mut tmp = transcript.generate_challenge_field_element();
             mpi_config.root_broadcast_f(&mut tmp);
@@ -84,5 +69,5 @@ pub fn gkr_prove<F: FieldEngine>(
         timer.stop();
     }
 
-    (claimed_v, rz0, rz1, r_simd, r_mpi)
+    (claimed_v, challenge)
 }

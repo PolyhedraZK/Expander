@@ -3,8 +3,8 @@
 use arith::Field;
 use circuit::Circuit;
 use gkr_engine::{
-    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine, GKRScheme, MPIConfig,
-    MPIEngine, Proof, StructuredReferenceString, Transcript,
+    ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
+    GKRScheme, MPIConfig, MPIEngine, Proof, StructuredReferenceString, Transcript,
 };
 use polynomials::{MultilinearExtension, MutRefMultiLinearPoly};
 use serdes::ExpSerde;
@@ -136,46 +136,42 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         c.fill_rnd_coefs(&mut transcript);
         c.evaluate();
 
-        let (claimed_v, rx, rsimd, rmpi);
-        let mut ry = None;
-
         let gkr_prove_timer = Timer::new("gkr prove", self.mpi_config.is_root());
-        if Cfg::SCHEME == GKRScheme::GkrSquare {
-            (claimed_v, rx, rsimd, rmpi) =
+
+        let (claimed_v, challenge) = if Cfg::SCHEME == GKRScheme::GkrSquare {
+            let (claimed_v, challenge_x) =
                 gkr_square_prove(c, &mut self.sp, &mut transcript, &self.mpi_config);
+            (
+                claimed_v,
+                ExpanderDualVarChallenge::from_single_var_challenge(&challenge_x),
+            )
         } else {
-            (claimed_v, rx, ry, rsimd, rmpi) =
-                gkr_prove(c, &mut self.sp, &mut transcript, &self.mpi_config);
-        }
+            gkr_prove(c, &mut self.sp, &mut transcript, &self.mpi_config)
+        };
         gkr_prove_timer.stop();
 
         transcript_root_broadcast(&mut transcript, &self.mpi_config);
 
         let pcs_open_timer = Timer::new("pcs open", self.mpi_config.is_root());
+
         // open
+        let mut challenge_x = challenge.challenge_x();
         let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
         self.prove_input_layer_claim(
             &mut mle_ref,
-            &mut ExpanderSingleVarChallenge {
-                x: rx,
-                x_simd: rsimd.clone(),
-                x_mpi: rmpi.clone(),
-            },
+            &mut challenge_x,
             pcs_params,
             pcs_proving_key,
             pcs_scratch,
             &mut transcript,
         );
 
-        if let Some(ry) = ry {
+        if challenge.rz_1.is_some() {
             transcript_root_broadcast(&mut transcript, &self.mpi_config);
+            let mut challange_y = challenge.challenge_y();
             self.prove_input_layer_claim(
                 &mut mle_ref,
-                &mut ExpanderSingleVarChallenge {
-                    x: ry,
-                    x_simd: rsimd,
-                    x_mpi: rmpi,
-                },
+                &mut challange_y,
                 pcs_params,
                 pcs_proving_key,
                 pcs_scratch,
@@ -214,7 +210,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
 				Cfg::PCSConfig::MINIMUM_NUM_VARS,
 			);
             inputs.lift_to_n_vars(Cfg::PCSConfig::MINIMUM_NUM_VARS);
-            open_at.x.resize(
+            open_at.rz.resize(
                 Cfg::PCSConfig::MINIMUM_NUM_VARS,
                 <Cfg::FieldConfig as FieldEngine>::ChallengeField::ZERO,
             )
@@ -233,7 +229,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         transcript.unlock_proof();
 
         inputs.lift_to_n_vars(original_input_vars);
-        open_at.x.resize(
+        open_at.rz.resize(
             original_input_vars,
             <Cfg::FieldConfig as FieldEngine>::ChallengeField::ZERO,
         );
