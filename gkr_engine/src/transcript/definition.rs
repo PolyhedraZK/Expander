@@ -2,6 +2,9 @@ use std::{fmt::Debug, io::Read};
 
 use arith::ExtensionField;
 
+/// A trait for transcript generation over the challenge field
+/// The associated field is the challenge field, i.e., M31Ext3
+/// The challenge field is not SIMD enabled
 pub trait Transcript<F: ExtensionField>: Clone + Debug {
     /// The proof type
     type Proof: Clone + Debug;
@@ -33,9 +36,9 @@ pub trait Transcript<F: ExtensionField>: Clone + Debug {
 
     /// Generate a slice of random circuit fields.
     fn generate_circuit_field_elements(&mut self, num_elems: usize) -> Vec<F::BaseField> {
-        let mut circuit_fs = Vec::with_capacity(num_elems);
-        (0..num_elems).for_each(|_| circuit_fs.push(self.generate_circuit_field_element()));
-        circuit_fs
+        (0..num_elems)
+            .map(|_| self.generate_circuit_field_element())
+            .collect()
     }
 
     /// Generate a challenge.
@@ -48,23 +51,17 @@ pub trait Transcript<F: ExtensionField>: Clone + Debug {
     /// Generate a list of positions that we want to open the polynomial at.
     #[inline]
     fn generate_challenge_index_vector(&mut self, num_queries: usize) -> Vec<usize> {
-        let mut challenges = Vec::with_capacity(num_queries);
-        let mut buf = [0u8; 8];
-        for _ in 0..num_queries {
-            buf.copy_from_slice(self.generate_challenge_u8_slice(8).as_slice());
-            challenges.push(usize::from_le_bytes(buf));
-        }
-        challenges
+        (0..num_queries)
+            .map(|_| usize::from_le_bytes(self.generate_challenge_u8_slice(8).try_into().unwrap()))
+            .collect()
     }
 
     /// Generate a challenge vector.
     #[inline]
     fn generate_challenge_field_elements(&mut self, n: usize) -> Vec<F> {
-        let mut challenges = Vec::with_capacity(n);
-        for _ in 0..n {
-            challenges.push(self.generate_challenge_field_element());
-        }
-        challenges
+        (0..n)
+            .map(|_| self.generate_challenge_field_element())
+            .collect()
     }
 
     /// Produce the proof

@@ -1,5 +1,5 @@
+mod challenge;
 mod definition;
-mod byte_hash;
 
+pub use challenge::*;
 pub use definition::*;
-pub use byte_hash::*;

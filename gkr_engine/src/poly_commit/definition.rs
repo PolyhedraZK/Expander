@@ -1,13 +1,9 @@
 use polynomials::MultilinearExtension;
 use rand::RngCore;
-// use mpi_engine::MPIEngine;
-// use polynomials::MultilinearExtension;
-// use rand::RngCore;
 use serdes::ExpSerde;
 use std::fmt::Debug;
-// use transcript::Transcript;
 
-use crate::{FieldEngine, MPIEngine};
+use crate::{ExpanderChallenge, FieldEngine, MPIEngine, Transcript};
 
 pub trait StructuredReferenceString {
     type PKey: Clone + Debug + ExpSerde + Send;
@@ -18,14 +14,7 @@ pub trait StructuredReferenceString {
     fn into_keys(self) -> (Self::PKey, Self::VKey);
 }
 
-#[derive(Debug, Clone)]
-pub struct ExpanderGKRChallenge<C: FieldEngine> {
-    pub x: Vec<C::ChallengeField>,
-    pub x_simd: Vec<C::ChallengeField>,
-    pub x_mpi: Vec<C::ChallengeField>,
-}
-
-pub trait PCSForExpanderGKR<C: FieldEngine> {
+pub trait ExpanderPCS<F: FieldEngine> {
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default + Send;
@@ -62,7 +51,7 @@ pub trait PCSForExpanderGKR<C: FieldEngine> {
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<F::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment>;
 
@@ -91,9 +80,9 @@ pub trait PCSForExpanderGKR<C: FieldEngine> {
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<C::SimdCircuitField>,
-        x: &ExpanderGKRChallenge<C>,
-        // transcript: &mut T,
+        poly: &impl MultilinearExtension<F::SimdCircuitField>,
+        x: &ExpanderChallenge<F>,
+        transcript: &mut impl Transcript<F::ChallengeField>,
         scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening>;
 
@@ -107,9 +96,9 @@ pub trait PCSForExpanderGKR<C: FieldEngine> {
         params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &ExpanderGKRChallenge<C>,
-        v: C::ChallengeField,
-        // transcript: &mut impl Transcript<C::ChallengeField>,
+        x: &ExpanderChallenge<F>,
+        v: F::ChallengeField,
+        transcript: &mut impl Transcript<F::ChallengeField>,
         opening: &Self::Opening,
     ) -> bool;
 }
