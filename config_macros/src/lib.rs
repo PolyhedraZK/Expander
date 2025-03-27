@@ -104,16 +104,13 @@ fn parse_polynomial_commitment_type(
     match (pcs_type_str.as_str(), field_type) {
         ("Raw", _) => (
             "Raw".to_owned(),
-            format!("RawExpanderGKR::<{field_config}, {transcript_type}>").to_owned(),
+            format!("RawExpanderGKR::<{field_config}>").to_owned(),
         ),
         ("Hyrax", "BN254") => (
             "Hyrax".to_owned(),
-            format!("HyraxPCS::<G1Affine, {transcript_type}>").to_owned(),
+            format!("HyraxPCS::<G1Affine>").to_owned(),
         ),
-        ("KZG", "BN254") => (
-            "KZG".to_owned(),
-            format!("HyperKZGPCS::<Bn256, {transcript_type}>").to_owned(),
-        ),
+        ("KZG", "BN254") => ("KZG".to_owned(), format!("HyperKZGPCS::<Bn256>").to_owned()),
         ("Orion", "GF2") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, GF2x128, {transcript_type}>").to_owned(),
@@ -149,19 +146,20 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
     } = parse_macro_input!(input as ConfigLit);
 
     let (field_type, field_config) = parse_field_type(field_expr);
-    let (fiat_shamir_hash_type, transcript_type) =
+    let (_fiat_shamir_hash_type, transcript_type) =
         parse_fiat_shamir_hash_type(&field_type, &field_config, fiat_shamir_hash_type_expr);
-    let (polynomial_commitment_enum, polynomial_commitment_type) = parse_polynomial_commitment_type(
-        &field_type,
-        &field_config,
-        &transcript_type,
-        polynomial_commitment_type,
-    );
+    let (_polynomial_commitment_enum, polynomial_commitment_type) =
+        parse_polynomial_commitment_type(
+            &field_type,
+            &field_config,
+            &transcript_type,
+            polynomial_commitment_type,
+        );
 
     let field_config = format_ident!("{field_config}");
-    let fiat_shamir_hash_type = format_ident!("{fiat_shamir_hash_type}");
+    // let fiat_shamir_hash_type = format_ident!("{fiat_shamir_hash_type}");
     let transcript_type_expr = syn::parse_str::<syn::Type>(&transcript_type).unwrap();
-    let polynomial_commitment_enum = format_ident!("{polynomial_commitment_enum}");
+    // let polynomial_commitment_enum = format_ident!("{polynomial_commitment_enum}");
     let polynomial_commitment_type_expr =
         syn::parse_str::<syn::Type>(&polynomial_commitment_type).unwrap();
 
@@ -171,7 +169,7 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
 
         impl GKREngine for #config_name {
             type FieldConfig = #field_config;
-            type MPIConfig = MPIConfig::default();
+            type MPIConfig = MPIConfig;
             type TranscriptConfig = #transcript_type_expr;
             type PCSConfig = #polynomial_commitment_type_expr;
         }

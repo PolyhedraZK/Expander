@@ -493,6 +493,7 @@ version = "0.1.0"
 dependencies = [
  "gf2",
  "gkr_engine",
+ "gkr_hashers",
  "goldilocks",
  "halo2curves",
  "mersenne31",

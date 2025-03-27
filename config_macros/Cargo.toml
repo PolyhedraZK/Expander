@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 gkr_engine = { path = "../gkr_engine" }
+gkr_hashers = { path = "../hasher" } 
 poly_commit = { path = "../poly_commit" }
 transcript = { path = "../transcript" }
 
