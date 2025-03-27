@@ -34,11 +34,22 @@ where
 
     fn minimum_num_vars(world_size: usize) -> usize {
         let circuit_field_elems_per_leaf = tree::leaf_adic::<C::CircuitField>();
-        let leaves_per_mt_opening = Self::SRS::LEAVES_IN_RANGE_OPENING * world_size;
+        let minimum_msg_size = {
+            let min_expander_po2_code_len = ORION_CODE_PARAMETER_INSTANCE
+                .length_threshold_g0s
+                .next_power_of_two();
 
-        let circuit_field_elems_per_mt_opening =
-            leaves_per_mt_opening * circuit_field_elems_per_leaf;
-        (circuit_field_elems_per_mt_opening / C::SimdCircuitField::PACK_SIZE).ilog2() as usize
+            if world_size <= min_expander_po2_code_len {
+                world_size
+            } else {
+                world_size / 2
+            }
+        };
+
+        let minimum_cicuit_field_elems_in_msg =
+            Self::SRS::LEAVES_IN_RANGE_OPENING * minimum_msg_size * circuit_field_elems_per_leaf;
+
+        (minimum_cicuit_field_elems_in_msg / C::SimdCircuitField::PACK_SIZE).ilog2() as usize
     }
 
     /// NOTE(HS): this is actually number of variables in polynomial,
