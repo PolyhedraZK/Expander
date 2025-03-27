@@ -2,13 +2,12 @@ use std::{fmt::Debug, io::Read};
 
 use arith::ExtensionField;
 
+use super::Proof;
+
 /// A trait for transcript generation over the challenge field
 /// The associated field is the challenge field, i.e., M31Ext3
 /// The challenge field is not SIMD enabled
 pub trait Transcript<F: ExtensionField>: Clone + Debug {
-    /// The proof type
-    type Proof: Clone + Debug;
-
     /// Create a new transcript.
     fn new() -> Self;
 
@@ -66,7 +65,7 @@ pub trait Transcript<F: ExtensionField>: Clone + Debug {
 
     /// Produce the proof
     /// It is not recommended to append/challenge after calling this function
-    fn finalize_and_get_proof(&self) -> Self::Proof;
+    fn finalize_and_get_proof(&self) -> Proof;
 
     /// Return current state of the transcript
     /// Note: this may incur an additional hash to shrink the state

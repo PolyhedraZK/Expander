@@ -1045,6 +1045,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "gkr_hashers"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "halo2curves",
+ "serdes",
+ "sha2",
+ "tiny-keccak",
+]
+
+[[package]]
 name = "glob"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1605,7 +1616,7 @@ dependencies = [
  "cfg-if",
  "criterion",
  "ethnum",
- "field_hashers",
+ "gkr_hashers",
  "halo2curves",
  "log",
  "rand",
@@ -2503,9 +2514,9 @@ name = "transcript"
 version = "0.1.0"
 dependencies = [
  "arith",
- "field_hashers",
+ "gkr_engine",
+ "gkr_hashers",
  "mersenne31",
- "mpi_config",
  "serdes",
  "sha2",
  "tiny-keccak",

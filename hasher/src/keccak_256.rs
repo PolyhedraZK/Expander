@@ -1,6 +1,6 @@
 use tiny_keccak::{Hasher, Keccak};
 
-use super::FiatShamirBytesHash;
+use crate::FiatShamirBytesHash;
 
 #[derive(Clone, Default, Debug)]
 pub struct Keccak256hasher {}

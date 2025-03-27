@@ -1,6 +1,5 @@
-use crate::Transcript;
 use arith::ExtensionField;
-use mpi_config::MPIConfig;
+use gkr_engine::{MPIConfig, MPIEngine, Transcript};
 
 /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
 pub fn transcript_root_broadcast<F, T>(transcript: &mut T, mpi_config: &MPIConfig)

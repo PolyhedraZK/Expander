@@ -43,13 +43,13 @@ pub use transcript::*;
 ///
 /// # Example
 /// ```ignore
-/// struct MyGKRConfig;
+/// struct M31Ext3Sha2Raw;
 ///
-/// impl GKREngine for MyGKRConfig {
-///     type FieldConfig = MyFieldConfig;
-///     type MPIConfig = MyMPIConfig;
-///     type TranscriptConfig = MyTranscriptConfig;
-///     type PCSConfig = MyPCSConfig;
+/// impl GKREngine for M31Ext3Sha2Raw {
+///     type FieldConfig = M31Ext3Config;
+///     type MPIConfig = MPIConfig;
+///     type TranscriptConfig = BytesHashTranscript<M31Ext3, Sha2hasher>;
+///     type PCSConfig = RawPCS<M31Ext3>;
 /// }
 /// ```
 pub trait GKREngine {
