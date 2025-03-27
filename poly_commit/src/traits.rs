@@ -1,20 +1,8 @@
 use arith::{ExtensionField, Field};
-use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
-use polynomials::MultilinearExtension;
+use gkr_engine::{StructuredReferenceString, Transcript};
 use rand::RngCore;
 use serdes::ExpSerde;
 use std::fmt::Debug;
-use transcript::Transcript;
-
-pub trait StructuredReferenceString {
-    type PKey: Clone + Debug + ExpSerde + Send;
-    type VKey: Clone + Debug + ExpSerde + Send;
-
-    /// Convert the SRS into proving and verifying keys.
-    /// Comsuming self by default.
-    fn into_keys(self) -> (Self::PKey, Self::VKey);
-}
 
 /// Standard Polynomial commitment scheme (PCS) trait.
 pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
@@ -68,122 +56,6 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
         v: F,
         opening: &Self::Opening,
         transcript: &mut T,
-    ) -> bool;
-}
-
-#[derive(Debug, Clone)]
-pub struct ExpanderGKRChallenge<C: GKRFieldConfig> {
-    pub x: Vec<C::ChallengeField>,
-    pub x_simd: Vec<C::ChallengeField>,
-    pub x_mpi: Vec<C::ChallengeField>,
-}
-
-impl<C: GKRFieldConfig> ExpanderGKRChallenge<C> {
-    pub fn local_xs(&self) -> Vec<C::ChallengeField> {
-        let mut local_xs = vec![C::ChallengeField::ZERO; self.x_simd.len() + self.x.len()];
-        local_xs[..self.x_simd.len()].copy_from_slice(&self.x_simd);
-        local_xs[self.x_simd.len()..].copy_from_slice(&self.x);
-        local_xs
-    }
-
-    pub fn global_xs(&self) -> Vec<C::ChallengeField> {
-        let mut global_xs = vec![C::ChallengeField::ZERO; self.num_vars()];
-        global_xs[..self.x_simd.len() + self.x.len()].copy_from_slice(&self.local_xs());
-        global_xs[self.x_simd.len() + self.x.len()..].copy_from_slice(&self.x_mpi);
-        global_xs
-    }
-
-    pub fn num_vars(&self) -> usize {
-        self.x.len() + self.x_simd.len() + self.x_mpi.len()
-    }
-}
-
-pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
-    const NAME: &'static str;
-
-    type Params: Clone + Debug + Default + Send;
-    type ScratchPad: Clone + Debug + Default + Send + ExpSerde;
-
-    type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString;
-    type Commitment: Clone + Debug + Default + ExpSerde;
-    type Opening: Clone + Debug + Default + ExpSerde;
-
-    /// Minimum number of variables supported in this PCS implementation,
-    /// that such constraint exists for PCSs like Orion,
-    /// but for Raw and Hyrax, polys of any size works.
-    const MINIMUM_NUM_VARS: usize = 0;
-
-    /// Generate a random structured reference string (SRS) for testing purposes.
-    /// Each process should return the SAME GLOBAL SRS.
-    fn gen_srs_for_testing(
-        params: &Self::Params,
-        mpi_config: &MPIConfig,
-        rng: impl RngCore,
-    ) -> Self::SRS;
-
-    /// n_input_vars is with respect to the multilinear poly on each machine in MPI,
-    /// also ignore the number of variables stacked in the SIMD field.
-    fn gen_params(n_input_vars: usize) -> Self::Params;
-
-    /// Initialize the scratch pad.
-    /// Each process returns its own scratch pad.
-    fn init_scratch_pad(params: &Self::Params, mpi_config: &MPIConfig) -> Self::ScratchPad;
-
-    /// Commit to a polynomial. Root process returns the commitment, other processes can return
-    /// arbitrary value.
-    fn commit(
-        params: &Self::Params,
-        mpi_config: &MPIConfig,
-        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<C::SimdCircuitField>,
-        scratch_pad: &mut Self::ScratchPad,
-    ) -> Option<Self::Commitment>;
-
-    /// Open the polynomial at a point.
-    /// Root process returns the opening, other processes can return arbitrary value.
-    ///
-    /// Note(ZF): In GKR, We'll add the opening proof to the transcript after
-    /// calling this function.
-    /// However, if the open function itself is a multi-round interactive argument,
-    /// `transcript.append_field_element` is likely to be used within the function.
-    ///
-    /// By default, `transcript.append_field_element` will add the field element to the proof,
-    /// which means the field element is added twice.
-    ///
-    /// A temporary solution is to add a `transcript.lock_proof()` at the beginning of the open
-    /// function and a `transcript.unlock_proof()` at the end of the open function.
-    ///
-    /// In this case, the `lock/unlock` function must be added at the beginning and end of the
-    /// verify function as well.
-    ///
-    /// NOTE(HS): We introduce MPI for the sake of parallelism, s.t., we can accelerate
-    /// the opening algorithm.  In such case, only the PCS opening at the root matters,
-    /// while opening from the subordinate parties are not used, at a scope of whole GKR
-    /// argument system.
-    fn open(
-        params: &Self::Params,
-        mpi_config: &MPIConfig,
-        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<C::SimdCircuitField>,
-        x: &ExpanderGKRChallenge<C>,
-        transcript: &mut T,
-        scratch_pad: &Self::ScratchPad,
-    ) -> Option<Self::Opening>;
-
-    /// Verify the opening of a polynomial at a point.
-    /// This should only be called on the root process.
-    ///
-    /// NOTE(HS): Again, corresponding to the comments in opening, the PCS opening reaching
-    /// this verify algorithm should be the one at the MPI root, rather than the ones from
-    /// any other subordinate MPI parties.
-    fn verify(
-        params: &Self::Params,
-        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
-        commitment: &Self::Commitment,
-        x: &ExpanderGKRChallenge<C>,
-        v: C::ChallengeField,
-        transcript: &mut T,
-        opening: &Self::Opening,
     ) -> bool;
 }
 

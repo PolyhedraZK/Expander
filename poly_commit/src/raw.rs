@@ -1,15 +1,15 @@
 /// Raw commitment for multi-linear polynomials
-use crate::{
-    ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,
-};
 use arith::{ExtensionField, Field};
 use ethnum::U256;
-use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
-use polynomials::{MultiLinearPoly, MultiLinearPolyExpander, MultilinearExtension};
+use gkr_engine::{
+    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIConfig, MPIEngine, StructuredReferenceString,
+    Transcript,
+};
+use polynomials::{MultiLinearPoly, MultilinearExtension};
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
-use transcript::Transcript;
+
+use crate::PolynomialCommitmentScheme;
 
 #[derive(Clone, Debug, Default)]
 pub struct RawCommitment<F: Field> {
@@ -115,13 +115,11 @@ impl<F: ExtensionField, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for R
 
 // =================================================================================================
 
-pub struct RawExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
-    _phantom: std::marker::PhantomData<(C, T)>,
+pub struct RawExpanderGKR<C: FieldEngine> {
+    _phantom: std::marker::PhantomData<C>,
 }
 
-impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T>
-    for RawExpanderGKR<C, T>
-{
+impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
     const NAME: &'static str = "RawExpanderGKR";
 
     type Params = usize;
@@ -191,8 +189,8 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _mpi_config: &MPIConfig,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         _poly: &impl MultilinearExtension<C::SimdCircuitField>,
-        _x: &ExpanderGKRChallenge<C>,
-        _transcript: &mut T,
+        _x: &ExpanderChallenge<C>,
+        _transcript: &mut impl Transcript<C::ChallengeField>,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
         Some(())
@@ -202,12 +200,12 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _params: &Self::Params,
         _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &ExpanderGKRChallenge<C>,
+        x: &ExpanderChallenge<C>,
         v: C::ChallengeField,
-        _transcript: &mut T,
+        _transcript: &mut impl Transcript<C::ChallengeField>,
         _opening: &Self::Opening,
     ) -> bool {
-        let ExpanderGKRChallenge::<C> { x, x_simd, x_mpi } = x;
+        let ExpanderChallenge::<C> { x, x_simd, x_mpi } = x;
         let v_target =
             MultiLinearPolyExpander::<C>::single_core_eval_circuit_vals_at_expander_challenge(
                 &commitment.evals,

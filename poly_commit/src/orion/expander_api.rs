@@ -1,22 +1,22 @@
 use std::io::Cursor;
 
 use arith::SimdField;
-use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use gkr_engine::{
+    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIConfig, MPIEngine, StructuredReferenceString,
+    Transcript,
+};
 use polynomials::{EqPolynomial, MultilinearExtension};
 use serdes::ExpSerde;
-use transcript::Transcript;
 
 use crate::{
     orion::{simd_field_agg_impl::*, *},
     traits::TensorCodeIOPPCS,
-    ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString,
 };
 
-impl<C, ComPackF, T> PCSForExpanderGKR<C, T>
+impl<C, ComPackF, T> ExpanderPCS<C>
     for OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF, T>
 where
-    C: GKRFieldConfig,
+    C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
     T: Transcript<C::ChallengeField>,
 {
@@ -94,7 +94,7 @@ where
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
-        eval_point: &ExpanderGKRChallenge<C>,
+        eval_point: &ExpanderChallenge<C>,
         transcript: &mut T,
         scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
@@ -165,7 +165,7 @@ where
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        eval_point: &ExpanderGKRChallenge<C>,
+        eval_point: &ExpanderChallenge<C>,
         eval: C::ChallengeField,
         transcript: &mut T, // add transcript here to allow interactive arguments
         opening: &Self::Opening,
@@ -201,9 +201,9 @@ where
 }
 
 pub type OrionPCSForGKR<C, ComPack, T> = OrionSIMDFieldPCS<
-    <C as GKRFieldConfig>::CircuitField,
-    <C as GKRFieldConfig>::SimdCircuitField,
-    <C as GKRFieldConfig>::ChallengeField,
+    <C as FieldEngine>::CircuitField,
+    <C as FieldEngine>::SimdCircuitField,
+    <C as FieldEngine>::ChallengeField,
     ComPack,
     T,
 >;

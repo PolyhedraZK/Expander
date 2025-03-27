@@ -102,3 +102,12 @@ pub trait ExpanderPCS<F: FieldEngine> {
         opening: &Self::Opening,
     ) -> bool;
 }
+
+impl StructuredReferenceString for () {
+    type PKey = ();
+    type VKey = ();
+
+    fn into_keys(self) -> (Self::PKey, Self::VKey) {
+        ((), ())
+    }
+}

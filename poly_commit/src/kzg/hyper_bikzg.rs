@@ -4,6 +4,7 @@
 use std::{io::Cursor, iter};
 
 use arith::ExtensionField;
+use gkr_engine::{MPIConfig, MPIEngine, Transcript};
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, Group, GroupEncoding},
@@ -11,10 +12,9 @@ use halo2curves::{
     CurveAffine,
 };
 use itertools::{chain, izip};
-use mpi_config::MPIConfig;
 use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
-use transcript::{transcript_root_broadcast, transcript_verifier_sync, Transcript};
+use transcript::{transcript_root_broadcast, transcript_verifier_sync};
 
 use crate::*;
 

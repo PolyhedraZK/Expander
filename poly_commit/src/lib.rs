@@ -1,7 +1,5 @@
 mod traits;
-pub use traits::{
-    ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,
-};
+pub use traits::PolynomialCommitmentScheme;
 
 pub const PCS_SOUNDNESS_BITS: usize = 128;
 

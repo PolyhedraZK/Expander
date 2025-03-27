@@ -2,9 +2,9 @@ use std::iter;
 
 use arith::{ExtensionField, Field, SimdField};
 use gf2::GF2;
+use gkr_engine::Transcript;
 use itertools::izip;
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
-use transcript::Transcript;
 
 use crate::{
     orion::{utils::*, OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad},

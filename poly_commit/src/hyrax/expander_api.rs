@@ -1,26 +1,25 @@
 use arith::ExtensionField;
-use gkr_field_config::GKRFieldConfig;
+use gkr_engine::{
+    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIConfig, MPIEngine, StructuredReferenceString, Transcript
+};
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
-use mpi_config::MPIConfig;
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
 };
 use serdes::ExpSerde;
-use transcript::Transcript;
 
 use crate::{
     hyrax::{
         hyrax_impl::{hyrax_commit, hyrax_open, hyrax_setup, hyrax_verify},
         pedersen::pedersen_commit,
     },
-    ExpanderGKRChallenge, HyraxCommitment, HyraxOpening, HyraxPCS, PCSForExpanderGKR,
-    PedersenParams, StructuredReferenceString,
+    HyraxCommitment, HyraxOpening, HyraxPCS, PedersenParams,
 };
 
-impl<G, C, T> PCSForExpanderGKR<G, T> for HyraxPCS<C, T>
+impl<G, C, T> ExpanderPCS<G> for HyraxPCS<C, T>
 where
-    G: GKRFieldConfig<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
+    G: FieldEngine<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
     C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
@@ -53,7 +52,7 @@ where
         _params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         let local_commit = hyrax_commit(proving_key, poly);
@@ -80,8 +79,8 @@ where
         _params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
-        x: &ExpanderGKRChallenge<G>,
+        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
+        x: &ExpanderChallenge<G>,
         _transcript: &mut T,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
@@ -114,8 +113,8 @@ where
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &ExpanderGKRChallenge<G>,
-        v: <G as GKRFieldConfig>::ChallengeField,
+        x: &ExpanderChallenge<G>,
+        v: <G as FieldEngine>::ChallengeField,
         _transcript: &mut T,
         opening: &Self::Opening,
     ) -> bool {

@@ -1,12 +1,10 @@
 use std::marker::PhantomData;
 
 use arith::{ExtensionField, Field, SimdField};
+use gkr_engine::{StructuredReferenceString, Transcript};
 use polynomials::MultiLinearPoly;
-use transcript::Transcript;
 
-use crate::{
-    orion::*, traits::TensorCodeIOPPCS, PolynomialCommitmentScheme, StructuredReferenceString,
-};
+use crate::{orion::*, traits::TensorCodeIOPPCS, PolynomialCommitmentScheme};
 
 impl StructuredReferenceString for OrionSRS {
     type PKey = OrionSRS;

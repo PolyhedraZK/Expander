@@ -4,7 +4,7 @@ use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use gf2::GF2x128;
 use gf2_128::GF2_128;
-use gkr_field_config::{GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use gkr_engine::FieldEngine;
 use itertools::izip;
 use mersenne31::{M31Ext3, M31x16};
 use polynomials::{EqPolynomial, MultiLinearPoly, MultiLinearPolyExpander};
@@ -35,7 +35,7 @@ fn orion_proof_aggregate<C, T>(
     transcript: &mut T,
 ) -> OrionProof<C::ChallengeField>
 where
-    C: GKRFieldConfig,
+    C: FieldEngine,
     T: Transcript<C::ChallengeField>,
 {
     let paths = openings
@@ -79,7 +79,7 @@ where
 
 fn test_orion_simd_aggregate_verify_helper<C, ComPackF, T>(num_parties: usize, num_vars: usize)
 where
-    C: GKRFieldConfig,
+    C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
     T: Transcript<C::ChallengeField>,
 {

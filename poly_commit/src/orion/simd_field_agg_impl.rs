@@ -2,26 +2,25 @@ use std::iter;
 
 use arith::{Field, SimdField};
 use gf2::GF2;
-use gkr_field_config::GKRFieldConfig;
+use gkr_engine::{ExpanderChallenge, FieldEngine, Transcript};
 use itertools::izip;
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
-use transcript::Transcript;
 
 use crate::{
-    orion::utils::*, traits::TensorCodeIOPPCS, ExpanderGKRChallenge, OrionCommitment, OrionProof,
-    OrionSRS, PCS_SOUNDNESS_BITS,
+    orion::utils::*, traits::TensorCodeIOPPCS, OrionCommitment, OrionProof, OrionSRS,
+    PCS_SOUNDNESS_BITS,
 };
 
 pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF, T>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
-    eval_point: &ExpanderGKRChallenge<C>,
+    eval_point: &ExpanderChallenge<C>,
     eval: C::ChallengeField,
     transcript: &mut T,
     proof: &OrionProof<C::ChallengeField>,
 ) -> bool
 where
-    C: GKRFieldConfig,
+    C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
     T: Transcript<C::ChallengeField>,
 {

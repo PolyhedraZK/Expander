@@ -1,5 +1,8 @@
 use arith::ExtensionField;
-use gkr_field_config::GKRFieldConfig;
+use gkr_engine::{
+    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIConfig, MPIEngine, StructuredReferenceString,
+    Transcript,
+};
 use halo2curves::{
     ff::PrimeField,
     group::prime::PrimeCurveAffine,
@@ -7,13 +10,12 @@ use halo2curves::{
     CurveAffine,
 };
 use serdes::ExpSerde;
-use transcript::Transcript;
 
 use crate::*;
 
-impl<G, E, T> PCSForExpanderGKR<G, T> for HyperKZGPCS<E, T>
+impl<G, E, T> ExpanderPCS<G> for HyperKZGPCS<E, T>
 where
-    G: GKRFieldConfig<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
+    G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
     E: Engine + MultiMillerLoop,
     E::Fr: ExtensionField + PrimeField,
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
@@ -30,11 +32,7 @@ where
 
     const MINIMUM_NUM_VARS: usize = 1;
 
-    fn init_scratch_pad(
-        _params: &Self::Params,
-        _mpi_config: &mpi_config::MPIConfig,
-    ) -> Self::ScratchPad {
-    }
+    fn init_scratch_pad(_params: &Self::Params, _mpi_config: &MPIConfig) -> Self::ScratchPad {}
 
     fn gen_params(n_input_vars: usize) -> Self::Params {
         n_input_vars
@@ -42,7 +40,7 @@ where
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        mpi_config: &mpi_config::MPIConfig,
+        mpi_config: &MPIConfig,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
         let x_degree_po2 = 1 << params;
@@ -54,9 +52,9 @@ where
 
     fn commit(
         _params: &Self::Params,
-        mpi_config: &mpi_config::MPIConfig,
+        mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         let local_commitment =
@@ -81,10 +79,10 @@ where
 
     fn open(
         _params: &Self::Params,
-        mpi_config: &mpi_config::MPIConfig,
+        mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
-        x: &ExpanderGKRChallenge<G>,
+        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
+        x: &ExpanderChallenge<G>,
         transcript: &mut T,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
@@ -102,8 +100,8 @@ where
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &ExpanderGKRChallenge<G>,
-        v: <G as GKRFieldConfig>::ChallengeField,
+        x: &ExpanderChallenge<G>,
+        v: <G as FieldEngine>::ChallengeField,
         transcript: &mut T,
         opening: &Self::Opening,
     ) -> bool {

@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use arith::ExtensionField;
+use gkr_engine::{StructuredReferenceString, Transcript};
 use halo2curves::{
     ff::PrimeField,
     pairing::{Engine, MultiMillerLoop},
@@ -8,7 +9,6 @@ use halo2curves::{
 };
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
-use transcript::Transcript;
 
 use crate::*;
 use kzg::hyper_kzg::*;
@@ -53,7 +53,7 @@ where
 
     fn commit(
         _params: &Self::Params,
-        proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
@@ -62,7 +62,7 @@ where
 
     fn open(
         _params: &Self::Params,
-        proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         _scratch_pad: &Self::ScratchPad,
@@ -73,7 +73,7 @@ where
 
     fn verify(
         _params: &Self::Params,
-        verifying_key: &<Self::SRS as crate::StructuredReferenceString>::VKey,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
         v: E::Fr,
