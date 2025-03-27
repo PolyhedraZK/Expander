@@ -1,44 +1,43 @@
 use crate::{unpack_and_combine, ProverScratchPad};
 use arith::{Field, SimdField};
 use circuit::CircuitLayer;
-use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use gkr_engine::{FieldEngine, MPIConfig, MPIEngine};
 use polynomials::EqPolynomial;
 
 use super::{power_gate::SumcheckPowerGateHelper, simd_gate::SumcheckSimdProdGateHelper};
 
 // todo: Move D to GKRFieldConfig
-pub(crate) struct SumcheckGkrSquareHelper<'a, C: GKRFieldConfig, const D: usize> {
-    pub(crate) rx: Vec<C::ChallengeField>,
-    pub(crate) r_simd_var: Vec<C::ChallengeField>,
-    pub(crate) r_mpi_var: Vec<C::ChallengeField>,
+pub(crate) struct SumcheckGkrSquareHelper<'a, F: FieldEngine, const D: usize> {
+    pub(crate) rx: Vec<F::ChallengeField>,
+    pub(crate) r_simd_var: Vec<F::ChallengeField>,
+    pub(crate) r_mpi_var: Vec<F::ChallengeField>,
 
-    layer: &'a CircuitLayer<C>,
-    sp: &'a mut ProverScratchPad<C>,
-    rz0: &'a [C::ChallengeField],
-    r_simd: &'a [C::ChallengeField],
-    r_mpi: &'a [C::ChallengeField],
+    layer: &'a CircuitLayer<F>,
+    sp: &'a mut ProverScratchPad<F>,
+    rz0: &'a [F::ChallengeField],
+    r_simd: &'a [F::ChallengeField],
+    r_mpi: &'a [F::ChallengeField],
 
     pub(crate) simd_var_num: usize,
 
-    x_helper: SumcheckPowerGateHelper<D>,
-    simd_helper: SumcheckSimdProdGateHelper,
-    mpi_helper: SumcheckSimdProdGateHelper,
+    x_helper: SumcheckPowerGateHelper<D, F>,
+    simd_helper: SumcheckSimdProdGateHelper<F>,
+    mpi_helper: SumcheckSimdProdGateHelper<F>,
 
     mpi_config: &'a MPIConfig,
 }
 
-impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
+impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
     #[inline]
     pub(crate) fn new(
-        layer: &'a CircuitLayer<C>,
-        rz0: &'a [C::ChallengeField],
-        r_simd: &'a [C::ChallengeField],
-        r_mpi: &'a [C::ChallengeField],
-        sp: &'a mut ProverScratchPad<C>,
+        layer: &'a CircuitLayer<F>,
+        rz0: &'a [F::ChallengeField],
+        r_simd: &'a [F::ChallengeField],
+        r_mpi: &'a [F::ChallengeField],
+        sp: &'a mut ProverScratchPad<F>,
         mpi_config: &'a MPIConfig,
     ) -> Self {
-        let simd_var_num = C::get_field_pack_size().trailing_zeros() as usize;
+        let simd_var_num = F::get_field_pack_size().trailing_zeros() as usize;
 
         SumcheckGkrSquareHelper {
             rx: vec![],
@@ -63,8 +62,8 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
     }
 
     #[inline]
-    pub(crate) fn poly_evals_at_x(&self, var_idx: usize) -> [C::ChallengeField; D] {
-        let local_vals_simd = self.x_helper.poly_eval_at::<C>(
+    pub(crate) fn poly_evals_at_x(&self, var_idx: usize) -> [F::ChallengeField; D] {
+        let local_vals_simd = self.x_helper.poly_eval_at(
             var_idx,
             &self.sp.v_evals,
             &self.sp.hg_evals_5,
@@ -78,7 +77,7 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
         let local_vals = local_vals_simd
             .iter()
             .map(|p| unpack_and_combine(p, &self.sp.eq_evals_at_r_simd0))
-            .collect::<Vec<C::ChallengeField>>();
+            .collect::<Vec<F::ChallengeField>>();
 
         self.mpi_config
             .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0)
@@ -87,10 +86,10 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
     }
 
     #[inline]
-    pub(crate) fn poly_evals_at_simd(&self, var_idx: usize) -> [C::ChallengeField; D] {
+    pub(crate) fn poly_evals_at_simd(&self, var_idx: usize) -> [F::ChallengeField; D] {
         let local_vals = self
             .simd_helper
-            .gkr2_poly_eval_at::<C, D>(
+            .gkr2_poly_eval_at::<D>(
                 var_idx,
                 &self.sp.eq_evals_at_r_simd0,
                 &self.sp.simd_var_v_evals,
@@ -105,9 +104,9 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
             .unwrap()
     }
 
-    pub(crate) fn poly_evals_at_mpi(&mut self, var_idx: usize) -> [C::ChallengeField; D] {
+    pub(crate) fn poly_evals_at_mpi(&mut self, var_idx: usize) -> [F::ChallengeField; D] {
         assert!(var_idx < self.mpi_config.world_size().trailing_zeros() as usize);
-        let mut evals = self.mpi_helper.gkr2_poly_eval_at::<C, D>(
+        let mut evals = self.mpi_helper.gkr2_poly_eval_at::<D>(
             var_idx,
             &self.sp.eq_evals_at_r_mpi0,
             &self.sp.mpi_var_v_evals,
@@ -121,8 +120,8 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
     }
 
     #[inline]
-    pub(crate) fn receive_x_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
-        self.x_helper.receive_challenge::<C>(
+    pub(crate) fn receive_x_challenge(&mut self, var_idx: usize, r: F::ChallengeField) {
+        self.x_helper.receive_challenge(
             var_idx,
             r,
             &mut self.sp.v_evals,
@@ -137,8 +136,8 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
     }
 
     #[inline]
-    pub(crate) fn receive_simd_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
-        self.simd_helper.receive_challenge::<C>(
+    pub(crate) fn receive_simd_challenge(&mut self, var_idx: usize, r: F::ChallengeField) {
+        self.simd_helper.receive_challenge(
             var_idx,
             r,
             &mut self.sp.eq_evals_at_r_simd0,
@@ -149,8 +148,8 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
     }
 
     #[inline]
-    pub(crate) fn receive_mpi_challenge(&mut self, var_idx: usize, r: C::ChallengeField) {
-        self.mpi_helper.receive_challenge::<C>(
+    pub(crate) fn receive_mpi_challenge(&mut self, var_idx: usize, r: F::ChallengeField) {
+        self.mpi_helper.receive_challenge(
             var_idx,
             r,
             &mut self.sp.eq_evals_at_r_mpi0,
@@ -161,15 +160,15 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
     }
 
     #[inline(always)]
-    pub(crate) fn vx_claim(&self) -> C::ChallengeField {
+    pub(crate) fn vx_claim(&self) -> F::ChallengeField {
         self.sp.mpi_var_v_evals[0]
     }
 
     #[inline]
     pub(crate) fn prepare_simd(&mut self) {
-        EqPolynomial::<C::ChallengeField>::eq_eval_at(
+        EqPolynomial::<F::ChallengeField>::eq_eval_at(
             self.r_simd,
-            &C::ChallengeField::one(),
+            &F::ChallengeField::one(),
             &mut self.sp.eq_evals_at_r_simd0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -179,9 +178,9 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
     #[inline]
     pub(crate) fn prepare_mpi(&mut self) {
         // TODO: No need to evaluate it at all world ranks, remove redundancy later.
-        EqPolynomial::<C::ChallengeField>::eq_eval_at(
+        EqPolynomial::<F::ChallengeField>::eq_eval_at(
             self.r_mpi,
-            &C::ChallengeField::one(),
+            &F::ChallengeField::one(),
             &mut self.sp.eq_evals_at_r_mpi0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -220,9 +219,9 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
             std::ptr::write_bytes(gate_exists_5.as_mut_ptr(), 0, vals.len());
             std::ptr::write_bytes(gate_exists_1.as_mut_ptr(), 0, vals.len());
         }
-        EqPolynomial::<C::ChallengeField>::eq_eval_at(
+        EqPolynomial::<F::ChallengeField>::eq_eval_at(
             self.rz0,
-            &C::ChallengeField::one(),
+            &F::ChallengeField::one(),
             eq_evals_at_rz0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -232,12 +231,12 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
             match g.gate_type {
                 12345 => {
                     hg_evals_5[g.i_ids[0]] +=
-                        C::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
+                        F::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
                     gate_exists_5[g.i_ids[0]] = true;
                 }
                 12346 => {
                     hg_evals_1[g.i_ids[0]] +=
-                        C::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
+                        F::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
                     gate_exists_1[g.i_ids[0]] = true;
                 }
                 _ => panic!("Unsupported gate type"),

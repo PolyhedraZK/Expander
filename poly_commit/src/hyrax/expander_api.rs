@@ -1,6 +1,7 @@
 use arith::ExtensionField;
 use gkr_engine::{
-    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, StructuredReferenceString, Transcript,
+    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, PolynomialCommitmentType,
+    StructuredReferenceString, Transcript,
 };
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
 use polynomials::{
@@ -25,6 +26,8 @@ where
     C::ScalarExt: ExtensionField + PrimeField,
 {
     const NAME: &'static str = "HyraxPCSForExpanderGKR";
+
+    const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Hyrax;
 
     type Params = usize;
     type ScratchPad = ();

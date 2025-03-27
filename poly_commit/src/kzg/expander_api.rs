@@ -1,6 +1,7 @@
 use arith::ExtensionField;
 use gkr_engine::{
-    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, StructuredReferenceString, Transcript,
+    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, PolynomialCommitmentType,
+    StructuredReferenceString, Transcript,
 };
 use halo2curves::{
     ff::PrimeField,
@@ -21,6 +22,8 @@ where
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
     const NAME: &'static str = "HyperKZGPCSForExpander";
+
+    const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::KZG;
 
     type Commitment = KZGCommitment<E>;
     type Opening = HyperBiKZGOpening<E>;

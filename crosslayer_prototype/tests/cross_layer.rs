@@ -1,6 +1,6 @@
 use arith::Field;
 use crosslayer_prototype::{prove_gkr, CrossLayerCircuit, CrossLayerConnections};
-use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use gkr_engine::{FieldEngine, GKREngine};
 use transcript::{BytesHashTranscript, SHA256hasher, Transcript};
 
 fn test_sumcheck_cross_layered_helper<C: GKRFieldConfig>() {

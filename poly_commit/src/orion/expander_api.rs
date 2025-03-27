@@ -2,7 +2,8 @@ use std::io::Cursor;
 
 use arith::SimdField;
 use gkr_engine::{
-    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, StructuredReferenceString, Transcript,
+    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, PolynomialCommitmentType,
+    StructuredReferenceString, Transcript,
 };
 use polynomials::{EqPolynomial, MultilinearExtension};
 use rand::RngCore;
@@ -21,6 +22,8 @@ where
     T: Transcript<C::ChallengeField>,
 {
     const NAME: &'static str = "OrionPCSForExpanderGKR";
+
+    const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Orion;
 
     type Params = usize;
     type ScratchPad = OrionScratchPad<C::CircuitField, ComPackF>;

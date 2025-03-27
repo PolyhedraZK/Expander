@@ -12,11 +12,13 @@
 //! - A Config is a struct that implements the Engine trait and contains the parameters for the GKR
 //!   protocol
 
+mod errors;
 mod field_engine;
 mod mpi_engine;
 mod poly_commit;
 mod transcript;
 
+pub use errors::*;
 pub use field_engine::*;
 pub use mpi_engine::*;
 pub use poly_commit::*;

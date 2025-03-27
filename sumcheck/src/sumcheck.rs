@@ -1,7 +1,5 @@
 use circuit::CircuitLayer;
-use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
-use transcript::Transcript;
+use gkr_engine::{FieldEngine, MPIConfig, MPIEngine, Transcript};
 
 use crate::{
     prover_helper::{SumcheckGkrSquareHelper, SumcheckGkrVanillaHelper},
@@ -21,22 +19,22 @@ pub const SUMCHECK_GKR_SQUARE_DEGREE: usize = 6;
 // FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
-pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    layer: &CircuitLayer<C>,
-    rz0: &[C::ChallengeField],
-    rz1: &Option<Vec<C::ChallengeField>>,
-    r_simd: &[C::ChallengeField],
-    r_mpi: &[C::ChallengeField],
-    alpha: Option<C::ChallengeField>,
+pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>>(
+    layer: &CircuitLayer<F>,
+    rz0: &[F::ChallengeField],
+    rz1: &Option<Vec<F::ChallengeField>>,
+    r_simd: &[F::ChallengeField],
+    r_mpi: &[F::ChallengeField],
+    alpha: Option<F::ChallengeField>,
     transcript: &mut T,
-    sp: &mut ProverScratchPad<C>,
+    sp: &mut ProverScratchPad<F>,
     mpi_config: &MPIConfig,
     is_output_layer: bool,
 ) -> (
-    Vec<C::ChallengeField>,
-    Option<Vec<C::ChallengeField>>,
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
+    Vec<F::ChallengeField>,
+    Option<Vec<F::ChallengeField>>,
+    Vec<F::ChallengeField>,
+    Vec<F::ChallengeField>,
 ) {
     let mut helper = SumcheckGkrVanillaHelper::new(
         layer,
@@ -57,21 +55,21 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
     helper.prepare_x_vals();
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_rx(i_var, SUMCHECK_GKR_DEGREE);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
         helper.receive_rx(i_var, r);
     }
 
     helper.prepare_simd_var_vals();
     for i_var in 0..helper.simd_var_num {
         let evals = helper.poly_evals_at_r_simd_var(i_var, SUMCHECK_GKR_SIMD_MPI_DEGREE);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
         helper.receive_r_simd_var(i_var, r);
     }
 
     helper.prepare_mpi_var_vals();
     for i_var in 0..mpi_config.world_size().trailing_zeros() as usize {
         let evals = helper.poly_evals_at_r_mpi_var(i_var, SUMCHECK_GKR_SIMD_MPI_DEGREE);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
         helper.receive_r_mpi_var(i_var, r);
     }
 
@@ -83,7 +81,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
         helper.prepare_y_vals();
         for i_var in 0..helper.input_var_num {
             let evals = helper.poly_evals_at_ry(i_var, SUMCHECK_GKR_DEGREE);
-            let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+            let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
             helper.receive_ry(i_var, r);
         }
         let vy_claim = helper.vy_claim();
@@ -105,22 +103,22 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
 // FIXME
 #[allow(clippy::needless_range_loop)] // todo: remove
 #[allow(clippy::type_complexity)]
-pub fn sumcheck_prove_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    layer: &CircuitLayer<C>,
-    rz0: &[C::ChallengeField],
-    r_simd: &[C::ChallengeField],
-    r_mpi: &[C::ChallengeField],
+pub fn sumcheck_prove_gkr_square_layer<F: FieldEngine, T: Transcript<F::ChallengeField>>(
+    layer: &CircuitLayer<F>,
+    rz0: &[F::ChallengeField],
+    r_simd: &[F::ChallengeField],
+    r_mpi: &[F::ChallengeField],
     transcript: &mut T,
-    sp: &mut ProverScratchPad<C>,
+    sp: &mut ProverScratchPad<F>,
     mpi_config: &MPIConfig,
 ) -> (
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
+    Vec<F::ChallengeField>,
+    Vec<F::ChallengeField>,
+    Vec<F::ChallengeField>,
 ) {
     const D: usize = SUMCHECK_GKR_SQUARE_DEGREE + 1;
     let mut helper =
-        SumcheckGkrSquareHelper::<C, D>::new(layer, rz0, r_simd, r_mpi, sp, mpi_config);
+        SumcheckGkrSquareHelper::<F, D>::new(layer, rz0, r_simd, r_mpi, sp, mpi_config);
 
     helper.prepare_simd();
     helper.prepare_mpi();
@@ -129,7 +127,7 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::Chall
     // x-variable sumcheck rounds
     for i_var in 0..layer.input_var_num {
         let evals = helper.poly_evals_at_x(i_var);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
         log::trace!("x i_var={} evals: {:?} r: {:?}", i_var, evals, r);
         helper.receive_x_challenge(i_var, r);
     }
@@ -140,7 +138,7 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::Chall
     // SIMD-variable sumcheck rounds
     for i_var in 0..helper.simd_var_num {
         let evals = helper.poly_evals_at_simd(i_var);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
         log::trace!("SIMD i_var={} evals: {:?} r: {:?}", i_var, evals, r);
         helper.receive_simd_challenge(i_var, r);
     }
@@ -148,7 +146,7 @@ pub fn sumcheck_prove_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::Chall
     helper.prepare_mpi_var_vals();
     for i_var in 0..mpi_config.world_size().trailing_zeros() as usize {
         let evals = helper.poly_evals_at_mpi(i_var);
-        let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
+        let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
         helper.receive_mpi_challenge(i_var, r);
     }
 

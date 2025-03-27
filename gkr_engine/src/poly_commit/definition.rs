@@ -1,9 +1,9 @@
 use polynomials::MultilinearExtension;
 use rand::RngCore;
 use serdes::ExpSerde;
-use std::fmt::Debug;
+use std::{fmt::Debug, str::FromStr};
 
-use crate::{ExpanderChallenge, FieldEngine, MPIEngine, Transcript};
+use crate::{ExpanderChallenge, FieldEngine, GKRErrors, MPIEngine, Transcript};
 
 pub trait StructuredReferenceString {
     type PKey: Clone + Debug + ExpSerde + Send;
@@ -16,6 +16,8 @@ pub trait StructuredReferenceString {
 
 pub trait ExpanderPCS<F: FieldEngine> {
     const NAME: &'static str;
+
+    const PCS_TYPE: PolynomialCommitmentType;
 
     type Params: Clone + Debug + Default + Send;
     type ScratchPad: Clone + Debug + Default + Send + ExpSerde;
@@ -109,5 +111,30 @@ impl StructuredReferenceString for () {
 
     fn into_keys(self) -> (Self::PKey, Self::VKey) {
         ((), ())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum PolynomialCommitmentType {
+    #[default]
+    Raw,
+    KZG,
+    Hyrax,
+    Orion,
+    FRI,
+}
+
+impl FromStr for PolynomialCommitmentType {
+    type Err = GKRErrors;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Raw" => Ok(PolynomialCommitmentType::Raw),
+            "KZG" => Ok(PolynomialCommitmentType::KZG),
+            "Hyrax" => Ok(PolynomialCommitmentType::Hyrax),
+            "Orion" => Ok(PolynomialCommitmentType::Orion),
+            "FRI" => Ok(PolynomialCommitmentType::FRI),
+            _ => Err(GKRErrors::PCSTypeError(s.to_string())),
+        }
     }
 }

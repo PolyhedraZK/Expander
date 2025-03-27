@@ -1,4 +1,4 @@
-use gkr_field_config::GKRFieldConfig;
+use gkr_engine::FieldEngine;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub enum CoefType {
@@ -9,7 +9,7 @@ pub enum CoefType {
 }
 
 #[derive(Debug, Clone)]
-pub struct Gate<C: GKRFieldConfig, const INPUT_NUM: usize> {
+pub struct Gate<C: FieldEngine, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
     pub o_id: usize,
     pub coef_type: CoefType,

@@ -2,7 +2,8 @@
 use arith::{ExtensionField, Field};
 use ethnum::U256;
 use gkr_engine::{
-    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, StructuredReferenceString, Transcript,
+    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, PolynomialCommitmentType,
+    StructuredReferenceString, Transcript,
 };
 use polynomials::{MultiLinearPoly, MultilinearExtension};
 use rand::RngCore;
@@ -120,6 +121,8 @@ pub struct RawExpanderGKR<C: FieldEngine> {
 
 impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
     const NAME: &'static str = "RawExpanderGKR";
+
+    const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;
 
     type Params = usize;
 

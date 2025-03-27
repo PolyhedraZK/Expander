@@ -64,7 +64,7 @@ fn parse_fiat_shamir_hash_type(
 
     let binding = hash_enum.ident.to_string();
     let hash_type_str = binding.as_str();
-    let challenge_f = format!("<{field_config} as GKRFieldConfig>::ChallengeField");
+    let challenge_f = format!("<{field_config} as FieldEngine>::ChallengeField");
     match (hash_type_str, field_type) {
         ("SHA256", _) => (
             "SHA256".to_owned(),
@@ -169,12 +169,11 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
         #[derive(Default, Debug, Clone, PartialEq)]
         #visibility struct #config_name;
 
-        impl GKRConfig for #config_name {
+        impl GKREngine for #config_name {
             type FieldConfig = #field_config;
-            const FIAT_SHAMIR_HASH: FiatShamirHashType = FiatShamirHashType::#fiat_shamir_hash_type;
-            type Transcript = #transcript_type_expr;
-            const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::#polynomial_commitment_enum;
-            type PCS = #polynomial_commitment_type_expr;
+            type MPIConfig = MPIConfig::default();
+            type TranscriptConfig = #transcript_type_expr;
+            type PCSConfig = #polynomial_commitment_type_expr;
         }
     };
 

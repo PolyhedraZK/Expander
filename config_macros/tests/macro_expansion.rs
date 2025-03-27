@@ -1,23 +1,20 @@
 use std::any::type_name;
 
-#[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
-use config::{FiatShamirHashType, PolynomialCommitmentType};
-#[allow(unused_imports)] // The FieldType import is used in the macro expansion
-use gkr_field_config::FieldType;
+// #[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
+// use config::{FiatShamirHashType, PolynomialCommitmentType};
+// #[allow(unused_imports)] // The FieldType import is used in the macro expansion
+// use gkr_engine::FieldType;
 
-use config::GKRConfig;
 use config_macros::declare_gkr_config;
-use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
-use gkr_field_config::{
-    BN254Config, GF2ExtConfig, GKRFieldConfig, GoldilocksExtConfig, M31ExtConfig,
-};
+use gkr_engine::{BN254Config, GF2ExtConfig, GKREngine, GoldilocksExtConfig, M31ExtConfig};
+use gkr_engine::{FiatShamirHashType, FieldEngine, FieldType, PolynomialCommitmentType};
 use halo2curves::bn256::Bn256;
 use mersenne31::M31x16;
 use poly_commit::{HyperKZGPCS, OrionPCSForGKR, RawExpanderGKR};
-use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
+use transcript::{BytesHashTranscript, FieldHashTranscript};
 
-fn print_type_name<Cfg: GKRConfig>() {
+fn print_type_name<Cfg: GKREngine>() {
     println!("{}", type_name::<Cfg>());
 }
 

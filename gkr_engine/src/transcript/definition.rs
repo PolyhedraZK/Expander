@@ -1,6 +1,8 @@
-use std::{fmt::Debug, io::Read};
+use std::{fmt::Debug, io::Read, str::FromStr};
 
 use arith::ExtensionField;
+
+use crate::GKRErrors;
 
 use super::Proof;
 
@@ -80,4 +82,29 @@ pub trait Transcript<F: ExtensionField>: Clone + Debug {
 
     /// unlock proof
     fn unlock_proof(&mut self);
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum FiatShamirHashType {
+    #[default]
+    SHA256,
+    Keccak256,
+    Poseidon,
+    Animoe,
+    MIMC5, // Note: use MIMC5 for bn254 ONLY
+}
+
+impl FromStr for FiatShamirHashType {
+    type Err = GKRErrors;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "SHA256" => Ok(FiatShamirHashType::SHA256),
+            "Keccak256" => Ok(FiatShamirHashType::Keccak256),
+            "Poseidon" => Ok(FiatShamirHashType::Poseidon),
+            "Animoe" => Ok(FiatShamirHashType::Animoe),
+            "MIMC5" => Ok(FiatShamirHashType::MIMC5),
+            _ => Err(GKRErrors::FiatShamirHashTypeError(s.to_string())),
+        }
+    }
 }

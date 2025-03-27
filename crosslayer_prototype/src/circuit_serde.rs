@@ -1,53 +1,14 @@
 use arith::Field;
-use gkr_field_config::GKRFieldConfig;
+use gkr_engine::{FieldEngine, GKREngine};
 use serdes::{ExpSerde, SerdeError};
 use std::{io::Read, vec};
-use thiserror::Error;
 
 use super::{Allocation, CoefType, CrossLayerRecursiveCircuit, CrossLayerSegment, Witness};
 use crate::{CrossLayerRelay, SegmentId, SimpleGate};
 
-#[derive(Debug, Error)]
-pub enum CircuitError {
-    #[error("field serde error: {0:?}")]
-    SerdeError(#[from] SerdeError),
-
-    #[error("other error: {0:?}")]
-    OtherError(#[from] std::io::Error),
-}
-pub trait FromEccSerde {
-    fn deserialize_from<R: Read>(reader: R) -> Self;
-}
-
-impl<T: FromEccSerde> FromEccSerde for Vec<T> {
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        let vec_len = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
-        let mut ret = vec![];
-        for _ in 0..vec_len {
-            ret.push(T::deserialize_from(&mut reader));
-        }
-        ret
-    }
-}
-
-impl<T1: FromEccSerde, T2: FromEccSerde> FromEccSerde for (T1, T2) {
-    fn deserialize_from<R: Read>(mut reader: R) -> Self {
-        (
-            T1::deserialize_from(&mut reader),
-            T2::deserialize_from(&mut reader),
-        )
-    }
-}
-
-impl FromEccSerde for usize {
-    fn deserialize_from<R: Read>(reader: R) -> Self {
-        <usize as ExpSerde>::deserialize_from(reader).unwrap()
-    }
-}
-
 /// A gate whose inputs are from different layers.
 #[derive(Debug, Clone)]
-pub struct ECCCrossLayerGate<C: GKRFieldConfig, const INPUT_NUM: usize> {
+pub struct ECCCrossLayerGate<C: FieldEngine, const INPUT_NUM: usize> {
     pub i_ids: [(usize, usize); INPUT_NUM], // (layer_offset, gate_offset)
     pub o_id: usize,
     pub coef_type: CoefType,
@@ -56,7 +17,7 @@ pub struct ECCCrossLayerGate<C: GKRFieldConfig, const INPUT_NUM: usize> {
 
 impl<C, const INPUT_NUM: usize> ECCCrossLayerGate<C, INPUT_NUM>
 where
-    C: GKRFieldConfig,
+    C: FieldEngine,
 {
     pub fn to_simple_gate_or_relay(
         &self,
@@ -89,7 +50,13 @@ where
     }
 }
 
-impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for ECCCrossLayerGate<C, INPUT_NUM> {
+impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for ECCCrossLayerGate<C, INPUT_NUM> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        todo!()
+    }
+
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let mut i_ids = [(0usize, 0usize); INPUT_NUM];
         for (layer_offset, gate_offset) in &mut i_ids {
@@ -130,7 +97,13 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> FromEccSerde for ECCCrossLayerGa
     }
 }
 
-impl FromEccSerde for Allocation {
+impl ExpSerde for Allocation {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        todo!()
+    }
+
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         Self {
             i_offset: <Vec<usize> as ExpSerde>::deserialize_from(&mut reader).unwrap(),
@@ -139,7 +112,13 @@ impl FromEccSerde for Allocation {
     }
 }
 
-impl<C: GKRFieldConfig> FromEccSerde for CrossLayerSegment<C> {
+impl<C: FieldEngine> ExpSerde for CrossLayerSegment<C> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        todo!()
+    }
+
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let input_size = <Vec<usize> as ExpSerde>::deserialize_from(&mut reader).unwrap();
         let output_size = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
@@ -190,7 +169,13 @@ impl<C: GKRFieldConfig> FromEccSerde for CrossLayerSegment<C> {
 
 const VERSION_NUM: usize = 3914834606642317635; // b'CIRCUIT6'
 
-impl<C: GKRFieldConfig> FromEccSerde for CrossLayerRecursiveCircuit<C> {
+impl<C: FieldEngine> ExpSerde for CrossLayerRecursiveCircuit<C> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        todo!()
+    }
+
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let version_num = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
         assert_eq!(version_num, VERSION_NUM);
@@ -210,7 +195,13 @@ impl<C: GKRFieldConfig> FromEccSerde for CrossLayerRecursiveCircuit<C> {
     }
 }
 
-impl<C: GKRFieldConfig> FromEccSerde for Witness<C> {
+impl<C: FieldEngine> ExpSerde for Witness<C> {
+    const SERIALIZED_SIZE: usize = unimplemented!();
+
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        todo!()
+    }
+
     fn deserialize_from<R: Read>(mut reader: R) -> Self {
         let num_witnesses = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
         let num_private_inputs_per_witness =
