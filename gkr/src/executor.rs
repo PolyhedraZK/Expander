@@ -159,6 +159,7 @@ pub fn prove<Cfg: GKREngine>(
             &mut rng,
         );
 
+    println!("proving");
     prover.prove(circuit, &pcs_params, &pcs_proving_key, &mut pcs_scratch)
 }
 
@@ -216,9 +217,9 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(command: &ExpanderExecArg
             circuit_file,
             witness_file,
             input_proof_file,
-            mpi_size,
+            mpi_size: _,
         } => {
-            let mpi_config = MPIConfig::verifier_new(mpi_size as i32);
+            let mpi_config = MPIConfig::prover_new();
             let verifier = Verifier::<Cfg>::new(mpi_config);
 
             assert!(
@@ -226,14 +227,23 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(command: &ExpanderExecArg
                 "Do not run verifier with mpiexec."
             );
 
+            println!("loading circuit file");
+
             let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_file);
+            
+            println!("loading witness file");
+            
             circuit.verifier_load_witness_file(&witness_file, &verifier.mpi_config);
+
+            println!("loading proof file");
 
             let bytes = fs::read(&input_proof_file).expect("Unable to read proof from file.");
             let (proof, claimed_v) = load_proof_and_claimed_v::<
                 <Cfg::FieldConfig as FieldEngine>::ChallengeField,
             >(&bytes)
             .expect("Unable to deserialize proof.");
+
+            println!("verifying proof");
 
             assert!(verify::<Cfg>(
                 &mut circuit,

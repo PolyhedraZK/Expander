@@ -172,9 +172,6 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
     fn single_core_eval_circuit_vals_at_expander_challenge(
         global_vals: &[Self::SimdCircuitField],
         challenge: &ExpanderSingleVarChallenge<Self>,
-        // x: &[Self::ChallengeField],
-        // x_simd: &[Self::ChallengeField],
-        // x_mpi: &[Self::ChallengeField],
     ) -> Self::ChallengeField {
         let local_poly_size = global_vals.len() >> challenge.r_mpi.len();
         assert_eq!(local_poly_size, 1 << challenge.rz.len());
