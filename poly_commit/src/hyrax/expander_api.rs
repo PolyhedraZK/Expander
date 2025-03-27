@@ -101,7 +101,7 @@ where
         let mut local_mle = MutRefMultiLinearPoly::from_ref(&mut local_basis);
         local_mle.fix_variables(&local_vars[pedersen_vars..]);
 
-        let eq_mpi_vars = EqPolynomial::build_eq_x_r(&x.x_mpi);
+        let eq_mpi_vars = EqPolynomial::build_eq_x_r(&x.r_mpi);
         let combined_coeffs = mpi_engine.coef_combine_vec(&local_basis, &eq_mpi_vars);
 
         if !mpi_engine.is_root() {
@@ -120,7 +120,7 @@ where
         _transcript: &mut impl Transcript<G::ChallengeField>,
         opening: &Self::Opening,
     ) -> bool {
-        if x.x_mpi.is_empty() {
+        if x.r_mpi.is_empty() {
             return hyrax_verify(verifying_key, commitment, &x.local_xs(), v, opening);
         }
 
@@ -131,7 +131,7 @@ where
 
         let local_vars = x.local_xs();
         let mut non_row_vars = local_vars[pedersen_vars..].to_vec();
-        non_row_vars.extend_from_slice(&x.x_mpi);
+        non_row_vars.extend_from_slice(&x.r_mpi);
 
         let eq_combination: Vec<C::Scalar> = EqPolynomial::build_eq_x_r(&non_row_vars);
         let mut row_comm = C::Curve::default();

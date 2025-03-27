@@ -17,30 +17,30 @@ pub struct ExpanderDualVarChallenge<C: FieldEngine> {
 #[derive(Debug, Clone)]
 pub struct ExpanderSingleVarChallenge<C: FieldEngine> {
     /// random challenge for the main body of the circuit
-    pub x: Vec<C::ChallengeField>,
+    pub rz: Vec<C::ChallengeField>,
     /// random challenge to merge the SIMD circuit into a single one
-    pub x_simd: Vec<C::ChallengeField>,
+    pub r_simd: Vec<C::ChallengeField>,
     /// random challenge to merge the MPI circuit into a single one
-    pub x_mpi: Vec<C::ChallengeField>,
+    pub r_mpi: Vec<C::ChallengeField>,
 }
 
 impl<C: FieldEngine> ExpanderSingleVarChallenge<C> {
     pub fn local_xs(&self) -> Vec<C::ChallengeField> {
-        let mut local_xs = vec![C::ChallengeField::ZERO; self.x_simd.len() + self.x.len()];
-        local_xs[..self.x_simd.len()].copy_from_slice(&self.x_simd);
-        local_xs[self.x_simd.len()..].copy_from_slice(&self.x);
+        let mut local_xs = vec![C::ChallengeField::ZERO; self.r_simd.len() + self.rz.len()];
+        local_xs[..self.r_simd.len()].copy_from_slice(&self.r_simd);
+        local_xs[self.r_simd.len()..].copy_from_slice(&self.rz);
         local_xs
     }
 
     pub fn global_xs(&self) -> Vec<C::ChallengeField> {
         let mut global_xs = vec![C::ChallengeField::ZERO; self.num_vars()];
-        global_xs[..self.x_simd.len() + self.x.len()].copy_from_slice(&self.local_xs());
-        global_xs[self.x_simd.len() + self.x.len()..].copy_from_slice(&self.x_mpi);
+        global_xs[..self.r_simd.len() + self.rz.len()].copy_from_slice(&self.local_xs());
+        global_xs[self.r_simd.len() + self.rz.len()..].copy_from_slice(&self.r_mpi);
         global_xs
     }
 
     pub fn num_vars(&self) -> usize {
-        self.x.len() + self.x_simd.len() + self.x_mpi.len()
+        self.rz.len() + self.r_simd.len() + self.r_mpi.len()
     }
 }
 
@@ -61,9 +61,9 @@ impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
 
     pub fn challenge_x(&self) -> ExpanderSingleVarChallenge<C> {
         ExpanderSingleVarChallenge {
-            x: self.rz_0.clone(),
-            x_simd: self.r_simd.clone(),
-            x_mpi: self.r_mpi.clone(),
+            rz: self.rz_0.clone(),
+            r_simd: self.r_simd.clone(),
+            r_mpi: self.r_mpi.clone(),
         }
     }
 
@@ -71,9 +71,9 @@ impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
         assert!(self.rz_1.is_some());
 
         ExpanderSingleVarChallenge {
-            x: self.rz_1.clone().unwrap(),
-            x_simd: self.r_simd.clone(),
-            x_mpi: self.r_mpi.clone(),
+            rz: self.rz_1.clone().unwrap(),
+            r_simd: self.r_simd.clone(),
+            r_mpi: self.r_mpi.clone(),
         }
     }
 }

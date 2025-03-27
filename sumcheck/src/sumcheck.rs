@@ -1,5 +1,5 @@
 use circuit::CircuitLayer;
-use gkr_engine::{FieldEngine, MPIConfig, MPIEngine, Transcript};
+use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIConfig, MPIEngine, Transcript};
 
 use crate::{
     prover_helper::{SumcheckGkrSquareHelper, SumcheckGkrVanillaHelper},
@@ -21,27 +21,32 @@ pub const SUMCHECK_GKR_SQUARE_DEGREE: usize = 6;
 #[allow(clippy::type_complexity)]
 pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>>(
     layer: &CircuitLayer<F>,
-    rz0: &[F::ChallengeField],
-    rz1: &Option<Vec<F::ChallengeField>>,
-    r_simd: &[F::ChallengeField],
-    r_mpi: &[F::ChallengeField],
+    challenge: &ExpanderDualVarChallenge<F>,
+
+    // rz0: &[F::ChallengeField],
+    // rz1: &Option<Vec<F::ChallengeField>>,
+    // r_simd: &[F::ChallengeField],
+    // r_mpi: &[F::ChallengeField],
     alpha: Option<F::ChallengeField>,
     transcript: &mut T,
     sp: &mut ProverScratchPad<F>,
     mpi_config: &MPIConfig,
     is_output_layer: bool,
-) -> (
-    Vec<F::ChallengeField>,
-    Option<Vec<F::ChallengeField>>,
-    Vec<F::ChallengeField>,
-    Vec<F::ChallengeField>,
-) {
+) -> ExpanderDualVarChallenge<F>
+// (
+//     Vec<F::ChallengeField>,
+//     Option<Vec<F::ChallengeField>>,
+//     Vec<F::ChallengeField>,
+//     Vec<F::ChallengeField>,
+// )
+{
     let mut helper = SumcheckGkrVanillaHelper::new(
         layer,
-        rz0,
-        rz1,
-        r_simd,
-        r_mpi,
+        challenge,
+        // rz0,
+        // rz1,
+        // r_simd,
+        // r_mpi,
         alpha,
         sp,
         mpi_config,
@@ -97,7 +102,7 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>
     let r_simd = helper.r_simd_var;
     let r_mpi = helper.r_mpi_var;
 
-    (rx, ry, r_simd, r_mpi)
+    ExpanderDualVarChallenge::new(rx, ry, r_simd, r_mpi)
 }
 
 // FIXME

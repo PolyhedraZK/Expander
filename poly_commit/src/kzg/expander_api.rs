@@ -92,7 +92,7 @@ where
             mpi_engine,
             poly,
             &x.local_xs(),
-            &x.x_mpi,
+            &x.r_mpi,
             transcript,
         )
     }
@@ -109,7 +109,7 @@ where
         coeff_form_hyper_bikzg_verify(
             verifying_key,
             &x.local_xs(),
-            &x.x_mpi,
+            &x.r_mpi,
             v,
             commitment.0,
             opening,

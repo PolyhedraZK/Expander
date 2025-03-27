@@ -1,6 +1,6 @@
 use arith::{Field, SimdField};
 use circuit::CircuitLayer;
-use gkr_engine::{FieldEngine, MPIConfig, MPIEngine};
+use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIConfig, MPIEngine};
 use polynomials::EqPolynomial;
 
 use crate::{unpack_and_combine, ProverScratchPad};
@@ -15,10 +15,12 @@ pub(crate) struct SumcheckGkrVanillaHelper<'a, F: FieldEngine> {
 
     layer: &'a CircuitLayer<F>,
     sp: &'a mut ProverScratchPad<F>,
-    rz0: &'a [F::ChallengeField],
-    rz1: &'a Option<Vec<F::ChallengeField>>,
-    r_simd: &'a [F::ChallengeField],
-    r_mpi: &'a [F::ChallengeField],
+
+    challenge: &'a ExpanderDualVarChallenge<F>,
+    // rz0: &'a [F::ChallengeField],
+    // rz1: &'a Option<Vec<F::ChallengeField>>,
+    // r_simd: &'a [F::ChallengeField],
+    // r_mpi: &'a [F::ChallengeField],
     alpha: Option<F::ChallengeField>,
 
     pub(crate) input_var_num: usize,
@@ -53,10 +55,12 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
     #[inline]
     pub(crate) fn new(
         layer: &'a CircuitLayer<F>,
-        rz0: &'a [F::ChallengeField],
-        rz1: &'a Option<Vec<F::ChallengeField>>,
-        r_simd: &'a [F::ChallengeField],
-        r_mpi: &'a [F::ChallengeField],
+        challenge: &'a ExpanderDualVarChallenge<F>,
+
+        // rz0: &'a [F::ChallengeField],
+        // rz1: &'a Option<Vec<F::ChallengeField>>,
+        // r_simd: &'a [F::ChallengeField],
+        // r_mpi: &'a [F::ChallengeField],
         alpha: Option<F::ChallengeField>,
         sp: &'a mut ProverScratchPad<F>,
         mpi_config: &'a MPIConfig,
@@ -71,10 +75,11 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
 
             layer,
             sp,
-            rz0,
-            rz1,
-            r_simd,
-            r_mpi,
+            challenge,
+            // rz0,
+            // rz1,
+            // r_simd,
+            // r_mpi,
             alpha,
 
             input_var_num: layer.input_var_num,
@@ -224,7 +229,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
     pub(crate) fn prepare_simd(&mut self) {
         if self.is_output_layer || self.alpha.is_none() {
             EqPolynomial::<F::ChallengeField>::eq_eval_at(
-                self.r_simd,
+                &self.challenge.r_simd,
                 &F::ChallengeField::one(),
                 &mut self.sp.eq_evals_at_r_simd0,
                 &mut self.sp.eq_evals_first_half,
@@ -238,7 +243,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         if self.is_output_layer || self.alpha.is_none() {
             // TODO: No need to evaluate it at all world ranks, remove redundancy later.
             EqPolynomial::<F::ChallengeField>::eq_eval_at(
-                self.r_mpi,
+                &self.challenge.r_mpi,
                 &F::ChallengeField::one(),
                 &mut self.sp.eq_evals_at_r_mpi0,
                 &mut self.sp.eq_evals_first_half,
@@ -264,14 +269,14 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
             std::ptr::write_bytes(gate_exists.as_mut_ptr(), 0, vals.len());
         }
 
-        assert_eq!(self.rz1.is_none(), self.alpha.is_none());
+        assert_eq!(self.challenge.rz_1.is_none(), self.alpha.is_none());
 
-        if self.is_output_layer || self.rz1.is_none() {
+        if self.is_output_layer || self.challenge.rz_1.is_none() {
             // Case 1: Output layer. There is only 1 claim
             // Case 2: Internal layer, but there is only 1 claim to prove,
             //  eq_evals_at_rx was thus skipped in the previous round
             EqPolynomial::<F::ChallengeField>::eq_eval_at(
-                self.rz0,
+                &self.challenge.rz_0,
                 &F::ChallengeField::ONE,
                 eq_evals_at_rz0,
                 &mut self.sp.eq_evals_first_half,
@@ -281,14 +286,14 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
             let alpha = self.alpha.unwrap();
             let eq_evals_at_rx_previous = &self.sp.eq_evals_at_rx;
             EqPolynomial::<F::ChallengeField>::eq_eval_at(
-                self.rz1.as_ref().unwrap(),
+                self.challenge.rz_1.as_ref().unwrap(),
                 &alpha,
                 eq_evals_at_rz0,
                 &mut self.sp.eq_evals_first_half,
                 &mut self.sp.eq_evals_second_half,
             );
 
-            for i in 0..(1 << self.rz0.len()) {
+            for i in 0..(1 << self.challenge.rz_0.len()) {
                 eq_evals_at_rz0[i] += eq_evals_at_rx_previous[i];
             }
         }
@@ -347,7 +352,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
 
         // TODO-Optimization: For root process, _eq_vec does not have to be recomputed
         self.sp.phase2_coef =
-            EqPolynomial::<F::ChallengeField>::eq_vec(self.r_mpi, &self.r_mpi_var)
+            EqPolynomial::<F::ChallengeField>::eq_vec(&self.challenge.r_mpi, &self.r_mpi_var)
                 * self.sp.eq_evals_at_r_simd0[0]
                 * v_rx_rsimd_rw;
 

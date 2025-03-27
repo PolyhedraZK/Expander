@@ -122,13 +122,13 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
 
     // NOTE generate srs for each party, and shared challenge point in each party
     let challenge_point = ExpanderSingleVarChallenge::<C> {
-        x_mpi: (0..num_vars_in_mpi)
+        r_mpi: (0..num_vars_in_mpi)
             .map(|_| C::ChallengeField::random_unsafe(&mut rng))
             .collect(),
-        x_simd: (0..num_vars_in_simd)
+        r_simd: (0..num_vars_in_simd)
             .map(|_| C::ChallengeField::random_unsafe(&mut rng))
             .collect(),
-        x: (0..num_vars_in_each_poly)
+        rz: (0..num_vars_in_each_poly)
             .map(|_| C::ChallengeField::random_unsafe(&mut rng))
             .collect(),
     };
@@ -136,7 +136,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     let mut transcript = T::new();
 
     dbg!(global_poly.get_num_vars(), global_poly.coeffs[0]);
-    dbg!(&challenge_point.x_mpi);
+    dbg!(&challenge_point.r_mpi);
     dbg!(mpi_config_ref.world_size(), mpi_config_ref.world_rank());
 
     // NOTE separate polynomial into different pieces by mpi rank

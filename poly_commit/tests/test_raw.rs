@@ -43,13 +43,13 @@ fn test_raw_gkr_helper<C: FieldEngine, T: Transcript<C::ChallengeField>>(
     let poly = RefMultiLinearPoly::from_ref(&hypercube_basis);
     let xs = (0..100)
         .map(|_| ExpanderSingleVarChallenge::<C> {
-            x: (0..params)
+            rz: (0..params)
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
-            x_simd: (0..C::get_field_pack_size().trailing_zeros())
+            r_simd: (0..C::get_field_pack_size().trailing_zeros())
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
-            x_mpi: (0..mpi_config.world_size().trailing_zeros())
+            r_mpi: (0..mpi_config.world_size().trailing_zeros())
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
         })

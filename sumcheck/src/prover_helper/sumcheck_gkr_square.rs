@@ -1,7 +1,7 @@
 use crate::{unpack_and_combine, ProverScratchPad};
 use arith::{Field, SimdField};
 use circuit::CircuitLayer;
-use gkr_engine::{FieldEngine, MPIConfig, MPIEngine};
+use gkr_engine::{ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine};
 use polynomials::EqPolynomial;
 
 use super::{power_gate::SumcheckPowerGateHelper, simd_gate::SumcheckSimdProdGateHelper};
@@ -14,10 +14,12 @@ pub(crate) struct SumcheckGkrSquareHelper<'a, F: FieldEngine, const D: usize> {
 
     layer: &'a CircuitLayer<F>,
     sp: &'a mut ProverScratchPad<F>,
-    rz0: &'a [F::ChallengeField],
-    r_simd: &'a [F::ChallengeField],
-    r_mpi: &'a [F::ChallengeField],
 
+    challenge: &'a ExpanderSingleVarChallenge<F>,
+
+    // rz0: &'a [F::ChallengeField],
+    // r_simd: &'a [F::ChallengeField],
+    // r_mpi: &'a [F::ChallengeField],
     pub(crate) simd_var_num: usize,
 
     x_helper: SumcheckPowerGateHelper<D, F>,
@@ -31,9 +33,10 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
     #[inline]
     pub(crate) fn new(
         layer: &'a CircuitLayer<F>,
-        rz0: &'a [F::ChallengeField],
-        r_simd: &'a [F::ChallengeField],
-        r_mpi: &'a [F::ChallengeField],
+        challenge: &'a ExpanderSingleVarChallenge<F>,
+        // rz0: &'a [F::ChallengeField],
+        // r_simd: &'a [F::ChallengeField],
+        // r_mpi: &'a [F::ChallengeField],
         sp: &'a mut ProverScratchPad<F>,
         mpi_config: &'a MPIConfig,
     ) -> Self {
@@ -46,10 +49,10 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
 
             layer,
             sp,
-            rz0,
-            r_simd,
-            r_mpi,
-
+            challenge,
+            // rz0,
+            // r_simd,
+            // r_mpi,
             simd_var_num,
 
             x_helper: SumcheckPowerGateHelper::new(layer.input_var_num),
@@ -167,7 +170,7 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
     #[inline]
     pub(crate) fn prepare_simd(&mut self) {
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
-            self.r_simd,
+            &self.challenge.r_simd,
             &F::ChallengeField::one(),
             &mut self.sp.eq_evals_at_r_simd0,
             &mut self.sp.eq_evals_first_half,
@@ -179,7 +182,7 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
     pub(crate) fn prepare_mpi(&mut self) {
         // TODO: No need to evaluate it at all world ranks, remove redundancy later.
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
-            self.r_mpi,
+            &self.challenge.r_mpi,
             &F::ChallengeField::one(),
             &mut self.sp.eq_evals_at_r_mpi0,
             &mut self.sp.eq_evals_first_half,
@@ -218,7 +221,7 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
             std::ptr::write_bytes(gate_exists_1.as_mut_ptr(), 0, vals.len());
         }
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
-            self.rz0,
+            &self.challenge.rz_0,
             &F::ChallengeField::one(),
             eq_evals_at_rz0,
             &mut self.sp.eq_evals_first_half,

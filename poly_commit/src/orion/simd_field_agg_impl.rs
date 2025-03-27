@@ -23,8 +23,8 @@ where
     C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
 {
-    let mpi_world_size = 1 << eval_point.x_mpi.len();
-    let local_num_vars = eval_point.num_vars() - eval_point.x_mpi.len();
+    let mpi_world_size = 1 << eval_point.r_mpi.len();
+    let local_num_vars = eval_point.num_vars() - eval_point.r_mpi.len();
     assert_eq!(local_num_vars, vk.num_vars);
 
     let (row_num, msg_size) = {

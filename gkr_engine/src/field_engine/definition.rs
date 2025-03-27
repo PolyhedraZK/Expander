@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use arith::{ExtensionField, Field, SimdField};
 use polynomials::MultiLinearPoly;
 
-use crate::{MPIConfig, MPIEngine};
+use crate::{ExpanderSingleVarChallenge, MPIConfig, MPIEngine};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum FieldType {
@@ -128,20 +128,26 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
     #[inline]
     fn collectively_eval_circuit_vals_at_expander_challenge(
         local_evals: &[Self::SimdCircuitField],
-        x: &[Self::ChallengeField],
-        x_simd: &[Self::ChallengeField],
-        x_mpi: &[Self::ChallengeField],
+        challenge: &ExpanderSingleVarChallenge<Self>,
+
+        // x: &[Self::ChallengeField],
+        // x_simd: &[Self::ChallengeField],
+        // x_mpi: &[Self::ChallengeField],
         scratch_field: &mut [Self::Field],
         scratch_challenge_field: &mut [Self::ChallengeField],
         mpi_config: &MPIConfig,
     ) -> Self::ChallengeField {
-        assert!(scratch_challenge_field.len() >= 1 << cmp::max(x_simd.len(), x_mpi.len()));
+        assert!(
+            scratch_challenge_field.len()
+                >= 1 << cmp::max(challenge.r_simd.len(), challenge.r_mpi.len())
+        );
 
-        let local_simd = Self::eval_circuit_vals_at_challenge(local_evals, x, scratch_field);
+        let local_simd =
+            Self::eval_circuit_vals_at_challenge(local_evals, &challenge.rz, scratch_field);
         let local_simd_unpacked = local_simd.unpack();
         let local_v = MultiLinearPoly::evaluate_with_buffer(
             &local_simd_unpacked,
-            x_simd,
+            &challenge.r_simd,
             scratch_challenge_field,
         );
 
@@ -151,7 +157,7 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
             mpi_config.gather_vec(&[local_v], &mut claimed_v_gathering_buffer);
             MultiLinearPoly::evaluate_with_buffer(
                 &claimed_v_gathering_buffer,
-                x_mpi,
+                &challenge.r_mpi,
                 scratch_challenge_field,
             )
         } else {
@@ -165,31 +171,38 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
     #[inline]
     fn single_core_eval_circuit_vals_at_expander_challenge(
         global_vals: &[Self::SimdCircuitField],
-        x: &[Self::ChallengeField],
-        x_simd: &[Self::ChallengeField],
-        x_mpi: &[Self::ChallengeField],
+        challenge: &ExpanderSingleVarChallenge<Self>,
+        // x: &[Self::ChallengeField],
+        // x_simd: &[Self::ChallengeField],
+        // x_mpi: &[Self::ChallengeField],
     ) -> Self::ChallengeField {
-        let local_poly_size = global_vals.len() >> x_mpi.len();
-        assert_eq!(local_poly_size, 1 << x.len());
+        let local_poly_size = global_vals.len() >> challenge.r_mpi.len();
+        assert_eq!(local_poly_size, 1 << challenge.rz.len());
 
         let mut scratch_field = vec![Self::Field::default(); local_poly_size];
         let mut scratch_challenge_field =
-            vec![Self::ChallengeField::default(); 1 << cmp::max(x_simd.len(), x_mpi.len())];
+            vec![
+                Self::ChallengeField::default();
+                1 << cmp::max(challenge.r_simd.len(), challenge.r_mpi.len())
+            ];
         let local_evals = global_vals
             .chunks(local_poly_size)
             .map(|local_vals| {
-                let local_simd =
-                    Self::eval_circuit_vals_at_challenge(local_vals, x, &mut scratch_field);
+                let local_simd = Self::eval_circuit_vals_at_challenge(
+                    local_vals,
+                    &challenge.rz,
+                    &mut scratch_field,
+                );
                 let local_simd_unpacked = local_simd.unpack();
                 MultiLinearPoly::evaluate_with_buffer(
                     &local_simd_unpacked,
-                    x_simd,
+                    &challenge.r_simd,
                     &mut scratch_challenge_field,
                 )
             })
             .collect::<Vec<Self::ChallengeField>>();
 
         let mut scratch = vec![Self::ChallengeField::default(); local_evals.len()];
-        MultiLinearPoly::evaluate_with_buffer(&local_evals, x_mpi, &mut scratch)
+        MultiLinearPoly::evaluate_with_buffer(&local_evals, &challenge.r_mpi, &mut scratch)
     }
 }

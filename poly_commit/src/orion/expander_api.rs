@@ -116,7 +116,7 @@ where
         }
 
         // NOTE: eval row combine from MPI
-        let mpi_eq_coeffs = EqPolynomial::build_eq_x_r(&eval_point.x_mpi);
+        let mpi_eq_coeffs = EqPolynomial::build_eq_x_r(&eval_point.r_mpi);
         let eval_row = mpi_engine.coef_combine_vec(&local_opening.eval_row, &mpi_eq_coeffs);
 
         // NOTE: sample MPI linear combination coeffs for proximity rows,
@@ -173,7 +173,7 @@ where
                                                               * interactive arguments */
         opening: &Self::Opening,
     ) -> bool {
-        if eval_point.x_mpi.is_empty() {
+        if eval_point.r_mpi.is_empty() {
             return orion_verify_simd_field::<
                 C::CircuitField,
                 C::SimdCircuitField,
