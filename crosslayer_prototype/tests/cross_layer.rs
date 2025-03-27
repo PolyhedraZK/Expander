@@ -1,21 +1,22 @@
 use arith::Field;
 use crosslayer_prototype::{prove_gkr, CrossLayerCircuit, CrossLayerConnections};
-use gkr_engine::{FieldEngine, GKREngine};
-use transcript::{BytesHashTranscript, SHA256hasher, Transcript};
+use gkr_engine::{BN254Config, FieldEngine, GF2ExtConfig, M31ExtConfig, Transcript};
+use gkr_hashers::SHA256hasher;
+use transcript::BytesHashTranscript;
 
-fn test_sumcheck_cross_layered_helper<C: GKRFieldConfig>() {
-    let mut transcript = BytesHashTranscript::<C::ChallengeField, SHA256hasher>::new();
+fn test_sumcheck_cross_layered_helper<F: FieldEngine>() {
+    let mut transcript = BytesHashTranscript::<F::ChallengeField, SHA256hasher>::new();
 
     let mut rng = rand::thread_rng();
     let n_layers = 5;
-    let circuit = CrossLayerCircuit::<C>::random_for_testing(&mut rng, n_layers);
+    let circuit = CrossLayerCircuit::<F>::random_for_testing(&mut rng, n_layers);
 
     let inputs = (0..circuit.layers[0].layer_size)
-        .map(|_| C::SimdCircuitField::random_unsafe(&mut rng))
+        .map(|_| F::SimdCircuitField::random_unsafe(&mut rng))
         .collect::<Vec<_>>();
     let evals = circuit.evaluate(&inputs);
     let connections = CrossLayerConnections::parse_circuit(&circuit);
-    let mut sp = crosslayer_prototype::CrossLayerProverScratchPad::<C>::new(
+    let mut sp = crosslayer_prototype::CrossLayerProverScratchPad::<F>::new(
         circuit.layers.len(),
         circuit.max_num_input_var(),
         circuit.max_num_output_var(),

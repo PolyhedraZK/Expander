@@ -2,7 +2,7 @@ use serdes::SerdeError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum GKRErrors {
+pub enum ExpErrors {
     #[error("Unknown string `{0}` for config enum deserialize")]
     SerializationError(String),
 

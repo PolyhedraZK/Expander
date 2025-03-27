@@ -2,7 +2,7 @@ use std::{fmt::Debug, io::Read, str::FromStr};
 
 use arith::ExtensionField;
 
-use crate::GKRErrors;
+use crate::ExpErrors;
 
 use super::Proof;
 
@@ -95,7 +95,7 @@ pub enum FiatShamirHashType {
 }
 
 impl FromStr for FiatShamirHashType {
-    type Err = GKRErrors;
+    type Err = ExpErrors;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -104,7 +104,7 @@ impl FromStr for FiatShamirHashType {
             "Poseidon" => Ok(FiatShamirHashType::Poseidon),
             "Animoe" => Ok(FiatShamirHashType::Animoe),
             "MIMC5" => Ok(FiatShamirHashType::MIMC5),
-            _ => Err(GKRErrors::FiatShamirHashTypeError(s.to_string())),
+            _ => Err(ExpErrors::FiatShamirHashTypeError(s.to_string())),
         }
     }
 }

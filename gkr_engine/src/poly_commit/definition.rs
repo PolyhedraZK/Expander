@@ -3,7 +3,7 @@ use rand::RngCore;
 use serdes::ExpSerde;
 use std::{fmt::Debug, str::FromStr};
 
-use crate::{ExpanderChallenge, FieldEngine, GKRErrors, MPIEngine, Transcript};
+use crate::{ExpErrors, ExpanderChallenge, FieldEngine, MPIEngine, Transcript};
 
 pub trait StructuredReferenceString {
     type PKey: Clone + Debug + ExpSerde + Send;
@@ -125,7 +125,7 @@ pub enum PolynomialCommitmentType {
 }
 
 impl FromStr for PolynomialCommitmentType {
-    type Err = GKRErrors;
+    type Err = ExpErrors;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -134,7 +134,7 @@ impl FromStr for PolynomialCommitmentType {
             "Hyrax" => Ok(PolynomialCommitmentType::Hyrax),
             "Orion" => Ok(PolynomialCommitmentType::Orion),
             "FRI" => Ok(PolynomialCommitmentType::FRI),
-            _ => Err(GKRErrors::PCSTypeError(s.to_string())),
+            _ => Err(ExpErrors::PCSTypeError(s.to_string())),
         }
     }
 }

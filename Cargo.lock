@@ -596,6 +596,7 @@ dependencies = [
  "env_logger",
  "ethnum",
  "gkr_engine",
+ "gkr_hashers",
  "log",
  "polynomials",
  "rand",
