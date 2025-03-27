@@ -19,7 +19,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
 
     const PCS_TYPE: PolynomialCommitmentType;
 
-    type Params: Clone + Debug + Default + Send;
+    type Params: Clone + Debug + Default + Send + Sync;
     type ScratchPad: Clone + Debug + Default + Send + ExpSerde;
 
     type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString;
