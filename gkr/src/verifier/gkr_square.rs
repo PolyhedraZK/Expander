@@ -30,14 +30,11 @@ pub fn gkr_square_verify<C: FieldEngine>(
 
     let layer_num = circuit.layers.len();
 
-    let mut challenge = ExpanderSingleVarChallenge::empty();
-
-    challenge.rz =
-        transcript.generate_challenge_field_elements(circuit.layers.last().unwrap().output_var_num);
-    challenge.r_simd = transcript
-        .generate_challenge_field_elements(C::get_field_pack_size().trailing_zeros() as usize);
-    challenge.r_mpi = transcript
-        .generate_challenge_field_elements(mpi_config.world_size().trailing_zeros() as usize);
+    let mut challenge = ExpanderSingleVarChallenge::sample_from_transcript(
+        transcript,
+        circuit.layers.last().unwrap().output_var_num,
+        mpi_config.world_size(),
+    );
 
     log::trace!("Initial rz0: {:?}", challenge.rz);
     log::trace!("Initial r_simd: {:?}", challenge.r_simd);

@@ -23,13 +23,11 @@ pub fn gkr_square_prove<F: FieldEngine>(
     let timer = start_timer!(|| "gkr^2 prove");
     let layer_num = circuit.layers.len();
 
-    let mut challenge = ExpanderSingleVarChallenge::empty();
-    challenge.rz =
-        transcript.generate_challenge_field_elements(circuit.layers.last().unwrap().output_var_num);
-    challenge.r_simd = transcript
-        .generate_challenge_field_elements(F::get_field_pack_size().trailing_zeros() as usize);
-    challenge.r_mpi = transcript
-        .generate_challenge_field_elements(mpi_config.world_size().trailing_zeros() as usize);
+    let mut challenge = ExpanderSingleVarChallenge::sample_from_transcript(
+        transcript,
+        circuit.layers.last().unwrap().output_var_num,
+        mpi_config.world_size(),
+    );
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
     let claimed_v = F::collectively_eval_circuit_vals_at_expander_challenge(

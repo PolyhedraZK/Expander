@@ -15,16 +15,11 @@ pub fn gkr_prove<F: FieldEngine>(
 ) -> (F::ChallengeField, ExpanderDualVarChallenge<F>) {
     let layer_num = circuit.layers.len();
 
-    let mut challenge = ExpanderDualVarChallenge::empty();
-
-    challenge.rz_0 =
-        transcript.generate_challenge_field_elements(circuit.layers.last().unwrap().output_var_num);
-
-    challenge.r_simd = transcript
-        .generate_challenge_field_elements(F::get_field_pack_size().trailing_zeros() as usize);
-
-    challenge.r_mpi = transcript
-        .generate_challenge_field_elements(mpi_config.world_size().trailing_zeros() as usize);
+    let mut challenge = ExpanderDualVarChallenge::sample_from_transcript(
+        transcript,
+        circuit.layers.last().unwrap().output_var_num,
+        mpi_config.world_size(),
+    );
 
     let mut alpha = None;
 

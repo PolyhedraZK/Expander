@@ -25,6 +25,7 @@ pub use mpi_engine::*;
 pub use poly_commit::*;
 pub use scheme::*;
 pub use transcript::*;
+
 /// Core trait defining the configuration types for a GKR protocol implementation.
 ///
 /// This trait serves as the main configuration interface for the GKR protocol, specifying the
