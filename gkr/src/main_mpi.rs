@@ -1,6 +1,9 @@
 use circuit::Circuit;
 use clap::Parser;
-use config::{Config, GKRConfig, GKRScheme};
+use config::{
+    instantiations::{BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion},
+    Config, GKRConfig, GKRScheme,
+};
 use mpi_config::{shared_mem::SharedMemory, MPIConfig};
 
 use gkr_field_config::GKRFieldConfig;
@@ -13,7 +16,7 @@ use gkr::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
         KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
-    BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, Prover,
+    Prover,
 };
 
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
