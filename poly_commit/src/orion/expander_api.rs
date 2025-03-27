@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use arith::SimdField;
 use gkr_engine::{
-    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, PolynomialCommitmentType,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
 };
 use polynomials::{EqPolynomial, MultilinearExtension};
@@ -97,7 +97,7 @@ where
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
-        eval_point: &ExpanderChallenge<C>,
+        eval_point: &ExpanderSingleVarChallenge<C>,
         transcript: &mut impl Transcript<C::ChallengeField>,
         scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
@@ -167,7 +167,7 @@ where
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        eval_point: &ExpanderChallenge<C>,
+        eval_point: &ExpanderSingleVarChallenge<C>,
         eval: C::ChallengeField,
         transcript: &mut impl Transcript<C::ChallengeField>, /* add transcript here to allow
                                                               * interactive arguments */

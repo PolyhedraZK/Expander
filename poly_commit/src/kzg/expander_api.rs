@@ -1,6 +1,6 @@
 use arith::ExtensionField;
 use gkr_engine::{
-    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, PolynomialCommitmentType,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
 };
 use halo2curves::{
@@ -83,7 +83,7 @@ where
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
-        x: &ExpanderChallenge<G>,
+        x: &ExpanderSingleVarChallenge<G>,
         transcript: &mut impl Transcript<G::ChallengeField>,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
@@ -101,7 +101,7 @@ where
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &ExpanderChallenge<G>,
+        x: &ExpanderSingleVarChallenge<G>,
         v: <G as FieldEngine>::ChallengeField,
         transcript: &mut impl Transcript<G::ChallengeField>,
         opening: &Self::Opening,

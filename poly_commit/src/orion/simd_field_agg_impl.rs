@@ -2,7 +2,7 @@ use std::iter;
 
 use arith::{Field, SimdField};
 use gf2::GF2;
-use gkr_engine::{ExpanderChallenge, FieldEngine, Transcript};
+use gkr_engine::{ExpanderSingleVarChallenge, FieldEngine, Transcript};
 use itertools::izip;
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 
@@ -14,7 +14,7 @@ use crate::{
 pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
-    eval_point: &ExpanderChallenge<C>,
+    eval_point: &ExpanderSingleVarChallenge<C>,
     eval: C::ChallengeField,
     transcript: &mut impl Transcript<C::ChallengeField>,
     proof: &OrionProof<C::ChallengeField>,

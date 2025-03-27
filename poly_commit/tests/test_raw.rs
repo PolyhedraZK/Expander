@@ -2,8 +2,8 @@ mod common;
 
 use arith::{Field, Fr};
 use gkr_engine::{
-    BN254Config, ExpanderChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, MPIConfig, MPIEngine,
-    Transcript,
+    BN254Config, ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, MPIConfig,
+    MPIEngine, Transcript,
 };
 use gkr_hashers::{Keccak256hasher, SHA256hasher};
 use poly_commit::raw::{RawExpanderGKR, RawMultiLinearPCS};
@@ -42,7 +42,7 @@ fn test_raw_gkr_helper<C: FieldEngine, T: Transcript<C::ChallengeField>>(
         .collect();
     let poly = RefMultiLinearPoly::from_ref(&hypercube_basis);
     let xs = (0..100)
-        .map(|_| ExpanderChallenge::<C> {
+        .map(|_| ExpanderSingleVarChallenge::<C> {
             x: (0..params)
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
@@ -53,7 +53,7 @@ fn test_raw_gkr_helper<C: FieldEngine, T: Transcript<C::ChallengeField>>(
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
         })
-        .collect::<Vec<ExpanderChallenge<C>>>();
+        .collect::<Vec<ExpanderSingleVarChallenge<C>>>();
     common::test_pcs_for_expander_gkr::<C, T, RawExpanderGKR<C>>(
         &params, mpi_config, transcript, &poly, &xs,
     );

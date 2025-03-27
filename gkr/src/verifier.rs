@@ -7,8 +7,8 @@ use std::{
 use arith::Field;
 use circuit::{Circuit, CircuitLayer};
 use gkr_engine::{
-    ExpanderChallenge, ExpanderPCS, FieldEngine, GKREngine, GKRScheme, MPIConfig, MPIEngine, Proof,
-    StructuredReferenceString, Transcript,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine, GKRScheme, MPIConfig,
+    MPIEngine, Proof, StructuredReferenceString, Transcript,
 };
 use serdes::ExpSerde;
 use sumcheck::{
@@ -336,7 +336,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                     pcs_params,
                     pcs_verification_key,
                     &commitment,
-                    &mut ExpanderChallenge {
+                    &mut ExpanderSingleVarChallenge {
                         x: rz0,
                         x_simd: r_simd.clone(),
                         x_mpi: r_mpi.clone(),
@@ -352,7 +352,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                         pcs_params,
                         pcs_verification_key,
                         &commitment,
-                        &mut ExpanderChallenge {
+                        &mut ExpanderSingleVarChallenge {
                             x: rz1,
                             x_simd: r_simd,
                             x_mpi: r_mpi,
@@ -381,7 +381,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                     pcs_params,
                     pcs_verification_key,
                     &commitment,
-                    &mut ExpanderChallenge {
+                    &mut ExpanderSingleVarChallenge {
                         x: rz,
                         x_simd: r_simd.clone(),
                         x_mpi: r_mpi.clone(),
@@ -407,7 +407,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
         pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
         commitment: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment,
-        open_at: &mut ExpanderChallenge<Cfg::FieldConfig>,
+        open_at: &mut ExpanderSingleVarChallenge<Cfg::FieldConfig>,
         v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
         transcript: &mut impl Transcript<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
         proof_reader: impl Read,

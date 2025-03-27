@@ -2,7 +2,7 @@
 use arith::{ExtensionField, Field};
 use ethnum::U256;
 use gkr_engine::{
-    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIEngine, PolynomialCommitmentType,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
 };
 use polynomials::{MultiLinearPoly, MultilinearExtension};
@@ -183,7 +183,7 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
         _mpi_engine: &impl MPIEngine,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         _poly: &impl MultilinearExtension<C::SimdCircuitField>,
-        _x: &ExpanderChallenge<C>,
+        _x: &ExpanderSingleVarChallenge<C>,
         _transcript: &mut impl Transcript<C::ChallengeField>,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
@@ -194,12 +194,12 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
         _params: &Self::Params,
         _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &ExpanderChallenge<C>,
+        x: &ExpanderSingleVarChallenge<C>,
         v: C::ChallengeField,
         _transcript: &mut impl Transcript<C::ChallengeField>,
         _opening: &Self::Opening,
     ) -> bool {
-        let ExpanderChallenge::<C> { x, x_simd, x_mpi } = x;
+        let ExpanderSingleVarChallenge::<C> { x, x_simd, x_mpi } = x;
         let v_target = C::single_core_eval_circuit_vals_at_expander_challenge(
             &commitment.evals,
             x,

@@ -1,8 +1,8 @@
 use arith::{ExtensionField, Field};
 use ark_std::test_rng;
 use gkr_engine::{
-    ExpanderChallenge, ExpanderPCS, FieldEngine, MPIConfig, MPIEngine, StructuredReferenceString,
-    Transcript,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
+    StructuredReferenceString, Transcript,
 };
 use poly_commit::PolynomialCommitmentScheme;
 use polynomials::MultilinearExtension;
@@ -52,7 +52,7 @@ pub fn test_pcs_for_expander_gkr<
     mpi_config: &MPIConfig,
     transcript: &mut T,
     poly: &impl MultilinearExtension<C::SimdCircuitField>,
-    xs: &[ExpanderChallenge<C>],
+    xs: &[ExpanderSingleVarChallenge<C>],
 ) {
     let mut rng = test_rng();
     let srs = P::gen_srs_for_testing(params, mpi_config, &mut rng);
@@ -72,7 +72,7 @@ pub fn test_pcs_for_expander_gkr<
     mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut coeffs_gathered);
 
     for xx in xs {
-        let ExpanderChallenge { x, x_simd, x_mpi } = xx;
+        let ExpanderSingleVarChallenge { x, x_simd, x_mpi } = xx;
         let mut transcript_cloned = transcript.clone();
 
         transcript.lock_proof();

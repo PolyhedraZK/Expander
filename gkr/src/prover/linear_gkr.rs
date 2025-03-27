@@ -3,8 +3,8 @@
 use arith::Field;
 use circuit::Circuit;
 use gkr_engine::{
-    ExpanderChallenge, ExpanderPCS, FieldEngine, GKREngine, GKRScheme, MPIConfig, MPIEngine, Proof,
-    StructuredReferenceString, Transcript,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine, GKRScheme, MPIConfig,
+    MPIEngine, Proof, StructuredReferenceString, Transcript,
 };
 use polynomials::{MultilinearExtension, MutRefMultiLinearPoly};
 use serdes::ExpSerde;
@@ -156,7 +156,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
         self.prove_input_layer_claim(
             &mut mle_ref,
-            &mut ExpanderChallenge {
+            &mut ExpanderSingleVarChallenge {
                 x: rx,
                 x_simd: rsimd.clone(),
                 x_mpi: rmpi.clone(),
@@ -171,7 +171,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
             transcript_root_broadcast(&mut transcript, &self.mpi_config);
             self.prove_input_layer_claim(
                 &mut mle_ref,
-                &mut ExpanderChallenge {
+                &mut ExpanderSingleVarChallenge {
                     x: ry,
                     x_simd: rsimd,
                     x_mpi: rmpi,
@@ -197,7 +197,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
     fn prove_input_layer_claim(
         &self,
         inputs: &mut MutRefMultiLinearPoly<<Cfg::FieldConfig as FieldEngine>::SimdCircuitField>,
-        open_at: &mut ExpanderChallenge<Cfg::FieldConfig>,
+        open_at: &mut ExpanderSingleVarChallenge<Cfg::FieldConfig>,
         pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
         pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
         pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad,

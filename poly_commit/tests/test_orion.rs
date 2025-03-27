@@ -5,7 +5,8 @@ use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
 use gf2_128::GF2_128;
 use gkr_engine::{
-    ExpanderChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, MPIConfig, MPIEngine, Transcript,
+    ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, MPIConfig, MPIEngine,
+    Transcript,
 };
 use gkr_hashers::Keccak256hasher;
 use mersenne31::{M31Ext3, M31x16, M31};
@@ -120,7 +121,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
         MultiLinearPoly::<C::SimdCircuitField>::random(num_vars_in_global_poly, &mut rng);
 
     // NOTE generate srs for each party, and shared challenge point in each party
-    let challenge_point = ExpanderChallenge::<C> {
+    let challenge_point = ExpanderSingleVarChallenge::<C> {
         x_mpi: (0..num_vars_in_mpi)
             .map(|_| C::ChallengeField::random_unsafe(&mut rng))
             .collect(),

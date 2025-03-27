@@ -4,7 +4,7 @@ use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use gf2::GF2x128;
 use gf2_128::GF2_128;
-use gkr_engine::{ExpanderChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, Transcript};
+use gkr_engine::{ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, Transcript};
 use gkr_hashers::Keccak256hasher;
 use itertools::izip;
 use mersenne31::{M31Ext3, M31x16};
@@ -98,7 +98,7 @@ where
         .map(|_| C::ChallengeField::random_unsafe(&mut rng))
         .collect();
 
-    let gkr_challenge: ExpanderChallenge<C> = ExpanderChallenge {
+    let gkr_challenge: ExpanderSingleVarChallenge<C> = ExpanderSingleVarChallenge {
         x_mpi: eval_point[num_vars - world_num_vars..].to_vec(),
         x: eval_point[simd_num_vars..num_vars - world_num_vars].to_vec(),
         x_simd: eval_point[..simd_num_vars].to_vec(),

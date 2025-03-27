@@ -3,7 +3,7 @@ use rand::RngCore;
 use serdes::ExpSerde;
 use std::{fmt::Debug, str::FromStr};
 
-use crate::{ExpErrors, ExpanderChallenge, FieldEngine, MPIEngine, Transcript};
+use crate::{ExpErrors, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, Transcript};
 
 pub trait StructuredReferenceString {
     type PKey: Clone + Debug + ExpSerde + Send + Sync + 'static;
@@ -83,7 +83,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<F::SimdCircuitField>,
-        x: &ExpanderChallenge<F>,
+        x: &ExpanderSingleVarChallenge<F>,
         transcript: &mut impl Transcript<F::ChallengeField>,
         scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening>;
@@ -98,7 +98,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
         params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &ExpanderChallenge<F>,
+        x: &ExpanderSingleVarChallenge<F>,
         v: F::ChallengeField,
         transcript: &mut impl Transcript<F::ChallengeField>,
         opening: &Self::Opening,

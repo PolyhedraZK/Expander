@@ -2,7 +2,7 @@ mod common;
 
 use arith::{Field, Fr};
 use ark_std::test_rng;
-use gkr_engine::{BN254Config, ExpanderChallenge, MPIConfig, MPIEngine, Transcript};
+use gkr_engine::{BN254Config, ExpanderSingleVarChallenge, MPIConfig, MPIEngine, Transcript};
 use gkr_hashers::Keccak256hasher;
 use halo2curves::bn256::G1Affine;
 use poly_commit::HyraxPCS;
@@ -39,7 +39,7 @@ fn test_hyrax_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_va
     let num_vars_in_each_poly = total_num_vars - num_vars_in_mpi;
 
     let global_poly = MultiLinearPoly::<Fr>::random(total_num_vars, &mut rng);
-    let challenge_point = ExpanderChallenge::<BN254Config> {
+    let challenge_point = ExpanderSingleVarChallenge::<BN254Config> {
         x_mpi: (0..num_vars_in_mpi)
             .map(|_| Fr::random_unsafe(&mut rng))
             .collect(),
