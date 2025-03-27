@@ -13,7 +13,7 @@ members = [
     # "config/gkr_field_config", # definitions of all field types used in gkr and pcs
     # "config/mpi_config", # definitions of mpi communication toolkit
     "config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
-    # "gkr",
+    "gkr",
     "gkr_engine", # definitions of GKR engine and associated types
     "hasher", # definitions of FiatShamirFieldHasher, FiatShamirBytesHash, and associated types
     "poly_commit",

@@ -17,13 +17,14 @@ mod field_engine;
 mod mpi_engine;
 mod poly_commit;
 mod transcript;
+mod scheme;
 
 pub use errors::*;
 pub use field_engine::*;
 pub use mpi_engine::*;
 pub use poly_commit::*;
 pub use transcript::*;
-
+pub use scheme::*;
 /// Core trait defining the configuration types for a GKR protocol implementation.
 ///
 /// This trait serves as the main configuration interface for the GKR protocol, specifying the
@@ -37,6 +38,8 @@ pub use transcript::*;
 /// * `TranscriptConfig` - Configuration for transcript generation, implementing `Transcript` over
 ///   the challenge field
 /// * `PCSConfig` - Configuration for polynomial commitment scheme, implementing `PCSForExpanderGKR`
+/// * `SchemeConfig` - Configuration for the GKR scheme, candidates are `GKRScheme::Vanilla` and
+///   `GKRScheme::GkrSquare`
 ///
 /// # Usage
 ///
@@ -52,6 +55,7 @@ pub use transcript::*;
 ///     type MPIConfig = MPIConfig;
 ///     type TranscriptConfig = BytesHashTranscript<M31Ext3, Sha2hasher>;
 ///     type PCSConfig = RawPCS<M31Ext3>;
+///     const SCHEME: GKRScheme = GKRScheme::Vanilla;
 /// }
 /// ```
 pub trait GKREngine {
@@ -66,4 +70,7 @@ pub trait GKREngine {
 
     /// Configuration for polynomial commitment scheme
     type PCSConfig: ExpanderPCS<Self::FieldConfig>;
+
+    /// GKR scheme
+    const SCHEME: GKRScheme;
 }

@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
-config_macros = { path = "../config/config_macros" }
+config_macros = { path = "../config_macros" }
 circuit = { path = "../circuit" }
 gf2 = { path = "../arith/gf2" }
 gf2_128 = { path = "../arith/gf2_128" }
@@ -58,7 +58,7 @@ path = "src/utils.rs"
 [features]
 default = []
 # default = [ "grinding" ]
-grinding = [ "gkr_engine/grinding" ]
+# grinding = [ "gkr_engine/grinding" ]
 recursion = [ "transcript/recursion" ]
 profile = [ "utils/profile", "sumcheck/profile" ]
 

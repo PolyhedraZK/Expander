@@ -10,6 +10,7 @@ struct ConfigLit {
     field_expr: ExprPath,
     fiat_shamir_hash_type_expr: ExprPath,
     polynomial_commitment_type: ExprPath,
+    scheme_config: ExprPath,
 }
 
 // Implement parsing for our custom input format
@@ -23,6 +24,8 @@ impl Parse for ConfigLit {
         let fiat_shamir_hash_type_expr: ExprPath = input.parse()?;
         input.parse::<Token![,]>()?;
         let polynomial_commitment_type: ExprPath = input.parse()?;
+        input.parse::<Token![,]>()?;
+        let scheme_config: ExprPath = input.parse()?;
         let _ = input.parse::<Token![,]>(); // Optional trailing comma
         Ok(ConfigLit {
             visibility,
@@ -30,6 +33,7 @@ impl Parse for ConfigLit {
             field_expr,
             fiat_shamir_hash_type_expr,
             polynomial_commitment_type,
+            scheme_config,
         })
     }
 }
@@ -123,6 +127,15 @@ fn parse_polynomial_commitment_type(
     }
 }
 
+fn _parse_scheme_config(scheme_config: ExprPath) -> String {
+    let binding = scheme_config
+        .path
+        .segments
+        .last()
+        .expect("Empty path for scheme config");
+    binding.ident.to_string()
+}
+
 /// Example usage:
 /// declare_gkr_config!(
 ///     pub MyFavoriateConfigName,
@@ -143,6 +156,7 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
         field_expr,
         fiat_shamir_hash_type_expr,
         polynomial_commitment_type,
+        scheme_config,
     } = parse_macro_input!(input as ConfigLit);
 
     let (field_type, field_config) = parse_field_type(field_expr);
@@ -172,6 +186,7 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
             type MPIConfig = MPIConfig;
             type TranscriptConfig = #transcript_type_expr;
             type PCSConfig = #polynomial_commitment_type_expr;
+            const SCHEME: GKRScheme = #scheme_config;
         }
     };
 
