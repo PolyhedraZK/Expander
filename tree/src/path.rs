@@ -13,7 +13,7 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Path {
     pub leaf: Leaf,
-    pub(crate) path_nodes: Vec<Node>,
+    pub path_nodes: Vec<Node>,
     pub index: usize,
 }
 
@@ -114,12 +114,22 @@ impl Path {
     pub fn leaf(&self) -> &Leaf {
         &self.leaf
     }
+
+    #[inline]
+    pub fn prefix_with(&mut self, prefix: &[Node], sub_tree_index: usize) {
+        assert!(sub_tree_index < 1 << prefix.len());
+
+        let sub_tree_leaves = 1 << self.path_nodes.len();
+
+        self.path_nodes.splice(0..0, prefix.iter().cloned());
+        self.index += sub_tree_leaves * sub_tree_index;
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct RangePath {
     pub leaves: Vec<Leaf>,
-    pub(crate) path_nodes: Vec<Node>,
+    pub path_nodes: Vec<Node>,
     pub left: usize,
     pub right: usize,
 }
@@ -187,5 +197,18 @@ impl RangePath {
     #[inline]
     pub fn verify(&self, root: &Node) -> bool {
         self.root() == *root
+    }
+
+    #[inline]
+    pub fn prefix_with(&mut self, prefix: &[Node], sub_tree_index: usize) {
+        assert!(sub_tree_index < 1 << prefix.len());
+
+        let sub_tree_leaves = (1 << self.path_nodes.len()) * self.leaves.len();
+
+        self.path_nodes.splice(0..0, prefix.iter().cloned());
+        let sub_tree_index_starts = sub_tree_leaves * sub_tree_index;
+
+        self.left += sub_tree_index_starts;
+        self.right += sub_tree_index_starts;
     }
 }

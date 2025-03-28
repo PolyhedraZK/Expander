@@ -175,7 +175,7 @@ impl Tree {
         }
         end_timer!(timer);
 
-        (non_leaf_nodes, leaf_nodes.to_vec())
+        (non_leaf_nodes, leaf_nodes)
     }
 
     /// Returns the root node of the tree.
