@@ -9,74 +9,6 @@ use std::{
 use super::{Allocation, CoefType, Gate, RecursiveCircuit, Segment, Witness};
 use crate::{GateAdd, GateConst, GateMul, SegmentId};
 
-impl<C: GKRFieldConfig, const INPUT_NUM: usize> ExpSerde for Gate<C, INPUT_NUM> {
-    const SERIALIZED_SIZE: usize = INPUT_NUM * <usize as ExpSerde>::SERIALIZED_SIZE
-        + 2 * <usize as ExpSerde>::SERIALIZED_SIZE
-        + 1
-        + C::CircuitField::SERIALIZED_SIZE;
-
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
-        for id in &self.i_ids {
-            id.serialize_into(&mut writer)?;
-        }
-
-        self.o_id.serialize_into(&mut writer)?;
-
-        match self.coef_type {
-            CoefType::Constant => {
-                1u8.serialize_into(&mut writer)?;
-                self.coef.serialize_into(&mut writer)?;
-            }
-            CoefType::Random => {
-                2u8.serialize_into(&mut writer)?;
-            }
-            CoefType::PublicInput(id) => {
-                3u8.serialize_into(&mut writer)?;
-                id.serialize_into(&mut writer)?;
-            }
-        }
-
-        Ok(())
-    }
-
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut i_ids = [0usize; INPUT_NUM];
-        for id in &mut i_ids {
-            *id = <usize as ExpSerde>::deserialize_from(&mut reader)?;
-        }
-
-        let o_id = <usize as ExpSerde>::deserialize_from(&mut reader)?;
-
-        let coef_type_u8 = u8::deserialize_from(&mut reader)?;
-        let (coef_type, coef) = match coef_type_u8 {
-            1 => (
-                CoefType::Constant,
-                C::CircuitField::deserialize_from(&mut reader)?,
-            ),
-            2 => (CoefType::Random, C::CircuitField::ZERO),
-            3 => {
-                if INPUT_NUM > 0 {
-                    panic!("Public Input can only be used with constant gates")
-                };
-
-                (
-                    CoefType::PublicInput(<usize as ExpSerde>::deserialize_from(&mut reader)?),
-                    C::CircuitField::ZERO,
-                )
-            }
-            _ => unreachable!(),
-        };
-
-        Ok(Self {
-            i_ids,
-            o_id,
-            coef_type,
-            coef,
-            gate_type: 0,
-        })
-    }
-}
-
 pub struct CustomGateWrapper<C: GKRFieldConfig, const INPUT_NUM: usize> {
     pub custom_gate: Gate<C, INPUT_NUM>,
 }
@@ -161,7 +93,7 @@ impl<C: GKRFieldConfig> ExpSerde for Segment<C> {
         <usize as ExpSerde>::serialize_into(&self.gate_uni.len(), &mut writer)?;
         for uni in &self.gate_uni {
             CustomGateWrapper::<C, 1> {
-                custom_gate: uni.clone(),
+                custom_gate: *uni,
             }
             .serialize_into(&mut writer)?;
         }
