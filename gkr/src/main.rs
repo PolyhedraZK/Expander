@@ -158,13 +158,6 @@ fn main() {
             },
             _ => unreachable!("Unsupported PCS type for Goldilocks"),
         },
-        "goldilocks" => match args.scheme.as_str() {
-            "keccak" => run_benchmark::<GoldilocksExtConfigSha2Raw>(
-                &args,
-                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-            ),
-            _ => unreachable!(),
-        },
         _ => unreachable!(),
     };
 
