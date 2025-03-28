@@ -173,7 +173,6 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
         verified &= sum == C::ChallengeField::ZERO;
         None
     };
-
     (verified, rx, ry, r_simd_xy, r_mpi_xy, vx_claim, vy_claim)
 }
 
@@ -247,6 +246,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             &mut sp,
             i == layer_num - 1,
         );
+
         verified &= cur_verified;
         alpha = if rz1.is_some() {
             Some(transcript.generate_challenge_field_element())

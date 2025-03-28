@@ -1,7 +1,5 @@
-use std::hint::black_box;
-
 use arith::bit_reverse;
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
 // bit reverse function from halo2
 fn halo2_bit_reverse(mut n: usize, l: usize) -> usize {

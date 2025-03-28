@@ -7,14 +7,17 @@ const DATA_PREFIX: &str = "data/";
 pub const KECCAK_M31_CIRCUIT: &str = "data/circuit_m31.txt";
 pub const KECCAK_GF2_CIRCUIT: &str = "data/circuit_gf2.txt";
 pub const KECCAK_BN254_CIRCUIT: &str = "data/circuit_bn254.txt";
+pub const KECCAK_GOLDILOCKS_CIRCUIT: &str = "data/circuit_goldilocks.txt";
 
 pub const KECCAK_M31_WITNESS: &str = "data/witness_m31.txt";
 pub const KECCAK_GF2_WITNESS: &str = "data/witness_gf2.txt";
 pub const KECCAK_BN254_WITNESS: &str = "data/witness_bn254.txt";
+pub const KECCAK_GOLDILOCKS_WITNESS: &str = "data/witness_goldilocks.txt";
 
 pub const KECCAK_M31_MPI2_WITNESS: &str = "data/witness_m31_mpi_2.txt";
 pub const KECCAK_GF2_MPI2_WITNESS: &str = "data/witness_gf2_mpi_2.txt";
 pub const KECCAK_BN254_MPI2_WITNESS: &str = "data/witness_bn254_mpi_2.txt";
+pub const KECCAK_GOLDILOCKS_MPI2_WITNESS: &str = "data/witness_goldilocks_mpi_2.txt";
 
 // URL for Keccak circuit repeated for 2 times
 pub const KECCAK_CIRCUIT_M31_URL: &str =
@@ -23,6 +26,8 @@ pub const KECCAK_CIRCUIT_GF2_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/circuit_gf2.txt";
 pub const KECCAK_CIRCUIT_BN254_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/circuit_bn254.txt";
+pub const KECCAK_CIRCUIT_GOLDILOCKS_URL: &str =
+    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/circuit_goldilocks.txt";
 
 pub const KECCAK_WITNESS_M31_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_m31.txt";
@@ -30,6 +35,8 @@ pub const KECCAK_WITNESS_GF2_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_gf2.txt";
 pub const KECCAK_WITNESS_BN254_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_bn254.txt";
+pub const KECCAK_WITNESS_GOLDILOCKS_URL: &str =
+    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_goldilocks.txt";
 
 pub const KECCAK_WITNESS_M31_MPI2_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_m31_mpi_2.txt";
@@ -37,6 +44,8 @@ pub const KECCAK_WITNESS_GF2_MPI2_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_gf2_mpi_2.txt";
 pub const KECCAK_WITNESS_BN254_MPI2_URL: &str =
     "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_bn254_mpi_2.txt";
+pub const KECCAK_WITNESS_GOLDILOCKS_MPI2_URL: &str =
+    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_goldilocks_mpi_2.txt";
 
 // circuit for repeating Poseidon for 120 times
 pub const POSEIDON_M31_CIRCUIT: &str = "data/poseidon_120_circuit_m31.txt";
@@ -93,6 +102,9 @@ pub fn dev_env_data_setup() {
 
     download_and_store(POSEIDON_WITNESS_M31_URL, POSEIDON_M31_WITNESS);
     // download_and_store(POSEIDON_WITNESS_BN254_URL, POSEIDON_BN254_WITNESS);
+
+    download_and_store(KECCAK_CIRCUIT_GOLDILOCKS_URL, KECCAK_GOLDILOCKS_CIRCUIT);
+    download_and_store(KECCAK_WITNESS_GOLDILOCKS_URL, KECCAK_GOLDILOCKS_WITNESS);
 }
 
 #[allow(dead_code)]

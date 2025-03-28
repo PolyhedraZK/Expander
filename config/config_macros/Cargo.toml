@@ -7,6 +7,7 @@ edition = "2021"
 config = { path = ".." }
 field_hashers = { path = "../../arith/field_hashers" }
 gkr_field_config = { path = "../gkr_field_config" }
+goldilocks = { path = "../../arith/goldilocks" }
 poly_commit = { path = "../../poly_commit" }
 transcript = { path = "../../transcript" }
 

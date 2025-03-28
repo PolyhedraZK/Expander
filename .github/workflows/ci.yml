@@ -104,6 +104,7 @@ jobs:
           cargo run --bin=gkr --release -- -t 4 -f gf2ext128
           cargo run --bin=gkr --release -- -t 4 -f m31ext3
           cargo run --bin=gkr --release -- -t 4 -f fr
+          cargo run --bin=gkr --release -- -t 4 -f goldilocks
 
       - name: Run benchmarks on AVX512 7950x3d
         if: matrix.os == '7950x3d'
@@ -111,3 +112,4 @@ jobs:
           cargo run --bin=gkr --release -- -t 16 -f gf2ext128
           cargo run --bin=gkr --release -- -t 16 -f m31ext3
           cargo run --bin=gkr --release -- -t 16 -f fr
+          cargo run --bin=gkr --release -- -t 16 -f goldilocks
