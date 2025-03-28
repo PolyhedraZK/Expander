@@ -1,10 +1,10 @@
-use arith::FieldSerde;
 use circuit::Circuit;
 use config::{FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::{shared_mem::SharedMemory, MPIConfig};
 use poly_commit::RawExpanderGKR;
+use serdes::ExpSerde;
 use transcript::{BytesHashTranscript, SHA256hasher};
 
 // circuit for repeating Keccak for 2 times
@@ -70,7 +70,7 @@ fn test_shared_mem() {
 }
 
 #[allow(unreachable_patterns)]
-fn test_shared_mem_helper<T: SharedMemory + FieldSerde + std::fmt::Debug>(
+fn test_shared_mem_helper<T: SharedMemory + ExpSerde + std::fmt::Debug>(
     mpi_config: &MPIConfig,
     t: Option<T>,
 ) {

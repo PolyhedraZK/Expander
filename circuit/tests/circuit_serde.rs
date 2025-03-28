@@ -1,10 +1,10 @@
-use arith::FieldSerde;
 use circuit::Circuit;
 use config::{FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::{root_println, MPIConfig};
 use poly_commit::RawExpanderGKR;
+use serdes::ExpSerde;
 use transcript::{BytesHashTranscript, SHA256hasher};
 
 // circuit for repeating Keccak for 2 times
