@@ -127,7 +127,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let mut prover = Prover::new(&config);
     prover.prepare_mem(&circuit);
 
-    let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
+    let (pcs_params, pcs_proving_key, _, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit.log_input_size(),
             &config.mpi_config,

@@ -55,7 +55,7 @@ fn benchmark_setup<Cfg: GKRConfig>(
         circuit.set_random_input_for_test();
     }
 
-    let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
+    let (pcs_params, pcs_proving_key, _, pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit.log_input_size(),
             &config.mpi_config,
