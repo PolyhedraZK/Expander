@@ -1,4 +1,4 @@
-use config::{FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
+use crate::{FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;

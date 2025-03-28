@@ -103,25 +103,25 @@ impl<C: GKRFieldConfig> RecursiveCircuit<C> {
                 let leaf_seg = &self.segments[leaf_seg_id];
                 for alloc in leaf_allocs {
                     for gate in &leaf_seg.gate_muls {
-                        let mut gate = gate.clone();
+                        let mut gate = *gate;
                         gate.i_ids[0] += alloc.i_offset;
                         gate.i_ids[1] += alloc.i_offset;
                         gate.o_id += alloc.o_offset;
                         ret_layer.mul.push(gate);
                     }
                     for gate in &leaf_seg.gate_adds {
-                        let mut gate = gate.clone();
+                        let mut gate = *gate;
                         gate.i_ids[0] += alloc.i_offset;
                         gate.o_id += alloc.o_offset;
                         ret_layer.add.push(gate);
                     }
                     for gate in &leaf_seg.gate_consts {
-                        let mut gate = gate.clone();
+                        let mut gate = *gate;
                         gate.o_id += alloc.o_offset;
                         ret_layer.const_.push(gate);
                     }
                     for gate in &leaf_seg.gate_uni {
-                        let mut gate = gate.clone();
+                        let mut gate = *gate;
                         gate.i_ids[0] += alloc.i_offset;
                         gate.o_id += alloc.o_offset;
                         ret_layer.uni.push(gate);
@@ -141,8 +141,6 @@ impl<C: GKRFieldConfig> RecursiveCircuit<C> {
             );
             ret.layers.push(ret_layer);
         }
-
-        ret.pre_process_gkr::<Cfg>();
 
         ret
     }

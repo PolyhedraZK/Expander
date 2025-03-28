@@ -3,7 +3,6 @@ use arith::Field;
 use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
 use gkr_field_config::{FieldType, GKRFieldConfig};
-use mpi_config::MPIConfig;
 use serdes::ExpSerde;
 use std::{io::Read, vec};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_SQUARE_DEGREE};
@@ -11,7 +10,7 @@ use transcript::Transcript;
 
 #[allow(clippy::type_complexity)]
 pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    mpi_config: &MPIConfig,
+    proving_time_mpi_size: usize,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
     claimed_v: &C::ChallengeField,
@@ -31,7 +30,7 @@ pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     );
 
     let timer = start_timer!(|| "gkr verify");
-    let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
+    let mut sp = VerifierScratchPad::<C>::new(circuit, proving_time_mpi_size);
 
     let layer_num = circuit.layers.len();
     let mut rz = vec![];
@@ -44,7 +43,7 @@ pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     for _ in 0..C::get_field_pack_size().trailing_zeros() {
         r_simd.push(transcript.generate_challenge_field_element());
     }
-    for _ in 0..mpi_config.world_size().trailing_zeros() {
+    for _ in 0..proving_time_mpi_size.trailing_zeros() {
         r_mpi.push(transcript.generate_challenge_field_element());
     }
     log::trace!("Initial rz0: {:?}", rz);
@@ -57,7 +56,7 @@ pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     for i in (0..layer_num).rev() {
         let cur_verified;
         (cur_verified, rz, r_simd, r_mpi, current_claim) = sumcheck_verify_gkr_square_layer(
-            mpi_config,
+            proving_time_mpi_size,
             &circuit.layers[i],
             public_input,
             &rz,
@@ -80,7 +79,7 @@ pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
 fn sumcheck_verify_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    mpi_config: &MPIConfig,
+    proving_time_mpi_size: usize,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
     rz: &[C::ChallengeField],
@@ -138,7 +137,7 @@ fn sumcheck_verify_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
     }
     GKRVerifierHelper::set_r_simd_xy(&r_simd_var, sp);
 
-    for _i_var in 0..mpi_config.world_size().trailing_zeros() {
+    for _i_var in 0..proving_time_mpi_size.trailing_zeros() {
         verified &= verify_sumcheck_step::<C, T>(
             &mut proof_reader,
             degree,
