@@ -58,7 +58,8 @@ impl SharedMemory for u8 {
 
 impl<T: Copy> SharedMemory for Vec<T> {
     fn bytes_size(&self) -> usize {
-        8 + self.len() * std::mem::size_of::<T>()
+        self.len().bytes_size()
+         + self.len() * std::mem::size_of::<T>()
     }
 
     fn to_memory(&self, ptr: &mut *mut u8) {

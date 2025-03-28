@@ -55,12 +55,13 @@ impl<C: GKRFieldConfig> SharedMemory for CircuitLayer<C> {
 
 impl<C: GKRFieldConfig> SharedMemory for Circuit<C> {
     fn bytes_size(&self) -> usize {
-        8 + self
+        self.layers.len().bytes_size()
+         + self
             .layers
             .iter()
             .map(|layer| layer.bytes_size())
             .sum::<usize>()
-            + 8
+            + self.expected_num_output_zeros.bytes_size()
     }
 
     fn to_memory(&self, ptr: &mut *mut u8) {
