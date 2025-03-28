@@ -7,9 +7,12 @@ use arith::Field;
 use circuit::Circuit;
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
+use env_logger;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
-use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use gkr_field_config::{
+    BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, GoldilocksExtConfig, M31ExtConfig,
+};
 use halo2curves::bn256::{Bn256, G1Affine};
 use mersenne31::M31x16;
 use mpi_config::{root_println, MPIConfig};
@@ -25,6 +28,9 @@ use crate::{utils::*, Prover, Verifier};
 
 #[test]
 fn test_gkr_correctness() {
+    // Initialize logger
+    env_logger::init();
+
     let mpi_config = MPIConfig::new();
     declare_gkr_config!(
         C0,
@@ -98,6 +104,12 @@ fn test_gkr_correctness() {
         FiatShamirHashType::MIMC5,
         PolynomialCommitmentType::KZG
     );
+    declare_gkr_config!(
+        C12,
+        FieldType::Goldilocks,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
 
     test_gkr_correctness_helper(
         &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
@@ -147,6 +159,10 @@ fn test_gkr_correctness() {
         &Config::<C11>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
+    test_gkr_correctness_helper(
+        &Config::<C12>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
 
     MPIConfig::finalize();
 }
@@ -163,6 +179,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         FieldType::GF2 => 1,
         FieldType::M31 => 2,
         FieldType::BN254 => 2,
+        FieldType::Goldilocks => 2,
         _ => unreachable!(),
     };
     root_println!(
@@ -176,6 +193,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         FieldType::GF2 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
         FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
+        FieldType::Goldilocks => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
         _ => unreachable!(),
     };
     let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_path);
@@ -185,6 +203,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         FieldType::GF2 => "../".to_owned() + KECCAK_GF2_WITNESS,
         FieldType::M31 => "../".to_owned() + KECCAK_M31_WITNESS,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_WITNESS,
+        FieldType::Goldilocks => "../".to_owned() + KECCAK_GOLDILOCKS_WITNESS,
         _ => unreachable!(),
     };
     circuit.load_witness_allow_padding_testing_only(&witness_path, &config.mpi_config);

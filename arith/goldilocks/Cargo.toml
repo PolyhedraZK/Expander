@@ -4,3 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+arith = { path = ".." }
+ark-std = "0.3"
+ethnum = "1.4"
+rand = "0.8"
+serdes = { path = "../../serdes" }
+
+[[bench]]
+name = "goldilocks"
+harness = false
+
+[dev-dependencies]
+criterion = "0.5"
