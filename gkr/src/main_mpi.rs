@@ -6,8 +6,6 @@ use std::str::FromStr;
 
 use gkr_field_config::GKRFieldConfig;
 use poly_commit::expander_pcs_init_testing_only;
-use rand::SeedableRng;
-use rand_chacha::ChaCha12Rng;
 
 use gkr::{
     utils::{
@@ -159,8 +157,6 @@ fn main() {
     MPIConfig::finalize();
 }
 
-const PCS_TESTING_SEED_U64: u64 = 114514;
-
 fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let pack_size = Cfg::FieldConfig::get_field_pack_size();
 
@@ -213,12 +209,10 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let mut prover = Prover::new(&config);
     prover.prepare_mem(&circuit);
 
-    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
-    let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
+    let (pcs_params, pcs_proving_key, _, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit.log_input_size(),
             &config.mpi_config,
-            &mut rng,
         );
 
     // calculate the proof size

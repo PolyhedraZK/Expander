@@ -11,8 +11,6 @@ use gkr_field_config::{FieldType, GKRFieldConfig};
 use mpi_config::MPIConfig;
 
 use poly_commit::expander_pcs_init_testing_only;
-use rand::SeedableRng;
-use rand_chacha::ChaCha12Rng;
 
 use gkr::{
     utils::{
@@ -160,13 +158,18 @@ fn main() {
             },
             _ => unreachable!("Unsupported PCS type for Goldilocks"),
         },
+        "goldilocks" => match args.scheme.as_str() {
+            "keccak" => run_benchmark::<GoldilocksExtConfigSha2Raw>(
+                &args,
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+            ),
+            _ => unreachable!(),
+        },
         _ => unreachable!(),
     };
 
     MPIConfig::finalize();
 }
-
-const PCS_TESTING_SEED_U64: u64 = 114514;
 
 fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let partial_proof_cnts = (0..args.threads)
@@ -231,12 +234,10 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
 
     println!("Circuit loaded!");
 
-    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit_template.log_input_size(),
             &config.mpi_config,
-            &mut rng,
         );
 
     // calculate the proof size

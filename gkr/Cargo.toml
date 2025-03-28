@@ -32,7 +32,6 @@ sha2.workspace = true
 halo2curves.workspace = true
 thiserror.workspace = true
 ethnum.workspace = true
-rand_chacha.workspace = true
 
 # for the server
 bytes.workspace = true
