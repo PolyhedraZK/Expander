@@ -1,58 +1,36 @@
 //! This module implements the core GKR IOP.
 
 use circuit::Circuit;
-use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
-use polynomials::MultiLinearPolyExpander;
+use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIConfig, MPIEngine, Transcript};
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
-use transcript::Transcript;
 use utils::timer::Timer;
 
 // FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    circuit: &Circuit<C>,
-    sp: &mut ProverScratchPad<C>,
-    transcript: &mut T,
+pub fn gkr_prove<F: FieldEngine>(
+    circuit: &Circuit<F>,
+    sp: &mut ProverScratchPad<F>,
+    transcript: &mut impl Transcript<F::ChallengeField>,
     mpi_config: &MPIConfig,
-) -> (
-    C::ChallengeField,
-    Vec<C::ChallengeField>,
-    Option<Vec<C::ChallengeField>>,
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
-) {
+) -> (F::ChallengeField, ExpanderDualVarChallenge<F>) {
     let layer_num = circuit.layers.len();
 
-    let mut rz0 = vec![];
-    let mut rz1 = None;
-    let mut r_simd = vec![];
-    let mut r_mpi = vec![];
-    for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.generate_challenge_field_element());
-    }
-
-    for _ in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.generate_challenge_field_element());
-    }
-
-    for _ in 0..mpi_config.world_size().trailing_zeros() {
-        r_mpi.push(transcript.generate_challenge_field_element());
-    }
+    let mut challenge = ExpanderDualVarChallenge::sample_from_transcript(
+        transcript,
+        circuit.layers.last().unwrap().output_var_num,
+        mpi_config.world_size(),
+    );
 
     let mut alpha = None;
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
-    let claimed_v =
-        MultiLinearPolyExpander::<C>::collectively_eval_circuit_vals_at_expander_challenge(
-            output_vals,
-            &rz0,
-            &r_simd,
-            &r_mpi,
-            &mut sp.hg_evals,
-            &mut sp.eq_evals_first_half, // confusing name here..
-            mpi_config,
-        );
+    let claimed_v = F::collectively_eval_circuit_vals_at_expander_challenge(
+        output_vals,
+        &challenge.challenge_x(),
+        &mut sp.hg_evals,
+        &mut sp.eq_evals_first_half, // confusing name here..
+        mpi_config,
+    );
 
     for i in (0..layer_num).rev() {
         let timer = Timer::new(
@@ -64,12 +42,10 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             ),
             mpi_config.is_root(),
         );
-        (rz0, rz1, r_simd, r_mpi) = sumcheck_prove_gkr_layer(
+
+        sumcheck_prove_gkr_layer(
             &circuit.layers[i],
-            &rz0,
-            &rz1,
-            &r_simd,
-            &r_mpi,
+            &mut challenge,
             alpha,
             transcript,
             sp,
@@ -77,7 +53,7 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             i == layer_num - 1,
         );
 
-        if rz1.is_some() {
+        if challenge.rz_1.is_some() {
             // TODO: try broadcast beta.unwrap directly
             let mut tmp = transcript.generate_challenge_field_element();
             mpi_config.root_broadcast_f(&mut tmp);
@@ -88,5 +64,5 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         timer.stop();
     }
 
-    (claimed_v, rz0, rz1, r_simd, r_mpi)
+    (claimed_v, challenge)
 }

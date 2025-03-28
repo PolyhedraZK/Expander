@@ -113,7 +113,7 @@ dependencies = [
 name = "arith"
 version = "0.1.0"
 dependencies = [
- "ark-std",
+ "ark-std 0.4.0",
  "cfg-if",
  "criterion",
  "ethnum",
@@ -135,7 +135,7 @@ checksum = "a22f4561524cd949590d78d7d4c5df8f592430d221f7f3c9497bbafd8972120f"
 dependencies = [
  "ark-ec",
  "ark-ff",
- "ark-std",
+ "ark-std 0.4.0",
 ]
 
 [[package]]
@@ -147,7 +147,7 @@ dependencies = [
  "ark-ff",
  "ark-poly",
  "ark-serialize",
- "ark-std",
+ "ark-std 0.4.0",
  "derivative",
  "hashbrown 0.13.2",
  "itertools 0.10.5",
@@ -165,7 +165,7 @@ dependencies = [
  "ark-ff-asm",
  "ark-ff-macros",
  "ark-serialize",
- "ark-std",
+ "ark-std 0.4.0",
  "derivative",
  "digest",
  "itertools 0.10.5",
@@ -207,7 +207,7 @@ checksum = "d320bfc44ee185d899ccbadfa8bc31aab923ce1558716e1997a1e74057fe86bf"
 dependencies = [
  "ark-ff",
  "ark-serialize",
- "ark-std",
+ "ark-std 0.4.0",
  "derivative",
  "hashbrown 0.13.2",
 ]
@@ -219,7 +219,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "adb7b85a02b83d2f22f89bd5cac66c9c89474240cb6207cb1efc16d098e822a5"
 dependencies = [
  "ark-serialize-derive",
- "ark-std",
+ "ark-std 0.4.0",
  "digest",
  "num-bigint",
 ]
@@ -233,6 +233,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "ark-std"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1df2c09229cbc5a028b1d70e00fdb2acee28b1055dfb5ca73eea49c5a25c4e7c"
+dependencies = [
+ "num-traits",
+ "rand",
 ]
 
 [[package]]
@@ -292,7 +302,7 @@ dependencies = [
  "ark-bn254",
  "ark-ec",
  "ark-ff",
- "ark-std",
+ "ark-std 0.4.0",
  "clap",
  "criterion",
  "halo2curves",
@@ -409,9 +419,9 @@ checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
 
 [[package]]
 name = "cc"
-version = "1.2.16"
+version = "1.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be714c154be609ec7f5dad223a33bf1482fff90472de28f7362806e6d4832b8c"
+checksum = "1fcb57c740ae1daf453ae85f16e37396f672b039e00d9d866e07ddb24e328e3a"
 dependencies = [
  "shlex",
 ]
@@ -477,12 +487,10 @@ name = "circuit"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
- "config",
+ "ark-std 0.4.0",
  "ethnum",
- "gkr_field_config",
+ "gkr_engine",
  "log",
- "mpi_config",
  "rand",
  "serdes",
  "thiserror",
@@ -557,31 +565,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "config"
-version = "0.1.0"
-dependencies = [
- "arith",
- "ark-std",
- "gf2",
- "gf2_128",
- "gkr_field_config",
- "halo2curves",
- "mersenne31",
- "mpi",
- "mpi_config",
- "poly_commit",
- "thiserror",
- "transcript",
-]
-
-[[package]]
 name = "config_macros"
 version = "0.1.0"
 dependencies = [
- "config",
- "field_hashers",
  "gf2",
- "gkr_field_config",
+ "gkr_engine",
+ "gkr_hashers",
+ "goldilocks",
  "halo2curves",
  "mersenne31",
  "poly_commit",
@@ -687,10 +677,10 @@ name = "crosslayer_prototype"
 version = "0.1.0"
 dependencies = [
  "arith",
- "config",
  "env_logger",
  "ethnum",
- "gkr_field_config",
+ "gkr_engine",
+ "gkr_hashers",
  "log",
  "polynomials",
  "rand",
@@ -931,7 +921,7 @@ name = "gf2"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "cfg-if",
  "criterion",
  "ethnum",
@@ -950,7 +940,7 @@ name = "gf2_128"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "criterion",
  "ethnum",
  "gf2",
@@ -970,25 +960,24 @@ name = "gkr"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "bytes",
  "chrono",
  "circuit",
  "clap",
- "config",
  "config_macros",
  "criterion",
  "env_logger",
  "ethnum",
- "field_hashers",
  "gf2",
  "gf2_128",
- "gkr_field_config",
+ "gkr_engine",
+ "gkr_hashers",
+ "goldilocks",
  "halo2curves",
  "log",
  "mersenne31",
  "mpi",
- "mpi_config",
  "poly_commit",
  "polynomials",
  "rand",
@@ -1006,14 +995,30 @@ dependencies = [
 ]
 
 [[package]]
-name = "gkr_field_config"
+name = "gkr_engine"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
  "gf2",
  "gf2_128",
+ "goldilocks",
  "mersenne31",
+ "mpi",
+ "polynomials",
+ "rand",
+ "serdes",
+ "thiserror",
+]
+
+[[package]]
+name = "gkr_hashers"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "halo2curves",
+ "serdes",
+ "sha2",
+ "tiny-keccak",
 ]
 
 [[package]]
@@ -1025,6 +1030,14 @@ checksum = "a8d1add55171497b4705a648c6b583acafb01d58050a51727785f0b2c8e0a2b2"
 [[package]]
 name = "goldilocks"
 version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std 0.3.0",
+ "criterion",
+ "ethnum",
+ "rand",
+ "serdes",
+]
 
 [[package]]
 name = "group"
@@ -1058,9 +1071,9 @@ dependencies = [
 
 [[package]]
 name = "half"
-version = "2.4.1"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6dd08c532ae367adf81c312a4580bc67f1d0fe8bc9c460520283f4c0ff277888"
+checksum = "7db2ff139bba50379da6aa0766b52fdcb62cb5b263009b09ed58ba604e14bbd1"
 dependencies = [
  "cfg-if",
  "crunchy",
@@ -1221,14 +1234,15 @@ dependencies = [
 
 [[package]]
 name = "iana-time-zone"
-version = "0.1.61"
+version = "0.1.62"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "235e081f3925a06703c2d0117ea8b91f042756fd6e7a6e5d901e8ca1a996b220"
+checksum = "b2fd658b06e56721792c5df4475705b6cda790e9298d19d2f8af083457bcd127"
 dependencies = [
  "android_system_properties",
  "core-foundation-sys",
  "iana-time-zone-haiku",
  "js-sys",
+ "log",
  "wasm-bindgen",
  "windows-core",
 ]
@@ -1283,9 +1297,9 @@ dependencies = [
 
 [[package]]
 name = "icu_locid_transform_data"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdc8ff3388f852bede6b579ad4e978ab004f139284d7b28715f773507b946f6e"
+checksum = "7515e6d781098bf9f7205ab3fc7e9709d34554ae0b21ddbcb5febfa4bc7df11d"
 
 [[package]]
 name = "icu_normalizer"
@@ -1307,9 +1321,9 @@ dependencies = [
 
 [[package]]
 name = "icu_normalizer_data"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8cafbf7aa791e9b22bec55a167906f9e1215fd475cd22adfcf660e03e989516"
+checksum = "c5e8338228bdc8ab83303f16b797e177953730f601a96c25d10cb3ab0daa0cb7"
 
 [[package]]
 name = "icu_properties"
@@ -1328,9 +1342,9 @@ dependencies = [
 
 [[package]]
 name = "icu_properties_data"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67a8effbc3dd3e4ba1afa8ad918d5684b8868b3b26500753effea8d2eed19569"
+checksum = "85fb8799753b75aee8d2a21d7c14d9f38921b54b3dbda10f5a3c7a7b82dba5e2"
 
 [[package]]
 name = "icu_provider"
@@ -1443,9 +1457,9 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jiff"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d699bc6dfc879fb1bf9bdff0d4c56f0884fc6f0d0eb0fba397a6d00cd9a6b85e"
+checksum = "c102670231191d07d37a35af3eb77f1f0dbf7a71be51a962dcd57ea607be7260"
 dependencies = [
  "jiff-static",
  "log",
@@ -1456,9 +1470,9 @@ dependencies = [
 
 [[package]]
 name = "jiff-static"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d16e75759ee0aa64c57a56acbf43916987b20c77373cb7e808979e02b93c9f9"
+checksum = "4cdde31a9d349f1b1f51a0b3714a5940ac022976f4b49485fc04be052b183b4c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1549,9 +1563,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.26"
+version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30bde2b3dc3671ae49d8e2e9f044c7c005836e7a023ee57cffa25ab82764bb9e"
+checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
 name = "memchr"
@@ -1564,11 +1578,11 @@ name = "mersenne31"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "cfg-if",
  "criterion",
  "ethnum",
- "field_hashers",
+ "gkr_hashers",
  "halo2curves",
  "log",
  "rand",
@@ -1648,15 +1662,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mpi_config"
-version = "0.1.0"
-dependencies = [
- "arith",
- "mersenne31",
- "mpi",
-]
-
-[[package]]
 name = "multer"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1723,9 +1728,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.21.0"
+version = "1.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cde51589ab56b20a6f686b2c68f7a0bd6add753d697abf720d63f8db3ab7b1ad"
+checksum = "d75b0bedcc4fe52caa0e03d9f1151a323e4aa5e2d78ba3580400cd3c9e2bc4bc"
 
 [[package]]
 name = "oorandom"
@@ -1863,18 +1868,17 @@ name = "poly_commit"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "criterion",
  "derivative",
  "ethnum",
- "field_hashers",
  "gf2",
  "gf2_128",
- "gkr_field_config",
+ "gkr_engine",
+ "gkr_hashers",
  "halo2curves",
  "itertools 0.13.0",
  "mersenne31",
- "mpi_config",
  "polynomials",
  "rand",
  "serdes",
@@ -1889,12 +1893,10 @@ name = "polynomials"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "criterion",
- "gkr_field_config",
  "halo2curves",
  "itertools 0.13.0",
- "mpi_config",
  "rand",
 ]
 
@@ -1919,14 +1921,14 @@ version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
 dependencies = [
- "zerocopy 0.8.23",
+ "zerocopy 0.8.24",
 ]
 
 [[package]]
 name = "prettyplease"
-version = "0.2.30"
+version = "0.2.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1ccf34da56fc294e7d4ccf69a85992b7dfb826b7cf57bac6a70bba3494cc08a"
+checksum = "5316f57387668042f561aae71480de936257848f9c43ce528e311d89a07cadeb"
 dependencies = [
  "proc-macro2",
  "syn 2.0.100",
@@ -1943,9 +1945,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.39"
+version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1f1914ce909e1658d9907913b4b91947430c7d9be598b15a1912935b8c04801"
+checksum = "1885c039570dc00dcb4ff087a89e185fd56bae234ddc7f056a945bf36467248d"
 dependencies = [
  "proc-macro2",
 ]
@@ -2283,11 +2285,9 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "circuit",
- "config",
  "env_logger",
- "gkr_field_config",
+ "gkr_engine",
  "log",
- "mpi_config",
  "polynomials",
  "transcript",
  "utils",
@@ -2383,9 +2383,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.44.0"
+version = "1.44.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9975ea0f48b5aa3972bf2d888c238182458437cc2a19374b81b25cdf1023fb3a"
+checksum = "f382da615b842244d4b8738c82ed1275e6c5dd90c459a30941cd07080b06c91a"
 dependencies = [
  "backtrace",
  "bytes",
@@ -2424,9 +2424,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.13"
+version = "0.7.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7fcaa8d55a2bdd6b83ace262b016eca0d79ee02818c5c1bcdf0305114081078"
+checksum = "6b9590b93e6fcc1739458317cccd391ad3955e2bde8913edf6f95f9e65a8f034"
 dependencies = [
  "bytes",
  "futures-core",
@@ -2466,9 +2466,9 @@ name = "transcript"
 version = "0.1.0"
 dependencies = [
  "arith",
- "field_hashers",
+ "gkr_engine",
+ "gkr_hashers",
  "mersenne31",
- "mpi_config",
  "serdes",
  "sha2",
  "tiny-keccak",
@@ -2479,7 +2479,7 @@ name = "tree"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std",
+ "ark-std 0.4.0",
  "criterion",
  "gf2",
  "gf2_128",
@@ -2590,6 +2590,7 @@ name = "utils"
 version = "0.1.0"
 dependencies = [
  "colored",
+ "halo2curves",
 ]
 
 [[package]]
@@ -2752,9 +2753,9 @@ dependencies = [
 
 [[package]]
 name = "windows-link"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6dccfd733ce2b1753b03b6d3c65edf020262ea35e20ccdf3e288043e6dd620e3"
+checksum = "76840935b766e1b0a05c0066835fb9ec80071d4c09a16f6bd5f7e655e3c14c38"
 
 [[package]]
 name = "windows-sys"
@@ -2894,11 +2895,11 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.23"
+version = "0.8.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd97444d05a4328b90e75e503a34bad781f14e28a823ad3557f0750df1ebcbc6"
+checksum = "2586fea28e186957ef732a5f8b3be2da217d65c5969d4b1e17f973ebbe876879"
 dependencies = [
- "zerocopy-derive 0.8.23",
+ "zerocopy-derive 0.8.24",
 ]
 
 [[package]]
@@ -2914,9 +2915,9 @@ dependencies = [
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.23"
+version = "0.8.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6352c01d0edd5db859a63e2605f4ea3183ddbd15e2c4a9e7d32184df75e4f154"
+checksum = "a996a8f63c5c4448cd959ac1bab0aaa3306ccfd060472f85943ee0750f0169be"
 dependencies = [
  "proc-macro2",
  "quote",

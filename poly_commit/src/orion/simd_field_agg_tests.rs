@@ -4,16 +4,14 @@ use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use gf2::GF2x128;
 use gf2_128::GF2_128;
-use gkr_field_config::{GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use gkr_engine::{ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, Transcript};
+use gkr_hashers::Keccak256hasher;
 use itertools::izip;
 use mersenne31::{M31Ext3, M31x16};
-use polynomials::{EqPolynomial, MultiLinearPoly, MultiLinearPolyExpander};
-use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
+use polynomials::{EqPolynomial, MultiLinearPoly};
+use transcript::BytesHashTranscript;
 
-use crate::{
-    orion::{simd_field_agg_impl::*, utils::*, *},
-    ExpanderGKRChallenge,
-};
+use crate::orion::{simd_field_agg_impl::*, utils::*, *};
 
 #[derive(Clone)]
 struct DistributedCommitter<F, EvalF, ComPackF, T>
@@ -35,7 +33,7 @@ fn orion_proof_aggregate<C, T>(
     transcript: &mut T,
 ) -> OrionProof<C::ChallengeField>
 where
-    C: GKRFieldConfig,
+    C: FieldEngine,
     T: Transcript<C::ChallengeField>,
 {
     let paths = openings
@@ -79,7 +77,7 @@ where
 
 fn test_orion_simd_aggregate_verify_helper<C, ComPackF, T>(num_parties: usize, num_vars: usize)
 where
-    C: GKRFieldConfig,
+    C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
     T: Transcript<C::ChallengeField>,
 {
@@ -100,10 +98,10 @@ where
         .map(|_| C::ChallengeField::random_unsafe(&mut rng))
         .collect();
 
-    let gkr_challenge: ExpanderGKRChallenge<C> = ExpanderGKRChallenge {
-        x_mpi: eval_point[num_vars - world_num_vars..].to_vec(),
-        x: eval_point[simd_num_vars..num_vars - world_num_vars].to_vec(),
-        x_simd: eval_point[..simd_num_vars].to_vec(),
+    let gkr_challenge: ExpanderSingleVarChallenge<C> = ExpanderSingleVarChallenge {
+        r_mpi: eval_point[num_vars - world_num_vars..].to_vec(),
+        rz: eval_point[simd_num_vars..num_vars - world_num_vars].to_vec(),
+        r_simd: eval_point[..simd_num_vars].to_vec(),
     };
 
     let mut committee = vec![
@@ -138,42 +136,30 @@ where
         internals[0]
     };
 
-    let openings: Vec<_> =
-        izip!(
-            &mut committee,
-            global_poly.coeffs.chunks(1 << local_real_num_vars)
+    let openings: Vec<_> = izip!(
+        &mut committee,
+        global_poly.coeffs.chunks(1 << local_real_num_vars)
+    )
+    .map(|(committer, eval_slice)| {
+        let cloned_poly = MultiLinearPoly::new(eval_slice.to_vec());
+        orion_open_simd_field::<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF>(
+            &srs,
+            &cloned_poly,
+            &gkr_challenge.local_xs(),
+            &mut committer.transcript,
+            &committer.scratch_pad,
         )
-        .map(|(committer, eval_slice)| {
-            let cloned_poly = MultiLinearPoly::new(eval_slice.to_vec());
-            orion_open_simd_field::<
-                C::CircuitField,
-                C::SimdCircuitField,
-                C::ChallengeField,
-                ComPackF,
-                T,
-            >(
-                &srs,
-                &cloned_poly,
-                &gkr_challenge.local_xs(),
-                &mut committer.transcript,
-                &committer.scratch_pad,
-            )
-        })
-        .collect();
+    })
+    .collect();
 
     let mut aggregator_transcript = committee[0].transcript.clone();
     let aggregated_proof =
-        orion_proof_aggregate::<C, T>(&openings, &gkr_challenge.x_mpi, &mut aggregator_transcript);
+        orion_proof_aggregate::<C, T>(&openings, &gkr_challenge.r_mpi, &mut aggregator_transcript);
 
     let final_expected_eval =
-        MultiLinearPolyExpander::<C>::single_core_eval_circuit_vals_at_expander_challenge(
-            &global_poly.coeffs,
-            &gkr_challenge.x,
-            &gkr_challenge.x_simd,
-            &gkr_challenge.x_mpi,
-        );
+        C::single_core_eval_circuit_vals_at_expander_challenge(&global_poly.coeffs, &gkr_challenge);
 
-    assert!(orion_verify_simd_field_aggregated::<C, ComPackF, T>(
+    assert!(orion_verify_simd_field_aggregated::<C, ComPackF>(
         &srs,
         &final_commitment,
         &gkr_challenge,

@@ -1,15 +1,15 @@
 mod common;
 
 use arith::{Field, Fr};
-use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use mpi_config::MPIConfig;
-use poly_commit::{
-    raw::{RawExpanderGKR, RawMultiLinearPCS},
-    ExpanderGKRChallenge,
+use gkr_engine::{
+    BN254Config, ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, MPIConfig,
+    MPIEngine, Transcript,
 };
+use gkr_hashers::{Keccak256hasher, SHA256hasher};
+use poly_commit::raw::{RawExpanderGKR, RawMultiLinearPCS};
 use polynomials::{MultiLinearPoly, RefMultiLinearPoly};
 use rand::thread_rng;
-use transcript::{BytesHashTranscript, Keccak256hasher, SHA256hasher, Transcript};
+use transcript::BytesHashTranscript;
 
 #[test]
 fn test_raw() {
@@ -30,7 +30,7 @@ fn test_raw() {
     );
 }
 
-fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+fn test_raw_gkr_helper<C: FieldEngine, T: Transcript<C::ChallengeField>>(
     mpi_config: &MPIConfig,
     transcript: &mut T,
 ) {
@@ -42,35 +42,35 @@ fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         .collect();
     let poly = RefMultiLinearPoly::from_ref(&hypercube_basis);
     let xs = (0..100)
-        .map(|_| ExpanderGKRChallenge::<C> {
-            x: (0..params)
+        .map(|_| ExpanderSingleVarChallenge::<C> {
+            rz: (0..params)
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
-            x_simd: (0..C::get_field_pack_size().trailing_zeros())
+            r_simd: (0..C::get_field_pack_size().trailing_zeros())
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
-            x_mpi: (0..mpi_config.world_size().trailing_zeros())
+            r_mpi: (0..mpi_config.world_size().trailing_zeros())
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
         })
-        .collect::<Vec<ExpanderGKRChallenge<C>>>();
-    common::test_pcs_for_expander_gkr::<C, T, RawExpanderGKR<C, T>>(
+        .collect::<Vec<ExpanderSingleVarChallenge<C>>>();
+    common::test_pcs_for_expander_gkr::<C, T, RawExpanderGKR<C>>(
         &params, mpi_config, transcript, &poly, &xs,
     );
 }
 
 #[test]
 fn test_raw_gkr() {
-    let mpi_config = MPIConfig::new();
+    let mpi_config = MPIConfig::prover_new();
 
-    type TM31 = BytesHashTranscript<<M31ExtConfig as GKRFieldConfig>::ChallengeField, SHA256hasher>;
+    type TM31 = BytesHashTranscript<<M31ExtConfig as FieldEngine>::ChallengeField, Keccak256hasher>;
     test_raw_gkr_helper::<M31ExtConfig, TM31>(&mpi_config, &mut TM31::new());
 
-    type TGF2 = BytesHashTranscript<<GF2ExtConfig as GKRFieldConfig>::ChallengeField, SHA256hasher>;
+    type TGF2 = BytesHashTranscript<<GF2ExtConfig as FieldEngine>::ChallengeField, SHA256hasher>;
     test_raw_gkr_helper::<GF2ExtConfig, TGF2>(&mpi_config, &mut TGF2::new());
 
     type TBN254 =
-        BytesHashTranscript<<BN254Config as GKRFieldConfig>::ChallengeField, SHA256hasher>;
+        BytesHashTranscript<<BN254Config as FieldEngine>::ChallengeField, Keccak256hasher>;
     test_raw_gkr_helper::<BN254Config, TBN254>(&mpi_config, &mut TBN254::new());
 
     MPIConfig::finalize();

@@ -5,9 +5,7 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
-config = { path = "../config" }
-gkr_field_config = { path = "../config/gkr_field_config" }
-mpi_config = { path = "../config/mpi_config" }
+gkr_engine = { path = "../gkr_engine" }
 serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
 

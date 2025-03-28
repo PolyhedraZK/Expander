@@ -9,7 +9,6 @@ use std::{
 };
 
 use arith::{field_common, Field, SimdField};
-use ark_std::Zero;
 use ethnum::U256;
 use rand::{Rng, RngCore};
 use serdes::{ExpSerde, SerdeResult};
@@ -60,7 +59,7 @@ impl ExpSerde for AVXM31 {
         reader.read_exact(&mut data)?;
         unsafe {
             let mut value = transmute::<[u8; Self::SERIALIZED_SIZE], __m512i>(data);
-            value = mod_reduce_epi32(value);
+            value = mod_reduce_epi32(value); // ZZ: this step seems unnecessary
             Ok(AVXM31 { v: value })
         }
     }
@@ -86,9 +85,7 @@ impl Field for AVXM31 {
 
     #[inline(always)]
     fn zero() -> Self {
-        AVXM31 {
-            v: unsafe { _mm512_set1_epi32(0) },
-        }
+        AVXM31 { v: PACKED_0 }
     }
 
     #[inline(always)]
@@ -164,21 +161,6 @@ impl Field for AVXM31 {
                 )
             },
         }
-    }
-
-    fn exp(&self, exponent: u128) -> Self {
-        let mut e = exponent;
-        let mut res = Self::one();
-        let mut t = *self;
-        while !e.is_zero() {
-            let b = e & 1;
-            if b == 1 {
-                res *= t;
-            }
-            t = t * t;
-            e >>= 1;
-        }
-        res
     }
 
     #[inline(always)]
@@ -389,7 +371,6 @@ impl Mul<M31> for AVXM31 {
 impl Add<M31> for AVXM31 {
     type Output = AVXM31;
     #[inline(always)]
-    #[allow(clippy::op_ref)]
     fn add(self, rhs: M31) -> Self::Output {
         self + AVXM31::pack_full(rhs)
     }

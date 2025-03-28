@@ -100,23 +100,6 @@ impl Field for M31Ext3 {
         }
     }
 
-    fn exp(&self, exponent: u128) -> Self {
-        // raise to the exp only when exponent is a base field element
-
-        let mut e = exponent;
-        let mut res = Self::one();
-        let mut t = *self;
-        while e != 0 {
-            let b = e & 1;
-            if b == 1 {
-                res *= t;
-            }
-            t = t * t;
-            e >>= 1;
-        }
-        res
-    }
-
     fn inv(&self) -> Option<Self> {
         if self.is_zero() {
             None

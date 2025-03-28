@@ -1,15 +1,19 @@
+use std::marker::PhantomData;
+
 use crate::{
     CrossLayerCircuitEvals, CrossLayerConnections, CrossLayerProverScratchPad, GenericLayer,
 };
 
 use arith::{ExtensionField, Field, SimdField};
-use gkr_field_config::{FieldType, GKRFieldConfig};
+use gkr_engine::{FieldEngine, FieldType};
 use polynomials::EqPolynomial;
 use sumcheck::unpack_and_combine;
 
-pub(crate) struct MultilinearProductHelper {}
+pub(crate) struct MultilinearProductHelper<F: FieldEngine> {
+    field: PhantomData<F>,
+}
 
-impl MultilinearProductHelper {
+impl<F: FieldEngine> MultilinearProductHelper<F> {
     // Sumcheck the product of two multi-linear polynomials f and h_g
     //
     // Inputs:
@@ -21,19 +25,19 @@ impl MultilinearProductHelper {
     // Output:
     // - the univariate polynomial that prover sends to the verifier
     #[inline]
-    pub(crate) fn poly_eval_at<C: GKRFieldConfig>(
+    pub(crate) fn poly_eval_at(
         var_num: usize,
         var_idx: usize,
         degree: usize,
-        bk_f: &[C::Field],
-        bk_hg: &[C::Field],
-        init_v: &[C::SimdCircuitField],
-    ) -> [C::Field; 3] {
+        bk_f: &[F::Field],
+        bk_hg: &[F::Field],
+        init_v: &[F::SimdCircuitField],
+    ) -> [F::Field; 3] {
         assert_eq!(degree, 2);
 
-        let mut p0 = C::Field::zero();
-        let mut p1 = C::Field::zero();
-        let mut p2 = C::Field::zero();
+        let mut p0 = F::Field::zero();
+        let mut p1 = F::Field::zero();
+        let mut p2 = F::Field::zero();
 
         let eval_size = 1 << (var_num - var_idx - 1);
         if var_idx == 0 {
@@ -44,9 +48,9 @@ impl MultilinearProductHelper {
                 let f_v_1 = init_v[i * 2 + 1];
                 let hg_v_0 = bk_hg[i * 2];
                 let hg_v_1 = bk_hg[i * 2 + 1];
-                p0 += C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
-                p1 += C::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
-                p2 += C::field_mul_simd_circuit_field(&(hg_v_0 + hg_v_1), &(f_v_0 + f_v_1));
+                p0 += F::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
+                p1 += F::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
+                p2 += F::field_mul_simd_circuit_field(&(hg_v_0 + hg_v_1), &(f_v_0 + f_v_1));
             }
         } else {
             for i in 0..eval_size {
@@ -60,7 +64,7 @@ impl MultilinearProductHelper {
             }
         }
 
-        if C::FIELD_TYPE == FieldType::GF2 {
+        if F::FIELD_TYPE == FieldType::GF2 {
             // over GF2_128, the three points are at 0, 1 and X
             let p2x = p2.mul_by_x();
             let p2x2 = p2x.mul_by_x();
@@ -76,21 +80,21 @@ impl MultilinearProductHelper {
 
     // process the challenge and update the bookkeeping tables for f and h_g accordingly
     #[inline]
-    pub(crate) fn receive_challenge<C: GKRFieldConfig>(
+    pub(crate) fn receive_challenge(
         var_num: usize,
         var_idx: usize,
-        r: C::ChallengeField,
-        bk_f: &mut [C::Field],
-        bk_hg: &mut [C::Field],
-        init_v: &[C::SimdCircuitField],
+        r: F::ChallengeField,
+        bk_f: &mut [F::Field],
+        bk_hg: &mut [F::Field],
+        init_v: &[F::SimdCircuitField],
     ) {
         assert!(var_idx < var_num);
 
         let eval_size = 1 << (var_num - var_idx - 1);
         if var_idx == 0 {
             for i in 0..eval_size {
-                bk_f[i] = C::field_add_simd_circuit_field(
-                    &C::simd_circuit_field_mul_challenge_field(
+                bk_f[i] = F::field_add_simd_circuit_field(
+                    &F::simd_circuit_field_mul_challenge_field(
                         &(init_v[i * 2 + 1] - init_v[i * 2]),
                         &r,
                     ),
@@ -107,28 +111,30 @@ impl MultilinearProductHelper {
     }
 }
 
-pub(crate) struct SumcheckSimdProdGateHelper {}
+pub(crate) struct SumcheckSimdProdGateHelper<F: FieldEngine> {
+    field: PhantomData<F>,
+}
 
 // The logic is exactly the same as SumcheckProductGateHelper, but field types are different
-impl SumcheckSimdProdGateHelper {
+impl<F: FieldEngine> SumcheckSimdProdGateHelper<F> {
     #[inline]
-    pub(crate) fn poly_eval_at<C: GKRFieldConfig>(
+    pub(crate) fn poly_eval_at(
         var_num: usize,
         var_idx: usize,
         degree: usize,
-        bk_eq: &mut [C::ChallengeField],
-        bk_f: &mut [C::ChallengeField],
-        bk_hg: &mut [C::ChallengeField],
-    ) -> [C::ChallengeField; 4] {
+        bk_eq: &mut [F::ChallengeField],
+        bk_f: &mut [F::ChallengeField],
+        bk_hg: &mut [F::ChallengeField],
+    ) -> [F::ChallengeField; 4] {
         assert_eq!(degree, 3);
-        let mut p0 = C::ChallengeField::zero();
-        let mut p1 = C::ChallengeField::zero();
-        let mut p2 = C::ChallengeField::zero();
-        let mut p3 = C::ChallengeField::zero();
+        let mut p0 = F::ChallengeField::zero();
+        let mut p1 = F::ChallengeField::zero();
+        let mut p2 = F::ChallengeField::zero();
+        let mut p3 = F::ChallengeField::zero();
 
         let eval_size = 1 << (var_num - var_idx - 1);
 
-        if C::FIELD_TYPE == FieldType::GF2 {
+        if F::FIELD_TYPE == FieldType::GF2 {
             for i in 0..eval_size {
                 let eq_v_0 = bk_eq[i * 2];
                 let eq_v_1 = bk_eq[i * 2 + 1];
@@ -179,13 +185,13 @@ impl SumcheckSimdProdGateHelper {
     }
 
     #[inline]
-    pub(crate) fn receive_challenge<C: GKRFieldConfig>(
+    pub(crate) fn receive_challenge(
         var_num: usize,
         var_idx: usize,
-        r: C::ChallengeField,
-        bk_eq: &mut [C::ChallengeField],
-        bk_f: &mut [C::ChallengeField],
-        bk_hg: &mut [C::ChallengeField],
+        r: F::ChallengeField,
+        bk_eq: &mut [F::ChallengeField],
+        bk_f: &mut [F::ChallengeField],
+        bk_hg: &mut [F::ChallengeField],
     ) {
         assert!(var_idx < var_num);
 
@@ -198,32 +204,32 @@ impl SumcheckSimdProdGateHelper {
     }
 }
 
-pub(crate) struct CrossLayerScatterHelper<'a, C: GKRFieldConfig> {
+pub(crate) struct CrossLayerScatterHelper<'a, F: FieldEngine> {
     pub(crate) input_layer_var_num: usize,
-    pub(crate) rx: Vec<C::ChallengeField>,
-    pub(crate) ry: Vec<C::ChallengeField>,
-    pub(crate) r_simd_next: Vec<C::ChallengeField>,
-    pub(crate) r_relays_next: Vec<(usize, Vec<C::ChallengeField>)>,
+    pub(crate) rx: Vec<F::ChallengeField>,
+    pub(crate) ry: Vec<F::ChallengeField>,
+    pub(crate) r_simd_next: Vec<F::ChallengeField>,
+    pub(crate) r_relays_next: Vec<(usize, Vec<F::ChallengeField>)>,
 
-    layer: &'a GenericLayer<C>,
-    rz0: &'a [C::ChallengeField],
-    r_simd: &'a [C::ChallengeField],
+    layer: &'a GenericLayer<F>,
+    rz0: &'a [F::ChallengeField],
+    r_simd: &'a [F::ChallengeField],
     connections: &'a CrossLayerConnections,
-    circuit_vals: &'a CrossLayerCircuitEvals<C>,
-    sp: &'a mut CrossLayerProverScratchPad<C>,
+    circuit_vals: &'a CrossLayerCircuitEvals<F>,
+    sp: &'a mut CrossLayerProverScratchPad<F>,
 }
 
 /// Helper functions to be called
 #[allow(clippy::too_many_arguments)]
-impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
+impl<'a, F: FieldEngine> CrossLayerScatterHelper<'a, F> {
     #[inline]
     pub(crate) fn new(
-        layer: &'a GenericLayer<C>,
-        rz0: &'a [C::ChallengeField],
-        r_simd: &'a [C::ChallengeField],
+        layer: &'a GenericLayer<F>,
+        rz0: &'a [F::ChallengeField],
+        r_simd: &'a [F::ChallengeField],
         connections: &'a CrossLayerConnections,
-        circuit_vals: &'a CrossLayerCircuitEvals<C>,
-        sp: &'a mut CrossLayerProverScratchPad<C>,
+        circuit_vals: &'a CrossLayerCircuitEvals<F>,
+        sp: &'a mut CrossLayerProverScratchPad<F>,
     ) -> Self {
         CrossLayerScatterHelper {
             input_layer_var_num: layer.input_layer_size.trailing_zeros() as usize,
@@ -245,10 +251,10 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
         &mut self,
         var_idx: usize,
         degree: usize,
-    ) -> [C::ChallengeField; 3] {
+    ) -> [F::ChallengeField; 3] {
         assert!(degree == 2);
         // layer_id - 1
-        let mut p3 = MultilinearProductHelper::poly_eval_at::<C>(
+        let mut p3 = MultilinearProductHelper::<F>::poly_eval_at(
             self.input_layer_var_num,
             var_idx,
             degree,
@@ -262,7 +268,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
             let cross_layer_size = self.sp.cross_layer_sizes[i_layer];
             if cross_layer_size > 0 {
                 if var_idx < cross_layer_size.trailing_zeros() as usize {
-                    let p3_at_layer_i = MultilinearProductHelper::poly_eval_at::<C>(
+                    let p3_at_layer_i = MultilinearProductHelper::<F>::poly_eval_at(
                         cross_layer_size.trailing_zeros() as usize,
                         var_idx,
                         degree,
@@ -283,7 +289,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
 
         p3.iter()
             .map(|p| unpack_and_combine(p, &self.sp.eq_evals_at_r_simd))
-            .collect::<Vec<C::ChallengeField>>()
+            .collect::<Vec<F::ChallengeField>>()
             .try_into()
             .unwrap()
     }
@@ -292,9 +298,9 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
         &mut self,
         var_idx: usize,
         degree: usize,
-    ) -> [C::ChallengeField; 4] {
-        SumcheckSimdProdGateHelper::poly_eval_at::<C>(
-            C::get_field_pack_size().trailing_zeros() as usize,
+    ) -> [F::ChallengeField; 4] {
+        SumcheckSimdProdGateHelper::<F>::poly_eval_at(
+            F::get_field_pack_size().trailing_zeros() as usize,
             var_idx,
             degree,
             &mut self.sp.eq_evals_at_r_simd,
@@ -308,9 +314,9 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
         &mut self,
         var_idx: usize,
         degree: usize,
-    ) -> [C::ChallengeField; 3] {
+    ) -> [F::ChallengeField; 3] {
         assert!(degree == 2);
-        let p3 = MultilinearProductHelper::poly_eval_at::<C>(
+        let p3 = MultilinearProductHelper::<F>::poly_eval_at(
             self.input_layer_var_num,
             var_idx,
             degree,
@@ -321,19 +327,19 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
         p3.iter()
             .map(|p| {
                 unpack_and_combine(
-                    &(C::challenge_mul_field(&self.sp.phase2_coef, p)),
+                    &(F::challenge_mul_field(&self.sp.phase2_coef, p)),
                     &self.sp.eq_evals_at_r_simd,
                 )
             })
-            .collect::<Vec<C::ChallengeField>>()
+            .collect::<Vec<F::ChallengeField>>()
             .try_into()
             .unwrap()
     }
 
     // Returns which relay layer has ended, and the final claim, can be empty
     #[inline]
-    pub(crate) fn receive_rx(&mut self, var_idx: usize, r: C::ChallengeField) {
-        MultilinearProductHelper::receive_challenge::<C>(
+    pub(crate) fn receive_rx(&mut self, var_idx: usize, r: F::ChallengeField) {
+        MultilinearProductHelper::<F>::receive_challenge(
             self.input_layer_var_num,
             var_idx,
             r,
@@ -346,7 +352,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
             let cross_layer_size = self.sp.cross_layer_sizes[i_layer];
             if cross_layer_size > 0 {
                 if var_idx < cross_layer_size.trailing_zeros() as usize {
-                    MultilinearProductHelper::receive_challenge::<C>(
+                    MultilinearProductHelper::<F>::receive_challenge(
                         cross_layer_size.trailing_zeros() as usize,
                         var_idx,
                         r,
@@ -365,7 +371,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
                 } else {
                     // for extra bits in sumcheck, we require it to be 1
                     self.sp.cross_layer_completed_values[i_layer] =
-                        C::challenge_mul_field(&r, &self.sp.cross_layer_completed_values[i_layer]);
+                        F::challenge_mul_field(&r, &self.sp.cross_layer_completed_values[i_layer]);
                 }
             }
         }
@@ -374,9 +380,9 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
     }
 
     #[inline]
-    pub(crate) fn receive_r_simd_var(&mut self, var_idx: usize, r: C::ChallengeField) {
-        SumcheckSimdProdGateHelper::receive_challenge::<C>(
-            C::get_field_pack_size().trailing_zeros() as usize,
+    pub(crate) fn receive_r_simd_var(&mut self, var_idx: usize, r: F::ChallengeField) {
+        SumcheckSimdProdGateHelper::<F>::receive_challenge(
+            F::get_field_pack_size().trailing_zeros() as usize,
             var_idx,
             r,
             &mut self.sp.eq_evals_at_r_simd,
@@ -387,8 +393,8 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
     }
 
     #[inline]
-    pub(crate) fn receive_ry(&mut self, var_idx: usize, r: C::ChallengeField) {
-        MultilinearProductHelper::receive_challenge::<C>(
+    pub(crate) fn receive_ry(&mut self, var_idx: usize, r: F::ChallengeField) {
+        MultilinearProductHelper::<F>::receive_challenge(
             self.input_layer_var_num,
             var_idx,
             r,
@@ -399,7 +405,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
         self.ry.push(r);
     }
 
-    pub(crate) fn vx_claims(&self) -> Vec<(usize, C::ChallengeField)> {
+    pub(crate) fn vx_claims(&self) -> Vec<(usize, F::ChallengeField)> {
         // TODO-Optimization: Maybe it's better to reduce simd for each relay layer individually and
         // return the result
         let mut claims = vec![(
@@ -418,7 +424,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
     }
 
     #[inline(always)]
-    pub(crate) fn vy_claim(&self) -> C::ChallengeField {
+    pub(crate) fn vy_claim(&self) -> F::ChallengeField {
         unpack_and_combine(
             &self.sp.v_evals[0],
             self.sp.eq_evals_at_r_simd_at_layer[self.layer.layer_id].as_slice(),
@@ -428,9 +434,9 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
     #[inline]
     pub(crate) fn prepare_simd(&mut self) {
         if self.layer.layer_id == self.sp.eq_evals_at_r_simd_at_layer.len() - 1 {
-            EqPolynomial::<C::ChallengeField>::eq_eval_at(
+            EqPolynomial::<F::ChallengeField>::eq_eval_at(
                 self.r_simd,
-                &C::ChallengeField::one(),
+                &F::ChallengeField::one(),
                 &mut self.sp.eq_evals_at_r_simd,
                 &mut self.sp.eq_evals_first_half,
                 &mut self.sp.eq_evals_second_half,
@@ -447,7 +453,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
         let eq_evals_at_rz = &mut self.sp.eq_evals_at_rz0;
         EqPolynomial::eq_eval_at(
             self.rz0,
-            &C::ChallengeField::ONE,
+            &F::ChallengeField::ONE,
             eq_evals_at_rz,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -471,14 +477,14 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
             if !connections_at_i_layer.is_empty() {
                 *cross_layer_size = connections_at_i_layer.len().next_power_of_two();
                 // TODO: Allocate this in scratchpad
-                cir_vals.resize(*cross_layer_size, C::SimdCircuitField::ZERO);
-                vals.resize(*cross_layer_size, C::Field::ZERO);
-                hg_vals.resize(*cross_layer_size, C::Field::ZERO);
+                cir_vals.resize(*cross_layer_size, F::SimdCircuitField::ZERO);
+                vals.resize(*cross_layer_size, F::Field::ZERO);
+                hg_vals.resize(*cross_layer_size, F::Field::ZERO);
 
                 for (idx, (o_id, i_id)) in connections_at_i_layer.iter().enumerate() {
                     cir_vals[idx] = self.circuit_vals.vals[i_layer][*i_id];
                     // Do nothing to vals[idx] here, it will be processed later in folding
-                    hg_vals[idx] = C::Field::from(eq_evals_at_rz[*o_id]);
+                    hg_vals[idx] = F::Field::from(eq_evals_at_rz[*o_id]);
                 }
             }
         }
@@ -493,12 +499,12 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
         }
 
         for g in mul.iter() {
-            let r = C::challenge_mul_circuit_field(&eq_evals_at_rz[g.o_id], &g.coef);
-            hg_vals[g.i_ids[0]] += C::simd_circuit_field_mul_challenge_field(&vals[g.i_ids[1]], &r);
+            let r = F::challenge_mul_circuit_field(&eq_evals_at_rz[g.o_id], &g.coef);
+            hg_vals[g.i_ids[0]] += F::simd_circuit_field_mul_challenge_field(&vals[g.i_ids[1]], &r);
         }
 
         for g in add.iter() {
-            hg_vals[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit_field(
+            hg_vals[g.i_ids[0]] += F::Field::from(F::challenge_mul_circuit_field(
                 &eq_evals_at_rz[g.o_id],
                 &g.coef,
             ));
@@ -537,24 +543,24 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
             std::ptr::write_bytes(hg_vals.as_mut_ptr(), 0, fill_len);
         }
 
-        EqPolynomial::<C::ChallengeField>::eq_eval_at(
+        EqPolynomial::<F::ChallengeField>::eq_eval_at(
             &self.rx,
-            &C::ChallengeField::ONE,
+            &F::ChallengeField::ONE,
             eq_evals_at_rx,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
 
-        EqPolynomial::<C::ChallengeField>::eq_eval_at(
+        EqPolynomial::<F::ChallengeField>::eq_eval_at(
             &self.r_simd_next,
-            &C::ChallengeField::ONE,
+            &F::ChallengeField::ONE,
             &mut self.sp.eq_evals_at_r_simd_at_layer[self.layer.layer_id],
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
 
         for g in mul.iter() {
-            hg_vals[g.i_ids[1]] += C::Field::from(C::challenge_mul_circuit_field(
+            hg_vals[g.i_ids[1]] += F::Field::from(F::challenge_mul_circuit_field(
                 &(eq_evals_at_rz[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
                 &g.coef,
             ));
@@ -562,36 +568,36 @@ impl<'a, C: GKRFieldConfig> CrossLayerScatterHelper<'a, C> {
     }
 }
 
-pub(crate) struct CrossLayerGatherHelper<'a, C: GKRFieldConfig> {
-    pub(crate) rx: Vec<C::ChallengeField>,
+pub(crate) struct CrossLayerGatherHelper<'a, F: FieldEngine> {
+    pub(crate) rx: Vec<F::ChallengeField>,
 
-    layer: &'a GenericLayer<C>,
-    rz0: &'a [C::ChallengeField],
-    rz1: &'a [C::ChallengeField],
-    r_relays: &'a [(usize, Vec<C::ChallengeField>)],
-    alpha: &'a C::ChallengeField, // alpha is the random value multiplied to V(rz1)
-    betas: &'a [C::ChallengeField], /* betas random value multiplied to the claims from the
+    layer: &'a GenericLayer<F>,
+    rz0: &'a [F::ChallengeField],
+    rz1: &'a [F::ChallengeField],
+    r_relays: &'a [(usize, Vec<F::ChallengeField>)],
+    alpha: &'a F::ChallengeField, // alpha is the random value multiplied to V(rz1)
+    betas: &'a [F::ChallengeField], /* betas random value multiplied to the claims from the
                                    * previous non-zero relay layer */
     connections: &'a CrossLayerConnections,
-    circuit_vals: &'a CrossLayerCircuitEvals<C>,
+    circuit_vals: &'a CrossLayerCircuitEvals<F>,
 
-    sp: &'a mut CrossLayerProverScratchPad<C>,
+    sp: &'a mut CrossLayerProverScratchPad<F>,
 
     pub(crate) cur_layer_var_num: usize,
 }
 
 #[allow(clippy::too_many_arguments)]
-impl<'a, C: GKRFieldConfig> CrossLayerGatherHelper<'a, C> {
+impl<'a, F: FieldEngine> CrossLayerGatherHelper<'a, F> {
     pub fn new(
-        layer: &'a GenericLayer<C>,
-        rz0: &'a [C::ChallengeField],
-        rz1: &'a [C::ChallengeField],
-        r_relays: &'a [(usize, Vec<C::ChallengeField>)],
-        alpha: &'a C::ChallengeField,
-        betas: &'a [C::ChallengeField],
+        layer: &'a GenericLayer<F>,
+        rz0: &'a [F::ChallengeField],
+        rz1: &'a [F::ChallengeField],
+        r_relays: &'a [(usize, Vec<F::ChallengeField>)],
+        alpha: &'a F::ChallengeField,
+        betas: &'a [F::ChallengeField],
         connections: &'a CrossLayerConnections,
-        circuit_vals: &'a CrossLayerCircuitEvals<C>,
-        sp: &'a mut CrossLayerProverScratchPad<C>,
+        circuit_vals: &'a CrossLayerCircuitEvals<F>,
+        sp: &'a mut CrossLayerProverScratchPad<F>,
     ) -> Self {
         CrossLayerGatherHelper {
             rx: vec![],
@@ -612,8 +618,8 @@ impl<'a, C: GKRFieldConfig> CrossLayerGatherHelper<'a, C> {
         &mut self,
         var_idx: usize,
         degree: usize,
-    ) -> [C::ChallengeField; 3] {
-        MultilinearProductHelper::poly_eval_at::<C>(
+    ) -> [F::ChallengeField; 3] {
+        MultilinearProductHelper::<F>::poly_eval_at(
             self.cur_layer_var_num,
             var_idx,
             degree,
@@ -623,13 +629,13 @@ impl<'a, C: GKRFieldConfig> CrossLayerGatherHelper<'a, C> {
         )
         .iter()
         .map(|p| p.unpack()[0])
-        .collect::<Vec<C::ChallengeField>>()
+        .collect::<Vec<F::ChallengeField>>()
         .try_into()
         .unwrap()
     }
 
-    pub(crate) fn receive_rx(&mut self, var_idx: usize, r: C::ChallengeField) {
-        MultilinearProductHelper::receive_challenge::<C>(
+    pub(crate) fn receive_rx(&mut self, var_idx: usize, r: F::ChallengeField) {
+        MultilinearProductHelper::<F>::receive_challenge(
             self.cur_layer_var_num,
             var_idx,
             r,
@@ -640,7 +646,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerGatherHelper<'a, C> {
         self.rx.push(r);
     }
 
-    pub(crate) fn vx_claim(&self) -> C::ChallengeField {
+    pub(crate) fn vx_claim(&self) -> F::ChallengeField {
         self.sp.v_evals[0].unpack()[0]
     }
 
@@ -651,13 +657,13 @@ impl<'a, C: GKRFieldConfig> CrossLayerGatherHelper<'a, C> {
 
         EqPolynomial::eq_eval_at(
             self.rz0,
-            &C::ChallengeField::ONE,
+            &F::ChallengeField::ONE,
             eq_evals_at_rz,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
         );
         for i in 0..self.rz0.len() {
-            hg_vals[i] += C::Field::from(eq_evals_at_rz[i]);
+            hg_vals[i] += F::Field::from(eq_evals_at_rz[i]);
         }
 
         // second claim from the previous layer
@@ -669,7 +675,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerGatherHelper<'a, C> {
             &mut self.sp.eq_evals_second_half,
         );
         for i in 0..self.rz0.len() {
-            hg_vals[i] += C::Field::from(eq_evals_at_rz[i]);
+            hg_vals[i] += F::Field::from(eq_evals_at_rz[i]);
         }
 
         for (layer_idx, (out_layer_id, claim)) in self.r_relays.iter().enumerate() {
@@ -686,7 +692,7 @@ impl<'a, C: GKRFieldConfig> CrossLayerGatherHelper<'a, C> {
                 .iter()
                 .enumerate()
             {
-                hg_vals[*i_id] += C::Field::from(eq_evals_at_rz[gate_idx]);
+                hg_vals[*i_id] += F::Field::from(eq_evals_at_rz[gate_idx]);
             }
         }
     }

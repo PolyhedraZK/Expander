@@ -134,21 +134,6 @@ impl Field for NeonGF2_128x8 {
     }
 
     #[inline(always)]
-    fn exp(&self, exponent: u128) -> Self {
-        let mut e = exponent;
-        let mut res = Self::one();
-        let mut t = *self;
-        while e > 0 {
-            if e & 1 == 1 {
-                res *= t;
-            }
-            t = t * t;
-            e >>= 1;
-        }
-        res
-    }
-
-    #[inline(always)]
     fn inv(&self) -> Option<Self> {
         if self.is_zero() {
             return None;

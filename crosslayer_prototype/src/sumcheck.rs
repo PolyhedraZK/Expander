@@ -1,6 +1,5 @@
 use arith::ExtensionField;
-use gkr_field_config::GKRFieldConfig;
-use transcript::Transcript;
+use gkr_engine::{FieldEngine, Transcript};
 
 use crate::{
     CrossLayerCircuitEvals, CrossLayerConnections, CrossLayerGatherHelper,
@@ -19,18 +18,18 @@ pub fn transcript_io<F: ExtensionField, T: Transcript<F>>(ps: &[F], transcript: 
 // FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
-pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    layer: &GenericLayer<C>,
-    rz0: &[C::ChallengeField],
-    r_simd: &[C::ChallengeField],
+pub fn sumcheck_prove_scatter_layer<F: FieldEngine, T: Transcript<F::ChallengeField>>(
+    layer: &GenericLayer<F>,
+    rz0: &[F::ChallengeField],
+    r_simd: &[F::ChallengeField],
     connections: &CrossLayerConnections,
-    circuit_vals: &CrossLayerCircuitEvals<C>,
+    circuit_vals: &CrossLayerCircuitEvals<F>,
     transcript: &mut T,
-    sp: &mut CrossLayerProverScratchPad<C>,
+    sp: &mut CrossLayerProverScratchPad<F>,
 ) -> (
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
-    Vec<(usize, Vec<C::ChallengeField>)>,
+    Vec<F::ChallengeField>,
+    Vec<F::ChallengeField>,
+    Vec<(usize, Vec<F::ChallengeField>)>,
 ) {
     let mut helper =
         CrossLayerScatterHelper::new(layer, rz0, r_simd, connections, circuit_vals, sp);
@@ -41,18 +40,18 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
     helper.prepare_x_vals();
     for i_var in 0..helper.input_layer_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
-        let r = transcript_io::<C::ChallengeField, T>(&evals, transcript);
+        let r = transcript_io::<F::ChallengeField, T>(&evals, transcript);
         helper.receive_rx(i_var, r);
     }
 
     helper.prepare_simd_var_vals();
-    for i_var in 0..C::get_field_pack_size().trailing_zeros() as usize {
+    for i_var in 0..F::get_field_pack_size().trailing_zeros() as usize {
         let evals = helper.poly_evals_at_r_simd_var(i_var, 3);
-        let r = transcript_io::<C::ChallengeField, T>(&evals, transcript);
+        let r = transcript_io::<F::ChallengeField, T>(&evals, transcript);
         helper.receive_r_simd_var(i_var, r);
     }
 
-    let vx_claims: Vec<(usize, C::ChallengeField)> = helper.vx_claims();
+    let vx_claims: Vec<(usize, F::ChallengeField)> = helper.vx_claims();
     for (_i_layer, claim) in vx_claims {
         transcript.append_field_element(&claim);
     }
@@ -61,7 +60,7 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
     helper.prepare_y_vals();
     for i_var in 0..helper.input_layer_var_num {
         let evals = helper.poly_evals_at_ry(i_var, 2);
-        let r = transcript_io::<C::ChallengeField, T>(&evals, transcript);
+        let r = transcript_io::<F::ChallengeField, T>(&evals, transcript);
         helper.receive_ry(i_var, r);
     }
     let vy_claim = helper.vy_claim();
@@ -71,16 +70,16 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn sumcheck_prove_gather_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    layer: &GenericLayer<C>,
-    rz0: &[C::ChallengeField],
-    rz1: &[C::ChallengeField],
-    r_relays: &[(usize, Vec<C::ChallengeField>)],
+pub fn sumcheck_prove_gather_layer<F: FieldEngine, T: Transcript<F::ChallengeField>>(
+    layer: &GenericLayer<F>,
+    rz0: &[F::ChallengeField],
+    rz1: &[F::ChallengeField],
+    r_relays: &[(usize, Vec<F::ChallengeField>)],
     connections: &CrossLayerConnections,
-    circuit_vals: &CrossLayerCircuitEvals<C>,
+    circuit_vals: &CrossLayerCircuitEvals<F>,
     transcript: &mut T,
-    sp: &mut CrossLayerProverScratchPad<C>,
-) -> (Vec<C::ChallengeField>, C::ChallengeField) {
+    sp: &mut CrossLayerProverScratchPad<F>,
+) -> (Vec<F::ChallengeField>, F::ChallengeField) {
     let alpha = transcript.generate_challenge_field_element();
     let betas = transcript.generate_challenge_field_elements(r_relays.len());
 
@@ -99,7 +98,7 @@ pub fn sumcheck_prove_gather_layer<C: GKRFieldConfig, T: Transcript<C::Challenge
     helper.prepare_x_vals();
     for i_var in 0..helper.cur_layer_var_num {
         let evals = helper.poly_evals_at_rx(i_var, 2);
-        let r = transcript_io::<C::ChallengeField, T>(&evals, transcript);
+        let r = transcript_io::<F::ChallengeField, T>(&evals, transcript);
         helper.receive_rx(i_var, r);
     }
 

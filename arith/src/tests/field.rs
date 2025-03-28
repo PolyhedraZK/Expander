@@ -1,5 +1,3 @@
-use std::io::Cursor;
-
 use ark_std::{end_timer, start_timer};
 use rand::RngCore;
 
@@ -194,8 +192,8 @@ pub(crate) fn random_serde_tests<F: Field, R: RngCore>(mut rng: R, type_name: St
         let a = F::random_unsafe(&mut rng);
         let mut buffer = vec![];
         assert!(a.serialize_into(&mut buffer).is_ok());
-        let mut cursor = Cursor::new(buffer);
-        let b = F::deserialize_from(&mut cursor);
+
+        let b = F::deserialize_from(buffer.as_slice());
         assert!(b.is_ok());
         let b = b.unwrap();
         assert_eq!(a, b);

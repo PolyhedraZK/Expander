@@ -34,7 +34,7 @@ mod simd_field_agg_impl;
 #[cfg(test)]
 mod simd_field_agg_tests;
 
-mod pcs_for_expander_gkr;
-pub use pcs_for_expander_gkr::OrionPCSForGKR;
+mod expander_api;
+pub use expander_api::OrionPCSForGKR;
 
 mod serde;
