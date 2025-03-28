@@ -119,6 +119,20 @@ fn test_mut_ref_multilinear_poly() {
     }
 }
 
+#[test]
+fn test_ith_eq_vec_elem() {
+    let mut rng = test_rng();
+    for nv in 4..=10 {
+        let point: Vec<Fr> = (0..nv).map(|_| Fr::random_unsafe(&mut rng)).collect();
+        let expected_evals = EqPolynomial::build_eq_x_r(&point);
+
+        expected_evals
+            .iter()
+            .enumerate()
+            .for_each(|(i, ev)| assert_eq!(EqPolynomial::ith_eq_vec_elem(&point, i), *ev))
+    }
+}
+
 /// Naive method to build eq(x, r).
 /// Only used for testing purpose.
 // Evaluate

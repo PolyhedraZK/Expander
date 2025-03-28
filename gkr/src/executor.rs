@@ -118,16 +118,20 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     }
 }
 
-fn input_poly_vars_calibration<Cfg: GKRConfig>(actual_poly_vars: usize) -> usize {
-    if actual_poly_vars < Cfg::PCS::MINIMUM_NUM_VARS {
+pub(crate) fn input_poly_vars_calibration<Cfg: GKRConfig>(
+    actual_poly_vars: usize,
+    world_size: usize,
+) -> usize {
+    let minimum_vars_for_pcs = Cfg::PCS::minimum_num_vars(world_size);
+    if actual_poly_vars < minimum_vars_for_pcs {
         eprintln!(
             "{} over {} has minimum supported local vars {}, but input poly has vars {}.",
             Cfg::PCS::NAME,
             <Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::NAME,
-            Cfg::PCS::MINIMUM_NUM_VARS,
+            minimum_vars_for_pcs,
             actual_poly_vars,
         );
-        return Cfg::PCS::MINIMUM_NUM_VARS;
+        return minimum_vars_for_pcs;
     }
 
     actual_poly_vars
@@ -142,9 +146,12 @@ pub fn prove<Cfg: GKRConfig>(
 ) {
     let mut prover = crate::Prover::new(config);
     prover.prepare_mem(circuit);
-    // TODO: Read PCS setup from files
 
-    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
+    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(
+        circuit.log_input_size(),
+        config.mpi_config.world_size(),
+    );
+    // TODO: Read PCS setup from files
     let (pcs_params, pcs_proving_key, _, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             minimum_poly_vars,
@@ -160,14 +167,16 @@ pub fn verify<Cfg: GKRConfig>(
     proof: &Proof,
     claimed_v: &<<Cfg as GKRConfig>::FieldConfig as GKRFieldConfig>::ChallengeField,
 ) -> bool {
+    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(
+        circuit.log_input_size(),
+        config.mpi_config.world_size(),
+    );
     // TODO: Read PCS setup from files
-
-    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
-    let (pcs_params, _, pcs_verification_key, _) = expander_pcs_init_testing_only::<
-        Cfg::FieldConfig,
-        Cfg::Transcript,
-        Cfg::PCS,
-    >(minimum_poly_vars, &config.mpi_config);
+    let (pcs_params, _, pcs_verification_key, mut _pcs_scratch) =
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
+            minimum_poly_vars,
+            &config.mpi_config,
+        );
     let verifier = crate::Verifier::new(config);
     let public_input = circuit.public_input.clone();
     verifier.verify(

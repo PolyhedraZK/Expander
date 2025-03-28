@@ -5,10 +5,13 @@ use itertools::izip;
 use serdes::SerdeError;
 use thiserror::Error;
 use transcript::Transcript;
+use tree::Node;
 
-use crate::{traits::TensorCodeIOPPCS, PCS_SOUNDNESS_BITS};
-
-use super::linear_code::{OrionCode, OrionCodeParameter};
+use crate::{
+    orion::linear_code::{OrionCode, OrionCodeParameter},
+    traits::TensorCodeIOPPCS,
+    PCS_SOUNDNESS_BITS,
+};
 
 /*
  * PCS ERROR AND RESULT SETUP
@@ -74,7 +77,7 @@ impl OrionSRS {
     }
 }
 
-pub type OrionCommitment = tree::Node;
+pub type OrionCommitment = Node;
 
 #[derive(Clone, Debug, Default)]
 pub struct OrionScratchPad<F, ComPackF>
@@ -83,7 +86,7 @@ where
     ComPackF: SimdField<Scalar = F>,
 {
     pub interleaved_alphabet_commitment: tree::Tree,
-
+    pub path_prefix: Vec<Node>,
     pub(crate) _phantom: PhantomData<ComPackF>,
 }
 
@@ -173,11 +176,12 @@ where
 #[inline(always)]
 pub(crate) fn orion_mt_verify(
     vk: &OrionSRS,
+    world_size: usize,
     query_indices: &[usize],
     range_openings: &[tree::RangePath],
     root: &OrionCommitment,
 ) -> bool {
-    let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING;
+    let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING * world_size;
     izip!(query_indices, range_openings).all(|(&qi, range_path)| {
         let index = qi % vk.codeword_len();
         range_path.verify(root) && index == range_path.left / leaves_in_range_opening
@@ -217,7 +221,6 @@ pub(crate) fn transpose<F: Field>(mat: &[F], out: &mut [F], row_num: usize) {
     });
 }
 
-#[allow(unused)]
 #[inline(always)]
 pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row_num: usize) {
     transpose(mat, scratch, row_num);
@@ -313,18 +316,17 @@ impl<F: Field> SubsetSumLUTs<F> {
 }
 
 #[inline(always)]
-pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
+pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF>(
     com_pack_size: usize,
     packed_evals: &[SimdF],
     eq_col_coeffs: &[EvalF],
     eval_row: &mut [EvalF],
+    rand_col_coeffs: &[Vec<EvalF>],
     proximity_rows: &mut [Vec<EvalF>],
-    transcript: &mut T,
 ) where
     F: Field,
     EvalF: ExtensionField<BaseField = F>,
     SimdF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     // NOTE: declare the look up tables for column sums
     let table_num = com_pack_size / SimdF::PACK_SIZE;
@@ -346,11 +348,8 @@ pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
             .for_each(|(p_col, eval)| *eval += luts.lookup_and_sum(p_col));
     });
 
-    // NOTE: draw random linear combination out
-    // and compose proximity response(s) of tensor code IOP based PCS
-    proximity_rows.iter_mut().for_each(|row_buffer| {
-        let random_coeffs = transcript.generate_challenge_field_elements(combination_size);
-
+    // NOTE: compose proximity response(s) of tensor code IOP based PCS
+    izip!(proximity_rows, rand_col_coeffs).for_each(|(row_buffer, random_coeffs)| {
         izip!(
             random_coeffs.chunks(com_pack_size),
             packed_evals.chunks(packed_evals.len() / packed_row_size)
@@ -444,18 +443,17 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
+pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
     com_pack_size: usize,
     packed_evals: &[SimdF],
     eq_col_coeffs: &[EvalF],
     eval_row: &mut [EvalF],
+    rand_col_coeffs: &[Vec<EvalF>],
     proximity_rows: &mut [Vec<EvalF>],
-    transcript: &mut T,
 ) where
     F: Field,
     EvalF: ExtensionField<BaseField = F>,
     SimdF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     // NOTE: check SIMD inner product numbers for column sums
     let simd_inner_prods = com_pack_size / SimdF::PACK_SIZE;
@@ -480,11 +478,8 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
         );
     });
 
-    // NOTE: draw random linear combination out
-    // and compose proximity response(s) of tensor code IOP based PCS
-    proximity_rows.iter_mut().for_each(|row_buffer| {
-        let random_coeffs = transcript.generate_challenge_field_elements(combination_size);
-
+    // NOTE: compose proximity response(s) of tensor code IOP based PCS
+    izip!(proximity_rows, rand_col_coeffs).for_each(|(row_buffer, random_coeffs)| {
         izip!(
             random_coeffs.chunks(com_pack_size),
             packed_evals.chunks(packed_evals.len() / packed_row_size)
@@ -537,7 +532,7 @@ mod tests {
     use gf2_128::{GF2_128x8, GF2_128};
     use itertools::izip;
 
-    use super::SubsetSumLUTs;
+    use crate::orion::utils::SubsetSumLUTs;
 
     #[test]
     fn test_lut_simd_inner_prod_consistency() {

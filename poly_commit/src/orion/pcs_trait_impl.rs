@@ -5,7 +5,14 @@ use polynomials::MultiLinearPoly;
 use transcript::Transcript;
 
 use crate::{
-    orion::*, traits::TensorCodeIOPPCS, PolynomialCommitmentScheme, StructuredReferenceString,
+    orion::{
+        base_field_impl::{orion_commit_base_field, orion_open_base_field},
+        simd_field_impl::{orion_commit_simd_field, orion_open_simd_field},
+        verify::orion_verify,
+        OrionCommitment, OrionProof, OrionSRS, OrionScratchPad, ORION_CODE_PARAMETER_INSTANCE,
+    },
+    traits::TensorCodeIOPPCS,
+    PolynomialCommitmentScheme, StructuredReferenceString,
 };
 
 impl StructuredReferenceString for OrionSRS {
@@ -82,7 +89,7 @@ where
         transcript: &mut T,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);
-        orion_open_base_field::<F, EvalF, ComPackF, OpenPackF, T>(
+        orion_open_base_field::<_, _, ComPackF, OpenPackF, _>(
             proving_key,
             poly,
             x,
@@ -101,10 +108,11 @@ where
         transcript: &mut T,
     ) -> bool {
         assert_eq!(*params, verifying_key.num_vars);
-        orion_verify_base_field::<F, EvalF, ComPackF, OpenPackF, T>(
+        orion_verify::<_, OpenPackF, _, ComPackF, _>(
             verifying_key,
             commitment,
             x,
+            &[],
             v,
             transcript,
             opening,
@@ -189,31 +197,13 @@ where
             poly.get_num_vars(),
             proving_key.num_vars - SimdF::PACK_SIZE.ilog2() as usize
         );
-        let opening = orion_open_simd_field::<F, SimdF, EvalF, ComPackF, T>(
+        orion_open_simd_field::<F, SimdF, EvalF, ComPackF, T>(
             proving_key,
             poly,
             x,
             transcript,
             scratch_pad,
-        );
-
-        let num_vars_in_msg = {
-            let real_num_vars = poly.get_num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
-            let (_, m) = <Self::SRS as TensorCodeIOPPCS>::evals_shape::<F>(real_num_vars);
-            m.ilog2() as usize
-        };
-        let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
-
-        // NOTE: working on evaluation response, evaluate the rest of the response
-        let mut scratch = vec![EvalF::ZERO; opening.eval_row.len()];
-        let eval = MultiLinearPoly::evaluate_with_buffer(
-            &opening.eval_row,
-            &x[num_vars_in_com_simd..num_vars_in_com_simd + num_vars_in_msg],
-            &mut scratch,
-        );
-        drop(scratch);
-
-        (eval, opening)
+        )
     }
 
     fn verify(
@@ -227,10 +217,11 @@ where
     ) -> bool {
         assert_eq!(*params, verifying_key.num_vars);
         assert_eq!(x.len(), verifying_key.num_vars);
-        orion_verify_simd_field::<F, SimdF, EvalF, ComPackF, T>(
+        orion_verify::<_, SimdF, _, ComPackF, _>(
             verifying_key,
             commitment,
             x,
+            &[],
             v,
             transcript,
             opening,
