@@ -7,9 +7,11 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field, FieldSerde, FieldSerdeResult, SimdField};
+use arith::{field_common, Field, SimdField};
 use ark_std::Zero;
+use ethnum::U256;
 use rand::{Rng, RngCore};
+use serdes::{ExpSerde, SerdeResult};
 
 use crate::{m31::M31_MOD, M31};
 
@@ -52,12 +54,12 @@ impl NeonM31 {
     }
 }
 
-impl FieldSerde for NeonM31 {
+impl ExpSerde for NeonM31 {
     const SERIALIZED_SIZE: usize = (128 / 8) * 4;
 
     #[inline(always)]
     /// serialize self into bytes
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         let data = unsafe { transmute::<[uint32x4_t; 4], [u8; 64]>(self.v) };
         writer.write_all(&data)?;
         Ok(())
@@ -65,7 +67,7 @@ impl FieldSerde for NeonM31 {
 
     /// deserialize bytes into field
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let mut data = [0; 64];
         reader.read_exact(&mut data)?;
         unsafe {
@@ -93,6 +95,8 @@ impl Field for NeonM31 {
     const INV_2: Self = Self {
         v: [PACKED_INV_2; 4],
     };
+
+    const MODULUS: U256 = M31::MODULUS;
 
     #[inline(always)]
     fn zero() -> Self {
@@ -311,6 +315,18 @@ impl SimdField for NeonM31 {
         let ret = unsafe { transmute::<[uint32x4_t; 4], [Self::Scalar; M31_PACK_SIZE]>(self.v) };
         ret.to_vec()
     }
+
+    #[inline(always)]
+    fn horizontal_sum(&self) -> Self::Scalar {
+        let ret = unsafe { transmute::<[uint32x4_t; 4], [Self::Scalar; M31_PACK_SIZE]>(self.v) };
+        let mut buffer = ret.iter().map(|r| r.v as u64).sum::<u64>();
+        buffer = (buffer & M31_MOD as u64) + (buffer >> 31);
+        if buffer == M31_MOD as u64 {
+            Self::Scalar::ZERO
+        } else {
+            Self::Scalar { v: buffer as u32 }
+        }
+    }
 }
 
 impl From<M31> for NeonM31 {
@@ -359,11 +375,22 @@ impl Default for NeonM31 {
 impl PartialEq for NeonM31 {
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            transmute::<[uint32x4_t; 4], [u32; 16]>(self.v)
-                == transmute::<[uint32x4_t; 4], [u32; 16]>(other.v)
+            transmute::<[uint32x4_t; 4], [u32; 16]>([
+                reduce_sum(self.v[0]),
+                reduce_sum(self.v[1]),
+                reduce_sum(self.v[2]),
+                reduce_sum(self.v[3]),
+            ]) == transmute::<[uint32x4_t; 4], [u32; 16]>([
+                reduce_sum(other.v[0]),
+                reduce_sum(other.v[1]),
+                reduce_sum(other.v[2]),
+                reduce_sum(other.v[3]),
+            ])
         }
     }
 }
+
+impl Eq for NeonM31 {}
 
 impl Mul<&M31> for NeonM31 {
     type Output = NeonM31;
@@ -461,4 +488,13 @@ fn mul_internal(a: &NeonM31, b: &NeonM31) -> NeonM31 {
         };
     }
     res
+}
+
+impl std::hash::Hash for NeonM31 {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<[uint32x4_t; 4], [u8; 64]>(self.v).as_ref());
+        }
+    }
 }

@@ -1,8 +1,10 @@
 use super::verify_sumcheck_step;
-use arith::{Field, FieldSerde};
+use arith::Field;
 use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
 use gkr_field_config::{FieldType, GKRFieldConfig};
+use mpi_config::MPIConfig;
+use serdes::ExpSerde;
 use std::{io::Read, vec};
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_SQUARE_DEGREE};
 use transcript::Transcript;

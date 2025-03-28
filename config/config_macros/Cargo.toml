@@ -16,6 +16,7 @@ gkr_field_config = { path = "../gkr_field_config" }
 mersenne31 = { path = "../../arith/mersenne31/" }
 poly_commit = { path = "../../poly_commit" }
 transcript = { path = "../../transcript" }
+halo2curves.workspace = true
 
 [lib]
 proc-macro=true

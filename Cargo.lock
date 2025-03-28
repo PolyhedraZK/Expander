@@ -118,11 +118,12 @@ dependencies = [
  "criterion",
  "ethnum",
  "halo2curves",
+ "itertools 0.13.0",
  "log",
  "rand",
  "raw-cpuid",
+ "serdes",
  "sha2",
- "thiserror",
  "tynm",
 ]
 
@@ -487,6 +488,7 @@ dependencies = [
  "mpi_config",
  "poly_commit",
  "rand",
+ "serdes",
  "thiserror",
  "transcript",
 ]
@@ -586,6 +588,7 @@ dependencies = [
  "field_hashers",
  "gf2",
  "gkr_field_config",
+ "halo2curves",
  "mersenne31",
  "poly_commit",
  "proc-macro2",
@@ -697,6 +700,7 @@ dependencies = [
  "log",
  "polynomials",
  "rand",
+ "serdes",
  "sumcheck",
  "thiserror",
  "transcript",
@@ -840,6 +844,7 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "halo2curves",
+ "serdes",
  "tiny-keccak",
 ]
 
@@ -940,6 +945,7 @@ dependencies = [
  "log",
  "rand",
  "raw-cpuid",
+ "serdes",
  "sha2",
  "thiserror",
  "tynm",
@@ -952,8 +958,10 @@ dependencies = [
  "arith",
  "ark-std",
  "criterion",
+ "ethnum",
  "gf2",
  "rand",
+ "serdes",
  "tynm",
 ]
 
@@ -991,6 +999,7 @@ dependencies = [
  "polynomials",
  "rand",
  "rand_chacha",
+ "serdes",
  "sha2",
  "sumcheck",
  "thiserror",
@@ -1160,9 +1169,9 @@ dependencies = [
 
 [[package]]
 name = "http"
-version = "1.3.0"
+version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a761d192fbf18bdef69f5ceedd0d1333afcbda0ee23840373b8317570d23c65"
+checksum = "f4a85d31aea989eead29a3aaf9e1115a180df8282431156e533de47660892565"
 dependencies = [
  "bytes",
  "fnv",
@@ -1570,6 +1579,7 @@ dependencies = [
  "log",
  "rand",
  "raw-cpuid",
+ "serdes",
  "sha2",
  "thiserror",
  "tynm",
@@ -1861,6 +1871,7 @@ dependencies = [
  "arith",
  "ark-std",
  "criterion",
+ "derivative",
  "ethnum",
  "field_hashers",
  "gf2",
@@ -1872,6 +1883,7 @@ dependencies = [
  "mpi_config",
  "polynomials",
  "rand",
+ "serdes",
  "thiserror",
  "transcript",
  "tree",
@@ -1887,7 +1899,9 @@ dependencies = [
  "criterion",
  "gkr_field_config",
  "halo2curves",
+ "itertools 0.13.0",
  "mpi_config",
+ "rand",
 ]
 
 [[package]]
@@ -2160,6 +2174,15 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "serdes"
+version = "0.1.0"
+dependencies = [
+ "ethnum",
+ "halo2curves",
+ "thiserror",
 ]
 
 [[package]]
@@ -2452,6 +2475,7 @@ dependencies = [
  "field_hashers",
  "mersenne31",
  "mpi_config",
+ "serdes",
  "sha2",
  "tiny-keccak",
 ]
@@ -2465,6 +2489,7 @@ dependencies = [
  "criterion",
  "gf2",
  "gf2_128",
+ "serdes",
  "sha2",
  "tynm",
 ]
@@ -2484,7 +2509,7 @@ dependencies = [
  "byteorder",
  "bytes",
  "data-encoding",
- "http 1.3.0",
+ "http 1.3.1",
  "httparse",
  "log",
  "rand",

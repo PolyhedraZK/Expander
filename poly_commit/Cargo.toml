@@ -5,12 +5,13 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
+gf2 = { path = "../arith/gf2" }
 gkr_field_config = { path = "../config/gkr_field_config" }
 mpi_config = { path = "../config/mpi_config" }
 polynomials = { path = "../arith/polynomials"}
+serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
 tree = { path = "../tree" }
-gf2 = { path = "../arith/gf2" }
 
 rand.workspace = true
 ethnum.workspace = true
@@ -18,6 +19,7 @@ ark-std.workspace = true
 thiserror.workspace = true
 itertools.workspace = true
 halo2curves.workspace = true
+derivative.workspace = true
 
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
@@ -33,4 +35,8 @@ harness = false
 
 [[bench]]
 name = "hyrax"
+harness = false
+
+[[bench]]
+name = "kzg"
 harness = false

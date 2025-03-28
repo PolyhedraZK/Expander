@@ -78,7 +78,7 @@ func (t *FieldHasherTranscript) AppendFs(fs ...frontend.Variable) {
 func (t *FieldHasherTranscript) CircuitF() frontend.Variable {
 	if len(t.dataPool) != 0 {
 		var newCount uint = 0
-		t.hashState, newCount = t.hasher.HashToState(t.dataPool...)
+		t.hashState, newCount = t.hasher.HashToState(append(t.hashState, t.dataPool...)...)
 
 		t.count += newCount
 		t.nextUnconsumed = 0
@@ -104,7 +104,7 @@ func (t *FieldHasherTranscript) CircuitF() frontend.Variable {
 func (t *FieldHasherTranscript) ChallengeF() []frontend.Variable {
 	if len(t.dataPool) != 0 {
 		var newCount uint = 0
-		t.hashState, newCount = t.hasher.HashToState(t.dataPool...)
+		t.hashState, newCount = t.hasher.HashToState(append(t.hashState, t.dataPool...)...)
 
 		t.count += newCount
 		t.nextUnconsumed = 0
@@ -145,7 +145,7 @@ func (t *FieldHasherTranscript) HashAndReturnState() []frontend.Variable {
 	var newCount uint = 0
 
 	if len(t.dataPool) != 0 {
-		t.hashState, newCount = t.hasher.HashToState(t.dataPool...)
+		t.hashState, newCount = t.hasher.HashToState(append(t.hashState, t.dataPool...)...)
 
 		t.count += newCount
 		t.dataPool = nil

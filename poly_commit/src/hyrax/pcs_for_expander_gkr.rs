@@ -1,4 +1,4 @@
-use arith::{ExtensionField, FieldSerde};
+use arith::ExtensionField;
 use gkr_field_config::GKRFieldConfig;
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
 use mpi_config::MPIConfig;
@@ -6,6 +6,7 @@ use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
 };
+use serdes::ExpSerde;
 use transcript::Transcript;
 
 use crate::{
@@ -13,13 +14,14 @@ use crate::{
         hyrax_impl::{hyrax_commit, hyrax_open, hyrax_setup, hyrax_verify},
         pedersen::pedersen_commit,
     },
-    HyraxCommitment, HyraxOpening, HyraxPCS, PCSForExpanderGKR, PedersenParams,
+    ExpanderGKRChallenge, HyraxCommitment, HyraxOpening, HyraxPCS, PCSForExpanderGKR,
+    PedersenParams, StructuredReferenceString,
 };
 
 impl<G, C, T> PCSForExpanderGKR<G, T> for HyraxPCS<C, T>
 where
     G: GKRFieldConfig<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
-    C: CurveAffine + FieldSerde,
+    C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
     T: Transcript<G::ChallengeField>,
@@ -50,14 +52,14 @@ where
     fn commit(
         _params: &Self::Params,
         mpi_config: &MPIConfig,
-        proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
-    ) -> Self::Commitment {
+    ) -> Option<Self::Commitment> {
         let local_commit = hyrax_commit(proving_key, poly);
 
         if mpi_config.is_single_process() {
-            return local_commit;
+            return local_commit.into();
         }
 
         let mut global_commit: Vec<C> = if mpi_config.is_root() {
@@ -67,25 +69,25 @@ where
         };
 
         mpi_config.gather_vec(&local_commit.0, &mut global_commit);
-        if mpi_config.is_root() {
-            return HyraxCommitment(global_commit);
+        if !mpi_config.is_root() {
+            return None;
         }
 
-        local_commit
+        HyraxCommitment(global_commit).into()
     }
 
     fn open(
         _params: &Self::Params,
         mpi_config: &MPIConfig,
-        proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
-        x: &crate::ExpanderGKRChallenge<G>,
+        x: &ExpanderGKRChallenge<G>,
         _transcript: &mut T,
         _scratch_pad: &Self::ScratchPad,
-    ) -> Self::Opening {
+    ) -> Option<Self::Opening> {
         if mpi_config.is_single_process() {
             let (_, open) = hyrax_open(proving_key, poly, &x.local_xs());
-            return open;
+            return open.into();
         }
 
         let local_num_vars = poly.num_vars();
@@ -101,18 +103,18 @@ where
         let eq_mpi_vars = EqPolynomial::build_eq_x_r(&x.x_mpi);
         let combined_coeffs = mpi_config.coef_combine_vec(&local_basis, &eq_mpi_vars);
 
-        if mpi_config.is_root() {
-            return HyraxOpening(combined_coeffs);
+        if !mpi_config.is_root() {
+            return None;
         }
 
-        HyraxOpening(local_basis)
+        HyraxOpening(combined_coeffs).into()
     }
 
     fn verify(
         _params: &Self::Params,
-        verifying_key: &<Self::SRS as crate::StructuredReferenceString>::VKey,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &crate::ExpanderGKRChallenge<G>,
+        x: &ExpanderGKRChallenge<G>,
         v: <G as GKRFieldConfig>::ChallengeField,
         _transcript: &mut T,
         opening: &Self::Opening,

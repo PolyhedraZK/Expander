@@ -1,14 +1,15 @@
-use arith::{ExtensionField, Field, FieldSerde};
+use arith::{ExtensionField, Field};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::MultilinearExtension;
 use rand::RngCore;
+use serdes::ExpSerde;
 use std::fmt::Debug;
 use transcript::Transcript;
 
 pub trait StructuredReferenceString {
-    type PKey: Clone + Debug + FieldSerde + Send;
-    type VKey: Clone + Debug + FieldSerde + Send;
+    type PKey: Clone + Debug + ExpSerde + Send;
+    type VKey: Clone + Debug + ExpSerde + Send;
 
     /// Convert the SRS into proving and verifying keys.
     /// Comsuming self by default.
@@ -22,11 +23,16 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
     type Params: Clone + Debug + Default;
     type Poly: Clone + Debug + Default;
     type EvalPoint: Clone + Debug + Default;
-    type ScratchPad: Clone + Debug + Default + FieldSerde;
+    type ScratchPad: Clone + Debug + Default + ExpSerde;
 
-    type SRS: Clone + Debug + Default + FieldSerde + StructuredReferenceString;
-    type Commitment: Clone + Debug + Default + FieldSerde;
-    type Opening: Clone + Debug + Default + FieldSerde;
+    type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString;
+    type Commitment: Clone + Debug + Default + ExpSerde;
+    type Opening: Clone + Debug + Default + ExpSerde;
+
+    /// Minimum number of variables supported in this PCS implementation,
+    /// that such constraint exists for PCSs like Orion,
+    /// but for Raw and Hyrax, polys of any size works.
+    const MINIMUM_NUM_VARS: usize = 0;
 
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Use self as the first argument to save some potential intermediate state.
@@ -96,11 +102,16 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default + Send;
-    type ScratchPad: Clone + Debug + Default + Send + FieldSerde;
+    type ScratchPad: Clone + Debug + Default + Send + ExpSerde;
 
-    type SRS: Clone + Debug + Default + FieldSerde + StructuredReferenceString;
-    type Commitment: Clone + Debug + Default + FieldSerde;
-    type Opening: Clone + Debug + Default + FieldSerde;
+    type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString;
+    type Commitment: Clone + Debug + Default + ExpSerde;
+    type Opening: Clone + Debug + Default + ExpSerde;
+
+    /// Minimum number of variables supported in this PCS implementation,
+    /// that such constraint exists for PCSs like Orion,
+    /// but for Raw and Hyrax, polys of any size works.
+    const MINIMUM_NUM_VARS: usize = 0;
 
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Each process should return the SAME GLOBAL SRS.
@@ -126,7 +137,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
-    ) -> Self::Commitment;
+    ) -> Option<Self::Commitment>;
 
     /// Open the polynomial at a point.
     /// Root process returns the opening, other processes can return arbitrary value.
@@ -157,7 +168,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
         x: &ExpanderGKRChallenge<C>,
         transcript: &mut T,
         scratch_pad: &Self::ScratchPad,
-    ) -> Self::Opening;
+    ) -> Option<Self::Opening>;
 
     /// Verify the opening of a polynomial at a point.
     /// This should only be called on the root process.

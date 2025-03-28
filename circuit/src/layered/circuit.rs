@@ -7,6 +7,7 @@ use config::GKRConfig;
 use gkr_field_config::GKRFieldConfig;
 use mpi::ffi::ompi_win_t;
 use mpi_config::{root_println, MPIConfig};
+use serdes::ExpSerde;
 use transcript::Transcript;
 
 use crate::*;
@@ -218,7 +219,7 @@ impl<C: GKRFieldConfig> Circuit<C> {
         allow_padding_for_testing: bool, // TODO: Consider remove this
     ) {
         let cursor = Cursor::new(file_bytes);
-        let mut witness = Witness::<C>::deserialize_from(cursor);
+        let mut witness = Witness::<C>::deserialize_from(cursor).unwrap();
 
         // sizes for a single piece of witness
         let private_input_size = 1 << self.log_input_size();

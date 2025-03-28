@@ -91,6 +91,11 @@ impl<'ref_life, 'outer_mut: 'ref_life, F: Field> MutRefMultiLinearPoly<'ref_life
     pub fn from_ref(evals: &'outer_mut mut Vec<F>) -> Self {
         Self { coeffs: evals }
     }
+
+    #[inline(always)]
+    pub fn lift_to_n_vars(&mut self, vars: usize) {
+        self.coeffs.resize(1 << vars, F::ZERO)
+    }
 }
 
 impl<'a, F: Field> Index<usize> for MutRefMultiLinearPoly<'a, F> {

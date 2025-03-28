@@ -1,21 +1,15 @@
-use std::io::{Read, Write};
-
-use halo2curves::{
-    bn256::{Fr, G1Affine, G2Affine},
-    ff::{Field as Halo2Field, FromUniformBytes, PrimeField},
-    group::GroupEncoding,
-};
+use ethnum::U256;
+use halo2curves::ff::{Field as Halo2Field, FromUniformBytes, PrimeField};
 use rand::RngCore;
 
-use crate::serde::{FieldSerdeError, FieldSerdeResult};
-use crate::{ExtensionField, Field, FieldForECC, FieldSerde, SimdField};
+use crate::{ExtensionField, FFTField, Field, SimdField};
 
-const MODULUS: ethnum::U256 = ethnum::U256([
+pub use halo2curves::bn256::Fr;
+
+const MODULUS: U256 = U256([
     0x2833e84879b9709143e1f593f0000001,
     0x30644e72e131a029b85045b68181585d,
 ]);
-
-pub use halo2curves::bn256::Fr as BN254Fr;
 
 impl Field for Fr {
     /// name
@@ -34,6 +28,9 @@ impl Field for Fr {
 
     /// Inverse of 2
     const INV_2: Self = Fr::TWO_INV;
+
+    /// MODULUS in [u64; 4]
+    const MODULUS: U256 = MODULUS;
 
     // ====================================
     // constants
@@ -71,6 +68,32 @@ impl Field for Fr {
         Self::from((rng.next_u32() & 1) as u64)
     }
 
+    /// expose the element as u32.
+    fn as_u32_unchecked(&self) -> u32 {
+        todo!()
+    }
+
+    #[inline(always)]
+    // TODO: better implementation
+    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+        <Fr as FromUniformBytes<64>>::from_uniform_bytes(
+            &[bytes.as_slice(), [0u8; 32].as_slice()]
+                .concat()
+                .try_into()
+                .unwrap(),
+        )
+    }
+
+    #[inline(always)]
+    fn from_u256(x: ethnum::U256) -> Self {
+        Fr::from_bytes(&(x % MODULUS).to_le_bytes()).unwrap()
+    }
+
+    #[inline(always)]
+    fn to_u256(&self) -> ethnum::U256 {
+        ethnum::U256::from_le_bytes(self.to_bytes())
+    }
+
     // ====================================
     // arithmetics
     // ====================================
@@ -87,40 +110,15 @@ impl Field for Fr {
     }
 
     /// Exp
-    fn exp(&self, _exponent: u128) -> Self {
-        unimplemented!()
+    #[inline(always)]
+    fn exp(&self, exp: u128) -> Self {
+        self.pow_vartime([exp as u64])
     }
 
     /// find the inverse of the element; return None if not exist
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
         self.invert().into()
-    }
-
-    /// expose the element as u32.
-    fn as_u32_unchecked(&self) -> u32 {
-        todo!()
-    }
-
-    // TODO: better implementation
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        <Fr as FromUniformBytes<64>>::from_uniform_bytes(
-            &[bytes.as_slice(), [0u8; 32].as_slice()]
-                .concat()
-                .try_into()
-                .unwrap(),
-        )
-    }
-}
-
-impl FieldForECC for Fr {
-    const MODULUS: ethnum::U256 = MODULUS;
-
-    fn from_u256(x: ethnum::U256) -> Self {
-        Fr::from_bytes(&(x % MODULUS).to_le_bytes()).unwrap()
-    }
-    fn to_u256(&self) -> ethnum::U256 {
-        ethnum::U256::from_le_bytes(self.to_bytes())
     }
 }
 
@@ -146,72 +144,6 @@ impl SimdField for Fr {
     const PACK_SIZE: usize = 1;
 }
 
-impl FieldSerde for Fr {
-    const SERIALIZED_SIZE: usize = 32;
-
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        writer.write_all(self.to_bytes().as_ref())?;
-        Ok(())
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut buffer = [0u8; Self::SERIALIZED_SIZE];
-        reader.read_exact(&mut buffer)?;
-        match Fr::from_bytes(&buffer).into_option() {
-            Some(v) => Ok(v),
-            None => Err(FieldSerdeError::DeserializeError),
-        }
-    }
-}
-
-impl FieldSerde for G1Affine {
-    const SERIALIZED_SIZE: usize = 32;
-
-    fn serialize_into<W: Write>(&self, writer: W) -> FieldSerdeResult<()> {
-        let bytes = self.to_bytes().as_ref().to_vec();
-        bytes.serialize_into(writer)
-    }
-
-    fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self> {
-        let bytes: Vec<u8> = Vec::deserialize_from(reader)?;
-        if bytes.len() != Self::SERIALIZED_SIZE {
-            return Err(FieldSerdeError::DeserializeError);
-        }
-
-        let mut encoding = <Self as GroupEncoding>::Repr::default();
-        encoding.as_mut().copy_from_slice(bytes.as_ref());
-        match G1Affine::from_bytes(&encoding).into_option() {
-            Some(a) => Ok(a),
-            None => Err(FieldSerdeError::DeserializeError),
-        }
-    }
-}
-
-impl FieldSerde for G2Affine {
-    const SERIALIZED_SIZE: usize = 64;
-
-    fn serialize_into<W: Write>(&self, writer: W) -> FieldSerdeResult<()> {
-        let bytes = self.to_bytes().as_ref().to_vec();
-        bytes.serialize_into(writer)
-    }
-
-    fn deserialize_from<R: Read>(reader: R) -> FieldSerdeResult<Self> {
-        let bytes: Vec<u8> = Vec::deserialize_from(reader)?;
-        if bytes.len() != Self::SERIALIZED_SIZE {
-            return Err(FieldSerdeError::DeserializeError);
-        }
-
-        let mut encoding = <Self as GroupEncoding>::Repr::default();
-        encoding.as_mut().copy_from_slice(bytes.as_ref());
-        match G2Affine::from_bytes(&encoding).into_option() {
-            Some(a) => Ok(a),
-            None => Err(FieldSerdeError::DeserializeError),
-        }
-    }
-}
-
 impl ExtensionField for Fr {
     const DEGREE: usize = 1;
 
@@ -225,21 +157,25 @@ impl ExtensionField for Fr {
     type BaseField = Self;
 
     /// Multiply the extension field with the base field
+    #[inline(always)]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
         self * base
     }
 
     /// Add the extension field with the base field
+    #[inline(always)]
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
         self + base
     }
 
     /// Multiply the extension field by x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
+    #[inline(always)]
     fn mul_by_x(&self) -> Self {
         unimplemented!("mul_by_x for Fr doesn't make sense")
     }
 
     /// Construct a new instance of extension field from coefficients
+    #[inline(always)]
     fn from_limbs(limbs: &[Self::BaseField]) -> Self {
         if limbs.len() < Self::DEGREE {
             Self::zero()
@@ -249,7 +185,25 @@ impl ExtensionField for Fr {
     }
 
     /// Extract polynomial field coefficients from the extension field instance
+    #[inline(always)]
     fn to_limbs(&self) -> Vec<Self::BaseField> {
         vec![*self]
+    }
+}
+
+impl FFTField for Fr {
+    const TWO_ADICITY: usize = <Self as PrimeField>::S as usize;
+
+    fn root_of_unity() -> Self {
+        <Self as PrimeField>::ROOT_OF_UNITY
+    }
+
+    fn two_adic_generator(bits: usize) -> Self {
+        let mut res = <Self as FFTField>::root_of_unity();
+        for _ in bits..Self::TWO_ADICITY {
+            res = res.square();
+        }
+
+        res
     }
 }

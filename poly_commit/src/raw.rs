@@ -2,12 +2,13 @@
 use crate::{
     ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,
 };
-use arith::{BN254Fr, ExtensionField, Field, FieldForECC, FieldSerde, FieldSerdeResult};
+use arith::{ExtensionField, Field};
 use ethnum::U256;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::{MultiLinearPoly, MultiLinearPolyExpander, MultilinearExtension};
 use rand::RngCore;
+use serdes::{ExpSerde, SerdeResult};
 use transcript::Transcript;
 
 #[derive(Clone, Debug, Default)]
@@ -15,13 +16,12 @@ pub struct RawCommitment<F: Field> {
     pub evals: Vec<F>,
 }
 
-impl<F: Field> FieldSerde for RawCommitment<F> {
+impl<F: Field> ExpSerde for RawCommitment<F> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         let u256_embedded = U256::from(self.evals.len() as u64);
-        let fr_embedded = BN254Fr::from_u256(u256_embedded);
-        fr_embedded.serialize_into(&mut writer)?;
+        u256_embedded.serialize_into(&mut writer)?;
 
         self.evals
             .iter()
@@ -30,14 +30,12 @@ impl<F: Field> FieldSerde for RawCommitment<F> {
         Ok(())
     }
 
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
         let mut v = Self::default();
 
-        let fr_embedded = BN254Fr::deserialize_from(&mut reader)?;
-        let u256_embedded = fr_embedded.to_u256();
-        let len = u256_embedded.as_usize();
+        let len = U256::deserialize_from(&mut reader)?;
 
-        for _ in 0..len {
+        for _ in 0..len.as_usize() {
             v.evals.push(F::deserialize_from(&mut reader)?);
         }
         Ok(v)
@@ -163,13 +161,14 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
-    ) -> Self::Commitment {
+    ) -> Option<Self::Commitment> {
         assert!(poly.num_vars() == *params);
 
         if mpi_config.is_single_process() {
             return Self::Commitment {
                 evals: poly.hypercube_basis(),
-            };
+            }
+            .into();
         }
 
         let mut buffer = if mpi_config.is_root() {
@@ -180,7 +179,11 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
 
         mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
 
-        Self::Commitment { evals: buffer }
+        if !mpi_config.is_root() {
+            return None;
+        }
+
+        Self::Commitment { evals: buffer }.into()
     }
 
     fn open(
@@ -191,7 +194,8 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _x: &ExpanderGKRChallenge<C>,
         _transcript: &mut T,
         _scratch_pad: &Self::ScratchPad,
-    ) -> Self::Opening {
+    ) -> Option<Self::Opening> {
+        Some(())
     }
 
     fn verify(

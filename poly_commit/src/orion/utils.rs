@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
-use arith::{ExtensionField, Field, FieldSerde, FieldSerdeError, SimdField};
+use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
+use serdes::SerdeError;
 use thiserror::Error;
 use transcript::Transcript;
 
@@ -19,7 +20,7 @@ pub enum OrionPCSError {
     ParameterUnmatchError,
 
     #[error("field serde error")]
-    SerializationError(#[from] FieldSerdeError),
+    SerializationError(#[from] SerdeError),
 }
 
 pub type OrionResult<T> = std::result::Result<T, OrionPCSError>;
@@ -83,27 +84,10 @@ where
 {
     pub interleaved_alphabet_commitment: tree::Tree,
 
-    _phantom: PhantomData<ComPackF>,
+    pub(crate) _phantom: PhantomData<ComPackF>,
 }
 
 unsafe impl<F: Field, ComPackF: SimdField<Scalar = F>> Send for OrionScratchPad<F, ComPackF> {}
-
-impl<F: Field, ComPackF: SimdField<Scalar = F>> FieldSerde for OrionScratchPad<F, ComPackF> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
-    fn serialize_into<W: std::io::Write>(&self, writer: W) -> arith::FieldSerdeResult<()> {
-        self.interleaved_alphabet_commitment.serialize_into(writer)
-    }
-
-    fn deserialize_from<R: std::io::Read>(reader: R) -> arith::FieldSerdeResult<Self> {
-        let interleaved_alphabet_commitment = tree::Tree::deserialize_from(reader)?;
-
-        Ok(Self {
-            interleaved_alphabet_commitment,
-            _phantom: PhantomData,
-        })
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct OrionProof<EvalF: Field> {
@@ -133,20 +117,24 @@ where
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
 
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
-    let mut scratch = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
-    transpose_in_place(&mut packed_interleaved_codewords, &mut scratch, packed_rows);
-    drop(scratch);
+    let mut interleaved_alphabets = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
+    transpose(
+        &packed_interleaved_codewords,
+        &mut interleaved_alphabets,
+        packed_rows,
+    );
+    drop(packed_interleaved_codewords);
 
     // NOTE: commit the interleaved codeword
     // we just directly commit to the packed field elements to leaves
     // Also note, when codeword is not power of 2 length, pad to nearest po2
     // to commit by merkle tree
-    if !packed_interleaved_codewords.len().is_power_of_two() {
-        let aligned_po2_len = packed_interleaved_codewords.len().next_power_of_two();
-        packed_interleaved_codewords.resize(aligned_po2_len, PackF::ZERO);
+    if !interleaved_alphabets.len().is_power_of_two() {
+        let aligned_po2_len = interleaved_alphabets.len().next_power_of_two();
+        interleaved_alphabets.resize(aligned_po2_len, PackF::ZERO);
     }
     scratch_pad.interleaved_alphabet_commitment =
-        tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(packed_interleaved_codewords);
+        tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(interleaved_alphabets);
 
     Ok(scratch_pad.interleaved_alphabet_commitment.root())
 }
@@ -206,60 +194,57 @@ pub(crate) const fn cache_batch_size<F: Sized>() -> usize {
 }
 
 #[inline(always)]
-pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row_num: usize) {
+pub(crate) fn transpose<F: Field>(mat: &[F], out: &mut [F], row_num: usize) {
     let col_num = mat.len() / row_num;
     let batch_size = cache_batch_size::<F>();
+    let mut batch_srt = 0;
 
-    mat.chunks(batch_size)
-        .enumerate()
-        .for_each(|(i, ith_batch)| {
-            let batch_srt = batch_size * i;
+    mat.chunks(batch_size).for_each(|ith_batch| {
+        let (mut src_y, mut src_x) = (batch_srt / col_num, batch_srt % col_num);
 
-            ith_batch.iter().enumerate().for_each(|(j, &elem_j)| {
-                let src = batch_srt + j;
-                let dst = (src / col_num) + (src % col_num) * row_num;
+        ith_batch.iter().for_each(|elem_j| {
+            let dst = src_y + src_x * row_num;
+            out[dst] = *elem_j;
 
-                scratch[dst] = elem_j;
-            })
+            src_x += 1;
+            if src_x >= col_num {
+                src_x = 0;
+                src_y += 1;
+            }
         });
 
+        batch_srt += batch_size
+    });
+}
+
+#[allow(unused)]
+#[inline(always)]
+pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row_num: usize) {
+    transpose(mat, scratch, row_num);
     mat.copy_from_slice(scratch);
 }
 
 #[inline(always)]
-pub(crate) fn transpose_and_pack<F, SimdF>(evaluations: &mut [F], row_num: usize) -> Vec<SimdF>
+pub(crate) fn pack_from_base<F, PackF>(evaluations: &[F]) -> Vec<PackF>
 where
     F: Field,
-    SimdF: SimdField<Scalar = F>,
+    PackF: SimdField<Scalar = F>,
 {
-    // NOTE: pre transpose evaluations
-    let mut scratch = vec![F::ZERO; evaluations.len()];
-    transpose_in_place(evaluations, &mut scratch, row_num);
-    drop(scratch);
-
-    // NOTE: SIMD pack each row of transposed matrix
+    // NOTE: SIMD pack neighboring base field evals
     evaluations
-        .chunks(SimdF::PACK_SIZE)
+        .chunks(PackF::PACK_SIZE)
         .map(SimdField::pack)
         .collect()
 }
 
 #[inline(always)]
-pub(crate) fn transpose_and_pack_simd<F, SimdF, PackF>(
-    evaluations: &mut [SimdF],
-    row_num: usize,
-) -> Vec<PackF>
+pub(crate) fn pack_simd<F, SimdF, PackF>(evaluations: &[SimdF]) -> Vec<PackF>
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
     PackF: SimdField<Scalar = F>,
 {
-    // NOTE: pre transpose evaluations
-    let mut scratch = vec![SimdF::ZERO; evaluations.len()];
-    transpose_in_place(evaluations, &mut scratch, row_num);
-    drop(scratch);
-
-    // NOTE: SIMD pack each row of transposed matrix
+    // NOTE: SIMD pack neighboring SIMD evals
     let relative_pack_size = PackF::PACK_SIZE / SimdF::PACK_SIZE;
     evaluations
         .chunks(relative_pack_size)
@@ -277,7 +262,7 @@ pub struct SubsetSumLUTs<F: Field> {
 }
 
 impl<F: Field> SubsetSumLUTs<F> {
-    #[inline]
+    #[inline(always)]
     pub fn new(entry_bits: usize, table_num: usize) -> Self {
         assert!(entry_bits > 0 && table_num > 0);
 
@@ -287,10 +272,9 @@ impl<F: Field> SubsetSumLUTs<F> {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn build(&mut self, weights: &[F]) {
-        assert_eq!(weights.len() % self.entry_bits, 0);
-        assert_eq!(weights.len() / self.entry_bits, self.tables.len());
+        assert_eq!(weights.len(), self.entry_bits * self.tables.len());
 
         self.tables.iter_mut().for_each(|lut| lut.fill(F::ZERO));
 
@@ -309,7 +293,7 @@ impl<F: Field> SubsetSumLUTs<F> {
         );
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn lookup_and_sum<BitF, EntryF>(&self, indices: &[EntryF]) -> F
     where
         BitF: Field,
@@ -330,7 +314,7 @@ impl<F: Field> SubsetSumLUTs<F> {
 
 #[inline(always)]
 pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
-    row_num: usize,
+    com_pack_size: usize,
     packed_evals: &[SimdF],
     eq_col_coeffs: &[EvalF],
     eval_row: &mut [EvalF],
@@ -343,24 +327,40 @@ pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
     T: Transcript<EvalF>,
 {
     // NOTE: declare the look up tables for column sums
-    let table_num = row_num / SimdF::PACK_SIZE;
+    let table_num = com_pack_size / SimdF::PACK_SIZE;
     let mut luts = SubsetSumLUTs::<EvalF>::new(SimdF::PACK_SIZE, table_num);
-    assert_eq!(row_num % SimdF::PACK_SIZE, 0);
+    assert_eq!(com_pack_size % SimdF::PACK_SIZE, 0);
+
+    let combination_size = eq_col_coeffs.len();
+    let packed_row_size = combination_size / com_pack_size;
 
     // NOTE: working on evaluation response of tensor code IOP based PCS
-    luts.build(eq_col_coeffs);
+    izip!(
+        eq_col_coeffs.chunks(com_pack_size),
+        packed_evals.chunks(packed_evals.len() / packed_row_size)
+    )
+    .for_each(|(eq_chunk, packed_evals_chunk)| {
+        luts.build(eq_chunk);
 
-    izip!(packed_evals.chunks(table_num), eval_row)
-        .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
+        izip!(packed_evals_chunk.chunks(table_num), &mut *eval_row)
+            .for_each(|(p_col, eval)| *eval += luts.lookup_and_sum(p_col));
+    });
 
     // NOTE: draw random linear combination out
     // and compose proximity response(s) of tensor code IOP based PCS
     proximity_rows.iter_mut().for_each(|row_buffer| {
-        let random_coeffs = transcript.generate_challenge_field_elements(row_num);
-        luts.build(&random_coeffs);
+        let random_coeffs = transcript.generate_challenge_field_elements(combination_size);
 
-        izip!(packed_evals.chunks(table_num), row_buffer)
-            .for_each(|(p_col, res)| *res = luts.lookup_and_sum(p_col));
+        izip!(
+            random_coeffs.chunks(com_pack_size),
+            packed_evals.chunks(packed_evals.len() / packed_row_size)
+        )
+        .for_each(|(random_chunk, packed_evals_chunk)| {
+            luts.build(random_chunk);
+
+            izip!(packed_evals_chunk.chunks(table_num), &mut *row_buffer)
+                .for_each(|(p_col, prox)| *prox += luts.lookup_and_sum(p_col));
+        });
     });
     drop(luts);
 }
@@ -396,20 +396,7 @@ where
  */
 
 #[inline(always)]
-pub(crate) fn simd_inner_product<F, SimdF>(lhs: &[SimdF], rhs: &[SimdF]) -> F
-where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-{
-    assert_eq!(lhs.len(), rhs.len());
-
-    let simd_sum: SimdF = izip!(lhs, rhs).map(|(a, b)| *a * b).sum();
-
-    simd_sum.unpack().iter().sum()
-}
-
-#[inline(always)]
-pub(crate) fn simd_ext_base_inner_prod<F, ExtF, SimdF>(
+fn simd_ext_base_inner_prod<F, ExtF, SimdF>(
     simd_ext_limbs: &[SimdF],
     simd_base_elems: &[SimdF],
 ) -> ExtF
@@ -422,15 +409,43 @@ where
 
     let mut ext_limbs = vec![F::ZERO; ExtF::DEGREE];
 
-    izip!(&mut ext_limbs, simd_ext_limbs.chunks(simd_base_elems.len()))
-        .for_each(|(e, simd_ext_limb)| *e = simd_inner_product(simd_ext_limb, simd_base_elems));
+    izip!(&mut ext_limbs, simd_ext_limbs.chunks(simd_base_elems.len())).for_each(
+        |(e, simd_ext_limb)| {
+            let simd_sum: SimdF = izip!(simd_ext_limb, simd_base_elems)
+                .map(|(a, b)| *a * b)
+                .sum();
+            *e = simd_sum.horizontal_sum();
+        },
+    );
 
     ExtF::from_limbs(&ext_limbs)
 }
 
+// NOTE(HS) this is only a helper function for SIMD inner product between
+// extension fields with SIMD base fields - motivation here is decompose extension fields
+// into base field limbs, decompose them, then reSIMD pack them.
+// This method is applied column-wise, i.e., the data size is the same as linear combination
+// size, which should be in total 1024 bits at this point (2025/03/11).
+#[inline(always)]
+fn transpose_and_pack<F, SimdF>(evaluations: &[F], row_num: usize) -> Vec<SimdF>
+where
+    F: Field,
+    SimdF: SimdField<Scalar = F>,
+{
+    // NOTE: pre transpose evaluations
+    let mut evaluations_transposed = vec![F::ZERO; evaluations.len()];
+    transpose(evaluations, &mut evaluations_transposed, row_num);
+
+    // NOTE: SIMD pack each row of transposed matrix
+    evaluations_transposed
+        .chunks(SimdF::PACK_SIZE)
+        .map(SimdField::pack)
+        .collect()
+}
+
 #[inline(always)]
 pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
-    row_num: usize,
+    com_pack_size: usize,
     packed_evals: &[SimdF],
     eq_col_coeffs: &[EvalF],
     eval_row: &mut [EvalF],
@@ -443,25 +458,49 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
     T: Transcript<EvalF>,
 {
     // NOTE: check SIMD inner product numbers for column sums
-    let simd_inner_prods = row_num / SimdF::PACK_SIZE;
-    assert_eq!(row_num % SimdF::PACK_SIZE, 0);
+    let simd_inner_prods = com_pack_size / SimdF::PACK_SIZE;
+    assert_eq!(com_pack_size % SimdF::PACK_SIZE, 0);
+
+    let combination_size = eq_col_coeffs.len();
+    let packed_row_size = combination_size / com_pack_size;
 
     // NOTE: working on evaluation response of tensor code IOP based PCS
-    let mut eq_col_coeffs_limbs: Vec<_> = eq_col_coeffs.iter().flat_map(|e| e.to_limbs()).collect();
-    let eq_col_simd_limbs: Vec<_> = transpose_and_pack(&mut eq_col_coeffs_limbs, row_num);
+    izip!(
+        eq_col_coeffs.chunks(com_pack_size),
+        packed_evals.chunks(packed_evals.len() / packed_row_size)
+    )
+    .for_each(|(eq_chunk, packed_evals_chunk)| {
+        let eq_col_coeffs_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
+        let eq_col_simd_limbs = transpose_and_pack(&eq_col_coeffs_limbs, com_pack_size);
 
-    izip!(packed_evals.chunks(simd_inner_prods), eval_row)
-        .for_each(|(p_col, res)| *res = simd_ext_base_inner_prod(&eq_col_simd_limbs, p_col));
+        izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *eval_row).for_each(
+            |(p_col, eval)| {
+                *eval += simd_ext_base_inner_prod::<_, EvalF, _>(&eq_col_simd_limbs, p_col)
+            },
+        );
+    });
 
     // NOTE: draw random linear combination out
     // and compose proximity response(s) of tensor code IOP based PCS
     proximity_rows.iter_mut().for_each(|row_buffer| {
-        let random_coeffs = transcript.generate_challenge_field_elements(row_num);
-        let mut proximity_limbs: Vec<_> = random_coeffs.iter().flat_map(|e| e.to_limbs()).collect();
-        let proximity_simd_limbs: Vec<_> = transpose_and_pack(&mut proximity_limbs, row_num);
+        let random_coeffs = transcript.generate_challenge_field_elements(combination_size);
 
-        izip!(packed_evals.chunks(simd_inner_prods), row_buffer)
-            .for_each(|(p_col, res)| *res = simd_ext_base_inner_prod(&proximity_simd_limbs, p_col));
+        izip!(
+            random_coeffs.chunks(com_pack_size),
+            packed_evals.chunks(packed_evals.len() / packed_row_size)
+        )
+        .for_each(|(rand_chunk, packed_evals_chunk)| {
+            let rand_coeffs_limbs: Vec<_> = rand_chunk.iter().flat_map(|e| e.to_limbs()).collect();
+            let rand_simd_limbs = transpose_and_pack(&rand_coeffs_limbs, com_pack_size);
+
+            izip!(
+                packed_evals_chunk.chunks(simd_inner_prods),
+                &mut *row_buffer
+            )
+            .for_each(|(p_col, prox)| {
+                *prox += simd_ext_base_inner_prod::<_, EvalF, _>(&rand_simd_limbs, p_col)
+            });
+        });
     });
 }
 
@@ -480,8 +519,8 @@ where
     // NOTE: check SIMD inner product numbers for column sums
     assert_eq!(fixed_rl.len() % SimdF::PACK_SIZE, 0);
 
-    let mut rl_limbs: Vec<_> = fixed_rl.iter().flat_map(|e| e.to_limbs()).collect();
-    let rl_simd_limbs: Vec<SimdF> = transpose_and_pack(&mut rl_limbs, fixed_rl.len());
+    let rl_limbs: Vec<_> = fixed_rl.iter().flat_map(|e| e.to_limbs()).collect();
+    let rl_simd_limbs: Vec<SimdF> = transpose_and_pack(&rl_limbs, fixed_rl.len());
 
     izip!(query_indices, packed_interleaved_alphabets).all(|(qi, interleaved_alphabet)| {
         let index = qi % codeword.len();
@@ -510,7 +549,7 @@ mod tests {
         let simd_weights = GF2_128x8::pack(&weights);
         let simd_bases = GF2x8::pack(&bases);
 
-        let expected_simd_inner_prod: GF2_128 = (simd_weights * simd_bases).unpack().iter().sum();
+        let expected_simd_inner_prod: GF2_128 = (simd_weights * simd_bases).horizontal_sum();
 
         let expected_vanilla_inner_prod: GF2_128 =
             izip!(&weights, &bases).map(|(w, b)| *w * *b).sum();
