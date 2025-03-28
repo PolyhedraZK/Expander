@@ -217,22 +217,25 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(command: &ExpanderExecArg
             circuit_file,
             witness_file,
             input_proof_file,
-            mpi_size: _,
+            mpi_size,
         } => {
-            let mpi_config = MPIConfig::prover_new();
+            let mpi_config = MPIConfig::verifier_new(mpi_size as i32);
             let verifier = Verifier::<Cfg>::new(mpi_config);
 
-            assert!(
-                verifier.mpi_config.world_size() == 1,
-                "Do not run verifier with mpiexec."
-            );
+            // this assertion is not right: the MPI size = 2 so that the verifier knows the prover
+            // is running in 2 threads. The verifier itself is running in 1 thread.
+            //
+            // assert!(
+            //     verifier.mpi_config.world_size() == 1,
+            //     "Do not run verifier with mpiexec."
+            // );
 
             println!("loading circuit file");
 
             let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_file);
-            
+
             println!("loading witness file");
-            
+
             circuit.verifier_load_witness_file(&witness_file, &verifier.mpi_config);
 
             println!("loading proof file");
