@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
+    "arith/babybear",
     "arith/field_hashers",
     "arith/gf2",
     "arith/gf2_128",
@@ -42,6 +43,8 @@ proc-macro2 = "1.0"  # For working with tokens
 itertools = "0.13"
 log = "0.4"
 mpi = "0.8.0"
+p3-baby-bear = { git = "https://github.com/Plonky3/Plonky3" }
+p3-field = { git = "https://github.com/Plonky3/Plonky3" }
 rand = "0.8.5"
 rayon = "1.10"
 sha2 = "0.10.8"

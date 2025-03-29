@@ -1,19 +1,23 @@
 [package]
-name = "goldilocks"
+name = "babybear"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+
 arith = { path = ".." }
 serdes = { path = "../../serdes" }
 
 ark-std.workspace = true
 ethnum.workspace = true
+p3-baby-bear.workspace = true
+p3-field.workspace = true
 rand.workspace = true
 
-[[bench]]
-name = "goldilocks"
-harness = false
 
-[dev-dependencies]
-criterion = "0.5"
+# [[bench]]
+# name = "goldilocks"
+# harness = false
+
+# [dev-dependencies]
+# criterion = "0.5"

@@ -68,13 +68,17 @@ pub trait Field:
     // constants
     // ====================================
     /// Zero element
-    fn zero() -> Self;
+    fn zero() -> Self {
+        Self::ZERO
+    }
 
     /// Is zero
     fn is_zero(&self) -> bool;
 
     /// Identity element
-    fn one() -> Self;
+    fn one() -> Self {
+        Self::ONE
+    }
 
     // ====================================
     // generators
