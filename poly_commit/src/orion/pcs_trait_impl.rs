@@ -77,7 +77,7 @@ where
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
         assert_eq!(*params, proving_key.num_vars);
-        orion_commit_base_field(proving_key, poly, scratch_pad).unwrap()
+        orion_commit_base_field::<_, OpenPackF, ComPackF>(proving_key, poly, scratch_pad).unwrap()
     }
 
     fn open(
@@ -89,7 +89,7 @@ where
         transcript: &mut T,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);
-        orion_open_base_field::<_, _, ComPackF, OpenPackF, _>(
+        orion_open_base_field::<_, OpenPackF, _, ComPackF, _>(
             proving_key,
             poly,
             x,
