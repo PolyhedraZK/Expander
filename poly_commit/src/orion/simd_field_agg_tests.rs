@@ -134,7 +134,7 @@ where
         .collect();
 
         let final_tree_height = 1 + roots.len().ilog2();
-        let (internals, _) = tree::Tree::new_with_leaf_nodes(roots, final_tree_height);
+        let internals = tree::Tree::new_with_leaf_nodes(&roots, final_tree_height);
         internals[0]
     };
 

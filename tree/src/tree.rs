@@ -46,11 +46,9 @@ impl Tree {
             .iter()
             .map(|leaf| leaf.leaf_hash())
             .collect::<Vec<Node>>();
-        let nodes = Self::new_with_leaf_nodes(leaf_nodes, tree_height);
-        Self {
-            nodes: [nodes.0, nodes.1].concat(),
-            leaves,
-        }
+        let mut nodes = Self::new_with_leaf_nodes(&leaf_nodes, tree_height);
+        nodes.extend(leaf_nodes);
+        Self { nodes, leaves }
     }
 
     /// Create a tree with compact serialization of field elements as leaves,
@@ -116,7 +114,8 @@ impl Tree {
     /// # Returns
     ///
     /// A tuple containing vectors of non-leaf nodes and leaf nodes.
-    pub fn new_with_leaf_nodes(leaf_nodes: Vec<Node>, tree_height: u32) -> (Vec<Node>, Vec<Node>) {
+    #[inline(always)]
+    pub fn new_with_leaf_nodes(leaf_nodes: &[Node], tree_height: u32) -> Vec<Node> {
         let timer = start_timer!(|| format!("generate new tree with {} leaves", leaf_nodes.len()));
 
         let len = leaf_nodes.len();
@@ -144,7 +143,7 @@ impl Tree {
                 .skip(start_index)
                 .for_each(|(current_index, e)| {
                     let left_leaf_index = left_child_index(current_index) - upper_bound;
-                    let right_leaf_index = right_child_index(current_index) - upper_bound;
+                    let right_leaf_index = left_leaf_index + 1;
                     *e = Node::node_hash(
                         &leaf_nodes[left_leaf_index],
                         &leaf_nodes[right_leaf_index],
@@ -157,18 +156,15 @@ impl Tree {
 
         for &start_index in &level_indices {
             let upper_bound = left_child_index(start_index);
-            let mut buf = non_leaf_nodes[start_index..upper_bound].to_vec();
-            buf.iter_mut().enumerate().for_each(|(index, node)| {
-                *node = Node::node_hash(
-                    &non_leaf_nodes[left_child_index(index + start_index)],
-                    &non_leaf_nodes[right_child_index(index + start_index)],
-                );
-            });
-            non_leaf_nodes[start_index..upper_bound].clone_from_slice(buf.as_ref());
+            for i in start_index..upper_bound {
+                let left = left_child_index(i);
+                let right = left + 1;
+                non_leaf_nodes[i] = Node::node_hash(&non_leaf_nodes[left], &non_leaf_nodes[right]);
+            }
         }
         end_timer!(timer);
 
-        (non_leaf_nodes, leaf_nodes)
+        non_leaf_nodes
     }
 
     /// Returns the root node of the tree.
@@ -294,6 +290,7 @@ fn left_child_index(index: usize) -> usize {
 }
 
 /// Returns the index of the right child, given an index.
+#[allow(unused)]
 #[inline]
 fn right_child_index(index: usize) -> usize {
     2 * index + 2
