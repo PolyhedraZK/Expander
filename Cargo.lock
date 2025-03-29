@@ -120,6 +120,9 @@ dependencies = [
  "halo2curves",
  "itertools 0.13.0",
  "log",
+ "p3-baby-bear",
+ "p3-field",
+ "p3-monty-31",
  "rand 0.8.5",
  "raw-cpuid",
  "serdes",
@@ -263,19 +266,6 @@ name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
-
-[[package]]
-name = "babybear"
-version = "0.1.0"
-dependencies = [
- "arith",
- "ark-std",
- "ethnum",
- "p3-baby-bear",
- "p3-field",
- "rand 0.8.5",
- "serdes",
-]
 
 [[package]]
 name = "backtrace"

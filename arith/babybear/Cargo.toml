@@ -12,6 +12,7 @@ ark-std.workspace = true
 ethnum.workspace = true
 p3-baby-bear.workspace = true
 p3-field.workspace = true
+p3-monty-31.workspace = true
 rand.workspace = true
 
 
