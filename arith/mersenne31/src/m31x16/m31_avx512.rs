@@ -47,7 +47,7 @@ impl ExpSerde for AVXM31 {
     #[inline(always)]
     /// serialize self into bytes
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        let data = unsafe { transmute::<__m512i, [u8; 64]>(self.v) };
+        let data = unsafe { transmute::<__m512i, [u8; 64]>(mod_reduce_epi32(self.v)) };
         writer.write_all(&data)?;
         Ok(())
     }
@@ -258,7 +258,7 @@ impl Debug for AVXM31 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut data = [0; M31_PACK_SIZE];
         unsafe {
-            _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.v);
+            _mm512_storeu_si512(data.as_mut_ptr() as *mut __m512i, self.v);
         }
         // if all data is the same, print only one
         if data.iter().all(|&x| x == data[0]) {

@@ -35,10 +35,7 @@ impl ExpSerde for AVX512GF2_128x8 {
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe {
-            let mut data = [0u8; 128];
-            _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data[0]);
-            _mm512_storeu_si512((data.as_mut_ptr() as *mut i32).offset(16), self.data[1]);
-            writer.write_all(&data)?;
+            writer.write_all(transmute::<[__m512i; 2], [u8; 128]>(self.data).as_ref())?;
         }
         Ok(())
     }
@@ -49,10 +46,7 @@ impl ExpSerde for AVX512GF2_128x8 {
         reader.read_exact(&mut data).unwrap();
         unsafe {
             Ok(Self {
-                data: [
-                    _mm512_loadu_si512(data.as_ptr() as *const i32),
-                    _mm512_loadu_si512((data.as_ptr() as *const i32).offset(16)),
-                ],
+                data: transmute::<[u8; 128], [__m512i; 2]>(data),
             })
         }
     }
@@ -369,8 +363,8 @@ impl Debug for AVX512GF2_128x8 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut data = [0u8; 128];
         unsafe {
-            _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data[0]);
-            _mm512_storeu_si512((data.as_mut_ptr() as *mut i32).offset(16), self.data[1]);
+            _mm512_storeu_si512(data.as_mut_ptr() as *mut __m512i, self.data[0]);
+            _mm512_storeu_si512((data.as_mut_ptr() as *mut __m512i).offset(16), self.data[1]);
         }
         f.debug_struct("AVX512GF2_128x8")
             .field("data", &data)

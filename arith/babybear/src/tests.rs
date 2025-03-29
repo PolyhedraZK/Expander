@@ -1,4 +1,5 @@
 use arith::{random_field_tests, random_inversion_tests};
+use ark_std::test_rng;
 
 use crate::BabyBear;
 
