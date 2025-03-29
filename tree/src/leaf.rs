@@ -51,27 +51,4 @@ impl Leaf {
 
         Node { data: res }
     }
-
-    // /// Computes the hash of the leaf using Poseidon hash function.
-    // ///
-    // /// # Arguments
-    // ///
-    // /// * `hash_param` - The Poseidon hash parameters
-    // ///
-    // /// # Returns
-    // ///
-    // /// A Node containing the hash of the leaf data.
-    // pub fn leaf_hash(&self, hash_param: &PoseidonBabyBearParams) -> Node {
-    //     // Use Poseidon hash for leaf nodes
-    //     // Note: This could be replaced with SHA2 if performance requires
-    //     let mut state = PoseidonBabyBearState { state: self.data };
-    //     hash_param.permute(&mut state);
-    //     Node {
-    //         data: unsafe {
-    //             transmute::<BabyBearx16, [u8; 64]>(state.state)[..32]
-    //                 .try_into()
-    //                 .unwrap()
-    //         },
-    //     }
-    // }
 }

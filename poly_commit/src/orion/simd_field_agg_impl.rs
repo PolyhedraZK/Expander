@@ -76,7 +76,7 @@ where
     let final_root = {
         // NOTE: check all merkle paths, and check merkle roots against commitment
         let final_tree_height = 1 + roots.len().ilog2();
-        let (internals, _) = tree::Tree::new_with_leaf_nodes(roots.clone(), final_tree_height);
+        let internals = tree::Tree::new_with_leaf_nodes(&roots, final_tree_height);
         internals[0]
     };
     if final_root != *commitment {
