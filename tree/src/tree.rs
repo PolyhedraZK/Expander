@@ -1,5 +1,6 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
+use std::mem::forget;
 
 use arith::{Field, SimdField};
 use ark_std::{end_timer, log2, start_timer};
@@ -34,16 +35,6 @@ impl Tree {
         let leaves = vec![Leaf::default(); 1 << (tree_height - 1)];
         Self::new_with_leaves(leaves)
     }
-
-    /// Builds a tree with the given leaves.
-    // #[inline]
-    // pub fn new_with_field_elements(leave_elems: &[F]) -> Self {
-    //     let leaves = leave_elems
-    //         .iter()
-    //         .map(|&leaf| Leaf { data: leaf })
-    //         .collect::<Vec<Leaf<F>>>();
-    //     Self::new_with_leaves(leaves)
-    // }
 
     /// Builds a tree with the given leaves.
     #[inline]
@@ -85,20 +76,22 @@ impl Tree {
         F: Field,
         PackF: SimdField<Scalar = F>,
     {
-        let mut serialized_bytes: Vec<u8> = vec![0u8; PackF::SIZE * field_elems.len()];
-        serialized_bytes
-            .chunks_mut(PackF::SIZE)
-            .zip(field_elems.iter())
-            .for_each(|(unit, elem)| {
-                elem.serialize_into(unit).unwrap();
-            });
+        assert_eq!(field_elems.len() * PackF::SIZE % LEAF_BYTES, 0);
+        assert!(field_elems.len().is_power_of_two());
 
-        assert!((serialized_bytes.len() / LEAF_BYTES).is_power_of_two());
+        let leaves = unsafe {
+            let field_elems_ptr = field_elems.as_ptr();
+            let field_elems_len = field_elems.len();
+            let field_elems_cap = field_elems.capacity();
 
-        let leaves = serialized_bytes
-            .chunks(LEAF_BYTES)
-            .map(move |chunk| Leaf::new(unsafe { chunk.try_into().unwrap_unchecked() }))
-            .collect();
+            forget(field_elems);
+
+            Vec::from_raw_parts(
+                field_elems_ptr as *mut Leaf,
+                field_elems_len * PackF::SIZE / LEAF_BYTES,
+                field_elems_cap * PackF::SIZE / LEAF_BYTES,
+            )
+        };
 
         Tree::new_with_leaves(leaves)
     }
@@ -270,14 +263,6 @@ impl Tree {
 
         self.gen_range_proof(left, right, tree_height)
     }
-
-    // pub fn batch_tree_for_recursive_oracles(leaves_vec: Vec<Vec<F>>) -> Vec<Self> {
-    //     // todo! optimize
-    //     leaves_vec
-    //         .iter()
-    //         .map(|leaves| Self::new_with_field_elements(leaves))
-    //         .collect()
-    // }
 }
 
 /// Returns the index of the sibling, given an index.
