@@ -7,7 +7,7 @@ use transcript::Transcript;
 use crate::{
     orion::{
         mpi_utils::{mpi_commit_encoded, orion_mpi_compute_mt_root, orion_mpi_mt_openings},
-        utils::{lut_open_linear_combine, pack_simd, simd_open_linear_combine},
+        utils::{lut_open_linear_combine, simd_open_linear_combine},
         OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
     },
     traits::TensorCodeIOPPCS,
@@ -40,7 +40,13 @@ where
     assert_eq!(row_num % relative_pack_size, 0);
 
     assert_eq!(poly.hypercube_size() % relative_pack_size, 0);
-    let packed_evals = pack_simd::<F, SimdF, ComPackF>(poly.hypercube_basis_ref());
+    let packed_evals = unsafe {
+        let ptr = poly.hypercube_basis_ref().as_ptr();
+        let len = poly.hypercube_size() / relative_pack_size;
+        let cap = poly.hypercube_basis_ref().capacity() / relative_pack_size;
+
+        Vec::from_raw_parts(ptr as *mut ComPackF, len, cap)
+    };
 
     let local_commitment = mpi_commit_encoded(
         mpi_config,
@@ -50,6 +56,7 @@ where
         packed_rows,
         msg_size,
     )?;
+    packed_evals.leak();
 
     orion_mpi_compute_mt_root(mpi_config, local_commitment, scratch_pad)
 }

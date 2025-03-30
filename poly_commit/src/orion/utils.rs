@@ -240,21 +240,6 @@ where
         .collect()
 }
 
-#[inline(always)]
-pub(crate) fn pack_simd<F, SimdF, PackF>(evaluations: &[SimdF]) -> Vec<PackF>
-where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    PackF: SimdField<Scalar = F>,
-{
-    // NOTE: SIMD pack neighboring SIMD evals
-    let relative_pack_size = PackF::PACK_SIZE / SimdF::PACK_SIZE;
-    evaluations
-        .chunks(relative_pack_size)
-        .map(PackF::pack_from_simd)
-        .collect()
-}
-
 /*
  * LINEAR OPERATIONS FOR GF2 (LOOKUP TABLE BASED)
  */

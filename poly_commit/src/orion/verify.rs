@@ -5,6 +5,7 @@ use gf2::GF2;
 use itertools::{chain, izip};
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 use transcript::Transcript;
+use tree::LEAF_BYTES;
 
 use crate::{
     orion::{
@@ -80,8 +81,16 @@ where
         .query_openings
         .iter()
         .map(|c| -> Vec<_> {
-            let elts = c.unpack_field_elems::<F, ComPackF>();
-            elts.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect()
+            let len = c.leaves.len() * LEAF_BYTES / SimdF::SIZE;
+            let cap = c.leaves.capacity() * LEAF_BYTES / SimdF::SIZE;
+
+            let leaves_cast =
+                unsafe { Vec::from_raw_parts(c.leaves.as_ptr() as *mut SimdF, len, cap) };
+
+            let res = leaves_cast.clone();
+            leaves_cast.leak();
+
+            res
         })
         .collect();
 

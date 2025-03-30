@@ -6,8 +6,7 @@ use transcript::Transcript;
 use crate::{
     orion::{
         utils::{
-            commit_encoded, lut_open_linear_combine, orion_mt_openings, pack_simd,
-            simd_open_linear_combine,
+            commit_encoded, lut_open_linear_combine, orion_mt_openings, simd_open_linear_combine,
         },
         OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
     },
@@ -40,9 +39,18 @@ where
     assert_eq!(row_num % relative_pack_size, 0);
 
     assert_eq!(poly.hypercube_size() % relative_pack_size, 0);
-    let packed_evals = pack_simd::<F, SimdF, ComPackF>(poly.hypercube_basis_ref());
+    let packed_evals = unsafe {
+        let ptr = poly.hypercube_basis_ref().as_ptr();
+        let len = poly.hypercube_size() / relative_pack_size;
+        let cap = poly.hypercube_basis_ref().capacity() / relative_pack_size;
 
-    commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
+        Vec::from_raw_parts(ptr as *mut ComPackF, len, cap)
+    };
+
+    let com = commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size);
+    packed_evals.leak();
+
+    com
 }
 
 #[inline(always)]

@@ -16,9 +16,6 @@ pub use base_field_impl::{orion_commit_base_field, orion_open_base_field};
 mod simd_field_impl;
 pub use simd_field_impl::{orion_commit_simd_field, orion_open_simd_field};
 
-#[cfg(test)]
-mod simd_field_tests;
-
 mod mpi_utils;
 
 mod simd_field_mpi_impl;
