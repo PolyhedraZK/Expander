@@ -1,4 +1,4 @@
-use std::{fmt::Debug, io::Read, marker::PhantomData};
+use std::{fmt::Debug, marker::PhantomData};
 
 use arith::{ExtensionField, Field};
 use field_hashers::FiatShamirFieldHasher;
@@ -19,15 +19,6 @@ pub trait Transcript<F: ExtensionField>: Clone + Debug {
     /// Append a polynomial commitment to the transcript
     /// called by the prover
     fn append_commitment(&mut self, commitment_bytes: &[u8]);
-
-    /// Append a polynomial commitment to the transcript
-    /// check that the pcs digest in the proof is correct
-    /// called by the verifier
-    fn append_commitment_and_check_digest<R: Read>(
-        &mut self,
-        commitment_bytes: &[u8],
-        proof_reader: &mut R,
-    ) -> bool;
 
     /// Append a field element to the transcript.
     fn append_field_element(&mut self, f: &F);
@@ -136,39 +127,8 @@ impl<F: ExtensionField, H: FiatShamirBytesHash> Transcript<F> for BytesHashTrans
             for _ in 0..PCS_DIGEST_LOOP {
                 H::hash_inplace(&mut digest);
             }
-            self.append_u8_slice(&digest);
+            self.set_state(&digest);
         }
-    }
-
-    #[inline]
-    /// check that the pcs digest in the proof is correct
-    fn append_commitment_and_check_digest<R: Read>(
-        &mut self,
-        commitment_bytes: &[u8],
-        _proof_reader: &mut R,
-    ) -> bool {
-        self.append_u8_slice(commitment_bytes);
-
-        #[cfg(not(feature = "recursion"))]
-        {
-            // When appending the initial commitment, we hash the commitment bytes
-            // for sufficient number of times, so that the FS hash has a sufficient circuit depth
-            let mut digest = [0u8; 32];
-            H::hash(&mut digest, commitment_bytes);
-            for _ in 0..PCS_DIGEST_LOOP {
-                H::hash_inplace(&mut digest);
-            }
-            self.append_u8_slice(&digest);
-
-            // check that digest matches the proof
-            let mut pcs_digest = [0u8; 32];
-            _proof_reader.read_exact(&mut pcs_digest).unwrap();
-
-            digest == pcs_digest
-        }
-
-        #[cfg(feature = "recursion")]
-        true
     }
 
     fn append_field_element(&mut self, f: &F) {
@@ -325,40 +285,8 @@ where
 
             let mut digest_bytes = vec![];
             challenge.serialize_into(&mut digest_bytes).unwrap();
-            self.append_u8_slice(&digest_bytes);
+            self.set_state(&digest_bytes);
         }
-    }
-
-    #[inline]
-    fn append_commitment_and_check_digest<R: Read>(
-        &mut self,
-        commitment_bytes: &[u8],
-        _proof_reader: &mut R,
-    ) -> bool {
-        self.append_u8_slice(commitment_bytes);
-
-        #[cfg(not(feature = "recursion"))]
-        {
-            // When appending the initial commitment, we hash the commitment bytes
-            // for sufficient number of times, so that the FS hash has a sufficient circuit depth
-            let mut challenge = self.generate_challenge_field_element().to_limbs();
-            let hasher = H::new();
-            for _ in 0..PCS_DIGEST_LOOP {
-                challenge = hasher.hash_to_state(&challenge);
-            }
-            let mut digest_bytes = vec![];
-            challenge.serialize_into(&mut digest_bytes).unwrap();
-            self.append_u8_slice(&digest_bytes);
-
-            // check that digest matches the proof
-            let challenge_from_proof =
-                Vec::<ChallengeF::BaseField>::deserialize_from(_proof_reader).unwrap();
-
-            challenge_from_proof == challenge
-        }
-
-        #[cfg(feature = "recursion")]
-        true
     }
 
     fn append_field_element(&mut self, f: &ChallengeF) {
