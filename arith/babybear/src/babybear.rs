@@ -1,198 +1,123 @@
-use crate::{field_common, Field, FieldForECC, FieldSerde, FieldSerdeResult, SimdField};
-use ark_std::Zero;
-use core::{
+use std::{
+    io::{Read, Write},
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
-use p3_baby_bear::BabyBear as P3BabyBear;
-use p3_field::{Field as P3Field, PrimeField32};
-use rand::distributions::{Distribution, Standard};
-use std::io::{Read, Write};
 
-mod baby_bearx16;
-pub use baby_bearx16::BabyBearx16;
+use arith::{field_common, Field, FieldParameters, MontyField31, MontyParameters};
+use ark_std::Zero;
+use ethnum::U256;
+use serdes::{ExpSerde, SerdeResult};
 
-#[cfg(target_arch = "x86_64")]
-pub(crate) mod baby_bear_avx;
-#[cfg(target_arch = "x86_64")]
-pub(crate) mod baby_bear_avx256;
-#[cfg(target_arch = "aarch64")]
-pub(crate) mod baby_bear_neon;
+/// The prime field `2^31 - 2^27 + 1`, a.k.a. the Baby Bear field.
+pub type BabyBear = MontyField31<BabyBearParameters>;
 
-#[cfg(target_arch = "x86_64")]
-pub use baby_bear_avx::AVXBabyBear;
+#[derive(Copy, Clone, Default, Debug, Eq, Hash, PartialEq)]
+pub struct BabyBearParameters;
 
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
-#[repr(transparent)]
-pub struct BabyBear(P3BabyBear);
+impl MontyParameters for BabyBearParameters {
+    /// The Baby Bear prime: 2^31 - 2^27 + 1.
+    /// This is the unique 31-bit prime with the highest possible 2 adicity (27).
+    const PRIME: u32 = 0x78000001;
 
-pub const BABYBEAR_MODULUS: u32 = 0x78000001;
+    const MONTY_BITS: u32 = 32;
+    const MONTY_MU: u32 = 0x88000001;
+}
+
+// impl PackedMontyParameters for BabyBearParameters {}
+
+// impl BarrettParameters for BabyBearParameters {}
+
+impl FieldParameters for BabyBearParameters {
+    const MONTY_GEN: BabyBear = BabyBear::new(31);
+
+    // fn try_inverse<F: P3Field>(p1: F) -> Option<F> {
+    //     if p1.is_zero() {
+    //         return None;
+    //     }
+
+    //     // From Fermat's little theorem, in a prime field `F_p`, the inverse of `a` is `a^(p-2)`.
+    //     // Here p-2 = 2013265919 = 1110111111111111111111111111111_2.
+    //     // Uses 30 Squares + 7 Multiplications => 37 Operations total.
+
+    //     let p100000000 = p1.exp_power_of_2(8);
+    //     let p100000001 = p100000000 * p1;
+    //     let p10000000000000000 = p100000000.exp_power_of_2(8);
+    //     let p10000000100000001 = p10000000000000000 * p100000001;
+    //     let p10000000100000001000 = p10000000100000001.exp_power_of_2(3);
+    //     let p1000000010000000100000000 = p10000000100000001000.exp_power_of_2(5);
+    //     let p1000000010000000100000001 = p1000000010000000100000000 * p1;
+    //     let p1000010010000100100001001 = p1000000010000000100000001 * p10000000100000001000;
+    //     let p10000000100000001000000010 = p1000000010000000100000001.square();
+    //     let p11000010110000101100001011 = p10000000100000001000000010 * p1000010010000100100001001;
+    //     let p100000001000000010000000100 = p10000000100000001000000010.square();
+    //     let p111000011110000111100001111 =
+    //         p100000001000000010000000100 * p11000010110000101100001011;
+    //     let p1110000111100001111000011110000 = p111000011110000111100001111.exp_power_of_2(4);
+    //     let p1110111111111111111111111111111 =
+    //         p1110000111100001111000011110000 * p111000011110000111100001111;
+
+    //     Some(p1110111111111111111111111111111)
+    // }
+}
+
+// impl RelativelyPrimePower<7> for BabyBearParameters {
+//     /// In the field `BabyBear`, `a^{1/7}` is equal to a^{1725656503}.
+//     ///
+//     /// This follows from the calculation `7 * 1725656503 = 6*(2^31 - 2^27) + 1 = 1 mod (p - 1)`.
+//     fn exp_root_d<R: PrimeCharacteristicRing>(val: R) -> R {
+//         exp_1725656503(val)
+//     }
+// }
+
+// impl TwoAdicData for BabyBearParameters {
+//     const TWO_ADICITY: usize = 27;
+
+//     type ArrayLike = &'static [BabyBear];
+
+//     const TWO_ADIC_GENERATORS: Self::ArrayLike = &BabyBear::new_array([
+//         0x1, 0x78000000, 0x67055c21, 0x5ee99486, 0xbb4c4e4, 0x2d4cc4da, 0x669d6090, 0x17b56c64,
+//         0x67456167, 0x688442f9, 0x145e952d, 0x4fe61226, 0x4c734715, 0x11c33e2a, 0x62c3d2b1,
+//         0x77cad399, 0x54c131f4, 0x4cabd6a6, 0x5cf5713f, 0x3e9430e8, 0xba067a3, 0x18adc27d,
+//         0x21fd55bc, 0x4b859b3d, 0x3bd57996, 0x4483d85a, 0x3a26eef8, 0x1a427a41,
+//     ]);
+
+//     const ROOTS_8: Self::ArrayLike = &BabyBear::new_array([0x1, 0x5ee99486, 0x67055c21, 0xc9ea3ba]);
+//     const INV_ROOTS_8: Self::ArrayLike =
+//         &BabyBear::new_array([0x1, 0x6b615c47, 0x10faa3e0, 0x19166b7b]);
+
+//     const ROOTS_16: Self::ArrayLike = &BabyBear::new_array([
+//         0x1, 0xbb4c4e4, 0x5ee99486, 0x4b49e08, 0x67055c21, 0x5376917a, 0xc9ea3ba, 0x563112a7,
+//     ]);
+//     const INV_ROOTS_16: Self::ArrayLike = &BabyBear::new_array([
+//         0x1, 0x21ceed5a, 0x6b615c47, 0x24896e87, 0x10faa3e0, 0x734b61f9, 0x19166b7b, 0x6c4b3b1d,
+//     ]);
+// }
+
+// impl BinomialExtensionData<4> for BabyBearParameters {
+//     const W: BabyBear = BabyBear::new(11);
+//     const DTH_ROOT: BabyBear = BabyBear::new(1728404513);
+//     const EXT_GENERATOR: [BabyBear; 4] = BabyBear::new_array([8, 1, 0, 0]);
+//     const EXT_TWO_ADICITY: usize = 29;
+
+//     type ArrayLike = [[BabyBear; 4]; 2];
+//     const TWO_ADIC_EXTENSION_GENERATORS: Self::ArrayLike =
+//         BabyBear::new_2d_array([[0, 0, 1996171314, 0], [0, 0, 0, 124907976]]);
+// }
+
+// impl BinomialExtensionData<5> for BabyBearParameters {
+//     const W: BabyBear = BabyBear::new(2);
+//     const DTH_ROOT: BabyBear = BabyBear::new(815036133);
+//     const EXT_GENERATOR: [BabyBear; 5] = BabyBear::new_array([8, 1, 0, 0, 0]);
+//     const EXT_TWO_ADICITY: usize = 27;
+
+//     type ArrayLike = [[BabyBear; 5]; 0];
+//     const TWO_ADIC_EXTENSION_GENERATORS: Self::ArrayLike = [];
+// }
 
 field_common!(BabyBear);
 
-impl BabyBear {
-    /// Input is provided in canonical form and converted into Montgomery form.
-    pub const fn new(value: u32) -> Self {
-        Self(P3BabyBear::new(value))
-    }
-}
 
-impl FieldSerde for BabyBear {
-    const SERIALIZED_SIZE: usize = 32 / 8;
-
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        // Note: BabyBear's impl of as_u32_unchecked() converts to canonical form
-        writer.write_all(self.as_u32_unchecked().to_le_bytes().as_ref())?;
-        Ok(())
-    }
-
-    /// Note: This function performs modular reduction on inputs and
-    /// converts from canonical to Montgomery form.
-    #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut u = [0u8; Self::SERIALIZED_SIZE];
-        reader.read_exact(&mut u)?;
-        let v = u32::from_le_bytes(u);
-        Ok(Self::from(v))
-    }
-
-    #[inline]
-    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut buf = [0u8; 32];
-        reader.read_exact(&mut buf)?;
-        assert!(
-            buf.iter().skip(4).all(|&x| x == 0),
-            "non-zero byte found in witness byte"
-        );
-        Ok(Self::from(u32::from_le_bytes(buf[..4].try_into().unwrap())))
-    }
-}
-
-impl Field for BabyBear {
-    const NAME: &'static str = "Baby Bear Field";
-
-    const SIZE: usize = 32 / 8;
-
-    const FIELD_SIZE: usize = 32;
-
-    const ZERO: Self = BabyBear::new(0);
-
-    const ONE: Self = BabyBear::new(1);
-
-    // See test below
-    const INV_2: Self = BabyBear::new(1006632961);
-
-    #[inline(always)]
-    fn zero() -> Self {
-        Self::ZERO
-    }
-
-    #[inline(always)]
-    fn is_zero(&self) -> bool {
-        *self == Self::ZERO
-    }
-
-    #[inline(always)]
-    fn one() -> Self {
-        Self::ONE
-    }
-
-    /// Uses rejection sampling to avoid bias.
-    fn random_unsafe(mut rng: impl rand::RngCore) -> Self {
-        let dist = Standard;
-        Self(dist.sample(&mut rng))
-    }
-
-    fn random_bool(mut rng: impl rand::RngCore) -> Self {
-        (rng.next_u32() & 1).into()
-    }
-
-    fn exp(&self, exponent: u128) -> Self {
-        let mut e = exponent;
-        let mut res = Self::one();
-        let mut t = *self;
-        while !e.is_zero() {
-            let b = e & 1;
-            if b == 1 {
-                res *= t;
-            }
-            t = t * t;
-            e >>= 1;
-        }
-        res
-    }
-
-    fn inv(&self) -> Option<Self> {
-        self.0.try_inverse().map(Self)
-    }
-
-    /// Converts to canonical form.
-    #[inline(always)]
-    fn as_u32_unchecked(&self) -> u32 {
-        self.0.as_canonical_u32()
-    }
-
-    #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        // Note: From<u32> performs modular reduction
-        u32::from_le_bytes(bytes[..4].try_into().unwrap()).into()
-    }
-}
-
-impl FieldForECC for BabyBear {
-    fn modulus() -> ethnum::U256 {
-        ethnum::U256::from(<P3BabyBear as PrimeField32>::ORDER_U32)
-    }
-
-    fn from_u256(x: ethnum::U256) -> Self {
-        Self::new((x % Self::modulus()).as_u32())
-    }
-
-    fn to_u256(&self) -> ethnum::U256 {
-        // Converts to canonical form before casting to U256
-        ethnum::U256::from(self.as_u32_unchecked())
-    }
-}
-
-// TODO: Actual SIMD impl
-// This is a dummy implementation to satisfy trait bounds
-impl SimdField for BabyBear {
-    type Scalar = Self;
-
-    fn scale(&self, challenge: &Self::Scalar) -> Self {
-        self * challenge
-    }
-
-    fn pack(base_vec: &[Self::Scalar]) -> Self {
-        debug_assert!(base_vec.len() == 1);
-        base_vec[0]
-    }
-
-    fn unpack(&self) -> Vec<Self::Scalar> {
-        vec![*self]
-    }
-
-    fn pack_size() -> usize {
-        1
-    }
-}
-
-impl Neg for BabyBear {
-    type Output = Self;
-
-    #[inline(always)]
-    fn neg(self) -> Self::Output {
-        Self(self.0.neg())
-    }
-}
-
-impl From<u32> for BabyBear {
-    #[inline(always)]
-    fn from(value: u32) -> Self {
-        Self::new(value)
-    }
-}
 
 #[inline(always)]
 fn add_internal(a: &BabyBear, b: &BabyBear) -> BabyBear {

@@ -8,17 +8,14 @@ ark-std.workspace = true
 criterion.workspace = true
 ethnum.workspace = true
 halo2curves.workspace = true
+itertools.workspace = true
 log.workspace = true
-p3-baby-bear.workspace = true
-p3-field.workspace = true
-p3-monty-31.workspace = true
+# p3-field.workspace = true
+# p3-monty-31.workspace = true
 rand.workspace = true
 sha2.workspace = true
 tynm.workspace = true
-itertools.workspace = true
 
-raw-cpuid = "11.1.0"
-cfg-if = "1.0"
 
 serdes = { path = "../serdes" }
 

@@ -1,3 +1,5 @@
+
+
 use crate::{field_common, BabyBear, Field, FieldSerde, FieldSerdeResult, SimdField};
 use p3_baby_bear::PackedBabyBearAVX2;
 use rand::RngCore;
@@ -12,285 +14,290 @@ use std::{
 
 const BABY_BEAR_PACK_SIZE: usize = 16;
 
-#[derive(Clone, Copy)]
 pub struct AVXBabyBear {
     pub v: [__m256i; 2],
 }
 
-impl AVXBabyBear {
-    #[inline(always)]
-    pub(crate) fn pack_full(x: BabyBear) -> Self {
-        AVXBabyBear {
-            v: unsafe {
-                // Safety: Memory layout of [BabyBear; 16]
-                // is 16 contiguous u32's, which can
-                // be reinterpreted as two contiguous __m256i,
-                // each holding 4 u32 values.
-                transmute([x; BABY_BEAR_PACK_SIZE])
-            },
-        }
-    }
-}
 
-field_common!(AVXBabyBear);
+// #[derive(Clone, Copy)]
+// pub struct AVXBabyBear {
+//     pub v: [__m256i; 2],
+// }
 
-impl FieldSerde for AVXBabyBear {
-    const SERIALIZED_SIZE: usize = 512 / 8;
+// impl AVXBabyBear {
+//     #[inline(always)]
+//     pub(crate) fn pack_full(x: BabyBear) -> Self {
+//         AVXBabyBear {
+//             v: unsafe {
+//                 // Safety: Memory layout of [BabyBear; 16]
+//                 // is 16 contiguous u32's, which can
+//                 // be reinterpreted as two contiguous __m256i,
+//                 // each holding 4 u32 values.
+//                 transmute([x; BABY_BEAR_PACK_SIZE])
+//             },
+//         }
+//     }
+// }
 
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        // Transmute would serialize the Montgomery form,
-        // instead we convert to canonical form and serialize
-        let unpacked = self.unpack();
-        let canonical: [u32; BABY_BEAR_PACK_SIZE] = unpacked
-            .iter()
-            .map(|x| x.as_u32_unchecked())
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap();
-        let data = unsafe { transmute::<_, [u8; Self::SERIALIZED_SIZE]>(canonical) };
-        writer.write_all(&data)?;
-        Ok(())
-    }
+// field_common!(AVXBabyBear);
 
-    #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut data = [0u8; Self::SERIALIZED_SIZE];
-        reader.read_exact(&mut data)?;
-        // Transmute would fail to convert to Montgomery form
-        let canonical = unsafe { transmute::<_, [u32; BABY_BEAR_PACK_SIZE]>(data) };
-        let unpacked = canonical
-            .iter()
-            .map(|x| BabyBear::new(*x))
-            .collect::<Vec<_>>();
-        Ok(Self::pack(&unpacked))
-    }
+// impl FieldSerde for AVXBabyBear {
+//     const SERIALIZED_SIZE: usize = 512 / 8;
 
-    #[inline(always)]
-    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut buf = [0u8; 32];
-        reader.read_exact(&mut buf)?;
-        assert!(
-            buf.iter().skip(4).all(|x| *x == 0),
-            "non-zero byte found in witness byte"
-        );
-        // BabyBear::from converts from canonical to Montgomery form
-        Ok(Self::pack_full(BabyBear::from(u32::from_le_bytes(
-            buf[..4].try_into().unwrap(),
-        ))))
-    }
-}
+//     #[inline(always)]
+//     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
+//         // Transmute would serialize the Montgomery form,
+//         // instead we convert to canonical form and serialize
+//         let unpacked = self.unpack();
+//         let canonical: [u32; BABY_BEAR_PACK_SIZE] = unpacked
+//             .iter()
+//             .map(|x| x.as_u32_unchecked())
+//             .collect::<Vec<_>>()
+//             .try_into()
+//             .unwrap();
+//         let data = unsafe { transmute::<_, [u8; Self::SERIALIZED_SIZE]>(canonical) };
+//         writer.write_all(&data)?;
+//         Ok(())
+//     }
 
-impl Field for AVXBabyBear {
-    const NAME: &'static str = "AVX Packed BabyBear";
+//     #[inline(always)]
+//     fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+//         let mut data = [0u8; Self::SERIALIZED_SIZE];
+//         reader.read_exact(&mut data)?;
+//         // Transmute would fail to convert to Montgomery form
+//         let canonical = unsafe { transmute::<_, [u32; BABY_BEAR_PACK_SIZE]>(data) };
+//         let unpacked = canonical
+//             .iter()
+//             .map(|x| BabyBear::new(*x))
+//             .collect::<Vec<_>>();
+//         Ok(Self::pack(&unpacked))
+//     }
 
-    const SIZE: usize = 512 / 8;
+//     #[inline(always)]
+//     fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+//         let mut buf = [0u8; 32];
+//         reader.read_exact(&mut buf)?;
+//         assert!(
+//             buf.iter().skip(4).all(|x| *x == 0),
+//             "non-zero byte found in witness byte"
+//         );
+//         // BabyBear::from converts from canonical to Montgomery form
+//         Ok(Self::pack_full(BabyBear::from(u32::from_le_bytes(
+//             buf[..4].try_into().unwrap(),
+//         ))))
+//     }
+// }
 
-    const FIELD_SIZE: usize = 32;
+// impl Field for AVXBabyBear {
+//     const NAME: &'static str = "AVX Packed BabyBear";
 
-    const ZERO: Self = Self {
-        v: unsafe { transmute([BabyBear::ZERO; BABY_BEAR_PACK_SIZE]) },
-    };
+//     const SIZE: usize = 512 / 8;
 
-    const ONE: Self = Self {
-        v: unsafe { transmute([BabyBear::ONE; BABY_BEAR_PACK_SIZE]) },
-    };
+//     const FIELD_SIZE: usize = 32;
 
-    const INV_2: Self = Self {
-        v: unsafe { transmute([BabyBear::INV_2; BABY_BEAR_PACK_SIZE]) },
-    };
+//     const ZERO: Self = Self {
+//         v: unsafe { transmute([BabyBear::ZERO; BABY_BEAR_PACK_SIZE]) },
+//     };
 
-    fn zero() -> Self {
-        Self::ZERO
-    }
+//     const ONE: Self = Self {
+//         v: unsafe { transmute([BabyBear::ONE; BABY_BEAR_PACK_SIZE]) },
+//     };
 
-    fn is_zero(&self) -> bool {
-        *self == Self::ZERO
-    }
+//     const INV_2: Self = Self {
+//         v: unsafe { transmute([BabyBear::INV_2; BABY_BEAR_PACK_SIZE]) },
+//     };
 
-    fn one() -> Self {
-        Self::ONE
-    }
+//     fn zero() -> Self {
+//         Self::ZERO
+//     }
 
-    fn random_unsafe(mut rng: impl RngCore) -> Self {
-        // TODO: Is it safe to instead sample a u32, reduce mod p,
-        // and treat this directly as the Montgomery form of an element?
-        let mut sample = [BabyBear::ZERO; BABY_BEAR_PACK_SIZE];
-        for i in 0..BABY_BEAR_PACK_SIZE {
-            sample[i] = BabyBear::random_unsafe(&mut rng);
-        }
-        Self::pack(&sample)
-    }
+//     fn is_zero(&self) -> bool {
+//         *self == Self::ZERO
+//     }
 
-    fn random_bool(mut rng: impl RngCore) -> Self {
-        let sample = (0..BABY_BEAR_PACK_SIZE)
-            .map(|_| BabyBear::random_bool(&mut rng))
-            .collect::<Vec<_>>();
-        Self::pack(&sample)
-    }
+//     fn one() -> Self {
+//         Self::ONE
+//     }
 
-    fn exp(&self, _mm256_castps_si256: u128) -> Self {
-        unimplemented!("exp not implemented for AVXBabyBear")
-    }
+//     fn random_unsafe(mut rng: impl RngCore) -> Self {
+//         // TODO: Is it safe to instead sample a u32, reduce mod p,
+//         // and treat this directly as the Montgomery form of an element?
+//         let mut sample = [BabyBear::ZERO; BABY_BEAR_PACK_SIZE];
+//         for i in 0..BABY_BEAR_PACK_SIZE {
+//             sample[i] = BabyBear::random_unsafe(&mut rng);
+//         }
+//         Self::pack(&sample)
+//     }
 
-    fn inv(&self) -> Option<Self> {
-        // slow, should not be used in production
-        let mut babybear_vec =
-            unsafe { transmute::<[__m256i; 2], [BabyBear; BABY_BEAR_PACK_SIZE]>(self.v) };
-        let is_nonzero = babybear_vec.iter().all(|x| !x.is_zero());
-        if !is_nonzero {
-            return None;
-        };
-        babybear_vec.iter_mut().for_each(|x| *x = x.inv().unwrap());
-        Some(Self::pack(&babybear_vec))
-    }
+//     fn random_bool(mut rng: impl RngCore) -> Self {
+//         let sample = (0..BABY_BEAR_PACK_SIZE)
+//             .map(|_| BabyBear::random_bool(&mut rng))
+//             .collect::<Vec<_>>();
+//         Self::pack(&sample)
+//     }
 
-    fn as_u32_unchecked(&self) -> u32 {
-        unimplemented!("self is a vector, cannot convert to u32")
-    }
+//     fn exp(&self, _mm256_castps_si256: u128) -> Self {
+//         unimplemented!("exp not implemented for AVXBabyBear")
+//     }
 
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        Self::pack_full(BabyBear::from_uniform_bytes(bytes))
-    }
-}
+//     fn inv(&self) -> Option<Self> {
+//         // slow, should not be used in production
+//         let mut babybear_vec =
+//             unsafe { transmute::<[__m256i; 2], [BabyBear; BABY_BEAR_PACK_SIZE]>(self.v) };
+//         let is_nonzero = babybear_vec.iter().all(|x| !x.is_zero());
+//         if !is_nonzero {
+//             return None;
+//         };
+//         babybear_vec.iter_mut().for_each(|x| *x = x.inv().unwrap());
+//         Some(Self::pack(&babybear_vec))
+//     }
 
-impl SimdField for AVXBabyBear {
-    type Scalar = BabyBear;
+//     fn as_u32_unchecked(&self) -> u32 {
+//         unimplemented!("self is a vector, cannot convert to u32")
+//     }
 
-    #[inline]
-    fn scale(&self, challenge: &Self::Scalar) -> Self {
-        *self * *challenge
-    }
+//     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+//         Self::pack_full(BabyBear::from_uniform_bytes(bytes))
+//     }
+// }
 
-    #[inline(always)]
-    fn pack(base_vec: &[Self::Scalar]) -> Self {
-        debug_assert!(base_vec.len() == BABY_BEAR_PACK_SIZE);
-        let ret: [Self::Scalar; BABY_BEAR_PACK_SIZE] = base_vec.try_into().unwrap();
-        Self {
-            // Transmute is reinterpreting an array of scalars in Montgomery form to an AVX register
-            v: unsafe { transmute(ret) },
-        }
-    }
+// impl SimdField for AVXBabyBear {
+//     type Scalar = BabyBear;
 
-    #[inline(always)]
-    fn unpack(&self) -> Vec<Self::Scalar> {
-        // Transmute is reinterpreting an AVX register to an array of scalars in Montgomery form
-        let ret = unsafe { transmute::<[__m256i; 2], [Self::Scalar; BABY_BEAR_PACK_SIZE]>(self.v) };
-        ret.to_vec()
-    }
+//     #[inline]
+//     fn scale(&self, challenge: &Self::Scalar) -> Self {
+//         *self * *challenge
+//     }
 
-    #[inline(always)]
-    fn pack_size() -> usize {
-        BABY_BEAR_PACK_SIZE
-    }
-}
+//     #[inline(always)]
+//     fn pack(base_vec: &[Self::Scalar]) -> Self {
+//         debug_assert!(base_vec.len() == BABY_BEAR_PACK_SIZE);
+//         let ret: [Self::Scalar; BABY_BEAR_PACK_SIZE] = base_vec.try_into().unwrap();
+//         Self {
+//             // Transmute is reinterpreting an array of scalars in Montgomery form to an AVX register
+//             v: unsafe { transmute(ret) },
+//         }
+//     }
 
-impl From<BabyBear> for AVXBabyBear {
-    #[inline(always)]
-    fn from(x: BabyBear) -> Self {
-        AVXBabyBear::pack_full(x)
-    }
-}
+//     #[inline(always)]
+//     fn unpack(&self) -> Vec<Self::Scalar> {
+//         // Transmute is reinterpreting an AVX register to an array of scalars in Montgomery form
+//         let ret = unsafe { transmute::<[__m256i; 2], [Self::Scalar; BABY_BEAR_PACK_SIZE]>(self.v) };
+//         ret.to_vec()
+//     }
 
-impl Debug for AVXBabyBear {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let unpacked = self.unpack();
-        if unpacked.iter().all(|x| *x == unpacked[0]) {
-            write!(f, "mm256i<16 x {:?}>", unpacked[0])
-        } else {
-            write!(f, "mm256i<{unpacked:?}>")
-        }
-    }
-}
+//     #[inline(always)]
+//     fn pack_size() -> usize {
+//         BABY_BEAR_PACK_SIZE
+//     }
+// }
 
-impl Default for AVXBabyBear {
-    fn default() -> Self {
-        Self::ZERO
-    }
-}
+// impl From<BabyBear> for AVXBabyBear {
+//     #[inline(always)]
+//     fn from(x: BabyBear) -> Self {
+//         AVXBabyBear::pack_full(x)
+//     }
+// }
 
-impl PartialEq for AVXBabyBear {
-    fn eq(&self, other: &Self) -> bool {
-        unsafe {
-            let cmp0 = _mm256_cmpeq_epi32_mask(self.v[0], other.v[0]);
-            let cmp1 = _mm256_cmpeq_epi32_mask(self.v[1], other.v[1]);
-            (cmp0 & cmp1) == 0xFF
-        }
-    }
-}
+// impl Debug for AVXBabyBear {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         let unpacked = self.unpack();
+//         if unpacked.iter().all(|x| *x == unpacked[0]) {
+//             write!(f, "mm256i<16 x {:?}>", unpacked[0])
+//         } else {
+//             write!(f, "mm256i<{unpacked:?}>")
+//         }
+//     }
+// }
 
-impl Mul<&BabyBear> for AVXBabyBear {
-    type Output = Self;
+// impl Default for AVXBabyBear {
+//     fn default() -> Self {
+//         Self::ZERO
+//     }
+// }
 
-    #[inline(always)]
-    fn mul(self, rhs: &BabyBear) -> Self::Output {
-        self * AVXBabyBear::pack_full(*rhs)
-    }
-}
+// impl PartialEq for AVXBabyBear {
+//     fn eq(&self, other: &Self) -> bool {
+//         unsafe {
+//             let cmp0 = _mm256_cmpeq_epi32_mask(self.v[0], other.v[0]);
+//             let cmp1 = _mm256_cmpeq_epi32_mask(self.v[1], other.v[1]);
+//             (cmp0 & cmp1) == 0xFF
+//         }
+//     }
+// }
 
-impl Mul<BabyBear> for AVXBabyBear {
-    type Output = AVXBabyBear;
+// impl Mul<&BabyBear> for AVXBabyBear {
+//     type Output = Self;
 
-    #[inline(always)]
-    fn mul(self, rhs: BabyBear) -> Self::Output {
-        self * &rhs
-    }
-}
+//     #[inline(always)]
+//     fn mul(self, rhs: &BabyBear) -> Self::Output {
+//         self * AVXBabyBear::pack_full(*rhs)
+//     }
+// }
 
-impl Add<BabyBear> for AVXBabyBear {
-    type Output = AVXBabyBear;
+// impl Mul<BabyBear> for AVXBabyBear {
+//     type Output = AVXBabyBear;
 
-    #[inline(always)]
-    fn add(self, rhs: BabyBear) -> Self::Output {
-        self + AVXBabyBear::pack_full(rhs)
-    }
-}
+//     #[inline(always)]
+//     fn mul(self, rhs: BabyBear) -> Self::Output {
+//         self * &rhs
+//     }
+// }
 
-impl From<u32> for AVXBabyBear {
-    #[inline(always)]
-    fn from(value: u32) -> Self {
-        // BabyBear::new converts to Montgomery form
-        AVXBabyBear::pack_full(BabyBear::new(value))
-    }
-}
+// impl Add<BabyBear> for AVXBabyBear {
+//     type Output = AVXBabyBear;
 
-impl Neg for AVXBabyBear {
-    type Output = AVXBabyBear;
+//     #[inline(always)]
+//     fn add(self, rhs: BabyBear) -> Self::Output {
+//         self + AVXBabyBear::pack_full(rhs)
+//     }
+// }
 
-    #[inline(always)]
-    fn neg(self) -> Self::Output {
-        unsafe {
-            let mut a: [PackedBabyBearAVX2; 2] = transmute(self);
-            a[0] = a[0].neg();
-            a[1] = a[1].neg();
-            transmute(a)
-        }
-    }
-}
+// impl From<u32> for AVXBabyBear {
+//     #[inline(always)]
+//     fn from(value: u32) -> Self {
+//         // BabyBear::new converts to Montgomery form
+//         AVXBabyBear::pack_full(BabyBear::new(value))
+//     }
+// }
 
-#[inline(always)]
-fn add_internal(a: &AVXBabyBear, b: &AVXBabyBear) -> AVXBabyBear {
-    unsafe {
-        let a: [PackedBabyBearAVX2; 2] = transmute(*a);
-        let b: [PackedBabyBearAVX2; 2] = transmute(*b);
-        transmute([a[0] + b[0], a[1] + b[1]])
-    }
-}
+// impl Neg for AVXBabyBear {
+//     type Output = AVXBabyBear;
 
-#[inline(always)]
-fn sub_internal(a: &AVXBabyBear, b: &AVXBabyBear) -> AVXBabyBear {
-    unsafe {
-        let a: [PackedBabyBearAVX2; 2] = transmute(*a);
-        let b: [PackedBabyBearAVX2; 2] = transmute(*b);
-        transmute([a[0] - b[0], a[1] - b[1]])
-    }
-}
+//     #[inline(always)]
+//     fn neg(self) -> Self::Output {
+//         unsafe {
+//             let mut a: [PackedBabyBearAVX2; 2] = transmute(self);
+//             a[0] = a[0].neg();
+//             a[1] = a[1].neg();
+//             transmute(a)
+//         }
+//     }
+// }
 
-#[inline(always)]
-fn mul_internal(a: &AVXBabyBear, b: &AVXBabyBear) -> AVXBabyBear {
-    unsafe {
-        let a: [PackedBabyBearAVX2; 2] = transmute(*a);
-        let b: [PackedBabyBearAVX2; 2] = transmute(*b);
-        transmute([a[0] * b[0], a[1] * b[1]])
-    }
-}
+// #[inline(always)]
+// fn add_internal(a: &AVXBabyBear, b: &AVXBabyBear) -> AVXBabyBear {
+//     unsafe {
+//         let a: [PackedBabyBearAVX2; 2] = transmute(*a);
+//         let b: [PackedBabyBearAVX2; 2] = transmute(*b);
+//         transmute([a[0] + b[0], a[1] + b[1]])
+//     }
+// }
+
+// #[inline(always)]
+// fn sub_internal(a: &AVXBabyBear, b: &AVXBabyBear) -> AVXBabyBear {
+//     unsafe {
+//         let a: [PackedBabyBearAVX2; 2] = transmute(*a);
+//         let b: [PackedBabyBearAVX2; 2] = transmute(*b);
+//         transmute([a[0] - b[0], a[1] - b[1]])
+//     }
+// }
+
+// #[inline(always)]
+// fn mul_internal(a: &AVXBabyBear, b: &AVXBabyBear) -> AVXBabyBear {
+//     unsafe {
+//         let a: [PackedBabyBearAVX2; 2] = transmute(*a);
+//         let b: [PackedBabyBearAVX2; 2] = transmute(*b);
+//         transmute([a[0] * b[0], a[1] * b[1]])
+//     }
+// }

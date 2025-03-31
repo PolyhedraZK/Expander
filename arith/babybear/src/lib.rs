@@ -1,23 +1,19 @@
+// Most of the code is from https://github.com/Plonky3/Plonky3
+//
+// Ideally we want to simply wrap plonky3/baby-bear::AVXBabyBear
+// But plonky3 has a feature flag on avx256/avx512 where expander
+// decides whether to use avx256 or avx512 at compile time.
+// This is not compatible with our compile time flag for avx256/avx512
+// in the core crate.
+// So we re-implement the BabyBearx16 field in our own crate.
+
 #![cfg_attr(target_arch = "x86_64", feature(stdarch_x86_avx512))]
 
 mod babybear;
 pub use babybear::BabyBear;
 
-// /// Goldilocks field
-// mod goldilocks;
-// pub use goldilocks::{Goldilocks, EPSILON, GOLDILOCKS_MOD};
-
-// /// Goldilocks extension field
-// mod goldilocks_ext;
-// pub use goldilocks_ext::GoldilocksExt2;
-
-// /// Goldilocks x8
-// mod goldilocksx8;
-// pub use goldilocksx8::Goldilocksx8;
-
-// /// Goldilocks extension field x8
-// mod goldilocks_ext2x8;
-// pub use goldilocks_ext2x8::GoldilocksExt2x8;
+// mod babybearx16;
+// pub use babybearx16::BabyBearx16;
 
 #[cfg(test)]
 mod tests;
