@@ -45,6 +45,7 @@ fn parse_field_type(field_expr: ExprPath) -> (String, String) {
         "M31" => ("M31".to_owned(), "M31ExtConfig".to_owned()),
         "BN254" => ("BN254".to_owned(), "BN254Config".to_owned()),
         "GF2" => ("GF2".to_owned(), "GF2ExtConfig".to_owned()),
+        "Goldilocks" => ("Goldilocks".to_owned(), "GoldilocksExtConfig".to_owned()),
         _ => panic!("Unknown field type"),
     }
 }

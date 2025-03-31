@@ -7,6 +7,7 @@ pub enum FieldType {
     M31,
     BN254,
     GF2,
+    Goldilocks,
 }
 
 pub trait GKRFieldConfig: Default + Debug + Clone + Send + Sync + 'static {

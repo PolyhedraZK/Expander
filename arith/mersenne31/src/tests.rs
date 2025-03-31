@@ -1,5 +1,3 @@
-use std::io::Cursor;
-
 use arith::{
     random_extension_field_tests, random_field_tests, random_inversion_tests,
     random_simd_field_tests,
@@ -65,8 +63,7 @@ fn test_simd_field() {
     let a = M31x16::from(256 + 2);
     let mut buffer = vec![];
     assert!(a.serialize_into(&mut buffer).is_ok());
-    let mut cursor = Cursor::new(buffer);
-    let b = M31x16::deserialize_from(&mut cursor);
+    let b = M31x16::deserialize_from(buffer.as_slice());
     assert!(b.is_ok());
     let b = b.unwrap();
     assert_eq!(a, b);

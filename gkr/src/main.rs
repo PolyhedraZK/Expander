@@ -6,20 +6,19 @@ use std::{
 use circuit::Circuit;
 use clap::Parser;
 use config::{
-    instantiations::{BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion},
+    instantiations::{BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, GoldilocksExtConfigSha2Raw},
     Config, GKRConfig, GKRScheme,
 };
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 
 use poly_commit::expander_pcs_init_testing_only;
-use rand::SeedableRng;
-use rand_chacha::ChaCha12Rng;
 
 use gkr::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
-        KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
+        KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT,
+        KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
     Prover,
 };
@@ -88,13 +87,18 @@ fn main() {
             ),
             _ => unreachable!(),
         },
+        "goldilocks" => match args.scheme.as_str() {
+            "keccak" => run_benchmark::<GoldilocksExtConfigSha2Raw>(
+                &args,
+                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+            ),
+            _ => unreachable!(),
+        },
         _ => unreachable!(),
     };
 
     MPIConfig::finalize();
 }
-
-const PCS_TESTING_SEED_U64: u64 = 114514;
 
 fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let partial_proof_cnts = (0..args.threads)
@@ -117,7 +121,10 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
                         KECCAK_BN254_CIRCUIT,
                     )
                 }
-            },
+                FieldType::Goldilocks => {
+                Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(KECCAK_GOLDILOCKS_CIRCUIT)
+            }
+        },
             "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
                 FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
                     Cfg,
@@ -133,6 +140,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
             FieldType::GF2 => KECCAK_GF2_WITNESS,
             FieldType::M31 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
+            FieldType::Goldilocks => KECCAK_GOLDILOCKS_WITNESS,
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31 => POSEIDON_M31_WITNESS,
@@ -148,6 +156,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         (FieldType::M31, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
         (FieldType::M31, "poseidon") => 120,
+        (FieldType::Goldilocks, "keccak") => 2,
         _ => unreachable!(),
     };
 
@@ -161,12 +170,10 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
 
     println!("Circuit loaded!");
 
-    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
             circuit_template.log_input_size(),
             &config.mpi_config,
-            &mut rng,
         );
 
     let start_time = std::time::Instant::now();

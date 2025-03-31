@@ -7,7 +7,13 @@ pub trait FFTField: Field + From<u64> {
 
     fn root_of_unity() -> Self;
 
-    fn two_adic_generator(bits: usize) -> Self;
+    fn two_adic_generator(bits: usize) -> Self {
+        let mut g = Self::root_of_unity();
+        for _ in bits..Self::TWO_ADICITY {
+            g = g.square();
+        }
+        g
+    }
 
     #[inline(always)]
     fn fft(poly: &[Self]) -> Vec<Self> {

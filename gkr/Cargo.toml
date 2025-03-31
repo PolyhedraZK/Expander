@@ -13,6 +13,7 @@ mpi_config = { path = "../config/mpi_config" }
 circuit = { path = "../circuit" }
 gf2 = { path = "../arith/gf2" }
 gf2_128 = { path = "../arith/gf2_128" }
+goldilocks = { path = "../arith/goldilocks" }
 mersenne31 = { path = "../arith/mersenne31" }
 poly_commit = { path = "../poly_commit" }
 polynomials = { path = "../arith/polynomials" }
@@ -31,7 +32,6 @@ sha2.workspace = true
 halo2curves.workspace = true
 thiserror.workspace = true
 ethnum.workspace = true
-rand_chacha.workspace = true
 
 # for the server
 bytes.workspace = true
