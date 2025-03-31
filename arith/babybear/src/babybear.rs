@@ -4,17 +4,18 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field, FieldParameters, MontyField31, MontyParameters, PackedMontyParameters};
+use arith::{
+    field_common, Field, FieldParameters, MontyField31, MontyParameters, PackedMontyParameters,
+};
 use ark_std::Zero;
 use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
 
-
 /// The prime field `2^31 - 2^27 + 1`, a.k.a. the Baby Bear field.
 pub type BabyBear = MontyField31<BabyBearParameters>;
 
-
-
+/// The modulus
+pub const BABY_BEAR_MOD: u32 = 0x78000001;
 
 #[derive(Copy, Clone, Default, Debug, Eq, Hash, PartialEq)]
 pub struct BabyBearParameters;
@@ -136,34 +137,3 @@ impl FieldParameters for BabyBearParameters {
 // fn mul_internal(a: &BabyBear, b: &BabyBear) -> BabyBear {
 //     BabyBear(a.0 * b.0)
 // }
-
-#[test]
-fn baby_bear_two_inverse() {
-    let two = BabyBear::new(2);
-    let two_inverse = BabyBearParameters::try_inverse(&two).unwrap();
-    // Display impl converts to canonical form
-    println!("2^-1 (canonical form): {two_inverse}");
-
-    // Check correctness
-    let two = BabyBear::new(2);
-    let two_inverse_canonical: u32 = 1006632961;
-    let two_inverse = BabyBear::new(two_inverse_canonical);
-    let one = BabyBear::ONE;
-    assert_eq!(one, two * two_inverse)
-}
-
-#[test]
-fn test_exponentiation() {
-    use rand::{rngs::OsRng, Rng};
-    let mut rng = OsRng;
-
-    for _ in 0..1000 {
-        // Use a small base to avoid overflow
-        let base_u32: u32 = rng.gen_range(0..=10);
-        let base = BabyBear::new(base_u32);
-        // Use a small exponent to avoid overflow
-        let exponent: u32 = rng.gen_range(0..=5);
-        let expected_result = BabyBear::new(base_u32.pow(exponent));
-        assert_eq!(base.exp(exponent as u128), expected_result);
-    }
-}

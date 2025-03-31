@@ -1,4 +1,3 @@
-
 use crate::{field_common, BabyBear, Field, FieldSerde, FieldSerdeResult, SimdField};
 use p3_baby_bear::PackedBabyBearNeon;
 use rand::RngCore;

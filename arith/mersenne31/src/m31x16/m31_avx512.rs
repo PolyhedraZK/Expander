@@ -22,7 +22,8 @@ const PACKED_INV_2: __m512i = unsafe { transmute([1 << 30; M31_PACK_SIZE]) };
 
 #[inline(always)]
 unsafe fn mod_reduce_epi32(x: __m512i) -> __m512i {
-    _mm512_add_epi32(_mm512_and_si512(x, PACKED_MOD), _mm512_srli_epi32(x, 31))
+    let subx = _mm512_sub_epi32(x, PACKED_MOD);
+    _mm512_min_epu32(x, subx)
 }
 
 #[derive(Clone, Copy)]
@@ -338,24 +339,7 @@ impl Mul<&M31> for AVXM31 {
     #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
         let rhsv = AVXM31::pack_full(*rhs);
-        unsafe {
-            let rhs_evn = rhsv.v;
-            let lhs_odd_dbl = _mm512_srli_epi64(self.v, 31);
-            let lhs_evn_dbl = _mm512_add_epi32(self.v, self.v);
-            let rhs_odd = movehdup_epi32(rhsv.v);
-
-            let prod_odd_dbl = _mm512_mul_epu32(lhs_odd_dbl, rhs_odd);
-            let prod_evn_dbl = _mm512_mul_epu32(lhs_evn_dbl, rhs_evn);
-
-            let prod_lo_dbl = mask_moveldup_epi32(prod_evn_dbl, ODDS, prod_odd_dbl);
-            let prod_hi = mask_movehdup_epi32(prod_odd_dbl, EVENS, prod_evn_dbl);
-            // Right shift to undo the doubling.
-            let prod_lo = _mm512_srli_epi32::<1>(prod_lo_dbl);
-
-            // Standard addition of two 31-bit values.
-            let res = add(prod_lo, prod_hi);
-            AVXM31 { v: res }
-        }
+        mul_internal(&self, &rhsv)
     }
 }
 

@@ -168,7 +168,6 @@ impl From<u64> for Goldilocks {
 }
 
 impl Goldilocks {
-
     #[inline(always)]
     fn try_inverse(&self) -> Option<Self> {
         try_inverse_u64(&self.v).map(|v| Goldilocks { v })

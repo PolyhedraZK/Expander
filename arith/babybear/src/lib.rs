@@ -12,8 +12,8 @@
 mod babybear;
 pub use babybear::BabyBear;
 
-// mod babybearx16;
-// pub use babybearx16::BabyBearx16;
+mod babybearx16;
+pub use babybearx16::BabyBearx16;
 
 #[cfg(test)]
 mod tests;

@@ -7,7 +7,12 @@
 // So we re-implement the field in our own crate.
 
 use std::{
-    cmp::Ordering, fmt::{self, Display}, io::{Read, Write}, iter::{Product, Sum}, marker::PhantomData, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}
+    cmp::Ordering,
+    fmt::{self, Display},
+    io::{Read, Write},
+    iter::{Product, Sum},
+    marker::PhantomData,
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 mod param;
@@ -51,7 +56,6 @@ impl<MP: FieldParameters> Display for MontyField31<MP> {
         write!(f, "{}", from_monty::<MP>(self.value))
     }
 }
-
 
 impl<MP: FieldParameters> MontyField31<MP> {
     /// The standard way to crate a new element.

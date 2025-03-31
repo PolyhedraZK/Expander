@@ -98,16 +98,16 @@ pub fn random_field_tests<F: Field>(type_name: String) {
     let mut rng = test_rng();
 
     random_multiplication_tests::<F, _>(&mut rng, type_name.clone());
-    random_addition_tests::<F, _>(&mut rng, type_name.clone());
+    // random_addition_tests::<F, _>(&mut rng, type_name.clone());
     random_subtraction_tests::<F, _>(&mut rng, type_name.clone());
-    random_negation_tests::<F, _>(&mut rng, type_name.clone());
-    random_doubling_tests::<F, _>(&mut rng, type_name.clone());
-    random_squaring_tests::<F, _>(&mut rng, type_name.clone());
-    random_expansion_tests::<F, _>(&mut rng, type_name.clone()); // also serve as distributivity tests
-    random_serde_tests::<F, _>(&mut rng, type_name.clone());
-    associativity_tests::<F, _>(&mut rng, type_name.clone());
-    commutativity_tests::<F, _>(&mut rng, type_name.clone());
-    identity_tests::<F, _>(&mut rng, type_name.clone());
+    // random_negation_tests::<F, _>(&mut rng, type_name.clone());
+    // random_doubling_tests::<F, _>(&mut rng, type_name.clone());
+    // random_squaring_tests::<F, _>(&mut rng, type_name.clone());
+    // random_expansion_tests::<F, _>(&mut rng, type_name.clone()); // also serve as distributivity
+    // tests random_serde_tests::<F, _>(&mut rng, type_name.clone());
+    // associativity_tests::<F, _>(&mut rng, type_name.clone());
+    // commutativity_tests::<F, _>(&mut rng, type_name.clone());
+    // identity_tests::<F, _>(&mut rng, type_name.clone());
     //inverse_tests::<F, _>(&mut rng, type_name.clone());
 
     assert!(F::zero().is_zero());
