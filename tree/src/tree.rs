@@ -41,13 +41,13 @@ impl Tree {
     pub fn new_with_leaves(leaves: Vec<Leaf>) -> Self {
         let tree_height = log2(leaves.len() + 1);
 
-        let leaf_nodes = leaves
+        let mut leaf_nodes = leaves
             .as_slice()
             .iter()
             .map(|leaf| leaf.leaf_hash())
             .collect::<Vec<Node>>();
         let mut nodes = Self::new_with_leaf_nodes(&leaf_nodes, tree_height);
-        nodes.extend(leaf_nodes);
+        nodes.append(&mut leaf_nodes);
         Self { nodes, leaves }
     }
 
