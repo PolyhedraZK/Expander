@@ -6,7 +6,10 @@ use std::{
 use circuit::Circuit;
 use clap::Parser;
 use config::{
-    instantiations::{BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, GoldilocksExtConfigSha2Raw},
+    instantiations::{
+        BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, GoldilocksExtConfigSha2Raw,
+        M31ExtConfigSha2Orion,
+    },
     Config, GKRConfig, GKRScheme,
 };
 use gkr_field_config::GKRFieldConfig;
@@ -122,9 +125,11 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
                     )
                 }
                 FieldType::Goldilocks => {
-                Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(KECCAK_GOLDILOCKS_CIRCUIT)
-            }
-        },
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_GOLDILOCKS_CIRCUIT,
+                    )
+                }
+            },
             "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
                 FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
                     Cfg,

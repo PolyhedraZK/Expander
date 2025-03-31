@@ -102,9 +102,10 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
                 KECCAK_BN254_CIRCUIT,
                 &config.mpi_config,
             ),
-            FieldType::Goldilocks => {
-                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(KECCAK_GOLDILOCKS_CIRCUIT)
-            }
+            FieldType::Goldilocks => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                KECCAK_GOLDILOCKS_CIRCUIT,
+                &config.mpi_config,
+            ),
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
