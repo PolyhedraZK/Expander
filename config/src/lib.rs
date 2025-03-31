@@ -98,6 +98,7 @@ pub enum GKRScheme {
     #[default]
     Vanilla,
     GkrSquare,
+    GKRParVerifier,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
