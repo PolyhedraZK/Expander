@@ -6,7 +6,9 @@
 //
 // So we re-implement the field in our own crate.
 
-use std::{cmp::Ordering, io::{Read, Write}, marker::PhantomData, ops::Neg};
+use std::{
+    cmp::Ordering, fmt::{self, Display}, io::{Read, Write}, iter::{Product, Sum}, marker::PhantomData, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}
+};
 
 mod param;
 use ethnum::U256;
@@ -20,21 +22,20 @@ use crate::Field;
 
 #[cfg(target_arch = "aarch64")]
 mod neon;
-// #[cfg(target_arch = "aarch64")]
-// pub type BabyBearx16 = babybear_neon::NeonBabyBear;
+#[cfg(target_arch = "aarch64")]
+pub use neon::PackedMontyParameters;
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 mod avx512;
-// #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
-// pub type PackedMontyParameters = avx512::PackedMontyParameters;
+pub use avx512::PackedMontyParameters;
 
 // Fallback, use avx2
 #[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
 mod avx256;
-// #[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
-// pub type BabyBearx16 = babybear_avx256::AVXBabyBear;
+#[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
+pub use avx256::PackedMontyParameters;
 
-#[derive(Clone, Copy, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Default, Debug, Eq, Hash, PartialEq)]
 #[repr(transparent)] // Packed field implementations rely on this!
 pub struct MontyField31<MP: MontyParameters> {
     /// The MONTY form of the field element, saved as a positive integer less than `P`.
@@ -45,7 +46,14 @@ pub struct MontyField31<MP: MontyParameters> {
     _phantom: PhantomData<MP>,
 }
 
-impl<MP: MontyParameters> MontyField31<MP> {
+impl<MP: FieldParameters> Display for MontyField31<MP> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", from_monty::<MP>(self.value))
+    }
+}
+
+
+impl<MP: FieldParameters> MontyField31<MP> {
     /// The standard way to crate a new element.
     /// Note that new converts the input into MONTY form so should be avoided in performance
     /// critical implementations.
@@ -103,30 +111,29 @@ impl<MP: MontyParameters> MontyField31<MP> {
     }
 }
 
-
-impl<MP: MontyParameters> Neg for MontyField31<MP> {
+impl<MP: FieldParameters> Neg for MontyField31<MP> {
     type Output = Self;
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-       Self::new(MP::PRIME - self.value)
+        Self::ZERO - self
     }
 }
 
-impl<MP: MontyParameters> From<u32> for MontyField31<MP> {
+impl<MP: FieldParameters> From<u32> for MontyField31<MP> {
     #[inline(always)]
     fn from(value: u32) -> Self {
         Self::new(value)
     }
 }
 
-impl<MP: MontyParameters> ExpSerde for MontyField31<MP> {
+impl<MP: FieldParameters> ExpSerde for MontyField31<MP> {
     const SERIALIZED_SIZE: usize = 32 / 8;
 
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         // Note: BabyBear's impl of as_u32_unchecked() converts to canonical form
-        writer.write_all(self.value.to_le_bytes().as_ref())?;
+        writer.write_all(from_monty::<MP>(self.value).to_le_bytes().as_ref())?;
         Ok(())
     }
 
@@ -137,7 +144,7 @@ impl<MP: MontyParameters> ExpSerde for MontyField31<MP> {
         let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
         let v = u32::from_le_bytes(u);
-        Ok(Self::from(v))
+        Ok(Self::new(v))
     }
 }
 
@@ -147,14 +154,162 @@ impl<MP: FieldParameters> PartialOrd for MontyField31<MP> {
     }
 }
 
-
 impl<MP: FieldParameters> Ord for MontyField31<MP> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.value.cmp(&other.value)
     }
 }
 
+impl<MP: FieldParameters> Sub<&MontyField31<MP>> for MontyField31<MP> {
+    type Output = MontyField31<MP>;
 
+    #[inline]
+    fn sub(self, rhs: &MontyField31<MP>) -> MontyField31<MP> {
+        self.sub(*rhs)
+    }
+}
+
+impl<MP: FieldParameters> Sub<MontyField31<MP>> for MontyField31<MP> {
+    type Output = MontyField31<MP>;
+
+    #[inline]
+    fn sub(self, rhs: MontyField31<MP>) -> MontyField31<MP> {
+        let (mut diff, over) = self.value.overflowing_sub(rhs.value);
+        let corr = if over { MP::PRIME } else { 0 };
+        diff = diff.wrapping_add(corr);
+        Self::new_monty(diff)
+    }
+}
+
+impl<MP: FieldParameters> SubAssign for MontyField31<MP> {
+    #[inline]
+    fn sub_assign(&mut self, rhs: MontyField31<MP>) {
+        *self = (*self).sub(rhs)
+    }
+}
+
+impl<MP: FieldParameters> SubAssign<&MontyField31<MP>> for MontyField31<MP> {
+    #[inline]
+    fn sub_assign(&mut self, rhs: &MontyField31<MP>) {
+        *self = (*self).sub(rhs)
+    }
+}
+
+// ========================
+// additions
+// ========================
+
+impl<MP: FieldParameters> Add<&MontyField31<MP>> for MontyField31<MP> {
+    type Output = MontyField31<MP>;
+
+    #[inline]
+    fn add(self, rhs: &MontyField31<MP>) -> MontyField31<MP> {
+        self.add(*rhs)
+    }
+}
+
+impl<MP: FieldParameters> Add<MontyField31<MP>> for MontyField31<MP> {
+    type Output = MontyField31<MP>;
+
+    #[inline]
+    fn add(self, rhs: MontyField31<MP>) -> MontyField31<MP> {
+        let mut sum = self.value + rhs.value;
+        let (corr_sum, over) = sum.overflowing_sub(MP::PRIME);
+        if !over {
+            sum = corr_sum;
+        }
+        Self::new_monty(sum)
+    }
+}
+
+impl<MP: FieldParameters> AddAssign for MontyField31<MP> {
+    #[inline]
+    fn add_assign(&mut self, rhs: MontyField31<MP>) {
+        *self = (*self).add(rhs)
+    }
+}
+
+impl<'b, MP: FieldParameters> AddAssign<&'b MontyField31<MP>> for MontyField31<MP> {
+    #[inline]
+    fn add_assign(&mut self, rhs: &'b MontyField31<MP>) {
+        *self = (*self).add(rhs)
+    }
+}
+
+impl<T, MP: FieldParameters> Sum<T> for MontyField31<MP>
+where
+    T: core::borrow::Borrow<Self>,
+{
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = T>,
+    {
+        iter.fold(Self::ZERO, |acc, item| acc + item.borrow())
+    }
+}
+
+// ========================
+// multiplications
+// ========================
+impl<MP: FieldParameters> Mul<MontyField31<MP>> for MontyField31<MP> {
+    type Output = MontyField31<MP>;
+
+    #[inline]
+    fn mul(self, rhs: MontyField31<MP>) -> MontyField31<MP> {
+        let long_prod = self.value as u64 * rhs.value as u64;
+        Self::new_monty(monty_reduce::<MP>(long_prod))
+    }
+}
+
+impl<'b, MP: FieldParameters> Mul<&'b MontyField31<MP>> for MontyField31<MP> {
+    type Output = MontyField31<MP>;
+
+    #[inline]
+    fn mul(self, rhs: &'b MontyField31<MP>) -> MontyField31<MP> {
+        self.mul(*rhs)
+    }
+}
+
+impl<MP: FieldParameters> Mul<MontyField31<MP>> for &MontyField31<MP> {
+    type Output = MontyField31<MP>;
+
+    #[inline(always)]
+    fn mul(self, rhs: MontyField31<MP>) -> MontyField31<MP> {
+        *self * rhs
+    }
+}
+
+impl<MP: FieldParameters> Mul<&MontyField31<MP>> for &MontyField31<MP> {
+    type Output = MontyField31<MP>;
+
+    #[inline(always)]
+    fn mul(self, rhs: &MontyField31<MP>) -> MontyField31<MP> {
+        *self * *rhs
+    }
+}
+
+impl<MP: FieldParameters> MulAssign for MontyField31<MP> {
+    #[inline]
+    fn mul_assign(&mut self, rhs: MontyField31<MP>) {
+        *self = self.clone().mul(rhs)
+    }
+}
+
+impl<'b, MP: FieldParameters> MulAssign<&'b MontyField31<MP>> for MontyField31<MP> {
+    #[inline]
+    fn mul_assign(&mut self, rhs: &'b MontyField31<MP>) {
+        *self = self.clone().mul(rhs)
+    }
+}
+
+impl<T, MP: FieldParameters> Product<T> for MontyField31<MP>
+where
+    T: core::borrow::Borrow<Self>,
+{
+    fn product<I: Iterator<Item = T>>(iter: I) -> Self {
+        iter.fold(Self::one(), |acc, item| acc * item.borrow())
+    }
+}
 
 impl<MP: FieldParameters> Field for MontyField31<MP> {
     const NAME: &'static str = "Monty Field";
@@ -212,4 +367,3 @@ impl<MP: FieldParameters> Field for MontyField31<MP> {
         u32::from_le_bytes(bytes[..4].try_into().unwrap()).into()
     }
 }
-

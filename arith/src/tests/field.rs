@@ -116,7 +116,7 @@ pub(crate) fn random_negation_tests<F: Field, R: RngCore>(mut rng: R, type_name:
         let mut b = a;
         b = b.neg();
         b.add_assign(&a);
-
+        println!("b: {:?}", b);
         assert!(b.is_zero());
     }
     end_timer!(start);

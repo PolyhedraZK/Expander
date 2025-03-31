@@ -140,6 +140,15 @@ pub trait Field:
         res
     }
 
+    #[inline(always)]
+    fn exp_power_of_2(&self, power_log: usize) -> Self {
+        let mut res = *self;
+        for _ in 0..power_log {
+            res = res.square();
+        }
+        res
+    }
+
     /// find the inverse of the element; return None if not exist
     fn inv(&self) -> Option<Self>;
 

@@ -4,13 +4,17 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field, FieldParameters, MontyField31, MontyParameters};
+use arith::{field_common, Field, FieldParameters, MontyField31, MontyParameters, PackedMontyParameters};
 use ark_std::Zero;
 use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
 
+
 /// The prime field `2^31 - 2^27 + 1`, a.k.a. the Baby Bear field.
 pub type BabyBear = MontyField31<BabyBearParameters>;
+
+
+
 
 #[derive(Copy, Clone, Default, Debug, Eq, Hash, PartialEq)]
 pub struct BabyBearParameters;
@@ -24,6 +28,7 @@ impl MontyParameters for BabyBearParameters {
     const MONTY_MU: u32 = 0x88000001;
 }
 
+impl PackedMontyParameters for BabyBearParameters {}
 // impl PackedMontyParameters for BabyBearParameters {}
 
 // impl BarrettParameters for BabyBearParameters {}
@@ -31,34 +36,34 @@ impl MontyParameters for BabyBearParameters {
 impl FieldParameters for BabyBearParameters {
     const MONTY_GEN: BabyBear = BabyBear::new(31);
 
-    // fn try_inverse<F: P3Field>(p1: F) -> Option<F> {
-    //     if p1.is_zero() {
-    //         return None;
-    //     }
+    fn try_inverse(p1: &BabyBear) -> Option<BabyBear> {
+        if p1.is_zero() {
+            return None;
+        }
 
-    //     // From Fermat's little theorem, in a prime field `F_p`, the inverse of `a` is `a^(p-2)`.
-    //     // Here p-2 = 2013265919 = 1110111111111111111111111111111_2.
-    //     // Uses 30 Squares + 7 Multiplications => 37 Operations total.
+        // From Fermat's little theorem, in a prime field `F_p`, the inverse of `a` is `a^(p-2)`.
+        // Here p-2 = 2013265919 = 1110111111111111111111111111111_2.
+        // Uses 30 Squares + 7 Multiplications => 37 Operations total.
 
-    //     let p100000000 = p1.exp_power_of_2(8);
-    //     let p100000001 = p100000000 * p1;
-    //     let p10000000000000000 = p100000000.exp_power_of_2(8);
-    //     let p10000000100000001 = p10000000000000000 * p100000001;
-    //     let p10000000100000001000 = p10000000100000001.exp_power_of_2(3);
-    //     let p1000000010000000100000000 = p10000000100000001000.exp_power_of_2(5);
-    //     let p1000000010000000100000001 = p1000000010000000100000000 * p1;
-    //     let p1000010010000100100001001 = p1000000010000000100000001 * p10000000100000001000;
-    //     let p10000000100000001000000010 = p1000000010000000100000001.square();
-    //     let p11000010110000101100001011 = p10000000100000001000000010 * p1000010010000100100001001;
-    //     let p100000001000000010000000100 = p10000000100000001000000010.square();
-    //     let p111000011110000111100001111 =
-    //         p100000001000000010000000100 * p11000010110000101100001011;
-    //     let p1110000111100001111000011110000 = p111000011110000111100001111.exp_power_of_2(4);
-    //     let p1110111111111111111111111111111 =
-    //         p1110000111100001111000011110000 * p111000011110000111100001111;
+        let p100000000 = p1.exp_power_of_2(8);
+        let p100000001 = p100000000 * p1;
+        let p10000000000000000 = p100000000.exp_power_of_2(8);
+        let p10000000100000001 = p10000000000000000 * p100000001;
+        let p10000000100000001000 = p10000000100000001.exp_power_of_2(3);
+        let p1000000010000000100000000 = p10000000100000001000.exp_power_of_2(5);
+        let p1000000010000000100000001 = p1000000010000000100000000 * p1;
+        let p1000010010000100100001001 = p1000000010000000100000001 * p10000000100000001000;
+        let p10000000100000001000000010 = p1000000010000000100000001.square();
+        let p11000010110000101100001011 = p10000000100000001000000010 * p1000010010000100100001001;
+        let p100000001000000010000000100 = p10000000100000001000000010.square();
+        let p111000011110000111100001111 =
+            p100000001000000010000000100 * p11000010110000101100001011;
+        let p1110000111100001111000011110000 = p111000011110000111100001111.exp_power_of_2(4);
+        let p1110111111111111111111111111111 =
+            p1110000111100001111000011110000 * p111000011110000111100001111;
 
-    //     Some(p1110111111111111111111111111111)
-    // }
+        Some(p1110111111111111111111111111111)
+    }
 }
 
 // impl RelativelyPrimePower<7> for BabyBearParameters {
@@ -82,8 +87,8 @@ impl FieldParameters for BabyBearParameters {
 //         0x21fd55bc, 0x4b859b3d, 0x3bd57996, 0x4483d85a, 0x3a26eef8, 0x1a427a41,
 //     ]);
 
-//     const ROOTS_8: Self::ArrayLike = &BabyBear::new_array([0x1, 0x5ee99486, 0x67055c21, 0xc9ea3ba]);
-//     const INV_ROOTS_8: Self::ArrayLike =
+//     const ROOTS_8: Self::ArrayLike = &BabyBear::new_array([0x1, 0x5ee99486, 0x67055c21,
+// 0xc9ea3ba]);     const INV_ROOTS_8: Self::ArrayLike =
 //         &BabyBear::new_array([0x1, 0x6b615c47, 0x10faa3e0, 0x19166b7b]);
 
 //     const ROOTS_16: Self::ArrayLike = &BabyBear::new_array([
@@ -115,29 +120,27 @@ impl FieldParameters for BabyBearParameters {
 //     const TWO_ADIC_EXTENSION_GENERATORS: Self::ArrayLike = [];
 // }
 
-field_common!(BabyBear);
+// field_common!(BabyBear);
 
+// #[inline(always)]
+// fn add_internal(a: &BabyBear, b: &BabyBear) -> BabyBear {
+//     BabyBear(a.0 + b.0)
+// }
 
+// #[inline(always)]
+// fn sub_internal(a: &BabyBear, b: &BabyBear) -> BabyBear {
+//     BabyBear(a.0 - b.0)
+// }
 
-#[inline(always)]
-fn add_internal(a: &BabyBear, b: &BabyBear) -> BabyBear {
-    BabyBear(a.0 + b.0)
-}
-
-#[inline(always)]
-fn sub_internal(a: &BabyBear, b: &BabyBear) -> BabyBear {
-    BabyBear(a.0 - b.0)
-}
-
-#[inline(always)]
-fn mul_internal(a: &BabyBear, b: &BabyBear) -> BabyBear {
-    BabyBear(a.0 * b.0)
-}
+// #[inline(always)]
+// fn mul_internal(a: &BabyBear, b: &BabyBear) -> BabyBear {
+//     BabyBear(a.0 * b.0)
+// }
 
 #[test]
 fn baby_bear_two_inverse() {
-    let two = P3BabyBear::new(2);
-    let two_inverse = <P3BabyBear as P3Field>::try_inverse(&two).unwrap();
+    let two = BabyBear::new(2);
+    let two_inverse = BabyBearParameters::try_inverse(&two).unwrap();
     // Display impl converts to canonical form
     println!("2^-1 (canonical form): {two_inverse}");
 
