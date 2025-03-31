@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use arith::{ExtensionField, Field, SimdField};
 use itertools::izip;
 use serdes::SerdeError;
@@ -80,17 +78,10 @@ impl OrionSRS {
 pub type OrionCommitment = Node;
 
 #[derive(Clone, Debug, Default)]
-pub struct OrionScratchPad<F, ComPackF>
-where
-    F: Field,
-    ComPackF: SimdField<Scalar = F>,
-{
+pub struct OrionScratchPad {
     pub interleaved_alphabet_commitment: tree::Tree,
     pub path_prefix: Vec<Node>,
-    pub(crate) _phantom: PhantomData<ComPackF>,
 }
-
-unsafe impl<F: Field, ComPackF: SimdField<Scalar = F>> Send for OrionScratchPad<F, ComPackF> {}
 
 #[derive(Clone, Debug, Default)]
 pub struct OrionProof<EvalF: Field> {
@@ -100,16 +91,15 @@ pub struct OrionProof<EvalF: Field> {
 }
 
 #[inline(always)]
-pub(crate) fn commit_encoded<F, PackF>(
+pub(crate) fn commit_encoded<PackF>(
     pk: &OrionSRS,
     packed_evals: &[PackF],
-    scratch_pad: &mut OrionScratchPad<F, PackF>,
+    scratch_pad: &mut OrionScratchPad,
     packed_rows: usize,
     msg_size: usize,
 ) -> OrionResult<OrionCommitment>
 where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
+    PackF: SimdField,
 {
     // NOTE: packed codeword buffer and encode over packed field
     let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
@@ -137,21 +127,19 @@ where
         interleaved_alphabets.resize(aligned_po2_len, PackF::ZERO);
     }
     scratch_pad.interleaved_alphabet_commitment =
-        tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(interleaved_alphabets);
+        tree::Tree::compact_new_with_packed_field_elems(interleaved_alphabets);
 
     Ok(scratch_pad.interleaved_alphabet_commitment.root())
 }
 
 #[inline(always)]
-pub(crate) fn orion_mt_openings<F, EvalF, ComPackF, T>(
+pub(crate) fn orion_mt_openings<EvalF, T>(
     pk: &OrionSRS,
     transcript: &mut T,
-    scratch_pad: &OrionScratchPad<F, ComPackF>,
+    scratch_pad: &OrionScratchPad,
 ) -> Vec<tree::RangePath>
 where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
+    EvalF: ExtensionField,
     T: Transcript<EvalF>,
 {
     let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING;

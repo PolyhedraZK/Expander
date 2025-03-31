@@ -28,7 +28,7 @@ fn simd_field_committing_benchmark_helper<F, SimdF, ComPackF>(
     ));
 
     let mut rng = test_rng();
-    let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
+    let mut scratch_pad = OrionScratchPad::default();
 
     for num_vars in lowest_num_vars..=highest_num_vars {
         let packed_num_vars = num_vars - SimdF::PACK_SIZE.ilog2() as usize;
@@ -47,7 +47,12 @@ fn simd_field_committing_benchmark_helper<F, SimdF, ComPackF>(
                 |b| {
                     b.iter(|| {
                         _ = black_box(
-                            orion_commit_simd_field(&srs, &poly, &mut scratch_pad).unwrap(),
+                            orion_commit_simd_field::<_, SimdF, ComPackF>(
+                                &srs,
+                                &poly,
+                                &mut scratch_pad,
+                            )
+                            .unwrap(),
                         )
                     })
                 },
@@ -81,7 +86,7 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, T>(
 
     let mut rng = test_rng();
     let mut transcript = T::new();
-    let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
+    let mut scratch_pad = OrionScratchPad::default();
 
     for num_vars in lowest_num_vars..=highest_num_vars {
         let packed_num_vars = num_vars - SimdF::PACK_SIZE.ilog2() as usize;
@@ -92,7 +97,8 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, T>(
 
         let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
 
-        let _commitment = orion_commit_simd_field(&srs, &poly, &mut scratch_pad).unwrap();
+        let _commitment =
+            orion_commit_simd_field::<_, SimdF, ComPackF>(&srs, &poly, &mut scratch_pad).unwrap();
 
         group
             .bench_function(

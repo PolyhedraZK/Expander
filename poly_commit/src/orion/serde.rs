@@ -1,9 +1,6 @@
-use std::{
-    io::{Read, Write},
-    marker::PhantomData,
-};
+use std::io::{Read, Write};
 
-use arith::{Field, SimdField};
+use arith::Field;
 use serdes::{ExpSerde, SerdeResult};
 use tree::Node;
 
@@ -130,7 +127,7 @@ impl<F: Field> ExpSerde for OrionProof<F> {
     }
 }
 
-impl<F: Field, ComPackF: SimdField<Scalar = F>> ExpSerde for OrionScratchPad<F, ComPackF> {
+impl ExpSerde for OrionScratchPad {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -146,7 +143,6 @@ impl<F: Field, ComPackF: SimdField<Scalar = F>> ExpSerde for OrionScratchPad<F, 
         Ok(Self {
             interleaved_alphabet_commitment,
             path_prefix,
-            _phantom: PhantomData,
         })
     }
 }

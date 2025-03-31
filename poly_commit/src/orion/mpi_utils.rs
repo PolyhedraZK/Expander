@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use arith::{ExtensionField, Field, SimdField};
+use arith::{ExtensionField, SimdField};
 use itertools::izip;
 use mpi_config::MPIConfig;
 use serdes::ExpSerde;
@@ -107,17 +107,16 @@ After all these, we can go onwards to MT commitment, and later open alphabets li
  */
 
 #[inline(always)]
-pub(crate) fn mpi_commit_encoded<F, PackF>(
+pub(crate) fn mpi_commit_encoded<PackF>(
     mpi_config: &MPIConfig,
     pk: &OrionSRS,
     packed_evals: &[PackF],
-    scratch_pad: &mut OrionScratchPad<F, PackF>,
+    scratch_pad: &mut OrionScratchPad,
     packed_rows: usize,
     msg_size: usize,
 ) -> OrionResult<OrionCommitment>
 where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
+    PackF: SimdField,
 {
     // NOTE: packed codeword buffer and encode over packed field
     let mut packed_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
@@ -183,15 +182,11 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn orion_mpi_compute_mt_root<F, PackF>(
+pub(crate) fn orion_mpi_compute_mt_root(
     mpi_config: &MPIConfig,
     local_commitment: Node,
-    scratch_pad: &mut OrionScratchPad<F, PackF>,
-) -> OrionResult<Node>
-where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
-{
+    scratch_pad: &mut OrionScratchPad,
+) -> OrionResult<Node> {
     let mut leaves = vec![tree::Node::default(); mpi_config.world_size()];
     mpi_config.gather_vec(&vec![local_commitment], &mut leaves);
 
@@ -223,16 +218,14 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn orion_mpi_mt_openings<F, EvalF, PackF, T>(
+pub(crate) fn orion_mpi_mt_openings<EvalF, T>(
     mpi_config: &MPIConfig,
     pk: &OrionSRS,
-    scratch_pad: &OrionScratchPad<F, PackF>,
+    scratch_pad: &OrionScratchPad,
     transcript: &mut T,
 ) -> Option<Vec<RangePath>>
 where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    PackF: SimdField<Scalar = F>,
+    EvalF: ExtensionField,
     T: Transcript<EvalF>,
 {
     let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING * mpi_config.world_size();

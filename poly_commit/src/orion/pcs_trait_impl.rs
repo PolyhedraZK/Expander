@@ -53,7 +53,7 @@ where
     type Params = usize;
     type Poly = MultiLinearPoly<F>;
     type EvalPoint = Vec<EvalF>;
-    type ScratchPad = OrionScratchPad<F, ComPackF>;
+    type ScratchPad = OrionScratchPad;
 
     type SRS = OrionSRS;
     type Commitment = OrionCommitment;
@@ -149,7 +149,7 @@ where
     type Params = usize;
     type Poly = MultiLinearPoly<SimdF>;
     type EvalPoint = Vec<EvalF>;
-    type ScratchPad = OrionScratchPad<F, ComPackF>;
+    type ScratchPad = OrionScratchPad;
 
     type SRS = OrionSRS;
     type Commitment = OrionCommitment;
@@ -181,7 +181,7 @@ where
             poly.get_num_vars(),
             proving_key.num_vars - SimdF::PACK_SIZE.ilog2() as usize
         );
-        orion_commit_simd_field(proving_key, poly, scratch_pad).unwrap()
+        orion_commit_simd_field::<_, SimdF, ComPackF>(proving_key, poly, scratch_pad).unwrap()
     }
 
     fn open(

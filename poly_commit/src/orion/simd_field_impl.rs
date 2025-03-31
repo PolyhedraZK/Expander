@@ -18,7 +18,7 @@ use crate::{
 pub fn orion_commit_simd_field<F, SimdF, ComPackF>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
-    scratch_pad: &mut OrionScratchPad<F, ComPackF>,
+    scratch_pad: &mut OrionScratchPad,
 ) -> OrionResult<OrionCommitment>
 where
     F: Field,
@@ -59,7 +59,7 @@ pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF, T>(
     poly: &impl MultilinearExtension<SimdF>,
     point: &[EvalF],
     transcript: &mut T,
-    scratch_pad: &OrionScratchPad<F, ComPackF>,
+    scratch_pad: &OrionScratchPad,
 ) -> (EvalF, OrionProof<EvalF>)
 where
     F: Field,

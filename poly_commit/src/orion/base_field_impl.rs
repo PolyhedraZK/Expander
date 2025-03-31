@@ -14,7 +14,7 @@ use crate::{
 pub fn orion_commit_base_field<F, SimdF, ComPackF>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<F>,
-    scratch_pad: &mut OrionScratchPad<F, ComPackF>,
+    scratch_pad: &mut OrionScratchPad,
 ) -> OrionResult<OrionCommitment>
 where
     F: Field,
@@ -34,7 +34,7 @@ pub fn orion_open_base_field<F, OpenPackF, EvalF, ComPackF, T>(
     poly: &impl MultilinearExtension<F>,
     point: &[EvalF],
     transcript: &mut T,
-    scratch_pad: &OrionScratchPad<F, ComPackF>,
+    scratch_pad: &OrionScratchPad,
 ) -> (EvalF, OrionProof<EvalF>)
 where
     F: Field,
@@ -47,5 +47,11 @@ where
     let packed_evals: Vec<OpenPackF> = pack_from_base(poly.hypercube_basis_ref());
     let simd_poly = RefMultiLinearPoly::from_ref(&packed_evals);
 
-    orion_open_simd_field(pk, &simd_poly, point, transcript, scratch_pad)
+    orion_open_simd_field::<_, OpenPackF, _, ComPackF, _>(
+        pk,
+        &simd_poly,
+        point,
+        transcript,
+        scratch_pad,
+    )
 }

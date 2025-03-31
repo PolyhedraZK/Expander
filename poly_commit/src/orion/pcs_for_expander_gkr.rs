@@ -26,7 +26,7 @@ where
     const NAME: &'static str = "OrionPCSForExpanderGKR";
 
     type Params = usize;
-    type ScratchPad = OrionScratchPad<C::CircuitField, ComPackF>;
+    type ScratchPad = OrionScratchPad;
 
     type Commitment = OrionCommitment;
     type Opening = OrionProof<C::ChallengeField>;
@@ -88,10 +88,21 @@ where
         // NOTE: Hang also assume that, linear GKR will take over the commitment
         // and force sync transcript hash state of subordinate machines to be the same.
         if mpi_config.is_single_process() {
-            return orion_commit_simd_field(proving_key, poly, scratch_pad).ok();
+            return orion_commit_simd_field::<_, C::SimdCircuitField, ComPackF>(
+                proving_key,
+                poly,
+                scratch_pad,
+            )
+            .ok();
         }
 
-        orion_mpi_commit_simd_field(mpi_config, proving_key, poly, scratch_pad).ok()
+        orion_mpi_commit_simd_field::<_, C::SimdCircuitField, ComPackF>(
+            mpi_config,
+            proving_key,
+            poly,
+            scratch_pad,
+        )
+        .ok()
     }
 
     fn open(
@@ -117,7 +128,7 @@ where
             return opening.into();
         }
 
-        orion_mpi_open_simd_field(
+        orion_mpi_open_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
             mpi_config,
             proving_key,
             poly,
