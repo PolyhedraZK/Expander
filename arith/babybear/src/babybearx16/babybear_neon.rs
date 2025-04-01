@@ -12,6 +12,18 @@ use std::{
 
 const BABY_BEAR_PACK_SIZE: usize = 16;
 
+const PACKED_0: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0; 4]) };
+
+// 1 in Montgomery form
+const PACKED_1: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0xffffffe; 4]) };
+
+// 2^-1 Montgomery form
+const PACKED_INV_2: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0x7ffffff; 4]) };
+
+const PACKED_MOD: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0x7fffffff; 4]) };
+
+const PACKED_MU: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0x88000001; 4]) };
+
 #[derive(Clone, Copy)]
 pub struct NeonBabyBear {
     pub v: [uint32x4_t; 4],
@@ -37,45 +49,20 @@ impl FieldSerde for NeonBabyBear {
 
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        // Transmute would serialize the Montgomery form,
-        // instead we convert to canonical form and serialize
-        let unpacked = self.unpack();
-        let canonical: [u32; BABY_BEAR_PACK_SIZE] = unpacked
-            .iter()
-            .map(|x| x.as_u32_unchecked())
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap();
-        let data = unsafe { transmute::<_, [u8; Self::SERIALIZED_SIZE]>(canonical) };
+        let data = unsafe { transmute::<[uint32x4_t; 4], [u8; 64]>(self.v) };
         writer.write_all(&data)?;
         Ok(())
     }
 
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut data = [0u8; Self::SERIALIZED_SIZE];
+        let mut data = [0; 64];
         reader.read_exact(&mut data)?;
-        // Transmute would fail to convert to Montgomery form
-        let canonical = unsafe { transmute::<_, [u32; BABY_BEAR_PACK_SIZE]>(data) };
-        let unpacked = canonical
-            .iter()
-            .map(|x| BabyBear::new(*x))
-            .collect::<Vec<_>>();
-        Ok(Self::pack(&unpacked))
-    }
-
-    #[inline]
-    fn try_deserialize_from_ecc_format<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
-        let mut buf = [0u8; 32];
-        reader.read_exact(&mut buf)?;
-        assert!(
-            buf.iter().skip(4).all(|x| *x == 0),
-            "non-zero byte found in witness byte"
-        );
-        // BabyBear::from converts from canonical to Montgomery form
-        Ok(Self::pack_full(BabyBear::from(u32::from_le_bytes(
-            buf[..4].try_into().unwrap(),
-        ))))
+        unsafe {
+            Ok(NeonM31 {
+                v: transmute::<[u8; 64], [uint32x4_t; 4]>(data),
+            })
+        }
     }
 }
 
@@ -111,8 +98,6 @@ impl Field for NeonBabyBear {
     }
 
     fn random_unsafe(mut rng: impl RngCore) -> Self {
-        // TODO: Is it safe to instead sample a u32, reduce mod p,
-        // and treat this directly as the Montgomery form of an element?
         let mut sample = [BabyBear::ZERO; BABY_BEAR_PACK_SIZE];
         for i in 0..BABY_BEAR_PACK_SIZE {
             sample[i] = BabyBear::random_unsafe(&mut rng);
@@ -125,10 +110,6 @@ impl Field for NeonBabyBear {
             .map(|_| BabyBear::random_bool(&mut rng))
             .collect::<Vec<_>>();
         Self::pack(&sample)
-    }
-
-    fn exp(&self, _: u128) -> Self {
-        unimplemented!("exp not implemented for NeonBabyBear")
     }
 
     fn inv(&self) -> Option<Self> {
@@ -157,7 +138,7 @@ impl SimdField for NeonBabyBear {
 
     #[inline]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
-        *self * *challenge
+        *this * *challenge
     }
 
     #[inline(always)]
@@ -256,11 +237,11 @@ impl Neg for NeonBabyBear {
     #[inline(always)]
     fn neg(self) -> Self::Output {
         unsafe {
-            let mut a: [PackedBabyBearNeon; 4] = transmute(self);
+            let mut res = [uint32x4_t::default(); 4];
             for i in 0..4 {
-                a[i] = a[i].neg();
+                res[i] = p3_instructions::neg(self.v[i]);
             }
-            transmute(a)
+            Self { v: res }
         }
     }
 }
@@ -268,38 +249,114 @@ impl Neg for NeonBabyBear {
 #[inline(always)]
 fn add_internal(a: &NeonBabyBear, b: &NeonBabyBear) -> NeonBabyBear {
     unsafe {
-        let a: [PackedBabyBearNeon; 4] = transmute(*a);
-        let b: [PackedBabyBearNeon; 4] = transmute(*b);
-        let mut res = [PackedBabyBearNeon::default(); 4];
+        let mut res = [uint32x4_t::default(); 4];
         for i in 0..4 {
-            res[i] = a[i] + b[i];
+            res[i] = p3_instructions::add(a.v[i], b.v[i]);
         }
-        transmute(res)
+        Self { v: res }
     }
 }
 
 #[inline(always)]
 fn sub_internal(a: &NeonBabyBear, b: &NeonBabyBear) -> NeonBabyBear {
     unsafe {
-        let a: [PackedBabyBearNeon; 4] = transmute(*a);
-        let b: [PackedBabyBearNeon; 4] = transmute(*b);
-        let mut res = [PackedBabyBearNeon::default(); 4];
+        let mut res = [uint32x4_t::default(); 4];
         for i in 0..4 {
-            res[i] = a[i] - b[i];
+            res[i] = p3_instructions::sub(a.v[i], b.v[i]);
         }
-        transmute(res)
+        Self { v: res }
     }
 }
 
 #[inline]
 fn mul_internal(a: &NeonBabyBear, b: &NeonBabyBear) -> NeonBabyBear {
     unsafe {
-        let a: [PackedBabyBearNeon; 4] = transmute(*a);
-        let b: [PackedBabyBearNeon; 4] = transmute(*b);
-        let mut res = [PackedBabyBearNeon::default(); 4];
+        let mut res = [uint32x4_t::default(); 4];
         for i in 0..4 {
-            res[i] = a[i] * b[i];
+            res[i] = p3_instructions::mul(a.v[i], b.v[i]);
         }
-        transmute(res)
+        Self { v: res }
+    }
+}
+
+mod p3_instructions {
+    use std::arch::aarch64::*;
+
+    const PACKED_P: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0x7fffffff; 4]) };
+    const PACKED_MU: int32x4_t = unsafe { transmute::<[i32; 4], int32x4_t>([0x88000001; 4]) };
+
+    #[inline]
+    #[must_use]
+    pub(super) fn add(lhs: uint32x4_t, rhs: uint32x4_t) -> uint32x4_t {
+        unsafe {
+            let t = vaddq_u32(lhs, rhs);
+            let u = vsubq_u32(t, PACKED_P);
+            vminq_u32(t, u)
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    pub(super) fn sub(lhs: uint32x4_t, rhs: uint32x4_t) -> uint32x4_t {
+        unsafe {
+            let diff = vsubq_u32(lhs, rhs);
+            let underflow = vcltq_u32(lhs, rhs);
+            vmlsq_u32(diff, underflow, PACKED_P)
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    pub(super) fn neg(val: uint32x4_t) -> uint32x4_t {
+        unsafe {
+            let t = vsubq_u32(PACKED_P, val);
+            let is_zero = vceqzq_u32(val);
+            vbicq_u32(t, is_zero)
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    fn mulby_mu(val: int32x4_t) -> int32x4_t {
+        unsafe { vmulq_s32(val, PACKED_MU) }
+    }
+
+    #[inline]
+    #[must_use]
+    fn get_c_hi(lhs: int32x4_t, rhs: int32x4_t) -> int32x4_t {
+        unsafe { vqdmulhq_s32(lhs, rhs) }
+    }
+
+    #[inline]
+    #[must_use]
+    fn get_qp_hi(lhs: int32x4_t, mu_rhs: int32x4_t) -> int32x4_t {
+        unsafe {
+            let q = vmulq_s32(lhs, mu_rhs);
+            vqdmulhq_s32(q, vreinterpretq_s32_u32(PACKED_P))
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    fn get_reduced_d(c_hi: int32x4_t, qp_hi: int32x4_t) -> uint32x4_t {
+        unsafe {
+            let d = vreinterpretq_u32_s32(vsubq_s32(c_hi, qp_hi));
+            let underflow = vcltq_s32(c_hi, qp_hi);
+            vmlsq_u32(d, underflow, PACKED_P)
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    pub(super) fn mul(lhs: uint32x4_t, rhs: uint32x4_t) -> uint32x4_t {
+        unsafe {
+            let lhs = vreinterpretq_s32_u32(lhs);
+            let rhs = vreinterpretq_s32_u32(rhs);
+
+            let mu_rhs = mulby_mu(rhs);
+            let c_hi = get_c_hi(lhs, rhs);
+            let qp_hi = get_qp_hi(lhs, mu_rhs);
+            get_reduced_d(c_hi, qp_hi)
+        }
     }
 }
