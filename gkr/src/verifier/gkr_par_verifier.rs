@@ -1,13 +1,41 @@
 use std::{io::Read, vec};
 
+use arith::Field;
 use circuit::Circuit;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use sumcheck::VerifierScratchPad;
+use serdes::ExpSerde;
+use sumcheck::{VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DEGREE};
 use transcript::Transcript;
 use utils::timer::Timer;
 
+use crate::prover::gkr_par_verifier::SumcheckLayerState;
 use super::common::sumcheck_verify_gkr_layer;
+
+pub fn parse_proof<C: GKRFieldConfig>(
+    circuit: &Circuit<C>,
+    mut proof_reader: impl Read,
+    mpi_config: &MPIConfig,
+) -> Vec<(Vec<u8>, SumcheckLayerState<C>)> {
+    circuit.layers
+        .iter()
+        .rev()
+        .map(| layer| {
+            let sumcheck_layer_state = SumcheckLayerState::<C>::deserialize_from(&mut proof_reader).unwrap();
+            let proof_size_n_challenge_fields = 
+                layer.input_var_num * (!layer.structure_info.skip_sumcheck_phase_two as usize + 1) * (SUMCHECK_GKR_DEGREE + 1) // variable x, y
+                + (C::get_field_pack_size().ilog2() as usize + mpi_config.world_size().ilog2() as usize) * (SUMCHECK_GKR_SIMD_MPI_DEGREE + 1); // variable simd, mpi
+            let proof_size_n_bytes = proof_size_n_challenge_fields * C::ChallengeField::SIZE;
+            let mut proof_bytes = vec![0u8; proof_size_n_bytes];
+            proof_reader.read_exact(&mut proof_bytes).unwrap();
+
+            (
+                proof_bytes,
+                sumcheck_layer_state,
+            )
+        })
+        .collect()
+}
 
 // todo: FIXME
 #[allow(clippy::type_complexity)]
@@ -53,6 +81,12 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
     let mut claimed_v1 = None;
 
     let mut verified = true;
+    let verification_units: Vec<(Vec<u8>, SumcheckLayerState<C>)> = parse_proof(
+        circuit,
+        &mut proof_reader,
+        mpi_config,
+    );
+
     for i in (0..layer_num).rev() {
         let cur_verified;
         (
