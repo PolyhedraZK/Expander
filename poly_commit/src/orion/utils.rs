@@ -258,7 +258,7 @@ impl<F: Field> SubsetSumLUTs<F> {
         izip!(&mut self.tables, weights.chunks(self.entry_bits)).for_each(
             |(lut_i, sub_weights)| {
                 sub_weights.iter().enumerate().for_each(|(i, weight_i)| {
-                    let bit_mask = 1 << (self.entry_bits - i - 1);
+                    let bit_mask = 1 << i;
                     lut_i.iter_mut().enumerate().for_each(|(bit_map, li)| {
                         if bit_map & bit_mask == bit_mask {
                             *li += weight_i;
