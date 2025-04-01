@@ -11,7 +11,8 @@ use clap::{Parser, Subcommand};
 use config::{Config, GKRConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
 use gkr_field_config::FieldType;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use mpi_config::{shared_mem::SharedMemory, MPIConfig};
+
 use poly_commit::{expander_pcs_init_testing_only, PCSForExpanderGKR};
 use serdes::{ExpSerde, SerdeError};
 
@@ -198,7 +199,10 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
             witness_file,
             output_proof_file,
         } => {
-            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_file);
+            let (mut circuit, mut window) = Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                &circuit_file,
+                &config.mpi_config,
+            );
             circuit.prover_load_witness_file(&witness_file, &config.mpi_config);
             let (claimed_v, proof) = prove(&mut circuit, &config);
 
@@ -207,6 +211,8 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
                     .expect("Unable to serialize proof.");
                 fs::write(output_proof_file, bytes).expect("Unable to write proof to file.");
             }
+            circuit.discard_control_of_shared_mem();
+            config.mpi_config.free_shared_mem(&mut window);
         }
         ExpanderExecSubCommand::Verify {
             circuit_file,
@@ -220,7 +226,9 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
             );
             config.mpi_config.world_size = mpi_size as i32;
 
-            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_file);
+            let mut circuit =
+                Circuit::<Cfg::FieldConfig>::verifier_load_circuit::<Cfg>(&circuit_file);
+
             circuit.verifier_load_witness_file(&witness_file, &config.mpi_config);
 
             let bytes = fs::read(&input_proof_file).expect("Unable to read proof from file.");
@@ -246,8 +254,10 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
                 .collect::<Vec<u8>>()
                 .try_into()
                 .unwrap();
-
-            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_file);
+            let (circuit, _) = Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                &circuit_file,
+                &config.mpi_config,
+            );
             let mut prover = crate::Prover::new(&config);
             prover.prepare_mem(&circuit);
             let verifier = crate::Verifier::new(&config);

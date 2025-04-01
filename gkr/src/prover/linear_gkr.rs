@@ -128,13 +128,16 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         }
         pcs_commit_timer.stop();
 
-        transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
-
         #[cfg(feature = "grinding")]
         grind::<Cfg>(&mut transcript, &self.config);
 
-        c.fill_rnd_coefs(&mut transcript);
+        if self.config.mpi_config.is_root() {
+            c.fill_rnd_coefs(&mut transcript);
+        }
+        self.config.mpi_config.barrier();
         c.evaluate();
+
+        transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
 
         let (claimed_v, rx, rsimd, rmpi);
         let mut ry = None;

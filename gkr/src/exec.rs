@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use clap::Parser;
-use config::{Config, FiatShamirHashType, GKRScheme, PolynomialCommitmentType};
-use gkr::{executor::*, gkr_configs::*};
+use config::{instantiations::*, Config, FiatShamirHashType, GKRScheme, PolynomialCommitmentType};
+use gkr::executor::*;
 use gkr_field_config::FieldType;
 use mpi_config::{root_println, MPIConfig};
 
