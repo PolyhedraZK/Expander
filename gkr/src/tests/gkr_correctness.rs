@@ -18,15 +18,12 @@ use mersenne31::M31x16;
 use poly_commit::{
     expander_pcs_init_testing_only, HyperKZGPCS, HyraxPCS, OrionPCSForGKR, RawExpanderGKR,
 };
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha12Rng;
+use rand::Rng;
 use serdes::ExpSerde;
 use sha2::Digest;
 use transcript::{BytesHashTranscript, FieldHashTranscript};
 
 use crate::{utils::*, Prover, Verifier};
-
-const PCS_TESTING_SEED_U64: u64 = 114514;
 
 #[test]
 fn test_gkr_correctness() {
@@ -124,6 +121,12 @@ fn test_gkr_correctness() {
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
+    declare_gkr_config!(
+        C12,
+        FieldType::Goldilocks,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
 
     test_gkr_correctness_helper::<C0>(None);
     test_gkr_correctness_helper::<C1>(None);
@@ -174,7 +177,8 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
         FieldType::Goldilocks => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
         _ => unreachable!(),
     };
-    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_path);
+    let mut circuit =
+        Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_path, &mpi_config);
     root_println!(mpi_config, "Circuit loaded.");
 
     let witness_path = match <Cfg::FieldConfig as FieldEngine>::FIELD_TYPE {
@@ -196,7 +200,6 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
     let mut prover = Prover::<Cfg>::new(mpi_config.clone());
     prover.prepare_mem(&circuit);
 
-    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
     let (pcs_params, pcs_proving_key, pcs_verification_key, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
             circuit.log_input_size(),
@@ -294,4 +297,7 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
         println!("Bad proof rejected.");
         println!("============== end ===============");
     }
+
+    circuit.discard_control_of_shared_mem();
+    config.mpi_config.free_shared_mem(&mut window);
 }

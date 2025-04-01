@@ -158,11 +158,7 @@ impl From<u64> for Goldilocks {
     #[inline(always)]
     fn from(x: u64) -> Self {
         Goldilocks {
-            v: if x < GOLDILOCKS_MOD {
-                x
-            } else {
-                x - GOLDILOCKS_MOD
-            },
+            v: mod_reduce_u64(x),
         }
     }
 }

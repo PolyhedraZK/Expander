@@ -160,10 +160,7 @@ impl<C: FieldEngine> ExpSerde for Segment<C> {
 
         <usize as ExpSerde>::serialize_into(&self.gate_uni.len(), &mut writer)?;
         for uni in &self.gate_uni {
-            CustomGateWrapper::<C, 1> {
-                custom_gate: uni.clone(),
-            }
-            .serialize_into(&mut writer)?;
+            CustomGateWrapper::<C, 1> { custom_gate: *uni }.serialize_into(&mut writer)?;
         }
 
         Ok(())

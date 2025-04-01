@@ -149,8 +149,6 @@ pub fn prove<Cfg: GKREngine>(
     prover.prepare_mem(circuit);
     // TODO: Read PCS setup from files
 
-    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
-
     let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
     let (pcs_params, pcs_proving_key, _, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
@@ -170,7 +168,6 @@ pub fn verify<Cfg: GKREngine>(
     claimed_v: &<<Cfg as GKREngine>::FieldConfig as FieldEngine>::ChallengeField,
 ) -> bool {
     // TODO: Read PCS setup from files
-    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
 
     let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
     let (pcs_params, _, pcs_verification_key, mut _pcs_scratch) =
@@ -200,7 +197,8 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(command: &ExpanderExecArg
             witness_file,
             output_proof_file,
         } => {
-            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_file);
+            let mut circuit =
+                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file);
             let mpi_config = MPIConfig::prover_new();
             let prover = Prover::<Cfg>::new(mpi_config.clone());
 
@@ -212,6 +210,8 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(command: &ExpanderExecArg
                     .expect("Unable to serialize proof.");
                 fs::write(output_proof_file, bytes).expect("Unable to write proof to file.");
             }
+            circuit.discard_control_of_shared_mem();
+            config.mpi_config.free_shared_mem(&mut window);
         }
         ExpanderExecSubCommand::Verify {
             circuit_file,
@@ -232,7 +232,8 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(command: &ExpanderExecArg
 
             println!("loading circuit file");
 
-            let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_file);
+            let mut circuit =
+                Circuit::<Cfg::FieldConfig>::verifier_load_circuit::<Cfg>(&circuit_file);
 
             println!("loading witness file");
 
@@ -276,11 +277,15 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(command: &ExpanderExecArg
                 .try_into()
                 .unwrap();
 
-            let circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_file);
+            let circuit =
+                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, &mpi_config);
             let verifier = crate::Verifier::<Cfg>::new(mpi_config.clone());
 
+            let mut prover = crate::Prover::new(mpi_config.clone());
+            prover.prepare_mem(&circuit);
+            let verifier = crate::Verifier::new(mpi_config.clone());
+
             // TODO: Read PCS setup from files
-            let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
                 expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
                     circuit.log_input_size(),

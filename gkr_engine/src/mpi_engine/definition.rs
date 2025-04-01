@@ -1,5 +1,10 @@
 use arith::Field;
-use mpi::topology::Process;
+use mpi::{
+    ffi::{ompi_win_t, MPI_Win_free},
+    topology::Process,
+};
+
+use super::SharedMemory;
 
 /// MPI APIs for distributed computing operations
 pub trait MPIEngine {
@@ -101,4 +106,36 @@ pub trait MPIEngine {
 
     /// Synchronize all processes at this point
     fn barrier(&self);
+
+    /// Create a shared memory segment for inter-process communication
+    fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, *mut ompi_win_t);
+
+    /// Consume the shared memory segment and create a new shared memory object
+    fn consume_obj_and_create_shared<T: SharedMemory>(
+        &self,
+        obj: Option<T>,
+    ) -> (T, *mut ompi_win_t) {
+        assert!(!self.is_root() || obj.is_some());
+
+        if self.is_root() {
+            let obj = obj.unwrap();
+            let n_bytes = obj.bytes_size();
+            let (mut ptr, window) = self.create_shared_mem(n_bytes);
+            let mut ptr_copy = ptr;
+            obj.to_memory(&mut ptr_copy);
+            self.barrier();
+            (T::from_memory(&mut ptr), window)
+        } else {
+            let (mut ptr, window) = self.create_shared_mem(0);
+            self.barrier(); // wait for root to write data
+            (T::from_memory(&mut ptr), window)
+        }
+    }
+
+    /// Discard the control of shared memory segment
+    fn free_shared_mem(&self, window: &mut *mut ompi_win_t) {
+        unsafe {
+            MPI_Win_free(window as *mut *mut ompi_win_t);
+        }
+    }
 }

@@ -41,7 +41,8 @@ fn benchmark_setup<Cfg: GKREngine>(
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad,
 ) {
     let mpi_config = MPIConfig::prover_new();
-    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(circuit_file);
+    let mut circuit =
+        Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(circuit_file);
 
     if let Some(witness_file) = witness_file {
         circuit.prover_load_witness_file(witness_file, &mpi_config);

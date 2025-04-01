@@ -1,6 +1,8 @@
+use std::os::raw::c_void;
 use std::{cmp, fmt::Debug};
 
 use arith::Field;
+use mpi::ffi::*;
 use mpi::{
     environment::Universe,
     ffi,
@@ -8,7 +10,7 @@ use mpi::{
     traits::*,
 };
 
-use super::MPIEngine;
+use super::{MPIEngine, SharedMemory};
 
 #[macro_export]
 macro_rules! root_println {
@@ -272,9 +274,47 @@ impl MPIEngine for MPIConfig {
         self.world.unwrap().process_at_rank(Self::ROOT_RANK)
     }
 
+    // Barrier is designed for mpi use only
+    // There might be some issues if used with multi-threading
     #[inline(always)]
     fn barrier(&self) {
-        self.world.unwrap().barrier();
+        if self.world_size > 1 {
+            self.world.unwrap().barrier();
+        }
+    }
+
+    #[inline]
+    fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, *mut ompi_win_t) {
+        let window_size = if self.is_root() { n_bytes } else { 0 };
+        let mut baseptr: *mut c_void = std::ptr::null_mut();
+        let mut window = std::ptr::null_mut();
+        unsafe {
+            MPI_Win_allocate_shared(
+                window_size as isize,
+                1,
+                RSMPI_INFO_NULL,
+                self.world.unwrap().as_raw(),
+                &mut baseptr as *mut *mut c_void as *mut c_void,
+                &mut window,
+            );
+            self.barrier();
+
+            if !self.is_root() {
+                let mut size = 0;
+                let mut disp_unit = 0;
+                let mut query_baseptr: *mut c_void = std::ptr::null_mut();
+                MPI_Win_shared_query(
+                    window,
+                    0,
+                    &mut size,
+                    &mut disp_unit,
+                    &mut query_baseptr as *mut *mut c_void as *mut c_void,
+                );
+                baseptr = query_baseptr;
+            }
+        }
+
+        (baseptr as *mut u8, window)
     }
 }
 

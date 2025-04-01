@@ -128,15 +128,17 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         }
         pcs_commit_timer.stop();
 
-        transcript_root_broadcast(&mut transcript, &self.mpi_config);
-
         #[cfg(feature = "grinding")]
         grind::<Cfg>(&mut transcript, &self.mpi_config);
 
-        c.fill_rnd_coefs(&mut transcript);
+        if self.config.mpi_config.is_root() {
+            c.fill_rnd_coefs(&mut transcript);
+        }
+        self.config.mpi_config.barrier();
         c.evaluate();
 
         let gkr_prove_timer = Timer::new("gkr prove", self.mpi_config.is_root());
+        transcript_root_broadcast(&mut transcript, &self.mpi_config);
 
         let (claimed_v, challenge) = if Cfg::SCHEME == GKRScheme::GkrSquare {
             let (claimed_v, challenge_x) =

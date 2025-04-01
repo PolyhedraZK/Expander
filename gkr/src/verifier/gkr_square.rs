@@ -26,7 +26,7 @@ pub fn gkr_square_verify<C: FieldEngine>(
     );
 
     let timer = start_timer!(|| "gkr verify");
-    let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
+    let mut sp = VerifierScratchPad::<C>::new(circuit, proving_time_mpi_size);
 
     let layer_num = circuit.layers.len();
 
@@ -117,7 +117,7 @@ fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
     }
     GKRVerifierHelper::set_r_simd_xy(&challenge.r_simd, sp);
 
-    for _i_var in 0..mpi_config.world_size().trailing_zeros() {
+    for _i_var in 0..proving_time_mpi_size.trailing_zeros() {
         verified &= verify_sumcheck_step::<C>(
             &mut proof_reader,
             degree,

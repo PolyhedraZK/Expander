@@ -113,19 +113,24 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
     // load circuit
     let mut circuit = match args.circuit.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GF2_CIRCUIT),
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_M31_CIRCUIT),
+            FieldType::GF2 => {
+                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(KECCAK_GF2_CIRCUIT)
+            }
+            FieldType::M31 => {
+                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(KECCAK_M31_CIRCUIT)
+            }
             FieldType::BN254 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_BN254_CIRCUIT)
+                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(KECCAK_BN254_CIRCUIT)
             }
             FieldType::Goldilocks => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GOLDILOCKS_CIRCUIT)
+                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(KECCAK_GOLDILOCKS_CIRCUIT)
             }
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(POSEIDON_M31_CIRCUIT)
-            }
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                POSEIDON_M31_CIRCUIT,
+                &config.mpi_config,
+            ),
             _ => unreachable!(),
         },
         _ => unreachable!(),
@@ -206,6 +211,8 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
             throughput.round()
         );
     }
+    circuit.discard_control_of_shared_mem();
+    config.mpi_config.free_shared_mem(&mut window);
 }
 
 fn print_info(args: &Args) {

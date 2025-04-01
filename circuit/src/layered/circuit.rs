@@ -3,10 +3,12 @@ use std::io::Cursor;
 
 use arith::{Field, SimdField};
 use ark_std::test_rng;
+use config::GKRConfig;
 use gkr_engine::{
     root_println, ExpanderPCS, FieldEngine, GKREngine, MPIConfig, MPIEngine,
     PolynomialCommitmentType, Transcript,
 };
+use mpi::ffi::ompi_win_t;
 use serdes::ExpSerde;
 
 use crate::*;
@@ -132,7 +134,10 @@ impl<C: FieldEngine> Clone for Circuit<C> {
         let mut ret = Circuit::<C> {
             layers: self.layers.clone(),
             public_input: self.public_input.clone(),
-            ..Default::default()
+            expected_num_output_zeros: self.expected_num_output_zeros,
+
+            rnd_coefs_identified: false,
+            rnd_coefs: vec![],
         };
 
         if self.rnd_coefs_identified {
@@ -145,9 +150,45 @@ impl<C: FieldEngine> Clone for Circuit<C> {
 unsafe impl<C> Send for Circuit<C> where C: FieldEngine {}
 
 impl<C: FieldEngine> Circuit<C> {
-    pub fn load_circuit<Cfg: GKREngine<FieldConfig = C>>(filename: &str) -> Self {
+    // Load a circuit from a file and flatten it
+    // Used for verifier
+    pub fn verifier_load_circuit<Cfg: GKREngine<FieldConfig = C>>(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
-        rc.flatten::<Cfg>()
+        let mut c = rc.flatten::<Cfg>();
+        c.pre_process_gkr::<Cfg>();
+        c
+    }
+
+    // Used for prover with mpi_size = 1.
+    // This avoids the overhead of shared memory
+    // No need to call discard_control_of_shared_mem() and free_shared_mem(window) after this
+    #[inline(always)]
+    pub fn single_thread_prover_load_circuit<Cfg: GKRConfig<FieldConfig = C>>(
+        filename: &str,
+    ) -> Self {
+        Self::verifier_load_circuit::<Cfg>(filename)
+    }
+
+    // The root process loads a circuit from a file and shares it with other processes
+    // with shared memory
+    // Used in the mpi case, ok if mpi_size = 1, but
+    // circuit.discard_control_of_shared_mem() and mpi_config.free_shared_mem(window) should be
+    // called before the end of the program
+    pub fn prover_load_circuit<Cfg: GKRConfig<FieldConfig = C>>(
+        filename: &str,
+        mpi_config: &MPIConfig,
+    ) -> (Self, *mut ompi_win_t) {
+        let circuit = if mpi_config.is_root() {
+            let rc = RecursiveCircuit::<C>::load(filename).unwrap();
+            let circuit = rc.flatten::<Cfg>();
+            Some(circuit)
+        } else {
+            None
+        };
+
+        let (mut circuit, window) = mpi_config.consume_obj_and_create_shared(circuit);
+        circuit.pre_process_gkr::<Cfg>();
+        (circuit, window)
     }
 
     pub fn load_witness_allow_padding_testing_only(
@@ -364,7 +405,6 @@ impl<C: FieldEngine> Circuit<C> {
 
     pub fn fill_rnd_coefs<T: Transcript<C::ChallengeField>>(&mut self, transcript: &mut T) {
         assert!(self.rnd_coefs_identified);
-
         let sampled_circuit_fs = transcript.generate_circuit_field_elements(self.rnd_coefs.len());
         self.rnd_coefs
             .iter()

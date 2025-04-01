@@ -1,6 +1,6 @@
 use gkr_engine::FieldEngine;
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub enum CoefType {
     #[default]
     Constant,
@@ -21,3 +21,7 @@ pub type GateMul<C> = Gate<C, 2>;
 pub type GateAdd<C> = Gate<C, 1>;
 pub type GateUni<C> = Gate<C, 1>;
 pub type GateConst<C> = Gate<C, 0>;
+
+// If I Simply add derive(Copy) to the Gate struct, the compiler does not seem to recognize it
+// for the type aliases. Explicitly state it here.
+impl<C: GKRFieldConfig, const INPUT_NUM: usize> Copy for Gate<C, INPUT_NUM> {}

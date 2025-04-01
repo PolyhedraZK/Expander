@@ -4,7 +4,6 @@ use gkr_engine::{ExpanderPCS, FieldEngine, MPIConfig, StructuredReferenceString}
 pub fn expander_pcs_init_testing_only<FieldConfig: FieldEngine, PCS: ExpanderPCS<FieldConfig>>(
     n_input_vars: usize,
     mpi_config: &MPIConfig,
-    mut rng: impl rand::RngCore,
 ) -> (
     PCS::Params,
     <PCS::SRS as StructuredReferenceString>::PKey,
