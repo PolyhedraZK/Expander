@@ -172,7 +172,7 @@ where
 
     fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
         let base_field_elems_num =
-            (n_bytes + ChallengeF::BaseField::SIZE - 1).div_ceil(ChallengeF::BaseField::SIZE);
+            (n_bytes + ChallengeF::BaseField::SIZE - 1) / ChallengeF::BaseField::SIZE;
         let elems = self.generate_challenge_field_elements(base_field_elems_num);
 
         let mut res = Vec::new();
