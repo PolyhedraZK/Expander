@@ -5,7 +5,13 @@ use std::{
 
 use circuit::Circuit;
 use clap::Parser;
-use config::{Config, GKRConfig, GKRScheme};
+use config::{
+    instantiations::{
+        BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, GoldilocksExtConfigSha2Raw,
+        M31ExtConfigSha2Orion,
+    },
+    Config, GKRConfig, GKRScheme,
+};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 
@@ -17,7 +23,6 @@ use gkr::{
         KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT,
         KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
-    BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2Orion,
     Prover,
 };
 
@@ -105,26 +110,35 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let pack_size = Cfg::FieldConfig::get_field_pack_size();
 
     // load circuit
-    let mut circuit_template = match args.scheme.as_str() {
-        "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GF2_CIRCUIT),
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_M31_CIRCUIT),
-            FieldType::BN254 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_BN254_CIRCUIT)
-            }
-            FieldType::Goldilocks => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GOLDILOCKS_CIRCUIT)
-            }
-        },
-        "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(POSEIDON_M31_CIRCUIT)
-            }
-            _ => unreachable!("not supported"),
-        },
+    let mut circuit_template =
+        match args.scheme.as_str() {
+            "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
+                FieldType::GF2 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(KECCAK_GF2_CIRCUIT),
+                FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(KECCAK_M31_CIRCUIT),
+                FieldType::BN254 => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_BN254_CIRCUIT,
+                    )
+                }
+                FieldType::Goldilocks => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_GOLDILOCKS_CIRCUIT,
+                    )
+                }
+            },
+            "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
+                FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(POSEIDON_M31_CIRCUIT),
+                _ => unreachable!("not supported"),
+            },
 
-        _ => unreachable!(),
-    };
+            _ => unreachable!(),
+        };
 
     let witness_path = match args.scheme.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {

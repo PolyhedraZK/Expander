@@ -1,3 +1,6 @@
+pub mod instantiations;
+pub use instantiations::*;
+
 use arith::Field;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
