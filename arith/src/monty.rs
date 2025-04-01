@@ -15,15 +15,16 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-mod param;
 use ethnum::U256;
+use serdes::{ExpSerde, SerdeResult};
+use utils::{from_monty, monty_reduce, to_monty};
+
+use crate::Field;
+
+mod param;
 pub use param::*;
 
 mod utils;
-use serdes::{ExpSerde, SerdeResult};
-pub use utils::*;
-
-use crate::Field;
 
 #[cfg(target_arch = "aarch64")]
 mod neon;
@@ -32,6 +33,7 @@ pub use neon::PackedMontyParameters;
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 mod avx512;
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 pub use avx512::PackedMontyParameters;
 
 // Fallback, use avx2
@@ -144,6 +146,7 @@ impl<MP: FieldParameters> ExpSerde for MontyField31<MP> {
     /// Note: This function performs modular reduction on inputs and
     /// converts from canonical to Montgomery form.
     #[inline(always)]
+    #[allow(const_evaluatable_unchecked)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let mut u = [0u8; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut u)?;
@@ -295,14 +298,14 @@ impl<MP: FieldParameters> Mul<&MontyField31<MP>> for &MontyField31<MP> {
 impl<MP: FieldParameters> MulAssign for MontyField31<MP> {
     #[inline]
     fn mul_assign(&mut self, rhs: MontyField31<MP>) {
-        *self = self.clone().mul(rhs)
+        *self = (*self).mul(&rhs)
     }
 }
 
 impl<'b, MP: FieldParameters> MulAssign<&'b MontyField31<MP>> for MontyField31<MP> {
     #[inline]
     fn mul_assign(&mut self, rhs: &'b MontyField31<MP>) {
-        *self = self.clone().mul(rhs)
+        *self = (*self).mul(rhs)
     }
 }
 

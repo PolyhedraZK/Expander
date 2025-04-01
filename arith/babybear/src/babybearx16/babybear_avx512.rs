@@ -173,7 +173,7 @@ impl Field for AVXBabyBear {
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         let m = BabyBear::from_uniform_bytes(bytes);
         Self {
-            v: unsafe { _mm512_set1_epi64(m.value as i64) },
+            v: unsafe { _mm512_set1_epi32(m.value as i32) },
         }
     }
 }
@@ -335,7 +335,6 @@ mod p3_instructions {
     use super::{PACKED_MOD, PACKED_MU};
 
     const EVENS: __mmask16 = 0b0101010101010101;
-    const EVENS4: __mmask16 = 0x0f0f;
 
     /// Add two vectors of MontyField31 elements in canonical form.
     ///

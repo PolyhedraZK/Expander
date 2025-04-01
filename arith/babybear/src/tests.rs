@@ -15,9 +15,9 @@ fn test_base_field() {
 
     let mut rng = test_rng();
     random_inversion_tests::<BabyBear, _>(&mut rng, "BabyBear".to_string());
-    // random_inversion_tests::<BabyBearx16, _>(&mut rng, "Vectorized BabyBear".to_string());
+    random_inversion_tests::<BabyBearx16, _>(&mut rng, "Vectorized BabyBear".to_string());
 
-    // random_simd_field_tests::<BabyBearx16>("Vectorized BabyBear".to_string());
+    random_simd_field_tests::<BabyBearx16>("Vectorized BabyBear".to_string());
 }
 
 #[test]

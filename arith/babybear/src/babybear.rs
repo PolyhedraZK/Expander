@@ -1,15 +1,6 @@
-use std::{
-    io::{Read, Write},
-    iter::{Product, Sum},
-    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
-};
+use std::{fmt::Debug, hash::Hash};
 
-use arith::{
-    field_common, Field, FieldParameters, MontyField31, MontyParameters, PackedMontyParameters,
-};
-use ark_std::Zero;
-use ethnum::U256;
-use serdes::{ExpSerde, SerdeResult};
+use arith::{Field, FieldParameters, MontyField31, MontyParameters, PackedMontyParameters};
 
 /// The prime field `2^31 - 2^27 + 1`, a.k.a. the Baby Bear field.
 pub type BabyBear = MontyField31<BabyBearParameters>;
@@ -30,9 +21,6 @@ impl MontyParameters for BabyBearParameters {
 }
 
 impl PackedMontyParameters for BabyBearParameters {}
-// impl PackedMontyParameters for BabyBearParameters {}
-
-// impl BarrettParameters for BabyBearParameters {}
 
 impl FieldParameters for BabyBearParameters {
     const MONTY_GEN: BabyBear = BabyBear::new(31);
@@ -66,74 +54,3 @@ impl FieldParameters for BabyBearParameters {
         Some(p1110111111111111111111111111111)
     }
 }
-
-// impl RelativelyPrimePower<7> for BabyBearParameters {
-//     /// In the field `BabyBear`, `a^{1/7}` is equal to a^{1725656503}.
-//     ///
-//     /// This follows from the calculation `7 * 1725656503 = 6*(2^31 - 2^27) + 1 = 1 mod (p - 1)`.
-//     fn exp_root_d<R: PrimeCharacteristicRing>(val: R) -> R {
-//         exp_1725656503(val)
-//     }
-// }
-
-// impl TwoAdicData for BabyBearParameters {
-//     const TWO_ADICITY: usize = 27;
-
-//     type ArrayLike = &'static [BabyBear];
-
-//     const TWO_ADIC_GENERATORS: Self::ArrayLike = &BabyBear::new_array([
-//         0x1, 0x78000000, 0x67055c21, 0x5ee99486, 0xbb4c4e4, 0x2d4cc4da, 0x669d6090, 0x17b56c64,
-//         0x67456167, 0x688442f9, 0x145e952d, 0x4fe61226, 0x4c734715, 0x11c33e2a, 0x62c3d2b1,
-//         0x77cad399, 0x54c131f4, 0x4cabd6a6, 0x5cf5713f, 0x3e9430e8, 0xba067a3, 0x18adc27d,
-//         0x21fd55bc, 0x4b859b3d, 0x3bd57996, 0x4483d85a, 0x3a26eef8, 0x1a427a41,
-//     ]);
-
-//     const ROOTS_8: Self::ArrayLike = &BabyBear::new_array([0x1, 0x5ee99486, 0x67055c21,
-// 0xc9ea3ba]);     const INV_ROOTS_8: Self::ArrayLike =
-//         &BabyBear::new_array([0x1, 0x6b615c47, 0x10faa3e0, 0x19166b7b]);
-
-//     const ROOTS_16: Self::ArrayLike = &BabyBear::new_array([
-//         0x1, 0xbb4c4e4, 0x5ee99486, 0x4b49e08, 0x67055c21, 0x5376917a, 0xc9ea3ba, 0x563112a7,
-//     ]);
-//     const INV_ROOTS_16: Self::ArrayLike = &BabyBear::new_array([
-//         0x1, 0x21ceed5a, 0x6b615c47, 0x24896e87, 0x10faa3e0, 0x734b61f9, 0x19166b7b, 0x6c4b3b1d,
-//     ]);
-// }
-
-// impl BinomialExtensionData<4> for BabyBearParameters {
-//     const W: BabyBear = BabyBear::new(11);
-//     const DTH_ROOT: BabyBear = BabyBear::new(1728404513);
-//     const EXT_GENERATOR: [BabyBear; 4] = BabyBear::new_array([8, 1, 0, 0]);
-//     const EXT_TWO_ADICITY: usize = 29;
-
-//     type ArrayLike = [[BabyBear; 4]; 2];
-//     const TWO_ADIC_EXTENSION_GENERATORS: Self::ArrayLike =
-//         BabyBear::new_2d_array([[0, 0, 1996171314, 0], [0, 0, 0, 124907976]]);
-// }
-
-// impl BinomialExtensionData<5> for BabyBearParameters {
-//     const W: BabyBear = BabyBear::new(2);
-//     const DTH_ROOT: BabyBear = BabyBear::new(815036133);
-//     const EXT_GENERATOR: [BabyBear; 5] = BabyBear::new_array([8, 1, 0, 0, 0]);
-//     const EXT_TWO_ADICITY: usize = 27;
-
-//     type ArrayLike = [[BabyBear; 5]; 0];
-//     const TWO_ADIC_EXTENSION_GENERATORS: Self::ArrayLike = [];
-// }
-
-// field_common!(BabyBear);
-
-// #[inline(always)]
-// fn add_internal(a: &BabyBear, b: &BabyBear) -> BabyBear {
-//     BabyBear(a.0 + b.0)
-// }
-
-// #[inline(always)]
-// fn sub_internal(a: &BabyBear, b: &BabyBear) -> BabyBear {
-//     BabyBear(a.0 - b.0)
-// }
-
-// #[inline(always)]
-// fn mul_internal(a: &BabyBear, b: &BabyBear) -> BabyBear {
-//     BabyBear(a.0 * b.0)
-// }

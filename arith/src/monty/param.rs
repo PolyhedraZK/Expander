@@ -1,7 +1,5 @@
 use std::{fmt::Debug, hash::Hash};
 
-use crate::Field;
-
 #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 use super::avx512::PackedMontyParameters;
 

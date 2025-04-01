@@ -1,4 +1,5 @@
 //! credit: https://github.com/Plonky3/Plonky3/blob/main/monty-31/src/utils.rs
+#![allow(unused)]
 use crate::{FieldParameters, MontyParameters};
 
 /// Convert a u32 into MONTY form.
