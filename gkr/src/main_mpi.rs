@@ -1,26 +1,28 @@
 use circuit::Circuit;
 use clap::Parser;
-use config::{Config, GKRConfig, GKRScheme, PolynomialCommitmentType};
-use mpi_config::{root_println, MPIConfig};
-use std::str::FromStr;
-
-use gkr_field_config::GKRFieldConfig;
-use poly_commit::expander_pcs_init_testing_only;
-
+use config::{
+    instantiations::{
+        BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
+        GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2Orion,
+        M31ExtConfigSha2Raw,
+    },
+    Config, GKRConfig, GKRScheme, PolynomialCommitmentType,
+};
 use gkr::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
         KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT,
         KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
-    BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
-    GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2Orion, M31ExtConfigSha2Raw,
     Prover,
 };
-
-use serdes::ExpSerde;
-
 use gkr_field_config::FieldType;
+use gkr_field_config::GKRFieldConfig;
+use mpi_config::shared_mem::SharedMemory;
+use mpi_config::{root_println, MPIConfig};
+use poly_commit::expander_pcs_init_testing_only;
+use serdes::ExpSerde;
+use std::str::FromStr;
 
 /// ...
 #[derive(Parser, Debug)]
@@ -161,21 +163,30 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let pack_size = Cfg::FieldConfig::get_field_pack_size();
 
     // load circuit
-    let mut circuit = match args.circuit.as_str() {
+    let (mut circuit, mut window) = match args.circuit.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GF2_CIRCUIT),
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_M31_CIRCUIT),
-            FieldType::BN254 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_BN254_CIRCUIT)
-            }
-            FieldType::Goldilocks => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GOLDILOCKS_CIRCUIT)
-            }
+            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                KECCAK_GF2_CIRCUIT,
+                &config.mpi_config,
+            ),
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                KECCAK_M31_CIRCUIT,
+                &config.mpi_config,
+            ),
+            FieldType::BN254 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                KECCAK_BN254_CIRCUIT,
+                &config.mpi_config,
+            ),
+            FieldType::Goldilocks => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                KECCAK_GOLDILOCKS_CIRCUIT,
+                &config.mpi_config,
+            ),
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(POSEIDON_M31_CIRCUIT)
-            }
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                POSEIDON_M31_CIRCUIT,
+                &config.mpi_config,
+            ),
             _ => unreachable!(),
         },
         _ => unreachable!(),
@@ -255,6 +266,8 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
             throughput.round()
         );
     }
+    circuit.discard_control_of_shared_mem();
+    config.mpi_config.free_shared_mem(&mut window);
 }
 
 fn print_info(args: &Args) {

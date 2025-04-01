@@ -6,23 +6,27 @@ use std::{
 
 use circuit::Circuit;
 use clap::Parser;
-use config::{Config, GKRConfig, GKRScheme, PolynomialCommitmentType};
-use gkr_field_config::{FieldType, GKRFieldConfig};
-use mpi_config::MPIConfig;
-
-use poly_commit::expander_pcs_init_testing_only;
-
+use config::PolynomialCommitmentType;
+use config::{
+    instantiations::{
+        BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
+        GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2Orion,
+        M31ExtConfigSha2Raw,
+    },
+    Config, GKRConfig, GKRScheme,
+};
 use gkr::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
         KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT,
         KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
-    BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
-    GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2Orion, M31ExtConfigSha2Raw,
     Prover,
 };
-
+use gkr_field_config::FieldType;
+use gkr_field_config::GKRFieldConfig;
+use mpi_config::MPIConfig;
+use poly_commit::expander_pcs_init_testing_only;
 use serdes::ExpSerde;
 
 /// ...
@@ -171,26 +175,35 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let pack_size = Cfg::FieldConfig::get_field_pack_size();
 
     // load circuit
-    let mut circuit_template = match args.circuit.as_str() {
-        "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GF2_CIRCUIT),
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_M31_CIRCUIT),
-            FieldType::BN254 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_BN254_CIRCUIT)
-            }
-            FieldType::Goldilocks => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GOLDILOCKS_CIRCUIT)
-            }
-        },
-        "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => {
-                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(POSEIDON_M31_CIRCUIT)
-            }
-            _ => unreachable!("not supported"),
-        },
+    let mut circuit_template =
+        match args.circuit.as_str() {
+            "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
+                FieldType::GF2 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(KECCAK_GF2_CIRCUIT),
+                FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(KECCAK_M31_CIRCUIT),
+                FieldType::BN254 => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_BN254_CIRCUIT,
+                    )
+                }
+                FieldType::Goldilocks => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_GOLDILOCKS_CIRCUIT,
+                    )
+                }
+            },
+            "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
+                FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(POSEIDON_M31_CIRCUIT),
+                _ => unreachable!("not supported"),
+            },
 
-        _ => unreachable!(),
-    };
+            _ => unreachable!(),
+        };
 
     let witness_path = match args.circuit.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {

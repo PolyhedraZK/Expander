@@ -1,3 +1,6 @@
+pub mod shared_mem;
+use shared_mem::SharedMemory;
+
 use std::{cmp, fmt::Debug};
 
 use arith::Field;
@@ -7,6 +10,9 @@ use mpi::{
     topology::{Process, SimpleCommunicator},
     traits::*,
 };
+
+use mpi::ffi::*;
+use std::os::raw::c_void;
 
 #[macro_export]
 macro_rules! root_println {
@@ -291,9 +297,73 @@ impl MPIConfig {
         self.world.unwrap().process_at_rank(Self::ROOT_RANK)
     }
 
+    // Barrier is designed for mpi use only
+    // There might be some issues if used with multi-threading
     #[inline(always)]
     pub fn barrier(&self) {
-        self.world.unwrap().barrier();
+        if self.world_size > 1 {
+            self.world.unwrap().barrier();
+        }
+    }
+
+    pub fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, *mut ompi_win_t) {
+        let window_size = if self.is_root() { n_bytes } else { 0 };
+        let mut baseptr: *mut c_void = std::ptr::null_mut();
+        let mut window = std::ptr::null_mut();
+        unsafe {
+            MPI_Win_allocate_shared(
+                window_size as isize,
+                1,
+                RSMPI_INFO_NULL,
+                self.world.unwrap().as_raw(),
+                &mut baseptr as *mut *mut c_void as *mut c_void,
+                &mut window,
+            );
+            self.barrier();
+
+            if !self.is_root() {
+                let mut size = 0;
+                let mut disp_unit = 0;
+                let mut query_baseptr: *mut c_void = std::ptr::null_mut();
+                MPI_Win_shared_query(
+                    window,
+                    0,
+                    &mut size,
+                    &mut disp_unit,
+                    &mut query_baseptr as *mut *mut c_void as *mut c_void,
+                );
+                baseptr = query_baseptr;
+            }
+        }
+
+        (baseptr as *mut u8, window)
+    }
+
+    pub fn consume_obj_and_create_shared<T: SharedMemory>(
+        &self,
+        obj: Option<T>,
+    ) -> (T, *mut ompi_win_t) {
+        assert!(!self.is_root() || obj.is_some());
+
+        if self.is_root() {
+            let obj = obj.unwrap();
+            let n_bytes = obj.bytes_size();
+            let (mut ptr, window) = self.create_shared_mem(n_bytes);
+            let mut ptr_copy = ptr;
+            obj.to_memory(&mut ptr_copy);
+            self.barrier();
+            (T::from_memory(&mut ptr), window)
+        } else {
+            let (mut ptr, window) = self.create_shared_mem(0);
+            self.barrier(); // wait for root to write data
+            (T::from_memory(&mut ptr), window)
+        }
+    }
+
+    pub fn free_shared_mem(&self, window: &mut *mut ompi_win_t) {
+        unsafe {
+            MPI_Win_free(window as *mut *mut ompi_win_t);
+        }
     }
 }
 

@@ -15,6 +15,7 @@ use gkr_field_config::{
 };
 use halo2curves::bn256::{Bn256, G1Affine};
 use mersenne31::M31x16;
+use mpi_config::shared_mem::SharedMemory;
 use mpi_config::{root_println, MPIConfig};
 use poly_commit::{
     expander_pcs_init_testing_only, HyperKZGPCS, HyraxPCS, OrionPCSForGKR, RawExpanderGKR,
@@ -196,7 +197,8 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         FieldType::Goldilocks => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
         _ => unreachable!(),
     };
-    let mut circuit = Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(&circuit_path);
+    let (mut circuit, mut window) =
+        Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_path, &config.mpi_config);
     root_println!(config.mpi_config, "Circuit loaded.");
 
     let witness_path = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
@@ -316,4 +318,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         println!("Bad proof rejected.");
         println!("============== end ===============");
     }
+
+    circuit.discard_control_of_shared_mem();
+    config.mpi_config.free_shared_mem(&mut window);
 }
