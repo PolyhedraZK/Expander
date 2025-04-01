@@ -30,6 +30,15 @@ unsafe fn mod_reduce_epi32(x: uint32x4_t) -> uint32x4_t {
     vsubq_u32(x, vandq_u32(mask, PACKED_MOD))
 }
 
+#[inline]
+unsafe fn mod_reduce_epi32x4_twice(x: &[uint32x4_t; 4]) -> [uint32x4_t; 4] {
+    x.iter()
+        .map(|x| mod_reduce_epi32(mod_reduce_epi32(*x)))
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap()
+}
+
 field_common!(NeonBabyBear);
 
 impl NeonBabyBear {
@@ -43,6 +52,11 @@ impl NeonBabyBear {
             },
         }
     }
+
+    #[inline(always)]
+    pub fn is_canonical(&self) -> bool {
+        self.unpack().iter().all(|x| x.value < BABY_BEAR_MOD)
+    }
 }
 
 impl ExpSerde for NeonBabyBear {
@@ -51,12 +65,8 @@ impl ExpSerde for NeonBabyBear {
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe {
-            let data = self
-                .v
-                .iter()
-                .map(|x| mod_reduce_epi32(*x))
-                .collect::<Vec<_>>();
-            let data = transmute::<[uint32x4_t; 4], [u8; 64]>(data[..4].try_into().unwrap());
+            let data = mod_reduce_epi32x4_twice(&self.v);
+            let data = transmute::<[uint32x4_t; 4], [u8; 64]>(data);
 
             writer.write_all(&data)?;
         }
@@ -113,7 +123,20 @@ impl Field for NeonBabyBear {
         for i in 0..BABY_BEAR_PACK_SIZE {
             sample[i] = BabyBear::random_unsafe(&mut rng);
         }
-        Self::pack(&sample)
+        let r = Self::pack(&sample);
+        if !r.is_canonical() {
+            panic!("random_unsafe: output is not canonical\n{:?}", r);
+        }
+
+        r
+        // // Caution: this may not produce uniformly random elements
+        // unsafe {
+        //     let mut data = [0u8; 64];
+        //     rng.fill_bytes(&mut data);
+        //     let mut v = transmute::<[u8; 64], [uint32x4_t; 4]>(data);
+        //     v = mod_reduce_epi32x4_twice(&v);
+        //     Self { v }
+        // }
     }
 
     fn random_bool(mut rng: impl RngCore) -> Self {
@@ -200,22 +223,8 @@ impl Default for NeonBabyBear {
 impl PartialEq for NeonBabyBear {
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            transmute::<[uint32x4_t; 4], [u32; 16]>(
-                self.v
-                    .iter()
-                    .map(|x| mod_reduce_epi32(*x))
-                    .collect::<Vec<_>>()
-                    .try_into()
-                    .unwrap(),
-            ) == transmute::<[uint32x4_t; 4], [u32; 16]>(
-                other
-                    .v
-                    .iter()
-                    .map(|x| mod_reduce_epi32(*x))
-                    .collect::<Vec<_>>()
-                    .try_into()
-                    .unwrap(),
-            )
+            transmute::<[uint32x4_t; 4], [u32; 16]>(mod_reduce_epi32x4_twice(&self.v))
+                == transmute::<[uint32x4_t; 4], [u32; 16]>(mod_reduce_epi32x4_twice(&other.v))
         }
     }
 }
@@ -297,6 +306,10 @@ fn sub_internal(a: &NeonBabyBear, b: &NeonBabyBear) -> NeonBabyBear {
 
 #[inline]
 fn mul_internal(a: &NeonBabyBear, b: &NeonBabyBear) -> NeonBabyBear {
+    if !a.is_canonical() || !b.is_canonical() {
+        panic!("mul_internal: input is not canonical\n{:?}\n{:?}", a, b);
+    }
+
     NeonBabyBear {
         v: [
             p3_instructions::mul(a.v[0], b.v[0]),
@@ -317,17 +330,49 @@ impl Hash for NeonBabyBear {
 }
 
 mod p3_instructions {
-    use std::{arch::aarch64::*, mem::transmute};
+    use std::{
+        arch::{aarch64::*, asm},
+        hint::unreachable_unchecked,
+        mem::transmute,
+    };
 
-    const PACKED_P: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0x7fffffff; 4]) };
+    use super::PACKED_MOD;
+
     const PACKED_MU: int32x4_t = unsafe { transmute::<[i32; 4], int32x4_t>([-0x77ffffff; 4]) };
+
+    /// No-op. Prevents the compiler from deducing the value of the vector.
+    ///
+    /// Similar to `std::hint::black_box`, it can be used to stop the compiler applying undesirable
+    /// "optimizations". Unlike the built-in `black_box`, it does not force the value to be written
+    /// to and then read from the stack.
+    #[inline]
+    #[must_use]
+    fn confuse_compiler(x: uint32x4_t) -> uint32x4_t {
+        let y;
+        unsafe {
+            asm!(
+                "/*{0:v}*/",
+                inlateout(vreg) x => y,
+                options(nomem, nostack, preserves_flags, pure),
+            );
+            // Below tells the compiler the semantics of this so it can still do constant folding,
+            // etc. You may ask, doesn't it defeat the point of the inline asm block to
+            // tell the compiler what it does? The answer is that we still inhibit the
+            // transform we want to avoid, so apparently not. Idk, LLVM works in
+            // mysterious ways.
+            if transmute::<uint32x4_t, [u32; 4]>(x) != transmute::<uint32x4_t, [u32; 4]>(y) {
+                unreachable_unchecked();
+            }
+        }
+        y
+    }
 
     #[inline]
     #[must_use]
     pub(super) fn add(lhs: uint32x4_t, rhs: uint32x4_t) -> uint32x4_t {
         unsafe {
             let t = vaddq_u32(lhs, rhs);
-            let u = vsubq_u32(t, PACKED_P);
+            let u = vsubq_u32(t, PACKED_MOD);
             vminq_u32(t, u)
         }
     }
@@ -338,7 +383,7 @@ mod p3_instructions {
         unsafe {
             let diff = vsubq_u32(lhs, rhs);
             let underflow = vcltq_u32(lhs, rhs);
-            vmlsq_u32(diff, underflow, PACKED_P)
+            vmlsq_u32(diff, underflow, PACKED_MOD)
         }
     }
 
@@ -346,7 +391,7 @@ mod p3_instructions {
     #[must_use]
     pub(super) fn neg(val: uint32x4_t) -> uint32x4_t {
         unsafe {
-            let t = vsubq_u32(PACKED_P, val);
+            let t = vsubq_u32(PACKED_MOD, val);
             let is_zero = vceqzq_u32(val);
             vbicq_u32(t, is_zero)
         }
@@ -369,24 +414,65 @@ mod p3_instructions {
     fn get_qp_hi(lhs: int32x4_t, mu_rhs: int32x4_t) -> int32x4_t {
         unsafe {
             let q = vmulq_s32(lhs, mu_rhs);
-            vqdmulhq_s32(q, vreinterpretq_s32_u32(PACKED_P))
+            vqdmulhq_s32(q, vreinterpretq_s32_u32(PACKED_MOD))
         }
     }
 
     #[inline]
     #[must_use]
-    fn get_reduced_d(c_hi: int32x4_t, qp_hi: int32x4_t) -> uint32x4_t {
+    fn get_d(c_hi: int32x4_t, qp_hi: int32x4_t) -> int32x4_t {
+        // We want this to compile to:
+        //      shsub    res.4s, c_hi.4s, qp_hi.4s
+        // throughput: .25 cyc/vec (16 els/cyc)
+        // latency: 2 cyc
+
         unsafe {
-            let d = vreinterpretq_u32_s32(vsubq_s32(c_hi, qp_hi));
+            // Form D. Note that `c_hi` is C >> 31 and `qp_hi` is (Q P) >> 31, whereas we want
+            // (C - Q P) >> 32, so we need to subtract and divide by 2. Luckily NEON has an
+            // instruction for that! The lowest bit of `c_hi` and `qp_hi` is the same,
+            // so the division is exact.
+            vhsubq_s32(c_hi, qp_hi)
+        }
+    }
+
+
+    #[inline]
+    #[must_use]
+    fn get_reduced_d(c_hi: int32x4_t, qp_hi: int32x4_t) -> uint32x4_t {
+        // We want this to compile to:
+        //      shsub    res.4s, c_hi.4s, qp_hi.4s
+        //      cmgt     underflow.4s, qp_hi.4s, c_hi.4s
+        //      mls      res.4s, underflow.4s, P.4s
+        // throughput: .75 cyc/vec (5.33 els/cyc)
+        // latency: 5 cyc
+    
+        unsafe {
+            let d = vreinterpretq_u32_s32(get_d(c_hi, qp_hi));
+    
+            // Finally, we reduce D to canonical form. D is negative iff `c_hi > qp_hi`, so if that's the
+            // case then we add P. Note that if `c_hi > qp_hi` then `underflow` is -1, so we must
+            // _subtract_ `underflow` * P.
             let underflow = vcltq_s32(c_hi, qp_hi);
-            vmlsq_u32(d, underflow, PACKED_P)
+            vmlsq_u32(d, confuse_compiler(underflow), PACKED_MOD)
         }
     }
 
     #[inline]
     #[must_use]
     pub(super) fn mul(lhs: uint32x4_t, rhs: uint32x4_t) -> uint32x4_t {
+        // We want this to compile to:
+        //      sqdmulh  c_hi.4s, lhs.4s, rhs.4s
+        //      mul      mu_rhs.4s, rhs.4s, MU.4s
+        //      mul      q.4s, lhs.4s, mu_rhs.4s
+        //      sqdmulh  qp_hi.4s, q.4s, P.4s
+        //      shsub    res.4s, c_hi.4s, qp_hi.4s
+        //      cmgt     underflow.4s, qp_hi.4s, c_hi.4s
+        //      mls      res.4s, underflow.4s, P.4s
+        // throughput: 1.75 cyc/vec (2.29 els/cyc)
+        // latency: (lhs->) 11 cyc, (rhs->) 14 cyc
+
         unsafe {
+            // No-op. The inputs are non-negative so we're free to interpret them as signed numbers.
             let lhs = vreinterpretq_s32_u32(lhs);
             let rhs = vreinterpretq_s32_u32(rhs);
 

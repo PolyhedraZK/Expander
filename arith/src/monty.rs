@@ -8,7 +8,7 @@
 
 use std::{
     cmp::Ordering,
-    fmt::{self, Display},
+    fmt::{self, Debug, Display},
     io::{Read, Write},
     iter::{Product, Sum},
     marker::PhantomData,
@@ -42,7 +42,7 @@ mod avx256;
 #[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
 pub use avx256::PackedMontyParameters;
 
-#[derive(Clone, Copy, Default, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Default, Eq, Hash, PartialEq)]
 #[repr(transparent)] // Packed field implementations rely on this!
 pub struct MontyField31<MP: MontyParameters> {
     /// The MONTY form of the field element, saved as a positive integer less than `P`.
@@ -56,6 +56,12 @@ pub struct MontyField31<MP: MontyParameters> {
 impl<MP: FieldParameters> Display for MontyField31<MP> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", from_monty::<MP>(self.value))
+    }
+}
+
+impl<MP: FieldParameters> Debug for MontyField31<MP> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.value)
     }
 }
 
