@@ -300,7 +300,7 @@ where
 
     izip!(&mut f_gamma_s, &f_gamma_quotient_s, &f_gamma_quotient_y).for_each(
         |(f_gamma, f_gamma_quotient, f_gamma_quotient_y_i)| {
-            polynomial_add(f_gamma, -delta_x_denom, &f_gamma_quotient);
+            polynomial_add(f_gamma, -delta_x_denom, f_gamma_quotient);
             f_gamma[0] -= *f_gamma_quotient_y_i * delta_y_denom;
         },
     );

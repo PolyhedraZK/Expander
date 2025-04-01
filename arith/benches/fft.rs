@@ -23,7 +23,8 @@ fn fft_benchmark(c: &mut Criterion) {
             |b, group_size_bits| {
                 b.iter(|| {
                     let group_size = 1 << group_size_bits;
-                    black_box(Fr::fft_in_place(&mut bn254_buf[..group_size]));
+                    Fr::fft_in_place(&mut bn254_buf[..group_size]);
+                    black_box(());
                 })
             },
         );
@@ -36,7 +37,8 @@ fn fft_benchmark(c: &mut Criterion) {
             |b, group_size_bits| {
                 b.iter(|| {
                     let group_size = 1 << group_size_bits;
-                    black_box(Fr::ifft_in_place(&mut bn254_buf[..group_size]));
+                    Fr::ifft_in_place(&mut bn254_buf[..group_size]);
+                    black_box(());
                 })
             },
         );
@@ -50,11 +52,8 @@ fn fft_benchmark(c: &mut Criterion) {
                 b.iter(|| {
                     let group_size = 1 << group_size_bits;
                     let omega = Fr::two_adic_generator(*group_size_bits as usize);
-                    black_box(halo2_serial_fft(
-                        &mut bn254_buf[..group_size],
-                        omega,
-                        *group_size_bits,
-                    ));
+                    halo2_serial_fft(&mut bn254_buf[..group_size], omega, *group_size_bits);
+                    black_box(());
                 })
             },
         );

@@ -1,21 +1,15 @@
-use std::{
-    io::{Cursor, Read},
-    vec,
-};
+use std::{io::Read, vec};
 
 use arith::Field;
-use circuit::{Circuit, CircuitLayer};
-use config::{Config, GKRConfig, GKRScheme};
+use circuit::CircuitLayer;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use poly_commit::{ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString};
 use serdes::ExpSerde;
 use sumcheck::{
     GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DEGREE,
     SUMCHECK_GKR_SQUARE_DEGREE,
 };
-use transcript::{transcript_verifier_sync, Proof, Transcript};
-use utils::timer::Timer;
+use transcript::Transcript;
 
 #[inline(always)]
 pub fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(

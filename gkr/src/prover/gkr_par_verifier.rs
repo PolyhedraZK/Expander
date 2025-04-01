@@ -66,7 +66,7 @@ pub fn checkpoint_sumcheck_layer_state<C: GKRFieldConfig, T: Transcript<C::Chall
             rz1: rz1.clone(),
             r_simd: r_simd.to_vec(),
             r_mpi: r_mpi.to_vec(),
-            alpha: alpha.clone(),
+            alpha: *alpha,
         };
         let mut state_bytes = vec![];
         sumcheck_state.serialize_into(&mut state_bytes).unwrap();
