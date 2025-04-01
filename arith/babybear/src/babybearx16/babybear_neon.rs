@@ -48,7 +48,9 @@ impl NeonBabyBear {
             v: unsafe {
                 // Safety: memory representation of [x; BABY_BEAR_PACK_SIZE]
                 // is 16 u32s, which can be reinterpreted as 4 uint32x4_t.
-                transmute::<[BabyBear; BABY_BEAR_PACK_SIZE], [uint32x4_t; 4]>([x; BABY_BEAR_PACK_SIZE])
+                transmute::<[BabyBear; BABY_BEAR_PACK_SIZE], [uint32x4_t; 4]>(
+                    [x; BABY_BEAR_PACK_SIZE],
+                )
             },
         }
     }
