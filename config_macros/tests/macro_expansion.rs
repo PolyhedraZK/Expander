@@ -1,10 +1,5 @@
 use std::any::type_name;
 
-// #[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
-// use config::{FiatShamirHashType, PolynomialCommitmentType};
-// #[allow(unused_imports)] // The FieldType import is used in the macro expansion
-// use gkr_engine::FieldType;
-
 use config_macros::declare_gkr_config;
 use gf2::GF2x128;
 use gkr_engine::{
