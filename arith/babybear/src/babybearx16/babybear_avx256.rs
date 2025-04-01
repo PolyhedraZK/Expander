@@ -30,6 +30,7 @@ const PACKED_0: __m256i = unsafe { transmute([0; 8]) };
 // 1 in Montgomery form
 const PACKED_1: __m256i = unsafe { transmute([0xffffffe; 8]) };
 
+// incorrect -- this is integer form; need Montgomery form
 const PACKED_INV_2: __m256i = unsafe { transmute([0x3c000001; 8]) };
 
 const PACKED_MOD: __m256i = unsafe { transmute([BABY_BEAR_MOD; 8]) };
@@ -63,17 +64,7 @@ impl ExpSerde for AVXBabyBear {
     #[inline(always)]
     /// serialize self into bytes
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        let mut data = [0; Self::SERIALIZED_SIZE];
-        unsafe {
-            _mm256_storeu_si256(
-                data[..8].as_mut_ptr() as *mut __m256i,
-                mod_reduce_epi32(self.v[0]),
-            );
-            _mm256_storeu_si256(
-                data[8..].as_mut_ptr() as *mut __m256i,
-                mod_reduce_epi32(self.v[1]),
-            );
-        }
+        let data = unsafe { transmute::<[__m256i; 2], [u8; 64]>(self.v) };
         writer.write_all(&data)?;
         Ok(())
     }
@@ -84,8 +75,9 @@ impl ExpSerde for AVXBabyBear {
         let mut data = [0; Self::SERIALIZED_SIZE];
         reader.read_exact(&mut data)?;
         unsafe {
-            let v0 = _mm256_loadu_si256(data[..8].as_ptr() as *const __m256i);
-            let v1 = _mm256_loadu_si256(data[8..].as_ptr() as *const __m256i);
+            let value = transmute::<[u8; Self::SERIALIZED_SIZE], [__m256i; 2]>(data);
+            let v0 = mod_reduce_epi32(value[0]);
+            let v1 = mod_reduce_epi32(value[1]);
             Ok(AVXBabyBear { v: [v0, v1] })
         }
     }
@@ -108,7 +100,7 @@ impl Field for AVXBabyBear {
         v: [PACKED_INV_2, PACKED_INV_2],
     };
 
-    const FIELD_SIZE: usize = 64;
+    const FIELD_SIZE: usize = 32;
 
     const MODULUS: U256 = U256([BABY_BEAR_MOD as u128, 0]);
 
@@ -140,19 +132,29 @@ impl Field for AVXBabyBear {
     fn random_unsafe(mut rng: impl RngCore) -> Self {
         // Caution: this may not produce uniformly random elements
         unsafe {
-            let mut v0 = _mm256_setr_epi64x(
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
+            let mut v0 = _mm256_setr_epi32(
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
             );
-            let mut v1 = _mm256_setr_epi64x(
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
+            let mut v1 = _mm256_setr_epi32(
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
             );
             v0 = mod_reduce_epi32(v0);
+            v0 = mod_reduce_epi32(v0);
+            v1 = mod_reduce_epi32(v1);
             v1 = mod_reduce_epi32(v1);
             Self { v: [v0, v1] }
         }
@@ -162,17 +164,25 @@ impl Field for AVXBabyBear {
     fn random_bool(mut rng: impl RngCore) -> Self {
         // Caution: this may not produce uniformly random elements
         unsafe {
-            let v0 = _mm256_setr_epi64x(
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
+            let v0 = _mm256_setr_epi32(
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
             );
-            let v1 = _mm256_setr_epi64x(
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
+            let v1 = _mm256_setr_epi32(
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
             );
             Self { v: [v0, v1] }
         }

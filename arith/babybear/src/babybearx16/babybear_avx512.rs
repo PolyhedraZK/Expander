@@ -30,6 +30,7 @@ const PACKED_0: __m512i = unsafe { transmute([0; BABY_BEAR_PACK_SIZE]) };
 // 1 in Montgomery form
 const PACKED_1: __m512i = unsafe { transmute([0xffffffe; BABY_BEAR_PACK_SIZE]) };
 
+// incorrect -- this is integer form; need Montgomery form
 const PACKED_INV_2: __m512i = unsafe { transmute([0x3c000001; BABY_BEAR_PACK_SIZE]) };
 
 const PACKED_MOD: __m512i = unsafe { transmute([BABY_BEAR_MOD; BABY_BEAR_PACK_SIZE]) };
@@ -87,7 +88,7 @@ impl Field for AVXBabyBear {
 
     const INV_2: Self = Self { v: PACKED_INV_2 };
 
-    const FIELD_SIZE: usize = 64;
+    const FIELD_SIZE: usize = 32;
 
     const MODULUS: U256 = U256([BABY_BEAR_MOD as u128, 0]);
 
@@ -105,9 +106,9 @@ impl Field for AVXBabyBear {
     fn is_zero(&self) -> bool {
         // value is either zero or 0x7FFFFFFF
         unsafe {
-            let pcmp = _mm512_cmpeq_epi64_mask(self.v, PACKED_0);
-            let pcmp2 = _mm512_cmpeq_epi64_mask(self.v, PACKED_MOD);
-            (pcmp | pcmp2) == 0xFF
+            let pcmp = _mm512_cmpeq_epi32_mask(self.v, PACKED_0);
+            let pcmp2 = _mm512_cmpeq_epi32_mask(self.v, PACKED_MOD);
+            (pcmp | pcmp2) == 0xFFFF
         }
     }
 
@@ -115,16 +116,25 @@ impl Field for AVXBabyBear {
     fn random_unsafe(mut rng: impl RngCore) -> Self {
         // Caution: this may not produce uniformly random elements
         unsafe {
-            let mut v = _mm512_setr_epi64(
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
-                rng.gen::<i64>(),
+            let mut v = _mm512_setr_epi32(
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
+                rng.gen::<i32>(),
             );
+            v = mod_reduce_epi32(v);
             v = mod_reduce_epi32(v);
             Self { v }
         }
@@ -134,15 +144,23 @@ impl Field for AVXBabyBear {
     fn random_bool(mut rng: impl RngCore) -> Self {
         // Caution: this may not produce uniformly random elements
         unsafe {
-            let v = _mm512_setr_epi64(
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
-                rng.gen::<bool>() as i64,
+            let v = _mm512_setr_epi32(
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
+                rng.gen::<bool>() as i32,
             );
             Self { v }
         }

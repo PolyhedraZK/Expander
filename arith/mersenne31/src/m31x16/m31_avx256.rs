@@ -335,6 +335,10 @@ impl PartialEq for AVXM31 {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
+            // probablisitic -- mod_reduce_epi32 only reduces one mod;
+            // i32::MAX = 2*MOD + 1 so there is a small probability that the reduced result
+            // does not lie in the field
+
             let cmp0 = _mm256_movemask_epi8(_mm256_cmpeq_epi8(
                 mod_reduce_epi32(self.v[0]),
                 mod_reduce_epi32(other.v[0]),
