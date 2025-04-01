@@ -11,7 +11,7 @@ use sumcheck::ProverScratchPad;
 use transcript::{transcript_root_broadcast, Proof, Transcript};
 use utils::timer::Timer;
 
-use crate::{gkr_prove, gkr_square_prove, gkr_par_verifier_prove};
+use crate::{gkr_par_verifier_prove, gkr_prove, gkr_square_prove};
 
 #[cfg(feature = "grinding")]
 pub(crate) fn grind<Cfg: GKRConfig>(transcript: &mut Cfg::Transcript, config: &Config<Cfg>) {
@@ -140,23 +140,22 @@ impl<Cfg: GKRConfig> Prover<Cfg> {
         match self.config.gkr_scheme {
             GKRScheme::Vanilla => {
                 (claimed_v, rx, ry, rsimd, rmpi) =
-                gkr_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
+                    gkr_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
             }
             GKRScheme::GkrSquare => {
                 (claimed_v, rx, rsimd, rmpi) =
-                gkr_square_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
+                    gkr_square_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
             }
             GKRScheme::GKRParVerifier => {
-                (claimed_v, rx, rsimd, rmpi) =
-                gkr_par_verifier_prove(c, &mut self.sp, &mut transcript, &self.config.mpi_config);
+                (claimed_v, rx, ry, rsimd, rmpi) = gkr_par_verifier_prove(
+                    c,
+                    &mut self.sp,
+                    &mut transcript,
+                    &self.config.mpi_config,
+                );
             }
         }
-        
-        if self.config.gkr_scheme == GKRScheme::GkrSquare {
-            
-        } else {
-            
-        }
+
         gkr_prove_timer.stop();
 
         transcript_root_broadcast(&mut transcript, &self.config.mpi_config);
