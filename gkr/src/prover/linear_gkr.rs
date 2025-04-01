@@ -131,10 +131,10 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         #[cfg(feature = "grinding")]
         grind::<Cfg>(&mut transcript, &self.mpi_config);
 
-        if self.config.mpi_config.is_root() {
+        if self.mpi_config.is_root() {
             c.fill_rnd_coefs(&mut transcript);
         }
-        self.config.mpi_config.barrier();
+        self.mpi_config.barrier();
         c.evaluate();
 
         let gkr_prove_timer = Timer::new("gkr prove", self.mpi_config.is_root());

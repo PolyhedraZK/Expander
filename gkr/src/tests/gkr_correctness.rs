@@ -10,7 +10,7 @@ use env_logger;
 use gf2::GF2x128;
 use gkr_engine::{
     root_println, BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GKRScheme,
-    GoldilocksExtConfig, M31ExtConfig, MPIConfig, MPIEngine,
+    GoldilocksExtConfig, M31ExtConfig, MPIConfig, MPIEngine, SharedMemory,
 };
 use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use halo2curves::bn256::{Bn256, G1Affine};
@@ -121,12 +121,6 @@ fn test_gkr_correctness() {
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
-    declare_gkr_config!(
-        C12,
-        FieldType::Goldilocks,
-        FiatShamirHashType::SHA256,
-        PolynomialCommitmentType::Raw
-    );
 
     test_gkr_correctness_helper::<C0>(None);
     test_gkr_correctness_helper::<C1>(None);
@@ -177,7 +171,7 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
         FieldType::Goldilocks => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
         _ => unreachable!(),
     };
-    let mut circuit =
+    let (mut circuit, mut window) =
         Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_path, &mpi_config);
     root_println!(mpi_config, "Circuit loaded.");
 
@@ -204,7 +198,6 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
-            &mut rng,
         );
 
     let proving_start = Instant::now();
@@ -299,5 +292,5 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
     }
 
     circuit.discard_control_of_shared_mem();
-    config.mpi_config.free_shared_mem(&mut window);
+    mpi_config.free_shared_mem(&mut window);
 }

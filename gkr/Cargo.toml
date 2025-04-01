@@ -23,13 +23,13 @@ utils = { path = "../utils" }
 ark-std.workspace = true
 clap.workspace = true
 env_logger.workspace = true
+ethnum.workspace = true
+halo2curves.workspace = true
 log.workspace = true
 mpi.workspace = true
 rand.workspace = true
 sha2.workspace = true
-halo2curves.workspace = true
 thiserror.workspace = true
-ethnum.workspace = true
 
 # for the server
 bytes.workspace = true
@@ -40,7 +40,7 @@ tynm.workspace = true
 tiny-keccak.workspace = true
 
 [dev-dependencies]
-criterion = "0.5.1"
+criterion.workspace = true
 
 [[bin]]
 name = "gkr-mpi"

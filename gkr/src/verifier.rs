@@ -67,7 +67,7 @@ fn verify_sumcheck_step<F: FieldEngine>(
 
 #[allow(clippy::too_many_arguments)]
 fn sumcheck_verify_gkr_layer<F: FieldEngine>(
-    mpi_config: &MPIConfig,
+    proving_time_mpi_size: usize,
     layer: &CircuitLayer<F>,
     public_input: &[F::SimdCircuitField],
     challenge: &mut ExpanderDualVarChallenge<F>,
@@ -175,7 +175,7 @@ fn sumcheck_verify_gkr_layer<F: FieldEngine>(
 // todo: FIXME
 #[allow(clippy::type_complexity)]
 pub fn gkr_verify<F: FieldEngine>(
-    mpi_config: &MPIConfig,
+    proving_time_mpi_size: usize,
     circuit: &Circuit<F>,
     public_input: &[F::SimdCircuitField],
     claimed_v: &F::ChallengeField,
@@ -195,7 +195,7 @@ pub fn gkr_verify<F: FieldEngine>(
     let mut challenge = ExpanderDualVarChallenge::sample_from_transcript(
         transcript,
         circuit.layers.last().unwrap().output_var_num,
-        mpi_config.world_size(),
+        proving_time_mpi_size,
     );
 
     let mut alpha = None;
@@ -205,7 +205,7 @@ pub fn gkr_verify<F: FieldEngine>(
     let mut verified = true;
     for i in (0..layer_num).rev() {
         let cur_verified = sumcheck_verify_gkr_layer(
-            mpi_config,
+            proving_time_mpi_size,
             &circuit.layers[i],
             public_input,
             &mut challenge,
@@ -255,7 +255,8 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
     ) -> bool {
         let timer = Timer::new("verify", true);
         let proving_time_mpi_size = self.mpi_config.world_size();
-        let mut transcript = Cfg::Transcript::new();
+
+        let mut transcript = Cfg::TranscriptConfig::new();
 
         let mut cursor = Cursor::new(&proof.bytes);
 
@@ -286,7 +287,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         let verified = match Cfg::SCHEME {
             GKRScheme::Vanilla => {
                 let (mut verified, challenge, claimed_v0, claimed_v1) = gkr_verify(
-                    &self.mpi_config,
+                    proving_time_mpi_size,
                     circuit,
                     public_input,
                     claimed_v,
@@ -330,7 +331,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
             }
             GKRScheme::GkrSquare => {
                 let (mut verified, mut challenge, claimed_v) = gkr_square_verify(
-                    &proving_time_mpi_size,
+                    proving_time_mpi_size,
                     circuit,
                     public_input,
                     claimed_v,

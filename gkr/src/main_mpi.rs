@@ -13,11 +13,10 @@ use gkr::{
     M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare, M31ExtConfigSha2RawVanilla, Prover,
 };
 use gkr_engine::{
-    root_println, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType,
+    root_println, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine,
+    PolynomialCommitmentType, SharedMemory,
 };
 use poly_commit::expander_pcs_init_testing_only;
-use rand::SeedableRng;
-use rand_chacha::ChaCha12Rng;
 use serdes::ExpSerde;
 
 /// ...
@@ -105,31 +104,33 @@ fn main() {
     MPIConfig::finalize();
 }
 
-const PCS_TESTING_SEED_U64: u64 = 114514;
-
 fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
     let pack_size = <Cfg::FieldConfig as FieldEngine>::get_field_pack_size();
 
     // load circuit
-    let mut circuit = match args.circuit.as_str() {
+    let (mut circuit, mut window) = match args.circuit.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => {
-                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(KECCAK_GF2_CIRCUIT)
-            }
-            FieldType::M31 => {
-                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(KECCAK_M31_CIRCUIT)
-            }
-            FieldType::BN254 => {
-                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(KECCAK_BN254_CIRCUIT)
-            }
-            FieldType::Goldilocks => {
-                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(KECCAK_GOLDILOCKS_CIRCUIT)
-            }
+            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                KECCAK_GF2_CIRCUIT,
+                &mpi_config,
+            ),
+            FieldType::M31 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                KECCAK_M31_CIRCUIT,
+                &mpi_config,
+            ),
+            FieldType::BN254 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                KECCAK_BN254_CIRCUIT,
+                &mpi_config,
+            ),
+            FieldType::Goldilocks => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+                KECCAK_GOLDILOCKS_CIRCUIT,
+                &mpi_config,
+            ),
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 POSEIDON_M31_CIRCUIT,
-                &config.mpi_config,
+                &mpi_config,
             ),
             _ => unreachable!(),
         },
@@ -164,12 +165,10 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
     let mut prover = Prover::<Cfg>::new(mpi_config.clone());
     prover.prepare_mem(&circuit);
 
-    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
     let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
-            &mut rng,
         );
 
     // calculate the proof size
@@ -212,7 +211,7 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
         );
     }
     circuit.discard_control_of_shared_mem();
-    config.mpi_config.free_shared_mem(&mut window);
+    mpi_config.free_shared_mem(&mut window);
 }
 
 fn print_info(args: &Args) {

@@ -6,14 +6,6 @@ use std::{
 
 use circuit::Circuit;
 use clap::Parser;
-
-use gkr_engine::{
-    ExpanderPCS, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType,
-};
-use poly_commit::expander_pcs_init_testing_only;
-use rand::SeedableRng;
-use rand_chacha::ChaCha12Rng;
-
 use gkr::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
@@ -24,7 +16,10 @@ use gkr::{
     GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2OrionSquare,
     M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare, M31ExtConfigSha2RawVanilla, Prover,
 };
-
+use gkr_engine::{
+    ExpanderPCS, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType,
+};
+use poly_commit::expander_pcs_init_testing_only;
 use serdes::ExpSerde;
 
 /// ...
@@ -115,8 +110,6 @@ fn main() {
 
     MPIConfig::finalize();
 }
-
-const PCS_TESTING_SEED_U64: u64 = 114514;
 
 fn run_benchmark<'a, Cfg: GKREngine>(args: &'a Args, mpi_config: MPIConfig)
 where
