@@ -191,7 +191,7 @@ pub fn verify<Cfg: GKREngine>(
     )
 }
 
-pub async fn run_command<'a, Cfg: GKREngine + 'static>(command: &ExpanderExecArgs) {
+pub async fn run_command<Cfg: GKREngine + 'static>(command: &ExpanderExecArgs) {
     let subcommands = command.subcommands.clone();
 
     match subcommands {

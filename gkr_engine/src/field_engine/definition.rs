@@ -88,7 +88,6 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
     ///
     /// This is more efficient than the generic implementation by avoiding
     /// unnecessary conversions between field types
-
     #[inline]
     fn eval_circuit_vals_at_challenge(
         evals: &[Self::SimdCircuitField],

@@ -84,6 +84,7 @@ impl<MP: FieldParameters> MontyField31<MP> {
 
     /// Produce a u32 in range [0, P) from a field element corresponding to the true value.
     #[inline(always)]
+    #[allow(dead_code)]
     pub(crate) const fn to_u32(elem: &Self) -> u32 {
         from_monty::<MP>(elem.value)
     }
@@ -332,7 +333,10 @@ impl<MP: FieldParameters> Field for MontyField31<MP> {
     const MODULUS: U256 = U256([MP::PRIME as u128, 0]);
 
     // See test below
-    const INV_2: Self = Self::new(1006632961);
+    const INV_2: Self = Self {
+        value: 134217727,
+        _phantom: PhantomData,
+    };
 
     #[inline(always)]
     fn zero() -> Self {

@@ -15,5 +15,11 @@ pub use babybear::BabyBear;
 mod babybearx16;
 pub use babybearx16::BabyBearx16;
 
+mod babybear_ext;
+pub use babybear_ext::BabyBearExt3;
+
+mod babybear_ext3x16;
+pub use babybear_ext3x16::BabyBearExt3x16;
+
 #[cfg(test)]
 mod tests;

@@ -3,9 +3,9 @@ use arith::{
     random_simd_field_tests, Field, FieldParameters,
 };
 use ark_std::test_rng;
-use serdes::{ExpSerde, SerdeResult};
+use serdes::ExpSerde;
 
-use crate::{babybear::BabyBearParameters, BabyBear, BabyBearx16};
+use crate::{babybear::BabyBearParameters, BabyBear, BabyBearExt3, BabyBearExt3x16, BabyBearx16};
 
 // CMD: RUSTFLAGS="-C target-feature=+avx512f" cargo test --package arith --lib --
 // tests::baby_bear::test_field --exact --show-output
@@ -38,33 +38,36 @@ fn test_simd_field() {
     assert_eq!(a, b);
 }
 
-// // CMD: RUSTFLAGS="-C target-feature=+avx512f" cargo test --package arith --lib --
-// // tests::baby_bear_ext::test_field --exact --show-output
-// #[test]
-// fn test_ext_field() {
-//     // Deg 3
-//     random_field_tests::<BabyBearExt3>("Baby Bear Ext3".to_string());
-//     random_extension_field_tests::<BabyBearExt3>("Baby Bear Ext3".to_string());
+// CMD: RUSTFLAGS="-C target-feature=+avx512f" cargo test --package arith --lib --
+// tests::baby_bear_ext::test_field --exact --show-output
+#[test]
+fn test_ext_field() {
+    // Deg 3
+    random_field_tests::<BabyBearExt3>("Baby Bear Ext3".to_string());
+    random_extension_field_tests::<BabyBearExt3>("Baby Bear Ext3".to_string());
 
-//     random_field_tests::<BabyBearExt3x16>("Simd Baby Bear Ext3".to_string());
-//     random_extension_field_tests::<BabyBearExt3x16>("Simd Baby Bear Ext3".to_string());
-//     random_simd_field_tests::<BabyBearExt3x16>("Simd Baby Bear Ext3".to_string());
+    random_field_tests::<BabyBearExt3x16>("Simd Baby Bear Ext3".to_string());
+    random_extension_field_tests::<BabyBearExt3x16>("Simd Baby Bear Ext3".to_string());
+    random_simd_field_tests::<BabyBearExt3x16>("Simd Baby Bear Ext3".to_string());
 
-//     // Deg 4
-//     random_field_tests::<BabyBearExt4>("Baby Bear Ext4".to_string());
-//     random_extension_field_tests::<BabyBearExt4>("Baby Bear Ext4".to_string());
+    // // Deg 4
+    // random_field_tests::<BabyBearExt4>("Baby Bear Ext4".to_string());
+    // random_extension_field_tests::<BabyBearExt4>("Baby Bear Ext4".to_string());
 
-//     random_field_tests::<BabyBearExt4x16>("Simd Baby Bear Ext4".to_string());
-//     random_extension_field_tests::<BabyBearExt4x16>("Simd Baby Bear Ext4".to_string());
-//     random_simd_field_tests::<BabyBearExt4x16>("Simd Baby Bear Ext4".to_string());
-// }
+    // random_field_tests::<BabyBearExt4x16>("Simd Baby Bear Ext4".to_string());
+    // random_extension_field_tests::<BabyBearExt4x16>("Simd Baby Bear Ext4".to_string());
+    // random_simd_field_tests::<BabyBearExt4x16>("Simd Baby Bear Ext4".to_string());
+}
 
 #[test]
 fn baby_bear_two_inverse() {
     let two = BabyBear::new(2);
     let two_inverse = BabyBearParameters::try_inverse(&two).unwrap();
     // Display impl converts to canonical form
-    println!("2^-1 (canonical form): {two_inverse}");
+    println!(
+        "2^-1 (canonical form): {} Montgomery {:?}",
+        two_inverse, two_inverse
+    );
 
     // Check correctness
     let two = BabyBear::new(2);

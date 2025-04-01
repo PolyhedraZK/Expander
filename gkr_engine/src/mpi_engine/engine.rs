@@ -138,7 +138,7 @@ impl MPIEngine for MPIConfig {
 
                 let local_vec_u8 = transmute_vec_to_u8_bytes(local_vec);
                 let local_n_bytes = local_vec_u8.len();
-                let n_chunks = (local_n_bytes + Self::CHUNK_SIZE - 1) / Self::CHUNK_SIZE;
+                let n_chunks = (local_n_bytes + Self::CHUNK_SIZE - 1).div_ceil(Self::CHUNK_SIZE);
                 if n_chunks == 1 {
                     if self.world_rank == Self::ROOT_RANK {
                         let mut global_vec_u8 = transmute_vec_to_u8_bytes(global_vec);

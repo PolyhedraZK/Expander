@@ -36,16 +36,6 @@ impl Tree {
     }
 
     /// Builds a tree with the given leaves.
-    // #[inline]
-    // pub fn new_with_field_elements(leave_elems: &[F]) -> Self {
-    //     let leaves = leave_elems
-    //         .iter()
-    //         .map(|&leaf| Leaf { data: leaf })
-    //         .collect::<Vec<Leaf<F>>>();
-    //     Self::new_with_leaves(leaves)
-    // }
-
-    /// Builds a tree with the given leaves.
     #[inline]
     pub fn new_with_leaves(leaves: Vec<Leaf>) -> Self {
         let tree_height = log2(leaves.len() + 1);

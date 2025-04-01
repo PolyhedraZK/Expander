@@ -30,8 +30,8 @@ const PACKED_0: __m512i = unsafe { transmute([0; BABY_BEAR_PACK_SIZE]) };
 // 1 in Montgomery form
 const PACKED_1: __m512i = unsafe { transmute([0xffffffe; BABY_BEAR_PACK_SIZE]) };
 
-// incorrect -- this is integer form; need Montgomery form
-const PACKED_INV_2: __m512i = unsafe { transmute([0x3c000001; BABY_BEAR_PACK_SIZE]) };
+// 2^-1 Montgomery form
+const PACKED_INV_2: __m512i = unsafe { transmute([0x7ffffff; BABY_BEAR_PACK_SIZE]) };
 
 const PACKED_MOD: __m512i = unsafe { transmute([BABY_BEAR_MOD; BABY_BEAR_PACK_SIZE]) };
 

@@ -30,8 +30,8 @@ const PACKED_0: __m256i = unsafe { transmute([0; 8]) };
 // 1 in Montgomery form
 const PACKED_1: __m256i = unsafe { transmute([0xffffffe; 8]) };
 
-// incorrect -- this is integer form; need Montgomery form
-const PACKED_INV_2: __m256i = unsafe { transmute([0x3c000001; 8]) };
+// 2^-1 Montgomery form
+const PACKED_INV_2: __m256i = unsafe { transmute([0x7ffffff; 8]) };
 
 const PACKED_MOD: __m256i = unsafe { transmute([BABY_BEAR_MOD; 8]) };
 

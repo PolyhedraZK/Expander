@@ -92,7 +92,7 @@ where
         }
 
         let local_num_vars = poly.num_vars();
-        let pedersen_vars = (local_num_vars + 1) / 2;
+        let pedersen_vars = (local_num_vars + 1).div_ceil(2);
         let pedersen_len = 1usize << pedersen_vars;
         assert_eq!(pedersen_len, proving_key.bases.len());
 
@@ -125,7 +125,7 @@ where
         }
 
         let local_num_vars = x.local_xs().len();
-        let pedersen_vars = (local_num_vars + 1) / 2;
+        let pedersen_vars = (local_num_vars + 1).div_ceil(2);
         let pedersen_len = 1usize << pedersen_vars;
         assert_eq!(pedersen_len, verifying_key.bases.len());
 

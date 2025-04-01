@@ -41,16 +41,16 @@ impl ExpSerde for AVX256GF2_128x8 {
 
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
-        writer.write_all(transmute::<[__m256i; 4], [u8; 512]>(self.data).as_ref())?;
+        writer.write_all(unsafe { transmute::<[__m256i; 4], [u8; 128]>(self.data).as_ref() })?;
         Ok(())
     }
 
     #[inline(always)]
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> Result<AVX256GF2_128x8, SerdeError> {
-        let mut data = [0u8; 512];
+        let mut data = [0u8; 128];
         reader.read_exact(&mut data)?;
         Ok(AVX256GF2_128x8 {
-            data: transmute::<[u8; 512], [__m256i; 4]>(data),
+            data: unsafe { transmute::<[u8; 128], [__m256i; 4]>(data) },
         })
     }
 }
