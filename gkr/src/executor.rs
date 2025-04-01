@@ -14,8 +14,6 @@ use gkr_engine::{
 };
 use log::info;
 use poly_commit::expander_pcs_init_testing_only;
-use rand::SeedableRng;
-use rand_chacha::ChaCha12Rng;
 use serdes::{ExpSerde, SerdeError};
 use warp::{http::StatusCode, reply, Filter};
 
@@ -150,12 +148,10 @@ pub fn prove<Cfg: GKREngine>(
     // TODO: Read PCS setup from files
 
     let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
-    let (pcs_params, pcs_proving_key, _, mut pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
-            minimum_poly_vars,
-            &mpi_config,
-            &mut rng,
-        );
+    let (pcs_params, pcs_proving_key, _, mut pcs_scratch) = expander_pcs_init_testing_only::<
+        Cfg::FieldConfig,
+        Cfg::PCSConfig,
+    >(minimum_poly_vars, &mpi_config);
 
     println!("proving");
     prover.prove(circuit, &pcs_params, &pcs_proving_key, &mut pcs_scratch)
@@ -174,7 +170,6 @@ pub fn verify<Cfg: GKREngine>(
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
             minimum_poly_vars,
             &mpi_config,
-            &mut rng,
         );
     let verifier = crate::Verifier::<Cfg>::new(mpi_config);
     let public_input = circuit.public_input.clone();
@@ -188,7 +183,10 @@ pub fn verify<Cfg: GKREngine>(
     )
 }
 
-pub async fn run_command<'a, Cfg: GKREngine + 'static>(command: &ExpanderExecArgs) {
+pub async fn run_command<'a, Cfg: GKREngine + 'static>(
+    command: &ExpanderExecArgs,
+    mpi_config: MPIConfig,
+) {
     let subcommands = command.subcommands.clone();
 
     match subcommands {
@@ -198,7 +196,7 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(command: &ExpanderExecArg
             output_proof_file,
         } => {
             let mut circuit =
-                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file);
+                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, &mpi_config);
             let mpi_config = MPIConfig::prover_new();
             let prover = Prover::<Cfg>::new(mpi_config.clone());
 
@@ -290,7 +288,6 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(command: &ExpanderExecArg
                 expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
                     circuit.log_input_size(),
                     &prover.mpi_config,
-                    &mut rng,
                 );
 
             let circuit = Arc::new(Mutex::new(circuit));

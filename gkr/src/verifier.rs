@@ -312,7 +312,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                 );
 
                 if challenge.rz_1.is_some() {
-                    transcript_verifier_sync(&mut transcript, self.proving_time_mpi_size);
+                    transcript_verifier_sync(&mut transcript, proving_time_mpi_size);
 
                     let mut challenge_y = challenge.challenge_y();
                     verified &= self.get_pcs_opening_from_proof_and_verify(

@@ -139,6 +139,7 @@ fn _parse_scheme_config(scheme_config: ExprPath) -> String {
 ///     FieldType::M31,
 ///     FiatShamirHashType::SHA256,
 ///     PolynomialCommitmentType::Raw
+///     GKRScheme::Vanilla,
 /// );
 #[proc_macro]
 pub fn declare_gkr_config(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

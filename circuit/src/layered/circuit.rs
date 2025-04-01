@@ -3,7 +3,6 @@ use std::io::Cursor;
 
 use arith::{Field, SimdField};
 use ark_std::test_rng;
-use config::GKRConfig;
 use gkr_engine::{
     root_println, ExpanderPCS, FieldEngine, GKREngine, MPIConfig, MPIEngine,
     PolynomialCommitmentType, Transcript,
@@ -163,7 +162,7 @@ impl<C: FieldEngine> Circuit<C> {
     // This avoids the overhead of shared memory
     // No need to call discard_control_of_shared_mem() and free_shared_mem(window) after this
     #[inline(always)]
-    pub fn single_thread_prover_load_circuit<Cfg: GKRConfig<FieldConfig = C>>(
+    pub fn single_thread_prover_load_circuit<Cfg: GKREngine<FieldConfig = C>>(
         filename: &str,
     ) -> Self {
         Self::verifier_load_circuit::<Cfg>(filename)
@@ -174,7 +173,7 @@ impl<C: FieldEngine> Circuit<C> {
     // Used in the mpi case, ok if mpi_size = 1, but
     // circuit.discard_control_of_shared_mem() and mpi_config.free_shared_mem(window) should be
     // called before the end of the program
-    pub fn prover_load_circuit<Cfg: GKRConfig<FieldConfig = C>>(
+    pub fn prover_load_circuit<Cfg: GKREngine<FieldConfig = C>>(
         filename: &str,
         mpi_config: &MPIConfig,
     ) -> (Self, *mut ompi_win_t) {

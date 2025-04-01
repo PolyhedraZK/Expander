@@ -24,4 +24,4 @@ pub type GateConst<C> = Gate<C, 0>;
 
 // If I Simply add derive(Copy) to the Gate struct, the compiler does not seem to recognize it
 // for the type aliases. Explicitly state it here.
-impl<C: GKRFieldConfig, const INPUT_NUM: usize> Copy for Gate<C, INPUT_NUM> {}
+impl<C: FieldEngine, const INPUT_NUM: usize> Copy for Gate<C, INPUT_NUM> {}

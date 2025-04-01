@@ -10,7 +10,7 @@ use mpi::{
     traits::*,
 };
 
-use super::{MPIEngine, SharedMemory};
+use super::MPIEngine;
 
 #[macro_export]
 macro_rules! root_println {

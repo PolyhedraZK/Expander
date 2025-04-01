@@ -1,8 +1,7 @@
 use super::circuit::{Circuit, CircuitLayer, StructureInfo};
 use super::gates::{GateAdd, GateConst, GateMul, GateUni};
 
-use gkr_engine::FieldEngine;
-use mpi_config::shared_mem::SharedMemory;
+use gkr_engine::{FieldEngine, SharedMemory};
 
 impl<C: FieldEngine> SharedMemory for CircuitLayer<C> {
     fn bytes_size(&self) -> usize {
@@ -54,7 +53,7 @@ impl<C: FieldEngine> SharedMemory for CircuitLayer<C> {
     }
 }
 
-impl<C: GKRFieldConfig> SharedMemory for Circuit<C> {
+impl<C: FieldEngine> SharedMemory for Circuit<C> {
     fn bytes_size(&self) -> usize {
         self.layers.len().bytes_size()
             + self

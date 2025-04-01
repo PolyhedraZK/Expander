@@ -492,6 +492,7 @@ dependencies = [
  "config_macros",
  "ethnum",
  "gkr_engine",
+ "gkr_hashers",
  "log",
  "mpi",
  "poly_commit",
