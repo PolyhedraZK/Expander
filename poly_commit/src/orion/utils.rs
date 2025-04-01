@@ -270,10 +270,9 @@ impl<F: Field> SubsetSumLUTs<F> {
     }
 
     #[inline(always)]
-    pub fn lookup_and_sum<BitF, EntryF>(&self, indices: &[EntryF]) -> F
+    pub fn lookup_and_sum<EntryF>(&self, indices: &[EntryF]) -> F
     where
-        BitF: Field,
-        EntryF: SimdField<Scalar = BitF>,
+        EntryF: SimdField,
     {
         // NOTE: at least the entry field elem should have a matching field size
         // and the the entry field being a SIMD field with same packing size as
