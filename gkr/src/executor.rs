@@ -194,7 +194,7 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
             output_proof_file,
         } => {
             let (mut circuit, mut window) =
-                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, &mpi_config);
+                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, mpi_config);
             let mpi_config = MPIConfig::prover_new();
             let prover = Prover::<Cfg>::new(mpi_config.clone());
 

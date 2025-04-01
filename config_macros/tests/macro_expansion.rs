@@ -79,12 +79,6 @@ fn main() {
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
-    declare_gkr_config!(
-        GoldilocksSHA256Config,
-        FieldType::Goldilocks,
-        FiatShamirHashType::SHA256,
-        PolynomialCommitmentType::Raw
-    );
 
     print_type_name::<M31Sha256Config>();
     print_type_name::<M31PoseidonRawConfig>();
