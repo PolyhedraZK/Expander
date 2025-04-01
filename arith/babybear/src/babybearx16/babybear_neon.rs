@@ -1,32 +1,33 @@
-use crate::{field_common, BabyBear, Field, FieldSerde, FieldSerdeResult, SimdField};
-use p3_baby_bear::PackedBabyBearNeon;
-use rand::RngCore;
 use std::{
     arch::aarch64::*,
     fmt::Debug,
+    hash::{Hash, Hasher},
     io::{Read, Write},
     iter::{Product, Sum},
     mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
+use arith::{field_common, Field, SimdField};
+use ethnum::U256;
+use rand::RngCore;
+use serdes::{ExpSerde, SerdeResult};
+
+use crate::{babybear::BABY_BEAR_MOD, BabyBear};
+
 const BABY_BEAR_PACK_SIZE: usize = 16;
-
-const PACKED_0: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0; 4]) };
-
-// 1 in Montgomery form
-const PACKED_1: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0xffffffe; 4]) };
-
-// 2^-1 Montgomery form
-const PACKED_INV_2: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0x7ffffff; 4]) };
-
-const PACKED_MOD: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0x7fffffff; 4]) };
-
-const PACKED_MU: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0x88000001; 4]) };
 
 #[derive(Clone, Copy)]
 pub struct NeonBabyBear {
     pub v: [uint32x4_t; 4],
+}
+
+const PACKED_MOD: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([BABY_BEAR_MOD; 4]) };
+
+#[inline]
+unsafe fn mod_reduce_epi32(x: uint32x4_t) -> uint32x4_t {
+    let mask = vcgeq_u32(x, PACKED_MOD);
+    vsubq_u32(x, vandq_u32(mask, PACKED_MOD))
 }
 
 field_common!(NeonBabyBear);
@@ -44,22 +45,30 @@ impl NeonBabyBear {
     }
 }
 
-impl FieldSerde for NeonBabyBear {
+impl ExpSerde for NeonBabyBear {
     const SERIALIZED_SIZE: usize = (128 / 8) * 4;
 
     #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> FieldSerdeResult<()> {
-        let data = unsafe { transmute::<[uint32x4_t; 4], [u8; 64]>(self.v) };
-        writer.write_all(&data)?;
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        unsafe {
+            let data = self
+                .v
+                .iter()
+                .map(|x| mod_reduce_epi32(*x))
+                .collect::<Vec<_>>();
+            let data = transmute::<[uint32x4_t; 4], [u8; 64]>(data[..4].try_into().unwrap());
+
+            writer.write_all(&data)?;
+        }
         Ok(())
     }
 
     #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> FieldSerdeResult<Self> {
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let mut data = [0; 64];
         reader.read_exact(&mut data)?;
         unsafe {
-            Ok(NeonM31 {
+            Ok(NeonBabyBear {
                 v: transmute::<[u8; 64], [uint32x4_t; 4]>(data),
             })
         }
@@ -84,6 +93,8 @@ impl Field for NeonBabyBear {
     const INV_2: Self = Self {
         v: unsafe { transmute([BabyBear::INV_2; BABY_BEAR_PACK_SIZE]) },
     };
+
+    const MODULUS: U256 = BabyBear::MODULUS;
 
     fn zero() -> Self {
         Self::ZERO
@@ -136,9 +147,11 @@ impl Field for NeonBabyBear {
 impl SimdField for NeonBabyBear {
     type Scalar = BabyBear;
 
+    const PACK_SIZE: usize = BABY_BEAR_PACK_SIZE;
+
     #[inline]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
-        *this * *challenge
+        *self * *challenge
     }
 
     #[inline(always)]
@@ -157,11 +170,6 @@ impl SimdField for NeonBabyBear {
         let ret =
             unsafe { transmute::<[uint32x4_t; 4], [Self::Scalar; BABY_BEAR_PACK_SIZE]>(self.v) };
         ret.to_vec()
-    }
-
-    #[inline(always)]
-    fn pack_size() -> usize {
-        BABY_BEAR_PACK_SIZE
     }
 }
 
@@ -192,11 +200,27 @@ impl Default for NeonBabyBear {
 impl PartialEq for NeonBabyBear {
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            transmute::<[uint32x4_t; 4], [u32; 16]>(self.v)
-                == transmute::<[uint32x4_t; 4], [u32; 16]>(other.v)
+            transmute::<[uint32x4_t; 4], [u32; 16]>(
+                self.v
+                    .iter()
+                    .map(|x| mod_reduce_epi32(*x))
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap(),
+            ) == transmute::<[uint32x4_t; 4], [u32; 16]>(
+                other
+                    .v
+                    .iter()
+                    .map(|x| mod_reduce_epi32(*x))
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap(),
+            )
         }
     }
 }
+
+impl Eq for NeonBabyBear {}
 
 impl Mul<&BabyBear> for NeonBabyBear {
     type Output = Self;
@@ -236,54 +260,67 @@ impl Neg for NeonBabyBear {
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        unsafe {
-            let mut res = [uint32x4_t::default(); 4];
-            for i in 0..4 {
-                res[i] = p3_instructions::neg(self.v[i]);
-            }
-            Self { v: res }
+        NeonBabyBear {
+            v: [
+                p3_instructions::neg(self.v[0]),
+                p3_instructions::neg(self.v[1]),
+                p3_instructions::neg(self.v[2]),
+                p3_instructions::neg(self.v[3]),
+            ],
         }
     }
 }
 
 #[inline(always)]
 fn add_internal(a: &NeonBabyBear, b: &NeonBabyBear) -> NeonBabyBear {
-    unsafe {
-        let mut res = [uint32x4_t::default(); 4];
-        for i in 0..4 {
-            res[i] = p3_instructions::add(a.v[i], b.v[i]);
-        }
-        Self { v: res }
+    NeonBabyBear {
+        v: [
+            p3_instructions::add(a.v[0], b.v[0]),
+            p3_instructions::add(a.v[1], b.v[1]),
+            p3_instructions::add(a.v[2], b.v[2]),
+            p3_instructions::add(a.v[3], b.v[3]),
+        ],
     }
 }
 
 #[inline(always)]
 fn sub_internal(a: &NeonBabyBear, b: &NeonBabyBear) -> NeonBabyBear {
-    unsafe {
-        let mut res = [uint32x4_t::default(); 4];
-        for i in 0..4 {
-            res[i] = p3_instructions::sub(a.v[i], b.v[i]);
-        }
-        Self { v: res }
+    NeonBabyBear {
+        v: [
+            p3_instructions::sub(a.v[0], b.v[0]),
+            p3_instructions::sub(a.v[1], b.v[1]),
+            p3_instructions::sub(a.v[2], b.v[2]),
+            p3_instructions::sub(a.v[3], b.v[3]),
+        ],
     }
 }
 
 #[inline]
 fn mul_internal(a: &NeonBabyBear, b: &NeonBabyBear) -> NeonBabyBear {
-    unsafe {
-        let mut res = [uint32x4_t::default(); 4];
-        for i in 0..4 {
-            res[i] = p3_instructions::mul(a.v[i], b.v[i]);
+    NeonBabyBear {
+        v: [
+            p3_instructions::mul(a.v[0], b.v[0]),
+            p3_instructions::mul(a.v[1], b.v[1]),
+            p3_instructions::mul(a.v[2], b.v[2]),
+            p3_instructions::mul(a.v[3], b.v[3]),
+        ],
+    }
+}
+
+impl Hash for NeonBabyBear {
+    #[inline(always)]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        unsafe {
+            state.write(transmute::<[uint32x4_t; 4], [u8; 64]>(self.v).as_ref());
         }
-        Self { v: res }
     }
 }
 
 mod p3_instructions {
-    use std::arch::aarch64::*;
+    use std::{arch::aarch64::*, mem::transmute};
 
     const PACKED_P: uint32x4_t = unsafe { transmute::<[u32; 4], uint32x4_t>([0x7fffffff; 4]) };
-    const PACKED_MU: int32x4_t = unsafe { transmute::<[i32; 4], int32x4_t>([0x88000001; 4]) };
+    const PACKED_MU: int32x4_t = unsafe { transmute::<[i32; 4], int32x4_t>([-0x77ffffff; 4]) };
 
     #[inline]
     #[must_use]

@@ -39,15 +39,19 @@ impl ExpSerde for NeonGF2_128x8 {
 
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
-        writer.write_all(transmute::<[uint32x4_t; 8], [u8; 128]>(self.v).as_ref())?;
+        unsafe {
+            writer.write_all(transmute::<[uint32x4_t; 8], [u8; 128]>(self.v).as_ref())?;
+        }
         Ok(())
     }
 
     #[inline(always)]
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut res = Self::zero();
-        reader.read_exact(transmute::<[u8; 128], [uint32x4_t; 8]>(&mut res.v).as_mut_ptr())?;
-        Ok(res)
+        let mut res = [0u8; 128];
+        reader.read_exact(&mut res)?;
+
+        let res = unsafe { transmute::<[u8; 128], [uint32x4_t; 8]>(res) };
+        Ok(Self { v: res })
     }
 }
 
