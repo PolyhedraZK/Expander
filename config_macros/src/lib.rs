@@ -176,7 +176,7 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
         syn::parse_str::<syn::Type>(&polynomial_commitment_type).unwrap();
 
     let ret: TokenStream = quote! {
-        #[derive(Default, Debug, Clone, PartialEq)]
+        #[derive(Default, Debug, Clone, PartialOrd, Ord, Hash, PartialEq, Eq, Copy)]
         #visibility struct #config_name;
 
         impl GKREngine for #config_name {
