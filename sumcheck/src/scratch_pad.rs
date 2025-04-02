@@ -1,6 +1,6 @@
 //! Scratch pad for prover and verifier to store intermediate values during the sumcheck protocol.
 
-use std::{cmp::max, ptr};
+use std::cmp::max;
 
 use arith::{ExtensionField, Field};
 use circuit::Circuit;
