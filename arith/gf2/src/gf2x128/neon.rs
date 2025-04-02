@@ -113,7 +113,7 @@ impl Field for NeonGF2x128 {
 
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
-        unimplemented!("u32 for GFx128 doesn't make sense")
+        unimplemented!("self is a vector, cannot convert to u32")
     }
 
     #[inline(always)]

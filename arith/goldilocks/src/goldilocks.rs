@@ -9,7 +9,7 @@ use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::goldilocks::p2_instructions::{assume, branch_hint, reduce128, try_inverse_u64};
+use crate::goldilocks::p2_instructions::{assume, branch_hint, reduce128};
 
 // Goldilocks field modulus: 2^64 - 2^32 + 1
 pub const GOLDILOCKS_MOD: u64 = 0xFFFFFFFF00000001;
@@ -111,13 +111,8 @@ impl Field for Goldilocks {
 
     #[inline(always)]
     fn from_u256(value: U256) -> Self {
-        assert!(value < Self::MODULUS);
-        // TODO: this is a hack to get the low 64 bits of the u256
-        // TODO: we should remove the assumption that the top bits are 0s
-        let (_high, low) = value.into_words();
-        let mut v = low as u64;
-        v = mod_reduce_u64(v);
-        Goldilocks { v }
+        let v = value % Self::MODULUS;
+        Goldilocks { v: v.as_u64() }
     }
 
     #[inline(always)]
@@ -173,9 +168,57 @@ impl Goldilocks {
         res
     }
 
+    /// Squares the base N number of times and multiplies the result by the tail value.
     #[inline(always)]
+    fn exp_acc<const N: usize>(base: Goldilocks, tail: Goldilocks) -> Goldilocks {
+        base.exp_power_of_2(N) * tail
+    }
+
+    #[inline(always)]
+    // credit: https://github.com/Plonky3/Plonky3/blob/main/goldilocks/src/goldilocks.rs#L241
     fn try_inverse(&self) -> Option<Self> {
-        try_inverse_u64(&self.v).map(|v| Goldilocks { v })
+        if self.is_zero() {
+            return None;
+        }
+
+        // From Fermat's little theorem, in a prime field `F_p`, the inverse of `a` is `a^(p-2)`.
+        //
+        // compute a^(p - 2) using 72 multiplications
+        // The exponent p - 2 is represented in binary as:
+        // 0b1111111111111111111111111111111011111111111111111111111111111111
+        // Adapted from: https://github.com/facebook/winterfell/blob/d238a1/math/src/field/f64/mod.rs#L136-L164
+
+        // compute base^11
+        let t2 = self.square() * *self;
+
+        // compute base^111
+        let t3 = t2.square() * *self;
+
+        // compute base^111111 (6 ones)
+        // repeatedly square t3 3 times and multiply by t3
+        let t6 = Self::exp_acc::<3>(t3, t3);
+        let t60 = t6.square();
+        let t7 = t60 * *self;
+
+        // compute base^111111111111 (12 ones)
+        // repeatedly square t6 6 times and multiply by t6
+        let t12 = Self::exp_acc::<5>(t60, t6);
+
+        // compute base^111111111111111111111111 (24 ones)
+        // repeatedly square t12 12 times and multiply by t12
+        let t24 = Self::exp_acc::<12>(t12, t12);
+
+        // compute base^1111111111111111111111111111111 (31 ones)
+        // repeatedly square t24 6 times and multiply by t6 first. then square t30 and
+        // multiply by base
+        let t31 = Self::exp_acc::<7>(t24, t7);
+
+        // compute base^111111111111111111111111111111101111111111111111111111111111111
+        // repeatedly square t31 32 times and multiply by t31
+        let t63 = Self::exp_acc::<32>(t31, t31);
+
+        // compute base^1111111111111111111111111111111011111111111111111111111111111111
+        Some(t63.square() * *self)
     }
 
     #[inline(always)]
@@ -255,9 +298,7 @@ pub(crate) mod p2_instructions {
     use std::arch::asm;
     use std::hint::unreachable_unchecked;
 
-    use arith::Field;
-
-    use crate::{Goldilocks, EPSILON, GOLDILOCKS_MOD};
+    use crate::{Goldilocks, EPSILON};
 
     /// Reduces to a 64-bit value. The result might not be in canonical form; it could be in between
     /// the field order and `2^64`.
@@ -349,227 +390,4 @@ pub(crate) mod p2_instructions {
         (x as u64, (x >> 64) as u64)
     }
 
-    /// Try to invert an element in a prime field.
-    ///
-    /// The algorithm below is the "plus-minus-inversion" method
-    /// with an "almost Montgomery inverse" flair. See Handbook of
-    /// Elliptic and Hyperelliptic Cryptography, Algorithms 11.6
-    /// and 11.12.
-    #[allow(clippy::many_single_char_names)]
-    pub(super) fn try_inverse_u64(x: &u64) -> Option<u64> {
-        let mut f = *x;
-        let mut g = GOLDILOCKS_MOD;
-        // NB: These two are very rarely such that their absolute
-        // value exceeds (p-1)/2; we are paying the price of i128 for
-        // the whole calculation, just for the times they do
-        // though. Measurements suggest a further 10% time saving if c
-        // and d could be replaced with i64's.
-        let mut c = 1i128;
-        let mut d = 0i128;
-
-        if f == 0 {
-            return None;
-        }
-
-        // f and g must always be odd.
-        let mut k = f.trailing_zeros();
-        f >>= k;
-        if f == 1 {
-            return Some(inverse_2exp(k as usize));
-        }
-
-        // The first two iterations are unrolled. This is to handle
-        // the case where f and g are both large and f+g can
-        // overflow. log2(max{f,g}) goes down by at least one each
-        // iteration though, so after two iterations we can be sure
-        // that f+g won't overflow.
-
-        // Iteration 1:
-        safe_iteration(&mut f, &mut g, &mut c, &mut d, &mut k);
-
-        if f == 1 {
-            // c must be -1 or 1 here.
-            if c == -1 {
-                return Some(GOLDILOCKS_MOD - inverse_2exp(k as usize));
-            }
-            debug_assert!(c == 1, "bug in try_inverse_u64");
-            return Some(inverse_2exp(k as usize));
-        }
-
-        // Iteration 2:
-        safe_iteration(&mut f, &mut g, &mut c, &mut d, &mut k);
-
-        // Remaining iterations:
-        while f != 1 {
-            unsafe {
-                unsafe_iteration(&mut f, &mut g, &mut c, &mut d, &mut k);
-            }
-        }
-
-        // The following two loops adjust c so it's in the canonical range
-        // [0, F::ORDER).
-
-        // The maximum number of iterations observed here is 2; should
-        // prove this.
-        while c < 0 {
-            c += GOLDILOCKS_MOD as i128;
-        }
-
-        // The maximum number of iterations observed here is 1; should
-        // prove this.
-        while c >= GOLDILOCKS_MOD as i128 {
-            c -= GOLDILOCKS_MOD as i128;
-        }
-
-        // Precomputing the binary inverses rather than using inverse_2exp
-        // saves ~5ns on my machine.
-        let res = Goldilocks { v: c as u64 }
-            * Goldilocks {
-                v: inverse_2exp(k as usize),
-            };
-        debug_assert!(
-            Goldilocks { v: *x } * res == Goldilocks::ONE,
-            "bug in try_inverse_u64"
-        );
-        Some(res.v)
-    }
-
-    /// This is a 'safe' iteration for the modular inversion algorithm. It
-    /// is safe in the sense that it will produce the right answer even
-    /// when f + g >= 2^64.
-    #[inline(always)]
-    fn safe_iteration(f: &mut u64, g: &mut u64, c: &mut i128, d: &mut i128, k: &mut u32) {
-        if f < g {
-            std::mem::swap(f, g);
-            std::mem::swap(c, d);
-        }
-        if *f & 3 == *g & 3 {
-            // f - g = 0 (mod 4)
-            *f -= *g;
-            *c -= *d;
-
-            // kk >= 2 because f is now 0 (mod 4).
-            let kk = f.trailing_zeros();
-            *f >>= kk;
-            *d <<= kk;
-            *k += kk;
-        } else {
-            // f + g = 0 (mod 4)
-            *f = (*f >> 2) + (*g >> 2) + 1u64;
-            *c += *d;
-            let kk = f.trailing_zeros();
-            *f >>= kk;
-            *d <<= kk + 2;
-            *k += kk + 2;
-        }
-    }
-
-    /// This is an 'unsafe' iteration for the modular inversion
-    /// algorithm. It is unsafe in the sense that it might produce the
-    /// wrong answer if f + g >= 2^64.
-    #[inline(always)]
-    unsafe fn unsafe_iteration(f: &mut u64, g: &mut u64, c: &mut i128, d: &mut i128, k: &mut u32) {
-        if *f < *g {
-            std::mem::swap(f, g);
-            std::mem::swap(c, d);
-        }
-        if *f & 3 == *g & 3 {
-            // f - g = 0 (mod 4)
-            *f -= *g;
-            *c -= *d;
-        } else {
-            // f + g = 0 (mod 4)
-            *f += *g;
-            *c += *d;
-        }
-
-        // kk >= 2 because f is now 0 (mod 4).
-        let kk = f.trailing_zeros();
-        *f >>= kk;
-        *d <<= kk;
-        *k += kk;
-    }
-
-    /// Compute the inverse of 2^exp in this field.
-    #[inline]
-    fn inverse_2exp(exp: usize) -> u64 {
-        // Let p = char(F). Since 2^exp is in the prime subfield, i.e. an
-        // element of GF_p, its inverse must be as well. Thus we may add
-        // multiples of p without changing the result. In particular,
-        // 2^-exp = 2^-exp - p 2^-exp
-        //        = 2^-exp (1 - p)
-        //        = p - (p - 1) / 2^exp
-
-        // If this field's two adicity, t, is at least exp, then 2^exp divides
-        // p - 1, so this division can be done with a simple bit shift. If
-        // exp > t, we repeatedly multiply by 2^-t and reduce exp until it's in
-        // the right range.
-
-        // NB: The only reason this is split into two cases is to save
-        // the multiplication (and possible calculation of
-        // inverse_2_pow_adicity) in the usual case that exp <=
-        // TWO_ADICITY. Can remove the branch and simplify if that
-        // saving isn't worth it.
-        let res = if exp > 32 {
-            // NB: This should be a compile-time constant
-            // MODULUS - ((MODULUS - 1) >> 32)
-            let inverse_2_pow_adicity = Goldilocks {
-                v: 0xfffffffe00000002,
-            };
-
-            let mut res = inverse_2_pow_adicity;
-            let mut e = exp - 32;
-
-            while e > 32 {
-                res *= inverse_2_pow_adicity;
-                e -= 32;
-            }
-            res * Goldilocks {
-                v: GOLDILOCKS_MOD - ((GOLDILOCKS_MOD - 1) >> e),
-            }
-        } else {
-            Goldilocks {
-                v: GOLDILOCKS_MOD - ((GOLDILOCKS_MOD - 1) >> exp),
-            }
-        };
-        res.v
-    }
-
-    // pub(crate) fn sqrt_tonelli_shanks(f: &Goldilocks, tm1d2: u64) -> Option<Goldilocks> {
-    //     // w = self^((t - 1) // 2)
-    //     let w = f.exp(tm1d2 as u128);
-
-    //     let mut v = Goldilocks::S;
-    //     let mut x = w * f;
-    //     let mut b = x * w;
-
-    //     // Initialize z as the 2^S root of unity.
-    //     let mut z = Goldilocks::ROOT_OF_UNITY;
-
-    //     for max_v in (1..=Goldilocks::S).rev() {
-    //         let mut k = 1;
-    //         let mut tmp = b.square();
-    //         let mut j_less_than_v: Choice = 1.into();
-
-    //         for j in 2..max_v {
-    //             let tmp_is_one = tmp.ct_eq(&Goldilocks::ONE);
-    //             let squared = Goldilocks::conditional_select(&tmp, &z, tmp_is_one).square();
-    //             tmp = Goldilocks::conditional_select(&squared, &tmp, tmp_is_one);
-    //             let new_z = Goldilocks::conditional_select(&z, &squared, tmp_is_one);
-    //             j_less_than_v &= !j.ct_eq(&v);
-    //             k = u32::conditional_select(&j, &k, tmp_is_one);
-    //             z = Goldilocks::conditional_select(&z, &new_z, j_less_than_v);
-    //         }
-
-    //         let result = x * z;
-    //         x = Goldilocks::conditional_select(&result, &x, b.ct_eq(&Goldilocks::ONE));
-    //         z = z.square();
-    //         b *= z;
-    //         v = k;
-    //     }
-    //     CtOption::new(
-    //         x,
-    //         (x * x).ct_eq(f), // Only return Some if it's the square root.
-    //     )
-    // }
 }
