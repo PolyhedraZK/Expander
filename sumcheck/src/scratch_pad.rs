@@ -70,6 +70,7 @@ impl<C: GKRFieldConfig> ProverScratchPad<C> {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct VerifierScratchPad<C: GKRFieldConfig> {
     // ====== for evaluating cst, add and mul ======
     pub eq_evals_at_rz0: Vec<C::ChallengeField>,
@@ -95,6 +96,9 @@ pub struct VerifierScratchPad<C: GKRFieldConfig> {
     pub deg6_eval_at: [C::ChallengeField; 7],
     pub deg6_lag_denoms_inv: [C::ChallengeField; 7],
 }
+
+unsafe impl<C: GKRFieldConfig> Send for VerifierScratchPad<C> {}
+unsafe impl<C: GKRFieldConfig> Sync for VerifierScratchPad<C> {}
 
 impl<C: GKRFieldConfig> VerifierScratchPad<C> {
     pub fn new(circuit: &Circuit<C>, mpi_world_size: usize) -> Self {

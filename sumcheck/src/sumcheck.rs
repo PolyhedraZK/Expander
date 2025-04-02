@@ -37,6 +37,8 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
     Option<Vec<C::ChallengeField>>,
     Vec<C::ChallengeField>,
     Vec<C::ChallengeField>,
+    C::ChallengeField,
+    Option<C::ChallengeField>,
 ) {
     let mut helper = SumcheckGkrVanillaHelper::new(
         layer,
@@ -79,6 +81,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
     transcript.append_field_element(&vx_claim);
 
     // gkr phase 2 over variable y
+    let mut vy_claim = None;
     if !layer.structure_info.skip_sumcheck_phase_two {
         helper.prepare_y_vals();
         for i_var in 0..helper.input_var_num {
@@ -86,8 +89,8 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
             let r = transcript_io::<C::ChallengeField, T>(mpi_config, &evals, transcript);
             helper.receive_ry(i_var, r);
         }
-        let vy_claim = helper.vy_claim();
-        transcript.append_field_element(&vy_claim);
+        vy_claim = Some(helper.vy_claim());
+        transcript.append_field_element(&vy_claim.unwrap());
     }
 
     let rx = helper.rx;
@@ -99,7 +102,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
     let r_simd = helper.r_simd_var;
     let r_mpi = helper.r_mpi_var;
 
-    (rx, ry, r_simd, r_mpi)
+    (rx, ry, r_simd, r_mpi, vx_claim, vy_claim)
 }
 
 // FIXME

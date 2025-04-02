@@ -9,13 +9,18 @@ use utils::timer::Timer;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SumcheckLayerState<C: GKRFieldConfig> {
-    transcript_state: Vec<u8>,
-    rz0: Vec<C::ChallengeField>,
-    rz1: Option<Vec<C::ChallengeField>>,
-    r_simd: Vec<C::ChallengeField>,
-    r_mpi: Vec<C::ChallengeField>,
-    alpha: Option<C::ChallengeField>,
+    pub transcript_state: Vec<u8>,
+    pub rz0: Vec<C::ChallengeField>,
+    pub rz1: Option<Vec<C::ChallengeField>>,
+    pub r_simd: Vec<C::ChallengeField>,
+    pub r_mpi: Vec<C::ChallengeField>,
+    pub alpha: Option<C::ChallengeField>,
+    pub claimed_v0: C::ChallengeField,
+    pub claimed_v1: Option<C::ChallengeField>,
 }
+
+unsafe impl<C: GKRFieldConfig> Send for SumcheckLayerState<C> {}
+unsafe impl<C: GKRFieldConfig> Sync for SumcheckLayerState<C> {}
 
 impl<C: GKRFieldConfig> ExpSerde for SumcheckLayerState<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
@@ -27,6 +32,8 @@ impl<C: GKRFieldConfig> ExpSerde for SumcheckLayerState<C> {
         self.r_simd.serialize_into(&mut writer)?;
         self.r_mpi.serialize_into(&mut writer)?;
         self.alpha.serialize_into(&mut writer)?;
+        self.claimed_v0.serialize_into(&mut writer)?;
+        self.claimed_v1.serialize_into(&mut writer)?;
         Ok(())
     }
 
@@ -37,6 +44,8 @@ impl<C: GKRFieldConfig> ExpSerde for SumcheckLayerState<C> {
         let r_simd = Vec::deserialize_from(&mut reader)?;
         let r_mpi = Vec::deserialize_from(&mut reader)?;
         let alpha = Option::<C::ChallengeField>::deserialize_from(&mut reader)?;
+        let claimed_v0 = C::ChallengeField::deserialize_from(&mut reader)?;
+        let claimed_v1 = Option::<C::ChallengeField>::deserialize_from(&mut reader)?;
 
         Ok(Self {
             transcript_state,
@@ -45,6 +54,8 @@ impl<C: GKRFieldConfig> ExpSerde for SumcheckLayerState<C> {
             r_simd,
             r_mpi,
             alpha,
+            claimed_v0,
+            claimed_v1,
         })
     }
 }
@@ -55,6 +66,8 @@ pub fn checkpoint_sumcheck_layer_state<C: GKRFieldConfig, T: Transcript<C::Chall
     r_simd: &[C::ChallengeField],
     r_mpi: &[C::ChallengeField],
     alpha: &Option<C::ChallengeField>,
+    claimed_v0: &C::ChallengeField,
+    claimed_v1: &Option<C::ChallengeField>,
     transcript: &mut T,
     mpi_config: &MPIConfig,
 ) {
@@ -119,6 +132,8 @@ pub fn gkr_par_verifier_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField
             mpi_config,
         );
 
+    let mut claimed_v0 = claimed_v.clone();
+    let mut claimed_v1 = None;
     for i in (0..layer_num).rev() {
         let timer = Timer::new(
             &format!(
@@ -131,10 +146,10 @@ pub fn gkr_par_verifier_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField
         );
 
         checkpoint_sumcheck_layer_state::<C, _>(
-            &rz0, &rz1, &r_simd, &r_mpi, &alpha, transcript, mpi_config,
+            &rz0, &rz1, &r_simd, &r_mpi, &alpha, &claimed_v0, &claimed_v1, transcript, mpi_config,
         );
 
-        (rz0, rz1, r_simd, r_mpi) = sumcheck_prove_gkr_layer(
+        (rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = sumcheck_prove_gkr_layer(
             &circuit.layers[i],
             &rz0,
             &rz1,

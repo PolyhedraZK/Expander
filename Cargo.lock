@@ -1004,6 +1004,7 @@ dependencies = [
  "poly_commit",
  "polynomials",
  "rand",
+ "rayon",
  "serdes",
  "sha2",
  "sumcheck",
