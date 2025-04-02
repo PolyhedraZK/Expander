@@ -16,8 +16,8 @@ impl GKRVerifierHelper {
         alpha: &Option<C::ChallengeField>,
         rz0: &[C::ChallengeField],
         rz1: &Option<Vec<C::ChallengeField>>,
-        r_simd: &Vec<C::ChallengeField>,
-        r_mpi: &Vec<C::ChallengeField>,
+        r_simd: &[C::ChallengeField],
+        r_mpi: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
         is_output_layer: bool,
     ) {
@@ -59,8 +59,8 @@ impl GKRVerifierHelper {
             &mut sp.eq_evals_second_part,
         );
 
-        sp.r_simd = r_simd;
-        sp.r_mpi = r_mpi;
+        sp.r_simd = r_simd.to_vec();
+        sp.r_mpi = r_mpi.to_vec();
     }
 
     #[inline(always)]
@@ -189,10 +189,7 @@ impl GKRVerifierHelper {
         r_simd_xy: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
     ) {
-        sp.eq_r_simd_r_simd_xy = EqPolynomial::<C::ChallengeField>::eq_vec(
-            unsafe { sp.r_simd.as_ref().unwrap() },
-            r_simd_xy,
-        );
+        sp.eq_r_simd_r_simd_xy = EqPolynomial::<C::ChallengeField>::eq_vec(&sp.r_simd, r_simd_xy);
     }
 
     #[inline(always)]
@@ -200,10 +197,7 @@ impl GKRVerifierHelper {
         r_mpi_xy: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
     ) {
-        sp.eq_r_mpi_r_mpi_xy = EqPolynomial::<C::ChallengeField>::eq_vec(
-            unsafe { sp.r_mpi.as_ref().unwrap() },
-            r_mpi_xy,
-        );
+        sp.eq_r_mpi_r_mpi_xy = EqPolynomial::<C::ChallengeField>::eq_vec(&sp.r_mpi, r_mpi_xy);
     }
 
     #[inline(always)]

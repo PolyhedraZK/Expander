@@ -34,9 +34,6 @@ pub struct CircuitLayer<C: GKRFieldConfig> {
     pub structure_info: StructureInfo,
 }
 
-unsafe impl<C: GKRFieldConfig> Send for CircuitLayer<C> {}
-unsafe impl<C: GKRFieldConfig> Sync for CircuitLayer<C> {}
-
 impl<C: GKRFieldConfig> CircuitLayer<C> {
     #[inline]
     pub fn evaluate(

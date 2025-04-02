@@ -19,9 +19,6 @@ pub struct SumcheckLayerState<C: GKRFieldConfig> {
     pub claimed_v1: Option<C::ChallengeField>,
 }
 
-unsafe impl<C: GKRFieldConfig> Send for SumcheckLayerState<C> {}
-unsafe impl<C: GKRFieldConfig> Sync for SumcheckLayerState<C> {}
-
 impl<C: GKRFieldConfig> ExpSerde for SumcheckLayerState<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
@@ -60,6 +57,7 @@ impl<C: GKRFieldConfig> ExpSerde for SumcheckLayerState<C> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn checkpoint_sumcheck_layer_state<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     rz0: &[C::ChallengeField],
     rz1: &Option<Vec<C::ChallengeField>>,
@@ -80,6 +78,8 @@ pub fn checkpoint_sumcheck_layer_state<C: GKRFieldConfig, T: Transcript<C::Chall
             r_simd: r_simd.to_vec(),
             r_mpi: r_mpi.to_vec(),
             alpha: *alpha,
+            claimed_v0: *claimed_v0,
+            claimed_v1: *claimed_v1,
         };
         let mut state_bytes = vec![];
         sumcheck_state.serialize_into(&mut state_bytes).unwrap();
@@ -132,7 +132,7 @@ pub fn gkr_par_verifier_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField
             mpi_config,
         );
 
-    let mut claimed_v0 = claimed_v.clone();
+    let mut claimed_v0 = claimed_v;
     let mut claimed_v1 = None;
     for i in (0..layer_num).rev() {
         let timer = Timer::new(
@@ -146,7 +146,15 @@ pub fn gkr_par_verifier_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField
         );
 
         checkpoint_sumcheck_layer_state::<C, _>(
-            &rz0, &rz1, &r_simd, &r_mpi, &alpha, &claimed_v0, &claimed_v1, transcript, mpi_config,
+            &rz0,
+            &rz1,
+            &r_simd,
+            &r_mpi,
+            &alpha,
+            &claimed_v0,
+            &claimed_v1,
+            transcript,
+            mpi_config,
         );
 
         (rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = sumcheck_prove_gkr_layer(

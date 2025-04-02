@@ -83,8 +83,8 @@ pub struct VerifierScratchPad<C: GKRFieldConfig> {
     pub eq_evals_first_part: Vec<C::ChallengeField>,
     pub eq_evals_second_part: Vec<C::ChallengeField>,
 
-    pub r_simd: *const Vec<C::ChallengeField>,
-    pub r_mpi: *const Vec<C::ChallengeField>,
+    pub r_simd: Vec<C::ChallengeField>,
+    pub r_mpi: Vec<C::ChallengeField>,
     pub eq_r_simd_r_simd_xy: C::ChallengeField,
     pub eq_r_mpi_r_mpi_xy: C::ChallengeField,
 
@@ -96,9 +96,6 @@ pub struct VerifierScratchPad<C: GKRFieldConfig> {
     pub deg6_eval_at: [C::ChallengeField; 7],
     pub deg6_lag_denoms_inv: [C::ChallengeField; 7],
 }
-
-unsafe impl<C: GKRFieldConfig> Send for VerifierScratchPad<C> {}
-unsafe impl<C: GKRFieldConfig> Sync for VerifierScratchPad<C> {}
 
 impl<C: GKRFieldConfig> VerifierScratchPad<C> {
     pub fn new(circuit: &Circuit<C>, mpi_world_size: usize) -> Self {
@@ -189,8 +186,8 @@ impl<C: GKRFieldConfig> VerifierScratchPad<C> {
                 max(max(max_io_size, simd_size), mpi_world_size)
             ],
 
-            r_simd: ptr::null(),
-            r_mpi: ptr::null(),
+            r_simd: vec![],
+            r_mpi: vec![],
             eq_r_simd_r_simd_xy: C::ChallengeField::zero(),
             eq_r_mpi_r_mpi_xy: C::ChallengeField::zero(),
 

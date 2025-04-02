@@ -10,32 +10,29 @@ use sumcheck::{VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DE
 use transcript::Transcript;
 use utils::timer::Timer;
 
-use crate::prover::gkr_par_verifier::SumcheckLayerState;
 use super::common::sumcheck_verify_gkr_layer;
+use crate::prover::gkr_par_verifier::SumcheckLayerState;
 
 pub fn parse_proof<'a, C: GKRFieldConfig>(
     circuit: &'a Circuit<C>,
     mut proof_reader: impl Read,
     mpi_config: &MPIConfig,
 ) -> Vec<(&'a CircuitLayer<C>, Vec<u8>, SumcheckLayerState<C>)> {
-    circuit.layers
+    circuit
+        .layers
         .iter()
         .rev()
-        .map(| layer| {
-            let sumcheck_layer_state = SumcheckLayerState::<C>::deserialize_from(&mut proof_reader).unwrap();
-            let proof_size_n_challenge_fields = 
-                layer.input_var_num * (!layer.structure_info.skip_sumcheck_phase_two as usize + 1) * (SUMCHECK_GKR_DEGREE + 1) // polynomials for variable x, y
+        .map(|layer| {
+            let sumcheck_layer_state =
+                SumcheckLayerState::<C>::deserialize_from(&mut proof_reader).unwrap();
+            let proof_size_n_challenge_fields = layer.input_var_num * (!layer.structure_info.skip_sumcheck_phase_two as usize + 1) * (SUMCHECK_GKR_DEGREE + 1) // polynomials for variable x, y
                 + (!layer.structure_info.skip_sumcheck_phase_two as usize + 1) // vx_claim, vy_claim
                 + (C::get_field_pack_size().ilog2() as usize + mpi_config.world_size().ilog2() as usize) * (SUMCHECK_GKR_SIMD_MPI_DEGREE + 1); // polynomials for variable simd, mpi
             let proof_size_n_bytes = proof_size_n_challenge_fields * C::ChallengeField::SIZE;
             let mut proof_bytes = vec![0u8; proof_size_n_bytes];
             proof_reader.read_exact(&mut proof_bytes).unwrap();
 
-            (
-                layer,
-                proof_bytes,
-                sumcheck_layer_state,
-            )
+            (layer, proof_bytes, sumcheck_layer_state)
         })
         .collect()
 }
@@ -46,7 +43,7 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
     mpi_config: &MPIConfig,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
-    claimed_v: &C::ChallengeField,
+    _claimed_v: &C::ChallengeField,
     transcript: &mut T,
     mut proof_reader: impl Read,
 ) -> (
@@ -61,9 +58,7 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
     let timer = Timer::new("gkr_par_verifier_verify", true);
     let sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
 
-    let layer_num = circuit.layers.len();
     let mut rz0 = vec![];
-    let mut rz1 = None;
     let mut r_simd = vec![];
     let mut r_mpi = vec![];
 
@@ -79,58 +74,41 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
         r_mpi.push(transcript.generate_challenge_field_element());
     }
 
-    let mut alpha = None;
-    let mut claimed_v0 = *claimed_v;
-    let mut claimed_v1 = None;
-
-    let mut verified = true;
-    let verification_exec_units = parse_proof(
-        circuit,
-        &mut proof_reader,
-        mpi_config,
-    );
+    let verification_exec_units = parse_proof(circuit, &mut proof_reader, mpi_config);
 
     let world_size = mpi_config.world_size();
-    verification_exec_units
+    let sumcheck_finished_states = verification_exec_units
         .par_iter()
         .enumerate()
         .map(|(i, (layer, proof_bytes, state))| {
-            
             let mut sp = sp.clone();
             let mut transcript = T::new();
             transcript.set_state(&state.transcript_state);
             let mut proof_reader = proof_bytes.as_slice();
-            let (
-                verified,
-                rz0,
-                rz1,
-                r_simd,
-                r_mpi,
-                claimed_v0,
-                claimed_v1,
-            ) = sumcheck_verify_gkr_layer(
-                &MPIConfig::new_for_verifier(world_size as i32),
-                layer,
-                public_input,
-                &rz0,
-                &rz1,
-                &r_simd,
-                &r_mpi,
-                claimed_v0,
-                claimed_v1,
-                alpha,
-                &mut proof_reader,
-                &mut transcript,
-                &mut sp,
-                i == 0,
-            ); 
+            let (verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) =
+                sumcheck_verify_gkr_layer(
+                    &MPIConfig::new_for_verifier(world_size as i32),
+                    layer,
+                    public_input,
+                    &state.rz0,
+                    &state.rz1,
+                    &state.r_simd,
+                    &state.r_mpi,
+                    state.claimed_v0,
+                    state.claimed_v1,
+                    state.alpha,
+                    &mut proof_reader,
+                    &mut transcript,
+                    &mut sp,
+                    i == 0,
+                );
 
             let alpha = if rz1.is_some() {
                 Some(transcript.generate_challenge_field_element())
             } else {
                 None
             };
-            
+
             (
                 verified,
                 SumcheckLayerState::<C> {
@@ -140,11 +118,24 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
                     r_simd: r_simd.to_vec(),
                     r_mpi: r_mpi.to_vec(),
                     alpha,
+                    claimed_v0,
+                    claimed_v1,
                 },
             )
         })
         .collect::<Vec<_>>();
 
     timer.stop();
-    unimplemented!()
+
+    let final_state = sumcheck_finished_states.last().unwrap();
+
+    (
+        final_state.0,
+        final_state.1.rz0.clone(),
+        final_state.1.rz1.clone(),
+        final_state.1.r_simd.clone(),
+        final_state.1.r_mpi.clone(),
+        final_state.1.claimed_v0,
+        final_state.1.claimed_v1,
+    )
 }
