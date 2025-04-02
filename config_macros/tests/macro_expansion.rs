@@ -1,15 +1,10 @@
 use std::any::type_name;
 
-// #[allow(unused_imports)] // The FiatShamirHashType import is used in the macro expansion
-// use config::{FiatShamirHashType, PolynomialCommitmentType};
-// #[allow(unused_imports)] // The FieldType import is used in the macro expansion
-// use gkr_engine::FieldType;
-
 use config_macros::declare_gkr_config;
 use gf2::GF2x128;
 use gkr_engine::{
-    BN254Config, FieldEngine, GF2ExtConfig, GKREngine, GKRScheme, GoldilocksExtConfig,
-    M31ExtConfig, MPIConfig,
+    BN254Config, BabyBearExtConfig, FieldEngine, GF2ExtConfig, GKREngine, GKRScheme,
+    GoldilocksExtConfig, M31ExtConfig, MPIConfig,
 };
 use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use halo2curves::bn256::Bn256;
@@ -79,6 +74,13 @@ fn main() {
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
+    declare_gkr_config!(
+        BabyBearSHA256Config,
+        FieldType::BabyBear,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw,
+        GKRScheme::Vanilla,
+    );
 
     print_type_name::<M31Sha256Config>();
     print_type_name::<M31PoseidonRawConfig>();
@@ -88,4 +90,5 @@ fn main() {
     print_type_name::<GF2Keccak256Config>();
     print_type_name::<GF2Keccak256OrionConfig>();
     print_type_name::<GoldilocksSHA256Config>();
+    print_type_name::<BabyBearSHA256Config>();
 }

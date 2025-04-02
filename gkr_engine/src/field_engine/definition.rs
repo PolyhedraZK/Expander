@@ -13,6 +13,7 @@ pub enum FieldType {
     BN254,
     GF2,
     Goldilocks,
+    BabyBear,
 }
 
 pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {

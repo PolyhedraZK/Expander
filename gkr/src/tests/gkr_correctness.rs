@@ -9,8 +9,8 @@ use config_macros::declare_gkr_config;
 use env_logger;
 use gf2::GF2x128;
 use gkr_engine::{
-    root_println, BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GKRScheme,
-    GoldilocksExtConfig, M31ExtConfig, MPIConfig, MPIEngine,
+    root_println, BN254Config, BabyBearExtConfig, FieldEngine, FieldType, GF2ExtConfig, GKREngine,
+    GKRScheme, GoldilocksExtConfig, M31ExtConfig, MPIConfig, MPIEngine,
 };
 use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use halo2curves::bn256::{Bn256, G1Affine};
@@ -124,6 +124,13 @@ fn test_gkr_correctness() {
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
+    declare_gkr_config!(
+        C13,
+        FieldType::BabyBear,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw,
+        GKRScheme::Vanilla,
+    );
 
     test_gkr_correctness_helper::<C0>(None);
     test_gkr_correctness_helper::<C1>(None);
@@ -138,6 +145,7 @@ fn test_gkr_correctness() {
     test_gkr_correctness_helper::<C10>(None);
     test_gkr_correctness_helper::<C11>(None);
     test_gkr_correctness_helper::<C12>(None);
+    test_gkr_correctness_helper::<C13>(None);
 
     MPIConfig::finalize();
 }

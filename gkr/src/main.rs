@@ -16,9 +16,10 @@ use rand_chacha::ChaCha12Rng;
 
 use gkr::{
     utils::{
-        KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
-        KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT,
-        KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
+        KECCAK_BABYBEAR_CIRCUIT, KECCAK_BABYBEAR_WITNESS, KECCAK_BN254_CIRCUIT,
+        KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS, KECCAK_GOLDILOCKS_CIRCUIT,
+        KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT,
+        POSEIDON_M31_WITNESS,
     },
     BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
     GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2OrionSquare,
@@ -140,6 +141,9 @@ where
             FieldType::Goldilocks => {
                 Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_GOLDILOCKS_CIRCUIT)
             }
+            FieldType::BabyBear => {
+                Circuit::<Cfg::FieldConfig>::load_circuit::<Cfg>(KECCAK_BABYBEAR_CIRCUIT)
+            }
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31 => {
@@ -156,6 +160,7 @@ where
             FieldType::M31 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
             FieldType::Goldilocks => KECCAK_GOLDILOCKS_WITNESS,
+            FieldType::BabyBear => KECCAK_BABYBEAR_WITNESS,
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31 => POSEIDON_M31_WITNESS,
@@ -170,8 +175,9 @@ where
         (FieldType::GF2, "keccak") => 1,
         (FieldType::M31, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
-        (FieldType::M31, "poseidon") => 120,
         (FieldType::Goldilocks, "keccak") => 2,
+        (FieldType::BabyBear, "keccak") => 2,
+        (FieldType::M31, "poseidon") => 120,
         _ => unreachable!(),
     };
 

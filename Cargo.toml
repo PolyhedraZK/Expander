@@ -2,7 +2,6 @@
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
     "arith/babybear",
-    "arith/field_hashers",
     "arith/gf2",
     "arith/gf2_128",
     "arith/goldilocks",
