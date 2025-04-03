@@ -4,7 +4,6 @@ use arith::Field;
 use circuit::CircuitLayer;
 use config::GKRScheme;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
 use serdes::ExpSerde;
 use sumcheck::{
     GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DEGREE,
@@ -53,7 +52,7 @@ pub fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
 #[allow(clippy::unnecessary_unwrap)]
 pub fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     gkr_scheme: GKRScheme,
-    mpi_config: &MPIConfig,
+    proving_time_mpi_size: usize,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
     rz0: &[C::ChallengeField],
@@ -140,7 +139,7 @@ pub fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFi
     }
     GKRVerifierHelper::set_r_simd_xy(&r_simd_xy, sp);
 
-    for _i_var in 0..mpi_config.world_size().trailing_zeros() {
+    for _i_var in 0..proving_time_mpi_size.ilog2() {
         verified &= verify_sumcheck_step::<C, T>(
             &mut proof_reader,
             SUMCHECK_GKR_SIMD_MPI_DEGREE,

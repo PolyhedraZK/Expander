@@ -41,6 +41,7 @@ impl<C: GKRConfig> Default for Verifier<C> {
 
 impl<Cfg: GKRConfig> Verifier<Cfg> {
     pub fn new(config: &Config<Cfg>) -> Self {
+        assert!(config.mpi_config.is_root());
         Verifier {
             config: config.clone(),
         }
@@ -56,6 +57,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         proof: &Proof,
     ) -> bool {
         let timer = Timer::new("verify", true);
+        let proving_time_mpi_size = self.config.mpi_config.world_size();
         let mut transcript = Cfg::Transcript::new();
 
         let mut cursor = Cursor::new(&proof.bytes);
@@ -75,18 +77,13 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         // fixed hasher, where as this function uses the transcript hasher
         transcript.append_commitment(&buffer);
 
-        // TODO: Implement a trait containing the size function,
-        // and use the following line to avoid unnecessary deserialization and serialization
-        // transcript.append_u8_slice(&proof.bytes[..commitment.size()]);
-
-        transcript_verifier_sync(&mut transcript, self.config.mpi_config.world_size());
-
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
         #[cfg(feature = "grinding")]
         grind::<Cfg>(&mut transcript, &self.config);
 
         circuit.fill_rnd_coefs(&mut transcript);
+        transcript_verifier_sync(&mut transcript, proving_time_mpi_size);
 
         let gkr_verified;
         let (rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1);
@@ -102,7 +99,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                     claimed_v0,
                     claimed_v1,
                 ) = gkr_verify(
-                    &self.config.mpi_config,
+                    proving_time_mpi_size,
                     circuit,
                     public_input,
                     claimed_v,
@@ -114,7 +111,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
             }
             GKRScheme::GkrSquare => {
                 (gkr_verified, rz0, r_simd, r_mpi, claimed_v0) = gkr_square_verify(
-                    &self.config.mpi_config,
+                    proving_time_mpi_size,
                     circuit,
                     public_input,
                     claimed_v,
@@ -136,7 +133,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
                     claimed_v0,
                     claimed_v1,
                 ) = gkr_par_verifier_verify(
-                    &self.config.mpi_config,
+                    proving_time_mpi_size,
                     circuit,
                     public_input,
                     claimed_v,

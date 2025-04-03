@@ -2,7 +2,6 @@ use std::{io::Read, vec};
 
 use circuit::Circuit;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
 use sumcheck::VerifierScratchPad;
 use transcript::Transcript;
 use utils::timer::Timer;
@@ -12,7 +11,7 @@ use super::common::sumcheck_verify_gkr_layer;
 // todo: FIXME
 #[allow(clippy::type_complexity)]
 pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    mpi_config: &MPIConfig,
+    proving_time_mpi_size: usize,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
     claimed_v: &C::ChallengeField,
@@ -28,7 +27,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     Option<C::ChallengeField>,
 ) {
     let timer = Timer::new("gkr_verify", true);
-    let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
+    let mut sp = VerifierScratchPad::<C>::new(circuit, proving_time_mpi_size);
 
     let layer_num = circuit.layers.len();
     let mut rz0 = vec![];
@@ -44,7 +43,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         r_simd.push(transcript.generate_challenge_field_element());
     }
 
-    for _ in 0..mpi_config.world_size().trailing_zeros() {
+    for _ in 0..proving_time_mpi_size.trailing_zeros() {
         r_mpi.push(transcript.generate_challenge_field_element());
     }
 
@@ -65,7 +64,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             claimed_v1,
         ) = sumcheck_verify_gkr_layer(
             config::GKRScheme::Vanilla,
-            mpi_config,
+            proving_time_mpi_size,
             &circuit.layers[i],
             public_input,
             &rz0,

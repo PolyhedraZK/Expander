@@ -7,7 +7,6 @@ use arith::Field;
 use circuit::{Circuit, CircuitLayer};
 use config::GKRScheme;
 use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
 use rayon::prelude::*;
 use serdes::ExpSerde;
 use sumcheck::{VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DEGREE};
@@ -17,11 +16,11 @@ use utils::timer::Timer;
 use super::common::sumcheck_verify_gkr_layer;
 use crate::prover::gkr_par_verifier::SumcheckLayerState;
 
-pub fn parse_proof<'a, C: GKRFieldConfig>(
-    circuit: &'a Circuit<C>,
+pub fn parse_proof<C: GKRFieldConfig>(
+    circuit: &Circuit<C>,
     mut proof_reader: impl Read,
-    mpi_config: &MPIConfig,
-) -> Vec<(&'a CircuitLayer<C>, Vec<u8>, SumcheckLayerState<C>)> {
+    proving_time_mpi_size: usize,
+) -> Vec<(&CircuitLayer<C>, Vec<u8>, SumcheckLayerState<C>)> {
     circuit
         .layers
         .iter()
@@ -32,7 +31,7 @@ pub fn parse_proof<'a, C: GKRFieldConfig>(
 
             let proof_size_n_challenge_fields = layer.input_var_num * (!layer.structure_info.skip_sumcheck_phase_two as usize + 1) * (SUMCHECK_GKR_DEGREE + 1) // polynomials for variable x, y
                 + (!layer.structure_info.skip_sumcheck_phase_two as usize + 1) // vx_claim, vy_claim
-                + (C::get_field_pack_size().ilog2() as usize + mpi_config.world_size().ilog2() as usize) * (SUMCHECK_GKR_SIMD_MPI_DEGREE + 1); // polynomials for variable simd, mpi
+                + (C::get_field_pack_size().ilog2() as usize + proving_time_mpi_size.ilog2() as usize) * (SUMCHECK_GKR_SIMD_MPI_DEGREE + 1); // polynomials for variable simd, mpi
             let proof_size_n_bytes = proof_size_n_challenge_fields * C::ChallengeField::SIZE;
             let mut proof_bytes = vec![0u8; proof_size_n_bytes];
             proof_reader.read_exact(&mut proof_bytes).unwrap();
@@ -45,7 +44,7 @@ pub fn parse_proof<'a, C: GKRFieldConfig>(
 // todo: FIXME
 #[allow(clippy::type_complexity)]
 pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    mpi_config: &MPIConfig,
+    proving_time_mpi_size: usize,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
     claimed_v: &C::ChallengeField,
@@ -61,7 +60,7 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
     Option<C::ChallengeField>,
 ) {
     let timer = Timer::new("gkr_par_verifier_verify", true);
-    let sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
+    let sp = VerifierScratchPad::<C>::new(circuit, proving_time_mpi_size);
 
     let mut rz0 = vec![];
     let mut r_simd = vec![];
@@ -75,12 +74,12 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
         r_simd.push(transcript.generate_challenge_field_element());
     }
 
-    for _ in 0..mpi_config.world_size().trailing_zeros() {
+    for _ in 0..proving_time_mpi_size.trailing_zeros() {
         r_mpi.push(transcript.generate_challenge_field_element());
     }
 
     let transcript_state = transcript.hash_and_return_state();
-    let verification_exec_units = parse_proof(circuit, &mut proof_reader, mpi_config);
+    let verification_exec_units = parse_proof(circuit, &mut proof_reader, proving_time_mpi_size);
 
     let init_state = &verification_exec_units.first().unwrap().2;
     let mut verified = init_state.transcript_state == transcript_state
@@ -92,7 +91,6 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
         && init_state.claimed_v0 == *claimed_v
         && init_state.claimed_v1.is_none();
 
-    let world_size = mpi_config.world_size();
     let sumcheck_finished_states = verification_exec_units
         .par_iter()
         .enumerate()
@@ -105,7 +103,7 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
             let (verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) =
                 sumcheck_verify_gkr_layer(
                     GKRScheme::GKRParVerifier,
-                    &MPIConfig::new_for_verifier(world_size as i32),
+                    proving_time_mpi_size,
                     layer,
                     public_input,
                     &state.rz0,

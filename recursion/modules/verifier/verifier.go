@@ -264,18 +264,18 @@ func Verify(
 		fsTranscript,
 	)
 
-	// NOTE: MPI Fiat-Shamir sync randomness
-	if mpiSize > 1 {
-		newState := fsTranscript.HashAndReturnState()
-		fsTranscript.SetState(newState)
-	}
-
 	if mpiSize > 1 {
 		log.Println("#Hashes for input: ", fsTranscript.GetCount())
 	}
 	fsTranscript.ResetCount()
 
 	originalCircuit.FillRndCoef(fsTranscript)
+
+	// NOTE: MPI Fiat-Shamir sync randomness
+	if mpiSize > 1 {
+		newState := fsTranscript.HashAndReturnState()
+		fsTranscript.SetState(newState)
+	}
 
 	log.Println("#Hashes for random gate: ", fsTranscript.GetCount())
 	fsTranscript.ResetCount()
