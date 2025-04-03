@@ -65,13 +65,26 @@ where
 
     // NOTE: check consistency in MT in the opening trees and against the commitment tree
     let world_size = 1 << mpi_point.len();
-    if !orion_mt_verify(
-        vk,
-        world_size,
-        &query_indices,
-        &proof.query_openings,
-        commitment,
-    ) {
+    {
+        if proof.merkle_cap.len() != world_size {
+            return false;
+        }
+
+        let actual_commitment = if world_size > 1 {
+            let height = 1 + mpi_point.len();
+            let (internal, _) =
+                tree::Tree::new_with_leaf_nodes(proof.merkle_cap.clone(), height as u32);
+            internal[0]
+        } else {
+            proof.merkle_cap[0]
+        };
+
+        if actual_commitment != *commitment {
+            return false;
+        }
+    }
+
+    if !orion_mt_verify(vk, &query_indices, &proof.query_openings, &proof.merkle_cap) {
         return false;
     }
 

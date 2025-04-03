@@ -112,6 +112,7 @@ impl<F: Field> ExpSerde for OrionProof<F> {
         self.eval_row.serialize_into(&mut writer)?;
         self.proximity_rows.serialize_into(&mut writer)?;
         self.query_openings.serialize_into(&mut writer)?;
+        self.merkle_cap.serialize_into(&mut writer)?;
         Ok(())
     }
 
@@ -119,10 +120,12 @@ impl<F: Field> ExpSerde for OrionProof<F> {
         let eval_row: Vec<F> = Vec::deserialize_from(&mut reader)?;
         let proximity_rows: Vec<Vec<F>> = Vec::deserialize_from(&mut reader)?;
         let query_openings: Vec<tree::RangePath> = Vec::deserialize_from(&mut reader)?;
+        let merkle_cap: Vec<Node> = Vec::deserialize_from(&mut reader)?;
         Ok(OrionProof {
             eval_row,
             proximity_rows,
             query_openings,
+            merkle_cap,
         })
     }
 }
@@ -133,16 +136,16 @@ impl ExpSerde for OrionScratchPad {
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.interleaved_alphabet_commitment
             .serialize_into(&mut writer)?;
-        self.path_prefix.serialize_into(writer)
+        self.merkle_cap.serialize_into(&mut writer)
     }
 
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
         let interleaved_alphabet_commitment = tree::Tree::deserialize_from(&mut reader)?;
-        let path_prefix: Vec<Node> = Vec::deserialize_from(&mut reader)?;
+        let merkle_cap: Vec<Node> = Vec::deserialize_from(&mut reader)?;
 
         Ok(Self {
             interleaved_alphabet_commitment,
-            path_prefix,
+            merkle_cap,
         })
     }
 }

@@ -80,7 +80,7 @@ pub type OrionCommitment = Node;
 #[derive(Clone, Debug, Default)]
 pub struct OrionScratchPad {
     pub interleaved_alphabet_commitment: tree::Tree,
-    pub path_prefix: Vec<Node>,
+    pub merkle_cap: Vec<Node>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -88,6 +88,7 @@ pub struct OrionProof<EvalF: Field> {
     pub eval_row: Vec<EvalF>,
     pub proximity_rows: Vec<Vec<EvalF>>,
     pub query_openings: Vec<tree::RangePath>,
+    pub merkle_cap: Vec<Node>,
 }
 
 #[inline(always)]
@@ -129,6 +130,8 @@ where
     scratch_pad.interleaved_alphabet_commitment =
         tree::Tree::compact_new_with_packed_field_elems(interleaved_alphabets);
 
+    scratch_pad.merkle_cap = vec![scratch_pad.interleaved_alphabet_commitment.root()];
+
     Ok(scratch_pad.interleaved_alphabet_commitment.root())
 }
 
@@ -164,15 +167,21 @@ where
 #[inline(always)]
 pub(crate) fn orion_mt_verify(
     vk: &OrionSRS,
-    world_size: usize,
     query_indices: &[usize],
     range_openings: &[tree::RangePath],
-    root: &OrionCommitment,
+    merkle_cap: &[Node],
 ) -> bool {
+    let world_size = merkle_cap.len();
     let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING * world_size;
+    let indices_per_merkle_cap = vk.codeword_len().next_power_of_two() / world_size;
+
     izip!(query_indices, range_openings).all(|(&qi, range_path)| {
         let index = qi % vk.codeword_len();
-        range_path.verify(root) && index == range_path.left / leaves_in_range_opening
+        let merkle_cap_index = index / indices_per_merkle_cap;
+        let in_sub_tree_index = index % indices_per_merkle_cap;
+
+        range_path.verify(&merkle_cap[merkle_cap_index])
+            && in_sub_tree_index == range_path.left / leaves_in_range_opening
     })
 }
 

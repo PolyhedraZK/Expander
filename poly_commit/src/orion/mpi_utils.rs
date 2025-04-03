@@ -5,7 +5,7 @@ use itertools::izip;
 use mpi_config::MPIConfig;
 use serdes::ExpSerde;
 use transcript::Transcript;
-use tree::{Leaf, Node, RangePath, Tree};
+use tree::{Node, RangePath, Tree};
 
 use crate::{
     orion::{
@@ -200,18 +200,12 @@ pub(crate) fn orion_mpi_compute_mt_root(
         }
     }
 
+    scratch_pad.merkle_cap = leaves.clone();
+
     let root = {
         let height = 1 + leaves.len().ilog2();
-        let (internal, leaves) = tree::Tree::new_with_leaf_nodes(leaves, height);
-        let dummy_tree = Tree {
-            nodes: [internal, leaves].concat(),
-            leaves: vec![Leaf::default(); mpi_config.world_size()],
-        };
-
-        let dummy_path = dummy_tree.gen_proof(mpi_config.world_rank(), height as usize);
-        scratch_pad.path_prefix = dummy_path.path_nodes;
-
-        dummy_tree.root()
+        let (internal, _) = tree::Tree::new_with_leaf_nodes(leaves, height);
+        internal[0]
     };
 
     Ok(root)
@@ -247,12 +241,9 @@ where
         .filter(|&&index| index_starts_this_world <= index && index < index_ends_this_world)
         .map(|index| {
             let left = (index - index_starts_this_world) * leaves_in_range_opening;
-            let mut range_opening = scratch_pad
+            scratch_pad
                 .interleaved_alphabet_commitment
-                .range_query(left, left + leaves_in_range_opening - 1);
-
-            range_opening.prefix_with(&scratch_pad.path_prefix, mpi_config.world_rank());
-            range_opening
+                .range_query(left, left + leaves_in_range_opening - 1)
         })
         .collect();
 

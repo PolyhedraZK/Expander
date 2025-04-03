@@ -155,6 +155,7 @@ where
         eval_row,
         proximity_rows,
         query_openings: query_openings.unwrap(),
+        merkle_cap: scratch_pad.merkle_cap.clone(),
     }
     .into()
 }
