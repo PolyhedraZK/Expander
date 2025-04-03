@@ -22,7 +22,6 @@ use rand::Rng;
 use serdes::ExpSerde;
 use sha2::Digest;
 use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
-use warp::test;
 
 use crate::{utils::*, Prover, Verifier};
 
