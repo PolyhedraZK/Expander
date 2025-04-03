@@ -1,4 +1,7 @@
-use std::{io::Read, vec};
+use std::{
+    io::{Cursor, Read},
+    vec,
+};
 
 use arith::Field;
 use circuit::{Circuit, CircuitLayer};
@@ -25,7 +28,7 @@ pub fn parse_proof<'a, C: GKRFieldConfig>(
         .map(|layer| {
             let sumcheck_layer_state =
                 SumcheckLayerState::<C>::deserialize_from(&mut proof_reader).unwrap();
-            
+
             let proof_size_n_challenge_fields = layer.input_var_num * (!layer.structure_info.skip_sumcheck_phase_two as usize + 1) * (SUMCHECK_GKR_DEGREE + 1) // polynomials for variable x, y
                 + (!layer.structure_info.skip_sumcheck_phase_two as usize + 1) // vx_claim, vy_claim
                 + (C::get_field_pack_size().ilog2() as usize + mpi_config.world_size().ilog2() as usize) * (SUMCHECK_GKR_SIMD_MPI_DEGREE + 1); // polynomials for variable simd, mpi
@@ -88,7 +91,6 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
         && init_state.claimed_v0 == *claimed_v
         && init_state.claimed_v1.is_none();
 
-    let n_layers = verification_exec_units.len();
     let world_size = mpi_config.world_size();
     let sumcheck_finished_states = verification_exec_units
         .par_iter()
@@ -97,7 +99,8 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
             let mut sp = sp.clone();
             let mut local_transcript = T::new();
             local_transcript.set_state(&state.transcript_state);
-            let mut proof_reader = proof_bytes.as_slice();
+
+            let mut cursor = Cursor::new(proof_bytes);
             let (verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) =
                 sumcheck_verify_gkr_layer(
                     &MPIConfig::new_for_verifier(world_size as i32),
@@ -110,7 +113,7 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
                     state.claimed_v0,
                     state.claimed_v1,
                     state.alpha,
-                    &mut proof_reader,
+                    &mut cursor,
                     &mut local_transcript,
                     &mut sp,
                     i == 0,
@@ -121,11 +124,6 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
             } else {
                 None
             };
-
-            println!(
-                "sumcheck_verify_gkr_layer: layer {}: {:?}",
-                n_layers - 1 - i, verified
-            );
 
             (
                 verified,

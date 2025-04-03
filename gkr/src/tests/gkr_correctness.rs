@@ -111,11 +111,6 @@ fn test_gkr_correctness() {
         PolynomialCommitmentType::Raw
     );
 
-    test_gkr_correctness_helper(
-        &Config::<C0>::new(GKRScheme::GKRParVerifier, mpi_config.clone()),
-        None,
-    );
-
     // test_gkr_correctness_helper(
     //     &Config::<C0>::new(GKRScheme::Vanilla, mpi_config.clone()),
     //     None,
@@ -168,6 +163,17 @@ fn test_gkr_correctness() {
     //     &Config::<C12>::new(GKRScheme::Vanilla, mpi_config.clone()),
     //     None,
     // );
+
+    // below are some tests for multi-core verifier
+    test_gkr_correctness_helper(
+        &Config::<C0>::new(GKRScheme::GKRParVerifier, mpi_config.clone()),
+        None,
+    );
+
+    test_gkr_correctness_helper(
+        &Config::<C0>::new(GKRScheme::GKRParVerifier, mpi_config.clone()),
+        None,
+    );
 
     MPIConfig::finalize();
 }

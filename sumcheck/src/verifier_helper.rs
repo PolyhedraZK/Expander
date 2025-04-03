@@ -19,29 +19,50 @@ impl GKRVerifierHelper {
         r_simd: &[C::ChallengeField],
         r_mpi: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
-        is_output_layer: bool,
+        _is_output_layer: bool,
     ) {
         assert_eq!(alpha.is_none(), rz1.is_none());
 
-        if is_output_layer {
+        EqPolynomial::<C::ChallengeField>::eq_eval_at(
+            rz0,
+            &C::ChallengeField::ONE,
+            &mut sp.eq_evals_at_rz0,
+            &mut sp.eq_evals_first_part,
+            &mut sp.eq_evals_second_part,
+        );
+        if alpha.is_some() && rz1.is_some() {
+            let alpha = alpha.unwrap();
             EqPolynomial::<C::ChallengeField>::eq_eval_at(
-                rz0,
+                rz1.as_ref().unwrap(),
                 &C::ChallengeField::ONE,
-                &mut sp.eq_evals_at_rz0,
+                &mut sp.eq_evals_at_rx,
                 &mut sp.eq_evals_first_part,
                 &mut sp.eq_evals_second_part,
             );
-        } else {
-            // use results from previous layer
-            let output_len = 1 << rz0.len();
-            sp.eq_evals_at_rz0[..output_len].copy_from_slice(&sp.eq_evals_at_rx[..output_len]);
-            if alpha.is_some() && rz1.is_some() {
-                let alpha = alpha.unwrap();
-                for i in 0..(1usize << layer.output_var_num) {
-                    sp.eq_evals_at_rz0[i] += alpha * sp.eq_evals_at_ry[i];
-                }
+            for i in 0..(1usize << layer.output_var_num) {
+                sp.eq_evals_at_rz0[i] += alpha * sp.eq_evals_at_rx[i];
             }
         }
+
+        // if is_output_layer {
+        //     EqPolynomial::<C::ChallengeField>::eq_eval_at(
+        //         rz0,
+        //         &C::ChallengeField::ONE,
+        //         &mut sp.eq_evals_at_rz0,
+        //         &mut sp.eq_evals_first_part,
+        //         &mut sp.eq_evals_second_part,
+        //     );
+        // } else {
+        //     // use results from previous layer
+        //     let output_len = 1 << rz0.len();
+        //     sp.eq_evals_at_rz0[..output_len].copy_from_slice(&sp.eq_evals_at_rx[..output_len]);
+        //     if alpha.is_some() && rz1.is_some() {
+        //         let alpha = alpha.unwrap();
+        //         for i in 0..(1usize << layer.output_var_num) {
+        //             sp.eq_evals_at_rz0[i] += alpha * sp.eq_evals_at_ry[i];
+        //         }
+        //     }
+        // }
 
         EqPolynomial::<C::ChallengeField>::eq_eval_at(
             r_simd,
