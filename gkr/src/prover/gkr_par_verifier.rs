@@ -7,7 +7,7 @@ use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use transcript::Transcript;
 use utils::timer::Timer;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct SumcheckLayerState<C: GKRFieldConfig> {
     pub transcript_state: Vec<u8>,
     pub rz0: Vec<C::ChallengeField>,
@@ -17,6 +17,19 @@ pub struct SumcheckLayerState<C: GKRFieldConfig> {
     pub alpha: Option<C::ChallengeField>,
     pub claimed_v0: C::ChallengeField,
     pub claimed_v1: Option<C::ChallengeField>,
+}
+
+impl<C: GKRFieldConfig> PartialEq for SumcheckLayerState<C> {
+    fn eq(&self, other: &Self) -> bool {
+        self.transcript_state == other.transcript_state
+            && self.rz0 == other.rz0
+            && self.rz1 == other.rz1
+            && self.r_simd == other.r_simd
+            && self.r_mpi == other.r_mpi
+            && self.alpha == other.alpha
+            && self.claimed_v0 == other.claimed_v0
+            && self.claimed_v1 == other.claimed_v1
+    }
 }
 
 impl<C: GKRFieldConfig> ExpSerde for SumcheckLayerState<C> {
@@ -83,6 +96,7 @@ pub fn checkpoint_sumcheck_layer_state<C: GKRFieldConfig, T: Transcript<C::Chall
         };
         let mut state_bytes = vec![];
         sumcheck_state.serialize_into(&mut state_bytes).unwrap();
+        transcript.append_u8_slice(&state_bytes);
         transcript.set_state(&transcript_state);
     }
 }
@@ -180,5 +194,6 @@ pub fn gkr_par_verifier_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField
         timer.stop();
     }
 
+    transcript.hash_and_return_state(); // trigger an additional hash to compress all the unhashed data, for ease of verification
     (claimed_v, rz0, rz1, r_simd, r_mpi)
 }
