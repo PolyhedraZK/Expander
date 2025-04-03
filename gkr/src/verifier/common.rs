@@ -2,6 +2,7 @@ use std::{io::Read, vec};
 
 use arith::Field;
 use circuit::CircuitLayer;
+use config::GKRScheme;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use serdes::ExpSerde;
@@ -51,6 +52,7 @@ pub fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
 pub fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+    gkr_scheme: GKRScheme,
     mpi_config: &MPIConfig,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
@@ -77,7 +79,25 @@ pub fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFi
     assert_eq!(rz1.is_none(), claimed_v1.is_none());
     assert_eq!(rz1.is_none(), alpha.is_none());
 
-    GKRVerifierHelper::prepare_layer(layer, &alpha, rz0, rz1, r_simd, r_mpi, sp, is_output_layer);
+    match gkr_scheme {
+        GKRScheme::GKRParVerifier => {
+            GKRVerifierHelper::prepare_layer_non_sequential(
+                layer, &alpha, rz0, rz1, r_simd, r_mpi, sp,
+            );
+        }
+        _ => {
+            GKRVerifierHelper::prepare_layer(
+                layer,
+                &alpha,
+                rz0,
+                rz1,
+                r_simd,
+                r_mpi,
+                sp,
+                is_output_layer,
+            );
+        }
+    }
 
     let var_num = layer.input_var_num;
     let simd_var_num = C::get_field_pack_size().trailing_zeros() as usize;

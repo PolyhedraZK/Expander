@@ -64,6 +64,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             claimed_v0,
             claimed_v1,
         ) = sumcheck_verify_gkr_layer(
+            config::GKRScheme::Vanilla,
             mpi_config,
             &circuit.layers[i],
             public_input,

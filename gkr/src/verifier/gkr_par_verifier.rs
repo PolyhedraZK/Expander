@@ -5,6 +5,7 @@ use std::{
 
 use arith::Field;
 use circuit::{Circuit, CircuitLayer};
+use config::GKRScheme;
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use rayon::prelude::*;
@@ -103,6 +104,7 @@ pub fn gkr_par_verifier_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeFiel
             let mut cursor = Cursor::new(proof_bytes);
             let (verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) =
                 sumcheck_verify_gkr_layer(
+                    GKRScheme::GKRParVerifier,
                     &MPIConfig::new_for_verifier(world_size as i32),
                     layer,
                     public_input,
