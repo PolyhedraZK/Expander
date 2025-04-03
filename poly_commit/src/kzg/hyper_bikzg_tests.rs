@@ -2,7 +2,8 @@ use std::iter;
 
 use arith::ExtensionField;
 use ark_std::test_rng;
-use field_hashers::MiMC5FiatShamirHasher;
+use gkr_engine::Transcript;
+use gkr_hashers::MiMC5FiatShamirHasher;
 use halo2curves::{
     bn256::{Bn256, Fr, G1Affine, G1},
     ff::Field,
@@ -12,7 +13,7 @@ use halo2curves::{
 };
 use itertools::{chain, izip};
 use polynomials::MultiLinearPoly;
-use transcript::{FieldHashTranscript, Transcript};
+use transcript::FieldHashTranscript;
 
 use crate::*;
 

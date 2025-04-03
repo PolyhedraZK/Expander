@@ -489,13 +489,12 @@ dependencies = [
  "arith",
  "ark-std 0.4.0",
  "bytes",
- "config",
  "config_macros",
  "ethnum",
- "gkr_field_config",
+ "gkr_engine",
+ "gkr_hashers",
  "log",
  "mpi",
- "mpi_config",
  "poly_commit",
  "rand",
  "serdes",
@@ -516,9 +515,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.32"
+version = "4.5.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6088f3ae8c3608d19260cd7445411865a485688711b78b5be70d78cd96136f83"
+checksum = "e958897981290da2a852763fe9cdb89cd36977a5d729023127095fa94d95e2ff"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -526,9 +525,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.32"
+version = "4.5.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22a7ef7f676155edfb82daa97f99441f3ebf4a58d5e32f295a56259f1b6facc8"
+checksum = "83b0f35019843db2160b5bb19ae09b4e6411ac33fc6a712003c33e03090e2489"
 dependencies = [
  "anstream",
  "anstyle",
@@ -571,33 +570,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "config"
-version = "0.1.0"
-dependencies = [
- "arith",
- "ark-std 0.4.0",
- "config_macros",
- "field_hashers",
- "gf2",
- "gf2_128",
- "gkr_field_config",
- "halo2curves",
- "mersenne31",
- "mpi",
- "mpi_config",
- "poly_commit",
- "thiserror",
- "transcript",
-]
-
-[[package]]
 name = "config_macros"
 version = "0.1.0"
 dependencies = [
- "config",
- "field_hashers",
  "gf2",
- "gkr_field_config",
+ "gkr_engine",
+ "gkr_hashers",
  "goldilocks",
  "halo2curves",
  "mersenne31",
@@ -704,10 +682,10 @@ name = "crosslayer_prototype"
 version = "0.1.0"
 dependencies = [
  "arith",
- "config",
  "env_logger",
  "ethnum",
- "gkr_field_config",
+ "gkr_engine",
+ "gkr_hashers",
  "log",
  "polynomials",
  "rand",
@@ -992,21 +970,19 @@ dependencies = [
  "chrono",
  "circuit",
  "clap",
- "config",
  "config_macros",
  "criterion",
  "env_logger",
  "ethnum",
- "field_hashers",
  "gf2",
  "gf2_128",
- "gkr_field_config",
+ "gkr_engine",
+ "gkr_hashers",
  "goldilocks",
  "halo2curves",
  "log",
  "mersenne31",
  "mpi",
- "mpi_config",
  "poly_commit",
  "polynomials",
  "rand",
@@ -1023,15 +999,31 @@ dependencies = [
 ]
 
 [[package]]
-name = "gkr_field_config"
+name = "gkr_engine"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std 0.4.0",
+ "field_hashers",
  "gf2",
  "gf2_128",
  "goldilocks",
  "mersenne31",
+ "mpi",
+ "polynomials",
+ "rand",
+ "serdes",
+ "thiserror",
+]
+
+[[package]]
+name = "gkr_hashers"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "halo2curves",
+ "serdes",
+ "sha2",
+ "tiny-keccak",
 ]
 
 [[package]]
@@ -1247,9 +1239,9 @@ dependencies = [
 
 [[package]]
 name = "iana-time-zone"
-version = "0.1.62"
+version = "0.1.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2fd658b06e56721792c5df4475705b6cda790e9298d19d2f8af083457bcd127"
+checksum = "b0c919e5debc312ad217002b8048a17b7d83f80703865bbfcfebb0458b0b27d8"
 dependencies = [
  "android_system_properties",
  "core-foundation-sys",
@@ -1310,9 +1302,9 @@ dependencies = [
 
 [[package]]
 name = "icu_locid_transform_data"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdc8ff3388f852bede6b579ad4e978ab004f139284d7b28715f773507b946f6e"
+checksum = "7515e6d781098bf9f7205ab3fc7e9709d34554ae0b21ddbcb5febfa4bc7df11d"
 
 [[package]]
 name = "icu_normalizer"
@@ -1334,9 +1326,9 @@ dependencies = [
 
 [[package]]
 name = "icu_normalizer_data"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8cafbf7aa791e9b22bec55a167906f9e1215fd475cd22adfcf660e03e989516"
+checksum = "c5e8338228bdc8ab83303f16b797e177953730f601a96c25d10cb3ab0daa0cb7"
 
 [[package]]
 name = "icu_properties"
@@ -1355,9 +1347,9 @@ dependencies = [
 
 [[package]]
 name = "icu_properties_data"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67a8effbc3dd3e4ba1afa8ad918d5684b8868b3b26500753effea8d2eed19569"
+checksum = "85fb8799753b75aee8d2a21d7c14d9f38921b54b3dbda10f5a3c7a7b82dba5e2"
 
 [[package]]
 name = "icu_provider"
@@ -1595,7 +1587,7 @@ dependencies = [
  "cfg-if",
  "criterion",
  "ethnum",
- "field_hashers",
+ "gkr_hashers",
  "halo2curves",
  "log",
  "rand",
@@ -1675,15 +1667,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mpi_config"
-version = "0.1.0"
-dependencies = [
- "arith",
- "mersenne31",
- "mpi",
-]
-
-[[package]]
 name = "multer"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1750,9 +1733,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.21.1"
+version = "1.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d75b0bedcc4fe52caa0e03d9f1151a323e4aa5e2d78ba3580400cd3c9e2bc4bc"
+checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 
 [[package]]
 name = "oorandom"
@@ -1894,14 +1877,13 @@ dependencies = [
  "criterion",
  "derivative",
  "ethnum",
- "field_hashers",
  "gf2",
  "gf2_128",
- "gkr_field_config",
+ "gkr_engine",
+ "gkr_hashers",
  "halo2curves",
  "itertools 0.13.0",
  "mersenne31",
- "mpi_config",
  "polynomials",
  "rand",
  "serdes",
@@ -1918,10 +1900,8 @@ dependencies = [
  "arith",
  "ark-std 0.4.0",
  "criterion",
- "gkr_field_config",
  "halo2curves",
  "itertools 0.13.0",
- "mpi_config",
  "rand",
 ]
 
@@ -2266,9 +2246,9 @@ checksum = "7fcf8323ef1faaee30a44a340193b1ac6814fd9b7b4e88e9d4519a3e4abe1cfd"
 
 [[package]]
 name = "socket2"
-version = "0.5.8"
+version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c970269d99b64e60ec3bd6ad27270092a5394c4e309314b18ae3fe575695fbe8"
+checksum = "4f5fd57c80058a56cf5c777ab8a126398ece8e442983605d280a44ce79d0edef"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
@@ -2310,11 +2290,9 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "circuit",
- "config",
  "env_logger",
- "gkr_field_config",
+ "gkr_engine",
  "log",
- "mpi_config",
  "polynomials",
  "transcript",
  "utils",
@@ -2493,9 +2471,9 @@ name = "transcript"
 version = "0.1.0"
 dependencies = [
  "arith",
- "field_hashers",
+ "gkr_engine",
+ "gkr_hashers",
  "mersenne31",
- "mpi_config",
  "serdes",
  "sha2",
  "tiny-keccak",
@@ -2617,6 +2595,7 @@ name = "utils"
 version = "0.1.0"
 dependencies = [
  "colored",
+ "halo2curves",
 ]
 
 [[package]]
@@ -2770,11 +2749,37 @@ dependencies = [
 
 [[package]]
 name = "windows-core"
-version = "0.52.0"
+version = "0.61.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33ab640c8d7e35bf8ba19b884ba838ceb4fba93a4e8c65a9059d08afcfc683d9"
+checksum = "4763c1de310c86d75a878046489e2e5ba02c649d185f21c67d4cf8a56d098980"
 dependencies = [
- "windows-targets",
+ "windows-implement",
+ "windows-interface",
+ "windows-link",
+ "windows-result",
+ "windows-strings",
+]
+
+[[package]]
+name = "windows-implement"
+version = "0.60.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a47fddd13af08290e67f4acabf4b459f647552718f683a7b415d290ac744a836"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
+]
+
+[[package]]
+name = "windows-interface"
+version = "0.59.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd9211b69f8dcdfa817bfd14bf1c97c9188afa36f4750130fcdf3f400eca9fa8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
 ]
 
 [[package]]
@@ -2782,6 +2787,24 @@ name = "windows-link"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76840935b766e1b0a05c0066835fb9ec80071d4c09a16f6bd5f7e655e3c14c38"
+
+[[package]]
+name = "windows-result"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c64fd11a4fd95df68efcfee5f44a294fe71b8bc6a91993e2791938abcc712252"
+dependencies = [
+ "windows-link",
+]
+
+[[package]]
+name = "windows-strings"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a2ba9642430ee452d5a7aa78d72907ebe8cfda358e8cb7918a2050581322f97"
+dependencies = [
+ "windows-link",
+]
 
 [[package]]
 name = "windows-sys"

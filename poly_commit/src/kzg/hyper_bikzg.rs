@@ -4,6 +4,7 @@
 use std::{io::Cursor, iter};
 
 use arith::ExtensionField;
+use gkr_engine::{MPIEngine, Transcript};
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, Group, GroupEncoding},
@@ -11,24 +12,22 @@ use halo2curves::{
     CurveAffine,
 };
 use itertools::{chain, izip};
-use mpi_config::MPIConfig;
 use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
-use transcript::{transcript_root_broadcast, transcript_verifier_sync, Transcript};
+use transcript::{transcript_root_broadcast, transcript_verifier_sync};
 
 use crate::*;
 
-pub fn coeff_form_hyper_bikzg_open<E, T>(
+pub fn coeff_form_hyper_bikzg_open<E>(
     srs: &CoefFormBiKZGLocalSRS<E>,
-    mpi_config: &MPIConfig,
+    mpi_engine: &impl MPIEngine,
     coeffs: &impl MultilinearExtension<E::Fr>,
     local_alphas: &[E::Fr],
     mpi_alphas: &[E::Fr],
-    fs_transcript: &mut T,
+    fs_transcript: &mut impl Transcript<E::Fr>,
 ) -> Option<HyperBiKZGOpening<E>>
 where
     E: MultiMillerLoop,
-    T: Transcript<E::Fr>,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     E::Fr: ExtensionField,
@@ -69,14 +68,14 @@ where
     //
 
     let mut root_gathering_folded_oracle_commits: Vec<E::G1Affine> =
-        vec![E::G1Affine::default(); mpi_config.world_size() * local_folded_x_oracle_commits.len()];
-    let mut final_evals_at_x: Vec<E::Fr> = vec![E::Fr::ZERO; mpi_config.world_size()];
+        vec![E::G1Affine::default(); mpi_engine.world_size() * local_folded_x_oracle_commits.len()];
+    let mut final_evals_at_x: Vec<E::Fr> = vec![E::Fr::ZERO; mpi_engine.world_size()];
 
-    mpi_config.gather_vec(
+    mpi_engine.gather_vec(
         &local_folded_x_oracle_commits,
         &mut root_gathering_folded_oracle_commits,
     );
-    mpi_config.gather_vec(&vec![local_final_eval_at_x], &mut final_evals_at_x);
+    mpi_engine.gather_vec(&[local_final_eval_at_x], &mut final_evals_at_x);
 
     //
     // Leader party collect oracle commitments, sum them up for folded oracles
@@ -85,7 +84,7 @@ where
     let mut folded_x_oracle_commits: Vec<E::G1Affine> = Vec::new();
     let mut y_oracle_commit: E::G1Affine = E::G1Affine::default();
 
-    if mpi_config.is_root() {
+    if mpi_engine.is_root() {
         let g1_zero = E::G1Affine::default().to_curve();
         let mut folded_x_coms_g1 = vec![g1_zero; local_folded_x_oracle_commits.len()];
 
@@ -109,7 +108,7 @@ where
     let mut folded_y_oracle_commits: Vec<E::G1Affine> = Vec::new();
     let mut folded_y_oracle_coeffs: Vec<Vec<E::Fr>> = Vec::new();
 
-    if mpi_config.is_root() {
+    if mpi_engine.is_root() {
         (folded_y_oracle_commits, folded_y_oracle_coeffs) =
             coeff_form_hyperkzg_local_poly_oracles(&srs.tau_y_srs, &final_evals_at_x, mpi_alphas);
     }
@@ -120,7 +119,7 @@ where
 
     let mut folded_oracle_commitments: Vec<E::G1Affine> = Vec::new();
 
-    if mpi_config.is_root() {
+    if mpi_engine.is_root() {
         folded_oracle_commitments = {
             let mut temp = folded_x_oracle_commits.clone();
             temp.push(y_oracle_commit);
@@ -136,7 +135,7 @@ where
         .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
     }
 
-    transcript_root_broadcast(fs_transcript, mpi_config);
+    transcript_root_broadcast(fs_transcript, mpi_engine);
 
     let beta_x = fs_transcript.generate_challenge_field_element();
     let beta_y = fs_transcript.generate_challenge_field_element();
@@ -160,7 +159,7 @@ where
     //
 
     let mut root_gathering_exported_folded_x_evals: Vec<HyperKZGExportedLocalEvals<E>> =
-        vec![local_exported_folded_x_evals.clone(); mpi_config.world_size()];
+        vec![local_exported_folded_x_evals.clone(); mpi_engine.world_size()];
     let mut root_aggregated_x_evals = HyperKZGAggregatedEvals::<E>::default();
     let mut root_folded_y_evals = HyperKZGLocalEvals::<E>::default();
 
@@ -171,11 +170,11 @@ where
             .unwrap();
 
         let mut gathering_buffer =
-            vec![0u8; mpi_config.world_size() * local_exported_folded_x_evals_bytes.len()];
+            vec![0u8; mpi_engine.world_size() * local_exported_folded_x_evals_bytes.len()];
 
-        mpi_config.gather_vec(&local_exported_folded_x_evals_bytes, &mut gathering_buffer);
+        mpi_engine.gather_vec(&local_exported_folded_x_evals_bytes, &mut gathering_buffer);
 
-        if mpi_config.is_root() {
+        if mpi_engine.is_root() {
             izip!(
                 &mut root_gathering_exported_folded_x_evals,
                 gathering_buffer.chunks(local_exported_folded_x_evals_bytes.len())
@@ -193,7 +192,7 @@ where
     // which is degree 0 for variable x, along variable y.
     //
 
-    if mpi_config.is_root() {
+    if mpi_engine.is_root() {
         root_aggregated_x_evals = HyperKZGAggregatedEvals::new_from_exported_evals(
             &root_gathering_exported_folded_x_evals,
             beta_y,
@@ -211,12 +210,12 @@ where
     // The leader party feeds all evals into RO, then sync party's transcript state
     //
 
-    if mpi_config.is_root() {
+    if mpi_engine.is_root() {
         root_aggregated_x_evals.append_to_transcript(fs_transcript);
         root_folded_y_evals.append_to_transcript(fs_transcript);
     }
 
-    transcript_root_broadcast(fs_transcript, mpi_config);
+    transcript_root_broadcast(fs_transcript, mpi_engine);
 
     let gamma = fs_transcript.generate_challenge_field_element();
 
@@ -226,9 +225,9 @@ where
     //
 
     let mut leader_gamma_aggregated_y_coeffs: Vec<E::Fr> =
-        vec![E::Fr::ZERO; mpi_config.world_size()];
+        vec![E::Fr::ZERO; mpi_engine.world_size()];
 
-    if mpi_config.is_root() {
+    if mpi_engine.is_root() {
         leader_gamma_aggregated_y_coeffs = {
             let gamma_n = gamma.pow_vartime([local_alphas.len() as u64]);
             let mut temp = coeff_form_hyperkzg_local_oracle_polys_aggregate::<E>(
@@ -248,7 +247,7 @@ where
             .serialize_into(&mut serialized_y_coeffs)
             .unwrap();
 
-        mpi_config.root_broadcast_bytes(&mut serialized_y_coeffs);
+        mpi_engine.root_broadcast_bytes(&mut serialized_y_coeffs);
         leader_gamma_aggregated_y_coeffs = {
             let mut cursor = Cursor::new(serialized_y_coeffs);
             Vec::deserialize_from(&mut cursor).unwrap()
@@ -269,7 +268,7 @@ where
             gamma,
         );
 
-        f_gamma_local[0] += leader_gamma_aggregated_y_coeffs[mpi_config.world_rank()];
+        f_gamma_local[0] += leader_gamma_aggregated_y_coeffs[mpi_engine.world_rank()];
         f_gamma_local
     };
 
@@ -277,7 +276,7 @@ where
         let mut local_degree_2 =
             local_folded_x_evals.interpolate_degree2_aggregated_evals(beta_x, gamma);
 
-        local_degree_2[0] += leader_gamma_aggregated_y_coeffs[mpi_config.world_rank()];
+        local_degree_2[0] += leader_gamma_aggregated_y_coeffs[mpi_engine.world_rank()];
         local_degree_2
     };
 
@@ -296,15 +295,15 @@ where
     //
 
     let mut root_gathering_gamma_aggregated_x_quotient_commitment_g1s: Vec<E::G1> =
-        vec![E::G1::generator(); mpi_config.world_size()];
-    mpi_config.gather_vec(
-        &vec![local_gamma_aggregated_x_quotient_commitment_g1],
+        vec![E::G1::generator(); mpi_engine.world_size()];
+    mpi_engine.gather_vec(
+        &[local_gamma_aggregated_x_quotient_commitment_g1],
         &mut root_gathering_gamma_aggregated_x_quotient_commitment_g1s,
     );
 
     let mut gamma_aggregated_x_quotient_commitment: E::G1Affine = E::G1Affine::default();
 
-    if mpi_config.is_root() {
+    if mpi_engine.is_root() {
         gamma_aggregated_x_quotient_commitment =
             root_gathering_gamma_aggregated_x_quotient_commitment_g1s
                 .iter()
@@ -314,7 +313,7 @@ where
         fs_transcript.append_u8_slice(gamma_aggregated_x_quotient_commitment.to_bytes().as_ref());
     }
 
-    transcript_root_broadcast(fs_transcript, mpi_config);
+    transcript_root_broadcast(fs_transcript, mpi_engine);
 
     let delta_x = fs_transcript.generate_challenge_field_element();
 
@@ -322,14 +321,14 @@ where
     // Locally compute the Lagrange-degree2 interpolation at delta_x, pool at leader
     //
 
-    let mut degree2_evals_at_delta_x: Vec<E::Fr> = vec![E::Fr::ZERO; mpi_config.world_size()];
+    let mut degree2_evals_at_delta_x: Vec<E::Fr> = vec![E::Fr::ZERO; mpi_engine.world_size()];
 
     let local_degree2_eval_at_delta_x = local_lagrange_degree2_at_x[0]
         + local_lagrange_degree2_at_x[1] * delta_x
         + local_lagrange_degree2_at_x[2] * delta_x * delta_x;
 
-    mpi_config.gather_vec(
-        &vec![local_degree2_eval_at_delta_x],
+    mpi_engine.gather_vec(
+        &[local_degree2_eval_at_delta_x],
         &mut degree2_evals_at_delta_x,
     );
 
@@ -339,11 +338,11 @@ where
     // then sync transcript state
     //
 
-    let mut leader_quotient_y_coeffs: Vec<E::Fr> = vec![E::Fr::ZERO; mpi_config.world_size()];
+    let mut leader_quotient_y_coeffs: Vec<E::Fr> = vec![E::Fr::ZERO; mpi_engine.world_size()];
     let mut leader_quotient_y_commitment: E::G1Affine = E::G1Affine::default();
 
-    if mpi_config.is_root() {
-        let num_y_coeffs = mpi_config.world_size();
+    if mpi_engine.is_root() {
+        let num_y_coeffs = mpi_engine.world_size();
 
         // NOTE(HS) interpolate at beta_y, beta_y2, -beta_y on lagrange_degree2_delta_x
         let lagrange_degree2_delta_y = {
@@ -374,7 +373,7 @@ where
         fs_transcript.append_u8_slice(leader_quotient_y_commitment.to_bytes().as_ref());
     }
 
-    transcript_root_broadcast(fs_transcript, mpi_config);
+    transcript_root_broadcast(fs_transcript, mpi_engine);
 
     let delta_y = fs_transcript.generate_challenge_field_element();
 
@@ -389,12 +388,12 @@ where
             .serialize_into(&mut serialized_y_quotient_coeffs)
             .unwrap();
 
-        mpi_config.root_broadcast_bytes(&mut serialized_y_quotient_coeffs);
+        mpi_engine.root_broadcast_bytes(&mut serialized_y_quotient_coeffs);
         leader_quotient_y_coeffs = {
             let mut cursor = Cursor::new(serialized_y_quotient_coeffs);
             Vec::deserialize_from(&mut cursor).unwrap()
         };
-        leader_quotient_y_coeffs.resize(mpi_config.world_size(), E::Fr::ZERO);
+        leader_quotient_y_coeffs.resize(mpi_engine.world_size(), E::Fr::ZERO);
     }
 
     //
@@ -412,20 +411,20 @@ where
         &local_gamma_aggregated_x_quotient,
     );
     local_gamma_aggregated_x_coeffs[0] -=
-        delta_y_denom * leader_quotient_y_coeffs[mpi_config.world_rank()];
+        delta_y_denom * leader_quotient_y_coeffs[mpi_engine.world_rank()];
 
     //
     // BiKZG commit to the last bivariate poly
     //
 
     let mut gathered_eval_opens: Vec<(E::Fr, E::G1Affine)> =
-        vec![(E::Fr::ZERO, E::G1Affine::default()); mpi_config.world_size()];
+        vec![(E::Fr::ZERO, E::G1Affine::default()); mpi_engine.world_size()];
     let local_eval_open =
         coeff_form_uni_kzg_open_eval(&srs.tau_x_srs, &local_gamma_aggregated_x_coeffs, delta_x);
 
-    mpi_config.gather_vec(&vec![local_eval_open], &mut gathered_eval_opens);
+    mpi_engine.gather_vec(&[local_eval_open], &mut gathered_eval_opens);
 
-    if !mpi_config.is_root() {
+    if !mpi_engine.is_root() {
         return None;
     }
 

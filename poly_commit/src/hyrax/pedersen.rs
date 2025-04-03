@@ -1,11 +1,10 @@
+use gkr_engine::StructuredReferenceString;
 use halo2curves::{
     ff::{Field, PrimeField},
     group::Curve,
     msm, CurveAffine,
 };
 use serdes::ExpSerde;
-
-use crate::StructuredReferenceString;
 
 #[derive(Clone, Debug, Default)]
 pub struct PedersenParams<C: CurveAffine + ExpSerde> {

@@ -1,8 +1,7 @@
 use derivative::Derivative;
+use gkr_engine::StructuredReferenceString;
 use halo2curves::{pairing::Engine, CurveAffine};
 use serdes::ExpSerde;
-
-use crate::StructuredReferenceString;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]

@@ -5,10 +5,12 @@ use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gf2::{GF2x128, GF2x8, GF2};
 use gf2_128::GF2_128;
+use gkr_engine::Transcript;
+use gkr_hashers::Keccak256hasher;
 use mersenne31::{M31Ext3, M31x16, M31};
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
-use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
+use transcript::BytesHashTranscript;
 use tynm::type_name;
 
 fn base_field_committing_benchmark_helper<F, ComPackF>(
@@ -141,7 +143,7 @@ fn base_field_opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(orion_open_base_field::<F, EvalF, ComPackF, OpenPackF, T>(
+                        _ = black_box(orion_open_base_field::<F, EvalF, ComPackF, OpenPackF>(
                             &srs,
                             &poly,
                             &eval_point,
@@ -215,7 +217,7 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, T>(
                 ),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(orion_open_simd_field::<F, SimdF, _, ComPackF, T>(
+                        _ = black_box(orion_open_simd_field::<F, SimdF, _, ComPackF>(
                             &srs,
                             &poly,
                             &eval_point,

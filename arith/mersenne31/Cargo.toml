@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../" }
-field_hashers = { path = "../field_hashers" }
+gkr_hashers = { path = "../../hasher" }
 serdes = { path = "../../serdes" }
 
 ark-std.workspace = true

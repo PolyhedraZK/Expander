@@ -1,5 +1,5 @@
 use arith::{Field, SimdField};
-use field_hashers::PoseidonStateTrait;
+use gkr_hashers::PoseidonStateTrait;
 
 use crate::{M31x16, M31};
 

@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use arith::ExtensionField;
+use gkr_engine::{StructuredReferenceString, Transcript};
 use halo2curves::{
     ff::PrimeField,
     pairing::{Engine, MultiMillerLoop},
@@ -8,28 +9,24 @@ use halo2curves::{
 };
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
-use transcript::Transcript;
 
 use crate::*;
 use kzg::hyper_kzg::*;
 
-pub struct HyperKZGPCS<E, T>
+pub struct HyperKZGPCS<E>
 where
     E: Engine,
     E::Fr: ExtensionField,
-    T: Transcript<E::Fr>,
 {
     _marker_e: PhantomData<E>,
-    _marker_t: PhantomData<T>,
 }
 
-impl<E, T> PolynomialCommitmentScheme<E::Fr, T> for HyperKZGPCS<E, T>
+impl<E> PolynomialCommitmentScheme<E::Fr> for HyperKZGPCS<E>
 where
     E: Engine + MultiMillerLoop,
     E::Fr: ExtensionField + PrimeField,
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
-    T: Transcript<E::Fr>,
 {
     const NAME: &'static str = "HyperKZGPCS";
 
@@ -53,7 +50,7 @@ where
 
     fn commit(
         _params: &Self::Params,
-        proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
@@ -62,23 +59,23 @@ where
 
     fn open(
         _params: &Self::Params,
-        proving_key: &<Self::SRS as crate::StructuredReferenceString>::PKey,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         _scratch_pad: &Self::ScratchPad,
-        transcript: &mut T,
+        transcript: &mut impl Transcript<E::Fr>,
     ) -> (E::Fr, Self::Opening) {
         coeff_form_uni_hyperkzg_open(proving_key, &poly.coeffs, x, transcript)
     }
 
     fn verify(
         _params: &Self::Params,
-        verifying_key: &<Self::SRS as crate::StructuredReferenceString>::VKey,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
         v: E::Fr,
         opening: &Self::Opening,
-        transcript: &mut T,
+        transcript: &mut impl Transcript<E::Fr>,
     ) -> bool {
         coeff_form_uni_hyperkzg_verify(
             verifying_key.clone(),

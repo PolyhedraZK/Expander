@@ -1,5 +1,7 @@
-use gkr_field_config::GKRFieldConfig;
 use std::{collections::HashMap, fs, io::Cursor};
+
+use gkr_engine::{ExpErrors, FieldEngine};
+use serdes::ExpSerde;
 
 use crate::*;
 
@@ -29,17 +31,17 @@ pub struct Allocation {
 pub type CrossLayerChildSpec = (SegmentId, Vec<Allocation>);
 
 #[derive(Default)]
-pub struct CrossLayerSegment<C: GKRFieldConfig> {
+pub struct CrossLayerSegment<F: FieldEngine> {
     pub input_size: CrossLayerInputSize,
     pub output_size: usize,
     pub child_segs: Vec<CrossLayerChildSpec>,
-    pub gate_muls: Vec<SimpleGateMul<C>>,
-    pub gate_adds: Vec<SimpleGateAdd<C>>,
-    pub gate_csts: Vec<SimpleGateCst<C>>,
-    pub gate_relay: Vec<CrossLayerRelay<C>>,
+    pub gate_muls: Vec<SimpleGateMul<F>>,
+    pub gate_adds: Vec<SimpleGateAdd<F>>,
+    pub gate_csts: Vec<SimpleGateCst<F>>,
+    pub gate_relay: Vec<CrossLayerRelay<F>>,
 }
 
-impl<C: GKRFieldConfig> CrossLayerSegment<C> {
+impl<F: FieldEngine> CrossLayerSegment<F> {
     #[inline]
     pub fn contain_gates(&self) -> bool {
         !self.gate_muls.is_empty()
@@ -51,7 +53,7 @@ impl<C: GKRFieldConfig> CrossLayerSegment<C> {
     #[inline]
     pub fn scan_leaf_segments(
         &self,
-        rc: &CrossLayerRecursiveCircuit<C>,
+        rc: &CrossLayerRecursiveCircuit<F>,
         cur_id: SegmentId,
     ) -> HashMap<SegmentId, Vec<Allocation>> {
         let mut ret: HashMap<usize, Vec<Allocation>> = HashMap::new();
@@ -83,29 +85,28 @@ impl<C: GKRFieldConfig> CrossLayerSegment<C> {
 }
 
 #[derive(Default)]
-pub struct CrossLayerRecursiveCircuit<C: GKRFieldConfig> {
+pub struct CrossLayerRecursiveCircuit<F: FieldEngine> {
     pub num_public_inputs: usize,
     pub num_outputs: usize,
     pub expected_num_output_zeros: usize,
 
-    pub segments: Vec<CrossLayerSegment<C>>,
+    pub segments: Vec<CrossLayerSegment<F>>,
     pub layers: Vec<SegmentId>,
 }
 
-impl<C: GKRFieldConfig> CrossLayerRecursiveCircuit<C> {
-    pub fn load(filename: &str) -> std::result::Result<Self, CircuitError> {
+impl<F: FieldEngine> CrossLayerRecursiveCircuit<F> {
+    pub fn load(filename: &str) -> std::result::Result<Self, ExpErrors> {
         let file_bytes = fs::read(filename)?;
-        let _cursor = Cursor::new(file_bytes);
-
-        Ok(Self::deserialize_from(_cursor))
+        let cursor = Cursor::new(file_bytes);
+        Ok(<Self as ExpSerde>::deserialize_from(cursor)?)
     }
 
-    pub fn flatten(&self) -> CrossLayerCircuit<C> {
-        let mut ret = CrossLayerCircuit::<C>::default();
+    pub fn flatten(&self) -> CrossLayerCircuit<F> {
+        let mut ret = CrossLayerCircuit::<F>::default();
 
         // denote the input layer as layer 0 here
         assert!(self.segments[self.layers[0]].input_size.len() == 1);
-        ret.layers.push(GenericLayer::<C> {
+        ret.layers.push(GenericLayer::<F> {
             layer_id: 0,
             layer_size: self.segments[self.layers[0]].input_size[0],
             input_layer_size: 0,
@@ -116,7 +117,7 @@ impl<C: GKRFieldConfig> CrossLayerRecursiveCircuit<C> {
         for (i, seg_id) in self.layers.iter().enumerate() {
             let layer_seg = &self.segments[*seg_id];
             let leaves = layer_seg.scan_leaf_segments(self, *seg_id);
-            let mut ret_layer = GenericLayer::<C> {
+            let mut ret_layer = GenericLayer::<F> {
                 layer_id: i + 1,
                 layer_size: layer_seg.output_size,
                 input_layer_size: layer_seg.input_size[0],

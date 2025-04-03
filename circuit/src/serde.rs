@@ -1,5 +1,5 @@
 use arith::Field;
-use gkr_field_config::GKRFieldConfig;
+use gkr_engine::FieldEngine;
 use serdes::{ExpSerde, SerdeResult};
 use std::{
     io::{Read, Write},
@@ -8,12 +8,11 @@ use std::{
 
 use super::{Allocation, CoefType, Gate, RecursiveCircuit, Segment, Witness};
 use crate::{GateAdd, GateConst, GateMul, SegmentId};
-
-pub struct CustomGateWrapper<C: GKRFieldConfig, const INPUT_NUM: usize> {
+pub struct CustomGateWrapper<C: FieldEngine, const INPUT_NUM: usize> {
     pub custom_gate: Gate<C, INPUT_NUM>,
 }
 
-impl<C: GKRFieldConfig, const INPUT_NUM: usize> ExpSerde for CustomGateWrapper<C, INPUT_NUM> {
+impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for CustomGateWrapper<C, INPUT_NUM> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: std::io::Write>(&self, mut _writer: W) -> SerdeResult<()> {
@@ -78,7 +77,7 @@ impl ExpSerde for Allocation {
     }
 }
 
-impl<C: GKRFieldConfig> ExpSerde for Segment<C> {
+impl<C: FieldEngine> ExpSerde for Segment<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -129,7 +128,7 @@ impl<C: GKRFieldConfig> ExpSerde for Segment<C> {
 
 const VERSION_NUM: usize = 3914834606642317635; // b'CIRCUIT6'
 
-impl<C: GKRFieldConfig> ExpSerde for RecursiveCircuit<C> {
+impl<C: FieldEngine> ExpSerde for RecursiveCircuit<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -165,7 +164,7 @@ impl<C: GKRFieldConfig> ExpSerde for RecursiveCircuit<C> {
     }
 }
 
-impl<C: GKRFieldConfig> ExpSerde for Witness<C> {
+impl<C: FieldEngine> ExpSerde for Witness<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: std::io::Write>(&self, mut _writer: W) -> SerdeResult<()> {
