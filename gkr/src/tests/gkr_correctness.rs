@@ -7,7 +7,6 @@ use arith::Field;
 use circuit::Circuit;
 use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
-use env_logger;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{
@@ -162,6 +161,17 @@ fn test_gkr_correctness() {
     );
     test_gkr_correctness_helper(
         &Config::<C12>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
+
+    // below are some tests for multi-core verifier
+    test_gkr_correctness_helper(
+        &Config::<C0>::new(GKRScheme::GKRParVerifier, mpi_config.clone()),
+        None,
+    );
+
+    test_gkr_correctness_helper(
+        &Config::<C0>::new(GKRScheme::GKRParVerifier, mpi_config.clone()),
         None,
     );
 

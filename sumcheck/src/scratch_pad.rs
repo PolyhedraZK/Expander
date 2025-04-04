@@ -1,6 +1,6 @@
 //! Scratch pad for prover and verifier to store intermediate values during the sumcheck protocol.
 
-use std::{cmp::max, ptr};
+use std::cmp::max;
 
 use arith::{ExtensionField, Field};
 use circuit::Circuit;
@@ -70,6 +70,7 @@ impl<C: GKRFieldConfig> ProverScratchPad<C> {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct VerifierScratchPad<C: GKRFieldConfig> {
     // ====== for evaluating cst, add and mul ======
     pub eq_evals_at_rz0: Vec<C::ChallengeField>,
@@ -82,8 +83,8 @@ pub struct VerifierScratchPad<C: GKRFieldConfig> {
     pub eq_evals_first_part: Vec<C::ChallengeField>,
     pub eq_evals_second_part: Vec<C::ChallengeField>,
 
-    pub r_simd: *const Vec<C::ChallengeField>,
-    pub r_mpi: *const Vec<C::ChallengeField>,
+    pub r_simd: Vec<C::ChallengeField>,
+    pub r_mpi: Vec<C::ChallengeField>,
     pub eq_r_simd_r_simd_xy: C::ChallengeField,
     pub eq_r_mpi_r_mpi_xy: C::ChallengeField,
 
@@ -185,8 +186,8 @@ impl<C: GKRFieldConfig> VerifierScratchPad<C> {
                 max(max(max_io_size, simd_size), mpi_world_size)
             ],
 
-            r_simd: ptr::null(),
-            r_mpi: ptr::null(),
+            r_simd: vec![],
+            r_mpi: vec![],
             eq_r_simd_r_simd_xy: C::ChallengeField::zero(),
             eq_r_mpi_r_mpi_xy: C::ChallengeField::zero(),
 

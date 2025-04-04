@@ -15,18 +15,19 @@ pub trait GKRFieldConfig: Default + Debug + Clone + Send + Sync + 'static {
     const FIELD_TYPE: FieldType;
 
     /// Field type for the circuit, e.g., M31
-    type CircuitField: Field + Send;
+    type CircuitField: Field + Send + Sync;
 
     /// Field type for the challenge, e.g., M31Ext3
-    type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send;
+    type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send + Sync;
 
     /// Main field type for the scheme, e.g., M31Ext3x16
     type Field: ExtensionField<BaseField = Self::SimdCircuitField>
         + SimdField<Scalar = Self::ChallengeField>
-        + Send;
+        + Send
+        + Sync;
 
     /// Simd field for circuit, e.g., M31x16
-    type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + Send;
+    type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + Send + Sync;
 
     /// API to allow for multiplications between the challenge and the circuit field
     fn challenge_mul_circuit_field(

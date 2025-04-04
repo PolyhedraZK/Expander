@@ -9,6 +9,8 @@ use crate::{scratch_pad::VerifierScratchPad, unpack_and_combine};
 pub struct GKRVerifierHelper {}
 
 impl GKRVerifierHelper {
+    // This assumes we're verifying GKR layer by layer sequentially, and can reuse some of the
+    // results from the previous layer, which is stored in the scratch pad.
     #[allow(clippy::too_many_arguments)]
     #[inline(always)]
     pub fn prepare_layer<C: GKRFieldConfig>(
@@ -16,8 +18,8 @@ impl GKRVerifierHelper {
         alpha: &Option<C::ChallengeField>,
         rz0: &[C::ChallengeField],
         rz1: &Option<Vec<C::ChallengeField>>,
-        r_simd: &Vec<C::ChallengeField>,
-        r_mpi: &Vec<C::ChallengeField>,
+        r_simd: &[C::ChallengeField],
+        r_mpi: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
         is_output_layer: bool,
     ) {
@@ -59,8 +61,63 @@ impl GKRVerifierHelper {
             &mut sp.eq_evals_second_part,
         );
 
-        sp.r_simd = r_simd;
-        sp.r_mpi = r_mpi;
+        sp.r_simd = r_simd.to_vec();
+        sp.r_mpi = r_mpi.to_vec();
+    }
+
+    // This is for the case where we are verifying GKR layers in parallel, and we need to
+    // recompute the evaluations for each layer independently.
+    // This is less efficient than the sequential version, but allows for more parallelism.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(always)]
+    pub fn prepare_layer_non_sequential<C: GKRFieldConfig>(
+        layer: &CircuitLayer<C>,
+        alpha: &Option<C::ChallengeField>,
+        rz0: &[C::ChallengeField],
+        rz1: &Option<Vec<C::ChallengeField>>,
+        r_simd: &[C::ChallengeField],
+        r_mpi: &[C::ChallengeField],
+        sp: &mut VerifierScratchPad<C>,
+    ) {
+        EqPolynomial::<C::ChallengeField>::eq_eval_at(
+            rz0,
+            &C::ChallengeField::ONE,
+            &mut sp.eq_evals_at_rz0,
+            &mut sp.eq_evals_first_part,
+            &mut sp.eq_evals_second_part,
+        );
+        if alpha.is_some() && rz1.is_some() {
+            let alpha = alpha.unwrap();
+            EqPolynomial::<C::ChallengeField>::eq_eval_at(
+                rz1.as_ref().unwrap(),
+                &C::ChallengeField::ONE,
+                &mut sp.eq_evals_at_rx,
+                &mut sp.eq_evals_first_part,
+                &mut sp.eq_evals_second_part,
+            );
+            for i in 0..(1usize << layer.output_var_num) {
+                sp.eq_evals_at_rz0[i] += alpha * sp.eq_evals_at_rx[i];
+            }
+        }
+
+        EqPolynomial::<C::ChallengeField>::eq_eval_at(
+            r_simd,
+            &C::ChallengeField::ONE,
+            &mut sp.eq_evals_at_r_simd,
+            &mut sp.eq_evals_first_part,
+            &mut sp.eq_evals_second_part,
+        );
+
+        EqPolynomial::<C::ChallengeField>::eq_eval_at(
+            r_mpi,
+            &C::ChallengeField::ONE,
+            &mut sp.eq_evals_at_r_mpi,
+            &mut sp.eq_evals_first_part,
+            &mut sp.eq_evals_second_part,
+        );
+
+        sp.r_simd = r_simd.to_vec();
+        sp.r_mpi = r_mpi.to_vec();
     }
 
     #[inline(always)]
@@ -189,10 +246,7 @@ impl GKRVerifierHelper {
         r_simd_xy: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
     ) {
-        sp.eq_r_simd_r_simd_xy = EqPolynomial::<C::ChallengeField>::eq_vec(
-            unsafe { sp.r_simd.as_ref().unwrap() },
-            r_simd_xy,
-        );
+        sp.eq_r_simd_r_simd_xy = EqPolynomial::<C::ChallengeField>::eq_vec(&sp.r_simd, r_simd_xy);
     }
 
     #[inline(always)]
@@ -200,10 +254,7 @@ impl GKRVerifierHelper {
         r_mpi_xy: &[C::ChallengeField],
         sp: &mut VerifierScratchPad<C>,
     ) {
-        sp.eq_r_mpi_r_mpi_xy = EqPolynomial::<C::ChallengeField>::eq_vec(
-            unsafe { sp.r_mpi.as_ref().unwrap() },
-            r_mpi_xy,
-        );
+        sp.eq_r_mpi_r_mpi_xy = EqPolynomial::<C::ChallengeField>::eq_vec(&sp.r_mpi, r_mpi_xy);
     }
 
     #[inline(always)]

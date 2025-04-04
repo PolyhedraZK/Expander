@@ -8,7 +8,6 @@ use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use transcript::Transcript;
 use utils::timer::Timer;
 
-// FIXME
 #[allow(clippy::type_complexity)]
 pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     circuit: &Circuit<C>,
@@ -64,7 +63,7 @@ pub fn gkr_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
             ),
             mpi_config.is_root(),
         );
-        (rz0, rz1, r_simd, r_mpi) = sumcheck_prove_gkr_layer(
+        (rz0, rz1, r_simd, r_mpi, _, _) = sumcheck_prove_gkr_layer(
             &circuit.layers[i],
             &rz0,
             &rz1,
