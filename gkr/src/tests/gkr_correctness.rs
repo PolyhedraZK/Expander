@@ -25,6 +25,7 @@ use serdes::ExpSerde;
 use sha2::Digest;
 use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
 
+use crate::executor::input_poly_vars_calibration;
 use crate::{utils::*, Prover, Verifier};
 
 #[test]
@@ -220,9 +221,13 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
     let mut prover = Prover::new(config);
     prover.prepare_mem(&circuit);
 
+    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(
+        circuit.log_input_size(),
+        config.mpi_config.world_size(),
+    );
     let (pcs_params, pcs_proving_key, pcs_verification_key, mut pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
-            circuit.log_input_size(),
+            minimum_poly_vars,
             &config.mpi_config,
         );
 

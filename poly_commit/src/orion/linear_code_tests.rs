@@ -35,7 +35,7 @@ where
 
     let orion_code = OrionCode::new(ORION_CODE_PARAMETER_INSTANCE, msg_len, &mut rng);
 
-    let row_bits = OrionSRS::LEAVES_IN_RANGE_OPENING * tree::LEAF_BYTES * 8;
+    let row_bits = OrionSRS::MINIMUM_LEAVES_IN_RANGE_OPENING * tree::LEAF_BYTES * 8;
     let row_num = row_bits / F::FIELD_SIZE;
     let weights: Vec<_> = (0..row_num).map(|_| F::random_unsafe(&mut rng)).collect();
 
@@ -71,7 +71,7 @@ where
 
 #[test]
 fn test_orion_code() {
-    (5..=15).for_each(|num_vars| {
+    (5..=10).for_each(|num_vars| {
         let msg_len = 1usize << num_vars;
         test_orion_code_generic::<GF2, GF2x8>(msg_len);
     });

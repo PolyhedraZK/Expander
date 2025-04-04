@@ -1,7 +1,6 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
 
-use arith::Field;
 use sha2::{Digest, Sha512_256};
 
 use crate::Node;
@@ -11,11 +10,6 @@ pub const LEAF_BYTES: usize = 64;
 
 /// Each leaf hash should have 32 bytes
 pub const LEAF_HASH_BYTES: usize = 32;
-
-#[inline(always)]
-pub const fn leaf_adic<F: Field>() -> usize {
-    LEAF_BYTES * 8 / F::FIELD_SIZE
-}
 
 /// Represents a leaf in the Merkle tree, containing 64 bytes of data stored in a BabyBearx16.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

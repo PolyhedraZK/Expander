@@ -1,14 +1,17 @@
-use std::io::Cursor;
-
-use arith::SimdField;
+use arith::{Field, SimdField};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
-use polynomials::{EqPolynomial, MultilinearExtension};
-use serdes::ExpSerde;
+use polynomials::MultilinearExtension;
 use transcript::Transcript;
 
 use crate::{
-    orion::{simd_field_agg_impl::*, *},
+    orion::{
+        simd_field_impl::{orion_commit_simd_field, orion_open_simd_field},
+        simd_field_mpi_impl::{orion_mpi_commit_simd_field, orion_mpi_open_simd_field},
+        verify::orion_verify,
+        OrionCommitment, OrionProof, OrionSIMDFieldPCS, OrionSRS, OrionScratchPad,
+        ORION_CODE_PARAMETER_INSTANCE,
+    },
     traits::TensorCodeIOPPCS,
     ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString,
 };
@@ -23,16 +26,50 @@ where
     const NAME: &'static str = "OrionPCSForExpanderGKR";
 
     type Params = usize;
-    type ScratchPad = OrionScratchPad<C::CircuitField, ComPackF>;
+    type ScratchPad = OrionScratchPad;
 
     type Commitment = OrionCommitment;
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
 
-    const MINIMUM_NUM_VARS: usize = (tree::leaf_adic::<C::CircuitField>()
-        * Self::SRS::LEAVES_IN_RANGE_OPENING
-        / C::SimdCircuitField::PACK_SIZE)
-        .ilog2() as usize;
+    fn minimum_num_vars(world_size: usize) -> usize {
+        let num_bits_packed_field = ComPackF::PACK_SIZE * C::CircuitField::FIELD_SIZE;
+
+        let minimum_num_bytes_opening_per_world = {
+            let minimum_num_bytes_opening =
+                Self::SRS::MINIMUM_LEAVES_IN_RANGE_OPENING * tree::LEAF_BYTES;
+            assert_eq!(minimum_num_bytes_opening % world_size, 0);
+
+            minimum_num_bytes_opening / world_size
+        };
+
+        let num_packed_fields_per_world_in_opening = {
+            let num_bytes_packed_field = num_bits_packed_field / 8;
+
+            minimum_num_bytes_opening_per_world.div_ceil(num_bytes_packed_field)
+        };
+
+        let num_simd_fields_per_world_in_opening = {
+            let num_base_fields_per_world_in_opening =
+                num_packed_fields_per_world_in_opening * ComPackF::PACK_SIZE;
+
+            num_base_fields_per_world_in_opening / C::SimdCircuitField::PACK_SIZE
+        };
+
+        let minimum_msg_size = {
+            let min_expander_po2_code_len = ORION_CODE_PARAMETER_INSTANCE
+                .length_threshold_g0s
+                .next_power_of_two();
+
+            if world_size <= min_expander_po2_code_len {
+                world_size
+            } else {
+                world_size / 2
+            }
+        };
+
+        (num_simd_fields_per_world_in_opening * minimum_msg_size).ilog2() as usize
+    }
 
     /// NOTE(HS): this is actually number of variables in polynomial,
     /// ignoring the variables for MPI parties and SIMD field element
@@ -42,12 +79,14 @@ where
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        _mpi_config: &MPIConfig,
+        mpi_config: &MPIConfig,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         OrionSRS::from_random::<C::CircuitField>(
+            mpi_config.world_size(),
             num_vars_each_core,
+            ComPackF::PACK_SIZE,
             ORION_CODE_PARAMETER_INSTANCE,
             rng,
         )
@@ -67,28 +106,26 @@ where
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
-        let commitment = orion_commit_simd_field(proving_key, poly, scratch_pad).unwrap();
-
         // NOTE: Hang also assume that, linear GKR will take over the commitment
         // and force sync transcript hash state of subordinate machines to be the same.
         if mpi_config.is_single_process() {
-            return commitment.into();
+            return orion_commit_simd_field::<_, C::SimdCircuitField, ComPackF>(
+                proving_key,
+                poly,
+                scratch_pad,
+            )
+            .ok();
         }
 
-        let local_buffer = vec![commitment];
-        let mut buffer = vec![Self::Commitment::default(); mpi_config.world_size()];
-        mpi_config.gather_vec(&local_buffer, &mut buffer);
-
-        if !mpi_config.is_root() {
-            return None;
-        }
-
-        let final_tree_height = 1 + buffer.len().ilog2();
-        let internals = tree::Tree::new_with_leaf_nodes(&buffer, final_tree_height);
-        internals[0].into()
+        orion_mpi_commit_simd_field::<_, C::SimdCircuitField, ComPackF>(
+            mpi_config,
+            proving_key,
+            poly,
+            scratch_pad,
+        )
+        .ok()
     }
 
-    // TODO(HS) rearrange the MT over interleaved codeword, s.t., we have smaller proof size
     fn open(
         params: &Self::Params,
         mpi_config: &MPIConfig,
@@ -101,64 +138,26 @@ where
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
-        let local_xs = eval_point.local_xs();
-        let local_opening = orion_open_simd_field::<
-            C::CircuitField,
-            C::SimdCircuitField,
-            C::ChallengeField,
-            ComPackF,
-            T,
-        >(proving_key, poly, &local_xs, transcript, scratch_pad);
         if mpi_config.is_single_process() {
-            return local_opening.into();
+            let (_, opening) = orion_open_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
+                proving_key,
+                poly,
+                &eval_point.local_xs(),
+                transcript,
+                scratch_pad,
+            );
+            return opening.into();
         }
 
-        // NOTE: eval row combine from MPI
-        let mpi_eq_coeffs = EqPolynomial::build_eq_x_r(&eval_point.x_mpi);
-        let eval_row = mpi_config.coef_combine_vec(&local_opening.eval_row, &mpi_eq_coeffs);
-
-        // NOTE: sample MPI linear combination coeffs for proximity rows,
-        // and proximity rows combine with MPI
-        let proximity_rows = local_opening
-            .proximity_rows
-            .iter()
-            .map(|row| {
-                let weights = transcript.generate_challenge_field_elements(mpi_config.world_size());
-                mpi_config.coef_combine_vec(row, &weights)
-            })
-            .collect();
-
-        // NOTE: local query openings serialized to bytes
-        let mut local_mt_paths_serialized = Vec::new();
-        local_opening
-            .query_openings
-            .serialize_into(&mut local_mt_paths_serialized)
-            .unwrap();
-
-        // NOTE: gather all merkle paths
-        let mut mt_paths_serialized =
-            vec![0u8; mpi_config.world_size() * local_mt_paths_serialized.len()];
-        mpi_config.gather_vec(&local_mt_paths_serialized, &mut mt_paths_serialized);
-
-        let query_openings: Vec<tree::RangePath> = mt_paths_serialized
-            .chunks(local_mt_paths_serialized.len())
-            .flat_map(|bs| {
-                let mut read_cursor = Cursor::new(bs);
-                <Vec<tree::RangePath> as ExpSerde>::deserialize_from(&mut read_cursor).unwrap()
-            })
-            .collect();
-
-        if !mpi_config.is_root() {
-            return None;
-        }
-
-        // NOTE: we only care about the root machine's opening as final proof, Hang assume.
-        OrionProof {
-            eval_row,
-            proximity_rows,
-            query_openings,
-        }
-        .into()
+        orion_mpi_open_simd_field::<_, C::SimdCircuitField, _, ComPackF, _>(
+            mpi_config,
+            proving_key,
+            poly,
+            &eval_point.local_xs(),
+            &eval_point.x_mpi,
+            transcript,
+            scratch_pad,
+        )
     }
 
     fn verify(
@@ -167,32 +166,14 @@ where
         commitment: &Self::Commitment,
         eval_point: &ExpanderGKRChallenge<C>,
         eval: C::ChallengeField,
-        transcript: &mut T, // add transcript here to allow interactive arguments
+        transcript: &mut T,
         opening: &Self::Opening,
     ) -> bool {
-        if eval_point.x_mpi.is_empty() {
-            return orion_verify_simd_field::<
-                C::CircuitField,
-                C::SimdCircuitField,
-                C::ChallengeField,
-                ComPackF,
-                T,
-            >(
-                verifying_key,
-                commitment,
-                &eval_point.local_xs(),
-                eval,
-                transcript,
-                opening,
-            );
-        }
-
-        // NOTE: we now assume that the input opening is from the root machine,
-        // as proofs from other machines are typically undefined
-        orion_verify_simd_field_aggregated::<C, ComPackF, T>(
+        orion_verify::<_, C::SimdCircuitField, _, ComPackF, _>(
             verifying_key,
             commitment,
-            eval_point,
+            &eval_point.local_xs(),
+            &eval_point.x_mpi,
             eval,
             transcript,
             opening,

@@ -166,7 +166,7 @@ fn test_orion_for_expander_gkr() {
         GF2ExtConfig,
         GF2x128,
         BytesHashTranscript<_, Keccak256hasher>,
-    >(&mpi_config, 16);
+    >(&mpi_config, 25);
 
     test_orion_for_expander_gkr_generics::<
         M31ExtConfig,
