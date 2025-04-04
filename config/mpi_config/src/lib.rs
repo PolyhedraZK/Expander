@@ -4,12 +4,15 @@ use shared_mem::SharedMemory;
 use std::{cmp, fmt::Debug};
 
 use arith::Field;
+use itertools::izip;
 use mpi::{
+    datatype::PartitionMut,
     environment::Universe,
     ffi,
     topology::{Process, SimpleCommunicator},
     traits::*,
 };
+use serdes::ExpSerde;
 
 use mpi::ffi::*;
 use std::os::raw::c_void;
@@ -269,6 +272,95 @@ impl MPIConfig {
         } else {
             self.gather_vec(local_vec, &mut vec![]);
             vec![F::ZERO; local_vec.len()]
+        }
+    }
+
+    /// perform an all to all transpose,
+    /// supposing the current party holds a row in a matrix with row number being MPI parties.
+    #[inline(always)]
+    pub fn all_to_all_transpose<F: Sized>(&self, row: &mut [F]) {
+        assert_eq!(row.len() % self.world_size(), 0);
+
+        // NOTE(HS) MPI has some upper limit for send buffer size, pre declare here and use later
+        const SEND_BUFFER_MAX: usize = 1 << 22;
+
+        let row_as_u8_len = size_of_val(row);
+        let row_u8s: &mut [u8] =
+            unsafe { std::slice::from_raw_parts_mut(row.as_mut_ptr() as *mut u8, row_as_u8_len) };
+
+        let num_of_bytes_per_world = row_as_u8_len / self.world_size();
+        let num_of_transposes = row_as_u8_len.div_ceil(SEND_BUFFER_MAX);
+
+        let mut send = vec![0u8; SEND_BUFFER_MAX];
+        let mut recv = vec![0u8; SEND_BUFFER_MAX];
+
+        let mut send_buffer_size = SEND_BUFFER_MAX;
+        let mut copy_starts = 0;
+
+        (0..num_of_transposes).for_each(|ith_transpose| {
+            if ith_transpose == num_of_transposes - 1 {
+                send_buffer_size = (num_of_bytes_per_world - copy_starts) * self.world_size();
+                send.resize(send_buffer_size, 0u8);
+                recv.resize(send_buffer_size, 0u8);
+            }
+
+            let send_buffer_size_per_world = send_buffer_size / self.world_size();
+            let copy_ends = copy_starts + send_buffer_size_per_world;
+
+            izip!(
+                row_u8s.chunks(num_of_bytes_per_world),
+                send.chunks_mut(send_buffer_size_per_world)
+            )
+            .for_each(|(row_chunk, send_chunk)| {
+                send_chunk.copy_from_slice(&row_chunk[copy_starts..copy_ends]);
+            });
+
+            self.world.unwrap().all_to_all_into(&send, &mut recv);
+
+            izip!(
+                row_u8s.chunks_mut(num_of_bytes_per_world),
+                recv.chunks(send_buffer_size_per_world)
+            )
+            .for_each(|(row_chunk, recv_chunk)| {
+                row_chunk[copy_starts..copy_ends].copy_from_slice(recv_chunk);
+            });
+
+            copy_starts += send_buffer_size_per_world;
+        });
+    }
+
+    #[inline(always)]
+    pub fn gather_varlen_vec<F: ExpSerde>(&self, elems: &Vec<F>, global_elems: &mut Vec<Vec<F>>) {
+        let mut elems_bytes: Vec<u8> = Vec::new();
+        elems.serialize_into(&mut elems_bytes).unwrap();
+
+        let mut byte_lengths = vec![0i32; self.world_size()];
+        self.gather_vec(&vec![elems_bytes.len() as i32], &mut byte_lengths);
+
+        let all_elems_bytes_len = byte_lengths.iter().sum::<i32>() as usize;
+        let mut all_elems_bytes: Vec<u8> = vec![0u8; all_elems_bytes_len];
+
+        if !self.is_root() {
+            self.root_process().gather_varcount_into(&elems_bytes);
+        } else {
+            let displs = byte_lengths
+                .iter()
+                .scan(0, |s, i| {
+                    let srt = *s;
+                    *s += i;
+                    Some(srt)
+                })
+                .collect::<Vec<_>>();
+
+            let mut partition = PartitionMut::new(&mut all_elems_bytes, byte_lengths, &displs[..]);
+
+            self.root_process()
+                .gather_varcount_into_root(&elems_bytes, &mut partition);
+
+            *global_elems = displs
+                .iter()
+                .map(|&srt| Vec::deserialize_from(&all_elems_bytes[srt as usize..]).unwrap())
+                .collect();
         }
     }
 
