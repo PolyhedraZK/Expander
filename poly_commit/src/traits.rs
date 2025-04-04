@@ -191,6 +191,9 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
 
 pub(crate) trait TensorCodeIOPPCS {
     // TODO(HS) better to be set as 16, but benchmark for gf2 keccak will complain and spam stderr
+    // TODO(HS) set this to a method function varying by polynomial variables
+    // should be O(\log n) where n is the polynomial size, essentially when polynomial
+    // is small the leaves should be 2, then scale up to 4, 8, 16 ...
     const MINIMUM_LEAVES_IN_RANGE_OPENING: usize = 8;
 
     fn codeword_len(&self) -> usize;
