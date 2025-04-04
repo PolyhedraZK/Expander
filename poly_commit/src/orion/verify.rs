@@ -33,7 +33,13 @@ where
     ComPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
-    let (_, msg_size) = OrionSRS::evals_shape::<F>(point.len());
+    let world_size = 1 << mpi_point.len();
+    let (_, msg_size) = OrionSRS::multi_process_local_eval_shape(
+        world_size,
+        point.len(),
+        F::FIELD_SIZE,
+        ComPackF::PACK_SIZE,
+    );
 
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;
@@ -64,7 +70,6 @@ where
     let query_indices = transcript.generate_challenge_index_vector(query_num);
 
     // NOTE: check consistency in MT in the opening trees and against the commitment tree
-    let world_size = 1 << mpi_point.len();
     {
         if proof.merkle_cap.len() != world_size {
             return false;

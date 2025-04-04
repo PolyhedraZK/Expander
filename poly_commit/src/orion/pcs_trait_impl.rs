@@ -59,11 +59,22 @@ where
     type Commitment = OrionCommitment;
     type Opening = OrionProof<EvalF>;
 
-    const MINIMUM_NUM_VARS: usize =
-        (Self::SRS::LEAVES_IN_RANGE_OPENING * tree::leaf_adic::<F>()).ilog2() as usize;
+    const MINIMUM_NUM_VARS: usize = {
+        let num_field_elems_per_leaf = tree::LEAF_BYTES * 8 / F::FIELD_SIZE;
+        let num_field_elems_per_opening =
+            Self::SRS::MINIMUM_LEAVES_IN_RANGE_OPENING * num_field_elems_per_leaf;
+
+        num_field_elems_per_opening.ilog2() as usize
+    };
 
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
-        OrionSRS::from_random::<F>(*params, ORION_CODE_PARAMETER_INSTANCE, rng)
+        OrionSRS::from_random::<F>(
+            1,
+            *params,
+            ComPackF::PACK_SIZE,
+            ORION_CODE_PARAMETER_INSTANCE,
+            rng,
+        )
     }
 
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {
@@ -155,15 +166,25 @@ where
     type Commitment = OrionCommitment;
     type Opening = OrionProof<EvalF>;
 
-    const MINIMUM_NUM_VARS: usize = (Self::SRS::LEAVES_IN_RANGE_OPENING * tree::leaf_adic::<F>()
-        / SimdF::PACK_SIZE)
-        .ilog2() as usize;
+    const MINIMUM_NUM_VARS: usize = {
+        let num_field_elems_per_leaf = tree::LEAF_BYTES * 8 / F::FIELD_SIZE;
+        let num_field_elems_per_opening =
+            Self::SRS::MINIMUM_LEAVES_IN_RANGE_OPENING * num_field_elems_per_leaf;
+
+        num_field_elems_per_opening.ilog2() as usize
+    };
 
     // NOTE: here we say the number of variables is the sum of 2 following things:
     // - number of variables of the multilinear polynomial
     // - number of variables reside in the SIMD field - e.g., 3 vars for a SIMD 8 field
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
-        OrionSRS::from_random::<F>(*params, ORION_CODE_PARAMETER_INSTANCE, rng)
+        OrionSRS::from_random::<F>(
+            1,
+            *params,
+            ComPackF::PACK_SIZE,
+            ORION_CODE_PARAMETER_INSTANCE,
+            rng,
+        )
     }
 
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {

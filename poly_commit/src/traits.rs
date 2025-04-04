@@ -190,17 +190,37 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
 }
 
 pub(crate) trait TensorCodeIOPPCS {
-    const LEAVES_IN_RANGE_OPENING: usize = 2;
+    // TODO(HS) better to be set as 16, but benchmark for gf2 keccak will complain and spam stderr
+    const MINIMUM_LEAVES_IN_RANGE_OPENING: usize = 8;
 
     fn codeword_len(&self) -> usize;
 
     fn minimum_hamming_weight(&self) -> f64;
 
-    fn evals_shape<F: Field>(num_vars: usize) -> (usize, usize) {
-        let elems_for_smallest_tree = tree::leaf_adic::<F>() * Self::LEAVES_IN_RANGE_OPENING;
+    fn multi_process_local_eval_shape(
+        world_size: usize,
+        num_local_vars: usize,
+        num_bits_base_field: usize,
+        field_pack_size: usize,
+    ) -> (usize, usize) {
+        let num_bits_packed_field = field_pack_size * num_bits_base_field;
 
-        let row_num: usize = elems_for_smallest_tree;
-        let msg_size: usize = (1 << num_vars) / row_num;
+        let minimum_num_bytes_opening_per_world = {
+            let minimum_num_bytes_opening =
+                Self::MINIMUM_LEAVES_IN_RANGE_OPENING * tree::LEAF_BYTES;
+            assert_eq!(minimum_num_bytes_opening % world_size, 0);
+
+            minimum_num_bytes_opening / world_size
+        };
+
+        let num_packed_fields_per_world_in_opening = {
+            let num_bytes_packed_field = num_bits_packed_field / 8;
+
+            minimum_num_bytes_opening_per_world.div_ceil(num_bytes_packed_field)
+        };
+
+        let row_num: usize = num_packed_fields_per_world_in_opening * field_pack_size;
+        let msg_size: usize = (1 << num_local_vars) / row_num;
 
         (row_num, msg_size)
     }

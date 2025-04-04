@@ -1,4 +1,4 @@
-use arith::SimdField;
+use arith::{Field, SimdField};
 use gkr_field_config::GKRFieldConfig;
 use mpi_config::MPIConfig;
 use polynomials::MultilinearExtension;
@@ -33,7 +33,29 @@ where
     type SRS = OrionSRS;
 
     fn minimum_num_vars(world_size: usize) -> usize {
-        let circuit_field_elems_per_leaf = tree::leaf_adic::<C::CircuitField>();
+        let num_bits_packed_field = ComPackF::PACK_SIZE * C::CircuitField::FIELD_SIZE;
+
+        let minimum_num_bytes_opening_per_world = {
+            let minimum_num_bytes_opening =
+                Self::SRS::MINIMUM_LEAVES_IN_RANGE_OPENING * tree::LEAF_BYTES;
+            assert_eq!(minimum_num_bytes_opening % world_size, 0);
+
+            minimum_num_bytes_opening / world_size
+        };
+
+        let num_packed_fields_per_world_in_opening = {
+            let num_bytes_packed_field = num_bits_packed_field / 8;
+
+            minimum_num_bytes_opening_per_world.div_ceil(num_bytes_packed_field)
+        };
+
+        let num_simd_fields_per_world_in_opening = {
+            let num_base_fields_per_world_in_opening =
+                num_packed_fields_per_world_in_opening * ComPackF::PACK_SIZE;
+
+            num_base_fields_per_world_in_opening / C::SimdCircuitField::PACK_SIZE
+        };
+
         let minimum_msg_size = {
             let min_expander_po2_code_len = ORION_CODE_PARAMETER_INSTANCE
                 .length_threshold_g0s
@@ -46,10 +68,7 @@ where
             }
         };
 
-        let minimum_cicuit_field_elems_in_msg =
-            Self::SRS::LEAVES_IN_RANGE_OPENING * minimum_msg_size * circuit_field_elems_per_leaf;
-
-        (minimum_cicuit_field_elems_in_msg / C::SimdCircuitField::PACK_SIZE).ilog2() as usize
+        (num_simd_fields_per_world_in_opening * minimum_msg_size).ilog2() as usize
     }
 
     /// NOTE(HS): this is actually number of variables in polynomial,
@@ -60,12 +79,14 @@ where
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        _mpi_config: &MPIConfig,
+        mpi_config: &MPIConfig,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         OrionSRS::from_random::<C::CircuitField>(
+            mpi_config.world_size(),
             num_vars_each_core,
+            ComPackF::PACK_SIZE,
             ORION_CODE_PARAMETER_INSTANCE,
             rng,
         )

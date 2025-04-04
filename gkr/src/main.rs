@@ -18,6 +18,7 @@ use mpi_config::MPIConfig;
 use poly_commit::expander_pcs_init_testing_only;
 
 use gkr::{
+    executor::input_poly_vars_calibration,
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
         KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT,
@@ -175,9 +176,11 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
 
     println!("Circuit loaded!");
 
+    let minimum_poly_vars =
+        input_poly_vars_calibration::<Cfg>(circuit_template.log_input_size(), 1);
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
-            circuit_template.log_input_size(),
+            minimum_poly_vars,
             &config.mpi_config,
         );
 

@@ -47,29 +47,22 @@ impl TensorCodeIOPPCS for OrionSRS {
 }
 
 impl OrionSRS {
-    pub fn new<F: Field>(num_vars: usize, code_instance: OrionCode) -> OrionResult<Self> {
-        let (_, msg_size) = Self::evals_shape::<F>(num_vars);
-        if msg_size != code_instance.msg_len() {
-            return Err(OrionPCSError::ParameterUnmatchError);
-        }
-
-        // NOTE: we just move the instance of code,
-        // don't think the instance of expander code will be used elsewhere
-        Ok(Self {
-            num_vars,
-            code_instance,
-        })
-    }
-
     pub fn from_random<F: Field>(
-        num_variables: usize,
+        world_size: usize,
+        num_local_vars: usize,
+        field_pack_size: usize,
         code_param_instance: OrionCodeParameter,
         mut rng: impl rand::RngCore,
     ) -> Self {
-        let (_, msg_size) = Self::evals_shape::<F>(num_variables);
+        let (_, msg_size) = Self::multi_process_local_eval_shape(
+            world_size,
+            num_local_vars,
+            F::FIELD_SIZE,
+            field_pack_size,
+        );
 
         Self {
-            num_vars: num_variables,
+            num_vars: num_local_vars,
             code_instance: OrionCode::new(code_param_instance, msg_size, &mut rng),
         }
     }
@@ -145,7 +138,7 @@ where
     EvalF: ExtensionField,
     T: Transcript<EvalF>,
 {
-    let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING;
+    let leaves_in_range_opening = OrionSRS::MINIMUM_LEAVES_IN_RANGE_OPENING;
 
     // NOTE: MT opening for point queries
     let query_num = pk.query_complexity(PCS_SOUNDNESS_BITS);
@@ -172,7 +165,6 @@ pub(crate) fn orion_mt_verify(
     merkle_cap: &[Node],
 ) -> bool {
     let world_size = merkle_cap.len();
-    let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING * world_size;
     let indices_per_merkle_cap = vk.codeword_len().next_power_of_two() / world_size;
 
     izip!(query_indices, range_openings).all(|(&qi, range_path)| {
@@ -181,7 +173,7 @@ pub(crate) fn orion_mt_verify(
         let in_sub_tree_index = index % indices_per_merkle_cap;
 
         range_path.verify(&merkle_cap[merkle_cap_index])
-            && in_sub_tree_index == range_path.left / leaves_in_range_opening
+            && in_sub_tree_index == range_path.left / range_path.leaves.len()
     })
 }
 

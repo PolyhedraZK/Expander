@@ -27,8 +27,13 @@ where
     ComPackF: SimdField<Scalar = F>,
 {
     let (row_num, msg_size) = {
-        let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
-        let (row_field_elems, msg_size) = OrionSRS::evals_shape::<F>(num_vars);
+        let local_num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
+        let (row_field_elems, msg_size) = OrionSRS::multi_process_local_eval_shape(
+            mpi_config.world_size(),
+            local_num_vars,
+            F::FIELD_SIZE,
+            ComPackF::PACK_SIZE,
+        );
         let row_num = row_field_elems / SimdF::PACK_SIZE;
         (row_num, msg_size)
     };
@@ -78,12 +83,17 @@ where
     ComPackF: SimdField<Scalar = F>,
     T: Transcript<EvalF>,
 {
-    let msg_size = {
-        let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
-        assert_eq!(num_vars, point.len());
+    let (local_row_field_elems, msg_size) = {
+        let local_num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
+        assert_eq!(local_num_vars, point.len());
 
-        let (_, msg_size) = OrionSRS::evals_shape::<F>(num_vars);
-        msg_size
+        let (local_row_field_elems, msg_size) = OrionSRS::multi_process_local_eval_shape(
+            mpi_config.world_size(),
+            local_num_vars,
+            F::FIELD_SIZE,
+            ComPackF::PACK_SIZE,
+        );
+        (local_row_field_elems, msg_size)
     };
 
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
@@ -145,7 +155,19 @@ where
         .collect();
 
     // NOTE: MT opening for point queries
-    let query_openings = orion_mpi_mt_openings(mpi_config, pk, scratch_pad, transcript);
+    let num_leaves_per_opening = {
+        let num_bits_opening = local_row_field_elems * F::FIELD_SIZE * mpi_config.world_size();
+        let num_bytes_opening = num_bits_opening / 8;
+
+        num_bytes_opening / tree::LEAF_BYTES
+    };
+    let query_openings = orion_mpi_mt_openings(
+        mpi_config,
+        pk,
+        num_leaves_per_opening,
+        scratch_pad,
+        transcript,
+    );
 
     if !mpi_config.is_root() {
         return None;

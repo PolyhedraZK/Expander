@@ -27,7 +27,13 @@ where
 {
     let (row_num, msg_size) = {
         let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
-        let (row_field_elems, msg_size) = OrionSRS::evals_shape::<F>(num_vars);
+        let (row_field_elems, msg_size) = OrionSRS::multi_process_local_eval_shape(
+            1,
+            num_vars,
+            F::FIELD_SIZE,
+            ComPackF::PACK_SIZE,
+        );
+
         let row_num = row_field_elems / SimdF::PACK_SIZE;
         (row_num, msg_size)
     };
@@ -72,7 +78,12 @@ where
         let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars, point.len());
 
-        let (_, msg_size) = OrionSRS::evals_shape::<F>(num_vars);
+        let (_, msg_size) = OrionSRS::multi_process_local_eval_shape(
+            1,
+            num_vars,
+            F::FIELD_SIZE,
+            ComPackF::PACK_SIZE,
+        );
         msg_size
     };
 

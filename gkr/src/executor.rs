@@ -119,7 +119,7 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     }
 }
 
-pub(crate) fn input_poly_vars_calibration<Cfg: GKRConfig>(
+pub fn input_poly_vars_calibration<Cfg: GKRConfig>(
     actual_poly_vars: usize,
     world_size: usize,
 ) -> usize {
