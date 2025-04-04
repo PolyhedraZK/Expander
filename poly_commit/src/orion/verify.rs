@@ -77,8 +77,7 @@ where
 
         let actual_commitment = if world_size > 1 {
             let height = 1 + mpi_point.len();
-            let (internal, _) =
-                tree::Tree::new_with_leaf_nodes(proof.merkle_cap.clone(), height as u32);
+            let internal = tree::Tree::new_with_leaf_nodes(&proof.merkle_cap, height as u32);
             internal[0]
         } else {
             proof.merkle_cap[0]

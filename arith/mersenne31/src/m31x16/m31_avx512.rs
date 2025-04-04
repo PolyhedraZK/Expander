@@ -236,8 +236,15 @@ impl SimdField for AVXM31 {
 
     #[inline(always)]
     fn horizontal_sum(&self) -> Self::Scalar {
-        let ret = unsafe { transmute::<__m512i, [Self::Scalar; M31_PACK_SIZE]>(self.v) };
-        let mut buffer = ret.iter().map(|r| r.v as u64).sum::<u64>();
+        let mut buffer = unsafe {
+            let lo_32x8: __m256i = _mm512_castsi512_si256(self.v);
+            let hi_32x8: __m256i = _mm512_extracti64x4_epi64(self.v, 1);
+            let lo_64x8: __m512i = _mm512_cvtepu32_epi64(lo_32x8);
+            let hi_64x8: __m512i = _mm512_cvtepu32_epi64(hi_32x8);
+            let sum_64x8 = _mm512_add_epi64(lo_64x8, hi_64x8);
+            _mm512_reduce_add_epi64(sum_64x8) as u64
+        };
+
         buffer = (buffer & M31_MOD as u64) + (buffer >> 31);
         if buffer == M31_MOD as u64 {
             Self::Scalar::ZERO

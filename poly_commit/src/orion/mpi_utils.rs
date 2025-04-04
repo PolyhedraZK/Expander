@@ -204,7 +204,7 @@ pub(crate) fn orion_mpi_compute_mt_root(
 
     let root = {
         let height = 1 + leaves.len().ilog2();
-        let (internal, _) = tree::Tree::new_with_leaf_nodes(leaves, height);
+        let internal = tree::Tree::new_with_leaf_nodes(&leaves, height);
         internal[0]
     };
 
