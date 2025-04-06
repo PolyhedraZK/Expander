@@ -1,5 +1,6 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
+use std::mem::forget;
 
 use arith::{Field, SimdField};
 use ark_std::{end_timer, log2, start_timer};
@@ -36,30 +37,18 @@ impl Tree {
     }
 
     /// Builds a tree with the given leaves.
-    // #[inline]
-    // pub fn new_with_field_elements(leave_elems: &[F]) -> Self {
-    //     let leaves = leave_elems
-    //         .iter()
-    //         .map(|&leaf| Leaf { data: leaf })
-    //         .collect::<Vec<Leaf<F>>>();
-    //     Self::new_with_leaves(leaves)
-    // }
-
-    /// Builds a tree with the given leaves.
     #[inline]
     pub fn new_with_leaves(leaves: Vec<Leaf>) -> Self {
         let tree_height = log2(leaves.len() + 1);
 
-        let leaf_nodes = leaves
+        let mut leaf_nodes = leaves
             .as_slice()
             .iter()
             .map(|leaf| leaf.leaf_hash())
             .collect::<Vec<Node>>();
-        let nodes = Self::new_with_leaf_nodes(leaf_nodes, tree_height);
-        Self {
-            nodes: [nodes.0, nodes.1].concat(),
-            leaves,
-        }
+        let mut nodes = Self::new_with_leaf_nodes(&leaf_nodes, tree_height);
+        nodes.append(&mut leaf_nodes);
+        Self { nodes, leaves }
     }
 
     /// Create a tree with compact serialization of field elements as leaves,
@@ -85,20 +74,22 @@ impl Tree {
         F: Field,
         PackF: SimdField<Scalar = F>,
     {
-        let mut serialized_bytes: Vec<u8> = vec![0u8; PackF::SIZE * field_elems.len()];
-        serialized_bytes
-            .chunks_mut(PackF::SIZE)
-            .zip(field_elems.iter())
-            .for_each(|(unit, elem)| {
-                elem.serialize_into(unit).unwrap();
-            });
+        assert_eq!(field_elems.len() * PackF::SIZE % LEAF_BYTES, 0);
+        assert!(field_elems.len().is_power_of_two());
 
-        assert!((serialized_bytes.len() / LEAF_BYTES).is_power_of_two());
+        let leaves = unsafe {
+            let field_elems_ptr = field_elems.as_ptr();
+            let field_elems_len = field_elems.len();
+            let field_elems_cap = field_elems.capacity();
 
-        let leaves = serialized_bytes
-            .chunks(LEAF_BYTES)
-            .map(move |chunk| Leaf::new(unsafe { chunk.try_into().unwrap_unchecked() }))
-            .collect();
+            forget(field_elems);
+
+            Vec::from_raw_parts(
+                field_elems_ptr as *mut Leaf,
+                field_elems_len * PackF::SIZE / LEAF_BYTES,
+                field_elems_cap * PackF::SIZE / LEAF_BYTES,
+            )
+        };
 
         Tree::new_with_leaves(leaves)
     }
@@ -123,7 +114,8 @@ impl Tree {
     /// # Returns
     ///
     /// A tuple containing vectors of non-leaf nodes and leaf nodes.
-    pub fn new_with_leaf_nodes(leaf_nodes: Vec<Node>, tree_height: u32) -> (Vec<Node>, Vec<Node>) {
+    #[inline(always)]
+    pub fn new_with_leaf_nodes(leaf_nodes: &[Node], tree_height: u32) -> Vec<Node> {
         let timer = start_timer!(|| format!("generate new tree with {} leaves", leaf_nodes.len()));
 
         let len = leaf_nodes.len();
@@ -151,7 +143,7 @@ impl Tree {
                 .skip(start_index)
                 .for_each(|(current_index, e)| {
                     let left_leaf_index = left_child_index(current_index) - upper_bound;
-                    let right_leaf_index = right_child_index(current_index) - upper_bound;
+                    let right_leaf_index = left_leaf_index + 1;
                     *e = Node::node_hash(
                         &leaf_nodes[left_leaf_index],
                         &leaf_nodes[right_leaf_index],
@@ -164,18 +156,15 @@ impl Tree {
 
         for &start_index in &level_indices {
             let upper_bound = left_child_index(start_index);
-            let mut buf = non_leaf_nodes[start_index..upper_bound].to_vec();
-            buf.iter_mut().enumerate().for_each(|(index, node)| {
-                *node = Node::node_hash(
-                    &non_leaf_nodes[left_child_index(index + start_index)],
-                    &non_leaf_nodes[right_child_index(index + start_index)],
-                );
-            });
-            non_leaf_nodes[start_index..upper_bound].clone_from_slice(buf.as_ref());
+            for i in start_index..upper_bound {
+                let left = left_child_index(i);
+                let right = left + 1;
+                non_leaf_nodes[i] = Node::node_hash(&non_leaf_nodes[left], &non_leaf_nodes[right]);
+            }
         }
         end_timer!(timer);
 
-        (non_leaf_nodes, leaf_nodes.to_vec())
+        non_leaf_nodes
     }
 
     /// Returns the root node of the tree.
@@ -270,14 +259,6 @@ impl Tree {
 
         self.gen_range_proof(left, right, tree_height)
     }
-
-    // pub fn batch_tree_for_recursive_oracles(leaves_vec: Vec<Vec<F>>) -> Vec<Self> {
-    //     // todo! optimize
-    //     leaves_vec
-    //         .iter()
-    //         .map(|leaves| Self::new_with_field_elements(leaves))
-    //         .collect()
-    // }
 }
 
 /// Returns the index of the sibling, given an index.
@@ -309,6 +290,7 @@ fn left_child_index(index: usize) -> usize {
 }
 
 /// Returns the index of the right child, given an index.
+#[allow(unused)]
 #[inline]
 fn right_child_index(index: usize) -> usize {
     2 * index + 2

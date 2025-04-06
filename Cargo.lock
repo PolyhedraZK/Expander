@@ -1667,6 +1667,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "mpi_config"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std 0.4.0",
+ "gf2",
+ "itertools 0.13.0",
+ "mersenne31",
+ "mpi",
+ "serdes",
+]
+
+[[package]]
 name = "multer"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

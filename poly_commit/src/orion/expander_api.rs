@@ -87,7 +87,7 @@ where
         }
 
         let final_tree_height = 1 + buffer.len().ilog2();
-        let (internals, _) = tree::Tree::new_with_leaf_nodes(buffer.clone(), final_tree_height);
+        let internals = tree::Tree::new_with_leaf_nodes(&buffer, final_tree_height);
         internals[0].into()
     }
 
