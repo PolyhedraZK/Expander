@@ -14,12 +14,11 @@ use crate::{
     traits::TensorCodeIOPPCS,
 };
 
-impl<C, ComPackF, T> ExpanderPCS<C>
-    for OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF, T>
+impl<C, ComPackF> ExpanderPCS<C>
+    for OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF>
 where
     C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
-    T: Transcript<C::ChallengeField>,
 {
     const NAME: &'static str = "OrionPCSForExpanderGKR";
 
@@ -202,10 +201,9 @@ where
     }
 }
 
-pub type OrionPCSForGKR<C, ComPack, T> = OrionSIMDFieldPCS<
+pub type OrionPCSForGKR<C, ComPack> = OrionSIMDFieldPCS<
     <C as FieldEngine>::CircuitField,
     <C as FieldEngine>::SimdCircuitField,
     <C as FieldEngine>::ChallengeField,
     ComPack,
-    T,
 >;

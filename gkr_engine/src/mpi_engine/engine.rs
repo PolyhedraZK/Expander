@@ -2,11 +2,8 @@ use std::os::raw::c_void;
 use std::{cmp, fmt::Debug};
 
 use arith::Field;
-<<<<<<< HEAD:gkr_engine/src/mpi_engine/engine.rs
-use mpi::ffi::*;
-=======
 use itertools::izip;
->>>>>>> main:config/mpi_config/src/lib.rs
+use mpi::ffi::*;
 use mpi::{
     datatype::PartitionMut,
     environment::Universe,
@@ -263,7 +260,7 @@ impl MPIEngine for MPIConfig {
     /// perform an all to all transpose,
     /// supposing the current party holds a row in a matrix with row number being MPI parties.
     #[inline(always)]
-    pub fn all_to_all_transpose<F: Sized>(&self, row: &mut [F]) {
+    fn all_to_all_transpose<F: Sized>(&self, row: &mut [F]) {
         assert_eq!(row.len() % self.world_size(), 0);
 
         // NOTE(HS) MPI has some upper limit for send buffer size, pre declare here and use later
@@ -315,12 +312,12 @@ impl MPIEngine for MPIConfig {
     }
 
     #[inline(always)]
-    pub fn gather_varlen_vec<F: ExpSerde>(&self, elems: &Vec<F>, global_elems: &mut Vec<Vec<F>>) {
+    fn gather_varlen_vec<F: ExpSerde>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<Vec<F>>) {
         let mut elems_bytes: Vec<u8> = Vec::new();
-        elems.serialize_into(&mut elems_bytes).unwrap();
+        local_vec.serialize_into(&mut elems_bytes).unwrap();
 
         let mut byte_lengths = vec![0i32; self.world_size()];
-        self.gather_vec(&vec![elems_bytes.len() as i32], &mut byte_lengths);
+        self.gather_vec(&[elems_bytes.len() as i32], &mut byte_lengths);
 
         let all_elems_bytes_len = byte_lengths.iter().sum::<i32>() as usize;
         let mut all_elems_bytes: Vec<u8> = vec![0u8; all_elems_bytes_len];
@@ -342,7 +339,7 @@ impl MPIEngine for MPIConfig {
             self.root_process()
                 .gather_varcount_into_root(&elems_bytes, &mut partition);
 
-            *global_elems = displs
+            *global_vec = displs
                 .iter()
                 .map(|&srt| Vec::deserialize_from(&all_elems_bytes[srt as usize..]).unwrap())
                 .collect();
