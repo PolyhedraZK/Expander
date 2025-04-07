@@ -8,4 +8,9 @@ arith = { path = "../" }
 serdes = { path = "../../serdes" }
 
 tiny-keccak.workspace = true
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+halo2curves = { workspace = true, features = [ "asm" ] }
+
+[target.'cfg(not(target_arch = "x86_64"))'.dependencies]
 halo2curves.workspace = true

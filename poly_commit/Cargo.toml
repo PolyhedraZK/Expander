@@ -18,8 +18,13 @@ ethnum.workspace = true
 ark-std.workspace = true
 thiserror.workspace = true
 itertools.workspace = true
-halo2curves.workspace = true
 derivative.workspace = true
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+halo2curves = { workspace = true, features = [ "asm" ] }
+
+[target.'cfg(not(target_arch = "x86_64"))'.dependencies]
+halo2curves.workspace = true
 
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
