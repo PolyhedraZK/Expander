@@ -6,7 +6,6 @@ use std::{
 
 use circuit::Circuit;
 use clap::Parser;
-use config::PolynomialCommitmentType;
 use config::{
     instantiations::{
         BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
@@ -15,6 +14,7 @@ use config::{
     },
     Config, GKRConfig, GKRScheme,
 };
+use config::{M31ConfigSha2Raw, PolynomialCommitmentType};
 use gkr::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
@@ -64,11 +64,11 @@ fn main() {
     match args.field.as_str() {
         "m31" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<M31ExtConfigSha2Raw>(
+                "keccak" => run_benchmark::<M31ConfigSha2Raw>(
                     &args,
                     Config::new(GKRScheme::Vanilla, mpi_config.clone()),
                 ),
-                "poseidon" => run_benchmark::<M31ExtConfigSha2Raw>(
+                "poseidon" => run_benchmark::<M31ConfigSha2Raw>(
                     &args,
                     Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
                 ),
@@ -197,7 +197,11 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
                     KECCAK_GF2_CIRCUIT,
                 )
             }
-            FieldType::M31 => todo!(),
+            FieldType::M31 => {
+                Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                    KECCAK_M31_CIRCUIT,
+                )
+            }
 
             FieldType::M31Ext3 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
                 Cfg,
@@ -229,7 +233,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
             FieldType::M31Ext3 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
             FieldType::GoldilocksExt2 => KECCAK_GOLDILOCKS_WITNESS,
-            FieldType::M31 => todo!(),
+            FieldType::M31 => KECCAK_M31_WITNESS,
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31Ext3 => POSEIDON_M31_WITNESS,
@@ -242,6 +246,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
 
     let circuit_copy_size: usize = match (Cfg::FieldConfig::FIELD_TYPE, args.circuit.as_str()) {
         (FieldType::GF2Ext128, "keccak") => 1,
+        (FieldType::M31, "keccak") => 2,
         (FieldType::M31Ext3, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
         (FieldType::M31Ext3, "poseidon") => 120,
