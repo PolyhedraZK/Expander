@@ -36,7 +36,7 @@ jobs:
     - name: Setup data
       run: cargo run --bin=dev-setup --release
     - name: Run benchmark
-      run: RUSTFLAGS="-C target-cpu=native" cargo criterion --all-features --message-format=json > benchmark_results.json
+      run: RUSTFLAGS="-C target-cpu=native" cargo criterion --message-format=json > benchmark_results.json
     - name: Clean benchmark results
       run: |
         wget https://raw.githubusercontent.com/PolyhedraZK/Expander/main/scripts/parse_benchmark_result.py
