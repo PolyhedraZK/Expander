@@ -55,6 +55,14 @@ impl SimdField for GoldilocksExt2x8 {
     }
 
     #[inline]
+    fn pack_full(base: &Self::Scalar) -> Self {
+        Self {
+            c0: Goldilocksx8::pack_full(&base.v[0]),
+            c1: Goldilocksx8::pack_full(&base.v[1]),
+        }
+    }
+
+    #[inline]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == Self::PACK_SIZE);
         let mut v0s = vec![];
@@ -124,7 +132,7 @@ impl ExtensionField for GoldilocksExt2x8 {
         // where X^2 = 7
         // = 7b + aX
         Self {
-            c0: self.c1 * Goldilocksx8::pack_full(Goldilocks { v: 7u64 }),
+            c0: self.c1 * Goldilocksx8::pack_full(&Goldilocks { v: 7u64 }),
             c1: self.c0,
         }
     }
@@ -157,8 +165,8 @@ impl From<GoldilocksExt2> for GoldilocksExt2x8 {
     #[inline]
     fn from(x: GoldilocksExt2) -> Self {
         Self {
-            c0: Goldilocksx8::pack_full(x.v[0]),
-            c1: Goldilocksx8::pack_full(x.v[1]),
+            c0: Goldilocksx8::pack_full(&x.v[0]),
+            c1: Goldilocksx8::pack_full(&x.v[1]),
         }
     }
 }
@@ -333,7 +341,7 @@ fn mul_internal(a: &GoldilocksExt2x8, b: &GoldilocksExt2x8) -> GoldilocksExt2x8 
 
 #[inline(always)]
 fn square_internal(a: &GoldilocksExt2x8) -> GoldilocksExt2x8 {
-    let r0 = a.c0.square() + a.c1.square() * Goldilocksx8::pack_full(7u64.into());
+    let r0 = a.c0.square() + a.c1.square() * Goldilocksx8::pack_full(&7u64.into());
     let r1 = a.c0 * a.c1.double();
     GoldilocksExt2x8 { c0: r0, c1: r1 }
 }
