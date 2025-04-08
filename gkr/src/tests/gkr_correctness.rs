@@ -11,7 +11,8 @@ use env_logger;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{
-    BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, GoldilocksExtConfig, M31ExtConfig,
+    BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, GoldilocksExtConfig, M31Config,
+    M31ExtConfig,
 };
 use halo2curves::bn256::{Bn256, G1Affine};
 use mersenne31::M31x16;
@@ -35,13 +36,13 @@ fn test_gkr_correctness() {
     let mpi_config = MPIConfig::new();
     declare_gkr_config!(
         C0,
-        FieldType::GF2,
+        FieldType::GF2Ext128,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw
     );
     declare_gkr_config!(
         C1,
-        FieldType::M31,
+        FieldType::M31Ext3,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw
     );
@@ -53,13 +54,13 @@ fn test_gkr_correctness() {
     );
     declare_gkr_config!(
         C3,
-        FieldType::GF2,
+        FieldType::GF2Ext128,
         FiatShamirHashType::Keccak256,
         PolynomialCommitmentType::Raw
     );
     declare_gkr_config!(
         C4,
-        FieldType::M31,
+        FieldType::M31Ext3,
         FiatShamirHashType::Keccak256,
         PolynomialCommitmentType::Raw
     );
@@ -77,19 +78,19 @@ fn test_gkr_correctness() {
     );
     declare_gkr_config!(
         C7,
-        FieldType::GF2,
+        FieldType::GF2Ext128,
         FiatShamirHashType::Keccak256,
         PolynomialCommitmentType::Orion,
     );
     declare_gkr_config!(
         C8,
-        FieldType::M31,
+        FieldType::M31Ext3,
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Raw,
     );
     declare_gkr_config!(
         C9,
-        FieldType::M31,
+        FieldType::M31Ext3,
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Orion,
     );
@@ -107,7 +108,13 @@ fn test_gkr_correctness() {
     );
     declare_gkr_config!(
         C12,
-        FieldType::Goldilocks,
+        FieldType::GoldilocksExt2,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw
+    );
+    declare_gkr_config!(
+        C13,
+        FieldType::M31,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw
     );

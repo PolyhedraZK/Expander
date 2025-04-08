@@ -197,6 +197,8 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
                     KECCAK_GF2_CIRCUIT,
                 )
             }
+            FieldType::M31 => todo!(),
+
             FieldType::M31Ext3 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
                 Cfg,
             >(KECCAK_M31_CIRCUIT),
@@ -227,6 +229,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
             FieldType::M31Ext3 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
             FieldType::GoldilocksExt2 => KECCAK_GOLDILOCKS_WITNESS,
+            FieldType::M31 => todo!(),
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31Ext3 => POSEIDON_M31_WITNESS,

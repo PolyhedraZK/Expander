@@ -24,20 +24,20 @@ fn print_type_name<Cfg: GKRConfig>() {
 #[test]
 fn main() {
     declare_gkr_config!(
-        M31Sha256Config,
-        FieldType::M31,
+        M31ExtSha256Config,
+        FieldType::M31Ext3,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw
     );
     declare_gkr_config!(
-        M31PoseidonRawConfig,
-        FieldType::M31,
+        M31ExtPoseidonRawConfig,
+        FieldType::M31Ext3,
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Raw
     );
     declare_gkr_config!(
-        M31PoseidonOrionConfig,
-        FieldType::M31,
+        M31ExtPoseidonOrionConfig,
+        FieldType::M31Ext3,
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Orion
     );
@@ -54,30 +54,30 @@ fn main() {
         PolynomialCommitmentType::KZG
     );
     declare_gkr_config!(
-        GF2Keccak256Config,
-        FieldType::GF2,
+        GF2ExtKeccak256Config,
+        FieldType::GF2Ext128,
         FiatShamirHashType::Keccak256,
         PolynomialCommitmentType::Raw
     );
     declare_gkr_config!(
-        GF2Keccak256OrionConfig,
-        FieldType::GF2,
+        GF2ExtKeccak256OrionConfig,
+        FieldType::GF2Ext128,
         FiatShamirHashType::Keccak256,
         PolynomialCommitmentType::Orion
     );
     declare_gkr_config!(
-        GoldilocksSHA256Config,
-        FieldType::Goldilocks,
+        GoldilocksExtSHA256Config,
+        FieldType::GoldilocksExt2,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw
     );
 
-    print_type_name::<M31Sha256Config>();
-    print_type_name::<M31PoseidonRawConfig>();
-    print_type_name::<M31PoseidonOrionConfig>();
+    print_type_name::<M31ExtSha256Config>();
+    print_type_name::<M31ExtPoseidonRawConfig>();
+    print_type_name::<M31ExtPoseidonOrionConfig>();
     print_type_name::<BN254MIMCConfig>();
     print_type_name::<BN254MIMCKZGConfig>();
-    print_type_name::<GF2Keccak256Config>();
-    print_type_name::<GF2Keccak256OrionConfig>();
-    print_type_name::<GoldilocksSHA256Config>();
+    print_type_name::<GF2ExtKeccak256Config>();
+    print_type_name::<GF2ExtKeccak256OrionConfig>();
+    print_type_name::<GoldilocksExtSHA256Config>();
 }

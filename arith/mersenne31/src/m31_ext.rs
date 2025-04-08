@@ -7,8 +7,8 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::ExtensionField;
 use arith::{field_common, Field};
+use arith::{ExtensionField, SimdField};
 use serdes::{ExpSerde, SerdeResult};
 
 use crate::m31::{mod_reduce_u32, M31};
@@ -352,5 +352,27 @@ impl PartialOrd for M31Ext3 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for M31Ext3 is not supported")
+    }
+}
+
+impl SimdField for M31Ext3 {
+    type Scalar = Self;
+
+    const PACK_SIZE: usize = 1;
+
+    #[inline(always)]
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
+        *self * challenge
+    }
+
+    #[inline(always)]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        assert_eq!(base_vec.len(), 1);
+        base_vec[0]
+    }
+
+    #[inline(always)]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        vec![*self]
     }
 }

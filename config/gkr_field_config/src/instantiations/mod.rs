@@ -1,6 +1,9 @@
 mod bn254;
 pub use bn254::*;
 
+mod m31;
+pub use m31::*;
+
 mod m31_ext3;
 pub use m31_ext3::*;
 

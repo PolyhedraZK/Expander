@@ -15,14 +15,14 @@ pub const KECCAK_GOLDILOCKS_CIRCUIT: &str = "data/circuit_goldilocks.txt";
 
 declare_gkr_config!(
     pub M31ExtConfigSha2Raw,
-    FieldType::M31,
+    FieldType::M31Ext3,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw
 );
 
 declare_gkr_config!(
     pub GF2ExtConfigSha2Raw,
-    FieldType::GF2,
+    FieldType::GF2Ext128,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw
 );

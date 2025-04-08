@@ -169,6 +169,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
                 KECCAK_GF2_CIRCUIT,
                 &config.mpi_config,
             ),
+            FieldType::M31 => todo!(),
             FieldType::M31Ext3 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 KECCAK_M31_CIRCUIT,
                 &config.mpi_config,
@@ -195,6 +196,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     let witness_path = match args.circuit.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::GF2Ext128 => KECCAK_GF2_WITNESS,
+            FieldType::M31 => todo!(),
             FieldType::M31Ext3 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
             FieldType::GoldilocksExt2 => KECCAK_GOLDILOCKS_WITNESS,

@@ -4,6 +4,7 @@ use arith::{ExtensionField, Field, SimdField};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldType {
+    M31,
     M31Ext3,
     BN254,
     GF2Ext128,

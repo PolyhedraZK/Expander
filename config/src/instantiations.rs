@@ -3,7 +3,7 @@ use config_macros::declare_gkr_config;
 use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{
-    BN254Config, GF2ExtConfig, GKRFieldConfig, GoldilocksExtConfig, M31ExtConfig,
+    BN254Config, GF2ExtConfig, GKRFieldConfig, GoldilocksExtConfig, M31Config, M31ExtConfig,
 };
 use halo2curves::bn256::{Bn256, G1Affine};
 use mersenne31::M31x16;
@@ -19,19 +19,19 @@ declare_gkr_config!(
 );
 declare_gkr_config!(
     pub M31ExtConfigPoseidonRaw,
-    FieldType::M31,
+    FieldType::M31Ext3,
     FiatShamirHashType::Poseidon,
     PolynomialCommitmentType::Raw
 );
 declare_gkr_config!(
     pub M31ExtConfigSha2Orion,
-    FieldType::M31,
+    FieldType::M31Ext3,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Orion
 );
 declare_gkr_config!(
     pub M31ExtConfigSha2Raw,
-    FieldType::M31,
+    FieldType::M31Ext3,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw
 );
@@ -65,13 +65,13 @@ declare_gkr_config!(
 // ============== GF2 ==============
 declare_gkr_config!(
     pub GF2ExtConfigSha2Orion,
-    FieldType::GF2,
+    FieldType::GF2Ext128,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Orion
 );
 declare_gkr_config!(
     pub GF2ExtConfigSha2Raw,
-    FieldType::GF2,
+    FieldType::GF2Ext128,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw
 );
@@ -79,7 +79,7 @@ declare_gkr_config!(
 // ============== Goldilocks ==============
 declare_gkr_config!(
     pub GoldilocksExtConfigSha2Raw,
-    FieldType::Goldilocks,
+    FieldType::GoldilocksExt2,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw
 );
