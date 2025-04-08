@@ -277,3 +277,17 @@ fn mul_internal(a: &NeonGoldilocks, b: &NeonGoldilocks) -> NeonGoldilocks {
     }
     res
 }
+
+impl FFTField for NeonGoldilocks {
+    const TWO_ADICITY: usize = 32;
+
+    /// The `2^s` root of unity.
+    ///
+    /// It can be calculated by exponentiating `Self::MULTIPLICATIVE_GENERATOR` by `t`,
+    /// where `t = (modulus - 1) >> Self::S`.
+    fn root_of_unity() -> Self {
+        Self::pack_full(Goldilocks {
+            v: 0x185629dcda58878c,
+        })
+    }
+}
