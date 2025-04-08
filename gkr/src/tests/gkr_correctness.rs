@@ -171,6 +171,10 @@ fn test_gkr_correctness() {
         &Config::<C12>::new(GKRScheme::Vanilla, mpi_config.clone()),
         None,
     );
+    test_gkr_correctness_helper(
+        &Config::<C13>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
 
     MPIConfig::finalize();
 }
@@ -188,6 +192,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         FieldType::M31Ext3 => 2,
         FieldType::BN254 => 2,
         FieldType::GoldilocksExt2 => 2,
+        FieldType::M31 => 2,
         _ => unreachable!(),
     };
     root_println!(
@@ -202,6 +207,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         FieldType::M31Ext3 => "../".to_owned() + KECCAK_M31_CIRCUIT,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
         FieldType::GoldilocksExt2 => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
+        FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
         _ => unreachable!(),
     };
     let (mut circuit, mut window) =
@@ -213,6 +219,7 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         FieldType::M31Ext3 => "../".to_owned() + KECCAK_M31_WITNESS,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_WITNESS,
         FieldType::GoldilocksExt2 => "../".to_owned() + KECCAK_GOLDILOCKS_WITNESS,
+        FieldType::M31 => "../".to_owned() + KECCAK_M31_WITNESS,
         _ => unreachable!(),
     };
     circuit.load_witness_allow_padding_testing_only(&witness_path, &config.mpi_config);
