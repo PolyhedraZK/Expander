@@ -322,7 +322,7 @@ impl FFTField for AVXGoldilocks {
 #[inline]
 unsafe fn mod_reduce_epi64(x: __m512i) -> __m512i {
     // Compare each element with modulus
-    let mask = _mm512_cmpgt_epu64_mask(x, PACKED_GOLDILOCKS_MOD);
+    let mask = _mm512_cmpge_epu64_mask(x, PACKED_GOLDILOCKS_MOD);
     // If element > modulus, subtract modulus
     _mm512_mask_sub_epi64(x, mask, x, PACKED_GOLDILOCKS_MOD)
 }
