@@ -60,7 +60,7 @@ impl MultilinearProductHelper {
             }
         }
 
-        if C::FIELD_TYPE == FieldType::GF2 {
+        if C::FIELD_TYPE == FieldType::GF2Ext128 {
             // over GF2_128, the three points are at 0, 1 and X
             let p2x = p2.mul_by_x();
             let p2x2 = p2x.mul_by_x();
@@ -128,7 +128,7 @@ impl SumcheckSimdProdGateHelper {
 
         let eval_size = 1 << (var_num - var_idx - 1);
 
-        if C::FIELD_TYPE == FieldType::GF2 {
+        if C::FIELD_TYPE == FieldType::GF2Ext128 {
             for i in 0..eval_size {
                 let eq_v_0 = bk_eq[i * 2];
                 let eq_v_1 = bk_eq[i * 2 + 1];

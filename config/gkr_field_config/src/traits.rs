@@ -4,10 +4,10 @@ use arith::{ExtensionField, Field, SimdField};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldType {
-    M31,
+    M31Ext3,
     BN254,
-    GF2,
-    Goldilocks,
+    GF2Ext128,
+    GoldilocksExt2,
 }
 
 pub trait GKRFieldConfig: Default + Debug + Clone + Send + Sync + 'static {

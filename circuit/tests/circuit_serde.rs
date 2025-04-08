@@ -11,6 +11,7 @@ use transcript::{BytesHashTranscript, SHA256hasher};
 pub const KECCAK_M31_CIRCUIT: &str = "data/circuit_m31.txt";
 pub const KECCAK_GF2_CIRCUIT: &str = "data/circuit_gf2.txt";
 pub const KECCAK_BN254_CIRCUIT: &str = "data/circuit_bn254.txt";
+pub const KECCAK_GOLDILOCKS_CIRCUIT: &str = "data/circuit_goldilocks.txt";
 
 declare_gkr_config!(
     pub M31ExtConfigSha2Raw,
@@ -51,9 +52,10 @@ fn test_circuit_serde_helper<Cfg: GKRConfig>(mpi_config: &MPIConfig) {
     );
 
     let circuit_path = match <Cfg as GKRConfig>::FieldConfig::FIELD_TYPE {
-        FieldType::GF2 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
-        FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
+        FieldType::GF2Ext128 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
+        FieldType::M31Ext3 => "../".to_owned() + KECCAK_M31_CIRCUIT,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
+        FieldType::GoldilocksExt2 => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
         _ => unreachable!(),
     };
     let circuit =

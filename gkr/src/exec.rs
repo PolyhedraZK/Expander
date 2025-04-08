@@ -34,14 +34,14 @@ async fn main() {
     root_println!(&mpi_config, "field type: {:?}", field_type);
 
     match (fs_hash_type.clone(), pcs_type.clone(), field_type.clone()) {
-        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::M31) => {
+        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::M31Ext3) => {
             run_command::<M31ExtConfigSha2Orion>(
                 &expander_exec_args,
                 Config::new(GKRScheme::Vanilla, mpi_config.clone()),
             )
             .await;
         }
-        (FiatShamirHashType::Poseidon, PolynomialCommitmentType::Raw, FieldType::M31) => {
+        (FiatShamirHashType::Poseidon, PolynomialCommitmentType::Raw, FieldType::M31Ext3) => {
             run_command::<M31ExtConfigPoseidonRaw>(
                 &expander_exec_args,
                 Config::new(GKRScheme::Vanilla, mpi_config.clone()),
@@ -76,14 +76,14 @@ async fn main() {
             )
             .await;
         }
-        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::GF2) => {
+        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::GF2Ext128) => {
             run_command::<GF2ExtConfigSha2Orion>(
                 &expander_exec_args,
                 Config::new(GKRScheme::Vanilla, mpi_config.clone()),
             )
             .await;
         }
-        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Raw, FieldType::GF2) => {
+        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Raw, FieldType::GF2Ext128) => {
             run_command::<GF2ExtConfigSha2Raw>(
                 &expander_exec_args,
                 Config::new(GKRScheme::Vanilla, mpi_config.clone()),

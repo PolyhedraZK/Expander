@@ -32,7 +32,7 @@ impl SumcheckSimdProdGateHelper {
 
         let eval_size = 1 << (self.var_num - var_idx - 1);
 
-        if C::FIELD_TYPE == FieldType::GF2 {
+        if C::FIELD_TYPE == FieldType::GF2Ext128 {
             for i in 0..eval_size {
                 let eq_v_0 = bk_eq[i * 2];
                 let eq_v_1 = bk_eq[i * 2 + 1];

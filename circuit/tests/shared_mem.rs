@@ -1,5 +1,5 @@
 use circuit::Circuit;
-use config::{FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
+use config::{FiatShamirHashType, GKRConfig, GoldilocksExtConfigSha2Raw, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
 use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use mpi_config::{shared_mem::SharedMemory, MPIConfig};
@@ -11,6 +11,7 @@ use transcript::{BytesHashTranscript, SHA256hasher};
 pub const KECCAK_M31_CIRCUIT: &str = "data/circuit_m31.txt";
 pub const KECCAK_GF2_CIRCUIT: &str = "data/circuit_gf2.txt";
 pub const KECCAK_BN254_CIRCUIT: &str = "data/circuit_bn254.txt";
+pub const KECCAK_GOLDILOCKS_CIRCUIT: &str = "data/circuit_goldilocks.txt";
 
 declare_gkr_config!(
     pub M31ExtConfigSha2Raw,
@@ -36,9 +37,10 @@ declare_gkr_config!(
 #[allow(unreachable_patterns)]
 fn load_circuit<Cfg: GKRConfig>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::FieldConfig>> {
     let circuit_path = match <Cfg as GKRConfig>::FieldConfig::FIELD_TYPE {
-        FieldType::GF2 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
-        FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
+        FieldType::GF2Ext128 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
+        FieldType::M31Ext3 => "../".to_owned() + KECCAK_M31_CIRCUIT,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
+        FieldType::GoldilocksExt2 => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
         _ => unreachable!(),
     };
 
@@ -64,6 +66,8 @@ fn test_shared_mem() {
     let circuit = load_circuit::<GF2ExtConfigSha2Raw>(&mpi_config);
     test_shared_mem_helper(&mpi_config, circuit);
     let circuit = load_circuit::<BN254ConfigSha2Raw>(&mpi_config);
+    test_shared_mem_helper(&mpi_config, circuit);
+    let circuit = load_circuit::<GoldilocksExtConfigSha2Raw>(&mpi_config);
     test_shared_mem_helper(&mpi_config, circuit);
 
     MPIConfig::finalize();

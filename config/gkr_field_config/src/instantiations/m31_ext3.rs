@@ -7,7 +7,7 @@ use crate::{FieldType, GKRFieldConfig};
 pub struct M31ExtConfig;
 
 impl GKRFieldConfig for M31ExtConfig {
-    const FIELD_TYPE: FieldType = FieldType::M31;
+    const FIELD_TYPE: FieldType = FieldType::M31Ext3;
 
     type CircuitField = M31;
 

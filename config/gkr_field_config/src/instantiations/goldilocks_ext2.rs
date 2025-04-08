@@ -7,7 +7,7 @@ use crate::{FieldType, GKRFieldConfig};
 pub struct GoldilocksExtConfig;
 
 impl GKRFieldConfig for GoldilocksExtConfig {
-    const FIELD_TYPE: FieldType = FieldType::Goldilocks;
+    const FIELD_TYPE: FieldType = FieldType::GoldilocksExt2;
 
     type CircuitField = Goldilocks;
 

@@ -177,10 +177,10 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
         <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE
     );
     let circuit_copy_size: usize = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
-        FieldType::GF2 => 1,
-        FieldType::M31 => 2,
+        FieldType::GF2Ext128 => 1,
+        FieldType::M31Ext3 => 2,
         FieldType::BN254 => 2,
-        FieldType::Goldilocks => 2,
+        FieldType::GoldilocksExt2 => 2,
         _ => unreachable!(),
     };
     root_println!(
@@ -191,10 +191,10 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
     root_println!(config.mpi_config, "Config created.");
 
     let circuit_path = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
-        FieldType::GF2 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
-        FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
+        FieldType::GF2Ext128 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
+        FieldType::M31Ext3 => "../".to_owned() + KECCAK_M31_CIRCUIT,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
-        FieldType::Goldilocks => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
+        FieldType::GoldilocksExt2 => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
         _ => unreachable!(),
     };
     let (mut circuit, mut window) =
@@ -202,10 +202,10 @@ fn test_gkr_correctness_helper<Cfg: GKRConfig>(config: &Config<Cfg>, write_proof
     root_println!(config.mpi_config, "Circuit loaded.");
 
     let witness_path = match <Cfg::FieldConfig as GKRFieldConfig>::FIELD_TYPE {
-        FieldType::GF2 => "../".to_owned() + KECCAK_GF2_WITNESS,
-        FieldType::M31 => "../".to_owned() + KECCAK_M31_WITNESS,
+        FieldType::GF2Ext128 => "../".to_owned() + KECCAK_GF2_WITNESS,
+        FieldType::M31Ext3 => "../".to_owned() + KECCAK_M31_WITNESS,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_WITNESS,
-        FieldType::Goldilocks => "../".to_owned() + KECCAK_GOLDILOCKS_WITNESS,
+        FieldType::GoldilocksExt2 => "../".to_owned() + KECCAK_GOLDILOCKS_WITNESS,
         _ => unreachable!(),
     };
     circuit.load_witness_allow_padding_testing_only(&witness_path, &config.mpi_config);

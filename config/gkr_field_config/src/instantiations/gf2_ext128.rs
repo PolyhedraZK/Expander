@@ -8,7 +8,7 @@ use crate::{FieldType, GKRFieldConfig};
 pub struct GF2ExtConfig;
 
 impl GKRFieldConfig for GF2ExtConfig {
-    const FIELD_TYPE: FieldType = FieldType::GF2;
+    const FIELD_TYPE: FieldType = FieldType::GF2Ext128;
 
     type CircuitField = GF2;
 

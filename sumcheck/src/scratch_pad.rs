@@ -109,7 +109,7 @@ impl<C: GKRFieldConfig> VerifierScratchPad<C> {
         let max_io_size = 1usize << max_num_var;
         let simd_size = C::get_field_pack_size();
 
-        let gf2_deg2_eval_coef = if C::FIELD_TYPE == FieldType::GF2 {
+        let gf2_deg2_eval_coef = if C::FIELD_TYPE == FieldType::GF2Ext128 {
             (C::ChallengeField::X - C::ChallengeField::one())
                 .mul_by_x()
                 .inv()
@@ -118,7 +118,7 @@ impl<C: GKRFieldConfig> VerifierScratchPad<C> {
             C::ChallengeField::INV_2
         };
 
-        let deg3_eval_at = if C::FIELD_TYPE == FieldType::GF2 {
+        let deg3_eval_at = if C::FIELD_TYPE == FieldType::GF2Ext128 {
             [
                 C::ChallengeField::ZERO,
                 C::ChallengeField::ONE,
