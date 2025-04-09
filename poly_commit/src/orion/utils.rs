@@ -54,12 +54,8 @@ impl OrionSRS {
         code_param_instance: OrionCodeParameter,
         mut rng: impl rand::RngCore,
     ) -> Self {
-        let (_, msg_size) = Self::multi_process_local_eval_shape(
-            world_size,
-            num_local_vars,
-            F::FIELD_SIZE,
-            field_pack_size,
-        );
+        let (_, msg_size) =
+            Self::local_eval_shape(world_size, num_local_vars, F::FIELD_SIZE, field_pack_size);
 
         Self {
             num_vars: num_local_vars,

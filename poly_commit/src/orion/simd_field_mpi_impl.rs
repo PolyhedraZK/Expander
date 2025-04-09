@@ -28,7 +28,7 @@ where
 {
     let (row_num, msg_size) = {
         let local_num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
-        let (row_field_elems, msg_size) = OrionSRS::multi_process_local_eval_shape(
+        let (row_field_elems, msg_size) = OrionSRS::local_eval_shape(
             mpi_config.world_size(),
             local_num_vars,
             F::FIELD_SIZE,
@@ -45,23 +45,20 @@ where
     assert_eq!(row_num % relative_pack_size, 0);
 
     assert_eq!(poly.hypercube_size() % relative_pack_size, 0);
-    let packed_evals = unsafe {
+    let packed_evals_ref = unsafe {
         let ptr = poly.hypercube_basis_ref().as_ptr();
         let len = poly.hypercube_size() / relative_pack_size;
-        let cap = poly.hypercube_basis_ref().capacity() / relative_pack_size;
-
-        Vec::from_raw_parts(ptr as *mut ComPackF, len, cap)
+        std::slice::from_raw_parts(ptr as *const ComPackF, len)
     };
 
     let local_commitment = mpi_commit_encoded(
         mpi_config,
         pk,
-        &packed_evals,
+        packed_evals_ref,
         scratch_pad,
         packed_rows,
         msg_size,
     )?;
-    packed_evals.leak();
 
     orion_mpi_compute_mt_root(mpi_config, local_commitment, scratch_pad)
 }
@@ -87,7 +84,7 @@ where
         let local_num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
         assert_eq!(local_num_vars, point.len());
 
-        let (local_row_field_elems, msg_size) = OrionSRS::multi_process_local_eval_shape(
+        let (local_row_field_elems, msg_size) = OrionSRS::local_eval_shape(
             mpi_config.world_size(),
             local_num_vars,
             F::FIELD_SIZE,

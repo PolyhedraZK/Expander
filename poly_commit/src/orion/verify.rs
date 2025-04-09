@@ -34,12 +34,8 @@ where
     T: Transcript<EvalF>,
 {
     let world_size = 1 << mpi_point.len();
-    let (_, msg_size) = OrionSRS::multi_process_local_eval_shape(
-        world_size,
-        point.len(),
-        F::FIELD_SIZE,
-        ComPackF::PACK_SIZE,
-    );
+    let (_, msg_size) =
+        OrionSRS::local_eval_shape(world_size, point.len(), F::FIELD_SIZE, ComPackF::PACK_SIZE);
 
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;
@@ -92,22 +88,14 @@ where
         return false;
     }
 
-    // NOTE: prepare the interleaved alphabets from the MT paths,
-    // but reshuffle the packed elements into another direction
+    // NOTE: prepare the interleaved alphabets from the MT paths
+    let num_simd_elems_per_leaf = proof.query_openings[0].leaves.len() * LEAF_BYTES / SimdF::SIZE;
     let packed_interleaved_alphabets: Vec<Vec<SimdF>> = proof
         .query_openings
         .iter()
-        .map(|c| -> Vec<_> {
-            let len = c.leaves.len() * LEAF_BYTES / SimdF::SIZE;
-            let cap = c.leaves.capacity() * LEAF_BYTES / SimdF::SIZE;
-
-            let leaves_cast =
-                unsafe { Vec::from_raw_parts(c.leaves.as_ptr() as *mut SimdF, len, cap) };
-
-            let res = leaves_cast.clone();
-            leaves_cast.leak();
-
-            res
+        .map(|c| unsafe {
+            let ptr = c.leaves.as_ptr();
+            std::slice::from_raw_parts(ptr as *const SimdF, num_simd_elems_per_leaf).to_vec()
         })
         .collect();
 

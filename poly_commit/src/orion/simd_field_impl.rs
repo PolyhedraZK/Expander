@@ -27,12 +27,8 @@ where
 {
     let (row_num, msg_size) = {
         let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
-        let (row_field_elems, msg_size) = OrionSRS::multi_process_local_eval_shape(
-            1,
-            num_vars,
-            F::FIELD_SIZE,
-            ComPackF::PACK_SIZE,
-        );
+        let (row_field_elems, msg_size) =
+            OrionSRS::local_eval_shape(1, num_vars, F::FIELD_SIZE, ComPackF::PACK_SIZE);
 
         let row_num = row_field_elems / SimdF::PACK_SIZE;
         (row_num, msg_size)
@@ -45,18 +41,13 @@ where
     assert_eq!(row_num % relative_pack_size, 0);
 
     assert_eq!(poly.hypercube_size() % relative_pack_size, 0);
-    let packed_evals = unsafe {
+    let packed_evals_ref = unsafe {
         let ptr = poly.hypercube_basis_ref().as_ptr();
         let len = poly.hypercube_size() / relative_pack_size;
-        let cap = poly.hypercube_basis_ref().capacity() / relative_pack_size;
-
-        Vec::from_raw_parts(ptr as *mut ComPackF, len, cap)
+        std::slice::from_raw_parts(ptr as *const ComPackF, len)
     };
 
-    let com = commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size);
-    packed_evals.leak();
-
-    com
+    commit_encoded(pk, packed_evals_ref, scratch_pad, packed_rows, msg_size)
 }
 
 #[inline(always)]
@@ -78,12 +69,8 @@ where
         let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars, point.len());
 
-        let (_, msg_size) = OrionSRS::multi_process_local_eval_shape(
-            1,
-            num_vars,
-            F::FIELD_SIZE,
-            ComPackF::PACK_SIZE,
-        );
+        let (_, msg_size) =
+            OrionSRS::local_eval_shape(1, num_vars, F::FIELD_SIZE, ComPackF::PACK_SIZE);
         msg_size
     };
 

@@ -200,7 +200,7 @@ pub(crate) trait TensorCodeIOPPCS {
 
     fn minimum_hamming_weight(&self) -> f64;
 
-    fn multi_process_local_eval_shape(
+    fn local_eval_shape(
         world_size: usize,
         num_local_vars: usize,
         num_bits_base_field: usize,
