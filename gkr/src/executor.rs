@@ -181,7 +181,10 @@ pub fn verify<Cfg: GKREngine>(
     )
 }
 
-pub async fn run_command<Cfg: GKREngine + 'static>(command: &ExpanderExecArgs) {
+pub async fn run_command<Cfg: GKREngine + 'static>(
+    command: &ExpanderExecArgs,
+    mpi_config: &MPIConfig,
+) {
     let subcommands = command.subcommands.clone();
 
     match subcommands {
@@ -190,11 +193,9 @@ pub async fn run_command<Cfg: GKREngine + 'static>(command: &ExpanderExecArgs) {
             witness_file,
             output_proof_file,
         } => {
-            let mpi_config = MPIConfig::prover_new();
-
             let (mut circuit, mut window) =
-                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, &mpi_config);
-
+                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, mpi_config);
+            let mpi_config = MPIConfig::prover_new();
             let prover = Prover::<Cfg>::new(mpi_config.clone());
 
             circuit.prover_load_witness_file(&witness_file, &mpi_config);

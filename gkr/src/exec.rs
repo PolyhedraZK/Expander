@@ -35,28 +35,28 @@ async fn main() {
 
     match (fs_hash_type.clone(), pcs_type.clone(), field_type.clone()) {
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::M31) => {
-            run_command::<M31ExtConfigSha2OrionVanilla>(&expander_exec_args).await;
+            run_command::<M31ExtConfigSha2OrionVanilla>(&expander_exec_args, &mpi_config).await;
         }
         (FiatShamirHashType::Poseidon, PolynomialCommitmentType::Raw, FieldType::M31) => {
-            run_command::<M31ExtConfigPoseidonRawVanilla>(&expander_exec_args).await;
+            run_command::<M31ExtConfigPoseidonRawVanilla>(&expander_exec_args, &mpi_config).await;
         }
         (FiatShamirHashType::MIMC5, PolynomialCommitmentType::Raw, FieldType::BN254) => {
-            run_command::<BN254ConfigMIMC5Raw>(&expander_exec_args).await;
+            run_command::<BN254ConfigMIMC5Raw>(&expander_exec_args, &mpi_config).await;
         }
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Raw, FieldType::BN254) => {
-            run_command::<BN254ConfigSha2Raw>(&expander_exec_args).await;
+            run_command::<BN254ConfigSha2Raw>(&expander_exec_args, &mpi_config).await;
         }
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Hyrax, FieldType::BN254) => {
-            run_command::<BN254ConfigSha2Hyrax>(&expander_exec_args).await;
+            run_command::<BN254ConfigSha2Hyrax>(&expander_exec_args, &mpi_config).await;
         }
         (FiatShamirHashType::MIMC5, PolynomialCommitmentType::KZG, FieldType::BN254) => {
-            run_command::<BN254ConfigMIMC5KZG>(&expander_exec_args).await;
+            run_command::<BN254ConfigMIMC5KZG>(&expander_exec_args, &mpi_config).await;
         }
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::GF2) => {
-            run_command::<GF2ExtConfigSha2Orion>(&expander_exec_args).await;
+            run_command::<GF2ExtConfigSha2Orion>(&expander_exec_args, &mpi_config).await;
         }
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Raw, FieldType::GF2) => {
-            run_command::<GF2ExtConfigSha2Raw>(&expander_exec_args).await;
+            run_command::<GF2ExtConfigSha2Raw>(&expander_exec_args, &mpi_config).await;
         }
         _ => panic!(
             "FS: {:?}, PCS: {:?}, Field: {:?} setting is not yet integrated in expander-exec",
