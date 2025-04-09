@@ -5,9 +5,8 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
-config = { path = "../config" }
-gkr_field_config = { path = "../config/gkr_field_config" }
-mpi_config = { path = "../config/mpi_config" }
+gkr_engine = { path = "../gkr_engine" }
+gkr_hashers = { path = "../hasher" }
 serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
 
@@ -20,5 +19,5 @@ rand.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-config_macros = { path = "../config/config_macros" }
+config_macros = { path = "../config_macros" }
 poly_commit = { path = "../poly_commit" }

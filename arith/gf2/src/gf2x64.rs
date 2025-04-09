@@ -273,6 +273,15 @@ impl SimdField for GF2x64 {
     }
 
     #[inline(always)]
+    fn pack_full(base: &Self::Scalar) -> Self {
+        match base.v {
+            0 => Self::zero(),
+            1 => Self::one(),
+            _ => unimplemented!(),
+        }
+    }
+
+    #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == Self::PACK_SIZE);
         let mut ret = 0u64;

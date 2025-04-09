@@ -8,17 +8,16 @@ use std::{
 use arith::Field;
 use circuit::Circuit;
 use clap::{Parser, Subcommand};
-use config::{Config, GKRConfig, SENTINEL_BN254, SENTINEL_GF2, SENTINEL_M31};
-use gkr_field_config::FieldType;
-use gkr_field_config::GKRFieldConfig;
-use mpi_config::{shared_mem::SharedMemory, MPIConfig};
-
-use poly_commit::{expander_pcs_init_testing_only, PCSForExpanderGKR};
-use serdes::{ExpSerde, SerdeError};
-
+use gkr_engine::{
+    BN254Config, ExpanderPCS, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GoldilocksExtConfig,
+    M31ExtConfig, MPIConfig, MPIEngine, Proof, SharedMemory,
+};
 use log::info;
-use transcript::Proof;
+use poly_commit::expander_pcs_init_testing_only;
+use serdes::{ExpSerde, SerdeError};
 use warp::{http::StatusCode, reply, Filter};
+
+use crate::{Prover, Verifier};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -109,9 +108,10 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     let bytes = fs::read(circuit_file).expect("Unable to read circuit file.");
     let field_bytes = &bytes[8..8 + 32];
     match field_bytes.try_into().unwrap() {
-        SENTINEL_M31 => FieldType::M31Ext3,
-        SENTINEL_BN254 => FieldType::BN254,
-        SENTINEL_GF2 => FieldType::GF2Ext128,
+        M31ExtConfig::SENTINEL => FieldType::M31Ext3,
+        BN254Config::SENTINEL => FieldType::BN254,
+        GF2ExtConfig::SENTINEL => FieldType::GF2Ext128,
+        GoldilocksExtConfig::SENTINEL => FieldType::GoldilocksExt2,
         _ => {
             println!("Unknown field type. Field byte value: {:?}", field_bytes);
             exit(1);
@@ -119,57 +119,57 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     }
 }
 
-fn input_poly_vars_calibration<Cfg: GKRConfig>(actual_poly_vars: usize) -> usize {
-    if actual_poly_vars < Cfg::PCS::MINIMUM_NUM_VARS {
+fn input_poly_vars_calibration<Cfg: GKREngine>(actual_poly_vars: usize) -> usize {
+    if actual_poly_vars < <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::MINIMUM_NUM_VARS {
         eprintln!(
             "{} over {} has minimum supported local vars {}, but input poly has vars {}.",
-            Cfg::PCS::NAME,
-            <Cfg::FieldConfig as GKRFieldConfig>::SimdCircuitField::NAME,
-            Cfg::PCS::MINIMUM_NUM_VARS,
+            Cfg::PCSConfig::NAME,
+            <Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
+            Cfg::PCSConfig::MINIMUM_NUM_VARS,
             actual_poly_vars,
         );
-        return Cfg::PCS::MINIMUM_NUM_VARS;
+        return Cfg::PCSConfig::MINIMUM_NUM_VARS;
     }
 
     actual_poly_vars
 }
 
-pub fn prove<Cfg: GKRConfig>(
+pub fn prove<Cfg: GKREngine>(
     circuit: &mut Circuit<Cfg::FieldConfig>,
-    config: &Config<Cfg>,
+    mpi_config: MPIConfig,
 ) -> (
-    <<Cfg as GKRConfig>::FieldConfig as GKRFieldConfig>::ChallengeField,
+    <<Cfg as GKREngine>::FieldConfig as FieldEngine>::ChallengeField,
     Proof,
 ) {
-    let mut prover = crate::Prover::new(config);
+    let mut prover = crate::Prover::<Cfg>::new(mpi_config.clone());
     prover.prepare_mem(circuit);
     // TODO: Read PCS setup from files
 
     let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
-    let (pcs_params, pcs_proving_key, _, mut pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
-            minimum_poly_vars,
-            &config.mpi_config,
-        );
+    let (pcs_params, pcs_proving_key, _, mut pcs_scratch) = expander_pcs_init_testing_only::<
+        Cfg::FieldConfig,
+        Cfg::PCSConfig,
+    >(minimum_poly_vars, &mpi_config);
 
+    println!("proving");
     prover.prove(circuit, &pcs_params, &pcs_proving_key, &mut pcs_scratch)
 }
 
-pub fn verify<Cfg: GKRConfig>(
+pub fn verify<Cfg: GKREngine>(
     circuit: &mut Circuit<Cfg::FieldConfig>,
-    config: &Config<Cfg>,
+    mpi_config: MPIConfig,
     proof: &Proof,
-    claimed_v: &<<Cfg as GKRConfig>::FieldConfig as GKRFieldConfig>::ChallengeField,
+    claimed_v: &<<Cfg as GKREngine>::FieldConfig as FieldEngine>::ChallengeField,
 ) -> bool {
     // TODO: Read PCS setup from files
 
     let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
-    let (pcs_params, _, pcs_verification_key, _) = expander_pcs_init_testing_only::<
-        Cfg::FieldConfig,
-        Cfg::Transcript,
-        Cfg::PCS,
-    >(minimum_poly_vars, &config.mpi_config);
-    let verifier = crate::Verifier::new(config);
+    let (pcs_params, _, pcs_verification_key, mut _pcs_scratch) =
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
+            minimum_poly_vars,
+            &mpi_config,
+        );
+    let verifier = crate::Verifier::<Cfg>::new(mpi_config);
     let public_input = circuit.public_input.clone();
     verifier.verify(
         circuit,
@@ -181,7 +181,10 @@ pub fn verify<Cfg: GKRConfig>(
     )
 }
 
-pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut config: Config<Cfg>) {
+pub async fn run_command<'a, Cfg: GKREngine + 'static>(
+    command: &ExpanderExecArgs,
+    mpi_config: &MPIConfig,
+) {
     let subcommands = command.subcommands.clone();
 
     match subcommands {
@@ -190,20 +193,21 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
             witness_file,
             output_proof_file,
         } => {
-            let (mut circuit, mut window) = Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
-                &circuit_file,
-                &config.mpi_config,
-            );
-            circuit.prover_load_witness_file(&witness_file, &config.mpi_config);
-            let (claimed_v, proof) = prove(&mut circuit, &config);
+            let (mut circuit, mut window) =
+                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, mpi_config);
+            let mpi_config = MPIConfig::prover_new();
+            let prover = Prover::<Cfg>::new(mpi_config.clone());
 
-            if config.mpi_config.is_root() {
+            circuit.prover_load_witness_file(&witness_file, &mpi_config);
+            let (claimed_v, proof) = prove::<Cfg>(&mut circuit, mpi_config.clone());
+
+            if prover.mpi_config.is_root() {
                 let bytes = dump_proof_and_claimed_v(&proof, &claimed_v)
                     .expect("Unable to serialize proof.");
                 fs::write(output_proof_file, bytes).expect("Unable to write proof to file.");
             }
             circuit.discard_control_of_shared_mem();
-            config.mpi_config.free_shared_mem(&mut window);
+            mpi_config.free_shared_mem(&mut window);
         }
         ExpanderExecSubCommand::Verify {
             circuit_file,
@@ -211,22 +215,42 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
             input_proof_file,
             mpi_size,
         } => {
-            assert!(
-                config.mpi_config.world_size() == 1,
-                "Do not run verifier with mpiexec."
-            );
-            config.mpi_config.world_size = mpi_size as i32;
+            let mpi_config = MPIConfig::verifier_new(mpi_size as i32);
+            let verifier = Verifier::<Cfg>::new(mpi_config);
+
+            // this assertion is not right: the MPI size = 2 so that the verifier knows the prover
+            // is running in 2 threads. The verifier itself is running in 1 thread.
+            //
+            // assert!(
+            //     verifier.mpi_config.world_size() == 1,
+            //     "Do not run verifier with mpiexec."
+            // );
+
+            println!("loading circuit file");
 
             let mut circuit =
                 Circuit::<Cfg::FieldConfig>::verifier_load_circuit::<Cfg>(&circuit_file);
 
-            circuit.verifier_load_witness_file(&witness_file, &config.mpi_config);
+            println!("loading witness file");
+
+            circuit.verifier_load_witness_file(&witness_file, &verifier.mpi_config);
+
+            println!("loading proof file");
 
             let bytes = fs::read(&input_proof_file).expect("Unable to read proof from file.");
-            let (proof, claimed_v) =
-                load_proof_and_claimed_v(&bytes).expect("Unable to deserialize proof.");
+            let (proof, claimed_v) = load_proof_and_claimed_v::<
+                <Cfg::FieldConfig as FieldEngine>::ChallengeField,
+            >(&bytes)
+            .expect("Unable to deserialize proof.");
 
-            assert!(verify(&mut circuit, &config, &proof, &claimed_v));
+            println!("verifying proof");
+
+            assert!(verify::<Cfg>(
+                &mut circuit,
+                verifier.mpi_config,
+                &proof,
+                &claimed_v
+            ));
 
             println!("success");
         }
@@ -235,8 +259,11 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
             host_ip,
             port,
         } => {
+            let mpi_config = MPIConfig::prover_new();
+            let prover = Prover::<Cfg>::new(mpi_config.clone());
+
             assert!(
-                config.mpi_config.world_size() == 1,
+                prover.mpi_config.world_size() == 1,
                 "Serve mode is not compatible with mpi for now."
             );
             let host: [u8; 4] = host_ip
@@ -245,19 +272,19 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
                 .collect::<Vec<u8>>()
                 .try_into()
                 .unwrap();
-            let (circuit, _) = Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
-                &circuit_file,
-                &config.mpi_config,
-            );
-            let mut prover = crate::Prover::new(&config);
+
+            let (circuit, _) =
+                Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, &mpi_config);
+
+            let mut prover = crate::Prover::<Cfg>::new(mpi_config.clone());
             prover.prepare_mem(&circuit);
-            let verifier = crate::Verifier::new(&config);
+            let verifier = crate::Verifier::<Cfg>::new(mpi_config.clone());
 
             // TODO: Read PCS setup from files
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
-                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
+                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
                     circuit.log_input_size(),
-                    &config.mpi_config,
+                    &prover.mpi_config,
                 );
 
             let circuit = Arc::new(Mutex::new(circuit));
@@ -287,7 +314,7 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
                         let pcs_proving_key = pcs_proving_key.lock().unwrap();
                         let mut pcs_scratch = pcs_scratch.lock().unwrap();
 
-                        circuit.load_witness_bytes(&witness_bytes, &MPIConfig::new(), true, true);
+                        circuit.load_witness_bytes(&witness_bytes, &prover.mpi_config, true, true);
                         let (claimed_v, proof) = prover.prove(
                             &mut circuit,
                             &pcs_params,
@@ -319,7 +346,12 @@ pub async fn run_command<'a, Cfg: GKRConfig>(command: &ExpanderExecArgs, mut con
                         let mut circuit = circuit_clone_for_verifier.lock().unwrap();
                         let verifier = verifier.lock().unwrap();
                         let pcs_verification_key = pcs_verification_key.lock().unwrap();
-                        circuit.load_witness_bytes(witness_bytes, &MPIConfig::new(), false, true);
+                        circuit.load_witness_bytes(
+                            witness_bytes,
+                            &verifier.mpi_config,
+                            false,
+                            true,
+                        );
                         let public_input = circuit.public_input.clone();
                         let (proof, claimed_v) = load_proof_and_claimed_v(proof_bytes).unwrap();
                         if verifier.verify(

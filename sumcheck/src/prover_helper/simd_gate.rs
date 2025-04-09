@@ -2,37 +2,43 @@
 //! to evaluate SIMD gates.
 //! A SIMD gate is a gate that merges all elements in a SIMD into a single one.
 
-use arith::{ExtensionField, Field};
-use gkr_field_config::{FieldType, GKRFieldConfig};
+use std::marker::PhantomData;
 
-pub(crate) struct SumcheckSimdProdGateHelper {
+use arith::{ExtensionField, Field};
+use gkr_engine::{FieldEngine, FieldType};
+
+pub(crate) struct SumcheckSimdProdGateHelper<F: FieldEngine> {
     var_num: usize,
+    field: PhantomData<F>,
 }
 
 // The logic is exactly the same as SumcheckProductGateHelper, but field types are different
-impl SumcheckSimdProdGateHelper {
+impl<F: FieldEngine> SumcheckSimdProdGateHelper<F> {
     pub(crate) fn new(var_num: usize) -> Self {
-        SumcheckSimdProdGateHelper { var_num }
+        SumcheckSimdProdGateHelper {
+            var_num,
+            field: PhantomData,
+        }
     }
 
     #[inline]
-    pub(crate) fn poly_eval_at<C: GKRFieldConfig>(
+    pub(crate) fn poly_eval_at(
         &self,
         var_idx: usize,
         degree: usize,
-        bk_eq: &mut [C::ChallengeField],
-        bk_f: &mut [C::ChallengeField],
-        bk_hg: &mut [C::ChallengeField],
-    ) -> [C::ChallengeField; 4] {
+        bk_eq: &mut [F::ChallengeField],
+        bk_f: &mut [F::ChallengeField],
+        bk_hg: &mut [F::ChallengeField],
+    ) -> [F::ChallengeField; 4] {
         assert_eq!(degree, 3);
-        let mut p0 = C::ChallengeField::zero();
-        let mut p1 = C::ChallengeField::zero();
-        let mut p2 = C::ChallengeField::zero();
-        let mut p3 = C::ChallengeField::zero();
+        let mut p0 = F::ChallengeField::zero();
+        let mut p1 = F::ChallengeField::zero();
+        let mut p2 = F::ChallengeField::zero();
+        let mut p3 = F::ChallengeField::zero();
 
         let eval_size = 1 << (self.var_num - var_idx - 1);
 
-        if C::FIELD_TYPE == FieldType::GF2Ext128 {
+        if F::FIELD_TYPE == FieldType::GF2Ext128 {
             for i in 0..eval_size {
                 let eq_v_0 = bk_eq[i * 2];
                 let eq_v_1 = bk_eq[i * 2 + 1];
@@ -85,23 +91,23 @@ impl SumcheckSimdProdGateHelper {
     /// Evaluate the GKR2 sumcheck polynomial at a SIMD variable,
     /// after x-sumcheck rounds have fixed the x variables. The
     /// polynomial is degree (D-1) in the SIMD variables.
-    pub(crate) fn gkr2_poly_eval_at<C: GKRFieldConfig, const D: usize>(
+    pub(crate) fn gkr2_poly_eval_at<const D: usize>(
         &self,
         var_idx: usize,
-        bk_eq: &[C::ChallengeField],
-        bk_v_simd: &[C::ChallengeField],
-        add_eval: C::ChallengeField,
-        pow_5_eval: C::ChallengeField,
-    ) -> [C::ChallengeField; D] {
-        let mut p = [C::ChallengeField::zero(); D];
-        let mut p_add = [C::ChallengeField::zero(); 3];
+        bk_eq: &[F::ChallengeField],
+        bk_v_simd: &[F::ChallengeField],
+        add_eval: F::ChallengeField,
+        pow_5_eval: F::ChallengeField,
+    ) -> [F::ChallengeField; D] {
+        let mut p = [F::ChallengeField::zero(); D];
+        let mut p_add = [F::ChallengeField::zero(); 3];
         let eval_size = 1 << (self.var_num - var_idx - 1);
 
         for i in 0..eval_size {
             // witness polynomial along current variable
-            let mut f_v = [C::ChallengeField::zero(); D];
+            let mut f_v = [F::ChallengeField::zero(); D];
             // eq polynomial along current variable
-            let mut eq_v = [C::ChallengeField::zero(); D];
+            let mut eq_v = [F::ChallengeField::zero(); D];
             f_v[0] = bk_v_simd[i * 2];
             f_v[1] = bk_v_simd[i * 2 + 1];
             eq_v[0] = bk_eq[i * 2];
@@ -128,20 +134,20 @@ impl SumcheckSimdProdGateHelper {
         p_add[2] = p_add[1].mul_by_6() + p_add[0].mul_by_3() - p_add[2].double();
 
         // Interpolate p_add into 7 points, add to p
-        Self::interpolate_3::<C, D>(&p_add, &mut p);
+        Self::interpolate_3::<D>(&p_add, &mut p);
         p
     }
 
     // Function to interpolate a quadratic polynomial and update an array of points
-    fn interpolate_3<C: GKRFieldConfig, const D: usize>(
-        p_add: &[C::ChallengeField; 3],
-        p: &mut [C::ChallengeField; D],
+    fn interpolate_3<const D: usize>(
+        p_add: &[F::ChallengeField; 3],
+        p: &mut [F::ChallengeField; D],
     ) {
         // Calculate coefficients for the interpolating polynomial
         let p_add_coef_0 = p_add[0];
-        let p_add_coef_2 = C::challenge_mul_circuit_field(
+        let p_add_coef_2 = F::challenge_mul_circuit_field(
             &(p_add[2] - p_add[1] - p_add[1] + p_add[0]),
-            &C::CircuitField::INV_2,
+            &F::CircuitField::INV_2,
         );
 
         let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
@@ -154,23 +160,23 @@ impl SumcheckSimdProdGateHelper {
         p[3] += p_add_coef_0 + p_add_coef_1.mul_by_3() + p_add_coef_2.mul_by_3().mul_by_3();
         p[4] += p_add_coef_0
             + p_add_coef_1.double().double()
-            + C::challenge_mul_circuit_field(&p_add_coef_2, &C::CircuitField::from(16));
+            + F::challenge_mul_circuit_field(&p_add_coef_2, &F::CircuitField::from(16));
         p[5] += p_add_coef_0
             + p_add_coef_1.mul_by_5()
-            + C::challenge_mul_circuit_field(&p_add_coef_2, &C::CircuitField::from(25));
+            + F::challenge_mul_circuit_field(&p_add_coef_2, &F::CircuitField::from(25));
         p[6] += p_add_coef_0
             + p_add_coef_1.mul_by_3().double()
-            + C::challenge_mul_circuit_field(&p_add_coef_2, &C::CircuitField::from(36));
+            + F::challenge_mul_circuit_field(&p_add_coef_2, &F::CircuitField::from(36));
     }
 
     #[inline]
-    pub(crate) fn receive_challenge<C: GKRFieldConfig>(
+    pub(crate) fn receive_challenge(
         &mut self,
         var_idx: usize,
-        r: C::ChallengeField,
-        bk_eq: &mut [C::ChallengeField],
-        bk_f: &mut [C::ChallengeField],
-        bk_hg: &mut [C::ChallengeField],
+        r: F::ChallengeField,
+        bk_eq: &mut [F::ChallengeField],
+        bk_f: &mut [F::ChallengeField],
+        bk_hg: &mut [F::ChallengeField],
     ) {
         assert!(var_idx < self.var_num);
 

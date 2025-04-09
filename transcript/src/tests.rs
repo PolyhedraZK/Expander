@@ -1,9 +1,10 @@
 use arith::{ExtensionField, Fr};
-use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
+use gkr_engine::Transcript;
+use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use mersenne31::{M31Ext3, M31x16};
 use sha2::{Digest, Sha256};
 
-use crate::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher, Transcript};
+use crate::{BytesHashTranscript, FieldHashTranscript};
 
 const EXAMPLE_IN: [u8; 32] = [
     40, 75, 185, 12, 169, 4, 108, 43, 211, 74, 219, 14, 2, 133, 97, 27, 200, 245, 110, 1, 253, 219,

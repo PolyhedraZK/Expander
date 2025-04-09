@@ -23,13 +23,6 @@ pub struct NeonGoldilocks {
     pub v: [Goldilocks; 8],
 }
 
-impl NeonGoldilocks {
-    #[inline(always)]
-    pub fn pack_full(x: Goldilocks) -> Self {
-        Self { v: [x; 8] }
-    }
-}
-
 field_common!(NeonGoldilocks);
 
 impl ExpSerde for NeonGoldilocks {
@@ -118,7 +111,7 @@ impl Field for NeonGoldilocks {
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         let m = Goldilocks::from_uniform_bytes(bytes);
-        Self::pack_full(m)
+        Self::pack_full(&m)
     }
 
     #[inline(always)]
@@ -143,6 +136,11 @@ impl SimdField for NeonGoldilocks {
     type Scalar = Goldilocks;
 
     const PACK_SIZE: usize = GOLDILOCKS_PACK_SIZE;
+
+    #[inline(always)]
+    fn pack_full(x: &Goldilocks) -> Self {
+        Self { v: [*x; 8] }
+    }
 
     #[inline]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
@@ -286,7 +284,7 @@ impl FFTField for NeonGoldilocks {
     /// It can be calculated by exponentiating `Self::MULTIPLICATIVE_GENERATOR` by `t`,
     /// where `t = (modulus - 1) >> Self::S`.
     fn root_of_unity() -> Self {
-        Self::pack_full(Goldilocks {
+        Self::pack_full(&Goldilocks {
             v: 0x185629dcda58878c,
         })
     }

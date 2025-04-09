@@ -6,26 +6,19 @@ use std::{
 
 use circuit::Circuit;
 use clap::Parser;
-use config::{
-    instantiations::{
-        BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
-        GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2Orion,
-        M31ExtConfigSha2Raw,
-    },
-    Config, GKRConfig, GKRScheme,
-};
-use config::{M31ConfigSha2Raw, PolynomialCommitmentType};
 use gkr::{
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
         KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT,
         KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
-    Prover,
+    BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
+    GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2OrionSquare,
+    M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare, M31ExtConfigSha2RawVanilla, Prover,
 };
-use gkr_field_config::FieldType;
-use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
+use gkr_engine::{
+    ExpanderPCS, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType,
+};
 use poly_commit::expander_pcs_init_testing_only;
 use serdes::ExpSerde;
 
@@ -33,7 +26,7 @@ use serdes::ExpSerde;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Field Identifier: fr, m31, m31ext3
+    /// Field Identifier: fr, m31ext3, gf2ext128, goldilocks
     #[arg(short, long,default_value_t = String::from("m31ext3"))]
     field: String,
 
@@ -58,20 +51,14 @@ fn main() {
     let args = Args::parse();
     print_info(&args);
 
-    let mpi_config = MPIConfig::new();
+    let mpi_config = MPIConfig::prover_new();
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
         "m31" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<M31ConfigSha2Raw>(
-                    &args,
-                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-                ),
-                "poseidon" => run_benchmark::<M31ConfigSha2Raw>(
-                    &args,
-                    Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
-                ),
+                "keccak" => run_benchmark::<M31ExtConfigSha2RawVanilla>(&args, mpi_config),
+                "poseidon" => run_benchmark::<M31ExtConfigSha2RawSquare>(&args, mpi_config),
                 _ => unreachable!(),
             },
             _ => unreachable!("Unsupported PCS type for M31"),
@@ -79,100 +66,50 @@ fn main() {
 
         "m31ext3" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<M31ExtConfigSha2Raw>(
-                    &args,
-                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-                ),
-                "poseidon" => run_benchmark::<M31ExtConfigSha2Raw>(
-                    &args,
-                    Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
-                ),
+                "keccak" => run_benchmark::<M31ExtConfigSha2RawVanilla>(&args, mpi_config.clone()),
+                "poseidon" => run_benchmark::<M31ExtConfigSha2RawSquare>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
             PolynomialCommitmentType::Orion => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<M31ExtConfigSha2Orion>(
-                    &args,
-                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-                ),
-                "poseidon" => run_benchmark::<M31ExtConfigSha2Orion>(
-                    &args,
-                    Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
-                ),
-                _ => unreachable!("Unsupported PCS type for M31"),
+                "keccak" => {
+                    run_benchmark::<M31ExtConfigSha2OrionVanilla>(&args, mpi_config.clone())
+                }
+                "poseidon" => {
+                    run_benchmark::<M31ExtConfigSha2OrionSquare>(&args, mpi_config.clone())
+                }
+                _ => unreachable!(""),
             },
             _ => unreachable!("Unsupported PCS type for M31"),
         },
         "fr" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<BN254ConfigSha2Raw>(
-                    &args,
-                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-                ),
-                "poseidon" => run_benchmark::<BN254ConfigSha2Raw>(
-                    &args,
-                    Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
-                ),
+                "keccak" => run_benchmark::<BN254ConfigSha2Raw>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
             PolynomialCommitmentType::Hyrax => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<BN254ConfigSha2Hyrax>(
-                    &args,
-                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-                ),
-                "poseidon" => run_benchmark::<BN254ConfigSha2Hyrax>(
-                    &args,
-                    Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
-                ),
+                "keccak" => run_benchmark::<BN254ConfigSha2Hyrax>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
             PolynomialCommitmentType::KZG => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<BN254ConfigMIMC5KZG>(
-                    &args,
-                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-                ),
-                "poseidon" => run_benchmark::<BN254ConfigMIMC5KZG>(
-                    &args,
-                    Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
-                ),
+                "keccak" => run_benchmark::<BN254ConfigMIMC5KZG>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
             _ => unreachable!("Unsupported PCS type for BN254"),
         },
         "gf2ext128" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<GF2ExtConfigSha2Raw>(
-                    &args,
-                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-                ),
-                "poseidon" => run_benchmark::<GF2ExtConfigSha2Raw>(
-                    &args,
-                    Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
-                ),
+                "keccak" => run_benchmark::<GF2ExtConfigSha2Raw>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
             PolynomialCommitmentType::Orion => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<GF2ExtConfigSha2Orion>(
-                    &args,
-                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-                ),
-                "poseidon" => run_benchmark::<GF2ExtConfigSha2Orion>(
-                    &args,
-                    Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
-                ),
+                "keccak" => run_benchmark::<GF2ExtConfigSha2Orion>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
             _ => unreachable!("Unsupported PCS type for GF2"),
         },
         "goldilocks" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<GoldilocksExtConfigSha2Raw>(
-                    &args,
-                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-                ),
-                "poseidon" => run_benchmark::<GoldilocksExtConfigSha2Raw>(
-                    &args,
-                    Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
-                ),
+                "keccak" => run_benchmark::<GoldilocksExtConfigSha2Raw>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
             _ => unreachable!("Unsupported PCS type for Goldilocks"),
@@ -183,49 +120,53 @@ fn main() {
     MPIConfig::finalize();
 }
 
-fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
+fn run_benchmark<'a, Cfg: GKREngine>(args: &'a Args, mpi_config: MPIConfig)
+where
+    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad: 'a,
+    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad: 'static,
+{
     let partial_proof_cnts = (0..args.threads)
         .map(|_| Arc::new(Mutex::new(0)))
         .collect::<Vec<_>>();
-    let pack_size = Cfg::FieldConfig::get_field_pack_size();
+
+    let pack_size = <Cfg::FieldConfig as FieldEngine>::get_field_pack_size();
 
     // load circuit
-    let mut circuit_template = match args.circuit.as_str() {
-        "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2Ext128 => {
-                Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
-                    KECCAK_GF2_CIRCUIT,
-                )
-            }
-            FieldType::M31 => {
-                Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
-                    KECCAK_M31_CIRCUIT,
-                )
-            }
-
-            FieldType::M31Ext3 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
-                Cfg,
-            >(KECCAK_M31_CIRCUIT),
-            FieldType::BN254 => {
-                Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
-                    KECCAK_BN254_CIRCUIT,
-                )
-            }
-            FieldType::GoldilocksExt2 => {
-                Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
-                    KECCAK_GOLDILOCKS_CIRCUIT,
-                )
-            }
-        },
-        "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31Ext3 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
-                Cfg,
-            >(POSEIDON_M31_CIRCUIT),
-            _ => unreachable!("not supported"),
-        },
-
-        _ => unreachable!(),
-    };
+    let mut circuit_template =
+        match args.circuit.as_str() {
+            "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
+                FieldType::GF2Ext128 => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_GF2_CIRCUIT,
+                    )
+                }
+                FieldType::M31Ext3 => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_M31_CIRCUIT,
+                    )
+                }
+                FieldType::BN254 => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_BN254_CIRCUIT,
+                    )
+                }
+                FieldType::GoldilocksExt2 => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_GOLDILOCKS_CIRCUIT,
+                    )
+                }
+                FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(KECCAK_M31_CIRCUIT),
+            },
+            "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
+                FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(POSEIDON_M31_CIRCUIT),
+                _ => unreachable!(),
+            },
+            _ => unreachable!(),
+        };
 
     let witness_path = match args.circuit.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
@@ -242,7 +183,7 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         _ => unreachable!(),
     };
 
-    circuit_template.load_witness_allow_padding_testing_only(witness_path, &config.mpi_config);
+    circuit_template.load_witness_allow_padding_testing_only(witness_path, &mpi_config);
 
     let circuit_copy_size: usize = match (Cfg::FieldConfig::FIELD_TYPE, args.circuit.as_str()) {
         (FieldType::GF2Ext128, "keccak") => 1,
@@ -265,19 +206,18 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
     println!("Circuit loaded!");
 
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
             circuit_template.log_input_size(),
-            &config.mpi_config,
+            &mpi_config,
         );
 
     // calculate the proof size
     {
         let mut local_circuit = circuits[0].clone();
-        let local_config = config.clone();
         let pcs_params = pcs_params.clone();
         let pcs_proving_key = pcs_proving_key.clone();
         let mut pcs_scratch = pcs_scratch.clone();
-        let mut prover = Prover::new(&local_config);
+        let mut prover = Prover::<Cfg>::new(mpi_config.clone());
         prover.prepare_mem(&local_circuit);
 
         let (claim, proof) = prover.prove(
@@ -297,14 +237,14 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         .into_iter()
         .enumerate()
         .map(|(i, mut c)| {
+            let local_config = mpi_config.clone();
             let partial_proof_cnt = partial_proof_cnts[i].clone();
-            let local_config = config.clone();
             let pcs_params = pcs_params.clone();
             let pcs_proving_key = pcs_proving_key.clone();
             let mut pcs_scratch = pcs_scratch.clone();
             thread::spawn(move || {
                 // bench func
-                let mut prover = Prover::new(&local_config);
+                let mut prover = Prover::<Cfg>::new(local_config.clone());
                 prover.prepare_mem(&c);
                 loop {
                     prover.prove(&mut c, &pcs_params, &pcs_proving_key, &mut pcs_scratch);
@@ -326,8 +266,8 @@ fn run_benchmark<Cfg: GKRConfig>(args: &Args, config: Config<Cfg>) {
         for cnt in &partial_proof_cnts {
             total_proof_cnt += *cnt.lock().unwrap();
         }
-        let throughput = total_proof_cnt as f64 / duration.as_secs_f64()
-            * (config.mpi_config.world_size() as f64);
+        let throughput =
+            total_proof_cnt as f64 / duration.as_secs_f64() * (mpi_config.world_size() as f64);
         println!("{}-bench: throughput: {} hashes/s", i, throughput.round());
     }
 }

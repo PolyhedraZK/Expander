@@ -34,20 +34,6 @@ pub struct NeonM31 {
 field_common!(NeonM31);
 
 impl NeonM31 {
-    #[inline(always)]
-    pub fn pack_full(x: M31) -> NeonM31 {
-        NeonM31 {
-            v: unsafe {
-                [
-                    vdupq_n_u32(x.v),
-                    vdupq_n_u32(x.v),
-                    vdupq_n_u32(x.v),
-                    vdupq_n_u32(x.v),
-                ]
-            },
-        }
-    }
-
     pub fn printavxtype() {
         println!("Not avx");
     }
@@ -281,11 +267,25 @@ impl SimdField for NeonM31 {
 
     #[inline]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
-        let packed_challenge = NeonM31::pack_full(*challenge);
+        let packed_challenge = NeonM31::pack_full(challenge);
         *self * packed_challenge
     }
 
     const PACK_SIZE: usize = M31_PACK_SIZE;
+
+    #[inline(always)]
+    fn pack_full(x: &M31) -> NeonM31 {
+        NeonM31 {
+            v: unsafe {
+                [
+                    vdupq_n_u32(x.v),
+                    vdupq_n_u32(x.v),
+                    vdupq_n_u32(x.v),
+                    vdupq_n_u32(x.v),
+                ]
+            },
+        }
+    }
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
@@ -334,7 +334,7 @@ impl SimdField for NeonM31 {
 impl From<M31> for NeonM31 {
     #[inline(always)]
     fn from(x: M31) -> Self {
-        NeonM31::pack_full(x)
+        NeonM31::pack_full(&x)
     }
 }
 
@@ -398,7 +398,7 @@ impl Mul<&M31> for NeonM31 {
     type Output = NeonM31;
     #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
-        let rhs_p = NeonM31::pack_full(*rhs);
+        let rhs_p = NeonM31::pack_full(rhs);
         self * rhs_p
     }
 }
@@ -416,14 +416,14 @@ impl Add<M31> for NeonM31 {
     #[inline(always)]
     #[allow(clippy::op_ref)]
     fn add(self, rhs: M31) -> Self::Output {
-        self + NeonM31::pack_full(rhs)
+        self + NeonM31::pack_full(&rhs)
     }
 }
 
 impl From<u32> for NeonM31 {
     #[inline(always)]
     fn from(x: u32) -> Self {
-        NeonM31::pack_full(M31::from(x))
+        NeonM31::pack_full(&M31::from(x))
     }
 }
 

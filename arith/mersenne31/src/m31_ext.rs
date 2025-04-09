@@ -366,6 +366,11 @@ impl SimdField for M31Ext3 {
     }
 
     #[inline(always)]
+    fn pack_full(x: &Self::Scalar) -> Self {
+        *x
+    }
+
+    #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert_eq!(base_vec.len(), 1);
         base_vec[0]
