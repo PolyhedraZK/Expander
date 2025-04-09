@@ -10,14 +10,12 @@ serdes = { path = "../../serdes" }
 
 ark-std.workspace = true
 ethnum.workspace = true
-# p3-field.workspace = true
-# p3-monty-31.workspace = true
 rand.workspace = true
 
 
-# [[bench]]
-# name = "goldilocks"
-# harness = false
+[[bench]]
+name = "babybear"
+harness = false
 
-# [dev-dependencies]
-# criterion = "0.5"
+[dev-dependencies]
+criterion = "0.5"
