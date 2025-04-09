@@ -17,10 +17,9 @@ use crate::{babybear::BABY_BEAR_MOD, BabyBear};
 
 #[inline]
 unsafe fn mod_reduce_epi32(x: __m256i) -> __m256i {
-    // Compare each element with modulus
-    let mask = _mm256_cmpge_epu32_mask(x, PACKED_MOD);
-    // If element > modulus, subtract modulus
-    _mm256_mask_sub_epi32(x, mask, x, PACKED_MOD)
+    // If element >= modulus, subtract modulus
+    let sub_mod = _mm256_sub_epi32(x, PACKED_MOD);
+    _mm256_min_epu32(x, sub_mod)
 }
 
 const BABY_BEAR_PACK_SIZE: usize = 16;

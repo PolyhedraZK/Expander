@@ -18,7 +18,7 @@ use crate::{babybear::BABY_BEAR_MOD, BabyBear};
 #[inline]
 unsafe fn mod_reduce_epi32(x: __m512i) -> __m512i {
     // Compare each element with modulus
-    let mask = _mm512_cmpge_epu32_mask(x, PACKED_MOD);
+    let mask = _mm512_cmpgt_epu32_mask(x, PACKED_MOD);
     // If element > modulus, subtract modulus
     _mm512_mask_sub_epi32(x, mask, x, PACKED_MOD)
 }
