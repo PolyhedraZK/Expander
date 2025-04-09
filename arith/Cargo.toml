@@ -7,7 +7,6 @@ edition = "2021"
 ark-std.workspace = true
 criterion.workspace = true
 ethnum.workspace = true
-halo2curves.workspace = true
 itertools.workspace = true
 log.workspace = true
 rand.workspace = true
@@ -16,6 +15,11 @@ tynm.workspace = true
 
 
 serdes = { path = "../serdes" }
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+halo2curves = { workspace = true, features = [ "asm" ] }
+[target.'cfg(not(target_arch = "x86_64"))'.dependencies]
+halo2curves.workspace = true
 
 [dev-dependencies]
 itertools.workspace = true

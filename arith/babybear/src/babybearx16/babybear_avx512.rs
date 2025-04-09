@@ -43,15 +43,6 @@ pub struct AVXBabyBear {
     pub v: __m512i,
 }
 
-impl AVXBabyBear {
-    #[inline(always)]
-    pub(crate) fn pack_full(x: BabyBear) -> AVXBabyBear {
-        AVXBabyBear {
-            v: unsafe { _mm512_set1_epi32(x.value as i32) },
-        }
-    }
-}
-
 field_common!(AVXBabyBear);
 
 impl ExpSerde for AVXBabyBear {
@@ -207,6 +198,13 @@ impl SimdField for AVXBabyBear {
     const PACK_SIZE: usize = BABY_BEAR_PACK_SIZE;
 
     #[inline(always)]
+    fn pack_full(x: &BabyBear) -> AVXBabyBear {
+        AVXBabyBear {
+            v: unsafe { _mm512_set1_epi32(x.value as i32) },
+        }
+    }
+
+    #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == BABY_BEAR_PACK_SIZE);
         let ret: [Self::Scalar; BABY_BEAR_PACK_SIZE] = base_vec.try_into().unwrap();
@@ -223,7 +221,7 @@ impl SimdField for AVXBabyBear {
 impl From<BabyBear> for AVXBabyBear {
     #[inline(always)]
     fn from(x: BabyBear) -> Self {
-        AVXBabyBear::pack_full(x)
+        AVXBabyBear::pack_full(&x)
     }
 }
 
@@ -297,7 +295,7 @@ impl Mul<&BabyBear> for AVXBabyBear {
 
     #[inline(always)]
     fn mul(self, rhs: &BabyBear) -> Self::Output {
-        let rhsv = AVXBabyBear::pack_full(*rhs);
+        let rhsv = AVXBabyBear::pack_full(rhs);
         mul_internal(&self, &rhsv)
     }
 }
@@ -315,14 +313,14 @@ impl Add<BabyBear> for AVXBabyBear {
     type Output = AVXBabyBear;
     #[inline(always)]
     fn add(self, rhs: BabyBear) -> Self::Output {
-        self + AVXBabyBear::pack_full(rhs)
+        self + AVXBabyBear::pack_full(&rhs)
     }
 }
 
 impl From<u32> for AVXBabyBear {
     #[inline(always)]
     fn from(x: u32) -> Self {
-        AVXBabyBear::pack_full(BabyBear::from(x))
+        AVXBabyBear::pack_full(&BabyBear::from(x))
     }
 }
 

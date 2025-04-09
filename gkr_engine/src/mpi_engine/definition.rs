@@ -1,5 +1,11 @@
 use arith::Field;
-use mpi::topology::Process;
+use mpi::{
+    ffi::{ompi_win_t, MPI_Win_free},
+    topology::Process,
+};
+use serdes::ExpSerde;
+
+use super::SharedMemory;
 
 /// MPI APIs for distributed computing operations
 pub trait MPIEngine {
@@ -81,6 +87,44 @@ pub trait MPIEngine {
     /// Non-root processes participate in gathering but return zero vectors.
     fn coef_combine_vec<F: Field>(&self, local_vec: &[F], coef: &[F]) -> Vec<F>;
 
+    /// Perform matrix transpose with other MPI processes through MPI all-to-all transpose
+    ///
+    /// # Arguments
+    /// * `row` - The row of elements from the current process among all rows of all processes
+    ///
+    /// # Behavior
+    /// - Each process exchanges chunks of data with every other process
+    /// - Resulting data layout on each process swaps one dimension of distribution with another
+    ///   (e.g., rows to columns in a distributed matrix)
+    fn all_to_all_transpose<F: Sized>(&self, row: &mut [F]);
+
+    /// Gather *variable length* vectors from all processes into the root process
+    ///
+    /// # Arguments
+    /// * `local_vec` - The local variable length vector to be gathered from this process
+    /// * `global_vec` - Buffer allocated in the root process to store all gathered vectors
+    ///
+    /// # Behavior
+    /// - Root process receives all *variable length* vectors
+    /// - Non-root processes send their vectors but their `global_vec`s are not modified
+    ///
+    /// # Implementation
+    /// Each process serializes their local vector of elements into bytes.
+    /// Each process gathers the number of bytes to the root process.
+    /// Root process allocates space to collect serialized bytes from each process.
+    /// Each process gathers the serialized bytes to the root process.
+    /// Root process deserialize all bytes and write into the `global_vec` containing var len elems.
+    ///
+    /// # NOTE
+    /// This method was introduced with a motivation of gathering variable number of Merkle paths
+    /// from each processes in Orion PCS.  The `global_vec` is particularly designed to be a vector
+    /// of vectors, as we want to keep track of the order of opened Merkle paths on each process,
+    /// namely reflecting the order of global Merkle path opening, making the root process easier in
+    /// flattening all the Merkle paths into a final flattened vector of opened Merkle paths with
+    /// agreeing order from the indices sampled from the Fiat-Shamir RO.
+    #[allow(clippy::ptr_arg)]
+    fn gather_varlen_vec<F: ExpSerde>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<Vec<F>>);
+
     /// Check if there is only one process in the MPI world
     fn is_single_process(&self) -> bool;
 
@@ -101,4 +145,36 @@ pub trait MPIEngine {
 
     /// Synchronize all processes at this point
     fn barrier(&self);
+
+    /// Create a shared memory segment for inter-process communication
+    fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, *mut ompi_win_t);
+
+    /// Consume the shared memory segment and create a new shared memory object
+    fn consume_obj_and_create_shared<T: SharedMemory>(
+        &self,
+        obj: Option<T>,
+    ) -> (T, *mut ompi_win_t) {
+        assert!(!self.is_root() || obj.is_some());
+
+        if self.is_root() {
+            let obj = obj.unwrap();
+            let n_bytes = obj.bytes_size();
+            let (mut ptr, window) = self.create_shared_mem(n_bytes);
+            let mut ptr_copy = ptr;
+            obj.to_memory(&mut ptr_copy);
+            self.barrier();
+            (T::from_memory(&mut ptr), window)
+        } else {
+            let (mut ptr, window) = self.create_shared_mem(0);
+            self.barrier(); // wait for root to write data
+            (T::from_memory(&mut ptr), window)
+        }
+    }
+
+    /// Discard the control of shared memory segment
+    fn free_shared_mem(&self, window: &mut *mut ompi_win_t) {
+        unsafe {
+            MPI_Win_free(window as *mut *mut ompi_win_t);
+        }
+    }
 }

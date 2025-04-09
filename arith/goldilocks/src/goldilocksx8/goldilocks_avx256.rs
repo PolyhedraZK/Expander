@@ -39,20 +39,6 @@ pub struct AVXGoldilocks {
     pub v: [__m256i; 2],
 }
 
-impl AVXGoldilocks {
-    #[inline(always)]
-    pub fn pack_full(x: Goldilocks) -> Self {
-        unsafe {
-            Self {
-                v: [
-                    _mm256_set1_epi64x(x.v as i64),
-                    _mm256_set1_epi64x(x.v as i64),
-                ],
-            }
-        }
-    }
-}
-
 field_common!(AVXGoldilocks);
 
 impl ExpSerde for AVXGoldilocks {
@@ -237,6 +223,18 @@ impl SimdField for AVXGoldilocks {
     const PACK_SIZE: usize = GOLDILOCKS_PACK_SIZE;
 
     #[inline(always)]
+    fn pack_full(x: &Goldilocks) -> Self {
+        unsafe {
+            Self {
+                v: [
+                    _mm256_set1_epi64x(x.v as i64),
+                    _mm256_set1_epi64x(x.v as i64),
+                ],
+            }
+        }
+    }
+
+    #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert_eq!(base_vec.len(), Self::PACK_SIZE);
         let ret: [Self::Scalar; Self::PACK_SIZE] = base_vec.try_into().unwrap();
@@ -316,7 +314,7 @@ impl Add<Goldilocks> for AVXGoldilocks {
     type Output = AVXGoldilocks;
     #[inline(always)]
     fn add(self, rhs: Goldilocks) -> Self::Output {
-        self + AVXGoldilocks::pack_full(rhs)
+        self + AVXGoldilocks::pack_full(&rhs)
     }
 }
 
@@ -357,7 +355,7 @@ impl From<u32> for AVXGoldilocks {
 impl From<u64> for AVXGoldilocks {
     #[inline(always)]
     fn from(x: u64) -> Self {
-        Self::pack_full(Goldilocks::from(x))
+        Self::pack_full(&Goldilocks::from(x))
     }
 }
 

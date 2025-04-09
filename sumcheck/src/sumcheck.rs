@@ -22,6 +22,8 @@ pub const SUMCHECK_GKR_SQUARE_DEGREE: usize = 6;
 // FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
+// essentially the prev level of challenge passes here, once this level is done, new challenge gets
+// written back into the prev space
 pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>>(
     layer: &CircuitLayer<F>,
     challenge: &mut ExpanderDualVarChallenge<F>,

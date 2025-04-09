@@ -42,20 +42,6 @@ pub struct AVXBabyBear {
     pub v: [__m256i; 2],
 }
 
-impl AVXBabyBear {
-    #[inline(always)]
-    pub(crate) fn pack_full(x: BabyBear) -> AVXBabyBear {
-        AVXBabyBear {
-            v: unsafe {
-                [
-                    _mm256_set1_epi32(x.value as i32),
-                    _mm256_set1_epi32(x.value as i32),
-                ]
-            },
-        }
-    }
-}
-
 field_common!(AVXBabyBear);
 
 impl ExpSerde for AVXBabyBear {
@@ -237,6 +223,18 @@ impl SimdField for AVXBabyBear {
     }
 
     const PACK_SIZE: usize = BABY_BEAR_PACK_SIZE;
+
+    #[inline(always)]
+    fn pack_full(x: &BabyBear) -> AVXBabyBear {
+        AVXBabyBear {
+            v: unsafe {
+                [
+                    _mm256_set1_epi32(x.value as i32),
+                    _mm256_set1_epi32(x.value as i32),
+                ]
+            },
+        }
+    }
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {

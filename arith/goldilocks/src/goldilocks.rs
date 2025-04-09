@@ -25,7 +25,7 @@ pub(crate) fn mod_reduce_u64(x: u64) -> u64 {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Goldilocks {
     pub v: u64,
 }
@@ -38,6 +38,20 @@ impl PartialEq for Goldilocks {
 }
 
 impl Eq for Goldilocks {}
+
+impl PartialOrd for Goldilocks {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Goldilocks {
+    #[inline(always)]
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        mod_reduce_u64(self.v).cmp(&mod_reduce_u64(other.v))
+    }
+}
 
 field_common!(Goldilocks);
 
@@ -106,12 +120,12 @@ impl Field for Goldilocks {
 
     #[inline(always)]
     fn to_u256(&self) -> U256 {
-        U256([self.v as u128, 0])
+        U256([mod_reduce_u64(self.v) as u128, 0])
     }
 
     #[inline(always)]
     fn from_u256(value: U256) -> Self {
-        assert!(value < Self::MODULUS);
+        let value = value % Self::MODULUS;
         // TODO: this is a hack to get the low 64 bits of the u256
         // TODO: we should remove the assumption that the top bits are 0s
         let (_high, low) = value.into_words();
@@ -158,11 +172,7 @@ impl From<u64> for Goldilocks {
     #[inline(always)]
     fn from(x: u64) -> Self {
         Goldilocks {
-            v: if x < GOLDILOCKS_MOD {
-                x
-            } else {
-                x - GOLDILOCKS_MOD
-            },
+            v: mod_reduce_u64(x),
         }
     }
 }
@@ -225,7 +235,7 @@ fn mul_internal(a: &Goldilocks, b: &Goldilocks) -> Goldilocks {
 impl std::hash::Hash for Goldilocks {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        state.write_u64(self.v);
+        state.write_u64(mod_reduce_u64(self.v));
     }
 }
 
@@ -362,7 +372,7 @@ pub(crate) mod p2_instructions {
         let mut c = 1i128;
         let mut d = 0i128;
 
-        if f == 0 {
+        if f == 0 || f == GOLDILOCKS_MOD {
             return None;
         }
 

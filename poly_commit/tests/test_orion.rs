@@ -83,13 +83,7 @@ fn test_orion_simd_field_pcs_generics<F, SimdF, EvalF, ComPackF>(
         common::test_pcs::<
             EvalF,
             BytesHashTranscript<EvalF, Keccak256hasher>,
-            OrionSIMDFieldPCS<
-                F,
-                SimdF,
-                EvalF,
-                ComPackF,
-                BytesHashTranscript<EvalF, Keccak256hasher>,
-            >,
+            OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF>,
         >(&num_vars, &poly, &xs);
     })
 }
@@ -151,7 +145,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     common::test_pcs_for_expander_gkr::<
         C,
         T,
-        OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF, T>,
+        OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF>,
     >(
         &num_vars_in_each_poly,
         mpi_config_ref,

@@ -6,11 +6,18 @@ edition = "2021"
 [dependencies]
 arith = { path = "../arith" }
 gkr_engine = { path = "../gkr_engine" }
+gkr_hashers = { path = "../hasher" }
 serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
 
 ark-std.workspace = true
+bytes.workspace = true
 ethnum.workspace = true
 log.workspace = true
+mpi.workspace = true
 rand.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+config_macros = { path = "../config_macros" }
+poly_commit = { path = "../poly_commit" }

@@ -3,8 +3,7 @@ use arith::Field;
 use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
 use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, FieldType, MPIEngine,
-    Transcript,
+    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, FieldType, Transcript,
 };
 use serdes::ExpSerde;
 use std::io::Read;
@@ -12,7 +11,7 @@ use sumcheck::{GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_SQUARE_DEGREE
 
 #[allow(clippy::type_complexity)]
 pub fn gkr_square_verify<C: FieldEngine>(
-    mpi_config: &impl MPIEngine,
+    proving_time_mpi_size: usize,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
     claimed_v: &C::ChallengeField,
@@ -26,14 +25,14 @@ pub fn gkr_square_verify<C: FieldEngine>(
     );
 
     let timer = start_timer!(|| "gkr verify");
-    let mut sp = VerifierScratchPad::<C>::new(circuit, mpi_config.world_size());
+    let mut sp = VerifierScratchPad::<C>::new(circuit, proving_time_mpi_size);
 
     let layer_num = circuit.layers.len();
 
     let mut challenge = ExpanderSingleVarChallenge::sample_from_transcript(
         transcript,
         circuit.layers.last().unwrap().output_var_num,
-        mpi_config.world_size(),
+        proving_time_mpi_size,
     );
 
     log::trace!("Initial rz0: {:?}", challenge.rz);
@@ -46,7 +45,7 @@ pub fn gkr_square_verify<C: FieldEngine>(
     for i in (0..layer_num).rev() {
         let cur_verified;
         (cur_verified, challenge, current_claim) = sumcheck_verify_gkr_square_layer(
-            mpi_config,
+            proving_time_mpi_size,
             &circuit.layers[i],
             public_input,
             &challenge,
@@ -67,7 +66,7 @@ pub fn gkr_square_verify<C: FieldEngine>(
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
 fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
-    mpi_config: &impl MPIEngine,
+    proving_time_mpi_size: usize,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
     challenge: &ExpanderSingleVarChallenge<C>,
@@ -80,7 +79,7 @@ fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
     // GKR2 with Power5 gate has degree 6 polynomial
     let degree = SUMCHECK_GKR_SQUARE_DEGREE;
 
-    let dual_challenge = ExpanderDualVarChallenge::from_single_var_challenge(challenge);
+    let dual_challenge = ExpanderDualVarChallenge::from(challenge);
 
     GKRVerifierHelper::prepare_layer(layer, &None, &dual_challenge, sp, is_output_layer);
 
@@ -117,7 +116,7 @@ fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
     }
     GKRVerifierHelper::set_r_simd_xy(&challenge.r_simd, sp);
 
-    for _i_var in 0..mpi_config.world_size().trailing_zeros() {
+    for _i_var in 0..proving_time_mpi_size.trailing_zeros() {
         verified &= verify_sumcheck_step::<C>(
             &mut proof_reader,
             degree,

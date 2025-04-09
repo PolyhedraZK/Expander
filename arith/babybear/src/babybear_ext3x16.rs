@@ -49,6 +49,17 @@ impl SimdField for BabyBearExt3x16 {
         *self * *challenge
     }
 
+    #[inline]
+    fn pack_full(base: &Self::Scalar) -> Self {
+        Self {
+            v: [
+                BabyBearx16::pack_full(&base.v[0]),
+                BabyBearx16::pack_full(&base.v[1]),
+                BabyBearx16::pack_full(&base.v[2]),
+            ],
+        }
+    }
+
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == Self::PACK_SIZE);
@@ -169,9 +180,9 @@ impl From<BabyBearExt3> for BabyBearExt3x16 {
     fn from(x: BabyBearExt3) -> Self {
         Self {
             v: [
-                BabyBearx16::pack_full(x.v[0]),
-                BabyBearx16::pack_full(x.v[1]),
-                BabyBearx16::pack_full(x.v[2]),
+                BabyBearx16::pack_full(&x.v[0]),
+                BabyBearx16::pack_full(&x.v[1]),
+                BabyBearx16::pack_full(&x.v[2]),
             ],
         }
     }

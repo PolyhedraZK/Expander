@@ -110,29 +110,26 @@ where
     }
 }
 
-pub struct OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF, T>
+pub struct OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF>
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     _marker_f: PhantomData<F>,
     _marker_simd_f: PhantomData<SimdF>,
     _marker_eval_f: PhantomData<EvalF>,
     _marker_commit_f: PhantomData<ComPackF>,
-    _marker_t: PhantomData<T>,
 }
 
-impl<F, SimdF, EvalF, ComPackF, T> PolynomialCommitmentScheme<EvalF>
-    for OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF, T>
+impl<F, SimdF, EvalF, ComPackF> PolynomialCommitmentScheme<EvalF>
+    for OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF>
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     const NAME: &'static str = "OrionSIMDFieldPCS";
 

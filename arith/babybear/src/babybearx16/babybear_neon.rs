@@ -43,19 +43,6 @@ field_common!(NeonBabyBear);
 
 impl NeonBabyBear {
     #[inline(always)]
-    pub fn pack_full(x: BabyBear) -> NeonBabyBear {
-        NeonBabyBear {
-            v: unsafe {
-                // Safety: memory representation of [x; BABY_BEAR_PACK_SIZE]
-                // is 16 u32s, which can be reinterpreted as 4 uint32x4_t.
-                transmute::<[BabyBear; BABY_BEAR_PACK_SIZE], [uint32x4_t; 4]>(
-                    [x; BABY_BEAR_PACK_SIZE],
-                )
-            },
-        }
-    }
-
-    #[inline(always)]
     pub fn is_canonical(&self) -> bool {
         self.unpack().iter().all(|x| x.value < BABY_BEAR_MOD)
     }
@@ -179,6 +166,19 @@ impl SimdField for NeonBabyBear {
     #[inline]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
         *self * *challenge
+    }
+
+    #[inline(always)]
+    fn pack_full(x: &BabyBear) -> NeonBabyBear {
+        NeonBabyBear {
+            v: unsafe {
+                // Safety: memory representation of [x; BABY_BEAR_PACK_SIZE]
+                // is 16 u32s, which can be reinterpreted as 4 uint32x4_t.
+                transmute::<[BabyBear; BABY_BEAR_PACK_SIZE], [uint32x4_t; 4]>(
+                    [x; BABY_BEAR_PACK_SIZE],
+                )
+            },
+        }
     }
 
     #[inline(always)]

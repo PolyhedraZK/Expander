@@ -21,16 +21,6 @@ pub struct AVX256GF2_128x8 {
 field_common!(AVX256GF2_128x8);
 
 impl AVX256GF2_128x8 {
-    #[inline(always)]
-    pub(crate) fn pack_full(data: __m128i) -> [__m256i; 4] {
-        [
-            unsafe { _mm256_broadcast_i32x4(data) },
-            unsafe { _mm256_broadcast_i32x4(data) },
-            unsafe { _mm256_broadcast_i32x4(data) },
-            unsafe { _mm256_broadcast_i32x4(data) },
-        ]
-    }
-
     pub fn printavxtype() {
         println!("Using avx256");
     }
@@ -419,9 +409,7 @@ impl Default for AVX256GF2_128x8 {
 impl From<GF2_128> for AVX256GF2_128x8 {
     #[inline(always)]
     fn from(v: GF2_128) -> AVX256GF2_128x8 {
-        AVX256GF2_128x8 {
-            data: Self::pack_full(v.v),
-        }
+        Self::pack_full(&v)
     }
 }
 
@@ -435,12 +423,26 @@ impl SimdField for AVX256GF2_128x8 {
 
     const PACK_SIZE: usize = 8;
 
+    #[inline]
+    fn pack_full(v: &GF2_128) -> Self {
+        Self {
+            data: [
+                unsafe { _mm256_broadcast_i32x4(v.v) },
+                unsafe { _mm256_broadcast_i32x4(v.v) },
+                unsafe { _mm256_broadcast_i32x4(v.v) },
+                unsafe { _mm256_broadcast_i32x4(v.v) },
+            ],
+        }
+    }
+
+    #[inline]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == 8);
         let base_vec_array: [Self::Scalar; 8] = base_vec.try_into().unwrap();
         unsafe { transmute(base_vec_array) }
     }
 
+    #[inline]
     fn unpack(&self) -> Vec<Self::Scalar> {
         let ret = unsafe { transmute::<[__m256i; 4], [Self::Scalar; 8]>(self.data) };
         ret.to_vec()

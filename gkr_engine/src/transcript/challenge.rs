@@ -28,15 +28,6 @@ pub struct ExpanderSingleVarChallenge<C: FieldEngine> {
 
 impl<C: FieldEngine> ExpanderSingleVarChallenge<C> {
     #[inline]
-    pub fn empty() -> Self {
-        Self {
-            rz: vec![],
-            r_simd: vec![],
-            r_mpi: vec![],
-        }
-    }
-
-    #[inline]
     pub fn new(
         rz: Vec<C::ChallengeField>,
         r_simd: Vec<C::ChallengeField>,
@@ -86,16 +77,6 @@ impl<C: FieldEngine> ExpanderSingleVarChallenge<C> {
 
 impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
     #[inline]
-    pub fn empty() -> Self {
-        Self {
-            rz_0: vec![],
-            rz_1: None,
-            r_simd: vec![],
-            r_mpi: vec![],
-        }
-    }
-
-    #[inline]
     pub fn new(
         rz_0: Vec<C::ChallengeField>,
         rz_1: Option<Vec<C::ChallengeField>>,
@@ -131,16 +112,6 @@ impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
     }
 
     #[inline]
-    pub fn from_single_var_challenge(challenge: &ExpanderSingleVarChallenge<C>) -> Self {
-        Self {
-            rz_0: challenge.rz.clone(),
-            rz_1: None,
-            r_simd: challenge.r_simd.clone(),
-            r_mpi: challenge.r_mpi.clone(),
-        }
-    }
-
-    #[inline]
     pub fn sample_from_transcript(
         transcript: &mut impl Transcript<C::ChallengeField>,
         num_circuit_var: usize,
@@ -160,6 +131,23 @@ impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
             rz_1: None,
             r_simd,
             r_mpi,
+        }
+    }
+}
+
+impl<C: FieldEngine> From<ExpanderSingleVarChallenge<C>> for ExpanderDualVarChallenge<C> {
+    fn from(challenge: ExpanderSingleVarChallenge<C>) -> Self {
+        Self::from(&challenge)
+    }
+}
+
+impl<C: FieldEngine> From<&ExpanderSingleVarChallenge<C>> for ExpanderDualVarChallenge<C> {
+    fn from(challenge: &ExpanderSingleVarChallenge<C>) -> Self {
+        Self {
+            rz_0: challenge.rz.clone(),
+            rz_1: None,
+            r_simd: challenge.r_simd.clone(),
+            r_mpi: challenge.r_mpi.clone(),
         }
     }
 }
