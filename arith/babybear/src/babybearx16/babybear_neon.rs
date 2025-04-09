@@ -154,7 +154,7 @@ impl Field for NeonBabyBear {
     }
 
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        Self::pack_full(BabyBear::from_uniform_bytes(bytes))
+        Self::pack_full(&BabyBear::from_uniform_bytes(bytes))
     }
 }
 
@@ -175,7 +175,7 @@ impl SimdField for NeonBabyBear {
                 // Safety: memory representation of [x; BABY_BEAR_PACK_SIZE]
                 // is 16 u32s, which can be reinterpreted as 4 uint32x4_t.
                 transmute::<[BabyBear; BABY_BEAR_PACK_SIZE], [uint32x4_t; 4]>(
-                    [x; BABY_BEAR_PACK_SIZE],
+                    [*x; BABY_BEAR_PACK_SIZE],
                 )
             },
         }
@@ -203,7 +203,7 @@ impl SimdField for NeonBabyBear {
 impl From<BabyBear> for NeonBabyBear {
     #[inline(always)]
     fn from(x: BabyBear) -> Self {
-        NeonBabyBear::pack_full(x)
+        NeonBabyBear::pack_full(&x)
     }
 }
 
@@ -240,7 +240,7 @@ impl Mul<&BabyBear> for NeonBabyBear {
 
     #[inline(always)]
     fn mul(self, rhs: &BabyBear) -> Self::Output {
-        self * NeonBabyBear::pack_full(*rhs)
+        self * NeonBabyBear::pack_full(rhs)
     }
 }
 
@@ -257,7 +257,7 @@ impl Add<BabyBear> for NeonBabyBear {
     type Output = NeonBabyBear;
     #[inline(always)]
     fn add(self, rhs: BabyBear) -> Self::Output {
-        self + NeonBabyBear::pack_full(rhs)
+        self + NeonBabyBear::pack_full(&rhs)
     }
 }
 
@@ -265,7 +265,7 @@ impl From<u32> for NeonBabyBear {
     #[inline(always)]
     fn from(value: u32) -> Self {
         // BabyBear::new converts to Montgomery form
-        NeonBabyBear::pack_full(BabyBear::new(value))
+        NeonBabyBear::pack_full(&BabyBear::new(value))
     }
 }
 
