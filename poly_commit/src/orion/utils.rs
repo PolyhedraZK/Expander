@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 
 use arith::{ExtensionField, Field, SimdField};
+use gkr_engine::Transcript;
 use itertools::izip;
 use serdes::SerdeError;
 use thiserror::Error;
-use transcript::Transcript;
 
 use crate::{traits::TensorCodeIOPPCS, PCS_SOUNDNESS_BITS};
 

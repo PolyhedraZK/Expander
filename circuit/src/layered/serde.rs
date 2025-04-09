@@ -1,10 +1,11 @@
 use std::io::{Read, Write};
 
+use arith::Field;
+use gkr_engine::FieldEngine;
+use serdes::{ExpSerde, SerdeResult};
+
 use super::circuit::{Circuit, CircuitLayer, StructureInfo};
 use super::gates::{CoefType, Gate, GateAdd, GateConst, GateMul, GateUni};
-use arith::Field;
-use gkr_field_config::GKRFieldConfig;
-use serdes::{ExpSerde, SerdeResult};
 
 impl ExpSerde for CoefType {
     const SERIALIZED_SIZE: usize = std::mem::size_of::<Self>();
@@ -35,7 +36,7 @@ impl ExpSerde for CoefType {
     }
 }
 
-impl<C: GKRFieldConfig, const INPUT_NUM: usize> ExpSerde for Gate<C, INPUT_NUM> {
+impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for Gate<C, INPUT_NUM> {
     const SERIALIZED_SIZE: usize = INPUT_NUM * <usize as ExpSerde>::SERIALIZED_SIZE
         + 2 * <usize as ExpSerde>::SERIALIZED_SIZE
         + 1
@@ -103,7 +104,7 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> ExpSerde for Gate<C, INPUT_NUM> 
     }
 }
 
-impl<C: GKRFieldConfig> ExpSerde for CircuitLayer<C> {
+impl<C: FieldEngine> ExpSerde for CircuitLayer<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -140,7 +141,7 @@ impl<C: GKRFieldConfig> ExpSerde for CircuitLayer<C> {
     }
 }
 
-impl<C: GKRFieldConfig> ExpSerde for Circuit<C> {
+impl<C: FieldEngine> ExpSerde for Circuit<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {

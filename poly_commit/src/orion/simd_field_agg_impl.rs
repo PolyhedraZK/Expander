@@ -2,31 +2,29 @@ use std::iter;
 
 use arith::{Field, SimdField};
 use gf2::GF2;
-use gkr_field_config::GKRFieldConfig;
+use gkr_engine::{ExpanderSingleVarChallenge, FieldEngine, Transcript};
 use itertools::izip;
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
-use transcript::Transcript;
 
 use crate::{
-    orion::utils::*, traits::TensorCodeIOPPCS, ExpanderGKRChallenge, OrionCommitment, OrionProof,
-    OrionSRS, PCS_SOUNDNESS_BITS,
+    orion::utils::*, traits::TensorCodeIOPPCS, OrionCommitment, OrionProof, OrionSRS,
+    PCS_SOUNDNESS_BITS,
 };
 
-pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF, T>(
+pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
-    eval_point: &ExpanderGKRChallenge<C>,
+    eval_point: &ExpanderSingleVarChallenge<C>,
     eval: C::ChallengeField,
-    transcript: &mut T,
+    transcript: &mut impl Transcript<C::ChallengeField>,
     proof: &OrionProof<C::ChallengeField>,
 ) -> bool
 where
-    C: GKRFieldConfig,
+    C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
-    T: Transcript<C::ChallengeField>,
 {
-    let mpi_world_size = 1 << eval_point.x_mpi.len();
-    let local_num_vars = eval_point.num_vars() - eval_point.x_mpi.len();
+    let mpi_world_size = 1 << eval_point.r_mpi.len();
+    let local_num_vars = eval_point.num_vars() - eval_point.r_mpi.len();
     assert_eq!(local_num_vars, vk.num_vars);
 
     let (row_num, msg_size) = {

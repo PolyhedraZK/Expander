@@ -1,23 +1,23 @@
 use crate::gates::{SimpleGateAdd, SimpleGateCst, SimpleGateMul};
 use arith::Field;
-use gkr_field_config::GKRFieldConfig;
+use gkr_engine::FieldEngine;
 use rand::RngCore;
 
 use super::CrossLayerRelay;
 
 #[derive(Debug, Clone, Default)]
-pub struct GenericLayer<C: GKRFieldConfig> {
+pub struct GenericLayer<F: FieldEngine> {
     pub layer_id: usize,
     pub layer_size: usize,
     pub input_layer_size: usize,
 
-    pub add_gates: Vec<SimpleGateAdd<C>>,
-    pub mul_gates: Vec<SimpleGateMul<C>>,
-    pub const_gates: Vec<SimpleGateCst<C>>,
-    pub relay_gates: Vec<CrossLayerRelay<C>>,
+    pub add_gates: Vec<SimpleGateAdd<F>>,
+    pub mul_gates: Vec<SimpleGateMul<F>>,
+    pub const_gates: Vec<SimpleGateCst<F>>,
+    pub relay_gates: Vec<CrossLayerRelay<F>>,
 }
 
-impl<C: GKRFieldConfig> GenericLayer<C> {
+impl<F: FieldEngine> GenericLayer<F> {
     pub fn random_for_bench(
         mut rng: impl RngCore,
         layer_id: usize,
@@ -30,7 +30,7 @@ impl<C: GKRFieldConfig> GenericLayer<C> {
 
         let output_size = layer_sizes[layer_id];
         let input_size = layer_sizes[layer_id - 1];
-        let mut layer = GenericLayer::<C> {
+        let mut layer = GenericLayer::<F> {
             layer_id,
             layer_size: output_size,
             input_layer_size: input_size,
@@ -73,7 +73,7 @@ impl<C: GKRFieldConfig> GenericLayer<C> {
         }
         let output_size = layer_sizes[layer_id];
         let input_size = layer_sizes[layer_id - 1];
-        let mut layer = GenericLayer::<C> {
+        let mut layer = GenericLayer::<F> {
             layer_id,
             layer_size: output_size,
             input_layer_size: input_size,
@@ -116,16 +116,16 @@ impl<C: GKRFieldConfig> GenericLayer<C> {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct CrossLayerCircuitEvals<C: GKRFieldConfig> {
-    pub vals: Vec<Vec<C::SimdCircuitField>>,
+pub struct CrossLayerCircuitEvals<F: FieldEngine> {
+    pub vals: Vec<Vec<F::SimdCircuitField>>,
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct CrossLayerCircuit<C: GKRFieldConfig> {
-    pub layers: Vec<GenericLayer<C>>,
+pub struct CrossLayerCircuit<F: FieldEngine> {
+    pub layers: Vec<GenericLayer<F>>,
 }
 
-impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
+impl<F: FieldEngine> CrossLayerCircuit<F> {
     pub fn random_for_bench(
         mut rng: impl RngCore,
         n_layers: usize,
@@ -134,7 +134,7 @@ impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
     ) -> Self {
         let layer_sizes = vec![size_of_each_layer; n_layers];
         let mut circuit = Self::default();
-        circuit.layers.push(GenericLayer::<C> {
+        circuit.layers.push(GenericLayer::<F> {
             layer_id: 0,
             layer_size: layer_sizes[0],
             ..Default::default()
@@ -142,7 +142,7 @@ impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
 
         for i in 1..layer_sizes.len() {
             let layer =
-                GenericLayer::<C>::random_for_bench(&mut rng, i, &layer_sizes, n_gates_each_layer);
+                GenericLayer::<F>::random_for_bench(&mut rng, i, &layer_sizes, n_gates_each_layer);
             circuit.layers.push(layer);
         }
         circuit
@@ -154,7 +154,7 @@ impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
             .collect::<Vec<_>>();
 
         let mut circuit = Self::default();
-        circuit.layers.push(GenericLayer::<C> {
+        circuit.layers.push(GenericLayer::<F> {
             layer_id: 0,
             layer_size: layer_sizes[0],
             ..Default::default()
@@ -167,34 +167,34 @@ impl<C: GKRFieldConfig> CrossLayerCircuit<C> {
         circuit
     }
 
-    pub fn evaluate(&self, input: &[C::SimdCircuitField]) -> CrossLayerCircuitEvals<C> {
+    pub fn evaluate(&self, input: &[F::SimdCircuitField]) -> CrossLayerCircuitEvals<F> {
         let mut vals = Vec::with_capacity(self.layers.len());
         vals.push(input.to_vec());
 
         for i_layer in 1..self.layers.len() {
             let layer = &self.layers[i_layer];
-            let mut new_layer_vals = vec![C::SimdCircuitField::zero(); layer.layer_size];
+            let mut new_layer_vals = vec![F::SimdCircuitField::zero(); layer.layer_size];
 
             for gate in &layer.add_gates {
-                new_layer_vals[gate.o_id] += C::circuit_field_mul_simd_circuit_field(
+                new_layer_vals[gate.o_id] += F::circuit_field_mul_simd_circuit_field(
                     &gate.coef,
                     &vals[i_layer - 1][gate.i_ids[0]],
                 );
             }
 
             for gate in &layer.mul_gates {
-                new_layer_vals[gate.o_id] += C::circuit_field_mul_simd_circuit_field(
+                new_layer_vals[gate.o_id] += F::circuit_field_mul_simd_circuit_field(
                     &gate.coef,
                     &(vals[i_layer - 1][gate.i_ids[0]] * vals[i_layer - 1][gate.i_ids[1]]),
                 );
             }
 
             for gate in &layer.const_gates {
-                new_layer_vals[gate.o_id] += C::SimdCircuitField::from(gate.coef);
+                new_layer_vals[gate.o_id] += F::SimdCircuitField::from(gate.coef);
             }
 
             for gate in &layer.relay_gates {
-                new_layer_vals[gate.o_id] += C::circuit_field_mul_simd_circuit_field(
+                new_layer_vals[gate.o_id] += F::circuit_field_mul_simd_circuit_field(
                     &gate.coef,
                     &vals[gate.i_layer][gate.i_id],
                 );
@@ -265,7 +265,7 @@ pub struct CrossLayerConnections {
 }
 
 impl CrossLayerConnections {
-    pub fn parse_circuit<C: GKRFieldConfig>(c: &CrossLayerCircuit<C>) -> Self {
+    pub fn parse_circuit<F: FieldEngine>(c: &CrossLayerCircuit<F>) -> Self {
         let mut connections = vec![vec![vec![]; c.layers.len()]; c.layers.len()];
 
         #[allow(clippy::needless_range_loop)]
@@ -281,9 +281,9 @@ impl CrossLayerConnections {
 
 // A direct copy of the witness struct from ecc
 #[derive(Debug, Clone)]
-pub struct Witness<C: GKRFieldConfig> {
+pub struct Witness<F: FieldEngine> {
     pub num_witnesses: usize,
     pub num_private_inputs_per_witness: usize,
     pub num_public_inputs_per_witness: usize,
-    pub values: Vec<C::CircuitField>,
+    pub values: Vec<F::CircuitField>,
 }
