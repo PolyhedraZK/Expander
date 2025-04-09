@@ -375,12 +375,22 @@ impl<MP: FieldParameters> Field for MontyField31<MP> {
     /// Converts to canonical form.
     #[inline(always)]
     fn as_u32_unchecked(&self) -> u32 {
-        to_monty::<MP>(self.value)
+        from_monty::<MP>(self.value)
     }
 
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         // Note: From<u32> performs modular reduction
         u32::from_le_bytes(bytes[..4].try_into().unwrap()).into()
+    }
+
+    #[inline(always)]
+    fn to_u256(&self) -> U256 {
+        U256([self.as_u32_unchecked() as u128, 0])
+    }
+
+    #[inline(always)]
+    fn from_u256(v: U256) -> Self {
+        Self::new(v.as_u32())
     }
 }
