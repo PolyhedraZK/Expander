@@ -1,8 +1,8 @@
 use config_macros::declare_gkr_config;
 use gf2::GF2x128;
 use gkr_engine::{
-    BN254Config, FieldEngine, GF2ExtConfig, GKREngine, GKRScheme, GoldilocksExtConfig,
-    M31ExtConfig, MPIConfig,
+    BN254Config, BabyBearExtConfig, FieldEngine, GF2ExtConfig, GKREngine, GKRScheme,
+    GoldilocksExtConfig, M31ExtConfig, MPIConfig,
 };
 use gkr_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use halo2curves::bn256::{Bn256, G1Affine};
@@ -104,6 +104,15 @@ declare_gkr_config!(
 declare_gkr_config!(
     pub GoldilocksExtConfigSha2Raw,
     FieldType::Goldilocks,
+    FiatShamirHashType::SHA256,
+    PolynomialCommitmentType::Raw,
+    GKRScheme::Vanilla,
+);
+
+// ============== Babybear ==============
+declare_gkr_config!(
+    pub BabyBearExtConfigSha2Raw,
+    FieldType::BabyBear,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
