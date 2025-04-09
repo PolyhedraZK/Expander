@@ -108,7 +108,7 @@ pub fn random_field_tests<F: Field>(type_name: String) {
     associativity_tests::<F, _>(&mut rng, type_name.clone());
     commutativity_tests::<F, _>(&mut rng, type_name.clone());
     identity_tests::<F, _>(&mut rng, type_name.clone());
-    //inverse_tests::<F, _>(&mut rng, type_name.clone());
+    // inverse_tests::<F, _>(&mut rng, type_name.clone());
 
     assert!(F::zero().is_zero());
     {

@@ -55,15 +55,11 @@ impl ExpSerde for AVXGoldilocks {
 
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut data0 = [0; 32];
-        let mut data1 = [0; 32];
-        reader.read_exact(&mut data0)?;
-        reader.read_exact(&mut data1)?;
-        unsafe {
-            let v0 = transmute::<[u8; 32], __m256i>(data0);
-            let v1 = transmute::<[u8; 32], __m256i>(data1);
-            Ok(Self { v: [v0, v1] })
-        }
+        let mut data = [0u8; Self::SERIALIZED_SIZE];
+        reader.read_exact(&mut data)?;
+        Ok(AVXGoldilocks {
+            v: unsafe { transmute::<[u8; Self::SERIALIZED_SIZE], [__m256i; 2]>(data) },
+        })
     }
 }
 

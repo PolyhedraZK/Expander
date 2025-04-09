@@ -68,13 +68,17 @@ pub trait Field:
     // constants
     // ====================================
     /// Zero element
-    fn zero() -> Self;
+    fn zero() -> Self {
+        Self::ZERO
+    }
 
     /// Is zero
     fn is_zero(&self) -> bool;
 
     /// Identity element
-    fn one() -> Self;
+    fn one() -> Self {
+        Self::ONE
+    }
 
     // ====================================
     // generators
@@ -132,6 +136,15 @@ pub trait Field:
             }
             t = t * t;
             e >>= 1;
+        }
+        res
+    }
+
+    #[inline(always)]
+    fn exp_power_of_2(&self, power_log: usize) -> Self {
+        let mut res = *self;
+        for _ in 0..power_log {
+            res = res.square();
         }
         res
     }

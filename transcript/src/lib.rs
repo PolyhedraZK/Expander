@@ -1,3 +1,5 @@
+#![allow(clippy::manual_div_ceil)]
+
 mod field_hash_transcript;
 pub use field_hash_transcript::FieldHashTranscript;
 

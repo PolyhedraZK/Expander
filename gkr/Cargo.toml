@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
+babybear = { path = "../arith/babybear" }
 config_macros = { path = "../config_macros" }
 circuit = { path = "../circuit" }
 gf2 = { path = "../arith/gf2" }

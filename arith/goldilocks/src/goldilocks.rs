@@ -179,15 +179,6 @@ impl From<u64> for Goldilocks {
 
 impl Goldilocks {
     #[inline(always)]
-    pub fn exp_power_of_2(&self, power_log: usize) -> Self {
-        let mut res = *self;
-        for _ in 0..power_log {
-            res = res.square();
-        }
-        res
-    }
-
-    #[inline(always)]
     fn try_inverse(&self) -> Option<Self> {
         try_inverse_u64(&self.v).map(|v| Goldilocks { v })
     }

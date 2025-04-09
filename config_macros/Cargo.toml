@@ -17,6 +17,7 @@ proc-macro2.workspace = true
 gf2 = { path = "../arith/gf2" }
 mersenne31 = { path = "../arith/mersenne31/" }
 goldilocks = { path = "../arith/goldilocks" }
+babybear = { path = "../arith/babybear" }
 
 halo2curves.workspace = true
 
