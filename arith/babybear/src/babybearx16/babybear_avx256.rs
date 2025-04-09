@@ -105,10 +105,16 @@ impl Field for AVXBabyBear {
     fn is_zero(&self) -> bool {
         // value is either zero or 0x7FFFFFFF
         unsafe {
-            let pcmp0 = _mm256_cmpeq_epi32_mask(self.v[0], PACKED_0);
-            let pcmp1 = _mm256_cmpeq_epi32_mask(self.v[1], PACKED_0);
-            let pcmp2_0 = _mm256_cmpeq_epi32_mask(self.v[0], PACKED_MOD);
-            let pcmp2_1 = _mm256_cmpeq_epi32_mask(self.v[1], PACKED_MOD);
+            let pcmp0 =
+                _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpeq_epi32(self.v[0], PACKED_0)));
+            let pcmp1 =
+                _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpeq_epi32(self.v[1], PACKED_0)));
+            let pcmp2_0 = _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpeq_epi32(
+                self.v[0], PACKED_MOD,
+            )));
+            let pcmp2_1 = _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpeq_epi32(
+                self.v[1], PACKED_MOD,
+            )));
             (pcmp0 | pcmp1 | pcmp2_0 | pcmp2_1) == 0xFF
         }
     }
@@ -290,10 +296,14 @@ impl PartialEq for AVXBabyBear {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let pcmp0 =
-                _mm256_cmpeq_epi32_mask(mod_reduce_epi32(self.v[0]), mod_reduce_epi32(other.v[0]));
-            let pcmp1 =
-                _mm256_cmpeq_epi32_mask(mod_reduce_epi32(self.v[1]), mod_reduce_epi32(other.v[1]));
+            let pcmp0 = _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpeq_epi32(
+                mod_reduce_epi32(self.v[0]),
+                mod_reduce_epi32(other.v[0]),
+            )));
+            let pcmp1 = _mm256_movemask_ps(_mm256_castsi256_ps(_mm256_cmpeq_epi32(
+                mod_reduce_epi32(self.v[1]),
+                mod_reduce_epi32(other.v[1]),
+            )));
             (pcmp0 & pcmp1) == 0xFF
         }
     }
