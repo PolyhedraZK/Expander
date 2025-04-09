@@ -12,7 +12,6 @@ use crate::{
         OrionCommitment, OrionProof, OrionSIMDFieldPCS, OrionSRS, OrionScratchPad,
         ORION_CODE_PARAMETER_INSTANCE,
     },
-    traits::TensorCodeIOPPCS,
     ExpanderGKRChallenge, PCSForExpanderGKR, StructuredReferenceString,
 };
 
@@ -32,28 +31,35 @@ where
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
 
+    /// Minimum number of variables supported by Orion, need world size as input.
+    ///
+    /// The computation, or simulation, goes as follows:
+    /// - On given a world size, we assume the number of variables is as low as possible.
+    /// - The minimum query from Merkle tree contains 2 leaves, should be shared across MPI parties.
+    /// - NOTE: if the world size is rather large, another factor need to be considered is the
+    ///   commitment SIMD field size used in SIMD encoding.  Each party contribute one SIMD field
+    ///   element at least to the one query opening, and supposing the world size is too large, we
+    ///   have to scale up the opening size.
+    /// - Once how many commitment SIMD field elements are contributed into the query opening, we
+    ///   just need to ensure the resulting encoded codeword is longer than the world size.
+    ///
+    /// NOTE: this method will be invoked before setup,
+    /// and suggest prover to extend the polynomial size up to the minimal number of variables.
     fn minimum_num_vars(world_size: usize) -> usize {
-        let num_bits_packed_field = ComPackF::PACK_SIZE * C::CircuitField::FIELD_SIZE;
+        const MINIMUM_QUERY_LEAVES: usize = 2;
 
-        let minimum_num_bytes_opening_per_world = {
-            let minimum_num_bytes_opening =
-                Self::SRS::MINIMUM_LEAVES_IN_RANGE_OPENING * tree::LEAF_BYTES;
-            assert_eq!(minimum_num_bytes_opening % world_size, 0);
+        let num_bits_com_pack_f = ComPackF::PACK_SIZE * C::CircuitField::FIELD_SIZE;
 
-            minimum_num_bytes_opening / world_size
+        let num_compack_fs_per_world_in_query = {
+            let minimum_bytes_opening = MINIMUM_QUERY_LEAVES * tree::LEAF_BYTES;
+            let minimum_bits_opening = minimum_bytes_opening * 8;
+
+            minimum_bits_opening.div_ceil(world_size * num_bits_com_pack_f)
         };
 
-        let num_packed_fields_per_world_in_opening = {
-            let num_bytes_packed_field = num_bits_packed_field / 8;
-
-            minimum_num_bytes_opening_per_world.div_ceil(num_bytes_packed_field)
-        };
-
-        let num_simd_fields_per_world_in_opening = {
-            let num_base_fields_per_world_in_opening =
-                num_packed_fields_per_world_in_opening * ComPackF::PACK_SIZE;
-
-            num_base_fields_per_world_in_opening / C::SimdCircuitField::PACK_SIZE
+        let num_simd_fs_per_world_in_query = {
+            let relative_pack_size = ComPackF::PACK_SIZE / C::SimdCircuitField::PACK_SIZE;
+            num_compack_fs_per_world_in_query * relative_pack_size
         };
 
         let minimum_msg_size = {
@@ -68,7 +74,7 @@ where
             }
         };
 
-        (num_simd_fields_per_world_in_opening * minimum_msg_size).ilog2() as usize
+        (num_simd_fs_per_world_in_query * minimum_msg_size).ilog2() as usize
     }
 
     /// NOTE(HS): this is actually number of variables in polynomial,
