@@ -34,15 +34,6 @@ pub struct AVXM31 {
     pub v: [__m256i; 2],
 }
 
-impl AVXM31 {
-    #[inline(always)]
-    pub(crate) fn pack_full(x: M31) -> AVXM31 {
-        AVXM31 {
-            v: unsafe { [_mm256_set1_epi32(x.v as i32), _mm256_set1_epi32(x.v as i32)] },
-        }
-    }
-}
-
 field_common!(AVXM31);
 
 impl ExpSerde for AVXM31 {
@@ -269,6 +260,13 @@ impl SimdField for AVXM31 {
     const PACK_SIZE: usize = M31_PACK_SIZE;
 
     #[inline(always)]
+    fn pack_full(x: &M31) -> AVXM31 {
+        AVXM31 {
+            v: unsafe { [_mm256_set1_epi32(x.v as i32), _mm256_set1_epi32(x.v as i32)] },
+        }
+    }
+
+    #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert_eq!(base_vec.len(), M31_PACK_SIZE);
         let ret: [Self::Scalar; M31_PACK_SIZE] = base_vec.try_into().unwrap();
@@ -315,7 +313,7 @@ impl SimdField for AVXM31 {
 impl From<M31> for AVXM31 {
     #[inline(always)]
     fn from(x: M31) -> Self {
-        AVXM31::pack_full(x)
+        AVXM31::pack_full(&x)
     }
 }
 
@@ -408,7 +406,7 @@ impl Mul<&M31> for AVXM31 {
 
     #[inline(always)]
     fn mul(self, rhs: &M31) -> Self::Output {
-        let rhsv = AVXM31::pack_full(*rhs);
+        let rhsv = AVXM31::pack_full(rhs);
         unsafe {
             let mut res: [__m256i; 2] = [_mm256_setzero_si256(); 2];
             #[allow(clippy::needless_range_loop)]
@@ -450,14 +448,14 @@ impl Add<M31> for AVXM31 {
     #[inline(always)]
     #[allow(clippy::op_ref)]
     fn add(self, rhs: M31) -> Self::Output {
-        self + AVXM31::pack_full(rhs)
+        self + AVXM31::pack_full(&rhs)
     }
 }
 
 impl From<u32> for AVXM31 {
     #[inline(always)]
     fn from(x: u32) -> Self {
-        AVXM31::pack_full(M31::from(x))
+        AVXM31::pack_full(&M31::from(x))
     }
 }
 

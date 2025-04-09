@@ -11,6 +11,10 @@ pub trait SimdField: From<Self::Scalar> + Field {
     /// scale self with the challenge
     fn scale(&self, challenge: &Self::Scalar) -> Self;
 
+    /// pack a single scalar field into self by cloning the
+    /// scalar field element into all slots
+    fn pack_full(base: &Self::Scalar) -> Self;
+
     /// pack a vec of scalar field into self
     fn pack(base_vec: &[Self::Scalar]) -> Self;
 

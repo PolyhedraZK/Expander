@@ -5,7 +5,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field, SimdField};
+use arith::{field_common, FFTField, Field, SimdField};
 use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
@@ -21,13 +21,6 @@ const GOLDILOCKS_PACK_SIZE: usize = 8;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NeonGoldilocks {
     pub v: [Goldilocks; 8],
-}
-
-impl NeonGoldilocks {
-    #[inline(always)]
-    pub fn pack_full(x: Goldilocks) -> Self {
-        Self { v: [x; 8] }
-    }
 }
 
 field_common!(NeonGoldilocks);
@@ -118,7 +111,7 @@ impl Field for NeonGoldilocks {
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         let m = Goldilocks::from_uniform_bytes(bytes);
-        Self::pack_full(m)
+        Self::pack_full(&m)
     }
 
     #[inline(always)]
@@ -143,6 +136,11 @@ impl SimdField for NeonGoldilocks {
     type Scalar = Goldilocks;
 
     const PACK_SIZE: usize = GOLDILOCKS_PACK_SIZE;
+
+    #[inline(always)]
+    fn pack_full(x: &Goldilocks) -> Self {
+        Self { v: [*x; 8] }
+    }
 
     #[inline]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
@@ -276,4 +274,18 @@ fn mul_internal(a: &NeonGoldilocks, b: &NeonGoldilocks) -> NeonGoldilocks {
         res.v[i] = a.v[i] * b.v[i];
     }
     res
+}
+
+impl FFTField for NeonGoldilocks {
+    const TWO_ADICITY: usize = 32;
+
+    /// The `2^s` root of unity.
+    ///
+    /// It can be calculated by exponentiating `Self::MULTIPLICATIVE_GENERATOR` by `t`,
+    /// where `t = (modulus - 1) >> Self::S`.
+    fn root_of_unity() -> Self {
+        Self::pack_full(&Goldilocks {
+            v: 0x185629dcda58878c,
+        })
+    }
 }
