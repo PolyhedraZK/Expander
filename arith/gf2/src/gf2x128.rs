@@ -29,6 +29,15 @@ impl SimdField for GF2x128 {
     }
 
     #[inline(always)]
+    fn pack_full(base: &Self::Scalar) -> Self {
+        match base.v {
+            0 => Self::ZERO,
+            1 => Self::ONE,
+            _ => panic!("Invalid value for GF2x128: {}", base.v),
+        }
+    }
+
+    #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert_eq!(base_vec.len(), Self::PACK_SIZE);
         let mut packed_to_gf2x64 = [GF2x64::ZERO; Self::PACK_SIZE / GF2x64::PACK_SIZE];
