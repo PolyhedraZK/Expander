@@ -5,10 +5,12 @@ use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gf2::{GF2x128, GF2x8, GF2};
 use gf2_128::GF2_128;
+use gkr_engine::Transcript;
+use gkr_hashers::Keccak256hasher;
 use mersenne31::{M31Ext3, M31x16, M31};
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
-use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
+use transcript::BytesHashTranscript;
 use tynm::type_name;
 
 fn simd_field_committing_benchmark_helper<F, SimdF, ComPackF>(
@@ -122,7 +124,7 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, T>(
                 ),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(orion_open_simd_field::<F, SimdF, _, ComPackF, T>(
+                        _ = black_box(orion_open_simd_field::<F, SimdF, _, ComPackF>(
                             &srs,
                             &poly,
                             &eval_point,

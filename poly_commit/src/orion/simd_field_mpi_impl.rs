@@ -1,8 +1,7 @@
 use arith::{ExtensionField, Field, SimdField};
 use gf2::GF2;
-use mpi_config::MPIConfig;
+use gkr_engine::{MPIEngine, Transcript};
 use polynomials::{EqPolynomial, MultilinearExtension};
-use transcript::Transcript;
 
 use crate::{
     orion::{
@@ -16,7 +15,7 @@ use crate::{
 
 #[inline(always)]
 pub fn orion_mpi_commit_simd_field<F, SimdF, ComPackF>(
-    mpi_config: &MPIConfig,
+    mpi_engine: &impl MPIEngine,
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
     scratch_pad: &mut OrionScratchPad,
@@ -29,7 +28,7 @@ where
     let (row_num, msg_size) = {
         let local_num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
         let (row_field_elems, msg_size) = OrionSRS::local_eval_shape(
-            mpi_config.world_size(),
+            mpi_engine.world_size(),
             local_num_vars,
             F::FIELD_SIZE,
             ComPackF::PACK_SIZE,
@@ -52,7 +51,7 @@ where
     };
 
     let local_commitment = mpi_commit_encoded(
-        mpi_config,
+        mpi_engine,
         pk,
         packed_evals_ref,
         scratch_pad,
@@ -60,17 +59,17 @@ where
         msg_size,
     )?;
 
-    orion_mpi_compute_mt_root(mpi_config, local_commitment, scratch_pad)
+    orion_mpi_compute_mt_root(mpi_engine, local_commitment, scratch_pad)
 }
 
 #[inline(always)]
-pub fn orion_mpi_open_simd_field<F, SimdF, EvalF, ComPackF, T>(
-    mpi_config: &MPIConfig,
+pub fn orion_mpi_open_simd_field<F, SimdF, EvalF, ComPackF>(
+    mpi_engine: &impl MPIEngine,
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
     point: &[EvalF],
     mpi_point: &[EvalF],
-    transcript: &mut T,
+    transcript: &mut impl Transcript<EvalF>,
     scratch_pad: &OrionScratchPad,
 ) -> Option<OrionProof<EvalF>>
 where
@@ -78,14 +77,13 @@ where
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     let (local_row_field_elems, msg_size) = {
         let local_num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
         assert_eq!(local_num_vars, point.len());
 
         let (local_row_field_elems, msg_size) = OrionSRS::local_eval_shape(
-            mpi_config.world_size(),
+            mpi_engine.world_size(),
             local_num_vars,
             F::FIELD_SIZE,
             ComPackF::PACK_SIZE,
@@ -101,7 +99,7 @@ where
         let mut eq_vars = point[..num_vars_in_com_simd].to_vec();
         eq_vars.extend_from_slice(&point[num_vars_in_com_simd + num_vars_in_msg..]);
         let mut coeffs = EqPolynomial::build_eq_x_r(&eq_vars);
-        let mpi_weight = EqPolynomial::ith_eq_vec_elem(mpi_point, mpi_config.world_rank());
+        let mpi_weight = EqPolynomial::ith_eq_vec_elem(mpi_point, mpi_engine.world_rank());
         coeffs.iter_mut().for_each(|c| *c *= mpi_weight);
         coeffs
     };
@@ -119,7 +117,7 @@ where
             let local_rand = transcript.generate_challenge_field_elements(num_of_local_random_vars);
             let mpi_rand = transcript.generate_challenge_field_elements(mpi_point.len());
             let mut coeffs = EqPolynomial::build_eq_x_r(&local_rand);
-            let mpi_weight = EqPolynomial::ith_eq_vec_elem(&mpi_rand, mpi_config.world_rank());
+            let mpi_weight = EqPolynomial::ith_eq_vec_elem(&mpi_rand, mpi_engine.world_rank());
             coeffs.iter_mut().for_each(|c| *c *= mpi_weight);
             coeffs
         })
@@ -145,28 +143,28 @@ where
     }
 
     // NOTE: MPI sum up local weighed rows
-    eval_row = mpi_config.sum_vec(&eval_row);
+    eval_row = mpi_engine.sum_vec(&eval_row);
     proximity_rows = proximity_rows
         .iter()
-        .map(|r| mpi_config.sum_vec(r))
+        .map(|r| mpi_engine.sum_vec(r))
         .collect();
 
     // NOTE: MT opening for point queries
     let num_leaves_per_opening = {
-        let num_bits_opening = local_row_field_elems * F::FIELD_SIZE * mpi_config.world_size();
+        let num_bits_opening = local_row_field_elems * F::FIELD_SIZE * mpi_engine.world_size();
         let num_bytes_opening = num_bits_opening / 8;
 
         num_bytes_opening / tree::LEAF_BYTES
     };
     let query_openings = orion_mpi_mt_openings(
-        mpi_config,
+        mpi_engine,
         pk,
         num_leaves_per_opening,
         scratch_pad,
         transcript,
     );
 
-    if !mpi_config.is_root() {
+    if !mpi_engine.is_root() {
         return None;
     }
 

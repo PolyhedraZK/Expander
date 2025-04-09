@@ -27,4 +27,4 @@ mod hyper_bikzg_tests;
 mod pcs_trait_impl;
 pub use pcs_trait_impl::HyperKZGPCS;
 
-mod pcs_for_expander;
+mod expander_api;

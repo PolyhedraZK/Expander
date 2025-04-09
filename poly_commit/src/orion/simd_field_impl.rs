@@ -1,7 +1,7 @@
 use arith::{ExtensionField, Field, SimdField};
 use gf2::GF2;
+use gkr_engine::Transcript;
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
-use transcript::Transcript;
 
 use crate::{
     orion::{
@@ -51,11 +51,11 @@ where
 }
 
 #[inline(always)]
-pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF, T>(
+pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
     point: &[EvalF],
-    transcript: &mut T,
+    transcript: &mut impl Transcript<EvalF>,
     scratch_pad: &OrionScratchPad,
 ) -> (EvalF, OrionProof<EvalF>)
 where
@@ -63,7 +63,6 @@ where
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     let msg_size = {
         let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;

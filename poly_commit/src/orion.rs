@@ -27,7 +27,7 @@ pub use verify::orion_verify;
 mod pcs_trait_impl;
 pub use pcs_trait_impl::{OrionBaseFieldPCS, OrionSIMDFieldPCS};
 
-mod pcs_for_expander_gkr;
-pub use pcs_for_expander_gkr::OrionPCSForGKR;
+mod expander_api;
+pub use expander_api::OrionPCSForGKR;
 
 mod serde;

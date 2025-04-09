@@ -1,6 +1,6 @@
 use arith::{ExtensionField, Field, SimdField};
+use gkr_engine::Transcript;
 use polynomials::{MultilinearExtension, RefMultiLinearPoly};
-use transcript::Transcript;
 
 use crate::{
     orion::{
@@ -29,11 +29,11 @@ where
 }
 
 #[inline(always)]
-pub fn orion_open_base_field<F, OpenPackF, EvalF, ComPackF, T>(
+pub fn orion_open_base_field<F, OpenPackF, EvalF, ComPackF>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<F>,
     point: &[EvalF],
-    transcript: &mut T,
+    transcript: &mut impl Transcript<EvalF>,
     scratch_pad: &OrionScratchPad,
 ) -> (EvalF, OrionProof<EvalF>)
 where
@@ -41,13 +41,12 @@ where
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     assert_eq!(poly.hypercube_size() % OpenPackF::PACK_SIZE, 0);
     let packed_evals: Vec<OpenPackF> = pack_from_base(poly.hypercube_basis_ref());
     let simd_poly = RefMultiLinearPoly::from_ref(&packed_evals);
 
-    orion_open_simd_field::<_, OpenPackF, _, ComPackF, _>(
+    orion_open_simd_field::<_, OpenPackF, _, ComPackF>(
         pk,
         &simd_poly,
         point,

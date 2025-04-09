@@ -1,8 +1,8 @@
 use arith::{ExtensionField, Field, SimdField};
+use gkr_engine::Transcript;
 use itertools::izip;
 use serdes::SerdeError;
 use thiserror::Error;
-use transcript::Transcript;
 use tree::Node;
 
 use crate::{

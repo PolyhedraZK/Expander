@@ -1,10 +1,9 @@
 use std::collections::VecDeque;
 
 use arith::{ExtensionField, SimdField};
+use gkr_engine::{MPIEngine, Transcript};
 use itertools::izip;
-use mpi_config::MPIConfig;
 use serdes::ExpSerde;
-use transcript::Transcript;
 use tree::{Node, RangePath, Tree};
 
 use crate::{
@@ -108,7 +107,7 @@ After all these, we can go onwards to MT commitment, and later open alphabets li
 
 #[inline(always)]
 pub(crate) fn mpi_commit_encoded<PackF>(
-    mpi_config: &MPIConfig,
+    mpi_engine: &impl MPIEngine,
     pk: &OrionSRS,
     packed_evals: &[PackF],
     scratch_pad: &mut OrionScratchPad,
@@ -145,18 +144,18 @@ where
     }
 
     // NOTE: ALL-TO-ALL transpose go get other world's slice of codeword
-    mpi_config.all_to_all_transpose(&mut packed_interleaved_codewords);
+    mpi_engine.all_to_all_transpose(&mut packed_interleaved_codewords);
 
     let codeword_po2_len = pk.codeword_len().next_power_of_two();
     let codeword_this_world_len = packed_rows * codeword_po2_len;
     assert_eq!(packed_interleaved_codewords.len(), codeword_this_world_len);
 
     {
-        let codeword_chunk_per_world_len = codeword_this_world_len / mpi_config.world_size();
-        assert_eq!(codeword_this_world_len % mpi_config.world_size(), 0);
+        let codeword_chunk_per_world_len = codeword_this_world_len / mpi_engine.world_size();
+        assert_eq!(codeword_this_world_len % mpi_engine.world_size(), 0);
 
-        let codeword_po2_per_world_len = codeword_po2_len / mpi_config.world_size();
-        assert_eq!(codeword_po2_len % mpi_config.world_size(), 0);
+        let codeword_po2_per_world_len = codeword_po2_len / mpi_engine.world_size();
+        assert_eq!(codeword_po2_len % mpi_engine.world_size(), 0);
 
         // NOTE: now transpose back to row order of each world's codeword slice
         let mut scratch = vec![PackF::ZERO; codeword_chunk_per_world_len];
@@ -171,7 +170,7 @@ where
     transpose(
         &packed_interleaved_codewords,
         &mut packed_interleaved_codeword_chunk,
-        packed_rows * mpi_config.world_size(),
+        packed_rows * mpi_engine.world_size(),
     );
     drop(packed_interleaved_codewords);
 
@@ -183,19 +182,19 @@ where
 
 #[inline(always)]
 pub(crate) fn orion_mpi_compute_mt_root(
-    mpi_config: &MPIConfig,
+    mpi_engine: &impl MPIEngine,
     local_commitment: Node,
     scratch_pad: &mut OrionScratchPad,
 ) -> OrionResult<Node> {
-    let mut leaves = vec![tree::Node::default(); mpi_config.world_size()];
-    mpi_config.gather_vec(&vec![local_commitment], &mut leaves);
+    let mut leaves = vec![tree::Node::default(); mpi_engine.world_size()];
+    mpi_engine.gather_vec(&[local_commitment], &mut leaves);
 
     {
         let mut leaves_bytes: Vec<u8> = Vec::new();
         leaves.serialize_into(&mut leaves_bytes)?;
-        mpi_config.root_broadcast_bytes(&mut leaves_bytes);
+        mpi_engine.root_broadcast_bytes(&mut leaves_bytes);
 
-        if !mpi_config.is_root() {
+        if !mpi_engine.is_root() {
             leaves = Vec::deserialize_from(leaves_bytes.as_slice())?;
         }
     }
@@ -213,7 +212,7 @@ pub(crate) fn orion_mpi_compute_mt_root(
 
 #[inline(always)]
 pub(crate) fn orion_mpi_mt_openings<EvalF, T>(
-    mpi_config: &MPIConfig,
+    mpi_engine: &impl MPIEngine,
     pk: &OrionSRS,
     num_leaves_per_opening: usize,
     scratch_pad: &OrionScratchPad,
@@ -231,8 +230,8 @@ where
         indices
     };
 
-    let index_range_per_world = pk.codeword_len().next_power_of_two() / mpi_config.world_size();
-    let index_starts_this_world = index_range_per_world * mpi_config.world_rank();
+    let index_range_per_world = pk.codeword_len().next_power_of_two() / mpi_engine.world_size();
+    let index_starts_this_world = index_range_per_world * mpi_engine.world_rank();
     let index_ends_this_world = index_starts_this_world + index_range_per_world;
 
     let local_paths: Vec<RangePath> = query_indices
@@ -247,9 +246,9 @@ where
         .collect();
 
     let mut global_paths: Vec<Vec<RangePath>> = Vec::new();
-    mpi_config.gather_varlen_vec(&local_paths, &mut global_paths);
+    mpi_engine.gather_varlen_vec(&local_paths, &mut global_paths);
 
-    if !mpi_config.is_root() {
+    if !mpi_engine.is_root() {
         return None;
     }
 

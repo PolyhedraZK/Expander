@@ -2,9 +2,9 @@ use std::iter;
 
 use arith::{ExtensionField, Field, SimdField};
 use gf2::GF2;
+use gkr_engine::Transcript;
 use itertools::{chain, izip};
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
-use transcript::Transcript;
 use tree::LEAF_BYTES;
 
 use crate::{
@@ -17,13 +17,13 @@ use crate::{
 };
 
 #[inline(always)]
-pub fn orion_verify<F, SimdF, EvalF, ComPackF, T>(
+pub fn orion_verify<F, SimdF, EvalF, ComPackF>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
     point: &[EvalF],
     mpi_point: &[EvalF],
     evaluation: EvalF,
-    transcript: &mut T,
+    transcript: &mut impl Transcript<EvalF>,
     proof: &OrionProof<EvalF>,
 ) -> bool
 where
@@ -31,7 +31,6 @@ where
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     let world_size = 1 << mpi_point.len();
     let (_, msg_size) =

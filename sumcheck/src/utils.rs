@@ -1,11 +1,5 @@
 use arith::{ExtensionField, SimdField};
-use mpi_config::MPIConfig;
-use transcript::Transcript;
-
-// #[inline(always)]
-// pub(crate) fn unpack_and_sum<F: SimdField>(p: &F) -> F::Scalar {
-//     p.unpack().into_iter().sum()
-// }
+use gkr_engine::{MPIConfig, MPIEngine, Transcript};
 
 #[inline(always)]
 /// Input

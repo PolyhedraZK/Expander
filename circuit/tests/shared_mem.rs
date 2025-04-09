@@ -1,11 +1,13 @@
 use circuit::Circuit;
-use config::{FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
-use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use mpi_config::{shared_mem::SharedMemory, MPIConfig};
+use gkr_engine::{
+    BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GKRScheme, M31ExtConfig,
+    MPIConfig, MPIEngine, SharedMemory,
+};
+use gkr_hashers::SHA256hasher;
 use poly_commit::RawExpanderGKR;
 use serdes::ExpSerde;
-use transcript::{BytesHashTranscript, SHA256hasher};
+use transcript::BytesHashTranscript;
 
 // circuit for repeating Keccak for 2 times
 pub const KECCAK_M31_CIRCUIT: &str = "data/circuit_m31.txt";
@@ -13,29 +15,32 @@ pub const KECCAK_GF2_CIRCUIT: &str = "data/circuit_gf2.txt";
 pub const KECCAK_BN254_CIRCUIT: &str = "data/circuit_bn254.txt";
 
 declare_gkr_config!(
-    pub M31ExtConfigSha2Raw,
+    M31ExtConfigSha2Raw,
     FieldType::M31,
     FiatShamirHashType::SHA256,
-    PolynomialCommitmentType::Raw
+    PolynomialCommitmentType::Raw,
+    GKRScheme::Vanilla,
 );
 
 declare_gkr_config!(
-    pub GF2ExtConfigSha2Raw,
+    GF2ExtConfigSha2Raw,
     FieldType::GF2,
     FiatShamirHashType::SHA256,
-    PolynomialCommitmentType::Raw
+    PolynomialCommitmentType::Raw,
+    GKRScheme::Vanilla,
 );
 
 declare_gkr_config!(
-    pub BN254ConfigSha2Raw,
+    BN254ConfigSha2Raw,
     FieldType::BN254,
     FiatShamirHashType::SHA256,
-    PolynomialCommitmentType::Raw
+    PolynomialCommitmentType::Raw,
+    GKRScheme::Vanilla,
 );
 
 #[allow(unreachable_patterns)]
-fn load_circuit<Cfg: GKRConfig>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::FieldConfig>> {
-    let circuit_path = match <Cfg as GKRConfig>::FieldConfig::FIELD_TYPE {
+fn load_circuit<Cfg: GKREngine>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::FieldConfig>> {
+    let circuit_path = match <Cfg as GKREngine>::FieldConfig::FIELD_TYPE {
         FieldType::GF2 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
         FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
@@ -51,7 +56,7 @@ fn load_circuit<Cfg: GKRConfig>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::F
 
 #[test]
 fn test_shared_mem() {
-    let mpi_config = MPIConfig::new();
+    let mpi_config = MPIConfig::prover_new();
     test_shared_mem_helper(&mpi_config, Some(123u8));
     test_shared_mem_helper(&mpi_config, Some(456789usize));
     test_shared_mem_helper(&mpi_config, Some(vec![1u8, 2, 3]));

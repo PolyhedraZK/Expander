@@ -1,5 +1,5 @@
 use arith::Field;
-use gkr_field_config::GKRFieldConfig;
+use gkr_engine::FieldEngine;
 use rand::RngCore;
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -12,7 +12,7 @@ pub enum CoefType {
 
 /// A gate whose inputs are from different layers.
 #[derive(Debug, Clone)]
-pub struct SimpleGate<C: GKRFieldConfig, const INPUT_NUM: usize> {
+pub struct SimpleGate<C: FieldEngine, const INPUT_NUM: usize> {
     pub i_ids: [usize; INPUT_NUM],
     pub o_id: usize,
     pub coef_type: CoefType,
@@ -23,7 +23,7 @@ pub type SimpleGateMul<C> = SimpleGate<C, 2>;
 pub type SimpleGateAdd<C> = SimpleGate<C, 1>;
 pub type SimpleGateCst<C> = SimpleGate<C, 0>;
 
-impl<C: GKRFieldConfig, const INPUT_NUM: usize> SimpleGate<C, INPUT_NUM> {
+impl<C: FieldEngine, const INPUT_NUM: usize> SimpleGate<C, INPUT_NUM> {
     /// located layer refers to the layer where the output of the gate is.
     /// layer_sizes is the number of nodes in each layer.
     pub fn random_for_testing(
@@ -49,14 +49,14 @@ impl<C: GKRFieldConfig, const INPUT_NUM: usize> SimpleGate<C, INPUT_NUM> {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct CrossLayerRelay<C: GKRFieldConfig> {
+pub struct CrossLayerRelay<C: FieldEngine> {
     pub o_id: usize,
     pub i_id: usize,
     pub i_layer: usize,
     pub coef: C::CircuitField,
 }
 
-impl<C: GKRFieldConfig> CrossLayerRelay<C> {
+impl<C: FieldEngine> CrossLayerRelay<C> {
     pub fn random_for_testing(
         mut rng: impl RngCore,
         output_size: usize,

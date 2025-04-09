@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use arith::{ExtensionField, Field, SimdField};
+use gkr_engine::{StructuredReferenceString, Transcript};
 use polynomials::MultiLinearPoly;
-use transcript::Transcript;
 
 use crate::{
     orion::{
@@ -12,7 +12,7 @@ use crate::{
         OrionCommitment, OrionProof, OrionSRS, OrionScratchPad, ORION_CODE_PARAMETER_INSTANCE,
     },
     traits::TensorCodeIOPPCS,
-    PolynomialCommitmentScheme, StructuredReferenceString,
+    PolynomialCommitmentScheme,
 };
 
 impl StructuredReferenceString for OrionSRS {
@@ -24,29 +24,26 @@ impl StructuredReferenceString for OrionSRS {
     }
 }
 
-pub struct OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF, T>
+pub struct OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF>
 where
     F: Field,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     _marker_f: PhantomData<F>,
     _marker_eval_f: PhantomData<EvalF>,
     _marker_commit_f: PhantomData<ComPackF>,
     _marker_open_f: PhantomData<OpenPackF>,
-    _marker_t: PhantomData<T>,
 }
 
-impl<F, EvalF, ComPackF, OpenPackF, T> PolynomialCommitmentScheme<EvalF, T>
-    for OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF, T>
+impl<F, EvalF, ComPackF, OpenPackF> PolynomialCommitmentScheme<EvalF>
+    for OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF>
 where
     F: Field,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     const NAME: &'static str = "OrionBaseFieldPCS";
 
@@ -97,10 +94,10 @@ where
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &Self::ScratchPad,
-        transcript: &mut T,
+        transcript: &mut impl Transcript<EvalF>,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);
-        orion_open_base_field::<_, OpenPackF, _, ComPackF, _>(
+        orion_open_base_field::<_, OpenPackF, _, ComPackF>(
             proving_key,
             poly,
             x,
@@ -116,10 +113,10 @@ where
         x: &Self::EvalPoint,
         v: EvalF,
         opening: &Self::Opening,
-        transcript: &mut T,
+        transcript: &mut impl Transcript<EvalF>,
     ) -> bool {
         assert_eq!(*params, verifying_key.num_vars);
-        orion_verify::<_, OpenPackF, _, ComPackF, _>(
+        orion_verify::<_, OpenPackF, _, ComPackF>(
             verifying_key,
             commitment,
             x,
@@ -131,29 +128,26 @@ where
     }
 }
 
-pub struct OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF, T>
+pub struct OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF>
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     _marker_f: PhantomData<F>,
     _marker_simd_f: PhantomData<SimdF>,
     _marker_eval_f: PhantomData<EvalF>,
     _marker_commit_f: PhantomData<ComPackF>,
-    _marker_t: PhantomData<T>,
 }
 
-impl<F, SimdF, EvalF, ComPackF, T> PolynomialCommitmentScheme<EvalF, T>
-    for OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF, T>
+impl<F, SimdF, EvalF, ComPackF> PolynomialCommitmentScheme<EvalF>
+    for OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF>
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     const NAME: &'static str = "OrionSIMDFieldPCS";
 
@@ -211,14 +205,14 @@ where
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &Self::ScratchPad,
-        transcript: &mut T,
+        transcript: &mut impl Transcript<EvalF>,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);
         assert_eq!(
             poly.get_num_vars(),
             proving_key.num_vars - SimdF::PACK_SIZE.ilog2() as usize
         );
-        orion_open_simd_field::<F, SimdF, EvalF, ComPackF, T>(
+        orion_open_simd_field::<F, SimdF, EvalF, ComPackF>(
             proving_key,
             poly,
             x,
@@ -234,11 +228,11 @@ where
         x: &Self::EvalPoint,
         v: EvalF,
         opening: &Self::Opening,
-        transcript: &mut T,
+        transcript: &mut impl Transcript<EvalF>,
     ) -> bool {
         assert_eq!(*params, verifying_key.num_vars);
         assert_eq!(x.len(), verifying_key.num_vars);
-        orion_verify::<_, SimdF, _, ComPackF, _>(
+        orion_verify::<_, SimdF, _, ComPackF>(
             verifying_key,
             commitment,
             x,
