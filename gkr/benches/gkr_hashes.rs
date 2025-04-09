@@ -68,7 +68,7 @@ fn benchmark_setup<Cfg: GKRConfig>(
 fn criterion_gkr_keccak(c: &mut Criterion) {
     declare_gkr_config!(
         M31ExtConfigSha2,
-        FieldType::M31,
+        FieldType::M31Ext3,
         FiatShamirHashType::SHA256,
         PCSCommitmentType::Raw
     );
@@ -153,7 +153,7 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
 fn criterion_gkr_poseidon(c: &mut Criterion) {
     declare_gkr_config!(
         M31ExtConfigSha2,
-        FieldType::M31,
+        FieldType::M31Ext3,
         FiatShamirHashType::SHA256,
         PCSCommitmentType::Raw
     );
