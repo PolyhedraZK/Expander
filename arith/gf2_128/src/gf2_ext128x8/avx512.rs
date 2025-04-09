@@ -20,15 +20,6 @@ pub struct AVX512GF2_128x8 {
 
 field_common!(AVX512GF2_128x8);
 
-impl AVX512GF2_128x8 {
-    #[inline(always)]
-    pub(crate) fn pack_full(data: __m128i) -> [__m512i; 2] {
-        [unsafe { _mm512_broadcast_i32x4(data) }, unsafe {
-            _mm512_broadcast_i32x4(data)
-        }]
-    }
-}
-
 impl ExpSerde for AVX512GF2_128x8 {
     const SERIALIZED_SIZE: usize = 512 * 2 / 8;
 
@@ -401,9 +392,7 @@ impl Default for AVX512GF2_128x8 {
 impl From<GF2_128> for AVX512GF2_128x8 {
     #[inline(always)]
     fn from(v: GF2_128) -> AVX512GF2_128x8 {
-        AVX512GF2_128x8 {
-            data: Self::pack_full(v.v),
-        }
+        Self::pack_full(&v)
     }
 }
 
@@ -423,6 +412,15 @@ impl SimdField for AVX512GF2_128x8 {
     type Scalar = GF2_128;
 
     const PACK_SIZE: usize = 8;
+
+    #[inline(always)]
+    fn pack_full(scalar: &GF2_128) -> Self {
+        Self {
+            data: [unsafe { _mm512_broadcast_i32x4(scalar.v) }, unsafe {
+                _mm512_broadcast_i32x4(scalar.v)
+            }],
+        }
+    }
 
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {

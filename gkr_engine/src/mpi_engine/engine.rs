@@ -3,11 +3,11 @@ use std::{cmp, fmt::Debug};
 
 use arith::Field;
 use itertools::izip;
-use mpi::ffi::*;
 use mpi::{
     datatype::PartitionMut,
     environment::Universe,
     ffi,
+    ffi::*,
     topology::{Process, SimpleCommunicator},
     traits::*,
 };
@@ -312,9 +312,9 @@ impl MPIEngine for MPIConfig {
     }
 
     #[inline(always)]
-    fn gather_varlen_vec<F: ExpSerde>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<Vec<F>>) {
+    fn gather_varlen_vec<F: ExpSerde>(&self, elems: &Vec<F>, global_elems: &mut Vec<Vec<F>>) {
         let mut elems_bytes: Vec<u8> = Vec::new();
-        local_vec.serialize_into(&mut elems_bytes).unwrap();
+        elems.serialize_into(&mut elems_bytes).unwrap();
 
         let mut byte_lengths = vec![0i32; self.world_size()];
         self.gather_vec(&[elems_bytes.len() as i32], &mut byte_lengths);
@@ -339,7 +339,7 @@ impl MPIEngine for MPIConfig {
             self.root_process()
                 .gather_varcount_into_root(&elems_bytes, &mut partition);
 
-            *global_vec = displs
+            *global_elems = displs
                 .iter()
                 .map(|&srt| Vec::deserialize_from(&all_elems_bytes[srt as usize..]).unwrap())
                 .collect();

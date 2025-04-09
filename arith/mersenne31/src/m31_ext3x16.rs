@@ -51,6 +51,17 @@ impl SimdField for M31Ext3x16 {
         *self * *challenge
     }
 
+    #[inline]
+    fn pack_full(base: &Self::Scalar) -> Self {
+        Self {
+            v: [
+                M31x16::pack_full(&base.v[0]),
+                M31x16::pack_full(&base.v[1]),
+                M31x16::pack_full(&base.v[2]),
+            ],
+        }
+    }
+
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == Self::PACK_SIZE);
@@ -168,9 +179,9 @@ impl From<M31Ext3> for M31Ext3x16 {
     fn from(x: M31Ext3) -> Self {
         Self {
             v: [
-                M31x16::pack_full(x.v[0]),
-                M31x16::pack_full(x.v[1]),
-                M31x16::pack_full(x.v[2]),
+                M31x16::pack_full(&x.v[0]),
+                M31x16::pack_full(&x.v[1]),
+                M31x16::pack_full(&x.v[2]),
             ],
         }
     }
