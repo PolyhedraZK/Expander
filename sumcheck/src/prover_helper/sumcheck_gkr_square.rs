@@ -17,9 +17,6 @@ pub(crate) struct SumcheckGkrSquareHelper<'a, F: FieldEngine, const D: usize> {
 
     challenge: &'a ExpanderSingleVarChallenge<F>,
 
-    // rz0: &'a [F::ChallengeField],
-    // r_simd: &'a [F::ChallengeField],
-    // r_mpi: &'a [F::ChallengeField],
     pub(crate) simd_var_num: usize,
 
     x_helper: SumcheckPowerGateHelper<D, F>,
@@ -47,9 +44,6 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
             layer,
             sp,
             challenge,
-            // rz0,
-            // r_simd,
-            // r_mpi,
             simd_var_num,
 
             x_helper: SumcheckPowerGateHelper::new(layer.input_var_num),

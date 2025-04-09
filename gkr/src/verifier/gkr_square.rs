@@ -79,7 +79,7 @@ fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
     // GKR2 with Power5 gate has degree 6 polynomial
     let degree = SUMCHECK_GKR_SQUARE_DEGREE;
 
-    let dual_challenge = ExpanderDualVarChallenge::from_single_var_challenge(challenge);
+    let dual_challenge = ExpanderDualVarChallenge::from(challenge);
 
     GKRVerifierHelper::prepare_layer(layer, &None, &dual_challenge, sp, is_output_layer);
 

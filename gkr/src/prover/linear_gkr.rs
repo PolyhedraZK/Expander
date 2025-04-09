@@ -143,10 +143,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         let (claimed_v, challenge) = if Cfg::SCHEME == GKRScheme::GkrSquare {
             let (claimed_v, challenge_x) =
                 gkr_square_prove(c, &mut self.sp, &mut transcript, &self.mpi_config);
-            (
-                claimed_v,
-                ExpanderDualVarChallenge::from_single_var_challenge(&challenge_x),
-            )
+            (claimed_v, ExpanderDualVarChallenge::from(&challenge_x))
         } else {
             gkr_prove(c, &mut self.sp, &mut transcript, &self.mpi_config)
         };
