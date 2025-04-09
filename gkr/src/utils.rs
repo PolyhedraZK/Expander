@@ -14,13 +14,13 @@ pub const KECCAK_M31_WITNESS: &str = "data/witness_m31.txt";
 pub const KECCAK_GF2_WITNESS: &str = "data/witness_gf2.txt";
 pub const KECCAK_BN254_WITNESS: &str = "data/witness_bn254.txt";
 pub const KECCAK_GOLDILOCKS_WITNESS: &str = "data/witness_goldilocks.txt";
-pub const KECCAK_BABYBEAR_WITNESS: &str = "data/witness_goldilocks.txt";
+pub const KECCAK_BABYBEAR_WITNESS: &str = "data/witness_babybear.txt";
 
 pub const KECCAK_M31_MPI2_WITNESS: &str = "data/witness_m31_mpi_2.txt";
 pub const KECCAK_GF2_MPI2_WITNESS: &str = "data/witness_gf2_mpi_2.txt";
 pub const KECCAK_BN254_MPI2_WITNESS: &str = "data/witness_bn254_mpi_2.txt";
 pub const KECCAK_GOLDILOCKS_MPI2_WITNESS: &str = "data/witness_goldilocks_mpi_2.txt";
-pub const KECCAK_BABYBEAR_MPI2_WITNESS: &str = "data/witness_goldilocks_mpi_2.txt";
+pub const KECCAK_BABYBEAR_MPI2_WITNESS: &str = "data/witness_babybear_mpi_2.txt";
 
 // URL for Keccak circuit repeated for 2 times
 pub const KECCAK_CIRCUIT_M31_URL: &str =

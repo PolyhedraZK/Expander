@@ -142,7 +142,7 @@ fn test_gkr_correctness() {
     test_gkr_correctness_helper::<C10>(None);
     test_gkr_correctness_helper::<C11>(None);
     test_gkr_correctness_helper::<C12>(None);
-    // test_gkr_correctness_helper::<C13>(None);
+    test_gkr_correctness_helper::<C13>(None);
 
     MPIConfig::finalize();
 }
