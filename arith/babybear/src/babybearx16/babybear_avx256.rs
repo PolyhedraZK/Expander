@@ -253,7 +253,7 @@ impl SimdField for AVXBabyBear {
 impl From<BabyBear> for AVXBabyBear {
     #[inline(always)]
     fn from(x: BabyBear) -> Self {
-        AVXBabyBear::pack_full(x)
+        AVXBabyBear::pack_full(&x)
     }
 }
 
@@ -340,7 +340,7 @@ impl Mul<&BabyBear> for AVXBabyBear {
 
     #[inline(always)]
     fn mul(self, rhs: &BabyBear) -> Self::Output {
-        let rhsv = AVXBabyBear::pack_full(*rhs);
+        let rhsv = AVXBabyBear::pack_full(rhs);
         mul_internal(&self, &rhsv)
     }
 }
@@ -358,14 +358,14 @@ impl Add<BabyBear> for AVXBabyBear {
     type Output = AVXBabyBear;
     #[inline(always)]
     fn add(self, rhs: BabyBear) -> Self::Output {
-        self + AVXBabyBear::pack_full(rhs)
+        self + AVXBabyBear::pack_full(&rhs)
     }
 }
 
 impl From<u32> for AVXBabyBear {
     #[inline(always)]
     fn from(x: u32) -> Self {
-        AVXBabyBear::pack_full(BabyBear::from(x))
+        AVXBabyBear::pack_full(&BabyBear::from(x))
     }
 }
 
