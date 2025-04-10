@@ -34,7 +34,7 @@ chrono = "0.4.38"
 clap = { version = "4.1", features = ["derive"] }
 criterion = { version = "0.5", features = ["html_reports"] }
 env_logger = "0.11.3"
-halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", default-features = false, features = [
+halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", branch = "fastmsmm", default-features = false, features = [
     "bits",
     "bn256-table"
 ] }
