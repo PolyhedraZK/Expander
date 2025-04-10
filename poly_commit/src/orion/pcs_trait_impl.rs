@@ -55,7 +55,7 @@ where
     type Commitment = OrionCommitment;
     type Opening = OrionProof<EvalF>;
 
-    fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
+    fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> (Self::SRS, usize) {
         OrionSRS::from_random::<F>(
             1,
             *params,
@@ -154,7 +154,7 @@ where
     // NOTE: here we say the number of variables is the sum of 2 following things:
     // - number of variables of the multilinear polynomial
     // - number of variables reside in the SIMD field - e.g., 3 vars for a SIMD 8 field
-    fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
+    fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> (Self::SRS, usize) {
         OrionSRS::from_random::<F>(
             1,
             *params,

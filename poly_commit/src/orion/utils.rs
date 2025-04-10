@@ -157,24 +157,26 @@ impl TensorCodeIOPPCS for OrionSRS {
 
 impl OrionSRS {
     // NOTE(HS) num local variables here refers to the number of variables for base field elements
-    // rather than SIMD field elements.
+    // rather than SIMD field elements, the number of variables returned for calibration is also
+    // over base field elements rather than SIMD field elements.
     pub fn from_random<F: Field>(
         world_size: usize,
         num_local_vars: usize,
         field_pack_size: usize,
         code_param_instance: OrionCodeParameter,
         mut rng: impl rand::RngCore,
-    ) -> Self {
+    ) -> (Self, usize) {
         let (num_leaves_per_mt_query, scaled_num_local_vars, msg_size) =
             orion_eval_shape(world_size, num_local_vars, F::FIELD_SIZE, field_pack_size);
 
-        // TODO(HS) return scaled_num_local_vars
-
-        Self {
-            num_vars: scaled_num_local_vars,
-            num_leaves_per_mt_query,
-            code_instance: OrionCode::new(code_param_instance, msg_size, &mut rng),
-        }
+        (
+            Self {
+                num_vars: scaled_num_local_vars,
+                num_leaves_per_mt_query,
+                code_instance: OrionCode::new(code_param_instance, msg_size, &mut rng),
+            },
+            scaled_num_local_vars,
+        )
     }
 
     pub fn local_num_fs_per_query(&self) -> usize {

@@ -19,7 +19,11 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
 
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Use self as the first argument to save some potential intermediate state.
-    fn gen_srs_for_testing(params: &Self::Params, rng: impl RngCore) -> Self::SRS;
+    ///
+    /// Additionally, this method returns a calibrated number of variables for
+    /// the polynomial, that the PCS might need to accept a length extended
+    /// version of polynomial as input.
+    fn gen_srs_for_testing(params: &Self::Params, rng: impl RngCore) -> (Self::SRS, usize);
 
     /// Initialize the scratch pad.
     fn init_scratch_pad(params: &Self::Params) -> Self::ScratchPad;

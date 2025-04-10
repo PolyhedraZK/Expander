@@ -65,8 +65,8 @@ impl<F: ExtensionField> PolynomialCommitmentScheme<F> for RawMultiLinearPCS {
 
     type Opening = ();
 
-    fn gen_srs_for_testing(_params: &Self::Params, _rng: impl RngCore) -> Self::SRS {
-        Self::SRS::default()
+    fn gen_srs_for_testing(params: &Self::Params, _rng: impl RngCore) -> (Self::SRS, usize) {
+        (Self::SRS::default(), *params)
     }
 
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}

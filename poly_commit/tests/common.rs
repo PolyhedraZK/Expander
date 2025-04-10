@@ -14,7 +14,8 @@ pub fn test_pcs<F: ExtensionField, T: Transcript<F>, P: PolynomialCommitmentSche
     xs: &[P::EvalPoint],
 ) {
     let mut rng = thread_rng();
-    let srs = P::gen_srs_for_testing(params, &mut rng);
+    // NOTE(HS) we assume that the polynomials we pass in are of sufficient length.
+    let (srs, _) = P::gen_srs_for_testing(params, &mut rng);
     let (proving_key, verification_key) = srs.into_keys();
     let mut transcript = T::new();
     let mut scratch_pad = P::init_scratch_pad(params);

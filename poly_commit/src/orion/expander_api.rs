@@ -88,13 +88,14 @@ where
         rng: impl rand::RngCore,
     ) -> Self::SRS {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
-        OrionSRS::from_random::<C::CircuitField>(
+        let (srs, _calibrated_num_vars_each_core) = OrionSRS::from_random::<C::CircuitField>(
             mpi_engine.world_size(),
             num_vars_each_core,
             ComPackF::PACK_SIZE,
             ORION_CODE_PARAMETER_INSTANCE,
             rng,
-        )
+        );
+        srs
     }
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {
