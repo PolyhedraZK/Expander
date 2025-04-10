@@ -1,4 +1,4 @@
-use arith::{Field, SimdField};
+use arith::SimdField;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
@@ -30,52 +30,6 @@ where
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
 
-    /// Minimum number of variables supported by Orion, need world size as input.
-    ///
-    /// The computation, or simulation, goes as follows:
-    /// - On given a world size, we assume the number of variables is as low as possible.
-    /// - The minimum query from Merkle tree contains 2 leaves, should be shared across MPI parties.
-    /// - NOTE: if the world size is rather large, another factor need to be considered is the
-    ///   commitment SIMD field size used in SIMD encoding.  Each party contribute one SIMD field
-    ///   element at least to the one query opening, and supposing the world size is too large, we
-    ///   have to scale up the opening size.
-    /// - Once how many commitment SIMD field elements are contributed into the query opening, we
-    ///   just need to ensure the resulting encoded codeword is longer than the world size.
-    ///
-    /// NOTE: this method will be invoked before setup,
-    /// and suggest prover to extend the polynomial size up to the minimal number of variables.
-    fn minimum_num_vars(world_size: usize) -> usize {
-        const MINIMUM_QUERY_LEAVES: usize = 2;
-
-        let num_bits_com_pack_f = ComPackF::PACK_SIZE * C::CircuitField::FIELD_SIZE;
-
-        let num_compack_fs_per_world_in_query = {
-            let minimum_bytes_opening = MINIMUM_QUERY_LEAVES * tree::LEAF_BYTES;
-            let minimum_bits_opening = minimum_bytes_opening * 8;
-
-            minimum_bits_opening.div_ceil(world_size * num_bits_com_pack_f)
-        };
-
-        let num_simd_fs_per_world_in_query = {
-            let relative_pack_size = ComPackF::PACK_SIZE / C::SimdCircuitField::PACK_SIZE;
-            num_compack_fs_per_world_in_query * relative_pack_size
-        };
-
-        let minimum_msg_size = {
-            let min_expander_po2_code_len = ORION_CODE_PARAMETER_INSTANCE
-                .length_threshold_g0s
-                .next_power_of_two();
-
-            if world_size <= min_expander_po2_code_len {
-                world_size
-            } else {
-                world_size / 2
-            }
-        };
-
-        (num_simd_fs_per_world_in_query * minimum_msg_size).ilog2() as usize
-    }
-
     /// NOTE(HS): this is actually number of variables in polynomial,
     /// ignoring the variables for MPI parties and SIMD field element
     fn gen_params(n_input_vars: usize) -> Self::Params {
@@ -86,16 +40,18 @@ where
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
-    ) -> Self::SRS {
+    ) -> (Self::SRS, usize) {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
-        let (srs, _calibrated_num_vars_each_core) = OrionSRS::from_random::<C::CircuitField>(
+        let (srs, calibrated_num_vars_each_core) = OrionSRS::from_random::<C::CircuitField>(
             mpi_engine.world_size(),
             num_vars_each_core,
             ComPackF::PACK_SIZE,
             ORION_CODE_PARAMETER_INSTANCE,
             rng,
         );
-        srs
+        let calibrated_num_local_simd_vars =
+            calibrated_num_vars_each_core - C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
+        (srs, calibrated_num_local_simd_vars)
     }
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {

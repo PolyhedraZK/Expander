@@ -7,7 +7,6 @@ use std::{
 use circuit::Circuit;
 use clap::Parser;
 use gkr::{
-    executor::input_poly_vars_calibration,
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
         KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT,
@@ -188,11 +187,9 @@ where
 
     println!("Circuit loaded!");
 
-    let minimum_poly_vars =
-        input_poly_vars_calibration::<Cfg>(circuit_template.log_input_size(), 1);
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
         expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
-            minimum_poly_vars,
+            circuit_template.log_input_size(),
             &mpi_config,
         );
 

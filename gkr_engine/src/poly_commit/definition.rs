@@ -19,27 +19,26 @@ pub trait ExpanderPCS<F: FieldEngine> {
 
     const PCS_TYPE: PolynomialCommitmentType;
 
-    type Params: Clone + Debug + Default + Send + Sync + 'static;
+    type Params: Clone + Debug + Default + Send + Sync + Into<usize> + 'static;
     type ScratchPad: Clone + Debug + Default + Send + ExpSerde + Sync;
 
     type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString + Send + Sync;
     type Commitment: Clone + Debug + Default + ExpSerde;
     type Opening: Clone + Debug + Default + ExpSerde;
 
-    /// Minimum number of variables supported in this PCS implementation,
-    /// that such constraint exists for PCSs like Orion,
-    /// but for Raw and Hyrax, polys of any size works.
-    fn minimum_num_vars(_world_size: usize) -> usize {
-        0
-    }
-
     /// Generate a random structured reference string (SRS) for testing purposes.
-    /// Each process should return the SAME GLOBAL SRS.
+    /// Each process should return the SRS share used for its committing and opening.
+    ///
+    /// Additionally, it returns a calibrated number of variable for polynomial,
+    /// that the PCS might need to accept a polynomial of extended length.
+    ///
+    /// NOTE(HS) the calibrated number of variables refers to the local SIMD variables
+    /// rather than the base field elements.
     fn gen_srs_for_testing(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl RngCore,
-    ) -> Self::SRS;
+    ) -> (Self::SRS, usize);
 
     /// n_input_vars is with respect to the multilinear poly on each machine in MPI,
     /// also ignore the number of variables stacked in the SIMD field.

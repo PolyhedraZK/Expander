@@ -31,10 +31,6 @@ where
     type SRS = CoefFormBiKZGLocalSRS<E>;
     type ScratchPad = ();
 
-    fn minimum_num_vars(_world_size: usize) -> usize {
-        1
-    }
-
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
     fn gen_params(n_input_vars: usize) -> Self::Params {
@@ -45,12 +41,16 @@ where
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
-    ) -> Self::SRS {
-        let x_degree_po2 = 1 << params;
+    ) -> (Self::SRS, usize) {
+        let local_num_vars = if *params == 0 { 1 } else { *params };
+
+        let x_degree_po2 = 1 << local_num_vars;
         let y_degree_po2 = mpi_engine.world_size();
         let rank = mpi_engine.world_rank();
 
-        generate_coef_form_bi_kzg_local_srs_for_testing(x_degree_po2, y_degree_po2, rank, rng)
+        let srs =
+            generate_coef_form_bi_kzg_local_srs_for_testing(x_degree_po2, y_degree_po2, rank, rng);
+        (srs, local_num_vars)
     }
 
     fn commit(

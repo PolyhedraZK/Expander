@@ -377,8 +377,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         )
         .unwrap();
 
-        let world_size = 1 << open_at.r_mpi.len();
-        let minimum_vars_for_pcs = Cfg::PCSConfig::minimum_num_vars(world_size);
+        let minimum_vars_for_pcs: usize = Into::into(pcs_params.clone());
         if open_at.rz.len() < minimum_vars_for_pcs {
             eprintln!(
 				"{} over {} has minimum supported local vars {}, but challenge has vars {}, pad to {} vars in verifying.",

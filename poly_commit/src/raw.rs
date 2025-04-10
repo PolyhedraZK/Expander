@@ -135,10 +135,11 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
     type Opening = ();
 
     fn gen_srs_for_testing(
-        _params: &Self::Params,
+        params: &Self::Params,
         _mpi_engine: &impl MPIEngine,
         _rng: impl RngCore,
-    ) -> Self::SRS {
+    ) -> (Self::SRS, usize) {
+        ((), *params)
     }
 
     fn gen_params(n_input_vars: usize) -> Self::Params {

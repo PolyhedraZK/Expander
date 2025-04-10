@@ -97,8 +97,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
             let original_input_vars = c.log_input_size();
             let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
 
-            let minimum_vars_for_pcs =
-                Cfg::PCSConfig::minimum_num_vars(self.mpi_config.world_size());
+            let minimum_vars_for_pcs: usize = Into::into(pcs_params.clone());
             if original_input_vars < minimum_vars_for_pcs {
                 eprintln!(
 					"{} over {} has minimum supported local vars {}, but input poly has vars {}, pad to {} vars in commiting.",
@@ -203,7 +202,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
     ) {
         let original_input_vars = inputs.num_vars();
 
-        let minimum_vars_for_pcs = Cfg::PCSConfig::minimum_num_vars(self.mpi_config.world_size());
+        let minimum_vars_for_pcs: usize = Into::into(pcs_params.clone());
         if original_input_vars < minimum_vars_for_pcs {
             eprintln!(
 				"{} over {} has minimum supported local vars {}, but input poly has vars {}, pad to {} vars in opening.",
