@@ -13,10 +13,11 @@ use transcript::BytesHashTranscript;
 pub const KECCAK_M31_CIRCUIT: &str = "data/circuit_m31.txt";
 pub const KECCAK_GF2_CIRCUIT: &str = "data/circuit_gf2.txt";
 pub const KECCAK_BN254_CIRCUIT: &str = "data/circuit_bn254.txt";
+pub const KECCAK_GOLDILOCKS_CIRCUIT: &str = "data/circuit_goldilocks.txt";
 
 declare_gkr_config!(
     pub M31ExtConfigSha2Raw,
-    FieldType::M31,
+    FieldType::M31Ext3,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
@@ -24,7 +25,7 @@ declare_gkr_config!(
 
 declare_gkr_config!(
     pub GF2ExtConfigSha2Raw,
-    FieldType::GF2,
+    FieldType::GF2Ext128,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
@@ -55,10 +56,11 @@ fn test_circuit_serde_helper<Cfg: GKREngine>(mpi_config: &MPIConfig) {
         <Cfg as GKREngine>::FieldConfig::FIELD_TYPE
     );
 
-    let circuit_path = match <<Cfg as GKREngine>::FieldConfig as FieldEngine>::FIELD_TYPE {
-        FieldType::GF2 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
-        FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
+    let circuit_path = match Cfg::FieldConfig::FIELD_TYPE {
+        FieldType::GF2Ext128 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
+        FieldType::M31Ext3 => "../".to_owned() + KECCAK_M31_CIRCUIT,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
+        FieldType::GoldilocksExt2 => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
         _ => unreachable!(),
     };
     let circuit =

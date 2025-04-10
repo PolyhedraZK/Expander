@@ -1,8 +1,8 @@
 use circuit::Circuit;
 use config_macros::declare_gkr_config;
 use gkr_engine::{
-    BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GKRScheme, M31ExtConfig,
-    MPIConfig, MPIEngine, SharedMemory,
+    BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GKRScheme, GoldilocksExtConfig,
+    M31ExtConfig, MPIConfig, MPIEngine, SharedMemory,
 };
 use gkr_hashers::SHA256hasher;
 use poly_commit::RawExpanderGKR;
@@ -13,10 +13,11 @@ use transcript::BytesHashTranscript;
 pub const KECCAK_M31_CIRCUIT: &str = "data/circuit_m31.txt";
 pub const KECCAK_GF2_CIRCUIT: &str = "data/circuit_gf2.txt";
 pub const KECCAK_BN254_CIRCUIT: &str = "data/circuit_bn254.txt";
+pub const KECCAK_GOLDILOCKS_CIRCUIT: &str = "data/circuit_goldilocks.txt";
 
 declare_gkr_config!(
     M31ExtConfigSha2Raw,
-    FieldType::M31,
+    FieldType::M31Ext3,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
@@ -24,7 +25,7 @@ declare_gkr_config!(
 
 declare_gkr_config!(
     GF2ExtConfigSha2Raw,
-    FieldType::GF2,
+    FieldType::GF2Ext128,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
@@ -38,12 +39,21 @@ declare_gkr_config!(
     GKRScheme::Vanilla,
 );
 
+declare_gkr_config!(
+    GoldilocksExtConfigSha2Raw,
+    FieldType::GoldilocksExt2,
+    FiatShamirHashType::SHA256,
+    PolynomialCommitmentType::Raw,
+    GKRScheme::Vanilla,
+);
+
 #[allow(unreachable_patterns)]
 fn load_circuit<Cfg: GKREngine>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::FieldConfig>> {
     let circuit_path = match <Cfg as GKREngine>::FieldConfig::FIELD_TYPE {
-        FieldType::GF2 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
-        FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
+        FieldType::GF2Ext128 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
+        FieldType::M31Ext3 => "../".to_owned() + KECCAK_M31_CIRCUIT,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
+        FieldType::GoldilocksExt2 => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
         _ => unreachable!(),
     };
 
@@ -69,6 +79,8 @@ fn test_shared_mem() {
     let circuit = load_circuit::<GF2ExtConfigSha2Raw>(&mpi_config);
     test_shared_mem_helper(&mpi_config, circuit);
     let circuit = load_circuit::<BN254ConfigSha2Raw>(&mpi_config);
+    test_shared_mem_helper(&mpi_config, circuit);
+    let circuit = load_circuit::<GoldilocksExtConfigSha2Raw>(&mpi_config);
     test_shared_mem_helper(&mpi_config, circuit);
 
     MPIConfig::finalize();

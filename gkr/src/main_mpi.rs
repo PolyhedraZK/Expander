@@ -110,11 +110,12 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
     // load circuit
     let (mut circuit, mut window) = match args.circuit.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+            FieldType::GF2Ext128 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 KECCAK_GF2_CIRCUIT,
                 &mpi_config,
             ),
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+            FieldType::M31 => todo!(),
+            FieldType::M31Ext3 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 KECCAK_M31_CIRCUIT,
                 &mpi_config,
             ),
@@ -122,13 +123,13 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
                 KECCAK_BN254_CIRCUIT,
                 &mpi_config,
             ),
-            FieldType::Goldilocks => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+            FieldType::GoldilocksExt2 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 KECCAK_GOLDILOCKS_CIRCUIT,
                 &mpi_config,
             ),
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+            FieldType::M31Ext3 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 POSEIDON_M31_CIRCUIT,
                 &mpi_config,
             ),
@@ -139,13 +140,14 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
 
     let witness_path = match args.circuit.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => KECCAK_GF2_WITNESS,
-            FieldType::M31 => KECCAK_M31_WITNESS,
+            FieldType::GF2Ext128 => KECCAK_GF2_WITNESS,
+            FieldType::M31 => todo!(),
+            FieldType::M31Ext3 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
-            FieldType::Goldilocks => KECCAK_GOLDILOCKS_WITNESS,
+            FieldType::GoldilocksExt2 => KECCAK_GOLDILOCKS_WITNESS,
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => POSEIDON_M31_WITNESS,
+            FieldType::M31Ext3 => POSEIDON_M31_WITNESS,
             _ => unreachable!("not supported"),
         },
         _ => unreachable!(),
@@ -154,11 +156,11 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
     circuit.load_witness_allow_padding_testing_only(witness_path, &mpi_config);
 
     let circuit_copy_size: usize = match (Cfg::FieldConfig::FIELD_TYPE, args.circuit.as_str()) {
-        (FieldType::GF2, "keccak") => 1,
-        (FieldType::M31, "keccak") => 2,
+        (FieldType::GF2Ext128, "keccak") => 1,
+        (FieldType::M31Ext3, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
-        (FieldType::M31, "poseidon") => 120,
-        (FieldType::Goldilocks, "keccak") => 2,
+        (FieldType::M31Ext3, "poseidon") => 120,
+        (FieldType::GoldilocksExt2, "keccak") => 2,
         _ => unreachable!(),
     };
 

@@ -97,7 +97,7 @@ impl<F: FieldEngine> SumcheckProductGateHelper<F> {
             }
         }
 
-        if F::FIELD_TYPE == FieldType::GF2 {
+        if F::FIELD_TYPE == FieldType::GF2Ext128 {
             // over GF2_128, the three points are at 0, 1 and X
             let p2x = p2.mul_by_x();
             let p2x2 = p2x.mul_by_x();
