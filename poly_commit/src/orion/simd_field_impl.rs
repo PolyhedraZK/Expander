@@ -36,9 +36,13 @@ where
     assert_eq!(row_num % relative_pack_size, 0);
 
     assert_eq!(poly.hypercube_size() % relative_pack_size, 0);
-    let packed_evals = pack_simd::<F, SimdF, ComPackF>(poly.hypercube_basis_ref());
+    let packed_evals_ref = unsafe {
+        let ptr = poly.hypercube_basis_ref().as_ptr();
+        let len = poly.hypercube_size() / relative_pack_size;
+        std::slice::from_raw_parts(ptr as *const ComPackF, len)
+    };
 
-    commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
+    commit_encoded(pk, packed_evals_ref, scratch_pad, packed_rows, msg_size)
 }
 
 // NOTE: this implementation doesn't quite align with opening for

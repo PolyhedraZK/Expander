@@ -574,14 +574,14 @@ impl ExtensionField for AVX256GF2_128x8 {
     #[inline(always)]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
         // -1 -> 0b11111111
-        let v0 = -(((base.v >> 7) & 1u8) as i64);
-        let v1 = -(((base.v >> 6) & 1u8) as i64);
-        let v2 = -(((base.v >> 5) & 1u8) as i64);
-        let v3 = -(((base.v >> 4) & 1u8) as i64);
-        let v4 = -(((base.v >> 3) & 1u8) as i64);
-        let v5 = -(((base.v >> 2) & 1u8) as i64);
-        let v6 = -(((base.v >> 1) & 1u8) as i64);
-        let v7 = -((base.v & 1u8) as i64);
+        let v0 = -((base.v & 1u8) as i64);
+        let v1 = -(((base.v >> 1) & 1u8) as i64);
+        let v2 = -(((base.v >> 2) & 1u8) as i64);
+        let v3 = -(((base.v >> 3) & 1u8) as i64);
+        let v4 = -(((base.v >> 4) & 1u8) as i64);
+        let v5 = -(((base.v >> 5) & 1u8) as i64);
+        let v6 = -(((base.v >> 6) & 1u8) as i64);
+        let v7 = -(((base.v >> 7) & 1u8) as i64);
 
         let mut res = *self;
         res.data[0] = unsafe { _mm256_and_si256(res.data[0], _mm256_set_epi64x(v1, v1, v0, v0)) };
@@ -594,14 +594,14 @@ impl ExtensionField for AVX256GF2_128x8 {
 
     #[inline(always)]
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
-        let v0 = ((base.v >> 7) & 1u8) as i64;
-        let v1 = ((base.v >> 6) & 1u8) as i64;
-        let v2 = ((base.v >> 5) & 1u8) as i64;
-        let v3 = ((base.v >> 4) & 1u8) as i64;
-        let v4 = ((base.v >> 3) & 1u8) as i64;
-        let v5 = ((base.v >> 2) & 1u8) as i64;
-        let v6 = ((base.v >> 1) & 1u8) as i64;
-        let v7 = (base.v & 1u8) as i64;
+        let v0 = (base.v & 1u8) as i64;
+        let v1 = ((base.v >> 1) & 1u8) as i64;
+        let v2 = ((base.v >> 2) & 1u8) as i64;
+        let v3 = ((base.v >> 3) & 1u8) as i64;
+        let v4 = ((base.v >> 4) & 1u8) as i64;
+        let v5 = ((base.v >> 5) & 1u8) as i64;
+        let v6 = ((base.v >> 6) & 1u8) as i64;
+        let v7 = ((base.v >> 7) & 1u8) as i64;
 
         let mut res = *self;
         res.data[0] = unsafe { _mm256_xor_si256(res.data[0], _mm256_set_epi64x(0, v1, 0, v0)) };
@@ -706,14 +706,14 @@ impl Mul<GF2x8> for AVX256GF2_128x8 {
 impl From<GF2x8> for AVX256GF2_128x8 {
     #[inline(always)]
     fn from(v: GF2x8) -> Self {
-        let v0 = ((v.v >> 7) & 1u8) as i64;
-        let v1 = ((v.v >> 6) & 1u8) as i64;
-        let v2 = ((v.v >> 5) & 1u8) as i64;
-        let v3 = ((v.v >> 4) & 1u8) as i64;
-        let v4 = ((v.v >> 3) & 1u8) as i64;
-        let v5 = ((v.v >> 2) & 1u8) as i64;
-        let v6 = ((v.v >> 1) & 1u8) as i64;
-        let v7 = (v.v & 1u8) as i64;
+        let v0 = (v.v & 1u8) as i64;
+        let v1 = ((v.v >> 1) & 1u8) as i64;
+        let v2 = ((v.v >> 2) & 1u8) as i64;
+        let v3 = ((v.v >> 3) & 1u8) as i64;
+        let v4 = ((v.v >> 4) & 1u8) as i64;
+        let v5 = ((v.v >> 5) & 1u8) as i64;
+        let v6 = ((v.v >> 6) & 1u8) as i64;
+        let v7 = ((v.v >> 7) & 1u8) as i64;
 
         AVX256GF2_128x8 {
             data: [

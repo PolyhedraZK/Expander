@@ -287,7 +287,7 @@ impl SimdField for GF2x8 {
         assert!(base_vec.len() == Self::PACK_SIZE);
         let mut ret = 0u8;
         for (i, scalar) in base_vec.iter().enumerate() {
-            ret |= scalar.v << (7 - i);
+            ret |= scalar.v << i;
         }
         Self { v: ret }
     }
@@ -297,7 +297,7 @@ impl SimdField for GF2x8 {
         let mut ret = vec![];
         for i in 0..Self::PACK_SIZE {
             ret.push(Self::Scalar {
-                v: (self.v >> (7 - i)) & 1u8,
+                v: (self.v >> i) & 1u8,
             });
         }
         ret
