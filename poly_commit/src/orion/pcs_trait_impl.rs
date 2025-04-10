@@ -11,7 +11,6 @@ use crate::{
         verify::orion_verify,
         OrionCommitment, OrionProof, OrionSRS, OrionScratchPad, ORION_CODE_PARAMETER_INSTANCE,
     },
-    traits::TensorCodeIOPPCS,
     PolynomialCommitmentScheme,
 };
 
@@ -55,14 +54,6 @@ where
     type SRS = OrionSRS;
     type Commitment = OrionCommitment;
     type Opening = OrionProof<EvalF>;
-
-    const MINIMUM_NUM_VARS: usize = {
-        let num_field_elems_per_leaf = tree::LEAF_BYTES * 8 / F::FIELD_SIZE;
-        let num_field_elems_per_opening =
-            Self::SRS::MINIMUM_LEAVES_IN_RANGE_OPENING * num_field_elems_per_leaf;
-
-        num_field_elems_per_opening.ilog2() as usize
-    };
 
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
         OrionSRS::from_random::<F>(
@@ -159,14 +150,6 @@ where
     type SRS = OrionSRS;
     type Commitment = OrionCommitment;
     type Opening = OrionProof<EvalF>;
-
-    const MINIMUM_NUM_VARS: usize = {
-        let num_field_elems_per_leaf = tree::LEAF_BYTES * 8 / F::FIELD_SIZE;
-        let num_field_elems_per_opening =
-            Self::SRS::MINIMUM_LEAVES_IN_RANGE_OPENING * num_field_elems_per_leaf;
-
-        num_field_elems_per_opening.ilog2() as usize
-    };
 
     // NOTE: here we say the number of variables is the sum of 2 following things:
     // - number of variables of the multilinear polynomial

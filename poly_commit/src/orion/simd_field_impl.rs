@@ -25,20 +25,11 @@ where
     SimdF: SimdField<Scalar = F>,
     ComPackF: SimdField<Scalar = F>,
 {
-    let (row_num, msg_size) = {
-        let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
-        let (row_field_elems, msg_size) =
-            OrionSRS::local_eval_shape(1, num_vars, F::FIELD_SIZE, ComPackF::PACK_SIZE);
-
-        let row_num = row_field_elems / SimdF::PACK_SIZE;
-        (row_num, msg_size)
-    };
+    let msg_size = pk.code_instance.msg_len();
+    let packed_rows = pk.local_num_fs_per_query() / ComPackF::PACK_SIZE;
 
     let relative_pack_size = ComPackF::PACK_SIZE / SimdF::PACK_SIZE;
     assert_eq!(ComPackF::PACK_SIZE % SimdF::PACK_SIZE, 0);
-
-    let packed_rows = row_num / relative_pack_size;
-    assert_eq!(row_num % relative_pack_size, 0);
 
     assert_eq!(poly.hypercube_size() % relative_pack_size, 0);
     let packed_evals_ref = unsafe {
@@ -64,14 +55,7 @@ where
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
 {
-    let msg_size = {
-        let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
-        assert_eq!(num_vars, point.len());
-
-        let (_, msg_size) =
-            OrionSRS::local_eval_shape(1, num_vars, F::FIELD_SIZE, ComPackF::PACK_SIZE);
-        msg_size
-    };
+    let msg_size = pk.code_instance.msg_len();
 
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;

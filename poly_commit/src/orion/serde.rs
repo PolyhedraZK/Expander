@@ -91,15 +91,18 @@ impl ExpSerde for OrionSRS {
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.num_vars.serialize_into(&mut writer)?;
+        self.num_leaves_per_mt_query.serialize_into(&mut writer)?;
         self.code_instance.serialize_into(&mut writer)?;
         Ok(())
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let num_variables = usize::deserialize_from(&mut reader)?;
+        let num_leaves_per_mt_query = usize::deserialize_from(&mut reader)?;
         let code_instance = OrionCode::deserialize_from(&mut reader)?;
         Ok(Self {
             num_vars: num_variables,
+            num_leaves_per_mt_query,
             code_instance,
         })
     }

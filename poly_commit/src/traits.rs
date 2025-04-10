@@ -17,11 +17,6 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
     type Commitment: Clone + Debug + Default + ExpSerde;
     type Opening: Clone + Debug + Default + ExpSerde;
 
-    /// Minimum number of variables supported in this PCS implementation,
-    /// that such constraint exists for PCSs like Orion,
-    /// but for Raw and Hyrax, polys of any size works.
-    const MINIMUM_NUM_VARS: usize = 0;
-
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Use self as the first argument to save some potential intermediate state.
     fn gen_srs_for_testing(params: &Self::Params, rng: impl RngCore) -> Self::SRS;
@@ -60,43 +55,11 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
 }
 
 pub(crate) trait TensorCodeIOPPCS {
-    // TODO(HS) better to be set as 16, but benchmark for gf2 keccak will complain and spam stderr
-    // TODO(HS) set this to a method function varying by polynomial variables
-    // should be O(\log n) where n is the polynomial size, essentially when polynomial
-    // is small the leaves should be 2, then scale up to 4, 8, 16 ...
-    const MINIMUM_LEAVES_IN_RANGE_OPENING: usize = 8;
-
     fn codeword_len(&self) -> usize;
 
     fn minimum_hamming_weight(&self) -> f64;
 
-    fn local_eval_shape(
-        world_size: usize,
-        num_local_vars: usize,
-        num_bits_base_field: usize,
-        field_pack_size: usize,
-    ) -> (usize, usize) {
-        let num_bits_packed_field = field_pack_size * num_bits_base_field;
-
-        let minimum_num_bytes_opening_per_world = {
-            let minimum_num_bytes_opening =
-                Self::MINIMUM_LEAVES_IN_RANGE_OPENING * tree::LEAF_BYTES;
-            assert_eq!(minimum_num_bytes_opening % world_size, 0);
-
-            minimum_num_bytes_opening / world_size
-        };
-
-        let num_packed_fields_per_world_in_opening = {
-            let num_bytes_packed_field = num_bits_packed_field / 8;
-
-            minimum_num_bytes_opening_per_world.div_ceil(num_bytes_packed_field)
-        };
-
-        let row_num: usize = num_packed_fields_per_world_in_opening * field_pack_size;
-        let msg_size: usize = (1 << num_local_vars) / row_num;
-
-        (row_num, msg_size)
-    }
+    fn num_leaves_per_mt_query(&self) -> usize;
 
     fn query_complexity(&self, soundness_bits: usize) -> usize {
         // NOTE: use Ligero (AHIV22) appendix C argument.

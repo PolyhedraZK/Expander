@@ -3,10 +3,10 @@ use gkr_engine::Transcript;
 use itertools::izip;
 use serdes::SerdeError;
 use thiserror::Error;
-use tree::Node;
+use tree::{Node, LEAF_BYTES};
 
 use crate::{
-    orion::linear_code::{OrionCode, OrionCodeParameter},
+    orion::linear_code::{OrionCode, OrionCodeParameter, ORION_CODE_PARAMETER_INSTANCE},
     traits::TensorCodeIOPPCS,
     PCS_SOUNDNESS_BITS,
 };
@@ -30,9 +30,114 @@ pub type OrionResult<T> = std::result::Result<T, OrionPCSError>;
  * RELEVANT TYPES SETUP
  */
 
+/// returning leaf number, calibrated local number of variables, and message size
+/// NOTE(HS) num of local variables is over base field with no SIMD
+pub(crate) const fn orion_eval_shape(
+    world_size: usize,
+    num_local_vars: usize,
+    num_bits_base_field: usize,
+    field_pack_size: usize,
+) -> (usize, usize, usize) {
+    // for a global polynomial, compute the boolean hypercube size
+    let hypercube_size = world_size * (1 << num_local_vars);
+
+    // compute how many bits the global polynomial occupy
+    let polynomial_bits = hypercube_size * num_bits_base_field;
+    let polynomial_bits_log2 = polynomial_bits.ilog2();
+
+    // the leaf should be roughly O(\log N) to the global polynomial size
+    let leaves_lower_bound = match polynomial_bits_log2 {
+        // 128 bytes MT opening
+        0..16 => 2,
+
+        // 256 bytes MT opening
+        16..22 => 4,
+
+        // 512 bytes MT opening
+        22..28 => 8,
+
+        // 1 KB MT opening
+        28..34 => 16,
+
+        // 2 KB MT opening
+        34.. => 32,
+    };
+
+    // now compute the commitment used SIMD field bits,
+    // and compared against the suggest leaf size above.
+    //
+    // the commitment used SIMD field is the smallest unit of memory in commitment,
+    // thus each world can contribute as low as 1 commitment used SIMD field element,
+    // and thus if the world size is too large, we might need to scale up the final
+    // leaf size based on suggested leaf size - and thus may require padding the poly
+    // to the right size.
+    let num_bits_packed_f = field_pack_size * num_bits_base_field;
+    let minimum_pack_fs_per_world_in_query = {
+        let leaves_bits_lower_bound = leaves_lower_bound * LEAF_BYTES * 8;
+        // NOTE(HS) div_ceil ensures each world contribute at least 1 commitment SIMD field element
+        // in the MT query opening
+        leaves_bits_lower_bound.div_ceil(num_bits_packed_f * world_size)
+    };
+
+    let final_leaves_bits = minimum_pack_fs_per_world_in_query * world_size * num_bits_packed_f;
+    let final_leaves_per_query = final_leaves_bits / (LEAF_BYTES * 8);
+
+    // once we have decided the leaf size, we know the message size need to be encoded.
+    // the consideration is that - resulting codeword size should be >= MPI world size.
+    //
+    // Otherwise, the MPI transpose cannot go through - the codeword is too short to be
+    // segmented into the number of shares spreaded across MPI words for all-to-all transpose.
+    let msg_size = polynomial_bits / final_leaves_bits;
+
+    // we want to know the mininum message size, such that the resulting codeword length
+    // (pad to next po2) >= the MPI world size.
+    //
+    // for small case, when input message is shorter than Expander code length threshold,
+    // the code is itself (by Druk-Ishai),
+    // otherwise Expander encoding applies, with a code rate > 1 / 2, eventually pad to 2x length.
+    //
+    // NOTE(HS): here we assume that the message size and the MPI world size are both po2,
+    // while Expander code length threshold might be arbitarary - we scale up the threshold
+    // to the next po2 to avoid corner case.
+    let minimum_msg_size = {
+        let min_expander_po2_code_len = ORION_CODE_PARAMETER_INSTANCE
+            .length_threshold_g0s
+            .next_power_of_two();
+
+        if world_size <= min_expander_po2_code_len {
+            world_size
+        } else {
+            world_size / 2
+        }
+    };
+
+    // Early exit - if the message size from the global poly is sufficiently large,
+    // we decide the global MT opening size, and are good with the local polynomial number of vars.
+    if msg_size >= minimum_msg_size {
+        return (final_leaves_per_query, num_local_vars, msg_size);
+    }
+
+    // Scale up the polynomial local number of variable and plan again for the evaluation shape.
+    let scaled_up_num_local_vars = {
+        let num_of_field_elems_per_world_in_query =
+            minimum_pack_fs_per_world_in_query * field_pack_size;
+
+        let minimum_poly_len = minimum_msg_size * num_of_field_elems_per_world_in_query;
+        minimum_poly_len.ilog2() as usize
+    };
+
+    orion_eval_shape(
+        world_size,
+        scaled_up_num_local_vars,
+        num_bits_base_field,
+        field_pack_size,
+    )
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct OrionSRS {
     pub num_vars: usize,
+    pub num_leaves_per_mt_query: usize,
     pub code_instance: OrionCode,
 }
 
@@ -44,9 +149,15 @@ impl TensorCodeIOPPCS for OrionSRS {
     fn minimum_hamming_weight(&self) -> f64 {
         self.code_instance.hamming_weight()
     }
+
+    fn num_leaves_per_mt_query(&self) -> usize {
+        self.num_leaves_per_mt_query
+    }
 }
 
 impl OrionSRS {
+    // NOTE(HS) num local variables here refers to the number of variables for base field elements
+    // rather than SIMD field elements.
     pub fn from_random<F: Field>(
         world_size: usize,
         num_local_vars: usize,
@@ -54,13 +165,21 @@ impl OrionSRS {
         code_param_instance: OrionCodeParameter,
         mut rng: impl rand::RngCore,
     ) -> Self {
-        let (_, msg_size) =
-            Self::local_eval_shape(world_size, num_local_vars, F::FIELD_SIZE, field_pack_size);
+        let (num_leaves_per_mt_query, scaled_num_local_vars, msg_size) =
+            orion_eval_shape(world_size, num_local_vars, F::FIELD_SIZE, field_pack_size);
+
+        // TODO(HS) return scaled_num_local_vars
 
         Self {
-            num_vars: num_local_vars,
+            num_vars: scaled_num_local_vars,
+            num_leaves_per_mt_query,
             code_instance: OrionCode::new(code_param_instance, msg_size, &mut rng),
         }
+    }
+
+    pub fn local_num_fs_per_query(&self) -> usize {
+        let local_poly_len = 1 << self.num_vars;
+        local_poly_len / self.code_instance.msg_len()
     }
 }
 
@@ -134,7 +253,7 @@ where
     EvalF: ExtensionField,
     T: Transcript<EvalF>,
 {
-    let leaves_in_range_opening = OrionSRS::MINIMUM_LEAVES_IN_RANGE_OPENING;
+    let leaves_in_range_opening = pk.num_leaves_per_mt_query();
 
     // NOTE: MT opening for point queries
     let query_num = pk.query_complexity(PCS_SOUNDNESS_BITS);

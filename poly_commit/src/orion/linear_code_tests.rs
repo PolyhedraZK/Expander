@@ -4,8 +4,7 @@ use gf2::{GF2x8, GF2};
 
 use crate::{
     orion::{linear_code::OrionCode, utils::transpose_in_place},
-    traits::TensorCodeIOPPCS,
-    OrionSRS, SubsetSumLUTs, ORION_CODE_PARAMETER_INSTANCE,
+    SubsetSumLUTs, ORION_CODE_PARAMETER_INSTANCE,
 };
 
 fn column_combination<F, PackF>(mat: &[F], combination: &[F]) -> Vec<F>
@@ -26,7 +25,7 @@ where
         .collect()
 }
 
-fn test_orion_code_generic<F, PackF>(msg_len: usize)
+fn test_orion_code_generic<F, PackF>(msg_len: usize, row_num: usize)
 where
     F: Field,
     PackF: SimdField<Scalar = F>,
@@ -35,8 +34,6 @@ where
 
     let orion_code = OrionCode::new(ORION_CODE_PARAMETER_INSTANCE, msg_len, &mut rng);
 
-    let row_bits = OrionSRS::MINIMUM_LEAVES_IN_RANGE_OPENING * tree::LEAF_BYTES * 8;
-    let row_num = row_bits / F::FIELD_SIZE;
     let weights: Vec<_> = (0..row_num).map(|_| F::random_unsafe(&mut rng)).collect();
 
     // NOTE: generate message and codeword in the slice buffer
@@ -71,8 +68,10 @@ where
 
 #[test]
 fn test_orion_code() {
+    const ROW_NUM: usize = 128;
+
     (5..=10).for_each(|num_vars| {
         let msg_len = 1usize << num_vars;
-        test_orion_code_generic::<GF2, GF2x8>(msg_len);
+        test_orion_code_generic::<GF2, GF2x8>(msg_len, ROW_NUM);
     });
 }

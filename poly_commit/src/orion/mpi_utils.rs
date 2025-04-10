@@ -214,7 +214,6 @@ pub(crate) fn orion_mpi_compute_mt_root(
 pub(crate) fn orion_mpi_mt_openings<EvalF, T>(
     mpi_engine: &impl MPIEngine,
     pk: &OrionSRS,
-    num_leaves_per_opening: usize,
     scratch_pad: &OrionScratchPad,
     transcript: &mut T,
 ) -> Option<Vec<RangePath>>
@@ -222,6 +221,8 @@ where
     EvalF: ExtensionField,
     T: Transcript<EvalF>,
 {
+    let num_leaves_per_opening = pk.num_leaves_per_mt_query();
+
     // NOTE: MT opening for point queries
     let query_num = pk.query_complexity(PCS_SOUNDNESS_BITS);
     let query_indices: Vec<usize> = {
