@@ -10,6 +10,7 @@ use crate::StructuredReferenceString;
 #[derive(Clone, Debug, Default)]
 pub struct PedersenParams<C: CurveAffine + ExpSerde> {
     pub bases: Vec<C>,
+    pub pre_bases: Vec<C::Curve>,
 }
 
 impl<C: CurveAffine + ExpSerde> ExpSerde for PedersenParams<C> {
@@ -21,7 +22,8 @@ impl<C: CurveAffine + ExpSerde> ExpSerde for PedersenParams<C> {
 
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> serdes::SerdeResult<Self> {
         let bases: Vec<C> = <Vec<C> as ExpSerde>::deserialize_from(&mut reader)?;
-        Ok(Self { bases })
+        let pre_bases = msm::multiexp_precompute(&bases, 12);
+        Ok(Self { bases, pre_bases})
     }
 }
 
@@ -50,8 +52,9 @@ where
 
     let mut bases = vec![C::default(); length];
     C::Curve::batch_normalize(&proj_bases, &mut bases);
+    let pre_bases = msm::multiexp_precompute(&bases, 12);
 
-    PedersenParams { bases }
+    PedersenParams { bases, pre_bases }
 }
 
 pub(crate) fn pedersen_commit<C: CurveAffine + ExpSerde>(
@@ -62,7 +65,9 @@ where
     C::Scalar: PrimeField,
 {
     let mut what = C::default().to_curve();
-    msm::multiexp_serial(coeffs, &params.bases, &mut what);
+
+    // msm::multiexp_serial(coeffs, &params.bases, &mut what);
+    msm::multiexp_precompute_serial::<C>(coeffs, &params.pre_bases, 12, &mut what);
 
     what.to_affine()
 }
