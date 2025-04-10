@@ -1,13 +1,11 @@
 [workspace]
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
-    "arith/field_hashers",
     "arith/gf2",
     "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31",
     "arith/polynomials",
-    "bi-kzg",
     "circuit",
     "config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
     "gkr",
