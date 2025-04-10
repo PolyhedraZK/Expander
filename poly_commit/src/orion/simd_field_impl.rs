@@ -28,13 +28,14 @@ where
     let msg_size = pk.code_instance.msg_len();
     let packed_rows = pk.local_num_fs_per_query() / ComPackF::PACK_SIZE;
 
-    let relative_pack_size = ComPackF::PACK_SIZE / SimdF::PACK_SIZE;
-    assert_eq!(ComPackF::PACK_SIZE % SimdF::PACK_SIZE, 0);
-
-    assert_eq!(poly.hypercube_size() % relative_pack_size, 0);
     let packed_evals_ref = unsafe {
+        let relative_pack_size = ComPackF::PACK_SIZE / SimdF::PACK_SIZE;
+        assert_eq!(ComPackF::PACK_SIZE % SimdF::PACK_SIZE, 0);
+
         let ptr = poly.hypercube_basis_ref().as_ptr();
         let len = poly.hypercube_size() / relative_pack_size;
+        assert_eq!(len * relative_pack_size, poly.hypercube_size());
+
         std::slice::from_raw_parts(ptr as *const ComPackF, len)
     };
 
