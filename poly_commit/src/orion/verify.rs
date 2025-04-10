@@ -87,7 +87,7 @@ where
     }
 
     // NOTE: prepare the interleaved alphabets from the MT paths
-    let num_simd_elems_per_leaf = proof.query_openings[0].leaves.len() * LEAF_BYTES / SimdF::SIZE;
+    let num_simd_elems_per_leaf = vk.num_leaves_per_mt_query() * LEAF_BYTES / SimdF::SIZE;
     let packed_interleaved_alphabets: Vec<Vec<SimdF>> = proof
         .query_openings
         .iter()
