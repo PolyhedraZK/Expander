@@ -18,6 +18,7 @@ pub(crate) fn mod_reduce_u32(x: u32) -> u32 {
     (x & M31_MOD) + (x >> 31)
 }
 
+#[inline]
 pub(crate) fn mod_reduce_u32_safe(x: u32) -> u32 {
     let x = (x & M31_MOD) + (x >> 31);
     if x == M31_MOD {
@@ -28,7 +29,7 @@ pub(crate) fn mod_reduce_u32_safe(x: u32) -> u32 {
 }
 
 #[inline]
-fn mod_reduce_i64(x: i64) -> i64 {
+pub(crate) fn mod_reduce_i64(x: i64) -> i64 {
     (x & M31_MOD as i64) + (x >> 31)
 }
 

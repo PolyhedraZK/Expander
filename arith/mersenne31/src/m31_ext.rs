@@ -11,7 +11,7 @@ use arith::ExtensionField;
 use arith::{field_common, Field};
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::m31::{mod_reduce_u32, M31};
+use crate::m31::{mod_reduce_i64, mod_reduce_u32, M31};
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct M31Ext3 {
@@ -325,18 +325,54 @@ fn mul_internal(a: &M31Ext3, b: &M31Ext3) -> M31Ext3 {
     let a = &a.v;
     let b = &b.v;
     let mut res = [M31::default(); 3];
-    res[0] = a[0] * b[0] + M31 { v: 5 } * (a[1] * b[2] + a[2] * b[1]);
-    res[1] = a[0] * b[1] + a[1] * b[0] + M31 { v: 5 } * a[2] * b[2];
-    res[2] = a[0] * b[2] + a[1] * b[1] + a[2] * b[0];
+    res[0].v = {
+        let a0xb0 = a[0] * b[0];
+        let a1xb2 = a[1] * b[2];
+        let a2xb1 = a[2] * b[1];
+
+        let res = a0xb0.v as i64 + 5 * (a1xb2.v as i64 + a2xb1.v as i64);
+        mod_reduce_i64(res) as u32
+    };
+    res[1].v = {
+        let a0xb1 = a[0] * b[1];
+        let a1xb0 = a[1] * b[0];
+        let a2xb2 = a[2] * b[2];
+
+        let res = a0xb1.v as i64 + a1xb0.v as i64 + 5 * a2xb2.v as i64;
+        mod_reduce_i64(res) as u32
+    };
+    res[2].v = {
+        let a0xb2 = a[0] * b[2];
+        let a1xb1 = a[1] * b[1];
+        let a2xb0 = a[2] * b[0];
+
+        let res = a0xb2.v as i64 + a1xb1.v as i64 + a2xb0.v as i64;
+        mod_reduce_i64(res) as u32
+    };
     M31Ext3 { v: res }
 }
 
 #[inline(always)]
 fn square_internal(a: &[M31; 3]) -> [M31; 3] {
     let mut res = [M31::default(); 3];
-    res[0] = a[0].square() + M31 { v: 10 } * (a[1] * a[2]);
-    res[1] = a[0] * a[1].double() + M31 { v: 5 } * a[2].square();
-    res[2] = a[0] * a[2].double() + a[1].square();
+
+    res[0].v = {
+        let a0_square = a[0].square();
+        let a1xa2 = a[1] * a[2];
+        mod_reduce_i64(a0_square.v as i64 + 10 * a1xa2.v as i64) as u32
+    };
+    res[1].v = {
+        let a0xa1 = a[0] * a[1];
+        let a2_square = a[2].square();
+
+        mod_reduce_i64(((a0xa1.v as i64) << 1) + 5 * a2_square.v as i64) as u32
+    };
+    res[2].v = {
+        let a0xa2 = a[0] * a[2];
+        let a1_square = a[1].square();
+
+        mod_reduce_i64(((a0xa2.v as i64) << 1) + a1_square.v as i64) as u32
+    };
     res
 }
 
