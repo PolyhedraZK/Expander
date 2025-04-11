@@ -111,16 +111,16 @@ pub(crate) fn mpi_commit_encoded<PackF>(
     pk: &OrionSRS,
     packed_evals: &[PackF],
     scratch_pad: &mut OrionScratchPad,
-    packed_rows: usize,
-    msg_size: usize,
 ) -> OrionResult<OrionCommitment>
 where
     PackF: SimdField,
 {
+    let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
+
     // NOTE: packed codeword buffer and encode over packed field
     let mut packed_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
     izip!(
-        packed_evals.chunks(msg_size),
+        packed_evals.chunks(pk.code_instance.msg_len()),
         packed_codewords.chunks_mut(pk.codeword_len())
     )
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
@@ -151,7 +151,7 @@ where
     let codeword_this_world_len = packed_rows * codeword_po2_len;
     assert_eq!(packed_interleaved_codewords.len(), codeword_this_world_len);
 
-    {
+    if packed_rows > 1 {
         let codeword_chunk_per_world_len = codeword_this_world_len / mpi_engine.world_size();
         assert_eq!(codeword_this_world_len % mpi_engine.world_size(), 0);
 

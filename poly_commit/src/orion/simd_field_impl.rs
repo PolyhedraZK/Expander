@@ -25,9 +25,6 @@ where
     SimdF: SimdField<Scalar = F>,
     ComPackF: SimdField<Scalar = F>,
 {
-    let msg_size = pk.code_instance.msg_len();
-    let packed_rows = pk.local_num_fs_per_query() / ComPackF::PACK_SIZE;
-
     let packed_evals_ref = unsafe {
         let relative_pack_size = ComPackF::PACK_SIZE / SimdF::PACK_SIZE;
         assert_eq!(ComPackF::PACK_SIZE % SimdF::PACK_SIZE, 0);
@@ -39,7 +36,7 @@ where
         std::slice::from_raw_parts(ptr as *const ComPackF, len)
     };
 
-    commit_encoded(pk, packed_evals_ref, scratch_pad, packed_rows, msg_size)
+    commit_encoded(pk, packed_evals_ref, scratch_pad)
 }
 
 #[inline(always)]

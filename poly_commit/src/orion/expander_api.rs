@@ -30,8 +30,7 @@ where
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
 
-    /// NOTE(HS): this is actually number of variables in polynomial,
-    /// ignoring the variables for MPI parties and SIMD field element
+    /// NOTE(HS): this is the number of variables for local polynomial w.r.t. SIMD field elements.
     fn gen_params(n_input_vars: usize) -> Self::Params {
         n_input_vars
     }
@@ -68,8 +67,6 @@ where
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
-        // NOTE: Hang also assume that, linear GKR will take over the commitment
-        // and force sync transcript hash state of subordinate machines to be the same.
         if mpi_engine.is_single_process() {
             return orion_commit_simd_field::<_, C::SimdCircuitField, ComPackF>(
                 proving_key,
@@ -127,8 +124,8 @@ where
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         eval_point: &ExpanderSingleVarChallenge<C>,
-        eval: <C as FieldEngine>::ChallengeField,
-        transcript: &mut impl gkr_engine::Transcript<C::ChallengeField>,
+        eval: C::ChallengeField,
+        transcript: &mut impl Transcript<C::ChallengeField>,
         opening: &Self::Opening,
     ) -> bool {
         orion_verify::<_, C::SimdCircuitField, _, ComPackF>(

@@ -25,9 +25,6 @@ where
     SimdF: SimdField<Scalar = F>,
     ComPackF: SimdField<Scalar = F>,
 {
-    let msg_size = pk.code_instance.msg_len();
-    let packed_rows = pk.local_num_fs_per_query() / ComPackF::PACK_SIZE;
-
     let packed_evals_ref = unsafe {
         let relative_pack_size = ComPackF::PACK_SIZE / SimdF::PACK_SIZE;
         assert_eq!(ComPackF::PACK_SIZE % SimdF::PACK_SIZE, 0);
@@ -39,16 +36,8 @@ where
         std::slice::from_raw_parts(ptr as *const ComPackF, len)
     };
 
-    let local_commitment = mpi_commit_encoded(
-        mpi_engine,
-        pk,
-        packed_evals_ref,
-        scratch_pad,
-        packed_rows,
-        msg_size,
-    )?;
-
-    orion_mpi_compute_mt_root(mpi_engine, local_commitment, scratch_pad)
+    let local_com = mpi_commit_encoded(mpi_engine, pk, packed_evals_ref, scratch_pad)?;
+    orion_mpi_compute_mt_root(mpi_engine, local_com, scratch_pad)
 }
 
 #[inline(always)]

@@ -206,16 +206,16 @@ pub(crate) fn commit_encoded<PackF>(
     pk: &OrionSRS,
     packed_evals: &[PackF],
     scratch_pad: &mut OrionScratchPad,
-    packed_rows: usize,
-    msg_size: usize,
 ) -> OrionResult<OrionCommitment>
 where
     PackF: SimdField,
 {
+    let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
+
     // NOTE: packed codeword buffer and encode over packed field
     let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
     izip!(
-        packed_evals.chunks(msg_size),
+        packed_evals.chunks(pk.code_instance.msg_len()),
         packed_interleaved_codewords.chunks_mut(pk.codeword_len())
     )
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
