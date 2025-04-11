@@ -18,6 +18,7 @@ ark-std.workspace = true
 thiserror.workspace = true
 itertools.workspace = true
 derivative.workspace = true
+transpose.workspace = true
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 halo2curves = { workspace = true, features = [ "asm" ] }

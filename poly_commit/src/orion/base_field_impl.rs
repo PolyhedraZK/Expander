@@ -4,11 +4,21 @@ use polynomials::{MultilinearExtension, RefMultiLinearPoly};
 
 use crate::{
     orion::{
-        simd_field_impl::orion_commit_simd_field, utils::pack_from_base, OrionCommitment,
-        OrionProof, OrionResult, OrionSRS, OrionScratchPad,
+        simd_field_impl::orion_commit_simd_field, OrionCommitment, OrionProof, OrionResult,
+        OrionSRS, OrionScratchPad,
     },
     orion_open_simd_field,
 };
+
+#[inline(always)]
+fn pack_from_base<F, PackF>(es: &[F]) -> Vec<PackF>
+where
+    F: Field,
+    PackF: SimdField<Scalar = F>,
+{
+    // NOTE: SIMD pack neighboring base field evals
+    es.chunks(PackF::PACK_SIZE).map(PackF::pack).collect()
+}
 
 #[inline(always)]
 pub fn orion_commit_base_field<F, SimdF, ComPackF>(

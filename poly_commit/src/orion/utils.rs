@@ -3,6 +3,7 @@ use gkr_engine::Transcript;
 use itertools::izip;
 use serdes::SerdeError;
 use thiserror::Error;
+use transpose::transpose;
 use tree::{Node, LEAF_BYTES};
 
 use crate::{
@@ -229,6 +230,7 @@ where
     transpose(
         &packed_interleaved_codewords,
         &mut interleaved_alphabets,
+        pk.codeword_len(),
         packed_rows,
     );
     drop(packed_interleaved_codewords);
@@ -296,58 +298,6 @@ pub(crate) fn orion_mt_verify(
         range_path.verify(&merkle_cap[merkle_cap_index])
             && in_sub_tree_index == range_path.left / range_path.leaves.len()
     })
-}
-
-/*
- * IMPLEMENTATIONS FOR MATRIX TRANSPOSE
- */
-
-pub(crate) const fn cache_batch_size<F: Sized>() -> usize {
-    const CACHE_SIZE: usize = 1 << 16;
-    CACHE_SIZE / size_of::<F>()
-}
-
-#[inline(always)]
-pub(crate) fn transpose<F: Field>(mat: &[F], out: &mut [F], row_num: usize) {
-    let col_num = mat.len() / row_num;
-    let batch_size = cache_batch_size::<F>();
-    let mut batch_srt = 0;
-
-    mat.chunks(batch_size).for_each(|ith_batch| {
-        let (mut src_y, mut src_x) = (batch_srt / col_num, batch_srt % col_num);
-
-        ith_batch.iter().for_each(|elem_j| {
-            let dst = src_y + src_x * row_num;
-            out[dst] = *elem_j;
-
-            src_x += 1;
-            if src_x >= col_num {
-                src_x = 0;
-                src_y += 1;
-            }
-        });
-
-        batch_srt += batch_size
-    });
-}
-
-#[inline(always)]
-pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row_num: usize) {
-    transpose(mat, scratch, row_num);
-    mat.copy_from_slice(scratch);
-}
-
-#[inline(always)]
-pub(crate) fn pack_from_base<F, PackF>(evaluations: &[F]) -> Vec<PackF>
-where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
-{
-    // NOTE: SIMD pack neighboring base field evals
-    evaluations
-        .chunks(PackF::PACK_SIZE)
-        .map(SimdField::pack)
-        .collect()
 }
 
 /*
@@ -520,20 +470,21 @@ where
 // This method is applied column-wise, i.e., the data size is the same as linear combination
 // size, which should be in total 1024 bits at this point (2025/03/11).
 #[inline(always)]
-fn transpose_and_pack<F, SimdF>(evaluations: &[F], row_num: usize) -> Vec<SimdF>
+fn transpose_and_pack<F, SimdF>(
+    base_limbs: &[F],
+    scratch: &mut [F],
+    degree: usize,
+    num_elems: usize,
+) -> Vec<SimdF>
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
 {
     // NOTE: pre transpose evaluations
-    let mut evaluations_transposed = vec![F::ZERO; evaluations.len()];
-    transpose(evaluations, &mut evaluations_transposed, row_num);
+    transpose(base_limbs, scratch, degree, num_elems);
 
     // NOTE: SIMD pack each row of transposed matrix
-    evaluations_transposed
-        .chunks(SimdF::PACK_SIZE)
-        .map(SimdField::pack)
-        .collect()
+    scratch.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect()
 }
 
 #[inline(always)]
@@ -556,39 +507,39 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
     let combination_size = eq_col_coeffs.len();
     let packed_row_size = combination_size / com_pack_size;
 
+    let mut buffer = vec![F::ZERO; com_pack_size * EvalF::DEGREE];
+
     // NOTE: working on evaluation response of tensor code IOP based PCS
     izip!(
         eq_col_coeffs.chunks(com_pack_size),
         packed_evals.chunks(packed_evals.len() / packed_row_size)
     )
     .for_each(|(eq_chunk, packed_evals_chunk)| {
-        let eq_col_coeffs_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
-        let eq_col_simd_limbs = transpose_and_pack(&eq_col_coeffs_limbs, com_pack_size);
+        let eq_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
+        let eq_limbs_simd =
+            transpose_and_pack(&eq_limbs, &mut buffer, EvalF::DEGREE, com_pack_size);
 
         izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *eval_row).for_each(
-            |(p_col, eval)| {
-                *eval += simd_ext_base_inner_prod::<_, EvalF, _>(&eq_col_simd_limbs, p_col)
-            },
+            |(p_col, eval)| *eval += simd_ext_base_inner_prod::<_, EvalF, _>(&eq_limbs_simd, p_col),
         );
     });
 
     // NOTE: compose proximity response(s) of tensor code IOP based PCS
-    izip!(proximity_rows, rand_col_coeffs).for_each(|(row_buffer, random_coeffs)| {
+    izip!(proximity_rows, rand_col_coeffs).for_each(|(prox_row, random_coeffs)| {
         izip!(
             random_coeffs.chunks(com_pack_size),
             packed_evals.chunks(packed_evals.len() / packed_row_size)
         )
         .for_each(|(rand_chunk, packed_evals_chunk)| {
-            let rand_coeffs_limbs: Vec<_> = rand_chunk.iter().flat_map(|e| e.to_limbs()).collect();
-            let rand_simd_limbs = transpose_and_pack(&rand_coeffs_limbs, com_pack_size);
+            let rand_limbs: Vec<_> = rand_chunk.iter().flat_map(|e| e.to_limbs()).collect();
+            let rand_limbs_simd =
+                transpose_and_pack(&rand_limbs, &mut buffer, EvalF::DEGREE, com_pack_size);
 
-            izip!(
-                packed_evals_chunk.chunks(simd_inner_prods),
-                &mut *row_buffer
-            )
-            .for_each(|(p_col, prox)| {
-                *prox += simd_ext_base_inner_prod::<_, EvalF, _>(&rand_simd_limbs, p_col)
-            });
+            izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *prox_row).for_each(
+                |(p_col, prox)| {
+                    *prox += simd_ext_base_inner_prod::<_, EvalF, _>(&rand_limbs_simd, p_col)
+                },
+            );
         });
     });
 }
@@ -608,8 +559,10 @@ where
     // NOTE: check SIMD inner product numbers for column sums
     assert_eq!(fixed_rl.len() % SimdF::PACK_SIZE, 0);
 
+    let mut scratch = vec![F::ZERO; fixed_rl.len() * ExtF::DEGREE];
     let rl_limbs: Vec<_> = fixed_rl.iter().flat_map(|e| e.to_limbs()).collect();
-    let rl_simd_limbs: Vec<SimdF> = transpose_and_pack(&rl_limbs, fixed_rl.len());
+    let rl_simd_limbs: Vec<SimdF> =
+        transpose_and_pack(&rl_limbs, &mut scratch, ExtF::DEGREE, fixed_rl.len());
 
     izip!(query_indices, packed_interleaved_alphabets).all(|(qi, interleaved_alphabet)| {
         let index = qi % codeword.len();

@@ -1,11 +1,9 @@
 use arith::{Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x8, GF2};
+use transpose::transpose;
 
-use crate::{
-    orion::{linear_code::OrionCode, utils::transpose_in_place},
-    SubsetSumLUTs, ORION_CODE_PARAMETER_INSTANCE,
-};
+use crate::{orion::linear_code::OrionCode, SubsetSumLUTs, ORION_CODE_PARAMETER_INSTANCE};
 
 fn column_combination<F, PackF>(mat: &[F], combination: &[F]) -> Vec<F>
 where
@@ -32,36 +30,45 @@ where
 {
     let mut rng = test_rng();
 
-    let orion_code = OrionCode::new(ORION_CODE_PARAMETER_INSTANCE, msg_len, &mut rng);
+    let encoder = OrionCode::new(ORION_CODE_PARAMETER_INSTANCE, msg_len, &mut rng);
 
     let weights: Vec<_> = (0..row_num).map(|_| F::random_unsafe(&mut rng)).collect();
 
     // NOTE: generate message and codeword in the slice buffer
-    let mut message_mat = vec![F::ZERO; row_num * orion_code.msg_len()];
-    let mut codeword_mat = vec![F::ZERO; row_num * orion_code.code_len()];
+    let mut message_mat = vec![F::ZERO; row_num * encoder.msg_len()];
+    let mut codeword_mat = vec![F::ZERO; row_num * encoder.code_len()];
 
     message_mat
-        .chunks_mut(orion_code.msg_len())
-        .zip(codeword_mat.chunks_mut(orion_code.code_len()))
+        .chunks_mut(encoder.msg_len())
+        .zip(codeword_mat.chunks_mut(encoder.code_len()))
         .for_each(|(msg, codeword)| {
             msg.fill_with(|| F::random_unsafe(&mut rng));
-            orion_code.encode_in_place(msg, codeword).unwrap()
+            encoder.encode_in_place(msg, codeword).unwrap()
         });
 
     // NOTE: transpose message and codeword matrix
-    let mut message_scratch = vec![F::ZERO; row_num * orion_code.msg_len()];
-    transpose_in_place(&mut message_mat, &mut message_scratch, row_num);
-    drop(message_scratch);
+    let mut message_mat_transpose = vec![F::ZERO; row_num * encoder.msg_len()];
+    transpose(
+        &message_mat,
+        &mut message_mat_transpose,
+        encoder.msg_len(),
+        row_num,
+    );
 
-    let mut codeword_scratch = vec![F::ZERO; row_num * orion_code.code_len()];
-    transpose_in_place(&mut codeword_mat, &mut codeword_scratch, row_num);
-    drop(codeword_scratch);
+    let mut codeword_mat_transpose = vec![F::ZERO; row_num * encoder.code_len()];
+    transpose(
+        &codeword_mat,
+        &mut codeword_mat_transpose,
+        encoder.code_len(),
+        row_num,
+    );
 
     // NOTE: message and codeword matrix linear combination with weights
-    let msg_linear_combined = column_combination::<F, PackF>(&message_mat, &weights);
-    let codeword_linear_combined = column_combination::<F, PackF>(&codeword_mat, &weights);
+    let msg_linear_combined = column_combination::<F, PackF>(&message_mat_transpose, &weights);
+    let codeword_linear_combined =
+        column_combination::<F, PackF>(&codeword_mat_transpose, &weights);
 
-    let codeword_computed = orion_code.encode(&msg_linear_combined).unwrap();
+    let codeword_computed = encoder.encode(&msg_linear_combined).unwrap();
 
     assert_eq!(codeword_linear_combined, codeword_computed);
 }

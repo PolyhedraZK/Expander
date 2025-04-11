@@ -4,13 +4,11 @@ use arith::{ExtensionField, SimdField};
 use gkr_engine::{MPIEngine, Transcript};
 use itertools::izip;
 use serdes::ExpSerde;
+use transpose::{transpose, transpose_inplace};
 use tree::{Node, RangePath, Tree};
 
 use crate::{
-    orion::{
-        utils::{transpose, transpose_in_place},
-        OrionCommitment, OrionResult, OrionSRS, OrionScratchPad,
-    },
+    orion::{OrionCommitment, OrionResult, OrionSRS, OrionScratchPad},
     traits::TensorCodeIOPPCS,
     PCS_SOUNDNESS_BITS,
 };
@@ -129,10 +127,10 @@ where
     let mut packed_interleaved_codewords = if packed_rows == 1 {
         packed_codewords
     } else {
-        let mut transposed = vec![PackF::ZERO; packed_codewords.len()];
-        transpose(&packed_codewords, &mut transposed, packed_rows);
+        let mut res = vec![PackF::ZERO; packed_codewords.len()];
+        transpose(&packed_codewords, &mut res, pk.codeword_len(), packed_rows);
         drop(packed_codewords);
-        transposed
+        res
     };
 
     // NOTE: commit the interleaved codeword
@@ -151,18 +149,17 @@ where
     let codeword_this_world_len = packed_rows * codeword_po2_len;
     assert_eq!(packed_interleaved_codewords.len(), codeword_this_world_len);
 
-    if packed_rows > 1 {
-        let codeword_chunk_per_world_len = codeword_this_world_len / mpi_engine.world_size();
-        assert_eq!(codeword_this_world_len % mpi_engine.world_size(), 0);
+    let codeword_po2_chunk_len = codeword_po2_len / mpi_engine.world_size();
+    assert_eq!(codeword_po2_len % mpi_engine.world_size(), 0);
 
-        let codeword_po2_per_world_len = codeword_po2_len / mpi_engine.world_size();
-        assert_eq!(codeword_po2_len % mpi_engine.world_size(), 0);
+    if packed_rows > 1 {
+        let codeword_chunk_per_world_len = codeword_po2_chunk_len * packed_rows;
 
         // NOTE: now transpose back to row order of each world's codeword slice
-        let mut scratch = vec![PackF::ZERO; codeword_chunk_per_world_len];
+        let mut scratch = vec![PackF::ZERO; std::cmp::max(codeword_po2_chunk_len, packed_rows)];
         packed_interleaved_codewords
             .chunks_mut(codeword_chunk_per_world_len)
-            .for_each(|c| transpose_in_place(c, &mut scratch, codeword_po2_per_world_len));
+            .for_each(|c| transpose_inplace(c, &mut scratch, packed_rows, codeword_po2_chunk_len));
         drop(scratch);
     }
 
@@ -171,6 +168,7 @@ where
     transpose(
         &packed_interleaved_codewords,
         &mut packed_interleaved_codeword_chunk,
+        codeword_po2_chunk_len,
         packed_rows * mpi_engine.world_size(),
     );
     drop(packed_interleaved_codewords);
