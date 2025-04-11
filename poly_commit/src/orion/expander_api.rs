@@ -126,17 +126,17 @@ where
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &ExpanderSingleVarChallenge<C>,
-        v: <C as FieldEngine>::ChallengeField,
+        eval_point: &ExpanderSingleVarChallenge<C>,
+        eval: <C as FieldEngine>::ChallengeField,
         transcript: &mut impl gkr_engine::Transcript<C::ChallengeField>,
         opening: &Self::Opening,
     ) -> bool {
         orion_verify::<_, C::SimdCircuitField, _, ComPackF>(
             verifying_key,
             commitment,
-            &x.local_xs(),
-            &x.r_mpi,
-            v,
+            &eval_point.local_xs(),
+            &eval_point.r_mpi,
+            eval,
             transcript,
             opening,
         )
