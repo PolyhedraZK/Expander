@@ -939,7 +939,7 @@ dependencies = [
 [[package]]
 name = "halo2curves"
 version = "0.6.1"
-source = "git+https://github.com/PolyhedraZK/halo2curves#79a953d0e2cd12478d4046cabdbe72d3abad9166"
+source = "git+https://github.com/PolyhedraZK/halo2curves?branch=fastmsmm#794c0cce663af29275fb2b318f5c1fedf4a191e7"
 dependencies = [
  "blake2",
  "digest",
