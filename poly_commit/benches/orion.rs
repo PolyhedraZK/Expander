@@ -36,9 +36,10 @@ fn simd_field_committing_benchmark_helper<F, SimdF, ComPackF>(
         let packed_num_vars = num_vars - SimdF::PACK_SIZE.ilog2() as usize;
         let poly = MultiLinearPoly::<SimdF>::random(packed_num_vars, &mut rng);
 
-        let (srs, _) = OrionSRS::from_random::<F>(
+        let (srs, _) = OrionSRS::from_random(
             1,
             num_vars,
+            F::FIELD_SIZE,
             ComPackF::PACK_SIZE,
             ORION_CODE_PARAMETER_INSTANCE,
             &mut rng,
@@ -103,9 +104,10 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, T>(
             .map(|_| EvalF::random_unsafe(&mut rng))
             .collect();
 
-        let (srs, _) = OrionSRS::from_random::<F>(
+        let (srs, _) = OrionSRS::from_random(
             1,
             num_vars,
+            F::FIELD_SIZE,
             ComPackF::PACK_SIZE,
             ORION_CODE_PARAMETER_INSTANCE,
             &mut rng,

@@ -56,9 +56,10 @@ where
     type Opening = OrionProof<EvalF>;
 
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> (Self::SRS, usize) {
-        OrionSRS::from_random::<F>(
+        OrionSRS::from_random(
             1,
             *params,
+            F::FIELD_SIZE,
             ComPackF::PACK_SIZE,
             ORION_CODE_PARAMETER_INSTANCE,
             rng,
@@ -155,9 +156,10 @@ where
     // - number of variables of the multilinear polynomial
     // - number of variables reside in the SIMD field - e.g., 3 vars for a SIMD 8 field
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> (Self::SRS, usize) {
-        OrionSRS::from_random::<F>(
+        OrionSRS::from_random(
             1,
             *params,
+            F::FIELD_SIZE,
             ComPackF::PACK_SIZE,
             ORION_CODE_PARAMETER_INSTANCE,
             rng,

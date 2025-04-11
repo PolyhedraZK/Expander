@@ -142,6 +142,10 @@ pub struct OrionSRS {
 }
 
 impl TensorCodeIOPPCS for OrionSRS {
+    fn message_len(&self) -> usize {
+        self.code_instance.msg_len()
+    }
+
     fn codeword_len(&self) -> usize {
         self.code_instance.code_len()
     }
@@ -159,29 +163,29 @@ impl OrionSRS {
     // NOTE(HS) num local variables here refers to the number of variables for base field elements
     // rather than SIMD field elements, the number of variables returned for calibration is also
     // over base field elements rather than SIMD field elements.
-    pub fn from_random<F: Field>(
+    pub fn from_random(
         world_size: usize,
         num_local_vars: usize,
+        num_field_bits: usize,
         field_pack_size: usize,
         code_param_instance: OrionCodeParameter,
         mut rng: impl rand::RngCore,
     ) -> (Self, usize) {
         let (num_leaves_per_mt_query, scaled_num_local_vars, msg_size) =
-            orion_eval_shape(world_size, num_local_vars, F::FIELD_SIZE, field_pack_size);
+            orion_eval_shape(world_size, num_local_vars, num_field_bits, field_pack_size);
 
-        (
-            Self {
-                num_vars: scaled_num_local_vars,
-                num_leaves_per_mt_query,
-                code_instance: OrionCode::new(code_param_instance, msg_size, &mut rng),
-            },
-            scaled_num_local_vars,
-        )
+        let srs_sampled = Self {
+            num_vars: scaled_num_local_vars,
+            num_leaves_per_mt_query,
+            code_instance: OrionCode::new(code_param_instance, msg_size, &mut rng),
+        };
+
+        (srs_sampled, scaled_num_local_vars)
     }
 
     pub fn local_num_fs_per_query(&self) -> usize {
         let local_poly_len = 1 << self.num_vars;
-        local_poly_len / self.code_instance.msg_len()
+        local_poly_len / self.message_len()
     }
 }
 
@@ -215,7 +219,7 @@ where
     // NOTE: packed codeword buffer and encode over packed field
     let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
     izip!(
-        packed_evals.chunks(pk.code_instance.msg_len()),
+        packed_evals.chunks(pk.message_len()),
         packed_interleaved_codewords.chunks_mut(pk.codeword_len())
     )
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;

@@ -1,4 +1,4 @@
-use arith::SimdField;
+use arith::{Field, SimdField};
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
@@ -41,9 +41,10 @@ where
         rng: impl rand::RngCore,
     ) -> (Self::SRS, usize) {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
-        let (srs, calibrated_num_vars_each_core) = OrionSRS::from_random::<C::CircuitField>(
+        let (srs, calibrated_num_vars_each_core) = OrionSRS::from_random(
             mpi_engine.world_size(),
             num_vars_each_core,
+            C::CircuitField::FIELD_SIZE,
             ComPackF::PACK_SIZE,
             ORION_CODE_PARAMETER_INSTANCE,
             rng,

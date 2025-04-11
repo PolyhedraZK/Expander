@@ -33,7 +33,7 @@ where
     ComPackF: SimdField<Scalar = F>,
 {
     let world_size = 1 << mpi_point.len();
-    let msg_size = vk.code_instance.msg_len();
+    let msg_size = vk.message_len();
 
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;

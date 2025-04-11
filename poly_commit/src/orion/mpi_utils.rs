@@ -120,7 +120,7 @@ where
     // NOTE: packed codeword buffer and encode over packed field
     let mut packed_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
     izip!(
-        packed_evals.chunks(pk.code_instance.msg_len()),
+        packed_evals.chunks(pk.message_len()),
         packed_codewords.chunks_mut(pk.codeword_len())
     )
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;

@@ -53,7 +53,7 @@ where
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
 {
-    let msg_size = pk.code_instance.msg_len();
+    let msg_size = pk.message_len();
 
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;

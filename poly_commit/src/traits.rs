@@ -59,6 +59,8 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
 }
 
 pub(crate) trait TensorCodeIOPPCS {
+    fn message_len(&self) -> usize;
+
     fn codeword_len(&self) -> usize;
 
     fn minimum_hamming_weight(&self) -> f64;
