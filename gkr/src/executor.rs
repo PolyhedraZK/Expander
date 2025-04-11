@@ -108,10 +108,10 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     let bytes = fs::read(circuit_file).expect("Unable to read circuit file.");
     let field_bytes = &bytes[8..8 + 32];
     match field_bytes.try_into().unwrap() {
-        M31ExtConfig::SENTINEL => FieldType::M31,
+        M31ExtConfig::SENTINEL => FieldType::M31Ext3,
         BN254Config::SENTINEL => FieldType::BN254,
-        GF2ExtConfig::SENTINEL => FieldType::GF2,
-        GoldilocksExtConfig::SENTINEL => FieldType::Goldilocks,
+        GF2ExtConfig::SENTINEL => FieldType::GF2Ext128,
+        GoldilocksExtConfig::SENTINEL => FieldType::GoldilocksExt2,
         _ => {
             println!("Unknown field type. Field byte value: {:?}", field_bytes);
             exit(1);

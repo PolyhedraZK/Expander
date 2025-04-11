@@ -13,8 +13,9 @@ use gkr::{
         KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
     BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
-    GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2OrionSquare,
-    M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare, M31ExtConfigSha2RawVanilla, Prover,
+    GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Raw, M31ConfigSha2RawVanilla,
+    M31ExtConfigSha2OrionSquare, M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare,
+    M31ExtConfigSha2RawVanilla, Prover,
 };
 use gkr_engine::{
     ExpanderPCS, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType,
@@ -55,6 +56,14 @@ fn main() {
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
+        "m31" => match pcs_type {
+            PolynomialCommitmentType::Raw => match args.circuit.as_str() {
+                "keccak" => run_benchmark::<M31ConfigSha2RawVanilla>(&args, mpi_config),
+                _ => unreachable!(),
+            },
+            _ => unreachable!("Unsupported PCS type for M31"),
+        },
+
         "m31ext3" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
                 "keccak" => run_benchmark::<M31ExtConfigSha2RawVanilla>(&args, mpi_config.clone()),
@@ -126,22 +135,29 @@ where
     let mut circuit_template =
         match args.circuit.as_str() {
             "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-                FieldType::GF2 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
-                    Cfg,
-                >(KECCAK_GF2_CIRCUIT),
-                FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
-                    Cfg,
-                >(KECCAK_M31_CIRCUIT),
+                FieldType::GF2Ext128 => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_GF2_CIRCUIT,
+                    )
+                }
+                FieldType::M31Ext3 => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_M31_CIRCUIT,
+                    )
+                }
                 FieldType::BN254 => {
                     Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
                         KECCAK_BN254_CIRCUIT,
                     )
                 }
-                FieldType::Goldilocks => {
+                FieldType::GoldilocksExt2 => {
                     Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
                         KECCAK_GOLDILOCKS_CIRCUIT,
                     )
                 }
+                FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(KECCAK_M31_CIRCUIT),
             },
             "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
                 FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
@@ -154,13 +170,14 @@ where
 
     let witness_path = match args.circuit.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => KECCAK_GF2_WITNESS,
-            FieldType::M31 => KECCAK_M31_WITNESS,
+            FieldType::GF2Ext128 => KECCAK_GF2_WITNESS,
+            FieldType::M31Ext3 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
-            FieldType::Goldilocks => KECCAK_GOLDILOCKS_WITNESS,
+            FieldType::GoldilocksExt2 => KECCAK_GOLDILOCKS_WITNESS,
+            FieldType::M31 => KECCAK_M31_WITNESS,
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => POSEIDON_M31_WITNESS,
+            FieldType::M31Ext3 => POSEIDON_M31_WITNESS,
             _ => unreachable!("not supported"),
         },
         _ => unreachable!(),
@@ -169,11 +186,12 @@ where
     circuit_template.load_witness_allow_padding_testing_only(witness_path, &mpi_config);
 
     let circuit_copy_size: usize = match (Cfg::FieldConfig::FIELD_TYPE, args.circuit.as_str()) {
-        (FieldType::GF2, "keccak") => 1,
+        (FieldType::GF2Ext128, "keccak") => 1,
         (FieldType::M31, "keccak") => 2,
+        (FieldType::M31Ext3, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
-        (FieldType::M31, "poseidon") => 120,
-        (FieldType::Goldilocks, "keccak") => 2,
+        (FieldType::M31Ext3, "poseidon") => 120,
+        (FieldType::GoldilocksExt2, "keccak") => 2,
         _ => unreachable!(),
     };
 

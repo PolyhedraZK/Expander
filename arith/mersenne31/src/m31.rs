@@ -4,7 +4,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field};
+use arith::{field_common, Field, SimdField};
 use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
@@ -302,5 +302,32 @@ impl std::hash::Hash for M31 {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         state.write_u32(mod_reduce_u32_safe(self.v));
+    }
+}
+
+impl SimdField for M31 {
+    type Scalar = Self;
+
+    const PACK_SIZE: usize = 1;
+
+    #[inline(always)]
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
+        *self * challenge
+    }
+
+    #[inline(always)]
+    fn pack_full(base: &Self::Scalar) -> Self {
+        *base
+    }
+
+    #[inline(always)]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        assert_eq!(base_vec.len(), 1);
+        base_vec[0]
+    }
+
+    #[inline(always)]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        vec![*self]
     }
 }

@@ -9,10 +9,11 @@ use crate::{ExpanderSingleVarChallenge, MPIConfig, MPIEngine};
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum FieldType {
     #[default]
-    M31,
+    M31Ext3,
     BN254,
-    GF2,
-    Goldilocks,
+    GF2Ext128,
+    GoldilocksExt2,
+    M31,
 }
 
 pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
