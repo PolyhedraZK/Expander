@@ -4,10 +4,10 @@ use arith::{
     random_extension_field_tests, random_field_tests, random_inversion_tests,
     random_simd_field_tests,
 };
-use arith::{random_from_limbs_to_limbs_tests, Field};
+use arith::{random_from_limbs_to_limbs_tests, Field, SimdField};
 use ark_std::test_rng;
 use ethnum::U256;
-use field_hashers::{FiatShamirFieldHasher, PoseidonFiatShamirHasher, PoseidonStateTrait};
+use transcript::{FiatShamirHash, PoseidonFiatShamirHasher, PoseidonStateTrait};
 use serdes::ExpSerde;
 
 use crate::m31::{mod_reduce_u32_safe, M31_MOD};
@@ -60,7 +60,7 @@ fn test_simd_field() {
     let mut rng = test_rng();
     random_inversion_tests::<M31x16, _>(&mut rng, "Vectorized M31".to_string());
 
-    random_simd_field_tests::<M31x16>("Vectorized M31".to_string());
+    random_simd_field_tests::<M31, M31x16>("Vectorized M31".to_string());
 
     let a = M31x16::from(256 + 2);
     let mut buffer = vec![];
@@ -78,7 +78,7 @@ fn test_ext_field() {
     random_extension_field_tests::<M31Ext3>("M31 Ext3".to_string());
     random_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
     random_extension_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
-    random_simd_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
+    random_simd_field_tests::<M31Ext3, M31Ext3x16>("Simd M31 Ext3".to_string());
     random_from_limbs_to_limbs_tests::<M31, M31Ext3>("M31 Ext3".to_string());
     random_from_limbs_to_limbs_tests::<M31x16, M31Ext3x16>("Simd M31 Ext3".to_string());
 }
@@ -120,9 +120,16 @@ fn test_poseidon_m31_fiat_shamir_hash() {
     let perm = PoseidonFiatShamirHasher::<M31x16>::new();
 
     {
-        let state_elems: [M31; M31x16::RATE] = [M31::from(114514); M31x16::RATE];
-        let actual_output = perm.hash_to_state(&state_elems);
-        let expected_output = vec![
+        // let state_elems: [M31; M31x16::RATE] = [M31::from(114514); M31x16::RATE];
+        let state_elems: Vec<u8> = [M31::from(114514); M31x16::RATE].iter().flat_map(|x| {
+            let mut xu8 = vec![0u8; M31x16::SIZE];
+            x.serialize_into(&mut xu8);
+            xu8
+        }).collect();
+        let mut actual_output_u8 = [0u8; M31x16::RATE * M31x16::SIZE];
+        perm.hash(&mut actual_output_u8, &state_elems);
+        let actual_output = M31x16::from_uniform_bytes(&actual_output_u8);
+        let expected_output = M31x16::pack(&vec![
             M31 { v: 1021105124 },
             M31 { v: 1342990709 },
             M31 { v: 1593716396 },
@@ -139,14 +146,20 @@ fn test_poseidon_m31_fiat_shamir_hash() {
             M31 { v: 187534772 },
             M31 { v: 436020341 },
             M31 { v: 1441052621 },
-        ];
+        ]);
         assert_eq!(actual_output, expected_output);
     }
 
     {
-        let state_elems: [M31; M31x16::STATE_WIDTH] = [M31::from(114514); M31x16::STATE_WIDTH];
-        let actual_output = perm.hash_to_state(&state_elems);
-        let expected_output = vec![
+        let state_elems: Vec<u8> = [M31::from(114514); M31x16::STATE_WIDTH].iter().flat_map(|x| {
+            let mut xu8 = vec![0u8; M31x16::SIZE];
+            x.serialize_into(&mut xu8);
+            xu8
+        }).collect();
+        let mut actual_output_u8 = [0u8; M31x16::RATE * M31x16::SIZE];
+        perm.hash(&mut actual_output_u8, &state_elems);
+        let actual_output = M31x16::from_uniform_bytes(&actual_output_u8);
+        let expected_output = M31x16::pack(&vec![
             M31 { v: 1510043913 },
             M31 { v: 1840611937 },
             M31 { v: 45881205 },
@@ -163,7 +176,7 @@ fn test_poseidon_m31_fiat_shamir_hash() {
             M31 { v: 2067011878 },
             M31 { v: 402134378 },
             M31 { v: 535675968 },
-        ];
+        ]);
         assert_eq!(actual_output, expected_output);
     }
 }

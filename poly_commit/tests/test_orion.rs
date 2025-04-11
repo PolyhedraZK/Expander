@@ -17,10 +17,10 @@ fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF>(
     num_vars_start: usize,
     num_vars_end: usize,
 ) where
-    F: Field,
+    F: Field + Send,
     EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
+    ComPackF: SimdField<F>,
+    OpenPackF: SimdField<F>,
 {
     let mut rng = test_rng();
 
@@ -36,13 +36,13 @@ fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF>(
 
         common::test_pcs::<
             EvalF,
-            BytesHashTranscript<EvalF, Keccak256hasher>,
+            BytesHashTranscript<Keccak256hasher>,
             OrionBaseFieldPCS<
                 F,
                 EvalF,
                 ComPackF,
                 OpenPackF,
-                BytesHashTranscript<EvalF, Keccak256hasher>,
+                BytesHashTranscript<Keccak256hasher>,
             >,
         >(&num_vars, &poly, &xs);
     })
@@ -59,10 +59,10 @@ fn test_orion_simd_field_pcs_generics<F, SimdF, EvalF, ComPackF>(
     num_vars_start: usize,
     num_vars_end: usize,
 ) where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
     EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
+    ComPackF: SimdField<F>,
 {
     let mut rng = test_rng();
 
@@ -79,13 +79,13 @@ fn test_orion_simd_field_pcs_generics<F, SimdF, EvalF, ComPackF>(
 
         common::test_pcs::<
             EvalF,
-            BytesHashTranscript<EvalF, Keccak256hasher>,
+            BytesHashTranscript<Keccak256hasher>,
             OrionSIMDFieldPCS<
                 F,
                 SimdF,
                 EvalF,
                 ComPackF,
-                BytesHashTranscript<EvalF, Keccak256hasher>,
+                BytesHashTranscript<Keccak256hasher>,
             >,
         >(&num_vars, &poly, &xs);
     })
@@ -103,19 +103,19 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     total_num_vars: usize,
 ) where
     C: GKRFieldConfig,
-    ComPackF: SimdField<Scalar = C::CircuitField>,
-    T: Transcript<C::ChallengeField>,
+    ComPackF: SimdField<C::BaseField>,
+    T: Transcript,
 {
     let mut rng = test_rng();
 
     // NOTE: generate global random polynomial
-    let num_vars_in_simd = C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
+    let num_vars_in_simd = C::SimdBaseField::PACK_SIZE.ilog2() as usize;
     let num_vars_in_mpi = mpi_config_ref.world_size().ilog2() as usize;
     let num_vars_in_each_poly = total_num_vars - num_vars_in_mpi - num_vars_in_simd;
     let num_vars_in_global_poly = total_num_vars - num_vars_in_simd;
 
     let global_poly =
-        MultiLinearPoly::<C::SimdCircuitField>::random(num_vars_in_global_poly, &mut rng);
+        MultiLinearPoly::<C::SimdBaseField>::random(num_vars_in_global_poly, &mut rng);
 
     // NOTE generate srs for each party, and shared challenge point in each party
     let challenge_point = ExpanderGKRChallenge::<C> {
@@ -148,7 +148,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     common::test_pcs_for_expander_gkr::<
         C,
         T,
-        OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF, T>,
+        OrionSIMDFieldPCS<C::BaseField, C::SimdBaseField, C::ChallengeField, ComPackF, T>,
     >(
         &num_vars_in_each_poly,
         mpi_config_ref,
@@ -165,13 +165,13 @@ fn test_orion_for_expander_gkr() {
     test_orion_for_expander_gkr_generics::<
         GF2ExtConfig,
         GF2x128,
-        BytesHashTranscript<_, Keccak256hasher>,
+        BytesHashTranscript<Keccak256hasher>,
     >(&mpi_config, 16);
 
     test_orion_for_expander_gkr_generics::<
         M31ExtConfig,
         M31x16,
-        BytesHashTranscript<_, Keccak256hasher>,
+        BytesHashTranscript<Keccak256hasher>,
     >(&mpi_config, 25);
 
     MPIConfig::finalize()

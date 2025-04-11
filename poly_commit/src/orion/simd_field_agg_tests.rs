@@ -16,17 +16,14 @@ use crate::{
 };
 
 #[derive(Clone)]
-struct DistributedCommitter<F, EvalF, ComPackF, T>
+struct DistributedCommitter<F, ComPackF, T>
 where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    F: Field + Send,
+    ComPackF: SimdField<F>,
+    T: Transcript,
 {
     pub scratch_pad: OrionScratchPad<F, ComPackF>,
     pub transcript: T,
-
-    _phantom: PhantomData<EvalF>,
 }
 
 fn orion_proof_aggregate<C, T>(
@@ -36,7 +33,7 @@ fn orion_proof_aggregate<C, T>(
 ) -> OrionProof<C::ChallengeField>
 where
     C: GKRFieldConfig,
-    T: Transcript<C::ChallengeField>,
+    T: Transcript,
 {
     let paths = openings
         .iter()
@@ -49,7 +46,7 @@ where
 
     let aggregated_proximity_rows = (0..proximity_reps)
         .map(|i| {
-            let weights = transcript.generate_challenge_field_elements(num_parties);
+            let weights = transcript.generate_field_elements::<C::ChallengeField>(num_parties);
             let mut rows: Vec<_> = openings
                 .iter()
                 .flat_map(|o| o.proximity_rows[i].clone())
@@ -80,18 +77,18 @@ where
 fn test_orion_simd_aggregate_verify_helper<C, ComPackF, T>(num_parties: usize, num_vars: usize)
 where
     C: GKRFieldConfig,
-    ComPackF: SimdField<Scalar = C::CircuitField>,
-    T: Transcript<C::ChallengeField>,
+    ComPackF: SimdField<C::BaseField>,
+    T: Transcript,
 {
     assert!(num_parties.is_power_of_two());
 
     let mut rng = test_rng();
 
-    let simd_num_vars = C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
+    let simd_num_vars = C::SimdBaseField::PACK_SIZE.ilog2() as usize;
     let world_num_vars = num_parties.ilog2() as usize;
 
     let global_poly =
-        MultiLinearPoly::<C::SimdCircuitField>::random(num_vars - simd_num_vars, &mut rng);
+        MultiLinearPoly::<C::SimdBaseField>::random(num_vars - simd_num_vars, &mut rng);
 
     let global_real_num_vars = global_poly.get_num_vars();
     let local_real_num_vars = global_real_num_vars - world_num_vars;
@@ -108,15 +105,14 @@ where
 
     let mut committee = vec![
         DistributedCommitter {
-            scratch_pad: OrionScratchPad::<C::CircuitField, ComPackF>::default(),
+            scratch_pad: OrionScratchPad::<C::BaseField, ComPackF>::default(),
             transcript: T::new(),
-            _phantom: PhantomData,
         };
         num_parties
     ];
     let mut verifier_transcript = T::new();
 
-    let srs = OrionSRS::from_random::<C::CircuitField>(
+    let srs = OrionSRS::from_random::<C::BaseField>(
         num_vars - world_num_vars,
         ORION_CODE_PARAMETER_INSTANCE,
         &mut rng,
@@ -146,8 +142,8 @@ where
         .map(|(committer, eval_slice)| {
             let cloned_poly = MultiLinearPoly::new(eval_slice.to_vec());
             orion_open_simd_field::<
-                C::CircuitField,
-                C::SimdCircuitField,
+                C::BaseField,
+                C::SimdBaseField,
                 C::ChallengeField,
                 ComPackF,
                 T,
@@ -191,7 +187,7 @@ fn test_orion_simd_aggregate_verify() {
         test_orion_simd_aggregate_verify_helper::<
             GF2ExtConfig,
             GF2x128,
-            BytesHashTranscript<GF2_128, Keccak256hasher>,
+            BytesHashTranscript<Keccak256hasher>,
         >(parties, num_var)
     });
 
@@ -199,7 +195,7 @@ fn test_orion_simd_aggregate_verify() {
         test_orion_simd_aggregate_verify_helper::<
             M31ExtConfig,
             M31x16,
-            BytesHashTranscript<M31Ext3, Keccak256hasher>,
+            BytesHashTranscript<Keccak256hasher>,
         >(parties, num_var)
     })
 }

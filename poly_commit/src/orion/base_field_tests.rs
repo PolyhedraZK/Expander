@@ -15,8 +15,8 @@ fn dumb_commit_base_field<F, ComPackF>(
     poly: &mut MultiLinearPoly<F>,
 ) -> OrionCommitment
 where
-    F: Field,
-    ComPackF: SimdField<Scalar = F>,
+    F: Field + Send,
+    ComPackF: SimdField<F>,
 {
     let (row_num, msg_size) = OrionSRS::evals_shape::<F>(poly.get_num_vars());
 
@@ -54,8 +54,8 @@ where
 
 fn test_orion_commit_base_field_consistency_generic<F, ComPackF>(num_vars: usize)
 where
-    F: Field,
-    ComPackF: SimdField<Scalar = F>,
+    F: Field + Send,
+    ComPackF: SimdField<F>,
 {
     let mut rng = test_rng();
 

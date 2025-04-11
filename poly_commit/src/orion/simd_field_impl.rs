@@ -18,9 +18,9 @@ pub fn orion_commit_simd_field<F, SimdF, ComPackF>(
     scratch_pad: &mut OrionScratchPad<F, ComPackF>,
 ) -> OrionResult<OrionCommitment>
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    ComPackF: SimdField<Scalar = F>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
+    ComPackF: SimdField<F>,
 {
     let (row_num, msg_size) = {
         let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
@@ -54,11 +54,11 @@ pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF, T>(
     scratch_pad: &OrionScratchPad<F, ComPackF>,
 ) -> OrionProof<EvalF>
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
     EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    ComPackF: SimdField<F>,
+    T: Transcript,
 {
     let msg_size = {
         let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
@@ -122,11 +122,11 @@ pub fn orion_verify_simd_field<F, SimdF, EvalF, ComPackF, T>(
     proof: &OrionProof<EvalF>,
 ) -> bool
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
     EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    ComPackF: SimdField<F>,
+    T: Transcript,
 {
     let (row_num, msg_size) = {
         let (row_field_elems, msg_size) = OrionSRS::evals_shape::<F>(point.len());
@@ -152,11 +152,11 @@ where
     // then draw query points from fiat shamir transcripts
     let proximity_reps = vk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
     let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_reps)
-        .map(|_| transcript.generate_challenge_field_elements(row_num * SimdF::PACK_SIZE))
+        .map(|_| transcript.generate_field_elements::<EvalF>(row_num * SimdF::PACK_SIZE))
         .collect();
 
     let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
-    let query_indices = transcript.generate_challenge_index_vector(query_num);
+    let query_indices = transcript.generate_usize_vector(query_num);
 
     // NOTE: check consistency in MT in the opening trees and against the commitment tree
     if !orion_mt_verify(vk, &query_indices, &proof.query_openings, commitment) {

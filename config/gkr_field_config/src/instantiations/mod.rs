@@ -6,3 +6,6 @@ pub use m31_ext3::*;
 
 mod gf2_ext128;
 pub use gf2_ext128::*;
+
+mod m31_ext3_binary;
+pub use m31_ext3_binary::*;

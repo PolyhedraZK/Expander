@@ -22,16 +22,16 @@ pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF, T>(
 ) -> bool
 where
     C: GKRFieldConfig,
-    ComPackF: SimdField<Scalar = C::CircuitField>,
-    T: Transcript<C::ChallengeField>,
+    ComPackF: SimdField<C::BaseField>,
+    T: Transcript,
 {
     let mpi_world_size = 1 << eval_point.x_mpi.len();
     let local_num_vars = eval_point.num_vars() - eval_point.x_mpi.len();
     assert_eq!(local_num_vars, vk.num_vars);
 
     let (row_num, msg_size) = {
-        let (row_field_elems, msg_size) = OrionSRS::evals_shape::<C::CircuitField>(local_num_vars);
-        let row_num = row_field_elems / C::SimdCircuitField::PACK_SIZE;
+        let (row_field_elems, msg_size) = OrionSRS::evals_shape::<C::BaseField>(local_num_vars);
+        let row_num = row_field_elems / C::SimdBaseField::PACK_SIZE;
         (row_num, msg_size)
     };
 
@@ -55,15 +55,15 @@ where
     let proximity_reps = vk.proximity_repetitions::<C::ChallengeField>(PCS_SOUNDNESS_BITS);
     let proximity_local_coeffs: Vec<Vec<C::ChallengeField>> = (0..proximity_reps)
         .map(|_| {
-            transcript.generate_challenge_field_elements(row_num * C::SimdCircuitField::PACK_SIZE)
+            transcript.generate_field_elements::<C::ChallengeField>(row_num * C::SimdBaseField::PACK_SIZE)
         })
         .collect();
 
     let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
-    let query_indices = transcript.generate_challenge_index_vector(query_num);
+    let query_indices = transcript.generate_usize_vector(query_num);
 
     let proximity_worlds_coeffs: Vec<Vec<C::ChallengeField>> = (0..proximity_reps)
-        .map(|_| transcript.generate_challenge_field_elements(mpi_world_size))
+        .map(|_| transcript.generate_field_elements::<C::ChallengeField>(mpi_world_size))
         .collect();
 
     // NOTE: work on the Merkle tree path validity
@@ -89,16 +89,16 @@ where
         return false;
     }
 
-    let mut packed_interleaved_alphabets: Vec<Vec<C::SimdCircuitField>> =
+    let mut packed_interleaved_alphabets: Vec<Vec<C::SimdBaseField>> =
         vec![Vec::new(); query_num];
 
     let concatenated_packed_interleaved_alphabets: Vec<_> = proof
         .query_openings
         .iter()
         .map(|c| -> Vec<_> {
-            let elts = c.unpack_field_elems::<C::CircuitField, ComPackF>();
-            elts.chunks(C::SimdCircuitField::PACK_SIZE)
-                .map(C::SimdCircuitField::pack)
+            let elts = c.unpack_field_elems::<C::BaseField, ComPackF>();
+            elts.chunks(C::SimdBaseField::PACK_SIZE)
+                .map(C::SimdBaseField::pack)
                 .collect()
         })
         .collect();
@@ -140,7 +140,7 @@ where
                 _ => return false,
             };
 
-            match C::CircuitField::NAME {
+            match C::BaseField::NAME {
                 GF2::NAME => lut_verify_alphabet_check(
                     &codeword,
                     rl,

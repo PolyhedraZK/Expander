@@ -14,7 +14,7 @@ use crate::{
 pub struct HyraxPCS<C, T>
 where
     C: CurveAffine + ExpSerde,
-    T: Transcript<C::Scalar>,
+    T: Transcript,
     C::Scalar: ExtensionField,
     C::ScalarExt: ExtensionField,
 {
@@ -25,7 +25,7 @@ where
 impl<C, T> PolynomialCommitmentScheme<C::Scalar, T> for HyraxPCS<C, T>
 where
     C: CurveAffine + ExpSerde,
-    T: Transcript<C::Scalar>,
+    T: Transcript,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
@@ -77,4 +77,6 @@ where
     ) -> bool {
         hyrax_verify(verifying_key, commitment, x, v, opening)
     }
+    
+    const MINIMUM_NUM_VARS: usize = 0;
 }

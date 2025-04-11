@@ -24,7 +24,7 @@ mod gkr_square;
 pub use gkr_square::gkr_square_verify;
 
 #[inline(always)]
-fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript>(
     mut proof_reader: impl Read,
     degree: usize,
     transcript: &mut T,
@@ -38,7 +38,7 @@ fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         transcript.append_field_element(&ps[i]);
     }
 
-    let r = transcript.generate_challenge_field_element();
+    let r = transcript.generate_field_element::<C::ChallengeField>();
     randomness_vec.push(r);
 
     let verified = (ps[0] + ps[1]) == *claimed_sum;
@@ -62,7 +62,7 @@ fn verify_sumcheck_step<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
-fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript>(
     mpi_config: &MPIConfig,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
@@ -179,7 +179,7 @@ fn sumcheck_verify_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>
 
 // todo: FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn gkr_verify<C: GKRFieldConfig, T: Transcript>(
     mpi_config: &MPIConfig,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
@@ -205,15 +205,15 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     let mut r_mpi = vec![];
 
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.generate_challenge_field_element());
+        rz0.push(transcript.generate_field_element());
     }
 
     for _ in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.generate_challenge_field_element());
+        r_simd.push(transcript.generate_field_element());
     }
 
     for _ in 0..mpi_config.world_size().trailing_zeros() {
-        r_mpi.push(transcript.generate_challenge_field_element());
+        r_mpi.push(transcript.generate_field_element());
     }
 
     let mut alpha = None;
@@ -249,7 +249,7 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         );
         verified &= cur_verified;
         alpha = if rz1.is_some() {
-            Some(transcript.generate_challenge_field_element())
+            Some(transcript.generate_field_element())
         } else {
             None
         };
@@ -304,7 +304,7 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         //
         // note that this function is almost identical to grind, except that grind uses a
         // fixed hasher, where as this function uses the transcript hasher
-        let pcs_verified = transcript.append_commitment_and_check_digest(&buffer, &mut cursor);
+        let pcs_verified = transcript.append_commitment_and_check_digest::<<Cfg::FieldConfig as GKRFieldConfig>::ChallengeField, _>(&buffer, &mut cursor);
         log::info!("pcs verification: {}", pcs_verified);
 
         // TODO: Implement a trait containing the size function,

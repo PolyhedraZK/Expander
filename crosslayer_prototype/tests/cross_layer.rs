@@ -4,7 +4,7 @@ use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use transcript::{BytesHashTranscript, SHA256hasher, Transcript};
 
 fn test_sumcheck_cross_layered_helper<C: GKRFieldConfig>() {
-    let mut transcript = BytesHashTranscript::<C::ChallengeField, SHA256hasher>::new();
+    let mut transcript = BytesHashTranscript::<SHA256hasher>::new();
 
     let mut rng = rand::thread_rng();
     let n_layers = 5;

@@ -14,24 +14,24 @@ use crate::{
 };
 
 impl<C, ComPackF, T> PCSForExpanderGKR<C, T>
-    for OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF, T>
+    for OrionSIMDFieldPCS<C::BaseField, C::SimdBaseField, C::ChallengeField, ComPackF, T>
 where
     C: GKRFieldConfig,
-    ComPackF: SimdField<Scalar = C::CircuitField>,
-    T: Transcript<C::ChallengeField>,
+    ComPackF: SimdField<C::BaseField>,
+    T: Transcript,
 {
     const NAME: &'static str = "OrionPCSForExpanderGKR";
 
     type Params = usize;
-    type ScratchPad = OrionScratchPad<C::CircuitField, ComPackF>;
+    type ScratchPad = OrionScratchPad<C::BaseField, ComPackF>;
 
     type Commitment = OrionCommitment;
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
 
-    const MINIMUM_NUM_VARS: usize = (tree::leaf_adic::<C::CircuitField>()
+    const MINIMUM_NUM_VARS: usize = (tree::leaf_adic::<C::BaseField>()
         * Self::SRS::LEAVES_IN_RANGE_OPENING
-        / C::SimdCircuitField::PACK_SIZE)
+        / C::SimdBaseField::PACK_SIZE)
         .ilog2() as usize;
 
     /// NOTE(HS): this is actually number of variables in polynomial,
@@ -45,8 +45,8 @@ where
         _mpi_config: &MPIConfig,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
-        let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
-        OrionSRS::from_random::<C::CircuitField>(
+        let num_vars_each_core = *params + C::SimdBaseField::PACK_SIZE.ilog2() as usize;
+        OrionSRS::from_random::<C::BaseField>(
             num_vars_each_core,
             ORION_CODE_PARAMETER_INSTANCE,
             rng,
@@ -61,10 +61,10 @@ where
         params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<C::SimdBaseField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
-        let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
+        let num_vars_each_core = *params + C::SimdBaseField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
         let commitment = orion_commit_simd_field(proving_key, poly, scratch_pad).unwrap();
@@ -93,18 +93,18 @@ where
         params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<C::SimdBaseField>,
         eval_point: &ExpanderGKRChallenge<C>,
         transcript: &mut T,
         scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
-        let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
+        let num_vars_each_core = *params + C::SimdBaseField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
         let local_xs = eval_point.local_xs();
         let local_opening = orion_open_simd_field::<
-            C::CircuitField,
-            C::SimdCircuitField,
+            C::BaseField,
+            C::SimdBaseField,
             C::ChallengeField,
             ComPackF,
             T,
@@ -123,7 +123,7 @@ where
             .proximity_rows
             .iter()
             .map(|row| {
-                let weights = transcript.generate_challenge_field_elements(mpi_config.world_size());
+                let weights = transcript.generate_field_elements::<C::ChallengeField>(mpi_config.world_size());
                 mpi_config.coef_combine_vec(row, &weights)
             })
             .collect();
@@ -172,8 +172,8 @@ where
     ) -> bool {
         if eval_point.x_mpi.is_empty() {
             return orion_verify_simd_field::<
-                C::CircuitField,
-                C::SimdCircuitField,
+                C::BaseField,
+                C::SimdBaseField,
                 C::ChallengeField,
                 ComPackF,
                 T,
@@ -201,8 +201,8 @@ where
 }
 
 pub type OrionPCSForGKR<C, ComPack, T> = OrionSIMDFieldPCS<
-    <C as GKRFieldConfig>::CircuitField,
-    <C as GKRFieldConfig>::SimdCircuitField,
+    <C as GKRFieldConfig>::BaseField,
+    <C as GKRFieldConfig>::SimdBaseField,
     <C as GKRFieldConfig>::ChallengeField,
     ComPack,
     T,

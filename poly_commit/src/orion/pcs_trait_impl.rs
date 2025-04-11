@@ -19,11 +19,11 @@ impl StructuredReferenceString for OrionSRS {
 
 pub struct OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF, T>
 where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    F: Field + Send,
+    EvalF: ExtensionField,
+    ComPackF: SimdField<F>,
+    OpenPackF: SimdField<F>,
+    T: Transcript,
 {
     _marker_f: PhantomData<F>,
     _marker_eval_f: PhantomData<EvalF>,
@@ -35,11 +35,11 @@ where
 impl<F, EvalF, ComPackF, OpenPackF, T> PolynomialCommitmentScheme<EvalF, T>
     for OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF, T>
 where
-    F: Field,
+    F: Field + Send,
     EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    ComPackF: SimdField<F>,
+    OpenPackF: SimdField<F>,
+    T: Transcript,
 {
     const NAME: &'static str = "OrionBaseFieldPCS";
 
@@ -114,11 +114,11 @@ where
 
 pub struct OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF, T>
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
+    EvalF: ExtensionField, //<BaseField = F>,
+    ComPackF: SimdField<F>,
+    T: Transcript,
 {
     _marker_f: PhantomData<F>,
     _marker_simd_f: PhantomData<SimdF>,
@@ -130,11 +130,11 @@ where
 impl<F, SimdF, EvalF, ComPackF, T> PolynomialCommitmentScheme<EvalF, T>
     for OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF, T>
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
     EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    ComPackF: SimdField<F>,
+    T: Transcript,
 {
     const NAME: &'static str = "OrionSIMDFieldPCS";
 

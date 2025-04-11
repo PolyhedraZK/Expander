@@ -295,17 +295,16 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
         }
 
         for g in mul.iter() {
-            let r = C::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
-            hg_vals[g.i_ids[0]] += C::simd_circuit_field_mul_challenge_field(&vals[g.i_ids[1]], &r);
+            let r = eq_evals_at_rz0[g.o_id] * g.coef;
+            hg_vals[g.i_ids[0]] += r * vals[g.i_ids[1]];
 
             gate_exists[g.i_ids[0]] = true;
         }
 
         for g in add.iter() {
-            hg_vals[g.i_ids[0]] += C::Field::from(C::challenge_mul_circuit_field(
-                &eq_evals_at_rz0[g.o_id],
-                &g.coef,
-            ));
+            hg_vals[g.i_ids[0]] += C::Field::from(
+                eq_evals_at_rz0[g.o_id] * g.coef,
+            );
             gate_exists[g.i_ids[0]] = true;
         }
     }
@@ -381,10 +380,9 @@ impl<'a, C: GKRFieldConfig> SumcheckGkrVanillaHelper<'a, C> {
 
         // TODO-OPTIMIZATION: hg_vals does not have to be simd here
         for g in mul.iter() {
-            hg_vals[g.i_ids[1]] += C::Field::from(C::challenge_mul_circuit_field(
-                &(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
-                &g.coef,
-            ));
+            hg_vals[g.i_ids[1]] += C::Field::from(
+                (eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]]) * g.coef,
+            );
             gate_exists[g.i_ids[1]] = true;
         }
     }

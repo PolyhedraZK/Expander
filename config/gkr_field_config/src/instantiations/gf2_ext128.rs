@@ -10,14 +10,19 @@ pub struct GF2ExtConfig;
 impl GKRFieldConfig for GF2ExtConfig {
     const FIELD_TYPE: FieldType = FieldType::GF2;
 
+    // type CircuitUnitField = GF2;
     type CircuitField = GF2;
 
     type SimdCircuitField = GF2x8;
+
+    type BaseField = Self::CircuitField;
+    type SimdBaseField = Self::SimdCircuitField;
 
     type ChallengeField = GF2_128;
 
     type Field = GF2_128x8;
 
+    /*
     #[inline(always)]
     fn challenge_mul_circuit_field(
         a: &Self::ChallengeField,
@@ -82,5 +87,5 @@ impl GKRFieldConfig for GF2ExtConfig {
     ) -> Self::Field {
         let b_simd_ext = Self::Field::from(*b);
         b_simd_ext.mul_by_base_field(a)
-    }
+    } */
 }

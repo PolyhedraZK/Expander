@@ -86,8 +86,8 @@ pub trait Field:
     /// expose the element as u32.
     fn as_u32_unchecked(&self) -> u32;
 
-    /// sample from a 32 bytes
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self;
+    /// sample from bytes
+    fn from_uniform_bytes(bytes: &[u8]) -> Self;
 
     /// convert to u256
     // todo: a cleaner way to do this is to trait bound Into<U256>

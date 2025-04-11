@@ -1,5 +1,6 @@
 use crate::{FieldType, GKRFieldConfig};
-use arith::Fr;
+use arith::{ExtensionField, Fr};
+use transcript::Transcript;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BN254Config;
@@ -7,14 +8,19 @@ pub struct BN254Config;
 impl GKRFieldConfig for BN254Config {
     const FIELD_TYPE: FieldType = FieldType::BN254;
 
+    // type CircuitUnitField = Fr;
     type CircuitField = Fr;
 
     type ChallengeField = Fr;
+
+    type BaseField = Self::CircuitField;
+    type SimdBaseField = Self::SimdCircuitField;
 
     type Field = Fr;
 
     type SimdCircuitField = Fr;
 
+    /*
     #[inline(always)]
     fn challenge_mul_circuit_field(
         a: &Self::ChallengeField,
@@ -76,5 +82,5 @@ impl GKRFieldConfig for BN254Config {
         b: &Self::ChallengeField,
     ) -> Self::Field {
         *a * b
-    }
+    } */
 }

@@ -21,7 +21,7 @@ pub const SUMCHECK_GKR_SQUARE_DEGREE: usize = 6;
 // FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
-pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
     rz1: &Option<Vec<C::ChallengeField>>,
@@ -105,7 +105,7 @@ pub fn sumcheck_prove_gkr_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeFie
 // FIXME
 #[allow(clippy::needless_range_loop)] // todo: remove
 #[allow(clippy::type_complexity)]
-pub fn sumcheck_prove_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn sumcheck_prove_gkr_square_layer<C: GKRFieldConfig, T: Transcript>(
     layer: &CircuitLayer<C>,
     rz0: &[C::ChallengeField],
     r_simd: &[C::ChallengeField],

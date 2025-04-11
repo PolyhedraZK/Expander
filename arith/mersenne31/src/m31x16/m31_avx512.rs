@@ -214,7 +214,7 @@ impl Field for AVXM31 {
     }
 
     #[inline]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         let m = M31::from_uniform_bytes(bytes);
         Self {
             v: unsafe { _mm512_set1_epi32(m.v as i32) },
@@ -229,38 +229,38 @@ impl Field for AVXM31 {
     }
 }
 
-impl SimdField for AVXM31 {
-    type Scalar = M31;
+impl SimdField<M31> for AVXM31 {
+    // type Scalar = M31;
 
     #[inline]
-    fn scale(&self, challenge: &Self::Scalar) -> Self {
+    fn scale(&self, challenge: &M31) -> Self {
         *self * *challenge
     }
 
     const PACK_SIZE: usize = M31_PACK_SIZE;
 
     #[inline(always)]
-    fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == M31_PACK_SIZE);
-        let ret: [Self::Scalar; M31_PACK_SIZE] = base_vec.try_into().unwrap();
-        unsafe { transmute(ret) }
-    }
-
-    #[inline(always)]
-    fn unpack(&self) -> Vec<Self::Scalar> {
-        let ret = unsafe { transmute::<__m512i, [Self::Scalar; M31_PACK_SIZE]>(self.v) };
+    fn unpack(&self) -> Vec<M31> {
+        let ret = unsafe { transmute::<__m512i, [M31; M31_PACK_SIZE]>(self.v) };
         ret.to_vec()
     }
 
     #[inline(always)]
-    fn horizontal_sum(&self) -> Self::Scalar {
-        let ret = unsafe { transmute::<__m512i, [Self::Scalar; M31_PACK_SIZE]>(self.v) };
+    fn pack(base_vec: &[M31]) -> Self {
+        assert!(base_vec.len() == M31_PACK_SIZE);
+        let ret: [M31; M31_PACK_SIZE] = base_vec.try_into().unwrap();
+        unsafe { transmute(ret) }
+    }
+
+    #[inline(always)]
+    fn horizontal_sum(&self) -> M31 {
+        let ret = unsafe { transmute::<__m512i, [M31; M31_PACK_SIZE]>(self.v) };
         let mut buffer = ret.iter().map(|r| r.v as u64).sum::<u64>();
         buffer = (buffer & M31_MOD as u64) + (buffer >> 31);
         if buffer == M31_MOD as u64 {
-            Self::Scalar::ZERO
+            M31::ZERO
         } else {
-            Self::Scalar { v: buffer as u32 }
+            M31 { v: buffer as u32 }
         }
     }
 }

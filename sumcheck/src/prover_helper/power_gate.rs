@@ -23,10 +23,7 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
     fn interpolate_3<C: GKRFieldConfig>(p_add: &[C::Field; 3], p: &mut [C::Field; D]) {
         // Calculate coefficients for the interpolating polynomial
         let p_add_coef_0 = p_add[0];
-        let p_add_coef_2 = C::field_mul_circuit_field(
-            &(p_add[2] - p_add[1] - p_add[1] + p_add[0]),
-            &C::CircuitField::INV_2,
-        );
+        let p_add_coef_2 = (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * C::CircuitField::INV_2;
 
         let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
 
@@ -38,13 +35,13 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
         p[3] += p_add_coef_0 + p_add_coef_1.mul_by_3() + p_add_coef_2.mul_by_3().mul_by_3();
         p[4] += p_add_coef_0
             + p_add_coef_1.double().double()
-            + C::field_mul_circuit_field(&p_add_coef_2, &C::CircuitField::from(16));
+            + p_add_coef_2 * C::CircuitField::from(16);
         p[5] += p_add_coef_0
             + p_add_coef_1.mul_by_5()
-            + C::field_mul_circuit_field(&p_add_coef_2, &C::CircuitField::from(25));
+            + p_add_coef_2 * C::CircuitField::from(25);
         p[6] += p_add_coef_0
             + p_add_coef_1.mul_by_3().double()
-            + C::field_mul_circuit_field(&p_add_coef_2, &C::CircuitField::from(36));
+            + p_add_coef_2 * C::CircuitField::from(36);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -85,7 +82,7 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
                 }
                 for i in 0..D {
                     let pow5 = f_v[i].square().square() * f_v[i];
-                    p[i] += C::simd_circuit_field_mul_challenge_field(&pow5, &hg_v[i]);
+                    p[i] += hg_v[i] * pow5;
                 }
             }
             let mut p_add = [C::Field::zero(); 3];
@@ -99,11 +96,11 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
                 f_v[1] = src_v[i * 2 + 1];
                 hg_v[0] = bk_hg_1[i * 2];
                 hg_v[1] = bk_hg_1[i * 2 + 1];
-                p_add[0] += C::simd_circuit_field_mul_challenge_field(&f_v[0], &hg_v[0]);
-                p_add[1] += C::simd_circuit_field_mul_challenge_field(&f_v[1], &hg_v[1]);
+                p_add[0] += hg_v[0] * f_v[0];
+                p_add[1] += hg_v[1] * f_v[1];
                 let s_f_v = f_v[0] + f_v[1];
                 let s_hg_v = hg_v[0] + hg_v[1];
-                p_add[2] += C::simd_circuit_field_mul_challenge_field(&s_f_v, &s_hg_v);
+                p_add[2] += s_hg_v * s_f_v;
             }
 
             p_add[2] = p_add[1].mul_by_6() + p_add[0].mul_by_3() - p_add[2].double();
@@ -134,7 +131,7 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
                 }
                 for i in 0..D {
                     let pow5 = f_v[i].square().square() * f_v[i];
-                    p[i] += C::challenge_mul_field(&hg_v[i], &pow5);
+                    p[i] += pow5 * hg_v[i];
                 }
             }
 
@@ -149,12 +146,12 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
                 f_v[1] = src_v[i * 2 + 1];
                 hg_v[0] = bk_hg_1[i * 2];
                 hg_v[1] = bk_hg_1[i * 2 + 1];
-                p_add[0] += C::challenge_mul_field(&hg_v[0], &f_v[0]);
-                p_add[1] += C::challenge_mul_field(&hg_v[1], &f_v[1]);
+                p_add[0] += f_v[0] * hg_v[0];
+                p_add[1] += f_v[1] * hg_v[1];
 
                 let s_f_v = f_v[0] + f_v[1];
                 let s_hg_v = hg_v[0] + hg_v[1];
-                p_add[2] += C::challenge_mul_field(&s_hg_v, &s_f_v);
+                p_add[2] += s_f_v * s_hg_v;
             }
             p_add[2] = p_add[1].mul_by_6() + p_add[0].mul_by_3() - p_add[2].double();
 
@@ -182,8 +179,8 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
         if var_idx == 0 {
             for i in 0..self.cur_eval_size >> 1 {
                 let diff = init_v[2 * i + 1] - init_v[2 * i];
-                let mul = C::simd_circuit_field_mul_challenge_field(&diff, &r);
-                let init_v_0 = C::simd_circuit_field_into_field(&init_v[2 * i]);
+                let mul = r * diff;
+                let init_v_0 = C::Field::from(init_v[2 * i]);
                 bk_f[i] = init_v_0 + mul;
 
                 if !gate_exists_5[i * 2] && !gate_exists_5[i * 2 + 1] {

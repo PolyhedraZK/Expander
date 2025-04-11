@@ -103,8 +103,8 @@ impl Path {
     #[inline]
     pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
     where
-        F: Field,
-        PackF: SimdField<Scalar = F>,
+        F: Field + Send,
+        PackF: SimdField<F>,
     {
         unpack_field_elems_from_bytes::<F, PackF>(&[self.leaf])
     }
@@ -178,8 +178,8 @@ impl RangePath {
     #[inline]
     pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
     where
-        F: Field,
-        PackF: SimdField<Scalar = F>,
+        F: Field + Send,
+        PackF: SimdField<F>,
     {
         unpack_field_elems_from_bytes::<F, PackF>(&self.leaves)
     }

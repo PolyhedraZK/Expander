@@ -9,7 +9,7 @@ use polynomials::{MultiLinearPolyExpander, MultilinearExtension};
 use rand::thread_rng;
 use transcript::Transcript;
 
-pub fn test_pcs<F: ExtensionField, T: Transcript<F>, P: PolynomialCommitmentScheme<F, T>>(
+pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<F, T>>(
     params: &P::Params,
     poly: &P::Poly,
     xs: &[P::EvalPoint],
@@ -46,13 +46,13 @@ pub fn test_pcs<F: ExtensionField, T: Transcript<F>, P: PolynomialCommitmentSche
 
 pub fn test_pcs_for_expander_gkr<
     C: GKRFieldConfig,
-    T: Transcript<C::ChallengeField>,
+    T: Transcript,
     P: PCSForExpanderGKR<C, T>,
 >(
     params: &P::Params,
     mpi_config: &MPIConfig,
     transcript: &mut T,
-    poly: &impl MultilinearExtension<C::SimdCircuitField>,
+    poly: &impl MultilinearExtension<C::SimdBaseField>,
     xs: &[ExpanderGKRChallenge<C>],
 ) {
     let mut rng = test_rng();
@@ -66,7 +66,7 @@ pub fn test_pcs_for_expander_gkr<
     // We use RawExpanderGKR as the golden standard for the evaluation value
     // Note this test will almost always pass for RawExpanderGKR, so make sure it is correct
     let mut coeffs_gathered = if mpi_config.is_root() {
-        vec![C::SimdCircuitField::ZERO; poly.hypercube_size() * mpi_config.world_size()]
+        vec![C::SimdBaseField::ZERO; poly.hypercube_size() * mpi_config.world_size()]
     } else {
         vec![]
     };

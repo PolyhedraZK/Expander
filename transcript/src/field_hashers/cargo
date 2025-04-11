@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 arith = { path = "../" }
 serdes = { path = "../../serdes" }
+transcript = { path = "../../transcript" }
 
 tiny-keccak.workspace = true
 halo2curves.workspace = true

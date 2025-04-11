@@ -10,7 +10,7 @@ use sumcheck::{GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_SQUARE_DEGREE
 use transcript::Transcript;
 
 #[allow(clippy::type_complexity)]
-pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript>(
     mpi_config: &MPIConfig,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
@@ -39,13 +39,13 @@ pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     let mut r_mpi = vec![];
 
     for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz.push(transcript.generate_challenge_field_element());
+        rz.push(transcript.generate_field_element::<C::ChallengeField>());
     }
     for _ in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.generate_challenge_field_element());
+        r_simd.push(transcript.generate_field_element::<C::ChallengeField>());
     }
     for _ in 0..mpi_config.world_size().trailing_zeros() {
-        r_mpi.push(transcript.generate_challenge_field_element());
+        r_mpi.push(transcript.generate_field_element::<C::ChallengeField>());
     }
     log::trace!("Initial rz0: {:?}", rz);
     log::trace!("Initial r_simd: {:?}", r_simd);
@@ -79,7 +79,7 @@ pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
-fn sumcheck_verify_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+fn sumcheck_verify_gkr_square_layer<C: GKRFieldConfig, T: Transcript>(
     mpi_config: &MPIConfig,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],

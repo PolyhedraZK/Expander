@@ -67,12 +67,12 @@ impl Tree {
     #[inline]
     pub fn compact_new_with_field_elems<F, PackF>(field_elems: Vec<F>) -> Self
     where
-        F: Field,
-        PackF: SimdField<Scalar = F>,
+        F: Field + Send,
+        PackF: SimdField<F>,
     {
         let packed_elems: Vec<PackF> = field_elems
             .chunks(PackF::PACK_SIZE)
-            .map(SimdField::pack)
+            .map(PackF::pack)
             .collect();
 
         Self::compact_new_with_packed_field_elems(packed_elems)
@@ -82,8 +82,8 @@ impl Tree {
     #[inline]
     pub fn compact_new_with_packed_field_elems<F, PackF>(field_elems: Vec<PackF>) -> Self
     where
-        F: Field,
-        PackF: SimdField<Scalar = F>,
+        F: Field + Send,
+        PackF: SimdField<F>,
     {
         let mut serialized_bytes: Vec<u8> = vec![0u8; PackF::SIZE * field_elems.len()];
         serialized_bytes
@@ -107,8 +107,8 @@ impl Tree {
     #[inline]
     pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
     where
-        F: Field,
-        PackF: SimdField<Scalar = F>,
+        F: Field + Send,
+        PackF: SimdField<F>,
     {
         unpack_field_elems_from_bytes::<F, PackF>(&self.leaves)
     }
@@ -339,8 +339,8 @@ pub(crate) fn is_left_child(index: usize) -> bool {
 #[inline]
 pub(crate) fn unpack_field_elems_from_bytes<F, PackF>(leaves: &[Leaf]) -> Vec<F>
 where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
+    F: Field + Send,
+    PackF: SimdField<F>,
 {
     let mut bytes = vec![0u8; leaves.len() * LEAF_BYTES];
     bytes

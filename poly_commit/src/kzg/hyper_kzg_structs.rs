@@ -31,7 +31,7 @@ impl<E: Engine> HyperKZGExportedLocalEvals<E> {
 
     pub(crate) fn append_to_transcript<T>(&self, fs_transcript: &mut T)
     where
-        T: Transcript<E::Fr>,
+        T: Transcript,
         E::Fr: ExtensionField,
     {
         fs_transcript.append_field_element(&self.beta_x2_eval);
@@ -144,7 +144,7 @@ where
 
     pub(crate) fn append_to_transcript<T>(&self, fs_transcript: &mut T)
     where
-        T: Transcript<E::Fr>,
+        T: Transcript,
     {
         fs_transcript.append_field_element(&self.beta2_evals[0]);
         izip!(&self.pos_beta_evals, &self.neg_beta_evals).for_each(|(beta_eval, neg_beta_eval)| {
@@ -250,7 +250,7 @@ where
 
     pub(crate) fn append_to_transcript<T>(&self, fs_transcript: &mut T)
     where
-        T: Transcript<E::Fr>,
+        T: Transcript,
     {
         self.beta_y2_evals.append_to_transcript(fs_transcript);
         self.pos_beta_y_evals.append_to_transcript(fs_transcript);

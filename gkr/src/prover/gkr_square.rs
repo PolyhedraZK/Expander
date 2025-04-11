@@ -10,7 +10,7 @@ use sumcheck::{sumcheck_prove_gkr_square_layer, ProverScratchPad};
 use transcript::Transcript;
 
 #[allow(clippy::type_complexity)]
-pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript>(
     circuit: &Circuit<C>,
     sp: &mut ProverScratchPad<C>,
     transcript: &mut T,
@@ -31,18 +31,18 @@ pub fn gkr_square_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 
     let mut rz0 = vec![];
     for _i in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.generate_challenge_field_element());
+        rz0.push(transcript.generate_field_element::<C::ChallengeField>());
     }
 
     let mut r_simd = vec![];
     for _i in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.generate_challenge_field_element());
+        r_simd.push(transcript.generate_field_element::<C::ChallengeField>());
     }
     log::trace!("Initial r_simd: {:?}", r_simd);
 
     let mut r_mpi = vec![];
     for _ in 0..mpi_config.world_size().trailing_zeros() {
-        r_mpi.push(transcript.generate_challenge_field_element());
+        r_mpi.push(transcript.generate_field_element::<C::ChallengeField>());
     }
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;

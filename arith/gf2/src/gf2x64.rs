@@ -4,6 +4,8 @@ use arith::{Field, SimdField};
 use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
 
+use crate::GF2x8;
+
 use super::GF2;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
@@ -89,7 +91,8 @@ impl Field for GF2x64 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
+        assert!(bytes.len() >= 8);
         let mut buf = [0u8; 8];
         buf[..].copy_from_slice(&bytes[..8]);
         GF2x64 {
@@ -262,9 +265,9 @@ impl From<GF2> for GF2x64 {
     }
 }
 
-impl SimdField for GF2x64 {
+impl SimdField<GF2> for GF2x64 {
     #[inline(always)]
-    fn scale(&self, challenge: &Self::Scalar) -> Self {
+    fn scale(&self, challenge: &GF2) -> Self {
         if challenge.v == 0 {
             Self::zero()
         } else {
@@ -273,27 +276,27 @@ impl SimdField for GF2x64 {
     }
 
     #[inline(always)]
-    fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == Self::PACK_SIZE);
-        let mut ret = 0u64;
-        for (i, scalar) in base_vec.iter().enumerate() {
-            ret |= (scalar.v as u64) << (Self::PACK_SIZE - 1 - i);
-        }
-        Self { v: ret }
-    }
-
-    #[inline(always)]
-    fn unpack(&self) -> Vec<Self::Scalar> {
-        let mut ret = vec![];
+    fn unpack(&self) -> Vec<GF2> {
+        let mut ret = vec![GF2::ZERO; Self::PACK_SIZE];
         for i in 0..Self::PACK_SIZE {
-            ret.push(Self::Scalar {
-                v: ((self.v >> (Self::PACK_SIZE - 1 - i)) & 1u64) as u8,
-            });
+            ret[i] = GF2 {
+                v: ((self.v >> i) & 1) as u8,
+            };
         }
         ret
     }
 
-    type Scalar = crate::GF2;
+    #[inline(always)]
+    fn pack(base_vec: &[GF2]) -> Self {
+        assert!(base_vec.len() == Self::PACK_SIZE);
+        let mut ret = 0u64;
+        for (i, scalar) in base_vec.iter().enumerate() {
+            ret |= (scalar.v as u64) << i;
+        }
+        Self { v: ret }
+    }
+
+    // type Scalar = crate::GF2;
 
     const PACK_SIZE: usize = 64;
 }

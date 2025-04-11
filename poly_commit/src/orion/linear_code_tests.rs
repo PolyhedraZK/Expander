@@ -10,8 +10,8 @@ use crate::{
 
 fn column_combination<F, PackF>(mat: &[F], combination: &[F]) -> Vec<F>
 where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
+    F: Field + Send,
+    PackF: SimdField<F>,
 {
     assert_eq!(combination.len() % PackF::PACK_SIZE, 0);
 
@@ -28,8 +28,8 @@ where
 
 fn test_orion_code_generic<F, PackF>(msg_len: usize)
 where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
+    F: Field + Send,
+    PackF: SimdField<F>,
 {
     let mut rng = test_rng();
 

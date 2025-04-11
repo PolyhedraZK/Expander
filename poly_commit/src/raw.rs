@@ -50,7 +50,7 @@ pub struct RawMultiLinearScratchPad<F: Field> {
 // Raw commitment for multi-linear polynomials
 pub struct RawMultiLinearPCS {}
 
-impl<F: ExtensionField, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for RawMultiLinearPCS {
+impl<F: ExtensionField, T: Transcript> PolynomialCommitmentScheme<F, T> for RawMultiLinearPCS {
     const NAME: &'static str = "RawMultiLinear";
 
     type Params = usize;
@@ -115,18 +115,18 @@ impl<F: ExtensionField, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for R
 
 // =================================================================================================
 
-pub struct RawExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
+pub struct RawExpanderGKR<C: GKRFieldConfig, T: Transcript> {
     _phantom: std::marker::PhantomData<(C, T)>,
 }
 
-impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T>
+impl<C: GKRFieldConfig, T: Transcript> PCSForExpanderGKR<C, T>
     for RawExpanderGKR<C, T>
 {
     const NAME: &'static str = "RawExpanderGKR";
 
     type Params = usize;
 
-    // type Poly = MultiLinearPoly<C::SimdCircuitField>;
+    // type Poly = MultiLinearPoly<C::SimdBaseField>;
 
     // type EvalPoint = (
     //     Vec<C::ChallengeField>, // x
@@ -138,7 +138,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
 
     type SRS = ();
 
-    type Commitment = RawCommitment<C::SimdCircuitField>;
+    type Commitment = RawCommitment<C::SimdBaseField>;
 
     type Opening = ();
 
@@ -159,7 +159,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         params: &Self::Params,
         mpi_config: &MPIConfig,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<C::SimdBaseField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         assert!(poly.num_vars() == *params);
@@ -172,7 +172,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         }
 
         let mut buffer = if mpi_config.is_root() {
-            vec![C::SimdCircuitField::zero(); poly.hypercube_size() * mpi_config.world_size()]
+            vec![C::SimdBaseField::zero(); poly.hypercube_size() * mpi_config.world_size()]
         } else {
             vec![]
         };
@@ -190,7 +190,7 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _params: &Self::Params,
         _mpi_config: &MPIConfig,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        _poly: &impl MultilinearExtension<C::SimdCircuitField>,
+        _poly: &impl MultilinearExtension<C::SimdBaseField>,
         _x: &ExpanderGKRChallenge<C>,
         _transcript: &mut T,
         _scratch_pad: &Self::ScratchPad,
@@ -217,4 +217,6 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
             );
         v == v_target
     }
+    
+    const MINIMUM_NUM_VARS: usize = 0;
 }

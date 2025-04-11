@@ -79,15 +79,16 @@ pub type OrionCommitment = tree::Node;
 #[derive(Clone, Debug, Default)]
 pub struct OrionScratchPad<F, ComPackF>
 where
-    F: Field,
-    ComPackF: SimdField<Scalar = F>,
+    F: Field + Send,
+    ComPackF: SimdField<F>,
 {
     pub interleaved_alphabet_commitment: tree::Tree,
 
-    pub(crate) _phantom: PhantomData<ComPackF>,
+    pub(crate) _phantom_f: PhantomData<F>,
+    pub(crate) _phantom_cpf: PhantomData<ComPackF>,
 }
 
-unsafe impl<F: Field, ComPackF: SimdField<Scalar = F>> Send for OrionScratchPad<F, ComPackF> {}
+unsafe impl<F: Field + Send, ComPackF: SimdField<F>> Send for OrionScratchPad<F, ComPackF> {}
 
 #[derive(Clone, Debug, Default)]
 pub struct OrionProof<EvalF: Field> {
@@ -105,8 +106,8 @@ pub(crate) fn commit_encoded<F, PackF>(
     msg_size: usize,
 ) -> OrionResult<OrionCommitment>
 where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
+    F: Field + Send,
+    PackF: SimdField<F>,
 {
     // NOTE: packed codeword buffer and encode over packed field
     let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
@@ -140,22 +141,21 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn orion_mt_openings<F, EvalF, ComPackF, T>(
+pub(crate) fn orion_mt_openings<F, ComPackF, T>(
     pk: &OrionSRS,
     transcript: &mut T,
     scratch_pad: &OrionScratchPad<F, ComPackF>,
 ) -> Vec<tree::RangePath>
 where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    F: Field + Send,
+    ComPackF: SimdField<F>,
+    T: Transcript,
 {
     let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING;
 
     // NOTE: MT opening for point queries
     let query_num = pk.query_complexity(PCS_SOUNDNESS_BITS);
-    let query_indices = transcript.generate_challenge_index_vector(query_num);
+    let query_indices = transcript.generate_usize_vector(query_num);
     query_indices
         .iter()
         .map(|qi| {
@@ -227,22 +227,22 @@ pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row
 #[inline(always)]
 pub(crate) fn pack_from_base<F, PackF>(evaluations: &[F]) -> Vec<PackF>
 where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
+    F: Field + Send,
+    PackF: SimdField<F>,
 {
     // NOTE: SIMD pack neighboring base field evals
     evaluations
         .chunks(PackF::PACK_SIZE)
-        .map(SimdField::pack)
+        .map(PackF::pack)
         .collect()
 }
 
 #[inline(always)]
 pub(crate) fn pack_simd<F, SimdF, PackF>(evaluations: &[SimdF]) -> Vec<PackF>
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    PackF: SimdField<Scalar = F>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
+    PackF: SimdField<F>,
 {
     // NOTE: SIMD pack neighboring SIMD evals
     let relative_pack_size = PackF::PACK_SIZE / SimdF::PACK_SIZE;
@@ -296,8 +296,8 @@ impl<F: Field> SubsetSumLUTs<F> {
     #[inline(always)]
     pub fn lookup_and_sum<BitF, EntryF>(&self, indices: &[EntryF]) -> F
     where
-        BitF: Field,
-        EntryF: SimdField<Scalar = BitF>,
+        BitF: Field + Send,
+        EntryF: SimdField<BitF>,
     {
         // NOTE: at least the entry field elem should have a matching field size
         // and the the entry field being a SIMD field with same packing size as
@@ -321,10 +321,10 @@ pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
     proximity_rows: &mut [Vec<EvalF>],
     transcript: &mut T,
 ) where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    SimdF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    F: Field + Send,
+    EvalF: ExtensionField,
+    SimdF: SimdField<F>,
+    T: Transcript,
 {
     // NOTE: declare the look up tables for column sums
     let table_num = com_pack_size / SimdF::PACK_SIZE;
@@ -349,7 +349,7 @@ pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
     // NOTE: draw random linear combination out
     // and compose proximity response(s) of tensor code IOP based PCS
     proximity_rows.iter_mut().for_each(|row_buffer| {
-        let random_coeffs = transcript.generate_challenge_field_elements(combination_size);
+        let random_coeffs = transcript.generate_field_elements::<EvalF>(combination_size);
 
         izip!(
             random_coeffs.chunks(com_pack_size),
@@ -373,9 +373,9 @@ pub(crate) fn lut_verify_alphabet_check<F, SimdF, ExtF>(
     packed_interleaved_alphabets: &[Vec<SimdF>],
 ) -> bool
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    ExtF: ExtensionField<BaseField = F>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
+    ExtF: ExtensionField,
 {
     // NOTE: build up lookup table
     let tables_num = fixed_rl.len() / SimdF::PACK_SIZE;
@@ -401,8 +401,8 @@ fn simd_ext_base_inner_prod<F, ExtF, SimdF>(
     simd_base_elems: &[SimdF],
 ) -> ExtF
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
     ExtF: ExtensionField<BaseField = F>,
 {
     assert_eq!(simd_ext_limbs.len(), simd_base_elems.len() * ExtF::DEGREE);
@@ -429,8 +429,8 @@ where
 #[inline(always)]
 fn transpose_and_pack<F, SimdF>(evaluations: &[F], row_num: usize) -> Vec<SimdF>
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
 {
     // NOTE: pre transpose evaluations
     let mut evaluations_transposed = vec![F::ZERO; evaluations.len()];
@@ -439,7 +439,7 @@ where
     // NOTE: SIMD pack each row of transposed matrix
     evaluations_transposed
         .chunks(SimdF::PACK_SIZE)
-        .map(SimdField::pack)
+        .map(SimdF::pack)
         .collect()
 }
 
@@ -452,10 +452,10 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
     proximity_rows: &mut [Vec<EvalF>],
     transcript: &mut T,
 ) where
-    F: Field,
+    F: Field + Send,
     EvalF: ExtensionField<BaseField = F>,
-    SimdF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    SimdF: SimdField<F>,
+    T: Transcript,
 {
     // NOTE: check SIMD inner product numbers for column sums
     let simd_inner_prods = com_pack_size / SimdF::PACK_SIZE;
@@ -483,7 +483,7 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
     // NOTE: draw random linear combination out
     // and compose proximity response(s) of tensor code IOP based PCS
     proximity_rows.iter_mut().for_each(|row_buffer| {
-        let random_coeffs = transcript.generate_challenge_field_elements(combination_size);
+        let random_coeffs = transcript.generate_field_elements::<EvalF>(combination_size);
 
         izip!(
             random_coeffs.chunks(com_pack_size),
@@ -512,8 +512,8 @@ pub(crate) fn simd_verify_alphabet_check<F, SimdF, ExtF>(
     packed_interleaved_alphabets: &[Vec<SimdF>],
 ) -> bool
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
     ExtF: ExtensionField<BaseField = F>,
 {
     // NOTE: check SIMD inner product numbers for column sums

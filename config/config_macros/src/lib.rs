@@ -35,16 +35,16 @@ impl Parse for ConfigLit {
 }
 
 // Check if the field type is one of the supported types and return the corresponding config type
-fn parse_field_type(field_expr: ExprPath) -> (String, String) {
+fn parse_field_type(field_expr: ExprPath, binary: &str) -> (String, String) {
     let field_enum = field_expr
         .path
         .segments
         .last()
         .expect("Empty path for field");
     match field_enum.ident.to_string().as_str() {
-        "M31" => ("M31".to_owned(), "M31ExtConfig".to_owned()),
-        "BN254" => ("BN254".to_owned(), "BN254Config".to_owned()),
-        "GF2" => ("GF2".to_owned(), "GF2ExtConfig".to_owned()),
+        "M31" => ("M31".to_owned(), format!("M31Ext{}Config", binary)),
+        "BN254" => ("BN254".to_owned(), format!("BN254{}Config", binary)),
+        "GF2" => ("GF2".to_owned(), format!("GF2Ext{}Config", binary)),
         _ => panic!("Unknown field type"),
     }
 }
@@ -61,26 +61,24 @@ fn parse_fiat_shamir_hash_type(
         .last()
         .expect("Empty path for hash type");
 
-    let binding = hash_enum.ident.to_string();
-    let hash_type_str = binding.as_str();
     let challenge_f = format!("<{field_config} as GKRFieldConfig>::ChallengeField");
-    match (hash_type_str, field_type) {
+    match (hash_enum.ident.to_string().as_str(), field_type) {
         ("SHA256", _) => (
             "SHA256".to_owned(),
-            format!("BytesHashTranscript::<{challenge_f}, SHA256hasher>").to_owned(),
+            format!("BytesHashTranscript::<SHA256hasher>").to_owned(),
         ),
         ("Keccak256", _) => (
             "Keccak256".to_owned(),
-            format!("BytesHashTranscript::<{challenge_f}, Keccak256hasher>").to_owned(),
+            format!("BytesHashTranscript::<Keccak256hasher>").to_owned(),
         ),
         ("Poseidon", "M31") => (
             "Poseidon".to_owned(),
-            format!("FieldHashTranscript::<{challenge_f}, PoseidonFiatShamirHasher<M31x16>>")
+            format!("FieldHashTranscript::<PoseidonFiatShamirHasher<M31x16>>")
                 .to_owned(),
         ),
         ("MIMC5", "BN254") => (
             "MIMC5".to_owned(),
-            format!("FieldHashTranscript::<{challenge_f}, MiMC5FiatShamirHasher<{challenge_f}>>")
+            format!("FieldHashTranscript::<MiMC5FiatShamirHasher<{challenge_f}>>")
                 .to_owned(),
         ),
         _ => panic!("Unknown hash type"),
@@ -93,14 +91,13 @@ fn parse_polynomial_commitment_type(
     transcript_type: &str,
     polynomial_commitment_type: ExprPath,
 ) -> (String, String) {
-    let binding = polynomial_commitment_type
+    let pc_enum = polynomial_commitment_type
         .path
         .segments
         .last()
         .expect("Empty path for polynomial commitment type");
 
-    let pcs_type_str = binding.ident.to_string();
-    match (pcs_type_str.as_str(), field_type) {
+    match (pc_enum.ident.to_string().as_str(), field_type) {
         ("Raw", _) => (
             "Raw".to_owned(),
             format!("RawExpanderGKR::<{field_config}, {transcript_type}>").to_owned(),
@@ -129,6 +126,7 @@ fn parse_polynomial_commitment_type(
 /// declare_gkr_config!(
 ///     pub MyFavoriateConfigName,
 ///     FieldType::M31,
+///     false,
 ///     FiatShamirHashType::SHA256,
 ///     PolynomialCommitmentType::Raw
 /// );
@@ -147,7 +145,10 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
         polynomial_commitment_type,
     } = parse_macro_input!(input as ConfigLit);
 
-    let (field_type, field_config) = parse_field_type(field_expr);
+    let binary_circuit = 
+        if config_name.to_string().contains("Binary") {"Binary"}
+        else {""};
+    let (field_type, field_config) = parse_field_type(field_expr, binary_circuit);
     let (fiat_shamir_hash_type, transcript_type) =
         parse_fiat_shamir_hash_type(&field_type, &field_config, fiat_shamir_hash_type_expr);
     let (polynomial_commitment_enum, polynomial_commitment_type) = parse_polynomial_commitment_type(

@@ -5,11 +5,11 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::Field;
+use arith::{Field, SimdField};
 use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::GF2;
+use crate::{GF2x8, GF2};
 
 #[derive(Debug, Clone, Copy)]
 pub struct AVXGF2x128 {
@@ -120,7 +120,8 @@ impl Field for AVXGF2x128 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
+        assert!(bytes.len() >= 16);
         unsafe {
             AVXGF2x128 {
                 v: transmute::<[u8; 16], __m128i>(bytes[..16].try_into().unwrap()),
@@ -317,3 +318,35 @@ impl std::hash::Hash for AVXGF2x128 {
         }
     }
 }
+
+impl From<GF2x8> for AVXGF2x128 {
+    #[inline(always)]
+    fn from(x: GF2x8) -> Self {
+        AVXGF2x128 { v: unsafe { _mm_set1_epi8(x.v as i8) }}
+    }
+}
+
+/*
+impl SimdField<GF2x8> for AVXGF2x128 {
+    // type Scalar = GF2;
+
+    const PACK_SIZE: usize = 16;
+
+    #[inline(always)]
+    fn scale(&self, challenge: &GF2x8) -> Self {
+        *self * Self::from(*challenge)
+    }
+
+    #[inline(always)]
+    fn pack(base_vec: &[GF2x8]) -> Self {
+        assert_eq!(base_vec.len(), 16);
+        let ret: [GF2x8; 16] = base_vec.try_into().unwrap();
+        unsafe { transmute(ret) }
+    }
+
+    #[inline(always)]
+    fn unpack(&self) -> Vec<GF2x8> {
+        let ret = unsafe { transmute::<__m128i, [GF2x8; 16]>(self.v) };
+        ret.to_vec()
+    }
+} */

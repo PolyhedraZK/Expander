@@ -6,7 +6,7 @@ use transcript::Transcript;
 use crate::sumcheck::{sumcheck_prove_gather_layer, sumcheck_prove_scatter_layer};
 use crate::{circuit, scratchpad, CrossLayerCircuit};
 
-pub fn prove_gkr<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn prove_gkr<C: GKRFieldConfig, T: Transcript>(
     circuit: &CrossLayerCircuit<C>,
     circuit_vals: &circuit::CrossLayerCircuitEvals<C>,
     connections: &circuit::CrossLayerConnections,
@@ -15,9 +15,9 @@ pub fn prove_gkr<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 ) -> (C::ChallengeField, Vec<C::ChallengeField>, C::ChallengeField) {
     let final_layer_vals = circuit_vals.vals.last().unwrap();
     let mut rz0 = transcript
-        .generate_challenge_field_elements(final_layer_vals.len().trailing_zeros() as usize);
+        .generate_field_elements::<C::ChallengeField>(final_layer_vals.len().trailing_zeros() as usize);
     let r_simd = transcript
-        .generate_challenge_field_elements(C::get_field_pack_size().trailing_zeros() as usize);
+        .generate_field_elements::<C::ChallengeField>(C::get_field_pack_size().trailing_zeros() as usize);
     let output_claim = MultiLinearPolyExpander::<C>::eval_circuit_vals_at_challenge(
         final_layer_vals,
         &rz0,

@@ -7,7 +7,7 @@ use gkr_field_config::FieldType;
 
 use config::GKRConfig;
 use config_macros::declare_gkr_config;
-use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
+use transcript::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use halo2curves::bn256::Bn256;

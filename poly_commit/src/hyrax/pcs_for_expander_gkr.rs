@@ -20,11 +20,11 @@ use crate::{
 
 impl<G, C, T> PCSForExpanderGKR<G, T> for HyraxPCS<C, T>
 where
-    G: GKRFieldConfig<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
+    G: GKRFieldConfig<ChallengeField = C::Scalar, SimdBaseField = C::Scalar>,
     C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
-    T: Transcript<G::ChallengeField>,
+    T: Transcript,
 {
     const NAME: &'static str = "HyraxPCSForExpanderGKR";
 
@@ -53,7 +53,7 @@ where
         _params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdBaseField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         let local_commit = hyrax_commit(proving_key, poly);
@@ -80,7 +80,7 @@ where
         _params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdBaseField>,
         x: &ExpanderGKRChallenge<G>,
         _transcript: &mut T,
         _scratch_pad: &Self::ScratchPad,

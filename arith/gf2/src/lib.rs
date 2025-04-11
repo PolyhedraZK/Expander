@@ -6,6 +6,9 @@ pub use gf2::GF2;
 mod gf2x8;
 pub use gf2x8::GF2x8;
 
+mod gf2x16;
+pub use gf2x16::GF2x16;
+
 mod gf2x64;
 pub use gf2x64::GF2x64;
 

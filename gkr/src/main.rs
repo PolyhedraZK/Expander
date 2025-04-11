@@ -19,6 +19,7 @@ use gkr::{
         KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
     },
     BN254ConfigSha2Hyrax, GF2ExtConfigSha2Orion, M31ExtConfigSha2Orion, Prover,
+    M31ExtBinaryConfigSha2Orion,
 };
 
 #[allow(unused_imports)] // The FieldType import is used in the macro expansion
@@ -43,6 +44,10 @@ struct Args {
     /// number of thread
     #[arg(short, long, default_value_t = 1)]
     threads: u64,
+
+    /// if the input is binary
+    #[arg(long, default_value_t = false)]
+    binary_input: bool,
 }
 
 fn main() {
@@ -53,10 +58,16 @@ fn main() {
 
     match args.field.as_str() {
         "m31ext3" => match args.scheme.as_str() {
-            "keccak" => run_benchmark::<M31ExtConfigSha2Orion>(
-                &args,
-                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-            ),
+            "keccak" => match args.binary_input {
+                true => run_benchmark::<M31ExtBinaryConfigSha2Orion>(
+                    &args,
+                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+                ),
+                _ => run_benchmark::<M31ExtConfigSha2Orion>(
+                    &args,
+                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+                ),
+            },
             "poseidon" => run_benchmark::<M31ExtConfigSha2Orion>(
                 &args,
                 Config::new(GKRScheme::GkrSquare, mpi_config.clone()),
@@ -75,10 +86,16 @@ fn main() {
             _ => unreachable!(),
         },
         "gf2ext128" => match args.scheme.as_str() {
-            "keccak" => run_benchmark::<GF2ExtConfigSha2Orion>(
-                &args,
-                Config::new(GKRScheme::Vanilla, mpi_config.clone()),
-            ),
+            "keccak" => match args.binary_input {
+                true => run_benchmark::<GF2ExtBinaryConfigSha2Orion>(
+                    &args,
+                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+                ),
+                _ => run_benchmark::<GF2ExtConfigSha2Orion>(
+                    &args,
+                    Config::new(GKRScheme::Vanilla, mpi_config.clone()),
+                ),
+            },
             "poseidon" => run_benchmark::<GF2ExtConfigSha2Orion>(
                 &args,
                 Config::new(GKRScheme::GkrSquare, mpi_config.clone()),

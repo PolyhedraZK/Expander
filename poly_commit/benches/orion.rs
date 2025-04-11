@@ -16,8 +16,8 @@ fn base_field_committing_benchmark_helper<F, ComPackF>(
     lowest_num_vars: usize,
     highest_num_vars: usize,
 ) where
-    F: Field,
-    ComPackF: SimdField<Scalar = F>,
+    F: Field + Send,
+    ComPackF: SimdField<F>,
 {
     let mut group = c.benchmark_group(format!(
         "Orion PCS base field committing: F = {}, ComPackF = {}",
@@ -58,9 +58,9 @@ fn simd_field_committing_benchmark_helper<F, SimdF, ComPackF>(
     lowest_num_vars: usize,
     highest_num_vars: usize,
 ) where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    ComPackF: SimdField<Scalar = F>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
+    ComPackF: SimdField<F>,
 {
     let mut group = c.benchmark_group(format!(
         "Orion PCS SIMD field committing: F = {}, SIMD-F = {}, ComPackF = {}",
@@ -108,11 +108,11 @@ fn base_field_opening_benchmark_helper<F, EvalF, ComPackF, OpenPackF, T>(
     lowest_num_vars: usize,
     highest_num_vars: usize,
 ) where
-    F: Field,
+    F: Field + Send,
     EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    ComPackF: SimdField<F>,
+    OpenPackF: SimdField<F>,
+    T: Transcript,
 {
     let mut group = c.benchmark_group(format!(
         "Orion PCS base field opening: F = {}, EvalF = {}, ComPackF = {}, OpenPackF = {}",
@@ -161,14 +161,14 @@ fn orion_base_field_opening_benchmark(c: &mut Criterion) {
         GF2_128,
         GF2x128,
         GF2x8,
-        BytesHashTranscript<_, Keccak256hasher>,
+        BytesHashTranscript<Keccak256hasher>,
     >(c, 19, 30);
     base_field_opening_benchmark_helper::<
         M31,
         M31Ext3,
         M31x16,
         M31x16,
-        BytesHashTranscript<_, Keccak256hasher>,
+        BytesHashTranscript<Keccak256hasher>,
     >(c, 19, 26);
 }
 
@@ -177,11 +177,11 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, T>(
     lowest_num_vars: usize,
     highest_num_vars: usize,
 ) where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
+    F: Field + Send,
+    SimdF: SimdField<F>,
     EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    ComPackF: SimdField<F>,
+    T: Transcript,
 {
     let mut group = c.benchmark_group(format!(
         "Orion PCS SIMD field opening: SIMD-F = {}, EvalF = {}, ComPackF = {}",
@@ -235,14 +235,14 @@ fn orion_simd_field_opening_benchmark(c: &mut Criterion) {
         GF2x8,
         GF2_128,
         GF2x128,
-        BytesHashTranscript<_, Keccak256hasher>,
+        BytesHashTranscript<Keccak256hasher>,
     >(c, 19, 32);
     simd_field_opening_benchmark_helper::<
         M31,
         M31x16,
         M31Ext3,
         M31x16,
-        BytesHashTranscript<_, Keccak256hasher>,
+        BytesHashTranscript<Keccak256hasher>,
     >(c, 19, 27);
 }
 

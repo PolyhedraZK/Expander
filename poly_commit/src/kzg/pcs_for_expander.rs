@@ -13,12 +13,12 @@ use crate::*;
 
 impl<G, E, T> PCSForExpanderGKR<G, T> for HyperKZGPCS<E, T>
 where
-    G: GKRFieldConfig<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
+    G: GKRFieldConfig<ChallengeField = E::Fr, SimdBaseField = E::Fr>,
     E: Engine + MultiMillerLoop,
     E::Fr: ExtensionField + PrimeField,
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
-    T: Transcript<G::ChallengeField>,
+    T: Transcript,
 {
     const NAME: &'static str = "HyperKZGPCSForExpander";
 
@@ -56,7 +56,7 @@ where
         _params: &Self::Params,
         mpi_config: &mpi_config::MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdBaseField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         let local_commitment =
@@ -83,7 +83,7 @@ where
         _params: &Self::Params,
         mpi_config: &mpi_config::MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<<G as GKRFieldConfig>::SimdBaseField>,
         x: &ExpanderGKRChallenge<G>,
         transcript: &mut T,
         _scratch_pad: &Self::ScratchPad,

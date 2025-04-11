@@ -6,7 +6,10 @@ pub use sha2_256::*;
 pub mod keccak_256;
 pub use keccak_256::*;
 
-pub trait FiatShamirBytesHash: Clone + Debug {
+pub trait FiatShamirHash: Clone + Debug {
+    /// Name for the hasher
+    const NAME: &'static str;
+
     /// The size of the hash output in bytes.
     const DIGEST_SIZE: usize;
 
@@ -14,8 +17,8 @@ pub trait FiatShamirBytesHash: Clone + Debug {
     fn new() -> Self;
 
     /// Hash the input into the output.
-    fn hash(output: &mut [u8], input: &[u8]);
+    fn hash(&self, output: &mut [u8], input: &[u8]);
 
     /// Hash the input in place.
-    fn hash_inplace(buffer: &mut [u8]);
+    fn hash_inplace(&self, buffer: &mut [u8]);
 }

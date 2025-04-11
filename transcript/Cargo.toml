@@ -5,12 +5,12 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
-field_hashers = { path = "../arith/field_hashers" }
 mpi_config = { path = "../config/mpi_config" }
 serdes = { path = "../serdes" }
 
 sha2.workspace = true
 tiny-keccak.workspace = true
+halo2curves.workspace = true
 
 [dev-dependencies]
 mersenne31 = { path = "../arith/mersenne31/" }

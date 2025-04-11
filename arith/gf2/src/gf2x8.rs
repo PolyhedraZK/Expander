@@ -94,7 +94,7 @@ impl Field for GF2x8 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         GF2x8 { v: bytes[0] }
     }
 
@@ -263,9 +263,9 @@ impl From<GF2> for GF2x8 {
     }
 }
 
-impl SimdField for GF2x8 {
+impl SimdField<GF2> for GF2x8 {
     #[inline(always)]
-    fn scale(&self, challenge: &Self::Scalar) -> Self {
+    fn scale(&self, challenge: &GF2) -> Self {
         if challenge.v == 0 {
             Self::zero()
         } else {
@@ -274,27 +274,27 @@ impl SimdField for GF2x8 {
     }
 
     #[inline(always)]
-    fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == Self::PACK_SIZE);
-        let mut ret = 0u8;
-        for (i, scalar) in base_vec.iter().enumerate() {
-            ret |= scalar.v << (7 - i);
-        }
-        Self { v: ret }
-    }
-
-    #[inline(always)]
-    fn unpack(&self) -> Vec<Self::Scalar> {
+    fn unpack(&self) -> Vec<GF2> {
         let mut ret = vec![];
         for i in 0..Self::PACK_SIZE {
-            ret.push(Self::Scalar {
-                v: (self.v >> (7 - i)) & 1u8,
+            ret.push(GF2 {
+                v: (self.v >> i) & 1u8,
             });
         }
         ret
     }
 
-    type Scalar = crate::GF2;
+    #[inline(always)]
+    fn pack(base_vec: &[GF2]) -> Self {
+        assert!(base_vec.len() == Self::PACK_SIZE);
+        let mut ret = 0u8;
+        for (i, scalar) in base_vec.iter().enumerate() {
+            ret |= scalar.v << i;
+        }
+        Self { v: ret }
+    }
+
+    // type Scalar = crate::GF2;
 
     const PACK_SIZE: usize = 8;
 }
@@ -311,5 +311,19 @@ impl PartialOrd for GF2x8 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for GF2x8 is not supported")
+    }
+}
+
+impl Mul<GF2> for GF2x8 {
+    type Output = GF2x8;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2) -> GF2x8 {
+        if rhs.is_zero() {
+            GF2x8::ZERO
+        }
+        else {
+            self
+        }
     }
 }

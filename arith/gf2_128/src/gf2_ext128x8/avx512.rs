@@ -219,7 +219,7 @@ impl Field for AVX512GF2_128x8 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(_bytes: &[u8]) -> Self {
         todo!()
     }
 
@@ -430,26 +430,26 @@ impl From<GF2_128> for AVX512GF2_128x8 {
 // For all simd field:
 // [GF2x128; 8] -> GF2_128x8 -> [GF2x128; 8] should not change the order
 
-impl SimdField for AVX512GF2_128x8 {
+impl SimdField<GF2_128> for AVX512GF2_128x8 {
     #[inline(always)]
-    fn scale(&self, challenge: &Self::Scalar) -> Self {
+    fn scale(&self, challenge: &GF2_128) -> Self {
         let simd_challenge = AVX512GF2_128x8::from(*challenge);
         *self * simd_challenge
     }
-    type Scalar = GF2_128;
+
+    #[inline(always)]
+    fn pack(base_vec: &[GF2_128]) -> Self {
+        assert_eq!(base_vec.len(), Self::PACK_SIZE);
+        let base_vec_array: [GF2_128; 8] = base_vec.try_into().unwrap();
+        unsafe { transmute(base_vec_array) }
+    }
+    // type Scalar = GF2_128;
 
     const PACK_SIZE: usize = 8;
 
     #[inline(always)]
-    fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert_eq!(base_vec.len(), Self::PACK_SIZE);
-        let base_vec_array: [Self::Scalar; 8] = base_vec.try_into().unwrap();
-        unsafe { transmute(base_vec_array) }
-    }
-
-    #[inline(always)]
-    fn unpack(&self) -> Vec<Self::Scalar> {
-        let array: [Self::Scalar; 8] = unsafe { transmute(self.data) };
+    fn unpack(&self) -> Vec<GF2_128> {
+        let array: [GF2_128; 8] = unsafe { transmute(self.data) };
         array.to_vec()
     }
 }
@@ -726,19 +726,6 @@ impl From<GF2x8> for AVX512GF2_128x8 {
                 unsafe { transmute::<[i64; 8], __m512i>([v0, 0, v1, 0, v2, 0, v3, 0]) },
                 unsafe { transmute::<[i64; 8], __m512i>([v4, 0, v5, 0, v6, 0, v7, 0]) },
             ],
-        }
-    }
-}
-
-impl Mul<GF2> for AVX512GF2_128x8 {
-    type Output = AVX512GF2_128x8;
-
-    #[inline(always)]
-    fn mul(self, rhs: GF2) -> Self::Output {
-        if rhs.is_zero() {
-            Self::zero()
-        } else {
-            self
         }
     }
 }

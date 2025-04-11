@@ -1,4 +1,4 @@
-use arith::{ExtensionField, SimdField};
+use arith::{ExtensionField, Field, SimdField};
 use mpi_config::MPIConfig;
 use transcript::Transcript;
 
@@ -14,7 +14,7 @@ use transcript::Transcript;
 ///
 /// Output
 /// - p0 * c0 + ... + pn * cn
-pub fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar {
+pub fn unpack_and_combine<Scalar: Field + Send, F: SimdField<Scalar>>(p: &F, coef: &[Scalar]) -> Scalar {
     if coef.len() >= F::PACK_SIZE {
         let coef_packed = F::pack(&coef[..F::PACK_SIZE]);
         return (coef_packed * p).horizontal_sum();
@@ -33,7 +33,7 @@ pub fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar 
 pub fn transcript_io<F, T>(mpi_config: &MPIConfig, ps: &[F], transcript: &mut T) -> F
 where
     F: ExtensionField,
-    T: Transcript<F>,
+    T: Transcript,
 {
     // 3 for x, y; 4 for simd var; 7 for pow5, 9 for pow7
     assert!(
@@ -43,7 +43,7 @@ where
     for p in ps {
         transcript.append_field_element(p);
     }
-    let mut r = transcript.generate_challenge_field_element();
+    let mut r = transcript.generate_field_element::<F>();
     mpi_config.root_broadcast_f(&mut r);
     r
 }

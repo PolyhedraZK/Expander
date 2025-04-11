@@ -4,11 +4,14 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, Field};
+use arith::{field_common, unit_simd, ExtensionField, Field, SimdField};
 use ark_std::Zero;
 use ethnum::U256;
+use gf2::{GF2x16, GF2};
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
+
+use crate::{M31Ext3, M31x16};
 
 pub const M31_MOD: u32 = 2147483647;
 
@@ -201,7 +204,8 @@ impl Field for M31 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
+        assert!(bytes.len() >= 4);
         let mut v = u32::from_le_bytes(bytes[..4].try_into().unwrap());
         v = mod_reduce_u32(v);
         M31 { v }
@@ -305,5 +309,45 @@ impl std::hash::Hash for M31 {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         state.write_u32(self.v);
+    }
+}
+impl Mul<M31Ext3> for M31 {
+    type Output = M31Ext3;
+
+    #[inline(always)]
+    fn mul(self, rhs: M31Ext3) -> Self::Output {
+        rhs.mul_by_base_field(&self)
+    }
+}
+
+unit_simd!(M31);
+
+impl Mul<GF2> for M31 {
+    type Output = M31;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2) -> Self::Output {
+        if rhs.is_zero() {
+            Self::Output::ZERO
+        }
+        else {
+            self
+        }
+    }
+}
+
+//TODO: use instruction
+impl Mul<GF2x16> for M31 {
+    type Output = M31x16;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2x16) -> Self::Output {
+        let mut res = [M31::ZERO; 16];
+        for i in 0..16 {
+            if !rhs.index(i).is_zero() {
+                res[i] = self;
+            }
+        }
+        Self::Output::pack(&res)
     }
 }

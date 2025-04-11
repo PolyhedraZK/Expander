@@ -6,7 +6,7 @@ use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use arith::field_common;
-use arith::Field;
+use arith::{Field, SimdField, unit_simd};
 use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
 
@@ -115,7 +115,7 @@ impl Field for GF2 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         GF2 { v: bytes[0] % 2 }
     }
 
@@ -188,3 +188,5 @@ impl std::hash::Hash for GF2 {
         state.write_u8(self.v);
     }
 }
+
+unit_simd!(GF2);

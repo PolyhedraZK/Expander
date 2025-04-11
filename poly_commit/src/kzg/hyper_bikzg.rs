@@ -28,7 +28,7 @@ pub fn coeff_form_hyper_bikzg_open<E, T>(
 ) -> Option<HyperBiKZGOpening<E>>
 where
     E: MultiMillerLoop,
-    T: Transcript<E::Fr>,
+    T: Transcript,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     E::Fr: ExtensionField,
@@ -138,8 +138,8 @@ where
 
     transcript_root_broadcast(fs_transcript, mpi_config);
 
-    let beta_x = fs_transcript.generate_challenge_field_element();
-    let beta_y = fs_transcript.generate_challenge_field_element();
+    let beta_x = fs_transcript.generate_field_element::<E::Fr>();
+    let beta_y = fs_transcript.generate_field_element::<E::Fr>();
 
     //
     // Local parties run HyperKZG evals at beta_x, -beta_x, beta_x^2 over folded coeffs
@@ -218,7 +218,7 @@ where
 
     transcript_root_broadcast(fs_transcript, mpi_config);
 
-    let gamma = fs_transcript.generate_challenge_field_element();
+    let gamma = fs_transcript.generate_field_element::<E::Fr>();
 
     //
     // The leader party linear combines folded coeffs at y with gamma,
@@ -316,7 +316,7 @@ where
 
     transcript_root_broadcast(fs_transcript, mpi_config);
 
-    let delta_x = fs_transcript.generate_challenge_field_element();
+    let delta_x = fs_transcript.generate_field_element::<E::Fr>();
 
     //
     // Locally compute the Lagrange-degree2 interpolation at delta_x, pool at leader
@@ -376,7 +376,7 @@ where
 
     transcript_root_broadcast(fs_transcript, mpi_config);
 
-    let delta_y = fs_transcript.generate_challenge_field_element();
+    let delta_y = fs_transcript.generate_field_element::<E::Fr>();
 
     //
     // Leader send out the quotient on y coefficients back to local parties
@@ -455,7 +455,7 @@ pub fn coeff_form_hyper_bikzg_verify<E, T>(
 ) -> bool
 where
     E: MultiMillerLoop,
-    T: Transcript<E::Fr>,
+    T: Transcript,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     E::Fr: ExtensionField,
@@ -487,8 +487,8 @@ where
     // NOTE(HS) transcript MPI thing ...
     transcript_verifier_sync(fs_transcript, mpi_world_size);
 
-    let beta_x = fs_transcript.generate_challenge_field_element();
-    let beta_y = fs_transcript.generate_challenge_field_element();
+    let beta_x = fs_transcript.generate_field_element::<E::Fr>();
+    let beta_y = fs_transcript.generate_field_element::<E::Fr>();
 
     // dbg!(beta_x, beta_y);
 
@@ -550,7 +550,7 @@ where
     // NOTE(HS) transcript MPI thing ...
     transcript_verifier_sync(fs_transcript, mpi_world_size);
 
-    let gamma = fs_transcript.generate_challenge_field_element();
+    let gamma = fs_transcript.generate_field_element::<E::Fr>();
 
     // dbg!(gamma);
 
@@ -592,7 +592,7 @@ where
     // NOTE(HS) transcript MPI thing ...
     transcript_verifier_sync(fs_transcript, mpi_world_size);
 
-    let delta_x = fs_transcript.generate_challenge_field_element();
+    let delta_x = fs_transcript.generate_field_element::<E::Fr>();
 
     // dbg!(delta_x);
 
@@ -615,7 +615,7 @@ where
     // NOTE(HS) transcript MPI thing ...
     transcript_verifier_sync(fs_transcript, mpi_world_size);
 
-    let delta_y = fs_transcript.generate_challenge_field_element();
+    let delta_y = fs_transcript.generate_field_element::<E::Fr>();
 
     // dbg!(delta_y);
 

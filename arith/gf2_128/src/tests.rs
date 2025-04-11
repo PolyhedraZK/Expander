@@ -12,7 +12,7 @@ use crate::{GF2_128x8, GF2_128};
 
 #[test]
 fn test_simd_field() {
-    random_simd_field_tests::<GF2_128x8>("Simd GF2 Ext128".to_string());
+    random_simd_field_tests::<GF2_128, GF2_128x8>("Simd GF2 Ext128".to_string());
 }
 
 #[test]

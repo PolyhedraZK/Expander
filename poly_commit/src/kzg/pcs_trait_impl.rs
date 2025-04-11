@@ -17,7 +17,7 @@ pub struct HyperKZGPCS<E, T>
 where
     E: Engine,
     E::Fr: ExtensionField,
-    T: Transcript<E::Fr>,
+    T: Transcript,
 {
     _marker_e: PhantomData<E>,
     _marker_t: PhantomData<T>,
@@ -29,7 +29,7 @@ where
     E::Fr: ExtensionField + PrimeField,
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
-    T: Transcript<E::Fr>,
+    T: Transcript,
 {
     const NAME: &'static str = "HyperKZGPCS";
 

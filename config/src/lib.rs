@@ -84,7 +84,7 @@ pub trait GKRConfig: Default + Debug + Clone + Send + Sync + 'static {
     const FIAT_SHAMIR_HASH: FiatShamirHashType;
 
     /// The transcript type
-    type Transcript: Transcript<<Self::FieldConfig as GKRFieldConfig>::ChallengeField>;
+    type Transcript: Transcript;
 
     /// The Polynomial Commitment type
     const PCS_TYPE: PolynomialCommitmentType;

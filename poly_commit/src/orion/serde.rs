@@ -131,7 +131,7 @@ impl<F: Field> ExpSerde for OrionProof<F> {
     }
 }
 
-impl<F: Field, ComPackF: SimdField<Scalar = F>> ExpSerde for OrionScratchPad<F, ComPackF> {
+impl<F: Field + Send, ComPackF: SimdField<F>> ExpSerde for OrionScratchPad<F, ComPackF> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> SerdeResult<()> {
@@ -143,7 +143,8 @@ impl<F: Field, ComPackF: SimdField<Scalar = F>> ExpSerde for OrionScratchPad<F, 
 
         Ok(Self {
             interleaved_alphabet_commitment,
-            _phantom: PhantomData,
+            _phantom_f: PhantomData,
+            _phantom_cpf: PhantomData,
         })
     }
 }

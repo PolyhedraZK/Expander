@@ -8,18 +8,18 @@ use crate::{
 };
 
 #[inline]
-pub fn transcript_io<F: ExtensionField, T: Transcript<F>>(ps: &[F], transcript: &mut T) -> F {
+pub fn transcript_io<F: ExtensionField, T: Transcript>(ps: &[F], transcript: &mut T) -> F {
     assert!(ps.len() == 3 || ps.len() == 4);
     for p in ps {
         transcript.append_field_element(p);
     }
-    transcript.generate_challenge_field_element()
+    transcript.generate_field_element::<F>()
 }
 
 // FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
-pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript>(
     layer: &GenericLayer<C>,
     rz0: &[C::ChallengeField],
     r_simd: &[C::ChallengeField],
@@ -71,7 +71,7 @@ pub fn sumcheck_prove_scatter_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn sumcheck_prove_gather_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn sumcheck_prove_gather_layer<C: GKRFieldConfig, T: Transcript>(
     layer: &GenericLayer<C>,
     rz0: &[C::ChallengeField],
     rz1: &[C::ChallengeField],
@@ -81,8 +81,8 @@ pub fn sumcheck_prove_gather_layer<C: GKRFieldConfig, T: Transcript<C::Challenge
     transcript: &mut T,
     sp: &mut CrossLayerProverScratchPad<C>,
 ) -> (Vec<C::ChallengeField>, C::ChallengeField) {
-    let alpha = transcript.generate_challenge_field_element();
-    let betas = transcript.generate_challenge_field_elements(r_relays.len());
+    let alpha = transcript.generate_field_element::<C::ChallengeField>();
+    let betas = transcript.generate_field_elements::<C::ChallengeField>(r_relays.len());
 
     let mut helper = CrossLayerGatherHelper::new(
         layer,

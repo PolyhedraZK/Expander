@@ -22,7 +22,7 @@ fn hyperkzg_committing_benchmark_helper(
         let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
         let srs =
-            HyperKZGPCS::<Bn256, BytesHashTranscript<Fr, Keccak256hasher>>::gen_srs_for_testing(
+            HyperKZGPCS::<Bn256, BytesHashTranscript<Keccak256hasher>>::gen_srs_for_testing(
                 &num_vars, &mut rng,
             );
 
@@ -32,7 +32,7 @@ fn hyperkzg_committing_benchmark_helper(
                 |b| {
                     b.iter(|| {
                         _ = black_box(
-                            HyperKZGPCS::<Bn256, BytesHashTranscript<Fr, Keccak256hasher>>::commit(
+                            HyperKZGPCS::<Bn256, BytesHashTranscript<Keccak256hasher>>::commit(
                                 &num_vars,
                                 &srs,
                                 &poly,
@@ -58,19 +58,19 @@ fn hyperkzg_opening_benchmark_helper(
     let mut group = c.benchmark_group("HyperKZG PCS opening");
 
     let mut rng = test_rng();
-    let mut transcript = BytesHashTranscript::<Fr, Keccak256hasher>::new();
+    let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
     let mut scratch_pad = ();
 
     for num_vars in lowest_num_vars..=highest_num_vars {
         let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
         let srs =
-            HyperKZGPCS::<Bn256, BytesHashTranscript<Fr, Keccak256hasher>>::gen_srs_for_testing(
+            HyperKZGPCS::<Bn256, BytesHashTranscript<Keccak256hasher>>::gen_srs_for_testing(
                 &num_vars, &mut rng,
             );
         let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
 
-        let _ = HyperKZGPCS::<Bn256, BytesHashTranscript<Fr, Keccak256hasher>>::commit(
+        let _ = HyperKZGPCS::<Bn256, BytesHashTranscript<Keccak256hasher>>::commit(
             &num_vars,
             &srs,
             &poly,

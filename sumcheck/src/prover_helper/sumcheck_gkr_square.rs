@@ -232,12 +232,12 @@ impl<'a, C: GKRFieldConfig, const D: usize> SumcheckGkrSquareHelper<'a, C, D> {
             match g.gate_type {
                 12345 => {
                     hg_evals_5[g.i_ids[0]] +=
-                        C::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
+                        eq_evals_at_rz0[g.o_id] * g.coef;
                     gate_exists_5[g.i_ids[0]] = true;
                 }
                 12346 => {
                     hg_evals_1[g.i_ids[0]] +=
-                        C::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
+                        eq_evals_at_rz0[g.o_id] * g.coef;
                     gate_exists_1[g.i_ids[0]] = true;
                 }
                 _ => panic!("Unsupported gate type"),

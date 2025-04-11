@@ -9,14 +9,19 @@ pub struct M31ExtConfig;
 impl GKRFieldConfig for M31ExtConfig {
     const FIELD_TYPE: FieldType = FieldType::M31;
 
+    // type CircuitUnitField = M31;
     type CircuitField = M31;
 
     type SimdCircuitField = M31x16;
+
+    type BaseField = Self::CircuitField;
+    type SimdBaseField = Self::SimdCircuitField;
 
     type ChallengeField = M31Ext3;
 
     type Field = M31Ext3x16;
 
+    /*
     #[inline(always)]
     fn challenge_mul_circuit_field(
         a: &Self::ChallengeField,
@@ -90,5 +95,5 @@ impl GKRFieldConfig for M31ExtConfig {
                 b_simd_ext.v[2] * a,
             ],
         }
-    }
+    } */
 }

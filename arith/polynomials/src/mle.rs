@@ -1,7 +1,7 @@
 use std::{
     cmp,
     marker::PhantomData,
-    ops::{Index, IndexMut, Mul},
+    ops::{Add, Index, IndexMut, Mul},
 };
 
 use arith::{Field, SimdField};
@@ -230,25 +230,35 @@ impl<C: GKRFieldConfig> MultiLinearPolyExpander<C> {
     }
 
     #[inline]
-    pub fn eval_circuit_vals_at_challenge(
-        evals: &[C::SimdCircuitField],
+    pub fn eval_circuit_vals_at_challenge<EvalField: Field>(
+        evals: &[EvalField],
         x: &[C::ChallengeField],
         scratch: &mut [C::Field],
-    ) -> C::Field {
+    ) -> C::Field 
+    where
+        C::ChallengeField: Mul<EvalField, Output = C::Field>,
+        C::Field: 
+            From<EvalField> +
+            SimdField<C::ChallengeField> + 
+            Add<EvalField, Output = C::Field>,
+    {
         assert_eq!(1 << x.len(), evals.len());
         assert!(scratch.len() >= evals.len());
 
         if x.is_empty() {
-            C::simd_circuit_field_into_field(&evals[0])
+            C::Field::from(evals[0])
+            // C::simd_circuit_field_into_field(&evals[0])
         } else {
             for i in 0..(evals.len() >> 1) {
+                scratch[i] = x[0] * (evals[i * 2 + 1] - evals[i * 2]) + evals[i * 2];
+                /*
                 scratch[i] = C::field_add_simd_circuit_field(
                     &C::simd_circuit_field_mul_challenge_field(
                         &(evals[i * 2 + 1] - evals[i * 2]),
                         &x[0],
                     ),
                     &evals[i * 2],
-                );
+                ); */
             }
 
             let mut cur_eval_size = evals.len() >> 2;
@@ -303,12 +313,19 @@ impl<C: GKRFieldConfig> MultiLinearPolyExpander<C> {
     /// This assumes only a single core holds all the evals, and evaluate it locally
     /// mostly used by the verifier
     #[inline]
-    pub fn single_core_eval_circuit_vals_at_expander_challenge(
-        global_vals: &[C::SimdCircuitField],
+    pub fn single_core_eval_circuit_vals_at_expander_challenge<EvalField: Field>(
+        global_vals: &[EvalField],
         x: &[C::ChallengeField],
         x_simd: &[C::ChallengeField],
         x_mpi: &[C::ChallengeField],
-    ) -> C::ChallengeField {
+    ) -> C::ChallengeField 
+    where
+        C::ChallengeField: Mul<EvalField, Output = C::Field>,
+        C::Field: 
+            From<EvalField> +
+            SimdField<C::ChallengeField> + 
+            Add<EvalField, Output = C::Field>,
+    {
         let local_poly_size = global_vals.len() >> x_mpi.len();
         assert_eq!(local_poly_size, 1 << x.len());
 

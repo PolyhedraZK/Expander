@@ -75,9 +75,10 @@ impl Field for Fr {
 
     #[inline(always)]
     // TODO: better implementation
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
+        assert!(bytes.len() >= 32);
         <Fr as FromUniformBytes<64>>::from_uniform_bytes(
-            &[bytes.as_slice(), [0u8; 32].as_slice()]
+            &[&bytes[..32], [0u8; 32].as_slice()]
                 .concat()
                 .try_into()
                 .unwrap(),
@@ -122,23 +123,24 @@ impl Field for Fr {
     }
 }
 
-impl SimdField for Fr {
-    type Scalar = Self;
+type Scalar = Fr;
+impl SimdField<Scalar> for Fr {
+    // type Scalar = Fr;
 
     #[inline(always)]
-    fn scale(&self, challenge: &Self::Scalar) -> Self {
+    fn scale(&self, challenge: &Scalar) -> Self {
         self * challenge
     }
 
     #[inline(always)]
-    fn pack(base_vec: &[Self::Scalar]) -> Self {
-        assert!(base_vec.len() == 1);
-        base_vec[0]
+    fn unpack(&self) -> Vec<Scalar> {
+        vec![*self]
     }
 
     #[inline(always)]
-    fn unpack(&self) -> Vec<Self::Scalar> {
-        vec![*self]
+    fn pack(base_vec: &[Fr]) -> Self {
+        assert!(base_vec.len() == 1);
+        base_vec[0]
     }
 
     const PACK_SIZE: usize = 1;

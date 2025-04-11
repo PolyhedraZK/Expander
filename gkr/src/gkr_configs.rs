@@ -1,6 +1,6 @@
 use config::{FiatShamirHashType, GKRConfig, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
-use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
+use transcript::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
 use gf2::GF2x128;
 use gkr_field_config::{BN254Config, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
 use halo2curves::bn256::{Bn256, G1Affine};
@@ -21,6 +21,14 @@ declare_gkr_config!(
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Orion
 );
+// TODO
+/*
+declare_gkr_config!(
+    pub M31ExtBinaryConfigSha2Orion,
+    FieldType::M31,
+    FiatShamirHashType::SHA256,
+    PolynomialCommitmentType::Orion
+); */
 declare_gkr_config!(
     pub M31ExtConfigSha2Raw,
     FieldType::M31,

@@ -1,4 +1,5 @@
 use ethnum::U256;
+use gf2::{GF2x128, GF2x16, GF2x8, GF2};
 use rand::RngCore;
 use std::{
     io::{Read, Write},
@@ -7,11 +8,15 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::ExtensionField;
+use arith::{dummy_multiplication, ExtensionField, SimdField};
 use arith::{field_common, Field};
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::m31::{mod_reduce_u32, M31};
+use crate::{
+    m31::{mod_reduce_u32, M31},
+    M31x16,
+    M31Ext3x16,
+};
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct M31Ext3 {
@@ -140,7 +145,8 @@ impl Field for M31Ext3 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
+        assert!(bytes.len() >= 12);
         let v1 = mod_reduce_u32(u32::from_be_bytes(bytes[0..4].try_into().unwrap()));
         let v2 = mod_reduce_u32(u32::from_be_bytes(bytes[4..8].try_into().unwrap()));
         let v3 = mod_reduce_u32(u32::from_be_bytes(bytes[8..12].try_into().unwrap()));
@@ -227,6 +233,8 @@ impl Mul<M31> for M31Ext3 {
     }
 }
 
+// expand_multiplication!(M31Ext3, M31, M31Ext3);
+
 impl Add<M31> for M31Ext3 {
     type Output = M31Ext3;
 
@@ -235,6 +243,8 @@ impl Add<M31> for M31Ext3 {
         self + M31Ext3::from(rhs)
     }
 }
+
+// expand_addition!(M31Ext3, M31, M31Ext3);
 
 impl Neg for M31Ext3 {
     type Output = M31Ext3;
@@ -369,5 +379,65 @@ impl PartialOrd for M31Ext3 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for M31Ext3 is not supported")
+    }
+}
+impl Mul<M31x16> for M31Ext3 {
+    type Output = M31Ext3x16;
+
+    #[inline(always)]
+    fn mul(self, rhs: M31x16) -> Self::Output {
+        let simd_lhs = M31Ext3x16::from(self);
+        M31Ext3x16 {
+            v: [
+                simd_lhs.v[0] * rhs,
+                simd_lhs.v[1] * rhs,
+                simd_lhs.v[2] * rhs,
+            ]       
+        }
+    }
+}
+
+impl Mul<M31Ext3x16> for M31Ext3 {
+    type Output = M31Ext3x16;
+
+    #[inline(always)]
+    fn mul(self, rhs: M31Ext3x16) -> Self::Output {
+        rhs * self
+    }
+}
+
+// expand_multiply!(M31Ext3, M31x16, M31Ext3x16);
+
+dummy_multiplication!(M31Ext3, GF2x8, M31Ext3);
+// dummy_addition!(M31Ext3, GF2x8, M31Ext3);
+dummy_multiplication!(M31Ext3, GF2x128, M31Ext3x16);
+
+//TODO: use instruction
+impl Mul<GF2x16> for M31Ext3 {
+    type Output = M31Ext3x16;
+    
+    #[inline(always)]
+    fn mul(self, rhs: GF2x16) -> Self::Output {
+        let mut res = [M31Ext3::ZERO; 16];
+        for i in 0..16 {
+            if !rhs.index(i).is_zero() {
+                res[i] = self;
+            }
+        }
+        Self::Output::pack(&res)
+    }
+}
+
+impl Mul<GF2> for M31Ext3 {
+    type Output = M31Ext3;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2) -> Self::Output {
+        if rhs.is_zero() {
+            self
+        }
+        else {
+            self + Self::ONE
+        }
     }
 }

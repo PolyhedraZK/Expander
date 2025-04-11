@@ -2,7 +2,7 @@ use ark_std::test_rng;
 use std::io::Cursor;
 
 use arith::{
-    random_field_tests, random_inversion_tests, random_simd_field_tests, Field, SimdField,
+    random_field_tests, random_inversion_tests, random_simd_field_tests, Field, SimdField
 };
 
 use crate::{GF2x128, GF2x64, GF2x8, GF2};
@@ -18,16 +18,17 @@ fn test_field() {
 #[test]
 fn test_simd_field() {
     random_field_tests::<GF2x8>("Vectorized GF2".to_string());
-    random_simd_field_tests::<GF2x8>("Vectorized GF2".to_string());
+    random_simd_field_tests::<GF2, GF2x8>("Vectorized GF2".to_string());
 
     random_field_tests::<GF2x64>("Vectorized GF2 len 64".to_string());
-    random_simd_field_tests::<GF2x64>("Vectorized GF2 len 64".to_string());
+    random_simd_field_tests::<GF2, GF2x64>("Vectorized GF2 len 64".to_string());
 
     random_field_tests::<GF2x128>("Vectorized GF2 len 128".to_string());
-    random_simd_field_tests::<GF2x128>("Vectorized GF2 len 128".to_string());
+    random_simd_field_tests::<GF2, GF2x128>("Vectorized GF2 len 128".to_string());
 }
 
-fn custom_serde_vectorize_gf2<F: SimdField<Scalar = GF2>>() {
+fn custom_serde_vectorize_gf2<F: SimdField<GF2>>() 
+{
     let mut rng = test_rng();
 
     let a = F::random_unsafe(&mut rng);

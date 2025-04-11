@@ -4,8 +4,9 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, ExtensionField, Field, SimdField};
+use arith::{dummy_addition, dummy_from, dummy_multiplication, field_common, ExtensionField, Field, SimdField};
 use ethnum::U256;
+use gf2::{GF2x128, GF2x16, GF2x8, GF2};
 use serdes::{ExpSerde, SerdeResult};
 
 use crate::{m31::M31, M31Ext3, M31x16};
@@ -41,18 +42,31 @@ impl ExpSerde for M31Ext3x16 {
     }
 }
 
-impl SimdField for M31Ext3x16 {
-    type Scalar = M31Ext3;
+impl SimdField<M31Ext3> for M31Ext3x16 {
+    // type Scalar = M31Ext3;
 
     #[inline]
-    fn scale(&self, challenge: &Self::Scalar) -> Self {
+    fn scale(&self, challenge: &M31Ext3) -> Self {
         *self * *challenge
     }
 
     const PACK_SIZE: usize = M31x16::PACK_SIZE;
 
     #[inline(always)]
-    fn pack(base_vec: &[Self::Scalar]) -> Self {
+    fn unpack(&self) -> Vec<M31Ext3> {
+        let v0s = self.v[0].unpack();
+        let v1s = self.v[1].unpack();
+        let v2s = self.v[2].unpack();
+
+        v0s.into_iter()
+            .zip(v1s)
+            .zip(v2s)
+            .map(|((v0, v1), v2)| M31Ext3 { v: [v0, v1, v2] })
+            .collect()
+    }
+
+    #[inline(always)]
+    fn pack(base_vec: &[M31Ext3]) -> Self {
         assert!(base_vec.len() == Self::PACK_SIZE);
         let mut v0s = vec![];
         let mut v1s = vec![];
@@ -70,22 +84,9 @@ impl SimdField for M31Ext3x16 {
     }
 
     #[inline(always)]
-    fn unpack(&self) -> Vec<Self::Scalar> {
-        let v0s = self.v[0].unpack();
-        let v1s = self.v[1].unpack();
-        let v2s = self.v[2].unpack();
-
-        v0s.into_iter()
-            .zip(v1s)
-            .zip(v2s)
-            .map(|((v0, v1), v2)| M31Ext3 { v: [v0, v1, v2] })
-            .collect()
-    }
-
-    #[inline(always)]
-    fn horizontal_sum(&self) -> Self::Scalar {
+    fn horizontal_sum(&self) -> M31Ext3 {
         let limbs = self.to_limbs();
-        Self::Scalar {
+        M31Ext3 {
             v: [
                 limbs[0].horizontal_sum(),
                 limbs[1].horizontal_sum(),
@@ -261,7 +262,8 @@ impl Field for M31Ext3x16 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
 
-    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
+    // TODO: implement
+    fn from_uniform_bytes(_bytes: &[u8]) -> Self {
         unimplemented!("vec m31: cannot convert from 32 bytes")
     }
 }
@@ -392,5 +394,79 @@ impl PartialOrd for M31Ext3x16 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for M31Ext3x16 is not supported")
+    }
+}
+impl Add<M31x16> for M31Ext3x16 {
+    type Output = M31Ext3x16;
+
+    #[inline(always)]
+    fn add(self, rhs: M31x16) -> Self::Output {
+        self.add_by_base_field(&rhs)
+    }
+}
+
+// expand_addition!(M31Ext3x16, M31x16, M31Ext3x16);
+
+dummy_multiplication!(M31Ext3x16, GF2x8, M31Ext3x16);
+dummy_addition!(M31Ext3x16, GF2x8, M31Ext3x16);
+dummy_multiplication!(M31Ext3x16, GF2x128, M31Ext3x16);
+dummy_addition!(M31Ext3x16, GF2x128, M31Ext3x16);
+dummy_from!(GF2x128, M31Ext3x16);
+
+impl Add<GF2x16> for M31Ext3x16 {
+    type Output= M31Ext3x16;
+
+    #[inline(always)]
+    fn add(self, rhs: GF2x16) -> Self::Output {
+        M31Ext3x16 {
+            v: [self.v[0] + M31x16::from(rhs), self.v[1], self.v[2]],
+        }
+    }
+}
+
+// TODO: use instruction
+impl Mul<GF2x16> for M31Ext3x16 {
+    type Output= M31Ext3x16;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2x16) -> Self::Output {
+        self * M31x16::from(rhs)
+    }
+}
+
+impl Add<GF2> for M31Ext3x16 {
+    type Output = M31Ext3x16;
+
+    #[inline(always)]
+    fn add(self, rhs: GF2) -> Self::Output {
+        if rhs.is_zero() {
+            self
+        }
+        else {
+            M31Ext3x16 {
+                v: [self.v[0] + M31x16::ONE, self.v[1], self.v[2]],
+            }
+        }
+    }
+}
+
+impl Mul<GF2> for M31Ext3x16 {
+    type Output = M31Ext3x16;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2) -> Self::Output {
+        if rhs.is_zero() {
+            Self::Output::ZERO
+        }
+        else {
+            self
+        }
+    }
+}
+
+impl From<GF2x16> for M31Ext3x16 {
+    #[inline(always)]
+    fn from(x: GF2x16) -> M31Ext3x16 {
+        M31Ext3x16::from(M31x16::from(x))
     }
 }

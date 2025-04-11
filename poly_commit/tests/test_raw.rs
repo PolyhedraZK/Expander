@@ -25,12 +25,12 @@ fn test_raw() {
         })
         .collect::<Vec<Vec<Fr>>>();
 
-    common::test_pcs::<Fr, BytesHashTranscript<_, Keccak256hasher>, RawMultiLinearPCS>(
+    common::test_pcs::<Fr, BytesHashTranscript<Keccak256hasher>, RawMultiLinearPCS>(
         &params, &poly, &xs,
     );
 }
 
-fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript>(
     mpi_config: &MPIConfig,
     transcript: &mut T,
 ) {
@@ -38,7 +38,7 @@ fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     let params = 8;
     let mut rng = thread_rng();
     let hypercube_basis = (0..(1 << params))
-        .map(|_| C::SimdCircuitField::random_unsafe(&mut rng))
+        .map(|_| C::SimdBaseField::random_unsafe(&mut rng))
         .collect();
     let poly = RefMultiLinearPoly::from_ref(&hypercube_basis);
     let xs = (0..100)
@@ -63,14 +63,14 @@ fn test_raw_gkr_helper<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 fn test_raw_gkr() {
     let mpi_config = MPIConfig::new();
 
-    type TM31 = BytesHashTranscript<<M31ExtConfig as GKRFieldConfig>::ChallengeField, SHA256hasher>;
+    type TM31 = BytesHashTranscript<SHA256hasher>;
     test_raw_gkr_helper::<M31ExtConfig, TM31>(&mpi_config, &mut TM31::new());
 
-    type TGF2 = BytesHashTranscript<<GF2ExtConfig as GKRFieldConfig>::ChallengeField, SHA256hasher>;
+    type TGF2 = BytesHashTranscript<SHA256hasher>;
     test_raw_gkr_helper::<GF2ExtConfig, TGF2>(&mpi_config, &mut TGF2::new());
 
     type TBN254 =
-        BytesHashTranscript<<BN254Config as GKRFieldConfig>::ChallengeField, SHA256hasher>;
+        BytesHashTranscript<SHA256hasher>;
     test_raw_gkr_helper::<BN254Config, TBN254>(&mpi_config, &mut TBN254::new());
 
     MPIConfig::finalize();

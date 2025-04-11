@@ -1,11 +1,13 @@
 use sha2::{digest::Output, Digest, Sha256};
 
-use super::FiatShamirBytesHash;
+use super::FiatShamirHash;
 
 #[derive(Debug, Clone, Default)]
 pub struct SHA256hasher;
 
-impl FiatShamirBytesHash for SHA256hasher {
+impl FiatShamirHash for SHA256hasher {
+    const NAME: &'static str = "SHA256 Hasher";
+
     const DIGEST_SIZE: usize = 32;
 
     #[inline]
@@ -14,7 +16,7 @@ impl FiatShamirBytesHash for SHA256hasher {
     }
 
     #[inline]
-    fn hash(output: &mut [u8], input: &[u8]) {
+    fn hash(&self, output: &mut [u8], input: &[u8]) {
         let mut hasher = Sha256::new();
 
         hasher.update(input);
@@ -22,7 +24,7 @@ impl FiatShamirBytesHash for SHA256hasher {
     }
 
     #[inline]
-    fn hash_inplace(buffer: &mut [u8]) {
+    fn hash_inplace(&self, buffer: &mut [u8]) {
         let mut hasher = Sha256::new();
         hasher.update(&*buffer);
         hasher.finalize_into_reset(Output::<Sha256>::from_mut_slice(buffer));

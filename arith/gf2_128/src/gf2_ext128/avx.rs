@@ -136,7 +136,8 @@ impl Field for AVXGF2_128 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
+        assert!(bytes.len() >= 16);
         unsafe {
             AVXGF2_128 {
                 v: transmute::<[u8; 16], __m128i>(bytes[..16].try_into().unwrap()),
@@ -240,15 +241,6 @@ impl ExtensionField for AVXGF2_128 {
             });
 
         res
-    }
-}
-
-impl Mul<GF2> for AVXGF2_128 {
-    type Output = AVXGF2_128;
-
-    #[inline(always)]
-    fn mul(self, rhs: GF2) -> Self::Output {
-        self.mul_by_base_field(&rhs)
     }
 }
 

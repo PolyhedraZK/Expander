@@ -16,7 +16,7 @@ impl StructuredReferenceString for () {
 #[allow(clippy::type_complexity)]
 pub fn expander_pcs_init_testing_only<
     FieldConfig: GKRFieldConfig,
-    T: Transcript<FieldConfig::ChallengeField>,
+    T: Transcript,
     PCS: PCSForExpanderGKR<FieldConfig, T>,
 >(
     n_input_vars: usize,

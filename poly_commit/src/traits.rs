@@ -17,7 +17,7 @@ pub trait StructuredReferenceString {
 }
 
 /// Standard Polynomial commitment scheme (PCS) trait.
-pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript<F>> {
+pub trait PolynomialCommitmentScheme<F: ExtensionField, T: Transcript> {
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default;
@@ -98,7 +98,7 @@ impl<C: GKRFieldConfig> ExpanderGKRChallenge<C> {
     }
 }
 
-pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
+pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript> {
     const NAME: &'static str;
 
     type Params: Clone + Debug + Default + Send;
@@ -135,7 +135,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
         params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<C::SimdBaseField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment>;
 
@@ -164,7 +164,7 @@ pub trait PCSForExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>
         params: &Self::Params,
         mpi_config: &MPIConfig,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<C::SimdBaseField>,
         x: &ExpanderGKRChallenge<C>,
         transcript: &mut T,
         scratch_pad: &Self::ScratchPad,
