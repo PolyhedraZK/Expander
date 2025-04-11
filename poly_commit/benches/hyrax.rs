@@ -23,7 +23,7 @@ fn hyrax_committing_benchmark_helper(
     for num_vars in lowest_num_vars..=highest_num_vars {
         let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
-        let srs = HyraxPCS::<G1Affine>::gen_srs_for_testing(&num_vars, &mut rng);
+        let (srs, _) = HyraxPCS::<G1Affine>::gen_srs_for_testing(&num_vars, &mut rng);
 
         group
             .bench_function(
@@ -61,7 +61,7 @@ fn hyrax_opening_benchmark_helper(
     for num_vars in lowest_num_vars..=highest_num_vars {
         let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
-        let srs = HyraxPCS::<G1Affine>::gen_srs_for_testing(&num_vars, &mut rng);
+        let (srs, _) = HyraxPCS::<G1Affine>::gen_srs_for_testing(&num_vars, &mut rng);
         let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
 
         let _ = HyraxPCS::<G1Affine>::commit(&num_vars, &srs, &poly, &mut scratch_pad);

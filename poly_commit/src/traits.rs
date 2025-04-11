@@ -17,14 +17,13 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
     type Commitment: Clone + Debug + Default + ExpSerde;
     type Opening: Clone + Debug + Default + ExpSerde;
 
-    /// Minimum number of variables supported in this PCS implementation,
-    /// that such constraint exists for PCSs like Orion,
-    /// but for Raw and Hyrax, polys of any size works.
-    const MINIMUM_NUM_VARS: usize = 0;
-
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Use self as the first argument to save some potential intermediate state.
-    fn gen_srs_for_testing(params: &Self::Params, rng: impl RngCore) -> Self::SRS;
+    ///
+    /// Additionally, this method returns a calibrated number of variables for
+    /// the polynomial, that the PCS might need to accept a length extended
+    /// version of polynomial as input.
+    fn gen_srs_for_testing(params: &Self::Params, rng: impl RngCore) -> (Self::SRS, usize);
 
     /// Initialize the scratch pad.
     fn init_scratch_pad(params: &Self::Params) -> Self::ScratchPad;
@@ -60,20 +59,13 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
 }
 
 pub(crate) trait TensorCodeIOPPCS {
-    const LEAVES_IN_RANGE_OPENING: usize = 2;
+    fn message_len(&self) -> usize;
 
     fn codeword_len(&self) -> usize;
 
     fn minimum_hamming_weight(&self) -> f64;
 
-    fn evals_shape<F: Field>(num_vars: usize) -> (usize, usize) {
-        let elems_for_smallest_tree = tree::leaf_adic::<F>() * Self::LEAVES_IN_RANGE_OPENING;
-
-        let row_num: usize = elems_for_smallest_tree;
-        let msg_size: usize = (1 << num_vars) / row_num;
-
-        (row_num, msg_size)
-    }
+    fn num_leaves_per_mt_query(&self) -> usize;
 
     fn query_complexity(&self, soundness_bits: usize) -> usize {
         // NOTE: use Ligero (AHIV22) appendix C argument.

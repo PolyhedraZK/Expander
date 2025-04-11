@@ -40,13 +40,7 @@ fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF>(
         common::test_pcs::<
             EvalF,
             BytesHashTranscript<EvalF, Keccak256hasher>,
-            OrionBaseFieldPCS<
-                F,
-                EvalF,
-                ComPackF,
-                OpenPackF,
-                BytesHashTranscript<EvalF, Keccak256hasher>,
-            >,
+            OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF>,
         >(&num_vars, &poly, &xs);
     })
 }
@@ -163,7 +157,7 @@ fn test_orion_for_expander_gkr() {
         GF2ExtConfig,
         GF2x128,
         BytesHashTranscript<_, Keccak256hasher>,
-    >(&mpi_config, 16);
+    >(&mpi_config, 25);
 
     test_orion_for_expander_gkr_generics::<
         M31ExtConfig,

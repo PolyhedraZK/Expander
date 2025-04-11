@@ -46,8 +46,8 @@ where
         params: &Self::Params,
         _mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
-    ) -> Self::SRS {
-        hyrax_setup(*params, rng)
+    ) -> (Self::SRS, usize) {
+        (hyrax_setup(*params, rng), *params)
     }
 
     fn commit(
