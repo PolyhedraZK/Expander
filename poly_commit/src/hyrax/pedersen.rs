@@ -23,7 +23,7 @@ impl<C: CurveAffine + ExpSerde> ExpSerde for PedersenParams<C> {
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> serdes::SerdeResult<Self> {
         let bases: Vec<C> = <Vec<C> as ExpSerde>::deserialize_from(&mut reader)?;
         let pre_bases = msm::multiexp_precompute(&bases, 12);
-        Ok(Self { bases, pre_bases})
+        Ok(Self { bases, pre_bases })
     }
 }
 
