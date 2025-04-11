@@ -1,8 +1,13 @@
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::{
+    mem::transmute,
+    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+};
 
 use arith::{Field, SimdField};
 use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
+
+use crate::GF2x8;
 
 use super::GF2;
 
@@ -284,22 +289,23 @@ impl SimdField for GF2x64 {
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == Self::PACK_SIZE);
-        let mut ret = 0u64;
-        for (i, scalar) in base_vec.iter().enumerate() {
-            ret |= (scalar.v as u64) << (Self::PACK_SIZE - 1 - i);
-        }
-        Self { v: ret }
+        let mut packed_to_gf2x8 = [GF2x8::ZERO; Self::PACK_SIZE / GF2x8::PACK_SIZE];
+        packed_to_gf2x8
+            .iter_mut()
+            .zip(base_vec.chunks(GF2x8::PACK_SIZE))
+            .for_each(|(gf2x8, pack)| *gf2x8 = GF2x8::pack(pack));
+        unsafe { transmute(packed_to_gf2x8) }
     }
 
     #[inline(always)]
     fn unpack(&self) -> Vec<Self::Scalar> {
-        let mut ret = vec![];
-        for i in 0..Self::PACK_SIZE {
-            ret.push(Self::Scalar {
-                v: ((self.v >> (Self::PACK_SIZE - 1 - i)) & 1u64) as u8,
-            });
-        }
-        ret
+        let packed_to_gf2x8: [GF2x8; Self::PACK_SIZE / GF2x8::PACK_SIZE] =
+            unsafe { transmute(*self) };
+
+        packed_to_gf2x8
+            .iter()
+            .flat_map(|packed| packed.unpack())
+            .collect()
     }
 
     type Scalar = crate::GF2;
