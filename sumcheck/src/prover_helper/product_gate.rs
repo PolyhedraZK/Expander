@@ -5,7 +5,6 @@ use std::ops::{Add, Mul};
 
 use arith::{ExtensionField, Field, SimdField};
 use env_logger::init;
-use gkr_field_config::{FieldType, GKRFieldConfig};
 
 pub(crate) struct SumcheckProductGateHelper {
     var_num: usize,
@@ -27,20 +26,23 @@ impl SumcheckProductGateHelper {
     // Output:
     // - the univariate polynomial that prover sends to the verifier
     #[inline]
-    pub(crate) fn poly_eval_at<C: GKRFieldConfig>(
+    pub(crate) fn poly_eval_at<VField: Field, EvalField: Field>(
         &self,
         var_idx: usize,
         degree: usize,
-        bk_f: &[C::Field],
-        bk_hg: &[C::Field],
-        init_v: &[C::SimdCircuitField],
+        bk_f: &[EvalField],
+        bk_hg: &[EvalField],
+        init_v: &[VField],
         gate_exists: &[bool],
-    ) -> [C::Field; 3] {
+    ) -> [EvalField; 3] 
+    where
+        EvalField: Mul<VField, Output = EvalField>,
+    {
         assert_eq!(degree, 2);
 
-        let mut p0 = C::Field::zero();
-        let mut p1 = C::Field::zero();
-        let mut p2 = C::Field::zero();
+        let mut p0 = EvalField::zero();
+        let mut p1 = EvalField::zero();
+        let mut p2 = EvalField::zero();
         log::trace!("bk_f: {:?}", &bk_f[..4]);
         log::trace!("bk_hg: {:?}", &bk_hg[..4]);
         log::trace!("init_v: {:?}", &init_v[..4]);
@@ -48,6 +50,7 @@ impl SumcheckProductGateHelper {
         let eval_size = 1 << (self.var_num - var_idx - 1);
         log::trace!("Eval size: {}", eval_size);
 
+        // TODO: merge situation
         if var_idx == 0 {
             // this is the first layer, we are able to accelerate by
             // avoiding the extension field operations
@@ -107,55 +110,6 @@ impl SumcheckProductGateHelper {
         [p0, p1, p2]
     }
 
-    /*
-    #[inline]
-    pub(crate) fn poly_eval_at_circuit_field<C: GKRFieldConfig>(
-        eval_size: usize,
-        bk_f: &[C::SimdCircuitField],
-        bk_hg: &[C::Field],
-        gate_exists: &[bool],
-    ) -> [C::Field; 3] {
-        let mut p0 = C::Field::zero();
-        let mut p1 = C::Field::zero();
-        let mut p2 = C::Field::zero();
-
-        log::trace!("bk_f: {:?}", &bk_f[..4]);
-        log::trace!("bk_hg: {:?}", &bk_hg[..4]);
-
-        for i in 0..eval_size {
-            if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                continue;
-            }
-
-            let f_v_0 = bk_f[i * 2];
-            let f_v_1 = bk_f[i * 2 + 1];
-            let hg_v_0 = bk_hg[i * 2];
-            let hg_v_1 = bk_hg[i * 2 + 1];
-
-            p0 += C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
-            log::trace!(
-                "p0.v += {:?} * {:?} = {:?}",
-                f_v_0,
-                hg_v_0,
-                C::field_mul_simd_circuit_field(&hg_v_0, &f_v_0) + p1
-            );
-            p1 += C::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
-            p2 += C::field_mul_simd_circuit_field(&(hg_v_0 + hg_v_1), &(f_v_0 + f_v_1));
-        }
-
-        if C::FIELD_TYPE == FieldType::GF2 {
-            // over GF2_128, the three points are at 0, 1 and X
-            let p2x = p2.mul_by_x();
-            let p2x2 = p2x.mul_by_x();
-            let linear_term = p1 + p0 + p2;
-            p2 = p2x2 + linear_term.mul_by_x() + p0;
-        } else {
-            // when Field size > 2, the three points are 0, 1, -2
-            p2 = p1.mul_by_6() + p0.mul_by_3() - p2.double();
-        }
-        [p0, p1, p2]
-    } */
-
     #[inline]
     pub(crate) fn poly_eval_at_<C: GKRFieldConfig, FF: Field>(
         eval_size: usize,
@@ -205,26 +159,6 @@ impl SumcheckProductGateHelper {
         }
         [p0, p1, p2]
     }
-
-    // process the challenge and update the bookkeeping tables for f and h_g accordingly
-    /*
-    #[inline]
-    pub(crate) fn receive_challenge_f_init_circuit_field<C: GKRFieldConfig>(
-        eval_size: usize,
-        r: C::ChallengeField,
-        bk_f: &mut [C::Field],
-        init_v: &[C::SimdCircuitField],
-    ) {
-        for i in 0..eval_size {
-            bk_f[i] = C::field_add_simd_circuit_field(
-                &C::simd_circuit_field_mul_challenge_field(
-                    &(init_v[2 * i + 1] - init_v[2 * i]),
-                    &r,
-                ),
-                &init_v[2 * i],
-            );
-        }
-    } */
 
     #[inline]
     pub(crate) fn receive_challenge_f<C: GKRFieldConfig>(
