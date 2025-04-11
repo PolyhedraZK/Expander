@@ -126,13 +126,14 @@ where
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
 
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
-    let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
-    transpose(
-        &packed_codewords,
-        &mut packed_interleaved_codewords,
-        packed_rows,
-    );
-    drop(packed_codewords);
+    let mut packed_interleaved_codewords = if packed_rows == 1 {
+        packed_codewords
+    } else {
+        let mut transposed = vec![PackF::ZERO; packed_codewords.len()];
+        transpose(&packed_codewords, &mut transposed, packed_rows);
+        drop(packed_codewords);
+        transposed
+    };
 
     // NOTE: commit the interleaved codeword
     // we just directly commit to the packed field elements to leaves
