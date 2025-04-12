@@ -464,29 +464,6 @@ where
     ExtF::from_limbs(&ext_limbs)
 }
 
-// NOTE(HS) this is only a helper function for SIMD inner product between
-// extension fields with SIMD base fields - motivation here is decompose extension fields
-// into base field limbs, decompose them, then reSIMD pack them.
-// This method is applied column-wise, i.e., the data size is the same as linear combination
-// size, which should be in total 1024 bits at this point (2025/03/11).
-#[inline(always)]
-fn transpose_and_pack<F, SimdF>(
-    base_limbs: &[F],
-    scratch: &mut [F],
-    degree: usize,
-    num_elems: usize,
-) -> Vec<SimdF>
-where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-{
-    // NOTE: pre transpose evaluations
-    transpose(base_limbs, scratch, degree, num_elems);
-
-    // NOTE: SIMD pack each row of transposed matrix
-    scratch.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect()
-}
-
 #[inline(always)]
 pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
     com_pack_size: usize,
@@ -516,11 +493,11 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
     )
     .for_each(|(eq_chunk, packed_evals_chunk)| {
         let eq_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
-        let eq_limbs_simd =
-            transpose_and_pack(&eq_limbs, &mut buffer, EvalF::DEGREE, com_pack_size);
+        transpose(&eq_limbs, &mut buffer, EvalF::DEGREE, com_pack_size);
+        let simd_limbs: Vec<_> = buffer.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect();
 
         izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *eval_row).for_each(
-            |(p_col, eval)| *eval += simd_ext_base_inner_prod::<_, EvalF, _>(&eq_limbs_simd, p_col),
+            |(p_col, eval)| *eval += simd_ext_base_inner_prod::<_, EvalF, _>(&simd_limbs, p_col),
         );
     });
 
@@ -532,12 +509,12 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
         )
         .for_each(|(rand_chunk, packed_evals_chunk)| {
             let rand_limbs: Vec<_> = rand_chunk.iter().flat_map(|e| e.to_limbs()).collect();
-            let rand_limbs_simd =
-                transpose_and_pack(&rand_limbs, &mut buffer, EvalF::DEGREE, com_pack_size);
+            transpose(&rand_limbs, &mut buffer, EvalF::DEGREE, com_pack_size);
+            let simd_limbs: Vec<_> = buffer.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect();
 
             izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *prox_row).for_each(
                 |(p_col, prox)| {
-                    *prox += simd_ext_base_inner_prod::<_, EvalF, _>(&rand_limbs_simd, p_col)
+                    *prox += simd_ext_base_inner_prod::<_, EvalF, _>(&simd_limbs, p_col)
                 },
             );
         });
@@ -561,12 +538,12 @@ where
 
     let mut scratch = vec![F::ZERO; fixed_rl.len() * ExtF::DEGREE];
     let rl_limbs: Vec<_> = fixed_rl.iter().flat_map(|e| e.to_limbs()).collect();
-    let rl_simd_limbs: Vec<SimdF> =
-        transpose_and_pack(&rl_limbs, &mut scratch, ExtF::DEGREE, fixed_rl.len());
+    transpose(&rl_limbs, &mut scratch, ExtF::DEGREE, fixed_rl.len());
+    let simd_limbs: Vec<_> = scratch.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect();
 
     izip!(query_indices, packed_interleaved_alphabets).all(|(qi, interleaved_alphabet)| {
         let index = qi % codeword.len();
-        let alphabet: ExtF = simd_ext_base_inner_prod(&rl_simd_limbs, interleaved_alphabet);
+        let alphabet: ExtF = simd_ext_base_inner_prod(&simd_limbs, interleaved_alphabet);
         alphabet == codeword[index]
     })
 }
