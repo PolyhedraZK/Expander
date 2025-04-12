@@ -4,7 +4,7 @@ use arith::{ExtensionField, SimdField};
 use gkr_engine::{MPIEngine, Transcript};
 use itertools::izip;
 use serdes::ExpSerde;
-use transpose::{transpose, transpose_inplace};
+use transpose::transpose_inplace;
 use tree::{Node, RangePath, Tree};
 
 use crate::{
@@ -116,40 +116,38 @@ where
     let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
 
     // NOTE: packed codeword buffer and encode over packed field
-    let mut packed_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
+    let mut codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
     izip!(
         packed_evals.chunks(pk.message_len()),
-        packed_codewords.chunks_mut(pk.codeword_len())
+        codewords.chunks_mut(pk.codeword_len())
     )
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
 
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
-    let mut packed_interleaved_codewords = if packed_rows == 1 {
-        packed_codewords
-    } else {
-        let mut res = vec![PackF::ZERO; packed_codewords.len()];
-        transpose(&packed_codewords, &mut res, pk.codeword_len(), packed_rows);
-        drop(packed_codewords);
-        res
-    };
+    if packed_rows > 1 {
+        let mut scratch = vec![PackF::ZERO; std::cmp::max(packed_rows, pk.codeword_len())];
+        transpose_inplace(&mut codewords, &mut scratch, pk.codeword_len(), packed_rows);
+        drop(scratch)
+    }
 
     // NOTE: commit the interleaved codeword
     // we just directly commit to the packed field elements to leaves
     // Also note, when codeword is not power of 2 length, pad to nearest po2
     // to commit by merkle tree
-    if !packed_interleaved_codewords.len().is_power_of_two() {
-        let aligned_po2_len = packed_interleaved_codewords.len().next_power_of_two();
-        packed_interleaved_codewords.resize(aligned_po2_len, PackF::ZERO);
+    if !codewords.len().is_power_of_two() {
+        let aligned_po2_len = codewords.len().next_power_of_two();
+        codewords.resize(aligned_po2_len, PackF::ZERO);
     }
 
     // NOTE: ALL-TO-ALL transpose go get other world's slice of codeword
-    mpi_engine.all_to_all_transpose(&mut packed_interleaved_codewords);
+    mpi_engine.all_to_all_transpose(&mut codewords);
 
     let codeword_po2_len = pk.codeword_len().next_power_of_two();
     let codeword_this_world_len = packed_rows * codeword_po2_len;
-    assert_eq!(packed_interleaved_codewords.len(), codeword_this_world_len);
+    assert_eq!(codewords.len(), codeword_this_world_len);
 
     let codeword_po2_chunk_len = codeword_po2_len / mpi_engine.world_size();
+    let global_packed_rows = packed_rows * mpi_engine.world_size();
     assert_eq!(codeword_po2_len % mpi_engine.world_size(), 0);
 
     if packed_rows > 1 {
@@ -157,24 +155,24 @@ where
 
         // NOTE: now transpose back to row order of each world's codeword slice
         let mut scratch = vec![PackF::ZERO; std::cmp::max(codeword_po2_chunk_len, packed_rows)];
-        packed_interleaved_codewords
+        codewords
             .chunks_mut(codeword_chunk_per_world_len)
             .for_each(|c| transpose_inplace(c, &mut scratch, packed_rows, codeword_po2_chunk_len));
         drop(scratch);
     }
 
     // NOTE: transpose back into column order of the codeword slice
-    let mut packed_interleaved_codeword_chunk = vec![PackF::ZERO; codeword_this_world_len];
-    transpose(
-        &packed_interleaved_codewords,
-        &mut packed_interleaved_codeword_chunk,
+    let mut scratch = vec![PackF::ZERO; std::cmp::max(codeword_po2_chunk_len, global_packed_rows)];
+    transpose_inplace(
+        &mut codewords,
+        &mut scratch,
         codeword_po2_chunk_len,
-        packed_rows * mpi_engine.world_size(),
+        global_packed_rows,
     );
-    drop(packed_interleaved_codewords);
+    drop(scratch);
 
     scratch_pad.interleaved_alphabet_commitment =
-        Tree::compact_new_with_packed_field_elems(packed_interleaved_codeword_chunk);
+        Tree::compact_new_with_packed_field_elems(codewords);
 
     Ok(scratch_pad.interleaved_alphabet_commitment.root())
 }

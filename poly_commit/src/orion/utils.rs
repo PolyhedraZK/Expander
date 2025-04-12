@@ -3,7 +3,7 @@ use gkr_engine::Transcript;
 use itertools::izip;
 use serdes::SerdeError;
 use thiserror::Error;
-use transpose::transpose;
+use transpose::{transpose, transpose_inplace};
 use tree::{Node, LEAF_BYTES};
 
 use crate::{
@@ -218,33 +218,28 @@ where
     let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
 
     // NOTE: packed codeword buffer and encode over packed field
-    let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
+    let mut codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
     izip!(
         packed_evals.chunks(pk.message_len()),
-        packed_interleaved_codewords.chunks_mut(pk.codeword_len())
+        codewords.chunks_mut(pk.codeword_len())
     )
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
 
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
-    let mut interleaved_alphabets = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
-    transpose(
-        &packed_interleaved_codewords,
-        &mut interleaved_alphabets,
-        pk.codeword_len(),
-        packed_rows,
-    );
-    drop(packed_interleaved_codewords);
+    let mut scratch = vec![PackF::ZERO; std::cmp::max(packed_rows, pk.codeword_len())];
+    transpose_inplace(&mut codewords, &mut scratch, pk.codeword_len(), packed_rows);
+    drop(scratch);
 
     // NOTE: commit the interleaved codeword
     // we just directly commit to the packed field elements to leaves
     // Also note, when codeword is not power of 2 length, pad to nearest po2
     // to commit by merkle tree
-    if !interleaved_alphabets.len().is_power_of_two() {
-        let aligned_po2_len = interleaved_alphabets.len().next_power_of_two();
-        interleaved_alphabets.resize(aligned_po2_len, PackF::ZERO);
+    if !codewords.len().is_power_of_two() {
+        let aligned_po2_len = codewords.len().next_power_of_two();
+        codewords.resize(aligned_po2_len, PackF::ZERO);
     }
     scratch_pad.interleaved_alphabet_commitment =
-        tree::Tree::compact_new_with_packed_field_elems(interleaved_alphabets);
+        tree::Tree::compact_new_with_packed_field_elems(codewords);
 
     scratch_pad.merkle_cap = vec![scratch_pad.interleaved_alphabet_commitment.root()];
 
