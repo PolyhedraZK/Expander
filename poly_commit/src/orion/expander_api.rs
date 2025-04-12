@@ -97,7 +97,7 @@ where
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         eval_point: &ExpanderSingleVarChallenge<C>,
-        transcript: &mut impl Transcript<C::ChallengeField>,
+        transcript: &mut impl Transcript,
         scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
@@ -124,7 +124,7 @@ where
             .proximity_rows
             .iter()
             .map(|row| {
-                let weights = transcript.generate_challenge_field_elements(mpi_engine.world_size());
+                let weights = transcript.generate_field_elements::<C::ChallengeField>(mpi_engine.world_size());
                 mpi_engine.coef_combine_vec(row, &weights)
             })
             .collect();
@@ -168,8 +168,8 @@ where
         commitment: &Self::Commitment,
         eval_point: &ExpanderSingleVarChallenge<C>,
         eval: C::ChallengeField,
-        transcript: &mut impl Transcript<C::ChallengeField>, /* add transcript here to allow
-                                                              * interactive arguments */
+        transcript: &mut impl Transcript, /* add transcript here to allow
+                                           * interactive arguments */
         opening: &Self::Opening,
     ) -> bool {
         if eval_point.r_mpi.is_empty() {

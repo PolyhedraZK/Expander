@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use arith::Field;
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::{FiatShamirFieldHasher, PoseidonStateTrait};
+use crate::{FiatShamirHasher, PoseidonStateTrait};
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct PoseidonPermutation<State: PoseidonStateTrait> {
@@ -101,15 +101,52 @@ impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
     }
 }
 
-impl<State: PoseidonStateTrait> FiatShamirFieldHasher<State::ElemT> for PoseidonPermutation<State> {
+impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
+    fn hash_u8_to_state(&self, input: &[u8]) -> State {
+        let u8_chunk_size = State::RATE * State::ElemT::SIZE;
+        let mut res = State::default();
+        let chunks = input.chunks_exact(u8_chunk_size);
+        let mut remainder = chunks.remainder().to_vec();
+
+        for chunk in chunks {
+            let mut state_elts = vec![State::ElemT::ZERO; State::STATE_WIDTH];
+            for (elem, elts) in chunk.chunks(State::ElemT::SIZE).zip(state_elts[State::CAPACITY..].iter_mut()) {
+                *elts = State::ElemT::from_uniform_bytes(elem);
+            }
+            let state = State::from_elems(&state_elts);
+
+            res += state;
+            self.permute(&mut res);
+        }
+
+        if remainder.len() > 0 {
+            remainder.resize(u8_chunk_size, 0);
+            
+            let mut state_elts = vec![State::ElemT::ZERO; State::STATE_WIDTH];
+            for (elem, elts) in remainder.chunks(State::ElemT::SIZE).zip(state_elts[State::CAPACITY..].iter_mut()) {
+                *elts = State::ElemT::from_uniform_bytes(elem);
+            }
+            let state = State::from_elems(&state_elts);
+
+            res += state;
+            self.permute(&mut res);
+        }
+
+        res
+    }
+}
+
+impl<State: PoseidonStateTrait> FiatShamirHasher for PoseidonPermutation<State> {
     const NAME: &'static str = "Poseidon Field Hasher";
 
-    const STATE_CAPACITY: usize = State::CAPACITY;
+    const DIGEST_SIZE: usize = State::CAPACITY;
 
     fn new() -> Self {
         Self::new()
     }
 
+    // TODO: delete it
+    /*
     fn hash_to_state(&self, input: &[State::ElemT]) -> Vec<State::ElemT> {
         let mut res = State::default();
 
@@ -126,6 +163,18 @@ impl<State: PoseidonStateTrait> FiatShamirFieldHasher<State::ElemT> for Poseidon
         });
 
         res.to_elems()
+    } */
+
+    fn hash(&self, output: &mut [u8], input: &[u8]) {
+        assert!(output.len() == State::CAPACITY * State::ElemT::SIZE);
+        let res = self.hash_u8_to_state(input);
+        res.to_u8(output);
+    }
+
+    fn hash_inplace(&self, buffer: &mut [u8]) {
+        assert!(buffer.len() == State::CAPACITY * State::ElemT::SIZE);
+        let res = self.hash_u8_to_state(buffer);
+        res.to_u8(buffer);
     }
 }
 

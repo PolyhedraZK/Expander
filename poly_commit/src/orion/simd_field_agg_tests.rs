@@ -1,30 +1,25 @@
-use std::marker::PhantomData;
 
-use arith::{ExtensionField, Field, SimdField};
+use arith::{Field, SimdField};
 use ark_std::test_rng;
 use gf2::GF2x128;
-use gf2_128::GF2_128;
 use gkr_engine::{ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, Transcript};
 use gkr_hashers::Keccak256hasher;
 use itertools::izip;
-use mersenne31::{M31Ext3, M31x16};
+use mersenne31::M31x16;
 use polynomials::{EqPolynomial, MultiLinearPoly};
 use transcript::BytesHashTranscript;
 
 use crate::orion::{simd_field_agg_impl::*, utils::*, *};
 
 #[derive(Clone)]
-struct DistributedCommitter<F, EvalF, ComPackF, T>
+struct DistributedCommitter<F, ComPackF, T>
 where
     F: Field,
-    EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    T: Transcript,
 {
     pub scratch_pad: OrionScratchPad<F, ComPackF>,
     pub transcript: T,
-
-    _phantom: PhantomData<EvalF>,
 }
 
 fn orion_proof_aggregate<C, T>(
@@ -34,7 +29,7 @@ fn orion_proof_aggregate<C, T>(
 ) -> OrionProof<C::ChallengeField>
 where
     C: FieldEngine,
-    T: Transcript<C::ChallengeField>,
+    T: Transcript,
 {
     let paths = openings
         .iter()
@@ -47,7 +42,7 @@ where
 
     let aggregated_proximity_rows = (0..proximity_reps)
         .map(|i| {
-            let weights = transcript.generate_challenge_field_elements(num_parties);
+            let weights = transcript.generate_field_elements::<C::ChallengeField>(num_parties);
             let mut rows: Vec<_> = openings
                 .iter()
                 .flat_map(|o| o.proximity_rows[i].clone())
@@ -79,7 +74,7 @@ fn test_orion_simd_aggregate_verify_helper<C, ComPackF, T>(num_parties: usize, n
 where
     C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
-    T: Transcript<C::ChallengeField>,
+    T: Transcript,
 {
     assert!(num_parties.is_power_of_two());
 
@@ -108,7 +103,6 @@ where
         DistributedCommitter {
             scratch_pad: OrionScratchPad::<C::CircuitField, ComPackF>::default(),
             transcript: T::new(),
-            _phantom: PhantomData,
         };
         num_parties
     ];
@@ -177,7 +171,7 @@ fn test_orion_simd_aggregate_verify() {
         test_orion_simd_aggregate_verify_helper::<
             GF2ExtConfig,
             GF2x128,
-            BytesHashTranscript<GF2_128, Keccak256hasher>,
+            BytesHashTranscript<Keccak256hasher>,
         >(parties, num_var)
     });
 
@@ -185,7 +179,7 @@ fn test_orion_simd_aggregate_verify() {
         test_orion_simd_aggregate_verify_helper::<
             M31ExtConfig,
             M31x16,
-            BytesHashTranscript<M31Ext3, Keccak256hasher>,
+            BytesHashTranscript<Keccak256hasher>,
         >(parties, num_var)
     })
 }

@@ -58,18 +58,18 @@ impl<C: FieldEngine> ExpanderSingleVarChallenge<C> {
 
     #[inline]
     pub fn sample_from_transcript(
-        transcript: &mut impl Transcript<C::ChallengeField>,
+        transcript: &mut impl Transcript,
         num_circuit_var: usize,
         world_size: usize,
     ) -> Self {
-        let rz = transcript.generate_challenge_field_elements(num_circuit_var);
+        let rz = transcript.generate_field_elements::<C::ChallengeField>(num_circuit_var);
 
-        let r_simd = transcript.generate_challenge_field_elements(
+        let r_simd = transcript.generate_field_elements::<C::ChallengeField>(
             <C::SimdCircuitField as SimdField>::PACK_SIZE.trailing_zeros() as usize,
         );
 
         let r_mpi =
-            transcript.generate_challenge_field_elements(world_size.trailing_zeros() as usize);
+            transcript.generate_field_elements::<C::ChallengeField>(world_size.trailing_zeros() as usize);
 
         Self { rz, r_simd, r_mpi }
     }
@@ -113,18 +113,18 @@ impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
 
     #[inline]
     pub fn sample_from_transcript(
-        transcript: &mut impl Transcript<C::ChallengeField>,
+        transcript: &mut impl Transcript,
         num_circuit_var: usize,
         world_size: usize,
     ) -> Self {
-        let rz_0 = transcript.generate_challenge_field_elements(num_circuit_var);
+        let rz_0 = transcript.generate_field_elements::<C::ChallengeField>(num_circuit_var);
 
-        let r_simd = transcript.generate_challenge_field_elements(
+        let r_simd = transcript.generate_field_elements::<C::ChallengeField>(
             <C::SimdCircuitField as SimdField>::PACK_SIZE.trailing_zeros() as usize,
         );
 
         let r_mpi =
-            transcript.generate_challenge_field_elements(world_size.trailing_zeros() as usize);
+            transcript.generate_field_elements::<C::ChallengeField>(world_size.trailing_zeros() as usize);
 
         Self {
             rz_0,

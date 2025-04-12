@@ -16,7 +16,7 @@ pub(crate) fn orion_verify_simd_field_aggregated<C, ComPackF>(
     commitment: &OrionCommitment,
     eval_point: &ExpanderSingleVarChallenge<C>,
     eval: C::ChallengeField,
-    transcript: &mut impl Transcript<C::ChallengeField>,
+    transcript: &mut impl Transcript,
     proof: &OrionProof<C::ChallengeField>,
 ) -> bool
 where
@@ -53,15 +53,15 @@ where
     let proximity_reps = vk.proximity_repetitions::<C::ChallengeField>(PCS_SOUNDNESS_BITS);
     let proximity_local_coeffs: Vec<Vec<C::ChallengeField>> = (0..proximity_reps)
         .map(|_| {
-            transcript.generate_challenge_field_elements(row_num * C::SimdCircuitField::PACK_SIZE)
+            transcript.generate_field_elements::<C::ChallengeField>(row_num * C::SimdCircuitField::PACK_SIZE)
         })
         .collect();
 
     let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
-    let query_indices = transcript.generate_challenge_index_vector(query_num);
+    let query_indices = transcript.generate_usize_vector(query_num);
 
     let proximity_worlds_coeffs: Vec<Vec<C::ChallengeField>> = (0..proximity_reps)
-        .map(|_| transcript.generate_challenge_field_elements(mpi_world_size))
+        .map(|_| transcript.generate_field_elements::<C::ChallengeField>(mpi_world_size))
         .collect();
 
     // NOTE: work on the Merkle tree path validity

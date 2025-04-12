@@ -206,7 +206,7 @@ impl Field for AVXGoldilocks {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         let m = Goldilocks::from_uniform_bytes(bytes);
         Self {
             v: [unsafe { _mm256_set1_epi64x(m.v as i64) }, unsafe {

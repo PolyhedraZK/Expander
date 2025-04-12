@@ -32,7 +32,7 @@ fn coeff_form_hyper_bikzg_open_simulate<E, T>(
 ) -> HyperBiKZGOpening<E>
 where
     E: MultiMillerLoop,
-    T: Transcript<E::Fr>,
+    T: Transcript,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     E::Fr: ExtensionField,
@@ -114,8 +114,8 @@ where
     )
     .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
 
-    let beta_x = fs_transcript.generate_challenge_field_element();
-    let beta_y = fs_transcript.generate_challenge_field_element();
+    let beta_x = fs_transcript.generate_field_element::<E::Fr>();
+    let beta_y = fs_transcript.generate_field_element::<E::Fr>();
 
     dbg!(beta_x, beta_y);
 
@@ -158,7 +158,7 @@ where
     // NOTE(HS) check if the final eval of root evals match with mle poly evaluation
     dbg!(&root_evals.multilinear_final_eval());
 
-    let gamma = fs_transcript.generate_challenge_field_element();
+    let gamma = fs_transcript.generate_field_element::<E::Fr>();
 
     dbg!(gamma);
 
@@ -232,7 +232,7 @@ where
 
     fs_transcript.append_u8_slice(f_gamma_quotient_com_x.to_bytes().as_ref());
 
-    let delta_x = fs_transcript.generate_challenge_field_element();
+    let delta_x = fs_transcript.generate_field_element::<E::Fr>();
 
     dbg!(delta_x);
 
@@ -286,7 +286,7 @@ where
     // NOTE(HS) sample from RO for delta_y
     fs_transcript.append_u8_slice(f_gamma_quotient_com_y.to_bytes().as_ref());
 
-    let delta_y = fs_transcript.generate_challenge_field_element();
+    let delta_y = fs_transcript.generate_field_element::<E::Fr>();
 
     dbg!(delta_y);
 
@@ -335,7 +335,7 @@ fn coeff_form_hyper_bikzg_verify_simulate<E, T>(
 ) -> bool
 where
     E: MultiMillerLoop,
-    T: Transcript<E::Fr>,
+    T: Transcript,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     E::Fr: ExtensionField,
@@ -362,8 +362,8 @@ where
         .iter()
         .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
 
-    let beta_x = fs_transcript.generate_challenge_field_element();
-    let beta_y = fs_transcript.generate_challenge_field_element();
+    let beta_x = fs_transcript.generate_field_element::<E::Fr>();
+    let beta_y = fs_transcript.generate_field_element::<E::Fr>();
 
     dbg!(beta_x, beta_y);
 
@@ -422,7 +422,7 @@ where
     opening.aggregated_evals.append_to_transcript(fs_transcript);
     opening.leader_evals.append_to_transcript(fs_transcript);
 
-    let gamma = fs_transcript.generate_challenge_field_element();
+    let gamma = fs_transcript.generate_field_element::<E::Fr>();
 
     dbg!(gamma);
 
@@ -461,7 +461,7 @@ where
 
     fs_transcript.append_u8_slice(opening.beta_x_commitment.to_bytes().as_ref());
 
-    let delta_x = fs_transcript.generate_challenge_field_element();
+    let delta_x = fs_transcript.generate_field_element::<E::Fr>();
 
     dbg!(delta_x);
 
@@ -481,7 +481,7 @@ where
 
     fs_transcript.append_u8_slice(opening.beta_y_commitment.to_bytes().as_ref());
 
-    let delta_y = fs_transcript.generate_challenge_field_element();
+    let delta_y = fs_transcript.generate_field_element::<E::Fr>();
 
     dbg!(delta_y);
 
@@ -576,7 +576,7 @@ fn test_hyper_bikzg_single_process_simulated_e2e() {
         global_commitment_g1.to_affine()
     };
 
-    let mut fs_transcript = FieldHashTranscript::<Fr, MiMC5FiatShamirHasher<Fr>>::new();
+    let mut fs_transcript = FieldHashTranscript::<MiMC5FiatShamirHasher<Fr>>::new();
     let mut verifier_transcript = fs_transcript.clone();
 
     let opening = coeff_form_hyper_bikzg_open_simulate(

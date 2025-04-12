@@ -63,7 +63,7 @@ where
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         _scratch_pad: &Self::ScratchPad,
-        transcript: &mut impl Transcript<E::Fr>,
+        transcript: &mut impl Transcript,
     ) -> (E::Fr, Self::Opening) {
         coeff_form_uni_hyperkzg_open(proving_key, &poly.coeffs, x, transcript)
     }
@@ -75,7 +75,7 @@ where
         x: &Self::EvalPoint,
         v: E::Fr,
         opening: &Self::Opening,
-        transcript: &mut impl Transcript<E::Fr>,
+        transcript: &mut impl Transcript,
     ) -> bool {
         coeff_form_uni_hyperkzg_verify(
             verifying_key.clone(),

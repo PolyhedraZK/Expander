@@ -1,9 +1,8 @@
 use std::{fmt::Debug, io::Read};
 
-use arith::{ExtensionField, Field};
+use arith::Field;
 use gkr_engine::{Proof, Transcript};
-use gkr_hashers::FiatShamirFieldHasher;
-use serdes::ExpSerde;
+use gkr_hashers::FiatShamirHasher;
 
 // When appending the initial commitment, we hash the commitment bytes
 // for sufficient number of times, so that the FS hash has a sufficient circuit depth
@@ -12,65 +11,71 @@ use serdes::ExpSerde;
 const PCS_DIGEST_LOOP: usize = 1000;
 
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct FieldHashTranscript<ChallengeF, H>
+pub struct FieldHashTranscript<H>
 where
-    ChallengeF: ExtensionField,
-    H: FiatShamirFieldHasher<ChallengeF::BaseField>,
+    H: FiatShamirHasher,
 {
     /// Internal hasher, it's a little costly to create a new hasher
     pub hasher: H,
 
-    /// The hash state, a vec of base field elems up to H::STATE_CAPACITY.
-    pub hash_state: Vec<ChallengeF::BaseField>,
+    pub digest: Vec<u8>,
+    digest_start: usize,
 
-    /// The index pointing into hash state, for the next unconsumed base field hash elem.
-    pub next_unconsumed: usize,
+    /// The proof bytes.
+    proof: Proof,
 
-    /// The proof bytes
-    pub proof: Proof,
+    /// The pointer to the proof bytes indicating where the hash starts.
+    hash_start_index: usize,
 
-    /// The data to be hashed
-    pub data_pool: Vec<ChallengeF::BaseField>,
-
-    /// Proof locked or not
-    pub proof_locked: bool,
+    /// locking point
+    proof_locked: bool,
+    proof_locked_at: usize,
 }
 
-impl<ChallengeF, H> Transcript<ChallengeF> for FieldHashTranscript<ChallengeF, H>
+impl<H> Transcript for FieldHashTranscript<H>
 where
-    ChallengeF: ExtensionField,
-    H: FiatShamirFieldHasher<ChallengeF::BaseField>,
+    H: FiatShamirHasher,
 {
     #[inline(always)]
     fn new() -> Self {
         Self {
             hasher: H::new(),
-            ..Default::default()
+            digest: vec![0u8; H::DIGEST_SIZE],
+            digest_start: 0,
+            proof: Proof::default(),
+            hash_start_index: 0,
+            proof_locked: false,
+            proof_locked_at: 0,
         }
     }
 
     #[inline]
-    fn append_commitment(&mut self, commitment_bytes: &[u8]) {
+    fn init_commitment<F: Field>(&mut self, commitment_bytes: &[u8]) -> Vec<u8>{
+        let challenge = self.generate_u8_slice(F::SIZE);
+        let mut digest = vec![0u8; H::DIGEST_SIZE];
+        self.hasher.hash(&mut digest, &challenge);
+        for _ in 1..PCS_DIGEST_LOOP {
+            self.hasher.hash_inplace(&mut digest);
+        }
+        digest
+    }
+
+    #[inline]
+    fn append_commitment<F: Field>(&mut self, commitment_bytes: &[u8]) {
         self.append_u8_slice(commitment_bytes);
 
         #[cfg(not(feature = "recursion"))]
         {
             // When appending the initial commitment, we hash the commitment bytes
             // for sufficient number of times, so that the FS hash has a sufficient circuit depth
-            let mut challenge = self.generate_challenge_field_element().to_limbs();
-            let hasher = H::new();
-            for _ in 0..PCS_DIGEST_LOOP {
-                challenge = hasher.hash_to_state(&challenge);
-            }
+            let digest = self.init_commitment::<F>(commitment_bytes);
 
-            let mut digest_bytes = vec![];
-            challenge.serialize_into(&mut digest_bytes).unwrap();
-            self.append_u8_slice(&digest_bytes);
+            self.append_u8_slice(&digest);
         }
     }
 
     #[inline]
-    fn append_commitment_and_check_digest<R: Read>(
+    fn append_commitment_and_check_digest<F: Field, R: Read>(
         &mut self,
         commitment_bytes: &[u8],
         _proof_reader: &mut R,
@@ -81,146 +86,105 @@ where
         {
             // When appending the initial commitment, we hash the commitment bytes
             // for sufficient number of times, so that the FS hash has a sufficient circuit depth
-            let mut challenge = self.generate_challenge_field_element().to_limbs();
-            let hasher = H::new();
-            for _ in 0..PCS_DIGEST_LOOP {
-                challenge = hasher.hash_to_state(&challenge);
-            }
-            let mut digest_bytes = vec![];
-            challenge.serialize_into(&mut digest_bytes).unwrap();
-            self.append_u8_slice(&digest_bytes);
+            let digest = self.init_commitment::<F>(commitment_bytes);
+
+            self.append_u8_slice(&digest);
 
             // check that digest matches the proof
-            let challenge_from_proof =
-                Vec::<ChallengeF::BaseField>::deserialize_from(_proof_reader).unwrap();
+            let mut challenge_from_proof = vec![0u8; H::DIGEST_SIZE];
+            _proof_reader.read_exact(&mut challenge_from_proof).unwrap();
 
-            challenge_from_proof == challenge
+            challenge_from_proof == digest
         }
 
         #[cfg(feature = "recursion")]
         true
     }
 
-    fn append_field_element(&mut self, f: &ChallengeF) {
-        if !self.proof_locked {
-            let mut buffer = vec![];
-            f.serialize_into(&mut buffer).unwrap();
-            self.proof.bytes.extend_from_slice(&buffer);
-        }
-        self.data_pool.extend_from_slice(&f.to_limbs());
-    }
-
     fn append_u8_slice(&mut self, buffer: &[u8]) {
         if !self.proof_locked {
             self.proof.bytes.extend_from_slice(buffer);
         }
-        let mut local_buffer = buffer.to_vec();
-        local_buffer.resize(local_buffer.len().next_multiple_of(32), 0u8);
-        local_buffer.chunks(32).for_each(|chunk_32| {
-            let challenge_f = ChallengeF::from_uniform_bytes(chunk_32.try_into().unwrap());
-            self.data_pool.extend_from_slice(&challenge_f.to_limbs());
-        });
+        self.digest.extend_from_slice(buffer);
     }
 
-    fn generate_circuit_field_element(&mut self) -> <ChallengeF as ExtensionField>::BaseField {
-        if !self.data_pool.is_empty() {
-            self.hash_state.extend_from_slice(&self.data_pool);
-            self.hash_state = self.hasher.hash_to_state(&self.hash_state);
-            self.data_pool.clear();
-            self.next_unconsumed = 0;
+    fn generate_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
+        let mut ret = vec![0u8; n_bytes];
+        let mut cur_n_bytes = 0usize;
+
+        while cur_n_bytes < n_bytes {
+            let digest_start = self.get_digest_start();
+            let digest_len = H::DIGEST_SIZE.min(n_bytes - cur_n_bytes);
+            ret[cur_n_bytes..cur_n_bytes + digest_len].copy_from_slice(&self.digest[digest_start..digest_start + digest_len]);
+            cur_n_bytes += digest_len;
+            self.digest_start += digest_len;
         }
 
-        if self.next_unconsumed < H::STATE_CAPACITY {
-            let circuit_f = self.hash_state[self.next_unconsumed];
-            self.next_unconsumed += 1;
-            return circuit_f;
-        }
-
-        self.hash_state = self.hasher.hash_to_state(&self.hash_state);
-        let circuit_f = self.hash_state[0];
-        self.next_unconsumed = 1;
-
-        circuit_f
+        ret
     }
 
-    fn generate_challenge_field_element(&mut self) -> ChallengeF {
-        if !self.data_pool.is_empty() {
-            self.hash_state.extend_from_slice(&self.data_pool);
-            self.hash_state = self.hasher.hash_to_state(&self.hash_state);
-            self.data_pool.clear();
-            self.next_unconsumed = 0;
+    #[inline]
+    fn finalize_and_get_proof(&mut self) -> Proof {
+        if self.proof_locked {
+            self.unlock_proof();
         }
-
-        if ChallengeF::DEGREE + self.next_unconsumed <= H::STATE_CAPACITY {
-            let challenge_f = ChallengeF::from_limbs(&self.hash_state[self.next_unconsumed..]);
-            self.next_unconsumed += ChallengeF::DEGREE;
-            return challenge_f;
-        }
-
-        let mut ext_limbs = Vec::new();
-        if self.next_unconsumed < H::STATE_CAPACITY {
-            ext_limbs.extend_from_slice(&self.hash_state[self.next_unconsumed..H::STATE_CAPACITY]);
-        }
-        let remaining_base_elems = ChallengeF::DEGREE - ext_limbs.len();
-
-        self.hash_state = self.hasher.hash_to_state(&self.hash_state);
-        ext_limbs.extend_from_slice(&self.hash_state[..remaining_base_elems]);
-        self.next_unconsumed = remaining_base_elems;
-
-        ChallengeF::from_limbs(&ext_limbs)
-    }
-
-    fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
-        let base_field_elems_num =
-            (n_bytes + ChallengeF::BaseField::SIZE - 1) / ChallengeF::BaseField::SIZE;
-        let elems = self.generate_challenge_field_elements(base_field_elems_num);
-
-        let mut res = Vec::new();
-        let mut buffer = Vec::new();
-
-        elems.iter().for_each(|t| {
-            t.serialize_into(&mut buffer).unwrap();
-            res.extend_from_slice(&buffer);
-        });
-        res.truncate(n_bytes);
-
-        res
-    }
-
-    fn finalize_and_get_proof(&self) -> Proof {
         self.proof.clone()
     }
 
     // NOTE(HS) the hash_and_return_state and set_state are always called together
     // mainly to sync up the MPI transcripts to a same transaction hash state.
     fn hash_and_return_state(&mut self) -> Vec<u8> {
-        if !self.data_pool.is_empty() {
-            self.hash_state = self.hasher.hash_to_state(&self.data_pool);
-            self.data_pool.clear();
-        } else {
-            self.hash_state = self.hasher.hash_to_state(&self.hash_state);
-        }
-
-        let mut state = vec![];
-        self.hash_state.serialize_into(&mut state).unwrap();
-        state
+        self.refresh_digest();
+        self.digest.clone()
     }
 
     fn set_state(&mut self, state: &[u8]) {
-        assert!(self.data_pool.is_empty());
+        self.hash_start_index = self.proof.bytes.len(); // discard unhashed data
+        assert!(state.len() == H::DIGEST_SIZE);
+        self.digest = state.to_vec();
         // NOTE(HS) since we broadcasted, then all the hash state base field elems
         // are being observed, then all of them are consumed
-        self.next_unconsumed = H::STATE_CAPACITY;
-        self.hash_state = Vec::deserialize_from(state).unwrap();
     }
 
+    #[inline(always)]
     fn lock_proof(&mut self) {
         assert!(!self.proof_locked);
         self.proof_locked = true;
     }
 
+    #[inline(always)]
     fn unlock_proof(&mut self) {
         assert!(self.proof_locked);
         self.proof_locked = false;
+        if self.hash_start_index < self.proof.bytes.len() {
+            self.refresh_digest();
+        }
+        self.proof.bytes.resize(self.proof_locked_at, 0);
+        self.hash_start_index = self.proof.bytes.len();
+    }
+
+    #[inline]
+    fn refresh_digest(&mut self) {
+        let hash_end_index = self.proof.bytes.len();
+        if hash_end_index > self.hash_start_index {
+            let hash_inputs = {
+                let mut res = self.digest.clone();
+                res.extend_from_slice(&self.proof.bytes[self.hash_start_index..hash_end_index]);
+                res
+            };
+
+            self.hasher.hash(&mut self.digest, &hash_inputs);
+            self.hash_start_index = hash_end_index;
+        } else {
+            self.hasher.hash_inplace(&mut self.digest);
+        }
+        self.digest_start = 0;
+    }
+
+    fn get_digest_start(&mut self) -> usize {
+        if self.digest_start >= H::DIGEST_SIZE {
+            self.refresh_digest();
+        }
+        self.digest_start
     }
 }

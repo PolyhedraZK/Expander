@@ -1,5 +1,6 @@
 use arith::{Field, SimdField};
 use gkr_hashers::PoseidonStateTrait;
+use serdes::ExpSerde;
 
 use crate::{M31x16, M31};
 
@@ -24,5 +25,9 @@ impl PoseidonStateTrait for M31x16 {
 
     fn full_round_sbox(&mut self) {
         *self = self.exp(Self::SBOX_POW as u128);
+    }
+
+    fn to_u8(&self, output: &mut [u8]) {
+        self.serialize_into(output).unwrap();
     }
 }

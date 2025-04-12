@@ -83,7 +83,7 @@ where
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
         x: &ExpanderSingleVarChallenge<G>,
-        _transcript: &mut impl Transcript<G::ChallengeField>,
+        _transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
         if mpi_engine.is_single_process() {
@@ -117,7 +117,7 @@ where
         commitment: &Self::Commitment,
         x: &ExpanderSingleVarChallenge<G>,
         v: <G as FieldEngine>::ChallengeField,
-        _transcript: &mut impl Transcript<G::ChallengeField>,
+        _transcript: &mut impl Transcript,
         opening: &Self::Opening,
     ) -> bool {
         if x.r_mpi.is_empty() {

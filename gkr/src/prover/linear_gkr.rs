@@ -124,7 +124,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         if self.mpi_config.is_root() {
             let mut buffer = vec![];
             commitment.unwrap().serialize_into(&mut buffer).unwrap(); // TODO: error propagation
-            transcript.append_commitment(&buffer);
+            transcript.append_commitment::<<Cfg::FieldConfig as FieldEngine>::ChallengeField>(&buffer);
         }
         pcs_commit_timer.stop();
 
@@ -196,7 +196,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
         pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
         pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad,
-        transcript: &mut impl Transcript<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
+        transcript: &mut impl Transcript,
     ) {
         let original_input_vars = inputs.num_vars();
         if original_input_vars < Cfg::PCSConfig::MINIMUM_NUM_VARS {

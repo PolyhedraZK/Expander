@@ -25,12 +25,12 @@ fn test_raw() {
         })
         .collect::<Vec<Vec<Fr>>>();
 
-    common::test_pcs::<Fr, BytesHashTranscript<_, Keccak256hasher>, RawMultiLinearPCS>(
+    common::test_pcs::<Fr, BytesHashTranscript<Keccak256hasher>, RawMultiLinearPCS>(
         &params, &poly, &xs,
     );
 }
 
-fn test_raw_gkr_helper<C: FieldEngine, T: Transcript<C::ChallengeField>>(
+fn test_raw_gkr_helper<C: FieldEngine, T: Transcript>(
     mpi_config: &MPIConfig,
     transcript: &mut T,
 ) {
@@ -63,14 +63,14 @@ fn test_raw_gkr_helper<C: FieldEngine, T: Transcript<C::ChallengeField>>(
 fn test_raw_gkr() {
     let mpi_config = MPIConfig::prover_new();
 
-    type TM31 = BytesHashTranscript<<M31ExtConfig as FieldEngine>::ChallengeField, Keccak256hasher>;
+    type TM31 = BytesHashTranscript<Keccak256hasher>;
     test_raw_gkr_helper::<M31ExtConfig, TM31>(&mpi_config, &mut TM31::new());
 
-    type TGF2 = BytesHashTranscript<<GF2ExtConfig as FieldEngine>::ChallengeField, SHA256hasher>;
+    type TGF2 = BytesHashTranscript<SHA256hasher>;
     test_raw_gkr_helper::<GF2ExtConfig, TGF2>(&mpi_config, &mut TGF2::new());
 
     type TBN254 =
-        BytesHashTranscript<<BN254Config as FieldEngine>::ChallengeField, Keccak256hasher>;
+        BytesHashTranscript<Keccak256hasher>;
     test_raw_gkr_helper::<BN254Config, TBN254>(&mpi_config, &mut TBN254::new());
 
     MPIConfig::finalize();

@@ -58,7 +58,7 @@ where
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         _scratch_pad: &Self::ScratchPad,
-        _transcript: &mut impl Transcript<C::Scalar>,
+        _transcript: &mut impl Transcript,
     ) -> (C::Scalar, Self::Opening) {
         hyrax_open(proving_key, poly, x)
     }
@@ -70,7 +70,7 @@ where
         x: &Self::EvalPoint,
         v: C::Scalar,
         opening: &Self::Opening,
-        _transcript: &mut impl Transcript<C::Scalar>,
+        _transcript: &mut impl Transcript,
     ) -> bool {
         hyrax_verify(verifying_key, commitment, x, v, opening)
     }

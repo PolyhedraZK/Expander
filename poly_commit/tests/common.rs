@@ -8,7 +8,7 @@ use poly_commit::PolynomialCommitmentScheme;
 use polynomials::MultilinearExtension;
 use rand::thread_rng;
 
-pub fn test_pcs<F: ExtensionField, T: Transcript<F>, P: PolynomialCommitmentScheme<F>>(
+pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<F>>(
     params: &P::Params,
     poly: &P::Poly,
     xs: &[P::EvalPoint],
@@ -45,7 +45,7 @@ pub fn test_pcs<F: ExtensionField, T: Transcript<F>, P: PolynomialCommitmentSche
 
 pub fn test_pcs_for_expander_gkr<
     C: FieldEngine,
-    T: Transcript<C::ChallengeField>,
+    T: Transcript,
     P: ExpanderPCS<C>,
 >(
     params: &P::Params,

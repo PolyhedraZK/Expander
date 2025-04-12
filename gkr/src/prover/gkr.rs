@@ -10,7 +10,7 @@ use utils::timer::Timer;
 pub fn gkr_prove<F: FieldEngine>(
     circuit: &Circuit<F>,
     sp: &mut ProverScratchPad<F>,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
     mpi_config: &MPIConfig,
 ) -> (F::ChallengeField, ExpanderDualVarChallenge<F>) {
     let layer_num = circuit.layers.len();
@@ -55,7 +55,7 @@ pub fn gkr_prove<F: FieldEngine>(
 
         if challenge.rz_1.is_some() {
             // TODO: try broadcast beta.unwrap directly
-            let mut tmp = transcript.generate_challenge_field_element();
+            let mut tmp = transcript.generate_field_element::<F::ChallengeField>();
             mpi_config.root_broadcast_f(&mut tmp);
             alpha = Some(tmp)
         } else {

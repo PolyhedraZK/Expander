@@ -39,13 +39,13 @@ fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF>(
 
         common::test_pcs::<
             EvalF,
-            BytesHashTranscript<EvalF, Keccak256hasher>,
+            BytesHashTranscript< Keccak256hasher>,
             OrionBaseFieldPCS<
                 F,
                 EvalF,
                 ComPackF,
                 OpenPackF,
-                BytesHashTranscript<EvalF, Keccak256hasher>,
+                BytesHashTranscript<Keccak256hasher>,
             >,
         >(&num_vars, &poly, &xs);
     })
@@ -82,7 +82,7 @@ fn test_orion_simd_field_pcs_generics<F, SimdF, EvalF, ComPackF>(
 
         common::test_pcs::<
             EvalF,
-            BytesHashTranscript<EvalF, Keccak256hasher>,
+            BytesHashTranscript<Keccak256hasher>,
             OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF>,
         >(&num_vars, &poly, &xs);
     })
@@ -101,7 +101,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
 ) where
     C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
-    T: Transcript<C::ChallengeField>,
+    T: Transcript,
 {
     let mut rng = test_rng();
 
@@ -162,13 +162,13 @@ fn test_orion_for_expander_gkr() {
     test_orion_for_expander_gkr_generics::<
         GF2ExtConfig,
         GF2x128,
-        BytesHashTranscript<_, Keccak256hasher>,
+        BytesHashTranscript<Keccak256hasher>,
     >(&mpi_config, 16);
 
     test_orion_for_expander_gkr_generics::<
         M31ExtConfig,
         M31x16,
-        BytesHashTranscript<_, Keccak256hasher>,
+        BytesHashTranscript<Keccak256hasher>,
     >(&mpi_config, 25);
 
     MPIConfig::finalize()
