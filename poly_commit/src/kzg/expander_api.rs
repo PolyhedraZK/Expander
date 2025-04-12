@@ -86,7 +86,7 @@ where
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
         x: &ExpanderSingleVarChallenge<G>,
-        transcript: &mut impl Transcript<G::ChallengeField>,
+        transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
         coeff_form_hyper_bikzg_open(
@@ -105,7 +105,7 @@ where
         commitment: &Self::Commitment,
         x: &ExpanderSingleVarChallenge<G>,
         v: <G as FieldEngine>::ChallengeField,
-        transcript: &mut impl Transcript<G::ChallengeField>,
+        transcript: &mut impl Transcript,
         opening: &Self::Opening,
     ) -> bool {
         coeff_form_hyper_bikzg_verify(

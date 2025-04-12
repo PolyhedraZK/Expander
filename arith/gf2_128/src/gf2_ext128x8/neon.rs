@@ -149,7 +149,7 @@ impl Field for NeonGF2_128x8 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(_bytes: &[u8]) -> Self {
         unimplemented!("from_uniform_bytes for GF128 doesn't make sense")
     }
 }

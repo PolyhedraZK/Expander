@@ -92,7 +92,7 @@ where
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         eval_point: &ExpanderSingleVarChallenge<C>,
-        transcript: &mut impl Transcript<C::ChallengeField>,
+        transcript: &mut impl Transcript,
         scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
@@ -126,7 +126,8 @@ where
         commitment: &Self::Commitment,
         eval_point: &ExpanderSingleVarChallenge<C>,
         eval: C::ChallengeField,
-        transcript: &mut impl Transcript<C::ChallengeField>,
+        transcript: &mut impl Transcript, /* add transcript here to allow
+                                           * interactive arguments */
         opening: &Self::Opening,
     ) -> bool {
         orion_verify::<_, C::SimdCircuitField, _, ComPackF>(

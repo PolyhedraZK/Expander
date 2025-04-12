@@ -1,8 +1,8 @@
-use std::{fmt::Debug, marker::PhantomData};
+use std::{fmt::Debug, io::Read};
 
-use arith::{ExtensionField, Field};
+use arith::Field;
 use gkr_engine::{Proof, Transcript};
-use gkr_hashers::FiatShamirBytesHash;
+use gkr_hashers::FiatShamirHasher;
 
 // When appending the initial commitment, we hash the commitment bytes
 // for sufficient number of times, so that the FS hash has a sufficient circuit depth
@@ -11,11 +11,12 @@ use gkr_hashers::FiatShamirBytesHash;
 const PCS_DIGEST_LOOP: usize = 1000;
 
 #[derive(Clone, Default, Debug, PartialEq)]
-pub struct BytesHashTranscript<F: Field, H: FiatShamirBytesHash> {
-    phantom: PhantomData<(F, H)>,
+pub struct BytesHashTranscript<H: FiatShamirHasher> {
+    hasher: H,
 
     /// The digest bytes.
     pub digest: Vec<u8>,
+    digest_start: usize,
 
     /// The proof bytes.
     proof: Proof,
@@ -28,11 +29,12 @@ pub struct BytesHashTranscript<F: Field, H: FiatShamirBytesHash> {
     proof_locked_at: usize,
 }
 
-impl<F: ExtensionField, H: FiatShamirBytesHash> Transcript<F> for BytesHashTranscript<F, H> {
+impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
     fn new() -> Self {
         Self {
-            phantom: PhantomData,
+            hasher: H::new(),
             digest: vec![0u8; H::DIGEST_SIZE],
+            digest_start: H::DIGEST_SIZE,
             proof: Proof::default(),
             hash_start_index: 0,
             proof_locked: false,
@@ -40,107 +42,121 @@ impl<F: ExtensionField, H: FiatShamirBytesHash> Transcript<F> for BytesHashTrans
         }
     }
 
+    #[cfg(not(feature = "recursion"))]
+    #[inline(always)]
+    fn init_commitment<F: Field>(&mut self, commitment_bytes: &[u8]) -> Vec<u8> {
+        let mut digest = vec![0u8; H::DIGEST_SIZE];
+        self.hasher.hash(&mut digest, commitment_bytes);
+        for _ in 0..PCS_DIGEST_LOOP {
+            self.hasher.hash_inplace(&mut digest);
+        }
+        digest
+    }
+
     #[inline]
-    fn append_commitment(&mut self, commitment_bytes: &[u8]) {
+    fn append_commitment<F: Field>(&mut self, commitment_bytes: &[u8]) {
         self.append_u8_slice(commitment_bytes);
 
         #[cfg(not(feature = "recursion"))]
         {
             // When appending the initial commitment, we hash the commitment bytes
             // for sufficient number of times, so that the FS hash has a sufficient circuit depth
-            let mut digest = [0u8; 32];
-            H::hash(&mut digest, commitment_bytes);
-            for _ in 0..PCS_DIGEST_LOOP {
-                H::hash_inplace(&mut digest);
-            }
-            self.set_state(&digest);
+            let digest = self.init_commitment::<F>(commitment_bytes);
+            self.append_u8_slice(&digest);
         }
     }
 
-    fn append_field_element(&mut self, f: &F) {
-        let mut buf = vec![];
-        f.serialize_into(&mut buf).unwrap();
-        self.append_u8_slice(&buf);
+    #[inline]
+    /// check that the pcs digest in the proof is correct
+    fn append_commitment_and_check_digest<F: Field, R: Read>(
+        &mut self,
+        commitment_bytes: &[u8],
+        _proof_reader: &mut R,
+    ) -> bool {
+        self.append_u8_slice(commitment_bytes);
+
+        #[cfg(not(feature = "recursion"))]
+        {
+            // When appending the initial commitment, we hash the commitment bytes
+            // for sufficient number of times, so that the FS hash has a sufficient circuit depth
+            let digest = self.init_commitment::<F>(commitment_bytes);
+            self.append_u8_slice(&digest);
+
+            // check that digest matches the proof
+            let mut pcs_digest = [0u8; 32];
+            _proof_reader.read_exact(&mut pcs_digest).unwrap();
+
+            digest == pcs_digest
+        }
+
+        #[cfg(feature = "recursion")]
+        true
     }
 
     /// Append a byte slice to the transcript.
+    #[inline(always)]
     fn append_u8_slice(&mut self, buffer: &[u8]) {
         self.proof.bytes.extend_from_slice(buffer);
     }
 
-    /// Generate a random circuit field.
-    fn generate_circuit_field_element(&mut self) -> <F as ExtensionField>::BaseField {
-        // NOTE(HS) fast path for BN254 sampling - notice that the deserialize from for BN254
-        // does not self correct the sampling bytes, we instead use challenge field sampling
-        // and cast it back to base field for BN254 case - maybe traverse back and unify the impls.
-        if F::DEGREE == 1 {
-            let challenge_fs = self.generate_challenge_field_element();
-            return challenge_fs.to_limbs()[0];
-        }
-
-        let bytes_sampled = self.generate_challenge_u8_slice(32);
-        let mut buffer = [0u8; 32];
-        buffer[..32].copy_from_slice(&bytes_sampled);
-
-        <F as ExtensionField>::BaseField::from_uniform_bytes(&buffer)
-    }
-
-    /// Generate a challenge.
-    fn generate_challenge_field_element(&mut self) -> F {
-        self.hash_to_digest();
-        assert!(F::SIZE <= H::DIGEST_SIZE);
-        F::from_uniform_bytes(&self.digest.clone().try_into().unwrap())
-    }
-
-    fn generate_challenge_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
-        let mut ret = vec![];
+    #[inline]
+    fn generate_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
+        let mut ret = vec![0u8; n_bytes];
         let mut cur_n_bytes = 0usize;
 
         while cur_n_bytes < n_bytes {
-            self.hash_to_digest();
-            ret.extend_from_slice(&self.digest);
-            cur_n_bytes += H::DIGEST_SIZE;
+            let digest_start = self.get_digest_start();
+            let digest_len = (H::DIGEST_SIZE - digest_start).min(n_bytes - cur_n_bytes);
+            ret[cur_n_bytes..cur_n_bytes + digest_len]
+                .copy_from_slice(&self.digest[digest_start..digest_start + digest_len]);
+            cur_n_bytes += digest_len;
+            self.digest_start += digest_len;
         }
 
-        ret.truncate(n_bytes);
         ret
     }
 
-    fn finalize_and_get_proof(&self) -> Proof {
+    #[inline(always)]
+    fn finalize_and_get_proof(&mut self) -> Proof {
+        if self.proof_locked {
+            self.unlock_proof();
+        }
         self.proof.clone()
     }
 
+    #[inline(always)]
     fn hash_and_return_state(&mut self) -> Vec<u8> {
-        self.hash_to_digest();
+        self.refresh_digest();
         self.digest.clone()
     }
 
+    #[inline(always)]
     fn set_state(&mut self, state: &[u8]) {
         self.hash_start_index = self.proof.bytes.len(); // discard unhashed data
         assert!(state.len() == H::DIGEST_SIZE);
         self.digest = state.to_vec();
     }
 
+    #[inline(always)]
     fn lock_proof(&mut self) {
         assert!(!self.proof_locked);
         self.proof_locked = true;
         self.proof_locked_at = self.proof.bytes.len();
     }
 
+    #[inline(always)]
     fn unlock_proof(&mut self) {
         assert!(self.proof_locked);
         self.proof_locked = false;
         if self.hash_start_index < self.proof.bytes.len() {
-            self.hash_to_digest();
+            self.refresh_digest();
         }
         self.proof.bytes.resize(self.proof_locked_at, 0);
         self.hash_start_index = self.proof.bytes.len();
     }
-}
 
-impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
-    /// Hash the input into the output.
-    pub fn hash_to_digest(&mut self) {
+    #[inline]
+    fn refresh_digest(&mut self) {
         let hash_end_index = self.proof.bytes.len();
         if hash_end_index > self.hash_start_index {
             let hash_inputs = {
@@ -149,10 +165,18 @@ impl<F: Field, H: FiatShamirBytesHash> BytesHashTranscript<F, H> {
                 res
             };
 
-            H::hash(&mut self.digest, &hash_inputs);
+            self.hasher.hash(&mut self.digest, &hash_inputs);
             self.hash_start_index = hash_end_index;
         } else {
-            H::hash_inplace(&mut self.digest);
+            self.hasher.hash_inplace(&mut self.digest);
         }
+        self.digest_start = 0;
+    }
+
+    fn get_digest_start(&mut self) -> usize {
+        if self.digest_start >= H::DIGEST_SIZE {
+            self.refresh_digest();
+        }
+        self.digest_start
     }
 }

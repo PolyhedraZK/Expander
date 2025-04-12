@@ -75,9 +75,9 @@ impl Field for Fr {
 
     #[inline(always)]
     // TODO: better implementation
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         <Fr as FromUniformBytes<64>>::from_uniform_bytes(
-            &[bytes.as_slice(), [0u8; 32].as_slice()]
+            &[&bytes[..32], [0u8; 32].as_slice()]
                 .concat()
                 .try_into()
                 .unwrap(),

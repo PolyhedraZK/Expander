@@ -115,7 +115,7 @@ impl Field for GF2 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         GF2 { v: bytes[0] % 2 }
     }
 
