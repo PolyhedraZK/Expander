@@ -17,8 +17,8 @@ const MIMC5_BN254_OUT: [u8; 32] = [
 fn check_mimc5_aligned() {
     let mimc = MiMC5FiatShamirHasher::<Fr>::new();
     let input = Fr::from(MIMC5_BN254_IN);
-    let mut inputu8 = vec![0u8; Fr::SIZE];
-    input.serialize_into(&mut inputu8);
+    let mut inputu8 = vec![];
+    input.serialize_into(&mut inputu8).unwrap();
     let mut output = vec![0u8; MiMC5FiatShamirHasher::<Fr>::DIGEST_SIZE];
     mimc.hash(&mut output, &inputu8);
 

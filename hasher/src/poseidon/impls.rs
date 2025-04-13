@@ -103,7 +103,6 @@ impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
 
 impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
     fn hash_u8_to_state(&self, input: &[u8]) -> State {
-println!("input len {}", input.len());
         let u8_chunk_size = State::RATE * State::ElemT::SIZE;
         let mut res = State::default();
         let chunks = input.chunks_exact(u8_chunk_size);
@@ -113,15 +112,11 @@ println!("input len {}", input.len());
             let mut state_elts = vec![State::ElemT::ZERO; State::STATE_WIDTH];
             for (elem, elts) in chunk.chunks(State::ElemT::SIZE).zip(state_elts[State::CAPACITY..].iter_mut()) {
                 *elts = State::ElemT::from_uniform_bytes(elem);
-println!("{:?}", elts);
             }
-println!("\n");
             let state = State::from_elems(&state_elts);
-println!("{:?}", state.to_elems());
 
             res += state;
             self.permute(&mut res);
-println!("{:?}", res.to_elems());
         }
 
         if remainder.len() > 0 {
@@ -137,7 +132,6 @@ println!("{:?}", res.to_elems());
             self.permute(&mut res);
         }
 
-println!("{:?}", res.to_elems());
         res
     }
 }

@@ -1,6 +1,5 @@
 use arith::{Field, SimdField};
 use gkr_hashers::PoseidonStateTrait;
-use serdes::ExpSerde;
 
 use crate::{M31x16, M31};
 
@@ -28,9 +27,6 @@ impl PoseidonStateTrait for M31x16 {
     }
 
     fn to_u8(&self, output: &mut [u8]) {
-        let mut res = vec![];
-        self.serialize_into(&mut res).unwrap();
-        output.copy_from_slice(&res);
-println!("output {:?}", output);
+        self.into_bytes(output);
     }
 }

@@ -45,13 +45,13 @@ impl<F: Field> FiatShamirHasher for MiMC5FiatShamirHasher<F> {
     fn hash(&self, output: &mut [u8], input: &[u8]) {
         assert!(output.len() == F::SIZE);
         let res = self.hash_u8_to_state(input);
-        res.serialize_into(output).unwrap();
+        res.into_bytes(output);
     }
 
     fn hash_inplace(&self, buffer: &mut [u8]) {
         assert!(buffer.len() == F::SIZE);
         let res = self.hash_u8_to_state(buffer);
-        res.serialize_into(buffer).unwrap();
+        res.into_bytes(buffer);
     }
 }
 

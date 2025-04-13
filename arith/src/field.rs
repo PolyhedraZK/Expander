@@ -92,6 +92,13 @@ pub trait Field:
     /// sample from a 32 bytes
     fn from_uniform_bytes(bytes: &[u8]) -> Self;
 
+    #[inline(always)]
+    fn into_bytes(&self, target: &mut [u8]) {
+        let mut res = vec![];
+        self.serialize_into(&mut res).unwrap();
+        target.copy_from_slice(&res);
+    }
+
     /// convert to u256
     // todo: a cleaner way to do this is to trait bound Into<U256>
     // but this requires modifications on ff or ethnum crate
