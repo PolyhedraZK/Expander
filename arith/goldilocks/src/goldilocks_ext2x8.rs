@@ -389,3 +389,12 @@ impl FFTField for GoldilocksExt2x8 {
         Self::pack_full(&var)
     }
 }
+
+impl Add<Goldilocksx8> for GoldilocksExt2x8 {
+    type Output = GoldilocksExt2x8;
+
+    #[inline(always)]
+    fn add(self, rhs: Goldilocksx8) -> Self::Output {
+        self.add_by_base_field(&rhs)
+    }
+}

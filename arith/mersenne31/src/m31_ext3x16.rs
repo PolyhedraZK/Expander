@@ -401,3 +401,12 @@ impl PartialOrd for M31Ext3x16 {
         unimplemented!("PartialOrd for M31Ext3x16 is not supported")
     }
 }
+
+impl Add<M31x16> for M31Ext3x16 {
+    type Output = M31Ext3x16;
+
+    #[inline(always)]
+    fn add(self, rhs: M31x16) -> Self::Output {
+        self.add_by_base_field(&rhs)
+    }
+}

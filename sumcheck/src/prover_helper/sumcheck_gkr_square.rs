@@ -19,7 +19,7 @@ pub(crate) struct SumcheckGkrSquareHelper<'a, F: FieldEngine, const D: usize> {
 
     pub(crate) simd_var_num: usize,
 
-    x_helper: SumcheckPowerGateHelper<D, F>,
+    x_helper: SumcheckPowerGateHelper<D>,
     simd_helper: SumcheckSimdProdGateHelper<F>,
     mpi_helper: SumcheckSimdProdGateHelper<F>,
 
@@ -57,7 +57,7 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
 
     #[inline]
     pub(crate) fn poly_evals_at_x(&self, var_idx: usize) -> [F::ChallengeField; D] {
-        let local_vals_simd = self.x_helper.poly_eval_at(
+        let local_vals_simd = self.x_helper.poly_eval_at::<F>(
             var_idx,
             &self.sp.v_evals,
             &self.sp.hg_evals_5,
@@ -115,7 +115,7 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
 
     #[inline]
     pub(crate) fn receive_x_challenge(&mut self, var_idx: usize, r: F::ChallengeField) {
-        self.x_helper.receive_challenge(
+        self.x_helper.receive_challenge::<F>(
             var_idx,
             r,
             &mut self.sp.v_evals,
@@ -223,12 +223,12 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
             match g.gate_type {
                 12345 => {
                     hg_evals_5[g.i_ids[0]] +=
-                        F::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
+                        eq_evals_at_rz0[g.o_id] * g.coef;
                     gate_exists_5[g.i_ids[0]] = true;
                 }
                 12346 => {
                     hg_evals_1[g.i_ids[0]] +=
-                        F::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
+                        eq_evals_at_rz0[g.o_id] * g.coef;
                     gate_exists_1[g.i_ids[0]] = true;
                 }
                 _ => panic!("Unsupported gate type"),
