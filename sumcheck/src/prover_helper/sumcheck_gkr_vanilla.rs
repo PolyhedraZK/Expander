@@ -22,7 +22,7 @@ pub(crate) struct SumcheckGkrVanillaHelper<'a, F: FieldEngine> {
     pub(crate) input_var_num: usize,
     pub(crate) simd_var_num: usize,
 
-    xy_helper: SumcheckProductGateHelper<F>,
+    xy_helper: SumcheckProductGateHelper,
     simd_var_helper: SumcheckSimdProdGateHelper<F>,
     mpi_var_helper: SumcheckSimdProdGateHelper<F>,
 
@@ -34,7 +34,7 @@ pub(crate) struct SumcheckGkrVanillaHelper<'a, F: FieldEngine> {
 impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
     #[inline(always)]
     fn xy_helper_receive_challenge(&mut self, var_idx: usize, r: F::ChallengeField) {
-        self.xy_helper.receive_challenge(
+        self.xy_helper.receive_challenge::<F>(
             var_idx,
             r,
             &mut self.sp.v_evals,
@@ -88,7 +88,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         degree: usize,
     ) -> [F::ChallengeField; 3] {
         assert!(var_idx < self.input_var_num);
-        let local_vals_simd = self.xy_helper.poly_eval_at(
+        let local_vals_simd = self.xy_helper.poly_eval_at::<F>(
             var_idx,
             degree,
             &self.sp.v_evals,
@@ -286,17 +286,14 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         }
 
         for g in mul.iter() {
-            let r = F::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
-            hg_vals[g.i_ids[0]] += F::simd_circuit_field_mul_challenge_field(&vals[g.i_ids[1]], &r);
+            let r = eq_evals_at_rz0[g.o_id] * g.coef;
+            hg_vals[g.i_ids[0]] += r * vals[g.i_ids[1]];
 
             gate_exists[g.i_ids[0]] = true;
         }
 
         for g in add.iter() {
-            hg_vals[g.i_ids[0]] += F::Field::from(F::challenge_mul_circuit_field(
-                &eq_evals_at_rz0[g.o_id],
-                &g.coef,
-            ));
+            hg_vals[g.i_ids[0]] += F::Field::from(eq_evals_at_rz0[g.o_id] * g.coef);
             gate_exists[g.i_ids[0]] = true;
         }
     }
@@ -370,10 +367,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
 
         // TODO-OPTIMIZATION: hg_vals does not have to be simd here
         for g in mul.iter() {
-            hg_vals[g.i_ids[1]] += F::Field::from(F::challenge_mul_circuit_field(
-                &(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
-                &g.coef,
-            ));
+            hg_vals[g.i_ids[1]] += F::Field::from(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]] * g.coef);
             gate_exists[g.i_ids[1]] = true;
         }
     }

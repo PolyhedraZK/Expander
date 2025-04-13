@@ -49,13 +49,13 @@ impl<C: FieldEngine> CircuitLayer<C> {
             let i1 = &self.input_vals[gate.i_ids[1]];
             let o = &mut res[gate.o_id];
             let mul = *i0 * i1;
-            *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &mul);
+            *o += mul * gate.coef;
         }
 
         for gate in &self.add {
             let i0 = self.input_vals[gate.i_ids[0]];
             let o = &mut res[gate.o_id];
-            *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0);
+            *o += i0 * gate.coef;
         }
 
         for gate in &self.const_ {
@@ -63,7 +63,7 @@ impl<C: FieldEngine> CircuitLayer<C> {
 
             let coef = match gate.coef_type {
                 CoefType::PublicInput(input_idx) => public_input[input_idx],
-                _ => C::circuit_field_to_simd_circuit_field(&gate.coef),
+                _ => gate.coef.into(),
             };
             *o += coef;
         }
@@ -77,11 +77,11 @@ impl<C: FieldEngine> CircuitLayer<C> {
                     let i0_2 = i0.square();
                     let i0_4 = i0_2.square();
                     let i0_5 = i0_4 * i0;
-                    *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, &i0_5);
+                    *o += i0_5 * gate.coef;
                 }
                 12346 => {
                     // pow1
-                    *o += C::circuit_field_mul_simd_circuit_field(&gate.coef, i0);
+                    *o += *i0 * gate.coef;
                 }
                 _ => panic!("Unknown gate type: {}", gate.gate_type),
             }

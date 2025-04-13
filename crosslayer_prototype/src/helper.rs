@@ -48,9 +48,9 @@ impl<F: FieldEngine> MultilinearProductHelper<F> {
                 let f_v_1 = init_v[i * 2 + 1];
                 let hg_v_0 = bk_hg[i * 2];
                 let hg_v_1 = bk_hg[i * 2 + 1];
-                p0 += F::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
-                p1 += F::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
-                p2 += F::field_mul_simd_circuit_field(&(hg_v_0 + hg_v_1), &(f_v_0 + f_v_1));
+                p0 += hg_v_0 * f_v_0;
+                p1 += hg_v_1 * f_v_1;
+                p2 += (hg_v_0 + hg_v_1) * (f_v_0 + f_v_1);
             }
         } else {
             for i in 0..eval_size {
@@ -93,13 +93,7 @@ impl<F: FieldEngine> MultilinearProductHelper<F> {
         let eval_size = 1 << (var_num - var_idx - 1);
         if var_idx == 0 {
             for i in 0..eval_size {
-                bk_f[i] = F::field_add_simd_circuit_field(
-                    &F::simd_circuit_field_mul_challenge_field(
-                        &(init_v[i * 2 + 1] - init_v[i * 2]),
-                        &r,
-                    ),
-                    &init_v[i * 2],
-                );
+                bk_f[i] = r * (init_v[i * 2 + 1] - init_v[i * 2]) + init_v[i * 2];
                 bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
             }
         } else {
@@ -327,7 +321,7 @@ impl<'a, F: FieldEngine> CrossLayerScatterHelper<'a, F> {
         p3.iter()
             .map(|p| {
                 unpack_and_combine(
-                    &(F::challenge_mul_field(&self.sp.phase2_coef, p)),
+                    &(*p * self.sp.phase2_coef),
                     &self.sp.eq_evals_at_r_simd,
                 )
             })
@@ -371,7 +365,7 @@ impl<'a, F: FieldEngine> CrossLayerScatterHelper<'a, F> {
                 } else {
                     // for extra bits in sumcheck, we require it to be 1
                     self.sp.cross_layer_completed_values[i_layer] =
-                        F::challenge_mul_field(&r, &self.sp.cross_layer_completed_values[i_layer]);
+                        self.sp.cross_layer_completed_values[i_layer] * r;
                 }
             }
         }
@@ -499,15 +493,12 @@ impl<'a, F: FieldEngine> CrossLayerScatterHelper<'a, F> {
         }
 
         for g in mul.iter() {
-            let r = F::challenge_mul_circuit_field(&eq_evals_at_rz[g.o_id], &g.coef);
-            hg_vals[g.i_ids[0]] += F::simd_circuit_field_mul_challenge_field(&vals[g.i_ids[1]], &r);
+            let r = eq_evals_at_rz[g.o_id] * g.coef;
+            hg_vals[g.i_ids[0]] += r * vals[g.i_ids[1]];
         }
 
         for g in add.iter() {
-            hg_vals[g.i_ids[0]] += F::Field::from(F::challenge_mul_circuit_field(
-                &eq_evals_at_rz[g.o_id],
-                &g.coef,
-            ));
+            hg_vals[g.i_ids[0]] += F::Field::from(eq_evals_at_rz[g.o_id] * g.coef);
         }
     }
 
@@ -560,10 +551,7 @@ impl<'a, F: FieldEngine> CrossLayerScatterHelper<'a, F> {
         );
 
         for g in mul.iter() {
-            hg_vals[g.i_ids[1]] += F::Field::from(F::challenge_mul_circuit_field(
-                &(eq_evals_at_rz[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
-                &g.coef,
-            ));
+            hg_vals[g.i_ids[1]] += F::Field::from((eq_evals_at_rz[g.o_id] * eq_evals_at_rx[g.i_ids[0]]) * g.coef);
         }
     }
 }

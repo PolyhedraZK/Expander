@@ -85,7 +85,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
                     let input_mpi_combined: F::Field = input
                         .iter()
                         .zip(&sp.eq_evals_at_r_mpi)
-                        .map(|(v, c)| F::simd_circuit_field_mul_challenge_field(v, c))
+                        .map(|(v, c)| *c * *v)
                         .sum();
 
                     // simd combined
@@ -95,10 +95,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
                             &sp.eq_evals_at_r_simd,
                         )
                 }
-                _ => F::challenge_mul_circuit_field(
-                    &sp.eq_evals_at_rz0[cst_gate.o_id],
-                    &cst_gate.coef,
-                ),
+                _ => sp.eq_evals_at_rz0[cst_gate.o_id] * cst_gate.coef,
             };
             v += tmp;
         }
@@ -111,10 +108,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
         let mut v = F::ChallengeField::zero();
         for add_gate in add_gates {
             v += sp.eq_evals_at_rz0[add_gate.o_id]
-                * F::challenge_mul_circuit_field(
-                    &sp.eq_evals_at_rx[add_gate.i_ids[0]],
-                    &add_gate.coef,
-                );
+                * sp.eq_evals_at_rx[add_gate.i_ids[0]] * add_gate.coef;
         }
         v * sp.eq_r_simd_r_simd_xy * sp.eq_r_mpi_r_mpi_xy
     }
@@ -124,10 +118,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
         let mut v = F::ChallengeField::zero();
         for mul_gate in mul_gates {
             let tmp = sp.eq_evals_at_rx[mul_gate.i_ids[0]]
-                * F::challenge_mul_circuit_field(
-                    &sp.eq_evals_at_ry[mul_gate.i_ids[1]],
-                    &mul_gate.coef,
-                );
+                * sp.eq_evals_at_ry[mul_gate.i_ids[1]] * mul_gate.coef;
             v += sp.eq_evals_at_rz0[mul_gate.o_id] * tmp;
         }
         v * sp.eq_r_simd_r_simd_xy * sp.eq_r_mpi_r_mpi_xy
@@ -141,7 +132,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
             // Gates of type 12346 represent an add gate
             if gate.gate_type == 12346 {
                 v += sp.eq_evals_at_rz0[gate.o_id]
-                    * F::challenge_mul_circuit_field(&sp.eq_evals_at_rx[gate.i_ids[0]], &gate.coef);
+                    * sp.eq_evals_at_rx[gate.i_ids[0]] * gate.coef;
             }
         }
         v * sp.eq_r_simd_r_simd_xy * sp.eq_r_mpi_r_mpi_xy
@@ -154,7 +145,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
             // Gates of type 12345 represent a pow5 gate
             if gate.gate_type == 12345 {
                 v += sp.eq_evals_at_rz0[gate.o_id]
-                    * F::challenge_mul_circuit_field(&sp.eq_evals_at_rx[gate.i_ids[0]], &gate.coef);
+                    * sp.eq_evals_at_rx[gate.i_ids[0]] * gate.coef;
             }
         }
         v * sp.eq_r_simd_r_simd_xy * sp.eq_r_mpi_r_mpi_xy
