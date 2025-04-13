@@ -35,23 +35,12 @@ impl<F:Field> MiMC5FiatShamirHasher<F> {
 impl<F: Field> FiatShamirHasher for MiMC5FiatShamirHasher<F> {
     const NAME: &'static str = "MiMC5_Field_Hasher";
 
-    const DIGEST_SIZE: usize = 1;
+    const DIGEST_SIZE: usize = F::SIZE;
 
     fn new() -> Self {
         let constants = generate_mimc_constants::<F>();
         Self { constants }
     }
-
-    // TODO: delete it
-    /*
-    fn hash_to_state(&self, input: &[F]) -> Vec<F> {
-        let mut h = F::ZERO;
-        input.iter().for_each(|a| {
-            let r = self.mimc5_hash(&h, a);
-            h += r + a;
-        });
-        vec![h]
-    } */
 
     fn hash(&self, output: &mut [u8], input: &[u8]) {
         assert!(output.len() == F::SIZE);

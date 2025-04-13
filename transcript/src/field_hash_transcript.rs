@@ -41,7 +41,7 @@ where
         Self {
             hasher: H::new(),
             digest: vec![0u8; H::DIGEST_SIZE],
-            digest_start: 0,
+            digest_start: H::DIGEST_SIZE,
             proof: Proof::default(),
             hash_start_index: 0,
             proof_locked: false,
@@ -102,10 +102,7 @@ where
     }
 
     fn append_u8_slice(&mut self, buffer: &[u8]) {
-        if !self.proof_locked {
-            self.proof.bytes.extend_from_slice(buffer);
-        }
-        self.digest.extend_from_slice(buffer);
+        self.proof.bytes.extend_from_slice(buffer);
     }
 
     fn generate_u8_slice(&mut self, n_bytes: usize) -> Vec<u8> {
@@ -150,6 +147,7 @@ where
     fn lock_proof(&mut self) {
         assert!(!self.proof_locked);
         self.proof_locked = true;
+        self.proof_locked_at = self.proof.bytes.len();
     }
 
     #[inline(always)]

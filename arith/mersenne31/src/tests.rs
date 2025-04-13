@@ -119,12 +119,13 @@ fn test_poseidon_m31_fiat_shamir_hash() {
     {
         // let state_elems: [M31; M31x16::RATE] = [M31::from(114514); M31x16::RATE];
         let state_elems: Vec<u8> = [M31::from(114514); M31x16::RATE].iter().flat_map(|x| {
-            let mut xu8 = vec![0u8; M31x16::SIZE];
-            x.serialize_into(&mut xu8);
+            let mut xu8 = vec![];
+            x.serialize_into(&mut xu8).unwrap();
             xu8
         }).collect();
-        let mut actual_output_u8 = [0u8; M31x16::RATE * M31x16::SIZE];
+        let mut actual_output_u8 = [0u8; M31x16::STATE_WIDTH * M31::SIZE];
         perm.hash(&mut actual_output_u8, &state_elems);
+println!("actual output {:?}", actual_output_u8);
         let actual_output = M31x16::from_uniform_bytes(&actual_output_u8);
         let expected_output = M31x16::pack(&vec![
             M31 { v: 1021105124 },
@@ -149,11 +150,11 @@ fn test_poseidon_m31_fiat_shamir_hash() {
 
     {
         let state_elems: Vec<u8> = [M31::from(114514); M31x16::STATE_WIDTH].iter().flat_map(|x| {
-            let mut xu8 = vec![0u8; M31x16::SIZE];
-            x.serialize_into(&mut xu8);
+            let mut xu8 = vec![];
+            x.serialize_into(&mut xu8).unwrap();
             xu8
         }).collect();
-        let mut actual_output_u8 = [0u8; M31x16::RATE * M31x16::SIZE];
+        let mut actual_output_u8 = [0u8; M31x16::STATE_WIDTH * M31::SIZE];
         perm.hash(&mut actual_output_u8, &state_elems);
         let actual_output = M31x16::from_uniform_bytes(&actual_output_u8);
         let expected_output = M31x16::pack(&vec![

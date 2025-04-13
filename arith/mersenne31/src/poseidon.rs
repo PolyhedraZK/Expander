@@ -28,6 +28,9 @@ impl PoseidonStateTrait for M31x16 {
     }
 
     fn to_u8(&self, output: &mut [u8]) {
-        self.serialize_into(output).unwrap();
+        let mut res = vec![];
+        self.serialize_into(&mut res).unwrap();
+        output.copy_from_slice(&res);
+println!("output {:?}", output);
     }
 }

@@ -103,6 +103,7 @@ impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
 
 impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
     fn hash_u8_to_state(&self, input: &[u8]) -> State {
+println!("input len {}", input.len());
         let u8_chunk_size = State::RATE * State::ElemT::SIZE;
         let mut res = State::default();
         let chunks = input.chunks_exact(u8_chunk_size);
@@ -112,11 +113,15 @@ impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
             let mut state_elts = vec![State::ElemT::ZERO; State::STATE_WIDTH];
             for (elem, elts) in chunk.chunks(State::ElemT::SIZE).zip(state_elts[State::CAPACITY..].iter_mut()) {
                 *elts = State::ElemT::from_uniform_bytes(elem);
+println!("{:?}", elts);
             }
+println!("\n");
             let state = State::from_elems(&state_elts);
+println!("{:?}", state.to_elems());
 
             res += state;
             self.permute(&mut res);
+println!("{:?}", res.to_elems());
         }
 
         if remainder.len() > 0 {
@@ -132,6 +137,7 @@ impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
             self.permute(&mut res);
         }
 
+println!("{:?}", res.to_elems());
         res
     }
 }
@@ -139,40 +145,20 @@ impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
 impl<State: PoseidonStateTrait> FiatShamirHasher for PoseidonPermutation<State> {
     const NAME: &'static str = "Poseidon Field Hasher";
 
-    const DIGEST_SIZE: usize = State::CAPACITY;
+    const DIGEST_SIZE: usize = State::STATE_WIDTH * State::ElemT::SIZE;
 
     fn new() -> Self {
         Self::new()
     }
 
-    // TODO: delete it
-    /*
-    fn hash_to_state(&self, input: &[State::ElemT]) -> Vec<State::ElemT> {
-        let mut res = State::default();
-
-        let mut elts = input.to_vec();
-        elts.resize(elts.len().next_multiple_of(State::RATE), State::ElemT::ZERO);
-
-        elts.chunks(State::RATE).for_each(|chunk| {
-            let mut state_elts = vec![State::ElemT::ZERO; State::CAPACITY];
-            state_elts.extend_from_slice(chunk);
-            let state = State::from_elems(&state_elts);
-
-            res += state;
-            self.permute(&mut res);
-        });
-
-        res.to_elems()
-    } */
-
     fn hash(&self, output: &mut [u8], input: &[u8]) {
-        assert!(output.len() == State::CAPACITY * State::ElemT::SIZE);
+        assert!(output.len() == Self::DIGEST_SIZE);
         let res = self.hash_u8_to_state(input);
         res.to_u8(output);
     }
 
     fn hash_inplace(&self, buffer: &mut [u8]) {
-        assert!(buffer.len() == State::CAPACITY * State::ElemT::SIZE);
+        assert!(buffer.len() == Self::DIGEST_SIZE);
         let res = self.hash_u8_to_state(buffer);
         res.to_u8(buffer);
     }
