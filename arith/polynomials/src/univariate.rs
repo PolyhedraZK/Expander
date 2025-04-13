@@ -149,7 +149,7 @@ impl<F: FFTField> UnivariateLagrangePolynomial<F> {
         let omega_inv = omega.inv().unwrap();
 
         let nominator_prepare = point.exp(n as u128) - F::ONE;
-        let denominator_prepare = F::from(n as u64);
+        let denominator_prepare = F::ONE.double().exp(log_n as u128);
 
         let mut omega_i = F::ONE;
         let mut denominator = denominator_prepare;
