@@ -2,11 +2,10 @@ use std::marker::PhantomData;
 
 use arith::{ExtensionField, Field, SimdField};
 use gkr_engine::{StructuredReferenceString, Transcript};
-use polynomials::MultiLinearPoly;
+use polynomials::{MultiLinearPoly, MultilinearExtension, RefMultiLinearPoly};
 
 use crate::{
     orion::{
-        base_field_impl::{orion_commit_base_field, orion_open_base_field},
         simd_field_impl::{orion_commit_simd_field, orion_open_simd_field},
         verify::orion_verify,
         OrionCommitment, OrionProof, OrionSRS, OrionScratchPad, ORION_CODE_PARAMETER_INSTANCE,
@@ -21,6 +20,16 @@ impl StructuredReferenceString for OrionSRS {
     fn into_keys(self) -> (Self::PKey, Self::VKey) {
         (self.clone(), self.clone())
     }
+}
+
+#[inline(always)]
+fn pack_from_base<F, PackF>(es: &[F]) -> Vec<PackF>
+where
+    F: Field,
+    PackF: SimdField<Scalar = F>,
+{
+    // NOTE: SIMD pack neighboring base field evals
+    es.chunks(PackF::PACK_SIZE).map(PackF::pack).collect()
 }
 
 pub struct OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF>
@@ -72,26 +81,36 @@ where
 
     fn commit(
         params: &Self::Params,
-        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        pk: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
-        assert_eq!(*params, proving_key.num_vars);
-        orion_commit_base_field::<_, OpenPackF, ComPackF>(proving_key, poly, scratch_pad).unwrap()
+        assert_eq!(*params, pk.num_vars);
+        assert_eq!(poly.hypercube_size() % OpenPackF::PACK_SIZE, 0);
+
+        let packed_evals: Vec<OpenPackF> = pack_from_base(poly.hypercube_basis_ref());
+        let simd_poly = RefMultiLinearPoly::from_ref(&packed_evals);
+
+        orion_commit_simd_field::<_, OpenPackF, ComPackF>(pk, &simd_poly, scratch_pad).unwrap()
     }
 
     fn open(
         params: &Self::Params,
-        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        pk: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript<EvalF>,
     ) -> (EvalF, Self::Opening) {
-        assert_eq!(*params, proving_key.num_vars);
-        orion_open_base_field::<_, OpenPackF, _, ComPackF>(
-            proving_key,
-            poly,
+        assert_eq!(*params, pk.num_vars);
+        assert_eq!(poly.hypercube_size() % OpenPackF::PACK_SIZE, 0);
+
+        let packed_evals: Vec<OpenPackF> = pack_from_base(poly.hypercube_basis_ref());
+        let simd_poly = RefMultiLinearPoly::from_ref(&packed_evals);
+
+        orion_open_simd_field::<_, OpenPackF, _, ComPackF>(
+            pk,
+            &simd_poly,
             x,
             transcript,
             scratch_pad,
@@ -100,23 +119,15 @@ where
 
     fn verify(
         params: &Self::Params,
-        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        vk: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
         v: EvalF,
         opening: &Self::Opening,
         transcript: &mut impl Transcript<EvalF>,
     ) -> bool {
-        assert_eq!(*params, verifying_key.num_vars);
-        orion_verify::<_, OpenPackF, _, ComPackF>(
-            verifying_key,
-            commitment,
-            x,
-            &[],
-            v,
-            transcript,
-            opening,
-        )
+        assert_eq!(*params, vk.num_vars);
+        orion_verify::<_, OpenPackF, _, ComPackF>(vk, commitment, x, &[], v, transcript, opening)
     }
 }
 
@@ -208,23 +219,15 @@ where
 
     fn verify(
         params: &Self::Params,
-        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        vk: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
         v: EvalF,
         opening: &Self::Opening,
         transcript: &mut impl Transcript<EvalF>,
     ) -> bool {
-        assert_eq!(*params, verifying_key.num_vars);
-        assert_eq!(x.len(), verifying_key.num_vars);
-        orion_verify::<_, SimdF, _, ComPackF>(
-            verifying_key,
-            commitment,
-            x,
-            &[],
-            v,
-            transcript,
-            opening,
-        )
+        assert_eq!(*params, vk.num_vars);
+        assert_eq!(x.len(), vk.num_vars);
+        orion_verify::<_, SimdF, _, ComPackF>(vk, commitment, x, &[], v, transcript, opening)
     }
 }

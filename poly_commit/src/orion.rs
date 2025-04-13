@@ -10,9 +10,6 @@ pub use linear_code::{OrionCodeParameter, ORION_CODE_PARAMETER_INSTANCE};
 #[cfg(test)]
 mod linear_code_tests;
 
-mod base_field_impl;
-pub use base_field_impl::{orion_commit_base_field, orion_open_base_field};
-
 mod simd_field_impl;
 pub use simd_field_impl::{orion_commit_simd_field, orion_open_simd_field};
 
