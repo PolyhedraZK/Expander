@@ -97,17 +97,10 @@ impl Field for M31Ext6 {
             return None;
         }
 
-        let normalize = (-self.v[0].square() - self.v[1].square().double()).inv();
-
-        if normalize.is_none() {
-            return None;
-        }
+        let normalize = (-self.v[0].square() - self.v[1].square().double()).inv()?;
 
         let compliment = Self {
-            v: [
-                -self.v[0] * normalize.unwrap(),
-                self.v[1] * normalize.unwrap(),
-            ],
+            v: [-self.v[0] * normalize, self.v[1] * normalize],
         };
 
         Some(compliment)
