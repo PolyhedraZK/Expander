@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut, Mul};
+use std::ops::{Add, Index, IndexMut, Mul};
 
 use arith::Field;
 use ark_std::log2;
@@ -121,21 +121,28 @@ impl<F: Field> MultiLinearPoly<F> {
     /// Generic method to evaluate a multilinear polynomial.
     /// This is the preferred method to evaluate a multilinear polynomial
     /// as it does not require additional memory.
-    pub fn evaluate_with_buffer(evals: &[F], point: &[F], scratch: &mut [F]) -> F {
+    pub fn evaluate_with_buffer<ChallengeF: Field, EvalF: Field>(evals: &[F], point: &[ChallengeF], scratch: &mut [EvalF]) -> EvalF 
+    where
+        ChallengeF: Mul<F, Output = EvalF>,
+        EvalF: From<F>
+            + Mul<F, Output = EvalF>
+            + Add<F, Output = EvalF>
+            + Mul<ChallengeF, Output = EvalF>,
+    {
         assert_eq!(1 << point.len(), evals.len());
         assert!(scratch.len() >= evals.len());
 
         if point.is_empty() {
-            evals[0]
+            evals[0].into()
         } else {
             for i in 0..(evals.len() >> 1) {
-                scratch[i] = (evals[i * 2 + 1] - evals[i * 2]) * point[0] + evals[i * 2];
+                scratch[i] = point[0] * (evals[i * 2 + 1] - evals[i * 2]) + evals[i * 2];
             }
 
             let mut cur_eval_size = evals.len() >> 2;
             for r in point.iter().skip(1) {
                 for i in 0..cur_eval_size {
-                    scratch[i] = scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]) * r;
+                    scratch[i] = scratch[i * 2] + (scratch[i * 2 + 1] - scratch[i * 2]) * *r;
                 }
                 cur_eval_size >>= 1;
             }
@@ -165,7 +172,14 @@ impl<F: Field> MultilinearExtension<F> for MultiLinearPoly<F> {
         &self.coeffs
     }
 
-    fn evaluate_with_buffer(&self, point: &[F], scratch: &mut [F]) -> F {
+    fn evaluate_with_buffer<ChallengeF: Field, EvalF: Field>(&self, point: &[ChallengeF], scratch: &mut [EvalF]) -> EvalF
+    where
+        ChallengeF: Mul<F, Output = EvalF>,
+        EvalF: From<F>
+            + Mul<F, Output = EvalF>
+            + Add<F, Output = EvalF>
+            + Mul<ChallengeF, Output = EvalF>,
+    {
         Self::evaluate_with_buffer(&self.coeffs, point, scratch)
     }
 
