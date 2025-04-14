@@ -7,6 +7,7 @@ use gf2::{GF2x128, GF2x8, GF2};
 use gf2_128::GF2_128;
 use gkr_engine::Transcript;
 use gkr_hashers::Keccak256hasher;
+use goldilocks::{Goldilocks, GoldilocksExt2, Goldilocksx8};
 use mersenne31::{M31Ext3, M31x16, M31};
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
@@ -73,6 +74,7 @@ fn simd_field_committing_benchmark_helper<F, SimdF, ComPackF>(
 fn orion_simd_field_committing_benchmark(c: &mut Criterion) {
     simd_field_committing_benchmark_helper::<GF2, GF2x8, GF2x128>(c, 19, 32);
     simd_field_committing_benchmark_helper::<M31, M31x16, M31x16>(c, 19, 27);
+    simd_field_committing_benchmark_helper::<Goldilocks, Goldilocksx8, Goldilocksx8>(c, 19, 27);
 }
 
 fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, T>(
@@ -153,6 +155,13 @@ fn orion_simd_field_opening_benchmark(c: &mut Criterion) {
         M31x16,
         M31Ext3,
         M31x16,
+        BytesHashTranscript<_, Keccak256hasher>,
+    >(c, 19, 27);
+    simd_field_opening_benchmark_helper::<
+        Goldilocks,
+        Goldilocksx8,
+        GoldilocksExt2,
+        Goldilocksx8,
         BytesHashTranscript<_, Keccak256hasher>,
     >(c, 19, 27);
 }

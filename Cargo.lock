@@ -1724,6 +1724,7 @@ dependencies = [
  "gf2_128",
  "gkr_engine",
  "gkr_hashers",
+ "goldilocks",
  "halo2curves",
  "itertools 0.13.0",
  "mersenne31",
