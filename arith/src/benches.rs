@@ -313,13 +313,13 @@ pub fn bench_field<F: Field>(c: &mut Criterion) {
 pub fn bench_fft<F: Field + FFTField>(c: &mut Criterion) {
     let mut group = c.benchmark_group("FFT");
 
-    const MAX_FFT_SIZE: usize = 1 << 16;
+    const MAX_FFT_SIZE: usize = 1 << 22;
     let mut rng = test_rng();
     let mut buf: Vec<F> = (0..MAX_FFT_SIZE)
         .map(|_| F::random_unsafe(&mut rng))
         .collect();
 
-    for group_size_bits in 9..=MAX_FFT_SIZE.ilog2() {
+    for group_size_bits in 11..=MAX_FFT_SIZE.ilog2() {
         group.bench_with_input(
             BenchmarkId::new(
                 format!("benchmark {} {group_size_bits}-bits FFT in place", F::NAME),
