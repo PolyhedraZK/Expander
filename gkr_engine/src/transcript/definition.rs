@@ -13,6 +13,7 @@ pub trait Transcript: Clone + Debug {
     /// Create a new transcript.
     fn new() -> Self;
 
+    #[cfg(not(feature = "recursion"))]
     fn init_commitment<F: Field>(&mut self, commitment_bytes: &[u8]) -> Vec<u8>;
 
     /// Append a polynomial commitment to the transcript

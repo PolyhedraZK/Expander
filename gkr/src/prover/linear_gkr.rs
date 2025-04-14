@@ -16,7 +16,7 @@ use crate::{gkr_prove, gkr_square_prove};
 
 #[cfg(feature = "grinding")]
 pub(crate) fn grind<Cfg: GKREngine>(
-    transcript: &mut impl Transcript<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
+    transcript: &mut impl Transcript,
     mpi_config: &MPIConfig,
 ) {
     use crate::GRINDING_BITS;
@@ -29,7 +29,7 @@ pub(crate) fn grind<Cfg: GKREngine>(
     let num_field_elements = (31 + <Cfg::FieldConfig as FieldEngine>::ChallengeField::SIZE)
         / <Cfg::FieldConfig as FieldEngine>::ChallengeField::SIZE;
 
-    let initial_hash = transcript.generate_challenge_field_elements(num_field_elements);
+    let initial_hash = transcript.generate_field_elements::<<Cfg::FieldConfig as FieldEngine>::ChallengeField>(num_field_elements);
     initial_hash
         .iter()
         .for_each(|h| h.serialize_into(&mut hash_bytes).unwrap()); // TODO: error propagation
@@ -40,7 +40,7 @@ pub(crate) fn grind<Cfg: GKREngine>(
     transcript.lock_proof();
     for _ in 0..(1 << GRINDING_BITS) {
         transcript.append_u8_slice(&hash_bytes);
-        hash_bytes = transcript.generate_challenge_u8_slice(32);
+        hash_bytes = transcript.generate_u8_slice(32);
     }
     transcript.append_u8_slice(&hash_bytes[..32]);
     transcript.unlock_proof();

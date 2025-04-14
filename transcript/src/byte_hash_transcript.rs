@@ -42,6 +42,7 @@ impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
         }
     }
 
+    #[cfg(not(feature = "recursion"))]
     #[inline(always)]
     fn init_commitment<F: Field>(&mut self, commitment_bytes: &[u8]) -> Vec<u8> {
         let mut digest = vec![0u8; H::DIGEST_SIZE];
