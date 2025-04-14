@@ -1,7 +1,7 @@
 //! This module implements helper functions for the prover side of the sumcheck protocol
 //! to evaluate power gates
 
-use std::{marker::PhantomData, ops::Mul};
+use std::ops::Mul;
 
 use arith::{Field, SimdField};
 use gkr_engine::FieldEngine;

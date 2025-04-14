@@ -50,7 +50,7 @@ where
     }
 
     #[inline]
-    fn init_commitment<F: Field>(&mut self, commitment_bytes: &[u8]) -> Vec<u8>{
+    fn init_commitment<F: Field>(&mut self, _commitment_bytes: &[u8]) -> Vec<u8>{
         let challenge = self.generate_u8_slice(F::SIZE);
         let mut digest = vec![0u8; H::DIGEST_SIZE];
         self.hasher.hash(&mut digest, &challenge);

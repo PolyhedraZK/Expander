@@ -1,4 +1,3 @@
-use arith::ExtensionField;
 use gkr_engine::{MPIEngine, Transcript};
 
 /// broadcast root transcript state. incurs an additional hash if self.world_size > 1

@@ -125,8 +125,6 @@ fn test_poseidon_m31_fiat_shamir_hash() {
         }).collect();
         let mut actual_output_u8 = [0u8; M31x16::STATE_WIDTH * M31::SIZE];
         perm.hash(&mut actual_output_u8, &state_elems);
-println!("actual output {:?}", actual_output_u8);
-        let actual_output = M31x16::from_uniform_bytes(&actual_output_u8);
         let expected_output = M31x16::pack(&vec![
             M31 { v: 1021105124 },
             M31 { v: 1342990709 },
@@ -145,7 +143,9 @@ println!("actual output {:?}", actual_output_u8);
             M31 { v: 436020341 },
             M31 { v: 1441052621 },
         ]);
-        assert_eq!(actual_output, expected_output);
+        let mut expected_output_u8 = vec![];
+        expected_output.serialize_into(&mut expected_output_u8).unwrap();
+        assert_eq!(actual_output_u8.to_vec(), expected_output_u8);
     }
 
     {
@@ -156,7 +156,6 @@ println!("actual output {:?}", actual_output_u8);
         }).collect();
         let mut actual_output_u8 = [0u8; M31x16::STATE_WIDTH * M31::SIZE];
         perm.hash(&mut actual_output_u8, &state_elems);
-        let actual_output = M31x16::from_uniform_bytes(&actual_output_u8);
         let expected_output = M31x16::pack(&vec![
             M31 { v: 1510043913 },
             M31 { v: 1840611937 },
@@ -175,62 +174,11 @@ println!("actual output {:?}", actual_output_u8);
             M31 { v: 402134378 },
             M31 { v: 535675968 },
         ]);
-        assert_eq!(actual_output, expected_output);
+        let mut expected_output_u8 = vec![];
+        expected_output.serialize_into(&mut expected_output_u8).unwrap();
+        assert_eq!(actual_output_u8.to_vec(), expected_output_u8);
     }
 }
-// TODO: delete it
-/*
-fn test_poseidon_m31_fiat_shamir_hash() {
-    let perm = PoseidonFiatShamirHasher::<M31x16>::new();
-
-    {
-        let state_elems: [M31; M31x16::RATE] = [M31::from(114514); M31x16::RATE];
-        let actual_output = perm.hash_to_state(&state_elems);
-        let expected_output = vec![
-            M31 { v: 1021105124 },
-            M31 { v: 1342990709 },
-            M31 { v: 1593716396 },
-            M31 { v: 2100280498 },
-            M31 { v: 330652568 },
-            M31 { v: 1371365483 },
-            M31 { v: 586650367 },
-            M31 { v: 345482939 },
-            M31 { v: 849034538 },
-            M31 { v: 175601510 },
-            M31 { v: 1454280121 },
-            M31 { v: 1362077584 },
-            M31 { v: 528171622 },
-            M31 { v: 187534772 },
-            M31 { v: 436020341 },
-            M31 { v: 1441052621 },
-        ];
-        assert_eq!(actual_output, expected_output);
-    }
-
-    {
-        let state_elems: [M31; M31x16::STATE_WIDTH] = [M31::from(114514); M31x16::STATE_WIDTH];
-        let actual_output = perm.hash_to_state(&state_elems);
-        let expected_output = vec![
-            M31 { v: 1510043913 },
-            M31 { v: 1840611937 },
-            M31 { v: 45881205 },
-            M31 { v: 1134797377 },
-            M31 { v: 803058407 },
-            M31 { v: 1772167459 },
-            M31 { v: 846553905 },
-            M31 { v: 2143336151 },
-            M31 { v: 300871060 },
-            M31 { v: 545838827 },
-            M31 { v: 1603101164 },
-            M31 { v: 396293243 },
-            M31 { v: 502075988 },
-            M31 { v: 2067011878 },
-            M31 { v: 402134378 },
-            M31 { v: 535675968 },
-        ];
-        assert_eq!(actual_output, expected_output);
-    }
-} */
 
 #[test]
 fn check_normalized_eq() {

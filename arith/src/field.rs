@@ -4,10 +4,7 @@ use rand::RngCore;
 use serdes::ExpSerde;
 
 use std::{
-    fmt::Debug,
-    hash::Hash,
-    iter::{Product, Sum},
-    ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    fmt::Debug, hash::Hash, io::Cursor, iter::{Product, Sum}, ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign}
 };
 
 /// Field definitions.
@@ -92,11 +89,18 @@ pub trait Field:
     /// sample from a 32 bytes
     fn from_uniform_bytes(bytes: &[u8]) -> Self;
 
+    /// convert into bytes
     #[inline(always)]
     fn into_bytes(&self, target: &mut [u8]) {
         let mut res = vec![];
         self.serialize_into(&mut res).unwrap();
         target.copy_from_slice(&res);
+    }
+
+    /// convert from bytes
+    #[inline(always)]
+    fn from_bytes(&mut self, source: &[u8]) {
+        *self = Self::deserialize_from(Cursor::new(source)).unwrap();
     }
 
     /// convert to u256

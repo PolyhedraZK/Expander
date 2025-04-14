@@ -1,4 +1,4 @@
-use arith::{Field, Fr};
+use arith::Fr;
 use serdes::ExpSerde;
 
 use crate::{FiatShamirHasher, MiMC5FiatShamirHasher};

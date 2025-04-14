@@ -1,7 +1,7 @@
 //! This module implements helper functions for the prover side of the sumcheck protocol
 //! to evaluate Mul gates
 
-use std::{marker::PhantomData, ops::{Add, Mul}};
+use std::ops::Mul;
 
 use arith::{ExtensionField, Field, SimdField};
 use gkr_engine::{FieldEngine, FieldType};

@@ -1,4 +1,4 @@
-use std::{fmt::Debug, io::Read, marker::PhantomData};
+use std::{fmt::Debug, io::Read};
 
 use arith::Field;
 use gkr_engine::{Proof, Transcript};
