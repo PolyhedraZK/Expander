@@ -9,6 +9,7 @@ use halo2curves::bn256::{Bn256, G1Affine};
 use mersenne31::M31x16;
 use poly_commit::{raw::RawExpanderGKR, HyperKZGPCS, HyraxPCS, OrionPCSForGKR};
 use transcript::{BytesHashTranscript, FieldHashTranscript};
+use goldilocks::Goldilocksx8;
 
 // ============== M31 ==============
 declare_gkr_config!(
@@ -106,5 +107,13 @@ declare_gkr_config!(
     FieldType::Goldilocks,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
+    GKRScheme::Vanilla,
+);
+
+declare_gkr_config!(
+    pub GoldilocksExtConfigSha2Orion,
+    FieldType::Goldilocks,
+    FiatShamirHashType::SHA256,
+    PolynomialCommitmentType::Orion,
     GKRScheme::Vanilla,
 );
