@@ -5,6 +5,8 @@ use std::{fs, panic};
 
 use arith::Field;
 use circuit::Circuit;
+use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
+use config::instantiations::GoldilocksExtConfigSha2Orion;
 use config_macros::declare_gkr_config;
 use env_logger;
 use gf2::GF2x128;
@@ -135,6 +137,12 @@ fn test_gkr_correctness() {
     test_gkr_correctness_helper::<C10>(None);
     test_gkr_correctness_helper::<C11>(None);
     test_gkr_correctness_helper::<C12>(None);
+
+    // Add test for GoldilocksExtConfigSha2Orion
+    test_gkr_correctness_helper(
+        &Config::<GoldilocksExtConfigSha2Orion>::new(GKRScheme::Vanilla, mpi_config.clone()),
+        None,
+    );
 
     MPIConfig::finalize();
 }

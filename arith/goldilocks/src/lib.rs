@@ -9,7 +9,7 @@ mod goldilocks_ext;
 pub use goldilocks_ext::GoldilocksExt2;
 
 /// Goldilocks x8
-mod goldilocksx8;
+pub mod goldilocksx8;
 pub use goldilocksx8::Goldilocksx8;
 
 /// Goldilocks extension field x8

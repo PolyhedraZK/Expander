@@ -96,6 +96,7 @@ fn parse_polynomial_commitment_type(
     field_type: &str,
     field_config: &str,
     polynomial_commitment_type: ExprPath,
+    transcript_type: &str,
 ) -> (String, String) {
     let binding = polynomial_commitment_type
         .path
@@ -118,6 +119,10 @@ fn parse_polynomial_commitment_type(
         ("Orion", "M31") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, M31x16>").to_owned(),
+        ),
+        ("Orion", "Goldilocks") => (
+            "Orion".to_owned(),
+            format!("OrionPCSForGKR::<{field_config}, Goldilocksx8, {transcript_type}>").to_owned(),
         ),
         _ => panic!("Unknown polynomial commitment type in config macro expansion"),
     }
@@ -160,7 +165,7 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
     let (_fiat_shamir_hash_type, transcript_type) =
         parse_fiat_shamir_hash_type(&field_type, &field_config, fiat_shamir_hash_type_expr);
     let (_polynomial_commitment_enum, polynomial_commitment_type) =
-        parse_polynomial_commitment_type(&field_type, &field_config, polynomial_commitment_type);
+        parse_polynomial_commitment_type(&field_type, &field_config, polynomial_commitment_type, &transcript_type);
 
     let field_config = format_ident!("{field_config}");
     // let fiat_shamir_hash_type = format_ident!("{fiat_shamir_hash_type}");
