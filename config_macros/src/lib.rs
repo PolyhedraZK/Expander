@@ -125,8 +125,7 @@ fn parse_polynomial_commitment_type(
         ),
         _ => panic!(
             "Unknown polynomial commitment type in config macro expansion. PCS: '{}', Field: '{}'",
-            pcs_type_str,
-            field_type
+            pcs_type_str, field_type
         ),
     }
 }
