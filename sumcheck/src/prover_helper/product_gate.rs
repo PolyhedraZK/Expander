@@ -90,55 +90,6 @@ impl SumcheckProductGateHelper {
             }
         };
 
-        // TODO: delete it
-        /*
-        if var_idx == 0 {
-            // this is the first layer, we are able to accelerate by
-            // avoiding the extension field operations
-            for i in 0..eval_size {
-                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                    continue;
-                }
-
-                let f_v_0 = init_v[i * 2];
-                let f_v_1 = init_v[i * 2 + 1];
-                let hg_v_0 = bk_hg[i * 2];
-                let hg_v_1 = bk_hg[i * 2 + 1];
-
-                p0 += F::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
-                log::trace!(
-                    "p0.v += {:?} * {:?} = {:?}",
-                    f_v_0,
-                    hg_v_0,
-                    F::field_mul_simd_circuit_field(&hg_v_0, &f_v_0) + p1
-                );
-                p1 += F::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
-                p2 += F::field_mul_simd_circuit_field(&(hg_v_0 + hg_v_1), &(f_v_0 + f_v_1));
-            }
-        } else {
-            // for the rest of layers we use extension field operations.
-            for i in 0..eval_size {
-                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                    continue;
-                }
-
-                let f_v_0 = bk_f[i * 2];
-                let f_v_1 = bk_f[i * 2 + 1];
-                let hg_v_0 = bk_hg[i * 2];
-                let hg_v_1 = bk_hg[i * 2 + 1];
-                p0 += f_v_0 * hg_v_0;
-                log::trace!(
-                    "p0.v+= {:?} * {:?} =  {:?}",
-                    f_v_0,
-                    hg_v_0,
-                    f_v_0 * hg_v_0 + p1
-                );
-                p1 += f_v_1 * hg_v_1;
-                p2 += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
-            }
-        }
-        */
-
         if F::FIELD_TYPE == FieldType::GF2 {
             // over GF2_128, the three points are at 0, 1 and X
             let p2x = p2.mul_by_x();
@@ -188,47 +139,5 @@ impl SumcheckProductGateHelper {
                 bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
             }
         }
-
-        // TODO: delete it
-        /*
-        if var_idx == 0 {
-            for i in 0..eval_size {
-                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                    gate_exists[i] = false;
-
-                    bk_f[i] = F::field_add_simd_circuit_field(
-                        &F::simd_circuit_field_mul_challenge_field(
-                            &(init_v[2 * i + 1] - init_v[2 * i]),
-                            &r,
-                        ),
-                        &init_v[2 * i],
-                    );
-                    bk_hg[i] = F::Field::zero();
-                } else {
-                    gate_exists[i] = true;
-
-                    bk_f[i] = F::field_add_simd_circuit_field(
-                        &F::simd_circuit_field_mul_challenge_field(
-                            &(init_v[2 * i + 1] - init_v[2 * i]),
-                            &r,
-                        ),
-                        &init_v[2 * i],
-                    );
-                    bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
-                }
-            }
-        } else {
-            for i in 0..eval_size {
-                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                    gate_exists[i] = false;
-                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
-                    bk_hg[i] = F::Field::zero();
-                } else {
-                    gate_exists[i] = true;
-                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
-                    bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
-                }
-            }
-        } */
     }
 }
