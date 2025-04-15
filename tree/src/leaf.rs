@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
 
-use sha2::{Digest, Sha512_256};
+use tiny_keccak::{Hasher, Keccak};
 
 use crate::Node;
 
@@ -39,9 +39,11 @@ impl Leaf {
     }
 
     pub fn leaf_hash(&self) -> Node {
-        let mut hasher = Sha512_256::new();
-        hasher.update(self.data);
-        let res: [u8; LEAF_HASH_BYTES] = hasher.finalize().into();
+        let mut hasher = Keccak::v256();
+        hasher.update(&self.data);
+        let mut res = [0u8; LEAF_HASH_BYTES];
+
+        hasher.finalize(&mut res);
 
         Node { data: res }
     }

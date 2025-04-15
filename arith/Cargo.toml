@@ -9,7 +9,6 @@ criterion.workspace = true
 ethnum.workspace = true
 log.workspace = true
 rand.workspace = true
-sha2.workspace = true
 tynm.workspace = true
 itertools.workspace = true
 

@@ -111,7 +111,6 @@ dependencies = [
  "rand",
  "raw-cpuid",
  "serdes",
- "sha2",
  "tynm",
 ]
 
@@ -786,7 +785,6 @@ dependencies = [
  "rand",
  "raw-cpuid",
  "serdes",
- "sha2",
  "thiserror",
  "tynm",
 ]
@@ -1436,7 +1434,6 @@ dependencies = [
  "rand",
  "raw-cpuid",
  "serdes",
- "sha2",
  "thiserror",
  "tynm",
 ]
@@ -2335,7 +2332,7 @@ dependencies = [
  "gf2",
  "gf2_128",
  "serdes",
- "sha2",
+ "tiny-keccak",
  "tynm",
 ]
 

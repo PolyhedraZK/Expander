@@ -11,7 +11,7 @@ serdes = { path = "../serdes" }
 # poseidon = { path = "../poseidon" }
 
 ark-std.workspace = true
-sha2.workspace = true
+tiny-keccak.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true
