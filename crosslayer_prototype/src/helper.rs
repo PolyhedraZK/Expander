@@ -319,12 +319,7 @@ impl<'a, F: FieldEngine> CrossLayerScatterHelper<'a, F> {
             &self.circuit_vals.vals[self.layer.layer_id - 1],
         );
         p3.iter()
-            .map(|p| {
-                unpack_and_combine(
-                    &(*p * self.sp.phase2_coef),
-                    &self.sp.eq_evals_at_r_simd,
-                )
-            })
+            .map(|p| unpack_and_combine(&(*p * self.sp.phase2_coef), &self.sp.eq_evals_at_r_simd))
             .collect::<Vec<F::ChallengeField>>()
             .try_into()
             .unwrap()
@@ -551,7 +546,8 @@ impl<'a, F: FieldEngine> CrossLayerScatterHelper<'a, F> {
         );
 
         for g in mul.iter() {
-            hg_vals[g.i_ids[1]] += F::Field::from((eq_evals_at_rz[g.o_id] * eq_evals_at_rx[g.i_ids[0]]) * g.coef);
+            hg_vals[g.i_ids[1]] +=
+                F::Field::from((eq_evals_at_rz[g.o_id] * eq_evals_at_rx[g.i_ids[0]]) * g.coef);
         }
     }
 }

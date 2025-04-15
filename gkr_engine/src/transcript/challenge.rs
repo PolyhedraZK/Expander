@@ -68,8 +68,8 @@ impl<C: FieldEngine> ExpanderSingleVarChallenge<C> {
             <C::SimdCircuitField as SimdField>::PACK_SIZE.trailing_zeros() as usize,
         );
 
-        let r_mpi =
-            transcript.generate_field_elements::<C::ChallengeField>(world_size.trailing_zeros() as usize);
+        let r_mpi = transcript
+            .generate_field_elements::<C::ChallengeField>(world_size.trailing_zeros() as usize);
 
         Self { rz, r_simd, r_mpi }
     }
@@ -123,8 +123,8 @@ impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
             <C::SimdCircuitField as SimdField>::PACK_SIZE.trailing_zeros() as usize,
         );
 
-        let r_mpi =
-            transcript.generate_field_elements::<C::ChallengeField>(world_size.trailing_zeros() as usize);
+        let r_mpi = transcript
+            .generate_field_elements::<C::ChallengeField>(world_size.trailing_zeros() as usize);
 
         Self {
             rz_0,

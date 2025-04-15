@@ -404,7 +404,8 @@ impl<C: FieldEngine> Circuit<C> {
 
     pub fn fill_rnd_coefs<T: Transcript>(&mut self, transcript: &mut T) {
         assert!(self.rnd_coefs_identified);
-        let sampled_circuit_fs = transcript.generate_field_elements::<C::CircuitField>(self.rnd_coefs.len());
+        let sampled_circuit_fs =
+            transcript.generate_field_elements::<C::CircuitField>(self.rnd_coefs.len());
         self.rnd_coefs
             .iter()
             .zip(sampled_circuit_fs.iter())

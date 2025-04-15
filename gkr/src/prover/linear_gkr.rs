@@ -15,10 +15,7 @@ use utils::timer::Timer;
 use crate::{gkr_prove, gkr_square_prove};
 
 #[cfg(feature = "grinding")]
-pub(crate) fn grind<Cfg: GKREngine>(
-    transcript: &mut impl Transcript,
-    mpi_config: &MPIConfig,
-) {
+pub(crate) fn grind<Cfg: GKREngine>(transcript: &mut impl Transcript, mpi_config: &MPIConfig) {
     use crate::GRINDING_BITS;
 
     let timer = Timer::new("grinding", mpi_config.is_root());
@@ -29,7 +26,10 @@ pub(crate) fn grind<Cfg: GKREngine>(
     let num_field_elements = (31 + <Cfg::FieldConfig as FieldEngine>::ChallengeField::SIZE)
         / <Cfg::FieldConfig as FieldEngine>::ChallengeField::SIZE;
 
-    let initial_hash = transcript.generate_field_elements::<<Cfg::FieldConfig as FieldEngine>::ChallengeField>(num_field_elements);
+    let initial_hash = transcript
+        .generate_field_elements::<<Cfg::FieldConfig as FieldEngine>::ChallengeField>(
+            num_field_elements,
+        );
     initial_hash
         .iter()
         .for_each(|h| h.serialize_into(&mut hash_bytes).unwrap()); // TODO: error propagation
@@ -124,7 +124,8 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         if self.mpi_config.is_root() {
             let mut buffer = vec![];
             commitment.unwrap().serialize_into(&mut buffer).unwrap(); // TODO: error propagation
-            transcript.append_commitment::<<Cfg::FieldConfig as FieldEngine>::ChallengeField>(&buffer);
+            transcript
+                .append_commitment::<<Cfg::FieldConfig as FieldEngine>::ChallengeField>(&buffer);
         }
         pcs_commit_timer.stop();
 

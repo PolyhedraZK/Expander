@@ -12,20 +12,18 @@ pub(crate) struct SumcheckProductGateHelper {
 
 impl SumcheckProductGateHelper {
     pub(crate) fn new(var_num: usize) -> Self {
-        SumcheckProductGateHelper {
-            var_num,
-        }
+        SumcheckProductGateHelper { var_num }
     }
 
     #[inline]
-    fn evaluate<VF: Field, EvalF: Field>(
+    fn evaluate<VF: Field, EvalF>(
         eval_size: usize,
         bk_f: &[VF],
         bk_hg: &[EvalF],
         gate_exists: &[bool],
     ) -> [EvalF; 3]
     where
-        EvalF: Mul<VF, Output = EvalF>
+        EvalF: Field + Mul<VF, Output = EvalF>,
     {
         let mut p0 = EvalF::ZERO;
         let mut p1 = EvalF::ZERO;
@@ -84,8 +82,7 @@ impl SumcheckProductGateHelper {
         let [p0, p1, mut p2] = {
             if var_idx == 0 {
                 Self::evaluate(eval_size, init_v, bk_hg, gate_exists)
-            }
-            else {
+            } else {
                 Self::evaluate(eval_size, bk_f, bk_hg, gate_exists)
             }
         };
@@ -122,8 +119,7 @@ impl SumcheckProductGateHelper {
             for i in 0..eval_size {
                 bk_f[i] = r * (init_v[2 * i + 1] - init_v[2 * i]) + init_v[2 * i];
             }
-        }
-        else {
+        } else {
             for i in 0..eval_size {
                 bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
             }
@@ -133,8 +129,7 @@ impl SumcheckProductGateHelper {
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 gate_exists[i] = false;
                 bk_hg[i] = F::Field::zero();
-            }
-            else{
+            } else {
                 gate_exists[i] = true;
                 bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
             }

@@ -30,10 +30,7 @@ fn test_raw() {
     );
 }
 
-fn test_raw_gkr_helper<C: FieldEngine, T: Transcript>(
-    mpi_config: &MPIConfig,
-    transcript: &mut T,
-) {
+fn test_raw_gkr_helper<C: FieldEngine, T: Transcript>(mpi_config: &MPIConfig, transcript: &mut T) {
     // NOTE(HS) local variables being 8
     let params = 8;
     let mut rng = thread_rng();
@@ -69,8 +66,7 @@ fn test_raw_gkr() {
     type TGF2 = BytesHashTranscript<SHA256hasher>;
     test_raw_gkr_helper::<GF2ExtConfig, TGF2>(&mpi_config, &mut TGF2::new());
 
-    type TBN254 =
-        BytesHashTranscript<Keccak256hasher>;
+    type TBN254 = BytesHashTranscript<Keccak256hasher>;
     test_raw_gkr_helper::<BN254Config, TBN254>(&mpi_config, &mut TBN254::new());
 
     MPIConfig::finalize();

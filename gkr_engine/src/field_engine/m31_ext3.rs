@@ -20,5 +20,4 @@ impl FieldEngine for M31ExtConfig {
     type ChallengeField = M31Ext3;
 
     type Field = M31Ext3x16;
-
 }

@@ -53,7 +53,9 @@ where
     let proximity_reps = vk.proximity_repetitions::<C::ChallengeField>(PCS_SOUNDNESS_BITS);
     let proximity_local_coeffs: Vec<Vec<C::ChallengeField>> = (0..proximity_reps)
         .map(|_| {
-            transcript.generate_field_elements::<C::ChallengeField>(row_num * C::SimdCircuitField::PACK_SIZE)
+            transcript.generate_field_elements::<C::ChallengeField>(
+                row_num * C::SimdCircuitField::PACK_SIZE,
+            )
         })
         .collect();
 

@@ -21,5 +21,4 @@ impl FieldEngine for GF2ExtConfig {
     type ChallengeField = GF2_128;
 
     type Field = GF2_128x8;
-
 }

@@ -72,21 +72,19 @@ fn parse_fiat_shamir_hash_type(
     match (hash_type_str, field_type) {
         ("SHA256", _) => (
             "SHA256".to_owned(),
-            format!("BytesHashTranscript::<SHA256hasher>").to_owned(),
+            "BytesHashTranscript::<SHA256hasher>".to_owned(),
         ),
         ("Keccak256", _) => (
             "Keccak256".to_owned(),
-            format!("BytesHashTranscript::<Keccak256hasher>").to_owned(),
+            "BytesHashTranscript::<Keccak256hasher>".to_owned(),
         ),
         ("Poseidon", "M31") => (
             "Poseidon".to_owned(),
-            format!("FieldHashTranscript::<PoseidonFiatShamirHasher<M31x16>>")
-                .to_owned(),
+            "FieldHashTranscript::<PoseidonFiatShamirHasher<M31x16>>".to_owned(),
         ),
         ("MIMC5", "BN254") => (
             "MIMC5".to_owned(),
-            format!("FieldHashTranscript::<MiMC5FiatShamirHasher<{challenge_f}>>")
-                .to_owned(),
+            format!("FieldHashTranscript::<MiMC5FiatShamirHasher<{challenge_f}>>").to_owned(),
         ),
         _ => panic!("Unknown hash type"),
     }

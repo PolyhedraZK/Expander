@@ -107,7 +107,8 @@ impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
         while cur_n_bytes < n_bytes {
             let digest_start = self.get_digest_start();
             let digest_len = (H::DIGEST_SIZE - digest_start).min(n_bytes - cur_n_bytes);
-            ret[cur_n_bytes..cur_n_bytes + digest_len].copy_from_slice(&self.digest[digest_start..digest_start + digest_len]);
+            ret[cur_n_bytes..cur_n_bytes + digest_len]
+                .copy_from_slice(&self.digest[digest_start..digest_start + digest_len]);
             cur_n_bytes += digest_len;
             self.digest_start += digest_len;
         }
@@ -178,5 +179,4 @@ impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
         }
         self.digest_start
     }
-    
 }

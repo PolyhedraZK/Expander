@@ -39,14 +39,8 @@ fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF>(
 
         common::test_pcs::<
             EvalF,
-            BytesHashTranscript< Keccak256hasher>,
-            OrionBaseFieldPCS<
-                F,
-                EvalF,
-                ComPackF,
-                OpenPackF,
-                BytesHashTranscript<Keccak256hasher>,
-            >,
+            BytesHashTranscript<Keccak256hasher>,
+            OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF, BytesHashTranscript<Keccak256hasher>>,
         >(&num_vars, &poly, &xs);
     })
 }

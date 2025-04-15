@@ -330,8 +330,7 @@ impl Mul<GF2> for GF2x8 {
     fn mul(self, rhs: GF2) -> GF2x8 {
         if rhs.is_zero() {
             GF2x8::ZERO
-        }
-        else {
+        } else {
             self
         }
     }

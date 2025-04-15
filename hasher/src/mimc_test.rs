@@ -23,8 +23,5 @@ fn check_mimc5_aligned() {
     mimc.hash(&mut output, &inputu8);
 
     assert_eq!(output.len(), MiMC5FiatShamirHasher::<Fr>::DIGEST_SIZE);
-    assert_eq!(
-        output,
-        MIMC5_BN254_OUT
-    );
+    assert_eq!(output, MIMC5_BN254_OUT);
 }

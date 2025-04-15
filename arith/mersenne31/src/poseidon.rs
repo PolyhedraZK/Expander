@@ -27,6 +27,6 @@ impl PoseidonStateTrait for M31x16 {
     }
 
     fn to_u8(&self, output: &mut [u8]) {
-        self.into_bytes(output);
+        self.to_bytes(output);
     }
 }

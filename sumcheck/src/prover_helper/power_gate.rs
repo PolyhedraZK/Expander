@@ -38,16 +38,14 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
         p[4] += p_add_coef_0
             + p_add_coef_1.double().double()
             + p_add_coef_2 * F::CircuitField::from(16);
-        p[5] += p_add_coef_0
-            + p_add_coef_1.mul_by_5()
-            + p_add_coef_2 * F::CircuitField::from(25);
+        p[5] += p_add_coef_0 + p_add_coef_1.mul_by_5() + p_add_coef_2 * F::CircuitField::from(25);
         p[6] += p_add_coef_0
             + p_add_coef_1.mul_by_3().double()
             + p_add_coef_2 * F::CircuitField::from(36);
     }
 
     #[inline]
-    fn evaluate<VF: Field, ChallengeF: Field, EvalF: Field>(
+    fn evaluate<VF: Field, ChallengeF: Field, EvalF>(
         eval_size: usize,
         src_v: &[VF],
         bk_hg_5: &[ChallengeF],
@@ -57,10 +55,7 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
         p: &mut [EvalF],
     ) -> [EvalF; 3]
     where
-        EvalF:
-            From<ChallengeF> +
-            Mul<ChallengeF, Output = EvalF> +
-            Mul<VF, Output = EvalF>,
+        EvalF: Field + From<ChallengeF> + Mul<ChallengeF, Output = EvalF> + Mul<VF, Output = EvalF>,
     {
         log::trace!("Eval size: {}", eval_size);
         for i in 0..eval_size {
@@ -138,8 +133,7 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
                     gate_exists_1,
                     &mut p,
                 )
-            }
-            else {
+            } else {
                 Self::evaluate(
                     eval_size,
                     bk_f,

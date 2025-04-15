@@ -9,7 +9,7 @@ pub struct MiMC5FiatShamirHasher<F: Field> {
     constants: Vec<F>,
 }
 
-impl<F:Field> MiMC5FiatShamirHasher<F> {
+impl<F: Field> MiMC5FiatShamirHasher<F> {
     fn hash_u8_to_state(&self, input: &[u8]) -> F {
         let mut h = F::ZERO;
         let chunks = input.chunks_exact(F::SIZE);
@@ -20,9 +20,9 @@ impl<F:Field> MiMC5FiatShamirHasher<F> {
             h += r + x;
         }
 
-        if remainder.len() > 0 {
+        if !remainder.is_empty() {
             remainder.resize(F::SIZE, 0);
-            
+
             let x = F::from_uniform_bytes(&remainder);
             let r = self.mimc5_hash(&h, &x);
             h += r + x;
@@ -45,13 +45,13 @@ impl<F: Field> FiatShamirHasher for MiMC5FiatShamirHasher<F> {
     fn hash(&self, output: &mut [u8], input: &[u8]) {
         assert!(output.len() == F::SIZE);
         let res = self.hash_u8_to_state(input);
-        res.into_bytes(output);
+        res.to_bytes(output);
     }
 
     fn hash_inplace(&self, buffer: &mut [u8]) {
         assert!(buffer.len() == F::SIZE);
         let res = self.hash_u8_to_state(buffer);
-        res.into_bytes(buffer);
+        res.to_bytes(buffer);
     }
 }
 

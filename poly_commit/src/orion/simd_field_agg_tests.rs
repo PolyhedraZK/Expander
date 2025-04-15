@@ -1,4 +1,3 @@
-
 use arith::{Field, SimdField};
 use ark_std::test_rng;
 use gf2::GF2x128;

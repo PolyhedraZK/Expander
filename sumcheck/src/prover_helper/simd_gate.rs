@@ -158,9 +158,7 @@ impl<F: FieldEngine> SumcheckSimdProdGateHelper<F> {
         p[4] += p_add_coef_0
             + p_add_coef_1.double().double()
             + p_add_coef_2 * F::CircuitField::from(16);
-        p[5] += p_add_coef_0
-            + p_add_coef_1.mul_by_5()
-            + p_add_coef_2 * F::CircuitField::from(25);
+        p[5] += p_add_coef_0 + p_add_coef_1.mul_by_5() + p_add_coef_2 * F::CircuitField::from(25);
         p[6] += p_add_coef_0
             + p_add_coef_1.mul_by_3().double()
             + p_add_coef_2 * F::CircuitField::from(36);

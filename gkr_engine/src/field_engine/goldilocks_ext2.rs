@@ -20,5 +20,4 @@ impl FieldEngine for GoldilocksExtConfig {
     type ChallengeField = GoldilocksExt2;
 
     type Field = GoldilocksExt2x8;
-
 }

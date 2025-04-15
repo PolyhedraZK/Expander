@@ -51,7 +51,7 @@ where
 
     #[cfg(not(feature = "recursion"))]
     #[inline]
-    fn init_commitment<F: Field>(&mut self, _commitment_bytes: &[u8]) -> Vec<u8>{
+    fn init_commitment<F: Field>(&mut self, _commitment_bytes: &[u8]) -> Vec<u8> {
         let challenge = self.generate_u8_slice(F::SIZE);
         let mut digest = vec![0u8; H::DIGEST_SIZE];
         self.hasher.hash(&mut digest, &challenge);
@@ -113,7 +113,8 @@ where
         while cur_n_bytes < n_bytes {
             let digest_start = self.get_digest_start();
             let digest_len = (H::DIGEST_SIZE - digest_start).min(n_bytes - cur_n_bytes);
-            ret[cur_n_bytes..cur_n_bytes + digest_len].copy_from_slice(&self.digest[digest_start..digest_start + digest_len]);
+            ret[cur_n_bytes..cur_n_bytes + digest_len]
+                .copy_from_slice(&self.digest[digest_start..digest_start + digest_len]);
             cur_n_bytes += digest_len;
             self.digest_start += digest_len;
         }

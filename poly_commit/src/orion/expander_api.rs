@@ -124,7 +124,8 @@ where
             .proximity_rows
             .iter()
             .map(|row| {
-                let weights = transcript.generate_field_elements::<C::ChallengeField>(mpi_engine.world_size());
+                let weights = transcript
+                    .generate_field_elements::<C::ChallengeField>(mpi_engine.world_size());
                 mpi_engine.coef_combine_vec(row, &weights)
             })
             .collect();

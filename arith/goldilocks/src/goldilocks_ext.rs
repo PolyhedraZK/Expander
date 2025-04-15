@@ -9,7 +9,10 @@ use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::{goldilocks::{mod_reduce_u64, Goldilocks}, GoldilocksExt2x8, Goldilocksx8};
+use crate::{
+    goldilocks::{mod_reduce_u64, Goldilocks},
+    GoldilocksExt2x8, Goldilocksx8,
+};
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct GoldilocksExt2 {
