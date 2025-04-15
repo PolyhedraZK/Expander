@@ -5,7 +5,7 @@ use gkr_engine::{MPIEngine, Transcript};
 use itertools::izip;
 use serdes::ExpSerde;
 use transpose::transpose_inplace;
-use tree::{Node, RangePath, Tree};
+use tree::{RangePath, Tree};
 
 use crate::{
     orion::{OrionCommitment, OrionResult, OrionSRS, OrionScratchPad},
@@ -174,15 +174,8 @@ where
     scratch_pad.interleaved_alphabet_commitment =
         Tree::compact_new_with_packed_field_elems(codewords);
 
-    Ok(scratch_pad.interleaved_alphabet_commitment.root())
-}
-
-#[inline(always)]
-pub(crate) fn orion_mpi_compute_mt_root(
-    mpi_engine: &impl MPIEngine,
-    local_commitment: Node,
-    scratch_pad: &mut OrionScratchPad,
-) -> OrionResult<Node> {
+    // NOTE: gather local roots and compute the final MT root
+    let local_commitment = scratch_pad.interleaved_alphabet_commitment.root();
     let mut leaves = vec![tree::Node::default(); mpi_engine.world_size()];
     mpi_engine.gather_vec(&[local_commitment], &mut leaves);
 

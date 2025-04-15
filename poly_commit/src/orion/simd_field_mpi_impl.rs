@@ -5,7 +5,7 @@ use polynomials::{EqPolynomial, MultilinearExtension};
 
 use crate::{
     orion::{
-        mpi_utils::{mpi_commit_encoded, orion_mpi_compute_mt_root, orion_mpi_mt_openings},
+        mpi_utils::{mpi_commit_encoded, orion_mpi_mt_openings},
         utils::{lut_open_linear_combine, simd_open_linear_combine},
         OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
     },
@@ -36,8 +36,7 @@ where
         std::slice::from_raw_parts(ptr as *const ComPackF, len)
     };
 
-    let local_com = mpi_commit_encoded(mpi_engine, pk, packed_evals_ref, scratch_pad)?;
-    orion_mpi_compute_mt_root(mpi_engine, local_com, scratch_pad)
+    mpi_commit_encoded(mpi_engine, pk, packed_evals_ref, scratch_pad)
 }
 
 #[inline(always)]
