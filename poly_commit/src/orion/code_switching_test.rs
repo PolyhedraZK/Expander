@@ -4,7 +4,7 @@ use gkr_engine::{BN254Config, FieldEngine};
 use polynomials::MultiLinearPoly;
 
 use crate::{
-    orion::linear_code::OrionCode, orion_code_switching_gkr_circuit, ORION_CODE_PARAMETER_INSTANCE,
+    code_switching_gkr_circuit, orion::linear_code::OrionCode, ORION_CODE_PARAMETER_INSTANCE,
 };
 
 fn test_orion_code_switch_circuit_evaluate_helper<F: Field, C: FieldEngine>(num_vars: usize)
@@ -12,6 +12,8 @@ where
     F: Field,
     C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
 {
+    const PROXIMITY_REPETITIONS: usize = 2;
+
     let mut rng = test_rng();
 
     let msg_size = 1 << num_vars;
@@ -34,7 +36,7 @@ where
         .collect();
 
     let mut layered_circuit =
-        orion_code_switching_gkr_circuit::<F, C>(&encoder, &challenge_point, 2);
+        code_switching_gkr_circuit::<F, C>(&encoder, &challenge_point, PROXIMITY_REPETITIONS);
 
     layered_circuit.layers[0].input_vals = input_coeffs.clone();
 
