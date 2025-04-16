@@ -219,7 +219,7 @@ impl Field for AVX256GF2_128x8 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(_bytes: &[u8]) -> Self {
         todo!()
     }
 

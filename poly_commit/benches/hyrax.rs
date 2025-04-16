@@ -55,7 +55,7 @@ fn hyrax_opening_benchmark_helper(
     let mut group = c.benchmark_group("Hyrax PCS opening");
 
     let mut rng = test_rng();
-    let mut transcript = BytesHashTranscript::<Fr, Keccak256hasher>::new();
+    let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
     let mut scratch_pad = ();
 
     for num_vars in lowest_num_vars..=highest_num_vars {

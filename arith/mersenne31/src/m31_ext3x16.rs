@@ -268,7 +268,7 @@ impl Field for M31Ext3x16 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
 
-    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(_bytes: &[u8]) -> Self {
         unimplemented!("vec m31: cannot convert from 32 bytes")
     }
 }
@@ -399,5 +399,14 @@ impl PartialOrd for M31Ext3x16 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for M31Ext3x16 is not supported")
+    }
+}
+
+impl Add<M31x16> for M31Ext3x16 {
+    type Output = M31Ext3x16;
+
+    #[inline(always)]
+    fn add(self, rhs: M31x16) -> Self::Output {
+        self.add_by_base_field(&rhs)
     }
 }

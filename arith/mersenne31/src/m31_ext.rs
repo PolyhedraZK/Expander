@@ -11,7 +11,10 @@ use arith::ExtensionField;
 use arith::{field_common, Field};
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::m31::{mod_reduce_u32, M31};
+use crate::{
+    m31::{mod_reduce_u32, M31},
+    M31Ext3x16, M31x16,
+};
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct M31Ext3 {
@@ -123,7 +126,7 @@ impl Field for M31Ext3 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         let v1 = mod_reduce_u32(u32::from_be_bytes(bytes[0..4].try_into().unwrap()));
         let v2 = mod_reduce_u32(u32::from_be_bytes(bytes[4..8].try_into().unwrap()));
         let v3 = mod_reduce_u32(u32::from_be_bytes(bytes[8..12].try_into().unwrap()));
@@ -352,5 +355,21 @@ impl PartialOrd for M31Ext3 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for M31Ext3 is not supported")
+    }
+}
+
+impl Mul<M31x16> for M31Ext3 {
+    type Output = M31Ext3x16;
+
+    #[inline(always)]
+    fn mul(self, rhs: M31x16) -> Self::Output {
+        let simd_lhs = M31Ext3x16::from(self);
+        M31Ext3x16 {
+            v: [
+                simd_lhs.v[0] * rhs,
+                simd_lhs.v[1] * rhs,
+                simd_lhs.v[2] * rhs,
+            ],
+        }
     }
 }

@@ -94,7 +94,7 @@ impl Field for GF2x8 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         GF2x8 { v: bytes[0] }
     }
 
@@ -320,5 +320,18 @@ impl PartialOrd for GF2x8 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for GF2x8 is not supported")
+    }
+}
+
+impl Mul<GF2> for GF2x8 {
+    type Output = GF2x8;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2) -> GF2x8 {
+        if rhs.is_zero() {
+            GF2x8::ZERO
+        } else {
+            self
+        }
     }
 }

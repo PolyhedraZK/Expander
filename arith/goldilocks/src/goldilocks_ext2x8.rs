@@ -232,7 +232,7 @@ impl Field for GoldilocksExt2x8 {
     }
 
     #[inline]
-    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(_bytes: &[u8]) -> Self {
         unimplemented!("vec m31: cannot convert from 32 bytes")
     }
 
@@ -358,5 +358,14 @@ impl PartialOrd for GoldilocksExt2x8 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for GoldilocksExt2x8 is not supported")
+    }
+}
+
+impl Add<Goldilocksx8> for GoldilocksExt2x8 {
+    type Output = GoldilocksExt2x8;
+
+    #[inline(always)]
+    fn add(self, rhs: Goldilocksx8) -> Self::Output {
+        self.add_by_base_field(&rhs)
     }
 }

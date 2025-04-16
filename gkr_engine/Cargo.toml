@@ -22,4 +22,5 @@ ark-std.workspace = true
 
 [features]
 default = []
+recursion = []
 # grinding = [ "grinding" ]

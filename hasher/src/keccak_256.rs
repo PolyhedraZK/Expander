@@ -1,11 +1,13 @@
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::FiatShamirBytesHash;
+use crate::FiatShamirHasher;
 
 #[derive(Clone, Default, Debug)]
 pub struct Keccak256hasher {}
 
-impl FiatShamirBytesHash for Keccak256hasher {
+impl FiatShamirHasher for Keccak256hasher {
+    const NAME: &'static str = "Keccak256 Hasher";
+
     const DIGEST_SIZE: usize = 32;
 
     #[inline]
@@ -14,14 +16,14 @@ impl FiatShamirBytesHash for Keccak256hasher {
     }
 
     #[inline]
-    fn hash(output: &mut [u8], input: &[u8]) {
+    fn hash(&self, output: &mut [u8], input: &[u8]) {
         let mut hasher = Keccak::v256();
         hasher.update(input);
         hasher.finalize(output);
     }
 
     #[inline]
-    fn hash_inplace(buffer: &mut [u8]) {
+    fn hash_inplace(&self, buffer: &mut [u8]) {
         let mut hasher = Keccak::v256();
         hasher.update(&*buffer);
         hasher.finalize(buffer);

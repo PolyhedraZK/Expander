@@ -94,7 +94,7 @@ impl Field for GF2x64 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         let mut buf = [0u8; 8];
         buf[..].copy_from_slice(&bytes[..8]);
         GF2x64 {

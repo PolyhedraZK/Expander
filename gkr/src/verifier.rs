@@ -34,7 +34,7 @@ pub struct Verifier<Cfg: GKREngine> {
 fn verify_sumcheck_step<F: FieldEngine>(
     mut proof_reader: impl Read,
     degree: usize,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
     claimed_sum: &mut F::ChallengeField,
     randomness_vec: &mut Vec<F::ChallengeField>,
     sp: &VerifierScratchPad<F>,
@@ -45,7 +45,7 @@ fn verify_sumcheck_step<F: FieldEngine>(
         transcript.append_field_element(&ps[i]);
     }
 
-    let r = transcript.generate_challenge_field_element();
+    let r = transcript.generate_field_element::<F::ChallengeField>();
     randomness_vec.push(r);
 
     let verified = (ps[0] + ps[1]) == *claimed_sum;
@@ -75,7 +75,7 @@ fn sumcheck_verify_gkr_layer<F: FieldEngine>(
     claimed_v1: &mut Option<F::ChallengeField>,
     alpha: Option<F::ChallengeField>,
     mut proof_reader: impl Read,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
     sp: &mut VerifierScratchPad<F>,
     is_output_layer: bool,
 ) -> bool {
@@ -179,7 +179,7 @@ pub fn gkr_verify<F: FieldEngine>(
     circuit: &Circuit<F>,
     public_input: &[F::SimdCircuitField],
     claimed_v: &F::ChallengeField,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
     mut proof_reader: impl Read,
 ) -> (
     bool,
@@ -220,7 +220,7 @@ pub fn gkr_verify<F: FieldEngine>(
 
         verified &= cur_verified;
         alpha = if challenge.rz_1.is_some() {
-            Some(transcript.generate_challenge_field_element())
+            Some(transcript.generate_field_element::<F::ChallengeField>())
         } else {
             None
         };
@@ -273,7 +273,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         //
         // note that this function is almost identical to grind, except that grind uses a
         // fixed hasher, where as this function uses the transcript hasher
-        let pcs_verified = transcript.append_commitment_and_check_digest(&buffer, &mut cursor);
+        let pcs_verified = transcript.append_commitment_and_check_digest::<<Cfg::FieldConfig as FieldEngine>::ChallengeField, _>(&buffer, &mut cursor);
         log::info!("pcs verification: {}", pcs_verified);
 
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
@@ -369,7 +369,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         commitment: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment,
         open_at: &mut ExpanderSingleVarChallenge<Cfg::FieldConfig>,
         v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
-        transcript: &mut impl Transcript<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
+        transcript: &mut impl Transcript,
         proof_reader: impl Read,
     ) -> bool {
         let opening = <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Opening::deserialize_from(

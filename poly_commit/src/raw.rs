@@ -89,7 +89,7 @@ impl<F: ExtensionField> PolynomialCommitmentScheme<F> for RawMultiLinearPCS {
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         _scratch_pad: &Self::ScratchPad,
-        _transcript: &mut impl Transcript<F>,
+        _transcript: &mut impl Transcript,
     ) -> (F, Self::Opening) {
         assert!(x.len() == *params);
         (MultiLinearPoly::<F>::evaluate_jolt(poly, x), ())
@@ -102,7 +102,7 @@ impl<F: ExtensionField> PolynomialCommitmentScheme<F> for RawMultiLinearPCS {
         x: &Self::EvalPoint,
         v: F,
         _opening: &Self::Opening,
-        _transcript: &mut impl Transcript<F>,
+        _transcript: &mut impl Transcript,
     ) -> bool {
         assert!(x.len() == *params);
         MultiLinearPoly::<F>::evaluate_with_buffer(
@@ -184,7 +184,7 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         _poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _x: &ExpanderSingleVarChallenge<C>,
-        _transcript: &mut impl Transcript<C::ChallengeField>,
+        _transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
         Some(())
@@ -196,7 +196,7 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
         commitment: &Self::Commitment,
         challenge: &ExpanderSingleVarChallenge<C>,
         v: C::ChallengeField,
-        _transcript: &mut impl Transcript<C::ChallengeField>,
+        _transcript: &mut impl Transcript,
         _opening: &Self::Opening,
     ) -> bool {
         let v_target =

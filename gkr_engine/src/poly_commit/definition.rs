@@ -84,7 +84,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<F::SimdCircuitField>,
         x: &ExpanderSingleVarChallenge<F>,
-        transcript: &mut impl Transcript<F::ChallengeField>,
+        transcript: &mut impl Transcript,
         scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening>;
 
@@ -100,7 +100,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
         commitment: &Self::Commitment,
         x: &ExpanderSingleVarChallenge<F>,
         v: F::ChallengeField,
-        transcript: &mut impl Transcript<F::ChallengeField>,
+        transcript: &mut impl Transcript,
         opening: &Self::Opening,
     ) -> bool;
 }

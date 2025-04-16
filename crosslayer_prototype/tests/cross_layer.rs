@@ -5,7 +5,7 @@ use gkr_hashers::SHA256hasher;
 use transcript::BytesHashTranscript;
 
 fn test_sumcheck_cross_layered_helper<F: FieldEngine>() {
-    let mut transcript = BytesHashTranscript::<F::ChallengeField, SHA256hasher>::new();
+    let mut transcript = BytesHashTranscript::<SHA256hasher>::new();
 
     let mut rng = rand::thread_rng();
     let n_layers = 5;

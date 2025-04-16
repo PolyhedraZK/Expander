@@ -112,7 +112,7 @@ where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     E::Fr: ExtensionField,
-    T: Transcript<E::Fr>,
+    T: Transcript,
 {
     let (folded_oracle_commitments, folded_oracle_coeffs) =
         coeff_form_hyperkzg_local_poly_oracles(srs, coeffs, alphas);
@@ -121,14 +121,14 @@ where
         fs_transcript.append_u8_slice(f.to_bytes().as_ref());
     });
 
-    let beta = fs_transcript.generate_challenge_field_element();
+    let beta = fs_transcript.generate_field_element::<E::Fr>();
     let beta2 = beta * beta;
 
     let local_evals =
         coeff_form_hyperkzg_local_evals::<E>(coeffs, &folded_oracle_coeffs, alphas, beta);
     local_evals.append_to_transcript(fs_transcript);
 
-    let gamma = fs_transcript.generate_challenge_field_element();
+    let gamma = fs_transcript.generate_field_element::<E::Fr>();
 
     let mut f_gamma =
         coeff_form_hyperkzg_local_oracle_polys_aggregate::<E>(coeffs, &folded_oracle_coeffs, gamma);
@@ -142,7 +142,7 @@ where
 
     fs_transcript.append_u8_slice(beta_x_commitment.to_bytes().as_ref());
 
-    let tau = fs_transcript.generate_challenge_field_element();
+    let tau = fs_transcript.generate_field_element::<E::Fr>();
     let vanishing_at_tau = {
         let f_gamma_denom = (tau - beta) * (tau + beta) * (tau - beta2);
         let lagrange_degree2_at_tau =
@@ -179,14 +179,14 @@ where
     E: MultiMillerLoop,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::Fr: ExtensionField,
-    T: Transcript<E::Fr>,
+    T: Transcript,
 {
     opening
         .folded_oracle_commitments
         .iter()
         .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
 
-    let beta = fs_transcript.generate_challenge_field_element();
+    let beta = fs_transcript.generate_field_element::<E::Fr>();
     let beta2 = beta * beta;
 
     let local_evals =
@@ -198,7 +198,7 @@ where
         return false;
     }
 
-    let gamma = fs_transcript.generate_challenge_field_element();
+    let gamma = fs_transcript.generate_field_element::<E::Fr>();
     let gamma_pow_series = powers_series(&gamma, alphas.len());
     let v_beta = univariate_evaluate(&local_evals.pos_beta_evals, &gamma_pow_series);
     let v_neg_beta = univariate_evaluate(&local_evals.neg_beta_evals, &gamma_pow_series);
@@ -215,7 +215,7 @@ where
         comm.to_curve() + univariate_evaluate(&folded_g1_oracle_comms, &gamma_pow_series[1..]);
 
     fs_transcript.append_u8_slice(opening.beta_x_commitment.to_bytes().as_ref());
-    let tau = fs_transcript.generate_challenge_field_element();
+    let tau = fs_transcript.generate_field_element::<E::Fr>();
 
     let q_weight = (tau - beta) * (tau - beta2) * (tau + beta);
     let lagrange_eval =

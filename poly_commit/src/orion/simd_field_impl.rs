@@ -54,7 +54,7 @@ pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
     point: &[EvalF],
-    transcript: &mut impl Transcript<EvalF>,
+    transcript: &mut impl Transcript,
     scratch_pad: &OrionScratchPad<F, ComPackF>,
 ) -> OrionProof<EvalF>
 where
@@ -121,7 +121,7 @@ pub fn orion_verify_simd_field<F, SimdF, EvalF, ComPackF>(
     commitment: &OrionCommitment,
     point: &[EvalF],
     evaluation: EvalF,
-    transcript: &mut impl Transcript<EvalF>,
+    transcript: &mut impl Transcript,
     proof: &OrionProof<EvalF>,
 ) -> bool
 where
@@ -154,11 +154,11 @@ where
     // then draw query points from fiat shamir transcripts
     let proximity_reps = vk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
     let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_reps)
-        .map(|_| transcript.generate_challenge_field_elements(row_num * SimdF::PACK_SIZE))
+        .map(|_| transcript.generate_field_elements::<EvalF>(row_num * SimdF::PACK_SIZE))
         .collect();
 
     let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
-    let query_indices = transcript.generate_challenge_index_vector(query_num);
+    let query_indices = transcript.generate_usize_vector(query_num);
 
     // NOTE: check consistency in MT in the opening trees and against the commitment tree
     if !orion_mt_verify(vk, &query_indices, &proof.query_openings, commitment) {

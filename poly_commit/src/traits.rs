@@ -44,7 +44,7 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &Self::ScratchPad,
-        transcript: &mut impl Transcript<F>,
+        transcript: &mut impl Transcript,
     ) -> (F, Self::Opening);
 
     /// Verify the opening of a polynomial at a point.
@@ -55,7 +55,7 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
         x: &Self::EvalPoint,
         v: F,
         opening: &Self::Opening,
-        transcript: &mut impl Transcript<F>,
+        transcript: &mut impl Transcript,
     ) -> bool;
 }
 

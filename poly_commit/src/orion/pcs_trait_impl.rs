@@ -21,7 +21,7 @@ where
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    T: Transcript,
 {
     _marker_f: PhantomData<F>,
     _marker_eval_f: PhantomData<EvalF>,
@@ -37,7 +37,7 @@ where
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
     OpenPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    T: Transcript,
 {
     const NAME: &'static str = "OrionBaseFieldPCS";
 
@@ -77,7 +77,7 @@ where
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &Self::ScratchPad,
-        transcript: &mut impl Transcript<EvalF>,
+        transcript: &mut impl Transcript,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);
         orion_open_base_field::<F, EvalF, ComPackF, OpenPackF>(
@@ -96,7 +96,7 @@ where
         x: &Self::EvalPoint,
         v: EvalF,
         opening: &Self::Opening,
-        transcript: &mut impl Transcript<EvalF>,
+        transcript: &mut impl Transcript,
     ) -> bool {
         assert_eq!(*params, verifying_key.num_vars);
         orion_verify_base_field::<F, EvalF, ComPackF, OpenPackF>(
@@ -177,7 +177,7 @@ where
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &Self::ScratchPad,
-        transcript: &mut impl Transcript<EvalF>,
+        transcript: &mut impl Transcript,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);
         assert_eq!(
@@ -218,7 +218,7 @@ where
         x: &Self::EvalPoint,
         v: EvalF,
         opening: &Self::Opening,
-        transcript: &mut impl Transcript<EvalF>,
+        transcript: &mut impl Transcript,
     ) -> bool {
         assert_eq!(*params, verifying_key.num_vars);
         assert_eq!(x.len(), verifying_key.num_vars);

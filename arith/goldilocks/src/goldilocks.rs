@@ -146,7 +146,7 @@ impl Field for Goldilocks {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         let mut v = u64::from_le_bytes(bytes[..8].try_into().unwrap());
         v = mod_reduce_u64(v);
         Goldilocks { v }

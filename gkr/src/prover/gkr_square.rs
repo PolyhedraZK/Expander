@@ -12,7 +12,7 @@ use sumcheck::{sumcheck_prove_gkr_square_layer, ProverScratchPad};
 pub fn gkr_square_prove<F: FieldEngine>(
     circuit: &Circuit<F>,
     sp: &mut ProverScratchPad<F>,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
     mpi_config: &MPIConfig,
 ) -> (F::ChallengeField, ExpanderSingleVarChallenge<F>) {
     assert_ne!(

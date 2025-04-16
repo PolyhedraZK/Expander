@@ -9,7 +9,10 @@ use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::goldilocks::{mod_reduce_u64, Goldilocks};
+use crate::{
+    goldilocks::{mod_reduce_u64, Goldilocks},
+    GoldilocksExt2x8, Goldilocksx8,
+};
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct GoldilocksExt2 {
@@ -125,7 +128,7 @@ impl Field for GoldilocksExt2 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         let mut v1 = u64::from_le_bytes(bytes[..8].try_into().unwrap());
         v1 = mod_reduce_u64(v1);
         let mut v2 = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
@@ -372,5 +375,18 @@ impl GoldilocksExt2 {
         res[1] = arr[1] * z0square;
 
         Self { v: res }
+    }
+}
+
+impl Mul<Goldilocksx8> for GoldilocksExt2 {
+    type Output = GoldilocksExt2x8;
+
+    #[inline(always)]
+    fn mul(self, rhs: Goldilocksx8) -> Self::Output {
+        let b_simd_ext = Self::Output::from(self);
+        Self::Output {
+            c0: b_simd_ext.c0 * rhs,
+            c1: b_simd_ext.c1 * rhs,
+        }
     }
 }

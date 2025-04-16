@@ -176,17 +176,13 @@ impl<F: FieldEngine> CrossLayerCircuit<F> {
             let mut new_layer_vals = vec![F::SimdCircuitField::zero(); layer.layer_size];
 
             for gate in &layer.add_gates {
-                new_layer_vals[gate.o_id] += F::circuit_field_mul_simd_circuit_field(
-                    &gate.coef,
-                    &vals[i_layer - 1][gate.i_ids[0]],
-                );
+                new_layer_vals[gate.o_id] += vals[i_layer - 1][gate.i_ids[0]] * gate.coef;
             }
 
             for gate in &layer.mul_gates {
-                new_layer_vals[gate.o_id] += F::circuit_field_mul_simd_circuit_field(
-                    &gate.coef,
-                    &(vals[i_layer - 1][gate.i_ids[0]] * vals[i_layer - 1][gate.i_ids[1]]),
-                );
+                new_layer_vals[gate.o_id] += (vals[i_layer - 1][gate.i_ids[0]]
+                    * vals[i_layer - 1][gate.i_ids[1]])
+                    * gate.coef;
             }
 
             for gate in &layer.const_gates {
@@ -194,10 +190,7 @@ impl<F: FieldEngine> CrossLayerCircuit<F> {
             }
 
             for gate in &layer.relay_gates {
-                new_layer_vals[gate.o_id] += F::circuit_field_mul_simd_circuit_field(
-                    &gate.coef,
-                    &vals[gate.i_layer][gate.i_id],
-                );
+                new_layer_vals[gate.o_id] += vals[gate.i_layer][gate.i_id] * gate.coef;
             }
 
             vals.push(new_layer_vals);
