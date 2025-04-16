@@ -26,6 +26,12 @@ pub use simd_field_impl::{
 #[cfg(test)]
 mod simd_field_tests;
 
+mod code_switching;
+pub use code_switching::orion_code_switching_gkr_circuit;
+
+#[cfg(test)]
+mod code_switching_test;
+
 mod pcs_trait_impl;
 pub use pcs_trait_impl::{OrionBaseFieldPCS, OrionSIMDFieldPCS};
 

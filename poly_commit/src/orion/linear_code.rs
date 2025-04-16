@@ -1,4 +1,4 @@
-use std::cmp;
+use std::{cmp, ops::Index};
 
 use arith::Field;
 use rand::seq::index;
@@ -291,5 +291,19 @@ impl OrionCode {
             .iter()
             .chain(self.g1s.iter())
             .try_for_each(|g| g.expander_mul(buffer, &mut scratch))
+    }
+}
+
+impl Index<usize> for OrionCode {
+    type Output = OrionExpanderGraphPositioned;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < self.g0s.len() + self.g1s.len());
+
+        if index < self.g0s.len() {
+            return &self.g0s[index];
+        }
+
+        &self.g1s[index - self.g0s.len()]
     }
 }

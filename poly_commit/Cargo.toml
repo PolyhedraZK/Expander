@@ -11,6 +11,8 @@ polynomials = { path = "../arith/polynomials"}
 serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
 tree = { path = "../tree" }
+circuit = { path = "../circuit" }
+sumcheck = { path = "../sumcheck" }
 
 rand.workspace = true
 ethnum.workspace = true

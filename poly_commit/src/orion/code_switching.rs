@@ -1,0 +1,192 @@
+use arith::Field;
+use circuit::{Circuit, CircuitLayer, CoefType, GateAdd};
+use gkr_engine::FieldEngine;
+
+use crate::orion::linear_code::OrionCode;
+
+pub fn orion_code_switching_gkr_circuit<F, C>(
+    encoder: &OrionCode,
+    challenge_point: &[C::ChallengeField],
+    proximity_rep: usize,
+) -> Circuit<C>
+where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F>,
+{
+    assert_eq!(1 << challenge_point.len(), encoder.msg_len());
+    assert!((1..=2).contains(&proximity_rep));
+
+    let num_computation_layers = {
+        let num_challenge_layers = challenge_point.len();
+        let num_encoding_layers = encoder.g0s.len() + encoder.g1s.len();
+
+        std::cmp::max(num_challenge_layers, num_encoding_layers)
+    };
+
+    let mut circuit: Circuit<C> = Circuit::default();
+
+    let layer_iter = (0..num_computation_layers).map(|i| {
+        let output_var_num = challenge_point.len() + 3;
+
+        let input_var_num = if i == 0 {
+            challenge_point.len() + 2
+        } else {
+            output_var_num
+        };
+
+        let mut layer: CircuitLayer<C> = CircuitLayer {
+            input_var_num,
+            output_var_num,
+            ..Default::default()
+        };
+
+        orion_code_switching_gkr_circuit_layer(
+            &mut layer,
+            encoder,
+            challenge_point,
+            proximity_rep,
+            i,
+        );
+
+        layer
+    });
+
+    circuit.layers.extend(layer_iter);
+    circuit
+}
+
+fn add_wire<F, C>(i_id: usize, o_id: usize, coef: C::ChallengeField) -> GateAdd<C>
+where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F>,
+{
+    GateAdd {
+        i_ids: [i_id],
+        o_id,
+        coef,
+        coef_type: CoefType::Constant,
+        gate_type: 0,
+    }
+}
+
+fn relay<F, C>(i_id: usize, o_id: usize) -> GateAdd<C>
+where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F>,
+{
+    GateAdd {
+        i_ids: [i_id],
+        o_id,
+        coef: C::ChallengeField::ONE,
+        coef_type: CoefType::Constant,
+        gate_type: 0,
+    }
+}
+
+struct ExpanderEncodingPosition {
+    i_srt: usize,
+    o_srt: usize,
+}
+
+fn orion_code_switching_gkr_circuit_layer<F, C>(
+    layer: &mut CircuitLayer<C>,
+    encoder: &OrionCode,
+    challenge_point: &[C::ChallengeField],
+    proximity_rep: usize,
+    index: usize,
+) where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F>,
+{
+    // NOTE(HS) MLE evals
+    orion_code_switching_gkr_layer_evaluating(layer, challenge_point, index);
+
+    // NOTE(HS) expander code encoding
+    let eval_width = encoder.msg_len();
+    let scratch_len = eval_width * 2;
+
+    // NOTE(HS) evaluation response encoding circuit
+    {
+        let enc_position = ExpanderEncodingPosition {
+            i_srt: if index == 0 { 0 } else { scratch_len },
+            o_srt: scratch_len,
+        };
+
+        orion_code_switching_gkr_layer_encoding(layer, encoder, index, enc_position);
+    }
+
+    // NOTE(HS) proximity response encoding circuit
+    (2..=proximity_rep + 1).for_each(|i| {
+        let enc_position = ExpanderEncodingPosition {
+            i_srt: if index == 0 { eval_width } else { scratch_len } * i,
+            o_srt: scratch_len * i,
+        };
+
+        orion_code_switching_gkr_layer_encoding(layer, encoder, index, enc_position);
+    });
+}
+
+fn orion_code_switching_gkr_layer_evaluating<F, C>(
+    layer: &mut CircuitLayer<C>,
+    challenge_point: &[C::ChallengeField],
+    index: usize,
+) where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F>,
+{
+    // NOTE(HS) MLE evals
+    let eval_width = 1 << challenge_point.len();
+    let evals_input_width = eval_width / (1 << index);
+    let evals_output_width = evals_input_width / 2;
+
+    // NOTE(HS) early exit - if output is 0, then relay prev layer evaluation to output
+    if evals_output_width == 0 {
+        layer.add.push(relay(0, 0));
+        return;
+    }
+
+    let v = challenge_point[index];
+
+    (0..evals_output_width).for_each(|out_i| {
+        layer.add.extend_from_slice(&[
+            add_wire(out_i * 2, out_i, C::ChallengeField::ONE - v),
+            add_wire(out_i * 2 + 1, out_i, v),
+        ]);
+    });
+}
+
+fn orion_code_switching_gkr_layer_encoding<F, C>(
+    layer: &mut CircuitLayer<C>,
+    encoder: &OrionCode,
+    layer_index: usize,
+    pos: ExpanderEncodingPosition,
+) where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F>,
+{
+    // NOTE(HS) expander code encoding
+    let num_encoding_layers = encoder.g0s.len() + encoder.g1s.len();
+
+    // NOTE(HS) early exit if no encoding happens, just relay encoding output
+    if layer_index >= num_encoding_layers {
+        let relay_iter = (0..encoder.code_len()).map(|i| relay(pos.i_srt + i, pos.o_srt + i));
+        layer.add.extend(relay_iter);
+        return;
+    }
+
+    let graph_ref = &encoder[layer_index];
+
+    // NOTE(HS) clone prev level of inputs
+    let relay_iter = (0..graph_ref.output_starts).map(|i| relay(i + pos.i_srt, i + pos.o_srt));
+    layer.add.extend(relay_iter);
+
+    // NOTE(HS) position the expander graph fan in
+    let i_srt = pos.i_srt + graph_ref.input_starts;
+    let o_srt = pos.o_srt + graph_ref.output_starts;
+
+    let neighbors_ref = &graph_ref.graph.neighborings;
+    neighbors_ref.iter().enumerate().for_each(|(out_i, in_s)| {
+        let enc_iter = in_s.iter().map(|in_i| relay(in_i + i_srt, out_i + o_srt));
+        layer.add.extend(enc_iter)
+    });
+}
