@@ -1,6 +1,7 @@
 use arith::Field;
 use circuit::{Circuit, CircuitLayer, CoefType, GateAdd};
 use gkr_engine::FieldEngine;
+use itertools::izip;
 
 use crate::orion::linear_code::OrionCode;
 
@@ -59,6 +60,26 @@ where
 
     circuit.layers.extend(layer_iter);
     circuit
+}
+
+/// On given an vanilla Orion proof evaluation response and proximity responses,
+/// output the input MLE polynomial coefficients for the code switching GKR circuit.
+pub fn prepare_code_switching_inputs<F: Field>(eval_resp: &[F], prox_resps: &[Vec<F>]) -> Vec<F> {
+    assert!(eval_resp.len().is_power_of_two());
+    let eval_width = eval_resp.len();
+
+    assert!((1..=2).contains(&prox_resps.len()));
+    prox_resps
+        .iter()
+        .for_each(|p| assert_eq!(p.len(), eval_width));
+
+    let mut buffer = eval_resp.to_vec();
+    buffer.resize(eval_width * 4, F::ZERO);
+
+    izip!((2..4), prox_resps)
+        .for_each(|(i, p)| buffer[i * eval_width..(i + 1) * eval_width].copy_from_slice(p));
+
+    buffer
 }
 
 /// A wire that links output gate from lower layer to input gate from higher layer,
@@ -136,12 +157,12 @@ fn code_switching_gkr_layer<F, C>(
     // Thus the first layer of circuit looks like
     // |- eval -|- 0000 -|-- eval encode --|-- prox encode --|-- prox encode --|
     // |        |       /                 /                 /                 /
-    // |        |   *--*        *--------*     *-----------*           *-----*
-    // |        |  /           /              /                       /
-    // |        | /           /              /                       /
-    // |        |/           /              /                       /
-    // |        /           /              /                       /
-    // | *-----*| *--------*        *-----*  *--------------------*
+    // |        |    *-*        *--------*     *-----------*           *-----*
+    // |        |   /          /              /                       /
+    // |        |  /          /              /                       /
+    // |        | /          /              /                       /
+    // |        |/          /              /                       /
+    // | *------* *--------*        *-----*  *--------------------*
     // |/       |/        /        /        /
     // |- eval -|- 0000 -|- prox -|- prox -|
     //

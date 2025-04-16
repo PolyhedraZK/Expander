@@ -4,7 +4,9 @@ use gkr_engine::{BN254Config, FieldEngine};
 use polynomials::MultiLinearPoly;
 
 use crate::{
-    code_switching_gkr_circuit, orion::linear_code::OrionCode, ORION_CODE_PARAMETER_INSTANCE,
+    code_switching_gkr_circuit,
+    orion::{code_switching::prepare_code_switching_inputs, linear_code::OrionCode},
+    ORION_CODE_PARAMETER_INSTANCE,
 };
 
 fn test_orion_code_switch_circuit_evaluate_helper<F: Field, C: FieldEngine>(num_vars: usize)
@@ -23,13 +25,10 @@ where
     let prox_poly0 = MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng);
     let prox_poly1 = MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng);
 
-    let input_coeffs = {
-        let mut buf = evals_poly.coeffs.clone();
-        buf.resize(msg_size * 2, F::ZERO);
-        buf.extend_from_slice(&prox_poly0.coeffs);
-        buf.extend_from_slice(&prox_poly1.coeffs);
-        buf
-    };
+    let input_coeffs = prepare_code_switching_inputs(
+        &evals_poly.coeffs,
+        &[prox_poly0.coeffs.clone(), prox_poly1.coeffs.clone()],
+    );
 
     let challenge_point: Vec<_> = (0..num_vars)
         .map(|_| C::ChallengeField::random_unsafe(&mut rng))

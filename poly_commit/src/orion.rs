@@ -27,7 +27,7 @@ pub use simd_field_impl::{
 mod simd_field_tests;
 
 mod code_switching;
-pub use code_switching::code_switching_gkr_circuit;
+pub use code_switching::{code_switching_gkr_circuit, prepare_code_switching_inputs};
 
 #[cfg(test)]
 mod code_switching_test;
