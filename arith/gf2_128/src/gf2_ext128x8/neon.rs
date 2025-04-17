@@ -277,14 +277,14 @@ impl ExtensionField for NeonGF2_128x8 {
 
     #[inline(always)]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
-        let v0 = ((base.v >> 7) & 1u8) as u32;
-        let v1 = ((base.v >> 6) & 1u8) as u32;
-        let v2 = ((base.v >> 5) & 1u8) as u32;
-        let v3 = ((base.v >> 4) & 1u8) as u32;
-        let v4 = ((base.v >> 3) & 1u8) as u32;
-        let v5 = ((base.v >> 2) & 1u8) as u32;
-        let v6 = ((base.v >> 1) & 1u8) as u32;
-        let v7 = (base.v & 1u8) as u32;
+        let v0 = (base.v & 1u8) as u32;
+        let v1 = ((base.v >> 1) & 1u8) as u32;
+        let v2 = ((base.v >> 2) & 1u8) as u32;
+        let v3 = ((base.v >> 3) & 1u8) as u32;
+        let v4 = ((base.v >> 4) & 1u8) as u32;
+        let v5 = ((base.v >> 5) & 1u8) as u32;
+        let v6 = ((base.v >> 6) & 1u8) as u32;
+        let v7 = ((base.v >> 7) & 1u8) as u32;
 
         Self {
             v: [
@@ -302,14 +302,14 @@ impl ExtensionField for NeonGF2_128x8 {
 
     #[inline(always)]
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
-        let v0 = ((base.v >> 7) & 1u8) as u32;
-        let v1 = ((base.v >> 6) & 1u8) as u32;
-        let v2 = ((base.v >> 5) & 1u8) as u32;
-        let v3 = ((base.v >> 4) & 1u8) as u32;
-        let v4 = ((base.v >> 3) & 1u8) as u32;
-        let v5 = ((base.v >> 2) & 1u8) as u32;
-        let v6 = ((base.v >> 1) & 1u8) as u32;
-        let v7 = (base.v & 1u8) as u32;
+        let v0 = (base.v & 1u8) as u32;
+        let v1 = ((base.v >> 1) & 1u8) as u32;
+        let v2 = ((base.v >> 2) & 1u8) as u32;
+        let v3 = ((base.v >> 3) & 1u8) as u32;
+        let v4 = ((base.v >> 4) & 1u8) as u32;
+        let v5 = ((base.v >> 5) & 1u8) as u32;
+        let v6 = ((base.v >> 6) & 1u8) as u32;
+        let v7 = ((base.v >> 7) & 1u8) as u32;
 
         Self {
             v: [
@@ -383,14 +383,14 @@ impl ExtensionField for NeonGF2_128x8 {
 impl From<GF2x8> for NeonGF2_128x8 {
     #[inline(always)]
     fn from(v: GF2x8) -> Self {
-        let v0 = ((v.v >> 7) & 1u8) as u32;
-        let v1 = ((v.v >> 6) & 1u8) as u32;
-        let v2 = ((v.v >> 5) & 1u8) as u32;
-        let v3 = ((v.v >> 4) & 1u8) as u32;
-        let v4 = ((v.v >> 3) & 1u8) as u32;
-        let v5 = ((v.v >> 2) & 1u8) as u32;
-        let v6 = ((v.v >> 1) & 1u8) as u32;
-        let v7 = (v.v & 1u8) as u32;
+        let v0 = (v.v & 1u8) as u32;
+        let v1 = ((v.v >> 1) & 1u8) as u32;
+        let v2 = ((v.v >> 2) & 1u8) as u32;
+        let v3 = ((v.v >> 3) & 1u8) as u32;
+        let v4 = ((v.v >> 4) & 1u8) as u32;
+        let v5 = ((v.v >> 5) & 1u8) as u32;
+        let v6 = ((v.v >> 6) & 1u8) as u32;
+        let v7 = ((v.v >> 7) & 1u8) as u32;
 
         NeonGF2_128x8 {
             v: [

@@ -7,7 +7,6 @@ members = [
     "arith/goldilocks",
     "arith/mersenne31",
     "arith/polynomials",
-    "bi-kzg",
     "circuit",
     "config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
     "gkr",

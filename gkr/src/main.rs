@@ -14,8 +14,9 @@ use gkr::{
         POSEIDON_M31_WITNESS,
     },
     BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
-    GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2OrionSquare,
-    M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare, M31ExtConfigSha2RawVanilla, Prover,
+    GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Orion, GoldilocksExtConfigSha2Raw,
+    M31ExtConfigSha2OrionSquare, M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare,
+    M31ExtConfigSha2RawVanilla, Prover,
 };
 use gkr_engine::{
     ExpanderPCS, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType,
@@ -102,6 +103,12 @@ fn main() {
         "goldilocks" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
                 "keccak" => run_benchmark::<GoldilocksExtConfigSha2Raw>(&args, mpi_config.clone()),
+                _ => unreachable!(),
+            },
+            PolynomialCommitmentType::Orion => match args.circuit.as_str() {
+                "keccak" => {
+                    run_benchmark::<GoldilocksExtConfigSha2Orion>(&args, mpi_config.clone())
+                }
                 _ => unreachable!(),
             },
             _ => unreachable!("Unsupported PCS type for Goldilocks"),

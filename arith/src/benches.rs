@@ -1,8 +1,8 @@
 use ark_std::test_rng;
-use criterion::{BatchSize, Criterion};
+use criterion::{BatchSize, BenchmarkId, Criterion};
 use tynm::type_name;
 
-use crate::{ExtensionField, Field};
+use crate::{ExtensionField, FFTField, Field};
 
 fn random_element<F: Field>() -> F {
     let mut rng = test_rng();
@@ -308,4 +308,43 @@ pub fn bench_field<F: Field>(c: &mut Criterion) {
             )
         },
     );
+}
+
+pub fn bench_fft<F: Field + FFTField>(c: &mut Criterion) {
+    let mut group = c.benchmark_group("FFT");
+
+    const MAX_FFT_SIZE: usize = 1 << 22;
+    let mut rng = test_rng();
+    let mut buf: Vec<F> = (0..MAX_FFT_SIZE)
+        .map(|_| F::random_unsafe(&mut rng))
+        .collect();
+
+    for group_size_bits in 11..=MAX_FFT_SIZE.ilog2() {
+        group.bench_with_input(
+            BenchmarkId::new(
+                format!("benchmark {} {group_size_bits}-bits FFT in place", F::NAME),
+                group_size_bits,
+            ),
+            &group_size_bits,
+            |b, group_size_bits| {
+                b.iter(|| {
+                    let group_size = 1 << group_size_bits;
+                    F::fft_in_place(&mut buf[..group_size]);
+                })
+            },
+        );
+        group.bench_with_input(
+            BenchmarkId::new(
+                format!("benchmark {} {group_size_bits}-bits iFFT in place", F::NAME),
+                group_size_bits,
+            ),
+            &group_size_bits,
+            |b, group_size_bits| {
+                b.iter(|| {
+                    let group_size = 1 << group_size_bits;
+                    F::ifft_in_place(&mut buf[..group_size]);
+                })
+            },
+        );
+    }
 }

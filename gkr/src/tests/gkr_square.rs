@@ -1,28 +1,12 @@
-use std::io::Write;
-use std::panic::AssertUnwindSafe;
-use std::time::Instant;
-use std::{fs, panic};
-
-use arith::{Field, ExpSerde, SimdField};
+use arith::SimdField;
 use circuit::{Circuit, CircuitLayer, CoefType, GateConst, GateUni};
-use config::{Config, FiatShamirHashType, GKRConfig, GKRScheme, PolynomialCommitmentType};
 use config_macros::declare_gkr_config;
-use field_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher};
-use gf2::GF2x128;
-use gkr_field_config::{BN254Config, FieldType, GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
-use halo2curves::bn256::G1Affine;
-use mersenne31::M31x16;
-use mpi_config::{root_println, MPIConfig};
-use poly_commit::{expander_pcs_init_testing_only, HyraxPCS, OrionPCSForGKR, RawExpanderGKR};
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha12Rng;
-use sha2::Digest;
-use transcript::{BytesHashTranscript, FieldHashTranscript, Keccak256hasher, SHA256hasher};
+use gkr_engine::{FieldEngine, GKREngine, GKRScheme, M31ExtConfig, MPIConfig, MPIEngine};
+use gkr_hashers::SHA256hasher;
+use poly_commit::{expander_pcs_init_testing_only, RawExpanderGKR};
+use transcript::BytesHashTranscript;
 
-use crate::{utils::*, Prover, Verifier};
-
-const PCS_TESTING_SEED_U64: u64 = 114514;
-
+use crate::{Prover, Verifier};
 
 /// A simple GKR2 test circuit:
 /// ```text
@@ -34,7 +18,7 @@ const PCS_TESTING_SEED_U64: u64 = 114514;
 ///  N_2_0     N_2_1   N_2_2  N_2_3     Layer 2 (Input)
 /// ```
 /// (Unmarked lines are `+` gates with coeff 1)
-pub fn gkr_square_test_circuit<C: GKRFieldConfig>() -> Circuit<C> {
+pub fn gkr_square_test_circuit<C: FieldEngine>() -> Circuit<C> {
     let mut circuit = Circuit::default();
 
     // Layer 1
@@ -152,48 +136,47 @@ fn gkr_square_correctness_test() {
         GkrConfigType,
         FieldType::M31,
         FiatShamirHashType::SHA256,
-        PolynomialCommitmentType::Raw
+        PolynomialCommitmentType::Raw,
+        GKRScheme::GkrSquare
     );
-    env_logger::init();
-    type GkrFieldConfigType = <GkrConfigType as GKRConfig>::FieldConfig;
-    let mpi_config = MPIConfig::new();
-    let config = Config::<GkrConfigType>::new(GKRScheme::GkrSquare, mpi_config.clone());
+    type GkrFieldConfigType = <GkrConfigType as GKREngine>::FieldConfig;
+    let mpi_config = MPIConfig::prover_new();
 
     let mut circuit = gkr_square_test_circuit::<GkrFieldConfigType>();
     // Set input layers with N_2_0 = 3, N_2_1 = 5, N_2_2 = 7,
     // and N_2_3 varying from 0 to 15
     let mut final_vals = (0..16).map(|x| x.into()).collect::<Vec<_>>(); // Add variety for MPI participants
-    final_vals[0] += <GkrFieldConfigType as GKRFieldConfig>::CircuitField::from(
-        config.mpi_config.world_rank as u32,
-    );
-    let final_vals = <GkrFieldConfigType as GKRFieldConfig>::SimdCircuitField::pack(&final_vals);
+    final_vals[0] +=
+        <GkrFieldConfigType as FieldEngine>::CircuitField::from(mpi_config.world_rank as u32);
+    let final_vals = <GkrFieldConfigType as FieldEngine>::SimdCircuitField::pack(&final_vals);
     circuit.layers[0].input_vals = vec![2.into(), 3.into(), 5.into(), final_vals];
     // Set public input PI[0] = 13
     circuit.public_input = vec![13.into()];
 
-    do_prove_verify(config, &mut circuit);
+    do_prove_verify::<GkrConfigType>(&mpi_config, &mut circuit);
     MPIConfig::finalize();
 }
 
-fn do_prove_verify<Cfg: GKRConfig>(config: Config<Cfg>, circuit: &mut Circuit<Cfg::FieldConfig>) {
+fn do_prove_verify<Cfg: GKREngine>(
+    mpi_config: &MPIConfig,
+    circuit: &mut Circuit<Cfg::FieldConfig>,
+) {
     circuit.evaluate();
 
-    let mut rng = ChaCha12Rng::seed_from_u64(PCS_TESTING_SEED_U64);
     let (pcs_params, pcs_proving_key, pcs_verification_key, mut pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::Transcript, Cfg::PCS>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
             circuit.log_input_size(),
-            &config.mpi_config,
-            &mut rng,
+            mpi_config,
         );
 
     // Prove
-    let mut prover = Prover::new(&config);
+    let mut prover = Prover::<Cfg>::new(mpi_config.clone());
     prover.prepare_mem(circuit);
     let (claimed_v, proof) = prover.prove(circuit, &pcs_params, &pcs_proving_key, &mut pcs_scratch);
 
     // Verify if root process
-    if config.mpi_config.is_root() {
-        let verifier = Verifier::new(&config);
+    if mpi_config.is_root() {
+        let verifier = Verifier::<Cfg>::new(mpi_config.clone());
         let public_input = circuit.public_input.clone();
         assert!(verifier.verify(
             circuit,
