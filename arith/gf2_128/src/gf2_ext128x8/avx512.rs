@@ -355,7 +355,7 @@ impl Debug for AVX512GF2_128x8 {
         let mut data = [0u8; 128];
         unsafe {
             _mm512_storeu_si512(data.as_mut_ptr() as *mut __m512i, self.data[0]);
-            _mm512_storeu_si512((data.as_mut_ptr() as *mut __m512i).offset(16), self.data[1]);
+            _mm512_storeu_si512((data.as_mut_ptr() as *mut __m512i).offset(1), self.data[1]);
         }
         f.debug_struct("AVX512GF2_128x8")
             .field("data", &data)
