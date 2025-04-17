@@ -228,11 +228,7 @@ where
         assert!(challenge.rz_1.is_none());
     }
 
-    assert!(challenge.r_mpi.is_empty());
-    let challenge: ExpanderSingleVarChallenge<C> =
-        ExpanderSingleVarChallenge::new(challenge.rz_0, challenge.r_simd, Vec::new());
-
-    (verified, challenge, claimed_v0)
+    (verified, challenge.into(), claimed_v0)
 }
 
 /// A wire that links output gate from lower layer to input gate from higher layer,
