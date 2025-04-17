@@ -41,6 +41,95 @@ impl<F: FFTField> IndexMut<usize> for UnivariateLagrangePolynomial<F> {
     }
 }
 
+// Credit: code adopted from Jolt
+//
+// Jolt's ack:
+//
+// Inspired by: https://github.com/TheAlgorithms/Rust/blob/master/src/math/gaussian_elimination.rs
+// Gaussian Elimination of Quadratic Matrices
+// Takes an augmented matrix as input, returns vector of results
+// Wikipedia reference: augmented matrix: https://en.wikipedia.org/wiki/Augmented_matrix
+// Wikipedia reference: algorithm: https://en.wikipedia.org/wiki/Gaussian_elimination
+
+pub fn gaussian_elimination<F: Field>(matrix: &mut [Vec<F>]) -> Vec<F> {
+    let size = matrix.len();
+    assert_eq!(size, matrix[0].len() - 1);
+
+    for i in 0..size - 1 {
+        for j in i..size - 1 {
+            echelon(matrix, i, j);
+        }
+    }
+
+    for i in (1..size).rev() {
+        eliminate(matrix, i);
+    }
+
+    // Disable cargo clippy warnings about needless range loops.
+    // Checking the diagonal like this is simpler than any alternative.
+    #[allow(clippy::needless_range_loop)]
+    for i in 0..size {
+        if matrix[i][i] == F::zero() {
+            println!("Infinitely many solutions");
+        }
+    }
+
+    let mut result: Vec<F> = vec![F::zero(); size];
+    for i in 0..size {
+        result[i] = matrix[i][size] * matrix[i][i].inv().unwrap();
+    }
+    result
+}
+
+fn echelon<F: Field>(matrix: &mut [Vec<F>], i: usize, j: usize) {
+    let size = matrix.len();
+    if matrix[i][i] == F::zero() {
+    } else {
+        let factor = matrix[j + 1][i] * matrix[i][i].inv().unwrap();
+        (i..size + 1).for_each(|k| {
+            let tmp = matrix[i][k];
+            matrix[j + 1][k] -= factor * tmp;
+        });
+    }
+}
+
+fn eliminate<F: Field>(matrix: &mut [Vec<F>], i: usize) {
+    let size = matrix.len();
+    if matrix[i][i] == F::zero() {
+    } else {
+        for j in (1..i + 1).rev() {
+            let factor = matrix[j - 1][i] * matrix[i][i].inv().unwrap();
+            for k in (0..size + 1).rev() {
+                let tmp = matrix[i][k];
+                matrix[j - 1][k] -= factor * tmp;
+            }
+        }
+    }
+}
+
+fn vandermonde_interpolation<F>(evals: &[F]) -> Vec<F>
+where
+    F: Field,
+{
+    let n = evals.len();
+    let xs: Vec<F> = (0..n).map(|x| F::from(x as u32)).collect();
+
+    let mut vandermonde: Vec<Vec<F>> = Vec::with_capacity(n);
+    for i in 0..n {
+        let mut row = Vec::with_capacity(n);
+        let x = xs[i];
+        row.push(F::one());
+        row.push(x);
+        for j in 2..n {
+            row.push(row[j - 1] * x);
+        }
+        row.push(evals[i]);
+        vandermonde.push(row);
+    }
+
+    gaussian_elimination(&mut vandermonde)
+}
+
 impl<F: Field> UnivariatePoly<F> {
     #[inline]
     pub fn new(coeffs: Vec<F>) -> Self {
@@ -63,6 +152,12 @@ impl<F: Field> UnivariatePoly<F> {
             eval += *t
         });
         eval
+    }
+
+    pub fn from_evals(evals: &[F]) -> Self {
+        Self {
+            coeffs: vandermonde_interpolation(evals),
+        }
     }
 
     /// Performing a polynomial division by f(X) / (X - \alpha),

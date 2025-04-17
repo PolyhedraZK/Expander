@@ -17,3 +17,6 @@ pub use hyrax::*;
 
 pub mod kzg;
 pub use kzg::*;
+
+pub mod fri;
+pub use fri::*;

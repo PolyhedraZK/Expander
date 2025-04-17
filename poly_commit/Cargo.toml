@@ -26,6 +26,7 @@ halo2curves.workspace = true
 
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
+goldilocks = { path = "../arith/goldilocks" }
 mersenne31 = { path = "../arith/mersenne31" }
 gkr_hashers = { path = "../hasher" }
 
