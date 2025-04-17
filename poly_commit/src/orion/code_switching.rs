@@ -1,7 +1,16 @@
-use arith::Field;
+use std::io::Read;
+
+use arith::{ExtensionField, Field};
+use ark_std::iterable::Iterable;
 use circuit::{Circuit, CircuitLayer, CoefType, GateAdd};
-use gkr_engine::FieldEngine;
+use gkr_engine::{
+    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
+    Transcript,
+};
 use itertools::izip;
+use sumcheck::{
+    sumcheck_prove_gkr_layer, sumcheck_verify_gkr_layer, ProverScratchPad, VerifierScratchPad,
+};
 
 use crate::orion::linear_code::OrionCode;
 
@@ -17,7 +26,8 @@ use crate::orion::linear_code::OrionCode;
 /// Once the query randomness is decided, the prover/verifier can append the selection
 /// layer to the output of the circuit, by relaying codeword alphabets to the final outputs
 /// of the circuit, then start the proving/verifying procedure.
-pub fn code_switching_gkr_circuit<F, C>(
+#[allow(unused)]
+pub(crate) fn code_switching_gkr_circuit<F, C>(
     encoder: &OrionCode,
     challenge_point: &[C::ChallengeField],
     proximity_rep: usize,
@@ -59,12 +69,23 @@ where
     });
 
     circuit.layers.extend(layer_iter);
+
+    // NOTE(HS) We know it is a bit early to say it is skipping second phase,
+    // but even with query randomness, it is still pure addition circuit,
+    // so we just identify structure here.
+    circuit.identify_structure_info();
     circuit
 }
 
+// TODO(HS) prepare query complexity
+
 /// On given an vanilla Orion proof evaluation response and proximity responses,
 /// output the input MLE polynomial coefficients for the code switching GKR circuit.
-pub fn prepare_code_switching_inputs<F: Field>(eval_resp: &[F], prox_resps: &[Vec<F>]) -> Vec<F> {
+#[allow(unused)]
+pub(crate) fn prepare_code_switching_inputs<F: Field>(
+    eval_resp: &[F],
+    prox_resps: &[Vec<F>],
+) -> Vec<F> {
     assert!(eval_resp.len().is_power_of_two());
     let eval_width = eval_resp.len();
 
@@ -80,6 +101,138 @@ pub fn prepare_code_switching_inputs<F: Field>(eval_resp: &[F], prox_resps: &[Ve
         .for_each(|(i, p)| buffer[i * eval_width..(i + 1) * eval_width].copy_from_slice(p));
 
     buffer
+}
+
+pub(crate) const CODE_SWITCHING_WORLD_SIZE: usize = 1;
+
+#[allow(unused)]
+pub(crate) fn prepare_code_switching_gkr_prover_mem<F, C>(
+    circuit: &Circuit<C>,
+) -> ProverScratchPad<C>
+where
+    F: Field + ExtensionField,
+    C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
+{
+    let max_i_vars = circuit
+        .layers
+        .iter()
+        .map(|l| l.input_var_num)
+        .max()
+        .unwrap();
+
+    let max_o_vars = circuit
+        .layers
+        .iter()
+        .map(|layer| layer.output_var_num)
+        .max()
+        .unwrap();
+
+    ProverScratchPad::<C>::new(max_i_vars, max_o_vars, CODE_SWITCHING_WORLD_SIZE)
+}
+
+#[allow(unused)]
+pub(crate) fn code_switching_gkr_prove<F, C>(
+    circuit: &Circuit<C>,
+    sp: &mut ProverScratchPad<C>,
+    fs_transcript: &mut impl Transcript<F>,
+    mpi_config: &MPIConfig,
+) -> (F, ExpanderSingleVarChallenge<C>)
+where
+    F: Field + ExtensionField,
+    C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
+{
+    assert_eq!(mpi_config.world_size(), CODE_SWITCHING_WORLD_SIZE);
+
+    let layer_num = circuit.layers.len();
+
+    let mut challenge: ExpanderDualVarChallenge<C> =
+        ExpanderDualVarChallenge::sample_from_transcript(
+            fs_transcript,
+            circuit.layers.last().unwrap().output_var_num,
+            CODE_SWITCHING_WORLD_SIZE,
+        );
+
+    let output_vals = &circuit.layers.last().unwrap().output_vals;
+    let claimed_v = C::collectively_eval_circuit_vals_at_expander_challenge(
+        output_vals,
+        &challenge.challenge_x(),
+        &mut sp.hg_evals,
+        &mut sp.eq_evals_first_half,
+        mpi_config,
+    );
+
+    for i in (0..layer_num).rev() {
+        sumcheck_prove_gkr_layer(
+            &circuit.layers[i],
+            &mut challenge,
+            None,
+            fs_transcript,
+            sp,
+            mpi_config,
+            i == layer_num - 1,
+        );
+
+        assert!(challenge.rz_1.is_none());
+    }
+
+    // NOTE(HS) since the circuit is purely addition gate, then no rz_1,
+    // or in a sense no need to be a dual var challenge.
+    assert!(challenge.rz_1.is_none());
+
+    let final_challenge: ExpanderSingleVarChallenge<C> = challenge.into();
+
+    (claimed_v, final_challenge)
+}
+
+#[allow(unused)]
+pub(crate) fn code_switching_gkr_verify<F, C>(
+    circuit: &Circuit<C>,
+    claimed_v: &F,
+    fs_transcript: &mut impl Transcript<F>,
+    mut proof_reader: impl Read,
+) -> (bool, ExpanderSingleVarChallenge<C>, F)
+where
+    F: Field + ExtensionField,
+    C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
+{
+    let mut sp = VerifierScratchPad::<C>::new(circuit, CODE_SWITCHING_WORLD_SIZE);
+
+    let layer_num = circuit.layers.len();
+
+    let mut challenge: ExpanderDualVarChallenge<C> =
+        ExpanderDualVarChallenge::sample_from_transcript(
+            fs_transcript,
+            circuit.layers.last().unwrap().output_var_num,
+            CODE_SWITCHING_WORLD_SIZE,
+        );
+
+    let mut verified = true;
+    let mut claimed_v0 = *claimed_v;
+    for i in (0..layer_num).rev() {
+        let cur_verified = sumcheck_verify_gkr_layer(
+            CODE_SWITCHING_WORLD_SIZE,
+            &circuit.layers[i],
+            &[],
+            &mut challenge,
+            &mut claimed_v0,
+            &mut None,
+            None,
+            &mut proof_reader,
+            fs_transcript,
+            &mut sp,
+            i == layer_num - 1,
+        );
+
+        verified &= cur_verified;
+
+        assert!(challenge.rz_1.is_none());
+    }
+
+    assert!(challenge.r_mpi.is_empty());
+    let challenge: ExpanderSingleVarChallenge<C> =
+        ExpanderSingleVarChallenge::new(challenge.rz_0, challenge.r_simd, Vec::new());
+
+    (verified, challenge, claimed_v0)
 }
 
 /// A wire that links output gate from lower layer to input gate from higher layer,
@@ -163,7 +316,7 @@ fn code_switching_gkr_layer<F, C>(
     // |        | /          /              /                       /
     // |        |/          /              /                       /
     // | *------* *--------*        *-----*  *--------------------*
-    // |/       |/        /        /        /
+    // |/        /        /        /        /
     // |- eval -|- 0000 -|- prox -|- prox -|
     //
     // While the internal layers should look like

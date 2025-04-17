@@ -10,6 +10,7 @@ gkr_engine = { path = "../gkr_engine" }
 polynomials = { path = "../arith/polynomials" }
 transcript = { path = "../transcript" }
 utils = { path = "../utils" }
+serdes = { path = "../serdes" }
 
 env_logger.workspace = true
 log.workspace = true
