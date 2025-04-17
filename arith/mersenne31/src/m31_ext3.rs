@@ -11,7 +11,7 @@ use arith::ExtensionField;
 use arith::{field_common, Field};
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::m31::{mod_reduce_u32, M31};
+use crate::m31::{mod_reduce_u32_safe, M31};
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct M31Ext3 {
@@ -124,21 +124,11 @@ impl Field for M31Ext3 {
 
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        let v1 = mod_reduce_u32(u32::from_be_bytes(bytes[0..4].try_into().unwrap()));
-        let v2 = mod_reduce_u32(u32::from_be_bytes(bytes[4..8].try_into().unwrap()));
-        let v3 = mod_reduce_u32(u32::from_be_bytes(bytes[8..12].try_into().unwrap()));
+        let v1 = mod_reduce_u32_safe(u32::from_be_bytes(bytes[0..4].try_into().unwrap()));
+        let v2 = mod_reduce_u32_safe(u32::from_be_bytes(bytes[4..8].try_into().unwrap()));
+        let v3 = mod_reduce_u32_safe(u32::from_be_bytes(bytes[8..12].try_into().unwrap()));
         Self {
-            v: [
-                M31 {
-                    v: mod_reduce_u32(v1),
-                },
-                M31 {
-                    v: mod_reduce_u32(v2),
-                },
-                M31 {
-                    v: mod_reduce_u32(v3),
-                },
-            ],
+            v: [M31 { v: v1 }, M31 { v: v2 }, M31 { v: v3 }],
         }
     }
 }
