@@ -118,7 +118,6 @@ declare_gkr_config!(
     GKRScheme::Vanilla,
 );
 
-
 // ============== Babybear ==============
 declare_gkr_config!(
     pub BabyBearExtConfigSha2Raw,
