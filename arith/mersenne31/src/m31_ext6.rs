@@ -8,7 +8,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{m31::mod_reduce_u32, M31Ext3, M31};
+use crate::{m31::mod_reduce_u32_safe, M31Ext3, M31};
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct M31Ext6 {
@@ -121,41 +121,20 @@ impl Field for M31Ext6 {
 
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
-        let v1 = mod_reduce_u32(u32::from_be_bytes(bytes[0..4].try_into().unwrap()));
-        let v2 = mod_reduce_u32(u32::from_be_bytes(bytes[4..8].try_into().unwrap()));
-        let v3 = mod_reduce_u32(u32::from_be_bytes(bytes[8..12].try_into().unwrap()));
+        let v1 = mod_reduce_u32_safe(u32::from_be_bytes(bytes[0..4].try_into().unwrap()));
+        let v2 = mod_reduce_u32_safe(u32::from_be_bytes(bytes[4..8].try_into().unwrap()));
+        let v3 = mod_reduce_u32_safe(u32::from_be_bytes(bytes[8..12].try_into().unwrap()));
 
-        // TODO(HS) need some inputs - do we need extra mod reduce u32 like m31ext3 impl?
         let a0 = M31Ext3 {
-            v: [
-                M31 {
-                    v: mod_reduce_u32(v1),
-                },
-                M31 {
-                    v: mod_reduce_u32(v2),
-                },
-                M31 {
-                    v: mod_reduce_u32(v3),
-                },
-            ],
+            v: [M31 { v: v1 }, M31 { v: v2 }, M31 { v: v3 }],
         };
 
-        let v4 = mod_reduce_u32(u32::from_be_bytes(bytes[12..16].try_into().unwrap()));
-        let v5 = mod_reduce_u32(u32::from_be_bytes(bytes[16..20].try_into().unwrap()));
-        let v6 = mod_reduce_u32(u32::from_be_bytes(bytes[20..24].try_into().unwrap()));
+        let v4 = mod_reduce_u32_safe(u32::from_be_bytes(bytes[12..16].try_into().unwrap()));
+        let v5 = mod_reduce_u32_safe(u32::from_be_bytes(bytes[16..20].try_into().unwrap()));
+        let v6 = mod_reduce_u32_safe(u32::from_be_bytes(bytes[20..24].try_into().unwrap()));
 
         let a1 = M31Ext3 {
-            v: [
-                M31 {
-                    v: mod_reduce_u32(v4),
-                },
-                M31 {
-                    v: mod_reduce_u32(v5),
-                },
-                M31 {
-                    v: mod_reduce_u32(v6),
-                },
-            ],
+            v: [M31 { v: v4 }, M31 { v: v5 }, M31 { v: v6 }],
         };
 
         Self { v: [a0, a1] }
