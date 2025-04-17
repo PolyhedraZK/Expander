@@ -1,4 +1,4 @@
-use arith::{ExtensionField, Field};
+use arith::ExtensionField;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,

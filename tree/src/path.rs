@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
 
-use arith::{Field, SimdField};
+use arith::SimdField;
 use ark_std::{end_timer, start_timer};
 
 use crate::{

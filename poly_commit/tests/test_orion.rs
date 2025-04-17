@@ -4,14 +4,14 @@ use std::ops::Mul;
 
 use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
-use gf2::{GF2x128, GF2x64, GF2x8, GF2};
-use gf2_128::{GF2_128x8, GF2_128};
+use gf2::{GF2x128, GF2x64, GF2x8};
+use gf2_128::GF2_128x8;
 use gkr_engine::{
     ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, MPIConfig, MPIEngine,
     Transcript,
 };
 use gkr_hashers::Keccak256hasher;
-use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
+use mersenne31::{M31Ext3x16, M31x16};
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
 use transcript::BytesHashTranscript;
@@ -41,11 +41,6 @@ fn test_orion_base_field_pcs_generics<SimdEvalF, ComPackF, OpenPackF>(
         let poly = MultiLinearPoly::<ComPackF::Scalar>::random(num_vars, &mut rng);
 
         common::test_pcs::<
-<<<<<<< HEAD
-            EvalF,
-            BytesHashTranscript<Keccak256hasher>,
-            OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF, BytesHashTranscript<Keccak256hasher>>,
-=======
             SimdEvalF::Scalar,
             BytesHashTranscript< Keccak256hasher>,
             OrionBaseFieldPCS<
@@ -54,7 +49,6 @@ fn test_orion_base_field_pcs_generics<SimdEvalF, ComPackF, OpenPackF>(
                 OpenPackF,
                 BytesHashTranscript<Keccak256hasher>,
             >,
->>>>>>> ca4759c (draft)
         >(&num_vars, &poly, &xs);
     })
 }

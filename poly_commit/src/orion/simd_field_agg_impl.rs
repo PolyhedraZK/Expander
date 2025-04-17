@@ -2,7 +2,7 @@ use std::{iter, ops::Mul};
 
 use arith::{ExtensionField, Field, SimdField};
 use gf2::GF2;
-use gkr_engine::{ExpanderSingleVarChallenge, FieldEngine, Transcript};
+use gkr_engine::{ExpanderSingleVarChallenge, Transcript};
 use itertools::izip;
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
 
@@ -56,13 +56,7 @@ where
     let proximity_reps = vk.proximity_repetitions::<SimdEvalF::Scalar>(PCS_SOUNDNESS_BITS);
     let proximity_local_coeffs: Vec<Vec<SimdEvalF::Scalar>> = (0..proximity_reps)
         .map(|_| {
-<<<<<<< HEAD
-            transcript.generate_field_elements::<C::ChallengeField>(
-                row_num * C::SimdCircuitField::PACK_SIZE,
-            )
-=======
             transcript.generate_field_elements::<SimdEvalF::Scalar>(row_num * SimdEvalF::PACK_SIZE)
->>>>>>> ca4759c (draft)
         })
         .collect();
 

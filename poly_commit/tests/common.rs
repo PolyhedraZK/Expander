@@ -43,15 +43,11 @@ pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<
     }
 }
 
-<<<<<<< HEAD
-pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C>>(
-=======
 pub fn test_pcs_for_expander_gkr<
     C: FieldEngine,
     T: Transcript,
     P: ExpanderPCS<C, PolyField = C::SimdCircuitField>,
 >(
->>>>>>> ca4759c (draft)
     params: &P::Params,
     mpi_config: &MPIConfig,
     transcript: &mut T,

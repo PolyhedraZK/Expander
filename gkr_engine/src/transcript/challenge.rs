@@ -1,6 +1,4 @@
-use arith::{Field, SimdField};
-
-use crate::FieldEngine;
+use arith::Field;
 
 use super::Transcript;
 
@@ -69,13 +67,8 @@ impl<F: Field> ExpanderSingleVarChallenge<F> {
             num_simd_var.trailing_zeros() as usize,
         );
 
-<<<<<<< HEAD
-        let r_mpi = transcript
-            .generate_field_elements::<C::ChallengeField>(world_size.trailing_zeros() as usize);
-=======
         let r_mpi =
             transcript.generate_field_elements::<F>(world_size.trailing_zeros() as usize);
->>>>>>> ca4759c (draft)
 
         Self { rz, r_simd, r_mpi }
     }
@@ -130,13 +123,8 @@ impl<F: Field> ExpanderDualVarChallenge<F> {
             num_simd_var.trailing_zeros() as usize,
         );
 
-<<<<<<< HEAD
-        let r_mpi = transcript
-            .generate_field_elements::<C::ChallengeField>(world_size.trailing_zeros() as usize);
-=======
         let r_mpi =
             transcript.generate_field_elements::<F>(world_size.trailing_zeros() as usize);
->>>>>>> ca4759c (draft)
 
         Self {
             rz_0,
