@@ -2119,6 +2119,7 @@ name = "sumcheck"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "ark-std 0.4.0",
  "circuit",
  "env_logger",
  "gkr_engine",

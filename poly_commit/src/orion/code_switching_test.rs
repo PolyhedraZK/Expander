@@ -1,18 +1,18 @@
 use std::io::Cursor;
 
-use arith::{ExtensionField, Field, Fr};
+use arith::{ExtensionField, Field, Fr, SimdField};
 use ark_std::test_rng;
 use gkr_engine::{BN254Config, FieldEngine, MPIConfig, MPIEngine, Transcript};
 use gkr_hashers::Keccak256hasher;
 use polynomials::MultiLinearPoly;
+use sumcheck::{gkr_prove, gkr_verify};
 use transcript::BytesHashTranscript;
 
 use crate::{
     orion::{
         code_switching::{
-            code_switching_gkr_circuit, code_switching_gkr_prove, code_switching_gkr_verify,
-            prepare_code_switching_gkr_prover_mem, prepare_code_switching_inputs,
-            CODE_SWITCHING_WORLD_SIZE,
+            code_switching_gkr_circuit, prepare_code_switching_gkr_prover_mem,
+            prepare_code_switching_inputs, CODE_SWITCHING_WORLD_SIZE,
         },
         linear_code::OrionCode,
     },
@@ -82,10 +82,12 @@ fn test_orion_code_switch_circuit_evaluate() {
 
 fn test_orion_code_switch_gkr_helper<F, C>(num_vars: usize, mpi_config: &MPIConfig)
 where
-    F: Field + ExtensionField,
+    F: Field + ExtensionField + SimdField,
     C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
 {
     const PROXIMITY_REPETITIONS: usize = 2;
+
+    assert_eq!(C::SimdCircuitField::PACK_SIZE, 1);
 
     let mut rng = test_rng();
 
@@ -114,29 +116,34 @@ where
     let mut fs_transcript_prover = BytesHashTranscript::<F, Keccak256hasher>::new();
     let mut fs_transcript_verifier = fs_transcript_prover.clone();
 
-    let (claimed_v, challenge_prover) = code_switching_gkr_prove(
+    let (claimed_v, challenge_prover) = gkr_prove(
         &layered_circuit,
         &mut sp,
         &mut fs_transcript_prover,
         mpi_config,
     );
+    assert!(challenge_prover.rz_1.is_none());
 
     let proof_bytes = fs_transcript_prover.finalize_and_get_proof();
     let mut proof_reader = Cursor::new(&proof_bytes.bytes);
-    let (verified, challenge_verifier, claimed_v_verifier) = code_switching_gkr_verify(
+    let (verified, challenge_verifier, claimed_v0_verifier, claimed_v1_verifier) = gkr_verify(
+        CODE_SWITCHING_WORLD_SIZE,
         &layered_circuit,
+        &[],
         &claimed_v,
         &mut fs_transcript_verifier,
         &mut proof_reader,
     );
+    assert!(challenge_verifier.rz_1.is_none());
 
-    assert_eq!(&challenge_verifier.rz, &challenge_prover.rz);
+    assert!(claimed_v1_verifier.is_none());
+    assert_eq!(&challenge_verifier.rz_0, &challenge_prover.rz_0);
     assert!(verified);
 
     let input_mle = MultiLinearPoly::new(input_coeffs);
-    let expected_final_claim_v = input_mle.evaluate_jolt(&challenge_verifier.rz);
+    let expected_final_claim_v = input_mle.evaluate_jolt(&challenge_verifier.rz_0);
 
-    assert_eq!(claimed_v_verifier, expected_final_claim_v);
+    assert_eq!(claimed_v0_verifier, expected_final_claim_v);
 }
 
 #[test]

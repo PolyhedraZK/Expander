@@ -8,11 +8,9 @@ use gkr_engine::{
 };
 use polynomials::{MultilinearExtension, MutRefMultiLinearPoly};
 use serdes::ExpSerde;
-use sumcheck::ProverScratchPad;
+use sumcheck::{gkr_prove, gkr_square_prove, ProverScratchPad};
 use transcript::transcript_root_broadcast;
 use utils::timer::Timer;
-
-use crate::{gkr_prove, gkr_square_prove};
 
 #[cfg(feature = "grinding")]
 pub(crate) fn grind<Cfg: GKREngine>(

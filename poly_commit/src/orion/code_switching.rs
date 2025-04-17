@@ -1,16 +1,9 @@
-use std::io::Read;
-
 use arith::{ExtensionField, Field};
 use ark_std::iterable::Iterable;
 use circuit::{Circuit, CircuitLayer, CoefType, GateAdd};
-use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
-    Transcript,
-};
+use gkr_engine::FieldEngine;
 use itertools::izip;
-use sumcheck::{
-    sumcheck_prove_gkr_layer, sumcheck_verify_gkr_layer, ProverScratchPad, VerifierScratchPad,
-};
+use sumcheck::ProverScratchPad;
 
 use crate::orion::linear_code::OrionCode;
 
@@ -128,107 +121,6 @@ where
         .unwrap();
 
     ProverScratchPad::<C>::new(max_i_vars, max_o_vars, CODE_SWITCHING_WORLD_SIZE)
-}
-
-#[allow(unused)]
-pub(crate) fn code_switching_gkr_prove<F, C>(
-    circuit: &Circuit<C>,
-    sp: &mut ProverScratchPad<C>,
-    fs_transcript: &mut impl Transcript<F>,
-    mpi_config: &MPIConfig,
-) -> (F, ExpanderSingleVarChallenge<C>)
-where
-    F: Field + ExtensionField,
-    C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
-{
-    assert_eq!(mpi_config.world_size(), CODE_SWITCHING_WORLD_SIZE);
-
-    let layer_num = circuit.layers.len();
-
-    let mut challenge: ExpanderDualVarChallenge<C> =
-        ExpanderDualVarChallenge::sample_from_transcript(
-            fs_transcript,
-            circuit.layers.last().unwrap().output_var_num,
-            CODE_SWITCHING_WORLD_SIZE,
-        );
-
-    let output_vals = &circuit.layers.last().unwrap().output_vals;
-    let claimed_v = C::collectively_eval_circuit_vals_at_expander_challenge(
-        output_vals,
-        &challenge.challenge_x(),
-        &mut sp.hg_evals,
-        &mut sp.eq_evals_first_half,
-        mpi_config,
-    );
-
-    for i in (0..layer_num).rev() {
-        sumcheck_prove_gkr_layer(
-            &circuit.layers[i],
-            &mut challenge,
-            None,
-            fs_transcript,
-            sp,
-            mpi_config,
-            i == layer_num - 1,
-        );
-
-        assert!(challenge.rz_1.is_none());
-    }
-
-    // NOTE(HS) since the circuit is purely addition gate, then no rz_1,
-    // or in a sense no need to be a dual var challenge.
-    assert!(challenge.rz_1.is_none());
-
-    let final_challenge: ExpanderSingleVarChallenge<C> = challenge.into();
-
-    (claimed_v, final_challenge)
-}
-
-#[allow(unused)]
-pub(crate) fn code_switching_gkr_verify<F, C>(
-    circuit: &Circuit<C>,
-    claimed_v: &F,
-    fs_transcript: &mut impl Transcript<F>,
-    mut proof_reader: impl Read,
-) -> (bool, ExpanderSingleVarChallenge<C>, F)
-where
-    F: Field + ExtensionField,
-    C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
-{
-    let mut sp = VerifierScratchPad::<C>::new(circuit, CODE_SWITCHING_WORLD_SIZE);
-
-    let layer_num = circuit.layers.len();
-
-    let mut challenge: ExpanderDualVarChallenge<C> =
-        ExpanderDualVarChallenge::sample_from_transcript(
-            fs_transcript,
-            circuit.layers.last().unwrap().output_var_num,
-            CODE_SWITCHING_WORLD_SIZE,
-        );
-
-    let mut verified = true;
-    let mut claimed_v0 = *claimed_v;
-    for i in (0..layer_num).rev() {
-        let cur_verified = sumcheck_verify_gkr_layer(
-            CODE_SWITCHING_WORLD_SIZE,
-            &circuit.layers[i],
-            &[],
-            &mut challenge,
-            &mut claimed_v0,
-            &mut None,
-            None,
-            &mut proof_reader,
-            fs_transcript,
-            &mut sp,
-            i == layer_num - 1,
-        );
-
-        verified &= cur_verified;
-
-        assert!(challenge.rz_1.is_none());
-    }
-
-    (verified, challenge.into(), claimed_v0)
 }
 
 /// A wire that links output gate from lower layer to input gate from higher layer,
