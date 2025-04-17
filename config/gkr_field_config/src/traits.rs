@@ -10,7 +10,7 @@ pub enum FieldType {
     Goldilocks,
 }
 
-pub trait GKRFieldConfig: Default + Debug + Clone + Send + Sync + 'static {
+pub trait GKRFieldConfig: Default + Debug + Clone + Send + Sync + PartialEq + 'static {
     /// Enum type for Self::Field
     const FIELD_TYPE: FieldType;
 

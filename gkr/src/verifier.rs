@@ -70,7 +70,8 @@ impl<Cfg: GKRConfig> Verifier<Cfg> {
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap();
 
-        // this function will iteratively hash the commitment, and append the
+        // this function will iteratively hash the commitment, and append the 
+        // final hash output to the transcript.
         // this introduces a decent circuit depth for the FS transform.
         //
         // note that this function is almost identical to grind, except that grind uses a
