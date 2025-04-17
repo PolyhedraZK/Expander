@@ -39,7 +39,7 @@ fn test_hyrax_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_va
     let num_vars_in_each_poly = total_num_vars - num_vars_in_mpi;
 
     let global_poly = MultiLinearPoly::<Fr>::random(total_num_vars, &mut rng);
-    let challenge_point = ExpanderSingleVarChallenge::<BN254Config> {
+    let challenge_point = ExpanderSingleVarChallenge::<Fr> {
         r_mpi: (0..num_vars_in_mpi)
             .map(|_| Fr::random_unsafe(&mut rng))
             .collect(),

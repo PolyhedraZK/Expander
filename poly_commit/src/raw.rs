@@ -134,6 +134,8 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
 
     type Opening = ();
 
+    type PolyField = C::SimdCircuitField;
+
     fn gen_srs_for_testing(
         _params: &Self::Params,
         _mpi_engine: &impl MPIEngine,
@@ -164,7 +166,7 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
         }
 
         let mut buffer = if mpi_engine.is_root() {
-            vec![C::SimdCircuitField::zero(); poly.hypercube_size() * mpi_engine.world_size()]
+            vec![C::SimdCircuitField::ZERO; poly.hypercube_size() * mpi_engine.world_size()]
         } else {
             vec![]
         };
@@ -183,7 +185,7 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
         _mpi_engine: &impl MPIEngine,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         _poly: &impl MultilinearExtension<C::SimdCircuitField>,
-        _x: &ExpanderSingleVarChallenge<C>,
+        _x: &ExpanderSingleVarChallenge<C::ChallengeField>,
         _transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
@@ -194,7 +196,7 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
         _params: &Self::Params,
         _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        challenge: &ExpanderSingleVarChallenge<C>,
+        challenge: &ExpanderSingleVarChallenge<C::ChallengeField>,
         v: C::ChallengeField,
         _transcript: &mut impl Transcript,
         _opening: &Self::Opening,

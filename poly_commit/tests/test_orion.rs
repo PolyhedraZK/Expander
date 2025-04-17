@@ -1,92 +1,107 @@
 mod common;
 
+use std::ops::Mul;
+
 use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
-use gf2_128::GF2_128;
+use gf2_128::{GF2_128x8, GF2_128};
 use gkr_engine::{
     ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, MPIConfig, MPIEngine,
     Transcript,
 };
 use gkr_hashers::Keccak256hasher;
-use mersenne31::{M31Ext3, M31x16, M31};
+use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
 use transcript::BytesHashTranscript;
 
 const TEST_REPETITION: usize = 3;
 
-fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF>(
+fn test_orion_base_field_pcs_generics<SimdEvalF, ComPackF, OpenPackF>(
     num_vars_start: usize,
     num_vars_end: usize,
 ) where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
+    SimdEvalF: SimdField + ExtensionField,
+    SimdEvalF::BaseField: SimdField + Mul<OpenPackF, Output = SimdEvalF::BaseField>,
+    SimdEvalF::Scalar: ExtensionField<BaseField = <SimdEvalF::BaseField as SimdField>::Scalar>,
+    ComPackF: SimdField,
+    OpenPackF: SimdField<Scalar = ComPackF::Scalar>,
 {
     let mut rng = test_rng();
 
     (num_vars_start..=num_vars_end).for_each(|num_vars| {
         let xs: Vec<_> = (0..TEST_REPETITION)
-            .map(|_| -> Vec<EvalF> {
+            .map(|_| -> Vec<SimdEvalF::Scalar> {
                 (0..num_vars)
-                    .map(|_| EvalF::random_unsafe(&mut rng))
+                    .map(|_| SimdEvalF::Scalar::random_unsafe(&mut rng))
                     .collect()
             })
             .collect();
-        let poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
+        let poly = MultiLinearPoly::<ComPackF::Scalar>::random(num_vars, &mut rng);
 
         common::test_pcs::<
+<<<<<<< HEAD
             EvalF,
             BytesHashTranscript<Keccak256hasher>,
             OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF, BytesHashTranscript<Keccak256hasher>>,
+=======
+            SimdEvalF::Scalar,
+            BytesHashTranscript< Keccak256hasher>,
+            OrionBaseFieldPCS<
+                SimdEvalF,
+                ComPackF,
+                OpenPackF,
+                BytesHashTranscript<Keccak256hasher>,
+            >,
+>>>>>>> ca4759c (draft)
         >(&num_vars, &poly, &xs);
     })
 }
 
 #[test]
 fn test_orion_base_field_pcs_full_e2e() {
-    test_orion_base_field_pcs_generics::<GF2, GF2_128, GF2x64, GF2x8>(19, 25);
-    test_orion_base_field_pcs_generics::<GF2, GF2_128, GF2x128, GF2x8>(19, 25);
-    test_orion_base_field_pcs_generics::<M31, M31Ext3, M31x16, M31x16>(16, 22)
+    test_orion_base_field_pcs_generics::<GF2_128x8, GF2x64, GF2x8>(19, 25);
+    test_orion_base_field_pcs_generics::<GF2_128x8, GF2x128, GF2x8>(19, 25);
+    test_orion_base_field_pcs_generics::<M31Ext3x16, M31x16, M31x16>(16, 22)
 }
 
-fn test_orion_simd_field_pcs_generics<F, SimdF, EvalF, ComPackF>(
+fn test_orion_simd_field_pcs_generics<SimdF, SimdEvalF, ComPackF>(
     num_vars_start: usize,
     num_vars_end: usize,
 ) where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
+    SimdF: SimdField,
+    SimdEvalF: SimdField + ExtensionField,
+    SimdEvalF::BaseField: SimdField + Mul<SimdF, Output = SimdEvalF::BaseField>,
+    SimdEvalF::Scalar: ExtensionField<BaseField = <SimdEvalF::BaseField as SimdField>::Scalar>,
+    ComPackF: SimdField<Scalar = SimdF::Scalar>,
 {
     let mut rng = test_rng();
 
     (num_vars_start..=num_vars_end).for_each(|num_vars| {
         let poly_num_vars = num_vars - SimdF::PACK_SIZE.ilog2() as usize;
         let xs: Vec<_> = (0..TEST_REPETITION)
-            .map(|_| -> Vec<EvalF> {
+            .map(|_| -> Vec<SimdEvalF::Scalar> {
                 (0..num_vars)
-                    .map(|_| EvalF::random_unsafe(&mut rng))
+                    .map(|_| SimdEvalF::Scalar::random_unsafe(&mut rng))
                     .collect()
             })
             .collect();
         let poly = MultiLinearPoly::<SimdF>::random(poly_num_vars, &mut rng);
 
         common::test_pcs::<
-            EvalF,
+            SimdEvalF::Scalar,
             BytesHashTranscript<Keccak256hasher>,
-            OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF>,
+            OrionSIMDFieldPCS<SimdF, SimdEvalF, ComPackF>,
         >(&num_vars, &poly, &xs);
     })
 }
 
 #[test]
 fn test_orion_simd_field_pcs_full_e2e() {
-    test_orion_simd_field_pcs_generics::<GF2, GF2x8, GF2_128, GF2x64>(19, 25);
-    test_orion_simd_field_pcs_generics::<GF2, GF2x8, GF2_128, GF2x128>(19, 25);
-    test_orion_simd_field_pcs_generics::<M31, M31x16, M31Ext3, M31x16>(16, 22);
+    test_orion_simd_field_pcs_generics::<GF2x8, GF2_128x8, GF2x64>(19, 25);
+    test_orion_simd_field_pcs_generics::<GF2x8, GF2_128x8, GF2x128>(19, 25);
+    test_orion_simd_field_pcs_generics::<M31x16, M31Ext3x16, M31x16>(16, 22);
 }
 
 fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
@@ -109,7 +124,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
         MultiLinearPoly::<C::SimdCircuitField>::random(num_vars_in_global_poly, &mut rng);
 
     // NOTE generate srs for each party, and shared challenge point in each party
-    let challenge_point = ExpanderSingleVarChallenge::<C> {
+    let challenge_point = ExpanderSingleVarChallenge::<C::ChallengeField> {
         r_mpi: (0..num_vars_in_mpi)
             .map(|_| C::ChallengeField::random_unsafe(&mut rng))
             .collect(),
@@ -139,7 +154,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     common::test_pcs_for_expander_gkr::<
         C,
         T,
-        OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF>,
+        OrionSIMDFieldPCS<C::SimdCircuitField, C::Field, ComPackF>,
     >(
         &num_vars_in_each_poly,
         mpi_config_ref,

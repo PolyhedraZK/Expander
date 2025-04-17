@@ -43,12 +43,20 @@ pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<
     }
 }
 
+<<<<<<< HEAD
 pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C>>(
+=======
+pub fn test_pcs_for_expander_gkr<
+    C: FieldEngine,
+    T: Transcript,
+    P: ExpanderPCS<C, PolyField = C::SimdCircuitField>,
+>(
+>>>>>>> ca4759c (draft)
     params: &P::Params,
     mpi_config: &MPIConfig,
     transcript: &mut T,
     poly: &impl MultilinearExtension<C::SimdCircuitField>,
-    xs: &[ExpanderSingleVarChallenge<C>],
+    xs: &[ExpanderSingleVarChallenge<C::ChallengeField>],
 ) {
     let mut rng = test_rng();
     let srs = P::gen_srs_for_testing(params, mpi_config, &mut rng);

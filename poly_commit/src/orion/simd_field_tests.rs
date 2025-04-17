@@ -82,7 +82,7 @@ where
     let real_num_vars = num_vars + SimdF::PACK_SIZE.ilog2() as usize;
     let srs =
         OrionSRS::from_random::<SimdF>(real_num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
-    let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
+    let mut scratch_pad = OrionScratchPad::<ComPackF>::default();
 
     let real_commitment = orion_commit_simd_field(&srs, &random_poly, &mut scratch_pad).unwrap();
     let dumb_commitment = dumb_commit_simd_field::<F, SimdF, ComPackF>(&srs, &random_poly);

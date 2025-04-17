@@ -1,5 +1,6 @@
 //! This module implements the core GKR IOP.
 
+use arith::SimdField;
 use circuit::Circuit;
 use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIConfig, MPIEngine, Transcript};
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
@@ -12,12 +13,13 @@ pub fn gkr_prove<F: FieldEngine>(
     sp: &mut ProverScratchPad<F>,
     transcript: &mut impl Transcript,
     mpi_config: &MPIConfig,
-) -> (F::ChallengeField, ExpanderDualVarChallenge<F>) {
+) -> (F::ChallengeField, ExpanderDualVarChallenge<F::ChallengeField>) {
     let layer_num = circuit.layers.len();
 
     let mut challenge = ExpanderDualVarChallenge::sample_from_transcript(
         transcript,
         circuit.layers.last().unwrap().output_var_num,
+        <F::Field as SimdField>::PACK_SIZE,
         mpi_config.world_size(),
     );
 

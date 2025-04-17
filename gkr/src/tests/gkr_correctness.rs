@@ -9,8 +9,7 @@ use config_macros::declare_gkr_config;
 use env_logger;
 use gf2::GF2x128;
 use gkr_engine::{
-    root_println, BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GKRScheme,
-    GoldilocksExtConfig, M31ExtConfig, MPIConfig, MPIEngine, SharedMemory,
+    root_println, BN254Config, ExpanderPCS, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GKRScheme, GoldilocksExtConfig, M31ExtConfig, MPIConfig, MPIEngine, SharedMemory
 };
 use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use halo2curves::bn256::{Bn256, G1Affine};
@@ -140,7 +139,10 @@ fn test_gkr_correctness() {
 }
 
 #[allow(unreachable_patterns)]
-fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
+fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) 
+where
+    Cfg::PCSConfig: ExpanderPCS<Cfg::FieldConfig, PolyField = <Cfg::FieldConfig as FieldEngine>::SimdCircuitField>,
+{
     let mpi_config = MPIConfig::prover_new();
 
     root_println!(mpi_config, "============== start ===============");

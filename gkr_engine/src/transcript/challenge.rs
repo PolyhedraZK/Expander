@@ -1,48 +1,48 @@
-use arith::SimdField;
+use arith::{Field, SimdField};
 
 use crate::FieldEngine;
 
 use super::Transcript;
 
 #[derive(Debug, Clone, Default)]
-pub struct ExpanderDualVarChallenge<C: FieldEngine> {
+pub struct ExpanderDualVarChallenge<F: Field> {
     /// random challenge for the x variable
-    pub rz_0: Vec<C::ChallengeField>,
+    pub rz_0: Vec<F>,
     /// random challenge for the y variable
-    pub rz_1: Option<Vec<C::ChallengeField>>,
+    pub rz_1: Option<Vec<F>>,
     /// random challenge to merge the SIMD circuit into a single one
-    pub r_simd: Vec<C::ChallengeField>,
+    pub r_simd: Vec<F>,
     /// random challenge to merge the MPI circuit into a single one
-    pub r_mpi: Vec<C::ChallengeField>,
+    pub r_mpi: Vec<F>,
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct ExpanderSingleVarChallenge<C: FieldEngine> {
+pub struct ExpanderSingleVarChallenge<F: Field> {
     /// random challenge for the main body of the circuit
-    pub rz: Vec<C::ChallengeField>,
+    pub rz: Vec<F>,
     /// random challenge to merge the SIMD circuit into a single one
-    pub r_simd: Vec<C::ChallengeField>,
+    pub r_simd: Vec<F>,
     /// random challenge to merge the MPI circuit into a single one
-    pub r_mpi: Vec<C::ChallengeField>,
+    pub r_mpi: Vec<F>,
 }
 
-impl<C: FieldEngine> ExpanderSingleVarChallenge<C> {
+impl<F: Field> ExpanderSingleVarChallenge<F> {
     #[inline]
     pub fn new(
-        rz: Vec<C::ChallengeField>,
-        r_simd: Vec<C::ChallengeField>,
-        r_mpi: Vec<C::ChallengeField>,
+        rz: Vec<F>,
+        r_simd: Vec<F>,
+        r_mpi: Vec<F>,
     ) -> Self {
         Self { rz, r_simd, r_mpi }
     }
 
     #[inline]
-    pub fn local_xs(&self) -> Vec<C::ChallengeField> {
+    pub fn local_xs(&self) -> Vec<F> {
         [self.r_simd.as_slice(), self.rz.as_slice()].concat()
     }
 
     #[inline]
-    pub fn global_xs(&self) -> Vec<C::ChallengeField> {
+    pub fn global_xs(&self) -> Vec<F> {
         [
             self.r_simd.as_slice(),
             self.rz.as_slice(),
@@ -60,28 +60,34 @@ impl<C: FieldEngine> ExpanderSingleVarChallenge<C> {
     pub fn sample_from_transcript(
         transcript: &mut impl Transcript,
         num_circuit_var: usize,
+        num_simd_var: usize,
         world_size: usize,
     ) -> Self {
-        let rz = transcript.generate_field_elements::<C::ChallengeField>(num_circuit_var);
+        let rz = transcript.generate_field_elements::<F>(num_circuit_var);
 
-        let r_simd = transcript.generate_field_elements::<C::ChallengeField>(
-            <C::SimdCircuitField as SimdField>::PACK_SIZE.trailing_zeros() as usize,
+        let r_simd = transcript.generate_field_elements::<F>(
+            num_simd_var.trailing_zeros() as usize,
         );
 
+<<<<<<< HEAD
         let r_mpi = transcript
             .generate_field_elements::<C::ChallengeField>(world_size.trailing_zeros() as usize);
+=======
+        let r_mpi =
+            transcript.generate_field_elements::<F>(world_size.trailing_zeros() as usize);
+>>>>>>> ca4759c (draft)
 
         Self { rz, r_simd, r_mpi }
     }
 }
 
-impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
+impl<F: Field> ExpanderDualVarChallenge<F> {
     #[inline]
     pub fn new(
-        rz_0: Vec<C::ChallengeField>,
-        rz_1: Option<Vec<C::ChallengeField>>,
-        r_simd: Vec<C::ChallengeField>,
-        r_mpi: Vec<C::ChallengeField>,
+        rz_0: Vec<F>,
+        rz_1: Option<Vec<F>>,
+        r_simd: Vec<F>,
+        r_mpi: Vec<F>,
     ) -> Self {
         Self {
             rz_0,
@@ -92,7 +98,7 @@ impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
     }
 
     #[inline]
-    pub fn challenge_x(&self) -> ExpanderSingleVarChallenge<C> {
+    pub fn challenge_x(&self) -> ExpanderSingleVarChallenge<F> {
         ExpanderSingleVarChallenge {
             rz: self.rz_0.clone(),
             r_simd: self.r_simd.clone(),
@@ -101,7 +107,7 @@ impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
     }
 
     #[inline]
-    pub fn challenge_y(&self) -> ExpanderSingleVarChallenge<C> {
+    pub fn challenge_y(&self) -> ExpanderSingleVarChallenge<F> {
         assert!(self.rz_1.is_some());
 
         ExpanderSingleVarChallenge {
@@ -115,16 +121,22 @@ impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
     pub fn sample_from_transcript(
         transcript: &mut impl Transcript,
         num_circuit_var: usize,
+        num_simd_var: usize,
         world_size: usize,
     ) -> Self {
-        let rz_0 = transcript.generate_field_elements::<C::ChallengeField>(num_circuit_var);
+        let rz_0 = transcript.generate_field_elements::<F>(num_circuit_var);
 
-        let r_simd = transcript.generate_field_elements::<C::ChallengeField>(
-            <C::SimdCircuitField as SimdField>::PACK_SIZE.trailing_zeros() as usize,
+        let r_simd = transcript.generate_field_elements::<F>(
+            num_simd_var.trailing_zeros() as usize,
         );
 
+<<<<<<< HEAD
         let r_mpi = transcript
             .generate_field_elements::<C::ChallengeField>(world_size.trailing_zeros() as usize);
+=======
+        let r_mpi =
+            transcript.generate_field_elements::<F>(world_size.trailing_zeros() as usize);
+>>>>>>> ca4759c (draft)
 
         Self {
             rz_0,
@@ -135,14 +147,14 @@ impl<C: FieldEngine> ExpanderDualVarChallenge<C> {
     }
 }
 
-impl<C: FieldEngine> From<ExpanderSingleVarChallenge<C>> for ExpanderDualVarChallenge<C> {
-    fn from(challenge: ExpanderSingleVarChallenge<C>) -> Self {
+impl<F: Field> From<ExpanderSingleVarChallenge<F>> for ExpanderDualVarChallenge<F> {
+    fn from(challenge: ExpanderSingleVarChallenge<F>) -> Self {
         Self::from(&challenge)
     }
 }
 
-impl<C: FieldEngine> From<&ExpanderSingleVarChallenge<C>> for ExpanderDualVarChallenge<C> {
-    fn from(challenge: &ExpanderSingleVarChallenge<C>) -> Self {
+impl<F: Field> From<&ExpanderSingleVarChallenge<F>> for ExpanderDualVarChallenge<F> {
+    fn from(challenge: &ExpanderSingleVarChallenge<F>) -> Self {
         Self {
             rz_0: challenge.rz.clone(),
             rz_1: None,

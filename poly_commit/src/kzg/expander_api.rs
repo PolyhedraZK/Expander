@@ -31,6 +31,8 @@ where
     type SRS = CoefFormBiKZGLocalSRS<E>;
     type ScratchPad = ();
 
+    type PolyField = E::Fr;
+
     const MINIMUM_NUM_VARS: usize = 1;
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
@@ -83,7 +85,7 @@ where
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
-        x: &ExpanderSingleVarChallenge<G>,
+        x: &ExpanderSingleVarChallenge<G::ChallengeField>,
         transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
@@ -101,7 +103,7 @@ where
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &ExpanderSingleVarChallenge<G>,
+        x: &ExpanderSingleVarChallenge<G::ChallengeField>,
         v: <G as FieldEngine>::ChallengeField,
         transcript: &mut impl Transcript,
         opening: &Self::Opening,

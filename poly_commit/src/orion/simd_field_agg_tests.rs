@@ -17,7 +17,7 @@ where
     ComPackF: SimdField<Scalar = F>,
     T: Transcript,
 {
-    pub scratch_pad: OrionScratchPad<F, ComPackF>,
+    pub scratch_pad: OrionScratchPad<ComPackF>,
     pub transcript: T,
 }
 
@@ -92,7 +92,7 @@ where
         .map(|_| C::ChallengeField::random_unsafe(&mut rng))
         .collect();
 
-    let gkr_challenge: ExpanderSingleVarChallenge<C> = ExpanderSingleVarChallenge {
+    let gkr_challenge: ExpanderSingleVarChallenge<C::ChallengeField> = ExpanderSingleVarChallenge {
         r_mpi: eval_point[num_vars - world_num_vars..].to_vec(),
         rz: eval_point[simd_num_vars..num_vars - world_num_vars].to_vec(),
         r_simd: eval_point[..simd_num_vars].to_vec(),
@@ -100,7 +100,7 @@ where
 
     let mut committee = vec![
         DistributedCommitter {
-            scratch_pad: OrionScratchPad::<C::CircuitField, ComPackF>::default(),
+            scratch_pad: OrionScratchPad::<ComPackF>::default(),
             transcript: T::new(),
         };
         num_parties
@@ -135,7 +135,7 @@ where
     )
     .map(|(committer, eval_slice)| {
         let cloned_poly = MultiLinearPoly::new(eval_slice.to_vec());
-        orion_open_simd_field::<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF>(
+        orion_open_simd_field::<C::SimdCircuitField, C::Field, ComPackF>(
             &srs,
             &cloned_poly,
             &gkr_challenge.local_xs(),
@@ -152,7 +152,7 @@ where
     let final_expected_eval =
         C::single_core_eval_circuit_vals_at_expander_challenge(&global_poly.coeffs, &gkr_challenge);
 
-    assert!(orion_verify_simd_field_aggregated::<C, ComPackF>(
+    assert!(orion_verify_simd_field_aggregated::<C::SimdCircuitField, C::Field, ComPackF>(
         &srs,
         &final_commitment,
         &gkr_challenge,

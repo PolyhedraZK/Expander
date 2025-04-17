@@ -53,7 +53,10 @@ pub struct Prover<Cfg: GKREngine> {
     sp: ProverScratchPad<Cfg::FieldConfig>,
 }
 
-impl<Cfg: GKREngine> Prover<Cfg> {
+impl<Cfg: GKREngine> Prover<Cfg> 
+where
+    Cfg::PCSConfig: ExpanderPCS<Cfg::FieldConfig, PolyField = <Cfg::FieldConfig as FieldEngine>::SimdCircuitField>,
+{
     pub fn new(mpi_config: MPIConfig) -> Self {
         Prover {
             mpi_config,
@@ -189,11 +192,14 @@ impl<Cfg: GKREngine> Prover<Cfg> {
     }
 }
 
-impl<Cfg: GKREngine> Prover<Cfg> {
+impl<Cfg: GKREngine> Prover<Cfg> 
+where
+    Cfg::PCSConfig: ExpanderPCS<Cfg::FieldConfig, PolyField = <Cfg::FieldConfig as FieldEngine>::SimdCircuitField>,
+{
     fn prove_input_layer_claim(
         &self,
         inputs: &mut MutRefMultiLinearPoly<<Cfg::FieldConfig as FieldEngine>::SimdCircuitField>,
-        open_at: &mut ExpanderSingleVarChallenge<Cfg::FieldConfig>,
+        open_at: &mut ExpanderSingleVarChallenge<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
         pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
         pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
         pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad,

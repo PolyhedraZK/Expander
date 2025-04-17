@@ -16,7 +16,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
     pub fn prepare_layer(
         layer: &CircuitLayer<F>,
         alpha: &Option<F::ChallengeField>,
-        challenge: &ExpanderDualVarChallenge<F>,
+        challenge: &ExpanderDualVarChallenge<F::ChallengeField>,
         sp: &mut VerifierScratchPad<F>,
         is_output_layer: bool,
     ) {

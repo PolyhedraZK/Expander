@@ -1,4 +1,4 @@
-use arith::ExtensionField;
+use arith::{ExtensionField, Field};
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
@@ -36,6 +36,8 @@ where
     type Opening = HyraxOpening<C>;
     type SRS = PedersenParams<C>;
 
+    type PolyField = C::Scalar;
+
     fn gen_params(n_input_vars: usize) -> Self::Params {
         n_input_vars
     }
@@ -54,7 +56,7 @@ where
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<G::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         let local_commit = hyrax_commit(proving_key, poly);
@@ -81,8 +83,8 @@ where
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
-        x: &ExpanderSingleVarChallenge<G>,
+        poly: &impl polynomials::MultilinearExtension<G::SimdCircuitField>,
+        x: &ExpanderSingleVarChallenge<G::ChallengeField>,
         _transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
@@ -115,7 +117,7 @@ where
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &ExpanderSingleVarChallenge<G>,
+        x: &ExpanderSingleVarChallenge<G::ChallengeField>,
         v: <G as FieldEngine>::ChallengeField,
         _transcript: &mut impl Transcript,
         opening: &Self::Opening,

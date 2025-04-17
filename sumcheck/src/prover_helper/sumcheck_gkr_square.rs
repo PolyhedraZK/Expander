@@ -15,7 +15,7 @@ pub(crate) struct SumcheckGkrSquareHelper<'a, F: FieldEngine, const D: usize> {
     layer: &'a CircuitLayer<F>,
     sp: &'a mut ProverScratchPad<F>,
 
-    challenge: &'a ExpanderSingleVarChallenge<F>,
+    challenge: &'a ExpanderSingleVarChallenge<F::ChallengeField>,
 
     pub(crate) simd_var_num: usize,
 
@@ -30,7 +30,7 @@ impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {
     #[inline]
     pub(crate) fn new(
         layer: &'a CircuitLayer<F>,
-        challenge: &'a ExpanderSingleVarChallenge<F>,
+        challenge: &'a ExpanderSingleVarChallenge<F::ChallengeField>,
         sp: &'a mut ProverScratchPad<F>,
         mpi_config: &'a MPIConfig,
     ) -> Self {

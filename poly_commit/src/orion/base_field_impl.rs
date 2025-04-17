@@ -1,4 +1,4 @@
-use std::iter;
+use std::{iter, ops::Mul};
 
 use arith::{ExtensionField, Field, SimdField};
 use gf2::GF2;
@@ -12,46 +12,46 @@ use crate::{
     PCS_SOUNDNESS_BITS,
 };
 
-pub fn orion_commit_base_field<F, ComPackF>(
+pub fn orion_commit_base_field<ComPackF>(
     pk: &OrionSRS,
-    poly: &impl MultilinearExtension<F>,
-    scratch_pad: &mut OrionScratchPad<F, ComPackF>,
+    poly: &impl MultilinearExtension<ComPackF::Scalar>,
+    scratch_pad: &mut OrionScratchPad<ComPackF>,
 ) -> OrionResult<OrionCommitment>
 where
-    F: Field,
-    ComPackF: SimdField<Scalar = F>,
+    ComPackF: SimdField,
 {
-    let (row_num, msg_size) = OrionSRS::evals_shape::<F>(poly.num_vars());
+    let (row_num, msg_size) = OrionSRS::evals_shape::<ComPackF::Scalar>(poly.num_vars());
     let packed_rows = row_num / ComPackF::PACK_SIZE;
     assert_eq!(row_num % ComPackF::PACK_SIZE, 0);
 
     assert_eq!(poly.hypercube_size() % ComPackF::PACK_SIZE, 0);
-    let packed_evals = pack_from_base::<F, ComPackF>(poly.hypercube_basis_ref());
+    let packed_evals = pack_from_base::<ComPackF>(poly.hypercube_basis_ref());
 
     commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
 }
 
-pub fn orion_open_base_field<F, EvalF, ComPackF, OpenPackF>(
+pub fn orion_open_base_field<SimdEvalF, ComPackF, OpenPackF>(
     pk: &OrionSRS,
-    poly: &impl MultilinearExtension<F>,
-    point: &[EvalF],
+    poly: &impl MultilinearExtension<ComPackF::Scalar>,
+    point: &[SimdEvalF::Scalar],
     transcript: &mut impl Transcript,
-    scratch_pad: &OrionScratchPad<F, ComPackF>,
-) -> (EvalF, OrionProof<EvalF>)
+    scratch_pad: &OrionScratchPad<ComPackF>,
+) -> (SimdEvalF::Scalar, OrionProof<SimdEvalF::Scalar>)
 where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
+    SimdEvalF: SimdField + ExtensionField,
+    SimdEvalF::BaseField: SimdField + Mul<OpenPackF, Output = SimdEvalF::BaseField>,
+    SimdEvalF::Scalar: ExtensionField<BaseField = <SimdEvalF::BaseField as SimdField>::Scalar>,
+    ComPackF: SimdField,
+    OpenPackF: SimdField<Scalar = ComPackF::Scalar>,
 {
-    let (_, msg_size) = OrionSRS::evals_shape::<F>(poly.num_vars());
+    let (_, msg_size) = OrionSRS::evals_shape::<ComPackF::Scalar>(poly.num_vars());
 
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;
 
     // NOTE: pack evaluations for linear combinations in evaulation/proximity tests
     assert_eq!(poly.hypercube_size() % OpenPackF::PACK_SIZE, 0);
-    let packed_evals: Vec<OpenPackF> = pack_from_base(poly.hypercube_basis_ref());
+    let packed_evals = pack_from_base(poly.hypercube_basis_ref());
 
     // NOTE: pre-compute the eq linear combine coeffs for linear combination
     let eq_col_coeffs = {
@@ -61,12 +61,12 @@ where
     };
 
     // NOTE: pre-declare the spaces for returning evaluation and proximity queries
-    let mut eval_row = vec![EvalF::ZERO; msg_size];
+    let mut eval_row = vec![SimdEvalF::Scalar::ZERO; msg_size];
 
-    let proximity_test_num = pk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
-    let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_test_num];
+    let proximity_test_num = pk.proximity_repetitions::<SimdEvalF::Scalar>(PCS_SOUNDNESS_BITS);
+    let mut proximity_rows = vec![vec![SimdEvalF::Scalar::ZERO; msg_size]; proximity_test_num];
 
-    match F::NAME {
+    match <<SimdEvalF as ExtensionField>::BaseField as SimdField>::Scalar::NAME {
         GF2::NAME => lut_open_linear_combine(
             ComPackF::PACK_SIZE,
             &packed_evals,
@@ -75,7 +75,7 @@ where
             &mut proximity_rows,
             transcript,
         ),
-        _ => simd_open_linear_combine(
+        _ => simd_open_linear_combine::<OpenPackF, SimdEvalF, _>(
             ComPackF::PACK_SIZE,
             &packed_evals,
             &eq_col_coeffs,
@@ -87,7 +87,7 @@ where
     drop(packed_evals);
 
     // NOTE: working on evaluation on top of evaluation response
-    let mut scratch = vec![EvalF::ZERO; msg_size];
+    let mut scratch = vec![SimdEvalF::Scalar::ZERO; msg_size];
     let eval = RefMultiLinearPoly::from_ref(&eval_row).evaluate_with_buffer(
         &point[num_vars_in_com_simd..num_vars_in_com_simd + num_vars_in_msg],
         &mut scratch,
@@ -107,27 +107,28 @@ where
     )
 }
 
-pub fn orion_verify_base_field<F, EvalF, ComPackF, OpenPackF>(
+pub fn orion_verify_base_field<SimdEvalF, ComPackF, OpenPackF>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
-    point: &[EvalF],
-    evaluation: EvalF,
+    point: &[SimdEvalF::Scalar],
+    evaluation: SimdEvalF::Scalar,
     transcript: &mut impl Transcript,
-    proof: &OrionProof<EvalF>,
+    proof: &OrionProof<SimdEvalF::Scalar>,
 ) -> bool
 where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
+    SimdEvalF: SimdField + ExtensionField,
+    SimdEvalF::BaseField: SimdField + Mul<OpenPackF, Output = SimdEvalF::BaseField>,
+    SimdEvalF::Scalar: ExtensionField<BaseField = <SimdEvalF::BaseField as SimdField>::Scalar>,
+    ComPackF: SimdField,
+    OpenPackF: SimdField<Scalar = ComPackF::Scalar>,
 {
-    let (row_num, msg_size) = OrionSRS::evals_shape::<F>(point.len());
+    let (row_num, msg_size) = OrionSRS::evals_shape::<ComPackF::Scalar>(point.len());
 
     let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
     let num_vars_in_msg = msg_size.ilog2() as usize;
 
     // NOTE: working on evaluation response, evaluate the rest of the response
-    let mut scratch = vec![EvalF::ZERO; msg_size];
+    let mut scratch = vec![SimdEvalF::Scalar::ZERO; msg_size];
     let final_eval = RefMultiLinearPoly::from_ref(&proof.eval_row).evaluate_with_buffer(
         &point[num_vars_in_com_simd..num_vars_in_com_simd + num_vars_in_msg],
         &mut scratch,
@@ -139,9 +140,9 @@ where
 
     // NOTE: working on proximity responses, draw random linear combinations
     // then draw query points from fiat shamir transcripts
-    let proximity_reps = vk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
-    let random_linear_combinations: Vec<Vec<EvalF>> = (0..proximity_reps)
-        .map(|_| transcript.generate_field_elements::<EvalF>(row_num))
+    let proximity_reps = vk.proximity_repetitions::<SimdEvalF::Scalar>(PCS_SOUNDNESS_BITS);
+    let random_linear_combinations: Vec<Vec<SimdEvalF::Scalar>> = (0..proximity_reps)
+        .map(|_| transcript.generate_field_elements::<SimdEvalF::Scalar>(row_num))
         .collect();
     let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
     let query_indices = transcript.generate_usize_vector(query_num);
@@ -157,7 +158,7 @@ where
         .query_openings
         .iter()
         .map(|p| -> Vec<_> {
-            p.unpack_field_elems::<F, ComPackF>()
+            p.unpack_field_elems::<ComPackF>()
                 .chunks(OpenPackF::PACK_SIZE)
                 .map(OpenPackF::pack)
                 .collect()
@@ -178,14 +179,14 @@ where
                 _ => return false,
             };
 
-            match F::NAME {
+            match <<SimdEvalF as ExtensionField>::BaseField as SimdField>::Scalar::NAME {
                 GF2::NAME => lut_verify_alphabet_check(
                     &codeword,
                     rl,
                     &query_indices,
                     &packed_interleaved_alphabets,
                 ),
-                _ => simd_verify_alphabet_check(
+                _ => simd_verify_alphabet_check::<OpenPackF, SimdEvalF>(
                     &codeword,
                     rl,
                     &query_indices,

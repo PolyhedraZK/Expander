@@ -61,7 +61,7 @@ where
 
     let mut random_poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
     let srs = OrionSRS::from_random::<F>(num_vars, ORION_CODE_PARAMETER_INSTANCE, &mut rng);
-    let mut scratch_pad = OrionScratchPad::<F, ComPackF>::default();
+    let mut scratch_pad = OrionScratchPad::<ComPackF>::default();
 
     let real_commitment = orion_commit_base_field(&srs, &random_poly, &mut scratch_pad).unwrap();
     let dumb_commitment = dumb_commit_base_field::<F, ComPackF>(&srs, &mut random_poly);

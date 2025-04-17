@@ -140,7 +140,10 @@ pub fn prove<Cfg: GKREngine>(
 ) -> (
     <<Cfg as GKREngine>::FieldConfig as FieldEngine>::ChallengeField,
     Proof,
-) {
+) 
+where
+    Cfg::PCSConfig: ExpanderPCS<Cfg::FieldConfig, PolyField = <Cfg::FieldConfig as FieldEngine>::SimdCircuitField>,
+{
     let mut prover = crate::Prover::<Cfg>::new(mpi_config.clone());
     prover.prepare_mem(circuit);
     // TODO: Read PCS setup from files
@@ -184,7 +187,10 @@ pub fn verify<Cfg: GKREngine>(
 pub async fn run_command<'a, Cfg: GKREngine + 'static>(
     command: &ExpanderExecArgs,
     mpi_config: &MPIConfig,
-) {
+) 
+where
+    Cfg::PCSConfig: ExpanderPCS<Cfg::FieldConfig, PolyField = <Cfg::FieldConfig as FieldEngine>::SimdCircuitField>,
+{
     let subcommands = command.subcommands.clone();
 
     match subcommands {

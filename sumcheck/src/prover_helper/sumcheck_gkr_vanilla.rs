@@ -16,7 +16,7 @@ pub(crate) struct SumcheckGkrVanillaHelper<'a, F: FieldEngine> {
     layer: &'a CircuitLayer<F>,
     sp: &'a mut ProverScratchPad<F>,
 
-    challenge: &'a ExpanderDualVarChallenge<F>,
+    challenge: &'a ExpanderDualVarChallenge<F::ChallengeField>,
     alpha: Option<F::ChallengeField>,
 
     pub(crate) input_var_num: usize,
@@ -51,7 +51,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
     #[inline]
     pub(crate) fn new(
         layer: &'a CircuitLayer<F>,
-        challenge: &'a ExpanderDualVarChallenge<F>,
+        challenge: &'a ExpanderDualVarChallenge<F::ChallengeField>,
         alpha: Option<F::ChallengeField>,
         sp: &'a mut ProverScratchPad<F>,
         mpi_config: &'a MPIConfig,

@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ops::Mul};
 
 use arith::{ExtensionField, Field, SimdField};
 use gkr_engine::{StructuredReferenceString, Transcript};
@@ -15,46 +15,44 @@ impl StructuredReferenceString for OrionSRS {
     }
 }
 
-pub struct OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF, T>
+pub struct OrionBaseFieldPCS<SimdEvalF, ComPackF, OpenPackF, T>
 where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
+    SimdEvalF: SimdField + ExtensionField,
+    SimdEvalF::BaseField: SimdField + Mul<OpenPackF, Output = SimdEvalF::BaseField>,
+    SimdEvalF::Scalar: ExtensionField<BaseField = <SimdEvalF::BaseField as SimdField>::Scalar>,
+    ComPackF: SimdField,
+    OpenPackF: SimdField<Scalar = ComPackF::Scalar>,
     T: Transcript,
 {
-    _marker_f: PhantomData<F>,
-    _marker_eval_f: PhantomData<EvalF>,
-    _marker_commit_f: PhantomData<ComPackF>,
-    _marker_open_f: PhantomData<OpenPackF>,
-    _marker_t: PhantomData<T>,
+    _marker_: PhantomData<(SimdEvalF, ComPackF, OpenPackF, T)>,
 }
 
-impl<F, EvalF, ComPackF, OpenPackF, T> PolynomialCommitmentScheme<EvalF>
-    for OrionBaseFieldPCS<F, EvalF, ComPackF, OpenPackF, T>
+impl<SimdEvalF, ComPackF, OpenPackF, T> PolynomialCommitmentScheme<SimdEvalF::Scalar>
+    for OrionBaseFieldPCS<SimdEvalF, ComPackF, OpenPackF, T>
 where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
+    SimdEvalF: SimdField + ExtensionField,
+    SimdEvalF::BaseField: SimdField + Mul<OpenPackF, Output = SimdEvalF::BaseField>,
+    SimdEvalF::Scalar: ExtensionField<BaseField = <SimdEvalF::BaseField as SimdField>::Scalar>,
+    ComPackF: SimdField,
+    OpenPackF: SimdField<Scalar = ComPackF::Scalar>,
     T: Transcript,
 {
     const NAME: &'static str = "OrionBaseFieldPCS";
 
     type Params = usize;
-    type Poly = MultiLinearPoly<F>;
-    type EvalPoint = Vec<EvalF>;
-    type ScratchPad = OrionScratchPad<F, ComPackF>;
+    type Poly = MultiLinearPoly<ComPackF::Scalar>;
+    type EvalPoint = Vec<SimdEvalF::Scalar>;
+    type ScratchPad = OrionScratchPad<ComPackF>;
 
     type SRS = OrionSRS;
     type Commitment = OrionCommitment;
-    type Opening = OrionProof<EvalF>;
+    type Opening = OrionProof<SimdEvalF::Scalar>;
 
     const MINIMUM_NUM_VARS: usize =
-        (Self::SRS::LEAVES_IN_RANGE_OPENING * tree::leaf_adic::<F>()).ilog2() as usize;
+        (Self::SRS::LEAVES_IN_RANGE_OPENING * tree::leaf_adic::<ComPackF::Scalar>()).ilog2() as usize;
 
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
-        OrionSRS::from_random::<F>(*params, ORION_CODE_PARAMETER_INSTANCE, rng)
+        OrionSRS::from_random::<ComPackF::Scalar>(*params, ORION_CODE_PARAMETER_INSTANCE, rng)
     }
 
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {
@@ -78,9 +76,9 @@ where
         x: &Self::EvalPoint,
         scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
-    ) -> (EvalF, Self::Opening) {
+    ) -> (SimdEvalF::Scalar, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);
-        orion_open_base_field::<F, EvalF, ComPackF, OpenPackF>(
+        orion_open_base_field::<SimdEvalF, ComPackF, OpenPackF>(
             proving_key,
             poly,
             x,
@@ -94,12 +92,12 @@ where
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
-        v: EvalF,
+        v: SimdEvalF::Scalar,
         opening: &Self::Opening,
         transcript: &mut impl Transcript,
     ) -> bool {
         assert_eq!(*params, verifying_key.num_vars);
-        orion_verify_base_field::<F, EvalF, ComPackF, OpenPackF>(
+        orion_verify_base_field::<SimdEvalF, ComPackF, OpenPackF>(
             verifying_key,
             commitment,
             x,
@@ -110,39 +108,38 @@ where
     }
 }
 
-pub struct OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF>
+pub struct OrionSIMDFieldPCS<SimdPolyF, SimdEvalF, ComPackF>
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
+    SimdPolyF: SimdField,
+    SimdEvalF: SimdField + ExtensionField,
+    SimdEvalF::BaseField: SimdField + Mul<SimdPolyF, Output = SimdEvalF::BaseField>,
+    SimdEvalF::Scalar: ExtensionField<BaseField = <SimdEvalF::BaseField as SimdField>::Scalar>,
+    ComPackF: SimdField<Scalar = SimdPolyF::Scalar>,
 {
-    _marker_f: PhantomData<F>,
-    _marker_simd_f: PhantomData<SimdF>,
-    _marker_eval_f: PhantomData<EvalF>,
-    _marker_commit_f: PhantomData<ComPackF>,
+    _marker_: PhantomData<(SimdPolyF, SimdEvalF, ComPackF)>,
 }
 
-impl<F, SimdF, EvalF, ComPackF> PolynomialCommitmentScheme<EvalF>
-    for OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF>
+impl<SimdF, SimdEvalF, ComPackF> PolynomialCommitmentScheme<SimdEvalF::Scalar>
+    for OrionSIMDFieldPCS<SimdF, SimdEvalF, ComPackF>
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
+    SimdF: SimdField,
+    SimdEvalF: SimdField + ExtensionField,
+    SimdEvalF::BaseField: SimdField + Mul<SimdF, Output = SimdEvalF::BaseField>,
+    SimdEvalF::Scalar: ExtensionField<BaseField = <SimdEvalF::BaseField as SimdField>::Scalar>,
+    ComPackF: SimdField<Scalar = SimdF::Scalar>,
 {
     const NAME: &'static str = "OrionSIMDFieldPCS";
 
     type Params = usize;
     type Poly = MultiLinearPoly<SimdF>;
-    type EvalPoint = Vec<EvalF>;
-    type ScratchPad = OrionScratchPad<F, ComPackF>;
+    type EvalPoint = Vec<SimdEvalF::Scalar>;
+    type ScratchPad = OrionScratchPad<ComPackF>;
 
     type SRS = OrionSRS;
     type Commitment = OrionCommitment;
-    type Opening = OrionProof<EvalF>;
+    type Opening = OrionProof<SimdEvalF::Scalar>;
 
-    const MINIMUM_NUM_VARS: usize = (Self::SRS::LEAVES_IN_RANGE_OPENING * tree::leaf_adic::<F>()
+    const MINIMUM_NUM_VARS: usize = (Self::SRS::LEAVES_IN_RANGE_OPENING * tree::leaf_adic::<SimdF::Scalar>()
         / SimdF::PACK_SIZE)
         .ilog2() as usize;
 
@@ -150,7 +147,7 @@ where
     // - number of variables of the multilinear polynomial
     // - number of variables reside in the SIMD field - e.g., 3 vars for a SIMD 8 field
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> Self::SRS {
-        OrionSRS::from_random::<F>(*params, ORION_CODE_PARAMETER_INSTANCE, rng)
+        OrionSRS::from_random::<SimdF::Scalar>(*params, ORION_CODE_PARAMETER_INSTANCE, rng)
     }
 
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {
@@ -178,13 +175,13 @@ where
         x: &Self::EvalPoint,
         scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
-    ) -> (EvalF, Self::Opening) {
+    ) -> (SimdEvalF::Scalar, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);
         assert_eq!(
             poly.get_num_vars(),
             proving_key.num_vars - SimdF::PACK_SIZE.ilog2() as usize
         );
-        let opening = orion_open_simd_field::<F, SimdF, EvalF, ComPackF>(
+        let opening = orion_open_simd_field::<SimdF, SimdEvalF, ComPackF>(
             proving_key,
             poly,
             x,
@@ -194,13 +191,13 @@ where
 
         let num_vars_in_msg = {
             let real_num_vars = poly.get_num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
-            let (_, m) = <Self::SRS as TensorCodeIOPPCS>::evals_shape::<F>(real_num_vars);
+            let (_, m) = <Self::SRS as TensorCodeIOPPCS>::evals_shape::<SimdF::Scalar>(real_num_vars);
             m.ilog2() as usize
         };
         let num_vars_in_com_simd = ComPackF::PACK_SIZE.ilog2() as usize;
 
         // NOTE: working on evaluation response, evaluate the rest of the response
-        let mut scratch = vec![EvalF::ZERO; opening.eval_row.len()];
+        let mut scratch = vec![SimdEvalF::Scalar::ZERO; opening.eval_row.len()];
         let eval = MultiLinearPoly::evaluate_with_buffer(
             &opening.eval_row,
             &x[num_vars_in_com_simd..num_vars_in_com_simd + num_vars_in_msg],
@@ -216,13 +213,13 @@ where
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
-        v: EvalF,
+        v: SimdEvalF::Scalar,
         opening: &Self::Opening,
         transcript: &mut impl Transcript,
     ) -> bool {
         assert_eq!(*params, verifying_key.num_vars);
         assert_eq!(x.len(), verifying_key.num_vars);
-        orion_verify_simd_field::<F, SimdF, EvalF, ComPackF>(
+        orion_verify_simd_field::<SimdF, SimdEvalF, ComPackF>(
             verifying_key,
             commitment,
             x,

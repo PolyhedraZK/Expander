@@ -26,7 +26,7 @@ pub const SUMCHECK_GKR_SQUARE_DEGREE: usize = 6;
 // written back into the prev space
 pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript>(
     layer: &CircuitLayer<F>,
-    challenge: &mut ExpanderDualVarChallenge<F>,
+    challenge: &mut ExpanderDualVarChallenge<F::ChallengeField>,
     alpha: Option<F::ChallengeField>,
     transcript: &mut T,
     sp: &mut ProverScratchPad<F>,
@@ -93,7 +93,7 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript>(
 #[allow(clippy::type_complexity)]
 pub fn sumcheck_prove_gkr_square_layer<F: FieldEngine, T: Transcript>(
     layer: &CircuitLayer<F>,
-    challenge: &mut ExpanderSingleVarChallenge<F>,
+    challenge: &mut ExpanderSingleVarChallenge<F::ChallengeField>,
     transcript: &mut T,
     sp: &mut ProverScratchPad<F>,
     mpi_config: &MPIConfig,

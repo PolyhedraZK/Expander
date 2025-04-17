@@ -15,7 +15,7 @@ use crate::{
 };
 
 impl<C, ComPackF> ExpanderPCS<C>
-    for OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF>
+    for OrionSIMDFieldPCS<C::SimdCircuitField, C::Field, ComPackF>
 where
     C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
@@ -25,11 +25,13 @@ where
     const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Orion;
 
     type Params = usize;
-    type ScratchPad = OrionScratchPad<C::CircuitField, ComPackF>;
+    type ScratchPad = OrionScratchPad<ComPackF>;
 
     type Commitment = OrionCommitment;
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
+
+    type PolyField = C::SimdCircuitField;
 
     const MINIMUM_NUM_VARS: usize = (tree::leaf_adic::<C::CircuitField>()
         * Self::SRS::LEAVES_IN_RANGE_OPENING
@@ -63,7 +65,7 @@ where
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<C::SimdCircuitField>,
+        poly: &impl MultilinearExtension<Self::PolyField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
@@ -95,8 +97,8 @@ where
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<C::SimdCircuitField>,
-        eval_point: &ExpanderSingleVarChallenge<C>,
+        poly: &impl MultilinearExtension<Self::PolyField>,
+        eval_point: &ExpanderSingleVarChallenge<C::ChallengeField>,
         transcript: &mut impl Transcript,
         scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
@@ -105,9 +107,8 @@ where
 
         let local_xs = eval_point.local_xs();
         let local_opening = orion_open_simd_field::<
-            C::CircuitField,
             C::SimdCircuitField,
-            C::ChallengeField,
+            C::Field,
             ComPackF,
         >(proving_key, poly, &local_xs, transcript, scratch_pad);
         if mpi_engine.is_single_process() {
@@ -167,7 +168,7 @@ where
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        eval_point: &ExpanderSingleVarChallenge<C>,
+        eval_point: &ExpanderSingleVarChallenge<C::ChallengeField>,
         eval: C::ChallengeField,
         transcript: &mut impl Transcript, /* add transcript here to allow
                                            * interactive arguments */
@@ -175,9 +176,8 @@ where
     ) -> bool {
         if eval_point.r_mpi.is_empty() {
             return orion_verify_simd_field::<
-                C::CircuitField,
                 C::SimdCircuitField,
-                C::ChallengeField,
+                C::Field,
                 ComPackF,
             >(
                 verifying_key,
@@ -191,7 +191,7 @@ where
 
         // NOTE: we now assume that the input opening is from the root machine,
         // as proofs from other machines are typically undefined
-        orion_verify_simd_field_aggregated::<C, ComPackF>(
+        orion_verify_simd_field_aggregated::<Self::PolyField, C::Field, ComPackF>(
             verifying_key,
             commitment,
             eval_point,
@@ -203,8 +203,7 @@ where
 }
 
 pub type OrionPCSForGKR<C, ComPack> = OrionSIMDFieldPCS<
-    <C as FieldEngine>::CircuitField,
     <C as FieldEngine>::SimdCircuitField,
-    <C as FieldEngine>::ChallengeField,
+    <C as FieldEngine>::Field,
     ComPack,
 >;

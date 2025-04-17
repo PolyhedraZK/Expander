@@ -4,7 +4,7 @@ use std::{
     vec,
 };
 
-use arith::Field;
+use arith::{Field, SimdField};
 use circuit::{Circuit, CircuitLayer};
 use gkr_engine::{
     ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
@@ -70,7 +70,7 @@ fn sumcheck_verify_gkr_layer<F: FieldEngine>(
     proving_time_mpi_size: usize,
     layer: &CircuitLayer<F>,
     public_input: &[F::SimdCircuitField],
-    challenge: &mut ExpanderDualVarChallenge<F>,
+    challenge: &mut ExpanderDualVarChallenge<F::ChallengeField>,
     claimed_v0: &mut F::ChallengeField,
     claimed_v1: &mut Option<F::ChallengeField>,
     alpha: Option<F::ChallengeField>,
@@ -183,7 +183,7 @@ pub fn gkr_verify<F: FieldEngine>(
     mut proof_reader: impl Read,
 ) -> (
     bool,
-    ExpanderDualVarChallenge<F>,
+    ExpanderDualVarChallenge<F::ChallengeField>,
     F::ChallengeField,
     Option<F::ChallengeField>,
 ) {
@@ -195,6 +195,7 @@ pub fn gkr_verify<F: FieldEngine>(
     let mut challenge = ExpanderDualVarChallenge::sample_from_transcript(
         transcript,
         circuit.layers.last().unwrap().output_var_num,
+        <F::Field as SimdField>::PACK_SIZE,
         proving_time_mpi_size,
     );
 
@@ -367,7 +368,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
         pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
         commitment: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment,
-        open_at: &mut ExpanderSingleVarChallenge<Cfg::FieldConfig>,
+        open_at: &mut ExpanderSingleVarChallenge<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
         v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
         transcript: &mut impl Transcript,
         proof_reader: impl Read,

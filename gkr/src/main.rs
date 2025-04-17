@@ -115,6 +115,7 @@ fn run_benchmark<'a, Cfg: GKREngine>(args: &'a Args, mpi_config: MPIConfig)
 where
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad: 'a,
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad: 'static,
+    Cfg::PCSConfig: ExpanderPCS<Cfg::FieldConfig, PolyField = <Cfg::FieldConfig as FieldEngine>::SimdCircuitField>,
 {
     let partial_proof_cnts = (0..args.threads)
         .map(|_| Arc::new(Mutex::new(0)))

@@ -96,12 +96,11 @@ impl Tree {
 
     /// Get field elements out of leaves with compact serialization.
     #[inline]
-    pub fn unpack_field_elems<F, PackF>(&self) -> Vec<F>
+    pub fn unpack_field_elems<PackF>(&self) -> Vec<PackF::Scalar>
     where
-        F: Field,
-        PackF: SimdField<Scalar = F>,
+        PackF: SimdField,
     {
-        unpack_field_elems_from_bytes::<F, PackF>(&self.leaves)
+        unpack_field_elems_from_bytes::<PackF>(&self.leaves)
     }
 
     /// Builds a tree with pre-hashed leaf nodes.
@@ -319,10 +318,9 @@ pub(crate) fn is_left_child(index: usize) -> bool {
 }
 
 #[inline]
-pub(crate) fn unpack_field_elems_from_bytes<F, PackF>(leaves: &[Leaf]) -> Vec<F>
+pub(crate) fn unpack_field_elems_from_bytes<PackF>(leaves: &[Leaf]) -> Vec<PackF::Scalar>
 where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
+    PackF: SimdField,
 {
     let mut bytes = vec![0u8; leaves.len() * LEAF_BYTES];
     bytes

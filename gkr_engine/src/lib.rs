@@ -12,6 +12,8 @@
 //! - A Config is a struct that implements the Engine trait and contains the parameters for the GKR
 //!   protocol
 
+#![feature(associated_type_defaults)]
+
 mod errors;
 mod field_engine;
 mod mpi_engine;

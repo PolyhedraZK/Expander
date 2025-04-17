@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ops::Mul};
 
 use arith::{ExtensionField, Field, SimdField};
 use gkr_engine::Transcript;
@@ -77,17 +77,16 @@ impl OrionSRS {
 pub type OrionCommitment = tree::Node;
 
 #[derive(Clone, Debug, Default)]
-pub struct OrionScratchPad<F, ComPackF>
+pub struct OrionScratchPad<ComPackF>
 where
-    F: Field,
-    ComPackF: SimdField<Scalar = F>,
+    ComPackF: SimdField,
 {
     pub interleaved_alphabet_commitment: tree::Tree,
 
     pub(crate) _phantom: PhantomData<ComPackF>,
 }
 
-unsafe impl<F: Field, ComPackF: SimdField<Scalar = F>> Send for OrionScratchPad<F, ComPackF> {}
+unsafe impl<ComPackF: SimdField> Send for OrionScratchPad<ComPackF> {}
 
 #[derive(Clone, Debug, Default)]
 pub struct OrionProof<EvalF: Field> {
@@ -100,7 +99,7 @@ pub struct OrionProof<EvalF: Field> {
 pub(crate) fn commit_encoded<F, PackF>(
     pk: &OrionSRS,
     packed_evals: &[PackF],
-    scratch_pad: &mut OrionScratchPad<F, PackF>,
+    scratch_pad: &mut OrionScratchPad<PackF>,
     packed_rows: usize,
     msg_size: usize,
 ) -> OrionResult<OrionCommitment>
@@ -140,14 +139,13 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn orion_mt_openings<F, ComPackF, T>(
+pub(crate) fn orion_mt_openings<ComPackF, T>(
     pk: &OrionSRS,
     transcript: &mut T,
-    scratch_pad: &OrionScratchPad<F, ComPackF>,
+    scratch_pad: &OrionScratchPad<ComPackF>,
 ) -> Vec<tree::RangePath>
 where
-    F: Field,
-    ComPackF: SimdField<Scalar = F>,
+    ComPackF: SimdField,
     T: Transcript,
 {
     let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING;
@@ -224,10 +222,9 @@ pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row
 }
 
 #[inline(always)]
-pub(crate) fn pack_from_base<F, PackF>(evaluations: &[F]) -> Vec<PackF>
+pub(crate) fn pack_from_base<PackF>(evaluations: &[PackF::Scalar]) -> Vec<PackF>
 where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
+    PackF: SimdField,
 {
     // NOTE: SIMD pack neighboring base field evals
     evaluations
@@ -306,7 +303,7 @@ pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
     transcript: &mut T,
 ) where
     F: Field,
-    EvalF: ExtensionField<BaseField = F>,
+    EvalF: ExtensionField,
     SimdF: SimdField<Scalar = F>,
     T: Transcript,
 {
@@ -350,16 +347,15 @@ pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
 }
 
 #[inline(always)]
-pub(crate) fn lut_verify_alphabet_check<F, SimdF, ExtF>(
+pub(crate) fn lut_verify_alphabet_check<SimdF, ExtF>(
     codeword: &[ExtF],
     fixed_rl: &[ExtF],
     query_indices: &[usize],
     packed_interleaved_alphabets: &[Vec<SimdF>],
 ) -> bool
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    ExtF: ExtensionField<BaseField = F>,
+    SimdF: SimdField,
+    ExtF: ExtensionField,
 {
     // NOTE: build up lookup table
     let tables_num = fixed_rl.len() / SimdF::PACK_SIZE;
@@ -380,29 +376,30 @@ where
  */
 
 #[inline(always)]
-fn simd_ext_base_inner_prod<F, ExtF, SimdF>(
-    simd_ext_limbs: &[SimdF],
+fn simd_ext_base_inner_prod<SimdExtF, SimdF>(
+    simd_ext_limbs: &[SimdExtF::BaseField],
     simd_base_elems: &[SimdF],
-) -> ExtF
+) -> SimdExtF::Scalar
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    ExtF: ExtensionField<BaseField = F>,
+    SimdExtF: SimdField + ExtensionField,
+    SimdExtF::BaseField: SimdField + Mul<SimdF, Output = SimdExtF::BaseField>,
+    SimdExtF::Scalar: ExtensionField<BaseField = <SimdExtF::BaseField as SimdField>::Scalar>,
+    SimdF: SimdField,
 {
-    assert_eq!(simd_ext_limbs.len(), simd_base_elems.len() * ExtF::DEGREE);
+    assert_eq!(simd_ext_limbs.len(), simd_base_elems.len() * SimdExtF::DEGREE);
 
-    let mut ext_limbs = vec![F::ZERO; ExtF::DEGREE];
+    let mut ext_limbs = vec![<<SimdExtF as ExtensionField>::BaseField as SimdField>::Scalar::ZERO; SimdExtF::DEGREE];
 
     izip!(&mut ext_limbs, simd_ext_limbs.chunks(simd_base_elems.len())).for_each(
         |(e, simd_ext_limb)| {
-            let simd_sum: SimdF = izip!(simd_ext_limb, simd_base_elems)
-                .map(|(a, b)| *a * b)
+            let simd_sum: SimdExtF::BaseField = izip!(simd_ext_limb, simd_base_elems)
+                .map(|(a, b)| *a * *b)
                 .sum();
             *e = simd_sum.horizontal_sum();
         },
     );
 
-    ExtF::from_limbs(&ext_limbs)
+    SimdExtF::Scalar::from_limbs(&ext_limbs)
 }
 
 // NOTE(HS) this is only a helper function for SIMD inner product between
@@ -411,13 +408,10 @@ where
 // This method is applied column-wise, i.e., the data size is the same as linear combination
 // size, which should be in total 1024 bits at this point (2025/03/11).
 #[inline(always)]
-fn transpose_and_pack<F, SimdF>(evaluations: &[F], row_num: usize) -> Vec<SimdF>
-where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
+fn transpose_and_pack<SimdF: SimdField>(evaluations: &[SimdF::Scalar], row_num: usize) -> Vec<SimdF>
 {
     // NOTE: pre transpose evaluations
-    let mut evaluations_transposed = vec![F::ZERO; evaluations.len()];
+    let mut evaluations_transposed = vec![SimdF::Scalar::ZERO; evaluations.len()];
     transpose(evaluations, &mut evaluations_transposed, row_num);
 
     // NOTE: SIMD pack each row of transposed matrix
@@ -428,17 +422,18 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
+pub(crate) fn simd_open_linear_combine<SimdF, SimdEvalF, T>(
     com_pack_size: usize,
     packed_evals: &[SimdF],
-    eq_col_coeffs: &[EvalF],
-    eval_row: &mut [EvalF],
-    proximity_rows: &mut [Vec<EvalF>],
+    eq_col_coeffs: &[SimdEvalF::Scalar],
+    eval_row: &mut [SimdEvalF::Scalar],
+    proximity_rows: &mut [Vec<SimdEvalF::Scalar>],
     transcript: &mut T,
 ) where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    SimdF: SimdField<Scalar = F>,
+    SimdEvalF: SimdField + ExtensionField,
+    SimdEvalF::BaseField: SimdField + Mul<SimdF, Output = SimdEvalF::BaseField>,
+    SimdEvalF::Scalar: ExtensionField<BaseField = <SimdEvalF::BaseField as SimdField>::Scalar>,
+    SimdF: SimdField,
     T: Transcript,
 {
     // NOTE: check SIMD inner product numbers for column sums
@@ -459,7 +454,7 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
 
         izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *eval_row).for_each(
             |(p_col, eval)| {
-                *eval += simd_ext_base_inner_prod::<_, EvalF, _>(&eq_col_simd_limbs, p_col)
+                *eval += simd_ext_base_inner_prod::<SimdEvalF, _>(&eq_col_simd_limbs, p_col)
             },
         );
     });
@@ -467,7 +462,7 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
     // NOTE: draw random linear combination out
     // and compose proximity response(s) of tensor code IOP based PCS
     proximity_rows.iter_mut().for_each(|row_buffer| {
-        let random_coeffs = transcript.generate_field_elements::<EvalF>(combination_size);
+        let random_coeffs = transcript.generate_field_elements::<SimdEvalF::Scalar>(combination_size);
 
         izip!(
             random_coeffs.chunks(com_pack_size),
@@ -482,33 +477,34 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
                 &mut *row_buffer
             )
             .for_each(|(p_col, prox)| {
-                *prox += simd_ext_base_inner_prod::<_, EvalF, _>(&rand_simd_limbs, p_col)
+                *prox += simd_ext_base_inner_prod::<SimdEvalF, _>(&rand_simd_limbs, p_col)
             });
         });
     });
 }
 
 #[inline(always)]
-pub(crate) fn simd_verify_alphabet_check<F, SimdF, ExtF>(
-    codeword: &[ExtF],
-    fixed_rl: &[ExtF],
+pub(crate) fn simd_verify_alphabet_check<SimdF, SimdEvalF>(
+    codeword: &[SimdEvalF::Scalar],
+    fixed_rl: &[SimdEvalF::Scalar],
     query_indices: &[usize],
     packed_interleaved_alphabets: &[Vec<SimdF>],
 ) -> bool
 where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    ExtF: ExtensionField<BaseField = F>,
+    SimdF: SimdField,
+    SimdEvalF: SimdField + ExtensionField,
+    SimdEvalF::BaseField: SimdField + Mul<SimdF, Output = SimdEvalF::BaseField>,
+    SimdEvalF::Scalar: ExtensionField<BaseField = <SimdEvalF::BaseField as SimdField>::Scalar>,
 {
     // NOTE: check SIMD inner product numbers for column sums
     assert_eq!(fixed_rl.len() % SimdF::PACK_SIZE, 0);
 
     let rl_limbs: Vec<_> = fixed_rl.iter().flat_map(|e| e.to_limbs()).collect();
-    let rl_simd_limbs: Vec<SimdF> = transpose_and_pack(&rl_limbs, fixed_rl.len());
+    let rl_simd_limbs = transpose_and_pack(&rl_limbs, fixed_rl.len());
 
     izip!(query_indices, packed_interleaved_alphabets).all(|(qi, interleaved_alphabet)| {
         let index = qi % codeword.len();
-        let alphabet: ExtF = simd_ext_base_inner_prod(&rl_simd_limbs, interleaved_alphabet);
+        let alphabet = simd_ext_base_inner_prod::<SimdEvalF, _>(&rl_simd_limbs, interleaved_alphabet);
         alphabet == codeword[index]
     })
 }

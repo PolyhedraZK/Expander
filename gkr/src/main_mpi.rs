@@ -13,8 +13,7 @@ use gkr::{
     M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare, M31ExtConfigSha2RawVanilla, Prover,
 };
 use gkr_engine::{
-    root_println, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine,
-    PolynomialCommitmentType, SharedMemory,
+    root_println, ExpanderPCS, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType, SharedMemory
 };
 use poly_commit::expander_pcs_init_testing_only;
 use serdes::ExpSerde;
@@ -104,7 +103,10 @@ fn main() {
     MPIConfig::finalize();
 }
 
-fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
+fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) 
+where
+    Cfg::PCSConfig: ExpanderPCS<Cfg::FieldConfig, PolyField = <Cfg::FieldConfig as FieldEngine>::SimdCircuitField>,
+{
     let pack_size = <Cfg::FieldConfig as FieldEngine>::get_field_pack_size();
 
     // load circuit

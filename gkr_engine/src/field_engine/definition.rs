@@ -38,8 +38,8 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
         + Add<Self::CircuitField, Output = Self::Field>
         + Mul<Self::SimdCircuitField, Output = Self::Field>
         + Add<Self::SimdCircuitField, Output = Self::Field>
-        + Mul<Self::ChallengeField, Output = Self::Field>
         + From<Self::SimdCircuitField>
+        + Mul<Self::ChallengeField, Output = Self::Field>
         + SimdField<Scalar = Self::ChallengeField>
         + Send;
 
@@ -60,6 +60,7 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
     /// This is more efficient than the generic implementation by avoiding
     /// unnecessary conversions between field types
 
+    /*
     #[inline]
     fn eval_circuit_vals_at_challenge(
         evals: &[Self::SimdCircuitField],
@@ -85,7 +86,7 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
             }
             scratch[0]
         }
-    }
+    } */
 
     /// This assumes each mpi core hold their own evals, and collectively
     /// compute the global evaluation.
@@ -93,7 +94,7 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
     #[inline]
     fn collectively_eval_circuit_vals_at_expander_challenge(
         local_evals: &[Self::SimdCircuitField],
-        challenge: &ExpanderSingleVarChallenge<Self>,
+        challenge: &ExpanderSingleVarChallenge<Self::ChallengeField>,
 
         // x: &[Self::ChallengeField],
         // x_simd: &[Self::ChallengeField],
@@ -108,7 +109,7 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
         );
 
         let local_simd =
-            Self::eval_circuit_vals_at_challenge(local_evals, &challenge.rz, scratch_field);
+            MultiLinearPoly::<Self::SimdCircuitField>::evaluate_with_buffer(local_evals, &challenge.rz, scratch_field);
         let local_simd_unpacked = local_simd.unpack();
         let local_v = MultiLinearPoly::evaluate_with_buffer(
             &local_simd_unpacked,
@@ -134,10 +135,16 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
     /// This assumes only a single core holds all the evals, and evaluate it locally
     /// mostly used by the verifier
     #[inline]
-    fn single_core_eval_circuit_vals_at_expander_challenge(
-        global_vals: &[Self::SimdCircuitField],
-        challenge: &ExpanderSingleVarChallenge<Self>,
-    ) -> Self::ChallengeField {
+    fn single_core_eval_circuit_vals_at_expander_challenge<ValF: Field>(
+        global_vals: &[ValF],
+        challenge: &ExpanderSingleVarChallenge<Self::ChallengeField>,
+    ) -> Self::ChallengeField 
+    where
+        Self::ChallengeField: Mul<ValF, Output = Self::Field>,
+        Self::Field: From<ValF> 
+        + Mul<ValF, Output = Self::Field> 
+        + Add<ValF, Output = Self::Field>,
+    {
         let local_poly_size = global_vals.len() >> challenge.r_mpi.len();
         assert_eq!(local_poly_size, 1 << challenge.rz.len());
 
@@ -150,7 +157,7 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
         let local_evals = global_vals
             .chunks(local_poly_size)
             .map(|local_vals| {
-                let local_simd = Self::eval_circuit_vals_at_challenge(
+                let local_simd = MultiLinearPoly::<ValF>::evaluate_with_buffer(
                     local_vals,
                     &challenge.rz,
                     &mut scratch_field,

@@ -13,13 +13,11 @@ pub fn prove_gkr<C: FieldEngine, T: Transcript>(
     sp: &mut scratchpad::CrossLayerProverScratchPad<C>,
 ) -> (C::ChallengeField, Vec<C::ChallengeField>, C::ChallengeField) {
     let final_layer_vals = circuit_vals.vals.last().unwrap();
-    let mut rz0 = transcript.generate_field_elements::<C::ChallengeField>(
-        final_layer_vals.len().trailing_zeros() as usize,
-    );
-    let r_simd = transcript.generate_field_elements::<C::ChallengeField>(
-        C::get_field_pack_size().trailing_zeros() as usize,
-    );
-    let output_claim = C::eval_circuit_vals_at_challenge(final_layer_vals, &rz0, &mut sp.v_evals);
+    let mut rz0 = transcript
+        .generate_field_elements::<C::ChallengeField>(final_layer_vals.len().trailing_zeros() as usize);
+    let r_simd = transcript
+        .generate_field_elements::<C::ChallengeField>(C::get_field_pack_size().trailing_zeros() as usize);
+    let output_claim = MultiLinearPoly::evaluate_with_buffer(final_layer_vals, &rz0, &mut sp.v_evals);
     let output_claim = MultiLinearPoly::<C::ChallengeField>::evaluate_with_buffer(
         &output_claim.unpack(),
         &r_simd,

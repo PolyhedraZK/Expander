@@ -1,5 +1,5 @@
 use super::verify_sumcheck_step;
-use arith::Field;
+use arith::{Field, SimdField};
 use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
 use gkr_engine::{
@@ -17,7 +17,7 @@ pub fn gkr_square_verify<C: FieldEngine>(
     claimed_v: &C::ChallengeField,
     transcript: &mut impl Transcript,
     mut proof_reader: impl Read,
-) -> (bool, ExpanderSingleVarChallenge<C>, C::ChallengeField) {
+) -> (bool, ExpanderSingleVarChallenge<C::ChallengeField>, C::ChallengeField) {
     assert_ne!(
         C::FIELD_TYPE,
         FieldType::GF2,
@@ -29,9 +29,10 @@ pub fn gkr_square_verify<C: FieldEngine>(
 
     let layer_num = circuit.layers.len();
 
-    let mut challenge = ExpanderSingleVarChallenge::sample_from_transcript(
+    let mut challenge = ExpanderSingleVarChallenge::<C::ChallengeField>::sample_from_transcript(
         transcript,
         circuit.layers.last().unwrap().output_var_num,
+        <C::Field as SimdField>::PACK_SIZE,
         proving_time_mpi_size,
     );
 
@@ -69,13 +70,13 @@ fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
     proving_time_mpi_size: usize,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
-    challenge: &ExpanderSingleVarChallenge<C>,
+    challenge: &ExpanderSingleVarChallenge<C::ChallengeField>,
     current_claim: C::ChallengeField,
     mut proof_reader: impl Read,
     transcript: &mut impl Transcript,
     sp: &mut VerifierScratchPad<C>,
     is_output_layer: bool,
-) -> (bool, ExpanderSingleVarChallenge<C>, C::ChallengeField) {
+) -> (bool, ExpanderSingleVarChallenge<C::ChallengeField>, C::ChallengeField) {
     // GKR2 with Power5 gate has degree 6 polynomial
     let degree = SUMCHECK_GKR_SQUARE_DEGREE;
 

@@ -39,7 +39,7 @@ fn test_raw_gkr_helper<C: FieldEngine, T: Transcript>(mpi_config: &MPIConfig, tr
         .collect();
     let poly = RefMultiLinearPoly::from_ref(&hypercube_basis);
     let xs = (0..100)
-        .map(|_| ExpanderSingleVarChallenge::<C> {
+        .map(|_| ExpanderSingleVarChallenge::<C::ChallengeField> {
             rz: (0..params)
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
@@ -50,7 +50,7 @@ fn test_raw_gkr_helper<C: FieldEngine, T: Transcript>(mpi_config: &MPIConfig, tr
                 .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                 .collect::<Vec<C::ChallengeField>>(),
         })
-        .collect::<Vec<ExpanderSingleVarChallenge<C>>>();
+        .collect::<Vec<ExpanderSingleVarChallenge<C::ChallengeField>>>();
     common::test_pcs_for_expander_gkr::<C, T, RawExpanderGKR<C>>(
         &params, mpi_config, transcript, &poly, &xs,
     );
