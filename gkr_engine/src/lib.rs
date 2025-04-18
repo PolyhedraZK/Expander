@@ -11,6 +11,7 @@
 //! - A Engine is a trait that defines the API for a component of GKR
 //! - A Config is a struct that implements the Engine trait and contains the parameters for the GKR
 //!   protocol
+#![allow(clippy::manual_div_ceil)]
 
 mod errors;
 mod field_engine;
