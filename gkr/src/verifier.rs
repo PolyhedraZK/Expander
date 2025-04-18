@@ -8,7 +8,7 @@ use arith::Field;
 use circuit::{Circuit, CircuitLayer};
 use gkr_engine::{
     ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
-    GKRScheme, MPIConfig, MPIEngine, Proof, StructuredReferenceString, Transcript,
+    GKRScheme, MPIConfig, MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
 };
 use serdes::ExpSerde;
 use sumcheck::{
@@ -377,17 +377,18 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         )
         .unwrap();
 
-        if open_at.rz.len() < <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::MINIMUM_NUM_VARS {
+        let minimum_vars_for_pcs: usize = pcs_params.num_vars();
+        if open_at.rz.len() < minimum_vars_for_pcs {
             eprintln!(
 				"{} over {} has minimum supported local vars {}, but challenge has vars {}, pad to {} vars in verifying.",
 				Cfg::PCSConfig::NAME,
 				<Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
-				Cfg::PCSConfig::MINIMUM_NUM_VARS,
+				minimum_vars_for_pcs,
 				open_at.rz.len(),
-				Cfg::PCSConfig::MINIMUM_NUM_VARS,
+				minimum_vars_for_pcs,
 			);
             open_at.rz.resize(
-                <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::MINIMUM_NUM_VARS,
+                minimum_vars_for_pcs,
                 <Cfg::FieldConfig as FieldEngine>::ChallengeField::ZERO,
             )
         }

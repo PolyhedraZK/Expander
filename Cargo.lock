@@ -101,28 +101,15 @@ dependencies = [
 name = "arith"
 version = "0.1.0"
 dependencies = [
- "ark-std 0.4.0",
- "cfg-if",
+ "ark-std",
  "criterion",
  "ethnum",
  "halo2curves",
  "itertools 0.13.0",
  "log",
  "rand",
- "raw-cpuid",
  "serdes",
- "sha2",
  "tynm",
-]
-
-[[package]]
-name = "ark-std"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1df2c09229cbc5a028b1d70e00fdb2acee28b1055dfb5ca73eea49c5a25c4e7c"
-dependencies = [
- "num-traits",
- "rand",
 ]
 
 [[package]]
@@ -152,6 +139,18 @@ name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
+
+[[package]]
+name = "babybear"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "criterion",
+ "ethnum",
+ "rand",
+ "serdes",
+]
 
 [[package]]
 name = "backtrace"
@@ -348,7 +347,7 @@ name = "circuit"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std 0.4.0",
+ "ark-std",
  "bytes",
  "config_macros",
  "ethnum",
@@ -434,6 +433,7 @@ dependencies = [
 name = "config_macros"
 version = "0.1.0"
 dependencies = [
+ "babybear",
  "gf2",
  "gkr_engine",
  "gkr_hashers",
@@ -777,7 +777,7 @@ name = "gf2"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std 0.4.0",
+ "ark-std",
  "cfg-if",
  "criterion",
  "ethnum",
@@ -786,7 +786,6 @@ dependencies = [
  "rand",
  "raw-cpuid",
  "serdes",
- "sha2",
  "thiserror",
  "tynm",
 ]
@@ -796,7 +795,7 @@ name = "gf2_128"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std 0.4.0",
+ "ark-std",
  "criterion",
  "ethnum",
  "gf2",
@@ -816,7 +815,8 @@ name = "gkr"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std 0.4.0",
+ "ark-std",
+ "babybear",
  "bytes",
  "chrono",
  "circuit",
@@ -854,7 +854,8 @@ name = "gkr_engine"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std 0.4.0",
+ "ark-std",
+ "babybear",
  "gf2",
  "gf2_128",
  "goldilocks",
@@ -889,7 +890,7 @@ name = "goldilocks"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std 0.3.0",
+ "ark-std",
  "criterion",
  "ethnum",
  "rand",
@@ -1426,7 +1427,7 @@ name = "mersenne31"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std 0.4.0",
+ "ark-std",
  "cfg-if",
  "criterion",
  "ethnum",
@@ -1436,7 +1437,6 @@ dependencies = [
  "rand",
  "raw-cpuid",
  "serdes",
- "sha2",
  "thiserror",
  "tynm",
 ]
@@ -1716,7 +1716,7 @@ name = "poly_commit"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std 0.4.0",
+ "ark-std",
  "criterion",
  "derivative",
  "ethnum",
@@ -1733,6 +1733,7 @@ dependencies = [
  "serdes",
  "thiserror",
  "transcript",
+ "transpose",
  "tree",
  "tynm",
 ]
@@ -1742,7 +1743,7 @@ name = "polynomials"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std 0.4.0",
+ "ark-std",
  "criterion",
  "halo2curves",
  "itertools 0.13.0",
@@ -2102,6 +2103,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
+name = "strength_reduce"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe895eb47f22e2ddd4dabc02bce419d2e643c8e3b585c78158b349195bc24d82"
+
+[[package]]
 name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2309,16 +2316,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "transpose"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ad61aed86bc3faea4300c7aee358b4c6d0c8d6ccc36524c96e4c92ccf26e77e"
+dependencies = [
+ "num-integer",
+ "strength_reduce",
+]
+
+[[package]]
 name = "tree"
 version = "0.1.0"
 dependencies = [
  "arith",
- "ark-std 0.4.0",
+ "ark-std",
  "criterion",
  "gf2",
  "gf2_128",
  "serdes",
- "sha2",
+ "tiny-keccak",
  "tynm",
 ]
 

@@ -8,7 +8,7 @@ use tynm::type_name;
 const FINAL_MT_LEAVES_LOG2: usize = 15;
 
 fn tree_building_benchmark(c: &mut Criterion) {
-    let mut group = c.benchmark_group("SHA512-256 merkle tree");
+    let mut group = c.benchmark_group("Keccak merkle tree");
 
     let mut rng = test_rng();
     let mut data_buffer = [0u8; LEAF_BYTES];
@@ -40,7 +40,7 @@ where
     PackF: SimdField<Scalar = F>,
 {
     let mut group = c.benchmark_group(format!(
-        "SHA512-256 merkle tree with field element {} packed by SIMD field element {}",
+        "Keccak merkle tree with field element {} packed by SIMD field element {}",
         type_name::<F>(),
         type_name::<PackF>()
     ));
@@ -74,7 +74,7 @@ where
     PackF: SimdField<Scalar = F>,
 {
     let mut group = c.benchmark_group(format!(
-        "SHA512-256 merkle tree with SIMD field element {}",
+        "Keccak merkle tree with SIMD field element {}",
         type_name::<PackF>()
     ));
     let num_of_elems_in_leaf = LEAF_BYTES / PackF::SIZE;

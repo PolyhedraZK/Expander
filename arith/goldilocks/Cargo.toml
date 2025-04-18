@@ -5,10 +5,11 @@ edition = "2021"
 
 [dependencies]
 arith = { path = ".." }
-ark-std = "0.3"
-ethnum = "1.4"
-rand = "0.8"
 serdes = { path = "../../serdes" }
+
+ark-std.workspace = true
+ethnum.workspace = true
+rand.workspace = true
 
 [[bench]]
 name = "goldilocks"
