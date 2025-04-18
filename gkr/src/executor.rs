@@ -163,7 +163,7 @@ pub fn verify<Cfg: GKREngine>(
     )
 }
 
-pub async fn run_command<'a, Cfg: GKREngine + 'static>(
+pub async fn run_command<Cfg: GKREngine + 'static>(
     command: &ExpanderExecArgs,
     mpi_config: &MPIConfig,
 ) {
