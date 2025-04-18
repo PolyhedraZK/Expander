@@ -9,7 +9,7 @@ use arith::Field;
 use circuit::Circuit;
 use clap::{Parser, Subcommand};
 use gkr_engine::{
-    BN254Config, ExpanderPCS, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GoldilocksExtConfig,
+    BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GoldilocksExtConfig,
     M31ExtConfig, MPIConfig, MPIEngine, Proof, SharedMemory,
 };
 use log::info;
@@ -119,21 +119,6 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     }
 }
 
-fn input_poly_vars_calibration<Cfg: GKREngine>(actual_poly_vars: usize) -> usize {
-    if actual_poly_vars < <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::MINIMUM_NUM_VARS {
-        eprintln!(
-            "{} over {} has minimum supported local vars {}, but input poly has vars {}.",
-            Cfg::PCSConfig::NAME,
-            <Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
-            Cfg::PCSConfig::MINIMUM_NUM_VARS,
-            actual_poly_vars,
-        );
-        return Cfg::PCSConfig::MINIMUM_NUM_VARS;
-    }
-
-    actual_poly_vars
-}
-
 pub fn prove<Cfg: GKREngine>(
     circuit: &mut Circuit<Cfg::FieldConfig>,
     mpi_config: MPIConfig,
@@ -143,13 +128,13 @@ pub fn prove<Cfg: GKREngine>(
 ) {
     let mut prover = crate::Prover::<Cfg>::new(mpi_config.clone());
     prover.prepare_mem(circuit);
-    // TODO: Read PCS setup from files
 
-    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
-    let (pcs_params, pcs_proving_key, _, mut pcs_scratch) = expander_pcs_init_testing_only::<
-        Cfg::FieldConfig,
-        Cfg::PCSConfig,
-    >(minimum_poly_vars, &mpi_config);
+    // TODO: Read PCS setup from files
+    let (pcs_params, pcs_proving_key, _, mut pcs_scratch) =
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
+            circuit.log_input_size(),
+            &mpi_config,
+        );
 
     println!("proving");
     prover.prove(circuit, &pcs_params, &pcs_proving_key, &mut pcs_scratch)
@@ -162,13 +147,10 @@ pub fn verify<Cfg: GKREngine>(
     claimed_v: &<<Cfg as GKREngine>::FieldConfig as FieldEngine>::ChallengeField,
 ) -> bool {
     // TODO: Read PCS setup from files
-
-    let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
-    let (pcs_params, _, pcs_verification_key, mut _pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
-            minimum_poly_vars,
-            &mpi_config,
-        );
+    let (pcs_params, _, pcs_verification_key, _) = expander_pcs_init_testing_only::<
+        Cfg::FieldConfig,
+        Cfg::PCSConfig,
+    >(circuit.log_input_size(), &mpi_config);
     let verifier = crate::Verifier::<Cfg>::new(mpi_config);
     let public_input = circuit.public_input.clone();
     verifier.verify(

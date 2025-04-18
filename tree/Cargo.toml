@@ -8,7 +8,7 @@ arith = { path = "../arith" }
 serdes = { path = "../serdes" }
 
 ark-std.workspace = true
-sha2.workspace = true
+tiny-keccak.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true

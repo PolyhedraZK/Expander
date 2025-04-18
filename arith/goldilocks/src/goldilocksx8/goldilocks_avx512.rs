@@ -13,7 +13,7 @@ use rand::Rng;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::{Goldilocks, EPSILON, GOLDILOCKS_MOD};
+use crate::{goldilocks::p2_instructions, Goldilocks, EPSILON, GOLDILOCKS_MOD};
 
 /// Number of Goldilocks elements in each __m512i element
 const GOLDILOCKS_PACK_SIZE: usize = 8;
@@ -205,6 +205,15 @@ impl SimdField for AVXGoldilocks {
     fn unpack(&self) -> Vec<Self::Scalar> {
         let ret = unsafe { transmute::<__m512i, [Self::Scalar; Self::PACK_SIZE]>(self.v) };
         ret.to_vec()
+    }
+
+    #[inline(always)]
+    fn horizontal_sum(&self) -> Self::Scalar {
+        let mut temp: u128 = 0;
+        let vars = unsafe { transmute::<__m512i, [Self::Scalar; Self::PACK_SIZE]>(self.v) };
+        vars.iter().for_each(|c| temp += c.v as u128);
+
+        p2_instructions::reduce128(temp)
     }
 }
 

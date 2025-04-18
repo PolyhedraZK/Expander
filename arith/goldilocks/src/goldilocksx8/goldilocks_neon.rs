@@ -10,7 +10,7 @@ use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::Goldilocks;
+use crate::{goldilocks::p2_instructions, Goldilocks};
 
 /// Number of Goldilocks elements packed
 const GOLDILOCKS_PACK_SIZE: usize = 8;
@@ -163,7 +163,10 @@ impl SimdField for NeonGoldilocks {
 
     #[inline(always)]
     fn horizontal_sum(&self) -> Self::Scalar {
-        self.v.iter().sum()
+        let mut temp: u128 = 0;
+        self.v.iter().for_each(|c| temp += c.v as u128);
+
+        p2_instructions::reduce128(temp)
     }
 }
 
