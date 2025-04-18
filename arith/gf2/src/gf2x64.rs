@@ -7,9 +7,7 @@ use arith::{Field, SimdField};
 use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::GF2x8;
-
-use super::GF2;
+use crate::{GF2x8, GF2};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct GF2x64 {

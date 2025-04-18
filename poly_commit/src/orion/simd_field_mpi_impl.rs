@@ -1,13 +1,12 @@
 use arith::{ExtensionField, Field, SimdField};
 use gf2::GF2;
-use gkr_engine::Transcript;
-use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
+use gkr_engine::{MPIEngine, Transcript};
+use polynomials::{EqPolynomial, MultilinearExtension};
 
 use crate::{
     orion::{
-        utils::{
-            commit_encoded, lut_open_linear_combine, orion_mt_openings, simd_open_linear_combine,
-        },
+        mpi_utils::{mpi_commit_encoded, orion_mpi_mt_openings},
+        utils::{lut_open_linear_combine, simd_open_linear_combine},
         OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad,
     },
     traits::TensorCodeIOPPCS,
@@ -15,7 +14,8 @@ use crate::{
 };
 
 #[inline(always)]
-pub fn orion_commit_simd_field<F, SimdF, ComPackF>(
+pub fn orion_mpi_commit_simd_field<F, SimdF, ComPackF>(
+    mpi_engine: &impl MPIEngine,
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
     scratch_pad: &mut OrionScratchPad,
@@ -36,17 +36,19 @@ where
         std::slice::from_raw_parts(ptr as *const ComPackF, len)
     };
 
-    commit_encoded(pk, packed_evals_ref, scratch_pad)
+    mpi_commit_encoded(mpi_engine, pk, packed_evals_ref, scratch_pad)
 }
 
 #[inline(always)]
-pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF>(
+pub fn orion_mpi_open_simd_field<F, SimdF, EvalF, ComPackF>(
+    mpi_engine: &impl MPIEngine,
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
     point: &[EvalF],
+    mpi_point: &[EvalF],
     transcript: &mut impl Transcript<EvalF>,
     scratch_pad: &OrionScratchPad,
-) -> (EvalF, OrionProof<EvalF>)
+) -> Option<OrionProof<EvalF>>
 where
     F: Field,
     SimdF: SimdField<Scalar = F>,
@@ -62,7 +64,10 @@ where
     let eq_col_coeffs = {
         let mut eq_vars = point[..num_vars_in_com_simd].to_vec();
         eq_vars.extend_from_slice(&point[num_vars_in_com_simd + num_vars_in_msg..]);
-        EqPolynomial::build_eq_x_r(&eq_vars)
+        let mut coeffs = EqPolynomial::build_eq_x_r(&eq_vars);
+        let mpi_weight = EqPolynomial::ith_eq_vec_elem(mpi_point, mpi_engine.world_rank());
+        coeffs.iter_mut().for_each(|c| *c *= mpi_weight);
+        coeffs
     };
 
     // NOTE: pre-declare the spaces for returning evaluation and proximity queries
@@ -71,10 +76,16 @@ where
     let proximity_test_num = pk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
     let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_test_num];
 
-    let random_col_coeffs: Vec<_> = (0..proximity_test_num)
+    // NOTE: draw randomness from transcript with log random complexity
+    let num_of_local_random_vars = point.len() - num_vars_in_msg;
+    let local_random_coeffs: Vec<_> = (0..proximity_test_num)
         .map(|_| {
-            let rand = transcript.generate_challenge_field_elements(point.len() - num_vars_in_msg);
-            EqPolynomial::build_eq_x_r(&rand)
+            let local_rand = transcript.generate_challenge_field_elements(num_of_local_random_vars);
+            let mpi_rand = transcript.generate_challenge_field_elements(mpi_point.len());
+            let mut coeffs = EqPolynomial::build_eq_x_r(&local_rand);
+            let mpi_weight = EqPolynomial::ith_eq_vec_elem(&mpi_rand, mpi_engine.world_rank());
+            coeffs.iter_mut().for_each(|c| *c *= mpi_weight);
+            coeffs
         })
         .collect();
 
@@ -84,7 +95,7 @@ where
             poly.hypercube_basis_ref(),
             &eq_col_coeffs,
             &mut eval_row,
-            &random_col_coeffs,
+            &local_random_coeffs,
             &mut proximity_rows,
         ),
         _ => simd_open_linear_combine(
@@ -92,29 +103,30 @@ where
             poly.hypercube_basis_ref(),
             &eq_col_coeffs,
             &mut eval_row,
-            &random_col_coeffs,
+            &local_random_coeffs,
             &mut proximity_rows,
         ),
     }
 
-    // NOTE: working on evaluation response, evaluate the rest of the response
-    let mut scratch = vec![EvalF::ZERO; msg_size];
-    let eval = RefMultiLinearPoly::from_ref(&eval_row).evaluate_with_buffer(
-        &point[num_vars_in_com_simd..num_vars_in_com_simd + num_vars_in_msg],
-        &mut scratch,
-    );
-    drop(scratch);
+    // NOTE: MPI sum up local weighed rows
+    eval_row = mpi_engine.sum_vec(&eval_row);
+    proximity_rows = proximity_rows
+        .iter()
+        .map(|r| mpi_engine.sum_vec(r))
+        .collect();
 
     // NOTE: MT opening for point queries
-    let query_openings = orion_mt_openings(pk, transcript, scratch_pad);
+    let query_openings = orion_mpi_mt_openings(mpi_engine, pk, scratch_pad, transcript);
 
-    (
-        eval,
-        OrionProof {
-            eval_row,
-            proximity_rows,
-            query_openings,
-            merkle_cap: scratch_pad.merkle_cap.clone(),
-        },
-    )
+    if !mpi_engine.is_root() {
+        return None;
+    }
+
+    OrionProof {
+        eval_row,
+        proximity_rows,
+        query_openings: query_openings.unwrap(),
+        merkle_cap: scratch_pad.merkle_cap.clone(),
+    }
+    .into()
 }
