@@ -1,7 +1,7 @@
 #![cfg_attr(target_arch = "x86_64", feature(stdarch_x86_avx512))]
 
-pub mod prover;
-pub use prover::*;
+pub mod linear_gkr;
+pub use linear_gkr::*;
 
 pub mod verifier;
 pub use verifier::*;

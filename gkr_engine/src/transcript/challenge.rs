@@ -151,3 +151,19 @@ impl<C: FieldEngine> From<&ExpanderSingleVarChallenge<C>> for ExpanderDualVarCha
         }
     }
 }
+
+impl<C: FieldEngine> From<ExpanderDualVarChallenge<C>> for ExpanderSingleVarChallenge<C> {
+    fn from(value: ExpanderDualVarChallenge<C>) -> Self {
+        Self::from(&value)
+    }
+}
+
+impl<C: FieldEngine> From<&ExpanderDualVarChallenge<C>> for ExpanderSingleVarChallenge<C> {
+    fn from(value: &ExpanderDualVarChallenge<C>) -> Self {
+        Self {
+            rz: value.rz_0.clone(),
+            r_simd: value.r_simd.clone(),
+            r_mpi: value.r_mpi.clone(),
+        }
+    }
+}

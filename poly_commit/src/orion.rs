@@ -21,6 +21,11 @@ pub use simd_field_mpi_impl::{orion_mpi_commit_simd_field, orion_mpi_open_simd_f
 mod verify;
 pub use verify::orion_verify;
 
+mod code_switching;
+
+#[cfg(test)]
+mod code_switching_test;
+
 mod pcs_trait_impl;
 pub use pcs_trait_impl::{OrionBaseFieldPCS, OrionSIMDFieldPCS};
 
