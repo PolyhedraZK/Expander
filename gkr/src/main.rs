@@ -8,13 +8,15 @@ use circuit::Circuit;
 use clap::Parser;
 use gkr::{
     utils::{
-        KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
-        KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT,
-        KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT, POSEIDON_M31_WITNESS,
+        KECCAK_BABYBEAR_CIRCUIT, KECCAK_BABYBEAR_WITNESS, KECCAK_BN254_CIRCUIT,
+        KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS, KECCAK_GOLDILOCKS_CIRCUIT,
+        KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT,
+        POSEIDON_M31_WITNESS,
     },
     BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
-    GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Raw, M31ExtConfigSha2OrionSquare,
-    M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare, M31ExtConfigSha2RawVanilla, Prover,
+    GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Orion, GoldilocksExtConfigSha2Raw,
+    M31ExtConfigSha2OrionSquare, M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare,
+    M31ExtConfigSha2RawVanilla, Prover,
 };
 use gkr_engine::{
     ExpanderPCS, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType,
@@ -103,6 +105,12 @@ fn main() {
                 "keccak" => run_benchmark::<GoldilocksExtConfigSha2Raw>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
+            PolynomialCommitmentType::Orion => match args.circuit.as_str() {
+                "keccak" => {
+                    run_benchmark::<GoldilocksExtConfigSha2Orion>(&args, mpi_config.clone())
+                }
+                _ => unreachable!(),
+            },
             _ => unreachable!("Unsupported PCS type for Goldilocks"),
         },
         _ => unreachable!(),
@@ -137,6 +145,11 @@ where
                         KECCAK_BN254_CIRCUIT,
                     )
                 }
+                FieldType::BabyBear => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_BABYBEAR_CIRCUIT,
+                    )
+                }
                 FieldType::Goldilocks => {
                     Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
                         KECCAK_GOLDILOCKS_CIRCUIT,
@@ -158,6 +171,7 @@ where
             FieldType::M31 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
             FieldType::Goldilocks => KECCAK_GOLDILOCKS_WITNESS,
+            FieldType::BabyBear => KECCAK_BABYBEAR_WITNESS,
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::M31 => POSEIDON_M31_WITNESS,
@@ -172,8 +186,9 @@ where
         (FieldType::GF2, "keccak") => 1,
         (FieldType::M31, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
-        (FieldType::M31, "poseidon") => 120,
         (FieldType::Goldilocks, "keccak") => 2,
+        (FieldType::BabyBear, "keccak") => 2,
+        (FieldType::M31, "poseidon") => 120,
         _ => unreachable!(),
     };
 

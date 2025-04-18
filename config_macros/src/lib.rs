@@ -50,6 +50,7 @@ fn parse_field_type(field_expr: ExprPath) -> (String, String) {
         "BN254" => ("BN254".to_owned(), "BN254Config".to_owned()),
         "GF2" => ("GF2".to_owned(), "GF2ExtConfig".to_owned()),
         "Goldilocks" => ("Goldilocks".to_owned(), "GoldilocksExtConfig".to_owned()),
+        "BabyBear" => ("BabyBear".to_owned(), "BabyBearExtConfig".to_owned()),
         _ => panic!("Unknown field type"),
     }
 }
@@ -119,7 +120,14 @@ fn parse_polynomial_commitment_type(
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, M31x16>").to_owned(),
         ),
-        _ => panic!("Unknown polynomial commitment type in config macro expansion"),
+        ("Orion", "Goldilocks") => (
+            "Orion".to_owned(),
+            format!("OrionPCSForGKR::<{field_config}, Goldilocksx8>").to_owned(),
+        ),
+        _ => panic!(
+            "Unknown polynomial commitment type in config macro expansion. PCS: '{}', Field: '{}'",
+            pcs_type_str, field_type
+        ),
     }
 }
 
@@ -163,9 +171,7 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
         parse_polynomial_commitment_type(&field_type, &field_config, polynomial_commitment_type);
 
     let field_config = format_ident!("{field_config}");
-    // let fiat_shamir_hash_type = format_ident!("{fiat_shamir_hash_type}");
     let transcript_type_expr = syn::parse_str::<syn::Type>(&transcript_type).unwrap();
-    // let polynomial_commitment_enum = format_ident!("{polynomial_commitment_enum}");
     let polynomial_commitment_type_expr =
         syn::parse_str::<syn::Type>(&polynomial_commitment_type).unwrap();
 

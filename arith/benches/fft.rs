@@ -1,57 +1,34 @@
 use std::hint::black_box;
 
-use arith::{FFTField, Field, Fr};
+use arith::{bench_fft, FFTField, Field, Fr};
 use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
-fn fft_benchmark(c: &mut Criterion) {
+pub fn bench_halo2_serial_fft<F: Field + FFTField>(c: &mut Criterion) {
     let mut group = c.benchmark_group("FFT");
 
-    const MAX_FFT_SIZE: usize = 1 << 16;
+    const MAX_FFT_SIZE: usize = 1 << 22;
     let mut rng = test_rng();
-    let mut bn254_buf: Vec<Fr> = (0..MAX_FFT_SIZE)
-        .map(|_| Fr::random_unsafe(&mut rng))
+    let mut buf: Vec<F> = (0..MAX_FFT_SIZE)
+        .map(|_| F::random_unsafe(&mut rng))
         .collect();
 
-    for group_size_bits in 9..=MAX_FFT_SIZE.ilog2() {
+    for group_size_bits in 11..=MAX_FFT_SIZE.ilog2() {
         group.bench_with_input(
             BenchmarkId::new(
-                format!("benchmark BN254 {group_size_bits}-bits FFT in place"),
+                format!(
+                    "benchmark {} {group_size_bits}-bits FFT in place by halo2 serial",
+                    F::NAME
+                ),
                 group_size_bits,
             ),
             &group_size_bits,
             |b, group_size_bits| {
                 b.iter(|| {
                     let group_size = 1 << group_size_bits;
-                    black_box(Fr::fft_in_place(&mut bn254_buf[..group_size]));
-                })
-            },
-        );
-        group.bench_with_input(
-            BenchmarkId::new(
-                format!("benchmark BN254 {group_size_bits}-bits iFFT in place"),
-                group_size_bits,
-            ),
-            &group_size_bits,
-            |b, group_size_bits| {
-                b.iter(|| {
-                    let group_size = 1 << group_size_bits;
-                    black_box(Fr::ifft_in_place(&mut bn254_buf[..group_size]));
-                })
-            },
-        );
-        group.bench_with_input(
-            BenchmarkId::new(
-                format!("benchmark BN254 {group_size_bits}-bits FFT in place by halo2 serial"),
-                group_size_bits,
-            ),
-            &group_size_bits,
-            |b, group_size_bits| {
-                b.iter(|| {
-                    let group_size = 1 << group_size_bits;
-                    let omega = Fr::two_adic_generator(*group_size_bits as usize);
+                    let omega = F::two_adic_generator(*group_size_bits as usize);
                     black_box(halo2_serial_fft(
-                        &mut bn254_buf[..group_size],
+                        &mut buf[..group_size],
                         omega,
                         *group_size_bits,
                     ));
@@ -120,5 +97,10 @@ pub fn halo2_serial_fft<F: FFTField>(a: &mut [F], omega: F, log_n: u32) {
     }
 }
 
-criterion_group!(benches, fft_benchmark);
+fn bn254_fr_fft_benchmark(c: &mut Criterion) {
+    bench_fft::<Fr>(c);
+    bench_halo2_serial_fft::<Fr>(c);
+}
+
+criterion_group!(benches, bn254_fr_fft_benchmark);
 criterion_main!(benches);
