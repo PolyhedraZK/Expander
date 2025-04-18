@@ -8,7 +8,7 @@ use arith::Field;
 use circuit::{Circuit, CircuitLayer};
 use gkr_engine::{
     ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
-    GKRScheme, MPIConfig, MPIEngine, Proof, StructuredReferenceString, Transcript,
+    GKRScheme, MPIConfig, MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
 };
 use serdes::ExpSerde;
 use sumcheck::{
@@ -377,7 +377,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         )
         .unwrap();
 
-        let minimum_vars_for_pcs: usize = Into::into(pcs_params.clone());
+        let minimum_vars_for_pcs: usize = pcs_params.num_vars();
         if open_at.rz.len() < minimum_vars_for_pcs {
             eprintln!(
 				"{} over {} has minimum supported local vars {}, but challenge has vars {}, pad to {} vars in verifying.",

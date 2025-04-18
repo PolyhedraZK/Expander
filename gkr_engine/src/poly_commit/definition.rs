@@ -14,12 +14,23 @@ pub trait StructuredReferenceString {
     fn into_keys(self) -> (Self::PKey, Self::VKey);
 }
 
+pub trait PCSParams: Clone + Debug + Default + Send + Sync + 'static {
+    /// Infer number of variables (local variables w.r.t. SIMD elements) from PCS params
+    fn num_vars(&self) -> usize;
+}
+
+impl PCSParams for usize {
+    fn num_vars(&self) -> usize {
+        *self
+    }
+}
+
 pub trait ExpanderPCS<F: FieldEngine> {
     const NAME: &'static str;
 
     const PCS_TYPE: PolynomialCommitmentType;
 
-    type Params: Clone + Debug + Default + Send + Sync + Into<usize> + 'static;
+    type Params: PCSParams;
     type ScratchPad: Clone + Debug + Default + Send + ExpSerde + Sync;
 
     type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString + Send + Sync;
