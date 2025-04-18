@@ -14,27 +14,29 @@ pub fn bench_halo2_serial_fft<F: Field + FFTField>(c: &mut Criterion) {
         .collect();
 
     for group_size_bits in 11..=MAX_FFT_SIZE.ilog2() {
-        group.bench_with_input(
-            BenchmarkId::new(
-                format!(
-                    "benchmark {} {group_size_bits}-bits FFT in place by halo2 serial",
-                    F::NAME
+        group
+            .bench_with_input(
+                BenchmarkId::new(
+                    format!(
+                        "benchmark {} {group_size_bits}-bits FFT in place by halo2 serial",
+                        F::NAME
+                    ),
+                    group_size_bits,
                 ),
-                group_size_bits,
-            ),
-            &group_size_bits,
-            |b, group_size_bits| {
-                b.iter(|| {
-                    let group_size = 1 << group_size_bits;
-                    let omega = F::two_adic_generator(*group_size_bits as usize);
-                    black_box(halo2_serial_fft(
-                        &mut buf[..group_size],
-                        omega,
-                        *group_size_bits,
-                    ));
-                })
-            },
-        );
+                &group_size_bits,
+                |b, group_size_bits| {
+                    b.iter(|| {
+                        let group_size = 1 << group_size_bits;
+                        let omega = F::two_adic_generator(*group_size_bits as usize);
+                        black_box(halo2_serial_fft(
+                            &mut buf[..group_size],
+                            omega,
+                            *group_size_bits,
+                        ));
+                    })
+                },
+            )
+            .sample_size(10);
     }
 }
 
