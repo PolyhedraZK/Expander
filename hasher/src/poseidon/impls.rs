@@ -11,9 +11,9 @@ pub struct PoseidonPermutation<State: PoseidonStateTrait> {
     pub round_constants: Vec<State>,
 }
 
-const POSEIDON_SEED_PREFIX: &str = "poseidon_seed";
+pub const POSEIDON_SEED_PREFIX: &str = "poseidon_seed";
 
-fn get_constants<State: PoseidonStateTrait>(round_num: usize) -> Vec<State> {
+pub fn get_constants<State: PoseidonStateTrait>(round_num: usize) -> Vec<State> {
     let seed = format!(
         "{POSEIDON_SEED_PREFIX}_{}_{}",
         State::ElemT::NAME,
@@ -40,14 +40,14 @@ fn get_constants<State: PoseidonStateTrait>(round_num: usize) -> Vec<State> {
         .collect()
 }
 
-const MATRIX_CIRC_MDS_8_SML_ROW: [u32; 8] = [7, 1, 3, 8, 8, 3, 4, 9];
+pub const MATRIX_CIRC_MDS_8_SML_ROW: [u32; 8] = [7, 1, 3, 8, 8, 3, 4, 9];
 
-const MATRIX_CIRC_MDS_12_SML_ROW: [u32; 12] = [1, 1, 2, 1, 8, 9, 10, 7, 5, 9, 4, 10];
+pub const MATRIX_CIRC_MDS_12_SML_ROW: [u32; 12] = [1, 1, 2, 1, 8, 9, 10, 7, 5, 9, 4, 10];
 
-const MATRIX_CIRC_MDS_16_SML_ROW: [u32; 16] =
+pub const MATRIX_CIRC_MDS_16_SML_ROW: [u32; 16] =
     [1, 1, 51, 1, 11, 17, 2, 1, 101, 63, 15, 2, 67, 22, 13, 3];
 
-fn get_mds_matrix<State: PoseidonStateTrait>() -> Vec<State> {
+pub fn get_mds_matrix<State: PoseidonStateTrait>() -> Vec<State> {
     let mds_first_row: &[u32] = match State::STATE_WIDTH {
         8 => &MATRIX_CIRC_MDS_8_SML_ROW,
         12 => &MATRIX_CIRC_MDS_12_SML_ROW,
@@ -66,7 +66,6 @@ fn get_mds_matrix<State: PoseidonStateTrait>() -> Vec<State> {
         .map(|i| State::from_elems(&buffer[i..i + State::STATE_WIDTH]))
         .collect()
 }
-
 impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
     fn new() -> Self {
         let total_rounds = State::FULL_ROUNDS + State::PARTIAL_ROUNDS;
