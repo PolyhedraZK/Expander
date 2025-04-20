@@ -73,10 +73,6 @@ where
     // |- eval -|- 0000 -|-- eval encode --|-- prox encode --|-- prox encode --|
     // |        |        |                 |                 |                 |
     // |        |        |                 |                 |                 |
-    // |        |        |                 |                 |                 |
-    // |        |        |                 |                 |                 |
-    // |        |        |                 |                 |                 |
-    // |        |        |                 |                 |                 |
     // |- eval -|- 0000 -|-- eval encode --|-- prox encode --|-- prox encode --|
     //
     // Side note: scratch len is the encode length, or 2x prox/eval length.
@@ -322,4 +318,92 @@ fn code_switching_gkr_layer_encoding<F, C>(
         let enc_iter = in_s.iter().map(|in_i| relay(in_i + i_srt, out_i + o_srt));
         layer.add.extend(enc_iter)
     });
+}
+
+#[cfg(test)]
+mod code_switching_test {
+    use arith::{ExtensionField, Field, Fr, SimdField};
+    use ark_std::test_rng;
+    use gkr_engine::{BN254Config, FieldEngine, Transcript};
+    use gkr_hashers::Keccak256hasher;
+    use polynomials::MultiLinearPoly;
+    use transcript::BytesHashTranscript;
+
+    use crate::{
+        orion::{
+            code_switching::{
+                code_switching_encoding, code_switching_evaluation, code_switching_opening_queries,
+                prepare_code_switching_inputs,
+            },
+            linear_code::OrionCode,
+        },
+        ORION_CODE_PARAMETER_INSTANCE,
+    };
+
+    fn test_orion_code_switch_gkr_helper<F, C>(num_vars: usize)
+    where
+        F: Field + ExtensionField + SimdField,
+        C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
+    {
+        const PROXIMITY_REPETITIONS: usize = 2;
+        const PHONY_QUERY_NUM: usize = 1000;
+
+        let mut rng = test_rng();
+
+        let msg_size = 1 << num_vars;
+        let encoder = OrionCode::new(ORION_CODE_PARAMETER_INSTANCE, msg_size, &mut rng);
+
+        let challenge_point: Vec<_> = (0..num_vars)
+            .map(|_| C::ChallengeField::random_unsafe(&mut rng))
+            .collect();
+
+        let queries = {
+            let mut transcript = BytesHashTranscript::<F, Keccak256hasher>::new();
+            let mut qs = transcript.generate_challenge_index_vector(PHONY_QUERY_NUM);
+            qs.iter_mut().for_each(|q| *q %= encoder.code_len());
+            qs
+        };
+
+        let mut layered_circuit =
+            code_switching_encoding::<F, C>(&encoder, num_vars, PROXIMITY_REPETITIONS);
+        code_switching_evaluation(&challenge_point, &mut layered_circuit);
+        code_switching_opening_queries(&queries, PROXIMITY_REPETITIONS, &mut layered_circuit);
+
+        let evals_poly = MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng);
+        let prox_poly0 = MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng);
+        let prox_poly1 = MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng);
+
+        let input_coeffs = prepare_code_switching_inputs(
+            &evals_poly.coeffs,
+            &[prox_poly0.coeffs.clone(), prox_poly1.coeffs.clone()],
+        );
+        layered_circuit.layers[0].input_vals = input_coeffs.clone();
+        layered_circuit.evaluate();
+
+        let expected = {
+            let evaluation = evals_poly.evaluate_jolt(&challenge_point);
+            let mut buffer = vec![evaluation];
+
+            let evals_encoded = encoder.encode(&evals_poly.coeffs).unwrap();
+            buffer.extend(queries.iter().map(|q| evals_encoded[*q]));
+
+            let prox0_encoded = encoder.encode(&prox_poly0.coeffs).unwrap();
+            buffer.extend(queries.iter().map(|q| prox0_encoded[*q]));
+
+            let prox1_encoded = encoder.encode(&prox_poly1.coeffs).unwrap();
+            buffer.extend(queries.iter().map(|q| prox1_encoded[*q]));
+
+            let po2_len = buffer.len().next_power_of_two();
+            buffer.resize(po2_len, F::ZERO);
+
+            buffer
+        };
+
+        assert_eq!(expected, layered_circuit.layers.last().unwrap().output_vals);
+    }
+
+    #[test]
+    fn test_orion_code_switch_gkr() {
+        test_orion_code_switch_gkr_helper::<Fr, BN254Config>(15);
+    }
 }
