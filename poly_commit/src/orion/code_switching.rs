@@ -106,19 +106,11 @@ where
     F: Field + ExtensionField,
     C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
 {
-    let max_i_vars = circuit
-        .layers
-        .iter()
-        .map(|l| l.input_var_num)
-        .max()
-        .unwrap();
+    let i_vars = circuit.layers.iter().map(|l| l.input_var_num);
+    let o_vars = circuit.layers.iter().map(|l| l.output_var_num);
 
-    let max_o_vars = circuit
-        .layers
-        .iter()
-        .map(|layer| layer.output_var_num)
-        .max()
-        .unwrap();
+    let max_i_vars = i_vars.max().unwrap();
+    let max_o_vars = o_vars.max().unwrap();
 
     ProverScratchPad::<C>::new(max_i_vars, max_o_vars, CODE_SWITCHING_WORLD_SIZE)
 }
