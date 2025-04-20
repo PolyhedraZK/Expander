@@ -106,11 +106,6 @@ where
     });
 
     circuit.layers.extend(layer_iter);
-
-    // NOTE(HS) We know it is a bit early to say it is skipping second phase,
-    // but even with query randomness, it is still pure addition circuit,
-    // so we just identify structure here.
-    circuit.identify_structure_info();
     circuit
 }
 
@@ -171,10 +166,7 @@ pub(crate) fn code_switching_opening_queries<F, C>(
 /// On given an vanilla Orion proof evaluation response and proximity responses,
 /// output the input MLE polynomial coefficients for the code switching GKR circuit.
 #[allow(unused)]
-pub(crate) fn prepare_code_switching_inputs<F: Field>(
-    eval_resp: &[F],
-    prox_resps: &[Vec<F>],
-) -> Vec<F> {
+pub fn prepare_code_switching_inputs<F: Field>(eval_resp: &[F], prox_resps: &[Vec<F>]) -> Vec<F> {
     assert!(eval_resp.len().is_power_of_two());
     let eval_width = eval_resp.len();
 

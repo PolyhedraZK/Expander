@@ -1,3 +1,4 @@
+use super::verify_sumcheck_step;
 use arith::Field;
 use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
@@ -6,9 +7,7 @@ use gkr_engine::{
 };
 use serdes::ExpSerde;
 use std::io::Read;
-use sumcheck::{
-    verify_sumcheck_step, GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_SQUARE_DEGREE,
-};
+use sumcheck::{GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_SQUARE_DEGREE};
 
 #[allow(clippy::type_complexity)]
 pub fn gkr_square_verify<C: FieldEngine>(
