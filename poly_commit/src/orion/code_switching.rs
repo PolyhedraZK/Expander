@@ -121,7 +121,7 @@ where
 }
 
 #[allow(unused)]
-pub(crate) fn code_switching_opening_queries<F, C>(
+pub(crate) fn code_switching_query<F, C>(
     indices: &[usize],
     proximity_rep: usize,
     circ: &mut Circuit<C>,
@@ -134,8 +134,7 @@ pub(crate) fn code_switching_opening_queries<F, C>(
 
     let output_var_num = {
         let total_outputs = 1 + (1 + proximity_rep) * indices.len();
-        // NOTE(HS) return ceil log2
-        (total_outputs as f64).log2().ceil() as usize
+        total_outputs.next_power_of_two().ilog2() as usize
     };
 
     let mut selection_layer: CircuitLayer<C> = CircuitLayer {
@@ -171,9 +170,7 @@ pub fn prepare_code_switching_inputs<F: Field>(eval_resp: &[F], prox_resps: &[Ve
     let eval_width = eval_resp.len();
 
     assert!((1..=2).contains(&prox_resps.len()));
-    prox_resps
-        .iter()
-        .for_each(|p| assert_eq!(p.len(), eval_width));
+    assert!(prox_resps.iter().all(|p| p.len() == eval_width));
 
     let mut buffer = eval_resp.to_vec();
     buffer.resize(eval_width * 4, F::ZERO);
@@ -265,7 +262,6 @@ fn code_switching_gkr_layer_evaluating<F, C>(
     }
 
     let v = challenge_point[index];
-
     (0..evals_output_width).for_each(|out_i| {
         layer.add.extend_from_slice(&[
             add_wire(out_i * 2, out_i, C::ChallengeField::ONE - v),
@@ -324,7 +320,7 @@ mod code_switching_test {
     use crate::{
         orion::{
             code_switching::{
-                code_switching_encoding, code_switching_evaluation, code_switching_opening_queries,
+                code_switching_encoding, code_switching_evaluation, code_switching_query,
                 prepare_code_switching_inputs,
             },
             linear_code::OrionCode,
@@ -359,7 +355,7 @@ mod code_switching_test {
         let mut layered_circuit =
             code_switching_encoding::<F, C>(&encoder, num_vars, PROXIMITY_REPETITIONS);
         code_switching_evaluation(&challenge_point, &mut layered_circuit);
-        code_switching_opening_queries(&queries, PROXIMITY_REPETITIONS, &mut layered_circuit);
+        code_switching_query(&queries, PROXIMITY_REPETITIONS, &mut layered_circuit);
 
         let evals_poly = MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng);
         let prox_poly0 = MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng);
