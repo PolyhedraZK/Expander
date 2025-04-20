@@ -11,8 +11,9 @@ use transcript::BytesHashTranscript;
 use crate::{
     orion::{
         code_switching::{
-            code_switching_gkr_circuit, prepare_code_switching_gkr_prover_mem,
-            prepare_code_switching_inputs, CODE_SWITCHING_WORLD_SIZE,
+            code_switching_encoding, code_switching_evaluation,
+            prepare_code_switching_gkr_prover_mem, prepare_code_switching_inputs,
+            CODE_SWITCHING_WORLD_SIZE,
         },
         linear_code::OrionCode,
     },
@@ -38,7 +39,8 @@ where
         .collect();
 
     let mut layered_circuit =
-        code_switching_gkr_circuit::<F, C>(&encoder, &challenge_point, PROXIMITY_REPETITIONS);
+        code_switching_encoding::<F, C>(&encoder, num_vars, PROXIMITY_REPETITIONS);
+    code_switching_evaluation(&challenge_point, &mut layered_circuit);
 
     let evals_poly = MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng);
     let prox_poly0 = MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng);
