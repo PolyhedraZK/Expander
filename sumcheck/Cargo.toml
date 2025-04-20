@@ -14,7 +14,6 @@ serdes = { path = "../serdes" }
 
 env_logger.workspace = true
 log.workspace = true
-ark-std.workspace = true
 
 [features]
 profile = [ "utils/profile" ]

@@ -9,8 +9,5 @@ pub use verifier_helper::*;
 mod scratch_pad;
 pub use scratch_pad::{ProverScratchPad, VerifierScratchPad};
 
-mod gkr_iop;
-pub use gkr_iop::{gkr_prove, gkr_square_prove, gkr_square_verify, gkr_verify};
-
-pub mod utils;
+mod utils;
 pub use utils::*;
