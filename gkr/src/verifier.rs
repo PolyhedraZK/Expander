@@ -7,8 +7,8 @@ use std::{
 use arith::Field;
 use circuit::Circuit;
 use gkr_engine::{
-    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
-    GKRScheme, MPIConfig, MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine, GKRScheme, MPIConfig,
+    MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
 };
 use serdes::ExpSerde;
 use transcript::transcript_verifier_sync;

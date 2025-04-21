@@ -167,7 +167,7 @@ fn test_gkr_correctness() {
     test_gkr_correctness_helper::<C14>(None);
     test_gkr_correctness_helper::<C15>(None);
     test_gkr_correctness_helper::<C16>(None);
-   
+
     MPIConfig::finalize();
 }
 
