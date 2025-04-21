@@ -1,6 +1,7 @@
 use arith::{
-    random_extension_field_tests, random_field_tests, random_from_limbs_to_limbs_tests,
-    random_inversion_tests, random_simd_field_tests, ExtensionField, Field,
+    random_extension_field_tests, random_fft_field_tests, random_field_tests,
+    random_from_limbs_to_limbs_tests, random_inversion_tests, random_simd_field_tests,
+    ExtensionField, Field,
 };
 use ark_std::test_rng;
 use ethnum::U256;
@@ -48,6 +49,7 @@ fn test_base_field() {
 
     let mut rng = test_rng();
     random_inversion_tests::<Goldilocks, _>(&mut rng, "Goldilocks".to_string());
+    random_fft_field_tests::<Goldilocks>("Goldilocks".to_string());
 }
 
 #[test]
@@ -56,6 +58,7 @@ fn test_simd_field() {
 
     let mut rng = test_rng();
     random_inversion_tests::<Goldilocksx8, _>(&mut rng, "Goldilocksx8".to_string());
+    random_fft_field_tests::<Goldilocksx8>("Goldilocksx8".to_string());
 
     random_simd_field_tests::<Goldilocksx8>("Goldilocksx8".to_string());
 

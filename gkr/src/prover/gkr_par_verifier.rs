@@ -1,33 +1,25 @@
 use circuit::Circuit;
-use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
-use polynomials::MultiLinearPolyExpander;
+use gkr_engine::{ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, Transcript};
+use rayon::vec;
 use serdes::ExpSerde;
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
-use transcript::Transcript;
 use utils::timer::Timer;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct SumcheckLayerState<C: GKRFieldConfig> {
+pub struct SumcheckLayerState<F: FieldEngine> {
     pub transcript_state: Vec<u8>,
-    pub rz0: Vec<C::ChallengeField>,
-    pub rz1: Option<Vec<C::ChallengeField>>,
-    pub r_simd: Vec<C::ChallengeField>,
-    pub r_mpi: Vec<C::ChallengeField>,
-    pub alpha: Option<C::ChallengeField>,
-    pub claimed_v0: C::ChallengeField,
-    pub claimed_v1: Option<C::ChallengeField>,
+    pub challenge: ExpanderDualVarChallenge<F>,
+    pub alpha: Option<F::ChallengeField>,
+    pub claimed_v0: F::ChallengeField,
+    pub claimed_v1: Option<F::ChallengeField>,
 }
 
-impl<C: GKRFieldConfig> ExpSerde for SumcheckLayerState<C> {
+impl<F: FieldEngine> ExpSerde for SumcheckLayerState<F> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> serdes::SerdeResult<()> {
         self.transcript_state.serialize_into(&mut writer)?;
-        self.rz0.serialize_into(&mut writer)?;
-        self.rz1.serialize_into(&mut writer)?;
-        self.r_simd.serialize_into(&mut writer)?;
-        self.r_mpi.serialize_into(&mut writer)?;
+        self.challenge.serialize_into(&mut writer)?;
         self.alpha.serialize_into(&mut writer)?;
         self.claimed_v0.serialize_into(&mut writer)?;
         self.claimed_v1.serialize_into(&mut writer)?;
@@ -36,20 +28,14 @@ impl<C: GKRFieldConfig> ExpSerde for SumcheckLayerState<C> {
 
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> serdes::SerdeResult<Self> {
         let transcript_state = Vec::deserialize_from(&mut reader)?;
-        let rz0 = Vec::deserialize_from(&mut reader)?;
-        let rz1 = Option::<Vec<C::ChallengeField>>::deserialize_from(&mut reader)?;
-        let r_simd = Vec::deserialize_from(&mut reader)?;
-        let r_mpi = Vec::deserialize_from(&mut reader)?;
-        let alpha = Option::<C::ChallengeField>::deserialize_from(&mut reader)?;
-        let claimed_v0 = C::ChallengeField::deserialize_from(&mut reader)?;
-        let claimed_v1 = Option::<C::ChallengeField>::deserialize_from(&mut reader)?;
+        let challenge = ExpanderDualVarChallenge::<F>::deserialize_from(&mut reader)?;
+        let alpha = Option::<F::ChallengeField>::deserialize_from(&mut reader)?;
+        let claimed_v0 = F::ChallengeField::deserialize_from(&mut reader)?;
+        let claimed_v1 = Option::<F::ChallengeField>::deserialize_from(&mut reader)?;
 
         Ok(Self {
             transcript_state,
-            rz0,
-            rz1,
-            r_simd,
-            r_mpi,
+            challenge,
             alpha,
             claimed_v0,
             claimed_v1,
@@ -58,25 +44,19 @@ impl<C: GKRFieldConfig> ExpSerde for SumcheckLayerState<C> {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn checkpoint_sumcheck_layer_state<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    rz0: &[C::ChallengeField],
-    rz1: &Option<Vec<C::ChallengeField>>,
-    r_simd: &[C::ChallengeField],
-    r_mpi: &[C::ChallengeField],
-    alpha: &Option<C::ChallengeField>,
-    claimed_v0: &C::ChallengeField,
-    claimed_v1: &Option<C::ChallengeField>,
-    transcript: &mut T,
-    mpi_config: &MPIConfig,
+pub fn checkpoint_sumcheck_layer_state<F: FieldEngine>(
+    challenge: &ExpanderDualVarChallenge<F>,
+    alpha: &Option<F::ChallengeField>,
+    claimed_v0: &F::ChallengeField,
+    claimed_v1: &Option<F::ChallengeField>,
+    transcript: &mut impl Transcript<F::ChallengeField>,
+    mpi_config: &impl MPIEngine,
 ) {
     let transcript_state = transcript.hash_and_return_state();
     if mpi_config.is_root() {
-        let sumcheck_state = SumcheckLayerState::<C> {
+        let sumcheck_state = SumcheckLayerState::<F> {
             transcript_state: transcript_state.clone(),
-            rz0: rz0.to_vec(),
-            rz1: rz1.clone(),
-            r_simd: r_simd.to_vec(),
-            r_mpi: r_mpi.to_vec(),
+            challenge: challenge.clone(),
             alpha: *alpha,
             claimed_v0: *claimed_v0,
             claimed_v1: *claimed_v1,
@@ -89,45 +69,29 @@ pub fn checkpoint_sumcheck_layer_state<C: GKRFieldConfig, T: Transcript<C::Chall
 }
 
 #[allow(clippy::type_complexity)]
-pub fn gkr_par_verifier_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
-    circuit: &Circuit<C>,
-    sp: &mut ProverScratchPad<C>,
-    transcript: &mut T,
-    mpi_config: &MPIConfig,
+pub fn gkr_par_verifier_prove<F: FieldEngine>(
+    circuit: &Circuit<F>,
+    sp: &mut ProverScratchPad<F>,
+    transcript: &mut impl Transcript<F::ChallengeField>,
+    mpi_config: &impl MPIEngine,
 ) -> (
-    C::ChallengeField,
-    Vec<C::ChallengeField>,
-    Option<Vec<C::ChallengeField>>,
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
+    F::ChallengeField,
+    ExpanderDualVarChallenge<F>,
 ) {
     let layer_num = circuit.layers.len();
 
-    let mut rz0 = vec![];
-    let mut rz1 = None;
-    let mut r_simd = vec![];
-    let mut r_mpi = vec![];
-    for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.generate_challenge_field_element());
-    }
-
-    for _ in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.generate_challenge_field_element());
-    }
-
-    for _ in 0..mpi_config.world_size().trailing_zeros() {
-        r_mpi.push(transcript.generate_challenge_field_element());
-    }
-
+    let mut challenge: ExpanderDualVarChallenge<F> = ExpanderSingleVarChallenge::sample_from_transcript(
+        transcript,
+        circuit.layers.last().unwrap().output_var_num,
+        mpi_config.world_size(),
+    ).into();  
     let mut alpha = None;
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
     let claimed_v =
-        MultiLinearPolyExpander::<C>::collectively_eval_circuit_vals_at_expander_challenge(
+        F::collectively_eval_circuit_vals_at_expander_challenge(
             output_vals,
-            &rz0,
-            &r_simd,
-            &r_mpi,
+            &challenge.challenge_x(),
             &mut sp.hg_evals,
             &mut sp.eq_evals_first_half, // confusing name here..
             mpi_config,
@@ -146,11 +110,8 @@ pub fn gkr_par_verifier_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField
             mpi_config.is_root(),
         );
 
-        checkpoint_sumcheck_layer_state::<C, _>(
-            &rz0,
-            &rz1,
-            &r_simd,
-            &r_mpi,
+        checkpoint_sumcheck_layer_state::<F>(
+            &challenge,
             &alpha,
             &claimed_v0,
             &claimed_v1,
@@ -158,12 +119,9 @@ pub fn gkr_par_verifier_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField
             mpi_config,
         );
 
-        (rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1) = sumcheck_prove_gkr_layer(
+        (claimed_v0, claimed_v1) = sumcheck_prove_gkr_layer(
             &circuit.layers[i],
-            &rz0,
-            &rz1,
-            &r_simd,
-            &r_mpi,
+            &mut challenge,
             alpha,
             transcript,
             sp,
@@ -171,7 +129,7 @@ pub fn gkr_par_verifier_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField
             i == layer_num - 1,
         );
 
-        if rz1.is_some() {
+        if challenge.rz_1.is_some() {
             let mut tmp = transcript.generate_challenge_field_element();
             mpi_config.root_broadcast_f(&mut tmp);
             alpha = Some(tmp)
@@ -182,5 +140,5 @@ pub fn gkr_par_verifier_prove<C: GKRFieldConfig, T: Transcript<C::ChallengeField
     }
 
     transcript.hash_and_return_state(); // trigger an additional hash to compress all the unhashed data, for ease of verification
-    (claimed_v, rz0, rz1, r_simd, r_mpi)
+    (claimed_v, challenge)
 }

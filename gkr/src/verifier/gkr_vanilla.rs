@@ -1,51 +1,36 @@
-use std::{io::Read, vec};
+use std::io::Read;
 
 use circuit::Circuit;
-use gkr_field_config::GKRFieldConfig;
+use gkr_engine::{ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, Transcript};
 use sumcheck::VerifierScratchPad;
-use transcript::Transcript;
 use utils::timer::Timer;
 
 use super::common::sumcheck_verify_gkr_layer;
 
-// todo: FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn gkr_verify<F: FieldEngine>(
     proving_time_mpi_size: usize,
-    circuit: &Circuit<C>,
-    public_input: &[C::SimdCircuitField],
-    claimed_v: &C::ChallengeField,
-    transcript: &mut T,
+    circuit: &Circuit<F>,
+    public_input: &[F::SimdCircuitField],
+    claimed_v: &F::ChallengeField,
+    transcript: &mut impl Transcript<F::ChallengeField>,
     mut proof_reader: impl Read,
 ) -> (
     bool,
-    Vec<C::ChallengeField>,
-    Option<Vec<C::ChallengeField>>,
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
-    C::ChallengeField,
-    Option<C::ChallengeField>,
+    ExpanderDualVarChallenge<F>,
+    F::ChallengeField,
+    Option<F::ChallengeField>,
 ) {
     let timer = Timer::new("gkr_verify", true);
-    let mut sp = VerifierScratchPad::<C>::new(circuit, proving_time_mpi_size);
+    let mut sp = VerifierScratchPad::<F>::new(circuit, proving_time_mpi_size);
 
     let layer_num = circuit.layers.len();
-    let mut rz0 = vec![];
-    let mut rz1 = None;
-    let mut r_simd = vec![];
-    let mut r_mpi = vec![];
 
-    for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz0.push(transcript.generate_challenge_field_element());
-    }
-
-    for _ in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.generate_challenge_field_element());
-    }
-
-    for _ in 0..proving_time_mpi_size.trailing_zeros() {
-        r_mpi.push(transcript.generate_challenge_field_element());
-    }
+    let mut challenge = ExpanderSingleVarChallenge::sample_from_transcript(
+        transcript,
+        circuit.layers.last().unwrap().output_var_num,
+        proving_time_mpi_size,
+    ).into();
 
     let mut alpha = None;
     let mut claimed_v0 = *claimed_v;
@@ -53,26 +38,14 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
 
     let mut verified = true;
     for i in (0..layer_num).rev() {
-        let cur_verified;
-        (
-            cur_verified,
-            rz0,
-            rz1,
-            r_simd,
-            r_mpi,
-            claimed_v0,
-            claimed_v1,
-        ) = sumcheck_verify_gkr_layer(
-            config::GKRScheme::Vanilla,
+        let cur_verified = sumcheck_verify_gkr_layer(
+            gkr_engine::GKRScheme::Vanilla,
             proving_time_mpi_size,
             &circuit.layers[i],
             public_input,
-            &rz0,
-            &rz1,
-            &r_simd,
-            &r_mpi,
-            claimed_v0,
-            claimed_v1,
+            &mut challenge,
+            &mut claimed_v0,
+            &mut claimed_v1,
             alpha,
             &mut proof_reader,
             transcript,
@@ -81,12 +54,19 @@ pub fn gkr_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         );
 
         verified &= cur_verified;
-        alpha = if rz1.is_some() {
+        alpha = if challenge.rz_1.is_some() {
             Some(transcript.generate_challenge_field_element())
         } else {
             None
         };
     }
     timer.stop();
-    (verified, rz0, rz1, r_simd, r_mpi, claimed_v0, claimed_v1)
+    let challenge = ExpanderDualVarChallenge::new(
+        challenge.rz_0,
+        challenge.rz_1,
+        challenge.r_simd,
+        challenge.r_mpi,
+    );
+
+    (verified, challenge, claimed_v0, claimed_v1)
 }

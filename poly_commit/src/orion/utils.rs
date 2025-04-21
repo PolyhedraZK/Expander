@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 
 use arith::{ExtensionField, Field, SimdField};
+use gkr_engine::Transcript;
 use itertools::izip;
 use serdes::SerdeError;
 use thiserror::Error;
-use transcript::Transcript;
 
 use crate::{traits::TensorCodeIOPPCS, PCS_SOUNDNESS_BITS};
 
@@ -237,21 +237,6 @@ where
         .collect()
 }
 
-#[inline(always)]
-pub(crate) fn pack_simd<F, SimdF, PackF>(evaluations: &[SimdF]) -> Vec<PackF>
-where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    PackF: SimdField<Scalar = F>,
-{
-    // NOTE: SIMD pack neighboring SIMD evals
-    let relative_pack_size = PackF::PACK_SIZE / SimdF::PACK_SIZE;
-    evaluations
-        .chunks(relative_pack_size)
-        .map(PackF::pack_from_simd)
-        .collect()
-}
-
 /*
  * LINEAR OPERATIONS FOR GF2 (LOOKUP TABLE BASED)
  */
@@ -282,7 +267,7 @@ impl<F: Field> SubsetSumLUTs<F> {
         izip!(&mut self.tables, weights.chunks(self.entry_bits)).for_each(
             |(lut_i, sub_weights)| {
                 sub_weights.iter().enumerate().for_each(|(i, weight_i)| {
-                    let bit_mask = 1 << (self.entry_bits - i - 1);
+                    let bit_mask = 1 << i;
                     lut_i.iter_mut().enumerate().for_each(|(bit_map, li)| {
                         if bit_map & bit_mask == bit_mask {
                             *li += weight_i;

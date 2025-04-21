@@ -1,24 +1,21 @@
 [workspace]
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
-    "arith/field_hashers",
     "arith/gf2",
     "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31",
     "arith/polynomials",
-    "bi-kzg",
     "circuit",
-    "config", # gkr_field_config + pcs_config + transcript_config
-    "config/gkr_field_config", # definitions of all field types used in gkr and pcs
-    "config/mpi_config", # definitions of mpi communication toolkit
-    "config/config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
+    "config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
     "gkr",
+    "gkr_engine", # definitions of GKR engine and associated types
+    "hasher", # definitions of FiatShamirFieldHasher, FiatShamirBytesHash, and associated types
     "poly_commit",
     "serdes", # serialization and deserialization of various data structures
     "sumcheck",
     "crosslayer_prototype",
-    "transcript",
+    "transcript", # instantiations of transcripts
     "tree",
     "utils",
 ]
@@ -36,7 +33,11 @@ criterion = { version = "0.5", features = ["html_reports"] }
 env_logger = "0.11.3"
 halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", default-features = false, features = [
     "bits",
+    "bn256-table"
 ] }
+syn = "2.0"       # For parsing Rust code
+quote = "1.0"     # For generating code
+proc-macro2 = "1.0"  # For working with tokens
 itertools = "0.13"
 log = "0.4"
 mpi = "0.8.0"

@@ -32,7 +32,7 @@ fn mod_reduce_i64(x: i64) -> i64 {
     (x & M31_MOD as i64) + (x >> 31)
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct M31 {
     pub v: u32,
 }
@@ -45,6 +45,20 @@ impl PartialEq for M31 {
 }
 
 impl Eq for M31 {}
+
+impl PartialOrd for M31 {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for M31 {
+    #[inline(always)]
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        mod_reduce_u32_safe(self.v).cmp(&mod_reduce_u32_safe(other.v))
+    }
+}
 
 field_common!(M31);
 
@@ -125,7 +139,7 @@ impl Field for M31 {
 
     #[inline(always)]
     fn to_u256(&self) -> U256 {
-        U256([self.v as u128, 0])
+        U256([mod_reduce_u32_safe(self.v) as u128, 0])
     }
 
     #[inline(always)]
@@ -186,7 +200,7 @@ impl Field for M31 {
     #[inline(always)]
     fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
         let mut v = u32::from_le_bytes(bytes[..4].try_into().unwrap());
-        v = mod_reduce_u32(v);
+        v = mod_reduce_u32_safe(v);
         M31 { v }
     }
 
@@ -287,6 +301,6 @@ fn mul_internal(a: &M31, b: &M31) -> M31 {
 impl std::hash::Hash for M31 {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        state.write_u32(self.v);
+        state.write_u32(mod_reduce_u32_safe(self.v));
     }
 }

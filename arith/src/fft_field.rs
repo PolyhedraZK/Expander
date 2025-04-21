@@ -2,7 +2,7 @@ use itertools::izip;
 
 use crate::{bit_reverse, Field};
 
-pub trait FFTField: Field + From<u64> {
+pub trait FFTField: Field {
     const TWO_ADICITY: usize;
 
     fn root_of_unity() -> Self;
@@ -39,11 +39,11 @@ pub trait FFTField: Field + From<u64> {
 
     #[inline(always)]
     fn ifft_in_place(evals: &mut [Self]) {
-        let po2_mul_subgroup_bits = evals.len().ilog2() as usize;
-        let omega = Self::two_adic_generator(po2_mul_subgroup_bits);
+        let log_n = evals.len().ilog2() as usize;
+        let omega = Self::two_adic_generator(log_n);
         let omega_inv = omega.inv().unwrap();
 
-        let n_inv = Self::from(evals.len() as u64).inv().unwrap();
+        let n_inv = Self::ONE.double().exp(log_n as u128).inv().unwrap();
 
         radix2_fft_single_threaded(evals, omega_inv);
         evals.iter_mut().for_each(|x| *x *= n_inv);

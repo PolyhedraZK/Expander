@@ -274,11 +274,20 @@ impl SimdField for GF2x8 {
     }
 
     #[inline(always)]
+    fn pack_full(base: &Self::Scalar) -> Self {
+        match base.v {
+            0 => Self::zero(),
+            1 => Self::one(),
+            _ => panic!("Invalid value for GF2x8: {}", base.v),
+        }
+    }
+
+    #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == Self::PACK_SIZE);
         let mut ret = 0u8;
         for (i, scalar) in base_vec.iter().enumerate() {
-            ret |= scalar.v << (7 - i);
+            ret |= scalar.v << i;
         }
         Self { v: ret }
     }
@@ -288,7 +297,7 @@ impl SimdField for GF2x8 {
         let mut ret = vec![];
         for i in 0..Self::PACK_SIZE {
             ret.push(Self::Scalar {
-                v: (self.v >> (7 - i)) & 1u8,
+                v: (self.v >> i) & 1u8,
             });
         }
         ret

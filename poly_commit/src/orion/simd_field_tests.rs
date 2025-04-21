@@ -48,7 +48,10 @@ where
 
     let mut packed_interleaved_codeword: Vec<_> = interleaved_codewords
         .chunks(ComPackF::PACK_SIZE / SimdF::PACK_SIZE)
-        .map(ComPackF::pack_from_simd)
+        .map(|chunk| {
+            let elems: Vec<_> = chunk.iter().cloned().flat_map(|c| c.unpack()).collect();
+            ComPackF::pack(&elems)
+        })
         .collect();
     drop(interleaved_codewords);
 

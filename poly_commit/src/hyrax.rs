@@ -7,4 +7,4 @@ pub use hyrax_impl::{HyraxCommitment, HyraxOpening};
 mod pcs_trait_impl;
 pub use pcs_trait_impl::HyraxPCS;
 
-mod pcs_for_expander_gkr;
+mod expander_api;

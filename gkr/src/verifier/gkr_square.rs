@@ -2,27 +2,22 @@ use super::verify_sumcheck_step;
 use arith::Field;
 use ark_std::{end_timer, start_timer};
 use circuit::{Circuit, CircuitLayer};
-use gkr_field_config::{FieldType, GKRFieldConfig};
+use gkr_engine::{
+    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, FieldType, Transcript,
+};
 use serdes::ExpSerde;
-use std::{io::Read, vec};
+use std::io::Read;
 use sumcheck::{GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_SQUARE_DEGREE};
-use transcript::Transcript;
 
 #[allow(clippy::type_complexity)]
-pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+pub fn gkr_square_verify<C: FieldEngine>(
     proving_time_mpi_size: usize,
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
     claimed_v: &C::ChallengeField,
-    transcript: &mut T,
+    transcript: &mut impl Transcript<C::ChallengeField>,
     mut proof_reader: impl Read,
-) -> (
-    bool,
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
-    C::ChallengeField,
-) {
+) -> (bool, ExpanderSingleVarChallenge<C>, C::ChallengeField) {
     assert_ne!(
         C::FIELD_TYPE,
         FieldType::GF2,
@@ -33,35 +28,27 @@ pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
     let mut sp = VerifierScratchPad::<C>::new(circuit, proving_time_mpi_size);
 
     let layer_num = circuit.layers.len();
-    let mut rz = vec![];
-    let mut r_simd = vec![];
-    let mut r_mpi = vec![];
 
-    for _ in 0..circuit.layers.last().unwrap().output_var_num {
-        rz.push(transcript.generate_challenge_field_element());
-    }
-    for _ in 0..C::get_field_pack_size().trailing_zeros() {
-        r_simd.push(transcript.generate_challenge_field_element());
-    }
-    for _ in 0..proving_time_mpi_size.trailing_zeros() {
-        r_mpi.push(transcript.generate_challenge_field_element());
-    }
-    log::trace!("Initial rz0: {:?}", rz);
-    log::trace!("Initial r_simd: {:?}", r_simd);
-    log::trace!("Initial r_mpi: {:?}", r_mpi);
+    let mut challenge = ExpanderSingleVarChallenge::sample_from_transcript(
+        transcript,
+        circuit.layers.last().unwrap().output_var_num,
+        proving_time_mpi_size,
+    );
+
+    log::trace!("Initial rz0: {:?}", challenge.rz);
+    log::trace!("Initial r_simd: {:?}", challenge.r_simd);
+    log::trace!("Initial r_mpi: {:?}", challenge.r_mpi);
 
     let mut verified = true;
     let mut current_claim = *claimed_v;
     log::trace!("Starting claim: {:?}", current_claim);
     for i in (0..layer_num).rev() {
         let cur_verified;
-        (cur_verified, rz, r_simd, r_mpi, current_claim) = sumcheck_verify_gkr_square_layer(
+        (cur_verified, challenge, current_claim) = sumcheck_verify_gkr_square_layer(
             proving_time_mpi_size,
             &circuit.layers[i],
             public_input,
-            &rz,
-            &r_simd,
-            &r_mpi,
+            &challenge,
             current_claim,
             &mut proof_reader,
             transcript,
@@ -72,83 +59,75 @@ pub fn gkr_square_verify<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
         verified &= cur_verified;
     }
     end_timer!(timer);
-    (verified, rz, r_simd, r_mpi, current_claim)
+    (verified, challenge, current_claim)
 }
 
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
-fn sumcheck_verify_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::ChallengeField>>(
+fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
     proving_time_mpi_size: usize,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
-    rz: &[C::ChallengeField],
-    r_simd: &[C::ChallengeField],
-    r_mpi: &[C::ChallengeField],
+    challenge: &ExpanderSingleVarChallenge<C>,
     current_claim: C::ChallengeField,
     mut proof_reader: impl Read,
-    transcript: &mut T,
+    transcript: &mut impl Transcript<C::ChallengeField>,
     sp: &mut VerifierScratchPad<C>,
     is_output_layer: bool,
-) -> (
-    bool,
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
-    Vec<C::ChallengeField>,
-    C::ChallengeField,
-) {
+) -> (bool, ExpanderSingleVarChallenge<C>, C::ChallengeField) {
     // GKR2 with Power5 gate has degree 6 polynomial
     let degree = SUMCHECK_GKR_SQUARE_DEGREE;
 
-    GKRVerifierHelper::prepare_layer(layer, &None, rz, &None, r_simd, r_mpi, sp, is_output_layer);
+    let dual_challenge = ExpanderDualVarChallenge::from(challenge);
+
+    GKRVerifierHelper::prepare_layer(layer, &None, &dual_challenge, sp, is_output_layer);
 
     let var_num = layer.input_var_num;
     let mut sum = current_claim;
     sum -= GKRVerifierHelper::eval_cst(&layer.const_, public_input, sp);
 
-    let mut rx = vec![];
-    let mut r_simd_var = vec![];
-    let mut r_mpi_var = vec![];
+    let mut challenge = ExpanderSingleVarChallenge::default();
     let mut verified = true;
 
     for i_var in 0..var_num {
-        verified &= verify_sumcheck_step::<C, T>(
+        verified &= verify_sumcheck_step::<C>(
             &mut proof_reader,
             degree,
             transcript,
             &mut sum,
-            &mut rx,
+            &mut challenge.rz,
             sp,
         );
         log::trace!("x {} var, verified? {}", i_var, verified);
     }
-    GKRVerifierHelper::set_rx(&rx, sp);
+    GKRVerifierHelper::set_rx(&challenge.rz, sp);
 
     for i_var in 0..C::get_field_pack_size().trailing_zeros() {
-        verified &= verify_sumcheck_step::<C, T>(
+        verified &= verify_sumcheck_step::<C>(
             &mut proof_reader,
             degree,
             transcript,
             &mut sum,
-            &mut r_simd_var,
+            &mut challenge.r_simd,
             sp,
         );
         log::trace!("simd {} var, verified? {}", i_var, verified);
     }
-    GKRVerifierHelper::set_r_simd_xy(&r_simd_var, sp);
+    GKRVerifierHelper::set_r_simd_xy(&challenge.r_simd, sp);
 
     for _i_var in 0..proving_time_mpi_size.trailing_zeros() {
-        verified &= verify_sumcheck_step::<C, T>(
+        verified &= verify_sumcheck_step::<C>(
             &mut proof_reader,
             degree,
             transcript,
             &mut sum,
-            &mut r_mpi_var,
+            &mut challenge.r_mpi,
             sp,
         );
         log::trace!("{} mpi var, verified? {}", _i_var, verified);
     }
-    GKRVerifierHelper::set_r_mpi_xy(&r_mpi_var, sp);
+    GKRVerifierHelper::set_r_mpi_xy(&challenge.r_mpi, sp);
 
     let v_claim = C::ChallengeField::deserialize_from(&mut proof_reader).unwrap();
     log::trace!("v_claim: {:?}", v_claim);
@@ -159,5 +138,5 @@ fn sumcheck_verify_gkr_square_layer<C: GKRFieldConfig, T: Transcript<C::Challeng
 
     verified &= sum == C::ChallengeField::ZERO;
 
-    (verified, rx, r_simd_var, r_mpi_var, v_claim)
+    (verified, challenge, v_claim)
 }

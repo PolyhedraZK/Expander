@@ -1,6 +1,7 @@
 use std::iter;
 
 use arith::ExtensionField;
+use gkr_engine::Transcript;
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, GroupEncoding},
@@ -8,7 +9,6 @@ use halo2curves::{
     CurveAffine,
 };
 use itertools::izip;
-use transcript::Transcript;
 
 use crate::*;
 

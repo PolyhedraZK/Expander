@@ -3,12 +3,12 @@ use std::io::Cursor;
 
 use arith::{Field, SimdField};
 use ark_std::test_rng;
-use config::GKRConfig;
-use gkr_field_config::GKRFieldConfig;
+use gkr_engine::{
+    root_println, ExpanderPCS, FieldEngine, GKREngine, MPIConfig, MPIEngine,
+    PolynomialCommitmentType, Transcript,
+};
 use mpi::ffi::ompi_win_t;
-use mpi_config::{root_println, MPIConfig};
 use serdes::ExpSerde;
-use transcript::Transcript;
 
 use crate::*;
 
@@ -20,7 +20,7 @@ pub struct StructureInfo {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct CircuitLayer<C: GKRFieldConfig> {
+pub struct CircuitLayer<C: FieldEngine> {
     pub input_var_num: usize,
     pub output_var_num: usize,
 
@@ -35,7 +35,7 @@ pub struct CircuitLayer<C: GKRFieldConfig> {
     pub structure_info: StructureInfo,
 }
 
-impl<C: GKRFieldConfig> CircuitLayer<C> {
+impl<C: FieldEngine> CircuitLayer<C> {
     #[inline]
     pub fn evaluate(
         &self,
@@ -119,7 +119,7 @@ impl<C: GKRFieldConfig> CircuitLayer<C> {
 }
 
 #[derive(Debug, Default)]
-pub struct Circuit<C: GKRFieldConfig> {
+pub struct Circuit<C: FieldEngine> {
     pub layers: Vec<CircuitLayer<C>>,
     pub public_input: Vec<C::SimdCircuitField>,
     pub expected_num_output_zeros: usize,
@@ -128,7 +128,7 @@ pub struct Circuit<C: GKRFieldConfig> {
     pub rnd_coefs: Vec<*mut C::CircuitField>, // unsafe
 }
 
-impl<C: GKRFieldConfig> Clone for Circuit<C> {
+impl<C: FieldEngine> Clone for Circuit<C> {
     fn clone(&self) -> Circuit<C> {
         let mut ret = Circuit::<C> {
             layers: self.layers.clone(),
@@ -146,12 +146,12 @@ impl<C: GKRFieldConfig> Clone for Circuit<C> {
     }
 }
 
-unsafe impl<C> Send for Circuit<C> where C: GKRFieldConfig {}
+unsafe impl<C> Send for Circuit<C> where C: FieldEngine {}
 
-impl<C: GKRFieldConfig> Circuit<C> {
+impl<C: FieldEngine> Circuit<C> {
     // Load a circuit from a file and flatten it
     // Used for verifier
-    pub fn verifier_load_circuit<Cfg: GKRConfig<FieldConfig = C>>(filename: &str) -> Self {
+    pub fn verifier_load_circuit<Cfg: GKREngine<FieldConfig = C>>(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
         let mut c = rc.flatten::<Cfg>();
         c.pre_process_gkr::<Cfg>();
@@ -162,7 +162,7 @@ impl<C: GKRFieldConfig> Circuit<C> {
     // This avoids the overhead of shared memory
     // No need to call discard_control_of_shared_mem() and free_shared_mem(window) after this
     #[inline(always)]
-    pub fn single_thread_prover_load_circuit<Cfg: GKRConfig<FieldConfig = C>>(
+    pub fn single_thread_prover_load_circuit<Cfg: GKREngine<FieldConfig = C>>(
         filename: &str,
     ) -> Self {
         Self::verifier_load_circuit::<Cfg>(filename)
@@ -173,7 +173,7 @@ impl<C: GKRFieldConfig> Circuit<C> {
     // Used in the mpi case, ok if mpi_size = 1, but
     // circuit.discard_control_of_shared_mem() and mpi_config.free_shared_mem(window) should be
     // called before the end of the program
-    pub fn prover_load_circuit<Cfg: GKRConfig<FieldConfig = C>>(
+    pub fn prover_load_circuit<Cfg: GKREngine<FieldConfig = C>>(
         filename: &str,
         mpi_config: &MPIConfig,
     ) -> (Self, *mut ompi_win_t) {
@@ -328,7 +328,7 @@ impl<C: GKRFieldConfig> Circuit<C> {
     }
 }
 
-impl<C: GKRFieldConfig> Circuit<C> {
+impl<C: FieldEngine> Circuit<C> {
     pub fn log_input_size(&self) -> usize {
         self.layers[0].input_var_num
     }
@@ -378,17 +378,17 @@ impl<C: GKRFieldConfig> Circuit<C> {
         );
     }
 
-    pub fn pre_process_gkr<Cfg: GKRConfig<FieldConfig = C>>(&mut self) {
+    pub fn pre_process_gkr<Cfg: GKREngine<FieldConfig = C>>(&mut self) {
         self.identify_rnd_coefs();
         self.identify_structure_info();
 
         // If there will be two claims for the input
         // Introduce an extra relay layer before the input layer
         if !self.layers[0].structure_info.skip_sumcheck_phase_two {
-            match Cfg::PCS_TYPE {
+            match <Cfg::PCSConfig as ExpanderPCS<C>>::PCS_TYPE {
                 // Raw PCS costs nothing in opening, so no need to add relay layer
                 // But we can probably add it in the future for verifier's convenience
-                config::PolynomialCommitmentType::Raw => (),
+                PolynomialCommitmentType::Raw => (),
                 _ => self.add_input_relay_layer(),
             }
         }

@@ -2,9 +2,9 @@ use std::iter;
 
 use arith::{ExtensionField, Field, SimdField};
 use gf2::GF2;
+use gkr_engine::Transcript;
 use itertools::izip;
 use polynomials::{EqPolynomial, MultilinearExtension, RefMultiLinearPoly};
-use transcript::Transcript;
 
 use crate::{
     orion::{utils::*, OrionCommitment, OrionProof, OrionResult, OrionSRS, OrionScratchPad},
@@ -36,9 +36,13 @@ where
     assert_eq!(row_num % relative_pack_size, 0);
 
     assert_eq!(poly.hypercube_size() % relative_pack_size, 0);
-    let packed_evals = pack_simd::<F, SimdF, ComPackF>(poly.hypercube_basis_ref());
+    let packed_evals_ref = unsafe {
+        let ptr = poly.hypercube_basis_ref().as_ptr();
+        let len = poly.hypercube_size() / relative_pack_size;
+        std::slice::from_raw_parts(ptr as *const ComPackF, len)
+    };
 
-    commit_encoded(pk, &packed_evals, scratch_pad, packed_rows, msg_size)
+    commit_encoded(pk, packed_evals_ref, scratch_pad, packed_rows, msg_size)
 }
 
 // NOTE: this implementation doesn't quite align with opening for
@@ -46,11 +50,11 @@ where
 // as this directly plug into GKR argument system.
 // In that context, there is no need to evaluate,
 // as evaluation statement can be reduced on the verifier side.
-pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF, T>(
+pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
     point: &[EvalF],
-    transcript: &mut T,
+    transcript: &mut impl Transcript<EvalF>,
     scratch_pad: &OrionScratchPad<F, ComPackF>,
 ) -> OrionProof<EvalF>
 where
@@ -58,7 +62,6 @@ where
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     let msg_size = {
         let num_vars = poly.num_vars() + SimdF::PACK_SIZE.ilog2() as usize;
@@ -113,12 +116,12 @@ where
     }
 }
 
-pub fn orion_verify_simd_field<F, SimdF, EvalF, ComPackF, T>(
+pub fn orion_verify_simd_field<F, SimdF, EvalF, ComPackF>(
     vk: &OrionSRS,
     commitment: &OrionCommitment,
     point: &[EvalF],
     evaluation: EvalF,
-    transcript: &mut T,
+    transcript: &mut impl Transcript<EvalF>,
     proof: &OrionProof<EvalF>,
 ) -> bool
 where
@@ -126,7 +129,6 @@ where
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     let (row_num, msg_size) = {
         let (row_field_elems, msg_size) = OrionSRS::evals_shape::<F>(point.len());

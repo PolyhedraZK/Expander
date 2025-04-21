@@ -40,6 +40,8 @@ pub trait Field:
     + Eq
     + PartialOrd
     + Ord
+    + Send
+    + Sync
 {
     /// name
     const NAME: &'static str;
