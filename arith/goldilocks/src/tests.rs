@@ -75,8 +75,10 @@ fn test_simd_field() {
 fn test_ext_field() {
     random_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
     random_extension_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
+    random_fft_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
     random_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
     random_extension_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
+    random_fft_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
     random_simd_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
     random_from_limbs_to_limbs_tests::<Goldilocks, GoldilocksExt2>("Goldilocks Ext2".to_string());
     random_from_limbs_to_limbs_tests::<Goldilocksx8, GoldilocksExt2x8>(

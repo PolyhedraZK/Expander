@@ -8,7 +8,7 @@ pub use traits::{FiatShamirBytesHash, FiatShamirFieldHasher, PoseidonStateTrait}
 mod mimc;
 pub use mimc::MiMC5FiatShamirHasher;
 
-mod poseidon;
+pub mod poseidon;
 pub use poseidon::PoseidonFiatShamirHasher;
 
 // byte hashers
