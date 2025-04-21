@@ -13,6 +13,7 @@ pub enum FieldType {
     BN254,
     GF2,
     Goldilocks,
+    BabyBear,
 }
 
 pub trait FieldEngine: Default + Debug + Clone + Send + Sync + PartialEq + 'static {
@@ -89,7 +90,6 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + PartialEq + 'stat
     ///
     /// This is more efficient than the generic implementation by avoiding
     /// unnecessary conversions between field types
-
     #[inline]
     fn eval_circuit_vals_at_challenge(
         evals: &[Self::SimdCircuitField],

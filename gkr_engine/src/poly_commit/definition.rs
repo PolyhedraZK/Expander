@@ -14,30 +14,42 @@ pub trait StructuredReferenceString {
     fn into_keys(self) -> (Self::PKey, Self::VKey);
 }
 
+pub trait PCSParams: Clone + Debug + Default + Send + Sync + 'static {
+    /// Infer number of variables (local variables w.r.t. SIMD elements) from PCS params
+    fn num_vars(&self) -> usize;
+}
+
+impl PCSParams for usize {
+    fn num_vars(&self) -> usize {
+        *self
+    }
+}
+
 pub trait ExpanderPCS<F: FieldEngine> {
     const NAME: &'static str;
 
     const PCS_TYPE: PolynomialCommitmentType;
 
-    type Params: Clone + Debug + Default + Send + Sync + 'static;
+    type Params: PCSParams;
     type ScratchPad: Clone + Debug + Default + Send + ExpSerde + Sync;
 
     type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString + Send + Sync;
     type Commitment: Clone + Debug + Default + ExpSerde;
     type Opening: Clone + Debug + Default + ExpSerde;
 
-    /// Minimum number of variables supported in this PCS implementation,
-    /// that such constraint exists for PCSs like Orion,
-    /// but for Raw and Hyrax, polys of any size works.
-    const MINIMUM_NUM_VARS: usize = 0;
-
     /// Generate a random structured reference string (SRS) for testing purposes.
-    /// Each process should return the SAME GLOBAL SRS.
+    /// Each process should return the SRS share used for its committing and opening.
+    ///
+    /// Additionally, it returns a calibrated number of variable for polynomial,
+    /// that the PCS might need to accept a polynomial of extended length.
+    ///
+    /// NOTE(HS) the calibrated number of variables refers to the local SIMD variables
+    /// rather than the base field elements.
     fn gen_srs_for_testing(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl RngCore,
-    ) -> Self::SRS;
+    ) -> (Self::SRS, usize);
 
     /// n_input_vars is with respect to the multilinear poly on each machine in MPI,
     /// also ignore the number of variables stacked in the SIMD field.

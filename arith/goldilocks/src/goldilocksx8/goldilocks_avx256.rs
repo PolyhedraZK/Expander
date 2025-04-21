@@ -13,7 +13,7 @@ use rand::Rng;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::{Goldilocks, EPSILON, GOLDILOCKS_MOD};
+use crate::{goldilocks::p2_instructions, Goldilocks, EPSILON, GOLDILOCKS_MOD};
 
 /// Number of Goldilocks elements in [__m256i; 2] elements
 const GOLDILOCKS_PACK_SIZE: usize = 8;
@@ -55,15 +55,11 @@ impl ExpSerde for AVXGoldilocks {
 
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut data0 = [0; 32];
-        let mut data1 = [0; 32];
-        reader.read_exact(&mut data0)?;
-        reader.read_exact(&mut data1)?;
-        unsafe {
-            let v0 = transmute::<[u8; 32], __m256i>(data0);
-            let v1 = transmute::<[u8; 32], __m256i>(data1);
-            Ok(Self { v: [v0, v1] })
-        }
+        let mut data = [0u8; Self::SERIALIZED_SIZE];
+        reader.read_exact(&mut data)?;
+        Ok(AVXGoldilocks {
+            v: unsafe { transmute::<[u8; Self::SERIALIZED_SIZE], [__m256i; 2]>(data) },
+        })
     }
 }
 
@@ -255,6 +251,17 @@ impl SimdField for AVXGoldilocks {
         ret.extend_from_slice(&ret0);
         ret.extend_from_slice(&ret1);
         ret
+    }
+
+    #[inline(always)]
+    fn horizontal_sum(&self) -> Self::Scalar {
+        let mut temp: u128 = 0;
+        let vars0 = unsafe { transmute::<__m256i, [Self::Scalar; 4]>(self.v[0]) };
+        let vars1 = unsafe { transmute::<__m256i, [Self::Scalar; 4]>(self.v[1]) };
+        vars0.iter().for_each(|c| temp += c.v as u128);
+        vars1.iter().for_each(|c| temp += c.v as u128);
+
+        p2_instructions::reduce128(temp)
     }
 }
 

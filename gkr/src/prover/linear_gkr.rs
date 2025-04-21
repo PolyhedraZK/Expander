@@ -4,7 +4,7 @@ use arith::Field;
 use circuit::Circuit;
 use gkr_engine::{
     ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
-    GKRScheme, MPIConfig, MPIEngine, Proof, StructuredReferenceString, Transcript,
+    GKRScheme, MPIConfig, MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
 };
 use polynomials::{MultilinearExtension, MutRefMultiLinearPoly};
 use serdes::ExpSerde;
@@ -96,16 +96,18 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         let commitment = {
             let original_input_vars = c.log_input_size();
             let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
-            if original_input_vars < Cfg::PCSConfig::MINIMUM_NUM_VARS {
+
+            let minimum_vars_for_pcs: usize = pcs_params.num_vars();
+            if original_input_vars < minimum_vars_for_pcs {
                 eprintln!(
 					"{} over {} has minimum supported local vars {}, but input poly has vars {}, pad to {} vars in commiting.",
 					Cfg::PCSConfig::NAME,
 					<Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
-					Cfg::PCSConfig::MINIMUM_NUM_VARS,
+					minimum_vars_for_pcs,
 					original_input_vars,
-					Cfg::PCSConfig::MINIMUM_NUM_VARS,
+					minimum_vars_for_pcs,
 				);
-                mle_ref.lift_to_n_vars(Cfg::PCSConfig::MINIMUM_NUM_VARS)
+                mle_ref.lift_to_n_vars(minimum_vars_for_pcs)
             }
 
             let commit = Cfg::PCSConfig::commit(
@@ -202,18 +204,20 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         transcript: &mut impl Transcript<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
     ) {
         let original_input_vars = inputs.num_vars();
-        if original_input_vars < Cfg::PCSConfig::MINIMUM_NUM_VARS {
+
+        let minimum_vars_for_pcs: usize = pcs_params.num_vars();
+        if original_input_vars < minimum_vars_for_pcs {
             eprintln!(
 				"{} over {} has minimum supported local vars {}, but input poly has vars {}, pad to {} vars in opening.",
 				Cfg::PCSConfig::NAME,
 				<Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
-				Cfg::PCSConfig::MINIMUM_NUM_VARS,
+				minimum_vars_for_pcs,
 				original_input_vars,
-				Cfg::PCSConfig::MINIMUM_NUM_VARS,
+				minimum_vars_for_pcs,
 			);
-            inputs.lift_to_n_vars(Cfg::PCSConfig::MINIMUM_NUM_VARS);
+            inputs.lift_to_n_vars(minimum_vars_for_pcs);
             open_at.rz.resize(
-                Cfg::PCSConfig::MINIMUM_NUM_VARS,
+                minimum_vars_for_pcs,
                 <Cfg::FieldConfig as FieldEngine>::ChallengeField::ZERO,
             )
         }

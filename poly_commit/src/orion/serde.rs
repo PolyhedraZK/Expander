@@ -1,13 +1,13 @@
-use std::{
-    io::{Read, Write},
-    marker::PhantomData,
-};
+use std::io::{Read, Write};
 
-use arith::{Field, SimdField};
+use arith::Field;
 use serdes::{ExpSerde, SerdeResult};
+use tree::Node;
 
 use crate::orion::{
-    linear_code::*,
+    linear_code::{
+        DirectedNeighboring, OrionCode, OrionExpanderGraph, OrionExpanderGraphPositioned,
+    },
     utils::{OrionProof, OrionSRS, OrionScratchPad},
 };
 
@@ -24,8 +24,7 @@ impl ExpSerde for OrionExpanderGraph {
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let l_vertices_size = usize::deserialize_from(&mut reader)?;
         let r_vertices_size = usize::deserialize_from(&mut reader)?;
-        let neighborings: Vec<DirectedNeighboring> =
-            <Vec<DirectedNeighboring> as ExpSerde>::deserialize_from(&mut reader)?;
+        let neighborings: Vec<DirectedNeighboring> = Vec::deserialize_from(&mut reader)?;
         Ok(Self {
             l_vertices_size,
             r_vertices_size,
@@ -75,10 +74,8 @@ impl ExpSerde for OrionCode {
         let hamming_weight = f64::deserialize_from(&mut reader)?;
         let msg_len = usize::deserialize_from(&mut reader)?;
         let codeword_len = usize::deserialize_from(&mut reader)?;
-        let g0s: Vec<OrionExpanderGraphPositioned> =
-            <Vec<OrionExpanderGraphPositioned> as ExpSerde>::deserialize_from(&mut reader)?;
-        let g1s: Vec<OrionExpanderGraphPositioned> =
-            <Vec<OrionExpanderGraphPositioned> as ExpSerde>::deserialize_from(&mut reader)?;
+        let g0s: Vec<OrionExpanderGraphPositioned> = Vec::deserialize_from(&mut reader)?;
+        let g1s: Vec<OrionExpanderGraphPositioned> = Vec::deserialize_from(&mut reader)?;
         Ok(Self {
             hamming_weight,
             msg_len,
@@ -94,15 +91,18 @@ impl ExpSerde for OrionSRS {
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.num_vars.serialize_into(&mut writer)?;
+        self.num_leaves_per_mt_query.serialize_into(&mut writer)?;
         self.code_instance.serialize_into(&mut writer)?;
         Ok(())
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let num_variables = usize::deserialize_from(&mut reader)?;
+        let num_leaves_per_mt_query = usize::deserialize_from(&mut reader)?;
         let code_instance = OrionCode::deserialize_from(&mut reader)?;
         Ok(Self {
             num_vars: num_variables,
+            num_leaves_per_mt_query,
             code_instance,
         })
     }
@@ -115,35 +115,40 @@ impl<F: Field> ExpSerde for OrionProof<F> {
         self.eval_row.serialize_into(&mut writer)?;
         self.proximity_rows.serialize_into(&mut writer)?;
         self.query_openings.serialize_into(&mut writer)?;
+        self.merkle_cap.serialize_into(&mut writer)?;
         Ok(())
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let eval_row: Vec<F> = <Vec<F> as ExpSerde>::deserialize_from(&mut reader)?;
-        let proximity_rows: Vec<Vec<F>> = <Vec<Vec<F>> as ExpSerde>::deserialize_from(&mut reader)?;
-        let query_openings: Vec<tree::RangePath> =
-            <Vec<tree::RangePath> as ExpSerde>::deserialize_from(&mut reader)?;
+        let eval_row: Vec<F> = Vec::deserialize_from(&mut reader)?;
+        let proximity_rows: Vec<Vec<F>> = Vec::deserialize_from(&mut reader)?;
+        let query_openings: Vec<tree::RangePath> = Vec::deserialize_from(&mut reader)?;
+        let merkle_cap: Vec<Node> = Vec::deserialize_from(&mut reader)?;
         Ok(OrionProof {
             eval_row,
             proximity_rows,
             query_openings,
+            merkle_cap,
         })
     }
 }
 
-impl<F: Field, ComPackF: SimdField<Scalar = F>> ExpSerde for OrionScratchPad<F, ComPackF> {
+impl ExpSerde for OrionScratchPad {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
-    fn serialize_into<W: std::io::Write>(&self, writer: W) -> SerdeResult<()> {
-        self.interleaved_alphabet_commitment.serialize_into(writer)
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
+        self.interleaved_alphabet_commitment
+            .serialize_into(&mut writer)?;
+        self.merkle_cap.serialize_into(&mut writer)
     }
 
-    fn deserialize_from<R: std::io::Read>(reader: R) -> SerdeResult<Self> {
-        let interleaved_alphabet_commitment = tree::Tree::deserialize_from(reader)?;
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
+        let interleaved_alphabet_commitment = tree::Tree::deserialize_from(&mut reader)?;
+        let merkle_cap: Vec<Node> = Vec::deserialize_from(&mut reader)?;
 
         Ok(Self {
             interleaved_alphabet_commitment,
-            _phantom: PhantomData,
+            merkle_cap,
         })
     }
 }

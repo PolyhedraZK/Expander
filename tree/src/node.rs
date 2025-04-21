@@ -1,6 +1,6 @@
 use std::{fmt, fmt::Display};
 
-use sha2::{Digest, Sha512_256};
+use tiny_keccak::{Hasher, Keccak};
 
 use crate::LEAF_HASH_BYTES;
 
@@ -25,7 +25,7 @@ impl Node {
 
     /// Computes the hash of two child nodes to create a parent node.
     ///
-    /// This function uses SHA-512 for hashing and takes the first 32 bytes of the result.
+    /// This function uses Keccak for hashing and takes the first 32 bytes of the result.
     ///
     /// # Arguments
     ///
@@ -37,13 +37,14 @@ impl Node {
     /// A new Node containing the hash of the two input nodes.
     #[inline]
     pub fn node_hash(left: &Node, right: &Node) -> Node {
-        let mut hasher = Sha512_256::new();
-        hasher.update(left.data);
-        hasher.update(right.data);
-        let result = hasher.finalize();
-        Node {
-            data: result.into(),
-        }
+        let mut hasher = Keccak::v256();
+        hasher.update(&left.data);
+        hasher.update(&right.data);
+
+        let mut result = [0u8; LEAF_HASH_BYTES];
+        hasher.finalize(&mut result);
+
+        Node { data: result }
     }
 
     /// Returns the data of the node as a slice of bytes.
