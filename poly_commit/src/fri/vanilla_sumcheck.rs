@@ -7,7 +7,7 @@ pub(crate) fn vanilla_sumcheck_degree_2_mul_step_prove<F: ExtensionField>(
     poly0: &mut impl MutableMultilinearExtension<F>,
     poly1: &mut impl MutableMultilinearExtension<F>,
     fs_transcript: &mut impl Transcript<F>,
-) -> (UnivariatePoly<F>, F, F) {
+) -> (UnivariatePoly<F>, F) {
     assert_eq!(poly0.hypercube_size(), poly1.hypercube_size());
 
     let half_hypercube = poly0.hypercube_size() >> 1;
@@ -28,8 +28,8 @@ pub(crate) fn vanilla_sumcheck_degree_2_mul_step_prove<F: ExtensionField>(
         uni_evals[2] += eval_at_2;
     });
 
-    let round_univariate_poly = UnivariatePoly::from_evals(&uni_evals);
-    round_univariate_poly
+    let uni_poly = UnivariatePoly::from_evals(&uni_evals);
+    uni_poly
         .coeffs
         .iter()
         .for_each(|f| fs_transcript.append_field_element(f));
@@ -38,34 +38,31 @@ pub(crate) fn vanilla_sumcheck_degree_2_mul_step_prove<F: ExtensionField>(
     poly0.fix_top_variable(r_combine);
     poly1.fix_top_variable(r_combine);
 
-    let round_univariate_poly_at_r = round_univariate_poly.evaluate(r_combine);
-
-    (round_univariate_poly, r_combine, round_univariate_poly_at_r)
+    (uni_poly, r_combine)
 }
 
 #[allow(unused)]
 pub(crate) fn vanilla_sumcheck_degree_2_mul_step_verify<F: ExtensionField>(
-    prev_claim: &mut F,
-    round_response: &UnivariatePoly<F>,
+    claim: &mut F,
+    uni_poly: &UnivariatePoly<F>,
     fs_transcript: &mut impl Transcript<F>,
 ) -> Option<F> {
-    if round_response.coeffs.len() != 3 {
+    if uni_poly.coeffs.len() != 3 {
         return None;
     }
 
-    let presumed_prev_hypercube_sum =
-        round_response.coeffs.iter().sum::<F>() + round_response.coeffs[0];
-    if presumed_prev_hypercube_sum != *prev_claim {
+    let presumed_prev_claim = uni_poly.coeffs.iter().sum::<F>() + uni_poly.coeffs[0];
+    if presumed_prev_claim != *claim {
         return None;
     }
 
-    round_response
+    uni_poly
         .coeffs
         .iter()
         .for_each(|f| fs_transcript.append_field_element(f));
 
     let r_combine = fs_transcript.generate_challenge_field_element();
-    *prev_claim = round_response.evaluate(r_combine);
+    *claim = uni_poly.evaluate(r_combine);
 
     Some(r_combine)
 }
@@ -95,35 +92,24 @@ mod vanilla_sumcheck_degree_2_test {
         let mut fs_transcript_p = BytesHashTranscript::<F, Keccak256hasher>::new();
         let mut fs_transcript_v = fs_transcript_p.clone();
 
-        let mut p_claim = claim.clone();
-        let sumcheck_resp: Vec<(UnivariatePoly<F>, F, F)> = (0..num_vars)
+        let sumcheck_resp: Vec<(UnivariatePoly<F>, F)> = (0..num_vars)
             .map(|_| {
-                let (univ, r, next_claim) = vanilla_sumcheck_degree_2_mul_step_prove(
+                vanilla_sumcheck_degree_2_mul_step_prove(
                     &mut multilinear_basis,
                     &mut eq_multilinear,
                     &mut fs_transcript_p,
-                );
-
-                p_claim = next_claim;
-
-                (univ, r, next_claim)
+                )
             })
             .collect();
 
         let mut v_claim = claim.clone();
-        sumcheck_resp
-            .iter()
-            .for_each(|(univ, expected_r, next_claim)| {
-                let fold_var = vanilla_sumcheck_degree_2_mul_step_verify(
-                    &mut v_claim,
-                    univ,
-                    &mut fs_transcript_v,
-                );
-                assert!(fold_var.is_some());
+        sumcheck_resp.iter().for_each(|(univ, expected_r)| {
+            let fold_var =
+                vanilla_sumcheck_degree_2_mul_step_verify(&mut v_claim, univ, &mut fs_transcript_v);
+            assert!(fold_var.is_some());
 
-                assert_eq!(*expected_r, fold_var.unwrap());
-                assert_eq!(v_claim, *next_claim);
-            });
+            assert_eq!(*expected_r, fold_var.unwrap());
+        });
     }
 
     #[test]

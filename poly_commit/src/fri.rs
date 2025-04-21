@@ -3,7 +3,7 @@ pub use utils::{FRICommitment, FRIScratchPad};
 
 mod vanilla_sumcheck;
 
-// mod basefold_impl;
+mod basefold_impl;
 
-// #[cfg(test)]
-// mod basefold_test;
+#[cfg(test)]
+mod basefold_test;

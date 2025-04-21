@@ -1,5 +1,6 @@
-use arith::{ExtensionField, FFTField};
+use arith::{bit_reverse_swap, ExtensionField, FFTField};
 use gkr_engine::Transcript;
+use itertools::izip;
 use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension, UnivariatePoly};
 use serdes::ExpSerde;
 use tree::Tree;
@@ -13,21 +14,22 @@ use crate::{
 
 const LOG_CODE_RATE: usize = 2;
 
-const MERGE_POLY_DEG: usize = 2;
-
 const QUERY_COMPLEXITY: usize = 50;
 
 #[allow(unused)]
-fn fri_commit<F: FFTField>(coeffs: &[F], scratch_pad: &mut FRIScratchPad<F>) -> FRICommitment {
+pub(crate) fn fri_commit<F: FFTField>(
+    coeffs: &[F],
+    scratch_pad: &mut FRIScratchPad<F>,
+) -> FRICommitment {
     assert!(coeffs.len().is_power_of_two());
 
     let mut codeword = {
-        let mle = MultiLinearPoly::new(coeffs.to_vec());
-        mle.interpolate_over_hypercube()
+        let mut temp = coeffs.to_vec();
+        bit_reverse_swap(&mut temp);
+        temp.resize(coeffs.len() << LOG_CODE_RATE, F::ZERO);
+        F::fft_in_place(&mut temp);
+        temp
     };
-    codeword.resize(coeffs.len() << LOG_CODE_RATE, F::ZERO);
-
-    F::fft_in_place(&mut codeword);
 
     let leaves = copy_elems_to_leaves(&codeword);
     let merkle_tree = Tree::new_with_leaves(leaves);
@@ -40,9 +42,8 @@ fn fri_commit<F: FFTField>(coeffs: &[F], scratch_pad: &mut FRIScratchPad<F>) -> 
     commitment
 }
 
-/*
 #[allow(unused)]
-fn fri_open<F, ChallengeF>(
+pub(crate) fn fri_open<F, ChallengeF>(
     poly: &impl MultilinearExtension<F>,
     point: &[ChallengeF],
     fs_transcript: &mut impl Transcript<ChallengeF>,
@@ -51,67 +52,75 @@ fn fri_open<F, ChallengeF>(
     F: FFTField + ExpSerde,
     ChallengeF: ExtensionField<BaseField = F> + ExpSerde + FFTField,
 {
-    let shift_z_poly = MultiLinearPoly::new(EqPolynomial::build_eq_x_r(point));
+    let mut shift_z_poly = MultiLinearPoly::new(EqPolynomial::build_eq_x_r(point));
 
-    let ext_poly = MultiLinearPoly::new(
+    let mut ext_poly = MultiLinearPoly::new(
         poly.hypercube_basis_ref()
             .iter()
             .cloned()
             .map(From::from)
             .collect(),
     );
-    let merge_function = |x: &[ChallengeF]| x.iter().product::<ChallengeF>();
 
     let num_vars = poly.num_vars();
 
-    let mut sumcheck_polys: Vec<UnivariatePoly<ChallengeF>> = Vec::with_capacity(num_vars);
     let mut iopp_codewords: Vec<Vec<ChallengeF>> = Vec::with_capacity(num_vars);
     let mut iopp_oracles: Vec<tree::Tree> = Vec::with_capacity(num_vars);
 
-    // todo: merge this loop into the sumcheck protocol.
-    let rs = (0..num_vars)
-        .flat_map(|i| {
-            // NOTE: sumcheck a single step, r_i start from x_0 towards x_n
-            // TODO: this seems to sumcheck against a product of two polynomials.
-            // Try to use our own sumcheck instead
-            let (sc_univariate_poly_i, r_i, next_claim) = vanilla_sumcheck_degree_2_mul_step_prove(
+    let mut codeword: Vec<ChallengeF> = scratch_pad
+        .codeword
+        .iter()
+        .cloned()
+        .map(From::from)
+        .collect();
+
+    let mut generator = ChallengeF::two_adic_generator(point.len() + LOG_CODE_RATE);
+    let two_inv = ChallengeF::ONE.double().inv().unwrap();
+
+    let univ_polys: Vec<UnivariatePoly<ChallengeF>> = (0..num_vars)
+        .map(|i| {
+            let (uni_poly_i, r_i) = vanilla_sumcheck_degree_2_mul_step_prove(
                 &mut ext_poly,
                 &mut shift_z_poly,
                 fs_transcript,
             );
-            sumcheck_polys.push(sc_univariate_poly_i.uni_polys[0].clone());
-            drop(sc_univariate_poly_i);
 
-            let mut coeffs = sumcheck_poly_vec[0].interpolate_over_hypercube();
-            coeffs.resize(coeffs.len() << LOG_CODE_RATE, ChallengeF::ZERO);
-            ChallengeF::fft_in_place(&mut coeffs);
+            let next_codeword_len = codeword.len() / 2;
 
-            {
-                let leaves = copy_elems_to_leaves(&coeffs);
-                let merkle_tree = Tree::new_with_leaves(leaves);
-                iopp_oracles.push(merkle_tree)
-            };
+            let mut diag_inv = ChallengeF::ONE;
+            let one_minus_r_i = ChallengeF::ONE - r_i;
+            let generator_inv = generator.inv().unwrap();
 
-            iopp_codewords.push(coeffs.clone());
+            let (odd_alphabets, even_alphabets) = codeword.split_at_mut(next_codeword_len);
+            izip!(odd_alphabets, even_alphabets).for_each(|(o_i, e_i)| {
+                let o = (*o_i + *e_i) * two_inv;
+                let e = (*o_i - *e_i) * two_inv * diag_inv;
 
-            // println!("{}-th round: randomness: {:?}", i, rs);
-            println!("{}-th round: final evals: {:?}", i, next_claim);
-            r_i
+                *o_i = o * one_minus_r_i + e * r_i;
+                diag_inv *= generator_inv;
+            });
+            generator = generator.square();
+
+            codeword.resize(next_codeword_len, ChallengeF::ZERO);
+
+            let leaves = copy_elems_to_leaves(&codeword);
+            let merkle_tree = Tree::new_with_leaves(leaves);
+            fs_transcript.append_u8_slice(merkle_tree.root().as_bytes());
+
+            iopp_oracles.push(merkle_tree);
+            iopp_codewords.push(codeword.clone());
+
+            uni_poly_i
         })
-        .collect::<Vec<ChallengeF>>();
+        .collect();
 
-    println!("prover randomness: {:?}", rs);
+    dbg!(ext_poly.coeffs[0]);
+    dbg!(&iopp_codewords.last());
+    assert_eq!(ext_poly.coeffs[0], iopp_codewords.last().unwrap()[0]);
 
-    let eq_zr_2 = EqPolynomial::eq_vec(&rs, point);
-    println!("prover eq(z, r): {:?}", eq_zr_2);
+    // TODO(HS) revamped up to here
 
-    let mut scratch = vec![ChallengeF::ZERO; poly.hypercube_size()];
-
-    let poly_r = ext_poly.evaluate_with_buffer(&rs, &mut scratch);
-    println!("prover f(r): {:?}", poly_r);
-
-    let poly_z = ext_poly.evaluate_with_buffer(point, &mut scratch);
-    println!("prover f(z): {:?}", poly_z);
+    return;
 
     let iopp_last_oracle_message = iopp_oracles[iopp_oracles.len() - 1].leaves.clone();
     let mut iopp_challenges = fs_transcript.generate_challenge_index_vector(QUERY_COMPLEXITY);
@@ -180,6 +189,7 @@ fn fri_open<F, ChallengeF>(
     */
 }
 
+/*
 #[allow(unused)]
 fn fri_verify<F, ChallengeF>(
     commitment: &FRICommitment,
