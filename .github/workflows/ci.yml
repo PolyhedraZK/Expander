@@ -87,15 +87,25 @@ jobs:
       - name: Download test data
         run: cargo run --bin=dev-setup --release
 
-      - name: Build project
+      - name: Build project on non MacOS machines
+        if: matrix.os != 'macos-latest'
         run: cargo build --all-features --release
 
-      - name: Run unit tests
+      - name: Build project on MacOS machines
+        if: matrix.os == 'macos-latest'
+        run: cargo build --release
+
+      - name: Run unit tests on non MacOS machines
+        if: matrix.os != 'macos-latest'
         run: cargo test --all-features --release --workspace
+
+      - name: Run unit tests on MacOS machines
+        if: matrix.os == 'macos-latest'
+        run: cargo test --release --workspace
 
       # It requires ~28GB of memory, which does not work on 'ubuntu-latest'.
       - name: Run E2E tests
-        if: matrix.os != 'ubuntu-latest' 
+        if: matrix.os != 'ubuntu-latest'
         run: ./scripts/test_recursion.py
 
       - name: Run benchmarks on Github Workflows
