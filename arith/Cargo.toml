@@ -15,6 +15,9 @@ tynm.workspace = true
 
 serdes = { path = "../serdes" }
 
+[features]
+halo2_asm = [ "halo2curves/asm" ]
+
 [[bench]]
 name = "fr"
 harness = false
