@@ -829,6 +829,7 @@ dependencies = [
  "gf2_128",
  "gkr_engine",
  "gkr_hashers",
+ "gkr_iop",
  "goldilocks",
  "halo2curves",
  "log",
@@ -877,6 +878,20 @@ dependencies = [
  "serdes",
  "sha2",
  "tiny-keccak",
+]
+
+[[package]]
+name = "gkr_iop"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std",
+ "circuit",
+ "gkr_engine",
+ "log",
+ "serdes",
+ "sumcheck",
+ "utils",
 ]
 
 [[package]]
@@ -2130,6 +2145,7 @@ dependencies = [
  "gkr_engine",
  "log",
  "polynomials",
+ "serdes",
  "transcript",
  "utils",
 ]
