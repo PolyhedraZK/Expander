@@ -1,5 +1,5 @@
 use arith::{ExtensionField, SimdField};
-use gkr_engine::{MPIConfig, MPIEngine, Transcript};
+use gkr_engine::{MPIEngine, Transcript};
 
 #[inline(always)]
 /// Input

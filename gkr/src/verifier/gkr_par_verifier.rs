@@ -59,7 +59,7 @@ pub fn gkr_par_verifier_verify<F: FieldEngine, T: Transcript<F::ChallengeField>>
     let timer = Timer::new("gkr_par_verifier_verify", true);
     let sp = VerifierScratchPad::<F>::new(circuit, proving_time_mpi_size);
 
-    let mut challenge = ExpanderSingleVarChallenge::sample_from_transcript(
+    let challenge = ExpanderSingleVarChallenge::sample_from_transcript(
         transcript,
         circuit.layers.last().unwrap().output_var_num,
         proving_time_mpi_size,

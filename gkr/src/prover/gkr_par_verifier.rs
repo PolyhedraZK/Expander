@@ -2,7 +2,6 @@ use circuit::Circuit;
 use gkr_engine::{
     ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, Transcript,
 };
-use rayon::vec;
 use serdes::ExpSerde;
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use utils::timer::Timer;

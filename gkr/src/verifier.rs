@@ -5,16 +5,12 @@ use std::{
 };
 
 use arith::Field;
-use circuit::{Circuit, CircuitLayer};
+use circuit::Circuit;
 use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
     GKRScheme, MPIConfig, MPIEngine, Proof, StructuredReferenceString, Transcript,
 };
 use serdes::ExpSerde;
-use sumcheck::{
-    GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DEGREE,
-    SUMCHECK_GKR_SQUARE_DEGREE,
-};
 use transcript::transcript_verifier_sync;
 use utils::timer::Timer;
 

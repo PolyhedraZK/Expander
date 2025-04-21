@@ -138,7 +138,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         var_idx: usize,
         degree: usize,
     ) -> [F::ChallengeField; 4] {
-        assert!(var_idx < self.mpi_var_helper.var_num as usize);
+        assert!(var_idx < self.mpi_var_helper.var_num);
         self.mpi_var_helper.poly_eval_at(
             var_idx,
             degree,
