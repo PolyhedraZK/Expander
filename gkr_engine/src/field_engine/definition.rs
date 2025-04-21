@@ -136,7 +136,7 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + PartialEq + 'stat
         // x_mpi: &[Self::ChallengeField],
         scratch_field: &mut [Self::Field],
         scratch_challenge_field: &mut [Self::ChallengeField],
-        mpi_config: & impl MPIEngine,
+        mpi_config: &impl MPIEngine,
     ) -> Self::ChallengeField {
         assert!(
             scratch_challenge_field.len()

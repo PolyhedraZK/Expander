@@ -71,7 +71,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         let mut buffer = vec![];
         commitment.serialize_into(&mut buffer).unwrap();
 
-        // this function will iteratively hash the commitment, and append the 
+        // this function will iteratively hash the commitment, and append the
         // final hash output to the transcript.
         // this introduces a decent circuit depth for the FS transform.
         //
@@ -98,7 +98,13 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                     &mut cursor,
                 );
 
-                (gkr_verified, challenge.challenge_x(), challenge.challenge_y(), claim_x, claim_y)
+                (
+                    gkr_verified,
+                    challenge.challenge_x(),
+                    challenge.challenge_y(),
+                    claim_x,
+                    claim_y,
+                )
             }
             GKRScheme::GkrSquare => {
                 let (gkr_verified, challenge_x, claim_x) = gkr_square_verify(
@@ -113,12 +119,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                 (gkr_verified, challenge_x, None, claim_x, None)
             }
             GKRScheme::GKRParVerifier => {
-                let (
-                    gkr_verified,
-                    challenge,
-                    claim_x,
-                    claim_y,
-                ) = gkr_par_verifier_verify(
+                let (gkr_verified, challenge, claim_x, claim_y) = gkr_par_verifier_verify(
                     proving_time_mpi_size,
                     circuit,
                     public_input,
@@ -127,7 +128,13 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                     &mut cursor,
                 );
 
-                (gkr_verified, challenge.challenge_x(), challenge.challenge_y(), claim_x, claim_y)
+                (
+                    gkr_verified,
+                    challenge.challenge_x(),
+                    challenge.challenge_y(),
+                    claim_x,
+                    claim_y,
+                )
             }
         };
         log::info!("GKR verification: {}", verified);

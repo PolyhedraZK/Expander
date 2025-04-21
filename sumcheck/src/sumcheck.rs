@@ -32,10 +32,7 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>
     sp: &mut ProverScratchPad<F>,
     mpi_config: &impl MPIEngine,
     is_output_layer: bool,
-) -> (
-    F::ChallengeField,
-    Option<F::ChallengeField>,
-){
+) -> (F::ChallengeField, Option<F::ChallengeField>) {
     let mut helper =
         SumcheckGkrVanillaHelper::new(layer, challenge, alpha, sp, mpi_config, is_output_layer);
 
@@ -52,7 +49,8 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>
 
     helper.prepare_simd_var_vals();
     for i_var in 0..helper.simd_var_num {
-        let evals = helper.poly_evals_at_r_simd_var(i_var, SUMCHECK_GKR_SIMD_MPI_DEGREE, mpi_config);
+        let evals =
+            helper.poly_evals_at_r_simd_var(i_var, SUMCHECK_GKR_SIMD_MPI_DEGREE, mpi_config);
         let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
         helper.receive_r_simd_var(i_var, r);
     }

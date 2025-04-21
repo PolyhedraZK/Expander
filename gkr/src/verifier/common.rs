@@ -61,25 +61,16 @@ pub fn sumcheck_verify_gkr_layer<F: FieldEngine>(
     transcript: &mut impl Transcript<F::ChallengeField>,
     sp: &mut VerifierScratchPad<F>,
     is_output_layer: bool,
-) -> bool 
-{
+) -> bool {
     assert_eq!(challenge.rz_1.is_none(), claimed_v1.is_none());
     assert_eq!(challenge.rz_1.is_none(), alpha.is_none());
 
     match gkr_scheme {
         GKRScheme::GKRParVerifier => {
-            GKRVerifierHelper::prepare_layer_non_sequential(
-                layer, &alpha, challenge, sp,
-            );
+            GKRVerifierHelper::prepare_layer_non_sequential(layer, &alpha, challenge, sp);
         }
         _ => {
-            GKRVerifierHelper::prepare_layer(
-                layer,
-                &alpha,
-                challenge,
-                sp,
-                is_output_layer,
-            );
+            GKRVerifierHelper::prepare_layer(layer, &alpha, challenge, sp, is_output_layer);
         }
     }
 

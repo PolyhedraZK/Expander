@@ -141,21 +141,14 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         transcript_root_broadcast(&mut transcript, &self.mpi_config);
 
         let (claimed_v, challenge) = match Cfg::SCHEME {
-            GKRScheme::Vanilla => {
-                gkr_prove(c, &mut self.sp, &mut transcript, &self.mpi_config)
-            }
+            GKRScheme::Vanilla => gkr_prove(c, &mut self.sp, &mut transcript, &self.mpi_config),
             GKRScheme::GkrSquare => {
                 let (claimed_v, challenge_x) =
                     gkr_square_prove(c, &mut self.sp, &mut transcript, &self.mpi_config);
                 (claimed_v, ExpanderDualVarChallenge::from(&challenge_x))
             }
             GKRScheme::GKRParVerifier => {
-                gkr_par_verifier_prove(
-                    c,
-                    &mut self.sp,
-                    &mut transcript,
-                    &self.mpi_config,
-                )
+                gkr_par_verifier_prove(c, &mut self.sp, &mut transcript, &self.mpi_config)
             }
         };
         gkr_prove_timer.stop();

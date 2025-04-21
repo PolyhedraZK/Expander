@@ -1,7 +1,10 @@
 //! This module implements the core GKR IOP.
 
 use circuit::Circuit;
-use gkr_engine::{ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine, Transcript};
+use gkr_engine::{
+    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
+    Transcript,
+};
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use utils::timer::Timer;
 
@@ -14,11 +17,13 @@ pub fn gkr_prove<F: FieldEngine>(
 ) -> (F::ChallengeField, ExpanderDualVarChallenge<F>) {
     let layer_num = circuit.layers.len();
 
-    let mut challenge: ExpanderDualVarChallenge<F> = ExpanderSingleVarChallenge::sample_from_transcript(
-        transcript,
-        circuit.layers.last().unwrap().output_var_num,
-        mpi_config.world_size(),
-    ).into();
+    let mut challenge: ExpanderDualVarChallenge<F> =
+        ExpanderSingleVarChallenge::sample_from_transcript(
+            transcript,
+            circuit.layers.last().unwrap().output_var_num,
+            mpi_config.world_size(),
+        )
+        .into();
 
     let mut alpha = None;
 

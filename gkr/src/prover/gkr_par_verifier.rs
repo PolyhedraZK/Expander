@@ -1,5 +1,7 @@
 use circuit::Circuit;
-use gkr_engine::{ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, Transcript};
+use gkr_engine::{
+    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, Transcript,
+};
 use rayon::vec;
 use serdes::ExpSerde;
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
@@ -74,28 +76,26 @@ pub fn gkr_par_verifier_prove<F: FieldEngine>(
     sp: &mut ProverScratchPad<F>,
     transcript: &mut impl Transcript<F::ChallengeField>,
     mpi_config: &impl MPIEngine,
-) -> (
-    F::ChallengeField,
-    ExpanderDualVarChallenge<F>,
-) {
+) -> (F::ChallengeField, ExpanderDualVarChallenge<F>) {
     let layer_num = circuit.layers.len();
 
-    let mut challenge: ExpanderDualVarChallenge<F> = ExpanderSingleVarChallenge::sample_from_transcript(
-        transcript,
-        circuit.layers.last().unwrap().output_var_num,
-        mpi_config.world_size(),
-    ).into();  
+    let mut challenge: ExpanderDualVarChallenge<F> =
+        ExpanderSingleVarChallenge::sample_from_transcript(
+            transcript,
+            circuit.layers.last().unwrap().output_var_num,
+            mpi_config.world_size(),
+        )
+        .into();
     let mut alpha = None;
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
-    let claimed_v =
-        F::collectively_eval_circuit_vals_at_expander_challenge(
-            output_vals,
-            &challenge.challenge_x(),
-            &mut sp.hg_evals,
-            &mut sp.eq_evals_first_half, // confusing name here..
-            mpi_config,
-        );
+    let claimed_v = F::collectively_eval_circuit_vals_at_expander_challenge(
+        output_vals,
+        &challenge.challenge_x(),
+        &mut sp.hg_evals,
+        &mut sp.eq_evals_first_half, // confusing name here..
+        mpi_config,
+    );
 
     let mut claimed_v0 = claimed_v;
     let mut claimed_v1 = None;

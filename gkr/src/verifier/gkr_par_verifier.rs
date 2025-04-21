@@ -5,7 +5,9 @@ use std::{
 
 use arith::Field;
 use circuit::{Circuit, CircuitLayer};
-use gkr_engine::{ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, GKRScheme, Transcript};
+use gkr_engine::{
+    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, GKRScheme, Transcript,
+};
 use rayon::prelude::*;
 use serdes::ExpSerde;
 use sumcheck::{VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DEGREE};
@@ -61,7 +63,8 @@ pub fn gkr_par_verifier_verify<F: FieldEngine, T: Transcript<F::ChallengeField>>
         transcript,
         circuit.layers.last().unwrap().output_var_num,
         proving_time_mpi_size,
-    ).into();
+    )
+    .into();
 
     let transcript_state = transcript.hash_and_return_state();
     let verification_exec_units = parse_proof(circuit, &mut proof_reader, proving_time_mpi_size);
@@ -83,21 +86,20 @@ pub fn gkr_par_verifier_verify<F: FieldEngine, T: Transcript<F::ChallengeField>>
             local_transcript.set_state(&state.transcript_state);
 
             let mut cursor = Cursor::new(proof_bytes);
-            let verified =
-                sumcheck_verify_gkr_layer(
-                    GKRScheme::GKRParVerifier,
-                    proving_time_mpi_size,
-                    layer,
-                    public_input,
-                    &mut state.challenge,
-                    &mut state.claimed_v0,
-                    &mut state.claimed_v1,
-                    state.alpha,
-                    &mut cursor,
-                    &mut local_transcript,
-                    &mut sp,
-                    i == 0,
-                );
+            let verified = sumcheck_verify_gkr_layer(
+                GKRScheme::GKRParVerifier,
+                proving_time_mpi_size,
+                layer,
+                public_input,
+                &mut state.challenge,
+                &mut state.claimed_v0,
+                &mut state.claimed_v1,
+                state.alpha,
+                &mut cursor,
+                &mut local_transcript,
+                &mut sp,
+                i == 0,
+            );
 
             let alpha = if state.challenge.rz_1.is_some() {
                 Some(local_transcript.generate_challenge_field_element())

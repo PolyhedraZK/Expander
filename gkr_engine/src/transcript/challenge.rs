@@ -105,12 +105,10 @@ impl<F: FieldEngine> ExpanderDualVarChallenge<F> {
 
     #[inline]
     pub fn challenge_y(&self) -> Option<ExpanderSingleVarChallenge<F>> {
-        self.rz_1.as_ref().map(|rz_1| {
-            ExpanderSingleVarChallenge {
-                rz: rz_1.clone(),
-                r_simd: self.r_simd.clone(),
-                r_mpi: self.r_mpi.clone(),
-            }
+        self.rz_1.as_ref().map(|rz_1| ExpanderSingleVarChallenge {
+            rz: rz_1.clone(),
+            r_simd: self.r_simd.clone(),
+            r_mpi: self.r_mpi.clone(),
         })
     }
 
@@ -194,10 +192,6 @@ impl<F: FieldEngine> ExpSerde for ExpanderSingleVarChallenge<F> {
         let r_simd = Vec::<F::ChallengeField>::deserialize_from(&mut reader)?;
         let r_mpi = Vec::<F::ChallengeField>::deserialize_from(&mut reader)?;
 
-        Ok(Self {
-            rz,
-            r_simd,
-            r_mpi,
-        })
+        Ok(Self { rz, r_simd, r_mpi })
     }
 }

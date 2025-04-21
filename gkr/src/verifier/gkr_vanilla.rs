@@ -30,7 +30,8 @@ pub fn gkr_verify<F: FieldEngine>(
         transcript,
         circuit.layers.last().unwrap().output_var_num,
         proving_time_mpi_size,
-    ).into();
+    )
+    .into();
 
     let mut alpha = None;
     let mut claimed_v0 = *claimed_v;
