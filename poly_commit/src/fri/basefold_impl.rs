@@ -5,7 +5,9 @@ use serdes::ExpSerde;
 use tree::Tree;
 
 use crate::{
-    fri::{utils::copy_elems_to_leaves, vanilla_sumcheck::SumcheckInstanceProof},
+    fri::{
+        utils::copy_elems_to_leaves, vanilla_sumcheck::vanilla_sumcheck_degree_2_mul_step_prove,
+    },
     FRICommitment, FRIScratchPad,
 };
 
@@ -38,6 +40,7 @@ fn fri_commit<F: FFTField>(coeffs: &[F], scratch_pad: &mut FRIScratchPad<F>) -> 
     commitment
 }
 
+/*
 #[allow(unused)]
 fn fri_open<F, ChallengeF>(
     poly: &impl MultilinearExtension<F>,
@@ -57,7 +60,6 @@ fn fri_open<F, ChallengeF>(
             .map(From::from)
             .collect(),
     );
-    let mut sumcheck_poly_vec = vec![ext_poly.clone(), shift_z_poly];
     let merge_function = |x: &[ChallengeF]| x.iter().product::<ChallengeF>();
 
     let num_vars = poly.num_vars();
@@ -72,15 +74,11 @@ fn fri_open<F, ChallengeF>(
             // NOTE: sumcheck a single step, r_i start from x_0 towards x_n
             // TODO: this seems to sumcheck against a product of two polynomials.
             // Try to use our own sumcheck instead
-            let (sc_univariate_poly_i, rs, final_evals) =
-                SumcheckInstanceProof::<ChallengeF>::prove_arbitrary(
-                    &ChallengeF::ZERO,
-                    1,
-                    &mut sumcheck_poly_vec,
-                    merge_function,
-                    MERGE_POLY_DEG,
-                    fs_transcript,
-                );
+            let (sc_univariate_poly_i, r_i, next_claim) = vanilla_sumcheck_degree_2_mul_step_prove(
+                &mut ext_poly,
+                &mut shift_z_poly,
+                fs_transcript,
+            );
             sumcheck_polys.push(sc_univariate_poly_i.uni_polys[0].clone());
             drop(sc_univariate_poly_i);
 
@@ -97,8 +95,8 @@ fn fri_open<F, ChallengeF>(
             iopp_codewords.push(coeffs.clone());
 
             // println!("{}-th round: randomness: {:?}", i, rs);
-            println!("{}-th round: final evals: {:?}", i, final_evals);
-            rs
+            println!("{}-th round: final evals: {:?}", i, next_claim);
+            r_i
         })
         .collect::<Vec<ChallengeF>>();
 
@@ -193,3 +191,4 @@ fn fri_verify<F, ChallengeF>(
     ChallengeF: ExtensionField<BaseField = F>,
 {
 }
+*/

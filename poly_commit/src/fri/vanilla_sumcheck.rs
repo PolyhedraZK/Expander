@@ -1,190 +1,133 @@
-use core::panic;
-
-use arith::{ExtensionField, Field};
+use arith::ExtensionField;
 use gkr_engine::Transcript;
-use polynomials::{MultiLinearPoly, UnivariatePoly};
-use serdes::ExpSerde;
+use polynomials::{MutableMultilinearExtension, UnivariatePoly};
 
-#[derive(Debug, Clone)]
-pub(crate) struct SumcheckInstanceProof<F: Field> {
-    pub uni_polys: Vec<UnivariatePoly<F>>,
+#[allow(unused)]
+pub(crate) fn vanilla_sumcheck_degree_2_mul_step_prove<F: ExtensionField>(
+    poly0: &mut impl MutableMultilinearExtension<F>,
+    poly1: &mut impl MutableMultilinearExtension<F>,
+    fs_transcript: &mut impl Transcript<F>,
+) -> (UnivariatePoly<F>, F, F) {
+    assert_eq!(poly0.hypercube_size(), poly1.hypercube_size());
+
+    let half_hypercube = poly0.hypercube_size() >> 1;
+    let mut uni_evals = vec![F::ZERO; 3];
+
+    (0..half_hypercube).for_each(|i| {
+        let (p0v0, p1v0) = (poly0[i], poly1[i]);
+        let (p0v1, p1v1) = (poly0[i + half_hypercube], poly1[i + half_hypercube]);
+        let (p0v2, p1v2) = (p0v1.double() - p0v0, p1v1.double() - p1v0);
+
+        let eval_at_0 = p0v0 * p1v0;
+        uni_evals[0] += eval_at_0;
+
+        let eval_at_1 = p0v1 * p1v1;
+        uni_evals[1] += eval_at_1;
+
+        let eval_at_2 = p0v2 * p1v2;
+        uni_evals[2] += eval_at_2;
+    });
+
+    let round_univariate_poly = UnivariatePoly::from_evals(&uni_evals);
+    round_univariate_poly
+        .coeffs
+        .iter()
+        .for_each(|f| fs_transcript.append_field_element(f));
+
+    let r_combine = fs_transcript.generate_challenge_field_element();
+    poly0.fix_top_variable(r_combine);
+    poly1.fix_top_variable(r_combine);
+
+    let round_univariate_poly_at_r = round_univariate_poly.evaluate(r_combine);
+
+    (round_univariate_poly, r_combine, round_univariate_poly_at_r)
 }
 
 #[allow(unused)]
-impl<F: ExtensionField + ExpSerde> SumcheckInstanceProof<F> {
-    pub(crate) fn new(uni_polys: Vec<UnivariatePoly<F>>) -> SumcheckInstanceProof<F> {
-        SumcheckInstanceProof { uni_polys }
+pub(crate) fn vanilla_sumcheck_degree_2_mul_step_verify<F: ExtensionField>(
+    prev_claim: &mut F,
+    round_response: &UnivariatePoly<F>,
+    fs_transcript: &mut impl Transcript<F>,
+) -> Option<F> {
+    if round_response.coeffs.len() != 3 {
+        return None;
     }
 
-    /// Create a sumcheck proof for polynomial(s) of arbitrary degree.
-    ///
-    /// Params
-    /// - `claim`: Claimed sumcheck evaluation (note: currently unused)
-    /// - `num_rounds`: Number of rounds of sumcheck, or number of variables to bind
-    /// - `polys`: Dense polynomials to combine and sumcheck
-    /// - `comb_func`: Function used to combine each polynomial evaluation
-    /// - `transcript`: Fiat-shamir transcript
-    ///
-    /// Returns (SumcheckInstanceProof, r_eval_point, final_evals)
-    /// - `r_eval_point`: Final random point of evaluation
-    /// - `final_evals`: Each of the polys evaluated at `r_eval_point`
-    pub(crate) fn prove_arbitrary<Func>(
-        _claim: &F,
-        num_rounds: usize,
-        polys: &mut [MultiLinearPoly<F>],
-        comb_func: Func,
-        combined_degree: usize,
-        transcript: &mut impl Transcript<F>,
-    ) -> (Self, Vec<F>, Vec<F>)
-    where
-        Func: Fn(&[F]) -> F + std::marker::Sync,
-    {
-        let mut r: Vec<F> = Vec::new();
-        let mut uni_polys: Vec<UnivariatePoly<F>> = Vec::new();
-
-        for _round in 0..num_rounds {
-            let mle_half = polys[0].coeffs.len() / 2;
-
-            let accum: Vec<Vec<F>> = (0..mle_half)
-                .map(|poly_term_i| {
-                    let mut accum = vec![F::zero(); combined_degree + 1];
-                    // Evaluate P({0, ..., |g(r)|})
-
-                    // TODO(#28): Optimize
-                    // Tricks can be used here for low order bits {0,1} but general premise is a
-                    // running sum for each of the m terms in the Dense
-                    // multilinear polynomials. Formula is: half = | D_{n-1} | /
-                    // 2 D_n(index, r) = D_{n-1}[half + index] + r *
-                    // (D_{n-1}[half + index] - D_{n-1}[index])
-
-                    // eval 0: bound_func is A(low)
-                    let params_zero: Vec<F> =
-                        polys.iter().map(|poly| poly.coeffs[poly_term_i]).collect();
-                    accum[0] += comb_func(&params_zero);
-
-                    // TODO(#28): Can be computed from prev_round_claim - eval_point_0
-                    let params_one: Vec<F> = polys
-                        .iter()
-                        .map(|poly| poly.coeffs[mle_half + poly_term_i])
-                        .collect();
-                    accum[1] += comb_func(&params_one);
-
-                    // D_n(index, r) = D_{n-1}[half + index] + r * (D_{n-1}[half + index] -
-                    // D_{n-1}[index]) D_n(index, 0) = D_{n-1}[LOW]
-                    // D_n(index, 1) = D_{n-1}[HIGH]
-                    // D_n(index, 2) = D_{n-1}[HIGH] + (D_{n-1}[HIGH] - D_{n-1}[LOW])
-                    // D_n(index, 3) = D_{n-1}[HIGH] + (D_{n-1}[HIGH] - D_{n-1}[LOW]) +
-                    // (D_{n-1}[HIGH] - D_{n-1}[LOW]) ...
-                    let mut existing_term = params_one;
-                    for eval_i in accum.iter_mut().take(combined_degree + 1).skip(2) {
-                        let mut poly_evals = vec![F::zero(); polys.len()];
-                        for poly_i in 0..polys.len() {
-                            let poly = &polys[poly_i];
-                            poly_evals[poly_i] = existing_term[poly_i]
-                                + poly.coeffs[mle_half + poly_term_i]
-                                - poly.coeffs[poly_term_i];
-                        }
-
-                        *eval_i += comb_func(&poly_evals);
-                        existing_term = poly_evals;
-                    }
-                    accum
-                })
-                .collect();
-
-            // Vector storing evaluations of combined polynomials g(x) = P_0(x) * ... P_{num_polys}
-            // (x) for points {0, ..., |g(x)|}
-            let uni_poly_eval_points: Vec<F> = (0..combined_degree + 1)
-                .map(|poly_i| accum.iter().map(|mle| mle[poly_i]).sum())
-                .collect();
-
-            let round_uni_poly = UnivariatePoly::from_evals(&uni_poly_eval_points);
-
-            // append the prover's message to the transcript
-            // round_uni_poly.
-            round_uni_poly
-                .coeffs
-                .iter()
-                .for_each(|f| transcript.append_field_element(f));
-
-            let r_j = transcript.generate_challenge_field_element();
-            r.push(r_j);
-
-            // bound all tables to the verifier's challenge
-            polys.iter_mut().for_each(|poly| poly.fix_top_variable(r_j));
-            uni_polys.push(round_uni_poly);
-        }
-
-        let final_evals = polys.iter().map(|poly| poly.coeffs[0]).collect();
-
-        (SumcheckInstanceProof { uni_polys }, r, final_evals)
+    let presumed_prev_hypercube_sum =
+        round_response.coeffs.iter().sum::<F>() + round_response.coeffs[0];
+    if presumed_prev_hypercube_sum != *prev_claim {
+        return None;
     }
 
-    /// Verify this sumcheck proof.
-    /// Note: Verification does not execute the final check of sumcheck protocol: g_v(r_v) =
-    /// oracle_g(r), as the oracle is not passed in. Expected that the caller will implement.
-    ///
-    /// Params
-    /// - `claim`: Claimed evaluation
-    /// - `num_rounds`: Number of rounds of sumcheck, or number of variables to bind
-    /// - `degree_bound`: Maximum allowed degree of the combined univariate polynomial
-    /// - `transcript`: Fiat-shamir transcript
-    ///
-    /// Returns (e, r)
-    /// - `e`: Claimed evaluation at random point
-    /// - `r`: Evaluation point
-    pub(crate) fn verify<T>(
-        &self,
-        claim: F,
-        num_rounds: usize,
-        degree_bound: usize,
-        transcript: &mut T,
-    ) -> (F, Vec<F>)
-    where
-        T: Transcript<F>,
-    {
-        let mut e = claim;
-        let mut r: Vec<F> = Vec::new();
+    round_response
+        .coeffs
+        .iter()
+        .for_each(|f| fs_transcript.append_field_element(f));
 
-        // verify that there is a univariate polynomial for each round
-        assert_eq!(self.uni_polys.len(), num_rounds);
-        for i in 0..self.uni_polys.len() {
-            let poly = &self.uni_polys[i];
+    let r_combine = fs_transcript.generate_challenge_field_element();
+    *prev_claim = round_response.evaluate(r_combine);
 
-            // verify degree bound
-            if poly.coeffs.len() - 1 != degree_bound {
-                panic!("poly degree incorrect")
-            }
-
-            // check if G_k(0) + G_k(1) = e
-
-            let poly_at_zero = poly.coeffs[0];
-            let poly_at_one = poly.coeffs.iter().sum::<F>();
-
-            assert_eq!(
-                poly_at_zero + poly_at_one,
-                e,
-                "{}-th sum is not equal to e",
-                i
-            );
-
-            // append the prover's message to the transcript
-            poly.coeffs
-                .iter()
-                .for_each(|f| transcript.append_field_element(f));
-
-            //derive the verifier's challenge for the next round
-            let r_i = transcript.generate_challenge_field_element();
-
-            r.push(r_i);
-
-            // evaluate the claimed degree-ell polynomial at r_i
-            e = poly.evaluate(r_i);
-        }
-
-        (e, r)
-    }
+    Some(r_combine)
 }
 
 #[cfg(test)]
-mod test {}
+mod vanilla_sumcheck_degree_2_test {
+    use arith::{ExtensionField, Fr};
+    use ark_std::test_rng;
+    use gkr_engine::Transcript;
+    use gkr_hashers::Keccak256hasher;
+    use polynomials::{EqPolynomial, MultiLinearPoly, UnivariatePoly};
+    use transcript::BytesHashTranscript;
+
+    use crate::fri::vanilla_sumcheck::{
+        vanilla_sumcheck_degree_2_mul_step_prove, vanilla_sumcheck_degree_2_mul_step_verify,
+    };
+
+    fn vanilla_sumcheck_degree_2_test_helper<F: ExtensionField>(num_vars: usize) {
+        let mut rng = test_rng();
+
+        let mut multilinear_basis = MultiLinearPoly::<F>::random(num_vars, &mut rng);
+        let point: Vec<_> = (0..num_vars).map(|_| F::random_unsafe(&mut rng)).collect();
+        let claim = multilinear_basis.evaluate_jolt(&point);
+
+        let mut eq_multilinear = MultiLinearPoly::new(EqPolynomial::build_eq_x_r(&point));
+
+        let mut fs_transcript_p = BytesHashTranscript::<F, Keccak256hasher>::new();
+        let mut fs_transcript_v = fs_transcript_p.clone();
+
+        let mut p_claim = claim.clone();
+        let sumcheck_resp: Vec<(UnivariatePoly<F>, F, F)> = (0..num_vars)
+            .map(|_| {
+                let (univ, r, next_claim) = vanilla_sumcheck_degree_2_mul_step_prove(
+                    &mut multilinear_basis,
+                    &mut eq_multilinear,
+                    &mut fs_transcript_p,
+                );
+
+                p_claim = next_claim;
+
+                (univ, r, next_claim)
+            })
+            .collect();
+
+        let mut v_claim = claim.clone();
+        sumcheck_resp
+            .iter()
+            .for_each(|(univ, expected_r, next_claim)| {
+                let fold_var = vanilla_sumcheck_degree_2_mul_step_verify(
+                    &mut v_claim,
+                    univ,
+                    &mut fs_transcript_v,
+                );
+                assert!(fold_var.is_some());
+
+                assert_eq!(*expected_r, fold_var.unwrap());
+                assert_eq!(v_claim, *next_claim);
+            });
+    }
+
+    #[test]
+    fn test_vanilla_sumcheck_degree_2_mul() {
+        vanilla_sumcheck_degree_2_test_helper::<Fr>(15);
+    }
+}

@@ -11,6 +11,7 @@ pub struct FRIScratchPad<F: FFTField> {
 
 unsafe impl<F: FFTField> Send for FRIScratchPad<F> {}
 
+#[allow(unused)]
 pub(crate) fn copy_elems_to_leaves<F: Field>(elems: &[F]) -> Vec<Leaf> {
     let max_elems_per_leaf = LEAF_BYTES * 8 / F::FIELD_SIZE;
     let num_elems_per_leaf = if max_elems_per_leaf.is_power_of_two() {
