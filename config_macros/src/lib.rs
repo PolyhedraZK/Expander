@@ -83,11 +83,6 @@ fn parse_fiat_shamir_hash_type(
             "Keccak256".to_owned(),
             format!("BytesHashTranscript::<{challenge_f}, Keccak256hasher>").to_owned(),
         ),
-        ("Poseidon", "M31") => (
-            "Poseidon".to_owned(),
-            format!("FieldHashTranscript::<{challenge_f}, PoseidonFiatShamirHasher<M31x16>>")
-                .to_owned(),
-        ),
         ("Poseidon", "M31Ext3") => (
             "Poseidon".to_owned(),
             format!("FieldHashTranscript::<{challenge_f}, PoseidonFiatShamirHasher<M31x16>>")
@@ -121,23 +116,15 @@ fn parse_polynomial_commitment_type(
         ),
         ("Hyrax", "BN254") => ("Hyrax".to_string(), "HyraxPCS::<G1Affine>".to_string()),
         ("KZG", "BN254") => ("KZG".to_owned(), "HyperKZGPCS::<Bn256>".to_string()),
-        ("Orion", "GF2") => (
-            "Orion".to_owned(),
-            format!("OrionPCSForGKR::<{field_config}, GF2x128>").to_owned(),
-        ),
         ("Orion", "GF2Ext128") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, GF2x128>").to_owned(),
-        ),
-        ("Orion", "M31") => (
-            "Orion".to_owned(),
-            format!("OrionPCSForGKR::<{field_config}, M31x16>").to_owned(),
         ),
         ("Orion", "M31Ext3") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, M31x16>").to_owned(),
         ),
-        ("Orion", "Goldilocks") => (
+        ("Orion", "GoldilocksExt2") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, Goldilocksx8>").to_owned(),
         ),

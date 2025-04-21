@@ -58,8 +58,15 @@ async fn main() {
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Raw, FieldType::GF2Ext128) => {
             run_command::<GF2ExtConfigSha2Raw>(&expander_exec_args, &mpi_config).await;
         }
-        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::Goldilocks) => {
+        (
+            FiatShamirHashType::SHA256,
+            PolynomialCommitmentType::Orion,
+            FieldType::GoldilocksExt2,
+        ) => {
             run_command::<GoldilocksExtConfigSha2Orion>(&expander_exec_args, &mpi_config).await;
+        }
+        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::BabyBearExt3) => {
+            run_command::<BabyBearExtConfigSha2Raw>(&expander_exec_args, &mpi_config).await;
         }
         _ => panic!(
             "FS: {:?}, PCS: {:?}, Field: {:?} setting is not yet integrated in expander-exec",

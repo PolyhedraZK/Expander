@@ -13,7 +13,6 @@ pub enum FieldType {
     BN254,
     GF2Ext128,
     GoldilocksExt2,
-    BabyBearExt3x16,
     M31,
     BabyBearExt3,
 }

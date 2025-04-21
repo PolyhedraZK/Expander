@@ -135,7 +135,7 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
                 KECCAK_GOLDILOCKS_CIRCUIT,
                 &mpi_config,
             ),
-            FieldType::BabyBear => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+            FieldType::BabyBearExt3 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 KECCAK_BABYBEAR_CIRCUIT,
                 &mpi_config,
             ),
