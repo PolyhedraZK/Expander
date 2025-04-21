@@ -4,7 +4,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, ExtensionField, Field, SimdField};
+use arith::{field_common, ExtensionField, FFTField, Field, SimdField};
 
 use ethnum::U256;
 use rand::RngCore;
@@ -233,7 +233,7 @@ impl Field for GoldilocksExt2x8 {
 
     #[inline]
     fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
-        unimplemented!("vec m31: cannot convert from 32 bytes")
+        unimplemented!("vec Goldilocks: cannot convert from 32 bytes")
     }
 
     #[inline]
@@ -242,7 +242,19 @@ impl Field for GoldilocksExt2x8 {
     }
 
     fn inv(&self) -> Option<Self> {
-        unimplemented!()
+        if self.is_zero() {
+            return None;
+        }
+
+        let compliment = Self {
+            c0: -self.c0,
+            c1: self.c1,
+        };
+
+        let w_base = Goldilocksx8::pack_full(&Goldilocks { v: Self::W as u64 });
+        let normalize = (-self.c0.square() + self.c1.square() * w_base).inv()?;
+
+        Some(compliment * normalize)
     }
 }
 
@@ -358,5 +370,22 @@ impl PartialOrd for GoldilocksExt2x8 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for GoldilocksExt2x8 is not supported")
+    }
+}
+
+impl FFTField for GoldilocksExt2x8 {
+    const TWO_ADICITY: usize = 33;
+
+    #[inline(always)]
+    fn root_of_unity() -> Self {
+        let var = GoldilocksExt2 {
+            v: [
+                Goldilocks::ZERO,
+                Goldilocks {
+                    v: 0xd95051a31cf4a6ef,
+                },
+            ],
+        };
+        Self::pack_full(&var)
     }
 }
