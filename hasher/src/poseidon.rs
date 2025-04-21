@@ -1,2 +1,2 @@
-mod impls;
+pub mod impls;
 pub use impls::PoseidonFiatShamirHasher;

@@ -7,24 +7,16 @@ edition = "2021"
 ark-std.workspace = true
 criterion.workspace = true
 ethnum.workspace = true
+itertools.workspace = true
+halo2curves.workspace = true
 log.workspace = true
 rand.workspace = true
-sha2.workspace = true
 tynm.workspace = true
-itertools.workspace = true
-
-raw-cpuid = "11.1.0"
-cfg-if = "1.0"
 
 serdes = { path = "../serdes" }
 
-[target.'cfg(target_arch = "x86_64")'.dependencies]
-halo2curves = { workspace = true, features = [ "asm" ] }
-[target.'cfg(not(target_arch = "x86_64"))'.dependencies]
-halo2curves.workspace = true
-
-[dev-dependencies]
-itertools.workspace = true
+[features]
+halo2_asm = [ "halo2curves/asm" ]
 
 [[bench]]
 name = "fr"

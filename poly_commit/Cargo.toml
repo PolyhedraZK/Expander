@@ -18,15 +18,13 @@ ark-std.workspace = true
 thiserror.workspace = true
 itertools.workspace = true
 derivative.workspace = true
-
-[target.'cfg(target_arch = "x86_64")'.dependencies]
-halo2curves = { workspace = true, features = [ "asm" ] }
-[target.'cfg(not(target_arch = "x86_64"))'.dependencies]
+transpose.workspace = true
 halo2curves.workspace = true
 
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
 mersenne31 = { path = "../arith/mersenne31" }
+goldilocks = { path = "../arith/goldilocks" }
 gkr_hashers = { path = "../hasher" }
 
 tynm.workspace = true

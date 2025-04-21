@@ -3,8 +3,8 @@ use std::any::type_name;
 use config_macros::declare_gkr_config;
 use gf2::GF2x128;
 use gkr_engine::{
-    BN254Config, FieldEngine, GF2ExtConfig, GKREngine, GKRScheme, GoldilocksExtConfig,
-    M31ExtConfig, MPIConfig,
+    BN254Config, BabyBearExtConfig, FieldEngine, GF2ExtConfig, GKREngine, GKRScheme,
+    GoldilocksExtConfig, M31ExtConfig, MPIConfig,
 };
 use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use halo2curves::bn256::Bn256;
@@ -74,6 +74,13 @@ fn main() {
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
+    declare_gkr_config!(
+        BabyBearExtSHA256Config,
+        FieldType::BabyBearExt3,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw,
+        GKRScheme::Vanilla,
+    );
 
     print_type_name::<M31ExtSha256Config>();
     print_type_name::<M31ExtPoseidonRawConfig>();
@@ -83,4 +90,5 @@ fn main() {
     print_type_name::<GF2ExtKeccak256Config>();
     print_type_name::<GF2ExtKeccak256OrionConfig>();
     print_type_name::<GoldilocksExtSHA256Config>();
+    print_type_name::<BabyBearExtSHA256Config>();
 }

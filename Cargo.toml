@@ -1,13 +1,12 @@
 [workspace]
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
-    "arith/field_hashers",
+    "arith/babybear",
     "arith/gf2",
     "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31",
     "arith/polynomials",
-    "bi-kzg",
     "circuit",
     "config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
     "gkr",
@@ -31,11 +30,11 @@ ark-ff = { version = "0.4" }
 bytes = "1.6.0"
 chrono = "0.4.38"
 clap = { version = "4.1", features = ["derive"] }
+cfg-if = "1.0"
 criterion = { version = "0.5", features = ["html_reports"] }
 env_logger = "0.11.3"
 halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", default-features = false, features = [
     "bits",
-    "bn256-table"
 ] }
 syn = "2.0"       # For parsing Rust code
 quote = "1.0"     # For generating code
@@ -44,6 +43,7 @@ itertools = "0.13"
 log = "0.4"
 mpi = "0.8.0"
 rand = "0.8.5"
+raw-cpuid = "11.1.0"
 rayon = "1.10"
 sha2 = "0.10.8"
 tiny-keccak = { version = "2.0.2", features = [ "sha3", "keccak" ] }
@@ -54,3 +54,4 @@ thiserror = "1.0.63"
 ethnum = "1.5.0"
 rand_chacha = "0.3.1"
 derivative = "2.2.0"
+transpose = "0.2.3"

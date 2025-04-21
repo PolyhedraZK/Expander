@@ -4,7 +4,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, ExtensionField, Field};
+use arith::{field_common, ExtensionField, FFTField, Field};
 use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
@@ -332,6 +332,22 @@ impl PartialOrd for GoldilocksExt2 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for GoldilocksExt2 is not supported")
+    }
+}
+
+impl FFTField for GoldilocksExt2 {
+    const TWO_ADICITY: usize = 33;
+
+    #[inline(always)]
+    fn root_of_unity() -> Self {
+        GoldilocksExt2 {
+            v: [
+                Goldilocks::ZERO,
+                Goldilocks {
+                    v: 0xd95051a31cf4a6ef,
+                },
+            ],
+        }
     }
 }
 

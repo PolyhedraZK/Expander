@@ -1,6 +1,6 @@
 use arith::{
-    random_extension_field_tests, random_field_tests, random_inversion_tests,
-    random_simd_field_tests,
+    random_extension_field_tests, random_fft_field_tests, random_field_tests,
+    random_inversion_tests, random_simd_field_tests,
 };
 use arith::{random_from_limbs_to_limbs_tests, Field};
 use ark_std::test_rng;
@@ -8,10 +8,10 @@ use ethnum::U256;
 use gkr_hashers::{FiatShamirFieldHasher, PoseidonFiatShamirHasher, PoseidonStateTrait};
 use serdes::ExpSerde;
 
-use crate::m31::{mod_reduce_u32_safe, M31_MOD};
-use crate::M31Ext3;
-use crate::M31Ext3x16;
-use crate::{M31x16, M31};
+use crate::{
+    m31::{mod_reduce_u32_safe, M31_MOD},
+    M31Ext3, M31Ext3x16, M31Ext6, M31x16, M31,
+};
 
 fn get_avx_version() -> &'static str {
     if cfg!(all(target_arch = "x86_64", target_feature = "avx512f")) {
@@ -74,6 +74,9 @@ fn test_simd_field() {
 fn test_ext_field() {
     random_field_tests::<M31Ext3>("M31 Ext3".to_string());
     random_extension_field_tests::<M31Ext3>("M31 Ext3".to_string());
+    random_field_tests::<M31Ext6>("M31 Ext6".to_string());
+    random_extension_field_tests::<M31Ext6>("M31 Ext6".to_string());
+    random_fft_field_tests::<M31Ext6>("M31 Ext6".to_string());
     random_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
     random_extension_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
     random_simd_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());

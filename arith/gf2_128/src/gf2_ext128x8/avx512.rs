@@ -26,10 +26,7 @@ impl ExpSerde for AVX512GF2_128x8 {
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe {
-            let mut data = [0u8; 128];
-            _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data[0]);
-            _mm512_storeu_si512((data.as_mut_ptr() as *mut i32).offset(16), self.data[1]);
-            writer.write_all(&data)?;
+            writer.write_all(transmute::<[__m512i; 2], [u8; 128]>(self.data).as_ref())?;
         }
         Ok(())
     }
@@ -40,10 +37,7 @@ impl ExpSerde for AVX512GF2_128x8 {
         reader.read_exact(&mut data).unwrap();
         unsafe {
             Ok(Self {
-                data: [
-                    _mm512_loadu_si512(data.as_ptr() as *const i32),
-                    _mm512_loadu_si512((data.as_ptr() as *const i32).offset(16)),
-                ],
+                data: transmute::<[u8; 128], [__m512i; 2]>(data),
             })
         }
     }
@@ -360,8 +354,8 @@ impl Debug for AVX512GF2_128x8 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut data = [0u8; 128];
         unsafe {
-            _mm512_storeu_si512(data.as_mut_ptr() as *mut i32, self.data[0]);
-            _mm512_storeu_si512((data.as_mut_ptr() as *mut i32).offset(16), self.data[1]);
+            _mm512_storeu_si512(data.as_mut_ptr() as *mut __m512i, self.data[0]);
+            _mm512_storeu_si512((data.as_mut_ptr() as *mut __m512i).offset(1), self.data[1]);
         }
         f.debug_struct("AVX512GF2_128x8")
             .field("data", &data)
@@ -572,27 +566,27 @@ impl ExtensionField for AVX512GF2_128x8 {
 
     #[inline(always)]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
-        let mask_high = duplicate_higher_4bits(base.v).reverse_bits();
-        let mask_low = duplicate_lower_4bits(base.v).reverse_bits();
+        let mask_high = duplicate_higher_4bits(base.v);
+        let mask_low = duplicate_lower_4bits(base.v);
 
         Self {
             data: [
-                unsafe { _mm512_maskz_mov_epi64(mask_high, self.data[0]) },
-                unsafe { _mm512_maskz_mov_epi64(mask_low, self.data[1]) },
+                unsafe { _mm512_maskz_mov_epi64(mask_low, self.data[0]) },
+                unsafe { _mm512_maskz_mov_epi64(mask_high, self.data[1]) },
             ],
         }
     }
 
     #[inline(always)]
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
-        let v0 = ((base.v >> 7) & 1u8) as i64;
-        let v1 = ((base.v >> 6) & 1u8) as i64;
-        let v2 = ((base.v >> 5) & 1u8) as i64;
-        let v3 = ((base.v >> 4) & 1u8) as i64;
-        let v4 = ((base.v >> 3) & 1u8) as i64;
-        let v5 = ((base.v >> 2) & 1u8) as i64;
-        let v6 = ((base.v >> 1) & 1u8) as i64;
-        let v7 = (base.v & 1u8) as i64;
+        let v0 = (base.v & 1u8) as i64;
+        let v1 = ((base.v >> 1) & 1u8) as i64;
+        let v2 = ((base.v >> 2) & 1u8) as i64;
+        let v3 = ((base.v >> 3) & 1u8) as i64;
+        let v4 = ((base.v >> 4) & 1u8) as i64;
+        let v5 = ((base.v >> 5) & 1u8) as i64;
+        let v6 = ((base.v >> 6) & 1u8) as i64;
+        let v7 = ((base.v >> 7) & 1u8) as i64;
 
         let mut res = *self;
         res.data[0] = unsafe {
@@ -694,14 +688,14 @@ impl ExtensionField for AVX512GF2_128x8 {
 impl From<GF2x8> for AVX512GF2_128x8 {
     #[inline(always)]
     fn from(v: GF2x8) -> Self {
-        let v0 = ((v.v >> 7) & 1u8) as i64;
-        let v1 = ((v.v >> 6) & 1u8) as i64;
-        let v2 = ((v.v >> 5) & 1u8) as i64;
-        let v3 = ((v.v >> 4) & 1u8) as i64;
-        let v4 = ((v.v >> 3) & 1u8) as i64;
-        let v5 = ((v.v >> 2) & 1u8) as i64;
-        let v6 = ((v.v >> 1) & 1u8) as i64;
-        let v7 = (v.v & 1u8) as i64;
+        let v0 = (v.v & 1u8) as i64;
+        let v1 = ((v.v >> 1) & 1u8) as i64;
+        let v2 = ((v.v >> 2) & 1u8) as i64;
+        let v3 = ((v.v >> 3) & 1u8) as i64;
+        let v4 = ((v.v >> 4) & 1u8) as i64;
+        let v5 = ((v.v >> 5) & 1u8) as i64;
+        let v6 = ((v.v >> 6) & 1u8) as i64;
+        let v7 = ((v.v >> 7) & 1u8) as i64;
 
         AVX512GF2_128x8 {
             data: [
