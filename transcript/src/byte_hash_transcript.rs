@@ -53,7 +53,7 @@ impl<F: ExtensionField, H: FiatShamirBytesHash> Transcript<F> for BytesHashTrans
             for _ in 0..PCS_DIGEST_LOOP {
                 H::hash_inplace(&mut digest);
             }
-            self.append_u8_slice(&digest);
+            self.set_state(&digest);
         }
     }
 

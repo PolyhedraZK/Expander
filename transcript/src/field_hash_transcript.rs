@@ -65,7 +65,7 @@ where
 
             let mut digest_bytes = vec![];
             challenge.serialize_into(&mut digest_bytes).unwrap();
-            self.append_u8_slice(&digest_bytes);
+            self.set_state(&digest_bytes);
         }
     }
 
