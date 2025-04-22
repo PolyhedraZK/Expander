@@ -50,6 +50,13 @@ fn main() {
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
+        "m31" => match pcs_type {
+            PolynomialCommitmentType::Raw => match args.circuit.as_str() {
+                "keccak" => run_benchmark::<M31x16ConfigSha2RawVanilla>(&args, mpi_config.clone()),
+                _ => unreachable!(),
+            },
+            _ => unreachable!("Unsupported PCS type for M31"),
+        },
         "m31ext3" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
                 "keccak" => run_benchmark::<M31x16ConfigSha2RawVanilla>(&args, mpi_config.clone()),
@@ -206,6 +213,10 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
         claim.serialize_into(&mut buf).unwrap();
         proof.serialize_into(&mut buf).unwrap();
         root_println!(mpi_config, "Proof size: {}", buf.len());
+
+        // Write the serialized proof to a file
+        std::fs::write("proof_mpi.txt", &buf).expect("Failed to write proof to file");
+        println!("Proof written to proof_mpi.txt");
     }
 
     const N_PROOF: usize = 10;

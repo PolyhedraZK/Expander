@@ -247,6 +247,10 @@ where
         claim.serialize_into(&mut buf).unwrap();
         proof.serialize_into(&mut buf).unwrap();
         println!("Proof size: {}", buf.len());
+
+        // Write the serialized proof to a file
+        std::fs::write("proof.txt", &buf).expect("Failed to write proof to file");
+        println!("Proof written to proof.txt");
     }
 
     let start_time = std::time::Instant::now();
