@@ -1,5 +1,5 @@
 use arith::{ExtensionField, SimdField};
-use gkr_engine::{MPIConfig, MPIEngine, Transcript};
+use gkr_engine::{MPIEngine, Transcript};
 
 #[inline(always)]
 /// Input
@@ -24,7 +24,7 @@ pub fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar 
 
 /// Transcript IO between sumcheck steps
 #[inline]
-pub fn transcript_io<F, T>(mpi_config: &MPIConfig, ps: &[F], transcript: &mut T) -> F
+pub fn transcript_io<F, T>(mpi_config: &impl MPIEngine, ps: &[F], transcript: &mut T) -> F
 where
     F: ExtensionField,
     T: Transcript<F>,

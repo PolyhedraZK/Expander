@@ -12,7 +12,7 @@ use sumcheck::ProverScratchPad;
 use transcript::transcript_root_broadcast;
 use utils::timer::Timer;
 
-use crate::{gkr_prove, gkr_square_prove};
+use crate::{gkr_par_verifier_prove, gkr_prove, gkr_square_prove};
 
 #[cfg(feature = "grinding")]
 pub(crate) fn grind<Cfg: GKREngine>(
@@ -142,12 +142,16 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         let gkr_prove_timer = Timer::new("gkr prove", self.mpi_config.is_root());
         transcript_root_broadcast(&mut transcript, &self.mpi_config);
 
-        let (claimed_v, challenge) = if Cfg::SCHEME == GKRScheme::GkrSquare {
-            let (claimed_v, challenge_x) =
-                gkr_square_prove(c, &mut self.sp, &mut transcript, &self.mpi_config);
-            (claimed_v, ExpanderDualVarChallenge::from(&challenge_x))
-        } else {
-            gkr_prove(c, &mut self.sp, &mut transcript, &self.mpi_config)
+        let (claimed_v, challenge) = match Cfg::SCHEME {
+            GKRScheme::Vanilla => gkr_prove(c, &mut self.sp, &mut transcript, &self.mpi_config),
+            GKRScheme::GkrSquare => {
+                let (claimed_v, challenge_x) =
+                    gkr_square_prove(c, &mut self.sp, &mut transcript, &self.mpi_config);
+                (claimed_v, ExpanderDualVarChallenge::from(&challenge_x))
+            }
+            GKRScheme::GKRParVerifier => {
+                gkr_par_verifier_prove(c, &mut self.sp, &mut transcript, &self.mpi_config)
+            }
         };
         gkr_prove_timer.stop();
 
@@ -167,12 +171,11 @@ impl<Cfg: GKREngine> Prover<Cfg> {
             &mut transcript,
         );
 
-        if challenge.rz_1.is_some() {
+        if let Some(mut challenge_y) = challenge.challenge_y() {
             transcript_root_broadcast(&mut transcript, &self.mpi_config);
-            let mut challange_y = challenge.challenge_y();
             self.prove_input_layer_claim(
                 &mut mle_ref,
-                &mut challange_y,
+                &mut challenge_y,
                 pcs_params,
                 pcs_proving_key,
                 pcs_scratch,

@@ -143,6 +143,27 @@ fn test_gkr_correctness() {
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
+    declare_gkr_config!(
+        C16,
+        FieldType::GF2Ext128,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw,
+        GKRScheme::GKRParVerifier,
+    );
+    declare_gkr_config!(
+        C17,
+        FieldType::M31x1,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw,
+        GKRScheme::GKRParVerifier,
+    );
+    declare_gkr_config!(
+        C18,
+        FieldType::BN254,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw,
+        GKRScheme::GKRParVerifier,
+    );
 
     test_gkr_correctness_helper::<C0>(None);
     test_gkr_correctness_helper::<C1>(None);
@@ -160,6 +181,9 @@ fn test_gkr_correctness() {
     test_gkr_correctness_helper::<C13>(None);
     test_gkr_correctness_helper::<C14>(None);
     test_gkr_correctness_helper::<C15>(None);
+    test_gkr_correctness_helper::<C16>(None);
+    test_gkr_correctness_helper::<C17>(None);
+    test_gkr_correctness_helper::<C18>(None);
 
     MPIConfig::finalize();
 }
