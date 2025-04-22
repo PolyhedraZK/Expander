@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use arith::{ExtensionField, Field, SimdField};
 use polynomials::MultiLinearPoly;
 
-use crate::{ExpanderSingleVarChallenge, MPIConfig, MPIEngine};
+use crate::{ExpanderSingleVarChallenge, MPIEngine};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum FieldType {
@@ -16,7 +16,7 @@ pub enum FieldType {
     BabyBear,
 }
 
-pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
+pub trait FieldEngine: Default + Debug + Clone + Send + Sync + PartialEq + 'static {
     /// Enum type for Self::Field
     const FIELD_TYPE: FieldType;
 
@@ -24,18 +24,19 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
     const SENTINEL: [u8; 32];
 
     /// Field type for the circuit, e.g., M31
-    type CircuitField: Field + Send;
+    type CircuitField: Field + Send + Sync;
 
     /// Field type for the challenge, e.g., M31Ext3
-    type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send;
+    type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send + Sync;
 
     /// Main field type for the scheme, e.g., M31Ext3x16
     type Field: ExtensionField<BaseField = Self::SimdCircuitField>
         + SimdField<Scalar = Self::ChallengeField>
-        + Send;
+        + Send
+        + Sync;
 
     /// Simd field for circuit, e.g., M31x16
-    type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + Send;
+    type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + Send + Sync;
 
     /// API to allow for multiplications between the challenge and the circuit field
     fn challenge_mul_circuit_field(
@@ -135,7 +136,7 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
         // x_mpi: &[Self::ChallengeField],
         scratch_field: &mut [Self::Field],
         scratch_challenge_field: &mut [Self::ChallengeField],
-        mpi_config: &MPIConfig,
+        mpi_config: &impl MPIEngine,
     ) -> Self::ChallengeField {
         assert!(
             scratch_challenge_field.len()

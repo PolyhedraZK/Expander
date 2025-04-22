@@ -11,6 +11,8 @@ pub struct GKRVerifierHelper<F: FieldEngine> {
 }
 
 impl<F: FieldEngine> GKRVerifierHelper<F> {
+    // This assumes we're verifying GKR layer by layer sequentially, and can reuse some of the
+    // results from the previous layer, which is stored in the scratch pad.
     #[allow(clippy::too_many_arguments)]
     #[inline(always)]
     pub fn prepare_layer(
@@ -58,8 +60,60 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
             &mut sp.eq_evals_second_part,
         );
 
-        sp.r_simd = &challenge.r_simd;
-        sp.r_mpi = &challenge.r_mpi;
+        sp.r_simd = challenge.r_simd.clone();
+        sp.r_mpi = challenge.r_mpi.clone();
+    }
+
+    // This is for the case where we are verifying GKR layers in parallel, and we need to
+    // recompute the evaluations for each layer independently.
+    // This is less efficient than the sequential version, but allows for more parallelism.
+    #[allow(clippy::too_many_arguments)]
+    #[inline(always)]
+    pub fn prepare_layer_non_sequential(
+        layer: &CircuitLayer<F>,
+        alpha: &Option<F::ChallengeField>,
+        challenge: &ExpanderDualVarChallenge<F>,
+        sp: &mut VerifierScratchPad<F>,
+    ) {
+        EqPolynomial::<F::ChallengeField>::eq_eval_at(
+            &challenge.rz_0,
+            &F::ChallengeField::ONE,
+            &mut sp.eq_evals_at_rz0,
+            &mut sp.eq_evals_first_part,
+            &mut sp.eq_evals_second_part,
+        );
+        if alpha.is_some() && challenge.rz_1.is_some() {
+            let alpha = alpha.unwrap();
+            EqPolynomial::<F::ChallengeField>::eq_eval_at(
+                challenge.rz_1.as_ref().unwrap(),
+                &F::ChallengeField::ONE,
+                &mut sp.eq_evals_at_rx,
+                &mut sp.eq_evals_first_part,
+                &mut sp.eq_evals_second_part,
+            );
+            for i in 0..(1usize << layer.output_var_num) {
+                sp.eq_evals_at_rz0[i] += alpha * sp.eq_evals_at_rx[i];
+            }
+        }
+
+        EqPolynomial::<F::ChallengeField>::eq_eval_at(
+            &challenge.r_simd,
+            &F::ChallengeField::ONE,
+            &mut sp.eq_evals_at_r_simd,
+            &mut sp.eq_evals_first_part,
+            &mut sp.eq_evals_second_part,
+        );
+
+        EqPolynomial::<F::ChallengeField>::eq_eval_at(
+            &challenge.r_mpi,
+            &F::ChallengeField::ONE,
+            &mut sp.eq_evals_at_r_mpi,
+            &mut sp.eq_evals_first_part,
+            &mut sp.eq_evals_second_part,
+        );
+
+        sp.r_simd = challenge.r_simd.clone();
+        sp.r_mpi = challenge.r_mpi.clone();
     }
 
     #[inline(always)]
@@ -173,18 +227,12 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
 
     #[inline(always)]
     pub fn set_r_simd_xy(r_simd_xy: &[F::ChallengeField], sp: &mut VerifierScratchPad<F>) {
-        sp.eq_r_simd_r_simd_xy = EqPolynomial::<F::ChallengeField>::eq_vec(
-            unsafe { sp.r_simd.as_ref().unwrap() },
-            r_simd_xy,
-        );
+        sp.eq_r_simd_r_simd_xy = EqPolynomial::<F::ChallengeField>::eq_vec(&sp.r_simd, r_simd_xy);
     }
 
     #[inline(always)]
     pub fn set_r_mpi_xy(r_mpi_xy: &[F::ChallengeField], sp: &mut VerifierScratchPad<F>) {
-        sp.eq_r_mpi_r_mpi_xy = EqPolynomial::<F::ChallengeField>::eq_vec(
-            unsafe { sp.r_mpi.as_ref().unwrap() },
-            r_mpi_xy,
-        );
+        sp.eq_r_mpi_r_mpi_xy = EqPolynomial::<F::ChallengeField>::eq_vec(&sp.r_mpi, r_mpi_xy);
     }
 
     #[inline(always)]

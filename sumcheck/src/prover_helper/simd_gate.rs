@@ -8,7 +8,7 @@ use arith::{ExtensionField, Field};
 use gkr_engine::{FieldEngine, FieldType};
 
 pub(crate) struct SumcheckSimdProdGateHelper<F: FieldEngine> {
-    var_num: usize,
+    pub(crate) var_num: usize,
     field: PhantomData<F>,
 }
 
