@@ -163,16 +163,15 @@ where
     }
 }
 
-/*
 #[allow(unused)]
 fn fri_verify<F, ChallengeF>(
     commitment: &FRICommitment,
     point: &[ChallengeF],
     evaluation: ChallengeF,
+    opening: &FRIOpening<ChallengeF>,
     fs_transcript: &mut impl Transcript<ChallengeF>,
 ) where
-    F: FFTField,
-    ChallengeF: ExtensionField<BaseField = F>,
+    F: FFTField + ExpSerde,
+    ChallengeF: ExtensionField<BaseField = F> + ExpSerde + FFTField,
 {
 }
-*/
