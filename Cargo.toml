@@ -11,6 +11,7 @@ members = [
     "config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
     "gkr",
     "gkr_engine", # definitions of GKR engine and associated types
+    "gkr_iop", # implementations of GKR based PIOPs
     "hasher", # definitions of FiatShamirFieldHasher, FiatShamirBytesHash, and associated types
     "poly_commit",
     "serdes", # serialization and deserialization of various data structures

@@ -1,19 +1,15 @@
 [package]
-name = "sumcheck"
+name = "gkr_iop"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 arith = { path = "../arith" }
 circuit = { path = "../circuit" }
 gkr_engine = { path = "../gkr_engine" }
 serdes = { path = "../serdes" }
-polynomials = { path = "../arith/polynomials" }
-transcript = { path = "../transcript" }
+sumcheck = { path = "../sumcheck" }
 utils = { path = "../utils" }
 
-env_logger.workspace = true
+ark-std.workspace = true
 log.workspace = true
-
-[features]
-profile = [ "utils/profile" ]
