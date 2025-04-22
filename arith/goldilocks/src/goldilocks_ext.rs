@@ -4,7 +4,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, ExtensionField, FFTField, Field};
+use arith::{field_common, ExtensionField, FFTField, Field, SimdField};
 use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
@@ -332,6 +332,33 @@ impl PartialOrd for GoldilocksExt2 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for GoldilocksExt2 is not supported")
+    }
+}
+
+impl SimdField for GoldilocksExt2 {
+    type Scalar = Self;
+
+    const PACK_SIZE: usize = 1;
+
+    #[inline(always)]
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
+        *self * challenge
+    }
+
+    #[inline(always)]
+    fn pack_full(x: &Self::Scalar) -> Self {
+        *x
+    }
+
+    #[inline(always)]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        assert_eq!(base_vec.len(), 1);
+        base_vec[0]
+    }
+
+    #[inline(always)]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        vec![*self]
     }
 }
 

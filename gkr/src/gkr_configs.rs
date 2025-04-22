@@ -2,7 +2,7 @@ use config_macros::declare_gkr_config;
 use gf2::GF2x128;
 use gkr_engine::{
     BN254Config, BabyBearExtConfig, FieldEngine, GF2ExtConfig, GKREngine, GKRScheme,
-    GoldilocksExtConfig, M31Config, M31ExtConfig, MPIConfig,
+    GoldilocksConfig, GoldilocksExtConfig, M31Config, M31ExtConfig, MPIConfig,
 };
 use gkr_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use goldilocks::Goldilocksx8;
@@ -110,6 +110,15 @@ declare_gkr_config!(
 );
 
 // ============== Goldilocks ==============
+declare_gkr_config!(
+    pub GoldilocksConfigSha2Raw,
+    FieldType::Goldilocks,
+    FiatShamirHashType::SHA256,
+    PolynomialCommitmentType::Raw,
+    GKRScheme::Vanilla,
+);
+
+// ============== GoldilocksExt2 ==============
 declare_gkr_config!(
     pub GoldilocksExtConfigSha2Raw,
     FieldType::GoldilocksExt2,

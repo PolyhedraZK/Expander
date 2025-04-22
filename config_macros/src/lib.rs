@@ -50,6 +50,7 @@ fn parse_field_type(field_expr: ExprPath) -> (String, String) {
         "M31Ext3" => ("M31Ext3".to_owned(), "M31ExtConfig".to_owned()),
         "BN254" => ("BN254".to_owned(), "BN254Config".to_owned()),
         "GF2Ext128" => ("GF2Ext128".to_owned(), "GF2ExtConfig".to_owned()),
+        "Goldilocks" => ("Goldilocks".to_owned(), "GoldilocksConfig".to_owned()),
         "GoldilocksExt2" => (
             "GoldilocksExt2".to_owned(),
             "GoldilocksExtConfig".to_owned(),

@@ -147,6 +147,9 @@ where
                         KECCAK_GF2_CIRCUIT,
                     )
                 }
+                FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
+                    Cfg,
+                >(KECCAK_M31_CIRCUIT),
                 FieldType::M31Ext3 => {
                     Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
                         KECCAK_M31_CIRCUIT,
@@ -162,14 +165,16 @@ where
                         KECCAK_BABYBEAR_CIRCUIT,
                     )
                 }
+                FieldType::Goldilocks => {
+                    Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
+                        KECCAK_GOLDILOCKS_CIRCUIT,
+                    )
+                }
                 FieldType::GoldilocksExt2 => {
                     Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(
                         KECCAK_GOLDILOCKS_CIRCUIT,
                     )
                 }
-                FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
-                    Cfg,
-                >(KECCAK_M31_CIRCUIT),
             },
             "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
                 FieldType::M31 => Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<
@@ -183,10 +188,11 @@ where
     let witness_path = match args.circuit.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
             FieldType::GF2Ext128 => KECCAK_GF2_WITNESS,
+            FieldType::M31 => KECCAK_M31_WITNESS,
             FieldType::M31Ext3 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
+            FieldType::Goldilocks => KECCAK_GOLDILOCKS_WITNESS,
             FieldType::GoldilocksExt2 => KECCAK_GOLDILOCKS_WITNESS,
-            FieldType::M31 => KECCAK_M31_WITNESS,
             FieldType::BabyBearExt3 => KECCAK_BABYBEAR_WITNESS,
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
