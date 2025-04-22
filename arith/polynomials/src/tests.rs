@@ -200,7 +200,7 @@ fn test_univariate_poly_evaluation() {
 
     // NOTE(HS) now we test point being on the smooth multiplicative subgroup
     let omega = Fr::two_adic_generator(bits);
-    let omega_i = omega.exp(893 as u128);
+    let omega_i = omega.exp(893_u128);
 
     let evaluation = univariate.evaluate(omega_i);
     let another_evaluation = lagrange.evaluate(omega_i);
