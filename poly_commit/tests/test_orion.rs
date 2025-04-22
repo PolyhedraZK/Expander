@@ -4,58 +4,20 @@ use arith::{ExtensionField, Field, SimdField};
 use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
 use gf2_128::GF2_128;
-use gkr_field_config::{GF2ExtConfig, GKRFieldConfig, M31ExtConfig};
+use gkr_engine::{
+    ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, GoldilocksExtConfig, M31ExtConfig,
+    MPIConfig, MPIEngine, Transcript,
+};
+use gkr_hashers::Keccak256hasher;
+use goldilocks::{Goldilocks, GoldilocksExt2, Goldilocksx8};
 use mersenne31::{M31Ext3, M31x16, M31};
-use mpi_config::MPIConfig;
 use poly_commit::*;
 use polynomials::MultiLinearPoly;
-use transcript::{BytesHashTranscript, Keccak256hasher, Transcript};
+use transcript::BytesHashTranscript;
 
 const TEST_REPETITION: usize = 3;
 
-fn test_orion_base_field_pcs_generics<F, EvalF, ComPackF, OpenPackF>(
-    num_vars_start: usize,
-    num_vars_end: usize,
-) where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
-    OpenPackF: SimdField<Scalar = F>,
-{
-    let mut rng = test_rng();
-
-    (num_vars_start..=num_vars_end).for_each(|num_vars| {
-        let xs: Vec<_> = (0..TEST_REPETITION)
-            .map(|_| -> Vec<EvalF> {
-                (0..num_vars)
-                    .map(|_| EvalF::random_unsafe(&mut rng))
-                    .collect()
-            })
-            .collect();
-        let poly = MultiLinearPoly::<F>::random(num_vars, &mut rng);
-
-        common::test_pcs::<
-            EvalF,
-            BytesHashTranscript<EvalF, Keccak256hasher>,
-            OrionBaseFieldPCS<
-                F,
-                EvalF,
-                ComPackF,
-                OpenPackF,
-                BytesHashTranscript<EvalF, Keccak256hasher>,
-            >,
-        >(&num_vars, &poly, &xs);
-    })
-}
-
-#[test]
-fn test_orion_base_field_pcs_full_e2e() {
-    test_orion_base_field_pcs_generics::<GF2, GF2_128, GF2x64, GF2x8>(19, 25);
-    test_orion_base_field_pcs_generics::<GF2, GF2_128, GF2x128, GF2x8>(19, 25);
-    test_orion_base_field_pcs_generics::<M31, M31Ext3, M31x16, M31x16>(16, 22)
-}
-
-fn test_orion_simd_field_pcs_generics<F, SimdF, EvalF, ComPackF>(
+fn test_orion_simd_pcs_generics<F, SimdF, EvalF, ComPackF>(
     num_vars_start: usize,
     num_vars_end: usize,
 ) where
@@ -80,29 +42,24 @@ fn test_orion_simd_field_pcs_generics<F, SimdF, EvalF, ComPackF>(
         common::test_pcs::<
             EvalF,
             BytesHashTranscript<EvalF, Keccak256hasher>,
-            OrionSIMDFieldPCS<
-                F,
-                SimdF,
-                EvalF,
-                ComPackF,
-                BytesHashTranscript<EvalF, Keccak256hasher>,
-            >,
+            OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF>,
         >(&num_vars, &poly, &xs);
     })
 }
 
 #[test]
-fn test_orion_simd_field_pcs_full_e2e() {
-    test_orion_simd_field_pcs_generics::<GF2, GF2x8, GF2_128, GF2x64>(19, 25);
-    test_orion_simd_field_pcs_generics::<GF2, GF2x8, GF2_128, GF2x128>(19, 25);
-    test_orion_simd_field_pcs_generics::<M31, M31x16, M31Ext3, M31x16>(16, 22);
+fn test_orion_simd_pcs_full_e2e() {
+    test_orion_simd_pcs_generics::<GF2, GF2x8, GF2_128, GF2x64>(19, 25);
+    test_orion_simd_pcs_generics::<GF2, GF2x8, GF2_128, GF2x128>(19, 25);
+    test_orion_simd_pcs_generics::<M31, M31x16, M31Ext3, M31x16>(16, 22);
+    test_orion_simd_pcs_generics::<Goldilocks, Goldilocksx8, GoldilocksExt2, Goldilocksx8>(16, 22)
 }
 
 fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     mpi_config_ref: &MPIConfig,
     total_num_vars: usize,
 ) where
-    C: GKRFieldConfig,
+    C: FieldEngine,
     ComPackF: SimdField<Scalar = C::CircuitField>,
     T: Transcript<C::ChallengeField>,
 {
@@ -118,14 +75,14 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
         MultiLinearPoly::<C::SimdCircuitField>::random(num_vars_in_global_poly, &mut rng);
 
     // NOTE generate srs for each party, and shared challenge point in each party
-    let challenge_point = ExpanderGKRChallenge::<C> {
-        x_mpi: (0..num_vars_in_mpi)
+    let challenge_point = ExpanderSingleVarChallenge::<C> {
+        r_mpi: (0..num_vars_in_mpi)
             .map(|_| C::ChallengeField::random_unsafe(&mut rng))
             .collect(),
-        x_simd: (0..num_vars_in_simd)
+        r_simd: (0..num_vars_in_simd)
             .map(|_| C::ChallengeField::random_unsafe(&mut rng))
             .collect(),
-        x: (0..num_vars_in_each_poly)
+        rz: (0..num_vars_in_each_poly)
             .map(|_| C::ChallengeField::random_unsafe(&mut rng))
             .collect(),
     };
@@ -133,7 +90,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     let mut transcript = T::new();
 
     dbg!(global_poly.get_num_vars(), global_poly.coeffs[0]);
-    dbg!(&challenge_point.x_mpi);
+    dbg!(&challenge_point.r_mpi);
     dbg!(mpi_config_ref.world_size(), mpi_config_ref.world_rank());
 
     // NOTE separate polynomial into different pieces by mpi rank
@@ -148,7 +105,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     common::test_pcs_for_expander_gkr::<
         C,
         T,
-        OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF, T>,
+        OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF>,
     >(
         &num_vars_in_each_poly,
         mpi_config_ref,
@@ -160,17 +117,23 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
 
 #[test]
 fn test_orion_for_expander_gkr() {
-    let mpi_config = MPIConfig::new();
+    let mpi_config = MPIConfig::prover_new();
 
     test_orion_for_expander_gkr_generics::<
         GF2ExtConfig,
         GF2x128,
         BytesHashTranscript<_, Keccak256hasher>,
-    >(&mpi_config, 16);
+    >(&mpi_config, 25);
 
     test_orion_for_expander_gkr_generics::<
         M31ExtConfig,
         M31x16,
+        BytesHashTranscript<_, Keccak256hasher>,
+    >(&mpi_config, 25);
+
+    test_orion_for_expander_gkr_generics::<
+        GoldilocksExtConfig,
+        Goldilocksx8,
         BytesHashTranscript<_, Keccak256hasher>,
     >(&mpi_config, 25);
 

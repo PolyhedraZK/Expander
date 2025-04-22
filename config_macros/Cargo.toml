@@ -1,0 +1,25 @@
+[package]
+name = "config_macros"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gkr_engine = { path = "../gkr_engine" }
+gkr_hashers = { path = "../hasher" } 
+poly_commit = { path = "../poly_commit" }
+transcript = { path = "../transcript" }
+
+syn.workspace = true
+quote.workspace = true
+proc-macro2.workspace = true
+
+[dev-dependencies]
+gf2 = { path = "../arith/gf2" }
+mersenne31 = { path = "../arith/mersenne31/" }
+goldilocks = { path = "../arith/goldilocks" }
+babybear = { path = "../arith/babybear" }
+
+halo2curves.workspace = true
+
+[lib]
+proc-macro=true

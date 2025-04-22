@@ -1,14 +1,16 @@
-use std::marker::PhantomData;
-
 use arith::{ExtensionField, Field, SimdField};
+use gkr_engine::Transcript;
 use itertools::izip;
 use serdes::SerdeError;
 use thiserror::Error;
-use transcript::Transcript;
+use transpose::{transpose, transpose_inplace};
+use tree::{Node, LEAF_BYTES};
 
-use crate::{traits::TensorCodeIOPPCS, PCS_SOUNDNESS_BITS};
-
-use super::linear_code::{OrionCode, OrionCodeParameter};
+use crate::{
+    orion::linear_code::{OrionCode, OrionCodeParameter, ORION_CODE_PARAMETER_INSTANCE},
+    traits::TensorCodeIOPPCS,
+    PCS_SOUNDNESS_BITS,
+};
 
 /*
  * PCS ERROR AND RESULT SETUP
@@ -29,13 +31,122 @@ pub type OrionResult<T> = std::result::Result<T, OrionPCSError>;
  * RELEVANT TYPES SETUP
  */
 
+/// returning leaf number, calibrated local number of variables, and message size
+/// NOTE(HS) num of local variables is over base field with no SIMD
+pub(crate) const fn orion_eval_shape(
+    world_size: usize,
+    num_local_vars: usize,
+    num_bits_base_field: usize,
+    field_pack_size: usize,
+) -> (usize, usize, usize) {
+    // for a global polynomial, compute the boolean hypercube size
+    let hypercube_size = world_size * (1 << num_local_vars);
+
+    // compute how many bits the global polynomial occupy
+    let polynomial_bits = hypercube_size * num_bits_base_field;
+    let polynomial_bits_log2 = polynomial_bits.ilog2();
+
+    // the leaf should be roughly O(\log N) to the global polynomial size
+    let leaves_lower_bound = match polynomial_bits_log2 {
+        // 128 bytes MT opening
+        0..16 => 2,
+
+        // 256 bytes MT opening
+        16..22 => 4,
+
+        // 512 bytes MT opening
+        22..28 => 8,
+
+        // 1 KB MT opening
+        28..34 => 16,
+
+        // 2 KB MT opening
+        34.. => 32,
+    };
+
+    // now compute the commitment used SIMD field bits,
+    // and compared against the suggest leaf size above.
+    //
+    // the commitment used SIMD field is the smallest unit of memory in commitment,
+    // thus each world can contribute as low as 1 commitment used SIMD field element,
+    // and thus if the world size is too large, we might need to scale up the final
+    // leaf size based on suggested leaf size - and thus may require padding the poly
+    // to the right size.
+    let num_bits_packed_f = field_pack_size * num_bits_base_field;
+    let minimum_pack_fs_per_world_in_query = {
+        let leaves_bits_lower_bound = leaves_lower_bound * LEAF_BYTES * 8;
+        // NOTE(HS) div_ceil ensures each world contribute at least 1 commitment SIMD field element
+        // in the MT query opening
+        leaves_bits_lower_bound.div_ceil(num_bits_packed_f * world_size)
+    };
+
+    let final_leaves_bits = minimum_pack_fs_per_world_in_query * world_size * num_bits_packed_f;
+    let final_leaves_per_query = final_leaves_bits / (LEAF_BYTES * 8);
+
+    // once we have decided the leaf size, we know the message size need to be encoded.
+    // the consideration is that - resulting codeword size should be >= MPI world size.
+    //
+    // Otherwise, the MPI transpose cannot go through - the codeword is too short to be
+    // segmented into the number of shares spreaded across MPI words for all-to-all transpose.
+    let msg_size = polynomial_bits / final_leaves_bits;
+
+    // we want to know the mininum message size, such that the resulting codeword length
+    // (pad to next po2) >= the MPI world size.
+    //
+    // for small case, when input message is shorter than Expander code length threshold,
+    // the code is itself (by Druk-Ishai),
+    // otherwise Expander encoding applies, with a code rate > 1 / 2, eventually pad to 2x length.
+    //
+    // NOTE(HS): here we assume that the message size and the MPI world size are both po2,
+    // while Expander code length threshold might be arbitarary - we scale up the threshold
+    // to the next po2 to avoid corner case.
+    let minimum_msg_size = {
+        let min_expander_po2_code_len = ORION_CODE_PARAMETER_INSTANCE
+            .length_threshold_g0s
+            .next_power_of_two();
+
+        if world_size <= min_expander_po2_code_len {
+            world_size
+        } else {
+            world_size / 2
+        }
+    };
+
+    // Early exit - if the message size from the global poly is sufficiently large,
+    // we decide the global MT opening size, and are good with the local polynomial number of vars.
+    if msg_size >= minimum_msg_size {
+        return (final_leaves_per_query, num_local_vars, msg_size);
+    }
+
+    // Scale up the polynomial local number of variable and plan again for the evaluation shape.
+    let scaled_up_num_local_vars = {
+        let num_of_field_elems_per_world_in_query =
+            minimum_pack_fs_per_world_in_query * field_pack_size;
+
+        let minimum_poly_len = minimum_msg_size * num_of_field_elems_per_world_in_query;
+        minimum_poly_len.ilog2() as usize
+    };
+
+    orion_eval_shape(
+        world_size,
+        scaled_up_num_local_vars,
+        num_bits_base_field,
+        field_pack_size,
+    )
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct OrionSRS {
     pub num_vars: usize,
+    pub num_leaves_per_mt_query: usize,
     pub code_instance: OrionCode,
 }
 
 impl TensorCodeIOPPCS for OrionSRS {
+    fn message_len(&self) -> usize {
+        self.code_instance.msg_len()
+    }
+
     fn codeword_len(&self) -> usize {
         self.code_instance.code_len()
     }
@@ -43,115 +154,109 @@ impl TensorCodeIOPPCS for OrionSRS {
     fn minimum_hamming_weight(&self) -> f64 {
         self.code_instance.hamming_weight()
     }
+
+    fn num_leaves_per_mt_query(&self) -> usize {
+        self.num_leaves_per_mt_query
+    }
 }
 
 impl OrionSRS {
-    pub fn new<F: Field>(num_vars: usize, code_instance: OrionCode) -> OrionResult<Self> {
-        let (_, msg_size) = Self::evals_shape::<F>(num_vars);
-        if msg_size != code_instance.msg_len() {
-            return Err(OrionPCSError::ParameterUnmatchError);
-        }
-
-        // NOTE: we just move the instance of code,
-        // don't think the instance of expander code will be used elsewhere
-        Ok(Self {
-            num_vars,
-            code_instance,
-        })
-    }
-
-    pub fn from_random<F: Field>(
-        num_variables: usize,
+    // NOTE(HS) num local variables here refers to the number of variables for base field elements
+    // rather than SIMD field elements, the number of variables returned for calibration is also
+    // over base field elements rather than SIMD field elements.
+    pub fn from_random(
+        world_size: usize,
+        num_local_vars: usize,
+        num_field_bits: usize,
+        field_pack_size: usize,
         code_param_instance: OrionCodeParameter,
         mut rng: impl rand::RngCore,
-    ) -> Self {
-        let (_, msg_size) = Self::evals_shape::<F>(num_variables);
+    ) -> (Self, usize) {
+        let (num_leaves_per_mt_query, scaled_num_local_vars, msg_size) =
+            orion_eval_shape(world_size, num_local_vars, num_field_bits, field_pack_size);
 
-        Self {
-            num_vars: num_variables,
+        let srs_sampled = Self {
+            num_vars: scaled_num_local_vars,
+            num_leaves_per_mt_query,
             code_instance: OrionCode::new(code_param_instance, msg_size, &mut rng),
-        }
+        };
+
+        (srs_sampled, scaled_num_local_vars)
+    }
+
+    pub fn local_num_fs_per_query(&self) -> usize {
+        let local_poly_len = 1 << self.num_vars;
+        local_poly_len / self.message_len()
     }
 }
 
-pub type OrionCommitment = tree::Node;
+pub type OrionCommitment = Node;
 
 #[derive(Clone, Debug, Default)]
-pub struct OrionScratchPad<F, ComPackF>
-where
-    F: Field,
-    ComPackF: SimdField<Scalar = F>,
-{
+pub struct OrionScratchPad {
     pub interleaved_alphabet_commitment: tree::Tree,
-
-    pub(crate) _phantom: PhantomData<ComPackF>,
+    pub merkle_cap: Vec<Node>,
 }
-
-unsafe impl<F: Field, ComPackF: SimdField<Scalar = F>> Send for OrionScratchPad<F, ComPackF> {}
 
 #[derive(Clone, Debug, Default)]
 pub struct OrionProof<EvalF: Field> {
     pub eval_row: Vec<EvalF>,
     pub proximity_rows: Vec<Vec<EvalF>>,
     pub query_openings: Vec<tree::RangePath>,
+    pub merkle_cap: Vec<Node>,
 }
 
 #[inline(always)]
-pub(crate) fn commit_encoded<F, PackF>(
+pub(crate) fn commit_encoded<PackF>(
     pk: &OrionSRS,
     packed_evals: &[PackF],
-    scratch_pad: &mut OrionScratchPad<F, PackF>,
-    packed_rows: usize,
-    msg_size: usize,
+    scratch_pad: &mut OrionScratchPad,
 ) -> OrionResult<OrionCommitment>
 where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
+    PackF: SimdField,
 {
+    let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
+
     // NOTE: packed codeword buffer and encode over packed field
-    let mut packed_interleaved_codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
+    let mut codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
     izip!(
-        packed_evals.chunks(msg_size),
-        packed_interleaved_codewords.chunks_mut(pk.codeword_len())
+        packed_evals.chunks(pk.message_len()),
+        codewords.chunks_mut(pk.codeword_len())
     )
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
 
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
-    let mut interleaved_alphabets = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
-    transpose(
-        &packed_interleaved_codewords,
-        &mut interleaved_alphabets,
-        packed_rows,
-    );
-    drop(packed_interleaved_codewords);
+    let mut scratch = vec![PackF::ZERO; std::cmp::max(packed_rows, pk.codeword_len())];
+    transpose_inplace(&mut codewords, &mut scratch, pk.codeword_len(), packed_rows);
+    drop(scratch);
 
     // NOTE: commit the interleaved codeword
     // we just directly commit to the packed field elements to leaves
     // Also note, when codeword is not power of 2 length, pad to nearest po2
     // to commit by merkle tree
-    if !interleaved_alphabets.len().is_power_of_two() {
-        let aligned_po2_len = interleaved_alphabets.len().next_power_of_two();
-        interleaved_alphabets.resize(aligned_po2_len, PackF::ZERO);
+    if !codewords.len().is_power_of_two() {
+        let aligned_po2_len = codewords.len().next_power_of_two();
+        codewords.resize(aligned_po2_len, PackF::ZERO);
     }
     scratch_pad.interleaved_alphabet_commitment =
-        tree::Tree::compact_new_with_packed_field_elems::<F, PackF>(interleaved_alphabets);
+        tree::Tree::compact_new_with_packed_field_elems(codewords);
+
+    scratch_pad.merkle_cap = vec![scratch_pad.interleaved_alphabet_commitment.root()];
 
     Ok(scratch_pad.interleaved_alphabet_commitment.root())
 }
 
 #[inline(always)]
-pub(crate) fn orion_mt_openings<F, EvalF, ComPackF, T>(
+pub(crate) fn orion_mt_openings<EvalF, T>(
     pk: &OrionSRS,
     transcript: &mut T,
-    scratch_pad: &OrionScratchPad<F, ComPackF>,
+    scratch_pad: &OrionScratchPad,
 ) -> Vec<tree::RangePath>
 where
-    F: Field,
-    EvalF: ExtensionField<BaseField = F>,
-    ComPackF: SimdField<Scalar = F>,
+    EvalF: ExtensionField,
     T: Transcript<EvalF>,
 {
-    let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING;
+    let leaves_in_range_opening = pk.num_leaves_per_mt_query();
 
     // NOTE: MT opening for point queries
     let query_num = pk.query_complexity(PCS_SOUNDNESS_BITS);
@@ -175,81 +280,19 @@ pub(crate) fn orion_mt_verify(
     vk: &OrionSRS,
     query_indices: &[usize],
     range_openings: &[tree::RangePath],
-    root: &OrionCommitment,
+    merkle_cap: &[Node],
 ) -> bool {
-    let leaves_in_range_opening = OrionSRS::LEAVES_IN_RANGE_OPENING;
+    let world_size = merkle_cap.len();
+    let indices_per_merkle_cap = vk.codeword_len().next_power_of_two() / world_size;
+
     izip!(query_indices, range_openings).all(|(&qi, range_path)| {
         let index = qi % vk.codeword_len();
-        range_path.verify(root) && index == range_path.left / leaves_in_range_opening
+        let merkle_cap_index = index / indices_per_merkle_cap;
+        let in_sub_tree_index = index % indices_per_merkle_cap;
+
+        range_path.verify(&merkle_cap[merkle_cap_index])
+            && in_sub_tree_index == range_path.left / range_path.leaves.len()
     })
-}
-
-/*
- * IMPLEMENTATIONS FOR MATRIX TRANSPOSE
- */
-
-pub(crate) const fn cache_batch_size<F: Sized>() -> usize {
-    const CACHE_SIZE: usize = 1 << 16;
-    CACHE_SIZE / size_of::<F>()
-}
-
-#[inline(always)]
-pub(crate) fn transpose<F: Field>(mat: &[F], out: &mut [F], row_num: usize) {
-    let col_num = mat.len() / row_num;
-    let batch_size = cache_batch_size::<F>();
-    let mut batch_srt = 0;
-
-    mat.chunks(batch_size).for_each(|ith_batch| {
-        let (mut src_y, mut src_x) = (batch_srt / col_num, batch_srt % col_num);
-
-        ith_batch.iter().for_each(|elem_j| {
-            let dst = src_y + src_x * row_num;
-            out[dst] = *elem_j;
-
-            src_x += 1;
-            if src_x >= col_num {
-                src_x = 0;
-                src_y += 1;
-            }
-        });
-
-        batch_srt += batch_size
-    });
-}
-
-#[allow(unused)]
-#[inline(always)]
-pub(crate) fn transpose_in_place<F: Field>(mat: &mut [F], scratch: &mut [F], row_num: usize) {
-    transpose(mat, scratch, row_num);
-    mat.copy_from_slice(scratch);
-}
-
-#[inline(always)]
-pub(crate) fn pack_from_base<F, PackF>(evaluations: &[F]) -> Vec<PackF>
-where
-    F: Field,
-    PackF: SimdField<Scalar = F>,
-{
-    // NOTE: SIMD pack neighboring base field evals
-    evaluations
-        .chunks(PackF::PACK_SIZE)
-        .map(SimdField::pack)
-        .collect()
-}
-
-#[inline(always)]
-pub(crate) fn pack_simd<F, SimdF, PackF>(evaluations: &[SimdF]) -> Vec<PackF>
-where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-    PackF: SimdField<Scalar = F>,
-{
-    // NOTE: SIMD pack neighboring SIMD evals
-    let relative_pack_size = PackF::PACK_SIZE / SimdF::PACK_SIZE;
-    evaluations
-        .chunks(relative_pack_size)
-        .map(PackF::pack_from_simd)
-        .collect()
 }
 
 /*
@@ -282,7 +325,7 @@ impl<F: Field> SubsetSumLUTs<F> {
         izip!(&mut self.tables, weights.chunks(self.entry_bits)).for_each(
             |(lut_i, sub_weights)| {
                 sub_weights.iter().enumerate().for_each(|(i, weight_i)| {
-                    let bit_mask = 1 << (self.entry_bits - i - 1);
+                    let bit_mask = 1 << i;
                     lut_i.iter_mut().enumerate().for_each(|(bit_map, li)| {
                         if bit_map & bit_mask == bit_mask {
                             *li += weight_i;
@@ -294,10 +337,9 @@ impl<F: Field> SubsetSumLUTs<F> {
     }
 
     #[inline(always)]
-    pub fn lookup_and_sum<BitF, EntryF>(&self, indices: &[EntryF]) -> F
+    pub fn lookup_and_sum<EntryF>(&self, indices: &[EntryF]) -> F
     where
-        BitF: Field,
-        EntryF: SimdField<Scalar = BitF>,
+        EntryF: SimdField,
     {
         // NOTE: at least the entry field elem should have a matching field size
         // and the the entry field being a SIMD field with same packing size as
@@ -313,18 +355,17 @@ impl<F: Field> SubsetSumLUTs<F> {
 }
 
 #[inline(always)]
-pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
+pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF>(
     com_pack_size: usize,
     packed_evals: &[SimdF],
     eq_col_coeffs: &[EvalF],
     eval_row: &mut [EvalF],
+    rand_col_coeffs: &[Vec<EvalF>],
     proximity_rows: &mut [Vec<EvalF>],
-    transcript: &mut T,
 ) where
     F: Field,
     EvalF: ExtensionField<BaseField = F>,
     SimdF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     // NOTE: declare the look up tables for column sums
     let table_num = com_pack_size / SimdF::PACK_SIZE;
@@ -346,11 +387,8 @@ pub(crate) fn lut_open_linear_combine<F, EvalF, SimdF, T>(
             .for_each(|(p_col, eval)| *eval += luts.lookup_and_sum(p_col));
     });
 
-    // NOTE: draw random linear combination out
-    // and compose proximity response(s) of tensor code IOP based PCS
-    proximity_rows.iter_mut().for_each(|row_buffer| {
-        let random_coeffs = transcript.generate_challenge_field_elements(combination_size);
-
+    // NOTE: compose proximity response(s) of tensor code IOP based PCS
+    izip!(proximity_rows, rand_col_coeffs).for_each(|(row_buffer, random_coeffs)| {
         izip!(
             random_coeffs.chunks(com_pack_size),
             packed_evals.chunks(packed_evals.len() / packed_row_size)
@@ -421,41 +459,18 @@ where
     ExtF::from_limbs(&ext_limbs)
 }
 
-// NOTE(HS) this is only a helper function for SIMD inner product between
-// extension fields with SIMD base fields - motivation here is decompose extension fields
-// into base field limbs, decompose them, then reSIMD pack them.
-// This method is applied column-wise, i.e., the data size is the same as linear combination
-// size, which should be in total 1024 bits at this point (2025/03/11).
 #[inline(always)]
-fn transpose_and_pack<F, SimdF>(evaluations: &[F], row_num: usize) -> Vec<SimdF>
-where
-    F: Field,
-    SimdF: SimdField<Scalar = F>,
-{
-    // NOTE: pre transpose evaluations
-    let mut evaluations_transposed = vec![F::ZERO; evaluations.len()];
-    transpose(evaluations, &mut evaluations_transposed, row_num);
-
-    // NOTE: SIMD pack each row of transposed matrix
-    evaluations_transposed
-        .chunks(SimdF::PACK_SIZE)
-        .map(SimdField::pack)
-        .collect()
-}
-
-#[inline(always)]
-pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
+pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
     com_pack_size: usize,
     packed_evals: &[SimdF],
     eq_col_coeffs: &[EvalF],
     eval_row: &mut [EvalF],
+    rand_col_coeffs: &[Vec<EvalF>],
     proximity_rows: &mut [Vec<EvalF>],
-    transcript: &mut T,
 ) where
     F: Field,
     EvalF: ExtensionField<BaseField = F>,
     SimdF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
 {
     // NOTE: check SIMD inner product numbers for column sums
     let simd_inner_prods = com_pack_size / SimdF::PACK_SIZE;
@@ -464,42 +479,39 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF, T>(
     let combination_size = eq_col_coeffs.len();
     let packed_row_size = combination_size / com_pack_size;
 
+    let mut buffer = vec![F::ZERO; com_pack_size * EvalF::DEGREE];
+
     // NOTE: working on evaluation response of tensor code IOP based PCS
     izip!(
         eq_col_coeffs.chunks(com_pack_size),
         packed_evals.chunks(packed_evals.len() / packed_row_size)
     )
     .for_each(|(eq_chunk, packed_evals_chunk)| {
-        let eq_col_coeffs_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
-        let eq_col_simd_limbs = transpose_and_pack(&eq_col_coeffs_limbs, com_pack_size);
+        let eq_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
+        transpose(&eq_limbs, &mut buffer, EvalF::DEGREE, com_pack_size);
+        let simd_limbs: Vec<_> = buffer.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect();
 
         izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *eval_row).for_each(
-            |(p_col, eval)| {
-                *eval += simd_ext_base_inner_prod::<_, EvalF, _>(&eq_col_simd_limbs, p_col)
-            },
+            |(p_col, eval)| *eval += simd_ext_base_inner_prod::<_, EvalF, _>(&simd_limbs, p_col),
         );
     });
 
-    // NOTE: draw random linear combination out
-    // and compose proximity response(s) of tensor code IOP based PCS
-    proximity_rows.iter_mut().for_each(|row_buffer| {
-        let random_coeffs = transcript.generate_challenge_field_elements(combination_size);
-
+    // NOTE: compose proximity response(s) of tensor code IOP based PCS
+    izip!(proximity_rows, rand_col_coeffs).for_each(|(prox_row, random_coeffs)| {
         izip!(
             random_coeffs.chunks(com_pack_size),
             packed_evals.chunks(packed_evals.len() / packed_row_size)
         )
         .for_each(|(rand_chunk, packed_evals_chunk)| {
-            let rand_coeffs_limbs: Vec<_> = rand_chunk.iter().flat_map(|e| e.to_limbs()).collect();
-            let rand_simd_limbs = transpose_and_pack(&rand_coeffs_limbs, com_pack_size);
+            let rand_limbs: Vec<_> = rand_chunk.iter().flat_map(|e| e.to_limbs()).collect();
+            transpose(&rand_limbs, &mut buffer, EvalF::DEGREE, com_pack_size);
+            let simd_limbs: Vec<_> = buffer.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect();
 
-            izip!(
-                packed_evals_chunk.chunks(simd_inner_prods),
-                &mut *row_buffer
-            )
-            .for_each(|(p_col, prox)| {
-                *prox += simd_ext_base_inner_prod::<_, EvalF, _>(&rand_simd_limbs, p_col)
-            });
+            izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *prox_row).for_each(
+                |(p_col, prox)| {
+                    *prox += simd_ext_base_inner_prod::<_, EvalF, _>(&simd_limbs, p_col)
+                },
+            );
         });
     });
 }
@@ -519,12 +531,14 @@ where
     // NOTE: check SIMD inner product numbers for column sums
     assert_eq!(fixed_rl.len() % SimdF::PACK_SIZE, 0);
 
+    let mut scratch = vec![F::ZERO; fixed_rl.len() * ExtF::DEGREE];
     let rl_limbs: Vec<_> = fixed_rl.iter().flat_map(|e| e.to_limbs()).collect();
-    let rl_simd_limbs: Vec<SimdF> = transpose_and_pack(&rl_limbs, fixed_rl.len());
+    transpose(&rl_limbs, &mut scratch, ExtF::DEGREE, fixed_rl.len());
+    let simd_limbs: Vec<_> = scratch.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect();
 
     izip!(query_indices, packed_interleaved_alphabets).all(|(qi, interleaved_alphabet)| {
         let index = qi % codeword.len();
-        let alphabet: ExtF = simd_ext_base_inner_prod(&rl_simd_limbs, interleaved_alphabet);
+        let alphabet: ExtF = simd_ext_base_inner_prod(&simd_limbs, interleaved_alphabet);
         alphabet == codeword[index]
     })
 }
@@ -537,7 +551,7 @@ mod tests {
     use gf2_128::{GF2_128x8, GF2_128};
     use itertools::izip;
 
-    use super::SubsetSumLUTs;
+    use crate::orion::utils::SubsetSumLUTs;
 
     #[test]
     fn test_lut_simd_inner_prod_consistency() {

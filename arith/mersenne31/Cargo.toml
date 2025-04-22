@@ -5,14 +5,13 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../" }
-field_hashers = { path = "../field_hashers" }
+gkr_hashers = { path = "../../hasher" }
 serdes = { path = "../../serdes" }
 
 ark-std.workspace = true
 halo2curves.workspace = true
 log.workspace = true
 rand.workspace = true
-sha2.workspace = true
 thiserror.workspace = true
 ethnum.workspace = true
 

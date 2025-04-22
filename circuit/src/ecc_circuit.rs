@@ -1,5 +1,4 @@
-use config::GKRConfig;
-use gkr_field_config::GKRFieldConfig;
+use gkr_engine::{FieldEngine, GKREngine};
 use serdes::{ExpSerde, SerdeResult};
 use std::{cmp::max, collections::HashMap, fs, io::Cursor};
 
@@ -14,7 +13,7 @@ pub struct Allocation {
 }
 
 #[derive(Default)]
-pub struct Segment<C: GKRFieldConfig> {
+pub struct Segment<C: FieldEngine> {
     pub i_var_num: usize,
     pub o_var_num: usize,
     pub child_segs: Vec<(SegmentId, Vec<Allocation>)>,
@@ -24,7 +23,7 @@ pub struct Segment<C: GKRFieldConfig> {
     pub gate_uni: Vec<GateUni<C>>,
 }
 
-impl<C: GKRFieldConfig> Segment<C> {
+impl<C: FieldEngine> Segment<C> {
     #[inline]
     pub fn contain_gates(&self) -> bool {
         !self.gate_muls.is_empty()
@@ -68,7 +67,7 @@ impl<C: GKRFieldConfig> Segment<C> {
 }
 
 #[derive(Default)]
-pub struct RecursiveCircuit<C: GKRFieldConfig> {
+pub struct RecursiveCircuit<C: FieldEngine> {
     pub num_public_inputs: usize,
     pub num_outputs: usize,
     pub expected_num_output_zeros: usize,
@@ -77,7 +76,7 @@ pub struct RecursiveCircuit<C: GKRFieldConfig> {
     pub layers: Vec<SegmentId>,
 }
 
-impl<C: GKRFieldConfig> RecursiveCircuit<C> {
+impl<C: FieldEngine> RecursiveCircuit<C> {
     pub fn load(filename: &str) -> SerdeResult<Self> {
         let file_bytes = fs::read(filename)?;
         let cursor = Cursor::new(file_bytes);
@@ -85,7 +84,7 @@ impl<C: GKRFieldConfig> RecursiveCircuit<C> {
         <Self as ExpSerde>::deserialize_from(cursor)
     }
 
-    pub fn flatten<Cfg: GKRConfig<FieldConfig = C>>(&self) -> Circuit<C> {
+    pub fn flatten<Cfg: GKREngine<FieldConfig = C>>(&self) -> Circuit<C> {
         let mut ret = Circuit::<C> {
             expected_num_output_zeros: self.expected_num_output_zeros,
             ..Default::default()

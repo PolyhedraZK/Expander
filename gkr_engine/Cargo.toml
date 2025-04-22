@@ -1,0 +1,26 @@
+[package]
+name = "gkr_engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arith = { path = "../arith" }
+babybear = { path = "../arith/babybear" }
+gf2 = { path = "../arith/gf2" }
+gf2_128 = { path = "../arith/gf2_128" }
+goldilocks = { path = "../arith/goldilocks" }
+mersenne31 = { path = "../arith/mersenne31" }
+polynomials = { path = "../arith/polynomials"}
+serdes = { path = "../serdes" }
+
+thiserror.workspace = true
+mpi.workspace = true
+rand.workspace = true
+itertools.workspace = true
+
+[dev-dependencies]
+ark-std.workspace = true
+
+[features]
+default = []
+# grinding = [ "grinding" ]

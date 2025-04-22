@@ -6,8 +6,7 @@ edition = "2021"
 [dependencies]
 arith = { path = "../arith" }
 gf2 = { path = "../arith/gf2" }
-gkr_field_config = { path = "../config/gkr_field_config" }
-mpi_config = { path = "../config/mpi_config" }
+gkr_engine = { path = "../gkr_engine" }
 polynomials = { path = "../arith/polynomials"}
 serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
@@ -19,16 +18,14 @@ ark-std.workspace = true
 thiserror.workspace = true
 itertools.workspace = true
 derivative.workspace = true
-
-[target.'cfg(target_arch = "x86_64")'.dependencies]
-halo2curves = { workspace = true, features = [ "asm" ] }
-[target.'cfg(not(target_arch = "x86_64"))'.dependencies]
+transpose.workspace = true
 halo2curves.workspace = true
 
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
 mersenne31 = { path = "../arith/mersenne31" }
-field_hashers = { path = "../arith/field_hashers" }
+goldilocks = { path = "../arith/goldilocks" }
+gkr_hashers = { path = "../hasher" }
 
 tynm.workspace = true
 criterion.workspace = true

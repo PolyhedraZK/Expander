@@ -39,23 +39,19 @@ impl ExpSerde for NeonGF2_128x8 {
 
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
-        self.v.iter().for_each(|&vv| {
-            writer
-                .write_all(unsafe { transmute::<uint32x4_t, [u8; 16]>(vv) }.as_ref())
-                .unwrap()
-        });
+        unsafe {
+            writer.write_all(transmute::<[uint32x4_t; 8], [u8; 128]>(self.v).as_ref())?;
+        }
         Ok(())
     }
 
     #[inline(always)]
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut res = Self::zero();
-        res.v.iter_mut().for_each(|vv| {
-            let mut u = [0u8; 16];
-            reader.read_exact(&mut u).unwrap();
-            *vv = unsafe { transmute::<[u8; 16], uint32x4_t>(u) }
-        });
-        Ok(res)
+        let mut res = [0u8; 128];
+        reader.read_exact(&mut res)?;
+
+        let res = unsafe { transmute::<[u8; 128], [uint32x4_t; 8]>(res) };
+        Ok(Self { v: res })
     }
 }
 
@@ -281,14 +277,14 @@ impl ExtensionField for NeonGF2_128x8 {
 
     #[inline(always)]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
-        let v0 = ((base.v >> 7) & 1u8) as u32;
-        let v1 = ((base.v >> 6) & 1u8) as u32;
-        let v2 = ((base.v >> 5) & 1u8) as u32;
-        let v3 = ((base.v >> 4) & 1u8) as u32;
-        let v4 = ((base.v >> 3) & 1u8) as u32;
-        let v5 = ((base.v >> 2) & 1u8) as u32;
-        let v6 = ((base.v >> 1) & 1u8) as u32;
-        let v7 = (base.v & 1u8) as u32;
+        let v0 = (base.v & 1u8) as u32;
+        let v1 = ((base.v >> 1) & 1u8) as u32;
+        let v2 = ((base.v >> 2) & 1u8) as u32;
+        let v3 = ((base.v >> 3) & 1u8) as u32;
+        let v4 = ((base.v >> 4) & 1u8) as u32;
+        let v5 = ((base.v >> 5) & 1u8) as u32;
+        let v6 = ((base.v >> 6) & 1u8) as u32;
+        let v7 = ((base.v >> 7) & 1u8) as u32;
 
         Self {
             v: [
@@ -306,14 +302,14 @@ impl ExtensionField for NeonGF2_128x8 {
 
     #[inline(always)]
     fn add_by_base_field(&self, base: &Self::BaseField) -> Self {
-        let v0 = ((base.v >> 7) & 1u8) as u32;
-        let v1 = ((base.v >> 6) & 1u8) as u32;
-        let v2 = ((base.v >> 5) & 1u8) as u32;
-        let v3 = ((base.v >> 4) & 1u8) as u32;
-        let v4 = ((base.v >> 3) & 1u8) as u32;
-        let v5 = ((base.v >> 2) & 1u8) as u32;
-        let v6 = ((base.v >> 1) & 1u8) as u32;
-        let v7 = (base.v & 1u8) as u32;
+        let v0 = (base.v & 1u8) as u32;
+        let v1 = ((base.v >> 1) & 1u8) as u32;
+        let v2 = ((base.v >> 2) & 1u8) as u32;
+        let v3 = ((base.v >> 3) & 1u8) as u32;
+        let v4 = ((base.v >> 4) & 1u8) as u32;
+        let v5 = ((base.v >> 5) & 1u8) as u32;
+        let v6 = ((base.v >> 6) & 1u8) as u32;
+        let v7 = ((base.v >> 7) & 1u8) as u32;
 
         Self {
             v: [
@@ -387,14 +383,14 @@ impl ExtensionField for NeonGF2_128x8 {
 impl From<GF2x8> for NeonGF2_128x8 {
     #[inline(always)]
     fn from(v: GF2x8) -> Self {
-        let v0 = ((v.v >> 7) & 1u8) as u32;
-        let v1 = ((v.v >> 6) & 1u8) as u32;
-        let v2 = ((v.v >> 5) & 1u8) as u32;
-        let v3 = ((v.v >> 4) & 1u8) as u32;
-        let v4 = ((v.v >> 3) & 1u8) as u32;
-        let v5 = ((v.v >> 2) & 1u8) as u32;
-        let v6 = ((v.v >> 1) & 1u8) as u32;
-        let v7 = (v.v & 1u8) as u32;
+        let v0 = (v.v & 1u8) as u32;
+        let v1 = ((v.v >> 1) & 1u8) as u32;
+        let v2 = ((v.v >> 2) & 1u8) as u32;
+        let v3 = ((v.v >> 3) & 1u8) as u32;
+        let v4 = ((v.v >> 4) & 1u8) as u32;
+        let v5 = ((v.v >> 5) & 1u8) as u32;
+        let v6 = ((v.v >> 6) & 1u8) as u32;
+        let v7 = ((v.v >> 7) & 1u8) as u32;
 
         NeonGF2_128x8 {
             v: [

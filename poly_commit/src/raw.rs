@@ -1,15 +1,15 @@
 /// Raw commitment for multi-linear polynomials
-use crate::{
-    ExpanderGKRChallenge, PCSForExpanderGKR, PolynomialCommitmentScheme, StructuredReferenceString,
-};
 use arith::{ExtensionField, Field};
 use ethnum::U256;
-use gkr_field_config::GKRFieldConfig;
-use mpi_config::MPIConfig;
-use polynomials::{MultiLinearPoly, MultiLinearPolyExpander, MultilinearExtension};
+use gkr_engine::{
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
+    StructuredReferenceString, Transcript,
+};
+use polynomials::{MultiLinearPoly, MultilinearExtension};
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
-use transcript::Transcript;
+
+use crate::PolynomialCommitmentScheme;
 
 #[derive(Clone, Debug, Default)]
 pub struct RawCommitment<F: Field> {
@@ -50,7 +50,7 @@ pub struct RawMultiLinearScratchPad<F: Field> {
 // Raw commitment for multi-linear polynomials
 pub struct RawMultiLinearPCS {}
 
-impl<F: ExtensionField, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for RawMultiLinearPCS {
+impl<F: ExtensionField> PolynomialCommitmentScheme<F> for RawMultiLinearPCS {
     const NAME: &'static str = "RawMultiLinear";
 
     type Params = usize;
@@ -65,8 +65,8 @@ impl<F: ExtensionField, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for R
 
     type Opening = ();
 
-    fn gen_srs_for_testing(_params: &Self::Params, _rng: impl RngCore) -> Self::SRS {
-        Self::SRS::default()
+    fn gen_srs_for_testing(params: &Self::Params, _rng: impl RngCore) -> (Self::SRS, usize) {
+        (Self::SRS::default(), *params)
     }
 
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
@@ -89,7 +89,7 @@ impl<F: ExtensionField, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for R
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         _scratch_pad: &Self::ScratchPad,
-        _transcript: &mut T,
+        _transcript: &mut impl Transcript<F>,
     ) -> (F, Self::Opening) {
         assert!(x.len() == *params);
         (MultiLinearPoly::<F>::evaluate_jolt(poly, x), ())
@@ -102,7 +102,7 @@ impl<F: ExtensionField, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for R
         x: &Self::EvalPoint,
         v: F,
         _opening: &Self::Opening,
-        _transcript: &mut T,
+        _transcript: &mut impl Transcript<F>,
     ) -> bool {
         assert!(x.len() == *params);
         MultiLinearPoly::<F>::evaluate_with_buffer(
@@ -115,24 +115,16 @@ impl<F: ExtensionField, T: Transcript<F>> PolynomialCommitmentScheme<F, T> for R
 
 // =================================================================================================
 
-pub struct RawExpanderGKR<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> {
-    _phantom: std::marker::PhantomData<(C, T)>,
+pub struct RawExpanderGKR<C: FieldEngine> {
+    _phantom: std::marker::PhantomData<C>,
 }
 
-impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T>
-    for RawExpanderGKR<C, T>
-{
+impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
     const NAME: &'static str = "RawExpanderGKR";
 
+    const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;
+
     type Params = usize;
-
-    // type Poly = MultiLinearPoly<C::SimdCircuitField>;
-
-    // type EvalPoint = (
-    //     Vec<C::ChallengeField>, // x
-    //     Vec<C::ChallengeField>, // x_simd
-    //     Vec<C::ChallengeField>, // x_mpi
-    // );
 
     type ScratchPad = ();
 
@@ -143,43 +135,44 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
     type Opening = ();
 
     fn gen_srs_for_testing(
-        _params: &Self::Params,
-        _mpi_config: &MPIConfig,
+        params: &Self::Params,
+        _mpi_engine: &impl MPIEngine,
         _rng: impl RngCore,
-    ) -> Self::SRS {
+    ) -> (Self::SRS, usize) {
+        ((), *params)
     }
 
     fn gen_params(n_input_vars: usize) -> Self::Params {
         n_input_vars
     }
 
-    fn init_scratch_pad(_params: &Self::Params, _mpi_config: &MPIConfig) -> Self::ScratchPad {}
+    fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
     fn commit(
         params: &Self::Params,
-        mpi_config: &MPIConfig,
+        mpi_engine: &impl MPIEngine,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         assert!(poly.num_vars() == *params);
 
-        if mpi_config.is_single_process() {
+        if mpi_engine.is_single_process() {
             return Self::Commitment {
                 evals: poly.hypercube_basis(),
             }
             .into();
         }
 
-        let mut buffer = if mpi_config.is_root() {
-            vec![C::SimdCircuitField::zero(); poly.hypercube_size() * mpi_config.world_size()]
+        let mut buffer = if mpi_engine.is_root() {
+            vec![C::SimdCircuitField::zero(); poly.hypercube_size() * mpi_engine.world_size()]
         } else {
             vec![]
         };
 
-        mpi_config.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
+        mpi_engine.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
 
-        if !mpi_config.is_root() {
+        if !mpi_engine.is_root() {
             return None;
         }
 
@@ -188,11 +181,11 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
 
     fn open(
         _params: &Self::Params,
-        _mpi_config: &MPIConfig,
+        _mpi_engine: &impl MPIEngine,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         _poly: &impl MultilinearExtension<C::SimdCircuitField>,
-        _x: &ExpanderGKRChallenge<C>,
-        _transcript: &mut T,
+        _x: &ExpanderSingleVarChallenge<C>,
+        _transcript: &mut impl Transcript<C::ChallengeField>,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
         Some(())
@@ -202,19 +195,13 @@ impl<C: GKRFieldConfig, T: Transcript<C::ChallengeField>> PCSForExpanderGKR<C, T
         _params: &Self::Params,
         _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
-        x: &ExpanderGKRChallenge<C>,
+        challenge: &ExpanderSingleVarChallenge<C>,
         v: C::ChallengeField,
-        _transcript: &mut T,
+        _transcript: &mut impl Transcript<C::ChallengeField>,
         _opening: &Self::Opening,
     ) -> bool {
-        let ExpanderGKRChallenge::<C> { x, x_simd, x_mpi } = x;
         let v_target =
-            MultiLinearPolyExpander::<C>::single_core_eval_circuit_vals_at_expander_challenge(
-                &commitment.evals,
-                x,
-                x_simd,
-                x_mpi,
-            );
+            C::single_core_eval_circuit_vals_at_expander_challenge(&commitment.evals, challenge);
         v == v_target
     }
 }

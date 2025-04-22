@@ -1,0 +1,13 @@
+[package]
+name = "gkr_hashers"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arith = { path = "../arith" }
+serdes = { path = "../serdes" }
+
+
+halo2curves.workspace = true
+sha2.workspace = true
+tiny-keccak.workspace = true
