@@ -12,6 +12,7 @@ pub struct FRIScratchPad<F: FFTField> {
 unsafe impl<F: FFTField> Send for FRIScratchPad<F> {}
 
 #[allow(unused)]
+#[inline(always)]
 pub(crate) fn copy_elems_to_leaves<F: Field>(elems: &[F]) -> Vec<Leaf> {
     let max_elems_per_leaf = LEAF_BYTES * 8 / F::FIELD_SIZE;
     let num_elems_per_leaf = if max_elems_per_leaf.is_power_of_two() {
@@ -39,6 +40,33 @@ pub(crate) fn copy_elems_to_leaves<F: Field>(elems: &[F]) -> Vec<Leaf> {
             leaf
         })
         .collect()
+}
+
+#[inline(always)]
+pub(crate) fn fri_mt_opening(
+    point_to_alphabet: &mut usize,
+    codeword_len: usize,
+    merkle_tree: &tree::Tree,
+) -> (tree::Path, tree::Path) {
+    let elems_in_leaf = codeword_len / merkle_tree.size();
+    let point_to_leaf = *point_to_alphabet / elems_in_leaf;
+
+    let oracle_rhs_start = merkle_tree.size() >> 1;
+    let sibling_point = point_to_leaf ^ oracle_rhs_start;
+
+    let left = std::cmp::min(point_to_leaf, sibling_point);
+    let right = oracle_rhs_start + left;
+
+    let height = merkle_tree.height();
+
+    if *point_to_alphabet >= codeword_len / 2 {
+        *point_to_alphabet -= codeword_len / 2
+    }
+
+    (
+        merkle_tree.gen_proof(left, height),
+        merkle_tree.gen_proof(right, height),
+    )
 }
 
 #[cfg(test)]

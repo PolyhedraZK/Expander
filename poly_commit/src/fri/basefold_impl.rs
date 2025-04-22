@@ -7,14 +7,15 @@ use tree::Tree;
 
 use crate::{
     fri::{
-        utils::copy_elems_to_leaves, vanilla_sumcheck::vanilla_sumcheck_degree_2_mul_step_prove,
+        utils::{copy_elems_to_leaves, fri_mt_opening},
+        vanilla_sumcheck::vanilla_sumcheck_degree_2_mul_step_prove,
     },
     FRICommitment, FRIScratchPad,
 };
 
 const LOG_CODE_RATE: usize = 2;
 
-const QUERY_COMPLEXITY: usize = 50;
+const QUERY_COMPLEXITY: usize = 100;
 
 #[allow(unused)]
 pub(crate) fn fri_commit<F: FFTField>(
@@ -118,64 +119,37 @@ pub(crate) fn fri_open<F, ChallengeF>(
     dbg!(&iopp_codewords.last());
     assert_eq!(ext_poly.coeffs[0], iopp_codewords.last().unwrap()[0]);
 
-    // TODO(HS) revamped up to here
-
-    return;
-
     let iopp_last_oracle_message = iopp_oracles[iopp_oracles.len() - 1].leaves.clone();
-    let mut iopp_challenges = fs_transcript.generate_challenge_index_vector(QUERY_COMPLEXITY);
-    let mut first_round_queries = vec![];
+    let iopp_challenges = fs_transcript.generate_challenge_index_vector(QUERY_COMPLEXITY);
 
-    let rest_iopp_queries = iopp_challenges
-        .iter_mut()
-        .map(|mut point| {
+    let rest_iopp_queries: Vec<Vec<(tree::Path, tree::Path)>> = iopp_challenges
+        .iter()
+        .map(|point| {
+            let mut codeword_len = scratch_pad.codeword.len();
+            let mut point_to_alphabet = point % codeword_len;
+            let height = scratch_pad.reed_solomon_commitment.height();
+
             let mut iopp_round_query = Vec::with_capacity(iopp_oracles.len() + 1);
 
-            // Merkle queries over F
-            let oracle_rhs_start = scratch_pad.reed_solomon_commitment.size() >> 1;
-            let sibling_point = *point ^ oracle_rhs_start;
-            let left = std::cmp::min(*point, sibling_point);
-            let right = oracle_rhs_start + left;
-            *point = left;
-
-            let first_round_query = (
-                scratch_pad
-                    .reed_solomon_commitment
-                    .gen_proof(left, scratch_pad.reed_solomon_commitment.height()),
-                scratch_pad
-                    .reed_solomon_commitment
-                    .gen_proof(right, scratch_pad.reed_solomon_commitment.height()),
+            let round_opening = fri_mt_opening(
+                &mut point_to_alphabet,
+                codeword_len,
+                &scratch_pad.reed_solomon_commitment,
             );
 
-            first_round_queries.push(first_round_query);
+            iopp_round_query.push(round_opening);
+            codeword_len >>= 1;
 
-            // Merkle queries over ExtF
             iopp_oracles.iter().for_each(|oracle| {
-                // NOTE: since the oracle length is always a power of 2,
-                // so the right hand side starts from directly div by 2.
-                let oracle_rhs_start = oracle.size() >> 1;
+                let round_opening = fri_mt_opening(&mut point_to_alphabet, codeword_len, oracle);
 
-                // NOTE: dirty trick, oracle rhs starting index is a pow of 2.
-                // now that we want to find a sibling point w.r.t the index,
-                // by plus (or minus) against point, so xor should work.
-                let sibling_point = *point ^ oracle_rhs_start;
-
-                let left = std::cmp::min(*point, sibling_point);
-                let right = oracle_rhs_start + left;
-
-                // NOTE: update point for next round of IOPP querying
-                *point = left;
-
-                iopp_round_query.push((
-                    oracle.gen_proof(left, oracle.height()),
-                    oracle.gen_proof(right, oracle.height()),
-                ))
+                iopp_round_query.push(round_opening);
+                codeword_len >>= 1;
             });
 
-            // todo: include first round query in the iopp round query
             iopp_round_query
         })
-        .collect::<Vec<_>>();
+        .collect();
 
     /*
     BasefoldProof {

@@ -11,12 +11,11 @@ use crate::fri::{
     FRIScratchPad,
 };
 
-fn fri_pcs_e2e_helper<
+fn fri_pcs_e2e_helper<F, ChallengeF>(num_vars: usize)
+where
     F: FFTField + ExtensionField,
     ChallengeF: ExtensionField<BaseField = F> + ExpSerde + FFTField,
->(
-    num_vars: usize,
-) {
+{
     let mut rng = test_rng();
 
     let mle = MultiLinearPoly::<F>::random(num_vars, &mut rng);
@@ -35,5 +34,5 @@ fn fri_pcs_e2e_helper<
 
 #[test]
 fn test_fri_pcs_e2e() {
-    fri_pcs_e2e_helper::<Fr, Fr>(15);
+    fri_pcs_e2e_helper::<Fr, Fr>(19);
 }
