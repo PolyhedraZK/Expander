@@ -20,21 +20,21 @@ fn print_type_name<Cfg: GKREngine>() {
 fn main() {
     declare_gkr_config!(
         M31ExtSha256Config,
-        FieldType::M31Ext3,
+        FieldType::M31x16,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
         M31ExtPoseidonRawConfig,
-        FieldType::M31Ext3,
+        FieldType::M31x16,
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
         M31ExtPoseidonOrionConfig,
-        FieldType::M31Ext3,
+        FieldType::M31x16,
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Orion,
         GKRScheme::Vanilla,
@@ -69,14 +69,14 @@ fn main() {
     );
     declare_gkr_config!(
         GoldilocksExtSHA256Config,
-        FieldType::GoldilocksExt2,
+        FieldType::Goldilocksx8,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
         BabyBearExtSHA256Config,
-        FieldType::BabyBearExt3,
+        FieldType::BabyBearx16,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,

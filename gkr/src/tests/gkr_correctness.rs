@@ -10,7 +10,8 @@ use env_logger;
 use gf2::GF2x128;
 use gkr_engine::{
     root_println, BN254Config, BabyBearx16Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine,
-    GKRScheme, Goldilocksx8Config, M31x1Config, M31x16Config, MPIConfig, MPIEngine, SharedMemory, Goldilocksx1Config
+    GKRScheme, Goldilocksx1Config, Goldilocksx8Config, M31x16Config, M31x1Config, MPIConfig,
+    MPIEngine, SharedMemory,
 };
 use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use halo2curves::bn256::{Bn256, G1Affine};
@@ -39,7 +40,7 @@ fn test_gkr_correctness() {
     );
     declare_gkr_config!(
         C1,
-        FieldType::M31Ext3,
+        FieldType::M31x16,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
@@ -60,7 +61,7 @@ fn test_gkr_correctness() {
     );
     declare_gkr_config!(
         C4,
-        FieldType::M31Ext3,
+        FieldType::M31x16,
         FiatShamirHashType::Keccak256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
@@ -88,14 +89,14 @@ fn test_gkr_correctness() {
     );
     declare_gkr_config!(
         C8,
-        FieldType::M31Ext3,
+        FieldType::M31x16,
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
         C9,
-        FieldType::M31Ext3,
+        FieldType::M31x16,
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Orion,
         GKRScheme::Vanilla,
@@ -116,28 +117,28 @@ fn test_gkr_correctness() {
     );
     declare_gkr_config!(
         C12,
-        FieldType::GoldilocksExt2,
+        FieldType::Goldilocksx8,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
         C13,
-        FieldType::M31,
+        FieldType::M31x1,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
         C14,
-        FieldType::BabyBearExt3,
+        FieldType::BabyBearx16,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
         C15,
-        FieldType::Goldilocks,
+        FieldType::Goldilocksx1,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
@@ -175,11 +176,12 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
     );
     let circuit_copy_size: usize = match <Cfg::FieldConfig as FieldEngine>::FIELD_TYPE {
         FieldType::GF2Ext128 => 1,
-        FieldType::M31Ext3 => 2,
+        FieldType::M31x16 => 2,
         FieldType::BN254 => 2,
-        FieldType::GoldilocksExt2 => 2,
-        FieldType::M31 => 2,
-        FieldType::BabyBearExt3 => 2,
+        FieldType::Goldilocksx1 => 2,
+        FieldType::Goldilocksx8 => 2,
+        FieldType::M31x1 => 2,
+        FieldType::BabyBearx16 => 2,
         _ => unreachable!(),
     };
     root_println!(
@@ -191,12 +193,12 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
 
     let circuit_path = match <Cfg::FieldConfig as FieldEngine>::FIELD_TYPE {
         FieldType::GF2Ext128 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
-        FieldType::M31 => "../".to_owned() + KECCAK_M31_CIRCUIT,
-        FieldType::M31Ext3 => "../".to_owned() + KECCAK_M31_CIRCUIT,
+        FieldType::M31x1 => "../".to_owned() + KECCAK_M31_CIRCUIT,
+        FieldType::M31x16 => "../".to_owned() + KECCAK_M31_CIRCUIT,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
-        FieldType::Goldilocks => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
-        FieldType::GoldilocksExt2 => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
-        FieldType::BabyBearExt3 => "../".to_owned() + KECCAK_BABYBEAR_CIRCUIT,
+        FieldType::Goldilocksx1 => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
+        FieldType::Goldilocksx8 => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
+        FieldType::BabyBearx16 => "../".to_owned() + KECCAK_BABYBEAR_CIRCUIT,
         _ => unreachable!(),
     };
     let (mut circuit, mut window) =
@@ -205,12 +207,12 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
 
     let witness_path = match <Cfg::FieldConfig as FieldEngine>::FIELD_TYPE {
         FieldType::GF2Ext128 => "../".to_owned() + KECCAK_GF2_WITNESS,
-        FieldType::M31 => "../".to_owned() + KECCAK_M31_WITNESS,
-        FieldType::M31Ext3 => "../".to_owned() + KECCAK_M31_WITNESS,
+        FieldType::M31x1 => "../".to_owned() + KECCAK_M31_WITNESS,
+        FieldType::M31x16 => "../".to_owned() + KECCAK_M31_WITNESS,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_WITNESS,
-        FieldType::Goldilocks => "../".to_owned() + KECCAK_GOLDILOCKS_WITNESS,
-        FieldType::GoldilocksExt2 => "../".to_owned() + KECCAK_GOLDILOCKS_WITNESS,
-        FieldType::BabyBearExt3 => "../".to_owned() + KECCAK_BABYBEAR_WITNESS,
+        FieldType::Goldilocksx1 => "../".to_owned() + KECCAK_GOLDILOCKS_WITNESS,
+        FieldType::Goldilocksx8 => "../".to_owned() + KECCAK_GOLDILOCKS_WITNESS,
+        FieldType::BabyBearx16 => "../".to_owned() + KECCAK_BABYBEAR_WITNESS,
         _ => unreachable!(),
     };
     circuit.load_witness_allow_padding_testing_only(&witness_path, &mpi_config);

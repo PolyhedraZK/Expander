@@ -7,7 +7,7 @@ use crate::{FieldEngine, FieldType};
 pub struct Goldilocksx8Config;
 
 impl FieldEngine for Goldilocksx8Config {
-    const FIELD_TYPE: FieldType = FieldType::GoldilocksExt2;
+    const FIELD_TYPE: FieldType = FieldType::Goldilocksx8;
 
     const SENTINEL: [u8; 32] = [
         1, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

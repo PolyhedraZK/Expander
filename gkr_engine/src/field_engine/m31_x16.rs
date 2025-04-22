@@ -7,7 +7,7 @@ use crate::{FieldEngine, FieldType};
 pub struct M31x16Config;
 
 impl FieldEngine for M31x16Config {
-    const FIELD_TYPE: FieldType = FieldType::M31Ext3;
+    const FIELD_TYPE: FieldType = FieldType::M31x16;
 
     const SENTINEL: [u8; 32] = [
         255, 255, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

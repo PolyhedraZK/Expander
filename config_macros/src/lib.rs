@@ -46,16 +46,13 @@ fn parse_field_type(field_expr: ExprPath) -> (String, String) {
         .last()
         .expect("Empty path for field");
     match field_enum.ident.to_string().as_str() {
-        "M31" => ("M31".to_owned(), "M31x1Config".to_owned()),
-        "M31Ext3" => ("M31Ext3".to_owned(), "M31x16Config".to_owned()),
+        "M31x1" => ("M31x1".to_owned(), "M31x1Config".to_owned()),
+        "M31x16" => ("M31x16".to_owned(), "M31x16Config".to_owned()),
         "BN254" => ("BN254".to_owned(), "BN254Config".to_owned()),
         "GF2Ext128" => ("GF2Ext128".to_owned(), "GF2ExtConfig".to_owned()),
-        "Goldilocks" => ("Goldilocks".to_owned(), "Goldilocksx1Config".to_owned()),
-        "GoldilocksExt2" => (
-            "GoldilocksExt2".to_owned(),
-            "Goldilocksx8Config".to_owned(),
-        ),
-        "BabyBearExt3" => ("BabyBearExt3".to_owned(), "BabyBearx16Config".to_owned()),
+        "Goldilocksx1" => ("Goldilocksx1".to_owned(), "Goldilocksx1Config".to_owned()),
+        "Goldilocksx8" => ("Goldilocksx8".to_owned(), "Goldilocksx8Config".to_owned()),
+        "BabyBearx16" => ("BabyBearx16".to_owned(), "BabyBearx16Config".to_owned()),
         _ => panic!("Unknown field type"),
     }
 }
@@ -84,7 +81,7 @@ fn parse_fiat_shamir_hash_type(
             "Keccak256".to_owned(),
             format!("BytesHashTranscript::<{challenge_f}, Keccak256hasher>").to_owned(),
         ),
-        ("Poseidon", "M31Ext3") => (
+        ("Poseidon", "M31x16") => (
             "Poseidon".to_owned(),
             format!("FieldHashTranscript::<{challenge_f}, PoseidonFiatShamirHasher<M31x16>>")
                 .to_owned(),
@@ -121,11 +118,11 @@ fn parse_polynomial_commitment_type(
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, GF2x128>").to_owned(),
         ),
-        ("Orion", "M31Ext3") => (
+        ("Orion", "M31x16") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, M31x16>").to_owned(),
         ),
-        ("Orion", "GoldilocksExt2") => (
+        ("Orion", "Goldilocksx8") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, Goldilocksx8>").to_owned(),
         ),

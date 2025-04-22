@@ -2,8 +2,8 @@ mod babybear_x16;
 mod bn254;
 mod definition;
 mod gf2_ext128;
-mod goldilocks_x8;
 mod goldilocks_x1;
+mod goldilocks_x8;
 mod m31_x1;
 mod m31_x16;
 

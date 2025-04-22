@@ -34,10 +34,10 @@ async fn main() {
     root_println!(&mpi_config, "field type: {:?}", field_type);
 
     match (fs_hash_type.clone(), pcs_type.clone(), field_type.clone()) {
-        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::M31Ext3) => {
+        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::M31x16) => {
             run_command::<M31x16ConfigSha2OrionVanilla>(&expander_exec_args, &mpi_config).await;
         }
-        (FiatShamirHashType::Poseidon, PolynomialCommitmentType::Raw, FieldType::M31Ext3) => {
+        (FiatShamirHashType::Poseidon, PolynomialCommitmentType::Raw, FieldType::M31x16) => {
             run_command::<M31x16ConfigPoseidonRawVanilla>(&expander_exec_args, &mpi_config).await;
         }
         (FiatShamirHashType::MIMC5, PolynomialCommitmentType::Raw, FieldType::BN254) => {
@@ -58,14 +58,10 @@ async fn main() {
         (FiatShamirHashType::SHA256, PolynomialCommitmentType::Raw, FieldType::GF2Ext128) => {
             run_command::<GF2ExtConfigSha2Raw>(&expander_exec_args, &mpi_config).await;
         }
-        (
-            FiatShamirHashType::SHA256,
-            PolynomialCommitmentType::Orion,
-            FieldType::GoldilocksExt2,
-        ) => {
+        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::Goldilocksx8) => {
             run_command::<Goldilocksx8ConfigSha2Orion>(&expander_exec_args, &mpi_config).await;
         }
-        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::BabyBearExt3) => {
+        (FiatShamirHashType::SHA256, PolynomialCommitmentType::Orion, FieldType::BabyBearx16) => {
             run_command::<BabyBearx16ConfigSha2Raw>(&expander_exec_args, &mpi_config).await;
         }
         _ => panic!(

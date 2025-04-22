@@ -7,7 +7,7 @@ use super::{FieldEngine, FieldType};
 pub struct BabyBearx16Config;
 
 impl FieldEngine for BabyBearx16Config {
-    const FIELD_TYPE: FieldType = FieldType::BabyBearExt3;
+    const FIELD_TYPE: FieldType = FieldType::BabyBearx16;
 
     const SENTINEL: [u8; 32] = [
         1, 0, 0, 120, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

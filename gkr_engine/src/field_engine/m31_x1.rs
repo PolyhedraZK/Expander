@@ -9,7 +9,7 @@ use super::FieldEngine;
 pub struct M31x1Config;
 
 impl FieldEngine for M31x1Config {
-    const FIELD_TYPE: FieldType = FieldType::M31;
+    const FIELD_TYPE: FieldType = FieldType::M31x1;
 
     const SENTINEL: [u8; 32] = [
         255, 255, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

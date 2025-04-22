@@ -17,7 +17,7 @@ pub const KECCAK_GOLDILOCKS_CIRCUIT: &str = "data/circuit_goldilocks.txt";
 
 declare_gkr_config!(
     M31x16ConfigSha2Raw,
-    FieldType::M31Ext3,
+    FieldType::M31x16,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
@@ -41,7 +41,7 @@ declare_gkr_config!(
 
 declare_gkr_config!(
     Goldilocksx8ConfigSha2Raw,
-    FieldType::GoldilocksExt2,
+    FieldType::Goldilocksx8,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
@@ -51,9 +51,9 @@ declare_gkr_config!(
 fn load_circuit<Cfg: GKREngine>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::FieldConfig>> {
     let circuit_path = match <Cfg as GKREngine>::FieldConfig::FIELD_TYPE {
         FieldType::GF2Ext128 => "../".to_owned() + KECCAK_GF2_CIRCUIT,
-        FieldType::M31Ext3 => "../".to_owned() + KECCAK_M31_CIRCUIT,
+        FieldType::M31x16 => "../".to_owned() + KECCAK_M31_CIRCUIT,
         FieldType::BN254 => "../".to_owned() + KECCAK_BN254_CIRCUIT,
-        FieldType::GoldilocksExt2 => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
+        FieldType::Goldilocksx8 => "../".to_owned() + KECCAK_GOLDILOCKS_CIRCUIT,
         _ => unreachable!(),
     };
 
