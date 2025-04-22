@@ -28,8 +28,7 @@ where
     let mut fs_transcript_p = BytesHashTranscript::<ChallengeF, Keccak256hasher>::new();
 
     let _commitment = fri_commit(&mle.coeffs, &mut scratch_pad);
-
-    fri_open(&mle, &point, &mut fs_transcript_p, &scratch_pad);
+    let _opening = fri_open(&mle, &point, &mut fs_transcript_p, &scratch_pad);
 }
 
 #[test]

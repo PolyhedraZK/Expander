@@ -11,24 +11,28 @@ pub(crate) fn vanilla_sumcheck_degree_2_mul_step_prove<F: ExtensionField>(
     assert_eq!(poly0.hypercube_size(), poly1.hypercube_size());
 
     let half_hypercube = poly0.hypercube_size() >> 1;
-    let mut uni_evals = vec![F::ZERO; 3];
+
+    let (mut at_0, mut at_pos_1, mut at_neg_1) = (F::ZERO, F::ZERO, F::ZERO);
 
     (0..half_hypercube).for_each(|i| {
         let (p0v0, p1v0) = (poly0[i], poly1[i]);
-        let (p0v1, p1v1) = (poly0[i + half_hypercube], poly1[i + half_hypercube]);
-        let (p0v2, p1v2) = (p0v1.double() - p0v0, p1v1.double() - p1v0);
+        let (p0_at_pos1, p1_at_pos1) = (poly0[i + half_hypercube], poly1[i + half_hypercube]);
+        let (p0_at_neg1, p1_at_neg1) = (p0v0.double() - p0_at_pos1, p1v0.double() - p1_at_pos1);
 
-        let eval_at_0 = p0v0 * p1v0;
-        uni_evals[0] += eval_at_0;
-
-        let eval_at_1 = p0v1 * p1v1;
-        uni_evals[1] += eval_at_1;
-
-        let eval_at_2 = p0v2 * p1v2;
-        uni_evals[2] += eval_at_2;
+        at_0 += p0v0 * p1v0;
+        at_pos_1 += p0_at_pos1 * p1_at_pos1;
+        at_neg_1 += p0_at_neg1 * p1_at_neg1;
     });
 
-    let uni_poly = UnivariatePoly::from_evals(&uni_evals);
+    let uni_poly = {
+        let a = at_0;
+        let a_plus_c = (at_pos_1 + at_neg_1) * F::INV_2;
+        let c = a_plus_c - a;
+        let b = at_pos_1 - a - c;
+
+        UnivariatePoly::new(vec![a, b, c])
+    };
+
     uni_poly
         .coeffs
         .iter()

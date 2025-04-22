@@ -1,4 +1,4 @@
-use arith::{bit_reverse_swap, ExtensionField, FFTField};
+use arith::{bit_reverse_swap, ExtensionField, FFTField, Field};
 use gkr_engine::Transcript;
 use itertools::izip;
 use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension, UnivariatePoly};
@@ -44,12 +44,21 @@ pub(crate) fn fri_commit<F: FFTField>(
 }
 
 #[allow(unused)]
+pub struct FRIOpening<F: Field> {
+    pub iopp_oracles: Vec<tree::Node>,
+    pub iopp_queries: Vec<Vec<(tree::Path, tree::Path)>>,
+    pub iopp_last_oracle_var: F,
+    pub sumcheck_responses: Vec<UnivariatePoly<F>>,
+}
+
+#[allow(unused)]
 pub(crate) fn fri_open<F, ChallengeF>(
     poly: &impl MultilinearExtension<F>,
     point: &[ChallengeF],
     fs_transcript: &mut impl Transcript<ChallengeF>,
     scratch_pad: &FRIScratchPad<F>,
-) where
+) -> FRIOpening<ChallengeF>
+where
     F: FFTField + ExpSerde,
     ChallengeF: ExtensionField<BaseField = F> + ExpSerde + FFTField,
 {
@@ -76,10 +85,8 @@ pub(crate) fn fri_open<F, ChallengeF>(
         .collect();
 
     let mut generator = ChallengeF::two_adic_generator(point.len() + LOG_CODE_RATE);
-    let two_inv = ChallengeF::ONE.double().inv().unwrap();
-
     let univ_polys: Vec<UnivariatePoly<ChallengeF>> = (0..num_vars)
-        .map(|i| {
+        .map(|_| {
             let (uni_poly_i, r_i) = vanilla_sumcheck_degree_2_mul_step_prove(
                 &mut ext_poly,
                 &mut shift_z_poly,
@@ -94,8 +101,8 @@ pub(crate) fn fri_open<F, ChallengeF>(
 
             let (odd_alphabets, even_alphabets) = codeword.split_at_mut(next_codeword_len);
             izip!(odd_alphabets, even_alphabets).for_each(|(o_i, e_i)| {
-                let o = (*o_i + *e_i) * two_inv;
-                let e = (*o_i - *e_i) * two_inv * diag_inv;
+                let o = (*o_i + *e_i) * ChallengeF::INV_2;
+                let e = (*o_i - *e_i) * ChallengeF::INV_2 * diag_inv;
 
                 *o_i = o * one_minus_r_i + e * r_i;
                 diag_inv *= generator_inv;
@@ -119,15 +126,12 @@ pub(crate) fn fri_open<F, ChallengeF>(
     dbg!(&iopp_codewords.last());
     assert_eq!(ext_poly.coeffs[0], iopp_codewords.last().unwrap()[0]);
 
-    let iopp_last_oracle_message = iopp_oracles[iopp_oracles.len() - 1].leaves.clone();
     let iopp_challenges = fs_transcript.generate_challenge_index_vector(QUERY_COMPLEXITY);
-
-    let rest_iopp_queries: Vec<Vec<(tree::Path, tree::Path)>> = iopp_challenges
+    let iopp_queries: Vec<Vec<(tree::Path, tree::Path)>> = iopp_challenges
         .iter()
         .map(|point| {
             let mut codeword_len = scratch_pad.codeword.len();
             let mut point_to_alphabet = point % codeword_len;
-            let height = scratch_pad.reed_solomon_commitment.height();
 
             let mut iopp_round_query = Vec::with_capacity(iopp_oracles.len() + 1);
 
@@ -151,16 +155,12 @@ pub(crate) fn fri_open<F, ChallengeF>(
         })
         .collect();
 
-    /*
-    BasefoldProof {
-        sumcheck_transcript: SumcheckInstanceProof::new(sumcheck_polys),
+    FRIOpening {
         iopp_oracles: iopp_oracles.iter().map(|t| t.root()).collect(),
-        iopp_last_oracle_message,
-        first_iopp_query: first_round_queries,
-        randomness: rs,
-        iopp_queries: rest_iopp_queries,
+        iopp_queries,
+        iopp_last_oracle_var: iopp_codewords[iopp_codewords.len() - 1][0],
+        sumcheck_responses: univ_polys,
     }
-    */
 }
 
 /*
