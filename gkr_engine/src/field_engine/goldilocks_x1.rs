@@ -1,12 +1,12 @@
 use arith::ExtensionField;
-use goldilocks::{Goldilocks, GoldilocksExt2, GoldilocksExt2x8, Goldilocksx8};
+use goldilocks::{Goldilocks, GoldilocksExt2};
 
 use crate::{FieldEngine, FieldType};
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct GoldilocksExtConfig;
+pub struct Goldilocksx1Config;
 
-impl FieldEngine for GoldilocksExtConfig {
+impl FieldEngine for Goldilocksx1Config {
     const FIELD_TYPE: FieldType = FieldType::GoldilocksExt2;
 
     const SENTINEL: [u8; 32] = [
@@ -16,11 +16,11 @@ impl FieldEngine for GoldilocksExtConfig {
 
     type CircuitField = Goldilocks;
 
-    type SimdCircuitField = Goldilocksx8;
+    type SimdCircuitField = Goldilocks;
 
     type ChallengeField = GoldilocksExt2;
 
-    type Field = GoldilocksExt2x8;
+    type Field = GoldilocksExt2;
 
     #[inline(always)]
     fn challenge_mul_circuit_field(
@@ -52,8 +52,7 @@ impl FieldEngine for GoldilocksExtConfig {
 
     #[inline(always)]
     fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field {
-        let a_simd = Self::Field::from(*a);
-        a_simd * b
+        a * b
     }
 
     #[inline(always)]
@@ -66,12 +65,12 @@ impl FieldEngine for GoldilocksExtConfig {
         a: &Self::CircuitField,
         b: &Self::SimdCircuitField,
     ) -> Self::SimdCircuitField {
-        Self::SimdCircuitField::from(*a) * *b
+        a * *b
     }
 
     #[inline(always)]
     fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField {
-        Self::SimdCircuitField::from(*a)
+        *a
     }
 
     #[inline(always)]
@@ -84,10 +83,8 @@ impl FieldEngine for GoldilocksExtConfig {
         a: &Self::SimdCircuitField,
         b: &Self::ChallengeField,
     ) -> Self::Field {
-        let b_simd_ext = Self::Field::from(*b);
         Self::Field {
-            c0: b_simd_ext.c0 * a,
-            c1: b_simd_ext.c1 * a,
+            v: [b.v[0] * a, b.v[1] * a],
         }
     }
 }

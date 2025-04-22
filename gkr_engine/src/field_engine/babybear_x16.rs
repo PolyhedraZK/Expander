@@ -1,26 +1,26 @@
 use arith::ExtensionField;
-use goldilocks::{Goldilocks, GoldilocksExt2};
+use babybear::{BabyBear, BabyBearExt3, BabyBearExt3x16, BabyBearx16};
 
-use crate::{FieldEngine, FieldType};
+use super::{FieldEngine, FieldType};
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct GoldilocksConfig;
+pub struct BabyBearx16Config;
 
-impl FieldEngine for GoldilocksConfig {
-    const FIELD_TYPE: FieldType = FieldType::GoldilocksExt2;
+impl FieldEngine for BabyBearx16Config {
+    const FIELD_TYPE: FieldType = FieldType::BabyBearExt3;
 
     const SENTINEL: [u8; 32] = [
-        1, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0,
+        1, 0, 0, 120, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0,
     ];
 
-    type CircuitField = Goldilocks;
+    type CircuitField = BabyBear;
 
-    type SimdCircuitField = Goldilocks;
+    type SimdCircuitField = BabyBearx16;
 
-    type ChallengeField = GoldilocksExt2;
+    type ChallengeField = BabyBearExt3;
 
-    type Field = GoldilocksExt2;
+    type Field = BabyBearExt3x16;
 
     #[inline(always)]
     fn challenge_mul_circuit_field(
@@ -52,7 +52,8 @@ impl FieldEngine for GoldilocksConfig {
 
     #[inline(always)]
     fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field {
-        a * b
+        let a_simd = Self::Field::from(*a);
+        a_simd * b
     }
 
     #[inline(always)]
@@ -65,12 +66,12 @@ impl FieldEngine for GoldilocksConfig {
         a: &Self::CircuitField,
         b: &Self::SimdCircuitField,
     ) -> Self::SimdCircuitField {
-        a * *b
+        Self::SimdCircuitField::from(*a) * *b
     }
 
     #[inline(always)]
     fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField {
-        *a
+        Self::SimdCircuitField::from(*a)
     }
 
     #[inline(always)]
@@ -83,8 +84,13 @@ impl FieldEngine for GoldilocksConfig {
         a: &Self::SimdCircuitField,
         b: &Self::ChallengeField,
     ) -> Self::Field {
+        let b_simd_ext = Self::Field::from(*b);
         Self::Field {
-            v: [b.v[0] * a, b.v[1] * a],
+            v: [
+                b_simd_ext.v[0] * a,
+                b_simd_ext.v[1] * a,
+                b_simd_ext.v[2] * a,
+            ],
         }
     }
 }

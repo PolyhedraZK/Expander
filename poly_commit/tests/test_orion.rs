@@ -5,7 +5,7 @@ use ark_std::test_rng;
 use gf2::{GF2x128, GF2x64, GF2x8, GF2};
 use gf2_128::GF2_128;
 use gkr_engine::{
-    ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, GoldilocksExtConfig, M31ExtConfig,
+    ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, Goldilocksx8Config, M31x16Config,
     MPIConfig, MPIEngine, Transcript,
 };
 use gkr_hashers::Keccak256hasher;
@@ -126,13 +126,13 @@ fn test_orion_for_expander_gkr() {
     >(&mpi_config, 25);
 
     test_orion_for_expander_gkr_generics::<
-        M31ExtConfig,
+        M31x16Config,
         M31x16,
         BytesHashTranscript<_, Keccak256hasher>,
     >(&mpi_config, 25);
 
     test_orion_for_expander_gkr_generics::<
-        GoldilocksExtConfig,
+        Goldilocksx8Config,
         Goldilocksx8,
         BytesHashTranscript<_, Keccak256hasher>,
     >(&mpi_config, 25);

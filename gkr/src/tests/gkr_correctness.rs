@@ -9,8 +9,8 @@ use config_macros::declare_gkr_config;
 use env_logger;
 use gf2::GF2x128;
 use gkr_engine::{
-    root_println, BN254Config, BabyBearExtConfig, FieldEngine, FieldType, GF2ExtConfig, GKREngine,
-    GKRScheme, GoldilocksExtConfig, M31Config, M31ExtConfig, MPIConfig, MPIEngine, SharedMemory, GoldilocksConfig
+    root_println, BN254Config, BabyBearx16Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine,
+    GKRScheme, Goldilocksx8Config, M31x1Config, M31x16Config, MPIConfig, MPIEngine, SharedMemory, Goldilocksx1Config
 };
 use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use halo2curves::bn256::{Bn256, G1Affine};

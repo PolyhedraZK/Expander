@@ -1,26 +1,26 @@
 use arith::ExtensionField;
-use babybear::{BabyBear, BabyBearExt3, BabyBearExt3x16, BabyBearx16};
+use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
 
-use super::{FieldEngine, FieldType};
+use crate::{FieldEngine, FieldType};
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct BabyBearExtConfig;
+pub struct M31x16Config;
 
-impl FieldEngine for BabyBearExtConfig {
-    const FIELD_TYPE: FieldType = FieldType::BabyBearExt3;
+impl FieldEngine for M31x16Config {
+    const FIELD_TYPE: FieldType = FieldType::M31Ext3;
 
     const SENTINEL: [u8; 32] = [
-        1, 0, 0, 120, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0,
+        255, 255, 255, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0,
     ];
 
-    type CircuitField = BabyBear;
+    type CircuitField = M31;
 
-    type SimdCircuitField = BabyBearx16;
+    type SimdCircuitField = M31x16;
 
-    type ChallengeField = BabyBearExt3;
+    type ChallengeField = M31Ext3;
 
-    type Field = BabyBearExt3x16;
+    type Field = M31Ext3x16;
 
     #[inline(always)]
     fn challenge_mul_circuit_field(
@@ -32,11 +32,15 @@ impl FieldEngine for BabyBearExtConfig {
 
     #[inline(always)]
     fn field_mul_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
+        // directly multiply M31Ext3 with M31
+        // skipping the conversion M31 -> M31Ext3
         *a * *b
     }
 
     #[inline(always)]
     fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field {
+        // directly add M31Ext3 with M31
+        // skipping the conversion M31 -> M31Ext3
         *a + *b
     }
 
@@ -68,7 +72,6 @@ impl FieldEngine for BabyBearExtConfig {
     ) -> Self::SimdCircuitField {
         Self::SimdCircuitField::from(*a) * *b
     }
-
     #[inline(always)]
     fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField {
         Self::SimdCircuitField::from(*a)

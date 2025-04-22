@@ -2,7 +2,7 @@ use circuit::Circuit;
 use config_macros::declare_gkr_config;
 use gkr_engine::{
     root_println, BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GKRScheme,
-    M31ExtConfig, MPIConfig, MPIEngine,
+    M31x16Config, MPIConfig, MPIEngine,
 };
 use gkr_hashers::SHA256hasher;
 use poly_commit::RawExpanderGKR;
@@ -16,7 +16,7 @@ pub const KECCAK_BN254_CIRCUIT: &str = "data/circuit_bn254.txt";
 pub const KECCAK_GOLDILOCKS_CIRCUIT: &str = "data/circuit_goldilocks.txt";
 
 declare_gkr_config!(
-    pub M31ExtConfigSha2Raw,
+    pub M31x16ConfigSha2Raw,
     FieldType::M31Ext3,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
@@ -42,7 +42,7 @@ declare_gkr_config!(
 #[test]
 fn test_circuit_serde() {
     let mpi_config = MPIConfig::prover_new();
-    test_circuit_serde_helper::<M31ExtConfigSha2Raw>(&mpi_config);
+    test_circuit_serde_helper::<M31x16ConfigSha2Raw>(&mpi_config);
     test_circuit_serde_helper::<GF2ExtConfigSha2Raw>(&mpi_config);
     test_circuit_serde_helper::<BN254ConfigSha2Raw>(&mpi_config);
     MPIConfig::finalize();

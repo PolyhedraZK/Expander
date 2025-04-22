@@ -2,7 +2,7 @@ mod common;
 
 use arith::{Field, Fr};
 use gkr_engine::{
-    BN254Config, ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, M31ExtConfig, MPIConfig,
+    BN254Config, ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, M31x16Config, MPIConfig,
     MPIEngine, Transcript,
 };
 use gkr_hashers::{Keccak256hasher, SHA256hasher};
@@ -63,8 +63,8 @@ fn test_raw_gkr_helper<C: FieldEngine, T: Transcript<C::ChallengeField>>(
 fn test_raw_gkr() {
     let mpi_config = MPIConfig::prover_new();
 
-    type TM31 = BytesHashTranscript<<M31ExtConfig as FieldEngine>::ChallengeField, Keccak256hasher>;
-    test_raw_gkr_helper::<M31ExtConfig, TM31>(&mpi_config, &mut TM31::new());
+    type TM31 = BytesHashTranscript<<M31x16Config as FieldEngine>::ChallengeField, Keccak256hasher>;
+    test_raw_gkr_helper::<M31x16Config, TM31>(&mpi_config, &mut TM31::new());
 
     type TGF2 = BytesHashTranscript<<GF2ExtConfig as FieldEngine>::ChallengeField, SHA256hasher>;
     test_raw_gkr_helper::<GF2ExtConfig, TGF2>(&mpi_config, &mut TGF2::new());

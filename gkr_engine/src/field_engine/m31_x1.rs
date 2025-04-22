@@ -6,9 +6,9 @@ use crate::FieldType;
 use super::FieldEngine;
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct M31Config;
+pub struct M31x1Config;
 
-impl FieldEngine for M31Config {
+impl FieldEngine for M31x1Config {
     const FIELD_TYPE: FieldType = FieldType::M31;
 
     const SENTINEL: [u8; 32] = [

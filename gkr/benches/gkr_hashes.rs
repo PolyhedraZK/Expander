@@ -9,7 +9,7 @@ use gkr::{
     Prover,
 };
 use gkr_engine::{
-    BN254Config, ExpanderPCS, FieldEngine, GKREngine, GKRScheme, M31ExtConfig, MPIConfig,
+    BN254Config, ExpanderPCS, FieldEngine, GKREngine, GKRScheme, M31x16Config, MPIConfig,
     MPIEngine, StructuredReferenceString,
 };
 use gkr_hashers::SHA256hasher;
@@ -66,7 +66,7 @@ fn benchmark_setup<Cfg: GKREngine>(
 
 fn criterion_gkr_keccak(c: &mut Criterion) {
     declare_gkr_config!(
-        M31ExtConfigSha2,
+        M31x16ConfigSha2,
         FieldType::M31Ext3,
         FiatShamirHashType::SHA256,
         PCSCommitmentType::Raw,
@@ -81,7 +81,7 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
     );
 
     let (m31_config, mut m31_circuit, m31_pcs_params, m31_pcs_proving_key, mut m31_pcs_scratch) =
-        benchmark_setup::<M31ExtConfigSha2>(KECCAK_M31_CIRCUIT, Some(KECCAK_M31_WITNESS));
+        benchmark_setup::<M31x16ConfigSha2>(KECCAK_M31_CIRCUIT, Some(KECCAK_M31_WITNESS));
     let (
         bn254_config,
         mut bn254_circuit,
@@ -90,7 +90,7 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
         mut bn254_pcs_scratch,
     ) = benchmark_setup::<BN254ConfigSha2>(KECCAK_BN254_CIRCUIT, Some(KECCAK_BN254_WITNESS));
 
-    let num_keccak_m31 = 2 * <M31ExtConfigSha2 as GKREngine>::FieldConfig::get_field_pack_size();
+    let num_keccak_m31 = 2 * <M31x16ConfigSha2 as GKREngine>::FieldConfig::get_field_pack_size();
     let num_keccak_bn254 = 2 * <BN254ConfigSha2 as GKREngine>::FieldConfig::get_field_pack_size();
 
     let mut group = c.benchmark_group("single thread proving keccak by GKR vanilla");
@@ -105,7 +105,7 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
         |b| {
             b.iter(|| {
                 {
-                    prover_run::<M31ExtConfigSha2>(
+                    prover_run::<M31x16ConfigSha2>(
                         &m31_config,
                         &mut m31_circuit,
                         &m31_pcs_params,
@@ -145,7 +145,7 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
 
 fn criterion_gkr_poseidon(c: &mut Criterion) {
     declare_gkr_config!(
-        M31ExtConfigSha2,
+        M31x16ConfigSha2,
         FieldType::M31Ext3,
         FiatShamirHashType::SHA256,
         PCSCommitmentType::Raw,
@@ -153,11 +153,11 @@ fn criterion_gkr_poseidon(c: &mut Criterion) {
     );
 
     let (m31_config, mut m31_circuit, pcs_params, pcs_proving_key, mut pcs_scratch) =
-        benchmark_setup::<M31ExtConfigSha2>(POSEIDON_M31_CIRCUIT, None);
+        benchmark_setup::<M31x16ConfigSha2>(POSEIDON_M31_CIRCUIT, None);
 
     let mut group = c.benchmark_group("single thread proving poseidon by GKR^2");
     let num_poseidon_m31 =
-        120 * <M31ExtConfigSha2 as GKREngine>::FieldConfig::get_field_pack_size();
+        120 * <M31x16ConfigSha2 as GKREngine>::FieldConfig::get_field_pack_size();
 
     group.bench_function(
         BenchmarkId::new(
@@ -170,7 +170,7 @@ fn criterion_gkr_poseidon(c: &mut Criterion) {
         |b| {
             b.iter(|| {
                 {
-                    prover_run::<M31ExtConfigSha2>(
+                    prover_run::<M31x16ConfigSha2>(
                         &m31_config,
                         &mut m31_circuit,
                         &pcs_params,

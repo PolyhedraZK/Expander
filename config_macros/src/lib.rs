@@ -46,16 +46,16 @@ fn parse_field_type(field_expr: ExprPath) -> (String, String) {
         .last()
         .expect("Empty path for field");
     match field_enum.ident.to_string().as_str() {
-        "M31" => ("M31".to_owned(), "M31Config".to_owned()),
-        "M31Ext3" => ("M31Ext3".to_owned(), "M31ExtConfig".to_owned()),
+        "M31" => ("M31".to_owned(), "M31x1Config".to_owned()),
+        "M31Ext3" => ("M31Ext3".to_owned(), "M31x16Config".to_owned()),
         "BN254" => ("BN254".to_owned(), "BN254Config".to_owned()),
         "GF2Ext128" => ("GF2Ext128".to_owned(), "GF2ExtConfig".to_owned()),
-        "Goldilocks" => ("Goldilocks".to_owned(), "GoldilocksConfig".to_owned()),
+        "Goldilocks" => ("Goldilocks".to_owned(), "Goldilocksx1Config".to_owned()),
         "GoldilocksExt2" => (
             "GoldilocksExt2".to_owned(),
-            "GoldilocksExtConfig".to_owned(),
+            "Goldilocksx8Config".to_owned(),
         ),
-        "BabyBearExt3" => ("BabyBearExt3".to_owned(), "BabyBearExtConfig".to_owned()),
+        "BabyBearExt3" => ("BabyBearExt3".to_owned(), "BabyBearx16Config".to_owned()),
         _ => panic!("Unknown field type"),
     }
 }

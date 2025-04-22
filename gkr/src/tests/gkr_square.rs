@@ -1,7 +1,7 @@
 use arith::SimdField;
 use circuit::{Circuit, CircuitLayer, CoefType, GateConst, GateUni};
 use config_macros::declare_gkr_config;
-use gkr_engine::{FieldEngine, GKREngine, GKRScheme, M31ExtConfig, MPIConfig, MPIEngine};
+use gkr_engine::{FieldEngine, GKREngine, GKRScheme, M31x16Config, MPIConfig, MPIEngine};
 use gkr_hashers::SHA256hasher;
 use poly_commit::{expander_pcs_init_testing_only, RawExpanderGKR};
 use transcript::BytesHashTranscript;

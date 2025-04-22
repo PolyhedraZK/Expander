@@ -1,8 +1,8 @@
 use circuit::Circuit;
 use config_macros::declare_gkr_config;
 use gkr_engine::{
-    BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GKRScheme, GoldilocksExtConfig,
-    M31ExtConfig, MPIConfig, MPIEngine, SharedMemory,
+    BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GKRScheme, Goldilocksx8Config,
+    M31x16Config, MPIConfig, MPIEngine, SharedMemory,
 };
 use gkr_hashers::SHA256hasher;
 use poly_commit::RawExpanderGKR;
@@ -16,7 +16,7 @@ pub const KECCAK_BN254_CIRCUIT: &str = "data/circuit_bn254.txt";
 pub const KECCAK_GOLDILOCKS_CIRCUIT: &str = "data/circuit_goldilocks.txt";
 
 declare_gkr_config!(
-    M31ExtConfigSha2Raw,
+    M31x16ConfigSha2Raw,
     FieldType::M31Ext3,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
@@ -40,7 +40,7 @@ declare_gkr_config!(
 );
 
 declare_gkr_config!(
-    GoldilocksExtConfigSha2Raw,
+    Goldilocksx8ConfigSha2Raw,
     FieldType::GoldilocksExt2,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
@@ -74,13 +74,13 @@ fn test_shared_mem() {
     test_shared_mem_helper(&mpi_config, Some((7u8, 8usize)));
     test_shared_mem_helper(&mpi_config, Some((9usize, 10u8)));
 
-    let circuit = load_circuit::<M31ExtConfigSha2Raw>(&mpi_config);
+    let circuit = load_circuit::<M31x16ConfigSha2Raw>(&mpi_config);
     test_shared_mem_helper(&mpi_config, circuit);
     let circuit = load_circuit::<GF2ExtConfigSha2Raw>(&mpi_config);
     test_shared_mem_helper(&mpi_config, circuit);
     let circuit = load_circuit::<BN254ConfigSha2Raw>(&mpi_config);
     test_shared_mem_helper(&mpi_config, circuit);
-    let circuit = load_circuit::<GoldilocksExtConfigSha2Raw>(&mpi_config);
+    let circuit = load_circuit::<Goldilocksx8ConfigSha2Raw>(&mpi_config);
     test_shared_mem_helper(&mpi_config, circuit);
 
     MPIConfig::finalize();
