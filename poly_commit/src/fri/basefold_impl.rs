@@ -47,7 +47,6 @@ pub(crate) fn fri_commit<F: FFTField>(
 pub struct FRIOpening<F: Field> {
     pub iopp_oracles: Vec<tree::Node>,
     pub iopp_queries: Vec<Vec<(tree::Path, tree::Path)>>,
-    pub iopp_last_oracle_var: F,
     pub sumcheck_responses: Vec<UnivariatePoly<F>>,
 }
 
@@ -85,13 +84,17 @@ where
         .collect();
 
     let mut generator = ChallengeF::two_adic_generator(point.len() + LOG_CODE_RATE);
+
+    let mut rs = vec![];
+
     let univ_polys: Vec<UnivariatePoly<ChallengeF>> = (0..num_vars)
-        .map(|_| {
+        .map(|i| {
             let (uni_poly_i, r_i) = vanilla_sumcheck_degree_2_mul_step_prove(
                 &mut ext_poly,
                 &mut shift_z_poly,
                 fs_transcript,
             );
+            rs.push(r_i);
 
             let next_codeword_len = codeword.len() / 2;
 
@@ -126,6 +129,15 @@ where
     dbg!(&iopp_codewords.last());
     assert_eq!(ext_poly.coeffs[0], iopp_codewords.last().unwrap()[0]);
 
+    rs.reverse();
+    dbg!(
+        ext_poly.coeffs[0],
+        shift_z_poly.coeffs[0],
+        EqPolynomial::eq_vec(point, &rs),
+        ext_poly.coeffs[0] * shift_z_poly.coeffs[0],
+        univ_polys.last().unwrap().evaluate(rs[0])
+    );
+
     let iopp_challenges = fs_transcript.generate_challenge_index_vector(QUERY_COMPLEXITY);
     let iopp_queries: Vec<Vec<(tree::Path, tree::Path)>> = iopp_challenges
         .iter()
@@ -158,7 +170,6 @@ where
     FRIOpening {
         iopp_oracles: iopp_oracles.iter().map(|t| t.root()).collect(),
         iopp_queries,
-        iopp_last_oracle_var: iopp_codewords[iopp_codewords.len() - 1][0],
         sumcheck_responses: univ_polys,
     }
 }
