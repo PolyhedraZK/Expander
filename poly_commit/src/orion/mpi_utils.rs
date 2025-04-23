@@ -102,7 +102,7 @@ eventually, a final transpose each row lead to results of ordering by *WHOLE* in
 
 After all these, we can go onwards to MT commitment, and later open alphabets lies in one of the parties.
  */
-
+#[cfg(feature = "proving")]
 #[inline(always)]
 pub(crate) fn mpi_commit_encoded<PackF>(
     mpi_engine: &impl MPIEngine,
@@ -199,7 +199,7 @@ where
 
     Ok(root)
 }
-
+#[cfg(feature = "proving")]
 #[inline(always)]
 pub(crate) fn orion_mpi_mt_openings<EvalF, T>(
     mpi_engine: &impl MPIEngine,

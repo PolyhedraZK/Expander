@@ -27,7 +27,7 @@ env_logger.workspace = true
 ethnum.workspace = true
 halo2curves.workspace = true
 log.workspace = true
-mpi.workspace = true
+mpi = {workspace = true, optional = true }
 rand.workspace = true
 rayon.workspace = true
 sha2.workspace = true
@@ -47,10 +47,12 @@ criterion.workspace = true
 [[bin]]
 name = "gkr-mpi"
 path = "src/main_mpi.rs"
+required-features = ["proving"]
 
 [[bin]]
 name = "expander-exec"
 path = "src/exec.rs"
+required-features = ["proving"]
 
 [[bin]]
 name = "dev-setup"
@@ -60,6 +62,7 @@ path = "src/utils.rs"
 default = []
 # default = [ "grinding" ]
 grinding = [ ]
+proving = ["transcript/proving", "gkr_engine/proving", "poly_commit/proving", "circuit/proving", "sumcheck/proving", "mpi"]
 recursion = [ "transcript/recursion" ]
 profile = [ "utils/profile", "sumcheck/profile" ]
 
@@ -67,4 +70,4 @@ profile = [ "utils/profile", "sumcheck/profile" ]
 name = "gkr-hashes"
 harness = false
 path = "benches/gkr_hashes.rs"
-
+required-features = ["proving"]

@@ -53,6 +53,7 @@ where
         (srs, local_num_vars)
     }
 
+    #[cfg(feature = "proving")]
     fn commit(
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
@@ -80,6 +81,7 @@ where
         KZGCommitment(final_commit).into()
     }
 
+    #[cfg(feature = "proving")]
     fn open(
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,

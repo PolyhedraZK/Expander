@@ -50,6 +50,7 @@ where
         (hyrax_setup(*params, rng), *params)
     }
 
+    #[cfg(feature = "proving")]
     fn commit(
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
@@ -77,6 +78,7 @@ where
         HyraxCommitment(global_commit).into()
     }
 
+    #[cfg(feature = "proving")]
     fn open(
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,

@@ -17,3 +17,4 @@ mersenne31 = { path = "../arith/mersenne31/" }
 
 [features]
 recursion = []
+proving = ["gkr_engine/proving"]

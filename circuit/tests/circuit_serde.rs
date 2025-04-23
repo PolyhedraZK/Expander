@@ -38,6 +38,7 @@ declare_gkr_config!(
     GKRScheme::Vanilla,
 );
 
+#[cfg(feature = "proving")]
 #[test]
 fn test_circuit_serde() {
     let mpi_config = MPIConfig::prover_new();

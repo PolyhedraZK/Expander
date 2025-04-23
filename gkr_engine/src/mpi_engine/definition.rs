@@ -1,4 +1,7 @@
 use arith::Field;
+#[cfg(feature = "proving")]
+use mpi::ffi::MPI_Win;
+#[cfg(feature = "proving")]
 use mpi::{
     ffi::{ompi_win_t, MPI_Win_free},
     topology::Process,
@@ -15,13 +18,16 @@ pub trait MPIEngine {
     /// The maximum chunk size for MPI communications
     const CHUNK_SIZE: usize;
 
+    #[cfg(feature = "proving")]
     /// Initialize the MPI environment.
     /// Safe to call multiple times as `mpi::initialize()` will return None if already initialized.
     fn init();
 
+    #[cfg(feature = "proving")]
     /// Finalize the MPI environment
     fn finalize();
 
+    #[cfg(feature = "proving")]
     /// Create a new MPI engine for the prover
     fn prover_new() -> Self;
 
@@ -31,6 +37,7 @@ pub trait MPIEngine {
     /// * `world_size` - The total number of processes in the MPI world
     fn verifier_new(world_size: i32) -> Self;
 
+    #[cfg(feature = "proving")]
     /// Gather vectors from all processes into the root process
     ///
     /// # Arguments
@@ -42,6 +49,7 @@ pub trait MPIEngine {
     /// - Non-root processes send their vectors but don't modify global_vec
     fn gather_vec<F: Sized + Clone>(&self, local_vec: &[F], global_vec: &mut Vec<F>);
 
+    #[cfg(feature = "proving")]
     /// Broadcast a field element from root process to all processes
     ///
     /// # Arguments
@@ -52,6 +60,7 @@ pub trait MPIEngine {
     /// - All other processes receive the value
     fn root_broadcast_f<F: Field>(&self, f: &mut F);
 
+    #[cfg(feature = "proving")]
     /// Broadcast a vector of bytes from root process to all processes
     ///
     /// # Arguments
@@ -62,6 +71,7 @@ pub trait MPIEngine {
     /// - All other processes receive the bytes
     fn root_broadcast_bytes(&self, bytes: &mut Vec<u8>);
 
+    #[cfg(feature = "proving")]
     /// Sum up field elements across all processes
     ///
     /// # Arguments
@@ -71,6 +81,7 @@ pub trait MPIEngine {
     /// A vector containing the sum of corresponding elements from all processes
     fn sum_vec<F: Field>(&self, local_vec: &[F]) -> Vec<F>;
 
+    #[cfg(feature = "proving")]
     /// Combines vectors from all MPI processes using weighted coefficients
     ///
     /// # Arguments
@@ -87,6 +98,7 @@ pub trait MPIEngine {
     /// Non-root processes participate in gathering but return zero vectors.
     fn coef_combine_vec<F: Field>(&self, local_vec: &[F], coef: &[F]) -> Vec<F>;
 
+    #[cfg(feature = "proving")]
     /// Perform matrix transpose with other MPI processes through MPI all-to-all transpose
     ///
     /// # Arguments
@@ -98,6 +110,7 @@ pub trait MPIEngine {
     ///   (e.g., rows to columns in a distributed matrix)
     fn all_to_all_transpose<F: Sized>(&self, row: &mut [F]);
 
+    #[cfg(feature = "proving")]
     /// Gather *variable length* vectors from all processes into the root process
     ///
     /// # Arguments
@@ -125,6 +138,7 @@ pub trait MPIEngine {
     #[allow(clippy::ptr_arg)]
     fn gather_varlen_vec<F: ExpSerde>(&self, local_vec: &Vec<F>, global_vec: &mut Vec<Vec<F>>);
 
+    #[cfg(feature = "proving")]
     /// Check if there is only one process in the MPI world
     fn is_single_process(&self) -> bool;
 
@@ -140,20 +154,21 @@ pub trait MPIEngine {
         self.world_rank() == Self::ROOT_RANK as usize
     }
 
+    #[cfg(feature = "proving")]
     /// Get the root process handle
     fn root_process(&self) -> Process;
 
+    #[cfg(feature = "proving")]
     /// Synchronize all processes at this point
     fn barrier(&self);
 
     /// Create a shared memory segment for inter-process communication
-    fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, *mut ompi_win_t);
+    #[cfg(feature = "proving")]
+    fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, MPI_Win);
 
     /// Consume the shared memory segment and create a new shared memory object
-    fn consume_obj_and_create_shared<T: SharedMemory>(
-        &self,
-        obj: Option<T>,
-    ) -> (T, *mut ompi_win_t) {
+    #[cfg(feature = "proving")]
+    fn consume_obj_and_create_shared<T: SharedMemory>(&self, obj: Option<T>) -> (T, MPI_Win) {
         assert!(!self.is_root() || obj.is_some());
 
         if self.is_root() {
@@ -171,10 +186,11 @@ pub trait MPIEngine {
         }
     }
 
+    #[cfg(feature = "proving")]
     /// Discard the control of shared memory segment
-    fn free_shared_mem(&self, window: &mut *mut ompi_win_t) {
+    fn free_shared_mem(&self, window: *mut MPI_Win) {
         unsafe {
-            MPI_Win_free(window as *mut *mut ompi_win_t);
+            MPI_Win_free(window);
         }
     }
 }

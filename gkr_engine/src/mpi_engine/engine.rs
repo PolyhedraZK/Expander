@@ -3,6 +3,7 @@ use std::{cmp, fmt::Debug};
 
 use arith::Field;
 use itertools::izip;
+#[cfg(feature = "proving")]
 use mpi::{
     datatype::PartitionMut,
     environment::Universe,
@@ -24,12 +25,16 @@ macro_rules! root_println {
     };
 }
 
+#[cfg(feature = "proving")]
 static mut UNIVERSE: Option<Universe> = None;
+#[cfg(feature = "proving")]
 static mut WORLD: Option<SimpleCommunicator> = None;
 
 #[derive(Clone)]
 pub struct MPIConfig {
+    #[cfg(feature = "proving")]
     pub universe: Option<&'static mpi::environment::Universe>,
+    #[cfg(feature = "proving")]
     pub world: Option<&'static SimpleCommunicator>,
     pub world_size: i32,
     pub world_rank: i32,
@@ -38,7 +43,9 @@ pub struct MPIConfig {
 impl Default for MPIConfig {
     fn default() -> Self {
         Self {
+            #[cfg(feature = "proving")]
             universe: None,
+            #[cfg(feature = "proving")]
             world: None,
             world_size: 1,
             world_rank: 0,
@@ -48,24 +55,35 @@ impl Default for MPIConfig {
 
 impl Debug for MPIConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let universe_fmt = if self.universe.is_none() {
-            Option::<usize>::None
-        } else {
-            Some(self.universe.unwrap().buffer_size())
-        };
+        #[cfg(feature = "proving")]
+        {
+            let universe_fmt = if self.universe.is_none() {
+                Option::<usize>::None
+            } else {
+                Some(self.universe.unwrap().buffer_size())
+            };
 
-        let world_fmt = if self.world.is_none() {
-            Option::<usize>::None
-        } else {
-            Some(0usize)
-        };
+            let world_fmt = if self.world.is_none() {
+                Option::<usize>::None
+            } else {
+                Some(0usize)
+            };
 
-        f.debug_struct("MPIConfig")
-            .field("universe", &universe_fmt)
-            .field("world", &world_fmt)
-            .field("world_size", &self.world_size)
-            .field("world_rank", &self.world_rank)
-            .finish()
+            f.debug_struct("MPIConfig")
+                .field("universe", &universe_fmt)
+                .field("world", &world_fmt)
+                .field("world_size", &self.world_size)
+                .field("world_rank", &self.world_rank)
+                .finish()
+        }
+
+        #[cfg(not(feature = "proving"))]
+        {
+            f.debug_struct("MPIConfig")
+                .field("world_size", &self.world_size)
+                .field("world_rank", &self.world_rank)
+                .finish()
+        }
     }
 }
 
@@ -85,6 +103,7 @@ impl MPIEngine for MPIConfig {
 
     // OK if already initialized, mpi::initialize() will return None
     #[allow(static_mut_refs)]
+    #[cfg(feature = "proving")]
     fn init() {
         unsafe {
             let universe = mpi::initialize();
@@ -96,10 +115,12 @@ impl MPIEngine for MPIConfig {
     }
 
     #[inline]
+    #[cfg(feature = "proving")]
     fn finalize() {
         unsafe { ffi::MPI_Finalize() };
     }
 
+    #[cfg(feature = "proving")]
     #[allow(static_mut_refs)]
     fn prover_new() -> Self {
         Self::init();
@@ -126,13 +147,16 @@ impl MPIEngine for MPIConfig {
     #[inline]
     fn verifier_new(world_size: i32) -> Self {
         Self {
+            #[cfg(feature = "proving")]
             universe: None,
+            #[cfg(feature = "proving")]
             world: None,
             world_size,
             world_rank: 0,
         }
     }
 
+    #[cfg(feature = "proving")]
     #[allow(clippy::collapsible_else_if)]
     fn gather_vec<F: Sized + Clone>(&self, local_vec: &[F], global_vec: &mut Vec<F>) {
         unsafe {
@@ -196,6 +220,7 @@ impl MPIEngine for MPIConfig {
     }
 
     /// Root process broadcast a value f into all the processes
+    #[cfg(feature = "proving")]
     #[inline]
     fn root_broadcast_f<F: Field>(&self, f: &mut F) {
         unsafe {
@@ -208,12 +233,14 @@ impl MPIEngine for MPIConfig {
         }
     }
 
+    #[cfg(feature = "proving")]
     #[inline]
     fn root_broadcast_bytes(&self, bytes: &mut Vec<u8>) {
         self.root_process().broadcast_into(bytes);
     }
 
     /// sum up all local values
+    #[cfg(feature = "proving")]
     #[inline]
     fn sum_vec<F: Field>(&self, local_vec: &[F]) -> Vec<F> {
         if self.world_size == 1 {
@@ -235,6 +262,7 @@ impl MPIEngine for MPIConfig {
     }
 
     /// coef has a length of mpi_world_size
+    #[cfg(feature = "proving")]
     #[inline]
     fn coef_combine_vec<F: Field>(&self, local_vec: &[F], coef: &[F]) -> Vec<F> {
         if self.world_size == 1 {
@@ -259,6 +287,7 @@ impl MPIEngine for MPIConfig {
 
     /// perform an all to all transpose,
     /// supposing the current party holds a row in a matrix with row number being MPI parties.
+    #[cfg(feature = "proving")]
     #[inline(always)]
     fn all_to_all_transpose<F: Sized>(&self, row: &mut [F]) {
         assert_eq!(row.len() % self.world_size(), 0);
@@ -311,6 +340,7 @@ impl MPIEngine for MPIConfig {
         });
     }
 
+    #[cfg(feature = "proving")]
     #[inline(always)]
     fn gather_varlen_vec<F: ExpSerde>(&self, elems: &Vec<F>, global_elems: &mut Vec<Vec<F>>) {
         let mut elems_bytes: Vec<u8> = Vec::new();
@@ -346,6 +376,7 @@ impl MPIEngine for MPIConfig {
         }
     }
 
+    #[cfg(feature = "proving")]
     #[inline(always)]
     fn is_single_process(&self) -> bool {
         self.world_size == 1
@@ -361,6 +392,7 @@ impl MPIEngine for MPIConfig {
         self.world_rank as usize
     }
 
+    #[cfg(feature = "proving")]
     #[inline(always)]
     fn root_process(&self) -> Process {
         self.world.unwrap().process_at_rank(Self::ROOT_RANK)
@@ -368,6 +400,7 @@ impl MPIEngine for MPIConfig {
 
     // Barrier is designed for mpi use only
     // There might be some issues if used with multi-threading
+    #[cfg(feature = "proving")]
     #[inline(always)]
     fn barrier(&self) {
         if self.world_size > 1 {
@@ -375,11 +408,12 @@ impl MPIEngine for MPIConfig {
         }
     }
 
+    #[cfg(feature = "proving")]
     #[inline]
-    fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, *mut ompi_win_t) {
+    fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, MPI_Win) {
         let window_size = if self.is_root() { n_bytes } else { 0 };
         let mut baseptr: *mut c_void = std::ptr::null_mut();
-        let mut window = std::ptr::null_mut();
+        let mut window = MPI_Win(std::ptr::null_mut());
         unsafe {
             MPI_Win_allocate_shared(
                 window_size as isize,

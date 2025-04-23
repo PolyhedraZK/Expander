@@ -27,7 +27,7 @@ mod gkr_square;
 pub use gkr_square::gkr_square_verify;
 
 mod gkr_par_verifier;
-pub use gkr_par_verifier::gkr_par_verifier_verify;
+pub use gkr_par_verifier::{gkr_par_verifier_verify, SumcheckLayerState};
 
 #[derive(Default)]
 pub struct Verifier<Cfg: GKREngine> {

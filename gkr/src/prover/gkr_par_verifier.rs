@@ -1,3 +1,4 @@
+use crate::verifier::SumcheckLayerState;
 use circuit::Circuit;
 use gkr_engine::{
     ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, Transcript,
@@ -5,44 +6,6 @@ use gkr_engine::{
 use serdes::ExpSerde;
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use utils::timer::Timer;
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SumcheckLayerState<F: FieldEngine> {
-    pub transcript_state: Vec<u8>,
-    pub challenge: ExpanderDualVarChallenge<F>,
-    pub alpha: Option<F::ChallengeField>,
-    pub claimed_v0: F::ChallengeField,
-    pub claimed_v1: Option<F::ChallengeField>,
-}
-
-impl<F: FieldEngine> ExpSerde for SumcheckLayerState<F> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> serdes::SerdeResult<()> {
-        self.transcript_state.serialize_into(&mut writer)?;
-        self.challenge.serialize_into(&mut writer)?;
-        self.alpha.serialize_into(&mut writer)?;
-        self.claimed_v0.serialize_into(&mut writer)?;
-        self.claimed_v1.serialize_into(&mut writer)?;
-        Ok(())
-    }
-
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> serdes::SerdeResult<Self> {
-        let transcript_state = Vec::deserialize_from(&mut reader)?;
-        let challenge = ExpanderDualVarChallenge::<F>::deserialize_from(&mut reader)?;
-        let alpha = Option::<F::ChallengeField>::deserialize_from(&mut reader)?;
-        let claimed_v0 = F::ChallengeField::deserialize_from(&mut reader)?;
-        let claimed_v1 = Option::<F::ChallengeField>::deserialize_from(&mut reader)?;
-
-        Ok(Self {
-            transcript_state,
-            challenge,
-            alpha,
-            claimed_v0,
-            claimed_v1,
-        })
-    }
-}
 
 #[allow(clippy::too_many_arguments)]
 pub fn checkpoint_sumcheck_layer_state<F: FieldEngine>(

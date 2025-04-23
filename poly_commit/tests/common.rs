@@ -44,6 +44,7 @@ pub fn test_pcs<F: ExtensionField, T: Transcript<F>, P: PolynomialCommitmentSche
     }
 }
 
+#[cfg(feature = "proving")]
 pub fn test_pcs_for_expander_gkr<
     C: FieldEngine,
     T: Transcript<C::ChallengeField>,

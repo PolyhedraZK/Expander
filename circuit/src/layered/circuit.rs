@@ -7,7 +7,7 @@ use gkr_engine::{
     root_println, ExpanderPCS, FieldEngine, GKREngine, MPIConfig, MPIEngine,
     PolynomialCommitmentType, Transcript,
 };
-use mpi::ffi::ompi_win_t;
+use mpi::ffi::MPI_Win;
 use serdes::ExpSerde;
 
 use crate::*;
@@ -168,6 +168,7 @@ impl<C: FieldEngine> Circuit<C> {
         Self::verifier_load_circuit::<Cfg>(filename)
     }
 
+    #[cfg(feature = "proving")]
     // The root process loads a circuit from a file and shares it with other processes
     // with shared memory
     // Used in the mpi case, ok if mpi_size = 1, but
@@ -176,7 +177,7 @@ impl<C: FieldEngine> Circuit<C> {
     pub fn prover_load_circuit<Cfg: GKREngine<FieldConfig = C>>(
         filename: &str,
         mpi_config: &MPIConfig,
-    ) -> (Self, *mut ompi_win_t) {
+    ) -> (Self, MPI_Win) {
         let circuit = if mpi_config.is_root() {
             let rc = RecursiveCircuit::<C>::load(filename).unwrap();
             let circuit = rc.flatten::<Cfg>();

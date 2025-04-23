@@ -55,6 +55,7 @@ fn test_orion_simd_pcs_full_e2e() {
     test_orion_simd_pcs_generics::<Goldilocks, Goldilocksx8, GoldilocksExt2, Goldilocksx8>(16, 22)
 }
 
+#[cfg(feature = "proving")]
 fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     mpi_config_ref: &MPIConfig,
     total_num_vars: usize,
@@ -115,6 +116,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     );
 }
 
+#[cfg(feature = "proving")]
 #[test]
 fn test_orion_for_expander_gkr() {
     let mpi_config = MPIConfig::prover_new();
