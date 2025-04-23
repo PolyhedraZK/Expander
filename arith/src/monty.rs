@@ -19,7 +19,7 @@ use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
 use utils::{from_monty, monty_reduce, to_monty};
 
-use crate::Field;
+use crate::{FFTField, Field};
 
 mod param;
 pub use param::*;
@@ -392,5 +392,13 @@ impl<MP: FieldParameters> Field for MontyField31<MP> {
     #[inline(always)]
     fn from_u256(v: U256) -> Self {
         Self::new(v.as_u32())
+    }
+}
+
+impl<MP: FieldParameters> FFTField for MontyField31<MP> {
+    const TWO_ADICITY: usize = MP::TWO_ADICITY;
+
+    fn root_of_unity() -> Self {
+        Self::from(MP::TWO_ADICITY_GENERATOR_IN_U32)
     }
 }
