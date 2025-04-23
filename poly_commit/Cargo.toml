@@ -41,3 +41,6 @@ harness = false
 [[bench]]
 name = "kzg"
 harness = false
+
+[features]
+proving = ["gkr_engine/proving", "transcript/proving"]

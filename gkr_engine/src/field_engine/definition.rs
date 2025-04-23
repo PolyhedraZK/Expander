@@ -123,6 +123,7 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + PartialEq + 'stat
         }
     }
 
+    #[cfg(feature = "proving")]
     /// This assumes each mpi core hold their own evals, and collectively
     /// compute the global evaluation.
     /// Mostly used by the prover run with `mpiexec`

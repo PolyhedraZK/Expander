@@ -1,6 +1,7 @@
 use arith::ExtensionField;
 use gkr_engine::{MPIEngine, Transcript};
 
+#[cfg(feature = "proving")]
 /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
 pub fn transcript_root_broadcast<F>(
     transcript: &mut impl Transcript<F>,

@@ -16,3 +16,4 @@ log.workspace = true
 
 [features]
 profile = [ "utils/profile" ]
+proving = ["gkr_engine/proving"]

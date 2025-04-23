@@ -148,6 +148,7 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
+    #[cfg(feature = "proving")]
     fn commit(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
@@ -179,6 +180,7 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
         Self::Commitment { evals: buffer }.into()
     }
 
+    #[cfg(feature = "proving")]
     fn open(
         _params: &Self::Params,
         _mpi_engine: &impl MPIEngine,

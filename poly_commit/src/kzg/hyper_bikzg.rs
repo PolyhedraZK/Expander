@@ -14,10 +14,14 @@ use halo2curves::{
 use itertools::{chain, izip};
 use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
-use transcript::{transcript_root_broadcast, transcript_verifier_sync};
+use transcript::transcript_verifier_sync;
+
+#[cfg(feature = "proving")]
+use transcript::transcript_root_broadcast;
 
 use crate::*;
 
+#[cfg(feature = "proving")]
 pub fn coeff_form_hyper_bikzg_open<E>(
     srs: &CoefFormBiKZGLocalSRS<E>,
     mpi_engine: &impl MPIEngine,

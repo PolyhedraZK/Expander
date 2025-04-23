@@ -23,8 +23,12 @@ use serdes::ExpSerde;
 use sha2::Digest;
 use transcript::{BytesHashTranscript, FieldHashTranscript};
 
-use crate::{utils::*, Prover, Verifier};
+use crate::{utils::*, Verifier};
 
+#[cfg(feature = "proving")]
+use crate::Prover;
+
+#[cfg(feature = "proving")]
 #[test]
 fn test_gkr_correctness() {
     // Initialize logger
@@ -171,6 +175,7 @@ fn test_gkr_correctness() {
     MPIConfig::finalize();
 }
 
+#[cfg(feature = "proving")]
 #[allow(unreachable_patterns)]
 fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
     let mpi_config = MPIConfig::prover_new();

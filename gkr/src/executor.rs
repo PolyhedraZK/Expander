@@ -17,7 +17,10 @@ use poly_commit::expander_pcs_init_testing_only;
 use serdes::{ExpSerde, SerdeError};
 use warp::{http::StatusCode, reply, Filter};
 
-use crate::{Prover, Verifier};
+#[cfg(feature = "proving")]
+use crate::Prover;
+
+use crate::Verifier;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -37,6 +40,7 @@ pub struct ExpanderExecArgs {
 
 #[derive(Debug, Subcommand, Clone)]
 pub enum ExpanderExecSubCommand {
+    #[cfg(feature = "proving")]
     Prove {
         /// Circuit File Path
         #[arg(short, long)]
@@ -67,6 +71,7 @@ pub enum ExpanderExecSubCommand {
         #[arg(short, long, default_value_t = 1)]
         mpi_size: u32,
     },
+    #[cfg(feature = "proving")]
     Serve {
         /// Circuit File Path
         #[arg(short, long)]
@@ -119,6 +124,7 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     }
 }
 
+#[cfg(feature = "proving")]
 pub fn prove<Cfg: GKREngine>(
     circuit: &mut Circuit<Cfg::FieldConfig>,
     mpi_config: MPIConfig,
@@ -170,6 +176,7 @@ pub async fn run_command<Cfg: GKREngine + 'static>(
     let subcommands = command.subcommands.clone();
 
     match subcommands {
+        #[cfg(feature = "proving")]
         ExpanderExecSubCommand::Prove {
             circuit_file,
             witness_file,
@@ -236,6 +243,7 @@ pub async fn run_command<Cfg: GKREngine + 'static>(
 
             println!("success");
         }
+        #[cfg(feature = "proving")]
         ExpanderExecSubCommand::Serve {
             circuit_file,
             host_ip,

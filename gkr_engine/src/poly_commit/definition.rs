@@ -59,6 +59,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
     /// Each process returns its own scratch pad.
     fn init_scratch_pad(params: &Self::Params, mpi_engine: &impl MPIEngine) -> Self::ScratchPad;
 
+    #[cfg(feature = "proving")]
     /// Commit to a polynomial. Root process returns the commitment, other processes can return
     /// arbitrary value.
     fn commit(
@@ -69,6 +70,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
         scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment>;
 
+    #[cfg(feature = "proving")]
     /// Open the polynomial at a point.
     /// Root process returns the opening, other processes can return arbitrary value.
     ///

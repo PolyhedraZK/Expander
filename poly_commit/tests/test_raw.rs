@@ -30,6 +30,7 @@ fn test_raw() {
     );
 }
 
+#[cfg(feature = "proving")]
 fn test_raw_gkr_helper<C: FieldEngine, T: Transcript<C::ChallengeField>>(
     mpi_config: &MPIConfig,
     transcript: &mut T,
@@ -59,6 +60,7 @@ fn test_raw_gkr_helper<C: FieldEngine, T: Transcript<C::ChallengeField>>(
     );
 }
 
+#[cfg(feature = "proving")]
 #[test]
 fn test_raw_gkr() {
     let mpi_config = MPIConfig::prover_new();

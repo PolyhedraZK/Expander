@@ -4,11 +4,13 @@ use gkr_engine::{
     Transcript,
 };
 
+#[cfg(feature = "proving")]
 use crate::{
     prover_helper::{SumcheckGkrSquareHelper, SumcheckGkrVanillaHelper},
     utils::transcript_io,
-    ProverScratchPad,
 };
+
+use crate::ProverScratchPad;
 
 /// The degree of the polynomial for sumcheck, which is 2 for non-SIMD/MPI variables
 /// and 3 for SIMD/MPI variables.
@@ -19,6 +21,7 @@ pub const SUMCHECK_GKR_SIMD_MPI_DEGREE: usize = 3;
 /// It is 6 for both SIMD/MPI and non-SIMD/MPI variables.
 pub const SUMCHECK_GKR_SQUARE_DEGREE: usize = 6;
 
+#[cfg(feature = "proving")]
 // FIXME
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
@@ -91,6 +94,7 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>
     (vx_claim, vy_claim)
 }
 
+#[cfg(feature = "proving")]
 // FIXME
 #[allow(clippy::needless_range_loop)] // todo: remove
 #[allow(clippy::type_complexity)]

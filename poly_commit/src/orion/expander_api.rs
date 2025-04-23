@@ -6,11 +6,14 @@ use gkr_engine::{
 use polynomials::MultilinearExtension;
 
 use crate::orion::{
+    verify::orion_verify, OrionCommitment, OrionProof, OrionSIMDFieldPCS, OrionSRS,
+    OrionScratchPad, ORION_CODE_PARAMETER_INSTANCE,
+};
+
+#[cfg(feature = "proving")]
+use crate::orion::{
     simd_field_impl::{orion_commit_simd_field, orion_open_simd_field},
     simd_field_mpi_impl::{orion_mpi_commit_simd_field, orion_mpi_open_simd_field},
-    verify::orion_verify,
-    OrionCommitment, OrionProof, OrionSIMDFieldPCS, OrionSRS, OrionScratchPad,
-    ORION_CODE_PARAMETER_INSTANCE,
 };
 
 impl<C, ComPackF> ExpanderPCS<C>
@@ -57,7 +60,7 @@ where
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {
         Self::ScratchPad::default()
     }
-
+    #[cfg(feature = "proving")]
     fn commit(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
@@ -86,6 +89,7 @@ where
         .ok()
     }
 
+    #[cfg(feature = "proving")]
     fn open(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,

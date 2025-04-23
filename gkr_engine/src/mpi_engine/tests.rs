@@ -6,6 +6,7 @@ use mersenne31::{M31Ext3, M31x16, M31};
 
 use crate::{MPIConfig, MPIEngine};
 
+#[cfg(feature = "proving")]
 fn test_gather_vec_helper(mpi_config: &MPIConfig) {
     const TEST_SIZE: usize = (1 << 10) + 1;
 
@@ -28,6 +29,7 @@ fn test_gather_vec_helper(mpi_config: &MPIConfig) {
     }
 }
 
+#[cfg(feature = "proving")]
 fn test_varlen_gather_vec_helper(mpi_config: &MPIConfig) {
     let msg: Vec<_> = (0..=mpi_config.world_rank()).collect();
     let mut global_elems: Vec<Vec<usize>> = Vec::new();
@@ -43,6 +45,7 @@ fn test_varlen_gather_vec_helper(mpi_config: &MPIConfig) {
     });
 }
 
+#[cfg(feature = "proving")]
 fn test_all_to_all_transpose_helper<F: Field>(mpi_config: &MPIConfig) {
     const TEST_MATRIX_LEN: usize = 1 << 23;
 
@@ -80,6 +83,7 @@ fn test_all_to_all_transpose_helper<F: Field>(mpi_config: &MPIConfig) {
     });
 }
 
+#[cfg(feature = "proving")]
 #[test]
 fn test_mpi_engine() {
     let mpi_config = MPIConfig::prover_new();

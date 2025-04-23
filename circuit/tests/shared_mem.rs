@@ -54,6 +54,7 @@ fn load_circuit<Cfg: GKREngine>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::F
     }
 }
 
+#[cfg(feature = "proving")]
 #[test]
 fn test_shared_mem() {
     let mpi_config = MPIConfig::prover_new();
@@ -74,6 +75,7 @@ fn test_shared_mem() {
     MPIConfig::finalize();
 }
 
+#[cfg(feature = "proving")]
 #[allow(unreachable_patterns)]
 fn test_shared_mem_helper<T: SharedMemory + ExpSerde + std::fmt::Debug>(
     mpi_config: &MPIConfig,

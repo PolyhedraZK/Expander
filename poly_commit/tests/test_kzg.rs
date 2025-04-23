@@ -31,6 +31,7 @@ fn test_hyperkzg_pcs_full_e2e() {
     test_hyperkzg_pcs_generics(2, 15)
 }
 
+#[cfg(feature = "proving")]
 fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_vars: usize) {
     let mut rng = test_rng();
 
@@ -73,6 +74,7 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
     );
 }
 
+#[cfg(feature = "proving")]
 #[test]
 fn test_hyper_bikzg_for_expander_gkr() {
     let mpi_config = MPIConfig::prover_new();

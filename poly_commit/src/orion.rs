@@ -15,7 +15,9 @@ pub use simd_field_impl::{orion_commit_simd_field, orion_open_simd_field};
 
 mod mpi_utils;
 
+#[cfg(feature = "proving")]
 mod simd_field_mpi_impl;
+#[cfg(feature = "proving")]
 pub use simd_field_mpi_impl::{orion_mpi_commit_simd_field, orion_mpi_open_simd_field};
 
 mod verify;

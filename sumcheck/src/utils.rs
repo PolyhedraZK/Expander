@@ -22,6 +22,7 @@ pub fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar 
         .sum()
 }
 
+#[cfg(feature = "proving")]
 /// Transcript IO between sumcheck steps
 #[inline]
 pub fn transcript_io<F, T>(mpi_config: &impl MPIEngine, ps: &[F], transcript: &mut T) -> F

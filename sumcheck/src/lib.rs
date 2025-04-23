@@ -1,6 +1,7 @@
 mod sumcheck;
 pub use sumcheck::*;
 
+#[cfg(feature = "proving")]
 mod prover_helper;
 
 mod verifier_helper;

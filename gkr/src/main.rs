@@ -16,8 +16,12 @@ use gkr::{
     BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
     GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Orion, GoldilocksExtConfigSha2Raw,
     M31ExtConfigSha2OrionSquare, M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare,
-    M31ExtConfigSha2RawVanilla, Prover,
+    M31ExtConfigSha2RawVanilla,
 };
+
+#[cfg(feature = "proving")]
+use gkr::Prover;
+
 use gkr_engine::{
     ExpanderPCS, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType,
 };
@@ -53,72 +57,82 @@ fn main() {
     let args = Args::parse();
     print_info(&args);
 
-    let mpi_config = MPIConfig::prover_new();
-    let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
+    #[cfg(feature = "proving")]
+    {
+        let mpi_config = MPIConfig::prover_new();
+        let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
-    match args.field.as_str() {
-        "m31ext3" => match pcs_type {
-            PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<M31ExtConfigSha2RawVanilla>(&args, mpi_config.clone()),
-                "poseidon" => run_benchmark::<M31ExtConfigSha2RawSquare>(&args, mpi_config.clone()),
-                _ => unreachable!(),
+        match args.field.as_str() {
+            "m31ext3" => match pcs_type {
+                PolynomialCommitmentType::Raw => match args.circuit.as_str() {
+                    "keccak" => {
+                        run_benchmark::<M31ExtConfigSha2RawVanilla>(&args, mpi_config.clone())
+                    }
+                    "poseidon" => {
+                        run_benchmark::<M31ExtConfigSha2RawSquare>(&args, mpi_config.clone())
+                    }
+                    _ => unreachable!(),
+                },
+                PolynomialCommitmentType::Orion => match args.circuit.as_str() {
+                    "keccak" => {
+                        run_benchmark::<M31ExtConfigSha2OrionVanilla>(&args, mpi_config.clone())
+                    }
+                    "poseidon" => {
+                        run_benchmark::<M31ExtConfigSha2OrionSquare>(&args, mpi_config.clone())
+                    }
+                    _ => unreachable!(""),
+                },
+                _ => unreachable!("Unsupported PCS type for M31"),
             },
-            PolynomialCommitmentType::Orion => match args.circuit.as_str() {
-                "keccak" => {
-                    run_benchmark::<M31ExtConfigSha2OrionVanilla>(&args, mpi_config.clone())
-                }
-                "poseidon" => {
-                    run_benchmark::<M31ExtConfigSha2OrionSquare>(&args, mpi_config.clone())
-                }
-                _ => unreachable!(""),
+            "fr" => match pcs_type {
+                PolynomialCommitmentType::Raw => match args.circuit.as_str() {
+                    "keccak" => run_benchmark::<BN254ConfigSha2Raw>(&args, mpi_config.clone()),
+                    _ => unreachable!(),
+                },
+                PolynomialCommitmentType::Hyrax => match args.circuit.as_str() {
+                    "keccak" => run_benchmark::<BN254ConfigSha2Hyrax>(&args, mpi_config.clone()),
+                    _ => unreachable!(),
+                },
+                PolynomialCommitmentType::KZG => match args.circuit.as_str() {
+                    "keccak" => run_benchmark::<BN254ConfigMIMC5KZG>(&args, mpi_config.clone()),
+                    _ => unreachable!(),
+                },
+                _ => unreachable!("Unsupported PCS type for BN254"),
             },
-            _ => unreachable!("Unsupported PCS type for M31"),
-        },
-        "fr" => match pcs_type {
-            PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<BN254ConfigSha2Raw>(&args, mpi_config.clone()),
-                _ => unreachable!(),
+            "gf2ext128" => match pcs_type {
+                PolynomialCommitmentType::Raw => match args.circuit.as_str() {
+                    "keccak" => run_benchmark::<GF2ExtConfigSha2Raw>(&args, mpi_config.clone()),
+                    _ => unreachable!(),
+                },
+                PolynomialCommitmentType::Orion => match args.circuit.as_str() {
+                    "keccak" => run_benchmark::<GF2ExtConfigSha2Orion>(&args, mpi_config.clone()),
+                    _ => unreachable!(),
+                },
+                _ => unreachable!("Unsupported PCS type for GF2"),
             },
-            PolynomialCommitmentType::Hyrax => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<BN254ConfigSha2Hyrax>(&args, mpi_config.clone()),
-                _ => unreachable!(),
+            "goldilocks" => match pcs_type {
+                PolynomialCommitmentType::Raw => match args.circuit.as_str() {
+                    "keccak" => {
+                        run_benchmark::<GoldilocksExtConfigSha2Raw>(&args, mpi_config.clone())
+                    }
+                    _ => unreachable!(),
+                },
+                PolynomialCommitmentType::Orion => match args.circuit.as_str() {
+                    "keccak" => {
+                        run_benchmark::<GoldilocksExtConfigSha2Orion>(&args, mpi_config.clone())
+                    }
+                    _ => unreachable!(),
+                },
+                _ => unreachable!("Unsupported PCS type for Goldilocks"),
             },
-            PolynomialCommitmentType::KZG => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<BN254ConfigMIMC5KZG>(&args, mpi_config.clone()),
-                _ => unreachable!(),
-            },
-            _ => unreachable!("Unsupported PCS type for BN254"),
-        },
-        "gf2ext128" => match pcs_type {
-            PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<GF2ExtConfigSha2Raw>(&args, mpi_config.clone()),
-                _ => unreachable!(),
-            },
-            PolynomialCommitmentType::Orion => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<GF2ExtConfigSha2Orion>(&args, mpi_config.clone()),
-                _ => unreachable!(),
-            },
-            _ => unreachable!("Unsupported PCS type for GF2"),
-        },
-        "goldilocks" => match pcs_type {
-            PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<GoldilocksExtConfigSha2Raw>(&args, mpi_config.clone()),
-                _ => unreachable!(),
-            },
-            PolynomialCommitmentType::Orion => match args.circuit.as_str() {
-                "keccak" => {
-                    run_benchmark::<GoldilocksExtConfigSha2Orion>(&args, mpi_config.clone())
-                }
-                _ => unreachable!(),
-            },
-            _ => unreachable!("Unsupported PCS type for Goldilocks"),
-        },
-        _ => unreachable!(),
-    };
+            _ => unreachable!(),
+        };
 
-    MPIConfig::finalize();
+        MPIConfig::finalize();
+    }
 }
 
+#[cfg(feature = "proving")]
 fn run_benchmark<'a, Cfg: GKREngine>(args: &'a Args, mpi_config: MPIConfig)
 where
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad: 'a,
