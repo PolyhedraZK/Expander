@@ -17,7 +17,7 @@ use crate::{
     FRICommitment, FRIScratchPad,
 };
 
-const LOG_CODE_RATE: usize = 2;
+const LOG_CODE_RATE: usize = 3;
 
 const QUERY_COMPLEXITY: usize = 100;
 
@@ -63,7 +63,7 @@ pub(crate) fn fri_open<F, ChallengeF>(
 ) -> (ChallengeF, FRIOpening<ChallengeF>)
 where
     F: FFTField + ExpSerde,
-    ChallengeF: ExtensionField<BaseField = F> + ExpSerde + FFTField,
+    ChallengeF: ExtensionField + From<F> + ExpSerde + FFTField,
 {
     let mut shift_z_poly = MultiLinearPoly::new(EqPolynomial::build_eq_x_r(point));
 
@@ -177,7 +177,7 @@ pub(crate) fn fri_verify<F, ChallengeF>(
 ) -> bool
 where
     F: FFTField + ExpSerde,
-    ChallengeF: ExtensionField<BaseField = F> + ExpSerde + FFTField,
+    ChallengeF: ExtensionField + From<F> + ExpSerde + FFTField,
 {
     let mut v_claim = evaluation;
 
