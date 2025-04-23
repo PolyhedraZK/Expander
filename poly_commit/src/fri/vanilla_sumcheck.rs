@@ -72,7 +72,7 @@ pub(crate) fn vanilla_sumcheck_degree_2_mul_step_verify<F: ExtensionField>(
 }
 
 #[cfg(test)]
-mod vanilla_sumcheck_degree_2_test {
+mod vanilla_sumcheck_test {
     use arith::{ExtensionField, Fr};
     use ark_std::test_rng;
     use gkr_engine::Transcript;

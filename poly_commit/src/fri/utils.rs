@@ -5,13 +5,12 @@ pub type FRICommitment = tree::Node;
 
 #[derive(Clone, Debug, Default)]
 pub struct FRIScratchPad<F: FFTField> {
-    pub reed_solomon_commitment: tree::Tree,
+    pub merkle: tree::Tree,
     pub codeword: Vec<F>,
 }
 
 unsafe impl<F: FFTField> Send for FRIScratchPad<F> {}
 
-#[allow(unused)]
 #[inline(always)]
 pub(crate) fn copy_elems_to_leaves<F: Field>(elems: &[F]) -> Vec<Leaf> {
     let max_elems_per_leaf = LEAF_BYTES * 8 / F::FIELD_SIZE;
@@ -28,14 +27,15 @@ pub(crate) fn copy_elems_to_leaves<F: Field>(elems: &[F]) -> Vec<Leaf> {
 
     elems
         .chunks(num_elems_per_leaf)
-        .map(|elems_chunk| unsafe {
+        .map(|elems_chunk| {
             let mut leaf = Leaf::default();
 
-            let u8_cast_slice = std::slice::from_raw_parts(
-                elems_chunk.as_ptr() as *const u8,
-                num_elems_per_leaf * field_bytes,
-            );
-            leaf.data[..u8_cast_slice.len()].copy_from_slice(u8_cast_slice);
+            elems_chunk.iter().enumerate().for_each(|(i, e)| {
+                let begin = i * field_bytes;
+                let end = begin + field_bytes;
+
+                e.serialize_into(&mut leaf.data[begin..end]).unwrap()
+            });
 
             leaf
         })
@@ -67,6 +67,48 @@ pub(crate) fn fri_mt_opening(
         merkle_tree.gen_proof(left, height),
         merkle_tree.gen_proof(right, height),
     )
+}
+
+#[inline(always)]
+pub(crate) fn fri_mt_query_alphabet<F: Field>(
+    query: &tree::Path,
+    alphabet_index_in_leaf: usize,
+) -> F {
+    let field_bytes = F::FIELD_SIZE / 8;
+
+    let begin = alphabet_index_in_leaf * field_bytes;
+    let end = begin + field_bytes;
+
+    let mut buffer = vec![0u8; field_bytes];
+    buffer.copy_from_slice(&query.leaf.data[begin..end]);
+
+    F::deserialize_from(buffer.as_slice()).unwrap()
+}
+
+#[inline(always)]
+pub(crate) fn fri_fold_step<F: Field>(
+    point_to_alphabet: &mut usize,
+    codeword_len: usize,
+    query_pair: &(tree::Path, tree::Path),
+) -> (F, F) {
+    let max_elems_per_leaf = LEAF_BYTES * 8 / F::FIELD_SIZE;
+    let num_elems_per_leaf = if max_elems_per_leaf.is_power_of_two() {
+        max_elems_per_leaf
+    } else {
+        max_elems_per_leaf.next_power_of_two() / 2
+    };
+
+    assert!(num_elems_per_leaf * F::FIELD_SIZE <= LEAF_BYTES * 8);
+    let alphabet_index_in_leaf = *point_to_alphabet % num_elems_per_leaf;
+
+    let left: F = fri_mt_query_alphabet(&query_pair.0, alphabet_index_in_leaf);
+    let right: F = fri_mt_query_alphabet(&query_pair.1, alphabet_index_in_leaf);
+
+    if *point_to_alphabet >= codeword_len / 2 {
+        *point_to_alphabet -= codeword_len / 2
+    }
+
+    (left, right)
 }
 
 #[cfg(test)]

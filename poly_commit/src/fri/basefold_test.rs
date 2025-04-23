@@ -7,7 +7,7 @@ use serdes::ExpSerde;
 use transcript::BytesHashTranscript;
 
 use crate::fri::{
-    basefold_impl::{fri_commit, fri_open},
+    basefold_impl::{fri_commit, fri_open, fri_verify},
     FRIScratchPad,
 };
 
@@ -26,9 +26,12 @@ where
         .collect();
 
     let mut fs_transcript_p = BytesHashTranscript::<ChallengeF, Keccak256hasher>::new();
+    let mut fs_transcript_v = fs_transcript_p.clone();
 
-    let _commitment = fri_commit(&mle.coeffs, &mut scratch_pad);
-    let _opening = fri_open(&mle, &point, &mut fs_transcript_p, &scratch_pad);
+    let commitment = fri_commit(&mle.coeffs, &mut scratch_pad);
+    let (eval, opening) = fri_open(&mle, &point, &mut fs_transcript_p, &scratch_pad);
+    let verif = fri_verify(&commitment, &point, eval, &opening, &mut fs_transcript_v);
+    assert!(verif)
 }
 
 #[test]
