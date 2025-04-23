@@ -73,10 +73,12 @@ pub(crate) fn sumcheck_deg_2_mul_step_verify<F: ExtensionField>(
 
 #[cfg(test)]
 mod vanilla_sumcheck_test {
-    use arith::{ExtensionField, Fr};
+    use arith::ExtensionField;
     use ark_std::test_rng;
     use gkr_engine::Transcript;
     use gkr_hashers::Keccak256hasher;
+    use goldilocks::GoldilocksExt2;
+    use mersenne31::{M31Ext3, M31Ext6};
     use polynomials::{EqPolynomial, MultiLinearPoly, UnivariatePoly};
     use transcript::BytesHashTranscript;
 
@@ -117,6 +119,8 @@ mod vanilla_sumcheck_test {
 
     #[test]
     fn test_vanilla_sumcheck_degree_2_mul() {
-        vanilla_sumcheck_degree_2_test_helper::<Fr>(15);
+        vanilla_sumcheck_degree_2_test_helper::<M31Ext3>(19);
+        vanilla_sumcheck_degree_2_test_helper::<M31Ext6>(19);
+        vanilla_sumcheck_degree_2_test_helper::<GoldilocksExt2>(19);
     }
 }
