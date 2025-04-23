@@ -2,10 +2,10 @@ use std::iter;
 
 use arith::{bit_reverse_swap, ExtensionField, FFTField, Field};
 use gkr_engine::Transcript;
-use itertools::izip;
+use itertools::{chain, izip};
 use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension, UnivariatePoly};
 use serdes::ExpSerde;
-use tree::Tree;
+use tree::{Node, Tree};
 
 use crate::{
     fri::{
@@ -17,7 +17,7 @@ use crate::{
     FRICommitment, FRIScratchPad,
 };
 
-const LOG_CODE_RATE: usize = 3;
+const LOG_CODE_RATE: usize = 2;
 
 const QUERY_COMPLEXITY: usize = 100;
 
@@ -90,7 +90,7 @@ where
     let mut generator = ChallengeF::two_adic_generator(point.len() + LOG_CODE_RATE);
 
     let univ_polys: Vec<UnivariatePoly<ChallengeF>> = (0..num_vars)
-        .map(|_| {
+        .map(|i| {
             let (uni_poly_i, r_i) = vanilla_sumcheck_degree_2_mul_step_prove(
                 &mut ext_poly,
                 &mut shift_z_poly,
@@ -115,12 +115,14 @@ where
 
             codeword.resize(next_codeword_len, ChallengeF::ZERO);
 
-            let leaves = copy_elems_to_leaves(&codeword);
-            let merkle_tree = Tree::new_with_leaves(leaves);
-            fs_transcript.append_u8_slice(merkle_tree.root().as_bytes());
+            if i != num_vars - 1 {
+                let leaves = copy_elems_to_leaves(&codeword);
+                let merkle_tree = Tree::new_with_leaves(leaves);
+                fs_transcript.append_u8_slice(merkle_tree.root().as_bytes());
 
-            iopp_oracles.push(merkle_tree);
-            iopp_codewords.push(codeword.clone());
+                iopp_oracles.push(merkle_tree);
+                iopp_codewords.push(codeword.clone());
+            }
 
             uni_poly_i
         })
@@ -169,7 +171,7 @@ where
 
 #[allow(unused)]
 pub(crate) fn fri_verify<F, ChallengeF>(
-    commitment: &FRICommitment,
+    com: &FRICommitment,
     point: &[ChallengeF],
     evaluation: ChallengeF,
     opening: &FRIOpening<ChallengeF>,
@@ -182,13 +184,22 @@ where
     let mut v_claim = evaluation;
 
     let mut rs: Vec<ChallengeF> = Vec::new();
-    izip!(&opening.sumcheck_responses, &opening.iopp_oracles).for_each(|(univ_p, oracle)| {
+    let phony_node = Node::default();
+    izip!(
+        &opening.sumcheck_responses,
+        chain!(&opening.iopp_oracles, iter::once(&phony_node))
+    )
+    .enumerate()
+    .for_each(|(i, (univ_p, oracle))| {
         let r_i = vanilla_sumcheck_degree_2_mul_step_verify(&mut v_claim, univ_p, fs_transcript);
         assert!(r_i.is_some());
 
         v_claim = univ_p.evaluate(r_i.unwrap());
         rs.push(r_i.unwrap());
-        fs_transcript.append_u8_slice(oracle.as_bytes());
+
+        if i != point.len() - 1 {
+            fs_transcript.append_u8_slice(oracle.as_bytes());
+        }
     });
 
     rs.reverse();
@@ -203,29 +214,13 @@ where
         f_z_eq_z_r * eq_z_r.inv().unwrap()
     };
 
-    dbg!(f_z);
-
-    let last_oracle = {
-        let last_codeword = vec![f_z; 1 << LOG_CODE_RATE];
-        let leaves = copy_elems_to_leaves(&last_codeword);
-        let merkle_tree = Tree::new_with_leaves(leaves);
-        merkle_tree.root()
-    };
-
-    if last_oracle != *opening.iopp_oracles.last().unwrap() {
-        return false;
-    }
-
-    let mut fri_verify = true;
-
     let iopp_challenges = fs_transcript.generate_challenge_index_vector(QUERY_COMPLEXITY);
-    izip!(&iopp_challenges, &opening.iopp_queries).for_each(|(challenge, iopp_query)| {
+    izip!(&iopp_challenges, &opening.iopp_queries).all(|(challenge, iopp_query)| {
         let mut codeword_len = 1 << (point.len() + LOG_CODE_RATE);
         let mut point_to_alphabet = challenge % codeword_len;
         let mut generator = ChallengeF::two_adic_generator(point.len() + LOG_CODE_RATE);
 
-        fri_verify = fri_verify && iopp_query[0].0.verify(commitment);
-        fri_verify = fri_verify && iopp_query[0].1.verify(commitment);
+        let mut fri_verify = iopp_query[0].0.verify(com) && iopp_query[0].1.verify(com);
 
         let (left, right): (ChallengeF, ChallengeF) = {
             let (l, r): (F, F) =
@@ -233,8 +228,6 @@ where
 
             (From::from(l), From::from(r))
         };
-
-        dbg!(left, right);
 
         let mut expected_next = {
             let diag_inv = generator.exp(point_to_alphabet as u128).inv().unwrap();
@@ -245,17 +238,15 @@ where
 
             o * (ChallengeF::ONE - r_i) + e * r_i
         };
-        dbg!(expected_next);
 
         codeword_len >>= 1;
         generator = generator.square();
 
         let mut is_right_query = point_to_alphabet >= codeword_len / 2;
-        dbg!(is_right_query);
 
         izip!(
             &opening.iopp_oracles,
-            rs.iter().rev().skip(1).chain(iter::once(&ChallengeF::ZERO)),
+            rs.iter().rev().skip(1),
             iopp_query.iter().skip(1)
         )
         .for_each(|(com, r_i, query_pair)| {
@@ -263,8 +254,6 @@ where
 
             let (left, right): (ChallengeF, ChallengeF) =
                 fri_fold_step(&mut point_to_alphabet, codeword_len, query_pair);
-
-            dbg!(left, right);
 
             let actual = if is_right_query { right } else { left };
             fri_verify = fri_verify && actual == expected_next;
@@ -277,15 +266,13 @@ where
 
                 o * (ChallengeF::ONE - r_i) + e * r_i
             };
-            dbg!(expected_next);
 
             codeword_len >>= 1;
             generator = generator.square();
 
             is_right_query = point_to_alphabet >= codeword_len / 2;
-            dbg!(is_right_query);
         });
-    });
 
-    fri_verify
+        fri_verify && expected_next == f_z
+    })
 }
