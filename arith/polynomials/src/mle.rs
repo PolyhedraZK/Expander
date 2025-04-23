@@ -30,51 +30,6 @@ impl<F: Field> MultiLinearPoly<F> {
         log2(self.coeffs.len()) as usize
     }
 
-    // TODO: optimize this function
-    #[inline]
-    pub fn interpolate_over_hypercube_impl(evals: &[F]) -> Vec<F> {
-        let mut coeffs = evals.to_vec();
-        let num_vars = log2(evals.len());
-
-        for i in 1..=num_vars {
-            let chunk_size = 1 << i;
-
-            coeffs.chunks_mut(chunk_size).for_each(|chunk| {
-                let half_chunk = chunk_size >> 1;
-                let (left, right) = chunk.split_at_mut(half_chunk);
-                right
-                    .iter_mut()
-                    .zip(left.iter())
-                    .for_each(|(a, b)| *a -= *b);
-            })
-        }
-
-        coeffs
-    }
-
-    // interpolate Z evaluations over boolean hypercube {0, 1}^n
-    #[inline]
-    pub fn interpolate_over_hypercube(&self) -> Vec<F> {
-        // Take eq poly as an example:
-        //
-        // The evaluation format of an eq poly over {0, 1}^2 follows:
-        // eq(\vec{r}, \vec{x}) with \vec{x} order in x0 x1
-        //
-        //     00             01            10          11
-        // (1-r0)(1-r1)    (1-r0)r1      r0(1-r1)      r0r1
-        //
-        // The interpolated version over x0 x1 (ordered in x0 x1) follows:
-        //
-        //     00               01                  10                11
-        // (1-r0)(1-r1)    (1-r0)(2r1-1)      (2r0-1)(1-r1)     (2r0-1)(2r1-1)
-
-        // NOTE(Hang): I think the original implementation of this dense multilinear
-        // polynomial requires a resizing of coeffs by num vars,
-        // e.g., when sumchecking - the num_var reduces, while Z evals can reuse the
-        // whole space, which means we cannot simply relying Z's size itself.
-        Self::interpolate_over_hypercube_impl(&self.coeffs)
-    }
-
     /// Evaluate the polynomial at the top variable
     #[inline]
     pub fn fix_top_variable<AF: Field + Mul<F, Output = F>>(&mut self, r: AF) {
@@ -168,10 +123,6 @@ impl<F: Field> MultilinearExtension<F> for MultiLinearPoly<F> {
     fn evaluate_with_buffer(&self, point: &[F], scratch: &mut [F]) -> F {
         Self::evaluate_with_buffer(&self.coeffs, point, scratch)
     }
-
-    fn interpolate_over_hypercube(&self) -> Vec<F> {
-        self.interpolate_over_hypercube()
-    }
 }
 
 impl<F: Field> IndexMut<usize> for MultiLinearPoly<F> {
@@ -187,21 +138,5 @@ impl<F: Field> MutableMultilinearExtension<F> for MultiLinearPoly<F> {
 
     fn fix_variables<AF: Field + std::ops::Mul<F, Output = F>>(&mut self, vars: &[AF]) {
         self.fix_variables(vars)
-    }
-
-    fn interpolate_over_hypercube_in_place(&mut self) {
-        let num_vars = self.num_vars();
-        for i in 1..=num_vars {
-            let chunk_size = 1 << i;
-
-            self.coeffs.chunks_mut(chunk_size).for_each(|chunk| {
-                let half_chunk = chunk_size >> 1;
-                let (left, right) = chunk.split_at_mut(half_chunk);
-                right
-                    .iter_mut()
-                    .zip(left.iter())
-                    .for_each(|(a, b)| *a -= *b);
-            })
-        }
     }
 }
