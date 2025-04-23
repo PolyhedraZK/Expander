@@ -35,7 +35,7 @@ impl Node {
     /// # Returns
     ///
     /// A new Node containing the hash of the two input nodes.
-    #[inline]
+    #[inline(always)]
     pub fn node_hash(left: &Node, right: &Node) -> Node {
         let mut hasher = Keccak::v256();
         hasher.update(&left.data);

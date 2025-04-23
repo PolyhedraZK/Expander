@@ -38,6 +38,7 @@ impl Leaf {
         Self { data }
     }
 
+    #[inline(always)]
     pub fn leaf_hash(&self) -> Node {
         let mut hasher = Keccak::v256();
         hasher.update(&self.data);
