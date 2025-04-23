@@ -2,8 +2,8 @@ use arith::ExtensionField;
 use gkr_engine::Transcript;
 use polynomials::{MutableMultilinearExtension, UnivariatePoly};
 
-#[allow(unused)]
-pub(crate) fn vanilla_sumcheck_degree_2_mul_step_prove<F: ExtensionField>(
+#[inline(always)]
+pub(crate) fn sumcheck_deg_2_mul_step_prove<F: ExtensionField>(
     poly0: &mut impl MutableMultilinearExtension<F>,
     poly1: &mut impl MutableMultilinearExtension<F>,
     fs_transcript: &mut impl Transcript<F>,
@@ -45,8 +45,8 @@ pub(crate) fn vanilla_sumcheck_degree_2_mul_step_prove<F: ExtensionField>(
     (uni_poly, r_combine)
 }
 
-#[allow(unused)]
-pub(crate) fn vanilla_sumcheck_degree_2_mul_step_verify<F: ExtensionField>(
+#[inline(always)]
+pub(crate) fn sumcheck_deg_2_mul_step_verify<F: ExtensionField>(
     claim: &mut F,
     uni_poly: &UnivariatePoly<F>,
     fs_transcript: &mut impl Transcript<F>,
@@ -81,7 +81,7 @@ mod vanilla_sumcheck_test {
     use transcript::BytesHashTranscript;
 
     use crate::fri::vanilla_sumcheck::{
-        vanilla_sumcheck_degree_2_mul_step_prove, vanilla_sumcheck_degree_2_mul_step_verify,
+        sumcheck_deg_2_mul_step_prove, sumcheck_deg_2_mul_step_verify,
     };
 
     fn vanilla_sumcheck_degree_2_test_helper<F: ExtensionField>(num_vars: usize) {
@@ -98,7 +98,7 @@ mod vanilla_sumcheck_test {
 
         let sumcheck_resp: Vec<(UnivariatePoly<F>, F)> = (0..num_vars)
             .map(|_| {
-                vanilla_sumcheck_degree_2_mul_step_prove(
+                sumcheck_deg_2_mul_step_prove(
                     &mut multilinear_basis,
                     &mut eq_multilinear,
                     &mut fs_transcript_p,
@@ -108,11 +108,10 @@ mod vanilla_sumcheck_test {
 
         let mut v_claim = claim.clone();
         sumcheck_resp.iter().for_each(|(univ, expected_r)| {
-            let fold_var =
-                vanilla_sumcheck_degree_2_mul_step_verify(&mut v_claim, univ, &mut fs_transcript_v);
-            assert!(fold_var.is_some());
+            let r_i = sumcheck_deg_2_mul_step_verify(&mut v_claim, univ, &mut fs_transcript_v);
+            assert!(r_i.is_some());
 
-            assert_eq!(*expected_r, fold_var.unwrap());
+            assert_eq!(*expected_r, r_i.unwrap());
         });
     }
 

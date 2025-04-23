@@ -30,7 +30,7 @@ where
     let mut fs_transcript_p = BytesHashTranscript::<ChallengeF, Keccak256hasher>::new();
     let mut fs_transcript_v = fs_transcript_p.clone();
 
-    let com = fri_commit(&mle.coeffs, &mut scratch_pad);
+    let com = fri_commit(&mle, &mut scratch_pad);
     let (eval, opening) = fri_open(&mle, &point, &mut fs_transcript_p, &scratch_pad);
     let verif = fri_verify::<F, ChallengeF>(&com, &point, eval, &opening, &mut fs_transcript_v);
     assert!(verif)

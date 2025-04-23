@@ -1,6 +1,6 @@
 use std::iter;
 
-use arith::{bit_reverse_swap, ExtensionField, FFTField, Field};
+use arith::{bit_reverse_swap, ExtensionField, FFTField};
 use gkr_engine::Transcript;
 use itertools::{chain, izip};
 use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension, UnivariatePoly};
@@ -9,29 +9,27 @@ use tree::{Node, Tree};
 
 use crate::{
     fri::{
-        utils::{copy_elems_to_leaves, fri_fold_step, fri_mt_opening},
-        vanilla_sumcheck::{
-            vanilla_sumcheck_degree_2_mul_step_prove, vanilla_sumcheck_degree_2_mul_step_verify,
-        },
+        utils::{copy_elems_to_leaves, fri_alphabets, fri_mt_opening},
+        vanilla_sumcheck::{sumcheck_deg_2_mul_step_prove, sumcheck_deg_2_mul_step_verify},
     },
-    FRICommitment, FRIScratchPad,
+    FRICommitment, FRIOpening, FRIScratchPad,
 };
 
 const LOG_CODE_RATE: usize = 2;
 
 const QUERY_COMPLEXITY: usize = 100;
 
-#[allow(unused)]
-pub(crate) fn fri_commit<F: FFTField>(
-    coeffs: &[F],
+// TODO(HS) commit with code rate, scratch pad keep track of code rate and query complexity
+
+#[inline(always)]
+pub fn fri_commit<F: FFTField>(
+    poly: &impl MultilinearExtension<F>,
     scratch_pad: &mut FRIScratchPad<F>,
 ) -> FRICommitment {
-    assert!(coeffs.len().is_power_of_two());
-
-    let mut codeword = {
-        let mut temp = coeffs.to_vec();
+    let codeword = {
+        let mut temp = poly.hypercube_basis();
         bit_reverse_swap(&mut temp);
-        temp.resize(coeffs.len() << LOG_CODE_RATE, F::ZERO);
+        temp.resize(poly.hypercube_size() << LOG_CODE_RATE, F::ZERO);
         F::fft_in_place(&mut temp);
         temp
     };
@@ -47,73 +45,56 @@ pub(crate) fn fri_commit<F: FFTField>(
     commitment
 }
 
-#[allow(unused)]
-pub struct FRIOpening<F: Field> {
-    pub iopp_oracles: Vec<tree::Node>,
-    pub iopp_queries: Vec<Vec<(tree::Path, tree::Path)>>,
-    pub sumcheck_responses: Vec<UnivariatePoly<F>>,
-}
-
-#[allow(unused)]
-pub(crate) fn fri_open<F, ChallengeF>(
+#[inline(always)]
+pub fn fri_open<F, ExtF>(
     poly: &impl MultilinearExtension<F>,
-    point: &[ChallengeF],
-    fs_transcript: &mut impl Transcript<ChallengeF>,
+    point: &[ExtF],
+    fs_transcript: &mut impl Transcript<ExtF>,
     scratch_pad: &FRIScratchPad<F>,
-) -> (ChallengeF, FRIOpening<ChallengeF>)
+) -> (ExtF, FRIOpening<ExtF>)
 where
     F: FFTField + ExpSerde,
-    ChallengeF: ExtensionField + From<F> + ExpSerde + FFTField,
+    ExtF: ExtensionField + From<F> + ExpSerde + FFTField,
 {
-    let mut shift_z_poly = MultiLinearPoly::new(EqPolynomial::build_eq_x_r(point));
+    let mut eq_z_poly = MultiLinearPoly::new(EqPolynomial::build_eq_x_r(point));
 
     let mut ext_poly = MultiLinearPoly::new(
         poly.hypercube_basis_ref()
             .iter()
-            .cloned()
-            .map(From::from)
+            .map(|&t| t.into())
             .collect(),
     );
 
     let num_vars = poly.num_vars();
 
-    let mut iopp_codewords: Vec<Vec<ChallengeF>> = Vec::with_capacity(num_vars);
+    let mut iopp_codewords: Vec<Vec<ExtF>> = Vec::with_capacity(num_vars);
     let mut iopp_oracles: Vec<tree::Tree> = Vec::with_capacity(num_vars);
 
-    let mut codeword: Vec<ChallengeF> = scratch_pad
-        .codeword
-        .iter()
-        .cloned()
-        .map(From::from)
-        .collect();
+    let mut codeword: Vec<ExtF> = scratch_pad.codeword.iter().map(|&t| t.into()).collect();
+    let mut generator = ExtF::two_adic_generator(point.len() + LOG_CODE_RATE);
 
-    let mut generator = ChallengeF::two_adic_generator(point.len() + LOG_CODE_RATE);
-
-    let univ_polys: Vec<UnivariatePoly<ChallengeF>> = (0..num_vars)
+    let univ_polys: Vec<Vec<ExtF>> = (0..num_vars)
         .map(|i| {
-            let (uni_poly_i, r_i) = vanilla_sumcheck_degree_2_mul_step_prove(
-                &mut ext_poly,
-                &mut shift_z_poly,
-                fs_transcript,
-            );
+            let (uni_poly, r) =
+                sumcheck_deg_2_mul_step_prove(&mut ext_poly, &mut eq_z_poly, fs_transcript);
 
             let next_codeword_len = codeword.len() / 2;
 
-            let mut diag_inv = ChallengeF::ONE;
-            let one_minus_r_i = ChallengeF::ONE - r_i;
+            let mut diag_inv = ExtF::ONE;
+            let one_minus_r = ExtF::ONE - r;
             let generator_inv = generator.inv().unwrap();
 
             let (odd_alphabets, even_alphabets) = codeword.split_at_mut(next_codeword_len);
             izip!(odd_alphabets, even_alphabets).for_each(|(o_i, e_i)| {
-                let o = (*o_i + *e_i) * ChallengeF::INV_2;
-                let e = (*o_i - *e_i) * ChallengeF::INV_2 * diag_inv;
+                let o = (*o_i + *e_i) * ExtF::INV_2;
+                let e = (*o_i - *e_i) * ExtF::INV_2 * diag_inv;
 
-                *o_i = o * one_minus_r_i + e * r_i;
+                *o_i = o * one_minus_r + e * r;
                 diag_inv *= generator_inv;
             });
             generator = generator.square();
 
-            codeword.resize(next_codeword_len, ChallengeF::ZERO);
+            codeword.resize(next_codeword_len, ExtF::ZERO);
 
             if i != num_vars - 1 {
                 let leaves = copy_elems_to_leaves(&codeword);
@@ -124,30 +105,29 @@ where
                 iopp_codewords.push(codeword.clone());
             }
 
-            uni_poly_i
+            uni_poly.coeffs
         })
         .collect();
 
-    let iopp_challenges = fs_transcript.generate_challenge_index_vector(QUERY_COMPLEXITY);
-    let iopp_queries: Vec<Vec<(tree::Path, tree::Path)>> = iopp_challenges
+    let challenge_indices = fs_transcript.generate_challenge_index_vector(QUERY_COMPLEXITY);
+    let iopp_queries: Vec<Vec<(tree::Path, tree::Path)>> = challenge_indices
         .iter()
-        .map(|point| {
-            let mut codeword_len = scratch_pad.codeword.len();
-            let mut point_to_alphabet = point % codeword_len;
+        .map(|index| {
+            let mut code_len = scratch_pad.codeword.len();
+            let mut alphabet_i = index % code_len;
 
             let mut iopp_round_query = Vec::with_capacity(iopp_oracles.len() + 1);
 
-            let round_opening =
-                fri_mt_opening(&mut point_to_alphabet, codeword_len, &scratch_pad.merkle);
+            let lr_qs = fri_mt_opening(&mut alphabet_i, code_len, &scratch_pad.merkle);
 
-            iopp_round_query.push(round_opening);
-            codeword_len >>= 1;
+            iopp_round_query.push(lr_qs);
+            code_len >>= 1;
 
             iopp_oracles.iter().for_each(|oracle| {
-                let round_opening = fri_mt_opening(&mut point_to_alphabet, codeword_len, oracle);
+                let lr_qs = fri_mt_opening(&mut alphabet_i, code_len, oracle);
 
-                iopp_round_query.push(round_opening);
-                codeword_len >>= 1;
+                iopp_round_query.push(lr_qs);
+                code_len >>= 1;
             });
 
             iopp_round_query
@@ -155,8 +135,8 @@ where
         .collect();
 
     let eval = {
-        let univ_p = &univ_polys[0];
-        univ_p.evaluate(ChallengeF::ZERO) + univ_p.evaluate(ChallengeF::ONE)
+        let univ_p = UnivariatePoly::new(univ_polys[0].clone());
+        univ_p.evaluate(ExtF::ZERO) + univ_p.evaluate(ExtF::ONE)
     };
 
     (
@@ -169,29 +149,30 @@ where
     )
 }
 
-#[allow(unused)]
-pub(crate) fn fri_verify<F, ChallengeF>(
+#[inline(always)]
+pub fn fri_verify<F, ExtF>(
     com: &FRICommitment,
-    point: &[ChallengeF],
-    evaluation: ChallengeF,
-    opening: &FRIOpening<ChallengeF>,
-    fs_transcript: &mut impl Transcript<ChallengeF>,
+    point: &[ExtF],
+    evaluation: ExtF,
+    opening: &FRIOpening<ExtF>,
+    fs_transcript: &mut impl Transcript<ExtF>,
 ) -> bool
 where
     F: FFTField + ExpSerde,
-    ChallengeF: ExtensionField + From<F> + ExpSerde + FFTField,
+    ExtF: ExtensionField + From<F> + ExpSerde + FFTField,
 {
     let mut v_claim = evaluation;
 
-    let mut rs: Vec<ChallengeF> = Vec::new();
+    let mut rs: Vec<ExtF> = Vec::new();
     let phony_node = Node::default();
     izip!(
         &opening.sumcheck_responses,
         chain!(&opening.iopp_oracles, iter::once(&phony_node))
     )
     .enumerate()
-    .for_each(|(i, (univ_p, oracle))| {
-        let r_i = vanilla_sumcheck_degree_2_mul_step_verify(&mut v_claim, univ_p, fs_transcript);
+    .for_each(|(i, (coeffs, oracle))| {
+        let univ_p = UnivariatePoly::new(coeffs.clone());
+        let r_i = sumcheck_deg_2_mul_step_verify(&mut v_claim, &univ_p, fs_transcript);
         assert!(r_i.is_some());
 
         v_claim = univ_p.evaluate(r_i.unwrap());
@@ -207,72 +188,76 @@ where
     let f_z = {
         let eq_z_r = EqPolynomial::eq_vec(point, &rs);
         let f_z_eq_z_r = {
-            let univ_p = opening.sumcheck_responses.last().unwrap();
+            let coeffs = opening.sumcheck_responses.last().unwrap().clone();
+            let univ_p = UnivariatePoly::new(coeffs);
             univ_p.evaluate(rs[0])
         };
 
         f_z_eq_z_r * eq_z_r.inv().unwrap()
     };
 
-    let iopp_challenges = fs_transcript.generate_challenge_index_vector(QUERY_COMPLEXITY);
-    izip!(&iopp_challenges, &opening.iopp_queries).all(|(challenge, iopp_query)| {
-        let mut codeword_len = 1 << (point.len() + LOG_CODE_RATE);
-        let mut point_to_alphabet = challenge % codeword_len;
-        let mut generator = ChallengeF::two_adic_generator(point.len() + LOG_CODE_RATE);
+    let challenge_indices = fs_transcript.generate_challenge_index_vector(QUERY_COMPLEXITY);
+    izip!(&challenge_indices, &opening.iopp_queries).all(|(index, iopp_query)| {
+        let mut code_len = 1 << (point.len() + LOG_CODE_RATE);
+        let mut alphabet_i = index % code_len;
+        let mut generator = ExtF::two_adic_generator(point.len() + LOG_CODE_RATE);
 
-        let mut fri_verify = iopp_query[0].0.verify(com) && iopp_query[0].1.verify(com);
+        if !iopp_query[0].0.verify(com) || !iopp_query[0].1.verify(com) {
+            return false;
+        }
 
-        let (left, right): (ChallengeF, ChallengeF) = {
-            let (l, r): (F, F) =
-                fri_fold_step(&mut point_to_alphabet, codeword_len, &iopp_query[0]);
-
+        let (l, r): (ExtF, ExtF) = {
+            let (l, r): (F, F) = fri_alphabets(&mut alphabet_i, code_len, &iopp_query[0]);
             (From::from(l), From::from(r))
         };
 
         let mut expected_next = {
-            let diag_inv = generator.exp(point_to_alphabet as u128).inv().unwrap();
+            let diag_inv = generator.exp(alphabet_i as u128).inv().unwrap();
 
             let r_i = rs.last().unwrap();
-            let o = (left + right) * ChallengeF::INV_2;
-            let e = (left - right) * ChallengeF::INV_2 * diag_inv;
+            let o = (l + r) * ExtF::INV_2;
+            let e = (l - r) * ExtF::INV_2 * diag_inv;
 
-            o * (ChallengeF::ONE - r_i) + e * r_i
+            o * (ExtF::ONE - r_i) + e * r_i
         };
 
-        codeword_len >>= 1;
+        code_len >>= 1;
         generator = generator.square();
+        let mut is_right_query = alphabet_i >= code_len / 2;
 
-        let mut is_right_query = point_to_alphabet >= codeword_len / 2;
-
-        izip!(
+        let query_verify = izip!(
             &opening.iopp_oracles,
             rs.iter().rev().skip(1),
             iopp_query.iter().skip(1)
         )
-        .for_each(|(com, r_i, query_pair)| {
-            fri_verify = fri_verify && query_pair.0.verify(com) && query_pair.1.verify(com);
+        .all(|(com, r_i, lr_qs)| {
+            if !lr_qs.0.verify(com) || !lr_qs.1.verify(com) {
+                return false;
+            }
 
-            let (left, right): (ChallengeF, ChallengeF) =
-                fri_fold_step(&mut point_to_alphabet, codeword_len, query_pair);
+            let (l, r): (ExtF, ExtF) = fri_alphabets(&mut alphabet_i, code_len, lr_qs);
 
-            let actual = if is_right_query { right } else { left };
-            fri_verify = fri_verify && actual == expected_next;
+            let actual = if is_right_query { r } else { l };
+            if actual != expected_next {
+                return false;
+            }
 
             expected_next = {
-                let diag_inv = generator.exp(point_to_alphabet as u128).inv().unwrap();
+                let diag_inv = generator.exp(alphabet_i as u128).inv().unwrap();
 
-                let o = (left + right) * ChallengeF::INV_2;
-                let e = (left - right) * ChallengeF::INV_2 * diag_inv;
+                let o = (l + r) * ExtF::INV_2;
+                let e = (l - r) * ExtF::INV_2 * diag_inv;
 
-                o * (ChallengeF::ONE - r_i) + e * r_i
+                o * (ExtF::ONE - r_i) + e * r_i
             };
 
-            codeword_len >>= 1;
+            code_len >>= 1;
             generator = generator.square();
+            is_right_query = alphabet_i >= code_len / 2;
 
-            is_right_query = point_to_alphabet >= codeword_len / 2;
+            true
         });
 
-        fri_verify && expected_next == f_z
+        query_verify && expected_next == f_z
     })
 }

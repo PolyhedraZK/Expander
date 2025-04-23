@@ -11,6 +11,13 @@ pub struct FRIScratchPad<F: FFTField> {
 
 unsafe impl<F: FFTField> Send for FRIScratchPad<F> {}
 
+#[derive(Clone, Debug, Default)]
+pub struct FRIOpening<F: Field> {
+    pub iopp_oracles: Vec<tree::Node>,
+    pub iopp_queries: Vec<Vec<(tree::Path, tree::Path)>>,
+    pub sumcheck_responses: Vec<Vec<F>>,
+}
+
 #[inline(always)]
 pub(crate) fn copy_elems_to_leaves<F: Field>(elems: &[F]) -> Vec<Leaf> {
     let max_elems_per_leaf = LEAF_BYTES * 8 / F::FIELD_SIZE;
@@ -86,7 +93,7 @@ pub(crate) fn fri_mt_query_alphabet<F: Field>(
 }
 
 #[inline(always)]
-pub(crate) fn fri_fold_step<F: Field>(
+pub(crate) fn fri_alphabets<F: Field>(
     point_to_alphabet: &mut usize,
     codeword_len: usize,
     query_pair: &(tree::Path, tree::Path),
