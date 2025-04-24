@@ -7,16 +7,16 @@ use std::{
 use circuit::Circuit;
 use clap::Parser;
 use gkr::{
+    BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
+    GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Orion, GoldilocksExtConfigSha2Raw,
+    M31ExtConfigSha2OrionSquare, M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare,
+    M31ExtConfigSha2RawVanilla, Prover,
     utils::{
         KECCAK_BABYBEAR_CIRCUIT, KECCAK_BABYBEAR_WITNESS, KECCAK_BN254_CIRCUIT,
         KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS, KECCAK_GOLDILOCKS_CIRCUIT,
         KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT,
         POSEIDON_M31_WITNESS,
     },
-    BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
-    GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Orion, GoldilocksExtConfigSha2Raw,
-    M31ExtConfigSha2OrionSquare, M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare,
-    M31ExtConfigSha2RawVanilla, Prover,
 };
 use gkr_engine::{
     ExpanderPCS, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType,
