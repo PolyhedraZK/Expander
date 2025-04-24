@@ -3,9 +3,9 @@
 //! (Those files can be generated and double checked with ExpanderCompilerCollection)
 //! Download the precomputed proofs for these circuits and witnesses.
 
-use std::io::Write;
 use std::fs::File;
 use std::io::Read;
+use std::io::Write;
 use std::path::Path;
 
 use circuit::Circuit;
@@ -35,8 +35,7 @@ fn main() {
     let args = Args::parse();
 
     dev_env_data_setup();
-    if args.compare
-    {
+    if args.compare {
         // check if the downloaded proofs match the one been generated
         proof_gen::<GF2ExtConfigSha2Raw>();
         proof_gen::<M31ExtConfigSha2RawVanilla>();
@@ -115,54 +114,73 @@ fn compare_proof_files() {
     let field_types = [
         ("GF2", "data/proof_gf2_regen.txt", "data/proof_gf2.txt"),
         ("M31", "data/proof_m31_regen.txt", "data/proof_m31.txt"),
-        ("BN254", "data/proof_bn254_regen.txt", "data/proof_bn254.txt"),
+        (
+            "BN254",
+            "data/proof_bn254_regen.txt",
+            "data/proof_bn254.txt",
+        ),
     ];
-    
+
     for (field_type, generated_path, downloaded_path) in field_types.iter() {
         println!("\nComparing {} proof files:", field_type);
-        
+
         // Check if both files exist
         if !Path::new(generated_path).exists() {
             println!("Error: Generated file '{}' does not exist", generated_path);
             continue;
         }
-        
+
         if !Path::new(downloaded_path).exists() {
-            println!("Error: Downloaded file '{}' does not exist", downloaded_path);
+            println!(
+                "Error: Downloaded file '{}' does not exist",
+                downloaded_path
+            );
             continue;
         }
-        
+
         // Read the files
         let mut generated_content = Vec::new();
         let mut downloaded_content = Vec::new();
-        
+
         let mut generated_file = File::open(generated_path).expect("Failed to open generated file");
-        let mut downloaded_file = File::open(downloaded_path).expect("Failed to open downloaded file");
-        
-        generated_file.read_to_end(&mut generated_content).expect("Failed to read generated file");
-        downloaded_file.read_to_end(&mut downloaded_content).expect("Failed to read downloaded file");
-        
+        let mut downloaded_file =
+            File::open(downloaded_path).expect("Failed to open downloaded file");
+
+        generated_file
+            .read_to_end(&mut generated_content)
+            .expect("Failed to read generated file");
+        downloaded_file
+            .read_to_end(&mut downloaded_content)
+            .expect("Failed to read downloaded file");
+
         // Compare file sizes
         println!("Generated file size: {} bytes", generated_content.len());
         println!("Downloaded file size: {} bytes", downloaded_content.len());
-        
+
         if generated_content.len() != downloaded_content.len() {
             println!("Files have different sizes!");
             continue;
         }
-        
+
         // Compare content
         let mut differences = 0;
-        for (i, (gen_byte, down_byte)) in generated_content.iter().zip(downloaded_content.iter()).enumerate() {
+        for (i, (gen_byte, down_byte)) in generated_content
+            .iter()
+            .zip(downloaded_content.iter())
+            .enumerate()
+        {
             if gen_byte != down_byte {
                 differences += 1;
-                if differences <= 10 { // Show only first 10 differences
-                    println!("Difference at byte {}: generated={:02x}, downloaded={:02x}", 
-                             i, gen_byte, down_byte);
+                if differences <= 10 {
+                    // Show only first 10 differences
+                    println!(
+                        "Difference at byte {}: generated={:02x}, downloaded={:02x}",
+                        i, gen_byte, down_byte
+                    );
                 }
             }
         }
-        
+
         if differences == 0 {
             println!("Files are identical!");
         } else {
