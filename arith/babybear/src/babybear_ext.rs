@@ -7,8 +7,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::ExtensionField;
-use arith::{field_common, Field};
+use arith::{field_common, ExtensionField, FFTField, Field};
 use serdes::{ExpSerde, SerdeResult};
 
 use crate::babybear::BabyBear;
@@ -227,6 +226,14 @@ impl From<u32> for BabyBearExt3 {
         BabyBearExt3 {
             v: [BabyBear::from(x), BabyBear::zero(), BabyBear::zero()],
         }
+    }
+}
+
+impl FFTField for BabyBearExt3 {
+    const TWO_ADICITY: usize = 27;
+
+    fn root_of_unity() -> Self {
+        Self::from(0x1a427a41)
     }
 }
 
