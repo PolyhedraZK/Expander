@@ -10,6 +10,7 @@ use std::path::Path;
 
 use circuit::Circuit;
 use clap::Parser;
+use gkr::Verifier;
 use gkr::{
     BN254ConfigSha2Raw, GF2ExtConfigSha2Raw, M31ExtConfigSha2RawVanilla, Prover,
     utils::{
@@ -48,7 +49,7 @@ fn proof_gen<C: GKREngine>() {
     let mpi_config = MPIConfig::prover_new();
 
     // load circuit
-    let mut circuit_template = match C::FieldConfig::FIELD_TYPE {
+    let mut circuit = match C::FieldConfig::FIELD_TYPE {
         FieldType::GF2 => {
             Circuit::<C::FieldConfig>::single_thread_prover_load_circuit::<C>(KECCAK_GF2_CIRCUIT)
         }
@@ -60,6 +61,7 @@ fn proof_gen<C: GKREngine>() {
         }
         _ => unreachable!(),
     };
+
     let witness_path = match C::FieldConfig::FIELD_TYPE {
         FieldType::GF2 => KECCAK_GF2_WITNESS,
         FieldType::M31 => KECCAK_M31_WITNESS,
@@ -74,40 +76,59 @@ fn proof_gen<C: GKREngine>() {
         _ => unreachable!(),
     };
 
-    circuit_template.load_witness_allow_padding_testing_only(witness_path, &mpi_config);
+    circuit.load_witness_allow_padding_testing_only(witness_path, &mpi_config);
 
-    let circuit = {
-        let mut c = circuit_template.clone();
-        c.evaluate();
-        c
-    };
+    circuit.evaluate();
 
-    let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
+    let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
         expander_pcs_init_testing_only::<C::FieldConfig, C::PCSConfig>(
-            circuit_template.log_input_size(),
+            circuit.log_input_size(),
             &mpi_config,
         );
 
-    let mut local_circuit = circuit.clone();
-    let pcs_params = pcs_params.clone();
-    let pcs_proving_key = pcs_proving_key.clone();
-    let mut pcs_scratch = pcs_scratch.clone();
-    let mut prover = Prover::<C>::new(mpi_config.clone());
-    prover.prepare_mem(&local_circuit);
+    let (claim, proof) = {
+        // generate the proof
+        let mut local_circuit = circuit.clone();
+        let pcs_params = pcs_params.clone();
+        let pcs_proving_key = pcs_proving_key.clone();
+        let mut pcs_scratch = pcs_scratch.clone();
+        let mut prover = Prover::<C>::new(mpi_config.clone());
+        prover.prepare_mem(&local_circuit);
 
-    let (claim, proof) = prover.prove(
-        &mut local_circuit,
-        &pcs_params,
-        &pcs_proving_key,
-        &mut pcs_scratch,
-    );
-    let mut buf = Vec::new();
-    claim.serialize_into(&mut buf).unwrap();
-    proof.serialize_into(&mut buf).unwrap();
+        let (claim, proof) = prover.prove(
+            &mut local_circuit,
+            &pcs_params,
+            &pcs_proving_key,
+            &mut pcs_scratch,
+        );
+        let mut buf = Vec::new();
+        claim.serialize_into(&mut buf).unwrap();
+        proof.serialize_into(&mut buf).unwrap();
 
-    let mut file = std::fs::File::create(proof_file_name).unwrap();
-    file.write_all(buf.as_ref()).expect("Unable to write data");
-    println!("{} generated", proof_file_name);
+        let mut file = std::fs::File::create(proof_file_name).unwrap();
+        file.write_all(buf.as_ref()).expect("Unable to write data");
+        println!("{} generated", proof_file_name);
+
+        (claim, proof)
+    };
+
+    {
+        // verify the proof
+        let verifier = Verifier::<C>::new(mpi_config.clone());
+
+        let public_input = circuit.public_input.clone();
+
+        assert!(verifier.verify(
+            &mut circuit,
+            &public_input,
+            &claim,
+            &pcs_params,
+            &pcs_verification_key,
+            &proof
+        ));
+
+        println!("{} verified", proof_file_name);
+    }
 }
 
 fn compare_proof_files() {
