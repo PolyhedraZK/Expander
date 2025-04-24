@@ -85,7 +85,7 @@ jobs:
       #     ./build-rust.sh
 
       - name: Download test data
-        run: cargo run --release --bin dev-setup  -- compare
+        run: cargo run --release --bin dev-setup  -- --compare
 
       - name: Build project on non MacOS machines
         if: matrix.os != 'macos-latest'
