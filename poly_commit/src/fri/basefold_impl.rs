@@ -15,15 +15,16 @@ use crate::{
     FRICommitment, FRIOpening, FRIScratchPad,
 };
 
-const LOG_CODE_RATE: usize = 2;
+pub(crate) const LOG_CODE_RATE: usize = 2;
 
 const QUERY_COMPLEXITY: usize = 100;
 
-// TODO(HS) commit with code rate, scratch pad keep track of code rate and query complexity
+// TODO(HS) query complexity from code rate and field size
 
 #[inline(always)]
 pub fn fri_commit<F: FFTField>(
     poly: &impl MultilinearExtension<F>,
+    code_rate_log2: usize,
     scratch_pad: &mut FRIScratchPad<F>,
 ) -> FRICommitment {
     let codeword = {
@@ -41,6 +42,7 @@ pub fn fri_commit<F: FFTField>(
 
     scratch_pad.merkle = merkle_tree;
     scratch_pad.codeword = codeword;
+    scratch_pad.rate_log2 = code_rate_log2;
 
     commitment
 }

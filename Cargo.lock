@@ -1718,6 +1718,7 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "ark-std",
+ "babybear",
  "criterion",
  "derivative",
  "ethnum",

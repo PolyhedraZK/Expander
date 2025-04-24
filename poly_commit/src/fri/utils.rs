@@ -7,6 +7,7 @@ pub type FRICommitment = tree::Node;
 pub struct FRIScratchPad<F: FFTField> {
     pub merkle: tree::Tree,
     pub codeword: Vec<F>,
+    pub rate_log2: usize,
 }
 
 unsafe impl<F: FFTField> Send for FRIScratchPad<F> {}

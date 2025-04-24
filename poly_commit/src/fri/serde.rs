@@ -9,13 +9,19 @@ impl<F: FFTField> ExpSerde for FRIScratchPad<F> {
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> serdes::SerdeResult<Self> {
         let merkle: tree::Tree = tree::Tree::deserialize_from(&mut reader)?;
         let codeword: Vec<F> = Vec::deserialize_from(&mut reader)?;
+        let rate_log2: usize = usize::deserialize_from(&mut reader)?;
 
-        Ok(Self { merkle, codeword })
+        Ok(Self {
+            merkle,
+            codeword,
+            rate_log2,
+        })
     }
 
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> serdes::SerdeResult<()> {
         self.merkle.serialize_into(&mut writer)?;
         self.codeword.serialize_into(&mut writer)?;
+        self.rate_log2.serialize_into(&mut writer)?;
 
         Ok(())
     }

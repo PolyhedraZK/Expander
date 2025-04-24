@@ -22,6 +22,7 @@ transpose.workspace = true
 halo2curves.workspace = true
 
 [dev-dependencies]
+babybear = { path = "../arith/babybear" }
 gf2_128 = { path = "../arith/gf2_128" }
 mersenne31 = { path = "../arith/mersenne31" }
 goldilocks = { path = "../arith/goldilocks" }
