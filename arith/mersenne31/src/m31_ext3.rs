@@ -11,7 +11,10 @@ use arith::ExtensionField;
 use arith::{field_common, Field};
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::{m31::{mod_reduce_u32_safe, M31}, M31Ext3x16, M31x16};
+use crate::{
+    m31::{mod_reduce_u32_safe, M31},
+    M31Ext3x16, M31x16,
+};
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct M31Ext3 {
@@ -356,7 +359,7 @@ impl Mul<M31x16> for M31Ext3 {
                 simd_lhs.v[0] * rhs,
                 simd_lhs.v[1] * rhs,
                 simd_lhs.v[2] * rhs,
-            ]       
+            ],
         }
     }
 }

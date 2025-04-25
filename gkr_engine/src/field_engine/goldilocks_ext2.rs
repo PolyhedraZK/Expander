@@ -1,4 +1,3 @@
-use arith::ExtensionField;
 use goldilocks::{Goldilocks, GoldilocksExt2, GoldilocksExt2x8, Goldilocksx8};
 
 use crate::{FieldEngine, FieldType};
@@ -21,5 +20,4 @@ impl FieldEngine for GoldilocksExtConfig {
     type ChallengeField = GoldilocksExt2;
 
     type Field = GoldilocksExt2x8;
-
 }

@@ -1,6 +1,6 @@
-use std::ops::{Add, Mul};
 use std::cmp;
 use std::fmt::Debug;
+use std::ops::{Add, Mul};
 
 use arith::{ExtensionField, Field, SimdField};
 use polynomials::MultiLinearPoly;
@@ -28,7 +28,9 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + PartialEq + 'stat
     type CircuitField: Field + Send + Sync;
 
     /// Field type for the challenge, e.g., M31Ext3
-    type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send + Sync
+    type ChallengeField: ExtensionField<BaseField = Self::CircuitField>
+        + Send
+        + Sync
         + Mul<Self::CircuitField, Output = Self::ChallengeField>
         + Mul<Self::SimdCircuitField, Output = Self::Field>;
 
@@ -45,10 +47,11 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + PartialEq + 'stat
         + Sync;
 
     /// Simd field for circuit, e.g., M31x16
-    type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + Send + Sync
+    type SimdCircuitField: SimdField<Scalar = Self::CircuitField>
+        + Send
+        + Sync
         + Mul<Self::CircuitField, Output = Self::SimdCircuitField>
         + From<Self::CircuitField>;
-
 
     /// The pack size for the simd circuit field, e.g., 16 for M31x16
     fn get_field_pack_size() -> usize {

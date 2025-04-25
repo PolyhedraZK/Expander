@@ -121,10 +121,15 @@ impl<F: Field> MultiLinearPoly<F> {
     /// Generic method to evaluate a multilinear polynomial.
     /// This is the preferred method to evaluate a multilinear polynomial
     /// as it does not require additional memory.
-    pub fn evaluate_with_buffer<ChallengeF: Field, EvalF: Field>(evals: &[F], point: &[ChallengeF], scratch: &mut [EvalF]) -> EvalF 
+    pub fn evaluate_with_buffer<ChallengeF, EvalF>(
+        evals: &[F],
+        point: &[ChallengeF],
+        scratch: &mut [EvalF],
+    ) -> EvalF
     where
-        ChallengeF: Mul<F, Output = EvalF>,
-        EvalF: From<F>
+        ChallengeF: Field + Mul<F, Output = EvalF>,
+        EvalF: Field
+            + From<F>
             + Mul<F, Output = EvalF>
             + Add<F, Output = EvalF>
             + Mul<ChallengeF, Output = EvalF>,
@@ -172,10 +177,15 @@ impl<F: Field> MultilinearExtension<F> for MultiLinearPoly<F> {
         &self.coeffs
     }
 
-    fn evaluate_with_buffer<ChallengeF: Field, EvalF: Field>(&self, point: &[ChallengeF], scratch: &mut [EvalF]) -> EvalF
+    fn evaluate_with_buffer<ChallengeF, EvalF>(
+        &self,
+        point: &[ChallengeF],
+        scratch: &mut [EvalF],
+    ) -> EvalF
     where
-        ChallengeF: Mul<F, Output = EvalF>,
-        EvalF: From<F>
+        ChallengeF: Field + Mul<F, Output = EvalF>,
+        EvalF: Field
+            + From<F>
             + Mul<F, Output = EvalF>
             + Add<F, Output = EvalF>
             + Mul<ChallengeF, Output = EvalF>,

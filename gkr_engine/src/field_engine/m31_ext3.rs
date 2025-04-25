@@ -1,4 +1,3 @@
-use arith::ExtensionField;
 use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
 
 use crate::{FieldEngine, FieldType};
@@ -21,5 +20,4 @@ impl FieldEngine for M31ExtConfig {
     type ChallengeField = M31Ext3;
 
     type Field = M31Ext3x16;
-
 }

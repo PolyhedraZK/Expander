@@ -366,7 +366,8 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
 
         // TODO-OPTIMIZATION: hg_vals does not have to be simd here
         for g in mul.iter() {
-            hg_vals[g.i_ids[1]] += F::Field::from(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]] * g.coef);
+            hg_vals[g.i_ids[1]] +=
+                F::Field::from(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]] * g.coef);
             gate_exists[g.i_ids[1]] = true;
         }
     }

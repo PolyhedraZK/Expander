@@ -180,8 +180,9 @@ impl<F: FieldEngine> CrossLayerCircuit<F> {
             }
 
             for gate in &layer.mul_gates {
-                new_layer_vals[gate.o_id] += 
-                    (vals[i_layer - 1][gate.i_ids[0]] * vals[i_layer - 1][gate.i_ids[1]]) * gate.coef;
+                new_layer_vals[gate.o_id] += (vals[i_layer - 1][gate.i_ids[0]]
+                    * vals[i_layer - 1][gate.i_ids[1]])
+                    * gate.coef;
             }
 
             for gate in &layer.const_gates {
