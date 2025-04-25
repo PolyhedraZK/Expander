@@ -8,8 +8,6 @@ pub use verifier::*;
 
 pub mod utils;
 
-pub mod executor;
-
 pub mod gkr_configs;
 pub use gkr_configs::*;
 

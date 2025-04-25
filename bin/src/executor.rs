@@ -8,6 +8,7 @@ use std::{
 use arith::Field;
 use circuit::Circuit;
 use clap::{Parser, Subcommand};
+use gkr::{Prover, Verifier};
 use gkr_engine::{
     BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GoldilocksExtConfig,
     M31ExtConfig, MPIConfig, MPIEngine, Proof, SharedMemory,
@@ -15,9 +16,7 @@ use gkr_engine::{
 use log::info;
 use poly_commit::expander_pcs_init_testing_only;
 use serdes::{ExpSerde, SerdeError};
-use warp::{http::StatusCode, reply, Filter};
-
-use crate::{Prover, Verifier};
+use warp::{Filter, http::StatusCode, reply};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -126,7 +125,7 @@ pub fn prove<Cfg: GKREngine>(
     <<Cfg as GKREngine>::FieldConfig as FieldEngine>::ChallengeField,
     Proof,
 ) {
-    let mut prover = crate::Prover::<Cfg>::new(mpi_config.clone());
+    let mut prover = Prover::<Cfg>::new(mpi_config.clone());
     prover.prepare_mem(circuit);
 
     // TODO: Read PCS setup from files
@@ -151,7 +150,7 @@ pub fn verify<Cfg: GKREngine>(
         Cfg::FieldConfig,
         Cfg::PCSConfig,
     >(circuit.log_input_size(), &mpi_config);
-    let verifier = crate::Verifier::<Cfg>::new(mpi_config);
+    let verifier = Verifier::<Cfg>::new(mpi_config);
     let public_input = circuit.public_input.clone();
     verifier.verify(
         circuit,
@@ -258,9 +257,9 @@ pub async fn run_command<Cfg: GKREngine + 'static>(
             let (circuit, _) =
                 Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, &mpi_config);
 
-            let mut prover = crate::Prover::<Cfg>::new(mpi_config.clone());
+            let mut prover = Prover::<Cfg>::new(mpi_config.clone());
             prover.prepare_mem(&circuit);
-            let verifier = crate::Verifier::<Cfg>::new(mpi_config.clone());
+            let verifier = Verifier::<Cfg>::new(mpi_config.clone());
 
             // TODO: Read PCS setup from files
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
