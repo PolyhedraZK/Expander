@@ -1,5 +1,5 @@
 use arith::{FFTField, Field};
-use tree::{Leaf, LEAF_BYTES};
+use tree::{Leaf, Node, RangePath, LEAF_BYTES};
 
 pub type FRICommitment = tree::Node;
 
@@ -14,8 +14,8 @@ unsafe impl<F: FFTField> Send for FRIScratchPad<F> {}
 
 #[derive(Clone, Debug, Default)]
 pub struct FRIOpening<F: Field> {
-    pub iopp_oracles: Vec<tree::Node>,
-    pub iopp_queries: Vec<Vec<(tree::Path, tree::Path)>>,
+    pub iopp_oracles: Vec<Node>,
+    pub iopp_queries: Vec<Vec<(RangePath, RangePath)>>,
     pub sumcheck_responses: Vec<Vec<F>>,
 }
 
@@ -55,7 +55,7 @@ pub(crate) fn fri_mt_opening(
     point_to_alphabet: &mut usize,
     codeword_len: usize,
     merkle_tree: &tree::Tree,
-) -> (tree::Path, tree::Path) {
+) -> (RangePath, RangePath) {
     let elems_in_leaf = codeword_len / merkle_tree.size();
     let point_to_leaf = *point_to_alphabet / elems_in_leaf;
 
@@ -65,21 +65,19 @@ pub(crate) fn fri_mt_opening(
     let left = std::cmp::min(point_to_leaf, sibling_point);
     let right = oracle_rhs_start + left;
 
-    let height = merkle_tree.height();
-
     if *point_to_alphabet >= codeword_len / 2 {
         *point_to_alphabet -= codeword_len / 2
     }
 
     (
-        merkle_tree.gen_proof(left, height),
-        merkle_tree.gen_proof(right, height),
+        merkle_tree.range_query(left, left),
+        merkle_tree.range_query(right, right),
     )
 }
 
 #[inline(always)]
 pub(crate) fn fri_mt_query_alphabet<F: Field>(
-    query: &tree::Path,
+    query: &RangePath,
     alphabet_index_in_leaf: usize,
 ) -> F {
     let field_bytes = F::FIELD_SIZE / 8;
@@ -88,7 +86,7 @@ pub(crate) fn fri_mt_query_alphabet<F: Field>(
     let end = begin + field_bytes;
 
     let mut buffer = vec![0u8; field_bytes];
-    buffer.copy_from_slice(&query.leaf.data[begin..end]);
+    buffer.copy_from_slice(&query.leaves[0].data[begin..end]);
 
     F::deserialize_from(buffer.as_slice()).unwrap()
 }
@@ -97,7 +95,7 @@ pub(crate) fn fri_mt_query_alphabet<F: Field>(
 pub(crate) fn fri_alphabets<F: Field>(
     point_to_alphabet: &mut usize,
     codeword_len: usize,
-    query_pair: &(tree::Path, tree::Path),
+    query_pair: &(RangePath, RangePath),
 ) -> (F, F) {
     let max_elems_per_leaf = LEAF_BYTES * 8 / F::FIELD_SIZE;
     let num_elems_per_leaf = if max_elems_per_leaf.is_power_of_two() {

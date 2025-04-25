@@ -2,7 +2,7 @@ use std::io::{Read, Write};
 
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::{Leaf, Node, Path, RangePath, Tree, LEAF_BYTES, LEAF_HASH_BYTES};
+use crate::{Leaf, Node, RangePath, Tree, LEAF_BYTES, LEAF_HASH_BYTES};
 
 impl ExpSerde for Leaf {
     const SERIALIZED_SIZE: usize = LEAF_BYTES;
@@ -34,50 +34,23 @@ impl ExpSerde for Node {
     }
 }
 
-impl ExpSerde for Path {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        <Vec<Node> as ExpSerde>::serialize_into(&self.path_nodes, &mut writer)?;
-        self.leaf.serialize_into(&mut writer)?;
-        self.index.serialize_into(&mut writer)?;
-
-        Ok(())
-    }
-
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let path_nodes: Vec<Node> = <Vec<Node> as ExpSerde>::deserialize_from(&mut reader)?;
-        let leaf = Leaf::deserialize_from(&mut reader)?;
-        let index = usize::deserialize_from(&mut reader)?;
-
-        Ok(Path {
-            path_nodes,
-            leaf,
-            index,
-        })
-    }
-}
-
 impl ExpSerde for RangePath {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.left.serialize_into(&mut writer)?;
-        self.right.serialize_into(&mut writer)?;
-        <Vec<Node> as ExpSerde>::serialize_into(&self.path_nodes, &mut writer)?;
+        self.path_nodes.serialize_into(&mut writer)?;
         self.leaves.serialize_into(&mut writer)?;
         Ok(())
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let left = usize::deserialize_from(&mut reader)?;
-        let right = usize::deserialize_from(&mut reader)?;
-        let path_nodes: Vec<Node> = <Vec<Node> as ExpSerde>::deserialize_from(&mut reader)?;
-        let leaves: Vec<Leaf> = <Vec<Leaf> as ExpSerde>::deserialize_from(&mut reader)?;
+        let path_nodes: Vec<Node> = Vec::deserialize_from(&mut reader)?;
+        let leaves: Vec<Leaf> = Vec::deserialize_from(&mut reader)?;
 
         Ok(RangePath {
             left,
-            right,
             path_nodes,
             leaves,
         })
@@ -88,13 +61,13 @@ impl ExpSerde for Tree {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        <Vec<Node> as ExpSerde>::serialize_into(&self.nodes, &mut writer)?;
+        self.nodes.serialize_into(&mut writer)?;
         self.leaves.serialize_into(&mut writer)
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let nodes: Vec<Node> = <Vec<Node> as ExpSerde>::deserialize_from(&mut reader)?;
-        let leaves: Vec<Leaf> = <Vec<Leaf> as ExpSerde>::deserialize_from(&mut reader)?;
+        let nodes: Vec<Node> = Vec::deserialize_from(&mut reader)?;
+        let leaves: Vec<Leaf> = Vec::deserialize_from(&mut reader)?;
 
         Ok(Self { nodes, leaves })
     }

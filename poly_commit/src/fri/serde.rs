@@ -1,5 +1,6 @@
 use arith::{FFTField, Field};
 use serdes::ExpSerde;
+use tree::{Node, RangePath};
 
 use crate::fri::{FRIOpening, FRIScratchPad};
 
@@ -31,8 +32,8 @@ impl<F: Field> ExpSerde for FRIOpening<F> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> serdes::SerdeResult<Self> {
-        let iopp_oracles: Vec<tree::Node> = Vec::deserialize_from(&mut reader)?;
-        let iopp_queries: Vec<Vec<(tree::Path, tree::Path)>> = Vec::deserialize_from(&mut reader)?;
+        let iopp_oracles: Vec<Node> = Vec::deserialize_from(&mut reader)?;
+        let iopp_queries: Vec<Vec<(RangePath, RangePath)>> = Vec::deserialize_from(&mut reader)?;
         let sumcheck_responses: Vec<Vec<F>> = Vec::deserialize_from(&mut reader)?;
 
         Ok(Self {

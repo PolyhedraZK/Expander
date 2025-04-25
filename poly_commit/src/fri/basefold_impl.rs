@@ -5,7 +5,7 @@ use gkr_engine::Transcript;
 use itertools::{chain, izip};
 use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension, UnivariatePoly};
 use serdes::ExpSerde;
-use tree::{Node, Tree};
+use tree::{Node, RangePath, Tree};
 
 use crate::{
     fri::{
@@ -112,7 +112,7 @@ where
         .collect();
 
     let challenge_indices = fs_transcript.generate_challenge_index_vector(QUERY_COMPLEXITY);
-    let iopp_queries: Vec<Vec<(tree::Path, tree::Path)>> = challenge_indices
+    let iopp_queries: Vec<Vec<(RangePath, RangePath)>> = challenge_indices
         .iter()
         .map(|index| {
             let mut code_len = scratch_pad.codeword.len();

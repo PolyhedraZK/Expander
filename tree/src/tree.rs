@@ -5,7 +5,7 @@ use std::mem::forget;
 use arith::{Field, SimdField};
 use ark_std::{end_timer, log2, start_timer};
 
-use crate::{Leaf, Node, Path, RangePath, LEAF_BYTES};
+use crate::{Leaf, Node, RangePath, LEAF_BYTES};
 
 /// Represents a Merkle tree structure.
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -173,46 +173,16 @@ impl Tree {
         log2(self.leaves.len() + 1) as usize
     }
 
-    /// Generates a membership proof for the given index.
-    #[inline]
-    pub fn gen_proof(&self, index: usize, tree_height: usize) -> Path {
-        let timer = start_timer!(|| "generate membership proof");
-
-        // Leaf
-        let leaf_index_in_tree = convert_index_to_last_level(index, tree_height);
-        let leaf = self.leaves[index];
-
-        // Path nodes
-        let sibling_index_in_tree = sibling_index(leaf_index_in_tree).unwrap();
-        let mut path_nodes = Vec::with_capacity(tree_height - 1);
-        path_nodes.push(self.nodes[sibling_index_in_tree]);
-
-        // Iterate from the bottom layer after the leaves to the top
-        let mut current_node = parent_index(leaf_index_in_tree).unwrap();
-        while current_node != 0 {
-            let sibling_node = sibling_index(current_node).unwrap();
-            path_nodes.push(self.nodes[sibling_node]);
-            current_node = parent_index(current_node).unwrap();
-        }
-
-        path_nodes.reverse();
-        end_timer!(timer);
-        Path {
-            index,
-            leaf,
-            path_nodes,
-        }
-    }
-
     /// Generates a range membership proof for given index range [left, right].
-    #[inline]
-    pub fn gen_range_proof(&self, left: usize, right: usize, tree_height: usize) -> RangePath {
-        assert!(right > left);
+    #[inline(always)]
+    pub fn range_query(&self, left: usize, right: usize) -> RangePath {
+        let tree_height = log2(self.leaves.len() + 1) as usize;
+
         assert!((right - left + 1).is_power_of_two());
         assert!(left % (right - left + 1) == 0);
 
         // Leaves
-        let range_leaves = self.leaves[left..right + 1].to_vec();
+        let leaves = self.leaves[left..right + 1].to_vec();
         let left_index_in_tree = convert_index_to_last_level(left, tree_height);
         let right_index_in_tree = convert_index_to_last_level(right, tree_height);
 
@@ -230,24 +200,9 @@ impl Tree {
 
         RangePath {
             left,
-            right,
             path_nodes,
-            leaves: range_leaves,
+            leaves,
         }
-    }
-
-    #[inline]
-    pub fn index_query(&self, index: usize) -> Path {
-        let tree_height = log2(self.leaves.len() + 1) as usize;
-
-        self.gen_proof(index, tree_height)
-    }
-
-    #[inline]
-    pub fn range_query(&self, left: usize, right: usize) -> RangePath {
-        let tree_height = log2(self.leaves.len() + 1) as usize;
-
-        self.gen_range_proof(left, right, tree_height)
     }
 }
 
