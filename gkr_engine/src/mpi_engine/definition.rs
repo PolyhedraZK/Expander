@@ -42,6 +42,17 @@ pub trait MPIEngine {
     /// - Non-root processes send their vectors but don't modify global_vec
     fn gather_vec<F: Sized + Clone>(&self, local_vec: &[F], global_vec: &mut Vec<F>);
 
+    /// Scatter vector from root process into all processes
+    ///
+    /// # Arguments
+    /// * `send_vec` - The global vector to be sent to all processes
+    /// * `receive_vec` - Buffer in non-root process to store sent vector segment
+    ///
+    /// # Behavior
+    /// - Root process sends vector segments into all vectors
+    /// - Non-root processes receive their segment share but not modifying send_vec
+    fn scatter_vec<F: Sized + Clone>(&self, send_vec: &[F], receive_vec: &mut [F]);
+
     /// Broadcast a field element from root process to all processes
     ///
     /// # Arguments

@@ -80,6 +80,34 @@ fn test_all_to_all_transpose_helper<F: Field>(mpi_config: &MPIConfig) {
     });
 }
 
+fn test_scatter_vec_helper(mpi_config: &MPIConfig) {
+    const TEST_SIZE: usize = MPIConfig::CHUNK_SIZE + 1;
+
+    let send_vec: Vec<_> = if mpi_config.is_root() {
+        let mut buf = vec![0u8; TEST_SIZE * mpi_config.world_size()];
+        buf.chunks_mut(TEST_SIZE)
+            .enumerate()
+            .for_each(|(i, chunk)| {
+                let fill_var = (i % mpi_config.world_size()) as u8;
+                chunk.fill(fill_var);
+            });
+
+        buf
+    } else {
+        Vec::new()
+    };
+
+    let mut local_vec = vec![0u8; TEST_SIZE];
+
+    mpi_config.scatter_vec(&send_vec, &mut local_vec);
+
+    let expected = local_vec
+        .iter()
+        .all(|v| *v == mpi_config.world_rank() as u8);
+
+    assert!(expected);
+}
+
 #[test]
 fn test_mpi_engine() {
     let mpi_config = MPIConfig::prover_new();
@@ -95,6 +123,8 @@ fn test_mpi_engine() {
     test_all_to_all_transpose_helper::<M31Ext3>(&mpi_config);
 
     test_varlen_gather_vec_helper(&mpi_config);
+
+    test_scatter_vec_helper(&mpi_config);
 
     MPIConfig::finalize();
 }
