@@ -10,7 +10,10 @@ use tree::{Node, RangePath, Tree};
 use crate::{
     fri::{
         utils::{copy_elems_to_leaves, fri_alphabets, fri_mt_opening},
-        vanilla_sumcheck::{sumcheck_deg_2_mul_step_prove, sumcheck_deg_2_mul_step_verify},
+        vanilla_sumcheck::{
+            sumcheck_deg_2_mul_step_verify, sumcheck_step_prove_gen_challenge,
+            sumcheck_step_prove_receive_challenge,
+        },
     },
     FRICommitment, FRIOpening, FRIScratchPad,
 };
@@ -77,8 +80,14 @@ where
 
     let univ_polys: Vec<Vec<ExtF>> = (0..num_vars)
         .map(|i| {
-            let (uni_poly, r) =
-                sumcheck_deg_2_mul_step_prove(&mut ext_poly, &mut eq_z_poly, fs_transcript);
+            let uni_poly = sumcheck_step_prove_gen_challenge(&ext_poly, &eq_z_poly);
+            let r = {
+                uni_poly
+                    .iter()
+                    .for_each(|c| fs_transcript.append_field_element(c));
+                fs_transcript.generate_challenge_field_element()
+            };
+            sumcheck_step_prove_receive_challenge(&mut ext_poly, &mut eq_z_poly, r);
 
             let next_codeword_len = codeword.len() / 2;
 
@@ -107,7 +116,7 @@ where
                 iopp_codewords.push(codeword.clone());
             }
 
-            uni_poly.coeffs
+            uni_poly.to_vec()
         })
         .collect();
 

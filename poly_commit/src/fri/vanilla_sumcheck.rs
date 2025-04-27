@@ -1,13 +1,12 @@
 use arith::ExtensionField;
 use gkr_engine::Transcript;
-use polynomials::{MutableMultilinearExtension, UnivariatePoly};
+use polynomials::{MultilinearExtension, MutableMultilinearExtension, UnivariatePoly};
 
 #[inline(always)]
-pub(crate) fn sumcheck_deg_2_mul_step_prove<F: ExtensionField>(
-    poly0: &mut impl MutableMultilinearExtension<F>,
-    poly1: &mut impl MutableMultilinearExtension<F>,
-    fs_transcript: &mut impl Transcript<F>,
-) -> (UnivariatePoly<F>, F) {
+pub(crate) fn sumcheck_step_prove_gen_challenge<F: ExtensionField>(
+    poly0: &impl MultilinearExtension<F>,
+    poly1: &impl MultilinearExtension<F>,
+) -> [F; 3] {
     assert_eq!(poly0.hypercube_size(), poly1.hypercube_size());
 
     let half_hypercube = poly0.hypercube_size() >> 1;
@@ -24,25 +23,24 @@ pub(crate) fn sumcheck_deg_2_mul_step_prove<F: ExtensionField>(
         at_neg_1 += p0_at_neg1 * p1_at_neg1;
     });
 
-    let uni_poly = {
+    {
         let a = at_0;
         let a_plus_c = (at_pos_1 + at_neg_1) * F::INV_2;
         let c = a_plus_c - a;
         let b = at_pos_1 - a - c;
 
-        UnivariatePoly::new(vec![a, b, c])
-    };
+        [a, b, c]
+    }
+}
 
-    uni_poly
-        .coeffs
-        .iter()
-        .for_each(|f| fs_transcript.append_field_element(f));
-
-    let r_combine = fs_transcript.generate_challenge_field_element();
+#[inline(always)]
+pub(crate) fn sumcheck_step_prove_receive_challenge<F: ExtensionField>(
+    poly0: &mut impl MutableMultilinearExtension<F>,
+    poly1: &mut impl MutableMultilinearExtension<F>,
+    r_combine: F,
+) {
     poly0.fix_top_variable(r_combine);
     poly1.fix_top_variable(r_combine);
-
-    (uni_poly, r_combine)
 }
 
 #[inline(always)]
@@ -83,7 +81,8 @@ mod vanilla_sumcheck_test {
     use transcript::BytesHashTranscript;
 
     use crate::fri::vanilla_sumcheck::{
-        sumcheck_deg_2_mul_step_prove, sumcheck_deg_2_mul_step_verify,
+        sumcheck_deg_2_mul_step_verify, sumcheck_step_prove_gen_challenge,
+        sumcheck_step_prove_receive_challenge,
     };
 
     fn vanilla_sumcheck_degree_2_test_helper<F: ExtensionField>(num_vars: usize) {
@@ -100,11 +99,19 @@ mod vanilla_sumcheck_test {
 
         let sumcheck_resp: Vec<(UnivariatePoly<F>, F)> = (0..num_vars)
             .map(|_| {
-                sumcheck_deg_2_mul_step_prove(
+                let coeffs = sumcheck_step_prove_gen_challenge(&multilinear_basis, &eq_multilinear);
+                let r = {
+                    coeffs
+                        .iter()
+                        .for_each(|c| fs_transcript_p.append_field_element(c));
+                    fs_transcript_p.generate_challenge_field_element()
+                };
+                sumcheck_step_prove_receive_challenge(
                     &mut multilinear_basis,
                     &mut eq_multilinear,
-                    &mut fs_transcript_p,
-                )
+                    r,
+                );
+                (UnivariatePoly::new(coeffs.to_vec()), r)
             })
             .collect();
 
