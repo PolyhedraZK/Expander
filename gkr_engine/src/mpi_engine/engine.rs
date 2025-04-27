@@ -1,5 +1,5 @@
 use std::os::raw::c_void;
-use std::{cmp, fmt::Debug};
+use std::{cmp, fmt::Debug, slice};
 
 use arith::Field;
 use itertools::izip;
@@ -195,6 +195,66 @@ impl MPIEngine for MPIConfig {
         }
     }
 
+    #[inline]
+    fn scatter_vec<F: Sized + Clone>(&self, send_vec: &[F], recv_vec: &mut [F]) {
+        if self.world_size() == 1 {
+            recv_vec.clone_from_slice(send_vec);
+            return;
+        }
+
+        let send_buf_u8_len = std::mem::size_of_val(send_vec);
+        let send_u8s: &[u8] =
+            unsafe { slice::from_raw_parts(send_vec.as_ptr() as *const u8, send_buf_u8_len) };
+
+        let recv_buf_u8_len = std::mem::size_of_val(recv_vec);
+        let recv_u8s: &mut [u8] =
+            unsafe { slice::from_raw_parts_mut(recv_vec.as_mut_ptr() as *mut u8, recv_buf_u8_len) };
+
+        let n_chunks = recv_buf_u8_len.div_ceil(Self::CHUNK_SIZE);
+
+        if n_chunks == 1 {
+            if self.is_root() {
+                self.root_process().scatter_into_root(send_u8s, recv_u8s);
+            } else {
+                self.root_process().scatter_into(recv_u8s);
+            }
+
+            return;
+        }
+
+        if !self.is_root() {
+            recv_u8s.chunks_mut(Self::CHUNK_SIZE).for_each(|c| {
+                self.root_process().scatter_into(c);
+            });
+
+            return;
+        }
+
+        let mut send_buf = vec![0u8; Self::CHUNK_SIZE * self.world_size()];
+
+        izip!(0..n_chunks, recv_u8s.chunks_mut(Self::CHUNK_SIZE)).for_each(|(i, recv_c)| {
+            let copy_srt = i * Self::CHUNK_SIZE;
+            let copy_end = copy_srt + recv_c.len();
+
+            if recv_c.len() < Self::CHUNK_SIZE {
+                send_buf.resize(recv_c.len() * self.world_size(), 0u8);
+            }
+
+            izip!(0..self.world_size(), send_buf.chunks_mut(recv_c.len())).for_each(
+                |(world_i, send_c)| {
+                    let world_starts = recv_buf_u8_len * world_i;
+
+                    let local_srt = world_starts + copy_srt;
+                    let local_end = world_starts + copy_end;
+
+                    send_c.copy_from_slice(&send_u8s[local_srt..local_end]);
+                },
+            );
+
+            self.root_process().scatter_into_root(&send_buf, recv_c);
+        })
+    }
+
     /// Root process broadcast a value f into all the processes
     #[inline]
     fn root_broadcast_f<F: Field>(&self, f: &mut F) {
@@ -268,7 +328,7 @@ impl MPIEngine for MPIConfig {
 
         let row_as_u8_len = size_of_val(row);
         let row_u8s: &mut [u8] =
-            unsafe { std::slice::from_raw_parts_mut(row.as_mut_ptr() as *mut u8, row_as_u8_len) };
+            unsafe { slice::from_raw_parts_mut(row.as_mut_ptr() as *mut u8, row_as_u8_len) };
 
         let num_of_bytes_per_world = row_as_u8_len / self.world_size();
         let num_of_transposes = row_as_u8_len.div_ceil(SEND_BUFFER_MAX);
