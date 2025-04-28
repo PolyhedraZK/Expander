@@ -1,9 +1,10 @@
 use std::str::FromStr;
 
+use bin::executor::*;
 use clap::Parser;
-use gkr::{executor::*, gkr_configs::*};
+use gkr::gkr_configs::*;
 use gkr_engine::{
-    root_println, FiatShamirHashType, FieldType, MPIConfig, MPIEngine, PolynomialCommitmentType,
+    FiatShamirHashType, FieldType, MPIConfig, MPIEngine, PolynomialCommitmentType, root_println,
 };
 
 #[tokio::main]

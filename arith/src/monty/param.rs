@@ -43,4 +43,8 @@ pub trait FieldParameters: PackedMontyParameters + Sized {
     const HALF_P_PLUS_1: u32 = (Self::PRIME + 1) >> 1;
 
     fn try_inverse(a: &MontyField31<Self>) -> Option<MontyField31<Self>>;
+
+    const TWO_ADICITY: usize;
+
+    const TWO_ADICITY_GENERATOR_IN_U32: u32;
 }

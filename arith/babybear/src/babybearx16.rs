@@ -2,6 +2,8 @@
 // With AVX it stores a single __m512i element.
 // With NEON it stores four uint32x4_t elements.
 
+use arith::FFTField;
+
 #[cfg(target_arch = "aarch64")]
 mod babybear_neon;
 #[cfg(target_arch = "aarch64")]
@@ -30,5 +32,13 @@ impl PartialOrd for BabyBearx16 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for BabyBearx16 is not supported")
+    }
+}
+
+impl FFTField for BabyBearx16 {
+    const TWO_ADICITY: usize = 27;
+
+    fn root_of_unity() -> Self {
+        Self::from(0x1a427a41)
     }
 }

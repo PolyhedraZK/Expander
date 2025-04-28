@@ -11,7 +11,10 @@ use arith::{field_common, Field};
 use arith::{ExtensionField, SimdField};
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::m31::{mod_reduce_u32_safe, M31};
+use crate::{
+    m31::{mod_reduce_u32_safe, M31},
+    M31Ext3x16, M31x16,
+};
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct M31Ext3 {
@@ -369,5 +372,21 @@ impl SimdField for M31Ext3 {
     #[inline(always)]
     fn unpack(&self) -> Vec<Self::Scalar> {
         vec![*self]
+    }
+}
+
+impl Mul<M31x16> for M31Ext3 {
+    type Output = M31Ext3x16;
+
+    #[inline(always)]
+    fn mul(self, rhs: M31x16) -> Self::Output {
+        let simd_lhs = M31Ext3x16::from(self);
+        M31Ext3x16 {
+            v: [
+                simd_lhs.v[0] * rhs,
+                simd_lhs.v[1] * rhs,
+                simd_lhs.v[2] * rhs,
+            ],
+        }
     }
 }

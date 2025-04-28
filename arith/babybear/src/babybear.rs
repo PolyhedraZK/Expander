@@ -25,6 +25,10 @@ impl PackedMontyParameters for BabyBearParameters {}
 impl FieldParameters for BabyBearParameters {
     const MONTY_GEN: BabyBear = BabyBear::new(31);
 
+    const TWO_ADICITY: usize = 27;
+
+    const TWO_ADICITY_GENERATOR_IN_U32: u32 = 0x1a427a41;
+
     fn try_inverse(p1: &BabyBear) -> Option<BabyBear> {
         if p1.is_zero() {
             return None;

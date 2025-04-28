@@ -7,11 +7,10 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::ExtensionField;
-use arith::{field_common, Field};
+use arith::{field_common, ExtensionField, FFTField, Field};
 use serdes::{ExpSerde, SerdeResult};
 
-use crate::babybear::BabyBear;
+use crate::{babybear::BabyBear, BabyBearExt3x16, BabyBearx16};
 
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct BabyBearExt3 {
@@ -230,6 +229,14 @@ impl From<u32> for BabyBearExt3 {
     }
 }
 
+impl FFTField for BabyBearExt3 {
+    const TWO_ADICITY: usize = 27;
+
+    fn root_of_unity() -> Self {
+        Self::from(0x1a427a41)
+    }
+}
+
 impl BabyBearExt3 {
     #[inline(always)]
     pub fn to_base_field(&self) -> BabyBear {
@@ -344,5 +351,18 @@ impl PartialOrd for BabyBearExt3 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for BabyBearExt3 is not supported")
+    }
+}
+
+impl Mul<BabyBearx16> for BabyBearExt3 {
+    type Output = BabyBearExt3x16;
+
+    #[inline(always)]
+    fn mul(self, rhs: BabyBearx16) -> Self::Output {
+        let mut res = Self::Output::from(self);
+        for v in res.v.iter_mut() {
+            *v *= rhs;
+        }
+        res
     }
 }

@@ -4,7 +4,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::{field_common, ExtensionField, Field, SimdField};
+use arith::{field_common, ExtensionField, FFTField, Field, SimdField};
 use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
 
@@ -262,7 +262,16 @@ impl Field for BabyBearExt3x16 {
     }
 
     fn inv(&self) -> Option<Self> {
-        unimplemented!()
+        // slow, should not be used in production
+        let mut m31_ext3_vec = self.unpack();
+        let is_non_zero = m31_ext3_vec.iter().all(|x| !x.is_zero());
+        if !is_non_zero {
+            return None;
+        }
+
+        m31_ext3_vec.iter_mut().for_each(|x| *x = x.inv().unwrap()); // safe unwrap
+
+        Some(Self::pack(&m31_ext3_vec))
     }
 
     fn as_u32_unchecked(&self) -> u32 {
@@ -271,6 +280,14 @@ impl Field for BabyBearExt3x16 {
 
     fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
         unimplemented!("vec babybear: cannot convert from 32 bytes")
+    }
+}
+
+impl FFTField for BabyBearExt3x16 {
+    const TWO_ADICITY: usize = 27;
+
+    fn root_of_unity() -> Self {
+        Self::from(0x1a427a41)
     }
 }
 
@@ -392,5 +409,14 @@ impl PartialOrd for BabyBearExt3x16 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for BabyBearExt3x16 is not supported")
+    }
+}
+
+impl Add<BabyBearx16> for BabyBearExt3x16 {
+    type Output = BabyBearExt3x16;
+
+    #[inline(always)]
+    fn add(self, rhs: BabyBearx16) -> Self::Output {
+        self.add_by_base_field(&rhs)
     }
 }
