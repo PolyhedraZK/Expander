@@ -1,6 +1,6 @@
 use arith::{
-    random_extension_field_tests, random_field_tests, random_inversion_tests,
-    random_simd_field_tests, Field, FieldParameters,
+    random_extension_field_tests, random_fft_field_tests, random_field_tests,
+    random_inversion_tests, random_simd_field_tests, Field, FieldParameters,
 };
 use ark_std::test_rng;
 use serdes::ExpSerde;
@@ -15,6 +15,8 @@ fn test_base_field() {
 
     let mut rng = test_rng();
     random_inversion_tests::<BabyBear, _>(&mut rng, "BabyBear".to_string());
+
+    random_fft_field_tests::<BabyBear>("Baby Bear".to_string());
 }
 
 #[test]
@@ -25,6 +27,8 @@ fn test_simd_field() {
     random_inversion_tests::<BabyBearx16, _>(&mut rng, "BabyBearx16".to_string());
 
     random_simd_field_tests::<BabyBearx16>("BabyBearx16".to_string());
+
+    random_fft_field_tests::<BabyBearx16>("BabyBearx16".to_string());
 
     let a = BabyBearx16::from(256u32 + 2);
     let mut buffer = vec![];
@@ -47,6 +51,8 @@ fn test_ext_field() {
     random_extension_field_tests::<BabyBearExt3x16>("Simd Baby Bear Ext3".to_string());
     random_simd_field_tests::<BabyBearExt3x16>("Simd Baby Bear Ext3".to_string());
 
+    random_fft_field_tests::<BabyBearExt3>("Baby Bear Ext3".to_string());
+    random_fft_field_tests::<BabyBearExt3x16>("SIMD Baby Bear Ext3".to_string());
     // // Deg 4
     // random_field_tests::<BabyBearExt4>("Baby Bear Ext4".to_string());
     // random_extension_field_tests::<BabyBearExt4>("Baby Bear Ext4".to_string());

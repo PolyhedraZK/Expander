@@ -1,4 +1,4 @@
-use std::{fmt::Debug, io::Read};
+use std::fmt::Debug;
 
 use arith::{ExtensionField, Field};
 use gkr_engine::{Proof, Transcript};
@@ -65,40 +65,8 @@ where
 
             let mut digest_bytes = vec![];
             challenge.serialize_into(&mut digest_bytes).unwrap();
-            self.append_u8_slice(&digest_bytes);
+            self.set_state(&digest_bytes);
         }
-    }
-
-    #[inline]
-    fn append_commitment_and_check_digest<R: Read>(
-        &mut self,
-        commitment_bytes: &[u8],
-        _proof_reader: &mut R,
-    ) -> bool {
-        self.append_u8_slice(commitment_bytes);
-
-        #[cfg(not(feature = "recursion"))]
-        {
-            // When appending the initial commitment, we hash the commitment bytes
-            // for sufficient number of times, so that the FS hash has a sufficient circuit depth
-            let mut challenge = self.generate_challenge_field_element().to_limbs();
-            let hasher = H::new();
-            for _ in 0..PCS_DIGEST_LOOP {
-                challenge = hasher.hash_to_state(&challenge);
-            }
-            let mut digest_bytes = vec![];
-            challenge.serialize_into(&mut digest_bytes).unwrap();
-            self.append_u8_slice(&digest_bytes);
-
-            // check that digest matches the proof
-            let challenge_from_proof =
-                Vec::<ChallengeF::BaseField>::deserialize_from(_proof_reader).unwrap();
-
-            challenge_from_proof == challenge
-        }
-
-        #[cfg(feature = "recursion")]
-        true
     }
 
     fn append_field_element(&mut self, f: &ChallengeF) {

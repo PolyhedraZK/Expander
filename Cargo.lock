@@ -174,6 +174,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
+name = "bin"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "babybear",
+ "bytes",
+ "chrono",
+ "circuit",
+ "clap",
+ "config_macros",
+ "gf2",
+ "gf2_128",
+ "gkr",
+ "gkr_engine",
+ "gkr_hashers",
+ "goldilocks",
+ "log",
+ "mersenne31",
+ "mpi",
+ "poly_commit",
+ "polynomials",
+ "serdes",
+ "sumcheck",
+ "tokio",
+ "transcript",
+ "utils",
+ "warp",
+]
+
+[[package]]
 name = "bindgen"
 version = "0.69.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -375,9 +405,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.36"
+version = "4.5.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2df961d8c8a0d08aa9945718ccf584145eee3f3aa06cddbeac12933781102e04"
+checksum = "eccb054f56cbd38340b380d4a8e69ef1f02f1af43db2f0cc817a4774d80ae071"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -385,9 +415,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.36"
+version = "4.5.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "132dbda40fb6753878316a489d5a1242a8ef2f0d9e47ba01c951ea8aa7d013a5"
+checksum = "efd9466fac8543255d3b1fcad4762c5e116ffe808c8a3043d4263cd4fd4862a2"
 dependencies = [
  "anstream",
  "anstyle",
@@ -817,10 +847,7 @@ dependencies = [
  "arith",
  "ark-std",
  "babybear",
- "bytes",
- "chrono",
  "circuit",
- "clap",
  "config_macros",
  "criterion",
  "env_logger",
@@ -837,16 +864,13 @@ dependencies = [
  "poly_commit",
  "polynomials",
  "rand",
+ "rayon",
  "serdes",
  "sha2",
  "sumcheck",
  "thiserror",
- "tiny-keccak",
- "tokio",
  "transcript",
- "tynm",
  "utils",
- "warp",
 ]
 
 [[package]]
@@ -940,7 +964,7 @@ dependencies = [
 [[package]]
 name = "halo2curves"
 version = "0.6.1"
-source = "git+https://github.com/PolyhedraZK/halo2curves#79a953d0e2cd12478d4046cabdbe72d3abad9166"
+source = "git+https://github.com/PolyhedraZK/halo2curves#33ebdf4a2845e96055438cc66305a34699fa3a19"
 dependencies = [
  "blake2",
  "digest",
@@ -1306,9 +1330,9 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jiff"
-version = "0.2.8"
+version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5ad87c89110f55e4cd4dc2893a9790820206729eaf221555f742d540b0724a0"
+checksum = "5a064218214dc6a10fbae5ec5fa888d80c45d611aba169222fc272072bf7aef6"
 dependencies = [
  "jiff-static",
  "log",
@@ -1319,9 +1343,9 @@ dependencies = [
 
 [[package]]
 name = "jiff-static"
-version = "0.2.8"
+version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d076d5b64a7e2fe6f0743f02c43ca4a6725c0f904203bfe276a5b3e793103605"
+checksum = "199b7932d97e325aff3a7030e141eafe7f2c6268e1d1b24859b753a627f45254"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2054,9 +2078,9 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.4.2"
+version = "1.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9e9e0b4211b72e7b8b6e85c807d36c212bdb33ea8587f7569562a84df5465b1"
+checksum = "9203b8055f63a2a00e2f593bb0510367fe707d7ff1e5c872de2f537b339e5410"
 dependencies = [
  "libc",
 ]

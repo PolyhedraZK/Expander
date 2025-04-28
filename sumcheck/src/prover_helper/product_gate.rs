@@ -1,22 +1,53 @@
 //! This module implements helper functions for the prover side of the sumcheck protocol
 //! to evaluate Mul gates
 
-use std::marker::PhantomData;
+use std::ops::Mul;
 
 use arith::{ExtensionField, Field, SimdField};
 use gkr_engine::{FieldEngine, FieldType};
 
-pub(crate) struct SumcheckProductGateHelper<F: FieldEngine> {
+pub(crate) struct SumcheckProductGateHelper {
     var_num: usize,
-    field: PhantomData<F>,
 }
 
-impl<F: FieldEngine> SumcheckProductGateHelper<F> {
+impl SumcheckProductGateHelper {
     pub(crate) fn new(var_num: usize) -> Self {
-        SumcheckProductGateHelper {
-            var_num,
-            field: PhantomData,
+        SumcheckProductGateHelper { var_num }
+    }
+
+    #[inline]
+    fn evaluate<VF: Field, EvalF>(
+        eval_size: usize,
+        bk_f: &[VF],
+        bk_hg: &[EvalF],
+        gate_exists: &[bool],
+    ) -> [EvalF; 3]
+    where
+        EvalF: Field + Mul<VF, Output = EvalF>,
+    {
+        let mut p0 = EvalF::ZERO;
+        let mut p1 = EvalF::ZERO;
+        let mut p2 = EvalF::ZERO;
+        for i in 0..eval_size {
+            if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
+                continue;
+            }
+
+            let f_v_0 = bk_f[i * 2];
+            let f_v_1 = bk_f[i * 2 + 1];
+            let hg_v_0 = bk_hg[i * 2];
+            let hg_v_1 = bk_hg[i * 2 + 1];
+            p0 += hg_v_0 * f_v_0;
+            log::trace!(
+                "p0.v+= {:?} * {:?} =  {:?}",
+                f_v_0,
+                hg_v_0,
+                hg_v_0 * f_v_0 + p1
+            );
+            p1 += hg_v_1 * f_v_1;
+            p2 += (hg_v_0 + hg_v_1) * (f_v_0 + f_v_1);
         }
+        [p0, p1, p2]
     }
 
     // Sumcheck the product of two multi-linear polynomials f and h_g
@@ -30,7 +61,7 @@ impl<F: FieldEngine> SumcheckProductGateHelper<F> {
     // Output:
     // - the univariate polynomial that prover sends to the verifier
     #[inline]
-    pub(crate) fn poly_eval_at(
+    pub(crate) fn poly_eval_at<F: FieldEngine>(
         &self,
         var_idx: usize,
         degree: usize,
@@ -41,9 +72,6 @@ impl<F: FieldEngine> SumcheckProductGateHelper<F> {
     ) -> [F::Field; 3] {
         assert_eq!(degree, 2);
 
-        let mut p0 = F::Field::zero();
-        let mut p1 = F::Field::zero();
-        let mut p2 = F::Field::zero();
         log::trace!("bk_f: {:?}", &bk_f[..4]);
         log::trace!("bk_hg: {:?}", &bk_hg[..4]);
         log::trace!("init_v: {:?}", &init_v[..4]);
@@ -51,51 +79,13 @@ impl<F: FieldEngine> SumcheckProductGateHelper<F> {
         let eval_size = 1 << (self.var_num - var_idx - 1);
         log::trace!("Eval size: {}", eval_size);
 
-        if var_idx == 0 {
-            // this is the first layer, we are able to accelerate by
-            // avoiding the extension field operations
-            for i in 0..eval_size {
-                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                    continue;
-                }
-
-                let f_v_0 = init_v[i * 2];
-                let f_v_1 = init_v[i * 2 + 1];
-                let hg_v_0 = bk_hg[i * 2];
-                let hg_v_1 = bk_hg[i * 2 + 1];
-
-                p0 += F::field_mul_simd_circuit_field(&hg_v_0, &f_v_0);
-                log::trace!(
-                    "p0.v += {:?} * {:?} = {:?}",
-                    f_v_0,
-                    hg_v_0,
-                    F::field_mul_simd_circuit_field(&hg_v_0, &f_v_0) + p1
-                );
-                p1 += F::field_mul_simd_circuit_field(&hg_v_1, &f_v_1);
-                p2 += F::field_mul_simd_circuit_field(&(hg_v_0 + hg_v_1), &(f_v_0 + f_v_1));
+        let [p0, p1, mut p2] = {
+            if var_idx == 0 {
+                Self::evaluate(eval_size, init_v, bk_hg, gate_exists)
+            } else {
+                Self::evaluate(eval_size, bk_f, bk_hg, gate_exists)
             }
-        } else {
-            // for the rest of layers we use extension field operations.
-            for i in 0..eval_size {
-                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                    continue;
-                }
-
-                let f_v_0 = bk_f[i * 2];
-                let f_v_1 = bk_f[i * 2 + 1];
-                let hg_v_0 = bk_hg[i * 2];
-                let hg_v_1 = bk_hg[i * 2 + 1];
-                p0 += f_v_0 * hg_v_0;
-                log::trace!(
-                    "p0.v+= {:?} * {:?} =  {:?}",
-                    f_v_0,
-                    hg_v_0,
-                    f_v_0 * hg_v_0 + p1
-                );
-                p1 += f_v_1 * hg_v_1;
-                p2 += (f_v_0 + f_v_1) * (hg_v_0 + hg_v_1);
-            }
-        }
+        };
 
         if F::FIELD_TYPE == FieldType::GF2 {
             // over GF2_128, the three points are at 0, 1 and X
@@ -112,7 +102,7 @@ impl<F: FieldEngine> SumcheckProductGateHelper<F> {
 
     // process the challenge and update the bookkeeping tables for f and h_g accordingly
     #[inline]
-    pub(crate) fn receive_challenge(
+    pub(crate) fn receive_challenge<F: FieldEngine>(
         &mut self,
         var_idx: usize,
         r: F::ChallengeField,
@@ -124,43 +114,24 @@ impl<F: FieldEngine> SumcheckProductGateHelper<F> {
         assert!(var_idx < self.var_num);
 
         let eval_size = 1 << (self.var_num - var_idx - 1);
+
         if var_idx == 0 {
             for i in 0..eval_size {
-                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                    gate_exists[i] = false;
-
-                    bk_f[i] = F::field_add_simd_circuit_field(
-                        &F::simd_circuit_field_mul_challenge_field(
-                            &(init_v[2 * i + 1] - init_v[2 * i]),
-                            &r,
-                        ),
-                        &init_v[2 * i],
-                    );
-                    bk_hg[i] = F::Field::zero();
-                } else {
-                    gate_exists[i] = true;
-
-                    bk_f[i] = F::field_add_simd_circuit_field(
-                        &F::simd_circuit_field_mul_challenge_field(
-                            &(init_v[2 * i + 1] - init_v[2 * i]),
-                            &r,
-                        ),
-                        &init_v[2 * i],
-                    );
-                    bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
-                }
+                bk_f[i] = r * (init_v[2 * i + 1] - init_v[2 * i]) + init_v[2 * i];
             }
         } else {
             for i in 0..eval_size {
-                if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
-                    gate_exists[i] = false;
-                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
-                    bk_hg[i] = F::Field::zero();
-                } else {
-                    gate_exists[i] = true;
-                    bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
-                    bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
-                }
+                bk_f[i] = bk_f[2 * i] + (bk_f[2 * i + 1] - bk_f[2 * i]).scale(&r);
+            }
+        }
+
+        for i in 0..eval_size {
+            if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
+                gate_exists[i] = false;
+                bk_hg[i] = F::Field::zero();
+            } else {
+                gate_exists[i] = true;
+                bk_hg[i] = bk_hg[2 * i] + (bk_hg[2 * i + 1] - bk_hg[2 * i]).scale(&r);
             }
         }
     }

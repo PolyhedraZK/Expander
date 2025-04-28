@@ -1,4 +1,4 @@
-use std::{fmt::Debug, io::Read, str::FromStr};
+use std::{fmt::Debug, str::FromStr};
 
 use arith::ExtensionField;
 
@@ -16,15 +16,6 @@ pub trait Transcript<F: ExtensionField>: Clone + Debug {
     /// Append a polynomial commitment to the transcript
     /// called by the prover
     fn append_commitment(&mut self, commitment_bytes: &[u8]);
-
-    /// Append a polynomial commitment to the transcript
-    /// check that the pcs digest in the proof is correct
-    /// called by the verifier
-    fn append_commitment_and_check_digest<R: Read>(
-        &mut self,
-        commitment_bytes: &[u8],
-        proof_reader: &mut R,
-    ) -> bool;
 
     /// Append a field element to the transcript.
     fn append_field_element(&mut self, f: &F);

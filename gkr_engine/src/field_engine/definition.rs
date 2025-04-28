@@ -1,10 +1,11 @@
 use std::cmp;
 use std::fmt::Debug;
+use std::ops::{Add, Mul};
 
 use arith::{ExtensionField, Field, SimdField};
 use polynomials::MultiLinearPoly;
 
-use crate::{ExpanderSingleVarChallenge, MPIConfig, MPIEngine};
+use crate::{ExpanderSingleVarChallenge, MPIEngine};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum FieldType {
@@ -16,7 +17,7 @@ pub enum FieldType {
     BabyBear,
 }
 
-pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
+pub trait FieldEngine: Default + Debug + Clone + Send + Sync + PartialEq + 'static {
     /// Enum type for Self::Field
     const FIELD_TYPE: FieldType;
 
@@ -24,60 +25,33 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
     const SENTINEL: [u8; 32];
 
     /// Field type for the circuit, e.g., M31
-    type CircuitField: Field + Send;
+    type CircuitField: Field + Send + Sync;
 
     /// Field type for the challenge, e.g., M31Ext3
-    type ChallengeField: ExtensionField<BaseField = Self::CircuitField> + Send;
+    type ChallengeField: ExtensionField<BaseField = Self::CircuitField>
+        + Send
+        + Sync
+        + Mul<Self::CircuitField, Output = Self::ChallengeField>
+        + Mul<Self::SimdCircuitField, Output = Self::Field>;
 
     /// Main field type for the scheme, e.g., M31Ext3x16
     type Field: ExtensionField<BaseField = Self::SimdCircuitField>
+        + Mul<Self::CircuitField, Output = Self::Field>
+        + Add<Self::CircuitField, Output = Self::Field>
+        + Mul<Self::SimdCircuitField, Output = Self::Field>
+        + Add<Self::SimdCircuitField, Output = Self::Field>
+        + Mul<Self::ChallengeField, Output = Self::Field>
+        + From<Self::SimdCircuitField>
         + SimdField<Scalar = Self::ChallengeField>
-        + Send;
+        + Send
+        + Sync;
 
     /// Simd field for circuit, e.g., M31x16
-    type SimdCircuitField: SimdField<Scalar = Self::CircuitField> + Send;
-
-    /// API to allow for multiplications between the challenge and the circuit field
-    fn challenge_mul_circuit_field(
-        a: &Self::ChallengeField,
-        b: &Self::CircuitField,
-    ) -> Self::ChallengeField;
-
-    /// API to allow for multiplications between the main field and the circuit field
-    fn field_mul_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field;
-
-    /// API to allow for addition between the main field and the circuit field
-    fn field_add_circuit_field(a: &Self::Field, b: &Self::CircuitField) -> Self::Field;
-
-    /// API to allow multiplications between the main field and the simd circuit field
-    fn field_add_simd_circuit_field(a: &Self::Field, b: &Self::SimdCircuitField) -> Self::Field;
-
-    /// API to allow multiplications between the main field and the simd circuit field
-    fn field_mul_simd_circuit_field(a: &Self::Field, b: &Self::SimdCircuitField) -> Self::Field;
-
-    /// API to allow for multiplications between the challenge and the main field
-    fn challenge_mul_field(a: &Self::ChallengeField, b: &Self::Field) -> Self::Field;
-
-    /// API to allow for multiplications between the challenge and the simd circuit field
-    fn circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field;
-
-    /// API to allow for multiplications between the simd circuit field and the challenge
-    fn circuit_field_mul_simd_circuit_field(
-        a: &Self::CircuitField,
-        b: &Self::SimdCircuitField,
-    ) -> Self::SimdCircuitField;
-
-    /// Convert a circuit field to a simd circuit field
-    fn circuit_field_to_simd_circuit_field(a: &Self::CircuitField) -> Self::SimdCircuitField;
-
-    /// Convert a simd circuit field to a circuit field
-    fn simd_circuit_field_into_field(a: &Self::SimdCircuitField) -> Self::Field;
-
-    /// API to allow for multiplications between the simd circuit field and the challenge
-    fn simd_circuit_field_mul_challenge_field(
-        a: &Self::SimdCircuitField,
-        b: &Self::ChallengeField,
-    ) -> Self::Field;
+    type SimdCircuitField: SimdField<Scalar = Self::CircuitField>
+        + Send
+        + Sync
+        + Mul<Self::CircuitField, Output = Self::SimdCircuitField>
+        + From<Self::CircuitField>;
 
     /// The pack size for the simd circuit field, e.g., 16 for M31x16
     fn get_field_pack_size() -> usize {
@@ -99,16 +73,10 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
         assert!(scratch.len() >= evals.len());
 
         if x.is_empty() {
-            Self::simd_circuit_field_into_field(&evals[0])
+            evals[0].into()
         } else {
             for i in 0..(evals.len() >> 1) {
-                scratch[i] = Self::field_add_simd_circuit_field(
-                    &Self::simd_circuit_field_mul_challenge_field(
-                        &(evals[i * 2 + 1] - evals[i * 2]),
-                        &x[0],
-                    ),
-                    &evals[i * 2],
-                );
+                scratch[i] = x[0] * (evals[i * 2 + 1] - evals[i * 2]) + evals[i * 2];
             }
 
             let mut cur_eval_size = evals.len() >> 2;
@@ -135,7 +103,7 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + 'static {
         // x_mpi: &[Self::ChallengeField],
         scratch_field: &mut [Self::Field],
         scratch_challenge_field: &mut [Self::ChallengeField],
-        mpi_config: &MPIConfig,
+        mpi_config: &impl MPIEngine,
     ) -> Self::ChallengeField {
         assert!(
             scratch_challenge_field.len()

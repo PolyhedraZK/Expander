@@ -1,11 +1,13 @@
 //! This module implements the core GKR IOP.
 
 use circuit::Circuit;
-use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIConfig, MPIEngine, Transcript};
+use gkr_engine::{
+    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
+    Transcript,
+};
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use utils::timer::Timer;
 
-// FIXME
 #[allow(clippy::type_complexity)]
 pub fn gkr_prove<F: FieldEngine>(
     circuit: &Circuit<F>,
@@ -15,11 +17,13 @@ pub fn gkr_prove<F: FieldEngine>(
 ) -> (F::ChallengeField, ExpanderDualVarChallenge<F>) {
     let layer_num = circuit.layers.len();
 
-    let mut challenge = ExpanderDualVarChallenge::sample_from_transcript(
-        transcript,
-        circuit.layers.last().unwrap().output_var_num,
-        mpi_config.world_size(),
-    );
+    let mut challenge: ExpanderDualVarChallenge<F> =
+        ExpanderSingleVarChallenge::sample_from_transcript(
+            transcript,
+            circuit.layers.last().unwrap().output_var_num,
+            mpi_config.world_size(),
+        )
+        .into();
 
     let mut alpha = None;
 
@@ -43,7 +47,7 @@ pub fn gkr_prove<F: FieldEngine>(
             mpi_config.is_root(),
         );
 
-        sumcheck_prove_gkr_layer(
+        (_, _) = sumcheck_prove_gkr_layer(
             &circuit.layers[i],
             &mut challenge,
             alpha,

@@ -3,4 +3,5 @@ pub enum GKRScheme {
     #[default]
     Vanilla,
     GkrSquare,
+    GKRParVerifier,
 }

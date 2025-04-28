@@ -1,6 +1,6 @@
 use arith::{Field, SimdField};
 use circuit::CircuitLayer;
-use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIConfig, MPIEngine};
+use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIEngine};
 use polynomials::EqPolynomial;
 
 use crate::{unpack_and_combine, ProverScratchPad};
@@ -22,11 +22,10 @@ pub(crate) struct SumcheckGkrVanillaHelper<'a, F: FieldEngine> {
     pub(crate) input_var_num: usize,
     pub(crate) simd_var_num: usize,
 
-    xy_helper: SumcheckProductGateHelper<F>,
+    xy_helper: SumcheckProductGateHelper,
     simd_var_helper: SumcheckSimdProdGateHelper<F>,
     mpi_var_helper: SumcheckSimdProdGateHelper<F>,
 
-    mpi_config: &'a MPIConfig,
     is_output_layer: bool,
 }
 
@@ -34,7 +33,7 @@ pub(crate) struct SumcheckGkrVanillaHelper<'a, F: FieldEngine> {
 impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
     #[inline(always)]
     fn xy_helper_receive_challenge(&mut self, var_idx: usize, r: F::ChallengeField) {
-        self.xy_helper.receive_challenge(
+        self.xy_helper.receive_challenge::<F>(
             var_idx,
             r,
             &mut self.sp.v_evals,
@@ -54,7 +53,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         challenge: &'a ExpanderDualVarChallenge<F>,
         alpha: Option<F::ChallengeField>,
         sp: &'a mut ProverScratchPad<F>,
-        mpi_config: &'a MPIConfig,
+        mpi_config: &impl MPIEngine,
         is_output_layer: bool,
     ) -> Self {
         let simd_var_num = F::get_field_pack_size().trailing_zeros() as usize;
@@ -77,7 +76,6 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
             mpi_var_helper: SumcheckSimdProdGateHelper::new(
                 mpi_config.world_size().trailing_zeros() as usize,
             ),
-            mpi_config,
             is_output_layer,
         }
     }
@@ -86,9 +84,10 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         &mut self,
         var_idx: usize,
         degree: usize,
+        mpi_config: &impl MPIEngine,
     ) -> [F::ChallengeField; 3] {
         assert!(var_idx < self.input_var_num);
-        let local_vals_simd = self.xy_helper.poly_eval_at(
+        let local_vals_simd = self.xy_helper.poly_eval_at::<F>(
             var_idx,
             degree,
             &self.sp.v_evals,
@@ -104,7 +103,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
             .collect::<Vec<F::ChallengeField>>();
 
         // MPI
-        self.mpi_config
+        mpi_config
             .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0)
             .try_into()
             .unwrap()
@@ -114,6 +113,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         &mut self,
         var_idx: usize,
         degree: usize,
+        mpi_config: &impl MPIEngine,
     ) -> [F::ChallengeField; 4] {
         assert!(var_idx < self.simd_var_num);
         let local_vals = self
@@ -127,7 +127,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
             )
             .to_vec();
 
-        self.mpi_config
+        mpi_config
             .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0)
             .try_into()
             .unwrap()
@@ -138,7 +138,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         var_idx: usize,
         degree: usize,
     ) -> [F::ChallengeField; 4] {
-        assert!(var_idx < self.mpi_config.world_size().trailing_zeros() as usize);
+        assert!(var_idx < self.mpi_var_helper.var_num);
         self.mpi_var_helper.poly_eval_at(
             var_idx,
             degree,
@@ -153,8 +153,9 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         &mut self,
         var_idx: usize,
         degree: usize,
+        mpi_config: &impl MPIEngine,
     ) -> [F::ChallengeField; 3] {
-        let [p0, p1, p2] = self.poly_evals_at_rx(var_idx, degree);
+        let [p0, p1, p2] = self.poly_evals_at_rx(var_idx, degree, mpi_config);
         [
             p0 * self.sp.phase2_coef,
             p1 * self.sp.phase2_coef,
@@ -206,10 +207,9 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
     }
 
     #[inline(always)]
-    pub(crate) fn vy_claim(&self) -> F::ChallengeField {
+    pub(crate) fn vy_claim(&self, mpi_config: &impl MPIEngine) -> F::ChallengeField {
         let vy_local = unpack_and_combine(&self.sp.v_evals[0], &self.sp.eq_evals_at_r_simd0);
-        self.mpi_config
-            .coef_combine_vec(&[vy_local], &self.sp.eq_evals_at_r_mpi0)[0]
+        mpi_config.coef_combine_vec(&[vy_local], &self.sp.eq_evals_at_r_mpi0)[0]
     }
 
     #[inline]
@@ -286,17 +286,14 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         }
 
         for g in mul.iter() {
-            let r = F::challenge_mul_circuit_field(&eq_evals_at_rz0[g.o_id], &g.coef);
-            hg_vals[g.i_ids[0]] += F::simd_circuit_field_mul_challenge_field(&vals[g.i_ids[1]], &r);
+            let r = eq_evals_at_rz0[g.o_id] * g.coef;
+            hg_vals[g.i_ids[0]] += r * vals[g.i_ids[1]];
 
             gate_exists[g.i_ids[0]] = true;
         }
 
         for g in add.iter() {
-            hg_vals[g.i_ids[0]] += F::Field::from(F::challenge_mul_circuit_field(
-                &eq_evals_at_rz0[g.o_id],
-                &g.coef,
-            ));
+            hg_vals[g.i_ids[0]] += F::Field::from(eq_evals_at_rz0[g.o_id] * g.coef);
             gate_exists[g.i_ids[0]] = true;
         }
     }
@@ -308,19 +305,18 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
     }
 
     #[inline]
-    pub(crate) fn prepare_mpi_var_vals(&mut self) {
-        self.mpi_config
-            .gather_vec(&[self.sp.simd_var_v_evals[0]], &mut self.sp.mpi_var_v_evals);
-        self.mpi_config.gather_vec(
+    pub(crate) fn prepare_mpi_var_vals(&mut self, mpi_config: &impl MPIEngine) {
+        mpi_config.gather_vec(&[self.sp.simd_var_v_evals[0]], &mut self.sp.mpi_var_v_evals);
+        mpi_config.gather_vec(
             &[self.sp.simd_var_hg_evals[0] * self.sp.eq_evals_at_r_simd0[0]],
             &mut self.sp.mpi_var_hg_evals,
         );
     }
 
     #[inline]
-    pub(crate) fn prepare_y_vals(&mut self) {
+    pub(crate) fn prepare_y_vals(&mut self, mpi_config: &impl MPIEngine) {
         let mut v_rx_rsimd_rw = self.sp.mpi_var_v_evals[0];
-        self.mpi_config.root_broadcast_f(&mut v_rx_rsimd_rw);
+        mpi_config.root_broadcast_f(&mut v_rx_rsimd_rw);
 
         let mul = &self.layer.mul;
         let eq_evals_at_rz0 = &self.sp.eq_evals_at_rz0;
@@ -370,10 +366,8 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
 
         // TODO-OPTIMIZATION: hg_vals does not have to be simd here
         for g in mul.iter() {
-            hg_vals[g.i_ids[1]] += F::Field::from(F::challenge_mul_circuit_field(
-                &(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]]),
-                &g.coef,
-            ));
+            hg_vals[g.i_ids[1]] +=
+                F::Field::from(eq_evals_at_rz0[g.o_id] * eq_evals_at_rx[g.i_ids[0]] * g.coef);
             gate_exists[g.i_ids[1]] = true;
         }
     }

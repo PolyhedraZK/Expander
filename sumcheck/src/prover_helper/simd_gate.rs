@@ -8,7 +8,7 @@ use arith::{ExtensionField, Field};
 use gkr_engine::{FieldEngine, FieldType};
 
 pub(crate) struct SumcheckSimdProdGateHelper<F: FieldEngine> {
-    var_num: usize,
+    pub(crate) var_num: usize,
     field: PhantomData<F>,
 }
 
@@ -145,10 +145,7 @@ impl<F: FieldEngine> SumcheckSimdProdGateHelper<F> {
     ) {
         // Calculate coefficients for the interpolating polynomial
         let p_add_coef_0 = p_add[0];
-        let p_add_coef_2 = F::challenge_mul_circuit_field(
-            &(p_add[2] - p_add[1] - p_add[1] + p_add[0]),
-            &F::CircuitField::INV_2,
-        );
+        let p_add_coef_2 = (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * F::CircuitField::INV_2;
 
         let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
 
@@ -160,13 +157,11 @@ impl<F: FieldEngine> SumcheckSimdProdGateHelper<F> {
         p[3] += p_add_coef_0 + p_add_coef_1.mul_by_3() + p_add_coef_2.mul_by_3().mul_by_3();
         p[4] += p_add_coef_0
             + p_add_coef_1.double().double()
-            + F::challenge_mul_circuit_field(&p_add_coef_2, &F::CircuitField::from(16));
-        p[5] += p_add_coef_0
-            + p_add_coef_1.mul_by_5()
-            + F::challenge_mul_circuit_field(&p_add_coef_2, &F::CircuitField::from(25));
+            + p_add_coef_2 * F::CircuitField::from(16);
+        p[5] += p_add_coef_0 + p_add_coef_1.mul_by_5() + p_add_coef_2 * F::CircuitField::from(25);
         p[6] += p_add_coef_0
             + p_add_coef_1.mul_by_3().double()
-            + F::challenge_mul_circuit_field(&p_add_coef_2, &F::CircuitField::from(36));
+            + p_add_coef_2 * F::CircuitField::from(36);
     }
 
     #[inline]
