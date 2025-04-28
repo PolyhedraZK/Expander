@@ -17,6 +17,8 @@ use utils::timer::Timer;
 #[cfg(feature = "grinding")]
 use crate::grind;
 
+pub mod structs;
+
 mod common;
 pub use common::*;
 
@@ -113,24 +115,6 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                 );
 
                 (gkr_verified, challenge_x, None, claim_x, None)
-            }
-            GKRScheme::GKRParVerifier => {
-                let (gkr_verified, challenge, claim_x, claim_y) = gkr_par_verifier_verify(
-                    proving_time_mpi_size,
-                    circuit,
-                    public_input,
-                    claimed_v,
-                    &mut transcript,
-                    &mut cursor,
-                );
-
-                (
-                    gkr_verified,
-                    challenge.challenge_x(),
-                    challenge.challenge_y(),
-                    claim_x,
-                    claim_y,
-                )
             }
         };
         log::info!("GKR verification: {}", verified);

@@ -16,6 +16,8 @@ use utils::timer::Timer;
 use super::common::sumcheck_verify_gkr_layer;
 use crate::prover::gkr_par_verifier::SumcheckLayerState;
 
+
+
 pub fn parse_proof<F: FieldEngine>(
     circuit: &Circuit<F>,
     mut proof_reader: impl Read,

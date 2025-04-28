@@ -2,7 +2,7 @@ use std::{io::Read, vec};
 
 use arith::Field;
 use circuit::CircuitLayer;
-use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, GKRScheme, Transcript};
+use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, GKREngine, GKRScheme, Transcript};
 use serdes::ExpSerde;
 use sumcheck::{
     GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DEGREE,
