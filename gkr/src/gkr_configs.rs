@@ -9,7 +9,7 @@ use goldilocks::Goldilocksx8;
 use halo2curves::bn256::{Bn256, G1Affine};
 use mersenne31::M31x16;
 use poly_commit::{raw::RawExpanderGKR, HyperKZGPCS, HyraxPCS, OrionPCSForGKR};
-use transcript::{BytesHashTranscript, FieldHashTranscript};
+use transcript::BytesHashTranscript;
 
 // ============== M31 ==============
 declare_gkr_config!(

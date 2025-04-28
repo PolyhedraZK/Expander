@@ -43,7 +43,7 @@ pub fn parse_proof<F: FieldEngine>(
 
 // todo: FIXME
 #[allow(clippy::type_complexity)]
-pub fn gkr_par_verifier_verify<F: FieldEngine, T: Transcript<F::ChallengeField>>(
+pub fn gkr_par_verifier_verify<F: FieldEngine, T: Transcript>(
     proving_time_mpi_size: usize,
     circuit: &Circuit<F>,
     public_input: &[F::SimdCircuitField],
@@ -102,7 +102,7 @@ pub fn gkr_par_verifier_verify<F: FieldEngine, T: Transcript<F::ChallengeField>>
             );
 
             let alpha = if state.challenge.rz_1.is_some() {
-                Some(local_transcript.generate_challenge_field_element())
+                Some(local_transcript.generate_field_element::<F::ChallengeField>())
             } else {
                 None
             };

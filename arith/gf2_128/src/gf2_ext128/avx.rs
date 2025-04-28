@@ -121,7 +121,7 @@ impl Field for AVXGF2_128 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         unsafe {
             AVXGF2_128 {
                 v: transmute::<[u8; 16], __m128i>(bytes[..16].try_into().unwrap()),

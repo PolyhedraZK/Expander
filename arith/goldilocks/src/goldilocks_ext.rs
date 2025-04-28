@@ -128,7 +128,7 @@ impl Field for GoldilocksExt2 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         let mut v1 = u64::from_le_bytes(bytes[..8].try_into().unwrap());
         v1 = mod_reduce_u64(v1);
         let mut v2 = u64::from_le_bytes(bytes[8..16].try_into().unwrap());

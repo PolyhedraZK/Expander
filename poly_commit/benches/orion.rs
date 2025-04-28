@@ -86,7 +86,7 @@ fn simd_field_opening_benchmark_helper<F, SimdF, EvalF, ComPackF, T>(
     SimdF: SimdField<Scalar = F>,
     EvalF: ExtensionField<BaseField = F>,
     ComPackF: SimdField<Scalar = F>,
-    T: Transcript<EvalF>,
+    T: Transcript,
 {
     let mut group = c.benchmark_group(format!(
         "Orion PCS SIMD field opening: SIMD-F = {}, EvalF = {}, ComPackF = {}",
@@ -148,21 +148,21 @@ fn orion_simd_field_opening_benchmark(c: &mut Criterion) {
         GF2x8,
         GF2_128,
         GF2x128,
-        BytesHashTranscript<_, Keccak256hasher>,
+        BytesHashTranscript<Keccak256hasher>,
     >(c, 19, 32);
     simd_field_opening_benchmark_helper::<
         M31,
         M31x16,
         M31Ext3,
         M31x16,
-        BytesHashTranscript<_, Keccak256hasher>,
+        BytesHashTranscript<Keccak256hasher>,
     >(c, 19, 27);
     simd_field_opening_benchmark_helper::<
         Goldilocks,
         Goldilocksx8,
         GoldilocksExt2,
         Goldilocksx8,
-        BytesHashTranscript<_, Keccak256hasher>,
+        BytesHashTranscript<Keccak256hasher>,
     >(c, 19, 27);
 }
 

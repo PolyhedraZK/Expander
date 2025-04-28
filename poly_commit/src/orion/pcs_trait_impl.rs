@@ -100,7 +100,7 @@ where
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &Self::ScratchPad,
-        transcript: &mut impl Transcript<EvalF>,
+        transcript: &mut impl Transcript,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, pk.num_vars);
         assert_eq!(poly.hypercube_size() % OpenPackF::PACK_SIZE, 0);
@@ -124,7 +124,7 @@ where
         x: &Self::EvalPoint,
         v: EvalF,
         opening: &Self::Opening,
-        transcript: &mut impl Transcript<EvalF>,
+        transcript: &mut impl Transcript,
     ) -> bool {
         assert_eq!(*params, vk.num_vars);
         orion_verify::<_, OpenPackF, _, ComPackF>(vk, commitment, x, &[], v, transcript, opening)
@@ -201,7 +201,7 @@ where
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         scratch_pad: &Self::ScratchPad,
-        transcript: &mut impl Transcript<EvalF>,
+        transcript: &mut impl Transcript,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);
         assert_eq!(
@@ -224,7 +224,7 @@ where
         x: &Self::EvalPoint,
         v: EvalF,
         opening: &Self::Opening,
-        transcript: &mut impl Transcript<EvalF>,
+        transcript: &mut impl Transcript,
     ) -> bool {
         assert_eq!(*params, vk.num_vars);
         assert_eq!(x.len(), vk.num_vars);

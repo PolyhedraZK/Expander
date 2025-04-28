@@ -50,7 +50,7 @@ pub fn checkpoint_sumcheck_layer_state<F: FieldEngine>(
     alpha: &Option<F::ChallengeField>,
     claimed_v0: &F::ChallengeField,
     claimed_v1: &Option<F::ChallengeField>,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
     mpi_config: &impl MPIEngine,
 ) {
     let transcript_state = transcript.hash_and_return_state();
@@ -73,7 +73,7 @@ pub fn checkpoint_sumcheck_layer_state<F: FieldEngine>(
 pub fn gkr_par_verifier_prove<F: FieldEngine>(
     circuit: &Circuit<F>,
     sp: &mut ProverScratchPad<F>,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
     mpi_config: &impl MPIEngine,
 ) -> (F::ChallengeField, ExpanderDualVarChallenge<F>) {
     let layer_num = circuit.layers.len();
@@ -129,7 +129,7 @@ pub fn gkr_par_verifier_prove<F: FieldEngine>(
         );
 
         if challenge.rz_1.is_some() {
-            let mut tmp = transcript.generate_challenge_field_element();
+            let mut tmp = transcript.generate_field_element::<F::ChallengeField>();
             mpi_config.root_broadcast_f(&mut tmp);
             alpha = Some(tmp)
         } else {
