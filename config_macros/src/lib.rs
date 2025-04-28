@@ -81,11 +81,11 @@ fn parse_fiat_shamir_hash_type(
         ),
         ("Poseidon", "M31") => (
             "Poseidon".to_owned(),
-            "FieldHashTranscript::<PoseidonFiatShamirHasher<M31x16>>".to_owned(),
+            "BytesHashTranscript::<PoseidonFiatShamirHasher<M31x16>>".to_owned(),
         ),
         ("MIMC5", "BN254") => (
             "MIMC5".to_owned(),
-            format!("FieldHashTranscript::<MiMC5FiatShamirHasher<{challenge_f}>>").to_owned(),
+            format!("BytesHashTranscript::<MiMC5FiatShamirHasher<{challenge_f}>>").to_owned(),
         ),
         _ => panic!("Unknown hash type"),
     }

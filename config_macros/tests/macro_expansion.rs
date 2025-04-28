@@ -10,7 +10,7 @@ use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHash
 use halo2curves::bn256::Bn256;
 use mersenne31::M31x16;
 use poly_commit::{HyperKZGPCS, OrionPCSForGKR, RawExpanderGKR};
-use transcript::{BytesHashTranscript, FieldHashTranscript};
+use transcript::BytesHashTranscript;
 
 fn print_type_name<Cfg: GKREngine>() {
     println!("{}: {:?}", type_name::<Cfg>(), Cfg::SCHEME);

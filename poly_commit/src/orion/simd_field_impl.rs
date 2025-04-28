@@ -44,7 +44,7 @@ pub fn orion_open_simd_field<F, SimdF, EvalF, ComPackF>(
     pk: &OrionSRS,
     poly: &impl MultilinearExtension<SimdF>,
     point: &[EvalF],
-    transcript: &mut impl Transcript<EvalF>,
+    transcript: &mut impl Transcript,
     scratch_pad: &OrionScratchPad,
 ) -> (EvalF, OrionProof<EvalF>)
 where
@@ -73,7 +73,7 @@ where
 
     let random_col_coeffs: Vec<_> = (0..proximity_test_num)
         .map(|_| {
-            let rand = transcript.generate_challenge_field_elements(point.len() - num_vars_in_msg);
+            let rand = transcript.generate_field_elements::<EvalF>(point.len() - num_vars_in_msg);
             EqPolynomial::build_eq_x_r(&rand)
         })
         .collect();

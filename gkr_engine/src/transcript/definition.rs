@@ -14,20 +14,11 @@ pub trait Transcript: Clone + Debug {
     fn new() -> Self;
 
     #[cfg(not(feature = "recursion"))]
-    fn init_commitment<F: Field>(&mut self, commitment_bytes: &[u8]) -> Vec<u8>;
+    fn init_commitment(&mut self, commitment_bytes: &[u8]) -> Vec<u8>;
 
     /// Append a polynomial commitment to the transcript
     /// called by the prover
-    fn append_commitment<F: Field>(&mut self, commitment_bytes: &[u8]);
-
-    /// Append a polynomial commitment to the transcript
-    /// check that the pcs digest in the proof is correct
-    /// called by the verifier
-    fn append_commitment_and_check_digest<F: Field, R: Read>(
-        &mut self,
-        commitment_bytes: &[u8],
-        proof_reader: &mut R,
-    ) -> bool;
+    fn append_commitment(&mut self, commitment_bytes: &[u8]);
 
     /// Append a field element to the transcript.
     #[inline]
@@ -105,8 +96,6 @@ pub trait Transcript: Clone + Debug {
     fn unlock_proof(&mut self);
 
     fn refresh_digest(&mut self);
-
-    fn get_digest_start(&mut self) -> usize;
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

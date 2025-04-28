@@ -13,7 +13,7 @@ use halo2curves::{
 };
 use itertools::{chain, izip};
 use polynomials::MultiLinearPoly;
-use transcript::FieldHashTranscript;
+use transcript::BytesHashTranscript;
 
 use crate::*;
 
@@ -576,7 +576,7 @@ fn test_hyper_bikzg_single_process_simulated_e2e() {
         global_commitment_g1.to_affine()
     };
 
-    let mut fs_transcript = FieldHashTranscript::<MiMC5FiatShamirHasher<Fr>>::new();
+    let mut fs_transcript = BytesHashTranscript::<MiMC5FiatShamirHasher<Fr>>::new();
     let mut verifier_transcript = fs_transcript.clone();
 
     let opening = coeff_form_hyper_bikzg_open_simulate(

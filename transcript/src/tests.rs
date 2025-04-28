@@ -4,7 +4,7 @@ use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHash
 use mersenne31::{M31Ext3, M31x16};
 use sha2::{Digest, Sha256};
 
-use crate::{BytesHashTranscript, FieldHashTranscript};
+use crate::BytesHashTranscript;
 
 const EXAMPLE_IN: [u8; 32] = [
     40, 75, 185, 12, 169, 4, 108, 43, 211, 74, 219, 14, 2, 133, 97, 27, 200, 245, 110, 1, 253, 219,
@@ -73,8 +73,8 @@ fn test_transcript_expected_behavior() {
 
     test_transcript_expected_behavior_helper::<
         M31Ext3,
-        FieldHashTranscript<PoseidonFiatShamirHasher<M31x16>>,
+        BytesHashTranscript<PoseidonFiatShamirHasher<M31x16>>,
     >();
-    test_transcript_expected_behavior_helper::<Fr, FieldHashTranscript<MiMC5FiatShamirHasher<Fr>>>(
+    test_transcript_expected_behavior_helper::<Fr, BytesHashTranscript<MiMC5FiatShamirHasher<Fr>>>(
     );
 }

@@ -206,7 +206,7 @@ impl Field for AVXBabyBear {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         let m = BabyBear::from_uniform_bytes(bytes);
         Self {
             v: unsafe {

@@ -247,13 +247,12 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn orion_mt_openings<EvalF, T>(
+pub(crate) fn orion_mt_openings<T>(
     pk: &OrionSRS,
     transcript: &mut T,
     scratch_pad: &OrionScratchPad,
 ) -> Vec<tree::RangePath>
 where
-    EvalF: ExtensionField,
     T: Transcript,
 {
     let leaves_in_range_opening = pk.num_leaves_per_mt_query();

@@ -1,6 +1,3 @@
-use std::{fmt::Debug, io::Read};
-
-use arith::Field;
 use gkr_engine::{Proof, Transcript};
 use gkr_hashers::FiatShamirHasher;
 
@@ -16,7 +13,6 @@ pub struct BytesHashTranscript<H: FiatShamirHasher> {
 
     /// The digest bytes.
     pub digest: Vec<u8>,
-    digest_start: usize,
 
     /// The proof bytes.
     proof: Proof,
@@ -34,7 +30,6 @@ impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
         Self {
             hasher: H::new(),
             digest: vec![0u8; H::DIGEST_SIZE],
-            digest_start: H::DIGEST_SIZE,
             proof: Proof::default(),
             hash_start_index: 0,
             proof_locked: false,
@@ -44,7 +39,7 @@ impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
 
     #[cfg(not(feature = "recursion"))]
     #[inline(always)]
-    fn init_commitment<F: Field>(&mut self, commitment_bytes: &[u8]) -> Vec<u8> {
+    fn init_commitment(&mut self, commitment_bytes: &[u8]) -> Vec<u8> {
         let mut digest = vec![0u8; H::DIGEST_SIZE];
         self.hasher.hash(&mut digest, commitment_bytes);
         for _ in 0..PCS_DIGEST_LOOP {
@@ -54,43 +49,16 @@ impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
     }
 
     #[inline]
-    fn append_commitment<F: Field>(&mut self, commitment_bytes: &[u8]) {
+    fn append_commitment(&mut self, commitment_bytes: &[u8]) {
         self.append_u8_slice(commitment_bytes);
 
         #[cfg(not(feature = "recursion"))]
         {
             // When appending the initial commitment, we hash the commitment bytes
             // for sufficient number of times, so that the FS hash has a sufficient circuit depth
-            let digest = self.init_commitment::<F>(commitment_bytes);
-            self.append_u8_slice(&digest);
+            let digest = self.init_commitment(commitment_bytes);
+            self.set_state(&digest);
         }
-    }
-
-    #[inline]
-    /// check that the pcs digest in the proof is correct
-    fn append_commitment_and_check_digest<F: Field, R: Read>(
-        &mut self,
-        commitment_bytes: &[u8],
-        _proof_reader: &mut R,
-    ) -> bool {
-        self.append_u8_slice(commitment_bytes);
-
-        #[cfg(not(feature = "recursion"))]
-        {
-            // When appending the initial commitment, we hash the commitment bytes
-            // for sufficient number of times, so that the FS hash has a sufficient circuit depth
-            let digest = self.init_commitment::<F>(commitment_bytes);
-            self.append_u8_slice(&digest);
-
-            // check that digest matches the proof
-            let mut pcs_digest = [0u8; 32];
-            _proof_reader.read_exact(&mut pcs_digest).unwrap();
-
-            digest == pcs_digest
-        }
-
-        #[cfg(feature = "recursion")]
-        true
     }
 
     /// Append a byte slice to the transcript.
@@ -105,12 +73,10 @@ impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
         let mut cur_n_bytes = 0usize;
 
         while cur_n_bytes < n_bytes {
-            let digest_start = self.get_digest_start();
-            let digest_len = (H::DIGEST_SIZE - digest_start).min(n_bytes - cur_n_bytes);
-            ret[cur_n_bytes..cur_n_bytes + digest_len]
-                .copy_from_slice(&self.digest[digest_start..digest_start + digest_len]);
+            self.refresh_digest();
+            let digest_len = H::DIGEST_SIZE.min(n_bytes - cur_n_bytes);
+            ret[cur_n_bytes..cur_n_bytes + digest_len].copy_from_slice(&self.digest[..digest_len]);
             cur_n_bytes += digest_len;
-            self.digest_start += digest_len;
         }
 
         ret
@@ -170,13 +136,5 @@ impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
         } else {
             self.hasher.hash_inplace(&mut self.digest);
         }
-        self.digest_start = 0;
-    }
-
-    fn get_digest_start(&mut self) -> usize {
-        if self.digest_start >= H::DIGEST_SIZE {
-            self.refresh_digest();
-        }
-        self.digest_start
     }
 }

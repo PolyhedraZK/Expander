@@ -126,8 +126,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         if self.mpi_config.is_root() {
             let mut buffer = vec![];
             commitment.unwrap().serialize_into(&mut buffer).unwrap(); // TODO: error propagation
-            transcript
-                .append_commitment::<<Cfg::FieldConfig as FieldEngine>::ChallengeField>(&buffer);
+            transcript.append_commitment(&buffer);
         }
         pcs_commit_timer.stop();
 

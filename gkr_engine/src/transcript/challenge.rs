@@ -65,14 +65,14 @@ impl<F: FieldEngine> ExpanderSingleVarChallenge<F> {
         num_circuit_var: usize,
         world_size: usize,
     ) -> Self {
-        let rz = transcript.generate_field_elements::<C::ChallengeField>(num_circuit_var);
+        let rz = transcript.generate_field_elements::<F::ChallengeField>(num_circuit_var);
 
-        let r_simd = transcript.generate_field_elements::<C::ChallengeField>(
-            <C::SimdCircuitField as SimdField>::PACK_SIZE.trailing_zeros() as usize,
+        let r_simd = transcript.generate_field_elements::<F::ChallengeField>(
+            <F::SimdCircuitField as SimdField>::PACK_SIZE.trailing_zeros() as usize,
         );
 
         let r_mpi = transcript
-            .generate_field_elements::<C::ChallengeField>(world_size.trailing_zeros() as usize);
+            .generate_field_elements::<F::ChallengeField>(world_size.trailing_zeros() as usize);
 
         Self { rz, r_simd, r_mpi }
     }
@@ -118,14 +118,14 @@ impl<F: FieldEngine> ExpanderDualVarChallenge<F> {
         num_circuit_var: usize,
         world_size: usize,
     ) -> Self {
-        let rz_0 = transcript.generate_field_elements::<C::ChallengeField>(num_circuit_var);
+        let rz_0 = transcript.generate_field_elements::<F::ChallengeField>(num_circuit_var);
 
-        let r_simd = transcript.generate_field_elements::<C::ChallengeField>(
-            <C::SimdCircuitField as SimdField>::PACK_SIZE.trailing_zeros() as usize,
+        let r_simd = transcript.generate_field_elements::<F::ChallengeField>(
+            <F::SimdCircuitField as SimdField>::PACK_SIZE.trailing_zeros() as usize,
         );
 
         let r_mpi = transcript
-            .generate_field_elements::<C::ChallengeField>(world_size.trailing_zeros() as usize);
+            .generate_field_elements::<F::ChallengeField>(world_size.trailing_zeros() as usize);
 
         Self {
             rz_0,

@@ -1,6 +1,6 @@
 use arith::{
     random_extension_field_tests, random_fft_field_tests, random_field_tests,
-    random_inversion_tests, random_simd_field_tests,
+    random_inversion_tests, random_simd_field_tests, SimdField,
 };
 use arith::{random_from_limbs_to_limbs_tests, Field};
 use ark_std::test_rng;
