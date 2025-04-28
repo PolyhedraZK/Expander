@@ -76,6 +76,7 @@ impl Field for Fr {
     #[inline(always)]
     // TODO: better implementation
     fn from_uniform_bytes(bytes: &[u8]) -> Self {
+        assert!(bytes.len() >= 32);
         <Fr as FromUniformBytes<64>>::from_uniform_bytes(
             &[&bytes[..32], [0u8; 32].as_slice()]
                 .concat()

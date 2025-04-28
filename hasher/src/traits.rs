@@ -96,5 +96,5 @@ pub trait PoseidonStateTrait:
         *self = Self::from_elems(&elts);
     }
 
-    fn to_u8(&self, output: &mut [u8]);
+    fn to_u8_slices(&self, output: &mut [u8]);
 }

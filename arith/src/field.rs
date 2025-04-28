@@ -6,7 +6,6 @@ use serdes::ExpSerde;
 use std::{
     fmt::Debug,
     hash::Hash,
-    io::Cursor,
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -108,7 +107,7 @@ pub trait Field:
     /// convert from bytes
     #[inline(always)]
     fn set_in_bytes(&mut self, source: &[u8]) {
-        *self = Self::deserialize_from(Cursor::new(source)).unwrap();
+        *self = Self::deserialize_from(source).unwrap();
     }
 
     /// convert to u256

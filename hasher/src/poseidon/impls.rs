@@ -153,13 +153,13 @@ impl<State: PoseidonStateTrait> FiatShamirHasher for PoseidonPermutation<State> 
     fn hash(&self, output: &mut [u8], input: &[u8]) {
         assert!(output.len() == Self::DIGEST_SIZE);
         let res = self.hash_u8_to_state(input);
-        res.to_u8(output);
+        res.to_u8_slices(output);
     }
 
     fn hash_inplace(&self, buffer: &mut [u8]) {
         assert!(buffer.len() == Self::DIGEST_SIZE);
         let res = self.hash_u8_to_state(buffer);
-        res.to_u8(buffer);
+        res.to_u8_slices(buffer);
     }
 }
 

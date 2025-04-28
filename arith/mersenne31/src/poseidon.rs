@@ -26,7 +26,7 @@ impl PoseidonStateTrait for M31x16 {
         *self = self.exp(Self::SBOX_POW as u128);
     }
 
-    fn to_u8(&self, output: &mut [u8]) {
+    fn to_u8_slices(&self, output: &mut [u8]) {
         self.to_bytes(output);
     }
 }

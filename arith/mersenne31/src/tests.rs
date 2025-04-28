@@ -120,7 +120,6 @@ fn test_poseidon_m31_fiat_shamir_hash() {
     let perm = PoseidonFiatShamirHasher::<M31x16>::new();
 
     {
-        // let state_elems: [M31; M31x16::RATE] = [M31::from(114514); M31x16::RATE];
         let state_elems: Vec<u8> = [M31::from(114514); M31x16::RATE]
             .iter()
             .flat_map(|x| {
