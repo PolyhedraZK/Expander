@@ -1,11 +1,22 @@
-use std::ops::{Index, IndexMut, Mul};
+use std::ops::{Add, Index, IndexMut, Mul};
 
 use arith::Field;
 
 use crate::MultiLinearPoly;
 
 pub trait MultilinearExtension<F: Field>: Index<usize, Output = F> {
-    fn evaluate_with_buffer(&self, point: &[F], scratch: &mut [F]) -> F;
+    fn evaluate_with_buffer<ChallengeF, EvalF>(
+        &self,
+        point: &[ChallengeF],
+        scratch: &mut [EvalF],
+    ) -> EvalF
+    where
+        ChallengeF: Field + Mul<F, Output = EvalF>,
+        EvalF: Field
+            + From<F>
+            + Mul<F, Output = EvalF>
+            + Add<F, Output = EvalF>
+            + Mul<ChallengeF, Output = EvalF>;
 
     fn num_vars(&self) -> usize;
 
@@ -59,7 +70,19 @@ impl<'a, F: Field> MultilinearExtension<F> for RefMultiLinearPoly<'a, F> {
     }
 
     #[inline(always)]
-    fn evaluate_with_buffer(&self, point: &[F], scratch: &mut [F]) -> F {
+    fn evaluate_with_buffer<ChallengeF, EvalF>(
+        &self,
+        point: &[ChallengeF],
+        scratch: &mut [EvalF],
+    ) -> EvalF
+    where
+        ChallengeF: Field + Mul<F, Output = EvalF>,
+        EvalF: Field
+            + From<F>
+            + Mul<F, Output = EvalF>
+            + Add<F, Output = EvalF>
+            + Mul<ChallengeF, Output = EvalF>,
+    {
         MultiLinearPoly::evaluate_with_buffer(self.coeffs, point, scratch)
     }
 }
@@ -125,7 +148,19 @@ impl<'a, F: Field> MultilinearExtension<F> for MutRefMultiLinearPoly<'a, F> {
     }
 
     #[inline(always)]
-    fn evaluate_with_buffer(&self, point: &[F], scratch: &mut [F]) -> F {
+    fn evaluate_with_buffer<ChallengeF, EvalF>(
+        &self,
+        point: &[ChallengeF],
+        scratch: &mut [EvalF],
+    ) -> EvalF
+    where
+        ChallengeF: Field + Mul<F, Output = EvalF>,
+        EvalF: Field
+            + From<F>
+            + Mul<F, Output = EvalF>
+            + Add<F, Output = EvalF>
+            + Mul<ChallengeF, Output = EvalF>,
+    {
         MultiLinearPoly::evaluate_with_buffer(self.coeffs, point, scratch)
     }
 }

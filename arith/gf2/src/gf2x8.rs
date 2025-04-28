@@ -322,3 +322,16 @@ impl PartialOrd for GF2x8 {
         unimplemented!("PartialOrd for GF2x8 is not supported")
     }
 }
+
+impl Mul<GF2> for GF2x8 {
+    type Output = GF2x8;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2) -> GF2x8 {
+        if rhs.is_zero() {
+            GF2x8::ZERO
+        } else {
+            self
+        }
+    }
+}
