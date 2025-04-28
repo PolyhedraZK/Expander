@@ -411,3 +411,12 @@ impl PartialOrd for BabyBearExt3x16 {
         unimplemented!("PartialOrd for BabyBearExt3x16 is not supported")
     }
 }
+
+impl Add<BabyBearx16> for BabyBearExt3x16 {
+    type Output = BabyBearExt3x16;
+
+    #[inline(always)]
+    fn add(self, rhs: BabyBearx16) -> Self::Output {
+        self.add_by_base_field(&rhs)
+    }
+}
