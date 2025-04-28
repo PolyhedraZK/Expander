@@ -1,19 +1,40 @@
-use arith::{bit_reverse, Field};
+use arith::{bit_reverse, FFTField};
 use gkr_engine::MPIEngine;
+
+use crate::utils::mpi_matrix_transpose;
 
 #[allow(unused)]
 #[inline(always)]
-pub(crate) fn mpi_reed_solomon_encoding<F: Field>(
+pub(crate) fn mpi_reed_solomon_encoding<F: FFTField>(
     mpi_config: &impl MPIEngine,
-    coeffs: &[F],
+    local_coeffs: &[F],
     code_rate_log2_bits: usize,
 ) {
-    let mut codeword: Vec<F> = coeffs.to_vec();
+    assert!(local_coeffs.len().is_power_of_two());
+
+    let (col_size, two_adic_bits): (usize, usize) = {
+        let hypercube_bits = local_coeffs.len().ilog2() + mpi_config.world_size().ilog2();
+        let codeword_bits = hypercube_bits as usize + code_rate_log2_bits;
+        if codeword_bits <= F::TWO_ADICITY {
+            (1, codeword_bits)
+        } else {
+            (1 << (codeword_bits - F::TWO_ADICITY), F::TWO_ADICITY)
+        }
+    };
+    let generator = F::two_adic_generator(two_adic_bits);
+
+    let mut codeword: Vec<F> = local_coeffs.to_vec();
+
+    mpi_matrix_transpose(mpi_config, &mut codeword, col_size);
+
+    // TODO extend local codewords to sufficient size, run local fft with generator
+
+    // TODO ... local FFT stuffs
 
     // NOTE(HS) bit inverse and FFT for MPI world variables
     {
         let mut root_codeword = {
-            let global_len = coeffs.len() * mpi_config.world_size();
+            let global_len = local_coeffs.len() * mpi_config.world_size();
             vec![F::ZERO; if mpi_config.is_root() { global_len } else { 0 }]
         };
 
@@ -35,7 +56,7 @@ pub(crate) fn mpi_reed_solomon_encoding<F: Field>(
                 }
             });
 
-            let mut chunk = 2 * coeffs.len();
+            let mut chunk = 2 * local_coeffs.len();
             for _ in 0..num_world_bits {
                 // TODO(HS) FFT for MPI world variables
                 root_codeword.chunks_mut(chunk).for_each(|coeffs| {
@@ -51,27 +72,4 @@ pub(crate) fn mpi_reed_solomon_encoding<F: Field>(
     }
 
     todo!()
-}
-
-#[cfg(test)]
-mod fft_test {
-    use arith::{bit_reverse_swap, Fr};
-
-    #[test]
-    fn test_fft_stuff() {
-        let mut coeffs = vec![
-            Fr::from(0u32),
-            Fr::from(1u32),
-            Fr::from(2u32),
-            Fr::from(3u32),
-        ];
-
-        bit_reverse_swap(&mut coeffs);
-        dbg!(&coeffs);
-
-        coeffs.resize(16, Fr::from(0u32));
-
-        bit_reverse_swap(&mut coeffs);
-        dbg!(&coeffs);
-    }
 }
