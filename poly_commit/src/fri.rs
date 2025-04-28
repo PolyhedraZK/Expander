@@ -5,6 +5,8 @@ mod serde;
 
 mod vanilla_sumcheck;
 
+mod mpi_rs_encoding;
+
 mod basefold_impl;
 pub use basefold_impl::{fri_commit, fri_open, fri_verify};
 
