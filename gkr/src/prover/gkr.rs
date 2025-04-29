@@ -2,8 +2,8 @@
 
 use circuit::Circuit;
 use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
-    Transcript,
+    root_println, ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig,
+    MPIEngine, Transcript,
 };
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use utils::timer::Timer;
@@ -24,6 +24,8 @@ pub fn gkr_prove<F: FieldEngine>(
             mpi_config.world_size(),
         )
         .into();
+
+    root_println!(mpi_config, "transcript after challenge: {:?}", transcript);
 
     let mut alpha = None;
 

@@ -199,12 +199,11 @@ impl MPIEngine for MPIConfig {
     #[inline]
     fn root_broadcast_f<F: Field>(&self, f: &mut F) {
         unsafe {
-            if self.world_size == 1 {
-            } else {
+
                 let mut vec_u8 = transmute_elem_to_u8_bytes(f, F::SIZE);
                 self.root_process().broadcast_into(&mut vec_u8);
                 vec_u8.leak();
-            }
+            
         }
     }
 

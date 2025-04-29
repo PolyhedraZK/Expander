@@ -31,6 +31,14 @@ tokio.workspace = true
 warp.workspace = true
 
 [[bin]]
+name = "dev_cuda_mpi_1"
+path = "src/dev_cuda_mpi_1.rs"
+
+[[bin]]
+name = "dev_cuda_mpi_16"
+path = "src/dev_cuda_mpi_16.rs"
+
+[[bin]]
 name = "dev-setup"
 path = "src/dev_setup.rs"
 

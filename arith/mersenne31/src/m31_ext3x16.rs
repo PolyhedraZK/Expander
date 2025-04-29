@@ -22,21 +22,42 @@ impl ExpSerde for M31Ext3x16 {
 
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        self.v[0].serialize_into(&mut writer)?;
-        self.v[1].serialize_into(&mut writer)?;
-        self.v[2].serialize_into(&mut writer)
+        let v0 = self.v[0].unpack();
+        let v1 = self.v[1].unpack();
+        let v2 = self.v[2].unpack();
+
+        v0.iter()
+            .zip(v1.iter())
+            .zip(v2.iter())
+            .for_each(|((v0, v1), v2)| {
+                v0.serialize_into(&mut writer).unwrap();
+                v1.serialize_into(&mut writer).unwrap();
+                v2.serialize_into(&mut writer).unwrap();
+            });
+
+        Ok(())
     }
 
     // FIXME: this deserialization function auto corrects invalid inputs.
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let mut v0 = vec![];
+        let mut v1 = vec![];
+        let mut v2 = vec![];
+
+        for _ in 0..M31x16::PACK_SIZE {
+            let x0 = M31::deserialize_from(&mut reader)?;
+            let x1 = M31::deserialize_from(&mut reader)?;
+            let x2 = M31::deserialize_from(&mut reader)?;
+
+            v0.push(x0);
+            v1.push(x1);
+            v2.push(x2);
+        }
+
         Ok(Self {
-            v: [
-                M31x16::deserialize_from(&mut reader)?,
-                M31x16::deserialize_from(&mut reader)?,
-                M31x16::deserialize_from(&mut reader)?,
-            ],
+            v: [M31x16::pack(&v0), M31x16::pack(&v1), M31x16::pack(&v2)],
         })
     }
 }

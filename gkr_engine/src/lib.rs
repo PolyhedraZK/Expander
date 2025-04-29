@@ -61,6 +61,10 @@ pub use transcript::*;
 /// }
 /// ```
 pub trait GKREngine: Send + Sync {
+    /// Configuration flag for CUDA development
+    /// if CUDA_DEV is true, the proof generation will not write the PCS to the transcript
+    const CUDA_DEV: bool = false;
+
     /// Configuration for field arithmetic operations
     type FieldConfig: FieldEngine;
 
