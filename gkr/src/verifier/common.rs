@@ -2,7 +2,7 @@ use std::{io::Read, vec};
 
 use arith::Field;
 use circuit::CircuitLayer;
-use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, GKREngine, GKRScheme, Transcript};
+use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, GKRScheme, Transcript};
 use serdes::ExpSerde;
 use sumcheck::{
     GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DEGREE,
@@ -49,7 +49,7 @@ pub fn verify_sumcheck_step<F: FieldEngine>(
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
 pub fn sumcheck_verify_gkr_layer<F: FieldEngine>(
-    gkr_scheme: GKRScheme,
+    _gkr_scheme: GKRScheme,
     proving_time_mpi_size: usize,
     layer: &CircuitLayer<F>,
     public_input: &[F::SimdCircuitField],
@@ -60,19 +60,12 @@ pub fn sumcheck_verify_gkr_layer<F: FieldEngine>(
     mut proof_reader: impl Read,
     transcript: &mut impl Transcript<F::ChallengeField>,
     sp: &mut VerifierScratchPad<F>,
-    is_output_layer: bool,
+    _is_output_layer: bool,
 ) -> bool {
     assert_eq!(challenge.rz_1.is_none(), claimed_v1.is_none());
     assert_eq!(challenge.rz_1.is_none(), alpha.is_none());
 
-    match gkr_scheme {
-        GKRScheme::GKRParVerifier => {
-            GKRVerifierHelper::prepare_layer_non_sequential(layer, &alpha, challenge, sp);
-        }
-        _ => {
-            GKRVerifierHelper::prepare_layer(layer, &alpha, challenge, sp, is_output_layer);
-        }
-    }
+    GKRVerifierHelper::prepare_layer_non_sequential(layer, &alpha, challenge, sp);
 
     let var_num = layer.input_var_num;
     let simd_var_num = F::get_field_pack_size().trailing_zeros() as usize;

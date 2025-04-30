@@ -1,16 +1,10 @@
-use core::random;
 use std::io::{Cursor, Read};
 
-use arith::{ExtensionField, Field, SimdField};
+use arith::{ExtensionField, SimdField};
 use circuit::Circuit;
-use gkr_engine::{ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine, Transcript};
-use serdes::ExpSerde;
+use gkr_engine::{ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, Transcript};
 use sumcheck::SUMCHECK_GKR_SIMD_MPI_DEGREE;
 use transcript::RandomTape;
-
-type Commitment<Cfg: GKREngine> = <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment; 
-type Opening<Cfg: GKREngine> = <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Opening;
-
 
 // ================ Structured Claims ================
 #[derive(Clone, Debug, Default)]
@@ -29,7 +23,9 @@ pub struct SumcheckVerificationUnit<F: FieldEngine> {
     pub proof: Vec<u8>,
 }
 
-
+/// Read a challenge field from the proof reader and
+///   1. Append the bytes to the proof_bytes vector.
+///   2. Append the field element to the transcript.
 #[inline(always)]
 pub fn parse_challenge_field<ChallengeF: ExtensionField>(
     mut proof_reader: impl Read,
@@ -49,9 +45,11 @@ pub fn parse_sumcheck_rounds<F: FieldEngine>(
     n_rounds: usize,
     degree: usize,
     transcript: &mut impl Transcript<F::ChallengeField>,
+    challenge_vec: &mut Vec<F::ChallengeField>,
     proof_bytes: &mut Vec<u8>,
     random_tape: &mut RandomTape<F::ChallengeField>,
 ) {
+    challenge_vec.clear();
     (0..n_rounds).for_each(|_| {
         (0..degree+1).for_each(|_| {
             parse_challenge_field::<F::ChallengeField>(
@@ -61,10 +59,12 @@ pub fn parse_sumcheck_rounds<F: FieldEngine>(
             );
         });
 
-        random_tape.tape.push(transcript.generate_challenge_field_element());
+        challenge_vec.push(transcript.generate_challenge_field_element());
     });
+    random_tape.tape.extend_from_slice(challenge_vec);
 }
 
+/// Parse the proof into a vector of verification units.
 pub fn parse_proof<F: FieldEngine>(
     mut proof_reader: impl Read,
     circuit: &Circuit<F>,
@@ -72,7 +72,7 @@ pub fn parse_proof<F: FieldEngine>(
     xy_var_degree: usize,
     claimed_v: F::ChallengeField,
     transcript: &mut impl Transcript<F::ChallengeField>,
-) -> Vec<SumcheckVerificationUnit<F>> {
+) -> (Vec<SumcheckVerificationUnit<F>>, ExpanderDualVarChallenge<F>, F::ChallengeField, Option<F::ChallengeField>) {
     let mut verification_units = vec![SumcheckVerificationUnit::<F>::default(); circuit.layers.len()];
     let n_output_vars = circuit.layers.last().unwrap().output_var_num;
     let n_simd_vars = <F::SimdCircuitField as SimdField>::PACK_SIZE.trailing_zeros() as usize;
@@ -83,16 +83,19 @@ pub fn parse_proof<F: FieldEngine>(
         n_output_vars,
         proving_time_mpi_size,
     ).into();
-    let mut claimed_x = claimed_v;
-    let alpha = None;
-    let mut claimed_y = None;
+    let mut claim_x = claimed_v;
+    let mut alpha = None;
+    let mut claim_y = None;
 
     for i in (0..circuit.layers.len()).rev() {
         let verification_unit = &mut verification_units[circuit.layers.len() - 1 - i];
-        verification_unit.claim.challenge = challenge.clone();
-        verification_unit.claim.claim_x = claimed_x;
-        verification_unit.claim.alpha = alpha;
-        verification_unit.claim.claim_y = claimed_y;
+        verification_unit.claim = SumcheckClaim {
+            challenge: challenge.clone(),
+            claim_x: claim_x.clone(),
+            alpha,
+            claim_y: claim_y.clone(),
+        };
+        challenge = ExpanderDualVarChallenge::default(); // reset challenge for next layer
 
         let layer = &circuit.layers[i];
         let sumcheck_proof = &mut verification_unit.proof;
@@ -104,6 +107,7 @@ pub fn parse_proof<F: FieldEngine>(
             n_vars,
             xy_var_degree,
             transcript,
+            &mut challenge.rz_0,
             sumcheck_proof,
             random_tape,
         );
@@ -113,6 +117,7 @@ pub fn parse_proof<F: FieldEngine>(
             n_simd_vars,
             SUMCHECK_GKR_SIMD_MPI_DEGREE,
             transcript,
+            &mut challenge.r_simd,
             sumcheck_proof,
             random_tape,
         );
@@ -122,29 +127,43 @@ pub fn parse_proof<F: FieldEngine>(
             n_mpi_vars,
             SUMCHECK_GKR_SIMD_MPI_DEGREE,
             transcript,
+            &mut challenge.r_mpi,
             sumcheck_proof,
             random_tape,
         );
 
-        challenge.rz_0 = parse_challenge_field::<F::ChallengeField>(
+        claim_x = parse_challenge_field::<F::ChallengeField>(
             &mut proof_reader,
             transcript,
             sumcheck_proof,
         );
 
         if !layer.structure_info.skip_sumcheck_phase_two {
+            challenge.rz_1 = Some(vec![]);
             parse_sumcheck_rounds::<F>(
                 &mut proof_reader,
                 n_vars,
                 xy_var_degree,
                 transcript,
+                challenge.rz_1.as_mut().unwrap(),
                 sumcheck_proof,
                 random_tape,
             );
+            claim_y = Some(parse_challenge_field::<F::ChallengeField>(
+                &mut proof_reader,
+                transcript,
+                sumcheck_proof,
+            ));
         }
         
+        alpha = if challenge.rz_1.is_some() {
+            let alpha = transcript.generate_challenge_field_element();
+            random_tape.tape.push(alpha);
+            Some(alpha)
+        } else {
+            None
+        };
     }
 
-
-    unimplemented!()
+    (verification_units, challenge, claim_x, claim_y)
 }
