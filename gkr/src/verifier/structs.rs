@@ -2,7 +2,9 @@ use std::io::{Cursor, Read};
 
 use arith::{ExtensionField, SimdField};
 use circuit::Circuit;
-use gkr_engine::{ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, Transcript};
+use gkr_engine::{
+    ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, Transcript,
+};
 use sumcheck::SUMCHECK_GKR_SIMD_MPI_DEGREE;
 use transcript::RandomTape;
 
@@ -51,12 +53,8 @@ pub fn parse_sumcheck_rounds<F: FieldEngine>(
 ) {
     challenge_vec.clear();
     (0..n_rounds).for_each(|_| {
-        (0..degree+1).for_each(|_| {
-            parse_challenge_field::<F::ChallengeField>(
-                &mut proof_reader,
-                transcript,
-                proof_bytes,
-            );
+        (0..degree + 1).for_each(|_| {
+            parse_challenge_field::<F::ChallengeField>(&mut proof_reader, transcript, proof_bytes);
         });
 
         challenge_vec.push(transcript.generate_challenge_field_element());
@@ -72,17 +70,25 @@ pub fn parse_proof<F: FieldEngine>(
     xy_var_degree: usize,
     claimed_v: F::ChallengeField,
     transcript: &mut impl Transcript<F::ChallengeField>,
-) -> (Vec<SumcheckVerificationUnit<F>>, ExpanderDualVarChallenge<F>, F::ChallengeField, Option<F::ChallengeField>) {
-    let mut verification_units = vec![SumcheckVerificationUnit::<F>::default(); circuit.layers.len()];
+) -> (
+    Vec<SumcheckVerificationUnit<F>>,
+    ExpanderDualVarChallenge<F>,
+    F::ChallengeField,
+    Option<F::ChallengeField>,
+) {
+    let mut verification_units =
+        vec![SumcheckVerificationUnit::<F>::default(); circuit.layers.len()];
     let n_output_vars = circuit.layers.last().unwrap().output_var_num;
     let n_simd_vars = <F::SimdCircuitField as SimdField>::PACK_SIZE.trailing_zeros() as usize;
     let n_mpi_vars = proving_time_mpi_size.trailing_zeros() as usize;
 
-    let mut challenge: ExpanderDualVarChallenge<F> = ExpanderSingleVarChallenge::sample_from_transcript(
-        transcript,
-        n_output_vars,
-        proving_time_mpi_size,
-    ).into();
+    let mut challenge: ExpanderDualVarChallenge<F> =
+        ExpanderSingleVarChallenge::sample_from_transcript(
+            transcript,
+            n_output_vars,
+            proving_time_mpi_size,
+        )
+        .into();
     let mut claim_x = claimed_v;
     let mut alpha = None;
     let mut claim_y = None;
@@ -101,7 +107,7 @@ pub fn parse_proof<F: FieldEngine>(
         let sumcheck_proof = &mut verification_unit.proof;
         let random_tape = &mut verification_unit.random_tape;
         let n_vars = layer.input_var_num;
-        
+
         parse_sumcheck_rounds::<F>(
             &mut proof_reader,
             n_vars,
@@ -121,7 +127,7 @@ pub fn parse_proof<F: FieldEngine>(
             sumcheck_proof,
             random_tape,
         );
-        
+
         parse_sumcheck_rounds::<F>(
             &mut proof_reader,
             n_mpi_vars,
@@ -155,7 +161,7 @@ pub fn parse_proof<F: FieldEngine>(
                 sumcheck_proof,
             ));
         }
-        
+
         alpha = if challenge.rz_1.is_some() {
             let alpha = transcript.generate_challenge_field_element();
             random_tape.tape.push(alpha);

@@ -11,7 +11,9 @@ use gkr_engine::{
     MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
 };
 use gkr_square::sumcheck_verify_gkr_square_layer;
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+};
 use serdes::ExpSerde;
 use sumcheck::{VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SQUARE_DEGREE};
 use transcript::transcript_verifier_sync;
@@ -31,7 +33,6 @@ pub use gkr_vanilla::gkr_verify;
 
 mod gkr_square;
 pub use gkr_square::gkr_square_verify;
-
 
 #[derive(Default)]
 pub struct Verifier<Cfg: GKREngine> {
@@ -190,10 +191,10 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
 
         circuit.fill_rnd_coefs(&mut transcript);
         transcript_verifier_sync(&mut transcript, proving_time_mpi_size);
-        
+
         let (mut verified, mut challenge_x, challenge_y, claim_x, claim_y) = match Cfg::SCHEME {
             GKRScheme::Vanilla => {
-                let (mut verification_units, challenge,claim_x, claim_y) = parse_proof(
+                let (mut verification_units, challenge, claim_x, claim_y) = parse_proof(
                     &mut cursor,
                     circuit,
                     proving_time_mpi_size,
@@ -201,37 +202,35 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                     *claimed_v,
                     &mut transcript,
                 );
-                let sp = VerifierScratchPad::<Cfg::FieldConfig>::new(
-                    circuit,
-                    proving_time_mpi_size,
-                );
+                let sp =
+                    VerifierScratchPad::<Cfg::FieldConfig>::new(circuit, proving_time_mpi_size);
 
                 let gkr_verified = verification_units
                     .par_iter_mut()
                     .zip(circuit.layers.par_iter())
                     .map(|(verification_unit, layer)| {
-                    let mut claim_x = verification_unit.claim.claim_x;
-                    let mut challenge = verification_unit.claim.challenge.clone();
-                    let alpha = verification_unit.claim.alpha;
-                    let mut claim_y = verification_unit.claim.claim_y;
+                        let mut claim_x = verification_unit.claim.claim_x;
+                        let mut challenge = verification_unit.claim.challenge.clone();
+                        let alpha = verification_unit.claim.alpha;
+                        let mut claim_y = verification_unit.claim.claim_y;
 
-                    let mut sp = sp.clone();
-                    sumcheck_verify_gkr_layer(
-                        gkr_engine::GKRScheme::Vanilla,
-                        proving_time_mpi_size,
-                        layer,
-                        public_input,
-                        &mut challenge,
-                        &mut claim_x,
-                        &mut claim_y,
-                        alpha,
-                        &mut Cursor::new(verification_unit.proof.clone()),
-                        &mut verification_unit.random_tape,
-                        &mut sp,
-                        false,
-                    )
-                })
-                .all(|verified| verified);
+                        let mut sp = sp.clone();
+                        sumcheck_verify_gkr_layer(
+                            gkr_engine::GKRScheme::Vanilla,
+                            proving_time_mpi_size,
+                            layer,
+                            public_input,
+                            &mut challenge,
+                            &mut claim_x,
+                            &mut claim_y,
+                            alpha,
+                            &mut Cursor::new(verification_unit.proof.clone()),
+                            &mut verification_unit.random_tape,
+                            &mut sp,
+                            false,
+                        )
+                    })
+                    .all(|verified| verified);
 
                 (
                     gkr_verified,
@@ -253,10 +252,8 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                 assert!(challenge.challenge_y().is_none());
                 assert!(claim_y.is_none());
 
-                let sp = VerifierScratchPad::<Cfg::FieldConfig>::new(
-                    circuit,
-                    proving_time_mpi_size,
-                );
+                let sp =
+                    VerifierScratchPad::<Cfg::FieldConfig>::new(circuit, proving_time_mpi_size);
 
                 let gkr_verified = verification_units
                     .par_iter_mut()
@@ -264,7 +261,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                     .map(|(verification_unit, layer)| {
                         let mut claim_x = verification_unit.claim.claim_x;
                         let mut challenge_x = verification_unit.claim.challenge.challenge_x();
-                        
+
                         let mut sp = sp.clone();
                         sumcheck_verify_gkr_square_layer(
                             proving_time_mpi_size,
@@ -283,7 +280,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                 (gkr_verified, challenge.challenge_x(), None, claim_x, None)
             }
         };
-        
+
         log::info!("GKR verification: {}", verified);
 
         transcript_verifier_sync(&mut transcript, proving_time_mpi_size);
