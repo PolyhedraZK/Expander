@@ -28,11 +28,12 @@ pub fn bench_halo2_serial_fft<F: Field + FFTField>(c: &mut Criterion) {
                     b.iter(|| {
                         let group_size = 1 << group_size_bits;
                         let omega = F::two_adic_generator(*group_size_bits as usize);
-                        black_box(halo2_serial_fft(
+                        halo2_serial_fft(
                             &mut buf[..group_size],
                             omega,
                             *group_size_bits,
-                        ));
+                        );
+                        black_box(());
                     })
                 },
             )

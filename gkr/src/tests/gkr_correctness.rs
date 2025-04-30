@@ -6,7 +6,6 @@ use std::{fs, panic};
 use arith::Field;
 use circuit::Circuit;
 use config_macros::declare_gkr_config;
-use env_logger;
 use gf2::GF2x128;
 use gkr_engine::{
     root_println, BN254Config, BabyBearExtConfig, FieldEngine, FieldType, GF2ExtConfig, GKREngine,
