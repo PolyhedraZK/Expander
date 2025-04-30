@@ -2,9 +2,7 @@ use std::io::{Cursor, Read};
 
 use arith::{ExtensionField, SimdField};
 use circuit::Circuit;
-use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, Transcript,
-};
+use gkr_engine::{ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, Transcript};
 use sumcheck::SUMCHECK_GKR_SIMD_MPI_DEGREE;
 use transcript::RandomTape;
 
@@ -95,7 +93,7 @@ pub fn parse_proof<F: FieldEngine>(
     let mut claim_y = None;
 
     for i in (0..circuit.layers.len()).rev() {
-        let verification_unit = &mut verification_units[circuit.layers.len() - 1 - i];
+        let verification_unit = &mut verification_units[i];
         verification_unit.claim = SumcheckClaim {
             challenge: challenge.clone(),
             claim_x,
@@ -161,6 +159,8 @@ pub fn parse_proof<F: FieldEngine>(
                 transcript,
                 sumcheck_proof,
             ));
+        } else {
+            claim_y = None;
         }
 
         alpha = if challenge.rz_1.is_some() {

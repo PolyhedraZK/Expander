@@ -129,19 +129,19 @@ fn test_gkr_correctness() {
     );
 
     test_gkr_correctness_helper::<C0>(None);
-    // test_gkr_correctness_helper::<C1>(None);
-    // test_gkr_correctness_helper::<C2>(None);
-    // test_gkr_correctness_helper::<C3>(None);
-    // test_gkr_correctness_helper::<C4>(None);
-    // test_gkr_correctness_helper::<C5>(None);
-    // test_gkr_correctness_helper::<C6>(None);
-    // test_gkr_correctness_helper::<C7>(None);
-    // test_gkr_correctness_helper::<C8>(None);
-    // test_gkr_correctness_helper::<C9>(None);
-    // test_gkr_correctness_helper::<C10>(None);
-    // test_gkr_correctness_helper::<C11>(None);
-    // test_gkr_correctness_helper::<C12>(None);
-    // test_gkr_correctness_helper::<C13>(None);
+    test_gkr_correctness_helper::<C1>(None);
+    test_gkr_correctness_helper::<C2>(None);
+    test_gkr_correctness_helper::<C3>(None);
+    test_gkr_correctness_helper::<C4>(None);
+    test_gkr_correctness_helper::<C5>(None);
+    test_gkr_correctness_helper::<C6>(None);
+    test_gkr_correctness_helper::<C7>(None);
+    test_gkr_correctness_helper::<C8>(None);
+    test_gkr_correctness_helper::<C9>(None);
+    test_gkr_correctness_helper::<C10>(None);
+    test_gkr_correctness_helper::<C11>(None);
+    test_gkr_correctness_helper::<C12>(None);
+    test_gkr_correctness_helper::<C13>(None);
 
     MPIConfig::finalize();
 }
@@ -276,19 +276,19 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
             verification_start.elapsed().as_micros()
         );
 
-        // let par_verification_start = Instant::now();
-        // assert!(verifier.par_verify(
-        //     &mut circuit,
-        //     &public_input_gathered,
-        //     &claimed_v,
-        //     &pcs_params,
-        //     &pcs_verification_key,
-        //     &proof
-        // ));
-        // println!(
-        //     "Verification time: {} μs",
-        //     par_verification_start.elapsed().as_micros()
-        // );
+        let par_verification_start = Instant::now();
+        assert!(verifier.par_verify(
+            &mut circuit,
+            &public_input_gathered,
+            &claimed_v,
+            &pcs_params,
+            &pcs_verification_key,
+            &proof
+        ));
+        println!(
+            "Multi-core Verification time: {} μs",
+            par_verification_start.elapsed().as_micros()
+        );
 
         println!("Correct proof verified.");
         let mut bad_proof = proof.clone();

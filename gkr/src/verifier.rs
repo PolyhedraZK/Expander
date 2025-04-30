@@ -120,6 +120,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                 (gkr_verified, challenge_x, None, claim_x, None)
             }
         };
+
         log::info!("GKR verification: {}", verified);
 
         transcript_verifier_sync(&mut transcript, proving_time_mpi_size);
@@ -202,6 +203,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                     *claimed_v,
                     &mut transcript,
                 );
+
                 let sp =
                     VerifierScratchPad::<Cfg::FieldConfig>::new(circuit, proving_time_mpi_size);
 
@@ -209,9 +211,9 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                     .par_iter_mut()
                     .zip(circuit.layers.par_iter())
                     .map(|(verification_unit, layer)| {
-                        let mut claim_x = verification_unit.claim.claim_x;
                         let mut challenge = verification_unit.claim.challenge.clone();
                         let alpha = verification_unit.claim.alpha;
+                        let mut claim_x = verification_unit.claim.claim_x;
                         let mut claim_y = verification_unit.claim.claim_y;
 
                         let mut sp = sp.clone();

@@ -43,7 +43,6 @@ pub fn gkr_square_verify<C: FieldEngine>(
     let mut current_claim = *claimed_v;
     log::trace!("Starting claim: {:?}", current_claim);
     for i in (0..layer_num).rev() {
-        
         let cur_verified = sumcheck_verify_gkr_square_layer(
             proving_time_mpi_size,
             &circuit.layers[i],
