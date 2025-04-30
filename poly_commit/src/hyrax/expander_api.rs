@@ -44,10 +44,12 @@ where
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        _mpi_engine: &impl MPIEngine,
+        mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
     ) -> (Self::SRS, usize) {
-        (hyrax_setup(*params, rng), *params)
+        let mpi_vars = mpi_engine.world_size().ilog2() as usize;
+
+        (hyrax_setup(*params, mpi_vars, rng), *params)
     }
 
     fn commit(
@@ -91,10 +93,8 @@ where
             return open.into();
         }
 
-        let local_num_vars = poly.num_vars();
-        let pedersen_vars = (local_num_vars + 1) / 2;
-        let pedersen_len = 1usize << pedersen_vars;
-        assert_eq!(pedersen_len, proving_key.bases.len());
+        let pedersen_len = proving_key.msm_len();
+        let pedersen_vars = pedersen_len.ilog2() as usize;
 
         let local_vars = x.local_xs();
         let mut local_basis = poly.hypercube_basis();
@@ -124,10 +124,8 @@ where
             return hyrax_verify(verifying_key, commitment, &x.local_xs(), v, opening);
         }
 
-        let local_num_vars = x.local_xs().len();
-        let pedersen_vars = (local_num_vars + 1) / 2;
-        let pedersen_len = 1usize << pedersen_vars;
-        assert_eq!(pedersen_len, verifying_key.bases.len());
+        let pedersen_len = verifying_key.msm_len();
+        let pedersen_vars = pedersen_len.ilog2() as usize;
 
         let local_vars = x.local_xs();
         let mut non_row_vars = local_vars[pedersen_vars..].to_vec();
