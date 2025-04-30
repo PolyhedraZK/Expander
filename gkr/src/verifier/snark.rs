@@ -161,6 +161,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         <Cfg::FieldConfig as FieldEngine>::ChallengeField,
         Option<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
     ) {
+        let parse_proof_timer = Timer::new("parse_proof", true);
         let xy_var_degree = match Cfg::SCHEME {
             GKRScheme::Vanilla => SUMCHECK_GKR_DEGREE,
             GKRScheme::GkrSquare => SUMCHECK_GKR_SQUARE_DEGREE,
@@ -174,9 +175,10 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
             *claimed_v,
             transcript,
         );
+        parse_proof_timer.stop();
 
+        let gkr_parallel_timer = Timer::new("gkr_parallel", true);
         let sp = VerifierScratchPad::<Cfg::FieldConfig>::new(circuit, proving_time_mpi_size);
-
         let (verified, challenge_x, challenge_y, claim_x, claim_y) = match Cfg::SCHEME {
             GKRScheme::Vanilla => {
                 let gkr_verified = verification_units
@@ -244,7 +246,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                 (gkr_verified, challenge.challenge_x(), None, claim_x, None)
             }
         };
-
+        gkr_parallel_timer.stop();
         transcript_verifier_sync(transcript, proving_time_mpi_size);
 
         (verified, challenge_x, challenge_y, claim_x, claim_y)
