@@ -53,6 +53,7 @@ pub fn gkr_square_verify<C: FieldEngine>(
             transcript,
             &mut sp,
             i == layer_num - 1,
+            false,
         );
         log::trace!("Layer {} verified? {}", i, cur_verified);
         verified &= cur_verified;
@@ -73,14 +74,19 @@ pub fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
     mut proof_reader: impl Read,
     transcript: &mut impl Transcript<C::ChallengeField>,
     sp: &mut VerifierScratchPad<C>,
-    _is_output_layer: bool,
+    is_output_layer: bool,
+    parallel_verify: bool,
 ) -> bool {
     // GKR2 with Power5 gate has degree 6 polynomial
     let degree = SUMCHECK_GKR_SQUARE_DEGREE;
 
     let dual_challenge = ExpanderDualVarChallenge::from(challenge.clone());
 
-    GKRVerifierHelper::prepare_layer_non_sequential(layer, &None, &dual_challenge, sp);
+    if parallel_verify {
+        GKRVerifierHelper::prepare_layer_non_sequential(layer, &None, &dual_challenge, sp);
+    } else {
+        GKRVerifierHelper::prepare_layer(layer, &None, &dual_challenge, sp, is_output_layer);
+    }
 
     let var_num = layer.input_var_num;
     let mut sum = *current_claim;

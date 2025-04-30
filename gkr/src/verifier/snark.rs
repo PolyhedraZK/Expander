@@ -190,7 +190,6 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
 
                         let mut sp = sp.clone();
                         sumcheck_verify_gkr_layer(
-                            gkr_engine::GKRScheme::Vanilla,
                             proving_time_mpi_size,
                             layer,
                             public_input,
@@ -202,6 +201,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                             &mut verification_unit.random_tape,
                             &mut sp,
                             false,
+                            true,
                         )
                     })
                     .all(|verified| verified);
@@ -236,6 +236,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                             &mut verification_unit.random_tape,
                             &mut sp,
                             false,
+                            true,
                         )
                     })
                     .all(|verified| verified);
