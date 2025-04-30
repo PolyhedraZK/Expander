@@ -69,7 +69,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         // ZZ: shall we use probabilistic grinding so the verifier can avoid this cost?
         // (and also be recursion friendly)
         #[cfg(feature = "grinding")]
-        grind::<Cfg>(&mut transcript, &self.mpi_config);
+        grind::<Cfg>(transcript, &self.mpi_config);
 
         circuit.fill_rnd_coefs(transcript);
         transcript_verifier_sync(transcript, proving_time_mpi_size);
