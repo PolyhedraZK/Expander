@@ -1,6 +1,6 @@
 use arith::{Field, SimdField};
 use circuit::CircuitLayer;
-use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIEngine};
+use gkr_engine::{root_println, ExpanderDualVarChallenge, FieldEngine, MPIEngine};
 use polynomials::EqPolynomial;
 
 use crate::{unpack_and_combine, ProverScratchPad};
@@ -96,11 +96,19 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
             &self.sp.gate_exists_5,
         );
 
+        root_println!(mpi_config, "gate exists {:?}", self.sp.gate_exists_5);       
+        // root_println!(mpi_config, "eq_evals_at_r_simd0 {:?}", self.sp.eq_evals_at_r_simd0);
+
         // SIMD
         let local_vals = local_vals_simd
             .iter()
             .map(|p| unpack_and_combine(p, &self.sp.eq_evals_at_r_simd0))
             .collect::<Vec<F::ChallengeField>>();
+
+        root_println!(mpi_config, "local_vals {:?}", local_vals);
+        // root_println!(mpi_config, "eq_evals_at_r_simd0 {:?}", self.sp.eq_evals_at_r_simd0);
+        // root_println!(mpi_config, "eq_evals_at_r_mpi0 {:?}", self.sp.eq_evals_at_r_mpi0);
+        
 
         // MPI
         mpi_config

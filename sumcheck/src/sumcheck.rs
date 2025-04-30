@@ -1,7 +1,7 @@
 use circuit::CircuitLayer;
 use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
-    Transcript,
+    root_println, ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig,
+    MPIEngine, Transcript,
 };
 
 use crate::{
@@ -44,6 +44,7 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript>(
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_rx(i_var, SUMCHECK_GKR_DEGREE, mpi_config);
         let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
+        root_println!(mpi_config, "\n i_var {} evals: {:?} r {:?}", i_var, evals, r);
         helper.receive_rx(i_var, r);
     }
 

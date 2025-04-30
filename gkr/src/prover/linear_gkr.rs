@@ -140,17 +140,14 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         self.mpi_config.barrier();
         c.evaluate();
 
-        root_println!(self.mpi_config, "transcript {:?}", transcript);
+        root_println!(self.mpi_config, "transcript {}", transcript);
 
         let gkr_prove_timer = Timer::new("gkr prove", self.mpi_config.is_root());
 
         transcript_root_broadcast(&mut transcript, &self.mpi_config);
 
-        root_println!(
-            self.mpi_config,
-            "transcript after broadcast {:?}",
-            transcript
-        );
+        root_println!(self.mpi_config, "transcript after broadcast {}", transcript);
+        // matches this far
 
         let (claimed_v, challenge) = match Cfg::SCHEME {
             GKRScheme::Vanilla => gkr_prove(c, &mut self.sp, &mut transcript, &self.mpi_config),
@@ -165,17 +162,13 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         };
         gkr_prove_timer.stop();
 
-        root_println!(
-            self.mpi_config,
-            "transcript after gkr_prove {:?}",
-            transcript
-        );
+        root_println!(self.mpi_config, "transcript after gkr_prove {}", transcript);
 
         transcript_root_broadcast(&mut transcript, &self.mpi_config);
 
         root_println!(
             self.mpi_config,
-            "transcript before challenge_x {:?}",
+            "transcript before challenge_x {}",
             transcript
         );
         let pcs_open_timer = Timer::new("pcs open", self.mpi_config.is_root());
@@ -194,14 +187,13 @@ impl<Cfg: GKREngine> Prover<Cfg> {
 
         root_println!(
             self.mpi_config,
-            "transcript before challenge_y {:?}",
+            "transcript before challenge_y {}",
             transcript
         );
 
         if let Some(mut challenge_y) = challenge.challenge_y() {
-            if !Cfg::CUDA_DEV {
-                transcript_root_broadcast(&mut transcript, &self.mpi_config);
-            }
+            transcript_root_broadcast(&mut transcript, &self.mpi_config);
+
             self.prove_input_layer_claim(
                 &mut mle_ref,
                 &mut challenge_y,

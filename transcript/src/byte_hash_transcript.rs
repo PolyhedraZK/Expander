@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use gkr_engine::{Proof, Transcript};
 use gkr_hashers::FiatShamirHasher;
 
@@ -23,6 +25,12 @@ pub struct BytesHashTranscript<H: FiatShamirHasher> {
     /// locking point
     proof_locked: bool,
     proof_locked_at: usize,
+}
+
+impl<H: FiatShamirHasher> Display for BytesHashTranscript<H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BytesHashTranscript {{ digest: {:?} }}", self.digest)
+    }
 }
 
 impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {

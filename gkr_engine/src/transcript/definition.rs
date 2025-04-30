@@ -1,4 +1,7 @@
-use std::{fmt::Debug, str::FromStr};
+use std::{
+    fmt::{Debug, Display},
+    str::FromStr,
+};
 
 use arith::Field;
 
@@ -9,7 +12,7 @@ use super::Proof;
 /// A trait for transcript generation over the challenge field
 /// The associated field is the challenge field, i.e., M31Ext3
 /// The challenge field is not SIMD enabled
-pub trait Transcript: Clone + Debug {
+pub trait Transcript: Clone + Debug + Display {
     /// Create a new transcript.
     fn new() -> Self;
 

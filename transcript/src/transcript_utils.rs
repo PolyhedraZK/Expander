@@ -16,8 +16,8 @@ pub fn transcript_verifier_sync<T>(transcript: &mut T, mpi_world_size: usize)
 where
     T: Transcript,
 {
-    if mpi_world_size > 1 {
-        let state = transcript.hash_and_return_state(); // Sync up the Fiat-Shamir randomness
-        transcript.set_state(&state);
-    }
+    // if mpi_world_size > 1 {
+    let state = transcript.hash_and_return_state(); // Sync up the Fiat-Shamir randomness
+    transcript.set_state(&state);
+    // }
 }

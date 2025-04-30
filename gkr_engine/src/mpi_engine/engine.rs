@@ -199,11 +199,9 @@ impl MPIEngine for MPIConfig {
     #[inline]
     fn root_broadcast_f<F: Field>(&self, f: &mut F) {
         unsafe {
-
-                let mut vec_u8 = transmute_elem_to_u8_bytes(f, F::SIZE);
-                self.root_process().broadcast_into(&mut vec_u8);
-                vec_u8.leak();
-            
+            let mut vec_u8 = transmute_elem_to_u8_bytes(f, F::SIZE);
+            self.root_process().broadcast_into(&mut vec_u8);
+            vec_u8.leak();
         }
     }
 
@@ -236,6 +234,9 @@ impl MPIEngine for MPIConfig {
     /// coef has a length of mpi_world_size
     #[inline]
     fn coef_combine_vec<F: Field>(&self, local_vec: &[F], coef: &[F]) -> Vec<F> {
+        root_println!(self, "local_vec: {:?}", local_vec);
+        root_println!(self, "coef: {:?}", coef);
+
         if self.world_size == 1 {
             // Warning: literally, it should be coef[0] * local_vec
             // but coef[0] is always one in our use case of self.world_size = 1
