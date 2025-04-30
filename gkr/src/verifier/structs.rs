@@ -62,6 +62,7 @@ pub fn parse_sumcheck_rounds<F: FieldEngine>(
     random_tape.tape.extend_from_slice(challenge_vec);
 }
 
+#[allow(clippy::type_complexity)]
 /// Parse the proof into a vector of verification units.
 pub fn parse_proof<F: FieldEngine>(
     mut proof_reader: impl Read,
