@@ -13,7 +13,7 @@ pub fn gkr_verify<F: FieldEngine>(
     circuit: &Circuit<F>,
     public_input: &[F::SimdCircuitField],
     claimed_v: &F::ChallengeField,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
     mut proof_reader: impl Read,
 ) -> (
     bool,
@@ -56,7 +56,7 @@ pub fn gkr_verify<F: FieldEngine>(
 
         verified &= cur_verified;
         alpha = if challenge.rz_1.is_some() {
-            Some(transcript.generate_challenge_field_element())
+            Some(transcript.generate_field_element::<F::ChallengeField>())
         } else {
             None
         };

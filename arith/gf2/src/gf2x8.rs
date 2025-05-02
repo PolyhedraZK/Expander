@@ -94,7 +94,7 @@ impl Field for GF2x8 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         GF2x8 { v: bytes[0] }
     }
 

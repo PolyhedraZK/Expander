@@ -7,8 +7,8 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
-use arith::ExtensionField;
 use arith::{field_common, Field};
+use arith::{ExtensionField, SimdField};
 use serdes::{ExpSerde, SerdeResult};
 
 use crate::{
@@ -126,7 +126,8 @@ impl Field for M31Ext3 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
+        assert!(bytes.len() >= 12);
         let v1 = mod_reduce_u32_safe(u32::from_be_bytes(bytes[0..4].try_into().unwrap()));
         let v2 = mod_reduce_u32_safe(u32::from_be_bytes(bytes[4..8].try_into().unwrap()));
         let v3 = mod_reduce_u32_safe(u32::from_be_bytes(bytes[8..12].try_into().unwrap()));
@@ -345,6 +346,33 @@ impl PartialOrd for M31Ext3 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for M31Ext3 is not supported")
+    }
+}
+
+impl SimdField for M31Ext3 {
+    type Scalar = Self;
+
+    const PACK_SIZE: usize = 1;
+
+    #[inline(always)]
+    fn scale(&self, challenge: &Self::Scalar) -> Self {
+        *self * challenge
+    }
+
+    #[inline(always)]
+    fn pack_full(x: &Self::Scalar) -> Self {
+        *x
+    }
+
+    #[inline(always)]
+    fn pack(base_vec: &[Self::Scalar]) -> Self {
+        assert_eq!(base_vec.len(), 1);
+        base_vec[0]
+    }
+
+    #[inline(always)]
+    fn unpack(&self) -> Vec<Self::Scalar> {
+        vec![*self]
     }
 }
 

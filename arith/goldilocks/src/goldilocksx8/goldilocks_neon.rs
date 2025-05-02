@@ -109,7 +109,7 @@ impl Field for NeonGoldilocks {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         let m = Goldilocks::from_uniform_bytes(bytes);
         Self::pack_full(&m)
     }

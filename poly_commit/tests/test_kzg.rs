@@ -20,7 +20,7 @@ fn test_hyperkzg_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
             .collect();
         let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
-        common::test_pcs::<Fr, BytesHashTranscript<Fr, Keccak256hasher>, HyperKZGPCS<Bn256>>(
+        common::test_pcs::<Fr, BytesHashTranscript<Keccak256hasher>, HyperKZGPCS<Bn256>>(
             &num_vars, &poly, &xs,
         );
     })
@@ -49,7 +49,7 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
             .collect(),
     };
 
-    let mut transcript = BytesHashTranscript::<Fr, Keccak256hasher>::new();
+    let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
 
     // NOTE separate polynomial into different pieces by mpi rank
     let poly_vars_stride = (1 << global_poly.get_num_vars()) / mpi_config_ref.world_size();
@@ -62,7 +62,7 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
 
     common::test_pcs_for_expander_gkr::<
         BN254Config,
-        BytesHashTranscript<Fr, Keccak256hasher>,
+        BytesHashTranscript<Keccak256hasher>,
         HyperKZGPCS<Bn256>,
     >(
         &num_vars_in_each_poly,

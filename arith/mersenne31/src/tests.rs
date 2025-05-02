@@ -1,11 +1,11 @@
 use arith::{
     random_extension_field_tests, random_fft_field_tests, random_field_tests,
-    random_inversion_tests, random_simd_field_tests,
+    random_inversion_tests, random_simd_field_tests, SimdField,
 };
 use arith::{random_from_limbs_to_limbs_tests, Field};
 use ark_std::test_rng;
 use ethnum::U256;
-use gkr_hashers::{FiatShamirFieldHasher, PoseidonFiatShamirHasher, PoseidonStateTrait};
+use gkr_hashers::{FiatShamirHasher, PoseidonFiatShamirHasher, PoseidonStateTrait};
 use serdes::ExpSerde;
 
 use crate::{
@@ -46,6 +46,7 @@ fn test_avx_version() {
 #[test]
 fn test_base_field() {
     random_field_tests::<M31>("M31".to_string());
+    random_simd_field_tests::<M31>("M31".to_string());
 
     let mut rng = test_rng();
     random_inversion_tests::<M31, _>(&mut rng, "M31".to_string());
@@ -73,9 +74,12 @@ fn test_simd_field() {
 fn test_ext_field() {
     random_field_tests::<M31Ext3>("M31 Ext3".to_string());
     random_extension_field_tests::<M31Ext3>("M31 Ext3".to_string());
+    random_simd_field_tests::<M31Ext3>("Simd M31 Ext3".to_string());
+
     random_field_tests::<M31Ext6>("M31 Ext6".to_string());
     random_extension_field_tests::<M31Ext6>("M31 Ext6".to_string());
     random_fft_field_tests::<M31Ext6>("M31 Ext6".to_string());
+
     random_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
     random_extension_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
     random_simd_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
@@ -120,9 +124,17 @@ fn test_poseidon_m31_fiat_shamir_hash() {
     let perm = PoseidonFiatShamirHasher::<M31x16>::new();
 
     {
-        let state_elems: [M31; M31x16::RATE] = [M31::from(114514); M31x16::RATE];
-        let actual_output = perm.hash_to_state(&state_elems);
-        let expected_output = vec![
+        let state_elems: Vec<u8> = [M31::from(114514); M31x16::RATE]
+            .iter()
+            .flat_map(|x| {
+                let mut xu8 = vec![];
+                x.serialize_into(&mut xu8).unwrap();
+                xu8
+            })
+            .collect();
+        let mut actual_output_u8 = [0u8; M31x16::STATE_WIDTH * M31::SIZE];
+        perm.hash(&mut actual_output_u8, &state_elems);
+        let expected_output = M31x16::pack(&vec![
             M31 { v: 1021105124 },
             M31 { v: 1342990709 },
             M31 { v: 1593716396 },
@@ -139,14 +151,26 @@ fn test_poseidon_m31_fiat_shamir_hash() {
             M31 { v: 187534772 },
             M31 { v: 436020341 },
             M31 { v: 1441052621 },
-        ];
-        assert_eq!(actual_output, expected_output);
+        ]);
+        let mut expected_output_u8 = vec![];
+        expected_output
+            .serialize_into(&mut expected_output_u8)
+            .unwrap();
+        assert_eq!(actual_output_u8.to_vec(), expected_output_u8);
     }
 
     {
-        let state_elems: [M31; M31x16::STATE_WIDTH] = [M31::from(114514); M31x16::STATE_WIDTH];
-        let actual_output = perm.hash_to_state(&state_elems);
-        let expected_output = vec![
+        let state_elems: Vec<u8> = [M31::from(114514); M31x16::STATE_WIDTH]
+            .iter()
+            .flat_map(|x| {
+                let mut xu8 = vec![];
+                x.serialize_into(&mut xu8).unwrap();
+                xu8
+            })
+            .collect();
+        let mut actual_output_u8 = [0u8; M31x16::STATE_WIDTH * M31::SIZE];
+        perm.hash(&mut actual_output_u8, &state_elems);
+        let expected_output = M31x16::pack(&vec![
             M31 { v: 1510043913 },
             M31 { v: 1840611937 },
             M31 { v: 45881205 },
@@ -163,8 +187,12 @@ fn test_poseidon_m31_fiat_shamir_hash() {
             M31 { v: 2067011878 },
             M31 { v: 402134378 },
             M31 { v: 535675968 },
-        ];
-        assert_eq!(actual_output, expected_output);
+        ]);
+        let mut expected_output_u8 = vec![];
+        expected_output
+            .serialize_into(&mut expected_output_u8)
+            .unwrap();
+        assert_eq!(actual_output_u8.to_vec(), expected_output_u8);
     }
 }
 

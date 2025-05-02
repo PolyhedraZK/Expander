@@ -46,11 +46,13 @@ fn parse_field_type(field_expr: ExprPath) -> (String, String) {
         .last()
         .expect("Empty path for field");
     match field_enum.ident.to_string().as_str() {
-        "M31" => ("M31".to_owned(), "M31ExtConfig".to_owned()),
+        "M31x1" => ("M31x1".to_owned(), "M31x1Config".to_owned()),
+        "M31x16" => ("M31x16".to_owned(), "M31x16Config".to_owned()),
         "BN254" => ("BN254".to_owned(), "BN254Config".to_owned()),
-        "GF2" => ("GF2".to_owned(), "GF2ExtConfig".to_owned()),
-        "Goldilocks" => ("Goldilocks".to_owned(), "GoldilocksExtConfig".to_owned()),
-        "BabyBear" => ("BabyBear".to_owned(), "BabyBearExtConfig".to_owned()),
+        "GF2Ext128" => ("GF2Ext128".to_owned(), "GF2ExtConfig".to_owned()),
+        "Goldilocksx1" => ("Goldilocksx1".to_owned(), "Goldilocksx1Config".to_owned()),
+        "Goldilocksx8" => ("Goldilocksx8".to_owned(), "Goldilocksx8Config".to_owned()),
+        "BabyBearx16" => ("BabyBearx16".to_owned(), "BabyBearx16Config".to_owned()),
         _ => panic!("Unknown field type"),
     }
 }
@@ -73,21 +75,19 @@ fn parse_fiat_shamir_hash_type(
     match (hash_type_str, field_type) {
         ("SHA256", _) => (
             "SHA256".to_owned(),
-            format!("BytesHashTranscript::<{challenge_f}, SHA256hasher>").to_owned(),
+            "BytesHashTranscript::<SHA256hasher>".to_owned(),
         ),
         ("Keccak256", _) => (
             "Keccak256".to_owned(),
-            format!("BytesHashTranscript::<{challenge_f}, Keccak256hasher>").to_owned(),
+            "BytesHashTranscript::<Keccak256hasher>".to_owned(),
         ),
-        ("Poseidon", "M31") => (
+        ("Poseidon", "M31x16") => (
             "Poseidon".to_owned(),
-            format!("FieldHashTranscript::<{challenge_f}, PoseidonFiatShamirHasher<M31x16>>")
-                .to_owned(),
+            "BytesHashTranscript::<PoseidonFiatShamirHasher<M31x16>>".to_owned(),
         ),
         ("MIMC5", "BN254") => (
             "MIMC5".to_owned(),
-            format!("FieldHashTranscript::<{challenge_f}, MiMC5FiatShamirHasher<{challenge_f}>>")
-                .to_owned(),
+            format!("BytesHashTranscript::<MiMC5FiatShamirHasher<{challenge_f}>>").to_owned(),
         ),
         _ => panic!("Unknown hash type"),
     }
@@ -112,15 +112,15 @@ fn parse_polynomial_commitment_type(
         ),
         ("Hyrax", "BN254") => ("Hyrax".to_string(), "HyraxPCS::<G1Affine>".to_string()),
         ("KZG", "BN254") => ("KZG".to_owned(), "HyperKZGPCS::<Bn256>".to_string()),
-        ("Orion", "GF2") => (
+        ("Orion", "GF2Ext128") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, GF2x128>").to_owned(),
         ),
-        ("Orion", "M31") => (
+        ("Orion", "M31x16") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, M31x16>").to_owned(),
         ),
-        ("Orion", "Goldilocks") => (
+        ("Orion", "Goldilocksx8") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, Goldilocksx8>").to_owned(),
         ),

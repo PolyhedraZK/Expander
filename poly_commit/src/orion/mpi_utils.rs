@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use arith::{ExtensionField, SimdField};
+use arith::SimdField;
 use gkr_engine::{MPIEngine, Transcript};
 use itertools::izip;
 use serdes::ExpSerde;
@@ -201,22 +201,21 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn orion_mpi_mt_openings<EvalF, T>(
+pub(crate) fn orion_mpi_mt_openings<T>(
     mpi_engine: &impl MPIEngine,
     pk: &OrionSRS,
     scratch_pad: &OrionScratchPad,
     transcript: &mut T,
 ) -> Option<Vec<RangePath>>
 where
-    EvalF: ExtensionField,
-    T: Transcript<EvalF>,
+    T: Transcript,
 {
     let num_leaves_per_opening = pk.num_leaves_per_mt_query();
 
     // NOTE: MT opening for point queries
     let query_num = pk.query_complexity(PCS_SOUNDNESS_BITS);
     let query_indices: Vec<usize> = {
-        let mut indices = transcript.generate_challenge_index_vector(query_num);
+        let mut indices = transcript.generate_usize_vector(query_num);
         indices.iter_mut().for_each(|q| *q %= pk.codeword_len());
         indices
     };

@@ -2,8 +2,8 @@
 
 use circuit::Circuit;
 use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
-    Transcript,
+    root_println, ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig,
+    MPIEngine, Transcript,
 };
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use utils::timer::Timer;
@@ -12,7 +12,7 @@ use utils::timer::Timer;
 pub fn gkr_prove<F: FieldEngine>(
     circuit: &Circuit<F>,
     sp: &mut ProverScratchPad<F>,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
     mpi_config: &MPIConfig,
 ) -> (F::ChallengeField, ExpanderDualVarChallenge<F>) {
     let layer_num = circuit.layers.len();
@@ -25,6 +25,10 @@ pub fn gkr_prove<F: FieldEngine>(
         )
         .into();
 
+    root_println!(mpi_config, "transcript after challenge: {}\n\n", transcript);
+
+    root_println!(mpi_config, "challenges: {:?}\n\n", challenge);
+
     let mut alpha = None;
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
@@ -35,6 +39,8 @@ pub fn gkr_prove<F: FieldEngine>(
         &mut sp.eq_evals_first_half, // confusing name here..
         mpi_config,
     );
+
+    root_println!(mpi_config, "transcript after challenge: {}\n\n", transcript);
 
     for i in (0..layer_num).rev() {
         let timer = Timer::new(
@@ -57,16 +63,32 @@ pub fn gkr_prove<F: FieldEngine>(
             i == layer_num - 1,
         );
 
+        root_println!(
+            mpi_config,
+            "is some {} is output {} transcript layer {}: {}",
+            challenge.rz_1.is_some(),
+            i == layer_num - 1,
+            i,
+            transcript
+        );
+
         if challenge.rz_1.is_some() {
             // TODO: try broadcast beta.unwrap directly
-            let mut tmp = transcript.generate_challenge_field_element();
+            let mut tmp = transcript.generate_field_element::<F::ChallengeField>();
             mpi_config.root_broadcast_f(&mut tmp);
             alpha = Some(tmp)
         } else {
             alpha = None;
         }
         timer.stop();
+
+        root_println!(mpi_config, "{}\n\n", transcript);
     }
 
+    root_println!(
+        mpi_config,
+        "transcript after challenge3: {}\n\n",
+        transcript
+    );
     (claimed_v, challenge)
 }

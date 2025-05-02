@@ -3,10 +3,10 @@ use babybear::{BabyBear, BabyBearExt3, BabyBearExt3x16, BabyBearx16};
 use super::{FieldEngine, FieldType};
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct BabyBearExtConfig;
+pub struct BabyBearx16Config;
 
-impl FieldEngine for BabyBearExtConfig {
-    const FIELD_TYPE: FieldType = FieldType::BabyBear;
+impl FieldEngine for BabyBearx16Config {
+    const FIELD_TYPE: FieldType = FieldType::BabyBearx16;
 
     const SENTINEL: [u8; 32] = [
         1, 0, 0, 120, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

@@ -379,7 +379,8 @@ impl<MP: FieldParameters> Field for MontyField31<MP> {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
+        assert!(bytes.len() >= 4);
         // Note: From<u32> performs modular reduction
         u32::from_le_bytes(bytes[..4].try_into().unwrap()).into()
     }

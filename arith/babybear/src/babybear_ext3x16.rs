@@ -278,7 +278,7 @@ impl Field for BabyBearExt3x16 {
         unimplemented!("self is a vector, cannot convert to u32")
     }
 
-    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(_bytes: &[u8]) -> Self {
         unimplemented!("vec babybear: cannot convert from 32 bytes")
     }
 }

@@ -61,6 +61,10 @@ pub use transcript::*;
 /// }
 /// ```
 pub trait GKREngine: Send + Sync {
+    /// Configuration flag for CUDA development
+    /// if CUDA_DEV is true, the proof generation will not write the PCS to the transcript
+    const CUDA_DEV: bool = false;
+
     /// Configuration for field arithmetic operations
     type FieldConfig: FieldEngine;
 
@@ -68,7 +72,7 @@ pub trait GKREngine: Send + Sync {
     type MPIConfig: MPIEngine;
 
     /// Configuration for transcript generation over the challenge field
-    type TranscriptConfig: Transcript<<Self::FieldConfig as FieldEngine>::ChallengeField>;
+    type TranscriptConfig: Transcript;
 
     /// Configuration for polynomial commitment scheme
     type PCSConfig: ExpanderPCS<Self::FieldConfig>;

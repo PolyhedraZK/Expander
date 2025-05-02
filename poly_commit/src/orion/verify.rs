@@ -23,7 +23,7 @@ pub fn orion_verify<F, SimdF, EvalF, ComPackF>(
     point: &[EvalF],
     mpi_point: &[EvalF],
     evaluation: EvalF,
-    transcript: &mut impl Transcript<EvalF>,
+    transcript: &mut impl Transcript,
     proof: &OrionProof<EvalF>,
 ) -> bool
 where
@@ -55,13 +55,13 @@ where
     let random_linear_combinations: Vec<_> = (0..proximity_reps)
         .map(|_| {
             let num_vars = point.len() - num_vars_in_msg + mpi_point.len();
-            let rand = transcript.generate_challenge_field_elements(num_vars);
+            let rand = transcript.generate_field_elements::<EvalF>(num_vars);
             EqPolynomial::build_eq_x_r(&rand)
         })
         .collect();
 
     let query_num = vk.query_complexity(PCS_SOUNDNESS_BITS);
-    let query_indices = transcript.generate_challenge_index_vector(query_num);
+    let query_indices = transcript.generate_usize_vector(query_num);
 
     // NOTE: check consistency in MT in the opening trees and against the commitment tree
     {

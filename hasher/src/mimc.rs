@@ -2,30 +2,56 @@ use arith::Field;
 use halo2curves::bn256::Fr;
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::FiatShamirFieldHasher;
+use crate::FiatShamirHasher;
 
 #[derive(Debug, Clone, Default)]
 pub struct MiMC5FiatShamirHasher<F: Field> {
     constants: Vec<F>,
 }
 
-impl<F: Field> FiatShamirFieldHasher<F> for MiMC5FiatShamirHasher<F> {
+impl<F: Field> MiMC5FiatShamirHasher<F> {
+    fn hash_u8_to_state(&self, input: &[u8]) -> F {
+        let mut h = F::ZERO;
+        let chunks = input.chunks_exact(F::SIZE);
+        let mut remainder = chunks.remainder().to_vec();
+        for chunk in chunks {
+            let x = F::from_uniform_bytes(chunk);
+            let r = self.mimc5_hash(&h, &x);
+            h += r + x;
+        }
+
+        if !remainder.is_empty() {
+            remainder.resize(F::SIZE, 0);
+
+            let x = F::from_uniform_bytes(&remainder);
+            let r = self.mimc5_hash(&h, &x);
+            h += r + x;
+        }
+
+        h
+    }
+}
+
+impl<F: Field> FiatShamirHasher for MiMC5FiatShamirHasher<F> {
     const NAME: &'static str = "MiMC5_Field_Hasher";
 
-    const STATE_CAPACITY: usize = 1;
+    const DIGEST_SIZE: usize = F::SIZE;
 
     fn new() -> Self {
         let constants = generate_mimc_constants::<F>();
         Self { constants }
     }
 
-    fn hash_to_state(&self, input: &[F]) -> Vec<F> {
-        let mut h = F::ZERO;
-        input.iter().for_each(|a| {
-            let r = self.mimc5_hash(&h, a);
-            h += r + a;
-        });
-        vec![h]
+    fn hash(&self, output: &mut [u8], input: &[u8]) {
+        assert!(output.len() == F::SIZE);
+        let res = self.hash_u8_to_state(input);
+        res.to_bytes(output);
+    }
+
+    fn hash_inplace(&self, buffer: &mut [u8]) {
+        assert!(buffer.len() == F::SIZE);
+        let res = self.hash_u8_to_state(buffer);
+        res.to_bytes(buffer);
     }
 }
 

@@ -1,7 +1,7 @@
 // traits definitions
 
 mod traits;
-pub use traits::{FiatShamirBytesHash, FiatShamirFieldHasher, PoseidonStateTrait};
+pub use traits::{FiatShamirHasher, PoseidonStateTrait};
 
 // field hashers
 

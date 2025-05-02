@@ -153,7 +153,7 @@ impl Field for NeonBabyBear {
         unimplemented!("self is a vector, cannot convert to u32")
     }
 
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         Self::pack_full(&BabyBear::from_uniform_bytes(bytes))
     }
 }

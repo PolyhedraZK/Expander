@@ -232,7 +232,7 @@ impl Field for GoldilocksExt2x8 {
     }
 
     #[inline]
-    fn from_uniform_bytes(_bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(_bytes: &[u8]) -> Self {
         unimplemented!("vec Goldilocks: cannot convert from 32 bytes")
     }
 

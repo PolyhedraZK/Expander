@@ -12,7 +12,7 @@ use circuit::Circuit;
 use clap::Parser;
 use gkr::Verifier;
 use gkr::{
-    BN254ConfigSha2Raw, GF2ExtConfigSha2Raw, M31ExtConfigSha2RawVanilla, Prover,
+    BN254ConfigSha2Raw, GF2ExtConfigSha2Raw, M31x16ConfigSha2RawVanilla, Prover,
     utils::{
         KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS,
         KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, dev_env_data_setup,
@@ -39,7 +39,7 @@ fn main() {
     if args.compare {
         // check if the downloaded proofs match the one been generated
         proof_gen::<GF2ExtConfigSha2Raw>();
-        proof_gen::<M31ExtConfigSha2RawVanilla>();
+        proof_gen::<M31x16ConfigSha2RawVanilla>();
         proof_gen::<BN254ConfigSha2Raw>();
         compare_proof_files();
     }
@@ -50,10 +50,10 @@ fn proof_gen<C: GKREngine>() {
 
     // load circuit
     let mut circuit = match C::FieldConfig::FIELD_TYPE {
-        FieldType::GF2 => {
+        FieldType::GF2Ext128 => {
             Circuit::<C::FieldConfig>::single_thread_prover_load_circuit::<C>(KECCAK_GF2_CIRCUIT)
         }
-        FieldType::M31 => {
+        FieldType::M31x16 => {
             Circuit::<C::FieldConfig>::single_thread_prover_load_circuit::<C>(KECCAK_M31_CIRCUIT)
         }
         FieldType::BN254 => {
@@ -63,15 +63,15 @@ fn proof_gen<C: GKREngine>() {
     };
 
     let witness_path = match C::FieldConfig::FIELD_TYPE {
-        FieldType::GF2 => KECCAK_GF2_WITNESS,
-        FieldType::M31 => KECCAK_M31_WITNESS,
+        FieldType::GF2Ext128 => KECCAK_GF2_WITNESS,
+        FieldType::M31x16 => KECCAK_M31_WITNESS,
         FieldType::BN254 => KECCAK_BN254_WITNESS,
         _ => unreachable!(),
     };
 
     let proof_file_name = match C::FieldConfig::FIELD_TYPE {
-        FieldType::GF2 => "data/proof_gf2_regen.txt",
-        FieldType::M31 => "data/proof_m31_regen.txt",
+        FieldType::GF2Ext128 => "data/proof_gf2_regen.txt",
+        FieldType::M31x16 => "data/proof_m31_regen.txt",
         FieldType::BN254 => "data/proof_bn254_regen.txt",
         _ => unreachable!(),
     };

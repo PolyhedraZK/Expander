@@ -46,6 +46,7 @@ fn test_avx_version() {
 #[test]
 fn test_base_field() {
     random_field_tests::<Goldilocks>("Goldilocks".to_string());
+    random_simd_field_tests::<Goldilocks>("Goldilocks".to_string());
 
     let mut rng = test_rng();
     random_inversion_tests::<Goldilocks, _>(&mut rng, "Goldilocks".to_string());
@@ -76,6 +77,8 @@ fn test_ext_field() {
     random_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
     random_extension_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
     random_fft_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
+    random_simd_field_tests::<GoldilocksExt2>("Goldilocks Ext2".to_string());
+
     random_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
     random_extension_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());
     random_fft_field_tests::<GoldilocksExt2x8>("Goldilocks Ext2x8".to_string());

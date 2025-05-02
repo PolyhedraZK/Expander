@@ -188,7 +188,7 @@ impl Field for AVXM31 {
     }
 
     #[inline]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         let m = M31::from_uniform_bytes(bytes);
         Self {
             v: unsafe { _mm512_set1_epi32(m.v as i32) },

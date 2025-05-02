@@ -3,8 +3,9 @@
 use arith::Field;
 use circuit::Circuit;
 use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
-    GKRScheme, MPIConfig, MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
+    root_println, ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine,
+    GKREngine, GKRScheme, MPIConfig, MPIEngine, PCSParams, Proof, StructuredReferenceString,
+    Transcript,
 };
 use polynomials::{MultilinearExtension, MutRefMultiLinearPoly};
 use serdes::ExpSerde;
@@ -15,10 +16,7 @@ use utils::timer::Timer;
 use crate::{gkr_par_verifier_prove, gkr_prove, gkr_square_prove};
 
 #[cfg(feature = "grinding")]
-pub(crate) fn grind<Cfg: GKREngine>(
-    transcript: &mut impl Transcript<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
-    mpi_config: &MPIConfig,
-) {
+pub(crate) fn grind<Cfg: GKREngine>(transcript: &mut impl Transcript, mpi_config: &MPIConfig) {
     use crate::GRINDING_BITS;
 
     let timer = Timer::new("grinding", mpi_config.is_root());
@@ -29,7 +27,10 @@ pub(crate) fn grind<Cfg: GKREngine>(
     let num_field_elements = (31 + <Cfg::FieldConfig as FieldEngine>::ChallengeField::SIZE)
         / <Cfg::FieldConfig as FieldEngine>::ChallengeField::SIZE;
 
-    let initial_hash = transcript.generate_challenge_field_elements(num_field_elements);
+    let initial_hash = transcript
+        .generate_field_elements::<<Cfg::FieldConfig as FieldEngine>::ChallengeField>(
+            num_field_elements,
+        );
     initial_hash
         .iter()
         .for_each(|h| h.serialize_into(&mut hash_bytes).unwrap()); // TODO: error propagation
@@ -40,7 +41,7 @@ pub(crate) fn grind<Cfg: GKREngine>(
     transcript.lock_proof();
     for _ in 0..(1 << GRINDING_BITS) {
         transcript.append_u8_slice(&hash_bytes);
-        hash_bytes = transcript.generate_challenge_u8_slice(32);
+        hash_bytes = transcript.generate_u8_slice(32);
     }
     transcript.append_u8_slice(&hash_bytes[..32]);
     transcript.unlock_proof();
@@ -123,7 +124,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
             commit
         };
 
-        if self.mpi_config.is_root() {
+        if self.mpi_config.is_root() && !Cfg::CUDA_DEV {
             let mut buffer = vec![];
             commitment.unwrap().serialize_into(&mut buffer).unwrap(); // TODO: error propagation
             transcript.append_commitment(&buffer);
@@ -139,8 +140,14 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         self.mpi_config.barrier();
         c.evaluate();
 
+        root_println!(self.mpi_config, "transcript {}", transcript);
+
         let gkr_prove_timer = Timer::new("gkr prove", self.mpi_config.is_root());
+
         transcript_root_broadcast(&mut transcript, &self.mpi_config);
+
+        root_println!(self.mpi_config, "transcript after broadcast {}", transcript);
+        // matches this far
 
         let (claimed_v, challenge) = match Cfg::SCHEME {
             GKRScheme::Vanilla => gkr_prove(c, &mut self.sp, &mut transcript, &self.mpi_config),
@@ -155,8 +162,15 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         };
         gkr_prove_timer.stop();
 
+        root_println!(self.mpi_config, "transcript after gkr_prove {}", transcript);
+
         transcript_root_broadcast(&mut transcript, &self.mpi_config);
 
+        root_println!(
+            self.mpi_config,
+            "transcript before challenge_x {}",
+            transcript
+        );
         let pcs_open_timer = Timer::new("pcs open", self.mpi_config.is_root());
 
         // open
@@ -171,8 +185,15 @@ impl<Cfg: GKREngine> Prover<Cfg> {
             &mut transcript,
         );
 
+        root_println!(
+            self.mpi_config,
+            "transcript before challenge_y {}",
+            transcript
+        );
+
         if let Some(mut challenge_y) = challenge.challenge_y() {
             transcript_root_broadcast(&mut transcript, &self.mpi_config);
+
             self.prove_input_layer_claim(
                 &mut mle_ref,
                 &mut challenge_y,
@@ -201,7 +222,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
         pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
         pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad,
-        transcript: &mut impl Transcript<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
+        transcript: &mut impl Transcript,
     ) {
         let original_input_vars = inputs.num_vars();
 

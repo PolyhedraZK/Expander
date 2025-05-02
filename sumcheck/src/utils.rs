@@ -27,7 +27,7 @@ pub fn unpack_and_combine<F: SimdField>(p: &F, coef: &[F::Scalar]) -> F::Scalar 
 pub fn transcript_io<F, T>(mpi_config: &impl MPIEngine, ps: &[F], transcript: &mut T) -> F
 where
     F: ExtensionField,
-    T: Transcript<F>,
+    T: Transcript,
 {
     // 3 for x, y; 4 for simd var; 7 for pow5, 9 for pow7
     assert!(
@@ -37,7 +37,7 @@ where
     for p in ps {
         transcript.append_field_element(p);
     }
-    let mut r = transcript.generate_challenge_field_element();
+    let mut r = transcript.generate_field_element::<F>();
     mpi_config.root_broadcast_f(&mut r);
     r
 }

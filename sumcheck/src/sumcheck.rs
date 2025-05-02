@@ -1,7 +1,7 @@
 use circuit::CircuitLayer;
 use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
-    Transcript,
+    root_println, ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig,
+    MPIEngine, Transcript,
 };
 
 use crate::{
@@ -24,7 +24,7 @@ pub const SUMCHECK_GKR_SQUARE_DEGREE: usize = 6;
 #[allow(clippy::type_complexity)]
 // essentially the prev level of challenge passes here, once this level is done, new challenge gets
 // written back into the prev space
-pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>>(
+pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript>(
     layer: &CircuitLayer<F>,
     challenge: &mut ExpanderDualVarChallenge<F>,
     alpha: Option<F::ChallengeField>,
@@ -44,6 +44,7 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>
     for i_var in 0..helper.input_var_num {
         let evals = helper.poly_evals_at_rx(i_var, SUMCHECK_GKR_DEGREE, mpi_config);
         let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
+        root_println!(mpi_config, "\n i_var {} evals: {:?} r {:?}", i_var, evals, r);
         helper.receive_rx(i_var, r);
     }
 
@@ -94,7 +95,7 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>
 // FIXME
 #[allow(clippy::needless_range_loop)] // todo: remove
 #[allow(clippy::type_complexity)]
-pub fn sumcheck_prove_gkr_square_layer<F: FieldEngine, T: Transcript<F::ChallengeField>>(
+pub fn sumcheck_prove_gkr_square_layer<F: FieldEngine, T: Transcript>(
     layer: &CircuitLayer<F>,
     challenge: &mut ExpanderSingleVarChallenge<F>,
     transcript: &mut T,

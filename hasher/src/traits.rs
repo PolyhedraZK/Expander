@@ -5,21 +5,10 @@ use std::{
 
 use arith::Field;
 
-pub trait FiatShamirFieldHasher<F: Field>: Clone + Debug + Default {
-    /// Name for the field hasher
+pub trait FiatShamirHasher: Clone + Debug {
+    /// Name for the hasher
     const NAME: &'static str;
 
-    /// The state capacity, or how many field elements squeezed in a hash
-    const STATE_CAPACITY: usize;
-
-    /// Create a new hash instance.
-    fn new() -> Self;
-
-    /// hash a vector of field element and return the hash result
-    fn hash_to_state(&self, input: &[F]) -> Vec<F>;
-}
-
-pub trait FiatShamirBytesHash: Clone + Debug {
     /// The size of the hash output in bytes.
     const DIGEST_SIZE: usize;
 
@@ -27,10 +16,10 @@ pub trait FiatShamirBytesHash: Clone + Debug {
     fn new() -> Self;
 
     /// Hash the input into the output.
-    fn hash(output: &mut [u8], input: &[u8]);
+    fn hash(&self, output: &mut [u8], input: &[u8]);
 
     /// Hash the input in place.
-    fn hash_inplace(buffer: &mut [u8]);
+    fn hash_inplace(&self, buffer: &mut [u8]);
 }
 
 pub trait PoseidonStateTrait:
@@ -106,4 +95,6 @@ pub trait PoseidonStateTrait:
         elts[0] = elts[0].exp(Self::SBOX_POW as u128);
         *self = Self::from_elems(&elts);
     }
+
+    fn to_u8_slices(&self, output: &mut [u8]);
 }

@@ -10,8 +10,8 @@ use circuit::Circuit;
 use clap::{Parser, Subcommand};
 use gkr::{Prover, Verifier};
 use gkr_engine::{
-    BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GoldilocksExtConfig,
-    M31ExtConfig, MPIConfig, MPIEngine, Proof, SharedMemory,
+    BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, Goldilocksx8Config, M31x16Config,
+    MPIConfig, MPIEngine, Proof, SharedMemory,
 };
 use log::info;
 use poly_commit::expander_pcs_init_testing_only;
@@ -107,10 +107,10 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
     let bytes = fs::read(circuit_file).expect("Unable to read circuit file.");
     let field_bytes = &bytes[8..8 + 32];
     match field_bytes.try_into().unwrap() {
-        M31ExtConfig::SENTINEL => FieldType::M31,
+        M31x16Config::SENTINEL => FieldType::M31x16,
         BN254Config::SENTINEL => FieldType::BN254,
-        GF2ExtConfig::SENTINEL => FieldType::GF2,
-        GoldilocksExtConfig::SENTINEL => FieldType::Goldilocks,
+        GF2ExtConfig::SENTINEL => FieldType::GF2Ext128,
+        Goldilocksx8Config::SENTINEL => FieldType::Goldilocksx8,
         _ => {
             println!("Unknown field type. Field byte value: {:?}", field_bytes);
             exit(1);

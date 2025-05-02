@@ -133,7 +133,7 @@ impl Field for NeonGF2_128 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         unsafe {
             NeonGF2_128 {
                 v: transmute::<[u8; 16], uint32x4_t>(bytes[..16].try_into().unwrap()),

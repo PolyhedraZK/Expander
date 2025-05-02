@@ -1,8 +1,5 @@
 #![allow(clippy::manual_div_ceil)]
 
-mod field_hash_transcript;
-pub use field_hash_transcript::FieldHashTranscript;
-
 mod byte_hash_transcript;
 pub use byte_hash_transcript::BytesHashTranscript;
 
