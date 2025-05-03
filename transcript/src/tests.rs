@@ -78,3 +78,28 @@ fn test_transcript_expected_behavior() {
     test_transcript_expected_behavior_helper::<Fr, BytesHashTranscript<MiMC5FiatShamirHasher<Fr>>>(
     );
 }
+
+fn get_transcript_output_helper<F, T>(input: &[u32]) -> F
+where
+    F: ExtensionField,
+    T: Transcript,
+{
+    let mut transcript = T::new();
+    let transcript_input = input.iter().map(|&x| F::from(x)).collect::<Vec<_>>();
+
+    transcript_input
+        .iter()
+        .for_each(|&x| transcript.append_field_element(&x));
+
+    let output = transcript.generate_field_element::<F>();
+    output
+}
+
+#[ignore]
+#[test]
+fn get_transcript_output() {
+    let input = vec![1, 2, 3, 4, 5];
+    let output =
+        get_transcript_output_helper::<Fr, BytesHashTranscript<MiMC5FiatShamirHasher<Fr>>>(&input);
+    println!("{:?}", output);
+}

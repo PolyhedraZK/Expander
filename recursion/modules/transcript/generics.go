@@ -60,6 +60,15 @@ func NewTranscript(arithmeticEngine fields.ArithmeticEngine) *FieldHasherTranscr
 	return &FieldHasherTranscript{
 		ArithmeticEngine: arithmeticEngine,
 		hasher:           hasher,
+		dataPool:         make([]frontend.Variable, 0),
+		hashState: func() []frontend.Variable {
+			initState := make([]frontend.Variable, hasher.StateCapacity())
+			for i := range int(hasher.StateCapacity()) {
+				initState[i] = 0
+			}
+			return initState
+		}(),
+		count: 0,
 	}
 }
 
