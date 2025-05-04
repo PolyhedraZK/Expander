@@ -5,27 +5,27 @@ use gkr::{
     Prover,
     utils::{KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS},
 };
-use gkr_engine::{GKREngine, MPIConfig, MPIEngine, SharedMemory};
-use gkr_engine::{GKRScheme, M31x1Config};
+use gkr_engine::GKRScheme;
+use gkr_engine::{GKREngine, Goldilocksx1Config, MPIConfig, MPIEngine, SharedMemory};
 use gkr_hashers::SHA256hasher;
 use poly_commit::RawExpanderGKR;
 use poly_commit::expander_pcs_init_testing_only;
 use serdes::ExpSerde;
 use transcript::BytesHashTranscript;
 
-struct M31x1Sha2RawCudaDev;
+struct Goldilocksx1Sha2RawCudaDev;
 
-impl GKREngine for M31x1Sha2RawCudaDev {
-    type FieldConfig = M31x1Config;
+impl GKREngine for Goldilocksx1Sha2RawCudaDev {
+    type FieldConfig = Goldilocksx1Config;
     type MPIConfig = MPIConfig;
     type TranscriptConfig = BytesHashTranscript<SHA256hasher>;
-    type PCSConfig = RawExpanderGKR<M31x1Config>;
+    type PCSConfig = RawExpanderGKR<Goldilocksx1Config>;
     const SCHEME: GKRScheme = GKRScheme::Vanilla;
     const CUDA_DEV: bool = true;
 }
 
 fn main() {
-    proof_gen_x16::<M31x1Sha2RawCudaDev>();
+    proof_gen_x16::<Goldilocksx1Sha2RawCudaDev>();
 }
 
 pub fn proof_gen_x16<C: GKREngine>() {

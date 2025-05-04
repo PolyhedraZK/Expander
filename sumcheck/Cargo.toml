@@ -14,5 +14,10 @@ utils = { path = "../utils" }
 env_logger.workspace = true
 log.workspace = true
 
+
+[dev-dependencies]
+gkr_hashers = { path = "../hasher" }
+poly_commit = { path = "../poly_commit" }
+
 [features]
 profile = [ "utils/profile" ]

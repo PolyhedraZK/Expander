@@ -96,7 +96,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
             &self.sp.gate_exists_5,
         );
 
-        root_println!(mpi_config, "gate exists {:?}", self.sp.gate_exists_5);       
+        // root_println!(mpi_config, "gate exists {:?}", self.sp.gate_exists_5);
         // root_println!(mpi_config, "eq_evals_at_r_simd0 {:?}", self.sp.eq_evals_at_r_simd0);
 
         // SIMD
@@ -108,13 +108,15 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         root_println!(mpi_config, "local_vals {:?}", local_vals);
         // root_println!(mpi_config, "eq_evals_at_r_simd0 {:?}", self.sp.eq_evals_at_r_simd0);
         // root_println!(mpi_config, "eq_evals_at_r_mpi0 {:?}", self.sp.eq_evals_at_r_mpi0);
-        
 
         // MPI
-        mpi_config
+        let eval_rx = mpi_config
             .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0)
             .try_into()
-            .unwrap()
+            .unwrap();
+        root_println!(mpi_config, "eval at rx {:?}", eval_rx);
+
+        eval_rx
     }
 
     pub(crate) fn poly_evals_at_r_simd_var(
