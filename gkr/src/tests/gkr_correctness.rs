@@ -20,7 +20,7 @@ use poly_commit::{
 use rand::Rng;
 use serdes::ExpSerde;
 use sha2::Digest;
-use transcript::{BytesHashTranscript, FieldHashTranscript};
+use transcript::BytesHashTranscript;
 
 use crate::{utils::*, Prover, Verifier};
 

@@ -68,7 +68,7 @@ pub trait GKREngine: Send + Sync {
     type MPIConfig: MPIEngine;
 
     /// Configuration for transcript generation over the challenge field
-    type TranscriptConfig: Transcript<<Self::FieldConfig as FieldEngine>::ChallengeField>;
+    type TranscriptConfig: Transcript;
 
     /// Configuration for polynomial commitment scheme
     type PCSConfig: ExpanderPCS<Self::FieldConfig>;

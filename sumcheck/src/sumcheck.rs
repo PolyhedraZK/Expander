@@ -24,7 +24,7 @@ pub const SUMCHECK_GKR_SQUARE_DEGREE: usize = 6;
 #[allow(clippy::type_complexity)]
 // essentially the prev level of challenge passes here, once this level is done, new challenge gets
 // written back into the prev space
-pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>>(
+pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript>(
     layer: &CircuitLayer<F>,
     challenge: &mut ExpanderDualVarChallenge<F>,
     alpha: Option<F::ChallengeField>,
@@ -94,7 +94,7 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript<F::ChallengeField>
 // FIXME
 #[allow(clippy::needless_range_loop)] // todo: remove
 #[allow(clippy::type_complexity)]
-pub fn sumcheck_prove_gkr_square_layer<F: FieldEngine, T: Transcript<F::ChallengeField>>(
+pub fn sumcheck_prove_gkr_square_layer<F: FieldEngine, T: Transcript>(
     layer: &CircuitLayer<F>,
     challenge: &mut ExpanderSingleVarChallenge<F>,
     transcript: &mut T,

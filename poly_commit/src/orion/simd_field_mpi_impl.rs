@@ -46,7 +46,7 @@ pub fn orion_mpi_open_simd_field<F, SimdF, EvalF, ComPackF>(
     poly: &impl MultilinearExtension<SimdF>,
     point: &[EvalF],
     mpi_point: &[EvalF],
-    transcript: &mut impl Transcript<EvalF>,
+    transcript: &mut impl Transcript,
     scratch_pad: &OrionScratchPad,
 ) -> Option<OrionProof<EvalF>>
 where
@@ -80,8 +80,8 @@ where
     let num_of_local_random_vars = point.len() - num_vars_in_msg;
     let local_random_coeffs: Vec<_> = (0..proximity_test_num)
         .map(|_| {
-            let local_rand = transcript.generate_challenge_field_elements(num_of_local_random_vars);
-            let mpi_rand = transcript.generate_challenge_field_elements(mpi_point.len());
+            let local_rand = transcript.generate_field_elements::<EvalF>(num_of_local_random_vars);
+            let mpi_rand = transcript.generate_field_elements::<EvalF>(mpi_point.len());
             let mut coeffs = EqPolynomial::build_eq_x_r(&local_rand);
             let mpi_weight = EqPolynomial::ith_eq_vec_elem(&mpi_rand, mpi_engine.world_rank());
             coeffs.iter_mut().for_each(|c| *c *= mpi_weight);

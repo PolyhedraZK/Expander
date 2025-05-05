@@ -265,7 +265,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         claim_x: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
         challenge_y: &mut Option<ExpanderSingleVarChallenge<Cfg::FieldConfig>>,
         claim_y: &Option<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
-        transcript: &mut impl Transcript<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
+        transcript: &mut impl Transcript,
         mut proof_reader: impl Read,
     ) -> bool {
         let timer = Timer::new("post_gkr", true);
@@ -390,7 +390,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         commitment: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment,
         open_at: &mut ExpanderSingleVarChallenge<Cfg::FieldConfig>,
         v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
-        transcript: &mut impl Transcript<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
+        transcript: &mut impl Transcript,
         proof_reader: impl Read,
     ) -> bool {
         let opening = <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Opening::deserialize_from(

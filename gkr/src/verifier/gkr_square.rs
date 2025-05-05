@@ -15,7 +15,7 @@ pub fn gkr_square_verify<C: FieldEngine>(
     circuit: &Circuit<C>,
     public_input: &[C::SimdCircuitField],
     claimed_v: &C::ChallengeField,
-    transcript: &mut impl Transcript<C::ChallengeField>,
+    transcript: &mut impl Transcript,
     mut proof_reader: impl Read,
 ) -> (bool, ExpanderSingleVarChallenge<C>, C::ChallengeField) {
     assert_ne!(
@@ -72,7 +72,7 @@ pub fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
     challenge: &mut ExpanderSingleVarChallenge<C>,
     current_claim: &mut C::ChallengeField,
     mut proof_reader: impl Read,
-    transcript: &mut impl Transcript<C::ChallengeField>,
+    transcript: &mut impl Transcript,
     sp: &mut VerifierScratchPad<C>,
     is_output_layer: bool,
     parallel_verify: bool,

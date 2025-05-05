@@ -1,4 +1,4 @@
-use arith::ExtensionField;
+use arith::{ExtensionField, Field};
 use gkr_engine::Transcript;
 
 /// A transcript that uses a random tape to generate challenges.
@@ -17,7 +17,7 @@ impl<ChallengeF: ExtensionField> RandomTape<ChallengeF> {
     }
 }
 
-impl<ChallengeF: ExtensionField> Transcript<ChallengeF> for RandomTape<ChallengeF> {
+impl<ChallengeF: ExtensionField> Transcript for RandomTape<ChallengeF> {
     fn new() -> Self {
         Self {
             tape: vec![],
@@ -25,27 +25,39 @@ impl<ChallengeF: ExtensionField> Transcript<ChallengeF> for RandomTape<Challenge
         }
     }
 
-    fn append_commitment(&mut self, _commitment_bytes: &[u8]) {}
+    /// Generate a field element.
+    /// In the case of a random tape, we actually require F to be the same as ChallengeF.
+    #[inline(always)]
+    fn generate_field_element<F: Field>(&mut self) -> F {
+        if self.position >= self.tape.len() {
+            panic!("Random tape exhausted");
+        }
+        let element = self.tape[self.position];
+        self.position += 1;
+        let mut element_to_return = F::ZERO;
+        assert!(F::NAME == ChallengeF::NAME);
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                &element as *const ChallengeF as *const u8,
+                &mut element_to_return as *mut F as *mut u8,
+                F::SIZE,
+            );
+        }
+        element_to_return
+    }
 
-    fn append_field_element(&mut self, _f: &ChallengeF) {}
+    fn append_commitment(&mut self, _commitment_bytes: &[u8]) {
+        unimplemented!()
+    }
 
+    // Do nothing, randomness are already stored in the tape
     fn append_u8_slice(&mut self, _buffer: &[u8]) {}
 
-    fn generate_circuit_field_element(&mut self) -> <ChallengeF as ExtensionField>::BaseField {
+    fn generate_u8_slice(&mut self, _n_bytes: usize) -> Vec<u8> {
         unimplemented!()
     }
 
-    fn generate_challenge_field_element(&mut self) -> ChallengeF {
-        let challenge = self.tape[self.position];
-        self.position += 1;
-        challenge
-    }
-
-    fn generate_challenge_u8_slice(&mut self, _n_bytes: usize) -> Vec<u8> {
-        unimplemented!()
-    }
-
-    fn finalize_and_get_proof(&self) -> gkr_engine::Proof {
+    fn finalize_and_get_proof(&mut self) -> gkr_engine::Proof {
         unimplemented!()
     }
 
@@ -62,6 +74,10 @@ impl<ChallengeF: ExtensionField> Transcript<ChallengeF> for RandomTape<Challenge
     }
 
     fn unlock_proof(&mut self) {
+        unimplemented!()
+    }
+
+    fn refresh_digest(&mut self) {
         unimplemented!()
     }
 }

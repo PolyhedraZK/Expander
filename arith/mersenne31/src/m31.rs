@@ -198,7 +198,7 @@ impl Field for M31 {
     }
 
     #[inline(always)]
-    fn from_uniform_bytes(bytes: &[u8; 32]) -> Self {
+    fn from_uniform_bytes(bytes: &[u8]) -> Self {
         let mut v = u32::from_le_bytes(bytes[..4].try_into().unwrap());
         v = mod_reduce_u32_safe(v);
         M31 { v }

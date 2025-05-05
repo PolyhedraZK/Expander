@@ -13,7 +13,7 @@ use sumcheck::{
 pub fn verify_sumcheck_step<F: FieldEngine>(
     mut proof_reader: impl Read,
     degree: usize,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
     claimed_sum: &mut F::ChallengeField,
     randomness_vec: &mut Vec<F::ChallengeField>,
     sp: &VerifierScratchPad<F>,
@@ -24,7 +24,7 @@ pub fn verify_sumcheck_step<F: FieldEngine>(
         transcript.append_field_element(&ps[i]);
     }
 
-    let r = transcript.generate_challenge_field_element();
+    let r = transcript.generate_field_element::<F::ChallengeField>();
     randomness_vec.push(r);
 
     let verified = (ps[0] + ps[1]) == *claimed_sum;
@@ -57,7 +57,7 @@ pub fn sumcheck_verify_gkr_layer<F: FieldEngine>(
     claimed_v1: &mut Option<F::ChallengeField>,
     alpha: Option<F::ChallengeField>,
     mut proof_reader: impl Read,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
     sp: &mut VerifierScratchPad<F>,
     is_output_layer: bool,
     parallel_verify: bool,
