@@ -43,17 +43,17 @@ pub fn gkr_square_verify<C: FieldEngine>(
     let mut current_claim = *claimed_v;
     log::trace!("Starting claim: {:?}", current_claim);
     for i in (0..layer_num).rev() {
-        let cur_verified;
-        (cur_verified, challenge, current_claim) = sumcheck_verify_gkr_square_layer(
+        let cur_verified = sumcheck_verify_gkr_square_layer(
             proving_time_mpi_size,
             &circuit.layers[i],
             public_input,
-            &challenge,
-            current_claim,
+            &mut challenge,
+            &mut current_claim,
             &mut proof_reader,
             transcript,
             &mut sp,
             i == layer_num - 1,
+            false,
         );
         log::trace!("Layer {} verified? {}", i, cur_verified);
         verified &= cur_verified;
@@ -65,29 +65,34 @@ pub fn gkr_square_verify<C: FieldEngine>(
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 #[allow(clippy::unnecessary_unwrap)]
-fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
+pub fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
     proving_time_mpi_size: usize,
     layer: &CircuitLayer<C>,
     public_input: &[C::SimdCircuitField],
-    challenge: &ExpanderSingleVarChallenge<C>,
-    current_claim: C::ChallengeField,
+    challenge: &mut ExpanderSingleVarChallenge<C>,
+    current_claim: &mut C::ChallengeField,
     mut proof_reader: impl Read,
     transcript: &mut impl Transcript,
     sp: &mut VerifierScratchPad<C>,
     is_output_layer: bool,
-) -> (bool, ExpanderSingleVarChallenge<C>, C::ChallengeField) {
+    parallel_verify: bool,
+) -> bool {
     // GKR2 with Power5 gate has degree 6 polynomial
     let degree = SUMCHECK_GKR_SQUARE_DEGREE;
 
-    let dual_challenge = ExpanderDualVarChallenge::from(challenge);
+    let dual_challenge = ExpanderDualVarChallenge::from(challenge.clone());
 
-    GKRVerifierHelper::prepare_layer(layer, &None, &dual_challenge, sp, is_output_layer);
+    if parallel_verify {
+        GKRVerifierHelper::prepare_layer_non_sequential(layer, &None, &dual_challenge, sp);
+    } else {
+        GKRVerifierHelper::prepare_layer(layer, &None, &dual_challenge, sp, is_output_layer);
+    }
 
     let var_num = layer.input_var_num;
-    let mut sum = current_claim;
+    let mut sum = *current_claim;
     sum -= GKRVerifierHelper::eval_cst(&layer.const_, public_input, sp);
 
-    let mut challenge = ExpanderSingleVarChallenge::default();
+    *challenge = ExpanderSingleVarChallenge::default();
     let mut verified = true;
 
     for i_var in 0..var_num {
@@ -138,5 +143,6 @@ fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
 
     verified &= sum == C::ChallengeField::ZERO;
 
-    (verified, challenge, v_claim)
+    *current_claim = v_claim;
+    verified
 }

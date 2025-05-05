@@ -12,7 +12,7 @@ use sumcheck::ProverScratchPad;
 use transcript::transcript_root_broadcast;
 use utils::timer::Timer;
 
-use crate::{gkr_par_verifier_prove, gkr_prove, gkr_square_prove};
+use crate::{gkr_prove, gkr_square_prove};
 
 #[cfg(feature = "grinding")]
 pub(crate) fn grind<Cfg: GKREngine>(transcript: &mut impl Transcript, mpi_config: &MPIConfig) {
@@ -148,9 +148,6 @@ impl<Cfg: GKREngine> Prover<Cfg> {
                 let (claimed_v, challenge_x) =
                     gkr_square_prove(c, &mut self.sp, &mut transcript, &self.mpi_config);
                 (claimed_v, ExpanderDualVarChallenge::from(&challenge_x))
-            }
-            GKRScheme::GKRParVerifier => {
-                gkr_par_verifier_prove(c, &mut self.sp, &mut transcript, &self.mpi_config)
             }
         };
         gkr_prove_timer.stop();
