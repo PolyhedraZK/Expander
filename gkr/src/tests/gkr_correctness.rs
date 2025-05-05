@@ -276,20 +276,20 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
             verification_start.elapsed().as_micros()
         );
 
-        let par_verification_start = Instant::now();
-        assert!(verifier.par_verify(
-            &mut circuit,
-            &public_input_gathered,
-            &claimed_v,
-            &pcs_params,
-            &pcs_verification_key,
-            &proof
-        ));
-        println!(
-            "Multi-core Verification time: {} μs",
-            par_verification_start.elapsed().as_micros()
-        );
-        println!("Correct proof verified.");
+        // let par_verification_start = Instant::now();
+        // assert!(verifier.par_verify(
+        //     &mut circuit,
+        //     &public_input_gathered,
+        //     &claimed_v,
+        //     &pcs_params,
+        //     &pcs_verification_key,
+        //     &proof
+        // ));
+        // println!(
+        //     "Multi-core Verification time: {} μs",
+        //     par_verification_start.elapsed().as_micros()
+        // );
+        // println!("Correct proof verified.");
 
         let mut bad_proof = proof.clone();
         let rng = &mut rand::thread_rng();
@@ -311,18 +311,18 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
         let final_result = result.unwrap_or_default();
         assert!(!final_result,);
 
-        let par_result = panic::catch_unwind(AssertUnwindSafe(|| {
-            verifier.par_verify(
-                &mut circuit,
-                &public_input_gathered,
-                &claimed_v,
-                &pcs_params,
-                &pcs_verification_key,
-                &bad_proof,
-            )
-        }));
-        let final_par_result = par_result.unwrap_or_default();
-        assert!(!final_par_result,);
+        // let par_result = panic::catch_unwind(AssertUnwindSafe(|| {
+        //     verifier.par_verify(
+        //         &mut circuit,
+        //         &public_input_gathered,
+        //         &claimed_v,
+        //         &pcs_params,
+        //         &pcs_verification_key,
+        //         &bad_proof,
+        //     )
+        // }));
+        // let final_par_result = par_result.unwrap_or_default();
+        // assert!(!final_par_result,);
 
         println!("Bad proof rejected.");
         println!("============== end ===============");

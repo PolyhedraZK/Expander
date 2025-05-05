@@ -29,7 +29,7 @@ pub struct SumcheckVerificationUnit<F: FieldEngine> {
 #[inline(always)]
 pub fn parse_challenge_field<ChallengeF: ExtensionField>(
     mut proof_reader: impl Read,
-    transcript: &mut impl Transcript<ChallengeF>,
+    transcript: &mut impl Transcript,
     proof_bytes: &mut Vec<u8>,
 ) -> ChallengeF {
     let mut buffer = vec![0; ChallengeF::SIZE];
@@ -44,7 +44,7 @@ pub fn parse_sumcheck_rounds<F: FieldEngine>(
     mut proof_reader: impl Read,
     n_rounds: usize,
     degree: usize,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
     challenge_vec: &mut Vec<F::ChallengeField>,
     proof_bytes: &mut Vec<u8>,
     random_tape: &mut RandomTape<F::ChallengeField>,
@@ -55,7 +55,7 @@ pub fn parse_sumcheck_rounds<F: FieldEngine>(
             parse_challenge_field::<F::ChallengeField>(&mut proof_reader, transcript, proof_bytes);
         });
 
-        challenge_vec.push(transcript.generate_challenge_field_element());
+        challenge_vec.push(transcript.generate_field_element());
     });
     random_tape.tape.extend_from_slice(challenge_vec);
 }
@@ -68,7 +68,7 @@ pub fn parse_proof<F: FieldEngine>(
     proving_time_mpi_size: usize,
     xy_var_degree: usize,
     claimed_v: F::ChallengeField,
-    transcript: &mut impl Transcript<F::ChallengeField>,
+    transcript: &mut impl Transcript,
 ) -> (
     Vec<SumcheckVerificationUnit<F>>,
     ExpanderDualVarChallenge<F>,
@@ -164,7 +164,7 @@ pub fn parse_proof<F: FieldEngine>(
         }
 
         alpha = if challenge.rz_1.is_some() {
-            let alpha = transcript.generate_challenge_field_element();
+            let alpha = transcript.generate_field_element();
             random_tape.tape.push(alpha);
             Some(alpha)
         } else {
