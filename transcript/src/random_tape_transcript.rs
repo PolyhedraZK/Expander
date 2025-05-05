@@ -33,6 +33,7 @@ impl<ChallengeF: ExtensionField> Transcript for RandomTape<ChallengeF> {
             panic!("Random tape exhausted");
         }
         let element = self.tape[self.position];
+        self.position += 1;
         let mut element_to_return = F::ZERO;
         assert!(F::NAME == ChallengeF::NAME);
         unsafe {
