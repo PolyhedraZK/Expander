@@ -34,10 +34,6 @@ type FieldHasherTranscript struct {
 	// The hashState
 	hashState []frontend.Variable
 
-	// helper field: an index pointing into the hash state for next unconsumed
-	// base field element
-	nextUnconsumed uint
-
 	// helper field: counting, irrelevant to circuit
 	count uint
 }
@@ -64,6 +60,15 @@ func NewTranscript(arithmeticEngine fields.ArithmeticEngine) *FieldHasherTranscr
 	return &FieldHasherTranscript{
 		ArithmeticEngine: arithmeticEngine,
 		hasher:           hasher,
+		dataPool:         make([]frontend.Variable, 0),
+		hashState: func() []frontend.Variable {
+			initState := make([]frontend.Variable, hasher.StateCapacity())
+			for i := range int(hasher.StateCapacity()) {
+				initState[i] = 0
+			}
+			return initState
+		}(),
+		count: 0,
 	}
 }
 
@@ -76,69 +81,13 @@ func (t *FieldHasherTranscript) AppendFs(fs ...frontend.Variable) {
 }
 
 func (t *FieldHasherTranscript) CircuitF() frontend.Variable {
-	if len(t.dataPool) != 0 {
-		var newCount uint = 0
-		t.hashState, newCount = t.hasher.HashToState(append(t.hashState, t.dataPool...)...)
-
-		t.count += newCount
-		t.nextUnconsumed = 0
-		t.dataPool = nil
-	}
-
-	if t.nextUnconsumed+1 <= t.hasher.StateCapacity() {
-		res := t.hashState[t.nextUnconsumed]
-		t.nextUnconsumed++
-		return res
-	} else {
-		var newCount uint = 0
-		t.hashState, newCount = t.hasher.HashToState(t.hashState...)
-		t.count += newCount
-
-		res := t.hashState[0]
-		t.nextUnconsumed = 1
-
-		return res
-	}
+	t.HashAndReturnState()
+	return t.hashState[0]
 }
 
 func (t *FieldHasherTranscript) ChallengeF() []frontend.Variable {
-	if len(t.dataPool) != 0 {
-		var newCount uint = 0
-		t.hashState, newCount = t.hasher.HashToState(append(t.hashState, t.dataPool...)...)
-
-		t.count += newCount
-		t.nextUnconsumed = 0
-		t.dataPool = nil
-	}
-
-	if t.ChallengeFieldDegree()+t.nextUnconsumed <= t.hasher.StateCapacity() {
-		sampledChallenge := make([]frontend.Variable, t.ChallengeFieldDegree())
-
-		sliceStart := t.nextUnconsumed
-		sliceEnd := t.nextUnconsumed + t.ChallengeFieldDegree()
-
-		copy(sampledChallenge, t.hashState[sliceStart:sliceEnd])
-		t.nextUnconsumed += t.ChallengeFieldDegree()
-
-		return sampledChallenge
-	}
-
-	var sampledChallenge []frontend.Variable = nil
-	if t.nextUnconsumed < t.hasher.StateCapacity() {
-		sampledChallenge = append(
-			sampledChallenge,
-			t.hashState[t.nextUnconsumed:t.hasher.StateCapacity()]...,
-		)
-	}
-	remainingElems := t.ChallengeFieldDegree() - uint(len(sampledChallenge))
-
-	var newCount uint = 0
-	t.hashState, newCount = t.hasher.HashToState(t.hashState...)
-	t.count += newCount
-	sampledChallenge = append(sampledChallenge, t.hashState[:remainingElems]...)
-	t.nextUnconsumed = remainingElems
-
-	return sampledChallenge
+	t.HashAndReturnState()
+	return t.hashState[:t.ChallengeFieldDegree()]
 }
 
 func (t *FieldHasherTranscript) HashAndReturnState() []frontend.Variable {
@@ -159,7 +108,7 @@ func (t *FieldHasherTranscript) HashAndReturnState() []frontend.Variable {
 }
 
 func (t *FieldHasherTranscript) SetState(newHashState []frontend.Variable) {
-	t.nextUnconsumed = t.hasher.StateCapacity()
+	t.dataPool = nil
 	t.hashState = newHashState
 }
 

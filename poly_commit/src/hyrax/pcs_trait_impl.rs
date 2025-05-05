@@ -40,7 +40,7 @@ where
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
 
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> (Self::SRS, usize) {
-        (hyrax_setup(*params, rng), *params)
+        (hyrax_setup(*params, 0, rng), *params)
     }
 
     fn commit(

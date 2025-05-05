@@ -13,12 +13,23 @@ use crate::hyrax::{
 
 pub(crate) fn hyrax_setup<C: CurveAffine + ExpSerde>(
     local_vars: usize,
+    mpi_vars: usize,
     rng: impl rand::RngCore,
 ) -> PedersenParams<C>
 where
     C::Scalar: PrimeField,
 {
-    let pedersen_vars = (local_vars + 1) / 2;
+    let pedersen_vars = {
+        let total_vars = mpi_vars + local_vars;
+        let squared_row_var = total_vars.div_ceil(2);
+
+        if mpi_vars + squared_row_var > total_vars {
+            total_vars - mpi_vars
+        } else {
+            squared_row_var
+        }
+    };
+
     let pedersen_length = 1 << pedersen_vars;
 
     pedersen_setup(pedersen_length, rng)
@@ -67,14 +78,9 @@ where
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
-    let vars = mle_poly.num_vars();
-    let pedersen_vars = (vars + 1) / 2;
-    let pedersen_len = 1usize << pedersen_vars;
-    assert_eq!(pedersen_len, params.bases.len());
-
     let commitments: Vec<C> = mle_poly
         .hypercube_basis_ref()
-        .chunks(pedersen_len)
+        .chunks(params.msm_len())
         .map(|sub_hypercube| pedersen_commit(params, sub_hypercube))
         .collect();
 
@@ -92,10 +98,8 @@ where
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
-    let vars = mle_poly.num_vars();
-    let pedersen_vars = (vars + 1) / 2;
-    let pedersen_len = 1usize << pedersen_vars;
-    assert_eq!(pedersen_len, params.bases.len());
+    let pedersen_len = params.msm_len();
+    let pedersen_vars = pedersen_len.ilog2() as usize;
 
     let mut local_basis = mle_poly.hypercube_basis();
     let mut local_mle = MutRefMultiLinearPoly::from_ref(&mut local_basis);
@@ -119,10 +123,8 @@ where
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
-    let vars = eval_point.len();
-    let pedersen_vars = (vars + 1) / 2;
-    let pedersen_len = 1usize << pedersen_vars;
-    assert_eq!(pedersen_len, params.bases.len());
+    let pedersen_len = params.msm_len();
+    let pedersen_vars = pedersen_len.ilog2() as usize;
 
     let eq_combination: Vec<C::Scalar> = EqPolynomial::build_eq_x_r(&eval_point[pedersen_vars..]);
     let mut row_comm = C::Curve::default();

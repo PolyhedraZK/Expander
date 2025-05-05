@@ -65,8 +65,13 @@ where
 {
     let mut what = C::default().to_curve();
 
-    // msm::multiexp_serial(coeffs, &params.bases, &mut what);
     msm::multiexp_precompute_serial::<C>(coeffs, &params.pre_bases, 12, &mut what);
 
     what.to_affine()
+}
+
+impl<C: CurveAffine + ExpSerde> PedersenParams<C> {
+    pub(crate) fn msm_len(&self) -> usize {
+        self.bases.len()
+    }
 }
