@@ -1,10 +1,8 @@
 use std::io::Write;
 
 use circuit::Circuit;
-use gkr::{
-    Prover,
-    utils::{KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS},
-};
+use gkr::Prover;
+use gkr::utils::{KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS};
 use gkr_engine::{GKREngine, MPIConfig, MPIEngine};
 use gkr_engine::{GKRScheme, Goldilocksx8Config};
 use gkr_hashers::SHA256hasher;
@@ -32,12 +30,13 @@ pub fn proof_gen_x1<C: GKREngine>() {
     let mpi_config = MPIConfig::prover_new();
 
     // load circuit
-    let mut circuit =
-        Circuit::<C::FieldConfig>::single_thread_prover_load_circuit::<C>(KECCAK_M31_CIRCUIT);
+    let mut circuit = Circuit::<C::FieldConfig>::single_thread_prover_load_circuit::<C>(
+        KECCAK_GOLDILOCKS_CIRCUIT,
+    );
 
-    let witness_path = KECCAK_M31_WITNESS;
+    let witness_path = KECCAK_GOLDILOCKS_WITNESS;
 
-    let proof_file_name = "data/proof_m31x16_cuda_dev.txt";
+    let proof_file_name = "data/proof_goldilocksx8_cuda_dev.txt";
 
     circuit.load_witness_allow_padding_testing_only(witness_path, &mpi_config);
 

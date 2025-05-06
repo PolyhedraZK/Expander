@@ -83,38 +83,105 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
     pub(crate) fn poly_evals_at_rx(
         &mut self,
         var_idx: usize,
-        degree: usize,
+        _degree: usize,
         mpi_config: &impl MPIEngine,
+        debug_mode: bool,
     ) -> [F::ChallengeField; 3] {
         assert!(var_idx < self.input_var_num);
-        let local_vals_simd = self.xy_helper.poly_eval_at::<F>(
+
+        Self::poly_evals_at_rx_helper(
+            self.xy_helper.var_num,
             var_idx,
-            degree,
+            mpi_config,
             &self.sp.v_evals,
             &self.sp.hg_evals,
             &self.layer.input_vals,
             &self.sp.gate_exists_5,
+            &self.sp.eq_evals_at_r_simd0,
+            &self.sp.eq_evals_at_r_mpi0,
+            debug_mode
+        )
+
+        // let local_vals_simd = self.xy_helper.poly_eval_at::<F>(
+        //     var_idx,
+        //     degree,
+        //     &self.sp.v_evals,
+        //     &self.sp.hg_evals,
+        //     &self.layer.input_vals,
+        //     &self.sp.gate_exists_5,
+        // );
+
+        // // root_println!(mpi_config, "gate exists {:?}", self.sp.gate_exists_5);
+        // // root_println!(mpi_config, "eq_evals_at_r_simd0 {:?}", self.sp.eq_evals_at_r_simd0);
+
+        // // SIMD
+        // let local_vals = local_vals_simd
+        //     .iter()
+        //     .map(|p| unpack_and_combine(p, &self.sp.eq_evals_at_r_simd0))
+        //     .collect::<Vec<F::ChallengeField>>();
+
+        // root_println!(mpi_config, "local_vals {:?}", local_vals);
+        // // root_println!(mpi_config, "eq_evals_at_r_simd0 {:?}", self.sp.eq_evals_at_r_simd0);
+        // // root_println!(mpi_config, "eq_evals_at_r_mpi0 {:?}", self.sp.eq_evals_at_r_mpi0);
+
+        // // MPI
+        // let eval_rx = mpi_config
+        //     .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0)
+        //     .try_into()
+        //     .unwrap();
+        // root_println!(mpi_config, "eval at rx {:?}", eval_rx);
+
+        // eval_rx
+    }
+
+    pub(crate) fn poly_evals_at_rx_helper(
+        var_num: usize,
+        var_idx: usize,
+        mpi_config: &impl MPIEngine,
+        v_evals: &[F::Field],
+        hg_evals: &[F::Field],
+        input_vals: &[F::SimdCircuitField],
+        gate_exists_5: &[bool],
+        eq_evals_at_r_simd0: &[F::ChallengeField],
+        eq_evals_at_r_mpi0: &[F::ChallengeField],
+        debug_mode: bool
+    ) -> [F::ChallengeField; 3] {
+        root_println!(
+            mpi_config,
+            "poly_evals_at_rx_helper: var_num {}, var_idx {}",
+            var_num,
+            var_idx
         );
 
-        // root_println!(mpi_config, "gate exists {:?}", self.sp.gate_exists_5);
-        // root_println!(mpi_config, "eq_evals_at_r_simd0 {:?}", self.sp.eq_evals_at_r_simd0);
+        if  debug_mode{
+            root_println!(mpi_config, "\n\n\n=================");
+            root_println!(mpi_config, "v_evals: {:?}", v_evals);
+            root_println!(mpi_config, "hg_evals: {:?}", hg_evals);
+            root_println!(mpi_config, "input_vals: {:?}", input_vals);
+            root_println!(mpi_config, "gate_exists_5: {:?}", gate_exists_5);
+            root_println!(mpi_config, "eq_evals_at_r_simd0: {:?}", eq_evals_at_r_simd0);
+            root_println!(mpi_config, "eq_evals_at_r_mpi0: {:?}", eq_evals_at_r_mpi0);
+            root_println!(mpi_config, "=================\n\n\n");
+        }
 
-        // SIMD
+        let local_vals_simd = SumcheckProductGateHelper::poly_eval_at_helper::<F>(
+            var_num,
+            var_idx,
+            v_evals,
+            hg_evals,
+            input_vals,
+            gate_exists_5,
+        );
+
         let local_vals = local_vals_simd
             .iter()
-            .map(|p| unpack_and_combine(p, &self.sp.eq_evals_at_r_simd0))
+            .map(|p| unpack_and_combine(p, &eq_evals_at_r_simd0))
             .collect::<Vec<F::ChallengeField>>();
 
-        root_println!(mpi_config, "local_vals {:?}", local_vals);
-        // root_println!(mpi_config, "eq_evals_at_r_simd0 {:?}", self.sp.eq_evals_at_r_simd0);
-        // root_println!(mpi_config, "eq_evals_at_r_mpi0 {:?}", self.sp.eq_evals_at_r_mpi0);
-
-        // MPI
         let eval_rx = mpi_config
-            .coef_combine_vec(&local_vals, &self.sp.eq_evals_at_r_mpi0)
+            .coef_combine_vec(&local_vals, &eq_evals_at_r_mpi0)
             .try_into()
             .unwrap();
-        root_println!(mpi_config, "eval at rx {:?}", eval_rx);
 
         eval_rx
     }
@@ -165,7 +232,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         degree: usize,
         mpi_config: &impl MPIEngine,
     ) -> [F::ChallengeField; 3] {
-        let [p0, p1, p2] = self.poly_evals_at_rx(var_idx, degree, mpi_config);
+        let [p0, p1, p2] = self.poly_evals_at_rx(var_idx, degree, mpi_config, false);
         [
             p0 * self.sp.phase2_coef,
             p1 * self.sp.phase2_coef,

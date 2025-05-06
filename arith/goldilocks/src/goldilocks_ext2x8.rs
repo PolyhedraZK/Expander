@@ -29,8 +29,12 @@ impl ExpSerde for GoldilocksExt2x8 {
     where
         W: std::io::Write,
     {
-        self.c0.serialize_into(&mut writer)?;
-        self.c1.serialize_into(&mut writer)?;
+        let c0 = self.c0.unpack();
+        let c1 = self.c1.unpack();
+        c0.iter().zip(c1.iter()).for_each(|(c0, c1)| {
+            c0.serialize_into(&mut writer).unwrap();
+            c1.serialize_into(&mut writer).unwrap();
+        });
         Ok(())
     }
 
@@ -38,9 +42,19 @@ impl ExpSerde for GoldilocksExt2x8 {
     where
         R: std::io::Read,
     {
-        let c0 = Goldilocksx8::deserialize_from(&mut reader)?;
-        let c1 = Goldilocksx8::deserialize_from(&mut reader)?;
-        Ok(Self { c0, c1 })
+        let mut c0 = vec![];
+        let mut c1 = vec![];
+        for _ in 0..Goldilocksx8::PACK_SIZE {
+            let c0_i = Goldilocks::deserialize_from(&mut reader)?;
+            let c1_i = Goldilocks::deserialize_from(&mut reader)?;
+            c0.push(c0_i);
+            c1.push(c1_i);
+        }
+
+        Ok(Self {
+            c0: Goldilocksx8::pack(c0.as_ref()),
+            c1: Goldilocksx8::pack(c1.as_ref()),
+        })
     }
 }
 

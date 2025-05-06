@@ -126,6 +126,7 @@ pub fn gkr_par_verifier_prove<F: FieldEngine>(
             sp,
             mpi_config,
             i == layer_num - 1,
+            false
         );
 
         if challenge.rz_1.is_some() {

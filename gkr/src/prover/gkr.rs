@@ -61,16 +61,10 @@ pub fn gkr_prove<F: FieldEngine>(
             sp,
             mpi_config,
             i == layer_num - 1,
+            i == 1,
         );
 
-        root_println!(
-            mpi_config,
-            "is some {} is output {} transcript layer {}: {}",
-            challenge.rz_1.is_some(),
-            i == layer_num - 1,
-            i,
-            transcript
-        );
+        root_println!(mpi_config, "transcript layer {}: {}", i, transcript);
 
         if challenge.rz_1.is_some() {
             // TODO: try broadcast beta.unwrap directly
