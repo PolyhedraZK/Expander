@@ -7,6 +7,7 @@ use crate::*;
 // recursive format used in compiler
 pub type SegmentId = usize;
 
+#[derive(ExpSerde)]
 pub struct Allocation {
     pub i_offset: usize,
     pub o_offset: usize,

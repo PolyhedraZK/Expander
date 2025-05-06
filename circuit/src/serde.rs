@@ -59,24 +59,6 @@ impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for CustomGateWrapper<C, I
     }
 }
 
-impl ExpSerde for Allocation {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
-        self.i_offset.serialize_into(&mut writer)?;
-        self.o_offset.serialize_into(&mut writer)?;
-
-        Ok(())
-    }
-
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        Ok(Self {
-            i_offset: <usize as ExpSerde>::deserialize_from(&mut reader)?,
-            o_offset: <usize as ExpSerde>::deserialize_from(&mut reader)?,
-        })
-    }
-}
-
 impl<C: FieldEngine> ExpSerde for Segment<C> {
     const SERIALIZED_SIZE: usize = unimplemented!();
 
