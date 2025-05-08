@@ -99,7 +99,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
             &self.sp.gate_exists_5,
             &self.sp.eq_evals_at_r_simd0,
             &self.sp.eq_evals_at_r_mpi0,
-            debug_mode
+            debug_mode,
         )
 
         // let local_vals_simd = self.xy_helper.poly_eval_at::<F>(
@@ -144,7 +144,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         gate_exists_5: &[bool],
         eq_evals_at_r_simd0: &[F::ChallengeField],
         eq_evals_at_r_mpi0: &[F::ChallengeField],
-        debug_mode: bool
+        debug_mode: bool,
     ) -> [F::ChallengeField; 3] {
         root_println!(
             mpi_config,
@@ -153,7 +153,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
             var_idx
         );
 
-        if  debug_mode{
+        if debug_mode {
             root_println!(mpi_config, "\n\n\n=================");
             root_println!(mpi_config, "v_evals: {:?}", v_evals);
             root_println!(mpi_config, "hg_evals: {:?}", hg_evals);

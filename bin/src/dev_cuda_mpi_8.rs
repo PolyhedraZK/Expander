@@ -2,7 +2,6 @@ use std::io::Write;
 
 use circuit::Circuit;
 use gkr::Prover;
-use gkr::utils::{KECCAK_GOLDILOCKS_CIRCUIT, KECCAK_GOLDILOCKS_WITNESS};
 use gkr_engine::GKRScheme;
 use gkr_engine::{GKREngine, Goldilocksx1Config, MPIConfig, MPIEngine, SharedMemory};
 use gkr_hashers::SHA256hasher;
@@ -10,6 +9,9 @@ use poly_commit::RawExpanderGKR;
 use poly_commit::expander_pcs_init_testing_only;
 use serdes::ExpSerde;
 use transcript::BytesHashTranscript;
+
+pub const CIRCUIT_DIR: &str = "data/circuit_fib_goldilocks.txt";
+pub const WITNESS_DIR: &str = "data/witness_fib_goldilocks.txt";
 
 struct Goldilocksx1Sha2RawCudaDev;
 
@@ -31,9 +33,9 @@ pub fn proof_gen_x8<C: GKREngine>() {
 
     // load circuit
     let (mut circuit, mut window) =
-        Circuit::<C::FieldConfig>::prover_load_circuit::<C>(KECCAK_GOLDILOCKS_CIRCUIT, &mpi_config);
+        Circuit::<C::FieldConfig>::prover_load_circuit::<C>(CIRCUIT_DIR, &mpi_config);
 
-    let witness_path = KECCAK_GOLDILOCKS_WITNESS;
+    let witness_path = WITNESS_DIR;
 
     let proof_file_name = "data/proof_Goldilocksx1_cuda_dev.txt";
 
