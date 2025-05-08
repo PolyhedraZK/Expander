@@ -3,6 +3,7 @@ use serdes::{ExpSerde, SerdeResult};
 
 use crate::*;
 
+// Derive macros does not work for associated types
 impl<E: Engine> ExpSerde for KZGCommitment<E>
 where
     E::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,

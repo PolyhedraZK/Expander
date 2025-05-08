@@ -2,13 +2,14 @@ use std::fmt;
 use std::fmt::{Debug, Display};
 
 use ark_std::{end_timer, start_timer};
+use serdes::ExpSerde;
 
 use crate::{
     common_ancestor, convert_index_to_last_level, is_left_child, parent_index, Leaf, Node, Tree,
 };
 
 /// Represents a path in the Merkle tree, used for proving membership.
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, ExpSerde)]
 pub struct Path {
     pub leaf: Leaf,
     pub(crate) path_nodes: Vec<Node>,
@@ -105,7 +106,7 @@ impl Path {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, ExpSerde)]
 pub struct RangePath {
     pub leaves: Vec<Leaf>,
     pub(crate) path_nodes: Vec<Node>,

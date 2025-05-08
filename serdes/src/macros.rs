@@ -34,7 +34,7 @@ macro_rules! exp_serde_for_generic_slices {
                 for _ in 0..$size {
                     ret.push(S::deserialize_from(&mut reader)?);
                 }
-                Ok(ret.try_into().map_err(|_| SerdeError::DeserializeError)?)
+                ret.try_into().map_err(|_| SerdeError::DeserializeError)
             }
         }
     };
