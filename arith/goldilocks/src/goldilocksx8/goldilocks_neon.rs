@@ -1,6 +1,5 @@
 use std::{
     fmt::Debug,
-    io::{Read, Write},
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -8,7 +7,7 @@ use std::{
 use arith::{field_common, FFTField, Field, SimdField};
 use ethnum::U256;
 use rand::RngCore;
-use serdes::{ExpSerde, SerdeResult};
+use serdes::ExpSerde;
 
 use crate::{goldilocks::p2_instructions, Goldilocks};
 
