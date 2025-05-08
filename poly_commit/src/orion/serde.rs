@@ -12,8 +12,6 @@ use crate::orion::{
 };
 
 impl ExpSerde for OrionExpanderGraph {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.l_vertices_size.serialize_into(&mut writer)?;
         self.r_vertices_size.serialize_into(&mut writer)?;
@@ -34,8 +32,6 @@ impl ExpSerde for OrionExpanderGraph {
 }
 
 impl ExpSerde for OrionExpanderGraphPositioned {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.input_starts.serialize_into(&mut writer)?;
         self.output_starts.serialize_into(&mut writer)?;
@@ -59,8 +55,6 @@ impl ExpSerde for OrionExpanderGraphPositioned {
 }
 
 impl ExpSerde for OrionCode {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.hamming_weight.serialize_into(&mut writer)?;
         self.msg_len.serialize_into(&mut writer)?;
@@ -87,8 +81,6 @@ impl ExpSerde for OrionCode {
 }
 
 impl ExpSerde for OrionSRS {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.num_vars.serialize_into(&mut writer)?;
         self.num_leaves_per_mt_query.serialize_into(&mut writer)?;
@@ -109,8 +101,6 @@ impl ExpSerde for OrionSRS {
 }
 
 impl<F: Field> ExpSerde for OrionProof<F> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.eval_row.serialize_into(&mut writer)?;
         self.proximity_rows.serialize_into(&mut writer)?;
@@ -134,8 +124,6 @@ impl<F: Field> ExpSerde for OrionProof<F> {
 }
 
 impl ExpSerde for OrionScratchPad {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.interleaved_alphabet_commitment
             .serialize_into(&mut writer)?;

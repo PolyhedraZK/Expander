@@ -1,45 +1,22 @@
 use ethnum::U256;
 use rand::RngCore;
 use std::{
-    io::{Read, Write},
     iter::{Product, Sum},
     mem::transmute,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 use arith::{field_common, ExtensionField, FFTField, Field};
-use serdes::{ExpSerde, SerdeResult};
+use serdes::ExpSerde;
 
 use crate::{babybear::BabyBear, BabyBearExt3x16, BabyBearx16};
 
-#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq, ExpSerde)]
 pub struct BabyBearExt3 {
     pub v: [BabyBear; 3],
 }
 
 field_common!(BabyBearExt3);
-
-impl ExpSerde for BabyBearExt3 {
-    const SERIALIZED_SIZE: usize = (32 / 8) * 3;
-
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        self.v[0].serialize_into(&mut writer)?;
-        self.v[1].serialize_into(&mut writer)?;
-        self.v[2].serialize_into(&mut writer)
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        Ok(BabyBearExt3 {
-            v: [
-                BabyBear::deserialize_from(&mut reader)?,
-                BabyBear::deserialize_from(&mut reader)?,
-                BabyBear::deserialize_from(&mut reader)?,
-            ],
-        })
-    }
-}
 
 impl Field for BabyBearExt3 {
     const NAME: &'static str = "Baby Bear Extension 3";

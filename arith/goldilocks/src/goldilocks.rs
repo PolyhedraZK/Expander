@@ -56,8 +56,6 @@ impl Ord for Goldilocks {
 field_common!(Goldilocks);
 
 impl ExpSerde for Goldilocks {
-    const SERIALIZED_SIZE: usize = 64 / 8;
-
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         // normalize the element: both 0 and Modulus are valid internal representations
@@ -68,7 +66,7 @@ impl ExpSerde for Goldilocks {
 
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut u = [0u8; Self::SERIALIZED_SIZE];
+        let mut u = [0u8; 8];
         reader.read_exact(&mut u)?;
         let mut v = u64::from_le_bytes(u);
         v = mod_reduce_u64(v);

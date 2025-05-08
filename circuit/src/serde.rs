@@ -13,8 +13,6 @@ pub struct CustomGateWrapper<C: FieldEngine, const INPUT_NUM: usize> {
 }
 
 impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for CustomGateWrapper<C, INPUT_NUM> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, mut _writer: W) -> SerdeResult<()> {
         todo!()
     }
@@ -60,8 +58,6 @@ impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for CustomGateWrapper<C, I
 }
 
 impl<C: FieldEngine> ExpSerde for Segment<C> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         <usize as ExpSerde>::serialize_into(&self.i_var_num, &mut writer)?;
         <usize as ExpSerde>::serialize_into(&self.o_var_num, &mut writer)?;
@@ -111,8 +107,6 @@ impl<C: FieldEngine> ExpSerde for Segment<C> {
 const VERSION_NUM: usize = 3914834606642317635; // b'CIRCUIT6'
 
 impl<C: FieldEngine> ExpSerde for RecursiveCircuit<C> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         VERSION_NUM.serialize_into(&mut writer)?;
         C::CircuitField::MODULUS.serialize_into(&mut writer)?;
@@ -147,8 +141,6 @@ impl<C: FieldEngine> ExpSerde for RecursiveCircuit<C> {
 }
 
 impl<C: FieldEngine> ExpSerde for Witness<C> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, mut _writer: W) -> SerdeResult<()> {
         todo!()
     }

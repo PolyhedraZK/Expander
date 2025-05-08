@@ -7,8 +7,6 @@ impl<E: Engine> ExpSerde for KZGCommitment<E>
 where
     E::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {
-    const SERIALIZED_SIZE: usize = <E::G1Affine as ExpSerde>::SERIALIZED_SIZE;
-
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> SerdeResult<()> {
         self.0.serialize_into(writer)
     }
@@ -23,8 +21,6 @@ where
     E::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.powers_of_tau.serialize_into(&mut writer)?;
         self.tau_g2.serialize_into(&mut writer)
@@ -44,8 +40,6 @@ impl<E: Engine> ExpSerde for UniKZGVerifierParams<E>
 where
     E::G2Affine: ExpSerde,
 {
-    const SERIALIZED_SIZE: usize = <E::G2Affine as ExpSerde>::SERIALIZED_SIZE;
-
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> SerdeResult<()> {
         self.tau_g2.serialize_into(writer)
     }
@@ -62,8 +56,6 @@ where
     E::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.tau_x_srs.serialize_into(&mut writer)?;
         self.tau_y_srs.serialize_into(&mut writer)
@@ -84,8 +76,6 @@ impl<E: Engine> ExpSerde for BiKZGVerifierParam<E>
 where
     E::G2Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
-    const SERIALIZED_SIZE: usize = 2 * <E::G2Affine as ExpSerde>::SERIALIZED_SIZE;
-
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.tau_x_g2.serialize_into(&mut writer)?;
         self.tau_y_g2.serialize_into(&mut writer)
@@ -103,8 +93,6 @@ impl<E: Engine> ExpSerde for HyperKZGExportedLocalEvals<E>
 where
     E::Fr: ExpSerde,
 {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.beta_x2_eval.serialize_into(&mut writer)?;
         self.pos_beta_x_evals.serialize_into(&mut writer)?;
@@ -129,8 +117,6 @@ where
     E::Fr: ExpSerde,
     E::G1Affine: ExpSerde + Default,
 {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.folded_oracle_commitments.serialize_into(&mut writer)?;
         self.evals_at_x.serialize_into(&mut writer)?;
@@ -157,8 +143,6 @@ impl<E: Engine> ExpSerde for HyperKZGAggregatedEvals<E>
 where
     E::Fr: ExpSerde,
 {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.beta_y2_evals.serialize_into(&mut writer)?;
         self.pos_beta_y_evals.serialize_into(&mut writer)?;
@@ -183,8 +167,6 @@ where
     E::Fr: ExpSerde,
     E::G1Affine: ExpSerde + Default,
 {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.folded_oracle_commitments.serialize_into(&mut writer)?;
 

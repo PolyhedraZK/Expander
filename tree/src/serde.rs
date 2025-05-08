@@ -5,8 +5,6 @@ use serdes::{ExpSerde, SerdeResult};
 use crate::{Leaf, Node, Path, RangePath, Tree, LEAF_BYTES, LEAF_HASH_BYTES};
 
 impl ExpSerde for Leaf {
-    const SERIALIZED_SIZE: usize = LEAF_BYTES;
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         writer.write_all(&self.data)?;
         Ok(())
@@ -20,8 +18,6 @@ impl ExpSerde for Leaf {
 }
 
 impl ExpSerde for Node {
-    const SERIALIZED_SIZE: usize = LEAF_HASH_BYTES;
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         writer.write_all(self.as_bytes())?;
         Ok(())
@@ -35,8 +31,6 @@ impl ExpSerde for Node {
 }
 
 impl ExpSerde for Path {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         <Vec<Node> as ExpSerde>::serialize_into(&self.path_nodes, &mut writer)?;
         self.leaf.serialize_into(&mut writer)?;
@@ -59,8 +53,6 @@ impl ExpSerde for Path {
 }
 
 impl ExpSerde for RangePath {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.left.serialize_into(&mut writer)?;
         self.right.serialize_into(&mut writer)?;
@@ -85,8 +77,6 @@ impl ExpSerde for RangePath {
 }
 
 impl ExpSerde for Tree {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         <Vec<Node> as ExpSerde>::serialize_into(&self.nodes, &mut writer)?;
         self.leaves.serialize_into(&mut writer)

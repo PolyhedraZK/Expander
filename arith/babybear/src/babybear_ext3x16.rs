@@ -1,43 +1,20 @@
 use std::{
-    io::{Read, Write},
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 use arith::{field_common, ExtensionField, FFTField, Field, SimdField};
 use ethnum::U256;
-use serdes::{ExpSerde, SerdeResult};
+use serdes::ExpSerde;
 
 use crate::{babybear::BabyBear, BabyBearExt3, BabyBearx16};
 
-#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq, ExpSerde)]
 pub struct BabyBearExt3x16 {
     pub v: [BabyBearx16; 3],
 }
 
 field_common!(BabyBearExt3x16);
-
-impl ExpSerde for BabyBearExt3x16 {
-    const SERIALIZED_SIZE: usize = (512 / 8) * 3;
-
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        self.v[0].serialize_into(&mut writer)?;
-        self.v[1].serialize_into(&mut writer)?;
-        self.v[2].serialize_into(&mut writer)
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        Ok(Self {
-            v: [
-                BabyBearx16::deserialize_from(&mut reader)?,
-                BabyBearx16::deserialize_from(&mut reader)?,
-                BabyBearx16::deserialize_from(&mut reader)?,
-            ],
-        })
-    }
-}
 
 impl SimdField for BabyBearExt3x16 {
     type Scalar = BabyBearExt3;

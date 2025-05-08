@@ -1,5 +1,4 @@
 use std::{
-    io::{Read, Write},
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -7,39 +6,19 @@ use std::{
 use arith::{field_common, ExtensionField, FFTField, Field};
 use ethnum::U256;
 use rand::RngCore;
-use serdes::{ExpSerde, SerdeResult};
+use serdes::ExpSerde;
 
 use crate::{
     goldilocks::{mod_reduce_u64, Goldilocks},
     GoldilocksExt2x8, Goldilocksx8,
 };
 
-#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq, ExpSerde)]
 pub struct GoldilocksExt2 {
     pub v: [Goldilocks; 2],
 }
 
 field_common!(GoldilocksExt2);
-
-impl ExpSerde for GoldilocksExt2 {
-    const SERIALIZED_SIZE: usize = (64 / 8) * 2;
-
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        self.v[0].serialize_into(&mut writer)?;
-        self.v[1].serialize_into(&mut writer)
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        Ok(GoldilocksExt2 {
-            v: [
-                Goldilocks::deserialize_from(&mut reader)?,
-                Goldilocks::deserialize_from(&mut reader)?,
-            ],
-        })
-    }
-}
 
 impl Field for GoldilocksExt2 {
     const NAME: &'static str = "Goldilocks Extension 2";

@@ -28,12 +28,6 @@ pub fn serdes_derive(input: TokenStream) -> TokenStream {
 
     let field_types: Vec<_> = fields.iter().map(|field| &field.ty).collect();
 
-    let serialized_size = quote! {
-        const SERIALIZED_SIZE: usize = #(
-            <#field_types as serdes::ExpSerde>::SERIALIZED_SIZE +
-        )* 0;
-    };
-
     let serialize_impl = quote! {
         fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> serdes::SerdeResult<()> {
             #(
@@ -55,7 +49,6 @@ pub fn serdes_derive(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl #impl_generics serdes::ExpSerde for #name #ty_generics #where_clause {
-            #serialized_size
 
             #serialize_impl
 

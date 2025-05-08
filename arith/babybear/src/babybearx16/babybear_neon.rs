@@ -49,8 +49,6 @@ impl NeonBabyBear {
 }
 
 impl ExpSerde for NeonBabyBear {
-    const SERIALIZED_SIZE: usize = (128 / 8) * 4;
-
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe {
