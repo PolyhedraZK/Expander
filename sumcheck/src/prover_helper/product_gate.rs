@@ -92,7 +92,7 @@ impl SumcheckProductGateHelper {
     ) -> [F::Field; 3] {
         let eval_size = 1 << (var_num - var_idx - 1);
         log::trace!("Eval size: {}", eval_size);
-        
+
         let [p0, p1, mut p2] = {
             if var_idx == 0 {
                 Self::evaluate(eval_size, init_v, bk_hg, gate_exists)

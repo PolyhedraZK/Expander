@@ -12,8 +12,13 @@ use transcript::BytesHashTranscript;
 
 struct Goldilocksx8Sha2RawCudaDev;
 
+// fibonacci like circuits with both add and mul gates
 pub const CIRCUIT_DIR: &str = "data/circuit_fib_goldilocks.txt";
 pub const WITNESS_DIR: &str = "data/witness_fib_goldilocks.txt";
+
+// // keccak circuits
+// pub const CIRCUIT_DIR: &str = "data/circuit_goldilocks.txt";
+// pub const WITNESS_DIR: &str = "data/witness_goldilocks.txt";
 
 impl GKREngine for Goldilocksx8Sha2RawCudaDev {
     type FieldConfig = Goldilocksx8Config;

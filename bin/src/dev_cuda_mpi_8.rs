@@ -10,8 +10,13 @@ use poly_commit::expander_pcs_init_testing_only;
 use serdes::ExpSerde;
 use transcript::BytesHashTranscript;
 
+// fibonacci like circuits with both add and mul gates
 pub const CIRCUIT_DIR: &str = "data/circuit_fib_goldilocks.txt";
 pub const WITNESS_DIR: &str = "data/witness_fib_goldilocks.txt";
+
+// // keccak circuits
+// pub const CIRCUIT_DIR: &str = "data/circuit_goldilocks.txt";
+// pub const WITNESS_DIR: &str = "data/witness_goldilocks.txt";
 
 struct Goldilocksx1Sha2RawCudaDev;
 
