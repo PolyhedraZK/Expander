@@ -1,18 +1,47 @@
 /// Raw commitment for multi-linear polynomials
 use arith::{ExtensionField, Field};
+use ethnum::U256;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
 };
 use polynomials::{MultiLinearPoly, MultilinearExtension};
 use rand::RngCore;
-use serdes::ExpSerde;
+use serdes::{ExpSerde, SerdeResult};
 
 use crate::PolynomialCommitmentScheme;
 
-#[derive(Clone, Debug, Default, ExpSerde)]
+#[derive(Clone, Debug, Default)]
 pub struct RawCommitment<F: Field> {
     pub evals: Vec<F>,
+}
+
+impl<F: Field> ExpSerde for RawCommitment<F> {
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
+        // ideally we want to remove this and use Derive(ExpSerde) method to determine the length
+        // of the vector.
+        // however, it seems that the recursion circuit has hardcoded the length.
+        // maybe we want to fix it?
+        let u256_embedded = U256::from(self.evals.len() as u64);
+        u256_embedded.serialize_into(&mut writer)?;
+
+        self.evals
+            .iter()
+            .try_for_each(|v| v.serialize_into(&mut writer))?;
+
+        Ok(())
+    }
+
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
+        let mut v = Self::default();
+
+        let len = U256::deserialize_from(&mut reader)?;
+
+        for _ in 0..len.as_usize() {
+            v.evals.push(F::deserialize_from(&mut reader)?);
+        }
+        Ok(v)
+    }
 }
 
 #[derive(Clone, Debug, Default)]
