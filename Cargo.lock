@@ -1741,6 +1741,7 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "ark-std",
+ "circuit",
  "criterion",
  "derivative",
  "ethnum",
@@ -1755,6 +1756,7 @@ dependencies = [
  "polynomials",
  "rand",
  "serdes",
+ "sumcheck",
  "thiserror",
  "transcript",
  "transpose",

@@ -1,0 +1,397 @@
+use std::iter;
+
+use arith::{ExtensionField, Field};
+use ark_std::iterable::Iterable;
+use circuit::{Circuit, CircuitLayer, CoefType, GateAdd};
+use gkr_engine::FieldEngine;
+use itertools::{chain, izip};
+use sumcheck::ProverScratchPad;
+
+use crate::orion::linear_code::OrionCode;
+
+pub(crate) const CODE_SWITCHING_WORLD_SIZE: usize = 1;
+
+/// Generate Orion code switching GKR circuit (before queries has been decided).
+///
+/// The code-switching circuit is decided partially during setup, and the other part is
+/// determined during opening, where randomness for queries are decided.
+///
+/// This method generates the code-switching circuit evaluating Orion evaluation response,
+/// encoding evaluation and proximity responses, and eventually the output of the circuit
+/// is the MLE poly evaluation, and codewords.
+///
+/// Once the query randomness is decided, the prover/verifier can append the selection
+/// layer to the output of the circuit, by relaying codeword alphabets to the final outputs
+/// of the circuit, then start the proving/verifying procedure.
+#[allow(unused)]
+pub(crate) fn code_switching_encoding<F, C>(
+    encoder: &OrionCode,
+    num_vars: usize,
+    proximity_rep: usize,
+) -> Circuit<C>
+where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
+{
+    assert!((1..=2).contains(&proximity_rep));
+    assert_eq!(encoder.msg_len().ilog2() as usize, num_vars);
+
+    let num_computation_layers = {
+        let num_challenge_layers = num_vars;
+        let num_encoding_layers = encoder.g0s.len() + encoder.g1s.len();
+
+        std::cmp::max(num_challenge_layers, num_encoding_layers)
+    };
+
+    let eval_width = encoder.msg_len();
+    let scratch_len = 2 * eval_width;
+
+    // NOTE(HS) the if condition on input (index == 0) or not is that,
+    // the input layer looks like follows:
+    //
+    // |- eval -|- 0000 -|- prox -|- prox -|
+    // in total the input length is 4x eval length
+    //
+    // while the internal circuit layer looks like follows:
+    //
+    // |- eval -|- 0000 -|-- eval encode --|-- prox encode --|-- prox encode --|
+    // in total the input length is 8x eval length
+    //
+    // Thus the first layer of circuit looks like
+    // |- eval -|- 0000 -|-- eval encode --|-- prox encode --|-- prox encode --|
+    // |        |       /                 /                 /                 /
+    // |        |    *-*        *--------*     *-----------*           *-----*
+    // |        |   /          /              /                       /
+    // |        |  /          /              /                       /
+    // |        | /          /              /                       /
+    // |        |/          /              /                       /
+    // | *------* *--------*        *-----*  *--------------------*
+    // |/        /        /        /        /
+    // |- eval -|- 0000 -|- prox -|- prox -|
+    //
+    // While the internal layers should look like
+    // |- eval -|- 0000 -|-- eval encode --|-- prox encode --|-- prox encode --|
+    // |        |        |                 |                 |                 |
+    // |        |        |                 |                 |                 |
+    // |- eval -|- 0000 -|-- eval encode --|-- prox encode --|-- prox encode --|
+    //
+    // Side note: scratch len is the encode length, or 2x prox/eval length.
+
+    let mut circuit: Circuit<C> = Circuit::default();
+    let layer_iter = (0..num_computation_layers).map(|i| {
+        let output_var_num = num_vars + 3;
+        let input_var_num = if i == 0 { num_vars + 2 } else { output_var_num };
+
+        let mut layer: CircuitLayer<C> = CircuitLayer {
+            input_var_num,
+            output_var_num,
+            ..Default::default()
+        };
+
+        chain!(
+            // NOTE(HS) evaluation response encoding circuit
+            iter::once(ExpanderEncodingPosition {
+                i_srt: if i == 0 { 0 } else { scratch_len },
+                o_srt: scratch_len,
+            }),
+            // NOTE(HS) proximity response encoding circuit
+            (2..proximity_rep + 2).map(|rep_i| ExpanderEncodingPosition {
+                i_srt: if i == 0 { eval_width } else { scratch_len } * rep_i,
+                o_srt: scratch_len * rep_i,
+            })
+        )
+        .for_each(|pos| code_switching_gkr_layer_encoding(&mut layer, encoder, i, pos));
+
+        layer
+    });
+
+    circuit.layers.extend(layer_iter);
+    circuit
+}
+
+#[allow(unused)]
+pub(crate) fn code_switching_evaluation<F, C>(point: &[C::ChallengeField], c: &mut Circuit<C>)
+where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
+{
+    c.layers.iter_mut().enumerate().for_each(|(i, l)| {
+        code_switching_gkr_layer_evaluating(l, point, i);
+    });
+}
+
+#[allow(unused)]
+pub(crate) fn code_switching_query<F, C>(
+    indices: &[usize],
+    proximity_rep: usize,
+    circ: &mut Circuit<C>,
+) where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
+{
+    let input_var_num = circ.layers.last().unwrap().output_var_num;
+    let encode_len = (1 << input_var_num) / 4;
+
+    let output_var_num = {
+        let total_outputs = 1 + (1 + proximity_rep) * indices.len();
+        total_outputs.next_power_of_two().ilog2() as usize
+    };
+
+    let mut selection_layer: CircuitLayer<C> = CircuitLayer {
+        input_var_num,
+        output_var_num,
+        ..Default::default()
+    };
+
+    // NOTE(HS) relay the evaluation output
+    selection_layer.add.push(relay(0, 0));
+
+    // NOTE(HS) relay proximity queries
+    let mut output_index: usize = 1;
+
+    (1..=1 + proximity_rep).for_each(|i| {
+        let encode_starts = i * encode_len;
+
+        indices.iter().for_each(|query_i| {
+            let input_gate = encode_starts + *query_i;
+            selection_layer.add.push(relay(input_gate, output_index));
+            output_index += 1;
+        });
+    });
+
+    circ.layers.push(selection_layer);
+}
+
+/// On given an vanilla Orion proof evaluation response and proximity responses,
+/// output the input MLE polynomial coefficients for the code switching GKR circuit.
+#[allow(unused)]
+pub fn prepare_code_switching_inputs<F: Field>(eval_resp: &[F], prox_resps: &[Vec<F>]) -> Vec<F> {
+    assert!(eval_resp.len().is_power_of_two());
+    let eval_width = eval_resp.len();
+
+    assert!((1..=2).contains(&prox_resps.len()));
+    assert!(prox_resps.iter().all(|p| p.len() == eval_width));
+
+    let mut buffer = eval_resp.to_vec();
+    buffer.resize(eval_width * 4, F::ZERO);
+
+    izip!((2..4), prox_resps)
+        .for_each(|(i, p)| buffer[i * eval_width..(i + 1) * eval_width].copy_from_slice(p));
+
+    buffer
+}
+
+#[allow(unused)]
+pub(crate) fn prepare_code_switching_gkr_prover_mem<F, C>(
+    circuit: &Circuit<C>,
+) -> ProverScratchPad<C>
+where
+    F: Field + ExtensionField,
+    C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
+{
+    let i_vars = circuit.layers.iter().map(|l| l.input_var_num);
+    let o_vars = circuit.layers.iter().map(|l| l.output_var_num);
+
+    let max_i_vars = i_vars.max().unwrap();
+    let max_o_vars = o_vars.max().unwrap();
+
+    ProverScratchPad::<C>::new(max_i_vars, max_o_vars, CODE_SWITCHING_WORLD_SIZE)
+}
+
+/// A wire that links output gate from lower layer to input gate from higher layer,
+/// the wire is weighted, namely the coefficient can be other than ONE.
+fn add_wire<F, C>(i_id: usize, o_id: usize, coef: C::ChallengeField) -> GateAdd<C>
+where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F>,
+{
+    GateAdd {
+        i_ids: [i_id],
+        o_id,
+        coef,
+        coef_type: CoefType::Constant,
+        gate_type: 0,
+    }
+}
+
+/// A relay wire that links output gate from lower layer to input gate from higher layer.
+fn relay<F, C>(i_id: usize, o_id: usize) -> GateAdd<C>
+where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F>,
+{
+    GateAdd {
+        i_ids: [i_id],
+        o_id,
+        coef: C::ChallengeField::ONE,
+        coef_type: CoefType::Constant,
+        gate_type: 0,
+    }
+}
+
+/// The tuple describes the position of a partial encoding circuit inside a global circuit.
+///
+/// The i_srt stands for input starting index from lower layer, while o_srt stands for the
+/// output starting index on the higher index.
+struct ExpanderEncodingPosition {
+    i_srt: usize,
+    o_srt: usize,
+}
+
+/// This method writes a partial MLE poly evaluation to a code switching GKR circuit layer.
+/// The lower index, the layer is nearer to the inputs.
+/// MLE polynomial evaluation sequence starts from lowest variable in sumcheck challenge,
+/// which is the left-most element in Expander little-endian boolean hypercube.
+fn code_switching_gkr_layer_evaluating<F, C>(
+    layer: &mut CircuitLayer<C>,
+    challenge_point: &[C::ChallengeField],
+    index: usize,
+) where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
+{
+    // NOTE(HS) MLE evals
+    let eval_width = 1 << challenge_point.len();
+    let evals_input_width = eval_width / (1 << index);
+    let evals_output_width = evals_input_width / 2;
+
+    // NOTE(HS) early exit - if output is 0, then relay prev layer evaluation to output
+    if evals_output_width == 0 {
+        layer.add.push(relay(0, 0));
+        return;
+    }
+
+    let v = challenge_point[index];
+    (0..evals_output_width).for_each(|out_i| {
+        layer.add.extend_from_slice(&[
+            add_wire(out_i * 2, out_i, C::ChallengeField::ONE - v),
+            add_wire(out_i * 2 + 1, out_i, v),
+        ]);
+    });
+}
+
+/// This method writes a partial Expander code encoding to a code switching GKR circuit layer.
+/// The lower index, the layer is nearer to the inputs.
+fn code_switching_gkr_layer_encoding<F, C>(
+    layer: &mut CircuitLayer<C>,
+    encoder: &OrionCode,
+    index: usize,
+    pos: ExpanderEncodingPosition,
+) where
+    F: Field,
+    C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
+{
+    // NOTE(HS) expander code encoding
+    let num_encoding_layers = encoder.g0s.len() + encoder.g1s.len();
+
+    // NOTE(HS) early exit if no encoding happens, just relay encoding output
+    if index >= num_encoding_layers {
+        let relay_iter = (0..encoder.code_len()).map(|i| relay(pos.i_srt + i, pos.o_srt + i));
+        layer.add.extend(relay_iter);
+        return;
+    }
+
+    let graph_ref = &encoder[index];
+
+    // NOTE(HS) clone prev level of inputs
+    let relay_iter = (0..graph_ref.output_starts).map(|i| relay(i + pos.i_srt, i + pos.o_srt));
+    layer.add.extend(relay_iter);
+
+    // NOTE(HS) position the expander graph fan in
+    let i_srt = pos.i_srt + graph_ref.input_starts;
+    let o_srt = pos.o_srt + graph_ref.output_starts;
+
+    let neighbors_ref = &graph_ref.graph.neighborings;
+    neighbors_ref.iter().enumerate().for_each(|(out_i, in_s)| {
+        let enc_iter = in_s.iter().map(|in_i| relay(in_i + i_srt, out_i + o_srt));
+        layer.add.extend(enc_iter)
+    });
+}
+
+#[cfg(test)]
+mod code_switching_test {
+    use arith::{ExtensionField, Field, Fr, SimdField};
+    use ark_std::test_rng;
+    use gkr_engine::{BN254Config, FieldEngine, Transcript};
+    use gkr_hashers::Keccak256hasher;
+    use polynomials::MultiLinearPoly;
+    use transcript::BytesHashTranscript;
+
+    use crate::{
+        orion::{
+            code_switching::{
+                code_switching_encoding, code_switching_evaluation, code_switching_query,
+                prepare_code_switching_inputs,
+            },
+            linear_code::OrionCode,
+        },
+        ORION_CODE_PARAMETER_INSTANCE,
+    };
+
+    fn test_orion_code_switch_gkr_helper<F, C>(num_vars: usize)
+    where
+        F: Field + ExtensionField + SimdField,
+        C: FieldEngine<CircuitField = F, ChallengeField = F, SimdCircuitField = F>,
+    {
+        const PROXIMITY_REPETITIONS: usize = 2;
+        const PHONY_QUERY_NUM: usize = 1000;
+
+        let mut rng = test_rng();
+
+        let msg_size = 1 << num_vars;
+        let encoder = OrionCode::new(ORION_CODE_PARAMETER_INSTANCE, msg_size, &mut rng);
+
+        let challenge_point: Vec<_> = (0..num_vars)
+            .map(|_| C::ChallengeField::random_unsafe(&mut rng))
+            .collect();
+
+        let queries = {
+            let mut transcript = BytesHashTranscript::<F, Keccak256hasher>::new();
+            let mut qs = transcript.generate_challenge_index_vector(PHONY_QUERY_NUM);
+            qs.iter_mut().for_each(|q| *q %= encoder.code_len());
+            qs
+        };
+
+        let mut layered_circuit =
+            code_switching_encoding::<F, C>(&encoder, num_vars, PROXIMITY_REPETITIONS);
+        code_switching_evaluation(&challenge_point, &mut layered_circuit);
+        code_switching_query(&queries, PROXIMITY_REPETITIONS, &mut layered_circuit);
+
+        let evals_poly = MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng);
+        let prox_poly0 = MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng);
+        let prox_poly1 = MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng);
+
+        let input_coeffs = prepare_code_switching_inputs(
+            &evals_poly.coeffs,
+            &[prox_poly0.coeffs.clone(), prox_poly1.coeffs.clone()],
+        );
+        layered_circuit.layers[0].input_vals = input_coeffs.clone();
+        layered_circuit.evaluate();
+
+        let expected = {
+            let evaluation = evals_poly.evaluate_jolt(&challenge_point);
+            let mut buffer = vec![evaluation];
+
+            let evals_encoded = encoder.encode(&evals_poly.coeffs).unwrap();
+            buffer.extend(queries.iter().map(|q| evals_encoded[*q]));
+
+            let prox0_encoded = encoder.encode(&prox_poly0.coeffs).unwrap();
+            buffer.extend(queries.iter().map(|q| prox0_encoded[*q]));
+
+            let prox1_encoded = encoder.encode(&prox_poly1.coeffs).unwrap();
+            buffer.extend(queries.iter().map(|q| prox1_encoded[*q]));
+
+            let po2_len = buffer.len().next_power_of_two();
+            buffer.resize(po2_len, F::ZERO);
+
+            buffer
+        };
+
+        assert_eq!(expected, layered_circuit.layers.last().unwrap().output_vals);
+    }
+
+    #[test]
+    fn test_orion_code_switch_gkr() {
+        test_orion_code_switch_gkr_helper::<Fr, BN254Config>(15);
+    }
+}

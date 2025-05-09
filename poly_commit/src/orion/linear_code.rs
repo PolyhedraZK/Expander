@@ -1,4 +1,4 @@
-use std::cmp;
+use std::{cmp, ops::Index};
 
 use arith::Field;
 use itertools::{chain, izip};
@@ -286,5 +286,19 @@ impl OrionCode {
         let mut scratch = vec![F::ZERO; self.code_len()];
 
         chain!(&self.g0s, &self.g1s).try_for_each(|g| g.expander_mul(buffer, &mut scratch))
+    }
+}
+
+impl Index<usize> for OrionCode {
+    type Output = OrionExpanderGraphPositioned;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < self.g0s.len() + self.g1s.len());
+
+        if index < self.g0s.len() {
+            return &self.g0s[index];
+        }
+
+        &self.g1s[index - self.g0s.len()]
     }
 }
