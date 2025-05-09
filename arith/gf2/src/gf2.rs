@@ -29,8 +29,6 @@ impl Eq for GF2 {}
 field_common!(GF2);
 
 impl ExpSerde for GF2 {
-    const SERIALIZED_SIZE: usize = 1;
-
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         writer.write_all(self.v.to_le_bytes().as_ref())?;
@@ -39,7 +37,7 @@ impl ExpSerde for GF2 {
 
     #[inline(always)]
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut u = [0u8; Self::SERIALIZED_SIZE];
+        let mut u = [0u8; 1];
         reader.read_exact(&mut u)?;
         Ok(GF2 { v: u[0] % 2 })
     }

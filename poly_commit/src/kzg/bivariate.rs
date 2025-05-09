@@ -6,6 +6,7 @@ use halo2curves::{
     CurveAffine,
 };
 use itertools::izip;
+use serdes::ExpSerde;
 
 use crate::*;
 
@@ -17,8 +18,8 @@ pub fn generate_coef_form_bi_kzg_local_srs_for_testing<E: MultiMillerLoop>(
     mut rng: impl rand::RngCore,
 ) -> CoefFormBiKZGLocalSRS<E>
 where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     assert!(local_length.is_power_of_two());
     assert!(distributed_parties.is_power_of_two());
@@ -78,8 +79,8 @@ pub fn coeff_form_bi_kzg_open_leader<E: MultiMillerLoop>(
     beta: E::Fr,
 ) -> (E::Fr, BiKZGProof<E>)
 where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     assert_eq!(srs.tau_y_srs.powers_of_tau.len(), evals_and_opens.len());
 
@@ -110,8 +111,8 @@ pub fn coeff_form_bi_kzg_verify<E: MultiMillerLoop>(
     opening: BiKZGProof<E>,
 ) -> bool
 where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     let g1_eval: E::G1Affine = (E::G1Affine::generator() * eval).into();
     let g2_alpha: E::G2 = E::G2Affine::generator() * alpha;

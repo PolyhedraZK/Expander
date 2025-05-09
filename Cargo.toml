@@ -15,6 +15,7 @@ members = [
     "hasher", # definitions of FiatShamirFieldHasher, FiatShamirBytesHash, and associated types
     "poly_commit",
     "serdes", # serialization and deserialization of various data structures
+    "serdes_derive",
     "sumcheck",
     "crosslayer_prototype",
     "transcript", # instantiations of transcripts

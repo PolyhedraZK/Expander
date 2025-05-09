@@ -27,8 +27,6 @@ impl AVX256GF2_128x8 {
 }
 
 impl ExpSerde for AVX256GF2_128x8 {
-    const SERIALIZED_SIZE: usize = 512 * 2 / 8;
-
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         writer.write_all(unsafe { transmute::<[__m256i; 4], [u8; 128]>(self.data).as_ref() })?;

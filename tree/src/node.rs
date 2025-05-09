@@ -1,11 +1,12 @@
 use std::{fmt, fmt::Display};
 
+use serdes::ExpSerde;
 use tiny_keccak::{Hasher, Keccak};
 
 use crate::LEAF_HASH_BYTES;
 
 /// A node in the Merkle tree, representing 32 bytes of data.
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
+#[derive(Debug, Copy, Clone, PartialEq, Default, ExpSerde)]
 pub struct Node {
     pub(crate) data: [u8; LEAF_HASH_BYTES],
 }

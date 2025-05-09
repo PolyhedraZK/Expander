@@ -26,5 +26,3 @@ pub use pcs_trait_impl::{OrionBaseFieldPCS, OrionSIMDFieldPCS};
 
 mod expander_api;
 pub use expander_api::OrionPCSForGKR;
-
-mod serde;

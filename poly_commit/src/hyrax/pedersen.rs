@@ -13,8 +13,6 @@ pub struct PedersenParams<C: CurveAffine + ExpSerde> {
 }
 
 impl<C: CurveAffine + ExpSerde> ExpSerde for PedersenParams<C> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> serdes::SerdeResult<()> {
         self.bases.serialize_into(&mut writer)
     }

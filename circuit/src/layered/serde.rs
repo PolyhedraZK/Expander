@@ -8,8 +8,6 @@ use super::circuit::{Circuit, CircuitLayer, StructureInfo};
 use super::gates::{CoefType, Gate, GateAdd, GateConst, GateMul, GateUni};
 
 impl ExpSerde for CoefType {
-    const SERIALIZED_SIZE: usize = std::mem::size_of::<Self>();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         match self {
             CoefType::Constant => 0u8.serialize_into(&mut writer)?,
@@ -37,11 +35,6 @@ impl ExpSerde for CoefType {
 }
 
 impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for Gate<C, INPUT_NUM> {
-    const SERIALIZED_SIZE: usize = INPUT_NUM * <usize as ExpSerde>::SERIALIZED_SIZE
-        + 2 * <usize as ExpSerde>::SERIALIZED_SIZE
-        + 1
-        + C::CircuitField::SERIALIZED_SIZE;
-
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         for id in &self.i_ids {
             id.serialize_into(&mut writer)?;
@@ -105,8 +98,6 @@ impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for Gate<C, INPUT_NUM> {
 }
 
 impl<C: FieldEngine> ExpSerde for CircuitLayer<C> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.input_var_num.serialize_into(&mut writer)?;
         self.output_var_num.serialize_into(&mut writer)?;
@@ -142,8 +133,6 @@ impl<C: FieldEngine> ExpSerde for CircuitLayer<C> {
 }
 
 impl<C: FieldEngine> ExpSerde for Circuit<C> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.layers.serialize_into(&mut writer)?;
         Ok(())

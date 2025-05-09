@@ -63,8 +63,6 @@ impl Ord for M31 {
 field_common!(M31);
 
 impl ExpSerde for M31 {
-    const SERIALIZED_SIZE: usize = 32 / 8;
-
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         writer.write_all(self.v.to_le_bytes().as_ref())?;
@@ -75,7 +73,7 @@ impl ExpSerde for M31 {
     // We should use separate APIs for this and for the actual deserialization.
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut u = [0u8; Self::SERIALIZED_SIZE];
+        let mut u = [0u8; 4];
         reader.read_exact(&mut u)?;
         let mut v = u32::from_le_bytes(u);
         v = mod_reduce_u32(v);

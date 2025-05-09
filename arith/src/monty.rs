@@ -141,8 +141,6 @@ impl<MP: FieldParameters> From<u32> for MontyField31<MP> {
 }
 
 impl<MP: FieldParameters> ExpSerde for MontyField31<MP> {
-    const SERIALIZED_SIZE: usize = 32 / 8;
-
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         // Note: BabyBear's impl of as_u32_unchecked() converts to canonical form
@@ -155,7 +153,7 @@ impl<MP: FieldParameters> ExpSerde for MontyField31<MP> {
     #[inline(always)]
     #[allow(const_evaluatable_unchecked)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut u = [0u8; Self::SERIALIZED_SIZE];
+        let mut u = [0u8; 4];
         reader.read_exact(&mut u)?;
         let v = u32::from_le_bytes(u);
         Ok(Self::new(v))

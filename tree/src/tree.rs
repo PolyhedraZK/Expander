@@ -4,11 +4,12 @@ use std::mem::forget;
 
 use arith::{Field, SimdField};
 use ark_std::{end_timer, log2, start_timer};
+use serdes::ExpSerde;
 
 use crate::{Leaf, Node, Path, RangePath, LEAF_BYTES};
 
 /// Represents a Merkle tree structure.
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, ExpSerde)]
 pub struct Tree {
     pub nodes: Vec<Node>,
     pub leaves: Vec<Leaf>,

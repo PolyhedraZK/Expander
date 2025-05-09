@@ -17,23 +17,19 @@ pub struct AVXGF2x128 {
 }
 
 impl ExpSerde for AVXGF2x128 {
-    const SERIALIZED_SIZE: usize = 16;
-
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
-        unsafe {
-            writer.write_all(transmute::<__m128i, [u8; Self::SERIALIZED_SIZE]>(self.v).as_ref())?
-        };
+        unsafe { writer.write_all(transmute::<__m128i, [u8; 16]>(self.v).as_ref())? };
         Ok(())
     }
 
     #[inline(always)]
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut u = [0u8; Self::SERIALIZED_SIZE];
+        let mut u = [0u8; 16];
         reader.read_exact(&mut u)?;
         unsafe {
             Ok(AVXGF2x128 {
-                v: transmute::<[u8; Self::SERIALIZED_SIZE], __m128i>(u),
+                v: transmute::<[u8; 16], __m128i>(u),
             })
         }
     }

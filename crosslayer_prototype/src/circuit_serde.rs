@@ -54,8 +54,6 @@ where
 }
 
 impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for ECCCrossLayerGate<C, INPUT_NUM> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, _writer: W) -> SerdeResult<()> {
         todo!()
     }
@@ -99,8 +97,6 @@ impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for ECCCrossLayerGate<C, I
 }
 
 impl ExpSerde for Allocation {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, _writer: W) -> SerdeResult<()> {
         todo!()
     }
@@ -114,8 +110,6 @@ impl ExpSerde for Allocation {
 }
 
 impl<F: FieldEngine> ExpSerde for CrossLayerSegment<F> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, _writer: W) -> SerdeResult<()> {
         todo!()
     }
@@ -171,8 +165,6 @@ impl<F: FieldEngine> ExpSerde for CrossLayerSegment<F> {
 const VERSION_NUM: usize = 3914834606642317635; // b'CIRCUIT6'
 
 impl<F: FieldEngine> ExpSerde for CrossLayerRecursiveCircuit<F> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, _writer: W) -> SerdeResult<()> {
         todo!()
     }
@@ -197,8 +189,6 @@ impl<F: FieldEngine> ExpSerde for CrossLayerRecursiveCircuit<F> {
 }
 
 impl<F: FieldEngine> ExpSerde for Witness<F> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, _writer: W) -> SerdeResult<()> {
         todo!()
     }

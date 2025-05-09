@@ -21,8 +21,6 @@ pub struct AVX512GF2_128x8 {
 field_common!(AVX512GF2_128x8);
 
 impl ExpSerde for AVX512GF2_128x8 {
-    const SERIALIZED_SIZE: usize = 512 * 2 / 8;
-
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe {
@@ -33,7 +31,7 @@ impl ExpSerde for AVX512GF2_128x8 {
 
     #[inline(always)]
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> Result<AVX512GF2_128x8, SerdeError> {
-        let mut data = [0u8; Self::SERIALIZED_SIZE];
+        let mut data = [0u8; 128];
         reader.read_exact(&mut data).unwrap();
         unsafe {
             Ok(Self {

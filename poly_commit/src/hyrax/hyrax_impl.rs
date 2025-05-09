@@ -42,8 +42,6 @@ pub struct HyraxCommitment<C: CurveAffine + ExpSerde>(pub Vec<C>);
 pub struct HyraxOpening<C: CurveAffine + ExpSerde>(pub Vec<C::Scalar>);
 
 impl<C: CurveAffine + ExpSerde> ExpSerde for HyraxCommitment<C> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
         self.0.serialize_into(writer)
     }
@@ -58,8 +56,6 @@ impl<C: CurveAffine + ExpSerde> ExpSerde for HyraxOpening<C>
 where
     C::Scalar: ExpSerde,
 {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
         self.0.serialize_into(writer)
     }

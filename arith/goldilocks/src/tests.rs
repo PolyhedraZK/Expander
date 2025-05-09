@@ -133,7 +133,7 @@ fn test_serialization() {
     let x = Goldilocks::random_unsafe(thread_rng());
     let mut bytes = Vec::new();
     x.serialize_into(&mut bytes).unwrap();
-    assert_eq!(bytes.len(), Goldilocks::SERIALIZED_SIZE);
+    assert_eq!(bytes.len(), 8);
 
     let y = Goldilocks::deserialize_from(bytes.as_slice()).unwrap();
     assert_eq!(x, y);
@@ -142,7 +142,7 @@ fn test_serialization() {
     let x_ext = GoldilocksExt2::random_unsafe(thread_rng());
     let mut bytes = Vec::new();
     x_ext.serialize_into(&mut bytes).unwrap();
-    assert_eq!(bytes.len(), GoldilocksExt2::SERIALIZED_SIZE);
+    assert_eq!(bytes.len(), 16);
 
     let y_ext = GoldilocksExt2::deserialize_from(bytes.as_slice()).unwrap();
     assert_eq!(x_ext, y_ext);

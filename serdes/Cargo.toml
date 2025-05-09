@@ -7,3 +7,5 @@ edition = "2021"
 thiserror.workspace = true
 halo2curves.workspace = true
 ethnum.workspace = true
+
+serdes_derive = { path = "../serdes_derive" }

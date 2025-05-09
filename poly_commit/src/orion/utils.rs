@@ -1,7 +1,7 @@
 use arith::{ExtensionField, Field, SimdField};
 use gkr_engine::Transcript;
 use itertools::izip;
-use serdes::SerdeError;
+use serdes::{ExpSerde, SerdeError};
 use thiserror::Error;
 use transpose::{transpose, transpose_inplace};
 use tree::{Node, LEAF_BYTES};
@@ -135,7 +135,7 @@ pub(crate) const fn orion_eval_shape(
     )
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ExpSerde)]
 pub struct OrionSRS {
     pub num_vars: usize,
     pub num_leaves_per_mt_query: usize,
@@ -192,13 +192,13 @@ impl OrionSRS {
 
 pub type OrionCommitment = Node;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ExpSerde)]
 pub struct OrionScratchPad {
     pub interleaved_alphabet_commitment: tree::Tree,
     pub merkle_cap: Vec<Node>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ExpSerde)]
 pub struct OrionProof<EvalF: Field> {
     pub eval_row: Vec<EvalF>,
     pub proximity_rows: Vec<Vec<EvalF>>,

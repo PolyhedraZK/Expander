@@ -11,11 +11,12 @@ where
 
 /// Structured reference string for univariate KZG polynomial commitment scheme.
 /// The univariate polynomial here is of coefficient form.
-#[derive(Clone, Debug, PartialEq, Eq, Derivative)]
+#[derive(Clone, Debug, PartialEq, Eq, Derivative, ExpSerde)]
 #[derivative(Default(bound = ""))]
 pub struct CoefFormUniKZGSRS<E: Engine>
 where
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     /// power of \tau times the generators of G1, yielding
     /// \tau^i over G1 with i ranging in \[ 0, 2^n - 1 \]
@@ -39,15 +40,19 @@ where
 }
 
 /// Univariate KZG PCS verifier's params.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct UniKZGVerifierParams<E: Engine> {
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ExpSerde)]
+pub struct UniKZGVerifierParams<E: Engine>
+where
+    E::G2Affine: ExpSerde,
+{
     /// \tau over G2
     pub tau_g2: E::G2Affine,
 }
 
 impl<E: Engine> From<&CoefFormUniKZGSRS<E>> for UniKZGVerifierParams<E>
 where
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     fn from(value: &CoefFormUniKZGSRS<E>) -> Self {
         Self {
@@ -56,21 +61,23 @@ where
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Derivative)]
+#[derive(Clone, Debug, PartialEq, Eq, Derivative, ExpSerde)]
 #[derivative(Default(bound = ""))]
 pub struct CoefFormBiKZGLocalSRS<E: Engine>
 where
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     pub tau_x_srs: CoefFormUniKZGSRS<E>,
     pub tau_y_srs: CoefFormUniKZGSRS<E>,
 }
 
 /// Bivariate KZG PCS verifier's params.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Default)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Default, ExpSerde)]
 pub struct BiKZGVerifierParam<E: Engine>
 where
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     /// tau_x over G2.
     pub tau_x_g2: E::G2Affine,
@@ -80,7 +87,8 @@ where
 
 impl<E: Engine> From<&CoefFormBiKZGLocalSRS<E>> for BiKZGVerifierParam<E>
 where
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     fn from(srs: &CoefFormBiKZGLocalSRS<E>) -> Self {
         Self {
@@ -106,7 +114,8 @@ where
 
 impl<E: Engine> From<&BiKZGVerifierParam<E>> for UniKZGVerifierParams<E>
 where
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     fn from(value: &BiKZGVerifierParam<E>) -> Self {
         Self {
