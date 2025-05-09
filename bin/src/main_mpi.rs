@@ -4,9 +4,9 @@ use circuit::Circuit;
 use clap::Parser;
 use gkr::{
     BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
-    GF2ExtConfigSha2Raw, GoldilocksExtConfigSha2Orion, GoldilocksExtConfigSha2Raw,
-    M31ExtConfigSha2OrionSquare, M31ExtConfigSha2OrionVanilla, M31ExtConfigSha2RawSquare,
-    M31ExtConfigSha2RawVanilla, Prover,
+    GF2ExtConfigSha2Raw, Goldilocksx8ConfigSha2Orion, Goldilocksx8ConfigSha2Raw,
+    M31x16ConfigSha2OrionSquare, M31x16ConfigSha2OrionVanilla, M31x16ConfigSha2RawSquare,
+    M31x16ConfigSha2RawVanilla, Prover,
     utils::{
         KECCAK_BABYBEAR_CIRCUIT, KECCAK_BABYBEAR_WITNESS, KECCAK_BN254_CIRCUIT,
         KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS, KECCAK_GOLDILOCKS_CIRCUIT,
@@ -50,18 +50,25 @@ fn main() {
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
+        "m31" => match pcs_type {
+            PolynomialCommitmentType::Raw => match args.circuit.as_str() {
+                "keccak" => run_benchmark::<M31x16ConfigSha2RawVanilla>(&args, mpi_config.clone()),
+                _ => unreachable!(),
+            },
+            _ => unreachable!("Unsupported PCS type for M31"),
+        },
         "m31ext3" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<M31ExtConfigSha2RawVanilla>(&args, mpi_config.clone()),
-                "poseidon" => run_benchmark::<M31ExtConfigSha2RawSquare>(&args, mpi_config.clone()),
+                "keccak" => run_benchmark::<M31x16ConfigSha2RawVanilla>(&args, mpi_config.clone()),
+                "poseidon" => run_benchmark::<M31x16ConfigSha2RawSquare>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
             PolynomialCommitmentType::Orion => match args.circuit.as_str() {
                 "keccak" => {
-                    run_benchmark::<M31ExtConfigSha2OrionVanilla>(&args, mpi_config.clone())
+                    run_benchmark::<M31x16ConfigSha2OrionVanilla>(&args, mpi_config.clone())
                 }
                 "poseidon" => {
-                    run_benchmark::<M31ExtConfigSha2OrionSquare>(&args, mpi_config.clone())
+                    run_benchmark::<M31x16ConfigSha2OrionSquare>(&args, mpi_config.clone())
                 }
                 _ => unreachable!(""),
             },
@@ -95,13 +102,11 @@ fn main() {
         },
         "goldilocks" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<GoldilocksExtConfigSha2Raw>(&args, mpi_config.clone()),
+                "keccak" => run_benchmark::<Goldilocksx8ConfigSha2Raw>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
             PolynomialCommitmentType::Orion => match args.circuit.as_str() {
-                "keccak" => {
-                    run_benchmark::<GoldilocksExtConfigSha2Orion>(&args, mpi_config.clone())
-                }
+                "keccak" => run_benchmark::<Goldilocksx8ConfigSha2Orion>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
             _ => unreachable!("Unsupported PCS type for Goldilocks"),
@@ -118,11 +123,14 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
     // load circuit
     let (mut circuit, mut window) = match args.circuit.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+            FieldType::GF2Ext128 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 KECCAK_GF2_CIRCUIT,
                 &mpi_config,
             ),
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+            FieldType::M31x1 => {
+                unimplemented!("x1 mod only used for testing. use main instead of main_mpi")
+            }
+            FieldType::M31x16 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 KECCAK_M31_CIRCUIT,
                 &mpi_config,
             ),
@@ -130,17 +138,20 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
                 KECCAK_BN254_CIRCUIT,
                 &mpi_config,
             ),
-            FieldType::Goldilocks => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+            FieldType::Goldilocksx1 => {
+                unimplemented!("x1 mod only used for testing. use main instead of main_mpi")
+            }
+            FieldType::Goldilocksx8 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 KECCAK_GOLDILOCKS_CIRCUIT,
                 &mpi_config,
             ),
-            FieldType::BabyBear => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+            FieldType::BabyBearx16 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 KECCAK_BABYBEAR_CIRCUIT,
                 &mpi_config,
             ),
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
+            FieldType::M31x16 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
                 POSEIDON_M31_CIRCUIT,
                 &mpi_config,
             ),
@@ -151,14 +162,20 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
 
     let witness_path = match args.circuit.as_str() {
         "keccak" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::GF2 => KECCAK_GF2_WITNESS,
-            FieldType::M31 => KECCAK_M31_WITNESS,
+            FieldType::GF2Ext128 => KECCAK_GF2_WITNESS,
+            FieldType::M31x1 => {
+                unimplemented!("x1 mod only used for testing. use main instead of main_mpi")
+            }
+            FieldType::M31x16 => KECCAK_M31_WITNESS,
             FieldType::BN254 => KECCAK_BN254_WITNESS,
-            FieldType::Goldilocks => KECCAK_GOLDILOCKS_WITNESS,
-            FieldType::BabyBear => KECCAK_BABYBEAR_WITNESS,
+            FieldType::Goldilocksx1 => {
+                unimplemented!("x1 mod only used for testing. use main instead of main_mpi")
+            }
+            FieldType::Goldilocksx8 => KECCAK_GOLDILOCKS_WITNESS,
+            FieldType::BabyBearx16 => KECCAK_BABYBEAR_WITNESS,
         },
         "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31 => POSEIDON_M31_WITNESS,
+            FieldType::M31x16 => POSEIDON_M31_WITNESS,
             _ => unreachable!("not supported"),
         },
         _ => unreachable!(),
@@ -167,11 +184,11 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
     circuit.load_witness_allow_padding_testing_only(witness_path, &mpi_config);
 
     let circuit_copy_size: usize = match (Cfg::FieldConfig::FIELD_TYPE, args.circuit.as_str()) {
-        (FieldType::GF2, "keccak") => 1,
-        (FieldType::M31, "keccak") => 2,
+        (FieldType::GF2Ext128, "keccak") => 1,
+        (FieldType::M31x16, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
-        (FieldType::M31, "poseidon") => 120,
-        (FieldType::Goldilocks, "keccak") => 2,
+        (FieldType::M31x16, "poseidon") => 120,
+        (FieldType::Goldilocksx8, "keccak") => 2,
         _ => unreachable!(),
     };
 
@@ -196,6 +213,10 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
         claim.serialize_into(&mut buf).unwrap();
         proof.serialize_into(&mut buf).unwrap();
         root_println!(mpi_config, "Proof size: {}", buf.len());
+
+        // Write the serialized proof to a file
+        std::fs::write("proof_mpi.txt", &buf).expect("Failed to write proof to file");
+        println!("Proof written to proof_mpi.txt");
     }
 
     const N_PROOF: usize = 10;

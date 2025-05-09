@@ -111,7 +111,7 @@ impl<F: FieldEngine> VerifierScratchPad<F> {
         let max_io_size = 1usize << max_num_var;
         let simd_size = F::get_field_pack_size();
 
-        let gf2_deg2_eval_coef = if F::FIELD_TYPE == FieldType::GF2 {
+        let gf2_deg2_eval_coef = if F::FIELD_TYPE == FieldType::GF2Ext128 {
             (F::ChallengeField::X - F::ChallengeField::one())
                 .mul_by_x()
                 .inv()
@@ -120,7 +120,7 @@ impl<F: FieldEngine> VerifierScratchPad<F> {
             F::ChallengeField::INV_2
         };
 
-        let deg3_eval_at = if F::FIELD_TYPE == FieldType::GF2 {
+        let deg3_eval_at = if F::FIELD_TYPE == FieldType::GF2Ext128 {
             [
                 F::ChallengeField::ZERO,
                 F::ChallengeField::ONE,

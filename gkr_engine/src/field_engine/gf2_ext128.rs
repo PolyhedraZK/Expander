@@ -7,7 +7,7 @@ use crate::{FieldEngine, FieldType};
 pub struct GF2ExtConfig;
 
 impl FieldEngine for GF2ExtConfig {
-    const FIELD_TYPE: FieldType = FieldType::GF2;
+    const FIELD_TYPE: FieldType = FieldType::GF2Ext128;
 
     const SENTINEL: [u8; 32] = [
         2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

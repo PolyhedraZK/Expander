@@ -1,8 +1,8 @@
 use config_macros::declare_gkr_config;
 use gf2::GF2x128;
 use gkr_engine::{
-    BN254Config, BabyBearExtConfig, FieldEngine, GF2ExtConfig, GKREngine, GKRScheme,
-    GoldilocksExtConfig, M31ExtConfig, MPIConfig,
+    BN254Config, BabyBearx16Config, FieldEngine, GF2ExtConfig, GKREngine, GKRScheme,
+    Goldilocksx1Config, Goldilocksx8Config, M31x16Config, M31x1Config, MPIConfig,
 };
 use gkr_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use goldilocks::Goldilocksx8;
@@ -13,43 +13,51 @@ use transcript::BytesHashTranscript;
 
 // ============== M31 ==============
 declare_gkr_config!(
-    pub M31ExtConfigPoseidonRawVanilla,
-    FieldType::M31,
+    pub M31x1ConfigSha2RawVanilla,
+    FieldType::M31x1,
+    FiatShamirHashType::SHA256,
+    PolynomialCommitmentType::Raw,
+    GKRScheme::Vanilla,
+);
+// ============== M31Ext3 ==============
+declare_gkr_config!(
+    pub M31x16ConfigPoseidonRawVanilla,
+    FieldType::M31x16,
     FiatShamirHashType::Poseidon,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
 );
 declare_gkr_config!(
-    pub M31ExtConfigPoseidonRawSquare,
-    FieldType::M31,
+    pub M31x16ConfigPoseidonRawSquare,
+    FieldType::M31x16,
     FiatShamirHashType::Poseidon,
     PolynomialCommitmentType::Raw,
     GKRScheme::GkrSquare,
 );
 declare_gkr_config!(
-    pub M31ExtConfigSha2OrionVanilla,
-    FieldType::M31,
+    pub M31x16ConfigSha2OrionVanilla,
+    FieldType::M31x16,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Orion,
     GKRScheme::Vanilla,
 );
 declare_gkr_config!(
-    pub M31ExtConfigSha2OrionSquare,
-    FieldType::M31,
+    pub M31x16ConfigSha2OrionSquare,
+    FieldType::M31x16,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Orion,
     GKRScheme::GkrSquare,
 );
 declare_gkr_config!(
-    pub M31ExtConfigSha2RawVanilla,
-    FieldType::M31,
+    pub M31x16ConfigSha2RawVanilla,
+    FieldType::M31x16,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
 );
 declare_gkr_config!(
-    pub M31ExtConfigSha2RawSquare,
-    FieldType::M31,
+    pub M31x16ConfigSha2RawSquare,
+    FieldType::M31x16,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::GkrSquare,
@@ -88,14 +96,14 @@ declare_gkr_config!(
 // ============== GF2 ==============
 declare_gkr_config!(
     pub GF2ExtConfigSha2Orion,
-    FieldType::GF2,
+    FieldType::GF2Ext128,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Orion,
     GKRScheme::Vanilla,
 );
 declare_gkr_config!(
     pub GF2ExtConfigSha2Raw,
-    FieldType::GF2,
+    FieldType::GF2Ext128,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
@@ -103,16 +111,25 @@ declare_gkr_config!(
 
 // ============== Goldilocks ==============
 declare_gkr_config!(
-    pub GoldilocksExtConfigSha2Raw,
-    FieldType::Goldilocks,
+    pub Goldilocksx1ConfigSha2Raw,
+    FieldType::Goldilocksx1,
+    FiatShamirHashType::SHA256,
+    PolynomialCommitmentType::Raw,
+    GKRScheme::Vanilla,
+);
+
+// ============== GoldilocksExt2 ==============
+declare_gkr_config!(
+    pub Goldilocksx8ConfigSha2Raw,
+    FieldType::Goldilocksx8,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
 );
 
 declare_gkr_config!(
-    pub GoldilocksExtConfigSha2Orion,
-    FieldType::Goldilocks,
+    pub Goldilocksx8ConfigSha2Orion,
+    FieldType::Goldilocksx8,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Orion,
     GKRScheme::Vanilla,
@@ -120,8 +137,8 @@ declare_gkr_config!(
 
 // ============== Babybear ==============
 declare_gkr_config!(
-    pub BabyBearExtConfigSha2Raw,
-    FieldType::BabyBear,
+    pub BabyBearx16ConfigSha2Raw,
+    FieldType::BabyBearx16,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
