@@ -278,7 +278,7 @@ impl OrionCode {
 
     #[inline(always)]
     pub fn encode_in_place<F: Field>(&self, msg: &[F], buffer: &mut [F]) -> OrionResult<()> {
-        if msg.len() != self.msg_len() || buffer.len() != self.code_len() {
+        if msg.len() != self.msg_len() || buffer.len() < self.code_len() {
             return Err(OrionPCSError::ParameterUnmatchError);
         }
 

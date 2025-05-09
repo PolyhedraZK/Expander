@@ -3,7 +3,7 @@ use std::io::Cursor;
 use ark_std::{rand::RngCore, test_rng};
 use serdes::ExpSerde;
 
-use crate::{Leaf, Path, Tree};
+use crate::{Leaf, RangePath, Tree};
 
 fn random_leaf<R: RngCore>(rng: &mut R) -> Leaf {
     Leaf::new({
@@ -38,7 +38,7 @@ fn test_tree() {
             let index = rng.next_u32() % (1 << (height - 1));
 
             // Generate a proof for the selected leaf
-            let proof = tree.gen_proof(index as usize, height);
+            let proof = tree.range_query(index as usize, index as usize);
 
             // Get the root of the tree
             let root = tree.root();
@@ -53,7 +53,7 @@ fn test_tree() {
             let mut buffer: Vec<u8> = Vec::new();
             proof.serialize_into(&mut buffer).unwrap();
             let mut cursor = Cursor::new(buffer);
-            let deserialized_proof = Path::deserialize_from(&mut cursor).unwrap();
+            let deserialized_proof = RangePath::deserialize_from(&mut cursor).unwrap();
 
             // Verify the proof
             // This checks that the leaf at the given index is indeed part of the tree

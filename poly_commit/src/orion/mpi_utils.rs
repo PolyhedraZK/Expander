@@ -10,98 +10,9 @@ use tree::{RangePath, Tree};
 use crate::{
     orion::{OrionCommitment, OrionResult, OrionSRS, OrionScratchPad},
     traits::TensorCodeIOPPCS,
+    utils::mpi_matrix_transpose,
     PCS_SOUNDNESS_BITS,
 };
-
-/*
-In the Orion scenario, the codeword originally look like following in the RAM:
-
-p(0):    *-*-*-*-*-*-*-*-*-*- .... -*
-
-         *-*-*-*-*-*-*-*-*-*- .... -*
-
-p(1):    *-*-*-*-*-*-*-*-*-*- .... -*
-
-         *-*-*-*-*-*-*-*-*-*- .... -*
-
-...
-
-p(n - 1): *-*-*-*-*-*-*-*-*-*- .... -*
-
-          *-*-*-*-*-*-*-*-*-*- .... -*
-
-a local transpose on each process allows for visiting in interleaved codeword order:
-
-p(0):     * * * * * * * * * *  ....  *
-          |/|/|/|/|/|/|/|/|/|  .... /|
-          * * * * * * * * * *  ....  *
-
-p(1):     * * * * * * * * * *  ....  *
-          |/|/|/|/|/|/|/|/|/|  .... /|
-          * * * * * * * * * *  ....  *
-
-...
-
-p(n - 1): * * * * * * * * * *  ....  *
-          |/|/|/|/|/|/|/|/|/|  .... /|
-          * * * * * * * * * *  ....  *
-
-a global MPI ALL TO ALL rewinds the order into the following:
-
-          p(0)        p(1)        p(2)     p(n - 1)
-          * * * *     * * * *     * *  ....  *
-          |/|/|/|     |/|/|/|     |/|  .... /|
-          * * * *     * * * *     * *  ....  *
-               /           /
-              /           /
-             /           /
-            /           /
-           /           /           /
-          * * * *     * * * *     * *  ....  *
-          |/|/|/|     |/|/|/|     |/|  .... /|
-          * * * *     * * * *     * *  ....  *
-               /           /
-              /           /
-             /           /
-            /           /
-           /           /           /
-          * * * *     * * * *     * *  ....  *
-          |/|/|/|     |/|/|/|     |/|  .... /|
-          * * * *     * * * *     * *  ....  *
-
-rearrange each row of interleaved codeword on each process, we have:
-
-          p(0)        p(1)        p(2)     p(n - 1)
-          *-*-*-*     *-*-*-*     *-*- .... -*
-          *-*-*-*     *-*-*-*     *-*- .... -*
-               /           /
-              /           /
-             /           /
-            /           /
-           /           /           /
-          *-*-*-*     *-*-*-*     *-*- .... -*
-          *-*-*-*     *-*-*-*     *-*- .... -*
-               /           /
-              /           /
-             /           /
-            /           /
-           /           /           /
-          *-*-*-*     *-*-*-*     *-*- .... -*
-          *-*-*-*     *-*-*-*     *-*- .... -*
-
-eventually, a final transpose each row lead to results of ordering by *WHOLE* interleaved alphabet:
-
-          p(0)                    p(1)                 ....
-          *     *     *     *     *     *     *     *
-          |    /|    /|    /|     |    /|    /|    /|
-          *   / *   / *   / *     *   / *   / *   / *
-          |  /  |  /  |  /  |     |  /  |  /  |  /  |
-          * /   * /   * /   *     * /   * /   * /   *
-          |/    |/    |/    |     |/    |/    |/    |
-          *     *     *     *     *     *     *     *
-
-After all these, we can go onwards to MT commitment, and later open alphabets lies in one of the parties.
- */
 
 #[inline(always)]
 pub(crate) fn mpi_commit_encoded<PackF>(
@@ -116,60 +27,21 @@ where
     let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
 
     // NOTE: packed codeword buffer and encode over packed field
-    let mut codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
+    let codeword_len_po2 = pk.codeword_len().next_power_of_two();
+    let mut codewords = vec![PackF::ZERO; packed_rows * codeword_len_po2];
     izip!(
         packed_evals.chunks(pk.message_len()),
-        codewords.chunks_mut(pk.codeword_len())
+        codewords.chunks_mut(codeword_len_po2)
     )
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
 
-    // NOTE: transpose codeword s.t., the matrix has codewords being columns
     if packed_rows > 1 {
-        let mut scratch = vec![PackF::ZERO; std::cmp::max(packed_rows, pk.codeword_len())];
-        transpose_inplace(&mut codewords, &mut scratch, pk.codeword_len(), packed_rows);
+        let mut scratch = vec![PackF::ZERO; std::cmp::max(packed_rows, codeword_len_po2)];
+        transpose_inplace(&mut codewords, &mut scratch, codeword_len_po2, packed_rows);
         drop(scratch)
     }
 
-    // NOTE: commit the interleaved codeword
-    // we just directly commit to the packed field elements to leaves
-    // Also note, when codeword is not power of 2 length, pad to nearest po2
-    // to commit by merkle tree
-    if !codewords.len().is_power_of_two() {
-        let aligned_po2_len = codewords.len().next_power_of_two();
-        codewords.resize(aligned_po2_len, PackF::ZERO);
-    }
-
-    // NOTE: ALL-TO-ALL transpose go get other world's slice of codeword
-    mpi_engine.all_to_all_transpose(&mut codewords);
-
-    let codeword_po2_len = pk.codeword_len().next_power_of_two();
-    let codeword_this_world_len = packed_rows * codeword_po2_len;
-    assert_eq!(codewords.len(), codeword_this_world_len);
-
-    let codeword_po2_chunk_len = codeword_po2_len / mpi_engine.world_size();
-    let global_packed_rows = packed_rows * mpi_engine.world_size();
-    assert_eq!(codeword_po2_len % mpi_engine.world_size(), 0);
-
-    if packed_rows > 1 {
-        let codeword_chunk_per_world_len = codeword_po2_chunk_len * packed_rows;
-
-        // NOTE: now transpose back to row order of each world's codeword slice
-        let mut scratch = vec![PackF::ZERO; std::cmp::max(codeword_po2_chunk_len, packed_rows)];
-        codewords
-            .chunks_mut(codeword_chunk_per_world_len)
-            .for_each(|c| transpose_inplace(c, &mut scratch, packed_rows, codeword_po2_chunk_len));
-        drop(scratch);
-    }
-
-    // NOTE: transpose back into column order of the codeword slice
-    let mut scratch = vec![PackF::ZERO; std::cmp::max(codeword_po2_chunk_len, global_packed_rows)];
-    transpose_inplace(
-        &mut codewords,
-        &mut scratch,
-        codeword_po2_chunk_len,
-        global_packed_rows,
-    );
-    drop(scratch);
+    mpi_matrix_transpose(mpi_engine, &mut codewords, packed_rows);
 
     scratch_pad.interleaved_alphabet_commitment =
         Tree::compact_new_with_packed_field_elems(codewords);

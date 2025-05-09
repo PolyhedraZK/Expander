@@ -51,7 +51,7 @@ pub trait FFTField: Field {
 }
 
 #[inline(always)]
-fn bit_reverse_swap<F: Copy>(elems: &mut [F]) {
+pub fn bit_reverse_swap<F: Copy>(elems: &mut [F]) {
     // NOTE(HS) we are assuming that this method is only used in FFT,
     // then the elems slice here is assumed to be of length power of 2.
 

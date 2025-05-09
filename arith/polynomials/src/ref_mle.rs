@@ -28,8 +28,6 @@ pub trait MultilinearExtension<F: Field>: Index<usize, Output = F> {
     fn hypercube_basis(&self) -> Vec<F>;
 
     fn hypercube_basis_ref(&self) -> &Vec<F>;
-
-    fn interpolate_over_hypercube(&self) -> Vec<F>;
 }
 
 #[derive(Debug, Clone)]
@@ -72,11 +70,6 @@ impl<'a, F: Field> MultilinearExtension<F> for RefMultiLinearPoly<'a, F> {
     }
 
     #[inline(always)]
-    fn interpolate_over_hypercube(&self) -> Vec<F> {
-        MultiLinearPoly::interpolate_over_hypercube_impl(self.coeffs)
-    }
-
-    #[inline(always)]
     fn evaluate_with_buffer<ChallengeF, EvalF>(
         &self,
         point: &[ChallengeF],
@@ -100,8 +93,6 @@ pub trait MutableMultilinearExtension<F: Field>:
     fn fix_top_variable<AF: Field + Mul<F, Output = F>>(&mut self, r: AF);
 
     fn fix_variables<AF: Field + Mul<F, Output = F>>(&mut self, vars: &[AF]);
-
-    fn interpolate_over_hypercube_in_place(&mut self);
 }
 
 #[derive(Debug)]
@@ -157,11 +148,6 @@ impl<'a, F: Field> MultilinearExtension<F> for MutRefMultiLinearPoly<'a, F> {
     }
 
     #[inline(always)]
-    fn interpolate_over_hypercube(&self) -> Vec<F> {
-        MultiLinearPoly::interpolate_over_hypercube_impl(self.coeffs)
-    }
-
-    #[inline(always)]
     fn evaluate_with_buffer<ChallengeF, EvalF>(
         &self,
         point: &[ChallengeF],
@@ -196,22 +182,5 @@ impl<'a, F: Field> MutableMultilinearExtension<F> for MutRefMultiLinearPoly<'a, 
         // evaluate single variable of partial point from left to right
         // need to reverse the order of the point
         vars.iter().rev().for_each(|p| self.fix_top_variable(*p))
-    }
-
-    #[inline(always)]
-    fn interpolate_over_hypercube_in_place(&mut self) {
-        let num_vars = self.num_vars();
-        for i in 1..=num_vars {
-            let chunk_size = 1 << i;
-
-            self.coeffs.chunks_mut(chunk_size).for_each(|chunk| {
-                let half_chunk = chunk_size >> 1;
-                let (left, right) = chunk.split_at_mut(half_chunk);
-                right
-                    .iter_mut()
-                    .zip(left.iter())
-                    .for_each(|(a, b)| *a -= *b);
-            })
-        }
     }
 }

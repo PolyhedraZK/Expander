@@ -1,6 +1,7 @@
 use arith::Field;
 use ark_std::test_rng;
-use gkr_engine::{ExpanderPCS, FieldEngine, MPIConfig, StructuredReferenceString};
+use gkr_engine::{ExpanderPCS, FieldEngine, MPIConfig, MPIEngine, StructuredReferenceString};
+use transpose::transpose_inplace;
 
 #[allow(clippy::type_complexity)]
 pub fn expander_pcs_init_testing_only<FieldConfig: FieldEngine, PCS: ExpanderPCS<FieldConfig>>(
@@ -38,4 +39,116 @@ pub fn expander_pcs_init_testing_only<FieldConfig: FieldEngine, PCS: ExpanderPCS
         pcs_verification_key,
         pcs_scratch,
     )
+}
+
+#[inline(always)]
+pub(crate) fn mpi_matrix_transpose<F: Sized + Copy + Clone + Default>(
+    mpi_engine: &impl MPIEngine,
+    local_matrix: &mut [F],
+    local_col_size: usize,
+) {
+    assert_eq!(local_matrix.len() % local_col_size, 0);
+    assert!(local_matrix.len() / local_col_size >= mpi_engine.world_size());
+    assert!(local_matrix.len().is_power_of_two());
+
+    /*
+    The input should be in column order, with column length being local_col_size
+
+    p(0):     * * * * * * * * * *  ....  *
+              |/|/|/|/|/|/|/|/|/|  .... /|
+              * * * * * * * * * *  ....  *
+
+    p(1):     * * * * * * * * * *  ....  *
+              |/|/|/|/|/|/|/|/|/|  .... /|
+              * * * * * * * * * *  ....  *
+
+    ...
+
+    p(n - 1): * * * * * * * * * *  ....  *
+              |/|/|/|/|/|/|/|/|/|  .... /|
+              * * * * * * * * * *  ....  *
+
+    A global MPI ALL TO ALL rewinds the order into the following:
+
+    p(0)        p(1)        p(2)     p(n - 1)
+    * * * *     * * * *     * *  ....  *
+    |/|/|/|     |/|/|/|     |/|  .... /|
+    * * * *     * * * *     * *  ....  *
+         /           /
+        /           /
+       /           /
+      /           /
+     /           /           /
+    * * * *     * * * *     * *  ....  *
+    |/|/|/|     |/|/|/|     |/|  .... /|
+    * * * *     * * * *     * *  ....  *
+         /           /
+        /           /
+       /           /
+      /           /
+     /           /           /
+    * * * *     * * * *     * *  ....  *
+    |/|/|/|     |/|/|/|     |/|  .... /|
+    * * * *     * * * *     * *  ....  *
+
+     */
+
+    // NOTE: ALL-TO-ALL transpose go get other world's slice of columns
+    mpi_engine.all_to_all_transpose(local_matrix);
+
+    /*
+    Rearrange each row of interleaved codeword on each process, we have:
+
+    p(0)        p(1)        p(2)     p(n - 1)
+    *-*-*-*     *-*-*-*     *-*- .... -*
+    *-*-*-*     *-*-*-*     *-*- .... -*
+         /           /
+        /           /
+       /           /
+      /           /
+     /           /           /
+    *-*-*-*     *-*-*-*     *-*- .... -*
+    *-*-*-*     *-*-*-*     *-*- .... -*
+         /           /
+        /           /
+       /           /
+      /           /
+     /           /           /
+    *-*-*-*     *-*-*-*     *-*- .... -*
+    *-*-*-*     *-*-*-*     *-*- .... -*
+
+     */
+
+    let global_col_size = mpi_engine.world_size() * local_col_size;
+    let row_length = local_matrix.len() / global_col_size;
+
+    if local_col_size > 1 {
+        let sub_matrix_per_world_len = local_col_size * row_length;
+
+        // NOTE: now transpose back to row order of each world's codeword slice
+        let mut scratch = vec![F::default(); std::cmp::max(local_col_size, row_length)];
+        local_matrix
+            .chunks_mut(sub_matrix_per_world_len)
+            .for_each(|c| transpose_inplace(c, &mut scratch, local_col_size, row_length));
+        drop(scratch);
+    }
+
+    /*
+    Eventually, a final transpose each row lead to results of global column order
+
+    p(0)                    p(1)                 ....
+    *     *     *     *     *     *     *     *
+    |    /|    /|    /|     |    /|    /|    /|
+    *   / *   / *   / *     *   / *   / *   / *
+    |  /  |  /  |  /  |     |  /  |  /  |  /  |
+    * /   * /   * /   *     * /   * /   * /   *
+    |/    |/    |/    |     |/    |/    |/    |
+    *     *     *     *     *     *     *     *
+
+     */
+
+    // NOTE: transpose back into column order
+    let mut scratch = vec![F::default(); std::cmp::max(global_col_size, row_length)];
+    transpose_inplace(local_matrix, &mut scratch, row_length, global_col_size);
+    drop(scratch);
 }
