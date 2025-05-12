@@ -60,15 +60,16 @@ pub fn serdes_derive(input: TokenStream) -> TokenStream {
             let mut deserialize_arms = Vec::new();
             for (idx, variant) in variants.iter().enumerate() {
                 let vname = &variant.ident;
+                let variant_index = idx + 1;
                 match &variant.fields {
                     Fields::Unit => {
                         serialize_arms.push(quote! {
                             Self::#vname => {
-                                (#idx as u32).serialize_into(&mut writer)?;
+                                (#variant_index as u32).serialize_into(&mut writer)?;
                             }
                         });
                         deserialize_arms.push(quote! {
-                            #idx => Ok(Self::#vname),
+                            #variant_index => Ok(Self::#vname),
                         });
                     }
                     Fields::Unnamed(fields) => {
@@ -77,7 +78,7 @@ pub fn serdes_derive(input: TokenStream) -> TokenStream {
                             .collect();
                         serialize_arms.push(quote! {
                             Self::#vname( #( ref #field_idents ),* ) => {
-                                (#idx as u32).serialize_into(&mut writer)?;
+                                (#variant_index as u32).serialize_into(&mut writer)?;
                                 #(
                                     #field_idents.serialize_into(&mut writer)?;
                                 )*
@@ -87,7 +88,7 @@ pub fn serdes_derive(input: TokenStream) -> TokenStream {
                             |_| quote! { <_ as ::serdes::ExpSerde>::deserialize_from(&mut reader)? },
                         );
                         deserialize_arms.push(quote! {
-                            #idx => Ok(Self::#vname( #(#deser_fields),* )),
+                            #variant_index => Ok(Self::#vname( #(#deser_fields),* )),
                         });
                     }
                     Fields::Named(fields) => {
@@ -98,7 +99,7 @@ pub fn serdes_derive(input: TokenStream) -> TokenStream {
                             .collect();
                         serialize_arms.push(quote! {
                             Self::#vname { #( ref #field_idents ),* } => {
-                                (#idx as u32).serialize_into(&mut writer)?;
+                                (#variant_index as u32).serialize_into(&mut writer)?;
                                 #(
                                     #field_idents.serialize_into(&mut writer)?;
                                 )*
@@ -106,7 +107,7 @@ pub fn serdes_derive(input: TokenStream) -> TokenStream {
                         });
                         let deser_fields = field_idents.iter().map(|ident| quote! { #ident: <_ as ::serdes::ExpSerde>::deserialize_from(&mut reader)? });
                         deserialize_arms.push(quote! {
-                            #idx => Ok(Self::#vname { #(#deser_fields),* }),
+                            #variant_index => Ok(Self::#vname { #(#deser_fields),* }),
                         });
                     }
                 }
