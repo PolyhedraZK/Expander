@@ -36,6 +36,7 @@ exp_serde_for_number!(usize, 8);
 exp_serde_for_number!(u8, 1);
 exp_serde_for_number!(f64, 8);
 exp_serde_for_number!(u128, 16);
+exp_serde_for_number!(u32, 4);
 exp_serde_for_number!(U256, 32);
 
 // macro serdes for [S: N] where S: ExpSerde
@@ -188,5 +189,20 @@ impl<T: ExpSerde> ExpSerde for Option<T> {
         } else {
             Ok(None)
         }
+    }
+}
+
+impl ExpSerde for String {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        let bytes = self.as_bytes();
+        bytes.len().serialize_into(&mut writer)?;
+        writer.write_all(bytes)?;
+        Ok(())
+    }
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let len = usize::deserialize_from(&mut reader)?;
+        let mut buf = vec![0u8; len];
+        reader.read_exact(&mut buf)?;
+        String::from_utf8(buf).map_err(|_| SerdeError::DeserializeError)
     }
 }

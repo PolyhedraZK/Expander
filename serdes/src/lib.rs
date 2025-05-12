@@ -1,6 +1,6 @@
-mod error;
-mod macros;
-mod serdes;
+pub mod error;
+pub mod macros;
+pub mod serdes;
 
 pub use error::{SerdeError, SerdeResult};
 pub use serdes::ExpSerde;
