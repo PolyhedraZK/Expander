@@ -162,7 +162,7 @@ impl<F: Field> EqPolynomial<F> {
     #[inline]
     fn build_eq_x_r_helper(r: &[F], buf: &mut Vec<F>) {
         if r.is_empty() {
-            panic!("r length is 0");
+            buf.push(F::one());
         } else if r.len() == 1 {
             // initializing the buffer with [1-r_0, r_0]
             buf.push(F::one() - r[0]);

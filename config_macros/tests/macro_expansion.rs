@@ -3,8 +3,8 @@ use std::any::type_name;
 use config_macros::declare_gkr_config;
 use gf2::GF2x128;
 use gkr_engine::{
-    BN254Config, BabyBearExtConfig, FieldEngine, GF2ExtConfig, GKREngine, GKRScheme,
-    GoldilocksExtConfig, M31ExtConfig, MPIConfig,
+    BN254Config, BabyBearx16Config, FieldEngine, GF2ExtConfig, GKREngine, GKRScheme,
+    Goldilocksx8Config, M31x16Config, MPIConfig,
 };
 use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use halo2curves::bn256::Bn256;
@@ -19,22 +19,22 @@ fn print_type_name<Cfg: GKREngine>() {
 #[test]
 fn main() {
     declare_gkr_config!(
-        M31Sha256Config,
-        FieldType::M31,
+        M31ExtSha256Config,
+        FieldType::M31x16,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
-        M31PoseidonRawConfig,
-        FieldType::M31,
+        M31ExtPoseidonRawConfig,
+        FieldType::M31x16,
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
-        M31PoseidonOrionConfig,
-        FieldType::M31,
+        M31ExtPoseidonOrionConfig,
+        FieldType::M31x16,
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Orion,
         GKRScheme::Vanilla,
@@ -54,41 +54,41 @@ fn main() {
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
-        GF2Keccak256Config,
-        FieldType::GF2,
+        GF2ExtKeccak256Config,
+        FieldType::GF2Ext128,
         FiatShamirHashType::Keccak256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
-        GF2Keccak256OrionConfig,
-        FieldType::GF2,
+        GF2ExtKeccak256OrionConfig,
+        FieldType::GF2Ext128,
         FiatShamirHashType::Keccak256,
         PolynomialCommitmentType::Orion,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
-        GoldilocksSHA256Config,
-        FieldType::Goldilocks,
+        GoldilocksExtSHA256Config,
+        FieldType::Goldilocksx8,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
-        BabyBearSHA256Config,
-        FieldType::BabyBear,
+        BabyBearExtSHA256Config,
+        FieldType::BabyBearx16,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
 
-    print_type_name::<M31Sha256Config>();
-    print_type_name::<M31PoseidonRawConfig>();
-    print_type_name::<M31PoseidonOrionConfig>();
+    print_type_name::<M31ExtSha256Config>();
+    print_type_name::<M31ExtPoseidonRawConfig>();
+    print_type_name::<M31ExtPoseidonOrionConfig>();
     print_type_name::<BN254MIMCConfig>();
     print_type_name::<BN254MIMCKZGConfig>();
-    print_type_name::<GF2Keccak256Config>();
-    print_type_name::<GF2Keccak256OrionConfig>();
-    print_type_name::<GoldilocksSHA256Config>();
-    print_type_name::<BabyBearSHA256Config>();
+    print_type_name::<GF2ExtKeccak256Config>();
+    print_type_name::<GF2ExtKeccak256OrionConfig>();
+    print_type_name::<GoldilocksExtSHA256Config>();
+    print_type_name::<BabyBearExtSHA256Config>();
 }

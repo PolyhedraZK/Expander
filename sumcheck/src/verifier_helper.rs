@@ -248,7 +248,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
         let p1 = ps[1];
         let p2 = ps[2];
 
-        if F::FIELD_TYPE == FieldType::GF2 {
+        if F::FIELD_TYPE == FieldType::GF2Ext128 {
             let tmp = p0 - p1;
 
             let c0 = p0;
