@@ -5,18 +5,25 @@ use derivative::Derivative;
 use gkr_engine::Transcript;
 use halo2curves::{ff::Field, pairing::Engine};
 use itertools::izip;
+use serdes::ExpSerde;
 
 use crate::*;
 
-#[derive(Clone, Debug, Derivative)]
+#[derive(Clone, Debug, Derivative, ExpSerde)]
 #[derivative(Default(bound = ""))]
-pub struct HyperKZGExportedLocalEvals<E: Engine> {
+pub struct HyperKZGExportedLocalEvals<E: Engine>
+where
+    E::Fr: ExpSerde,
+{
     pub beta_x2_eval: E::Fr,
     pub pos_beta_x_evals: Vec<E::Fr>,
     pub neg_beta_x_evals: Vec<E::Fr>,
 }
 
-impl<E: Engine> HyperKZGExportedLocalEvals<E> {
+impl<E: Engine> HyperKZGExportedLocalEvals<E>
+where
+    E::Fr: ExpSerde,
+{
     pub(crate) fn new(evals_num: usize) -> Self {
         Self {
             beta_x2_eval: E::Fr::default(),
@@ -44,11 +51,12 @@ impl<E: Engine> HyperKZGExportedLocalEvals<E> {
     }
 }
 
-#[derive(Clone, Debug, Derivative)]
+#[derive(Clone, Debug, Derivative, ExpSerde)]
 #[derivative(Default(bound = ""))]
 pub struct HyperKZGOpening<E: Engine>
 where
-    E::G1Affine: Default,
+    E::Fr: ExpSerde,
+    E::G1Affine: Default + ExpSerde,
 {
     pub folded_oracle_commitments: Vec<E::G1Affine>,
     pub evals_at_x: HyperKZGExportedLocalEvals<E>,
@@ -56,9 +64,12 @@ where
     pub quotient_delta_x_commitment: E::G1Affine,
 }
 
-#[derive(Clone, Debug, Derivative)]
+#[derive(Clone, Debug, Derivative, ExpSerde)]
 #[derivative(Default(bound = ""))]
-pub(crate) struct HyperKZGLocalEvals<E: Engine> {
+pub(crate) struct HyperKZGLocalEvals<E: Engine>
+where
+    E::Fr: ExpSerde,
+{
     pub(crate) beta2_evals: Vec<E::Fr>,
     pub(crate) pos_beta_evals: Vec<E::Fr>,
     pub(crate) neg_beta_evals: Vec<E::Fr>,
@@ -154,7 +165,10 @@ where
     }
 }
 
-impl<E: Engine> Index<usize> for HyperKZGExportedLocalEvals<E> {
+impl<E: Engine> Index<usize> for HyperKZGExportedLocalEvals<E>
+where
+    E::Fr: ExpSerde,
+{
     type Output = E::Fr;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -175,7 +189,10 @@ impl<E: Engine> Index<usize> for HyperKZGExportedLocalEvals<E> {
     }
 }
 
-impl<E: Engine> IndexMut<usize> for HyperKZGExportedLocalEvals<E> {
+impl<E: Engine> IndexMut<usize> for HyperKZGExportedLocalEvals<E>
+where
+    E::Fr: ExpSerde,
+{
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         assert_eq!(self.pos_beta_x_evals.len(), self.neg_beta_x_evals.len());
         assert!(!self.pos_beta_x_evals.is_empty());
@@ -194,7 +211,10 @@ impl<E: Engine> IndexMut<usize> for HyperKZGExportedLocalEvals<E> {
     }
 }
 
-impl<E: Engine> From<HyperKZGLocalEvals<E>> for HyperKZGExportedLocalEvals<E> {
+impl<E: Engine> From<HyperKZGLocalEvals<E>> for HyperKZGExportedLocalEvals<E>
+where
+    E::Fr: ExpSerde,
+{
     fn from(value: HyperKZGLocalEvals<E>) -> Self {
         Self {
             beta_x2_eval: value.beta2_evals[0],
@@ -204,9 +224,12 @@ impl<E: Engine> From<HyperKZGLocalEvals<E>> for HyperKZGExportedLocalEvals<E> {
     }
 }
 
-#[derive(Clone, Debug, Derivative)]
+#[derive(Clone, Debug, Derivative, ExpSerde)]
 #[derivative(Default(bound = ""))]
-pub struct HyperKZGAggregatedEvals<E: Engine> {
+pub struct HyperKZGAggregatedEvals<E: Engine>
+where
+    E::Fr: ExpSerde,
+{
     pub beta_y2_evals: HyperKZGExportedLocalEvals<E>,
     pub pos_beta_y_evals: HyperKZGExportedLocalEvals<E>,
     pub neg_beta_y_evals: HyperKZGExportedLocalEvals<E>,
@@ -258,11 +281,12 @@ where
     }
 }
 
-#[derive(Debug, Clone, Derivative)]
+#[derive(Debug, Clone, Derivative, ExpSerde)]
 #[derivative(Default(bound = ""))]
 pub struct HyperBiKZGOpening<E: Engine>
 where
-    E::G1Affine: Default,
+    E::Fr: ExpSerde,
+    E::G1Affine: Default + ExpSerde,
 {
     pub folded_oracle_commitments: Vec<E::G1Affine>,
 
@@ -278,7 +302,8 @@ where
 
 impl<E: Engine> From<HyperBiKZGOpening<E>> for HyperKZGOpening<E>
 where
-    E::G1Affine: Default,
+    E::Fr: ExpSerde,
+    E::G1Affine: Default + ExpSerde,
 {
     fn from(value: HyperBiKZGOpening<E>) -> Self {
         Self {
@@ -292,7 +317,8 @@ where
 
 impl<E: Engine> From<HyperKZGOpening<E>> for HyperBiKZGOpening<E>
 where
-    E::G1Affine: Default,
+    E::Fr: ExpSerde,
+    E::G1Affine: Default + ExpSerde,
 {
     fn from(value: HyperKZGOpening<E>) -> Self {
         Self {

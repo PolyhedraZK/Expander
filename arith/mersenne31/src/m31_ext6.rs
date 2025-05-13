@@ -1,45 +1,20 @@
 use arith::{field_common, ExtensionField, FFTField, Field};
 use ethnum::U256;
 use rand::RngCore;
-use serdes::{ExpSerde, SerdeResult};
+use serdes::ExpSerde;
 use std::{
-    io::{Read, Write},
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 use crate::{m31::mod_reduce_u32_safe, M31Ext3, M31};
 
-#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq, ExpSerde)]
 pub struct M31Ext6 {
     pub v: [M31Ext3; 2],
 }
 
 field_common!(M31Ext6);
-
-impl ExpSerde for M31Ext6 {
-    const SERIALIZED_SIZE: usize = (32 / 8) * 6;
-
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        self.v[0].serialize_into(&mut writer)?;
-        self.v[1].serialize_into(&mut writer)?;
-        Ok(())
-    }
-
-    // FIXME: this deserialization function auto corrects invalid inputs.
-    // We should use separate APIs for this and for the actual deserialization.
-    // NOTE(HS): directly copied from M31ext3 impl
-    #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        Ok(Self {
-            v: [
-                M31Ext3::deserialize_from(&mut reader)?,
-                M31Ext3::deserialize_from(&mut reader)?,
-            ],
-        })
-    }
-}
 
 impl Field for M31Ext6 {
     const NAME: &'static str = "Mersenne 31 Extension 6";

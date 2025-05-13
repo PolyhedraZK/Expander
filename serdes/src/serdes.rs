@@ -10,12 +10,10 @@ use halo2curves::{
     group::GroupEncoding,
 };
 
-use crate::{exp_serde_for_number, SerdeError, SerdeResult};
+use crate::{exp_serde_for_generic_slices, exp_serde_for_number, SerdeError, SerdeResult};
 
 /// Serde for Arithmetic types such as field and group operations
 pub trait ExpSerde: Sized {
-    const SERIALIZED_SIZE: usize;
-
     /// serialize self into bytes
     fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()>;
 
@@ -24,8 +22,6 @@ pub trait ExpSerde: Sized {
 }
 
 impl ExpSerde for () {
-    const SERIALIZED_SIZE: usize = 0;
-
     fn serialize_into<W: std::io::Write>(&self, _writer: W) -> SerdeResult<()> {
         Ok(())
     }
@@ -40,11 +36,19 @@ exp_serde_for_number!(usize, 8);
 exp_serde_for_number!(u8, 1);
 exp_serde_for_number!(f64, 8);
 exp_serde_for_number!(u128, 16);
+exp_serde_for_number!(u32, 4);
 exp_serde_for_number!(U256, 32);
 
-impl ExpSerde for bool {
-    const SERIALIZED_SIZE: usize = 1;
+// macro serdes for [S: N] where S: ExpSerde
+exp_serde_for_generic_slices!(2);
+exp_serde_for_generic_slices!(3);
+exp_serde_for_generic_slices!(4);
+exp_serde_for_generic_slices!(8);
+exp_serde_for_generic_slices!(16);
+exp_serde_for_generic_slices!(32);
+exp_serde_for_generic_slices!(64);
 
+impl ExpSerde for bool {
     fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {
         (*self as u8).serialize_into(writer)
     }
@@ -55,8 +59,6 @@ impl ExpSerde for bool {
 }
 
 impl<V: ExpSerde> ExpSerde for Vec<V> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.len().serialize_into(&mut writer)?;
         for v in self.iter() {
@@ -75,32 +77,7 @@ impl<V: ExpSerde> ExpSerde for Vec<V> {
     }
 }
 
-// Consider use const generics after it gets stable
-impl ExpSerde for [u64; 4] {
-    const SERIALIZED_SIZE: usize = 32;
-
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        for i in self {
-            writer.write_all(&i.to_le_bytes())?;
-        }
-        Ok(())
-    }
-
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut ret = [0u64; 4];
-        let mut buffer = [0u8; u64::SERIALIZED_SIZE];
-
-        for r in &mut ret {
-            reader.read_exact(&mut buffer)?;
-            *r = u64::from_le_bytes(buffer);
-        }
-        Ok(ret)
-    }
-}
-
 impl ExpSerde for Fr {
-    const SERIALIZED_SIZE: usize = 32;
-
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         writer.write_all(self.to_bytes().as_ref())?;
@@ -109,7 +86,7 @@ impl ExpSerde for Fr {
 
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut buffer = [0u8; Self::SERIALIZED_SIZE];
+        let mut buffer = [0u8; 32];
         reader.read_exact(&mut buffer)?;
         match Fr::from_bytes(&buffer).into_option() {
             Some(v) => Ok(v),
@@ -119,21 +96,19 @@ impl ExpSerde for Fr {
 }
 
 impl ExpSerde for G1Affine {
-    const SERIALIZED_SIZE: usize = 32;
-
     fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {
-        let bytes = self.to_bytes().as_ref().to_vec();
-        bytes.serialize_into(writer)
+        let mut buf = [0u8; 32];
+        assert!(self.to_bytes().as_ref().len() == 32);
+        buf.copy_from_slice(self.to_bytes().as_ref());
+        buf.serialize_into(writer)
     }
 
-    fn deserialize_from<R: Read>(reader: R) -> SerdeResult<Self> {
-        let bytes: Vec<u8> = Vec::deserialize_from(reader)?;
-        if bytes.len() != Self::SERIALIZED_SIZE {
-            return Err(SerdeError::DeserializeError);
-        }
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let mut buf = [0u8; 32];
+        reader.read_exact(&mut buf)?;
 
         let mut encoding = <Self as GroupEncoding>::Repr::default();
-        encoding.as_mut().copy_from_slice(bytes.as_ref());
+        encoding.as_mut().copy_from_slice(buf.as_ref());
         match G1Affine::from_bytes(&encoding).into_option() {
             Some(a) => Ok(a),
             None => Err(SerdeError::DeserializeError),
@@ -142,21 +117,17 @@ impl ExpSerde for G1Affine {
 }
 
 impl ExpSerde for G2Affine {
-    const SERIALIZED_SIZE: usize = 64;
-
     fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {
         let bytes = self.to_bytes().as_ref().to_vec();
         bytes.serialize_into(writer)
     }
 
-    fn deserialize_from<R: Read>(reader: R) -> SerdeResult<Self> {
-        let bytes: Vec<u8> = Vec::deserialize_from(reader)?;
-        if bytes.len() != Self::SERIALIZED_SIZE {
-            return Err(SerdeError::DeserializeError);
-        }
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let mut buf = [0u8; 64];
+        reader.read_exact(&mut buf)?;
 
         let mut encoding = <Self as GroupEncoding>::Repr::default();
-        encoding.as_mut().copy_from_slice(bytes.as_ref());
+        encoding.as_mut().copy_from_slice(buf.as_ref());
         match G2Affine::from_bytes(&encoding).into_option() {
             Some(a) => Ok(a),
             None => Err(SerdeError::DeserializeError),
@@ -165,8 +136,6 @@ impl ExpSerde for G2Affine {
 }
 
 impl<T1: ExpSerde, T2: ExpSerde> ExpSerde for (T1, T2) {
-    const SERIALIZED_SIZE: usize = T1::SERIALIZED_SIZE + T2::SERIALIZED_SIZE;
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.0.serialize_into(&mut writer)?;
         self.1.serialize_into(&mut writer)?;
@@ -181,8 +150,6 @@ impl<T1: ExpSerde, T2: ExpSerde> ExpSerde for (T1, T2) {
 }
 
 impl<K: ExpSerde + Eq + Hash, V: ExpSerde> ExpSerde for HashMap<K, V> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.len().serialize_into(&mut writer)?;
         for (k, v) in self.iter() {
@@ -205,8 +172,6 @@ impl<K: ExpSerde + Eq + Hash, V: ExpSerde> ExpSerde for HashMap<K, V> {
 }
 
 impl<T: ExpSerde> ExpSerde for Option<T> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         match self {
             Some(v) => {
@@ -224,5 +189,20 @@ impl<T: ExpSerde> ExpSerde for Option<T> {
         } else {
             Ok(None)
         }
+    }
+}
+
+impl ExpSerde for String {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        let bytes = self.as_bytes();
+        bytes.len().serialize_into(&mut writer)?;
+        writer.write_all(bytes)?;
+        Ok(())
+    }
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let len = usize::deserialize_from(&mut reader)?;
+        let mut buf = vec![0u8; len];
+        reader.read_exact(&mut buf)?;
+        String::from_utf8(buf).map_err(|_| SerdeError::DeserializeError)
     }
 }

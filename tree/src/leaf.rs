@@ -1,6 +1,7 @@
 use std::fmt;
 use std::fmt::{Debug, Display};
 
+use serdes::ExpSerde;
 use tiny_keccak::{Hasher, Keccak};
 
 use crate::Node;
@@ -12,7 +13,7 @@ pub const LEAF_BYTES: usize = 64;
 pub const LEAF_HASH_BYTES: usize = 32;
 
 /// Represents a leaf in the Merkle tree, containing 64 bytes of data stored in a BabyBearx16.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, ExpSerde)]
 pub struct Leaf {
     pub data: [u8; LEAF_BYTES],
 }

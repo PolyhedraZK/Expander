@@ -35,8 +35,6 @@ impl PartialEq for NeonGF2_128x8 {
 impl Eq for NeonGF2_128x8 {}
 
 impl ExpSerde for NeonGF2_128x8 {
-    const SERIALIZED_SIZE: usize = 128;
-
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe {

@@ -42,8 +42,6 @@ pub struct AVXGoldilocks {
 field_common!(AVXGoldilocks);
 
 impl ExpSerde for AVXGoldilocks {
-    const SERIALIZED_SIZE: usize = GOLDILOCKS_PACK_SIZE * 8; // 64 bytes total
-
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         let data0 = unsafe { transmute::<__m256i, [u8; 32]>(mod_reduce_epi64(self.v[0])) };
@@ -55,10 +53,10 @@ impl ExpSerde for AVXGoldilocks {
 
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut data = [0u8; Self::SERIALIZED_SIZE];
+        let mut data = [0u8; 64];
         reader.read_exact(&mut data)?;
         Ok(AVXGoldilocks {
-            v: unsafe { transmute::<[u8; Self::SERIALIZED_SIZE], [__m256i; 2]>(data) },
+            v: unsafe { transmute::<[u8; 64], [__m256i; 2]>(data) },
         })
     }
 }
