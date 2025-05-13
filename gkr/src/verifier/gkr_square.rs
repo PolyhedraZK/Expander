@@ -20,7 +20,7 @@ pub fn gkr_square_verify<C: FieldEngine>(
 ) -> (bool, ExpanderSingleVarChallenge<C>, C::ChallengeField) {
     assert_ne!(
         C::FIELD_TYPE,
-        FieldType::GF2,
+        FieldType::GF2Ext128,
         "GF2 is not supported in GKR^2"
     );
 
