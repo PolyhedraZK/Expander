@@ -109,7 +109,7 @@ fn test_gkr_correctness() {
     declare_gkr_config!(
         C11,
         FieldType::BN254,
-        FiatShamirHashType::MIMC5,
+        FiatShamirHashType::SHA256,
         PolynomialCommitmentType::KZG,
         GKRScheme::Vanilla,
     );
