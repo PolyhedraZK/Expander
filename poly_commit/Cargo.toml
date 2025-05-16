@@ -11,6 +11,7 @@ polynomials = { path = "../arith/polynomials"}
 serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
 tree = { path = "../tree" }
+utils = { path = "../utils" }
 
 rand.workspace = true
 ethnum.workspace = true
@@ -41,3 +42,11 @@ harness = false
 [[bench]]
 name = "kzg"
 harness = false
+
+[[bench]]
+name = "pcs_all"
+harness = false
+
+[features]
+default = [ "profile" ]
+profile = [ "utils/profile" ]
