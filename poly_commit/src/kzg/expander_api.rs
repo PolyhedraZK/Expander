@@ -19,7 +19,6 @@ use crate::{
     *,
 };
 
-
 impl<G, E> ExpanderPCS<G> for HyperKZGPCS<E>
 where
     G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
@@ -110,7 +109,11 @@ where
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
         if poly.num_vars() < Self::MINIMUM_SUPPORTED_NUM_VARS {
-            let (poly, x) = lift_poly_and_expander_challenge_to_n_vars(poly, x, Self::MINIMUM_SUPPORTED_NUM_VARS);
+            let (poly, x) = lift_poly_and_expander_challenge_to_n_vars(
+                poly,
+                x,
+                Self::MINIMUM_SUPPORTED_NUM_VARS,
+            );
             return <Self as ExpanderPCS<G>>::open(
                 _params,
                 mpi_engine,
