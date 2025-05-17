@@ -11,7 +11,13 @@ use halo2curves::{
 };
 use serdes::ExpSerde;
 
-use crate::*;
+use crate::{
+    utils::{
+        lift_expander_challenge_to_n_vars, lift_poly_and_expander_challenge_to_n_vars,
+        lift_poly_to_n_vars,
+    },
+    *,
+};
 
 impl<G, E> ExpanderPCS<G> for HyperKZGPCS<E>
 where
@@ -60,6 +66,19 @@ where
         poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
+        // The minimum supported number of variables is 1.
+        // If the polynomial has no variables, we lift it to a polynomial with 1 variable.
+        if poly.num_vars() == 0 {
+            let poly = lift_poly_to_n_vars(poly, 1);
+            return <Self as ExpanderPCS<G>>::commit(
+                _params,
+                mpi_engine,
+                proving_key,
+                &poly,
+                _scratch_pad,
+            );
+        };
+
         let local_commitment =
             coeff_form_uni_kzg_commit(&proving_key.tau_x_srs, poly.hypercube_basis_ref());
 
@@ -89,6 +108,19 @@ where
         transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
+        if poly.num_vars() == 0 {
+            let (poly, x) = lift_poly_and_expander_challenge_to_n_vars(poly, x, 1);
+            return <Self as ExpanderPCS<G>>::open(
+                _params,
+                mpi_engine,
+                proving_key,
+                &poly,
+                &x,
+                transcript,
+                _scratch_pad,
+            );
+        };
+
         coeff_form_hyper_bikzg_open(
             proving_key,
             mpi_engine,
@@ -108,6 +140,19 @@ where
         transcript: &mut impl Transcript,
         opening: &Self::Opening,
     ) -> bool {
+        if x.rz.is_empty() {
+            let x = lift_expander_challenge_to_n_vars(x, 1);
+            return <Self as ExpanderPCS<G>>::verify(
+                _params,
+                verifying_key,
+                commitment,
+                &x,
+                v,
+                transcript,
+                opening,
+            );
+        };
+
         coeff_form_hyper_bikzg_verify(
             verifying_key,
             &x.local_xs(),
