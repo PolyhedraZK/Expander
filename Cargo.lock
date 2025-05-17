@@ -2037,6 +2037,7 @@ version = "0.1.0"
 dependencies = [
  "ethnum",
  "halo2curves",
+ "rand",
  "serdes_derive",
  "thiserror",
 ]
