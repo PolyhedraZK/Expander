@@ -6,7 +6,7 @@ use gkr_engine::{
     ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
     GKRScheme, MPIConfig, MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
 };
-use polynomials::{MultilinearExtension, MutRefMultiLinearPoly};
+use polynomials::{MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension};
 use serdes::ExpSerde;
 use sumcheck::ProverScratchPad;
 use transcript::transcript_root_broadcast;

@@ -102,6 +102,8 @@ pub trait MutableMultilinearExtension<F: Field>:
     fn fix_variables<AF: Field + Mul<F, Output = F>>(&mut self, vars: &[AF]);
 
     fn interpolate_over_hypercube_in_place(&mut self);
+
+    fn lift_to_n_vars(&mut self, n_vars: usize);
 }
 
 #[derive(Debug)]
@@ -113,11 +115,6 @@ impl<'ref_life, 'outer_mut: 'ref_life, F: Field> MutRefMultiLinearPoly<'ref_life
     #[inline(always)]
     pub fn from_ref(evals: &'outer_mut mut Vec<F>) -> Self {
         Self { coeffs: evals }
-    }
-
-    #[inline(always)]
-    pub fn lift_to_n_vars(&mut self, vars: usize) {
-        self.coeffs.resize(1 << vars, F::ZERO)
     }
 }
 
@@ -213,5 +210,10 @@ impl<'a, F: Field> MutableMultilinearExtension<F> for MutRefMultiLinearPoly<'a, 
                     .for_each(|(a, b)| *a -= *b);
             })
         }
+    }
+
+    #[inline(always)]
+    fn lift_to_n_vars(&mut self, n_vars: usize) {
+        self.coeffs.resize(1 << n_vars, F::ZERO);
     }
 }

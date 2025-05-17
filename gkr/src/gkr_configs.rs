@@ -86,6 +86,13 @@ declare_gkr_config!(
     GKRScheme::Vanilla,
 );
 declare_gkr_config!(
+    pub BN254ConfigSha2KZG,
+    FieldType::BN254,
+    FiatShamirHashType::SHA256,
+    PolynomialCommitmentType::KZG,
+    GKRScheme::Vanilla,
+);
+declare_gkr_config!(
     pub BN254ConfigMIMC5KZG,
     FieldType::BN254,
     FiatShamirHashType::MIMC5,

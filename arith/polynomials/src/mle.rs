@@ -228,4 +228,8 @@ impl<F: Field> MutableMultilinearExtension<F> for MultiLinearPoly<F> {
             })
         }
     }
+
+    fn lift_to_n_vars(&mut self, n_vars: usize) {
+        self.coeffs.resize(1 << n_vars, F::ZERO);
+    }
 }

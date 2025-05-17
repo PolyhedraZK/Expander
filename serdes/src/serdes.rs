@@ -118,8 +118,10 @@ impl ExpSerde for G1Affine {
 
 impl ExpSerde for G2Affine {
     fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {
-        let bytes = self.to_bytes().as_ref().to_vec();
-        bytes.serialize_into(writer)
+        let mut buf = [0u8; 64];
+        assert!(self.to_bytes().as_ref().len() == 64);
+        buf.copy_from_slice(self.to_bytes().as_ref());
+        buf.serialize_into(writer)
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
