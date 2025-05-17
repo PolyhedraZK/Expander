@@ -19,6 +19,7 @@ use crate::{
     *,
 };
 
+
 impl<G, E> ExpanderPCS<G> for HyperKZGPCS<E>
 where
     G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
@@ -48,7 +49,7 @@ where
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
     ) -> (Self::SRS, usize) {
-        let local_num_vars = if *params == 0 { 1 } else { *params };
+        let local_num_vars = std::cmp::max(*params, Self::MINIMUM_SUPPORTED_NUM_VARS);
 
         let x_degree_po2 = 1 << local_num_vars;
         let y_degree_po2 = mpi_engine.world_size();
@@ -68,8 +69,8 @@ where
     ) -> Option<Self::Commitment> {
         // The minimum supported number of variables is 1.
         // If the polynomial has no variables, we lift it to a polynomial with 1 variable.
-        if poly.num_vars() == 0 {
-            let poly = lift_poly_to_n_vars(poly, 1);
+        if poly.num_vars() < Self::MINIMUM_SUPPORTED_NUM_VARS {
+            let poly = lift_poly_to_n_vars(poly, Self::MINIMUM_SUPPORTED_NUM_VARS);
             return <Self as ExpanderPCS<G>>::commit(
                 _params,
                 mpi_engine,
@@ -108,8 +109,8 @@ where
         transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
-        if poly.num_vars() == 0 {
-            let (poly, x) = lift_poly_and_expander_challenge_to_n_vars(poly, x, 1);
+        if poly.num_vars() < Self::MINIMUM_SUPPORTED_NUM_VARS {
+            let (poly, x) = lift_poly_and_expander_challenge_to_n_vars(poly, x, Self::MINIMUM_SUPPORTED_NUM_VARS);
             return <Self as ExpanderPCS<G>>::open(
                 _params,
                 mpi_engine,
@@ -140,8 +141,8 @@ where
         transcript: &mut impl Transcript,
         opening: &Self::Opening,
     ) -> bool {
-        if x.rz.is_empty() {
-            let x = lift_expander_challenge_to_n_vars(x, 1);
+        if x.rz.len() < Self::MINIMUM_SUPPORTED_NUM_VARS {
+            let x = lift_expander_challenge_to_n_vars(x, Self::MINIMUM_SUPPORTED_NUM_VARS);
             return <Self as ExpanderPCS<G>>::verify(
                 _params,
                 verifying_key,
