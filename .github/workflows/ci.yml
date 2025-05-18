@@ -24,6 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
   
+      - name: Setup Dependencies
+        run: sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
+        
       - name: Check formatting
         run: |
           curl --proto '=https' --tlsv1.2 -sSf -y https://sh.rustup.rs | sh
