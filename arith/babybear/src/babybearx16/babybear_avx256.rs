@@ -279,7 +279,7 @@ impl Debug for AVXBabyBear {
                 }
             )
         } else {
-            write!(f, "mm256i<{:?}>", data)
+            write!(f, "mm256i<{data:?}>")
         }
     }
 }
