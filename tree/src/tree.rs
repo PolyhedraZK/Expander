@@ -19,11 +19,11 @@ impl Display for Tree {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "nodes:")?;
         for (i, e) in self.nodes.iter().enumerate() {
-            writeln!(f, "{}: {}", i, e)?;
+            writeln!(f, "{i}: {e}")?;
         }
         writeln!(f, "leaves:")?;
         for (i, e) in self.leaves.iter().enumerate() {
-            writeln!(f, "{}: {}", i, e)?;
+            writeln!(f, "{i}: {e}")?;
         }
         Ok(())
     }

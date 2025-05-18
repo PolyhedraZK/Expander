@@ -136,7 +136,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         };
         transcript_verifier_sync(transcript, proving_time_mpi_size);
 
-        log::info!("GKR verification: {}", verified);
+        log::info!("GKR verification: {verified}");
 
         timer.stop();
         (verified, challenge_x, challenge_y, claim_x, claim_y)

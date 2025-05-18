@@ -201,13 +201,13 @@ impl<C: FieldEngine> Circuit<C> {
 
     pub fn prover_load_witness_file(&mut self, filename: &str, mpi_config: &MPIConfig) {
         let file_bytes = fs::read(filename)
-            .unwrap_or_else(|_| panic!("Failed to read witness file: {}", filename));
+            .unwrap_or_else(|_| panic!("Failed to read witness file: {filename}"));
         self.load_witness_bytes(&file_bytes, mpi_config, true, false);
     }
 
     pub fn verifier_load_witness_file(&mut self, filename: &str, mpi_config: &MPIConfig) {
         let file_bytes = fs::read(filename)
-            .unwrap_or_else(|_| panic!("Failed to read witness file: {}", filename));
+            .unwrap_or_else(|_| panic!("Failed to read witness file: {filename}"));
         self.load_witness_bytes(&file_bytes, mpi_config, false, false);
     }
 

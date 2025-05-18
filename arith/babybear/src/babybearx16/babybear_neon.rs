@@ -310,7 +310,7 @@ fn sub_internal(a: &NeonBabyBear, b: &NeonBabyBear) -> NeonBabyBear {
 #[inline]
 fn mul_internal(a: &NeonBabyBear, b: &NeonBabyBear) -> NeonBabyBear {
     if !a.is_canonical() || !b.is_canonical() {
-        panic!("mul_internal: input is not canonical\n{:?}\n{:?}", a, b);
+        panic!("mul_internal: input is not canonical\n{a:?}\n{b:?}");
     }
 
     NeonBabyBear {

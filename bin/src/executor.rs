@@ -112,7 +112,7 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
         GF2ExtConfig::SENTINEL => FieldType::GF2Ext128,
         Goldilocksx8Config::SENTINEL => FieldType::Goldilocksx8,
         _ => {
-            println!("Unknown field type. Field byte value: {:?}", field_bytes);
+            println!("Unknown field type. Field byte value: {field_bytes:?}");
             exit(1);
         }
     }
@@ -281,7 +281,7 @@ pub async fn run_command<Cfg: GKREngine + 'static>(
             let ready_time = chrono::offset::Utc::now();
             let ready = warp::path("ready").map(move || {
                 info!("Received ready request.");
-                reply::with_status(format!("Ready since {:?}", ready_time), StatusCode::OK)
+                reply::with_status(format!("Ready since {ready_time:?}"), StatusCode::OK)
             });
             let prove =
                 warp::path("prove")
