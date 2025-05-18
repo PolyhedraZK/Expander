@@ -26,12 +26,14 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-
+        
       - name: Setup Dependencies
         run: sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
 
       - name: Check formatting
-        run: cargo fmt --all -- --check
+        run: ｜
+          rustup component add --toolchain nightly-2025-05-14-x86_64-unknown-linux-gnu rustfmt
+          cargo fmt --all -- --check
 
       - name: Run clippy
         run: cargo clippy --all
