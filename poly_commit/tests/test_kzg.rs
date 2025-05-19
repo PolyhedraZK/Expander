@@ -77,7 +77,7 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
 fn test_hyper_bikzg_for_expander_gkr() {
     let mpi_config = MPIConfig::prover_new();
 
-    test_hyper_bikzg_for_expander_gkr_generics(&mpi_config, 15);
+    test_hyper_bikzg_for_expander_gkr_generics(&mpi_config, 1);
 
     MPIConfig::finalize()
 }

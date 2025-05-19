@@ -49,11 +49,11 @@ pub trait ExpanderPCS<F: FieldEngine> {
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl RngCore,
-    ) -> (Self::SRS, usize);
+    ) -> Self::SRS;
 
     /// n_input_vars is with respect to the multilinear poly on each machine in MPI,
     /// also ignore the number of variables stacked in the SIMD field.
-    fn gen_params(n_input_vars: usize) -> Self::Params;
+    fn gen_params(n_input_vars: usize, world_size: usize) -> Self::Params;
 
     /// Initialize the scratch pad.
     /// Each process returns its own scratch pad.

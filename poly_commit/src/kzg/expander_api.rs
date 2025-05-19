@@ -39,24 +39,22 @@ where
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
-    fn gen_params(n_input_vars: usize) -> Self::Params {
-        n_input_vars
+    fn gen_params(n_input_vars: usize, _world_size: usize) -> Self::Params {
+        std::cmp::max(n_input_vars, Self::MINIMUM_SUPPORTED_NUM_VARS)
     }
 
     fn gen_srs_for_testing(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
-    ) -> (Self::SRS, usize) {
-        let local_num_vars = std::cmp::max(*params, Self::MINIMUM_SUPPORTED_NUM_VARS);
+    ) -> Self::SRS {
+        let local_num_vars = *params;
 
         let x_degree_po2 = 1 << local_num_vars;
         let y_degree_po2 = mpi_engine.world_size();
         let rank = mpi_engine.world_rank();
 
-        let srs =
-            generate_coef_form_bi_kzg_local_srs_for_testing(x_degree_po2, y_degree_po2, rank, rng);
-        (srs, local_num_vars)
+        generate_coef_form_bi_kzg_local_srs_for_testing(x_degree_po2, y_degree_po2, rank, rng)
     }
 
     fn commit(

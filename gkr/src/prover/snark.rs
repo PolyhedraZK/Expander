@@ -4,9 +4,11 @@ use arith::Field;
 use circuit::Circuit;
 use gkr_engine::{
     ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
-    GKRScheme, MPIConfig, MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
+    GKRScheme, MPIConfig, MPIEngine, Proof, StructuredReferenceString, Transcript,
 };
-use polynomials::{MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension};
+use polynomials::{
+    MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension, RefMultiLinearPoly,
+};
 use serdes::ExpSerde;
 use sumcheck::ProverScratchPad;
 use transcript::transcript_root_broadcast;
@@ -93,35 +95,13 @@ impl<Cfg: GKREngine> Prover<Cfg> {
 
         let pcs_commit_timer = Timer::new("pcs commit", self.mpi_config.is_root());
         // PC commit
-        let commitment = {
-            let original_input_vars = c.log_input_size();
-            let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
-
-            let minimum_vars_for_pcs: usize = pcs_params.num_vars();
-            if original_input_vars < minimum_vars_for_pcs {
-                eprintln!(
-					"{} over {} has minimum supported local vars {}, but input poly has vars {}, pad to {} vars in commiting.",
-					Cfg::PCSConfig::NAME,
-					<Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
-					minimum_vars_for_pcs,
-					original_input_vars,
-					minimum_vars_for_pcs,
-				);
-                mle_ref.lift_to_n_vars(minimum_vars_for_pcs)
-            }
-
-            let commit = Cfg::PCSConfig::commit(
-                pcs_params,
-                &self.mpi_config,
-                pcs_proving_key,
-                &mle_ref,
-                pcs_scratch,
-            );
-
-            mle_ref.lift_to_n_vars(original_input_vars);
-
-            commit
-        };
+        let commitment = Cfg::PCSConfig::commit(
+            pcs_params,
+            &self.mpi_config,
+            pcs_proving_key,
+            &RefMultiLinearPoly::from_ref(&c.layers[0].input_vals),
+            pcs_scratch,
+        );
 
         if self.mpi_config.is_root() {
             let mut buffer = vec![];
@@ -201,23 +181,6 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         transcript: &mut impl Transcript,
     ) {
         let original_input_vars = inputs.num_vars();
-
-        let minimum_vars_for_pcs: usize = pcs_params.num_vars();
-        if original_input_vars < minimum_vars_for_pcs {
-            eprintln!(
-				"{} over {} has minimum supported local vars {}, but input poly has vars {}, pad to {} vars in opening.",
-				Cfg::PCSConfig::NAME,
-				<Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
-				minimum_vars_for_pcs,
-				original_input_vars,
-				minimum_vars_for_pcs,
-			);
-            inputs.lift_to_n_vars(minimum_vars_for_pcs);
-            open_at.rz.resize(
-                minimum_vars_for_pcs,
-                <Cfg::FieldConfig as FieldEngine>::ChallengeField::ZERO,
-            )
-        }
 
         transcript.lock_proof();
         let opening = Cfg::PCSConfig::open(
