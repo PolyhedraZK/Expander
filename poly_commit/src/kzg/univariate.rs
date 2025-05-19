@@ -56,10 +56,10 @@ where
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
     let mut com = E::G1::generator() * E::Fr::ZERO;
-    // let timer = ::utils::timer::Timer::new(format!("kzg commit msm {}", coeffs.len()).as_ref(),
-    // true);
+    let timer =
+        ::utils::timer::Timer::new(format!("kzg commit msm {}", coeffs.len()).as_ref(), true);
     msm::multiexp_serial(coeffs, &srs.powers_of_tau[..coeffs.len()], &mut com);
-    // timer.stop();
+    timer.stop();
 
     com.into()
 }

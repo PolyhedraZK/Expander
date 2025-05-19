@@ -15,10 +15,10 @@ use utils::timer::Timer;
 fn main() {
     let mpi_config = MPIConfig::prover_new();
     println!("==========================");
-    for num_vars in 10..21 {
+    for num_vars in 10..11 {
         root_println!(mpi_config, "num vars: {}", num_vars);
-        bench_hyrax(&mpi_config, num_vars);
         bench_kzg(&mpi_config, num_vars);
+        bench_hyrax(&mpi_config, num_vars);
         bench_orion(&mpi_config, num_vars);
         println!("==========================");
     }
@@ -88,22 +88,10 @@ fn bench_hyrax(mpi_config: &MPIConfig, num_vars: usize) {
 }
 
 fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
-    // full scalar
     let mut rng = test_rng();
     let (srs, _) = HyperKZGPCS::<Bn256>::gen_srs_for_testing(&num_vars, &mut rng);
 
-    let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
     let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
-
-    pcs_bench::<HyperKZGPCS<Bn256>>(
-        mpi_config,
-        &num_vars,
-        &srs,
-        &poly,
-        &eval_point,
-        "kzg full scalar   ",
-    );
-
     // small scalar
     let input = (0..1 << num_vars)
         .map(|_| Fr::from(rng.next_u32()))
@@ -116,6 +104,16 @@ fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
         &poly,
         &eval_point,
         "kzg small scalar  ",
+    );
+    // full scalar
+    let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
+    pcs_bench::<HyperKZGPCS<Bn256>>(
+        mpi_config,
+        &num_vars,
+        &srs,
+        &poly,
+        &eval_point,
+        "kzg full scalar   ",
     );
 }
 
