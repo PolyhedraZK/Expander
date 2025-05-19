@@ -91,15 +91,16 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         let proving_timer = Timer::new("prover", self.mpi_config.is_root());
         let mut transcript = Cfg::TranscriptConfig::new();
 
-        let pcs_commit_timer = Timer::new("pcs commit", self.mpi_config.is_root());
-        // PC commit
-        let commitment = {
-            let original_input_vars = c.log_input_size();
-            let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
+        if self.mpi_config.is_root() {
+            let pcs_commit_timer = Timer::new("pcs commit", self.mpi_config.is_root());
+            // PC commit
+            let commitment = {
+                let original_input_vars = c.log_input_size();
+                let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
 
-            let minimum_vars_for_pcs: usize = pcs_params.num_vars();
-            if original_input_vars < minimum_vars_for_pcs {
-                eprintln!(
+                let minimum_vars_for_pcs: usize = pcs_params.num_vars();
+                if original_input_vars < minimum_vars_for_pcs {
+                    eprintln!(
 					"{} over {} has minimum supported local vars {}, but input poly has vars {}, pad to {} vars in commiting.",
 					Cfg::PCSConfig::NAME,
 					<Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
@@ -107,28 +108,28 @@ impl<Cfg: GKREngine> Prover<Cfg> {
 					original_input_vars,
 					minimum_vars_for_pcs,
 				);
-                mle_ref.lift_to_n_vars(minimum_vars_for_pcs)
-            }
+                    mle_ref.lift_to_n_vars(minimum_vars_for_pcs)
+                }
 
-            let commit = Cfg::PCSConfig::commit(
-                pcs_params,
-                &self.mpi_config,
-                pcs_proving_key,
-                &mle_ref,
-                pcs_scratch,
-            );
+                let commit = Cfg::PCSConfig::commit(
+                    pcs_params,
+                    // &self.mpi_config,
+                    pcs_proving_key,
+                    &mle_ref,
+                    pcs_scratch,
+                );
 
-            mle_ref.lift_to_n_vars(original_input_vars);
+                mle_ref.lift_to_n_vars(original_input_vars);
 
-            commit
-        };
+                commit
+            };
 
-        if self.mpi_config.is_root() {
             let mut buffer = vec![];
             commitment.unwrap().serialize_into(&mut buffer).unwrap(); // TODO: error propagation
             transcript.append_commitment(&buffer);
+
+            pcs_commit_timer.stop();
         }
-        pcs_commit_timer.stop();
 
         #[cfg(feature = "grinding")]
         grind::<Cfg>(&mut transcript, &self.mpi_config);
@@ -154,33 +155,35 @@ impl<Cfg: GKREngine> Prover<Cfg> {
 
         transcript_root_broadcast(&mut transcript, &self.mpi_config);
 
-        let pcs_open_timer = Timer::new("pcs open", self.mpi_config.is_root());
+        if self.mpi_config.is_root() {
+            let pcs_open_timer = Timer::new("pcs open", self.mpi_config.is_root());
 
-        // open
-        let mut challenge_x = challenge.challenge_x();
-        let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
-        self.prove_input_layer_claim(
-            &mut mle_ref,
-            &mut challenge_x,
-            pcs_params,
-            pcs_proving_key,
-            pcs_scratch,
-            &mut transcript,
-        );
-
-        if let Some(mut challenge_y) = challenge.challenge_y() {
-            transcript_root_broadcast(&mut transcript, &self.mpi_config);
+            // open
+            let mut challenge_x = challenge.challenge_x();
+            let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
             self.prove_input_layer_claim(
                 &mut mle_ref,
-                &mut challenge_y,
+                &mut challenge_x,
                 pcs_params,
                 pcs_proving_key,
                 pcs_scratch,
                 &mut transcript,
             );
-        }
 
-        pcs_open_timer.stop();
+            if let Some(mut challenge_y) = challenge.challenge_y() {
+                transcript_root_broadcast(&mut transcript, &self.mpi_config);
+                self.prove_input_layer_claim(
+                    &mut mle_ref,
+                    &mut challenge_y,
+                    pcs_params,
+                    pcs_proving_key,
+                    pcs_scratch,
+                    &mut transcript,
+                );
+            }
+
+            pcs_open_timer.stop();
+        }
 
         let proof = transcript.finalize_and_get_proof();
         proving_timer.print(&format!("Proof size {} bytes", proof.bytes.len()));
@@ -222,7 +225,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         transcript.lock_proof();
         let opening = Cfg::PCSConfig::open(
             pcs_params,
-            &self.mpi_config,
+            // &self.mpi_config,
             pcs_proving_key,
             inputs,
             open_at,

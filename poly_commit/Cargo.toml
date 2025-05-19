@@ -48,5 +48,6 @@ name = "pcs_all"
 harness = false
 
 [features]
-default = [ "profile" ]
+default = []
+# default = [ "profile" ]
 profile = [ "utils/profile" ]

@@ -37,12 +37,13 @@ where
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
     ) -> (Self::SRS, usize) {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         let (srs, calibrated_num_vars_each_core) = OrionSRS::from_random(
-            mpi_engine.world_size(),
+            // mpi_engine.world_size(),
+            1,
             num_vars_each_core,
             C::CircuitField::FIELD_SIZE,
             ComPackF::PACK_SIZE,
@@ -60,7 +61,7 @@ where
 
     fn commit(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
@@ -68,27 +69,25 @@ where
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
-        if mpi_engine.is_single_process() {
-            return orion_commit_simd_field::<_, C::SimdCircuitField, ComPackF>(
-                proving_key,
-                poly,
-                scratch_pad,
-            )
-            .ok();
-        }
+        //    ? if mpi_engine.is_single_process() {
+        // return
+        orion_commit_simd_field::<_, C::SimdCircuitField, ComPackF>(proving_key, poly, scratch_pad)
+            .ok()
+        // ;
+        // }
 
-        orion_mpi_commit_simd_field::<_, C::SimdCircuitField, ComPackF>(
-            mpi_engine,
-            proving_key,
-            poly,
-            scratch_pad,
-        )
-        .ok()
+        // orion_mpi_commit_simd_field::<_, C::SimdCircuitField, ComPackF>(
+        //     mpi_engine,
+        //     proving_key,
+        //     poly,
+        //     scratch_pad,
+        // )
+        // .ok()
     }
 
     fn open(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         eval_point: &ExpanderSingleVarChallenge<C>,
@@ -98,26 +97,26 @@ where
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
-        if mpi_engine.is_single_process() {
-            let (_, opening) = orion_open_simd_field::<_, C::SimdCircuitField, _, ComPackF>(
-                proving_key,
-                poly,
-                &eval_point.local_xs(),
-                transcript,
-                scratch_pad,
-            );
-            return opening.into();
-        }
-
-        orion_mpi_open_simd_field::<_, C::SimdCircuitField, _, ComPackF>(
-            mpi_engine,
+        // if mpi_engine.is_single_process() {
+        let (_, opening) = orion_open_simd_field::<_, C::SimdCircuitField, _, ComPackF>(
             proving_key,
             poly,
             &eval_point.local_xs(),
-            &eval_point.r_mpi,
             transcript,
             scratch_pad,
-        )
+        );
+        return opening.into();
+        // }
+
+        // orion_mpi_open_simd_field::<_, C::SimdCircuitField, _, ComPackF>(
+        //     mpi_engine,
+        //     proving_key,
+        //     poly,
+        //     &eval_point.local_xs(),
+        //     &eval_point.r_mpi,
+        //     transcript,
+        //     scratch_pad,
+        // )
     }
 
     fn verify(

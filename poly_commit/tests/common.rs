@@ -53,11 +53,19 @@ pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C
 ) {
     let mut rng = test_rng();
     // NOTE(HS) we assume that the polynomials we pass in are of sufficient length.
-    let (srs, _) = P::gen_srs_for_testing(params, mpi_config, &mut rng);
+    let (srs, _) = P::gen_srs_for_testing(
+        params, //mpi_config,
+        &mut rng,
+    );
     let (proving_key, verification_key) = srs.into_keys();
     let mut scratch_pad = P::init_scratch_pad(params, mpi_config);
 
-    let commitment = P::commit(params, mpi_config, &proving_key, poly, &mut scratch_pad);
+    let commitment = P::commit(
+        params, //mpi_config,
+        &proving_key,
+        poly,
+        &mut scratch_pad,
+    );
 
     // PCSForExpanderGKR does not require an evaluation value for the opening function
     // We use RawExpanderGKR as the golden standard for the evaluation value
@@ -75,7 +83,7 @@ pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C
         transcript.lock_proof();
         let opening = P::open(
             params,
-            mpi_config,
+            // mpi_config,
             &proving_key,
             poly,
             xx,

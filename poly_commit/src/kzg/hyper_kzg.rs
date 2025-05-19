@@ -1,5 +1,6 @@
 use std::iter;
 
+use ::utils::timer::Timer;
 use arith::ExtensionField;
 use gkr_engine::Transcript;
 use halo2curves::{
@@ -34,9 +35,7 @@ where
                 .chunks(2)
                 .map(|c| (E::Fr::ONE - alpha) * c[0] + *alpha * c[1])
                 .collect();
-
             let folded_oracle_commit = coeff_form_uni_kzg_commit(srs, &local_coeffs);
-
             (folded_oracle_commit, local_coeffs.clone())
         })
         .unzip()
@@ -115,8 +114,12 @@ where
     E::Fr: ExtensionField,
     T: Transcript,
 {
+    let timer = Timer::new("local oracle", true);
+
     let (folded_oracle_commitments, folded_oracle_coeffs) =
         coeff_form_hyperkzg_local_poly_oracles(srs, coeffs, alphas);
+
+    timer.stop();
 
     folded_oracle_commitments.iter().for_each(|f| {
         fs_transcript.append_u8_slice(f.to_bytes().as_ref());
@@ -125,11 +128,17 @@ where
     let beta = fs_transcript.generate_field_element::<E::Fr>();
     let beta2 = beta * beta;
 
+    let timer = Timer::new("local evals", true);
+
     let local_evals =
         coeff_form_hyperkzg_local_evals::<E>(coeffs, &folded_oracle_coeffs, alphas, beta);
     local_evals.append_to_transcript(fs_transcript);
 
+    timer.stop();
+
     let gamma = fs_transcript.generate_field_element::<E::Fr>();
+
+    let timer = Timer::new("interpolate and quotient", true);
 
     let mut f_gamma =
         coeff_form_hyperkzg_local_oracle_polys_aggregate::<E>(coeffs, &folded_oracle_coeffs, gamma);
@@ -139,9 +148,18 @@ where
         polynomial_add(&mut nom, -E::Fr::ONE, &lagrange_degree2);
         univariate_roots_quotient(nom, &[beta, beta2, -beta])
     };
+
+    timer.stop();
+
+    let timer = Timer::new("commit", true);
+
     let beta_x_commitment = coeff_form_uni_kzg_commit(srs, &f_gamma_quotient);
 
+    timer.stop();
+
     fs_transcript.append_u8_slice(beta_x_commitment.to_bytes().as_ref());
+
+    let timer = Timer::new("degree 1 quotient", true);
 
     let tau = fs_transcript.generate_field_element::<E::Fr>();
     let vanishing_at_tau = {
@@ -154,7 +172,14 @@ where
         assert_eq!(lagrange_degree2_at_tau, remainder);
         coeffs
     };
+
+    timer.stop();
+
+    let timer = Timer::new("commit", true);
+
     let quotient_delta_x_commitment = coeff_form_uni_kzg_commit(srs, &vanishing_at_tau);
+
+    timer.stop();
 
     (
         local_evals.multilinear_final_eval(),

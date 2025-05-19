@@ -89,8 +89,8 @@ where
 
     let (div, eval) = univariate_degree_one_quotient(&gammas, beta);
 
-    let mut y_open = E::G1::generator() * E::Fr::ZERO;
-    msm::multiexp_serial(&div, &srs.tau_y_srs.powers_of_tau[..div.len()], &mut y_open);
+    // let mut y_open = E::G1::generator() * E::Fr::ZERO;
+let y_open =     msm::best_multiexp(&div, &srs.tau_y_srs.powers_of_tau[..div.len()],);
 
     (
         eval,
