@@ -16,7 +16,11 @@ pub fn expander_pcs_init_testing_only<FieldConfig: FieldEngine, PCS: ExpanderPCS
 
     let mut pcs_params = <PCS as ExpanderPCS<FieldConfig>>::gen_params(n_input_vars);
     let (pcs_setup, calibrated_num_local_simd_vars) =
-        <PCS as ExpanderPCS<FieldConfig>>::gen_srs_for_testing(&pcs_params, mpi_config, &mut rng);
+        <PCS as ExpanderPCS<FieldConfig>>::gen_srs_for_testing(
+            &pcs_params,
+            // mpi_config,
+            &mut rng,
+        );
 
     if n_input_vars < calibrated_num_local_simd_vars {
         eprintln!(

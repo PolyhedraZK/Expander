@@ -55,10 +55,10 @@ where
 {
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
-    let mut com = E::G1::generator() * E::Fr::ZERO;
+    // let mut com = E::G1::generator() * E::Fr::ZERO;
     let timer =
         ::utils::timer::Timer::new(format!("kzg commit msm {}", coeffs.len()).as_ref(), true);
-    msm::multiexp_serial(coeffs, &srs.powers_of_tau[..coeffs.len()], &mut com);
+    let com = msm::best_multiexp(coeffs, &srs.powers_of_tau[..coeffs.len()]); //&mut com);
     timer.stop();
 
     com.into()
@@ -77,11 +77,11 @@ where
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
     let (div, eval) = univariate_degree_one_quotient(coeffs, alpha);
-    let mut opening = E::G1::generator() * E::Fr::ZERO;
+    // let mut opening = E::G1::generator() * E::Fr::ZERO;
 
     // let timer = ::utils::timer::Timer::new(format!("kzg open msm {}", div.len()).as_ref(), true);
-    msm::multiexp_serial(&div, &srs.powers_of_tau[..div.len()], &mut opening);
-    // timer.stop();
+    let opening = msm::best_multiexp(&div, &srs.powers_of_tau[..div.len()]); //&mut opening);
+                                                                             // timer.stop();
 
     (eval, opening.into())
 }

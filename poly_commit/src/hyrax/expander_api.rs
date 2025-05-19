@@ -44,71 +44,77 @@ where
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
     ) -> (Self::SRS, usize) {
-        let mpi_vars = mpi_engine.world_size().ilog2() as usize;
+        // let mpi_vars = mpi_engine.world_size().ilog2() as usize;
 
-        (hyrax_setup(*params, mpi_vars, rng), *params)
+        (
+            hyrax_setup(
+                *params, 1, // mpi_vars,
+                rng,
+            ),
+            *params,
+        )
     }
 
     fn commit(
         _params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         let local_commit = hyrax_commit(proving_key, poly);
 
-        if mpi_engine.is_single_process() {
-            return local_commit.into();
-        }
+        // if mpi_engine.is_single_process() {
+        return local_commit.into();
+        // }
 
-        let mut global_commit: Vec<C> = if mpi_engine.is_root() {
-            vec![C::default(); mpi_engine.world_size() * local_commit.0.len()]
-        } else {
-            vec![]
-        };
+        // let mut global_commit: Vec<C> = if mpi_engine.is_root() {
+        //     vec![C::default(); mpi_engine.world_size() * local_commit.0.len()]
+        // } else {
+        //     vec![]
+        // };
 
-        mpi_engine.gather_vec(&local_commit.0, &mut global_commit);
-        if !mpi_engine.is_root() {
-            return None;
-        }
+        // mpi_engine.gather_vec(&local_commit.0, &mut global_commit);
+        // if !mpi_engine.is_root() {
+        //     return None;
+        // }
 
-        HyraxCommitment(global_commit).into()
+        // HyraxCommitment(global_commit).into()
     }
 
     fn open(
         _params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
         x: &ExpanderSingleVarChallenge<G>,
         _transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
-        if mpi_engine.is_single_process() {
-            let (_, open) = hyrax_open(proving_key, poly, &x.local_xs());
-            return open.into();
-        }
+        // if mpi_engine.is_single_process() {
+        let (_, open) = hyrax_open(proving_key, poly, &x.local_xs());
+        return open.into();
+        // }
 
-        let pedersen_len = proving_key.msm_len();
-        let pedersen_vars = pedersen_len.ilog2() as usize;
+        // let pedersen_len = proving_key.msm_len();
+        // let pedersen_vars = pedersen_len.ilog2() as usize;
 
-        let local_vars = x.local_xs();
-        let mut local_basis = poly.hypercube_basis();
-        let mut local_mle = MutRefMultiLinearPoly::from_ref(&mut local_basis);
-        local_mle.fix_variables(&local_vars[pedersen_vars..]);
+        // let local_vars = x.local_xs();
+        // let mut local_basis = poly.hypercube_basis();
+        // let mut local_mle = MutRefMultiLinearPoly::from_ref(&mut local_basis);
+        // local_mle.fix_variables(&local_vars[pedersen_vars..]);
 
-        let eq_mpi_vars = EqPolynomial::build_eq_x_r(&x.r_mpi);
-        let combined_coeffs = mpi_engine.coef_combine_vec(&local_basis, &eq_mpi_vars);
+        // let eq_mpi_vars = EqPolynomial::build_eq_x_r(&x.r_mpi);
+        // let combined_coeffs = mpi_engine.coef_combine_vec(&local_basis, &eq_mpi_vars);
 
-        if !mpi_engine.is_root() {
-            return None;
-        }
+        // if !mpi_engine.is_root() {
+        //     return None;
+        // }
 
-        HyraxOpening(combined_coeffs).into()
+        // HyraxOpening(combined_coeffs).into()
     }
 
     fn verify(
@@ -120,26 +126,26 @@ where
         _transcript: &mut impl Transcript,
         opening: &Self::Opening,
     ) -> bool {
-        if x.r_mpi.is_empty() {
-            return hyrax_verify(verifying_key, commitment, &x.local_xs(), v, opening);
-        }
+        // if x.r_mpi.is_empty() {
+        return hyrax_verify(verifying_key, commitment, &x.local_xs(), v, opening);
+        // }
 
-        let pedersen_len = verifying_key.msm_len();
-        let pedersen_vars = pedersen_len.ilog2() as usize;
+        // let pedersen_len = verifying_key.msm_len();
+        // let pedersen_vars = pedersen_len.ilog2() as usize;
 
-        let local_vars = x.local_xs();
-        let mut non_row_vars = local_vars[pedersen_vars..].to_vec();
-        non_row_vars.extend_from_slice(&x.r_mpi);
+        // let local_vars = x.local_xs();
+        // let mut non_row_vars = local_vars[pedersen_vars..].to_vec();
+        // non_row_vars.extend_from_slice(&x.r_mpi);
 
-        let eq_combination: Vec<C::Scalar> = EqPolynomial::build_eq_x_r(&non_row_vars);
-        let row_comm = msm::best_multiexp(&eq_combination, &commitment.0);
+        // let eq_combination: Vec<C::Scalar> = EqPolynomial::build_eq_x_r(&non_row_vars);
+        // let row_comm = msm::best_multiexp(&eq_combination, &commitment.0);
 
-        if pedersen_commit(verifying_key, &opening.0) != row_comm.into() {
-            return false;
-        }
+        // if pedersen_commit(verifying_key, &opening.0) != row_comm.into() {
+        //     return false;
+        // }
 
-        let mut scratch = vec![C::Scalar::default(); opening.0.len()];
-        v == RefMultiLinearPoly::from_ref(&opening.0)
-            .evaluate_with_buffer(&local_vars[..pedersen_vars], &mut scratch)
+        // let mut scratch = vec![C::Scalar::default(); opening.0.len()];
+        // v == RefMultiLinearPoly::from_ref(&opening.0)
+        //     .evaluate_with_buffer(&local_vars[..pedersen_vars], &mut scratch)
     }
 }

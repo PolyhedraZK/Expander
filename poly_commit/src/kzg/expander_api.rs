@@ -39,14 +39,14 @@ where
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
     ) -> (Self::SRS, usize) {
         let local_num_vars = if *params == 0 { 1 } else { *params };
 
         let x_degree_po2 = 1 << local_num_vars;
-        let y_degree_po2 = mpi_engine.world_size();
-        let rank = mpi_engine.world_rank();
+        let y_degree_po2 = 1; //mpi_engine.world_size();
+        let rank = 0; // mpi_engine.world_rank();
 
         let srs =
             generate_coef_form_bi_kzg_local_srs_for_testing(x_degree_po2, y_degree_po2, rank, rng);
@@ -55,7 +55,7 @@ where
 
     fn commit(
         _params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
@@ -63,26 +63,26 @@ where
         let local_commitment =
             coeff_form_uni_kzg_commit(&proving_key.tau_x_srs, poly.hypercube_basis_ref());
 
-        if mpi_engine.is_single_process() {
-            return KZGCommitment(local_commitment).into();
-        }
+        // if mpi_engine.is_single_process() {
+        return KZGCommitment(local_commitment).into();
+        // }
 
-        let local_g1 = local_commitment.to_curve();
-        let mut root_gathering_commits: Vec<E::G1> = vec![local_g1; mpi_engine.world_size()];
-        mpi_engine.gather_vec(&[local_g1], &mut root_gathering_commits);
+        // let local_g1 = local_commitment.to_curve();
+        // let mut root_gathering_commits: Vec<E::G1> = vec![local_g1; mpi_engine.world_size()];
+        // mpi_engine.gather_vec(&[local_g1], &mut root_gathering_commits);
 
-        if !mpi_engine.is_root() {
-            return None;
-        }
+        // if !mpi_engine.is_root() {
+        //     return None;
+        // }
 
-        let final_commit = root_gathering_commits.iter().sum::<E::G1>().into();
+        // let final_commit = root_gathering_commits.iter().sum::<E::G1>().into();
 
-        KZGCommitment(final_commit).into()
+        // KZGCommitment(final_commit).into()
     }
 
     fn open(
         _params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
         x: &ExpanderSingleVarChallenge<G>,
@@ -91,10 +91,10 @@ where
     ) -> Option<Self::Opening> {
         coeff_form_hyper_bikzg_open(
             proving_key,
-            mpi_engine,
+            // mpi_engine,
             poly,
             &x.local_xs(),
-            &x.r_mpi,
+            // &x.r_mpi,
             transcript,
         )
     }

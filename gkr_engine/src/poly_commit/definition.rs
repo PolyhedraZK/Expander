@@ -47,7 +47,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
     /// rather than the base field elements.
     fn gen_srs_for_testing(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         rng: impl RngCore,
     ) -> (Self::SRS, usize);
 
@@ -63,7 +63,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
     /// arbitrary value.
     fn commit(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<F::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
@@ -92,7 +92,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
     /// argument system.
     fn open(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<F::SimdCircuitField>,
         x: &ExpanderSingleVarChallenge<F>,

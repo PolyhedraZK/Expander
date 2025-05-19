@@ -138,7 +138,7 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
 
     fn gen_srs_for_testing(
         params: &Self::Params,
-        _mpi_engine: &impl MPIEngine,
+        // _mpi_engine: &impl MPIEngine,
         _rng: impl RngCore,
     ) -> (Self::SRS, usize) {
         ((), *params)
@@ -152,38 +152,38 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
 
     fn commit(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         assert!(poly.num_vars() == *params);
 
-        if mpi_engine.is_single_process() {
-            return Self::Commitment {
-                evals: poly.hypercube_basis(),
-            }
-            .into();
+        // if mpi_engine.is_single_process() {
+        return Self::Commitment {
+            evals: poly.hypercube_basis(),
         }
+        .into();
+        // }
 
-        let mut buffer = if mpi_engine.is_root() {
-            vec![C::SimdCircuitField::zero(); poly.hypercube_size() * mpi_engine.world_size()]
-        } else {
-            vec![]
-        };
+        // let mut buffer = if mpi_engine.is_root() {
+        //     vec![C::SimdCircuitField::zero(); poly.hypercube_size() * mpi_engine.world_size()]
+        // } else {
+        //     vec![]
+        // };
 
-        mpi_engine.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
+        // mpi_engine.gather_vec(poly.hypercube_basis_ref(), &mut buffer);
 
-        if !mpi_engine.is_root() {
-            return None;
-        }
+        // if !mpi_engine.is_root() {
+        //     return None;
+        // }
 
-        Self::Commitment { evals: buffer }.into()
+        // Self::Commitment { evals: buffer }.into()
     }
 
     fn open(
         _params: &Self::Params,
-        _mpi_engine: &impl MPIEngine,
+        // _mpi_engine: &impl MPIEngine,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         _poly: &impl MultilinearExtension<C::SimdCircuitField>,
         _x: &ExpanderSingleVarChallenge<C>,
