@@ -123,8 +123,7 @@ where
     let pedersen_vars = pedersen_len.ilog2() as usize;
 
     let eq_combination: Vec<C::Scalar> = EqPolynomial::build_eq_x_r(&eval_point[pedersen_vars..]);
-    let mut row_comm = C::Curve::default();
-    msm::multiexp_serial(&eq_combination, &comm.0, &mut row_comm);
+    let row_comm = msm::best_multiexp(&eq_combination, &comm.0);
 
     if pedersen_commit(params, &proof.0) != row_comm.into() {
         return false;

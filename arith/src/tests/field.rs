@@ -5,7 +5,7 @@ use crate::Field;
 
 #[allow(clippy::eq_op)]
 pub(crate) fn commutativity_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-    let _message = format!("commutativity {}", type_name);
+    let _message = format!("commutativity {type_name}");
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
@@ -18,7 +18,7 @@ pub(crate) fn commutativity_tests<F: Field, R: RngCore>(mut rng: R, type_name: S
 }
 
 pub(crate) fn identity_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-    let _message = format!("identity {}", type_name);
+    let _message = format!("identity {type_name}");
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
@@ -35,7 +35,7 @@ pub(crate) fn identity_tests<F: Field, R: RngCore>(mut rng: R, type_name: String
 }
 
 pub(crate) fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-    let _message = format!("multiplication {}", type_name);
+    let _message = format!("multiplication {type_name}");
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
@@ -62,7 +62,7 @@ pub(crate) fn random_multiplication_tests<F: Field, R: RngCore>(mut rng: R, type
 }
 
 pub(crate) fn random_addition_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-    let _message = format!("addition {}", type_name);
+    let _message = format!("addition {type_name}");
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
@@ -88,7 +88,7 @@ pub(crate) fn random_addition_tests<F: Field, R: RngCore>(mut rng: R, type_name:
 }
 
 pub(crate) fn random_subtraction_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-    let _message = format!("subtraction {}", type_name);
+    let _message = format!("subtraction {type_name}");
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
@@ -109,7 +109,7 @@ pub(crate) fn random_subtraction_tests<F: Field, R: RngCore>(mut rng: R, type_na
 }
 
 pub(crate) fn random_negation_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-    let _message = format!("negation {}", type_name);
+    let _message = format!("negation {type_name}");
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
@@ -122,7 +122,7 @@ pub(crate) fn random_negation_tests<F: Field, R: RngCore>(mut rng: R, type_name:
 }
 
 pub(crate) fn random_doubling_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-    let _message = format!("doubling {}", type_name);
+    let _message = format!("doubling {type_name}");
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let mut a = F::random_unsafe(&mut rng);
@@ -136,7 +136,7 @@ pub(crate) fn random_doubling_tests<F: Field, R: RngCore>(mut rng: R, type_name:
 }
 
 pub(crate) fn random_squaring_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-    let _message = format!("squaring {}", type_name);
+    let _message = format!("squaring {type_name}");
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let mut a = F::random_unsafe(&mut rng);
@@ -150,7 +150,7 @@ pub(crate) fn random_squaring_tests<F: Field, R: RngCore>(mut rng: R, type_name:
 }
 
 pub(crate) fn random_expansion_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-    let _message = format!("expansion {}", type_name);
+    let _message = format!("expansion {type_name}");
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         // Compare (a + b)(c + d) and (a*c + b*c + a*d + b*d)
@@ -185,7 +185,7 @@ pub(crate) fn random_expansion_tests<F: Field, R: RngCore>(mut rng: R, type_name
 }
 
 pub(crate) fn random_serde_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-    let _message = format!("serde {}", type_name);
+    let _message = format!("serde {type_name}");
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);
@@ -201,7 +201,7 @@ pub(crate) fn random_serde_tests<F: Field, R: RngCore>(mut rng: R, type_name: St
 }
 
 pub(crate) fn associativity_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
-    let _message = format!("associativity {}", type_name);
+    let _message = format!("associativity {type_name}");
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let a = F::random_unsafe(&mut rng);

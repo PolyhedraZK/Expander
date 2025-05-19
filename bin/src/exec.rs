@@ -66,8 +66,7 @@ async fn main() {
             run_command::<BabyBearx16ConfigSha2Raw>(&expander_exec_args, &mpi_config).await;
         }
         _ => panic!(
-            "FS: {:?}, PCS: {:?}, Field: {:?} setting is not yet integrated in expander-exec",
-            fs_hash_type, pcs_type, field_type
+            "FS: {fs_hash_type:?}, PCS: {pcs_type:?}, Field: {field_type:?} setting is not yet integrated in expander-exec"
         ),
     }
 

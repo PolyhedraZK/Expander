@@ -125,8 +125,7 @@ fn parse_polynomial_commitment_type(
             format!("OrionPCSForGKR::<{field_config}, Goldilocksx8>").to_owned(),
         ),
         _ => panic!(
-            "Unknown polynomial commitment type in config macro expansion. PCS: '{}', Field: '{}'",
-            pcs_type_str, field_type
+            "Unknown polynomial commitment type in config macro expansion. PCS: '{pcs_type_str}', Field: '{field_type}'"
         ),
     }
 }

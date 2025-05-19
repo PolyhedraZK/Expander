@@ -38,7 +38,7 @@ pub fn gkr_square_prove<F: FieldEngine>(
         mpi_config,
     );
 
-    log::trace!("Claimed v: {:?}", claimed_v);
+    log::trace!("Claimed v: {claimed_v:?}");
 
     for i in (0..layer_num).rev() {
         sumcheck_prove_gkr_square_layer(
@@ -49,7 +49,7 @@ pub fn gkr_square_prove<F: FieldEngine>(
             mpi_config,
         );
 
-        log::trace!("Layer {} proved", i);
+        log::trace!("Layer {i} proved");
         log::trace!("rz0.0: {:?}", challenge.rz[0]);
         log::trace!("rz0.1: {:?}", challenge.rz[1]);
         log::trace!("rz0.2: {:?}", challenge.rz[2]);

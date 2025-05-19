@@ -23,17 +23,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
+  
       - name: Setup Dependencies
         run: sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
-
+        
       - name: Check formatting
-        run: cargo fmt --all -- --check
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf -y https://sh.rustup.rs | sh
+          rustup component add --toolchain nightly-2025-05-17-x86_64-unknown-linux-gnu rustfmt clippy
+          cargo fmt --all -- --check
 
       - name: Run clippy
         run: cargo clippy --all

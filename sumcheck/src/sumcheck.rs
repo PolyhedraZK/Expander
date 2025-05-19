@@ -45,6 +45,7 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript>(
         let evals = helper.poly_evals_at_rx(i_var, SUMCHECK_GKR_DEGREE, mpi_config);
         let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
         helper.receive_rx(i_var, r);
+        log::trace!("x i_var={i_var} evals: {evals:?} r: {r:?}");
     }
 
     helper.prepare_simd_var_vals();
@@ -53,6 +54,7 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript>(
             helper.poly_evals_at_r_simd_var(i_var, SUMCHECK_GKR_SIMD_MPI_DEGREE, mpi_config);
         let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
         helper.receive_r_simd_var(i_var, r);
+        log::trace!("SIMD i_var={i_var} evals: {evals:?} r: {r:?}");
     }
 
     helper.prepare_mpi_var_vals(mpi_config);
@@ -112,7 +114,7 @@ pub fn sumcheck_prove_gkr_square_layer<F: FieldEngine, T: Transcript>(
     for i_var in 0..layer.input_var_num {
         let evals = helper.poly_evals_at_x(i_var);
         let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
-        log::trace!("x i_var={} evals: {:?} r: {:?}", i_var, evals, r);
+        log::trace!("x i_var={i_var} evals: {evals:?} r: {r:?}");
         helper.receive_x_challenge(i_var, r);
     }
 
@@ -123,7 +125,7 @@ pub fn sumcheck_prove_gkr_square_layer<F: FieldEngine, T: Transcript>(
     for i_var in 0..helper.simd_var_num {
         let evals = helper.poly_evals_at_simd(i_var);
         let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
-        log::trace!("SIMD i_var={} evals: {:?} r: {:?}", i_var, evals, r);
+        log::trace!("SIMD i_var={i_var} evals: {evals:?} r: {r:?}");
         helper.receive_simd_challenge(i_var, r);
     }
 
