@@ -121,19 +121,24 @@ pub trait ExpanderPCS<F: FieldEngine> {
 
     /// Partially verify the opening of a polynomial at a point.
     /// Deffer some of the checks to the batch verification via accumulator.
+    #[allow(clippy::too_many_arguments)]
     fn partial_verify(
-        params: &Self::Params,
-        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
-        commitment: &Self::Commitment,
-        x: &ExpanderSingleVarChallenge<F>,
-        v: F::ChallengeField,
-        transcript: &mut impl Transcript,
-        opening: &Self::Opening,
-        accumulator: &mut Self::Accumulator,
-    ) -> bool;
+        _params: &Self::Params,
+        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        _commitment: &Self::Commitment,
+        _x: &ExpanderSingleVarChallenge<F>,
+        _v: F::ChallengeField,
+        _transcript: &mut impl Transcript,
+        _opening: &Self::Opening,
+        _accumulator: &mut Self::Accumulator,
+    ) -> bool {
+        unimplemented!("Partial verification is not implemented for this PCS.")
+    }
 
     /// Perform the finally batch verification for the accumulated opening proofs.
-    fn batch_deferred_verification(accumulator: &mut Self::Accumulator) -> bool;
+    fn batch_deferred_verification(_accumulator: &mut Self::Accumulator) -> bool {
+        unimplemented!("Batch verification is not implemented for this PCS.")
+    }
 }
 
 impl StructuredReferenceString for () {

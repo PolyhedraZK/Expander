@@ -117,7 +117,7 @@ where
             _params,
             verifying_key,
             commitment,
-            &x,
+            x,
             v,
             transcript,
             opening,

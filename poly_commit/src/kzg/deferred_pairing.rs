@@ -66,7 +66,6 @@ impl<E: MultiMillerLoop> DeferredPairingCheck for PairingAccumulator<E> {
         let g1g2_pairs = g1_affines
             .iter()
             .zip(g2_prepared.iter())
-            .map(|(g1, g2)| (g1, g2))
             .collect::<Vec<_>>();
 
         let gt_result = E::multi_miller_loop(g1g2_pairs.as_slice());

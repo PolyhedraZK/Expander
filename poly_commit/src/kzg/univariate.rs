@@ -125,7 +125,7 @@ where
     let g2_alpha: E::G2 = E::G2Affine::generator() * alpha;
 
     pairing_accumulator.add_pairing_check(&(opening.to_curve(), (vk.tau_g2.to_curve() - g2_alpha)));
-    pairing_accumulator.add_pairing_check(&((g1_eval - comm).into(), E::G2::generator()));
+    pairing_accumulator.add_pairing_check(&(g1_eval - comm, E::G2::generator()));
 
     true
 }

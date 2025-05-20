@@ -136,6 +136,8 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
 
     type Opening = ();
 
+    type Accumulator = ();
+
     fn gen_srs_for_testing(
         params: &Self::Params,
         _mpi_engine: &impl MPIEngine,

@@ -30,6 +30,8 @@ where
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
 
+    type Accumulator = ();
+
     /// NOTE(HS): this is the number of variables for local polynomial w.r.t. SIMD field elements.
     fn gen_params(n_input_vars: usize) -> Self::Params {
         n_input_vars

@@ -36,6 +36,8 @@ where
     type Opening = HyraxOpening<C>;
     type SRS = PedersenParams<C>;
 
+    type Accumulator = ();
+
     fn gen_params(n_input_vars: usize) -> Self::Params {
         n_input_vars
     }
