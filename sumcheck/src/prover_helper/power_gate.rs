@@ -57,7 +57,7 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
     where
         EvalF: Field + From<ChallengeF> + Mul<ChallengeF, Output = EvalF> + Mul<VF, Output = EvalF>,
     {
-        log::trace!("Eval size: {}", eval_size);
+        log::trace!("Eval size: {eval_size}");
         for i in 0..eval_size {
             if !gate_exists_5[i * 2] && !gate_exists_5[i * 2 + 1] {
                 continue;

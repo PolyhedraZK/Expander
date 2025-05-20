@@ -132,8 +132,7 @@ where
         non_row_vars.extend_from_slice(&x.r_mpi);
 
         let eq_combination: Vec<C::Scalar> = EqPolynomial::build_eq_x_r(&non_row_vars);
-        let mut row_comm = C::Curve::default();
-        msm::multiexp_serial(&eq_combination, &commitment.0, &mut row_comm);
+        let row_comm = msm::best_multiexp(&eq_combination, &commitment.0);
 
         if pedersen_commit(verifying_key, &opening.0) != row_comm.into() {
             return false;

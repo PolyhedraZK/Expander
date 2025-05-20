@@ -41,7 +41,7 @@ pub fn gkr_square_verify<C: FieldEngine>(
 
     let mut verified = true;
     let mut current_claim = *claimed_v;
-    log::trace!("Starting claim: {:?}", current_claim);
+    log::trace!("Starting claim: {current_claim:?}",);
     for i in (0..layer_num).rev() {
         let cur_verified = sumcheck_verify_gkr_square_layer(
             proving_time_mpi_size,
@@ -55,7 +55,7 @@ pub fn gkr_square_verify<C: FieldEngine>(
             i == layer_num - 1,
             false,
         );
-        log::trace!("Layer {} verified? {}", i, cur_verified);
+        log::trace!("Layer {i} verified? {cur_verified}");
         verified &= cur_verified;
     }
     end_timer!(timer);
@@ -104,7 +104,7 @@ pub fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
             &mut challenge.rz,
             sp,
         );
-        log::trace!("x {} var, verified? {}", i_var, verified);
+        log::trace!("x {i_var} var, verified? {verified}");
     }
     GKRVerifierHelper::set_rx(&challenge.rz, sp);
 
@@ -117,7 +117,7 @@ pub fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
             &mut challenge.r_simd,
             sp,
         );
-        log::trace!("simd {} var, verified? {}", i_var, verified);
+        log::trace!("simd {i_var} var, verified? {verified}");
     }
     GKRVerifierHelper::set_r_simd_xy(&challenge.r_simd, sp);
 
@@ -130,12 +130,12 @@ pub fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
             &mut challenge.r_mpi,
             sp,
         );
-        log::trace!("{} mpi var, verified? {}", _i_var, verified);
+        log::trace!("{_i_var} mpi var, verified? {verified}");
     }
     GKRVerifierHelper::set_r_mpi_xy(&challenge.r_mpi, sp);
 
     let v_claim = C::ChallengeField::deserialize_from(&mut proof_reader).unwrap();
-    log::trace!("v_claim: {:?}", v_claim);
+    log::trace!("v_claim: {v_claim:?}");
 
     sum -= v_claim * GKRVerifierHelper::eval_pow_1(&layer.uni, sp)
         + v_claim.exp(5) * GKRVerifierHelper::eval_pow_5(&layer.uni, sp);

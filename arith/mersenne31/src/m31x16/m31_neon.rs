@@ -358,7 +358,7 @@ impl Debug for NeonM31 {
                         }
                     )?;
                 } else {
-                    write!(f, "uint32x4_t<{:?}>", data)?;
+                    write!(f, "uint32x4_t<{data:?}>")?;
                 }
             }
         }

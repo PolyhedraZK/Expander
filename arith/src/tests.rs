@@ -137,7 +137,7 @@ pub fn random_from_limbs_to_limbs_tests<F: Field, ExtF: ExtensionField<BaseField
     type_name: String,
 ) {
     let mut rng = test_rng();
-    let _message = format!("from/to limbs {}", type_name);
+    let _message = format!("from/to limbs {type_name}");
 
     (0..1000).for_each(|_| {
         let ext_f = ExtF::random_unsafe(&mut rng);
@@ -150,7 +150,7 @@ pub fn random_from_limbs_to_limbs_tests<F: Field, ExtF: ExtensionField<BaseField
 pub fn random_inversion_tests<F: Field, R: RngCore>(mut rng: R, type_name: String) {
     assert!(F::zero().inv().is_none());
 
-    let _message = format!("inversion {}", type_name);
+    let _message = format!("inversion {type_name}");
     let start = start_timer!(|| _message);
     for _ in 0..1000 {
         let mut a = F::random_unsafe(&mut rng);

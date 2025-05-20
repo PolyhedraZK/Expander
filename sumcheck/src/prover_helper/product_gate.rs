@@ -77,7 +77,7 @@ impl SumcheckProductGateHelper {
         log::trace!("init_v: {:?}", &init_v[..4]);
 
         let eval_size = 1 << (self.var_num - var_idx - 1);
-        log::trace!("Eval size: {}", eval_size);
+        log::trace!("Eval size: {eval_size}");
 
         let [p0, p1, mut p2] = {
             if var_idx == 0 {

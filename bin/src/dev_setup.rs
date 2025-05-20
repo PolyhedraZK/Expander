@@ -107,7 +107,7 @@ fn proof_gen<C: GKREngine>() {
 
         let mut file = std::fs::File::create(proof_file_name).unwrap();
         file.write_all(buf.as_ref()).expect("Unable to write data");
-        println!("{} generated", proof_file_name);
+        println!("{proof_file_name} generated");
 
         (claim, proof)
     };
@@ -127,7 +127,7 @@ fn proof_gen<C: GKREngine>() {
             &proof
         ));
 
-        println!("{} verified", proof_file_name);
+        println!("{proof_file_name} verified");
     }
 }
 
@@ -143,19 +143,16 @@ fn compare_proof_files() {
     ];
 
     for (field_type, generated_path, downloaded_path) in field_types.iter() {
-        println!("\nComparing {} proof files:", field_type);
+        println!("\nComparing {field_type} proof files:");
 
         // Check if both files exist
         if !Path::new(generated_path).exists() {
-            println!("Error: Generated file '{}' does not exist", generated_path);
+            println!("Error: Generated file '{generated_path}' does not exist");
             continue;
         }
 
         if !Path::new(downloaded_path).exists() {
-            println!(
-                "Error: Downloaded file '{}' does not exist",
-                downloaded_path
-            );
+            println!("Error: Downloaded file '{downloaded_path}' does not exist");
             continue;
         }
 
@@ -195,8 +192,7 @@ fn compare_proof_files() {
                 if differences <= 10 {
                     // Show only first 10 differences
                     println!(
-                        "Difference at byte {}: generated={:02x}, downloaded={:02x}",
-                        i, gen_byte, down_byte
+                        "Difference at byte {i}: generated={gen_byte:02x}, downloaded={down_byte:02x}"
                     );
                 }
             }
@@ -205,7 +201,7 @@ fn compare_proof_files() {
         if differences == 0 {
             println!("Files are identical!");
         } else {
-            println!("Files differ in {} bytes", differences);
+            println!("Files differ in {differences} bytes");
         }
     }
 }
