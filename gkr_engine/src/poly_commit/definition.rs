@@ -130,7 +130,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
         transcript: &mut impl Transcript,
         opening: &Self::Opening,
         accumulator: &mut Self::Accumulator,
-    );
+    ) -> bool;
 
     /// Perform the finally batch verification for the accumulated opening proofs.
     fn batch_deferred_verification(accumulator: &mut Self::Accumulator) -> bool;

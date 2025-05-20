@@ -2,11 +2,14 @@ mod common;
 
 use arith::{Field, Fr};
 use ark_std::test_rng;
-use gkr_engine::{BN254Config, ExpanderSingleVarChallenge, MPIConfig, MPIEngine, Transcript};
+use gkr_engine::{
+    BN254Config, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine, Transcript,
+};
+use gkr_engine::{ExpanderPCS, StructuredReferenceString};
 use gkr_hashers::Keccak256hasher;
 use halo2curves::bn256::Bn256;
-use poly_commit::HyperKZGPCS;
-use polynomials::MultiLinearPoly;
+use poly_commit::{DeferredPairingCheck, HyperKZGPCS, PairingAccumulator};
+use polynomials::{MultiLinearPoly, MultilinearExtension};
 use transcript::BytesHashTranscript;
 
 const TEST_REPETITION: usize = 3;
@@ -80,4 +83,88 @@ fn test_hyper_bikzg_for_expander_gkr() {
     test_hyper_bikzg_for_expander_gkr_generics(&mpi_config, 15);
 
     MPIConfig::finalize()
+}
+
+#[test]
+fn test_hyper_bikzg_batch_verification() {
+    let mut rng = test_rng();
+    let mpi_config = MPIConfig::prover_new();
+
+    for num_vars in 2..=15 {
+        let (srs, _) = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config>>::gen_srs_for_testing(
+            &num_vars,
+            &mpi_config,
+            &mut rng,
+        );
+        let (proving_key, verification_key) = srs.into_keys();
+
+        let transcript = BytesHashTranscript::<Keccak256hasher>::new();
+        let mut scratch_pad = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config>>::init_scratch_pad(
+            &num_vars,
+            &mpi_config,
+        );
+        let mut pairing_accumulator = PairingAccumulator::<Bn256>::default();
+
+        let polys = (0..3).map(|_| MultiLinearPoly::<Fr>::random(num_vars, &mut rng));
+
+        for poly in polys {
+            let mut rng = test_rng();
+            let challenge_point_1 = ExpanderSingleVarChallenge::<BN254Config> {
+                r_mpi: Vec::new(),
+                r_simd: Vec::new(),
+                rz: (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect(),
+            };
+            let challenge_point_2 = ExpanderSingleVarChallenge::<BN254Config> {
+                r_mpi: Vec::new(),
+                r_simd: Vec::new(),
+                rz: (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect(),
+            };
+            let commitment = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config>>::commit(
+                &num_vars,
+                &mpi_config,
+                &proving_key,
+                &poly,
+                &mut scratch_pad,
+            )
+            .unwrap();
+
+            for c in [challenge_point_1, challenge_point_2] {
+                // open
+                let mut local_transcript = transcript.clone();
+                let opening = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config>>::open(
+                    &num_vars,
+                    &mpi_config,
+                    &proving_key,
+                    &poly,
+                    &c,
+                    &mut local_transcript,
+                    &mut scratch_pad,
+                )
+                .unwrap();
+
+                // partial verify
+                let mut local_transcript = transcript.clone();
+                let v = BN254Config::single_core_eval_circuit_vals_at_expander_challenge(
+                    &poly.hypercube_basis_ref(),
+                    &c,
+                );
+
+                let partial_verify =
+                    <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config>>::partial_verify(
+                        &num_vars,
+                        &verification_key,
+                        &commitment,
+                        &c,
+                        v,
+                        &mut local_transcript,
+                        &opening,
+                        &mut pairing_accumulator,
+                    );
+
+                assert!(partial_verify);
+            }
+        }
+        // finalize the pairing check
+        assert!(pairing_accumulator.check_pairings());
+    }
 }

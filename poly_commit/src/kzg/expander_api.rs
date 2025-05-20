@@ -111,15 +111,20 @@ where
         transcript: &mut impl Transcript,
         opening: &Self::Opening,
     ) -> bool {
-        coeff_form_hyper_bikzg_verify(
+        let mut accumulator = PairingAccumulator::default();
+
+        let partial_check = Self::partial_verify(
+            _params,
             verifying_key,
-            &x.local_xs(),
-            &x.r_mpi,
+            commitment,
+            &x,
             v,
-            commitment.0,
-            opening,
             transcript,
-        )
+            opening,
+            &mut accumulator,
+        );
+        let pairing_check = accumulator.check_pairings();
+        partial_check && pairing_check
     }
 
     fn partial_verify(
@@ -131,7 +136,17 @@ where
         transcript: &mut impl Transcript,
         opening: &Self::Opening,
         accumulator: &mut Self::Accumulator,
-    ) {
+    ) -> bool {
+        coeff_form_hyper_bikzg_partial_verify(
+            verifying_key,
+            &x.local_xs(),
+            &x.r_mpi,
+            v,
+            commitment.0,
+            opening,
+            transcript,
+            accumulator,
+        )
     }
 
     fn batch_deferred_verification(accumulator: &mut Self::Accumulator) -> bool {

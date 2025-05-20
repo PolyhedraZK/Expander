@@ -461,198 +461,24 @@ where
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
     E::Fr: ExtensionField,
 {
-    // NOTE(HS) deteriorate to vanilla HyperKZG verify if mpi_alphas is empty
-    if mpi_alphas.is_empty() {
-        let hyper_bikzg_opening = opening.clone();
-        let hyper_kzg_opening: HyperKZGOpening<E> = hyper_bikzg_opening.into();
-
-        let what = coeff_form_uni_hyperkzg_verify(
-            vk.into(),
-            commitment,
-            local_alphas,
-            eval,
-            &hyper_kzg_opening,
-            fs_transcript,
-        );
-
-        return what;
-    }
-
-    let mpi_world_size = 1 << mpi_alphas.len();
-
-    opening
-        .folded_oracle_commitments
-        .iter()
-        .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
-
-    // NOTE(HS) transcript MPI thing ...
-    transcript_verifier_sync(fs_transcript, mpi_world_size);
-
-    let beta_x = fs_transcript.generate_field_element::<E::Fr>();
-    let beta_y = fs_transcript.generate_field_element::<E::Fr>();
-
-    // dbg!(beta_x, beta_y);
-
-    // NOTE(HS) evaluation checks
-
-    let beta_y2_local = HyperKZGLocalEvals::new_from_exported_evals(
-        &opening.aggregated_evals.beta_y2_evals,
+    let mut pairing_accumulator = PairingAccumulator::default();
+    let partial_check = coeff_form_hyper_bikzg_partial_verify(
+        vk,
         local_alphas,
-        beta_x,
+        mpi_alphas,
+        eval,
+        commitment,
+        opening,
+        fs_transcript,
+        &mut pairing_accumulator,
     );
+    let pairing_check = pairing_accumulator.check_pairings();
 
-    let pos_beta_y_local = HyperKZGLocalEvals::new_from_exported_evals(
-        &opening.aggregated_evals.pos_beta_y_evals,
-        local_alphas,
-        beta_x,
-    );
-
-    let neg_beta_y_local = HyperKZGLocalEvals::new_from_exported_evals(
-        &opening.aggregated_evals.neg_beta_y_evals,
-        local_alphas,
-        beta_x,
-    );
-
-    let beta_y2_final_eval = beta_y2_local.multilinear_final_eval();
-    let pos_beta_y_final_eval = pos_beta_y_local.multilinear_final_eval();
-    let neg_beta_y_final_eval = neg_beta_y_local.multilinear_final_eval();
-
-    // dbg!(
-    //     &beta_y2_final_eval,
-    //     &pos_beta_y_final_eval,
-    //     &neg_beta_y_final_eval
-    // );
-
-    // dbg!(
-    //     &opening.leader_evals.beta_x2_eval,
-    //     &opening.leader_evals.pos_beta_x_evals[0],
-    //     &opening.leader_evals.neg_beta_x_evals[0]
-    // );
-
-    if beta_y2_final_eval != opening.leader_evals.beta_x2_eval {
-        return false;
-    }
-    if pos_beta_y_final_eval != opening.leader_evals.pos_beta_x_evals[0] {
-        return false;
-    }
-    if neg_beta_y_final_eval != opening.leader_evals.neg_beta_x_evals[0] {
-        return false;
-    }
-
-    let local_final_eval =
-        HyperKZGLocalEvals::new_from_exported_evals(&opening.leader_evals, mpi_alphas, beta_y);
-    if eval != local_final_eval.multilinear_final_eval() {
-        return false;
-    }
-
-    opening.aggregated_evals.append_to_transcript(fs_transcript);
-    opening.leader_evals.append_to_transcript(fs_transcript);
-
-    // NOTE(HS) transcript MPI thing ...
-    transcript_verifier_sync(fs_transcript, mpi_world_size);
-
-    let gamma = fs_transcript.generate_field_element::<E::Fr>();
-
-    // dbg!(gamma);
-
-    let aggregated_oracle_commitment: E::G1Affine = {
-        let gamma_power_series = powers_series(&gamma, local_alphas.len() + mpi_alphas.len() + 1);
-
-        let com_g1: E::G1 = izip!(
-            iter::once(&commitment).chain(&opening.folded_oracle_commitments),
-            &gamma_power_series
-        )
-        .map(|(com, g)| com.to_curve() * g)
-        .sum();
-
-        com_g1.into()
-    };
-
-    // NOTE(HS) aggregate lagrange degree 2 polys
-    let (y_beta2, y_beta, y_neg_beta) = {
-        let gamma_n = gamma.pow_vartime([local_alphas.len() as u64]);
-        let (v_beta2, v_beta, v_neg_beta) = local_final_eval.gamma_aggregate_evals(gamma);
-
-        (v_beta2 * gamma_n, v_beta * gamma_n, v_neg_beta * gamma_n)
-    };
-
-    let mut aggregated_beta_y2_locals =
-        beta_y2_local.interpolate_degree2_aggregated_evals(beta_x, gamma);
-    aggregated_beta_y2_locals[0] += y_beta2;
-
-    let mut aggregated_pos_beta_y_locals =
-        pos_beta_y_local.interpolate_degree2_aggregated_evals(beta_x, gamma);
-    aggregated_pos_beta_y_locals[0] += y_beta;
-
-    let mut aggregated_neg_beta_y_locals =
-        neg_beta_y_local.interpolate_degree2_aggregated_evals(beta_x, gamma);
-    aggregated_neg_beta_y_locals[0] += y_neg_beta;
-
-    fs_transcript.append_u8_slice(opening.beta_x_commitment.to_bytes().as_ref());
-
-    // NOTE(HS) transcript MPI thing ...
-    transcript_verifier_sync(fs_transcript, mpi_world_size);
-
-    let delta_x = fs_transcript.generate_field_element::<E::Fr>();
-
-    // dbg!(delta_x);
-
-    let delta_x_pow_series = powers_series(&delta_x, 3);
-    let at_beta_y2 = univariate_evaluate(&aggregated_beta_y2_locals, &delta_x_pow_series);
-    let at_beta_y = univariate_evaluate(&aggregated_pos_beta_y_locals, &delta_x_pow_series);
-    let at_neg_beta_y = univariate_evaluate(&aggregated_neg_beta_y_locals, &delta_x_pow_series);
-
-    // dbg!(at_beta_y2, at_beta_y, at_neg_beta_y);
-
-    let lagrange_degree2_delta_y = coeff_form_degree2_lagrange(
-        [beta_y, -beta_y, beta_y * beta_y],
-        [at_beta_y, at_neg_beta_y, at_beta_y2],
-    );
-
-    // dbg!(lagrange_degree2_delta_y);
-
-    fs_transcript.append_u8_slice(opening.beta_y_commitment.to_bytes().as_ref());
-
-    // NOTE(HS) transcript MPI thing ...
-    transcript_verifier_sync(fs_transcript, mpi_world_size);
-
-    let delta_y = fs_transcript.generate_field_element::<E::Fr>();
-
-    // dbg!(delta_y);
-
-    let delta_y_pow_series = powers_series(&delta_y, 3);
-    let degree_2_final_eval = univariate_evaluate(&lagrange_degree2_delta_y, &delta_y_pow_series);
-
-    // dbg!(degree_2_final_eval);
-
-    // NOTE(HS) f_gamma_s - (delta_x - beta_x) ... (delta_x - beta_x2) f_gamma_quotient_s
-    //                    - (delta_y - beta_y) ... (delta_y - beta_y2) lagrange_quotient_y
-    let delta_x_denom = (delta_x - beta_x) * (delta_x - beta_x * beta_x) * (delta_x + beta_x);
-    let delta_y_denom = (delta_y - beta_y) * (delta_y - beta_y * beta_y) * (delta_y + beta_y);
-
-    let com_r = aggregated_oracle_commitment.to_curve()
-        - (opening.beta_x_commitment * delta_x_denom)
-        - (opening.beta_y_commitment * delta_y_denom);
-
-    // dbg!(com_r);
-
-    let final_opening = BiKZGProof {
-        quotient_x: opening.quotient_delta_x_commitment,
-        quotient_y: opening.quotient_delta_y_commitment,
-    };
-
-    coeff_form_bi_kzg_verify(
-        vk.clone(),
-        com_r.to_affine(),
-        delta_x,
-        delta_y,
-        degree_2_final_eval,
-        final_opening,
-    )
+    partial_check && pairing_check
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn coeff_form_hyper_bikzg_verify_minus_pairing<E, T>(
+pub fn coeff_form_hyper_bikzg_partial_verify<E, T>(
     vk: &BiKZGVerifierParam<E>,
     local_alphas: &[E::Fr],
     mpi_alphas: &[E::Fr],
@@ -674,13 +500,14 @@ where
         let hyper_bikzg_opening = opening.clone();
         let hyper_kzg_opening: HyperKZGOpening<E> = hyper_bikzg_opening.into();
 
-        let what = coeff_form_uni_hyperkzg_verify(
+        let what = coeff_form_uni_hyperkzg_partial_verify(
             vk.into(),
             commitment,
             local_alphas,
             eval,
             &hyper_kzg_opening,
             fs_transcript,
+            pairing_accumulator,
         );
 
         return what;
@@ -849,12 +676,13 @@ where
         quotient_y: opening.quotient_delta_y_commitment,
     };
 
-    coeff_form_bi_kzg_verify(
+    coeff_form_bi_kzg_partial_verify(
         vk.clone(),
         com_r.to_affine(),
         delta_x,
         delta_y,
         degree_2_final_eval,
         final_opening,
+        pairing_accumulator,
     )
 }

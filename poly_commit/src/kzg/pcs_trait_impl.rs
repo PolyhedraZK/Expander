@@ -13,6 +13,8 @@ use serdes::ExpSerde;
 use crate::*;
 use kzg::hyper_kzg::*;
 
+use super::deferred_pairing::{DeferredPairingCheck, PairingAccumulator};
+
 pub struct HyperKZGPCS<E>
 where
     E: Engine,
@@ -78,13 +80,20 @@ where
         opening: &Self::Opening,
         transcript: &mut impl Transcript,
     ) -> bool {
-        coeff_form_uni_hyperkzg_verify(
+        let mut accumulator = PairingAccumulator::default();
+
+        let partial_check = coeff_form_uni_hyperkzg_partial_verify(
             verifying_key.clone(),
             commitment.0,
             x,
             v,
             opening,
             transcript,
-        )
+            &mut accumulator,
+        );
+
+        let pairing_check = accumulator.check_pairings();
+
+        pairing_check && partial_check
     }
 }
