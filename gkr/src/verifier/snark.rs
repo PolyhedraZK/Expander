@@ -8,8 +8,8 @@ use super::gkr_square::sumcheck_verify_gkr_square_layer;
 use arith::Field;
 use circuit::Circuit;
 use gkr_engine::{
-    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine, GKRScheme, MPIConfig,
-    MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
+    DeferredCheck, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine, GKRScheme,
+    MPIConfig, MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
 };
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
@@ -253,6 +253,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
     }
 
     /// Verify the PCS opening against the commitment and the claim from GKR.
+    /// Defer the pairing check to accumulator if any.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::type_complexity)]
@@ -267,9 +268,10 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         claim_y: &Option<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
         transcript: &mut impl Transcript,
         mut proof_reader: impl Read,
+        accmulator: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Accumulator,
     ) -> bool {
         let timer = Timer::new("post_gkr", true);
-        let mut verified = self.get_pcs_opening_from_proof_and_verify(
+        let mut verified = self.get_pcs_opening_from_proof_and_partial_verify(
             pcs_params,
             pcs_verification_key,
             commitment,
@@ -277,10 +279,11 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
             claim_x,
             transcript,
             &mut proof_reader,
+            accmulator,
         );
 
         if let Some(challenge_y) = challenge_y {
-            verified &= self.get_pcs_opening_from_proof_and_verify(
+            verified &= self.get_pcs_opening_from_proof_and_partial_verify(
                 pcs_params,
                 pcs_verification_key,
                 commitment,
@@ -288,6 +291,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
                 claim_y.as_ref().unwrap(),
                 transcript,
                 &mut proof_reader,
+                accmulator,
             );
         }
 
@@ -295,7 +299,9 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         verified
     }
 
-    pub fn verify(
+    /// Paritially verify the proof.
+    /// Conduct the whole procedure except for pairing, if any.
+    pub fn partial_verify(
         &self,
         circuit: &mut Circuit<Cfg::FieldConfig>,
         public_input: &[<Cfg::FieldConfig as FieldEngine>::SimdCircuitField],
@@ -303,6 +309,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
         pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
         proof: &Proof,
+        accumulator: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Accumulator,
     ) -> bool {
         let timer = Timer::new("snark verify", true);
 
@@ -331,6 +338,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
             &claim_y,
             &mut transcript,
             &mut cursor,
+            accumulator,
         );
 
         timer.stop();
@@ -338,7 +346,8 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         verified
     }
 
-    pub fn par_verify(
+    /// Verify the GKR proof := { GKR_IOP proof, PCS proof}
+    pub fn verify(
         &self,
         circuit: &mut Circuit<Cfg::FieldConfig>,
         public_input: &[<Cfg::FieldConfig as FieldEngine>::SimdCircuitField],
@@ -346,6 +355,35 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
         pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
         proof: &Proof,
+    ) -> bool {
+        let mut accumulator =
+            <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Accumulator::default();
+
+        let partial_check = self.partial_verify(
+            circuit,
+            public_input,
+            claimed_v,
+            pcs_params,
+            pcs_verification_key,
+            proof,
+            &mut accumulator,
+        );
+        let final_check = accumulator.final_check();
+
+        partial_check && final_check
+    }
+
+    /// Paritially verify the proof.
+    /// Conduct the whole procedure except for pairing, if any.
+    pub fn par_partial_verify(
+        &self,
+        circuit: &mut Circuit<Cfg::FieldConfig>,
+        public_input: &[<Cfg::FieldConfig as FieldEngine>::SimdCircuitField],
+        claimed_v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
+        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
+        proof: &Proof,
+        accumulator: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Accumulator,
     ) -> bool {
         let timer = Timer::new("snark verify", true);
 
@@ -374,16 +412,43 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
             &claim_y,
             &mut transcript,
             &mut cursor,
+            accumulator,
         );
 
         timer.stop();
         verified
     }
+
+    /// Verify the GKR proof with parallel GKR.
+    pub fn par_verify(
+        &self,
+        circuit: &mut Circuit<Cfg::FieldConfig>,
+        public_input: &[<Cfg::FieldConfig as FieldEngine>::SimdCircuitField],
+        claimed_v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
+        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
+        proof: &Proof,
+    ) -> bool {
+        let mut accumulator =
+            <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Accumulator::default();
+        let partial_check = self.par_partial_verify(
+            circuit,
+            public_input,
+            claimed_v,
+            pcs_params,
+            pcs_verification_key,
+            proof,
+            &mut accumulator,
+        );
+        let final_check = accumulator.final_check();
+
+        partial_check && final_check
+    }
 }
 
 impl<Cfg: GKREngine> Verifier<Cfg> {
     #[allow(clippy::too_many_arguments)]
-    fn get_pcs_opening_from_proof_and_verify(
+    fn get_pcs_opening_from_proof_and_partial_verify(
         &self,
         pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
         pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
@@ -392,6 +457,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
         transcript: &mut impl Transcript,
         proof_reader: impl Read,
+        accumulator: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Accumulator,
     ) -> bool {
         let opening = <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Opening::deserialize_from(
             proof_reader,
@@ -415,7 +481,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         }
 
         transcript.lock_proof();
-        let verified = Cfg::PCSConfig::verify(
+        let verified = Cfg::PCSConfig::partial_verify(
             pcs_params,
             pcs_verification_key,
             commitment,
@@ -423,6 +489,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
             *v,
             transcript,
             &opening,
+            accumulator,
         );
         transcript.unlock_proof();
 
