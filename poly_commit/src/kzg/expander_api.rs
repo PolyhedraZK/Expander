@@ -13,6 +13,8 @@ use serdes::ExpSerde;
 
 use crate::*;
 
+use super::deferred_pairing::{DeferredPairingCheck, PairingAccumulator};
+
 impl<G, E> ExpanderPCS<G> for HyperKZGPCS<E>
 where
     G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
@@ -30,6 +32,7 @@ where
     type Params = usize;
     type SRS = CoefFormBiKZGLocalSRS<E>;
     type ScratchPad = ();
+    type Accumulator = PairingAccumulator<E>;
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
@@ -117,5 +120,21 @@ where
             opening,
             transcript,
         )
+    }
+
+    fn partial_verify(
+        _params: &Self::Params,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        commitment: &Self::Commitment,
+        x: &ExpanderSingleVarChallenge<G>,
+        v: <G as FieldEngine>::ChallengeField,
+        transcript: &mut impl Transcript,
+        opening: &Self::Opening,
+        accumulator: &mut Self::Accumulator,
+    ) {
+    }
+
+    fn batch_deferred_verification(accumulator: &mut Self::Accumulator) -> bool {
+        accumulator.check_pairings()
     }
 }

@@ -10,6 +10,8 @@ use serdes::ExpSerde;
 
 use crate::*;
 
+use super::deferred_pairing::{DeferredPairingCheck, PairingAccumulator};
+
 #[inline(always)]
 pub(crate) fn generate_coef_form_uni_kzg_srs_for_testing<E: MultiMillerLoop>(
     length: usize,
@@ -86,30 +88,49 @@ where
     (eval, opening.into())
 }
 
+// #[inline(always)]
+// pub(crate) fn coeff_form_uni_kzg_verify<E: MultiMillerLoop>(
+//     vk: UniKZGVerifierParams<E>,
+//     comm: E::G1Affine,
+//     alpha: E::Fr,
+//     eval: E::Fr,
+//     opening: E::G1Affine,
+// ) -> bool
+// where
+//     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+//     E::G2Affine: ExpSerde,
+// {
+//     let g1_eval: E::G1Affine = (E::G1Affine::generator() * eval).into();
+//     let g2_alpha: E::G2 = E::G2Affine::generator() * alpha;
+
+//     let gt_result = E::multi_miller_loop(&[
+//         (
+//             &opening,
+//             &(vk.tau_g2.to_curve() - g2_alpha).to_affine().into(),
+//         ),
+//         (&(g1_eval - comm).into(), &E::G2Affine::generator().into()),
+//     ]);
+
+//     gt_result.final_exponentiation().is_identity().into()
+// }
+
 #[inline(always)]
-pub(crate) fn coeff_form_uni_kzg_verify<E: MultiMillerLoop>(
+pub(crate) fn coeff_form_uni_kzg_partial_verify<E: MultiMillerLoop>(
     vk: UniKZGVerifierParams<E>,
     comm: E::G1Affine,
     alpha: E::Fr,
     eval: E::Fr,
     opening: E::G1Affine,
-) -> bool
-where
+    pairing_accumulator: &mut PairingAccumulator<E>,
+) where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde,
 {
     let g1_eval: E::G1Affine = (E::G1Affine::generator() * eval).into();
     let g2_alpha: E::G2 = E::G2Affine::generator() * alpha;
 
-    let gt_result = E::multi_miller_loop(&[
-        (
-            &opening,
-            &(vk.tau_g2.to_curve() - g2_alpha).to_affine().into(),
-        ),
-        (&(g1_eval - comm).into(), &E::G2Affine::generator().into()),
-    ]);
-
-    gt_result.final_exponentiation().is_identity().into()
+    pairing_accumulator.add_pairing_check(&(opening.to_curve(), (vk.tau_g2.to_curve() - g2_alpha)));
+    pairing_accumulator.add_pairing_check(&((g1_eval - comm).into(), E::G2::generator()));
 }
 
 #[cfg(test)]
@@ -142,6 +163,7 @@ mod tests {
 
         let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
         assert_eq!(actual_eval, eval);
+
         assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
     }
 
@@ -158,6 +180,7 @@ mod tests {
 
         let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
         assert_eq!(actual_eval, eval);
+
         assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
     }
 }

@@ -6,7 +6,7 @@ use halo2curves::{
 };
 
 /// Deferred pairing checks
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct PairingAccumulator<E: Engine> {
     pub g1s: Vec<E::G1>,
     pub g2s: Vec<E::G2>,
@@ -25,6 +25,7 @@ pub trait DeferredPairingCheck {
     }
 }
 
+// Empty implementation for the case where no pairing checks are needed
 impl DeferredPairingCheck for () {
     type AccumulatedValues = ();
 }

@@ -38,7 +38,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
     type Opening: Clone + Debug + Default + ExpSerde;
 
     /// An accumulator to be used for deferred batch verification for KZG.
-    type Accumulator: Clone + Debug + Default;
+    type Accumulator: Clone + Debug;
 
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Each process should return the SRS share used for its committing and opening.
@@ -133,7 +133,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
     );
 
     /// Perform the finally batch verification for the accumulated opening proofs.
-    fn batch_verify(accumulator: &mut Self::Accumulator) -> bool;
+    fn batch_deferred_verification(accumulator: &mut Self::Accumulator) -> bool;
 }
 
 impl StructuredReferenceString for () {

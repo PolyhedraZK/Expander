@@ -13,6 +13,8 @@ use serdes::ExpSerde;
 
 use crate::*;
 
+use super::deferred_pairing::PairingAccumulator;
+
 #[inline(always)]
 pub(crate) fn coeff_form_hyperkzg_local_poly_oracles<E>(
     srs: &CoefFormUniKZGSRS<E>,
@@ -230,4 +232,73 @@ where
         lagrange_eval,
         opening.quotient_delta_x_commitment,
     )
+}
+
+#[inline(always)]
+pub fn coeff_form_uni_hyperkzg_partial_verify<E, T>(
+    vk: UniKZGVerifierParams<E>,
+    comm: E::G1Affine,
+    alphas: &[E::Fr],
+    eval: E::Fr,
+    opening: &HyperKZGOpening<E>,
+    fs_transcript: &mut T,
+    pairing_accumulator: &mut PairingAccumulator<E>,
+) -> bool
+where
+    E: MultiMillerLoop,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: ExpSerde,
+    E::Fr: ExtensionField + ExpSerde,
+    T: Transcript,
+{
+    opening
+        .folded_oracle_commitments
+        .iter()
+        .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
+
+    let beta = fs_transcript.generate_field_element::<E::Fr>();
+    let beta2 = beta * beta;
+
+    let local_evals =
+        HyperKZGLocalEvals::<E>::new_from_exported_evals(&opening.evals_at_x, alphas, beta);
+
+    opening.evals_at_x.append_to_transcript(fs_transcript);
+
+    if local_evals.multilinear_final_eval() != eval {
+        return false;
+    }
+
+    let gamma = fs_transcript.generate_field_element::<E::Fr>();
+    let gamma_pow_series = powers_series(&gamma, alphas.len());
+    let v_beta = univariate_evaluate(&local_evals.pos_beta_evals, &gamma_pow_series);
+    let v_neg_beta = univariate_evaluate(&local_evals.neg_beta_evals, &gamma_pow_series);
+    let v_beta2 = univariate_evaluate(&local_evals.beta2_evals, &gamma_pow_series);
+    let lagrange_degree2 =
+        coeff_form_degree2_lagrange([beta, -beta, beta2], [v_beta, v_neg_beta, v_beta2]);
+
+    let folded_g1_oracle_comms: Vec<E::G1> = opening
+        .folded_oracle_commitments
+        .iter()
+        .map(|c| c.to_curve())
+        .collect();
+    let commitment_agg_g1: E::G1 =
+        comm.to_curve() + univariate_evaluate(&folded_g1_oracle_comms, &gamma_pow_series[1..]);
+
+    fs_transcript.append_u8_slice(opening.beta_x_commitment.to_bytes().as_ref());
+    let tau = fs_transcript.generate_field_element::<E::Fr>();
+
+    let q_weight = (tau - beta) * (tau - beta2) * (tau + beta);
+    let lagrange_eval =
+        lagrange_degree2[0] + lagrange_degree2[1] * tau + lagrange_degree2[2] * tau * tau;
+
+    coeff_form_uni_kzg_partial_verify(
+        vk,
+        (commitment_agg_g1 - opening.beta_x_commitment.to_curve() * q_weight).into(),
+        tau,
+        lagrange_eval,
+        opening.quotient_delta_x_commitment,
+        pairing_accumulator,
+    );
+
+    true
 }
