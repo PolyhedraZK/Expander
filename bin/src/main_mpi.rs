@@ -117,7 +117,7 @@ fn main() {
     MPIConfig::finalize();
 }
 
-fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) 
+fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig)
 where
     Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
 {

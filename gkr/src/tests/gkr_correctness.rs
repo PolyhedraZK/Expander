@@ -163,7 +163,7 @@ fn test_gkr_correctness() {
 }
 
 #[allow(unreachable_patterns)]
-fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) 
+fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>)
 where
     Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
 {

@@ -23,8 +23,7 @@ fn prover_run<Cfg: GKREngine>(
     pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
     pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::PKey,
     pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad,
-) 
-where 
+) where
     Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
 {
     let mut prover = Prover::<Cfg>::new(mpi_config.clone());
@@ -41,7 +40,7 @@ fn benchmark_setup<Cfg: GKREngine>(
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
     <<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::PKey,
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad,
-) {
+){
     let mpi_config = MPIConfig::prover_new();
     let mut circuit =
         Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(circuit_file);

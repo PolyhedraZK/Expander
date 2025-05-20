@@ -87,7 +87,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
         pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::PKey,
         pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad,
-    ) -> (<Cfg::FieldConfig as FieldEngine>::ChallengeField, Proof) 
+    ) -> (<Cfg::FieldConfig as FieldEngine>::ChallengeField, Proof)
     where
         Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
     {
@@ -202,8 +202,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::PKey,
         pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad,
         transcript: &mut impl Transcript,
-    )
-    where
+    ) where
         Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
     {
         let original_input_vars = inputs.num_vars();
