@@ -1,3 +1,4 @@
+use arith::Field;
 use polynomials::MultilinearExtension;
 use rand::RngCore;
 use serdes::ExpSerde;
@@ -25,7 +26,7 @@ impl PCSParams for usize {
     }
 }
 
-pub trait ExpanderPCS<F: FieldEngine> {
+pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
     const NAME: &'static str;
 
     const PCS_TYPE: PolynomialCommitmentType;
@@ -65,7 +66,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<F::SimdCircuitField>,
+        poly: &impl MultilinearExtension<PolyField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment>;
 
@@ -94,7 +95,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<F::SimdCircuitField>,
+        poly: &impl MultilinearExtension<PolyField>,
         x: &ExpanderSingleVarChallenge<F>,
         transcript: &mut impl Transcript,
         scratch_pad: &Self::ScratchPad,

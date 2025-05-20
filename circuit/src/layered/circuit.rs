@@ -385,7 +385,7 @@ impl<C: FieldEngine> Circuit<C> {
         // If there will be two claims for the input
         // Introduce an extra relay layer before the input layer
         if !self.layers[0].structure_info.skip_sumcheck_phase_two {
-            match <Cfg::PCSConfig as ExpanderPCS<C>>::PCS_TYPE {
+            match <Cfg::PCSConfig as ExpanderPCS<C, _>>::PCS_TYPE {
                 // Raw PCS costs nothing in opening, so no need to add relay layer
                 // But we can probably add it in the future for verifier's convenience
                 PolynomialCommitmentType::Raw => (),

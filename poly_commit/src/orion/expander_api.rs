@@ -13,7 +13,7 @@ use crate::orion::{
     ORION_CODE_PARAMETER_INSTANCE,
 };
 
-impl<C, ComPackF> ExpanderPCS<C>
+impl<C, ComPackF> ExpanderPCS<C, C::SimdCircuitField>
     for OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF>
 where
     C: FieldEngine,
