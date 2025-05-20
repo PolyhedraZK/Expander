@@ -52,8 +52,8 @@ fn test_orion_simd_pcs_full_e2e() {
     test_orion_simd_pcs_generics::<GF2, GF2x8, GF2_128, GF2x64>(19, 25);
     test_orion_simd_pcs_generics::<GF2, GF2x8, GF2_128, GF2x128>(19, 25);
     test_orion_simd_pcs_generics::<M31, M31x16, M31Ext3, M31x16>(16, 22);
-    test_orion_simd_pcs_generics::<Goldilocks, Goldilocksx8, GoldilocksExt2, Goldilocksx8>(16,
-22) }
+    test_orion_simd_pcs_generics::<Goldilocks, Goldilocksx8, GoldilocksExt2, Goldilocksx8>(16, 22)
+}
 
 fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
     mpi_config_ref: &MPIConfig,

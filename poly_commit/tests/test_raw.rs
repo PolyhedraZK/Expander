@@ -30,8 +30,8 @@ fn test_raw() {
     );
 }
 
-fn test_raw_gkr_helper<C: FieldEngine, T: Transcript>(mpi_config: &MPIConfig, transcript: &mut T)
-{     // NOTE(HS) local variables being 8
+fn test_raw_gkr_helper<C: FieldEngine, T: Transcript>(mpi_config: &MPIConfig, transcript: &mut T) {
+    // NOTE(HS) local variables being 8
     let params = 8;
     let mut rng = thread_rng();
     let hypercube_basis = (0..(1 << params))
