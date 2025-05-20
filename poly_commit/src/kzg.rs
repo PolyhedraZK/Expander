@@ -30,5 +30,4 @@ pub use pcs_trait_impl::HyperKZGPCS;
 mod expander_api;
 
 mod deferred_pairing;
-pub use deferred_pairing::DeferredPairingCheck;
 pub use deferred_pairing::PairingAccumulator;

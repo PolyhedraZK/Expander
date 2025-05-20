@@ -1,3 +1,4 @@
+use gkr_engine::DeferredCheck;
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, Group},
@@ -10,7 +11,7 @@ use serdes::ExpSerde;
 
 use crate::*;
 
-use super::deferred_pairing::{DeferredPairingCheck, PairingAccumulator};
+use super::deferred_pairing::PairingAccumulator;
 
 #[inline(always)]
 pub(crate) fn generate_coef_form_uni_kzg_srs_for_testing<E: MultiMillerLoop>(
@@ -103,7 +104,7 @@ where
 {
     let mut pairing_accumulator = PairingAccumulator::default();
     coeff_form_uni_kzg_partial_verify(vk, comm, alpha, eval, opening, &mut pairing_accumulator);
-    let pairing_check = pairing_accumulator.check_pairings();
+    let pairing_check = pairing_accumulator.final_check();
 
     pairing_check
 }
@@ -124,8 +125,8 @@ where
     let g1_eval: E::G1Affine = (E::G1Affine::generator() * eval).into();
     let g2_alpha: E::G2 = E::G2Affine::generator() * alpha;
 
-    pairing_accumulator.add_pairing_check(&(opening.to_curve(), (vk.tau_g2.to_curve() - g2_alpha)));
-    pairing_accumulator.add_pairing_check(&(g1_eval - comm, E::G2::generator()));
+    pairing_accumulator.accumulate(&(opening.to_curve(), (vk.tau_g2.to_curve() - g2_alpha)));
+    pairing_accumulator.accumulate(&(g1_eval - comm, E::G2::generator()));
 
     true
 }

@@ -13,7 +13,7 @@ use serdes::ExpSerde;
 
 use crate::*;
 
-use super::deferred_pairing::{DeferredPairingCheck, PairingAccumulator};
+use super::deferred_pairing::PairingAccumulator;
 
 impl<G, E> ExpanderPCS<G> for HyperKZGPCS<E>
 where
@@ -102,31 +102,6 @@ where
         )
     }
 
-    fn verify(
-        _params: &Self::Params,
-        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
-        commitment: &Self::Commitment,
-        x: &ExpanderSingleVarChallenge<G>,
-        v: <G as FieldEngine>::ChallengeField,
-        transcript: &mut impl Transcript,
-        opening: &Self::Opening,
-    ) -> bool {
-        let mut accumulator = PairingAccumulator::default();
-
-        let partial_check = Self::partial_verify(
-            _params,
-            verifying_key,
-            commitment,
-            x,
-            v,
-            transcript,
-            opening,
-            &mut accumulator,
-        );
-        let pairing_check = accumulator.check_pairings();
-        partial_check && pairing_check
-    }
-
     fn partial_verify(
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
@@ -147,9 +122,5 @@ where
             transcript,
             accumulator,
         )
-    }
-
-    fn batch_deferred_verification(accumulator: &mut Self::Accumulator) -> bool {
-        accumulator.check_pairings()
     }
 }

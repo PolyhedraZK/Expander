@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use arith::ExtensionField;
-use gkr_engine::{StructuredReferenceString, Transcript};
+use gkr_engine::{DeferredCheck, StructuredReferenceString, Transcript};
 use halo2curves::{
     ff::PrimeField,
     pairing::{Engine, MultiMillerLoop},
@@ -13,7 +13,7 @@ use serdes::ExpSerde;
 use crate::*;
 use kzg::hyper_kzg::*;
 
-use super::deferred_pairing::{DeferredPairingCheck, PairingAccumulator};
+use super::deferred_pairing::PairingAccumulator;
 
 pub struct HyperKZGPCS<E>
 where
@@ -92,7 +92,7 @@ where
             &mut accumulator,
         );
 
-        let pairing_check = accumulator.check_pairings();
+        let pairing_check = accumulator.final_check();
 
         pairing_check && partial_check
     }

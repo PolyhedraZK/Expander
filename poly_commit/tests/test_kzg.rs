@@ -3,12 +3,13 @@ mod common;
 use arith::{Field, Fr};
 use ark_std::test_rng;
 use gkr_engine::{
-    BN254Config, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine, Transcript,
+    BN254Config, DeferredCheck, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
+    Transcript,
 };
 use gkr_engine::{ExpanderPCS, StructuredReferenceString};
 use gkr_hashers::Keccak256hasher;
 use halo2curves::bn256::Bn256;
-use poly_commit::{DeferredPairingCheck, HyperKZGPCS, PairingAccumulator};
+use poly_commit::{HyperKZGPCS, PairingAccumulator};
 use polynomials::{MultiLinearPoly, MultilinearExtension};
 use transcript::BytesHashTranscript;
 
@@ -165,6 +166,6 @@ fn test_hyper_bikzg_batch_verification() {
             }
         }
         // finalize the pairing check
-        assert!(pairing_accumulator.check_pairings());
+        assert!(pairing_accumulator.final_check());
     }
 }

@@ -1,3 +1,4 @@
+use gkr_engine::DeferredCheck;
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, Group},
@@ -10,7 +11,7 @@ use serdes::ExpSerde;
 
 use crate::*;
 
-use super::deferred_pairing::{DeferredPairingCheck, PairingAccumulator};
+use super::deferred_pairing::PairingAccumulator;
 
 #[inline(always)]
 pub fn generate_coef_form_bi_kzg_local_srs_for_testing<E: MultiMillerLoop>(
@@ -126,7 +127,7 @@ where
         opening,
         &mut pairing_accumulator,
     );
-    let pairing_check = pairing_accumulator.check_pairings();
+    let pairing_check = pairing_accumulator.final_check();
     partial_check && pairing_check
 }
 
@@ -148,17 +149,17 @@ where
     let g2_alpha: E::G2 = E::G2Affine::generator() * alpha;
     let g2_beta: E::G2 = E::G2Affine::generator() * beta;
 
-    pairing_accumulator.add_pairing_check(&(
+    pairing_accumulator.accumulate(&(
         opening.quotient_x.to_curve(),
         (vk.tau_x_g2.to_curve() - g2_alpha),
     ));
 
-    pairing_accumulator.add_pairing_check(&(
+    pairing_accumulator.accumulate(&(
         opening.quotient_y.to_curve(),
         (vk.tau_y_g2.to_curve() - g2_beta),
     ));
 
-    pairing_accumulator.add_pairing_check(&((g1_eval - comm), E::G2::generator()));
+    pairing_accumulator.accumulate(&((g1_eval - comm), E::G2::generator()));
 
     true
 }
@@ -166,6 +167,7 @@ where
 #[cfg(test)]
 mod tests {
     use ark_std::test_rng;
+    use gkr_engine::DeferredCheck;
     use halo2curves::{
         bn256::{Bn256, Fr, G1Affine, G1},
         ff::Field,
@@ -173,10 +175,7 @@ mod tests {
     };
     use itertools::izip;
 
-    use crate::{
-        kzg::deferred_pairing::{DeferredPairingCheck, PairingAccumulator},
-        *,
-    };
+    use crate::{kzg::deferred_pairing::PairingAccumulator, *};
 
     #[test]
     fn test_coefficient_form_bivariate_kzg_e2e() {
@@ -229,6 +228,6 @@ mod tests {
             &mut pairing_accumulator,
         );
 
-        assert!(pairing_accumulator.check_pairings());
+        assert!(pairing_accumulator.final_check());
     }
 }

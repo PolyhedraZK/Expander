@@ -1,7 +1,7 @@
 use std::iter;
 
 use arith::ExtensionField;
-use gkr_engine::Transcript;
+use gkr_engine::{DeferredCheck, Transcript};
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, GroupEncoding},
@@ -13,7 +13,7 @@ use serdes::ExpSerde;
 
 use crate::*;
 
-use super::deferred_pairing::{DeferredPairingCheck, PairingAccumulator};
+use super::deferred_pairing::PairingAccumulator;
 
 #[inline(always)]
 pub(crate) fn coeff_form_hyperkzg_local_poly_oracles<E>(
@@ -195,7 +195,7 @@ where
         fs_transcript,
         &mut pairing_accumulator,
     );
-    let pairing_check = pairing_accumulator.check_pairings();
+    let pairing_check = pairing_accumulator.final_check();
 
     partial_check && pairing_check
 }

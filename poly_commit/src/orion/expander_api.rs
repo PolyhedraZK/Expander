@@ -122,7 +122,7 @@ where
         )
     }
 
-    fn verify(
+    fn partial_verify(
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
@@ -131,6 +131,7 @@ where
         transcript: &mut impl Transcript, /* add transcript here to allow
                                            * interactive arguments */
         opening: &Self::Opening,
+        _accumulator: &mut Self::Accumulator,
     ) -> bool {
         orion_verify::<_, C::SimdCircuitField, _, ComPackF>(
             verifying_key,

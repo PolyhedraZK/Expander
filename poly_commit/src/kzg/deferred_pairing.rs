@@ -1,3 +1,4 @@
+use gkr_engine::DeferredCheck;
 use halo2curves::group::prime::PrimeCurveAffine;
 use halo2curves::group::Curve;
 use halo2curves::{
@@ -24,33 +25,15 @@ where
     }
 }
 
-pub trait DeferredPairingCheck {
-    /// Data type to be accumulated
-    type AccumulatedValues;
-
-    /// Add a new pairing check to the accumulator
-    fn add_pairing_check(&mut self, _accumulated_values: &Self::AccumulatedValues) {}
-
-    /// Check if all pairings are valid
-    fn check_pairings(&self) -> bool {
-        true
-    }
-}
-
-// Empty implementation for the case where no pairing checks are needed
-impl DeferredPairingCheck for () {
-    type AccumulatedValues = ();
-}
-
-impl<E: MultiMillerLoop> DeferredPairingCheck for PairingAccumulator<E> {
+impl<E: MultiMillerLoop> DeferredCheck for PairingAccumulator<E> {
     type AccumulatedValues = (E::G1, E::G2);
 
-    fn add_pairing_check(&mut self, accumulated_values: &(E::G1, E::G2)) {
+    fn accumulate(&mut self, accumulated_values: &(E::G1, E::G2)) {
         self.g1s.push(accumulated_values.0);
         self.g2s.push(accumulated_values.1);
     }
 
-    fn check_pairings(&self) -> bool {
+    fn final_check(&self) -> bool {
         if self.g1s.is_empty() || self.g2s.is_empty() {
             return true;
         }

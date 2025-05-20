@@ -19,6 +19,24 @@ pub trait PCSParams: Clone + Debug + Default + Send + Sync + 'static {
     fn num_vars(&self) -> usize;
 }
 
+pub trait DeferredCheck {
+    /// Data type to be accumulated
+    type AccumulatedValues;
+
+    /// Add a new pairing check to the accumulator
+    fn accumulate(&mut self, _accumulated_values: &Self::AccumulatedValues) {}
+
+    /// Check if all pairings are valid
+    fn final_check(&self) -> bool {
+        true
+    }
+}
+
+// Empty implementation for the case where no pairing checks are needed
+impl DeferredCheck for () {
+    type AccumulatedValues = ();
+}
+
 impl PCSParams for usize {
     fn num_vars(&self) -> usize {
         *self
@@ -38,7 +56,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
     type Opening: Clone + Debug + Default + ExpSerde;
 
     /// An accumulator to be used for deferred batch verification for KZG.
-    type Accumulator: Clone + Debug;
+    type Accumulator: Clone + Debug + Default + DeferredCheck;
 
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Each process should return the SRS share used for its committing and opening.
@@ -117,27 +135,41 @@ pub trait ExpanderPCS<F: FieldEngine> {
         v: F::ChallengeField,
         transcript: &mut impl Transcript,
         opening: &Self::Opening,
-    ) -> bool;
+    ) -> bool {
+        let mut accumulator = Self::Accumulator::default();
+
+        let partial_check = Self::partial_verify(
+            params,
+            verifying_key,
+            commitment,
+            x,
+            v,
+            transcript,
+            opening,
+            &mut accumulator,
+        );
+        let final_check = accumulator.final_check();
+
+        partial_check && final_check
+    }
 
     /// Partially verify the opening of a polynomial at a point.
     /// Deffer some of the checks to the batch verification via accumulator.
     #[allow(clippy::too_many_arguments)]
     fn partial_verify(
-        _params: &Self::Params,
-        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
-        _commitment: &Self::Commitment,
-        _x: &ExpanderSingleVarChallenge<F>,
-        _v: F::ChallengeField,
-        _transcript: &mut impl Transcript,
-        _opening: &Self::Opening,
-        _accumulator: &mut Self::Accumulator,
-    ) -> bool {
-        unimplemented!("Partial verification is not implemented for this PCS.")
-    }
+        params: &Self::Params,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        commitment: &Self::Commitment,
+        x: &ExpanderSingleVarChallenge<F>,
+        v: F::ChallengeField,
+        transcript: &mut impl Transcript,
+        opening: &Self::Opening,
+        accumulator: &mut Self::Accumulator,
+    ) -> bool;
 
     /// Perform the finally batch verification for the accumulated opening proofs.
-    fn batch_deferred_verification(_accumulator: &mut Self::Accumulator) -> bool {
-        unimplemented!("Batch verification is not implemented for this PCS.")
+    fn batch_deferred_verification(accumulator: &mut Self::Accumulator) -> bool {
+        accumulator.final_check()
     }
 }
 

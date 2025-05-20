@@ -4,7 +4,7 @@
 use std::{io::Cursor, iter};
 
 use arith::ExtensionField;
-use gkr_engine::{MPIEngine, Transcript};
+use gkr_engine::{DeferredCheck, MPIEngine, Transcript};
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, Group, GroupEncoding},
@@ -18,7 +18,7 @@ use transcript::{transcript_root_broadcast, transcript_verifier_sync};
 
 use crate::*;
 
-use super::deferred_pairing::{DeferredPairingCheck, PairingAccumulator};
+use super::deferred_pairing::PairingAccumulator;
 
 pub fn coeff_form_hyper_bikzg_open<E>(
     srs: &CoefFormBiKZGLocalSRS<E>,
@@ -472,7 +472,7 @@ where
         fs_transcript,
         &mut pairing_accumulator,
     );
-    let pairing_check = pairing_accumulator.check_pairings();
+    let pairing_check = pairing_accumulator.final_check();
 
     partial_check && pairing_check
 }

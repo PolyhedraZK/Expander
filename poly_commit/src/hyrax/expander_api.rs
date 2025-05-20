@@ -113,7 +113,7 @@ where
         HyraxOpening(combined_coeffs).into()
     }
 
-    fn verify(
+    fn partial_verify(
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
@@ -121,6 +121,7 @@ where
         v: <G as FieldEngine>::ChallengeField,
         _transcript: &mut impl Transcript,
         opening: &Self::Opening,
+        _accumulator: &mut Self::Accumulator,
     ) -> bool {
         if x.r_mpi.is_empty() {
             return hyrax_verify(verifying_key, commitment, &x.local_xs(), v, opening);

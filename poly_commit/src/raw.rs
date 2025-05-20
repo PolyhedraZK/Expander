@@ -195,7 +195,7 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
         Some(())
     }
 
-    fn verify(
+    fn partial_verify(
         _params: &Self::Params,
         _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
@@ -203,6 +203,7 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
         v: C::ChallengeField,
         _transcript: &mut impl Transcript,
         _opening: &Self::Opening,
+        _accumulator: &mut Self::Accumulator,
     ) -> bool {
         let v_target =
             C::single_core_eval_circuit_vals_at_expander_challenge(&commitment.evals, challenge);
