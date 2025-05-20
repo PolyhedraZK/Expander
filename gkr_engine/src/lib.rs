@@ -13,6 +13,8 @@
 //!   protocol
 #![allow(clippy::manual_div_ceil)]
 
+#![feature(associated_type_defaults)]
+
 mod errors;
 mod field_engine;
 mod mpi_engine;
@@ -20,6 +22,7 @@ mod poly_commit;
 mod scheme;
 mod transcript;
 
+use arith::Field;
 pub use errors::*;
 pub use field_engine::*;
 pub use mpi_engine::*;
@@ -71,7 +74,8 @@ pub trait GKREngine: Send + Sync {
     type TranscriptConfig: Transcript;
 
     /// Configuration for polynomial commitment scheme
-    type PCSConfig: ExpanderPCS<Self::FieldConfig>;
+    type PCSField: Field = <<Self as GKREngine>::FieldConfig as FieldEngine>::SimdCircuitField;
+    type PCSConfig: ExpanderPCS<Self::FieldConfig, Self::PCSField>;
 
     /// GKR scheme
     const SCHEME: GKRScheme;
