@@ -104,7 +104,10 @@ fn main() {
     MPIConfig::finalize();
 }
 
-fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
+fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) 
+where
+    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+{
     let pack_size = <Cfg::FieldConfig as FieldEngine>::get_field_pack_size();
 
     // load circuit
@@ -166,7 +169,7 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
     prover.prepare_mem(&circuit);
 
     let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
         );

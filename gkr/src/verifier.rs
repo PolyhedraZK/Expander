@@ -249,8 +249,8 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         circuit: &mut Circuit<Cfg::FieldConfig>,
         public_input: &[<Cfg::FieldConfig as FieldEngine>::SimdCircuitField],
         claimed_v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
-        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
-        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
+        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::VKey,
         proof: &Proof,
     ) -> bool {
         let timer = Timer::new("verify", true);
@@ -261,7 +261,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         let mut cursor = Cursor::new(&proof.bytes);
 
         let commitment =
-            <<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment as ExpSerde>::deserialize_from(
+            <<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Commitment as ExpSerde>::deserialize_from(
                 &mut cursor,
             )
             .unwrap();
@@ -364,20 +364,20 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
     #[allow(clippy::too_many_arguments)]
     fn get_pcs_opening_from_proof_and_verify(
         &self,
-        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
-        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
-        commitment: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
+        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::VKey,
+        commitment: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Commitment,
         open_at: &mut ExpanderSingleVarChallenge<Cfg::FieldConfig>,
         v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
         transcript: &mut impl Transcript,
         proof_reader: impl Read,
     ) -> bool {
-        let opening = <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Opening::deserialize_from(
+        let opening = <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Opening::deserialize_from(
             proof_reader,
         )
         .unwrap();
 
-        if open_at.rz.len() < <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::MINIMUM_NUM_VARS {
+        if open_at.rz.len() < <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::MINIMUM_NUM_VARS {
             eprintln!(
 				"{} over {} has minimum supported local vars {}, but challenge has vars {}, pad to {} vars in verifying.",
 				Cfg::PCSConfig::NAME,
@@ -387,7 +387,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
 				Cfg::PCSConfig::MINIMUM_NUM_VARS,
 			);
             open_at.rz.resize(
-                <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::MINIMUM_NUM_VARS,
+                <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::MINIMUM_NUM_VARS,
                 <Cfg::FieldConfig as FieldEngine>::ChallengeField::ZERO,
             )
         }

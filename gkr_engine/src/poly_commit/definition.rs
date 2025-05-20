@@ -1,3 +1,4 @@
+use arith::Field;
 use polynomials::MultilinearExtension;
 use rand::RngCore;
 use serdes::ExpSerde;
@@ -14,7 +15,7 @@ pub trait StructuredReferenceString {
     fn into_keys(self) -> (Self::PKey, Self::VKey);
 }
 
-pub trait ExpanderPCS<F: FieldEngine> {
+pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
     const NAME: &'static str;
 
     const PCS_TYPE: PolynomialCommitmentType;
@@ -25,6 +26,8 @@ pub trait ExpanderPCS<F: FieldEngine> {
     type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString + Send + Sync;
     type Commitment: Clone + Debug + Default + ExpSerde;
     type Opening: Clone + Debug + Default + ExpSerde;
+
+    // type PolyField: Field;
 
     /// Minimum number of variables supported in this PCS implementation,
     /// that such constraint exists for PCSs like Orion,
@@ -53,7 +56,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<F::SimdCircuitField>,
+        poly: &impl MultilinearExtension<PolyField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment>;
 
@@ -82,7 +85,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<F::SimdCircuitField>,
+        poly: &impl MultilinearExtension<PolyField>,
         x: &ExpanderSingleVarChallenge<F>,
         transcript: &mut impl Transcript,
         scratch_pad: &Self::ScratchPad,

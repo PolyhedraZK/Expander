@@ -120,7 +120,7 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
 }
 
 fn input_poly_vars_calibration<Cfg: GKREngine>(actual_poly_vars: usize) -> usize {
-    if actual_poly_vars < <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::MINIMUM_NUM_VARS {
+    if actual_poly_vars < <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::MINIMUM_NUM_VARS {
         eprintln!(
             "{} over {} has minimum supported local vars {}, but input poly has vars {}.",
             Cfg::PCSConfig::NAME,
@@ -140,7 +140,10 @@ pub fn prove<Cfg: GKREngine>(
 ) -> (
     <<Cfg as GKREngine>::FieldConfig as FieldEngine>::ChallengeField,
     Proof,
-) {
+) 
+where
+    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>
+{
     let mut prover = crate::Prover::<Cfg>::new(mpi_config.clone());
     prover.prepare_mem(circuit);
     // TODO: Read PCS setup from files
@@ -148,6 +151,7 @@ pub fn prove<Cfg: GKREngine>(
     let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
     let (pcs_params, pcs_proving_key, _, mut pcs_scratch) = expander_pcs_init_testing_only::<
         Cfg::FieldConfig,
+        Cfg::PCSField,
         Cfg::PCSConfig,
     >(minimum_poly_vars, &mpi_config);
 
@@ -165,7 +169,7 @@ pub fn verify<Cfg: GKREngine>(
 
     let minimum_poly_vars = input_poly_vars_calibration::<Cfg>(circuit.log_input_size());
     let (pcs_params, _, pcs_verification_key, mut _pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
             minimum_poly_vars,
             &mpi_config,
         );
@@ -184,7 +188,10 @@ pub fn verify<Cfg: GKREngine>(
 pub async fn run_command<'a, Cfg: GKREngine + 'static>(
     command: &ExpanderExecArgs,
     mpi_config: &MPIConfig,
-) {
+) 
+where
+    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>
+{
     let subcommands = command.subcommands.clone();
 
     match subcommands {
@@ -282,7 +289,7 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
 
             // TODO: Read PCS setup from files
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
-                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
+                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
                     circuit.log_input_size(),
                     &prover.mpi_config,
                 );
