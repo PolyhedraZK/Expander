@@ -301,6 +301,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
 
     /// Paritially verify the proof.
     /// Conduct the whole procedure except for pairing, if any.
+    #[allow(clippy::too_many_arguments)]
     pub fn partial_verify(
         &self,
         circuit: &mut Circuit<Cfg::FieldConfig>,
@@ -375,6 +376,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
 
     /// Paritially verify the proof.
     /// Conduct the whole procedure except for pairing, if any.
+    #[allow(clippy::too_many_arguments)]
     pub fn par_partial_verify(
         &self,
         circuit: &mut Circuit<Cfg::FieldConfig>,
