@@ -37,6 +37,9 @@ pub trait ExpanderPCS<F: FieldEngine> {
     type Commitment: Clone + Debug + Default + ExpSerde;
     type Opening: Clone + Debug + Default + ExpSerde;
 
+    /// An accumulator to be used for deferred batch verification for KZG.
+    type Accumulator: Clone + Debug + Default;
+
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Each process should return the SRS share used for its committing and opening.
     ///
@@ -115,6 +118,22 @@ pub trait ExpanderPCS<F: FieldEngine> {
         transcript: &mut impl Transcript,
         opening: &Self::Opening,
     ) -> bool;
+
+    /// Partially verify the opening of a polynomial at a point.
+    /// Deffer some of the checks to the batch verification via accumulator.
+    fn partial_verify(
+        params: &Self::Params,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        commitment: &Self::Commitment,
+        x: &ExpanderSingleVarChallenge<F>,
+        v: F::ChallengeField,
+        transcript: &mut impl Transcript,
+        opening: &Self::Opening,
+        accumulator: &mut Self::Accumulator,
+    );
+
+    /// Perform the finally batch verification for the accumulated opening proofs.
+    fn batch_verify(accumulator: &mut Self::Accumulator) -> bool;
 }
 
 impl StructuredReferenceString for () {
