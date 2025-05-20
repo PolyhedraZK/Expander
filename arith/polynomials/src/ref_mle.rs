@@ -27,19 +27,19 @@ pub trait MultilinearExtension<F: Field>: Index<usize, Output = F> {
 
     fn hypercube_basis(&self) -> Vec<F>;
 
-    fn hypercube_basis_ref(&self) -> &Vec<F>;
+    fn hypercube_basis_ref(&self) -> &[F];
 
     fn interpolate_over_hypercube(&self) -> Vec<F>;
 }
 
 #[derive(Debug, Clone)]
 pub struct RefMultiLinearPoly<'ref_life, F: Field> {
-    pub coeffs: &'ref_life Vec<F>,
+    pub coeffs: &'ref_life [F],
 }
 
 impl<'ref_life, 'outer: 'ref_life, F: Field> RefMultiLinearPoly<'ref_life, F> {
     #[inline(always)]
-    pub fn from_ref(evals: &'outer Vec<F>) -> Self {
+    pub fn from_ref(evals: &'outer [F]) -> Self {
         Self { coeffs: evals }
     }
 }
@@ -63,11 +63,11 @@ impl<'a, F: Field> MultilinearExtension<F> for RefMultiLinearPoly<'a, F> {
 
     #[inline(always)]
     fn hypercube_basis(&self) -> Vec<F> {
-        self.coeffs.clone()
+        self.coeffs.to_vec()
     }
 
     #[inline(always)]
-    fn hypercube_basis_ref(&self) -> &Vec<F> {
+    fn hypercube_basis_ref(&self) -> &[F] {
         self.coeffs
     }
 
@@ -149,7 +149,7 @@ impl<'a, F: Field> MultilinearExtension<F> for MutRefMultiLinearPoly<'a, F> {
     }
 
     #[inline(always)]
-    fn hypercube_basis_ref(&self) -> &Vec<F> {
+    fn hypercube_basis_ref(&self) -> &[F] {
         self.coeffs
     }
 

@@ -173,7 +173,7 @@ impl<F: Field> MultilinearExtension<F> for MultiLinearPoly<F> {
         self.coeffs.clone()
     }
 
-    fn hypercube_basis_ref(&self) -> &Vec<F> {
+    fn hypercube_basis_ref(&self) -> &[F] {
         &self.coeffs
     }
 
