@@ -15,9 +15,9 @@ use crate::*;
 
 impl<G, E> ExpanderPCS<G, E::Fr> for HyperKZGPCS<E>
 where
-    G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
+    G: FieldEngine<ChallengeField = E::Fr>,
     E: Engine + MultiMillerLoop,
-    E::Fr: ExtensionField + PrimeField,
+    E::Fr: ExtensionField + PrimeField + From<G::SimdCircuitField>,
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {

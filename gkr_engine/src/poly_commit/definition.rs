@@ -26,6 +26,12 @@ impl PCSParams for usize {
     }
 }
 
+/// This trait specifies the field used on Expander side.
+///   PolyField: the field of the coef of polynomial sent to PCS
+///   ChallengeField: the field of the challenge point, should be FieldEngine::ChallengeField
+///   EvalField: the field of the evaluation, in the current use case always be FieldEngine::Field
+/// since Polyfield has simd Note that it is not necessary that PolyField can be handled by PCS
+/// directly. PolyField should be bounded when implemented if necessary.
 pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
     const NAME: &'static str;
 

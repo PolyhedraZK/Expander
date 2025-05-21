@@ -20,9 +20,9 @@ use crate::{
 
 impl<G, C> ExpanderPCS<G, C::Scalar> for HyraxPCS<C>
 where
-    G: FieldEngine<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
+    G: FieldEngine<ChallengeField = C::Scalar>,
     C: CurveAffine + ExpSerde,
-    C::Scalar: ExtensionField + PrimeField,
+    C::Scalar: ExtensionField + PrimeField + From<G::SimdCircuitField>,
     C::ScalarExt: ExtensionField + PrimeField,
 {
     const NAME: &'static str = "HyraxPCSForExpanderGKR";

@@ -165,7 +165,7 @@ fn test_gkr_correctness() {
 #[allow(unreachable_patterns)]
 fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>)
 where
-    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSPolyField>,
 {
     let mpi_config = MPIConfig::prover_new();
 
@@ -229,7 +229,7 @@ where
     prover.prepare_mem(&circuit);
 
     let (pcs_params, pcs_proving_key, pcs_verification_key, mut pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSPolyField, Cfg::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
         );

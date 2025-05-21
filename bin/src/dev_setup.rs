@@ -47,7 +47,7 @@ fn main() {
 
 fn proof_gen<C: GKREngine>()
 where
-    C::FieldConfig: FieldEngine<SimdCircuitField = C::PCSField>,
+    C::FieldConfig: FieldEngine<SimdCircuitField = C::PCSPolyField>,
 {
     let mpi_config = MPIConfig::prover_new();
 
@@ -84,7 +84,7 @@ where
     circuit.evaluate();
 
     let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
-        expander_pcs_init_testing_only::<C::FieldConfig, C::PCSField, C::PCSConfig>(
+        expander_pcs_init_testing_only::<C::FieldConfig, C::PCSPolyField, C::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
         );

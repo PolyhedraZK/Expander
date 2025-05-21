@@ -84,12 +84,12 @@ impl<Cfg: GKREngine> Prover<Cfg> {
     pub fn prove(
         &mut self,
         c: &mut Circuit<Cfg::FieldConfig>,
-        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
-        pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::PKey,
-        pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSPolyField>>::Params,
+        pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSPolyField>>::SRS as StructuredReferenceString>::PKey,
+        pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSPolyField>>::ScratchPad,
     ) -> (<Cfg::FieldConfig as FieldEngine>::ChallengeField, Proof)
     where
-        Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+        Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSPolyField>,
     {
         let proving_timer = Timer::new("prover", self.mpi_config.is_root());
         let mut transcript = Cfg::TranscriptConfig::new();
@@ -198,12 +198,12 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         &self,
         inputs: &mut MutRefMultiLinearPoly<<Cfg::FieldConfig as FieldEngine>::SimdCircuitField>,
         open_at: &mut ExpanderSingleVarChallenge<Cfg::FieldConfig>,
-        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
-        pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::PKey,
-        pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSPolyField>>::Params,
+        pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSPolyField>>::SRS as StructuredReferenceString>::PKey,
+        pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSPolyField>>::ScratchPad,
         transcript: &mut impl Transcript,
     ) where
-        Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+        Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSPolyField>,
     {
         let original_input_vars = inputs.num_vars();
 
