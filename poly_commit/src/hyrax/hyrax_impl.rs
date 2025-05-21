@@ -1,6 +1,5 @@
 use arith::{ExtensionField, Field};
 use gkr_engine::Transcript;
-use halo2curves::group::Group;
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
@@ -157,8 +156,7 @@ where
     let pedersen_len = params.msm_len();
     let pedersen_vars = pedersen_len.ilog2() as usize;
 
-    // let challenge = transcript.generate_field_element::<C::Scalar>();
-    let challenge = C::Scalar::one();
+    let challenge = transcript.generate_field_element::<C::Scalar>();
     let challenge_power = powers_series(&challenge, len);
 
     // the opening is the random linearly combine all the polynomials
@@ -171,9 +169,7 @@ where
         let mut local_mle = MutRefMultiLinearPoly::from_ref(&mut local_basis);
         local_mle.fix_variables(&eval_point[pedersen_vars..]);
 
-        evals.push(
-            local_mle.evaluate_with_buffer(&eval_point[..pedersen_vars], &mut buffer) * challenge,
-        );
+        evals.push(local_mle.evaluate_with_buffer(&eval_point[..pedersen_vars], &mut buffer));
 
         res.iter_mut()
             .zip(local_mle.coeffs.iter())
@@ -204,26 +200,30 @@ where
     let pedersen_len = params.msm_len();
     let pedersen_vars = pedersen_len.ilog2() as usize;
 
-    // let challenge = transcript.generate_field_element::<C::Scalar>();
-    let challenge = C::Scalar::one();
+    let challenge = transcript.generate_field_element::<C::Scalar>();
     let challenge_power = powers_series(&challenge, len);
 
     // random linear combination of the commitments
     // for each i we want to do
     //  comm_i * challenge_i * eq_combination
     // we do the second mul first -- this is a field op
-    let mut row_comm = C::Curve::identity();
-    let eq_combination: Vec<C::Scalar> = EqPolynomial::build_eq_x_r(&eval_point[pedersen_vars..]);
-    for (i, comm) in comm_list.iter().enumerate() {
-        let challenge = &challenge_power[i];
-        let scaled_eq = scale(&eq_combination, challenge);
-        let this_row_comm = msm::best_multiexp(&scaled_eq, &comm.0);
+    // then we do a single multiexp to take advantage of Pippenger's algorithm
 
-        row_comm += this_row_comm;
+    let bases = comm_list
+        .iter()
+        .flat_map(|comm| comm.0.clone())
+        .collect::<Vec<_>>();
+
+    let mut scalars = vec![];
+    let eq_combination: Vec<C::Scalar> = EqPolynomial::build_eq_x_r(&eval_point[pedersen_vars..]);
+    for c in challenge_power.iter() {
+        scalars.extend_from_slice(scale(&eq_combination, c).as_ref());
     }
 
+    let row_comm = msm::best_multiexp(&scalars, &bases);
+
     if pedersen_commit(params, &batch_proof.0) != row_comm.into() {
-        println!("commitment not matching");
+        eprintln!("commitment not matching");
         return false;
     }
 
