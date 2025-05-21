@@ -2,11 +2,13 @@ mod common;
 
 use arith::{Field, Fr};
 use ark_std::test_rng;
+use gkr_engine::StructuredReferenceString;
 use gkr_engine::{BN254Config, ExpanderSingleVarChallenge, MPIConfig, MPIEngine, Transcript};
-use gkr_hashers::Keccak256hasher;
+use gkr_hashers::{Keccak256hasher, SHA256hasher};
 use halo2curves::bn256::G1Affine;
-use poly_commit::HyraxPCS;
+use poly_commit::{HyraxPCS, PolynomialCommitmentScheme};
 use polynomials::MultiLinearPoly;
+use rand::thread_rng;
 use transcript::BytesHashTranscript;
 
 const TEST_REPETITION: usize = 3;
@@ -80,4 +82,66 @@ fn test_hyrax_for_expander_gkr() {
     test_hyrax_for_expander_gkr_generics(&mpi_config, 19);
 
     MPIConfig::finalize()
+}
+
+#[test]
+fn test_hyrax_batch_open() {
+    let mut rng = thread_rng();
+
+    for num_vars in 2..3 {
+        // NOTE(HS) we assume that the polynomials we pass in are of sufficient length.
+        let (srs, _) = <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::gen_srs_for_testing(
+            &num_vars, &mut rng,
+        );
+        let (proving_key, verification_key) = srs.into_keys();
+        let mut scratch_pad =
+            <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::init_scratch_pad(&num_vars);
+
+        // first poly
+        let poly_1 = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
+        let commitment_1 = <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::commit(
+            &num_vars,
+            &proving_key,
+            &poly_1,
+            &mut scratch_pad,
+        );
+
+        let poly_2 = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
+        let commitment_2 = <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::commit(
+            &num_vars,
+            &proving_key,
+            &poly_2,
+            &mut scratch_pad,
+        );
+
+        let x = (0..num_vars)
+            .map(|_| Fr::random_unsafe(&mut rng))
+            .collect::<Vec<_>>();
+
+        let mut transcript = BytesHashTranscript::<SHA256hasher>::new();
+
+        let (values, batch_opening) =
+            <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::batch_open(
+                &num_vars,
+                &proving_key,
+                &[poly_1, poly_2],
+                x.as_ref(),
+                &mut scratch_pad,
+                &mut transcript,
+            );
+
+        let mut transcript = BytesHashTranscript::<SHA256hasher>::new();
+
+        assert!(
+            <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::batch_verify(
+                &num_vars,
+                &verification_key,
+                &[commitment_1, commitment_2],
+                x.as_ref(),
+                &values,
+                &batch_opening,
+                &mut transcript
+            )
+        )
+    }
 }

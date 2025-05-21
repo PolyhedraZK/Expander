@@ -56,6 +56,27 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
         opening: &Self::Opening,
         transcript: &mut impl Transcript,
     ) -> bool;
+
+    /// Open a set of polynomials at a point.
+    fn batch_open(
+        params: &Self::Params,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        polys: &[Self::Poly],
+        x: &Self::EvalPoint,
+        scratch_pad: &Self::ScratchPad,
+        transcript: &mut impl Transcript,
+    ) -> (Vec<F>, Self::Opening);
+
+    /// Verify the opening of a set of polynomials at a point.
+    fn batch_verify(
+        params: &Self::Params,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        commitments: &[Self::Commitment],
+        x: &Self::EvalPoint,
+        vs: &[F],
+        opening: &Self::Opening,
+        transcript: &mut impl Transcript,
+    ) -> bool;
 }
 
 pub(crate) trait TensorCodeIOPPCS {

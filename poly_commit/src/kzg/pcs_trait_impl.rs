@@ -96,4 +96,29 @@ where
 
         pairing_check && partial_check
     }
+
+    fn batch_open(
+        _params: &Self::Params,
+        _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        _polys: &[Self::Poly],
+        _x: &Self::EvalPoint,
+        _scratch_pad: &Self::ScratchPad,
+        _transcript: &mut impl Transcript,
+    ) -> (Vec<E::Fr>, Self::Opening) {
+        // todo: implement batch_open
+        unimplemented!("batch_open is not implemented for HyperKZGPCS");
+    }
+
+    fn batch_verify(
+        _params: &Self::Params,
+        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        _commitments: &[Self::Commitment],
+        _x: &Self::EvalPoint,
+        _vs: &[E::Fr],
+        _opening: &Self::Opening,
+        _transcript: &mut impl Transcript,
+    ) -> bool {
+        // todo: implement batch_verify
+        unimplemented!("batch_verify is not implemented for HyperKZGPCS");
+    }
 }

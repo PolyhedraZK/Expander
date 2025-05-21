@@ -113,6 +113,29 @@ impl<F: ExtensionField> PolynomialCommitmentScheme<F> for RawMultiLinearPCS {
             &mut vec![F::ZERO; commitment.evals.len()],
         ) == v
     }
+
+    fn batch_open(
+        _params: &Self::Params,
+        _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        _polys: &[Self::Poly],
+        _x: &Self::EvalPoint,
+        _scratch_pad: &Self::ScratchPad,
+        _transcript: &mut impl Transcript,
+    ) -> (Vec<F>, Self::Opening) {
+        unimplemented!("batch_open is not implemented for RawMultiLinearPCS");
+    }
+
+    fn batch_verify(
+        _params: &Self::Params,
+        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        _commitments: &[Self::Commitment],
+        _x: &Self::EvalPoint,
+        _vs: &[F],
+        _opening: &Self::Opening,
+        _transcript: &mut impl Transcript,
+    ) -> bool {
+        unimplemented!("batch_verify is not implemented for RawMultiLinearPCS");
+    }
 }
 
 // =================================================================================================

@@ -1,4 +1,6 @@
-use arith::ExtensionField;
+use arith::{ExtensionField, Field};
+use gkr_engine::Transcript;
+use halo2curves::group::Group;
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
@@ -6,9 +8,12 @@ use polynomials::{
 };
 use serdes::ExpSerde;
 
-use crate::hyrax::{
-    pedersen::{pedersen_commit, pedersen_setup},
-    PedersenParams,
+use crate::{
+    hyrax::{
+        pedersen::{pedersen_commit, pedersen_setup},
+        PedersenParams,
+    },
+    powers_series,
 };
 
 pub(crate) fn hyrax_setup<C: CurveAffine + ExpSerde>(
@@ -132,4 +137,111 @@ where
     let mut scratch = vec![C::Scalar::default(); proof.0.len()];
     eval == RefMultiLinearPoly::from_ref(&proof.0)
         .evaluate_with_buffer(&eval_point[..pedersen_vars], &mut scratch)
+}
+
+// batch open a set of mle_polys at the same point
+// returns a set of eval points and a signle opening
+// NOTE: random linear combination is used to merge polynomials
+pub(crate) fn hyrax_batch_open<C>(
+    params: &PedersenParams<C>,
+    mle_poly_list: &[impl MultilinearExtension<C::Scalar>],
+    eval_point: &[C::Scalar],
+    transcript: &mut impl Transcript,
+) -> (Vec<C::Scalar>, HyraxOpening<C>)
+where
+    C: CurveAffine + ExpSerde,
+    C::Scalar: ExtensionField + PrimeField,
+    C::ScalarExt: ExtensionField + PrimeField,
+{
+    let len = mle_poly_list.len();
+    let pedersen_len = params.msm_len();
+    let pedersen_vars = pedersen_len.ilog2() as usize;
+
+    // let challenge = transcript.generate_field_element::<C::Scalar>();
+    let challenge = C::Scalar::one();
+    let challenge_power = powers_series(&challenge, len);
+
+    // the opening is the random linearly combine all the polynomials
+    let mut res = vec![C::Scalar::default(); 1 << pedersen_vars];
+    let mut evals = vec![];
+    let mut buffer = vec![C::Scalar::default(); 1 << pedersen_vars];
+
+    for (mle_poly, challenge) in mle_poly_list.iter().zip(challenge_power.iter()) {
+        let mut local_basis = mle_poly.hypercube_basis();
+        let mut local_mle = MutRefMultiLinearPoly::from_ref(&mut local_basis);
+        local_mle.fix_variables(&eval_point[pedersen_vars..]);
+
+        evals.push(
+            local_mle.evaluate_with_buffer(&eval_point[..pedersen_vars], &mut buffer) * challenge,
+        );
+
+        res.iter_mut()
+            .zip(local_mle.coeffs.iter())
+            .for_each(|(r, c)| {
+                *r += *challenge * *c;
+            });
+    }
+    (evals, HyraxOpening(res))
+}
+
+/// Batch verify a list of hyrax commitments/proofs that are opened at the same point.
+pub(crate) fn hyrax_batch_verify<C>(
+    params: &PedersenParams<C>,
+    comm_list: &[HyraxCommitment<C>],
+    eval_point: &[C::Scalar],
+    eval_list: &[C::Scalar],
+    batch_proof: &HyraxOpening<C>,
+    transcript: &mut impl Transcript,
+) -> bool
+where
+    C: CurveAffine + ExpSerde,
+    C::Scalar: ExtensionField + PrimeField,
+    C::ScalarExt: ExtensionField + PrimeField,
+{
+    let len = comm_list.len();
+    assert_eq!(len, eval_list.len());
+
+    let pedersen_len = params.msm_len();
+    let pedersen_vars = pedersen_len.ilog2() as usize;
+
+    // let challenge = transcript.generate_field_element::<C::Scalar>();
+    let challenge = C::Scalar::one();
+    let challenge_power = powers_series(&challenge, len);
+
+    // random linear combination of the commitments
+    // for each i we want to do
+    //  comm_i * challenge_i * eq_combination
+    // we do the second mul first -- this is a field op
+    let mut row_comm = C::Curve::identity();
+    let eq_combination: Vec<C::Scalar> = EqPolynomial::build_eq_x_r(&eval_point[pedersen_vars..]);
+    for (i, comm) in comm_list.iter().enumerate() {
+        let challenge = &challenge_power[i];
+        let scaled_eq = scale(&eq_combination, challenge);
+        let this_row_comm = msm::best_multiexp(&scaled_eq, &comm.0);
+
+        row_comm += this_row_comm;
+    }
+
+    if pedersen_commit(params, &batch_proof.0) != row_comm.into() {
+        println!("commitment not matching");
+        return false;
+    }
+
+    // now we need to check the evaluations
+    let eval_sum = eval_list
+        .iter()
+        .zip(challenge_power.iter())
+        .map(|(eval, challenge)| *eval * *challenge)
+        .sum::<C::Scalar>();
+
+    let mut scratch = vec![C::Scalar::default(); batch_proof.0.len()];
+    eval_sum
+        == RefMultiLinearPoly::from_ref(&batch_proof.0)
+            .evaluate_with_buffer(&eval_point[..pedersen_vars], &mut scratch)
+}
+
+#[inline(always)]
+// scale a vector by a scalar
+fn scale<F: Field>(base: &[F], scalar: &F) -> Vec<F> {
+    base.iter().map(|x| *x * scalar).collect()
 }
