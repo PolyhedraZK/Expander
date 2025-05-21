@@ -34,8 +34,8 @@ pub trait ExpanderPCS<F: FieldEngine> {
     type ScratchPad: Clone + Debug + Default + Send + ExpSerde + Sync;
 
     type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString + Send + Sync;
-    type Commitment: Clone + Debug + Default + ExpSerde;
-    type Opening: Clone + Debug + Default + ExpSerde;
+    type Commitment: Clone + Debug + Default + ExpSerde + Send + Sync;
+    type Opening: Clone + Debug + Default + ExpSerde + Send + Sync;
 
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Each process should return the SRS share used for its committing and opening.
