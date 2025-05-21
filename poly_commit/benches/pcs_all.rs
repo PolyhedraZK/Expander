@@ -225,7 +225,6 @@ fn bench_hyrax_batch_open(mpi_config: &MPIConfig, num_vars: usize, num_poly: usi
     commitments.serialize_into(&mut buf).unwrap();
     let com_size = buf.len();
 
-
     // open all polys at a single point
     let x = (0..num_vars)
         .map(|_| Fr::random_unsafe(&mut rng))
