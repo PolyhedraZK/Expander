@@ -3,7 +3,7 @@ use ark_std::test_rng;
 use criterion::black_box;
 use gkr_engine::StructuredReferenceString;
 use gkr_engine::{root_println, MPIConfig, MPIEngine, Transcript};
-use gkr_hashers::Keccak256hasher;
+use gkr_hashers::{Keccak256hasher, SHA256hasher};
 use halo2curves::bn256::{Bn256, G1Affine};
 use poly_commit::{HyperKZGPCS, HyraxPCS, OrionBaseFieldPCS, PolynomialCommitmentScheme};
 use polynomials::MultiLinearPoly;
@@ -11,6 +11,8 @@ use rand::RngCore;
 use serdes::ExpSerde;
 use transcript::BytesHashTranscript;
 use utils::timer::Timer;
+
+const NUM_POLY_BATCH_OPEN: usize = 100;
 
 fn main() {
     let mpi_config = MPIConfig::prover_new();
@@ -85,6 +87,9 @@ fn bench_hyrax(mpi_config: &MPIConfig, num_vars: usize) {
         &eval_point,
         "hyrax small scalar",
     );
+
+    // batch open
+    bench_hyrax_batch_open(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
 }
 
 fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
@@ -187,6 +192,94 @@ fn pcs_bench<PCS: PolynomialCommitmentScheme<Fr>>(
         mpi_config,
         "{}",
         format!("{} open size      {}", label, open_size),
+    );
+
+    root_println!(mpi_config, "  --- ");
+}
+
+fn bench_hyrax_batch_open(mpi_config: &MPIConfig, num_vars: usize, num_poly: usize) {
+    let mut rng = test_rng();
+
+    let (srs, _) = <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::gen_srs_for_testing(
+        &num_vars, &mut rng,
+    );
+    let (proving_key, verification_key) = srs.into_keys();
+    let mut scratch_pad =
+        <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::init_scratch_pad(&num_vars);
+
+    let polys = (0..num_poly)
+        .map(|_| MultiLinearPoly::<Fr>::random(num_vars, &mut rng))
+        .collect::<Vec<_>>();
+    let commitments = polys
+        .iter()
+        .map(|poly| {
+            <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::commit(
+                &num_vars,
+                &proving_key,
+                poly,
+                &mut scratch_pad,
+            )
+        })
+        .collect::<Vec<_>>();
+    let mut buf = vec![];
+    commitments.serialize_into(&mut buf).unwrap();
+    let com_size = buf.len();
+
+
+    // open all polys at a single point
+    let x = (0..num_vars)
+        .map(|_| Fr::random_unsafe(&mut rng))
+        .collect::<Vec<_>>();
+
+    let mut transcript = BytesHashTranscript::<SHA256hasher>::new();
+    let timer = Timer::new(
+        format!("hyrax batch open {} polys   ", num_poly).as_ref(),
+        mpi_config.is_root(),
+    );
+    let (values, batch_opening) =
+        <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::batch_open(
+            &num_vars,
+            &proving_key,
+            &polys,
+            x.as_ref(),
+            &mut scratch_pad,
+            &mut transcript,
+        );
+
+    timer.stop();
+
+    let mut buf = vec![];
+    values.serialize_into(&mut buf).unwrap();
+    batch_opening.serialize_into(&mut buf).unwrap();
+    let open_size = buf.len();
+
+    let mut transcript = BytesHashTranscript::<SHA256hasher>::new();
+    let timer = Timer::new(
+        format!("hyrax batch verify {} polys ", num_poly).as_ref(),
+        mpi_config.is_root(),
+    );
+    assert!(
+        <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::batch_verify(
+            &num_vars,
+            &verification_key,
+            &commitments,
+            x.as_ref(),
+            &values,
+            &batch_opening,
+            &mut transcript
+        )
+    );
+    timer.stop();
+
+    root_println!(
+        mpi_config,
+        "{}",
+        format!("hyrax batch {} poly commit size  {}", num_poly, com_size),
+    );
+    root_println!(
+        mpi_config,
+        "{}",
+        format!("hyrax batch {} poly open size    {}", num_poly, open_size),
     );
 
     root_println!(mpi_config, "  --- ");
