@@ -62,7 +62,7 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
 
     dbg!(local_poly.get_num_vars(), local_poly.coeffs[0]);
 
-    let params = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config>>::gen_params(
+    let params = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config, Fr>>::gen_params(
         num_vars_in_each_poly,
         mpi_config_ref.world_size(),
     );
