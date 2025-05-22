@@ -38,19 +38,21 @@ fn main() {
     dev_env_data_setup();
     if args.compare {
         // check if the downloaded proofs match the one been generated
-        proof_gen::<GF2ExtConfigSha2Raw>();
-        proof_gen::<M31x16ConfigSha2RawVanilla>();
-        proof_gen::<BN254ConfigSha2Raw>();
+        let communicator = MPIConfig::init().unwrap();
+        let mpi_config = MPIConfig::prover_new(&communicator);
+
+        proof_gen::<GF2ExtConfigSha2Raw>(mpi_config.clone());
+        proof_gen::<M31x16ConfigSha2RawVanilla>(mpi_config.clone());
+        proof_gen::<BN254ConfigSha2Raw>(mpi_config.clone());
         compare_proof_files();
+        MPIConfig::finalize();
     }
 }
 
-fn proof_gen<C: GKREngine>()
+fn proof_gen<'a, C: GKREngine>(mpi_config: MPIConfig<'a>)
 where
     C::FieldConfig: FieldEngine<SimdCircuitField = C::PCSField>,
 {
-    let communicator = MPIConfig::init().unwrap();
-    let mpi_config = MPIConfig::prover_new(&communicator);
     // load circuit
     let mut circuit = match C::FieldConfig::FIELD_TYPE {
         FieldType::GF2Ext128 => {
