@@ -79,6 +79,4 @@ fn test_hyper_bikzg_for_expander_gkr() {
     let world = universe.world();
     let mpi_config = MPIConfig::prover_new(&universe, &world);
     test_hyper_bikzg_for_expander_gkr_generics(&mpi_config, 15);
-
-    MPIConfig::finalize()
 }

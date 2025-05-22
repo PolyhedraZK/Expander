@@ -137,6 +137,4 @@ fn test_orion_for_expander_gkr() {
         Goldilocksx8,
         BytesHashTranscript<Keccak256hasher>,
     >(&mpi_config, 25);
-
-    MPIConfig::finalize()
 }
