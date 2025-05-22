@@ -164,8 +164,10 @@ fn test_gkr_correctness() {
 }
 
 #[allow(unreachable_patterns)]
-fn test_gkr_correctness_helper<Cfg: GKREngine>(mpi_config: MPIConfig<'_>, write_proof_to: Option<&str>)
-where
+fn test_gkr_correctness_helper<Cfg: GKREngine>(
+    mpi_config: MPIConfig<'_>,
+    write_proof_to: Option<&str>,
+) where
     Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
 {
     root_println!(mpi_config, "============== start ===============");
