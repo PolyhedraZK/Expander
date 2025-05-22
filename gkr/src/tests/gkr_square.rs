@@ -140,8 +140,7 @@ fn gkr_square_correctness_test() {
         GKRScheme::GkrSquare
     );
     type GkrFieldConfigType = <GkrConfigType as GKREngine>::FieldConfig;
-    let mpi_config = MPIConfig::prover_new();
-
+let communicator = MPIConfig::init().unwrap(); let mpi_config = MPIConfig::prover_new(&communicator);
     let mut circuit = gkr_square_test_circuit::<GkrFieldConfigType>();
     // Set input layers with N_2_0 = 3, N_2_1 = 5, N_2_2 = 7,
     // and N_2_3 varying from 0 to 15

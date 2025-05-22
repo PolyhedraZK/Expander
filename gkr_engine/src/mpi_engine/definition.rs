@@ -10,26 +10,7 @@ use super::SharedMemory;
 /// MPI APIs for distributed computing operations
 pub trait MPIEngine {
     /// The rank of the root process (always 0)
-    const ROOT_RANK: i32;
-
-    /// The maximum chunk size for MPI communications
-    const CHUNK_SIZE: usize;
-
-    /// Initialize the MPI environment.
-    /// Safe to call multiple times as `mpi::initialize()` will return None if already initialized.
-    fn init();
-
-    /// Finalize the MPI environment
-    fn finalize();
-
-    /// Create a new MPI engine for the prover
-    fn prover_new() -> Self;
-
-    /// Create a new MPI engine for the verifier with specified world size
-    ///
-    /// # Arguments
-    /// * `world_size` - The total number of processes in the MPI world
-    fn verifier_new(world_size: i32) -> Self;
+    const ROOT_RANK: i32 = 0;
 
     /// Gather vectors from all processes into the root process
     ///

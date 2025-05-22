@@ -41,7 +41,8 @@ fn benchmark_setup<Cfg: GKREngine>(
     <<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::PKey,
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad,
 ){
-    let mpi_config = MPIConfig::prover_new();
+    let communicator = MPIConfig::init().unwrap();
+    let mpi_config = MPIConfig::prover_new(&communicator);
     let mut circuit =
         Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(circuit_file);
 

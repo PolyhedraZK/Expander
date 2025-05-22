@@ -167,8 +167,8 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>)
 where
     Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
 {
-    let mpi_config = MPIConfig::prover_new();
-
+    let communicator = MPIConfig::init().unwrap();
+    let mpi_config = MPIConfig::prover_new(&communicator);
     root_println!(mpi_config, "============== start ===============");
     root_println!(
         mpi_config,

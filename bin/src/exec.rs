@@ -15,8 +15,8 @@ async fn main() {
     let pcs_type =
         PolynomialCommitmentType::from_str(&expander_exec_args.poly_commitment_scheme).unwrap();
 
-    let mpi_config = MPIConfig::prover_new();
-
+    let communicator = MPIConfig::init().unwrap();
+    let mpi_config = MPIConfig::prover_new(&communicator);
     root_println!(mpi_config, "Fiat-Shamir Hash Type: {:?}", &fs_hash_type);
     root_println!(
         mpi_config,

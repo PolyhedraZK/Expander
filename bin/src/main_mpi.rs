@@ -46,7 +46,8 @@ fn main() {
     let args = Args::parse();
     print_info(&args);
 
-    let mpi_config = MPIConfig::prover_new();
+    let communicator = MPIConfig::init().unwrap();
+    let mpi_config = MPIConfig::prover_new(&communicator);
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
@@ -255,7 +256,8 @@ where
 }
 
 fn print_info(args: &Args) {
-    let mpi_config = MPIConfig::prover_new();
+    let communicator = MPIConfig::init().unwrap();
+    let mpi_config = MPIConfig::prover_new(&communicator);
     if !mpi_config.is_root() {
         return;
     }

@@ -58,8 +58,8 @@ fn test_raw_gkr_helper<C: FieldEngine, T: Transcript>(mpi_config: &MPIConfig, tr
 
 #[test]
 fn test_raw_gkr() {
-    let mpi_config = MPIConfig::prover_new();
-
+    let communicator = MPIConfig::init().unwrap();
+    let mpi_config = MPIConfig::prover_new(&communicator);
     type TM31 = BytesHashTranscript<Keccak256hasher>;
     test_raw_gkr_helper::<M31x16Config, TM31>(&mpi_config, &mut TM31::new());
 

@@ -110,7 +110,8 @@ fn test_scatter_vec_helper(mpi_config: &MPIConfig) {
 
 #[test]
 fn test_mpi_engine() {
-    let mpi_config = MPIConfig::prover_new();
+    let communicator = MPIConfig::init().unwrap();
+    let mpi_config = MPIConfig::prover_new(&communicator);
 
     test_gather_vec_helper(&mpi_config);
 

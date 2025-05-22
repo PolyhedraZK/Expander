@@ -23,7 +23,8 @@ pub(crate) struct SumcheckGkrSquareHelper<'a, F: FieldEngine, const D: usize> {
     simd_helper: SumcheckSimdProdGateHelper<F>,
     mpi_helper: SumcheckSimdProdGateHelper<F>,
 
-    mpi_config: &'a MPIConfig,
+    // ZF: I think we do not need it to be a reference here, will remove it later
+    mpi_config: &'a MPIConfig<'a>,
 }
 
 impl<'a, F: FieldEngine, const D: usize> SumcheckGkrSquareHelper<'a, F, D> {

@@ -49,8 +49,8 @@ fn proof_gen<C: GKREngine>()
 where
     C::FieldConfig: FieldEngine<SimdCircuitField = C::PCSField>,
 {
-    let mpi_config = MPIConfig::prover_new();
-
+    let communicator = MPIConfig::init().unwrap();
+    let mpi_config = MPIConfig::prover_new(&communicator);
     // load circuit
     let mut circuit = match C::FieldConfig::FIELD_TYPE {
         FieldType::GF2Ext128 => {
