@@ -5,13 +5,21 @@ use gkr_engine::{
 };
 use polynomials::MultilinearExtension;
 
-use crate::orion::{
-    simd_field_impl::{orion_commit_simd_field, orion_open_simd_field},
-    simd_field_mpi_impl::{orion_mpi_commit_simd_field, orion_mpi_open_simd_field},
-    verify::orion_verify,
-    OrionCommitment, OrionProof, OrionSIMDFieldPCS, OrionSRS, OrionScratchPad,
-    ORION_CODE_PARAMETER_INSTANCE,
+use crate::{
+    orion::{
+        simd_field_impl::{orion_commit_simd_field, orion_open_simd_field},
+        simd_field_mpi_impl::{orion_mpi_commit_simd_field, orion_mpi_open_simd_field},
+        verify::orion_verify,
+        OrionCommitment, OrionProof, OrionSIMDFieldPCS, OrionSRS, OrionScratchPad,
+        ORION_CODE_PARAMETER_INSTANCE,
+    },
+    utils::{
+        lift_expander_challenge_to_n_vars, lift_poly_and_expander_challenge_to_n_vars,
+        lift_poly_to_n_vars,
+    },
 };
+
+use super::utils::orion_eval_shape;
 
 impl<C, ComPackF> ExpanderPCS<C, C::SimdCircuitField>
     for OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF>
@@ -31,15 +39,23 @@ where
     type SRS = OrionSRS;
 
     /// NOTE(HS): this is the number of variables for local polynomial w.r.t. SIMD field elements.
-    fn gen_params(n_input_vars: usize) -> Self::Params {
-        n_input_vars
+    fn gen_params(n_input_vars: usize, world_size: usize) -> Self::Params {
+        let num_vars_each_core = n_input_vars + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
+        let (_num_leaves_per_mt_query, scaled_num_local_vars, _msg_size) = orion_eval_shape(
+            world_size,
+            num_vars_each_core,
+            C::CircuitField::FIELD_SIZE,
+            C::SimdCircuitField::PACK_SIZE,
+        );
+
+        scaled_num_local_vars - C::SimdCircuitField::PACK_SIZE.ilog2() as usize
     }
 
     fn gen_srs_for_testing(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
-    ) -> (Self::SRS, usize) {
+    ) -> Self::SRS {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         let (srs, calibrated_num_vars_each_core) = OrionSRS::from_random(
             mpi_engine.world_size(),
@@ -49,9 +65,8 @@ where
             ORION_CODE_PARAMETER_INSTANCE,
             rng,
         );
-        let calibrated_num_local_simd_vars =
-            calibrated_num_vars_each_core - C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
-        (srs, calibrated_num_local_simd_vars)
+        assert_eq!(num_vars_each_core, calibrated_num_vars_each_core);
+        srs
     }
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {
@@ -65,6 +80,17 @@ where
         poly: &impl MultilinearExtension<C::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
+        if poly.num_vars() < *params {
+            let poly = lift_poly_to_n_vars(poly, *params);
+            return <Self as ExpanderPCS<C, C::SimdCircuitField>>::commit(
+                params,
+                mpi_engine,
+                proving_key,
+                &poly,
+                scratch_pad,
+            );
+        }
+
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
@@ -95,6 +121,20 @@ where
         transcript: &mut impl Transcript,
         scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
+        if poly.num_vars() < *params {
+            let (poly, eval_point) =
+                lift_poly_and_expander_challenge_to_n_vars(poly, eval_point, *params);
+            return <Self as ExpanderPCS<C, C::SimdCircuitField>>::open(
+                params,
+                mpi_engine,
+                proving_key,
+                &poly,
+                &eval_point,
+                transcript,
+                scratch_pad,
+            );
+        }
+
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         assert_eq!(num_vars_each_core, proving_key.num_vars);
 
@@ -121,7 +161,7 @@ where
     }
 
     fn verify(
-        _params: &Self::Params,
+        params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         eval_point: &ExpanderSingleVarChallenge<C>,
@@ -130,6 +170,19 @@ where
                                            * interactive arguments */
         opening: &Self::Opening,
     ) -> bool {
+        if eval_point.num_vars() < *params {
+            let eval_point = lift_expander_challenge_to_n_vars(eval_point, *params);
+            return <Self as ExpanderPCS<C, C::SimdCircuitField>>::verify(
+                params,
+                verifying_key,
+                commitment,
+                &eval_point,
+                eval,
+                transcript,
+                opening,
+            );
+        }
+
         orion_verify::<_, C::SimdCircuitField, _, ComPackF>(
             verifying_key,
             commitment,

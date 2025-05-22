@@ -2,7 +2,9 @@ mod common;
 
 use arith::{Field, Fr};
 use ark_std::test_rng;
-use gkr_engine::{BN254Config, ExpanderSingleVarChallenge, MPIConfig, MPIEngine, Transcript};
+use gkr_engine::{
+    BN254Config, ExpanderPCS, ExpanderSingleVarChallenge, MPIConfig, MPIEngine, Transcript,
+};
 use gkr_hashers::Keccak256hasher;
 use halo2curves::bn256::Bn256;
 use poly_commit::HyperKZGPCS;
@@ -60,12 +62,16 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
 
     dbg!(local_poly.get_num_vars(), local_poly.coeffs[0]);
 
+    let params = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config, Fr>>::gen_params(
+        num_vars_in_each_poly,
+        mpi_config_ref.world_size(),
+    );
     common::test_pcs_for_expander_gkr::<
         BN254Config,
         BytesHashTranscript<Keccak256hasher>,
         HyperKZGPCS<Bn256>,
     >(
-        &num_vars_in_each_poly,
+        &params,
         mpi_config_ref,
         &mut transcript,
         &local_poly,
@@ -77,6 +83,7 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
 fn test_hyper_bikzg_for_expander_gkr() {
     let mpi_config = MPIConfig::prover_new();
 
+    test_hyper_bikzg_for_expander_gkr_generics(&mpi_config, 1);
     test_hyper_bikzg_for_expander_gkr_generics(&mpi_config, 15);
 
     MPIConfig::finalize()

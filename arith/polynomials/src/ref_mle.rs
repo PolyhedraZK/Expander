@@ -27,19 +27,19 @@ pub trait MultilinearExtension<F: Field>: Index<usize, Output = F> {
 
     fn hypercube_basis(&self) -> Vec<F>;
 
-    fn hypercube_basis_ref(&self) -> &Vec<F>;
+    fn hypercube_basis_ref(&self) -> &[F];
 
     fn interpolate_over_hypercube(&self) -> Vec<F>;
 }
 
 #[derive(Debug, Clone)]
 pub struct RefMultiLinearPoly<'ref_life, F: Field> {
-    pub coeffs: &'ref_life Vec<F>,
+    pub coeffs: &'ref_life [F],
 }
 
 impl<'ref_life, 'outer: 'ref_life, F: Field> RefMultiLinearPoly<'ref_life, F> {
     #[inline(always)]
-    pub fn from_ref(evals: &'outer Vec<F>) -> Self {
+    pub fn from_ref(evals: &'outer [F]) -> Self {
         Self { coeffs: evals }
     }
 }
@@ -63,11 +63,11 @@ impl<'a, F: Field> MultilinearExtension<F> for RefMultiLinearPoly<'a, F> {
 
     #[inline(always)]
     fn hypercube_basis(&self) -> Vec<F> {
-        self.coeffs.clone()
+        self.coeffs.to_vec()
     }
 
     #[inline(always)]
-    fn hypercube_basis_ref(&self) -> &Vec<F> {
+    fn hypercube_basis_ref(&self) -> &[F] {
         self.coeffs
     }
 
@@ -102,6 +102,8 @@ pub trait MutableMultilinearExtension<F: Field>:
     fn fix_variables<AF: Field + Mul<F, Output = F>>(&mut self, vars: &[AF]);
 
     fn interpolate_over_hypercube_in_place(&mut self);
+
+    fn lift_to_n_vars(&mut self, n_vars: usize);
 }
 
 #[derive(Debug)]
@@ -113,11 +115,6 @@ impl<'ref_life, 'outer_mut: 'ref_life, F: Field> MutRefMultiLinearPoly<'ref_life
     #[inline(always)]
     pub fn from_ref(evals: &'outer_mut mut Vec<F>) -> Self {
         Self { coeffs: evals }
-    }
-
-    #[inline(always)]
-    pub fn lift_to_n_vars(&mut self, vars: usize) {
-        self.coeffs.resize(1 << vars, F::ZERO)
     }
 }
 
@@ -152,7 +149,7 @@ impl<'a, F: Field> MultilinearExtension<F> for MutRefMultiLinearPoly<'a, F> {
     }
 
     #[inline(always)]
-    fn hypercube_basis_ref(&self) -> &Vec<F> {
+    fn hypercube_basis_ref(&self) -> &[F] {
         self.coeffs
     }
 
@@ -213,5 +210,10 @@ impl<'a, F: Field> MutableMultilinearExtension<F> for MutRefMultiLinearPoly<'a, 
                     .for_each(|(a, b)| *a -= *b);
             })
         }
+    }
+
+    #[inline(always)]
+    fn lift_to_n_vars(&mut self, n_vars: usize) {
+        self.coeffs.resize(1 << n_vars, F::ZERO);
     }
 }
