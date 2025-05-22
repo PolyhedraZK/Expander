@@ -29,6 +29,9 @@ use crate::{utils::*, Prover, Verifier};
 fn test_gkr_correctness() {
     // Initialize logger
     env_logger::init();
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(&universe, &world);
 
     declare_gkr_config!(
         C0,
@@ -142,32 +145,29 @@ fn test_gkr_correctness() {
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
-    test_gkr_correctness_helper::<C0>(None);
-    test_gkr_correctness_helper::<C1>(None);
-    test_gkr_correctness_helper::<C2>(None);
-    test_gkr_correctness_helper::<C3>(None);
-    test_gkr_correctness_helper::<C4>(None);
-    test_gkr_correctness_helper::<C5>(None);
-    test_gkr_correctness_helper::<C6>(None);
-    test_gkr_correctness_helper::<C7>(None);
-    test_gkr_correctness_helper::<C8>(None);
-    test_gkr_correctness_helper::<C9>(None);
-    test_gkr_correctness_helper::<C10>(None);
-    test_gkr_correctness_helper::<C11>(None);
-    test_gkr_correctness_helper::<C12>(None);
-    test_gkr_correctness_helper::<C13>(None);
-    test_gkr_correctness_helper::<C14>(None);
-    test_gkr_correctness_helper::<C15>(None);
+    test_gkr_correctness_helper::<C0>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C1>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C2>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C3>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C4>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C5>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C6>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C7>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C8>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C9>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C10>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C11>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C12>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C13>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C14>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C15>(mpi_config.clone(), None);
 }
 
 #[allow(unreachable_patterns)]
-fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>)
+fn test_gkr_correctness_helper<Cfg: GKREngine>(mpi_config: MPIConfig<'_>, write_proof_to: Option<&str>)
 where
     Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
 {
-    let universe = MPIConfig::init().unwrap();
-    let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(&universe, &world);
     root_println!(mpi_config, "============== start ===============");
     root_println!(
         mpi_config,
