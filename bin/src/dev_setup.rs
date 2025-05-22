@@ -18,7 +18,7 @@ use gkr::{
         KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, dev_env_data_setup,
     },
 };
-use gkr_engine::{FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine};
+use gkr_engine::{FieldEngine, FieldType, GKREngine, MPIConfig};
 use poly_commit::expander_pcs_init_testing_only;
 use serdes::ExpSerde;
 

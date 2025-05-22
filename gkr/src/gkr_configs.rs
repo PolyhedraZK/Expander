@@ -3,7 +3,6 @@ use gf2::GF2x128;
 use gkr_engine::{
     BN254Config, BabyBearx16Config, FieldEngine, GF2ExtConfig, GKREngine, GKRScheme,
     Goldilocksx1Config, Goldilocksx8Config, M31x16Config, M31x1Config, MPIConfig,
-    PolynomialCommitmentType,
 };
 use gkr_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use goldilocks::Goldilocksx8;
