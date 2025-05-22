@@ -182,12 +182,9 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
         } => {
             let (mut circuit, mut window) =
                 Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, mpi_config);
-            let universe = MPIConfig::init().unwrap();
-            let world = universe.world();
-            let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
             let prover = Prover::<Cfg>::new(mpi_config.clone());
 
-            circuit.prover_load_witness_file(&witness_file, &mpi_config);
+            circuit.prover_load_witness_file(&witness_file, mpi_config);
             let (claimed_v, proof) = prove::<Cfg>(&mut circuit, mpi_config.clone());
 
             if prover.mpi_config.is_root() {
