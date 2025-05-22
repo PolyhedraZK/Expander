@@ -178,7 +178,7 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
         #[derive(Default, Debug, Clone, PartialOrd, Ord, Hash, PartialEq, Eq, Copy)]
         #visibility struct #config_name<'a> {
             _marker: std::marker::PhantomData<&'a ()>,
-        };
+        }
 
         impl<'a> GKREngine for #config_name<'a> {
             type FieldConfig = #field_config;

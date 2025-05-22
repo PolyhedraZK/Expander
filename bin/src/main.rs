@@ -126,7 +126,7 @@ fn main() {
     MPIConfig::finalize();
 }
 
-fn run_benchmark<'a, Cfg: GKREngine>(args: &'a Args, mpi_config: MPIConfig)
+fn run_benchmark<'a, Cfg: GKREngine>(args: &'a Args, mpi_config: MPIConfig<'a>)
 where
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad: 'a,
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad: 'static,

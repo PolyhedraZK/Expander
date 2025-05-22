@@ -166,9 +166,9 @@ pub fn verify<Cfg: GKREngine>(
     )
 }
 
-pub async fn run_command<Cfg: GKREngine + 'static>(
+pub async fn run_command<'a, Cfg: GKREngine + 'static>(
     command: &ExpanderExecArgs,
-    mpi_config: &MPIConfig,
+    mpi_config: &MPIConfig<'a>,
 ) where
     Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
 {
@@ -247,8 +247,7 @@ pub async fn run_command<Cfg: GKREngine + 'static>(
             host_ip,
             port,
         } => {
-            let communicator = MPIConfig::init().unwrap();
-            let mpi_config = MPIConfig::prover_new(&communicator);
+            let mpi_config = MPIConfig::verifier_new(1);
             let prover = Prover::<Cfg>::new(mpi_config.clone());
 
             assert!(
