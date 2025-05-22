@@ -13,8 +13,9 @@ use transcript::BytesHashTranscript;
 use utils::timer::Timer;
 
 fn main() {
-    let communicator = MPIConfig::init().unwrap();
-    let mpi_config = MPIConfig::prover_new(&communicator);
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(&universe, &world);
     println!("==========================");
     for num_vars in 10..19 {
         root_println!(mpi_config, "num vars: {}", num_vars);

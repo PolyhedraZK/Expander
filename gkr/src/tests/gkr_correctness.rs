@@ -158,8 +158,6 @@ fn test_gkr_correctness() {
     test_gkr_correctness_helper::<C13>(None);
     test_gkr_correctness_helper::<C14>(None);
     test_gkr_correctness_helper::<C15>(None);
-
-    MPIConfig::finalize();
 }
 
 #[allow(unreachable_patterns)]
@@ -167,8 +165,9 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>)
 where
     Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
 {
-    let communicator = MPIConfig::init().unwrap();
-    let mpi_config = MPIConfig::prover_new(&communicator);
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(&universe, &world);
     root_println!(mpi_config, "============== start ===============");
     root_println!(
         mpi_config,

@@ -38,14 +38,14 @@ fn main() {
     dev_env_data_setup();
     if args.compare {
         // check if the downloaded proofs match the one been generated
-        let communicator = MPIConfig::init().unwrap();
-        let mpi_config = MPIConfig::prover_new(&communicator);
+        let universe = MPIConfig::init().unwrap();
+        let world = universe.world();
+        let mpi_config = MPIConfig::prover_new(&universe, &world);
 
         proof_gen::<GF2ExtConfigSha2Raw>(mpi_config.clone());
         proof_gen::<M31x16ConfigSha2RawVanilla>(mpi_config.clone());
         proof_gen::<BN254ConfigSha2Raw>(mpi_config.clone());
         compare_proof_files();
-        MPIConfig::finalize();
     }
 }
 

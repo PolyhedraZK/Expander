@@ -3,9 +3,9 @@ use std::{cmp, fmt::Debug, slice};
 
 use arith::Field;
 use itertools::izip;
+use mpi::environment::Universe;
 use mpi::{
     datatype::PartitionMut,
-    ffi,
     ffi::*,
     topology::{Process, SimpleCommunicator},
     traits::*,
@@ -25,6 +25,7 @@ macro_rules! root_println {
 
 #[derive(Clone)]
 pub struct MPIConfig<'a> {
+    pub universe: Option<&'a Universe>,
     pub world: Option<&'a SimpleCommunicator>,
     pub world_size: i32,
     pub world_rank: i32,
@@ -33,6 +34,7 @@ pub struct MPIConfig<'a> {
 impl<'a> Default for MPIConfig<'a> {
     fn default() -> Self {
         Self {
+            universe: None,
             world: None,
             world_size: 1,
             world_rank: 0,
@@ -42,6 +44,12 @@ impl<'a> Default for MPIConfig<'a> {
 
 impl<'a> Debug for MPIConfig<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let universe_fmt = if self.universe.is_none() {
+            Option::<usize>::None
+        } else {
+            Some(0usize)
+        };
+
         let world_fmt = if self.world.is_none() {
             Option::<usize>::None
         } else {
@@ -49,6 +57,7 @@ impl<'a> Debug for MPIConfig<'a> {
         };
 
         f.debug_struct("MPIConfig")
+            .field("universe", &universe_fmt)
             .field("world", &world_fmt)
             .field("world_size", &self.world_size)
             .field("world_rank", &self.world_rank)
@@ -69,22 +78,18 @@ impl<'a> MPIConfig<'a> {
 
     /// Initialize the MPI environment.
     /// Safe to call multiple times as `mpi::initialize()` will return None if already initialized.
-    pub fn init() -> Option<SimpleCommunicator> {
-        mpi::initialize().map(|universe| universe.world())
-    }
-
-    /// Finalize the MPI environment
-    #[inline]
-    pub fn finalize() {
-        unsafe { ffi::MPI_Finalize() };
+    pub fn init() -> Option<Universe> {
+        mpi::initialize()
     }
 
     /// Create a new MPI engine for the prover
-    pub fn prover_new(communicator: &'a SimpleCommunicator) -> Self {
+    pub fn prover_new(universe: &'a Universe, communicator: &'a SimpleCommunicator) -> Self {
+        let universe = Some(universe);
         let world = Some(communicator);
         let world_size = communicator.size();
         let world_rank = communicator.rank();
         Self {
+            universe,
             world,
             world_size,
             world_rank,
@@ -98,6 +103,7 @@ impl<'a> MPIConfig<'a> {
     #[inline]
     pub fn verifier_new(world_size: i32) -> Self {
         Self {
+            universe: None,
             world: None,
             world_size,
             world_rank: 0,

@@ -117,8 +117,9 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
 
 #[test]
 fn test_orion_for_expander_gkr() {
-    let communicator = MPIConfig::init().unwrap();
-    let mpi_config = MPIConfig::prover_new(&communicator);
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(&universe, &world);
     test_orion_for_expander_gkr_generics::<
         GF2ExtConfig,
         GF2x128,
