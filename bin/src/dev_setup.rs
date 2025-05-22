@@ -40,7 +40,7 @@ fn main() {
         // check if the downloaded proofs match the one been generated
         let universe = MPIConfig::init().unwrap();
         let world = universe.world();
-        let mpi_config = MPIConfig::prover_new(&universe, &world);
+        let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
 
         proof_gen::<GF2ExtConfigSha2Raw>(mpi_config.clone());
         proof_gen::<M31x16ConfigSha2RawVanilla>(mpi_config.clone());

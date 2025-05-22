@@ -10,7 +10,7 @@ use gkr::{
 };
 use gkr_engine::{
     BN254Config, ExpanderPCS, FieldEngine, GKREngine, GKRScheme, M31x16Config, MPIConfig,
-    MPIEngine, StructuredReferenceString,
+    StructuredReferenceString,
 };
 use gkr_hashers::SHA256hasher;
 use poly_commit::{expander_pcs_init_testing_only, raw::RawExpanderGKR};
@@ -35,15 +35,13 @@ fn benchmark_setup<Cfg: GKREngine>(
     circuit_file: &str,
     witness_file: Option<&str>,
 ) -> (
-    MPIConfig,
+    MPIConfig<'static>,
     Circuit<Cfg::FieldConfig>,
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
     <<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::PKey,
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad,
 ){
-    let universe = MPIConfig::init().unwrap();
-    let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(&universe, &world);
+    let mpi_config = MPIConfig::prover_new(None, None);
     let mut circuit =
         Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(circuit_file);
 

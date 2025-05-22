@@ -119,7 +119,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
 fn test_orion_for_expander_gkr() {
     let universe = MPIConfig::init().unwrap();
     let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(&universe, &world);
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     test_orion_for_expander_gkr_generics::<
         GF2ExtConfig,
         GF2x128,

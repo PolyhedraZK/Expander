@@ -48,7 +48,7 @@ fn main() {
 
     let universe = MPIConfig::init().unwrap();
     let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(&universe, &world);
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
@@ -257,7 +257,7 @@ where
 fn print_info(args: &Args) {
     let universe = MPIConfig::init().unwrap();
     let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(&universe, &world);
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     if !mpi_config.is_root() {
         return;
     }

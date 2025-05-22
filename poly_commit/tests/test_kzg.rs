@@ -77,6 +77,6 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
 fn test_hyper_bikzg_for_expander_gkr() {
     let universe = MPIConfig::init().unwrap();
     let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(&universe, &world);
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     test_hyper_bikzg_for_expander_gkr_generics(&mpi_config, 15);
 }

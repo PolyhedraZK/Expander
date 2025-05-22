@@ -64,9 +64,7 @@ fn main() {
         UNIVERSE = Some(universe);
         WORLD = Some(world);
     }
-    let mpi_config = MPIConfig::prover_new(unsafe { UNIVERSE.as_ref().unwrap() }, unsafe {
-        WORLD.as_ref().unwrap()
-    });
+    let mpi_config = MPIConfig::prover_new(unsafe { UNIVERSE.as_ref() }, unsafe { WORLD.as_ref() });
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {

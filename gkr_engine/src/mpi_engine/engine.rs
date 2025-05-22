@@ -83,11 +83,16 @@ impl<'a> MPIConfig<'a> {
     }
 
     /// Create a new MPI engine for the prover
-    pub fn prover_new(universe: &'a Universe, communicator: &'a SimpleCommunicator) -> Self {
-        let universe = Some(universe);
-        let world = Some(communicator);
-        let world_size = communicator.size();
-        let world_rank = communicator.rank();
+    pub fn prover_new(
+        universe: Option<&'a Universe>,
+        communicator: Option<&'a SimpleCommunicator>,
+    ) -> Self {
+        let world = communicator;
+        let (world_size, world_rank) = if let Some(world) = world {
+            (world.size(), world.rank())
+        } else {
+            (1, 0)
+        };
         Self {
             universe,
             world,
@@ -252,6 +257,9 @@ impl<'a> MPIEngine for MPIConfig<'a> {
 
     #[inline]
     fn root_broadcast_bytes(&self, bytes: &mut Vec<u8>) {
+        if self.world_size == 1 {
+            return;
+        }
         self.root_process().broadcast_into(bytes);
     }
 

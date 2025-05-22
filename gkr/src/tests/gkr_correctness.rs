@@ -31,7 +31,7 @@ fn test_gkr_correctness() {
     env_logger::init();
     let universe = MPIConfig::init().unwrap();
     let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(&universe, &world);
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
 
     declare_gkr_config!(
         C0,

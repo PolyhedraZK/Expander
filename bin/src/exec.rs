@@ -17,7 +17,7 @@ async fn main() {
 
     let universe = MPIConfig::init().unwrap();
     let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(&universe, &world);
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     root_println!(mpi_config, "Fiat-Shamir Hash Type: {:?}", &fs_hash_type);
     root_println!(
         mpi_config,
