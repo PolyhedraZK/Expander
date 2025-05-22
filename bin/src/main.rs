@@ -21,6 +21,7 @@ use gkr::{
 use gkr_engine::{
     ExpanderPCS, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType,
 };
+use mpi::topology::SimpleCommunicator;
 use poly_commit::expander_pcs_init_testing_only;
 use serdes::ExpSerde;
 
@@ -49,12 +50,18 @@ struct Args {
     threads: u64,
 }
 
+static mut MPI_COMMUNICATOR: Option<SimpleCommunicator> = None;
+
+#[allow(static_mut_refs)]
 fn main() {
     let args = Args::parse();
     print_info(&args);
 
     let communicator = MPIConfig::init().unwrap();
-    let mpi_config = MPIConfig::prover_new(&communicator);
+    unsafe {
+        MPI_COMMUNICATOR = Some(communicator);
+    }
+    let mpi_config = MPIConfig::prover_new(unsafe { MPI_COMMUNICATOR.as_ref().unwrap() });
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
@@ -126,9 +133,8 @@ fn main() {
     MPIConfig::finalize();
 }
 
-fn run_benchmark<'a, Cfg: GKREngine>(args: &'a Args, mpi_config: MPIConfig<'a>)
+fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig<'static>)
 where
-    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad: 'a,
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad: 'static,
     Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
 {
