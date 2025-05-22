@@ -18,7 +18,7 @@ use crate::{
     HyraxCommitment, HyraxOpening, HyraxPCS, PedersenParams,
 };
 
-impl<G, C> ExpanderPCS<G> for HyraxPCS<C>
+impl<G, C> ExpanderPCS<G, C::Scalar> for HyraxPCS<C>
 where
     G: FieldEngine<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
     C: CurveAffine + ExpSerde,
@@ -56,7 +56,7 @@ where
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<C::Scalar>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         let local_commit = hyrax_commit(proving_key, poly);
@@ -83,7 +83,7 @@ where
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<C::Scalar>,
         x: &ExpanderSingleVarChallenge<G>,
         _transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,

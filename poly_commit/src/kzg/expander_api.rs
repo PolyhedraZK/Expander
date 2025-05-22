@@ -19,7 +19,7 @@ use crate::{
     *,
 };
 
-impl<G, E> ExpanderPCS<G> for HyperKZGPCS<E>
+impl<G, E> ExpanderPCS<G, E::Fr> for HyperKZGPCS<E>
 where
     G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
     E: Engine + MultiMillerLoop,
@@ -61,7 +61,7 @@ where
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<E::Fr>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         // The minimum supported number of variables is 1.
@@ -101,7 +101,7 @@ where
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<E::Fr>,
         x: &ExpanderSingleVarChallenge<G>,
         transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
