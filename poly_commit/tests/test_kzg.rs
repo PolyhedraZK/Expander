@@ -64,12 +64,16 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
 
     dbg!(local_poly.get_num_vars(), local_poly.coeffs[0]);
 
+    let params = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config, Fr>>::gen_params(
+        num_vars_in_each_poly,
+        mpi_config_ref.world_size(),
+    );
     common::test_pcs_for_expander_gkr::<
         BN254Config,
         BytesHashTranscript<Keccak256hasher>,
         HyperKZGPCS<Bn256>,
     >(
-        &num_vars_in_each_poly,
+        &params,
         mpi_config_ref,
         &mut transcript,
         &local_poly,
@@ -81,6 +85,7 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
 fn test_hyper_bikzg_for_expander_gkr() {
     let mpi_config = MPIConfig::prover_new();
 
+    test_hyper_bikzg_for_expander_gkr_generics(&mpi_config, 1);
     test_hyper_bikzg_for_expander_gkr_generics(&mpi_config, 15);
 
     MPIConfig::finalize()
@@ -92,7 +97,7 @@ fn test_hyper_bikzg_batch_verification() {
     let mpi_config = MPIConfig::prover_new();
 
     for num_vars in 2..=15 {
-        let (srs, _) = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config>>::gen_srs_for_testing(
+        let srs = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config, Fr>>::gen_srs_for_testing(
             &num_vars,
             &mpi_config,
             &mut rng,
@@ -100,10 +105,11 @@ fn test_hyper_bikzg_batch_verification() {
         let (proving_key, verification_key) = srs.into_keys();
 
         let transcript = BytesHashTranscript::<Keccak256hasher>::new();
-        let mut scratch_pad = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config>>::init_scratch_pad(
-            &num_vars,
-            &mpi_config,
-        );
+        let mut scratch_pad =
+            <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config, Fr>>::init_scratch_pad(
+                &num_vars,
+                &mpi_config,
+            );
         let mut pairing_accumulator = PairingAccumulator::<Bn256>::default();
 
         let polys = (0..3).map(|_| MultiLinearPoly::<Fr>::random(num_vars, &mut rng));
@@ -120,7 +126,7 @@ fn test_hyper_bikzg_batch_verification() {
                 r_simd: Vec::new(),
                 rz: (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect(),
             };
-            let commitment = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config>>::commit(
+            let commitment = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config, Fr>>::commit(
                 &num_vars,
                 &mpi_config,
                 &proving_key,
@@ -132,7 +138,7 @@ fn test_hyper_bikzg_batch_verification() {
             for c in [challenge_point_1, challenge_point_2] {
                 // open
                 let mut local_transcript = transcript.clone();
-                let opening = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config>>::open(
+                let opening = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config, Fr>>::open(
                     &num_vars,
                     &mpi_config,
                     &proving_key,
@@ -151,7 +157,7 @@ fn test_hyper_bikzg_batch_verification() {
                 );
 
                 let partial_verify =
-                    <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config>>::partial_verify(
+                    <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config, Fr>>::partial_verify(
                         &num_vars,
                         &verification_key,
                         &commitment,

@@ -9,3 +9,6 @@ halo2curves.workspace = true
 ethnum.workspace = true
 
 serdes_derive = { path = "../serdes_derive" }
+
+[dev-dependencies]
+rand.workspace = true

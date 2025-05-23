@@ -5,11 +5,10 @@ use std::{
 };
 
 use super::gkr_square::sumcheck_verify_gkr_square_layer;
-use arith::Field;
 use circuit::Circuit;
 use gkr_engine::{
     DeferredCheck, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine, GKRScheme,
-    MPIConfig, MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
+    MPIConfig, MPIEngine, Proof, StructuredReferenceString, Transcript,
 };
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
@@ -48,10 +47,10 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         circuit: &mut Circuit<Cfg::FieldConfig>,
         transcript: &mut Cfg::TranscriptConfig,
         proving_time_mpi_size: usize,
-    ) -> <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment {
+    ) -> <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Commitment {
         let timer = Timer::new("pre_gkr", true);
         let commitment =
-            <<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment as ExpSerde>::deserialize_from(
+            <<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Commitment as ExpSerde>::deserialize_from(
                 &mut proof_reader,
             )
             .unwrap();
@@ -259,16 +258,16 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
     #[allow(clippy::type_complexity)]
     pub(crate) fn post_gkr(
         &self,
-        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
-        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
-        commitment: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
+        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::VKey,
+        commitment: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Commitment,
         challenge_x: &mut ExpanderSingleVarChallenge<Cfg::FieldConfig>,
         claim_x: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
         challenge_y: &mut Option<ExpanderSingleVarChallenge<Cfg::FieldConfig>>,
         claim_y: &Option<<Cfg::FieldConfig as FieldEngine>::ChallengeField>,
         transcript: &mut impl Transcript,
         mut proof_reader: impl Read,
-        accmulator: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Accumulator,
+        accmulator: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Accumulator,
     ) -> bool {
         let timer = Timer::new("post_gkr", true);
         let mut verified = self.get_pcs_opening_from_proof_and_partial_verify(
@@ -307,10 +306,10 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         circuit: &mut Circuit<Cfg::FieldConfig>,
         public_input: &[<Cfg::FieldConfig as FieldEngine>::SimdCircuitField],
         claimed_v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
-        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
-        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
+        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::VKey,
         proof: &Proof,
-        accumulator: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Accumulator,
+        accumulator: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Accumulator,
     ) -> bool {
         let timer = Timer::new("snark verify", true);
 
@@ -353,12 +352,13 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         circuit: &mut Circuit<Cfg::FieldConfig>,
         public_input: &[<Cfg::FieldConfig as FieldEngine>::SimdCircuitField],
         claimed_v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
-        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
-        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
+        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::VKey,
         proof: &Proof,
     ) -> bool {
         let mut accumulator =
-            <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Accumulator::default();
+            <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Accumulator::default(
+            );
 
         let partial_check = self.partial_verify(
             circuit,
@@ -382,10 +382,10 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         circuit: &mut Circuit<Cfg::FieldConfig>,
         public_input: &[<Cfg::FieldConfig as FieldEngine>::SimdCircuitField],
         claimed_v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
-        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
-        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
+        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::VKey,
         proof: &Proof,
-        accumulator: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Accumulator,
+        accumulator: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Accumulator,
     ) -> bool {
         let timer = Timer::new("snark verify", true);
 
@@ -427,12 +427,13 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         circuit: &mut Circuit<Cfg::FieldConfig>,
         public_input: &[<Cfg::FieldConfig as FieldEngine>::SimdCircuitField],
         claimed_v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
-        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
-        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
+        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::VKey,
         proof: &Proof,
     ) -> bool {
         let mut accumulator =
-            <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Accumulator::default();
+            <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Accumulator::default(
+            );
         let partial_check = self.par_partial_verify(
             circuit,
             public_input,
@@ -452,35 +453,19 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
     #[allow(clippy::too_many_arguments)]
     fn get_pcs_opening_from_proof_and_partial_verify(
         &self,
-        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
-        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::VKey,
-        commitment: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
+        pcs_verification_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::VKey,
+        commitment: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Commitment,
         open_at: &mut ExpanderSingleVarChallenge<Cfg::FieldConfig>,
         v: &<Cfg::FieldConfig as FieldEngine>::ChallengeField,
         transcript: &mut impl Transcript,
         proof_reader: impl Read,
-        accumulator: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Accumulator,
+        accumulator: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Accumulator,
     ) -> bool {
-        let opening = <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Opening::deserialize_from(
+        let opening = <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Opening::deserialize_from(
             proof_reader,
         )
         .unwrap();
-
-        let minimum_vars_for_pcs: usize = pcs_params.num_vars();
-        if open_at.rz.len() < minimum_vars_for_pcs {
-            eprintln!(
-				"{} over {} has minimum supported local vars {}, but challenge has vars {}, pad to {} vars in verifying.",
-				Cfg::PCSConfig::NAME,
-				<Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
-				minimum_vars_for_pcs,
-				open_at.rz.len(),
-				minimum_vars_for_pcs,
-			);
-            open_at.rz.resize(
-                minimum_vars_for_pcs,
-                <Cfg::FieldConfig as FieldEngine>::ChallengeField::ZERO,
-            )
-        }
 
         transcript.lock_proof();
         let verified = Cfg::PCSConfig::partial_verify(

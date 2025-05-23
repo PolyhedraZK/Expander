@@ -18,7 +18,7 @@ use crate::{
     HyraxCommitment, HyraxOpening, HyraxPCS, PedersenParams,
 };
 
-impl<G, C> ExpanderPCS<G> for HyraxPCS<C>
+impl<G, C> ExpanderPCS<G, C::Scalar> for HyraxPCS<C>
 where
     G: FieldEngine<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
     C: CurveAffine + ExpSerde,
@@ -38,7 +38,7 @@ where
 
     type Accumulator = ();
 
-    fn gen_params(n_input_vars: usize) -> Self::Params {
+    fn gen_params(n_input_vars: usize, _world_size: usize) -> Self::Params {
         n_input_vars
     }
 
@@ -48,17 +48,17 @@ where
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
-    ) -> (Self::SRS, usize) {
+    ) -> Self::SRS {
         let mpi_vars = mpi_engine.world_size().ilog2() as usize;
 
-        (hyrax_setup(*params, mpi_vars, rng), *params)
+        hyrax_setup(*params, mpi_vars, rng)
     }
 
     fn commit(
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<C::Scalar>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         let local_commit = hyrax_commit(proving_key, poly);
@@ -85,7 +85,7 @@ where
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<C::Scalar>,
         x: &ExpanderSingleVarChallenge<G>,
         _transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
