@@ -44,7 +44,11 @@ pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<
     }
 }
 
-pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C>>(
+pub fn test_pcs_for_expander_gkr<
+    C: FieldEngine,
+    T: Transcript,
+    P: ExpanderPCS<C, C::SimdCircuitField>,
+>(
     params: &P::Params,
     mpi_config: &MPIConfig,
     transcript: &mut T,
@@ -53,7 +57,7 @@ pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C
 ) {
     let mut rng = test_rng();
     // NOTE(HS) we assume that the polynomials we pass in are of sufficient length.
-    let (srs, _) = P::gen_srs_for_testing(params, mpi_config, &mut rng);
+    let srs = P::gen_srs_for_testing(params, mpi_config, &mut rng);
     let (proving_key, verification_key) = srs.into_keys();
     let mut scratch_pad = P::init_scratch_pad(params, mpi_config);
 

@@ -23,6 +23,14 @@ where
     _marker_e: PhantomData<E>,
 }
 
+impl<E> HyperKZGPCS<E>
+where
+    E: Engine,
+    E::Fr: ExtensionField,
+{
+    pub const MINIMUM_SUPPORTED_NUM_VARS: usize = 2;
+}
+
 impl<E> PolynomialCommitmentScheme<E::Fr> for HyperKZGPCS<E>
 where
     E: Engine + MultiMillerLoop,

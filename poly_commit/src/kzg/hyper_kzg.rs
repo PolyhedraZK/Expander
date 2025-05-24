@@ -46,7 +46,7 @@ where
 
 #[inline(always)]
 pub(crate) fn coeff_form_hyperkzg_local_evals<E>(
-    coeffs: &Vec<E::Fr>,
+    coeffs: &[E::Fr],
     folded_oracle_coeffs: &[Vec<E::Fr>],
     local_alphas: &[E::Fr],
     beta: E::Fr,
@@ -69,7 +69,11 @@ where
 
     let mut local_evals = HyperKZGLocalEvals::<E>::new_from_beta2_evals(beta2_eval);
 
-    izip!(iter::once(coeffs).chain(folded_oracle_coeffs), local_alphas).for_each(|(cs, alpha)| {
+    izip!(
+        iter::once(coeffs).chain(folded_oracle_coeffs.iter().map(|x| x.as_slice())),
+        local_alphas
+    )
+    .for_each(|(cs, alpha)| {
         let beta_eval = univariate_evaluate(cs, &beta_pow_series);
         let neg_beta_eval = univariate_evaluate(cs, &neg_beta_pow_series);
 
@@ -106,7 +110,7 @@ where
 #[inline(always)]
 pub fn coeff_form_uni_hyperkzg_open<E, T>(
     srs: &CoefFormUniKZGSRS<E>,
-    coeffs: &Vec<E::Fr>,
+    coeffs: &[E::Fr],
     alphas: &[E::Fr],
     fs_transcript: &mut T,
 ) -> (E::Fr, HyperKZGOpening<E>)

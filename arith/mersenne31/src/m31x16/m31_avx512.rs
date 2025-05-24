@@ -276,7 +276,7 @@ impl Debug for AVXM31 {
                 }
             )
         } else {
-            write!(f, "mm512i<{data:?}>",)
+            write!(f, "mm512i<{data:?}>")
         }
     }
 }

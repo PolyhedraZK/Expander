@@ -144,7 +144,7 @@ pub struct RawExpanderGKR<C: FieldEngine> {
     _phantom: std::marker::PhantomData<C>,
 }
 
-impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
+impl<C: FieldEngine> ExpanderPCS<C, C::SimdCircuitField> for RawExpanderGKR<C> {
     const NAME: &'static str = "RawExpanderGKR";
 
     const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;
@@ -162,14 +162,13 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
     type Accumulator = ();
 
     fn gen_srs_for_testing(
-        params: &Self::Params,
+        _params: &Self::Params,
         _mpi_engine: &impl MPIEngine,
         _rng: impl RngCore,
-    ) -> (Self::SRS, usize) {
-        ((), *params)
+    ) -> Self::SRS {
     }
 
-    fn gen_params(n_input_vars: usize) -> Self::Params {
+    fn gen_params(n_input_vars: usize, _world_size: usize) -> Self::Params {
         n_input_vars
     }
 

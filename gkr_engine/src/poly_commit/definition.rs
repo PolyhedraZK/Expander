@@ -1,3 +1,4 @@
+use arith::Field;
 use polynomials::MultilinearExtension;
 use rand::RngCore;
 use serdes::ExpSerde;
@@ -43,7 +44,7 @@ impl PCSParams for usize {
     }
 }
 
-pub trait ExpanderPCS<F: FieldEngine> {
+pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
     const NAME: &'static str;
 
     const PCS_TYPE: PolynomialCommitmentType;
@@ -52,8 +53,8 @@ pub trait ExpanderPCS<F: FieldEngine> {
     type ScratchPad: Clone + Debug + Default + Send + ExpSerde + Sync;
 
     type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString + Send + Sync;
-    type Commitment: Clone + Debug + Default + ExpSerde;
-    type Opening: Clone + Debug + Default + ExpSerde;
+    type Commitment: Clone + Debug + Default + ExpSerde + Send + Sync;
+    type Opening: Clone + Debug + Default + ExpSerde + Send + Sync;
 
     /// An accumulator to be used for deferred batch verification for KZG.
     type Accumulator: Clone + Debug + Default + DeferredCheck;
@@ -70,11 +71,11 @@ pub trait ExpanderPCS<F: FieldEngine> {
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl RngCore,
-    ) -> (Self::SRS, usize);
+    ) -> Self::SRS;
 
     /// n_input_vars is with respect to the multilinear poly on each machine in MPI,
     /// also ignore the number of variables stacked in the SIMD field.
-    fn gen_params(n_input_vars: usize) -> Self::Params;
+    fn gen_params(n_input_vars: usize, world_size: usize) -> Self::Params;
 
     /// Initialize the scratch pad.
     /// Each process returns its own scratch pad.
@@ -86,7 +87,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<F::SimdCircuitField>,
+        poly: &impl MultilinearExtension<PolyField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment>;
 
@@ -115,7 +116,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<F::SimdCircuitField>,
+        poly: &impl MultilinearExtension<PolyField>,
         x: &ExpanderSingleVarChallenge<F>,
         transcript: &mut impl Transcript,
         scratch_pad: &Self::ScratchPad,
