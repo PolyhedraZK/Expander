@@ -15,7 +15,6 @@ use std::{cmp::max, collections::HashMap, marker::PhantomData, ops::Add, sync::A
 use arith::Field;
 use rand::Rng;
 use rand::RngCore;
-use serdes::ExpSerde;
 
 use crate::MultiLinearPoly;
 
@@ -326,183 +325,79 @@ impl<F: Field> VirtualPolynomial<F> {
 
 //     Arc::new(mle)
 // }
-/// This function build the eq(x, r) polynomial for any given r, and output the
-/// evaluation of eq(x, r) in its vector form.
-///
-/// Evaluate
-///      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-/// over r, which is
-///      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
-pub fn build_eq_x_r_vec<F: Field>(r: &[F]) -> Vec<F> {
-    // we build eq(x,r) from its evaluations
-    // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
-    // for example, with num_vars = 4, x is a binary vector of 4, then
-    //  0 0 0 0 -> (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)
-    //  1 0 0 0 -> r0       * (1-r1)    * (1-r2)    * (1-r3)
-    //  0 1 0 0 -> (1-r0)   * r1        * (1-r2)    * (1-r3)
-    //  1 1 0 0 -> r0       * r1        * (1-r2)    * (1-r3)
-    //  ....
-    //  1 1 1 1 -> r0       * r1        * r2        * r3
-    // we will need 2^num_var evaluations
+// /// This function build the eq(x, r) polynomial for any given r, and output the
+// /// evaluation of eq(x, r) in its vector form.
+// ///
+// /// Evaluate
+// ///      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
+// /// over r, which is
+// ///      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
+// pub fn build_eq_x_r_vec<F: Field>(r: &[F]) -> Vec<F> {
+//     // we build eq(x,r) from its evaluations
+//     // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
+//     // for example, with num_vars = 4, x is a binary vector of 4, then
+//     //  0 0 0 0 -> (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)
+//     //  1 0 0 0 -> r0       * (1-r1)    * (1-r2)    * (1-r3)
+//     //  0 1 0 0 -> (1-r0)   * r1        * (1-r2)    * (1-r3)
+//     //  1 1 0 0 -> r0       * r1        * (1-r2)    * (1-r3)
+//     //  ....
+//     //  1 1 1 1 -> r0       * r1        * r2        * r3
+//     // we will need 2^num_var evaluations
 
-    let mut eval = Vec::new();
-    build_eq_x_r_helper(r, &mut eval);
-    eval
-}
+//     let mut eval = Vec::new();
+//     build_eq_x_r_helper(r, &mut eval);
+//     eval
+// }
 
-/// A helper function to build eq(x, r) recursively.
-/// This function takes `r.len()` steps, and for each step it requires a maximum
-/// `r.len()-1` multiplications.
-fn build_eq_x_r_helper<F: Field>(r: &[F], buf: &mut Vec<F>) {
-    if r.is_empty() {
-        panic!("r length is 0");
-    } else if r.len() == 1 {
-        // initializing the buffer with [1-r_0, r_0]
-        buf.push(F::one() - r[0]);
-        buf.push(r[0]);
-    } else {
-        build_eq_x_r_helper(&r[1..], buf);
+// /// A helper function to build eq(x, r) recursively.
+// /// This function takes `r.len()` steps, and for each step it requires a maximum
+// /// `r.len()-1` multiplications.
+// fn build_eq_x_r_helper<F: Field>(r: &[F], buf: &mut Vec<F>) {
+//     if r.is_empty() {
+//         panic!("r length is 0");
+//     } else if r.len() == 1 {
+//         // initializing the buffer with [1-r_0, r_0]
+//         buf.push(F::one() - r[0]);
+//         buf.push(r[0]);
+//     } else {
+//         build_eq_x_r_helper(&r[1..], buf);
 
-        // suppose at the previous step we received [b_1, ..., b_k]
-        // for the current step we will need
-        // if x_0 = 0:   (1-r0) * [b_1, ..., b_k]
-        // if x_0 = 1:   r0 * [b_1, ..., b_k]
-        // let mut res = vec![];
-        // for &b_i in buf.iter() {
-        //     let tmp = r[0] * b_i;
-        //     res.push(b_i - tmp);
-        //     res.push(tmp);
-        // }
-        // *buf = res;
+//         // suppose at the previous step we received [b_1, ..., b_k]
+//         // for the current step we will need
+//         // if x_0 = 0:   (1-r0) * [b_1, ..., b_k]
+//         // if x_0 = 1:   r0 * [b_1, ..., b_k]
+//         // let mut res = vec![];
+//         // for &b_i in buf.iter() {
+//         //     let tmp = r[0] * b_i;
+//         //     res.push(b_i - tmp);
+//         //     res.push(tmp);
+//         // }
+//         // *buf = res;
 
-        let mut res = vec![F::zero(); buf.len() << 1];
-        res.iter_mut().enumerate().for_each(|(i, val)| {
-            let bi = buf[i >> 1];
-            let tmp = r[0] * bi;
-            if i & 1 == 0 {
-                *val = bi - tmp;
-            } else {
-                *val = tmp;
-            }
-        });
-        *buf = res;
-    }
-}
+//         let mut res = vec![F::zero(); buf.len() << 1];
+//         res.iter_mut().enumerate().for_each(|(i, val)| {
+//             let bi = buf[i >> 1];
+//             let tmp = r[0] * bi;
+//             if i & 1 == 0 {
+//                 *val = bi - tmp;
+//             } else {
+//                 *val = tmp;
+//             }
+//         });
+//         *buf = res;
+//     }
+// }
 
-/// Decompose an integer into a binary vector in little endian.
-pub fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
-    let mut res = Vec::with_capacity(num_var);
-    let mut i = input;
-    for _ in 0..num_var {
-        res.push(i & 1 == 1);
-        i >>= 1;
-    }
-    res
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    use arith::Fr;
-    use ark_std::test_rng;
-
-    #[test]
-    fn test_virtual_polynomial_additions() {
-        let mut rng = test_rng();
-        for nv in 2..5 {
-            for num_products in 2..5 {
-                let base: Vec<Fr> = (0..nv).map(|_| Fr::random_unsafe(&mut rng)).collect();
-
-                let (a, _a_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), num_products, &mut rng);
-                let (b, _b_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), num_products, &mut rng);
-                let c = &a + &b;
-
-                assert_eq!(
-                    a.evaluate(base.as_ref()) + b.evaluate(base.as_ref()),
-                    c.evaluate(base.as_ref())
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn test_virtual_polynomial_mul_by_mle() {
-        let mut rng = test_rng();
-        for nv in 2..5 {
-            for num_products in 2..5 {
-                let base: Vec<Fr> = (0..nv).map(|_| Fr::random_unsafe(&mut rng)).collect();
-
-                let (a, _a_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), num_products, &mut rng);
-                let (b, _b_sum) = random_mle_list(nv, 1, &mut rng);
-                let b_mle = b[0].clone();
-                let coeff = Fr::random_unsafe(&mut rng);
-                let b_vp = VirtualPolynomial::new_from_mle(&b_mle, coeff);
-
-                let mut c = a.clone();
-
-                c.mul_by_mle(b_mle, coeff);
-
-                assert_eq!(
-                    a.evaluate(base.as_ref()) * b_vp.evaluate(base.as_ref()),
-                    c.evaluate(base.as_ref())
-                );
-            }
-        }
-    }
-
-    // #[test]
-    // fn test_eq_xr() {
-    //     let mut rng = test_rng();
-    //     for nv in 4..10 {
-    //         let r: Vec<Fr> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
-    //         let eq_x_r = build_eq_x_r(r.as_ref()).unwrap();
-    //         let eq_x_r2 = build_eq_x_r_for_test(r.as_ref());
-    //         assert_eq!(eq_x_r, eq_x_r2);
-    //     }
-    // }
-
-    // /// Naive method to build eq(x, r).
-    // /// Only used for testing purpose.
-    // // Evaluate
-    // //      eq(x,y) = \prod_i=1^num_var (x_i * y_i + (1-x_i)*(1-y_i))
-    // // over r, which is
-    // //      eq(x,y) = \prod_i=1^num_var (x_i * r_i + (1-x_i)*(1-r_i))
-    // fn build_eq_x_r_for_test<F: PrimeField>(r: &[F]) -> Arc<DenseMultilinearExtension<F>> {
-    //     // we build eq(x,r) from its evaluations
-    //     // we want to evaluate eq(x,r) over x \in {0, 1}^num_vars
-    //     // for example, with num_vars = 4, x is a binary vector of 4, then
-    //     //  0 0 0 0 -> (1-r0)   * (1-r1)    * (1-r2)    * (1-r3)
-    //     //  1 0 0 0 -> r0       * (1-r1)    * (1-r2)    * (1-r3)
-    //     //  0 1 0 0 -> (1-r0)   * r1        * (1-r2)    * (1-r3)
-    //     //  1 1 0 0 -> r0       * r1        * (1-r2)    * (1-r3)
-    //     //  ....
-    //     //  1 1 1 1 -> r0       * r1        * r2        * r3
-    //     // we will need 2^num_var evaluations
-
-    //     // First, we build array for {1 - r_i}
-    //     let one_minus_r: Vec<F> = r.iter().map(|ri| F::one() - ri).collect();
-
-    //     let num_var = r.len();
-    //     let mut eval = vec![];
-
-    //     for i in 0..1 << num_var {
-    //         let mut current_eval = F::one();
-    //         let bit_sequence = bit_decompose(i, num_var);
-
-    //         for (&bit, (ri, one_minus_ri)) in
-    //             bit_sequence.iter().zip(r.iter().zip(one_minus_r.iter()))
-    //         {
-    //             current_eval *= if bit { *ri } else { *one_minus_ri };
-    //         }
-    //         eval.push(current_eval);
-    //     }
-
-    //     let mle = DenseMultilinearExtension::from_evaluations_vec(num_var, eval);
-
-    //     Arc::new(mle)
-    // }
-}
+// /// Decompose an integer into a binary vector in little endian.
+// pub fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
+//     let mut res = Vec::with_capacity(num_var);
+//     let mut i = input;
+//     for _ in 0..num_var {
+//         res.push(i & 1 == 1);
+//         i >>= 1;
+//     }
+//     res
+// }
 
 /// Sample a random list of multilinear polynomials.
 /// Returns
