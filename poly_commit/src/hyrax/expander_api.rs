@@ -1,5 +1,3 @@
-use std::f128::consts::E;
-
 use arith::ExtensionField;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
@@ -53,24 +51,27 @@ where
     ) -> Self::SRS {
         let mpi_vars = mpi_engine.world_size().ilog2() as usize;
 
-        if path.is_some() {
+        let srs = if path.is_some() {
             match std::fs::File::open(path.unwrap()) {
-                Ok(file) => {
+                Ok(mut file) => {
                     // file exists; deserialize SRS from file
-
-                    let srs_deser = PedersenParams::<C>::deserialize_from(&mut file)
-                        .expect("Failed to deserialize SRS for Hyrax PCS");
+                    PedersenParams::<C>::deserialize_from(&mut file)
+                        .expect("Failed to deserialize SRS for Hyrax PCS")
                 }
 
                 Err(_e) => {
                     // file does not exist; generate SRS and store to file
-
-                    panic!("Failed to open SRS file at path: {}", path.unwrap());
+                    let srs = hyrax_setup(*params, mpi_vars, rng);
+                    let mut file =
+                        std::fs::File::create(path.unwrap()).expect("Failed to create SRS file");
+                    srs.serialize_into(&mut file)
+                        .expect("Failed to serialize SRS to file");
+                    srs
                 }
             }
-        }
-
-        let srs = hyrax_setup(*params, mpi_vars, rng);
+        } else {
+            hyrax_setup(*params, mpi_vars, rng)
+        };
 
         srs
     }
@@ -168,15 +169,24 @@ where
 }
 
 fn generate_srs_and_store_to_file<C>(
-    &params: &PedersenParams<C>,
+    params: &usize,
     mpi_vars: usize,
     rng: impl rand::RngCore,
     path: Option<&str>,
-) where
+) -> PedersenParams<C>
+where
     C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
     C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let srs = hyrax_setup(*params, mpi_vars, rng);
+
+    if let Some(path) = path {
+        let mut file = std::fs::File::create(path).expect("Failed to create SRS file");
+        srs.serialize_into(&mut file)
+            .expect("Failed to serialize SRS to file");
+    }
+
+    srs
 }
