@@ -18,6 +18,7 @@ pub(crate) fn hyrax_setup<C: CurveAffine + ExpSerde>(
 ) -> PedersenParams<C>
 where
     C::Scalar: PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let pedersen_vars = {
         let total_vars = mpi_vars + local_vars;
@@ -73,6 +74,7 @@ pub(crate) fn hyrax_commit<C: CurveAffine + ExpSerde>(
 where
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let commitments: Vec<C> = mle_poly
         .hypercube_basis_ref()
@@ -93,6 +95,7 @@ where
     C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let pedersen_len = params.msm_len();
     let pedersen_vars = pedersen_len.ilog2() as usize;
@@ -118,6 +121,7 @@ where
     C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let pedersen_len = params.msm_len();
     let pedersen_vars = pedersen_len.ilog2() as usize;

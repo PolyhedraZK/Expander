@@ -1,3 +1,5 @@
+use std::path;
+
 use arith::{Field, SimdField};
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
@@ -51,10 +53,11 @@ where
         scaled_num_local_vars - C::SimdCircuitField::PACK_SIZE.ilog2() as usize
     }
 
-    fn gen_srs_for_testing(
+    fn gen_or_load_srs_for_testing(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
+        path: Option<&str>,
     ) -> Self::SRS {
         let num_vars_each_core = *params + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
         let (srs, calibrated_num_vars_each_core) = OrionSRS::from_random(

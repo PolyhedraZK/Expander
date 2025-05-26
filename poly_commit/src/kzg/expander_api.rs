@@ -43,10 +43,11 @@ where
         std::cmp::max(n_input_vars, Self::MINIMUM_SUPPORTED_NUM_VARS)
     }
 
-    fn gen_srs_for_testing(
+    fn gen_or_load_srs_for_testing(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
+        _path: Option<&str>,
     ) -> Self::SRS {
         let local_num_vars = *params;
 

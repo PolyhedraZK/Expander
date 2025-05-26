@@ -1,3 +1,5 @@
+use std::f128::consts::E;
+
 use arith::ExtensionField;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
@@ -24,6 +26,7 @@ where
     C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     const NAME: &'static str = "HyraxPCSForExpanderGKR";
 
@@ -42,14 +45,34 @@ where
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
-    fn gen_srs_for_testing(
+    fn gen_or_load_srs_for_testing(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
+        path: Option<&str>,
     ) -> Self::SRS {
         let mpi_vars = mpi_engine.world_size().ilog2() as usize;
 
-        hyrax_setup(*params, mpi_vars, rng)
+        if path.is_some() {
+            match std::fs::File::open(path.unwrap()) {
+                Ok(file) => {
+                    // file exists; deserialize SRS from file
+
+                    let srs_deser = PedersenParams::<C>::deserialize_from(&mut file)
+                        .expect("Failed to deserialize SRS for Hyrax PCS");
+                }
+
+                Err(_e) => {
+                    // file does not exist; generate SRS and store to file
+
+                    panic!("Failed to open SRS file at path: {}", path.unwrap());
+                }
+            }
+        }
+
+        let srs = hyrax_setup(*params, mpi_vars, rng);
+
+        srs
     }
 
     fn commit(
@@ -142,4 +165,18 @@ where
         v == RefMultiLinearPoly::from_ref(&opening.0)
             .evaluate_with_buffer(&local_vars[..pedersen_vars], &mut scratch)
     }
+}
+
+fn generate_srs_and_store_to_file<C>(
+    &params: &PedersenParams<C>,
+    mpi_vars: usize,
+    rng: impl rand::RngCore,
+    path: Option<&str>,
+) where
+    C: CurveAffine + ExpSerde,
+    C::Scalar: ExtensionField + PrimeField,
+    C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
+{
+    let srs = hyrax_setup(*params, mpi_vars, rng);
 }

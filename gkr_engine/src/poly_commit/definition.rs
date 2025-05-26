@@ -38,6 +38,14 @@ pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
     type Commitment: Clone + Debug + Default + ExpSerde + Send + Sync;
     type Opening: Clone + Debug + Default + ExpSerde + Send + Sync;
 
+    /// This function returns the SRS for the PCS.
+    ///
+    /// If `path` is provided, it will attempt to load the SRS from the specified path.
+    /// If the SRS is not found or cannot be loaded, it will generate a new SRS and save it to the
+    /// path.
+    ///
+    /// If `path` is `None`, it will always generate a new SRS.
+    ///
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Each process should return the SRS share used for its committing and opening.
     ///
@@ -46,10 +54,11 @@ pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
     ///
     /// NOTE(HS) the calibrated number of variables refers to the local SIMD variables
     /// rather than the base field elements.
-    fn gen_srs_for_testing(
+    fn gen_or_load_srs_for_testing(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl RngCore,
+        path: Option<&str>,
     ) -> Self::SRS;
 
     /// n_input_vars is with respect to the multilinear poly on each machine in MPI,
