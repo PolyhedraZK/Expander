@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../" }
+serdes = { path = "../../serdes" }
 
 ark-std.workspace = true
 criterion.workspace = true

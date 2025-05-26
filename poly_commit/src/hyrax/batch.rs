@@ -74,6 +74,6 @@ where
         BTreeMap::from_iter(point_indices.iter().map(|(point, idx)| (*idx, *point)))
             .into_values()
             .collect::<Vec<_>>();
- 
+
     todo!()
 }

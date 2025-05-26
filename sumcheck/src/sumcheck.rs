@@ -1,3 +1,4 @@
+//! Sumcheck protocol implementation for GKR layers.
 use circuit::CircuitLayer;
 use gkr_engine::{
     ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
