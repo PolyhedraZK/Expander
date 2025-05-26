@@ -144,26 +144,3 @@ where
             .evaluate_with_buffer(&local_vars[..pedersen_vars], &mut scratch)
     }
 }
-
-// fn generate_srs_and_store_to_file<C>(
-//     params: &usize,
-//     mpi_vars: usize,
-//     rng: impl rand::RngCore,
-//     path: Option<&str>,
-// ) -> PedersenParams<C>
-// where
-//     C: CurveAffine + ExpSerde,
-//     C::Scalar: ExtensionField + PrimeField,
-//     C::ScalarExt: ExtensionField + PrimeField,
-//     C::Base: PrimeField<Repr = [u8; 32]>,
-// {
-//     let srs = hyrax_setup(*params, mpi_vars, rng);
-
-//     if let Some(path) = path {
-//         let mut file = std::fs::File::create(path).expect("Failed to create SRS file");
-//         srs.serialize_into(&mut file)
-//             .expect("Failed to serialize SRS to file");
-//     }
-
-//     srs
-// }
