@@ -8,3 +8,6 @@ mod pcs_trait_impl;
 pub use pcs_trait_impl::HyraxPCS;
 
 mod expander_api;
+
+mod batch;
+pub use batch::*;
