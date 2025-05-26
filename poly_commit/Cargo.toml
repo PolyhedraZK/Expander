@@ -12,6 +12,7 @@ serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
 tree = { path = "../tree" }
 utils = { path = "../utils" }
+sumcheck = { path = "../sumcheck" }
 
 rand.workspace = true
 ethnum.workspace = true

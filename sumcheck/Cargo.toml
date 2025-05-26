@@ -8,11 +8,17 @@ arith = { path = "../arith" }
 circuit = { path = "../circuit" }
 gkr_engine = { path = "../gkr_engine" }
 polynomials = { path = "../arith/polynomials" }
+serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
 utils = { path = "../utils" }
 
 env_logger.workspace = true
 log.workspace = true
+
+[dev-dependencies]
+gkr_hashers = { path = "../hasher" }
+
+ark-std.workspace = true
 
 [features]
 profile = [ "utils/profile" ]

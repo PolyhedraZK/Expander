@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use arith::ExtensionField;
-use gkr_engine::{StructuredReferenceString, Transcript};
+use gkr_engine::{DeferredCheck, StructuredReferenceString, Transcript};
 use halo2curves::{
     ff::PrimeField,
     pairing::{Engine, MultiMillerLoop},
@@ -12,6 +12,8 @@ use serdes::ExpSerde;
 
 use crate::*;
 use kzg::hyper_kzg::*;
+
+use super::deferred_pairing::PairingAccumulator;
 
 pub struct HyperKZGPCS<E>
 where
@@ -86,13 +88,45 @@ where
         opening: &Self::Opening,
         transcript: &mut impl Transcript,
     ) -> bool {
-        coeff_form_uni_hyperkzg_verify(
+        let mut accumulator = PairingAccumulator::default();
+
+        let partial_check = coeff_form_uni_hyperkzg_partial_verify(
             verifying_key.clone(),
             commitment.0,
             x,
             v,
             opening,
             transcript,
-        )
+            &mut accumulator,
+        );
+
+        let pairing_check = accumulator.final_check();
+
+        pairing_check && partial_check
+    }
+
+    fn batch_open(
+        _params: &Self::Params,
+        _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        _polys: &[Self::Poly],
+        _x: &Self::EvalPoint,
+        _scratch_pad: &Self::ScratchPad,
+        _transcript: &mut impl Transcript,
+    ) -> (Vec<E::Fr>, Self::Opening) {
+        // todo: implement batch_open
+        unimplemented!("batch_open is not implemented for HyperKZGPCS");
+    }
+
+    fn batch_verify(
+        _params: &Self::Params,
+        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        _commitments: &[Self::Commitment],
+        _x: &Self::EvalPoint,
+        _vs: &[E::Fr],
+        _opening: &Self::Opening,
+        _transcript: &mut impl Transcript,
+    ) -> bool {
+        // todo: implement batch_verify
+        unimplemented!("batch_verify is not implemented for HyperKZGPCS");
     }
 }

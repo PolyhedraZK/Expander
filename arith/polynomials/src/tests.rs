@@ -259,3 +259,47 @@ fn test_univariate_degree_one_quotient() {
         assert_eq!(poly.coeffs, vec![Fr::ONE, Fr::ZERO, Fr::ZERO, Fr::ZERO]);
     }
 }
+
+#[test]
+fn test_virtual_polynomial_additions() {
+    let mut rng = test_rng();
+    for nv in 2..5 {
+        for num_products in 2..5 {
+            let base: Vec<Fr> = (0..nv).map(|_| Fr::random_unsafe(&mut rng)).collect();
+
+            let (a, _a_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), num_products, &mut rng);
+            let (b, _b_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), num_products, &mut rng);
+            let c = &a + &b;
+
+            assert_eq!(
+                a.evaluate(base.as_ref()) + b.evaluate(base.as_ref()),
+                c.evaluate(base.as_ref())
+            );
+        }
+    }
+}
+
+#[test]
+fn test_virtual_polynomial_mul_by_mle() {
+    let mut rng = test_rng();
+    for nv in 2..5 {
+        for num_products in 2..5 {
+            let base: Vec<Fr> = (0..nv).map(|_| Fr::random_unsafe(&mut rng)).collect();
+
+            let (a, _a_sum) = VirtualPolynomial::<Fr>::rand(nv, (2, 3), num_products, &mut rng);
+            let (b, _b_sum) = random_mle_list(nv, 1, &mut rng);
+            let b_mle = b[0].clone();
+            let coeff = Fr::random_unsafe(&mut rng);
+            let b_vp = VirtualPolynomial::new_from_mle(&b_mle, coeff);
+
+            let mut c = a.clone();
+
+            c.mul_by_mle(b_mle, coeff);
+
+            assert_eq!(
+                a.evaluate(base.as_ref()) * b_vp.evaluate(base.as_ref()),
+                c.evaluate(base.as_ref())
+            );
+        }
+    }
+}

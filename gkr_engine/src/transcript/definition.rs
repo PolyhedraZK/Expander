@@ -1,6 +1,7 @@
 use std::{fmt::Debug, str::FromStr};
 
 use arith::Field;
+use serdes::ExpSerde;
 
 use crate::ExpErrors;
 
@@ -22,6 +23,13 @@ pub trait Transcript: Clone + Debug {
     fn append_field_element<F: Field>(&mut self, f: &F) {
         let mut buf = vec![];
         f.serialize_into(&mut buf).unwrap();
+        self.append_u8_slice(&buf);
+    }
+
+    #[inline]
+    fn append_serializable_data<T: ExpSerde>(&mut self, data: &T) {
+        let mut buf = vec![];
+        data.serialize_into(&mut buf).unwrap();
         self.append_u8_slice(&buf);
     }
 

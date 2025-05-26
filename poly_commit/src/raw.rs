@@ -113,6 +113,29 @@ impl<F: ExtensionField> PolynomialCommitmentScheme<F> for RawMultiLinearPCS {
             &mut vec![F::ZERO; commitment.evals.len()],
         ) == v
     }
+
+    fn batch_open(
+        _params: &Self::Params,
+        _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        _polys: &[Self::Poly],
+        _x: &Self::EvalPoint,
+        _scratch_pad: &Self::ScratchPad,
+        _transcript: &mut impl Transcript,
+    ) -> (Vec<F>, Self::Opening) {
+        unimplemented!("batch_open is not implemented for RawMultiLinearPCS");
+    }
+
+    fn batch_verify(
+        _params: &Self::Params,
+        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        _commitments: &[Self::Commitment],
+        _x: &Self::EvalPoint,
+        _vs: &[F],
+        _opening: &Self::Opening,
+        _transcript: &mut impl Transcript,
+    ) -> bool {
+        unimplemented!("batch_verify is not implemented for RawMultiLinearPCS");
+    }
 }
 
 // =================================================================================================
@@ -135,6 +158,8 @@ impl<C: FieldEngine> ExpanderPCS<C, C::SimdCircuitField> for RawExpanderGKR<C> {
     type Commitment = RawCommitment<C::SimdCircuitField>;
 
     type Opening = ();
+
+    type Accumulator = ();
 
     fn gen_srs_for_testing(
         _params: &Self::Params,
@@ -192,7 +217,7 @@ impl<C: FieldEngine> ExpanderPCS<C, C::SimdCircuitField> for RawExpanderGKR<C> {
         Some(())
     }
 
-    fn verify(
+    fn partial_verify(
         _params: &Self::Params,
         _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
@@ -200,6 +225,7 @@ impl<C: FieldEngine> ExpanderPCS<C, C::SimdCircuitField> for RawExpanderGKR<C> {
         v: C::ChallengeField,
         _transcript: &mut impl Transcript,
         _opening: &Self::Opening,
+        _accumulator: &mut Self::Accumulator,
     ) -> bool {
         let v_target =
             C::single_core_eval_circuit_vals_at_expander_challenge(&commitment.evals, challenge);

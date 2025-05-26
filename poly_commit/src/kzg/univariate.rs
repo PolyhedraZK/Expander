@@ -1,14 +1,17 @@
+use gkr_engine::DeferredCheck;
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, Group},
     msm,
-    pairing::{MillerLoopResult, MultiMillerLoop},
+    pairing::MultiMillerLoop,
     CurveAffine,
 };
 use itertools::izip;
 use serdes::ExpSerde;
 
 use crate::*;
+
+use super::deferred_pairing::PairingAccumulator;
 
 #[inline(always)]
 pub(crate) fn generate_coef_form_uni_kzg_srs_for_testing<E: MultiMillerLoop>(
@@ -87,6 +90,7 @@ where
 }
 
 #[inline(always)]
+#[cfg(test)]
 pub(crate) fn coeff_form_uni_kzg_verify<E: MultiMillerLoop>(
     vk: UniKZGVerifierParams<E>,
     comm: E::G1Affine,
@@ -98,18 +102,33 @@ where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde,
 {
+    let mut pairing_accumulator = PairingAccumulator::default();
+    coeff_form_uni_kzg_partial_verify(vk, comm, alpha, eval, opening, &mut pairing_accumulator);
+    let pairing_check = pairing_accumulator.final_check();
+
+    pairing_check
+}
+
+#[inline(always)]
+pub(crate) fn coeff_form_uni_kzg_partial_verify<E: MultiMillerLoop>(
+    vk: UniKZGVerifierParams<E>,
+    comm: E::G1Affine,
+    alpha: E::Fr,
+    eval: E::Fr,
+    opening: E::G1Affine,
+    pairing_accumulator: &mut PairingAccumulator<E>,
+) -> bool
+where
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: ExpSerde,
+{
     let g1_eval: E::G1Affine = (E::G1Affine::generator() * eval).into();
     let g2_alpha: E::G2 = E::G2Affine::generator() * alpha;
 
-    let gt_result = E::multi_miller_loop(&[
-        (
-            &opening,
-            &(vk.tau_g2.to_curve() - g2_alpha).to_affine().into(),
-        ),
-        (&(g1_eval - comm).into(), &E::G2Affine::generator().into()),
-    ]);
+    pairing_accumulator.accumulate(&(opening.to_curve(), (vk.tau_g2.to_curve() - g2_alpha)));
+    pairing_accumulator.accumulate(&(g1_eval - comm, E::G2::generator()));
 
-    gt_result.final_exponentiation().is_identity().into()
+    true
 }
 
 #[cfg(test)]
@@ -142,6 +161,7 @@ mod tests {
 
         let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
         assert_eq!(actual_eval, eval);
+
         assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
     }
 
@@ -158,6 +178,7 @@ mod tests {
 
         let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
         assert_eq!(actual_eval, eval);
+
         assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
     }
 }

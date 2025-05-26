@@ -11,6 +11,8 @@ use crate::{
     HyraxCommitment, HyraxOpening, PedersenParams, PolynomialCommitmentScheme,
 };
 
+use super::hyrax_impl::{hyrax_batch_open, hyrax_batch_verify};
+
 pub struct HyraxPCS<C>
 where
     C: CurveAffine + ExpSerde,
@@ -73,5 +75,35 @@ where
         _transcript: &mut impl Transcript,
     ) -> bool {
         hyrax_verify(verifying_key, commitment, x, v, opening)
+    }
+
+    fn batch_open(
+        _params: &Self::Params,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        mle_poly_list: &[Self::Poly],
+        eval_point: &Self::EvalPoint,
+        _scratch_pad: &Self::ScratchPad,
+        transcript: &mut impl Transcript,
+    ) -> (Vec<C::Scalar>, Self::Opening) {
+        hyrax_batch_open(proving_key, mle_poly_list, eval_point, transcript)
+    }
+
+    fn batch_verify(
+        _params: &Self::Params,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        comm_list: &[Self::Commitment],
+        eval_point: &Self::EvalPoint,
+        eval_list: &[C::Scalar],
+        batch_proof: &Self::Opening,
+        transcript: &mut impl Transcript,
+    ) -> bool {
+        hyrax_batch_verify(
+            verifying_key,
+            comm_list,
+            eval_point,
+            eval_list,
+            batch_proof,
+            transcript,
+        )
     }
 }

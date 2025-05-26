@@ -10,5 +10,8 @@ pub use univariate::*;
 mod eq;
 pub use eq::*;
 
+mod virtual_poly;
+pub use virtual_poly::*;
+
 #[cfg(test)]
 mod tests;

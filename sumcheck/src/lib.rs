@@ -11,3 +11,9 @@ pub use scratch_pad::{ProverScratchPad, VerifierScratchPad};
 
 mod utils;
 pub use utils::*;
+
+mod sumcheck_generic;
+pub use sumcheck_generic::*;
+
+#[cfg(test)]
+mod tests;
