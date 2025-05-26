@@ -5,11 +5,10 @@ use std::{
 };
 
 use super::gkr_square::sumcheck_verify_gkr_square_layer;
-use arith::Field;
 use circuit::Circuit;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine, GKRScheme, MPIConfig,
-    MPIEngine, PCSParams, Proof, StructuredReferenceString, Transcript,
+    MPIEngine, Proof, StructuredReferenceString, Transcript,
 };
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
@@ -397,22 +396,6 @@ impl<Cfg: GKREngine> Verifier<'_, Cfg> {
             proof_reader,
         )
         .unwrap();
-
-        let minimum_vars_for_pcs: usize = pcs_params.num_vars();
-        if open_at.rz.len() < minimum_vars_for_pcs {
-            eprintln!(
-				"{} over {} has minimum supported local vars {}, but challenge has vars {}, pad to {} vars in verifying.",
-				Cfg::PCSConfig::NAME,
-				<Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
-				minimum_vars_for_pcs,
-				open_at.rz.len(),
-				minimum_vars_for_pcs,
-			);
-            open_at.rz.resize(
-                minimum_vars_for_pcs,
-                <Cfg::FieldConfig as FieldEngine>::ChallengeField::ZERO,
-            )
-        }
 
         transcript.lock_proof();
         let verified = Cfg::PCSConfig::verify(

@@ -36,7 +36,7 @@ where
     type Opening = HyraxOpening<C>;
     type SRS = PedersenParams<C>;
 
-    fn gen_params(n_input_vars: usize) -> Self::Params {
+    fn gen_params(n_input_vars: usize, _world_size: usize) -> Self::Params {
         n_input_vars
     }
 
@@ -46,10 +46,10 @@ where
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
-    ) -> (Self::SRS, usize) {
+    ) -> Self::SRS {
         let mpi_vars = mpi_engine.world_size().ilog2() as usize;
 
-        (hyrax_setup(*params, mpi_vars, rng), *params)
+        hyrax_setup(*params, mpi_vars, rng)
     }
 
     fn commit(

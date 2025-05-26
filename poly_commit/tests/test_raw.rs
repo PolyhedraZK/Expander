@@ -36,7 +36,7 @@ fn test_raw_gkr_helper<C: FieldEngine, T: Transcript>(mpi_config: &MPIConfig, tr
     let mut rng = thread_rng();
     let hypercube_basis = (0..(1 << params))
         .map(|_| C::SimdCircuitField::random_unsafe(&mut rng))
-        .collect();
+        .collect::<Vec<_>>();
     let poly = RefMultiLinearPoly::from_ref(&hypercube_basis);
     let xs = (0..100)
         .map(|_| ExpanderSingleVarChallenge::<C> {

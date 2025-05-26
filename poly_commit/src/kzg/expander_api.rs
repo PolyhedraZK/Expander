@@ -11,7 +11,13 @@ use halo2curves::{
 };
 use serdes::ExpSerde;
 
-use crate::*;
+use crate::{
+    utils::{
+        lift_expander_challenge_to_n_vars, lift_poly_and_expander_challenge_to_n_vars,
+        lift_poly_to_n_vars,
+    },
+    *,
+};
 
 impl<G, E> ExpanderPCS<G, E::Fr> for HyperKZGPCS<E>
 where
@@ -33,24 +39,22 @@ where
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
-    fn gen_params(n_input_vars: usize) -> Self::Params {
-        n_input_vars
+    fn gen_params(n_input_vars: usize, _world_size: usize) -> Self::Params {
+        std::cmp::max(n_input_vars, Self::MINIMUM_SUPPORTED_NUM_VARS)
     }
 
     fn gen_srs_for_testing(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
-    ) -> (Self::SRS, usize) {
-        let local_num_vars = if *params == 0 { 1 } else { *params };
+    ) -> Self::SRS {
+        let local_num_vars = *params;
 
         let x_degree_po2 = 1 << local_num_vars;
         let y_degree_po2 = mpi_engine.world_size();
         let rank = mpi_engine.world_rank();
 
-        let srs =
-            generate_coef_form_bi_kzg_local_srs_for_testing(x_degree_po2, y_degree_po2, rank, rng);
-        (srs, local_num_vars)
+        generate_coef_form_bi_kzg_local_srs_for_testing(x_degree_po2, y_degree_po2, rank, rng)
     }
 
     fn commit(
@@ -60,6 +64,19 @@ where
         poly: &impl polynomials::MultilinearExtension<E::Fr>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
+        // The minimum supported number of variables is 1.
+        // If the polynomial has no variables, we lift it to a polynomial with 1 variable.
+        if poly.num_vars() < Self::MINIMUM_SUPPORTED_NUM_VARS {
+            let poly = lift_poly_to_n_vars(poly, Self::MINIMUM_SUPPORTED_NUM_VARS);
+            return <Self as ExpanderPCS<G, E::Fr>>::commit(
+                _params,
+                mpi_engine,
+                proving_key,
+                &poly,
+                _scratch_pad,
+            );
+        };
+
         let local_commitment =
             coeff_form_uni_kzg_commit(&proving_key.tau_x_srs, poly.hypercube_basis_ref());
 
@@ -89,6 +106,23 @@ where
         transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
+        if poly.num_vars() < Self::MINIMUM_SUPPORTED_NUM_VARS {
+            let (poly, x) = lift_poly_and_expander_challenge_to_n_vars(
+                poly,
+                x,
+                Self::MINIMUM_SUPPORTED_NUM_VARS,
+            );
+            return <Self as ExpanderPCS<G, E::Fr>>::open(
+                _params,
+                mpi_engine,
+                proving_key,
+                &poly,
+                &x,
+                transcript,
+                _scratch_pad,
+            );
+        };
+
         coeff_form_hyper_bikzg_open(
             proving_key,
             mpi_engine,
@@ -108,6 +142,19 @@ where
         transcript: &mut impl Transcript,
         opening: &Self::Opening,
     ) -> bool {
+        if x.rz.len() < Self::MINIMUM_SUPPORTED_NUM_VARS {
+            let x = lift_expander_challenge_to_n_vars(x, Self::MINIMUM_SUPPORTED_NUM_VARS);
+            return <Self as ExpanderPCS<G, E::Fr>>::verify(
+                _params,
+                verifying_key,
+                commitment,
+                &x,
+                v,
+                transcript,
+                opening,
+            );
+        };
+
         coeff_form_hyper_bikzg_verify(
             verifying_key,
             &x.local_xs(),
