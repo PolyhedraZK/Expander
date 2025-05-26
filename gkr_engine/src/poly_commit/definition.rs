@@ -59,7 +59,37 @@ pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
         mpi_engine: &impl MPIEngine,
         rng: impl RngCore,
         path: Option<&str>,
-    ) -> Self::SRS;
+    ) -> Self::SRS {
+        match path {
+            Some(path) => {
+                match std::fs::File::open(path) {
+                    Ok(mut file) => {
+                        // file exists; deserialize SRS from file
+                        Self::SRS::deserialize_from(&mut file).unwrap_or_else(|_| {
+                            panic!("Failed to deserialize SRS for {} PCS", Self::NAME)
+                        })
+                    }
+                    Err(_e) => {
+                        // file does not exist; generate SRS and store to file
+                        let srs = Self::gen_srs(params, mpi_engine, rng);
+                        let mut file =
+                            std::fs::File::create(path).expect("Failed to create SRS file");
+                        srs.serialize_into(&mut file)
+                            .expect("Failed to serialize SRS to file");
+                        srs
+                    }
+                }
+            }
+
+            None => {
+                // no path provided; generate SRS
+                Self::gen_srs(params, mpi_engine, rng)
+            }
+        }
+    }
+
+    /// The actual function to generate the SRS.
+    fn gen_srs(params: &Self::Params, mpi_engine: &impl MPIEngine, rng: impl RngCore) -> Self::SRS;
 
     /// n_input_vars is with respect to the multilinear poly on each machine in MPI,
     /// also ignore the number of variables stacked in the SIMD field.

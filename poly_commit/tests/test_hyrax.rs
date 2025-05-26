@@ -70,6 +70,7 @@ fn test_hyrax_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_va
         &mut transcript,
         &local_poly,
         &[challenge_point],
+        Some("../data/hyrax_srs.bin"),
     );
 }
 

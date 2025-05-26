@@ -9,7 +9,7 @@ use serdes::ExpSerde;
 #[derive(Clone, Debug, Default)]
 pub struct PedersenParams<C>
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine,
     C::Base: PrimeField<Repr = [u8; 32]>,
 {
     pub bases: Vec<C>,
@@ -18,7 +18,7 @@ where
 
 impl<C> ExpSerde for PedersenParams<C>
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine,
     C::Base: PrimeField<Repr = [u8; 32]>,
 {
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> serdes::SerdeResult<()> {
@@ -88,7 +88,7 @@ where
 
 impl<C> StructuredReferenceString for PedersenParams<C>
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine,
     C::Base: PrimeField<Repr = [u8; 32]>,
 {
     type PKey = Self;
@@ -101,8 +101,8 @@ where
 
 pub(crate) fn pedersen_setup<C>(length: usize, mut rng: impl rand::RngCore) -> PedersenParams<C>
 where
+    C: CurveAffine,
     C::Scalar: PrimeField,
-    C: CurveAffine + ExpSerde,
     C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let proj_bases: Vec<C::Curve> = (0..length)
@@ -121,8 +121,8 @@ where
 
 pub(crate) fn pedersen_commit<C>(params: &PedersenParams<C>, coeffs: &[C::Scalar]) -> C
 where
+    C: CurveAffine,
     C::Scalar: PrimeField,
-    C: CurveAffine + ExpSerde,
     C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let mut what = C::default().to_curve();
@@ -134,7 +134,7 @@ where
 
 impl<C> PedersenParams<C>
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine,
     C::Base: PrimeField<Repr = [u8; 32]>,
 {
     pub(crate) fn msm_len(&self) -> usize {

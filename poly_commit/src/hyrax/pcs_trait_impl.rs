@@ -13,7 +13,7 @@ use crate::{
 
 pub struct HyraxPCS<C>
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine,
     C::Scalar: ExtensionField,
     C::ScalarExt: ExtensionField,
 {

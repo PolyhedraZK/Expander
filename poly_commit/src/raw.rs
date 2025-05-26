@@ -136,11 +136,10 @@ impl<C: FieldEngine> ExpanderPCS<C, C::SimdCircuitField> for RawExpanderGKR<C> {
 
     type Opening = ();
 
-    fn gen_or_load_srs_for_testing(
+    fn gen_srs(
         _params: &Self::Params,
         _mpi_engine: &impl MPIEngine,
         _rng: impl RngCore,
-        _path: Option<&str>,
     ) -> Self::SRS {
     }
 

@@ -43,37 +43,14 @@ where
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
-    fn gen_or_load_srs_for_testing(
+    fn gen_srs(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
-        path: Option<&str>,
     ) -> Self::SRS {
         let mpi_vars = mpi_engine.world_size().ilog2() as usize;
 
-        let srs = if path.is_some() {
-            match std::fs::File::open(path.unwrap()) {
-                Ok(mut file) => {
-                    // file exists; deserialize SRS from file
-                    PedersenParams::<C>::deserialize_from(&mut file)
-                        .expect("Failed to deserialize SRS for Hyrax PCS")
-                }
-
-                Err(_e) => {
-                    // file does not exist; generate SRS and store to file
-                    let srs = hyrax_setup(*params, mpi_vars, rng);
-                    let mut file =
-                        std::fs::File::create(path.unwrap()).expect("Failed to create SRS file");
-                    srs.serialize_into(&mut file)
-                        .expect("Failed to serialize SRS to file");
-                    srs
-                }
-            }
-        } else {
-            hyrax_setup(*params, mpi_vars, rng)
-        };
-
-        srs
+        hyrax_setup(*params, mpi_vars, rng)
     }
 
     fn commit(
@@ -168,25 +145,25 @@ where
     }
 }
 
-fn generate_srs_and_store_to_file<C>(
-    params: &usize,
-    mpi_vars: usize,
-    rng: impl rand::RngCore,
-    path: Option<&str>,
-) -> PedersenParams<C>
-where
-    C: CurveAffine + ExpSerde,
-    C::Scalar: ExtensionField + PrimeField,
-    C::ScalarExt: ExtensionField + PrimeField,
-    C::Base: PrimeField<Repr = [u8; 32]>,
-{
-    let srs = hyrax_setup(*params, mpi_vars, rng);
+// fn generate_srs_and_store_to_file<C>(
+//     params: &usize,
+//     mpi_vars: usize,
+//     rng: impl rand::RngCore,
+//     path: Option<&str>,
+// ) -> PedersenParams<C>
+// where
+//     C: CurveAffine + ExpSerde,
+//     C::Scalar: ExtensionField + PrimeField,
+//     C::ScalarExt: ExtensionField + PrimeField,
+//     C::Base: PrimeField<Repr = [u8; 32]>,
+// {
+//     let srs = hyrax_setup(*params, mpi_vars, rng);
 
-    if let Some(path) = path {
-        let mut file = std::fs::File::create(path).expect("Failed to create SRS file");
-        srs.serialize_into(&mut file)
-            .expect("Failed to serialize SRS to file");
-    }
+//     if let Some(path) = path {
+//         let mut file = std::fs::File::create(path).expect("Failed to create SRS file");
+//         srs.serialize_into(&mut file)
+//             .expect("Failed to serialize SRS to file");
+//     }
 
-    srs
-}
+//     srs
+// }
