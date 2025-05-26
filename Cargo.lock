@@ -2163,11 +2163,14 @@ name = "sumcheck"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "ark-std",
  "circuit",
  "env_logger",
  "gkr_engine",
+ "gkr_hashers",
  "log",
  "polynomials",
+ "serdes",
  "transcript",
  "utils",
 ]

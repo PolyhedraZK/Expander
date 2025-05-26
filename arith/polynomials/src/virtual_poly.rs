@@ -15,6 +15,8 @@ use std::{cmp::max, collections::HashMap, marker::PhantomData, ops::Add, sync::A
 use arith::Field;
 use rand::Rng;
 use rand::RngCore;
+use serdes::ExpSerde;
+use serdes::SerdeError;
 
 use crate::MultiLinearPoly;
 
@@ -68,6 +70,28 @@ pub struct VPAuxInfo<F: Field> {
     /// Associated field
     #[doc(hidden)]
     pub phantom: PhantomData<F>,
+}
+
+impl<F: Field> ExpSerde for VPAuxInfo<F> {
+    fn serialize_into<W>(&self, mut writer: W) -> Result<(), SerdeError>
+    where
+        W: std::io::Write,
+    {
+        self.max_degree.serialize_into(&mut writer)?;
+        self.num_variables.serialize_into(&mut writer)
+    }
+    fn deserialize_from<R>(mut reader: R) -> Result<Self, SerdeError>
+    where
+        R: std::io::Read,
+    {
+        let max_degree = usize::deserialize_from(&mut reader)?;
+        let num_variables = usize::deserialize_from(&mut reader)?;
+        Ok(VPAuxInfo {
+            max_degree,
+            num_variables,
+            phantom: PhantomData,
+        })
+    }
 }
 
 impl<F: Field> Add for &VirtualPolynomial<F> {

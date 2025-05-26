@@ -14,3 +14,6 @@ pub use utils::*;
 
 mod sumcheck_generic;
 pub use sumcheck_generic::*;
+
+#[cfg(test)]
+mod tests;
