@@ -1,13 +1,9 @@
 use std::marker::PhantomData;
 
 use arith::ExtensionField;
-use arith::Field;
 use gkr_engine::{DeferredCheck, StructuredReferenceString, Transcript};
-use halo2curves::group::Group;
-use halo2curves::msm::multiexp_serial;
 use halo2curves::{
     ff::PrimeField,
-    group::Curve,
     pairing::{Engine, MultiMillerLoop},
     CurveAffine,
 };
@@ -117,36 +113,7 @@ where
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
     ) -> (Vec<E::Fr>, Self::Opening) {
-        let rlc_randomness = transcript.generate_field_element::<E::Fr>();
-        let num_poly = polys.len();
-        let rlcs = powers_series(&rlc_randomness, num_poly);
-        let mut buf = vec![E::Fr::default(); polys[0].coeffs.len()];
-
-        let merged_poly = polys
-            .iter()
-            .zip(rlcs.iter())
-            .skip(1)
-            .fold(polys[0].clone(), |acc, (poly, r)| acc + &(poly * r));
-
-        let mut evals = polys
-            .iter()
-            .map(|p| MultiLinearPoly::evaluate_with_buffer(p.coeffs.as_ref(), x, &mut buf))
-            .collect::<Vec<_>>();
-
-        let (_batch_eval, open) =
-            coeff_form_uni_hyperkzg_open(proving_key, &merged_poly.coeffs, x, transcript);
-
-        {
-            // sanity check: the merged evaluation should match the batch evaluation
-            // this step is not necessary if the performance is critical
-            let mut merged_eval = evals[0];
-            for (eval, r) in evals.iter_mut().zip(rlcs.iter()).skip(1) {
-                merged_eval += *eval * r;
-            }
-            assert_eq!(_batch_eval, merged_eval);
-        }
-
-        (evals, open)
+        kzg_batch_open(proving_key, polys, x, transcript)
     }
 
     fn batch_verify(
@@ -158,27 +125,13 @@ where
         opening: &Self::Opening,
         transcript: &mut impl Transcript,
     ) -> bool {
-        let rlc_randomness = transcript.generate_field_element::<E::Fr>();
-        let num_poly = commitments.len();
-        let rlcs = powers_series(&rlc_randomness, num_poly);
+        let commitment_unwrapped = commitments.iter().map(|c| c.0).collect::<Vec<_>>();
 
-        let commitments_local = commitments.iter().map(|c| c.0).collect::<Vec<_>>();
-
-        // stay with single thread as the num_poly is usually small
-        let mut merged_commitment = E::G1::identity();
-        multiexp_serial(&rlcs, &commitments_local, &mut merged_commitment);
-
-        let merged_eval = evals
-            .iter()
-            .zip(rlcs.iter())
-            .fold(E::Fr::zero(), |acc, (e, r)| acc + (*e * r));
-
-        Self::verify(
-            _params,
+        kzg_batch_verify(
             verifying_key,
-            &KZGCommitment(merged_commitment.to_affine()),
+            &commitment_unwrapped,
             x,
-            merged_eval,
+            evals,
             opening,
             transcript,
         )

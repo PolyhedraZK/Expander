@@ -9,6 +9,7 @@ use halo2curves::{
     pairing::{Engine, MultiMillerLoop},
     CurveAffine,
 };
+use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
 
 use crate::{
@@ -104,7 +105,7 @@ where
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<E::Fr>,
+        poly: &impl MultilinearExtension<E::Fr>,
         x: &ExpanderSingleVarChallenge<G>,
         transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
@@ -170,4 +171,42 @@ where
             accumulator,
         )
     }
+
+    // /// Open a set of polynomials at a point.
+    // fn batch_open(
+    //     _params: &Self::Params,
+    //     _mpi_engine: &impl MPIEngine,
+    //     proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+    //     mle_poly_list: &[impl MultilinearExtension<E::Fr>],
+    //     eval_point: &ExpanderSingleVarChallenge<G>,
+    //     _scratch_pad: &Self::ScratchPad,
+    //     transcript: &mut impl Transcript,
+    // ) -> (Vec<E::Fr>, Self::Opening) {
+    //     let (eval, open) = kzg_batch_open(
+    //         proving_key,
+    //         mle_poly_list,
+    //         &eval_point.local_xs(),
+    //         transcript,
+    //     );
+    //     (eval, open.into())
+    // }
+
+    // fn batch_verify(
+    //     _params: &Self::Params,
+    //     verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+    //     commitments: &[Self::Commitment],
+    //     x: &ExpanderSingleVarChallenge<G>,
+    //     evals: &[<G as FieldEngine>::ChallengeField],
+    //     opening: &Self::Opening,
+    //     transcript: &mut impl Transcript,
+    // ) -> bool {
+    //     kzg_batch_verify(
+    //         verifying_key,
+    //         commitments,
+    //         &x.local_xs(),
+    //         evals,
+    //         opening,
+    //         transcript,
+    //     )
+    // }
 }
