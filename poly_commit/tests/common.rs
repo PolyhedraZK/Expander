@@ -101,7 +101,6 @@ where
     }
 }
 
-
 #[allow(dead_code)]
 pub fn test_pcs_for_expander_gkr<
     C: FieldEngine,
