@@ -24,6 +24,7 @@ where
     C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     const NAME: &'static str = "HyraxPCSForExpanderGKR";
 
@@ -42,7 +43,7 @@ where
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
-    fn gen_srs_for_testing(
+    fn gen_srs(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,

@@ -76,6 +76,7 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
         &mut transcript,
         &local_poly,
         &[challenge_point],
+        None,
     );
 }
 

@@ -112,6 +112,7 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
         &mut transcript,
         &local_poly,
         &[challenge_point],
+        None,
     );
 }
 

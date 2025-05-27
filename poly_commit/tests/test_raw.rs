@@ -52,7 +52,7 @@ fn test_raw_gkr_helper<C: FieldEngine, T: Transcript>(mpi_config: &MPIConfig, tr
         })
         .collect::<Vec<ExpanderSingleVarChallenge<C>>>();
     common::test_pcs_for_expander_gkr::<C, T, RawExpanderGKR<C>>(
-        &params, mpi_config, transcript, &poly, &xs,
+        &params, mpi_config, transcript, &poly, &xs, None,
     );
 }
 

@@ -13,7 +13,7 @@ use crate::{
 
 pub struct HyraxPCS<C>
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine,
     C::Scalar: ExtensionField,
     C::ScalarExt: ExtensionField,
 {
@@ -25,6 +25,7 @@ where
     C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     const NAME: &'static str = "HyraxPCS";
 
