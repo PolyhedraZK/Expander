@@ -156,6 +156,30 @@ impl<F: Field> MultiLinearPoly<F> {
     }
 }
 
+impl<F: Field> Add<&MultiLinearPoly<F>> for MultiLinearPoly<F> {
+    type Output = Self;
+
+    fn add(self, other: &MultiLinearPoly<F>) -> Self::Output {
+        assert_eq!(self.coeffs.len(), other.coeffs.len());
+        let coeffs = self
+            .coeffs
+            .iter()
+            .zip(other.coeffs.iter())
+            .map(|(a, b)| *a + *b)
+            .collect();
+        MultiLinearPoly { coeffs }
+    }
+}
+
+impl<F: Field> Mul<&F> for &MultiLinearPoly<F> {
+    type Output = MultiLinearPoly<F>;
+
+    fn mul(self, scalar: &F) -> Self::Output {
+        let coeffs = self.coeffs.iter().map(|c| *c * scalar).collect();
+        MultiLinearPoly { coeffs }
+    }
+}
+
 impl<F: Field> Index<usize> for MultiLinearPoly<F> {
     type Output = F;
 

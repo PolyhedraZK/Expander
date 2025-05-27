@@ -175,3 +175,13 @@ fn test_hyper_bikzg_batch_verification() {
         assert!(pairing_accumulator.final_check());
     }
 }
+
+#[test]
+fn test_kzg_batch_open() {
+    common::test_batching::<Fr, BytesHashTranscript<Keccak256hasher>, HyperKZGPCS<Bn256>>();
+    // common::test_batching_for_expander_gkr::<
+    //     BN254Config,
+    //     BytesHashTranscript<Keccak256hasher>,
+    //     HyraxPCS<G1Affine>,
+    // >();
+}
