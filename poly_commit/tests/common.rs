@@ -44,6 +44,7 @@ pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<
     }
 }
 
+#[allow(dead_code)]
 pub fn test_batching<F, T, P>()
 where
     F: ExtensionField,
@@ -100,6 +101,8 @@ where
     }
 }
 
+
+#[allow(dead_code)]
 pub fn test_pcs_for_expander_gkr<
     C: FieldEngine,
     T: Transcript,
