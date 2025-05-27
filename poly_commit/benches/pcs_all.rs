@@ -1,4 +1,4 @@
-use arith::{Field, Fr};
+use arith::{ExtensionField, Field, Fr};
 use ark_std::test_rng;
 use criterion::black_box;
 use gkr_engine::StructuredReferenceString;
@@ -17,10 +17,10 @@ const NUM_POLY_BATCH_OPEN: usize = 100;
 fn main() {
     let mpi_config = MPIConfig::prover_new();
     println!("==========================");
-    for num_vars in 10..21 {
+    for num_vars in 18..21 {
         root_println!(mpi_config, "num vars: {}", num_vars);
-        bench_hyrax(&mpi_config, num_vars);
         bench_kzg(&mpi_config, num_vars);
+        bench_hyrax(&mpi_config, num_vars);
         bench_orion(&mpi_config, num_vars);
         println!("==========================");
     }
@@ -89,7 +89,7 @@ fn bench_hyrax(mpi_config: &MPIConfig, num_vars: usize) {
     );
 
     // batch open
-    bench_hyrax_batch_open(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
+    bench_batch_open::<Fr, HyraxPCS<G1Affine>>(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
 }
 
 fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
@@ -122,6 +122,9 @@ fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
         &eval_point,
         "kzg small scalar  ",
     );
+
+    // batch open
+    bench_batch_open::<Fr, HyperKZGPCS<Bn256>>(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
 }
 
 fn pcs_bench<PCS: PolynomialCommitmentScheme<Fr>>(
@@ -197,29 +200,28 @@ fn pcs_bench<PCS: PolynomialCommitmentScheme<Fr>>(
     root_println!(mpi_config, "  --- ");
 }
 
-fn bench_hyrax_batch_open(mpi_config: &MPIConfig, num_vars: usize, num_poly: usize) {
+fn bench_batch_open<F, PCS>(mpi_config: &MPIConfig, num_vars: usize, num_poly: usize)
+where
+    F: Field + ExtensionField,
+    PCS: PolynomialCommitmentScheme<
+        F,
+        Params = usize,
+        EvalPoint = Vec<F>,
+        Poly = MultiLinearPoly<F>,
+    >,
+{
     let mut rng = test_rng();
 
-    let (srs, _) = <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::gen_srs_for_testing(
-        &num_vars, &mut rng,
-    );
+    let (srs, _) = PCS::gen_srs_for_testing(&num_vars, &mut rng);
     let (proving_key, verification_key) = srs.into_keys();
-    let mut scratch_pad =
-        <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::init_scratch_pad(&num_vars);
+    let mut scratch_pad = PCS::init_scratch_pad(&num_vars);
 
     let polys = (0..num_poly)
-        .map(|_| MultiLinearPoly::<Fr>::random(num_vars, &mut rng))
+        .map(|_| MultiLinearPoly::<F>::random(num_vars, &mut rng))
         .collect::<Vec<_>>();
     let commitments = polys
         .iter()
-        .map(|poly| {
-            <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::commit(
-                &num_vars,
-                &proving_key,
-                poly,
-                &mut scratch_pad,
-            )
-        })
+        .map(|poly| PCS::commit(&num_vars, &proving_key, poly, &mut scratch_pad))
         .collect::<Vec<_>>();
     let mut buf = vec![];
     commitments.serialize_into(&mut buf).unwrap();
@@ -227,23 +229,22 @@ fn bench_hyrax_batch_open(mpi_config: &MPIConfig, num_vars: usize, num_poly: usi
 
     // open all polys at a single point
     let x = (0..num_vars)
-        .map(|_| Fr::random_unsafe(&mut rng))
+        .map(|_| F::random_unsafe(&mut rng))
         .collect::<Vec<_>>();
 
     let mut transcript = BytesHashTranscript::<SHA256hasher>::new();
     let timer = Timer::new(
-        format!("hyrax batch open {} polys   ", num_poly).as_ref(),
+        format!("{} batch open {} polys   ", PCS::NAME, num_poly).as_ref(),
         mpi_config.is_root(),
     );
-    let (values, batch_opening) =
-        <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::batch_open(
-            &num_vars,
-            &proving_key,
-            &polys,
-            x.as_ref(),
-            &mut scratch_pad,
-            &mut transcript,
-        );
+    let (values, batch_opening) = PCS::batch_open(
+        &num_vars,
+        &proving_key,
+        &polys,
+        &x,
+        &mut scratch_pad,
+        &mut transcript,
+    );
 
     timer.stop();
 
@@ -254,31 +255,39 @@ fn bench_hyrax_batch_open(mpi_config: &MPIConfig, num_vars: usize, num_poly: usi
 
     let mut transcript = BytesHashTranscript::<SHA256hasher>::new();
     let timer = Timer::new(
-        format!("hyrax batch verify {} polys ", num_poly).as_ref(),
+        format!("{} batch verify {} polys ", PCS::NAME, num_poly).as_ref(),
         mpi_config.is_root(),
     );
-    assert!(
-        <HyraxPCS<G1Affine> as PolynomialCommitmentScheme<Fr>>::batch_verify(
-            &num_vars,
-            &verification_key,
-            &commitments,
-            x.as_ref(),
-            &values,
-            &batch_opening,
-            &mut transcript
-        )
-    );
+    assert!(PCS::batch_verify(
+        &num_vars,
+        &verification_key,
+        &commitments,
+        &x,
+        &values,
+        &batch_opening,
+        &mut transcript
+    ));
     timer.stop();
 
     root_println!(
         mpi_config,
         "{}",
-        format!("hyrax batch {} poly commit size  {}", num_poly, com_size),
+        format!(
+            "{} batch {} poly commit size  {}",
+            PCS::NAME,
+            num_poly,
+            com_size
+        ),
     );
     root_println!(
         mpi_config,
         "{}",
-        format!("hyrax batch {} poly open size    {}", num_poly, open_size),
+        format!(
+            "{} batch {} poly open size    {}",
+            PCS::NAME,
+            num_poly,
+            open_size
+        ),
     );
 
     root_println!(mpi_config, "  --- ");
