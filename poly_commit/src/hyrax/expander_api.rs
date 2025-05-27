@@ -18,6 +18,8 @@ use crate::{
     HyraxCommitment, HyraxOpening, HyraxPCS, PedersenParams,
 };
 
+use super::hyrax_impl::{hyrax_batch_open, hyrax_batch_verify};
+
 impl<G, C> ExpanderPCS<G, C::Scalar> for HyraxPCS<C>
 where
     G: FieldEngine<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
@@ -118,13 +120,13 @@ where
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &ExpanderSingleVarChallenge<G>,
-        v: <G as FieldEngine>::ChallengeField,
+        evals: <G as FieldEngine>::ChallengeField,
         _transcript: &mut impl Transcript,
         opening: &Self::Opening,
         _accumulator: &mut Self::Accumulator,
     ) -> bool {
         if x.r_mpi.is_empty() {
-            return hyrax_verify(verifying_key, commitment, &x.local_xs(), v, opening);
+            return hyrax_verify(verifying_key, commitment, &x.local_xs(), evals, opening);
         }
 
         let pedersen_len = verifying_key.msm_len();
@@ -142,7 +144,44 @@ where
         }
 
         let mut scratch = vec![C::Scalar::default(); opening.0.len()];
-        v == RefMultiLinearPoly::from_ref(&opening.0)
-            .evaluate_with_buffer(&local_vars[..pedersen_vars], &mut scratch)
+        evals
+            == RefMultiLinearPoly::from_ref(&opening.0)
+                .evaluate_with_buffer(&local_vars[..pedersen_vars], &mut scratch)
+    }
+    /// Open a set of polynomials at a point.
+    fn batch_open(
+        _params: &Self::Params,
+        _mpi_engine: &impl MPIEngine,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        mle_poly_list: &[impl MultilinearExtension<C::Scalar>],
+        eval_point: &ExpanderSingleVarChallenge<G>,
+        _scratch_pad: &Self::ScratchPad,
+        transcript: &mut impl Transcript,
+    ) -> (Vec<C::Scalar>, Self::Opening) {
+        hyrax_batch_open(
+            proving_key,
+            mle_poly_list,
+            &eval_point.local_xs(),
+            transcript,
+        )
+    }
+
+    fn batch_verify(
+        _params: &Self::Params,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        commitments: &[Self::Commitment],
+        x: &ExpanderSingleVarChallenge<G>,
+        evals: &[<G as FieldEngine>::ChallengeField],
+        opening: &Self::Opening,
+        transcript: &mut impl Transcript,
+    ) -> bool {
+        hyrax_batch_verify(
+            verifying_key,
+            commitments,
+            &x.local_xs(),
+            evals,
+            opening,
+            transcript,
+        )
     }
 }

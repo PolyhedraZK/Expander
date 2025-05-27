@@ -172,6 +172,32 @@ pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
     fn batch_deferred_verification(accumulator: &mut Self::Accumulator) -> bool {
         accumulator.final_check()
     }
+
+    /// Open a set of polynomials at a point.
+    fn batch_open(
+        _params: &Self::Params,
+        _mpi_engine: &impl MPIEngine,
+        _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        _polys: &[impl MultilinearExtension<PolyField>],
+        _x: &ExpanderSingleVarChallenge<F>,
+        _scratch_pad: &Self::ScratchPad,
+        _transcript: &mut impl Transcript,
+    ) -> (Vec<F::ChallengeField>, Self::Opening) {
+        unimplemented!("Batch opening is not implemented for this PCS type")
+    }
+
+    /// Verify the opening of a set of polynomials at a point.
+    fn batch_verify(
+        _params: &Self::Params,
+        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        _commitments: &[Self::Commitment],
+        _x: &ExpanderSingleVarChallenge<F>,
+        _evals: &[F::ChallengeField],
+        _opening: &Self::Opening,
+        _transcript: &mut impl Transcript,
+    ) -> bool {
+        unimplemented!("Batch verify is not implemented for this PCS type")
+    }
 }
 
 impl StructuredReferenceString for () {

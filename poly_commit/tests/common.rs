@@ -5,7 +5,7 @@ use gkr_engine::{
     StructuredReferenceString, Transcript,
 };
 use poly_commit::PolynomialCommitmentScheme;
-use polynomials::MultilinearExtension;
+use polynomials::{MultiLinearPoly, MultilinearExtension};
 use rand::thread_rng;
 
 pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<F>>(
@@ -41,6 +41,62 @@ pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<
             &opening,
             &mut transcript_cloned
         ));
+    }
+}
+
+pub fn test_batching<F, T, P>()
+where
+    F: ExtensionField,
+    T: Transcript,
+    P: PolynomialCommitmentScheme<F, Params = usize, EvalPoint = Vec<F>, Poly = MultiLinearPoly<F>>,
+{
+    let mut rng = thread_rng();
+
+    for num_vars in 2..10 {
+        // NOTE(HS) we assume that the polynomials we pass in are of sufficient length.
+        let (srs, _) = P::gen_srs_for_testing(&num_vars, &mut rng);
+
+        let mut scratch_pad = P::init_scratch_pad(&num_vars);
+
+        let (proving_key, verification_key) = srs.into_keys();
+
+        for num_poly in [1, 2, 10, 100] {
+            let polys = (0..num_poly)
+                .map(|_| MultiLinearPoly::<F>::random(num_vars, &mut rng))
+                .collect::<Vec<_>>();
+            let commitments = polys
+                .iter()
+                .map(|poly| P::commit(&num_vars, &proving_key, poly, &mut scratch_pad))
+                .collect::<Vec<_>>();
+
+            // open all polys at a single point
+            let x = (0..num_vars)
+                .map(|_| F::random_unsafe(&mut rng))
+                .collect::<Vec<_>>();
+
+            let mut transcript = T::new();
+
+            let (values, batch_opening) = P::batch_open(
+                &num_vars,
+                &proving_key,
+                &polys,
+                x.as_ref(),
+                &mut scratch_pad,
+                &mut transcript,
+            );
+
+            let mut transcript = T::new();
+
+            assert!(P::batch_verify(
+                &num_vars,
+                &verification_key,
+                &commitments,
+                x.as_ref(),
+                &values,
+                &batch_opening,
+                &mut transcript
+            ))
+        }
     }
 }
 
@@ -103,6 +159,68 @@ pub fn test_pcs_for_expander_gkr<
                 &opening.unwrap()
             ));
             transcript.unlock_proof();
+        }
+    }
+}
+
+pub fn test_batching_for_expander_gkr<C, T, P>()
+where
+    C: FieldEngine,
+    T: Transcript,
+    P: ExpanderPCS<C, C::SimdCircuitField, Params = usize>,
+{
+    let mut rng = test_rng();
+    let mpi_config = MPIConfig::prover_new();
+    for num_vars in 2..10 {
+        // NOTE(HS) we assume that the polynomials we pass in are of sufficient length.
+        let srs = P::gen_srs_for_testing(&num_vars, &mpi_config, &mut rng);
+        let (proving_key, verification_key) = srs.into_keys();
+        let mut scratch_pad = P::init_scratch_pad(&num_vars, &mpi_config);
+
+        for num_poly in [1, 2, 10, 100] {
+            let polys = (0..num_poly)
+                .map(|_| MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng))
+                .collect::<Vec<_>>();
+
+            let commitments = polys
+                .iter()
+                .map(|poly| {
+                    P::commit(&num_vars, &mpi_config, &proving_key, poly, &mut scratch_pad).unwrap()
+                })
+                .collect::<Vec<_>>();
+
+            // open all polys at a single point
+            let challenge_point = ExpanderSingleVarChallenge::<C> {
+                r_mpi: Vec::new(),
+                r_simd: Vec::new(),
+                rz: (0..num_vars)
+                    .map(|_| C::ChallengeField::random_unsafe(&mut rng))
+                    .collect(),
+            };
+
+            let mut transcript = T::new();
+
+            let (eval_list, opening) = P::batch_open(
+                &num_vars,
+                &mpi_config,
+                &proving_key,
+                &polys,
+                &challenge_point,
+                &mut scratch_pad,
+                &mut transcript,
+            );
+
+            let mut transcript = T::new();
+
+            assert!(P::batch_verify(
+                &num_vars,
+                &verification_key,
+                &commitments,
+                &challenge_point,
+                &eval_list,
+                &opening,
+                &mut transcript,
+            ));
         }
     }
 }
