@@ -73,6 +73,8 @@ impl<F: Field> GenericSumcheck<F> {
     ) -> SumcheckProof<F> {
         transcript.append_serializable_data(&poly.aux_info);
 
+        println!("aux info: {:?}", poly.aux_info);
+
         let mut prover_state = ProverState::prover_init(poly);
         let mut challenge = None;
         let mut prover_msgs = Vec::with_capacity(poly.aux_info.num_variables);
@@ -87,7 +89,7 @@ impl<F: Field> GenericSumcheck<F> {
         if let Some(p) = challenge {
             prover_state.challenges.push(p)
         };
-
+        println!("prover challenges: {:?}", prover_state.challenges);
         SumcheckProof {
             challenges: prover_state.challenges,
             iop_message: prover_msgs,
@@ -103,6 +105,9 @@ impl<F: Field> GenericSumcheck<F> {
     ) -> SumCheckSubClaim<F> {
         transcript.append_serializable_data(aux_info);
         let mut verifier_state = VerifierState::verifier_init(aux_info);
+
+
+        println!("aux info: {:?}", aux_info);
         for i in 0..aux_info.num_variables {
             let prover_msg = proof.iop_message.get(i).expect("proof is incomplete");
             transcript.append_serializable_data(prover_msg);
@@ -113,6 +118,7 @@ impl<F: Field> GenericSumcheck<F> {
             );
         }
 
+        println!("verifier challenges: {:?}", verifier_state.challenges);
         VerifierState::check_and_generate_subclaim(&verifier_state, &claimed_sum)
     }
 }
@@ -141,8 +147,6 @@ impl<F: Field> ProverState<F> {
         if self.round >= self.virtual_poly.aux_info.num_variables {
             panic!("Prover has already finished all rounds");
         }
-
-        // let fix_argument = start_timer!(|| "fix argument");
 
         // Step 1:
         // fix argument and evaluate f(x) over x_m = r; where r is the challenge
@@ -314,19 +318,22 @@ impl<F: Field> VerifierState<F> {
         // insert the asserted_sum to the first position of the expected vector
         expected_vec.insert(0, *asserted_sum);
 
-        for (evaluations, &expected) in self
+        for (i,(evaluations, &expected)) in self
             .polynomials_received
             .iter()
             .zip(expected_vec.iter())
-            .take(self.num_vars)
+            .take(self.num_vars).enumerate()
         {
             // the deferred check during the interactive phase:
             // 1. check if the received 'P(0) + P(1) = expected`.
-            if evaluations[0] + evaluations[1] != expected {
-                println!(
-                    "evaluations: {:?}, expected: {:?}",
-                    evaluations, expected
+
+
+             println!(
+                    "{} layer: {} evaluations: {:?}\nsum: {:?}\nexpected: {:?}",
+                    i,evaluations.len(), evaluations, evaluations[0] + evaluations[1], expected
                 );
+            if evaluations[0] + evaluations[1] != expected {
+               
                 panic!("Prover message is not consistent with the claim.")
             }
         }
@@ -362,82 +369,82 @@ pub(crate) fn interpolate_uni_poly<F: Field>(p_i: &[F], eval_at: F) -> F {
         prod *= tmp;
     }
     let mut res = F::zero();
-    // we want to compute \prod (j!=i) (i-j) for a given i
-    //
-    // we start from the last step, which is
-    //  denom[len-1] = (len-1) * (len-2) *... * 2 * 1
-    // the step before that is
-    //  denom[len-2] = (len-2) * (len-3) * ... * 2 * 1 * -1
-    // and the step before that is
-    //  denom[len-3] = (len-3) * (len-4) * ... * 2 * 1 * -1 * -2
-    //
-    // i.e., for any i, the one before this will be derived from
-    //  denom[i-1] = denom[i] * (len-i) / i
-    //
-    // that is, we only need to store
-    // - the last denom for i = len-1, and
-    // - the ratio between current step and fhe last step, which is the product of (len-i) / i from
-    //   all previous steps and we store this product as a fraction number to reduce field
-    //   divisions.
+    // // we want to compute \prod (j!=i) (i-j) for a given i
+    // //
+    // // we start from the last step, which is
+    // //  denom[len-1] = (len-1) * (len-2) *... * 2 * 1
+    // // the step before that is
+    // //  denom[len-2] = (len-2) * (len-3) * ... * 2 * 1 * -1
+    // // and the step before that is
+    // //  denom[len-3] = (len-3) * (len-4) * ... * 2 * 1 * -1 * -2
+    // //
+    // // i.e., for any i, the one before this will be derived from
+    // //  denom[i-1] = denom[i] * (len-i) / i
+    // //
+    // // that is, we only need to store
+    // // - the last denom for i = len-1, and
+    // // - the ratio between current step and fhe last step, which is the product of (len-i) / i from
+    // //   all previous steps and we store this product as a fraction number to reduce field
+    // //   divisions.
 
-    // We know
-    //  - 2^61 < factorial(20) < 2^62
-    //  - 2^122 < factorial(33) < 2^123
-    // so we will be able to compute the ratio
-    //  - for len <= 20 with i64
-    //  - for len <= 33 with i128
-    //  - for len >  33 with BigInt
-    if p_i.len() <= 20 {
-        let last_denominator = F::from_u256(u64_factorial(len - 1).into());
-        let mut ratio_numerator = 1i64;
-        let mut ratio_denominator = 1u64;
+    // // We know
+    // //  - 2^61 < factorial(20) < 2^62
+    // //  - 2^122 < factorial(33) < 2^123
+    // // so we will be able to compute the ratio
+    // //  - for len <= 20 with i64
+    // //  - for len <= 33 with i128
+    // //  - for len >  33 with BigInt
+    // if p_i.len() <= 20 {
+    //     let last_denominator = F::from_u256(u64_factorial(len - 1).into());
+    //     let mut ratio_numerator = 1i64;
+    //     let mut ratio_denominator = 1u64;
 
-        for i in (0..len).rev() {
-            let ratio_numerator_f = if ratio_numerator < 0 {
-                -F::from_u256(((-ratio_numerator) as u64).into())
-            } else {
-                F::from_u256((ratio_numerator as u64).into())
-            };
+    //     for i in (0..len).rev() {
+    //         let ratio_numerator_f = if ratio_numerator < 0 {
+    //             -F::from_u256(((-ratio_numerator) as u64).into())
+    //         } else {
+    //             F::from_u256((ratio_numerator as u64).into())
+    //         };
 
-            res += p_i[i]
-                * prod
-                * F::from_u256(ratio_denominator.into())
-                * (last_denominator * ratio_numerator_f * evals[i])
-                    .inv()
-                    .unwrap();
+    //         res += p_i[i]
+    //             * prod
+    //             * F::from_u256(ratio_denominator.into())
+    //             * (last_denominator * ratio_numerator_f * evals[i])
+    //                 .inv()
+    //                 .unwrap();
 
-            // compute denom for the next step is current_denom * (len-i)/i
-            if i != 0 {
-                ratio_numerator *= -(len as i64 - i as i64);
-                ratio_denominator *= i as u64;
-            }
-        }
-    } else if p_i.len() <= 33 {
-        let last_denominator = F::from_u256(u128_factorial(len - 1).into());
-        let mut ratio_numerator = 1i128;
-        let mut ratio_denominator = 1u128;
+    //         // compute denom for the next step is current_denom * (len-i)/i
+    //         if i != 0 {
+    //             ratio_numerator *= -(len as i64 - i as i64);
+    //             ratio_denominator *= i as u64;
+    //         }
+    //     }
+    // } else if p_i.len() <= 33 {
+    //     let last_denominator = F::from_u256(u128_factorial(len - 1).into());
+    //     let mut ratio_numerator = 1i128;
+    //     let mut ratio_denominator = 1u128;
 
-        for i in (0..len).rev() {
-            let ratio_numerator_f = if ratio_numerator < 0 {
-                -F::from_u256(((-ratio_numerator) as u128).into())
-            } else {
-                F::from_u256((ratio_numerator as u128).into())
-            };
+    //     for i in (0..len).rev() {
+    //         let ratio_numerator_f = if ratio_numerator < 0 {
+    //             -F::from_u256(((-ratio_numerator) as u128).into())
+    //         } else {
+    //             F::from_u256((ratio_numerator as u128).into())
+    //         };
 
-            res += p_i[i]
-                * prod
-                * F::from_u256((ratio_denominator as u128).into())
-                * (last_denominator * ratio_numerator_f * evals[i])
-                    .inv()
-                    .unwrap();
+    //         res += p_i[i]
+    //             * prod
+    //             * F::from_u256((ratio_denominator as u128).into())
+    //             * (last_denominator * ratio_numerator_f * evals[i])
+    //                 .inv()
+    //                 .unwrap();
 
-            // compute denom for the next step is current_denom * (len-i)/i
-            if i != 0 {
-                ratio_numerator *= -(len as i128 - i as i128);
-                ratio_denominator *= i as u128;
-            }
-        }
-    } else {
+    //         // compute denom for the next step is current_denom * (len-i)/i
+    //         if i != 0 {
+    //             ratio_numerator *= -(len as i128 - i as i128);
+    //             ratio_denominator *= i as u128;
+    //         }
+    //     }
+    // } else {
         let mut denom_up = field_factorial::<F>(len - 1);
         let mut denom_down = F::one();
 
@@ -450,7 +457,7 @@ pub(crate) fn interpolate_uni_poly<F: Field>(p_i: &[F], eval_at: F) -> F {
                 denom_down *= F::from(i as u32);
             }
         }
-    }
+    // }
     res
 }
 

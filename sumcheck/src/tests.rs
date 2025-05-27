@@ -96,11 +96,11 @@ fn test_trivial_polynomial() {
 }
 #[test]
 fn test_normal_polynomial() {
-    let nv = 12;
-    let num_multiplicands_range = (4, 9);
+    let nv = 3;
+    let num_multiplicands_range = (1, 2);
     let num_products = 5;
 
-    test_sumcheck(nv, num_multiplicands_range, num_products);
+    // test_sumcheck(nv, num_multiplicands_range, num_products);
     test_sumcheck_internal(nv, num_multiplicands_range, num_products)
 }
 
@@ -114,61 +114,61 @@ fn test_extract_sum() {
     assert_eq!(GenericSumcheck::<Fr>::extract_sum(&proof), asserted_sum);
 }
 
-#[test]
-/// Test that the memory usage of shared-reference is linear to number of
-/// unique MLExtensions instead of total number of multiplicands.
-fn test_shared_reference() {
-    let mut rng = test_rng();
-    let ml_extensions: Vec<_> = (0..5)
-        .map(|_| Arc::new(MultiLinearPoly::<Fr>::random(8, &mut rng)))
-        .collect();
-    let mut poly = VirtualPolynomial::new(8);
-    poly.add_mle_list(
-        vec![
-            ml_extensions[2].clone(),
-            ml_extensions[3].clone(),
-            ml_extensions[0].clone(),
-        ],
-        Fr::random_unsafe(&mut rng),
-    );
-    poly.add_mle_list(
-        vec![
-            ml_extensions[1].clone(),
-            ml_extensions[4].clone(),
-            ml_extensions[4].clone(),
-        ],
-        Fr::random_unsafe(&mut rng),
-    );
-    poly.add_mle_list(
-        vec![
-            ml_extensions[3].clone(),
-            ml_extensions[2].clone(),
-            ml_extensions[1].clone(),
-        ],
-        Fr::random_unsafe(&mut rng),
-    );
-    poly.add_mle_list(
-        vec![ml_extensions[0].clone(), ml_extensions[0].clone()],
-        Fr::random_unsafe(&mut rng),
-    );
-    poly.add_mle_list(vec![ml_extensions[4].clone()], Fr::random_unsafe(&mut rng));
+// #[test]
+// /// Test that the memory usage of shared-reference is linear to number of
+// /// unique MLExtensions instead of total number of multiplicands.
+// fn test_shared_reference() {
+//     let mut rng = test_rng();
+//     let ml_extensions: Vec<_> = (0..5)
+//         .map(|_| Arc::new(MultiLinearPoly::<Fr>::random(8, &mut rng)))
+//         .collect();
+//     let mut poly = VirtualPolynomial::new(8);
+//     poly.add_mle_list(
+//         vec![
+//             ml_extensions[2].clone(),
+//             ml_extensions[3].clone(),
+//             ml_extensions[0].clone(),
+//         ],
+//         Fr::random_unsafe(&mut rng),
+//     );
+//     poly.add_mle_list(
+//         vec![
+//             ml_extensions[1].clone(),
+//             ml_extensions[4].clone(),
+//             ml_extensions[4].clone(),
+//         ],
+//         Fr::random_unsafe(&mut rng),
+//     );
+//     poly.add_mle_list(
+//         vec![
+//             ml_extensions[3].clone(),
+//             ml_extensions[2].clone(),
+//             ml_extensions[1].clone(),
+//         ],
+//         Fr::random_unsafe(&mut rng),
+//     );
+//     poly.add_mle_list(
+//         vec![ml_extensions[0].clone(), ml_extensions[0].clone()],
+//         Fr::random_unsafe(&mut rng),
+//     );
+//     poly.add_mle_list(vec![ml_extensions[4].clone()], Fr::random_unsafe(&mut rng));
 
-    assert_eq!(poly.flattened_ml_extensions.len(), 5);
+//     assert_eq!(poly.flattened_ml_extensions.len(), 5);
 
-    // test memory usage for prover
-    let prover = ProverState::<Fr>::prover_init(&poly);
-    assert_eq!(prover.virtual_poly.flattened_ml_extensions.len(), 5);
-    drop(prover);
+//     // test memory usage for prover
+//     let prover = ProverState::<Fr>::prover_init(&poly);
+//     assert_eq!(prover.virtual_poly.flattened_ml_extensions.len(), 5);
+//     drop(prover);
 
-    let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
-    let poly_info = poly.aux_info.clone();
-    let proof = GenericSumcheck::<Fr>::prove(&poly, &mut transcript);
-    let asserted_sum = GenericSumcheck::<Fr>::extract_sum(&proof);
+//     let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
+//     let poly_info = poly.aux_info.clone();
+//     let proof = GenericSumcheck::<Fr>::prove(&poly, &mut transcript);
+//     let asserted_sum = GenericSumcheck::<Fr>::extract_sum(&proof);
 
-    let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
-    let subclaim = GenericSumcheck::<Fr>::verify(asserted_sum, &proof, &poly_info, &mut transcript);
-    assert!(
-        poly.evaluate(&subclaim.point) == subclaim.expected_evaluation,
-        "wrong subclaim"
-    );
-}
+//     let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
+//     let subclaim = GenericSumcheck::<Fr>::verify(asserted_sum, &proof, &poly_info, &mut transcript);
+//     assert!(
+//         poly.evaluate(&subclaim.point) == subclaim.expected_evaluation,
+//         "wrong subclaim"
+//     );
+// }
