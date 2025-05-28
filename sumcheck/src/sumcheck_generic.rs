@@ -1,3 +1,7 @@
+//! This module implements the SumCheck protocol for verifying the sum of
+//! evaluations of a set of multi-linear polynomial over the hypercube {0,1}^n.
+//! This is hardcoded for addition gate for simplicity and efficiency.
+
 use arith::Field;
 use gkr_engine::Transcript;
 use polynomials::{MultiLinearPoly, MultilinearExtension};

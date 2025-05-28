@@ -6,15 +6,14 @@ use super::{IOPProverMessage, IOPVerifierState, SumCheckSubClaim};
 impl<F: Field> IOPVerifierState<F> {
     /// Initialize the verifier's state.
     pub fn verifier_init(num_vars: usize) -> Self {
-        let res = Self {
+       Self {
             round: 1,
             num_vars,
             finished: false,
             polynomials_received: Vec::with_capacity(num_vars),
             challenges: Vec::with_capacity(num_vars),
-        };
-
-        res
+        }
+        
     }
 
     /// Run verifier for the current round, given a prover message.

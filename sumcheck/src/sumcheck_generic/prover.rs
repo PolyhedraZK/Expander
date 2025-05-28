@@ -65,10 +65,8 @@ impl<F: Field> IOPProverState<F> {
             f_1 += coeffs[len..].iter().sum::<F>();
         }
 
-        let msg = IOPProverMessage {
+        IOPProverMessage {
             evaluations: vec![f_0, f_1],
-        };
-
-        msg
+        }
     }
 }
