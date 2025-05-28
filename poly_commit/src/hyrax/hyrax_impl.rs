@@ -61,15 +61,16 @@ where
 
     fn deserialize_from<R: std::io::Read>(mut reader: R) -> serdes::SerdeResult<Self> {
         let num_elements = usize::deserialize_from(&mut reader)?;
-
-        let mut buffer = [0u8; 64];
         let mut uncompressed = <C as UncompressedEncoding>::Uncompressed::default();
 
         let mut elements = Vec::with_capacity(num_elements);
         for _ in 0..num_elements {
-            reader.read_exact(&mut buffer).unwrap();
-            uncompressed.as_mut().copy_from_slice(&buffer);
-            elements.push(C::from_uncompressed_unchecked(&uncompressed).unwrap());
+            reader.read_exact(uncompressed.as_mut())?;
+            elements.push(
+                C::from_uncompressed_unchecked(&uncompressed)
+                    .into_option()
+                    .ok_or(serdes::SerdeError::DeserializeError)?,
+            );
         }
         Ok(Self(elements))
     }
