@@ -39,7 +39,7 @@ where
 #[derive(Clone, Debug, Default)]
 pub struct HyraxCommitment<C>(pub Vec<C>)
 where
-    C: CurveAffine + ExpSerde;
+    C: CurveAffine + ExpSerde + UncompressedEncoding;
 
 #[derive(Clone, Debug, Default)]
 pub struct HyraxOpening<C>(pub Vec<C::Scalar>)
