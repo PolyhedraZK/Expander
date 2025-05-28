@@ -2,7 +2,9 @@ use std::marker::PhantomData;
 
 use arith::ExtensionField;
 use gkr_engine::{StructuredReferenceString, Transcript};
-use halo2curves::{ff::PrimeField, CurveAffine};
+use halo2curves::{
+    bn256::G1Uncompressed, ff::PrimeField, group::UncompressedEncoding, CurveAffine,
+};
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
 
@@ -13,7 +15,7 @@ use crate::{
 
 pub struct HyraxPCS<C>
 where
-    C: CurveAffine,
+    C: CurveAffine + ExpSerde + UncompressedEncoding<Uncompressed = G1Uncompressed>,
     C::Scalar: ExtensionField,
     C::ScalarExt: ExtensionField,
 {
@@ -22,7 +24,7 @@ where
 
 impl<C> PolynomialCommitmentScheme<C::Scalar> for HyraxPCS<C>
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding<Uncompressed = G1Uncompressed>,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
     C::Base: PrimeField<Repr = [u8; 32]>,

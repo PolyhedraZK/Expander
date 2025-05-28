@@ -3,7 +3,9 @@ use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
 };
-use halo2curves::{ff::PrimeField, msm, CurveAffine};
+use halo2curves::{
+    bn256::G1Uncompressed, ff::PrimeField, group::UncompressedEncoding, msm, CurveAffine,
+};
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
@@ -21,7 +23,7 @@ use crate::{
 impl<G, C> ExpanderPCS<G, C::Scalar> for HyraxPCS<C>
 where
     G: FieldEngine<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding<Uncompressed = G1Uncompressed>,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
     C::Base: PrimeField<Repr = [u8; 32]>,
