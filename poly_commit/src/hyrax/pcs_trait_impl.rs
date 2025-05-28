@@ -159,6 +159,7 @@ where
             });
         }
 
+        // built the virtual polynomial for SumCheck
         let tilde_eqs: Vec<MultiLinearPoly<C::Scalar>> = points
             .iter()
             .map(|point| {
@@ -170,6 +171,10 @@ where
         let mut sumcheck_poly = vec![];
         for (tilde_g, tilde_eq) in tilde_gs.iter().zip(tilde_eqs.into_iter()) {
             sumcheck_poly.extend_from_slice([tilde_g.clone(), tilde_eq].as_slice());
+        }
+        println!("SumCheck poly: {:?}", sumcheck_poly.len());
+        for poly in sumcheck_poly.iter() {
+            println!("Poly: {:?}", poly.coeffs.len());
         }
 
         let proof = SumCheck::<C::Scalar>::prove(&sumcheck_poly, transcript);

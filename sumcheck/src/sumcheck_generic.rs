@@ -96,6 +96,10 @@ impl<F: Field> SumCheck<F> {
             prover_msgs.push(prover_msg);
             challenge = Some(transcript.generate_field_element::<F>());
         }
+        // pushing the last challenge point to the state
+        if let Some(p) = challenge {
+            prover_state.challenges.push(p)
+        };
 
         IOPProof {
             point: prover_state.challenges,
