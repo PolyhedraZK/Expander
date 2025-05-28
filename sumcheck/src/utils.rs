@@ -1,4 +1,4 @@
-use arith::{ExtensionField,  SimdField};
+use arith::{ExtensionField, SimdField};
 use gkr_engine::{MPIEngine, Transcript};
 
 #[inline(always)]

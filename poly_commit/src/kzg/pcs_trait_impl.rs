@@ -113,7 +113,7 @@ where
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
-    fn batch_open(
+    fn single_point_batch_open(
         _params: &Self::Params,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         polys: &[Self::Poly],
@@ -124,7 +124,7 @@ where
         kzg_batch_open(proving_key, polys, x, transcript)
     }
 
-    fn batch_verify(
+    fn single_point_batch_verify(
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitments: &[Self::Commitment],

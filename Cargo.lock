@@ -1755,6 +1755,7 @@ dependencies = [
  "polynomials",
  "rand",
  "serdes",
+ "sumcheck",
  "thiserror",
  "transcript",
  "transpose",
