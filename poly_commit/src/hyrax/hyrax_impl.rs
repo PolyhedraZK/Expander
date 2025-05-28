@@ -1,7 +1,5 @@
 use arith::ExtensionField;
-use halo2curves::{
-    bn256::G1Uncompressed, ff::PrimeField, group::UncompressedEncoding, msm, CurveAffine,
-};
+use halo2curves::{ff::PrimeField, group::UncompressedEncoding, msm, CurveAffine};
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
@@ -46,11 +44,11 @@ where
 #[derive(Clone, Debug, Default)]
 pub struct HyraxOpening<C>(pub Vec<C::Scalar>)
 where
-    C: CurveAffine + ExpSerde + UncompressedEncoding<Uncompressed = G1Uncompressed>;
+    C: CurveAffine + ExpSerde + UncompressedEncoding;
 
 impl<C> ExpSerde for HyraxCommitment<C>
 where
-    C: CurveAffine + ExpSerde + UncompressedEncoding<Uncompressed = G1Uncompressed>,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
 {
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> serdes::SerdeResult<()> {
         self.0.len().serialize_into(&mut writer)?;
@@ -65,7 +63,7 @@ where
         let num_elements = usize::deserialize_from(&mut reader)?;
 
         let mut buffer = [0u8; 64];
-        let mut uncompressed = G1Uncompressed::default();
+        let mut uncompressed = <C as UncompressedEncoding>::Uncompressed::default();
 
         let mut elements = Vec::with_capacity(num_elements);
         for _ in 0..num_elements {
@@ -79,7 +77,7 @@ where
 
 impl<C> ExpSerde for HyraxOpening<C>
 where
-    C: CurveAffine + ExpSerde + UncompressedEncoding<Uncompressed = G1Uncompressed>,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExpSerde,
 {
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
@@ -97,7 +95,7 @@ pub(crate) fn hyrax_commit<C>(
     mle_poly: &impl MultilinearExtension<C::Scalar>,
 ) -> HyraxCommitment<C>
 where
-    C: CurveAffine + ExpSerde + UncompressedEncoding<Uncompressed = G1Uncompressed>,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
     C::Base: PrimeField<Repr = [u8; 32]>,
@@ -118,7 +116,7 @@ pub(crate) fn hyrax_open<C>(
     eval_point: &[C::Scalar],
 ) -> (C::Scalar, HyraxOpening<C>)
 where
-    C: CurveAffine + ExpSerde + UncompressedEncoding<Uncompressed = G1Uncompressed>,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
     C::Base: PrimeField<Repr = [u8; 32]>,
@@ -144,7 +142,7 @@ pub(crate) fn hyrax_verify<C>(
     proof: &HyraxOpening<C>,
 ) -> bool
 where
-    C: CurveAffine + ExpSerde + UncompressedEncoding<Uncompressed = G1Uncompressed>,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
     C::Base: PrimeField<Repr = [u8; 32]>,
