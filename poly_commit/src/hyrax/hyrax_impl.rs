@@ -1,5 +1,5 @@
 use arith::ExtensionField;
-use halo2curves::{ff::PrimeField, msm, CurveAffine};
+use halo2curves::{ff::PrimeField, group::UncompressedEncoding, msm, CurveAffine};
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
@@ -37,24 +37,48 @@ where
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct HyraxCommitment<C: CurveAffine + ExpSerde>(pub Vec<C>);
+pub struct HyraxCommitment<C>(pub Vec<C>)
+where
+    C: CurveAffine + ExpSerde + UncompressedEncoding;
 
 #[derive(Clone, Debug, Default)]
-pub struct HyraxOpening<C: CurveAffine + ExpSerde>(pub Vec<C::Scalar>);
+pub struct HyraxOpening<C>(pub Vec<C::Scalar>)
+where
+    C: CurveAffine + ExpSerde + UncompressedEncoding;
 
-impl<C: CurveAffine + ExpSerde> ExpSerde for HyraxCommitment<C> {
-    fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
-        self.0.serialize_into(writer)
+impl<C> ExpSerde for HyraxCommitment<C>
+where
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
+{
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> serdes::SerdeResult<()> {
+        self.0.len().serialize_into(&mut writer)?;
+        for c in self.0.iter() {
+            let uncompressed = UncompressedEncoding::to_uncompressed(c);
+            writer.write_all(uncompressed.as_ref())?;
+        }
+        Ok(())
     }
 
-    fn deserialize_from<R: std::io::Read>(reader: R) -> serdes::SerdeResult<Self> {
-        let buffer: Vec<C> = <Vec<C> as ExpSerde>::deserialize_from(reader)?;
-        Ok(Self(buffer))
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> serdes::SerdeResult<Self> {
+        let num_elements = usize::deserialize_from(&mut reader)?;
+        let mut uncompressed = <C as UncompressedEncoding>::Uncompressed::default();
+
+        let mut elements = Vec::with_capacity(num_elements);
+        for _ in 0..num_elements {
+            reader.read_exact(uncompressed.as_mut())?;
+            elements.push(
+                C::from_uncompressed_unchecked(&uncompressed)
+                    .into_option()
+                    .ok_or(serdes::SerdeError::DeserializeError)?,
+            );
+        }
+        Ok(Self(elements))
     }
 }
 
-impl<C: CurveAffine + ExpSerde> ExpSerde for HyraxOpening<C>
+impl<C> ExpSerde for HyraxOpening<C>
 where
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExpSerde,
 {
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
@@ -67,11 +91,12 @@ where
     }
 }
 
-pub(crate) fn hyrax_commit<C: CurveAffine + ExpSerde>(
+pub(crate) fn hyrax_commit<C>(
     params: &PedersenParams<C>,
     mle_poly: &impl MultilinearExtension<C::Scalar>,
 ) -> HyraxCommitment<C>
 where
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
     C::Base: PrimeField<Repr = [u8; 32]>,
@@ -92,7 +117,7 @@ pub(crate) fn hyrax_open<C>(
     eval_point: &[C::Scalar],
 ) -> (C::Scalar, HyraxOpening<C>)
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
     C::Base: PrimeField<Repr = [u8; 32]>,
@@ -118,7 +143,7 @@ pub(crate) fn hyrax_verify<C>(
     proof: &HyraxOpening<C>,
 ) -> bool
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
     C::Base: PrimeField<Repr = [u8; 32]>,
