@@ -8,6 +8,7 @@ use serdes::ExpSerde;
 
 use crate::{
     hyrax::hyrax_impl::{hyrax_commit, hyrax_open, hyrax_setup, hyrax_verify},
+    traits::BatchOpeningPCS,
     HyraxCommitment, HyraxOpening, PedersenParams, PolynomialCommitmentScheme,
 };
 
@@ -76,7 +77,14 @@ where
     ) -> bool {
         hyrax_verify(verifying_key, commitment, x, v, opening)
     }
+}
 
+impl<C> BatchOpeningPCS<C::Scalar> for HyraxPCS<C>
+where
+    C: CurveAffine + ExpSerde,
+    C::Scalar: ExtensionField + PrimeField,
+    C::ScalarExt: ExtensionField + PrimeField,
+{
     fn batch_open(
         _params: &Self::Params,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,

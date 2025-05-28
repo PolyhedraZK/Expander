@@ -56,8 +56,12 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
         opening: &Self::Opening,
         transcript: &mut impl Transcript,
     ) -> bool;
+}
 
-    /// Open a set of polynomials at a point.
+/// Batch opening polynomial commitment scheme trait.
+/// This trait is implemented for homomorphic polynomial commitment schemes such as Hyrax and KZG
+pub trait BatchOpeningPCS<F: ExtensionField>: PolynomialCommitmentScheme<F> {
+    /// Open a set of polynomials at a single point.
     fn batch_open(
         params: &Self::Params,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
@@ -67,7 +71,7 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
         transcript: &mut impl Transcript,
     ) -> (Vec<F>, Self::Opening);
 
-    /// Verify the opening of a set of polynomials at a point.
+    /// Verify the opening of a set of polynomials at a single point.
     fn batch_verify(
         params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,

@@ -129,29 +129,6 @@ where
         assert_eq!(*params, vk.num_vars);
         orion_verify::<_, OpenPackF, _, ComPackF>(vk, commitment, x, &[], v, transcript, opening)
     }
-
-    fn batch_open(
-        _params: &Self::Params,
-        _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        _polys: &[Self::Poly],
-        _x: &Self::EvalPoint,
-        _scratch_pad: &Self::ScratchPad,
-        _transcript: &mut impl Transcript,
-    ) -> (Vec<EvalF>, Self::Opening) {
-        unimplemented!("batch_open is not implemented for OrionBaseFieldPCS");
-    }
-
-    fn batch_verify(
-        _params: &Self::Params,
-        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
-        _commitments: &[Self::Commitment],
-        _x: &Self::EvalPoint,
-        _vs: &[EvalF],
-        _opening: &Self::Opening,
-        _transcript: &mut impl Transcript,
-    ) -> bool {
-        unimplemented!("batch_verify is not implemented for OrionBaseFieldPCS");
-    }
 }
 
 pub struct OrionSIMDFieldPCS<F, SimdF, EvalF, ComPackF>
@@ -252,28 +229,5 @@ where
         assert_eq!(*params, vk.num_vars);
         assert_eq!(x.len(), vk.num_vars);
         orion_verify::<_, SimdF, _, ComPackF>(vk, commitment, x, &[], v, transcript, opening)
-    }
-
-    fn batch_open(
-        _params: &Self::Params,
-        _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        _polys: &[Self::Poly],
-        _x: &Self::EvalPoint,
-        _scratch_pad: &Self::ScratchPad,
-        _transcript: &mut impl Transcript,
-    ) -> (Vec<EvalF>, Self::Opening) {
-        unimplemented!("batch_open is not implemented for OrionSIMDFieldPCS");
-    }
-
-    fn batch_verify(
-        _params: &Self::Params,
-        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
-        _commitments: &[Self::Commitment],
-        _x: &Self::EvalPoint,
-        _vs: &[EvalF],
-        _opening: &Self::Opening,
-        _transcript: &mut impl Transcript,
-    ) -> bool {
-        unimplemented!("batch_verify is not implemented for OrionSIMDFieldPCS");
     }
 }

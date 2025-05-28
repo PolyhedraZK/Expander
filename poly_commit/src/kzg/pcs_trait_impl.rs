@@ -10,7 +10,7 @@ use halo2curves::{
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
 
-use crate::*;
+use crate::{traits::BatchOpeningPCS, *};
 use kzg::hyper_kzg::*;
 
 use super::deferred_pairing::PairingAccumulator;
@@ -104,7 +104,15 @@ where
 
         pairing_check && partial_check
     }
+}
 
+impl<E> BatchOpeningPCS<E::Fr> for HyperKZGPCS<E>
+where
+    E: Engine + MultiMillerLoop,
+    E::Fr: ExtensionField + PrimeField,
+    E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+{
     fn batch_open(
         _params: &Self::Params,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,

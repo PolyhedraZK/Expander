@@ -1,7 +1,7 @@
 #![allow(clippy::manual_div_ceil)]
 
 mod traits;
-pub use traits::PolynomialCommitmentScheme;
+pub use traits::{BatchOpeningPCS, PolynomialCommitmentScheme};
 
 pub const PCS_SOUNDNESS_BITS: usize = 128;
 
