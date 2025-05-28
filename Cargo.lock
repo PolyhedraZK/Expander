@@ -1773,6 +1773,7 @@ dependencies = [
  "halo2curves",
  "itertools 0.13.0",
  "rand",
+ "serdes",
 ]
 
 [[package]]
@@ -2161,11 +2162,14 @@ name = "sumcheck"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "ark-std",
  "circuit",
  "env_logger",
  "gkr_engine",
+ "gkr_hashers",
  "log",
  "polynomials",
+ "serdes",
  "transcript",
  "utils",
 ]
