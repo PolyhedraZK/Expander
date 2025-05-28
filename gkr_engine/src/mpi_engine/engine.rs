@@ -244,11 +244,11 @@ impl<'a> MPIEngine for MPIConfig<'a> {
 
     /// Root process broadcast a value f into all the processes
     #[inline]
-    fn root_broadcast_f<F: Field>(&self, f: &mut F) {
+    fn root_broadcast_f<F: Copy>(&self, f: &mut F) {
         unsafe {
             if self.world_size == 1 {
             } else {
-                let mut vec_u8 = transmute_elem_to_u8_bytes(f, F::SIZE);
+                let mut vec_u8 = transmute_elem_to_u8_bytes(f, std::mem::size_of::<F>());
                 self.root_process().broadcast_into(&mut vec_u8);
                 vec_u8.leak();
             }
