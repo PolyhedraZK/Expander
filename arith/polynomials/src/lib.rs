@@ -10,8 +10,5 @@ pub use univariate::*;
 mod eq;
 pub use eq::*;
 
-mod vp;
-pub use vp::*;
-
 #[cfg(test)]
 mod tests;
