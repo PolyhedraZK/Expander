@@ -42,7 +42,7 @@ pub trait MPIEngine {
     /// # Behavior
     /// - Root process broadcasts its value
     /// - All other processes receive the value
-    fn root_broadcast_f<F: Field>(&self, f: &mut F);
+    fn root_broadcast_f<F: Copy>(&self, f: &mut F);
 
     /// Broadcast a vector of bytes from root process to all processes
     ///
