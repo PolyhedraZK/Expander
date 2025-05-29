@@ -67,8 +67,6 @@ where
 {
     /// A sum check proof proving tilde g's sum
     pub(crate) sum_check_proof: IOPProof<F>,
-    /// f_i(point_i)
-    pub f_i_eval_at_point_i: Vec<F>,
     /// proof for g'(a_2)
     pub(crate) g_prime_proof: PCS::Opening,
 }
@@ -106,7 +104,7 @@ pub trait BatchOpeningPCS<F: ExtensionField>: PolynomialCommitmentScheme<F> + Si
         points: &[Self::EvalPoint],
         scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
-    ) -> BatchOpening<F, Self> {
+    ) -> (Vec<F>, BatchOpening<F, Self>) {
         unimplemented!()
     }
 

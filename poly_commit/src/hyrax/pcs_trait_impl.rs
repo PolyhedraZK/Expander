@@ -132,6 +132,10 @@ where
     /// 6. build g'(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is the sumcheck's
     ///    point
     /// 7. open g'(X) at point (a2)
+    ///
+    /// Returns:
+    /// - the evaluations of the polynomials at their corresponding points
+    /// - the batch opening proof containing the sumcheck proof and the opening of g'(X)
     fn multiple_points_batch_open(
         _params: &Self::Params,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
@@ -139,7 +143,7 @@ where
         points: &[Self::EvalPoint],
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
-    ) -> BatchOpening<C::Scalar, Self> {
+    ) -> (Vec<C::Scalar>, BatchOpening<C::Scalar, Self>) {
         let num_vars = polys[0].num_vars();
         let k = polys.len();
         let ell = log2(k) as usize;
@@ -157,8 +161,6 @@ where
         // eq(t, i) for i in [0..k]
         let eq_t_i = EqPolynomial::build_eq_x_r(&t);
 
-        // let eq_t_i = vec![C::Scalar::one(); 1 << ell];
-
         // \tilde g_i(b) = eq(t, i) * f_i(b)
         let mut tilde_gs = vec![];
         for (index, f_i) in polys.iter().enumerate() {
@@ -170,7 +172,6 @@ where
                 coeffs: tilde_g_eval,
             });
         }
-        // println!("tilde_gs: {:?}", tilde_gs);
 
         // built the virtual polynomial for SumCheck
         let tilde_eqs: Vec<MultiLinearPoly<C::Scalar>> = points
@@ -185,34 +186,19 @@ where
         for (tilde_g, tilde_eq) in tilde_gs.iter().zip(tilde_eqs.into_iter()) {
             sumcheck_poly.add_pair(tilde_g.clone(), tilde_eq);
         }
-        // println!("SumCheck poly: {:?}", sumcheck_poly.len());
-        // for poly in sumcheck_poly.iter() {
-        //     println!("Poly: {:?}", poly.coeffs.len());
-        // }
 
         let proof = SumCheck::<C::Scalar>::prove(&sumcheck_poly, transcript);
 
-        println!("SumCheck proof: {:?}", proof,);
-
-        println!(
-            "SumCheck sum: {:?}",
-            SumCheck::<C::Scalar>::extract_sum(&proof)
-        );
-
         let a2 = &proof.point[..num_vars];
-
-        println!("a2: {:?}", a2);
-        println!("eq_t_i: {:?}", eq_t_i);
+        let mut a2_rev = a2.to_vec();
+        a2_rev.reverse();
 
         // build g'(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is the
         // sumcheck's point \tilde eq_i(a2) = eq(a2, point_i)
         let mut g_prime_evals = vec![C::Scalar::zero(); 1 << num_vars];
 
-        // println!("tilde_gs: {:?}", tilde_gs.len());
-        // println!("tilde_gs: {:?}", tilde_gs[0]);
         for (tilde_g, point) in tilde_gs.iter().zip(points.iter()) {
-            let eq_i_a2 = EqPolynomial::eq_vec(a2, point);
-            println!("eq_i_a2: {:?}", eq_i_a2);
+            let eq_i_a2 = EqPolynomial::eq_vec(a2_rev.as_ref(), point);
             for (j, &tilde_g_eval) in tilde_g.coeffs.iter().enumerate() {
                 g_prime_evals[j] += tilde_g_eval * eq_i_a2;
             }
@@ -221,38 +207,15 @@ where
             coeffs: g_prime_evals,
         };
 
-        let mut a2_rev = a2.to_vec();
-        a2_rev.reverse();
-
-        // let (_g_prime_eval, g_prime_proof) = hyrax_open(proving_key, &g_prime, a2_rev.as_ref());
-        // //a2.to_vec().as_ref());
         let (_g_prime_eval, g_prime_proof) = hyrax_open(proving_key, &g_prime, a2_rev.as_ref()); //a2.to_vec().as_ref());
+        (
+            evals,
+            BatchOpening {
+                sum_check_proof: proof,
 
-        println!("g(a2) from hyrax: {:?}", _g_prime_eval);
-
-        println!("g'(a2):  {:?}", g_prime.evaluate_jolt(a2));
-        println!("g'(a2_rev):  {:?}", g_prime.eval_reverse_order(a2));
-
-        // let mut sumcheck_poly_eval = C::Scalar::zero();
-        // for p in sumcheck_poly.iter() {
-        //     sumcheck_poly_eval += p.evaluate_jolt(a2);
-        // }
-
-        println!("prover sumcheck eval:  {:?}", sumcheck_poly.evaluate(a2));
-        // println!("prover sumcheck eval:  {:?}", sumcheck_poly_eval);
-
-        // let mut sumcheck_poly_eval = C::Scalar::zero();
-        // for p in sumcheck_poly.iter() {
-        //     sumcheck_poly_eval += p.eval_reverse_order(a2);
-        // }
-
-        // println!("prover sumcheck eval rev:  {:?}", sumcheck_poly_eval);
-
-        BatchOpening {
-            sum_check_proof: proof,
-            f_i_eval_at_point_i: evals.to_vec(),
-            g_prime_proof,
-        }
+                g_prime_proof,
+            },
+        )
     }
 
     /// Verify the opening of a set of polynomials at a single point.
@@ -267,7 +230,7 @@ where
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitments: &[Self::Commitment],
         points: &[Self::EvalPoint],
-        _values: &[C::Scalar],
+        values: &[C::Scalar],
         opening: &BatchOpening<C::Scalar, Self>,
         transcript: &mut impl Transcript,
     ) -> bool {
@@ -285,23 +248,15 @@ where
 
         let eq_t_i = EqPolynomial::build_eq_x_r(&t);
 
-        // let eq_t_i = vec![C::Scalar::one(); 1 << ell];
-
-        println!("a2: {:?}", a2);
-        println!("eq_t_i: {:?}", eq_t_i);
-
         // build g' commitment
-        // todo: use MSM
 
+        // todo: use MSM
         // let mut scalars = vec![];
         // let mut bases = vec![];
 
         let mut g_prime_commit_elems = vec![C::Curve::default(); commitments[0].0.len()];
         for (i, point) in points.iter().enumerate() {
-            let eq_i_a2 = EqPolynomial::eq_vec(a2, point);
-            println!("eq_i_a2: {:?}", eq_i_a2);
-            // scalars.push(eq_i_a2 * eq_t_list[i]);
-            // bases.push(commitments[i].0);
+            let eq_i_a2 = EqPolynomial::eq_vec(a2_rev.as_ref(), point);
             let scalar = eq_i_a2 * eq_t_i[i];
             for (j, &base) in commitments[i].0.iter().enumerate() {
                 g_prime_commit_elems[j] += base * scalar;
@@ -315,16 +270,13 @@ where
         // ensure \sum_i eq(t, <i>) * f_i_evals matches the sum via SumCheck
         let mut sum = C::Scalar::zero();
         for (i, &e) in eq_t_i.iter().enumerate().take(k) {
-            sum += e * opening.f_i_eval_at_point_i[i];
+            sum += e * values[i];
         }
 
         let subclaim =
             SumCheck::<C::Scalar>::verify(sum, &opening.sum_check_proof, num_var, transcript);
 
-        println!("subclaim: {:?}", subclaim);
-
         let tilde_g_eval = subclaim.expected_evaluation;
-        println!("verifier expected tilde_g_eval: {:?}", tilde_g_eval);
 
         // verify commitment
         hyrax_verify(

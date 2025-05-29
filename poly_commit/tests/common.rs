@@ -61,55 +61,49 @@ where
 
         let (proving_key, verification_key) = srs.into_keys();
 
-        // // single point batch opening
-        // for num_poly in [1, 2, 10, 100] {
-        //     let polys = (0..num_poly)
-        //         .map(|_| MultiLinearPoly::<F>::random(num_vars, &mut rng))
-        //         .collect::<Vec<_>>();
-        //     let commitments = polys
-        //         .iter()
-        //         .map(|poly| P::commit(&num_vars, &proving_key, poly, &mut scratch_pad))
-        //         .collect::<Vec<_>>();
+        // single point batch opening
+        for num_poly in [1, 2, 10, 100] {
+            let polys = (0..num_poly)
+                .map(|_| MultiLinearPoly::<F>::random(num_vars, &mut rng))
+                .collect::<Vec<_>>();
+            let commitments = polys
+                .iter()
+                .map(|poly| P::commit(&num_vars, &proving_key, poly, &mut scratch_pad))
+                .collect::<Vec<_>>();
 
-        //     // open all polys at a single point
-        //     let x = (0..num_vars)
-        //         .map(|_| F::random_unsafe(&mut rng))
-        //         .collect::<Vec<_>>();
+            // open all polys at a single point
+            let x = (0..num_vars)
+                .map(|_| F::random_unsafe(&mut rng))
+                .collect::<Vec<_>>();
 
-        //     let mut transcript = T::new();
+            let mut transcript = T::new();
 
-        //     let (values, batch_opening) = P::single_point_batch_open(
-        //         &num_vars,
-        //         &proving_key,
-        //         &polys,
-        //         x.as_ref(),
-        //         &mut scratch_pad,
-        //         &mut transcript,
-        //     );
+            let (values, batch_opening) = P::single_point_batch_open(
+                &num_vars,
+                &proving_key,
+                &polys,
+                x.as_ref(),
+                &mut scratch_pad,
+                &mut transcript,
+            );
 
-        //     let mut transcript = T::new();
+            let mut transcript = T::new();
 
-        //     assert!(P::single_point_batch_verify(
-        //         &num_vars,
-        //         &verification_key,
-        //         &commitments,
-        //         x.as_ref(),
-        //         &values,
-        //         &batch_opening,
-        //         &mut transcript
-        //     ))
-        // }
+            assert!(P::single_point_batch_verify(
+                &num_vars,
+                &verification_key,
+                &commitments,
+                x.as_ref(),
+                &values,
+                &batch_opening,
+                &mut transcript
+            ))
+        }
 
         // multi point batch opening
         for num_poly in [2, 4, 8, 16] {
             let polys = (0..num_poly)
-                .map(
-                    |_| MultiLinearPoly {
-                        coeffs: (0..1 << num_vars)
-                            .map(|i| F::from(num_poly * 10 + i as u32))
-                            .collect(),
-                    }, // MultiLinearPoly::<F>::random(num_vars, &mut rng)
-                )
+                .map(|_| MultiLinearPoly::<F>::random(num_vars, &mut rng))
                 .collect::<Vec<_>>();
 
             let commitments = polys
@@ -121,22 +115,14 @@ where
             let points = (0..num_poly)
                 .map(|_| {
                     (0..num_vars)
-                        .map(
-                            |_| F::from(1u32), // F::random_unsafe(&mut rng)
-                        )
+                        .map(|_i| F::random_unsafe(&mut rng))
                         .collect::<Vec<_>>()
                 })
                 .collect::<Vec<_>>();
 
-            let values = polys
-                .iter()
-                .zip(points.iter())
-                .map(|(poly, point)| poly.eval_reverse_order(point))
-                .collect::<Vec<_>>();
-
             let mut transcript = T::new();
 
-            let batch_opening = P::multiple_points_batch_open(
+            let (values, batch_opening) = P::multiple_points_batch_open(
                 &num_vars,
                 &proving_key,
                 &polys,
