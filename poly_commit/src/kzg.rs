@@ -29,8 +29,5 @@ pub use pcs_trait_impl::HyperKZGPCS;
 
 mod expander_api;
 
-mod deferred_pairing;
-pub use deferred_pairing::PairingAccumulator;
-
 mod batch;
 pub use batch::{kzg_batch_open, kzg_batch_verify};

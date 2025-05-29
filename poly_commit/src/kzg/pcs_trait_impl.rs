@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use arith::ExtensionField;
 use arith::Field;
 use ark_std::log2;
-use gkr_engine::{DeferredCheck, StructuredReferenceString, Transcript};
+use gkr_engine::{StructuredReferenceString, Transcript};
 use halo2curves::group::Curve;
 use halo2curves::group::Group;
 use halo2curves::{
@@ -21,8 +21,6 @@ use crate::{
     *,
 };
 use kzg::hyper_kzg::*;
-
-use super::deferred_pairing::PairingAccumulator;
 
 pub struct HyperKZGPCS<E>
 where
@@ -97,21 +95,7 @@ where
         opening: &Self::Opening,
         transcript: &mut impl Transcript,
     ) -> bool {
-        let mut accumulator = PairingAccumulator::default();
-
-        let partial_check = coeff_form_uni_hyperkzg_partial_verify(
-            verifying_key,
-            commitment.0,
-            x,
-            v,
-            opening,
-            transcript,
-            &mut accumulator,
-        );
-
-        let pairing_check = accumulator.final_check();
-
-        pairing_check && partial_check
+        coeff_form_uni_hyperkzg_verify(verifying_key, commitment.0, x, v, opening, transcript)
     }
 }
 

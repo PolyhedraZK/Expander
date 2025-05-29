@@ -1,6 +1,6 @@
 //! This module implements the SumCheck protocol for verifying the sum of
 //! evaluations of a set of multi-linear polynomial over the hypercube {0,1}^n.
-//! This is hardcoded for addition gate for simplicity and efficiency.
+//! This is hardcoded for sum of product of MLEs for simplicity and efficiency.
 // Credit: code adopted from https://github.com/EspressoSystems/hyperplonk/ with modification
 
 use arith::Field;

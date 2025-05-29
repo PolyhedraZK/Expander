@@ -20,8 +20,6 @@ use crate::{
     *,
 };
 
-use super::deferred_pairing::PairingAccumulator;
-
 impl<G, E> ExpanderPCS<G, E::Fr> for HyperKZGPCS<E>
 where
     G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
@@ -39,7 +37,6 @@ where
     type Params = usize;
     type SRS = CoefFormBiKZGLocalSRS<E>;
     type ScratchPad = ();
-    type Accumulator = PairingAccumulator<E>;
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
@@ -137,7 +134,7 @@ where
         )
     }
 
-    fn partial_verify(
+    fn verify(
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
@@ -145,7 +142,6 @@ where
         v: <G as FieldEngine>::ChallengeField,
         transcript: &mut impl Transcript,
         opening: &Self::Opening,
-        accumulator: &mut Self::Accumulator,
     ) -> bool {
         if x.rz.len() < Self::MINIMUM_SUPPORTED_NUM_VARS {
             let x = lift_expander_challenge_to_n_vars(x, Self::MINIMUM_SUPPORTED_NUM_VARS);
@@ -160,7 +156,7 @@ where
             );
         };
 
-        coeff_form_hyper_bikzg_partial_verify(
+        coeff_form_hyper_bikzg_verify(
             verifying_key,
             &x.local_xs(),
             &x.r_mpi,
@@ -168,7 +164,6 @@ where
             commitment.0,
             opening,
             transcript,
-            accumulator,
         )
     }
 

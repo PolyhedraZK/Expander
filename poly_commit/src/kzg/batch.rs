@@ -1,13 +1,13 @@
 use arith::{ExtensionField, Field};
-use gkr_engine::{DeferredCheck, Transcript};
+use gkr_engine::Transcript;
 use halo2curves::group::Group;
 use halo2curves::{group::Curve, msm::multiexp_serial, pairing::MultiMillerLoop, CurveAffine};
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
 
 use super::{
-    coeff_form_uni_hyperkzg_open, coeff_form_uni_hyperkzg_partial_verify, powers_series,
-    CoefFormUniKZGSRS, HyperKZGOpening, PairingAccumulator, UniKZGVerifierParams,
+    coeff_form_uni_hyperkzg_open, coeff_form_uni_hyperkzg_verify, powers_series, CoefFormUniKZGSRS,
+    HyperKZGOpening, UniKZGVerifierParams,
 };
 
 pub fn kzg_batch_open<E>(
@@ -81,19 +81,12 @@ where
         .zip(rlcs.iter())
         .fold(E::Fr::zero(), |acc, (e, r)| acc + (*e * r));
 
-    let mut accumulator = PairingAccumulator::default();
-
-    let partial_check = coeff_form_uni_hyperkzg_partial_verify(
+    coeff_form_uni_hyperkzg_verify(
         verifying_key,
         merged_commitment.to_affine(),
         x,
         merged_eval,
         opening,
         transcript,
-        &mut accumulator,
-    );
-
-    let pairing_check = accumulator.final_check();
-
-    pairing_check && partial_check
+    )
 }

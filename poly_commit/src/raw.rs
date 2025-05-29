@@ -136,8 +136,6 @@ impl<C: FieldEngine> ExpanderPCS<C, C::SimdCircuitField> for RawExpanderGKR<C> {
 
     type Opening = ();
 
-    type Accumulator = ();
-
     fn gen_srs_for_testing(
         _params: &Self::Params,
         _mpi_engine: &impl MPIEngine,
@@ -194,7 +192,7 @@ impl<C: FieldEngine> ExpanderPCS<C, C::SimdCircuitField> for RawExpanderGKR<C> {
         Some(())
     }
 
-    fn partial_verify(
+    fn verify(
         _params: &Self::Params,
         _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
@@ -202,7 +200,6 @@ impl<C: FieldEngine> ExpanderPCS<C, C::SimdCircuitField> for RawExpanderGKR<C> {
         v: C::ChallengeField,
         _transcript: &mut impl Transcript,
         _opening: &Self::Opening,
-        _accumulator: &mut Self::Accumulator,
     ) -> bool {
         let v_target =
             C::single_core_eval_circuit_vals_at_expander_challenge(&commitment.evals, challenge);

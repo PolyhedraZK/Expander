@@ -38,8 +38,6 @@ where
     type Opening = HyraxOpening<C>;
     type SRS = PedersenParams<C>;
 
-    type Accumulator = ();
-
     fn gen_params(n_input_vars: usize, _world_size: usize) -> Self::Params {
         n_input_vars
     }
@@ -115,7 +113,7 @@ where
         HyraxOpening(combined_coeffs).into()
     }
 
-    fn partial_verify(
+    fn verify(
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
@@ -123,7 +121,6 @@ where
         evals: <G as FieldEngine>::ChallengeField,
         _transcript: &mut impl Transcript,
         opening: &Self::Opening,
-        _accumulator: &mut Self::Accumulator,
     ) -> bool {
         if x.r_mpi.is_empty() {
             return hyrax_verify(verifying_key, commitment, &x.local_xs(), evals, opening);
@@ -148,6 +145,7 @@ where
             == RefMultiLinearPoly::from_ref(&opening.0)
                 .evaluate_with_buffer(&local_vars[..pedersen_vars], &mut scratch)
     }
+
     /// Open a set of polynomials at a point.
     fn batch_open(
         _params: &Self::Params,

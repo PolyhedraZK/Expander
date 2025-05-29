@@ -1,17 +1,14 @@
-use gkr_engine::DeferredCheck;
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, Curve, Group},
     msm,
-    pairing::MultiMillerLoop,
+    pairing::{MillerLoopResult, MultiMillerLoop},
     CurveAffine,
 };
 use itertools::izip;
 use serdes::ExpSerde;
 
 use crate::*;
-
-use super::deferred_pairing::PairingAccumulator;
 
 #[inline(always)]
 pub fn generate_coef_form_bi_kzg_local_srs_for_testing<E: MultiMillerLoop>(
@@ -117,57 +114,28 @@ where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
-    let mut pairing_accumulator = PairingAccumulator::default();
-    let partial_check = coeff_form_bi_kzg_partial_verify(
-        vk,
-        comm,
-        alpha,
-        beta,
-        eval,
-        opening,
-        &mut pairing_accumulator,
-    );
-    let pairing_check = pairing_accumulator.final_check();
-    partial_check && pairing_check
-}
-
-#[inline(always)]
-pub fn coeff_form_bi_kzg_partial_verify<E: MultiMillerLoop>(
-    vk: BiKZGVerifierParam<E>,
-    comm: E::G1Affine,
-    alpha: E::Fr,
-    beta: E::Fr,
-    eval: E::Fr,
-    opening: BiKZGProof<E>,
-    pairing_accumulator: &mut PairingAccumulator<E>,
-) -> bool
-where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
-{
     let g1_eval: E::G1Affine = (E::G1Affine::generator() * eval).into();
     let g2_alpha: E::G2 = E::G2Affine::generator() * alpha;
     let g2_beta: E::G2 = E::G2Affine::generator() * beta;
 
-    pairing_accumulator.accumulate(&(
-        opening.quotient_x.to_curve(),
-        (vk.tau_x_g2.to_curve() - g2_alpha),
-    ));
+    let gt_result = E::multi_miller_loop(&[
+        (
+            &opening.quotient_x,
+            &(vk.tau_x_g2.to_curve() - g2_alpha).to_affine().into(),
+        ),
+        (
+            &opening.quotient_y,
+            &(vk.tau_y_g2.to_curve() - g2_beta).to_affine().into(),
+        ),
+        (&(g1_eval - comm).into(), &E::G2Affine::generator().into()),
+    ]);
 
-    pairing_accumulator.accumulate(&(
-        opening.quotient_y.to_curve(),
-        (vk.tau_y_g2.to_curve() - g2_beta),
-    ));
-
-    pairing_accumulator.accumulate(&((g1_eval - comm), E::G2::generator()));
-
-    true
+    gt_result.final_exponentiation().is_identity().into()
 }
 
 #[cfg(test)]
 mod tests {
     use ark_std::test_rng;
-    use gkr_engine::DeferredCheck;
     use halo2curves::{
         bn256::{Bn256, Fr, G1Affine, G1},
         ff::Field,
@@ -175,7 +143,7 @@ mod tests {
     };
     use itertools::izip;
 
-    use crate::{kzg::deferred_pairing::PairingAccumulator, *};
+    use crate::*;
 
     #[test]
     fn test_coefficient_form_bivariate_kzg_e2e() {
@@ -217,17 +185,13 @@ mod tests {
 
         let vk: BiKZGVerifierParam<Bn256> = From::from(&party_srs[0]);
 
-        let mut pairing_accumulator = PairingAccumulator::default();
-        coeff_form_bi_kzg_partial_verify(
+        assert!(coeff_form_bi_kzg_verify(
             vk,
             global_commitment,
             alpha,
             beta,
             final_eval,
             final_opening,
-            &mut pairing_accumulator,
-        );
-
-        assert!(pairing_accumulator.final_check());
+        ));
     }
 }

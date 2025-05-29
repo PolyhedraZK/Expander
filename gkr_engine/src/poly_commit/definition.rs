@@ -20,24 +20,6 @@ pub trait PCSParams: Clone + Debug + Default + Send + Sync + 'static {
     fn num_vars(&self) -> usize;
 }
 
-pub trait DeferredCheck {
-    /// Data type to be accumulated
-    type AccumulatedValues;
-
-    /// Add a new pairing check to the accumulator
-    fn accumulate(&mut self, _accumulated_values: &Self::AccumulatedValues) {}
-
-    /// Check if all pairings are valid
-    fn final_check(&self) -> bool {
-        true
-    }
-}
-
-// Empty implementation for the case where no pairing checks are needed
-impl DeferredCheck for () {
-    type AccumulatedValues = ();
-}
-
 impl PCSParams for usize {
     fn num_vars(&self) -> usize {
         *self
@@ -55,9 +37,6 @@ pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
     type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString + Send + Sync;
     type Commitment: Clone + Debug + Default + ExpSerde + Send + Sync;
     type Opening: Clone + Debug + Default + ExpSerde + Send + Sync;
-
-    /// An accumulator to be used for deferred batch verification for KZG.
-    type Accumulator: Clone + Debug + Default + DeferredCheck;
 
     /// Generate a random structured reference string (SRS) for testing purposes.
     /// Each process should return the SRS share used for its committing and opening.
@@ -136,42 +115,7 @@ pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
         v: F::ChallengeField,
         transcript: &mut impl Transcript,
         opening: &Self::Opening,
-    ) -> bool {
-        let mut accumulator = Self::Accumulator::default();
-
-        let partial_check = Self::partial_verify(
-            params,
-            verifying_key,
-            commitment,
-            x,
-            v,
-            transcript,
-            opening,
-            &mut accumulator,
-        );
-        let final_check = accumulator.final_check();
-
-        partial_check && final_check
-    }
-
-    /// Partially verify the opening of a polynomial at a point.
-    /// Deffer some of the checks to the batch verification via accumulator.
-    #[allow(clippy::too_many_arguments)]
-    fn partial_verify(
-        params: &Self::Params,
-        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
-        commitment: &Self::Commitment,
-        x: &ExpanderSingleVarChallenge<F>,
-        v: F::ChallengeField,
-        transcript: &mut impl Transcript,
-        opening: &Self::Opening,
-        accumulator: &mut Self::Accumulator,
     ) -> bool;
-
-    /// Perform the finally batch verification for the accumulated opening proofs.
-    fn batch_deferred_verification(accumulator: &mut Self::Accumulator) -> bool {
-        accumulator.final_check()
-    }
 
     /// Open a set of polynomials at a point.
     fn batch_open(

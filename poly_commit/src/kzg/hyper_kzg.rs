@@ -1,7 +1,7 @@
 use std::iter;
 
 use arith::ExtensionField;
-use gkr_engine::{DeferredCheck, Transcript};
+use gkr_engine::Transcript;
 use halo2curves::{
     ff::Field,
     group::{prime::PrimeCurveAffine, GroupEncoding},
@@ -12,8 +12,6 @@ use itertools::izip;
 use serdes::ExpSerde;
 
 use crate::*;
-
-use super::deferred_pairing::PairingAccumulator;
 
 #[inline(always)]
 pub(crate) fn coeff_form_hyperkzg_local_poly_oracles<E>(
@@ -189,38 +187,6 @@ where
     E::Fr: ExtensionField + ExpSerde,
     T: Transcript,
 {
-    let mut pairing_accumulator = PairingAccumulator::default();
-    let partial_check = coeff_form_uni_hyperkzg_partial_verify(
-        vk,
-        comm,
-        alphas,
-        eval,
-        opening,
-        fs_transcript,
-        &mut pairing_accumulator,
-    );
-    let pairing_check = pairing_accumulator.final_check();
-
-    partial_check && pairing_check
-}
-
-#[inline(always)]
-pub fn coeff_form_uni_hyperkzg_partial_verify<E, T>(
-    vk: &UniKZGVerifierParams<E>,
-    comm: E::G1Affine,
-    alphas: &[E::Fr],
-    eval: E::Fr,
-    opening: &HyperKZGOpening<E>,
-    fs_transcript: &mut T,
-    pairing_accumulator: &mut PairingAccumulator<E>,
-) -> bool
-where
-    E: MultiMillerLoop,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
-    E::G2Affine: ExpSerde,
-    E::Fr: ExtensionField + ExpSerde,
-    T: Transcript,
-{
     opening
         .folded_oracle_commitments
         .iter()
@@ -261,13 +227,12 @@ where
     let lagrange_eval =
         lagrange_degree2[0] + lagrange_degree2[1] * tau + lagrange_degree2[2] * tau * tau;
 
-    coeff_form_uni_kzg_partial_verify(
+    coeff_form_uni_kzg_verify(
         vk,
         (commitment_agg_g1 - opening.beta_x_commitment.to_curve() * q_weight).into(),
         tau,
         lagrange_eval,
         opening.quotient_delta_x_commitment,
-        pairing_accumulator,
     );
 
     true

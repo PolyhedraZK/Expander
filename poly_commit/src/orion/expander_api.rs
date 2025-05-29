@@ -38,8 +38,6 @@ where
     type Opening = OrionProof<C::ChallengeField>;
     type SRS = OrionSRS;
 
-    type Accumulator = ();
-
     /// NOTE(HS): this is the number of variables for local polynomial w.r.t. SIMD field elements.
     fn gen_params(n_input_vars: usize, world_size: usize) -> Self::Params {
         let num_vars_each_core = n_input_vars + C::SimdCircuitField::PACK_SIZE.ilog2() as usize;
@@ -162,7 +160,7 @@ where
         )
     }
 
-    fn partial_verify(
+    fn verify(
         params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
@@ -171,7 +169,6 @@ where
         transcript: &mut impl Transcript, /* add transcript here to allow
                                            * interactive arguments */
         opening: &Self::Opening,
-        _accumulator: &mut Self::Accumulator,
     ) -> bool {
         if eval_point.num_vars() < *params {
             let eval_point = lift_expander_challenge_to_n_vars(eval_point, *params);
