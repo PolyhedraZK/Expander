@@ -100,7 +100,7 @@ where
         let mut accumulator = PairingAccumulator::default();
 
         let partial_check = coeff_form_uni_hyperkzg_partial_verify(
-            &verifying_key,
+            verifying_key,
             commitment.0,
             x,
             v,

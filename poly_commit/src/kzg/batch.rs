@@ -84,7 +84,7 @@ where
     let mut accumulator = PairingAccumulator::default();
 
     let partial_check = coeff_form_uni_hyperkzg_partial_verify(
-        &verifying_key,
+        verifying_key,
         merged_commitment.to_affine(),
         x,
         merged_eval,

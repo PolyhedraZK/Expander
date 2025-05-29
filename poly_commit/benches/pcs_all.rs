@@ -5,7 +5,9 @@ use gkr_engine::StructuredReferenceString;
 use gkr_engine::{root_println, MPIConfig, MPIEngine, Transcript};
 use gkr_hashers::{Keccak256hasher, SHA256hasher};
 use halo2curves::bn256::{Bn256, G1Affine};
-use poly_commit::{HyperKZGPCS, HyraxPCS, OrionBaseFieldPCS, PolynomialCommitmentScheme};
+use poly_commit::{
+    BatchOpeningPCS, HyperKZGPCS, HyraxPCS, OrionBaseFieldPCS, PolynomialCommitmentScheme,
+};
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
 use serdes::ExpSerde;
@@ -203,12 +205,7 @@ fn pcs_bench<PCS: PolynomialCommitmentScheme<Fr>>(
 fn bench_batch_open<F, PCS>(mpi_config: &MPIConfig, num_vars: usize, num_poly: usize)
 where
     F: Field + ExtensionField,
-    PCS: PolynomialCommitmentScheme<
-        F,
-        Params = usize,
-        EvalPoint = Vec<F>,
-        Poly = MultiLinearPoly<F>,
-    >,
+    PCS: BatchOpeningPCS<F, Params = usize, EvalPoint = Vec<F>, Poly = MultiLinearPoly<F>>,
 {
     let mut rng = test_rng();
 
@@ -237,7 +234,7 @@ where
         format!("{} batch open {} polys   ", PCS::NAME, num_poly).as_ref(),
         mpi_config.is_root(),
     );
-    let (values, batch_opening) = PCS::batch_open(
+    let (values, batch_opening) = PCS::single_point_batch_open(
         &num_vars,
         &proving_key,
         &polys,
@@ -258,7 +255,7 @@ where
         format!("{} batch verify {} polys ", PCS::NAME, num_poly).as_ref(),
         mpi_config.is_root(),
     );
-    assert!(PCS::batch_verify(
+    assert!(PCS::single_point_batch_verify(
         &num_vars,
         &verification_key,
         &commitments,
