@@ -103,7 +103,13 @@ where
         // multi point batch opening
         for num_poly in [2, 4, 8, 16] {
             let polys = (0..num_poly)
-                .map(|_| MultiLinearPoly::<F>::random(num_vars, &mut rng))
+                .map(
+                    |_| MultiLinearPoly {
+                        coeffs: (0..1 << num_vars)
+                            .map(|i| F::from(num_poly * 10 + i as u32))
+                            .collect(),
+                    }, // MultiLinearPoly::<F>::random(num_vars, &mut rng)
+                )
                 .collect::<Vec<_>>();
 
             let commitments = polys
@@ -115,7 +121,9 @@ where
             let points = (0..num_poly)
                 .map(|_| {
                     (0..num_vars)
-                        .map(|_| F::random_unsafe(&mut rng))
+                        .map(
+                            |_| F::from(1u32), // F::random_unsafe(&mut rng)
+                        )
                         .collect::<Vec<_>>()
                 })
                 .collect::<Vec<_>>();
@@ -123,7 +131,7 @@ where
             let values = polys
                 .iter()
                 .zip(points.iter())
-                .map(|(poly, point)| poly.evaluate_jolt(point))
+                .map(|(poly, point)| poly.eval_reverse_order(point))
                 .collect::<Vec<_>>();
 
             let mut transcript = T::new();

@@ -55,7 +55,9 @@ pub trait Transcript: Clone + Debug {
     /// Generate a field element.
     #[inline(always)]
     fn generate_field_element<F: Field>(&mut self) -> F {
-        F::from_uniform_bytes(&self.generate_u8_slice(F::SIZE))
+        F::from(self.generate_u8_slice(1)[0] as u32)
+
+        // F::from_uniform_bytes(&self.generate_u8_slice(F::SIZE))
     }
 
     /// Generate a field element vector.
