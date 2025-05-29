@@ -252,7 +252,6 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
     }
 
     /// Verify the PCS opening against the commitment and the claim from GKR.
-    /// Defer the pairing check to accumulator if any.
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::type_complexity)]
