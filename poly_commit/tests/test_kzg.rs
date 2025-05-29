@@ -2,14 +2,12 @@ mod common;
 
 use arith::{Field, Fr};
 use ark_std::test_rng;
-use gkr_engine::{
-    BN254Config, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine, Transcript,
-};
-use gkr_engine::{ExpanderPCS, StructuredReferenceString};
+use gkr_engine::ExpanderPCS;
+use gkr_engine::{BN254Config, ExpanderSingleVarChallenge, MPIConfig, MPIEngine, Transcript};
 use gkr_hashers::Keccak256hasher;
 use halo2curves::bn256::Bn256;
 use poly_commit::HyperKZGPCS;
-use polynomials::{MultiLinearPoly, MultilinearExtension};
+use polynomials::MultiLinearPoly;
 use transcript::BytesHashTranscript;
 
 const TEST_REPETITION: usize = 3;
