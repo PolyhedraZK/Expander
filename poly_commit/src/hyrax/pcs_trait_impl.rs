@@ -9,6 +9,7 @@ use halo2curves::{ff::PrimeField, CurveAffine};
 use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension};
 use serdes::ExpSerde;
 use sumcheck::SumCheck;
+use sumcheck::SumOfProductsPoly;
 
 use crate::traits::BatchOpening;
 use crate::{
@@ -150,13 +151,13 @@ where
             .map(|(poly, point)| poly.evaluate_jolt(point))
             .collect();
 
-        // // challenge point t
-        // let t = transcript.generate_field_elements::<C::Scalar>(ell);
+        // challenge point t
+        let t = transcript.generate_field_elements::<C::Scalar>(ell);
 
-        // // eq(t, i) for i in [0..k]
-        // let eq_t_i = EqPolynomial::build_eq_x_r(&t);
+        // eq(t, i) for i in [0..k]
+        let eq_t_i = EqPolynomial::build_eq_x_r(&t);
 
-        let eq_t_i = vec![C::Scalar::one(); 1 << ell];
+        // let eq_t_i = vec![C::Scalar::one(); 1 << ell];
 
         // \tilde g_i(b) = eq(t, i) * f_i(b)
         let mut tilde_gs = vec![];
@@ -180,14 +181,14 @@ where
             })
             .collect();
 
-        let mut sumcheck_poly = vec![];
+        let mut sumcheck_poly = SumOfProductsPoly::new();
         for (tilde_g, tilde_eq) in tilde_gs.iter().zip(tilde_eqs.into_iter()) {
-            sumcheck_poly.extend_from_slice([tilde_g.clone(), tilde_eq].as_slice());
+            sumcheck_poly.add_pair(tilde_g.clone(), tilde_eq);
         }
-        println!("SumCheck poly: {:?}", sumcheck_poly.len());
-        for poly in sumcheck_poly.iter() {
-            println!("Poly: {:?}", poly.coeffs.len());
-        }
+        // println!("SumCheck poly: {:?}", sumcheck_poly.len());
+        // for poly in sumcheck_poly.iter() {
+        //     println!("Poly: {:?}", poly.coeffs.len());
+        // }
 
         let proof = SumCheck::<C::Scalar>::prove(&sumcheck_poly, transcript);
 
@@ -225,26 +226,27 @@ where
 
         // let (_g_prime_eval, g_prime_proof) = hyrax_open(proving_key, &g_prime, a2_rev.as_ref());
         // //a2.to_vec().as_ref());
-        let (_g_prime_eval, g_prime_proof) = hyrax_open(proving_key, &g_prime, a2); //a2.to_vec().as_ref());
+        let (_g_prime_eval, g_prime_proof) = hyrax_open(proving_key, &g_prime, a2_rev.as_ref()); //a2.to_vec().as_ref());
 
         println!("g(a2) from hyrax: {:?}", _g_prime_eval);
 
         println!("g'(a2):  {:?}", g_prime.evaluate_jolt(a2));
         println!("g'(a2_rev):  {:?}", g_prime.eval_reverse_order(a2));
 
-        let mut sumcheck_poly_eval = C::Scalar::zero();
-        for p in sumcheck_poly.iter() {
-            sumcheck_poly_eval += p.evaluate_jolt(a2);
-        }
+        // let mut sumcheck_poly_eval = C::Scalar::zero();
+        // for p in sumcheck_poly.iter() {
+        //     sumcheck_poly_eval += p.evaluate_jolt(a2);
+        // }
 
-        println!("prover sumcheck eval:  {:?}", sumcheck_poly_eval);
+        println!("prover sumcheck eval:  {:?}", sumcheck_poly.evaluate(a2));
+        // println!("prover sumcheck eval:  {:?}", sumcheck_poly_eval);
 
-        let mut sumcheck_poly_eval = C::Scalar::zero();
-        for p in sumcheck_poly.iter() {
-            sumcheck_poly_eval += p.eval_reverse_order(a2);
-        }
+        // let mut sumcheck_poly_eval = C::Scalar::zero();
+        // for p in sumcheck_poly.iter() {
+        //     sumcheck_poly_eval += p.eval_reverse_order(a2);
+        // }
 
-        println!("prover sumcheck eval rev:  {:?}", sumcheck_poly_eval);
+        // println!("prover sumcheck eval rev:  {:?}", sumcheck_poly_eval);
 
         BatchOpening {
             sum_check_proof: proof,
@@ -275,13 +277,15 @@ where
 
         // sum check point (a2)
         let a2 = &opening.sum_check_proof.point[..num_var];
+        let mut a2_rev = a2.to_vec();
+        a2_rev.reverse();
 
-        // // challenge point t
-        // let t = transcript.generate_field_elements::<C::Scalar>(ell);
+        // challenge point t
+        let t = transcript.generate_field_elements::<C::Scalar>(ell);
 
-        // let eq_t_i = EqPolynomial::build_eq_x_r(&t);
+        let eq_t_i = EqPolynomial::build_eq_x_r(&t);
 
-        let eq_t_i = vec![C::Scalar::one(); 1 << ell];
+        // let eq_t_i = vec![C::Scalar::one(); 1 << ell];
 
         println!("a2: {:?}", a2);
         println!("eq_t_i: {:?}", eq_t_i);
@@ -326,10 +330,8 @@ where
         hyrax_verify(
             verifying_key,
             &g_prime_commit,
-            a2.to_vec().as_ref(),
+            a2_rev.as_ref(),
             tilde_g_eval,
-            // C::Scalar::from(4916250u32), // this is the expected value of g'(a2) from the
-            // sumcheck
             &opening.g_prime_proof,
         )
     }
