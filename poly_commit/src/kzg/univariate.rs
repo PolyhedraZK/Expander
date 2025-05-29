@@ -92,7 +92,7 @@ where
 #[inline(always)]
 #[cfg(test)]
 pub(crate) fn coeff_form_uni_kzg_verify<E: MultiMillerLoop>(
-    vk: UniKZGVerifierParams<E>,
+    vk: &UniKZGVerifierParams<E>,
     comm: E::G1Affine,
     alpha: E::Fr,
     eval: E::Fr,
@@ -111,7 +111,7 @@ where
 
 #[inline(always)]
 pub(crate) fn coeff_form_uni_kzg_partial_verify<E: MultiMillerLoop>(
-    vk: UniKZGVerifierParams<E>,
+    vk: &UniKZGVerifierParams<E>,
     comm: E::G1Affine,
     alpha: E::Fr,
     eval: E::Fr,
@@ -162,7 +162,7 @@ mod tests {
         let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
         assert_eq!(actual_eval, eval);
 
-        assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
+        assert!(coeff_form_uni_kzg_verify(&vk, com, alpha, eval, opening))
     }
 
     #[test]
@@ -179,6 +179,6 @@ mod tests {
         let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
         assert_eq!(actual_eval, eval);
 
-        assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
+        assert!(coeff_form_uni_kzg_verify(&vk, com, alpha, eval, opening))
     }
 }

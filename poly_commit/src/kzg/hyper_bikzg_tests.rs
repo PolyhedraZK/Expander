@@ -347,7 +347,7 @@ where
         let hyper_kzg_opening: HyperKZGOpening<E> = hyper_bikzg_opening.into();
 
         let what = coeff_form_uni_hyperkzg_verify(
-            vk.into(),
+            &vk.into(),
             commitment,
             local_alphas,
             eval,

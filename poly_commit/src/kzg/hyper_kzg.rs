@@ -175,7 +175,7 @@ where
 
 #[inline(always)]
 pub fn coeff_form_uni_hyperkzg_verify<E, T>(
-    vk: UniKZGVerifierParams<E>,
+    vk: &UniKZGVerifierParams<E>,
     comm: E::G1Affine,
     alphas: &[E::Fr],
     eval: E::Fr,
@@ -206,7 +206,7 @@ where
 
 #[inline(always)]
 pub fn coeff_form_uni_hyperkzg_partial_verify<E, T>(
-    vk: UniKZGVerifierParams<E>,
+    vk: &UniKZGVerifierParams<E>,
     comm: E::G1Affine,
     alphas: &[E::Fr],
     eval: E::Fr,

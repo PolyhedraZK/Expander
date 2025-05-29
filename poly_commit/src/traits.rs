@@ -104,9 +104,7 @@ pub trait BatchOpeningPCS<F: ExtensionField>: PolynomialCommitmentScheme<F> + Si
         points: &[Self::EvalPoint],
         scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
-    ) -> (Vec<F>, BatchOpening<F, Self>) {
-        unimplemented!()
-    }
+    ) -> (Vec<F>, BatchOpening<F, Self>);
 
     /// Verify the opening of a set of polynomials at a single point.
     fn multiple_points_batch_verify(
@@ -117,9 +115,7 @@ pub trait BatchOpeningPCS<F: ExtensionField>: PolynomialCommitmentScheme<F> + Si
         values: &[F],
         opening: &BatchOpening<F, Self>,
         transcript: &mut impl Transcript,
-    ) -> bool {
-        unimplemented!()
-    }
+    ) -> bool;
 }
 
 pub(crate) trait TensorCodeIOPPCS {
