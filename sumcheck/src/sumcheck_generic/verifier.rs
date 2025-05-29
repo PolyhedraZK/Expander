@@ -77,11 +77,23 @@ impl<F: Field> IOPVerifierState<F> {
             let evals = &self.polynomials_received[i];
 
             // the univariate polynomial f is received in its extrapolated form, i.e.,
-            // f(0) = evals[0] and f(1) = evals[1].
-            // now we want to compute f(r) for the challenge r = self.challenges[i]
-            // that is
-            // f(0) + (f(1) - f(0)) * r
-            expected = evals[0] + (evals[1] - evals[0]) * self.challenges[i];
+            //   h(0) = evals[0], h(1) = evals[1], h(2) = evals[2]
+            // that is, suppose h = h_0 + h_1 * x + h_2 * x^2, then
+            //   h(0) = h_0
+            //   h(1) = h_0 + h_1 + h_2
+            //   h(2) = h_0 + 2 * h_1 + 4 * h_2
+            // therefore
+            //   h_0 = evals[0]
+            //   h_2 = (h(2) + h(0))/2 -  h(1)
+            //   h_1 = h(1) - h_0 - h_2
+
+            let h_0 = evals[0];
+            let h_2 = (evals[2] + evals[0]) * F::from(2u32).inv().unwrap() - evals[1];
+            let h_1 = evals[1] - h_0 - h_2;
+
+            // now we want to compute h(r) for the challenge r = self.challenges[i]
+            // h(r) = h_0 + h_1 * r + h_2 * r^2
+            expected = h_0 + h_1 * self.challenges[i] + h_2 * self.challenges[i].square();
         }
 
         SumCheckSubClaim {

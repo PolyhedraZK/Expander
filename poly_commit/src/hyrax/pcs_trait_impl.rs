@@ -190,7 +190,7 @@ where
         }
 
         let proof = SumCheck::<C::Scalar>::prove(&sumcheck_poly, transcript);
-        
+
         println!("SumCheck proof: {:?}", proof,);
 
         println!(
@@ -223,15 +223,13 @@ where
         let mut a2_rev = a2.to_vec();
         a2_rev.reverse();
 
-        // let (_g_prime_eval, g_prime_proof) = hyrax_open(proving_key, &g_prime, a2_rev.as_ref()); //a2.to_vec().as_ref());
+        // let (_g_prime_eval, g_prime_proof) = hyrax_open(proving_key, &g_prime, a2_rev.as_ref());
+        // //a2.to_vec().as_ref());
         let (_g_prime_eval, g_prime_proof) = hyrax_open(proving_key, &g_prime, a2); //a2.to_vec().as_ref());
 
         println!("g(a2) from hyrax: {:?}", _g_prime_eval);
 
-        println!(
-            "g'(a2):  {:?}",
-            g_prime.evaluate_jolt(a2)
-        );
+        println!("g'(a2):  {:?}", g_prime.evaluate_jolt(a2));
         println!("g'(a2_rev):  {:?}", g_prime.eval_reverse_order(a2));
 
         let mut sumcheck_poly_eval = C::Scalar::zero();
@@ -245,7 +243,6 @@ where
         for p in sumcheck_poly.iter() {
             sumcheck_poly_eval += p.eval_reverse_order(a2);
         }
-        
 
         println!("prover sumcheck eval rev:  {:?}", sumcheck_poly_eval);
 
@@ -331,7 +328,8 @@ where
             &g_prime_commit,
             a2.to_vec().as_ref(),
             tilde_g_eval,
-            // C::Scalar::from(4916250u32), // this is the expected value of g'(a2) from the sumcheck
+            // C::Scalar::from(4916250u32), // this is the expected value of g'(a2) from the
+            // sumcheck
             &opening.g_prime_proof,
         )
     }

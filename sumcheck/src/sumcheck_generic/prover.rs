@@ -1,17 +1,16 @@
 use arith::Field;
-use polynomials::{MultiLinearPoly, MultilinearExtension};
 
-use super::{IOPProverMessage, IOPProverState};
+use super::{IOPProverMessage, IOPProverState, SumOfProductsPoly};
 
 impl<F: Field> IOPProverState<F> {
     /// Initialize the prover state to argue for the sum of the input polynomial
     /// over {0,1}^`num_vars`.
-    pub fn prover_init(polynomials: &[MultiLinearPoly<F>]) -> Self {
+    pub fn prover_init(polynomials: &SumOfProductsPoly<F>) -> Self {
         Self {
-            challenges: Vec::with_capacity(polynomials[0].num_vars()),
+            challenges: Vec::with_capacity(polynomials.num_vars()),
             round: 0,
-            init_num_vars: polynomials[0].num_vars(),
-            mle_list: polynomials.to_vec(),
+            init_num_vars: polynomials.num_vars(),
+            mle_list: polynomials.clone(),
         }
     }
 
@@ -44,8 +43,9 @@ impl<F: Field> IOPProverState<F> {
 
             let r = self.challenges[self.round - 1];
 
-            for mle in self.mle_list.iter_mut() {
-                mle.fix_top_variable(r);
+            for (f, g) in self.mle_list.f_and_g_pairs.iter_mut() {
+                f.fix_top_variable(r);
+                g.fix_top_variable(r);
             }
         } else if self.round > 0 {
             panic!("verifier message is empty")
@@ -53,20 +53,35 @@ impl<F: Field> IOPProverState<F> {
 
         self.round += 1;
 
-        let len = self.mle_list[0].coeffs.len() / 2;
-        let mut f_0 = F::zero();
-        let mut f_1 = F::zero();
+        let len = 1 << (self.mle_list.num_vars() - 1);
+        let mut h_0 = F::zero();
+        let mut h_1 = F::zero();
+        let mut h_2 = F::zero();
 
-        for mle in self.mle_list.iter() {
-            // evaluate the polynomial at the current point
-            // and sum the evaluations for f_0 and f_1
-            let coeffs = mle.coeffs.as_slice();
-            f_0 += coeffs[..len].iter().sum::<F>();
-            f_1 += coeffs[len..].iter().sum::<F>();
+        for (f, g) in self.mle_list.f_and_g_pairs.iter() {
+            // evaluate the polynomial at 0, 1 and 2
+            // and obtain f(0)g(0) and f(1)g(1) and f(2)g(2)
+            let f_coeffs = f.coeffs.as_slice();
+            let g_coeffs = g.coeffs.as_slice();
+
+            h_0 += f_coeffs[..len].iter().sum::<F>() * g_coeffs[..len].iter().sum::<F>();
+            h_1 += f_coeffs[len..].iter().sum::<F>() * g_coeffs[len..].iter().sum::<F>();
+
+            let f_2 = f_coeffs[..len]
+                .iter()
+                .zip(f_coeffs[len..].iter())
+                .map(|(a, b)| -*a + b.double())
+                .sum::<F>();
+            let g2 = g_coeffs[..len]
+                .iter()
+                .zip(g_coeffs[len..].iter())
+                .map(|(a, b)| -*a + b.double())
+                .sum::<F>();
+            h_2 += f_2 * g2;
         }
 
         IOPProverMessage {
-            evaluations: vec![f_0, f_1],
+            evaluations: vec![h_0, h_1, h_2],
         }
     }
 }
