@@ -265,6 +265,7 @@ fn scale<F: Field>(base: &[F], scalar: &F) -> Vec<F> {
 /// Returns:
 /// - the evaluations of the polynomials at their corresponding points
 /// - the batch opening proof containing the sumcheck proof and the opening of g'(X)
+#[allow(clippy::type_complexity)]
 pub(crate) fn hyrax_multi_points_batch_open_internal<C>(
     proving_key: &PedersenParams<C>,
     polys: &[MultiLinearPoly<C::Scalar>],

@@ -14,6 +14,7 @@ use sumcheck::{IOPProof, SumCheck, SumOfProductsPoly};
 /// - the new point for evaluation
 /// - the new polynomial that is merged via sumcheck
 /// - the proof of the sumcheck
+#[allow(clippy::type_complexity)]
 pub fn prover_merge_points<C>(
     polys: &[MultiLinearPoly<C::Scalar>],
     points: &[Vec<C::Scalar>],
@@ -132,7 +133,7 @@ where
         sum += e * values[i];
     }
 
-    let subclaim = SumCheck::<C::Scalar>::verify(sum, &sumcheck_proof, num_var, transcript);
+    let subclaim = SumCheck::<C::Scalar>::verify(sum, sumcheck_proof, num_var, transcript);
 
     let tilde_g_eval = subclaim.expected_evaluation;
 

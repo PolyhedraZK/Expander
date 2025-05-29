@@ -197,10 +197,7 @@ where
         // sum check point (a2)
         let a2 = batch_opening.sum_check_proof.export_point_to_expander();
 
-        let commitments = commitments
-            .iter()
-            .map(|c| vec![c.0.clone()])
-            .collect::<Vec<_>>();
+        let commitments = commitments.iter().map(|c| vec![c.0]).collect::<Vec<_>>();
 
         let (tilde_g_eval, g_prime_commit) = verifier_merge_points::<E::G1Affine>(
             &commitments,

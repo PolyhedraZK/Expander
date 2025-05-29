@@ -150,7 +150,7 @@ where
             commitments,
             points,
             values,
-            &batch_opening,
+            batch_opening,
             transcript,
         )
     }

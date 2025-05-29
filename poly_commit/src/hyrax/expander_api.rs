@@ -164,12 +164,7 @@ where
         if mpi_engine.is_single_process() || mpi_engine.is_root() {
             let points = eval_points.iter().map(|x| x.local_xs()).collect::<Vec<_>>();
 
-            return hyrax_multi_points_batch_open_internal(
-                proving_key,
-                mle_poly_list,
-                &points,
-                transcript,
-            );
+            hyrax_multi_points_batch_open_internal(proving_key, mle_poly_list, &points, transcript)
         } else {
             // todo: handle this case?
             panic!("Hyrax PCS does not support multi-points batch opening in non-root processes");
