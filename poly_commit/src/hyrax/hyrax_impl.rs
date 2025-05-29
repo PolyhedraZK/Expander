@@ -1,12 +1,15 @@
 use arith::{ExtensionField, Field};
 use gkr_engine::Transcript;
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
+use polynomials::MultiLinearPoly;
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
 };
 use serdes::ExpSerde;
 
+use crate::batching::{prover_merge_points, verifier_merge_points};
+use crate::traits::BatchOpening;
 use crate::{
     hyrax::{
         pedersen::{pedersen_commit, pedersen_setup},
@@ -14,6 +17,8 @@ use crate::{
     },
     powers_series,
 };
+
+use super::HyraxPCS;
 
 pub(crate) fn hyrax_setup<C: CurveAffine + ExpSerde>(
     local_vars: usize,
@@ -244,4 +249,91 @@ where
 // scale a vector by a scalar
 fn scale<F: Field>(base: &[F], scalar: &F) -> Vec<F> {
     base.iter().map(|x| *x * scalar).collect()
+}
+
+/// Open a set of polynomials at a multiple points.
+/// Requires the length of the polys to be the same as points.
+/// Steps:
+/// 1. get challenge point t from transcript
+/// 2. build eq(t,i) for i in [0..k]
+/// 3. build \tilde g_i(b) = eq(t, i) * f_i(b)
+/// 4. compute \tilde eq_i(b) = eq(b, point_i)
+/// 5. run sumcheck on \sum_i=1..k \tilde eq_i * \tilde g_i
+/// 6. build g'(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is the sumcheck's point
+/// 7. open g'(X) at point (a2)
+///
+/// Returns:
+/// - the evaluations of the polynomials at their corresponding points
+/// - the batch opening proof containing the sumcheck proof and the opening of g'(X)
+pub(crate) fn hyrax_multi_points_batch_open_internal<C>(
+    proving_key: &PedersenParams<C>,
+    polys: &[MultiLinearPoly<C::Scalar>],
+    points: &[Vec<C::Scalar>],
+    transcript: &mut impl Transcript,
+) -> (Vec<C::Scalar>, BatchOpening<C::Scalar, HyraxPCS<C>>)
+where
+    C: CurveAffine + ExpSerde,
+    C::Scalar: ExtensionField + PrimeField,
+    C::ScalarExt: ExtensionField + PrimeField,
+{
+    // generate evals for each polynomial at its corresponding point
+    let evals: Vec<C::Scalar> = polys
+        .iter()
+        .zip(points.iter())
+        .map(|(poly, point)| poly.evaluate_jolt(point))
+        .collect();
+
+    let (new_point, g_prime, proof) = prover_merge_points::<C>(polys, points, transcript);
+
+    let (_g_prime_eval, g_prime_proof) = hyrax_open(proving_key, &g_prime, &new_point);
+    (
+        evals,
+        BatchOpening {
+            sum_check_proof: proof,
+            g_prime_proof,
+        },
+    )
+}
+
+/// Verify the opening of a set of polynomials at a single point.
+/// Steps:
+/// 1. get challenge point t from transcript
+/// 2. build g' commitment
+/// 3. ensure \sum_i eq(a2, point_i) * eq(t, <i>) * f_i_evals matches the sum via SumCheck
+///    verification
+/// 4. verify commitment
+pub(crate) fn hyrax_multi_points_batch_verify_internal<C>(
+    verifying_key: &PedersenParams<C>,
+    commitments: &[HyraxCommitment<C>],
+    points: &[Vec<C::Scalar>],
+    values: &[C::Scalar],
+    batch_opening: &BatchOpening<C::Scalar, HyraxPCS<C>>,
+    transcript: &mut impl Transcript,
+) -> bool
+where
+    C: CurveAffine + ExpSerde,
+    C::Scalar: ExtensionField + PrimeField,
+    C::ScalarExt: ExtensionField + PrimeField,
+{
+    let a2 = batch_opening.sum_check_proof.export_point_to_expander();
+
+    let commitments = commitments.iter().map(|c| c.0.clone()).collect::<Vec<_>>();
+
+    let (tilde_g_eval, g_prime_commit) = verifier_merge_points(
+        &commitments,
+        points,
+        values,
+        &batch_opening.sum_check_proof,
+        transcript,
+    );
+    let g_prime_commit = HyraxCommitment(g_prime_commit);
+
+    // verify commitment
+    hyrax_verify(
+        verifying_key,
+        &g_prime_commit,
+        a2.as_ref(),
+        tilde_g_eval,
+        &batch_opening.g_prime_proof,
+    )
 }

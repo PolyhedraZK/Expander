@@ -59,7 +59,7 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
     ) -> bool;
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, ExpSerde)]
 pub struct BatchOpening<F, PCS>
 where
     F: ExtensionField,

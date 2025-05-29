@@ -36,6 +36,7 @@ where
 
     type Commitment = OrionCommitment;
     type Opening = OrionProof<C::ChallengeField>;
+    type BatchOpening = ();
     type SRS = OrionSRS;
 
     /// NOTE(HS): this is the number of variables for local polynomial w.r.t. SIMD field elements.

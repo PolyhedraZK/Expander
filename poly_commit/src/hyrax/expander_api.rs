@@ -5,8 +5,8 @@ use gkr_engine::{
 };
 use halo2curves::{ff::PrimeField, msm, CurveAffine};
 use polynomials::{
-    EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
-    RefMultiLinearPoly,
+    EqPolynomial, MultiLinearPoly, MultilinearExtension, MutRefMultiLinearPoly,
+    MutableMultilinearExtension, RefMultiLinearPoly,
 };
 use serdes::ExpSerde;
 
@@ -15,10 +15,13 @@ use crate::{
         hyrax_impl::{hyrax_commit, hyrax_open, hyrax_setup, hyrax_verify},
         pedersen::pedersen_commit,
     },
+    traits::BatchOpening,
     HyraxCommitment, HyraxOpening, HyraxPCS, PedersenParams,
 };
 
-use super::hyrax_impl::{hyrax_batch_open, hyrax_batch_verify};
+use super::hyrax_impl::{
+    hyrax_multi_points_batch_open_internal, hyrax_multi_points_batch_verify_internal,
+};
 
 impl<G, C> ExpanderPCS<G, C::Scalar> for HyraxPCS<C>
 where
@@ -37,6 +40,8 @@ where
     type Commitment = HyraxCommitment<C>;
     type Opening = HyraxOpening<C>;
     type SRS = PedersenParams<C>;
+
+    type BatchOpening = BatchOpening<C::Scalar, Self>;
 
     fn gen_params(n_input_vars: usize, _world_size: usize) -> Self::Params {
         n_input_vars
@@ -146,39 +151,55 @@ where
                 .evaluate_with_buffer(&local_vars[..pedersen_vars], &mut scratch)
     }
 
-    /// Open a set of polynomials at a point.
-    fn batch_open(
+    /// Open a set of polynomials at a set of points.
+    fn multi_points_batch_open(
         _params: &Self::Params,
-        _mpi_engine: &impl MPIEngine,
+        mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        mle_poly_list: &[impl MultilinearExtension<C::Scalar>],
-        eval_point: &ExpanderSingleVarChallenge<G>,
+        mle_poly_list: &[MultiLinearPoly<C::Scalar>],
+        eval_points: &[ExpanderSingleVarChallenge<G>],
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
-    ) -> (Vec<C::Scalar>, Self::Opening) {
-        hyrax_batch_open(
-            proving_key,
-            mle_poly_list,
-            &eval_point.local_xs(),
-            transcript,
-        )
+    ) -> (Vec<C::Scalar>, Self::BatchOpening) {
+        if mpi_engine.is_single_process() || mpi_engine.is_root() {
+            let points = eval_points.iter().map(|x| x.local_xs()).collect::<Vec<_>>();
+
+            return hyrax_multi_points_batch_open_internal(
+                proving_key,
+                mle_poly_list,
+                &points,
+                transcript,
+            );
+        } else {
+            // todo: handle this case?
+            panic!("Hyrax PCS does not support multi-points batch opening in non-root processes");
+        }
     }
 
-    fn batch_verify(
+    /// Verify the opening of a set of polynomials at a set of points.
+    fn multi_points_batch_verify(
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitments: &[Self::Commitment],
-        x: &ExpanderSingleVarChallenge<G>,
+        x: &[ExpanderSingleVarChallenge<G>],
         evals: &[<G as FieldEngine>::ChallengeField],
-        opening: &Self::Opening,
+        batch_opening: &Self::BatchOpening,
         transcript: &mut impl Transcript,
     ) -> bool {
-        hyrax_batch_verify(
+        for x_i in x {
+            assert!(
+                x_i.r_mpi.is_empty(),
+                "Hyrax PCS does not support multi-points batch verification with MPI challenges"
+            );
+        }
+        let points = x.iter().map(|x| x.local_xs()).collect::<Vec<_>>();
+
+        hyrax_multi_points_batch_verify_internal(
             verifying_key,
             commitments,
-            &x.local_xs(),
+            &points,
             evals,
-            opening,
+            batch_opening,
             transcript,
         )
     }

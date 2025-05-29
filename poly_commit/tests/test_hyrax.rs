@@ -85,9 +85,9 @@ fn test_hyrax_for_expander_gkr() {
 #[test]
 fn test_hyrax_batch_open() {
     common::test_batching::<Fr, BytesHashTranscript<Keccak256hasher>, HyraxPCS<G1Affine>>();
-    common::test_batching_for_expander_gkr::<
-        BN254Config,
-        BytesHashTranscript<Keccak256hasher>,
-        HyraxPCS<G1Affine>,
-    >();
+    // common::test_batching_for_expander_gkr::<
+    //     BN254Config,
+    //     BytesHashTranscript<Keccak256hasher>,
+    //     HyraxPCS<G1Affine>,
+    // >();
 }

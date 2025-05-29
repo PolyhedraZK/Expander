@@ -1,21 +1,17 @@
 use std::marker::PhantomData;
 
 use arith::ExtensionField;
-use arith::Field;
-use ark_std::log2;
 use gkr_engine::{StructuredReferenceString, Transcript};
-use halo2curves::group::Curve;
-use halo2curves::group::Group;
 use halo2curves::{
     ff::PrimeField,
     pairing::{Engine, MultiMillerLoop},
     CurveAffine,
 };
-use polynomials::{EqPolynomial, MultiLinearPoly, MultilinearExtension};
+use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
-use sumcheck::SumCheck;
-use sumcheck::SumOfProductsPoly;
 
+use crate::batching::prover_merge_points;
+use crate::batching::verifier_merge_points;
 use crate::{
     traits::{BatchOpening, BatchOpeningPCS},
     *,
@@ -161,10 +157,6 @@ where
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
     ) -> (Vec<E::Fr>, BatchOpening<E::Fr, Self>) {
-        let num_vars = polys[0].num_vars();
-        let k = polys.len();
-        let ell = log2(k) as usize;
-
         // generate evals for each polynomial at its corresponding point
         let evals: Vec<E::Fr> = polys
             .iter()
@@ -172,60 +164,11 @@ where
             .map(|(poly, point)| poly.evaluate_jolt(point))
             .collect();
 
-        // challenge point t
-        let t = transcript.generate_field_elements::<E::Fr>(ell);
-
-        // eq(t, i) for i in [0..k]
-        let eq_t_i = EqPolynomial::build_eq_x_r(&t);
-
-        // \tilde g_i(b) = eq(t, i) * f_i(b)
-        let mut tilde_gs = vec![];
-        for (index, f_i) in polys.iter().enumerate() {
-            let mut tilde_g_eval = vec![E::Fr::zero(); 1 << num_vars];
-            for (j, &f_i_eval) in f_i.coeffs.iter().enumerate() {
-                tilde_g_eval[j] = f_i_eval * eq_t_i[index];
-            }
-            tilde_gs.push(MultiLinearPoly {
-                coeffs: tilde_g_eval,
-            });
-        }
-
-        // built the virtual polynomial for SumCheck
-        let tilde_eqs: Vec<MultiLinearPoly<E::Fr>> = points
-            .iter()
-            .map(|point| {
-                let eq_b_zi = EqPolynomial::build_eq_x_r(point);
-                MultiLinearPoly { coeffs: eq_b_zi }
-            })
-            .collect();
-
-        let mut sumcheck_poly = SumOfProductsPoly::new();
-        for (tilde_g, tilde_eq) in tilde_gs.iter().zip(tilde_eqs.into_iter()) {
-            sumcheck_poly.add_pair(tilde_g.clone(), tilde_eq);
-        }
-
-        let proof = SumCheck::<E::Fr>::prove(&sumcheck_poly, transcript);
-
-        let a2 = &proof.point[..num_vars];
-        let mut a2_rev = a2.to_vec();
-        a2_rev.reverse();
-
-        // build g'(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is the
-        // sumcheck's point \tilde eq_i(a2) = eq(a2, point_i)
-        let mut g_prime_evals = vec![E::Fr::zero(); 1 << num_vars];
-
-        for (tilde_g, point) in tilde_gs.iter().zip(points.iter()) {
-            let eq_i_a2 = EqPolynomial::eq_vec(a2_rev.as_ref(), point);
-            for (j, &tilde_g_eval) in tilde_g.coeffs.iter().enumerate() {
-                g_prime_evals[j] += tilde_g_eval * eq_i_a2;
-            }
-        }
-        let g_prime = MultiLinearPoly {
-            coeffs: g_prime_evals,
-        };
+        let (new_point, g_prime, proof) =
+            prover_merge_points::<E::G1Affine>(polys, points, transcript);
 
         let (_g_prime_eval, g_prime_proof) =
-            coeff_form_uni_hyperkzg_open(proving_key, &g_prime.coeffs, a2_rev.as_ref(), transcript);
+            coeff_form_uni_hyperkzg_open(proving_key, &g_prime.coeffs, &new_point, transcript);
         (
             evals,
             BatchOpening {
@@ -248,65 +191,33 @@ where
         commitments: &[Self::Commitment],
         points: &[Self::EvalPoint],
         values: &[E::Fr],
-        opening: &BatchOpening<E::Fr, Self>,
+        batch_opening: &BatchOpening<E::Fr, Self>,
         transcript: &mut impl Transcript,
     ) -> bool {
-        let k = commitments.len();
-        let ell = log2(k) as usize;
-        let num_var = opening.sum_check_proof.point.len();
-
         // sum check point (a2)
-        let a2 = &opening.sum_check_proof.point[..num_var];
-        let mut a2_rev = a2.to_vec();
-        a2_rev.reverse();
+        let a2 = batch_opening.sum_check_proof.export_point_to_expander();
 
-        // challenge point t
-        let t = transcript.generate_field_elements::<E::Fr>(ell);
+        let commitments = commitments
+            .iter()
+            .map(|c| vec![c.0.clone()])
+            .collect::<Vec<_>>();
 
-        let eq_t_i = EqPolynomial::build_eq_x_r(&t);
-
-        // build g' commitment
-
-        // todo: use MSM
-        // let mut scalars = vec![];
-        // let mut bases = vec![];
-
-        let mut g_prime_commit_elems = E::G1::identity();
-        for (i, point) in points.iter().enumerate() {
-            let eq_i_a2 = EqPolynomial::eq_vec(a2_rev.as_ref(), point);
-            let scalar = eq_i_a2 * eq_t_i[i];
-
-            g_prime_commit_elems += commitments[i].0 * scalar;
-        }
-
-        let g_prime_commit = g_prime_commit_elems.to_affine();
-
-        // ensure \sum_i eq(t, <i>) * f_i_evals matches the sum via SumCheck
-        let mut sum = E::Fr::zero();
-        for (i, &e) in eq_t_i.iter().enumerate().take(k) {
-            sum += e * values[i];
-        }
-
-        let subclaim =
-            SumCheck::<E::Fr>::verify(sum, &opening.sum_check_proof, num_var, transcript);
-
-        let tilde_g_eval = subclaim.expected_evaluation;
+        let (tilde_g_eval, g_prime_commit) = verifier_merge_points::<E::G1Affine>(
+            &commitments,
+            points,
+            values,
+            &batch_opening.sum_check_proof,
+            transcript,
+        );
 
         // verify commitment
         coeff_form_uni_hyperkzg_verify(
             verifying_key,
-            g_prime_commit,
-            a2_rev.as_ref(),
+            g_prime_commit[0],
+            a2.as_ref(),
             tilde_g_eval,
-            &opening.g_prime_proof,
+            &batch_opening.g_prime_proof,
             transcript,
         )
-        // hyrax_verify(
-        //     verifying_key,
-        //     &g_prime_commit,
-        //     a2_rev.as_ref(),
-        //     tilde_g_eval,
-        //     &opening.g_prime_proof,
-        // )
     }
 }

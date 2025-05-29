@@ -136,6 +136,8 @@ impl<C: FieldEngine> ExpanderPCS<C, C::SimdCircuitField> for RawExpanderGKR<C> {
 
     type Opening = ();
 
+    type BatchOpening = ();
+
     fn gen_srs_for_testing(
         _params: &Self::Params,
         _mpi_engine: &impl MPIEngine,

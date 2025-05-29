@@ -1,3 +1,4 @@
+use crate::traits::BatchOpening;
 use arith::ExtensionField;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
@@ -37,6 +38,7 @@ where
     type Params = usize;
     type SRS = CoefFormBiKZGLocalSRS<E>;
     type ScratchPad = ();
+    type BatchOpening = BatchOpening<E::Fr, Self>;
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 

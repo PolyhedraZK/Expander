@@ -238,33 +238,35 @@ where
                 .collect::<Vec<_>>();
 
             // open all polys at a single point
-            let challenge_point = ExpanderSingleVarChallenge::<C> {
-                r_mpi: Vec::new(),
-                r_simd: Vec::new(),
-                rz: (0..num_vars)
-                    .map(|_| C::ChallengeField::random_unsafe(&mut rng))
-                    .collect(),
-            };
+            let challenge_points = (0..num_poly)
+                .map(|_| ExpanderSingleVarChallenge::<C> {
+                    r_mpi: Vec::new(),
+                    r_simd: Vec::new(),
+                    rz: (0..num_vars)
+                        .map(|_| C::ChallengeField::random_unsafe(&mut rng))
+                        .collect(),
+                })
+                .collect::<Vec<_>>();
 
             let mut transcript = T::new();
 
-            let (eval_list, opening) = P::batch_open(
+            let (eval_list, opening) = P::multi_points_batch_open(
                 &num_vars,
                 &mpi_config,
                 &proving_key,
                 &polys,
-                &challenge_point,
+                &challenge_points,
                 &mut scratch_pad,
                 &mut transcript,
             );
 
             let mut transcript = T::new();
 
-            assert!(P::batch_verify(
+            assert!(P::multi_points_batch_verify(
                 &num_vars,
                 &verification_key,
                 &commitments,
-                &challenge_point,
+                &challenge_points,
                 &eval_list,
                 &opening,
                 &mut transcript,
