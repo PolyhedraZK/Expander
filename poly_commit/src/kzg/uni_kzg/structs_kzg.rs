@@ -5,12 +5,12 @@ use serdes::{ExpSerde, SerdeResult};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]
-pub struct KZGCommitment<E: Engine>(pub E::G1Affine)
+pub struct UniKZGCommitment<E: Engine>(pub E::G1Affine)
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>;
 
 // Derive macros does not work for associated types
-impl<E: Engine> ExpSerde for KZGCommitment<E>
+impl<E: Engine> ExpSerde for UniKZGCommitment<E>
 where
     E::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
 {

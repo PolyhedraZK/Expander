@@ -8,6 +8,7 @@ use poly_commit::{BatchOpeningPCS, PolynomialCommitmentScheme};
 use polynomials::{MultiLinearPoly, MultilinearExtension};
 use rand::thread_rng;
 
+#[allow(dead_code)]
 pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<F>>(
     params: &P::Params,
     poly: &P::Poly,

@@ -14,7 +14,5 @@ mod pcs_trait_impl;
 pub use pcs_trait_impl::*;
 
 mod expander_api;
-pub use expander_api::*;
 
 mod batch;
-pub use batch::{kzg_single_point_batch_open, kzg_single_point_batch_verify};

@@ -10,7 +10,7 @@ use crate::{
     HyperUniKZGOpening, UniKZGVerifierParams,
 };
 
-pub fn kzg_single_point_batch_open<E>(
+pub(crate) fn kzg_single_point_batch_open<E>(
     proving_key: &CoefFormUniKZGSRS<E>,
     polys: &[MultiLinearPoly<E::Fr>],
     x: &[E::Fr],
@@ -54,7 +54,7 @@ where
     (evals, open)
 }
 
-pub fn kzg_single_point_batch_verify<E>(
+pub(crate) fn kzg_single_point_batch_verify<E>(
     verifying_key: &UniKZGVerifierParams<E>,
     commitments: &[E::G1Affine],
     x: &[E::Fr],

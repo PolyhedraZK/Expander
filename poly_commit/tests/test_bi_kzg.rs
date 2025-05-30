@@ -6,31 +6,31 @@ use gkr_engine::ExpanderPCS;
 use gkr_engine::{BN254Config, ExpanderSingleVarChallenge, MPIConfig, MPIEngine, Transcript};
 use gkr_hashers::Keccak256hasher;
 use halo2curves::bn256::Bn256;
-use poly_commit::{HyperBiKZGPCS, };
+use poly_commit::HyperBiKZGPCS;
 use polynomials::MultiLinearPoly;
 use transcript::BytesHashTranscript;
 
 const TEST_REPETITION: usize = 3;
 
-// fn test_hyperkzg_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
-//     let mut rng = test_rng();
+fn test_hyperkzg_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
+    let mut rng = test_rng();
 
-//     (num_vars_start..=num_vars_end).for_each(|num_vars| {
-//         let xs: Vec<_> = (0..TEST_REPETITION)
-//             .map(|_| -> Vec<Fr> { (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect() })
-//             .collect();
-//         let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
+    (num_vars_start..=num_vars_end).for_each(|num_vars| {
+        let xs: Vec<_> = (0..TEST_REPETITION)
+            .map(|_| -> Vec<Fr> { (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect() })
+            .collect();
+        let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
-//         common::test_pcs::<Fr, BytesHashTranscript<Keccak256hasher>, HyperBiKZGPCS<Bn256>>(
-//             &num_vars, &poly, &xs,
-//         );
-//     })
-// }
+        common::test_pcs::<Fr, BytesHashTranscript<Keccak256hasher>, HyperBiKZGPCS<Bn256>>(
+            &num_vars, &poly, &xs,
+        );
+    })
+}
 
-// #[test]
-// fn test_hyperkzg_pcs_full_e2e() {
-//     test_hyperkzg_pcs_generics(2, 15)
-// }
+#[test]
+fn test_hyperkzg_pcs_full_e2e() {
+    test_hyperkzg_pcs_generics(2, 15)
+}
 
 fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_vars: usize) {
     let mut rng = test_rng();

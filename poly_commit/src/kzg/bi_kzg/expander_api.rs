@@ -32,7 +32,7 @@ where
 
     const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::KZG;
 
-    type Commitment = KZGCommitment<E>;
+    type Commitment = BiKZGCommitment<E>;
     type Opening = HyperBiKZGOpening<E>;
     type Params = usize;
     type SRS = CoefFormBiKZGLocalSRS<E>;
@@ -83,7 +83,7 @@ where
             coeff_form_uni_kzg_commit(&proving_key.tau_x_srs, poly.hypercube_basis_ref());
 
         if mpi_engine.is_single_process() {
-            return KZGCommitment(local_commitment).into();
+            return BiKZGCommitment(local_commitment).into();
         }
 
         let local_g1 = local_commitment.to_curve();
@@ -96,7 +96,7 @@ where
 
         let final_commit = root_gathering_commits.iter().sum::<E::G1>().into();
 
-        KZGCommitment(final_commit).into()
+        BiKZGCommitment(final_commit).into()
     }
 
     fn open(
@@ -167,42 +167,4 @@ where
             transcript,
         )
     }
-
-    // /// Open a set of polynomials at a point.
-    // fn batch_open(
-    //     _params: &Self::Params,
-    //     _mpi_engine: &impl MPIEngine,
-    //     proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-    //     mle_poly_list: &[impl MultilinearExtension<E::Fr>],
-    //     eval_point: &ExpanderSingleVarChallenge<G>,
-    //     _scratch_pad: &Self::ScratchPad,
-    //     transcript: &mut impl Transcript,
-    // ) -> (Vec<E::Fr>, Self::Opening) {
-    //     let (eval, open) = kzg_batch_open(
-    //         proving_key,
-    //         mle_poly_list,
-    //         &eval_point.local_xs(),
-    //         transcript,
-    //     );
-    //     (eval, open.into())
-    // }
-
-    // fn batch_verify(
-    //     _params: &Self::Params,
-    //     verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
-    //     commitments: &[Self::Commitment],
-    //     x: &ExpanderSingleVarChallenge<G>,
-    //     evals: &[<G as FieldEngine>::ChallengeField],
-    //     opening: &Self::Opening,
-    //     transcript: &mut impl Transcript,
-    // ) -> bool {
-    //     kzg_batch_verify(
-    //         verifying_key,
-    //         commitments,
-    //         &x.local_xs(),
-    //         evals,
-    //         opening,
-    //         transcript,
-    //     )
-    // }
 }

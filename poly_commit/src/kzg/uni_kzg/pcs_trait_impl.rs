@@ -17,6 +17,8 @@ use crate::{
     *,
 };
 
+use super::batch::{kzg_single_point_batch_open, kzg_single_point_batch_verify};
+
 pub struct HyperUniKZGPCS<E>
 where
     E: Engine,
@@ -40,7 +42,7 @@ where
     type ScratchPad = ();
 
     type SRS = CoefFormUniKZGSRS<E>;
-    type Commitment = KZGCommitment<E>;
+    type Commitment = UniKZGCommitment<E>;
     type Opening = HyperUniKZGOpening<E>;
 
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
@@ -59,7 +61,7 @@ where
         poly: &Self::Poly,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
-        KZGCommitment(coeff_form_uni_kzg_commit(proving_key, &poly.coeffs))
+        UniKZGCommitment(coeff_form_uni_kzg_commit(proving_key, &poly.coeffs))
     }
 
     fn open(

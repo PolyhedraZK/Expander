@@ -1,10 +1,5 @@
-use std::ops::{Index, IndexMut};
-
-use arith::ExtensionField;
 use derivative::Derivative;
-use gkr_engine::Transcript;
-use halo2curves::{ff::Field, pairing::Engine};
-use itertools::izip;
+use halo2curves::pairing::Engine;
 use serdes::ExpSerde;
 
 use crate::*;
