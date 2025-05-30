@@ -460,10 +460,6 @@ impl<'a> MPIEngine for MPIConfig<'a> {
     }
 }
 
-// This may not be correct. Temporarily add here for the compatibility of some outdated execution
-// code, will remove later
-unsafe impl<'a> Send for MPIConfig<'a> {}
-
 /// Return an u8 vector sharing THE SAME MEMORY SLOT with the input.
 #[inline]
 unsafe fn transmute_elem_to_u8_bytes<V: Sized>(elem: &V, byte_size: usize) -> Vec<u8> {

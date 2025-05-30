@@ -258,14 +258,14 @@ where
         .into_iter()
         .enumerate()
         .map(|(i, mut c)| {
-            let local_config = mpi_config.clone();
             let partial_proof_cnt = partial_proof_cnts[i].clone();
             let pcs_params = pcs_params.clone();
             let pcs_proving_key = pcs_proving_key.clone();
             let mut pcs_scratch = pcs_scratch.clone();
             thread::spawn(move || {
                 // bench func
-                let mut prover = Prover::<Cfg>::new(local_config.clone());
+                let local_mpi_config = MPIConfig::prover_new(None, None);
+                let mut prover = Prover::<Cfg>::new(local_mpi_config);
                 prover.prepare_mem(&c);
                 loop {
                     prover.prove(&mut c, &pcs_params, &pcs_proving_key, &mut pcs_scratch);
