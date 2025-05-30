@@ -1,22 +1,11 @@
-mod utils;
-pub(crate) use utils::*;
+mod structs_bi_kzg;
+pub use structs_bi_kzg::*;
 
-mod serde;
-
-mod structs;
-pub use structs::*;
-
-mod univariate;
-pub use univariate::*;
+mod structs_hyper_bi_kzg;
+pub use structs_hyper_bi_kzg::*;
 
 mod bivariate;
 pub use bivariate::*;
-
-mod hyper_kzg_structs;
-pub use hyper_kzg_structs::*;
-
-mod hyper_kzg;
-pub use hyper_kzg::*;
 
 mod hyper_bikzg;
 pub use hyper_bikzg::*;
@@ -28,6 +17,3 @@ mod pcs_trait_impl;
 pub use pcs_trait_impl::HyperBiKZGPCS;
 
 mod expander_api;
-
-mod batch;
-pub use batch::{kzg_batch_open, kzg_batch_verify};

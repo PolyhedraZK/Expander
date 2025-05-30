@@ -1,13 +1,27 @@
 use derivative::Derivative;
 use gkr_engine::StructuredReferenceString;
 use halo2curves::{pairing::Engine, CurveAffine};
-use serdes::ExpSerde;
+use serdes::{ExpSerde, SerdeResult};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct KZGCommitment<E: Engine>(pub E::G1Affine)
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>;
+
+// Derive macros does not work for associated types
+impl<E: Engine> ExpSerde for KZGCommitment<E>
+where
+    E::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+{
+    fn serialize_into<W: std::io::Write>(&self, writer: W) -> SerdeResult<()> {
+        self.0.serialize_into(writer)
+    }
+
+    fn deserialize_from<R: std::io::Read>(reader: R) -> SerdeResult<Self> {
+        Ok(Self(<E::G1Affine as ExpSerde>::deserialize_from(reader)?))
+    }
+}
 
 /// Structured reference string for univariate KZG polynomial commitment scheme.
 /// The univariate polynomial here is of coefficient form.

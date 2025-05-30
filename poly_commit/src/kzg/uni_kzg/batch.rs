@@ -5,13 +5,12 @@ use halo2curves::{group::Curve, msm::multiexp_serial, pairing::MultiMillerLoop, 
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
 
-use crate::{CoefFormUniKZGSRS, UniKZGVerifierParams};
-
-use super::{
-    coeff_form_uni_hyperkzg_open, coeff_form_uni_hyperkzg_verify, powers_series, HyperKZGOpening,
+use crate::{
+    coeff_form_uni_hyperkzg_open, coeff_form_uni_hyperkzg_verify, powers_series, CoefFormUniKZGSRS,
+    HyperKZGOpening, UniKZGVerifierParams,
 };
 
-pub fn kzg_batch_open<E>(
+pub fn kzg_single_point_batch_open<E>(
     proving_key: &CoefFormUniKZGSRS<E>,
     polys: &[MultiLinearPoly<E::Fr>],
     x: &[E::Fr],
@@ -55,7 +54,7 @@ where
     (evals, open)
 }
 
-pub fn kzg_batch_verify<E>(
+pub fn kzg_single_point_batch_verify<E>(
     verifying_key: &UniKZGVerifierParams<E>,
     commitments: &[E::G1Affine],
     x: &[E::Fr],

@@ -6,3 +6,6 @@ pub use bi_kzg::*;
 
 mod structs;
 pub use structs::*;
+
+mod utils;
+pub use utils::*;
