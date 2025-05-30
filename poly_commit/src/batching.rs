@@ -1,4 +1,5 @@
 //! Multi-points batch opening
+//! Uses Rayon to parallelize the computation.
 use arith::{ExtensionField, Field};
 use ark_std::log2;
 use gkr_engine::Transcript;
@@ -7,8 +8,12 @@ use halo2curves::msm::best_multiexp;
 use halo2curves::{ff::PrimeField, CurveAffine};
 use polynomials::MultiLinearPoly;
 use polynomials::{EqPolynomial, MultilinearExtension};
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+};
 use serdes::ExpSerde;
 use sumcheck::{IOPProof, SumCheck, SumOfProductsPoly};
+use utils::timer::Timer;
 
 /// Merge a list of polynomials and its corresponding points into a single polynomial
 /// Returns
@@ -41,49 +46,79 @@ where
     let eq_t_i = EqPolynomial::build_eq_x_r(&t);
 
     // \tilde g_i(b) = eq(t, i) * f_i(b)
-    let mut tilde_gs = vec![];
-    for (index, f_i) in polys.iter().enumerate() {
-        let mut tilde_g_eval = vec![C::Scalar::zero(); 1 << num_vars];
-        for (j, &f_i_eval) in f_i.coeffs.iter().enumerate() {
-            tilde_g_eval[j] = f_i_eval * eq_t_i[index];
-        }
-        tilde_gs.push(MultiLinearPoly {
-            coeffs: tilde_g_eval,
-        });
-    }
+    let timer = Timer::new("Building tilde g_i(b)", true);
+
+    let tilde_gs = polys
+        .par_iter()
+        .enumerate()
+        .map(|(index, f_i)| {
+            let mut tilde_g_eval = vec![C::Scalar::zero(); 1 << num_vars];
+            for (j, &f_i_eval) in f_i.coeffs.iter().enumerate() {
+                tilde_g_eval[j] = f_i_eval * eq_t_i[index];
+            }
+
+            MultiLinearPoly {
+                coeffs: tilde_g_eval,
+            }
+        })
+        .collect::<Vec<_>>();
+    timer.stop();
 
     // built the virtual polynomial for SumCheck
+    let timer = Timer::new("Building tilde eqs", true);
     let tilde_eqs: Vec<MultiLinearPoly<C::Scalar>> = points
-        .iter()
+        .par_iter()
         .map(|point| {
             let eq_b_zi = EqPolynomial::build_eq_x_r(point);
             MultiLinearPoly { coeffs: eq_b_zi }
         })
         .collect();
+    timer.stop();
 
+    let timer = Timer::new("Sumcheck merging points", true);
     let mut sumcheck_poly = SumOfProductsPoly::new();
     for (tilde_g, tilde_eq) in tilde_gs.iter().zip(tilde_eqs.into_iter()) {
         sumcheck_poly.add_pair(tilde_g.clone(), tilde_eq);
     }
-
     let proof = SumCheck::<C::Scalar>::prove(&sumcheck_poly, transcript);
+    timer.stop();
 
     let a2 = proof.export_point_to_expander();
 
     // build g'(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is the
     // sumcheck's point \tilde eq_i(a2) = eq(a2, point_i)
-    let mut g_prime_evals = vec![C::Scalar::zero(); 1 << num_vars];
+    let timer = Timer::new("Building g'(X)", true);
+    let g_prime_evals: Vec<C::Scalar> = (0..(1 << num_vars))
+        .into_par_iter()
+        .map(|j| {
+            tilde_gs
+                .par_iter()
+                .zip(points.par_iter())
+                .map(|(tilde_g, point)| {
+                    let eq_i_a2 = EqPolynomial::eq_vec(a2.as_ref(), point);
 
-    for (tilde_g, point) in tilde_gs.iter().zip(points.iter()) {
-        let eq_i_a2 = EqPolynomial::eq_vec(a2.as_ref(), point);
-        for (j, &tilde_g_eval) in tilde_g.coeffs.iter().enumerate() {
-            g_prime_evals[j] += tilde_g_eval * eq_i_a2;
-        }
-    }
+                    tilde_g.coeffs[j] * eq_i_a2
+                })
+                .sum()
+        })
+        .collect();
+
     let g_prime = MultiLinearPoly {
         coeffs: g_prime_evals,
     };
 
+    // let mut g_prime_evals = vec![C::Scalar::zero(); 1 << num_vars];
+
+    // for (tilde_g, point) in tilde_gs.iter().zip(points.iter()) {
+    //     let eq_i_a2 = EqPolynomial::eq_vec(a2.as_ref(), point);
+    //     for (j, &tilde_g_eval) in tilde_g.coeffs.iter().enumerate() {
+    //         g_prime_evals[j] += tilde_g_eval * eq_i_a2;
+    //     }
+    // }
+    // let g_prime = MultiLinearPoly {
+    //     coeffs: g_prime_evals,
+    // };
+    timer.stop();
     (a2, g_prime, proof)
 }
 
@@ -156,9 +191,9 @@ fn transpose<C: CurveAffine>(m: &[&[C]]) -> Vec<Vec<C>> {
 
     let mut transposed = vec![Vec::with_capacity(rows); cols];
 
-    for i in 0..rows {
+    for row in m.iter() {
         for j in 0..cols {
-            transposed[j].push(m[i][j]);
+            transposed[j].push(row[j]);
         }
     }
 

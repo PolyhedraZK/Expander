@@ -73,7 +73,7 @@ where
         let local_commitment =
             coeff_form_uni_kzg_commit(&proving_key.tau_x_srs, poly.hypercube_basis_ref());
 
-        BiKZGCommitment(local_commitment).into()
+        BiKZGCommitment(local_commitment)
     }
 
     fn open(

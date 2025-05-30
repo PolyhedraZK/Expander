@@ -28,7 +28,7 @@ fn test_hyperkzg_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
 }
 
 #[test]
-fn test_hyperkzg_pcs_full_e2e() {
+fn test_hyper_uni_kzg_pcs_full_e2e() {
     test_hyperkzg_pcs_generics(2, 15)
 }
 
@@ -89,7 +89,7 @@ fn test_hyper_unikzg_for_expander_gkr() {
 }
 
 #[test]
-fn test_kzg_batch_open() {
+fn test_uni_kzg_batch_open() {
     common::test_batching::<Fr, BytesHashTranscript<Keccak256hasher>, HyperUniKZGPCS<Bn256>>();
     common::test_batching_for_expander_gkr::<
         BN254Config,

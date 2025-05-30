@@ -15,6 +15,7 @@ utils = { path = "../utils" }
 
 env_logger.workspace = true
 log.workspace = true
+rayon.workspace = true
 
 [dev-dependencies]
 ark-std.workspace = true

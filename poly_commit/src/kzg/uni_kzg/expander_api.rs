@@ -54,7 +54,7 @@ where
         poly: &impl polynomials::MultilinearExtension<E::Fr>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
-        let commitment = coeff_form_uni_kzg_commit(&proving_key, poly.hypercube_basis_ref());
+        let commitment = coeff_form_uni_kzg_commit(proving_key, poly.hypercube_basis_ref());
         Some(UniKZGCommitment(commitment))
     }
 
@@ -69,7 +69,7 @@ where
     ) -> Option<Self::Opening> {
         let (_eval, open) = coeff_form_uni_hyperkzg_open(
             proving_key,
-            &poly.hypercube_basis_ref(),
+            poly.hypercube_basis_ref(),
             &x.local_xs(),
             transcript,
         );

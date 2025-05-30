@@ -12,7 +12,7 @@ use transcript::BytesHashTranscript;
 
 const TEST_REPETITION: usize = 3;
 
-fn test_hyperkzg_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
+fn test_hyper_bi_kzg_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
     let mut rng = test_rng();
 
     (num_vars_start..=num_vars_end).for_each(|num_vars| {
@@ -28,11 +28,11 @@ fn test_hyperkzg_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
 }
 
 #[test]
-fn test_hyperkzg_pcs_full_e2e() {
-    test_hyperkzg_pcs_generics(2, 15)
+fn test_hyper_bi_kzg_pcs_full_e2e() {
+    test_hyper_bi_kzg_pcs_generics(2, 15)
 }
 
-fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_vars: usize) {
+fn test_hyper_bi_kzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_vars: usize) {
     let mut rng = test_rng();
 
     // NOTE BN254 GKR SIMD pack size = 1, num vars in SIMD is 0
@@ -79,21 +79,11 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
 }
 
 #[test]
-fn test_hyper_bikzg_for_expander_gkr() {
+fn test_hyper_bi_kzg_for_expander_gkr() {
     let mpi_config = MPIConfig::prover_new();
 
-    test_hyper_bikzg_for_expander_gkr_generics(&mpi_config, 1);
-    test_hyper_bikzg_for_expander_gkr_generics(&mpi_config, 15);
+    test_hyper_bi_kzg_for_expander_gkr_generics(&mpi_config, 1);
+    test_hyper_bi_kzg_for_expander_gkr_generics(&mpi_config, 15);
 
     MPIConfig::finalize()
 }
-
-// #[test]
-// fn test_kzg_batch_open() {
-//     common::test_batching::<Fr, BytesHashTranscript<Keccak256hasher>, HyperBiKZGPCS<Bn256>>();
-//     // common::test_batching_for_expander_gkr::<
-//     //     BN254Config,
-//     //     BytesHashTranscript<Keccak256hasher>,
-//     //     HyraxPCS<G1Affine>,
-//     // >();
-// }

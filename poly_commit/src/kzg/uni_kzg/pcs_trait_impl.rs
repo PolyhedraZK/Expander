@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use ::utils::timer::Timer;
 use arith::ExtensionField;
 use gkr_engine::{StructuredReferenceString, Transcript};
 use halo2curves::{
@@ -8,6 +9,7 @@ use halo2curves::{
     CurveAffine,
 };
 use polynomials::MultiLinearPoly;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
 
 use crate::batching::prover_merge_points;
@@ -150,18 +152,27 @@ where
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
     ) -> (Vec<E::Fr>, BatchOpening<E::Fr, Self>) {
+        let timer = Timer::new("batch_opening", true);
         // generate evals for each polynomial at its corresponding point
+        let eval_timer = Timer::new("eval all polys", true);
         let evals: Vec<E::Fr> = polys
-            .iter()
-            .zip(points.iter())
+            .par_iter()
+            .zip_eq(points.par_iter())
             .map(|(poly, point)| poly.evaluate_jolt(point))
             .collect();
+        eval_timer.stop();
 
+        let merger_timer = Timer::new("merging points", true);
         let (new_point, g_prime, proof) =
             prover_merge_points::<E::G1Affine>(polys, points, transcript);
+        merger_timer.stop();
 
+        let pcs_timer = Timer::new("kzg_open", true);
         let (_g_prime_eval, g_prime_proof) =
             coeff_form_uni_hyperkzg_open(proving_key, &g_prime.coeffs, &new_point, transcript);
+        pcs_timer.stop();
+
+        timer.stop();
         (
             evals,
             BatchOpening {
