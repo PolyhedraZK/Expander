@@ -16,7 +16,6 @@ use crate::{
     traits::{BatchOpening, BatchOpeningPCS},
     *,
 };
-use bi_kzg::hyper_kzg::*;
 
 pub struct HyperBiKZGPCS<E>
 where

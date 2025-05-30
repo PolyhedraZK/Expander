@@ -5,9 +5,10 @@ use halo2curves::{group::Curve, msm::multiexp_serial, pairing::MultiMillerLoop, 
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
 
+use crate::{CoefFormUniKZGSRS, UniKZGVerifierParams};
+
 use super::{
-    coeff_form_uni_hyperkzg_open, coeff_form_uni_hyperkzg_verify, powers_series, CoefFormUniKZGSRS,
-    HyperKZGOpening, UniKZGVerifierParams,
+    coeff_form_uni_hyperkzg_open, coeff_form_uni_hyperkzg_verify, powers_series, HyperKZGOpening,
 };
 
 pub fn kzg_batch_open<E>(
