@@ -21,7 +21,6 @@ use gkr::{
 use gkr_engine::{
     ExpanderPCS, FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine, PolynomialCommitmentType,
 };
-use mpi::{environment::Universe, topology::SimpleCommunicator};
 use poly_commit::expander_pcs_init_testing_only;
 use serdes::ExpSerde;
 
@@ -50,21 +49,13 @@ struct Args {
     threads: u64,
 }
 
-static mut UNIVERSE: Option<Universe> = None;
-static mut WORLD: Option<SimpleCommunicator> = None;
-
 #[allow(static_mut_refs)]
 fn main() {
     let args = Args::parse();
     print_info(&args);
 
-    let universe = MPIConfig::init().unwrap();
-    let world = universe.world();
-    unsafe {
-        UNIVERSE = Some(universe);
-        WORLD = Some(world);
-    }
-    let mpi_config = MPIConfig::prover_new(unsafe { UNIVERSE.as_ref() }, unsafe { WORLD.as_ref() });
+    // This is a designated single-process benchmark
+    let mpi_config = MPIConfig::prover_new(None, None);
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {

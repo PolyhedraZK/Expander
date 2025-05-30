@@ -245,7 +245,7 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
             host_ip,
             port,
         } => {
-            let mpi_config = MPIConfig::verifier_new(1);
+            let mpi_config = MPIConfig::prover_new(None, None);
             let prover = Prover::<Cfg>::new(mpi_config.clone());
 
             assert!(
@@ -262,10 +262,6 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
             let (circuit, _) =
                 Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, &mpi_config);
 
-            let mut prover = Prover::<Cfg>::new(mpi_config.clone());
-            prover.prepare_mem(&circuit);
-            let verifier = Verifier::<Cfg>::new(mpi_config.clone());
-
             // TODO: Read PCS setup from files
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
                 expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
@@ -275,8 +271,6 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
 
             let circuit = Arc::new(Mutex::new(circuit));
             let circuit_clone_for_verifier = circuit.clone();
-            let prover = Arc::new(Mutex::new(prover));
-            let verifier = Arc::new(Mutex::new(verifier));
             let pcs_params = Arc::new(Mutex::new(pcs_params));
             let pcs_params_clone_for_verifier = pcs_params.clone();
             let pcs_proving_key = Arc::new(Mutex::new(pcs_proving_key));
@@ -294,8 +288,10 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
                     .map(move |bytes: bytes::Bytes| {
                         info!("Received prove request.");
                         let witness_bytes: Vec<u8> = bytes.to_vec();
+
                         let mut circuit = circuit.lock().unwrap();
-                        let mut prover = prover.lock().unwrap();
+                        let mut prover = Prover::<Cfg>::new(MPIConfig::prover_new(None, None));
+                        prover.prepare_mem(&circuit);
                         let pcs_params = pcs_params.lock().unwrap();
                         let pcs_proving_key = pcs_proving_key.lock().unwrap();
                         let mut pcs_scratch = pcs_scratch.lock().unwrap();
@@ -330,7 +326,7 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
                             ..16 + length_of_witness_bytes + length_of_proof_bytes];
 
                         let mut circuit = circuit_clone_for_verifier.lock().unwrap();
-                        let verifier = verifier.lock().unwrap();
+                        let verifier = Verifier::<Cfg>::new(MPIConfig::verifier_new(1));
                         let pcs_verification_key = pcs_verification_key.lock().unwrap();
                         circuit.load_witness_bytes(
                             witness_bytes,
