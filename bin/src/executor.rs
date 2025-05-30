@@ -166,6 +166,9 @@ pub fn verify<Cfg: GKREngine>(
     )
 }
 
+// The 'Prove' command can be run with mpi more than one process
+// The 'Verify' command must be run with mpi size = 1
+// The 'Serve' command must be run with mpi size = 1
 pub async fn run_command<'a, Cfg: GKREngine + 'static>(
     command: &ExpanderExecArgs,
     mpi_config: &MPIConfig<'a>,
