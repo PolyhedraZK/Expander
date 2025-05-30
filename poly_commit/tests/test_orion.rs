@@ -118,8 +118,9 @@ fn test_orion_for_expander_gkr_generics<C, ComPackF, T>(
 
 #[test]
 fn test_orion_for_expander_gkr() {
-    let mpi_config = MPIConfig::prover_new();
-
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     test_orion_for_expander_gkr_generics::<
         GF2ExtConfig,
         GF2x128,
@@ -137,6 +138,4 @@ fn test_orion_for_expander_gkr() {
         Goldilocksx8,
         BytesHashTranscript<Keccak256hasher>,
     >(&mpi_config, 25);
-
-    MPIConfig::finalize()
 }

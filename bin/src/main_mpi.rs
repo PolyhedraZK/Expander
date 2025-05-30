@@ -46,7 +46,9 @@ fn main() {
     let args = Args::parse();
     print_info(&args);
 
-    let mpi_config = MPIConfig::prover_new();
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
@@ -113,8 +115,6 @@ fn main() {
         },
         _ => unreachable!(),
     };
-
-    MPIConfig::finalize();
 }
 
 fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig)
@@ -255,7 +255,9 @@ where
 }
 
 fn print_info(args: &Args) {
-    let mpi_config = MPIConfig::prover_new();
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     if !mpi_config.is_root() {
         return;
     }

@@ -18,7 +18,7 @@ use gkr::{
         KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, dev_env_data_setup,
     },
 };
-use gkr_engine::{FieldEngine, FieldType, GKREngine, MPIConfig, MPIEngine};
+use gkr_engine::{FieldEngine, FieldType, GKREngine, MPIConfig};
 use poly_commit::expander_pcs_init_testing_only;
 use serdes::ExpSerde;
 
@@ -38,19 +38,21 @@ fn main() {
     dev_env_data_setup();
     if args.compare {
         // check if the downloaded proofs match the one been generated
-        proof_gen::<GF2ExtConfigSha2Raw>();
-        proof_gen::<M31x16ConfigSha2RawVanilla>();
-        proof_gen::<BN254ConfigSha2Raw>();
+        let universe = MPIConfig::init().unwrap();
+        let world = universe.world();
+        let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
+
+        proof_gen::<GF2ExtConfigSha2Raw>(mpi_config.clone());
+        proof_gen::<M31x16ConfigSha2RawVanilla>(mpi_config.clone());
+        proof_gen::<BN254ConfigSha2Raw>(mpi_config.clone());
         compare_proof_files();
     }
 }
 
-fn proof_gen<C: GKREngine>()
+fn proof_gen<'a, C: GKREngine>(mpi_config: MPIConfig<'a>)
 where
     C::FieldConfig: FieldEngine<SimdCircuitField = C::PCSField>,
 {
-    let mpi_config = MPIConfig::prover_new();
-
     // load circuit
     let mut circuit = match C::FieldConfig::FIELD_TYPE {
         FieldType::GF2Ext128 => {
