@@ -8,9 +8,7 @@ use halo2curves::msm::best_multiexp;
 use halo2curves::{ff::PrimeField, CurveAffine};
 use polynomials::MultiLinearPoly;
 use polynomials::{EqPolynomial, MultilinearExtension};
-use rayon::iter::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
-};
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
 use sumcheck::{IOPProof, SumCheck, SumOfProductsPoly};
 use utils::timer::Timer;
@@ -88,36 +86,21 @@ where
     // build g'(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is the
     // sumcheck's point \tilde eq_i(a2) = eq(a2, point_i)
     let timer = Timer::new("Building g'(X)", true);
-    let g_prime_evals: Vec<C::Scalar> = (0..(1 << num_vars))
-        .into_par_iter()
-        .map(|j| {
-            tilde_gs
-                .par_iter()
-                .zip(points.par_iter())
-                .map(|(tilde_g, point)| {
-                    let eq_i_a2 = EqPolynomial::eq_vec(a2.as_ref(), point);
 
-                    tilde_g.coeffs[j] * eq_i_a2
-                })
-                .sum()
-        })
-        .collect();
+    let mut g_prime_evals = vec![C::Scalar::zero(); 1 << num_vars];
+    let eq_i_a2_polys = points
+        .par_iter()
+        .map(|point| EqPolynomial::eq_vec(a2.as_ref(), point))
+        .collect::<Vec<_>>();
 
+    for (tilde_g, eq_i_a2) in tilde_gs.iter().zip(eq_i_a2_polys.iter()) {
+        for (j, &tilde_g_eval) in tilde_g.coeffs.iter().enumerate() {
+            g_prime_evals[j] += tilde_g_eval * eq_i_a2;
+        }
+    }
     let g_prime = MultiLinearPoly {
         coeffs: g_prime_evals,
     };
-
-    // let mut g_prime_evals = vec![C::Scalar::zero(); 1 << num_vars];
-
-    // for (tilde_g, point) in tilde_gs.iter().zip(points.iter()) {
-    //     let eq_i_a2 = EqPolynomial::eq_vec(a2.as_ref(), point);
-    //     for (j, &tilde_g_eval) in tilde_g.coeffs.iter().enumerate() {
-    //         g_prime_evals[j] += tilde_g_eval * eq_i_a2;
-    //     }
-    // }
-    // let g_prime = MultiLinearPoly {
-    //     coeffs: g_prime_evals,
-    // };
     timer.stop();
     (a2, g_prime, proof)
 }
