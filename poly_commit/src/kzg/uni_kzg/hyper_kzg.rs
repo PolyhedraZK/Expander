@@ -111,7 +111,7 @@ pub fn coeff_form_uni_hyperkzg_open<E, T>(
     coeffs: &[E::Fr],
     alphas: &[E::Fr],
     fs_transcript: &mut T,
-) -> (E::Fr, HyperKZGOpening<E>)
+) -> (E::Fr, HyperUniKZGOpening<E>)
 where
     E: MultiMillerLoop,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
@@ -162,7 +162,7 @@ where
 
     (
         local_evals.multilinear_final_eval(),
-        HyperKZGOpening {
+        HyperUniKZGOpening {
             folded_oracle_commitments,
             evals_at_x: local_evals.into(),
             beta_x_commitment,
@@ -177,7 +177,7 @@ pub fn coeff_form_uni_hyperkzg_verify<E, T>(
     comm: E::G1Affine,
     alphas: &[E::Fr],
     eval: E::Fr,
-    opening: &HyperKZGOpening<E>,
+    opening: &HyperUniKZGOpening<E>,
     fs_transcript: &mut T,
 ) -> bool
 where

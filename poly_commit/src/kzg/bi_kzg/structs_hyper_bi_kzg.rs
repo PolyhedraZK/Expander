@@ -28,7 +28,7 @@ where
     pub quotient_delta_y_commitment: E::G1Affine,
 }
 
-impl<E: Engine> From<HyperBiKZGOpening<E>> for HyperKZGOpening<E>
+impl<E: Engine> From<HyperBiKZGOpening<E>> for HyperUniKZGOpening<E>
 where
     E::Fr: ExpSerde,
     E::G1Affine: Default + ExpSerde,
@@ -43,12 +43,12 @@ where
     }
 }
 
-impl<E: Engine> From<HyperKZGOpening<E>> for HyperBiKZGOpening<E>
+impl<E: Engine> From<HyperUniKZGOpening<E>> for HyperBiKZGOpening<E>
 where
     E::Fr: ExpSerde,
     E::G1Affine: Default + ExpSerde,
 {
-    fn from(value: HyperKZGOpening<E>) -> Self {
+    fn from(value: HyperUniKZGOpening<E>) -> Self {
         Self {
             folded_oracle_commitments: value.folded_oracle_commitments,
             leader_evals: value.evals_at_x,

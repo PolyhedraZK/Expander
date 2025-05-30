@@ -32,9 +32,9 @@ where
     const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::KZG;
 
     type Commitment = KZGCommitment<E>;
-    type Opening = HyperBiKZGOpening<E>;
+    type Opening = HyperUniKZGOpening<E>;
     type Params = usize;
-    type SRS = CoefFormBiKZGLocalSRS<E>;
+    type SRS = CoefFormUniKZGSRS<E>;
     type ScratchPad = ();
     type BatchOpening = BatchOpening<E::Fr, Self>;
 
@@ -49,7 +49,12 @@ where
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
-        todo!()
+        // todo!()
+                let local_num_vars = *params;
+
+        let x_degree_po2 = 1 << local_num_vars;
+        generate_coef_form_uni_kzg_srs_for_testing(x_degree_po2, rng)
+
         // let local_num_vars = *params;
 
         // let x_degree_po2 = 1 << local_num_vars;

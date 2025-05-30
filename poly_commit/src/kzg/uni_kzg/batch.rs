@@ -7,7 +7,7 @@ use serdes::ExpSerde;
 
 use crate::{
     coeff_form_uni_hyperkzg_open, coeff_form_uni_hyperkzg_verify, powers_series, CoefFormUniKZGSRS,
-    HyperKZGOpening, UniKZGVerifierParams,
+    HyperUniKZGOpening, UniKZGVerifierParams,
 };
 
 pub fn kzg_single_point_batch_open<E>(
@@ -15,7 +15,7 @@ pub fn kzg_single_point_batch_open<E>(
     polys: &[MultiLinearPoly<E::Fr>],
     x: &[E::Fr],
     transcript: &mut impl Transcript,
-) -> (Vec<E::Fr>, HyperKZGOpening<E>)
+) -> (Vec<E::Fr>, HyperUniKZGOpening<E>)
 where
     E: MultiMillerLoop,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
@@ -59,7 +59,7 @@ pub fn kzg_single_point_batch_verify<E>(
     commitments: &[E::G1Affine],
     x: &[E::Fr],
     evals: &[E::Fr],
-    opening: &HyperKZGOpening<E>,
+    opening: &HyperUniKZGOpening<E>,
     transcript: &mut impl Transcript,
 ) -> bool
 where

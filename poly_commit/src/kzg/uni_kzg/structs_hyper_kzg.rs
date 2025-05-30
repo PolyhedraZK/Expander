@@ -53,7 +53,7 @@ where
 
 #[derive(Clone, Debug, Derivative, ExpSerde)]
 #[derivative(Default(bound = ""))]
-pub struct HyperKZGOpening<E: Engine>
+pub struct HyperUniKZGOpening<E: Engine>
 where
     E::Fr: ExpSerde,
     E::G1Affine: Default + ExpSerde,

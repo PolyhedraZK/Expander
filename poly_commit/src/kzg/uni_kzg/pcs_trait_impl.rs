@@ -41,7 +41,7 @@ where
 
     type SRS = CoefFormUniKZGSRS<E>;
     type Commitment = KZGCommitment<E>;
-    type Opening = HyperKZGOpening<E>;
+    type Opening = HyperUniKZGOpening<E>;
 
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
 
