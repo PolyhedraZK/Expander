@@ -3,6 +3,7 @@ use arith::{ExtensionField, Field};
 use ark_std::log2;
 use gkr_engine::Transcript;
 use halo2curves::group::Curve;
+use halo2curves::msm::best_multiexp;
 use halo2curves::{ff::PrimeField, CurveAffine};
 use polynomials::MultiLinearPoly;
 use polynomials::{EqPolynomial, MultilinearExtension};
@@ -111,19 +112,23 @@ where
     let eq_t_i = EqPolynomial::build_eq_x_r(&t);
 
     // build g' commitment
+    let bases = commitments.iter().map(|c| c.as_ref()).collect::<Vec<_>>();
+    let bases_transposed = transpose::<C>(&bases);
 
-    // todo: use MSM
-    // let mut scalars = vec![];
-    // let mut bases = vec![];
+    let scalars = points
+        .iter()
+        .enumerate()
+        .map(|(i, p)| {
+            let eq_i_a2 = EqPolynomial::eq_vec(a2.as_ref(), p);
+            eq_i_a2 * eq_t_i[i]
+        })
+        .collect::<Vec<_>>();
 
-    let mut g_prime_commit_elems = vec![C::Curve::default(); commitments[0].as_ref().len()];
-    for (i, point) in points.iter().enumerate() {
-        let eq_i_a2 = EqPolynomial::eq_vec(a2.as_ref(), point);
-        let scalar = eq_i_a2 * eq_t_i[i];
-        for (j, &base) in commitments[i].as_ref().iter().enumerate() {
-            g_prime_commit_elems[j] += base * scalar;
-        }
-    }
+    let g_prime_commit_elems = bases_transposed
+        .iter()
+        .map(|base| best_multiexp(&scalars, base))
+        .collect::<Vec<_>>();
+
     let mut g_prime_commit_affine = vec![C::default(); commitments[0].as_ref().len()];
     C::Curve::batch_normalize(&g_prime_commit_elems, &mut g_prime_commit_affine);
 
@@ -138,4 +143,24 @@ where
     let tilde_g_eval = subclaim.expected_evaluation;
 
     (tilde_g_eval, g_prime_commit_affine)
+}
+
+#[inline]
+fn transpose<C: CurveAffine>(m: &[&[C]]) -> Vec<Vec<C>> {
+    if m.is_empty() || m[0].is_empty() {
+        return Vec::new();
+    }
+
+    let rows = m.len();
+    let cols = m[0].len();
+
+    let mut transposed = vec![Vec::with_capacity(rows); cols];
+
+    for i in 0..rows {
+        for j in 0..cols {
+            transposed[j].push(m[i][j]);
+        }
+    }
+
+    transposed
 }

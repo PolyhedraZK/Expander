@@ -6,7 +6,7 @@ use gkr_engine::{root_println, MPIConfig, MPIEngine, Transcript};
 use gkr_hashers::{Keccak256hasher, SHA256hasher};
 use halo2curves::bn256::{Bn256, G1Affine};
 use poly_commit::{
-    BatchOpeningPCS, HyperBiKZGPCS, HyraxPCS, OrionBaseFieldPCS, PolynomialCommitmentScheme,
+    BatchOpeningPCS, HyperUniKZGPCS, HyraxPCS, OrionBaseFieldPCS, PolynomialCommitmentScheme,
 };
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
@@ -97,12 +97,12 @@ fn bench_hyrax(mpi_config: &MPIConfig, num_vars: usize) {
 fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
     // full scalar
     let mut rng = test_rng();
-    let (srs, _) = HyperBiKZGPCS::<Bn256>::gen_srs_for_testing(&num_vars, &mut rng);
+    let (srs, _) = HyperUniKZGPCS::<Bn256>::gen_srs_for_testing(&num_vars, &mut rng);
 
     let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
     let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
 
-    pcs_bench::<HyperBiKZGPCS<Bn256>>(
+    pcs_bench::<HyperUniKZGPCS<Bn256>>(
         mpi_config,
         &num_vars,
         &srs,
@@ -116,7 +116,7 @@ fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
         .map(|_| Fr::from(rng.next_u32()))
         .collect::<Vec<_>>();
     let poly = MultiLinearPoly::<Fr>::new(input);
-    pcs_bench::<HyperBiKZGPCS<Bn256>>(
+    pcs_bench::<HyperUniKZGPCS<Bn256>>(
         mpi_config,
         &num_vars,
         &srs,
@@ -126,7 +126,7 @@ fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
     );
 
     // batch open
-    bench_batch_open::<Fr, HyperBiKZGPCS<Bn256>>(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
+    bench_batch_open::<Fr, HyperUniKZGPCS<Bn256>>(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
 }
 
 fn pcs_bench<PCS: PolynomialCommitmentScheme<Fr>>(
@@ -216,6 +216,15 @@ where
     let polys = (0..num_poly)
         .map(|_| MultiLinearPoly::<F>::random(num_vars, &mut rng))
         .collect::<Vec<_>>();
+
+    let points = (0..num_poly)
+        .map(|_| {
+            (0..num_vars)
+                .map(|_| F::random_unsafe(&mut rng))
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
     let commitments = polys
         .iter()
         .map(|poly| PCS::commit(&num_vars, &proving_key, poly, &mut scratch_pad))
@@ -224,21 +233,16 @@ where
     commitments.serialize_into(&mut buf).unwrap();
     let com_size = buf.len();
 
-    // open all polys at a single point
-    let x = (0..num_vars)
-        .map(|_| F::random_unsafe(&mut rng))
-        .collect::<Vec<_>>();
-
     let mut transcript = BytesHashTranscript::<SHA256hasher>::new();
     let timer = Timer::new(
         format!("{} batch open {} polys   ", PCS::NAME, num_poly).as_ref(),
         mpi_config.is_root(),
     );
-    let (values, batch_opening) = PCS::single_point_batch_open(
+    let (values, batch_opening) = PCS::multiple_points_batch_open(
         &num_vars,
         &proving_key,
         &polys,
-        &x,
+        &points,
         &mut scratch_pad,
         &mut transcript,
     );
@@ -255,11 +259,11 @@ where
         format!("{} batch verify {} polys ", PCS::NAME, num_poly).as_ref(),
         mpi_config.is_root(),
     );
-    assert!(PCS::single_point_batch_verify(
+    assert!(PCS::multiple_points_batch_verify(
         &num_vars,
         &verification_key,
         &commitments,
-        &x,
+        &points,
         &values,
         &batch_opening,
         &mut transcript
