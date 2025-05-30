@@ -6,6 +6,7 @@ use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
 };
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
 use utils::timer::Timer;
 
@@ -282,8 +283,8 @@ where
     // generate evals for each polynomial at its corresponding point
     let eval_timer = Timer::new("eval all polys", true);
     let evals: Vec<C::Scalar> = polys
-        .iter()
-        .zip(points.iter())
+        .par_iter()
+        .zip_eq(points.par_iter())
         .map(|(poly, point)| poly.evaluate_jolt(point))
         .collect();
     eval_timer.stop();
