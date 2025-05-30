@@ -6,7 +6,7 @@ use gkr_engine::ExpanderPCS;
 use gkr_engine::{BN254Config, ExpanderSingleVarChallenge, MPIConfig, MPIEngine, Transcript};
 use gkr_hashers::Keccak256hasher;
 use halo2curves::bn256::Bn256;
-use poly_commit::HyperKZGPCS;
+use poly_commit::HyperBiKZGPCS;
 use polynomials::MultiLinearPoly;
 use transcript::BytesHashTranscript;
 
@@ -21,7 +21,7 @@ fn test_hyperkzg_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
             .collect();
         let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
-        common::test_pcs::<Fr, BytesHashTranscript<Keccak256hasher>, HyperKZGPCS<Bn256>>(
+        common::test_pcs::<Fr, BytesHashTranscript<Keccak256hasher>, HyperBiKZGPCS<Bn256>>(
             &num_vars, &poly, &xs,
         );
     })
@@ -61,14 +61,14 @@ fn test_hyper_bikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_
 
     dbg!(local_poly.get_num_vars(), local_poly.coeffs[0]);
 
-    let params = <HyperKZGPCS<Bn256> as ExpanderPCS<BN254Config, Fr>>::gen_params(
+    let params = <HyperBiKZGPCS<Bn256> as ExpanderPCS<BN254Config, Fr>>::gen_params(
         num_vars_in_each_poly,
         mpi_config_ref.world_size(),
     );
     common::test_pcs_for_expander_gkr::<
         BN254Config,
         BytesHashTranscript<Keccak256hasher>,
-        HyperKZGPCS<Bn256>,
+        HyperBiKZGPCS<Bn256>,
     >(
         &params,
         mpi_config_ref,
@@ -90,7 +90,7 @@ fn test_hyper_bikzg_for_expander_gkr() {
 
 #[test]
 fn test_kzg_batch_open() {
-    common::test_batching::<Fr, BytesHashTranscript<Keccak256hasher>, HyperKZGPCS<Bn256>>();
+    common::test_batching::<Fr, BytesHashTranscript<Keccak256hasher>, HyperBiKZGPCS<Bn256>>();
     // common::test_batching_for_expander_gkr::<
     //     BN254Config,
     //     BytesHashTranscript<Keccak256hasher>,

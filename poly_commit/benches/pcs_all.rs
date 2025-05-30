@@ -6,7 +6,7 @@ use gkr_engine::{root_println, MPIConfig, MPIEngine, Transcript};
 use gkr_hashers::{Keccak256hasher, SHA256hasher};
 use halo2curves::bn256::{Bn256, G1Affine};
 use poly_commit::{
-    BatchOpeningPCS, HyperKZGPCS, HyraxPCS, OrionBaseFieldPCS, PolynomialCommitmentScheme,
+    BatchOpeningPCS, HyperBiKZGPCS, HyraxPCS, OrionBaseFieldPCS, PolynomialCommitmentScheme,
 };
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
@@ -97,12 +97,12 @@ fn bench_hyrax(mpi_config: &MPIConfig, num_vars: usize) {
 fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
     // full scalar
     let mut rng = test_rng();
-    let (srs, _) = HyperKZGPCS::<Bn256>::gen_srs_for_testing(&num_vars, &mut rng);
+    let (srs, _) = HyperBiKZGPCS::<Bn256>::gen_srs_for_testing(&num_vars, &mut rng);
 
     let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
     let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
 
-    pcs_bench::<HyperKZGPCS<Bn256>>(
+    pcs_bench::<HyperBiKZGPCS<Bn256>>(
         mpi_config,
         &num_vars,
         &srs,
@@ -116,7 +116,7 @@ fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
         .map(|_| Fr::from(rng.next_u32()))
         .collect::<Vec<_>>();
     let poly = MultiLinearPoly::<Fr>::new(input);
-    pcs_bench::<HyperKZGPCS<Bn256>>(
+    pcs_bench::<HyperBiKZGPCS<Bn256>>(
         mpi_config,
         &num_vars,
         &srs,
@@ -126,7 +126,7 @@ fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
     );
 
     // batch open
-    bench_batch_open::<Fr, HyperKZGPCS<Bn256>>(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
+    bench_batch_open::<Fr, HyperBiKZGPCS<Bn256>>(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
 }
 
 fn pcs_bench<PCS: PolynomialCommitmentScheme<Fr>>(

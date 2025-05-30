@@ -16,9 +16,9 @@ use crate::{
     traits::{BatchOpening, BatchOpeningPCS},
     *,
 };
-use kzg::hyper_kzg::*;
+use bi_kzg::hyper_kzg::*;
 
-pub struct HyperKZGPCS<E>
+pub struct HyperBiKZGPCS<E>
 where
     E: Engine,
     E::Fr: ExtensionField,
@@ -26,7 +26,7 @@ where
     _marker_e: PhantomData<E>,
 }
 
-impl<E> HyperKZGPCS<E>
+impl<E> HyperBiKZGPCS<E>
 where
     E: Engine,
     E::Fr: ExtensionField,
@@ -34,14 +34,14 @@ where
     pub const MINIMUM_SUPPORTED_NUM_VARS: usize = 2;
 }
 
-impl<E> PolynomialCommitmentScheme<E::Fr> for HyperKZGPCS<E>
+impl<E> PolynomialCommitmentScheme<E::Fr> for HyperBiKZGPCS<E>
 where
     E: Engine + MultiMillerLoop,
     E::Fr: ExtensionField + PrimeField,
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
-    const NAME: &'static str = "HyperKZGPCS";
+    const NAME: &'static str = "HyperBiKZGPCS";
 
     type Params = usize;
     type Poly = MultiLinearPoly<E::Fr>;
@@ -95,7 +95,7 @@ where
     }
 }
 
-impl<E> BatchOpeningPCS<E::Fr> for HyperKZGPCS<E>
+impl<E> BatchOpeningPCS<E::Fr> for HyperBiKZGPCS<E>
 where
     E: Engine + MultiMillerLoop,
     E::Fr: ExtensionField + PrimeField,

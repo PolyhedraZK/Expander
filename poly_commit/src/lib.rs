@@ -17,7 +17,7 @@ pub use orion::*;
 pub mod hyrax;
 pub use hyrax::*;
 
-pub mod kzg;
-pub use kzg::*;
+pub mod bi_kzg;
+pub use bi_kzg::*;
 
 pub mod batching;

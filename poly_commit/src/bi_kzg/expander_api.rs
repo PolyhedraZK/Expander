@@ -21,7 +21,7 @@ use crate::{
     *,
 };
 
-impl<G, E> ExpanderPCS<G, E::Fr> for HyperKZGPCS<E>
+impl<G, E> ExpanderPCS<G, E::Fr> for HyperBiKZGPCS<E>
 where
     G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
     E: Engine + MultiMillerLoop,
@@ -29,7 +29,7 @@ where
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
-    const NAME: &'static str = "HyperKZGPCSForExpander";
+    const NAME: &'static str = "HyperBiKZGPCSForExpander";
 
     const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::KZG;
 
