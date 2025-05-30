@@ -172,6 +172,8 @@ impl From<GoldilocksExt2> for GoldilocksExt2x8 {
 }
 
 impl Field for GoldilocksExt2x8 {
+    type UnitField = Goldilocks;
+
     const NAME: &'static str = "Goldilocks Extension Field 2x8";
 
     const SIZE: usize = 512 / 8 * 2;

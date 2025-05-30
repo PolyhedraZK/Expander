@@ -48,6 +48,8 @@ impl ExpSerde for M31Ext3 {
 }
 
 impl Field for M31Ext3 {
+    type UnitField = M31;
+
     const NAME: &'static str = "Mersenne 31 Extension 3";
 
     const SIZE: usize = 32 / 8 * 3;

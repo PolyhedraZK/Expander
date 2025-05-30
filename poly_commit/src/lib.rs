@@ -1,3 +1,5 @@
+#![feature(associated_type_defaults)]
+
 mod traits;
 pub use traits::PolynomialCommitmentScheme;
 
@@ -17,3 +19,6 @@ pub use hyrax::*;
 
 pub mod kzg;
 pub use kzg::*;
+
+pub mod re_orion;
+// pub use re_orion::*;

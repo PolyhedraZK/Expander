@@ -77,6 +77,8 @@ impl ExpSerde for Goldilocks {
 }
 
 impl Field for Goldilocks {
+    type UnitField = Goldilocks;
+
     const NAME: &'static str = "Goldilocks";
 
     const SIZE: usize = 64 / 8;

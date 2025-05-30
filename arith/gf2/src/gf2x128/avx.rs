@@ -40,6 +40,8 @@ impl ExpSerde for AVXGF2x128 {
 }
 
 impl Field for AVXGF2x128 {
+    type UnitField = GF2;
+
     const NAME: &'static str = "AVX Galois Field 2 SIMD 128";
 
     const SIZE: usize = 128 / 8;

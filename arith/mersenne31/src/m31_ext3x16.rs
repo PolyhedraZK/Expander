@@ -188,6 +188,8 @@ impl From<M31Ext3> for M31Ext3x16 {
 }
 
 impl Field for M31Ext3x16 {
+    type UnitField = M31;
+
     #[cfg(target_arch = "x86_64")]
     const NAME: &'static str = "AVX Vectorized Mersenne 31 Extension 3";
 

@@ -43,7 +43,11 @@ pub trait Field:
     + Ord
     + Send
     + Sync
+    // TODO: ?
+    + Mul<Self::UnitField, Output = Self>
 {
+    type UnitField: Field;
+
     /// name
     const NAME: &'static str;
 
@@ -179,5 +183,15 @@ pub trait Field:
     fn mul_by_6(&self) -> Self {
         let t = self.mul_by_3();
         t + t
+    }
+
+    #[inline(always)]
+    fn get_pack_size() -> usize {
+        1
+    }
+
+    #[inline(always)]
+    fn get_degree() -> usize {
+        1
     }
 }

@@ -69,6 +69,8 @@ const PACKED_INV_2: [__m512i; 2] = [_M512_INV_2, _M512_INV_2]; // Should not be 
 
 // p(x) = x^128 + x^7 + x^2 + x + 1
 impl Field for AVX512GF2_128x8 {
+    type UnitField = GF2;
+
     const NAME: &'static str = "AVX512 Galois Field 2^128 SIMD 8";
 
     // size in bytes

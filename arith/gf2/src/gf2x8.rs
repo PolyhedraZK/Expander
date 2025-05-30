@@ -30,6 +30,7 @@ impl ExpSerde for GF2x8 {
 }
 
 impl Field for GF2x8 {
+    type UnitField = GF2;
     // still will pack 8 bits into a u8
 
     const NAME: &'static str = "Galois Field 2 SIMD 8";

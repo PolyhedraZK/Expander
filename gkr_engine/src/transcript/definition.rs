@@ -46,6 +46,7 @@ pub trait Transcript: Clone + Debug {
     /// Generate a slice of random bytes.
     fn generate_u8_slice(&mut self, n_bytes: usize) -> Vec<u8>;
 
+    // TODO: delete it
     fn generate_usize_vector(&mut self, n: usize) -> Vec<usize> {
         let mut res: Vec<usize> = vec![0; n];
         let mut buf = [0u8; 8];

@@ -57,6 +57,8 @@ impl ExpSerde for AVXM31 {
 }
 
 impl Field for AVXM31 {
+    type UnitField = M31;
+
     const NAME: &'static str = "AVX Packed Mersenne 31";
 
     // size in bytes

@@ -12,6 +12,7 @@ const MODULUS: U256 = U256([
 ]);
 
 impl Field for Fr {
+    type UnitField = Fr;
     /// name
     const NAME: &'static str = "bn254 scalar field";
 

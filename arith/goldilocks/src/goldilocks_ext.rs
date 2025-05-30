@@ -42,6 +42,8 @@ impl ExpSerde for GoldilocksExt2 {
 }
 
 impl Field for GoldilocksExt2 {
+    type UnitField = Goldilocks;
+
     const NAME: &'static str = "Goldilocks Extension 2";
 
     const SIZE: usize = 64 / 8 * 2;

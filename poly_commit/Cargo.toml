@@ -11,6 +11,23 @@ polynomials = { path = "../arith/polynomials"}
 serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
 tree = { path = "../tree" }
+gkr_hashers = { path = "../hasher" }
+
+p3-air = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" } 
+p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-challenger = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-uni-stark = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-mersenne-31 = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-circle = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-commit = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-dft = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-fri = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-keccak = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-symmetric = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-merkle-tree = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+serde = { version = "1.0", default-features = false }
+serde_cbor = "0.11"
 
 rand.workspace = true
 ethnum.workspace = true

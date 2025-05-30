@@ -1,4 +1,4 @@
-use std::mem::transmute;
+use std::{mem::transmute, ops::Mul};
 
 use arith::{Field, SimdField};
 
@@ -75,5 +75,19 @@ impl PartialOrd for GF2x128 {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
         unimplemented!("PartialOrd for GF2x128 is not supported")
+    }
+}
+
+impl Mul<GF2> for GF2x128 {
+    type Output = GF2x128;
+
+    #[inline(always)]
+    fn mul(self, rhs: GF2) -> Self::Output {
+        if rhs.is_zero() {
+            Self::ZERO
+        }
+        else {
+            self
+        }
     }
 }

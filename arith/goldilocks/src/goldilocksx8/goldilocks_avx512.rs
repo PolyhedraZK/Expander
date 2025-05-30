@@ -60,6 +60,8 @@ impl ExpSerde for AVXGoldilocks {
 }
 
 impl Field for AVXGoldilocks {
+    type UnitField = Goldilocks;
+
     const NAME: &'static str = "AVXGoldilocks";
 
     const SIZE: usize = 512 / 8;

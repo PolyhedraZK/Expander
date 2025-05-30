@@ -98,6 +98,8 @@ impl M31 {
 }
 
 impl Field for M31 {
+    type UnitField = M31;
+
     const NAME: &'static str = "Mersenne 31";
 
     const SIZE: usize = 32 / 8;

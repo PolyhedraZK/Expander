@@ -43,7 +43,7 @@ pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<
     }
 }
 
-pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C>>(
+pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C, C::SimdCircuitField>>(
     params: &P::Params,
     mpi_config: &MPIConfig,
     transcript: &mut T,
