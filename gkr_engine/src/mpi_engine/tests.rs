@@ -110,7 +110,9 @@ fn test_scatter_vec_helper(mpi_config: &MPIConfig) {
 
 #[test]
 fn test_mpi_engine() {
-    let mpi_config = MPIConfig::prover_new();
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
 
     test_gather_vec_helper(&mpi_config);
 
@@ -125,6 +127,4 @@ fn test_mpi_engine() {
     test_varlen_gather_vec_helper(&mpi_config);
 
     test_scatter_vec_helper(&mpi_config);
-
-    MPIConfig::finalize();
 }

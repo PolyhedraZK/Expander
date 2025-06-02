@@ -49,11 +49,13 @@ struct Args {
     threads: u64,
 }
 
+#[allow(static_mut_refs)]
 fn main() {
     let args = Args::parse();
     print_info(&args);
 
-    let mpi_config = MPIConfig::prover_new();
+    // This is a designated single-process benchmark
+    let mpi_config = MPIConfig::prover_new(None, None);
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
@@ -121,13 +123,10 @@ fn main() {
         },
         _ => unreachable!(),
     };
-
-    MPIConfig::finalize();
 }
 
-fn run_benchmark<'a, Cfg: GKREngine>(args: &'a Args, mpi_config: MPIConfig)
+fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig<'static>)
 where
-    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad: 'a,
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad: 'static,
     Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
 {
@@ -259,14 +258,14 @@ where
         .into_iter()
         .enumerate()
         .map(|(i, mut c)| {
-            let local_config = mpi_config.clone();
             let partial_proof_cnt = partial_proof_cnts[i].clone();
             let pcs_params = pcs_params.clone();
             let pcs_proving_key = pcs_proving_key.clone();
             let mut pcs_scratch = pcs_scratch.clone();
             thread::spawn(move || {
                 // bench func
-                let mut prover = Prover::<Cfg>::new(local_config.clone());
+                let local_mpi_config = MPIConfig::prover_new(None, None);
+                let mut prover = Prover::<Cfg>::new(local_mpi_config);
                 prover.prepare_mem(&c);
                 loop {
                     prover.prove(&mut c, &pcs_params, &pcs_proving_key, &mut pcs_scratch);

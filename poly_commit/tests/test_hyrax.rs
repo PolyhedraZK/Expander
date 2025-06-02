@@ -76,9 +76,8 @@ fn test_hyrax_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_va
 
 #[test]
 fn test_hyrax_for_expander_gkr() {
-    let mpi_config = MPIConfig::prover_new();
-
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     test_hyrax_for_expander_gkr_generics(&mpi_config, 19);
-
-    MPIConfig::finalize()
 }
