@@ -11,27 +11,31 @@ use crate::re_orion::{
     codeswitch::*,
 };
 
-pub struct OrionInstance<WitF, EvalF, ResF, H> 
+pub struct OrionInstance<WitF, CodeF, EvalF, ResF, H> 
 where 
     WitF: Field, 
-    EvalF: Field + Mul<WitF, Output = ResF>, 
+    CodeF: Field + From<WitF>, 
+    EvalF: Field + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF>, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
+    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF>,
     H: FiatShamirHasher,
 {
-    srs: OrionSRS<WitF, EvalF, ResF>,
-    commitments: HashMap<Vec<u8>, OrionCommitInstance<WitF, EvalF, ResF, H>>,
+    srs: OrionSRS<EvalF, ResF>,
+    commitments: HashMap<Vec<u8>, OrionCommitInstance<WitF, CodeF, EvalF, ResF, H>>,
     scratch: OrionScratchPad<EvalF, ResF, H>,
 }
 
-impl<WitF, EvalF, ResF, H> OrionInstance<WitF, EvalF, ResF, H> 
+impl<WitF, CodeF, EvalF, ResF, H> OrionInstance<WitF, CodeF, EvalF, ResF, H> 
 where 
     WitF: Field, 
-    EvalF: Field + Mul<WitF, Output = ResF>, 
+    CodeF: Field + From<WitF>, 
+    EvalF: Field + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF>, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
+    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF>,
     H: FiatShamirHasher,
 {
     pub fn new(wit_len: usize) -> Self {
-        let srs = OrionSRS::<WitF, EvalF, ResF>::new(wit_len);
+        let srs = OrionSRS::<EvalF, ResF>::new(wit_len);
         let scratch = OrionScratchPad::<EvalF, ResF, H>::new(srs.msg_len, srs.encoder.code_len());
         Self {
             srs,
@@ -41,7 +45,7 @@ where
     }
 
     pub fn commit(&mut self, wit: &[WitF]) -> Vec<u8> {
-        let c = OrionCommitInstance::<WitF, EvalF, ResF, H>::new(wit, self.srs.msg_len, &self.srs.encoder);
+        let c = OrionCommitInstance::<WitF, CodeF, EvalF, ResF, H>::new(wit, self.srs.msg_len, &self.srs.encoder);
         let res = c.commit();
         self.commitments.insert(res.clone(), c);
         res
@@ -52,7 +56,7 @@ where
         commitment: &[u8],
         eval_point: &[EvalF],
         transcript: &mut impl Transcript,
-    ) -> OrionOpening<WitF, ResF> {
+    ) -> OrionOpening<CodeF, ResF> {
         if let Some(instance) = self.commitments.get_mut(commitment) {
             let r0 = &mut self.scratch.r0;
             let r1 = &mut self.scratch.r1;
@@ -71,7 +75,7 @@ where
         &mut self,
         commitment: &[u8],
         eval_point: &[EvalF],
-        opening: &OrionOpening<WitF, ResF>,
+        opening: &OrionOpening<CodeF, ResF>,
         transcript: &mut impl Transcript,
     ) -> bool {
         let r0 = &mut self.scratch.r0;
@@ -84,27 +88,25 @@ where
     }
 }
 
-pub struct OrionSRS<WitF, EvalF, ResF> 
+pub struct OrionSRS<EvalF, ResF> 
 where
-    WitF: Field,
     EvalF: Field,
     ResF: Field,
 {
     msg_len: usize,
-    encoder: Encoder<WitF::UnitField>,
-    air: CodeSwitchAir<WitF, EvalF, ResF>,
+    encoder: Encoder<ResF::UnitField>,
+    air: CodeSwitchAir<EvalF, ResF>,
 }
 
-impl<WitF, EvalF, ResF> OrionSRS<WitF, EvalF, ResF> 
+impl<EvalF, ResF> OrionSRS<EvalF, ResF> 
 where
-    WitF: Field,
     EvalF: Field,
     ResF: Field,
 {
     pub fn new(wit_len: usize) -> Self {
         let msg_len = ((wit_len + COLUMN_SIZE - 1) >> COLUMN_LG);
-        let encoder = Encoder::<WitF::UnitField>::new(msg_len);
-        let air = CodeSwitchAir::<WitF, EvalF, ResF>{
+        let encoder = Encoder::<ResF::UnitField>::new(msg_len);
+        let air = CodeSwitchAir::<EvalF, ResF>{
             graph_c: encoder.c.clone(),
             graph_d: encoder.d.clone(),
             msg_len: msg_len,
@@ -127,44 +129,49 @@ where
 
 }
 
-pub struct OrionCommitInstance<WitF, EvalF, ResF, H> 
+pub struct OrionCommitInstance<WitF, CodeF, EvalF, ResF, H> 
 where 
     WitF: Field, 
-    EvalF: Field + Mul<WitF, Output = ResF>, 
+    CodeF: Field + From<WitF>, 
+    EvalF: Field + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF>, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
+    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF>,
     H: FiatShamirHasher,
 {
     wit: Vec<WitF>,
     width: usize,
-    code: Vec<WitF>,
+    code: Vec<CodeF>,
     code_len: usize,
     wit_t: Vec<WitF>,
-    c1: Vec<WitF>,
+    c1: Vec<CodeF>,
     tree: MerkleTree<H>,
     _marker: PhantomData<(EvalF, ResF)>,
 }
 
-impl<WitF, EvalF, ResF, H> OrionCommitInstance<WitF, EvalF, ResF, H> 
+impl<WitF, CodeF, EvalF, ResF, H> OrionCommitInstance<WitF, CodeF, EvalF, ResF, H> 
 where 
     WitF: Field, 
-    EvalF: Field + Mul<WitF, Output = ResF>, 
+    CodeF: Field + From<WitF>, 
+    EvalF: Field + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF>, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
+    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF>,
+    
     H: FiatShamirHasher,
 {
-    fn new(wit: &[WitF], msg_len: usize, encoder: &Encoder<WitF::UnitField>) -> Self {
+    fn new(wit: &[WitF], msg_len: usize, encoder: &Encoder<ResF::UnitField>) -> Self {
         let mut wit = wit.to_vec();
         let n = msg_len;
         wit.resize(COLUMN_SIZE * n, WitF::ZERO);
         let m = encoder.code_len();
-        let mut code = vec![WitF::ZERO; COLUMN_SIZE * m];
+        let mut code = vec![CodeF::ZERO; COLUMN_SIZE * m];
 
         let mut wit_t = vec![WitF::ZERO; wit.len()];
         transpose(&wit, &mut wit_t, n, COLUMN_SIZE, 32);
 
         for (i, row) in wit.chunks_exact(n).enumerate() {
-            encoder.encode(row, &mut code[i * m..], n, 0);
+            encoder.encode(row, &mut code[i * m..], n);
         }
-        let mut c1 = vec![WitF::ZERO; code.len()];
+        let mut c1 = vec![CodeF::ZERO; code.len()];
         transpose(&code, &mut c1, m, COLUMN_SIZE, 32);
 
         let mut tree = MerkleTree::new(c1.len());
@@ -190,10 +197,10 @@ where
         r0: &[EvalF],
         r1: &[EvalF],
         // eval_point: &[EvalF], 
-        air: &CodeSwitchAir<WitF, EvalF, ResF>,
+        air: &CodeSwitchAir<EvalF, ResF>,
         scratch: &mut OrionInstanceScratchPad<ResF, H>,
         transcript: &mut impl Transcript,
-    ) -> OrionOpening<WitF, ResF> 
+    ) -> OrionOpening<CodeF, ResF> 
     {
         // let r0 = &mut scratch.r0;
         // let r1 = &mut scratch.r1;
@@ -277,7 +284,7 @@ where
             c_gamma: &c_gamma,
             // c_gamma_idx: &c_gamma_idx,
         };
-        let proof_cs = prove::<WitF, EvalF, ResF>(air, &witness, &public_values);
+        let proof_cs = prove::<EvalF, ResF>(air, &witness, &public_values);
 
         let mut root_idx_proof: Vec<Vec<u8>> = Vec::with_capacity(idxs.len());
         let column_leaf = 1 << (self.tree.height - COLUMN_LG);
@@ -285,7 +292,7 @@ where
             root_idx_proof.push(self.tree.prove(column_leaf + i, 1));
         }
 
-        let mut c2: Vec<Vec<WitF>> = Vec::with_capacity(idxs.len());
+        let mut c2: Vec<Vec<CodeF>> = Vec::with_capacity(idxs.len());
         for idx in idxs {
             c2.push(self.c1[idx * COLUMN_SIZE..(idx + 1) * COLUMN_SIZE].to_vec());
         }
@@ -310,7 +317,7 @@ where
         r0: &[EvalF],
         r1: &[EvalF],
         opening: &OrionOpening<WitF, ResF>,
-        air: &CodeSwitchAir<WitF, EvalF, ResF>,
+        air: &CodeSwitchAir<EvalF, ResF>,
         scratch: &mut OrionInstanceScratchPad<ResF, H>,
         transcript: &mut impl Transcript,
     ) -> bool {
@@ -409,7 +416,7 @@ impl<EvalF: Field, ResF: Field, H: FiatShamirHasher> OrionScratchPad<EvalF, ResF
     }
 }
 
-pub struct OrionOpening<F: Field, ResF: Field> {
+pub struct OrionOpening<CodeF: Field, ResF: Field> {
     proof_cs: Vec<u8>,
 
     c_gamma_idx: Vec<ResF>,
@@ -420,5 +427,5 @@ pub struct OrionOpening<F: Field, ResF: Field> {
 
     root_idx_proof: Vec<Vec<u8>>,
 
-    c2: Vec<Vec<F>>,
+    c2: Vec<Vec<CodeF>>,
 }

@@ -29,30 +29,30 @@ pub struct PublicValuesForPlonky3<'a, EvalF: Field, ResF: Field> {
 }
 
 // TODO: Encode bi-graph only constructed with base field?
-pub fn prove<WitF: Field, EvalF: Field, ResF: Field>(
-    air: &CodeSwitchAir<WitF, EvalF, ResF>,
+pub fn prove<EvalF: Field, ResF: Field>(
+    air: &CodeSwitchAir<EvalF, ResF>,
     witness: &WitnessForPlonky3<ResF>,
     public_values: &PublicValuesForPlonky3<EvalF, ResF>,
 ) -> Vec<u8> {
     match ResF::UnitField::NAME {
-        "Mersenne 31" => prove_in_plonky3::<Mersenne31, 3, _, _, _>(air, witness, public_values),
+        "Mersenne 31" => prove_in_plonky3::<Mersenne31, 3, _, _>(air, witness, public_values),
         _ => unimplemented!()
     }
 }
 
-pub fn verify<WitF: Field, EvalF: Field, ResF: Field>(
-    air: &CodeSwitchAir<WitF, EvalF, ResF>,
+pub fn verify<EvalF: Field, ResF: Field>(
+    air: &CodeSwitchAir<EvalF, ResF>,
     proof: &[u8],
     public_values: &PublicValuesForPlonky3<EvalF, ResF>,
 ) -> bool {
     match ResF::UnitField::NAME {
-        "Mersenne 31" => verify_in_plonky3::<Mersenne31, 3, _, _, _>(air, proof, public_values),
+        "Mersenne 31" => verify_in_plonky3::<Mersenne31, 3, _, _>(air, proof, public_values),
         _ => unimplemented!()
     }
 }
 
-fn prove_in_plonky3<PF: PrimeField32 + ComplexExtendable + BinomiallyExtendable<3>, const Degree: usize, WitF: Field, EvalF: Field, ResF: Field> (
-    air: &CodeSwitchAir<WitF, EvalF, ResF>,
+fn prove_in_plonky3<PF: PrimeField32 + ComplexExtendable + BinomiallyExtendable<3>, const Degree: usize, EvalF: Field, ResF: Field> (
+    air: &CodeSwitchAir<EvalF, ResF>,
     witness: &WitnessForPlonky3<ResF>,
     public_values: &PublicValuesForPlonky3<EvalF, ResF>,
 ) -> Vec<u8> {
@@ -88,8 +88,8 @@ println!("plonky3 start");
     serde_cbor::to_vec(&proof).unwrap()
 }
 
-fn verify_in_plonky3<PF: PrimeField32 + ComplexExtendable + BinomiallyExtendable<3>, const Degree: usize, WitF: Field, EvalF: Field, ResF: Field> (
-    air: &CodeSwitchAir<WitF, EvalF, ResF>,
+fn verify_in_plonky3<PF: PrimeField32 + ComplexExtendable + BinomiallyExtendable<3>, const Degree: usize, EvalF: Field, ResF: Field> (
+    air: &CodeSwitchAir<EvalF, ResF>,
     proof: &[u8],
     public_values: &PublicValuesForPlonky3<EvalF, ResF>,
 ) -> bool {

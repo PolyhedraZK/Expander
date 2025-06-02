@@ -106,26 +106,67 @@ println!("bi-graph generated");
         return self.code_len;
     }
 
-    pub fn encode<MF: Field + Mul<F, Output = MF>>(&self, src: &[MF], dst: &mut [MF], n: usize, dep: usize) -> usize {
-        dst[..n].copy_from_slice(&src[..n]);
+    pub fn encode<MsgF, CodeF>(&self, src: &[MsgF], dst: &mut [CodeF], n: usize) -> usize 
+    where
+        MsgF: Field + Sized,
+        F: Mul<MsgF, Output = CodeF> + Mul<CodeF, Output = CodeF>,
+        CodeF: Field + From<MsgF> + Sized,
+    {
+        if MsgF::NAME == CodeF::NAME {
+            unsafe { std::ptr::copy_nonoverlapping(src.as_ptr() as *const CodeF, dst.as_mut_ptr(), n); }
+            // dst[..n].copy_from_slice(&src[..n]);
+            self.encode_inplace(dst, n, 0)
+        }
+        else {
+            let dep = 0;
+            for (s, d) in src.iter().zip(dst.iter_mut()).take(n) {
+                *d = CodeF::from(*s)
+            }
+
+            let r = self.c[dep].r_size;
+            let nxt_dst = &mut dst[n..];
+            nxt_dst[..r].fill(CodeF::ZERO);
+            for (i, u) in src.iter().enumerate() {
+                for (v, w) in &self.c[dep].edge[i] {
+                    nxt_dst[*v] += *w * *u;
+                }
+            }
+            
+            let l = self.encode_inplace(nxt_dst, r, dep + 1);
+
+            let r = self.d[dep].r_size;
+            let (nxt_src, nxt_dst) = dst.split_at_mut(n + l);
+
+            nxt_dst[..r].fill(CodeF::ZERO);
+            for (i, u) in nxt_src[n..].iter().enumerate() {
+                for (v, w) in &self.d[dep].edge[i] {
+                    nxt_dst[*v] += *w * *u;
+                }
+            }
+            
+            n + l + r
+        }
 // println!("start encode {} {} {}", src.len(), n, dst.len());
-        self.encode_inplace(dst, n, dep)
     }
 
-    pub fn encode_inplace<MF: Field + Mul<F, Output = MF>>(&self, dst: &mut [MF], n: usize, dep: usize) -> usize {
+    pub fn encode_inplace<CodeF: Field>(&self, dst: &mut [CodeF], n: usize, dep: usize) -> usize 
+    where
+        F: Mul<CodeF, Output = CodeF>,
+    {
         if n <= DISTANCE_THRESHOLD {
             return n
         }
 
-        let r = (n as f64 * ALPHA).round() as usize;
+        // let r = (n as f64 * ALPHA).round() as usize;
+        let r = self.c[dep].r_size;
         let (src, nxt_dst) = dst.split_at_mut(n);
 
         // TODO: unsafe?
-        nxt_dst[..r].fill(MF::ZERO);
+        nxt_dst[..r].fill(CodeF::ZERO);
 // println!("c {} {}", dep, self.c[dep].edge.len());
         for (i, u) in src.iter().enumerate() {
             for (v, w) in &self.c[dep].edge[i] {
-                nxt_dst[*v] += *u * *w;
+                nxt_dst[*v] += *w * *u;
             }
         }
         
@@ -134,10 +175,10 @@ println!("bi-graph generated");
         let r = self.d[dep].r_size;
         let (nxt_src, nxt_dst) = dst.split_at_mut(n + l);
 
-        nxt_dst[..r].fill(MF::ZERO);
+        nxt_dst[..r].fill(CodeF::ZERO);
         for (i, u) in nxt_src[n..].iter().enumerate() {
             for (v, w) in &self.d[dep].edge[i] {
-                nxt_dst[*v] += *u * *w;
+                nxt_dst[*v] += *w * *u;
             }
         }
         

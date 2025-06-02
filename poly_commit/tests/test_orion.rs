@@ -23,7 +23,7 @@ fn test_merkle_tree() {
 #[test]
 fn test_re_orion_e2e() {
     let msg_bit = 11;
-    let mut pcs = OrionInstance::<M31, M31, M31, SHA256hasher>::new(1 << msg_bit);
+    let mut pcs = OrionInstance::<M31, M31, M31, M31, SHA256hasher>::new(1 << msg_bit);
     let wit = vec![M31::ONE; 1 << msg_bit];
     let commit = pcs.commit(&wit);
 

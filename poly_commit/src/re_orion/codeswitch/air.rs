@@ -13,10 +13,10 @@ use crate::re_orion::{
 
 /// Assumes the field size is at least 16 bits.
 #[derive(Debug)]
-pub struct CodeSwitchAir<WitF: ExpField, EvalF: ExpField, ResF: ExpField> {
+pub struct CodeSwitchAir<EvalF: ExpField, ResF: ExpField> {
     // TODO: borrow
-    pub graph_c: Vec<BiGraph<WitF::UnitField>>,
-    pub graph_d: Vec<BiGraph<WitF::UnitField>>,
+    pub graph_c: Vec<BiGraph<ResF::UnitField>>,
+    pub graph_d: Vec<BiGraph<ResF::UnitField>>,
     
     pub msg_len: usize,
     pub code_len: usize,
@@ -27,13 +27,13 @@ pub struct CodeSwitchAir<WitF: ExpField, EvalF: ExpField, ResF: ExpField> {
     pub _marker: PhantomData<(EvalF, ResF)>,
 }
 
-impl<PF: P3Field, WitF: ExpField, EvalF: ExpField, ResF: ExpField> BaseAir<PF> for CodeSwitchAir<WitF, EvalF, ResF> {
+impl<PF: P3Field, EvalF: ExpField, ResF: ExpField> BaseAir<PF> for CodeSwitchAir<EvalF, ResF> {
     fn width(&self) -> usize {
         self.msg_len * 2
     }
 }
 
-impl<AB: AirBuilderWithPublicValues, WitF: ExpField, EvalF: ExpField, ResF: ExpField> Air<AB> for CodeSwitchAir<WitF, EvalF, ResF> {
+impl<AB: AirBuilderWithPublicValues, EvalF: ExpField, ResF: ExpField> Air<AB> for CodeSwitchAir<EvalF, ResF> {
     #[inline]
     fn eval(&self, builder: &mut AB) {
 println!("eval ? ");
@@ -83,7 +83,7 @@ println!("{} {} {}", public_values.len(), msg_len, self.column_size);
     }
 }
 
-impl<WitF: ExpField, EvalF: ExpField, ResF: ExpField> CodeSwitchAir<WitF, EvalF, ResF> {
+impl<EvalF: ExpField, ResF: ExpField> CodeSwitchAir<EvalF, ResF> {
     fn encode<'a, AB: AirBuilderWithPublicValues>(&self, check: &mut FilteredAirBuilder<'a, AB>, src: &[AB::Var], dst: &[AB::Var], n: usize) -> usize {
 println!("plonky encode");
         // let mut check = builder.when_first_row();
