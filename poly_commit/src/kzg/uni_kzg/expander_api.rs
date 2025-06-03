@@ -38,7 +38,7 @@ where
         n_input_vars
     }
 
-    fn gen_srs_for_testing(
+    fn gen_srs(
         params: &Self::Params,
         _mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,

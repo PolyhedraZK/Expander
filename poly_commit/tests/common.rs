@@ -220,10 +220,12 @@ where
     P: ExpanderPCS<C, C::SimdCircuitField, Params = usize>,
 {
     let mut rng = test_rng();
-    let mpi_config = MPIConfig::prover_new();
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     for num_vars in 2..10 {
         // NOTE(HS) we assume that the polynomials we pass in are of sufficient length.
-        let srs = P::gen_srs_for_testing(&num_vars, &mpi_config, &mut rng);
+        let srs = P::gen_srs(&num_vars, &mpi_config, &mut rng);
         let (proving_key, verification_key) = srs.into_keys();
         let mut scratch_pad = P::init_scratch_pad(&num_vars, &mpi_config);
 

@@ -75,17 +75,18 @@ fn test_hyper_unikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total
         &mut transcript,
         &local_poly,
         &[challenge_point],
+        None,
     );
 }
 
 #[test]
 fn test_hyper_unikzg_for_expander_gkr() {
-    let mpi_config = MPIConfig::prover_new();
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
 
     test_hyper_unikzg_for_expander_gkr_generics(&mpi_config, 1);
     test_hyper_unikzg_for_expander_gkr_generics(&mpi_config, 15);
-
-    MPIConfig::finalize()
 }
 
 #[test]

@@ -85,9 +85,10 @@ where
 
 impl<C> BatchOpeningPCS<C::Scalar> for HyraxPCS<C>
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     fn single_point_batch_open(
         _params: &Self::Params,
