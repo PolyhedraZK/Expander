@@ -220,9 +220,7 @@ where
     P: ExpanderPCS<C, C::SimdCircuitField, Params = usize>,
 {
     let mut rng = test_rng();
-    let universe = MPIConfig::init().unwrap();
-    let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
+    let mpi_config = MPIConfig::prover_new(None, None);
     for num_vars in 2..10 {
         // NOTE(HS) we assume that the polynomials we pass in are of sufficient length.
         let srs = P::gen_srs(&num_vars, &mpi_config, &mut rng);
