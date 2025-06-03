@@ -3,10 +3,9 @@ use std::{cmp, fmt::Debug, slice};
 
 use arith::Field;
 use itertools::izip;
+use mpi::environment::Universe;
 use mpi::{
     datatype::PartitionMut,
-    environment::Universe,
-    ffi,
     ffi::*,
     topology::{Process, SimpleCommunicator},
     traits::*,
@@ -24,18 +23,15 @@ macro_rules! root_println {
     };
 }
 
-static mut UNIVERSE: Option<Universe> = None;
-static mut WORLD: Option<SimpleCommunicator> = None;
-
 #[derive(Clone)]
-pub struct MPIConfig {
-    pub universe: Option<&'static mpi::environment::Universe>,
-    pub world: Option<&'static SimpleCommunicator>,
+pub struct MPIConfig<'a> {
+    pub universe: Option<&'a Universe>,
+    pub world: Option<&'a SimpleCommunicator>,
     pub world_size: i32,
     pub world_rank: i32,
 }
 
-impl Default for MPIConfig {
+impl<'a> Default for MPIConfig<'a> {
     fn default() -> Self {
         Self {
             universe: None,
@@ -46,12 +42,12 @@ impl Default for MPIConfig {
     }
 }
 
-impl Debug for MPIConfig {
+impl<'a> Debug for MPIConfig<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let universe_fmt = if self.universe.is_none() {
             Option::<usize>::None
         } else {
-            Some(self.universe.unwrap().buffer_size())
+            Some(0usize)
         };
 
         let world_fmt = if self.world.is_none() {
@@ -70,50 +66,32 @@ impl Debug for MPIConfig {
 }
 
 // Note: may not be correct
-impl PartialEq for MPIConfig {
+impl<'a> PartialEq for MPIConfig<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.world_rank == other.world_rank && self.world_size == other.world_size
     }
 }
 
-/// MPI toolkit:
-impl MPIEngine for MPIConfig {
-    const ROOT_RANK: i32 = 0;
-
+impl<'a> MPIConfig<'a> {
     /// The communication limit for MPI is 2^30. Save 10 bits for #parties here.
-    const CHUNK_SIZE: usize = 1usize << 20;
+    pub const CHUNK_SIZE: usize = 1usize << 20;
 
-    // OK if already initialized, mpi::initialize() will return None
-    #[allow(static_mut_refs)]
-    fn init() {
-        unsafe {
-            let universe = mpi::initialize();
-            if universe.is_some() {
-                UNIVERSE = universe;
-                WORLD = Some(UNIVERSE.as_ref().unwrap().world());
-            }
-        }
+    /// Initialize the MPI environment.
+    /// Safe to call multiple times as `mpi::initialize()` will return None if already initialized.
+    pub fn init() -> Option<Universe> {
+        mpi::initialize()
     }
 
-    #[inline]
-    fn finalize() {
-        unsafe { ffi::MPI_Finalize() };
-    }
-
-    #[allow(static_mut_refs)]
-    fn prover_new() -> Self {
-        Self::init();
-        let universe = unsafe { UNIVERSE.as_ref() };
-        let world = unsafe { WORLD.as_ref() };
-        let world_size = if let Some(world) = world {
-            world.size()
+    /// Create a new MPI engine for the prover
+    pub fn prover_new(
+        universe: Option<&'a Universe>,
+        communicator: Option<&'a SimpleCommunicator>,
+    ) -> Self {
+        let world = communicator;
+        let (world_size, world_rank) = if let Some(world) = world {
+            (world.size(), world.rank())
         } else {
-            1
-        };
-        let world_rank = if let Some(world) = world {
-            world.rank()
-        } else {
-            0
+            (1, 0)
         };
         Self {
             universe,
@@ -123,8 +101,12 @@ impl MPIEngine for MPIConfig {
         }
     }
 
+    /// Create a new MPI engine for the verifier with specified world size
+    ///
+    /// # Arguments
+    /// * `world_size` - The total number of processes in the MPI world
     #[inline]
-    fn verifier_new(world_size: i32) -> Self {
+    pub fn verifier_new(world_size: i32) -> Self {
         Self {
             universe: None,
             world: None,
@@ -132,6 +114,11 @@ impl MPIEngine for MPIConfig {
             world_rank: 0,
         }
     }
+}
+
+/// MPI toolkit:
+impl<'a> MPIEngine for MPIConfig<'a> {
+    const ROOT_RANK: i32 = 0;
 
     #[allow(clippy::collapsible_else_if)]
     fn gather_vec<F: Sized + Clone>(&self, local_vec: &[F], global_vec: &mut Vec<F>) {
@@ -257,11 +244,11 @@ impl MPIEngine for MPIConfig {
 
     /// Root process broadcast a value f into all the processes
     #[inline]
-    fn root_broadcast_f<F: Field>(&self, f: &mut F) {
+    fn root_broadcast_f<F: Copy>(&self, f: &mut F) {
         unsafe {
             if self.world_size == 1 {
             } else {
-                let mut vec_u8 = transmute_elem_to_u8_bytes(f, F::SIZE);
+                let mut vec_u8 = transmute_elem_to_u8_bytes(f, std::mem::size_of::<F>());
                 self.root_process().broadcast_into(&mut vec_u8);
                 vec_u8.leak();
             }
@@ -270,6 +257,9 @@ impl MPIEngine for MPIConfig {
 
     #[inline]
     fn root_broadcast_bytes(&self, bytes: &mut Vec<u8>) {
+        if self.world_size == 1 {
+            return;
+        }
         self.root_process().broadcast_into(bytes);
     }
 
@@ -469,8 +459,6 @@ impl MPIEngine for MPIConfig {
         (baseptr as *mut u8, window)
     }
 }
-
-unsafe impl Send for MPIConfig {}
 
 /// Return an u8 vector sharing THE SAME MEMORY SLOT with the input.
 #[inline]

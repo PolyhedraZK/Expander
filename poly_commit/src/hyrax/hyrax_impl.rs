@@ -1,6 +1,6 @@
 use arith::{ExtensionField, Field};
 use gkr_engine::Transcript;
-use halo2curves::{ff::PrimeField, msm, CurveAffine};
+use halo2curves::{ff::PrimeField, group::UncompressedEncoding, msm, CurveAffine};
 use polynomials::MultiLinearPoly;
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
@@ -29,6 +29,7 @@ pub(crate) fn hyrax_setup<C: CurveAffine + ExpSerde>(
 ) -> PedersenParams<C>
 where
     C::Scalar: PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let pedersen_vars = {
         let total_vars = mpi_vars + local_vars;
@@ -47,24 +48,48 @@ where
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct HyraxCommitment<C: CurveAffine + ExpSerde>(pub Vec<C>);
+pub struct HyraxCommitment<C>(pub Vec<C>)
+where
+    C: CurveAffine + ExpSerde + UncompressedEncoding;
 
 #[derive(Clone, Debug, Default)]
-pub struct HyraxOpening<C: CurveAffine + ExpSerde>(pub Vec<C::Scalar>);
+pub struct HyraxOpening<C>(pub Vec<C::Scalar>)
+where
+    C: CurveAffine + ExpSerde + UncompressedEncoding;
 
-impl<C: CurveAffine + ExpSerde> ExpSerde for HyraxCommitment<C> {
-    fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
-        self.0.serialize_into(writer)
+impl<C> ExpSerde for HyraxCommitment<C>
+where
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
+{
+    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> serdes::SerdeResult<()> {
+        self.0.len().serialize_into(&mut writer)?;
+        for c in self.0.iter() {
+            let uncompressed = UncompressedEncoding::to_uncompressed(c);
+            writer.write_all(uncompressed.as_ref())?;
+        }
+        Ok(())
     }
 
-    fn deserialize_from<R: std::io::Read>(reader: R) -> serdes::SerdeResult<Self> {
-        let buffer: Vec<C> = <Vec<C> as ExpSerde>::deserialize_from(reader)?;
-        Ok(Self(buffer))
+    fn deserialize_from<R: std::io::Read>(mut reader: R) -> serdes::SerdeResult<Self> {
+        let num_elements = usize::deserialize_from(&mut reader)?;
+        let mut uncompressed = <C as UncompressedEncoding>::Uncompressed::default();
+
+        let mut elements = Vec::with_capacity(num_elements);
+        for _ in 0..num_elements {
+            reader.read_exact(uncompressed.as_mut())?;
+            elements.push(
+                C::from_uncompressed_unchecked(&uncompressed)
+                    .into_option()
+                    .ok_or(serdes::SerdeError::DeserializeError)?,
+            );
+        }
+        Ok(Self(elements))
     }
 }
 
-impl<C: CurveAffine + ExpSerde> ExpSerde for HyraxOpening<C>
+impl<C> ExpSerde for HyraxOpening<C>
 where
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExpSerde,
 {
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> serdes::SerdeResult<()> {
@@ -77,13 +102,15 @@ where
     }
 }
 
-pub(crate) fn hyrax_commit<C: CurveAffine + ExpSerde>(
+pub(crate) fn hyrax_commit<C>(
     params: &PedersenParams<C>,
     mle_poly: &impl MultilinearExtension<C::Scalar>,
 ) -> HyraxCommitment<C>
 where
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let commitments: Vec<C> = mle_poly
         .hypercube_basis_ref()
@@ -101,9 +128,10 @@ pub(crate) fn hyrax_open<C>(
     eval_point: &[C::Scalar],
 ) -> (C::Scalar, HyraxOpening<C>)
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let pedersen_len = params.msm_len();
     let pedersen_vars = pedersen_len.ilog2() as usize;
@@ -126,9 +154,10 @@ pub(crate) fn hyrax_verify<C>(
     proof: &HyraxOpening<C>,
 ) -> bool
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let pedersen_len = params.msm_len();
     let pedersen_vars = pedersen_len.ilog2() as usize;
@@ -155,9 +184,10 @@ pub(crate) fn hyrax_batch_open<C>(
     transcript: &mut impl Transcript,
 ) -> (Vec<C::Scalar>, HyraxOpening<C>)
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let len = mle_poly_list.len();
     let pedersen_len = params.msm_len();
@@ -197,9 +227,10 @@ pub(crate) fn hyrax_batch_verify<C>(
     transcript: &mut impl Transcript,
 ) -> bool
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let len = comm_list.len();
     assert_eq!(len, eval_list.len());
@@ -275,9 +306,10 @@ pub(crate) fn hyrax_multi_points_batch_open_internal<C>(
     transcript: &mut impl Transcript,
 ) -> (Vec<C::Scalar>, BatchOpening<C::Scalar, HyraxPCS<C>>)
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let timer = Timer::new("batch_opening", true);
     // generate evals for each polynomial at its corresponding point
@@ -325,9 +357,10 @@ pub(crate) fn hyrax_multi_points_batch_verify_internal<C>(
     transcript: &mut impl Transcript,
 ) -> bool
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     let a2 = batch_opening.sum_check_proof.export_point_to_expander();
 

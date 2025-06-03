@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use arith::ExtensionField;
 use gkr_engine::{StructuredReferenceString, Transcript};
-use halo2curves::{ff::PrimeField, CurveAffine};
+use halo2curves::{ff::PrimeField, group::UncompressedEncoding, CurveAffine};
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
 
@@ -19,7 +19,7 @@ use super::hyrax_impl::{hyrax_batch_open, hyrax_batch_verify};
 
 pub struct HyraxPCS<C>
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField,
     C::ScalarExt: ExtensionField,
 {
@@ -28,9 +28,10 @@ where
 
 impl<C> PolynomialCommitmentScheme<C::Scalar> for HyraxPCS<C>
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     const NAME: &'static str = "HyraxPCS";
 

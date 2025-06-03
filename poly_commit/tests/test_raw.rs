@@ -52,14 +52,15 @@ fn test_raw_gkr_helper<C: FieldEngine, T: Transcript>(mpi_config: &MPIConfig, tr
         })
         .collect::<Vec<ExpanderSingleVarChallenge<C>>>();
     common::test_pcs_for_expander_gkr::<C, T, RawExpanderGKR<C>>(
-        &params, mpi_config, transcript, &poly, &xs,
+        &params, mpi_config, transcript, &poly, &xs, None,
     );
 }
 
 #[test]
 fn test_raw_gkr() {
-    let mpi_config = MPIConfig::prover_new();
-
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     type TM31 = BytesHashTranscript<Keccak256hasher>;
     test_raw_gkr_helper::<M31x16Config, TM31>(&mpi_config, &mut TM31::new());
 
@@ -68,6 +69,4 @@ fn test_raw_gkr() {
 
     type TBN254 = BytesHashTranscript<Keccak256hasher>;
     test_raw_gkr_helper::<BN254Config, TBN254>(&mpi_config, &mut TBN254::new());
-
-    MPIConfig::finalize();
 }

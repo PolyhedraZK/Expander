@@ -52,7 +52,7 @@ where
         scaled_num_local_vars - C::SimdCircuitField::PACK_SIZE.ilog2() as usize
     }
 
-    fn gen_srs_for_testing(
+    fn gen_srs(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,

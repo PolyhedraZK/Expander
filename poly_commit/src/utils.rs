@@ -25,10 +25,11 @@ pub fn expander_pcs_init_testing_only<
         n_input_vars,
         mpi_config.world_size(),
     );
-    let pcs_setup = <PCS as ExpanderPCS<FieldConfig, PCSPolyField>>::gen_srs_for_testing(
+    let pcs_setup = <PCS as ExpanderPCS<FieldConfig, PCSPolyField>>::gen_or_load_srs_for_testing(
         &pcs_params,
         mpi_config,
         &mut rng,
+        None,
     );
 
     let (pcs_proving_key, pcs_verification_key) = pcs_setup.into_keys();

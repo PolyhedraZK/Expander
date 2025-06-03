@@ -3,7 +3,7 @@ use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
 };
-use halo2curves::{ff::PrimeField, msm, CurveAffine};
+use halo2curves::{ff::PrimeField, group::UncompressedEncoding, msm, CurveAffine};
 use polynomials::{
     EqPolynomial, MultiLinearPoly, MultilinearExtension, MutRefMultiLinearPoly,
     MutableMultilinearExtension, RefMultiLinearPoly,
@@ -26,9 +26,10 @@ use super::hyrax_impl::{
 impl<G, C> ExpanderPCS<G, C::Scalar> for HyraxPCS<C>
 where
     G: FieldEngine<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     const NAME: &'static str = "HyraxPCSForExpanderGKR";
 
@@ -49,7 +50,7 @@ where
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
-    fn gen_srs_for_testing(
+    fn gen_srs(
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
