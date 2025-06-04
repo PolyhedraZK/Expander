@@ -43,3 +43,6 @@ output.txt
 
 # vscode settings
 .vscode/
+
+# Temp diff comparison
+*.diff
