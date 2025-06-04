@@ -2,7 +2,7 @@ use std::io::Write;
 
 use circuit::Circuit;
 use gkr::Prover;
-use gkr_engine::{GKREngine, MPIConfig, MPIEngine};
+use gkr_engine::{FieldEngine, GKREngine, MPIConfig, MPIEngine};
 use gkr_engine::{GKRScheme, Goldilocksx8Config};
 use gkr_hashers::SHA256hasher;
 use poly_commit::RawExpanderGKR;
@@ -10,7 +10,9 @@ use poly_commit::expander_pcs_init_testing_only;
 use serdes::ExpSerde;
 use transcript::BytesHashTranscript;
 
-struct Goldilocksx8Sha2RawCudaDev;
+struct Goldilocksx8Sha2RawCudaDev<'a> {
+    _marker: std::marker::PhantomData<&'a ()>,
+}
 
 // fibonacci like circuits with both add and mul gates
 pub const CIRCUIT_DIR: &str = "data/circuit_fib_goldilocks.txt";
@@ -20,9 +22,9 @@ pub const WITNESS_DIR: &str = "data/witness_fib_goldilocks.txt";
 // pub const CIRCUIT_DIR: &str = "data/circuit_goldilocks.txt";
 // pub const WITNESS_DIR: &str = "data/witness_goldilocks.txt";
 
-impl GKREngine for Goldilocksx8Sha2RawCudaDev {
+impl<'a> GKREngine for Goldilocksx8Sha2RawCudaDev<'a> {
     type FieldConfig = Goldilocksx8Config;
-    type MPIConfig = MPIConfig;
+    type MPIConfig = MPIConfig<'a>;
     type TranscriptConfig = BytesHashTranscript<SHA256hasher>;
     type PCSConfig = RawExpanderGKR<Goldilocksx8Config>;
     const SCHEME: GKRScheme = GKRScheme::Vanilla;
@@ -33,8 +35,13 @@ fn main() {
     proof_gen_x1::<Goldilocksx8Sha2RawCudaDev>();
 }
 
-pub fn proof_gen_x1<C: GKREngine>() {
-    let mpi_config = MPIConfig::prover_new();
+pub fn proof_gen_x1<C: GKREngine>()
+where
+    C::FieldConfig: FieldEngine<SimdCircuitField = C::PCSField>,
+{
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
 
     // load circuit
     let mut circuit =
@@ -49,7 +56,7 @@ pub fn proof_gen_x1<C: GKREngine>() {
     circuit.evaluate();
 
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
-        expander_pcs_init_testing_only::<C::FieldConfig, C::PCSConfig>(
+        expander_pcs_init_testing_only::<C::FieldConfig, C::PCSField, C::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
         );

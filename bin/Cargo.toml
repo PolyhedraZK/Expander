@@ -30,13 +30,13 @@ mpi.workspace = true
 tokio.workspace = true
 warp.workspace = true
 
-# [[bin]]
-# name = "dev_cuda_mpi_1"
-# path = "src/dev_cuda_mpi_1.rs"
+[[bin]]
+name = "dev_cuda_mpi_1"
+path = "src/dev_cuda_mpi_1.rs"
 
-# [[bin]]
-# name = "dev_cuda_mpi_8"
-# path = "src/dev_cuda_mpi_8.rs"
+[[bin]]
+name = "dev_cuda_mpi_8"
+path = "src/dev_cuda_mpi_8.rs"
 
 [[bin]]
 name = "dev-setup"
