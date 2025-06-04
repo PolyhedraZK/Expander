@@ -28,7 +28,7 @@ fn test_hyrax_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
 
 #[test]
 fn test_hyrax_pcs_e2e() {
-    test_hyrax_pcs_generics(3, 17)
+    test_hyrax_pcs_generics(1, 17)
 }
 
 fn test_hyrax_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_vars: usize) {
@@ -85,9 +85,9 @@ fn test_hyrax_for_expander_gkr() {
 #[test]
 fn test_hyrax_batch_open() {
     common::test_batching::<Fr, BytesHashTranscript<Keccak256hasher>, HyraxPCS<G1Affine>>();
-    // common::test_batching_for_expander_gkr::<
-    //     BN254Config,
-    //     BytesHashTranscript<Keccak256hasher>,
-    //     HyraxPCS<G1Affine>,
-    // >();
+    common::test_batching_for_expander_gkr::<
+        BN254Config,
+        BytesHashTranscript<Keccak256hasher>,
+        HyraxPCS<G1Affine>,
+    >();
 }

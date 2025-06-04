@@ -55,7 +55,6 @@ where
     let mut rng = thread_rng();
 
     for num_vars in 2..10 {
-        // NOTE(HS) we assume that the polynomials we pass in are of sufficient length.
         let (srs, _) = P::gen_srs_for_testing(&num_vars, &mut rng);
 
         let mut scratch_pad = P::init_scratch_pad(&num_vars);
@@ -101,8 +100,9 @@ where
             ))
         }
 
-        // multi point batch opening
-        for num_poly in [2, 4, 8, 16] {
+        // edga case: multi point batch opening with 1 poly
+        {
+            let num_poly = 1;
             let polys = (0..num_poly)
                 .map(|_| MultiLinearPoly::<F>::random(num_vars, &mut rng))
                 .collect::<Vec<_>>();
@@ -120,6 +120,63 @@ where
                         .collect::<Vec<_>>()
                 })
                 .collect::<Vec<_>>();
+
+            let mut transcript = T::new();
+
+            let (values, batch_opening) = P::multiple_points_batch_open(
+                &num_vars,
+                &proving_key,
+                &polys,
+                points.as_ref(),
+                &mut scratch_pad,
+                &mut transcript,
+            );
+
+            let mut transcript = T::new();
+
+            assert!(P::multiple_points_batch_verify(
+                &num_vars,
+                &verification_key,
+                &commitments,
+                points.as_ref(),
+                &values,
+                &batch_opening,
+                &mut transcript
+            ))
+        }
+
+        // multi point batch opening with multiple polys and various lengths
+        for num_poly in [1, 2, 4, 8, 16] {
+            println!(
+                "Testing multi point batch opening with {} vars and {} polys",
+                num_vars, num_poly
+            );
+            let mut polys = (0..num_poly)
+                .map(|_| MultiLinearPoly::<F>::random(num_vars, &mut rng))
+                .collect::<Vec<_>>();
+            // polynomial with a fixed number of variables
+            polys.push(MultiLinearPoly::<F>::random(2, &mut rng));
+            // polynomial with one less variable than the others
+            polys.push(MultiLinearPoly::<F>::random(num_vars - 1, &mut rng));
+            let commitments = polys
+                .iter()
+                .map(|poly| P::commit(&num_vars, &proving_key, poly, &mut scratch_pad))
+                .collect::<Vec<_>>();
+
+            // open all polys at all points
+            let mut points = (0..num_poly)
+                .map(|_| {
+                    (0..num_vars)
+                        .map(|_i| F::random_unsafe(&mut rng))
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>();
+            points.push(vec![F::random_unsafe(&mut rng), F::random_unsafe(&mut rng)]);
+            points.push(
+                (0..num_vars - 1)
+                    .map(|_i| F::random_unsafe(&mut rng))
+                    .collect::<Vec<_>>(),
+            );
 
             let mut transcript = T::new();
 

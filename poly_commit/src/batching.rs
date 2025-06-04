@@ -33,8 +33,11 @@ where
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
-    let num_vars = polys[0].num_vars();
-    let k = polys.len();
+    // Ensure that all polynomials have the same number of variables
+    let (padded_polys, padded_points) = pad_polynomials_and_points::<C>(polys, points);
+
+    let num_vars = padded_polys[0].num_vars();
+    let k = padded_polys.len();
     let ell = log2(k) as usize;
 
     // challenge point t
@@ -46,7 +49,7 @@ where
     // \tilde g_i(b) = eq(t, i) * f_i(b)
     let timer = Timer::new("Building tilde g_i(b)", true);
 
-    let tilde_gs = polys
+    let tilde_gs = padded_polys
         .par_iter()
         .enumerate()
         .map(|(index, f_i)| {
@@ -64,7 +67,7 @@ where
 
     // built the virtual polynomial for SumCheck
     let timer = Timer::new("Building tilde eqs", true);
-    let tilde_eqs: Vec<MultiLinearPoly<C::Scalar>> = points
+    let tilde_eqs: Vec<MultiLinearPoly<C::Scalar>> = padded_points
         .par_iter()
         .map(|point| {
             let eq_b_zi = EqPolynomial::build_eq_x_r(point);
@@ -88,7 +91,7 @@ where
     let timer = Timer::new("Building g'(X)", true);
 
     let mut g_prime_evals = vec![C::Scalar::zero(); 1 << num_vars];
-    let eq_i_a2_polys = points
+    let eq_i_a2_polys = padded_points
         .par_iter()
         .map(|point| EqPolynomial::eq_vec(a2.as_ref(), point))
         .collect::<Vec<_>>();
@@ -117,9 +120,15 @@ where
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
-    let k = commitments.len();
+    let (padded_commitments, padded_points) = pad_commitments_and_points::<C>(commitments, points);
+
+    let k = padded_commitments.len();
     let ell = log2(k) as usize;
     let num_var = sumcheck_proof.point.len();
+    assert!(
+        num_var == padded_points[0].len(),
+        "Number of variables in sumcheck proof must match the number of variables in points"
+    );
 
     // sum check point (a2)
     let a2 = sumcheck_proof.export_point_to_expander();
@@ -130,10 +139,13 @@ where
     let eq_t_i = EqPolynomial::build_eq_x_r(&t);
 
     // build g' commitment
-    let bases = commitments.iter().map(|c| c.as_ref()).collect::<Vec<_>>();
+    let bases = padded_commitments
+        .iter()
+        .map(|c| c.as_ref())
+        .collect::<Vec<_>>();
     let bases_transposed = transpose::<C>(&bases);
 
-    let scalars = points
+    let scalars = padded_points
         .iter()
         .enumerate()
         .map(|(i, p)| {
@@ -147,7 +159,7 @@ where
         .map(|base| best_multiexp(&scalars, base))
         .collect::<Vec<_>>();
 
-    let mut g_prime_commit_affine = vec![C::default(); commitments[0].as_ref().len()];
+    let mut g_prime_commit_affine = vec![C::default(); padded_commitments[0].len()];
     C::Curve::batch_normalize(&g_prime_commit_elems, &mut g_prime_commit_affine);
 
     // ensure \sum_i eq(t, <i>) * f_i_evals matches the sum via SumCheck
@@ -181,4 +193,81 @@ fn transpose<C: CurveAffine>(m: &[&[C]]) -> Vec<Vec<C>> {
     }
 
     transposed
+}
+
+#[inline]
+#[allow(clippy::type_complexity)]
+fn pad_polynomials_and_points<C>(
+    polys: &[MultiLinearPoly<C::Scalar>],
+    points: &[Vec<C::Scalar>],
+) -> (Vec<MultiLinearPoly<C::Scalar>>, Vec<Vec<C::Scalar>>)
+where
+    C: CurveAffine + ExpSerde,
+    C::Scalar: ExtensionField + PrimeField,
+    C::ScalarExt: ExtensionField + PrimeField,
+{
+    let max_size = polys
+        .iter()
+        .map(|p| p.hypercube_basis_ref().len())
+        .max()
+        .unwrap_or(0);
+    let max_num_vars = log2(max_size) as usize;
+    let padded_polys = polys
+        .iter()
+        .map(|poly| {
+            let mut coeffs = poly.coeffs.clone();
+            coeffs.resize(max_size, C::Scalar::zero());
+            MultiLinearPoly { coeffs }
+        })
+        .collect::<Vec<_>>();
+    let padded_points = points
+        .iter()
+        .map(|point| {
+            let mut padded_point = point.clone();
+            padded_point.resize(max_num_vars, C::Scalar::zero());
+            padded_point
+        })
+        .collect::<Vec<_>>();
+
+    (padded_polys, padded_points)
+}
+
+#[inline]
+// Each commitment is a vector of curve points
+// This generalizes both KZG and Hyrax commitments
+fn pad_commitments_and_points<C>(
+    commitments: &[impl AsRef<[C]>],
+    points: &[Vec<C::Scalar>],
+) -> (Vec<Vec<C>>, Vec<Vec<C::Scalar>>)
+where
+    C: CurveAffine + ExpSerde,
+    C::Scalar: ExtensionField + PrimeField,
+    C::ScalarExt: ExtensionField + PrimeField,
+{
+    let max_num_vars = points.iter().map(|p| p.len()).max().unwrap_or(0);
+    let max_commit_size = commitments
+        .iter()
+        .map(|c| c.as_ref().len())
+        .max()
+        .unwrap_or(0);
+
+    let padded_points = points
+        .iter()
+        .map(|point| {
+            let mut padded_point = point.clone();
+            padded_point.resize(max_num_vars, C::Scalar::zero());
+            padded_point
+        })
+        .collect::<Vec<_>>();
+
+    let padded_commitments = commitments
+        .iter()
+        .map(|commitment| {
+            let mut padded_commitment = commitment.as_ref().to_vec();
+            padded_commitment.resize(max_commit_size, C::identity());
+            padded_commitment
+        })
+        .collect::<Vec<_>>();
+
+    (padded_commitments, padded_points)
 }

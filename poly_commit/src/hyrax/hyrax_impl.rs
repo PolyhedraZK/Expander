@@ -112,6 +112,21 @@ where
     C::ScalarExt: ExtensionField + PrimeField,
     C::Base: PrimeField<Repr = [u8; 32]>,
 {
+    if mle_poly.hypercube_basis_ref().len() < params.msm_len() {
+        // usually the params should be smaller than mle_poly as we rearrange the polynomial as a
+        // matrix, and the params are the number of columns.
+        //
+        // However, in the batch opening cases, it is possible that some of the polynomials are in
+        // fact much smaller; whereas the params are determined according to the maximum
+        // polynomial size of the batch.
+
+        let mut scalars = mle_poly.hypercube_basis();
+        scalars.resize(params.msm_len(), C::Scalar::zero());
+        let commitment = pedersen_commit(params, scalars.as_ref());
+
+        return HyraxCommitment(vec![commitment]);
+    }
+
     let commitments: Vec<C> = mle_poly
         .hypercube_basis_ref()
         .chunks(params.msm_len())
@@ -165,13 +180,22 @@ where
     let eq_combination: Vec<C::Scalar> = EqPolynomial::build_eq_x_r(&eval_point[pedersen_vars..]);
     let row_comm = msm::best_multiexp(&eq_combination, &comm.0);
 
-    if pedersen_commit(params, &proof.0) != row_comm.into() {
+    let pedersen_commitment = pedersen_commit(params, &proof.0);
+
+    if pedersen_commitment != row_comm.into() {
+        eprintln!("pedersen commitment not match",);
         return false;
     }
 
     let mut scratch = vec![C::Scalar::default(); proof.0.len()];
-    eval == RefMultiLinearPoly::from_ref(&proof.0)
-        .evaluate_with_buffer(&eval_point[..pedersen_vars], &mut scratch)
+    let res = eval
+        == RefMultiLinearPoly::from_ref(&proof.0)
+            .evaluate_with_buffer(&eval_point[..pedersen_vars], &mut scratch);
+    if !res {
+        eprintln!("evaluation does not match");
+    }
+
+    res
 }
 
 // batch open a set of mle_polys at the same point
