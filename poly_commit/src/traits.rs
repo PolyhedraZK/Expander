@@ -3,6 +3,7 @@ use gkr_engine::{StructuredReferenceString, Transcript};
 use rand::RngCore;
 use serdes::ExpSerde;
 use std::fmt::Debug;
+use sumcheck::IOPProof;
 
 /// Standard Polynomial commitment scheme (PCS) trait.
 pub trait PolynomialCommitmentScheme<F: ExtensionField> {
@@ -54,6 +55,65 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
         x: &Self::EvalPoint,
         v: F,
         opening: &Self::Opening,
+        transcript: &mut impl Transcript,
+    ) -> bool;
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Default, ExpSerde)]
+pub struct BatchOpening<F, PCS>
+where
+    F: ExtensionField,
+    PCS: PolynomialCommitmentScheme<F>,
+{
+    /// A sum check proof proving tilde g's sum
+    pub(crate) sum_check_proof: IOPProof<F>,
+    /// proof for g'(a_2)
+    pub(crate) g_prime_proof: PCS::Opening,
+}
+
+/// Batch opening polynomial commitment scheme trait.
+/// This trait is implemented for homomorphic polynomial commitment schemes such as Hyrax and KZG
+pub trait BatchOpeningPCS<F: ExtensionField>: PolynomialCommitmentScheme<F> + Sized {
+    /// Open a set of polynomials at a single point.
+    fn single_point_batch_open(
+        params: &Self::Params,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        polys: &[Self::Poly],
+        x: &Self::EvalPoint,
+        scratch_pad: &Self::ScratchPad,
+        transcript: &mut impl Transcript,
+    ) -> (Vec<F>, Self::Opening);
+
+    /// Verify the opening of a set of polynomials at a single point.
+    fn single_point_batch_verify(
+        params: &Self::Params,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        commitments: &[Self::Commitment],
+        x: &Self::EvalPoint,
+        vs: &[F],
+        opening: &Self::Opening,
+        transcript: &mut impl Transcript,
+    ) -> bool;
+
+    /// Open a set of polynomials at a multiple points.
+    /// Requires the length of the polys to be the same as points.
+    fn multiple_points_batch_open(
+        params: &Self::Params,
+        proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        polys: &[Self::Poly],
+        points: &[Self::EvalPoint],
+        scratch_pad: &Self::ScratchPad,
+        transcript: &mut impl Transcript,
+    ) -> (Vec<F>, BatchOpening<F, Self>);
+
+    /// Verify the opening of a set of polynomials at a single point.
+    fn multiple_points_batch_verify(
+        params: &Self::Params,
+        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        commitments: &[Self::Commitment],
+        points: &[Self::EvalPoint],
+        values: &[F],
+        opening: &BatchOpening<F, Self>,
         transcript: &mut impl Transcript,
     ) -> bool;
 }

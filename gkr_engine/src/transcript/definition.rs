@@ -1,6 +1,7 @@
 use std::{fmt::Debug, str::FromStr};
 
 use arith::Field;
+use serdes::ExpSerde;
 
 use crate::ExpErrors;
 
@@ -27,6 +28,13 @@ pub trait Transcript: Clone + Debug {
 
     /// Append a slice of bytes
     fn append_u8_slice(&mut self, buffer: &[u8]);
+
+    fn append_serializable_data<T: ExpSerde>(&mut self, data: &T) {
+        let mut buf = vec![];
+        data.serialize_into(&mut buf).unwrap();
+        self.append_u8_slice(&buf);
+    }
+
     /*
         self.proof.bytes.extend_from_slice(buffer);
     */

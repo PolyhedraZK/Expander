@@ -8,7 +8,7 @@ use gkr_hashers::{MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher}
 use goldilocks::Goldilocksx8;
 use halo2curves::bn256::{Bn256, G1Affine};
 use mersenne31::M31x16;
-use poly_commit::{raw::RawExpanderGKR, HyperKZGPCS, HyraxPCS, OrionPCSForGKR};
+use poly_commit::{raw::RawExpanderGKR, HyperBiKZGPCS, HyraxPCS, OrionPCSForGKR};
 use transcript::BytesHashTranscript;
 
 // ============== M31 ==============

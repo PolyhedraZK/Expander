@@ -184,6 +184,7 @@ mod tests {
             coeff_form_bi_kzg_open_leader(&party_srs[0], &evals_and_opens, beta);
 
         let vk: BiKZGVerifierParam<Bn256> = From::from(&party_srs[0]);
+
         assert!(coeff_form_bi_kzg_verify(
             vk,
             global_commitment,

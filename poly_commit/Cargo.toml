@@ -12,15 +12,17 @@ serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
 tree = { path = "../tree" }
 utils = { path = "../utils" }
+sumcheck = { path = "../sumcheck" }
 
-rand.workspace = true
 ethnum.workspace = true
 ark-std.workspace = true
-thiserror.workspace = true
-itertools.workspace = true
 derivative.workspace = true
-transpose.workspace = true
 halo2curves.workspace = true
+itertools.workspace = true
+rand.workspace = true
+rayon.workspace = true
+transpose.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
@@ -48,5 +50,6 @@ name = "pcs_all"
 harness = false
 
 [features]
-default = [ "profile" ]
+default = [ ]
+# default = [ "profile" ]
 profile = [ "utils/profile" ]
