@@ -1,7 +1,4 @@
-use std::{
-    fmt::{Debug, Display},
-    str::FromStr,
-};
+use std::{fmt::Debug, str::FromStr};
 
 use arith::Field;
 
@@ -12,12 +9,9 @@ use super::Proof;
 /// A trait for transcript generation over the challenge field
 /// The associated field is the challenge field, i.e., M31Ext3
 /// The challenge field is not SIMD enabled
-pub trait Transcript: Clone + Debug + Display {
+pub trait Transcript: Clone + Debug {
     /// Create a new transcript.
     fn new() -> Self;
-
-    #[cfg(not(feature = "recursion"))]
-    fn init_commitment(&mut self, commitment_bytes: &[u8]) -> Vec<u8>;
 
     /// Append a polynomial commitment to the transcript
     /// called by the prover

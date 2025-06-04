@@ -34,8 +34,6 @@ pub struct AVXM31 {
 field_common!(AVXM31);
 
 impl ExpSerde for AVXM31 {
-    const SERIALIZED_SIZE: usize = 512 / 8;
-
     #[inline(always)]
     /// serialize self into bytes
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -47,10 +45,10 @@ impl ExpSerde for AVXM31 {
     /// deserialize bytes into field
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut data = [0; Self::SERIALIZED_SIZE];
+        let mut data = [0; 64];
         reader.read_exact(&mut data)?;
         unsafe {
-            let mut value = transmute::<[u8; Self::SERIALIZED_SIZE], __m512i>(data);
+            let mut value = transmute::<[u8; 64], __m512i>(data);
             value = mod_reduce_epi32(value); // ZZ: this step seems unnecessary
             Ok(AVXM31 { v: value })
         }
@@ -278,7 +276,7 @@ impl Debug for AVXM31 {
                 }
             )
         } else {
-            write!(f, "mm512i<{:?}>", data)
+            write!(f, "mm512i<{data:?}>")
         }
     }
 }

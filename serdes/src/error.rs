@@ -7,6 +7,9 @@ pub enum SerdeError {
 
     #[error("Deserialization failure")]
     DeserializeError,
+
+    #[error("Invalid variant index: {0}")]
+    InvalidVariantIndex(usize),
 }
 
 pub type SerdeResult<T> = std::result::Result<T, SerdeError>;

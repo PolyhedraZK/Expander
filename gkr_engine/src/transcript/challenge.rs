@@ -1,13 +1,11 @@
-use std::io::{Read, Write};
-
 use arith::SimdField;
-use serdes::{ExpSerde, SerdeResult};
+use serdes::ExpSerde;
 
 use crate::FieldEngine;
 
 use super::Transcript;
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, ExpSerde)]
 pub struct ExpanderDualVarChallenge<F: FieldEngine> {
     /// random challenge for the x variable
     pub rz_0: Vec<F::ChallengeField>,
@@ -19,7 +17,7 @@ pub struct ExpanderDualVarChallenge<F: FieldEngine> {
     pub r_mpi: Vec<F::ChallengeField>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, ExpSerde)]
 pub struct ExpanderSingleVarChallenge<F: FieldEngine> {
     /// random challenge for the main body of the circuit
     pub rz: Vec<F::ChallengeField>,
@@ -150,48 +148,5 @@ impl<F: FieldEngine> From<&ExpanderSingleVarChallenge<F>> for ExpanderDualVarCha
             r_simd: challenge.r_simd.clone(),
             r_mpi: challenge.r_mpi.clone(),
         }
-    }
-}
-
-impl<F: FieldEngine> ExpSerde for ExpanderDualVarChallenge<F> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        self.rz_0.serialize_into(&mut writer)?;
-        self.rz_1.serialize_into(&mut writer)?;
-        self.r_simd.serialize_into(&mut writer)?;
-        self.r_mpi.serialize_into(&mut writer)?;
-        Ok(())
-    }
-
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let rz_0 = Vec::<F::ChallengeField>::deserialize_from(&mut reader)?;
-        let rz_1 = Option::<Vec<F::ChallengeField>>::deserialize_from(&mut reader)?;
-        let r_simd = Vec::<F::ChallengeField>::deserialize_from(&mut reader)?;
-        let r_mpi = Vec::<F::ChallengeField>::deserialize_from(&mut reader)?;
-
-        Ok(Self {
-            rz_0,
-            rz_1,
-            r_simd,
-            r_mpi,
-        })
-    }
-}
-
-impl<F: FieldEngine> ExpSerde for ExpanderSingleVarChallenge<F> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        self.rz.serialize_into(&mut writer)?;
-        self.r_simd.serialize_into(&mut writer)?;
-        self.r_mpi.serialize_into(&mut writer)?;
-        Ok(())
-    }
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let rz = Vec::<F::ChallengeField>::deserialize_from(&mut reader)?;
-        let r_simd = Vec::<F::ChallengeField>::deserialize_from(&mut reader)?;
-        let r_mpi = Vec::<F::ChallengeField>::deserialize_from(&mut reader)?;
-
-        Ok(Self { rz, r_simd, r_mpi })
     }
 }

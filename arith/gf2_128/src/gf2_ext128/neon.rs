@@ -34,8 +34,6 @@ fn sub_internal(a: &NeonGF2_128, b: &NeonGF2_128) -> NeonGF2_128 {
 }
 
 impl ExpSerde for NeonGF2_128 {
-    const SERIALIZED_SIZE: usize = 16;
-
     #[inline(always)]
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
         unsafe { writer.write_all(transmute::<uint32x4_t, [u8; 16]>(self.v).as_ref())? };

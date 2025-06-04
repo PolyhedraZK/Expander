@@ -241,10 +241,10 @@ impl<F: FieldEngine> CrossLayerCircuit<F> {
         }
 
         println!("Number of layers: {}", self.layers.len());
-        println!("Number of add gates: {}", n_add_gates);
-        println!("Number of mul gates: {}", n_mul_gates);
-        println!("Number of const gates: {}", n_const_gates);
-        println!("Number of relay gates: {}", n_relay_gates);
+        println!("Number of add gates: {n_add_gates}");
+        println!("Number of mul gates: {n_mul_gates}");
+        println!("Number of const gates: {n_const_gates}");
+        println!("Number of relay gates: {n_relay_gates}");
     }
 }
 

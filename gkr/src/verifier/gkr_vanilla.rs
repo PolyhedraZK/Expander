@@ -40,7 +40,6 @@ pub fn gkr_verify<F: FieldEngine>(
     let mut verified = true;
     for i in (0..layer_num).rev() {
         let cur_verified = sumcheck_verify_gkr_layer(
-            gkr_engine::GKRScheme::Vanilla,
             proving_time_mpi_size,
             &circuit.layers[i],
             public_input,
@@ -52,6 +51,7 @@ pub fn gkr_verify<F: FieldEngine>(
             transcript,
             &mut sp,
             i == layer_num - 1,
+            false,
         );
 
         verified &= cur_verified;

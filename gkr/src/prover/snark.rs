@@ -7,13 +7,15 @@ use gkr_engine::{
     GKREngine, GKRScheme, MPIConfig, MPIEngine, PCSParams, Proof, StructuredReferenceString,
     Transcript,
 };
-use polynomials::{MultilinearExtension, MutRefMultiLinearPoly};
+use polynomials::{
+    MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension, RefMultiLinearPoly,
+};
 use serdes::ExpSerde;
 use sumcheck::ProverScratchPad;
 use transcript::transcript_root_broadcast;
 use utils::timer::Timer;
 
-use crate::{gkr_par_verifier_prove, gkr_prove, gkr_square_prove};
+use crate::{gkr_prove, gkr_square_prove};
 
 #[cfg(feature = "grinding")]
 pub(crate) fn grind<Cfg: GKREngine>(transcript: &mut impl Transcript, mpi_config: &MPIConfig) {
@@ -49,13 +51,13 @@ pub(crate) fn grind<Cfg: GKREngine>(transcript: &mut impl Transcript, mpi_config
 }
 
 #[derive(Default)]
-pub struct Prover<Cfg: GKREngine> {
-    pub mpi_config: MPIConfig,
+pub struct Prover<'a, Cfg: GKREngine> {
+    pub mpi_config: MPIConfig<'a>,
     sp: ProverScratchPad<Cfg::FieldConfig>,
 }
 
-impl<Cfg: GKREngine> Prover<Cfg> {
-    pub fn new(mpi_config: MPIConfig) -> Self {
+impl<'a, Cfg: GKREngine> Prover<'a, Cfg> {
+    pub fn new(mpi_config: MPIConfig<'a>) -> Self {
         Prover {
             mpi_config,
             sp: ProverScratchPad::default(),
@@ -85,44 +87,25 @@ impl<Cfg: GKREngine> Prover<Cfg> {
     pub fn prove(
         &mut self,
         c: &mut Circuit<Cfg::FieldConfig>,
-        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
-        pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
-        pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad,
-    ) -> (<Cfg::FieldConfig as FieldEngine>::ChallengeField, Proof) {
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
+        pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::PKey,
+        pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad,
+    ) -> (<Cfg::FieldConfig as FieldEngine>::ChallengeField, Proof)
+    where
+        Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+    {
         let proving_timer = Timer::new("prover", self.mpi_config.is_root());
         let mut transcript = Cfg::TranscriptConfig::new();
 
         let pcs_commit_timer = Timer::new("pcs commit", self.mpi_config.is_root());
         // PC commit
-        let commitment = {
-            let original_input_vars = c.log_input_size();
-            let mut mle_ref = MutRefMultiLinearPoly::from_ref(&mut c.layers[0].input_vals);
-
-            let minimum_vars_for_pcs: usize = pcs_params.num_vars();
-            if original_input_vars < minimum_vars_for_pcs {
-                eprintln!(
-					"{} over {} has minimum supported local vars {}, but input poly has vars {}, pad to {} vars in commiting.",
-					Cfg::PCSConfig::NAME,
-					<Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
-					minimum_vars_for_pcs,
-					original_input_vars,
-					minimum_vars_for_pcs,
-				);
-                mle_ref.lift_to_n_vars(minimum_vars_for_pcs)
-            }
-
-            let commit = Cfg::PCSConfig::commit(
-                pcs_params,
-                &self.mpi_config,
-                pcs_proving_key,
-                &mle_ref,
-                pcs_scratch,
-            );
-
-            mle_ref.lift_to_n_vars(original_input_vars);
-
-            commit
-        };
+        let commitment = Cfg::PCSConfig::commit(
+            pcs_params,
+            &self.mpi_config,
+            pcs_proving_key,
+            &RefMultiLinearPoly::from_ref(&c.layers[0].input_vals),
+            pcs_scratch,
+        );
 
         if self.mpi_config.is_root() && !Cfg::CUDA_DEV {
             let mut buffer = vec![];
@@ -140,13 +123,17 @@ impl<Cfg: GKREngine> Prover<Cfg> {
         self.mpi_config.barrier();
         c.evaluate();
 
-        root_println!(self.mpi_config, "transcript {}", transcript);
+        root_println!(self.mpi_config, "transcript {:?}", transcript);
 
         let gkr_prove_timer = Timer::new("gkr prove", self.mpi_config.is_root());
 
         transcript_root_broadcast(&mut transcript, &self.mpi_config);
 
-        root_println!(self.mpi_config, "transcript after broadcast {}", transcript);
+        root_println!(
+            self.mpi_config,
+            "transcript after broadcast {:?}",
+            transcript
+        );
         // matches this far
 
         let (claimed_v, challenge) = match Cfg::SCHEME {
@@ -156,19 +143,20 @@ impl<Cfg: GKREngine> Prover<Cfg> {
                     gkr_square_prove(c, &mut self.sp, &mut transcript, &self.mpi_config);
                 (claimed_v, ExpanderDualVarChallenge::from(&challenge_x))
             }
-            GKRScheme::GKRParVerifier => {
-                gkr_par_verifier_prove(c, &mut self.sp, &mut transcript, &self.mpi_config)
-            }
         };
         gkr_prove_timer.stop();
 
-        root_println!(self.mpi_config, "transcript after gkr_prove {}", transcript);
+        root_println!(
+            self.mpi_config,
+            "transcript after gkr_prove {:?}",
+            transcript
+        );
 
         transcript_root_broadcast(&mut transcript, &self.mpi_config);
 
         root_println!(
             self.mpi_config,
-            "transcript before challenge_x {}",
+            "transcript before challenge_x {:?}",
             transcript
         );
         let pcs_open_timer = Timer::new("pcs open", self.mpi_config.is_root());
@@ -187,7 +175,7 @@ impl<Cfg: GKREngine> Prover<Cfg> {
 
         root_println!(
             self.mpi_config,
-            "transcript before challenge_y {}",
+            "transcript before challenge_y {:?}",
             transcript
         );
 
@@ -214,34 +202,19 @@ impl<Cfg: GKREngine> Prover<Cfg> {
     }
 }
 
-impl<Cfg: GKREngine> Prover<Cfg> {
+impl<Cfg: GKREngine> Prover<'_, Cfg> {
     fn prove_input_layer_claim(
         &self,
         inputs: &mut MutRefMultiLinearPoly<<Cfg::FieldConfig as FieldEngine>::SimdCircuitField>,
         open_at: &mut ExpanderSingleVarChallenge<Cfg::FieldConfig>,
-        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
-        pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
-        pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad,
+        pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
+        pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::PKey,
+        pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad,
         transcript: &mut impl Transcript,
-    ) {
+    ) where
+        Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+    {
         let original_input_vars = inputs.num_vars();
-
-        let minimum_vars_for_pcs: usize = pcs_params.num_vars();
-        if original_input_vars < minimum_vars_for_pcs {
-            eprintln!(
-				"{} over {} has minimum supported local vars {}, but input poly has vars {}, pad to {} vars in opening.",
-				Cfg::PCSConfig::NAME,
-				<Cfg::FieldConfig as FieldEngine>::SimdCircuitField::NAME,
-				minimum_vars_for_pcs,
-				original_input_vars,
-				minimum_vars_for_pcs,
-			);
-            inputs.lift_to_n_vars(minimum_vars_for_pcs);
-            open_at.rz.resize(
-                minimum_vars_for_pcs,
-                <Cfg::FieldConfig as FieldEngine>::ChallengeField::ZERO,
-            )
-        }
 
         transcript.lock_proof();
         let opening = Cfg::PCSConfig::open(

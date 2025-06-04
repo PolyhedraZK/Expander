@@ -49,7 +49,7 @@ pub fn proof_gen_x8<C: GKREngine>() {
     circuit.evaluate();
 
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
-        expander_pcs_init_testing_only::<C::FieldConfig, C::PCSConfig>(
+        expander_pcs_init_testing_only::<C::FieldConfig, _, C::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
         );

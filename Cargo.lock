@@ -1760,6 +1760,7 @@ dependencies = [
  "transpose",
  "tree",
  "tynm",
+ "utils",
 ]
 
 [[package]]
@@ -2037,7 +2038,18 @@ version = "0.1.0"
 dependencies = [
  "ethnum",
  "halo2curves",
+ "rand",
+ "serdes_derive",
  "thiserror",
+]
+
+[[package]]
+name = "serdes_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.100",
 ]
 
 [[package]]

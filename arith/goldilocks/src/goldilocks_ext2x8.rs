@@ -23,8 +23,6 @@ pub struct GoldilocksExt2x8 {
 field_common!(GoldilocksExt2x8);
 
 impl ExpSerde for GoldilocksExt2x8 {
-    const SERIALIZED_SIZE: usize = 32;
-
     fn serialize_into<W>(&self, mut writer: W) -> Result<(), SerdeError>
     where
         W: std::io::Write,

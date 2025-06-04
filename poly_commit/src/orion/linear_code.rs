@@ -3,6 +3,7 @@ use std::cmp;
 use arith::Field;
 use itertools::{chain, izip};
 use rand::seq::index;
+use serdes::ExpSerde;
 
 use super::{OrionPCSError, OrionResult};
 
@@ -14,7 +15,7 @@ pub type DirectedEdge = usize;
 
 pub type DirectedNeighboring = Vec<DirectedEdge>;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ExpSerde)]
 pub struct OrionExpanderGraph {
     // L R vertices size book keeping:
     // keep track of message length (l), and "compressed" code length (r)
@@ -121,7 +122,7 @@ pub const ORION_CODE_PARAMETER_INSTANCE: OrionCodeParameter = OrionCodeParameter
 /// - Druk-Ishai 2014
 /// https://dl.acm.org/doi/10.1145/2554797.2554815
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ExpSerde)]
 pub struct OrionExpanderGraphPositioned {
     pub graph: OrionExpanderGraph,
 
@@ -168,7 +169,7 @@ impl OrionExpanderGraphPositioned {
 // (Spielman96), that relies on 2 lists of expander graphs serving as
 // error reduction code, and thus the linear error correction code derive
 // from the parity matrices corresponding to these expander graphs.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ExpSerde)]
 pub struct OrionCode {
     pub hamming_weight: f64,
 

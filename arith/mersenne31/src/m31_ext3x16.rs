@@ -18,8 +18,6 @@ pub struct M31Ext3x16 {
 field_common!(M31Ext3x16);
 
 impl ExpSerde for M31Ext3x16 {
-    const SERIALIZED_SIZE: usize = (512 / 8) * 3;
-
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         let v0 = self.v[0].unpack();

@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use arith::ExtensionField;
 use gkr_engine::{StructuredReferenceString, Transcript};
-use halo2curves::{ff::PrimeField, CurveAffine};
+use halo2curves::{ff::PrimeField, group::UncompressedEncoding, CurveAffine};
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
 
@@ -13,7 +13,7 @@ use crate::{
 
 pub struct HyraxPCS<C>
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField,
     C::ScalarExt: ExtensionField,
 {
@@ -22,9 +22,10 @@ where
 
 impl<C> PolynomialCommitmentScheme<C::Scalar> for HyraxPCS<C>
 where
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     const NAME: &'static str = "HyraxPCS";
 
@@ -40,7 +41,7 @@ where
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
 
     fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> (Self::SRS, usize) {
-        (hyrax_setup(*params, rng), *params)
+        (hyrax_setup(*params, 0, rng), *params)
     }
 
     fn commit(

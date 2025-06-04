@@ -13,6 +13,7 @@ use halo2curves::{
 };
 use itertools::{chain, izip};
 use polynomials::MultiLinearPoly;
+use serdes::ExpSerde;
 use transcript::BytesHashTranscript;
 
 use crate::*;
@@ -33,8 +34,8 @@ fn coeff_form_hyper_bikzg_open_simulate<E, T>(
 where
     E: MultiMillerLoop,
     T: Transcript,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
     E::Fr: ExtensionField,
 {
     // NOTE(HS) deteriorate to vanilla HyperKZG if mpi_alphas is empty, namely single party setting
@@ -336,8 +337,8 @@ fn coeff_form_hyper_bikzg_verify_simulate<E, T>(
 where
     E: MultiMillerLoop,
     T: Transcript,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
     E::Fr: ExtensionField,
 {
     // NOTE(HS) deteriorate to vanilla HyperKZG verify if mpi_alphas is empty

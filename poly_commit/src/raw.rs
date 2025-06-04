@@ -17,9 +17,11 @@ pub struct RawCommitment<F: Field> {
 }
 
 impl<F: Field> ExpSerde for RawCommitment<F> {
-    const SERIALIZED_SIZE: usize = unimplemented!();
-
     fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
+        // ideally we want to remove this and use Derive(ExpSerde) method to determine the length
+        // of the vector.
+        // however, it seems that the recursion circuit has hardcoded the length.
+        // maybe we want to fix it?
         let u256_embedded = U256::from(self.evals.len() as u64);
         u256_embedded.serialize_into(&mut writer)?;
 
@@ -119,7 +121,7 @@ pub struct RawExpanderGKR<C: FieldEngine> {
     _phantom: std::marker::PhantomData<C>,
 }
 
-impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
+impl<C: FieldEngine> ExpanderPCS<C, C::SimdCircuitField> for RawExpanderGKR<C> {
     const NAME: &'static str = "RawExpanderGKR";
 
     const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;
@@ -134,15 +136,14 @@ impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
 
     type Opening = ();
 
-    fn gen_srs_for_testing(
-        params: &Self::Params,
+    fn gen_srs(
+        _params: &Self::Params,
         _mpi_engine: &impl MPIEngine,
         _rng: impl RngCore,
-    ) -> (Self::SRS, usize) {
-        ((), *params)
+    ) -> Self::SRS {
     }
 
-    fn gen_params(n_input_vars: usize) -> Self::Params {
+    fn gen_params(n_input_vars: usize, _world_size: usize) -> Self::Params {
         n_input_vars
     }
 

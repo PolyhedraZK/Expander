@@ -6,7 +6,6 @@ use std::{fs, panic};
 use arith::Field;
 use circuit::Circuit;
 use config_macros::declare_gkr_config;
-use env_logger;
 use gf2::GF2x128;
 use gkr_engine::{
     root_println, BN254Config, BabyBearx16Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine,
@@ -30,6 +29,9 @@ use crate::{utils::*, Prover, Verifier};
 fn test_gkr_correctness() {
     // Initialize logger
     env_logger::init();
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
 
     declare_gkr_config!(
         C0,
@@ -148,7 +150,7 @@ fn test_gkr_correctness() {
         FieldType::GF2Ext128,
         FiatShamirHashType::SHA256,
         PolynomialCommitmentType::Raw,
-        GKRScheme::GKRParVerifier,
+        GKRScheme::Vanilla,
     );
     declare_gkr_config!(
         C17,
@@ -189,9 +191,12 @@ fn test_gkr_correctness() {
 }
 
 #[allow(unreachable_patterns)]
-fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
-    let mpi_config = MPIConfig::prover_new();
-
+fn test_gkr_correctness_helper<Cfg: GKREngine>(
+    mpi_config: MPIConfig<'_>,
+    write_proof_to: Option<&str>,
+) where
+    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+{
     root_println!(mpi_config, "============== start ===============");
     root_println!(
         mpi_config,
@@ -252,7 +257,7 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
     prover.prepare_mem(&circuit);
 
     let (pcs_params, pcs_proving_key, pcs_verification_key, mut pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
         );
@@ -322,7 +327,22 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
             "Verification time: {} μs",
             verification_start.elapsed().as_micros()
         );
+
+        let par_verification_start = Instant::now();
+        assert!(verifier.par_verify(
+            &mut circuit,
+            &public_input_gathered,
+            &claimed_v,
+            &pcs_params,
+            &pcs_verification_key,
+            &proof
+        ));
+        println!(
+            "Multi-core Verification time: {} μs",
+            par_verification_start.elapsed().as_micros()
+        );
         println!("Correct proof verified.");
+
         let mut bad_proof = proof.clone();
         let rng = &mut rand::thread_rng();
         let random_idx = rng.gen_range(0..bad_proof.bytes.len());
@@ -340,10 +360,22 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(write_proof_to: Option<&str>) {
                 &bad_proof,
             )
         }));
-
         let final_result = result.unwrap_or_default();
-
         assert!(!final_result,);
+
+        let par_result = panic::catch_unwind(AssertUnwindSafe(|| {
+            verifier.par_verify(
+                &mut circuit,
+                &public_input_gathered,
+                &claimed_v,
+                &pcs_params,
+                &pcs_verification_key,
+                &bad_proof,
+            )
+        }));
+        let final_par_result = par_result.unwrap_or_default();
+        assert!(!final_par_result,);
+
         println!("Bad proof rejected.");
         println!("============== end ===============");
     }

@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use gkr_engine::{Proof, Transcript};
 use gkr_hashers::FiatShamirHasher;
 
@@ -27,9 +25,18 @@ pub struct BytesHashTranscript<H: FiatShamirHasher> {
     proof_locked_at: usize,
 }
 
-impl<H: FiatShamirHasher> Display for BytesHashTranscript<H> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "BytesHashTranscript {{ digest: {:?} }}", self.digest)
+impl<H: FiatShamirHasher> BytesHashTranscript<H> {
+    /// When appending the initial commitment, we hash the commitment bytes
+    /// for sufficient number of times, so that the FS hash has a sufficient circuit depth      
+    #[cfg(not(feature = "recursion"))]
+    #[inline(always)]
+    fn hash_init_commitment(&mut self, commitment_bytes: &[u8]) -> Vec<u8> {
+        let mut digest = vec![0u8; H::DIGEST_SIZE];
+        self.hasher.hash(&mut digest, commitment_bytes);
+        for _ in 0..PCS_DIGEST_LOOP {
+            self.hasher.hash_inplace(&mut digest);
+        }
+        digest
     }
 }
 
@@ -45,17 +52,6 @@ impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
         }
     }
 
-    #[cfg(not(feature = "recursion"))]
-    #[inline(always)]
-    fn init_commitment(&mut self, commitment_bytes: &[u8]) -> Vec<u8> {
-        let mut digest = vec![0u8; H::DIGEST_SIZE];
-        self.hasher.hash(&mut digest, commitment_bytes);
-        for _ in 0..PCS_DIGEST_LOOP {
-            self.hasher.hash_inplace(&mut digest);
-        }
-        digest
-    }
-
     #[inline]
     fn append_commitment(&mut self, commitment_bytes: &[u8]) {
         self.append_u8_slice(commitment_bytes);
@@ -64,7 +60,7 @@ impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
         {
             // When appending the initial commitment, we hash the commitment bytes
             // for sufficient number of times, so that the FS hash has a sufficient circuit depth
-            let digest = self.init_commitment(commitment_bytes);
+            let digest = self.hash_init_commitment(commitment_bytes);
             self.set_state(&digest);
         }
     }

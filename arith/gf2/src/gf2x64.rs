@@ -5,32 +5,13 @@ use std::{
 
 use arith::{Field, SimdField};
 use ethnum::U256;
-use serdes::{ExpSerde, SerdeResult};
+use serdes::ExpSerde;
 
 use crate::{GF2x8, GF2};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, ExpSerde)]
 pub struct GF2x64 {
     pub v: u64,
-}
-
-impl ExpSerde for GF2x64 {
-    const SERIALIZED_SIZE: usize = 8;
-
-    #[inline(always)]
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
-        writer.write_all(self.v.to_le_bytes().as_ref())?;
-        Ok(())
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: std::io::Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut u = [0u8; Self::SERIALIZED_SIZE];
-        reader.read_exact(&mut u)?;
-        Ok(GF2x64 {
-            v: u64::from_le_bytes(u),
-        })
-    }
 }
 
 impl Field for GF2x64 {

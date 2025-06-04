@@ -44,8 +44,6 @@ pub struct AVXBabyBear {
 field_common!(AVXBabyBear);
 
 impl ExpSerde for AVXBabyBear {
-    const SERIALIZED_SIZE: usize = 512 / 8;
-
     #[inline(always)]
     /// serialize self into bytes
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -57,10 +55,10 @@ impl ExpSerde for AVXBabyBear {
     /// deserialize bytes into field
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut data = [0; Self::SERIALIZED_SIZE];
+        let mut data = [0; 64];
         reader.read_exact(&mut data)?;
         unsafe {
-            let value = transmute::<[u8; Self::SERIALIZED_SIZE], [__m256i; 2]>(data);
+            let value = transmute::<[u8; 64], [__m256i; 2]>(data);
             let v0 = mod_reduce_epi32(value[0]);
             let v1 = mod_reduce_epi32(value[1]);
             Ok(AVXBabyBear { v: [v0, v1] })
@@ -281,7 +279,7 @@ impl Debug for AVXBabyBear {
                 }
             )
         } else {
-            write!(f, "mm256i<{:?}>", data)
+            write!(f, "mm256i<{data:?}>")
         }
     }
 }

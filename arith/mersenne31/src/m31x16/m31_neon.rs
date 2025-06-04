@@ -40,8 +40,6 @@ impl NeonM31 {
 }
 
 impl ExpSerde for NeonM31 {
-    const SERIALIZED_SIZE: usize = (128 / 8) * 4;
-
     #[inline(always)]
     /// serialize self into bytes
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -360,7 +358,7 @@ impl Debug for NeonM31 {
                         }
                     )?;
                 } else {
-                    write!(f, "uint32x4_t<{:?}>", data)?;
+                    write!(f, "uint32x4_t<{data:?}>")?;
                 }
             }
         }

@@ -201,13 +201,13 @@ impl<C: FieldEngine> Circuit<C> {
 
     pub fn prover_load_witness_file(&mut self, filename: &str, mpi_config: &MPIConfig) {
         let file_bytes = fs::read(filename)
-            .unwrap_or_else(|_| panic!("Failed to read witness file: {}", filename));
+            .unwrap_or_else(|_| panic!("Failed to read witness file: {filename}"));
         self.load_witness_bytes(&file_bytes, mpi_config, true, false);
     }
 
     pub fn verifier_load_witness_file(&mut self, filename: &str, mpi_config: &MPIConfig) {
         let file_bytes = fs::read(filename)
-            .unwrap_or_else(|_| panic!("Failed to read witness file: {}", filename));
+            .unwrap_or_else(|_| panic!("Failed to read witness file: {filename}"));
         self.load_witness_bytes(&file_bytes, mpi_config, false, false);
     }
 
@@ -385,7 +385,7 @@ impl<C: FieldEngine> Circuit<C> {
         // If there will be two claims for the input
         // Introduce an extra relay layer before the input layer
         if !self.layers[0].structure_info.skip_sumcheck_phase_two {
-            match <Cfg::PCSConfig as ExpanderPCS<C>>::PCS_TYPE {
+            match <Cfg::PCSConfig as ExpanderPCS<C, _>>::PCS_TYPE {
                 // Raw PCS costs nothing in opening, so no need to add relay layer
                 // But we can probably add it in the future for verifier's convenience
                 PolynomialCommitmentType::Raw => (),

@@ -32,39 +32,40 @@ pub struct ProverScratchPad<F: FieldEngine> {
 
 impl<F: FieldEngine> ProverScratchPad<F> {
     pub fn new(max_num_input_var: usize, max_num_output_var: usize, mpi_world_size: usize) -> Self {
-        let max_input_num = 1 << max_num_input_var;
-        let max_output_num = 1 << max_num_output_var;
+        let max_input_size = 1 << max_num_input_var;
+        let max_output_size = 1 << max_num_output_var;
+        let max_io_size = max(max_input_size, max_output_size);
         ProverScratchPad {
-            v_evals: vec![F::Field::default(); max_input_num],
-            hg_evals_5: vec![F::ChallengeField::default(); max_input_num],
-            hg_evals_1: vec![F::ChallengeField::default(); max_input_num],
-            hg_evals: vec![F::Field::default(); max_input_num],
+            v_evals: vec![F::Field::default(); max_input_size],
+            hg_evals_5: vec![F::ChallengeField::default(); max_input_size],
+            hg_evals_1: vec![F::ChallengeField::default(); max_input_size],
+            hg_evals: vec![F::Field::default(); max_input_size],
             simd_var_v_evals: vec![F::ChallengeField::default(); F::get_field_pack_size()],
             simd_var_hg_evals: vec![F::ChallengeField::default(); F::get_field_pack_size()],
             mpi_var_v_evals: vec![F::ChallengeField::default(); mpi_world_size],
             mpi_var_hg_evals: vec![F::ChallengeField::default(); mpi_world_size],
 
-            eq_evals_at_rx: vec![F::ChallengeField::default(); max_input_num],
-            eq_evals_at_rz0: vec![F::ChallengeField::default(); max_output_num],
+            eq_evals_at_rx: vec![F::ChallengeField::default(); max_input_size],
+            eq_evals_at_rz0: vec![F::ChallengeField::default(); max_output_size],
             eq_evals_at_r_simd0: vec![F::ChallengeField::default(); F::get_field_pack_size()],
             eq_evals_at_r_mpi0: vec![F::ChallengeField::default(); mpi_world_size],
             eq_evals_first_half: vec![
                 F::ChallengeField::default();
                 max(
-                    max(max_output_num, F::get_field_pack_size()),
+                    max(max_io_size, F::get_field_pack_size()),
                     mpi_world_size
                 )
             ],
             eq_evals_second_half: vec![
                 F::ChallengeField::default();
                 max(
-                    max(max_output_num, F::get_field_pack_size()),
+                    max(max_io_size, F::get_field_pack_size()),
                     mpi_world_size
                 )
             ],
 
-            gate_exists_5: vec![false; max_input_num],
-            gate_exists_1: vec![false; max_input_num],
+            gate_exists_5: vec![false; max_input_size],
+            gate_exists_1: vec![false; max_input_size],
             phase2_coef: F::ChallengeField::ZERO,
         }
     }

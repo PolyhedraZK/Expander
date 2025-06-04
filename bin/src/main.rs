@@ -9,8 +9,8 @@ use clap::Parser;
 use gkr::{
     BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
     GF2ExtConfigSha2Raw, Goldilocksx8ConfigSha2Orion, Goldilocksx8ConfigSha2Raw,
-    M31x16ConfigSha2OrionSquare, M31x16ConfigSha2OrionVanilla, M31x16ConfigSha2RawSquare,
-    M31x16ConfigSha2RawVanilla, Prover,
+    M31x1ConfigSha2RawVanilla, M31x16ConfigSha2OrionSquare, M31x16ConfigSha2OrionVanilla,
+    M31x16ConfigSha2RawSquare, M31x16ConfigSha2RawVanilla, Prover,
     utils::{
         KECCAK_BABYBEAR_CIRCUIT, KECCAK_BABYBEAR_WITNESS, KECCAK_BN254_CIRCUIT,
         KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS, KECCAK_GOLDILOCKS_CIRCUIT,
@@ -49,14 +49,24 @@ struct Args {
     threads: u64,
 }
 
+#[allow(static_mut_refs)]
 fn main() {
     let args = Args::parse();
     print_info(&args);
 
-    let mpi_config = MPIConfig::prover_new();
+    // This is a designated single-process benchmark
+    let mpi_config = MPIConfig::prover_new(None, None);
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
+        "m31" => match pcs_type {
+            PolynomialCommitmentType::Raw => match args.circuit.as_str() {
+                "keccak" => run_benchmark::<M31x1ConfigSha2RawVanilla>(&args, mpi_config),
+                _ => unreachable!(),
+            },
+            _ => unreachable!("Unsupported PCS type for M31"),
+        },
+
         "m31ext3" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
                 "keccak" => run_benchmark::<M31x16ConfigSha2RawVanilla>(&args, mpi_config.clone()),
@@ -113,14 +123,12 @@ fn main() {
         },
         _ => unreachable!(),
     };
-
-    MPIConfig::finalize();
 }
 
-fn run_benchmark<'a, Cfg: GKREngine>(args: &'a Args, mpi_config: MPIConfig)
+fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig<'static>)
 where
-    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad: 'a,
-    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad: 'static,
+    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad: 'static,
+    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
 {
     let partial_proof_cnts = (0..args.threads)
         .map(|_| Arc::new(Mutex::new(0)))
@@ -215,7 +223,7 @@ where
     println!("Circuit loaded!");
 
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
             circuit_template.log_input_size(),
             &mpi_config,
         );
@@ -250,14 +258,14 @@ where
         .into_iter()
         .enumerate()
         .map(|(i, mut c)| {
-            let local_config = mpi_config.clone();
             let partial_proof_cnt = partial_proof_cnts[i].clone();
             let pcs_params = pcs_params.clone();
             let pcs_proving_key = pcs_proving_key.clone();
             let mut pcs_scratch = pcs_scratch.clone();
             thread::spawn(move || {
                 // bench func
-                let mut prover = Prover::<Cfg>::new(local_config.clone());
+                let local_mpi_config = MPIConfig::prover_new(None, None);
+                let mut prover = Prover::<Cfg>::new(local_mpi_config);
                 prover.prepare_mem(&c);
                 loop {
                     prover.prove(&mut c, &pcs_params, &pcs_proving_key, &mut pcs_scratch);

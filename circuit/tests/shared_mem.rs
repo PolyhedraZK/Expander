@@ -66,7 +66,9 @@ fn load_circuit<Cfg: GKREngine>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::F
 
 #[test]
 fn test_shared_mem() {
-    let mpi_config = MPIConfig::prover_new();
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     test_shared_mem_helper(&mpi_config, Some(123u8));
     test_shared_mem_helper(&mpi_config, Some(456789usize));
     test_shared_mem_helper(&mpi_config, Some(vec![1u8, 2, 3]));
@@ -82,8 +84,6 @@ fn test_shared_mem() {
     test_shared_mem_helper(&mpi_config, circuit);
     let circuit = load_circuit::<Goldilocksx8ConfigSha2Raw>(&mpi_config);
     test_shared_mem_helper(&mpi_config, circuit);
-
-    MPIConfig::finalize();
 }
 
 #[allow(unreachable_patterns)]

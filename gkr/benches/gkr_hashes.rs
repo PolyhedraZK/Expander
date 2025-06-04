@@ -20,10 +20,12 @@ use transcript::BytesHashTranscript;
 fn prover_run<Cfg: GKREngine>(
     mpi_config: &MPIConfig,
     circuit: &mut Circuit<Cfg::FieldConfig>,
-    pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
-    pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
-    pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad,
-) {
+    pcs_params: &<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
+    pcs_proving_key: &<<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::PKey,
+    pcs_scratch: &mut <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad,
+) where
+    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+{
     let mut prover = Prover::<Cfg>::new(mpi_config.clone());
     prover.prepare_mem(circuit);
     prover.prove(circuit, pcs_params, pcs_proving_key, pcs_scratch);
@@ -33,13 +35,13 @@ fn benchmark_setup<Cfg: GKREngine>(
     circuit_file: &str,
     witness_file: Option<&str>,
 ) -> (
-    MPIConfig,
+    MPIConfig<'static>,
     Circuit<Cfg::FieldConfig>,
-    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
-    <<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
-    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad,
-) {
-    let mpi_config = MPIConfig::prover_new();
+    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::Params,
+    <<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::SRS as StructuredReferenceString>::PKey,
+    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad,
+){
+    let mpi_config = MPIConfig::prover_new(None, None);
     let mut circuit =
         Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(circuit_file);
 
@@ -50,7 +52,7 @@ fn benchmark_setup<Cfg: GKREngine>(
     }
 
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
         );

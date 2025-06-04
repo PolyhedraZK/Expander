@@ -46,7 +46,9 @@ fn main() {
     let args = Args::parse();
     print_info(&args);
 
-    let mpi_config = MPIConfig::prover_new();
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
@@ -113,11 +115,12 @@ fn main() {
         },
         _ => unreachable!(),
     };
-
-    MPIConfig::finalize();
 }
 
-fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
+fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig)
+where
+    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+{
     let pack_size = <Cfg::FieldConfig as FieldEngine>::get_field_pack_size();
 
     // load circuit
@@ -196,7 +199,7 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
     prover.prepare_mem(&circuit);
 
     let (pcs_params, pcs_proving_key, _pcs_verification_key, mut pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
         );
@@ -252,7 +255,9 @@ fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig) {
 }
 
 fn print_info(args: &Args) {
-    let mpi_config = MPIConfig::prover_new();
+    let universe = MPIConfig::init().unwrap();
+    let world = universe.world();
+    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     if !mpi_config.is_root() {
         return;
     }

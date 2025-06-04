@@ -9,6 +9,7 @@ use halo2curves::{
     CurveAffine,
 };
 use itertools::izip;
+use serdes::ExpSerde;
 
 use crate::*;
 
@@ -20,8 +21,8 @@ pub(crate) fn coeff_form_hyperkzg_local_poly_oracles<E>(
 ) -> (Vec<E::G1Affine>, Vec<Vec<E::Fr>>)
 where
     E: MultiMillerLoop,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
     E::Fr: ExtensionField,
 {
     let mut local_coeffs = coeffs.to_vec();
@@ -43,7 +44,7 @@ where
 
 #[inline(always)]
 pub(crate) fn coeff_form_hyperkzg_local_evals<E>(
-    coeffs: &Vec<E::Fr>,
+    coeffs: &[E::Fr],
     folded_oracle_coeffs: &[Vec<E::Fr>],
     local_alphas: &[E::Fr],
     beta: E::Fr,
@@ -66,7 +67,11 @@ where
 
     let mut local_evals = HyperKZGLocalEvals::<E>::new_from_beta2_evals(beta2_eval);
 
-    izip!(iter::once(coeffs).chain(folded_oracle_coeffs), local_alphas).for_each(|(cs, alpha)| {
+    izip!(
+        iter::once(coeffs).chain(folded_oracle_coeffs.iter().map(|x| x.as_slice())),
+        local_alphas
+    )
+    .for_each(|(cs, alpha)| {
         let beta_eval = univariate_evaluate(cs, &beta_pow_series);
         let neg_beta_eval = univariate_evaluate(cs, &neg_beta_pow_series);
 
@@ -103,14 +108,14 @@ where
 #[inline(always)]
 pub fn coeff_form_uni_hyperkzg_open<E, T>(
     srs: &CoefFormUniKZGSRS<E>,
-    coeffs: &Vec<E::Fr>,
+    coeffs: &[E::Fr],
     alphas: &[E::Fr],
     fs_transcript: &mut T,
 ) -> (E::Fr, HyperKZGOpening<E>)
 where
     E: MultiMillerLoop,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
     E::Fr: ExtensionField,
     T: Transcript,
 {
@@ -177,8 +182,9 @@ pub fn coeff_form_uni_hyperkzg_verify<E, T>(
 ) -> bool
 where
     E: MultiMillerLoop,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::Fr: ExtensionField,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: ExpSerde,
+    E::Fr: ExtensionField + ExpSerde,
     T: Transcript,
 {
     opening

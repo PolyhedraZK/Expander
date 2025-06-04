@@ -125,8 +125,7 @@ fn parse_polynomial_commitment_type(
             format!("OrionPCSForGKR::<{field_config}, Goldilocksx8>").to_owned(),
         ),
         _ => panic!(
-            "Unknown polynomial commitment type in config macro expansion. PCS: '{}', Field: '{}'",
-            pcs_type_str, field_type
+            "Unknown polynomial commitment type in config macro expansion. PCS: '{pcs_type_str}', Field: '{field_type}'"
         ),
     }
 }
@@ -177,11 +176,13 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
 
     let ret: TokenStream = quote! {
         #[derive(Default, Debug, Clone, PartialOrd, Ord, Hash, PartialEq, Eq, Copy)]
-        #visibility struct #config_name;
+        #visibility struct #config_name<'a> {
+            _marker: std::marker::PhantomData<&'a ()>,
+        }
 
-        impl GKREngine for #config_name {
+        impl<'a> GKREngine for #config_name<'a> {
             type FieldConfig = #field_config;
-            type MPIConfig = MPIConfig;
+            type MPIConfig = MPIConfig<'a>;
             type TranscriptConfig = #transcript_type_expr;
             type PCSConfig = #polynomial_commitment_type_expr;
             const SCHEME: GKRScheme = #scheme_config;

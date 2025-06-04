@@ -6,6 +6,7 @@ use halo2curves::{
     CurveAffine,
 };
 use itertools::izip;
+use serdes::ExpSerde;
 
 use crate::*;
 
@@ -15,8 +16,8 @@ pub(crate) fn generate_coef_form_uni_kzg_srs_for_testing<E: MultiMillerLoop>(
     mut rng: impl rand::RngCore,
 ) -> CoefFormUniKZGSRS<E>
 where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     assert!(length.is_power_of_two());
 
@@ -49,13 +50,17 @@ pub(crate) fn coeff_form_uni_kzg_commit<E: MultiMillerLoop>(
     coeffs: &[E::Fr],
 ) -> E::G1Affine
 where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
     let mut com = E::G1::generator() * E::Fr::ZERO;
+    // let timer = ::utils::timer::Timer::new(format!("kzg commit msm {}", coeffs.len()).as_ref(),
+    // true);
     msm::multiexp_serial(coeffs, &srs.powers_of_tau[..coeffs.len()], &mut com);
+    // timer.stop();
+
     com.into()
 }
 
@@ -66,14 +71,17 @@ pub fn coeff_form_uni_kzg_open_eval<E: MultiMillerLoop>(
     alpha: E::Fr,
 ) -> (E::Fr, E::G1Affine)
 where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
     let (div, eval) = univariate_degree_one_quotient(coeffs, alpha);
     let mut opening = E::G1::generator() * E::Fr::ZERO;
+
+    // let timer = ::utils::timer::Timer::new(format!("kzg open msm {}", div.len()).as_ref(), true);
     msm::multiexp_serial(&div, &srs.powers_of_tau[..div.len()], &mut opening);
+    // timer.stop();
 
     (eval, opening.into())
 }
@@ -88,6 +96,7 @@ pub(crate) fn coeff_form_uni_kzg_verify<E: MultiMillerLoop>(
 ) -> bool
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: ExpSerde,
 {
     let g1_eval: E::G1Affine = (E::G1Affine::generator() * eval).into();
     let g2_alpha: E::G2 = E::G2Affine::generator() * alpha;

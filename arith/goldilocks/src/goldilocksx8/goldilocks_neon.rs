@@ -1,6 +1,5 @@
 use std::{
     fmt::Debug,
-    io::{Read, Write},
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -8,7 +7,7 @@ use std::{
 use arith::{field_common, FFTField, Field, SimdField};
 use ethnum::U256;
 use rand::RngCore;
-use serdes::{ExpSerde, SerdeResult};
+use serdes::ExpSerde;
 
 use crate::{goldilocks::p2_instructions, Goldilocks};
 
@@ -18,37 +17,12 @@ const GOLDILOCKS_PACK_SIZE: usize = 8;
 /// NeonGoldilocks packs 8 Goldilocks elements
 /// Unlike NeonM31 we end up not using neon's 128-bit vectorized operations
 /// Working on vectors seems to be slower since we only pack 2 elements per slot
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ExpSerde)]
 pub struct NeonGoldilocks {
     pub v: [Goldilocks; 8],
 }
 
 field_common!(NeonGoldilocks);
-
-impl ExpSerde for NeonGoldilocks {
-    const SERIALIZED_SIZE: usize = 64; // 8 * 8 bytes
-
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        for elem in &self.v {
-            elem.serialize_into(&mut writer)?;
-        }
-        Ok(())
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut v = [Goldilocks::zero(); 8];
-        for elem in &mut v {
-            let mut bytes = [0u8; 8];
-            reader.read_exact(&mut bytes)?;
-            *elem = Goldilocks {
-                v: u64::from_le_bytes(bytes),
-            };
-        }
-        Ok(Self { v })
-    }
-}
 
 impl Field for NeonGoldilocks {
     const NAME: &'static str = "Neon Packed Goldilocks";

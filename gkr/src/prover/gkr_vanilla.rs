@@ -25,7 +25,11 @@ pub fn gkr_prove<F: FieldEngine>(
         )
         .into();
 
-    root_println!(mpi_config, "transcript after challenge: {}\n\n", transcript);
+    root_println!(
+        mpi_config,
+        "transcript after challenge: {:?}\n\n",
+        transcript
+    );
 
     root_println!(mpi_config, "challenges: {:?}\n\n", challenge);
 
@@ -40,7 +44,11 @@ pub fn gkr_prove<F: FieldEngine>(
         mpi_config,
     );
 
-    root_println!(mpi_config, "transcript after challenge: {}\n\n", transcript);
+    root_println!(
+        mpi_config,
+        "transcript after challenge: {:?}\n\n",
+        transcript
+    );
 
     for i in (0..layer_num).rev() {
         let timer = Timer::new(
@@ -64,7 +72,7 @@ pub fn gkr_prove<F: FieldEngine>(
             i == 1,
         );
 
-        root_println!(mpi_config, "transcript layer {}: {}", i, transcript);
+        root_println!(mpi_config, "transcript layer {}: {:?}", i, transcript);
 
         if challenge.rz_1.is_some() {
             // TODO: try broadcast beta.unwrap directly
@@ -76,12 +84,12 @@ pub fn gkr_prove<F: FieldEngine>(
         }
         timer.stop();
 
-        root_println!(mpi_config, "{}\n\n", transcript);
+        root_println!(mpi_config, "{:?}\n\n", transcript);
     }
 
     root_println!(
         mpi_config,
-        "transcript after challenge3: {}\n\n",
+        "transcript after challenge3: {:?}\n\n",
         transcript
     );
     (claimed_v, challenge)

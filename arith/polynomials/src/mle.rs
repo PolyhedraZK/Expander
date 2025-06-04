@@ -173,7 +173,7 @@ impl<F: Field> MultilinearExtension<F> for MultiLinearPoly<F> {
         self.coeffs.clone()
     }
 
-    fn hypercube_basis_ref(&self) -> &Vec<F> {
+    fn hypercube_basis_ref(&self) -> &[F] {
         &self.coeffs
     }
 
@@ -227,5 +227,9 @@ impl<F: Field> MutableMultilinearExtension<F> for MultiLinearPoly<F> {
                     .for_each(|(a, b)| *a -= *b);
             })
         }
+    }
+
+    fn lift_to_n_vars(&mut self, n_vars: usize) {
+        self.coeffs.resize(1 << n_vars, F::ZERO);
     }
 }

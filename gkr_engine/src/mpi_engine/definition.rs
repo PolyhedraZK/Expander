@@ -10,26 +10,7 @@ use super::SharedMemory;
 /// MPI APIs for distributed computing operations
 pub trait MPIEngine {
     /// The rank of the root process (always 0)
-    const ROOT_RANK: i32;
-
-    /// The maximum chunk size for MPI communications
-    const CHUNK_SIZE: usize;
-
-    /// Initialize the MPI environment.
-    /// Safe to call multiple times as `mpi::initialize()` will return None if already initialized.
-    fn init();
-
-    /// Finalize the MPI environment
-    fn finalize();
-
-    /// Create a new MPI engine for the prover
-    fn prover_new() -> Self;
-
-    /// Create a new MPI engine for the verifier with specified world size
-    ///
-    /// # Arguments
-    /// * `world_size` - The total number of processes in the MPI world
-    fn verifier_new(world_size: i32) -> Self;
+    const ROOT_RANK: i32 = 0;
 
     /// Gather vectors from all processes into the root process
     ///
@@ -42,6 +23,17 @@ pub trait MPIEngine {
     /// - Non-root processes send their vectors but don't modify global_vec
     fn gather_vec<F: Sized + Clone>(&self, local_vec: &[F], global_vec: &mut Vec<F>);
 
+    /// Scatter vector from root process into all processes
+    ///
+    /// # Arguments
+    /// * `send_vec` - The global vector to be sent to all processes
+    /// * `receive_vec` - Buffer in non-root process to store sent vector segment
+    ///
+    /// # Behavior
+    /// - Root process sends vector segments into all vectors
+    /// - Non-root processes receive their segment share but not modifying send_vec
+    fn scatter_vec<F: Sized + Clone>(&self, send_vec: &[F], receive_vec: &mut [F]);
+
     /// Broadcast a field element from root process to all processes
     ///
     /// # Arguments
@@ -50,7 +42,7 @@ pub trait MPIEngine {
     /// # Behavior
     /// - Root process broadcasts its value
     /// - All other processes receive the value
-    fn root_broadcast_f<F: Field>(&self, f: &mut F);
+    fn root_broadcast_f<F: Copy>(&self, f: &mut F);
 
     /// Broadcast a vector of bytes from root process to all processes
     ///

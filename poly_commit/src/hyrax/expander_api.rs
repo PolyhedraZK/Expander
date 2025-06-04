@@ -3,7 +3,7 @@ use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
 };
-use halo2curves::{ff::PrimeField, msm, CurveAffine};
+use halo2curves::{ff::PrimeField, group::UncompressedEncoding, msm, CurveAffine};
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
@@ -18,12 +18,13 @@ use crate::{
     HyraxCommitment, HyraxOpening, HyraxPCS, PedersenParams,
 };
 
-impl<G, C> ExpanderPCS<G> for HyraxPCS<C>
+impl<G, C> ExpanderPCS<G, C::Scalar> for HyraxPCS<C>
 where
     G: FieldEngine<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
-    C: CurveAffine + ExpSerde,
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
+    C::Base: PrimeField<Repr = [u8; 32]>,
 {
     const NAME: &'static str = "HyraxPCSForExpanderGKR";
 
@@ -36,25 +37,27 @@ where
     type Opening = HyraxOpening<C>;
     type SRS = PedersenParams<C>;
 
-    fn gen_params(n_input_vars: usize) -> Self::Params {
+    fn gen_params(n_input_vars: usize, _world_size: usize) -> Self::Params {
         n_input_vars
     }
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
-    fn gen_srs_for_testing(
+    fn gen_srs(
         params: &Self::Params,
-        _mpi_engine: &impl MPIEngine,
+        mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
-    ) -> (Self::SRS, usize) {
-        (hyrax_setup(*params, rng), *params)
+    ) -> Self::SRS {
+        let mpi_vars = mpi_engine.world_size().ilog2() as usize;
+
+        hyrax_setup(*params, mpi_vars, rng)
     }
 
     fn commit(
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<C::Scalar>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         let local_commit = hyrax_commit(proving_key, poly);
@@ -81,7 +84,7 @@ where
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<<G as FieldEngine>::SimdCircuitField>,
+        poly: &impl polynomials::MultilinearExtension<C::Scalar>,
         x: &ExpanderSingleVarChallenge<G>,
         _transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,
@@ -91,10 +94,8 @@ where
             return open.into();
         }
 
-        let local_num_vars = poly.num_vars();
-        let pedersen_vars = (local_num_vars + 1) / 2;
-        let pedersen_len = 1usize << pedersen_vars;
-        assert_eq!(pedersen_len, proving_key.bases.len());
+        let pedersen_len = proving_key.msm_len();
+        let pedersen_vars = pedersen_len.ilog2() as usize;
 
         let local_vars = x.local_xs();
         let mut local_basis = poly.hypercube_basis();
@@ -124,18 +125,15 @@ where
             return hyrax_verify(verifying_key, commitment, &x.local_xs(), v, opening);
         }
 
-        let local_num_vars = x.local_xs().len();
-        let pedersen_vars = (local_num_vars + 1) / 2;
-        let pedersen_len = 1usize << pedersen_vars;
-        assert_eq!(pedersen_len, verifying_key.bases.len());
+        let pedersen_len = verifying_key.msm_len();
+        let pedersen_vars = pedersen_len.ilog2() as usize;
 
         let local_vars = x.local_xs();
         let mut non_row_vars = local_vars[pedersen_vars..].to_vec();
         non_row_vars.extend_from_slice(&x.r_mpi);
 
         let eq_combination: Vec<C::Scalar> = EqPolynomial::build_eq_x_r(&non_row_vars);
-        let mut row_comm = C::Curve::default();
-        msm::multiexp_serial(&eq_combination, &commitment.0, &mut row_comm);
+        let row_comm = msm::best_multiexp(&eq_combination, &commitment.0);
 
         if pedersen_commit(verifying_key, &opening.0) != row_comm.into() {
             return false;

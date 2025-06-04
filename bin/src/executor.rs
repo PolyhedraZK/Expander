@@ -112,7 +112,7 @@ pub fn detect_field_type_from_circuit_file(circuit_file: &str) -> FieldType {
         GF2ExtConfig::SENTINEL => FieldType::GF2Ext128,
         Goldilocksx8Config::SENTINEL => FieldType::Goldilocksx8,
         _ => {
-            println!("Unknown field type. Field byte value: {:?}", field_bytes);
+            println!("Unknown field type. Field byte value: {field_bytes:?}");
             exit(1);
         }
     }
@@ -124,13 +124,16 @@ pub fn prove<Cfg: GKREngine>(
 ) -> (
     <<Cfg as GKREngine>::FieldConfig as FieldEngine>::ChallengeField,
     Proof,
-) {
+)
+where
+    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+{
     let mut prover = Prover::<Cfg>::new(mpi_config.clone());
     prover.prepare_mem(circuit);
 
     // TODO: Read PCS setup from files
     let (pcs_params, pcs_proving_key, _, mut pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
         );
@@ -148,6 +151,7 @@ pub fn verify<Cfg: GKREngine>(
     // TODO: Read PCS setup from files
     let (pcs_params, _, pcs_verification_key, _) = expander_pcs_init_testing_only::<
         Cfg::FieldConfig,
+        Cfg::PCSField,
         Cfg::PCSConfig,
     >(circuit.log_input_size(), &mpi_config);
     let verifier = Verifier::<Cfg>::new(mpi_config);
@@ -162,10 +166,15 @@ pub fn verify<Cfg: GKREngine>(
     )
 }
 
-pub async fn run_command<Cfg: GKREngine + 'static>(
+// The 'Prove' command can be run with mpi more than one process
+// The 'Verify' command must be run with mpi size = 1
+// The 'Serve' command must be run with mpi size = 1
+pub async fn run_command<'a, Cfg: GKREngine + 'static>(
     command: &ExpanderExecArgs,
-    mpi_config: &MPIConfig,
-) {
+    mpi_config: &MPIConfig<'a>,
+) where
+    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+{
     let subcommands = command.subcommands.clone();
 
     match subcommands {
@@ -176,10 +185,9 @@ pub async fn run_command<Cfg: GKREngine + 'static>(
         } => {
             let (mut circuit, mut window) =
                 Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, mpi_config);
-            let mpi_config = MPIConfig::prover_new();
             let prover = Prover::<Cfg>::new(mpi_config.clone());
 
-            circuit.prover_load_witness_file(&witness_file, &mpi_config);
+            circuit.prover_load_witness_file(&witness_file, mpi_config);
             let (claimed_v, proof) = prove::<Cfg>(&mut circuit, mpi_config.clone());
 
             if prover.mpi_config.is_root() {
@@ -240,7 +248,7 @@ pub async fn run_command<Cfg: GKREngine + 'static>(
             host_ip,
             port,
         } => {
-            let mpi_config = MPIConfig::prover_new();
+            let mpi_config = MPIConfig::prover_new(None, None);
             let prover = Prover::<Cfg>::new(mpi_config.clone());
 
             assert!(
@@ -257,21 +265,15 @@ pub async fn run_command<Cfg: GKREngine + 'static>(
             let (circuit, _) =
                 Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, &mpi_config);
 
-            let mut prover = Prover::<Cfg>::new(mpi_config.clone());
-            prover.prepare_mem(&circuit);
-            let verifier = Verifier::<Cfg>::new(mpi_config.clone());
-
             // TODO: Read PCS setup from files
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
-                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
+                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
                     circuit.log_input_size(),
                     &prover.mpi_config,
                 );
 
             let circuit = Arc::new(Mutex::new(circuit));
             let circuit_clone_for_verifier = circuit.clone();
-            let prover = Arc::new(Mutex::new(prover));
-            let verifier = Arc::new(Mutex::new(verifier));
             let pcs_params = Arc::new(Mutex::new(pcs_params));
             let pcs_params_clone_for_verifier = pcs_params.clone();
             let pcs_proving_key = Arc::new(Mutex::new(pcs_proving_key));
@@ -281,7 +283,7 @@ pub async fn run_command<Cfg: GKREngine + 'static>(
             let ready_time = chrono::offset::Utc::now();
             let ready = warp::path("ready").map(move || {
                 info!("Received ready request.");
-                reply::with_status(format!("Ready since {:?}", ready_time), StatusCode::OK)
+                reply::with_status(format!("Ready since {ready_time:?}"), StatusCode::OK)
             });
             let prove =
                 warp::path("prove")
@@ -289,8 +291,10 @@ pub async fn run_command<Cfg: GKREngine + 'static>(
                     .map(move |bytes: bytes::Bytes| {
                         info!("Received prove request.");
                         let witness_bytes: Vec<u8> = bytes.to_vec();
+
                         let mut circuit = circuit.lock().unwrap();
-                        let mut prover = prover.lock().unwrap();
+                        let mut prover = Prover::<Cfg>::new(MPIConfig::prover_new(None, None));
+                        prover.prepare_mem(&circuit);
                         let pcs_params = pcs_params.lock().unwrap();
                         let pcs_proving_key = pcs_proving_key.lock().unwrap();
                         let mut pcs_scratch = pcs_scratch.lock().unwrap();
@@ -325,7 +329,7 @@ pub async fn run_command<Cfg: GKREngine + 'static>(
                             ..16 + length_of_witness_bytes + length_of_proof_bytes];
 
                         let mut circuit = circuit_clone_for_verifier.lock().unwrap();
-                        let verifier = verifier.lock().unwrap();
+                        let verifier = Verifier::<Cfg>::new(MPIConfig::verifier_new(1));
                         let pcs_verification_key = pcs_verification_key.lock().unwrap();
                         circuit.load_witness_bytes(
                             witness_bytes,
