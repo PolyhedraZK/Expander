@@ -11,3 +11,6 @@ pub use scratch_pad::{ProverScratchPad, VerifierScratchPad};
 
 mod utils;
 pub use utils::*;
+
+// #[cfg(test)]
+// mod tests;

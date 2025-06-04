@@ -2,8 +2,8 @@
 
 use circuit::Circuit;
 use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
-    Transcript,
+    root_println, ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig,
+    MPIEngine, Transcript,
 };
 use sumcheck::{sumcheck_prove_gkr_layer, ProverScratchPad};
 use utils::timer::Timer;
@@ -25,6 +25,14 @@ pub fn gkr_prove<F: FieldEngine>(
         )
         .into();
 
+    root_println!(
+        mpi_config,
+        "transcript after challenge: {:?}\n\n",
+        transcript
+    );
+
+    root_println!(mpi_config, "challenges: {:?}\n\n", challenge);
+
     let mut alpha = None;
 
     let output_vals = &circuit.layers.last().unwrap().output_vals;
@@ -34,6 +42,12 @@ pub fn gkr_prove<F: FieldEngine>(
         &mut sp.hg_evals,
         &mut sp.eq_evals_first_half, // confusing name here..
         mpi_config,
+    );
+
+    root_println!(
+        mpi_config,
+        "transcript after challenge: {:?}\n\n",
+        transcript
     );
 
     for i in (0..layer_num).rev() {
@@ -55,7 +69,10 @@ pub fn gkr_prove<F: FieldEngine>(
             sp,
             mpi_config,
             i == layer_num - 1,
+            i == 1,
         );
+
+        root_println!(mpi_config, "transcript layer {}: {:?}", i, transcript);
 
         if challenge.rz_1.is_some() {
             // TODO: try broadcast beta.unwrap directly
@@ -66,7 +83,14 @@ pub fn gkr_prove<F: FieldEngine>(
             alpha = None;
         }
         timer.stop();
+
+        root_println!(mpi_config, "{:?}\n\n", transcript);
     }
 
+    root_println!(
+        mpi_config,
+        "transcript after challenge3: {:?}\n\n",
+        transcript
+    );
     (claimed_v, challenge)
 }
