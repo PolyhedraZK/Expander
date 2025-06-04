@@ -12,7 +12,7 @@ pub fn transcript_root_broadcast(transcript: &mut impl Transcript, mpi_engine: &
 /// Note: Currently, the verifier is assumed to run on a single core with no mpi sync,
 /// the word 'sync' here refers to the verifier syncing up with the prover's transcript state,
 /// which is updated by 'transcript_root_broadcast' if mpi_size > 1.
-pub fn transcript_verifier_sync<T>(transcript: &mut T, mpi_world_size: usize)
+pub fn transcript_verifier_sync<T>(transcript: &mut T, _mpi_world_size: usize)
 where
     T: Transcript,
 {

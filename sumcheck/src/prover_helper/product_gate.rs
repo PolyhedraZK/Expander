@@ -61,6 +61,7 @@ impl SumcheckProductGateHelper {
     // Output:
     // - the univariate polynomial that prover sends to the verifier
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn poly_eval_at<F: FieldEngine>(
         &self,
         var_idx: usize,

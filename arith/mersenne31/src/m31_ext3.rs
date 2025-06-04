@@ -8,7 +8,7 @@ use std::{
 
 use arith::{field_common, Field};
 use arith::{ExtensionField, SimdField};
-use serdes::{ExpSerde, SerdeResult};
+use serdes::ExpSerde;
 
 use crate::{
     m31::{mod_reduce_u32_safe, M31},
