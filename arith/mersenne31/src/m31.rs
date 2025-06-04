@@ -9,6 +9,8 @@ use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
 
+use crate::M31x16;
+
 pub const M31_MOD: u32 = 2147483647;
 
 #[inline]
@@ -304,5 +306,14 @@ impl std::hash::Hash for M31 {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         state.write_u32(mod_reduce_u32_safe(self.v));
+    }
+}
+
+impl Mul<M31x16> for M31 {
+    type Output = M31x16;
+
+    #[inline(always)]
+    fn mul(self, rhs: M31x16) -> Self::Output {
+        rhs * self
     }
 }

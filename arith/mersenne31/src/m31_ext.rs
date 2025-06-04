@@ -146,6 +146,11 @@ impl Field for M31Ext3 {
             ],
         }
     }
+
+    #[inline(always)]
+    fn get_degree() -> usize {
+        3
+    }
 }
 
 impl ExtensionField for M31Ext3 {

@@ -202,6 +202,11 @@ impl Field for AVXM31 {
         let res = unsafe { mod_reduce_epi32(_mm512_add_epi32(self.v, double)) };
         Self { v: res }
     }
+
+    #[inline(always)]
+    fn get_pack_size() -> usize {
+        16
+    }
 }
 
 impl SimdField for AVXM31 {

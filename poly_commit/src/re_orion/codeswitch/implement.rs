@@ -51,14 +51,15 @@ pub fn verify<EvalF: Field, ResF: Field>(
     }
 }
 
-fn prove_in_plonky3<PF: PrimeField32 + ComplexExtendable + BinomiallyExtendable<3>, const Degree: usize, EvalF: Field, ResF: Field> (
+fn prove_in_plonky3<PF: PrimeField32 + ComplexExtendable + BinomiallyExtendable<Degree>, const Degree: usize, EvalF: Field, ResF: Field> (
     air: &CodeSwitchAir<EvalF, ResF>,
     witness: &WitnessForPlonky3<ResF>,
     public_values: &PublicValuesForPlonky3<EvalF, ResF>,
 ) -> Vec<u8> {
-    let width = air.msg_len * 2;
-    let mut trace = PF::zero_vec(width * 4);
     let witness_size = ResF::get_degree() * ResF::get_pack_size();
+    let width = air.msg_len * 2 * witness_size;
+    let mut trace = PF::zero_vec(width * 4);
+println!("prepare trace {}", width);
     unsafe { 
         let mut pos = 0;
         std::ptr::copy_nonoverlapping(witness.y_gamma.as_ptr() as *const PF, trace.as_mut_ptr(), witness_size * witness.y_gamma.len()); 
@@ -68,27 +69,33 @@ fn prove_in_plonky3<PF: PrimeField32 + ComplexExtendable + BinomiallyExtendable<
         std::ptr::copy_nonoverlapping(public_values.c_gamma.as_ptr() as *const PF, trace.as_mut_ptr().add(pos), public_values.c_gamma.len() * witness_size);
         pos += public_values.c_gamma.len() * witness_size;
     }
+println!("trace fin");
     let challenge_size = EvalF::get_degree() * EvalF::get_pack_size();
     // TODO: borrow
     let mut pis = PF::zero_vec(public_values.r1.len() * challenge_size + (public_values.c_gamma.len() + 1) * witness_size);
+// println!("{:?}", pis);
 println!("prove pis len {} {} {} ", pis.len(), public_values.r1.len(), public_values.c_gamma.len());
     unsafe {
         std::ptr::copy_nonoverlapping(public_values.r1.as_ptr() as *const PF, pis.as_mut_ptr().add(air.code_len * witness_size), public_values.r1.len() * challenge_size);
+// println!("r1 set {:?}", &pis[84..]);
         std::ptr::copy_nonoverlapping(vec![public_values.y].as_ptr() as *const PF, pis.as_mut_ptr().add(air.code_len * witness_size + public_values.r1.len() * challenge_size), witness_size);
     }
+// println!("y {:?}", public_values.y);
+// println!("{:?}", pis);
+// println!("{:?}", &pis[84..]);
 
     let (trace_head, trace_tail) = trace.split_at_mut(width * 2);
     trace_tail[..width].copy_from_slice(&trace_head[width..]);
     trace_tail[width..width * 2].copy_from_slice(&trace_head[width..]);
 
-    let config = P3Config::<PF>::init();
+    let config = P3Config::<PF, Degree>::init();
 
 println!("plonky3 start");
-    let proof = p3prove(&config, air, &mut P3Config::<PF>::get_challenger(), RowMajorMatrix::new(trace, width), &pis);
+    let proof = p3prove(&config, air, &mut P3Config::<PF, Degree>::get_challenger(), RowMajorMatrix::new(trace, width), &pis);
     serde_cbor::to_vec(&proof).unwrap()
 }
 
-fn verify_in_plonky3<PF: PrimeField32 + ComplexExtendable + BinomiallyExtendable<3>, const Degree: usize, EvalF: Field, ResF: Field> (
+fn verify_in_plonky3<PF: PrimeField32 + ComplexExtendable + BinomiallyExtendable<Degree>, const Degree: usize, EvalF: Field, ResF: Field> (
     air: &CodeSwitchAir<EvalF, ResF>,
     proof: &[u8],
     public_values: &PublicValuesForPlonky3<EvalF, ResF>,
@@ -104,15 +111,21 @@ println!("verify pis len {} {} {} ", pis.len(), public_values.r1.len(), public_v
     }
 
     // let config = MyConfig::new(pcs, challenger);
-    let config = P3Config::<PF>::init();
+    let config = P3Config::<PF, Degree>::init();
 
-    p3verify(&config, air, &mut P3Config::<PF>::get_challenger(), &serde_cbor::from_slice(proof).unwrap(), &pis);
-    true
+    let rst = p3verify(&config, air, &mut P3Config::<PF, Degree>::get_challenger(), &serde_cbor::from_slice(proof).unwrap(), &pis);
+    if let Err(e) = rst {
+        println!("{:?}", e);
+        false
+    }
+    else {
+        true
+    }
 }
 
-trait Plonky3Config<F: PrimeField32> {
+trait Plonky3Config<F: PrimeField32, const D: usize> {
     type Val: PrimeField32 = F;
-    type Challenge = BinomialExtensionField<Self::Val, 3>;
+    type Challenge = BinomialExtensionField<Self::Val, D>;
 
     // Your choice of Hash Function
     type ByteHash: CryptographicHasher<u8, [u8; 32]> = Keccak256Hash;
@@ -139,11 +152,11 @@ trait Plonky3Config<F: PrimeField32> {
     fn get_challenger() -> Self::Challenger;
 }
 
-struct P3Config<F: PrimeField32> {
+struct P3Config<F: PrimeField32, const D: usize> {
     _marker: PhantomData<F>,
 }
 
-impl<F: PrimeField32> Plonky3Config<F> for P3Config<F> {
+impl<F: PrimeField32, const D: usize> Plonky3Config<F, D> for P3Config<F, D> {
     #[inline(always)]
     fn init() -> Self::MyConfig {
         let byte_hash = Self::ByteHash {};

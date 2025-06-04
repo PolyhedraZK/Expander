@@ -273,6 +273,14 @@ impl Field for M31Ext3x16 {
     fn from_uniform_bytes(_bytes: &[u8]) -> Self {
         unimplemented!("vec m31: cannot convert from 32 bytes")
     }
+
+    fn get_degree() -> usize {
+        3
+    }
+
+    fn get_pack_size() -> usize {
+        16
+    }
 }
 
 impl Mul<M31Ext3> for M31Ext3x16 {

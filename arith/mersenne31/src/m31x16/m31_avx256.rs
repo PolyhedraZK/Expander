@@ -247,6 +247,11 @@ impl Field for AVXM31 {
         };
         Self { v: res }
     }
+
+    #[inline(always)]
+    fn get_pack_size() -> usize {
+        16
+    }
 }
 
 impl SimdField for AVXM31 {

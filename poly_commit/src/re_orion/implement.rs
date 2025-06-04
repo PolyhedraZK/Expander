@@ -106,15 +106,14 @@ where
     pub fn new(wit_len: usize) -> Self {
         let msg_len = ((wit_len + COLUMN_SIZE - 1) >> COLUMN_LG);
         let encoder = Encoder::<ResF::UnitField>::new(msg_len);
-        let air = CodeSwitchAir::<EvalF, ResF>{
-            graph_c: encoder.c.clone(),
-            graph_d: encoder.d.clone(),
-            msg_len: msg_len,
-            code_len: encoder.code_len(),
-            column_size: COLUMN_SIZE,
-            idxs: (0..1500).collect(),
-            _marker: PhantomData,
-        };
+        let air = CodeSwitchAir::<EvalF, ResF>::new(
+            encoder.c.clone(),
+            encoder.d.clone(),
+            msg_len,
+            encoder.code_len(),
+            COLUMN_SIZE,
+            (0..1500).collect(),
+        );
         Self {
             msg_len,
             encoder,
@@ -161,6 +160,7 @@ where
     fn new(wit: &[WitF], msg_len: usize, encoder: &Encoder<ResF::UnitField>) -> Self {
         let mut wit = wit.to_vec();
         let n = msg_len;
+println!("witlen {} -> {}, codelen {}", wit.len(), n, encoder.code_len());
         wit.resize(COLUMN_SIZE * n, WitF::ZERO);
         let m = encoder.code_len();
         let mut code = vec![CodeF::ZERO; COLUMN_SIZE * m];
@@ -217,6 +217,10 @@ where
         let c_gamma = &mut scratch.c_gamma;
         let y_gamma = &mut scratch.y_gamma;
         
+        y_prime.fill(ResF::ZERO);
+        c_gamma.fill(ResF::ZERO);
+        y_gamma.fill(ResF::ZERO);
+
         // let eq_head = &mut scratch.eq_head;
         // let eq_tail = &mut scratch.eq_tail;
         // EqPolynomial::<EvalF>::eq_eval_at(eval_point[..COLUMN_SIZE], EvalF::ONE, r0, eq_head, eq_tail);
@@ -256,6 +260,14 @@ where
             y += y_prime[i] * r1[i];
         }
 
+let mut tmp = ResF::ZERO;
+for i in 0..self.width {
+    for j in 0..COLUMN_SIZE {
+        tmp += r0[j] * r1[i] * self.wit[j * self.width + i];
+    }
+}
+println!("test y {:?} ? {:?}", tmp, y);
+
         let c_gamma_root = tree_gamma.commit();
         transcript.append_u8_slice(&c_gamma_root);
         transcript.append_field_element(&y);
@@ -273,6 +285,7 @@ where
             c_gamma_proof.push(tree_gamma.prove(leaves + idx, 1));
         }
 
+println!("prepare plonky3");
         let witness = WitnessForPlonky3{
             y_gamma: &y_gamma,
             y1: &y_prime,
@@ -327,10 +340,11 @@ where
         let c_gamma = &opening.c_gamma_idx;
         let c_gamma_proof = &opening.c_gamma_proof;
         let mut leaf = vec![0u8; H::DIGEST_SIZE];
+        let mut f = vec![0u8; ResF::SIZE];
         for i in 0..c_gamma.len() {
             leaf.fill(0);
-            c_gamma[i].to_bytes(&mut leaf[..ResF::SIZE]);
-            hasher.hash_inplace(&mut leaf);
+            c_gamma[i].to_bytes(&mut f);
+            hasher.hash(&mut leaf, &f);
             if !MerkleTree::verify(c_gamma_root, &mut leaf, &c_gamma_proof[i], &hasher) {
                 return false;
             }
@@ -370,7 +384,8 @@ where
             r1: r1,
             y: opening.y,
             // TODO: idx only
-            c_gamma: &c_gamma,
+            // TODO: real idxs
+            c_gamma: &c_gamma[..28],
             // c_gamma_idx: &c_gamma_idx,
         };
 

@@ -34,12 +34,13 @@ impl<H: FiatShamirHasher> MerkleTree<H> {
         let block_size = H::DIGEST_SIZE;
         assert!(node.len() >= n * 2 * block_size);
         let leaves = &mut node[(1 << h) * block_size..(1 << (h + 1)) * block_size];
+        let mut f = vec![0u8; F::SIZE];
         leaves.fill(0);
         for (i, si) in src.iter().enumerate().take(n) {
             let leaf = &mut leaves[i * block_size..(i + 1) * block_size];
-             si.to_bytes(&mut leaf[..F::SIZE]);
-// println!("<{}> {:?}", i, &leaf);
-             hasher.hash_inplace(leaf);
+             si.to_bytes(&mut f);
+// println!("<{}> {:?}", i, &f);
+             hasher.hash(leaf, &f);
 // println!("-> {:?}", &leaf);
         }
 // println!("prepared node {:?}", node);

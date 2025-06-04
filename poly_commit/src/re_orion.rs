@@ -15,7 +15,7 @@ mod utils;
 use utils::*;
 
 mod codeswitch;
-use codeswitch::*;
+pub use codeswitch::*;
 
 mod test;
 pub use test::*;

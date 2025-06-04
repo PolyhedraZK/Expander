@@ -260,6 +260,11 @@ impl Field for NeonM31 {
         }
         res
     }
+
+    #[inline(always)]
+    fn get_pack_size() -> usize {
+        16
+    }
 }
 
 impl SimdField for NeonM31 {

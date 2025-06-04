@@ -1,0 +1,44 @@
+[package]
+name = "poly_commit"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arith = { path = "../arith" }
+gf2 = { path = "../arith/gf2" }
+
+p3-air = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" } 
+p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-challenger = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-uni-stark = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-mersenne-31 = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-circle = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-commit = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-dft = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-fri = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-keccak = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-symmetric = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-merkle-tree = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+serde = { version = "1.0", default-features = false }
+serde_cbor = "0.11"
+
+rand.workspace = true
+ethnum.workspace = true
+ark-std.workspace = true
+thiserror.workspace = true
+itertools.workspace = true
+derivative.workspace = true
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+halo2curves = { workspace = true, features = [ "asm" ] }
+[target.'cfg(not(target_arch = "x86_64"))'.dependencies]
+halo2curves.workspace = true
+
+[dev-dependencies]
+gf2_128 = { path = "../arith/gf2_128" }
+mersenne31 = { path = "../arith/mersenne31" }
+gkr_hashers = { path = "../hasher" }
+
+tynm.workspace = true
+criterion.workspace = true
