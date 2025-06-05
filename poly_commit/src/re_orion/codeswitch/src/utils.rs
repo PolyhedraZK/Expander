@@ -1,6 +1,6 @@
 use arith::Field;
 // use mersenne31::M31;
-use p3_field::Algebra;
+use p3_field::{Algebra, Field as P3Field};
 
 // pub fn unit_mul<Expr: Algebra<Expr>>(lhs: &[Expr], rhs: &[Expr], res: &mut [Expr]) {
 //     res[0] = lhs[0].clone() * rhs[0].clone()

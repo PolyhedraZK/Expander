@@ -5,11 +5,14 @@ use gkr_engine::Transcript;
 use gkr_hashers::FiatShamirHasher;
 use polynomials::EqPolynomial;
 use crate::re_orion::{
-    parameters::*,
     MerkleTree, MerkleTreeAPI, Encoder,
     utils::*,
     codeswitch::*,
 };
+
+const COLUMN_LG: usize = 7;
+const COLUMN_SIZE: usize = 1 << COLUMN_LG;
+const CHALLENGE_SIZE: usize = 1500;
 
 pub struct OrionInstance<WitF, CodeF, EvalF, ResF, H> 
 where 

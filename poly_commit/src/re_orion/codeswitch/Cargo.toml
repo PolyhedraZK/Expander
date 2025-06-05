@@ -1,11 +1,16 @@
 [package]
-name = "poly_commit"
+name = "codeswitch"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-arith = { path = "../arith" }
-gf2 = { path = "../arith/gf2" }
+arith = { path = "../../../../arith" }
+gf2 = { path = "../../../../arith/gf2" }
+gf2_128 = { path = "../../../../arith/gf2_128" }
+goldilocks = { path = "../../../../arith/goldilocks" }
+mersenne31 = { path = "../../../../arith/mersenne31" }
+
+encoder = { path = "../encoder" }
 
 p3-air = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
 p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" } 
@@ -30,15 +35,6 @@ thiserror.workspace = true
 itertools.workspace = true
 derivative.workspace = true
 
-[target.'cfg(target_arch = "x86_64")'.dependencies]
-halo2curves = { workspace = true, features = [ "asm" ] }
-[target.'cfg(not(target_arch = "x86_64"))'.dependencies]
-halo2curves.workspace = true
-
 [dev-dependencies]
-gf2_128 = { path = "../arith/gf2_128" }
-mersenne31 = { path = "../arith/mersenne31" }
-gkr_hashers = { path = "../hasher" }
-
 tynm.workspace = true
 criterion.workspace = true

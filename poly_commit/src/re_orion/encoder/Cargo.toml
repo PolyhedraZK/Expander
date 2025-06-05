@@ -1,0 +1,17 @@
+[package]
+name = "encoder"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+arith = { path = "../../../../arith" }
+serdes = { path = "../../../../serdes" }
+
+p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" } 
+
+rand.workspace = true
+ethnum.workspace = true
+ark-std.workspace = true
+thiserror.workspace = true
+itertools.workspace = true
+derivative.workspace = true

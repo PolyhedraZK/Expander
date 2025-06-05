@@ -1,4 +1,5 @@
 use arith::Field;
+use p3_field::Field as P3Field;
 use rand::{Rng, RngCore};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
@@ -8,11 +9,19 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::ops::Mul;
 use std::path::Path;
-use super::parameters::*;
+
+pub const TARGET_DISTANCE: f64 = 0.07;
+pub const DISTANCE_THRESHOLD: usize = ((1.0 / TARGET_DISTANCE) - 1.0) as usize;
+const RS_RATE: u32 = 2;
+const ALPHA: f64 = 0.238;
+const BETA: f64 = 0.1205;
+const R: f64 = 1.72;
+const C_SIZE: usize = 10;
+const D_SIZE: usize = 20;
 
 #[derive(Debug, Clone)]
-pub struct BiGraph<F: Field> {
-    l_degree: usize,
+pub struct BiGraph<F> {
+    pub l_degree: usize,
     pub l_size: usize,
     pub r_size: usize,
     pub edge: Vec<Vec<(usize, F)>>, // l: [..l_size], r: [l_size..]
@@ -49,8 +58,8 @@ impl<F: Field> BiGraph<F> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Encoder<F: Field> {
-    code_len: usize,
+pub struct Encoder<F> {
+    pub code_len: usize,
     pub c: Vec<BiGraph<F>>,
     pub d: Vec<BiGraph<F>>,
 }
@@ -156,7 +165,6 @@ println!("bi-graph generated");
         if n <= DISTANCE_THRESHOLD {
             return n
         }
-
         // let r = (n as f64 * ALPHA).round() as usize;
         let r = self.c[dep].r_size;
         let (src, nxt_dst) = dst.split_at_mut(n);
@@ -184,8 +192,37 @@ println!("bi-graph generated");
         
         n + l + r
     }
+}
 
-    pub fn code_len(&self) -> usize {
-        self.code_len
+fn trans_bigraph_vec<S: Field, T: P3Field>(src: &[BiGraph<S>]) -> Vec<BiGraph<T>> {
+    let mut g: Vec<BiGraph<T>> = Vec::with_capacity(src.len());
+    for gi in src.iter() {
+        let mut edges: Vec<Vec<(usize, T)>> = Vec::with_capacity(gi.edge.len());
+        for e in gi.edge.iter() {
+            let mut edge: Vec<(usize, T)> = vec![(0, T::ZERO); e.len()];
+            unsafe { std::ptr::copy_nonoverlapping(e.as_ptr() as *const (usize, T), edge.as_mut_ptr(), e.len()); }
+            edges.push(edge);
+        }
+        g.push(BiGraph::<T> {
+            l_degree: gi.l_degree,
+            l_size: gi.l_size,
+            r_size: gi.r_size,
+            edge: edges,
+        });
+    }
+    g
+}
+
+pub trait NewFrom<S: Field> {
+    fn new_from(encoder: &Encoder<S>) -> Self;
+}
+
+impl<S: Field, T: P3Field> NewFrom<S> for Encoder<T> {
+    fn new_from(encoder: &Encoder<S>) -> Encoder<T> {
+        Encoder::<T> {
+           code_len: encoder.code_len,
+           c: trans_bigraph_vec(&encoder.c),
+           d: trans_bigraph_vec(&encoder.d),
+        }
     }
 }

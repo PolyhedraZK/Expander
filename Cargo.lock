@@ -415,6 +415,41 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
+name = "codeswitch"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std 0.4.0",
+ "criterion",
+ "derivative",
+ "encoder",
+ "ethnum",
+ "gf2",
+ "gf2_128",
+ "goldilocks",
+ "itertools 0.13.0",
+ "mersenne31",
+ "p3-air",
+ "p3-challenger",
+ "p3-circle",
+ "p3-commit",
+ "p3-dft",
+ "p3-field",
+ "p3-fri",
+ "p3-keccak",
+ "p3-matrix",
+ "p3-merkle-tree",
+ "p3-mersenne-31",
+ "p3-symmetric",
+ "p3-uni-stark",
+ "rand 0.8.5",
+ "serde",
+ "serde_cbor",
+ "thiserror",
+ "tynm",
+]
+
+[[package]]
 name = "colorchoice"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -622,6 +657,21 @@ name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
+
+[[package]]
+name = "encoder"
+version = "0.1.0"
+dependencies = [
+ "arith",
+ "ark-std 0.4.0",
+ "derivative",
+ "ethnum",
+ "itertools 0.13.0",
+ "p3-field",
+ "rand 0.8.5",
+ "serdes",
+ "thiserror",
+]
 
 [[package]]
 name = "encoding_rs"
@@ -2009,8 +2059,10 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "ark-std 0.4.0",
+ "codeswitch",
  "criterion",
  "derivative",
+ "encoder",
  "ethnum",
  "gf2",
  "gf2_128",

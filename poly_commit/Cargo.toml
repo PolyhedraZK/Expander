@@ -13,6 +13,9 @@ transcript = { path = "../transcript" }
 tree = { path = "../tree" }
 gkr_hashers = { path = "../hasher" }
 
+encoder = { path = "src/re_orion/encoder" }
+codeswitch = { path = "src/re_orion/codeswitch" }
+
 p3-air = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
 p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" } 
 p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
@@ -44,7 +47,6 @@ halo2curves.workspace = true
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
 mersenne31 = { path = "../arith/mersenne31" }
-gkr_hashers = { path = "../hasher" }
 
 tynm.workspace = true
 criterion.workspace = true
