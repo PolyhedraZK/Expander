@@ -30,15 +30,15 @@ pub struct BiGraph<F> {
 impl<F: Field> BiGraph<F> {
     fn generate(l_size: usize, r_size: usize, degree: usize) -> Self {
         let mut edge: Vec<Vec<(usize, F)>> = Vec::with_capacity(l_size + r_size);
-        for i in 0..l_size {
+        for _ in 0..l_size {
             edge.push(Vec::with_capacity(degree));
         }
-        for i in 0..r_size {
+        for _ in 0..r_size {
             edge.push(Vec::new());
         }
         let mut rng = StdRng::from_seed([226; 32]);
         for i in 0..l_size {
-            for j in 0..degree {
+            for _ in 0..degree {
                 let to = rng.next_u32() as usize % r_size;
                 let mut bytes = vec![0u8; F::SIZE];
                 rng.fill_bytes(&mut bytes);
@@ -88,7 +88,6 @@ impl<F: Field> Encoder<F> {
                 d: vec![],
             };
             ret.generate(1 << logn, 0);
-println!("bi-graph generated");
             // TODO: serde
             // let file = std::fs::File::create(filename).unwrap();
             // let writer = std::io::BufWriter::new(file);
@@ -155,7 +154,6 @@ println!("bi-graph generated");
             
             n + l + r
         }
-// println!("start encode {} {} {}", src.len(), n, dst.len());
     }
 
     pub fn encode_inplace<CodeF: Field>(&self, dst: &mut [CodeF], n: usize, dep: usize) -> usize 
@@ -171,7 +169,6 @@ println!("bi-graph generated");
 
         // TODO: unsafe?
         nxt_dst[..r].fill(CodeF::ZERO);
-// println!("c {} {}", dep, self.c[dep].edge.len());
         for (i, u) in src.iter().enumerate() {
             for (v, w) in &self.c[dep].edge[i] {
                 nxt_dst[*v] += *w * *u;

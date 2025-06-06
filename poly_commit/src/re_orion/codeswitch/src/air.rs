@@ -1,11 +1,11 @@
-use std::{marker::PhantomData, mem::transmute_copy};
+use std::marker::PhantomData;
 
 use arith::Field;
 use itertools::izip;
 use p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir, FilteredAirBuilder};
-use p3_field::{Field as P3Field, PrimeField32, PrimeCharacteristicRing};
+use p3_field::PrimeCharacteristicRing;
 use p3_matrix::{dense::RowMajorMatrix, Matrix};
-use p3_uni_stark::{prove as p3prove, verify as p3verify, StarkConfig};
+use p3_uni_stark::{prove as p3prove, verify as p3verify};
 
 use encoder::*;
 
@@ -13,9 +13,7 @@ use crate::{P3Config, P3FieldConfig, P3Multiply, Plonky3Config};
 
 pub const CHALLENGE_SIZE: usize = 1500;
 
-/// Assumes the field size is at least 16 bits.
 #[derive(Debug)]
-// TODO: constrain EvalF in ExtensionField?
 pub struct CodeSwitchAir<EvalF, ResF: Field> 
 where
     EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
@@ -29,7 +27,6 @@ where
     pub code_len: usize,
     pub column_size: usize,
 
-    // pub idxs: &'a Vec<usize>,
     pub idxs: Vec<usize>,
     _marker: PhantomData<EvalF>,
 }
@@ -153,7 +150,6 @@ where
         let witness_size = self.eval_degree * self.res_pack_size;
         let challenge_size = self.eval_degree;
         let public_values = builder.public_values();
-        // let gamma = public_values[..pos].to_vec();
         let c_gamma_range = self.idxs.len() * witness_size;
         let c_gamma_idx: Vec<AB::Expr> = public_values[..c_gamma_range].iter().map(|&x| x.into()).collect();
         let r1_range = msg_len * challenge_size;
@@ -164,15 +160,10 @@ where
         let inputs = main.row_slice(0);
         let outputs = main.row_slice(1);
 
-// println!("inputs {} outputs {}", inputs.len(), outputs.len());
         let y_gamma = &inputs[..msg_len * witness_size];
         let y1 = &inputs[msg_len * witness_size..msg_len * 2 * witness_size];
-        // let code: Vec<&[AB::Var]> = Vec::with_capacity(self.idxs.len());
-        // code.append(inputs[msg_len * 2..].chunks(self.column_size).collect());
-        // let code: Vec<&[AB::Var]> = inputs[msg_len * 2 * witness_size..].chunks(self.column_size).collect();
 
         let c_gamma = &outputs[..code_len * witness_size];
-        // let c1 = &outputs[code_len..code_len * 2];
 
         let mut check = builder.when_first_row();
 
@@ -192,27 +183,10 @@ where
                     *u -= v.clone();
                 }
             }
-            // let mut res: Vec<AB::Expr> = y1expr.clone();
-            // unit_mul(r1_chunk, &y1expr, &mut res);
-// println!("r {:?} y {:?} rst {:?}", r1_chunk, y1expr, res);
-            // let ryi = unit_mul(&r1expr, &y1expr, &mut res);
-            // for (u, v) in izip!(y.iter_mut(), res.iter()) {
-            //     *u -= v.clone();
-            // }
         }
         for v in y.iter() {
             check.assert_zero(v.clone());
         }
-
-        /*
-        for &idx in &self.idxs {
-            check.assert_eq(c_gamma[idx], 
-                izip!(&gamma, code[idx]).map(|(&gm, &c)| gm.into() * c).sum::<AB::Expr>()
-            );
-            check.assert_eq(c1[idx], 
-                izip!(&r0, code[idx]).map(|(&r, &c)| r.into() * c).sum::<AB::Expr>()
-            );
-        } */
     }
 }
 

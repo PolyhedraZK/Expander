@@ -4,7 +4,7 @@ use arith::Field;
 use p3_challenger::{HashChallenger, SerializingChallenger32};
 use p3_circle::CirclePcs;
 use p3_commit::ExtensionMmcs;
-use p3_field::{extension::{BinomialExtensionField, BinomiallyExtendable, ComplexExtendable}, Algebra, ExtensionField, Field as Plonky3Field, PrimeField32};
+use p3_field::{extension::{BinomialExtensionField, ComplexExtendable}, Algebra, ExtensionField, PrimeField32};
 
 use mersenne31::{M31Ext3, M31};
 use p3_fri::FriConfig;

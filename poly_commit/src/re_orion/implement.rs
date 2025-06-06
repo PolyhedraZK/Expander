@@ -165,7 +165,6 @@ where
     fn new(wit: &[WitF], msg_len: usize, encoder: &Encoder<ResF::UnitField>) -> Self {
         let mut wit = wit.to_vec();
         let n = msg_len;
-println!("witlen {} -> {}, codelen {}", wit.len(), n, encoder.code_len);
         wit.resize(COLUMN_SIZE * n, WitF::ZERO);
         let m = encoder.code_len;
         let mut code = vec![CodeF::ZERO; COLUMN_SIZE * m];
@@ -226,11 +225,6 @@ println!("witlen {} -> {}, codelen {}", wit.len(), n, encoder.code_len);
         c_gamma.fill(ResF::ZERO);
         y_gamma.fill(ResF::ZERO);
 
-        // let eq_head = &mut scratch.eq_head;
-        // let eq_tail = &mut scratch.eq_tail;
-        // EqPolynomial::<EvalF>::eq_eval_at(eval_point[..COLUMN_SIZE], EvalF::ONE, r0, eq_head, eq_tail);
-        // EqPolynomial::<EvalF>::eq_eval_at(eval_point[COLUMN_SIZE..], EvalF::ONE, r1, eq_head, eq_tail);
-
         for (j, row) in self.wit_t.chunks_exact(COLUMN_SIZE).enumerate() {
             for (i, &w) in row.iter().enumerate() {
                 y_prime[j] += r0[i] * w;
@@ -242,20 +236,6 @@ println!("witlen {} -> {}, codelen {}", wit.len(), n, encoder.code_len);
                 c_gamma[j] += gamma[i] * c;
             }
         }
-// println!("{:?}", &self.code[..self.code_len]);
-// println!("{:?}", c_gamma);
-        /*
-        for j in 0..self.width {
-            for i in 0..COLUMN_SIZE {
-                y_prime[j] += r0[i] * self.wit[j];
-                y_gamma[j] += gamma[i] * self.wit[j];
-            }
-        }
-        for j in 0..self.code_len {
-            for i in 0..COLUMN_SIZE {
-                c_gamma[j] += gamma[i] * self.code[j];
-            }
-        } */
 
         let tree_gamma = &mut scratch.tree_gamma;
         tree_gamma.build(&c_gamma[..self.code_len]);
@@ -264,14 +244,6 @@ println!("witlen {} -> {}, codelen {}", wit.len(), n, encoder.code_len);
         for i in 0..self.width {
             y += y_prime[i] * r1[i];
         }
-
-let mut tmp = ResF::ZERO;
-for i in 0..self.width {
-    for j in 0..COLUMN_SIZE {
-        tmp += r0[j] * r1[i] * self.wit[j * self.width + i];
-    }
-}
-println!("test y {:?} ? {:?}", tmp, y);
 
         let c_gamma_root = tree_gamma.commit();
         transcript.append_u8_slice(&c_gamma_root);
@@ -291,16 +263,6 @@ println!("test y {:?} ? {:?}", tmp, y);
             c_gamma_proof.push(tree_gamma.prove(leaves + idx, 1));
         }
 
-println!("prepare plonky3");
-        /*
-        let public_values = PublicValuesForPlonky3{
-            r1: r1,
-            y: y,
-            // TODO: idx only
-            c_gamma: &c_gamma,
-            // c_gamma_idx: &c_gamma_idx,
-        }; */
-        // TODO: c_gamma[idx]
         let proof_cs = air.prove(&y_gamma, &y_prime, &c_gamma, &c_gamma_idx, &r1, &y, );
 
         let mut root_idx_proof: Vec<Vec<u8>> = Vec::with_capacity(idxs.len());
@@ -378,21 +340,6 @@ println!("prepare plonky3");
                 return false;;
             }
         }
-
-        // let mut idxs = Vec::with_capacity(CHALLENGE_SIZE);
-        // for i in 0..CHALLENGE_SIZE {
-        //     idxs.push(usize::from_le_bytes(transcript.generate_u8_slice(8).try_into().unwrap()) % self.width);
-        // }
-
-        /*
-        let public_values = PublicValuesForPlonky3{
-            r1: r1,
-            y: opening.y,
-            // TODO: idx only
-            // TODO: real idxs
-            c_gamma: &c_gamma[..28],
-            // c_gamma_idx: &c_gamma_idx,
-        }; */
 
         air.verify(&opening.proof_cs, &c_gamma,&r1, &opening.y)
     }
