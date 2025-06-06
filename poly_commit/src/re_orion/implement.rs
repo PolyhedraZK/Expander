@@ -117,7 +117,7 @@ where
             &encoder,
             msg_len,
             COLUMN_SIZE,
-            (0..1500).collect(),
+            (0..1500).map(|x| x % encoder.code_len).collect(),
         );
         Self {
             msg_len,
@@ -277,15 +277,16 @@ println!("test y {:?} ? {:?}", tmp, y);
         transcript.append_u8_slice(&c_gamma_root);
         transcript.append_field_element(&y);
 
-        let mut idxs = Vec::with_capacity(CHALLENGE_SIZE);
-        for i in 0..CHALLENGE_SIZE {
-            idxs.push(usize::from_le_bytes(transcript.generate_u8_slice(8).try_into().unwrap()) % self.width);
-        }
+        let idxs = &air.idxs;
+        // let mut idxs = Vec::with_capacity(CHALLENGE_SIZE);
+        // for i in 0..CHALLENGE_SIZE {
+        //     idxs.push(usize::from_le_bytes(transcript.generate_u8_slice(8).try_into().unwrap()) % self.width);
+        // }
 
         let mut c_gamma_idx: Vec<ResF> = Vec::with_capacity(idxs.len());
         let mut c_gamma_proof: Vec<Vec<u8>> = Vec::with_capacity(idxs.len());
         let leaves = 1 << tree_gamma.height;
-        for &idx in &idxs {
+        for &idx in idxs.iter() {
             c_gamma_idx.push(c_gamma[idx]);
             c_gamma_proof.push(tree_gamma.prove(leaves + idx, 1));
         }
@@ -300,11 +301,11 @@ println!("prepare plonky3");
             // c_gamma_idx: &c_gamma_idx,
         }; */
         // TODO: c_gamma[idx]
-        let proof_cs = air.prove(&y_gamma, &y_prime, &r1, &y, &c_gamma);
+        let proof_cs = air.prove(&y_gamma, &y_prime, &c_gamma, &c_gamma_idx, &r1, &y, );
 
         let mut root_idx_proof: Vec<Vec<u8>> = Vec::with_capacity(idxs.len());
         let column_leaf = 1 << (self.tree.height - COLUMN_LG);
-        for &i in &idxs {
+        for &i in idxs.iter() {
             root_idx_proof.push(self.tree.prove(column_leaf + i, 1));
         }
 
@@ -393,7 +394,7 @@ println!("prepare plonky3");
             // c_gamma_idx: &c_gamma_idx,
         }; */
 
-        air.verify(&opening.proof_cs, &r1, &opening.y, &c_gamma[..28])
+        air.verify(&opening.proof_cs, &c_gamma,&r1, &opening.y)
     }
 }
 
