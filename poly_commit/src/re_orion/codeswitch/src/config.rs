@@ -4,15 +4,17 @@ use arith::Field;
 use p3_challenger::{HashChallenger, SerializingChallenger32};
 use p3_circle::CirclePcs;
 use p3_commit::ExtensionMmcs;
-use p3_field::{extension::{BinomialExtensionField, BinomiallyExtendable, ComplexExtendable}, ExtensionField, Field as Plonky3Field, PrimeField32};
+use p3_field::{extension::{BinomialExtensionField, BinomiallyExtendable, ComplexExtendable}, Algebra, ExtensionField, Field as Plonky3Field, PrimeField32};
 
-use mersenne31::M31;
+use mersenne31::{M31Ext3, M31};
 use p3_fri::FriConfig;
 use p3_keccak::Keccak256Hash;
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_mersenne_31::Mersenne31;
 use p3_symmetric::{CompressionFunctionFromHasher, CryptographicHasher, SerializingHasher32};
 use p3_uni_stark::StarkConfig;
+
+use crate::utils::*;
 
 pub struct P3Config {}
 
@@ -83,4 +85,24 @@ pub trait P3FieldConfig {
 impl P3FieldConfig for M31 {
     type P3Field = Mersenne31;
     type P3Challenge = BinomialExtensionField<Self::P3Field, 3>;
+}
+
+pub trait P3Multiply {
+    fn p3mul<Expr: Algebra<Expr>>(lhs: &[Expr], rhs: &[Expr], res: &mut [Expr]);
+}
+
+impl P3Multiply for M31 {
+    #[inline(always)]
+    fn p3mul<Expr: Algebra<Expr>>(lhs: &[Expr], rhs: &[Expr], res: &mut [Expr]) {
+        res[0] = lhs[0].clone() * rhs[0].clone()
+    }
+}
+
+impl P3Multiply for M31Ext3 {
+    #[inline(always)]
+    fn p3mul<Expr: Algebra<Expr>>(lhs: &[Expr], rhs: &[Expr], res: &mut [Expr]) {
+        res[0] = lhs[0].clone() * rhs[0].clone() + mul5(lhs[1].clone() * rhs[2].clone() + lhs[2].clone() * rhs[1].clone());
+        res[1] = lhs[0].clone() * rhs[1].clone() + lhs[1].clone() * rhs[0].clone() + mul5(lhs[2].clone() * rhs[2].clone());
+        res[2] = lhs[0].clone() * rhs[2].clone() + lhs[1].clone() * rhs[1].clone() + lhs[2].clone() * rhs[1].clone();
+    }
 }

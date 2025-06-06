@@ -5,17 +5,8 @@ pub use implement::*;
 mod merkletree;
 pub use merkletree::*;
 
-mod encoder;
-use encoder::*;
-
-mod parameters;
-// use parameters::*;
-
 mod utils;
 use utils::*;
-
-mod codeswitch;
-pub use codeswitch::*;
 
 mod test;
 pub use test::*;

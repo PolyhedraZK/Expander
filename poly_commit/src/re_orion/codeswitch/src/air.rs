@@ -9,7 +9,7 @@ use p3_uni_stark::{prove as p3prove, verify as p3verify, StarkConfig};
 
 use encoder::*;
 
-use crate::{P3Config, P3FieldConfig, Plonky3Config};
+use crate::{P3Config, P3FieldConfig, P3Multiply, Plonky3Config};
 
 use super::utils::*;
 
@@ -21,7 +21,7 @@ const DISTANCE_THRESHOLD: usize = ((1.0 / TARGET_DISTANCE) - 1.0) as usize;
 // TODO: constrain EvalF in ExtensionField?
 pub struct CodeSwitchAir<EvalF, ResF: Field> 
 where
-    EvalF: Field<UnitField = ResF::UnitField>,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
     ResF::UnitField: P3FieldConfig,
 {
     pub encoder: Encoder<<ResF::UnitField as P3FieldConfig>::P3Field>,
@@ -39,14 +39,13 @@ where
 
 impl<EvalF, ResF: Field> CodeSwitchAir<EvalF, ResF> 
 where
-    EvalF: Field<UnitField = ResF::UnitField>,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
     ResF::UnitField: P3FieldConfig,
 {
     #[inline(always)]
     pub fn new(
         encoder: &Encoder<ResF::UnitField>,
         msg_len: usize,
-        code_len: usize,
         column_size: usize,
         idxs: Vec<usize>,
     ) -> Self 
@@ -58,7 +57,7 @@ where
             eval_degree: EvalF::get_degree(),
             res_pack_size: ResF::get_pack_size(),
             msg_len,
-            code_len,
+            code_len: encoder.code_len,
             column_size,
             idxs,
             _marker: PhantomData,
@@ -70,12 +69,13 @@ where
         y_gamma: &[ResF],
         y1: &[ResF],
         r1: &[EvalF],
-        y: ResF,
+        y: &ResF,
         c_gamma: &[ResF],
     ) -> Vec<u8> {
         let witness_size = self.eval_degree * self.res_pack_size;
         let width = self.msg_len * 2 * witness_size;
         let mut trace = <ResF::UnitField as P3FieldConfig>::P3Field::zero_vec(width * 4);
+        // TODO: unify arrange mem
         unsafe { 
             let mut pos = 0;
             std::ptr::copy_nonoverlapping(y_gamma.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, trace.as_mut_ptr(), witness_size * y_gamma.len()); 
@@ -88,10 +88,11 @@ where
 
         let challenge_size = self.eval_degree;
         // TODO: borrow
-        let mut pis = <ResF::UnitField as P3FieldConfig>::P3Field::zero_vec(r1.len() * challenge_size + (c_gamma.len() + 1) * witness_size);
+        // TODO: scratch pis
+        let mut pis = <ResF::UnitField as P3FieldConfig>::P3Field::zero_vec(r1.len() * challenge_size + (c_gamma.len() + 1) * witness_size + 2);
         unsafe {
             std::ptr::copy_nonoverlapping(r1.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.encoder.code_len * witness_size), r1.len() * challenge_size);
-            std::ptr::copy_nonoverlapping(vec![y].as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.encoder.code_len * witness_size + r1.len() * challenge_size), witness_size);
+            std::ptr::copy_nonoverlapping(vec![*y].as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.encoder.code_len * witness_size + r1.len() * challenge_size), witness_size);
         }
 
         let config = <P3Config as Plonky3Config<ResF::UnitField>>::init();
@@ -104,17 +105,17 @@ where
         &self,
         proof: &[u8],
         r1: &[EvalF],
-        y: ResF,
+        y: &ResF,
         c_gamma: &[ResF],
     ) -> bool 
     {
         let witness_size = self.eval_degree * self.res_pack_size;
         let challenge_size = self.eval_degree;
         // TODO: borrow
-        let mut pis = <ResF::UnitField as P3FieldConfig>::P3Field::zero_vec(r1.len() * challenge_size + (c_gamma.len() + 1) * witness_size);
+        let mut pis = <ResF::UnitField as P3FieldConfig>::P3Field::zero_vec(r1.len() * challenge_size + (c_gamma.len() + 1) * witness_size + 2);
         unsafe {
             std::ptr::copy_nonoverlapping(r1.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.encoder.code_len * witness_size), r1.len() * challenge_size);
-            std::ptr::copy_nonoverlapping(vec![y].as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.encoder.code_len * witness_size + r1.len() * challenge_size), witness_size);
+            std::ptr::copy_nonoverlapping(vec![*y].as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.encoder.code_len * witness_size + r1.len() * challenge_size), witness_size);
         }
 
         let config = <P3Config as Plonky3Config<ResF::UnitField>>::init();
@@ -132,7 +133,7 @@ where
 
 impl<PF, EvalF, ResF: Field> BaseAir<PF> for CodeSwitchAir<EvalF, ResF> 
 where
-    EvalF: Field<UnitField = ResF::UnitField>,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
     ResF::UnitField: P3FieldConfig,
 {
     fn width(&self) -> usize {
@@ -142,7 +143,7 @@ where
 
 impl<AB: AirBuilderWithPublicValues<F = <ResF::UnitField as P3FieldConfig>::P3Field>, EvalF, ResF: Field> Air<AB> for CodeSwitchAir<EvalF, ResF> 
 where
-    EvalF: Field<UnitField = ResF::UnitField>,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
     ResF::UnitField: P3FieldConfig,
 {
     #[inline]
@@ -178,7 +179,7 @@ where
             let y1expr: Vec<AB::Expr> = y1_chunk.iter().map(|&x| x.into()).collect();
             let mut res = r1_chunk.to_vec();
             for (y_unit, y1_unit) in izip!(y.chunks_exact_mut(self.eval_degree),y1expr.chunks_exact(self.eval_degree)) {
-                unit_mul(r1_chunk, y1_unit, &mut res);
+                EvalF::p3mul(r1_chunk, y1_unit, &mut res);
                 for (u, v) in izip!(y_unit.iter_mut(), res.iter()) {
                     *u -= v.clone();
                 }
@@ -209,7 +210,7 @@ where
 
 impl<EvalF, ResF: Field> CodeSwitchAir<EvalF, ResF> 
 where
-    EvalF: Field<UnitField = ResF::UnitField>,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
     ResF::UnitField: P3FieldConfig,
 {
     fn encode<'a, AB: AirBuilderWithPublicValues<F = <ResF::UnitField as P3FieldConfig>::P3Field>>(&self, check: &mut FilteredAirBuilder<'a, AB>, src: &[AB::Var], dst: &[AB::Var], n: usize) {

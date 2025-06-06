@@ -226,3 +226,25 @@ impl<S: Field, T: P3Field> NewFrom<S> for Encoder<T> {
         }
     }
 }
+
+use std::fmt::Debug;
+
+impl<F: Debug> BiGraph<F> {
+    pub fn print(&self) {
+        println!("{} {} {}", self.l_degree, self.l_size, self.r_size);
+        for e in self.edge.iter() {
+            println!("({}, {:?})", e[0].0, e[0].1);
+        }
+    }
+}
+
+impl<F: Debug> Encoder<F> {
+    pub fn print(&self) {
+        println!("code len {}", self.code_len);
+        for i in 0..self.c.len() {
+            println!("c d {}", i);
+            self.c[i].print();
+            self.d[i].print();
+        }
+    }
+}

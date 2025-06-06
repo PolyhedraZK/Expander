@@ -1,26 +1,28 @@
 use std::{collections::HashMap, marker::PhantomData, ops::Mul};
 
 use arith::Field;
+use codeswitch::{CodeSwitchAir, P3FieldConfig, P3Multiply};
+use encoder::Encoder;
 use gkr_engine::Transcript;
 use gkr_hashers::FiatShamirHasher;
 use polynomials::EqPolynomial;
 use crate::re_orion::{
-    MerkleTree, MerkleTreeAPI, Encoder,
+    MerkleTree, MerkleTreeAPI,
     utils::*,
-    codeswitch::*,
 };
 
 const COLUMN_LG: usize = 7;
 const COLUMN_SIZE: usize = 1 << COLUMN_LG;
 const CHALLENGE_SIZE: usize = 1500;
 
+// TODO: SIZE and PACK_SIZE to const
 pub struct OrionInstance<WitF, CodeF, EvalF, ResF, H> 
 where 
     WitF: Field, 
     CodeF: Field + From<WitF>, 
-    EvalF: Field + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF>, 
+    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
-    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF>,
+    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3FieldConfig,
     H: FiatShamirHasher,
 {
     srs: OrionSRS<EvalF, ResF>,
@@ -32,14 +34,14 @@ impl<WitF, CodeF, EvalF, ResF, H> OrionInstance<WitF, CodeF, EvalF, ResF, H>
 where 
     WitF: Field, 
     CodeF: Field + From<WitF>, 
-    EvalF: Field + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF>, 
+    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
-    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF>,
+    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3FieldConfig,
     H: FiatShamirHasher,
 {
     pub fn new(wit_len: usize) -> Self {
         let srs = OrionSRS::<EvalF, ResF>::new(wit_len);
-        let scratch = OrionScratchPad::<EvalF, ResF, H>::new(srs.msg_len, srs.encoder.code_len());
+        let scratch = OrionScratchPad::<EvalF, ResF, H>::new(srs.msg_len, srs.encoder.code_len);
         Self {
             srs,
             commitments: HashMap::new(),
@@ -93,8 +95,9 @@ where
 
 pub struct OrionSRS<EvalF, ResF> 
 where
-    EvalF: Field,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
     ResF: Field,
+    ResF::UnitField: P3FieldConfig,
 {
     msg_len: usize,
     encoder: Encoder<ResF::UnitField>,
@@ -103,17 +106,16 @@ where
 
 impl<EvalF, ResF> OrionSRS<EvalF, ResF> 
 where
-    EvalF: Field,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
     ResF: Field,
+    ResF::UnitField: P3FieldConfig,
 {
     pub fn new(wit_len: usize) -> Self {
         let msg_len = ((wit_len + COLUMN_SIZE - 1) >> COLUMN_LG);
         let encoder = Encoder::<ResF::UnitField>::new(msg_len);
         let air = CodeSwitchAir::<EvalF, ResF>::new(
-            encoder.c.clone(),
-            encoder.d.clone(),
+            &encoder,
             msg_len,
-            encoder.code_len(),
             COLUMN_SIZE,
             (0..1500).collect(),
         );
@@ -126,7 +128,7 @@ where
 
     #[inline(always)]
     pub fn code_len(&self) -> usize {
-        self.encoder.code_len()
+        self.encoder.code_len
     }
 
 }
@@ -135,9 +137,9 @@ pub struct OrionCommitInstance<WitF, CodeF, EvalF, ResF, H>
 where 
     WitF: Field, 
     CodeF: Field + From<WitF>, 
-    EvalF: Field + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF>, 
+    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
-    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF>,
+    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3FieldConfig,
     H: FiatShamirHasher,
 {
     wit: Vec<WitF>,
@@ -154,18 +156,18 @@ impl<WitF, CodeF, EvalF, ResF, H> OrionCommitInstance<WitF, CodeF, EvalF, ResF, 
 where 
     WitF: Field, 
     CodeF: Field + From<WitF>, 
-    EvalF: Field + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF>, 
+    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
-    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF>,
+    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3FieldConfig,
     
     H: FiatShamirHasher,
 {
     fn new(wit: &[WitF], msg_len: usize, encoder: &Encoder<ResF::UnitField>) -> Self {
         let mut wit = wit.to_vec();
         let n = msg_len;
-println!("witlen {} -> {}, codelen {}", wit.len(), n, encoder.code_len());
+println!("witlen {} -> {}, codelen {}", wit.len(), n, encoder.code_len);
         wit.resize(COLUMN_SIZE * n, WitF::ZERO);
-        let m = encoder.code_len();
+        let m = encoder.code_len;
         let mut code = vec![CodeF::ZERO; COLUMN_SIZE * m];
 
         let mut wit_t = vec![WitF::ZERO; wit.len()];
@@ -289,18 +291,16 @@ println!("test y {:?} ? {:?}", tmp, y);
         }
 
 println!("prepare plonky3");
-        let witness = WitnessForPlonky3{
-            y_gamma: &y_gamma,
-            y1: &y_prime,
-        };
+        /*
         let public_values = PublicValuesForPlonky3{
             r1: r1,
             y: y,
             // TODO: idx only
             c_gamma: &c_gamma,
             // c_gamma_idx: &c_gamma_idx,
-        };
-        let proof_cs = prove::<EvalF, ResF>(air, &witness, &public_values);
+        }; */
+        // TODO: c_gamma[idx]
+        let proof_cs = air.prove(&y_gamma, &y_prime, &r1, &y, &c_gamma);
 
         let mut root_idx_proof: Vec<Vec<u8>> = Vec::with_capacity(idxs.len());
         let column_leaf = 1 << (self.tree.height - COLUMN_LG);
@@ -383,6 +383,7 @@ println!("prepare plonky3");
         //     idxs.push(usize::from_le_bytes(transcript.generate_u8_slice(8).try_into().unwrap()) % self.width);
         // }
 
+        /*
         let public_values = PublicValuesForPlonky3{
             r1: r1,
             y: opening.y,
@@ -390,9 +391,9 @@ println!("prepare plonky3");
             // TODO: real idxs
             c_gamma: &c_gamma[..28],
             // c_gamma_idx: &c_gamma_idx,
-        };
+        }; */
 
-        verify(air, &opening.proof_cs, &public_values)
+        air.verify(&opening.proof_cs, &r1, &opening.y, &c_gamma[..28])
     }
 }
 
