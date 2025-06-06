@@ -1,7 +1,7 @@
 use std::{collections::HashMap, marker::PhantomData, ops::Mul};
 
 use arith::Field;
-use codeswitch::{CodeSwitchAir, P3FieldConfig, P3Multiply};
+use codeswitch::{CodeSwitchAir, P3FieldConfig, P3Multiply, CHALLENGE_SIZE};
 use encoder::Encoder;
 use gkr_engine::Transcript;
 use gkr_hashers::FiatShamirHasher;
@@ -13,7 +13,7 @@ use crate::re_orion::{
 
 const COLUMN_LG: usize = 7;
 const COLUMN_SIZE: usize = 1 << COLUMN_LG;
-const CHALLENGE_SIZE: usize = 1500;
+// const CHALLENGE_SIZE: usize = 1500;
 
 // TODO: SIZE and PACK_SIZE to const
 pub struct OrionInstance<WitF, CodeF, EvalF, ResF, H> 

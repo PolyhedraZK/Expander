@@ -64,7 +64,7 @@ println!("e2e test start");
     // type EvalF = M31;
     // type ResF = M31x16;
 
-    let msg_bit = 11;
+    let msg_bit = 20;
     let mut pcs = OrionInstance::<WitF, CodeF, EvalF, ResF, SHA256hasher>::new(1 << msg_bit);
     let wit = vec![WitF::ONE; 1 << msg_bit];
     let commit = pcs.commit(&wit);

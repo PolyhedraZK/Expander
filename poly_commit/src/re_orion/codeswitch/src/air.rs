@@ -11,10 +11,7 @@ use encoder::*;
 
 use crate::{P3Config, P3FieldConfig, P3Multiply, Plonky3Config};
 
-use super::utils::*;
-
-const TARGET_DISTANCE: f64 = 0.07;
-const DISTANCE_THRESHOLD: usize = ((1.0 / TARGET_DISTANCE) - 1.0) as usize;
+pub const CHALLENGE_SIZE: usize = 1500;
 
 /// Assumes the field size is at least 16 bits.
 #[derive(Debug)]
@@ -83,16 +80,17 @@ where
             std::ptr::copy_nonoverlapping(y1.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, trace.as_mut_ptr().add(pos), witness_size * y1.len()); 
             pos += y1.len() * witness_size;
             std::ptr::copy_nonoverlapping(c_gamma.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, trace.as_mut_ptr().add(pos), c_gamma.len() * witness_size);
-            pos += c_gamma.len() * witness_size;
+            // pos += c_gamma.len() * witness_size;
         }
 
         let challenge_size = self.eval_degree;
         // TODO: borrow
         // TODO: scratch pis
-        let mut pis = <ResF::UnitField as P3FieldConfig>::P3Field::zero_vec(r1.len() * challenge_size + (c_gamma.len() + 1) * witness_size + 2);
+        let mut pis = <ResF::UnitField as P3FieldConfig>::P3Field::zero_vec(r1.len() * challenge_size + (self.idxs.len() + 1) * witness_size);
         unsafe {
-            std::ptr::copy_nonoverlapping(r1.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.encoder.code_len * witness_size), r1.len() * challenge_size);
-            std::ptr::copy_nonoverlapping(vec![*y].as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.encoder.code_len * witness_size + r1.len() * challenge_size), witness_size);
+            // TODO: set c_gamma_idx
+            std::ptr::copy_nonoverlapping(r1.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.idxs.len() * witness_size), r1.len() * challenge_size);
+            std::ptr::copy_nonoverlapping(vec![*y].as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.idxs.len() * witness_size + r1.len() * challenge_size), witness_size);
         }
 
         let config = <P3Config as Plonky3Config<ResF::UnitField>>::init();
@@ -112,10 +110,11 @@ where
         let witness_size = self.eval_degree * self.res_pack_size;
         let challenge_size = self.eval_degree;
         // TODO: borrow
-        let mut pis = <ResF::UnitField as P3FieldConfig>::P3Field::zero_vec(r1.len() * challenge_size + (c_gamma.len() + 1) * witness_size + 2);
+        let mut pis = <ResF::UnitField as P3FieldConfig>::P3Field::zero_vec(r1.len() * challenge_size + (self.idxs.len() + 1) * witness_size);
         unsafe {
-            std::ptr::copy_nonoverlapping(r1.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.encoder.code_len * witness_size), r1.len() * challenge_size);
-            std::ptr::copy_nonoverlapping(vec![*y].as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.encoder.code_len * witness_size + r1.len() * challenge_size), witness_size);
+            // TODO: set c_gamma_idx
+            std::ptr::copy_nonoverlapping(r1.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.idxs.len() * witness_size), r1.len() * challenge_size);
+            std::ptr::copy_nonoverlapping(vec![*y].as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, pis.as_mut_ptr().add(self.idxs.len() * witness_size + r1.len() * challenge_size), witness_size);
         }
 
         let config = <P3Config as Plonky3Config<ResF::UnitField>>::init();
@@ -154,7 +153,7 @@ where
         let challenge_size = self.eval_degree;
         let public_values = builder.public_values();
         // let gamma = public_values[..pos].to_vec();
-        let c_gamma_range = code_len * witness_size;
+        let c_gamma_range = self.idxs.len() * witness_size;
         let r1_range = msg_len * challenge_size;
         let r1: Vec<AB::Expr> = public_values[c_gamma_range..c_gamma_range + r1_range].iter().map(|&x| x.into()).collect();
         let mut y: Vec<AB::Expr> = public_values[c_gamma_range + r1_range..c_gamma_range + r1_range + witness_size].iter().map(|&x| x.into()).collect();
