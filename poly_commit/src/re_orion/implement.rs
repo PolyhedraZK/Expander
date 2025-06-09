@@ -20,7 +20,7 @@ pub struct OrionInstance<WitF, CodeF, EvalF, ResF, H>
 where 
     WitF: Field, 
     CodeF: Field + From<WitF>, 
-    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply, 
+    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply<ResF>, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
     ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3FieldConfig,
     H: FiatShamirHasher,
@@ -34,7 +34,7 @@ impl<WitF, CodeF, EvalF, ResF, H> OrionInstance<WitF, CodeF, EvalF, ResF, H>
 where 
     WitF: Field, 
     CodeF: Field + From<WitF>, 
-    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply, 
+    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply<ResF>, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
     ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3FieldConfig,
     H: FiatShamirHasher,
@@ -95,7 +95,7 @@ where
 
 pub struct OrionSRS<EvalF, ResF> 
 where
-    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply<ResF>,
     ResF: Field,
     ResF::UnitField: P3FieldConfig,
 {
@@ -106,7 +106,7 @@ where
 
 impl<EvalF, ResF> OrionSRS<EvalF, ResF> 
 where
-    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply<ResF>,
     ResF: Field,
     ResF::UnitField: P3FieldConfig,
 {
@@ -137,7 +137,7 @@ pub struct OrionCommitInstance<WitF, CodeF, EvalF, ResF, H>
 where 
     WitF: Field, 
     CodeF: Field + From<WitF>, 
-    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply, 
+    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply<ResF>, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
     ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3FieldConfig,
     H: FiatShamirHasher,
@@ -156,7 +156,7 @@ impl<WitF, CodeF, EvalF, ResF, H> OrionCommitInstance<WitF, CodeF, EvalF, ResF, 
 where 
     WitF: Field, 
     CodeF: Field + From<WitF>, 
-    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply, 
+    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply<ResF>, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
     ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3FieldConfig,
     
@@ -244,6 +244,14 @@ where
         for i in 0..self.width {
             y += y_prime[i] * r1[i];
         }
+
+let mut tmp = ResF::ZERO;
+for i in 0..self.width {
+    for j in 0..COLUMN_SIZE {
+        tmp += r0[j] * r1[i] * self.wit[j * self.width + i];
+    }
+}
+println!("test y {:?} ? {:?}", tmp, y);
 
         let c_gamma_root = tree_gamma.commit();
         transcript.append_u8_slice(&c_gamma_root);

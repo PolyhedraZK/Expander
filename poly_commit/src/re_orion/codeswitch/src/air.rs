@@ -16,7 +16,7 @@ pub const CHALLENGE_SIZE: usize = 1500;
 #[derive(Debug)]
 pub struct CodeSwitchAir<EvalF, ResF: Field> 
 where
-    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply<ResF>,
     ResF::UnitField: P3FieldConfig,
 {
     pub encoder: Encoder<<ResF::UnitField as P3FieldConfig>::P3Field>,
@@ -33,7 +33,7 @@ where
 
 impl<EvalF, ResF: Field> CodeSwitchAir<EvalF, ResF> 
 where
-    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply<ResF>,
     ResF::UnitField: P3FieldConfig,
 {
     #[inline(always)]
@@ -130,7 +130,7 @@ where
 
 impl<PF, EvalF, ResF: Field> BaseAir<PF> for CodeSwitchAir<EvalF, ResF> 
 where
-    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply<ResF>,
     ResF::UnitField: P3FieldConfig,
 {
     fn width(&self) -> usize {
@@ -140,7 +140,7 @@ where
 
 impl<AB: AirBuilderWithPublicValues<F = <ResF::UnitField as P3FieldConfig>::P3Field>, EvalF, ResF: Field> Air<AB> for CodeSwitchAir<EvalF, ResF> 
 where
-    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply<ResF>,
     ResF::UnitField: P3FieldConfig,
 {
     #[inline]
@@ -176,12 +176,10 @@ where
 
         for (r1_chunk, y1_chunk) in izip!(r1.chunks_exact(self.eval_degree), y1.chunks_exact(witness_size)) {
             let y1expr: Vec<AB::Expr> = y1_chunk.iter().map(|&x| x.into()).collect();
-            let mut res = r1_chunk.to_vec();
-            for (y_unit, y1_unit) in izip!(y.chunks_exact_mut(self.eval_degree),y1expr.chunks_exact(self.eval_degree)) {
-                EvalF::p3mul(r1_chunk, y1_unit, &mut res);
-                for (u, v) in izip!(y_unit.iter_mut(), res.iter()) {
-                    *u -= v.clone();
-                }
+            let mut res = y1expr.to_vec();
+            <EvalF as P3Multiply::<ResF>>::p3mul(r1_chunk, &y1expr, &mut res);
+            for (u, v) in izip!(y.iter_mut(), res.iter()) {
+                *u -= v.clone();
             }
         }
         for v in y.iter() {
@@ -192,7 +190,7 @@ where
 
 impl<EvalF, ResF: Field> CodeSwitchAir<EvalF, ResF> 
 where
-    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply<ResF>,
     ResF::UnitField: P3FieldConfig,
 {
     fn encode<'a, AB: AirBuilderWithPublicValues<F = <ResF::UnitField as P3FieldConfig>::P3Field>>(&self, check: &mut FilteredAirBuilder<'a, AB>, src: &[AB::Var], dst: &[AB::Var], n: usize) {
@@ -236,6 +234,5 @@ where
             }
             pos += r;
         }
-println!("coded {}", pos);
     }
 }

@@ -6,7 +6,7 @@ use p3_circle::CirclePcs;
 use p3_commit::ExtensionMmcs;
 use p3_field::{extension::{BinomialExtensionField, ComplexExtendable}, Algebra, ExtensionField, PrimeField32};
 
-use mersenne31::{M31Ext3, M31};
+use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
 use p3_fri::FriConfig;
 use p3_keccak::Keccak256Hash;
 use p3_merkle_tree::MerkleTreeMmcs;
@@ -87,22 +87,42 @@ impl P3FieldConfig for M31 {
     type P3Challenge = BinomialExtensionField<Self::P3Field, 3>;
 }
 
-pub trait P3Multiply {
+pub trait P3Multiply<RHS: Field> {
     fn p3mul<Expr: Algebra<Expr>>(lhs: &[Expr], rhs: &[Expr], res: &mut [Expr]);
 }
 
-impl P3Multiply for M31 {
+impl P3Multiply<M31> for M31 {
     #[inline(always)]
     fn p3mul<Expr: Algebra<Expr>>(lhs: &[Expr], rhs: &[Expr], res: &mut [Expr]) {
         res[0] = lhs[0].clone() * rhs[0].clone()
     }
 }
 
-impl P3Multiply for M31Ext3 {
+impl P3Multiply<M31x16> for M31 {
+    #[inline(always)]
+    fn p3mul<Expr: Algebra<Expr>>(lhs: &[Expr], rhs: &[Expr], res: &mut [Expr]) {
+        for i in 0..16 {
+            res[i] = lhs[0].clone() * rhs[i].clone()
+        }
+    }
+}
+
+impl P3Multiply<M31Ext3> for M31Ext3 {
     #[inline(always)]
     fn p3mul<Expr: Algebra<Expr>>(lhs: &[Expr], rhs: &[Expr], res: &mut [Expr]) {
         res[0] = lhs[0].clone() * rhs[0].clone() + mul5(lhs[1].clone() * rhs[2].clone() + lhs[2].clone() * rhs[1].clone());
         res[1] = lhs[0].clone() * rhs[1].clone() + lhs[1].clone() * rhs[0].clone() + mul5(lhs[2].clone() * rhs[2].clone());
-        res[2] = lhs[0].clone() * rhs[2].clone() + lhs[1].clone() * rhs[1].clone() + lhs[2].clone() * rhs[1].clone();
+        res[2] = lhs[0].clone() * rhs[2].clone() + lhs[1].clone() * rhs[1].clone() + lhs[2].clone() * rhs[0].clone();
+    }
+}
+
+impl P3Multiply<M31Ext3x16> for M31Ext3 {
+    #[inline(always)]
+    fn p3mul<Expr: Algebra<Expr>>(lhs: &[Expr], rhs: &[Expr], res: &mut [Expr]) {
+        for i in 0..16 {
+            res[i] = lhs[0].clone() * rhs[i].clone() + mul5(lhs[1].clone() * rhs[32 + i].clone() + lhs[2].clone() * rhs[16 + i].clone());
+            res[16 + i] = lhs[0].clone() * rhs[16 + i].clone() + lhs[1].clone() * rhs[i].clone() + mul5(lhs[2].clone() * rhs[32 + i].clone());
+            res[32 + i] = lhs[0].clone() * rhs[32 + i].clone() + lhs[1].clone() * rhs[16 + i].clone() + lhs[2].clone() * rhs[i].clone();
+        }
     }
 }
