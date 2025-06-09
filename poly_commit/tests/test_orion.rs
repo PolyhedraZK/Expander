@@ -10,6 +10,28 @@ use transcript::BytesHashTranscript;
 
 use p3_mersenne_31::Mersenne31;
 
+use std::time::{Instant, Duration};
+
+pub struct Timer {
+    start: Instant,
+    last: Duration,
+}
+
+impl Timer {
+    pub fn new() -> Self {
+        Timer {
+            start: Instant::now(),
+            last: Duration::new(0, 0),
+        }
+    }
+
+    pub fn count(&mut self) -> Duration {
+        let e = self.start.elapsed();
+        let res = e - self.last;
+        self.last = e;
+        res
+    }
+}
 
 #[test]
 fn test_merkle_tree() {
@@ -30,7 +52,6 @@ fn test_merkle_tree() {
 #[test]
 fn test_re_orion_e2e() {
     let mut rng = test_rng();
-println!("e2e test start");
     type WitF = M31x16;
     type CodeF = M31x16;
     type EvalF = M31Ext3;
@@ -51,20 +72,24 @@ println!("e2e test start");
     // type EvalF = M31Ext3;
     // type ResF = M31Ext3;
 
-    let msg_bit = 11;
+    let msg_bit = 20;
     let mut pcs = OrionInstance::<WitF, CodeF, EvalF, ResF, SHA256hasher>::new(1 << msg_bit);
     // let wit = vec![WitF::ONE; 1 << msg_bit];
     let wit: Vec<WitF> = (0..1 << msg_bit).map(|_| WitF::random_unsafe(&mut rng)).collect();
+    let mut timer = Timer::new();
     let commit = pcs.commit(&wit);
-println!("commit fin");
+println!("commit fin in {:?}", timer.count());
 
     let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
     // let poly = vec![EvalF::from(2); msg_bit];
     let poly: Vec<EvalF> = (0..msg_bit).map(|_| EvalF::random_unsafe(&mut rng)).collect();
+    let mut timer = Timer::new();
     let opening = pcs.open(&commit, &poly, &mut transcript);
-println!("open fin");
+println!("open fin in {:?}", timer.count());
     
     let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
+    let mut timer = Timer::new();
     let verify = pcs.verify(&commit, &poly, &opening, &mut transcript);
+    // println!("verify fin in {:?}", timer.count());
     assert!(verify);
 }

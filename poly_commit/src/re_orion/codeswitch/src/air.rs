@@ -9,7 +9,7 @@ use p3_uni_stark::{prove as p3prove, verify as p3verify};
 
 use encoder::*;
 
-use crate::{P3Config, P3FieldConfig, P3Multiply, Plonky3Config};
+use crate::{utils::Timer, P3Config, P3FieldConfig, P3Multiply, Plonky3Config};
 
 pub const CHALLENGE_SIZE: usize = 1500;
 
@@ -68,16 +68,13 @@ where
         y: &ResF,
     ) -> Vec<u8> {
         let witness_size = self.eval_degree * self.res_pack_size;
-        let width = self.msg_len * 2 * witness_size;
+        let width = self.encoder.code_len * witness_size;
         let mut trace = <ResF::UnitField as P3FieldConfig>::P3Field::zero_vec(width * 4);
         // TODO: unify arrange mem
         unsafe { 
-            let mut pos = 0;
             std::ptr::copy_nonoverlapping(y_gamma.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, trace.as_mut_ptr(), witness_size * y_gamma.len()); 
-            pos += y_gamma.len() * witness_size;
-            std::ptr::copy_nonoverlapping(y1.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, trace.as_mut_ptr().add(pos), witness_size * y1.len()); 
-            pos += y1.len() * witness_size;
-            std::ptr::copy_nonoverlapping(c_gamma.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, trace.as_mut_ptr().add(pos), c_gamma.len() * witness_size);
+            std::ptr::copy_nonoverlapping(c_gamma.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, trace.as_mut_ptr().add(width), c_gamma.len() * witness_size);
+            std::ptr::copy_nonoverlapping(y1.as_ptr() as *const <ResF::UnitField as P3FieldConfig>::P3Field, trace.as_mut_ptr().add(width * 3), witness_size * y1.len()); 
             // pos += c_gamma.len() * witness_size;
         }
 
@@ -117,7 +114,9 @@ where
 
         let config = <P3Config as Plonky3Config<ResF::UnitField>>::init();
 
+let mut timer = Timer::new();
         let rst = p3verify(&config, self, &mut <P3Config as Plonky3Config<ResF::UnitField>>::get_challenger(), &serde_cbor::from_slice(proof).unwrap(), &pis);
+println!("p3verify in {:?}", timer.count());
         if let Err(e) = rst {
             println!("{:?}", e);
             false
@@ -134,7 +133,7 @@ where
     ResF::UnitField: P3FieldConfig,
 {
     fn width(&self) -> usize {
-        self.msg_len * 2 * self.eval_degree * self.res_pack_size
+        self.encoder.code_len * self.eval_degree * self.res_pack_size
     }
 }
 
@@ -161,8 +160,6 @@ where
         let outputs = main.row_slice(1);
 
         let y_gamma = &inputs[..msg_len * witness_size];
-        let y1 = &inputs[msg_len * witness_size..msg_len * 2 * witness_size];
-
         let c_gamma = &outputs[..code_len * witness_size];
 
         let mut check = builder.when_first_row();
@@ -174,6 +171,8 @@ where
             }
         }
 
+        let mut check = builder.when_last_row();
+        let y1 = &inputs[..msg_len * witness_size];
         for (r1_chunk, y1_chunk) in izip!(r1.chunks_exact(self.eval_degree), y1.chunks_exact(witness_size)) {
             let y1expr: Vec<AB::Expr> = y1_chunk.iter().map(|&x| x.into()).collect();
             let mut res = y1expr.to_vec();

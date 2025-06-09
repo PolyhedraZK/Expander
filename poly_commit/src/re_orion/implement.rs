@@ -245,14 +245,6 @@ where
             y += y_prime[i] * r1[i];
         }
 
-let mut tmp = ResF::ZERO;
-for i in 0..self.width {
-    for j in 0..COLUMN_SIZE {
-        tmp += r0[j] * r1[i] * self.wit[j * self.width + i];
-    }
-}
-println!("test y {:?} ? {:?}", tmp, y);
-
         let c_gamma_root = tree_gamma.commit();
         transcript.append_u8_slice(&c_gamma_root);
         transcript.append_field_element(&y);
@@ -271,7 +263,9 @@ println!("test y {:?} ? {:?}", tmp, y);
             c_gamma_proof.push(tree_gamma.prove(leaves + idx, 1));
         }
 
+let mut timer = Timer::new();
         let proof_cs = air.prove(&y_gamma, &y_prime, &c_gamma, &c_gamma_idx, &r1, &y, );
+println!("plonky3 prove in {:?}", timer.count());
 
         let mut root_idx_proof: Vec<Vec<u8>> = Vec::with_capacity(idxs.len());
         let column_leaf = 1 << (self.tree.height - COLUMN_LG);
@@ -308,6 +302,7 @@ println!("test y {:?} ? {:?}", tmp, y);
         scratch: &mut OrionInstanceScratchPad<ResF, H>,
         transcript: &mut impl Transcript,
     ) -> bool {
+let mut timer = Timer::new();
         let hasher = H::new();
 
         let c_gamma_root = &opening.c_gamma_root;
@@ -349,7 +344,11 @@ println!("test y {:?} ? {:?}", tmp, y);
             }
         }
 
-        air.verify(&opening.proof_cs, &c_gamma,&r1, &opening.y)
+println!("merkletree {:?}", timer.count());
+let mut timer = Timer::new();
+        let rst = air.verify(&opening.proof_cs, &c_gamma,&r1, &opening.y);
+println!("plonky3 {:?}", timer.count());
+        rst
     }
 }
 
