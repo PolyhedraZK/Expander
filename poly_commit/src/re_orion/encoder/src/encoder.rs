@@ -1,5 +1,4 @@
 use arith::Field;
-use p3_field::Field as P3Field;
 use rand::{Rng, RngCore};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
@@ -191,13 +190,16 @@ impl<F: Field> Encoder<F> {
     }
 }
 
-fn trans_bigraph_vec<S: Field, T: P3Field>(src: &[BiGraph<S>]) -> Vec<BiGraph<T>> {
+fn trans_bigraph_vec<S: Field, T>(src: &[BiGraph<S>]) -> Vec<BiGraph<T>> {
     let mut g: Vec<BiGraph<T>> = Vec::with_capacity(src.len());
     for gi in src.iter() {
         let mut edges: Vec<Vec<(usize, T)>> = Vec::with_capacity(gi.edge.len());
         for e in gi.edge.iter() {
-            let mut edge: Vec<(usize, T)> = vec![(0, T::ZERO); e.len()];
-            unsafe { std::ptr::copy_nonoverlapping(e.as_ptr() as *const (usize, T), edge.as_mut_ptr(), e.len()); }
+            let mut edge: Vec<(usize, T)> = Vec::with_capacity(e.len());
+            unsafe { 
+                std::ptr::copy_nonoverlapping(e.as_ptr() as *const (usize, T), edge.as_mut_ptr(), e.len()); 
+                edge.set_len(e.len());
+            }
             edges.push(edge);
         }
         g.push(BiGraph::<T> {
@@ -214,7 +216,7 @@ pub trait NewFrom<S: Field> {
     fn new_from(encoder: &Encoder<S>) -> Self;
 }
 
-impl<S: Field, T: P3Field> NewFrom<S> for Encoder<T> {
+impl<S: Field, T> NewFrom<S> for Encoder<T> {
     fn new_from(encoder: &Encoder<S>) -> Encoder<T> {
         Encoder::<T> {
            code_len: encoder.code_len,
