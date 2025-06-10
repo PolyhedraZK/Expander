@@ -7,6 +7,7 @@ use ark_std::test_rng;
 use ethnum::U256;
 use rand::thread_rng;
 use serdes::ExpSerde;
+use whir::crypto::fields::{Field64, Field64_2};
 
 use crate::{
     goldilocks::mod_reduce_u64, Goldilocks, GoldilocksExt2, GoldilocksExt2x8, Goldilocksx8,
@@ -238,4 +239,35 @@ fn test_edge_cases() {
     assert!(GoldilocksExt2::zero().inv().is_none());
     let x = GoldilocksExt2::X;
     assert_eq!(x * x, GoldilocksExt2::from(Goldilocks::from(7u32)));
+}
+
+#[test]
+fn convert_from_and_to_arkworks() {
+    let mut rng = thread_rng();
+
+    let one = Goldilocks::one();
+    let ark_one = Field64::from(1u32);
+
+    assert_eq!(one, Goldilocks::from(ark_one));
+    assert_eq!(Field64::from(one), ark_one);
+
+    for _ in 0..100 {
+        let x = Goldilocks::random_unsafe(&mut rng);
+        let ark_x = Field64::from(x);
+        assert_eq!(x, Goldilocks::from(ark_x));
+        assert_eq!(Field64::from(x), ark_x);
+    }
+
+    let one = GoldilocksExt2::one();
+    let ark_one = Field64_2::from(1u32);
+
+    assert_eq!(one, GoldilocksExt2::from(ark_one));
+    assert_eq!(Field64_2::from(one), ark_one);
+
+    for _ in 0..100 {
+        let x = GoldilocksExt2::random_unsafe(&mut rng);
+        let ark_x = Field64_2::from(x);
+        assert_eq!(x, GoldilocksExt2::from(ark_x));
+        assert_eq!(Field64_2::from(x), ark_x);
+    }
 }
