@@ -22,10 +22,10 @@ use whir::{
 
 const TEST_REPETITION: usize = 3;
 
-pub fn test_whir_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<F>>(
+fn test_whir_pcs_helper<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<F>>(
     params: &P::Params,
     poly: &P::Poly,
-    xs: &[P::EvalPoint],
+    x: &P::EvalPoint,
 ) {
     let mut rng = thread_rng();
     // NOTE(HS) we assume that the polynomials we pass in are of sufficient length.
@@ -39,40 +39,34 @@ pub fn test_whir_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentSc
     let commitment = P::commit(params, &proving_key, poly, &mut scratch_pad);
 
     println!("scratch_pad: {:?}", scratch_pad);
-    
-    for x in xs {
-        let mut transcript_cloned = transcript.clone();
-        let (v, opening) = P::open(
-            params,
-            &commitment,
-            &proving_key,
-            poly,
-            x,
-            &mut scratch_pad,
-            &mut transcript,
-        );
-        assert!(P::verify(
-            params,
-            &verification_key,
-            &commitment,
-            x,
-            v,
-            &opening,
-            &mut transcript_cloned
-        ));
-    }
+
+    let mut transcript_cloned = transcript.clone();
+    let (v, opening) = P::open(
+        params,
+        &commitment,
+        &proving_key,
+        poly,
+        x,
+        &mut scratch_pad,
+        &mut transcript,
+    );
+    assert!(P::verify(
+        params,
+        &verification_key,
+        &commitment,
+        x,
+        v,
+        &opening,
+        &mut transcript_cloned
+    ));
 }
 
-fn test_whir_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
+fn test_whir_pcs(num_vars_start: usize, num_vars_end: usize) {
     let mut rng = test_rng();
 
     (num_vars_start..=num_vars_end).for_each(|num_vars| {
-        let xs: Vec<_> = (0..TEST_REPETITION)
-            .map(|_| -> Vec<GoldilocksExt2> {
-                (0..num_vars)
-                    .map(|_| GoldilocksExt2::random_unsafe(&mut rng))
-                    .collect()
-            })
+        let point = (0..num_vars)
+            .map(|_| GoldilocksExt2::random_unsafe(&mut rng))
             .collect();
         let poly = MultiLinearPoly::<Goldilocks>::random(num_vars, &mut rng);
 
@@ -98,13 +92,13 @@ fn test_whir_pcs_generics(num_vars_start: usize, num_vars_end: usize) {
             whir_params,
         );
 
-        test_whir_pcs::<GoldilocksExt2, BytesHashTranscript<Keccak256hasher>, WhirPCS>(
-            &params, &poly, &xs,
+        test_whir_pcs_helper::<GoldilocksExt2, BytesHashTranscript<Keccak256hasher>, WhirPCS>(
+            &params, &poly, &point,
         );
     })
 }
 
 #[test]
 fn test_whir_pcs_full_e2e() {
-    test_whir_pcs_generics(10, 15)
+    test_whir_pcs(10, 15)
 }
