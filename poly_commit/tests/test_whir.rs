@@ -6,7 +6,7 @@ use goldilocks::{Goldilocks, GoldilocksExt2};
 use poly_commit::{PolynomialCommitmentScheme, WhirPCS};
 use polynomials::MultiLinearPoly;
 use rand::thread_rng;
-use spongefish_pow::{keccak::KeccakPoW, PowStrategy};
+use spongefish_pow::keccak::KeccakPoW;
 use transcript::BytesHashTranscript;
 use whir::{
     crypto::{
@@ -20,8 +20,6 @@ use whir::{
     whir::parameters::WhirConfig,
 };
 
-const TEST_REPETITION: usize = 3;
-
 fn test_whir_pcs_helper<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<F>>(
     params: &P::Params,
     poly: &P::Poly,
@@ -34,11 +32,7 @@ fn test_whir_pcs_helper<F: ExtensionField, T: Transcript, P: PolynomialCommitmen
     let mut transcript = T::new();
     let mut scratch_pad = P::init_scratch_pad(params);
 
-    println!("scratch_pad: {:?}", scratch_pad);
-
     let commitment = P::commit(params, &proving_key, poly, &mut scratch_pad);
-
-    println!("scratch_pad: {:?}", scratch_pad);
 
     let mut transcript_cloned = transcript.clone();
     let (v, opening) = P::open(

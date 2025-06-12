@@ -1,4 +1,3 @@
-use arith::FFTField;
 use ark_std::log2;
 use gkr_engine::{StructuredReferenceString, Transcript};
 use goldilocks::{Goldilocks, GoldilocksExt2};
@@ -8,9 +7,9 @@ use spongefish_pow::keccak::KeccakPoW;
 use whir::{
     crypto::{
         fields::{Field64, Field64_2},
-        merkle_tree::keccak::{KeccakCompress, KeccakMerkleTreeParams},
+        merkle_tree::keccak::KeccakMerkleTreeParams,
     },
-    poly_utils::{coeffs::CoefficientList, evals::EvaluationsList, multilinear::MultilinearPoint},
+    poly_utils::{coeffs::CoefficientList, multilinear::MultilinearPoint},
     whir::{
         committer::{CommitmentReader, CommitmentWriter},
         domainsep::WhirDomainSeparator,
@@ -46,8 +45,8 @@ impl PolynomialCommitmentScheme<GoldilocksExt2> for WhirPCS {
     fn init_scratch_pad(params: &Self::Params) -> Self::ScratchPad {
         // todo: session identifier can be sampled from transcript?
         let domainsep = DomainSeparator::new("🌪️")
-            .commit_statement(&params)
-            .add_whir_proof(&params);
+            .commit_statement(params)
+            .add_whir_proof(params);
 
         domainsep.to_prover_state()
     }
@@ -71,15 +70,13 @@ impl PolynomialCommitmentScheme<GoldilocksExt2> for WhirPCS {
 
         let committer = CommitmentWriter::new(params.clone());
 
-        let witness = committer.commit(prover_state, whir_poly.clone()).unwrap();
-
-        witness
+        committer.commit(prover_state, whir_poly.clone()).unwrap()
     }
 
     fn open(
         params: &Self::Params,
         commitment: &Self::Commitment,
-        proving_key: &<Self::SRS as gkr_engine::StructuredReferenceString>::PKey,
+        _proving_key: &<Self::SRS as gkr_engine::StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
         prover_state: &mut Self::ScratchPad,
@@ -118,12 +115,12 @@ impl PolynomialCommitmentScheme<GoldilocksExt2> for WhirPCS {
 
     fn verify(
         params: &Self::Params,
-        verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
-        commitment: &Self::Commitment,
+        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        _commitment: &Self::Commitment,
         x: &Self::EvalPoint,
         eval: GoldilocksExt2,
         opening: &Self::Opening,
-        transcript: &mut impl Transcript,
+        _transcript: &mut impl Transcript,
     ) -> bool {
         let num_variables = x.len();
         let mut statement = Statement::<Field64_2>::new(num_variables);
@@ -136,26 +133,27 @@ impl PolynomialCommitmentScheme<GoldilocksExt2> for WhirPCS {
         let weights = Weights::evaluation(point.clone());
         statement.add_constraint(weights, eval.into());
 
-        let commitment_reader = CommitmentReader::new(&params);
-        let verifier = Verifier::new(&params);
+        let commitment_reader = CommitmentReader::new(params);
+        let verifier = Verifier::new(params);
 
         let domainsep = DomainSeparator::new("🌪️")
-            .commit_statement(&params)
-            .add_whir_proof(&params);
+            .commit_statement(params)
+            .add_whir_proof(params);
 
         let mut verifier_state = domainsep.to_verifier_state(opening);
         let parsed_commitment = commitment_reader
             .parse_commitment(&mut verifier_state)
             .unwrap();
 
-        let (point, constraint) =
+        let (_point, constraint) =
             match verifier.verify(&mut verifier_state, &parsed_commitment, &statement) {
                 Ok((p, c)) => (p, c),
                 Err(_) => return false,
             };
 
-        println!("WhirPCS: Verifying point: {:?}", point);
-        println!("WhirPCS: Verifying constraint: {:?}", constraint);
+        if !constraint.is_empty() {
+            return false;
+        }
 
         true
     }

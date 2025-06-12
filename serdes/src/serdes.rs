@@ -7,12 +7,7 @@ use std::{
 use ethnum::U256;
 use halo2curves::{
     bn256::{Fr, G1Affine, G2Affine},
-    ff::Field,
     group::GroupEncoding,
-};
-use whir::{
-    crypto::{fields::Field64, merkle_tree::keccak::KeccakMerkleTreeParams},
-    whir::committer::Witness,
 };
 
 use crate::{exp_serde_for_generic_slices, exp_serde_for_number, SerdeError, SerdeResult};
@@ -211,15 +206,5 @@ impl ExpSerde for String {
         let mut buf = vec![0u8; len];
         reader.read_exact(&mut buf)?;
         String::from_utf8(buf).map_err(|_| SerdeError::DeserializeError)
-    }
-}
-
-impl ExpSerde for Witness<Field64, KeccakMerkleTreeParams<Field64>> {
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        todo!()
-    }
-
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        todo!()
     }
 }
