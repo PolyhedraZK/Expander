@@ -344,10 +344,10 @@ where
     // NOTE(HS) deteriorate to vanilla HyperKZG verify if mpi_alphas is empty
     if mpi_alphas.is_empty() {
         let hyper_bikzg_opening = opening.clone();
-        let hyper_kzg_opening: HyperKZGOpening<E> = hyper_bikzg_opening.into();
+        let hyper_kzg_opening: HyperUniKZGOpening<E> = hyper_bikzg_opening.into();
 
         let what = coeff_form_uni_hyperkzg_verify(
-            vk.into(),
+            &vk.into(),
             commitment,
             local_alphas,
             eval,

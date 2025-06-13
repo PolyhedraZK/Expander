@@ -1,5 +1,5 @@
 use arith::Field;
-use polynomials::MultilinearExtension;
+use polynomials::{MultiLinearPoly, MultilinearExtension};
 use rand::RngCore;
 use serdes::ExpSerde;
 use std::{fmt::Debug, str::FromStr};
@@ -37,6 +37,7 @@ pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
     type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString + Send + Sync;
     type Commitment: Clone + Debug + Default + ExpSerde + Send + Sync;
     type Opening: Clone + Debug + Default + ExpSerde + Send + Sync;
+    type BatchOpening: ExpSerde + Send + Sync;
 
     /// This function returns the SRS for the PCS.
     ///
@@ -155,6 +156,32 @@ pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
         transcript: &mut impl Transcript,
         opening: &Self::Opening,
     ) -> bool;
+
+    /// Open a set of polynomials at a set of points.
+    fn multi_points_batch_open(
+        _params: &Self::Params,
+        _mpi_engine: &impl MPIEngine,
+        _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
+        _polys: &[MultiLinearPoly<PolyField>],
+        _x: &[ExpanderSingleVarChallenge<F>],
+        _scratch_pad: &Self::ScratchPad,
+        _transcript: &mut impl Transcript,
+    ) -> (Vec<F::ChallengeField>, Self::BatchOpening) {
+        unimplemented!("Batch opening is not implemented for this PCS type")
+    }
+
+    /// Verify the opening of a set of polynomials at a set of points.
+    fn multi_points_batch_verify(
+        _params: &Self::Params,
+        _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
+        _commitments: &[Self::Commitment],
+        _x: &[ExpanderSingleVarChallenge<F>],
+        _evals: &[F::ChallengeField],
+        _opening: &Self::BatchOpening,
+        _transcript: &mut impl Transcript,
+    ) -> bool {
+        unimplemented!("Batch verify is not implemented for this PCS type")
+    }
 }
 
 impl StructuredReferenceString for () {

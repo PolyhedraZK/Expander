@@ -294,6 +294,9 @@ impl<'a, Cfg: GKREngine> Verifier<'a, Cfg> {
         verified
     }
 
+    /// Paritially verify the proof.
+    /// Conduct the whole procedure except for pairing, if any.
+    #[allow(clippy::too_many_arguments)]
     pub fn verify(
         &self,
         circuit: &mut Circuit<Cfg::FieldConfig>,

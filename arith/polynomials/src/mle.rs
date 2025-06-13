@@ -5,7 +5,7 @@ use ark_std::log2;
 
 use crate::{EqPolynomial, MultilinearExtension, MutableMultilinearExtension};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct MultiLinearPoly<F: Field> {
     pub coeffs: Vec<F>,
 }
@@ -87,6 +87,35 @@ impl<F: Field> MultiLinearPoly<F> {
         self.coeffs.truncate(n);
     }
 
+    #[inline]
+    pub fn fix_bottom_variable(&mut self, point: &F) {
+        let n = self.coeffs.len() / 2;
+
+        // evaluate single variable of partial point from left to right
+
+        for i in 0..n {
+            self.coeffs[i] =
+                self.coeffs[i] + (self.coeffs[(i << 1) + 1] - self.coeffs[i << 1]) * point;
+        }
+        self.coeffs.truncate(n);
+    }
+
+    /// Hyperplonk's implementation
+    /// Evaluate the polynomial at a set of variables, from top to bottom
+    /// This is equivalent to `evaluate` when partial_point.len() = nv
+    ///
+    /// This matches the behavior of Hyperplonk's polynomial evaluation
+    #[inline]
+    pub fn eval_reverse_order<AF: Field + Mul<F, Output = F>>(&self, partial_point: &[AF]) -> F {
+        // evaluate single variable of partial point from left to right
+        let mut tmp = self.clone();
+        partial_point
+            .iter()
+            .for_each(|point| tmp.fix_top_variable(*point));
+
+        tmp.coeffs[0]
+    }
+
     /// Hyperplonk's implementation
     /// Evaluate the polynomial at a set of variables, from bottom to top
     /// This is equivalent to `evaluate` when partial_point.len() = nv
@@ -153,6 +182,30 @@ impl<F: Field> MultiLinearPoly<F> {
             }
             scratch[0]
         }
+    }
+}
+
+impl<F: Field> Add<&MultiLinearPoly<F>> for MultiLinearPoly<F> {
+    type Output = Self;
+
+    fn add(self, other: &MultiLinearPoly<F>) -> Self::Output {
+        assert_eq!(self.coeffs.len(), other.coeffs.len());
+        let coeffs = self
+            .coeffs
+            .iter()
+            .zip(other.coeffs.iter())
+            .map(|(a, b)| *a + *b)
+            .collect();
+        MultiLinearPoly { coeffs }
+    }
+}
+
+impl<F: Field> Mul<&F> for &MultiLinearPoly<F> {
+    type Output = MultiLinearPoly<F>;
+
+    fn mul(self, scalar: &F) -> Self::Output {
+        let coeffs = self.coeffs.iter().map(|c| *c * scalar).collect();
+        MultiLinearPoly { coeffs }
     }
 }
 

@@ -53,7 +53,7 @@ where
 
 #[derive(Clone, Debug, Derivative, ExpSerde)]
 #[derivative(Default(bound = ""))]
-pub struct HyperKZGOpening<E: Engine>
+pub struct HyperUniKZGOpening<E: Engine>
 where
     E::Fr: ExpSerde,
     E::G1Affine: Default + ExpSerde,
@@ -278,56 +278,5 @@ where
         self.beta_y2_evals.append_to_transcript(fs_transcript);
         self.pos_beta_y_evals.append_to_transcript(fs_transcript);
         self.neg_beta_y_evals.append_to_transcript(fs_transcript);
-    }
-}
-
-#[derive(Debug, Clone, Derivative, ExpSerde)]
-#[derivative(Default(bound = ""))]
-pub struct HyperBiKZGOpening<E: Engine>
-where
-    E::Fr: ExpSerde,
-    E::G1Affine: Default + ExpSerde,
-{
-    pub folded_oracle_commitments: Vec<E::G1Affine>,
-
-    pub aggregated_evals: HyperKZGAggregatedEvals<E>,
-    pub leader_evals: HyperKZGExportedLocalEvals<E>,
-
-    pub beta_x_commitment: E::G1Affine,
-    pub beta_y_commitment: E::G1Affine,
-
-    pub quotient_delta_x_commitment: E::G1Affine,
-    pub quotient_delta_y_commitment: E::G1Affine,
-}
-
-impl<E: Engine> From<HyperBiKZGOpening<E>> for HyperKZGOpening<E>
-where
-    E::Fr: ExpSerde,
-    E::G1Affine: Default + ExpSerde,
-{
-    fn from(value: HyperBiKZGOpening<E>) -> Self {
-        Self {
-            folded_oracle_commitments: value.folded_oracle_commitments,
-            evals_at_x: value.leader_evals,
-            beta_x_commitment: value.beta_x_commitment,
-            quotient_delta_x_commitment: value.quotient_delta_x_commitment,
-        }
-    }
-}
-
-impl<E: Engine> From<HyperKZGOpening<E>> for HyperBiKZGOpening<E>
-where
-    E::Fr: ExpSerde,
-    E::G1Affine: Default + ExpSerde,
-{
-    fn from(value: HyperKZGOpening<E>) -> Self {
-        Self {
-            folded_oracle_commitments: value.folded_oracle_commitments,
-            leader_evals: value.evals_at_x,
-            beta_x_commitment: value.beta_x_commitment,
-            quotient_delta_x_commitment: value.quotient_delta_x_commitment,
-
-            ..Default::default()
-        }
     }
 }

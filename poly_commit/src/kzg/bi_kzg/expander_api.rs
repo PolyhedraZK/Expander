@@ -9,6 +9,7 @@ use halo2curves::{
     pairing::{Engine, MultiMillerLoop},
     CurveAffine,
 };
+use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
 
 use crate::{
@@ -19,7 +20,7 @@ use crate::{
     *,
 };
 
-impl<G, E> ExpanderPCS<G, E::Fr> for HyperKZGPCS<E>
+impl<G, E> ExpanderPCS<G, E::Fr> for HyperBiKZGPCS<E>
 where
     G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
     E: Engine + MultiMillerLoop,
@@ -27,15 +28,16 @@ where
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
-    const NAME: &'static str = "HyperKZGPCSForExpander";
+    const NAME: &'static str = "HyperBiKZGForExpander";
 
     const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::KZG;
 
-    type Commitment = KZGCommitment<E>;
+    type Commitment = BiKZGCommitment<E>;
     type Opening = HyperBiKZGOpening<E>;
     type Params = usize;
     type SRS = CoefFormBiKZGLocalSRS<E>;
     type ScratchPad = ();
+    type BatchOpening = ();
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
@@ -81,7 +83,7 @@ where
             coeff_form_uni_kzg_commit(&proving_key.tau_x_srs, poly.hypercube_basis_ref());
 
         if mpi_engine.is_single_process() {
-            return KZGCommitment(local_commitment).into();
+            return BiKZGCommitment(local_commitment).into();
         }
 
         let local_g1 = local_commitment.to_curve();
@@ -94,14 +96,14 @@ where
 
         let final_commit = root_gathering_commits.iter().sum::<E::G1>().into();
 
-        KZGCommitment(final_commit).into()
+        BiKZGCommitment(final_commit).into()
     }
 
     fn open(
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<E::Fr>,
+        poly: &impl MultilinearExtension<E::Fr>,
         x: &ExpanderSingleVarChallenge<G>,
         transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,

@@ -7,13 +7,20 @@ use halo2curves::{
     pairing::{Engine, MultiMillerLoop},
     CurveAffine,
 };
-use polynomials::MultiLinearPoly;
+use polynomials::{MultiLinearPoly, MultilinearExtension};
 use serdes::ExpSerde;
 
-use crate::*;
-use kzg::hyper_kzg::*;
+use crate::{
+    coeff_form_uni_hyperkzg_open, coeff_form_uni_hyperkzg_verify, coeff_form_uni_kzg_commit,
+    HyperUniKZGOpening, PolynomialCommitmentScheme,
+};
 
-pub struct HyperKZGPCS<E>
+use super::{
+    generate_coef_form_bi_kzg_local_srs_for_testing, BiKZGCommitment, CoefFormBiKZGLocalSRS,
+    HyperBiKZGOpening,
+};
+
+pub struct HyperBiKZGPCS<E>
 where
     E: Engine,
     E::Fr: ExtensionField,
@@ -21,7 +28,7 @@ where
     _marker_e: PhantomData<E>,
 }
 
-impl<E> HyperKZGPCS<E>
+impl<E> HyperBiKZGPCS<E>
 where
     E: Engine,
     E::Fr: ExtensionField,
@@ -29,23 +36,23 @@ where
     pub const MINIMUM_SUPPORTED_NUM_VARS: usize = 2;
 }
 
-impl<E> PolynomialCommitmentScheme<E::Fr> for HyperKZGPCS<E>
+impl<E> PolynomialCommitmentScheme<E::Fr> for HyperBiKZGPCS<E>
 where
     E: Engine + MultiMillerLoop,
     E::Fr: ExtensionField + PrimeField,
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
 {
-    const NAME: &'static str = "HyperKZGPCS";
+    const NAME: &'static str = "HyperBiKZGPCS";
 
     type Params = usize;
     type Poly = MultiLinearPoly<E::Fr>;
     type EvalPoint = Vec<E::Fr>;
     type ScratchPad = ();
 
-    type SRS = CoefFormUniKZGSRS<E>;
-    type Commitment = KZGCommitment<E>;
-    type Opening = HyperKZGOpening<E>;
+    type SRS = CoefFormBiKZGLocalSRS<E>;
+    type Commitment = BiKZGCommitment<E>;
+    type Opening = HyperBiKZGOpening<E>;
 
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
 
@@ -53,7 +60,7 @@ where
         let local_num_vars = if *params == 0 { 1 } else { *params };
 
         let length = 1 << local_num_vars;
-        let srs = generate_coef_form_uni_kzg_srs_for_testing(length, rng);
+        let srs = generate_coef_form_bi_kzg_local_srs_for_testing(length, 1, 0, rng);
         (srs, local_num_vars)
     }
 
@@ -63,7 +70,10 @@ where
         poly: &Self::Poly,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Self::Commitment {
-        KZGCommitment(coeff_form_uni_kzg_commit(proving_key, &poly.coeffs))
+        let local_commitment =
+            coeff_form_uni_kzg_commit(&proving_key.tau_x_srs, poly.hypercube_basis_ref());
+
+        BiKZGCommitment(local_commitment)
     }
 
     fn open(
@@ -74,7 +84,15 @@ where
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
     ) -> (E::Fr, Self::Opening) {
-        coeff_form_uni_hyperkzg_open(proving_key, &poly.coeffs, x, transcript)
+        let (eval, hyperkzg_opening) = coeff_form_uni_hyperkzg_open(
+            &proving_key.tau_x_srs,
+            poly.hypercube_basis_ref(),
+            x,
+            transcript,
+        );
+
+        let hyper_bikzg_opening: HyperBiKZGOpening<E> = hyperkzg_opening.into();
+        (eval, hyper_bikzg_opening)
     }
 
     fn verify(
@@ -86,12 +104,15 @@ where
         opening: &Self::Opening,
         transcript: &mut impl Transcript,
     ) -> bool {
+        let hyper_bikzg_opening = opening.clone();
+        let hyper_kzg_opening: HyperUniKZGOpening<E> = hyper_bikzg_opening.into();
+
         coeff_form_uni_hyperkzg_verify(
-            verifying_key.clone(),
+            &verifying_key.into(),
             commitment.0,
             x,
             v,
-            opening,
+            &hyper_kzg_opening,
             transcript,
         )
     }

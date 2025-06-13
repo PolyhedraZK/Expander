@@ -55,11 +55,7 @@ where
 {
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
-    let mut com = E::G1::generator() * E::Fr::ZERO;
-    // let timer = ::utils::timer::Timer::new(format!("kzg commit msm {}", coeffs.len()).as_ref(),
-    // true);
-    msm::multiexp_serial(coeffs, &srs.powers_of_tau[..coeffs.len()], &mut com);
-    // timer.stop();
+    let com = msm::best_multiexp(coeffs, &srs.powers_of_tau[..coeffs.len()]);
 
     com.into()
 }
@@ -77,18 +73,14 @@ where
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
     let (div, eval) = univariate_degree_one_quotient(coeffs, alpha);
-    let mut opening = E::G1::generator() * E::Fr::ZERO;
-
-    // let timer = ::utils::timer::Timer::new(format!("kzg open msm {}", div.len()).as_ref(), true);
-    msm::multiexp_serial(&div, &srs.powers_of_tau[..div.len()], &mut opening);
-    // timer.stop();
+    let opening = msm::best_multiexp(&div, &srs.powers_of_tau[..div.len()]);
 
     (eval, opening.into())
 }
 
 #[inline(always)]
 pub(crate) fn coeff_form_uni_kzg_verify<E: MultiMillerLoop>(
-    vk: UniKZGVerifierParams<E>,
+    vk: &UniKZGVerifierParams<E>,
     comm: E::G1Affine,
     alpha: E::Fr,
     eval: E::Fr,
@@ -142,7 +134,8 @@ mod tests {
 
         let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
         assert_eq!(actual_eval, eval);
-        assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
+
+        assert!(coeff_form_uni_kzg_verify(&vk, com, alpha, eval, opening))
     }
 
     #[test]
@@ -158,6 +151,7 @@ mod tests {
 
         let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
         assert_eq!(actual_eval, eval);
-        assert!(coeff_form_uni_kzg_verify(vk, com, alpha, eval, opening))
+
+        assert!(coeff_form_uni_kzg_verify(&vk, com, alpha, eval, opening))
     }
 }
