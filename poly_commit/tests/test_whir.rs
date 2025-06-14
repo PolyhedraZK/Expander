@@ -6,19 +6,7 @@ use goldilocks::{Goldilocks, GoldilocksExt2};
 use poly_commit::{PolynomialCommitmentScheme, WhirPCS};
 use polynomials::MultiLinearPoly;
 use rand::thread_rng;
-use spongefish_pow::keccak::KeccakPoW;
 use transcript::BytesHashTranscript;
-use whir::{
-    crypto::{
-        fields::Field64_2,
-        merkle_tree::{
-            keccak::{KeccakCompress, KeccakLeafHash, KeccakMerkleTreeParams},
-            parameters::default_config,
-        },
-    },
-    parameters::{FoldingFactor, MultivariateParameters, ProtocolParameters, SoundnessType},
-    whir::parameters::WhirConfig,
-};
 
 fn test_whir_pcs_helper<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<F>>(
     params: &P::Params,
