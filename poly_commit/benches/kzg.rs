@@ -64,7 +64,7 @@ fn hyperkzg_opening_benchmark_helper(
         let (srs, _) = HyperBiKZGPCS::<Bn256>::gen_srs_for_testing(&num_vars, &mut rng);
         let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
 
-        let _ = HyperBiKZGPCS::<Bn256>::commit(&num_vars, &srs, &poly, &mut scratch_pad);
+        let com = HyperBiKZGPCS::<Bn256>::commit(&num_vars, &srs, &poly, &mut scratch_pad);
 
         group
             .bench_function(
@@ -73,10 +73,11 @@ fn hyperkzg_opening_benchmark_helper(
                     b.iter(|| {
                         _ = black_box(HyperBiKZGPCS::<Bn256>::open(
                             &num_vars,
+                            &com,
                             &srs,
                             &poly,
                             &eval_point,
-                            &scratch_pad,
+                            &mut scratch_pad,
                             &mut transcript,
                         ))
                     })

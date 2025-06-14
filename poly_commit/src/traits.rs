@@ -15,7 +15,7 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
     type ScratchPad: Debug;
 
     type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString;
-    type Commitment;
+    type Commitment: ExpSerde;
     type Opening: Clone + Debug + Default + ExpSerde;
 
     /// Generate a random structured reference string (SRS) for testing purposes.

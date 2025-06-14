@@ -2,13 +2,18 @@ use ark_std::log2;
 use gkr_engine::{StructuredReferenceString, Transcript};
 use goldilocks::{Goldilocks, GoldilocksExt2};
 use polynomials::MultiLinearPoly;
+use rand::RngCore;
 use spongefish::{DomainSeparator, ProverState};
 use spongefish_pow::keccak::KeccakPoW;
 use whir::{
     crypto::{
         fields::{Field64, Field64_2},
-        merkle_tree::keccak::KeccakMerkleTreeParams,
+        merkle_tree::{
+            keccak::{KeccakCompress, KeccakLeafHash, KeccakMerkleTreeParams},
+            parameters::default_config,
+        },
     },
+    parameters::{FoldingFactor, MultivariateParameters, ProtocolParameters, SoundnessType},
     poly_utils::{coeffs::CoefficientList, multilinear::MultilinearPoint},
     whir::{
         committer::{CommitmentReader, CommitmentWriter},
@@ -39,8 +44,8 @@ impl PolynomialCommitmentScheme<GoldilocksExt2> for WhirPCS {
     type ScratchPad = ProverState;
 
     type SRS = ();
-    type Commitment = WhirCommitment; //Vec<u8>; //WhirCommitment;
-    type Opening = Vec<u8>; //Goldilocks;
+    type Commitment = WhirCommitment;
+    type Opening = Vec<u8>;
 
     fn init_scratch_pad(params: &Self::Params) -> Self::ScratchPad {
         // todo: session identifier can be sampled from transcript?
@@ -156,5 +161,31 @@ impl PolynomialCommitmentScheme<GoldilocksExt2> for WhirPCS {
         }
 
         true
+    }
+}
+
+impl WhirPCS {
+    pub fn random_params(num_vars: usize, rng: &mut impl RngCore) -> WhirParam {
+        let (leaf_hash_params, two_to_one_params) =
+            default_config::<Field64_2, KeccakLeafHash<Field64_2>, KeccakCompress>(rng);
+
+        let mv_params = MultivariateParameters::<Field64_2>::new(num_vars);
+
+        let whir_params = ProtocolParameters::<KeccakMerkleTreeParams<Field64_2>, KeccakPoW> {
+            initial_statement: true,
+            security_level: 100,
+            pow_bits: 0,
+            folding_factor: FoldingFactor::ConstantFromSecondRound(4, 2),
+            leaf_hash_params,
+            two_to_one_params,
+            soundness_type: SoundnessType::ConjectureList,
+            _pow_parameters: Default::default(),
+            starting_log_inv_rate: 1,
+        };
+
+        WhirConfig::<Field64_2, KeccakMerkleTreeParams<Field64_2>, KeccakPoW>::new(
+            mv_params,
+            whir_params,
+        )
     }
 }

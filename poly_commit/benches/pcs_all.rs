@@ -4,9 +4,11 @@ use criterion::black_box;
 use gkr_engine::StructuredReferenceString;
 use gkr_engine::{root_println, MPIConfig, MPIEngine, Transcript};
 use gkr_hashers::{Keccak256hasher, SHA256hasher};
+use goldilocks::{Goldilocks, GoldilocksExt2};
 use halo2curves::bn256::{Bn256, G1Affine};
 use poly_commit::{
-    BatchOpeningPCS, HyperUniKZGPCS, HyraxPCS, OrionBaseFieldPCS, PolynomialCommitmentScheme,
+    BatchOpeningPCS, HyperUniKZGPCS, HyraxPCS, OrionSIMDFieldPCS, PolynomialCommitmentScheme,
+    WhirPCS,
 };
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
@@ -21,44 +23,56 @@ fn main() {
     let world = universe.world();
     let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
     println!("==========================");
-    for num_vars in 18..21 {
+    for num_vars in 10..21 {
         root_println!(mpi_config, "num vars: {}", num_vars);
+        bench_whir(&mpi_config, num_vars);
+        bench_orion(&mpi_config, num_vars);
         bench_kzg(&mpi_config, num_vars);
         bench_hyrax(&mpi_config, num_vars);
-        bench_orion(&mpi_config, num_vars);
         println!("==========================");
     }
 }
 
-fn bench_orion(mpi_config: &MPIConfig, num_vars: usize) {
+fn bench_whir(mpi_config: &MPIConfig, num_vars: usize) {
     // full scalar
     let mut rng = test_rng();
-    let (srs, _) = OrionBaseFieldPCS::<Fr, Fr, Fr, Fr>::gen_srs_for_testing(&num_vars, &mut rng);
 
-    let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
-    let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
-    pcs_bench::<OrionBaseFieldPCS<Fr, Fr, Fr, Fr>>(
+    let params = WhirPCS::random_params(num_vars, &mut rng);
+    let (srs, _) = WhirPCS::gen_srs_for_testing(&params, &mut rng);
+
+    let poly = MultiLinearPoly::<Goldilocks>::random(num_vars, &mut rng);
+    let eval_point: Vec<_> = (0..num_vars)
+        .map(|_| GoldilocksExt2::random_unsafe(&mut rng))
+        .collect();
+    pcs_bench::<WhirPCS, GoldilocksExt2>(
         mpi_config,
-        &num_vars,
+        &params,
         &srs,
         &poly,
         &eval_point,
-        "orion full scalar ",
+        "Whir goldilocks   ",
     );
+}
 
-    // small scalar
-    let input = (0..1 << num_vars)
-        .map(|_| Fr::from(rng.next_u32()))
-        .collect::<Vec<_>>();
-    let poly = MultiLinearPoly::<Fr>::new(input);
-    pcs_bench::<OrionBaseFieldPCS<Fr, Fr, Fr, Fr>>(
-        mpi_config,
-        &num_vars,
-        &srs,
-        &poly,
-        &eval_point,
-        "orion small scalar",
-    );
+fn bench_orion(mpi_config: &MPIConfig, num_vars: usize) {
+    let mut rng = test_rng();
+    {
+        // Bn scalar
+        let (srs, _) =
+            OrionSIMDFieldPCS::<Fr, Fr, Fr, Fr>::gen_srs_for_testing(&num_vars, &mut rng);
+
+        let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
+        let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
+
+        pcs_bench::<OrionSIMDFieldPCS<Fr, Fr, Fr, Fr>, Fr>(
+            mpi_config,
+            &num_vars,
+            &srs,
+            &poly,
+            &eval_point,
+            "orion Fr ",
+        );
+    }
 }
 
 fn bench_hyrax(mpi_config: &MPIConfig, num_vars: usize) {
@@ -69,7 +83,7 @@ fn bench_hyrax(mpi_config: &MPIConfig, num_vars: usize) {
     let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
     let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
 
-    pcs_bench::<HyraxPCS<G1Affine>>(
+    pcs_bench::<HyraxPCS<G1Affine>, Fr>(
         mpi_config,
         &num_vars,
         &srs,
@@ -83,7 +97,7 @@ fn bench_hyrax(mpi_config: &MPIConfig, num_vars: usize) {
         .map(|_| Fr::from(rng.next_u32()))
         .collect::<Vec<_>>();
     let poly = MultiLinearPoly::<Fr>::new(input);
-    pcs_bench::<HyraxPCS<G1Affine>>(
+    pcs_bench::<HyraxPCS<G1Affine>, Fr>(
         mpi_config,
         &num_vars,
         &srs,
@@ -93,7 +107,7 @@ fn bench_hyrax(mpi_config: &MPIConfig, num_vars: usize) {
     );
 
     // batch open
-    bench_batch_open::<Fr, HyraxPCS<G1Affine>>(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
+    bench_batch_open::<HyraxPCS<G1Affine>, Fr>(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
 }
 
 fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
@@ -104,7 +118,7 @@ fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
     let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
     let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
 
-    pcs_bench::<HyperUniKZGPCS<Bn256>>(
+    pcs_bench::<HyperUniKZGPCS<Bn256>, Fr>(
         mpi_config,
         &num_vars,
         &srs,
@@ -118,7 +132,7 @@ fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
         .map(|_| Fr::from(rng.next_u32()))
         .collect::<Vec<_>>();
     let poly = MultiLinearPoly::<Fr>::new(input);
-    pcs_bench::<HyperUniKZGPCS<Bn256>>(
+    pcs_bench::<HyperUniKZGPCS<Bn256>, Fr>(
         mpi_config,
         &num_vars,
         &srs,
@@ -128,17 +142,20 @@ fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {
     );
 
     // batch open
-    bench_batch_open::<Fr, HyperUniKZGPCS<Bn256>>(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
+    bench_batch_open::<HyperUniKZGPCS<Bn256>, Fr>(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
 }
 
-fn pcs_bench<PCS: PolynomialCommitmentScheme<Fr>>(
+fn pcs_bench<PCS, F>(
     mpi_config: &MPIConfig,
-    num_vars: &PCS::Params,
+    params: &PCS::Params,
     srs: &PCS::SRS,
     poly: &PCS::Poly,
     eval_point: &PCS::EvalPoint,
     label: &str,
-) {
+) where
+    PCS: PolynomialCommitmentScheme<F>,
+    F: Field + ExtensionField,
+{
     let timer = Timer::new(
         format!("{} commit    ", label).as_ref(),
         mpi_config.is_root(),
@@ -147,9 +164,9 @@ fn pcs_bench<PCS: PolynomialCommitmentScheme<Fr>>(
     let (pk, vk) = srs.clone().into_keys();
 
     let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
-    let mut scratch_pad = PCS::init_scratch_pad(&num_vars);
+    let mut scratch_pad = PCS::init_scratch_pad(&params);
 
-    let com = black_box(PCS::commit(&num_vars, &pk, &poly, &mut scratch_pad));
+    let com = black_box(PCS::commit(&params, &pk, &poly, &mut scratch_pad));
     timer.stop();
 
     let timer = Timer::new(
@@ -157,11 +174,12 @@ fn pcs_bench<PCS: PolynomialCommitmentScheme<Fr>>(
         mpi_config.is_root(),
     );
     let (eval, open) = black_box(PCS::open(
-        &num_vars,
+        &params,
+        &com,
         &pk,
         &poly,
         &eval_point,
-        &scratch_pad,
+        &mut scratch_pad,
         &mut transcript,
     ));
     timer.stop();
@@ -172,7 +190,7 @@ fn pcs_bench<PCS: PolynomialCommitmentScheme<Fr>>(
     );
     let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
     assert!(black_box(PCS::verify(
-        &num_vars,
+        &params,
         &vk,
         &com,
         &eval_point,
@@ -204,10 +222,10 @@ fn pcs_bench<PCS: PolynomialCommitmentScheme<Fr>>(
     root_println!(mpi_config, "  --- ");
 }
 
-fn bench_batch_open<F, PCS>(mpi_config: &MPIConfig, num_vars: usize, num_poly: usize)
+fn bench_batch_open<PCS, F>(mpi_config: &MPIConfig, num_vars: usize, num_poly: usize)
 where
-    F: Field + ExtensionField,
     PCS: BatchOpeningPCS<F, Params = usize, EvalPoint = Vec<F>, Poly = MultiLinearPoly<F>>,
+    F: Field + ExtensionField,
 {
     let mut rng = test_rng();
 

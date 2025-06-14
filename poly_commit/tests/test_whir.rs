@@ -64,27 +64,7 @@ fn test_whir_pcs(num_vars_start: usize, num_vars_end: usize) {
             .collect();
         let poly = MultiLinearPoly::<Goldilocks>::random(num_vars, &mut rng);
 
-        let (leaf_hash_params, two_to_one_params) =
-            default_config::<Field64_2, KeccakLeafHash<Field64_2>, KeccakCompress>(&mut rng);
-
-        let mv_params = MultivariateParameters::<Field64_2>::new(num_vars);
-
-        let whir_params = ProtocolParameters::<KeccakMerkleTreeParams<Field64_2>, KeccakPoW> {
-            initial_statement: true,
-            security_level: 100,
-            pow_bits: 0,
-            folding_factor: FoldingFactor::ConstantFromSecondRound(4, 2),
-            leaf_hash_params,
-            two_to_one_params,
-            soundness_type: SoundnessType::ConjectureList,
-            _pow_parameters: Default::default(),
-            starting_log_inv_rate: 1,
-        };
-
-        let params = WhirConfig::<Field64_2, KeccakMerkleTreeParams<Field64_2>, KeccakPoW>::new(
-            mv_params,
-            whir_params,
-        );
+        let params = WhirPCS::random_params(num_vars, &mut rng);
 
         test_whir_pcs_helper::<GoldilocksExt2, BytesHashTranscript<Keccak256hasher>, WhirPCS>(
             &params, &poly, &point,
