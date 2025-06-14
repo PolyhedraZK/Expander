@@ -121,6 +121,7 @@ pub struct SumCheck<F: Field> {
 
 impl<F: Field> SumCheck<F> {
     /// Extract sum from the proof
+    #[inline]
     pub fn extract_sum(proof: &IOPProof<F>) -> F {
         proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]
     }
@@ -128,6 +129,7 @@ impl<F: Field> SumCheck<F> {
     /// Generate proof of the sum of polynomial over {0,1}^`num_vars`
     ///
     /// The polynomial is represented in the form of a VirtualPolynomial.
+    #[inline]
     pub fn prove(
         poly_list: &SumOfProductsPoly<F>,
         transcript: &mut impl Transcript,
@@ -156,6 +158,7 @@ impl<F: Field> SumCheck<F> {
     }
 
     /// Verify the claimed sum using the proof
+    #[inline]
     pub fn verify(
         claimed_sum: F,
         proof: &IOPProof<F>,
