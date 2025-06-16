@@ -45,12 +45,16 @@ impl<F: Field> IOPProverState<F> {
             let r = self.challenges[self.round - 1];
 
             self.mle_list
-                .f_and_g_pairs
+                .f_g_h_tuple
                 .par_iter_mut()
-                .for_each(|(f, g)| {
+                .for_each(|(f, g, h)| {
                     // fix the top variable of f and g to r
                     f.fix_top_variable(r);
                     g.fix_top_variable(r);
+                    match h {
+                        Some(h_poly) => h_poly.fix_top_variable(r),
+                        None => {}
+                    };
                 });
         } else if self.round > 0 {
             panic!("verifier message is empty")

@@ -15,40 +15,70 @@ mod verifier;
 mod tests;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-/// A special form of a multi-linear polynomial: f = f0*g0 + f1*g1 + ...
-/// where f0, f1, ...  and g0, g1, ... are multi-linear polynomials
-/// The sumcheck over this polynomial has a degree of 2
+pub struct ProductOfMLEs<F:Field>(pub(crate) Vec<MultiLinearPoly<F>>);
+
+
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+/// A special form of a multi-linear polynomial: f = f0*g0*h0 + f1*g1*h0 + ...
+/// where f0, f1, ...  and g0, g1, ..., and h0, h1, ..., are multi-linear polynomials
+/// The sumcheck over this polynomial has a degree of 2 if h is None
+/// has degree 3 if h is Some.
 pub struct SumOfProductsPoly<F: Field> {
     /// The list of multi-linear polynomials to be summed
-    pub f_and_g_pairs: Vec<(MultiLinearPoly<F>, MultiLinearPoly<F>)>,
+    pub monomials: Vec<ProductOfMLEs<F>>,
+    /// degree of the polynomial
+    pub degree: usize,
 }
 
 impl<F: Field> SumOfProductsPoly<F> {
     /// Create a new SumOfProducts instance
-    pub fn new() -> Self {
+    pub fn new(degree: usize) -> Self {
         Self {
-            f_and_g_pairs: vec![],
+            monomials: vec![],
+            degree,
         }
     }
 
     /// Get the number of variables in the polynomial
     pub fn num_vars(&self) -> usize {
-        if self.f_and_g_pairs.is_empty() {
+        if self.monomials.is_empty() {
             0
         } else {
-            self.f_and_g_pairs[0].0.num_vars()
+            self.monomials[0].0.num_vars()
         }
     }
 
     pub fn add_pair(&mut self, poly0: MultiLinearPoly<F>, poly1: MultiLinearPoly<F>) {
         assert_eq!(poly0.num_vars(), poly1.num_vars());
-        self.f_and_g_pairs.push((poly0, poly1));
+        assert_eq!(self.degree, 2);
+        self.f_g_h_tuple.push((poly0, poly1, None));
+    }
+
+    pub fn add_tuple(
+        &mut self,
+        poly0: MultiLinearPoly<F>,
+        poly1: MultiLinearPoly<F>,
+        poly2: MultiLinearPoly<F>,
+    ) {
+        assert_eq!(poly0.num_vars(), poly1.num_vars());
+        assert_eq!(poly0.num_vars(), poly2.num_vars());
+        assert_eq!(self.degree, 3);
+       
+        self.f_g_h_tuple.push((poly0, poly1, Some(poly2)));
     }
 
     pub fn evaluate(&self, point: &[F]) -> F {
-        self.f_and_g_pairs
+        self.f_g_h_tuple
             .iter()
-            .map(|(f, g)| f.eval_reverse_order(point) * g.eval_reverse_order(point))
+            .map(|(f, g, h)| {
+                f.eval_reverse_order(point)
+                    * g.eval_reverse_order(point)
+                    * match h {
+                        Some(h_poly) => h_poly.eval_reverse_order(point),
+                        None => F::ONE,
+                    }
+            })
             .sum()
     }
 }
@@ -139,12 +169,17 @@ impl<F: Field> SumCheck<F> {
         let mut prover_state = IOPProverState::prover_init(poly_list);
         let mut challenge = None;
         let mut prover_msgs = Vec::with_capacity(num_vars);
-        for _ in 0..num_vars {
+        for i in 0..num_vars {
             let prover_msg =
                 IOPProverState::prove_round_and_update_state(&mut prover_state, &challenge);
             transcript.append_serializable_data(&prover_msg);
             prover_msgs.push(prover_msg);
             challenge = Some(transcript.generate_field_element::<F>());
+
+            println!(
+                "Prover round {i} challenge: {:?}",
+                challenge.as_ref().unwrap()
+            );
         }
         // pushing the last challenge point to the state
         if let Some(p) = challenge {
@@ -173,6 +208,11 @@ impl<F: Field> SumCheck<F> {
                 &mut verifier_state,
                 prover_msg,
                 transcript,
+            );
+
+            println!(
+                "Verifier round {i} challenge: {:?}",
+                verifier_state.challenges.last().unwrap()
             );
         }
 

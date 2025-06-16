@@ -490,14 +490,14 @@ fn test_sumcheck_matmul_basic_2x2() {
     let claimed_sum = SumCheckMatMul::extract_sum(&proof);
 
     // Verify the proof
-    let num_vars = 1; 
+    let num_vars = 1;
     let subclaim = SumCheckMatMul::verify(claimed_sum, &proof, num_vars, &mut verifier_transcript);
 
     println!("subclaim: {:?}", subclaim);
 
     // The sumcheck should succeed (subclaim should be valid)
     let mut test_transcript = BytesHashTranscript::<Keccak256hasher>::new();
-    let mle_list = witnesses.form_sumcheck_polynomial(&mut test_transcript);
+    let (mle_list, _) = witnesses.form_sumcheck_polynomial(&mut test_transcript);
     let evals = mle_list.evaluate(&subclaim.point);
     assert!(evals == subclaim.expected_evaluation, "wrong subclaim");
 }
@@ -552,7 +552,7 @@ fn test_sumcheck_matmul_rectangular_matrices() {
     let subclaim = SumCheckMatMul::verify(claimed_sum, &proof, num_vars, &mut verifier_transcript);
 
     let mut test_transcript = BytesHashTranscript::<Keccak256hasher>::new();
-    let mle_list = witnesses.form_sumcheck_polynomial(&mut test_transcript);
+    let (mle_list, _) = witnesses.form_sumcheck_polynomial(&mut test_transcript);
     let evals = mle_list.evaluate(&subclaim.point);
     assert!(evals == subclaim.expected_evaluation, "wrong subclaim");
 }
@@ -603,7 +603,7 @@ fn test_sumcheck_matmul_identity_matrix() {
     let subclaim = SumCheckMatMul::verify(claimed_sum, &proof, 2, &mut verifier_transcript);
 
     let mut test_transcript = BytesHashTranscript::<Keccak256hasher>::new();
-    let mle_list = witnesses.form_sumcheck_polynomial(&mut test_transcript);
+    let (mle_list, _) = witnesses.form_sumcheck_polynomial(&mut test_transcript);
     let evals = mle_list.evaluate(&subclaim.point);
     assert!(evals == subclaim.expected_evaluation, "wrong subclaim");
 }
@@ -654,7 +654,7 @@ fn test_sumcheck_matmul_zero_matrix() {
     let subclaim = SumCheckMatMul::verify(claimed_sum, &proof, 2, &mut verifier_transcript);
 
     let mut test_transcript = BytesHashTranscript::<Keccak256hasher>::new();
-    let mle_list = witnesses.form_sumcheck_polynomial(&mut test_transcript);
+    let (mle_list, _) = witnesses.form_sumcheck_polynomial(&mut test_transcript);
     let evals = mle_list.evaluate(&subclaim.point);
     assert!(evals == subclaim.expected_evaluation, "wrong subclaim");
 }
@@ -710,7 +710,7 @@ fn test_sumcheck_matmul_should_fail_with_wrong_result() {
 
     // This should fail validation
     let mut test_transcript = BytesHashTranscript::<Keccak256hasher>::new();
-    let mle_list = witnesses.form_sumcheck_polynomial(&mut test_transcript);
+    let (mle_list, _) = witnesses.form_sumcheck_polynomial(&mut test_transcript);
     let evals = mle_list.evaluate(&subclaim.point);
     assert!(evals == subclaim.expected_evaluation, "wrong subclaim");
 }
@@ -755,7 +755,7 @@ fn test_sumcheck_matmul_single_element() {
     );
 
     let mut test_transcript = BytesHashTranscript::<Keccak256hasher>::new();
-    let mle_list = witnesses.form_sumcheck_polynomial(&mut test_transcript);
+    let (mle_list, _) = witnesses.form_sumcheck_polynomial(&mut test_transcript);
     let evals = mle_list.evaluate(&subclaim.point);
     assert!(evals == subclaim.expected_evaluation, "wrong subclaim");
 }

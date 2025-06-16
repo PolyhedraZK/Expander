@@ -23,12 +23,23 @@ impl<'a, F: Field> MatMulWitnesses<'a, F> {
     pub fn form_sumcheck_polynomial(
         &self,
         transcript: &mut impl Transcript,
-    ) -> SumOfProductsPoly<F> {
+    ) -> (SumOfProductsPoly<F>, MultiLinearPoly<F>) {
         let r = transcript.generate_field_element::<F>();
+        println!("Forming sumcheck polynomial with r = {r:?}");
 
         let a_rlc_ed = self.a.from_mle_via_rlc(&r);
         let b_transposed = self.b.transpose();
-        let c_rlc_ed = self.c.from_mle_via_rlc(&r);
+        let mut c_rlc_ed = self.c.from_mle_via_rlc(&r);
+
+        for (b, c_i) in b_transposed.row_vectors_ref().iter().zip(c_rlc_ed.iter()) {
+            assert_eq!(
+                b.len(),
+                a_rlc_ed.len(),
+                "Row length mismatch in matrix multiplication witness"
+            );
+            assert_eq!(inner_product(&a_rlc_ed, b), *c_i)
+        }
+        c_rlc_ed[0] = F::ZERO;
 
         let a_mle = MultiLinearPoly { coeffs: a_rlc_ed };
         let b_rows = b_transposed.row_vectors_ref();
@@ -38,9 +49,11 @@ impl<'a, F: Field> MatMulWitnesses<'a, F> {
                 coeffs: row.to_vec(),
             })
             .collect::<Vec<_>>();
-        let c_mle = MultiLinearPoly { coeffs: c_rlc_ed };
+        let c_mle = MultiLinearPoly {
+            coeffs: c_rlc_ed.clone(),
+        };
         let neg_one_mle = MultiLinearPoly {
-            coeffs: vec![-F::ONE; a_mle.coeffs.len()],
+            coeffs: vec![F::ONE; a_mle.coeffs.len()],
         };
 
         let mut polys = SumOfProductsPoly::new();
@@ -50,6 +63,11 @@ impl<'a, F: Field> MatMulWitnesses<'a, F> {
 
         polys.add_pair(c_mle, neg_one_mle);
 
-        polys
+        (polys, MultiLinearPoly { coeffs: c_rlc_ed })
     }
+}
+
+fn inner_product<F: Field>(a: &[F], b: &[F]) -> F {
+    assert_eq!(a.len(), b.len(), "Inner product length mismatch");
+    a.iter().zip(b.iter()).map(|(x, y)| *x * *y).sum()
 }

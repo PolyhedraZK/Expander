@@ -4,8 +4,8 @@ pub use sumcheck::*;
 mod sumcheck_generic;
 pub use sumcheck_generic::*;
 
-mod sumcheck_matmul;
-pub use sumcheck_matmul::*;
+// mod sumcheck_matmul;
+// pub use sumcheck_matmul::*;
 
 mod prover_helper;
 
