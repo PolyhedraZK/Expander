@@ -58,6 +58,8 @@ impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
 
         #[cfg(not(feature = "recursion"))]
         {
+            // When appending the initial commitment, we hash the commitment bytes
+            // for sufficient number of times, so that the FS hash has a sufficient circuit depth
             let digest = self.hash_init_commitment(commitment_bytes);
             self.set_state(&digest);
         }

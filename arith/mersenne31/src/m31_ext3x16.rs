@@ -1,20 +1,64 @@
 use std::{
+    io::{Read, Write},
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 use arith::{field_common, ExtensionField, Field, SimdField};
 use ethnum::U256;
-use serdes::ExpSerde;
+use serdes::{ExpSerde, SerdeResult};
 
 use crate::{m31::M31, M31Ext3, M31x16};
 
-#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq, ExpSerde)]
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct M31Ext3x16 {
     pub v: [M31x16; 3],
 }
 
 field_common!(M31Ext3x16);
+
+impl ExpSerde for M31Ext3x16 {
+    #[inline(always)]
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        let v0 = self.v[0].unpack();
+        let v1 = self.v[1].unpack();
+        let v2 = self.v[2].unpack();
+
+        v0.iter()
+            .zip(v1.iter())
+            .zip(v2.iter())
+            .for_each(|((v0, v1), v2)| {
+                v0.serialize_into(&mut writer).unwrap();
+                v1.serialize_into(&mut writer).unwrap();
+                v2.serialize_into(&mut writer).unwrap();
+            });
+
+        Ok(())
+    }
+
+    // FIXME: this deserialization function auto corrects invalid inputs.
+    // We should use separate APIs for this and for the actual deserialization.
+    #[inline(always)]
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let mut v0 = vec![];
+        let mut v1 = vec![];
+        let mut v2 = vec![];
+
+        for _ in 0..M31x16::PACK_SIZE {
+            let x0 = M31::deserialize_from(&mut reader)?;
+            let x1 = M31::deserialize_from(&mut reader)?;
+            let x2 = M31::deserialize_from(&mut reader)?;
+
+            v0.push(x0);
+            v1.push(x1);
+            v2.push(x2);
+        }
+
+        Ok(Self {
+            v: [M31x16::pack(&v0), M31x16::pack(&v1), M31x16::pack(&v2)],
+        })
+    }
+}
 
 impl SimdField for M31Ext3x16 {
     type Scalar = M31Ext3;
