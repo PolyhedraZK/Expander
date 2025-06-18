@@ -8,8 +8,6 @@ use poly_commit::re_orion::*;
 use gkr_hashers::{FiatShamirHasher, Keccak256hasher, SHA256hasher};
 use transcript::BytesHashTranscript;
 
-use p3_mersenne_31::Mersenne31;
-
 use std::time::{Instant, Duration};
 
 pub struct Timer {
@@ -73,7 +71,7 @@ fn test_re_orion_e2e() {
     // type ResF = M31Ext3;
 
     let msg_bit = 20;
-    let mut pcs = OrionInstance::<WitF, CodeF, EvalF, ResF, SHA256hasher>::new(1 << msg_bit);
+    let mut pcs = OrionInstance::<WitF, CodeF, EvalF, ResF, SHA256hasher>::new(msg_bit);
     // let wit = vec![WitF::ONE; 1 << msg_bit];
     let wit: Vec<WitF> = (0..1 << msg_bit).map(|_| WitF::random_unsafe(&mut rng)).collect();
     let mut timer = Timer::new();

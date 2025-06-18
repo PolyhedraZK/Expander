@@ -1,7 +1,7 @@
 use std::{collections::HashMap, marker::PhantomData, ops::Mul};
 
 use arith::Field;
-use codeswitch::{CodeSwitchAir, P3FieldConfig, P3Multiply, CHALLENGE_SIZE};
+use codeswitch::{CodeSwitchAir, P3Config, P3Multiply, CHALLENGE_SIZE};
 use encoder::Encoder;
 use gkr_engine::Transcript;
 use gkr_hashers::FiatShamirHasher;
@@ -11,8 +11,8 @@ use crate::re_orion::{
     utils::*,
 };
 
-const COLUMN_LG: usize = 7;
-const COLUMN_SIZE: usize = 1 << COLUMN_LG;
+const COLUMN_LOG: usize = 7;
+const COLUMN_SIZE: usize = 1 << COLUMN_LOG;
 // const CHALLENGE_SIZE: usize = 1500;
 
 // TODO: SIZE and PACK_SIZE to const
@@ -20,9 +20,9 @@ pub struct OrionInstance<WitF, CodeF, EvalF, ResF, H>
 where 
     WitF: Field, 
     CodeF: Field + From<WitF>, 
-    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply<ResF>, 
+    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply<ResF> + P3Multiply<EvalF>, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
-    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3FieldConfig,
+    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3Config,
     H: FiatShamirHasher,
 {
     srs: OrionSRS<EvalF, ResF>,
@@ -34,9 +34,9 @@ impl<WitF, CodeF, EvalF, ResF, H> OrionInstance<WitF, CodeF, EvalF, ResF, H>
 where 
     WitF: Field, 
     CodeF: Field + From<WitF>, 
-    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply<ResF>, 
+    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply<ResF> + P3Multiply<EvalF>, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
-    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3FieldConfig,
+    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3Config,
     H: FiatShamirHasher,
 {
     pub fn new(wit_len: usize) -> Self {
@@ -67,9 +67,9 @@ where
             let r1 = &mut self.scratch.r1;
             let eq_head = &mut self.scratch.eq_head;
             let eq_tail = &mut self.scratch.eq_tail;
-            EqPolynomial::<EvalF>::eq_eval_at(&eval_point[..COLUMN_LG], &EvalF::ONE, r0, eq_head, eq_tail);
-            EqPolynomial::<EvalF>::eq_eval_at(&eval_point[COLUMN_LG..], &EvalF::ONE, r1, eq_head, eq_tail);
-            instance.open(r0, r1, &self.srs.air, &mut self.scratch.instance_scratch, transcript)
+            EqPolynomial::<EvalF>::eq_eval_at(&eval_point[..COLUMN_LOG], &EvalF::ONE, r0, eq_head, eq_tail);
+            EqPolynomial::<EvalF>::eq_eval_at(&eval_point[COLUMN_LOG..], &EvalF::ONE, r1, eq_head, eq_tail);
+            instance.open(r0, r1, &eval_point[COLUMN_LOG..], &self.srs.air, &mut self.scratch.instance_scratch, transcript)
         }
         else {
             panic!("the commitment does not exist")
@@ -87,17 +87,17 @@ where
         let r1 = &mut self.scratch.r1;
         let eq_head = &mut self.scratch.eq_head;
         let eq_tail = &mut self.scratch.eq_tail;
-        EqPolynomial::<EvalF>::eq_eval_at(&eval_point[..COLUMN_LG], &EvalF::ONE, r0, eq_head, eq_tail);
-        EqPolynomial::<EvalF>::eq_eval_at(&eval_point[COLUMN_LG..], &EvalF::ONE, r1, eq_head, eq_tail);
-        OrionCommitInstance::verify(commitment, r0, r1, opening, &self.srs.air, &mut self.scratch.instance_scratch, transcript)
+        EqPolynomial::<EvalF>::eq_eval_at(&eval_point[..COLUMN_LOG], &EvalF::ONE, r0, eq_head, eq_tail);
+        EqPolynomial::<EvalF>::eq_eval_at(&eval_point[COLUMN_LOG..], &EvalF::ONE, r1, eq_head, eq_tail);
+        OrionCommitInstance::verify(commitment, r0, r1, &eval_point[COLUMN_LOG..], opening, &self.srs.air, &mut self.scratch.instance_scratch, transcript)
     }
 }
 
 pub struct OrionSRS<EvalF, ResF> 
 where
-    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply<ResF>,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply<ResF> + P3Multiply<EvalF>,
     ResF: Field,
-    ResF::UnitField: P3FieldConfig,
+    ResF::UnitField: P3Config,
 {
     msg_len: usize,
     encoder: Encoder<ResF::UnitField>,
@@ -106,18 +106,19 @@ where
 
 impl<EvalF, ResF> OrionSRS<EvalF, ResF> 
 where
-    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply<ResF>,
+    EvalF: Field<UnitField = ResF::UnitField> + P3Multiply<ResF> + P3Multiply<EvalF>,
     ResF: Field,
-    ResF::UnitField: P3FieldConfig,
+    ResF::UnitField: P3Config,
 {
     pub fn new(wit_len: usize) -> Self {
-        let msg_len = ((wit_len + COLUMN_SIZE - 1) >> COLUMN_LG);
+        let msg_len = 1 << (wit_len - COLUMN_LOG);
         let encoder = Encoder::<ResF::UnitField>::new(msg_len);
         let air = CodeSwitchAir::<EvalF, ResF>::new(
             &encoder,
             msg_len,
             COLUMN_SIZE,
             (0..1500).map(|x| x % encoder.code_len).collect(),
+            wit_len - COLUMN_LOG,
         );
         Self {
             msg_len,
@@ -139,7 +140,7 @@ where
     CodeF: Field + From<WitF>, 
     EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply<ResF>, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
-    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3FieldConfig,
+    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3Config,
     H: FiatShamirHasher,
 {
     wit: Vec<WitF>,
@@ -156,9 +157,9 @@ impl<WitF, CodeF, EvalF, ResF, H> OrionCommitInstance<WitF, CodeF, EvalF, ResF, 
 where 
     WitF: Field, 
     CodeF: Field + From<WitF>, 
-    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply<ResF>, 
+    EvalF: Field<UnitField = ResF::UnitField> + Mul<WitF, Output = ResF> + Mul<CodeF, Output = ResF> + P3Multiply<ResF> + P3Multiply<EvalF>, 
     ResF: Field + Mul<EvalF, Output = ResF>, 
-    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3FieldConfig,
+    ResF::UnitField: Mul<WitF, Output = CodeF> + Mul<CodeF, Output = CodeF> + P3Config,
     
     H: FiatShamirHasher,
 {
@@ -200,6 +201,7 @@ where
         &mut self, 
         r0: &[EvalF],
         r1: &[EvalF],
+        r1_points: &[EvalF],
         // eval_point: &[EvalF], 
         air: &CodeSwitchAir<EvalF, ResF>,
         scratch: &mut OrionInstanceScratchPad<ResF, H>,
@@ -264,11 +266,11 @@ where
         }
 
 let mut timer = Timer::new();
-        let proof_cs = air.prove(&y_gamma, &y_prime, &c_gamma, &c_gamma_idx, &r1, &y, );
+        let proof_cs = air.prove(&y_gamma, &y_prime, &c_gamma, &c_gamma_idx, &r1_points, &y, );
 println!("plonky3 prove in {:?}", timer.count());
 
         let mut root_idx_proof: Vec<Vec<u8>> = Vec::with_capacity(idxs.len());
-        let column_leaf = 1 << (self.tree.height - COLUMN_LG);
+        let column_leaf = 1 << (self.tree.height - COLUMN_LOG);
         for &i in idxs.iter() {
             root_idx_proof.push(self.tree.prove(column_leaf + i, 1));
         }
@@ -297,6 +299,7 @@ println!("plonky3 prove in {:?}", timer.count());
         commitment: &[u8],
         r0: &[EvalF],
         r1: &[EvalF],
+        r1_points: &[EvalF],
         opening: &OrionOpening<WitF, ResF>,
         air: &CodeSwitchAir<EvalF, ResF>,
         scratch: &mut OrionInstanceScratchPad<ResF, H>,
@@ -346,7 +349,7 @@ let mut timer = Timer::new();
 
 println!("merkletree {:?}", timer.count());
 let mut timer = Timer::new();
-        let rst = air.verify(&opening.proof_cs, &c_gamma,&r1, &opening.y);
+        let rst = air.verify(&opening.proof_cs, &c_gamma, &r1_points, &opening.y);
 println!("plonky3 {:?}", timer.count());
         rst
     }
