@@ -78,12 +78,7 @@ impl<F: Field> IOPVerifierState<F> {
 
             // check that the sum received from last round is correct
             if expected != evals[0] + evals[1] {
-                panic!(
-                    "Verifier failed at round {}: expected = {:?}, got = {:?}",
-                    i + 1,
-                    expected,
-                    evals[0] + evals[1]
-                );
+                return (false, SumCheckSubClaim::default());
             }
 
             // the univariate polynomial f is received in its extrapolated form, i.e.,
