@@ -1,7 +1,6 @@
 use arith::{ExtensionField, Field};
 use gkr_engine::Transcript;
 use halo2curves::{ff::PrimeField, group::UncompressedEncoding, msm, CurveAffine};
-use polynomials::MultiLinearPoly;
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,

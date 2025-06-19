@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use ::utils::timer::Timer;
 use arith::ExtensionField;
 use gkr_engine::{StructuredReferenceString, Transcript};
 use halo2curves::{
@@ -9,11 +8,8 @@ use halo2curves::{
     CurveAffine,
 };
 use polynomials::MultiLinearPoly;
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
 
-use crate::batching::prover_merge_points;
-use crate::batching::verifier_merge_points;
 use crate::{
     traits::{BatchOpening, BatchOpeningPCS},
     *,
