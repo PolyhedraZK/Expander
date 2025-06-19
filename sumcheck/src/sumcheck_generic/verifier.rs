@@ -76,6 +76,16 @@ impl<F: Field> IOPVerifierState<F> {
         for i in 0..self.num_vars {
             let evals = &self.polynomials_received[i];
 
+            // check that the sum received from last round is correct
+            if expected != evals[0] + evals[1] {
+                panic!(
+                    "Verifier failed at round {}: expected = {:?}, got = {:?}",
+                    i + 1,
+                    expected,
+                    evals[0] + evals[1]
+                );
+            }
+
             // the univariate polynomial f is received in its extrapolated form, i.e.,
             //   h(0) = evals[0], h(1) = evals[1], h(2) = evals[2]
             // that is, suppose h = h_0 + h_1 * x + h_2 * x^2, then

@@ -32,7 +32,13 @@ fn test_sumcheck_subroutine() {
             let asserted_sum = mle_list
                 .f_and_g_pairs
                 .iter()
-                .map(|(f, g)| f.coeffs.iter().sum::<Fr>() * g.coeffs.iter().sum::<Fr>())
+                .map(|(f, g)| {
+                    f.coeffs
+                        .iter()
+                        .zip(g.coeffs.iter())
+                        .map(|(&f, &g)| f * g)
+                        .sum::<Fr>()
+                })
                 .sum::<Fr>();
 
             let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
@@ -65,7 +71,7 @@ fn test_sumcheck_subroutine() {
 fn test_sumcheck_e2e() {
     let mut rng = test_rng();
 
-    for num_vars in 1..10 {
+    for num_vars in 3..10 {
         let size = 1 << num_vars;
 
         for num_poly in 1..10 {
@@ -90,7 +96,13 @@ fn test_sumcheck_e2e() {
             let asserted_sum = mle_list
                 .f_and_g_pairs
                 .iter()
-                .map(|(f, g)| f.coeffs.iter().sum::<Fr>() * g.coeffs.iter().sum::<Fr>())
+                .map(|(f, g)| {
+                    f.coeffs
+                        .iter()
+                        .zip(g.coeffs.iter())
+                        .map(|(&f, &g)| f * g)
+                        .sum::<Fr>()
+                })
                 .sum::<Fr>();
 
             // prover

@@ -93,26 +93,35 @@ impl<F: Field> IOPProverState<F> {
             .map(|(f, g)| {
                 // evaluate the polynomial at 0, 1 and 2
                 // and obtain f(0)g(0) and f(1)g(1) and f(2)g(2)
+
                 let f_coeffs = f.coeffs.as_slice();
                 let g_coeffs = g.coeffs.as_slice();
 
-                let h_0_local =
-                    f_coeffs[..len].iter().sum::<F>() * g_coeffs[..len].iter().sum::<F>();
-                let h_1_local =
-                    f_coeffs[len..].iter().sum::<F>() * g_coeffs[len..].iter().sum::<F>();
+                let h_0_local = f_coeffs[..len]
+                    .iter()
+                    .zip(g_coeffs[..len].iter())
+                    .map(|(&f, &g)| f * g)
+                    .sum::<F>();
 
-                let f_2 = f_coeffs[..len]
+                let h_1_local = f_coeffs[len..]
+                    .iter()
+                    .zip(g_coeffs[len..].iter())
+                    .map(|(&f, &g)| f * g)
+                    .sum::<F>();
+
+                let h_2_local = f_coeffs[..len]
                     .iter()
                     .zip(f_coeffs[len..].iter())
                     .map(|(a, b)| -*a + b.double())
-                    .sum::<F>();
-                let g2 = g_coeffs[..len]
-                    .iter()
-                    .zip(g_coeffs[len..].iter())
-                    .map(|(a, b)| -*a + b.double())
+                    .zip(
+                        g_coeffs[..len]
+                            .iter()
+                            .zip(g_coeffs[len..].iter())
+                            .map(|(a, b)| -*a + b.double()),
+                    )
+                    .map(|(a, b)| a * b)
                     .sum::<F>();
 
-                let h_2_local = f_2 * g2;
                 (h_0_local, h_1_local, h_2_local)
             })
             .collect::<Vec<_>>()
