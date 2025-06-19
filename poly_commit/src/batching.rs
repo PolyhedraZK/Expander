@@ -6,11 +6,11 @@ use gkr_engine::Transcript;
 use halo2curves::group::Curve;
 use halo2curves::msm::best_multiexp;
 use halo2curves::{ff::PrimeField, CurveAffine};
-use polynomials::MultiLinearPoly;
 use polynomials::{EqPolynomial, MultilinearExtension};
+use polynomials::{MultiLinearPoly, SumOfProductsPoly};
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
-use sumcheck::{IOPProof, SumCheck, SumOfProductsPoly};
+use sumcheck::{IOPProof, SumCheck};
 use utils::timer::Timer;
 
 /// Merge a list of polynomials and its corresponding points into a single polynomial

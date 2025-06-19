@@ -3,6 +3,7 @@ use super::*;
 use arith::Fr;
 use ark_std::test_rng;
 use gkr_hashers::Keccak256hasher;
+use polynomials::MultiLinearPoly;
 use transcript::BytesHashTranscript;
 
 #[test]
@@ -29,17 +30,7 @@ fn test_sumcheck_subroutine() {
 
             let mle_list = SumOfProductsPoly::<Fr> { f_and_g_pairs };
 
-            let asserted_sum = mle_list
-                .f_and_g_pairs
-                .iter()
-                .map(|(f, g)| {
-                    f.coeffs
-                        .iter()
-                        .zip(g.coeffs.iter())
-                        .map(|(&f, &g)| f * g)
-                        .sum::<Fr>()
-                })
-                .sum::<Fr>();
+            let asserted_sum = mle_list.sum();
 
             let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
 
@@ -93,17 +84,7 @@ fn test_sumcheck_e2e() {
 
             let mle_list = SumOfProductsPoly::<Fr> { f_and_g_pairs };
 
-            let asserted_sum = mle_list
-                .f_and_g_pairs
-                .iter()
-                .map(|(f, g)| {
-                    f.coeffs
-                        .iter()
-                        .zip(g.coeffs.iter())
-                        .map(|(&f, &g)| f * g)
-                        .sum::<Fr>()
-                })
-                .sum::<Fr>();
+            let asserted_sum = mle_list.sum();
 
             // prover
             let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();

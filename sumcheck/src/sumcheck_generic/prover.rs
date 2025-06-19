@@ -1,7 +1,8 @@
 use arith::Field;
+use polynomials::SumOfProductsPoly;
 use rayon::iter::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
 
-use super::{IOPProverMessage, IOPProverState, SumOfProductsPoly};
+use super::{IOPProverMessage, IOPProverState};
 
 impl<F: Field> IOPProverState<F> {
     /// Initialize the prover state to argue for the sum of the input polynomial
