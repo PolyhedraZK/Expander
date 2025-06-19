@@ -4,7 +4,7 @@ use arith::Field;
 
 use crate::MultiLinearPoly;
 
-pub trait MultilinearExtension<F: Field>: Index<usize, Output = F> {
+pub trait MultilinearExtension<F: Field>: Index<usize, Output = F> + Send + Sync {
     fn evaluate_with_buffer<ChallengeF, EvalF>(
         &self,
         point: &[ChallengeF],
@@ -17,6 +17,19 @@ pub trait MultilinearExtension<F: Field>: Index<usize, Output = F> {
             + Mul<F, Output = EvalF>
             + Add<F, Output = EvalF>
             + Mul<ChallengeF, Output = EvalF>;
+
+    fn evaluate<ChallengeF, EvalF>(&self, point: &[ChallengeF]) -> EvalF
+    where
+        ChallengeF: Field + Mul<F, Output = EvalF>,
+        EvalF: Field
+            + From<F>
+            + Mul<F, Output = EvalF>
+            + Add<F, Output = EvalF>
+            + Mul<ChallengeF, Output = EvalF>,
+    {
+        let mut scratch = vec![EvalF::ZERO; self.hypercube_size()];
+        self.evaluate_with_buffer(point, &mut scratch)
+    }
 
     fn num_vars(&self) -> usize;
 
