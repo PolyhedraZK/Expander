@@ -122,7 +122,7 @@ impl<F: Field> SumCheck<F> {
         proof: &IOPProof<F>,
         num_vars: usize,
         transcript: &mut impl Transcript,
-    ) -> SumCheckSubClaim<F> {
+    ) -> (bool, SumCheckSubClaim<F>) {
         let mut verifier_state = IOPVerifierState::verifier_init(num_vars);
         for i in 0..num_vars {
             let prover_msg = proof.proofs.get(i).expect("proof is incomplete");

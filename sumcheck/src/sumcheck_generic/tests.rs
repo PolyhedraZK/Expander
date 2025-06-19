@@ -50,8 +50,9 @@ fn test_sumcheck_subroutine() {
                 ));
             }
 
-            let subclaim = IOPVerifierState::check_and_generate_subclaim(&verifier, &asserted_sum);
-
+            let (verified, subclaim) =
+                IOPVerifierState::check_and_generate_subclaim(&verifier, &asserted_sum);
+            assert!(verified, "sumcheck verification failed");
             let evals = mle_list.evaluate(&subclaim.point);
             assert!(evals == subclaim.expected_evaluation, "wrong subclaim");
         }
@@ -62,7 +63,7 @@ fn test_sumcheck_subroutine() {
 fn test_sumcheck_e2e() {
     let mut rng = test_rng();
 
-    for num_vars in 3..10 {
+    for num_vars in 1..10 {
         let size = 1 << num_vars;
 
         for num_poly in 1..10 {
@@ -92,8 +93,9 @@ fn test_sumcheck_e2e() {
 
             // verifier
             let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
-            let subclaim = SumCheck::<Fr>::verify(asserted_sum, &proof, num_vars, &mut transcript);
-
+            let (verified, subclaim) =
+                SumCheck::<Fr>::verify(asserted_sum, &proof, num_vars, &mut transcript);
+            assert!(verified, "sumcheck verification failed");
             let evals = mle_list.evaluate(&subclaim.point);
             assert!(evals == subclaim.expected_evaluation, "wrong subclaim");
         }
