@@ -311,13 +311,17 @@ where
         .map(|c| vec![c.as_ref().0])
         .collect::<Vec<_>>();
 
-    let (tilde_g_eval, g_prime_commit) = verifier_merge_points::<E::G1Affine>(
+    let (verified, tilde_g_eval, g_prime_commit) = verifier_merge_points::<E::G1Affine>(
         &commitments,
         points,
         values,
         &batch_opening.sum_check_proof,
         transcript,
     );
+
+    if !verified {
+        return false;
+    }
 
     // verify commitment
     coeff_form_uni_hyperkzg_verify(
