@@ -167,7 +167,6 @@ where
         batch_opening: &BatchOpening<E::Fr, Self>,
         transcript: &mut impl Transcript,
     ) -> bool {
-        // sum check point (a2)
         multiple_points_batch_verify_impl(
             verifying_key,
             commitments,

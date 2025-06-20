@@ -405,13 +405,17 @@ where
         .map(|c| c.as_ref().0.clone())
         .collect::<Vec<_>>();
 
-    let (tilde_g_eval, g_prime_commit) = verifier_merge_points(
+    let (sumcheck_verified, tilde_g_eval, g_prime_commit) = verifier_merge_points(
         &commitments,
         points,
         values,
         &batch_opening.sum_check_proof,
         transcript,
     );
+    if !sumcheck_verified {
+        return false;
+    }
+
     let g_prime_commit = HyraxCommitment(g_prime_commit);
 
     // verify commitment

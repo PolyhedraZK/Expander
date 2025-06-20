@@ -6,11 +6,11 @@ use gkr_engine::Transcript;
 use halo2curves::group::Curve;
 use halo2curves::msm::best_multiexp;
 use halo2curves::{ff::PrimeField, CurveAffine};
-use polynomials::MultiLinearPoly;
 use polynomials::{EqPolynomial, MultilinearExtension};
+use polynomials::{MultiLinearPoly, SumOfProductsPoly};
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
-use sumcheck::{IOPProof, SumCheck, SumOfProductsPoly};
+use sumcheck::{IOPProof, SumCheck};
 use utils::timer::Timer;
 
 /// Merge a list of polynomials and its corresponding points into a single polynomial
@@ -114,7 +114,7 @@ pub fn verifier_merge_points<C>(
     values: &[C::Scalar],
     sumcheck_proof: &IOPProof<C::Scalar>,
     transcript: &mut impl Transcript,
-) -> (C::Scalar, Vec<C>)
+) -> (bool, C::Scalar, Vec<C>)
 where
     C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
@@ -168,11 +168,12 @@ where
         sum += e * values[i];
     }
 
-    let subclaim = SumCheck::<C::Scalar>::verify(sum, sumcheck_proof, num_var, transcript);
+    let (verified, subclaim) =
+        SumCheck::<C::Scalar>::verify(sum, sumcheck_proof, num_var, transcript);
 
     let tilde_g_eval = subclaim.expected_evaluation;
 
-    (tilde_g_eval, g_prime_commit_affine)
+    (verified, tilde_g_eval, g_prime_commit_affine)
 }
 
 #[inline]

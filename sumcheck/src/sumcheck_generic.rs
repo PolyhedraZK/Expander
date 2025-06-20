@@ -5,7 +5,7 @@
 
 use arith::Field;
 use gkr_engine::Transcript;
-use polynomials::{MultiLinearPoly, MultilinearExtension};
+use polynomials::SumOfProductsPoly;
 use serdes::ExpSerde;
 
 mod prover;
@@ -13,45 +13,6 @@ mod verifier;
 
 #[cfg(test)]
 mod tests;
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-/// A special form of a multi-linear polynomial: f = f0*g0 + f1*g1 + ...
-/// where f0, f1, ...  and g0, g1, ... are multi-linear polynomials
-/// The sumcheck over this polynomial has a degree of 2
-pub struct SumOfProductsPoly<F: Field> {
-    /// The list of multi-linear polynomials to be summed
-    pub f_and_g_pairs: Vec<(MultiLinearPoly<F>, MultiLinearPoly<F>)>,
-}
-
-impl<F: Field> SumOfProductsPoly<F> {
-    /// Create a new SumOfProducts instance
-    pub fn new() -> Self {
-        Self {
-            f_and_g_pairs: vec![],
-        }
-    }
-
-    /// Get the number of variables in the polynomial
-    pub fn num_vars(&self) -> usize {
-        if self.f_and_g_pairs.is_empty() {
-            0
-        } else {
-            self.f_and_g_pairs[0].0.num_vars()
-        }
-    }
-
-    pub fn add_pair(&mut self, poly0: MultiLinearPoly<F>, poly1: MultiLinearPoly<F>) {
-        assert_eq!(poly0.num_vars(), poly1.num_vars());
-        self.f_and_g_pairs.push((poly0, poly1));
-    }
-
-    pub fn evaluate(&self, point: &[F]) -> F {
-        self.f_and_g_pairs
-            .iter()
-            .map(|(f, g)| f.eval_reverse_order(point) * g.eval_reverse_order(point))
-            .sum()
-    }
-}
 
 /// An IOP proof is a collections of
 /// - messages from prover to verifier at each round through the interactive protocol.
@@ -161,7 +122,7 @@ impl<F: Field> SumCheck<F> {
         proof: &IOPProof<F>,
         num_vars: usize,
         transcript: &mut impl Transcript,
-    ) -> SumCheckSubClaim<F> {
+    ) -> (bool, SumCheckSubClaim<F>) {
         let mut verifier_state = IOPVerifierState::verifier_init(num_vars);
         for i in 0..num_vars {
             let prover_msg = proof.proofs.get(i).expect("proof is incomplete");
