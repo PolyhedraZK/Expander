@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use ::utils::timer::Timer;
 use arith::ExtensionField;
 use gkr_engine::{StructuredReferenceString, Transcript};
 use halo2curves::{
@@ -9,11 +8,8 @@ use halo2curves::{
     CurveAffine,
 };
 use polynomials::MultiLinearPoly;
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
 
-use crate::batching::prover_merge_points;
-use crate::batching::verifier_merge_points;
 use crate::{
     traits::{BatchOpening, BatchOpeningPCS},
     *,
@@ -152,34 +148,7 @@ where
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
     ) -> (Vec<E::Fr>, BatchOpening<E::Fr, Self>) {
-        let timer = Timer::new("batch_opening", true);
-        // generate evals for each polynomial at its corresponding point
-        let eval_timer = Timer::new("eval all polys", true);
-        let evals: Vec<E::Fr> = polys
-            .par_iter()
-            .zip_eq(points.par_iter())
-            .map(|(poly, point)| poly.evaluate_jolt(point))
-            .collect();
-        eval_timer.stop();
-
-        let merger_timer = Timer::new("merging points", true);
-        let (new_point, g_prime, proof) =
-            prover_merge_points::<E::G1Affine>(polys, points, transcript);
-        merger_timer.stop();
-
-        let pcs_timer = Timer::new("kzg_open", true);
-        let (_g_prime_eval, g_prime_proof) =
-            coeff_form_uni_hyperkzg_open(proving_key, &g_prime.coeffs, &new_point, transcript);
-        pcs_timer.stop();
-
-        timer.stop();
-        (
-            evals,
-            BatchOpening {
-                sum_check_proof: proof,
-                g_prime_proof,
-            },
-        )
+        multiple_points_batch_open_impl(proving_key, polys, points, transcript)
     }
 
     /// Verify the opening of a set of polynomials at a single point.
@@ -198,30 +167,12 @@ where
         batch_opening: &BatchOpening<E::Fr, Self>,
         transcript: &mut impl Transcript,
     ) -> bool {
-        // sum check point (a2)
-        let a2 = batch_opening.sum_check_proof.export_point_to_expander();
-
-        let commitments = commitments.iter().map(|c| vec![c.0]).collect::<Vec<_>>();
-
-        let (sumcheck_verified, tilde_g_eval, g_prime_commit) = verifier_merge_points::<E::G1Affine>(
-            &commitments,
+        multiple_points_batch_verify_impl(
+            verifying_key,
+            commitments,
             points,
             values,
-            &batch_opening.sum_check_proof,
-            transcript,
-        );
-
-        if !sumcheck_verified {
-            return false;
-        }
-
-        // verify commitment
-        coeff_form_uni_hyperkzg_verify(
-            verifying_key,
-            g_prime_commit[0],
-            a2.as_ref(),
-            tilde_g_eval,
-            &batch_opening.g_prime_proof,
+            batch_opening,
             transcript,
         )
     }

@@ -5,8 +5,8 @@ use gkr_engine::{
 };
 use halo2curves::{ff::PrimeField, group::UncompressedEncoding, msm, CurveAffine};
 use polynomials::{
-    EqPolynomial, MultiLinearPoly, MultilinearExtension, MutRefMultiLinearPoly,
-    MutableMultilinearExtension, RefMultiLinearPoly,
+    EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
+    RefMultiLinearPoly,
 };
 use serdes::ExpSerde;
 
@@ -157,7 +157,7 @@ where
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        mle_poly_list: &[MultiLinearPoly<C::Scalar>],
+        mle_poly_list: &[impl MultilinearExtension<C::Scalar>],
         eval_points: &[ExpanderSingleVarChallenge<G>],
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
@@ -176,7 +176,7 @@ where
     fn multi_points_batch_verify(
         _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
-        commitments: &[Self::Commitment],
+        commitments: &[impl AsRef<Self::Commitment>],
         x: &[ExpanderSingleVarChallenge<G>],
         evals: &[<G as FieldEngine>::ChallengeField],
         batch_opening: &Self::BatchOpening,

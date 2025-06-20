@@ -275,6 +275,7 @@ where
     C: FieldEngine,
     T: Transcript,
     P: ExpanderPCS<C, C::SimdCircuitField, Params = usize>,
+    P::Commitment: AsRef<P::Commitment>,
 {
     let mut rng = test_rng();
     let mpi_config = MPIConfig::prover_new(None, None);
