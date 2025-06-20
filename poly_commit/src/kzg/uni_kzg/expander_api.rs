@@ -8,7 +8,7 @@ use halo2curves::{
     pairing::{Engine, MultiMillerLoop},
     CurveAffine,
 };
-use polynomials::{MultiLinearPoly, MultilinearExtension};
+use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
 
 use crate::{traits::BatchOpening, *};
@@ -98,30 +98,23 @@ where
 
     /// Open a set of polynomials at a point.
     fn multi_points_batch_open(
-        params: &Self::Params,
+        _params: &Self::Params,
         _mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        polys: &[MultiLinearPoly<E::Fr>],
+        polys: &[impl MultilinearExtension<E::Fr>],
         x: &[ExpanderSingleVarChallenge<G>],
-        scratch_pad: &Self::ScratchPad,
+        _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
     ) -> (Vec<E::Fr>, Self::BatchOpening) {
         let points: Vec<Vec<E::Fr>> = x.iter().map(|p| p.local_xs()).collect();
 
-        <Self as BatchOpeningPCS<E::Fr>>::multiple_points_batch_open(
-            params,
-            proving_key,
-            polys,
-            points.as_ref(),
-            scratch_pad,
-            transcript,
-        )
+        multiple_points_batch_open_impl(proving_key, polys, points.as_ref(), transcript)
     }
 
     fn multi_points_batch_verify(
-        params: &Self::Params,
+        _params: &Self::Params,
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
-        commitments: &[Self::Commitment],
+        commitments: &[impl AsRef<Self::Commitment>],
         x: &[ExpanderSingleVarChallenge<G>],
         evals: &[E::Fr],
         batch_opening: &Self::BatchOpening,
@@ -129,8 +122,7 @@ where
     ) -> bool {
         let points: Vec<Vec<E::Fr>> = x.iter().map(|p| p.local_xs()).collect();
 
-        <Self as BatchOpeningPCS<E::Fr>>::multiple_points_batch_verify(
-            params,
+        multiple_points_batch_verify_impl(
             verifying_key,
             commitments,
             points.as_ref(),

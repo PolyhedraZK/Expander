@@ -1,7 +1,6 @@
 use arith::{ExtensionField, Field};
 use gkr_engine::Transcript;
 use halo2curves::{ff::PrimeField, group::UncompressedEncoding, msm, CurveAffine};
-use polynomials::MultiLinearPoly;
 use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
@@ -51,6 +50,19 @@ where
 pub struct HyraxCommitment<C>(pub Vec<C>)
 where
     C: CurveAffine + ExpSerde + UncompressedEncoding;
+
+/// Jutification: from AsRef Documentation:
+///  Ideally, `AsRef` would be reflexive, i.e. there would be an `impl<T: ?Sized> AsRef<T> for T`
+///  Such a blanket implementation is currently *not* provided due to technical restrictions of
+///  Rust's type system
+impl<C> AsRef<HyraxCommitment<C>> for HyraxCommitment<C>
+where
+    C: CurveAffine + ExpSerde + UncompressedEncoding,
+{
+    fn as_ref(&self) -> &HyraxCommitment<C> {
+        self
+    }
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct HyraxOpening<C>(pub Vec<C::Scalar>)
@@ -325,7 +337,7 @@ fn scale<F: Field>(base: &[F], scalar: &F) -> Vec<F> {
 #[allow(clippy::type_complexity)]
 pub(crate) fn hyrax_multi_points_batch_open_internal<C>(
     proving_key: &PedersenParams<C>,
-    polys: &[MultiLinearPoly<C::Scalar>],
+    polys: &[impl MultilinearExtension<C::Scalar>],
     points: &[Vec<C::Scalar>],
     transcript: &mut impl Transcript,
 ) -> (Vec<C::Scalar>, BatchOpening<C::Scalar, HyraxPCS<C>>)
@@ -341,7 +353,7 @@ where
     let evals: Vec<C::Scalar> = polys
         .par_iter()
         .zip_eq(points.par_iter())
-        .map(|(poly, point)| poly.evaluate_jolt(point))
+        .map(|(poly, point)| poly.evaluate(point))
         .collect();
     eval_timer.stop();
 
@@ -374,7 +386,7 @@ where
 /// 4. verify commitment
 pub(crate) fn hyrax_multi_points_batch_verify_internal<C>(
     verifying_key: &PedersenParams<C>,
-    commitments: &[HyraxCommitment<C>],
+    commitments: &[impl AsRef<HyraxCommitment<C>>],
     points: &[Vec<C::Scalar>],
     values: &[C::Scalar],
     batch_opening: &BatchOpening<C::Scalar, HyraxPCS<C>>,
@@ -388,7 +400,10 @@ where
 {
     let a2 = batch_opening.sum_check_proof.export_point_to_expander();
 
-    let commitments = commitments.iter().map(|c| c.0.clone()).collect::<Vec<_>>();
+    let commitments = commitments
+        .iter()
+        .map(|c| c.as_ref().0.clone())
+        .collect::<Vec<_>>();
 
     let (tilde_g_eval, g_prime_commit) = verifier_merge_points(
         &commitments,

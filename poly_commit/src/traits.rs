@@ -72,9 +72,9 @@ where
 }
 
 /// Batch opening polynomial commitment scheme trait.
-/// This trait is implemented for homomorphic polynomial commitment schemes such as Hyrax and KZG
 pub trait BatchOpeningPCS<F: ExtensionField>: PolynomialCommitmentScheme<F> + Sized {
-    /// Open a set of polynomials at a single point.
+    /// This trait is implemented for homomorphic polynomial commitment schemes such as Hyrax and
+    /// KZG Open a set of polynomials at a single point.
     fn single_point_batch_open(
         params: &Self::Params,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
