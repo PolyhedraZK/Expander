@@ -27,6 +27,7 @@ impl Field for GF2x8 {
 
     const INV_2: Self = GF2x8 { v: 0 };
 
+    #[doc(hidden)]
     const MODULUS: U256 = unimplemented!(); // should not be used
 
     #[inline(always)]

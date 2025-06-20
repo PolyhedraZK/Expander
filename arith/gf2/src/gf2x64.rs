@@ -25,8 +25,10 @@ impl Field for GF2x64 {
 
     const ONE: Self = GF2x64 { v: !0u64 };
 
+    #[doc(hidden)]
     const INV_2: Self = unimplemented!(); // NOTE: should not be used
 
+    #[doc(hidden)]
     const MODULUS: U256 = unimplemented!(); // should not be used
 
     #[inline(always)]
