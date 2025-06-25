@@ -5,11 +5,9 @@ use std::{
 };
 
 use arith::{field_common, FFTField, Field, SimdField};
-use ark_ff::{BigInteger64, PrimeField};
 use ethnum::U256;
 use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
-use whir::crypto::fields::Field64;
 
 use crate::goldilocks::p2_instructions::{assume, branch_hint, reduce128, try_inverse_u64};
 
@@ -604,35 +602,4 @@ pub(crate) mod p2_instructions {
     //         (x * x).ct_eq(f), // Only return Some if it's the square root.
     //     )
     // }
-}
-
-impl From<Field64> for Goldilocks {
-    #[inline(always)]
-    fn from(x: Field64) -> Self {
-        Goldilocks {
-            v: x.into_bigint().0[0],
-        }
-    }
-}
-
-impl From<&Field64> for Goldilocks {
-    #[inline(always)]
-    fn from(x: &Field64) -> Self {
-        Goldilocks {
-            v: x.into_bigint().0[0],
-        }
-    }
-}
-
-impl From<Goldilocks> for Field64 {
-    #[inline(always)]
-    fn from(x: Goldilocks) -> Self {
-        Field64::from_bigint(BigInteger64::new([x.v])).unwrap()
-    }
-}
-impl From<&Goldilocks> for Field64 {
-    #[inline(always)]
-    fn from(x: &Goldilocks) -> Self {
-        Field64::from_bigint(BigInteger64::new([x.v])).unwrap()
-    }
 }
