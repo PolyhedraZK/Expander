@@ -73,6 +73,8 @@ impl<F: Field> IOPVerifierState<F> {
 
         let mut expected = *asserted_sum;
 
+        let two_inv = F::from(2u32).inv().unwrap();
+
         for i in 0..self.num_vars {
             let evals = &self.polynomials_received[i];
 
@@ -93,7 +95,7 @@ impl<F: Field> IOPVerifierState<F> {
             //   h_1 = h(1) - h_0 - h_2
 
             let h_0 = evals[0];
-            let h_2 = (evals[2] + evals[0]) * F::from(2u32).inv().unwrap() - evals[1];
+            let h_2 = (evals[2] + evals[0]) * two_inv - evals[1];
             let h_1 = evals[1] - h_0 - h_2;
 
             // now we want to compute h(r) for the challenge r = self.challenges[i]

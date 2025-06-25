@@ -107,24 +107,6 @@ impl<F: Field> ProductOfMLEs<F> {
     pub fn extrapolate_at_0_1_2(&self) -> (F, F, F) {
         // evaluate the polynomial at 0, 1 and 2
         // and obtain f(0)g(0) and f(1)g(1) and f(2)g(2)
-        //     let f_coeffs = f.coeffs.as_slice();
-        //     let g_coeffs = g.coeffs.as_slice();
-
-        //     h_0 += f_coeffs[..len].iter().sum::<F>() * g_coeffs[..len].iter().sum::<F>();
-        //     h_1 += f_coeffs[len..].iter().sum::<F>() * g_coeffs[len..].iter().sum::<F>();
-
-        //     let f_2 = f_coeffs[..len]
-        //         .iter()
-        //         .zip(f_coeffs[len..].iter())
-        //         .map(|(a, b)| -*a + b.double())
-        //         .sum::<F>();
-        //     let g2 = g_coeffs[..len]
-        //         .iter()
-        //         .zip(g_coeffs[len..].iter())
-        //         .map(|(a, b)| -*a + b.double())
-        //         .sum::<F>();
-        //     h_2 += f_2 * g2;
-
         assert_eq!(
             self.degree(),
             2,
@@ -132,7 +114,7 @@ impl<F: Field> ProductOfMLEs<F> {
         );
 
         let f_coeffs = self.polynomials[0].coeffs.as_slice();
-        let g_coeffs = self.polynomials[0].coeffs.as_slice();
+        let g_coeffs = self.polynomials[1].coeffs.as_slice();
 
         let len = 1 << (self.num_vars() - 1);
 

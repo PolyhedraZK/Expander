@@ -413,6 +413,7 @@ where
         transcript,
     );
     if !sumcheck_verified {
+        eprintln!("sumcheck verification failed");
         return false;
     }
 
