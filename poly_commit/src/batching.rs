@@ -6,11 +6,11 @@ use gkr_engine::Transcript;
 use halo2curves::group::Curve;
 use halo2curves::msm::best_multiexp;
 use halo2curves::{ff::PrimeField, CurveAffine};
-use polynomials::MultiLinearPoly;
 use polynomials::{EqPolynomial, MultilinearExtension};
+use polynomials::{MultiLinearPoly, SumOfProductsPoly};
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
-use sumcheck::{IOPProof, SumCheck, SumOfProductsPoly};
+use sumcheck::{IOPProof, SumCheck};
 use utils::timer::Timer;
 
 /// Merge a list of polynomials and its corresponding points into a single polynomial
@@ -20,8 +20,8 @@ use utils::timer::Timer;
 /// - the proof of the sumcheck
 #[allow(clippy::type_complexity)]
 pub fn prover_merge_points<C>(
-    polys: &[MultiLinearPoly<C::Scalar>],
-    points: &[Vec<C::Scalar>],
+    polys: &[impl MultilinearExtension<C::Scalar>],
+    points: &[impl AsRef<[C::Scalar]>],
     transcript: &mut impl Transcript,
 ) -> (
     Vec<C::Scalar>,
@@ -110,11 +110,11 @@ where
 
 pub fn verifier_merge_points<C>(
     commitments: &[impl AsRef<[C]>],
-    points: &[Vec<C::Scalar>],
+    points: &[impl AsRef<[C::Scalar]>],
     values: &[C::Scalar],
     sumcheck_proof: &IOPProof<C::Scalar>,
     transcript: &mut impl Transcript,
-) -> (C::Scalar, Vec<C>)
+) -> (bool, C::Scalar, Vec<C>)
 where
     C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
@@ -168,11 +168,12 @@ where
         sum += e * values[i];
     }
 
-    let subclaim = SumCheck::<C::Scalar>::verify(sum, sumcheck_proof, num_var, transcript);
+    let (verified, subclaim) =
+        SumCheck::<C::Scalar>::verify(sum, sumcheck_proof, num_var, transcript);
 
     let tilde_g_eval = subclaim.expected_evaluation;
 
-    (tilde_g_eval, g_prime_commit_affine)
+    (verified, tilde_g_eval, g_prime_commit_affine)
 }
 
 #[inline]
@@ -198,8 +199,8 @@ fn transpose<C: CurveAffine>(m: &[&[C]]) -> Vec<Vec<C>> {
 #[inline]
 #[allow(clippy::type_complexity)]
 fn pad_polynomials_and_points<C>(
-    polys: &[MultiLinearPoly<C::Scalar>],
-    points: &[Vec<C::Scalar>],
+    polys: &[impl MultilinearExtension<C::Scalar>],
+    points: &[impl AsRef<[C::Scalar]>],
 ) -> (Vec<MultiLinearPoly<C::Scalar>>, Vec<Vec<C::Scalar>>)
 where
     C: CurveAffine + ExpSerde,
@@ -215,7 +216,7 @@ where
     let padded_polys = polys
         .iter()
         .map(|poly| {
-            let mut coeffs = poly.coeffs.clone();
+            let mut coeffs = poly.hypercube_basis_ref().to_vec();
             coeffs.resize(max_size, C::Scalar::zero());
             MultiLinearPoly { coeffs }
         })
@@ -223,7 +224,7 @@ where
     let padded_points = points
         .iter()
         .map(|point| {
-            let mut padded_point = point.clone();
+            let mut padded_point = point.as_ref().to_vec();
             padded_point.resize(max_num_vars, C::Scalar::zero());
             padded_point
         })
@@ -237,14 +238,14 @@ where
 // This generalizes both KZG and Hyrax commitments
 fn pad_commitments_and_points<C>(
     commitments: &[impl AsRef<[C]>],
-    points: &[Vec<C::Scalar>],
+    points: &[impl AsRef<[C::Scalar]>],
 ) -> (Vec<Vec<C>>, Vec<Vec<C::Scalar>>)
 where
     C: CurveAffine + ExpSerde,
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
-    let max_num_vars = points.iter().map(|p| p.len()).max().unwrap_or(0);
+    let max_num_vars = points.iter().map(|p| p.as_ref().len()).max().unwrap_or(0);
     let max_commit_size = commitments
         .iter()
         .map(|c| c.as_ref().len())
@@ -254,7 +255,7 @@ where
     let padded_points = points
         .iter()
         .map(|point| {
-            let mut padded_point = point.clone();
+            let mut padded_point = point.as_ref().to_vec();
             padded_point.resize(max_num_vars, C::Scalar::zero());
             padded_point
         })

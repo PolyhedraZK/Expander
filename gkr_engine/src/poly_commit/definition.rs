@@ -162,7 +162,7 @@ pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
         _params: &Self::Params,
         _mpi_engine: &impl MPIEngine,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        _polys: &[MultiLinearPoly<PolyField>],
+        _polys: &[impl MultilinearExtension<PolyField>],
         _x: &[ExpanderSingleVarChallenge<F>],
         _scratch_pad: &Self::ScratchPad,
         _transcript: &mut impl Transcript,
@@ -174,7 +174,7 @@ pub trait ExpanderPCS<F: FieldEngine, PolyField: Field> {
     fn multi_points_batch_verify(
         _params: &Self::Params,
         _verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
-        _commitments: &[Self::Commitment],
+        _commitments: &[impl AsRef<Self::Commitment>],
         _x: &[ExpanderSingleVarChallenge<F>],
         _evals: &[F::ChallengeField],
         _opening: &Self::BatchOpening,

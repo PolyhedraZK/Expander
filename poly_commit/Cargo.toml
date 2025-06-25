@@ -22,11 +22,8 @@ halo2curves.workspace = true
 itertools.workspace = true
 rand.workspace = true
 rayon.workspace = true
-spongefish.workspace = true
-spongefish-pow.workspace = true
 transpose.workspace = true
 thiserror.workspace = true
-whir.workspace = true
 
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }

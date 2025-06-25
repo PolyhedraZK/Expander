@@ -27,7 +27,6 @@ pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<
         let mut transcript_cloned = transcript.clone();
         let (v, opening) = P::open(
             params,
-            &commitment,
             &proving_key,
             poly,
             x,
@@ -276,6 +275,7 @@ where
     C: FieldEngine,
     T: Transcript,
     P: ExpanderPCS<C, C::SimdCircuitField, Params = usize>,
+    P::Commitment: AsRef<P::Commitment>,
 {
     let mut rng = test_rng();
     let mpi_config = MPIConfig::prover_new(None, None);

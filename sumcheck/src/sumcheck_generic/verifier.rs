@@ -62,19 +62,24 @@ impl<F: Field> IOPVerifierState<F> {
     /// evaluated at `subclaim.point` will be `subclaim.expected_evaluation`.
     /// Otherwise, it is highly unlikely that those two will be equal.
     /// Larger field size guarantees smaller soundness error.
-    pub fn check_and_generate_subclaim(&self, asserted_sum: &F) -> SumCheckSubClaim<F> {
+    pub fn check_and_generate_subclaim(&self, asserted_sum: &F) -> (bool, SumCheckSubClaim<F>) {
         if !self.finished {
             panic!("Incorrect verifier state: Verifier has not finished.");
         }
 
         if self.polynomials_received.len() != self.num_vars {
-            panic!("insufficient rounds")
+            return (false, SumCheckSubClaim::default());
         }
 
         let mut expected = *asserted_sum;
 
         for i in 0..self.num_vars {
             let evals = &self.polynomials_received[i];
+
+            // check that the sum received from last round is correct
+            if expected != evals[0] + evals[1] {
+                return (false, SumCheckSubClaim::default());
+            }
 
             // the univariate polynomial f is received in its extrapolated form, i.e.,
             //   h(0) = evals[0], h(1) = evals[1], h(2) = evals[2]
@@ -96,11 +101,14 @@ impl<F: Field> IOPVerifierState<F> {
             expected = h_0 + h_1 * self.challenges[i] + h_2 * self.challenges[i].square();
         }
 
-        SumCheckSubClaim {
-            point: self.challenges.clone(),
-            // the last expected value (not checked within this function) will be included in the
-            // subclaim
-            expected_evaluation: expected,
-        }
+        (
+            true,
+            SumCheckSubClaim {
+                point: self.challenges.clone(),
+                // the last expected value (not checked within this function) will be included in
+                // the subclaim
+                expected_evaluation: expected,
+            },
+        )
     }
 }

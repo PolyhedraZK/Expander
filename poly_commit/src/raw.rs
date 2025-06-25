@@ -87,7 +87,6 @@ impl<F: ExtensionField> PolynomialCommitmentScheme<F> for RawMultiLinearPCS {
 
     fn open(
         params: &Self::Params,
-        _commitment: &Self::Commitment,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,

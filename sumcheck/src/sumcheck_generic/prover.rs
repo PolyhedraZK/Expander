@@ -1,7 +1,8 @@
 use arith::Field;
+use polynomials::SumOfProductsPoly;
 use rayon::iter::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator};
 
-use super::{IOPProverMessage, IOPProverState, SumOfProductsPoly};
+use super::{IOPProverMessage, IOPProverState};
 
 impl<F: Field> IOPProverState<F> {
     /// Initialize the prover state to argue for the sum of the input polynomial
@@ -45,16 +46,12 @@ impl<F: Field> IOPProverState<F> {
             let r = self.challenges[self.round - 1];
 
             self.mle_list
-                .f_g_h_tuple
+                .f_and_g_pairs
                 .par_iter_mut()
-                .for_each(|(f, g, h)| {
+                .for_each(|(f, g)| {
                     // fix the top variable of f and g to r
                     f.fix_top_variable(r);
                     g.fix_top_variable(r);
-                    match h {
-                        Some(h_poly) => h_poly.fix_top_variable(r),
-                        None => {}
-                    };
                 });
         } else if self.round > 0 {
             panic!("verifier message is empty")
@@ -97,26 +94,35 @@ impl<F: Field> IOPProverState<F> {
             .map(|(f, g)| {
                 // evaluate the polynomial at 0, 1 and 2
                 // and obtain f(0)g(0) and f(1)g(1) and f(2)g(2)
+
                 let f_coeffs = f.coeffs.as_slice();
                 let g_coeffs = g.coeffs.as_slice();
 
-                let h_0_local =
-                    f_coeffs[..len].iter().sum::<F>() * g_coeffs[..len].iter().sum::<F>();
-                let h_1_local =
-                    f_coeffs[len..].iter().sum::<F>() * g_coeffs[len..].iter().sum::<F>();
+                let h_0_local = f_coeffs[..len]
+                    .iter()
+                    .zip(g_coeffs[..len].iter())
+                    .map(|(&f, &g)| f * g)
+                    .sum::<F>();
 
-                let f_2 = f_coeffs[..len]
+                let h_1_local = f_coeffs[len..]
+                    .iter()
+                    .zip(g_coeffs[len..].iter())
+                    .map(|(&f, &g)| f * g)
+                    .sum::<F>();
+
+                let h_2_local = f_coeffs[..len]
                     .iter()
                     .zip(f_coeffs[len..].iter())
                     .map(|(a, b)| -*a + b.double())
-                    .sum::<F>();
-                let g2 = g_coeffs[..len]
-                    .iter()
-                    .zip(g_coeffs[len..].iter())
-                    .map(|(a, b)| -*a + b.double())
+                    .zip(
+                        g_coeffs[..len]
+                            .iter()
+                            .zip(g_coeffs[len..].iter())
+                            .map(|(a, b)| -*a + b.double()),
+                    )
+                    .map(|(a, b)| a * b)
                     .sum::<F>();
 
-                let h_2_local = f_2 * g2;
                 (h_0_local, h_1_local, h_2_local)
             })
             .collect::<Vec<_>>()

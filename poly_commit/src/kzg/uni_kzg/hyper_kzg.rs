@@ -1,17 +1,24 @@
 use std::iter;
 
+use ::utils::timer::Timer;
 use arith::ExtensionField;
 use gkr_engine::Transcript;
 use halo2curves::{
-    ff::Field,
+    ff::{Field, PrimeField},
     group::{prime::PrimeCurveAffine, GroupEncoding},
-    pairing::MultiMillerLoop,
+    pairing::{Engine, MultiMillerLoop},
     CurveAffine,
 };
 use itertools::izip;
+use polynomials::MultilinearExtension;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
 
-use crate::*;
+use crate::{
+    batching::{prover_merge_points, verifier_merge_points},
+    traits::BatchOpening,
+    *,
+};
 
 #[inline(always)]
 pub(crate) fn coeff_form_hyperkzg_local_poly_oracles<E>(
@@ -236,4 +243,93 @@ where
     );
 
     true
+}
+
+pub fn multiple_points_batch_open_impl<E, PCS>(
+    proving_key: &CoefFormUniKZGSRS<E>,
+    polys: &[impl MultilinearExtension<E::Fr>],
+    points: &[impl AsRef<[E::Fr]>],
+    transcript: &mut impl Transcript,
+) -> (Vec<E::Fr>, BatchOpening<E::Fr, PCS>)
+where
+    E: Engine + MultiMillerLoop,
+    E::Fr: ExtensionField + PrimeField,
+    E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    PCS: PolynomialCommitmentScheme<E::Fr, Opening = HyperUniKZGOpening<E>>,
+{
+    let timer = Timer::new("batch_opening", true);
+    // generate evals for each polynomial at its corresponding point
+    let eval_timer = Timer::new("eval all polys", true);
+    let points = points.iter().map(|p| p.as_ref()).collect::<Vec<_>>();
+    let evals: Vec<E::Fr> = polys
+        .par_iter()
+        .zip_eq(points.par_iter())
+        .map(|(poly, point)| poly.evaluate(point))
+        .collect();
+    eval_timer.stop();
+
+    let merger_timer = Timer::new("merging points", true);
+    let (new_point, g_prime, proof) =
+        prover_merge_points::<E::G1Affine>(polys, &points, transcript);
+    merger_timer.stop();
+
+    let pcs_timer = Timer::new("kzg_open", true);
+    let (_g_prime_eval, g_prime_proof) =
+        coeff_form_uni_hyperkzg_open(proving_key, &g_prime.coeffs, &new_point, transcript);
+    pcs_timer.stop();
+
+    timer.stop();
+    (
+        evals,
+        BatchOpening {
+            sum_check_proof: proof,
+            g_prime_proof,
+        },
+    )
+}
+
+pub fn multiple_points_batch_verify_impl<E, PCS>(
+    verifying_key: &UniKZGVerifierParams<E>,
+    commitments: &[impl AsRef<UniKZGCommitment<E>>],
+    points: &[impl AsRef<[E::Fr]>],
+    values: &[E::Fr],
+    batch_opening: &BatchOpening<E::Fr, PCS>,
+    transcript: &mut impl Transcript,
+) -> bool
+where
+    E: Engine + MultiMillerLoop,
+    E::Fr: ExtensionField + PrimeField,
+    E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    PCS: PolynomialCommitmentScheme<E::Fr, Opening = HyperUniKZGOpening<E>>,
+{
+    let a2 = batch_opening.sum_check_proof.export_point_to_expander();
+
+    let commitments = commitments
+        .iter()
+        .map(|c| vec![c.as_ref().0])
+        .collect::<Vec<_>>();
+
+    let (verified, tilde_g_eval, g_prime_commit) = verifier_merge_points::<E::G1Affine>(
+        &commitments,
+        points,
+        values,
+        &batch_opening.sum_check_proof,
+        transcript,
+    );
+
+    if !verified {
+        return false;
+    }
+
+    // verify commitment
+    coeff_form_uni_hyperkzg_verify(
+        verifying_key,
+        g_prime_commit[0],
+        a2.as_ref(),
+        tilde_g_eval,
+        &batch_opening.g_prime_proof,
+        transcript,
+    )
 }

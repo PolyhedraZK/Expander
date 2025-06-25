@@ -3,6 +3,7 @@ use super::*;
 use arith::Fr;
 use ark_std::test_rng;
 use gkr_hashers::Keccak256hasher;
+use polynomials::MultiLinearPoly;
 use transcript::BytesHashTranscript;
 
 #[test]
@@ -29,11 +30,7 @@ fn test_sumcheck_subroutine() {
 
             let mle_list = SumOfProductsPoly::<Fr> { f_and_g_pairs };
 
-            let asserted_sum = mle_list
-                .f_and_g_pairs
-                .iter()
-                .map(|(f, g)| f.coeffs.iter().sum::<Fr>() * g.coeffs.iter().sum::<Fr>())
-                .sum::<Fr>();
+            let asserted_sum = mle_list.sum();
 
             let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
 
@@ -53,8 +50,9 @@ fn test_sumcheck_subroutine() {
                 ));
             }
 
-            let subclaim = IOPVerifierState::check_and_generate_subclaim(&verifier, &asserted_sum);
-
+            let (verified, subclaim) =
+                IOPVerifierState::check_and_generate_subclaim(&verifier, &asserted_sum);
+            assert!(verified, "sumcheck verification failed");
             let evals = mle_list.evaluate(&subclaim.point);
             assert!(evals == subclaim.expected_evaluation, "wrong subclaim");
         }
@@ -87,11 +85,7 @@ fn test_sumcheck_e2e() {
 
             let mle_list = SumOfProductsPoly::<Fr> { f_and_g_pairs };
 
-            let asserted_sum = mle_list
-                .f_and_g_pairs
-                .iter()
-                .map(|(f, g)| f.coeffs.iter().sum::<Fr>() * g.coeffs.iter().sum::<Fr>())
-                .sum::<Fr>();
+            let asserted_sum = mle_list.sum();
 
             // prover
             let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
@@ -99,8 +93,9 @@ fn test_sumcheck_e2e() {
 
             // verifier
             let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
-            let subclaim = SumCheck::<Fr>::verify(asserted_sum, &proof, num_vars, &mut transcript);
-
+            let (verified, subclaim) =
+                SumCheck::<Fr>::verify(asserted_sum, &proof, num_vars, &mut transcript);
+            assert!(verified, "sumcheck verification failed");
             let evals = mle_list.evaluate(&subclaim.point);
             assert!(evals == subclaim.expected_evaluation, "wrong subclaim");
         }

@@ -9,6 +9,15 @@ pub struct UniKZGCommitment<E: Engine>(pub E::G1Affine)
 where
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>;
 
+impl<E: Engine> AsRef<UniKZGCommitment<E>> for UniKZGCommitment<E>
+where
+    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+{
+    fn as_ref(&self) -> &UniKZGCommitment<E> {
+        self
+    }
+}
+
 // Derive macros does not work for associated types
 impl<E: Engine> ExpSerde for UniKZGCommitment<E>
 where

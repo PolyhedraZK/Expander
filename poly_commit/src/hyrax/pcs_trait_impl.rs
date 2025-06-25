@@ -61,7 +61,6 @@ where
 
     fn open(
         _params: &Self::Params,
-        _commitment: &Self::Commitment,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
