@@ -5,7 +5,7 @@ use mpi::{
 };
 use serdes::ExpSerde;
 
-use super::SharedMemory;
+use super::MPISharedMemory;
 
 /// MPI APIs for distributed computing operations
 pub trait MPIEngine {
@@ -142,7 +142,7 @@ pub trait MPIEngine {
     fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, *mut ompi_win_t);
 
     /// Consume the shared memory segment and create a new shared memory object
-    fn consume_obj_and_create_shared<T: SharedMemory>(
+    fn consume_obj_and_create_shared<T: MPISharedMemory>(
         &self,
         obj: Option<T>,
     ) -> (T, *mut ompi_win_t) {
@@ -155,11 +155,11 @@ pub trait MPIEngine {
             let mut ptr_copy = ptr;
             obj.to_memory(&mut ptr_copy);
             self.barrier();
-            (T::from_memory(&mut ptr), window)
+            (T::new_from_memory(&mut ptr), window)
         } else {
             let (mut ptr, window) = self.create_shared_mem(0);
             self.barrier(); // wait for root to write data
-            (T::from_memory(&mut ptr), window)
+            (T::new_from_memory(&mut ptr), window)
         }
     }
 

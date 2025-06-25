@@ -10,7 +10,7 @@ use gf2::GF2x128;
 use gkr_engine::{
     root_println, BN254Config, BabyBearx16Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine,
     GKRScheme, Goldilocksx1Config, Goldilocksx8Config, M31x16Config, M31x1Config, MPIConfig,
-    MPIEngine, SharedMemory,
+    MPIEngine, MPISharedMemory,
 };
 use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use halo2curves::bn256::{Bn256, G1Affine};

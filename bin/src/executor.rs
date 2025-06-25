@@ -11,7 +11,7 @@ use clap::{Parser, Subcommand};
 use gkr::{Prover, Verifier};
 use gkr_engine::{
     BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, Goldilocksx8Config, M31x16Config,
-    MPIConfig, MPIEngine, Proof, SharedMemory,
+    MPIConfig, MPIEngine, MPISharedMemory, Proof,
 };
 use log::info;
 use poly_commit::expander_pcs_init_testing_only;
