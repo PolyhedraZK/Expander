@@ -7,9 +7,11 @@ edition = "2021"
 arith = { path = ".." }
 serdes = { path = "../../serdes" }
 
+ark-ff.workspace = true
 ark-std.workspace = true
 ethnum.workspace = true
 rand.workspace = true
+whir.workspace = true
 
 [[bench]]
 name = "goldilocks"
