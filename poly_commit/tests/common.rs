@@ -100,7 +100,7 @@ where
             ))
         }
 
-        // edga case: multi point batch opening with 1 poly
+        // edge case: multi point batch opening with 1 poly
         {
             let num_poly = 1;
             let polys = (0..num_poly)

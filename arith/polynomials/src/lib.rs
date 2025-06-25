@@ -13,5 +13,8 @@ pub use eq::*;
 mod sum_of_products;
 pub use sum_of_products::*;
 
+mod product_of_mles;
+pub use product_of_mles::*;
+
 #[cfg(test)]
 mod tests;

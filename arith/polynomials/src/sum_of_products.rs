@@ -1,6 +1,6 @@
 use arith::Field;
 
-use crate::{MultiLinearPoly, MultilinearExtension};
+use crate::{MultiLinearPoly, MultilinearExtension, ProductOfMLEs};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 /// A special form of a multi-linear polynomial: f = f0*g0 + f1*g1 + ...
@@ -8,32 +8,29 @@ use crate::{MultiLinearPoly, MultilinearExtension};
 /// The sumcheck over this polynomial has a degree of 2
 pub struct SumOfProductsPoly<F: Field> {
     /// The list of multi-linear polynomials to be summed
-    pub f_and_g_pairs: Vec<(MultiLinearPoly<F>, MultiLinearPoly<F>)>,
+    pub monomials: Vec<ProductOfMLEs<F>>,
 }
 
 impl<F: Field> SumOfProductsPoly<F> {
     /// Create a new SumOfProducts instance
     #[inline]
     pub fn new() -> Self {
-        Self {
-            f_and_g_pairs: vec![],
-        }
+        Self { monomials: vec![] }
     }
 
     /// Get the number of variables in the polynomial
     #[inline]
     pub fn num_vars(&self) -> usize {
-        if self.f_and_g_pairs.is_empty() {
+        if self.monomials.is_empty() {
             0
         } else {
-            self.f_and_g_pairs[0].0.num_vars()
+            self.monomials[0].num_vars()
         }
     }
 
     #[inline]
     pub fn add_pair(&mut self, poly0: MultiLinearPoly<F>, poly1: MultiLinearPoly<F>) {
-        assert_eq!(poly0.num_vars(), poly1.num_vars());
-        if !self.f_and_g_pairs.is_empty() {
+        if !self.monomials.is_empty() {
             // Ensure new pair's num_vars matches existing pairs.
             assert_eq!(
                 self.num_vars(),
@@ -41,22 +38,39 @@ impl<F: Field> SumOfProductsPoly<F> {
                 "All polynomial pairs must have the same number of variables"
             );
         }
-        self.f_and_g_pairs.push((poly0, poly1));
+        self.monomials.push(ProductOfMLEs::from_pair(poly0, poly1));
     }
 
     #[inline]
     pub fn evaluate(&self, point: &[F]) -> F {
-        self.f_and_g_pairs
-            .iter()
-            .map(|(f, g)| f.eval_reverse_order(point) * g.eval_reverse_order(point))
-            .sum()
+        self.monomials.iter().map(|m| m.evaluate(point)).sum()
     }
 
     #[inline]
     pub fn sum(&self) -> F {
-        self.f_and_g_pairs
-            .iter()
-            .flat_map(|(f, g)| f.coeffs.iter().zip(g.coeffs.iter()).map(|(&f, &g)| f * g))
-            .sum::<F>()
+        self.monomials.iter().map(|m| m.sum()).sum()
+    }
+
+    #[inline]
+    pub fn fix_top_variable(&mut self, value: F) {
+        for monomial in &mut self.monomials {
+            monomial.fix_top_variable(value);
+        }
+    }
+
+    #[inline]
+    pub fn extrapolate_at_0_1_2(&self) -> (F, F, F) {
+        let mut sum0 = F::zero();
+        let mut sum1 = F::zero();
+        let mut sum2 = F::zero();
+
+        for monomial in &self.monomials {
+            let (s0, s1, s2) = monomial.extrapolate_at_0_1_2();
+            sum0 += s0;
+            sum1 += s1;
+            sum2 += s2;
+        }
+
+        (sum0, sum1, sum2)
     }
 }

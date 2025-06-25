@@ -3,7 +3,7 @@ use super::*;
 use arith::Fr;
 use ark_std::test_rng;
 use gkr_hashers::Keccak256hasher;
-use polynomials::MultiLinearPoly;
+use polynomials::{MultiLinearPoly, ProductOfMLEs};
 use transcript::BytesHashTranscript;
 
 #[test]
@@ -24,11 +24,13 @@ fn test_sumcheck_subroutine() {
                         .collect::<Vec<_>>();
                     let g = MultiLinearPoly::<Fr>::new(g_coeffs);
 
-                    (f, g)
+                    ProductOfMLEs::from_pair(f, g)
                 })
                 .collect::<Vec<_>>();
 
-            let mle_list = SumOfProductsPoly::<Fr> { f_and_g_pairs };
+            let mle_list = SumOfProductsPoly::<Fr> {
+                monomials: f_and_g_pairs,
+            };
 
             let asserted_sum = mle_list.sum();
 
@@ -79,11 +81,13 @@ fn test_sumcheck_e2e() {
                         .collect::<Vec<_>>();
                     let g = MultiLinearPoly::<Fr>::new(g_coeffs);
 
-                    (f, g)
+                    ProductOfMLEs::from_pair(f, g)
                 })
                 .collect::<Vec<_>>();
 
-            let mle_list = SumOfProductsPoly::<Fr> { f_and_g_pairs };
+            let mle_list = SumOfProductsPoly::<Fr> {
+                monomials: f_and_g_pairs,
+            };
 
             let asserted_sum = mle_list.sum();
 

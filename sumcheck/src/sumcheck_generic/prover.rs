@@ -45,24 +45,21 @@ impl<F: Field> IOPProverState<F> {
 
             let r = self.challenges[self.round - 1];
 
-            self.mle_list
-                .f_and_g_pairs
-                .par_iter_mut()
-                .for_each(|(f, g)| {
-                    // fix the top variable of f and g to r
-                    f.fix_top_variable(r);
-                    g.fix_top_variable(r);
-                });
+            self.mle_list.fix_top_variable(r);
+
+            // self.mle_list
+            //     .f_and_g_pairs
+            //     .par_iter_mut()
+            //     .for_each(|(f, g)| {
+            //         // fix the top variable of f and g to r
+            //         f.fix_top_variable(r);
+            //         g.fix_top_variable(r);
+            //     });
         } else if self.round > 0 {
             panic!("verifier message is empty")
         }
 
         self.round += 1;
-
-        let len = 1 << (self.mle_list.num_vars() - 1);
-        let mut h_0 = F::zero();
-        let mut h_1 = F::zero();
-        let mut h_2 = F::zero();
 
         // The following commented code is a sequential version of the computation
         //
@@ -88,50 +85,52 @@ impl<F: Field> IOPProverState<F> {
         //     h_2 += f_2 * g2;
         // }
 
-        self.mle_list
-            .f_and_g_pairs
-            .par_iter()
-            .map(|(f, g)| {
-                // evaluate the polynomial at 0, 1 and 2
-                // and obtain f(0)g(0) and f(1)g(1) and f(2)g(2)
+        // self.mle_list
+        //     .f_and_g_pairs
+        //     .par_iter()
+        //     .map(|(f, g)| {
+        //         // evaluate the polynomial at 0, 1 and 2
+        //         // and obtain f(0)g(0) and f(1)g(1) and f(2)g(2)
 
-                let f_coeffs = f.coeffs.as_slice();
-                let g_coeffs = g.coeffs.as_slice();
+        //         let f_coeffs = f.coeffs.as_slice();
+        //         let g_coeffs = g.coeffs.as_slice();
 
-                let h_0_local = f_coeffs[..len]
-                    .iter()
-                    .zip(g_coeffs[..len].iter())
-                    .map(|(&f, &g)| f * g)
-                    .sum::<F>();
+        //         let h_0_local = f_coeffs[..len]
+        //             .iter()
+        //             .zip(g_coeffs[..len].iter())
+        //             .map(|(&f, &g)| f * g)
+        //             .sum::<F>();
 
-                let h_1_local = f_coeffs[len..]
-                    .iter()
-                    .zip(g_coeffs[len..].iter())
-                    .map(|(&f, &g)| f * g)
-                    .sum::<F>();
+        //         let h_1_local = f_coeffs[len..]
+        //             .iter()
+        //             .zip(g_coeffs[len..].iter())
+        //             .map(|(&f, &g)| f * g)
+        //             .sum::<F>();
 
-                let h_2_local = f_coeffs[..len]
-                    .iter()
-                    .zip(f_coeffs[len..].iter())
-                    .map(|(a, b)| -*a + b.double())
-                    .zip(
-                        g_coeffs[..len]
-                            .iter()
-                            .zip(g_coeffs[len..].iter())
-                            .map(|(a, b)| -*a + b.double()),
-                    )
-                    .map(|(a, b)| a * b)
-                    .sum::<F>();
+        //         let h_2_local = f_coeffs[..len]
+        //             .iter()
+        //             .zip(f_coeffs[len..].iter())
+        //             .map(|(a, b)| -*a + b.double())
+        //             .zip(
+        //                 g_coeffs[..len]
+        //                     .iter()
+        //                     .zip(g_coeffs[len..].iter())
+        //                     .map(|(a, b)| -*a + b.double()),
+        //             )
+        //             .map(|(a, b)| a * b)
+        //             .sum::<F>();
 
-                (h_0_local, h_1_local, h_2_local)
-            })
-            .collect::<Vec<_>>()
-            .iter()
-            .for_each(|(h_0_local, h_1_local, h_2_local)| {
-                h_0 += h_0_local;
-                h_1 += h_1_local;
-                h_2 += h_2_local;
-            });
+        //         (h_0_local, h_1_local, h_2_local)
+        //     })
+        //     .collect::<Vec<_>>()
+        //     .iter()
+        //     .for_each(|(h_0_local, h_1_local, h_2_local)| {
+        //         h_0 += h_0_local;
+        //         h_1 += h_1_local;
+        //         h_2 += h_2_local;
+        //     });
+
+        let (h_0, h_1, h_2) = self.mle_list.extrapolate_at_0_1_2();
 
         IOPProverMessage {
             evaluations: vec![h_0, h_1, h_2],
