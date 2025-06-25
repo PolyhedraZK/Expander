@@ -145,4 +145,75 @@ impl<F: Field> ProductOfMLEs<F> {
 
         (h_0_local, h_1_local, h_2_local)
     }
+
+    #[inline]
+    pub fn extrapolate_at_0_1_2_m1(&self) -> (F, F, F, F) {
+        // evaluate the polynomial at 0, 1, 2 and f(-1)
+        // and obtain f(0)g(0)h(0) and f(1)g(1)h(1) and f(2)g(2)h(2) and f(-1)g(-1)h(-1)
+        assert_eq!(
+            self.degree(),
+            3,
+            "Extrapolation is only defined for degree 2 polynomials"
+        );
+
+        let f_coeffs = self.polynomials[0].coeffs.as_slice();
+        let g_coeffs = self.polynomials[1].coeffs.as_slice();
+        let h_coeffs = self.polynomials[2].coeffs.as_slice();
+
+        let len = 1 << (self.num_vars() - 1);
+
+        let r_0_local = f_coeffs[..len]
+            .iter()
+            .zip(g_coeffs[..len].iter())
+            .zip(h_coeffs[..len].iter())
+            .map(|((&f, &g), &h)| f * g * h)
+            .sum::<F>();
+
+        let r_1_local = f_coeffs[len..]
+            .iter()
+            .zip(g_coeffs[len..].iter())
+            .zip(h_coeffs[len..].iter())
+            .map(|((&f, &g), &h)| f * g * h)
+            .sum::<F>();
+
+        let r_2_local = f_coeffs[..len]
+            .iter()
+            .zip(f_coeffs[len..].iter())
+            .map(|(a, b)| -*a + b.double())
+            .zip(
+                g_coeffs[..len]
+                    .iter()
+                    .zip(g_coeffs[len..].iter())
+                    .map(|(a, b)| -*a + b.double()),
+            )
+            .zip(
+                h_coeffs[..len]
+                    .iter()
+                    .zip(h_coeffs[len..].iter())
+                    .map(|(a, b)| -*a + b.double()),
+            )
+            .map(|((a, b), c)| a * b * c)
+            .sum::<F>();
+
+        let r_m1_local = f_coeffs[..len]
+            .iter()
+            .zip(f_coeffs[len..].iter())
+            .map(|(a, b)| a.double() - b)
+            .zip(
+                g_coeffs[..len]
+                    .iter()
+                    .zip(g_coeffs[len..].iter())
+                    .map(|(a, b)| a.double() - b),
+            )
+            .zip(
+                h_coeffs[..len]
+                    .iter()
+                    .zip(h_coeffs[len..].iter())
+                    .map(|(a, b)| a.double() - b),
+            )
+            .map(|((a, b), c)| a * b * c)
+            .sum::<F>();
+
+        (r_0_local, r_1_local, r_2_local, r_m1_local)
+    }
 }

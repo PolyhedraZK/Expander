@@ -72,8 +72,8 @@ impl<F: Field> IOPVerifierState<F> {
         }
 
         let mut expected = *asserted_sum;
-
-        let two_inv = F::from(2u32).inv().unwrap();
+        let inv_2 = F::from(2u32).inv().expect("2 is not zero in the field");
+        let inv_6 = F::from(6u32).inv().expect("6 is not zero in the field");
 
         for i in 0..self.num_vars {
             let evals = &self.polynomials_received[i];
@@ -83,24 +83,8 @@ impl<F: Field> IOPVerifierState<F> {
                 return (false, SumCheckSubClaim::default());
             }
 
-            // the univariate polynomial f is received in its extrapolated form, i.e.,
-            //   h(0) = evals[0], h(1) = evals[1], h(2) = evals[2]
-            // that is, suppose h = h_0 + h_1 * x + h_2 * x^2, then
-            //   h(0) = h_0
-            //   h(1) = h_0 + h_1 + h_2
-            //   h(2) = h_0 + 2 * h_1 + 4 * h_2
-            // therefore
-            //   h_0 = evals[0]
-            //   h_2 = (h(2) + h(0))/2 -  h(1)
-            //   h_1 = h(1) - h_0 - h_2
-
-            let h_0 = evals[0];
-            let h_2 = (evals[2] + evals[0]) * two_inv - evals[1];
-            let h_1 = evals[1] - h_0 - h_2;
-
-            // now we want to compute h(r) for the challenge r = self.challenges[i]
-            // h(r) = h_0 + h_1 * r + h_2 * r^2
-            expected = h_0 + h_1 * self.challenges[i] + h_2 * self.challenges[i].square();
+            expected =
+                interpolated_form_poly_evaluated_at_r(evals, &self.challenges[i], &inv_2, &inv_6);
         }
 
         (
@@ -112,5 +96,62 @@ impl<F: Field> IOPVerifierState<F> {
                 expected_evaluation: expected,
             },
         )
+    }
+}
+
+#[inline]
+fn interpolated_form_poly_evaluated_at_r<F: Field>(evals: &[F], r: &F, inv_2: &F, inv_6: &F) -> F {
+    match evals.len() {
+        3 => {
+            // the univariate polynomial f is received in its extrapolated form, i.e.,
+            //   h(0) = evals[0], h(1) = evals[1], h(2) = evals[2]
+            // that is, suppose h = h_0 + h_1 * x + h_2 * x^2, then
+            //   h(0) = h_0
+            //   h(1) = h_0 + h_1 + h_2
+            //   h(2) = h_0 + 2 * h_1 + 4 * h_2
+            // therefore
+            //   h_0 = evals[0]
+            //   h_2 = (h(2) + h(0))/2 -  h(1)
+            //   h_1 = h(1) - h_0 - h_2
+            let h_0 = evals[0];
+            let h_2 = (evals[2] + evals[0]) * inv_2 - evals[1];
+            let h_1 = evals[1] - h_0 - h_2;
+
+            // h(r) = h_0 + h_1 * r + h_2 * r^2
+            h_0 + h_1 * r + h_2 * r.square()
+        }
+
+        4 => {
+            // the univariate polynomial f is received in its extrapolated form, i.e.,
+            //   h(0) = evals[0], h(1) = evals[1], h(2) = evals[2], h(-1) = evals[3]
+            // that is, suppose h = h_0 + h_1 * x + h_2 * x^2, then
+            //   h(0) = h_0
+            //   h(1) = h_0 + h_1 + h_2 + h_3
+            //   h(2) = h_0 + 2 * h_1 + 4 * h_2 + 8 * h_3
+            //   h(-1) = h_0 - h_1 + h_2 - h_3
+            // therefore
+            //   h_0 = evals[0]
+            //   h_2 = (h(1) + h(-1))/2 -  h_0
+            // and
+            //   tmp0 := h_1 +     h_3 = (h(1) - h(-1))/2
+            //   tmp1 := h_1 + 7 * h_3 = (h(2) - h(1)) - 3 * h_2
+            // so
+            //   h_3 = (tmp1 - tmp0) / 6
+            //   h_1 = tmp0 - h_3
+
+            let h_0 = evals[0];
+            let h_2 = (evals[1] + evals[3]) * inv_2 - h_0;
+            let tmp0 = (evals[1] - evals[3]) * inv_2;
+            let tmp1 = (evals[2] - evals[1]) - F::from(3u32) * h_2;
+            let h_3 = (tmp1 - tmp0) * inv_6;
+            let h_1 = tmp0 - h_3;
+
+            // h(r) = h_0 + h_1 * r + h_2 * r^2 + h_3 * r^3
+            let r_square = r.square();
+            let r_cube = r_square * r;
+            h_0 + h_1 * r + h_2 * r_square + h_3 * r_cube
+        }
+
+        _ => panic!("interpolate only supports 3 or 4 evaluations"),
     }
 }

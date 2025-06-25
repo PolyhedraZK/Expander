@@ -51,10 +51,20 @@ impl<F: Field> IOPProverState<F> {
 
         self.round += 1;
 
-        let (h_0, h_1, h_2) = self.mle_list.extrapolate_at_0_1_2();
+        let evaluations = match self.mle_list.degree() {
+            2 => {
+                let (h_0, h_1, h_2) = self.mle_list.extrapolate_at_0_1_2();
+                vec![h_0, h_1, h_2]
+            }
+            3 => {
+                let (h_0, h_1, h_2, h_m1) = self.mle_list.extrapolate_at_0_1_2_m1();
+                vec![h_0, h_1, h_2, h_m1]
+            }
+            _ => {
+                panic!("SumCheck protocol only supports polynomials of degree 2 or 3")
+            }
+        };
 
-        IOPProverMessage {
-            evaluations: vec![h_0, h_1, h_2],
-        }
+        IOPProverMessage { evaluations }
     }
 }

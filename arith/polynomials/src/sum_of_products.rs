@@ -18,6 +18,15 @@ impl<F: Field> SumOfProductsPoly<F> {
         Self { monomials: vec![] }
     }
 
+    #[inline]
+    pub fn degree(&self) -> usize {
+        if self.monomials.is_empty() {
+            0
+        } else {
+            self.monomials[0].degree()
+        }
+    }
+
     /// Get the number of variables in the polynomial
     #[inline]
     pub fn num_vars(&self) -> usize {
@@ -64,6 +73,8 @@ impl<F: Field> SumOfProductsPoly<F> {
         let mut sum1 = F::zero();
         let mut sum2 = F::zero();
 
+        // this iteration can be parallelized
+        // do we want to parallelize it?
         for monomial in &self.monomials {
             let (s0, s1, s2) = monomial.extrapolate_at_0_1_2();
             sum0 += s0;
@@ -72,5 +83,25 @@ impl<F: Field> SumOfProductsPoly<F> {
         }
 
         (sum0, sum1, sum2)
+    }
+
+    #[inline]
+    pub fn extrapolate_at_0_1_2_m1(&self) -> (F, F, F, F) {
+        let mut sum0 = F::zero();
+        let mut sum1 = F::zero();
+        let mut sum2 = F::zero();
+        let mut sum_m1 = F::zero();
+
+        // this iteration can be parallelized
+        // do we want to parallelize it?
+        for monomial in &self.monomials {
+            let (s0, s1, s2, s_m1) = monomial.extrapolate_at_0_1_2_m1();
+            sum0 += s0;
+            sum1 += s1;
+            sum2 += s2;
+            sum_m1 += s_m1;
+        }
+
+        (sum0, sum1, sum2, sum_m1)
     }
 }
