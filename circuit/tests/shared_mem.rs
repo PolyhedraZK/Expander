@@ -2,7 +2,7 @@ use circuit::Circuit;
 use config_macros::declare_gkr_config;
 use gkr_engine::{
     BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, GKRScheme, Goldilocksx8Config,
-    M31x16Config, MPIConfig, MPIEngine, SharedMemory,
+    M31x16Config, MPIConfig, MPIEngine, MPISharedMemory,
 };
 use gkr_hashers::SHA256hasher;
 use poly_commit::RawExpanderGKR;
@@ -87,7 +87,7 @@ fn test_shared_mem() {
 }
 
 #[allow(unreachable_patterns)]
-fn test_shared_mem_helper<T: SharedMemory + ExpSerde + std::fmt::Debug>(
+fn test_shared_mem_helper<T: MPISharedMemory + ExpSerde + std::fmt::Debug>(
     mpi_config: &MPIConfig,
     t: Option<T>,
 ) {

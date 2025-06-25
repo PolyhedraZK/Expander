@@ -1,9 +1,9 @@
 use super::circuit::{Circuit, CircuitLayer, StructureInfo};
 use super::gates::{GateAdd, GateConst, GateMul, GateUni};
 
-use gkr_engine::{FieldEngine, SharedMemory};
+use gkr_engine::{FieldEngine, MPISharedMemory};
 
-impl<C: FieldEngine> SharedMemory for CircuitLayer<C> {
+impl<C: FieldEngine> MPISharedMemory for CircuitLayer<C> {
     fn bytes_size(&self) -> usize {
         8 + 8
             + self.mul.bytes_size()
@@ -21,13 +21,13 @@ impl<C: FieldEngine> SharedMemory for CircuitLayer<C> {
         self.uni.to_memory(ptr);
     }
 
-    fn from_memory(ptr: &mut *mut u8) -> Self {
-        let input_var_num = usize::from_memory(ptr);
-        let output_var_num = usize::from_memory(ptr);
-        let mul = Vec::<GateMul<C>>::from_memory(ptr);
-        let add = Vec::<GateAdd<C>>::from_memory(ptr);
-        let const_ = Vec::<GateConst<C>>::from_memory(ptr);
-        let uni = Vec::<GateUni<C>>::from_memory(ptr);
+    fn new_from_memory(ptr: &mut *mut u8) -> Self {
+        let input_var_num = usize::new_from_memory(ptr);
+        let output_var_num = usize::new_from_memory(ptr);
+        let mul = Vec::<GateMul<C>>::new_from_memory(ptr);
+        let add = Vec::<GateAdd<C>>::new_from_memory(ptr);
+        let const_ = Vec::<GateConst<C>>::new_from_memory(ptr);
+        let uni = Vec::<GateUni<C>>::new_from_memory(ptr);
 
         CircuitLayer {
             input_var_num,
@@ -53,7 +53,7 @@ impl<C: FieldEngine> SharedMemory for CircuitLayer<C> {
     }
 }
 
-impl<C: FieldEngine> SharedMemory for Circuit<C> {
+impl<C: FieldEngine> MPISharedMemory for Circuit<C> {
     fn bytes_size(&self) -> usize {
         self.layers.len().bytes_size()
             + self
@@ -71,12 +71,12 @@ impl<C: FieldEngine> SharedMemory for Circuit<C> {
         self.expected_num_output_zeros.to_memory(ptr);
     }
 
-    fn from_memory(ptr: &mut *mut u8) -> Self {
-        let len = usize::from_memory(ptr);
+    fn new_from_memory(ptr: &mut *mut u8) -> Self {
+        let len = usize::new_from_memory(ptr);
         let layers = (0..len)
-            .map(|_| CircuitLayer::<C>::from_memory(ptr))
+            .map(|_| CircuitLayer::<C>::new_from_memory(ptr))
             .collect();
-        let expected_num_output_zeros = usize::from_memory(ptr);
+        let expected_num_output_zeros = usize::new_from_memory(ptr);
 
         Circuit {
             layers,
