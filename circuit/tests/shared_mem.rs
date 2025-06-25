@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use circuit::Circuit;
 use config_macros::declare_gkr_config;
 use gkr_engine::{
@@ -84,6 +86,15 @@ fn test_shared_mem() {
     test_shared_mem_helper(&mpi_config, circuit);
     let circuit = load_circuit::<Goldilocksx8ConfigSha2Raw>(&mpi_config);
     test_shared_mem_helper(&mpi_config, circuit);
+
+    let circuit = load_circuit::<M31x16ConfigSha2Raw>(&mpi_config);
+    test_shared_mem_on_heap_helper(&mpi_config, circuit);
+    let circuit = load_circuit::<GF2ExtConfigSha2Raw>(&mpi_config);
+    test_shared_mem_on_heap_helper(&mpi_config, circuit);
+    let circuit = load_circuit::<BN254ConfigSha2Raw>(&mpi_config);
+    test_shared_mem_on_heap_helper(&mpi_config, circuit);
+    let circuit = load_circuit::<Goldilocksx8ConfigSha2Raw>(&mpi_config);
+    test_shared_mem_on_heap_helper(&mpi_config, circuit);
 }
 
 #[allow(unreachable_patterns)]
@@ -125,5 +136,64 @@ fn test_shared_mem_helper<T: MPISharedMemory + ExpSerde + std::fmt::Debug>(
             });
     }
     data.discard_control_of_shared_mem();
+    mpi_config.free_shared_mem(&mut window);
+}
+
+fn test_shared_mem_on_heap_helper<T: MPISharedMemory + ExpSerde + std::fmt::Debug + Default>(
+    mpi_config: &MPIConfig,
+    t: Option<T>,
+) {
+    let data_on_heap = Arc::new(Mutex::new(T::default()));
+
+    let mut original_serialization = vec![];
+    let (data, mut window) = if mpi_config.is_root() {
+        t.as_ref()
+            .unwrap()
+            .serialize_into(&mut original_serialization)
+            .unwrap();
+        mpi_config.consume_obj_and_create_shared(t)
+    } else {
+        mpi_config.consume_obj_and_create_shared(t)
+    };
+
+    *data_on_heap.lock().unwrap() = data;
+
+    let mut shared_serialization = vec![];
+    data_on_heap
+        .lock()
+        .unwrap()
+        .serialize_into(&mut shared_serialization)
+        .unwrap();
+
+    let mut gathered_bytes = if mpi_config.is_root() {
+        vec![0u8; original_serialization.len() * mpi_config.world_size()]
+    } else {
+        vec![]
+    };
+    mpi_config.gather_vec(&shared_serialization, &mut gathered_bytes);
+    if mpi_config.is_root() {
+        gathered_bytes
+            .chunks_exact_mut(original_serialization.len())
+            .enumerate()
+            .for_each(|(i, chunk)| {
+                assert_eq!(
+                    chunk,
+                    &original_serialization[..],
+                    "rank {} not consistent",
+                    i
+                );
+            });
+    }
+
+    match Arc::try_unwrap(data_on_heap) {
+        Ok(mutex) => {
+            let value = mutex.into_inner().unwrap(); // moves the value out
+            value.discard_control_of_shared_mem();
+        }
+        Err(_) => {
+            panic!("Failed to unwrap Arc, multiple references exist");
+        }
+    }
+
     mpi_config.free_shared_mem(&mut window);
 }

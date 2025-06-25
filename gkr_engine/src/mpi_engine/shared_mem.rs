@@ -12,18 +12,18 @@ pub trait MPISharedMemory {
 
     /// Read the value from the shared memory pointed to by `ptr`.
     /// The pointer is advanced by the size of the value.
-    /// 
+    ///
     /// Depending on the type, this may involve multiple objects across processes
     /// controlling the same memory. By default, only the root process will write to the memory,
     /// but this is not enforced by the trait.
-    /// 
+    ///
     /// Q: Why not simply use Arc<Mutex<T>>?
     /// A: Because the memory is shared across processes, not threads.
     fn new_from_memory(ptr: &mut *mut u8) -> Self;
 
     /// Since the memory is shared across processes, the drop of the value
     /// may cause multiple deallocations of the same memory.
-    /// This function is used to discard the control of the shared memory 
+    /// This function is used to discard the control of the shared memory
     /// before the value is dropped.
     fn discard_control_of_shared_mem(self);
 }
