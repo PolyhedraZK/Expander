@@ -90,7 +90,7 @@ impl<F: ExtensionField> PolynomialCommitmentScheme<F> for RawMultiLinearPCS {
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        _scratch_pad: &Self::ScratchPad,
+        _scratch_pad: &mut Self::ScratchPad,
         _transcript: &mut impl Transcript,
     ) -> (F, Self::Opening) {
         assert!(x.len() == *params);

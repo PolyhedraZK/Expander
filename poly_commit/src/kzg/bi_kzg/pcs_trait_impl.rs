@@ -81,7 +81,7 @@ where
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        _scratch_pad: &Self::ScratchPad,
+        _scratch_pad: &mut Self::ScratchPad,
         transcript: &mut impl Transcript,
     ) -> (E::Fr, Self::Opening) {
         let (eval, hyperkzg_opening) = coeff_form_uni_hyperkzg_open(
