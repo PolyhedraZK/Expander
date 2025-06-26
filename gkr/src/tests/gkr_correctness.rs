@@ -145,6 +145,14 @@ fn test_gkr_correctness() {
         PolynomialCommitmentType::Raw,
         GKRScheme::Vanilla,
     );
+    declare_gkr_config!(
+        C16,
+        FieldType::GF2Ext128,
+        FiatShamirHashType::SHA256,
+        PolynomialCommitmentType::Raw,
+        GKRScheme::Vanilla,
+    );
+
     test_gkr_correctness_helper::<C0>(mpi_config.clone(), None);
     test_gkr_correctness_helper::<C1>(mpi_config.clone(), None);
     test_gkr_correctness_helper::<C2>(mpi_config.clone(), None);
@@ -161,6 +169,7 @@ fn test_gkr_correctness() {
     test_gkr_correctness_helper::<C13>(mpi_config.clone(), None);
     test_gkr_correctness_helper::<C14>(mpi_config.clone(), None);
     test_gkr_correctness_helper::<C15>(mpi_config.clone(), None);
+    test_gkr_correctness_helper::<C16>(mpi_config.clone(), None);
 }
 
 #[allow(unreachable_patterns)]

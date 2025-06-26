@@ -7,7 +7,7 @@ use arith::{ExtensionField, Field, SimdField};
 use gkr_engine::{FieldEngine, FieldType};
 
 pub(crate) struct SumcheckProductGateHelper {
-    var_num: usize,
+    pub(crate) var_num: usize,
 }
 
 impl SumcheckProductGateHelper {
@@ -61,6 +61,7 @@ impl SumcheckProductGateHelper {
     // Output:
     // - the univariate polynomial that prover sends to the verifier
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn poly_eval_at<F: FieldEngine>(
         &self,
         var_idx: usize,
@@ -76,8 +77,22 @@ impl SumcheckProductGateHelper {
         log::trace!("bk_hg: {:?}", &bk_hg[..4]);
         log::trace!("init_v: {:?}", &init_v[..4]);
 
-        let eval_size = 1 << (self.var_num - var_idx - 1);
-        log::trace!("Eval size: {eval_size}");
+        Self::poly_eval_at_helper::<F>(self.var_num, var_idx, bk_f, bk_hg, init_v, gate_exists)
+    }
+
+    #[inline]
+    // This function does not require SumcheckProductGateHelper as an input.
+    // It makes unit tests easier to write.
+    pub(crate) fn poly_eval_at_helper<F: FieldEngine>(
+        var_num: usize,
+        var_idx: usize,
+        bk_f: &[F::Field],
+        bk_hg: &[F::Field],
+        init_v: &[F::SimdCircuitField],
+        gate_exists: &[bool],
+    ) -> [F::Field; 3] {
+        let eval_size = 1 << (var_num - var_idx - 1);
+        log::trace!("Eval size: {}", eval_size);
 
         let [p0, p1, mut p2] = {
             if var_idx == 0 {

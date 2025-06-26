@@ -8,19 +8,53 @@ use arith::{field_common, ExtensionField, FFTField, Field, SimdField};
 
 use ethnum::U256;
 use rand::RngCore;
-use serdes::ExpSerde;
+use serdes::{ExpSerde, SerdeError};
 
 use crate::{Goldilocks, GoldilocksExt2, Goldilocksx8};
 
 /// Degree-2 extension of Goldilocks field with 8-element SIMD operations
 /// Represents elements as a + bX where X^2 = 7
-#[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq, ExpSerde)]
+#[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
 pub struct GoldilocksExt2x8 {
     pub c0: Goldilocksx8, // constant term
     pub c1: Goldilocksx8, // coefficient of X
 }
 
 field_common!(GoldilocksExt2x8);
+
+impl ExpSerde for GoldilocksExt2x8 {
+    fn serialize_into<W>(&self, mut writer: W) -> Result<(), SerdeError>
+    where
+        W: std::io::Write,
+    {
+        let c0 = self.c0.unpack();
+        let c1 = self.c1.unpack();
+        c0.iter().zip(c1.iter()).for_each(|(c0, c1)| {
+            c0.serialize_into(&mut writer).unwrap();
+            c1.serialize_into(&mut writer).unwrap();
+        });
+        Ok(())
+    }
+
+    fn deserialize_from<R>(mut reader: R) -> Result<Self, SerdeError>
+    where
+        R: std::io::Read,
+    {
+        let mut c0 = vec![];
+        let mut c1 = vec![];
+        for _ in 0..Goldilocksx8::PACK_SIZE {
+            let c0_i = Goldilocks::deserialize_from(&mut reader)?;
+            let c1_i = Goldilocks::deserialize_from(&mut reader)?;
+            c0.push(c0_i);
+            c1.push(c1_i);
+        }
+
+        Ok(Self {
+            c0: Goldilocksx8::pack(c0.as_ref()),
+            c1: Goldilocksx8::pack(c1.as_ref()),
+        })
+    }
+}
 
 impl SimdField for GoldilocksExt2x8 {
     type Scalar = GoldilocksExt2;
