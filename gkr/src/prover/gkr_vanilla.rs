@@ -14,8 +14,11 @@ pub fn gkr_prove<F: FieldEngine>(
     sp: &mut ProverScratchPad<F>,
     transcript: &mut impl Transcript,
     mpi_config: &MPIConfig,
-) -> (F::ChallengeField, ExpanderDualVarChallenge<F>) 
-where F::CircuitField: std::fmt::Debug, F::SimdCircuitField: std::fmt::Debug {
+) -> (F::ChallengeField, ExpanderDualVarChallenge<F>)
+where
+    F::CircuitField: std::fmt::Debug,
+    F::SimdCircuitField: std::fmt::Debug,
+{
     let layer_num = circuit.layers.len();
 
     let mut challenge: ExpanderDualVarChallenge<F> =
@@ -39,7 +42,9 @@ where F::CircuitField: std::fmt::Debug, F::SimdCircuitField: std::fmt::Debug {
 
     // Serialize circuit to file if EXPANDER_GPU environment variable is set to 1
     if std::env::var("EXPANDER_GPU").map_or(false, |v| v == "1") {
-        if let Err(e) = gpu::serdes::serial_circuit_witness_as_plaintext(circuit, transcript, &challenge) {
+        if let Err(e) =
+            gpu::serdes::serial_circuit_witness_as_plaintext(circuit, transcript, &challenge)
+        {
             println!("Failed to serialize circuit: {}", e);
         }
     }
