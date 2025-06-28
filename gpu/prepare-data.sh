@@ -17,12 +17,12 @@ cd ../Expander
 
 # Use Expander's GPU serialization to produce circuit and witness for GPU usage
 git checkout gpu-expander
+EXPANDER_GPU=1 RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo run --release --bin=gkr -- --circuit keccak --pcs Raw --threads 1 --field m31ext3
 EXPANDER_GPU=1 RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo run --release --bin=gkr -- --circuit keccak --pcs Raw --threads 1 --field goldilocks
 EXPANDER_GPU=1 RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo run --release --bin=gkr -- --circuit keccak --pcs Raw --threads 1 --field fr
-EXPANDER_GPU=1 RUSTFLAGS="-C target-cpu=native -C target-feature=+avx512f" cargo run --release --bin=gkr -- --circuit keccak --pcs Raw --threads 1 --field m31ext3
 mv data/*.gpu.* ..
 cd ..
 
 # Remove this two repo
-rm -rf Expander ExpanderCompilerCollection
+rm -rf ExpanderCompilerCollection
 cd ..
