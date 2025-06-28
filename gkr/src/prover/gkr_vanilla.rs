@@ -41,11 +41,11 @@ where
     );
 
     // Serialize circuit to file if EXPANDER_GPU environment variable is set to 1
-    if std::env::var("EXPANDER_GPU").map_or(false, |v| v == "1") {
+    if std::env::var("EXPANDER_GPU").is_ok_and(|v| v == "1") {
         if let Err(e) =
             gpu::serdes::serial_circuit_witness_as_plaintext(circuit, transcript, &challenge)
         {
-            println!("Failed to serialize circuit: {}", e);
+            println!("Failed to serialize circuit: {e}");
         }
     }
 
@@ -91,7 +91,7 @@ where
     }
 
     // Print final claims if EXPANDER_GPU environment variable is set to 1
-    if std::env::var("EXPANDER_GPU").map_or(false, |v| v == "1") {
+    if std::env::var("EXPANDER_GPU").is_ok_and(|v| v == "1") {
         if let Some(vx) = final_vx_claim {
             gpu::serdes::print_final_claims::<F>(&vx, &final_vy_claim);
             println!("GKR final proof claims as shown above.");

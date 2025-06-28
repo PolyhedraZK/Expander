@@ -35,7 +35,7 @@ fn serialize_field_element<C: FieldEngine>(element: &C::CircuitField) -> String 
         // Append in little-endian order (from most significant byte)
         for i in (0..element_size).rev() {
             let byte = element_bytes[i];
-            hex_str.push_str(&format!("{:02x}", byte));
+            hex_str.push_str(&format!("{byte:02x}"));
         }
 
         // Check if it's zero value (all bytes are 0)
@@ -48,7 +48,7 @@ fn serialize_field_element<C: FieldEngine>(element: &C::CircuitField) -> String 
         hex_str
     } else {
         // For other field types: m31ext3 and goldilocks
-        let debug_str = format!("{:?}", element);
+        let debug_str = format!("{element:?}");
 
         // Try to extract value from "FieldType { v: value }" format
         if let Some(v_pos) = debug_str.find("v: ") {
@@ -64,8 +64,7 @@ fn serialize_field_element<C: FieldEngine>(element: &C::CircuitField) -> String 
 
         // Panic if parsing fails
         panic!(
-            "Failed to parse field element value from debug string: {}",
-            debug_str
+            "Failed to parse field element value from debug string: {debug_str}"
         )
     }
 }
@@ -98,7 +97,7 @@ where
             // Append in little-endian order (from most significant byte)
             for i in (0..32).rev() {
                 let byte = element_bytes[i];
-                hex_str.push_str(&format!("{:02x}", byte));
+                hex_str.push_str(&format!("{byte:02x}"));
             }
 
             // Check if it's zero value (all bytes are 0)
@@ -126,7 +125,7 @@ where
                 // Append in little-endian order (from most significant byte)
                 for i in (start_byte..end_byte).rev() {
                     let byte = element_bytes[i];
-                    hex_str.push_str(&format!("{:02x}", byte));
+                    hex_str.push_str(&format!("{byte:02x}"));
                 }
 
                 // Check if it's zero value
@@ -144,7 +143,7 @@ where
         }
     } else {
         // For other field types: m31ext3 and goldilocks
-        let debug_str = format!("{:?}", element);
+        let debug_str = format!("{element:?}");
 
         // Handle array format: [Type { v: val1 }, Type { v: val2 }, ...]
         if debug_str.contains('[') && debug_str.contains(']') {
@@ -196,8 +195,7 @@ where
 
         // Panic if parsing fails
         panic!(
-            "Failed to parse SIMD field element value from debug string: {}",
-            debug_str
+            "Failed to parse SIMD field element value from debug string: {debug_str}"
         )
     }
 }
@@ -269,7 +267,7 @@ where
             writeln!(writer, "=====Input Values=====")?;
             for (idx, input_val) in layer.input_vals.iter().enumerate() {
                 let val_str = serialize_simd_field_element::<C>(input_val);
-                writeln!(writer, "InputVal[{}] {}", idx, val_str)?;
+                writeln!(writer, "InputVal[{idx}] {val_str}")?;
                 items_processed += 1;
             }
         }
@@ -279,7 +277,7 @@ where
             writeln!(writer, "=====Output Values=====")?;
             for (idx, output_val) in layer.output_vals.iter().enumerate() {
                 let val_str = serialize_simd_field_element::<C>(output_val);
-                writeln!(writer, "OutputVal[{}] {}", idx, val_str)?;
+                writeln!(writer, "OutputVal[{idx}] {val_str}")?;
                 items_processed += 1;
             }
         }
@@ -335,8 +333,7 @@ where
         };
         if percent > last_percent && percent % 5 == 0 {
             println!(
-                "Serialization progress: {}% (processed {}/{} items: {} gates + {} values)",
-                percent, items_processed, total_items, total_gates, total_values
+                "Serialization progress: {percent}% (processed {items_processed}/{total_items} items: {total_gates} gates + {total_values} values)"
             );
             last_percent = percent;
         }
@@ -366,11 +363,10 @@ where
                 println!("Warning: file size may be insufficient, please check if fully written");
             }
             println!(
-                "Successfully serialized {} gates and {} values to file (total {} items)",
-                total_gates, total_values, total_items
+                "Successfully serialized {total_gates} gates and {total_values} values to file (total {total_items} items)"
             );
         }
-        Err(e) => println!("Unable to verify file: {}", e),
+        Err(e) => println!("Unable to verify file: {e}"),
     }
 
     Ok(())
@@ -393,21 +389,20 @@ where
         8 => "goldilocksext2",
         _ => "unknown",
     };
-    let filepath = format!("data/keccak_{}.gpu.circuit", field_type);
+    let filepath = format!("data/keccak_{field_type}.gpu.circuit");
 
     // Check if file already exists
     if std::path::Path::new(&filepath).exists() {
         println!(
-            "Circuit file {} already exists, skipping serialization",
-            filepath
+            "Circuit file {filepath} already exists, skipping serialization"
         );
         return Ok(());
     }
 
     // Perform serialization
-    println!("GPU enabled, serializing circuit to {}", filepath);
+    println!("GPU enabled, serializing circuit to {filepath}");
     serialize_circuit_to_file(circuit, &filepath)?;
-    println!("Successfully serialized circuit to {}", filepath);
+    println!("Successfully serialized circuit to {filepath}");
 
     // Get digest, proof bytes, and hash_start_index directly from memory using unsafe code
     let (digest_bytes, proof_bytes, hash_start_index) = unsafe {
@@ -441,7 +436,7 @@ where
     writeln!(file, "=====Transcript Start=====")?;
     writeln!(file, "TranscriptDigestByte={}", digest_bytes.len())?;
     writeln!(file, "TranscriptProofByte={}", proof_bytes.len())?;
-    writeln!(file, "TranscriptHashStartIndex={}", hash_start_index)?;
+    writeln!(file, "TranscriptHashStartIndex={hash_start_index}")?;
 
     // Write digest bytes first
     writeln!(file, "=====Digest Bytes=====")?;
@@ -451,11 +446,11 @@ where
 
         // Format bytes with leading zeros and join with commas
         let formatted_bytes: Vec<String> =
-            chunk.iter().map(|&byte| format!("{:03}", byte)).collect();
+            chunk.iter().map(|&byte| format!("{byte:03}")).collect();
         let line = formatted_bytes.join(",");
 
         // Write line with range annotation
-        writeln!(file, "{} //digest[{}-{}]", line, start_idx, end_idx)?;
+        writeln!(file, "{line} //digest[{start_idx}-{end_idx}]")?;
     }
 
     // Write proof bytes
@@ -466,22 +461,22 @@ where
 
         // Format bytes with leading zeros and join with commas
         let formatted_bytes: Vec<String> =
-            chunk.iter().map(|&byte| format!("{:03}", byte)).collect();
+            chunk.iter().map(|&byte| format!("{byte:03}")).collect();
         let line = formatted_bytes.join(",");
 
         // Write line with range annotation
-        writeln!(file, "{} //proof[{}-{}]", line, start_idx, end_idx)?;
+        writeln!(file, "{line} //proof[{start_idx}-{end_idx}]")?;
     }
 
     // Write transcript end marker
     writeln!(file, "=====Transcript End=====")?;
 
     // Write the challenge
-    writeln!(file, "Challenge: {:?}", challenge)?;
+    writeln!(file, "Challenge: {challenge:?}")?;
 
     file.flush()?;
 
-    println!("Transcript digest and proof bytes written to {}", filepath);
+    println!("Transcript digest and proof bytes written to {filepath}");
     println!(
         "Total digest bytes: {}, Total proof bytes: {}, Hash start index: {}",
         digest_bytes.len(),
@@ -498,9 +493,9 @@ pub fn print_final_claims<F: FieldEngine>(
     vy_claim: &Option<F::ChallengeField>,
 ) {
     println!("=====Final Claims=====");
-    println!("vx_claim = {:?}", vx_claim);
+    println!("vx_claim = {vx_claim:?}");
     if let Some(vy) = vy_claim {
-        println!("vy_claim = {:?}", vy);
+        println!("vy_claim = {vy:?}");
     } else {
         println!("vy_claim = None");
     }

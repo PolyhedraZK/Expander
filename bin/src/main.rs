@@ -70,7 +70,7 @@ fn main() {
         "m31ext3" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
                 "keccak" => {
-                    if std::env::var("EXPANDER_GPU").map_or(false, |v| v == "1") {
+                    if std::env::var("EXPANDER_GPU").is_ok_and(|v| v == "1") {
                         run_benchmark::<M31x1ConfigSha2RawVanilla>(&args, mpi_config.clone())
                     } else {
                         run_benchmark::<M31x16ConfigSha2RawVanilla>(&args, mpi_config.clone())
@@ -119,7 +119,7 @@ fn main() {
         "goldilocks" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
                 "keccak" => {
-                    if std::env::var("EXPANDER_GPU").map_or(false, |v| v == "1") {
+                    if std::env::var("EXPANDER_GPU").is_ok_and(|v| v == "1") {
                         run_benchmark::<Goldilocksx1ConfigSha2Raw>(&args, mpi_config.clone())
                     } else {
                         run_benchmark::<Goldilocksx8ConfigSha2Raw>(&args, mpi_config.clone())
