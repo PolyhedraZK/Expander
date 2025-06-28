@@ -1,0 +1,11 @@
+[package]
+name = "gpu"
+version = "0.1.0"
+edition = "2025"
+
+[dependencies]
+circuit = { path = "../circuit" }
+gkr_engine = { path = "../gkr_engine" }
+gkr_hashers = { path = "../hasher" }
+transcript = { path = "../transcript" }
+thiserror.workspace = true 
