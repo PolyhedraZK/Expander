@@ -63,9 +63,7 @@ fn serialize_field_element<C: FieldEngine>(element: &C::CircuitField) -> String 
         }
 
         // Panic if parsing fails
-        panic!(
-            "Failed to parse field element value from debug string: {debug_str}"
-        )
+        panic!("Failed to parse field element value from debug string: {debug_str}")
     }
 }
 
@@ -194,9 +192,7 @@ where
         }
 
         // Panic if parsing fails
-        panic!(
-            "Failed to parse SIMD field element value from debug string: {debug_str}"
-        )
+        panic!("Failed to parse SIMD field element value from debug string: {debug_str}")
     }
 }
 
@@ -393,9 +389,7 @@ where
 
     // Check if file already exists
     if std::path::Path::new(&filepath).exists() {
-        println!(
-            "Circuit file {filepath} already exists, skipping serialization"
-        );
+        println!("Circuit file {filepath} already exists, skipping serialization");
         return Ok(());
     }
 
@@ -445,8 +439,7 @@ where
         let end_idx = start_idx + chunk.len() - 1;
 
         // Format bytes with leading zeros and join with commas
-        let formatted_bytes: Vec<String> =
-            chunk.iter().map(|&byte| format!("{byte:03}")).collect();
+        let formatted_bytes: Vec<String> = chunk.iter().map(|&byte| format!("{byte:03}")).collect();
         let line = formatted_bytes.join(",");
 
         // Write line with range annotation
@@ -460,8 +453,7 @@ where
         let end_idx = start_idx + chunk.len() - 1;
 
         // Format bytes with leading zeros and join with commas
-        let formatted_bytes: Vec<String> =
-            chunk.iter().map(|&byte| format!("{byte:03}")).collect();
+        let formatted_bytes: Vec<String> = chunk.iter().map(|&byte| format!("{byte:03}")).collect();
         let line = formatted_bytes.join(",");
 
         // Write line with range annotation
