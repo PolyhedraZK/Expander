@@ -5,7 +5,7 @@ use std::ptr::copy_nonoverlapping;
 /// 'in place' as much as possible, without allocating new memory.
 /// For example, a `Vec<T>` will only allocate memory for the pointer and length.
 ///
-/// We assume all types aligned to 8 bytes, which is the case for most types in Rust.
+/// We assume all types have a minimum alignment of 8 bytes, which is the case for most types in Rust. 
 /// Be careful when using types with different alignments, as this may lead to undefined behavior.
 /// For example, avx512 type `__m512i` is aligned to 64 bytes, and `__m256i` is aligned to 32 bytes.
 pub trait MPISharedMemory {
