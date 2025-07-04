@@ -25,35 +25,42 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-ark-std = "0.4"
-ark-bn254 = "0.4.0"
-ark-ec = "0.4.0"
-ark-ff = { version = "0.4" }
+ark-std = { version = "0.5", features = ["std"] }
+ark-bn254 = "0.5.0"
+ark-ec = "0.5.0"
+ark-ff = { version = "0.5", features = ["asm", "std"] }
+
 bytes = "1.6.0"
 chrono = "0.4.38"
 clap = { version = "4.1", features = ["derive"] }
 cfg-if = "1.0"
 criterion = { version = "0.5", features = ["html_reports"] }
+derivative = "2.2.0"
 env_logger = "0.11.3"
+ethnum = "1.5.0"
 halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", default-features = false, features = [
     "bits",
 ] }
 syn = "2.0"       # For parsing Rust code
+spongefish = { git = "https://github.com/arkworks-rs/spongefish", features = [
+    "arkworks-algebra",
+] }
+spongefish-pow = { git = "https://github.com/arkworks-rs/spongefish" }
 quote = "1.0"     # For generating code
 proc-macro2 = "1.0"  # For working with tokens
 itertools = "0.13"
 log = "0.4"
 mpi = "0.8.0"
 rand = "0.8.5"
+rand_chacha = "0.3.1"
 raw-cpuid = "11.1.0"
 rayon = "1.10"
 sha2 = "0.10.8"
+thiserror = "1.0.63"
 tiny-keccak = { version = "2.0.2", features = [ "sha3", "keccak" ] }
 tokio = { version = "1.38.0", features = ["full"] }
+transpose = "0.2.3"
 tynm = { version = "0.1.6", default-features = false }
 warp = "0.3.7"
-thiserror = "1.0.63"
-ethnum = "1.5.0"
-rand_chacha = "0.3.1"
-derivative = "2.2.0"
-transpose = "0.2.3"
+# whir = { git = "https://github.com/WizardOfMenlo/whir", rev = "9d7a97b169542f8d0787db482ee58f7b9b660848" }
+ whir = { git = "https://github.com/zhenfeizhang/whir" }

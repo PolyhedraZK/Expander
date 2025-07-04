@@ -7,6 +7,7 @@ use arith::{field_common, ExtensionField, FFTField, Field, SimdField};
 use ethnum::U256;
 use rand::RngCore;
 use serdes::ExpSerde;
+use whir::crypto::fields::Field64_2;
 
 use crate::{
     goldilocks::{mod_reduce_u64, Goldilocks},
@@ -409,6 +410,43 @@ impl Mul<Goldilocksx8> for GoldilocksExt2 {
         Self::Output {
             c0: b_simd_ext.c0 * rhs,
             c1: b_simd_ext.c1 * rhs,
+        }
+    }
+}
+
+impl From<Field64_2> for GoldilocksExt2 {
+    #[inline(always)]
+    fn from(x: Field64_2) -> Self {
+        GoldilocksExt2 {
+            v: [x.c0.into(), x.c1.into()],
+        }
+    }
+}
+
+impl From<&Field64_2> for GoldilocksExt2 {
+    #[inline(always)]
+    fn from(x: &Field64_2) -> Self {
+        GoldilocksExt2 {
+            v: [x.c0.into(), x.c1.into()],
+        }
+    }
+}
+
+impl From<GoldilocksExt2> for Field64_2 {
+    #[inline(always)]
+    fn from(x: GoldilocksExt2) -> Self {
+        Field64_2 {
+            c0: x.v[0].into(),
+            c1: x.v[1].into(),
+        }
+    }
+}
+impl From<&GoldilocksExt2> for Field64_2 {
+    #[inline(always)]
+    fn from(x: &GoldilocksExt2) -> Self {
+        Field64_2 {
+            c0: x.v[0].into(),
+            c1: x.v[1].into(),
         }
     }
 }

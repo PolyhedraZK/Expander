@@ -64,7 +64,7 @@ fn hyrax_opening_benchmark_helper(
         let (srs, _) = HyraxPCS::<G1Affine>::gen_srs_for_testing(&num_vars, &mut rng);
         let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
 
-        let _ = HyraxPCS::<G1Affine>::commit(&num_vars, &srs, &poly, &mut scratch_pad);
+        let com = HyraxPCS::<G1Affine>::commit(&num_vars, &srs, &poly, &mut scratch_pad);
 
         group
             .bench_function(
@@ -73,10 +73,11 @@ fn hyrax_opening_benchmark_helper(
                     b.iter(|| {
                         _ = black_box(HyraxPCS::<G1Affine>::open(
                             &num_vars,
+                            &com,
                             &srs,
                             &poly,
                             &eval_point,
-                            &scratch_pad,
+                            &mut scratch_pad,
                             &mut transcript,
                         ))
                     })
