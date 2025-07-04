@@ -334,11 +334,11 @@ impl<const N: usize> ExtensionField for FrxN<N> {
     }
 
     fn to_limbs(&self) -> Vec<Self::BaseField> {
-        vec![self.clone()]
+        vec![*self]
     }
 
     fn from_limbs(limbs: &[Self::BaseField]) -> Self {
         assert_eq!(limbs.len(), 1);
-        limbs[0].clone()
+        limbs[0]
     }
 }
