@@ -13,6 +13,9 @@ pub use extension_field::*;
 mod bn254;
 pub use bn254::*;
 
+mod bn254xn;
+pub use bn254xn::*;
+
 mod simd_field;
 pub use simd_field::*;
 

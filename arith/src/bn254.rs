@@ -6,7 +6,7 @@ use crate::{ExtensionField, FFTField, Field, SimdField};
 
 pub use halo2curves::bn256::Fr;
 
-const MODULUS: U256 = U256([
+pub(crate) const MODULUS: U256 = U256([
     0x2833e84879b9709143e1f593f0000001,
     0x30644e72e131a029b85045b68181585d,
 ]);
