@@ -145,3 +145,159 @@ macro_rules! field_common {
         }
     };
 }
+
+#[macro_export]
+macro_rules! rep_field_common {
+    ($field:ident <const N: usize>) => {
+        impl<const N: usize> Sub<&$field<N>> for $field<N> {
+            type Output = $field<N>;
+
+            #[inline]
+            fn sub(self, rhs: &$field<N>) -> $field<N> {
+                self.sub(*rhs)
+            }
+        }
+
+        impl<const N: usize> Sub<$field<N>> for $field<N> {
+            type Output = $field<N>;
+
+            #[inline]
+            fn sub(self, rhs: $field<N>) -> $field<N> {
+                (&self).sub_internal(&rhs)
+            }
+        }
+
+        impl<const N: usize> SubAssign for $field<N> {
+            #[inline]
+            fn sub_assign(&mut self, rhs: $field<N>) {
+                *self = (*self).sub(rhs)
+            }
+        }
+
+        impl<const N: usize> SubAssign<&$field<N>> for $field<N> {
+            #[inline]
+            fn sub_assign(&mut self, rhs: &$field<N>) {
+                *self = (*self).sub(rhs)
+            }
+        }
+
+        // ========================
+        // additions
+        // ========================
+
+        impl<const N: usize> Add<&$field<N>> for $field<N> {
+            type Output = $field<N>;
+
+            #[inline]
+            fn add(self, rhs: &$field<N>) -> $field<N> {
+                self.add(*rhs)
+            }
+        }
+
+        impl<const N: usize> Add<$field<N>> for $field<N> {
+            type Output = $field<N>;
+
+            #[inline]
+            fn add(self, rhs: $field<N>) -> $field<N> {
+                (&self).add_internal(&rhs)
+            }
+        }
+
+        impl<const N: usize> AddAssign for $field<N> {
+            #[inline]
+            fn add_assign(&mut self, rhs: $field<N>) {
+                *self = (*self).add(rhs)
+            }
+        }
+
+        impl<'b, const N: usize> AddAssign<&'b $field<N>> for $field<N> {
+            #[inline]
+            fn add_assign(&mut self, rhs: &'b $field<N>) {
+                *self = (*self).add(rhs)
+            }
+        }
+
+        impl<T, const N: usize> Sum<T> for $field<N>
+        where
+            T: core::borrow::Borrow<Self>,
+        {
+            fn sum<I>(iter: I) -> Self
+            where
+                I: Iterator<Item = T>,
+            {
+                iter.fold(Self::ZERO, |acc, item| acc + item.borrow())
+            }
+        }
+
+        impl<const N: usize> Neg for $field<N> {
+            type Output = $field<N>;
+
+            #[inline]
+            fn neg(self) -> $field<N> {
+                Self::ZERO - self
+            }
+        }
+
+        // ========================
+        // multiplications
+        // ========================
+        impl<const N: usize> Mul<$field<N>> for $field<N> {
+            type Output = $field<N>;
+
+            #[inline]
+            fn mul(self, rhs: $field<N>) -> $field<N> {
+                (&self).mul_internal(&rhs)
+            }
+        }
+
+        impl<'b, const N: usize> Mul<&'b $field<N>> for $field<N> {
+            type Output = $field<N>;
+
+            #[inline]
+            fn mul(self, rhs: &'b $field<N>) -> $field<N> {
+                self.mul(*rhs)
+            }
+        }
+
+        impl<const N: usize> Mul<$field<N>> for &$field<N> {
+            type Output = $field<N>;
+
+            #[inline(always)]
+            fn mul(self, rhs: $field<N>) -> $field<N> {
+                *self * rhs
+            }
+        }
+
+        impl<const N: usize> Mul<&$field<N>> for &$field<N> {
+            type Output = $field<N>;
+
+            #[inline(always)]
+            fn mul(self, rhs: &$field<N>) -> $field<N> {
+                *self * *rhs
+            }
+        }
+
+        impl<const N: usize> MulAssign for $field<N> {
+            #[inline]
+            fn mul_assign(&mut self, rhs: $field<N>) {
+                *self = self.clone().mul(rhs)
+            }
+        }
+
+        impl<'b, const N: usize> MulAssign<&'b $field<N>> for $field<N> {
+            #[inline]
+            fn mul_assign(&mut self, rhs: &'b $field<N>) {
+                *self = self.clone().mul(rhs)
+            }
+        }
+
+        impl<T, const N: usize> Product<T> for $field<N>
+        where
+            T: core::borrow::Borrow<Self>,
+        {
+            fn product<I: Iterator<Item = T>>(iter: I) -> Self {
+                iter.fold(Self::one(), |acc, item| acc * item.borrow())
+            }
+        }
+    };
+}
