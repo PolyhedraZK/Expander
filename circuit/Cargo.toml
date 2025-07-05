@@ -21,3 +21,4 @@ thiserror.workspace = true
 [dev-dependencies]
 config_macros = { path = "../config_macros" }
 poly_commit = { path = "../poly_commit" }
+mersenne31 = { path = "../arith/mersenne31"}

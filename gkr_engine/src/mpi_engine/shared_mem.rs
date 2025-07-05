@@ -1,5 +1,14 @@
 use std::ptr::copy_nonoverlapping;
 
+/// Trait for types that can be serialized to and from shared memory
+/// Compare to traditional deserialization, this trait deserializes
+/// 'in place' as much as possible, without allocating new memory.
+/// For example, a `Vec<T>` will only allocate memory for the pointer and length.
+///
+/// We assume all types have a minimum alignment of 8 bytes, which is the case for most types in
+/// Rust. Be careful when using types with different alignments, as this may lead to undefined
+/// behavior. For example, avx512 type `__m512i` is aligned to 64 bytes, and `__m256i` is aligned to
+/// 32 bytes.
 pub trait MPISharedMemory {
     /// The serialization size of the type in bytes.
     fn bytes_size(&self) -> usize;
@@ -51,39 +60,17 @@ impl MPISharedMemory for usize {
     fn discard_control_of_shared_mem(self) {}
 }
 
-impl MPISharedMemory for u8 {
-    fn bytes_size(&self) -> usize {
-        1
-    }
-
-    fn to_memory(&self, ptr: &mut *mut u8) {
-        unsafe {
-            ptr.write(*self);
-            *ptr = ptr.add(1);
-        }
-    }
-
-    fn new_from_memory(ptr: &mut *mut u8) -> Self {
-        unsafe {
-            let ret = ptr.read();
-            *ptr = ptr.add(1);
-            ret
-        }
-    }
-
-    fn discard_control_of_shared_mem(self) {}
-}
-
 impl<T: Copy> MPISharedMemory for Vec<T> {
     fn bytes_size(&self) -> usize {
-        self.len().bytes_size() + self.len() * std::mem::size_of::<T>()
+        let alignment = std::mem::align_of::<T>();
+        std::cmp::max(self.len().bytes_size(), alignment) + self.len() * std::mem::size_of::<T>()
     }
 
     fn to_memory(&self, ptr: &mut *mut u8) {
         unsafe {
             let len = self.len();
             len.to_memory(ptr);
-
+            align_ptr(ptr, std::mem::align_of::<T>());
             copy_nonoverlapping(self.as_ptr(), *ptr as *mut T, len);
             *ptr = ptr.add(len * std::mem::size_of::<T>());
         }
@@ -92,6 +79,7 @@ impl<T: Copy> MPISharedMemory for Vec<T> {
     fn new_from_memory(ptr: &mut *mut u8) -> Self {
         unsafe {
             let len = usize::new_from_memory(ptr);
+            align_ptr(ptr, std::mem::align_of::<T>());
             let ret = Vec::<T>::from_raw_parts(*ptr as *mut T, len, len);
             *ptr = ptr.add(len * std::mem::size_of::<T>());
             ret
@@ -123,4 +111,10 @@ impl<T1: MPISharedMemory, T2: MPISharedMemory> MPISharedMemory for (T1, T2) {
         self.0.discard_control_of_shared_mem();
         self.1.discard_control_of_shared_mem();
     }
+}
+
+pub fn align_ptr(ptr: &mut *mut u8, align: usize) {
+    let addr = *ptr as usize;
+    let aligned = (addr + align - 1) & !(align - 1);
+    *ptr = aligned as *mut u8;
 }

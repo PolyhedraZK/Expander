@@ -384,6 +384,7 @@ dependencies = [
  "gkr_engine",
  "gkr_hashers",
  "log",
+ "mersenne31",
  "mpi",
  "poly_commit",
  "rand",
