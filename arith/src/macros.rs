@@ -280,14 +280,14 @@ macro_rules! rep_field_common {
         impl<const N: usize> MulAssign for $field<N> {
             #[inline]
             fn mul_assign(&mut self, rhs: $field<N>) {
-                *self = self.clone().mul(rhs)
+                *self = self.mul(&rhs)
             }
         }
 
         impl<'b, const N: usize> MulAssign<&'b $field<N>> for $field<N> {
             #[inline]
             fn mul_assign(&mut self, rhs: &'b $field<N>) {
-                *self = self.clone().mul(rhs)
+                *self = self.mul(rhs)
             }
         }
 
