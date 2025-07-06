@@ -207,7 +207,7 @@ impl<const N: usize> Field for FrxN<N> {
             v: self
                 .v
                 .iter()
-                .map(|elem| elem.pow([exp as u64]))
+                .map(|elem| elem.exp(exp))
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
