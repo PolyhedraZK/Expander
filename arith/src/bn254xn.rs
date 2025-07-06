@@ -1,3 +1,5 @@
+#![allow(clippy::needless_range_loop)]
+
 use std::{
     io::{Read, Write},
     iter::{Product, Sum},
@@ -46,6 +48,7 @@ impl<const N: usize> Ord for FrxN<N> {
     }
 }
 
+#[allow(clippy::non_canonical_partial_ord_impl)]
 impl<const N: usize> PartialOrd for FrxN<N> {
     #[inline(always)]
     fn partial_cmp(&self, _: &Self) -> Option<std::cmp::Ordering> {
