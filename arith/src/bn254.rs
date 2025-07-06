@@ -113,7 +113,8 @@ impl Field for Fr {
     /// Exp
     #[inline(always)]
     fn exp(&self, exp: u128) -> Self {
-        self.pow_vartime([exp as u64])
+        let exp_limbs = [exp as u64, (exp >> 64) as u64];
+        self.pow_vartime(exp_limbs)
     }
 
     /// find the inverse of the element; return None if not exist

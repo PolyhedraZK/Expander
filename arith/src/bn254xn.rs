@@ -203,14 +203,9 @@ impl<const N: usize> Field for FrxN<N> {
     /// Exp
     #[inline(always)]
     fn exp(&self, exp: u128) -> Self {
+        let exp_limbs = [exp as u64, (exp >> 64) as u64];
         Self {
-            v: self
-                .v
-                .iter()
-                .map(|elem| elem.exp(exp))
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap(),
+            v: std::array::from_fn(|i| self.v[i].pow_vartime(exp_limbs)),
         }
     }
 
