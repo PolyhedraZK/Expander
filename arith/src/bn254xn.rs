@@ -138,9 +138,9 @@ impl<const N: usize> Field for FrxN<N> {
     /// create a random element from rng.
     /// test only -- the output may not be uniformly random.
     #[inline(always)]
-    fn random_unsafe(rng: impl RngCore) -> Self {
+    fn random_unsafe(mut rng: impl RngCore) -> Self {
         Self {
-            v: [Fr::random(rng); N],
+            v: std::array::from_fn(|_| Fr::random(&mut rng)),
         }
     }
 
