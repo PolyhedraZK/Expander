@@ -21,7 +21,6 @@ mod poly_commit;
 mod scheme;
 mod transcript;
 
-use arith::Field;
 pub use errors::*;
 pub use field_engine::*;
 pub use mpi_engine::*;

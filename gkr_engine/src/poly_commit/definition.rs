@@ -1,4 +1,3 @@
-use arith::Field;
 use polynomials::MultilinearExtension;
 use rand::RngCore;
 use serdes::ExpSerde;
