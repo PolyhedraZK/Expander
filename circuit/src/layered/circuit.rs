@@ -3,10 +3,7 @@ use std::io::Cursor;
 
 use arith::{Field, SimdField};
 use ark_std::test_rng;
-use gkr_engine::{
-    root_println, ExpanderPCS, FieldEngine, GKREngine, MPIConfig, MPIEngine,
-    PolynomialCommitmentType, Transcript,
-};
+use gkr_engine::{root_println, FieldEngine, GKREngine, MPIConfig, MPIEngine, Transcript};
 use mpi::ffi::ompi_win_t;
 use serdes::ExpSerde;
 
@@ -154,7 +151,7 @@ impl<C: FieldEngine> Circuit<C> {
     pub fn verifier_load_circuit<Cfg: GKREngine<FieldConfig = C>>(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
         let mut c = rc.flatten::<Cfg>();
-        c.pre_process_gkr::<Cfg>();
+        c.pre_process_gkr();
         c
     }
 
@@ -186,7 +183,7 @@ impl<C: FieldEngine> Circuit<C> {
         };
 
         let (mut circuit, window) = mpi_config.consume_obj_and_create_shared(circuit);
-        circuit.pre_process_gkr::<Cfg>();
+        circuit.pre_process_gkr();
         (circuit, window)
     }
 
@@ -378,19 +375,14 @@ impl<C: FieldEngine> Circuit<C> {
         );
     }
 
-    pub fn pre_process_gkr<Cfg: GKREngine<FieldConfig = C>>(&mut self) {
+    pub fn pre_process_gkr(&mut self) {
         self.identify_rnd_coefs();
         self.identify_structure_info();
 
         // If there will be two claims for the input
         // Introduce an extra relay layer before the input layer
         if !self.layers[0].structure_info.skip_sumcheck_phase_two {
-            match <Cfg::PCSConfig as ExpanderPCS<C, _>>::PCS_TYPE {
-                // Raw PCS costs nothing in opening, so no need to add relay layer
-                // But we can probably add it in the future for verifier's convenience
-                PolynomialCommitmentType::Raw => (),
-                _ => self.add_input_relay_layer(),
-            }
+            self.add_input_relay_layer();
         }
     }
 
