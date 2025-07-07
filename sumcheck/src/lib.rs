@@ -7,8 +7,8 @@ pub use sumcheck_generic::*;
 mod zerocheck;
 pub use zerocheck::*;
 
-// mod sumcheck_matmul;
-// pub use sumcheck_matmul::*;
+mod sumcheck_matmul;
+pub use sumcheck_matmul::*;
 
 mod prover_helper;
 

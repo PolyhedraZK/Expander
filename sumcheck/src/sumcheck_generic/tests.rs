@@ -20,10 +20,8 @@ fn test_sumcheck_subroutine() {
                         let polynomials = (0..degree)
                             .map(|_| {
                                 // Generate random coefficients for f and g
-                                // We can use Fr::rand to generate random elements in the field
                                 let coeffs = (1..=size)
                                     .map(|_| Fr::random_unsafe(&mut rng))
-                                    // .map(|i| Fr::from(i))
                                     .collect::<Vec<_>>();
                                 MultiLinearPoly::<Fr>::new(coeffs)
                             })
@@ -78,10 +76,8 @@ fn test_sumcheck_e2e() {
                         let polynomials = (0..degree)
                             .map(|_| {
                                 // Generate random coefficients for f and g
-                                // We can use Fr::rand to generate random elements in the field
                                 let coeffs = (1..=size)
                                     .map(|_| Fr::random_unsafe(&mut rng))
-                                    // .map(|i| Fr::from(i))
                                     .collect::<Vec<_>>();
                                 MultiLinearPoly::<Fr>::new(coeffs)
                             })

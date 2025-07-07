@@ -1,8 +1,6 @@
 use arith::Field;
 use gkr_engine::Transcript;
-use polynomials::MultiLinearPoly;
-
-use crate::SumOfProductsPoly;
+use polynomials::{MultiLinearPoly, SumOfProductsPoly};
 
 use super::MatRef;
 
@@ -20,7 +18,7 @@ impl<'a, F: Field> MatMulWitnesses<'a, F> {
     }
 
     #[inline]
-    pub fn form_sumcheck_polynomial(
+    pub fn form_zerocheck_polynomial(
         &self,
         transcript: &mut impl Transcript,
     ) -> (SumOfProductsPoly<F>, MultiLinearPoly<F>) {
