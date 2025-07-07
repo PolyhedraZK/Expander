@@ -1,4 +1,4 @@
-use gkr_engine::{FieldEngine, GKREngine};
+use gkr_engine::FieldEngine;
 use serdes::{ExpSerde, SerdeResult};
 use std::{cmp::max, collections::HashMap, fs, io::Cursor};
 
