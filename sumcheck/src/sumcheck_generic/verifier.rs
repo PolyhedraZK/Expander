@@ -39,6 +39,8 @@ impl<F: Field> IOPVerifierState<F> {
         // such checks to `check_and_generate_subclaim` after the last round.
 
         let challenge = transcript.generate_field_element::<F>();
+        println!("Verifier round {}: challenge = {:?}", self.round, challenge);
+
         self.challenges.push(challenge);
         self.polynomials_received
             .push(prover_msg.evaluations.clone());

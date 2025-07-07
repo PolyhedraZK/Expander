@@ -40,6 +40,7 @@ impl<F: Field> ZeroCheck<F> {
     ) -> (bool, ZeroCheckSubClaim<F>) {
         // check that the sum is zero
         if proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1] != F::zero() {
+            println!("ZeroCheck failed: sum is not zero: {:?}", proof.proofs[0].evaluations[0] + proof.proofs[0].evaluations[1]);
             return (
                 false,
                 ZeroCheckSubClaim {

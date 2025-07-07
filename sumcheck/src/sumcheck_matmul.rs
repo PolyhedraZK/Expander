@@ -25,6 +25,8 @@ impl<F: Field> SumCheckMatMul<F> {
     #[inline]
     pub fn prove(input: &MatMulWitnesses<F>, transcript: &mut impl Transcript) -> IOPProof<F> {
         let (sum_poly, c) = input.form_zerocheck_polynomial(transcript);
+        println!("Formed sumcheck polynomial = {:?}", sum_poly);
+
         ZeroCheck::prove(&sum_poly, transcript)
     }
 
@@ -34,7 +36,7 @@ impl<F: Field> SumCheckMatMul<F> {
         transcript: &mut impl Transcript,
     ) -> (bool, ZeroCheckSubClaim<F>) {
         // todo: check r is correct
-        let _r = transcript.generate_field_element::<F>();
+        // let _r = transcript.generate_field_element::<F>();
         ZeroCheck::verify(proof, transcript)
     }
 }

@@ -22,7 +22,8 @@ impl<'a, F: Field> MatMulWitnesses<'a, F> {
         &self,
         transcript: &mut impl Transcript,
     ) -> (SumOfProductsPoly<F>, MultiLinearPoly<F>) {
-        let r = transcript.generate_field_element::<F>();
+        // let r = transcript.generate_field_element::<F>();
+        let r = F::from(2);
         println!("Forming sumcheck polynomial with r = {r:?}");
 
         let a_rlc_ed = self.a.from_mle_via_rlc(&r);

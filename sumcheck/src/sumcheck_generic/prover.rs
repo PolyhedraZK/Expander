@@ -48,7 +48,6 @@ impl<F: Field> IOPProverState<F> {
         } else if self.round > 0 {
             panic!("verifier message is empty")
         }
-
         self.round += 1;
 
         let evaluations = match self.mle_list.degree() {
@@ -65,6 +64,7 @@ impl<F: Field> IOPProverState<F> {
             }
         };
 
+        println!("Prover round {}: challenge = {:?}", self.round, challenge);
         IOPProverMessage { evaluations }
     }
 }
