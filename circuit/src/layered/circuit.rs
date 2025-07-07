@@ -150,7 +150,7 @@ impl<C: FieldEngine> Circuit<C> {
     // Used for verifier
     pub fn verifier_load_circuit<Cfg: GKREngine<FieldConfig = C>>(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
-        let mut c = rc.flatten::<Cfg>();
+        let mut c = rc.flatten();
         c.pre_process_gkr();
         c
     }
@@ -176,7 +176,7 @@ impl<C: FieldEngine> Circuit<C> {
     ) -> (Self, *mut ompi_win_t) {
         let circuit = if mpi_config.is_root() {
             let rc = RecursiveCircuit::<C>::load(filename).unwrap();
-            let circuit = rc.flatten::<Cfg>();
+            let circuit = rc.flatten();
             Some(circuit)
         } else {
             None

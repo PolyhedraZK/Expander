@@ -85,7 +85,7 @@ impl<C: FieldEngine> RecursiveCircuit<C> {
         <Self as ExpSerde>::deserialize_from(cursor)
     }
 
-    pub fn flatten<Cfg: GKREngine<FieldConfig = C>>(&self) -> Circuit<C> {
+    pub fn flatten(&self) -> Circuit<C> {
         let mut ret = Circuit::<C> {
             expected_num_output_zeros: self.expected_num_output_zeros,
             ..Default::default()
