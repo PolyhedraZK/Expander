@@ -73,8 +73,7 @@ pub trait GKREngine: Send + Sync {
     type TranscriptConfig: Transcript;
 
     /// Configuration for polynomial commitment scheme
-    type PCSField: Field = <<Self as GKREngine>::FieldConfig as FieldEngine>::SimdCircuitField;
-    type PCSConfig: ExpanderPCS<Self::FieldConfig, Self::PCSField>;
+    type PCSConfig: ExpanderPCS<Self::FieldConfig>;
 
     /// GKR scheme
     const SCHEME: GKRScheme;

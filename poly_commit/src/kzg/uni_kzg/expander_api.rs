@@ -13,7 +13,7 @@ use serdes::ExpSerde;
 
 use crate::{traits::BatchOpening, *};
 
-impl<G, E> ExpanderPCS<G, E::Fr> for HyperUniKZGPCS<E>
+impl<G, E> ExpanderPCS<G> for HyperUniKZGPCS<E>
 where
     G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
     E: Engine + MultiMillerLoop,
