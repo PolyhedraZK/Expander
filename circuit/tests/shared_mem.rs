@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use arith::Field;
 use circuit::Circuit;
 use config_macros::declare_gkr_config;
 use gkr_engine::{
@@ -7,6 +8,7 @@ use gkr_engine::{
     M31x16Config, MPIConfig, MPIEngine, MPISharedMemory,
 };
 use gkr_hashers::SHA256hasher;
+use mersenne31::M31x16;
 use poly_commit::RawExpanderGKR;
 use serdes::ExpSerde;
 use transcript::BytesHashTranscript;
@@ -68,15 +70,27 @@ fn load_circuit<Cfg: GKREngine>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::F
 
 #[test]
 fn test_shared_mem() {
+    let mut rng = rand::thread_rng();
     let universe = MPIConfig::init().unwrap();
     let world = universe.world();
     let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
-    test_shared_mem_helper(&mpi_config, Some(123u8));
     test_shared_mem_helper(&mpi_config, Some(456789usize));
-    test_shared_mem_helper(&mpi_config, Some(vec![1u8, 2, 3]));
     test_shared_mem_helper(&mpi_config, Some(vec![4usize, 5, 6]));
-    test_shared_mem_helper(&mpi_config, Some((7u8, 8usize)));
-    test_shared_mem_helper(&mpi_config, Some((9usize, 10u8)));
+    test_shared_mem_helper(
+        &mpi_config,
+        Some(vec![
+            M31x16::random_unsafe(&mut rng),
+            M31x16::random_unsafe(&mut rng),
+        ]),
+    );
+
+    test_shared_mem_on_heap_helper(
+        &mpi_config,
+        Some(vec![
+            M31x16::random_unsafe(&mut rng),
+            M31x16::random_unsafe(&mut rng),
+        ]),
+    );
 
     let circuit = load_circuit::<M31x16ConfigSha2Raw>(&mpi_config);
     test_shared_mem_helper(&mpi_config, circuit);
