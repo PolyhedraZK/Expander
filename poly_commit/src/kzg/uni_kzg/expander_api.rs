@@ -11,7 +11,14 @@ use halo2curves::{
 use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
 
-use crate::{traits::BatchOpening, *};
+use crate::{
+    traits::BatchOpening,
+    utils::{
+        lift_expander_challenge_to_n_vars, lift_poly_and_expander_challenge_to_n_vars,
+        lift_poly_to_n_vars,
+    },
+    *,
+};
 
 impl<G, E> ExpanderPCS<G> for HyperUniKZGPCS<E>
 where
@@ -34,8 +41,12 @@ where
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
-    fn gen_params(n_input_vars: usize, _world_size: usize) -> Self::Params {
-        n_input_vars
+    fn gen_params(n_input_vars: usize, world_size: usize) -> Self::Params {
+        assert_eq!(
+            world_size, 1,
+            "HyperUniKZGPCS is not parallelized, world size must be 1"
+        );
+        std::cmp::max(n_input_vars, Self::MINIMUM_SUPPORTED_NUM_VARS)
     }
 
     fn gen_srs(
@@ -43,30 +54,61 @@ where
         _mpi_engine: &impl MPIEngine,
         rng: impl rand::RngCore,
     ) -> Self::SRS {
+        assert!(
+            *params >= Self::MINIMUM_SUPPORTED_NUM_VARS,
+            "params must be at least {}",
+            Self::MINIMUM_SUPPORTED_NUM_VARS
+        );
         let size = 1 << *params;
         generate_coef_form_uni_kzg_srs_for_testing(size, rng)
     }
 
     fn commit(
-        _params: &Self::Params,
-        _mpi_engine: &impl MPIEngine,
+        params: &Self::Params,
+        mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<E::Fr>,
-        _scratch_pad: &mut Self::ScratchPad,
+        scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
+        if poly.num_vars() < Self::MINIMUM_SUPPORTED_NUM_VARS {
+            assert_eq!(*params, Self::MINIMUM_SUPPORTED_NUM_VARS);
+            let poly = lift_poly_to_n_vars(poly, *params);
+            return <Self as ExpanderPCS<G, E::Fr>>::commit(
+                params,
+                mpi_engine,
+                proving_key,
+                &poly,
+                scratch_pad,
+            );
+        }
+
         let commitment = coeff_form_uni_kzg_commit(proving_key, poly.hypercube_basis_ref());
         Some(UniKZGCommitment(commitment))
     }
 
     fn open(
-        _params: &Self::Params,
-        _mpi_engine: &impl MPIEngine,
+        params: &Self::Params,
+        mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<E::Fr>,
         x: &ExpanderSingleVarChallenge<G>,
         transcript: &mut impl Transcript,
-        _scratch_pad: &Self::ScratchPad,
+        scratch_pad: &Self::ScratchPad,
     ) -> Option<Self::Opening> {
+        if poly.num_vars() < Self::MINIMUM_SUPPORTED_NUM_VARS {
+            assert_eq!(*params, Self::MINIMUM_SUPPORTED_NUM_VARS);
+            let (poly, x) = lift_poly_and_expander_challenge_to_n_vars(poly, x, *params);
+            return <Self as ExpanderPCS<G, E::Fr>>::open(
+                params,
+                mpi_engine,
+                proving_key,
+                &poly,
+                &x,
+                transcript,
+                scratch_pad,
+            );
+        }
+
         let (_eval, open) = coeff_form_uni_hyperkzg_open(
             proving_key,
             poly.hypercube_basis_ref(),
@@ -86,6 +128,19 @@ where
         transcript: &mut impl Transcript,
         opening: &Self::Opening,
     ) -> bool {
+        if x.rz.len() < Self::MINIMUM_SUPPORTED_NUM_VARS {
+            let x = lift_expander_challenge_to_n_vars(x, Self::MINIMUM_SUPPORTED_NUM_VARS);
+            return <Self as ExpanderPCS<G, E::Fr>>::verify(
+                _params,
+                verifying_key,
+                commitment,
+                &x,
+                v,
+                transcript,
+                opening,
+            );
+        }
+
         coeff_form_uni_hyperkzg_verify(
             verifying_key,
             commitment.0,
