@@ -85,6 +85,7 @@ fn test_hyper_unikzg_for_expander_gkr() {
     let world = universe.world();
     let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
 
+    test_hyper_unikzg_for_expander_gkr_generics(&mpi_config, 0);
     test_hyper_unikzg_for_expander_gkr_generics(&mpi_config, 1);
     test_hyper_unikzg_for_expander_gkr_generics(&mpi_config, 15);
 }
