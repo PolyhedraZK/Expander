@@ -32,7 +32,7 @@ where
         proj_bases
             .par_iter_mut()
             .zip(tau_geometric_progression.par_iter())
-            .for_each(|(b, tau_i)| *b = *b * tau_i);
+            .for_each(|(b, tau_i)| *b *= tau_i);
 
         let mut g_bases = vec![E::G1Affine::default(); length];
         E::G1::batch_normalize(&proj_bases, &mut g_bases);
