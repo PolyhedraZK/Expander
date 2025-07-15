@@ -44,13 +44,13 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    
+
     let universe = MPIConfig::init().unwrap();
     let world = universe.world();
     let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
-    
+
     print_info(&args, &mpi_config);
-    
+
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
