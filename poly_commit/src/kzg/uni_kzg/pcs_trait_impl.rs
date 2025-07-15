@@ -72,10 +72,11 @@ where
 
     fn open(
         _params: &Self::Params,
+        _commitment: &Self::Commitment,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        _scratch_pad: &Self::ScratchPad,
+        _scratch_pad: &mut Self::ScratchPad,
         transcript: &mut impl Transcript,
     ) -> (E::Fr, Self::Opening) {
         coeff_form_uni_hyperkzg_open(proving_key, &poly.coeffs, x, transcript)

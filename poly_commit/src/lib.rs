@@ -21,3 +21,6 @@ pub mod kzg;
 pub use kzg::*;
 
 pub mod batching;
+
+pub mod whir;
+pub use whir::*;
