@@ -63,13 +63,7 @@ where
         transcript: &mut impl Transcript,
     ) -> OrionOpening<CodeF, ResF> {
         if let Some(instance) = self.commitments.get_mut(commitment) {
-            let r0 = &mut self.scratch.r0;
-            let r1 = &mut self.scratch.r1;
-            let eq_head = &mut self.scratch.eq_head;
-            let eq_tail = &mut self.scratch.eq_tail;
-            EqPolynomial::<EvalF>::eq_eval_at(&eval_point[..COLUMN_LOG], &EvalF::ONE, r0, eq_head, eq_tail);
-            EqPolynomial::<EvalF>::eq_eval_at(&eval_point[COLUMN_LOG..], &EvalF::ONE, r1, eq_head, eq_tail);
-            instance.open(r0, r1, &eval_point[COLUMN_LOG..], &self.srs.air, &mut self.scratch.instance_scratch, transcript)
+            instance.open(eval_point, &self.srs.air, &mut self.scratch, transcript)
         }
         else {
             panic!("the commitment does not exist")
@@ -83,13 +77,14 @@ where
         opening: &OrionOpening<CodeF, ResF>,
         transcript: &mut impl Transcript,
     ) -> bool {
-        let r0 = &mut self.scratch.r0;
-        let r1 = &mut self.scratch.r1;
-        let eq_head = &mut self.scratch.eq_head;
-        let eq_tail = &mut self.scratch.eq_tail;
-        EqPolynomial::<EvalF>::eq_eval_at(&eval_point[..COLUMN_LOG], &EvalF::ONE, r0, eq_head, eq_tail);
-        EqPolynomial::<EvalF>::eq_eval_at(&eval_point[COLUMN_LOG..], &EvalF::ONE, r1, eq_head, eq_tail);
-        OrionCommitInstance::verify(commitment, r0, r1, &eval_point[COLUMN_LOG..], opening, &self.srs.air, &mut self.scratch.instance_scratch, transcript)
+        // let r0 = &mut self.scratch.r0;
+        // let r1 = &mut self.scratch.r1;
+        // let eq_head = &mut self.scratch.eq_head;
+        // let eq_tail = &mut self.scratch.eq_tail;
+        // EqPolynomial::<EvalF>::eq_eval_at(&eval_point[..COLUMN_LOG], &EvalF::ONE, r0, eq_head, eq_tail);
+        // EqPolynomial::<EvalF>::eq_eval_at(&eval_point[COLUMN_LOG..], &EvalF::ONE, r1, eq_head, eq_tail);
+
+        OrionCommitInstance::verify(commitment, eval_point, opening, &self.srs.air, &mut self.scratch, transcript)
     }
 }
 
@@ -199,17 +194,20 @@ where
 
     fn open(
         &mut self, 
-        r0: &[EvalF],
-        r1: &[EvalF],
-        r1_points: &[EvalF],
-        // eval_point: &[EvalF], 
+        // r0: &[EvalF],
+        // r1: &[EvalF],
+        // r1_points: &[EvalF],
+        eval_point: &[EvalF], 
         air: &CodeSwitchAir<EvalF, ResF>,
-        scratch: &mut OrionInstanceScratchPad<ResF, H>,
+        scratch: &mut OrionScratchPad<EvalF, ResF, H>,
         transcript: &mut impl Transcript,
     ) -> OrionOpening<CodeF, ResF> 
     {
-        // let r0 = &mut scratch.r0;
-        // let r1 = &mut scratch.r1;
+        let r0 = &mut scratch.r0;
+        let r1 = &mut scratch.r1;
+        EqPolynomial::<EvalF>::eq_eval_at(&eval_point[..COLUMN_LOG], &EvalF::ONE, r0, &mut scratch.eq_head, &mut scratch.eq_tail);
+        EqPolynomial::<EvalF>::eq_eval_at(&eval_point[COLUMN_LOG..], &EvalF::ONE, r1, &mut scratch.eq_head, &mut scratch.eq_tail);
+
         let mut gamma: Vec<EvalF> = Vec::with_capacity(r0.len());
         for i in 0..r0.len() {
             gamma.push(transcript.generate_field_element::<EvalF>());
@@ -266,7 +264,11 @@ where
         }
 
 let mut timer = Timer::new();
-        let proof_cs = air.prove(&y_gamma, &y_prime, &c_gamma, &c_gamma_idx, &r1_points, &y, );
+        // let r1len = eval_point.len() - COLUMN_LOG;
+        // let headlen = r1len >> 1;
+        // let r1_head = &scratch.eq_head[..1 << headlen];
+        // let r1_tail = &scratch.eq_tail[..1 << (r1len - headlen)];
+        let proof_cs = air.prove(&y_gamma, &y_prime, &c_gamma, &c_gamma_idx, &scratch.eq_head, &scratch.eq_tail, &y, );
 println!("plonky3 prove in {:?}", timer.count());
 
         let mut root_idx_proof: Vec<Vec<u8>> = Vec::with_capacity(idxs.len());
@@ -297,14 +299,20 @@ println!("plonky3 prove in {:?}", timer.count());
 
     fn verify(
         commitment: &[u8],
-        r0: &[EvalF],
-        r1: &[EvalF],
-        r1_points: &[EvalF],
+        // r0: &[EvalF],
+        // r1: &[EvalF],
+        // r1_points: &[EvalF],
+        eval_point: &[EvalF],
         opening: &OrionOpening<WitF, ResF>,
         air: &CodeSwitchAir<EvalF, ResF>,
-        scratch: &mut OrionInstanceScratchPad<ResF, H>,
+        scratch: &mut OrionScratchPad<EvalF, ResF, H>,
         transcript: &mut impl Transcript,
     ) -> bool {
+        let r0 = &mut scratch.r0;
+        let r1 = &mut scratch.r1;
+        EqPolynomial::<EvalF>::eq_eval_at(&eval_point[..COLUMN_LOG], &EvalF::ONE, r0, &mut scratch.eq_head, &mut scratch.eq_tail);
+        EqPolynomial::<EvalF>::eq_eval_at(&eval_point[COLUMN_LOG..], &EvalF::ONE, r1, &mut scratch.eq_head, &mut scratch.eq_tail);
+
 let mut timer = Timer::new();
         let hasher = H::new();
 
@@ -349,34 +357,21 @@ let mut timer = Timer::new();
 
 println!("merkletree {:?}", timer.count());
 let mut timer = Timer::new();
-        let rst = air.verify(&opening.proof_cs, &c_gamma, &r1_points, &opening.y);
+        let rst = air.verify(&opening.proof_cs, &c_gamma, &scratch.eq_head, &scratch.eq_tail, &opening.y);
 println!("plonky3 {:?}", timer.count());
         rst
     }
 }
 
-struct OrionInstanceScratchPad<F: Field, H: FiatShamirHasher> {
-    y_prime: Vec<F>,
-    c_gamma: Vec<F>,
-    y_gamma: Vec<F>,
-    tree_gamma: MerkleTree<H>,
-}
-
-impl<F: Field, H: FiatShamirHasher> OrionInstanceScratchPad<F, H> {
-    fn new(n: usize, m: usize) -> Self {
-        Self {
-            y_prime: vec![F::ZERO; n],
-            c_gamma: vec![F::ZERO; m],
-            y_gamma: vec![F::ZERO; n],
-            tree_gamma: MerkleTree::new(m.max(COLUMN_SIZE)),
-        }
-    }
-}
-
 pub struct OrionScratchPad<EvalF: Field, ResF: Field, H: FiatShamirHasher> {
-    instance_scratch: OrionInstanceScratchPad<ResF, H>,
+    y_prime: Vec<ResF>,
+    c_gamma: Vec<ResF>,
+    y_gamma: Vec<ResF>,
+    tree_gamma: MerkleTree<H>,
+
     r0: Vec<EvalF>,
     r1: Vec<EvalF>,
+
     eq_head: Vec<EvalF>,
     eq_tail: Vec<EvalF>,
 }
@@ -384,12 +379,21 @@ pub struct OrionScratchPad<EvalF: Field, ResF: Field, H: FiatShamirHasher> {
 impl<EvalF: Field, ResF: Field, H: FiatShamirHasher> OrionScratchPad<EvalF, ResF, H> {
     fn new(n: usize, m: usize) -> Self {
         Self {
-            instance_scratch: OrionInstanceScratchPad::<ResF, H>::new(n, m),
+            y_prime: vec![ResF::ZERO; n],
+            c_gamma: vec![ResF::ZERO; m],
+            y_gamma: vec![ResF::ZERO; n],
+            tree_gamma: MerkleTree::new(m.max(COLUMN_SIZE)),
+
             r0: vec![EvalF::ZERO; COLUMN_SIZE],
             r1: vec![EvalF::ZERO; n],
+
             eq_head: vec![EvalF::ZERO; n * COLUMN_SIZE],
             eq_tail: vec![EvalF::ZERO; n * COLUMN_SIZE],
         }
+    }
+
+    fn eq_eval_at(&mut self, eval_point: &[EvalF], res: &mut [EvalF]) {
+        EqPolynomial::<EvalF>::eq_eval_at(eval_point, &EvalF::ONE, res, &mut self.eq_head, &mut self.eq_tail);
     }
 }
 

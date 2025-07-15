@@ -88,7 +88,8 @@ Registry::default()
         y1: &[ResF],
         c_gamma: &[ResF],
         c_gamma_idx: &[ResF],
-        r1: &[EvalF],
+        r1_head: &[EvalF],
+        r1_tail: &[EvalF],
         y: &ResF,
     ) -> Vec<u8> {
         let witness_size = self.eval_degree * self.res_pack_size;
@@ -106,13 +107,17 @@ println!("trace len {}", trace.len());
         let challenge_size = self.eval_degree;
         // TODO: borrow
         // TODO: scratch pis
-        let mut pis = <ResF::UnitField as P3Config>::Val::zero_vec(r1.len() * challenge_size + (c_gamma_idx.len() + 1) * witness_size);
+        let r1_head_len = 1 << (self.tail_source);
+        let r1_tail_len = 1 << (self.r1_log - self.tail_source);
+        let mut pis = <ResF::UnitField as P3Config>::Val::zero_vec((r1_head_len + r1_tail_len) * challenge_size + (c_gamma_idx.len() + 1) * witness_size);
         unsafe {
             std::ptr::copy_nonoverlapping(c_gamma_idx.as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr(), c_gamma_idx.len() * witness_size);
-            std::ptr::copy_nonoverlapping(r1.as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr().add(c_gamma_idx.len() * witness_size), r1.len() * challenge_size);
-            std::ptr::copy_nonoverlapping(vec![*y].as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr().add(c_gamma_idx.len() * witness_size + r1.len() * challenge_size), witness_size);
+            // std::ptr::copy_nonoverlapping(r1.as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr().add(c_gamma_idx.len() * witness_size), r1.len() * challenge_size);
+            std::ptr::copy_nonoverlapping(vec![*y].as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr().add(c_gamma_idx.len() * witness_size), witness_size);
+            std::ptr::copy_nonoverlapping(r1_head.as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr().add((c_gamma_idx.len() + 1) * witness_size), r1_head_len * challenge_size);
+            std::ptr::copy_nonoverlapping(r1_tail.as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr().add((c_gamma_idx.len() + 1) * witness_size + r1_head_len * challenge_size), challenge_size);
         }
-println!("{} {} ", r1.len(), self.r1_log);
+// println!("{} {} ", r1.len(), self.r1_log);
 println!("pis len {}", pis.len());
 
         ResF::UnitField::p3prove(self, width, trace, &pis)
@@ -122,18 +127,23 @@ println!("pis len {}", pis.len());
         &self,
         proofu8: &[u8],
         c_gamma_idx: &[ResF],
-        r1: &[EvalF],
+        r1_head: &[EvalF],
+        r1_tail: &[EvalF],
         y: &ResF,
     ) -> bool 
     {
         let witness_size = self.eval_degree * self.res_pack_size;
         let challenge_size = self.eval_degree;
         // TODO: borrow
-        let mut pis = <ResF::UnitField as P3Config>::Val::zero_vec(r1.len() * challenge_size + (c_gamma_idx.len() + 1) * witness_size);
+        let r1_head_len = 1 << (self.tail_source);
+        let r1_tail_len = 1 << (self.r1_log - self.tail_source);
+        let mut pis = <ResF::UnitField as P3Config>::Val::zero_vec((r1_head_len + r1_tail_len) * challenge_size + (c_gamma_idx.len() + 1) * witness_size);
         unsafe {
             std::ptr::copy_nonoverlapping(c_gamma_idx.as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr(), c_gamma_idx.len() * witness_size);
-            std::ptr::copy_nonoverlapping(r1.as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr().add(c_gamma_idx.len() * witness_size), r1.len() * challenge_size);
-            std::ptr::copy_nonoverlapping(vec![*y].as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr().add(c_gamma_idx.len() * witness_size + r1.len() * challenge_size), witness_size);
+            // std::ptr::copy_nonoverlapping(r1.as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr().add(c_gamma_idx.len() * witness_size), r1.len() * challenge_size);
+            std::ptr::copy_nonoverlapping(vec![*y].as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr().add(c_gamma_idx.len() * witness_size), witness_size);
+            std::ptr::copy_nonoverlapping(r1_head.as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr().add((c_gamma_idx.len() + 1) * witness_size), r1_head_len * challenge_size);
+            std::ptr::copy_nonoverlapping(r1_tail.as_ptr() as *const <ResF::UnitField as P3Config>::Val, pis.as_mut_ptr().add((c_gamma_idx.len() + 1) * witness_size + r1_head_len * challenge_size), challenge_size);
         }
 println!("pis len in verify {}", pis.len());
 
@@ -165,11 +175,17 @@ where
         let public_values = builder.public_values();
         let c_gamma_range = self.idxs.len() * witness_size;
         let c_gamma_idx: Vec<AB::Expr> = public_values[..c_gamma_range].iter().map(|&x| x.into()).collect();
-        let r1_range = self.r1_log * challenge_size;
+        let mut y: Vec<AB::Expr> = public_values[c_gamma_range..c_gamma_range + witness_size].iter().map(|&x| x.into()).collect();
+        let r1_head_range = (1 << self.tail_source) * challenge_size;
+        let pos = c_gamma_range + witness_size;
+        let r1_head: Vec<AB::Expr> = public_values[pos..pos + r1_head_range].iter().map(|&x| x.into()).collect();
+        let r1_tail_range = (1 << (self.r1_log - self.tail_source)) * challenge_size;
+        let pos = c_gamma_range + witness_size + r1_head_range;
+        let r1_tail: Vec<AB::Expr> = public_values[pos..pos + r1_tail_range].iter().map(|&x| x.into()).collect();
+        // let r1_range = self.r1_log * challenge_size;
         // let (r1_head, r1_tail) = self.eval_r1::<AB>(&public_values[c_gamma_range..c_gamma_range + r1_range]);
         // let r1_range = msg_len * challenge_size;
         // let r1: Vec<AB::Expr> = public_values[c_gamma_range..c_gamma_range + r1_range].iter().map(|&x| x.into()).collect();
-        let mut y: Vec<AB::Expr> = public_values[c_gamma_range + r1_range..c_gamma_range + r1_range + witness_size].iter().map(|&x| x.into()).collect();
 
         let main = builder.main();
         let inputs = main.row_slice(0);
@@ -201,7 +217,11 @@ where
             for (u, v) in izip!(y.iter_mut(), res.iter()) {
                 *u -= v.clone();
             }
+        }
+        for v in y.iter() {
+            check.assert_zero(v.clone());
         } */
+
         /*
         for (r1_chunk, y1_chunk) in izip!(r1.chunks_exact(self.eval_degree), y1.chunks_exact(witness_size)) {
             let y1expr: Vec<AB::Expr> = y1_chunk.iter().map(|&x| x.into()).collect();
@@ -211,9 +231,6 @@ where
                 *u -= v.clone();
             }
         } */
-        // for v in y.iter() {
-        //     check.assert_zero(v.clone());
-        // }
     }
 }
 

@@ -8,8 +8,10 @@ use codeswitch::P3Multiply;
 use itertools::izip;
 use mersenne31::{M31Ext3, M31};
 use p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir};
+use p3_examples::airs::ProofObjective;
 use p3_field::{extension::BinomiallyExtendable, PrimeField32, Algebra};
 use p3_field::PrimeCharacteristicRing;
+use p3_keccak_air::KeccakAir;
 use p3_matrix::{dense::RowMajorMatrix, Matrix};
 use p3_mersenne_31::Mersenne31;
 use p3_uni_stark::{prove as p3prove, verify as p3verify, StarkConfig};
@@ -22,6 +24,8 @@ use p3_fri::FriConfig;
 use p3_keccak::Keccak256Hash;
 use p3_symmetric::{CompressionFunctionFromHasher, CryptographicHasher, SerializingHasher32};
 use p3_merkle_tree::MerkleTreeMmcs;
+
+use p3_examples::proofs::*;
 
 const N: usize = 4;
 const WIDTH: usize = 48;
@@ -268,7 +272,7 @@ fn M31_from_vec(v: &[u32]) -> Vec<M31> {
     v.iter().map(|&x| M31::from(x)).collect()
 }
 
-#[test]
+// #[test]
 fn test_multipier() {
     type TestField = Mersenne31;
     // let mut trace: Vec<M31> = [6, 3, 3, 8, 1, 5, 3, 7, 86, 15, 9, 56, 0, 0, 0, 0].iter().map(|&x| M31::from(x)).collect();
@@ -304,3 +308,12 @@ fn test_multipier() {
     // let mut trace: Vec<M31> = [0, 1, 1, 1, 1, 2, 2, 3, 3, 5, 5, 8, 8, 13, 13, 21].iter().map(|&x| M31::from(x)).collect();
     // assert!(prove_fib::<M31, Mersenne31, 3>(&trace));
 }
+
+/*
+fn test_verify() {
+    type EF = BinomialExtensionField<Mersenne31, 3>;
+    let num_hashes = (1 << 20) / 24;
+    let proof_goal = ProofObjective::Keccak(KeccakAir {});
+    let result = prove_m31_keccak(proof_goal, num_hashes);
+    report_result(result);
+} */

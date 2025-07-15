@@ -1,55 +1,57 @@
 use std::marker::PhantomData;
 
 use arith::Field;
+use p3_air::BaseAir;
 use p3_challenger::{HashChallenger, SerializingChallenger32};
 use p3_circle::CirclePcs;
-use p3_commit::ExtensionMmcs;
+use p3_commit::{ExtensionMmcs, Pcs};
+use p3_dft::Radix2DitParallel;
 use p3_field::{extension::{BinomialExtensionField, ComplexExtendable}, Algebra, ExtensionField, PrimeField32};
 
 use mersenne31::{M31Ext3, M31Ext3x16, M31x16, M31};
-use p3_fri::FriConfig;
-use p3_keccak::Keccak256Hash;
+use p3_fri::{FriConfig, TwoAdicFriPcs};
+use p3_keccak::{Keccak256Hash, KeccakF};
+use p3_matrix::dense::RowMajorMatrix;
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_mersenne_31::Mersenne31;
-use p3_symmetric::{CompressionFunctionFromHasher, CryptographicHasher, SerializingHasher32};
-use p3_uni_stark::StarkConfig;
+use p3_symmetric::{CompressionFunctionFromHasher, CryptographicHasher, PaddingFreeSponge, SerializingHasher32, SerializingHasher32To64};
+use p3_uni_stark::{StarkConfig, StarkGenericConfig, prove, verify};
 
-use crate::utils::*;
+use crate::{utils::*, CodeSwitchAir};
 
-pub struct P3Config {}
+pub trait P3Config {
+    type Val: PrimeField32 + ComplexExtendable;
+    type Challenge: ExtensionField<Self::Val>;
+    // type Challenger;
+    // type PCS: Pcs<Self::Challenge, Self::Challenger>;
+    type Config: StarkGenericConfig<Challenge = Self::Challenge>;
 
-pub trait Plonky3Config<C: P3FieldConfig> {
-    type Val: PrimeField32 = C::P3Field;
-    type Challenge = C::P3Challenge;
+    fn init_stark_config() -> (Self::Config, <Self::Config as StarkGenericConfig>::Challenger);
 
-    // Your choice of Hash Function
-    type ByteHash: CryptographicHasher<u8, [u8; 32]> = Keccak256Hash;
-    type FieldHash = SerializingHasher32<Self::ByteHash>;
+    fn p3prove<EvalF, ResF>(
+        air: &CodeSwitchAir<EvalF, ResF>,
+        width: usize,
+        trace: Vec<Self::Val>,
+        pis: &Vec<Self::Val>,
+    ) -> Vec<u8> 
+    where
+        EvalF: Field<UnitField = Self> + P3Multiply<ResF> + P3Multiply<EvalF>,
+        ResF: Field<UnitField = Self>;
 
-    // Defines a compression function type using ByteHash, with 2 input blocks and 32-byte output.
-    type MyCompress = CompressionFunctionFromHasher<Self::ByteHash, 2, 32>;
-
-    // Defines a Merkle tree commitment scheme for field elements with 32 levels.
-    type ValMmcs = MerkleTreeMmcs<Self::Val, u8, Self::FieldHash, Self::MyCompress, 32>;
-
-    type ChallengeMmcs = ExtensionMmcs<Self::Val, Self::Challenge, Self::ValMmcs>;
-
-    // Defines the challenger type for generating random challenges.
-    type MyHashChallenger = HashChallenger<u8, Self::ByteHash, 32>;
-    type Challenger = SerializingChallenger32<Self::Val, Self::MyHashChallenger>;
-
-    type Pcs = CirclePcs<Self::Val, Self::ValMmcs, Self::ChallengeMmcs>;
-
-    type MyConfig = StarkConfig<Self::Pcs, Self::Challenge, Self::Challenger>;
-
-    fn init() -> Self::MyConfig;
-
-    fn get_challenger() -> Self::Challenger;
+    fn p3verify<EvalF, ResF>(
+        air: &CodeSwitchAir<EvalF, ResF>,
+        proof: &[u8],
+        pis: &Vec<Self::Val>,
+    ) -> bool
+    where
+        EvalF: Field<UnitField = Self> + P3Multiply<ResF> + P3Multiply<EvalF>,
+        ResF: Field<UnitField = Self>;
 }
 
+/*
 impl<C: P3FieldConfig> Plonky3Config<C> for P3Config {
     #[inline(always)]
-    fn init() -> Self::MyConfig {
+    fn init() -> (Self::MyConfig, Self::Challenger) {
         let byte_hash = Self::ByteHash {};
         let field_hash = Self::FieldHash::new(Self::ByteHash {});
         let compress = Self::MyCompress::new(byte_hash);
@@ -62,29 +64,129 @@ impl<C: P3FieldConfig> Plonky3Config<C> for P3Config {
             proof_of_work_bits: 16,
             mmcs: challenge_mmcs,
         };
+        // let dft = Self::Dft::default();
+        // let pcs = Self::Pcs::new(dft, val_mmcs, fri_config);
         let pcs = Self::Pcs {
             mmcs: val_mmcs,
             fri_config,
             _phantom: PhantomData,
         };
         // let challenger = Self::Challenger::new(Self::MyHashChallenger::new(vec![20180226u8; 32], Self::ByteHash{}));
-        Self::MyConfig::new(pcs) // , challenger)
+        (Self::MyConfig::new(pcs), Self::Challenger::from_hasher(vec![], Self::ByteHash {}))
     }
+} */
+
+type KeccakCompressionFunction =
+    CompressionFunctionFromHasher<PaddingFreeSponge<KeccakF, 25, 17, 4>, 2, 4>;
+type KeccakMerkleMmcs<F> = MerkleTreeMmcs<
+    [F; p3_keccak::VECTOR_LEN],
+    [u64; p3_keccak::VECTOR_LEN],
+    SerializingHasher32To64<PaddingFreeSponge<KeccakF, 25, 17, 4>>,
+    KeccakCompressionFunction,
+    4,
+>;
+type KeccakCircleStarkConfig<F, EF> = StarkConfig<
+    CirclePcs<F, KeccakMerkleMmcs<F>, ExtensionMmcs<F, EF, KeccakMerkleMmcs<F>>>,
+    EF,
+    SerializingChallenger32<F, HashChallenger<u8, Keccak256Hash, 32>>,
+>;
+
+
+impl P3Config for M31 {
+    type Val = Mersenne31;
+    type Challenge = BinomialExtensionField<Self::Val, 3>;
+    // type Challenger = SerializingChallenger32<Self::Val, HashChallenger<u8, Keccak256Hash, 32>>;
+    type Config = KeccakCircleStarkConfig<Self::Val, Self::Challenge>;
 
     #[inline(always)]
-    fn get_challenger() -> Self::Challenger {
-        Self::Challenger::from_hasher(vec![], Self::ByteHash {})
+    fn init_stark_config() -> (Self::Config, <Self::Config as StarkGenericConfig>::Challenger) {
+        let u64_hash = PaddingFreeSponge::<KeccakF, 25, 17, 4>::new(KeccakF {});
+        let field_hash = SerializingHasher32To64::new(u64_hash);
+        let compress = KeccakCompressionFunction::new(u64_hash);
+        let val_mmcs = KeccakMerkleMmcs::new(field_hash, compress);
+        let challenge_mmcs = ExtensionMmcs::<Self::Val, Self::Challenge, _>::new(val_mmcs.clone());
+        let fri_config = FriConfig {
+            log_blowup: 1,
+            log_final_poly_len: 0,
+            num_queries: 100,
+            proof_of_work_bits: 16,
+            mmcs: challenge_mmcs,
+        };
+        let pcs = CirclePcs::new(val_mmcs, fri_config);
+        let challenger = SerializingChallenger32::from_hasher(vec![], Keccak256Hash {});
+        let config = KeccakCircleStarkConfig::new(pcs);
+        (config, challenger)
     }
-}
 
-pub trait P3FieldConfig {
-    type P3Field: PrimeField32 + ComplexExtendable;
-    type P3Challenge: ExtensionField<Self::P3Field>;
-}
+    fn p3prove<EvalF, ResF>(
+        air: &CodeSwitchAir<EvalF, ResF>,
+        width: usize,
+        trace: Vec<Self::Val>,
+        pis: &Vec<Self::Val>,
+    ) -> Vec<u8> 
+    where
+        EvalF: Field<UnitField = Self> + P3Multiply<ResF> + P3Multiply<EvalF>,
+        ResF: Field<UnitField = Self>,
+    {
+        let u64_hash = PaddingFreeSponge::<KeccakF, 25, 17, 4>::new(KeccakF {});
+        let field_hash = SerializingHasher32To64::new(u64_hash);
+        let compress = KeccakCompressionFunction::new(u64_hash);
+        let val_mmcs = KeccakMerkleMmcs::new(field_hash, compress);
+        let challenge_mmcs = ExtensionMmcs::<Self::Val, Self::Challenge, _>::new(val_mmcs.clone());
+        let fri_config = FriConfig {
+            log_blowup: 1,
+            log_final_poly_len: 0,
+            num_queries: 100,
+            proof_of_work_bits: 16,
+            mmcs: challenge_mmcs,
+        };
+        let pcs = CirclePcs::new(val_mmcs, fri_config);
+        let mut challenger = SerializingChallenger32::from_hasher(vec![], Keccak256Hash {});
+        let config = KeccakCircleStarkConfig::new(pcs);
 
-impl P3FieldConfig for M31 {
-    type P3Field = Mersenne31;
-    type P3Challenge = BinomialExtensionField<Self::P3Field, 3>;
+        let proof = prove(&config, air, &mut challenger, RowMajorMatrix::new(trace, width), pis);
+        serde_cbor::to_vec(&proof).unwrap()
+    }
+
+    fn p3verify<EvalF, ResF>(
+        air: &CodeSwitchAir<EvalF, ResF>,
+        proofu8: &[u8],
+        pis: &Vec<Self::Val>,
+    ) -> bool
+    where
+        EvalF: Field<UnitField = Self> + P3Multiply<ResF> + P3Multiply<EvalF>,
+        ResF: Field<UnitField = Self>,
+    {
+        let u64_hash = PaddingFreeSponge::<KeccakF, 25, 17, 4>::new(KeccakF {});
+        let field_hash = SerializingHasher32To64::new(u64_hash);
+        let compress = KeccakCompressionFunction::new(u64_hash);
+        let val_mmcs = KeccakMerkleMmcs::new(field_hash, compress);
+        let challenge_mmcs = ExtensionMmcs::<Self::Val, Self::Challenge, _>::new(val_mmcs.clone());
+        let fri_config = FriConfig {
+            log_blowup: 1,
+            log_final_poly_len: 0,
+            num_queries: 100,
+            proof_of_work_bits: 16,
+            mmcs: challenge_mmcs,
+        };
+        let pcs = CirclePcs::new(val_mmcs, fri_config);
+        let mut challenger = SerializingChallenger32::from_hasher(vec![], Keccak256Hash {});
+        let config = KeccakCircleStarkConfig::new(pcs);
+
+        let proof = serde_cbor::from_slice(proofu8).unwrap();
+let mut timer = Timer::new();
+        let rst = verify(&config, air, &mut challenger, &proof, &pis);
+println!("p3verify in {:?}", timer.count());
+
+        if let Err(e) = rst {
+            println!("{:?}", e);
+            false
+        }
+        else {
+            true
+        }
+    }
+    
 }
 
 pub trait P3Multiply<RHS: Field> {

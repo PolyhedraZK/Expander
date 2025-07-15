@@ -16,7 +16,7 @@ p3-air = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
 p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" } 
 p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
 p3-challenger = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
-p3-uni-stark = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-uni-stark = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" , features = ["parallel"] }
 p3-mersenne-31 = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
 p3-circle = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
 p3-commit = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
@@ -35,6 +35,12 @@ thiserror.workspace = true
 itertools.workspace = true
 derivative.workspace = true
 
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.17", features = ["std", "env-filter"] }
+tracing-forest = { version = "0.1.6", features = ["ansi", "smallvec"] }
+
 [dev-dependencies]
 tynm.workspace = true
 criterion.workspace = true
+p3-examples = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
+p3-keccak-air = { git = "https://github.com/Plonky3/Plonky3", rev = "949cce9" }
