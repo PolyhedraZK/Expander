@@ -13,6 +13,7 @@ gf2_128 = { path = "../arith/gf2_128" }
 gkr_engine = { path = "../gkr_engine" }
 gkr_hashers = { path = "../hasher" }
 goldilocks = { path = "../arith/goldilocks" }
+gpu = { path = "../gpu" }
 mersenne31 = { path = "../arith/mersenne31" }
 poly_commit = { path = "../poly_commit" }
 polynomials = { path = "../arith/polynomials" }
