@@ -44,11 +44,13 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    print_info(&args);
 
     let universe = MPIConfig::init().unwrap();
     let world = universe.world();
     let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
+
+    print_info(&args, &mpi_config);
+
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
@@ -254,10 +256,7 @@ where
     mpi_config.free_shared_mem(&mut window);
 }
 
-fn print_info(args: &Args) {
-    let universe = MPIConfig::init().unwrap();
-    let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
+fn print_info(args: &Args, mpi_config: &MPIConfig) {
     if !mpi_config.is_root() {
         return;
     }
