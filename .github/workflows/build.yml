@@ -39,7 +39,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: "mpi-v5.0.7"
+          prefix-key: "mpi-v5.0.8"
 
       - name: Install MPI for MacOS workflow
         if: matrix.os == 'macos-latest'
