@@ -5,7 +5,7 @@ use halo2curves::{
     pairing::{MillerLoopResult, MultiMillerLoop},
     CurveAffine,
 };
-use itertools::izip;
+use rayon::prelude::*;
 use serdes::ExpSerde;
 
 use crate::*;
@@ -29,7 +29,10 @@ where
     let g1_prog = g1.to_curve();
     let coeff_bases = {
         let mut proj_bases = vec![g1_prog; length];
-        izip!(&mut proj_bases, &tau_geometric_progression).for_each(|(b, tau_i)| *b *= *tau_i);
+        proj_bases
+            .par_iter_mut()
+            .zip(tau_geometric_progression.par_iter())
+            .for_each(|(b, tau_i)| *b *= tau_i);
 
         let mut g_bases = vec![E::G1Affine::default(); length];
         E::G1::batch_normalize(&proj_bases, &mut g_bases);
