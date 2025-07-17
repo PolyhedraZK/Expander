@@ -2171,6 +2171,7 @@ dependencies = [
  "gkr_engine",
  "gkr_hashers",
  "log",
+ "poly_commit",
  "polynomials",
  "rayon",
  "serdes",

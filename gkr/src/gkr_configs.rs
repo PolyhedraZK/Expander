@@ -11,7 +11,7 @@ use mersenne31::M31x16;
 use poly_commit::{raw::RawExpanderGKR, HyperBiKZGPCS, HyraxPCS, OrionPCSForGKR};
 use transcript::BytesHashTranscript;
 
-// ============== M31 ==============
+// ============== M31Ext3 ==============
 declare_gkr_config!(
     pub M31x1ConfigSha2RawVanilla,
     FieldType::M31x1,
@@ -116,7 +116,7 @@ declare_gkr_config!(
     GKRScheme::Vanilla,
 );
 
-// ============== Goldilocks ==============
+// ============== GoldilocksExt2 ==============
 declare_gkr_config!(
     pub Goldilocksx1ConfigSha2Raw,
     FieldType::Goldilocksx1,

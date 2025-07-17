@@ -3,8 +3,8 @@
 use arith::Field;
 use circuit::Circuit;
 use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
-    GKRScheme, MPIConfig, MPIEngine, Proof, StructuredReferenceString, Transcript,
+    root_println, ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine,
+    GKREngine, GKRScheme, MPIConfig, MPIEngine, Proof, StructuredReferenceString, Transcript,
 };
 use polynomials::{
     MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension, RefMultiLinearPoly,
@@ -106,7 +106,7 @@ impl<'a, Cfg: GKREngine> Prover<'a, Cfg> {
             pcs_scratch,
         );
 
-        if self.mpi_config.is_root() {
+        if self.mpi_config.is_root() && !Cfg::CUDA_DEV {
             let mut buffer = vec![];
             commitment.unwrap().serialize_into(&mut buffer).unwrap(); // TODO: error propagation
             transcript.append_commitment(&buffer);
@@ -122,8 +122,18 @@ impl<'a, Cfg: GKREngine> Prover<'a, Cfg> {
         self.mpi_config.barrier();
         c.evaluate();
 
+        root_println!(self.mpi_config, "transcript {:?}", transcript);
+
         let gkr_prove_timer = Timer::new("gkr prove", self.mpi_config.is_root());
+
         transcript_root_broadcast(&mut transcript, &self.mpi_config);
+
+        root_println!(
+            self.mpi_config,
+            "transcript after broadcast {:?}",
+            transcript
+        );
+        // matches this far
 
         let (claimed_v, challenge) = match Cfg::SCHEME {
             GKRScheme::Vanilla => gkr_prove(c, &mut self.sp, &mut transcript, &self.mpi_config),
@@ -135,8 +145,19 @@ impl<'a, Cfg: GKREngine> Prover<'a, Cfg> {
         };
         gkr_prove_timer.stop();
 
+        root_println!(
+            self.mpi_config,
+            "transcript after gkr_prove {:?}",
+            transcript
+        );
+
         transcript_root_broadcast(&mut transcript, &self.mpi_config);
 
+        root_println!(
+            self.mpi_config,
+            "transcript before challenge_x {:?}",
+            transcript
+        );
         let pcs_open_timer = Timer::new("pcs open", self.mpi_config.is_root());
 
         // open
@@ -151,8 +172,15 @@ impl<'a, Cfg: GKREngine> Prover<'a, Cfg> {
             &mut transcript,
         );
 
+        root_println!(
+            self.mpi_config,
+            "transcript before challenge_y {:?}",
+            transcript
+        );
+
         if let Some(mut challenge_y) = challenge.challenge_y() {
             transcript_root_broadcast(&mut transcript, &self.mpi_config);
+
             self.prove_input_layer_claim(
                 &mut mle_ref,
                 &mut challenge_y,
