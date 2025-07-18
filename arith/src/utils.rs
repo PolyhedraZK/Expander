@@ -1,3 +1,5 @@
+use crate::Field;
+
 // NOTE(HS) acknowledge to https://github.com/EugeneGonzalez/bit_reverse
 #[rustfmt::skip]
 const U8_REVERSE_LOOKUP: [u8; 256] = [
@@ -69,6 +71,17 @@ pub fn bit_reverse(mut n: usize, bit_width: usize) -> usize {
     }
 
     n >> right_shift
+}
+
+#[inline(always)]
+pub fn powers_series<F: Field>(x: &F, n: usize) -> Vec<F> {
+    let mut powers = vec![F::ONE];
+    let mut cur = *x;
+    for _ in 0..n - 1 {
+        powers.push(cur);
+        cur *= x;
+    }
+    powers
 }
 
 #[cfg(test)]
