@@ -21,7 +21,7 @@ use crate::{
 
 use super::utils::orion_eval_shape;
 
-impl<C, ComPackF> ExpanderPCS<C, C::SimdCircuitField>
+impl<C, ComPackF> ExpanderPCS<C>
     for OrionSIMDFieldPCS<C::CircuitField, C::SimdCircuitField, C::ChallengeField, ComPackF>
 where
     C: FieldEngine,
@@ -83,7 +83,7 @@ where
     ) -> Option<Self::Commitment> {
         if poly.num_vars() < *params {
             let poly = lift_poly_to_n_vars(poly, *params);
-            return <Self as ExpanderPCS<C, C::SimdCircuitField>>::commit(
+            return <Self as ExpanderPCS<C>>::commit(
                 params,
                 mpi_engine,
                 proving_key,
@@ -125,7 +125,7 @@ where
         if poly.num_vars() < *params {
             let (poly, eval_point) =
                 lift_poly_and_expander_challenge_to_n_vars(poly, eval_point, *params);
-            return <Self as ExpanderPCS<C, C::SimdCircuitField>>::open(
+            return <Self as ExpanderPCS<C>>::open(
                 params,
                 mpi_engine,
                 proving_key,
@@ -173,7 +173,7 @@ where
     ) -> bool {
         if eval_point.num_vars() < *params {
             let eval_point = lift_expander_challenge_to_n_vars(eval_point, *params);
-            return <Self as ExpanderPCS<C, C::SimdCircuitField>>::verify(
+            return <Self as ExpanderPCS<C>>::verify(
                 params,
                 verifying_key,
                 commitment,

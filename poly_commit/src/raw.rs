@@ -121,7 +121,7 @@ pub struct RawExpanderGKR<C: FieldEngine> {
     _phantom: std::marker::PhantomData<C>,
 }
 
-impl<C: FieldEngine> ExpanderPCS<C, C::SimdCircuitField> for RawExpanderGKR<C> {
+impl<C: FieldEngine> ExpanderPCS<C> for RawExpanderGKR<C> {
     const NAME: &'static str = "RawExpanderGKR";
 
     const PCS_TYPE: PolynomialCommitmentType = PolynomialCommitmentType::Raw;

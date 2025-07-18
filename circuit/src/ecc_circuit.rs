@@ -1,4 +1,4 @@
-use gkr_engine::{FieldEngine, GKREngine};
+use gkr_engine::FieldEngine;
 use serdes::{ExpSerde, SerdeResult};
 use std::{cmp::max, collections::HashMap, fs, io::Cursor};
 
@@ -85,7 +85,7 @@ impl<C: FieldEngine> RecursiveCircuit<C> {
         <Self as ExpSerde>::deserialize_from(cursor)
     }
 
-    pub fn flatten<Cfg: GKREngine<FieldConfig = C>>(&self) -> Circuit<C> {
+    pub fn flatten(&self) -> Circuit<C> {
         let mut ret = Circuit::<C> {
             expected_num_output_zeros: self.expected_num_output_zeros,
             ..Default::default()

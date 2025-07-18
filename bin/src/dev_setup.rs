@@ -49,10 +49,7 @@ fn main() {
     }
 }
 
-fn proof_gen<'a, C: GKREngine>(mpi_config: MPIConfig<'a>)
-where
-    C::FieldConfig: FieldEngine<SimdCircuitField = C::PCSField>,
-{
+fn proof_gen<'a, C: GKREngine>(mpi_config: MPIConfig<'a>) {
     // load circuit
     let mut circuit = match C::FieldConfig::FIELD_TYPE {
         FieldType::GF2Ext128 => {
@@ -86,7 +83,7 @@ where
     circuit.evaluate();
 
     let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
-        expander_pcs_init_testing_only::<C::FieldConfig, C::PCSField, C::PCSConfig>(
+        expander_pcs_init_testing_only::<C::FieldConfig, C::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
         );
