@@ -33,11 +33,12 @@ where
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
-    // Ensure that all polynomials have the same number of variables
-    let (padded_polys, padded_points) = pad_polynomials_and_points::<C>(polys, points);
-
-    let num_vars = padded_polys[0].num_vars();
-    let k = padded_polys.len();
+    let num_vars = polys
+        .iter()
+        .map(|p| p.hypercube_basis_ref().len())
+        .max()
+        .unwrap_or(0);
+    let k = polys.len();
     let ell = log2(k) as usize;
 
     // challenge point t
@@ -49,12 +50,12 @@ where
     // \tilde g_i(b) = eq(t, i) * f_i(b)
     let timer = Timer::new("Building tilde g_i(b)", true);
 
-    let tilde_gs = padded_polys
+    let tilde_gs = polys
         .par_iter()
         .enumerate()
         .map(|(index, f_i)| {
-            let mut tilde_g_eval = vec![C::Scalar::zero(); 1 << num_vars];
-            for (j, &f_i_eval) in f_i.coeffs.iter().enumerate() {
+            let mut tilde_g_eval = vec![C::Scalar::zero(); 1 << f_i.num_vars()];
+            for (j, &f_i_eval) in f_i.hypercube_basis_ref().iter().enumerate() {
                 tilde_g_eval[j] = f_i_eval * eq_t_i[index];
             }
 
@@ -67,10 +68,12 @@ where
 
     // built the virtual polynomial for SumCheck
     let timer = Timer::new("Building tilde eqs", true);
-    let tilde_eqs: Vec<MultiLinearPoly<C::Scalar>> = padded_points
+    let points = points.iter().map(|p| p.as_ref()).collect::<Vec<_>>();
+    let tilde_eqs: Vec<MultiLinearPoly<C::Scalar>> = points
         .par_iter()
         .map(|point| {
-            let eq_b_zi = EqPolynomial::build_eq_x_r(point);
+            let mut eq_b_zi = vec![C::Scalar::zero(); 1 << point.len()];
+            EqPolynomial::build_eq_x_r_with_buf(point, &C::Scalar::one(), &mut eq_b_zi);
             MultiLinearPoly { coeffs: eq_b_zi }
         })
         .collect();
@@ -91,9 +94,13 @@ where
     let timer = Timer::new("Building g'(X)", true);
 
     let mut g_prime_evals = vec![C::Scalar::zero(); 1 << num_vars];
-    let eq_i_a2_polys = padded_points
+    let eq_i_a2_polys = points
         .par_iter()
-        .map(|point| EqPolynomial::eq_vec(a2.as_ref(), point))
+        .map(|point| {
+            let mut padded_point = point.to_vec();
+            padded_point.resize(num_vars, C::Scalar::zero());
+            EqPolynomial::eq_vec(a2.as_ref(), &padded_point)
+        })
         .collect::<Vec<_>>();
 
     for (tilde_g, eq_i_a2) in tilde_gs.iter().zip(eq_i_a2_polys.iter()) {

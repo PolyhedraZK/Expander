@@ -23,24 +23,16 @@ impl<F: Field> SumOfProductsPoly<F> {
     /// Get the number of variables in the polynomial
     #[inline]
     pub fn num_vars(&self) -> usize {
-        if self.f_and_g_pairs.is_empty() {
-            0
-        } else {
-            self.f_and_g_pairs[0].0.num_vars()
-        }
+        self.f_and_g_pairs
+            .iter()
+            .map(|(f, _)| f.num_vars())
+            .max()
+            .unwrap_or(0)
     }
 
     #[inline]
     pub fn add_pair(&mut self, poly0: MultiLinearPoly<F>, poly1: MultiLinearPoly<F>) {
         assert_eq!(poly0.num_vars(), poly1.num_vars());
-        if !self.f_and_g_pairs.is_empty() {
-            // Ensure new pair's num_vars matches existing pairs.
-            assert_eq!(
-                self.num_vars(),
-                poly0.num_vars(),
-                "All polynomial pairs must have the same number of variables"
-            );
-        }
         self.f_and_g_pairs.push((poly0, poly1));
     }
 
