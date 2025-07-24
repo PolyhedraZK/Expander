@@ -33,11 +33,7 @@ where
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
-    let num_vars = polys
-        .iter()
-        .map(|p| p.hypercube_basis_ref().len())
-        .max()
-        .unwrap_or(0);
+    let num_vars = polys.iter().map(|p| p.num_vars()).max().unwrap_or(0);
     let k = polys.len();
     let ell = log2(k) as usize;
 
@@ -205,6 +201,7 @@ fn transpose<C: CurveAffine>(m: &[&[C]]) -> Vec<Vec<C>> {
 
 #[inline]
 #[allow(clippy::type_complexity)]
+#[allow(unused)]
 fn pad_polynomials_and_points<C>(
     polys: &[impl MultilinearExtension<C::Scalar>],
     points: &[impl AsRef<[C::Scalar]>],
