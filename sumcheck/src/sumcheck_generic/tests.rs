@@ -1,8 +1,8 @@
 use super::*;
 
 use arith::Fr;
-use ark_std::test_rng;
-use gkr_hashers::Keccak256hasher;
+use ark_std::{rand::thread_rng, test_rng};
+use gkr_hashers::{Keccak256hasher, SHA256hasher};
 use polynomials::MultiLinearPoly;
 use transcript::BytesHashTranscript;
 
@@ -100,4 +100,51 @@ fn test_sumcheck_e2e() {
             assert!(evals == subclaim.expected_evaluation, "wrong subclaim");
         }
     }
+}
+
+fn test_sumcheck_generic_padding_helper<F: Field, T: Transcript>() {
+    let num_polys = 16;
+    let max_num_vars = 10;
+    let mut rng = thread_rng();
+
+    let mle_list = SumOfProductsPoly {
+        f_and_g_pairs: (0..num_polys)
+            .map(|i| {
+                let num_vars = i % max_num_vars + 1;
+                let poly0 = MultiLinearPoly::random(num_vars, &mut rng);
+                let poly1 = MultiLinearPoly::random(num_vars, &mut rng);
+                (poly0, poly1)
+            })
+            .collect(),
+    };
+
+    let proof = SumCheck::prove(&mle_list, &mut T::new());
+
+    let padded_mle_list = SumOfProductsPoly {
+        f_and_g_pairs: mle_list
+            .f_and_g_pairs
+            .iter()
+            .map(|(f, g)| (
+                MultiLinearPoly { coeffs: {
+                    let mut coeffs = f.coeffs.clone();
+                    coeffs.resize(1 << max_num_vars, F::zero());
+                    coeffs
+                } },
+                MultiLinearPoly { coeffs: {
+                    let mut coeffs = g.coeffs.clone();
+                    coeffs.resize(1 << max_num_vars, F::zero());
+                    coeffs
+                } },
+            ))
+            .collect(),
+    };
+
+    let proof_with_padded_mle_list = SumCheck::prove(&padded_mle_list, &mut T::new());
+
+    assert_eq!(proof, proof_with_padded_mle_list);
+}
+
+#[test]
+fn test_sumcheck_generic_padding() {
+    test_sumcheck_generic_padding_helper::<Fr, BytesHashTranscript<SHA256hasher>>();
 }

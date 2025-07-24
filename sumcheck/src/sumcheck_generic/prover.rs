@@ -18,7 +18,7 @@ impl<F: Field> IOPProverState<F> {
             mle_list: polynomials.clone(),
             init_sum_of_vals: polynomials
                 .f_and_g_pairs
-                .iter()
+                .par_iter()
                 .map(|(f, g)| {
                     f.coeffs
                         .iter()
@@ -27,7 +27,7 @@ impl<F: Field> IOPProverState<F> {
                         .sum::<F>()
                 })
                 .collect(),
-            eq_prefix: vec![F::one(); num_vars],
+            eq_prefix: vec![F::one(); polynomials.f_and_g_pairs.len()],
         }
     }
 
@@ -135,15 +135,15 @@ impl<F: Field> IOPProverState<F> {
                         .map(|(a, b)| a * b)
                         .sum::<F>();
 
-                    let eq_prefix_i = self.eq_prefix[i];
+                    let eq_prefix_i = self.eq_prefix[i].square();
                     (
                         h_0_local * eq_prefix_i,
                         h_1_local * eq_prefix_i,
                         h_2_local * eq_prefix_i,
                     )
                 } else {
-                    let h = self.eq_prefix[i] * self.init_sum_of_vals[i];
-                    (h, F::zero(), -h)
+                    let h = self.eq_prefix[i].square() * self.init_sum_of_vals[i];
+                    (h, F::zero(), h)
                 }
             })
             .collect::<Vec<_>>()
@@ -160,10 +160,10 @@ impl<F: Field> IOPProverState<F> {
     }
 
     fn get_sub_idx(init_num_vars: usize, round: usize, local_num_vars: usize) -> Option<usize> {
-        if init_num_vars - round > local_num_vars {
+        if round < init_num_vars - local_num_vars + 1 {
             None
         } else {
-            Some(local_num_vars - (init_num_vars - round))
+            Some(round - (init_num_vars - local_num_vars + 1))
         }
     }
 
@@ -175,12 +175,12 @@ impl<F: Field> IOPProverState<F> {
             .for_each(|((f, g), eq_prefix)| {
                 if let Some(_sub_idx) =
                     Self::get_sub_idx(self.init_num_vars, self.round, f.num_vars())
-                {
-                    *eq_prefix *= F::one() - *challenge; // eq(challenge, 0)
-                } else {
+                {                    
                     // fix the top variable for each polynomial pair
                     f.fix_top_variable(*challenge);
                     g.fix_top_variable(*challenge);
+                } else {
+                    *eq_prefix *= F::one() - *challenge; // eq(challenge, 0)
                 }
             });
     }
