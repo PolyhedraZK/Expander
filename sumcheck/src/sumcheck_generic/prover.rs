@@ -175,7 +175,7 @@ impl<F: Field> IOPProverState<F> {
             .for_each(|((f, g), eq_prefix)| {
                 if let Some(_sub_idx) =
                     Self::get_sub_idx(self.init_num_vars, self.round, f.num_vars())
-                {                    
+                {
                     // fix the top variable for each polynomial pair
                     f.fix_top_variable(*challenge);
                     g.fix_top_variable(*challenge);

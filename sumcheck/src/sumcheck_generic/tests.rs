@@ -124,18 +124,24 @@ fn test_sumcheck_generic_padding_helper<F: Field, T: Transcript>() {
         f_and_g_pairs: mle_list
             .f_and_g_pairs
             .iter()
-            .map(|(f, g)| (
-                MultiLinearPoly { coeffs: {
-                    let mut coeffs = f.coeffs.clone();
-                    coeffs.resize(1 << max_num_vars, F::zero());
-                    coeffs
-                } },
-                MultiLinearPoly { coeffs: {
-                    let mut coeffs = g.coeffs.clone();
-                    coeffs.resize(1 << max_num_vars, F::zero());
-                    coeffs
-                } },
-            ))
+            .map(|(f, g)| {
+                (
+                    MultiLinearPoly {
+                        coeffs: {
+                            let mut coeffs = f.coeffs.clone();
+                            coeffs.resize(1 << max_num_vars, F::zero());
+                            coeffs
+                        },
+                    },
+                    MultiLinearPoly {
+                        coeffs: {
+                            let mut coeffs = g.coeffs.clone();
+                            coeffs.resize(1 << max_num_vars, F::zero());
+                            coeffs
+                        },
+                    },
+                )
+            })
             .collect(),
     };
 
