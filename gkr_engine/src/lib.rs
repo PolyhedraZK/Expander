@@ -21,7 +21,6 @@ mod poly_commit;
 mod scheme;
 mod transcript;
 
-use arith::Field;
 pub use errors::*;
 pub use field_engine::*;
 pub use mpi_engine::*;
@@ -73,8 +72,7 @@ pub trait GKREngine: Send + Sync {
     type TranscriptConfig: Transcript;
 
     /// Configuration for polynomial commitment scheme
-    type PCSField: Field = <<Self as GKREngine>::FieldConfig as FieldEngine>::SimdCircuitField;
-    type PCSConfig: ExpanderPCS<Self::FieldConfig, Self::PCSField>;
+    type PCSConfig: ExpanderPCS<Self::FieldConfig>;
 
     /// GKR scheme
     const SCHEME: GKRScheme;

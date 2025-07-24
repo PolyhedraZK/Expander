@@ -205,11 +205,7 @@ where
 }
 
 #[allow(dead_code)]
-pub fn test_pcs_for_expander_gkr<
-    C: FieldEngine,
-    T: Transcript,
-    P: ExpanderPCS<C, C::SimdCircuitField>,
->(
+pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C>>(
     params: &P::Params,
     mpi_config: &MPIConfig,
     transcript: &mut T,
@@ -274,7 +270,7 @@ pub fn test_batching_for_expander_gkr<C, T, P>(allow_variable_length: bool)
 where
     C: FieldEngine,
     T: Transcript,
-    P: ExpanderPCS<C, C::SimdCircuitField, Params = usize>,
+    P: ExpanderPCS<C, Params = usize>,
     P::Commitment: AsRef<P::Commitment>,
 {
     let mut rng = test_rng();

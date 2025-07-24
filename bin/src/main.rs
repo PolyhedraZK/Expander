@@ -127,8 +127,8 @@ fn main() {
 
 fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig<'static>)
 where
-    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig, Cfg::PCSField>>::ScratchPad: 'static,
-    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+    <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad: 'static,
+    Cfg::FieldConfig: FieldEngine,
 {
     let partial_proof_cnts = (0..args.threads)
         .map(|_| Arc::new(Mutex::new(0)))
@@ -223,7 +223,7 @@ where
     println!("Circuit loaded!");
 
     let (pcs_params, pcs_proving_key, _pcs_verification_key, pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
             circuit_template.log_input_size(),
             &mpi_config,
         );
