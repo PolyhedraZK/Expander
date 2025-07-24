@@ -1,6 +1,6 @@
 use arith::Field;
 
-use crate::{MultiLinearPoly, MultilinearExtension};
+use crate::{EqPolynomial, MultiLinearPoly, MultilinearExtension};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 /// A special form of a multi-linear polynomial: f = f0*g0 + f1*g1 + ...
@@ -23,24 +23,16 @@ impl<F: Field> SumOfProductsPoly<F> {
     /// Get the number of variables in the polynomial
     #[inline]
     pub fn num_vars(&self) -> usize {
-        if self.f_and_g_pairs.is_empty() {
-            0
-        } else {
-            self.f_and_g_pairs[0].0.num_vars()
-        }
+        self.f_and_g_pairs
+            .iter()
+            .map(|(f, _)| f.num_vars())
+            .max()
+            .unwrap_or(0)
     }
 
     #[inline]
     pub fn add_pair(&mut self, poly0: MultiLinearPoly<F>, poly1: MultiLinearPoly<F>) {
         assert_eq!(poly0.num_vars(), poly1.num_vars());
-        if !self.f_and_g_pairs.is_empty() {
-            // Ensure new pair's num_vars matches existing pairs.
-            assert_eq!(
-                self.num_vars(),
-                poly0.num_vars(),
-                "All polynomial pairs must have the same number of variables"
-            );
-        }
         self.f_and_g_pairs.push((poly0, poly1));
     }
 
@@ -48,7 +40,18 @@ impl<F: Field> SumOfProductsPoly<F> {
     pub fn evaluate(&self, point: &[F]) -> F {
         self.f_and_g_pairs
             .iter()
-            .map(|(f, g)| f.eval_reverse_order(point) * g.eval_reverse_order(point))
+            .map(|(f, g)| {
+                // 1. point is big endian here
+                // 2. for smaller but dense multilinear polynomials, we assume the mle values
+                // locate at (0 -- poly_size)
+                let num_poly_vars = f.num_vars();
+                let (point_vars_remaining, point_vars_for_polys) =
+                    point.split_at(point.len() - num_poly_vars);
+
+                f.eval_reverse_order(point_vars_for_polys)
+                    * g.eval_reverse_order(point_vars_for_polys)
+                    * EqPolynomial::ith_eq_vec_elem(point_vars_remaining, 0).square()
+            })
             .sum()
     }
 

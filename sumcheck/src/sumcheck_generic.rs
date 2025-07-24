@@ -50,6 +50,10 @@ pub struct IOPProverState<F: Field> {
     /// list of MLE poly
     // todo: change this to reference
     pub mle_list: SumOfProductsPoly<F>,
+
+    pub init_sum_of_vals: Vec<F>,
+
+    pub eq_prefix: Vec<F>,
 }
 
 /// Prover State of a PolyIOP

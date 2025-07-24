@@ -97,5 +97,5 @@ fn test_uni_kzg_batch_open() {
         BN254Config,
         BytesHashTranscript<Keccak256hasher>,
         HyperUniKZGPCS<Bn256>,
-    >();
+    >(true);
 }
