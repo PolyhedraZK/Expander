@@ -1,11 +1,7 @@
 use arith::Field;
-use polynomials::{MultiLinearPoly, MultilinearExtension, SumOfProductsPoly};
-use rayon::{
-    iter::{
-        IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator,
-        ParallelIterator,
-    },
-    vec,
+use polynomials::{MultilinearExtension, SumOfProductsPoly};
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
 };
 
 use super::{IOPProverMessage, IOPProverState};
@@ -107,11 +103,9 @@ impl<F: Field> IOPProverState<F> {
                 // evaluate the polynomial at 0, 1 and 2
                 // and obtain f(0)g(0) and f(1)g(1) and f(2)g(2)
 
-                if let Some(sub_idx) = Self::get_sub_idx(
-                    self.init_num_vars,
-                    self.round,
-                    f.num_vars(),
-                ) {
+                if let Some(sub_idx) =
+                    Self::get_sub_idx(self.init_num_vars, self.round, f.num_vars())
+                {
                     let len = 1 << (f.num_vars() - sub_idx - 1);
                     let f_coeffs = f.coeffs.as_slice();
                     let g_coeffs = g.coeffs.as_slice();
@@ -140,7 +134,7 @@ impl<F: Field> IOPProverState<F> {
                         )
                         .map(|(a, b)| a * b)
                         .sum::<F>();
-                    
+
                     let eq_prefix_i = self.eq_prefix[i];
                     (
                         h_0_local * eq_prefix_i,
@@ -149,11 +143,7 @@ impl<F: Field> IOPProverState<F> {
                     )
                 } else {
                     let h = self.eq_prefix[i] * self.init_sum_of_vals[i];
-                    (
-                        h,
-                        F::zero(),
-                        -h,
-                    )
+                    (h, F::zero(), -h)
                 }
             })
             .collect::<Vec<_>>()
