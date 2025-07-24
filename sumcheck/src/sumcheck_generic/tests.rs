@@ -110,13 +110,14 @@ fn test_sumcheck_generic_padding_helper<F: Field, T: Transcript>() {
     let mle_list = SumOfProductsPoly {
         f_and_g_pairs: (0..num_polys)
             .map(|i| {
-                let num_vars = i % max_num_vars + 1;
+                let num_vars = i % (max_num_vars + 1);
                 let poly0 = MultiLinearPoly::random(num_vars, &mut rng);
                 let poly1 = MultiLinearPoly::random(num_vars, &mut rng);
                 (poly0, poly1)
             })
             .collect(),
     };
+    let claimed_sum = mle_list.sum();
 
     let proof = SumCheck::prove(&mle_list, &mut T::new());
 
@@ -148,6 +149,12 @@ fn test_sumcheck_generic_padding_helper<F: Field, T: Transcript>() {
     let proof_with_padded_mle_list = SumCheck::prove(&padded_mle_list, &mut T::new());
 
     assert_eq!(proof, proof_with_padded_mle_list);
+
+    let (verified, subclaim) =
+        SumCheck::verify(claimed_sum, &proof_with_padded_mle_list, max_num_vars, &mut T::new());
+    assert!(verified, "sumcheck verification failed");
+    let evals = mle_list.evaluate(&subclaim.point);
+    assert!(evals == subclaim.expected_evaluation, "wrong subclaim");
 }
 
 #[test]

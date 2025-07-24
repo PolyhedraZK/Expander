@@ -6,7 +6,7 @@ use gkr_engine::{
 };
 use poly_commit::{BatchOpeningPCS, PolynomialCommitmentScheme};
 use polynomials::{MultiLinearPoly, MultilinearExtension};
-use rand::thread_rng;
+use rand::{thread_rng, RngCore};
 
 #[allow(dead_code)]
 pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<F>>(
@@ -280,20 +280,20 @@ where
     let mut rng = test_rng();
     let mpi_config = MPIConfig::prover_new(None, None);
     for num_vars in 2..10 {
-        // NOTE(HS) we assume that the polynomials we pass in are of sufficient length.
         let srs = P::gen_srs(&num_vars, &mpi_config, &mut rng);
         let (proving_key, verification_key) = srs.into_keys();
         let mut scratch_pad = P::init_scratch_pad(&num_vars, &mpi_config);
 
         for num_poly in [1, 2, 10, 100] {
+            let num_vars_rand = (rng.next_u64() as usize) % num_vars;
             let polys = (0..num_poly)
-                .map(|_| MultiLinearPoly::<C::SimdCircuitField>::random(num_vars, &mut rng))
+                .map(|_| MultiLinearPoly::<C::SimdCircuitField>::random(num_vars_rand, &mut rng))
                 .collect::<Vec<_>>();
 
             let commitments = polys
                 .iter()
                 .map(|poly| {
-                    P::commit(&num_vars, &mpi_config, &proving_key, poly, &mut scratch_pad).unwrap()
+                    P::commit(&poly.num_vars(), &mpi_config, &proving_key, poly, &mut scratch_pad).unwrap()
                 })
                 .collect::<Vec<_>>();
 
