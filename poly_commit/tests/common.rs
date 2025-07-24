@@ -270,7 +270,7 @@ pub fn test_pcs_for_expander_gkr<
 }
 
 #[allow(dead_code)]
-pub fn test_batching_for_expander_gkr<C, T, P>()
+pub fn test_batching_for_expander_gkr<C, T, P>(allow_variable_length: bool)
 where
     C: FieldEngine,
     T: Transcript,
@@ -285,24 +285,31 @@ where
         let mut scratch_pad = P::init_scratch_pad(&num_vars, &mpi_config);
 
         for num_poly in [1, 2, 10, 100] {
-            let num_vars_rand = (rng.next_u64() as usize) % num_vars;
             let polys = (0..num_poly)
-                .map(|_| MultiLinearPoly::<C::SimdCircuitField>::random(num_vars_rand, &mut rng))
+                .map(|i| {
+                    let num_vars_rand = if allow_variable_length && i > 0 {
+                        rng.next_u32() as usize % (num_vars + 1)
+                    } else {
+                        num_vars
+                    };
+                    MultiLinearPoly::<C::SimdCircuitField>::random(num_vars_rand, &mut rng)
+                })
                 .collect::<Vec<_>>();
 
             let commitments = polys
                 .iter()
                 .map(|poly| {
-                    P::commit(&poly.num_vars(), &mpi_config, &proving_key, poly, &mut scratch_pad).unwrap()
+                    let params = P::gen_params(poly.num_vars(), 1);
+                    P::commit(&params, &mpi_config, &proving_key, poly, &mut scratch_pad).unwrap()
                 })
                 .collect::<Vec<_>>();
 
             // open all polys at a single point
             let challenge_points = (0..num_poly)
-                .map(|_| ExpanderSingleVarChallenge::<C> {
+                .map(|i| ExpanderSingleVarChallenge::<C> {
                     r_mpi: Vec::new(),
                     r_simd: Vec::new(),
-                    rz: (0..num_vars)
+                    rz: (0.. polys[i].num_vars())
                         .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                         .collect(),
                 })
