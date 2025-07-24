@@ -126,14 +126,14 @@ pub fn prove<Cfg: GKREngine>(
     Proof,
 )
 where
-    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+    Cfg::FieldConfig: FieldEngine,
 {
     let mut prover = Prover::<Cfg>::new(mpi_config.clone());
     prover.prepare_mem(circuit);
 
     // TODO: Read PCS setup from files
     let (pcs_params, pcs_proving_key, _, mut pcs_scratch) =
-        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
+        expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
             circuit.log_input_size(),
             &mpi_config,
         );
@@ -151,7 +151,6 @@ pub fn verify<Cfg: GKREngine>(
     // TODO: Read PCS setup from files
     let (pcs_params, _, pcs_verification_key, _) = expander_pcs_init_testing_only::<
         Cfg::FieldConfig,
-        Cfg::PCSField,
         Cfg::PCSConfig,
     >(circuit.log_input_size(), &mpi_config);
     let verifier = Verifier::<Cfg>::new(mpi_config);
@@ -173,7 +172,7 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
     command: &ExpanderExecArgs,
     mpi_config: &MPIConfig<'a>,
 ) where
-    Cfg::FieldConfig: FieldEngine<SimdCircuitField = Cfg::PCSField>,
+    Cfg::FieldConfig: FieldEngine,
 {
     let subcommands = command.subcommands.clone();
 
@@ -267,7 +266,7 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
 
             // TODO: Read PCS setup from files
             let (pcs_params, pcs_proving_key, pcs_verification_key, pcs_scratch) =
-                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSField, Cfg::PCSConfig>(
+                expander_pcs_init_testing_only::<Cfg::FieldConfig, Cfg::PCSConfig>(
                     circuit.log_input_size(),
                     &prover.mpi_config,
                 );

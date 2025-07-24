@@ -23,7 +23,7 @@ use super::hyrax_impl::{
     hyrax_multi_points_batch_open_internal, hyrax_multi_points_batch_verify_internal,
 };
 
-impl<G, C> ExpanderPCS<G, C::Scalar> for HyraxPCS<C>
+impl<G, C> ExpanderPCS<G> for HyraxPCS<C>
 where
     G: FieldEngine<ChallengeField = C::Scalar, SimdCircuitField = C::Scalar>,
     C: CurveAffine + ExpSerde + UncompressedEncoding,

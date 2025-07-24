@@ -20,7 +20,7 @@ use crate::{
     *,
 };
 
-impl<G, E> ExpanderPCS<G, E::Fr> for HyperBiKZGPCS<E>
+impl<G, E> ExpanderPCS<G> for HyperBiKZGPCS<E>
 where
     G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
     E: Engine + MultiMillerLoop,
@@ -70,7 +70,7 @@ where
         // If the polynomial has no variables, we lift it to a polynomial with 1 variable.
         if poly.num_vars() < Self::MINIMUM_SUPPORTED_NUM_VARS {
             let poly = lift_poly_to_n_vars(poly, Self::MINIMUM_SUPPORTED_NUM_VARS);
-            return <Self as ExpanderPCS<G, E::Fr>>::commit(
+            return <Self as ExpanderPCS<G>>::commit(
                 _params,
                 mpi_engine,
                 proving_key,
@@ -114,7 +114,7 @@ where
                 x,
                 Self::MINIMUM_SUPPORTED_NUM_VARS,
             );
-            return <Self as ExpanderPCS<G, E::Fr>>::open(
+            return <Self as ExpanderPCS<G>>::open(
                 _params,
                 mpi_engine,
                 proving_key,
@@ -146,7 +146,7 @@ where
     ) -> bool {
         if x.rz.len() < Self::MINIMUM_SUPPORTED_NUM_VARS {
             let x = lift_expander_challenge_to_n_vars(x, Self::MINIMUM_SUPPORTED_NUM_VARS);
-            return <Self as ExpanderPCS<G, E::Fr>>::verify(
+            return <Self as ExpanderPCS<G>>::verify(
                 _params,
                 verifying_key,
                 commitment,
