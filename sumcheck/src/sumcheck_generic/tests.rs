@@ -150,8 +150,12 @@ fn test_sumcheck_generic_padding_helper<F: Field, T: Transcript>() {
 
     assert_eq!(proof, proof_with_padded_mle_list);
 
-    let (verified, subclaim) =
-        SumCheck::verify(claimed_sum, &proof_with_padded_mle_list, max_num_vars, &mut T::new());
+    let (verified, subclaim) = SumCheck::verify(
+        claimed_sum,
+        &proof_with_padded_mle_list,
+        max_num_vars,
+        &mut T::new(),
+    );
     assert!(verified, "sumcheck verification failed");
     let evals = mle_list.evaluate(&subclaim.point);
     assert!(evals == subclaim.expected_evaluation, "wrong subclaim");

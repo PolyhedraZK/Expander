@@ -309,7 +309,7 @@ where
                 .map(|i| ExpanderSingleVarChallenge::<C> {
                     r_mpi: Vec::new(),
                     r_simd: Vec::new(),
-                    rz: (0.. polys[i].num_vars())
+                    rz: (0..polys[i].num_vars())
                         .map(|_| C::ChallengeField::random_unsafe(&mut rng))
                         .collect(),
                 })
