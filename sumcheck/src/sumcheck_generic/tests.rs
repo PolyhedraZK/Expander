@@ -3,7 +3,7 @@ use super::*;
 use arith::Fr;
 use ark_std::{rand::thread_rng, test_rng};
 use gkr_hashers::{Keccak256hasher, SHA256hasher};
-use polynomials::MultiLinearPoly;
+use polynomials::{MultiLinearPoly, MutableMultilinearExtension};
 use transcript::BytesHashTranscript;
 
 #[test]
@@ -111,8 +111,8 @@ fn test_sumcheck_generic_padding_helper<F: Field, T: Transcript>() {
         f_and_g_pairs: (0..num_polys)
             .map(|i| {
                 let num_vars = i % (max_num_vars + 1);
-                let poly0 = MultiLinearPoly::random(num_vars, &mut rng);
-                let poly1 = MultiLinearPoly::random(num_vars, &mut rng);
+                let poly0 = MultiLinearPoly::<F>::random(num_vars, &mut rng);
+                let poly1 = MultiLinearPoly::<F>::random(num_vars, &mut rng);
                 (poly0, poly1)
             })
             .collect(),
@@ -126,22 +126,11 @@ fn test_sumcheck_generic_padding_helper<F: Field, T: Transcript>() {
             .f_and_g_pairs
             .iter()
             .map(|(f, g)| {
-                (
-                    MultiLinearPoly {
-                        coeffs: {
-                            let mut coeffs = f.coeffs.clone();
-                            coeffs.resize(1 << max_num_vars, F::zero());
-                            coeffs
-                        },
-                    },
-                    MultiLinearPoly {
-                        coeffs: {
-                            let mut coeffs = g.coeffs.clone();
-                            coeffs.resize(1 << max_num_vars, F::zero());
-                            coeffs
-                        },
-                    },
-                )
+                let mut f_padded = f.clone();
+                f_padded.lift_to_n_vars(max_num_vars);
+                let mut g_padded = g.clone();
+                g_padded.lift_to_n_vars(max_num_vars);
+                (f_padded, g_padded)
             })
             .collect(),
     };
