@@ -89,5 +89,5 @@ fn test_hyrax_batch_open() {
         BN254Config,
         BytesHashTranscript<Keccak256hasher>,
         HyraxPCS<G1Affine>,
-    >();
+    >(false);
 }
