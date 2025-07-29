@@ -197,9 +197,7 @@ pub enum PolynomialCommitmentType {
     #[default]
     Raw,
     KZG,
-    Hyrax,
-    Orion,
-    FRI,
+    WHIR,
 }
 
 impl FromStr for PolynomialCommitmentType {
@@ -209,9 +207,7 @@ impl FromStr for PolynomialCommitmentType {
         match s {
             "Raw" => Ok(PolynomialCommitmentType::Raw),
             "KZG" => Ok(PolynomialCommitmentType::KZG),
-            "Hyrax" => Ok(PolynomialCommitmentType::Hyrax),
-            "Orion" => Ok(PolynomialCommitmentType::Orion),
-            "FRI" => Ok(PolynomialCommitmentType::FRI),
+            "WHIR" => Ok(PolynomialCommitmentType::WHIR),
             _ => Err(ExpErrors::PCSTypeError(s.to_string())),
         }
     }

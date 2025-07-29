@@ -6,18 +6,15 @@ use std::{fs, panic};
 use arith::Field;
 use circuit::Circuit;
 use config_macros::declare_gkr_config;
-use gf2::GF2x128;
 use gkr_engine::{
     root_println, BN254Config, BabyBearx16Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine,
     GKRScheme, Goldilocksx1Config, Goldilocksx8Config, M31x16Config, M31x1Config, MPIConfig,
     MPIEngine, MPISharedMemory,
 };
 use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
-use halo2curves::bn256::{Bn256, G1Affine};
+use halo2curves::bn256::Bn256;
 use mersenne31::M31x16;
-use poly_commit::{
-    expander_pcs_init_testing_only, HyperBiKZGPCS, HyraxPCS, OrionPCSForGKR, RawExpanderGKR,
-};
+use poly_commit::{expander_pcs_init_testing_only, HyperUniKZGPCS, RawExpanderGKR};
 use rand::Rng;
 use serdes::ExpSerde;
 use sha2::Digest;
@@ -83,31 +80,10 @@ fn test_gkr_correctness() {
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
-        C7,
-        FieldType::GF2Ext128,
-        FiatShamirHashType::Keccak256,
-        PolynomialCommitmentType::Orion,
-        GKRScheme::Vanilla,
-    );
-    declare_gkr_config!(
         C8,
         FieldType::M31x16,
         FiatShamirHashType::Poseidon,
         PolynomialCommitmentType::Raw,
-        GKRScheme::Vanilla,
-    );
-    declare_gkr_config!(
-        C9,
-        FieldType::M31x16,
-        FiatShamirHashType::Poseidon,
-        PolynomialCommitmentType::Orion,
-        GKRScheme::Vanilla,
-    );
-    declare_gkr_config!(
-        C10,
-        FieldType::BN254,
-        FiatShamirHashType::Keccak256,
-        PolynomialCommitmentType::Hyrax,
         GKRScheme::Vanilla,
     );
     declare_gkr_config!(
@@ -152,10 +128,7 @@ fn test_gkr_correctness() {
     test_gkr_correctness_helper::<C4>(mpi_config.clone(), None);
     test_gkr_correctness_helper::<C5>(mpi_config.clone(), None);
     test_gkr_correctness_helper::<C6>(mpi_config.clone(), None);
-    test_gkr_correctness_helper::<C7>(mpi_config.clone(), None);
     test_gkr_correctness_helper::<C8>(mpi_config.clone(), None);
-    test_gkr_correctness_helper::<C9>(mpi_config.clone(), None);
-    test_gkr_correctness_helper::<C10>(mpi_config.clone(), None);
     test_gkr_correctness_helper::<C11>(mpi_config.clone(), None);
     test_gkr_correctness_helper::<C12>(mpi_config.clone(), None);
     test_gkr_correctness_helper::<C13>(mpi_config.clone(), None);

@@ -1,4 +1,4 @@
-use arith::{ExtensionField, Field};
+use arith::ExtensionField;
 use gkr_engine::{StructuredReferenceString, Transcript};
 use rand::RngCore;
 use serdes::ExpSerde;
@@ -116,31 +116,4 @@ pub trait BatchOpeningPCS<F: ExtensionField>: PolynomialCommitmentScheme<F> + Si
         opening: &BatchOpening<F, Self>,
         transcript: &mut impl Transcript,
     ) -> bool;
-}
-
-pub(crate) trait TensorCodeIOPPCS {
-    fn message_len(&self) -> usize;
-
-    fn codeword_len(&self) -> usize;
-
-    fn minimum_hamming_weight(&self) -> f64;
-
-    fn num_leaves_per_mt_query(&self) -> usize;
-
-    fn query_complexity(&self, soundness_bits: usize) -> usize {
-        // NOTE: use Ligero (AHIV22) appendix C argument.
-        let avg_case_dist = self.minimum_hamming_weight() / 2f64;
-        let sec_bits = -(1f64 - avg_case_dist).log2();
-
-        (soundness_bits as f64 / sec_bits).ceil() as usize
-    }
-
-    fn proximity_repetitions<F: Field>(&self, soundness_bits: usize) -> usize {
-        // NOTE: use Ligero (AHIV22) or Avg-case dist to a code (BKS18)
-        // version of avg case dist in unique decoding technique.
-        // Here is the probability union bound
-        let single_run_soundness_bits = F::FIELD_SIZE - self.codeword_len().ilog2() as usize;
-
-        (soundness_bits as f64 / single_run_soundness_bits as f64).ceil() as usize
-    }
 }
