@@ -61,10 +61,11 @@ where
 
     fn open(
         _params: &Self::Params,
+        _commitment: &Self::Commitment,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        _scratch_pad: &Self::ScratchPad,
+        _scratch_pad: &mut Self::ScratchPad,
         _transcript: &mut impl Transcript,
     ) -> (C::Scalar, Self::Opening) {
         hyrax_open(proving_key, poly, x)

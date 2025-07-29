@@ -96,10 +96,11 @@ where
 
     fn open(
         params: &Self::Params,
+        _commitment: &Self::Commitment,
         pk: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        scratch_pad: &Self::ScratchPad,
+        scratch_pad: &mut Self::ScratchPad,
         transcript: &mut impl Transcript,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, pk.num_vars);
@@ -197,10 +198,11 @@ where
 
     fn open(
         params: &Self::Params,
+        _commitment: &Self::Commitment,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        scratch_pad: &Self::ScratchPad,
+        scratch_pad: &mut Self::ScratchPad,
         transcript: &mut impl Transcript,
     ) -> (EvalF, Self::Opening) {
         assert_eq!(*params, proving_key.num_vars);

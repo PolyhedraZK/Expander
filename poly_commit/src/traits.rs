@@ -9,13 +9,13 @@ use sumcheck::IOPProof;
 pub trait PolynomialCommitmentScheme<F: ExtensionField> {
     const NAME: &'static str;
 
-    type Params: Clone + Debug + Default;
+    type Params: Clone + Debug;
     type Poly: Clone + Debug + Default;
     type EvalPoint: Clone + Debug + Default;
-    type ScratchPad: Clone + Debug + Default + ExpSerde;
+    type ScratchPad: Debug;
 
     type SRS: Clone + Debug + Default + ExpSerde + StructuredReferenceString;
-    type Commitment: Clone + Debug + Default + ExpSerde;
+    type Commitment: ExpSerde;
     type Opening: Clone + Debug + Default + ExpSerde;
 
     /// Generate a random structured reference string (SRS) for testing purposes.
@@ -40,10 +40,11 @@ pub trait PolynomialCommitmentScheme<F: ExtensionField> {
     /// Open the polynomial at a point.
     fn open(
         params: &Self::Params,
+        commitment: &Self::Commitment,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &Self::Poly,
         x: &Self::EvalPoint,
-        scratch_pad: &Self::ScratchPad,
+        scratch_pad: &mut Self::ScratchPad,
         transcript: &mut impl Transcript,
     ) -> (F, Self::Opening);
 

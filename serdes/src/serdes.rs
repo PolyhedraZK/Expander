@@ -9,6 +9,10 @@ use halo2curves::{
     bn256::{Fr, G1Affine, G2Affine},
     group::GroupEncoding,
 };
+use whir::{
+    crypto::{fields::Field64_2, merkle_tree::keccak::KeccakMerkleTreeParams},
+    whir::committer::Witness,
+};
 
 use crate::{exp_serde_for_generic_slices, exp_serde_for_number, SerdeError, SerdeResult};
 
@@ -206,5 +210,14 @@ impl ExpSerde for String {
         let mut buf = vec![0u8; len];
         reader.read_exact(&mut buf)?;
         String::from_utf8(buf).map_err(|_| SerdeError::DeserializeError)
+    }
+}
+
+impl ExpSerde for Witness<Field64_2, KeccakMerkleTreeParams<Field64_2>> {
+    fn serialize_into<W: Write>(&self, mut _writer: W) -> SerdeResult<()> {
+        Ok(())
+    }
+    fn deserialize_from<R: Read>(mut _reader: R) -> SerdeResult<Self> {
+        unimplemented!("Witness deserialization is not implemented for witness");
     }
 }

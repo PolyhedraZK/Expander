@@ -4,9 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-thiserror.workspace = true
-halo2curves.workspace = true
 ethnum.workspace = true
+halo2curves.workspace = true
+thiserror.workspace = true
+whir.workspace = true
 
 serdes_derive = { path = "../serdes_derive" }
 

@@ -27,6 +27,7 @@ pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<
         let mut transcript_cloned = transcript.clone();
         let (v, opening) = P::open(
             params,
+            &commitment,
             &proving_key,
             poly,
             x,

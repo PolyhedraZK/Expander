@@ -7,6 +7,7 @@ edition = "2021"
 arith = { path = "../arith" }
 gf2 = { path = "../arith/gf2" }
 gkr_engine = { path = "../gkr_engine" }
+goldilocks = { path = "../arith/goldilocks" }
 polynomials = { path = "../arith/polynomials"}
 serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
@@ -21,8 +22,11 @@ halo2curves.workspace = true
 itertools.workspace = true
 rand.workspace = true
 rayon.workspace = true
+spongefish.workspace = true
+spongefish-pow.workspace = true
 transpose.workspace = true
 thiserror.workspace = true
+whir.workspace = true
 
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
