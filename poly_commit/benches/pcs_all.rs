@@ -4,10 +4,8 @@ use criterion::black_box;
 use gkr_engine::StructuredReferenceString;
 use gkr_engine::{root_println, MPIConfig, MPIEngine, Transcript};
 use gkr_hashers::{Keccak256hasher, SHA256hasher};
-use halo2curves::bn256::{Bn256, G1Affine};
-use poly_commit::{
-    BatchOpeningPCS, HyperUniKZGPCS, HyraxPCS, OrionBaseFieldPCS, PolynomialCommitmentScheme,
-};
+use halo2curves::bn256::Bn256;
+use poly_commit::{BatchOpeningPCS, HyperUniKZGPCS, PolynomialCommitmentScheme};
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
 use serdes::ExpSerde;
@@ -24,76 +22,8 @@ fn main() {
     for num_vars in 18..21 {
         root_println!(mpi_config, "num vars: {}", num_vars);
         bench_kzg(&mpi_config, num_vars);
-        bench_hyrax(&mpi_config, num_vars);
-        bench_orion(&mpi_config, num_vars);
         println!("==========================");
     }
-}
-
-fn bench_orion(mpi_config: &MPIConfig, num_vars: usize) {
-    // full scalar
-    let mut rng = test_rng();
-    let (srs, _) = OrionBaseFieldPCS::<Fr, Fr, Fr, Fr>::gen_srs_for_testing(&num_vars, &mut rng);
-
-    let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
-    let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
-    pcs_bench::<OrionBaseFieldPCS<Fr, Fr, Fr, Fr>>(
-        mpi_config,
-        &num_vars,
-        &srs,
-        &poly,
-        &eval_point,
-        "orion full scalar ",
-    );
-
-    // small scalar
-    let input = (0..1 << num_vars)
-        .map(|_| Fr::from(rng.next_u32()))
-        .collect::<Vec<_>>();
-    let poly = MultiLinearPoly::<Fr>::new(input);
-    pcs_bench::<OrionBaseFieldPCS<Fr, Fr, Fr, Fr>>(
-        mpi_config,
-        &num_vars,
-        &srs,
-        &poly,
-        &eval_point,
-        "orion small scalar",
-    );
-}
-
-fn bench_hyrax(mpi_config: &MPIConfig, num_vars: usize) {
-    // full scalar
-    let mut rng = test_rng();
-    let (srs, _) = HyraxPCS::<G1Affine>::gen_srs_for_testing(&num_vars, &mut rng);
-
-    let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
-    let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
-
-    pcs_bench::<HyraxPCS<G1Affine>>(
-        mpi_config,
-        &num_vars,
-        &srs,
-        &poly,
-        &eval_point,
-        "hyrax full scalar ",
-    );
-
-    // small scalar
-    let input = (0..1 << num_vars)
-        .map(|_| Fr::from(rng.next_u32()))
-        .collect::<Vec<_>>();
-    let poly = MultiLinearPoly::<Fr>::new(input);
-    pcs_bench::<HyraxPCS<G1Affine>>(
-        mpi_config,
-        &num_vars,
-        &srs,
-        &poly,
-        &eval_point,
-        "hyrax small scalar",
-    );
-
-    // batch open
-    bench_batch_open::<Fr, HyraxPCS<G1Affine>>(mpi_config, num_vars, NUM_POLY_BATCH_OPEN);
 }
 
 fn bench_kzg(mpi_config: &MPIConfig, num_vars: usize) {

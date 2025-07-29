@@ -34,14 +34,6 @@ tynm.workspace = true
 criterion.workspace = true
 
 [[bench]]
-name = "orion"
-harness = false
-
-[[bench]]
-name = "hyrax"
-harness = false
-
-[[bench]]
 name = "kzg"
 harness = false
 
