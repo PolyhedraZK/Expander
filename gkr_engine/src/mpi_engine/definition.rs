@@ -1,8 +1,5 @@
 use arith::Field;
-use mpi::{
-    ffi::{ompi_win_t, MPI_Win_free},
-    topology::Process,
-};
+use mpi::{ffi::ompi_win_t, topology::Process};
 use serdes::ExpSerde;
 
 use super::MPISharedMemory;
@@ -166,7 +163,9 @@ pub trait MPIEngine {
     /// Discard the control of shared memory segment
     fn free_shared_mem(&self, window: &mut *mut ompi_win_t) {
         unsafe {
-            MPI_Win_free(window as *mut *mut ompi_win_t);
+            // Reconstruct an MPI_Win handle from the raw pointer and let MPI release it.
+            let mut win_handle = mpi::ffi::MPI_Win(*window);
+            mpi::ffi::MPI_Win_free(&mut win_handle as *mut mpi::ffi::MPI_Win);
         }
     }
 }

@@ -429,7 +429,10 @@ impl<'a> MPIEngine for MPIConfig<'a> {
     fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, *mut ompi_win_t) {
         let window_size = if self.is_root() { n_bytes } else { 0 };
         let mut baseptr: *mut c_void = std::ptr::null_mut();
-        let mut window = std::ptr::null_mut();
+
+        // Handle to the MPI window.  Initialize to null and let MPI fill it in.
+        let mut window_handle: MPI_Win = MPI_Win(std::ptr::null_mut());
+
         unsafe {
             MPI_Win_allocate_shared(
                 window_size as isize,
@@ -437,26 +440,26 @@ impl<'a> MPIEngine for MPIConfig<'a> {
                 RSMPI_INFO_NULL,
                 self.world.unwrap().as_raw(),
                 &mut baseptr as *mut *mut c_void as *mut c_void,
-                &mut window,
+                &mut window_handle as *mut MPI_Win,
             );
             self.barrier();
 
             if !self.is_root() {
-                let mut size = 0;
-                let mut disp_unit = 0;
+                let mut size: MPI_Aint = 0;
+                let mut disp_unit: ::std::os::raw::c_int = 0;
                 let mut query_baseptr: *mut c_void = std::ptr::null_mut();
                 MPI_Win_shared_query(
-                    window,
+                    window_handle,
                     0,
-                    &mut size,
-                    &mut disp_unit,
+                    &mut size as *mut MPI_Aint,
+                    &mut disp_unit as *mut ::std::os::raw::c_int,
                     &mut query_baseptr as *mut *mut c_void as *mut c_void,
                 );
                 baseptr = query_baseptr;
             }
         }
 
-        (baseptr as *mut u8, window)
+        (baseptr as *mut u8, window_handle.0)
     }
 }
 
