@@ -140,6 +140,17 @@ impl<MP: FieldParameters> From<u32> for MontyField31<MP> {
     }
 }
 
+impl<MP: FieldParameters> From<u64> for MontyField31<MP> {
+    #[inline(always)]
+    fn from(value: u64) -> Self {
+        assert!(
+            value <= u32::MAX as u64,
+            "Value out of range for MontyField31"
+        );
+        Self::new(value as u32)
+    }
+}
+
 impl<MP: FieldParameters> ExpSerde for MontyField31<MP> {
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {

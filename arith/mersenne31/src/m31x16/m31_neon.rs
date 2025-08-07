@@ -425,6 +425,13 @@ impl From<u32> for NeonM31 {
     }
 }
 
+impl From<u64> for NeonM31 {
+    #[inline(always)]
+    fn from(x: u64) -> Self {
+        NeonM31::pack_full(&M31::from(x))
+    }
+}
+
 impl Neg for NeonM31 {
     type Output = NeonM31;
     #[inline(always)]

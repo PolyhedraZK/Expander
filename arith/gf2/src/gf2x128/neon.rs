@@ -294,6 +294,18 @@ impl From<u32> for NeonGF2x128 {
     }
 }
 
+impl From<u64> for NeonGF2x128 {
+    #[inline(always)]
+    fn from(v: u64) -> Self {
+        assert!(v < 2);
+        if v == 0 {
+            NeonGF2x128::ZERO
+        } else {
+            NeonGF2x128::ONE
+        }
+    }
+}
+
 impl From<GF2> for NeonGF2x128 {
     #[inline(always)]
     fn from(v: GF2) -> Self {
