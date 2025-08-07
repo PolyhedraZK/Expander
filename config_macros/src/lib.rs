@@ -110,19 +110,10 @@ fn parse_polynomial_commitment_type(
             "Raw".to_owned(),
             format!("RawExpanderGKR::<{field_config}>").to_owned(),
         ),
-        ("Hyrax", "BN254") => ("Hyrax".to_string(), "HyraxPCS::<G1Affine>".to_string()),
-        ("KZG", "BN254") => ("KZG".to_owned(), "HyperBiKZGPCS::<Bn256>".to_string()),
+        ("KZG", "BN254") => ("KZG".to_owned(), "HyperUniKZGPCS::<Bn256>".to_string()),
         ("Orion", "GF2Ext128") => (
             "Orion".to_owned(),
             format!("OrionPCSForGKR::<{field_config}, GF2x128>").to_owned(),
-        ),
-        ("Orion", "M31x16") => (
-            "Orion".to_owned(),
-            format!("OrionPCSForGKR::<{field_config}, M31x16>").to_owned(),
-        ),
-        ("Orion", "Goldilocksx8") => (
-            "Orion".to_owned(),
-            format!("OrionPCSForGKR::<{field_config}, Goldilocksx8>").to_owned(),
         ),
         _ => panic!(
             "Unknown polynomial commitment type in config macro expansion. PCS: '{pcs_type_str}', Field: '{field_type}'"

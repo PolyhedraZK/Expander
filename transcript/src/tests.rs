@@ -30,7 +30,7 @@ where
     {
         let mut transcript = T::new();
 
-        let base_field_elems: Vec<F::BaseField> = vec![F::BaseField::from(1); F::DEGREE];
+        let base_field_elems: Vec<F::BaseField> = vec![F::BaseField::from(1u32); F::DEGREE];
         let challenge_field_elem: F = F::from_limbs(&base_field_elems);
 
         transcript.append_field_element(&challenge_field_elem);

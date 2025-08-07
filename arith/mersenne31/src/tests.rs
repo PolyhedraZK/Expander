@@ -61,7 +61,7 @@ fn test_simd_field() {
 
     random_simd_field_tests::<M31x16>("Vectorized M31".to_string());
 
-    let a = M31x16::from(256 + 2);
+    let a = M31x16::from(256u32 + 2);
     let mut buffer = vec![];
     assert!(a.serialize_into(&mut buffer).is_ok());
     let b = M31x16::deserialize_from(buffer.as_slice());
@@ -91,29 +91,29 @@ fn test_ext_field() {
 #[test]
 fn test_vectors() {
     let a = M31Ext3 {
-        v: [M31::from(1), M31::from(2), M31::from(3)],
+        v: [M31::from(1u32), M31::from(2u32), M31::from(3u32)],
     };
     let b = M31Ext3 {
-        v: [M31::from(4), M31::from(5), M31::from(6)],
+        v: [M31::from(4u32), M31::from(5u32), M31::from(6u32)],
     };
     let expected_prod = M31Ext3 {
-        v: [M31::from(139), M31::from(103), M31::from(28)],
+        v: [M31::from(139u32), M31::from(103u32), M31::from(28u32)],
     };
     assert_eq!(expected_prod, a * b);
 
     let expected_inv = M31Ext3 {
         v: [
-            M31::from(1279570927),
-            M31::from(2027416670),
-            M31::from(696388467),
+            M31::from(1279570927u32),
+            M31::from(2027416670u32),
+            M31::from(696388467u32),
         ],
     };
     assert_eq!(expected_inv, a.inv().unwrap());
     let a_pow_11 = M31Ext3 {
         v: [
-            M31::from(2145691179),
-            M31::from(1848238717),
-            M31::from(1954563431),
+            M31::from(2145691179u32),
+            M31::from(1848238717u32),
+            M31::from(1954563431u32),
         ],
     };
     assert_eq!(a_pow_11, a.exp(11));
@@ -124,7 +124,7 @@ fn test_poseidon_m31_fiat_shamir_hash() {
     let perm = PoseidonFiatShamirHasher::<M31x16>::new();
 
     {
-        let state_elems: Vec<u8> = [M31::from(114514); M31x16::RATE]
+        let state_elems: Vec<u8> = [M31::from(114514u32); M31x16::RATE]
             .iter()
             .flat_map(|x| {
                 let mut xu8 = vec![];
@@ -160,7 +160,7 @@ fn test_poseidon_m31_fiat_shamir_hash() {
     }
 
     {
-        let state_elems: Vec<u8> = [M31::from(114514); M31x16::STATE_WIDTH]
+        let state_elems: Vec<u8> = [M31::from(114514u32); M31x16::STATE_WIDTH]
             .iter()
             .flat_map(|x| {
                 let mut xu8 = vec![];

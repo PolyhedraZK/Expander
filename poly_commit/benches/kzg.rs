@@ -6,7 +6,7 @@ use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gkr_engine::Transcript;
 use gkr_hashers::Keccak256hasher;
 use halo2curves::bn256::Bn256;
-use poly_commit::{HyperBiKZGPCS, PolynomialCommitmentScheme};
+use poly_commit::{HyperUniKZGPCS, PolynomialCommitmentScheme};
 use polynomials::MultiLinearPoly;
 use transcript::BytesHashTranscript;
 
@@ -23,14 +23,14 @@ fn hyperkzg_committing_benchmark_helper(
     for num_vars in lowest_num_vars..=highest_num_vars {
         let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
-        let (srs, _) = HyperBiKZGPCS::<Bn256>::gen_srs_for_testing(&num_vars, &mut rng);
+        let (srs, _) = HyperUniKZGPCS::<Bn256>::gen_srs_for_testing(&num_vars, &mut rng);
 
         group
             .bench_function(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(HyperBiKZGPCS::<Bn256>::commit(
+                        _ = black_box(HyperUniKZGPCS::<Bn256>::commit(
                             &num_vars,
                             &srs,
                             &poly,
@@ -61,17 +61,17 @@ fn hyperkzg_opening_benchmark_helper(
     for num_vars in lowest_num_vars..=highest_num_vars {
         let poly = MultiLinearPoly::<Fr>::random(num_vars, &mut rng);
 
-        let (srs, _) = HyperBiKZGPCS::<Bn256>::gen_srs_for_testing(&num_vars, &mut rng);
+        let (srs, _) = HyperUniKZGPCS::<Bn256>::gen_srs_for_testing(&num_vars, &mut rng);
         let eval_point: Vec<_> = (0..num_vars).map(|_| Fr::random_unsafe(&mut rng)).collect();
 
-        let _ = HyperBiKZGPCS::<Bn256>::commit(&num_vars, &srs, &poly, &mut scratch_pad);
+        let _ = HyperUniKZGPCS::<Bn256>::commit(&num_vars, &srs, &poly, &mut scratch_pad);
 
         group
             .bench_function(
                 BenchmarkId::new(format!("{num_vars} variables"), num_vars),
                 |b| {
                     b.iter(|| {
-                        _ = black_box(HyperBiKZGPCS::<Bn256>::open(
+                        _ = black_box(HyperUniKZGPCS::<Bn256>::open(
                             &num_vars,
                             &srs,
                             &poly,

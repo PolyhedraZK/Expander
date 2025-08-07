@@ -2,33 +2,29 @@
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
     "arith/babybear",
-    "arith/gf2",
     "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31",
     "arith/polynomials", 
     "bin", # binary executables
     "circuit",
-    "config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
     "gkr",
     "gkr_engine", # definitions of GKR engine and associated types
     "hasher", # definitions of FiatShamirFieldHasher, FiatShamirBytesHash, and associated types
     "poly_commit",
     "serdes", # serialization and deserialization of various data structures
-    "serdes_derive",
     "sumcheck",
     "crosslayer_prototype",
     "transcript", # instantiations of transcripts
-    "tree",
     "utils",
 ]
 resolver = "2"
 
 [workspace.dependencies]
-ark-std = "0.4"
-ark-bn254 = "0.4.0"
-ark-ec = "0.4.0"
-ark-ff = { version = "0.4" }
+ark-std = "0.5"
+ark-bn254 = "0.5.0"
+ark-ec = "0.5.0"
+ark-ff = "0.5.0"
 bytes = "1.6.0"
 chrono = "0.4.38"
 clap = { version = "4.1", features = ["derive"] }

@@ -10,7 +10,6 @@ gkr_engine = { path = "../gkr_engine" }
 polynomials = { path = "../arith/polynomials"}
 serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
-tree = { path = "../tree" }
 utils = { path = "../utils" }
 sumcheck = { path = "../sumcheck" }
 
@@ -32,14 +31,6 @@ gkr_hashers = { path = "../hasher" }
 
 tynm.workspace = true
 criterion.workspace = true
-
-[[bench]]
-name = "orion"
-harness = false
-
-[[bench]]
-name = "hyrax"
-harness = false
 
 [[bench]]
 name = "kzg"

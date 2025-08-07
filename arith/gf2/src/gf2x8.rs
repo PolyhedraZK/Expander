@@ -235,6 +235,18 @@ impl From<u32> for GF2x8 {
     }
 }
 
+impl From<u64> for GF2x8 {
+    #[inline(always)]
+    fn from(v: u64) -> Self {
+        assert!(v < 2);
+        if v == 0 {
+            GF2x8 { v: 0 }
+        } else {
+            GF2x8 { v: 0xFF }
+        }
+    }
+}
+
 impl From<GF2> for GF2x8 {
     #[inline(always)]
     fn from(v: GF2) -> Self {

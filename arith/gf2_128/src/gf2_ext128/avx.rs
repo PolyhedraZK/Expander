@@ -325,6 +325,15 @@ impl From<u32> for AVXGF2_128 {
     }
 }
 
+impl From<u64> for AVXGF2_128 {
+    #[inline(always)]
+    fn from(v: u64) -> Self {
+        AVXGF2_128 {
+            v: unsafe { std::mem::transmute::<[u64; 2], __m128i>([v, 0]) },
+        }
+    }
+}
+
 #[inline(always)]
 fn add_internal(a: &AVXGF2_128, b: &AVXGF2_128) -> AVXGF2_128 {
     AVXGF2_128 {

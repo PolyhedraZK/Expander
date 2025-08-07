@@ -157,11 +157,12 @@ impl<F: FieldEngine> SumcheckSimdProdGateHelper<F> {
         p[3] += p_add_coef_0 + p_add_coef_1.mul_by_3() + p_add_coef_2.mul_by_3().mul_by_3();
         p[4] += p_add_coef_0
             + p_add_coef_1.double().double()
-            + p_add_coef_2 * F::CircuitField::from(16);
-        p[5] += p_add_coef_0 + p_add_coef_1.mul_by_5() + p_add_coef_2 * F::CircuitField::from(25);
+            + p_add_coef_2 * F::CircuitField::from(16u32);
+        p[5] +=
+            p_add_coef_0 + p_add_coef_1.mul_by_5() + p_add_coef_2 * F::CircuitField::from(25u32);
         p[6] += p_add_coef_0
             + p_add_coef_1.mul_by_3().double()
-            + p_add_coef_2 * F::CircuitField::from(36);
+            + p_add_coef_2 * F::CircuitField::from(36u32);
     }
 
     #[inline]

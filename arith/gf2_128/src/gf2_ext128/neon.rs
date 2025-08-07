@@ -271,6 +271,15 @@ impl From<u32> for NeonGF2_128 {
     }
 }
 
+impl From<u64> for NeonGF2_128 {
+    #[inline(always)]
+    fn from(v: u64) -> Self {
+        NeonGF2_128 {
+            v: unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+        }
+    }
+}
+
 // multiply the polynomial by x^32, without reducing the irreducible polynomial
 // equivalent to _mm_shuffle_epi32(a, 147)
 #[inline(always)]

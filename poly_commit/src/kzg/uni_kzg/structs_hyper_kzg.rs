@@ -1,5 +1,3 @@
-use std::ops::{Index, IndexMut};
-
 use arith::ExtensionField;
 use derivative::Derivative;
 use gkr_engine::Transcript;
@@ -24,18 +22,6 @@ impl<E: Engine> HyperKZGExportedLocalEvals<E>
 where
     E::Fr: ExpSerde,
 {
-    pub(crate) fn new(evals_num: usize) -> Self {
-        Self {
-            beta_x2_eval: E::Fr::default(),
-            pos_beta_x_evals: vec![E::Fr::default(); evals_num],
-            neg_beta_x_evals: vec![E::Fr::default(); evals_num],
-        }
-    }
-
-    pub(crate) fn len(&self) -> usize {
-        self.pos_beta_x_evals.len() + self.neg_beta_x_evals.len() + 1
-    }
-
     pub(crate) fn append_to_transcript<T>(&self, fs_transcript: &mut T)
     where
         T: Transcript,
@@ -165,52 +151,6 @@ where
     }
 }
 
-impl<E: Engine> Index<usize> for HyperKZGExportedLocalEvals<E>
-where
-    E::Fr: ExpSerde,
-{
-    type Output = E::Fr;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        assert_eq!(self.pos_beta_x_evals.len(), self.neg_beta_x_evals.len());
-        assert!(!self.pos_beta_x_evals.is_empty());
-
-        let evals_len = self.pos_beta_x_evals.len();
-
-        if index < evals_len {
-            &self.pos_beta_x_evals[index]
-        } else if index < 2 * evals_len {
-            &self.neg_beta_x_evals[index - evals_len]
-        } else if index == 2 * evals_len {
-            &self.beta_x2_eval
-        } else {
-            unreachable!()
-        }
-    }
-}
-
-impl<E: Engine> IndexMut<usize> for HyperKZGExportedLocalEvals<E>
-where
-    E::Fr: ExpSerde,
-{
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        assert_eq!(self.pos_beta_x_evals.len(), self.neg_beta_x_evals.len());
-        assert!(!self.pos_beta_x_evals.is_empty());
-
-        let evals_len = self.pos_beta_x_evals.len();
-
-        if index < evals_len {
-            &mut self.pos_beta_x_evals[index]
-        } else if index < 2 * evals_len {
-            &mut self.neg_beta_x_evals[index - evals_len]
-        } else if index == 2 * evals_len {
-            &mut self.beta_x2_eval
-        } else {
-            unreachable!()
-        }
-    }
-}
-
 impl<E: Engine> From<HyperKZGLocalEvals<E>> for HyperKZGExportedLocalEvals<E>
 where
     E::Fr: ExpSerde,
@@ -221,62 +161,5 @@ where
             pos_beta_x_evals: value.pos_beta_evals,
             neg_beta_x_evals: value.neg_beta_evals,
         }
-    }
-}
-
-#[derive(Clone, Debug, Derivative, ExpSerde)]
-#[derivative(Default(bound = ""))]
-pub struct HyperKZGAggregatedEvals<E: Engine>
-where
-    E::Fr: ExpSerde,
-{
-    pub beta_y2_evals: HyperKZGExportedLocalEvals<E>,
-    pub pos_beta_y_evals: HyperKZGExportedLocalEvals<E>,
-    pub neg_beta_y_evals: HyperKZGExportedLocalEvals<E>,
-}
-
-impl<E: Engine> HyperKZGAggregatedEvals<E>
-where
-    E::Fr: ExtensionField,
-{
-    pub(crate) fn new_from_exported_evals(
-        exported_evals: &[HyperKZGExportedLocalEvals<E>],
-        beta_y: E::Fr,
-    ) -> Self {
-        let evals_len = exported_evals[0].pos_beta_x_evals.len();
-        let num_local_evals = exported_evals[0].len();
-        let num_parties = exported_evals.len();
-
-        assert!(num_parties >= 2 && num_parties.is_power_of_two());
-
-        let mut aggregated = Self {
-            beta_y2_evals: HyperKZGExportedLocalEvals::new(evals_len),
-            pos_beta_y_evals: HyperKZGExportedLocalEvals::new(evals_len),
-            neg_beta_y_evals: HyperKZGExportedLocalEvals::new(evals_len),
-        };
-
-        let beta_y2 = beta_y * beta_y;
-        let beta_y2_pow_series = powers_series(&beta_y2, num_parties);
-        let pos_beta_y_pow_series = powers_series(&beta_y, num_parties);
-        let neg_beta_y_pow_series = powers_series(&(-beta_y), num_parties);
-
-        (0..num_local_evals).for_each(|i| {
-            let y_poly: Vec<E::Fr> = exported_evals.iter().map(|e| e[i]).collect();
-
-            aggregated.beta_y2_evals[i] = univariate_evaluate(&y_poly, &beta_y2_pow_series);
-            aggregated.pos_beta_y_evals[i] = univariate_evaluate(&y_poly, &pos_beta_y_pow_series);
-            aggregated.neg_beta_y_evals[i] = univariate_evaluate(&y_poly, &neg_beta_y_pow_series);
-        });
-
-        aggregated
-    }
-
-    pub(crate) fn append_to_transcript<T>(&self, fs_transcript: &mut T)
-    where
-        T: Transcript,
-    {
-        self.beta_y2_evals.append_to_transcript(fs_transcript);
-        self.pos_beta_y_evals.append_to_transcript(fs_transcript);
-        self.neg_beta_y_evals.append_to_transcript(fs_transcript);
     }
 }

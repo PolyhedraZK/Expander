@@ -11,12 +11,6 @@ pub use utils::expander_pcs_init_testing_only;
 pub mod raw;
 pub use raw::RawExpanderGKR;
 
-pub mod orion;
-pub use orion::*;
-
-pub mod hyrax;
-pub use hyrax::*;
-
 pub mod kzg;
 pub use kzg::*;
 
