@@ -228,15 +228,14 @@ impl From<u64> for NeonGF2_128x8 {
     fn from(v: u64) -> Self {
         NeonGF2_128x8 {
             v: [
-                unsafe { transmute::<[u64; 2], uint64x2_t>([v, 0]) },
-                unsafe { transmute::<[u64; 2], uint64x2_t>([v, 0]) },
-                unsafe { transmute::<[u64; 2], uint64x2_t>([v, 0]) },
-                unsafe { transmute::<[u64; 2], uint64x2_t>([v, 0]) },
-                unsafe { transmute::<[u64; 2], uint64x2_t>([v, 0]) },
-                unsafe { transmute::<[u64; 2], uint64x2_t>([v, 0]) },
-                unsafe { transmute::<[u64; 2], uint64x2_t>([v, 0]) },
-                unsafe { transmute::<[u64; 2], uint64x2_t>([v, 0]) },
-                unsafe { transmute::<[u64; 2], uint64x2_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
             ],
         }
     }
