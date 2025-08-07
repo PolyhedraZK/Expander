@@ -1,5 +1,6 @@
-// traits definitions
+#![no_std]
 
+// traits definitions
 mod traits;
 pub use traits::{FiatShamirHasher, PoseidonStateTrait};
 

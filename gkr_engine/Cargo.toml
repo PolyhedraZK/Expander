@@ -13,6 +13,8 @@ mersenne31 = { path = "../arith/mersenne31" }
 polynomials = { path = "../arith/polynomials"}
 serdes = { path = "../serdes" }
 
+
+ark-std.workspace = true
 thiserror.workspace = true
 mpi.workspace = true
 rand.workspace = true

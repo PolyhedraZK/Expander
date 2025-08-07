@@ -1,12 +1,12 @@
+use arith::{field_common, ExtensionField, FFTField, Field, SimdField};
+
+use ethnum::U256;
+use rand::RngCore;
+use serdes::ExpSerde;
 use std::{
     iter::{Product, Sum},
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
-
-use arith::{field_common, ExtensionField, FFTField, Field, SimdField};
-use ethnum::U256;
-use rand::RngCore;
-use serdes::ExpSerde;
 
 use crate::{
     goldilocks::{mod_reduce_u64, Goldilocks},

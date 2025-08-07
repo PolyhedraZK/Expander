@@ -1,3 +1,5 @@
+#![no_std]
+
 mod ecc_circuit;
 pub use ecc_circuit::*;
 

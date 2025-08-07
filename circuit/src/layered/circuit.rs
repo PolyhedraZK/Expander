@@ -1,8 +1,9 @@
-use std::fs;
-use std::io::Cursor;
-
 use arith::{Field, SimdField};
+use ark_std::fs;
+use ark_std::io::Cursor;
+use ark_std::println;
 use ark_std::test_rng;
+use ark_std::{vec, vec::Vec};
 use gkr_engine::{root_println, FieldEngine, GKREngine, MPIConfig, MPIEngine, Transcript};
 use mpi::ffi::ompi_win_t;
 use serdes::ExpSerde;

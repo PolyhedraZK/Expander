@@ -1,6 +1,6 @@
-use std::io::{Read, Write};
-
 use arith::Field;
+use ark_std::io::{Read, Write};
+use ark_std::{vec, vec::Vec};
 use gkr_engine::FieldEngine;
 use serdes::{ExpSerde, SerdeResult};
 
@@ -35,7 +35,7 @@ impl ExpSerde for CoefType {
 }
 
 impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for Gate<C, INPUT_NUM> {
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         for id in &self.i_ids {
             id.serialize_into(&mut writer)?;
         }

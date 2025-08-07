@@ -1,3 +1,4 @@
+use ark_std::vec::Vec;
 use gkr_engine::FieldEngine;
 
 // A direct copy of the witness struct from ecc

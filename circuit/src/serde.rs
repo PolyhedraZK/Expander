@@ -1,10 +1,11 @@
 use arith::Field;
-use gkr_engine::FieldEngine;
-use serdes::{ExpSerde, SerdeResult};
-use std::{
+use ark_std::{
     io::{Read, Write},
     vec,
+    vec::Vec,
 };
+use gkr_engine::FieldEngine;
+use serdes::{ExpSerde, SerdeResult};
 
 use super::{Allocation, CoefType, Gate, RecursiveCircuit, Segment, Witness};
 use crate::{GateAdd, GateConst, GateMul, SegmentId};
@@ -13,7 +14,7 @@ pub struct CustomGateWrapper<C: FieldEngine, const INPUT_NUM: usize> {
 }
 
 impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for CustomGateWrapper<C, INPUT_NUM> {
-    fn serialize_into<W: std::io::Write>(&self, mut _writer: W) -> SerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut _writer: W) -> SerdeResult<()> {
         todo!()
     }
 
@@ -58,7 +59,7 @@ impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for CustomGateWrapper<C, I
 }
 
 impl<C: FieldEngine> ExpSerde for Segment<C> {
-    fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> SerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         <usize as ExpSerde>::serialize_into(&self.i_var_num, &mut writer)?;
         <usize as ExpSerde>::serialize_into(&self.o_var_num, &mut writer)?;
 
@@ -141,7 +142,7 @@ impl<C: FieldEngine> ExpSerde for RecursiveCircuit<C> {
 }
 
 impl<C: FieldEngine> ExpSerde for Witness<C> {
-    fn serialize_into<W: std::io::Write>(&self, mut _writer: W) -> SerdeResult<()> {
+    fn serialize_into<W: Write>(&self, mut _writer: W) -> SerdeResult<()> {
         todo!()
     }
 

@@ -7,7 +7,7 @@ edition = "2021"
 arith = { path = "../arith" }
 serdes = { path = "../serdes" }
 
-
+ark-std.workspace = true
 halo2curves.workspace = true
 sha2.workspace = true
 tiny-keccak.workspace = true

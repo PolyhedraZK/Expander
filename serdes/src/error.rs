@@ -3,7 +3,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum SerdeError {
     #[error("IO Error: {0}")]
-    IOError(#[from] std::io::Error),
+    IOError(#[from] ark_std::io::Error),
 
     #[error("Deserialization failure")]
     DeserializeError,
@@ -12,4 +12,4 @@ pub enum SerdeError {
     InvalidVariantIndex(usize),
 }
 
-pub type SerdeResult<T> = std::result::Result<T, SerdeError>;
+pub type SerdeResult<T> = ark_std::result::Result<T, SerdeError>;

@@ -1,6 +1,7 @@
 use super::circuit::{Circuit, CircuitLayer, StructureInfo};
 use super::gates::{GateAdd, GateConst, GateMul, GateUni};
 
+use ark_std::{vec, vec::Vec};
 use gkr_engine::{FieldEngine, MPISharedMemory};
 
 impl<C: FieldEngine> MPISharedMemory for CircuitLayer<C> {

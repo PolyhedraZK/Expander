@@ -1,7 +1,10 @@
-use std::{
+use ark_std::{
     collections::HashMap,
     hash::Hash,
     io::{Read, Write},
+    string::String,
+    vec,
+    vec::Vec,
 };
 
 use ethnum::U256;
@@ -22,11 +25,11 @@ pub trait ExpSerde: Sized {
 }
 
 impl ExpSerde for () {
-    fn serialize_into<W: std::io::Write>(&self, _writer: W) -> SerdeResult<()> {
+    fn serialize_into<W: Write>(&self, _writer: W) -> SerdeResult<()> {
         Ok(())
     }
 
-    fn deserialize_from<R: std::io::Read>(_reader: R) -> SerdeResult<Self> {
+    fn deserialize_from<R: Read>(_reader: R) -> SerdeResult<Self> {
         Ok(())
     }
 }

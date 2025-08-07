@@ -1,6 +1,5 @@
-use std::fmt;
-use std::fmt::{Debug, Display};
-
+use ark_std::fmt;
+use ark_std::fmt::{Debug, Display};
 use ark_std::{end_timer, start_timer};
 use serdes::ExpSerde;
 
@@ -70,7 +69,7 @@ impl Path {
                 current_node = Node::node_hash(&current_node, node)
             };
         }
-
+        // todo: use timer from util
         end_timer!(timer);
         if current_node != *root {
             println!("path does not match the root");

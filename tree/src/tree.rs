@@ -1,8 +1,7 @@
-use std::fmt;
-use std::fmt::{Debug, Display};
-use std::mem::forget;
-
 use arith::{Field, SimdField};
+use ark_std::fmt;
+use ark_std::fmt::{Debug, Display};
+use ark_std::mem::forget;
 use ark_std::{end_timer, log2, start_timer};
 use serdes::ExpSerde;
 

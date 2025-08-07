@@ -1,3 +1,7 @@
+#![no_std]
+
+use ark_std::format;
+use ark_std::vec::Vec;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Fields};
@@ -28,7 +32,7 @@ pub fn serdes_derive(input: TokenStream) -> TokenStream {
             let field_types: Vec<_> = fields.iter().map(|field| &field.ty).collect();
 
             let serialize_impl = quote! {
-                fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> ::serdes::SerdeResult<()> {
+                fn serialize_into<W: ark_std::io::Write>(&self, mut writer: W) -> ::serdes::SerdeResult<()> {
                     #(
                         self.#field_names.serialize_into(&mut writer)?;
                     )*
@@ -37,7 +41,7 @@ pub fn serdes_derive(input: TokenStream) -> TokenStream {
             };
 
             let deserialize_impl = quote! {
-                fn deserialize_from<R: std::io::Read>(mut reader: R) -> ::serdes::SerdeResult<Self> {
+                fn deserialize_from<R: ark_std::io::Read>(mut reader: R) -> ::serdes::SerdeResult<Self> {
                     Ok(Self {
                         #(
                             #field_names: <#field_types as ::serdes::ExpSerde>::deserialize_from(&mut reader)?,
@@ -112,7 +116,7 @@ pub fn serdes_derive(input: TokenStream) -> TokenStream {
                 }
             }
             let serialize_variant = quote! {
-                fn serialize_into<W: std::io::Write>(&self, mut writer: W) -> ::serdes::SerdeResult<()> {
+                fn serialize_into<W: ark_std::io::Write>(&self, mut writer: W) -> ::serdes::SerdeResult<()> {
                     match self {
                         #(#serialize_arms)*
                     }
@@ -120,7 +124,7 @@ pub fn serdes_derive(input: TokenStream) -> TokenStream {
                 }
             };
             let deserialize_variant = quote! {
-                fn deserialize_from<R: std::io::Read>(mut reader: R) -> ::serdes::SerdeResult<Self> {
+                fn deserialize_from<R: ark_std::io::Read>(mut reader: R) -> ::serdes::SerdeResult<Self> {
                     let variant_index: u32 = ::serdes::ExpSerde::deserialize_from(&mut reader)?;
                     match variant_index as usize {
                         #(#deserialize_arms)*

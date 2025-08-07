@@ -114,9 +114,9 @@ dependencies = [
 
 [[package]]
 name = "ark-std"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94893f1e0c6eeab764ade8dc4c0db24caf4fe7cbbaafc0eba0a9030f447b5185"
+checksum = "246a225cc6131e9ee4f24619af0f19d67761fff15d7ccc22e42b80846e69449a"
 dependencies = [
  "num-traits",
  "rand",
@@ -383,7 +383,7 @@ dependencies = [
  "poly_commit",
  "rand",
  "serdes",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "transcript",
 ]
 
@@ -577,7 +577,7 @@ dependencies = [
  "rand",
  "serdes",
  "sumcheck",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "transcript",
 ]
 
@@ -801,7 +801,7 @@ dependencies = [
  "rand",
  "raw-cpuid",
  "serdes",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "tynm",
 ]
 
@@ -853,7 +853,7 @@ dependencies = [
  "serdes",
  "sha2",
  "sumcheck",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "transcript",
  "utils",
 ]
@@ -874,7 +874,7 @@ dependencies = [
  "polynomials",
  "rand",
  "serdes",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -882,6 +882,7 @@ name = "gkr_hashers"
 version = "0.1.0"
 dependencies = [
  "arith",
+ "ark-std",
  "halo2curves",
  "serdes",
  "sha2",
@@ -1395,7 +1396,7 @@ dependencies = [
  "rand",
  "raw-cpuid",
  "serdes",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "tynm",
 ]
 
@@ -1695,7 +1696,7 @@ dependencies = [
  "rayon",
  "serdes",
  "sumcheck",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "transcript",
  "transpose",
  "tree",
@@ -1963,17 +1964,19 @@ dependencies = [
 name = "serdes"
 version = "0.1.0"
 dependencies = [
+ "ark-std",
  "ethnum",
  "halo2curves",
  "rand",
  "serdes_derive",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
 name = "serdes_derive"
 version = "0.1.0"
 dependencies = [
+ "ark-std",
  "proc-macro2",
  "quote",
  "syn 2.0.104",

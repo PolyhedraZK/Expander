@@ -5,7 +5,6 @@ use std::{
 };
 
 use arith::{field_common, ExtensionField, FFTField, Field, SimdField};
-
 use ethnum::U256;
 use rand::RngCore;
 use serdes::ExpSerde;

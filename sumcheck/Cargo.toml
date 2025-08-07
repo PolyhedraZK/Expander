@@ -13,6 +13,7 @@ serdes = { path = "../serdes" }
 transcript = { path = "../transcript" }
 utils = { path = "../utils" }
 
+ark-std.workspace = true
 env_logger.workspace = true
 log.workspace = true
 rayon.workspace = true

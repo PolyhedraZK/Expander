@@ -1,6 +1,7 @@
 use arith::Field;
 use halo2curves::bn256::Fr;
 use tiny_keccak::{Hasher, Keccak};
+use ark_std::vec::Vec;
 
 use crate::FiatShamirHasher;
 

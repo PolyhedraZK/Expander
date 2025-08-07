@@ -1,5 +1,4 @@
-use std::io::Cursor;
-
+use ark_std::io::Cursor;
 use serdes::ExpSerde;
 
 #[derive(ExpSerde, Debug, PartialEq)]
