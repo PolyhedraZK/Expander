@@ -89,6 +89,13 @@ impl<const N: usize> From<u32> for FrxN<N> {
     }
 }
 
+impl<const N: usize> From<u64> for FrxN<N> {
+    fn from(x: u64) -> Self {
+        let v = Fr::from(x);
+        Self { v: [v; N] }
+    }
+}
+
 rep_field_common!( FrxN <const N: usize>);
 
 impl<const N: usize> Field for FrxN<N> {

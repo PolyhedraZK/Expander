@@ -264,7 +264,7 @@ impl FFTField for BabyBearExt3x16 {
     const TWO_ADICITY: usize = 27;
 
     fn root_of_unity() -> Self {
-        Self::from(0x1a427a41)
+        Self::from(0x1a427a41u32)
     }
 }
 
@@ -323,6 +323,19 @@ impl Neg for BabyBearExt3x16 {
 impl From<u32> for BabyBearExt3x16 {
     #[inline(always)]
     fn from(x: u32) -> Self {
+        BabyBearExt3x16 {
+            v: [
+                BabyBearx16::from(x),
+                BabyBearx16::zero(),
+                BabyBearx16::zero(),
+            ],
+        }
+    }
+}
+
+impl From<u64> for BabyBearExt3x16 {
+    #[inline(always)]
+    fn from(x: u64) -> Self {
         BabyBearExt3x16 {
             v: [
                 BabyBearx16::from(x),

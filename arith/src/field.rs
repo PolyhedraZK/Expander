@@ -18,6 +18,7 @@ pub trait Field:
     + Default
     + PartialEq
     + From<u32>
+    + From<u64>
     + Neg<Output = Self>
     + Add<Output = Self>
     + Sub<Output = Self>

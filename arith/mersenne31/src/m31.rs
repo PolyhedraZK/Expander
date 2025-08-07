@@ -232,6 +232,14 @@ impl From<u32> for M31 {
     }
 }
 
+impl From<u64> for M31 {
+    #[inline(always)]
+    fn from(x: u64) -> Self {
+        assert!(x <= u32::MAX as u64, "Value out of range for M31");
+        Self::from(x as u32)
+    }
+}
+
 impl M31 {
     #[inline(always)]
     fn exp_power_of_2(&self, power_log: usize) -> Self {
