@@ -261,7 +261,7 @@ impl Mul<M31Ext3> for M31Ext3x16 {
         // + (a0*b1 + a1*b0)*x + 5* a2*b2
         // + (a0*b2 + a1*b1 + a2*b0)*x^2
 
-        let five = M31::from(5);
+        let five = M31::from(5u32);
         let mut res = [M31x16::default(); 3];
         res[0] =
             self.v[0] * rhs.v[0] + self.v[1] * (rhs.v[2] * five) + self.v[2] * (rhs.v[1] * five);
@@ -308,6 +308,16 @@ impl From<u32> for M31Ext3x16 {
     fn from(x: u32) -> Self {
         M31Ext3x16 {
             v: [M31x16::from(x), M31x16::zero(), M31x16::zero()],
+        }
+    }
+}
+
+impl From<u64> for M31Ext3x16 {
+    #[inline(always)]
+    fn from(x: u64) -> Self {
+        assert!(x <= u32::MAX as u64, "Value out of range for M31Ext3x16");
+        M31Ext3x16 {
+            v: [M31x16::from(x as u32), M31x16::zero(), M31x16::zero()],
         }
     }
 }

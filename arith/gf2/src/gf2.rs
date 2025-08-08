@@ -158,6 +158,13 @@ impl From<u32> for GF2 {
     }
 }
 
+impl From<u64> for GF2 {
+    #[inline(always)]
+    fn from(v: u64) -> Self {
+        GF2 { v: (v % 2) as u8 }
+    }
+}
+
 impl From<bool> for GF2 {
     #[inline(always)]
     fn from(value: bool) -> Self {

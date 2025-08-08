@@ -181,7 +181,7 @@ impl FFTField for M31Ext6 {
     #[inline(always)]
     fn root_of_unity() -> Self {
         Self {
-            v: [M31Ext3::from(1840555991), M31Ext3::from(599996438)],
+            v: [M31Ext3::from(1840555991u32), M31Ext3::from(599996438u32)],
         }
     }
 }
@@ -208,6 +208,15 @@ impl Neg for M31Ext6 {
 impl From<u32> for M31Ext6 {
     #[inline(always)]
     fn from(x: u32) -> Self {
+        Self {
+            v: [M31Ext3::from(x), M31Ext3::ZERO],
+        }
+    }
+}
+
+impl From<u64> for M31Ext6 {
+    #[inline(always)]
+    fn from(x: u64) -> Self {
         Self {
             v: [M31Ext3::from(x), M31Ext3::ZERO],
         }

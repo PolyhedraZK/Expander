@@ -267,6 +267,14 @@ impl From<u32> for NeonBabyBear {
     }
 }
 
+impl From<u64> for NeonBabyBear {
+    #[inline(always)]
+    fn from(value: u64) -> Self {
+        // BabyBear::new converts to Montgomery form
+        NeonBabyBear::pack_full(&BabyBear::new(value as u32))
+    }
+}
+
 impl Neg for NeonBabyBear {
     type Output = Self;
 

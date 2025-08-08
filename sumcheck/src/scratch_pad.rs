@@ -131,8 +131,8 @@ impl<F: FieldEngine> VerifierScratchPad<F> {
             [
                 F::ChallengeField::ZERO,
                 F::ChallengeField::ONE,
-                F::ChallengeField::from(2),
-                F::ChallengeField::from(3),
+                F::ChallengeField::from(2u32),
+                F::ChallengeField::from(3u32),
             ]
         };
 
@@ -151,11 +151,11 @@ impl<F: FieldEngine> VerifierScratchPad<F> {
         let deg6_eval_at = [
             F::ChallengeField::ZERO,
             F::ChallengeField::ONE,
-            F::ChallengeField::from(2),
-            F::ChallengeField::from(3),
-            F::ChallengeField::from(4),
-            F::ChallengeField::from(5),
-            F::ChallengeField::from(6),
+            F::ChallengeField::from(2u32),
+            F::ChallengeField::from(3u32),
+            F::ChallengeField::from(4u32),
+            F::ChallengeField::from(5u32),
+            F::ChallengeField::from(6u32),
         ];
 
         let mut deg6_lag_denoms_inv = [F::ChallengeField::ZERO; 7];
