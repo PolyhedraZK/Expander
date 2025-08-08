@@ -21,7 +21,7 @@ impl<F: Field> MultiLinearPoly<F> {
     /// Sample a random polynomials.
     #[inline]
     pub fn random(nv: usize, mut rng: impl rand::RngCore) -> Self {
-        let coeff = (0..1 << nv).map(|_| F::random_unsafe(&mut rng)).collect();
+        let coeff = (0..1usize << nv).map(|_| F::random_unsafe(&mut rng)).collect();
         Self { coeffs: coeff }
     }
 
