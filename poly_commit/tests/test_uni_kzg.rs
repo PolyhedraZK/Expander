@@ -8,6 +8,7 @@ use gkr_hashers::Keccak256hasher;
 use halo2curves::bn256::Bn256;
 use poly_commit::HyperUniKZGPCS;
 use polynomials::MultiLinearPoly;
+use rand::RngCore;
 use transcript::BytesHashTranscript;
 
 const TEST_REPETITION: usize = 3;
