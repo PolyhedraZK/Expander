@@ -298,6 +298,16 @@ impl From<u32> for GoldilocksExt2x8 {
     }
 }
 
+impl From<u64> for GoldilocksExt2x8 {
+    #[inline]
+    fn from(value: u64) -> Self {
+        Self {
+            c0: Goldilocksx8::from(value),
+            c1: Goldilocksx8::ZERO,
+        }
+    }
+}
+
 #[inline(always)]
 fn add_internal(a: &GoldilocksExt2x8, b: &GoldilocksExt2x8) -> GoldilocksExt2x8 {
     GoldilocksExt2x8 {

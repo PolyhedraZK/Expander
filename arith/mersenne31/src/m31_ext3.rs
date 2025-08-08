@@ -207,6 +207,16 @@ impl From<u32> for M31Ext3 {
     }
 }
 
+impl From<u64> for M31Ext3 {
+    #[inline(always)]
+    fn from(x: u64) -> Self {
+        assert!(x <= u32::MAX as u64, "Value out of range for M31Ext3");
+        M31Ext3 {
+            v: [M31::from(x as u32), M31::zero(), M31::zero()],
+        }
+    }
+}
+
 impl M31Ext3 {
     #[inline(always)]
     pub fn to_base_field(&self) -> M31 {

@@ -322,6 +322,13 @@ impl From<u32> for AVXBabyBear {
     }
 }
 
+impl From<u64> for AVXBabyBear {
+    #[inline(always)]
+    fn from(x: u64) -> Self {
+        AVXBabyBear::pack_full(&BabyBear::from(x))
+    }
+}
+
 impl Neg for AVXBabyBear {
     type Output = AVXBabyBear;
     #[inline(always)]

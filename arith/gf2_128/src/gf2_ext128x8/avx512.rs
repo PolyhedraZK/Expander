@@ -339,6 +339,15 @@ impl From<u32> for AVX512GF2_128x8 {
     }
 }
 
+impl From<u64> for AVX512GF2_128x8 {
+    #[inline(always)]
+    fn from(v: u64) -> AVX512GF2_128x8 {
+        assert!(v < 2); // only 0 and 1 are allowed
+        let data = unsafe { _mm512_set_epi64(0, v as i64, 0, v as i64, 0, v as i64, 0, v as i64) };
+        AVX512GF2_128x8 { data: [data, data] }
+    }
+}
+
 impl Neg for AVX512GF2_128x8 {
     type Output = AVX512GF2_128x8;
 

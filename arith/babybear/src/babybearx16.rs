@@ -39,6 +39,6 @@ impl FFTField for BabyBearx16 {
     const TWO_ADICITY: usize = 27;
 
     fn root_of_unity() -> Self {
-        Self::from(0x1a427a41)
+        Self::from(0x1a427a41u32)
     }
 }

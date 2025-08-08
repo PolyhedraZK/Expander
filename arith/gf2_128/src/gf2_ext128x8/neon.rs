@@ -224,6 +224,23 @@ impl From<u32> for NeonGF2_128x8 {
     }
 }
 
+impl From<u64> for NeonGF2_128x8 {
+    fn from(v: u64) -> Self {
+        NeonGF2_128x8 {
+            v: [
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+                unsafe { transmute::<[u64; 2], uint32x4_t>([v, 0]) },
+            ],
+        }
+    }
+}
+
 #[inline(always)]
 fn add_internal(a: &NeonGF2_128x8, b: &NeonGF2_128x8) -> NeonGF2_128x8 {
     NeonGF2_128x8 {

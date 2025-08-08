@@ -293,6 +293,18 @@ impl From<u32> for AVXGF2x128 {
     }
 }
 
+impl From<u64> for AVXGF2x128 {
+    #[inline(always)]
+    fn from(v: u64) -> Self {
+        assert!(v < 2);
+        if v == 0 {
+            AVXGF2x128::ZERO
+        } else {
+            AVXGF2x128::ONE
+        }
+    }
+}
+
 impl From<GF2> for AVXGF2x128 {
     #[inline(always)]
     fn from(v: GF2) -> Self {

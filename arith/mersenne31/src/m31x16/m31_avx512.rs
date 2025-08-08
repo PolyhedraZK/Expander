@@ -373,6 +373,13 @@ impl From<u32> for AVXM31 {
     }
 }
 
+impl From<u64> for AVXM31 {
+    #[inline(always)]
+    fn from(x: u64) -> Self {
+        AVXM31::pack_full(&M31::from(x))
+    }
+}
+
 impl Neg for AVXM31 {
     type Output = AVXM31;
     #[inline(always)]
