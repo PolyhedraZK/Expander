@@ -442,7 +442,7 @@ impl<'a, F: FieldEngine> CrossLayerScatterHelper<'a, F> {
         let eq_evals_at_rz = &mut self.sp.eq_evals_at_rz0;
         EqPolynomial::eq_eval_at(
             self.rz0,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             eq_evals_at_rz,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -466,9 +466,9 @@ impl<'a, F: FieldEngine> CrossLayerScatterHelper<'a, F> {
             if !connections_at_i_layer.is_empty() {
                 *cross_layer_size = connections_at_i_layer.len().next_power_of_two();
                 // TODO: Allocate this in scratchpad
-                cir_vals.resize(*cross_layer_size, F::SimdCircuitField::ZERO);
-                vals.resize(*cross_layer_size, F::Field::ZERO);
-                hg_vals.resize(*cross_layer_size, F::Field::ZERO);
+                cir_vals.resize(*cross_layer_size, F::SimdCircuitField::zero());
+                vals.resize(*cross_layer_size, F::Field::zero());
+                hg_vals.resize(*cross_layer_size, F::Field::zero());
 
                 for (idx, (o_id, i_id)) in connections_at_i_layer.iter().enumerate() {
                     cir_vals[idx] = self.circuit_vals.vals[i_layer][*i_id];
@@ -531,7 +531,7 @@ impl<'a, F: FieldEngine> CrossLayerScatterHelper<'a, F> {
 
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
             &self.rx,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             eq_evals_at_rx,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -539,7 +539,7 @@ impl<'a, F: FieldEngine> CrossLayerScatterHelper<'a, F> {
 
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
             &self.r_simd_next,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             &mut self.sp.eq_evals_at_r_simd_at_layer[self.layer.layer_id],
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -641,7 +641,7 @@ impl<'a, F: FieldEngine> CrossLayerGatherHelper<'a, F> {
 
         EqPolynomial::eq_eval_at(
             self.rz0,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             eq_evals_at_rz,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,

@@ -8,7 +8,6 @@ arith = { path = "../" }
 serdes = { path = "../../serdes" }
 
 ark-std.workspace = true
-halo2curves.workspace = true
 log.workspace = true
 rand.workspace = true
 thiserror.workspace = true

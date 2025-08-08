@@ -78,7 +78,7 @@ macro_rules! field_common {
             where
                 I: Iterator<Item = T>,
             {
-                iter.fold(Self::ZERO, |acc, item| acc + item.borrow())
+                iter.fold(Self::zero(), |acc, item| acc + item.borrow())
             }
         }
 
@@ -225,7 +225,7 @@ macro_rules! rep_field_common {
             where
                 I: Iterator<Item = T>,
             {
-                iter.fold(Self::ZERO, |acc, item| acc + item.borrow())
+                iter.fold(Self::zero(), |acc, item| acc + item.borrow())
             }
         }
 
@@ -234,7 +234,7 @@ macro_rules! rep_field_common {
 
             #[inline]
             fn neg(self) -> $field<N> {
-                Self::ZERO - self
+                Self::zero() - self
             }
         }
 

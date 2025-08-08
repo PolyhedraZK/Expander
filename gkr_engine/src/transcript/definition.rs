@@ -61,7 +61,7 @@ pub trait Transcript: Clone + Debug {
     /// Generate a field element vector.
     #[inline(always)]
     fn generate_field_elements<F: Field>(&mut self, n: usize) -> Vec<F> {
-        let mut res = vec![F::ZERO; n];
+        let mut res = vec![F::zero(); n];
         for e in res.iter_mut() {
             *e = self.generate_field_element();
         }

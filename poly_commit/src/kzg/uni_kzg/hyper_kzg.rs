@@ -39,7 +39,7 @@ where
         .map(|alpha| {
             local_coeffs = local_coeffs
                 .chunks(2)
-                .map(|c| (E::Fr::ONE - alpha) * c[0] + *alpha * c[1])
+                .map(|c| (E::Fr::one() - alpha) * c[0] + *alpha * c[1])
                 .collect();
 
             let folded_oracle_commit = coeff_form_uni_kzg_commit(srs, &local_coeffs);
@@ -63,7 +63,7 @@ where
 {
     let beta2 = beta * beta;
     let beta_inv = beta.invert().unwrap();
-    let two_inv = E::Fr::ONE.double().invert().unwrap();
+    let two_inv = E::Fr::one().double().invert().unwrap();
     let beta_pow_series = powers_series(&beta, coeffs.len());
     let neg_beta_pow_series = powers_series(&(-beta), coeffs.len());
 
@@ -83,7 +83,7 @@ where
         let neg_beta_eval = univariate_evaluate(cs, &neg_beta_pow_series);
 
         let beta2_eval = two_inv
-            * ((beta_eval + neg_beta_eval) * (E::Fr::ONE - alpha)
+            * ((beta_eval + neg_beta_eval) * (E::Fr::one() - alpha)
                 + (beta_eval - neg_beta_eval) * beta_inv * alpha);
 
         local_evals.beta2_evals.push(beta2_eval);
@@ -147,7 +147,7 @@ where
     let lagrange_degree2 = local_evals.interpolate_degree2_aggregated_evals(beta, gamma);
     let f_gamma_quotient = {
         let mut nom = f_gamma.clone();
-        polynomial_add(&mut nom, -E::Fr::ONE, &lagrange_degree2);
+        polynomial_add(&mut nom, -E::Fr::one(), &lagrange_degree2);
         univariate_roots_quotient(nom, &[beta, beta2, -beta])
     };
     let beta_x_commitment = coeff_form_uni_kzg_commit(srs, &f_gamma_quotient);

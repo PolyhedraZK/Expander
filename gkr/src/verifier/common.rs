@@ -152,7 +152,7 @@ pub fn sumcheck_verify_gkr_layer<F: FieldEngine>(
         verified &= sum == vx_claim * vy_claim * GKRVerifierHelper::eval_mul(&layer.mul, sp);
         Some(vy_claim)
     } else {
-        verified &= sum == F::ChallengeField::ZERO;
+        verified &= sum == F::ChallengeField::zero();
         None
     };
 

@@ -27,17 +27,17 @@ impl Field for GoldilocksExt2 {
 
     const FIELD_SIZE: usize = 64 * 2;
 
-    const ZERO: Self = GoldilocksExt2 {
-        v: [Goldilocks::ZERO, Goldilocks::ZERO],
-    };
+    // const ZERO: Self = GoldilocksExt2 {
+    //     v: [Goldilocks::zero(), Goldilocks::zero()],
+    // };
 
-    const ONE: Self = GoldilocksExt2 {
-        v: [Goldilocks::ONE, Goldilocks::ZERO],
-    };
+    // const ONE: Self = GoldilocksExt2 {
+    //     v: [Goldilocks::one(), Goldilocks::zero()],
+    // };
 
-    const INV_2: Self = GoldilocksExt2 {
-        v: [Goldilocks::INV_2, Goldilocks::ZERO],
-    };
+    // const INV_2: Self = GoldilocksExt2 {
+    //     v: [Goldilocks::INV_2, Goldilocks::zero()],
+    // };
 
     const MODULUS: U256 = Goldilocks::MODULUS;
 
@@ -82,7 +82,7 @@ impl Field for GoldilocksExt2 {
 
         let a_pow_r_minus_1 = self.frobenius();
         let a_pow_r = a_pow_r_minus_1 * *self;
-        debug_assert!(a_pow_r.v[1] == Goldilocks::ZERO);
+        debug_assert!(a_pow_r.v[1].is_zero());
         let a_pow_r_inv = a_pow_r.v[0].inv().expect("inverse does not exist");
 
         let res = [
@@ -124,9 +124,15 @@ impl ExtensionField for GoldilocksExt2 {
 
     const W: u32 = 7; // x^2 - 7 is the irreducible polynomial
 
-    const X: Self = GoldilocksExt2 {
-        v: [Goldilocks::ZERO, Goldilocks::ONE],
-    };
+    // const X: Self = GoldilocksExt2 {
+    //     v: [Goldilocks::zero(), Goldilocks::one()],
+    // };
+
+    fn x() -> Self {
+        Self {
+            v: [Goldilocks::zero(), Goldilocks::one()],
+        }
+    }
 
     type BaseField = Goldilocks;
 
@@ -351,7 +357,7 @@ impl FFTField for GoldilocksExt2 {
     fn root_of_unity() -> Self {
         GoldilocksExt2 {
             v: [
-                Goldilocks::ZERO,
+                Goldilocks::zero(),
                 Goldilocks {
                     v: 0xd95051a31cf4a6ef,
                 },
@@ -391,7 +397,7 @@ impl GoldilocksExt2 {
         }
         let z0square = z0 * z0;
 
-        let mut res = [Goldilocks::ZERO; 2];
+        let mut res = [Goldilocks::zero(); 2];
 
         res[0] = arr[0] * z0;
         res[1] = arr[1] * z0square;

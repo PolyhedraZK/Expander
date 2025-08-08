@@ -39,7 +39,7 @@ where
     let num_vars_in_msg = msg_size.ilog2() as usize;
 
     // NOTE: working on evaluation response, evaluate the rest of the response
-    let mut scratch = vec![EvalF::ZERO; msg_size];
+    let mut scratch = vec![EvalF::zero(); msg_size];
     let final_eval = RefMultiLinearPoly::from_ref(&proof.eval_row).evaluate_with_buffer(
         &point[num_vars_in_com_simd..num_vars_in_com_simd + num_vars_in_msg],
         &mut scratch,

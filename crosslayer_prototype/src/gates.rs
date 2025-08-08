@@ -65,7 +65,7 @@ impl<C: FieldEngine> CrossLayerRelay<C> {
     ) -> Self {
         let o_id = rng.next_u64() as usize % output_size;
         let i_id = rng.next_u64() as usize % input_size;
-        let coef = C::CircuitField::ONE; // temporarily support one only
+        let coef = C::CircuitField::one(); // temporarily support one only
         Self {
             o_id,
             i_id,

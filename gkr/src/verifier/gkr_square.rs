@@ -141,7 +141,7 @@ pub fn sumcheck_verify_gkr_square_layer<C: FieldEngine>(
         + v_claim.exp(5) * GKRVerifierHelper::eval_pow_5(&layer.uni, sp);
     transcript.append_field_element(&v_claim);
 
-    verified &= sum == C::ChallengeField::ZERO;
+    verified &= sum == C::ChallengeField::zero();
 
     *current_claim = v_claim;
     verified

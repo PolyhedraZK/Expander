@@ -116,7 +116,7 @@ where
     let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
 
     // NOTE: packed codeword buffer and encode over packed field
-    let mut codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
+    let mut codewords = vec![PackF::zero(); packed_rows * pk.codeword_len()];
     izip!(
         packed_evals.chunks(pk.message_len()),
         codewords.chunks_mut(pk.codeword_len())
@@ -125,7 +125,7 @@ where
 
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
     if packed_rows > 1 {
-        let mut scratch = vec![PackF::ZERO; std::cmp::max(packed_rows, pk.codeword_len())];
+        let mut scratch = vec![PackF::zero(); std::cmp::max(packed_rows, pk.codeword_len())];
         transpose_inplace(&mut codewords, &mut scratch, pk.codeword_len(), packed_rows);
         drop(scratch)
     }
@@ -136,7 +136,7 @@ where
     // to commit by merkle tree
     if !codewords.len().is_power_of_two() {
         let aligned_po2_len = codewords.len().next_power_of_two();
-        codewords.resize(aligned_po2_len, PackF::ZERO);
+        codewords.resize(aligned_po2_len, PackF::zero());
     }
 
     // NOTE: ALL-TO-ALL transpose go get other world's slice of codeword
@@ -154,7 +154,7 @@ where
         let codeword_chunk_per_world_len = codeword_po2_chunk_len * packed_rows;
 
         // NOTE: now transpose back to row order of each world's codeword slice
-        let mut scratch = vec![PackF::ZERO; std::cmp::max(codeword_po2_chunk_len, packed_rows)];
+        let mut scratch = vec![PackF::zero(); std::cmp::max(codeword_po2_chunk_len, packed_rows)];
         codewords
             .chunks_mut(codeword_chunk_per_world_len)
             .for_each(|c| transpose_inplace(c, &mut scratch, packed_rows, codeword_po2_chunk_len));
@@ -162,7 +162,7 @@ where
     }
 
     // NOTE: transpose back into column order of the codeword slice
-    let mut scratch = vec![PackF::ZERO; std::cmp::max(codeword_po2_chunk_len, global_packed_rows)];
+    let mut scratch = vec![PackF::zero(); std::cmp::max(codeword_po2_chunk_len, global_packed_rows)];
     transpose_inplace(
         &mut codewords,
         &mut scratch,

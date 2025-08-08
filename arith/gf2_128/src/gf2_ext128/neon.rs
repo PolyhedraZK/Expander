@@ -178,7 +178,7 @@ impl ExtensionField for NeonGF2_128 {
     #[inline(always)]
     fn from_limbs(limbs: &[Self::BaseField]) -> Self {
         let mut local_limbs = limbs.to_vec();
-        local_limbs.resize(Self::DEGREE, Self::BaseField::ZERO);
+        local_limbs.resize(Self::DEGREE, Self::BaseField::zero());
 
         let mut u32_lanes = [0u32; 4];
         local_limbs
@@ -199,7 +199,7 @@ impl ExtensionField for NeonGF2_128 {
     fn to_limbs(&self) -> Vec<Self::BaseField> {
         let mut u32_extracted: [u32; 4] = unsafe { transmute(self.v) };
 
-        let mut res = vec![Self::BaseField::ZERO; 128];
+        let mut res = vec![Self::BaseField::zero(); 128];
         u32_extracted
             .iter_mut()
             .enumerate()

@@ -1,6 +1,6 @@
 use arith::Field;
+use ark_bn254::Fr;
 use ark_std::vec::Vec;
-use halo2curves::bn256::Fr;
 use tiny_keccak::{Hasher, Keccak};
 
 use crate::FiatShamirHasher;
@@ -12,7 +12,7 @@ pub struct MiMC5FiatShamirHasher<F: Field> {
 
 impl<F: Field> MiMC5FiatShamirHasher<F> {
     fn hash_u8_to_state(&self, input: &[u8]) -> F {
-        let mut h = F::ZERO;
+        let mut h = F::zero();
         let chunks = input.chunks_exact(F::SIZE);
         let mut remainder = chunks.remainder().to_vec();
         for chunk in chunks {

@@ -82,7 +82,7 @@ impl Field for NeonBabyBear {
     const ZERO: Self = Self {
         v: unsafe {
             transmute::<[BabyBear; BABY_BEAR_PACK_SIZE], [uint32x4_t; 4]>(
-                [BabyBear::ZERO; BABY_BEAR_PACK_SIZE],
+                [BabyBear::zero(); BABY_BEAR_PACK_SIZE],
             )
         },
     };
@@ -90,7 +90,7 @@ impl Field for NeonBabyBear {
     const ONE: Self = Self {
         v: unsafe {
             transmute::<[BabyBear; BABY_BEAR_PACK_SIZE], [uint32x4_t; 4]>(
-                [BabyBear::ONE; BABY_BEAR_PACK_SIZE],
+                [BabyBear::one(); BABY_BEAR_PACK_SIZE],
             )
         },
     };
@@ -106,15 +106,15 @@ impl Field for NeonBabyBear {
     const MODULUS: U256 = BabyBear::MODULUS;
 
     fn zero() -> Self {
-        Self::ZERO
+        Self::zero()
     }
 
     fn is_zero(&self) -> bool {
-        *self == Self::ZERO
+        *self == Self::zero()
     }
 
     fn one() -> Self {
-        Self::ONE
+        Self::one()
     }
 
     fn random_unsafe(mut rng: impl RngCore) -> Self {
@@ -218,7 +218,7 @@ impl Debug for NeonBabyBear {
 
 impl Default for NeonBabyBear {
     fn default() -> Self {
-        Self::ZERO
+        Self::zero()
     }
 }
 

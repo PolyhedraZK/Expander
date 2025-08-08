@@ -44,17 +44,17 @@ impl Field for AVXGF2_128 {
 
     const FIELD_SIZE: usize = 128; // in bits
 
-    const ZERO: Self = AVXGF2_128 {
-        v: unsafe { std::mem::zeroed() },
-    };
+    // const ZERO: Self = AVXGF2_128 {
+    //     v: unsafe { std::mem::zeroed() },
+    // };
 
-    const ONE: Self = AVXGF2_128 {
-        v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) },
-    };
+    // const ONE: Self = AVXGF2_128 {
+    //     v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([1, 0, 0, 0]) },
+    // };
 
-    const INV_2: Self = AVXGF2_128 {
-        v: unsafe { std::mem::zeroed() },
-    };
+    // const INV_2: Self = AVXGF2_128 {
+    //     v: unsafe { std::mem::zeroed() },
+    // };
 
     const MODULUS: U256 = unimplemented!(); // should not be used
 
@@ -131,9 +131,15 @@ impl ExtensionField for AVXGF2_128 {
 
     const W: u32 = 0x87;
 
-    const X: Self = AVXGF2_128 {
-        v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([2, 0, 0, 0]) },
-    };
+    // const X: Self = AVXGF2_128 {
+    //     v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([2, 0, 0, 0]) },
+    // };
+
+    fn x() -> Self {
+        AVXGF2_128 {
+            v: unsafe { std::mem::transmute::<[i32; 4], __m128i>([2, 0, 0, 0]) },
+        }
+    }
 
     type BaseField = GF2;
 
@@ -187,7 +193,7 @@ impl ExtensionField for AVXGF2_128 {
     #[inline(always)]
     fn from_limbs(limbs: &[Self::BaseField]) -> Self {
         let mut local_limbs = limbs.to_vec();
-        local_limbs.resize(Self::DEGREE, Self::BaseField::ZERO);
+        local_limbs.resize(Self::DEGREE, Self::BaseField::zero());
 
         let mut u32_lanes = [0u32; 4];
         local_limbs
@@ -208,7 +214,7 @@ impl ExtensionField for AVXGF2_128 {
     fn to_limbs(&self) -> Vec<Self::BaseField> {
         let mut u32_extracted: [u32; 4] = unsafe { transmute(self.v) };
 
-        let mut res = vec![Self::BaseField::ZERO; Self::DEGREE];
+        let mut res = vec![Self::BaseField::zero(); Self::DEGREE];
         u32_extracted
             .iter_mut()
             .enumerate()

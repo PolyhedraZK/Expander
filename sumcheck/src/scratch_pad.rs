@@ -66,7 +66,7 @@ impl<F: FieldEngine> ProverScratchPad<F> {
 
             gate_exists_5: vec![false; max_input_size],
             gate_exists_1: vec![false; max_input_size],
-            phase2_coef: F::ChallengeField::ZERO,
+            phase2_coef: F::ChallengeField::zero(),
         }
     }
 }
@@ -112,33 +112,33 @@ impl<F: FieldEngine> VerifierScratchPad<F> {
         let simd_size = F::get_field_pack_size();
 
         let gf2_deg2_eval_coef = if F::FIELD_TYPE == FieldType::GF2Ext128 {
-            (F::ChallengeField::X - F::ChallengeField::one())
+            (F::ChallengeField::x() - F::ChallengeField::one())
                 .mul_by_x()
                 .inv()
                 .unwrap()
         } else {
-            F::ChallengeField::INV_2
+            F::ChallengeField::from(2).inv().unwrap()
         };
 
         let deg3_eval_at = if F::FIELD_TYPE == FieldType::GF2Ext128 {
             [
-                F::ChallengeField::ZERO,
-                F::ChallengeField::ONE,
-                F::ChallengeField::X,
-                F::ChallengeField::X.mul_by_x(),
+                F::ChallengeField::zero(),
+                F::ChallengeField::one(),
+                F::ChallengeField::x(),
+                F::ChallengeField::x().mul_by_x(),
             ]
         } else {
             [
-                F::ChallengeField::ZERO,
-                F::ChallengeField::ONE,
+                F::ChallengeField::zero(),
+                F::ChallengeField::one(),
                 F::ChallengeField::from(2),
                 F::ChallengeField::from(3),
             ]
         };
 
-        let mut deg3_lag_denoms_inv = [F::ChallengeField::ZERO; 4];
+        let mut deg3_lag_denoms_inv = [F::ChallengeField::zero(); 4];
         for i in 0..4 {
-            let mut denominator = F::ChallengeField::ONE;
+            let mut denominator = F::ChallengeField::one();
             for j in 0..4 {
                 if j == i {
                     continue;
@@ -149,8 +149,8 @@ impl<F: FieldEngine> VerifierScratchPad<F> {
         }
 
         let deg6_eval_at = [
-            F::ChallengeField::ZERO,
-            F::ChallengeField::ONE,
+            F::ChallengeField::zero(),
+            F::ChallengeField::one(),
             F::ChallengeField::from(2),
             F::ChallengeField::from(3),
             F::ChallengeField::from(4),
@@ -158,9 +158,9 @@ impl<F: FieldEngine> VerifierScratchPad<F> {
             F::ChallengeField::from(6),
         ];
 
-        let mut deg6_lag_denoms_inv = [F::ChallengeField::ZERO; 7];
+        let mut deg6_lag_denoms_inv = [F::ChallengeField::zero(); 7];
         for i in 0..7 {
-            let mut denominator = F::ChallengeField::ONE;
+            let mut denominator = F::ChallengeField::one();
             for j in 0..7 {
                 if j == i {
                     continue;

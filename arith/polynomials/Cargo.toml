@@ -9,7 +9,6 @@ serdes = { path = "../../serdes" }
 
 ark-std.workspace = true
 criterion.workspace = true
-halo2curves.workspace = true
 rand.workspace = true
 itertools.workspace = true
 

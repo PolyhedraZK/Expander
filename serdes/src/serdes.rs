@@ -1,3 +1,4 @@
+use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{
     collections::HashMap,
@@ -8,10 +9,6 @@ use ark_std::{
     vec::Vec,
 };
 use ethnum::U256;
-use halo2curves::{
-    bn256::{Fr, G1Affine, G2Affine},
-    group::GroupEncoding,
-};
 
 use crate::{exp_serde_for_generic_slices, exp_serde_for_number, SerdeError, SerdeResult};
 
@@ -80,66 +77,6 @@ impl<V: ExpSerde> ExpSerde for Vec<V> {
     }
 }
 
-impl ExpSerde for Fr {
-    #[inline(always)]
-    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        writer.write_all(self.to_bytes().as_ref())?;
-        Ok(())
-    }
-
-    #[inline(always)]
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut buffer = [0u8; 32];
-        reader.read_exact(&mut buffer)?;
-        match Fr::from_bytes(&buffer).into_option() {
-            Some(v) => Ok(v),
-            None => Err(SerdeError::DeserializeError),
-        }
-    }
-}
-
-impl ExpSerde for G1Affine {
-    fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {
-        let mut buf = [0u8; 32];
-        assert!(self.to_bytes().as_ref().len() == 32);
-        buf.copy_from_slice(self.to_bytes().as_ref());
-        buf.serialize_into(writer)
-    }
-
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut buf = [0u8; 32];
-        reader.read_exact(&mut buf)?;
-
-        let mut encoding = <Self as GroupEncoding>::Repr::default();
-        encoding.as_mut().copy_from_slice(buf.as_ref());
-        match G1Affine::from_bytes(&encoding).into_option() {
-            Some(a) => Ok(a),
-            None => Err(SerdeError::DeserializeError),
-        }
-    }
-}
-
-impl ExpSerde for G2Affine {
-    fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {
-        let mut buf = [0u8; 64];
-        assert!(self.to_bytes().as_ref().len() == 64);
-        buf.copy_from_slice(self.to_bytes().as_ref());
-        buf.serialize_into(writer)
-    }
-
-    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut buf = [0u8; 64];
-        reader.read_exact(&mut buf)?;
-
-        let mut encoding = <Self as GroupEncoding>::Repr::default();
-        encoding.as_mut().copy_from_slice(buf.as_ref());
-        match G2Affine::from_bytes(&encoding).into_option() {
-            Some(a) => Ok(a),
-            None => Err(SerdeError::DeserializeError),
-        }
-    }
-}
-
 impl ExpSerde for ark_bn254::Fr {
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -154,7 +91,7 @@ impl ExpSerde for ark_bn254::Fr {
     }
 }
 
-impl ExpSerde for ark_bn254::G1Affine {
+impl<P: SWCurveConfig> ExpSerde for Affine<P> {
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.serialize_uncompressed(&mut writer).unwrap();

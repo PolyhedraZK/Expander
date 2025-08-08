@@ -21,11 +21,11 @@ impl Field for GF2x8 {
 
     const FIELD_SIZE: usize = 1; // in bits
 
-    const ZERO: Self = GF2x8 { v: 0 };
+    // const ZERO: Self = GF2x8 { v: 0 };
 
-    const ONE: Self = GF2x8 { v: 255 };
+    // const ONE: Self = GF2x8 { v: 255 };
 
-    const INV_2: Self = GF2x8 { v: 0 };
+    // const INV_2: Self = GF2x8 { v: 0 };
 
     #[doc(hidden)]
     const MODULUS: U256 = unimplemented!(); // should not be used
@@ -89,7 +89,7 @@ impl Field for GF2x8 {
 
     #[inline(always)]
     fn mul_by_6(&self) -> Self {
-        Self::ZERO
+        Self::zero()
     }
 }
 
@@ -313,7 +313,7 @@ impl Mul<GF2> for GF2x8 {
     #[inline(always)]
     fn mul(self, rhs: GF2) -> GF2x8 {
         if rhs.is_zero() {
-            GF2x8::ZERO
+            GF2x8::zero()
         } else {
             self
         }

@@ -1,7 +1,6 @@
 use super::*;
-use arith::{FFTField, Field};
+use arith::{FFTField, Field, Fr};
 use ark_std::test_rng;
-use halo2curves::bn256::Fr;
 
 #[test]
 fn test_scaled_eq_xr() {
@@ -65,7 +64,7 @@ fn test_eq_xr() {
 
         // expander
         let mut eq_x_r2 = vec![Fr::zero(); 1 << nv];
-        EqPolynomial::<Fr>::build_eq_x_r_with_buf(r.as_ref(), &Fr::ONE, &mut eq_x_r2);
+        EqPolynomial::<Fr>::build_eq_x_r_with_buf(r.as_ref(), &Fr::one(), &mut eq_x_r2);
         assert_eq!(eq_x_r2, eq_x_r0);
 
         // jolt
@@ -81,7 +80,7 @@ fn test_ref_multilinear_poly() {
         let es_len = 1 << nv;
         let es: Vec<Fr> = (0..es_len).map(|_| Fr::random_unsafe(&mut rng)).collect();
         let point: Vec<Fr> = (0..nv).map(|_| Fr::random_unsafe(&mut rng)).collect();
-        let mut scratch = vec![Fr::ZERO; es_len];
+        let mut scratch = vec![Fr::zero(); es_len];
 
         let mle_from_ref = RefMultiLinearPoly::<Fr>::from_ref(&es);
 
@@ -104,7 +103,7 @@ fn test_mut_ref_multilinear_poly() {
         let mut es: Vec<Fr> = (0..es_len).map(|_| Fr::random_unsafe(&mut rng)).collect();
         let es_cloned = es.clone();
         let point: Vec<Fr> = (0..nv).map(|_| Fr::random_unsafe(&mut rng)).collect();
-        let mut scratch = vec![Fr::ZERO; es_len];
+        let mut scratch = vec![Fr::zero(); es_len];
 
         let mut mle_from_mut_ref = MutRefMultiLinearPoly::<Fr>::from_ref(&mut es);
 
@@ -212,19 +211,25 @@ fn test_univariate_poly_evaluation() {
 fn test_univariate_degree_one_quotient() {
     {
         // x^3 + 1 = (x + 1)(x^2 - x + 1)
-        let mut poly = UnivariatePoly::new(vec![Fr::ONE, Fr::ZERO, Fr::ZERO, Fr::ONE]);
+        let mut poly = UnivariatePoly::new(vec![Fr::one(), Fr::zero(), Fr::zero(), Fr::one()]);
         let point = -Fr::from(1u64);
         poly.root_vanishing_quotient(&[point]);
 
-        assert_eq!(poly.coeffs, vec![Fr::ONE, -Fr::ONE, Fr::ONE, Fr::ZERO]);
+        assert_eq!(
+            poly.coeffs,
+            vec![Fr::one(), -Fr::one(), Fr::one(), Fr::zero()]
+        );
     }
     {
         // x^3 - 1 = (x-1)(x^2 + x + 1)
-        let poly = UnivariatePoly::new(vec![-Fr::ONE, Fr::ZERO, Fr::ZERO, Fr::ONE]);
+        let poly = UnivariatePoly::new(vec![-Fr::one(), Fr::zero(), Fr::zero(), Fr::one()]);
         let point = Fr::from(1u64);
         let (div, remainder) = poly.degree_one_quotient(point);
-        assert_eq!(div.coeffs, vec![Fr::ONE, Fr::ONE, Fr::ONE, Fr::ZERO]);
-        assert_eq!(remainder, Fr::ZERO)
+        assert_eq!(
+            div.coeffs,
+            vec![Fr::one(), Fr::one(), Fr::one(), Fr::zero()]
+        );
+        assert_eq!(remainder, Fr::zero());
     }
     {
         // x^3 + 6x^2 + 11x + 6 = (x + 1)(x + 2)(x + 3)
@@ -255,7 +260,10 @@ fn test_univariate_degree_one_quotient() {
             Fr::from(6u64),
             Fr::from(1u64),
         ]);
-        poly.root_vanishing_quotient(&[-Fr::ONE, -Fr::from(2u64), -Fr::from(3u64)]);
-        assert_eq!(poly.coeffs, vec![Fr::ONE, Fr::ZERO, Fr::ZERO, Fr::ZERO]);
+        poly.root_vanishing_quotient(&[-Fr::one(), -Fr::from(2u64), -Fr::from(3u64)]);
+        assert_eq!(
+            poly.coeffs,
+            vec![Fr::one(), Fr::zero(), Fr::zero(), Fr::zero()]
+        );
     }
 }

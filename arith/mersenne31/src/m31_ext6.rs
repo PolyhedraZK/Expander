@@ -23,23 +23,25 @@ impl Field for M31Ext6 {
 
     const FIELD_SIZE: usize = 32 * 6;
 
-    const ZERO: Self = M31Ext6 {
-        v: [M31Ext3::ZERO, M31Ext3::ZERO],
-    };
+    // const ZERO: Self = M31Ext6 {
+    //     v: [M31Ext3::zero(), M31Ext3::zero()],
+    // };
 
-    const ONE: Self = M31Ext6 {
-        v: [M31Ext3::ONE, M31Ext3::ZERO],
-    };
+    // const ONE: Self = M31Ext6 {
+    //     v: [M31Ext3::one(), M31Ext3::zero()],
+    // };
 
-    const INV_2: M31Ext6 = M31Ext6 {
-        v: [M31Ext3::INV_2, M31Ext3::ZERO],
-    };
+    // const INV_2: M31Ext6 = M31Ext6 {
+    //     v: [M31Ext3::INV_2, M31Ext3::zero()],
+    // };
 
     const MODULUS: U256 = M31::MODULUS;
 
     #[inline(always)]
     fn zero() -> Self {
-        Self::ZERO
+       M31Ext6 {
+            v: [M31Ext3::zero(), M31Ext3::zero()],
+        }
     }
 
     #[inline(always)]
@@ -49,7 +51,7 @@ impl Field for M31Ext6 {
 
     #[inline(always)]
     fn one() -> Self {
-        Self::ONE
+        Self::one()
     }
 
     fn random_unsafe(mut rng: impl RngCore) -> Self {
@@ -63,7 +65,7 @@ impl Field for M31Ext6 {
 
     fn random_bool(mut rng: impl RngCore) -> Self {
         M31Ext6 {
-            v: [M31Ext3::random_bool(&mut rng), M31Ext3::ZERO],
+            v: [M31Ext3::random_bool(&mut rng), M31Ext3::zero()],
         }
     }
 
@@ -125,7 +127,7 @@ impl ExtensionField for M31Ext6 {
     const W: u32 = (1 << 31) - 3;
 
     const X: Self = M31Ext6 {
-        v: [M31Ext3::ZERO, M31Ext3::ONE],
+        v: [M31Ext3::zero(), M31Ext3::one()],
     };
 
     /// Base field for the extension
@@ -209,7 +211,7 @@ impl From<u32> for M31Ext6 {
     #[inline(always)]
     fn from(x: u32) -> Self {
         Self {
-            v: [M31Ext3::from(x), M31Ext3::ZERO],
+            v: [M31Ext3::from(x), M31Ext3::zero()],
         }
     }
 }
@@ -218,7 +220,7 @@ impl From<M31Ext3> for M31Ext6 {
     #[inline(always)]
     fn from(x: M31Ext3) -> Self {
         Self {
-            v: [x, M31Ext3::ZERO],
+            v: [x, M31Ext3::zero()],
         }
     }
 }
@@ -260,7 +262,7 @@ fn mul_internal(a: &M31Ext6, b: &M31Ext6) -> M31Ext6 {
 
 #[inline(always)]
 fn square_internal(a: &[M31Ext3; 2]) -> [M31Ext3; 2] {
-    let mut res = [M31Ext3::ZERO; 2];
+    let mut res = [M31Ext3::zero(); 2];
     res[0] = a[0].square() - a[1].square().double();
     res[1] = a[0] * a[1].double();
     res

@@ -70,7 +70,7 @@ impl From<Goldilocksx8> for GoldilocksExt2x8 {
     fn from(x: Goldilocksx8) -> Self {
         Self {
             c0: x,
-            c1: Goldilocksx8::ZERO,
+            c1: Goldilocksx8::zero(),
         }
     }
 }
@@ -82,10 +82,17 @@ impl ExtensionField for GoldilocksExt2x8 {
 
     const W: u32 = 7;
 
-    const X: Self = Self {
-        c0: Goldilocksx8::ZERO,
-        c1: Goldilocksx8::ONE,
-    };
+    // const X: Self = Self {
+    //     c0: Goldilocksx8::zero(),
+    //     c1: Goldilocksx8::one(),
+    // };
+
+    fn x() -> Self {
+        Self {
+            c0: Goldilocksx8::zero(),
+            c1: Goldilocksx8::one(),
+        }
+    }
 
     #[inline]
     fn mul_by_base_field(&self, base: &Self::BaseField) -> Self {
@@ -157,29 +164,35 @@ impl Field for GoldilocksExt2x8 {
 
     const MODULUS: U256 = Goldilocks::MODULUS;
 
-    const ZERO: Self = Self {
-        c0: Goldilocksx8::ZERO,
-        c1: Goldilocksx8::ZERO,
-    };
+    // const ZERO: Self = Self {
+    //     c0: Goldilocksx8::zero(),
+    //     c1: Goldilocksx8::zero(),
+    // };
 
-    const ONE: Self = Self {
-        c0: Goldilocksx8::ONE,
-        c1: Goldilocksx8::ZERO,
-    };
+    // const ONE: Self = Self {
+    //     c0: Goldilocksx8::one(),
+    //     c1: Goldilocksx8::zero(),
+    // };
 
-    const INV_2: Self = Self {
-        c0: Goldilocksx8::INV_2,
-        c1: Goldilocksx8::ZERO,
-    };
+    // const INV_2: Self = Self {
+    //     c0: Goldilocksx8::INV_2,
+    //     c1: Goldilocksx8::zero(),
+    // };
 
     #[inline]
     fn zero() -> Self {
-        Self::ZERO
+        Self {
+            c0: Goldilocksx8::zero(),
+            c1: Goldilocksx8::zero(),
+        }
     }
 
     #[inline]
     fn one() -> Self {
-        Self::ONE
+        Self {
+            c0: Goldilocksx8::one(),
+            c1: Goldilocksx8::zero(),
+        }
     }
 
     #[inline]
@@ -199,7 +212,7 @@ impl Field for GoldilocksExt2x8 {
     fn random_bool(mut rng: impl RngCore) -> Self {
         Self {
             c0: Goldilocksx8::random_bool(&mut rng),
-            c1: Goldilocksx8::ZERO,
+            c1: Goldilocksx8::zero(),
         }
     }
 
@@ -292,7 +305,7 @@ impl From<u32> for GoldilocksExt2x8 {
     fn from(value: u32) -> Self {
         Self {
             c0: Goldilocksx8::from(value),
-            c1: Goldilocksx8::ZERO,
+            c1: Goldilocksx8::zero(),
         }
     }
 }
@@ -357,7 +370,7 @@ impl FFTField for GoldilocksExt2x8 {
     fn root_of_unity() -> Self {
         let var = GoldilocksExt2 {
             v: [
-                Goldilocks::ZERO,
+                Goldilocks::zero(),
                 Goldilocks {
                     v: 0xd95051a31cf4a6ef,
                 },

@@ -57,7 +57,7 @@ impl<F: Field> UnivariatePoly<F> {
     /// Evaluation by Horner's rule
     #[inline]
     pub fn evaluate(&self, point: F) -> F {
-        let mut eval = F::ZERO;
+        let mut eval = F::zero();
         self.coeffs.iter().rev().for_each(|t| {
             eval *= point;
             eval += *t
@@ -81,7 +81,7 @@ impl<F: Field> UnivariatePoly<F> {
 
         let final_remainder = div_coeffs[0];
         let mut final_div_coeffs = div_coeffs[1..].to_owned();
-        final_div_coeffs.resize(self.coeffs.len(), F::ZERO);
+        final_div_coeffs.resize(self.coeffs.len(), F::zero());
 
         (Self::new(final_div_coeffs), final_remainder)
     }
@@ -100,11 +100,12 @@ impl<F: Field> UnivariatePoly<F> {
                 self.coeffs[i - 1] += remainder;
             }
 
-            assert_eq!(self.coeffs[ith_root], F::ZERO);
+            assert_eq!(self.coeffs[ith_root], F::zero());
         });
 
         self.coeffs.drain(0..roots.len());
-        self.coeffs.resize(self.coeffs.len() + roots.len(), F::ZERO);
+        self.coeffs
+            .resize(self.coeffs.len() + roots.len(), F::zero());
     }
 }
 
@@ -119,7 +120,7 @@ impl<F: Field> AddAssign<&Self> for UnivariatePoly<F> {
     #[inline(always)]
     fn add_assign(&mut self, rhs: &Self) {
         if rhs.coeffs.len() > self.coeffs.len() {
-            self.coeffs.resize(rhs.coeffs.len(), F::ZERO);
+            self.coeffs.resize(rhs.coeffs.len(), F::zero());
         }
 
         izip!(&mut self.coeffs, &rhs.coeffs).for_each(|(c, r)| *c += r);
@@ -148,10 +149,10 @@ impl<F: FFTField> UnivariateLagrangePolynomial<F> {
         let omega = F::two_adic_generator(log_n);
         let omega_inv = omega.inv().unwrap();
 
-        let nominator_prepare = point.exp(n as u128) - F::ONE;
-        let denominator_prepare = F::ONE.double().exp(log_n as u128);
+        let nominator_prepare = point.exp(n as u128) - F::one();
+        let denominator_prepare = F::one().double().exp(log_n as u128);
 
-        let mut omega_i = F::ONE;
+        let mut omega_i = F::one();
         let mut denominator = denominator_prepare;
 
         self.evals
@@ -162,7 +163,7 @@ impl<F: FFTField> UnivariateLagrangePolynomial<F> {
                 let res = if nominator_vanisher.is_zero() {
                     *e_i
                 } else if nominator_prepare.is_zero() {
-                    F::ZERO
+                    F::zero()
                 } else {
                     let nominator = nominator_prepare * nominator_vanisher.inv().unwrap();
                     *e_i * nominator * denominator.inv().unwrap()
@@ -214,11 +215,11 @@ impl<F: Field> EqUnivariatePoly<F> {
     /// Evaluation in O(\log N) time
     #[inline]
     pub fn evaluate(&self, x: F) -> F {
-        let mut eval = F::ONE;
+        let mut eval = F::one();
         let mut x_pow = x;
 
         self.point.iter().for_each(|e| {
-            eval *= x_pow * e + F::ONE - e;
+            eval *= x_pow * e + F::one() - e;
             x_pow = x_pow.square();
         });
 

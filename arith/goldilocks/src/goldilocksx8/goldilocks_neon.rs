@@ -31,17 +31,17 @@ impl Field for NeonGoldilocks {
 
     const FIELD_SIZE: usize = 64;
 
-    const ZERO: Self = Self {
-        v: [Goldilocks::ZERO; 8],
-    };
+    // const ZERO: Self = Self {
+    //     v: [Goldilocks::zero(); 8],
+    // };
 
-    const ONE: Self = Self {
-        v: [Goldilocks::ONE; 8],
-    };
+    // const ONE: Self = Self {
+    //     v: [Goldilocks::one(); 8],
+    // };
 
-    const INV_2: Self = Self {
-        v: [Goldilocks::INV_2; 8],
-    };
+    // const INV_2: Self = Self {
+    //     v: [Goldilocks::INV_2; 8],
+    // };
 
     const MODULUS: U256 = Goldilocks::MODULUS;
 

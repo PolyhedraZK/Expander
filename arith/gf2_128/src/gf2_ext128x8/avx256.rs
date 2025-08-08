@@ -214,12 +214,12 @@ impl Field for AVX256GF2_128x8 {
 
     #[inline(always)]
     fn double(&self) -> Self {
-        Self::ZERO
+        Self::zero()
     }
 
     #[inline(always)]
     fn mul_by_2(&self) -> Self {
-        Self::ZERO
+        Self::zero()
     }
 
     #[inline(always)]
@@ -234,7 +234,7 @@ impl Field for AVX256GF2_128x8 {
 
     #[inline(always)]
     fn mul_by_6(&self) -> Self {
-        Self::ZERO
+        Self::zero()
     }
 }
 /*
@@ -640,9 +640,9 @@ impl ExtensionField for AVX256GF2_128x8 {
     #[inline(always)]
     fn from_limbs(limbs: &[Self::BaseField]) -> Self {
         let mut local_limbs = limbs.to_vec();
-        local_limbs.resize(Self::DEGREE, Self::BaseField::ZERO);
+        local_limbs.resize(Self::DEGREE, Self::BaseField::zero());
 
-        let mut buffer = vec![GF2::ZERO; Self::DEGREE * Self::PACK_SIZE];
+        let mut buffer = vec![GF2::zero(); Self::DEGREE * Self::PACK_SIZE];
 
         local_limbs.iter().enumerate().for_each(|(ith_limb, limb)| {
             let unpacked = limb.unpack();
@@ -663,7 +663,7 @@ impl ExtensionField for AVX256GF2_128x8 {
     fn to_limbs(&self) -> Vec<Self::BaseField> {
         let gf2_128s = self.unpack();
 
-        let mut buffer = vec![GF2::ZERO; Self::DEGREE * Self::PACK_SIZE];
+        let mut buffer = vec![GF2::zero(); Self::DEGREE * Self::PACK_SIZE];
         gf2_128s
             .iter()
             .enumerate()

@@ -66,10 +66,10 @@ where
     };
 
     // NOTE: pre-declare the spaces for returning evaluation and proximity queries
-    let mut eval_row = vec![EvalF::ZERO; msg_size];
+    let mut eval_row = vec![EvalF::zero(); msg_size];
 
     let proximity_test_num = pk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
-    let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_test_num];
+    let mut proximity_rows = vec![vec![EvalF::zero(); msg_size]; proximity_test_num];
 
     let random_col_coeffs: Vec<_> = (0..proximity_test_num)
         .map(|_| {
@@ -98,7 +98,7 @@ where
     }
 
     // NOTE: working on evaluation response, evaluate the rest of the response
-    let mut scratch = vec![EvalF::ZERO; msg_size];
+    let mut scratch = vec![EvalF::zero(); msg_size];
     let eval = RefMultiLinearPoly::from_ref(&eval_row).evaluate_with_buffer(
         &point[num_vars_in_com_simd..num_vars_in_com_simd + num_vars_in_msg],
         &mut scratch,

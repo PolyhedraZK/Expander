@@ -110,7 +110,7 @@ impl<F: ExtensionField> PolynomialCommitmentScheme<F> for RawMultiLinearPCS {
         MultiLinearPoly::<F>::evaluate_with_buffer(
             &commitment.evals,
             x,
-            &mut vec![F::ZERO; commitment.evals.len()],
+            &mut vec![F::zero(); commitment.evals.len()],
         ) == v
     }
 }

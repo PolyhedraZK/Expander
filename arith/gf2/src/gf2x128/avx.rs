@@ -42,17 +42,17 @@ impl Field for AVXGF2x128 {
 
     const FIELD_SIZE: usize = 1; // in bits
 
-    const ZERO: Self = AVXGF2x128 {
-        v: unsafe { zeroed() },
-    };
+    // const ZERO: Self = AVXGF2x128 {
+    //     v: unsafe { zeroed() },
+    // };
 
-    const ONE: Self = AVXGF2x128 {
-        v: unsafe { transmute::<[u64; 2], __m128i>([!0u64, !0u64]) },
-    };
+    // const ONE: Self = AVXGF2x128 {
+    //     v: unsafe { transmute::<[u64; 2], __m128i>([!0u64, !0u64]) },
+    // };
 
-    const INV_2: Self = AVXGF2x128 {
-        v: unsafe { zeroed() },
-    };
+    // const INV_2: Self = AVXGF2x128 {
+    //     v: unsafe { zeroed() },
+    // };
 
     const MODULUS: U256 = unimplemented!(); // should not be used
 
@@ -128,7 +128,7 @@ impl Field for AVXGF2x128 {
 impl Default for AVXGF2x128 {
     #[inline(always)]
     fn default() -> Self {
-        Self::ZERO
+        Self::zero()
     }
 }
 
@@ -286,9 +286,9 @@ impl From<u32> for AVXGF2x128 {
     fn from(v: u32) -> Self {
         assert!(v < 2);
         if v == 0 {
-            AVXGF2x128::ZERO
+            AVXGF2x128::zero()
         } else {
-            AVXGF2x128::ONE
+            AVXGF2x128::one()
         }
     }
 }
@@ -298,9 +298,9 @@ impl From<GF2> for AVXGF2x128 {
     fn from(v: GF2) -> Self {
         assert!(v.v < 2);
         if v.v == 0 {
-            AVXGF2x128::ZERO
+            AVXGF2x128::zero()
         } else {
-            AVXGF2x128::ONE
+            AVXGF2x128::one()
         }
     }
 }

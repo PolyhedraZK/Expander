@@ -52,14 +52,14 @@ pub trait Field:
     /// Field element size in bits, e.g., log_2(modulus), rounded up to the next power of 2.
     const FIELD_SIZE: usize;
 
-    /// zero
-    const ZERO: Self;
+    // /// zero
+    // const ZERO: Self;
 
-    /// One
-    const ONE: Self;
+    // /// One
+    // const ONE: Self;
 
-    /// Inverse of 2
-    const INV_2: Self;
+    // /// Inverse of 2
+    // const INV_2: Self;
 
     /// MODULUS
     const MODULUS: U256;
@@ -68,17 +68,19 @@ pub trait Field:
     // constants
     // ====================================
     /// Zero element
-    fn zero() -> Self {
-        Self::ZERO
-    }
+    fn zero() -> Self;
+    // {
+    //     Self::zero()
+    // }
 
     /// Is zero
     fn is_zero(&self) -> bool;
 
     /// Identity element
-    fn one() -> Self {
-        Self::ONE
-    }
+    fn one() -> Self;
+    //  {
+    //     Self::one()
+    // }
 
     // ====================================
     // generators

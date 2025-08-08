@@ -16,8 +16,8 @@ sumcheck = { path = "../sumcheck" }
 
 ethnum.workspace = true
 ark-std.workspace = true
+ark-bn254.workspace = true
 derivative.workspace = true
-halo2curves.workspace = true
 itertools.workspace = true
 rand.workspace = true
 rayon.workspace = true

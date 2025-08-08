@@ -95,9 +95,15 @@ impl ExtensionField for M31Ext3x16 {
 
     const W: u32 = 5;
 
-    const X: Self = M31Ext3x16 {
-        v: [M31x16::ZERO, M31x16::ONE, M31x16::ZERO],
-    };
+    // const X: Self = M31Ext3x16 {
+    //     v: [M31x16::zero(), M31x16::one(), M31x16::zero()],
+    // };
+
+    fn x() -> Self {
+        M31Ext3x16 {
+            v: [M31x16::zero(), M31x16::one(), M31x16::zero()],
+        }
+    }
 
     type BaseField = M31x16;
 
@@ -173,17 +179,17 @@ impl Field for M31Ext3x16 {
 
     const FIELD_SIZE: usize = 32 * 3;
 
-    const ZERO: Self = Self {
-        v: [M31x16::ZERO; 3],
-    };
+    // const ZERO: Self = Self {
+    //     v: [M31x16::zero(); 3],
+    // };
 
-    const ONE: Self = Self {
-        v: [M31x16::ONE, M31x16::ZERO, M31x16::ZERO],
-    };
+    // const ONE: Self = Self {
+    //     v: [M31x16::one(), M31x16::zero(), M31x16::zero()],
+    // };
 
-    const INV_2: Self = Self {
-        v: [M31x16::INV_2, M31x16::ZERO, M31x16::ZERO],
-    };
+    // const INV_2: Self = Self {
+    //     v: [M31x16::INV_2, M31x16::zero(), M31x16::zero()],
+    // };
 
     const MODULUS: U256 = M31::MODULUS;
 

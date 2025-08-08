@@ -129,7 +129,7 @@ impl<F: Field> EqPolynomial<F> {
             .map(|r_i| {
                 let mut term = *r_i;
                 if index & 1 == 0 {
-                    term = F::ONE - term;
+                    term = F::one() - term;
                 }
 
                 index >>= 1;

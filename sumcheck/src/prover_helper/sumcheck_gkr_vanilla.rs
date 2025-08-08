@@ -264,7 +264,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
             //  eq_evals_at_rx was thus skipped in the previous round
             EqPolynomial::<F::ChallengeField>::eq_eval_at(
                 &self.challenge.rz_0,
-                &F::ChallengeField::ONE,
+                &F::ChallengeField::one(),
                 eq_evals_at_rz0,
                 &mut self.sp.eq_evals_first_half,
                 &mut self.sp.eq_evals_second_half,
@@ -342,7 +342,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         // EQ Polys for next round
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
             &self.r_mpi_var,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             &mut self.sp.eq_evals_at_r_mpi0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -350,7 +350,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
 
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
             &self.rx,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             eq_evals_at_rx,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,
@@ -358,7 +358,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
 
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
             &self.r_simd_var,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             &mut self.sp.eq_evals_at_r_simd0,
             &mut self.sp.eq_evals_first_half,
             &mut self.sp.eq_evals_second_half,

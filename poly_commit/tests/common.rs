@@ -225,7 +225,7 @@ pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C
     // We use RawExpanderGKR as the golden standard for the evaluation value
     // Note this test will almost always pass for RawExpanderGKR, so make sure it is correct
     let mut coeffs_gathered = if mpi_config.is_root() {
-        vec![C::SimdCircuitField::ZERO; poly.hypercube_size() * mpi_config.world_size()]
+        vec![C::SimdCircuitField::zero(); poly.hypercube_size() * mpi_config.world_size()]
     } else {
         vec![]
     };

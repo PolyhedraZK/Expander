@@ -25,9 +25,9 @@ impl SumcheckProductGateHelper {
     where
         EvalF: Field + Mul<VF, Output = EvalF>,
     {
-        let mut p0 = EvalF::ZERO;
-        let mut p1 = EvalF::ZERO;
-        let mut p2 = EvalF::ZERO;
+        let mut p0 = EvalF::zero();
+        let mut p1 = EvalF::zero();
+        let mut p2 = EvalF::zero();
         for i in 0..eval_size {
             if !gate_exists[i * 2] && !gate_exists[i * 2 + 1] {
                 continue;

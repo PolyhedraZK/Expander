@@ -99,9 +99,15 @@ impl ExtensionField for BabyBearExt3x16 {
 
     const W: u32 = 2;
 
-    const X: Self = BabyBearExt3x16 {
-        v: [BabyBearx16::ZERO, BabyBearx16::ONE, BabyBearx16::ZERO],
-    };
+    // const X: Self = BabyBearExt3x16 {
+    //     v: [BabyBearx16::zero(), BabyBearx16::one(), BabyBearx16::zero()],
+    // };
+
+    fn x() -> Self {
+        BabyBearExt3x16 {
+            v: [BabyBearx16::zero(), BabyBearx16::one(), BabyBearx16::zero()],
+        }
+    }
 
     type BaseField = BabyBearx16;
 
@@ -176,17 +182,17 @@ impl Field for BabyBearExt3x16 {
 
     const FIELD_SIZE: usize = 32 * 3;
 
-    const ZERO: Self = Self {
-        v: [BabyBearx16::ZERO; 3],
-    };
+    // const ZERO: Self = Self {
+    //     v: [BabyBearx16::zero(); 3],
+    // };
 
-    const ONE: Self = Self {
-        v: [BabyBearx16::ONE, BabyBearx16::ZERO, BabyBearx16::ZERO],
-    };
+    // const ONE: Self = Self {
+    //     v: [BabyBearx16::one(), BabyBearx16::zero(), BabyBearx16::zero()],
+    // };
 
-    const INV_2: Self = Self {
-        v: [BabyBearx16::INV_2, BabyBearx16::ZERO, BabyBearx16::ZERO],
-    };
+    // const INV_2: Self = Self {
+    //     v: [BabyBearx16::INV_2, BabyBearx16::zero(), BabyBearx16::zero()],
+    // };
 
     const MODULUS: U256 = BabyBear::MODULUS;
 

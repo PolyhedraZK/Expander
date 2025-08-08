@@ -1,5 +1,5 @@
+use ark_bn254::Fr;
 use ark_std::test_rng;
-use halo2curves::bn256::Fr;
 
 use super::{
     random_fft_field_tests, random_field_tests, random_from_limbs_to_limbs_tests,

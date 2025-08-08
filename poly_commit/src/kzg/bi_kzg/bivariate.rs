@@ -89,7 +89,7 @@ where
 
     let (div, eval) = univariate_degree_one_quotient(&gammas, beta);
 
-    let mut y_open = E::G1::generator() * E::Fr::ZERO;
+    let mut y_open = E::G1::generator() * E::Fr::zero();
     msm::multiexp_serial(&div, &srs.tau_y_srs.powers_of_tau[..div.len()], &mut y_open);
 
     (
@@ -136,11 +136,6 @@ where
 #[cfg(test)]
 mod tests {
     use ark_std::test_rng;
-    use halo2curves::{
-        bn256::{Bn256, Fr, G1Affine, G1},
-        ff::Field,
-        group::{prime::PrimeCurveAffine, Curve},
-    };
     use itertools::izip;
 
     use crate::*;

@@ -25,7 +25,7 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
     fn interpolate_3<F: FieldEngine>(p_add: &[F::Field; 3], p: &mut [F::Field; D]) {
         // Calculate coefficients for the interpolating polynomial
         let p_add_coef_0 = p_add[0];
-        let p_add_coef_2 = (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * F::CircuitField::INV_2;
+        let p_add_coef_2 = (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * F::CircuitField::from(2).inv().unwrap();
 
         let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
 
@@ -62,8 +62,8 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
             if !gate_exists_5[i * 2] && !gate_exists_5[i * 2 + 1] {
                 continue;
             }
-            let mut f_v = [VF::ZERO; D];
-            let mut hg_v = [ChallengeF::ZERO; D];
+            let mut f_v = [VF::zero(); D];
+            let mut hg_v = [ChallengeF::zero(); D];
             f_v[0] = src_v[i * 2];
             f_v[1] = src_v[i * 2 + 1];
             hg_v[0] = bk_hg_5[i * 2];
@@ -81,13 +81,13 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
             }
         }
 
-        let mut p_add = [EvalF::ZERO; 3];
+        let mut p_add = [EvalF::zero(); 3];
         for i in 0..eval_size {
             if !gate_exists_1[i * 2] && !gate_exists_1[i * 2 + 1] {
                 continue;
             }
-            let mut f_v = [VF::ZERO; 3];
-            let mut hg_v = [ChallengeF::ZERO; 3];
+            let mut f_v = [VF::zero(); 3];
+            let mut hg_v = [ChallengeF::zero(); 3];
             f_v[0] = src_v[i * 2];
             f_v[1] = src_v[i * 2 + 1];
             hg_v[0] = bk_hg_1[i * 2];

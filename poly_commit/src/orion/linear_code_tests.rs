@@ -35,8 +35,8 @@ where
     let weights: Vec<_> = (0..row_num).map(|_| F::random_unsafe(&mut rng)).collect();
 
     // NOTE: generate message and codeword in the slice buffer
-    let mut message_mat = vec![F::ZERO; row_num * encoder.msg_len()];
-    let mut codeword_mat = vec![F::ZERO; row_num * encoder.code_len()];
+    let mut message_mat = vec![F::zero(); row_num * encoder.msg_len()];
+    let mut codeword_mat = vec![F::zero(); row_num * encoder.code_len()];
 
     message_mat
         .chunks_mut(encoder.msg_len())
@@ -47,7 +47,7 @@ where
         });
 
     // NOTE: transpose message and codeword matrix
-    let mut message_mat_transpose = vec![F::ZERO; row_num * encoder.msg_len()];
+    let mut message_mat_transpose = vec![F::zero(); row_num * encoder.msg_len()];
     transpose(
         &message_mat,
         &mut message_mat_transpose,
@@ -55,7 +55,7 @@ where
         row_num,
     );
 
-    let mut codeword_mat_transpose = vec![F::ZERO; row_num * encoder.code_len()];
+    let mut codeword_mat_transpose = vec![F::zero(); row_num * encoder.code_len()];
     transpose(
         &codeword_mat,
         &mut codeword_mat_transpose,

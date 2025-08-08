@@ -27,7 +27,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
         if is_output_layer {
             EqPolynomial::<F::ChallengeField>::eq_eval_at(
                 &challenge.rz_0,
-                &F::ChallengeField::ONE,
+                &F::ChallengeField::one(),
                 &mut sp.eq_evals_at_rz0,
                 &mut sp.eq_evals_first_part,
                 &mut sp.eq_evals_second_part,
@@ -46,7 +46,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
 
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
             &challenge.r_simd,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             &mut sp.eq_evals_at_r_simd,
             &mut sp.eq_evals_first_part,
             &mut sp.eq_evals_second_part,
@@ -54,7 +54,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
 
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
             &challenge.r_mpi,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             &mut sp.eq_evals_at_r_mpi,
             &mut sp.eq_evals_first_part,
             &mut sp.eq_evals_second_part,
@@ -77,7 +77,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
     ) {
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
             &challenge.rz_0,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             &mut sp.eq_evals_at_rz0,
             &mut sp.eq_evals_first_part,
             &mut sp.eq_evals_second_part,
@@ -86,7 +86,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
             let alpha = alpha.unwrap();
             EqPolynomial::<F::ChallengeField>::eq_eval_at(
                 challenge.rz_1.as_ref().unwrap(),
-                &F::ChallengeField::ONE,
+                &F::ChallengeField::one(),
                 &mut sp.eq_evals_at_rx,
                 &mut sp.eq_evals_first_part,
                 &mut sp.eq_evals_second_part,
@@ -98,7 +98,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
 
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
             &challenge.r_simd,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             &mut sp.eq_evals_at_r_simd,
             &mut sp.eq_evals_first_part,
             &mut sp.eq_evals_second_part,
@@ -106,7 +106,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
 
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
             &challenge.r_mpi,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             &mut sp.eq_evals_at_r_mpi,
             &mut sp.eq_evals_first_part,
             &mut sp.eq_evals_second_part,
@@ -209,7 +209,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
     pub fn set_rx(rx: &[F::ChallengeField], sp: &mut VerifierScratchPad<F>) {
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
             rx,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             &mut sp.eq_evals_at_rx,
             &mut sp.eq_evals_first_part,
             &mut sp.eq_evals_second_part,
@@ -230,7 +230,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
     pub fn set_ry(ry: &[F::ChallengeField], sp: &mut VerifierScratchPad<F>) {
         EqPolynomial::<F::ChallengeField>::eq_eval_at(
             ry,
-            &F::ChallengeField::ONE,
+            &F::ChallengeField::one(),
             &mut sp.eq_evals_at_ry,
             &mut sp.eq_evals_first_part,
             &mut sp.eq_evals_second_part,
@@ -257,7 +257,7 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
             c0 + (c2 * x + c1) * x
         } else {
             let c0 = p0;
-            let c2 = F::ChallengeField::INV_2 * (p2 - p1 - p1 + p0);
+            let c2 = F::ChallengeField::from(2).inv().unwrap() * (p2 - p1 - p1 + p0);
             let c1 = p1 - p0 - c2;
             c0 + (c2 * x + c1) * x
         }
@@ -294,9 +294,9 @@ impl<F: FieldEngine> GKRVerifierHelper<F> {
             _ => panic!("unsupported degree"),
         };
 
-        let mut v = F::ChallengeField::ZERO;
+        let mut v = F::ChallengeField::zero();
         for i in 0..vals.len() {
-            let mut numerator = F::ChallengeField::ONE;
+            let mut numerator = F::ChallengeField::one();
             for j in 0..vals.len() {
                 if j == i {
                     continue;

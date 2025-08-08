@@ -269,7 +269,7 @@ impl<'a> MPIEngine for MPIConfig<'a> {
         if self.world_size == 1 {
             local_vec.to_vec()
         } else if self.world_rank == Self::ROOT_RANK {
-            let mut global_vec = vec![F::ZERO; local_vec.len() * (self.world_size as usize)];
+            let mut global_vec = vec![F::zero(); local_vec.len() * (self.world_size as usize)];
             self.gather_vec(local_vec, &mut global_vec);
             for i in 0..local_vec.len() {
                 for j in 1..(self.world_size as usize) {
@@ -292,8 +292,8 @@ impl<'a> MPIEngine for MPIConfig<'a> {
             // but coef[0] is always one in our use case of self.world_size = 1
             local_vec.to_vec()
         } else if self.world_rank == Self::ROOT_RANK {
-            let mut global_vec = vec![F::ZERO; local_vec.len() * (self.world_size as usize)];
-            let mut ret = vec![F::ZERO; local_vec.len()];
+            let mut global_vec = vec![F::zero(); local_vec.len() * (self.world_size as usize)];
+            let mut ret = vec![F::zero(); local_vec.len()];
             self.gather_vec(local_vec, &mut global_vec);
             for i in 0..local_vec.len() {
                 for j in 0..(self.world_size as usize) {
@@ -303,7 +303,7 @@ impl<'a> MPIEngine for MPIConfig<'a> {
             ret
         } else {
             self.gather_vec(local_vec, &mut vec![]);
-            vec![F::ZERO; local_vec.len()]
+            vec![F::zero(); local_vec.len()]
         }
     }
 

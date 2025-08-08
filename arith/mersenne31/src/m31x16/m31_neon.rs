@@ -17,7 +17,7 @@ use crate::{m31::M31_MOD, M31};
 const M31_PACK_SIZE: usize = 16;
 const PACKED_MOD: uint32x4_t = unsafe { transmute([M31_MOD; 4]) };
 const PACKED_0: uint32x4_t = unsafe { transmute([0; 4]) };
-const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
+// const PACKED_INV_2: uint32x4_t = unsafe { transmute([1 << 30; 4]) };
 
 #[inline(always)]
 fn reduce_sum(x: uint32x4_t) -> uint32x4_t {
@@ -69,15 +69,15 @@ impl Field for NeonM31 {
 
     const FIELD_SIZE: usize = 32;
 
-    const ZERO: Self = Self { v: [PACKED_0; 4] };
+    // const ZERO: Self = Self { v: [PACKED_0; 4] };
 
-    const ONE: Self = Self {
-        v: [unsafe { transmute::<[u32; 4], uint32x4_t>([1; 4]) }; 4],
-    };
+    // const ONE: Self = Self {
+    //     v: [unsafe { transmute::<[u32; 4], uint32x4_t>([1; 4]) }; 4],
+    // };
 
-    const INV_2: Self = Self {
-        v: [PACKED_INV_2; 4],
-    };
+    // const INV_2: Self = Self {
+    //     v: [PACKED_INV_2; 4],
+    // };
 
     const MODULUS: U256 = M31::MODULUS;
 
@@ -322,7 +322,7 @@ impl SimdField for NeonM31 {
 
         buffer = (buffer & M31_MOD as u64) + (buffer >> 31);
         if buffer == M31_MOD as u64 {
-            Self::Scalar::ZERO
+            Self::Scalar::zero()
         } else {
             Self::Scalar { v: buffer as u32 }
         }

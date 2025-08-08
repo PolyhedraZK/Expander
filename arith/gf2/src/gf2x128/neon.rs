@@ -127,7 +127,7 @@ impl Field for NeonGF2x128 {
 impl Default for NeonGF2x128 {
     #[inline(always)]
     fn default() -> Self {
-        Self::ZERO
+        Self::zero()
     }
 }
 
@@ -287,9 +287,9 @@ impl From<u32> for NeonGF2x128 {
     fn from(v: u32) -> Self {
         assert!(v < 2);
         if v == 0 {
-            NeonGF2x128::ZERO
+            NeonGF2x128::zero()
         } else {
-            NeonGF2x128::ONE
+            NeonGF2x128::one()
         }
     }
 }
@@ -299,9 +299,9 @@ impl From<GF2> for NeonGF2x128 {
     fn from(v: GF2) -> Self {
         assert!(v.v < 2);
         if v.v == 0 {
-            NeonGF2x128::ZERO
+            NeonGF2x128::zero()
         } else {
-            NeonGF2x128::ONE
+            NeonGF2x128::one()
         }
     }
 }

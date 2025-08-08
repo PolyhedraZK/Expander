@@ -60,7 +60,7 @@ where
     let local_final_eval_at_x = {
         let last_coeffs = local_folded_x_oracle_coeffs.last().unwrap().clone();
         let last_alpha = local_alphas[local_alphas.len() - 1];
-        (E::Fr::ONE - last_alpha) * last_coeffs[0] + last_alpha * last_coeffs[1]
+        (E::Fr::one() - last_alpha) * last_coeffs[0] + last_alpha * last_coeffs[1]
     };
 
     //
@@ -69,7 +69,7 @@ where
 
     let mut root_gathering_folded_oracle_commits: Vec<E::G1Affine> =
         vec![E::G1Affine::default(); mpi_engine.world_size() * local_folded_x_oracle_commits.len()];
-    let mut final_evals_at_x: Vec<E::Fr> = vec![E::Fr::ZERO; mpi_engine.world_size()];
+    let mut final_evals_at_x: Vec<E::Fr> = vec![E::Fr::zero(); mpi_engine.world_size()];
 
     mpi_engine.gather_vec(
         &local_folded_x_oracle_commits,
@@ -225,7 +225,7 @@ where
     //
 
     let mut leader_gamma_aggregated_y_coeffs: Vec<E::Fr> =
-        vec![E::Fr::ZERO; mpi_engine.world_size()];
+        vec![E::Fr::zero(); mpi_engine.world_size()];
 
     if mpi_engine.is_root() {
         leader_gamma_aggregated_y_coeffs = {
@@ -282,7 +282,7 @@ where
 
     let local_gamma_aggregated_x_quotient = {
         let mut nom = local_gamma_aggregated_x_coeffs.clone();
-        polynomial_add(&mut nom, -E::Fr::ONE, &local_lagrange_degree2_at_x);
+        polynomial_add(&mut nom, -E::Fr::one(), &local_lagrange_degree2_at_x);
         univariate_roots_quotient(nom, &[beta_x, -beta_x, beta_x * beta_x])
     };
 
@@ -321,7 +321,7 @@ where
     // Locally compute the Lagrange-degree2 interpolation at delta_x, pool at leader
     //
 
-    let mut degree2_evals_at_delta_x: Vec<E::Fr> = vec![E::Fr::ZERO; mpi_engine.world_size()];
+    let mut degree2_evals_at_delta_x: Vec<E::Fr> = vec![E::Fr::zero(); mpi_engine.world_size()];
 
     let local_degree2_eval_at_delta_x = local_lagrange_degree2_at_x[0]
         + local_lagrange_degree2_at_x[1] * delta_x
@@ -338,7 +338,7 @@ where
     // then sync transcript state
     //
 
-    let mut leader_quotient_y_coeffs: Vec<E::Fr> = vec![E::Fr::ZERO; mpi_engine.world_size()];
+    let mut leader_quotient_y_coeffs: Vec<E::Fr> = vec![E::Fr::zero(); mpi_engine.world_size()];
     let mut leader_quotient_y_commitment: E::G1Affine = E::G1Affine::default();
 
     if mpi_engine.is_root() {
@@ -363,7 +363,7 @@ where
 
         leader_quotient_y_coeffs = {
             let mut nom = degree2_evals_at_delta_x.clone();
-            polynomial_add(&mut nom, -E::Fr::ONE, &lagrange_degree2_delta_y);
+            polynomial_add(&mut nom, -E::Fr::one(), &lagrange_degree2_delta_y);
             univariate_roots_quotient(nom, &[beta_y, -beta_y, beta_y * beta_y])
         };
 
@@ -393,7 +393,7 @@ where
             let mut cursor = Cursor::new(serialized_y_quotient_coeffs);
             Vec::deserialize_from(&mut cursor).unwrap()
         };
-        leader_quotient_y_coeffs.resize(mpi_engine.world_size(), E::Fr::ZERO);
+        leader_quotient_y_coeffs.resize(mpi_engine.world_size(), E::Fr::zero());
     }
 
     //
@@ -418,7 +418,7 @@ where
     //
 
     let mut gathered_eval_opens: Vec<(E::Fr, E::G1Affine)> =
-        vec![(E::Fr::ZERO, E::G1Affine::default()); mpi_engine.world_size()];
+        vec![(E::Fr::zero(), E::G1Affine::default()); mpi_engine.world_size()];
     let local_eval_open =
         coeff_form_uni_kzg_open_eval(&srs.tau_x_srs, &local_gamma_aggregated_x_coeffs, delta_x);
 

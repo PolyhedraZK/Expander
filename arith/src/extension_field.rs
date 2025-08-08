@@ -14,7 +14,7 @@ pub trait ExtensionField: Mul<Self::BaseField> + From<Self::BaseField> + Field {
     const W: u32;
 
     /// x, i.e, 0 + x + 0 x^2 + 0 x^3 + ...
-    const X: Self;
+    fn x() -> Self;
 
     /// Base field for the extension
     type BaseField: Field + Send;

@@ -29,8 +29,8 @@ const PACKED_0: __m256i = unsafe { transmute([0; 8]) };
 // 1 in Montgomery form
 const PACKED_1: __m256i = unsafe { transmute([0xffffffe; 8]) };
 
-// 2^-1 Montgomery form
-const PACKED_INV_2: __m256i = unsafe { transmute([0x7ffffff; 8]) };
+// // 2^-1 Montgomery form
+// const PACKED_INV_2: __m256i = unsafe { transmute([0x7ffffff; 8]) };
 
 const PACKED_MOD: __m256i = unsafe { transmute([BABY_BEAR_MOD; 8]) };
 
@@ -71,17 +71,17 @@ impl Field for AVXBabyBear {
 
     const SIZE: usize = 512 / 8;
 
-    const ZERO: Self = Self {
-        v: [PACKED_0, PACKED_0],
-    };
+    // const ZERO: Self = Self {
+    //     v: [PACKED_0, PACKED_0],
+    // };
 
-    const ONE: Self = Self {
-        v: [PACKED_1, PACKED_1],
-    };
+    // const ONE: Self = Self {
+    //     v: [PACKED_1, PACKED_1],
+    // };
 
-    const INV_2: Self = Self {
-        v: [PACKED_INV_2, PACKED_INV_2],
-    };
+    // const INV_2: Self = Self {
+    //     v: [PACKED_INV_2, PACKED_INV_2],
+    // };
 
     const FIELD_SIZE: usize = 32;
 
@@ -89,7 +89,9 @@ impl Field for AVXBabyBear {
 
     #[inline(always)]
     fn zero() -> Self {
-        Self::ZERO
+        Self {
+            v: [PACKED_0, PACKED_0],
+        }
     }
 
     #[inline(always)]

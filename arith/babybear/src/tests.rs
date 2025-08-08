@@ -76,7 +76,7 @@ fn baby_bear_two_inverse() {
     let two = BabyBear::new(2);
     let two_inverse_canonical: u32 = 1006632961;
     let two_inverse = BabyBear::new(two_inverse_canonical);
-    let one = BabyBear::ONE;
+    let one = BabyBear::one();
     assert_eq!(one, two * two_inverse)
 }
 

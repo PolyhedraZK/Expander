@@ -6,8 +6,9 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
+use ark_bn254::Fr;
+use ark_ff::{Field as ArkField, PrimeField, UniformRand};
 use ethnum::U256;
-use halo2curves::{bn256::Fr, ff::Field as _};
 use rand::RngCore;
 use serdes::ExpSerde;
 
@@ -100,14 +101,14 @@ impl<const N: usize> Field for FrxN<N> {
 
     const FIELD_SIZE: usize = 256;
 
-    /// zero
-    const ZERO: Self = Self { v: [Fr::zero(); N] };
+    // /// zero
+    // const ZERO: Self = Self { v: [Fr::zero(); N] };
 
-    /// One
-    const ONE: Self = Self { v: [Fr::one(); N] };
+    // /// One
+    // const ONE: Self = Self { v: [Fr::one(); N] };
 
-    /// Inverse of 2
-    const INV_2: Self = Self { v: [Fr::INV_2; N] };
+    // /// Inverse of 2
+    // const INV_2: Self = Self { v: [Fr::INV_2; N] };
 
     /// MODULUS in [u64; 4]
     const MODULUS: U256 = super::bn254::MODULUS;
@@ -140,7 +141,7 @@ impl<const N: usize> Field for FrxN<N> {
     #[inline(always)]
     fn random_unsafe(mut rng: impl RngCore) -> Self {
         Self {
-            v: std::array::from_fn(|_| Fr::random(&mut rng)),
+            v: std::array::from_fn(|_| Fr::rand(&mut rng)),
         }
     }
 
@@ -176,7 +177,7 @@ impl<const N: usize> Field for FrxN<N> {
 
     #[inline(always)]
     fn from_u256(x: ethnum::U256) -> Self {
-        let v = Fr::from_bytes(&(x % Self::MODULUS).to_le_bytes()).unwrap();
+        let v = Fr::from_le_bytes_mod_order(&(x % Self::MODULUS).to_le_bytes());
         Self { v: [v; N] }
     }
 
@@ -205,7 +206,7 @@ impl<const N: usize> Field for FrxN<N> {
     fn exp(&self, exp: u128) -> Self {
         let exp_limbs = [exp as u64, (exp >> 64) as u64];
         Self {
-            v: std::array::from_fn(|i| self.v[i].pow_vartime(exp_limbs)),
+            v: std::array::from_fn(|i| self.v[i].pow(exp_limbs)),
         }
     }
 
@@ -315,7 +316,9 @@ impl<const N: usize> ExtensionField for FrxN<N> {
 
     const W: u32 = 1;
 
-    const X: Self = Self::ZERO;
+    fn x() -> Self {
+        Self::default()
+    }
 
     type BaseField = Self;
 
@@ -328,7 +331,7 @@ impl<const N: usize> ExtensionField for FrxN<N> {
     }
 
     fn mul_by_x(&self) -> Self {
-        self * Self::X
+        self * Self::x()
     }
 
     fn to_limbs(&self) -> Vec<Self::BaseField> {

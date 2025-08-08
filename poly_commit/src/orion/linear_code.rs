@@ -272,7 +272,7 @@ impl OrionCode {
 
     #[inline(always)]
     pub fn encode<F: Field>(&self, msg: &[F]) -> OrionResult<OrionCodeword<F>> {
-        let mut codeword = vec![F::ZERO; self.code_len()];
+        let mut codeword = vec![F::zero(); self.code_len()];
         self.encode_in_place(msg, &mut codeword)?;
         Ok(codeword)
     }
@@ -284,7 +284,7 @@ impl OrionCode {
         }
 
         buffer[..self.msg_len()].copy_from_slice(msg);
-        let mut scratch = vec![F::ZERO; self.code_len()];
+        let mut scratch = vec![F::zero(); self.code_len()];
 
         chain!(&self.g0s, &self.g1s).try_for_each(|g| g.expander_mul(buffer, &mut scratch))
     }

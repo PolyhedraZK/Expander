@@ -190,7 +190,7 @@ fn test_exponentiation() {
 fn test_special_values() {
     // Test INV_2
     assert_eq!(
-        Goldilocks::INV_2 * Goldilocks::from(2u32),
+        Goldilocks::from(2u32).inv().unwrap() * Goldilocks::from(2u32),
         Goldilocks::one()
     );
 
@@ -206,7 +206,7 @@ fn test_special_values() {
 
     // Test extension field special values
     assert_eq!(
-        GoldilocksExt2::X * GoldilocksExt2::X,
+        GoldilocksExt2::x() * GoldilocksExt2::x(),
         GoldilocksExt2::from(Goldilocks::from(7u32))
     );
 }
@@ -236,6 +236,6 @@ fn test_edge_cases() {
     // Test extension field edge cases
     assert!(GoldilocksExt2::zero().is_zero());
     assert!(GoldilocksExt2::zero().inv().is_none());
-    let x = GoldilocksExt2::X;
+    let x = GoldilocksExt2::x();
     assert_eq!(x * x, GoldilocksExt2::from(Goldilocks::from(7u32)));
 }

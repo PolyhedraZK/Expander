@@ -27,8 +27,9 @@ const PACKED_EPSILON: __m512i = unsafe { transmute([EPSILON; GOLDILOCKS_PACK_SIZ
 /// Packed zero
 const PACKED_0: __m512i = unsafe { transmute([0u64; GOLDILOCKS_PACK_SIZE]) };
 
-/// Packed inverse of 2
-const PACKED_INV_2: __m512i = unsafe { transmute([0x7FFFFFFF80000001u64; GOLDILOCKS_PACK_SIZE]) };
+// /// Packed inverse of 2
+// const PACKED_INV_2: __m512i = unsafe { transmute([0x7FFFFFFF80000001u64; GOLDILOCKS_PACK_SIZE])
+// };
 
 #[derive(Debug, Clone, Copy)]
 pub struct AVXGoldilocks {
@@ -62,13 +63,13 @@ impl Field for AVXGoldilocks {
 
     const SIZE: usize = 512 / 8;
 
-    const ZERO: Self = Self { v: PACKED_0 };
+    // const ZERO: Self = Self { v: PACKED_0 };
 
-    const ONE: Self = Self {
-        v: unsafe { transmute::<[u64; 8], __m512i>([1; GOLDILOCKS_PACK_SIZE]) },
-    };
+    // const ONE: Self = Self {
+    //     v: unsafe { transmute::<[u64; 8], __m512i>([1; GOLDILOCKS_PACK_SIZE]) },
+    // };
 
-    const INV_2: Self = Self { v: PACKED_INV_2 };
+    // const INV_2: Self = Self { v: PACKED_INV_2 };
 
     const FIELD_SIZE: usize = 64;
 
@@ -76,12 +77,14 @@ impl Field for AVXGoldilocks {
 
     #[inline(always)]
     fn zero() -> Self {
-        Self::ZERO
+        Self { v: PACKED_0 }
     }
 
     #[inline(always)]
     fn one() -> Self {
-        Self::ONE
+        Self {
+            v: unsafe { transmute::<[u64; 8], __m512i>([1; GOLDILOCKS_PACK_SIZE]) },
+        }
     }
 
     #[inline(always)]

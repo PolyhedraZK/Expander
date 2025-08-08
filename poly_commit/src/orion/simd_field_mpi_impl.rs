@@ -71,10 +71,10 @@ where
     };
 
     // NOTE: pre-declare the spaces for returning evaluation and proximity queries
-    let mut eval_row = vec![EvalF::ZERO; msg_size];
+    let mut eval_row = vec![EvalF::zero(); msg_size];
 
     let proximity_test_num = pk.proximity_repetitions::<EvalF>(PCS_SOUNDNESS_BITS);
-    let mut proximity_rows = vec![vec![EvalF::ZERO; msg_size]; proximity_test_num];
+    let mut proximity_rows = vec![vec![EvalF::zero(); msg_size]; proximity_test_num];
 
     // NOTE: draw randomness from transcript with log random complexity
     let num_of_local_random_vars = point.len() - num_vars_in_msg;

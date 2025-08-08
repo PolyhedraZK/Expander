@@ -110,7 +110,6 @@ where
 #[cfg(test)]
 mod tests {
     use ark_std::test_rng;
-    use halo2curves::bn256::{Bn256, Fr};
 
     use crate::*;
 

@@ -59,7 +59,7 @@ pub fn halo2_serial_fft<F: FFTField>(a: &mut [F], omega: F, log_n: u32) {
 
     // precompute twiddle factors
     let twiddles: Vec<_> = (0..(n / 2))
-        .scan(F::ONE, |w, _| {
+        .scan(F::one(), |w, _| {
             let tw = *w;
             *w *= &omega;
             Some(tw)

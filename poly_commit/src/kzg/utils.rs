@@ -1,11 +1,11 @@
 use std::{iter::Sum, ops::Mul};
 
-use halo2curves::ff::Field;
+use arith::Field;
 use itertools::izip;
 
 #[inline(always)]
 pub(crate) fn powers_series<F: Field>(x: &F, n: usize) -> Vec<F> {
-    let mut powers = vec![F::ONE];
+    let mut powers = vec![F::one()];
     let mut cur = *x;
     for _ in 0..n - 1 {
         powers.push(cur);
@@ -30,7 +30,7 @@ pub(crate) fn univariate_degree_one_quotient<F: Field>(coeffs: &[F], alpha: F) -
 
     let final_remainder = div_coeffs[0];
     let mut final_div_coeffs = div_coeffs[1..].to_owned();
-    final_div_coeffs.resize(coeffs.len(), F::ZERO);
+    final_div_coeffs.resize(coeffs.len(), F::zero());
 
     (final_div_coeffs, final_remainder)
 }
@@ -46,7 +46,7 @@ pub(crate) fn univariate_roots_quotient<F: Field>(mut coeffs: Vec<F>, roots: &[F
             coeffs[i - 1] += remainder;
         }
 
-        assert_eq!(coeffs[ith_root], F::ZERO);
+        assert_eq!(coeffs[ith_root], F::zero());
     });
 
     coeffs[roots.len()..].to_owned()
@@ -86,7 +86,7 @@ pub(crate) fn univariate_degree_b_quotient<F: Field>(
 #[inline(always)]
 pub(crate) fn polynomial_add<F: Field>(coeffs: &mut Vec<F>, weight: F, another_coeffs: &[F]) {
     if coeffs.len() < another_coeffs.len() {
-        coeffs.resize(another_coeffs.len(), F::ZERO);
+        coeffs.resize(another_coeffs.len(), F::zero());
     }
 
     izip!(coeffs, another_coeffs).for_each(|(c, a)| *c += weight * *a);
@@ -97,15 +97,15 @@ pub(crate) fn coeff_form_degree2_lagrange<F: Field>(roots: [F; 3], evals: [F; 3]
     let [r0, r1, r2] = roots;
     let [e0, e1, e2] = evals;
 
-    let r0_nom = [r1 * r2, -r1 - r2, F::ONE];
+    let r0_nom = [r1 * r2, -r1 - r2, F::one()];
     let r0_denom_inv = ((r0 - r1) * (r0 - r2)).invert().unwrap();
     let r0_weight = r0_denom_inv * e0;
 
-    let r1_nom = [r0 * r2, -r0 - r2, F::ONE];
+    let r1_nom = [r0 * r2, -r0 - r2, F::one()];
     let r1_denom_inv = ((r1 - r0) * (r1 - r2)).invert().unwrap();
     let r1_weight = r1_denom_inv * e1;
 
-    let r2_nom = [r0 * r1, -r0 - r1, F::ONE];
+    let r2_nom = [r0 * r1, -r0 - r1, F::one()];
     let r2_denom_inv = ((r2 - r0) * (r2 - r1)).invert().unwrap();
     let r2_weight = r2_denom_inv * e2;
 
@@ -120,8 +120,6 @@ pub(crate) fn coeff_form_degree2_lagrange<F: Field>(roots: [F; 3], evals: [F; 3]
 
 #[cfg(test)]
 mod test {
-    use halo2curves::{bn256::Fr, ff::Field};
-
     use crate::*;
 
     #[test]
@@ -145,7 +143,7 @@ mod test {
                     Fr::from(0u64)
                 ]
             );
-            assert_eq!(remainder, Fr::ZERO)
+            assert_eq!(remainder, Fr::zero())
         }
         {
             // x^3 - 1 = (x-1)(x^2 + x + 1)
@@ -166,7 +164,7 @@ mod test {
                     Fr::from(0u64)
                 ]
             );
-            assert_eq!(remainder, Fr::ZERO)
+            assert_eq!(remainder, Fr::zero())
         }
         {
             // x^3 + 6x^2 + 11x + 6 = (x + 1)(x + 2)(x + 3)

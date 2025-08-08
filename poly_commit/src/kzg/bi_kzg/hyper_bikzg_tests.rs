@@ -4,13 +4,6 @@ use arith::ExtensionField;
 use ark_std::test_rng;
 use gkr_engine::Transcript;
 use gkr_hashers::MiMC5FiatShamirHasher;
-use halo2curves::{
-    bn256::{Bn256, Fr, G1Affine, G1},
-    ff::Field,
-    group::{prime::PrimeCurveAffine, Curve, GroupEncoding},
-    pairing::MultiMillerLoop,
-    CurveAffine,
-};
 use itertools::{chain, izip};
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
@@ -69,7 +62,7 @@ where
             let final_coeffs = folded_x_oracle_coeffs.last().unwrap().clone();
             let final_alpha = local_alphas[local_alphas.len() - 1];
 
-            (E::Fr::ONE - final_alpha) * final_coeffs[0] + final_alpha * final_coeffs[1]
+            (E::Fr::one() - final_alpha) * final_coeffs[0] + final_alpha * final_coeffs[1]
         })
         .collect();
 
@@ -214,7 +207,7 @@ where
     let f_gamma_quotient_s: Vec<Vec<E::Fr>> = izip!(&f_gamma_s, &lagrange_degree2_s)
         .map(|(f_gamma, lagrange_degree2)| {
             let mut nom = f_gamma.clone();
-            polynomial_add(&mut nom, -E::Fr::ONE, lagrange_degree2);
+            polynomial_add(&mut nom, -E::Fr::one(), lagrange_degree2);
             univariate_roots_quotient(nom, &[beta_x, -beta_x, beta_x * beta_x])
         })
         .collect();
@@ -274,10 +267,10 @@ where
     // NOTE(HS) vanish over the three beta_y points above, then commit Q_y
     let mut f_gamma_quotient_y = {
         let mut nom = lagrange_degree2_delta_x.clone();
-        polynomial_add(&mut nom, -E::Fr::ONE, &lagrange_degree2_delta_y);
+        polynomial_add(&mut nom, -E::Fr::one(), &lagrange_degree2_delta_y);
         univariate_roots_quotient(nom, &[beta_y, -beta_y, beta_y * beta_y])
     };
-    f_gamma_quotient_y.resize(lagrange_degree2_delta_x.len(), E::Fr::ZERO);
+    f_gamma_quotient_y.resize(lagrange_degree2_delta_x.len(), E::Fr::zero());
 
     let f_gamma_quotient_com_y =
         coeff_form_uni_kzg_commit(&srs_s[0].tau_y_srs, &f_gamma_quotient_y);

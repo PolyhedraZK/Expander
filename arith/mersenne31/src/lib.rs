@@ -15,10 +15,10 @@ mod poseidon;
 mod m31_ext3;
 pub use m31_ext3::M31Ext3;
 
-/// Degree 6 extension field for Mersenne-31
-/// instantiated by degree 2 extension of degree 3 extension for Mersenne-31
-mod m31_ext6;
-pub use m31_ext6::M31Ext6;
+// /// Degree 6 extension field for Mersenne-31
+// /// instantiated by degree 2 extension of degree 3 extension for Mersenne-31
+// mod m31_ext6;
+// pub use m31_ext6::M31Ext6;
 
 /// SIMDx16 for Degree 3 extension field for Mersenne-31
 mod m31_ext3x16;

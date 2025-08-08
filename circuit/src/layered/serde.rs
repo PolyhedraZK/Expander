@@ -73,7 +73,7 @@ impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for Gate<C, INPUT_NUM> {
                 CoefType::Constant,
                 C::CircuitField::deserialize_from(&mut reader)?,
             ),
-            2 => (CoefType::Random, C::CircuitField::ZERO),
+            2 => (CoefType::Random, C::CircuitField::zero()),
             3 => {
                 if INPUT_NUM > 0 {
                     panic!("Public Input can only be used with constant gates")
@@ -81,7 +81,7 @@ impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for Gate<C, INPUT_NUM> {
 
                 (
                     CoefType::PublicInput(<usize as ExpSerde>::deserialize_from(&mut reader)?),
-                    C::CircuitField::ZERO,
+                    C::CircuitField::zero(),
                 )
             }
             _ => unreachable!(),

@@ -218,7 +218,7 @@ where
     let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
 
     // NOTE: packed codeword buffer and encode over packed field
-    let mut codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
+    let mut codewords = vec![PackF::zero(); packed_rows * pk.codeword_len()];
     izip!(
         packed_evals.chunks(pk.message_len()),
         codewords.chunks_mut(pk.codeword_len())
@@ -226,7 +226,7 @@ where
     .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
 
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
-    let mut scratch = vec![PackF::ZERO; std::cmp::max(packed_rows, pk.codeword_len())];
+    let mut scratch = vec![PackF::zero(); std::cmp::max(packed_rows, pk.codeword_len())];
     transpose_inplace(&mut codewords, &mut scratch, pk.codeword_len(), packed_rows);
     drop(scratch);
 
@@ -236,7 +236,7 @@ where
     // to commit by merkle tree
     if !codewords.len().is_power_of_two() {
         let aligned_po2_len = codewords.len().next_power_of_two();
-        codewords.resize(aligned_po2_len, PackF::ZERO);
+        codewords.resize(aligned_po2_len, PackF::zero());
     }
     scratch_pad.interleaved_alphabet_commitment =
         tree::Tree::compact_new_with_packed_field_elems(codewords);
@@ -310,7 +310,7 @@ impl<F: Field> SubsetSumLUTs<F> {
 
         Self {
             entry_bits,
-            tables: vec![vec![F::ZERO; 1 << entry_bits]; table_num],
+            tables: vec![vec![F::zero(); 1 << entry_bits]; table_num],
         }
     }
 
@@ -318,7 +318,7 @@ impl<F: Field> SubsetSumLUTs<F> {
     pub fn build(&mut self, weights: &[F]) {
         assert_eq!(weights.len(), self.entry_bits * self.tables.len());
 
-        self.tables.iter_mut().for_each(|lut| lut.fill(F::ZERO));
+        self.tables.iter_mut().for_each(|lut| lut.fill(F::zero()));
 
         // NOTE: we are assuming that the table is for {0, 1}-linear combination
         izip!(&mut self.tables, weights.chunks(self.entry_bits)).for_each(
@@ -444,7 +444,7 @@ where
 {
     assert_eq!(simd_ext_limbs.len(), simd_base_elems.len() * ExtF::DEGREE);
 
-    let mut ext_limbs = vec![F::ZERO; ExtF::DEGREE];
+    let mut ext_limbs = vec![F::zero(); ExtF::DEGREE];
 
     izip!(&mut ext_limbs, simd_ext_limbs.chunks(simd_base_elems.len())).for_each(
         |(e, simd_ext_limb)| {
@@ -478,7 +478,7 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
     let combination_size = eq_col_coeffs.len();
     let packed_row_size = combination_size / com_pack_size;
 
-    let mut buffer = vec![F::ZERO; com_pack_size * EvalF::DEGREE];
+    let mut buffer = vec![F::zero(); com_pack_size * EvalF::DEGREE];
 
     // NOTE: working on evaluation response of tensor code IOP based PCS
     izip!(
@@ -530,7 +530,7 @@ where
     // NOTE: check SIMD inner product numbers for column sums
     assert_eq!(fixed_rl.len() % SimdF::PACK_SIZE, 0);
 
-    let mut scratch = vec![F::ZERO; fixed_rl.len() * ExtF::DEGREE];
+    let mut scratch = vec![F::zero(); fixed_rl.len() * ExtF::DEGREE];
     let rl_limbs: Vec<_> = fixed_rl.iter().flat_map(|e| e.to_limbs()).collect();
     transpose(&rl_limbs, &mut scratch, ExtF::DEGREE, fixed_rl.len());
     let simd_limbs: Vec<_> = scratch.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect();

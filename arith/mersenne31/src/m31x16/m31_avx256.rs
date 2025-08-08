@@ -17,7 +17,7 @@ use crate::m31::{M31, M31_MOD};
 const M31_PACK_SIZE: usize = 16;
 const PACKED_MOD: __m256i = unsafe { transmute([M31_MOD; M31_PACK_SIZE / 2]) };
 const PACKED_0: __m256i = unsafe { transmute([0; M31_PACK_SIZE / 2]) };
-const PACKED_INV_2: __m256i = unsafe { transmute([1 << 30; M31_PACK_SIZE / 2]) };
+// const PACKED_INV_2: __m256i = unsafe { transmute([1 << 30; M31_PACK_SIZE / 2]) };
 
 #[inline(always)]
 unsafe fn mod_reduce_epi32(x: __m256i) -> __m256i {
@@ -64,17 +64,17 @@ impl Field for AVXM31 {
     // size in bytes
     const SIZE: usize = 512 / 8;
 
-    const ZERO: Self = Self {
-        v: [PACKED_0, PACKED_0],
-    };
+    // const ZERO: Self = Self {
+    //     v: [PACKED_0, PACKED_0],
+    // };
 
-    const ONE: Self = Self {
-        v: unsafe { transmute::<[u32; 16], [__m256i; 2]>([1; M31_PACK_SIZE]) },
-    };
+    // const ONE: Self = Self {
+    //     v: unsafe { transmute::<[u32; 16], [__m256i; 2]>([1; M31_PACK_SIZE]) },
+    // };
 
-    const INV_2: Self = Self {
-        v: [PACKED_INV_2, PACKED_INV_2],
-    };
+    // const INV_2: Self = Self {
+    //     v: [PACKED_INV_2, PACKED_INV_2],
+    // };
 
     const FIELD_SIZE: usize = 32;
 
@@ -301,7 +301,7 @@ impl SimdField for AVXM31 {
 
         buffer = (buffer & M31_MOD as u64) + (buffer >> 31);
         if buffer == M31_MOD as u64 {
-            Self::Scalar::ZERO
+            Self::Scalar::zero()
         } else {
             Self::Scalar { v: buffer as u32 }
         }

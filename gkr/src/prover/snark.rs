@@ -202,7 +202,7 @@ impl<Cfg: GKREngine> Prover<'_, Cfg> {
         inputs.lift_to_n_vars(original_input_vars);
         open_at.rz.resize(
             original_input_vars,
-            <Cfg::FieldConfig as FieldEngine>::ChallengeField::ZERO,
+            <Cfg::FieldConfig as FieldEngine>::ChallengeField::zero(),
         );
 
         if self.mpi_config.is_root() {

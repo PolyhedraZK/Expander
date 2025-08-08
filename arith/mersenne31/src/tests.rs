@@ -1,6 +1,6 @@
 use arith::{
-    random_extension_field_tests, random_fft_field_tests, random_field_tests,
-    random_inversion_tests, random_simd_field_tests, SimdField,
+    random_extension_field_tests, random_field_tests, random_inversion_tests,
+    random_simd_field_tests, SimdField,
 };
 use arith::{random_from_limbs_to_limbs_tests, Field};
 use ark_std::test_rng;
@@ -10,7 +10,7 @@ use serdes::ExpSerde;
 
 use crate::{
     m31::{mod_reduce_u32_safe, M31_MOD},
-    M31Ext3, M31Ext3x16, M31Ext6, M31x16, M31,
+    M31Ext3, M31Ext3x16, M31x16, M31,
 };
 
 fn get_avx_version() -> &'static str {
@@ -75,10 +75,6 @@ fn test_ext_field() {
     random_field_tests::<M31Ext3>("M31 Ext3".to_string());
     random_extension_field_tests::<M31Ext3>("M31 Ext3".to_string());
     random_simd_field_tests::<M31Ext3>("Simd M31 Ext3".to_string());
-
-    random_field_tests::<M31Ext6>("M31 Ext6".to_string());
-    random_extension_field_tests::<M31Ext6>("M31 Ext6".to_string());
-    random_fft_field_tests::<M31Ext6>("M31 Ext6".to_string());
 
     random_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());
     random_extension_field_tests::<M31Ext3x16>("Simd M31 Ext3".to_string());

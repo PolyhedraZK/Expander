@@ -129,7 +129,7 @@ impl<MP: FieldParameters> Neg for MontyField31<MP> {
 
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        Self::ZERO - self
+        Self::zero() - self
     }
 }
 
@@ -256,7 +256,7 @@ where
     where
         I: Iterator<Item = T>,
     {
-        iter.fold(Self::ZERO, |acc, item| acc + item.borrow())
+        iter.fold(Self::zero(), |acc, item| acc + item.borrow())
     }
 }
 
@@ -330,31 +330,31 @@ impl<MP: FieldParameters> Field for MontyField31<MP> {
 
     const FIELD_SIZE: usize = 32;
 
-    const ZERO: Self = Self::new(0);
+    // const ZERO: Self = Self::new(0);
 
-    const ONE: Self = Self::new(1);
+    // const ONE: Self = Self::new(1);
 
     const MODULUS: U256 = U256([MP::PRIME as u128, 0]);
 
-    // See test below
-    const INV_2: Self = Self {
-        value: 134217727,
-        _phantom: PhantomData,
-    };
+    // // See test below
+    // const INV_2: Self = Self {
+    //     value: 134217727,
+    //     _phantom: PhantomData,
+    // };
 
     #[inline(always)]
     fn zero() -> Self {
-        Self::ZERO
+        Self::new(0)
     }
 
     #[inline(always)]
     fn is_zero(&self) -> bool {
-        *self == Self::ZERO
+        *self == Self::zero()
     }
 
     #[inline(always)]
     fn one() -> Self {
-        Self::ONE
+        Self::new(1)
     }
 
     /// Uses rejection sampling to avoid bias.

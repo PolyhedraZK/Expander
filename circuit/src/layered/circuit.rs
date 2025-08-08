@@ -427,7 +427,7 @@ impl<C: FieldEngine> Circuit<C> {
             input_relay_layer.add.push(GateAdd {
                 i_ids: [i],
                 o_id: i,
-                coef: C::CircuitField::ONE,
+                coef: C::CircuitField::one(),
                 coef_type: CoefType::Constant,
                 gate_type: 0,
             });

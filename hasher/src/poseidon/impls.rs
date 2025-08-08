@@ -109,7 +109,7 @@ impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
         let mut remainder = chunks.remainder().to_vec();
 
         for chunk in chunks {
-            let mut state_elts = vec![State::ElemT::ZERO; State::STATE_WIDTH];
+            let mut state_elts = vec![State::ElemT::zero(); State::STATE_WIDTH];
             for (elem, elts) in chunk
                 .chunks(State::ElemT::SIZE)
                 .zip(state_elts[State::CAPACITY..].iter_mut())
@@ -125,7 +125,7 @@ impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
         if !remainder.is_empty() {
             remainder.resize(u8_chunk_size, 0);
 
-            let mut state_elts = vec![State::ElemT::ZERO; State::STATE_WIDTH];
+            let mut state_elts = vec![State::ElemT::zero(); State::STATE_WIDTH];
             for (elem, elts) in remainder
                 .chunks(State::ElemT::SIZE)
                 .zip(state_elts[State::CAPACITY..].iter_mut())

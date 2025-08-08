@@ -9,13 +9,13 @@ use crate::{MPIConfig, MPIEngine};
 fn test_gather_vec_helper(mpi_config: &MPIConfig) {
     const TEST_SIZE: usize = (1 << 10) + 1;
 
-    let mut local_vec = vec![M31::ZERO; TEST_SIZE];
+    let mut local_vec = vec![M31::zero(); TEST_SIZE];
     for i in 0..TEST_SIZE {
         local_vec[i] = M31::from((mpi_config.world_rank() * TEST_SIZE + i) as u32);
     }
 
     let mut global_vec = if mpi_config.is_root() {
-        vec![M31::ZERO; TEST_SIZE * mpi_config.world_size()]
+        vec![M31::zero(); TEST_SIZE * mpi_config.world_size()]
     } else {
         vec![]
     };

@@ -263,7 +263,7 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(
 
     let mut public_input_gathered = if mpi_config.is_root() {
         vec![
-            <Cfg::FieldConfig as FieldEngine>::SimdCircuitField::ZERO;
+            <Cfg::FieldConfig as FieldEngine>::SimdCircuitField::zero();
             circuit.public_input.len() * mpi_config.world_size()
         ]
     } else {

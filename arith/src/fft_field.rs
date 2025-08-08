@@ -43,7 +43,7 @@ pub trait FFTField: Field {
         let omega = Self::two_adic_generator(log_n);
         let omega_inv = omega.inv().unwrap();
 
-        let n_inv = Self::ONE.double().exp(log_n as u128).inv().unwrap();
+        let n_inv = Self::one().double().exp(log_n as u128).inv().unwrap();
 
         radix2_fft_single_threaded(evals, omega_inv);
         evals.iter_mut().for_each(|x| *x *= n_inv);
@@ -88,7 +88,7 @@ pub fn radix2_fft_single_threaded<F: FFTField>(coeffs: &mut [F], omega: F) {
 
     // precompute twiddle factors
     let twiddles: Vec<_> = (0..(n / 2))
-        .scan(F::ONE, |w, _| {
+        .scan(F::one(), |w, _| {
             let tw = *w;
             *w *= &omega;
             Some(tw)
@@ -124,8 +124,8 @@ pub fn radix2_fft_single_threaded<F: FFTField>(coeffs: &mut [F], omega: F) {
 
 #[cfg(test)]
 mod fft_test {
+    use ark_bn254::Fr;
     use ark_std::test_rng;
-    use halo2curves::bn256::Fr;
     use itertools::izip;
 
     use crate::{FFTField, Field};

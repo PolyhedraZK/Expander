@@ -86,7 +86,7 @@ pub fn random_extension_field_tests<F: ExtensionField>(_name: String) {
 
         {
             let a = F::random_unsafe(&mut rng);
-            let b = F::X;
+            let b = F::x();
             let ax = a.mul_by_x();
             let ab = a * b;
             assert_eq!(ax, ab);
@@ -234,7 +234,7 @@ pub fn random_fft_field_tests<F: Field + FFTField>(_name: String) {
             a[degree - 1] = F::one();
             b[0] = F::one();
             b[1] = F::one();
-            c[0] = F::ONE.double();
+            c[0] = F::one().double();
             c[1] = F::one();
             c[degree - 1] = F::one();
 
@@ -302,7 +302,7 @@ fn schoolbook_mul<F: Field>(a: &[F], b: &[F]) -> Vec<F> {
     let degree = a.len();
     assert_eq!(degree, b.len());
 
-    let mut buf = vec![F::ZERO; degree << 1];
+    let mut buf = vec![F::zero(); degree << 1];
 
     for i in 0..degree {
         for j in 0..degree {

@@ -27,7 +27,7 @@ pub trait MultilinearExtension<F: Field>: Index<usize, Output = F> + Send + Sync
             + Add<F, Output = EvalF>
             + Mul<ChallengeF, Output = EvalF>,
     {
-        let mut scratch = vec![EvalF::ZERO; self.hypercube_size()];
+        let mut scratch = vec![EvalF::zero(); self.hypercube_size()];
         self.evaluate_with_buffer(point, &mut scratch)
     }
 
@@ -227,6 +227,6 @@ impl<'a, F: Field> MutableMultilinearExtension<F> for MutRefMultiLinearPoly<'a, 
 
     #[inline(always)]
     fn lift_to_n_vars(&mut self, n_vars: usize) {
-        self.coeffs.resize(1 << n_vars, F::ZERO);
+        self.coeffs.resize(1 << n_vars, F::zero());
     }
 }

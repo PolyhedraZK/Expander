@@ -19,7 +19,6 @@ mersenne31 = { path = "../arith/mersenne31/" }
 goldilocks = { path = "../arith/goldilocks" }
 babybear = { path = "../arith/babybear" }
 
-halo2curves.workspace = true
 
 [lib]
 proc-macro=true

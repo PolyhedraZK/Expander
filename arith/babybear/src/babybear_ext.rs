@@ -25,17 +25,17 @@ impl Field for BabyBearExt3 {
 
     const FIELD_SIZE: usize = 32 * 3;
 
-    const ZERO: Self = BabyBearExt3 {
-        v: [BabyBear::ZERO, BabyBear::ZERO, BabyBear::ZERO],
-    };
+    // const ZERO: Self = BabyBearExt3 {
+    //     v: [BabyBear::zero(), BabyBear::zero(), BabyBear::zero()],
+    // };
 
-    const ONE: Self = BabyBearExt3 {
-        v: [BabyBear::ONE, BabyBear::ZERO, BabyBear::ZERO],
-    };
+    // const ONE: Self = BabyBearExt3 {
+    //     v: [BabyBear::one(), BabyBear::zero(), BabyBear::zero()],
+    // };
 
-    const INV_2: BabyBearExt3 = BabyBearExt3 {
-        v: [BabyBear::INV_2, BabyBear::new(0), BabyBear::new(0)],
-    };
+    // const INV_2: BabyBearExt3 = BabyBearExt3 {
+    //     v: [BabyBear::INV_2, BabyBear::new(0), BabyBear::new(0)],
+    // };
 
     const MODULUS: U256 = BabyBear::MODULUS;
 
@@ -118,9 +118,15 @@ impl ExtensionField for BabyBearExt3 {
     /// Extension Field
     const W: u32 = 2;
 
-    const X: Self = BabyBearExt3 {
-        v: [BabyBear::ZERO, BabyBear::ONE, BabyBear::ZERO],
-    };
+    // const X: Self = BabyBearExt3 {
+    //     v: [BabyBear::zero(), BabyBear::one(), BabyBear::zero()],
+    // };
+
+    fn x() -> Self {
+        BabyBearExt3 {
+            v: [BabyBear::zero(), BabyBear::one(), BabyBear::zero()],
+        }
+    }
 
     /// Base field for the extension
     type BaseField = BabyBear;

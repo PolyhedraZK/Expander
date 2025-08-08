@@ -52,11 +52,11 @@ impl Field for GF2 {
 
     const FIELD_SIZE: usize = 1; // in bits
 
-    const ZERO: Self = GF2 { v: 0 };
+    // const ZERO: Self = GF2 { v: 0 };
 
-    const ONE: Self = GF2 { v: 1 };
+    // const ONE: Self = GF2 { v: 1 };
 
-    const INV_2: Self = GF2 { v: 0 };
+    // const INV_2: Self = GF2 { v: 0 };
 
     const MODULUS: U256 = U256([MOD as u128, 0]);
 
@@ -124,7 +124,7 @@ impl Field for GF2 {
 
     #[inline(always)]
     fn mul_by_6(&self) -> Self {
-        Self::ZERO
+        Self::zero()
     }
 
     #[inline(always)]

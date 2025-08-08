@@ -41,10 +41,10 @@ impl ExpSerde for AVX512GF2_128x8 {
     }
 }
 
-const PACKED_0: [__m512i; 2] = [
-    unsafe { transmute::<[i32; 16], std::arch::x86_64::__m512i>([0; 16]) },
-    unsafe { transmute::<[i32; 16], std::arch::x86_64::__m512i>([0; 16]) },
-];
+// const PACKED_0: [__m512i; 2] = [
+//     unsafe { transmute::<[i32; 16], std::arch::x86_64::__m512i>([0; 16]) },
+//     unsafe { transmute::<[i32; 16], std::arch::x86_64::__m512i>([0; 16]) },
+// ];
 const _M512_INV_2: __m512i = unsafe {
     transmute([
         67_u64,
@@ -57,7 +57,7 @@ const _M512_INV_2: __m512i = unsafe {
         (1_u64) << 63,
     ])
 };
-const PACKED_INV_2: [__m512i; 2] = [_M512_INV_2, _M512_INV_2]; // Should not be used?
+// const PACKED_INV_2: [__m512i; 2] = [_M512_INV_2, _M512_INV_2]; // Should not be used?
 
 // p(x) = x^128 + x^7 + x^2 + x + 1
 impl Field for AVX512GF2_128x8 {
@@ -66,18 +66,18 @@ impl Field for AVX512GF2_128x8 {
     // size in bytes
     const SIZE: usize = 512 * 2 / 8;
 
-    const ZERO: Self = Self { data: PACKED_0 };
+    // const ZERO: Self = Self { data: PACKED_0 };
 
-    const ONE: Self = Self {
-        data: unsafe {
-            [
-                transmute::<[u64; 8], __m512i>([1, 0, 1, 0, 1, 0, 1, 0]),
-                transmute::<[u64; 8], __m512i>([1, 0, 1, 0, 1, 0, 1, 0]),
-            ]
-        },
-    };
+    // const ONE: Self = Self {
+    //     data: unsafe {
+    //         [
+    //             transmute::<[u64; 8], __m512i>([1, 0, 1, 0, 1, 0, 1, 0]),
+    //             transmute::<[u64; 8], __m512i>([1, 0, 1, 0, 1, 0, 1, 0]),
+    //         ]
+    //     },
+    // };
 
-    const INV_2: Self = Self { data: PACKED_INV_2 };
+    // const INV_2: Self = Self { data: PACKED_INV_2 };
 
     const FIELD_SIZE: usize = 128;
 
@@ -197,12 +197,12 @@ impl Field for AVX512GF2_128x8 {
 
     #[inline(always)]
     fn double(&self) -> Self {
-        Self::ZERO
+        Self::zero()
     }
 
     #[inline(always)]
     fn mul_by_2(&self) -> Self {
-        Self::ZERO
+        Self::zero()
     }
 
     #[inline(always)]
@@ -217,7 +217,7 @@ impl Field for AVX512GF2_128x8 {
 
     #[inline(always)]
     fn mul_by_6(&self) -> Self {
-        Self::ZERO
+        Self::zero()
     }
 }
 /*
@@ -551,14 +551,25 @@ impl ExtensionField for AVX512GF2_128x8 {
 
     const W: u32 = GF2_128::W;
 
-    const X: Self = Self {
-        data: unsafe {
-            [
-                transmute::<[u64; 8], __m512i>([2u64, 0, 2u64, 0, 2u64, 0, 2u64, 0]),
-                transmute::<[u64; 8], __m512i>([2u64, 0, 2u64, 0, 2u64, 0, 2u64, 0]),
-            ]
-        },
-    };
+    // const X: Self = Self {
+    //     data: unsafe {
+    //         [
+    //             transmute::<[u64; 8], __m512i>([2u64, 0, 2u64, 0, 2u64, 0, 2u64, 0]),
+    //             transmute::<[u64; 8], __m512i>([2u64, 0, 2u64, 0, 2u64, 0, 2u64, 0]),
+    //         ]
+    //     },
+    // };
+
+    fn x() -> Self {
+        Self {
+            data: unsafe {
+                [
+                    transmute::<[u64; 8], __m512i>([2u64, 0, 2u64, 0, 2u64, 0, 2u64, 0]),
+                    transmute::<[u64; 8], __m512i>([2u64, 0, 2u64, 0, 2u64, 0, 2u64, 0]),
+                ]
+            },
+        }
+    }
 
     type BaseField = GF2x8;
 
@@ -645,9 +656,9 @@ impl ExtensionField for AVX512GF2_128x8 {
     #[inline(always)]
     fn from_limbs(limbs: &[Self::BaseField]) -> Self {
         let mut local_limbs = limbs.to_vec();
-        local_limbs.resize(Self::DEGREE, Self::BaseField::ZERO);
+        local_limbs.resize(Self::DEGREE, Self::BaseField::zero());
 
-        let mut buffer = vec![GF2::ZERO; Self::DEGREE * Self::PACK_SIZE];
+        let mut buffer = vec![GF2::zero(); Self::DEGREE * Self::PACK_SIZE];
 
         local_limbs.iter().enumerate().for_each(|(ith_limb, limb)| {
             let unpacked = limb.unpack();
@@ -668,7 +679,7 @@ impl ExtensionField for AVX512GF2_128x8 {
     fn to_limbs(&self) -> Vec<Self::BaseField> {
         let gf2_128s = self.unpack();
 
-        let mut buffer = vec![GF2::ZERO; Self::DEGREE * Self::PACK_SIZE];
+        let mut buffer = vec![GF2::zero(); Self::DEGREE * Self::PACK_SIZE];
         gf2_128s
             .iter()
             .enumerate()

@@ -1,10 +1,12 @@
+use ark_ff::{FftField, Field as ArkField, PrimeField, Zero};
+use ark_std::UniformRand;
 use ethnum::U256;
-use halo2curves::ff::{Field as Halo2Field, FromUniformBytes, PrimeField};
 use rand::RngCore;
+use serdes::ExpSerde;
 
 use crate::{ExtensionField, FFTField, Field, SimdField};
 
-pub use halo2curves::bn256::Fr;
+pub use ark_bn254::Fr;
 
 pub(crate) const MODULUS: U256 = U256([
     0x2833e84879b9709143e1f593f0000001,
@@ -20,14 +22,15 @@ impl Field for Fr {
 
     const FIELD_SIZE: usize = 256;
 
-    /// zero
-    const ZERO: Self = Fr::zero();
+    // /// zero
+    // const ZERO: Self = <Fr as Field>::zero();
 
-    /// One
-    const ONE: Self = Fr::one();
+    // /// One
+    // const ONE: Self = <Fr as ArkField>::one();
 
-    /// Inverse of 2
-    const INV_2: Self = Fr::TWO_INV;
+    // /// Inverse of 2
+    // // FIXME
+    // const INV_2: Self = <Fr as ArkField>::one();
 
     /// MODULUS in [u64; 4]
     const MODULUS: U256 = MODULUS;
@@ -38,18 +41,18 @@ impl Field for Fr {
     /// Zero element
     #[inline(always)]
     fn zero() -> Self {
-        Fr::zero()
+        <Fr as Zero>::zero()
     }
 
     #[inline(always)]
     fn is_zero(&self) -> bool {
-        *self == Fr::zero()
+        *self == <Fr as Field>::zero()
     }
 
     /// Identity element
     #[inline(always)]
     fn one() -> Self {
-        Fr::one()
+        <Fr as ArkField>::ONE
     }
 
     // ====================================
@@ -58,8 +61,8 @@ impl Field for Fr {
     /// create a random element from rng.
     /// test only -- the output may not be uniformly random.
     #[inline(always)]
-    fn random_unsafe(rng: impl RngCore) -> Self {
-        Fr::random(rng)
+    fn random_unsafe(mut rng: impl RngCore) -> Self {
+        Fr::rand(&mut rng)
     }
 
     /// create a random boolean element from rng
@@ -77,22 +80,19 @@ impl Field for Fr {
     // TODO: better implementation
     fn from_uniform_bytes(bytes: &[u8]) -> Self {
         assert!(bytes.len() >= 32);
-        <Fr as FromUniformBytes<64>>::from_uniform_bytes(
-            &[&bytes[..32], [0u8; 32].as_slice()]
-                .concat()
-                .try_into()
-                .unwrap(),
-        )
+        <Fr as PrimeField>::from_le_bytes_mod_order(&bytes[..32])
     }
 
     #[inline(always)]
     fn from_u256(x: ethnum::U256) -> Self {
-        Fr::from_bytes(&(x % MODULUS).to_le_bytes()).unwrap()
+        <Fr as PrimeField>::from_le_bytes_mod_order(&x.to_le_bytes())
     }
 
     #[inline(always)]
     fn to_u256(&self) -> ethnum::U256 {
-        ethnum::U256::from_le_bytes(self.to_bytes())
+        let mut res = vec![];
+        self.serialize_into(&mut res).unwrap();
+        ethnum::U256::from_le_bytes(res.try_into().unwrap())
     }
 
     // ====================================
@@ -114,13 +114,13 @@ impl Field for Fr {
     #[inline(always)]
     fn exp(&self, exp: u128) -> Self {
         let exp_limbs = [exp as u64, (exp >> 64) as u64];
-        self.pow_vartime(exp_limbs)
+        self.pow(exp_limbs)
     }
 
     /// find the inverse of the element; return None if not exist
     #[inline(always)]
     fn inv(&self) -> Option<Self> {
-        self.invert().into()
+        self.inverse()
     }
 }
 
@@ -158,7 +158,9 @@ impl ExtensionField for Fr {
     const W: u32 = 1;
 
     // placeholder, doesn't make sense for Fr
-    const X: Self = Fr::zero();
+    fn x() -> Self {
+        Self::default()
+    }
 
     /// Base field for the extension
     type BaseField = Self;
@@ -185,7 +187,7 @@ impl ExtensionField for Fr {
     #[inline(always)]
     fn from_limbs(limbs: &[Self::BaseField]) -> Self {
         if limbs.len() < Self::DEGREE {
-            Self::zero()
+            <Self as Field>::zero()
         } else {
             limbs[0]
         }
@@ -199,9 +201,9 @@ impl ExtensionField for Fr {
 }
 
 impl FFTField for Fr {
-    const TWO_ADICITY: usize = <Self as PrimeField>::S as usize;
+    const TWO_ADICITY: usize = <Self as FftField>::TWO_ADICITY as usize;
 
     fn root_of_unity() -> Self {
-        <Self as PrimeField>::ROOT_OF_UNITY
+        Self::TWO_ADIC_ROOT_OF_UNITY
     }
 }

@@ -93,7 +93,7 @@ where
         beta: E::Fr,
     ) -> Self {
         let beta_inv = beta.invert().unwrap();
-        let two_inv = E::Fr::ONE.double().invert().unwrap();
+        let two_inv = E::Fr::one().double().invert().unwrap();
 
         let mut local_evals = Self::new_from_beta2_evals(exported.beta_x2_eval);
 
@@ -104,7 +104,7 @@ where
         )
         .for_each(|(pos_beta_x_eval, neg_beta_x_eval, alpha)| {
             let beta2_eval = two_inv
-                * ((*pos_beta_x_eval + *neg_beta_x_eval) * (E::Fr::ONE - alpha)
+                * ((*pos_beta_x_eval + *neg_beta_x_eval) * (E::Fr::one() - alpha)
                     + (*pos_beta_x_eval - *neg_beta_x_eval) * beta_inv * alpha);
 
             local_evals.beta2_evals.push(beta2_eval);

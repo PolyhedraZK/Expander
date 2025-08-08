@@ -79,13 +79,13 @@ impl Field for Goldilocks {
 
     const SIZE: usize = 64 / 8;
 
-    const ZERO: Self = Goldilocks { v: 0 };
+    // const ZERO: Self = Goldilocks { v: 0 };
 
-    const ONE: Self = Goldilocks { v: 1 };
+    // const ONE: Self = Goldilocks { v: 1 };
 
-    const INV_2: Self = Goldilocks {
-        v: 0x7FFFFFFF80000001,
-    }; // (2^63 - 2^31 + 1)
+    // const INV_2: Self = Goldilocks {
+    //     v: 0x7FFFFFFF80000001,
+    // }; // (2^63 - 2^31 + 1)
 
     const FIELD_SIZE: usize = 64;
 
@@ -155,7 +155,7 @@ impl Neg for Goldilocks {
     type Output = Goldilocks;
     #[inline(always)]
     fn neg(self) -> Self::Output {
-        Goldilocks::ZERO - self
+        Goldilocks::zero() - self
     }
 }
 
@@ -458,7 +458,7 @@ pub(crate) mod p2_instructions {
                 v: inverse_2exp(k as usize),
             };
         debug_assert!(
-            Goldilocks { v: *x } * res == Goldilocks::ONE,
+            Goldilocks { v: *x } * res == Goldilocks::one(),
             "bug in try_inverse_u64"
         );
         Some(res.v)
@@ -582,7 +582,7 @@ pub(crate) mod p2_instructions {
     //         let mut j_less_than_v: Choice = 1.into();
 
     //         for j in 2..max_v {
-    //             let tmp_is_one = tmp.ct_eq(&Goldilocks::ONE);
+    //             let tmp_is_one = tmp.ct_eq(&Goldilocks::one());
     //             let squared = Goldilocks::conditional_select(&tmp, &z, tmp_is_one).square();
     //             tmp = Goldilocks::conditional_select(&squared, &tmp, tmp_is_one);
     //             let new_z = Goldilocks::conditional_select(&z, &squared, tmp_is_one);
@@ -592,7 +592,7 @@ pub(crate) mod p2_instructions {
     //         }
 
     //         let result = x * z;
-    //         x = Goldilocks::conditional_select(&result, &x, b.ct_eq(&Goldilocks::ONE));
+    //         x = Goldilocks::conditional_select(&result, &x, b.ct_eq(&Goldilocks::one()));
     //         z = z.square();
     //         b *= z;
     //         v = k;

@@ -22,7 +22,7 @@ impl SimdField for GF2x128 {
     #[inline(always)]
     fn scale(&self, challenge: &Self::Scalar) -> Self {
         if challenge.v == 0 {
-            <Self as Field>::ZERO
+            <Self as Field>::zero()
         } else {
             *self
         }
@@ -31,8 +31,8 @@ impl SimdField for GF2x128 {
     #[inline(always)]
     fn pack_full(base: &Self::Scalar) -> Self {
         match base.v {
-            0 => Self::ZERO,
-            1 => Self::ONE,
+            0 => Self::zero(),
+            1 => Self::one(),
             _ => panic!("Invalid value for GF2x128: {}", base.v),
         }
     }
@@ -40,7 +40,7 @@ impl SimdField for GF2x128 {
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert_eq!(base_vec.len(), Self::PACK_SIZE);
-        let mut packed_to_gf2x64 = [GF2x64::ZERO; Self::PACK_SIZE / GF2x64::PACK_SIZE];
+        let mut packed_to_gf2x64 = [GF2x64::zero(); Self::PACK_SIZE / GF2x64::PACK_SIZE];
         packed_to_gf2x64
             .iter_mut()
             .zip(base_vec.chunks(GF2x64::PACK_SIZE))

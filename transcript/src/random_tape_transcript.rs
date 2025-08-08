@@ -34,7 +34,7 @@ impl<ChallengeF: ExtensionField> Transcript for RandomTape<ChallengeF> {
         }
         let element = self.tape[self.position];
         self.position += 1;
-        let mut element_to_return = F::ZERO;
+        let mut element_to_return = F::zero();
         assert!(F::NAME == ChallengeF::NAME);
         unsafe {
             std::ptr::copy_nonoverlapping(

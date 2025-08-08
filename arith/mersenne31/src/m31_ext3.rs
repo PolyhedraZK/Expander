@@ -29,17 +29,17 @@ impl Field for M31Ext3 {
 
     const FIELD_SIZE: usize = 32 * 3;
 
-    const ZERO: Self = M31Ext3 {
-        v: [M31::ZERO, M31::ZERO, M31::ZERO],
-    };
+    // const ZERO: Self = M31Ext3 {
+    //     v: [M31::zero(), M31::zero(), M31::zero()],
+    // };
 
-    const ONE: Self = M31Ext3 {
-        v: [M31::ONE, M31::ZERO, M31::ZERO],
-    };
+    // const ONE: Self = M31Ext3 {
+    //     v: [M31::one(), M31::zero(), M31::zero()],
+    // };
 
-    const INV_2: M31Ext3 = M31Ext3 {
-        v: [M31::INV_2, M31 { v: 0 }, M31 { v: 0 }],
-    };
+    // const INV_2: M31Ext3 = M31Ext3 {
+    //     v: [M31::INV_2, M31 { v: 0 }, M31 { v: 0 }],
+    // };
 
     const MODULUS: U256 = M31::MODULUS;
 
@@ -118,9 +118,15 @@ impl ExtensionField for M31Ext3 {
     /// Extension Field
     const W: u32 = 5;
 
-    const X: Self = M31Ext3 {
-        v: [M31::ZERO, M31::ONE, M31::ZERO],
-    };
+    // const X: Self = M31Ext3 {
+    //     v: [M31::zero(), M31::one(), M31::zero()],
+    // };
+
+    fn x() -> Self {
+        M31Ext3 {
+            v: [M31::zero(), M31::one(), M31::zero()],
+        }
+    }
 
     /// Base field for the extension
     type BaseField = M31;

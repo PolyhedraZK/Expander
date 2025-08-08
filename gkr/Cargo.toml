@@ -24,7 +24,6 @@ utils = { path = "../utils" }
 ark-std.workspace = true
 env_logger.workspace = true
 ethnum.workspace = true
-halo2curves.workspace = true
 log.workspace = true
 mpi.workspace = true
 rand.workspace = true

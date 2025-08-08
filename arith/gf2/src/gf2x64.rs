@@ -21,24 +21,24 @@ impl Field for GF2x64 {
 
     const FIELD_SIZE: usize = 1;
 
-    const ZERO: Self = GF2x64 { v: 0 };
+    // const ZERO: Self = GF2x64 { v: 0 };
 
-    const ONE: Self = GF2x64 { v: !0u64 };
+    // const ONE: Self = GF2x64 { v: !0u64 };
 
-    #[doc(hidden)]
-    const INV_2: Self = unimplemented!(); // NOTE: should not be used
+    // #[doc(hidden)]
+    // const INV_2: Self = unimplemented!(); // NOTE: should not be used
 
     #[doc(hidden)]
     const MODULUS: U256 = unimplemented!(); // should not be used
 
     #[inline(always)]
     fn zero() -> Self {
-        GF2x64::ZERO
+        GF2x64 { v: 0 }
     }
 
     #[inline(always)]
     fn one() -> Self {
-        GF2x64::ONE
+        GF2x64 { v: !0u64 }
     }
 
     #[inline(always)]
@@ -90,7 +90,7 @@ impl Field for GF2x64 {
 
     #[inline(always)]
     fn mul_by_6(&self) -> Self {
-        Self::ZERO
+        Self::zero()
     }
 }
 
@@ -270,7 +270,7 @@ impl SimdField for GF2x64 {
     #[inline(always)]
     fn pack(base_vec: &[Self::Scalar]) -> Self {
         assert!(base_vec.len() == Self::PACK_SIZE);
-        let mut packed_to_gf2x8 = [GF2x8::ZERO; Self::PACK_SIZE / GF2x8::PACK_SIZE];
+        let mut packed_to_gf2x8 = [GF2x8::zero(); Self::PACK_SIZE / GF2x8::PACK_SIZE];
         packed_to_gf2x8
             .iter_mut()
             .zip(base_vec.chunks(GF2x8::PACK_SIZE))
