@@ -38,8 +38,13 @@ fn test_hyper_unikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total
     // NOTE BN254 GKR SIMD pack size = 1, num vars in SIMD is 0
     let num_vars_in_mpi = mpi_config_ref.world_size().ilog2() as usize;
     let num_vars_in_each_poly = total_num_vars - num_vars_in_mpi;
-
-    let global_poly = MultiLinearPoly::<Fr>::random(total_num_vars, &mut rng);
+    
+    let mut coeffs = vec![Fr::ZERO; 1usize << total_num_vars];
+    for i in 0..(1usize << num_vars_in_each_poly) {
+        // coeffs[i] = Fr::random_unsafe(&mut rng);
+        coeffs[i] = Fr::from(rng.next_u64());
+    }
+    let global_poly = MultiLinearPoly::new(coeffs);
     let challenge_point = ExpanderSingleVarChallenge::<BN254Config> {
         r_mpi: (0..num_vars_in_mpi)
             .map(|_| Fr::random_unsafe(&mut rng))
@@ -53,7 +58,7 @@ fn test_hyper_unikzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total
     let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
 
     // NOTE separate polynomial into different pieces by mpi rank
-    let poly_vars_stride = (1 << global_poly.get_num_vars()) / mpi_config_ref.world_size();
+    let poly_vars_stride = (1usize << global_poly.get_num_vars()) / mpi_config_ref.world_size();
     let poly_coeff_starts = mpi_config_ref.world_rank() * poly_vars_stride;
     let poly_coeff_ends = poly_coeff_starts + poly_vars_stride;
     let local_poly =
@@ -85,7 +90,7 @@ fn test_hyper_unikzg_for_expander_gkr() {
     let world = universe.world();
     let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
 
-    test_hyper_unikzg_for_expander_gkr_generics(&mpi_config, 30);
+    test_hyper_unikzg_for_expander_gkr_generics(&mpi_config, 32);
 }
 
 #[test]

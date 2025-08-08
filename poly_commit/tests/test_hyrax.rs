@@ -4,9 +4,10 @@ use arith::{Field, Fr};
 use ark_std::test_rng;
 use gkr_engine::{BN254Config, ExpanderSingleVarChallenge, MPIConfig, MPIEngine, Transcript};
 use gkr_hashers::Keccak256hasher;
-use halo2curves::bn256::G1Affine;
+use halo2curves::{bn256::G1Affine, ff::Field};
 use poly_commit::HyraxPCS;
 use polynomials::MultiLinearPoly;
+use rand::RngCore;
 use transcript::BytesHashTranscript;
 
 const TEST_REPETITION: usize = 3;
@@ -38,7 +39,12 @@ fn test_hyrax_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_va
     let num_vars_in_mpi = mpi_config_ref.world_size().ilog2() as usize;
     let num_vars_in_each_poly = total_num_vars - num_vars_in_mpi;
 
-    let global_poly = MultiLinearPoly::<Fr>::random(total_num_vars, &mut rng);
+    let mut coeffs = vec![Fr::ZERO; 1usize << total_num_vars];
+    for i in 0..(1usize << num_vars_in_each_poly) {
+        // coeffs[i] = Fr::random_unsafe(&mut rng);
+        coeffs[i] = Fr::from(rng.next_u64());
+    }
+    let global_poly = MultiLinearPoly::new(coeffs);
     let challenge_point = ExpanderSingleVarChallenge::<BN254Config> {
         r_mpi: (0..num_vars_in_mpi)
             .map(|_| Fr::random_unsafe(&mut rng))
