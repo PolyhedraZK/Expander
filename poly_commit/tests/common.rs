@@ -7,6 +7,7 @@ use gkr_engine::{
 use poly_commit::{BatchOpeningPCS, PolynomialCommitmentScheme};
 use polynomials::{MultiLinearPoly, MultilinearExtension};
 use rand::{thread_rng, RngCore};
+use utils::timer::Timer;
 
 #[allow(dead_code)]
 pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<F>>(
@@ -219,7 +220,9 @@ pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C
     let (proving_key, verification_key) = srs.into_keys();
     let mut scratch_pad = P::init_scratch_pad(params, mpi_config);
 
+    let commit_timer = Timer::new("commitment", mpi_config.is_root());
     let commitment = P::commit(params, mpi_config, &proving_key, poly, &mut scratch_pad);
+    commit_timer.stop();
 
     // PCSForExpanderGKR does not require an evaluation value for the opening function
     // We use RawExpanderGKR as the golden standard for the evaluation value
@@ -234,6 +237,7 @@ pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C
     for xx in xs {
         let mut transcript_cloned = transcript.clone();
 
+        let opening_timer = Timer::new("opening", mpi_config.is_root());
         transcript.lock_proof();
         let opening = P::open(
             params,
@@ -245,6 +249,7 @@ pub fn test_pcs_for_expander_gkr<C: FieldEngine, T: Transcript, P: ExpanderPCS<C
             &mut scratch_pad,
         );
         transcript.unlock_proof();
+        opening_timer.stop();
 
         if mpi_config.is_root() {
             // this will always pass for RawExpanderGKR, so make sure it is correct
