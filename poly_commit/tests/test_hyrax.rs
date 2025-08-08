@@ -4,7 +4,7 @@ use arith::{Field, Fr};
 use ark_std::test_rng;
 use gkr_engine::{BN254Config, ExpanderSingleVarChallenge, MPIConfig, MPIEngine, Transcript};
 use gkr_hashers::Keccak256hasher;
-use halo2curves::{bn256::G1Affine, ff::Field};
+use halo2curves::bn256::G1Affine;
 use poly_commit::HyraxPCS;
 use polynomials::MultiLinearPoly;
 use rand::RngCore;
