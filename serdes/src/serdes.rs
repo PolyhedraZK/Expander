@@ -1,3 +1,4 @@
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{
     collections::HashMap,
     hash::Hash,
@@ -6,7 +7,6 @@ use ark_std::{
     vec,
     vec::Vec,
 };
-
 use ethnum::U256;
 use halo2curves::{
     bn256::{Fr, G1Affine, G2Affine},
@@ -137,6 +137,34 @@ impl ExpSerde for G2Affine {
             Some(a) => Ok(a),
             None => Err(SerdeError::DeserializeError),
         }
+    }
+}
+
+impl ExpSerde for ark_bn254::Fr {
+    #[inline(always)]
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        self.serialize_uncompressed(&mut writer).unwrap();
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let res = Self::deserialize_uncompressed(&mut reader).unwrap();
+        Ok(res)
+    }
+}
+
+impl ExpSerde for ark_bn254::G1Affine {
+    #[inline(always)]
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        self.serialize_uncompressed(&mut writer).unwrap();
+        Ok(())
+    }
+
+    #[inline(always)]
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let res = Self::deserialize_uncompressed(&mut reader).unwrap();
+        Ok(res)
     }
 }
 

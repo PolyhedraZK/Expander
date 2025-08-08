@@ -1,6 +1,7 @@
 use ark_std::{
     fmt::Debug,
-    ops::{Add, AddAssign, Mul, MulAssign},vec::Vec,
+    ops::{Add, AddAssign, Mul, MulAssign},
+    vec::Vec,
 };
 
 use arith::Field;

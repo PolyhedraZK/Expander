@@ -1,7 +1,7 @@
-use ark_std::fmt::Debug;
-use ark_std::{vec::Vec, vec};
-use ark_std::format;
 use arith::Field;
+use ark_std::fmt::Debug;
+use ark_std::format;
+use ark_std::{vec, vec::Vec};
 use tiny_keccak::{Hasher, Keccak};
 
 use crate::{FiatShamirHasher, PoseidonStateTrait};

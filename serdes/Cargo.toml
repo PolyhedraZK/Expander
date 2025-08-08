@@ -5,6 +5,8 @@ edition = "2021"
 
 [dependencies]
 ark-std.workspace = true
+ark-bn254.workspace = true
+ark-serialize.workspace = true
 ethnum.workspace = true
 halo2curves.workspace = true
 thiserror.workspace = true

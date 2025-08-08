@@ -1,6 +1,6 @@
 use arith::Fr;
-use serdes::ExpSerde;
 use ark_std::vec;
+use serdes::ExpSerde;
 
 use crate::{FiatShamirHasher, MiMC5FiatShamirHasher};
 

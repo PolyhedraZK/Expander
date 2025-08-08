@@ -29,6 +29,7 @@ ark-std = "0.5"
 ark-bn254 = "0.5.0"
 ark-ec = "0.5.0"
 ark-ff = { version = "0.5" }
+ark-serialize = "0.5.0"
 bytes = "1.6.0"
 chrono = "0.4.38"
 clap = { version = "4.1", features = ["derive"] }
