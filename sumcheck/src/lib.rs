@@ -4,7 +4,7 @@ pub use sumcheck::*;
 mod sumcheck_generic;
 pub use sumcheck_generic::*;
 
-mod prover_helper;
+// mod prover_helper;
 
 mod verifier_helper;
 pub use verifier_helper::*;

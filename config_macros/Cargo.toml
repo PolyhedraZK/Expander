@@ -14,10 +14,10 @@ quote.workspace = true
 proc-macro2.workspace = true
 
 [dev-dependencies]
-gf2 = { path = "../arith/gf2" }
-mersenne31 = { path = "../arith/mersenne31/" }
-goldilocks = { path = "../arith/goldilocks" }
-babybear = { path = "../arith/babybear" }
+# gf2 = { path = "../arith/gf2" }
+# mersenne31 = { path = "../arith/mersenne31/" }
+# goldilocks = { path = "../arith/goldilocks" }
+# babybear = { path = "../arith/babybear" }
 
 
 [lib]

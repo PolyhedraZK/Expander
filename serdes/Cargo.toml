@@ -14,6 +14,6 @@ thiserror.workspace = true
 serdes_derive = { path = "../serdes_derive" }
 
 [dev-dependencies]
-rand.workspace = true
+# rand.workspace = true
 
 

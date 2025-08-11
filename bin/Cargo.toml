@@ -5,16 +5,16 @@ edition = "2024"
 
 [dependencies]
 arith = { path = "../arith" }
-babybear = { path = "../arith/babybear" }
+# babybear = { path = "../arith/babybear" }
 config_macros = { path = "../config_macros" }
 circuit = { path = "../circuit" }
-gf2 = { path = "../arith/gf2" }
-gf2_128 = { path = "../arith/gf2_128" }
+# gf2 = { path = "../arith/gf2" }
+# gf2_128 = { path = "../arith/gf2_128" }
 gkr = { path = "../gkr" }
 gkr_engine = { path = "../gkr_engine" }
 gkr_hashers = { path = "../hasher" }
-goldilocks = { path = "../arith/goldilocks" }
-mersenne31 = { path = "../arith/mersenne31" }
+# goldilocks = { path = "../arith/goldilocks" }
+# mersenne31 = { path = "../arith/mersenne31" }
 poly_commit = { path = "../poly_commit" }
 polynomials = { path = "../arith/polynomials" }
 serdes = { path = "../serdes" }
@@ -26,7 +26,7 @@ bytes.workspace = true
 chrono.workspace = true
 clap.workspace = true
 log.workspace = true
-mpi.workspace = true
+# mpi.workspace = true
 tokio.workspace = true
 warp.workspace = true
 

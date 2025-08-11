@@ -16,14 +16,14 @@
 
 mod errors;
 mod field_engine;
-mod mpi_engine;
+// mod mpi_engine;
 mod poly_commit;
 mod scheme;
 mod transcript;
 
 pub use errors::*;
 pub use field_engine::*;
-pub use mpi_engine::*;
+// pub use mpi_engine::*;
 pub use poly_commit::*;
 pub use scheme::*;
 pub use transcript::*;
@@ -65,8 +65,8 @@ pub trait GKREngine: Send + Sync {
     /// Configuration for field arithmetic operations
     type FieldConfig: FieldEngine;
 
-    /// Configuration for distributed computing operations
-    type MPIConfig: MPIEngine;
+    // /// Configuration for distributed computing operations
+    // type MPIConfig: MPIEngine;
 
     /// Configuration for transcript generation over the challenge field
     type TranscriptConfig: Transcript;

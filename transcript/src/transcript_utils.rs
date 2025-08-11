@@ -1,13 +1,13 @@
-use gkr_engine::{MPIEngine, Transcript};
+use gkr_engine::Transcript;
 
-/// broadcast root transcript state. incurs an additional hash if self.world_size > 1
-pub fn transcript_root_broadcast(transcript: &mut impl Transcript, mpi_engine: &impl MPIEngine) {
-    if mpi_engine.world_size() > 1 {
-        let mut state = transcript.hash_and_return_state();
-        mpi_engine.root_broadcast_bytes(&mut state);
-        transcript.set_state(&state);
-    }
-}
+// /// broadcast root transcript state. incurs an additional hash if self.world_size > 1
+// pub fn transcript_root_broadcast(transcript: &mut impl Transcript, mpi_engine: &impl MPIEngine) {
+//     if mpi_engine.world_size() > 1 {
+//         let mut state = transcript.hash_and_return_state();
+//         mpi_engine.root_broadcast_bytes(&mut state);
+//         transcript.set_state(&state);
+//     }
+// }
 
 /// Correspondence to 'transcript_root_broadcast' from the verifier side.
 ///

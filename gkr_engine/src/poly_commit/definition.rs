@@ -3,7 +3,7 @@ use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
 use std::{fmt::Debug, str::FromStr};
 
-use crate::{ExpErrors, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, Transcript};
+use crate::{ExpErrors, ExpanderSingleVarChallenge, FieldEngine, Transcript};
 
 pub trait StructuredReferenceString {
     type PKey: Clone + Debug + ExpSerde + Send + Sync + 'static;
@@ -56,7 +56,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
     /// rather than the base field elements.
     fn gen_or_load_srs_for_testing(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        // mpi_engine: &impl MPIEngine,
         rng: impl RngCore,
         path: Option<&str>,
     ) -> Self::SRS {
@@ -71,7 +71,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
                     }
                     Err(_e) => {
                         // file does not exist; generate SRS and store to file
-                        let srs = Self::gen_srs(params, mpi_engine, rng);
+                        let srs = Self::gen_srs(params, rng);
                         let mut file =
                             std::fs::File::create(path).expect("Failed to create SRS file");
                         srs.serialize_into(&mut file)
@@ -83,13 +83,13 @@ pub trait ExpanderPCS<F: FieldEngine> {
 
             None => {
                 // no path provided; generate SRS
-                Self::gen_srs(params, mpi_engine, rng)
+                Self::gen_srs(params, rng)
             }
         }
     }
 
     /// The actual function to generate the SRS.
-    fn gen_srs(params: &Self::Params, mpi_engine: &impl MPIEngine, rng: impl RngCore) -> Self::SRS;
+    fn gen_srs(params: &Self::Params, rng: impl RngCore) -> Self::SRS;
 
     /// n_input_vars is with respect to the multilinear poly on each machine in MPI,
     /// also ignore the number of variables stacked in the SIMD field.
@@ -97,13 +97,12 @@ pub trait ExpanderPCS<F: FieldEngine> {
 
     /// Initialize the scratch pad.
     /// Each process returns its own scratch pad.
-    fn init_scratch_pad(params: &Self::Params, mpi_engine: &impl MPIEngine) -> Self::ScratchPad;
+    fn init_scratch_pad(params: &Self::Params) -> Self::ScratchPad;
 
     /// Commit to a polynomial. Root process returns the commitment, other processes can return
     /// arbitrary value.
     fn commit(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<F::SimdCircuitField>,
         scratch_pad: &mut Self::ScratchPad,
@@ -132,7 +131,6 @@ pub trait ExpanderPCS<F: FieldEngine> {
     /// argument system.
     fn open(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<F::SimdCircuitField>,
         x: &ExpanderSingleVarChallenge<F>,
@@ -159,7 +157,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
     /// Open a set of polynomials at a set of points.
     fn multi_points_batch_open(
         _params: &Self::Params,
-        _mpi_engine: &impl MPIEngine,
+        // _mpi_engine: &impl MPIEngine,
         _proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         _polys: &[impl MultilinearExtension<F::SimdCircuitField>],
         _x: &[ExpanderSingleVarChallenge<F>],

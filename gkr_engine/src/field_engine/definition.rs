@@ -5,7 +5,7 @@ use std::ops::{Add, Mul};
 use arith::{ExtensionField, Field, SimdField};
 use polynomials::MultiLinearPoly;
 
-use crate::{ExpanderSingleVarChallenge, MPIEngine};
+use crate::ExpanderSingleVarChallenge;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum FieldType {
@@ -105,35 +105,36 @@ pub trait FieldEngine: Default + Debug + Clone + Send + Sync + PartialEq + 'stat
         // x_mpi: &[Self::ChallengeField],
         scratch_field: &mut [Self::Field],
         scratch_challenge_field: &mut [Self::ChallengeField],
-        mpi_config: &impl MPIEngine,
+        // mpi_config: &impl MPIEngine,
     ) -> Self::ChallengeField {
-        assert!(
-            scratch_challenge_field.len()
-                >= 1 << cmp::max(challenge.r_simd.len(), challenge.r_mpi.len())
-        );
+        unimplemented!("not used by verifier")
+        // assert!(
+        //     scratch_challenge_field.len()
+        //         >= 1 << cmp::max(challenge.r_simd.len(), challenge.r_mpi.len())
+        // );
 
-        let local_simd =
-            Self::eval_circuit_vals_at_challenge(local_evals, &challenge.rz, scratch_field);
-        let local_simd_unpacked = local_simd.unpack();
-        let local_v = MultiLinearPoly::evaluate_with_buffer(
-            &local_simd_unpacked,
-            &challenge.r_simd,
-            scratch_challenge_field,
-        );
+        // let local_simd =
+        //     Self::eval_circuit_vals_at_challenge(local_evals, &challenge.rz, scratch_field);
+        // let local_simd_unpacked = local_simd.unpack();
+        // let local_v = MultiLinearPoly::evaluate_with_buffer(
+        //     &local_simd_unpacked,
+        //     &challenge.r_simd,
+        //     scratch_challenge_field,
+        // );
 
-        if mpi_config.is_root() {
-            let mut claimed_v_gathering_buffer =
-                vec![Self::ChallengeField::zero(); mpi_config.world_size()];
-            mpi_config.gather_vec(&[local_v], &mut claimed_v_gathering_buffer);
-            MultiLinearPoly::evaluate_with_buffer(
-                &claimed_v_gathering_buffer,
-                &challenge.r_mpi,
-                scratch_challenge_field,
-            )
-        } else {
-            mpi_config.gather_vec(&[local_v], &mut vec![]);
-            Self::ChallengeField::zero()
-        }
+        // if mpi_config.is_root() {
+        //     let mut claimed_v_gathering_buffer =
+        //         vec![Self::ChallengeField::zero(); mpi_config.world_size()];
+        //     mpi_config.gather_vec(&[local_v], &mut claimed_v_gathering_buffer);
+        //     MultiLinearPoly::evaluate_with_buffer(
+        //         &claimed_v_gathering_buffer,
+        //         &challenge.r_mpi,
+        //         scratch_challenge_field,
+        //     )
+        // } else {
+        //     mpi_config.gather_vec(&[local_v], &mut vec![]);
+        //     Self::ChallengeField::zero()
+        // }
     }
 
     /// This assumes only a single core holds all the evals, and evaluate it locally

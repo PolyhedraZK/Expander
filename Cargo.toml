@@ -1,11 +1,11 @@
 [workspace]
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
-    "arith/babybear",
-    "arith/gf2",
-    "arith/gf2_128",
-    "arith/goldilocks",
-    "arith/mersenne31",
+    # "arith/babybear",
+    # "arith/gf2",
+    # "arith/gf2_128",
+    # "arith/goldilocks",
+    # "arith/mersenne31",
     "arith/polynomials", 
     "bin", # binary executables
     "circuit",
@@ -41,8 +41,8 @@ quote = "1.0"     # For generating code
 proc-macro2 = "1.0"  # For working with tokens
 itertools = "0.13"
 log = "0.4"
-mpi = { git = "https://github.com/rsmpi/rsmpi", rev = "61796831954b679cbe267c1b704ddbcb7fef3715" }
-rand = { version = "0.8.5", features = ["std"] }
+# mpi = { git = "https://github.com/rsmpi/rsmpi", rev = "61796831954b679cbe267c1b704ddbcb7fef3715" }
+# rand = { version = "0.8.5", features = ["std"] }
 raw-cpuid = "11.1.0"
 rayon = "1.10"
 sha2 = "0.10.8"

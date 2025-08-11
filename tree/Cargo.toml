@@ -14,8 +14,8 @@ tiny-keccak.workspace = true
 criterion.workspace = true
 tynm.workspace = true
 
-gf2 = { path = "../arith/gf2" }
-gf2_128 = { path = "../arith/gf2_128" }
+# gf2 = { path = "../arith/gf2" }
+# gf2_128 = { path = "../arith/gf2_128" }
 
 [[bench]]
 name = "tree"

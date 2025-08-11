@@ -1,6 +1,6 @@
 use arith::{Field, SimdField};
 use circuit::CircuitLayer;
-use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIEngine};
+use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, };
 use polynomials::EqPolynomial;
 
 use crate::{unpack_and_combine, ProverScratchPad};
@@ -24,7 +24,6 @@ pub(crate) struct SumcheckGkrVanillaHelper<'a, F: FieldEngine> {
 
     xy_helper: SumcheckProductGateHelper,
     simd_var_helper: SumcheckSimdProdGateHelper<F>,
-    mpi_var_helper: SumcheckSimdProdGateHelper<F>,
 
     is_output_layer: bool,
 }
@@ -53,7 +52,6 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         challenge: &'a ExpanderDualVarChallenge<F>,
         alpha: Option<F::ChallengeField>,
         sp: &'a mut ProverScratchPad<F>,
-        mpi_config: &impl MPIEngine,
         is_output_layer: bool,
     ) -> Self {
         let simd_var_num = F::get_field_pack_size().trailing_zeros() as usize;
@@ -73,9 +71,6 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
 
             xy_helper: SumcheckProductGateHelper::new(layer.input_var_num),
             simd_var_helper: SumcheckSimdProdGateHelper::new(simd_var_num),
-            mpi_var_helper: SumcheckSimdProdGateHelper::new(
-                mpi_config.world_size().trailing_zeros() as usize,
-            ),
             is_output_layer,
         }
     }
