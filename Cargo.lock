@@ -1783,6 +1783,7 @@ dependencies = [
  "ethnum",
  "serdes_derive",
  "thiserror 2.0.12",
+ "wasm-bindgen",
 ]
 
 [[package]]

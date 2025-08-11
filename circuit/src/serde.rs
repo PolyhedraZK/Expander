@@ -1,14 +1,15 @@
 use arith::Field;
+use ark_std::string::ToString;
 use ark_std::{
     io::{Read, Write},
     vec,
     vec::Vec,
 };
-use gkr_engine::FieldEngine;use ark_std::string::ToString;
+use gkr_engine::FieldEngine;
 use serdes::{ExpSerde, SerdeResult};
 
 use super::{Allocation, CoefType, Gate, RecursiveCircuit, Segment, Witness};
-use crate::{console_log, GateAdd, GateConst, GateMul, SegmentId, log};
+use crate::{console_log, log, GateAdd, GateConst, GateMul, SegmentId};
 
 pub struct CustomGateWrapper<C: FieldEngine, const INPUT_NUM: usize> {
     pub custom_gate: Gate<C, INPUT_NUM>,
@@ -151,10 +152,8 @@ impl<C: FieldEngine> ExpSerde for Witness<C> {
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         let num_witnesses = <usize as ExpSerde>::deserialize_from(&mut reader)?;
-        let num_private_inputs_per_witness =
-            <usize as ExpSerde>::deserialize_from(&mut reader)?;
-        let num_public_inputs_per_witness =
-            <usize as ExpSerde>::deserialize_from(&mut reader)?;
+        let num_private_inputs_per_witness = <usize as ExpSerde>::deserialize_from(&mut reader)?;
+        let num_public_inputs_per_witness = <usize as ExpSerde>::deserialize_from(&mut reader)?;
         let _modulus = <[u64; 4]>::deserialize_from(&mut reader)?;
 
         let mut values = vec![];

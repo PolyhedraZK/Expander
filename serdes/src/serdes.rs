@@ -1,5 +1,6 @@
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_std::string::ToString;
 use ark_std::{
     collections::HashMap,
     hash::Hash,
@@ -10,7 +11,9 @@ use ark_std::{
 };
 use ethnum::U256;
 
-use crate::{exp_serde_for_generic_slices, exp_serde_for_number, SerdeError, SerdeResult};
+use crate::{
+    console_log, exp_serde_for_generic_slices, exp_serde_for_number, log, SerdeError, SerdeResult,
+};
 
 /// Serde for Arithmetic types such as field and group operations
 pub trait ExpSerde: Sized {
@@ -90,13 +93,13 @@ impl<V: ExpSerde> ExpSerde for Vec<V> {
 impl ExpSerde for ark_bn254::Fr {
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        self.serialize_uncompressed(&mut writer).unwrap();
+        self.serialize_compressed(&mut writer).unwrap();
         Ok(())
     }
 
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let res = Self::deserialize_uncompressed(&mut reader).unwrap();
+        let res = Self::deserialize_compressed(&mut reader).unwrap();
         Ok(res)
     }
 }
@@ -104,7 +107,7 @@ impl ExpSerde for ark_bn254::Fr {
 impl<P: SWCurveConfig> ExpSerde for Affine<P> {
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        match self.serialize_uncompressed(&mut writer) {
+        match self.serialize_compressed(&mut writer) {
             Ok(()) => Ok(()),
             Err(_e) => Err(SerdeError::DeserializeError),
         }
@@ -112,9 +115,17 @@ impl<P: SWCurveConfig> ExpSerde for Affine<P> {
 
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let res = match Self::deserialize_uncompressed(&mut reader) {
+        // let mut buf = [0; 160];
+        // reader.read(&mut buf)?;
+        // console_log!("buf: {:?}", buf);
+        // let res = match Self::deserialize_compressed_unchecked(&mut buf.as_slice()) {
+
+        let res = match Self::deserialize_compressed_unchecked(&mut reader) {
             Ok(res) => res,
-            Err(_e) => return Err(SerdeError::DeserializeError),
+            Err(e) => {
+                console_log!("Failed to deserialize Affine: {}", e);
+                return Err(SerdeError::DeserializeError);
+            }
         };
         Ok(res)
     }

@@ -11,6 +11,8 @@ ark-serialize.workspace = true
 ethnum.workspace = true
 thiserror.workspace = true
 
+wasm-bindgen = "0.2"
+
 serdes_derive = { path = "../serdes_derive" }
 
 [dev-dependencies]

@@ -12,7 +12,8 @@ pub use witness::*;
 mod serde;
 pub use serde::*;
 
-use wasm_bindgen::prelude::wasm_bindgen;use ark_std::string::ToString;
+use ark_std::string::ToString;
+use wasm_bindgen::prelude::wasm_bindgen;
 // Import the `console.log` function from the `console` object
 #[wasm_bindgen]
 extern "C" {
