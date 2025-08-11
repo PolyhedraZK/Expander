@@ -15,6 +15,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
+use ark_std::rand::RngCore;
 use ethnum::U256;
 use serdes::{ExpSerde, SerdeResult};
 use utils::{from_monty, monty_reduce, to_monty};
@@ -358,11 +359,11 @@ impl<MP: FieldParameters> Field for MontyField31<MP> {
     }
 
     /// Uses rejection sampling to avoid bias.
-    fn random_unsafe(mut rng: impl rand::RngCore) -> Self {
+    fn random_unsafe(mut rng: impl RngCore) -> Self {
         Self::new(rng.next_u32())
     }
 
-    fn random_bool(mut rng: impl rand::RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         (rng.next_u32() & 1).into()
     }
 

@@ -1,7 +1,6 @@
 use ark_ff::{FftField, Field as ArkField, PrimeField, Zero};
-use ark_std::UniformRand;
+use ark_std::{rand::RngCore, UniformRand};
 use ethnum::U256;
-use rand::RngCore;
 use serdes::ExpSerde;
 
 use crate::{ExtensionField, FFTField, Field, SimdField};

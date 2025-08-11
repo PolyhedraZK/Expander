@@ -126,7 +126,6 @@ dependencies = [
  "ethnum",
  "itertools 0.13.0",
  "log",
- "rand",
  "serdes",
  "tynm",
 ]
@@ -476,7 +475,6 @@ dependencies = [
  "mersenne31",
  "mpi",
  "poly_commit",
- "rand",
  "serdes",
  "thiserror 2.0.12",
  "transcript",
@@ -972,7 +970,6 @@ dependencies = [
  "mersenne31",
  "mpi",
  "polynomials",
- "rand",
  "serdes",
  "thiserror 2.0.12",
 ]

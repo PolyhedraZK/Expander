@@ -1,10 +1,9 @@
-use ark_std::{end_timer, start_timer, test_rng};
+use ark_std::{end_timer, rand::RngCore, start_timer, test_rng};
 use field::{
     associativity_tests, commutativity_tests, identity_tests, random_addition_tests,
     random_doubling_tests, random_expansion_tests, random_multiplication_tests,
     random_negation_tests, random_serde_tests, random_squaring_tests, random_subtraction_tests,
 };
-use rand::RngCore;
 
 use crate::{ExtensionField, FFTField, Field, SimdField};
 

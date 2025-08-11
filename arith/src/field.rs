@@ -1,6 +1,5 @@
-use ark_std::Zero;
+use ark_std::{rand::RngCore, Zero};
 use ethnum::U256;
-use rand::RngCore;
 use serdes::ExpSerde;
 
 use std::{

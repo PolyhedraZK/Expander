@@ -1,5 +1,4 @@
-use ark_std::{end_timer, start_timer};
-use rand::RngCore;
+use ark_std::{end_timer, rand::RngCore, start_timer};
 
 use crate::Field;
 

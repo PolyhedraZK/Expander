@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use arith::Field;
+use ark_std::test_rng;
 use circuit::Circuit;
 use config_macros::declare_gkr_config;
 use gkr_engine::{
@@ -70,7 +71,7 @@ fn load_circuit<Cfg: GKREngine>(mpi_config: &MPIConfig) -> Option<Circuit<Cfg::F
 
 #[test]
 fn test_shared_mem() {
-    let mut rng = rand::thread_rng();
+    let mut rng = test_rng();
     let universe = MPIConfig::init().unwrap();
     let world = universe.world();
     let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));

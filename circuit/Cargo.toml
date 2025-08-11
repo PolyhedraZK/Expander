@@ -15,7 +15,6 @@ bytes.workspace = true
 ethnum.workspace = true
 log.workspace = true
 mpi.workspace = true
-rand.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

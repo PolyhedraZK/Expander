@@ -8,8 +8,8 @@ use std::{
 
 use ark_bn254::Fr;
 use ark_ff::{Field as ArkField, PrimeField, UniformRand};
+use ark_std::rand::RngCore;
 use ethnum::U256;
-use rand::RngCore;
 use serdes::ExpSerde;
 
 use crate::{rep_field_common, ExtensionField, Field, SimdField};

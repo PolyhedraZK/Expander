@@ -1,5 +1,5 @@
+use ark_std::rand::RngCore;
 use polynomials::MultilinearExtension;
-use rand::RngCore;
 use serdes::ExpSerde;
 use std::{fmt::Debug, str::FromStr};
 
