@@ -962,12 +962,7 @@ version = "0.1.0"
 dependencies = [
  "arith",
  "ark-std",
- "babybear",
- "gf2",
- "gf2_128",
- "goldilocks",
  "itertools 0.13.0",
- "mersenne31",
  "mpi",
  "polynomials",
  "serdes",
