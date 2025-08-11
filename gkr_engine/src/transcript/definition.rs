@@ -42,15 +42,15 @@ pub trait Transcript: Clone + Debug {
     /// Generate a slice of random bytes.
     fn generate_u8_slice(&mut self, n_bytes: usize) -> Vec<u8>;
 
-    fn generate_usize_vector(&mut self, n: usize) -> Vec<usize> {
-        let mut res: Vec<usize> = vec![0; n];
-        let mut buf = [0u8; 8];
-        for e in res.iter_mut() {
-            buf.copy_from_slice(&self.generate_u8_slice(8));
-            *e = usize::from_le_bytes(buf);
-        }
-        res
-    }
+    // fn generate_usize_vector(&mut self, n: usize) -> Vec<usize> {
+    //     let mut res: Vec<usize> = vec![0; n];
+    //     let mut buf = [0u8; 8];
+    //     for e in res.iter_mut() {
+    //         buf.copy_from_slice(&self.generate_u8_slice(8));
+    //         *e = usize::from_le_bytes(buf);
+    //     }
+    //     res
+    // }
 
     /// Generate a field element.
     #[inline(always)]
