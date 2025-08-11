@@ -85,7 +85,7 @@ where
     let (div, eval) = univariate_degree_one_quotient(&gammas, beta);
 
     let y_open: E::G1 =
-        VariableBaseMSM::msm(&srs.tau_x_srs.powers_of_tau[..div.len()], &div).unwrap();
+        VariableBaseMSM::msm(&srs.tau_y_srs.powers_of_tau[..div.len()], &div).unwrap();
 
     (
         eval,
