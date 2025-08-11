@@ -150,7 +150,13 @@ impl<C: FieldEngine> Circuit<C> {
     // Load a circuit from a file and flatten it
     // Used for verifier
     pub fn verifier_load_circuit<Cfg: GKREngine<FieldConfig = C>>(filename: &str) -> Self {
-        let rc = RecursiveCircuit::<C>::load(filename).unwrap();
+        let rc = match RecursiveCircuit::<C>::load(filename) {
+            Ok(circuit) => circuit,
+            Err(e) => {
+                ark_std::println!("Failed to load circuit: {}", e);
+                return Self::default();
+            }
+        };
         let mut c = rc.flatten();
         c.pre_process_gkr();
         c

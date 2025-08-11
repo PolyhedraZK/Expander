@@ -19,7 +19,7 @@ impl<C: FieldEngine, const INPUT_NUM: usize> ExpSerde for CustomGateWrapper<C, I
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let gate_type = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
+        let gate_type = <usize as ExpSerde>::deserialize_from(&mut reader)?;
         let i_ids: [usize; INPUT_NUM] = <Vec<usize> as ExpSerde>::deserialize_from(&mut reader)?
             .try_into()
             .unwrap();
@@ -123,17 +123,17 @@ impl<C: FieldEngine> ExpSerde for RecursiveCircuit<C> {
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let version_num = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
+        let version_num = <usize as ExpSerde>::deserialize_from(&mut reader)?;
         assert_eq!(version_num, VERSION_NUM);
         let expected_mod = <C::CircuitField as Field>::MODULUS;
         let mut read_mod = [0u8; 32];
-        reader.read_exact(&mut read_mod).unwrap();
+        reader.read_exact(&mut read_mod)?;
         assert_eq!(read_mod, expected_mod.to_le_bytes());
 
         Ok(RecursiveCircuit {
-            num_public_inputs: <usize as ExpSerde>::deserialize_from(&mut reader).unwrap(),
-            num_outputs: <usize as ExpSerde>::deserialize_from(&mut reader).unwrap(),
-            expected_num_output_zeros: <usize as ExpSerde>::deserialize_from(&mut reader).unwrap(),
+            num_public_inputs: <usize as ExpSerde>::deserialize_from(&mut reader)?,
+            num_outputs: <usize as ExpSerde>::deserialize_from(&mut reader)?,
+            expected_num_output_zeros: <usize as ExpSerde>::deserialize_from(&mut reader)?,
 
             segments: Vec::<Segment<C>>::deserialize_from(&mut reader)?,
             layers: <Vec<usize> as ExpSerde>::deserialize_from(&mut reader)?,
@@ -147,17 +147,17 @@ impl<C: FieldEngine> ExpSerde for Witness<C> {
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let num_witnesses = <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
+        let num_witnesses = <usize as ExpSerde>::deserialize_from(&mut reader)?;
         let num_private_inputs_per_witness =
-            <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
+            <usize as ExpSerde>::deserialize_from(&mut reader)?;
         let num_public_inputs_per_witness =
-            <usize as ExpSerde>::deserialize_from(&mut reader).unwrap();
-        let _modulus = <[u64; 4]>::deserialize_from(&mut reader).unwrap();
+            <usize as ExpSerde>::deserialize_from(&mut reader)?;
+        let _modulus = <[u64; 4]>::deserialize_from(&mut reader)?;
 
         let mut values = vec![];
         for _ in 0..num_witnesses * (num_private_inputs_per_witness + num_public_inputs_per_witness)
         {
-            values.push(C::CircuitField::deserialize_from(&mut reader).unwrap());
+            values.push(C::CircuitField::deserialize_from(&mut reader)?);
         }
 
         Ok(Self {
