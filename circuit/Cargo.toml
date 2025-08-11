@@ -17,6 +17,8 @@ log.workspace = true
 # mpi.workspace = true
 thiserror.workspace = true
 
+wasm-bindgen = "0.2.92"
+
 [dev-dependencies]
 config_macros = { path = "../config_macros" }
 poly_commit = { path = "../poly_commit" }

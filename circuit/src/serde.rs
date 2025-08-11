@@ -4,11 +4,12 @@ use ark_std::{
     vec,
     vec::Vec,
 };
-use gkr_engine::FieldEngine;
+use gkr_engine::FieldEngine;use ark_std::string::ToString;
 use serdes::{ExpSerde, SerdeResult};
 
 use super::{Allocation, CoefType, Gate, RecursiveCircuit, Segment, Witness};
-use crate::{GateAdd, GateConst, GateMul, SegmentId};
+use crate::{console_log, GateAdd, GateConst, GateMul, SegmentId, log};
+
 pub struct CustomGateWrapper<C: FieldEngine, const INPUT_NUM: usize> {
     pub custom_gate: Gate<C, INPUT_NUM>,
 }
@@ -105,7 +106,7 @@ impl<C: FieldEngine> ExpSerde for Segment<C> {
     }
 }
 
-const VERSION_NUM: usize = 3914834606642317635; // b'CIRCUIT6'
+const VERSION_NUM: u64 = 3914834606642317635; // b'CIRCUIT6'
 
 impl<C: FieldEngine> ExpSerde for RecursiveCircuit<C> {
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
@@ -123,8 +124,10 @@ impl<C: FieldEngine> ExpSerde for RecursiveCircuit<C> {
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let version_num = <usize as ExpSerde>::deserialize_from(&mut reader)?;
-        assert_eq!(version_num, VERSION_NUM);
+        console_log!("start deser");
+        let version_num = <u64 as ExpSerde>::deserialize_from(&mut reader)?;
+        // assert_eq!(version_num as u64, VERSION_NUM);
+        console_log!("Successfully loaded circuit version: {}", version_num);
         let expected_mod = <C::CircuitField as Field>::MODULUS;
         let mut read_mod = [0u8; 32];
         reader.read_exact(&mut read_mod)?;

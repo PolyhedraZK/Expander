@@ -7,13 +7,13 @@ use crate::*;
 // recursive format used in compiler
 pub type SegmentId = usize;
 
-#[derive(ExpSerde)]
+#[derive(ExpSerde, Debug)]
 pub struct Allocation {
     pub i_offset: usize,
     pub o_offset: usize,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Segment<C: FieldEngine> {
     pub i_var_num: usize,
     pub o_var_num: usize,
@@ -67,7 +67,7 @@ impl<C: FieldEngine> Segment<C> {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct RecursiveCircuit<C: FieldEngine> {
     pub num_public_inputs: usize,
     pub num_outputs: usize,
@@ -81,6 +81,8 @@ impl<C: FieldEngine> RecursiveCircuit<C> {
     pub fn load(filename: &str) -> SerdeResult<Self> {
         let file_bytes = fs::read(filename)?;
         let cursor = Cursor::new(file_bytes);
+
+        console_log!("Loading circuit from file: {}", filename);
 
         <Self as ExpSerde>::deserialize_from(cursor)
     }

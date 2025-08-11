@@ -422,6 +422,7 @@ dependencies = [
  "serdes",
  "thiserror 2.0.12",
  "transcript",
+ "wasm-bindgen",
 ]
 
 [[package]]

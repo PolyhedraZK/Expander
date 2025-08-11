@@ -182,7 +182,7 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
 
         impl<'a> GKREngine for #config_name<'a> {
             type FieldConfig = #field_config;
-            type MPIConfig = MPIConfig<'a>;
+            // type MPIConfig = MPIConfig<'a>;
             type TranscriptConfig = #transcript_type_expr;
             type PCSConfig = #polynomial_commitment_type_expr;
             const SCHEME: GKRScheme = #scheme_config;
