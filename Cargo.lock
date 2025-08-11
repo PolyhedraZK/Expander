@@ -1749,7 +1749,6 @@ dependencies = [
  "ark-std",
  "criterion",
  "itertools 0.13.0",
- "rand",
  "serdes",
 ]
 

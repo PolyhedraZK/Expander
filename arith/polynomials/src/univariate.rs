@@ -1,6 +1,7 @@
 use std::ops::{AddAssign, Index, IndexMut, MulAssign};
 
 use arith::{FFTField, Field};
+use ark_std::rand::RngCore;
 use itertools::izip;
 
 #[derive(Debug, Clone, Default)]
@@ -49,7 +50,7 @@ impl<F: Field> UnivariatePoly<F> {
 
     /// Sample a random polynomials.
     #[inline]
-    pub fn random(degree: usize, mut rng: impl rand::RngCore) -> Self {
+    pub fn random(degree: usize, mut rng: impl RngCore) -> Self {
         let coeffs = (0..=degree).map(|_| F::random_unsafe(&mut rng)).collect();
         Self { coeffs }
     }
@@ -136,7 +137,7 @@ impl<F: FFTField> UnivariateLagrangePolynomial<F> {
     }
 
     #[inline]
-    pub fn random(degree: usize, mut rng: impl rand::RngCore) -> Self {
+    pub fn random(degree: usize, mut rng: impl RngCore) -> Self {
         assert!((degree + 1).is_power_of_two());
         let evals = (0..=degree).map(|_| F::random_unsafe(&mut rng)).collect();
         Self { evals }

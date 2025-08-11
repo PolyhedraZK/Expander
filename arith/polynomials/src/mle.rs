@@ -1,7 +1,7 @@
 use std::ops::{Add, Index, IndexMut, Mul};
 
 use arith::Field;
-use ark_std::log2;
+use ark_std::{log2, rand::RngCore};
 
 use crate::{EqPolynomial, MultilinearExtension, MutableMultilinearExtension};
 
@@ -20,7 +20,7 @@ impl<F: Field> MultiLinearPoly<F> {
 
     /// Sample a random polynomials.
     #[inline]
-    pub fn random(nv: usize, mut rng: impl rand::RngCore) -> Self {
+    pub fn random(nv: usize, mut rng: impl RngCore) -> Self {
         let coeff = (0..1 << nv).map(|_| F::random_unsafe(&mut rng)).collect();
         Self { coeffs: coeff }
     }
