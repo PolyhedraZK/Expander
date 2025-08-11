@@ -1,32 +1,30 @@
-use halo2curves::{
-    ff::Field,
-    group::{prime::PrimeCurveAffine, Curve, Group},
-    msm,
-    pairing::{MillerLoopResult, MultiMillerLoop},
-    CurveAffine,
-};
+use ark_ec::AffineRepr;
+use ark_ec::CurveGroup;
+use ark_ec::{pairing::Pairing, VariableBaseMSM};
+use ark_std::One;
+use ark_std::UniformRand;
 use rayon::prelude::*;
 use serdes::ExpSerde;
 
 use crate::*;
 
 #[inline(always)]
-pub(crate) fn generate_coef_form_uni_kzg_srs_for_testing<E: MultiMillerLoop>(
+pub(crate) fn generate_coef_form_uni_kzg_srs_for_testing<E: Pairing>(
     length: usize,
     mut rng: impl rand::RngCore,
 ) -> CoefFormUniKZGSRS<E>
 where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: ExpSerde,
 {
     assert!(length.is_power_of_two());
 
-    let tau = E::Fr::random(&mut rng);
+    let tau = E::ScalarField::rand(&mut rng);
     let g1 = E::G1Affine::generator();
 
     let tau_geometric_progression = powers_series(&tau, length);
 
-    let g1_prog = g1.to_curve();
+    let g1_prog: E::G1 = g1.into();
     let coeff_bases = {
         let mut proj_bases = vec![g1_prog; length];
         proj_bases
@@ -34,8 +32,7 @@ where
             .zip(tau_geometric_progression.par_iter())
             .for_each(|(b, tau_i)| *b *= tau_i);
 
-        let mut g_bases = vec![E::G1Affine::default(); length];
-        E::G1::batch_normalize(&proj_bases, &mut g_bases);
+        let g_bases = E::G1::normalize_batch(&proj_bases);
 
         drop(proj_bases);
         g_bases
@@ -48,67 +45,68 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn coeff_form_uni_kzg_commit<E: MultiMillerLoop>(
+pub(crate) fn coeff_form_uni_kzg_commit<E: Pairing>(
     srs: &CoefFormUniKZGSRS<E>,
-    coeffs: &[E::Fr],
+    coeffs: &[E::ScalarField],
 ) -> E::G1Affine
 where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: ExpSerde,
 {
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
-    let com = msm::best_multiexp(coeffs, &srs.powers_of_tau[..coeffs.len()]);
+    let com: E::G1 = VariableBaseMSM::msm(&srs.powers_of_tau[..coeffs.len()], coeffs).unwrap();
 
     com.into()
 }
 
 #[inline(always)]
-pub fn coeff_form_uni_kzg_open_eval<E: MultiMillerLoop>(
+pub fn coeff_form_uni_kzg_open_eval<E: Pairing>(
     srs: &CoefFormUniKZGSRS<E>,
-    coeffs: &[E::Fr],
-    alpha: E::Fr,
-) -> (E::Fr, E::G1Affine)
+    coeffs: &[E::ScalarField],
+    alpha: E::ScalarField,
+) -> (E::ScalarField, E::G1Affine)
 where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: ExpSerde,
 {
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
     let (div, eval) = univariate_degree_one_quotient(coeffs, alpha);
-    let opening = msm::best_multiexp(&div, &srs.powers_of_tau[..div.len()]);
+    let opening: E::G1 = VariableBaseMSM::msm(&srs.powers_of_tau[..div.len()], &div).unwrap();
 
     (eval, opening.into())
 }
 
 #[inline(always)]
-pub(crate) fn coeff_form_uni_kzg_verify<E: MultiMillerLoop>(
+pub(crate) fn coeff_form_uni_kzg_verify<E: Pairing>(
     vk: &UniKZGVerifierParams<E>,
     comm: E::G1Affine,
-    alpha: E::Fr,
-    eval: E::Fr,
+    alpha: E::ScalarField,
+    eval: E::ScalarField,
     opening: E::G1Affine,
 ) -> bool
 where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde,
 {
     let g1_eval: E::G1Affine = (E::G1Affine::generator() * eval).into();
     let g2_alpha: E::G2 = E::G2Affine::generator() * alpha;
 
-    let gt_result = E::multi_miller_loop(&[
-        (
-            &opening,
-            &(vk.tau_g2.to_curve() - g2_alpha).to_affine().into(),
-        ),
-        (&(g1_eval - comm).into(), &E::G2Affine::generator().into()),
-    ]);
+    let gt_result = E::multi_miller_loop(
+        &[opening, (g1_eval - comm).into()],
+        &[
+            (vk.tau_g2 - g2_alpha).into(),
+            E::G2Affine::generator().into(),
+        ],
+    );
 
-    gt_result.final_exponentiation().is_identity().into()
+    E::final_exponentiation(gt_result).unwrap().0 == E::TargetField::one()
 }
 
 #[cfg(test)]
 mod tests {
+    use arith::Fr;
+    use ark_bn254::Bn254;
     use ark_std::test_rng;
 
     use crate::*;
@@ -130,8 +128,8 @@ mod tests {
         let eval = Fr::from(604800u64);
 
         let mut rng = test_rng();
-        let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn256>(8, &mut rng);
-        let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
+        let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn254>(8, &mut rng);
+        let vk: UniKZGVerifierParams<Bn254> = From::from(&srs);
         let com = coeff_form_uni_kzg_commit(&srs, &poly);
 
         let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);
@@ -147,8 +145,8 @@ mod tests {
         let eval = Fr::from(100u64);
 
         let mut rng = test_rng();
-        let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn256>(8, &mut rng);
-        let vk: UniKZGVerifierParams<Bn256> = From::from(&srs);
+        let srs = generate_coef_form_uni_kzg_srs_for_testing::<Bn254>(8, &mut rng);
+        let vk: UniKZGVerifierParams<Bn254> = From::from(&srs);
         let com = coeff_form_uni_kzg_commit(&srs, &poly);
 
         let (actual_eval, opening) = coeff_form_uni_kzg_open_eval(&srs, &poly, alpha);

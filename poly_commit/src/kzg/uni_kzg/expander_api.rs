@@ -1,12 +1,8 @@
 use arith::ExtensionField;
+use ark_ec::pairing::Pairing;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
-};
-use halo2curves::{
-    ff::PrimeField,
-    pairing::{Engine, MultiMillerLoop},
-    CurveAffine,
 };
 use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
@@ -22,11 +18,11 @@ use crate::{
 
 impl<G, E> ExpanderPCS<G> for HyperUniKZGPCS<E>
 where
-    G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
-    E: Engine + MultiMillerLoop,
-    E::Fr: ExtensionField + PrimeField,
-    E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    G: FieldEngine<ChallengeField = E::ScalarField, SimdCircuitField = E::ScalarField>,
+    E: Pairing,
+    E::ScalarField: ExtensionField,
+    E::G1Affine: ExpSerde + Default,
+    E::G2Affine: ExpSerde + Default,
 {
     const NAME: &'static str = "HyperUniKZGForExpander";
 
@@ -37,7 +33,7 @@ where
     type Params = usize;
     type SRS = CoefFormUniKZGSRS<E>;
     type ScratchPad = ();
-    type BatchOpening = BatchOpening<E::Fr, Self>;
+    type BatchOpening = BatchOpening<E::ScalarField, Self>;
 
     fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
 
@@ -67,7 +63,7 @@ where
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<E::Fr>,
+        poly: &impl polynomials::MultilinearExtension<E::ScalarField>,
         scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         if poly.num_vars() < Self::MINIMUM_SUPPORTED_NUM_VARS {
@@ -90,7 +86,7 @@ where
         params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<E::Fr>,
+        poly: &impl MultilinearExtension<E::ScalarField>,
         x: &ExpanderSingleVarChallenge<G>,
         transcript: &mut impl Transcript,
         scratch_pad: &Self::ScratchPad,
@@ -156,12 +152,12 @@ where
         _params: &Self::Params,
         _mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        polys: &[impl MultilinearExtension<E::Fr>],
+        polys: &[impl MultilinearExtension<E::ScalarField>],
         x: &[ExpanderSingleVarChallenge<G>],
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
-    ) -> (Vec<E::Fr>, Self::BatchOpening) {
-        let points: Vec<Vec<E::Fr>> = x.iter().map(|p| p.local_xs()).collect();
+    ) -> (Vec<E::ScalarField>, Self::BatchOpening) {
+        let points: Vec<Vec<E::ScalarField>> = x.iter().map(|p| p.local_xs()).collect();
 
         multiple_points_batch_open_impl(proving_key, polys, points.as_ref(), transcript)
     }
@@ -171,11 +167,11 @@ where
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitments: &[impl AsRef<Self::Commitment>],
         x: &[ExpanderSingleVarChallenge<G>],
-        evals: &[E::Fr],
+        evals: &[E::ScalarField],
         batch_opening: &Self::BatchOpening,
         transcript: &mut impl Transcript,
     ) -> bool {
-        let points: Vec<Vec<E::Fr>> = x.iter().map(|p| p.local_xs()).collect();
+        let points: Vec<Vec<E::ScalarField>> = x.iter().map(|p| p.local_xs()).collect();
 
         multiple_points_batch_verify_impl(
             verifying_key,

@@ -1,14 +1,14 @@
+use ark_ec::pairing::Pairing;
 use derivative::Derivative;
-use halo2curves::pairing::Engine;
 use serdes::ExpSerde;
 
 use crate::*;
 
 #[derive(Debug, Clone, Derivative, ExpSerde)]
 #[derivative(Default(bound = ""))]
-pub struct HyperBiKZGOpening<E: Engine>
+pub struct HyperBiKZGOpening<E: Pairing>
 where
-    E::Fr: ExpSerde,
+    E::ScalarField: ExpSerde,
     E::G1Affine: Default + ExpSerde,
 {
     pub folded_oracle_commitments: Vec<E::G1Affine>,
@@ -23,9 +23,9 @@ where
     pub quotient_delta_y_commitment: E::G1Affine,
 }
 
-impl<E: Engine> From<HyperBiKZGOpening<E>> for HyperUniKZGOpening<E>
+impl<E: Pairing> From<HyperBiKZGOpening<E>> for HyperUniKZGOpening<E>
 where
-    E::Fr: ExpSerde,
+    E::ScalarField: ExpSerde,
     E::G1Affine: Default + ExpSerde,
 {
     fn from(value: HyperBiKZGOpening<E>) -> Self {
@@ -38,9 +38,9 @@ where
     }
 }
 
-impl<E: Engine> From<HyperUniKZGOpening<E>> for HyperBiKZGOpening<E>
+impl<E: Pairing> From<HyperUniKZGOpening<E>> for HyperBiKZGOpening<E>
 where
-    E::Fr: ExpSerde,
+    E::ScalarField: ExpSerde,
     E::G1Affine: Default + ExpSerde,
 {
     fn from(value: HyperUniKZGOpening<E>) -> Self {

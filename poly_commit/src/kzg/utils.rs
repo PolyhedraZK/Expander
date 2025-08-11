@@ -1,10 +1,11 @@
 use std::{iter::Sum, ops::Mul};
 
 use arith::Field;
+use ark_ff::PrimeField;
 use itertools::izip;
 
 #[inline(always)]
-pub(crate) fn powers_series<F: Field>(x: &F, n: usize) -> Vec<F> {
+pub(crate) fn powers_series<F: PrimeField>(x: &F, n: usize) -> Vec<F> {
     let mut powers = vec![F::one()];
     let mut cur = *x;
     for _ in 0..n - 1 {
@@ -17,7 +18,7 @@ pub(crate) fn powers_series<F: Field>(x: &F, n: usize) -> Vec<F> {
 /// Given a univariate polynomial of coefficient form f(X) = c0 + c1 X + ... + cn X^n
 /// and perform the division f(X) / (X - \alpha).
 #[inline(always)]
-pub(crate) fn univariate_degree_one_quotient<F: Field>(coeffs: &[F], alpha: F) -> (Vec<F>, F) {
+pub(crate) fn univariate_degree_one_quotient<F: PrimeField>(coeffs: &[F], alpha: F) -> (Vec<F>, F) {
     let mut div_coeffs = coeffs.to_vec();
 
     for i in (1..coeffs.len()).rev() {
@@ -98,15 +99,15 @@ pub(crate) fn coeff_form_degree2_lagrange<F: Field>(roots: [F; 3], evals: [F; 3]
     let [e0, e1, e2] = evals;
 
     let r0_nom = [r1 * r2, -r1 - r2, F::one()];
-    let r0_denom_inv = ((r0 - r1) * (r0 - r2)).invert().unwrap();
+    let r0_denom_inv = ((r0 - r1) * (r0 - r2)).inv().unwrap();
     let r0_weight = r0_denom_inv * e0;
 
     let r1_nom = [r0 * r2, -r0 - r2, F::one()];
-    let r1_denom_inv = ((r1 - r0) * (r1 - r2)).invert().unwrap();
+    let r1_denom_inv = ((r1 - r0) * (r1 - r2)).inv().unwrap();
     let r1_weight = r1_denom_inv * e1;
 
     let r2_nom = [r0 * r1, -r0 - r1, F::one()];
-    let r2_denom_inv = ((r2 - r0) * (r2 - r1)).invert().unwrap();
+    let r2_denom_inv = ((r2 - r0) * (r2 - r1)).inv().unwrap();
     let r2_weight = r2_denom_inv * e2;
 
     let combine = |a, b, c| a * r0_weight + b * r1_weight + c * r2_weight;
@@ -120,6 +121,8 @@ pub(crate) fn coeff_form_degree2_lagrange<F: Field>(roots: [F; 3], evals: [F; 3]
 
 #[cfg(test)]
 mod test {
+    use arith::{Field, Fr};
+
     use crate::*;
 
     #[test]
@@ -143,7 +146,7 @@ mod test {
                     Fr::from(0u64)
                 ]
             );
-            assert_eq!(remainder, Fr::zero())
+            assert_eq!(remainder, <Fr as Field>::zero())
         }
         {
             // x^3 - 1 = (x-1)(x^2 + x + 1)
@@ -164,7 +167,7 @@ mod test {
                     Fr::from(0u64)
                 ]
             );
-            assert_eq!(remainder, Fr::zero())
+            assert_eq!(remainder, <Fr as Field>::zero())
         }
         {
             // x^3 + 6x^2 + 11x + 6 = (x + 1)(x + 2)(x + 3)

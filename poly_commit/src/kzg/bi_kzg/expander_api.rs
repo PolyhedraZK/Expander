@@ -1,13 +1,8 @@
 use arith::ExtensionField;
+use ark_ec::pairing::Pairing;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
-};
-use halo2curves::{
-    ff::PrimeField,
-    group::prime::PrimeCurveAffine,
-    pairing::{Engine, MultiMillerLoop},
-    CurveAffine,
 };
 use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
@@ -22,11 +17,11 @@ use crate::{
 
 impl<G, E> ExpanderPCS<G> for HyperBiKZGPCS<E>
 where
-    G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
-    E: Engine + MultiMillerLoop,
-    E::Fr: ExtensionField + PrimeField,
-    E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    G: FieldEngine<ChallengeField = E::ScalarField, SimdCircuitField = E::ScalarField>,
+    E: Pairing,
+    E::ScalarField: ExtensionField,
+    E::G1Affine: ExpSerde + Default,
+    E::G2Affine: ExpSerde + Default,
 {
     const NAME: &'static str = "HyperBiKZGForExpander";
 
@@ -63,7 +58,7 @@ where
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl polynomials::MultilinearExtension<E::Fr>,
+        poly: &impl polynomials::MultilinearExtension<E::ScalarField>,
         _scratch_pad: &mut Self::ScratchPad,
     ) -> Option<Self::Commitment> {
         // The minimum supported number of variables is 1.
@@ -86,7 +81,7 @@ where
             return BiKZGCommitment(local_commitment).into();
         }
 
-        let local_g1 = local_commitment.to_curve();
+        let local_g1: E::G1 = local_commitment.into();
         let mut root_gathering_commits: Vec<E::G1> = vec![local_g1; mpi_engine.world_size()];
         mpi_engine.gather_vec(&[local_g1], &mut root_gathering_commits);
 
@@ -103,7 +98,7 @@ where
         _params: &Self::Params,
         mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
-        poly: &impl MultilinearExtension<E::Fr>,
+        poly: &impl MultilinearExtension<E::ScalarField>,
         x: &ExpanderSingleVarChallenge<G>,
         transcript: &mut impl Transcript,
         _scratch_pad: &Self::ScratchPad,

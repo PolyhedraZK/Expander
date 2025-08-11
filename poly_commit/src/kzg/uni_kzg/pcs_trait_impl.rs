@@ -1,12 +1,8 @@
 use std::marker::PhantomData;
 
 use arith::ExtensionField;
+use ark_ec::pairing::Pairing;
 use gkr_engine::{StructuredReferenceString, Transcript};
-use halo2curves::{
-    ff::PrimeField,
-    pairing::{Engine, MultiMillerLoop},
-    CurveAffine,
-};
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
 
@@ -19,32 +15,32 @@ use super::batch::{kzg_single_point_batch_open, kzg_single_point_batch_verify};
 
 pub struct HyperUniKZGPCS<E>
 where
-    E: Engine,
-    E::Fr: ExtensionField,
+    E: Pairing,
+    E::ScalarField: ExtensionField,
 {
     _marker_e: PhantomData<E>,
 }
 
 impl<E> HyperUniKZGPCS<E>
 where
-    E: Engine,
-    E::Fr: ExtensionField,
+    E: Pairing,
+    E::ScalarField: ExtensionField,
 {
     pub const MINIMUM_SUPPORTED_NUM_VARS: usize = 1;
 }
 
-impl<E> PolynomialCommitmentScheme<E::Fr> for HyperUniKZGPCS<E>
+impl<E> PolynomialCommitmentScheme<E::ScalarField> for HyperUniKZGPCS<E>
 where
-    E: Engine + MultiMillerLoop,
-    E::Fr: ExtensionField + PrimeField,
-    E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E: Pairing,
+    E::ScalarField: ExtensionField,
+    E::G1Affine: ExpSerde + Default,
+    E::G2Affine: ExpSerde + Default,
 {
     const NAME: &'static str = "HyperUniKZGPCS";
 
     type Params = usize;
-    type Poly = MultiLinearPoly<E::Fr>;
-    type EvalPoint = Vec<E::Fr>;
+    type Poly = MultiLinearPoly<E::ScalarField>;
+    type EvalPoint = Vec<E::ScalarField>;
     type ScratchPad = ();
 
     type SRS = CoefFormUniKZGSRS<E>;
@@ -77,7 +73,7 @@ where
         x: &Self::EvalPoint,
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
-    ) -> (E::Fr, Self::Opening) {
+    ) -> (E::ScalarField, Self::Opening) {
         coeff_form_uni_hyperkzg_open(proving_key, &poly.coeffs, x, transcript)
     }
 
@@ -86,7 +82,7 @@ where
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
-        v: E::Fr,
+        v: E::ScalarField,
         opening: &Self::Opening,
         transcript: &mut impl Transcript,
     ) -> bool {
@@ -94,12 +90,12 @@ where
     }
 }
 
-impl<E> BatchOpeningPCS<E::Fr> for HyperUniKZGPCS<E>
+impl<E> BatchOpeningPCS<E::ScalarField> for HyperUniKZGPCS<E>
 where
-    E: Engine + MultiMillerLoop,
-    E::Fr: ExtensionField + PrimeField,
-    E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E: Pairing,
+    E::ScalarField: ExtensionField,
+    E::G1Affine: ExpSerde + Default,
+    E::G2Affine: ExpSerde + Default,
 {
     fn single_point_batch_open(
         _params: &Self::Params,
@@ -108,7 +104,7 @@ where
         x: &Self::EvalPoint,
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
-    ) -> (Vec<E::Fr>, Self::Opening) {
+    ) -> (Vec<E::ScalarField>, Self::Opening) {
         kzg_single_point_batch_open(proving_key, polys, x, transcript)
     }
 
@@ -117,7 +113,7 @@ where
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitments: &[Self::Commitment],
         x: &Self::EvalPoint,
-        evals: &[E::Fr],
+        evals: &[E::ScalarField],
         opening: &Self::Opening,
         transcript: &mut impl Transcript,
     ) -> bool {
@@ -155,7 +151,7 @@ where
         points: &[Self::EvalPoint],
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
-    ) -> (Vec<E::Fr>, BatchOpening<E::Fr, Self>) {
+    ) -> (Vec<E::ScalarField>, BatchOpening<E::ScalarField, Self>) {
         multiple_points_batch_open_impl(proving_key, polys, points, transcript)
     }
 
@@ -171,8 +167,8 @@ where
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitments: &[Self::Commitment],
         points: &[Self::EvalPoint],
-        values: &[E::Fr],
-        batch_opening: &BatchOpening<E::Fr, Self>,
+        values: &[E::ScalarField],
+        batch_opening: &BatchOpening<E::ScalarField, Self>,
         transcript: &mut impl Transcript,
     ) -> bool {
         multiple_points_batch_verify_impl(

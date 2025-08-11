@@ -1,6 +1,9 @@
 use std::iter;
 
-use arith::ExtensionField;
+use arith::{ExtensionField, Field, Fr};use ark_ec::CurveGroup;
+use ark_bn254::{Bn254, G1Affine, G1Projective};
+use ark_ec::{pairing::Pairing, AffineRepr};
+use ark_ff::{Field as ArkField, UniformRand};
 use ark_std::test_rng;
 use gkr_engine::Transcript;
 use gkr_hashers::MiMC5FiatShamirHasher;
@@ -19,17 +22,17 @@ use crate::*;
 
 fn coeff_form_hyper_bikzg_open_simulate<E, T>(
     srs_s: &[CoefFormBiKZGLocalSRS<E>],
-    coeffs_s: &[Vec<E::Fr>],
-    local_alphas: &[E::Fr],
-    mpi_alphas: &[E::Fr],
+    coeffs_s: &[Vec<E::ScalarField>],
+    local_alphas: &[E::ScalarField],
+    mpi_alphas: &[E::ScalarField],
     fs_transcript: &mut T,
 ) -> HyperBiKZGOpening<E>
 where
-    E: MultiMillerLoop,
+    E: Pairing,
     T: Transcript,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
-    E::Fr: ExtensionField,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: ExpSerde,
+    E::ScalarField: ExtensionField,
 {
     // NOTE(HS) deteriorate to vanilla HyperKZG if mpi_alphas is empty, namely single party setting
     if mpi_alphas.is_empty() {
@@ -49,20 +52,20 @@ where
 
     let (folded_x_oracle_commits_s, folded_x_oracle_coeffs_s): (
         Vec<Vec<E::G1Affine>>,
-        Vec<Vec<Vec<E::Fr>>>,
+        Vec<Vec<Vec<E::ScalarField>>>,
     ) = izip!(srs_s, coeffs_s)
         .map(|(srs, coeffs)| {
             coeff_form_hyperkzg_local_poly_oracles(&srs.tau_x_srs, coeffs, local_alphas)
         })
         .unzip();
 
-    let final_evals_at_x: Vec<E::Fr> = folded_x_oracle_coeffs_s
+    let final_evals_at_x: Vec<E::ScalarField> = folded_x_oracle_coeffs_s
         .iter()
         .map(|folded_x_oracle_coeffs| {
             let final_coeffs = folded_x_oracle_coeffs.last().unwrap().clone();
             let final_alpha = local_alphas[local_alphas.len() - 1];
 
-            (E::Fr::one() - final_alpha) * final_coeffs[0] + final_alpha * final_coeffs[1]
+            (<E::ScalarField as Field>::one() - final_alpha) * final_coeffs[0] + final_alpha * final_coeffs[1]
         })
         .collect();
 
@@ -74,10 +77,10 @@ where
         .map(|i| {
             let ith_fold_commits: E::G1 = folded_x_oracle_commits_s
                 .iter()
-                .map(|f| f[i].to_curve())
+                .map(|f| E::G1::from(f[i]))
                 .sum();
 
-            ith_fold_commits.to_affine()
+            ith_fold_commits.into_affine()
         })
         .collect();
 
@@ -106,10 +109,10 @@ where
         iter::once(&y_oracle_commit),
         &folded_y_oracle_commits,
     )
-    .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
+    .for_each(|f| fs_transcript.append_serializable_data(f));
 
-    let beta_x = fs_transcript.generate_field_element::<E::Fr>();
-    let beta_y = fs_transcript.generate_field_element::<E::Fr>();
+    let beta_x = fs_transcript.generate_field_element::<E::ScalarField>();
+    let beta_y = fs_transcript.generate_field_element::<E::ScalarField>();
 
     dbg!(beta_x, beta_y);
 
@@ -152,7 +155,7 @@ where
     // NOTE(HS) check if the final eval of root evals match with mle poly evaluation
     dbg!(&root_evals.multilinear_final_eval());
 
-    let gamma = fs_transcript.generate_field_element::<E::Fr>();
+    let gamma = fs_transcript.generate_field_element::<E::ScalarField>();
 
     dbg!(gamma);
 
@@ -162,7 +165,7 @@ where
     //
 
     let f_gamma_global = {
-        let gamma_n = gamma.pow_vartime([local_alphas.len() as u64]);
+        let gamma_n = gamma.pow([local_alphas.len() as u64]);
         let mut temp = coeff_form_hyperkzg_local_oracle_polys_aggregate::<E>(
             &final_evals_at_x,
             &folded_y_oracle_coeffs_s,
@@ -179,16 +182,17 @@ where
     // and commit to the final quotient poly
     //
 
-    let mut f_gamma_s: Vec<Vec<E::Fr>> = {
-        let mut f_gamma_s_local: Vec<Vec<E::Fr>> = izip!(coeffs_s, folded_x_oracle_coeffs_s)
-            .map(|(coeffs, folded_oracle_coeffs)| {
-                coeff_form_hyperkzg_local_oracle_polys_aggregate::<E>(
-                    coeffs,
-                    &folded_oracle_coeffs,
-                    gamma,
-                )
-            })
-            .collect();
+    let mut f_gamma_s: Vec<Vec<E::ScalarField>> = {
+        let mut f_gamma_s_local: Vec<Vec<E::ScalarField>> =
+            izip!(coeffs_s, folded_x_oracle_coeffs_s)
+                .map(|(coeffs, folded_oracle_coeffs)| {
+                    coeff_form_hyperkzg_local_oracle_polys_aggregate::<E>(
+                        coeffs,
+                        &folded_oracle_coeffs,
+                        gamma,
+                    )
+                })
+                .collect();
 
         izip!(&mut f_gamma_s_local, &f_gamma_global)
             .for_each(|(f_g, f_global)| f_g[0] += *f_global);
@@ -196,7 +200,7 @@ where
         f_gamma_s_local
     };
 
-    let lagrange_degree2_s: Vec<[E::Fr; 3]> = izip!(folded_x_evals_s, &f_gamma_global)
+    let lagrange_degree2_s: Vec<[E::ScalarField; 3]> = izip!(folded_x_evals_s, &f_gamma_global)
         .map(|(l, g)| {
             let mut local_degree_2 = l.interpolate_degree2_aggregated_evals(beta_x, gamma);
             local_degree_2[0] += g;
@@ -204,16 +208,16 @@ where
         })
         .collect();
 
-    let f_gamma_quotient_s: Vec<Vec<E::Fr>> = izip!(&f_gamma_s, &lagrange_degree2_s)
+    let f_gamma_quotient_s: Vec<Vec<E::ScalarField>> = izip!(&f_gamma_s, &lagrange_degree2_s)
         .map(|(f_gamma, lagrange_degree2)| {
             let mut nom = f_gamma.clone();
-            polynomial_add(&mut nom, -E::Fr::one(), lagrange_degree2);
+            polynomial_add(&mut nom, -<E::ScalarField as Field>::one(), lagrange_degree2);
             univariate_roots_quotient(nom, &[beta_x, -beta_x, beta_x * beta_x])
         })
         .collect();
     let f_gamma_quotient_com_s: Vec<E::G1> = izip!(srs_s, &f_gamma_quotient_s)
         .map(|(srs, f_gamma_quotient)| {
-            coeff_form_uni_kzg_commit(&srs.tau_x_srs, f_gamma_quotient).to_curve()
+            coeff_form_uni_kzg_commit(&srs.tau_x_srs, f_gamma_quotient).into()
         })
         .collect();
 
@@ -224,9 +228,9 @@ where
 
     let f_gamma_quotient_com_x: E::G1Affine = f_gamma_quotient_com_s.iter().sum::<E::G1>().into();
 
-    fs_transcript.append_u8_slice(f_gamma_quotient_com_x.to_bytes().as_ref());
+    fs_transcript.append_serializable_data(&f_gamma_quotient_com_x);
 
-    let delta_x = fs_transcript.generate_field_element::<E::Fr>();
+    let delta_x = fs_transcript.generate_field_element::<E::ScalarField>();
 
     dbg!(delta_x);
 
@@ -234,7 +238,7 @@ where
     // Locally compute the Lagrange-degree2 interpolation at delta_x, pool at leader
     //
 
-    let lagrange_degree2_delta_x: Vec<E::Fr> = lagrange_degree2_s
+    let lagrange_degree2_delta_x: Vec<E::ScalarField> = lagrange_degree2_s
         .iter()
         .map(|l| l[0] + l[1] * delta_x + l[2] * delta_x * delta_x)
         .collect();
@@ -267,10 +271,10 @@ where
     // NOTE(HS) vanish over the three beta_y points above, then commit Q_y
     let mut f_gamma_quotient_y = {
         let mut nom = lagrange_degree2_delta_x.clone();
-        polynomial_add(&mut nom, -E::Fr::one(), &lagrange_degree2_delta_y);
+        polynomial_add(&mut nom, -<E::ScalarField as Field>::one(), &lagrange_degree2_delta_y);
         univariate_roots_quotient(nom, &[beta_y, -beta_y, beta_y * beta_y])
     };
-    f_gamma_quotient_y.resize(lagrange_degree2_delta_x.len(), E::Fr::zero());
+    f_gamma_quotient_y.resize(lagrange_degree2_delta_x.len(), <E::ScalarField as Field>::zero());
 
     let f_gamma_quotient_com_y =
         coeff_form_uni_kzg_commit(&srs_s[0].tau_y_srs, &f_gamma_quotient_y);
@@ -278,9 +282,9 @@ where
     dbg!(f_gamma_quotient_y.len());
 
     // NOTE(HS) sample from RO for delta_y
-    fs_transcript.append_u8_slice(f_gamma_quotient_com_y.to_bytes().as_ref());
+    fs_transcript.append_serializable_data(&f_gamma_quotient_com_y);
 
-    let delta_y = fs_transcript.generate_field_element::<E::Fr>();
+    let delta_y = fs_transcript.generate_field_element::<E::ScalarField>();
 
     dbg!(delta_y);
 
@@ -301,7 +305,7 @@ where
     );
 
     // NOTE(HS) bivariate KZG opening
-    let evals_and_opens: Vec<(E::Fr, E::G1Affine)> = izip!(srs_s, &f_gamma_s)
+    let evals_and_opens: Vec<(E::ScalarField, E::G1Affine)> = izip!(srs_s, &f_gamma_s)
         .map(|(srs, x_coeffs)| coeff_form_uni_kzg_open_eval(&srs.tau_x_srs, x_coeffs, delta_x))
         .collect();
 
@@ -320,19 +324,19 @@ where
 
 fn coeff_form_hyper_bikzg_verify_simulate<E, T>(
     vk: &BiKZGVerifierParam<E>,
-    local_alphas: &[E::Fr],
-    mpi_alphas: &[E::Fr],
-    eval: E::Fr,
+    local_alphas: &[E::ScalarField],
+    mpi_alphas: &[E::ScalarField],
+    eval: E::ScalarField,
     commitment: E::G1Affine,
     opening: &HyperBiKZGOpening<E>,
     fs_transcript: &mut T,
 ) -> bool
 where
-    E: MultiMillerLoop,
+    E: Pairing,
     T: Transcript,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
-    E::Fr: ExtensionField,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: ExpSerde,
+    E::ScalarField: ExtensionField,
 {
     // NOTE(HS) deteriorate to vanilla HyperKZG verify if mpi_alphas is empty
     if mpi_alphas.is_empty() {
@@ -354,10 +358,10 @@ where
     opening
         .folded_oracle_commitments
         .iter()
-        .for_each(|f| fs_transcript.append_u8_slice(f.to_bytes().as_ref()));
+        .for_each(|f| fs_transcript.append_serializable_data(f));
 
-    let beta_x = fs_transcript.generate_field_element::<E::Fr>();
-    let beta_y = fs_transcript.generate_field_element::<E::Fr>();
+    let beta_x = fs_transcript.generate_field_element::<E::ScalarField>();
+    let beta_y = fs_transcript.generate_field_element::<E::ScalarField>();
 
     dbg!(beta_x, beta_y);
 
@@ -416,7 +420,7 @@ where
     opening.aggregated_evals.append_to_transcript(fs_transcript);
     opening.leader_evals.append_to_transcript(fs_transcript);
 
-    let gamma = fs_transcript.generate_field_element::<E::Fr>();
+    let gamma = fs_transcript.generate_field_element::<E::ScalarField>();
 
     dbg!(gamma);
 
@@ -427,7 +431,7 @@ where
             iter::once(&commitment).chain(&opening.folded_oracle_commitments),
             &gamma_power_series
         )
-        .map(|(com, g)| com.to_curve() * g)
+        .map(|(com, g)| *com * g)
         .sum();
 
         com_g1.into()
@@ -435,7 +439,7 @@ where
 
     // NOTE(HS) aggregate lagrange degree 2 polys
     let (y_beta2, y_beta, y_neg_beta) = {
-        let gamma_n = gamma.pow_vartime([local_alphas.len() as u64]);
+        let gamma_n = gamma.pow([local_alphas.len() as u64]);
         let (v_beta2, v_beta, v_neg_beta) = local_final_eval.gamma_aggregate_evals(gamma);
 
         (v_beta2 * gamma_n, v_beta * gamma_n, v_neg_beta * gamma_n)
@@ -453,9 +457,9 @@ where
         neg_beta_y_local.interpolate_degree2_aggregated_evals(beta_x, gamma);
     aggregated_neg_beta_y_locals[0] += y_neg_beta;
 
-    fs_transcript.append_u8_slice(opening.beta_x_commitment.to_bytes().as_ref());
+    fs_transcript.append_serializable_data(&opening.beta_x_commitment);
 
-    let delta_x = fs_transcript.generate_field_element::<E::Fr>();
+    let delta_x = fs_transcript.generate_field_element::<E::ScalarField>();
 
     dbg!(delta_x);
 
@@ -473,9 +477,9 @@ where
 
     dbg!(lagrange_degree2_delta_y);
 
-    fs_transcript.append_u8_slice(opening.beta_y_commitment.to_bytes().as_ref());
+    fs_transcript.append_serializable_data(&opening.beta_y_commitment);
 
-    let delta_y = fs_transcript.generate_field_element::<E::Fr>();
+    let delta_y = fs_transcript.generate_field_element::<E::ScalarField>();
 
     dbg!(delta_y);
 
@@ -489,7 +493,7 @@ where
     let delta_x_denom = (delta_x - beta_x) * (delta_x - beta_x * beta_x) * (delta_x + beta_x);
     let delta_y_denom = (delta_y - beta_y) * (delta_y - beta_y * beta_y) * (delta_y + beta_y);
 
-    let com_r = aggregated_oracle_commitment.to_curve()
+    let com_r = aggregated_oracle_commitment
         - (opening.beta_x_commitment * delta_x_denom)
         - (opening.beta_y_commitment * delta_y_denom);
 
@@ -502,7 +506,7 @@ where
 
     let what = coeff_form_bi_kzg_verify(
         vk.clone(),
-        com_r.to_affine(),
+        com_r.into_affine(),
         delta_x,
         delta_y,
         degree_2_final_eval,
@@ -527,10 +531,10 @@ fn test_hyper_bikzg_single_process_simulated_e2e() {
 
     let mut rng = test_rng();
 
-    let local_alphas: Vec<_> = (0..x_vars).map(|_| Fr::random(&mut rng)).collect();
-    let mpi_alphas: Vec<_> = (0..y_vars).map(|_| Fr::random(&mut rng)).collect();
+    let local_alphas: Vec<_> = (0..x_vars).map(|_| Fr::rand(&mut rng)).collect();
+    let mpi_alphas: Vec<_> = (0..y_vars).map(|_| Fr::rand(&mut rng)).collect();
 
-    let party_srs: Vec<CoefFormBiKZGLocalSRS<Bn256>> = (0..=y_degree)
+    let party_srs: Vec<CoefFormBiKZGLocalSRS<Bn254>> = (0..=y_degree)
         .map(|rank| {
             let mut srs_rng = test_rng();
             generate_coef_form_bi_kzg_local_srs_for_testing(
@@ -543,7 +547,7 @@ fn test_hyper_bikzg_single_process_simulated_e2e() {
         .collect();
 
     let xy_coeffs: Vec<Vec<Fr>> = (0..=y_degree)
-        .map(|_| (0..=x_degree).map(|_| Fr::random(&mut rng)).collect())
+        .map(|_| (0..=x_degree).map(|_| Fr::rand(&mut rng)).collect())
         .collect();
 
     let all_alphas = {
@@ -566,8 +570,8 @@ fn test_hyper_bikzg_single_process_simulated_e2e() {
             .map(|(srs, x_coeffs)| coeff_form_uni_kzg_commit(&srs.tau_x_srs, x_coeffs))
             .collect();
 
-        let global_commitment_g1: G1 = commitments.iter().map(|c| c.to_curve()).sum();
-        global_commitment_g1.to_affine()
+        let global_commitment_g1: G1Projective = commitments.iter().map(|c| c.into_group()).sum();
+        global_commitment_g1.into()
     };
 
     let mut fs_transcript = BytesHashTranscript::<MiMC5FiatShamirHasher<Fr>>::new();
@@ -581,7 +585,7 @@ fn test_hyper_bikzg_single_process_simulated_e2e() {
         &mut fs_transcript,
     );
 
-    let vk: BiKZGVerifierParam<Bn256> = From::from(&party_srs[0]);
+    let vk: BiKZGVerifierParam<Bn254> = From::from(&party_srs[0]);
     let what = coeff_form_hyper_bikzg_verify_simulate(
         &vk,
         &local_alphas,

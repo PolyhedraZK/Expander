@@ -1,27 +1,22 @@
+use ark_ec::pairing::Pairing;
 use derivative::Derivative;
 use gkr_engine::StructuredReferenceString;
-use halo2curves::{pairing::Engine, CurveAffine};
 use serdes::{ExpSerde, SerdeResult};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]
-pub struct UniKZGCommitment<E: Engine>(pub E::G1Affine)
-where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>;
+pub struct UniKZGCommitment<E: Pairing>(pub E::G1Affine);
 
-impl<E: Engine> AsRef<UniKZGCommitment<E>> for UniKZGCommitment<E>
-where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-{
+impl<E: Pairing> AsRef<UniKZGCommitment<E>> for UniKZGCommitment<E> {
     fn as_ref(&self) -> &UniKZGCommitment<E> {
         self
     }
 }
 
 // Derive macros does not work for associated types
-impl<E: Engine> ExpSerde for UniKZGCommitment<E>
+impl<E: Pairing> ExpSerde for UniKZGCommitment<E>
 where
-    E::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G1Affine: ExpSerde,
 {
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> SerdeResult<()> {
         self.0.serialize_into(writer)
@@ -36,10 +31,10 @@ where
 /// The univariate polynomial here is of coefficient form.
 #[derive(Clone, Debug, PartialEq, Eq, Derivative, ExpSerde)]
 #[derivative(Default(bound = ""))]
-pub struct CoefFormUniKZGSRS<E: Engine>
+pub struct CoefFormUniKZGSRS<E: Pairing>
 where
     E::G1Affine: ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
+    E::G2Affine: ExpSerde,
 {
     /// power of \tau times the generators of G1, yielding
     /// \tau^i over G1 with i ranging in \[ 0, 2^n - 1 \]
@@ -48,10 +43,10 @@ where
     pub tau_g2: E::G2Affine,
 }
 
-impl<E: Engine> StructuredReferenceString for CoefFormUniKZGSRS<E>
+impl<E: Pairing> StructuredReferenceString for CoefFormUniKZGSRS<E>
 where
-    <E as Engine>::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    <E as Engine>::G2Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    <E as Pairing>::G1Affine: ExpSerde,
+    <E as Pairing>::G2Affine: ExpSerde,
 {
     type PKey = CoefFormUniKZGSRS<E>;
     type VKey = UniKZGVerifierParams<E>;
@@ -64,7 +59,7 @@ where
 
 /// Univariate KZG PCS verifier's params.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ExpSerde)]
-pub struct UniKZGVerifierParams<E: Engine>
+pub struct UniKZGVerifierParams<E: Pairing>
 where
     E::G2Affine: ExpSerde,
 {
@@ -72,10 +67,10 @@ where
     pub tau_g2: E::G2Affine,
 }
 
-impl<E: Engine> From<&CoefFormUniKZGSRS<E>> for UniKZGVerifierParams<E>
+impl<E: Pairing> From<&CoefFormUniKZGSRS<E>> for UniKZGVerifierParams<E>
 where
     E::G1Affine: ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
+    E::G2Affine: ExpSerde,
 {
     fn from(value: &CoefFormUniKZGSRS<E>) -> Self {
         Self {

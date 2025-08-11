@@ -1,20 +1,18 @@
+use ark_ec::pairing::Pairing;
 use derivative::Derivative;
 use gkr_engine::StructuredReferenceString;
-use halo2curves::{pairing::Engine, CurveAffine};
 use serdes::{ExpSerde, SerdeResult};
 
 use crate::{CoefFormUniKZGSRS, UniKZGVerifierParams};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]
-pub struct BiKZGCommitment<E: Engine>(pub E::G1Affine)
-where
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>;
+pub struct BiKZGCommitment<E: Pairing>(pub E::G1Affine);
 
 // Derive macros does not work for associated types
-impl<E: Engine> ExpSerde for BiKZGCommitment<E>
+impl<E: Pairing> ExpSerde for BiKZGCommitment<E>
 where
-    E::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
+    E::G1Affine: ExpSerde,
 {
     fn serialize_into<W: std::io::Write>(&self, writer: W) -> SerdeResult<()> {
         self.0.serialize_into(writer)
@@ -27,10 +25,10 @@ where
 
 #[derive(Clone, Debug, PartialEq, Eq, Derivative, ExpSerde)]
 #[derivative(Default(bound = ""))]
-pub struct CoefFormBiKZGLocalSRS<E: Engine>
+pub struct CoefFormBiKZGLocalSRS<E: Pairing>
 where
     E::G1Affine: ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
+    E::G2Affine: ExpSerde,
 {
     pub tau_x_srs: CoefFormUniKZGSRS<E>,
     pub tau_y_srs: CoefFormUniKZGSRS<E>,
@@ -38,10 +36,10 @@ where
 
 /// Bivariate KZG PCS verifier's params.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Default, ExpSerde)]
-pub struct BiKZGVerifierParam<E: Engine>
+pub struct BiKZGVerifierParam<E: Pairing>
 where
     E::G1Affine: ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
+    E::G2Affine: ExpSerde,
 {
     /// tau_x over G2.
     pub tau_x_g2: E::G2Affine,
@@ -49,10 +47,10 @@ where
     pub tau_y_g2: E::G2Affine,
 }
 
-impl<E: Engine> From<&CoefFormBiKZGLocalSRS<E>> for BiKZGVerifierParam<E>
+impl<E: Pairing> From<&CoefFormBiKZGLocalSRS<E>> for BiKZGVerifierParam<E>
 where
     E::G1Affine: ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
+    E::G2Affine: ExpSerde,
 {
     fn from(srs: &CoefFormBiKZGLocalSRS<E>) -> Self {
         Self {
@@ -62,10 +60,10 @@ where
     }
 }
 
-impl<E: Engine> StructuredReferenceString for CoefFormBiKZGLocalSRS<E>
+impl<E: Pairing> StructuredReferenceString for CoefFormBiKZGLocalSRS<E>
 where
-    <E as Engine>::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    <E as Engine>::G2Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: ExpSerde,
 {
     type PKey = CoefFormBiKZGLocalSRS<E>;
     type VKey = BiKZGVerifierParam<E>;
@@ -76,10 +74,10 @@ where
     }
 }
 
-impl<E: Engine> From<&BiKZGVerifierParam<E>> for UniKZGVerifierParams<E>
+impl<E: Pairing> From<&BiKZGVerifierParam<E>> for UniKZGVerifierParams<E>
 where
     E::G1Affine: ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
+    E::G2Affine: ExpSerde,
 {
     fn from(value: &BiKZGVerifierParam<E>) -> Self {
         Self {
@@ -90,7 +88,7 @@ where
 
 /// Proof for Bi-KZG polynomial commitment scheme.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct BiKZGProof<E: Engine> {
+pub struct BiKZGProof<E: Pairing> {
     pub quotient_x: E::G1Affine,
     pub quotient_y: E::G1Affine,
 }

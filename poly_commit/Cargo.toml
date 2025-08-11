@@ -14,10 +14,12 @@ tree = { path = "../tree" }
 utils = { path = "../utils" }
 sumcheck = { path = "../sumcheck" }
 
-ethnum.workspace = true
+ark-ec.workspace = true
+ark-ff.workspace = true
 ark-std.workspace = true
 ark-bn254.workspace = true
 derivative.workspace = true
+ethnum.workspace = true
 itertools.workspace = true
 rand.workspace = true
 rayon.workspace = true
@@ -33,13 +35,13 @@ gkr_hashers = { path = "../hasher" }
 tynm.workspace = true
 criterion.workspace = true
 
-[[bench]]
-name = "orion"
-harness = false
+# [[bench]]
+# name = "orion"
+# harness = false
 
-[[bench]]
-name = "hyrax"
-harness = false
+# [[bench]]
+# name = "hyrax"
+# harness = false
 
 [[bench]]
 name = "kzg"

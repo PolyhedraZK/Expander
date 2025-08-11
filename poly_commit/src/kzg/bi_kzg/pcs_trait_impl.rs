@@ -1,12 +1,8 @@
 use std::marker::PhantomData;
 
 use arith::ExtensionField;
+use ark_ec::pairing::Pairing;
 use gkr_engine::{StructuredReferenceString, Transcript};
-use halo2curves::{
-    ff::PrimeField,
-    pairing::{Engine, MultiMillerLoop},
-    CurveAffine,
-};
 use polynomials::{MultiLinearPoly, MultilinearExtension};
 use serdes::ExpSerde;
 
@@ -22,32 +18,32 @@ use super::{
 
 pub struct HyperBiKZGPCS<E>
 where
-    E: Engine,
-    E::Fr: ExtensionField,
+    E: Pairing,
+    E::ScalarField: ExtensionField,
 {
     _marker_e: PhantomData<E>,
 }
 
 impl<E> HyperBiKZGPCS<E>
 where
-    E: Engine,
-    E::Fr: ExtensionField,
+    E: Pairing,
+    E::ScalarField: ExtensionField,
 {
     pub const MINIMUM_SUPPORTED_NUM_VARS: usize = 2;
 }
 
-impl<E> PolynomialCommitmentScheme<E::Fr> for HyperBiKZGPCS<E>
+impl<E> PolynomialCommitmentScheme<E::ScalarField> for HyperBiKZGPCS<E>
 where
-    E: Engine + MultiMillerLoop,
-    E::Fr: ExtensionField + PrimeField,
-    E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
-    E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
+    E: Pairing,
+    E::ScalarField: ExtensionField,
+    E::G1Affine: ExpSerde + Default,
+    E::G2Affine: ExpSerde + Default,
 {
     const NAME: &'static str = "HyperBiKZGPCS";
 
     type Params = usize;
-    type Poly = MultiLinearPoly<E::Fr>;
-    type EvalPoint = Vec<E::Fr>;
+    type Poly = MultiLinearPoly<E::ScalarField>;
+    type EvalPoint = Vec<E::ScalarField>;
     type ScratchPad = ();
 
     type SRS = CoefFormBiKZGLocalSRS<E>;
@@ -83,7 +79,7 @@ where
         x: &Self::EvalPoint,
         _scratch_pad: &Self::ScratchPad,
         transcript: &mut impl Transcript,
-    ) -> (E::Fr, Self::Opening) {
+    ) -> (E::ScalarField, Self::Opening) {
         let (eval, hyperkzg_opening) = coeff_form_uni_hyperkzg_open(
             &proving_key.tau_x_srs,
             poly.hypercube_basis_ref(),
@@ -100,7 +96,7 @@ where
         verifying_key: &<Self::SRS as StructuredReferenceString>::VKey,
         commitment: &Self::Commitment,
         x: &Self::EvalPoint,
-        v: E::Fr,
+        v: E::ScalarField,
         opening: &Self::Opening,
         transcript: &mut impl Transcript,
     ) -> bool {

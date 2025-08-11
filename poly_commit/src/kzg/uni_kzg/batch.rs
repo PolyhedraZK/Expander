@@ -1,7 +1,6 @@
 use arith::{ExtensionField, Field};
+use ark_ec::{pairing::Pairing, VariableBaseMSM};
 use gkr_engine::Transcript;
-use halo2curves::group::Group;
-use halo2curves::{group::Curve, msm::multiexp_serial, pairing::MultiMillerLoop, CurveAffine};
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
 
@@ -12,20 +11,20 @@ use crate::{
 
 pub(crate) fn kzg_single_point_batch_open<E>(
     proving_key: &CoefFormUniKZGSRS<E>,
-    polys: &[MultiLinearPoly<E::Fr>],
-    x: &[E::Fr],
+    polys: &[MultiLinearPoly<E::ScalarField>],
+    x: &[E::ScalarField],
     transcript: &mut impl Transcript,
-) -> (Vec<E::Fr>, HyperUniKZGOpening<E>)
+) -> (Vec<E::ScalarField>, HyperUniKZGOpening<E>)
 where
-    E: MultiMillerLoop,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
-    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
-    E::Fr: ExtensionField,
+    E: Pairing,
+    E::G1Affine: ExpSerde,
+    E::G2Affine: ExpSerde,
+    E::ScalarField: ExtensionField,
 {
-    let rlc_randomness = transcript.generate_field_element::<E::Fr>();
+    let rlc_randomness = transcript.generate_field_element::<E::ScalarField>();
     let num_poly = polys.len();
     let rlcs = powers_series(&rlc_randomness, num_poly);
-    let mut buf = vec![E::Fr::default(); polys[0].coeffs.len()];
+    let mut buf = vec![E::ScalarField::default(); polys[0].coeffs.len()];
 
     let merged_poly = polys
         .iter()
@@ -57,33 +56,32 @@ where
 pub(crate) fn kzg_single_point_batch_verify<E>(
     verifying_key: &UniKZGVerifierParams<E>,
     commitments: &[E::G1Affine],
-    x: &[E::Fr],
-    evals: &[E::Fr],
+    x: &[E::ScalarField],
+    evals: &[E::ScalarField],
     opening: &HyperUniKZGOpening<E>,
     transcript: &mut impl Transcript,
 ) -> bool
 where
-    E: MultiMillerLoop,
-    E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
+    E: Pairing,
+    E::G1Affine: ExpSerde,
     E::G2Affine: ExpSerde,
-    E::Fr: ExtensionField + ExpSerde,
+    E::ScalarField: ExtensionField + ExpSerde,
 {
-    let rlc_randomness = transcript.generate_field_element::<E::Fr>();
+    let rlc_randomness = transcript.generate_field_element::<E::ScalarField>();
     let num_poly = commitments.len();
     let rlcs = powers_series(&rlc_randomness, num_poly);
 
     // stay with single thread as the num_poly is usually small
-    let mut merged_commitment = E::G1::identity();
-    multiexp_serial(&rlcs, commitments, &mut merged_commitment);
+    let merged_commitment: E::G1 = VariableBaseMSM::msm(commitments, &rlcs).unwrap();
 
     let merged_eval = evals
         .iter()
         .zip(rlcs.iter())
-        .fold(E::Fr::zero(), |acc, (e, r)| acc + (*e * r));
+        .fold(E::ScalarField::zero(), |acc, (e, r)| acc + (*e * r));
 
     coeff_form_uni_hyperkzg_verify(
         verifying_key,
-        merged_commitment.to_affine(),
+        merged_commitment.into(),
         x,
         merged_eval,
         opening,
