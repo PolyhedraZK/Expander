@@ -1,12 +1,12 @@
 /// Raw commitment for multi-linear polynomials
 use arith::{ExtensionField, Field};
+use ark_std::rand::RngCore;
 use ethnum::U256;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
 };
 use polynomials::{MultiLinearPoly, MultilinearExtension};
-use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
 
 use crate::PolynomialCommitmentScheme;

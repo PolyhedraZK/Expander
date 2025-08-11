@@ -1,12 +1,14 @@
 use arith::{ExtensionField, Field};
-use ark_std::test_rng;
+use ark_std::{
+    rand::{thread_rng, RngCore},
+    test_rng,
+};
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
     StructuredReferenceString, Transcript,
 };
 use poly_commit::{BatchOpeningPCS, PolynomialCommitmentScheme};
 use polynomials::{MultiLinearPoly, MultilinearExtension};
-use rand::{thread_rng, RngCore};
 
 #[allow(dead_code)]
 pub fn test_pcs<F: ExtensionField, T: Transcript, P: PolynomialCommitmentScheme<F>>(
@@ -284,7 +286,7 @@ where
             let polys = (0..num_poly)
                 .map(|i| {
                     let num_vars_rand = if allow_variable_length && i > 0 {
-                        rng.next_u32() as usize % (num_vars + 1)
+                        rng.next_u64() as usize % (num_vars + 1)
                     } else {
                         num_vars
                     };

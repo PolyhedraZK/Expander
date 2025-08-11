@@ -54,7 +54,10 @@ impl<F: FieldEngine> CrossLayerProverScratchPad<F> {
             cross_layer_hg_evals: vec![vec![]; n_layers],
             cross_layer_completed_values: vec![F::Field::one(); n_layers],
             eq_evals_at_r_simd_at_layer: vec![
-                vec![F::ChallengeField::one(); F::get_field_pack_size()];
+                vec![
+                    F::ChallengeField::one();
+                    F::get_field_pack_size()
+                ];
                 n_layers
             ],
 

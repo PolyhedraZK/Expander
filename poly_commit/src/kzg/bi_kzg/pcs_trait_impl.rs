@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use arith::ExtensionField;
 use ark_ec::pairing::Pairing;
+use ark_std::rand::RngCore;
 use gkr_engine::{StructuredReferenceString, Transcript};
 use polynomials::{MultiLinearPoly, MultilinearExtension};
 use serdes::ExpSerde;
@@ -52,7 +53,7 @@ where
 
     fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
 
-    fn gen_srs_for_testing(params: &Self::Params, rng: impl rand::RngCore) -> (Self::SRS, usize) {
+    fn gen_srs_for_testing(params: &Self::Params, rng: impl RngCore) -> (Self::SRS, usize) {
         let local_num_vars = if *params == 0 { 1 } else { *params };
 
         let length = 1 << local_num_vars;

@@ -1,5 +1,6 @@
 use arith::ExtensionField;
 use ark_ec::pairing::Pairing;
+use ark_std::rand::RngCore;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
@@ -40,11 +41,7 @@ where
         std::cmp::max(n_input_vars, Self::MINIMUM_SUPPORTED_NUM_VARS)
     }
 
-    fn gen_srs(
-        params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
-        rng: impl rand::RngCore,
-    ) -> Self::SRS {
+    fn gen_srs(params: &Self::Params, mpi_engine: &impl MPIEngine, rng: impl RngCore) -> Self::SRS {
         let local_num_vars = *params;
 
         let x_degree_po2 = 1 << local_num_vars;

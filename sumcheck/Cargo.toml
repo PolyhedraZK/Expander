@@ -19,7 +19,6 @@ log.workspace = true
 rayon.workspace = true
 
 [dev-dependencies]
-ark-std.workspace = true
 
 
 [features]

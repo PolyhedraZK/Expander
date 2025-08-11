@@ -1,6 +1,6 @@
 use arith::{ExtensionField, Field};
+use ark_std::rand::RngCore;
 use gkr_engine::{StructuredReferenceString, Transcript};
-use rand::RngCore;
 use serdes::ExpSerde;
 use std::fmt::Debug;
 use sumcheck::IOPProof;

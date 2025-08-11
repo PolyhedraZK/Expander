@@ -1,6 +1,7 @@
 use ark_ec::AffineRepr;
 use ark_ec::CurveGroup;
 use ark_ec::{pairing::Pairing, VariableBaseMSM};
+use ark_std::rand::RngCore;
 use ark_std::One;
 use ark_std::UniformRand;
 use rayon::prelude::*;
@@ -11,7 +12,7 @@ use crate::*;
 #[inline(always)]
 pub(crate) fn generate_coef_form_uni_kzg_srs_for_testing<E: Pairing>(
     length: usize,
-    mut rng: impl rand::RngCore,
+    mut rng: impl RngCore,
 ) -> CoefFormUniKZGSRS<E>
 where
     E::G1Affine: ExpSerde,

@@ -1,5 +1,6 @@
 use arith::ExtensionField;
 use ark_ec::pairing::Pairing;
+use ark_std::rand::RngCore;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
@@ -48,7 +49,7 @@ where
     fn gen_srs(
         params: &Self::Params,
         _mpi_engine: &impl MPIEngine,
-        rng: impl rand::RngCore,
+        rng: impl RngCore,
     ) -> Self::SRS {
         assert!(
             *params >= Self::MINIMUM_SUPPORTED_NUM_VARS,

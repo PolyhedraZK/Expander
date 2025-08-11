@@ -1,6 +1,7 @@
 use ark_ec::AffineRepr;
 use ark_ec::VariableBaseMSM;
 use ark_ec::{pairing::Pairing, CurveGroup};
+use ark_std::rand::RngCore;
 use ark_std::One;
 use ark_std::UniformRand;
 use itertools::izip;
@@ -13,7 +14,7 @@ pub fn generate_coef_form_bi_kzg_local_srs_for_testing<E: Pairing>(
     local_length: usize,
     distributed_parties: usize,
     party_rank: usize,
-    mut rng: impl rand::RngCore,
+    mut rng: impl RngCore,
 ) -> CoefFormBiKZGLocalSRS<E>
 where
     E::G1Affine: ExpSerde,
@@ -165,7 +166,10 @@ mod tests {
             .map(|(srs, x_coeffs)| coeff_form_uni_kzg_commit(&srs.tau_x_srs, x_coeffs))
             .collect();
 
-        let global_commitment_g1: G1Projective = commitments.iter().map(|c| c.into_group()).sum::<G1Projective>();
+        let global_commitment_g1: G1Projective = commitments
+            .iter()
+            .map(|c| c.into_group())
+            .sum::<G1Projective>();
         let global_commitment: G1Affine = global_commitment_g1.into_affine();
 
         let alpha = Fr::rand(&mut rng);

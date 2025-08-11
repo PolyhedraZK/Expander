@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
-gf2 = { path = "../arith/gf2" }
+# gf2 = { path = "../arith/gf2" }
 gkr_engine = { path = "../gkr_engine" }
 polynomials = { path = "../arith/polynomials"}
 serdes = { path = "../serdes" }
@@ -21,7 +21,6 @@ ark-bn254.workspace = true
 derivative.workspace = true
 ethnum.workspace = true
 itertools.workspace = true
-rand.workspace = true
 rayon.workspace = true
 transpose.workspace = true
 thiserror.workspace = true

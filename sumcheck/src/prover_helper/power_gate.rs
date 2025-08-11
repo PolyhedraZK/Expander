@@ -25,7 +25,8 @@ impl<const D: usize> SumcheckPowerGateHelper<D> {
     fn interpolate_3<F: FieldEngine>(p_add: &[F::Field; 3], p: &mut [F::Field; D]) {
         // Calculate coefficients for the interpolating polynomial
         let p_add_coef_0 = p_add[0];
-        let p_add_coef_2 = (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * F::CircuitField::from(2).inv().unwrap();
+        let p_add_coef_2 =
+            (p_add[2] - p_add[1] - p_add[1] + p_add[0]) * F::CircuitField::from(2).inv().unwrap();
 
         let p_add_coef_1 = p_add[1] - p_add_coef_0 - p_add_coef_2;
 

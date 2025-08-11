@@ -1,6 +1,7 @@
 mod common;
 
 use arith::{Field, Fr};
+use ark_std::test_rng;
 use gkr_engine::{
     BN254Config, ExpanderSingleVarChallenge, FieldEngine, GF2ExtConfig, M31x16Config, MPIConfig,
     MPIEngine, Transcript,
@@ -8,14 +9,13 @@ use gkr_engine::{
 use gkr_hashers::{Keccak256hasher, SHA256hasher};
 use poly_commit::raw::{RawExpanderGKR, RawMultiLinearPCS};
 use polynomials::{MultiLinearPoly, RefMultiLinearPoly};
-use rand::thread_rng;
 use transcript::BytesHashTranscript;
 
 #[test]
 fn test_raw() {
     // NOTE(HS) 8 variables
     let params = 8;
-    let mut rng = thread_rng();
+    let mut rng = test_rng();
     let poly = MultiLinearPoly::random(params, &mut rng);
     let xs = (0..100)
         .map(|_| {
@@ -33,7 +33,7 @@ fn test_raw() {
 fn test_raw_gkr_helper<C: FieldEngine, T: Transcript>(mpi_config: &MPIConfig, transcript: &mut T) {
     // NOTE(HS) local variables being 8
     let params = 8;
-    let mut rng = thread_rng();
+    let mut rng = test_rng();
     let hypercube_basis = (0..(1 << params))
         .map(|_| C::SimdCircuitField::random_unsafe(&mut rng))
         .collect::<Vec<_>>();

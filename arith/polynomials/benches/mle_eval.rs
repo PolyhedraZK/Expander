@@ -76,7 +76,11 @@ fn bench_eq_xr<F: Field>(c: &mut Criterion) {
             b.iter(|| {
                 black_box({
                     let mut eq_x_r = vec![F::zero(); 1 << nv];
-                    EqPolynomial::<F>::build_eq_x_r_with_buf(point.as_ref(), &F::one(), &mut eq_x_r);
+                    EqPolynomial::<F>::build_eq_x_r_with_buf(
+                        point.as_ref(),
+                        &F::one(),
+                        &mut eq_x_r,
+                    );
                 })
             })
         });
