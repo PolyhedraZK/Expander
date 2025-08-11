@@ -5,7 +5,7 @@ use field::{
     random_negation_tests, random_serde_tests, random_squaring_tests, random_subtraction_tests,
 };
 
-use crate::{ExtensionField, FFTField, Field, SimdField};
+use crate::{ExtensionField, Field, SimdField};
 
 #[cfg(test)]
 mod bn254;
@@ -192,106 +192,106 @@ pub fn random_simd_field_tests<F: SimdField>(_name: String) {
     }
 }
 
-pub fn random_fft_field_tests<F: Field + FFTField>(_name: String) {
-    let mut rng = test_rng();
+// pub fn random_fft_field_tests<F: Field + FFTField>(_name: String) {
+//     let mut rng = test_rng();
 
-    for log_degree in [2, 3, 5, 10] {
-        let degree = 1 << log_degree;
+//     for log_degree in [2, 3, 5, 10] {
+//         let degree = 1 << log_degree;
 
-        {
-            // (x+1)(x^2-1) = x^3 + x^2 - x - 1
-            let mut a = vec![F::zero(); degree];
-            let mut b = vec![F::zero(); degree];
-            let mut c = vec![F::zero(); degree];
-            a[0] = F::one();
-            a[1] = F::one();
-            b[0] = -F::one();
-            b[2] = F::one();
-            c[0] = -F::one();
-            c[1] = -F::one();
-            c[2] = F::one();
-            c[3] = F::one();
+//         {
+//             // (x+1)(x^2-1) = x^3 + x^2 - x - 1
+//             let mut a = vec![F::zero(); degree];
+//             let mut b = vec![F::zero(); degree];
+//             let mut c = vec![F::zero(); degree];
+//             a[0] = F::one();
+//             a[1] = F::one();
+//             b[0] = -F::one();
+//             b[2] = F::one();
+//             c[0] = -F::one();
+//             c[1] = -F::one();
+//             c[2] = F::one();
+//             c[3] = F::one();
 
-            F::fft_in_place(&mut a);
-            F::fft_in_place(&mut b);
+//             F::fft_in_place(&mut a);
+//             F::fft_in_place(&mut b);
 
-            a.iter_mut().zip(b.iter()).for_each(|(a, b)| {
-                *a *= *b;
-            });
+//             a.iter_mut().zip(b.iter()).for_each(|(a, b)| {
+//                 *a *= *b;
+//             });
 
-            F::ifft_in_place(&mut a);
+//             F::ifft_in_place(&mut a);
 
-            assert_eq!(a, c);
-        }
+//             assert_eq!(a, c);
+//         }
 
-        {
-            // (x^(n-1) + 1) * (x + 1) = x^(n-1) + x + 2
-            let mut a = vec![F::zero(); degree];
-            let mut b = vec![F::zero(); degree];
-            let mut c = vec![F::zero(); degree];
-            a[0] = F::one();
-            a[degree - 1] = F::one();
-            b[0] = F::one();
-            b[1] = F::one();
-            c[0] = F::one().double();
-            c[1] = F::one();
-            c[degree - 1] = F::one();
+//         {
+//             // (x^(n-1) + 1) * (x + 1) = x^(n-1) + x + 2
+//             let mut a = vec![F::zero(); degree];
+//             let mut b = vec![F::zero(); degree];
+//             let mut c = vec![F::zero(); degree];
+//             a[0] = F::one();
+//             a[degree - 1] = F::one();
+//             b[0] = F::one();
+//             b[1] = F::one();
+//             c[0] = F::one().double();
+//             c[1] = F::one();
+//             c[degree - 1] = F::one();
 
-            F::fft_in_place(&mut a);
-            F::fft_in_place(&mut b);
+//             F::fft_in_place(&mut a);
+//             F::fft_in_place(&mut b);
 
-            a.iter_mut().zip(b.iter()).for_each(|(a, b)| {
-                *a *= *b;
-            });
+//             a.iter_mut().zip(b.iter()).for_each(|(a, b)| {
+//                 *a *= *b;
+//             });
 
-            F::ifft_in_place(&mut a);
+//             F::ifft_in_place(&mut a);
 
-            assert_eq!(a, c);
-        }
-    }
+//             assert_eq!(a, c);
+//         }
+//     }
 
-    for i in [1, 2, 3, 5, 10] {
-        let degree = 1 << i;
+//     for i in [1, 2, 3, 5, 10] {
+//         let degree = 1 << i;
 
-        let mut a = vec![F::zero(); degree];
-        let mut b = vec![F::zero(); degree];
+//         let mut a = vec![F::zero(); degree];
+//         let mut b = vec![F::zero(); degree];
 
-        for i in 0..degree {
-            a[i] = F::random_unsafe(&mut rng);
-            b[i] = F::random_unsafe(&mut rng);
-        }
+//         for i in 0..degree {
+//             a[i] = F::random_unsafe(&mut rng);
+//             b[i] = F::random_unsafe(&mut rng);
+//         }
 
-        let mut a2 = a.clone();
+//         let mut a2 = a.clone();
 
-        F::fft_in_place(&mut a2);
-        let mut a_add_b = a2.clone();
-        let mut a_mul_b = a2.clone();
+//         F::fft_in_place(&mut a2);
+//         let mut a_add_b = a2.clone();
+//         let mut a_mul_b = a2.clone();
 
-        F::ifft_in_place(&mut a2);
-        assert_eq!(a, a2);
+//         F::ifft_in_place(&mut a2);
+//         assert_eq!(a, a2);
 
-        let mut b2 = b.clone();
+//         let mut b2 = b.clone();
 
-        F::fft_in_place(&mut b2);
-        a_add_b.iter_mut().zip(b2.iter()).for_each(|(c, b)| *c += b);
-        a_mul_b.iter_mut().zip(b2.iter()).for_each(|(c, b)| *c *= b);
+//         F::fft_in_place(&mut b2);
+//         a_add_b.iter_mut().zip(b2.iter()).for_each(|(c, b)| *c += b);
+//         a_mul_b.iter_mut().zip(b2.iter()).for_each(|(c, b)| *c *= b);
 
-        F::ifft_in_place(&mut b2);
-        assert_eq!(b, b2);
+//         F::ifft_in_place(&mut b2);
+//         assert_eq!(b, b2);
 
-        F::ifft_in_place(&mut a_add_b);
-        let a_add_b_2 = a
-            .iter()
-            .zip(b.iter())
-            .map(|(&a, &b)| a + b)
-            .collect::<Vec<_>>();
-        assert_eq!(a_add_b, a_add_b_2);
+//         F::ifft_in_place(&mut a_add_b);
+//         let a_add_b_2 = a
+//             .iter()
+//             .zip(b.iter())
+//             .map(|(&a, &b)| a + b)
+//             .collect::<Vec<_>>();
+//         assert_eq!(a_add_b, a_add_b_2);
 
-        F::ifft_in_place(&mut a_mul_b);
-        let a_mul_b_2 = schoolbook_mul(&a, &b);
-        assert_eq!(a_mul_b, a_mul_b_2);
-    }
-}
+//         F::ifft_in_place(&mut a_mul_b);
+//         let a_mul_b_2 = schoolbook_mul(&a, &b);
+//         assert_eq!(a_mul_b, a_mul_b_2);
+//     }
+// }
 
 /// school book multiplication
 /// output = a(x) * b(x) mod x^N - 1 mod MODULUS

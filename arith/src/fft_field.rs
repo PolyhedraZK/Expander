@@ -71,7 +71,9 @@ fn bit_reverse_swap<F: Copy>(elems: &mut [F]) {
             // NOTE(HS) the invariant here is bit swap won't exceed the range,
             // so we choose to use unchecked to short wire the range check,
             // s.t., less instructions
-            unsafe { elems.swap_unchecked(swap_to, i) }
+            elems.swap(i, swap_to);
+
+            // unsafe { elems.swap_unchecked(swap_to, i) }
             swap_count += 1;
         }
     }
