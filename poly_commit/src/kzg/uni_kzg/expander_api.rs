@@ -36,7 +36,7 @@ where
     type ScratchPad = ();
     type BatchOpening = BatchOpening<E::ScalarField, Self>;
 
-    fn init_scratch_pad(_params: &Self::Params,) -> Self::ScratchPad {}
+    fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
 
     fn gen_params(n_input_vars: usize, world_size: usize) -> Self::Params {
         assert_eq!(
@@ -46,11 +46,7 @@ where
         std::cmp::max(n_input_vars, Self::MINIMUM_SUPPORTED_NUM_VARS)
     }
 
-    fn gen_srs(
-        params: &Self::Params,
-       
-        rng: impl RngCore,
-    ) -> Self::SRS {
+    fn gen_srs(params: &Self::Params, rng: impl RngCore) -> Self::SRS {
         assert!(
             *params >= Self::MINIMUM_SUPPORTED_NUM_VARS,
             "params must be at least {}",
@@ -69,12 +65,7 @@ where
         if poly.num_vars() < Self::MINIMUM_SUPPORTED_NUM_VARS {
             assert_eq!(*params, Self::MINIMUM_SUPPORTED_NUM_VARS);
             let poly = lift_poly_to_n_vars(poly, *params);
-            return <Self as ExpanderPCS<G>>::commit(
-                params,
-                proving_key,
-                &poly,
-                scratch_pad,
-            );
+            return <Self as ExpanderPCS<G>>::commit(params, proving_key, &poly, scratch_pad);
         }
 
         let commitment = coeff_form_uni_kzg_commit(proving_key, poly.hypercube_basis_ref());
@@ -83,7 +74,7 @@ where
 
     fn open(
         params: &Self::Params,
-        
+
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<E::ScalarField>,
         x: &ExpanderSingleVarChallenge<G>,

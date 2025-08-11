@@ -1,6 +1,6 @@
 // use circuit::CircuitLayer;
 // use gkr_engine::{
-//     ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, 
+//     ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine,
 //     Transcript,
 // };
 
@@ -22,8 +22,8 @@
 // // FIXME
 // #[allow(clippy::too_many_arguments)]
 // #[allow(clippy::type_complexity)]
-// // essentially the prev level of challenge passes here, once this level is done, new challenge gets
-// // written back into the prev space
+// // essentially the prev level of challenge passes here, once this level is done, new challenge
+// gets // written back into the prev space
 // pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript>(
 //     layer: &CircuitLayer<F>,
 //     challenge: &mut ExpanderDualVarChallenge<F>,

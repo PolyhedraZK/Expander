@@ -32,7 +32,7 @@ impl ExpSerde for () {
 }
 
 exp_serde_for_number!(u64, 8);
-exp_serde_for_number!(usize, 8);
+// exp_serde_for_number!(usize, 8);
 exp_serde_for_number!(u8, 1);
 exp_serde_for_number!(f64, 8);
 exp_serde_for_number!(u128, 16);
@@ -55,6 +55,16 @@ impl ExpSerde for bool {
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
         u8::deserialize_from(&mut reader).map(|u| u != 0)
+    }
+}
+
+impl ExpSerde for usize {
+    fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {
+        (*self as u64).serialize_into(writer)
+    }
+
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        u64::deserialize_from(&mut reader).map(|u| u as Self)
     }
 }
 

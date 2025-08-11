@@ -1,5 +1,5 @@
 use arith::{ExtensionField, SimdField};
-use gkr_engine::{ Transcript};
+use gkr_engine::Transcript;
 
 #[inline(always)]
 /// Input

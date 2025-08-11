@@ -1,8 +1,6 @@
 use arith::Field;
 use ark_std::test_rng;
-use gkr_engine::{
-    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine,  StructuredReferenceString,
-};
+use gkr_engine::{ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, StructuredReferenceString};
 use polynomials::{MultiLinearPoly, MultilinearExtension, MutableMultilinearExtension};
 
 #[allow(clippy::type_complexity)]
@@ -16,13 +14,9 @@ pub fn expander_pcs_init_testing_only<FieldConfig: FieldEngine, PCS: ExpanderPCS
 ) {
     let mut rng = test_rng();
 
-    let pcs_params =
-        <PCS as ExpanderPCS<FieldConfig>>::gen_params(n_input_vars, 16);
-    let pcs_setup = <PCS as ExpanderPCS<FieldConfig>>::gen_or_load_srs_for_testing(
-        &pcs_params,
-        &mut rng,
-        None,
-    );
+    let pcs_params = <PCS as ExpanderPCS<FieldConfig>>::gen_params(n_input_vars, 16);
+    let pcs_setup =
+        <PCS as ExpanderPCS<FieldConfig>>::gen_or_load_srs_for_testing(&pcs_params, &mut rng, None);
 
     let (pcs_proving_key, pcs_verification_key) = pcs_setup.into_keys();
     let pcs_scratch = <PCS as ExpanderPCS<FieldConfig>>::init_scratch_pad(&pcs_params);

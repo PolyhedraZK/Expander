@@ -2,7 +2,7 @@ use arith::ExtensionField;
 use ark_ec::pairing::Pairing;
 use ark_std::rand::RngCore;
 use gkr_engine::{
-    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine,  PolynomialCommitmentType,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
 };
 use polynomials::MultilinearExtension;
@@ -35,13 +35,13 @@ where
     type ScratchPad = ();
     type BatchOpening = ();
 
-    fn init_scratch_pad(_params: &Self::Params, ) -> Self::ScratchPad {}
+    fn init_scratch_pad(_params: &Self::Params) -> Self::ScratchPad {}
 
     fn gen_params(n_input_vars: usize, _world_size: usize) -> Self::Params {
         std::cmp::max(n_input_vars, Self::MINIMUM_SUPPORTED_NUM_VARS)
     }
 
-    fn gen_srs(params: &Self::Params,  rng: impl RngCore) -> Self::SRS {
+    fn gen_srs(params: &Self::Params, rng: impl RngCore) -> Self::SRS {
         unimplemented!()
         // let local_num_vars = *params;
 

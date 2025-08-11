@@ -9,11 +9,11 @@ use ark_ec::pairing::Pairing;
 use ark_ec::CurveGroup;
 use ark_ec::PrimeGroup;
 use ark_ff::Field as _;
-use gkr_engine::{ Transcript};
+use gkr_engine::Transcript;
 use itertools::{chain, izip};
 use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
-use transcript::{ transcript_verifier_sync};
+use transcript::transcript_verifier_sync;
 
 use crate::*;
 
@@ -31,8 +31,8 @@ use crate::*;
 //     E::G2Affine: ExpSerde,
 //     E::ScalarField: ExtensionField,
 // {
-//     // NOTE(HS) deteriorate to vanilla HyperKZG if mpi_alphas is empty, namely single party setting
-//     // since there is no other mpi variables, then the party running is the leader
+//     // NOTE(HS) deteriorate to vanilla HyperKZG if mpi_alphas is empty, namely single party
+// setting     // since there is no other mpi variables, then the party running is the leader
 //     if mpi_alphas.is_empty() {
 //         let (_, hyperkzg_opening) = coeff_form_uni_hyperkzg_open(
 //             &srs.tau_x_srs,
@@ -67,8 +67,8 @@ use crate::*;
 //     //
 
 //     let mut root_gathering_folded_oracle_commits: Vec<E::G1Affine> =
-//         vec![E::G1Affine::default(); mpi_engine.world_size() * local_folded_x_oracle_commits.len()];
-//     let mut final_evals_at_x: Vec<E::ScalarField> =
+//         vec![E::G1Affine::default(); mpi_engine.world_size() *
+// local_folded_x_oracle_commits.len()];     let mut final_evals_at_x: Vec<E::ScalarField> =
 //         vec![<E::ScalarField as Field>::zero(); mpi_engine.world_size()];
 
 //     mpi_engine.gather_vec(
@@ -109,8 +109,8 @@ use crate::*;
 
 //     if mpi_engine.is_root() {
 //         (folded_y_oracle_commits, folded_y_oracle_coeffs) =
-//             coeff_form_hyperkzg_local_poly_oracles(&srs.tau_y_srs, &final_evals_at_x, mpi_alphas);
-//     }
+//             coeff_form_hyperkzg_local_poly_oracles(&srs.tau_y_srs, &final_evals_at_x,
+// mpi_alphas);     }
 
 //     //
 //     // The leader party feeds all folded oracles into RO, then sync party's transcript state
@@ -355,8 +355,8 @@ use crate::*;
 //             let neg_beta_y_pow_series = powers_series(&(-beta_y), num_y_coeffs);
 //             let beta_y2_pow_series = powers_series(&(beta_y * beta_y), num_y_coeffs);
 
-//             let at_beta_y = univariate_evaluate(&degree2_evals_at_delta_x, &pos_beta_y_pow_series);
-//             let at_neg_beta_y =
+//             let at_beta_y = univariate_evaluate(&degree2_evals_at_delta_x,
+// &pos_beta_y_pow_series);             let at_neg_beta_y =
 //                 univariate_evaluate(&degree2_evals_at_delta_x, &neg_beta_y_pow_series);
 //             let at_beta_y2 = univariate_evaluate(&degree2_evals_at_delta_x, &beta_y2_pow_series);
 
@@ -397,8 +397,8 @@ use crate::*;
 //             let mut cursor = Cursor::new(serialized_y_quotient_coeffs);
 //             Vec::deserialize_from(&mut cursor).unwrap()
 //         };
-//         leader_quotient_y_coeffs.resize(mpi_engine.world_size(), <E::ScalarField as Field>::zero());
-//     }
+//         leader_quotient_y_coeffs.resize(mpi_engine.world_size(), <E::ScalarField as
+// Field>::zero());     }
 
 //     //
 //     // Final step for local - trip off the prior quotients at x and y on \pm beta and beta^2
@@ -422,8 +422,8 @@ use crate::*;
 //     //
 
 //     let mut gathered_eval_opens: Vec<(E::ScalarField, E::G1Affine)> =
-//         vec![(<E::ScalarField as Field>::zero(), E::G1Affine::default()); mpi_engine.world_size()];
-//     let local_eval_open =
+//         vec![(<E::ScalarField as Field>::zero(), E::G1Affine::default());
+// mpi_engine.world_size()];     let local_eval_open =
 //         coeff_form_uni_kzg_open_eval(&srs.tau_x_srs, &local_gamma_aggregated_x_coeffs, delta_x);
 
 //     mpi_engine.gather_vec(&[local_eval_open], &mut gathered_eval_opens);
