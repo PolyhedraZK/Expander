@@ -104,13 +104,18 @@ impl ExpSerde for ark_bn254::Fr {
 impl<P: SWCurveConfig> ExpSerde for Affine<P> {
     #[inline(always)]
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
-        self.serialize_uncompressed(&mut writer).unwrap();
-        Ok(())
+        match self.serialize_compressed(&mut writer) {
+            Ok(()) => Ok(()),
+            Err(_e) => Err(SerdeError::DeserializeError),
+        }
     }
 
     #[inline(always)]
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let res = Self::deserialize_uncompressed(&mut reader).unwrap();
+        let res = match Self::deserialize_compressed(&mut reader) {
+            Ok(res) => res,
+            Err(_e) => return Err(SerdeError::DeserializeError),
+        };
         Ok(res)
     }
 }
