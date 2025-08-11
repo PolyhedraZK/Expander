@@ -1,14 +1,13 @@
 use arith::Field;
 use ark_std::test_rng;
 use gkr_engine::{
-    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, StructuredReferenceString,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine,  StructuredReferenceString,
 };
 use polynomials::{MultiLinearPoly, MultilinearExtension, MutableMultilinearExtension};
 
 #[allow(clippy::type_complexity)]
 pub fn expander_pcs_init_testing_only<FieldConfig: FieldEngine, PCS: ExpanderPCS<FieldConfig>>(
     n_input_vars: usize,
-    mpi_config: &impl MPIEngine,
 ) -> (
     PCS::Params,
     <PCS::SRS as StructuredReferenceString>::PKey,
@@ -18,16 +17,15 @@ pub fn expander_pcs_init_testing_only<FieldConfig: FieldEngine, PCS: ExpanderPCS
     let mut rng = test_rng();
 
     let pcs_params =
-        <PCS as ExpanderPCS<FieldConfig>>::gen_params(n_input_vars, mpi_config.world_size());
+        <PCS as ExpanderPCS<FieldConfig>>::gen_params(n_input_vars, 16);
     let pcs_setup = <PCS as ExpanderPCS<FieldConfig>>::gen_or_load_srs_for_testing(
         &pcs_params,
-        mpi_config,
         &mut rng,
         None,
     );
 
     let (pcs_proving_key, pcs_verification_key) = pcs_setup.into_keys();
-    let pcs_scratch = <PCS as ExpanderPCS<FieldConfig>>::init_scratch_pad(&pcs_params, mpi_config);
+    let pcs_scratch = <PCS as ExpanderPCS<FieldConfig>>::init_scratch_pad(&pcs_params);
 
     (
         pcs_params,

@@ -8,8 +8,8 @@ pub const PCS_SOUNDNESS_BITS: usize = 128;
 mod utils;
 pub use utils::expander_pcs_init_testing_only;
 
-pub mod raw;
-pub use raw::RawExpanderGKR;
+// pub mod raw;
+// pub use raw::RawExpanderGKR;
 
 // pub mod orion;
 // pub use orion::*;

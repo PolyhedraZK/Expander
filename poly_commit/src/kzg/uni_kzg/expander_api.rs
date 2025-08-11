@@ -2,7 +2,7 @@ use arith::ExtensionField;
 use ark_ec::pairing::Pairing;
 use ark_std::rand::RngCore;
 use gkr_engine::{
-    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
 };
 use polynomials::MultilinearExtension;
@@ -36,7 +36,7 @@ where
     type ScratchPad = ();
     type BatchOpening = BatchOpening<E::ScalarField, Self>;
 
-    fn init_scratch_pad(_params: &Self::Params, _mpi_engine: &impl MPIEngine) -> Self::ScratchPad {}
+    fn init_scratch_pad(_params: &Self::Params,) -> Self::ScratchPad {}
 
     fn gen_params(n_input_vars: usize, world_size: usize) -> Self::Params {
         assert_eq!(
@@ -48,7 +48,7 @@ where
 
     fn gen_srs(
         params: &Self::Params,
-        _mpi_engine: &impl MPIEngine,
+       
         rng: impl RngCore,
     ) -> Self::SRS {
         assert!(
@@ -62,7 +62,6 @@ where
 
     fn commit(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl polynomials::MultilinearExtension<E::ScalarField>,
         scratch_pad: &mut Self::ScratchPad,
@@ -72,7 +71,6 @@ where
             let poly = lift_poly_to_n_vars(poly, *params);
             return <Self as ExpanderPCS<G>>::commit(
                 params,
-                mpi_engine,
                 proving_key,
                 &poly,
                 scratch_pad,
@@ -85,7 +83,7 @@ where
 
     fn open(
         params: &Self::Params,
-        mpi_engine: &impl MPIEngine,
+        
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         poly: &impl MultilinearExtension<E::ScalarField>,
         x: &ExpanderSingleVarChallenge<G>,
@@ -97,7 +95,6 @@ where
             let (poly, x) = lift_poly_and_expander_challenge_to_n_vars(poly, x, *params);
             return <Self as ExpanderPCS<G>>::open(
                 params,
-                mpi_engine,
                 proving_key,
                 &poly,
                 &x,
@@ -151,7 +148,6 @@ where
     /// Open a set of polynomials at a point.
     fn multi_points_batch_open(
         _params: &Self::Params,
-        _mpi_engine: &impl MPIEngine,
         proving_key: &<Self::SRS as StructuredReferenceString>::PKey,
         polys: &[impl MultilinearExtension<E::ScalarField>],
         x: &[ExpanderSingleVarChallenge<G>],

@@ -26,9 +26,9 @@ transpose.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-gf2_128 = { path = "../arith/gf2_128" }
-mersenne31 = { path = "../arith/mersenne31" }
-goldilocks = { path = "../arith/goldilocks" }
+# gf2_128 = { path = "../arith/gf2_128" }
+# mersenne31 = { path = "../arith/mersenne31" }
+# goldilocks = { path = "../arith/goldilocks" }
 gkr_hashers = { path = "../hasher" }
 
 tynm.workspace = true
