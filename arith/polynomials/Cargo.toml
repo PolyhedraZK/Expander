@@ -8,8 +8,10 @@ arith = { path = "../" }
 serdes = { path = "../../serdes" }
 
 ark-std.workspace = true
-criterion.workspace = true
 itertools.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
 
 [[bench]]
 name = "mle_eval"

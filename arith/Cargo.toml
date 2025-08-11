@@ -7,13 +7,15 @@ edition = "2021"
 ark-ff.workspace = true
 ark-std.workspace = true
 ark-bn254.workspace = true
-criterion.workspace = true
 ethnum.workspace = true
 itertools.workspace = true
 log.workspace = true
 tynm.workspace = true
 
 serdes = { path = "../serdes" }
+
+[dev-dependencies]
+criterion.workspace = true
 
 [[bench]]
 name = "fr"
