@@ -5,8 +5,8 @@ use std::{
 };
 
 use arith::{field_common, Field, SimdField};
+use ark_std::rand::RngCore;
 use ethnum::U256;
-use rand::RngCore;
 use serdes::{ExpSerde, SerdeResult};
 
 pub const M31_MOD: u32 = 2147483647;

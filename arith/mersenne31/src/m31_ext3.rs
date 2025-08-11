@@ -1,5 +1,5 @@
+use ark_std::rand::RngCore;
 use ethnum::U256;
-use rand::RngCore;
 use std::{
     iter::{Product, Sum},
     mem::transmute,

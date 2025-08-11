@@ -10,7 +10,6 @@ serdes = { path = "../../serdes" }
 
 ark-std.workspace = true
 log.workspace = true
-rand.workspace = true
 thiserror.workspace = true
 ethnum.workspace = true
 

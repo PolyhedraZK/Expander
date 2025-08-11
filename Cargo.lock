@@ -1454,7 +1454,6 @@ dependencies = [
  "ethnum",
  "gkr_hashers",
  "log",
- "rand",
  "raw-cpuid",
  "serdes",
  "thiserror 2.0.12",

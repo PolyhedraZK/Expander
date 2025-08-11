@@ -4,6 +4,7 @@ use std::{
 };
 
 use arith::{field_common, ExtensionField, Field, SimdField};
+use ark_std::rand::RngCore;
 use ethnum::U256;
 use serdes::ExpSerde;
 
@@ -213,7 +214,7 @@ impl Field for M31Ext3x16 {
     }
 
     #[inline(always)]
-    fn random_unsafe(mut rng: impl rand::RngCore) -> Self {
+    fn random_unsafe(mut rng: impl RngCore) -> Self {
         M31Ext3x16 {
             v: [
                 M31x16::random_unsafe(&mut rng),
@@ -224,7 +225,7 @@ impl Field for M31Ext3x16 {
     }
 
     #[inline(always)]
-    fn random_bool(mut rng: impl rand::RngCore) -> Self {
+    fn random_bool(mut rng: impl RngCore) -> Self {
         M31Ext3x16 {
             v: [
                 M31x16::random_bool(&mut rng),

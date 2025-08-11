@@ -9,8 +9,8 @@ use std::{
 };
 
 use arith::{field_common, Field, SimdField};
+use ark_std::rand::{RngCore, Rng};
 use ethnum::U256;
-use rand::{Rng, RngCore};
 use serdes::{ExpSerde, SerdeResult};
 
 use crate::m31::{M31, M31_MOD};
