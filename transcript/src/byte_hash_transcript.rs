@@ -15,10 +15,10 @@ pub struct BytesHashTranscript<H: FiatShamirHasher> {
     pub digest: Vec<u8>,
 
     /// The proof bytes.
-    proof: Proof,
+    pub proof: Proof,
 
     /// The pointer to the proof bytes indicating where the hash starts.
-    hash_start_index: usize,
+    pub hash_start_index: usize,
 
     /// locking point
     proof_locked: bool,

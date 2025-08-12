@@ -842,6 +842,7 @@ dependencies = [
  "gkr_engine",
  "gkr_hashers",
  "goldilocks",
+ "gpu",
  "halo2curves",
  "log",
  "mersenne31",
@@ -904,6 +905,17 @@ dependencies = [
  "ethnum",
  "rand",
  "serdes",
+]
+
+[[package]]
+name = "gpu"
+version = "0.1.0"
+dependencies = [
+ "circuit",
+ "gkr_engine",
+ "gkr_hashers",
+ "thiserror",
+ "transcript",
 ]
 
 [[package]]

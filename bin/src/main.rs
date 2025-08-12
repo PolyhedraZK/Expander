@@ -8,9 +8,9 @@ use circuit::Circuit;
 use clap::Parser;
 use gkr::{
     BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
-    GF2ExtConfigSha2Raw, Goldilocksx8ConfigSha2Orion, Goldilocksx8ConfigSha2Raw,
-    M31x1ConfigSha2RawVanilla, M31x16ConfigSha2OrionSquare, M31x16ConfigSha2OrionVanilla,
-    M31x16ConfigSha2RawSquare, M31x16ConfigSha2RawVanilla, Prover,
+    GF2ExtConfigSha2Raw, Goldilocksx1ConfigSha2Raw, Goldilocksx8ConfigSha2Orion,
+    Goldilocksx8ConfigSha2Raw, M31x1ConfigSha2RawVanilla, M31x16ConfigSha2OrionSquare,
+    M31x16ConfigSha2OrionVanilla, M31x16ConfigSha2RawSquare, M31x16ConfigSha2RawVanilla, Prover,
     utils::{
         KECCAK_BABYBEAR_CIRCUIT, KECCAK_BABYBEAR_WITNESS, KECCAK_BN254_CIRCUIT,
         KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS, KECCAK_GOLDILOCKS_CIRCUIT,
@@ -69,7 +69,13 @@ fn main() {
 
         "m31ext3" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<M31x16ConfigSha2RawVanilla>(&args, mpi_config.clone()),
+                "keccak" => {
+                    if std::env::var("EXPANDER_GPU").is_ok_and(|v| v == "1") {
+                        run_benchmark::<M31x1ConfigSha2RawVanilla>(&args, mpi_config.clone())
+                    } else {
+                        run_benchmark::<M31x16ConfigSha2RawVanilla>(&args, mpi_config.clone())
+                    }
+                }
                 "poseidon" => run_benchmark::<M31x16ConfigSha2RawSquare>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
@@ -112,7 +118,13 @@ fn main() {
         },
         "goldilocks" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
-                "keccak" => run_benchmark::<Goldilocksx8ConfigSha2Raw>(&args, mpi_config.clone()),
+                "keccak" => {
+                    if std::env::var("EXPANDER_GPU").is_ok_and(|v| v == "1") {
+                        run_benchmark::<Goldilocksx1ConfigSha2Raw>(&args, mpi_config.clone())
+                    } else {
+                        run_benchmark::<Goldilocksx8ConfigSha2Raw>(&args, mpi_config.clone())
+                    }
+                }
                 _ => unreachable!(),
             },
             PolynomialCommitmentType::Orion => match args.circuit.as_str() {
@@ -206,6 +218,7 @@ where
         (FieldType::M31x1, "keccak") => 2,
         (FieldType::M31x16, "keccak") => 2,
         (FieldType::M31x16, "poseidon") => 120,
+        (FieldType::Goldilocksx1, "keccak") => 2,
         (FieldType::Goldilocksx8, "keccak") => 2,
         (FieldType::BabyBearx16, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
