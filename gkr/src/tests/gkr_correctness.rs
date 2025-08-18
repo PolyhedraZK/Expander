@@ -16,7 +16,7 @@ use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHash
 use halo2curves::bn256::{Bn256, G1Affine};
 use mersenne31::M31x16;
 use poly_commit::{
-    expander_pcs_init_testing_only, HyperBiKZGPCS, HyraxPCS, OrionPCSForGKR, RawExpanderGKR,
+    expander_pcs_init_testing_only, HyperUniKZGPCS, HyraxPCS, OrionPCSForGKR, RawExpanderGKR,
 };
 use rand::Rng;
 use serdes::ExpSerde;
