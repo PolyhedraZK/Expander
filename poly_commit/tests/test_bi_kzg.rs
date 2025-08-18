@@ -32,8 +32,8 @@
 //     test_hyper_bi_kzg_pcs_generics(2, 15)
 // }
 
-// fn test_hyper_bi_kzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_vars: usize) {
-//     let mut rng = test_rng();
+// fn test_hyper_bi_kzg_for_expander_gkr_generics(mpi_config_ref: &MPIConfig, total_num_vars: usize)
+// {     let mut rng = test_rng();
 
 //     // NOTE BN254 GKR SIMD pack size = 1, num vars in SIMD is 0
 //     let num_vars_in_mpi = mpi_config_ref.world_size().ilog2() as usize;

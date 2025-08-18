@@ -3,11 +3,7 @@ use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, PolynomialCommitmentType,
     StructuredReferenceString, Transcript,
 };
-use halo2curves::{
-    ff::PrimeField,
-    pairing::MultiMillerLoop,
-    CurveAffine,
-};
+use halo2curves::{ff::PrimeField, pairing::MultiMillerLoop, CurveAffine};
 use polynomials::MultilinearExtension;
 use serdes::ExpSerde;
 
