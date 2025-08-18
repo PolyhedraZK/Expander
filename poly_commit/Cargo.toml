@@ -24,6 +24,10 @@ rayon.workspace = true
 transpose.workspace = true
 thiserror.workspace = true
 
+# msm-cuda = { version = "0.1.0", git = "https://github.com/supranational/sppark.git", rev = "946f5622441172ed154a0965c313f4822858538a", subdir = "poc/msm-cuda", features = ["bn254"], optional = true}
+msm-cuda = { version = "0.1.0", path = "../../sppark/poc/msm-cuda", features = ["bn254"], optional = true}
+
+
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
 mersenne31 = { path = "../arith/mersenne31" }
@@ -50,6 +54,6 @@ name = "pcs_all"
 harness = false
 
 [features]
-default = [ ]
-# default = [ "profile" ]
+default = [ "cuda-msm" ]
 profile = [ "utils/profile" ]
+cuda-msm = [ "msm-cuda" ]

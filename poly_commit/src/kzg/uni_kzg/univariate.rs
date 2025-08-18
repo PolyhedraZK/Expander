@@ -8,6 +8,9 @@ use halo2curves::{
 use rayon::prelude::*;
 use serdes::ExpSerde;
 
+#[cfg(feature = "cuda-msm")]
+use msm_cuda::*;
+
 use crate::*;
 
 #[inline(always)]
@@ -48,19 +51,30 @@ where
 }
 
 #[inline(always)]
-pub(crate) fn coeff_form_uni_kzg_commit<E: MultiMillerLoop>(
+pub(crate) fn coeff_form_uni_kzg_commit<E>(
     srs: &CoefFormUniKZGSRS<E>,
     coeffs: &[E::Fr],
 ) -> E::G1Affine
 where
+    E: MultiMillerLoop<
+        G1 = halo2curves::bn256::G1,
+        G2 = halo2curves::bn256::G2,
+        G1Affine = halo2curves::bn256::G1Affine,
+        G2Affine = halo2curves::bn256::G2Affine,
+        Fr = halo2curves::bn256::Fr,
+    >,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
-    let com = msm::best_multiexp(coeffs, &srs.powers_of_tau[..coeffs.len()]);
+    #[cfg(not(feature = "cuda-msm"))]
+    let com = msm::best_multiexp(coeffs, &srs.powers_of_tau[..coeffs.len()]).into();
 
-    com.into()
+    #[cfg(feature = "cuda-msm")]
+    let com = multi_scalar_mult_halo2(&srs.powers_of_tau[..coeffs.len()], coeffs);
+
+    com
 }
 
 #[inline(always)]

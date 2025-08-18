@@ -5,7 +5,7 @@ use gkr_engine::{
 };
 use halo2curves::{
     ff::PrimeField,
-    pairing::{Engine, MultiMillerLoop},
+    pairing::MultiMillerLoop,
     CurveAffine,
 };
 use polynomials::MultilinearExtension;
@@ -23,7 +23,13 @@ use crate::{
 impl<G, E> ExpanderPCS<G> for HyperUniKZGPCS<E>
 where
     G: FieldEngine<ChallengeField = E::Fr, SimdCircuitField = E::Fr>,
-    E: Engine + MultiMillerLoop,
+    E: MultiMillerLoop<
+        G1 = halo2curves::bn256::G1,
+        G2 = halo2curves::bn256::G2,
+        G1Affine = halo2curves::bn256::G1Affine,
+        G2Affine = halo2curves::bn256::G2Affine,
+        Fr = halo2curves::bn256::Fr,
+    >,
     E::Fr: ExtensionField + PrimeField,
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,

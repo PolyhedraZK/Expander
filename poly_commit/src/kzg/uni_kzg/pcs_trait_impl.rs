@@ -2,11 +2,7 @@ use std::marker::PhantomData;
 
 use arith::ExtensionField;
 use gkr_engine::{StructuredReferenceString, Transcript};
-use halo2curves::{
-    ff::PrimeField,
-    pairing::{Engine, MultiMillerLoop},
-    CurveAffine,
-};
+use halo2curves::{ff::PrimeField, pairing::MultiMillerLoop, CurveAffine};
 use polynomials::MultiLinearPoly;
 use serdes::ExpSerde;
 
@@ -19,7 +15,13 @@ use super::batch::{kzg_single_point_batch_open, kzg_single_point_batch_verify};
 
 pub struct HyperUniKZGPCS<E>
 where
-    E: Engine,
+    E: MultiMillerLoop<
+        G1 = halo2curves::bn256::G1,
+        G2 = halo2curves::bn256::G2,
+        G1Affine = halo2curves::bn256::G1Affine,
+        G2Affine = halo2curves::bn256::G2Affine,
+        Fr = halo2curves::bn256::Fr,
+    >,
     E::Fr: ExtensionField,
 {
     _marker_e: PhantomData<E>,
@@ -27,7 +29,13 @@ where
 
 impl<E> HyperUniKZGPCS<E>
 where
-    E: Engine,
+    E: MultiMillerLoop<
+        G1 = halo2curves::bn256::G1,
+        G2 = halo2curves::bn256::G2,
+        G1Affine = halo2curves::bn256::G1Affine,
+        G2Affine = halo2curves::bn256::G2Affine,
+        Fr = halo2curves::bn256::Fr,
+    >,
     E::Fr: ExtensionField,
 {
     pub const MINIMUM_SUPPORTED_NUM_VARS: usize = 1;
@@ -35,7 +43,13 @@ where
 
 impl<E> PolynomialCommitmentScheme<E::Fr> for HyperUniKZGPCS<E>
 where
-    E: Engine + MultiMillerLoop,
+    E: MultiMillerLoop<
+        G1 = halo2curves::bn256::G1,
+        G2 = halo2curves::bn256::G2,
+        G1Affine = halo2curves::bn256::G1Affine,
+        G2Affine = halo2curves::bn256::G2Affine,
+        Fr = halo2curves::bn256::Fr,
+    >,
     E::Fr: ExtensionField + PrimeField,
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
@@ -96,7 +110,13 @@ where
 
 impl<E> BatchOpeningPCS<E::Fr> for HyperUniKZGPCS<E>
 where
-    E: Engine + MultiMillerLoop,
+    E: MultiMillerLoop<
+        G1 = halo2curves::bn256::G1,
+        G2 = halo2curves::bn256::G2,
+        G1Affine = halo2curves::bn256::G1Affine,
+        G2Affine = halo2curves::bn256::G2Affine,
+        Fr = halo2curves::bn256::Fr,
+    >,
     E::Fr: ExtensionField + PrimeField,
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,

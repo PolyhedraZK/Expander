@@ -24,6 +24,7 @@ impl<E: Engine> HyperKZGExportedLocalEvals<E>
 where
     E::Fr: ExpSerde,
 {
+    #[allow(dead_code)]
     pub(crate) fn new(evals_num: usize) -> Self {
         Self {
             beta_x2_eval: E::Fr::default(),
@@ -32,6 +33,7 @@ where
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn len(&self) -> usize {
         self.pos_beta_x_evals.len() + self.neg_beta_x_evals.len() + 1
     }
@@ -239,6 +241,7 @@ impl<E: Engine> HyperKZGAggregatedEvals<E>
 where
     E::Fr: ExtensionField,
 {
+    #[allow(dead_code)]
     pub(crate) fn new_from_exported_evals(
         exported_evals: &[HyperKZGExportedLocalEvals<E>],
         beta_y: E::Fr,
@@ -271,6 +274,7 @@ where
         aggregated
     }
 
+    #[allow(dead_code)]
     pub(crate) fn append_to_transcript<T>(&self, fs_transcript: &mut T)
     where
         T: Transcript,

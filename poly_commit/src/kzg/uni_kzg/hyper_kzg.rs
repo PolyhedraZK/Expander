@@ -27,7 +27,13 @@ pub(crate) fn coeff_form_hyperkzg_local_poly_oracles<E>(
     local_alphas: &[E::Fr],
 ) -> (Vec<E::G1Affine>, Vec<Vec<E::Fr>>)
 where
-    E: MultiMillerLoop,
+    E: MultiMillerLoop<
+        G1 = halo2curves::bn256::G1,
+        G2 = halo2curves::bn256::G2,
+        G1Affine = halo2curves::bn256::G1Affine,
+        G2Affine = halo2curves::bn256::G2Affine,
+        Fr = halo2curves::bn256::Fr,
+    >,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
     E::Fr: ExtensionField,
@@ -120,7 +126,13 @@ pub fn coeff_form_uni_hyperkzg_open<E, T>(
     fs_transcript: &mut T,
 ) -> (E::Fr, HyperUniKZGOpening<E>)
 where
-    E: MultiMillerLoop,
+    E: MultiMillerLoop<
+        G1 = halo2curves::bn256::G1,
+        G2 = halo2curves::bn256::G2,
+        G1Affine = halo2curves::bn256::G1Affine,
+        G2Affine = halo2curves::bn256::G2Affine,
+        Fr = halo2curves::bn256::Fr,
+    >,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
     E::Fr: ExtensionField,
@@ -252,7 +264,13 @@ pub fn multiple_points_batch_open_impl<E, PCS>(
     transcript: &mut impl Transcript,
 ) -> (Vec<E::Fr>, BatchOpening<E::Fr, PCS>)
 where
-    E: Engine + MultiMillerLoop,
+    E: MultiMillerLoop<
+        G1 = halo2curves::bn256::G1,
+        G2 = halo2curves::bn256::G2,
+        G1Affine = halo2curves::bn256::G1Affine,
+        G2Affine = halo2curves::bn256::G2Affine,
+        Fr = halo2curves::bn256::Fr,
+    >,
     E::Fr: ExtensionField + PrimeField,
     E::G1Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1>,
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
