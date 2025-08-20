@@ -26,7 +26,8 @@ cuda-mobile = []
 # TODO: Switch to workspace dependencies and fix arkworks inconsistency caused by upgrade
 [dependencies]
 blst = "~0.3.11"
-sppark = { git = "https://github.com/supranational/sppark.git", rev = "9cd5cbd310433665a9e8c26837355cb41ca88b06" }
+# sppark = { git = "https://github.com/supranational/sppark.git", rev = "9cd5cbd310433665a9e8c26837355cb41ca88b06" }
+sppark = { path = "../../../../softwares/sppark/rust"}
 rand = "0.8"
 rand_chacha = "0.3"
 ark-std = "0.3.0"

@@ -18,7 +18,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     let (points, scalars) =
         util::generate_points_scalars_halo2::<Bn256>(1usize << npoints_npow);
 
-    let mut group = c.benchmark_group("CUDA");
+    let mut group = c.benchmark_group("CUDA_HALO2");
     group.sample_size(20);
 
     let name = format!("2**{}", npoints_npow);
