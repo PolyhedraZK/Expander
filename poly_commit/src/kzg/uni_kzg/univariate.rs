@@ -8,7 +8,7 @@ use halo2curves::{
 use rayon::prelude::*;
 use serdes::ExpSerde;
 
-#[cfg(feature = "cuda-msm")]
+#[cfg(feature = "cuda_msm")]
 use msm_cuda::*;
 
 use crate::*;
@@ -68,10 +68,10 @@ where
 {
     assert!(srs.powers_of_tau.len() >= coeffs.len());
 
-    #[cfg(not(feature = "cuda-msm"))]
+    #[cfg(not(feature = "cuda_msm"))]
     let com = msm::best_multiexp(coeffs, &srs.powers_of_tau[..coeffs.len()]).into();
 
-    #[cfg(feature = "cuda-msm")]
+    #[cfg(feature = "cuda_msm")]
     let com = multi_scalar_mult_halo2(&srs.powers_of_tau[..coeffs.len()], coeffs);
 
     com

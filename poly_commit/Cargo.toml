@@ -13,6 +13,7 @@ transcript = { path = "../transcript" }
 tree = { path = "../tree" }
 utils = { path = "../utils" }
 sumcheck = { path = "../sumcheck" }
+msm_cuda = { path = "../arith/msm_cuda", optional = true}
 
 ethnum.workspace = true
 ark-std.workspace = true
@@ -23,9 +24,6 @@ rand.workspace = true
 rayon.workspace = true
 transpose.workspace = true
 thiserror.workspace = true
-
-msm-cuda = { version = "0.1.0", git = "https://github.com/zhiyong1997/sppark.git", subdir = "poc/msm-cuda", features = ["bn254"], optional = true}
-# msm-cuda = { version = "0.1.0", path = "../../sppark/poc/msm-cuda", features = ["bn254"], optional = true}
 
 
 [dev-dependencies]
@@ -54,6 +52,6 @@ name = "pcs_all"
 harness = false
 
 [features]
-default = [ "cuda-msm" ]
+default = [ ]
 profile = [ "utils/profile" ]
-cuda-msm = [ "msm-cuda" ]
+cuda_msm = [ "msm_cuda" ]
