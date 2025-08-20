@@ -23,7 +23,7 @@ use rayon::prelude::*;
 #[cfg(feature = "bn254")]
 pub fn halo2_g1_affine_to_arkworks(points: &[G1Affine]) -> Vec<G1AffineArkworks> {
     points
-        .par_chunks(1024)
+        .par_chunks(1usize << 15)
         .map(|chunk| {
             chunk
                 .iter()
@@ -49,7 +49,7 @@ pub fn halo2_g1_affine_to_arkworks(points: &[G1Affine]) -> Vec<G1AffineArkworks>
 #[cfg(feature = "bn254")]
 pub fn arkworks_g1_affine_to_halo2(points: &[G1AffineArkworks]) -> Vec<G1Affine> {
     points
-        .par_chunks(1024)
+        .par_chunks(1usize << 15)
         .map(|chunk| {
             chunk
                 .iter()
@@ -73,7 +73,7 @@ pub fn arkworks_g1_affine_to_halo2(points: &[G1AffineArkworks]) -> Vec<G1Affine>
 
 #[cfg(feature = "bn254")]
 pub fn multi_scalar_mult_halo2(points: &[G1Affine], scalars: &[Fr]) -> G1Affine {
-    use utils::timer::{self, Timer};
+    use utils::timer::Timer;
 
     use crate::multi_scalar_mult_arkworks;
 
@@ -83,7 +83,7 @@ pub fn multi_scalar_mult_halo2(points: &[G1Affine], scalars: &[Fr]) -> G1Affine 
 
     let timer = Timer::new("scalars repr transformation", true);
     let scalars_integer = scalars
-        .par_chunks(1024)
+        .par_chunks(1usize << 15)
         .map(|chunk| chunk.iter().map(|p| p.to_repr()).collect::<Vec<_>>())
         .flatten()
         .collect::<Vec<_>>();
