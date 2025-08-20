@@ -1739,6 +1739,7 @@ dependencies = [
  "rand_chacha",
  "rayon",
  "sppark",
+ "utils",
  "which",
 ]
 

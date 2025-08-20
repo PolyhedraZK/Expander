@@ -39,6 +39,7 @@ num-bigint = "0.4.6"
 rayon = "1.11.0"
 
 halo2curves.workspace = true
+utils = { path = "../../utils" }
 
 [build-dependencies]
 cc = "^1.0.70"

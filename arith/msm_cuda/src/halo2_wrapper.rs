@@ -73,13 +73,15 @@ pub fn arkworks_g1_affine_to_halo2(points: &[G1AffineArkworks]) -> Vec<G1Affine>
 
 #[cfg(feature = "bn254")]
 pub fn multi_scalar_mult_halo2(points: &[G1Affine], scalars: &[Fr]) -> G1Affine {
+    use utils::timer::{self, Timer};
+
     use crate::multi_scalar_mult_arkworks;
 
+    let timer = Timer::new("affine points transformation", true);
     let points_arkworks = halo2_g1_affine_to_arkworks(points);
+    timer.stop();
 
-    // let points_reconstructed = arkworks_g1_affine_to_halo2(&points_arkworks);
-    // assert_eq!(points_reconstructed, points);
-
+    let timer = Timer::new("scalars repr transformation", true);
     let scalars_integer = scalars
         .par_chunks(1024)
         .map(|chunk| chunk.iter().map(|p| p.to_repr()).collect::<Vec<_>>())
@@ -88,10 +90,13 @@ pub fn multi_scalar_mult_halo2(points: &[G1Affine], scalars: &[Fr]) -> G1Affine 
     let scalars_arkworks = unsafe {
         std::slice::from_raw_parts(scalars_integer.as_ptr() as *const _, scalars_integer.len())
     };
+    timer.stop();
 
+    let timer = Timer::new("gpu multi-scalar multiplication", true);
     let arkworks_result_gpu =
         multi_scalar_mult_arkworks::<G1AffineArkworks>(&points_arkworks, scalars_arkworks)
             .into_affine();
+    timer.stop();
 
     unsafe {
         if arkworks_result_gpu.is_zero() {
