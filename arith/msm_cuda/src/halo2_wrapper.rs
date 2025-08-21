@@ -48,11 +48,12 @@ pub fn halo2_g1_affine_to_arkworks(points: &[G1Affine]) -> Vec<G1AffineArkworks>
 
 #[cfg(feature = "bn254")]
 pub fn arkworks_g1_affine_to_halo2(points: &[G1AffineArkworks]) -> Vec<G1Affine> {
+    let identity = G1Affine::identity();
     points
         .iter()
         .map(|p| {
             if p.is_zero() {
-                G1Affine::identity()
+                identity
             } else {
                 unsafe { *(p as *const _ as *const G1Affine) }
             }
@@ -63,11 +64,12 @@ pub fn arkworks_g1_affine_to_halo2(points: &[G1AffineArkworks]) -> Vec<G1Affine>
 #[cfg(feature = "bn254")]
 pub fn arkworks_g1_affine_to_halo2_rayon(points: &[G1AffineArkworks]) -> Vec<G1Affine> {
     use rayon::prelude::*;
+    let identity = G1Affine::identity();
     points
         .par_iter()
         .map(|p| {
             if p.is_zero() {
-                G1Affine::identity()
+                identity
             } else {
                 // SAFETY: x and y fields are both Fq, which are compatible between libraries
                 unsafe { *(p as *const _ as *const G1Affine) }
