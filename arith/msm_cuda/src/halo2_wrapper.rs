@@ -54,12 +54,7 @@ pub fn arkworks_g1_affine_to_halo2(points: &[G1AffineArkworks]) -> Vec<G1Affine>
             if p.is_zero() {
                 G1Affine::identity()
             } else {
-                unsafe {
-                    G1Affine {
-                        x: transmute::<_, _>(p.x),
-                        y: transmute::<_, _>(p.y),
-                    }
-                }
+                unsafe { *(p as *const _ as *const G1Affine) }
             }
         })
         .collect()
@@ -75,10 +70,7 @@ pub fn arkworks_g1_affine_to_halo2_rayon(points: &[G1AffineArkworks]) -> Vec<G1A
                 G1Affine::identity()
             } else {
                 // SAFETY: x and y fields are both Fq, which are compatible between libraries
-                G1Affine {
-                    x: unsafe { std::mem::transmute_copy(&p.x) },
-                    y: unsafe { std::mem::transmute_copy(&p.y) },
-                }
+                unsafe { *(p as *const _ as *const G1Affine) }
             }
         })
         .collect()

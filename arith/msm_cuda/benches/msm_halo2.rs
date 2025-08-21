@@ -15,8 +15,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     let bench_npow = std::env::var("BENCH_NPOW").unwrap_or("23".to_string());
     let npoints_npow = i32::from_str(&bench_npow).unwrap();
 
-    let (points, scalars) =
-        util::generate_points_scalars_halo2::<Bn256>(1usize << npoints_npow);
+    let (points, scalars) = util::generate_points_scalars_halo2::<Bn256>(1usize << npoints_npow);
 
     let mut group = c.benchmark_group("CUDA_HALO2");
     group.sample_size(20);
@@ -35,8 +34,7 @@ fn criterion_benchmark_2(c: &mut Criterion) {
     let bench_npow = std::env::var("BENCH_NPOW").unwrap_or("23".to_string());
     let npoints_npow = i32::from_str(&bench_npow).unwrap();
 
-    let (points, scalars) =
-        util::generate_points_scalars_halo2::<Bn256>(1usize << npoints_npow);
+    let (points, scalars) = util::generate_points_scalars_halo2::<Bn256>(1usize << npoints_npow);
 
     let mut group = c.benchmark_group("CPU_HALO2");
     group.sample_size(20);
