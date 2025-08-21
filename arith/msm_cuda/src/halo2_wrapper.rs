@@ -66,6 +66,25 @@ pub fn arkworks_g1_affine_to_halo2(points: &[G1AffineArkworks]) -> Vec<G1Affine>
 }
 
 #[cfg(feature = "bn254")]
+pub fn arkworks_g1_affine_to_halo2_rayon(points: &[G1AffineArkworks]) -> Vec<G1Affine> {
+    use rayon::prelude::*;
+    points
+        .par_iter()
+        .map(|p| {
+            if p.is_zero() {
+                G1Affine::identity()
+            } else {
+                // SAFETY: x and y fields are both Fq, which are compatible between libraries
+                G1Affine {
+                    x: unsafe { std::mem::transmute_copy(&p.x) },
+                    y: unsafe { std::mem::transmute_copy(&p.y) },
+                }
+            }
+        })
+        .collect()
+}
+
+#[cfg(feature = "bn254")]
 pub fn multi_scalar_mult_halo2(points: &[G1Affine], scalars: &[Fr]) -> G1Affine {
     use utils::timer::Timer;
 
