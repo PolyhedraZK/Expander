@@ -49,25 +49,19 @@ pub fn halo2_g1_affine_to_arkworks(points: &[G1Affine]) -> Vec<G1AffineArkworks>
 #[cfg(feature = "bn254")]
 pub fn arkworks_g1_affine_to_halo2(points: &[G1AffineArkworks]) -> Vec<G1Affine> {
     points
-        .par_chunks(1024)
-        .map(|chunk| {
-            chunk
-                .iter()
-                .map(|p| {
-                    if p.is_zero() {
-                        G1Affine::identity()
-                    } else {
-                        unsafe {
-                            G1Affine {
-                                x: transmute::<_, _>(p.x),
-                                y: transmute::<_, _>(p.y),
-                            }
-                        }
+        .iter()
+        .map(|p| {
+            if p.is_zero() {
+                G1Affine::identity()
+            } else {
+                unsafe {
+                    G1Affine {
+                        x: transmute::<_, _>(p.x),
+                        y: transmute::<_, _>(p.y),
                     }
-                })
-                .collect::<Vec<_>>()
+                }
+            }
         })
-        .flatten()
         .collect()
 }
 
