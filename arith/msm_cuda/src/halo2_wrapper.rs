@@ -4,7 +4,7 @@
 use halo2curves::{
     bn256::{Fr, G1Affine, G1},
     ff::PrimeField,
-    group::prime::PrimeCurveAffine,
+    group::{prime::PrimeCurveAffine, Curve},
 };
 
 #[cfg(feature = "bn254")]
@@ -78,12 +78,14 @@ pub fn arkworks_g1_affine_to_halo2_rayon(points: &[G1AffineArkworks]) -> Vec<G1A
 
 #[cfg(feature = "bn254")]
 pub fn multi_scalar_mult_halo2(points: &[G1Affine], scalars: &[Fr]) -> G1Affine {
+    use ark_bn254::G1Projective;
+    use ark_ec::ProjectiveCurve;
     use utils::timer::Timer;
 
     #[cfg_attr(feature = "quiet", allow(improper_ctypes))]
     extern "C" {
         fn mult_pippenger_inf_halo2(
-            out: *mut G1,
+            out: *mut G1Projective, // This G1Projective is supposed to be in its Jacobian representation
             points_with_infinity: *const G1Affine,
             npoints: usize,
             scalars: *const Fr, /* These scalars are supposed to be in their canonical
@@ -94,9 +96,8 @@ pub fn multi_scalar_mult_halo2(points: &[G1Affine], scalars: &[Fr]) -> G1Affine 
 
     let timer = Timer::new("scalars repr transformation", true);
     let scalars_integer = scalars
-        .par_chunks(1024)
-        .map(|chunk| chunk.iter().map(|p| p.to_repr()).collect::<Vec<_>>())
-        .flatten()
+        .par_iter()
+        .map(|p| p.to_repr())
         .collect::<Vec<_>>();
     timer.stop();
 
@@ -106,22 +107,31 @@ pub fn multi_scalar_mult_halo2(points: &[G1Affine], scalars: &[Fr]) -> G1Affine 
         panic!("length mismatch")
     }
 
-    let mut ret = G1::default();
+    // We're introducing an arkworks intemediate because halo2 does not use jacobian coordinates
+    let mut arkworks_proj = G1Projective::default();
     let err = unsafe {
         mult_pippenger_inf_halo2(
-            &mut ret as *mut _ as *mut _,
+            &mut arkworks_proj as *mut _ as *mut _,
             points.as_ptr() as *const _,
             npoints,
             scalars_integer.as_ptr() as *const _,
             std::mem::size_of::<G1Affine>(),
         )
     };
+    let arkworks_affine = arkworks_proj.into_affine();
     if err.code != 0 {
         panic!("{}", String::from(err));
     }
 
+    let halo2_affine = if arkworks_affine.is_zero() {
+        G1Affine::identity()
+    } else {
+        // SAFETY: x and y fields are both Fq, which are compatible between libraries
+        unsafe { *(&arkworks_affine as *const _ as *const G1Affine) }
+    };
+
     timer.stop();
-    ret.into()
+    halo2_affine
 }
 
 #[cfg(not(feature = "bn254"))]
