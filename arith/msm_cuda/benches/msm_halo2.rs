@@ -5,7 +5,7 @@
 #![cfg(feature = "bn254")]
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use halo2curves::bn256::Bn256;
+use halo2curves::{bn256::Bn256, msm::best_multiexp};
 
 use std::str::FromStr;
 
@@ -31,5 +31,25 @@ fn criterion_benchmark(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, criterion_benchmark);
+fn criterion_benchmark_2(c: &mut Criterion) {
+    let bench_npow = std::env::var("BENCH_NPOW").unwrap_or("23".to_string());
+    let npoints_npow = i32::from_str(&bench_npow).unwrap();
+
+    let (points, scalars) =
+        util::generate_points_scalars_halo2::<Bn256>(1usize << npoints_npow);
+
+    let mut group = c.benchmark_group("CPU_HALO2");
+    group.sample_size(20);
+
+    let name = format!("2**{}", npoints_npow);
+    group.bench_function(name, |b| {
+        b.iter(|| {
+            let _ = best_multiexp(&scalars.as_slice(), &points.as_slice());
+        })
+    });
+
+    group.finish();
+}
+
+criterion_group!(benches, criterion_benchmark, criterion_benchmark_2);
 criterion_main!(benches);
