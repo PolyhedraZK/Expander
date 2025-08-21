@@ -18,7 +18,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     let (points, _scalars) =
         util::generate_points_scalars_arkworks::<G1Affine>(1usize << npoints_npow);
 
-    let mut group = c.benchmark_group("CUDA");
+    let mut group = c.benchmark_group("arkworks to halo2");
     group.sample_size(20);
 
     let name = format!("single core 2**{}", npoints_npow);
