@@ -33,6 +33,16 @@ RustError::by_value mult_pippenger_inf(point_t* out, const affine_t points[],
     return mult_pippenger<bucket_t>(out, points, npoints, scalars, false, ffi_affine_sz);
 }
 
+typedef bucket_t::affine_t halo2_affine_t;
+
+extern "C"
+RustError::by_value mult_pippenger_inf_halo2(point_t* out, const halo2_affine_t points[],
+                                             size_t npoints, const scalar_t scalars[],
+                                             size_t ffi_affine_sz)
+{
+    return mult_pippenger<bucket_t>(out, points, npoints, scalars, false, ffi_affine_sz);
+}
+
 #if defined(FEATURE_BLS12_381) || defined(FEATURE_BLS12_377) || defined(FEATURE_BN254)
 typedef jacobian_t<fp2_t> point_fp2_t;
 typedef xyzz_t<fp2_t> bucket_fp2_t;

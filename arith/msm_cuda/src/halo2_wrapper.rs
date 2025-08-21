@@ -2,15 +2,13 @@
 
 #[cfg(feature = "bn254")]
 use halo2curves::{
-    bn256::{Fr, G1Affine},
+    bn256::{Fr, G1Affine, G1},
     ff::PrimeField,
     group::prime::PrimeCurveAffine,
 };
 
 #[cfg(feature = "bn254")]
 use ark_bn254::G1Affine as G1AffineArkworks;
-#[cfg(feature = "bn254")]
-use ark_ec::ProjectiveCurve;
 #[cfg(feature = "bn254")]
 use ark_std::Zero;
 
@@ -82,11 +80,17 @@ pub fn arkworks_g1_affine_to_halo2_rayon(points: &[G1AffineArkworks]) -> Vec<G1A
 pub fn multi_scalar_mult_halo2(points: &[G1Affine], scalars: &[Fr]) -> G1Affine {
     use utils::timer::Timer;
 
-    use crate::multi_scalar_mult_arkworks;
-
-    let timer = Timer::new("affine points transformation", true);
-    let points_arkworks = halo2_g1_affine_to_arkworks(points);
-    timer.stop();
+    #[cfg_attr(feature = "quiet", allow(improper_ctypes))]
+    extern "C" {
+        fn mult_pippenger_inf_halo2(
+            out: *mut G1,
+            points_with_infinity: *const G1Affine,
+            npoints: usize,
+            scalars: *const Fr, /* These scalars are supposed to be in their canonical
+                                 * representation */
+            ffi_affine_sz: usize,
+        ) -> sppark::Error;
+    }
 
     let timer = Timer::new("scalars repr transformation", true);
     let scalars_integer = scalars
@@ -94,27 +98,30 @@ pub fn multi_scalar_mult_halo2(points: &[G1Affine], scalars: &[Fr]) -> G1Affine 
         .map(|chunk| chunk.iter().map(|p| p.to_repr()).collect::<Vec<_>>())
         .flatten()
         .collect::<Vec<_>>();
-    let scalars_arkworks = unsafe {
-        std::slice::from_raw_parts(scalars_integer.as_ptr() as *const _, scalars_integer.len())
-    };
     timer.stop();
 
     let timer = Timer::new("gpu multi-scalar multiplication", true);
-    let arkworks_result_gpu =
-        multi_scalar_mult_arkworks::<G1AffineArkworks>(&points_arkworks, scalars_arkworks)
-            .into_affine();
-    timer.stop();
-
-    unsafe {
-        if arkworks_result_gpu.is_zero() {
-            G1Affine::identity()
-        } else {
-            G1Affine {
-                x: transmute::<_, _>(arkworks_result_gpu.x),
-                y: transmute::<_, _>(arkworks_result_gpu.y),
-            }
-        }
+    let npoints = points.len();
+    if npoints != scalars.len() {
+        panic!("length mismatch")
     }
+
+    let mut ret = G1::default();
+    let err = unsafe {
+        mult_pippenger_inf_halo2(
+            &mut ret as *mut _ as *mut _,
+            points.as_ptr() as *const _,
+            npoints,
+            scalars_integer.as_ptr() as *const _,
+            std::mem::size_of::<G1Affine>(),
+        )
+    };
+    if err.code != 0 {
+        panic!("{}", String::from(err));
+    }
+
+    timer.stop();
+    ret.into()
 }
 
 #[cfg(not(feature = "bn254"))]
