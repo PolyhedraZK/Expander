@@ -54,4 +54,4 @@ harness = false
 [features]
 default = [ ]
 profile = [ "utils/profile" ]
-cuda_msm = [ "msm_cuda" ]
+cuda_msm = [ "msm_cuda", "msm_cuda/gpu" ]

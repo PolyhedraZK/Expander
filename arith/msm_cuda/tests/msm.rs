@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
+#![cfg(feature = "gpu")]
+
 #[cfg(feature = "bls12_377")]
 use ark_bls12_377::{G1Affine, G2Affine};
 #[cfg(feature = "bls12_381")]
