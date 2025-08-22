@@ -2,9 +2,9 @@
 
 #[cfg(feature = "bn254")]
 use halo2curves::{
-    bn256::{Fr, G1Affine, G1},
+    bn256::{Fr, G1Affine},
     ff::PrimeField,
-    group::{prime::PrimeCurveAffine, Curve},
+    group::prime::PrimeCurveAffine,
 };
 
 #[cfg(feature = "bn254")]
@@ -85,7 +85,8 @@ pub fn multi_scalar_mult_halo2(points: &[G1Affine], scalars: &[Fr]) -> G1Affine 
     #[cfg_attr(feature = "quiet", allow(improper_ctypes))]
     extern "C" {
         fn mult_pippenger_inf_halo2(
-            out: *mut G1Projective, // This G1Projective is supposed to be in its Jacobian representation
+            out: *mut G1Projective, /* This G1Projective is supposed to be in its Jacobian
+                                     * representation */
             points_with_infinity: *const G1Affine,
             npoints: usize,
             scalars: *const Fr, /* These scalars are supposed to be in their canonical
@@ -95,10 +96,7 @@ pub fn multi_scalar_mult_halo2(points: &[G1Affine], scalars: &[Fr]) -> G1Affine 
     }
 
     let timer = Timer::new("scalars repr transformation", true);
-    let scalars_integer = scalars
-        .par_iter()
-        .map(|p| p.to_repr())
-        .collect::<Vec<_>>();
+    let scalars_integer = scalars.par_iter().map(|p| p.to_repr()).collect::<Vec<_>>();
     timer.stop();
 
     let timer = Timer::new("gpu multi-scalar multiplication", true);
