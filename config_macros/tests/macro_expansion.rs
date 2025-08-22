@@ -9,7 +9,7 @@ use gkr_engine::{
 use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use halo2curves::bn256::Bn256;
 use mersenne31::M31x16;
-use poly_commit::{HyperBiKZGPCS, OrionPCSForGKR, RawExpanderGKR};
+use poly_commit::{HyperUniKZGPCS, OrionPCSForGKR, RawExpanderGKR};
 use transcript::BytesHashTranscript;
 
 fn print_type_name<Cfg: GKREngine>() {

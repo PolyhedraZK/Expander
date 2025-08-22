@@ -17,7 +17,13 @@ pub(crate) fn kzg_single_point_batch_open<E>(
     transcript: &mut impl Transcript,
 ) -> (Vec<E::Fr>, HyperUniKZGOpening<E>)
 where
-    E: MultiMillerLoop,
+    E: MultiMillerLoop<
+        G1 = halo2curves::bn256::G1,
+        G2 = halo2curves::bn256::G2,
+        G1Affine = halo2curves::bn256::G1Affine,
+        G2Affine = halo2curves::bn256::G2Affine,
+        Fr = halo2curves::bn256::Fr,
+    >,
     E::G1Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + ExpSerde,
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
     E::Fr: ExtensionField,
