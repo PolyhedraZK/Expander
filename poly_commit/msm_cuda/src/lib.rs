@@ -2,8 +2,6 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#![cfg(feature = "gpu")]
-
 pub mod util;
 
 mod arkworks_impl;

@@ -22,7 +22,6 @@ bls12_377 = ["ark-bls12-377/curve"]
 bls12_381 = ["ark-bls12-381/curve"]
 quiet = []
 cuda-mobile = []
-gpu = []
 
 # TODO: Switch to workspace dependencies and fix arkworks inconsistency caused by upgrade
 [dependencies]

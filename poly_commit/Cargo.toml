@@ -13,7 +13,7 @@ transcript = { path = "../transcript" }
 tree = { path = "../tree" }
 utils = { path = "../utils" }
 sumcheck = { path = "../sumcheck" }
-msm_cuda = { path = "../arith/msm_cuda", optional = true}
+msm_cuda = { path = "./msm_cuda", optional = true}
 
 ethnum.workspace = true
 ark-std.workspace = true
@@ -54,4 +54,4 @@ harness = false
 [features]
 default = [ ]
 profile = [ "utils/profile" ]
-cuda_msm = [ "msm_cuda", "msm_cuda/gpu" ]
+cuda_msm = [ "msm_cuda" ]
