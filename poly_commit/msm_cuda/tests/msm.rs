@@ -113,7 +113,10 @@ fn halo2_arkworks_repr() {
     assert_eq!(arkworks_memory_bytes, halo2_memory_bytes);
 }
 
-#[cfg(all(feature = "cuda", any(feature = "bls12_381", feature = "bls12_377", feature = "bn254")))]
+#[cfg(all(
+    feature = "cuda",
+    any(feature = "bls12_381", feature = "bls12_377", feature = "bn254")
+))]
 #[test]
 fn msm_fp2_correctness() {
     let test_npow = std::env::var("TEST_NPOW").unwrap_or("14".to_string());
