@@ -2,25 +2,32 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#![cfg(feature = "gpu")]
-
-#[cfg(feature = "bls12_377")]
+#[cfg(all(feature = "cuda", feature = "bls12_377"))]
 use ark_bls12_377::{G1Affine, G2Affine};
-#[cfg(feature = "bls12_381")]
+#[cfg(all(feature = "cuda", feature = "bls12_381"))]
 use ark_bls12_381::{G1Affine, G2Affine};
-#[cfg(feature = "bn254")]
+#[cfg(all(feature = "cuda", feature = "bn254"))]
 use ark_bn254::{G1Affine, G2Affine};
+#[cfg(feature = "cuda")]
 use ark_ec::msm::VariableBaseMSM;
+#[cfg(feature = "cuda")]
 use ark_ec::ProjectiveCurve;
+#[cfg(feature = "cuda")]
 use ark_ff::BigInteger256;
+#[cfg(feature = "cuda")]
 use halo2curves::bn256::Fr;
+#[cfg(feature = "cuda")]
 use halo2curves::ff::PrimeField as _;
 
+#[cfg(feature = "cuda")]
 use std::mem::transmute;
+#[cfg(feature = "cuda")]
 use std::str::FromStr;
 
+#[cfg(feature = "cuda")]
 use msm_cuda::*;
 
+#[cfg(feature = "cuda")]
 #[test]
 fn msm_correctness_arkworks() {
     let test_npow = std::env::var("TEST_NPOW").unwrap_or("15".to_string());
@@ -42,8 +49,10 @@ fn msm_correctness_arkworks() {
     assert_eq!(msm_result, arkworks_result);
 }
 
+#[cfg(feature = "cuda")]
 use halo2curves::msm::best_multiexp;
 
+#[cfg(feature = "cuda")]
 #[test]
 fn msm_correctness_halo2() {
     let test_npow = std::env::var("TEST_NPOW").unwrap_or("15".to_string());
@@ -77,7 +86,7 @@ fn msm_correctness_halo2() {
     assert_eq!(msm_result_gpu, msm_result_halo2);
 }
 
-#[cfg(feature = "bn254")]
+#[cfg(all(feature = "cuda", feature = "bn254"))]
 #[test]
 fn halo2_arkworks_repr() {
     use ark_ec::AffineCurve;
@@ -104,7 +113,7 @@ fn halo2_arkworks_repr() {
     assert_eq!(arkworks_memory_bytes, halo2_memory_bytes);
 }
 
-#[cfg(any(feature = "bls12_381", feature = "bls12_377", feature = "bn254"))]
+#[cfg(all(feature = "cuda", any(feature = "bls12_381", feature = "bls12_377", feature = "bn254")))]
 #[test]
 fn msm_fp2_correctness() {
     let test_npow = std::env::var("TEST_NPOW").unwrap_or("14".to_string());
