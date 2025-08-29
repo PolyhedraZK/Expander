@@ -38,11 +38,22 @@ jobs:
         toolchain: stable
         override: true
     
-    - name: Check CUDA installation
+    - name: Check and Setup CUDA
       run: |
         echo "Checking CUDA installation..."
-        nvidia-smi || echo "nvidia-smi not found"
-        nvcc --version || echo "nvcc not found"
+        if ! command -v nvcc &> /dev/null; then
+          echo "nvcc not found, installing CUDA toolkit..."
+          # Install CUDA toolkit
+          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update
+          sudo apt-get -y install cuda-toolkit-12-3
+          echo "export PATH=/usr/local/cuda-12.3/bin:$PATH" >> $GITHUB_ENV
+          echo "export LD_LIBRARY_PATH=/usr/local/cuda-12.3/lib64:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        fi
+        # Verify installation
+        nvidia-smi || echo "Warning: nvidia-smi not found"
+        nvcc --version || echo "Error: nvcc still not found after installation"
         
     - name: Install criterion
       run: cargo install cargo-criterion
