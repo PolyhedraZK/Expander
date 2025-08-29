@@ -42,24 +42,10 @@ jobs:
       run: |
         echo "Checking CUDA installation..."
         if ! command -v nvcc &> /dev/null; then
-          echo "nvcc not found, installing CUDA toolkit..."
-          # Install only the necessary CUDA components
-          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
-          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          echo "nvcc not found, installing CUDA toolkit from apt..."
           sudo apt-get update
-          # Install only essential CUDA components without the full toolkit
-          sudo apt-get -y install --no-install-recommends \
-            cuda-cudart-12-3 \
-            cuda-compiler-12-3 \
-            cuda-libraries-dev-12-3 \
-            cuda-nvcc-12-3 \
-            libcudnn8 \
-            libcudnn8-dev
-          echo "PATH=/usr/local/cuda-12.3/bin:$PATH" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=/usr/local/cuda-12.3/lib64:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-          # Apply changes to current shell
-          export PATH=/usr/local/cuda-12.3/bin:$PATH
-          export LD_LIBRARY_PATH=/usr/local/cuda-12.3/lib64:$LD_LIBRARY_PATH
+          # Try installing nvidia-cuda-toolkit from standard Ubuntu repos
+          sudo apt-get -y install nvidia-cuda-toolkit
         fi
         # Verify installation
         nvidia-smi || echo "Warning: nvidia-smi not found"
