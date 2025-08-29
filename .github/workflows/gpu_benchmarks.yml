@@ -54,6 +54,7 @@ jobs:
           echo "Installing CUDA repository package..."
           sudo dpkg -i cuda-repo-ubuntu2404-13-0-local_13.0.0-580.65.06-1_amd64.deb
           sudo cp /var/cuda-repo-ubuntu2404-13-0-local/cuda-*-keyring.gpg /usr/share/keyrings/
+          sudo apt-key add /var/cuda-repo-ubuntu2404-13-0-local/*.pub
           sudo apt-get update
           sudo apt-get -y install cuda-toolkit-13-0
         fi
