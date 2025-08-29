@@ -56,10 +56,38 @@ jobs:
           # Warning: Do not avoid signature check for production
           sudo apt-get -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true update
           sudo apt-get -y --allow-unauthenticated install cuda-toolkit-13-0
+          
+          # Add CUDA binaries to PATH
+          echo "Adding CUDA to PATH..."
+          export PATH=/usr/local/cuda-13.0/bin:$PATH
+          export LD_LIBRARY_PATH=/usr/local/cuda-13.0/lib64:$LD_LIBRARY_PATH
+          
+          # Make PATH changes available for subsequent steps
+          echo "PATH=/usr/local/cuda-13.0/bin:$PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=/usr/local/cuda-13.0/lib64:$LD_LIBRARY_PATH" >> $GITHUB_ENV
         fi
+        
         # Verify installation
         nvidia-smi || echo "Warning: nvidia-smi not found"
-        nvcc --version || echo "Error: nvcc still not found after installation"
+        
+        # Check nvcc availability with explicit path if needed
+        if command -v nvcc &> /dev/null; then
+          echo "nvcc found in PATH"
+          nvcc --version
+        elif [ -f /usr/local/cuda-13.0/bin/nvcc ]; then
+          echo "nvcc found at /usr/local/cuda-13.0/bin/nvcc"
+          /usr/local/cuda-13.0/bin/nvcc --version
+          # Add to PATH if not already there
+          export PATH=/usr/local/cuda-13.0/bin:$PATH
+          echo "PATH=/usr/local/cuda-13.0/bin:$PATH" >> $GITHUB_ENV
+        else
+          echo "ERROR: nvcc not found after installation!"
+          echo "Checking common CUDA installation directories..."
+          ls -la /usr/local/ | grep cuda || true
+          ls -la /usr/local/cuda*/bin/ 2>/dev/null || true
+          echo "FATAL: Cannot proceed without nvcc. Failing CI."
+          exit 1
+        fi
         
     - name: Install criterion
       run: cargo install cargo-criterion
