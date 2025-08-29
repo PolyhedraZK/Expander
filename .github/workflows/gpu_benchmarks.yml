@@ -1,0 +1,111 @@
+name: GPU Benchmarks for MSM CUDA
+
+env:
+  RUSTFLAGS: "-Dwarnings -C target-cpu=native"
+  RUST_BACKTRACE: 1
+  ACTIONS_RUNNER_DEBUG: true
+
+# Cancel all previous runs of the same workflow
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    paths:
+      - 'poly_commit/msm_cuda/**'
+      - '.github/workflows/gpu_benchmarks.yml'
+  pull_request:
+    paths:
+      - 'poly_commit/msm_cuda/**'
+      - '.github/workflows/gpu_benchmarks.yml'
+  workflow_dispatch:
+
+jobs:
+  gpu-benchmark:
+    runs-on: T4-gpu
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Dependencies for Linux
+      run: sudo apt-get update && sudo apt-get install -y build-essential
+    
+    - name: Update toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Check CUDA installation
+      run: |
+        echo "Checking CUDA installation..."
+        nvidia-smi || echo "nvidia-smi not found"
+        nvcc --version || echo "nvcc not found"
+        
+    - name: Install criterion
+      run: cargo install cargo-criterion
+    
+    - name: Build with CUDA support
+      working-directory: poly_commit/msm_cuda
+      run: |
+        echo "Building with CUDA support..."
+        cargo build --release --features "cuda bn254"
+    
+    - name: Run MSM benchmarks
+      working-directory: poly_commit/msm_cuda
+      run: |
+        echo "Running MSM CUDA benchmarks..."
+        cargo bench --features "cuda bn254" --bench msm -- --verbose
+        
+    - name: Run MSM Halo2 benchmarks
+      working-directory: poly_commit/msm_cuda
+      run: |
+        echo "Running MSM Halo2 benchmarks..."
+        cargo bench --features "cuda bn254" --bench msm_halo2 -- --verbose
+    
+    - name: Run benchmarks with different sizes
+      working-directory: poly_commit/msm_cuda
+      run: |
+        echo "Running benchmarks with different problem sizes..."
+        for npow in 16 18 20 22 23; do
+          echo "Running with 2^$npow points..."
+          BENCH_NPOW=$npow cargo bench --features "cuda bn254" --bench msm
+          BENCH_NPOW=$npow cargo bench --features "cuda bn254" --bench msm_halo2
+        done
+    
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: gpu-benchmark-results
+        path: |
+          poly_commit/msm_cuda/target/criterion/**/*.html
+          poly_commit/msm_cuda/target/criterion/**/*.csv
+        retention-days: 30
+    
+    - name: Comment benchmark results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          // Read benchmark results from criterion output
+          const criterionPath = 'poly_commit/msm_cuda/target/criterion';
+          let results = '## GPU Benchmark Results\n\n';
+          
+          results += '### Environment\n';
+          results += '- Runner: T4-gpu\n';
+          results += '- Features: cuda, bn254\n\n';
+          
+          results += '### Benchmark Results\n';
+          results += 'See artifacts for detailed HTML reports.\n';
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: results
+          });
