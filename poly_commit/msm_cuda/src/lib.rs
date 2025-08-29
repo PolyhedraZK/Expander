@@ -2,6 +2,9 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
+// The feature cuda does not have to be manually enabled
+// build.rs has already taken care of that
+
 pub mod util;
 
 #[cfg(feature = "cuda")]
