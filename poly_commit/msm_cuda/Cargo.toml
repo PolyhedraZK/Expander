@@ -58,7 +58,3 @@ harness = false
 [[bench]]
 name = "msm_halo2"
 harness = false
-
-[[bench]]
-name = "arkworks_to_halo2"
-harness = false

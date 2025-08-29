@@ -1,4 +1,4 @@
-#![cfg(feature = "bn254")]
+#![cfg(all(feature = "cuda", feature = "bn254"))]
 
 // Copyright Supranational LLC
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
@@ -38,7 +38,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 criterion_group!(benches, criterion_benchmark);
 criterion_main!(benches);
 
-#[cfg(not(feature = "bn254"))]
+#[cfg(not(all(feature = "cuda", feature = "bn254")))]
 fn main() {
-    // No benchmarks: bn254 feature not enabled
+    // No benchmarks: cuda and bn254 features not both enabled
 }

@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0, see LICENSE for details.
 // SPDX-License-Identifier: Apache-2.0
 
-#![cfg(feature = "bn254")]
+#![cfg(all(feature = "cuda", feature = "bn254"))]
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use halo2curves::{bn256::Bn256, msm::best_multiexp};
@@ -52,7 +52,7 @@ fn criterion_benchmark_2(c: &mut Criterion) {
 criterion_group!(benches, criterion_benchmark, criterion_benchmark_2);
 criterion_main!(benches);
 
-#[cfg(not(feature = "bn254"))]
+#[cfg(not(all(feature = "cuda", feature = "bn254")))]
 fn main() {
-    // No benchmarks: bn254 feature not enabled
+    // No benchmarks: cuda and bn254 features not both enabled
 }
