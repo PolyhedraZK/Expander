@@ -51,3 +51,8 @@ fn criterion_benchmark_2(c: &mut Criterion) {
 
 criterion_group!(benches, criterion_benchmark, criterion_benchmark_2);
 criterion_main!(benches);
+
+#[cfg(not(feature = "bn254"))]
+fn main() {
+    // No benchmarks: bn254 feature not enabled
+}
