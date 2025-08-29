@@ -44,10 +44,6 @@ name = "hyrax"
 harness = false
 
 [[bench]]
-name = "kzg"
-harness = false
-
-[[bench]]
 name = "pcs_all"
 harness = false
 
