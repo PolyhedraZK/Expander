@@ -55,7 +55,7 @@ jobs:
 
           # Warning: Do not avoid signature check for production
           sudo apt-get -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true update
-          sudo apt-get -y install cuda-toolkit-13-0
+          sudo apt-get -y --allow-unauthenticated install cuda-toolkit-13-0
         fi
         # Verify installation
         nvidia-smi || echo "Warning: nvidia-smi not found"
