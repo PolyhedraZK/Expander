@@ -43,8 +43,8 @@ jobs:
         echo "Checking CUDA installation..."
         if ! command -v nvcc &> /dev/null; then
           echo "nvcc not found, installing CUDA toolkit from apt..."
-          sudo apt remove --purge "cuda*"
-          sudo apt autoremove
+          sudo apt remove -y --purge "cuda*"
+          sudo apt autoremove -y
 
           wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-ubuntu2404.pin
           sudo mv cuda-ubuntu2404.pin /etc/apt/preferences.d/cuda-repository-pin-600
