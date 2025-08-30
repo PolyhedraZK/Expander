@@ -13,6 +13,7 @@ transcript = { path = "../transcript" }
 tree = { path = "../tree" }
 utils = { path = "../utils" }
 sumcheck = { path = "../sumcheck" }
+msm_cuda = { path = "./msm_cuda", optional = true}
 
 ethnum.workspace = true
 ark-std.workspace = true
@@ -23,6 +24,7 @@ rand.workspace = true
 rayon.workspace = true
 transpose.workspace = true
 thiserror.workspace = true
+
 
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
@@ -42,14 +44,10 @@ name = "hyrax"
 harness = false
 
 [[bench]]
-name = "kzg"
-harness = false
-
-[[bench]]
 name = "pcs_all"
 harness = false
 
 [features]
 default = [ ]
-# default = [ "profile" ]
 profile = [ "utils/profile" ]
+cuda_msm = [ "msm_cuda" ]

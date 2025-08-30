@@ -6,6 +6,7 @@ members = [
     "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31",
+    "poly_commit/msm_cuda",
     "arith/polynomials", 
     "bin", # binary executables
     "circuit",
