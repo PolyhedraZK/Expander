@@ -120,7 +120,7 @@ impl FromStr for FiatShamirHashType {
             "Poseidon" => Ok(FiatShamirHashType::Poseidon),
             "Animoe" => Ok(FiatShamirHashType::Animoe),
             "MIMC5" => Ok(FiatShamirHashType::MIMC5),
-            _ => Err(format!("Unknown FiatShamirHashType: {}", s)),
+            _ => Err(format!("Unknown FiatShamirHashType: {s}")),
         }
     }
 }
