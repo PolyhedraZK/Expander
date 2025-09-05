@@ -2,7 +2,7 @@ use arith::Field;
 use halo2curves::bn256::Fr;
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::FiatShamirHasher;
+use crate::{FiatShamirHashType, FiatShamirHasher};
 
 #[derive(Debug, Clone, Default)]
 pub struct MiMC5FiatShamirHasher<F: Field> {
@@ -33,7 +33,7 @@ impl<F: Field> MiMC5FiatShamirHasher<F> {
 }
 
 impl<F: Field> FiatShamirHasher for MiMC5FiatShamirHasher<F> {
-    const NAME: &'static str = "MiMC5_Field_Hasher";
+    const TYPE: FiatShamirHashType = FiatShamirHashType::MIMC5;
 
     const DIGEST_SIZE: usize = F::SIZE;
 

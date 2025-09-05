@@ -1,9 +1,8 @@
-use std::{fmt::Debug, str::FromStr};
+use std::fmt::Debug;
 
 use arith::Field;
+use gkr_hashers::FiatShamirHashType;
 use serdes::ExpSerde;
-
-use crate::ExpErrors;
 
 use super::Proof;
 
@@ -11,6 +10,9 @@ use super::Proof;
 /// The associated field is the challenge field, i.e., M31Ext3
 /// The challenge field is not SIMD enabled
 pub trait Transcript: Clone + Debug {
+    /// Hash Type
+    const HASH_TYPE: FiatShamirHashType;
+
     /// Create a new transcript.
     fn new() -> Self;
 
@@ -101,29 +103,4 @@ pub trait Transcript: Clone + Debug {
     fn unlock_proof(&mut self);
 
     fn refresh_digest(&mut self);
-}
-
-#[derive(Debug, Clone, PartialEq, Default)]
-pub enum FiatShamirHashType {
-    #[default]
-    SHA256,
-    Keccak256,
-    Poseidon,
-    Animoe,
-    MIMC5, // Note: use MIMC5 for bn254 ONLY
-}
-
-impl FromStr for FiatShamirHashType {
-    type Err = ExpErrors;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "SHA256" => Ok(FiatShamirHashType::SHA256),
-            "Keccak256" => Ok(FiatShamirHashType::Keccak256),
-            "Poseidon" => Ok(FiatShamirHashType::Poseidon),
-            "Animoe" => Ok(FiatShamirHashType::Animoe),
-            "MIMC5" => Ok(FiatShamirHashType::MIMC5),
-            _ => Err(ExpErrors::FiatShamirHashTypeError(s.to_string())),
-        }
-    }
 }

@@ -1,5 +1,5 @@
 use arith::{ExtensionField, Field};
-use gkr_engine::Transcript;
+use gkr_engine::{FiatShamirHashType, Transcript};
 
 /// A transcript that uses a random tape to generate challenges.
 #[derive(Default, Clone, Debug, PartialEq)]
@@ -18,6 +18,8 @@ impl<ChallengeF: ExtensionField> RandomTape<ChallengeF> {
 }
 
 impl<ChallengeF: ExtensionField> Transcript for RandomTape<ChallengeF> {
+    const HASH_TYPE: FiatShamirHashType = unimplemented!();
+
     fn new() -> Self {
         Self {
             tape: vec![],
