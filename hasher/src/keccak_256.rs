@@ -1,12 +1,12 @@
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::FiatShamirHasher;
+use crate::{FiatShamirHashType, FiatShamirHasher};
 
 #[derive(Clone, Default, Debug)]
 pub struct Keccak256hasher {}
 
 impl FiatShamirHasher for Keccak256hasher {
-    const NAME: &'static str = "Keccak256 Hasher";
+    const TYPE: FiatShamirHashType = FiatShamirHashType::Keccak256;
 
     const DIGEST_SIZE: usize = 32;
 

@@ -1,4 +1,4 @@
-use gkr_engine::{Proof, Transcript};
+use gkr_engine::{FiatShamirHashType, Proof, Transcript};
 use gkr_hashers::FiatShamirHasher;
 
 // When appending the initial commitment, we hash the commitment bytes
@@ -41,6 +41,8 @@ impl<H: FiatShamirHasher> BytesHashTranscript<H> {
 }
 
 impl<H: FiatShamirHasher> Transcript for BytesHashTranscript<H> {
+    const HASH_TYPE: FiatShamirHashType = H::TYPE;
+
     fn new() -> Self {
         Self {
             hasher: H::new(),

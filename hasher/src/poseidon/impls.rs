@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use arith::Field;
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::{FiatShamirHasher, PoseidonStateTrait};
+use crate::{FiatShamirHashType, FiatShamirHasher, PoseidonStateTrait};
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct PoseidonPermutation<State: PoseidonStateTrait> {
@@ -142,7 +142,7 @@ impl<State: PoseidonStateTrait> PoseidonPermutation<State> {
 }
 
 impl<State: PoseidonStateTrait> FiatShamirHasher for PoseidonPermutation<State> {
-    const NAME: &'static str = "Poseidon Field Hasher";
+    const TYPE: FiatShamirHashType = FiatShamirHashType::Poseidon;
 
     const DIGEST_SIZE: usize = State::STATE_WIDTH * State::ElemT::SIZE;
 
