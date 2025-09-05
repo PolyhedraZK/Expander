@@ -18,7 +18,7 @@ impl<ChallengeF: ExtensionField> RandomTape<ChallengeF> {
 }
 
 impl<ChallengeF: ExtensionField> Transcript for RandomTape<ChallengeF> {
-    const HASH_TYPE: FiatShamirHashType = unimplemented!();
+    const HASH_TYPE: FiatShamirHashType = FiatShamirHashType::NONE;
 
     fn new() -> Self {
         Self {

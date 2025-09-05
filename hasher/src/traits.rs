@@ -108,6 +108,7 @@ pub enum FiatShamirHashType {
     Poseidon,
     Animoe,
     MIMC5, // Note: use MIMC5 for bn254 ONLY
+    NONE,
 }
 
 impl FromStr for FiatShamirHashType {
@@ -120,6 +121,7 @@ impl FromStr for FiatShamirHashType {
             "Poseidon" => Ok(FiatShamirHashType::Poseidon),
             "Animoe" => Ok(FiatShamirHashType::Animoe),
             "MIMC5" => Ok(FiatShamirHashType::MIMC5),
+            "NONE" => Ok(FiatShamirHashType::NONE),
             _ => Err(format!("Unknown FiatShamirHashType: {s}")),
         }
     }
