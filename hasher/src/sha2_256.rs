@@ -1,12 +1,14 @@
 use sha2::{digest::Output, Digest, Sha256};
 
+use crate::FiatShamirHashType;
+
 use super::FiatShamirHasher;
 
 #[derive(Debug, Clone, Default)]
 pub struct SHA256hasher;
 
 impl FiatShamirHasher for SHA256hasher {
-    const NAME: &'static str = "SHA256 Hasher";
+    const TYPE: FiatShamirHashType = FiatShamirHashType::SHA256;
 
     const DIGEST_SIZE: usize = 32;
 

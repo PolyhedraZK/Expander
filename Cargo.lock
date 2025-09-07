@@ -1092,6 +1092,7 @@ dependencies = [
  "babybear",
  "gf2",
  "gf2_128",
+ "gkr_hashers",
  "goldilocks",
  "itertools 0.13.0",
  "mersenne31",

@@ -28,6 +28,9 @@ pub use poly_commit::*;
 pub use scheme::*;
 pub use transcript::*;
 
+// re-export the FiatShamirHasher and FiatShamirHashType traits for backward compatibility
+pub use gkr_hashers::{FiatShamirHashType, FiatShamirHasher};
+
 /// Core trait defining the configuration types for a GKR protocol implementation.
 ///
 /// This trait serves as the main configuration interface for the GKR protocol, specifying the

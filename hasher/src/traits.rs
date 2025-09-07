@@ -1,13 +1,14 @@
 use std::{
     fmt::Debug,
     ops::{Add, AddAssign, Mul, MulAssign},
+    str::FromStr,
 };
 
 use arith::Field;
 
 pub trait FiatShamirHasher: Clone + Debug {
-    /// Name for the hasher
-    const NAME: &'static str;
+    /// Type for the hasher
+    const TYPE: FiatShamirHashType;
 
     /// The size of the hash output in bytes.
     const DIGEST_SIZE: usize;
@@ -97,4 +98,31 @@ pub trait PoseidonStateTrait:
     }
 
     fn to_u8_slices(&self, output: &mut [u8]);
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum FiatShamirHashType {
+    #[default]
+    SHA256,
+    Keccak256,
+    Poseidon,
+    Animoe,
+    MIMC5, // Note: use MIMC5 for bn254 ONLY
+    NONE,
+}
+
+impl FromStr for FiatShamirHashType {
+    type Err = String; // Use String as error type
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "SHA256" => Ok(FiatShamirHashType::SHA256),
+            "Keccak256" => Ok(FiatShamirHashType::Keccak256),
+            "Poseidon" => Ok(FiatShamirHashType::Poseidon),
+            "Animoe" => Ok(FiatShamirHashType::Animoe),
+            "MIMC5" => Ok(FiatShamirHashType::MIMC5),
+            "NONE" => Ok(FiatShamirHashType::NONE),
+            _ => Err(format!("Unknown FiatShamirHashType: {s}")),
+        }
+    }
 }
