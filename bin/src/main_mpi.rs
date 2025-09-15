@@ -5,7 +5,7 @@ use clap::Parser;
 use gkr::{
     BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
     GF2ExtConfigSha2Raw, Goldilocksx8ConfigSha2Orion, Goldilocksx8ConfigSha2Raw,
-    M31x16ConfigSha2OrionSquare, M31x16ConfigSha2OrionVanilla, M31x16ConfigSha2RawSquare,
+    M31x16ConfigSha2OrionVanilla,
     M31x16ConfigSha2RawVanilla, Prover,
     utils::{
         KECCAK_BABYBEAR_CIRCUIT, KECCAK_BABYBEAR_WITNESS, KECCAK_BN254_CIRCUIT,

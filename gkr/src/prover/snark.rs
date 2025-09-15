@@ -3,7 +3,7 @@
 use arith::Field;
 use circuit::Circuit;
 use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
     GKRScheme, MPIConfig, MPIEngine, Proof, StructuredReferenceString, Transcript,
 };
 use polynomials::{
@@ -14,7 +14,7 @@ use sumcheck::ProverScratchPad;
 use transcript::transcript_root_broadcast;
 use utils::timer::Timer;
 
-use crate::{gkr_prove, gkr_square_prove};
+use crate::gkr_prove;
 
 #[cfg(feature = "grinding")]
 pub(crate) fn grind<Cfg: GKREngine>(transcript: &mut impl Transcript, mpi_config: &MPIConfig) {
@@ -127,11 +127,6 @@ impl<'a, Cfg: GKREngine> Prover<'a, Cfg> {
 
         let (claimed_v, challenge) = match Cfg::SCHEME {
             GKRScheme::Vanilla => gkr_prove(c, &mut self.sp, &mut transcript, &self.mpi_config),
-            GKRScheme::GkrSquare => {
-                let (claimed_v, challenge_x) =
-                    gkr_square_prove(c, &mut self.sp, &mut transcript, &self.mpi_config);
-                (claimed_v, ExpanderDualVarChallenge::from(&challenge_x))
-            }
         };
         gkr_prove_timer.stop();
 

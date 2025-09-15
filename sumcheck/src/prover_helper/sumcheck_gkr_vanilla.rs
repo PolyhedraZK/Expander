@@ -39,7 +39,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
             &mut self.sp.v_evals,
             &mut self.sp.hg_evals,
             &self.layer.input_vals,
-            &mut self.sp.gate_exists_5,
+            &mut self.sp.gate_exists,
         );
     }
 }
@@ -93,7 +93,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
             &self.sp.v_evals,
             &self.sp.hg_evals,
             &self.layer.input_vals,
-            &self.sp.gate_exists_5,
+            &self.sp.gate_exists,
         );
 
         // SIMD
@@ -245,7 +245,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         let add = &self.layer.add;
         let vals = &self.layer.input_vals;
         let eq_evals_at_rz0 = &mut self.sp.eq_evals_at_rz0;
-        let gate_exists = &mut self.sp.gate_exists_5;
+        let gate_exists = &mut self.sp.gate_exists;
         let hg_vals = &mut self.sp.hg_evals;
         // hg_vals[0..vals.len()].fill(F::zero()); // FIXED: consider memset unsafe?
         unsafe {
@@ -321,7 +321,7 @@ impl<'a, F: FieldEngine> SumcheckGkrVanillaHelper<'a, F> {
         let mul = &self.layer.mul;
         let eq_evals_at_rz0 = &self.sp.eq_evals_at_rz0;
         let eq_evals_at_rx = &mut self.sp.eq_evals_at_rx;
-        let gate_exists = &mut self.sp.gate_exists_5;
+        let gate_exists = &mut self.sp.gate_exists;
         let hg_vals = &mut self.sp.hg_evals;
         let fill_len = 1 << self.rx.len();
         // hg_vals[0..fill_len].fill(F::zero()); // FIXED: consider memset unsafe?

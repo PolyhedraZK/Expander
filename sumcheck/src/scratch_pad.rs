@@ -9,7 +9,6 @@ use gkr_engine::{FieldEngine, FieldType};
 #[derive(Clone, Debug, Default)]
 pub struct ProverScratchPad<F: FieldEngine> {
     pub v_evals: Vec<F::Field>,
-    pub hg_evals_5: Vec<F::ChallengeField>,
     pub hg_evals_1: Vec<F::ChallengeField>,
     pub hg_evals: Vec<F::Field>,
     pub simd_var_v_evals: Vec<F::ChallengeField>,
@@ -24,8 +23,7 @@ pub struct ProverScratchPad<F: FieldEngine> {
     pub eq_evals_first_half: Vec<F::ChallengeField>,
     pub eq_evals_second_half: Vec<F::ChallengeField>,
 
-    pub gate_exists_5: Vec<bool>,
-    pub gate_exists_1: Vec<bool>,
+    pub gate_exists: Vec<bool>,
 
     pub phase2_coef: F::ChallengeField,
 }
@@ -37,7 +35,6 @@ impl<F: FieldEngine> ProverScratchPad<F> {
         let max_io_size = max(max_input_size, max_output_size);
         ProverScratchPad {
             v_evals: vec![F::Field::default(); max_input_size],
-            hg_evals_5: vec![F::ChallengeField::default(); max_input_size],
             hg_evals_1: vec![F::ChallengeField::default(); max_input_size],
             hg_evals: vec![F::Field::default(); max_input_size],
             simd_var_v_evals: vec![F::ChallengeField::default(); F::get_field_pack_size()],
@@ -64,8 +61,7 @@ impl<F: FieldEngine> ProverScratchPad<F> {
                 )
             ],
 
-            gate_exists_5: vec![false; max_input_size],
-            gate_exists_1: vec![false; max_input_size],
+            gate_exists: vec![false; max_input_size],
             phase2_coef: F::ChallengeField::ZERO,
         }
     }

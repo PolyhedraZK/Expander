@@ -28,13 +28,6 @@ declare_gkr_config!(
     GKRScheme::Vanilla,
 );
 declare_gkr_config!(
-    pub M31x16ConfigPoseidonRawSquare,
-    FieldType::M31x16,
-    FiatShamirHashType::Poseidon,
-    PolynomialCommitmentType::Raw,
-    GKRScheme::GkrSquare,
-);
-declare_gkr_config!(
     pub M31x16ConfigSha2OrionVanilla,
     FieldType::M31x16,
     FiatShamirHashType::SHA256,
@@ -42,25 +35,11 @@ declare_gkr_config!(
     GKRScheme::Vanilla,
 );
 declare_gkr_config!(
-    pub M31x16ConfigSha2OrionSquare,
-    FieldType::M31x16,
-    FiatShamirHashType::SHA256,
-    PolynomialCommitmentType::Orion,
-    GKRScheme::GkrSquare,
-);
-declare_gkr_config!(
     pub M31x16ConfigSha2RawVanilla,
     FieldType::M31x16,
     FiatShamirHashType::SHA256,
     PolynomialCommitmentType::Raw,
     GKRScheme::Vanilla,
-);
-declare_gkr_config!(
-    pub M31x16ConfigSha2RawSquare,
-    FieldType::M31x16,
-    FiatShamirHashType::SHA256,
-    PolynomialCommitmentType::Raw,
-    GKRScheme::GkrSquare,
 );
 
 // ============== BN254 ==============
