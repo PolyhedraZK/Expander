@@ -9,8 +9,7 @@ use clap::Parser;
 use gkr::{
     BN254ConfigMIMC5KZG, BN254ConfigSha2Hyrax, BN254ConfigSha2Raw, GF2ExtConfigSha2Orion,
     GF2ExtConfigSha2Raw, Goldilocksx8ConfigSha2Orion, Goldilocksx8ConfigSha2Raw,
-    M31x1ConfigSha2RawVanilla, M31x16ConfigSha2OrionSquare, M31x16ConfigSha2OrionVanilla,
-    M31x16ConfigSha2RawSquare, M31x16ConfigSha2RawVanilla, Prover,
+    M31x1ConfigSha2RawVanilla, M31x16ConfigSha2OrionVanilla, M31x16ConfigSha2RawVanilla, Prover,
     utils::{
         KECCAK_BABYBEAR_CIRCUIT, KECCAK_BABYBEAR_WITNESS, KECCAK_BN254_CIRCUIT,
         KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS, KECCAK_GOLDILOCKS_CIRCUIT,
@@ -70,15 +69,11 @@ fn main() {
         "m31ext3" => match pcs_type {
             PolynomialCommitmentType::Raw => match args.circuit.as_str() {
                 "keccak" => run_benchmark::<M31x16ConfigSha2RawVanilla>(&args, mpi_config.clone()),
-                "poseidon" => run_benchmark::<M31x16ConfigSha2RawSquare>(&args, mpi_config.clone()),
                 _ => unreachable!(),
             },
             PolynomialCommitmentType::Orion => match args.circuit.as_str() {
                 "keccak" => {
                     run_benchmark::<M31x16ConfigSha2OrionVanilla>(&args, mpi_config.clone())
-                }
-                "poseidon" => {
-                    run_benchmark::<M31x16ConfigSha2OrionSquare>(&args, mpi_config.clone())
                 }
                 _ => unreachable!(""),
             },

@@ -6,7 +6,6 @@ use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, Transcript};
 use serdes::ExpSerde;
 use sumcheck::{
     GKRVerifierHelper, VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SIMD_MPI_DEGREE,
-    SUMCHECK_GKR_SQUARE_DEGREE,
 };
 
 #[inline(always)]
@@ -30,13 +29,10 @@ pub fn verify_sumcheck_step<F: FieldEngine>(
     let verified = (ps[0] + ps[1]) == *claimed_sum;
 
     // This assumes SUMCHECK_GKR_DEGREE == 2, SUMCHECK_GKR_SIMD_MPI_DEGREE == 3,
-    // SUMCHECK_GKR_SQUARE_DEGREE == 6
     if degree == SUMCHECK_GKR_DEGREE {
         *claimed_sum = GKRVerifierHelper::degree_2_eval(&ps, r, sp);
     } else if degree == SUMCHECK_GKR_SIMD_MPI_DEGREE {
         *claimed_sum = GKRVerifierHelper::degree_3_eval(&ps, r, sp);
-    } else if degree == SUMCHECK_GKR_SQUARE_DEGREE {
-        *claimed_sum = GKRVerifierHelper::degree_6_eval(&ps, r, sp);
     } else {
         panic!("unsupported degree");
     }

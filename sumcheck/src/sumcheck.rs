@@ -1,23 +1,12 @@
 use circuit::CircuitLayer;
-use gkr_engine::{
-    ExpanderDualVarChallenge, FieldEngine, MPIEngine,
-    Transcript,
-};
+use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIEngine, Transcript};
 
-use crate::{
-    prover_helper::SumcheckGkrVanillaHelper,
-    utils::transcript_io,
-    ProverScratchPad,
-};
+use crate::{prover_helper::SumcheckGkrVanillaHelper, utils::transcript_io, ProverScratchPad};
 
 /// The degree of the polynomial for sumcheck, which is 2 for non-SIMD/MPI variables
 /// and 3 for SIMD/MPI variables.
 pub const SUMCHECK_GKR_DEGREE: usize = 2;
 pub const SUMCHECK_GKR_SIMD_MPI_DEGREE: usize = 3;
-
-/// The degree of the polynomial for sumcheck in the GKR square case.
-/// It is 6 for both SIMD/MPI and non-SIMD/MPI variables.
-pub const SUMCHECK_GKR_SQUARE_DEGREE: usize = 6;
 
 // FIXME
 #[allow(clippy::too_many_arguments)]

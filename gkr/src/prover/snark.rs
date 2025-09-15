@@ -3,8 +3,8 @@
 use arith::Field;
 use circuit::Circuit;
 use gkr_engine::{
-    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine,
-    GKRScheme, MPIConfig, MPIEngine, Proof, StructuredReferenceString, Transcript,
+    ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine, GKRScheme, MPIConfig,
+    MPIEngine, Proof, StructuredReferenceString, Transcript,
 };
 use polynomials::{
     MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension, RefMultiLinearPoly,
