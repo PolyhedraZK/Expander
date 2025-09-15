@@ -9,8 +9,7 @@ use gkr::{
     utils::{
         KECCAK_BABYBEAR_CIRCUIT, KECCAK_BABYBEAR_WITNESS, KECCAK_BN254_CIRCUIT,
         KECCAK_BN254_WITNESS, KECCAK_GF2_CIRCUIT, KECCAK_GF2_WITNESS, KECCAK_GOLDILOCKS_CIRCUIT,
-        KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS, POSEIDON_M31_CIRCUIT,
-        POSEIDON_M31_WITNESS,
+        KECCAK_GOLDILOCKS_WITNESS, KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS,
     },
 };
 use gkr_engine::{
@@ -150,13 +149,6 @@ where
                 &mpi_config,
             ),
         },
-        "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31x16 => Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(
-                POSEIDON_M31_CIRCUIT,
-                &mpi_config,
-            ),
-            _ => unreachable!(),
-        },
         _ => unreachable!(),
     };
 
@@ -174,10 +166,6 @@ where
             FieldType::Goldilocksx8 => KECCAK_GOLDILOCKS_WITNESS,
             FieldType::BabyBearx16 => KECCAK_BABYBEAR_WITNESS,
         },
-        "poseidon" => match Cfg::FieldConfig::FIELD_TYPE {
-            FieldType::M31x16 => POSEIDON_M31_WITNESS,
-            _ => unreachable!("not supported"),
-        },
         _ => unreachable!(),
     };
 
@@ -187,7 +175,6 @@ where
         (FieldType::GF2Ext128, "keccak") => 1,
         (FieldType::M31x16, "keccak") => 2,
         (FieldType::BN254, "keccak") => 2,
-        (FieldType::M31x16, "poseidon") => 120,
         (FieldType::Goldilocksx8, "keccak") => 2,
         _ => unreachable!(),
     };
@@ -258,7 +245,6 @@ fn print_info(args: &Args, mpi_config: &MPIConfig) {
 
     let prover = match args.circuit.as_str() {
         "keccak" => "GKR",
-        "poseidon" => "GKR^2",
         _ => unreachable!(),
     };
 

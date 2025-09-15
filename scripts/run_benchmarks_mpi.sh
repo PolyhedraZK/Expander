@@ -37,7 +37,6 @@ run_benchmark() {
 # M31 combinations
 print_header "Testing M31 Field Combinations"
 run_benchmark "m31ext3" "Raw" "keccak"
-run_benchmark "m31ext3" "Raw" "poseidon"
 run_benchmark "m31ext3" "Orion" "keccak"
 
 # BN254 combinations
