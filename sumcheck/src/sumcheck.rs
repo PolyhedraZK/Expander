@@ -1,23 +1,12 @@
 use circuit::CircuitLayer;
-use gkr_engine::{
-    ExpanderDualVarChallenge, ExpanderSingleVarChallenge, FieldEngine, MPIConfig, MPIEngine,
-    Transcript,
-};
+use gkr_engine::{ExpanderDualVarChallenge, FieldEngine, MPIEngine, Transcript};
 
-use crate::{
-    prover_helper::{SumcheckGkrSquareHelper, SumcheckGkrVanillaHelper},
-    utils::transcript_io,
-    ProverScratchPad,
-};
+use crate::{prover_helper::SumcheckGkrVanillaHelper, utils::transcript_io, ProverScratchPad};
 
 /// The degree of the polynomial for sumcheck, which is 2 for non-SIMD/MPI variables
 /// and 3 for SIMD/MPI variables.
 pub const SUMCHECK_GKR_DEGREE: usize = 2;
 pub const SUMCHECK_GKR_SIMD_MPI_DEGREE: usize = 3;
-
-/// The degree of the polynomial for sumcheck in the GKR square case.
-/// It is 6 for both SIMD/MPI and non-SIMD/MPI variables.
-pub const SUMCHECK_GKR_SQUARE_DEGREE: usize = 6;
 
 // FIXME
 #[allow(clippy::too_many_arguments)]
@@ -91,53 +80,4 @@ pub fn sumcheck_prove_gkr_layer<F: FieldEngine, T: Transcript>(
 
     *challenge = ExpanderDualVarChallenge::new(rx, ry, r_simd, r_mpi);
     (vx_claim, vy_claim)
-}
-
-// FIXME
-#[allow(clippy::needless_range_loop)] // todo: remove
-#[allow(clippy::type_complexity)]
-pub fn sumcheck_prove_gkr_square_layer<F: FieldEngine, T: Transcript>(
-    layer: &CircuitLayer<F>,
-    challenge: &mut ExpanderSingleVarChallenge<F>,
-    transcript: &mut T,
-    sp: &mut ProverScratchPad<F>,
-    mpi_config: &MPIConfig,
-) {
-    const D: usize = SUMCHECK_GKR_SQUARE_DEGREE + 1;
-    let mut helper = SumcheckGkrSquareHelper::<F, D>::new(layer, challenge, sp, mpi_config);
-
-    helper.prepare_simd();
-    helper.prepare_mpi();
-    helper.prepare_g_x_vals();
-
-    // x-variable sumcheck rounds
-    for i_var in 0..layer.input_var_num {
-        let evals = helper.poly_evals_at_x(i_var);
-        let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
-        log::trace!("x i_var={i_var} evals: {evals:?} r: {r:?}");
-        helper.receive_x_challenge(i_var, r);
-    }
-
-    // Unpack SIMD witness polynomial evaluations
-    helper.prepare_simd_var_vals();
-
-    // SIMD-variable sumcheck rounds
-    for i_var in 0..helper.simd_var_num {
-        let evals = helper.poly_evals_at_simd(i_var);
-        let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
-        log::trace!("SIMD i_var={i_var} evals: {evals:?} r: {r:?}");
-        helper.receive_simd_challenge(i_var, r);
-    }
-
-    helper.prepare_mpi_var_vals();
-    for i_var in 0..mpi_config.world_size().trailing_zeros() as usize {
-        let evals = helper.poly_evals_at_mpi(i_var);
-        let r = transcript_io::<F::ChallengeField, T>(mpi_config, &evals, transcript);
-        helper.receive_mpi_challenge(i_var, r);
-    }
-
-    log::trace!("vx claim: {:?}", helper.vx_claim());
-    transcript.append_field_element(&helper.vx_claim());
-
-    *challenge = ExpanderSingleVarChallenge::new(helper.rx, helper.r_simd_var, helper.r_mpi_var);
 }

@@ -44,8 +44,7 @@ pub use gkr_hashers::{FiatShamirHashType, FiatShamirHasher};
 /// * `TranscriptConfig` - Configuration for transcript generation, implementing `Transcript` over
 ///   the challenge field
 /// * `PCSConfig` - Configuration for polynomial commitment scheme, implementing `PCSForExpanderGKR`
-/// * `Scheme` - Identifier for the GKR scheme, candidates are `GKRScheme::Vanilla` and
-///   `GKRScheme::GkrSquare`
+/// * `Scheme` - Identifier for the GKR scheme, candidates are `GKRScheme::Vanilla`
 ///
 /// # Usage
 ///

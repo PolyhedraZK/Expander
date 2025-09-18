@@ -2,10 +2,7 @@ use circuit::Circuit;
 use config_macros::declare_gkr_config;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use gkr::{
-    utils::{
-        KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS,
-        POSEIDON_M31_CIRCUIT,
-    },
+    utils::{KECCAK_BN254_CIRCUIT, KECCAK_BN254_WITNESS, KECCAK_M31_CIRCUIT, KECCAK_M31_WITNESS},
     Prover,
 };
 use gkr_engine::{
@@ -145,46 +142,5 @@ fn criterion_gkr_keccak(c: &mut Criterion) {
     );
 }
 
-fn criterion_gkr_poseidon(c: &mut Criterion) {
-    declare_gkr_config!(
-        M31x16ConfigSha2,
-        FieldType::M31x16,
-        FiatShamirHashType::SHA256,
-        PCSCommitmentType::Raw,
-        GKRScheme::GkrSquare
-    );
-
-    let (m31_config, mut m31_circuit, pcs_params, pcs_proving_key, mut pcs_scratch) =
-        benchmark_setup::<M31x16ConfigSha2>(POSEIDON_M31_CIRCUIT, None);
-
-    let mut group = c.benchmark_group("single thread proving poseidon by GKR^2");
-    let num_poseidon_m31 =
-        120 * <M31x16ConfigSha2 as GKREngine>::FieldConfig::get_field_pack_size();
-
-    group.bench_function(
-        BenchmarkId::new(
-            format!(
-                "Over M31, with {} poseidon instances per proof",
-                num_poseidon_m31
-            ),
-            0,
-        ),
-        |b| {
-            b.iter(|| {
-                {
-                    prover_run::<M31x16ConfigSha2>(
-                        &m31_config,
-                        &mut m31_circuit,
-                        &pcs_params,
-                        &pcs_proving_key,
-                        &mut pcs_scratch,
-                    );
-                    black_box(())
-                };
-            })
-        },
-    );
-}
-
-criterion_group!(benches, criterion_gkr_keccak, criterion_gkr_poseidon);
+criterion_group!(benches, criterion_gkr_keccak);
 criterion_main!(benches);

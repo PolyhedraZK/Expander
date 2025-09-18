@@ -9,8 +9,6 @@ use gkr_engine::{FieldEngine, FieldType};
 #[derive(Clone, Debug, Default)]
 pub struct ProverScratchPad<F: FieldEngine> {
     pub v_evals: Vec<F::Field>,
-    pub hg_evals_5: Vec<F::ChallengeField>,
-    pub hg_evals_1: Vec<F::ChallengeField>,
     pub hg_evals: Vec<F::Field>,
     pub simd_var_v_evals: Vec<F::ChallengeField>,
     pub simd_var_hg_evals: Vec<F::ChallengeField>,
@@ -24,21 +22,30 @@ pub struct ProverScratchPad<F: FieldEngine> {
     pub eq_evals_first_half: Vec<F::ChallengeField>,
     pub eq_evals_second_half: Vec<F::ChallengeField>,
 
-    pub gate_exists_5: Vec<bool>,
-    pub gate_exists_1: Vec<bool>,
+    pub gate_exists: Vec<bool>,
 
     pub phase2_coef: F::ChallengeField,
 }
 
 impl<F: FieldEngine> ProverScratchPad<F> {
+    /// Compute the smallest power of 2 that is greater than or equal to the square root of n.
+    pub fn pow2_sqrt_ceil(n: usize) -> usize {
+        let mut x = 1;
+        while x * x < n {
+            x *= 2;
+        }
+        x
+    }
+
     pub fn new(max_num_input_var: usize, max_num_output_var: usize, mpi_world_size: usize) -> Self {
         let max_input_size = 1 << max_num_input_var;
         let max_output_size = 1 << max_num_output_var;
         let max_io_size = max(max_input_size, max_output_size);
+        let max_size = max(max(max_io_size, F::get_field_pack_size()), mpi_world_size);
+        let sqrt_max_size = Self::pow2_sqrt_ceil(max_size);
+
         ProverScratchPad {
             v_evals: vec![F::Field::default(); max_input_size],
-            hg_evals_5: vec![F::ChallengeField::default(); max_input_size],
-            hg_evals_1: vec![F::ChallengeField::default(); max_input_size],
             hg_evals: vec![F::Field::default(); max_input_size],
             simd_var_v_evals: vec![F::ChallengeField::default(); F::get_field_pack_size()],
             simd_var_hg_evals: vec![F::ChallengeField::default(); F::get_field_pack_size()],
@@ -49,23 +56,10 @@ impl<F: FieldEngine> ProverScratchPad<F> {
             eq_evals_at_rz0: vec![F::ChallengeField::default(); max_output_size],
             eq_evals_at_r_simd0: vec![F::ChallengeField::default(); F::get_field_pack_size()],
             eq_evals_at_r_mpi0: vec![F::ChallengeField::default(); mpi_world_size],
-            eq_evals_first_half: vec![
-                F::ChallengeField::default();
-                max(
-                    max(max_io_size, F::get_field_pack_size()),
-                    mpi_world_size
-                )
-            ],
-            eq_evals_second_half: vec![
-                F::ChallengeField::default();
-                max(
-                    max(max_io_size, F::get_field_pack_size()),
-                    mpi_world_size
-                )
-            ],
+            eq_evals_first_half: vec![F::ChallengeField::default(); sqrt_max_size],
+            eq_evals_second_half: vec![F::ChallengeField::default(); sqrt_max_size],
 
-            gate_exists_5: vec![false; max_input_size],
-            gate_exists_1: vec![false; max_input_size],
+            gate_exists: vec![false; max_input_size],
             phase2_coef: F::ChallengeField::ZERO,
         }
     }
