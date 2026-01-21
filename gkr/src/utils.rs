@@ -104,37 +104,55 @@ fn download_and_store(url: &str, file: &str) {
         .arg("-c")
         .arg(format!("wget -L {url} -O {file}"))
         .output()
-        .expect("Failed to download circuit");
+        .expect("Failed to execute wget");
 
-    assert!(download.status.success(), "Circuit download failure")
+    if !download.status.success() {
+        eprintln!("Warning: Failed to download {url} to {file}");
+    }
+}
+
+fn download_and_store_required(url: &str, file: &str) {
+    let download = Command::new("bash")
+        .arg("-c")
+        .arg(format!("wget -L {url} -O {file}"))
+        .output()
+        .expect("Failed to execute wget");
+
+    assert!(download.status.success(), "Required file download failed: {url}");
 }
 
 pub fn dev_env_data_setup() {
     fs::create_dir_all(DATA_PREFIX).unwrap();
 
-    // keccak circuit
-    download_and_store(KECCAK_CIRCUIT_M31_URL, KECCAK_M31_CIRCUIT);
-    download_and_store(KECCAK_CIRCUIT_GF2_URL, KECCAK_GF2_CIRCUIT);
-    download_and_store(KECCAK_CIRCUIT_BN254_URL, KECCAK_BN254_CIRCUIT);
+    // Required keccak circuits (GF2, M31, BN254)
+    download_and_store_required(KECCAK_CIRCUIT_M31_URL, KECCAK_M31_CIRCUIT);
+    download_and_store_required(KECCAK_CIRCUIT_GF2_URL, KECCAK_GF2_CIRCUIT);
+    download_and_store_required(KECCAK_CIRCUIT_BN254_URL, KECCAK_BN254_CIRCUIT);
+
+    // Optional keccak circuits (Goldilocks, BabyBear) - may not be available
     download_and_store(KECCAK_CIRCUIT_GOLDILOCKS_URL, KECCAK_GOLDILOCKS_CIRCUIT);
     download_and_store(KECCAK_CIRCUIT_BABYBEAR_URL, KECCAK_BABYBEAR_CIRCUIT);
 
-    download_and_store(KECCAK_WITNESS_M31_URL, KECCAK_M31_WITNESS);
-    download_and_store(KECCAK_WITNESS_GF2_URL, KECCAK_GF2_WITNESS);
-    download_and_store(KECCAK_WITNESS_BN254_URL, KECCAK_BN254_WITNESS);
+    // Required witnesses
+    download_and_store_required(KECCAK_WITNESS_M31_URL, KECCAK_M31_WITNESS);
+    download_and_store_required(KECCAK_WITNESS_GF2_URL, KECCAK_GF2_WITNESS);
+    download_and_store_required(KECCAK_WITNESS_BN254_URL, KECCAK_BN254_WITNESS);
+
+    // Optional witnesses (Goldilocks, BabyBear)
     download_and_store(KECCAK_WITNESS_GOLDILOCKS_URL, KECCAK_GOLDILOCKS_WITNESS);
     download_and_store(KECCAK_WITNESS_BABYBEAR_URL, KECCAK_BABYBEAR_WITNESS);
 
-    download_and_store(KECCAK_M31_PROOF_URL, KECCAK_M31_PROOF);
-    download_and_store(KECCAK_GF2_PROOF_URL, KECCAK_GF2_PROOF);
-    download_and_store(KECCAK_BN254_PROOF_URL, KECCAK_BN254_PROOF);
+    // Proofs
+    download_and_store_required(KECCAK_M31_PROOF_URL, KECCAK_M31_PROOF);
+    download_and_store_required(KECCAK_GF2_PROOF_URL, KECCAK_GF2_PROOF);
+    download_and_store_required(KECCAK_BN254_PROOF_URL, KECCAK_BN254_PROOF);
 
-    // keccak circuit with MPI
+    // MPI witnesses - optional (may not be in release)
     download_and_store(KECCAK_WITNESS_M31_MPI2_URL, KECCAK_M31_MPI2_WITNESS);
     download_and_store(KECCAK_WITNESS_GF2_MPI2_URL, KECCAK_GF2_MPI2_WITNESS);
     download_and_store(KECCAK_WITNESS_BN254_MPI2_URL, KECCAK_BN254_MPI2_WITNESS);
 
     // poseidon circuit
-    download_and_store(POSEIDON_CIRCUIT_M31_URL, POSEIDON_M31_CIRCUIT);
-    download_and_store(POSEIDON_WITNESS_M31_URL, POSEIDON_M31_WITNESS);
+    download_and_store_required(POSEIDON_CIRCUIT_M31_URL, POSEIDON_M31_CIRCUIT);
+    download_and_store_required(POSEIDON_WITNESS_M31_URL, POSEIDON_M31_WITNESS);
 }
