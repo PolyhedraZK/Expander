@@ -30,26 +30,40 @@ struct Args {
     /// default: false
     #[arg(short, long, default_value_t = false)]
     compare: bool,
+
+    /// skip downloading files (use existing files in data/)
+    #[arg(long, default_value_t = false)]
+    no_download: bool,
+
+    /// generate proofs only (no download, no compare)
+    #[arg(long, default_value_t = false)]
+    generate_only: bool,
 }
 
 fn main() {
     let args = Args::parse();
 
-    dev_env_data_setup();
-    if args.compare {
-        // check if the downloaded proofs match the one been generated
+    if !args.no_download && !args.generate_only {
+        dev_env_data_setup();
+    }
+
+    if args.compare || args.generate_only {
+        // generate proofs
         let universe = MPIConfig::init().unwrap();
         let world = universe.world();
         let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
 
-        proof_gen::<GF2ExtConfigSha2Raw>(mpi_config.clone());
-        proof_gen::<M31x16ConfigSha2RawVanilla>(mpi_config.clone());
-        proof_gen::<BN254ConfigSha2Raw>(mpi_config.clone());
-        compare_proof_files();
+        proof_gen::<GF2ExtConfigSha2Raw>(mpi_config.clone(), args.generate_only);
+        proof_gen::<M31x16ConfigSha2RawVanilla>(mpi_config.clone(), args.generate_only);
+        proof_gen::<BN254ConfigSha2Raw>(mpi_config.clone(), args.generate_only);
+
+        if args.compare && !args.generate_only {
+            compare_proof_files();
+        }
     }
 }
 
-fn proof_gen<'a, C: GKREngine>(mpi_config: MPIConfig<'a>) {
+fn proof_gen<'a, C: GKREngine>(mpi_config: MPIConfig<'a>, generate_only: bool) {
     // load circuit
     let mut circuit = match C::FieldConfig::FIELD_TYPE {
         FieldType::GF2Ext128 => {
@@ -71,10 +85,14 @@ fn proof_gen<'a, C: GKREngine>(mpi_config: MPIConfig<'a>) {
         _ => unreachable!(),
     };
 
-    let proof_file_name = match C::FieldConfig::FIELD_TYPE {
-        FieldType::GF2Ext128 => "data/proof_gf2_regen.txt",
-        FieldType::M31x16 => "data/proof_m31_regen.txt",
-        FieldType::BN254 => "data/proof_bn254_regen.txt",
+    // When generate_only, write to final proof file; otherwise write to _regen for comparison
+    let proof_file_name = match (C::FieldConfig::FIELD_TYPE, generate_only) {
+        (FieldType::GF2Ext128, true) => "data/proof_gf2.txt",
+        (FieldType::GF2Ext128, false) => "data/proof_gf2_regen.txt",
+        (FieldType::M31x16, true) => "data/proof_m31.txt",
+        (FieldType::M31x16, false) => "data/proof_m31_regen.txt",
+        (FieldType::BN254, true) => "data/proof_bn254.txt",
+        (FieldType::BN254, false) => "data/proof_bn254_regen.txt",
         _ => unreachable!(),
     };
 
@@ -114,8 +132,8 @@ fn proof_gen<'a, C: GKREngine>(mpi_config: MPIConfig<'a>) {
         (claim, proof)
     };
 
-    {
-        // verify the proof
+    if !generate_only {
+        // verify the proof (skip for generate_only mode as verification is done separately)
         let verifier = Verifier::<C>::new(mpi_config.clone());
 
         let public_input = circuit.public_input.clone();

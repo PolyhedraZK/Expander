@@ -58,7 +58,7 @@ jobs:
       - name: Generate proofs
         run: |
           cargo build --release --bin dev-setup
-          cargo run --release --bin dev-setup -- --compare
+          cargo run --release --bin dev-setup -- --generate-only
 
       - name: List all test data files
         run: ls -la data/
