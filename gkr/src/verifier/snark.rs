@@ -269,6 +269,11 @@ impl<'a, Cfg: GKREngine> Verifier<'a, Cfg> {
         let mut transcript = Cfg::TranscriptConfig::new();
         let mut cursor = Cursor::new(&proof.bytes);
 
+        // Bind public input to the FS transcript to prevent malleability attacks
+        for v in public_input {
+            transcript.append_field_element(v);
+        }
+
         let commitment = self.pre_gkr(&mut cursor, circuit, &mut transcript, proving_time_mpi_size);
 
         let (mut verified, mut challenge_x, mut challenge_y, claim_x, claim_y) = self.gkr(
@@ -311,6 +316,11 @@ impl<'a, Cfg: GKREngine> Verifier<'a, Cfg> {
         let proving_time_mpi_size = self.mpi_config.world_size();
         let mut transcript = Cfg::TranscriptConfig::new();
         let mut cursor = Cursor::new(&proof.bytes);
+
+        // Bind public input to the FS transcript to prevent malleability attacks
+        for v in public_input {
+            transcript.append_field_element(v);
+        }
 
         let commitment = self.pre_gkr(&mut cursor, circuit, &mut transcript, proving_time_mpi_size);
 

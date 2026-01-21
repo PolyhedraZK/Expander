@@ -26,39 +26,44 @@ pub const KECCAK_M31_PROOF: &str = "data/proof_m31.txt";
 pub const KECCAK_GF2_PROOF: &str = "data/proof_gf2.txt";
 pub const KECCAK_BN254_PROOF: &str = "data/proof_bn254.txt";
 
+// GitHub Release tag for test data
+// Update this tag when regenerating test data
+pub const TESTDATA_TAG: &str = "testdata-v1";
+pub const GITHUB_RELEASE_BASE: &str = "https://github.com/PolyhedraZK/Expander/releases/download";
+
 // URL for Keccak circuit repeated for 2 times
 pub const KECCAK_CIRCUIT_M31_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/circuit_m31.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/circuit_m31.txt");
 pub const KECCAK_CIRCUIT_GF2_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/circuit_gf2.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/circuit_gf2.txt");
 pub const KECCAK_CIRCUIT_BN254_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/circuit_bn254.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/circuit_bn254.txt");
 pub const KECCAK_CIRCUIT_GOLDILOCKS_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/circuit_goldilocks.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/circuit_goldilocks.txt");
 pub const KECCAK_CIRCUIT_BABYBEAR_URL: &str =
-        "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/circuit_babybear.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/circuit_babybear.txt");
 
 pub const KECCAK_WITNESS_M31_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_m31.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/witness_m31.txt");
 pub const KECCAK_WITNESS_GF2_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_gf2.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/witness_gf2.txt");
 pub const KECCAK_WITNESS_BN254_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_bn254.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/witness_bn254.txt");
 pub const KECCAK_WITNESS_GOLDILOCKS_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_goldilocks.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/witness_goldilocks.txt");
 pub const KECCAK_WITNESS_BABYBEAR_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_babybear.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/witness_babybear.txt");
 
 pub const KECCAK_WITNESS_M31_MPI2_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_m31_mpi_2.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/witness_m31_mpi_2.txt");
 pub const KECCAK_WITNESS_GF2_MPI2_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_gf2_mpi_2.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/witness_gf2_mpi_2.txt");
 pub const KECCAK_WITNESS_BN254_MPI2_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_bn254_mpi_2.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/witness_bn254_mpi_2.txt");
 pub const KECCAK_WITNESS_GOLDILOCKS_MPI2_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_goldilocks_mpi_2.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/witness_goldilocks_mpi_2.txt");
 pub const KECCAK_WITNESS_BABYBEAR_MPI2_URL: &str =
-        "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/witness_babybear_mpi_2.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/witness_babybear_mpi_2.txt");
 
 // circuit for repeating Poseidon for 120 times
 pub const POSEIDON_M31_CIRCUIT: &str = "data/poseidon_120_circuit_m31.txt";
@@ -71,32 +76,33 @@ pub const POSEIDON_M31_WITNESS: &str = "data/poseidon_120_witness_m31.txt";
 
 // URL for Poseidon circuit repeated for 120 times
 pub const POSEIDON_CIRCUIT_M31_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_circuit_m31.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/poseidon_120_circuit_m31.txt");
 // URL for Poseidon circuit repeated for 120 times
 pub const POSEIDON_WITNESS_M31_URL: &str =
-        "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_witness_m31.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/poseidon_120_witness_m31.txt");
 // // URL for Poseidon circuit repeated for 120 times
 // pub const POSEIDON_CIRCUIT_BN254_URL: &str =
-// "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_circuit_bn254.txt";
+// concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/poseidon_120_circuit_bn254.txt");
 // // URL for Poseidon circuit repeated for 120 times
 // pub const POSEIDON_WITNESS_BN254_URL: &str =
-//         "https://storage.googleapis.com/expander-compiled-circuits/poseidon-ci/poseidon_120_witness_bn254.txt";
+//     concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/poseidon_120_witness_bn254.txt");
 
 // URL for proofs
 pub const KECCAK_M31_PROOF_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/proof_m31.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/proof_m31.txt");
 pub const KECCAK_GF2_PROOF_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/proof_gf2.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/proof_gf2.txt");
 pub const KECCAK_BN254_PROOF_URL: &str =
-    "https://storage.googleapis.com/expander-compiled-circuits/keccak-ci/serialization-v6/proof_bn254.txt";
+    concat!("https://github.com/PolyhedraZK/Expander/releases/download/testdata-v1/proof_bn254.txt");
 
 // NOTE(Hang 08/23/24):
 // CI process is unhappy about reqwest as a dependency,
 // so we use wget as a backup option.
+// NOTE: -L flag is needed to follow redirects (required for GitHub releases)
 fn download_and_store(url: &str, file: &str) {
     let download = Command::new("bash")
         .arg("-c")
-        .arg(format!("wget {url} -O {file}"))
+        .arg(format!("wget -L {url} -O {file}"))
         .output()
         .expect("Failed to download circuit");
 

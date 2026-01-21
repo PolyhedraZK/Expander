@@ -252,6 +252,11 @@ func Verify(
 ) {
 	fsTranscript := transcript.NewTranscript(api)
 
+	// Bind public input to the FS transcript to prevent malleability attacks
+	for _, pi := range public_input {
+		fsTranscript.AppendFs(pi...)
+	}
+
 	// Only supports RawCommitment now
 	circuitInputSize := uint(1) << originalCircuit.Layers[0].InputLenLog
 
