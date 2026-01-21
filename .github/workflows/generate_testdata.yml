@@ -1,0 +1,88 @@
+name: Generate and Upload Test Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release (e.g., testdata-v1)'
+        required: true
+        default: 'testdata-v1'
+
+env:
+  RUSTFLAGS: "-C target-cpu=native"
+  RUST_BACKTRACE: 1
+
+jobs:
+  generate-testdata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Expander
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '>=1.22.0'
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Clone ExpanderCompilerCollection
+        run: |
+          git clone --depth 1 -b dev https://github.com/PolyhedraZK/ExpanderCompilerCollection.git
+          cd ExpanderCompilerCollection
+
+      - name: Generate Keccak circuits and witnesses
+        run: |
+          cd ExpanderCompilerCollection
+          cargo test --release keccak
+          mkdir -p ../data
+          cp expander_compiler/circuit_*.txt ../data/ || true
+          cp expander_compiler/witness_*.txt ../data/ || true
+
+      - name: Generate Poseidon circuits and witnesses
+        run: |
+          cd ExpanderCompilerCollection
+          go run ecgo/examples/poseidon_m31/main.go
+          cp poseidon_*.txt ../data/ || true
+
+      - name: List generated files
+        run: ls -la data/
+
+      - name: Generate proofs
+        run: |
+          cargo build --release --bin dev-setup
+          cargo run --release --bin dev-setup -- --compare
+
+      - name: List all test data files
+        run: ls -la data/
+
+      - name: Create release archive
+        run: |
+          cd data
+          tar -czvf ../expander-testdata.tar.gz *.txt
+
+      - name: Create Release and Upload
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}
+          name: "Test Data ${{ github.event.inputs.tag_name }}"
+          body: |
+            Automatically generated test data for Expander CI.
+
+            Contains:
+            - Circuit files (circuit_*.txt)
+            - Witness files (witness_*.txt)
+            - Proof files (proof_*.txt)
+            - Poseidon circuit and witness files
+          files: |
+            expander-testdata.tar.gz
+            data/*.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
