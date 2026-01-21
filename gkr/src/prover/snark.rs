@@ -96,6 +96,14 @@ impl<'a, Cfg: GKREngine> Prover<'a, Cfg> {
         let proving_timer = Timer::new("prover", self.mpi_config.is_root());
         let mut transcript = Cfg::TranscriptConfig::new();
 
+        // Bind public input to the FS transcript to prevent malleability attacks
+        if self.mpi_config.is_root() {
+            for v in &c.public_input {
+                transcript.append_field_element(v);
+            }
+        }
+        transcript_root_broadcast(&mut transcript, &self.mpi_config);
+
         let pcs_commit_timer = Timer::new("pcs commit", self.mpi_config.is_root());
         // PC commit
         let commitment = Cfg::PCSConfig::commit(
