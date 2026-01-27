@@ -273,10 +273,11 @@ impl<'a, Cfg: GKREngine> Verifier<'a, Cfg> {
         // Bind public input to the FS transcript to prevent malleability attacks
         let mut proof_public_inputs = Vec::with_capacity(public_input.len());
         for _ in 0..public_input.len() {
-            let v =
-                <Cfg::FieldConfig as FieldEngine>::SimdCircuitField::deserialize_from(&mut cursor)
-                    .unwrap();
-            proof_public_inputs.push(v);
+            match <Cfg::FieldConfig as FieldEngine>::SimdCircuitField::deserialize_from(&mut cursor)
+            {
+                Ok(v) => proof_public_inputs.push(v),
+                Err(_) => return false,
+            }
         }
 
         // Check equality
