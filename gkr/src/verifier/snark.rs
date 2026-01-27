@@ -48,6 +48,7 @@ impl<'a, Cfg: GKREngine> Verifier<'a, Cfg> {
         proving_time_mpi_size: usize,
     ) -> <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment {
         let timer = Timer::new("pre_gkr", true);
+
         let commitment =
             <<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Commitment as ExpSerde>::deserialize_from(
                 &mut proof_reader,
@@ -270,10 +271,23 @@ impl<'a, Cfg: GKREngine> Verifier<'a, Cfg> {
         let mut cursor = Cursor::new(&proof.bytes);
 
         // Bind public input to the FS transcript to prevent malleability attacks
-        for v in public_input {
-            transcript.append_field_element(v);
+        let mut proof_public_inputs = Vec::with_capacity(public_input.len());
+        for _ in 0..public_input.len() {
+            let v =
+                <Cfg::FieldConfig as FieldEngine>::SimdCircuitField::deserialize_from(&mut cursor)
+                    .unwrap();
+            proof_public_inputs.push(v);
         }
 
+        // Check equality
+        if proof_public_inputs != public_input {
+            return false;
+        }
+
+        // Now bind the inputs
+        for v in &proof_public_inputs {
+            transcript.append_field_element(v);
+        }
         let commitment = self.pre_gkr(&mut cursor, circuit, &mut transcript, proving_time_mpi_size);
 
         let (mut verified, mut challenge_x, mut challenge_y, claim_x, claim_y) = self.gkr(
@@ -318,7 +332,21 @@ impl<'a, Cfg: GKREngine> Verifier<'a, Cfg> {
         let mut cursor = Cursor::new(&proof.bytes);
 
         // Bind public input to the FS transcript to prevent malleability attacks
-        for v in public_input {
+        let mut proof_public_inputs = Vec::with_capacity(public_input.len());
+        for _ in 0..public_input.len() {
+            let v =
+                <Cfg::FieldConfig as FieldEngine>::SimdCircuitField::deserialize_from(&mut cursor)
+                    .unwrap();
+            proof_public_inputs.push(v);
+        }
+
+        // Check equality
+        if proof_public_inputs != public_input {
+            return false;
+        }
+
+        // Now bind the inputs
+        for v in &proof_public_inputs {
             transcript.append_field_element(v);
         }
 
