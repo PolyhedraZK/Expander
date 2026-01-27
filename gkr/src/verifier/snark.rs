@@ -270,24 +270,8 @@ impl<'a, Cfg: GKREngine> Verifier<'a, Cfg> {
         let mut transcript = Cfg::TranscriptConfig::new();
         let mut cursor = Cursor::new(&proof.bytes);
 
-        // Bind public input to the FS transcript to prevent malleability attacks
-        let mut proof_public_inputs = Vec::with_capacity(public_input.len());
-        for _ in 0..public_input.len() {
-            match <Cfg::FieldConfig as FieldEngine>::SimdCircuitField::deserialize_from(&mut cursor)
-            {
-                Ok(v) => proof_public_inputs.push(v),
-                Err(_) => return false,
-            }
-        }
-
-        // Check equality
-        if proof_public_inputs != public_input {
+        if !self.bind_and_check_public_inputs(&mut cursor, public_input, &mut transcript) {
             return false;
-        }
-
-        // Now bind the inputs
-        for v in &proof_public_inputs {
-            transcript.append_field_element(v);
         }
         let commitment = self.pre_gkr(&mut cursor, circuit, &mut transcript, proving_time_mpi_size);
 
@@ -332,23 +316,8 @@ impl<'a, Cfg: GKREngine> Verifier<'a, Cfg> {
         let mut transcript = Cfg::TranscriptConfig::new();
         let mut cursor = Cursor::new(&proof.bytes);
 
-        // Bind public input to the FS transcript to prevent malleability attacks
-        let mut proof_public_inputs = Vec::with_capacity(public_input.len());
-        for _ in 0..public_input.len() {
-            let v =
-                <Cfg::FieldConfig as FieldEngine>::SimdCircuitField::deserialize_from(&mut cursor)
-                    .unwrap();
-            proof_public_inputs.push(v);
-        }
-
-        // Check equality
-        if proof_public_inputs != public_input {
+        if !self.bind_and_check_public_inputs(&mut cursor, public_input, &mut transcript) {
             return false;
-        }
-
-        // Now bind the inputs
-        for v in &proof_public_inputs {
-            transcript.append_field_element(v);
         }
 
         let commitment = self.pre_gkr(&mut cursor, circuit, &mut transcript, proving_time_mpi_size);
@@ -378,7 +347,6 @@ impl<'a, Cfg: GKREngine> Verifier<'a, Cfg> {
         verified
     }
 }
-
 impl<Cfg: GKREngine> Verifier<'_, Cfg> {
     #[allow(clippy::too_many_arguments)]
     fn get_pcs_opening_from_proof_and_verify(
@@ -413,5 +381,33 @@ impl<Cfg: GKREngine> Verifier<'_, Cfg> {
         transcript.append_u8_slice(&buffer);
 
         verified
+    }
+    fn bind_and_check_public_inputs(
+        &self,
+        cursor: &mut Cursor<&Vec<u8>>,
+        public_input: &[<Cfg::FieldConfig as FieldEngine>::SimdCircuitField],
+        transcript: &mut Cfg::TranscriptConfig,
+    ) -> bool {
+        // Bind public input to the FS transcript to prevent malleability attacks
+        let mut proof_public_inputs = Vec::with_capacity(public_input.len());
+
+        for _ in 0..public_input.len() {
+            match <Cfg::FieldConfig as FieldEngine>::SimdCircuitField::deserialize_from(
+                &mut *cursor,
+            ) {
+                Ok(v) => proof_public_inputs.push(v),
+                Err(_) => return false,
+            }
+        }
+        // Check equality
+        if proof_public_inputs != public_input {
+            return false;
+        }
+
+        // Now bind the inputs
+        for v in &proof_public_inputs {
+            transcript.append_field_element(v);
+        }
+        true
     }
 }
