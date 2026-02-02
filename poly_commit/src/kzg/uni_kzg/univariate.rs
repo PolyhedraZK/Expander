@@ -7,6 +7,7 @@ use halo2curves::{
 };
 use rayon::prelude::*;
 use serdes::ExpSerde;
+use std::time::Instant;
 
 #[cfg(feature = "cuda_msm")]
 use msm_cuda::*;
@@ -23,30 +24,43 @@ where
     E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
 {
     assert!(length.is_power_of_two());
+    eprintln!("[KZG SRS] Starting SRS generation with length={}", length);
 
+    let start = Instant::now();
     let tau = E::Fr::random(&mut rng);
     let g1 = E::G1Affine::generator();
+    eprintln!("[KZG SRS] tau & g1 generation: {:?}", start.elapsed());
 
+    let start = Instant::now();
     let tau_geometric_progression = powers_series(&tau, length);
+    eprintln!("[KZG SRS] powers_series (tau^i): {:?}", start.elapsed());
 
     let g1_prog = g1.to_curve();
     let coeff_bases = {
-        let mut proj_bases = vec![g1_prog; length];
-        proj_bases
-            .par_iter_mut()
-            .zip(tau_geometric_progression.par_iter())
-            .for_each(|(b, tau_i)| *b *= tau_i);
+        // 直接并行计算 g1 * tau^i，避免串行分配 + 串行clone + 并行乘法
+        let start = Instant::now();
+        let proj_bases: Vec<E::G1> = tau_geometric_progression
+            .par_iter()
+            .map(|tau_i| g1_prog * tau_i)
+            .collect();
+        eprintln!("[KZG SRS] parallel point mul (g1 * tau^i): {:?}", start.elapsed());
 
+        let start = Instant::now();
         let mut g_bases = vec![E::G1Affine::default(); length];
         E::G1::batch_normalize(&proj_bases, &mut g_bases);
+        eprintln!("[KZG SRS] batch_normalize: {:?}", start.elapsed());
 
         drop(proj_bases);
         g_bases
     };
 
+    let start = Instant::now();
+    let tau_g2 = (E::G2Affine::generator() * tau).into();
+    eprintln!("[KZG SRS] tau_g2 computation: {:?}", start.elapsed());
+
     CoefFormUniKZGSRS {
         powers_of_tau: coeff_bases,
-        tau_g2: (E::G2Affine::generator() * tau).into(),
+        tau_g2,
     }
 }
 

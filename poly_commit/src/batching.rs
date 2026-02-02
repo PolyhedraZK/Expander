@@ -8,11 +8,15 @@ use halo2curves::msm::best_multiexp;
 use halo2curves::{ff::PrimeField, CurveAffine};
 use polynomials::{EqPolynomial, MultilinearExtension};
 use polynomials::{MultiLinearPoly, SumOfProductsPoly};
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
 use sumcheck::{IOPProof, SumCheck};
+#[cfg(feature = "mem-profile")]
+use utils::memory_profiler::{get_memory_delta_mb, get_memory_usage_mb, vec_size_mb};
+use utils::memory_profiler::{set_memory_baseline, MemoryProfiler};
 use utils::timer::Timer;
-
+use std::time::Instant;
+use rayon::iter::IntoParallelRefMutIterator;
 /// Merge a list of polynomials and its corresponding points into a single polynomial
 /// Returns
 /// - the new point for evaluation
@@ -33,20 +37,46 @@ where
     C::Scalar: ExtensionField + PrimeField,
     C::ScalarExt: ExtensionField + PrimeField,
 {
+    // Memory profiling setup
+    set_memory_baseline();
+    let mem_profiler = MemoryProfiler::new("prover_merge_points", true);
+
     let num_vars = polys.iter().map(|p| p.num_vars()).max().unwrap_or(0);
     let k = polys.len();
     let ell = log2(k) as usize;
+
+    #[cfg(feature = "mem-profile")]
+    {
+        let total_poly_size: usize = polys.iter().map(|p| p.hypercube_basis_ref().len()).sum();
+        let field_size = std::mem::size_of::<C::Scalar>();
+        let estimated_input_mb = (total_poly_size * field_size) as f64 / (1024.0 * 1024.0);
+        eprintln!(
+            "[MEM INFO] k={}, num_vars={}, total_poly_elements={}, field_size={} bytes",
+            k, num_vars, total_poly_size, field_size
+        );
+        eprintln!(
+            "[MEM INFO] Estimated input polys size: {:.2} MB",
+            estimated_input_mb
+        );
+    }
+
+    mem_profiler.checkpoint("after params calculation");
 
     // challenge point t
     let t = transcript.generate_field_elements::<C::Scalar>(ell);
 
     // eq(t, i) for i in [0..k]
     let eq_t_i = EqPolynomial::build_eq_x_r(&t);
+    mem_profiler.checkpoint("after eq_t_i");
 
-    // \tilde g_i(b) = eq(t, i) * f_i(b)
-    let timer = Timer::new("Building tilde g_i(b)", true);
+    // 预处理 points 引用
+    let points_ref: Vec<&[C::Scalar]> = points.iter().map(|p| p.as_ref()).collect();
 
-    let tilde_gs = polys
+    // ============ 构建 tilde_gs ============
+    let timer = Timer::new("Building tilde_gs", true);
+    mem_profiler.checkpoint("before building tilde_gs");
+
+    let tilde_gs: Vec<MultiLinearPoly<C::Scalar>> = polys
         .par_iter()
         .enumerate()
         .map(|(index, f_i)| {
@@ -54,18 +84,27 @@ where
             for (j, &f_i_eval) in f_i.hypercube_basis_ref().iter().enumerate() {
                 tilde_g_eval[j] = f_i_eval * eq_t_i[index];
             }
-
-            MultiLinearPoly {
-                coeffs: tilde_g_eval,
-            }
+            MultiLinearPoly { coeffs: tilde_g_eval }
         })
-        .collect::<Vec<_>>();
+        .collect();
     timer.stop();
 
-    // built the virtual polynomial for SumCheck
-    let timer = Timer::new("Building tilde eqs", true);
-    let points = points.iter().map(|p| p.as_ref()).collect::<Vec<_>>();
-    let tilde_eqs: Vec<MultiLinearPoly<C::Scalar>> = points
+    #[cfg(feature = "mem-profile")]
+    {
+        let tilde_gs_size: f64 = tilde_gs.iter().map(|g| vec_size_mb(&g.coeffs)).sum();
+        eprintln!(
+            "[MEM DETAIL] tilde_gs actual size: {:.2} MB ({} polys)",
+            tilde_gs_size,
+            tilde_gs.len()
+        );
+    }
+    mem_profiler.checkpoint("after building tilde_gs");
+
+    // ============ 构建 tilde_eqs ============
+    let timer = Timer::new("Building tilde_eqs", true);
+    mem_profiler.checkpoint("before building tilde_eqs");
+
+    let tilde_eqs: Vec<MultiLinearPoly<C::Scalar>> = points_ref
         .par_iter()
         .map(|point| {
             let mut eq_b_zi = vec![C::Scalar::zero(); 1 << point.len()];
@@ -75,39 +114,135 @@ where
         .collect();
     timer.stop();
 
-    let timer = Timer::new("Sumcheck merging points", true);
-    let mut sumcheck_poly = SumOfProductsPoly::new();
-    for (tilde_g, tilde_eq) in tilde_gs.iter().zip(tilde_eqs.into_iter()) {
-        sumcheck_poly.add_pair(tilde_g.clone(), tilde_eq);
+    #[cfg(feature = "mem-profile")]
+    {
+        let tilde_eqs_size: f64 = tilde_eqs.iter().map(|eq| vec_size_mb(&eq.coeffs)).sum();
+        eprintln!(
+            "[MEM DETAIL] tilde_eqs actual size: {:.2} MB ({} polys)",
+            tilde_eqs_size,
+            tilde_eqs.len()
+        );
     }
-    let proof = SumCheck::<C::Scalar>::prove(&sumcheck_poly, transcript);
+    mem_profiler.checkpoint("after building tilde_eqs");
+
+    // ============ 构建 sumcheck_poly（直接移动，不克隆）============
+    let timer = Timer::new("Building sumcheck_poly", true);
+    mem_profiler.checkpoint("before building sumcheck_poly");
+
+    let mut sumcheck_poly = SumOfProductsPoly::new();
+    // 直接移动 tilde_gs 和 tilde_eqs 到 sumcheck_poly，不保留
+    for (tilde_g, tilde_eq) in tilde_gs.into_iter().zip(tilde_eqs.into_iter()) {
+        sumcheck_poly.add_pair(tilde_g, tilde_eq);  // 移动，无克隆
+    }
     timer.stop();
+
+    mem_profiler.checkpoint("after building sumcheck_poly (before prove)");
+
+    #[cfg(feature = "mem-profile")]
+    {
+        let sumcheck_poly_size: f64 = sumcheck_poly
+            .f_and_g_pairs
+            .iter()
+            .map(|(f, g)| vec_size_mb(&f.coeffs) + vec_size_mb(&g.coeffs))
+            .sum();
+        eprintln!(
+            "[MEM DETAIL] sumcheck_poly actual size: {:.2} MB ({} pairs)",
+            sumcheck_poly_size,
+            sumcheck_poly.f_and_g_pairs.len()
+        );
+        eprintln!("[MEM DETAIL] Note: tilde_gs still alive, tilde_eqs moved into sumcheck_poly");
+    }
+
+    mem_profiler.checkpoint("before SumCheck::prove");
+    let timer_sumcheck = Timer::new("SumCheck::prove", true);
+    let proof = SumCheck::<C::Scalar>::prove(sumcheck_poly, transcript);  // 传递所有权，无需克隆
+    timer_sumcheck.stop();
+    mem_profiler.checkpoint("after SumCheck::prove (sumcheck_poly moved, auto dropped)");
 
     let a2 = proof.export_point_to_expander();
 
     // build g'(X) = \sum_i=1..k \tilde eq_i(a2) * \tilde g_i(X) where (a2) is the
     // sumcheck's point \tilde eq_i(a2) = eq(a2, point_i)
     let timer = Timer::new("Building g'(X)", true);
+    mem_profiler.checkpoint("before building g_prime");
 
     let mut g_prime_evals = vec![C::Scalar::zero(); 1 << num_vars];
-    let eq_i_a2_polys = points
+
+    #[cfg(feature = "mem-profile")]
+    {
+        eprintln!(
+            "[MEM DETAIL] g_prime_evals allocated: {:.2} MB",
+            vec_size_mb(&g_prime_evals)
+        );
+    }
+
+    // 计算 eq_i_a2 系数
+    let eq_i_a2_polys: Vec<C::Scalar> = points_ref
         .par_iter()
         .map(|point| {
             let mut padded_point = point.to_vec();
             padded_point.resize(num_vars, C::Scalar::zero());
             EqPolynomial::eq_vec(a2.as_ref(), &padded_point)
         })
-        .collect::<Vec<_>>();
+        .collect();
 
-    for (tilde_g, eq_i_a2) in tilde_gs.iter().zip(eq_i_a2_polys.iter()) {
-        for (j, &tilde_g_eval) in tilde_g.coeffs.iter().enumerate() {
-            g_prime_evals[j] += tilde_g_eval * eq_i_a2;
-        }
+    mem_profiler.checkpoint("after eq_i_a2_polys");
+
+    // ============ 重新计算 tilde_gs 用于 g_prime ============
+    let timer_recompute = Timer::new("Recompute tilde_gs for g_prime", true);
+    mem_profiler.checkpoint("before recompute tilde_gs");
+
+    let tilde_gs_recomputed: Vec<MultiLinearPoly<C::Scalar>> = polys
+        .par_iter()
+        .enumerate()
+        .map(|(index, f_i)| {
+            let mut tilde_g_eval = vec![C::Scalar::zero(); 1 << f_i.num_vars()];
+            for (j, &f_i_eval) in f_i.hypercube_basis_ref().iter().enumerate() {
+                tilde_g_eval[j] = f_i_eval * eq_t_i[index];
+            }
+            MultiLinearPoly { coeffs: tilde_g_eval }
+        })
+        .collect();
+    timer_recompute.stop();
+
+    #[cfg(feature = "mem-profile")]
+    {
+        let tilde_gs_size: f64 = tilde_gs_recomputed.iter().map(|g| vec_size_mb(&g.coeffs)).sum();
+        eprintln!(
+            "[MEM DETAIL] tilde_gs_recomputed size: {:.2} MB ({} polys)",
+            tilde_gs_size,
+            tilde_gs_recomputed.len()
+        );
     }
+    mem_profiler.checkpoint("after recompute tilde_gs");
+
+    // 计算 g_prime_evals
+    let start = Instant::now();
+    g_prime_evals.par_iter_mut().enumerate().for_each(|(j, eval)| {
+        let mut sum = C::Scalar::zero();
+        for (tilde_g, eq_i_a2) in tilde_gs_recomputed.iter().zip(eq_i_a2_polys.iter()) {
+            if let Some(&coeff) = tilde_g.coeffs.get(j) {
+                sum += coeff * eq_i_a2;
+            }
+        }
+        *eval += sum;
+    });
+    let duration = start.elapsed();
+
+    #[cfg(feature = "mem-profile")]
+    {
+        eprintln!("g_prime calculation 耗时: {:?}", duration);
+    }
+
+    // tilde_gs_recomputed 在这里自动 drop
+    mem_profiler.checkpoint("after g_prime calculation (tilde_gs_recomputed dropped)");
+
     let g_prime = MultiLinearPoly {
         coeffs: g_prime_evals,
     };
     timer.stop();
+
+    mem_profiler.end();
     (a2, g_prime, proof)
 }
 

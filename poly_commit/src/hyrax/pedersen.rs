@@ -5,6 +5,7 @@ use halo2curves::{
     msm, CurveAffine,
 };
 use serdes::ExpSerde;
+use std::time::Instant;
 
 #[derive(Clone, Debug, Default)]
 pub struct PedersenParams<C>
@@ -105,16 +106,25 @@ where
     C::Scalar: PrimeField,
     C::Base: PrimeField<Repr = [u8; 32]>,
 {
+    eprintln!("[PEDERSEN SETUP] Starting setup with length={}", length);
+
+    let start = Instant::now();
     let proj_bases: Vec<C::Curve> = (0..length)
         .map(|_| {
             let scalar = C::Scalar::random(&mut rng);
             C::generator() * scalar
         })
         .collect();
+    eprintln!("[PEDERSEN SETUP] proj_bases (serial point mul): {:?}", start.elapsed());
 
+    let start = Instant::now();
     let mut bases = vec![C::default(); length];
     C::Curve::batch_normalize(&proj_bases, &mut bases);
+    eprintln!("[PEDERSEN SETUP] batch_normalize: {:?}", start.elapsed());
+
+    let start = Instant::now();
     let pre_bases = msm::multiexp_precompute(&bases, 12);
+    eprintln!("[PEDERSEN SETUP] multiexp_precompute: {:?}", start.elapsed());
 
     PedersenParams { bases, pre_bases }
 }

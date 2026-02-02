@@ -68,8 +68,8 @@ impl<V: ExpSerde> ExpSerde for Vec<V> {
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let mut v = Self::default();
         let len = usize::deserialize_from(&mut reader)?;
+        let mut v = Vec::with_capacity(len);  // 预分配，避免 realloc
         for _ in 0..len {
             v.push(V::deserialize_from(&mut reader)?);
         }

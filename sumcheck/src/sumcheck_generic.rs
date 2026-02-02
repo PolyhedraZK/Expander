@@ -7,6 +7,9 @@ use arith::Field;
 use gkr_engine::Transcript;
 use polynomials::SumOfProductsPoly;
 use serdes::ExpSerde;
+#[cfg(feature = "mem-profile")]
+use utils::memory_profiler::{get_memory_delta_mb, get_memory_usage_mb, vec_size_mb};
+use utils::memory_profiler::MemoryProfiler;
 
 mod prover;
 mod verifier;
@@ -93,26 +96,87 @@ impl<F: Field> SumCheck<F> {
     /// Generate proof of the sum of polynomial over {0,1}^`num_vars`
     ///
     /// The polynomial is represented in the form of a VirtualPolynomial.
+    /// Note: This function takes ownership of poly_list to avoid unnecessary cloning.
     pub fn prove(
-        poly_list: &SumOfProductsPoly<F>,
+        poly_list: SumOfProductsPoly<F>,  // 接受所有权，避免内部克隆
         transcript: &mut impl Transcript,
     ) -> IOPProof<F> {
-        let num_vars = poly_list.num_vars();
+        let mem_profiler = MemoryProfiler::new("SumCheck::prove", true);
 
-        let mut prover_state = IOPProverState::prover_init(poly_list);
+        let num_vars = poly_list.num_vars();
+        let num_pairs = poly_list.f_and_g_pairs.len();
+
+        #[cfg(feature = "mem-profile")]
+        {
+            let poly_list_size: f64 = poly_list
+                .f_and_g_pairs
+                .iter()
+                .map(|(f, g)| vec_size_mb(&f.coeffs) + vec_size_mb(&g.coeffs))
+                .sum();
+            eprintln!(
+                "[MEM SUMCHECK] Input poly_list: {:.2} MB ({} pairs, {} vars)",
+                poly_list_size, num_pairs, num_vars
+            );
+        }
+
+        mem_profiler.checkpoint("before prover_init");
+        let mut prover_state = IOPProverState::prover_init_owned(poly_list);  // 直接移动，无克隆
+        mem_profiler.checkpoint("after prover_init (moved, no clone)");
+
+        #[cfg(feature = "mem-profile")]
+        {
+            let state_mle_size: f64 = prover_state
+                .mle_list
+                .f_and_g_pairs
+                .iter()
+                .map(|(f, g)| vec_size_mb(&f.coeffs) + vec_size_mb(&g.coeffs))
+                .sum();
+            eprintln!(
+                "[MEM SUMCHECK] prover_state.mle_list: {:.2} MB",
+                state_mle_size
+            );
+        }
+
         let mut challenge = None;
         let mut prover_msgs = Vec::with_capacity(num_vars);
-        for _ in 0..num_vars {
+
+        for round in 0..num_vars {
+            #[cfg(feature = "mem-profile")]
+            {
+                if round == 0 || (round + 1) % 5 == 0 || round == num_vars - 1 {
+                    // Calculate current mle_list size
+                    let current_mle_size: f64 = prover_state
+                        .mle_list
+                        .f_and_g_pairs
+                        .iter()
+                        .map(|(f, g)| vec_size_mb(&f.coeffs) + vec_size_mb(&g.coeffs))
+                        .sum();
+                    eprintln!(
+                        "[MEM SUMCHECK ROUND {}/{}] mle_list: {:.2} MB | RSS: {:.2} MB | Delta: {:+.2} MB",
+                        round + 1,
+                        num_vars,
+                        current_mle_size,
+                        get_memory_usage_mb(),
+                        get_memory_delta_mb()
+                    );
+                }
+            }
+
             let prover_msg =
                 IOPProverState::prove_round_and_update_state(&mut prover_state, &challenge);
             transcript.append_serializable_data(&prover_msg);
             prover_msgs.push(prover_msg);
             challenge = Some(transcript.generate_field_element::<F>());
         }
+
+        mem_profiler.checkpoint("after all rounds");
+
         // pushing the last challenge point to the state
         if let Some(p) = challenge {
             prover_state.challenges.push(p)
         };
+
+        mem_profiler.end();
 
         IOPProof {
             point: prover_state.challenges,

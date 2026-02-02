@@ -1,6 +1,7 @@
 use polynomials::MultilinearExtension;
 use rand::RngCore;
 use serdes::ExpSerde;
+use std::io::{BufReader, BufWriter};
 use std::{fmt::Debug, str::FromStr};
 
 use crate::{ExpErrors, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, Transcript};
@@ -63,18 +64,21 @@ pub trait ExpanderPCS<F: FieldEngine> {
         match path {
             Some(path) => {
                 match std::fs::File::open(path) {
-                    Ok(mut file) => {
+                    Ok(file) => {
                         // file exists; deserialize SRS from file
-                        Self::SRS::deserialize_from(&mut file).unwrap_or_else(|_| {
+                        let mut reader = BufReader::with_capacity(64 * 1024 * 1024, file); // 64MB buffer
+                        Self::SRS::deserialize_from(&mut reader).unwrap_or_else(|_| {
                             panic!("Failed to deserialize SRS for {} PCS", Self::NAME)
                         })
                     }
                     Err(_e) => {
                         // file does not exist; generate SRS and store to file
+                        eprintln!("[SRS] Creating and caching SRS to: {}", path);
                         let srs = Self::gen_srs(params, mpi_engine, rng);
-                        let mut file =
+                        let file =
                             std::fs::File::create(path).expect("Failed to create SRS file");
-                        srs.serialize_into(&mut file)
+                        let mut writer = BufWriter::with_capacity(64 * 1024 * 1024, file); // 64MB buffer
+                        srs.serialize_into(&mut writer)
                             .expect("Failed to serialize SRS to file");
                         srs
                     }

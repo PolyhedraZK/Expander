@@ -1,7 +1,11 @@
 use derivative::Derivative;
 use gkr_engine::StructuredReferenceString;
+use halo2curves::group::prime::PrimeCurveAffine;
+use halo2curves::group::UncompressedEncoding;
 use halo2curves::{pairing::Engine, CurveAffine};
+use rayon::prelude::*;
 use serdes::{ExpSerde, SerdeResult};
+use std::io::{Read, Write};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]
@@ -34,7 +38,7 @@ where
 
 /// Structured reference string for univariate KZG polynomial commitment scheme.
 /// The univariate polynomial here is of coefficient form.
-#[derive(Clone, Debug, PartialEq, Eq, Derivative, ExpSerde)]
+#[derive(Clone, Debug, PartialEq, Eq, Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct CoefFormUniKZGSRS<E: Engine>
 where
@@ -46,6 +50,87 @@ where
     pub powers_of_tau: Vec<E::G1Affine>,
     /// \tau over G2
     pub tau_g2: E::G2Affine,
+}
+
+/// Custom ExpSerde implementation with parallel deserialization for fast SRS loading
+/// Uses UNCOMPRESSED format to avoid expensive square root computation during load
+impl<E: Engine> ExpSerde for CoefFormUniKZGSRS<E>
+where
+    E::G1Affine: ExpSerde + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G1> + UncompressedEncoding + Send + Sync,
+    E::G2Affine: CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2> + ExpSerde,
+{
+    fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+        use std::time::Instant;
+
+        // Serialize length
+        self.powers_of_tau.len().serialize_into(&mut writer)?;
+
+        // Get uncompressed point size
+        let point_size = std::mem::size_of::<<E::G1Affine as UncompressedEncoding>::Uncompressed>();
+        let total_size = self.powers_of_tau.len() * point_size;
+
+        // Pre-allocate buffer
+        let start = Instant::now();
+        let mut buffer = vec![0u8; total_size];
+
+        // Convert all points to uncompressed format IN PARALLEL
+        buffer
+            .par_chunks_mut(point_size)
+            .zip(self.powers_of_tau.par_iter())
+            .for_each(|(chunk, point)| {
+                let uncompressed = point.to_uncompressed();
+                chunk.copy_from_slice(uncompressed.as_ref());
+            });
+        eprintln!("[SRS SAVE] Converted {} points to uncompressed in {:?}", self.powers_of_tau.len(), start.elapsed());
+
+        // Write all at once
+        let start = Instant::now();
+        writer.write_all(&buffer)?;
+        eprintln!("[SRS SAVE] Wrote {} MB in {:?}", buffer.len() / 1024 / 1024, start.elapsed());
+
+        // Serialize tau_g2
+        self.tau_g2.serialize_into(&mut writer)?;
+        Ok(())
+    }
+
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        use std::time::Instant;
+
+        // Read length
+        let len = usize::deserialize_from(&mut reader)?;
+        eprintln!("[SRS LOAD] Loading {} G1 points (uncompressed format)...", len);
+
+        // Uncompressed G1 point size for BN256: 64 bytes (32 for x, 32 for y)
+        let point_size = std::mem::size_of::<<E::G1Affine as UncompressedEncoding>::Uncompressed>();
+        let total_bytes = len * point_size;
+
+        let start = Instant::now();
+        let mut buffer = vec![0u8; total_bytes];
+        reader.read_exact(&mut buffer)?;
+        eprintln!("[SRS LOAD] Read {} MB in {:?}", total_bytes / 1024 / 1024, start.elapsed());
+
+        // Parse points in parallel - using from_uncompressed_unchecked (no square root needed!)
+        let start = Instant::now();
+        let powers_of_tau: Vec<E::G1Affine> = buffer
+            .par_chunks(point_size)
+            .map(|chunk| {
+                let mut uncompressed = <E::G1Affine as UncompressedEncoding>::Uncompressed::default();
+                uncompressed.as_mut().copy_from_slice(chunk);
+                E::G1Affine::from_uncompressed_unchecked(&uncompressed)
+                    .into_option()
+                    .expect("Invalid G1 point in SRS file")
+            })
+            .collect();
+        eprintln!("[SRS LOAD] Parsed {} points in {:?}", len, start.elapsed());
+
+        // Read tau_g2
+        let tau_g2 = E::G2Affine::deserialize_from(&mut reader)?;
+
+        Ok(Self {
+            powers_of_tau,
+            tau_g2,
+        })
+    }
 }
 
 impl<E: Engine> StructuredReferenceString for CoefFormUniKZGSRS<E>

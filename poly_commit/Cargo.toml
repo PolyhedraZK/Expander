@@ -25,7 +25,7 @@ rayon.workspace = true
 transpose.workspace = true
 thiserror.workspace = true
 
-
+sysinfo = "0.30"
 [dev-dependencies]
 gf2_128 = { path = "../arith/gf2_128" }
 mersenne31 = { path = "../arith/mersenne31" }
@@ -50,4 +50,5 @@ harness = false
 [features]
 default = [ ]
 profile = [ "utils/profile" ]
+mem-profile = [ "utils/mem-profile", "sumcheck/mem-profile" ]
 cuda_msm = [ "msm_cuda" ]

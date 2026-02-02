@@ -9,3 +9,4 @@ colored = { version = "2.0.0", default-features = false, optional = true}
 [features]
 default = []
 profile = [ "dep:colored" ]
+mem-profile = [ "dep:colored" ]

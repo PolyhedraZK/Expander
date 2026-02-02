@@ -23,3 +23,4 @@ ark-std.workspace = true
 
 [features]
 profile = [ "utils/profile" ]
+mem-profile = [ "utils/mem-profile" ]

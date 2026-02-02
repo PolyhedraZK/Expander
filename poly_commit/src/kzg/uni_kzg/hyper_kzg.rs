@@ -1,5 +1,8 @@
 use std::iter;
 
+#[cfg(feature = "mem-profile")]
+use ::utils::memory_profiler::{get_memory_delta_mb, get_memory_usage_mb, vec_size_mb};
+use ::utils::memory_profiler::{set_memory_baseline, MemoryProfiler};
 use ::utils::timer::Timer;
 use arith::ExtensionField;
 use gkr_engine::Transcript;
@@ -276,9 +279,39 @@ where
     E::G2Affine: ExpSerde + Default + CurveAffine<ScalarExt = E::Fr, CurveExt = E::G2>,
     PCS: PolynomialCommitmentScheme<E::Fr, Opening = HyperUniKZGOpening<E>>,
 {
+    // Set memory baseline for the entire batch opening
+    set_memory_baseline();
+    let mem_profiler = MemoryProfiler::new("multiple_points_batch_open_impl", true);
+
+    #[cfg(feature = "mem-profile")]
+    {
+        let num_polys = polys.len();
+        let total_poly_elements: usize = polys.iter().map(|p| p.hypercube_basis_ref().len()).sum();
+        let field_size = std::mem::size_of::<E::Fr>();
+        let estimated_input_mb = (total_poly_elements * field_size) as f64 / (1024.0 * 1024.0);
+        eprintln!("======================================================================");
+        eprintln!("[MEM BATCH_OPEN] Starting batch opening");
+        eprintln!(
+            "[MEM BATCH_OPEN] Input: {} polys, {} total elements, field_size={} bytes",
+            num_polys, total_poly_elements, field_size
+        );
+        eprintln!(
+            "[MEM BATCH_OPEN] Estimated input size: {:.2} MB",
+            estimated_input_mb
+        );
+        eprintln!(
+            "[MEM BATCH_OPEN] Initial RSS: {:.2} MB",
+            get_memory_usage_mb()
+        );
+        eprintln!("======================================================================");
+    }
+
     let timer = Timer::new("batch_opening", true);
+
     // generate evals for each polynomial at its corresponding point
     let eval_timer = Timer::new("eval all polys", true);
+    mem_profiler.checkpoint("before eval all polys");
+
     let points = points.iter().map(|p| p.as_ref()).collect::<Vec<_>>();
     let evals: Vec<E::Fr> = polys
         .par_iter()
@@ -286,18 +319,51 @@ where
         .map(|(poly, point)| poly.evaluate(point))
         .collect();
     eval_timer.stop();
+    mem_profiler.checkpoint("after eval all polys");
 
     let merger_timer = Timer::new("merging points", true);
+    mem_profiler.checkpoint("before prover_merge_points");
+
     let (new_point, g_prime, proof) =
         prover_merge_points::<E::G1Affine>(polys, &points, transcript);
+
+    mem_profiler.checkpoint("after prover_merge_points");
+
+    #[cfg(feature = "mem-profile")]
+    {
+        eprintln!(
+            "[MEM BATCH_OPEN] g_prime size: {:.2} MB ({} coeffs)",
+            vec_size_mb(&g_prime.coeffs),
+            g_prime.coeffs.len()
+        );
+    }
+
     merger_timer.stop();
 
     let pcs_timer = Timer::new("kzg_open", true);
+    mem_profiler.checkpoint("before kzg_open");
+
     let (_g_prime_eval, g_prime_proof) =
         coeff_form_uni_hyperkzg_open(proving_key, &g_prime.coeffs, &new_point, transcript);
+
+    mem_profiler.checkpoint("after kzg_open");
     pcs_timer.stop();
 
     timer.stop();
+
+    #[cfg(feature = "mem-profile")]
+    {
+        eprintln!("======================================================================");
+        eprintln!(
+            "[MEM BATCH_OPEN] Final RSS: {:.2} MB | Total delta: {:+.2} MB",
+            get_memory_usage_mb(),
+            get_memory_delta_mb()
+        );
+        eprintln!("======================================================================");
+    }
+
+    mem_profiler.end();
+
     (
         evals,
         BatchOpening {
