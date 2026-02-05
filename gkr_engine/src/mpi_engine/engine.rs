@@ -426,10 +426,10 @@ impl<'a> MPIEngine for MPIConfig<'a> {
     }
 
     #[inline]
-    fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, *mut ompi_win_t) {
+    fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, MPI_Win) {
         let window_size = if self.is_root() { n_bytes } else { 0 };
         let mut baseptr: *mut c_void = std::ptr::null_mut();
-        let mut window = std::ptr::null_mut();
+        let mut window = MPI_Win(std::ptr::null_mut());
         unsafe {
             MPI_Win_allocate_shared(
                 window_size as isize,
@@ -437,7 +437,7 @@ impl<'a> MPIEngine for MPIConfig<'a> {
                 RSMPI_INFO_NULL,
                 self.world.unwrap().as_raw(),
                 &mut baseptr as *mut *mut c_void as *mut c_void,
-                &mut window,
+                &mut window as *mut MPI_Win,
             );
             self.barrier();
 

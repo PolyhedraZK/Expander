@@ -1,6 +1,6 @@
 use arith::Field;
 use mpi::{
-    ffi::{ompi_win_t, MPI_Win_free},
+    ffi::{MPI_Win, MPI_Win_free},
     topology::Process,
 };
 use serdes::ExpSerde;
@@ -139,13 +139,13 @@ pub trait MPIEngine {
     fn barrier(&self);
 
     /// Create a shared memory segment for inter-process communication
-    fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, *mut ompi_win_t);
+    fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, MPI_Win);
 
     /// Consume the shared memory segment and create a new shared memory object
     fn consume_obj_and_create_shared<T: MPISharedMemory>(
         &self,
         obj: Option<T>,
-    ) -> (T, *mut ompi_win_t) {
+    ) -> (T, MPI_Win) {
         assert!(!self.is_root() || obj.is_some());
 
         if self.is_root() {
@@ -164,9 +164,9 @@ pub trait MPIEngine {
     }
 
     /// Discard the control of shared memory segment
-    fn free_shared_mem(&self, window: &mut *mut ompi_win_t) {
+    fn free_shared_mem(&self, window: &mut MPI_Win) {
         unsafe {
-            MPI_Win_free(window as *mut *mut ompi_win_t);
+            MPI_Win_free(window as *mut MPI_Win);
         }
     }
 }
