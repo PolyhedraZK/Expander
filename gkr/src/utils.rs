@@ -48,35 +48,93 @@ fn download_and_store(url_path: &str, file: &str) {
         .output()
         .expect("Failed to download circuit");
 
-    assert!(download.status.success(), "Circuit download failure: {}", url)
+    assert!(
+        download.status.success(),
+        "Circuit download failure: {}",
+        url
+    )
 }
 
 pub fn dev_env_data_setup() {
     fs::create_dir_all(DATA_PREFIX).unwrap();
 
     // keccak circuit
-    download_and_store("/keccak-ci/serialization-v6/circuit_m31.txt", KECCAK_M31_CIRCUIT);
-    download_and_store("/keccak-ci/serialization-v6/circuit_gf2.txt", KECCAK_GF2_CIRCUIT);
-    download_and_store("/keccak-ci/serialization-v6/circuit_bn254.txt", KECCAK_BN254_CIRCUIT);
-    download_and_store("/keccak-ci/serialization-v6/circuit_goldilocks.txt", KECCAK_GOLDILOCKS_CIRCUIT);
-    download_and_store("/keccak-ci/serialization-v6/circuit_babybear.txt", KECCAK_BABYBEAR_CIRCUIT);
+    download_and_store(
+        "/keccak-ci/serialization-v6/circuit_m31.txt",
+        KECCAK_M31_CIRCUIT,
+    );
+    download_and_store(
+        "/keccak-ci/serialization-v6/circuit_gf2.txt",
+        KECCAK_GF2_CIRCUIT,
+    );
+    download_and_store(
+        "/keccak-ci/serialization-v6/circuit_bn254.txt",
+        KECCAK_BN254_CIRCUIT,
+    );
+    download_and_store(
+        "/keccak-ci/serialization-v6/circuit_goldilocks.txt",
+        KECCAK_GOLDILOCKS_CIRCUIT,
+    );
+    download_and_store(
+        "/keccak-ci/serialization-v6/circuit_babybear.txt",
+        KECCAK_BABYBEAR_CIRCUIT,
+    );
 
-    download_and_store("/keccak-ci/serialization-v6/witness_m31.txt", KECCAK_M31_WITNESS);
-    download_and_store("/keccak-ci/serialization-v6/witness_gf2.txt", KECCAK_GF2_WITNESS);
-    download_and_store("/keccak-ci/serialization-v6/witness_bn254.txt", KECCAK_BN254_WITNESS);
-    download_and_store("/keccak-ci/serialization-v6/witness_goldilocks.txt", KECCAK_GOLDILOCKS_WITNESS);
-    download_and_store("/keccak-ci/serialization-v6/witness_babybear.txt", KECCAK_BABYBEAR_WITNESS);
+    download_and_store(
+        "/keccak-ci/serialization-v6/witness_m31.txt",
+        KECCAK_M31_WITNESS,
+    );
+    download_and_store(
+        "/keccak-ci/serialization-v6/witness_gf2.txt",
+        KECCAK_GF2_WITNESS,
+    );
+    download_and_store(
+        "/keccak-ci/serialization-v6/witness_bn254.txt",
+        KECCAK_BN254_WITNESS,
+    );
+    download_and_store(
+        "/keccak-ci/serialization-v6/witness_goldilocks.txt",
+        KECCAK_GOLDILOCKS_WITNESS,
+    );
+    download_and_store(
+        "/keccak-ci/serialization-v6/witness_babybear.txt",
+        KECCAK_BABYBEAR_WITNESS,
+    );
 
-    download_and_store("/keccak-ci/serialization-v6/proof_m31.txt", KECCAK_M31_PROOF);
-    download_and_store("/keccak-ci/serialization-v6/proof_gf2.txt", KECCAK_GF2_PROOF);
-    download_and_store("/keccak-ci/serialization-v6/proof_bn254.txt", KECCAK_BN254_PROOF);
+    download_and_store(
+        "/keccak-ci/serialization-v6/proof_m31.txt",
+        KECCAK_M31_PROOF,
+    );
+    download_and_store(
+        "/keccak-ci/serialization-v6/proof_gf2.txt",
+        KECCAK_GF2_PROOF,
+    );
+    download_and_store(
+        "/keccak-ci/serialization-v6/proof_bn254.txt",
+        KECCAK_BN254_PROOF,
+    );
 
     // keccak circuit with MPI
-    download_and_store("/keccak-ci/serialization-v6/witness_m31_mpi_2.txt", KECCAK_M31_MPI2_WITNESS);
-    download_and_store("/keccak-ci/serialization-v6/witness_gf2_mpi_2.txt", KECCAK_GF2_MPI2_WITNESS);
-    download_and_store("/keccak-ci/serialization-v6/witness_bn254_mpi_2.txt", KECCAK_BN254_MPI2_WITNESS);
+    download_and_store(
+        "/keccak-ci/serialization-v6/witness_m31_mpi_2.txt",
+        KECCAK_M31_MPI2_WITNESS,
+    );
+    download_and_store(
+        "/keccak-ci/serialization-v6/witness_gf2_mpi_2.txt",
+        KECCAK_GF2_MPI2_WITNESS,
+    );
+    download_and_store(
+        "/keccak-ci/serialization-v6/witness_bn254_mpi_2.txt",
+        KECCAK_BN254_MPI2_WITNESS,
+    );
 
     // poseidon circuit
-    download_and_store("/poseidon-ci/poseidon_120_circuit_m31.txt", POSEIDON_M31_CIRCUIT);
-    download_and_store("/poseidon-ci/poseidon_120_witness_m31.txt", POSEIDON_M31_WITNESS);
+    download_and_store(
+        "/poseidon-ci/poseidon_120_circuit_m31.txt",
+        POSEIDON_M31_CIRCUIT,
+    );
+    download_and_store(
+        "/poseidon-ci/poseidon_120_witness_m31.txt",
+        POSEIDON_M31_WITNESS,
+    );
 }
