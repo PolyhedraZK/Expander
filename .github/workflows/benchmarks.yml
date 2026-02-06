@@ -30,14 +30,6 @@ jobs:
     
     - name: Install MPI
       run: python3 ./scripts/install.py
-    - name: 'Authenticate to Google Cloud'
-      uses: 'google-github-actions/auth@v1'
-      with:
-        credentials_json: '${{ secrets.GCP_SA_KEY }}'
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/setup-gcloud@v1
-      with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
     - name: Install criterion
       run: cargo install cargo-criterion
     - name: Setup data
@@ -48,8 +40,11 @@ jobs:
       run: |
         wget https://raw.githubusercontent.com/PolyhedraZK/Expander/main/scripts/parse_benchmark_result.py
         python3 parse_benchmark_result.py benchmark_results.json benchmark_results_clean.json
-    - name: Upload benchmark results to Google Cloud Storage
+    - name: Upload benchmark results to R2
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       run: |
         commit_hash=$(git rev-parse HEAD)
         repo_name="${GITHUB_REPOSITORY#*/}"
-        gsutil cp benchmark_results_clean.json gs://github_micro_bench/${repo_name}/benchmark_${commit_hash}.json
+        aws s3 cp benchmark_results_clean.json s3://expander-circuits/benchmarks/${repo_name}/benchmark_${commit_hash}.json --endpoint-url ${{ secrets.R2_ENDPOINT }}
