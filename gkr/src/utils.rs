@@ -37,21 +37,20 @@ pub const POSEIDON_M31_WITNESS: &str = "data/poseidon_120_witness_m31.txt";
 fn download_and_store(url_path: &str, file: &str) {
     // Skip download if file already exists
     if std::path::Path::new(file).exists() {
-        println!("File already exists, skipping download: {}", file);
+        println!("File already exists, skipping download: {file}");
         return;
     }
 
-    let url = format!("{}{}", URL_PREFIX, url_path);
+    let url = format!("{URL_PREFIX}{url_path}");
     let download = Command::new("bash")
         .arg("-c")
-        .arg(format!("wget {} -O {}", url, file))
+        .arg(format!("wget {url} -O {file}"))
         .output()
         .expect("Failed to download circuit");
 
     assert!(
         download.status.success(),
-        "Circuit download failure: {}",
-        url
+        "Circuit download failure: {url}"
     )
 }
 
