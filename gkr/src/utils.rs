@@ -48,10 +48,7 @@ fn download_and_store(url_path: &str, file: &str) {
         .output()
         .expect("Failed to download circuit");
 
-    assert!(
-        download.status.success(),
-        "Circuit download failure: {url}"
-    )
+    assert!(download.status.success(), "Circuit download failure: {url}")
 }
 
 pub fn dev_env_data_setup() {
