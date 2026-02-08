@@ -47,7 +47,12 @@ harness = false
 name = "pcs_all"
 harness = false
 
+[build-dependencies]
+cc = { version = "1.0", features = ["parallel"], optional = true }
+which = { version = "4.0", optional = true }
+
 [features]
 default = [ ]
 profile = [ "utils/profile" ]
 cuda_msm = [ "msm_cuda" ]
+cuda = [ "dep:cc", "dep:which", "tree/cuda" ]

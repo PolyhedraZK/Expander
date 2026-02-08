@@ -14,3 +14,9 @@ pub use scratch_pad::{ProverScratchPad, VerifierScratchPad};
 
 mod utils;
 pub use utils::*;
+
+#[cfg(feature = "cuda")]
+pub mod cuda_ffi;
+
+#[cfg(feature = "cuda")]
+pub mod cuda_dispatch;

@@ -4,6 +4,11 @@ pub use utils::{
     SubsetSumLUTs,
 };
 
+#[cfg(feature = "cuda")]
+pub mod cuda_ffi;
+
+pub mod cuda_commit;
+
 mod linear_code;
 pub use linear_code::{OrionCodeParameter, ORION_CODE_PARAMETER_INSTANCE};
 

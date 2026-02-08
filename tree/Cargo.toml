@@ -10,6 +10,10 @@ serdes = { path = "../serdes" }
 ark-std.workspace = true
 tiny-keccak.workspace = true
 
+[build-dependencies]
+cc = { version = "1.0", features = ["parallel"], optional = true }
+which = { version = "4.0", optional = true }
+
 [dev-dependencies]
 criterion.workspace = true
 tynm.workspace = true
@@ -20,3 +24,6 @@ gf2_128 = { path = "../arith/gf2_128" }
 [[bench]]
 name = "tree"
 harness = false
+
+[features]
+cuda = [ "dep:cc", "dep:which" ]

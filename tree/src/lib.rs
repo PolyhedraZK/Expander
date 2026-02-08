@@ -13,5 +13,10 @@ pub use leaf::*;
 mod path;
 pub use path::*;
 
+#[cfg(feature = "cuda")]
+pub mod cuda_ffi;
+
+pub mod cuda_tree;
+
 #[cfg(test)]
 mod tests;

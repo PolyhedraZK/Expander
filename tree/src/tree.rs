@@ -112,6 +112,12 @@ impl Tree {
         let len = leaf_nodes.len();
         assert_eq!(len, 1 << (tree_height - 1), "incorrect leaf size");
 
+        // Try GPU-accelerated tree construction
+        if let Some(nodes) = crate::cuda_tree::gpu_build_merkle_tree(leaf_nodes, tree_height) {
+            end_timer!(timer);
+            return nodes;
+        }
+
         let mut non_leaf_nodes = vec![Node::default(); (1 << (tree_height - 1)) - 1];
 
         // Compute the starting indices for each non-leaf level of the tree
