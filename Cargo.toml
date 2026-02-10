@@ -1,8 +1,4 @@
 [workspace]
-[workspace.package]
-version = "0.1.0"
-edition = "2021"
-
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
     "arith/babybear",
@@ -10,7 +6,7 @@ members = [
     "arith/gf2_128",
     "arith/goldilocks",
     "arith/mersenne31",
-    "arith/polynomials", 
+    "arith/polynomials",
     "bin", # binary executables
     "circuit",
     "config_macros", # proc macros used to declare a new config, this has to a separate crate due to rust compilation issues
@@ -27,6 +23,10 @@ members = [
     "utils",
 ]
 resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
 
 [workspace.dependencies]
 ark-std = "0.4"
