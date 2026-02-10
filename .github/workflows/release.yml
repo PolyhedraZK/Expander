@@ -9,11 +9,81 @@ permissions:
   contents: write
 
 jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/pypa/manylinux_2_28_x86_64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: dnf install -y openmpi-devel pkgconf-pkg-config perl-IPC-Cmd perl-Time-Piece clang-devel
+
+      - name: Configure MPI environment
+        run: |
+          echo "/usr/lib64/openmpi/bin" >> $GITHUB_PATH
+          echo "LIBRARY_PATH=/usr/lib64/openmpi/lib" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=/usr/lib64/openmpi/lib" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=/usr/lib64/openmpi/lib/pkgconfig" >> $GITHUB_ENV
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Build expander-exec
+        run: cargo build --release --target x86_64-unknown-linux-gnu --bin expander-exec
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: expander-exec-linux-x86_64
+          path: target/x86_64-unknown-linux-gnu/release/expander-exec
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system dependencies
+        run: brew install open-mpi
+
+      - name: Install Rust target
+        run: rustup target add aarch64-apple-darwin
+
+      - name: Build expander-exec
+        run: cargo build --release --target aarch64-apple-darwin --bin expander-exec
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: expander-exec-macos-aarch64
+          path: target/aarch64-apple-darwin/release/expander-exec
+
   release:
+    needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Prepare release assets
+        run: |
+          mv artifacts/expander-exec-linux-x86_64/expander-exec ./expander-exec-linux-x86_64
+          mv artifacts/expander-exec-macos-aarch64/expander-exec ./expander-exec-macos-aarch64
+          chmod +x expander-exec-*
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          files: |
+            expander-exec-linux-x86_64
+            expander-exec-macos-aarch64
