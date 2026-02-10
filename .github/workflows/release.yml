@@ -11,34 +11,21 @@ permissions:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
-    container:
-      image: quay.io/pypa/manylinux_2_28_x86_64
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Install system dependencies
-        run: dnf install -y openmpi-devel pkgconf-pkg-config perl-IPC-Cmd perl-Time-Piece clang-devel
-
-      - name: Configure MPI environment
-        run: |
-          echo "/usr/lib64/openmpi/bin" >> $GITHUB_PATH
-          echo "LIBRARY_PATH=/usr/lib64/openmpi/lib" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=/usr/lib64/openmpi/lib" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=/usr/lib64/openmpi/lib/pkgconfig" >> $GITHUB_ENV
-
-      - name: Install Rust
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        run: sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
 
       - name: Build expander-exec
-        run: cargo build --release --target x86_64-unknown-linux-gnu --bin expander-exec
+        run: cargo build --release --bin expander-exec
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: expander-exec-linux-x86_64
-          path: target/x86_64-unknown-linux-gnu/release/expander-exec
+          path: target/release/expander-exec
 
   build-macos:
     runs-on: macos-latest
