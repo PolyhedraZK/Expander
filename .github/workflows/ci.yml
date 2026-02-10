@@ -4,7 +4,7 @@
 
 name: expander-rs CI
 
-on: [pull_request, push]
+on: [pull_request, push, workflow_call]
 
 env:
   RUSTFLAGS: "-Dwarnings -C target-cpu=native"

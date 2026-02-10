@@ -1,4 +1,8 @@
 [workspace]
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
 members = [
     "arith", # definitions of Field, Extensions, SIMDS
     "arith/babybear",
