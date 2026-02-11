@@ -14,10 +14,19 @@ macro_rules! root_println {
     };
 }
 
-#[derive(Clone, Default, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct MPIConfig {
     pub world_size: i32,
     pub world_rank: i32,
+}
+
+impl Default for MPIConfig {
+    fn default() -> Self {
+        Self {
+            world_size: 1,
+            world_rank: 0,
+        }
+    }
 }
 
 impl Debug for MPIConfig {
@@ -51,11 +60,7 @@ impl MPIEngine for MPIConfig {
 
     #[inline(always)]
     fn gather_vec<F: Sized + Clone>(&self, local_vec: &[F], global_vec: &mut Vec<F>) {
-        if self.world_size == 1 {
-            *global_vec = local_vec.to_vec();
-        } else {
-            *global_vec = local_vec.to_vec();
-        }
+        *global_vec = local_vec.to_vec();
     }
 
     #[inline]
@@ -75,8 +80,8 @@ impl MPIEngine for MPIConfig {
     }
 
     #[inline]
-    fn coef_combine_vec<F: Field>(&self, local_vec: &[F], _coef: &[F]) -> Vec<F> {
-        local_vec.to_vec()
+    fn coef_combine_vec<F: Field>(&self, local_vec: &[F], coef: &[F]) -> Vec<F> {
+        local_vec.iter().zip(coef).map(|(v, c)| *v * *c).collect()
     }
 
     #[inline(always)]
