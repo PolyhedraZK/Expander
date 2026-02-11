@@ -7,7 +7,7 @@ on:
   workflow_call:
 
 env:
-  RUSTFLAGS: "-Dwarnings -C target-cpu=native"
+  RUSTFLAGS: "-Dwarnings"
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
 
