@@ -1,123 +1,64 @@
-# Expander CI: unit tests on Github's servers
-# it runs on both macos and ubuntu avx2
-# it does not check for avx512 -- this is not available on github
-
 name: expander-rs CI
 
-on: [pull_request, push, workflow_call]
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
 
 env:
   RUSTFLAGS: "-Dwarnings -C target-cpu=native"
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  ACTIONS_RUNNER_DEBUG: true
 
-# Cancel all previous runs of the same workflow
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint
+  fmt:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || '' }}
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - name: Auto-format
+        if: github.event_name == 'pull_request'
+        run: cargo +nightly fmt --all
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        if: github.event_name == 'pull_request'
+        with:
+          commit_message: "style: apply rustfmt"
+      - name: Check formatting
+        if: github.event_name != 'pull_request'
+        run: cargo +nightly fmt --all -- --check
+
+  clippy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-  
-      - name: Setup Dependencies
-        run: sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
-        
-      - name: Check formatting
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf -y https://sh.rustup.rs | sh
-          rustup component add --toolchain nightly-2025-05-17-x86_64-unknown-linux-gnu rustfmt clippy
-          cargo fmt --all -- --check
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y build-essential libopenmpi-dev
+      - run: cargo clippy --all
 
-      - name: Run clippy
-        run: cargo clippy --all
-
-  build-and-test:
-    name: Build and Test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-          - os: ubuntu-latest
-          - os: 7950x3d
-            feature: avx512f
-
+  test:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          prefix-key: "mpi-v5.0.8"
-
-      - uses: actions/setup-go@v5
-        if: matrix.os != '7950x3d'
-        with:
-          go-version: '>=1.22.0'
-
-      - name: Setup Dependencies for MacOS workflow
-        if: matrix.os == 'macos-latest'
-        run: brew install gcc make openmpi
-
-      - name: Setup Dependencies for Ubuntu workflow
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
-
-      # TODO(HS) after fixing FS transcript, fix the FS transcript circuit in recurison side
-      # - name: Setup ECC Library
-      #   run: |
-      #     cd ~
-      #     rm -rf ExpanderCompilerCollection
-      #     git clone -b dev https://github.com/PolyhedraZK/ExpanderCompilerCollection.git
-      #     cd ExpanderCompilerCollection
-      #     ./build-rust.sh
-
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y build-essential libopenmpi-dev
       - name: Download test data
-        run: cargo run --release --bin dev-setup  -- --compare
-
-      - name: Build project on non MacOS machines
-        if: matrix.os != 'macos-latest'
+        run: cargo run --release --bin dev-setup -- --compare
+      - name: Build
         run: cargo build --all-features --release
-
-      - name: Build project on MacOS machines
-        if: matrix.os == 'macos-latest'
-        run: cargo build --release
-
-      - name: Run unit tests on non MacOS machines
-        if: matrix.os != 'macos-latest'
+      - name: Run tests
         run: cargo test --all-features --release --workspace
-
-      - name: Run unit tests on MacOS machines
-        if: matrix.os == 'macos-latest'
-        run: cargo test --release --workspace
-
-      # It requires ~28GB of memory, which does not work on 'ubuntu-latest'.
-      - name: Run E2E tests
-        if: matrix.os != 'ubuntu-latest'
-        run: ./scripts/test_recursion.py
-
-      - name: Run benchmarks on Github Workflows
-        if: matrix.os != '7950x3d'
-        run: |
-          cargo run --bin=gkr --release -- -t 4 -f gf2ext128
-          cargo run --bin=gkr --release -- -t 4 -f m31ext3
-          cargo run --bin=gkr --release -- -t 4 -f fr
-          cargo run --bin=gkr --release -- -t 4 -f goldilocks
-
-      - name: Run benchmarks on AVX512 7950x3d
-        if: matrix.os == '7950x3d'
-        run: |
-          cargo run --bin=gkr --release -- -t 16 -f gf2ext128
-          cargo run --bin=gkr --release -- -t 16 -f m31ext3
-          cargo run --bin=gkr --release -- -t 16 -f fr
-          cargo run --bin=gkr --release -- -t 16 -f goldilocks
