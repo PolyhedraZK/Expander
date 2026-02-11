@@ -80,8 +80,8 @@ impl MPIEngine for MPIConfig {
     }
 
     #[inline]
-    fn coef_combine_vec<F: Field>(&self, local_vec: &[F], coef: &[F]) -> Vec<F> {
-        local_vec.iter().zip(coef).map(|(v, c)| *v * *c).collect()
+    fn coef_combine_vec<F: Field>(&self, local_vec: &[F], _coef: &[F]) -> Vec<F> {
+        local_vec.to_vec()
     }
 
     #[inline(always)]
