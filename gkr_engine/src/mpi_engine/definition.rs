@@ -142,10 +142,7 @@ pub trait MPIEngine {
     fn create_shared_mem(&self, n_bytes: usize) -> (*mut u8, MPI_Win);
 
     /// Consume the shared memory segment and create a new shared memory object
-    fn consume_obj_and_create_shared<T: MPISharedMemory>(
-        &self,
-        obj: Option<T>,
-    ) -> (T, MPI_Win) {
+    fn consume_obj_and_create_shared<T: MPISharedMemory>(&self, obj: Option<T>) -> (T, MPI_Win) {
         assert!(!self.is_root() || obj.is_some());
 
         if self.is_root() {
