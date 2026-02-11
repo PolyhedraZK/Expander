@@ -41,9 +41,7 @@ declare_gkr_config!(
 
 #[test]
 fn test_circuit_serde() {
-    let universe = MPIConfig::init().unwrap();
-    let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
+    let mpi_config = MPIConfig::prover_new();
     test_circuit_serde_helper::<M31x16ConfigSha2Raw>(&mpi_config);
     test_circuit_serde_helper::<GF2ExtConfigSha2Raw>(&mpi_config);
     test_circuit_serde_helper::<BN254ConfigSha2Raw>(&mpi_config);

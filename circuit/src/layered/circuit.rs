@@ -4,15 +4,12 @@ use std::io::Cursor;
 use arith::{Field, SimdField};
 use ark_std::test_rng;
 use gkr_engine::{root_println, FieldEngine, GKREngine, MPIConfig, MPIEngine, Transcript};
-use mpi::ffi::MPI_Win;
 use serdes::ExpSerde;
 
 use crate::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct StructureInfo {
-    // If a layer contains only linear combination of fan-in-one gates, we can skip the second
-    // phase of sumcheck e.g. y = a + b + c, and y = a^5 + b^5 + c^5
     pub skip_sumcheck_phase_two: bool,
 }
 
@@ -22,7 +19,7 @@ pub struct CircuitLayer<C: FieldEngine> {
     pub output_var_num: usize,
 
     pub input_vals: Vec<C::SimdCircuitField>,
-    pub output_vals: Vec<C::SimdCircuitField>, // empty most time, unless in the last layer
+    pub output_vals: Vec<C::SimdCircuitField>,
 
     pub mul: Vec<GateMul<C>>,
     pub add: Vec<GateAdd<C>>,
@@ -70,14 +67,12 @@ impl<C: FieldEngine> CircuitLayer<C> {
             let o = &mut res[gate.o_id];
             match gate.gate_type {
                 12345 => {
-                    // pow5
                     let i0_2 = i0.square();
                     let i0_4 = i0_2.square();
                     let i0_5 = i0_4 * i0;
                     *o += i0_5 * gate.coef;
                 }
                 12346 => {
-                    // pow1
                     *o += *i0 * gate.coef;
                 }
                 _ => panic!("Unknown gate type: {}", gate.gate_type),
@@ -122,7 +117,7 @@ pub struct Circuit<C: FieldEngine> {
     pub expected_num_output_zeros: usize,
 
     pub rnd_coefs_identified: bool,
-    pub rnd_coefs: Vec<*mut C::CircuitField>, // unsafe
+    pub rnd_coefs: Vec<*mut C::CircuitField>,
 }
 
 impl<C: FieldEngine> Clone for Circuit<C> {
@@ -146,8 +141,6 @@ impl<C: FieldEngine> Clone for Circuit<C> {
 unsafe impl<C> Send for Circuit<C> where C: FieldEngine {}
 
 impl<C: FieldEngine> Circuit<C> {
-    // Load a circuit from a file and flatten it
-    // Used for verifier
     pub fn verifier_load_circuit<Cfg: GKREngine<FieldConfig = C>>(filename: &str) -> Self {
         let rc = RecursiveCircuit::<C>::load(filename).unwrap();
         let mut c = rc.flatten();
@@ -155,9 +148,6 @@ impl<C: FieldEngine> Circuit<C> {
         c
     }
 
-    // Used for prover with mpi_size = 1.
-    // This avoids the overhead of shared memory
-    // No need to call discard_control_of_shared_mem() and free_shared_mem(window) after this
     #[inline(always)]
     pub fn single_thread_prover_load_circuit<Cfg: GKREngine<FieldConfig = C>>(
         filename: &str,
@@ -165,26 +155,14 @@ impl<C: FieldEngine> Circuit<C> {
         Self::verifier_load_circuit::<Cfg>(filename)
     }
 
-    // The root process loads a circuit from a file and shares it with other processes
-    // with shared memory
-    // Used in the mpi case, ok if mpi_size = 1, but
-    // circuit.discard_control_of_shared_mem() and mpi_config.free_shared_mem(window) should be
-    // called before the end of the program
     pub fn prover_load_circuit<Cfg: GKREngine<FieldConfig = C>>(
         filename: &str,
-        mpi_config: &MPIConfig,
-    ) -> (Self, MPI_Win) {
-        let circuit = if mpi_config.is_root() {
-            let rc = RecursiveCircuit::<C>::load(filename).unwrap();
-            let circuit = rc.flatten();
-            Some(circuit)
-        } else {
-            None
-        };
-
-        let (mut circuit, window) = mpi_config.consume_obj_and_create_shared(circuit);
+        _mpi_config: &MPIConfig,
+    ) -> Self {
+        let rc = RecursiveCircuit::<C>::load(filename).unwrap();
+        let mut circuit = rc.flatten();
         circuit.pre_process_gkr();
-        (circuit, window)
+        circuit
     }
 
     pub fn load_witness_allow_padding_testing_only(
@@ -213,12 +191,11 @@ impl<C: FieldEngine> Circuit<C> {
         file_bytes: &[u8],
         mpi_config: &MPIConfig,
         is_prover: bool,
-        allow_padding_for_testing: bool, // TODO: Consider remove this
+        allow_padding_for_testing: bool,
     ) {
         let cursor = Cursor::new(file_bytes);
         let mut witness = Witness::<C>::deserialize_from(cursor).unwrap();
 
-        // sizes for a single piece of witness
         let private_input_size = 1 << self.log_input_size();
         let public_input_size = witness.num_public_inputs_per_witness;
         let total_size = private_input_size + public_input_size;
@@ -231,7 +208,6 @@ impl<C: FieldEngine> Circuit<C> {
             witness.num_witnesses
         );
 
-        // the number of witnesses should be equal to the number of MPI processes * simd width
         let desired_number_of_witnesses = C::get_field_pack_size() * mpi_config.world_size();
 
         #[allow(clippy::comparison_chain)]
@@ -330,7 +306,6 @@ impl<C: FieldEngine> Circuit<C> {
         self.layers[0].input_var_num
     }
 
-    // Build a random mock circuit with binary inputs
     pub fn set_random_input_for_test(&mut self) {
         let mut rng = test_rng();
         self.layers[0].input_vals = (0..(1 << self.log_input_size()))
@@ -379,8 +354,6 @@ impl<C: FieldEngine> Circuit<C> {
         self.identify_rnd_coefs();
         self.identify_structure_info();
 
-        // If there will be two claims for the input
-        // Introduce an extra relay layer before the input layer
         if !self.layers[0].structure_info.skip_sumcheck_phase_two {
             self.add_input_relay_layer();
         }
@@ -410,10 +383,6 @@ impl<C: FieldEngine> Circuit<C> {
         }
     }
 
-    /// Add a layer before the input layer that contains only relays
-    /// The purpose is to make the input layer contain only addition gates,
-    /// and thus reduces the number of input claims from 2 to 1,
-    /// saving the PCS opening time.
     pub fn add_input_relay_layer(&mut self) {
         let input_var_num = self.layers[0].input_var_num;
         let mut input_relay_layer = CircuitLayer::<C> {

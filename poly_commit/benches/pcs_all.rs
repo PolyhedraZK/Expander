@@ -17,9 +17,7 @@ use utils::timer::Timer;
 const NUM_POLY_BATCH_OPEN: usize = 100;
 
 fn main() {
-    let universe = MPIConfig::init().unwrap();
-    let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
+    let mpi_config = MPIConfig::prover_new();
     println!("==========================");
     for num_vars in 18..21 {
         root_println!(mpi_config, "num vars: {}", num_vars);

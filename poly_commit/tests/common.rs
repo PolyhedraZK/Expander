@@ -274,7 +274,7 @@ where
     P::Commitment: AsRef<P::Commitment>,
 {
     let mut rng = test_rng();
-    let mpi_config = MPIConfig::prover_new(None, None);
+    let mpi_config = MPIConfig::prover_new();
     for num_vars in 2..10 {
         let srs = P::gen_srs(&num_vars, &mpi_config, &mut rng);
         let (proving_key, verification_key) = srs.into_keys();

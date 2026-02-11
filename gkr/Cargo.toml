@@ -26,7 +26,6 @@ env_logger.workspace = true
 ethnum.workspace = true
 halo2curves.workspace = true
 log.workspace = true
-mpi.workspace = true
 rand.workspace = true
 rayon.workspace = true
 sha2.workspace = true

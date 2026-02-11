@@ -33,17 +33,13 @@ jobs:
 
       - name: Setup Dependencies for MacOS workflow
         if: matrix.os == 'macos-latest'
-        run: brew install gcc make openmpi
+        run: brew install gcc make
 
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: "mpi-v5.0.8"
-
-      - name: Install MPI for MacOS workflow
-        if: matrix.os == 'macos-latest'
-        run: python3 ./scripts/install.py
+          prefix-key: "no-mpi-v1"
 
       - name: Set RUSTFLAGS for AVX
         if: matrix.os != 'macos-latest'

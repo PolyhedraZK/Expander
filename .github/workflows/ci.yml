@@ -24,9 +24,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
   
-      - name: Setup Dependencies
-        run: sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
-        
       - name: Check formatting
         run: |
           curl --proto '=https' --tlsv1.2 -sSf -y https://sh.rustup.rs | sh
@@ -58,7 +55,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: "mpi-v5.0.8"
+          prefix-key: "no-mpi-v1"
 
       - uses: actions/setup-go@v5
         if: matrix.os != '7950x3d'
@@ -67,11 +64,7 @@ jobs:
 
       - name: Setup Dependencies for MacOS workflow
         if: matrix.os == 'macos-latest'
-        run: brew install gcc make openmpi
-
-      - name: Setup Dependencies for Ubuntu workflow
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get install -y build-essential openmpi-bin libopenmpi-dev
+        run: brew install gcc make
 
       # TODO(HS) after fixing FS transcript, fix the FS transcript circuit in recurison side
       # - name: Setup ECC Library

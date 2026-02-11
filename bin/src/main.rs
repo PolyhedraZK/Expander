@@ -55,7 +55,7 @@ fn main() {
     print_info(&args);
 
     // This is a designated single-process benchmark
-    let mpi_config = MPIConfig::prover_new(None, None);
+    let mpi_config = MPIConfig::prover_new();
     let pcs_type = PolynomialCommitmentType::from_str(&args.pcs).unwrap();
 
     match args.field.as_str() {
@@ -125,7 +125,7 @@ fn main() {
     };
 }
 
-fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig<'static>)
+fn run_benchmark<Cfg: GKREngine>(args: &Args, mpi_config: MPIConfig)
 where
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad: 'static,
     Cfg::FieldConfig: FieldEngine,
@@ -264,7 +264,7 @@ where
             let mut pcs_scratch = pcs_scratch.clone();
             thread::spawn(move || {
                 // bench func
-                let local_mpi_config = MPIConfig::prover_new(None, None);
+                let local_mpi_config = MPIConfig::prover_new();
                 let mut prover = Prover::<Cfg>::new(local_mpi_config);
                 prover.prepare_mem(&c);
                 loop {

@@ -3,7 +3,6 @@ use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream, Result};
 use syn::{parse_macro_input, ExprPath, Ident, Token, Visibility};
 
-// Define a struct to parse our custom input format
 struct ConfigLit {
     visibility: Visibility,
     config_name: Ident,
@@ -13,7 +12,6 @@ struct ConfigLit {
     scheme_config: ExprPath,
 }
 
-// Implement parsing for our custom input format
 impl Parse for ConfigLit {
     fn parse(input: ParseStream) -> Result<Self> {
         let visibility: Visibility = input.parse()?;
@@ -26,7 +24,7 @@ impl Parse for ConfigLit {
         let polynomial_commitment_type: ExprPath = input.parse()?;
         input.parse::<Token![,]>()?;
         let scheme_config: ExprPath = input.parse()?;
-        let _ = input.parse::<Token![,]>(); // Optional trailing comma
+        let _ = input.parse::<Token![,]>();
         Ok(ConfigLit {
             visibility,
             config_name,
@@ -38,7 +36,6 @@ impl Parse for ConfigLit {
     }
 }
 
-// Check if the field type is one of the supported types and return the corresponding config type
 fn parse_field_type(field_expr: ExprPath) -> (String, String) {
     let field_enum = field_expr
         .path
@@ -57,7 +54,6 @@ fn parse_field_type(field_expr: ExprPath) -> (String, String) {
     }
 }
 
-// Check if the hash type is one of the supported types and return the corresponding enum
 fn parse_fiat_shamir_hash_type(
     field_type: &str,
     field_config: &str,
@@ -139,21 +135,12 @@ fn _parse_scheme_config(scheme_config: ExprPath) -> String {
     binding.ident.to_string()
 }
 
-/// Example usage:
-/// declare_gkr_config!(
-///     pub MyFavoriateConfigName,
-///     FieldType::M31,
-///     FiatShamirHashType::SHA256,
-///     PolynomialCommitmentType::Raw
-///     GKRScheme::Vanilla,
-/// );
 #[proc_macro]
 pub fn declare_gkr_config(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     declare_gkr_config_impl(input)
 }
 
 fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // Parse the input tokens into our custom struct
     let ConfigLit {
         visibility,
         config_name,
@@ -176,13 +163,11 @@ fn declare_gkr_config_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
 
     let ret: TokenStream = quote! {
         #[derive(Default, Debug, Clone, PartialOrd, Ord, Hash, PartialEq, Eq, Copy)]
-        #visibility struct #config_name<'a> {
-            _marker: std::marker::PhantomData<&'a ()>,
-        }
+        #visibility struct #config_name;
 
-        impl<'a> GKREngine for #config_name<'a> {
+        impl GKREngine for #config_name {
             type FieldConfig = #field_config;
-            type MPIConfig = MPIConfig<'a>;
+            type MPIConfig = MPIConfig;
             type TranscriptConfig = #transcript_type_expr;
             type PCSConfig = #polynomial_commitment_type_expr;
             const SCHEME: GKRScheme = #scheme_config;
