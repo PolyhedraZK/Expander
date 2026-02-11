@@ -162,10 +162,8 @@ fn test_gkr_correctness() {
 }
 
 #[allow(unreachable_patterns)]
-fn test_gkr_correctness_helper<Cfg: GKREngine>(
-    mpi_config: MPIConfig,
-    write_proof_to: Option<&str>,
-) where
+fn test_gkr_correctness_helper<Cfg: GKREngine>(mpi_config: MPIConfig, write_proof_to: Option<&str>)
+where
     Cfg::FieldConfig: FieldEngine,
 {
     root_println!(mpi_config, "============== start ===============");
@@ -350,5 +348,4 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(
         println!("Bad proof rejected.");
         println!("============== end ===============");
     }
-
 }
