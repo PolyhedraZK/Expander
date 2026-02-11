@@ -11,7 +11,7 @@ use clap::{Parser, Subcommand};
 use gkr::{Prover, Verifier};
 use gkr_engine::{
     BN254Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine, Goldilocksx8Config, M31x16Config,
-    MPIConfig, MPIEngine, MPISharedMemory, Proof,
+    MPIConfig, MPIEngine, Proof,
 };
 use log::info;
 use poly_commit::expander_pcs_init_testing_only;
@@ -168,9 +168,9 @@ pub fn verify<Cfg: GKREngine>(
 // The 'Prove' command can be run with mpi more than one process
 // The 'Verify' command must be run with mpi size = 1
 // The 'Serve' command must be run with mpi size = 1
-pub async fn run_command<'a, Cfg: GKREngine + 'static>(
+pub async fn run_command<Cfg: GKREngine + 'static>(
     command: &ExpanderExecArgs,
-    mpi_config: &MPIConfig<'a>,
+    mpi_config: &MPIConfig,
 ) where
     Cfg::FieldConfig: FieldEngine,
 {
@@ -182,7 +182,7 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
             witness_file,
             output_proof_file,
         } => {
-            let (mut circuit, mut window) =
+            let mut circuit =
                 Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, mpi_config);
             let prover = Prover::<Cfg>::new(mpi_config.clone());
 
@@ -194,8 +194,6 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
                     .expect("Unable to serialize proof.");
                 fs::write(output_proof_file, bytes).expect("Unable to write proof to file.");
             }
-            circuit.discard_control_of_shared_mem();
-            mpi_config.free_shared_mem(&mut window);
         }
         ExpanderExecSubCommand::Verify {
             circuit_file,
@@ -261,7 +259,7 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
                 .try_into()
                 .unwrap();
 
-            let (circuit, _) =
+            let circuit =
                 Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_file, &mpi_config);
 
             // TODO: Read PCS setup from files
@@ -292,7 +290,7 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
                         let witness_bytes: Vec<u8> = bytes.to_vec();
 
                         let mut circuit = circuit.lock().unwrap();
-                        let mut prover = Prover::<Cfg>::new(MPIConfig::prover_new(None, None));
+                        let mut prover = Prover::<Cfg>::new(MPIConfig::prover_new());
                         prover.prepare_mem(&circuit);
                         let pcs_params = pcs_params.lock().unwrap();
                         let pcs_proving_key = pcs_proving_key.lock().unwrap();
