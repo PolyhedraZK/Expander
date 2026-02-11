@@ -247,7 +247,7 @@ pub async fn run_command<'a, Cfg: GKREngine + 'static>(
             host_ip,
             port,
         } => {
-            let mpi_config = MPIConfig::prover_new(None, None);
+            let mpi_config = mpi_config.clone();
             let prover = Prover::<Cfg>::new(mpi_config.clone());
 
             assert!(
