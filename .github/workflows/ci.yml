@@ -21,7 +21,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref || '' }}
       - uses: dtolnay/rust-toolchain@nightly
@@ -30,7 +30,7 @@ jobs:
       - name: Auto-format
         if: github.event_name == 'pull_request'
         run: cargo +nightly fmt --all
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - uses: stefanzweifel/git-auto-commit-action@v7
         if: github.event_name == 'pull_request'
         with:
           commit_message: "style: apply rustfmt"
@@ -41,7 +41,7 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2025-05-17
@@ -53,7 +53,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2025-05-17

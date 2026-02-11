@@ -14,7 +14,7 @@ jobs:
     container:
       image: quay.io/pypa/manylinux_2_28_x86_64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install system dependencies
         run: dnf install -y openmpi-devel pkgconf-pkg-config perl-IPC-Cmd perl-Time-Piece clang-devel
@@ -35,7 +35,7 @@ jobs:
         run: cargo build --release --bin expander-exec
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: expander-exec-linux-x86_64
           path: target/release/expander-exec
@@ -43,7 +43,7 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Install system dependencies
@@ -58,7 +58,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: "11.0"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: expander-exec-macos-aarch64
           path: target/aarch64-apple-darwin/release/expander-exec
@@ -67,10 +67,10 @@ jobs:
     needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           path: ./artifacts
 
