@@ -25,7 +25,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.3.0"
 edition = "2021"
 
 [workspace.dependencies]
@@ -60,4 +60,4 @@ ethnum = "1.5.0"
 rand_chacha = "0.3.1"
 derivative = "2.2.0"
 transpose = "0.2.3"
-zerocopy = ">=0.8.26, <0.8.38"
+zerocopy = "0.8"
