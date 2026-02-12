@@ -81,7 +81,7 @@ fn test_all_to_all_transpose_helper<F: Field>(mpi_config: &MPIConfig) {
 }
 
 fn test_scatter_vec_helper(mpi_config: &MPIConfig) {
-    const TEST_SIZE: usize = MPIConfig::CHUNK_SIZE + 1;
+    const TEST_SIZE: usize = 1024 + 1;
 
     let send_vec: Vec<_> = if mpi_config.is_root() {
         let mut buf = vec![0u8; TEST_SIZE * mpi_config.world_size()];
@@ -110,9 +110,7 @@ fn test_scatter_vec_helper(mpi_config: &MPIConfig) {
 
 #[test]
 fn test_mpi_engine() {
-    let universe = MPIConfig::init().unwrap();
-    let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
+    let mpi_config = MPIConfig::prover_new();
 
     test_gather_vec_helper(&mpi_config);
 

@@ -35,13 +35,13 @@ fn benchmark_setup<Cfg: GKREngine>(
     circuit_file: &str,
     witness_file: Option<&str>,
 ) -> (
-    MPIConfig<'static>,
+    MPIConfig,
     Circuit<Cfg::FieldConfig>,
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::Params,
     <<Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::SRS as StructuredReferenceString>::PKey,
     <Cfg::PCSConfig as ExpanderPCS<Cfg::FieldConfig>>::ScratchPad,
 ) {
-    let mpi_config = MPIConfig::prover_new(None, None);
+    let mpi_config = MPIConfig::prover_new();
     let mut circuit =
         Circuit::<Cfg::FieldConfig>::single_thread_prover_load_circuit::<Cfg>(circuit_file);
 

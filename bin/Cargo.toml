@@ -26,7 +26,6 @@ bytes.workspace = true
 chrono.workspace = true
 clap.workspace = true
 log.workspace = true
-mpi.workspace = true
 tokio.workspace = true
 warp.workspace = true
 
@@ -42,6 +41,3 @@ path = "src/exec.rs"
 name = "gkr"
 path = "src/main.rs"
 
-[[bin]]
-name = "gkr-mpi"
-path = "src/main_mpi.rs"

@@ -23,13 +23,13 @@ use crate::grind;
 use crate::{gkr_square_verify, gkr_verify, parse_proof, sumcheck_verify_gkr_layer};
 
 #[derive(Default)]
-pub struct Verifier<'a, Cfg: GKREngine> {
-    pub mpi_config: MPIConfig<'a>,
+pub struct Verifier<Cfg: GKREngine> {
+    pub mpi_config: MPIConfig,
     phantom: PhantomData<Cfg>,
 }
 
-impl<'a, Cfg: GKREngine> Verifier<'a, Cfg> {
-    pub fn new(mpi_config: MPIConfig<'a>) -> Self {
+impl<Cfg: GKREngine> Verifier<Cfg> {
+    pub fn new(mpi_config: MPIConfig) -> Self {
         Self {
             mpi_config,
             phantom: PhantomData,
@@ -383,7 +383,7 @@ impl<'a, Cfg: GKREngine> Verifier<'a, Cfg> {
     }
 }
 
-impl<Cfg: GKREngine> Verifier<'_, Cfg> {
+impl<Cfg: GKREngine> Verifier<Cfg> {
     #[allow(clippy::too_many_arguments)]
     fn get_pcs_opening_from_proof_and_verify(
         &self,

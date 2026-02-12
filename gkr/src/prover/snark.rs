@@ -50,13 +50,13 @@ pub(crate) fn grind<Cfg: GKREngine>(transcript: &mut impl Transcript, mpi_config
 }
 
 #[derive(Default)]
-pub struct Prover<'a, Cfg: GKREngine> {
-    pub mpi_config: MPIConfig<'a>,
+pub struct Prover<Cfg: GKREngine> {
+    pub mpi_config: MPIConfig,
     sp: ProverScratchPad<Cfg::FieldConfig>,
 }
 
-impl<'a, Cfg: GKREngine> Prover<'a, Cfg> {
-    pub fn new(mpi_config: MPIConfig<'a>) -> Self {
+impl<Cfg: GKREngine> Prover<Cfg> {
+    pub fn new(mpi_config: MPIConfig) -> Self {
         Prover {
             mpi_config,
             sp: ProverScratchPad::default(),
@@ -173,7 +173,7 @@ impl<'a, Cfg: GKREngine> Prover<'a, Cfg> {
     }
 }
 
-impl<Cfg: GKREngine> Prover<'_, Cfg> {
+impl<Cfg: GKREngine> Prover<Cfg> {
     fn prove_input_layer_claim(
         &self,
         inputs: &mut MutRefMultiLinearPoly<<Cfg::FieldConfig as FieldEngine>::SimdCircuitField>,

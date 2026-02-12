@@ -10,7 +10,7 @@ use gf2::GF2x128;
 use gkr_engine::{
     root_println, BN254Config, BabyBearx16Config, FieldEngine, FieldType, GF2ExtConfig, GKREngine,
     GKRScheme, Goldilocksx1Config, Goldilocksx8Config, M31x16Config, M31x1Config, MPIConfig,
-    MPIEngine, MPISharedMemory,
+    MPIEngine,
 };
 use gkr_hashers::{Keccak256hasher, MiMC5FiatShamirHasher, PoseidonFiatShamirHasher, SHA256hasher};
 use halo2curves::bn256::{Bn256, G1Affine};
@@ -29,9 +29,7 @@ use crate::{utils::*, Prover, Verifier};
 fn test_gkr_correctness() {
     // Initialize logger
     env_logger::init();
-    let universe = MPIConfig::init().unwrap();
-    let world = universe.world();
-    let mpi_config = MPIConfig::prover_new(Some(&universe), Some(&world));
+    let mpi_config = MPIConfig::prover_new();
 
     declare_gkr_config!(
         C0,
@@ -164,10 +162,8 @@ fn test_gkr_correctness() {
 }
 
 #[allow(unreachable_patterns)]
-fn test_gkr_correctness_helper<Cfg: GKREngine>(
-    mpi_config: MPIConfig<'_>,
-    write_proof_to: Option<&str>,
-) where
+fn test_gkr_correctness_helper<Cfg: GKREngine>(mpi_config: MPIConfig, write_proof_to: Option<&str>)
+where
     Cfg::FieldConfig: FieldEngine,
 {
     root_println!(mpi_config, "============== start ===============");
@@ -203,7 +199,7 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(
         FieldType::BabyBearx16 => "../".to_owned() + KECCAK_BABYBEAR_CIRCUIT,
         _ => unreachable!(),
     };
-    let (mut circuit, mut window) =
+    let mut circuit =
         Circuit::<Cfg::FieldConfig>::prover_load_circuit::<Cfg>(&circuit_path, &mpi_config);
     root_println!(mpi_config, "Circuit loaded.");
 
@@ -352,7 +348,4 @@ fn test_gkr_correctness_helper<Cfg: GKREngine>(
         println!("Bad proof rejected.");
         println!("============== end ===============");
     }
-
-    circuit.discard_control_of_shared_mem();
-    mpi_config.free_shared_mem(&mut window);
 }
