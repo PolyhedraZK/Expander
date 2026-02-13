@@ -15,11 +15,13 @@ utils = { path = "../utils" }
 
 env_logger.workspace = true
 log.workspace = true
-rayon.workspace = true
+rayon = { workspace = true, optional = true }
 
 [dev-dependencies]
 ark-std.workspace = true
 
 
 [features]
+default = ["parallel"]
+parallel = ["rayon"]
 profile = [ "utils/profile" ]

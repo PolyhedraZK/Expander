@@ -8,6 +8,7 @@ use halo2curves::msm::best_multiexp;
 use halo2curves::{ff::PrimeField, CurveAffine};
 use polynomials::{EqPolynomial, MultilinearExtension};
 use polynomials::{MultiLinearPoly, SumOfProductsPoly};
+#[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
 use sumcheck::{IOPProof, SumCheck};
@@ -46,8 +47,11 @@ where
     // \tilde g_i(b) = eq(t, i) * f_i(b)
     let timer = Timer::new("Building tilde g_i(b)", true);
 
-    let tilde_gs = polys
-        .par_iter()
+    #[cfg(feature = "parallel")]
+    let iter = polys.par_iter();
+    #[cfg(not(feature = "parallel"))]
+    let iter = polys.iter();
+    let tilde_gs = iter
         .enumerate()
         .map(|(index, f_i)| {
             let mut tilde_g_eval = vec![C::Scalar::zero(); 1 << f_i.num_vars()];
@@ -65,8 +69,11 @@ where
     // built the virtual polynomial for SumCheck
     let timer = Timer::new("Building tilde eqs", true);
     let points = points.iter().map(|p| p.as_ref()).collect::<Vec<_>>();
-    let tilde_eqs: Vec<MultiLinearPoly<C::Scalar>> = points
-        .par_iter()
+    #[cfg(feature = "parallel")]
+    let points_iter = points.par_iter();
+    #[cfg(not(feature = "parallel"))]
+    let points_iter = points.iter();
+    let tilde_eqs: Vec<MultiLinearPoly<C::Scalar>> = points_iter
         .map(|point| {
             let mut eq_b_zi = vec![C::Scalar::zero(); 1 << point.len()];
             EqPolynomial::build_eq_x_r_with_buf(point, &C::Scalar::one(), &mut eq_b_zi);
@@ -90,8 +97,11 @@ where
     let timer = Timer::new("Building g'(X)", true);
 
     let mut g_prime_evals = vec![C::Scalar::zero(); 1 << num_vars];
-    let eq_i_a2_polys = points
-        .par_iter()
+    #[cfg(feature = "parallel")]
+    let points_iter2 = points.par_iter();
+    #[cfg(not(feature = "parallel"))]
+    let points_iter2 = points.iter();
+    let eq_i_a2_polys = points_iter2
         .map(|point| {
             let mut padded_point = point.to_vec();
             padded_point.resize(num_vars, C::Scalar::zero());

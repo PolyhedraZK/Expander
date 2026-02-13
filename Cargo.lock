@@ -78,7 +78,7 @@ dependencies = [
 
 [[package]]
 name = "arith"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "ark-std",
  "criterion",
@@ -121,7 +121,7 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "babybear"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "ark-std",
@@ -139,7 +139,7 @@ checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
 name = "bin"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "babybear",
@@ -295,7 +295,7 @@ dependencies = [
 
 [[package]]
 name = "circuit"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "ark-std",
@@ -371,7 +371,7 @@ dependencies = [
 
 [[package]]
 name = "config_macros"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "babybear",
  "gf2",
@@ -424,8 +424,6 @@ dependencies = [
  "num-traits",
  "once_cell",
  "oorandom",
- "plotters",
- "rayon",
  "regex",
  "serde",
  "serde_derive",
@@ -471,7 +469,7 @@ checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
 name = "crosslayer_prototype"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "env_logger",
@@ -705,7 +703,7 @@ dependencies = [
 
 [[package]]
 name = "gf2"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "ark-std",
@@ -723,7 +721,7 @@ dependencies = [
 
 [[package]]
 name = "gf2_128"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "ark-std",
@@ -737,7 +735,7 @@ dependencies = [
 
 [[package]]
 name = "gkr"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "ark-std",
@@ -769,7 +767,7 @@ dependencies = [
 
 [[package]]
 name = "gkr_engine"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "ark-std",
@@ -787,7 +785,7 @@ dependencies = [
 
 [[package]]
 name = "gkr_hashers"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "halo2curves",
@@ -798,7 +796,7 @@ dependencies = [
 
 [[package]]
 name = "goldilocks"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "ark-std",
@@ -1238,7 +1236,7 @@ checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
 
 [[package]]
 name = "mersenne31"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "ark-std",
@@ -1454,36 +1452,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
-name = "plotters"
-version = "0.3.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5aeb6f403d7a4911efb1e33402027fc44f29b5bf6def3effcc22d7bb75f2b747"
-dependencies = [
- "num-traits",
- "plotters-backend",
- "plotters-svg",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
-name = "plotters-backend"
-version = "0.3.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df42e13c12958a16b3f7f4386b9ab1f3e7933914ecea48da7139435263a4172a"
-
-[[package]]
-name = "plotters-svg"
-version = "0.3.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51bae2ac328883f7acdfea3d66a7c35751187f870bc81f94563733a154d7a670"
-dependencies = [
- "plotters-backend",
-]
-
-[[package]]
 name = "poly_commit"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "ark-std",
@@ -1513,7 +1483,7 @@ dependencies = [
 
 [[package]]
 name = "polynomials"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "ark-std",
@@ -1768,7 +1738,7 @@ dependencies = [
 
 [[package]]
 name = "serdes"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "ethnum",
  "halo2curves",
@@ -1779,7 +1749,7 @@ dependencies = [
 
 [[package]]
 name = "serdes_derive"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1894,7 +1864,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "sumcheck"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "ark-std",
@@ -2079,7 +2049,7 @@ dependencies = [
 
 [[package]]
 name = "transcript"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "gkr_engine",
@@ -2102,7 +2072,7 @@ dependencies = [
 
 [[package]]
 name = "tree"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "arith",
  "ark-std",
@@ -2208,7 +2178,7 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "utils"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "colored",
 ]
@@ -2316,16 +2286,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f01b580c9ac74c8d8f0c0e4afb04eeef2acf145458e52c03845ee9cd23e3d12"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "web-sys"
-version = "0.3.85"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "312e32e551d92129218ea9a2452120f4aabc03529ef03e4d0d82fb2780608598"
-dependencies = [
- "js-sys",
- "wasm-bindgen",
 ]
 
 [[package]]

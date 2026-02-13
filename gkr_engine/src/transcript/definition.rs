@@ -47,7 +47,7 @@ pub trait Transcript: Clone + Debug {
         let mut buf = [0u8; 8];
         for e in res.iter_mut() {
             buf.copy_from_slice(&self.generate_u8_slice(8));
-            *e = usize::from_le_bytes(buf);
+            *e = u64::from_le_bytes(buf) as usize;
         }
         res
     }

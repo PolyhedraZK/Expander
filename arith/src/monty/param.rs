@@ -8,6 +8,10 @@ use super::avx256::PackedMontyParameters;
 
 #[cfg(target_arch = "aarch64")]
 use super::neon::PackedMontyParameters;
+
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+use super::PackedMontyParameters;
+
 use super::MontyField31;
 
 /// MontyParameters contains the prime P along with constants needed to convert elements into and

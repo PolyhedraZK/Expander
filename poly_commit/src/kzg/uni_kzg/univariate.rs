@@ -5,6 +5,7 @@ use halo2curves::{
     pairing::{MillerLoopResult, MultiMillerLoop},
     CurveAffine,
 };
+#[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use serdes::ExpSerde;
 
@@ -29,9 +30,15 @@ where
     let g1_prog = g1.to_curve();
     let coeff_bases = {
         let mut proj_bases = vec![g1_prog; length];
+        #[cfg(feature = "parallel")]
         proj_bases
             .par_iter_mut()
             .zip(tau_geometric_progression.par_iter())
+            .for_each(|(b, tau_i)| *b *= tau_i);
+        #[cfg(not(feature = "parallel"))]
+        proj_bases
+            .iter_mut()
+            .zip(tau_geometric_progression.iter())
             .for_each(|(b, tau_i)| *b *= tau_i);
 
         let mut g_bases = vec![E::G1Affine::default(); length];

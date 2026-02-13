@@ -21,6 +21,11 @@ mod avx256;
 #[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
 pub type GF2_128x8 = avx256::AVX256GF2_128x8;
 
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+mod scalar;
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+pub type GF2_128x8 = scalar::ScalarGF2_128x8;
+
 impl Ord for GF2_128x8 {
     #[inline(always)]
     fn cmp(&self, _: &Self) -> std::cmp::Ordering {

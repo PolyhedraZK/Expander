@@ -1,5 +1,6 @@
 use arith::Field;
 use polynomials::{MultilinearExtension, SumOfProductsPoly};
+#[cfg(feature = "parallel")]
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
 };
@@ -16,17 +17,20 @@ impl<F: Field> IOPProverState<F> {
             round: 0,
             init_num_vars: num_vars,
             mle_list: polynomials.clone(),
-            init_sum_of_vals: polynomials
-                .f_and_g_pairs
-                .par_iter()
-                .map(|(f, g)| {
+            init_sum_of_vals: {
+                #[cfg(feature = "parallel")]
+                let iter = polynomials.f_and_g_pairs.par_iter();
+                #[cfg(not(feature = "parallel"))]
+                let iter = polynomials.f_and_g_pairs.iter();
+                iter.map(|(f, g)| {
                     f.coeffs
                         .iter()
                         .zip(g.coeffs.iter())
                         .map(|(&f, &g)| f * g)
                         .sum::<F>()
                 })
-                .collect(),
+                .collect()
+            },
             eq_prefix: vec![F::one(); polynomials.f_and_g_pairs.len()],
         }
     }
@@ -95,10 +99,11 @@ impl<F: Field> IOPProverState<F> {
         //     h_2 += f_2 * g2;
         // }
 
-        self.mle_list
-            .f_and_g_pairs
-            .par_iter()
-            .enumerate()
+        #[cfg(feature = "parallel")]
+        let iter = self.mle_list.f_and_g_pairs.par_iter();
+        #[cfg(not(feature = "parallel"))]
+        let iter = self.mle_list.f_and_g_pairs.iter();
+        iter.enumerate()
             .map(|(i, (f, g))| {
                 // evaluate the polynomial at 0, 1 and 2
                 // and obtain f(0)g(0) and f(1)g(1) and f(2)g(2)
@@ -168,11 +173,19 @@ impl<F: Field> IOPProverState<F> {
     }
 
     fn fix_top_variable_for_poly_pairs(&mut self, challenge: &F) {
-        self.mle_list
+        #[cfg(feature = "parallel")]
+        let iter = self
+            .mle_list
             .f_and_g_pairs
             .par_iter_mut()
-            .zip(self.eq_prefix.par_iter_mut())
-            .for_each(|((f, g), eq_prefix)| {
+            .zip(self.eq_prefix.par_iter_mut());
+        #[cfg(not(feature = "parallel"))]
+        let iter = self
+            .mle_list
+            .f_and_g_pairs
+            .iter_mut()
+            .zip(self.eq_prefix.iter_mut());
+        iter.for_each(|((f, g), eq_prefix)| {
                 if let Some(_sub_idx) =
                     Self::get_sub_idx(self.init_num_vars, self.round, f.num_vars())
                 {

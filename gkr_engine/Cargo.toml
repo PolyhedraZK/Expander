@@ -5,11 +5,11 @@ edition.workspace = true
 
 [dependencies]
 arith = { path = "../arith" }
-babybear = { path = "../arith/babybear" }
-gf2 = { path = "../arith/gf2" }
-gf2_128 = { path = "../arith/gf2_128" }
-goldilocks = { path = "../arith/goldilocks" }
-mersenne31 = { path = "../arith/mersenne31" }
+babybear = { path = "../arith/babybear", optional = true }
+gf2 = { path = "../arith/gf2", optional = true }
+gf2_128 = { path = "../arith/gf2_128", optional = true }
+goldilocks = { path = "../arith/goldilocks", optional = true }
+mersenne31 = { path = "../arith/mersenne31", optional = true }
 polynomials = { path = "../arith/polynomials"}
 serdes = { path = "../serdes" }
 
@@ -21,6 +21,7 @@ itertools.workspace = true
 ark-std.workspace = true
 
 [features]
-default = []
+default = ["all_fields"]
+all_fields = ["babybear", "gf2", "gf2_128", "goldilocks", "mersenne31"]
 recursion = []
 # grinding = [ "grinding" ]

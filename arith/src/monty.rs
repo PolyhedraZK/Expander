@@ -42,6 +42,9 @@ mod avx256;
 #[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
 pub use avx256::PackedMontyParameters;
 
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+pub trait PackedMontyParameters: param::MontyParameters {}
+
 #[derive(Clone, Copy, Default, Eq, Hash, PartialEq)]
 #[repr(transparent)] // Packed field implementations rely on this!
 pub struct MontyField31<MP: MontyParameters> {

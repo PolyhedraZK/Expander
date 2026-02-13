@@ -172,6 +172,9 @@ impl Field for BabyBearExt3x16 {
     #[cfg(target_arch = "aarch64")]
     const NAME: &'static str = "Neon Vectorized Baby Bear Extension 3";
 
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+    const NAME: &'static str = "Scalar Vectorized Baby Bear Extension 3";
+
     const SIZE: usize = 512 / 8 * 3;
 
     const FIELD_SIZE: usize = 32 * 3;

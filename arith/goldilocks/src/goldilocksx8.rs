@@ -3,9 +3,9 @@
 // With NEON it stores 8 u64 elements.
 // NEON doesn't use and arm instructions and can be used as a fallback for other architectures.
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(not(target_arch = "x86_64"))]
 mod goldilocks_neon;
-#[cfg(target_arch = "aarch64")]
+#[cfg(not(target_arch = "x86_64"))]
 pub type Goldilocksx8 = goldilocks_neon::NeonGoldilocks;
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
@@ -13,7 +13,6 @@ mod goldilocks_avx512;
 #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 pub type Goldilocksx8 = goldilocks_avx512::AVXGoldilocks;
 
-// Fallback, use avx2
 #[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
 mod goldilocks_avx256;
 #[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]

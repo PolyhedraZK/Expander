@@ -4,23 +4,28 @@ use std::{
     vec,
 };
 
+#[cfg(feature = "parallel")]
 use super::gkr_square::sumcheck_verify_gkr_square_layer;
 use circuit::Circuit;
 use gkr_engine::{
     ExpanderPCS, ExpanderSingleVarChallenge, FieldEngine, GKREngine, GKRScheme, MPIConfig,
     MPIEngine, Proof, StructuredReferenceString, Transcript,
 };
+#[cfg(feature = "parallel")]
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
 };
 use serdes::ExpSerde;
+#[cfg(feature = "parallel")]
 use sumcheck::{VerifierScratchPad, SUMCHECK_GKR_DEGREE, SUMCHECK_GKR_SQUARE_DEGREE};
 use transcript::transcript_verifier_sync;
 use utils::timer::Timer;
 
 #[cfg(feature = "grinding")]
 use crate::grind;
-use crate::{gkr_square_verify, gkr_verify, parse_proof, sumcheck_verify_gkr_layer};
+use crate::{gkr_square_verify, gkr_verify};
+#[cfg(feature = "parallel")]
+use crate::{parse_proof, sumcheck_verify_gkr_layer};
 
 #[derive(Default)]
 pub struct Verifier<Cfg: GKREngine> {
@@ -141,7 +146,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         (verified, challenge_x, challenge_y, claim_x, claim_y)
     }
 
-    /// Parallel version of the GKR verification.
+    #[cfg(feature = "parallel")]
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::type_complexity)]
@@ -340,6 +345,7 @@ impl<Cfg: GKREngine> Verifier<Cfg> {
         verified
     }
 
+    #[cfg(feature = "parallel")]
     pub fn par_verify(
         &self,
         circuit: &mut Circuit<Cfg::FieldConfig>,

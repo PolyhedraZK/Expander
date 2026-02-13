@@ -14,6 +14,11 @@ mod neon;
 #[cfg(target_arch = "aarch64")]
 pub type GF2x128 = neon::NeonGF2x128;
 
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+mod scalar;
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+pub type GF2x128 = scalar::ScalarGF2x128;
+
 impl SimdField for GF2x128 {
     type Scalar = GF2;
 

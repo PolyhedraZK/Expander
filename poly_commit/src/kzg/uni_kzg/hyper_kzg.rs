@@ -11,6 +11,7 @@ use halo2curves::{
 };
 use itertools::izip;
 use polynomials::MultilinearExtension;
+#[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
 
@@ -262,11 +263,13 @@ where
     // generate evals for each polynomial at its corresponding point
     let eval_timer = Timer::new("eval all polys", true);
     let points = points.iter().map(|p| p.as_ref()).collect::<Vec<_>>();
-    let evals: Vec<E::Fr> = polys
-        .par_iter()
-        .zip_eq(points.par_iter())
-        .map(|(poly, point)| poly.evaluate(point))
-        .collect();
+    let evals: Vec<E::Fr> = {
+        #[cfg(feature = "parallel")]
+        let iter = polys.par_iter().zip_eq(points.par_iter());
+        #[cfg(not(feature = "parallel"))]
+        let iter = polys.iter().zip(points.iter());
+        iter.map(|(poly, point)| poly.evaluate(point)).collect()
+    };
     eval_timer.stop();
 
     let merger_timer = Timer::new("merging points", true);

@@ -162,7 +162,7 @@ impl<F: FieldEngine> ExpSerde for CrossLayerSegment<F> {
     }
 }
 
-const VERSION_NUM: usize = 3914834606642317635; // b'CIRCUIT6'
+const VERSION_NUM: u64 = 3914834606642317635; // b'CIRCUIT6'
 
 impl<F: FieldEngine> ExpSerde for CrossLayerRecursiveCircuit<F> {
     fn serialize_into<W: Write>(&self, _writer: W) -> SerdeResult<()> {
@@ -170,7 +170,7 @@ impl<F: FieldEngine> ExpSerde for CrossLayerRecursiveCircuit<F> {
     }
 
     fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
-        let version_num = <usize as ExpSerde>::deserialize_from(&mut reader)?;
+        let version_num = <u64 as ExpSerde>::deserialize_from(&mut reader)?;
         assert_eq!(version_num, VERSION_NUM);
         let expected_mod = <F::CircuitField as Field>::MODULUS;
         let mut read_mod = [0u8; 32];

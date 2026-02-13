@@ -20,6 +20,11 @@ mod babybear_avx256;
 #[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
 pub type BabyBearx16 = babybear_avx256::AVXBabyBear;
 
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+mod babybear_scalar;
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+pub type BabyBearx16 = babybear_scalar::ScalarBabyBear;
+
 impl Ord for BabyBearx16 {
     #[inline(always)]
     fn cmp(&self, _: &Self) -> std::cmp::Ordering {

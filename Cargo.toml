@@ -37,7 +37,7 @@ bytes = "1.6.0"
 chrono = "0.4.38"
 clap = { version = "4.1", features = ["derive"] }
 cfg-if = "1.0"
-criterion = { version = "0.5", features = ["html_reports"] }
+criterion = { version = "0.5", default-features = false, features = ["html_reports"] }
 env_logger = "0.11.3"
 halo2curves = { git = "https://github.com/PolyhedraZK/halo2curves", default-features = false, features = [
     "bits",

@@ -5,6 +5,7 @@ use polynomials::{
     EqPolynomial, MultilinearExtension, MutRefMultiLinearPoly, MutableMultilinearExtension,
     RefMultiLinearPoly,
 };
+#[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serdes::ExpSerde;
 use utils::timer::Timer;
@@ -350,11 +351,13 @@ where
     let timer = Timer::new("batch_opening", true);
     // generate evals for each polynomial at its corresponding point
     let eval_timer = Timer::new("eval all polys", true);
-    let evals: Vec<C::Scalar> = polys
-        .par_iter()
-        .zip_eq(points.par_iter())
-        .map(|(poly, point)| poly.evaluate(point))
-        .collect();
+    let evals: Vec<C::Scalar> = {
+        #[cfg(feature = "parallel")]
+        let iter = polys.par_iter().zip_eq(points.par_iter());
+        #[cfg(not(feature = "parallel"))]
+        let iter = polys.iter().zip(points.iter());
+        iter.map(|(poly, point)| poly.evaluate(point)).collect()
+    };
     eval_timer.stop();
 
     let merger_timer = Timer::new("merging points", true);

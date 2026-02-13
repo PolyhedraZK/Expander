@@ -16,4 +16,4 @@ name = "goldilocks"
 harness = false
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = { version = "0.5", default-features = false }

@@ -282,6 +282,7 @@ impl FFTField for Goldilocks {
 pub(crate) mod p2_instructions {
     //! Credit: the majority of the code is borrowed or inspired from Plonky2 with modifications.
 
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
     use std::arch::asm;
     use std::hint::unreachable_unchecked;
 
@@ -327,6 +328,7 @@ pub(crate) mod p2_instructions {
     /// This function has no semantics. It is a hint only.
     #[inline(always)]
     pub(super) fn branch_hint() {
+        #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
         unsafe {
             asm!("", options(nomem, nostack, preserves_flags));
         }

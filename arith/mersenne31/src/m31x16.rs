@@ -18,6 +18,11 @@ mod m31_avx256;
 #[cfg(all(target_arch = "x86_64", not(target_feature = "avx512f")))]
 pub type M31x16 = m31_avx256::AVXM31;
 
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+mod m31_scalar;
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+pub type M31x16 = m31_scalar::ScalarM31x16;
+
 impl Ord for M31x16 {
     #[inline(always)]
     fn cmp(&self, _: &Self) -> std::cmp::Ordering {
