@@ -18,11 +18,16 @@ use utils::timer::Timer;
 /// - the new point for evaluation
 /// - the new polynomial that is merged via sumcheck
 /// - the proof of the sumcheck
+///
+/// When `low_memory` is true, tilde_gs are moved (not cloned) into sumcheck and
+/// recomputed afterwards for g_prime construction. This reduces peak memory at
+/// the cost of redundant computation.
 #[allow(clippy::type_complexity)]
 pub fn prover_merge_points<C>(
     polys: &[impl MultilinearExtension<C::Scalar>],
     points: &[impl AsRef<[C::Scalar]>],
     transcript: &mut impl Transcript,
+    low_memory: bool,
 ) -> (
     Vec<C::Scalar>,
     MultiLinearPoly<C::Scalar>,
@@ -46,20 +51,7 @@ where
     // \tilde g_i(b) = eq(t, i) * f_i(b)
     let timer = Timer::new("Building tilde g_i(b)", true);
 
-    let tilde_gs = polys
-        .par_iter()
-        .enumerate()
-        .map(|(index, f_i)| {
-            let mut tilde_g_eval = vec![C::Scalar::zero(); 1 << f_i.num_vars()];
-            for (j, &f_i_eval) in f_i.hypercube_basis_ref().iter().enumerate() {
-                tilde_g_eval[j] = f_i_eval * eq_t_i[index];
-            }
-
-            MultiLinearPoly {
-                coeffs: tilde_g_eval,
-            }
-        })
-        .collect::<Vec<_>>();
+    let tilde_gs = build_tilde_gs(polys, &eq_t_i);
     timer.stop();
 
     // built the virtual polynomial for SumCheck
@@ -77,10 +69,20 @@ where
 
     let timer = Timer::new("Sumcheck merging points", true);
     let mut sumcheck_poly = SumOfProductsPoly::new();
-    for (tilde_g, tilde_eq) in tilde_gs.iter().zip(tilde_eqs.into_iter()) {
-        sumcheck_poly.add_pair(tilde_g.clone(), tilde_eq);
+    // Use Option to let the compiler track ownership across the two branches.
+    let mut tilde_gs = Some(tilde_gs);
+    if low_memory {
+        // Move tilde_gs into sumcheck_poly to avoid holding two copies simultaneously
+        for (tilde_g, tilde_eq) in tilde_gs.take().unwrap().into_iter().zip(tilde_eqs.into_iter())
+        {
+            sumcheck_poly.add_pair(tilde_g, tilde_eq);
+        }
+    } else {
+        for (tilde_g, tilde_eq) in tilde_gs.as_ref().unwrap().iter().zip(tilde_eqs.into_iter()) {
+            sumcheck_poly.add_pair(tilde_g.clone(), tilde_eq);
+        }
     }
-    let proof = SumCheck::<C::Scalar>::prove(&sumcheck_poly, transcript);
+    let proof = SumCheck::<C::Scalar>::prove(sumcheck_poly, transcript);
     timer.stop();
 
     let a2 = proof.export_point_to_expander();
@@ -99,7 +101,11 @@ where
         })
         .collect::<Vec<_>>();
 
-    for (tilde_g, eq_i_a2) in tilde_gs.iter().zip(eq_i_a2_polys.iter()) {
+    // In low_memory mode, tilde_gs were moved and consumed.
+    // Recompute them for g_prime construction.
+    let tilde_gs_for_gprime = tilde_gs.unwrap_or_else(|| build_tilde_gs(polys, &eq_t_i));
+
+    for (tilde_g, eq_i_a2) in tilde_gs_for_gprime.iter().zip(eq_i_a2_polys.iter()) {
         for (j, &tilde_g_eval) in tilde_g.coeffs.iter().enumerate() {
             g_prime_evals[j] += tilde_g_eval * eq_i_a2;
         }
@@ -109,6 +115,26 @@ where
     };
     timer.stop();
     (a2, g_prime, proof)
+}
+
+/// Build tilde_gs: \tilde g_i(b) = eq(t, i) * f_i(b)
+fn build_tilde_gs<S: ExtensionField + PrimeField>(
+    polys: &[impl MultilinearExtension<S>],
+    eq_t_i: &[S],
+) -> Vec<MultiLinearPoly<S>> {
+    polys
+        .par_iter()
+        .enumerate()
+        .map(|(index, f_i)| {
+            let mut tilde_g_eval = vec![S::zero(); 1 << f_i.num_vars()];
+            for (j, &f_i_eval) in f_i.hypercube_basis_ref().iter().enumerate() {
+                tilde_g_eval[j] = f_i_eval * eq_t_i[index];
+            }
+            MultiLinearPoly {
+                coeffs: tilde_g_eval,
+            }
+        })
+        .collect()
 }
 
 pub fn verifier_merge_points<C>(

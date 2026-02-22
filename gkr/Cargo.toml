@@ -41,6 +41,7 @@ default = []
 grinding = [ ]
 recursion = [ "transcript/recursion" ]
 profile = [ "utils/profile", "sumcheck/profile" ]
+low-memory = [ "poly_commit/low-memory" ]
 
 [[bench]]
 name = "gkr-hashes"
