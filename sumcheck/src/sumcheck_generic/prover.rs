@@ -31,6 +31,32 @@ impl<F: Field> IOPProverState<F> {
         }
     }
 
+    /// Initialize the prover state by taking ownership of the polynomials,
+    /// avoiding the clone in `prover_init`.
+    pub fn prover_init_owned(polynomials: SumOfProductsPoly<F>) -> Self {
+        let num_vars = polynomials.num_vars();
+        let init_sum_of_vals: Vec<F> = polynomials
+            .f_and_g_pairs
+            .par_iter()
+            .map(|(f, g)| {
+                f.coeffs
+                    .iter()
+                    .zip(g.coeffs.iter())
+                    .map(|(&f, &g)| f * g)
+                    .sum::<F>()
+            })
+            .collect();
+        let eq_prefix = vec![F::one(); polynomials.f_and_g_pairs.len()];
+        Self {
+            challenges: Vec::with_capacity(num_vars),
+            round: 0,
+            init_num_vars: num_vars,
+            mle_list: polynomials,
+            init_sum_of_vals,
+            eq_prefix,
+        }
+    }
+
     /// Receive message from verifier, generate prover message, and proceed to
     /// next round.
     ///
