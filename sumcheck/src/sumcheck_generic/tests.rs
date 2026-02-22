@@ -89,7 +89,7 @@ fn test_sumcheck_e2e() {
 
             // prover
             let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
-            let proof = SumCheck::<Fr>::prove(&mle_list, &mut transcript);
+            let proof = SumCheck::<Fr>::prove(mle_list.clone(), &mut transcript);
 
             // verifier
             let mut transcript = BytesHashTranscript::<Keccak256hasher>::new();
@@ -119,7 +119,7 @@ fn test_sumcheck_generic_padding_helper<F: Field, T: Transcript>() {
     };
     let claimed_sum = mle_list.sum();
 
-    let proof = SumCheck::prove(&mle_list, &mut T::new());
+    let proof = SumCheck::prove(mle_list.clone(), &mut T::new());
 
     let padded_mle_list = SumOfProductsPoly {
         f_and_g_pairs: mle_list
@@ -135,7 +135,7 @@ fn test_sumcheck_generic_padding_helper<F: Field, T: Transcript>() {
             .collect(),
     };
 
-    let proof_with_padded_mle_list = SumCheck::prove(&padded_mle_list, &mut T::new());
+    let proof_with_padded_mle_list = SumCheck::prove(padded_mle_list, &mut T::new());
 
     assert_eq!(proof, proof_with_padded_mle_list);
 
