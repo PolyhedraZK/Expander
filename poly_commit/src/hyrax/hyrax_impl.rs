@@ -358,7 +358,7 @@ where
     eval_timer.stop();
 
     let merger_timer = Timer::new("merging points", true);
-    let (new_point, g_prime, proof) = prover_merge_points::<C>(polys, points, transcript);
+    let (new_point, g_prime, proof) = prover_merge_points::<C>(polys, points, transcript, cfg!(feature = "low-memory"));
     merger_timer.stop();
 
     // open g'(X) at point (a2)

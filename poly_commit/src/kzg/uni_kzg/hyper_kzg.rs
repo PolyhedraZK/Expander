@@ -289,7 +289,7 @@ where
 
     let merger_timer = Timer::new("merging points", true);
     let (new_point, g_prime, proof) =
-        prover_merge_points::<E::G1Affine>(polys, &points, transcript);
+        prover_merge_points::<E::G1Affine>(polys, &points, transcript, cfg!(feature = "low-memory"));
     merger_timer.stop();
 
     let pcs_timer = Timer::new("kzg_open", true);
