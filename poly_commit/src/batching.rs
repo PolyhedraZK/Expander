@@ -69,13 +69,16 @@ where
 
     let timer = Timer::new("Sumcheck merging points", true);
     let mut sumcheck_poly = SumOfProductsPoly::new();
+    // Use Option to let the compiler track ownership across the two branches.
+    let mut tilde_gs = Some(tilde_gs);
     if low_memory {
         // Move tilde_gs into sumcheck_poly to avoid holding two copies simultaneously
-        for (tilde_g, tilde_eq) in tilde_gs.into_iter().zip(tilde_eqs.into_iter()) {
+        for (tilde_g, tilde_eq) in tilde_gs.take().unwrap().into_iter().zip(tilde_eqs.into_iter())
+        {
             sumcheck_poly.add_pair(tilde_g, tilde_eq);
         }
     } else {
-        for (tilde_g, tilde_eq) in tilde_gs.iter().zip(tilde_eqs.into_iter()) {
+        for (tilde_g, tilde_eq) in tilde_gs.as_ref().unwrap().iter().zip(tilde_eqs.into_iter()) {
             sumcheck_poly.add_pair(tilde_g.clone(), tilde_eq);
         }
     }
@@ -98,13 +101,9 @@ where
         })
         .collect::<Vec<_>>();
 
-    // In low_memory mode, tilde_gs were moved into sumcheck_poly and consumed.
+    // In low_memory mode, tilde_gs were moved and consumed.
     // Recompute them for g_prime construction.
-    let tilde_gs_for_gprime = if low_memory {
-        build_tilde_gs(polys, &eq_t_i)
-    } else {
-        tilde_gs
-    };
+    let tilde_gs_for_gprime = tilde_gs.unwrap_or_else(|| build_tilde_gs(polys, &eq_t_i));
 
     for (tilde_g, eq_i_a2) in tilde_gs_for_gprime.iter().zip(eq_i_a2_polys.iter()) {
         for (j, &tilde_g_eval) in tilde_g.coeffs.iter().enumerate() {
