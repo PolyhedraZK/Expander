@@ -111,9 +111,9 @@ where
                 uncompressed.as_mut().copy_from_slice(chunk);
                 E::G1Affine::from_uncompressed_unchecked(&uncompressed)
                     .into_option()
-                    .expect("Invalid G1 point in SRS file")
+                    .ok_or(serdes::SerdeError::DeserializeError)
             })
-            .collect();
+            .collect::<SerdeResult<Vec<_>>>()?;
 
         // Read tau_g2
         let tau_g2 = E::G2Affine::deserialize_from(&mut reader)?;

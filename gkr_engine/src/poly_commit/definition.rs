@@ -6,6 +6,9 @@ use std::{fmt::Debug, str::FromStr};
 
 use crate::{ExpErrors, ExpanderSingleVarChallenge, FieldEngine, MPIEngine, Transcript};
 
+/// Buffer capacity for SRS file I/O (64 MB).
+const SRS_IO_BUFFER_CAPACITY: usize = 64 * 1024 * 1024;
+
 pub trait StructuredReferenceString {
     type PKey: Clone + Debug + ExpSerde + Send + Sync + 'static;
     type VKey: Clone + Debug + ExpSerde + Send + Sync + 'static;
@@ -66,7 +69,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
                 match std::fs::File::open(path) {
                     Ok(file) => {
                         // file exists; deserialize SRS from file
-                        let mut reader = BufReader::with_capacity(64 * 1024 * 1024, file);
+                        let mut reader = BufReader::with_capacity(SRS_IO_BUFFER_CAPACITY, file);
                         Self::SRS::deserialize_from(&mut reader).unwrap_or_else(|_| {
                             panic!("Failed to deserialize SRS for {} PCS", Self::NAME)
                         })
@@ -76,7 +79,7 @@ pub trait ExpanderPCS<F: FieldEngine> {
                         let srs = Self::gen_srs(params, mpi_engine, rng);
                         let file =
                             std::fs::File::create(path).expect("Failed to create SRS file");
-                        let mut writer = BufWriter::with_capacity(64 * 1024 * 1024, file);
+                        let mut writer = BufWriter::with_capacity(SRS_IO_BUFFER_CAPACITY, file);
                         srs.serialize_into(&mut writer)
                             .expect("Failed to serialize SRS to file");
                         srs
