@@ -93,13 +93,14 @@ impl<F: Field> SumCheck<F> {
     /// Generate proof of the sum of polynomial over {0,1}^`num_vars`
     ///
     /// The polynomial is represented in the form of a VirtualPolynomial.
+    /// Takes ownership of poly_list to avoid cloning internally.
     pub fn prove(
-        poly_list: &SumOfProductsPoly<F>,
+        poly_list: SumOfProductsPoly<F>,
         transcript: &mut impl Transcript,
     ) -> IOPProof<F> {
         let num_vars = poly_list.num_vars();
 
-        let mut prover_state = IOPProverState::prover_init(poly_list);
+        let mut prover_state = IOPProverState::prover_init_owned(poly_list);
         let mut challenge = None;
         let mut prover_msgs = Vec::with_capacity(num_vars);
         for _ in 0..num_vars {
