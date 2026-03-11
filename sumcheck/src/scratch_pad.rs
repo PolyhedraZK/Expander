@@ -42,7 +42,13 @@ impl<F: FieldEngine> ProverScratchPad<F> {
         let max_output_size = 1 << max_num_output_var;
         let max_io_size = max(max_input_size, max_output_size);
         let max_size = max(max(max_io_size, F::get_field_pack_size()), mpi_world_size);
-        let sqrt_max_size = Self::pow2_sqrt_ceil(max_size);
+        // Ensure scratch is at least SIMD and MPI size (not just sqrt of max_size),
+        // because collectively_eval_circuit_vals_at_expander_challenge needs
+        // scratch >= 1 << max(r_simd.len(), r_mpi.len()).
+        let sqrt_max_size = max(
+            Self::pow2_sqrt_ceil(max_size),
+            max(F::get_field_pack_size(), mpi_world_size),
+        );
 
         ProverScratchPad {
             v_evals: vec![F::Field::default(); max_input_size],
