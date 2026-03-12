@@ -51,3 +51,4 @@ harness = false
 default = [ ]
 profile = [ "utils/profile" ]
 cuda_msm = [ "msm_cuda" ]
+low-memory = [ ]
