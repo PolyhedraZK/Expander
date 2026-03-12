@@ -80,7 +80,7 @@ where
     for (tilde_g, tilde_eq) in tilde_gs.iter().zip(tilde_eqs.into_iter()) {
         sumcheck_poly.add_pair(tilde_g.clone(), tilde_eq);
     }
-    let proof = SumCheck::<C::Scalar>::prove(&sumcheck_poly, transcript);
+    let proof = SumCheck::<C::Scalar>::prove(sumcheck_poly, transcript);
     timer.stop();
 
     let a2 = proof.export_point_to_expander();
