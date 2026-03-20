@@ -14,3 +14,6 @@ pub use scratch_pad::{ProverScratchPad, VerifierScratchPad};
 
 mod utils;
 pub use utils::*;
+
+pub mod sumcheck_batch;
+pub use sumcheck_batch::*;
