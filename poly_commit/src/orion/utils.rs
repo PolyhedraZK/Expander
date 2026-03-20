@@ -217,13 +217,19 @@ where
 {
     let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
 
-    // NOTE: packed codeword buffer and encode over packed field
+    // NOTE: packed codeword buffer and encode over packed field (parallel)
     let mut codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
-    izip!(
-        packed_evals.chunks(pk.message_len()),
-        codewords.chunks_mut(pk.codeword_len())
-    )
-    .try_for_each(|(evals, codeword)| pk.code_instance.encode_in_place(evals, codeword))?;
+    {
+        use rayon::prelude::*;
+        let code = &pk.code_instance;
+        let msg_len = pk.message_len();
+        let cw_len = pk.codeword_len();
+        packed_evals.par_chunks(msg_len)
+            .zip(codewords.par_chunks_mut(cw_len))
+            .for_each(|(evals, codeword)| {
+                code.encode_in_place(evals, codeword).unwrap();
+            });
+    }
 
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
     let mut scratch = vec![PackF::ZERO; std::cmp::max(packed_rows, pk.codeword_len())];
