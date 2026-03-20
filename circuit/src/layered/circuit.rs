@@ -326,6 +326,43 @@ impl<C: FieldEngine> Circuit<C> {
 }
 
 impl<C: FieldEngine> Circuit<C> {
+    /// Clone for batch GKR: copies values but SHARES gate arrays via unsafe pointer aliasing.
+    /// The returned circuits borrow gate data from `self` — `self` MUST outlive them.
+    /// The caller MUST NOT drop the returned circuits normally — use `drop_batch_clone` instead.
+    pub unsafe fn clone_for_batch(&self) -> Self {
+        Circuit {
+            layers: self.layers.iter().map(|layer| {
+                CircuitLayer {
+                    input_var_num: layer.input_var_num,
+                    output_var_num: layer.output_var_num,
+                    input_vals: layer.input_vals.clone(),
+                    output_vals: layer.output_vals.clone(),
+                    mul: std::ptr::read(&layer.mul),
+                    add: std::ptr::read(&layer.add),
+                    const_: std::ptr::read(&layer.const_),
+                    uni: std::ptr::read(&layer.uni),
+                    structure_info: layer.structure_info.clone(),
+                }
+            }).collect(),
+            public_input: self.public_input.clone(),
+            expected_num_output_zeros: self.expected_num_output_zeros,
+            rnd_coefs_identified: self.rnd_coefs_identified,
+            rnd_coefs: self.rnd_coefs.clone(),
+        }
+    }
+
+    /// Drop a circuit created by `clone_for_batch` without freeing the shared gate arrays.
+    pub unsafe fn drop_batch_clone(mut self) {
+        for layer in &mut self.layers {
+            // Prevent Vec destructor from freeing shared gate memory
+            std::mem::forget(std::mem::take(&mut layer.mul));
+            std::mem::forget(std::mem::take(&mut layer.add));
+            std::mem::forget(std::mem::take(&mut layer.const_));
+            std::mem::forget(std::mem::take(&mut layer.uni));
+        }
+        // Now safe to drop the rest (values, public_input)
+    }
+
     pub fn log_input_size(&self) -> usize {
         self.layers[0].input_var_num
     }
