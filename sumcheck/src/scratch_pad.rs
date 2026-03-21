@@ -121,9 +121,25 @@ impl<F: FieldEngine> ScratchPadBatch<F> {
             + 2 * sqrt_max_size;           // eq_evals_first/second_half
         let b_per_sp = max_input_size; // gate_exists
 
-        // Allocate flat buffers
-        let mut f_buf: Vec<F::Field> = vec![F::Field::default(); n * f_per_sp];
-        let mut cf_buf: Vec<F::ChallengeField> = vec![F::ChallengeField::default(); n * cf_per_sp];
+        // Allocate flat buffers (use unsafe alloc_zeroed for large buffers to avoid sequential init)
+        let mut f_buf: Vec<F::Field> = if n * f_per_sp > 65536 {
+            unsafe {
+                let layout = std::alloc::Layout::array::<F::Field>(n * f_per_sp).unwrap();
+                let ptr = std::alloc::alloc_zeroed(layout) as *mut F::Field;
+                Vec::from_raw_parts(ptr, n * f_per_sp, n * f_per_sp)
+            }
+        } else {
+            vec![F::Field::default(); n * f_per_sp]
+        };
+        let mut cf_buf: Vec<F::ChallengeField> = if n * cf_per_sp > 65536 {
+            unsafe {
+                let layout = std::alloc::Layout::array::<F::ChallengeField>(n * cf_per_sp).unwrap();
+                let ptr = std::alloc::alloc_zeroed(layout) as *mut F::ChallengeField;
+                Vec::from_raw_parts(ptr, n * cf_per_sp, n * cf_per_sp)
+            }
+        } else {
+            vec![F::ChallengeField::default(); n * cf_per_sp]
+        };
         let mut b_buf: Vec<bool> = vec![false; n * b_per_sp];
 
         // Build aliased scratch pads
