@@ -363,6 +363,65 @@ impl<C: FieldEngine> Circuit<C> {
         // Now safe to drop the rest (values, public_input)
     }
 
+    /// Create N batch circuits from pre-allocated flat buffers.
+    /// Each circuit shares gates with `self` and gets a slice of the flat buffers for values.
+    /// Returns (circuits, flat_buffers) — flat_buffers must outlive circuits.
+    /// Call `drop_batch_clone` on each circuit when done.
+    pub unsafe fn create_batch(&self, n: usize) -> (Vec<Self>, Vec<Vec<C::SimdCircuitField>>) {
+        let num_layers = self.layers.len();
+        // Pre-allocate flat buffers: one per layer, size = N × layer_size
+        let mut flat_buffers: Vec<Vec<C::SimdCircuitField>> = self.layers.iter().map(|layer| {
+            let layer_size = 1usize << layer.input_var_num;
+            vec![C::SimdCircuitField::default(); n * layer_size]
+        }).collect();
+        // Note: output_vals are not pre-allocated (evaluate creates them)
+
+        let circuits: Vec<Self> = (0..n).map(|i| {
+            Circuit {
+                layers: (0..num_layers).map(|l| {
+                    let layer = &self.layers[l];
+                    let layer_size = 1usize << layer.input_var_num;
+                    let _out_size = 0;
+                    CircuitLayer {
+                        input_var_num: layer.input_var_num,
+                        output_var_num: layer.output_var_num,
+                        input_vals: Vec::from_raw_parts(
+                            flat_buffers[l].as_mut_ptr().add(i * layer_size),
+                            layer_size, layer_size,
+                        ),
+                        output_vals: Vec::new(), // evaluate creates this
+                        mul: std::ptr::read(&layer.mul),
+                        add: std::ptr::read(&layer.add),
+                        const_: std::ptr::read(&layer.const_),
+                        uni: std::ptr::read(&layer.uni),
+                        structure_info: layer.structure_info.clone(),
+                    }
+                }).collect(),
+                public_input: self.public_input.clone(),
+                expected_num_output_zeros: self.expected_num_output_zeros,
+                rnd_coefs_identified: self.rnd_coefs_identified,
+                rnd_coefs: self.rnd_coefs.clone(),
+            }
+        }).collect();
+
+        (circuits, flat_buffers)
+    }
+
+    /// Drop batch circuits created by `create_batch`.
+    /// Prevents freeing shared gates AND aliased value buffers.
+    pub unsafe fn drop_batch(circuits: Vec<Self>) {
+        for mut c in circuits {
+            for layer in &mut c.layers {
+                std::mem::forget(std::mem::take(&mut layer.mul));
+                std::mem::forget(std::mem::take(&mut layer.add));
+                std::mem::forget(std::mem::take(&mut layer.const_));
+                std::mem::forget(std::mem::take(&mut layer.uni));
+                std::mem::forget(std::mem::take(&mut layer.input_vals));
+                std::mem::forget(std::mem::take(&mut layer.output_vals));
+            }
+        }
+    }
+
     pub fn log_input_size(&self) -> usize {
         self.layers[0].input_var_num
     }
