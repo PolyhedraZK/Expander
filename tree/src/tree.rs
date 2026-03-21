@@ -122,35 +122,72 @@ impl Tree {
             index = left_child_index(index);
         }
 
-        // Compute the hash values for the non-leaf bottom layer
+        // Compute the hash values for the non-leaf bottom layer (parallel)
         {
             let start_index = level_indices.pop().unwrap();
             let upper_bound = left_child_index(start_index);
+            let level_size = upper_bound - start_index;
 
-            non_leaf_nodes
-                .iter_mut()
-                .enumerate()
-                .take(upper_bound)
-                .skip(start_index)
-                .for_each(|(current_index, e)| {
-                    let left_leaf_index = left_child_index(current_index) - upper_bound;
-                    let right_leaf_index = left_leaf_index + 1;
-                    *e = Node::node_hash(
-                        &leaf_nodes[left_leaf_index],
-                        &leaf_nodes[right_leaf_index],
-                    );
-                });
+            if level_size >= 256 {
+                // Parallel: each parent reads from leaf_nodes (separate array), no aliasing
+                use rayon::prelude::*;
+                non_leaf_nodes[start_index..upper_bound]
+                    .par_iter_mut()
+                    .enumerate()
+                    .for_each(|(i, e)| {
+                        let current_index = start_index + i;
+                        let left_leaf_index = left_child_index(current_index) - upper_bound;
+                        let right_leaf_index = left_leaf_index + 1;
+                        *e = Node::node_hash(
+                            &leaf_nodes[left_leaf_index],
+                            &leaf_nodes[right_leaf_index],
+                        );
+                    });
+            } else {
+                non_leaf_nodes
+                    .iter_mut()
+                    .enumerate()
+                    .take(upper_bound)
+                    .skip(start_index)
+                    .for_each(|(current_index, e)| {
+                        let left_leaf_index = left_child_index(current_index) - upper_bound;
+                        let right_leaf_index = left_leaf_index + 1;
+                        *e = Node::node_hash(
+                            &leaf_nodes[left_leaf_index],
+                            &leaf_nodes[right_leaf_index],
+                        );
+                    });
+            }
         }
 
         // Compute the hash values for nodes in every other layer in the tree
+        // Parallel via unsafe raw pointers: parents at [start..upper) read children
+        // at [upper..), which are non-overlapping index ranges. Safe for parallel writes.
         level_indices.reverse();
 
         for &start_index in &level_indices {
             let upper_bound = left_child_index(start_index);
-            for i in start_index..upper_bound {
-                let left = left_child_index(i);
-                let right = left + 1;
-                non_leaf_nodes[i] = Node::node_hash(&non_leaf_nodes[left], &non_leaf_nodes[right]);
+            let level_size = upper_bound - start_index;
+            if level_size >= 256 {
+                use rayon::prelude::*;
+                let ptr = non_leaf_nodes.as_mut_ptr() as usize;
+                (start_index..upper_bound).into_par_iter().for_each(|i| {
+                    let ptr = ptr as *mut Node;
+                    let left = left_child_index(i);
+                    let right = left + 1;
+                    // SAFETY: writing to index i, reading from left/right where left > i.
+                    // All writes in this level are to [start_index..upper_bound).
+                    // All reads are from [upper_bound..) which is not written in this level.
+                    unsafe {
+                        *ptr.add(i) = Node::node_hash(&*ptr.add(left), &*ptr.add(right));
+                    }
+                });
+            } else {
+                for i in start_index..upper_bound {
+                    let left = left_child_index(i);
+                    let right = left + 1;
+                    non_leaf_nodes[i] = Node::node_hash(&non_leaf_nodes[left], &non_leaf_nodes[right]);
+                }
             }
         }
         end_timer!(timer);

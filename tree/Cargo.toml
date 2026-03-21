@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
+rayon = "1.10"
 serdes = { path = "../serdes" }
 
 ark-std.workspace = true
