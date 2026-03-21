@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 arith = { path = "../arith" }
+blake3 = "1.5"
 rayon = "1.10"
 serdes = { path = "../serdes" }
 

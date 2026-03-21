@@ -1,7 +1,6 @@
 use std::{fmt, fmt::Display};
 
 use serdes::ExpSerde;
-use tiny_keccak::{Hasher, Keccak};
 
 use crate::LEAF_HASH_BYTES;
 
@@ -38,13 +37,12 @@ impl Node {
     /// A new Node containing the hash of the two input nodes.
     #[inline]
     pub fn node_hash(left: &Node, right: &Node) -> Node {
-        let mut hasher = Keccak::v256();
-        hasher.update(&left.data);
-        hasher.update(&right.data);
-
+        let mut input = [0u8; LEAF_HASH_BYTES * 2];
+        input[..LEAF_HASH_BYTES].copy_from_slice(&left.data);
+        input[LEAF_HASH_BYTES..].copy_from_slice(&right.data);
+        let hash = blake3::hash(&input);
         let mut result = [0u8; LEAF_HASH_BYTES];
-        hasher.finalize(&mut result);
-
+        result.copy_from_slice(&hash.as_bytes()[..LEAF_HASH_BYTES]);
         Node { data: result }
     }
 

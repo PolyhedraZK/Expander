@@ -2,7 +2,6 @@ use std::fmt;
 use std::fmt::{Debug, Display};
 
 use serdes::ExpSerde;
-use tiny_keccak::{Hasher, Keccak};
 
 use crate::Node;
 
@@ -40,12 +39,9 @@ impl Leaf {
     }
 
     pub fn leaf_hash(&self) -> Node {
-        let mut hasher = Keccak::v256();
-        hasher.update(&self.data);
+        let hash = blake3::hash(&self.data);
         let mut res = [0u8; LEAF_HASH_BYTES];
-
-        hasher.finalize(&mut res);
-
+        res.copy_from_slice(&hash.as_bytes()[..LEAF_HASH_BYTES]);
         Node { data: res }
     }
 }
