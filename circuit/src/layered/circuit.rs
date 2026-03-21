@@ -372,7 +372,15 @@ impl<C: FieldEngine> Circuit<C> {
         // Pre-allocate flat buffers: one per layer, size = N × layer_size
         let mut flat_buffers: Vec<Vec<C::SimdCircuitField>> = self.layers.iter().map(|layer| {
             let layer_size = 1usize << layer.input_var_num;
-            vec![C::SimdCircuitField::default(); n * layer_size]
+            if n * layer_size > 4096 {
+                unsafe {
+                    let layout = std::alloc::Layout::array::<C::SimdCircuitField>(n * layer_size).unwrap();
+                    let ptr = std::alloc::alloc_zeroed(layout) as *mut C::SimdCircuitField;
+                    Vec::from_raw_parts(ptr, n * layer_size, n * layer_size)
+                }
+            } else {
+                vec![C::SimdCircuitField::default(); n * layer_size]
+            }
         }).collect();
         // Note: output_vals are not pre-allocated (evaluate creates them)
 
