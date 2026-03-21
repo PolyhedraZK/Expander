@@ -71,6 +71,200 @@ impl<F: FieldEngine> ProverScratchPad<F> {
     }
 }
 
+/// Pre-allocated flat-buffer batch of `ProverScratchPad` instances.
+///
+/// Instead of N×13 heap allocations, this does exactly 3 allocations (one per
+/// element type) and creates N `ProverScratchPad` instances whose `Vec` fields
+/// alias into the flat buffers via `Vec::from_raw_parts`.
+///
+/// # Safety
+/// - `ScratchPadBatch` MUST outlive all references to the scratch pads.
+/// - The custom `Drop` impl forgets all inner Vecs before dropping the flat buffers.
+/// - The scratch pads MUST NOT be individually dropped or moved out of `sps`.
+pub struct ScratchPadBatch<F: FieldEngine> {
+    /// Backing buffer for v_evals + hg_evals (F::Field elements)
+    _f_buf: Vec<F::Field>,
+    /// Backing buffer for all ChallengeField vecs
+    _cf_buf: Vec<F::ChallengeField>,
+    /// Backing buffer for gate_exists
+    _b_buf: Vec<bool>,
+    /// The aliased scratch pad instances
+    sps: Vec<ProverScratchPad<F>>,
+}
+
+impl<F: FieldEngine> ScratchPadBatch<F> {
+    /// Create a batch of `n` scratch pads sharing 3 flat buffers.
+    ///
+    /// Parameters match `ProverScratchPad::new`.
+    pub fn new(
+        n: usize,
+        max_num_input_var: usize,
+        max_num_output_var: usize,
+        mpi_world_size: usize,
+    ) -> Self {
+        let max_input_size = 1 << max_num_input_var;
+        let max_output_size = 1 << max_num_output_var;
+        let max_io_size = max(max_input_size, max_output_size);
+        let pack_size = F::get_field_pack_size();
+        let max_size = max(max(max_io_size, pack_size), mpi_world_size);
+        let sqrt_max_size = max(
+            ProverScratchPad::<F>::pow2_sqrt_ceil(max_size),
+            max(pack_size, mpi_world_size),
+        );
+
+        // Per-SP element counts
+        let f_per_sp = 2 * max_input_size; // v_evals + hg_evals
+        let cf_per_sp = 3 * pack_size // simd_var_v/hg + eq_at_r_simd0
+            + 3 * mpi_world_size           // mpi_var_v/hg + eq_at_r_mpi0
+            + max_input_size               // eq_evals_at_rx
+            + max_output_size              // eq_evals_at_rz0
+            + 2 * sqrt_max_size;           // eq_evals_first/second_half
+        let b_per_sp = max_input_size; // gate_exists
+
+        // Allocate flat buffers
+        let mut f_buf: Vec<F::Field> = vec![F::Field::default(); n * f_per_sp];
+        let mut cf_buf: Vec<F::ChallengeField> = vec![F::ChallengeField::default(); n * cf_per_sp];
+        let mut b_buf: Vec<bool> = vec![false; n * b_per_sp];
+
+        // Build aliased scratch pads
+        let mut sps = Vec::with_capacity(n);
+        for i in 0..n {
+            let f_base = f_buf.as_mut_ptr();
+            let cf_base = cf_buf.as_mut_ptr();
+            let b_base = b_buf.as_mut_ptr();
+
+            let f_off = i * f_per_sp;
+            let cf_off = i * cf_per_sp;
+            let b_off = i * b_per_sp;
+
+            unsafe {
+                // F::Field slices: v_evals, hg_evals
+                let v_evals = Vec::from_raw_parts(
+                    f_base.add(f_off),
+                    max_input_size,
+                    max_input_size,
+                );
+                let hg_evals = Vec::from_raw_parts(
+                    f_base.add(f_off + max_input_size),
+                    max_input_size,
+                    max_input_size,
+                );
+
+                // ChallengeField slices — laid out contiguously
+                let mut co = cf_off; // running offset into cf_buf
+
+                let simd_var_v_evals = Vec::from_raw_parts(
+                    cf_base.add(co), pack_size, pack_size,
+                );
+                co += pack_size;
+
+                let simd_var_hg_evals = Vec::from_raw_parts(
+                    cf_base.add(co), pack_size, pack_size,
+                );
+                co += pack_size;
+
+                let mpi_var_v_evals = Vec::from_raw_parts(
+                    cf_base.add(co), mpi_world_size, mpi_world_size,
+                );
+                co += mpi_world_size;
+
+                let mpi_var_hg_evals = Vec::from_raw_parts(
+                    cf_base.add(co), mpi_world_size, mpi_world_size,
+                );
+                co += mpi_world_size;
+
+                let eq_evals_at_rx = Vec::from_raw_parts(
+                    cf_base.add(co), max_input_size, max_input_size,
+                );
+                co += max_input_size;
+
+                let eq_evals_at_rz0 = Vec::from_raw_parts(
+                    cf_base.add(co), max_output_size, max_output_size,
+                );
+                co += max_output_size;
+
+                let eq_evals_at_r_simd0 = Vec::from_raw_parts(
+                    cf_base.add(co), pack_size, pack_size,
+                );
+                co += pack_size;
+
+                let eq_evals_at_r_mpi0 = Vec::from_raw_parts(
+                    cf_base.add(co), mpi_world_size, mpi_world_size,
+                );
+                co += mpi_world_size;
+
+                let eq_evals_first_half = Vec::from_raw_parts(
+                    cf_base.add(co), sqrt_max_size, sqrt_max_size,
+                );
+                co += sqrt_max_size;
+
+                let eq_evals_second_half = Vec::from_raw_parts(
+                    cf_base.add(co), sqrt_max_size, sqrt_max_size,
+                );
+                let _ = co + sqrt_max_size; // consumed
+
+                // bool slice: gate_exists
+                let gate_exists = Vec::from_raw_parts(
+                    b_base.add(b_off), max_input_size, max_input_size,
+                );
+
+                sps.push(ProverScratchPad {
+                    v_evals,
+                    hg_evals,
+                    simd_var_v_evals,
+                    simd_var_hg_evals,
+                    mpi_var_v_evals,
+                    mpi_var_hg_evals,
+                    eq_evals_at_rx,
+                    eq_evals_at_rz0,
+                    eq_evals_at_r_simd0,
+                    eq_evals_at_r_mpi0,
+                    eq_evals_first_half,
+                    eq_evals_second_half,
+                    gate_exists,
+                    phase2_coef: F::ChallengeField::ZERO,
+                });
+            }
+        }
+
+        ScratchPadBatch {
+            _f_buf: f_buf,
+            _cf_buf: cf_buf,
+            _b_buf: b_buf,
+            sps,
+        }
+    }
+
+    /// Returns a mutable slice of N scratch pads.
+    #[inline]
+    pub fn as_mut_slice(&mut self) -> &mut [ProverScratchPad<F>] {
+        &mut self.sps
+    }
+}
+
+impl<F: FieldEngine> Drop for ScratchPadBatch<F> {
+    fn drop(&mut self) {
+        // Forget all inner Vecs to prevent double-free.
+        // The flat buffers (_f_buf, _cf_buf, _b_buf) own the memory
+        // and will free it when this struct drops (after this fn returns).
+        for sp in &mut self.sps {
+            std::mem::forget(std::mem::take(&mut sp.v_evals));
+            std::mem::forget(std::mem::take(&mut sp.hg_evals));
+            std::mem::forget(std::mem::take(&mut sp.simd_var_v_evals));
+            std::mem::forget(std::mem::take(&mut sp.simd_var_hg_evals));
+            std::mem::forget(std::mem::take(&mut sp.mpi_var_v_evals));
+            std::mem::forget(std::mem::take(&mut sp.mpi_var_hg_evals));
+            std::mem::forget(std::mem::take(&mut sp.eq_evals_at_rx));
+            std::mem::forget(std::mem::take(&mut sp.eq_evals_at_rz0));
+            std::mem::forget(std::mem::take(&mut sp.eq_evals_at_r_simd0));
+            std::mem::forget(std::mem::take(&mut sp.eq_evals_at_r_mpi0));
+            std::mem::forget(std::mem::take(&mut sp.eq_evals_first_half));
+            std::mem::forget(std::mem::take(&mut sp.eq_evals_second_half));
+            std::mem::forget(std::mem::take(&mut sp.gate_exists));
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct VerifierScratchPad<F: FieldEngine> {
     // ====== for evaluating cst, add and mul ======

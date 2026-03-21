@@ -191,8 +191,9 @@ pub fn sumcheck_prove_gkr_layer_batch<F: FieldEngine, T: Transcript>(
     }
 
     // Each instance uses single-process MPI internally.
+    // Write in-place to avoid replacing the Vec (important for aliased ScratchPadBatch).
     for sp in scratch_pads.iter_mut() {
-        sp.eq_evals_at_r_mpi0 = vec![F::ChallengeField::ONE];
+        sp.eq_evals_at_r_mpi0[0] = F::ChallengeField::ONE;
     }
 
     // ======== Phase 1: x-variable sumcheck ========
@@ -258,9 +259,13 @@ pub fn sumcheck_prove_gkr_layer_batch<F: FieldEngine, T: Transcript>(
     }
 
     // ======== Phase 2: SIMD variable sumcheck ========
+    // Unpack into existing buffers to avoid replacing the Vec
+    // (important for aliased ScratchPadBatch).
     scratch_pads.par_iter_mut().for_each(|sp| {
-        sp.simd_var_v_evals = sp.v_evals[0].unpack();
-        sp.simd_var_hg_evals = sp.hg_evals[0].unpack();
+        let v_unpacked = sp.v_evals[0].unpack();
+        let hg_unpacked = sp.hg_evals[0].unpack();
+        sp.simd_var_v_evals.copy_from_slice(&v_unpacked);
+        sp.simd_var_hg_evals.copy_from_slice(&hg_unpacked);
     });
 
     let mut simd_helpers: Vec<SumcheckSimdProdGateHelper<F>> = (0..n)
