@@ -42,11 +42,13 @@ impl Tree {
     pub fn new_with_leaves(leaves: Vec<Leaf>) -> Self {
         let tree_height = log2(leaves.len() + 1);
 
-        let mut leaf_nodes = leaves
-            .as_slice()
-            .iter()
-            .map(|leaf| leaf.leaf_hash())
-            .collect::<Vec<Node>>();
+        // Parallel leaf hashing (Keccak-256 per leaf is the dominant cost)
+        let mut leaf_nodes: Vec<Node> = if leaves.len() >= 256 {
+            use rayon::prelude::*;
+            leaves.par_iter().map(|leaf| leaf.leaf_hash()).collect()
+        } else {
+            leaves.iter().map(|leaf| leaf.leaf_hash()).collect()
+        };
         let mut nodes = Self::new_with_leaf_nodes(&leaf_nodes, tree_height);
         nodes.append(&mut leaf_nodes);
         Self { nodes, leaves }

@@ -235,7 +235,6 @@ where
     let mut scratch = vec![PackF::ZERO; std::cmp::max(packed_rows, pk.codeword_len())];
     transpose_inplace(&mut codewords, &mut scratch, pk.codeword_len(), packed_rows);
     drop(scratch);
-
     // NOTE: commit the interleaved codeword
     // we just directly commit to the packed field elements to leaves
     // Also note, when codeword is not power of 2 length, pad to nearest po2
