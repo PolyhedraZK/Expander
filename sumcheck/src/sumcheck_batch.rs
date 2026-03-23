@@ -201,21 +201,31 @@ pub fn sumcheck_prove_gkr_layer_batch<F: FieldEngine, T: Transcript>(
         .map(|_| SumcheckProductGateHelper::new(input_var_num))
         .collect();
 
-    scratch_pads
-        .par_iter_mut()
-        .zip(layers.par_iter())
-        .for_each(|(sp, layer)| {
+    let use_seq = n <= 2048;
+
+    if use_seq {
+        for (sp, layer) in scratch_pads.iter_mut().zip(layers.iter()) {
             prepare_x_vals_for_instance(layer, challenge, alpha, sp, is_output_layer);
-        });
+        }
+    } else {
+        scratch_pads
+            .par_iter_mut()
+            .zip(layers.par_iter())
+            .for_each(|(sp, layer)| {
+                prepare_x_vals_for_instance(layer, challenge, alpha, sp, is_output_layer);
+            });
+    }
 
     let mut all_rx = Vec::with_capacity(input_var_num);
     for i_var in 0..input_var_num {
-        let agg = xy_helpers
-            .par_iter_mut()
-            .zip(scratch_pads.par_iter())
-            .zip(layers.par_iter())
-            .zip(batch_eq_coeffs.par_iter())
-            .map(|(((helper, sp), layer), &eq_coeff)| {
+        let agg = if use_seq {
+            let mut agg = [F::ChallengeField::ZERO; 3];
+            for (((helper, sp), layer), &eq_coeff) in xy_helpers
+                .iter_mut()
+                .zip(scratch_pads.iter())
+                .zip(layers.iter())
+                .zip(batch_eq_coeffs.iter())
+            {
                 let local_simd = helper.poly_eval_at::<F>(
                     i_var,
                     SUMCHECK_GKR_DEGREE,
@@ -224,28 +234,51 @@ pub fn sumcheck_prove_gkr_layer_batch<F: FieldEngine, T: Transcript>(
                     &layer.input_vals,
                     &sp.gate_exists,
                 );
-                let mut local_agg = [F::ChallengeField::ZERO; 3];
                 for k in 0..3 {
-                    local_agg[k] =
+                    agg[k] +=
                         eq_coeff * unpack_and_combine(&local_simd[k], &sp.eq_evals_at_r_simd0);
                 }
-                local_agg
-            })
-            .reduce(
-                || [F::ChallengeField::ZERO; 3],
-                |mut a, b| {
+            }
+            agg
+        } else {
+            xy_helpers
+                .par_iter_mut()
+                .zip(scratch_pads.par_iter())
+                .zip(layers.par_iter())
+                .zip(batch_eq_coeffs.par_iter())
+                .map(|(((helper, sp), layer), &eq_coeff)| {
+                    let local_simd = helper.poly_eval_at::<F>(
+                        i_var,
+                        SUMCHECK_GKR_DEGREE,
+                        &sp.v_evals,
+                        &sp.hg_evals,
+                        &layer.input_vals,
+                        &sp.gate_exists,
+                    );
+                    let mut local_agg = [F::ChallengeField::ZERO; 3];
                     for k in 0..3 {
-                        a[k] += b[k];
+                        local_agg[k] =
+                            eq_coeff * unpack_and_combine(&local_simd[k], &sp.eq_evals_at_r_simd0);
                     }
-                    a
-                },
-            );
+                    local_agg
+                })
+                .reduce(
+                    || [F::ChallengeField::ZERO; 3],
+                    |mut a, b| {
+                        for k in 0..3 {
+                            a[k] += b[k];
+                        }
+                        a
+                    },
+                )
+        };
         let r = transcript_io_local::<F::ChallengeField, T>(&agg, transcript);
-        xy_helpers
-            .par_iter_mut()
-            .zip(scratch_pads.par_iter_mut())
-            .zip(layers.par_iter())
-            .for_each(|((helper, sp), layer)| {
+        if use_seq {
+            for ((helper, sp), layer) in xy_helpers
+                .iter_mut()
+                .zip(scratch_pads.iter_mut())
+                .zip(layers.iter())
+            {
                 helper.receive_challenge::<F>(
                     i_var,
                     r,
@@ -254,19 +287,44 @@ pub fn sumcheck_prove_gkr_layer_batch<F: FieldEngine, T: Transcript>(
                     &layer.input_vals,
                     &mut sp.gate_exists,
                 );
-            });
+            }
+        } else {
+            xy_helpers
+                .par_iter_mut()
+                .zip(scratch_pads.par_iter_mut())
+                .zip(layers.par_iter())
+                .for_each(|((helper, sp), layer)| {
+                    helper.receive_challenge::<F>(
+                        i_var,
+                        r,
+                        &mut sp.v_evals,
+                        &mut sp.hg_evals,
+                        &layer.input_vals,
+                        &mut sp.gate_exists,
+                    );
+                });
+        }
         all_rx.push(r);
     }
 
     // ======== Phase 2: SIMD variable sumcheck ========
     // Unpack into existing buffers to avoid replacing the Vec
     // (important for aliased ScratchPadBatch).
-    scratch_pads.par_iter_mut().for_each(|sp| {
-        let v_unpacked = sp.v_evals[0].unpack();
-        let hg_unpacked = sp.hg_evals[0].unpack();
-        sp.simd_var_v_evals.copy_from_slice(&v_unpacked);
-        sp.simd_var_hg_evals.copy_from_slice(&hg_unpacked);
-    });
+    if use_seq {
+        for sp in scratch_pads.iter_mut() {
+            let v_unpacked = sp.v_evals[0].unpack();
+            let hg_unpacked = sp.hg_evals[0].unpack();
+            sp.simd_var_v_evals.copy_from_slice(&v_unpacked);
+            sp.simd_var_hg_evals.copy_from_slice(&hg_unpacked);
+        }
+    } else {
+        scratch_pads.par_iter_mut().for_each(|sp| {
+            let v_unpacked = sp.v_evals[0].unpack();
+            let hg_unpacked = sp.hg_evals[0].unpack();
+            sp.simd_var_v_evals.copy_from_slice(&v_unpacked);
+            sp.simd_var_hg_evals.copy_from_slice(&hg_unpacked);
+        });
+    }
 
     let mut simd_helpers: Vec<SumcheckSimdProdGateHelper<F>> = (0..n)
         .map(|_| SumcheckSimdProdGateHelper::new(simd_var_num))
@@ -274,11 +332,13 @@ pub fn sumcheck_prove_gkr_layer_batch<F: FieldEngine, T: Transcript>(
 
     let mut all_r_simd = Vec::with_capacity(simd_var_num);
     for i_var in 0..simd_var_num {
-        let agg = simd_helpers
-            .par_iter_mut()
-            .zip(scratch_pads.par_iter_mut())
-            .zip(batch_eq_coeffs.par_iter())
-            .map(|((helper, sp), &eq_coeff)| {
+        let agg = if use_seq {
+            let mut agg = [F::ChallengeField::ZERO; 4];
+            for ((helper, sp), &eq_coeff) in simd_helpers
+                .iter_mut()
+                .zip(scratch_pads.iter_mut())
+                .zip(batch_eq_coeffs.iter())
+            {
                 let local = helper.poly_eval_at(
                     i_var,
                     SUMCHECK_GKR_SIMD_MPI_DEGREE,
@@ -286,26 +346,43 @@ pub fn sumcheck_prove_gkr_layer_batch<F: FieldEngine, T: Transcript>(
                     &mut sp.simd_var_v_evals,
                     &mut sp.simd_var_hg_evals,
                 );
-                let mut local_agg = [F::ChallengeField::ZERO; 4];
                 for k in 0..4 {
-                    local_agg[k] = eq_coeff * local[k];
+                    agg[k] += eq_coeff * local[k];
                 }
-                local_agg
-            })
-            .reduce(
-                || [F::ChallengeField::ZERO; 4],
-                |mut a, b| {
+            }
+            agg
+        } else {
+            simd_helpers
+                .par_iter_mut()
+                .zip(scratch_pads.par_iter_mut())
+                .zip(batch_eq_coeffs.par_iter())
+                .map(|((helper, sp), &eq_coeff)| {
+                    let local = helper.poly_eval_at(
+                        i_var,
+                        SUMCHECK_GKR_SIMD_MPI_DEGREE,
+                        &mut sp.eq_evals_at_r_simd0,
+                        &mut sp.simd_var_v_evals,
+                        &mut sp.simd_var_hg_evals,
+                    );
+                    let mut local_agg = [F::ChallengeField::ZERO; 4];
                     for k in 0..4 {
-                        a[k] += b[k];
+                        local_agg[k] = eq_coeff * local[k];
                     }
-                    a
-                },
-            );
+                    local_agg
+                })
+                .reduce(
+                    || [F::ChallengeField::ZERO; 4],
+                    |mut a, b| {
+                        for k in 0..4 {
+                            a[k] += b[k];
+                        }
+                        a
+                    },
+                )
+        };
         let r = transcript_io_local::<F::ChallengeField, T>(&agg, transcript);
-        simd_helpers
-            .par_iter_mut()
-            .zip(scratch_pads.par_iter_mut())
-            .for_each(|(helper, sp)| {
+        if use_seq {
+            for (helper, sp) in simd_helpers.iter_mut().zip(scratch_pads.iter_mut()) {
                 helper.receive_challenge(
                     i_var,
                     r,
@@ -313,7 +390,21 @@ pub fn sumcheck_prove_gkr_layer_batch<F: FieldEngine, T: Transcript>(
                     &mut sp.simd_var_v_evals,
                     &mut sp.simd_var_hg_evals,
                 );
-            });
+            }
+        } else {
+            simd_helpers
+                .par_iter_mut()
+                .zip(scratch_pads.par_iter_mut())
+                .for_each(|(helper, sp)| {
+                    helper.receive_challenge(
+                        i_var,
+                        r,
+                        &mut sp.eq_evals_at_r_simd0,
+                        &mut sp.simd_var_v_evals,
+                        &mut sp.simd_var_hg_evals,
+                    );
+                });
+        }
         all_r_simd.push(r);
     }
 
@@ -359,14 +450,22 @@ pub fn sumcheck_prove_gkr_layer_batch<F: FieldEngine, T: Transcript>(
         // y-phase batch coefficients: eq(r_mpi_var, j) for j = 0..N-1
         let batch_eq_y = EqPolynomial::<F::ChallengeField>::build_eq_x_r(&all_r_mpi);
 
-        scratch_pads
-            .par_iter_mut()
-            .zip(layers.par_iter())
-            .for_each(|(sp, layer)| {
+        if use_seq {
+            for (sp, layer) in scratch_pads.iter_mut().zip(layers.iter()) {
                 prepare_y_vals_for_instance(
                     layer, &all_rx, &all_r_simd, &all_r_mpi, challenge, sp, vx_claim,
                 );
-            });
+            }
+        } else {
+            scratch_pads
+                .par_iter_mut()
+                .zip(layers.par_iter())
+                .for_each(|(sp, layer)| {
+                    prepare_y_vals_for_instance(
+                        layer, &all_rx, &all_r_simd, &all_r_mpi, challenge, sp, vx_claim,
+                    );
+                });
+        }
 
         // phase2_coef is the SAME for all instances (shared challenge values).
         let phase2_coef = scratch_pads[0].phase2_coef;
@@ -377,12 +476,14 @@ pub fn sumcheck_prove_gkr_layer_batch<F: FieldEngine, T: Transcript>(
 
         let mut all_ry = Vec::with_capacity(input_var_num);
         for i_var in 0..input_var_num {
-            let agg = xy_helpers_y
-                .par_iter_mut()
-                .zip(scratch_pads.par_iter())
-                .zip(layers.par_iter())
-                .zip(batch_eq_y.par_iter())
-                .map(|(((helper, sp), layer), &eq_y)| {
+            let agg = if use_seq {
+                let mut agg = [F::ChallengeField::ZERO; 3];
+                for (((helper, sp), layer), &eq_y) in xy_helpers_y
+                    .iter_mut()
+                    .zip(scratch_pads.iter())
+                    .zip(layers.iter())
+                    .zip(batch_eq_y.iter())
+                {
                     let local_simd = helper.poly_eval_at::<F>(
                         i_var,
                         SUMCHECK_GKR_DEGREE,
@@ -391,29 +492,53 @@ pub fn sumcheck_prove_gkr_layer_batch<F: FieldEngine, T: Transcript>(
                         &layer.input_vals,
                         &sp.gate_exists,
                     );
-                    let mut local_agg = [F::ChallengeField::ZERO; 3];
                     for k in 0..3 {
                         let scalar =
                             unpack_and_combine(&local_simd[k], &sp.eq_evals_at_r_simd0);
-                        local_agg[k] = eq_y * scalar * phase2_coef;
+                        agg[k] += eq_y * scalar * phase2_coef;
                     }
-                    local_agg
-                })
-                .reduce(
-                    || [F::ChallengeField::ZERO; 3],
-                    |mut a, b| {
+                }
+                agg
+            } else {
+                xy_helpers_y
+                    .par_iter_mut()
+                    .zip(scratch_pads.par_iter())
+                    .zip(layers.par_iter())
+                    .zip(batch_eq_y.par_iter())
+                    .map(|(((helper, sp), layer), &eq_y)| {
+                        let local_simd = helper.poly_eval_at::<F>(
+                            i_var,
+                            SUMCHECK_GKR_DEGREE,
+                            &sp.v_evals,
+                            &sp.hg_evals,
+                            &layer.input_vals,
+                            &sp.gate_exists,
+                        );
+                        let mut local_agg = [F::ChallengeField::ZERO; 3];
                         for k in 0..3 {
-                            a[k] += b[k];
+                            let scalar =
+                                unpack_and_combine(&local_simd[k], &sp.eq_evals_at_r_simd0);
+                            local_agg[k] = eq_y * scalar * phase2_coef;
                         }
-                        a
-                    },
-                );
+                        local_agg
+                    })
+                    .reduce(
+                        || [F::ChallengeField::ZERO; 3],
+                        |mut a, b| {
+                            for k in 0..3 {
+                                a[k] += b[k];
+                            }
+                            a
+                        },
+                    )
+            };
             let r = transcript_io_local::<F::ChallengeField, T>(&agg, transcript);
-            xy_helpers_y
-                .par_iter_mut()
-                .zip(scratch_pads.par_iter_mut())
-                .zip(layers.par_iter())
-                .for_each(|((helper, sp), layer)| {
+            if use_seq {
+                for ((helper, sp), layer) in xy_helpers_y
+                    .iter_mut()
+                    .zip(scratch_pads.iter_mut())
+                    .zip(layers.iter())
+                {
                     helper.receive_challenge::<F>(
                         i_var,
                         r,
@@ -422,18 +547,42 @@ pub fn sumcheck_prove_gkr_layer_batch<F: FieldEngine, T: Transcript>(
                         &layer.input_vals,
                         &mut sp.gate_exists,
                     );
-                });
+                }
+            } else {
+                xy_helpers_y
+                    .par_iter_mut()
+                    .zip(scratch_pads.par_iter_mut())
+                    .zip(layers.par_iter())
+                    .for_each(|((helper, sp), layer)| {
+                        helper.receive_challenge::<F>(
+                            i_var,
+                            r,
+                            &mut sp.v_evals,
+                            &mut sp.hg_evals,
+                            &layer.input_vals,
+                            &mut sp.gate_exists,
+                        );
+                    });
+            }
             all_ry.push(r);
         }
 
         // vy_claim = sum over instances of eq_y[j] * unpack_and_combine(v_j[0], eq_simd_j)
-        let vy_sum = scratch_pads
-            .par_iter()
-            .zip(batch_eq_y.par_iter())
-            .map(|(sp, &eq_y)| {
-                eq_y * unpack_and_combine(&sp.v_evals[0], &sp.eq_evals_at_r_simd0)
-            })
-            .reduce(|| F::ChallengeField::ZERO, |a, b| a + b);
+        let vy_sum = if use_seq {
+            let mut sum = F::ChallengeField::ZERO;
+            for (sp, &eq_y) in scratch_pads.iter().zip(batch_eq_y.iter()) {
+                sum += eq_y * unpack_and_combine(&sp.v_evals[0], &sp.eq_evals_at_r_simd0);
+            }
+            sum
+        } else {
+            scratch_pads
+                .par_iter()
+                .zip(batch_eq_y.par_iter())
+                .map(|(sp, &eq_y)| {
+                    eq_y * unpack_and_combine(&sp.v_evals[0], &sp.eq_evals_at_r_simd0)
+                })
+                .reduce(|| F::ChallengeField::ZERO, |a, b| a + b)
+        };
         vy_claim = Some(vy_sum);
         transcript.append_field_element(&vy_sum);
 
