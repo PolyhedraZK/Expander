@@ -602,6 +602,58 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
 
     let mut buffer = vec![F::ZERO; com_pack_size * EvalF::DEGREE];
 
+    // GPU FFI acceleration for large commits
+    #[cfg(feature = "cuda_pcs")]
+    if eval_row.len() >= 32768 {
+        let t_gpu = std::time::Instant::now();
+        let msg_len = eval_row.len();
+        let packed_rows = eq_col_coeffs.len() / com_pack_size;
+        let n_prox = proximity_rows.len();
+
+        // Flatten eq_col_coeffs to raw M31 (3 per E3)
+        let eq_flat: Vec<u32> = unsafe {
+            std::slice::from_raw_parts(eq_col_coeffs.as_ptr() as *const u32,
+                eq_col_coeffs.len() * 3).to_vec()
+        };
+        // Flatten rand_col_coeffs
+        let mut rand_flat: Vec<u32> = Vec::with_capacity(n_prox * packed_rows * 16 * 3);
+        for rc in rand_col_coeffs {
+            unsafe {
+                rand_flat.extend_from_slice(std::slice::from_raw_parts(
+                    rc.as_ptr() as *const u32, rc.len() * 3));
+            }
+        }
+        // packed_evals as raw u32
+        let evals_ptr = packed_evals.as_ptr() as *const u32;
+        let eval_row_ptr = eval_row.as_mut_ptr() as *mut u32;
+
+        // Flatten prox output
+        let mut prox_flat = vec![0u32; n_prox * msg_len * 3];
+
+        extern "C" {
+            fn gpu_linear_combine_m31ext3(
+                packed_evals: *const u32, eq_coeffs: *const u32,
+                packed_rows: u32, msg_len: u32, eval_row: *mut u32,
+                n_proximity: u32, rand_coeffs: *const u32, prox_rows: *mut u32);
+        }
+        unsafe {
+            gpu_linear_combine_m31ext3(
+                evals_ptr, eq_flat.as_ptr(), packed_rows as u32, msg_len as u32,
+                eval_row_ptr, n_prox as u32, rand_flat.as_ptr(), prox_flat.as_mut_ptr());
+        }
+
+        // Copy prox results back
+        for (t, pr) in proximity_rows.iter_mut().enumerate() {
+            unsafe {
+                std::ptr::copy_nonoverlapping(
+                    prox_flat[t * msg_len * 3..].as_ptr(),
+                    pr.as_mut_ptr() as *mut u32, msg_len * 3);
+            }
+        }
+        eprintln!("      [gpu-ffi] linear_combine: {:?}", t_gpu.elapsed());
+        return;
+    }
+
     // eval_row: parallel over j within each chunk pair
     {
         use rayon::prelude::*;

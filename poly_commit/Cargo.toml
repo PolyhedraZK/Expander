@@ -47,8 +47,12 @@ harness = false
 name = "pcs_all"
 harness = false
 
+[build-dependencies]
+cc = { version = "1", features = ["parallel"] }
+
 [features]
 default = [ ]
 profile = [ "utils/profile" ]
 cuda_msm = [ "msm_cuda" ]
+cuda_pcs = [ ]
 low-memory = [ ]
