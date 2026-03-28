@@ -464,6 +464,123 @@ where
 }
 
 #[inline(always)]
+fn gpu_linear_combine<F, EvalF, SimdF>(
+    packed_evals: &[SimdF],
+    eq_col_coeffs: &[EvalF],
+    eval_row: &mut [EvalF],
+    rand_col_coeffs: &[Vec<EvalF>],
+    proximity_rows: &mut [Vec<EvalF>],
+    com_pack_size: usize,
+    simd_inner_prods: usize,
+    packed_row_size: usize,
+) where
+    F: Field,
+    EvalF: ExtensionField<BaseField = F>,
+    SimdF: SimdField<Scalar = F>,
+{
+    use std::io::{BufRead, BufReader, Write};
+    let msg_len = eval_row.len();
+    let packed_rows = eq_col_coeffs.len() / com_pack_size;
+    let commit_len = packed_evals.len();
+    let n_prox = proximity_rows.len();
+
+    // Write request to /dev/shm/gpu_data/lc_request.bin
+    let req_path = "/dev/shm/gpu_data/lc_request.bin";
+    {
+        let mut f = std::fs::File::create(req_path).unwrap();
+        f.write_all(&1u32.to_le_bytes()).unwrap(); // 1 job
+        f.write_all(&(commit_len as u32).to_le_bytes()).unwrap();
+        f.write_all(&(msg_len as u32).to_le_bytes()).unwrap();
+        f.write_all(&(packed_rows as u32).to_le_bytes()).unwrap();
+        f.write_all(&(n_prox as u32).to_le_bytes()).unwrap();
+
+        // packed_evals as raw bytes
+        let evals_bytes: &[u8] = unsafe {
+            std::slice::from_raw_parts(packed_evals.as_ptr() as *const u8,
+                                        packed_evals.len() * std::mem::size_of::<SimdF>())
+        };
+        f.write_all(evals_bytes).unwrap();
+
+        // eq_col_coeffs as raw E3 bytes (packed_rows * 16 * 12 bytes)
+        let eq_bytes: &[u8] = unsafe {
+            std::slice::from_raw_parts(eq_col_coeffs.as_ptr() as *const u8,
+                                        eq_col_coeffs.len() * std::mem::size_of::<EvalF>())
+        };
+        f.write_all(eq_bytes).unwrap();
+
+        // rand_col_coeffs per proximity test
+        for rc in rand_col_coeffs {
+            let rc_bytes: &[u8] = unsafe {
+                std::slice::from_raw_parts(rc.as_ptr() as *const u8,
+                                            rc.len() * std::mem::size_of::<EvalF>())
+            };
+            f.write_all(rc_bytes).unwrap();
+        }
+    }
+
+    // Send LINEAR_COMBINE to GPU server
+    gpu_server_command("LINEAR_COMBINE");
+
+    // Read results
+    let res_path = "/dev/shm/gpu_data/lc_result.bin";
+    let res_data = std::fs::read(res_path).unwrap();
+    let elem_size = std::mem::size_of::<EvalF>();
+    let mut offset = 0;
+
+    // eval_row
+    unsafe {
+        let src = &res_data[offset..offset + msg_len * elem_size];
+        std::ptr::copy_nonoverlapping(src.as_ptr(), eval_row.as_mut_ptr() as *mut u8, src.len());
+    }
+    offset += msg_len * elem_size;
+
+    // proximity_rows
+    for pr in proximity_rows.iter_mut() {
+        unsafe {
+            let src = &res_data[offset..offset + msg_len * elem_size];
+            std::ptr::copy_nonoverlapping(src.as_ptr(), pr.as_mut_ptr() as *mut u8, src.len());
+        }
+        offset += msg_len * elem_size;
+    }
+}
+
+fn gpu_server_command(cmd: &str) {
+    use std::io::{BufRead, BufReader, Write};
+    use std::sync::Mutex;
+
+    static GPU_SERVER: std::sync::OnceLock<Mutex<GpuServerConn>> = std::sync::OnceLock::new();
+
+    struct GpuServerConn {
+        stdin: std::process::ChildStdin,
+        stdout: BufReader<std::process::ChildStdout>,
+    }
+
+    let server = GPU_SERVER.get_or_init(|| {
+        let mut child = std::process::Command::new("cuda/gpu_prover_v2")
+            .arg("--server")
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::inherit())
+            .spawn()
+            .expect("Failed to launch cuda/gpu_prover_v2 --server");
+        let stdin = child.stdin.take().unwrap();
+        let stdout = BufReader::new(child.stdout.take().unwrap());
+        let mut s = GpuServerConn { stdin, stdout };
+        let mut line = String::new();
+        s.stdout.read_line(&mut line).unwrap();
+        assert!(line.starts_with("GPU_SERVER_READY"), "GPU: {}", line.trim());
+        eprintln!("  [gpu-lc] server connected");
+        Mutex::new(s)
+    });
+
+    let mut s = server.lock().unwrap();
+    writeln!(s.stdin, "{}", cmd).unwrap();
+    s.stdin.flush().unwrap();
+    let mut line = String::new();
+    s.stdout.read_line(&mut line).unwrap();
+    eprintln!("  [gpu-lc] {}: {}", cmd, line.trim());
+}
+
 pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
     com_pack_size: usize,
     packed_evals: &[SimdF],
@@ -485,19 +602,34 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
 
     let mut buffer = vec![F::ZERO; com_pack_size * EvalF::DEGREE];
 
-    // eval_row: sequential (correct, original logic)
-    izip!(
-        eq_col_coeffs.chunks(com_pack_size),
-        packed_evals.chunks(packed_evals.len() / packed_row_size)
-    )
-    .for_each(|(eq_chunk, packed_evals_chunk)| {
-        let eq_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
-        transpose(&eq_limbs, &mut buffer, EvalF::DEGREE, com_pack_size);
-        let simd_limbs: Vec<_> = buffer.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect();
-        izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *eval_row).for_each(
-            |(p_col, eval)| *eval += simd_ext_base_inner_prod::<_, EvalF, _>(&simd_limbs, p_col),
-        );
-    });
+    // eval_row: parallel over j within each chunk pair
+    {
+        use rayon::prelude::*;
+        let msg_len = eval_row.len();
+        // Pre-compute SIMD limbs per chunk (avoids redundant work in parallel loop)
+        let chunk_limbs: Vec<Vec<SimdF>> = eq_col_coeffs.chunks(com_pack_size).map(|eq_chunk| {
+            let mut buf = vec![F::ZERO; com_pack_size * EvalF::DEGREE];
+            let eq_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
+            transpose(&eq_limbs, &mut buf, EvalF::DEGREE, com_pack_size);
+            buf.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect()
+        }).collect();
+
+        let data_chunk_size = packed_evals.len() / packed_row_size;
+        let actual_msg = data_chunk_size / simd_inner_prods;
+        for (r, simd_limbs) in chunk_limbs.iter().enumerate() {
+            let data_chunk = &packed_evals[r * data_chunk_size..(r + 1) * data_chunk_size];
+            if actual_msg >= 256 {
+                eval_row[..actual_msg].par_iter_mut().enumerate().for_each(|(j, eval)| {
+                    let p_col = &data_chunk[j * simd_inner_prods..(j + 1) * simd_inner_prods];
+                    *eval += simd_ext_base_inner_prod::<_, EvalF, _>(simd_limbs, p_col);
+                });
+            } else {
+                izip!(data_chunk.chunks(simd_inner_prods), &mut eval_row[..actual_msg]).for_each(
+                    |(p_col, eval)| *eval += simd_ext_base_inner_prod::<_, EvalF, _>(simd_limbs, p_col),
+                );
+            }
+        }
+    }
 
     // proximity_rows: parallel across tests (each test is independent)
     {

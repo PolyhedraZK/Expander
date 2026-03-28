@@ -78,6 +78,7 @@ where
         })
         .collect();
 
+    let _t_lc = std::time::Instant::now();
     match F::NAME {
         GF2::NAME => lut_open_linear_combine(
             ComPackF::PACK_SIZE,
@@ -97,6 +98,8 @@ where
         ),
     }
 
+    eprintln!("      [pcs-inner] linear_combine: {:?}", _t_lc.elapsed());
+    let _t_eval = std::time::Instant::now();
     // NOTE: working on evaluation response, evaluate the rest of the response
     let mut scratch = vec![EvalF::ZERO; msg_size];
     let eval = RefMultiLinearPoly::from_ref(&eval_row).evaluate_with_buffer(
@@ -105,9 +108,12 @@ where
     );
     drop(scratch);
 
+    eprintln!("      [pcs-inner] multilinear_eval: {:?}", _t_eval.elapsed());
+    let _t_mt = std::time::Instant::now();
     // NOTE: MT opening for point queries
     let query_openings = orion_mt_openings(pk, transcript, scratch_pad);
 
+    eprintln!("      [pcs-inner] merkle_query: {:?} ({} queries)", _t_mt.elapsed(), query_openings.len());
     (
         eval,
         OrionProof {
