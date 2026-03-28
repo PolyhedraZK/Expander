@@ -216,6 +216,97 @@ where
     PackF: SimdField,
 {
     let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
+
+    // GPU full commit for large polynomials
+    #[cfg(feature = "cuda_pcs")]
+    // GPU commit disabled — Rayon 54-core CPU is faster than GPU due to:
+    // 1. PCIe upload overhead for leaves (512MB+)
+    // 2. GPU serialization blocks Rayon threads
+    // 3. Multiple commits contend for single GPU
+    if false && packed_evals.len() >= 4194304 && std::env::var("USE_GPU_PROVER").is_ok() {
+        let t0 = std::time::Instant::now();
+        let commit_len = packed_evals.len();
+        let msg_len = pk.message_len();
+        let cw_len = pk.codeword_len();
+        let srs_path = format!("/dev/shm/gpu_data/srs_{}.bin", commit_len);
+
+        // Dump SRS if not yet done
+        if !std::path::Path::new(&srs_path).exists() {
+            std::fs::create_dir_all("/dev/shm/gpu_data").ok();
+            use std::io::Write as W2;
+            let code = &pk.code_instance;
+            let mut f = std::fs::File::create(&srs_path).unwrap();
+            f.write_all(&(code.msg_len() as u32).to_le_bytes()).unwrap();
+            f.write_all(&(code.code_len() as u32).to_le_bytes()).unwrap();
+            let n_graphs = code.g0s.len() + code.g1s.len();
+            f.write_all(&(n_graphs as u32).to_le_bytes()).unwrap();
+            f.write_all(&(pk.num_leaves_per_mt_query as u32).to_le_bytes()).unwrap();
+            for gp in code.g0s.iter().chain(code.g1s.iter()) {
+                f.write_all(&(gp.input_starts as u32).to_le_bytes()).unwrap();
+                f.write_all(&(gp.output_starts as u32).to_le_bytes()).unwrap();
+                f.write_all(&(gp.output_ends as u32).to_le_bytes()).unwrap();
+                let g = &gp.graph;
+                let mut row_ptrs = Vec::with_capacity(g.r_vertices_size + 1);
+                row_ptrs.push(0u32);
+                let mut col_indices = Vec::new();
+                for ni in &g.neighborings {
+                    for &idx in ni { col_indices.push(idx as u32); }
+                    row_ptrs.push(col_indices.len() as u32);
+                }
+                for v in &row_ptrs { f.write_all(&v.to_le_bytes()).unwrap(); }
+                for v in &col_indices { f.write_all(&v.to_le_bytes()).unwrap(); }
+            }
+        }
+
+        {
+            let srs_cstr = std::ffi::CString::new(srs_path.as_str()).unwrap();
+            let total_m31x16 = (packed_rows * cw_len) as u64;
+            let padded = total_m31x16.next_power_of_two() as usize;
+
+            let mut leaf_hashes_raw = vec![0u8; padded * 32];
+            let mut nodes_raw = vec![0u8; (padded - 1) * 32];
+            let mut leaves_raw = vec![0u8; padded * 64];
+            let mut n_leaves_out = 0u32;
+
+            extern "C" {
+                fn gpu_full_commit(
+                    packed_evals: *const u32, commit_len: u32, msg_len: u32, cw_len: u32,
+                    srs_path: *const std::ffi::c_char,
+                    leaf_hashes: *mut u8, nodes: *mut u8, leaves_raw: *mut u8, n_leaves: *mut u32);
+            }
+            unsafe {
+                gpu_full_commit(
+                    packed_evals.as_ptr() as *const u32,
+                    commit_len as u32, msg_len as u32, cw_len as u32,
+                    srs_cstr.as_ptr(),
+                    leaf_hashes_raw.as_mut_ptr(), nodes_raw.as_mut_ptr(),
+                    leaves_raw.as_mut_ptr(), &mut n_leaves_out);
+            }
+
+            let n_leaves = n_leaves_out as usize;
+            // Reconstruct Tree
+            let leaves: Vec<tree::Leaf> = unsafe {
+                let ptr = leaves_raw.as_ptr() as *const tree::Leaf;
+                std::slice::from_raw_parts(ptr, n_leaves).to_vec()
+            };
+            // nodes = internal_nodes ++ leaf_hashes
+            let mut nodes: Vec<tree::Node> = unsafe {
+                let ptr = nodes_raw.as_ptr() as *const tree::Node;
+                std::slice::from_raw_parts(ptr, n_leaves - 1).to_vec()
+            };
+            let leaf_nodes: Vec<tree::Node> = unsafe {
+                let ptr = leaf_hashes_raw.as_ptr() as *const tree::Node;
+                std::slice::from_raw_parts(ptr, n_leaves).to_vec()
+            };
+            nodes.extend(leaf_nodes);
+
+            scratch_pad.interleaved_alphabet_commitment = tree::Tree { nodes, leaves };
+            scratch_pad.merkle_cap = vec![scratch_pad.interleaved_alphabet_commitment.root()];
+            eprintln!("    [gpu-commit] {} leaves: {:?}", n_leaves, t0.elapsed());
+            return Ok(scratch_pad.interleaved_alphabet_commitment.root());
+        } // end inner block
+    }
+
     let t_commit = std::time::Instant::now();
 
     // NOTE: packed codeword buffer and encode over packed field (parallel)

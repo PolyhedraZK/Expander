@@ -8,7 +8,9 @@ fn main() {
                 .flag("-O3")
                 .flag("-std=c++17")
                 .file("cuda/pcs_linear_combine.cu")
+                .file("cuda/gpu_commit.cu")
                 .compile("pcs_cuda");
+            println!("cargo:rerun-if-changed=cuda/gpu_commit.cu");
             println!("cargo:rustc-link-lib=cudart");
             println!("cargo:rerun-if-changed=cuda/pcs_linear_combine.cu");
         } else {
