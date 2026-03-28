@@ -173,6 +173,81 @@ __global__ void kernel_build_eq_ffi(const uint32_t* challenges, int n_vars, uint
 static uint32_t* d_evals;
 static size_t d_evals_size;
 
+// ================================================================
+// Blake3 for Merkle tree (matching Rust blake3 crate for 64-byte input)
+// ================================================================
+__host__ __device__ static inline uint32_t rotr32(uint32_t x, int n) { return (x >> n) | (x << (32 - n)); }
+__host__ __device__ static inline void b3_g(uint32_t* s, int a, int b, int c, int d, uint32_t mx, uint32_t my) {
+    s[a]=s[a]+s[b]+mx; s[d]=rotr32(s[d]^s[a],16); s[c]=s[c]+s[d]; s[b]=rotr32(s[b]^s[c],12);
+    s[a]=s[a]+s[b]+my; s[d]=rotr32(s[d]^s[a],8); s[c]=s[c]+s[d]; s[b]=rotr32(s[b]^s[c],7);
+}
+__host__ __device__ static inline void b3_round(uint32_t* s, const uint32_t* m) {
+    b3_g(s,0,4,8,12,m[0],m[1]); b3_g(s,1,5,9,13,m[2],m[3]);
+    b3_g(s,2,6,10,14,m[4],m[5]); b3_g(s,3,7,11,15,m[6],m[7]);
+    b3_g(s,0,5,10,15,m[8],m[9]); b3_g(s,1,6,11,12,m[10],m[11]);
+    b3_g(s,2,7,8,13,m[12],m[13]); b3_g(s,3,4,9,14,m[14],m[15]);
+}
+__host__ __device__ static inline void b3_permute(uint32_t* m) {
+    uint32_t t[16]={m[2],m[6],m[3],m[10],m[7],m[0],m[4],m[13],m[1],m[11],m[12],m[5],m[9],m[14],m[15],m[8]};
+    for(int i=0;i<16;i++)m[i]=t[i];
+}
+__device__ static void b3_hash64(const uint8_t* data, uint8_t* out) {
+    uint32_t iv[8]={0x6A09E667,0xBB67AE85,0x3C6EF372,0xA54FF53A,0x510E527F,0x9B05688C,0x1F83D9AB,0x5BE0CD19};
+    uint32_t blk[16]; for(int i=0;i<16;i++) blk[i]=(uint32_t)data[4*i]|((uint32_t)data[4*i+1]<<8)|((uint32_t)data[4*i+2]<<16)|((uint32_t)data[4*i+3]<<24);
+    uint32_t s[16]={iv[0],iv[1],iv[2],iv[3],iv[4],iv[5],iv[6],iv[7],iv[0],iv[1],iv[2],iv[3],0,0,64,0x0B};
+    uint32_t m[16]; for(int i=0;i<16;i++)m[i]=blk[i];
+    b3_round(s,m);b3_permute(m);b3_round(s,m);b3_permute(m);b3_round(s,m);b3_permute(m);
+    b3_round(s,m);b3_permute(m);b3_round(s,m);b3_permute(m);b3_round(s,m);b3_permute(m);b3_round(s,m);
+    for(int i=0;i<8;i++){uint32_t v=s[i]^s[i+8]; out[4*i]=(uint8_t)v;out[4*i+1]=(uint8_t)(v>>8);out[4*i+2]=(uint8_t)(v>>16);out[4*i+3]=(uint8_t)(v>>24);}
+}
+
+__global__ void k_hash_leaves(const uint8_t* data, uint8_t* hashes, uint32_t n) {
+    uint32_t i = blockIdx.x*blockDim.x+threadIdx.x;
+    if(i>=n)return;
+    b3_hash64(data+(uint64_t)i*64, hashes+(uint64_t)i*32);
+}
+__global__ void k_hash_parents(const uint8_t* children, uint8_t* parents, uint32_t n) {
+    uint32_t i = blockIdx.x*blockDim.x+threadIdx.x;
+    if(i>=n)return;
+    uint8_t buf[64];
+    for(int b=0;b<32;b++){buf[b]=children[(uint64_t)i*64+b];buf[32+b]=children[(uint64_t)i*64+32+b];}
+    b3_hash64(buf, parents+(uint64_t)i*32);
+}
+
+// FFI: build Merkle tree on GPU.
+// Input: h_leaves (n_leaves × 64 bytes, host memory)
+// Output: h_leaf_hashes (n_leaves × 32 bytes), h_nodes ((n_leaves-1) × 32 bytes)
+// h_nodes[0] = root. Layout matches Expander Tree.
+extern "C" void gpu_merkle_tree_blake3(
+    const uint8_t* h_leaves, uint32_t n_leaves,
+    uint8_t* h_leaf_hashes, uint8_t* h_nodes)
+{
+    uint8_t* d_leaves; cudaMalloc(&d_leaves, (size_t)n_leaves*64);
+    cudaMemcpy(d_leaves, h_leaves, (size_t)n_leaves*64, cudaMemcpyHostToDevice);
+
+    uint8_t* d_lh; cudaMalloc(&d_lh, (size_t)n_leaves*32);
+    k_hash_leaves<<<(n_leaves+255)/256,256>>>(d_leaves, d_lh, n_leaves);
+    cudaFree(d_leaves);
+
+    // Build tree: nodes[(n_leaves-1)] bottom-up
+    uint8_t* d_nodes; cudaMalloc(&d_nodes, (size_t)(n_leaves-1)*32);
+    // Bottom level
+    uint32_t level_size = n_leaves/2;
+    uint32_t start = level_size-1;
+    k_hash_parents<<<(level_size+255)/256,256>>>(d_lh, d_nodes+(uint64_t)start*32, level_size);
+    // Higher levels
+    while(level_size>1) {
+        level_size/=2;
+        uint32_t ps=level_size-1, cs=2*level_size-1;
+        k_hash_parents<<<(level_size+255)/256,256>>>(d_nodes+(uint64_t)cs*32, d_nodes+(uint64_t)ps*32, level_size);
+    }
+    cudaDeviceSynchronize();
+
+    cudaMemcpy(h_leaf_hashes, d_lh, (size_t)n_leaves*32, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_nodes, d_nodes, (size_t)(n_leaves-1)*32, cudaMemcpyDeviceToHost);
+    cudaFree(d_lh); cudaFree(d_nodes);
+}
+
 extern "C" void gpu_eval_at_challenge_m31ext3(
     const uint32_t* h_packed_vals, uint32_t commit_len,
     const uint32_t* h_rz, uint32_t n_rz_vars,

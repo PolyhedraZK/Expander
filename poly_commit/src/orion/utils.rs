@@ -216,6 +216,7 @@ where
     PackF: SimdField,
 {
     let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
+    let t_commit = std::time::Instant::now();
 
     // NOTE: packed codeword buffer and encode over packed field (parallel)
     let mut codewords = vec![PackF::ZERO; packed_rows * pk.codeword_len()];
@@ -231,10 +232,12 @@ where
             });
     }
 
+    let t_encode_done = std::time::Instant::now();
     // NOTE: transpose codeword s.t., the matrix has codewords being columns
     let mut scratch = vec![PackF::ZERO; std::cmp::max(packed_rows, pk.codeword_len())];
     transpose_inplace(&mut codewords, &mut scratch, pk.codeword_len(), packed_rows);
     drop(scratch);
+    let t_transpose_done = std::time::Instant::now();
     // NOTE: commit the interleaved codeword
     // we just directly commit to the packed field elements to leaves
     // Also note, when codeword is not power of 2 length, pad to nearest po2
@@ -248,6 +251,10 @@ where
 
     scratch_pad.merkle_cap = vec![scratch_pad.interleaved_alphabet_commitment.root()];
 
+    let t_tree_done = std::time::Instant::now();
+    eprintln!("    [commit-inner] encode={:?} transpose={:?} tree={:?} rows={} cw_len={}",
+        t_encode_done - t_commit, t_transpose_done - t_encode_done,
+        t_tree_done - t_transpose_done, packed_rows, pk.codeword_len());
     Ok(scratch_pad.interleaved_alphabet_commitment.root())
 }
 

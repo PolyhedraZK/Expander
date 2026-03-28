@@ -54,5 +54,5 @@ cc = { version = "1", features = ["parallel"] }
 default = [ ]
 profile = [ "utils/profile" ]
 cuda_msm = [ "msm_cuda" ]
-cuda_pcs = [ ]
+cuda_pcs = [ "tree/cuda_tree" ]
 low-memory = [ ]

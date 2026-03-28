@@ -40,10 +40,37 @@ impl Tree {
     /// Builds a tree with the given leaves.
     #[inline]
     pub fn new_with_leaves(leaves: Vec<Leaf>) -> Self {
-        let tree_height = log2(leaves.len() + 1);
+        let n_leaves = leaves.len();
+        let tree_height = log2(n_leaves + 1);
 
-        // Parallel leaf hashing (Keccak-256 per leaf is the dominant cost)
-        let mut leaf_nodes: Vec<Node> = if leaves.len() >= 256 {
+        // GPU Merkle tree for large trees (>= 64K leaves)
+        #[cfg(feature = "cuda_tree")]
+        if false && n_leaves >= 2097152 && std::env::var("USE_GPU_PROVER").is_ok() {
+            extern "C" {
+                fn gpu_merkle_tree_blake3(
+                    leaves: *const u8, n_leaves: u32,
+                    leaf_hashes: *mut u8, nodes: *mut u8);
+            }
+            let t0 = std::time::Instant::now();
+            let leaves_ptr = leaves.as_ptr() as *const u8;
+            let mut leaf_hashes = vec![Node::default(); n_leaves];
+            // internal_nodes = n_leaves - 1 (index 0 = root)
+            // + leaf_hashes appended = total nodes array
+            let mut internal_nodes = vec![Node::default(); n_leaves - 1];
+            unsafe {
+                gpu_merkle_tree_blake3(
+                    leaves_ptr, n_leaves as u32,
+                    leaf_hashes.as_mut_ptr() as *mut u8,
+                    internal_nodes.as_mut_ptr() as *mut u8);
+            }
+            // nodes = internal_nodes ++ leaf_hashes (matching Expander layout)
+            internal_nodes.extend(leaf_hashes);
+            eprintln!("    [gpu-tree] {} leaves: {:?}", n_leaves, t0.elapsed());
+            return Self { nodes: internal_nodes, leaves };
+        }
+
+        // CPU fallback
+        let mut leaf_nodes: Vec<Node> = if n_leaves >= 256 {
             use rayon::prelude::*;
             leaves.par_iter().map(|leaf| leaf.leaf_hash()).collect()
         } else {
