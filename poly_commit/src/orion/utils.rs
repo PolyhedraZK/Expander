@@ -485,7 +485,7 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
 
     let mut buffer = vec![F::ZERO; com_pack_size * EvalF::DEGREE];
 
-    // NOTE: working on evaluation response of tensor code IOP based PCS
+    // eval_row: sequential (correct, original logic)
     izip!(
         eq_col_coeffs.chunks(com_pack_size),
         packed_evals.chunks(packed_evals.len() / packed_row_size)
@@ -494,30 +494,32 @@ pub(crate) fn simd_open_linear_combine<F, EvalF, SimdF>(
         let eq_limbs: Vec<_> = eq_chunk.iter().flat_map(|e| e.to_limbs()).collect();
         transpose(&eq_limbs, &mut buffer, EvalF::DEGREE, com_pack_size);
         let simd_limbs: Vec<_> = buffer.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect();
-
         izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *eval_row).for_each(
             |(p_col, eval)| *eval += simd_ext_base_inner_prod::<_, EvalF, _>(&simd_limbs, p_col),
         );
     });
 
-    // NOTE: compose proximity response(s) of tensor code IOP based PCS
-    izip!(proximity_rows, rand_col_coeffs).for_each(|(prox_row, random_coeffs)| {
-        izip!(
-            random_coeffs.chunks(com_pack_size),
-            packed_evals.chunks(packed_evals.len() / packed_row_size)
-        )
-        .for_each(|(rand_chunk, packed_evals_chunk)| {
-            let rand_limbs: Vec<_> = rand_chunk.iter().flat_map(|e| e.to_limbs()).collect();
-            transpose(&rand_limbs, &mut buffer, EvalF::DEGREE, com_pack_size);
-            let simd_limbs: Vec<_> = buffer.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect();
-
-            izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *prox_row).for_each(
-                |(p_col, prox)| {
-                    *prox += simd_ext_base_inner_prod::<_, EvalF, _>(&simd_limbs, p_col)
-                },
-            );
+    // proximity_rows: parallel across tests (each test is independent)
+    {
+        use rayon::prelude::*;
+        proximity_rows.par_iter_mut().zip(rand_col_coeffs.par_iter()).for_each(|(prox_row, random_coeffs)| {
+            let mut buf = vec![F::ZERO; com_pack_size * EvalF::DEGREE];
+            izip!(
+                random_coeffs.chunks(com_pack_size),
+                packed_evals.chunks(packed_evals.len() / packed_row_size)
+            )
+            .for_each(|(rand_chunk, packed_evals_chunk)| {
+                let rand_limbs: Vec<_> = rand_chunk.iter().flat_map(|e| e.to_limbs()).collect();
+                transpose(&rand_limbs, &mut buf, EvalF::DEGREE, com_pack_size);
+                let simd_limbs: Vec<_> = buf.chunks(SimdF::PACK_SIZE).map(SimdF::pack).collect();
+                izip!(packed_evals_chunk.chunks(simd_inner_prods), &mut *prox_row).for_each(
+                    |(p_col, prox)| {
+                        *prox += simd_ext_base_inner_prod::<_, EvalF, _>(&simd_limbs, p_col)
+                    },
+                );
+            });
         });
-    });
+    }
 }
 
 #[inline(always)]
