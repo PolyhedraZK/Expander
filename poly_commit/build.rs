@@ -7,6 +7,7 @@ fn main() {
                 .cuda(true)
                 .flag("-O3")
                 .flag("-std=c++17")
+                .include("../../cuda")  // workspace root cuda/ for spielman.cuh, blake3.cuh
                 .file("cuda/pcs_linear_combine.cu")
                 .file("cuda/gpu_commit.cu")
                 .compile("pcs_cuda");

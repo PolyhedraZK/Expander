@@ -217,13 +217,9 @@ where
 {
     let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
 
-    // GPU full commit for large polynomials
+    // GPU commit: use via gpu_prove_all after GKR (not from commit thread — avoids GPU contention)
     #[cfg(feature = "cuda_pcs")]
-    // GPU commit disabled — Rayon 54-core CPU is faster than GPU due to:
-    // 1. PCIe upload overhead for leaves (512MB+)
-    // 2. GPU serialization blocks Rayon threads
-    // 3. Multiple commits contend for single GPU
-    if false && packed_evals.len() >= 4194304 && std::env::var("USE_GPU_PROVER").is_ok() {
+    if false && packed_evals.len() >= 1048576 && std::env::var("USE_GPU_PROVER").is_ok() {
         let t0 = std::time::Instant::now();
         let commit_len = packed_evals.len();
         let msg_len = pk.message_len();
