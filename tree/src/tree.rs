@@ -45,7 +45,9 @@ impl Tree {
 
         // GPU Merkle tree for large trees (>= 64K leaves)
         #[cfg(feature = "cuda_tree")]
-        if false && n_leaves >= 2097152 && std::env::var("USE_GPU_PROVER").is_ok() {
+        // GPU Merkle disabled: CPU Rayon parallel (4 trees simultaneously) beats
+        // GPU serial (one tree at a time with PCIe overhead)
+        if false && n_leaves >= 8388608 && std::env::var("USE_GPU_PROVER").is_ok() {
             extern "C" {
                 fn gpu_merkle_tree_blake3(
                     leaves: *const u8, n_leaves: u32,
