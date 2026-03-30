@@ -349,6 +349,10 @@ extern "C" void gpu_linear_combine_m31ext3(
 // GPU PCS Open — polynomial and tree ALREADY on GPU.
 // Only small data (coefficients, query indices) uploaded. Results downloaded.
 // ================================================================
+// From gpu_commit.cu
+extern "C" void gpu_tree_get_ptrs(int32_t id, uint32_t** leaves, uint8_t** lh, uint8_t** nd, uint32_t* n,
+    uint32_t** poly, uint32_t* cl, uint32_t* ml);
+
 extern "C" void gpu_pcs_open_with_device_data(
     const uint32_t* d_packed_evals,  // polynomial on GPU [commit_len * 16]
     const uint32_t* h_eq_coeffs,     // eq coefficients from CPU [packed_rows * 16 * 3]
@@ -399,10 +403,7 @@ extern "C" void gpu_pcs_open_with_device_data(
     }
 
     // Merkle path extraction from GPU-resident tree
-    // tree pointers passed via gpu_tree_get_ptrs (in gpu_commit.cu)
     if (tree_id >= 0) {
-        extern "C" void gpu_tree_get_ptrs(int32_t id, uint32_t** leaves, uint8_t** lh, uint8_t** nd, uint32_t* n,
-            uint32_t** poly, uint32_t* cl, uint32_t* ml);
         uint32_t* t_leaves; uint8_t* t_lh; uint8_t* t_nd; uint32_t n_leaves;
         uint32_t* t_poly; uint32_t t_cl, t_ml;
         gpu_tree_get_ptrs(tree_id, &t_leaves, &t_lh, &t_nd, &n_leaves, &t_poly, &t_cl, &t_ml);

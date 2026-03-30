@@ -131,7 +131,6 @@ extern "C" int32_t gpu_commit_to_tree(
     uint64_t padded = 1; while (padded < total_m31x16) padded <<= 1;
     uint32_t n_leaves = (uint32_t)padded;
 
-    auto& tree = g_trees[slot];
     cudaMalloc(&tree.d_leaves, (size_t)n_leaves * 64);
     if (padded > total_m31x16) cudaMemset(tree.d_leaves, 0, (size_t)n_leaves * 64);
     {

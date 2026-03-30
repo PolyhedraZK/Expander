@@ -202,7 +202,7 @@ pub struct OrionScratchPad {
 // Used by PCS opening to access VRAM-resident tree without modifying OrionScratchPad's serialization.
 use std::sync::Mutex;
 use std::collections::HashMap;
-static GPU_TREE_REGISTRY: std::sync::LazyLock<Mutex<HashMap<[u8; 32], (i32, u32)>>> =
+pub static GPU_TREE_REGISTRY: std::sync::LazyLock<Mutex<HashMap<[u8; 32], (i32, u32)>>> =
     std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Register a host→device pointer mapping for committed polynomial data.
@@ -285,13 +285,9 @@ where
                     packed_evals: *const u32, commit_len: u32, msg_len: u32, cw_len: u32,
                     srs_path: *const std::ffi::c_char,
                     root_hash: *mut u8, n_leaves: *mut u32) -> i32;
-                fn gpu_tree_download(
-                    tree_id: i32,
-                    leaf_hashes: *mut u8, nodes: *mut u8, leaves_raw: *mut u8);
-                fn gpu_tree_free(tree_id: i32);
             }
 
-            // GPU commit — tree stays in VRAM, only root hash downloaded
+            // GPU commit — tree + polynomial stay in VRAM. Only root hash (32 bytes) downloaded.
             let tree_id = unsafe {
                 gpu_commit_to_tree(
                     packed_evals.as_ptr() as *const u32,
@@ -300,42 +296,16 @@ where
                     root_hash.as_mut_ptr(), &mut n_leaves_out)
             };
             let n_leaves = n_leaves_out as usize;
-            let t_compute = t0.elapsed();
 
-            // Download nodes (hashes) + leaf hashes for Merkle path construction.
-            // Leaf DATA stays on GPU — downloaded on demand during PCS opening.
-            let mut leaf_hashes_raw = vec![0u8; n_leaves * 32];
-            let mut nodes_raw = vec![0u8; (n_leaves - 1) * 32];
-            if tree_id >= 0 {
-                extern "C" {
-                    fn gpu_tree_download_hashes(tree_id: i32, leaf_hashes: *mut u8, nodes: *mut u8);
-                }
-                unsafe {
-                    gpu_tree_download_hashes(tree_id,
-                        leaf_hashes_raw.as_mut_ptr(), nodes_raw.as_mut_ptr());
-                    // Don't free tree — leaf data still needed for PCS range queries
-                }
-            }
-
-            // Construct Tree with nodes but EMPTY leaves (leaf data on GPU)
-            // PCS opening will download specific leaf ranges via gpu_tree_download_leaves_range
-            let leaves: Vec<tree::Leaf> = vec![tree::Leaf::default(); n_leaves];
-            let mut nodes: Vec<tree::Node> = unsafe {
-                let ptr = nodes_raw.as_ptr() as *const tree::Node;
-                std::slice::from_raw_parts(ptr, n_leaves - 1).to_vec()
+            // Minimal scratch pad: root only. PCS open uses GPU data directly.
+            let root_node: tree::Node = unsafe { std::ptr::read(root_hash.as_ptr() as *const tree::Node) };
+            scratch_pad.interleaved_alphabet_commitment = tree::Tree {
+                nodes: vec![root_node], leaves: vec![],
             };
-            let leaf_nodes: Vec<tree::Node> = unsafe {
-                let ptr = leaf_hashes_raw.as_ptr() as *const tree::Node;
-                std::slice::from_raw_parts(ptr, n_leaves).to_vec()
-            };
-            nodes.extend(leaf_nodes);
-
-            scratch_pad.interleaved_alphabet_commitment = tree::Tree { nodes, leaves };
-            scratch_pad.merkle_cap = vec![scratch_pad.interleaved_alphabet_commitment.root()];
-            // Store tree_id for later leaf data downloads
+            scratch_pad.merkle_cap = vec![root_node];
             GPU_TREE_REGISTRY.lock().unwrap().insert(root_hash, (tree_id, n_leaves as u32));
-            eprintln!("    [gpu-commit] {} leaves: compute={:?} total={:?}", n_leaves, t_compute, t0.elapsed());
-            return Ok(scratch_pad.interleaved_alphabet_commitment.root());
+            eprintln!("    [gpu-commit] {} leaves: {:?}", n_leaves, t0.elapsed());
+            return Ok(root_node);
         } // end inner block
     }
 

@@ -12,7 +12,7 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Default, ExpSerde)]
 pub struct Path {
     pub leaf: Leaf,
-    pub(crate) path_nodes: Vec<Node>,
+    pub path_nodes: Vec<Node>,
     pub index: usize,
 }
 
@@ -109,7 +109,7 @@ impl Path {
 #[derive(Clone, Debug, PartialEq, Default, ExpSerde)]
 pub struct RangePath {
     pub leaves: Vec<Leaf>,
-    pub(crate) path_nodes: Vec<Node>,
+    pub path_nodes: Vec<Node>,
     pub left: usize,
     pub right: usize,
 }
