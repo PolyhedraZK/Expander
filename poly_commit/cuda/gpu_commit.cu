@@ -66,6 +66,9 @@ static struct GpuTreeSlot {
     uint32_t* d_leaves;  // raw transposed data (n_leaves × 16 uint32_t = 64 bytes each)
     uint8_t* d_lh;       // leaf hashes (n_leaves × 32)
     uint8_t* d_nd;       // internal nodes ((n_leaves-1) × 32)
+    uint32_t* d_poly;    // original polynomial (commit_len × 16 uint32_t, before encoding)
+    uint32_t commit_len; // original polynomial size
+    uint32_t msg_len;    // message length (per row)
     uint32_t n_leaves;
     bool active;
 } g_trees[MAX_GPU_TREES] = {};
@@ -105,6 +108,19 @@ extern "C" int32_t gpu_commit_to_tree(
                    h_packed_evals + (uint64_t)r * msg_len * 16,
                    (size_t)msg_len * 16 * 4, cudaMemcpyHostToDevice);
     }
+
+    // Save original polynomial on GPU (before encoding overwrites it)
+    size_t poly_bytes = (size_t)commit_len * 16 * 4;
+    auto& tree = g_trees[slot];
+    cudaMalloc(&tree.d_poly, poly_bytes);
+    // Copy original data from buffer (rows at stride cw_len) into contiguous poly
+    for (uint32_t r = 0; r < packed_rows; r++) {
+        cudaMemcpy(tree.d_poly + (uint64_t)r * msg_len * 16,
+                   g_srs.d_buffer + (uint64_t)r * cw_len * 16,
+                   (size_t)msg_len * 16 * 4, cudaMemcpyDeviceToDevice);
+    }
+    tree.commit_len = commit_len;
+    tree.msg_len = msg_len;
 
     // Batched Spielman encode
     gpu_spielman_encode_m31x16(g_srs.d_buffer, g_srs.d_scratch,
@@ -162,7 +178,8 @@ extern "C" void gpu_tree_free(int32_t tree_id) {
     if (tree_id < 0 || tree_id >= MAX_GPU_TREES || !g_trees[tree_id].active) return;
     auto& t = g_trees[tree_id];
     cudaFree(t.d_leaves); cudaFree(t.d_lh); cudaFree(t.d_nd);
-    t.d_leaves = nullptr; t.d_lh = nullptr; t.d_nd = nullptr;
+    if (t.d_poly) cudaFree(t.d_poly);
+    t.d_leaves = nullptr; t.d_lh = nullptr; t.d_nd = nullptr; t.d_poly = nullptr;
     t.active = false;
 }
 
@@ -242,12 +259,15 @@ extern "C" void gpu_tree_range_queries(
 }
 
 extern "C" void gpu_tree_get_ptrs(int32_t tree_id,
-    uint32_t** out_leaves, uint8_t** out_lh, uint8_t** out_nd, uint32_t* out_n) {
+    uint32_t** out_leaves, uint8_t** out_lh, uint8_t** out_nd, uint32_t* out_n,
+    uint32_t** out_poly, uint32_t* out_commit_len, uint32_t* out_msg_len) {
     if (tree_id < 0 || tree_id >= MAX_GPU_TREES || !g_trees[tree_id].active) {
-        *out_leaves = nullptr; *out_lh = nullptr; *out_nd = nullptr; *out_n = 0; return;
+        *out_leaves = nullptr; *out_lh = nullptr; *out_nd = nullptr; *out_n = 0;
+        *out_poly = nullptr; *out_commit_len = 0; *out_msg_len = 0; return;
     }
     auto& t = g_trees[tree_id];
     *out_leaves = t.d_leaves; *out_lh = t.d_lh; *out_nd = t.d_nd; *out_n = t.n_leaves;
+    *out_poly = t.d_poly; *out_commit_len = t.commit_len; *out_msg_len = t.msg_len;
 }
 
 extern "C" void gpu_tree_free_all() {

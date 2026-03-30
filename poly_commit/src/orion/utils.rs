@@ -205,6 +205,18 @@ use std::collections::HashMap;
 static GPU_TREE_REGISTRY: std::sync::LazyLock<Mutex<HashMap<[u8; 32], (i32, u32)>>> =
     std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
 
+/// Register a host→device pointer mapping for committed polynomial data.
+/// Called after arena upload to GPU. PCS open uses this to find device pointer.
+static GPU_POLY_REGISTRY: std::sync::LazyLock<Mutex<HashMap<usize, usize>>> =
+    std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
+
+pub fn register_gpu_poly(host_ptr: usize, device_ptr: usize) {
+    GPU_POLY_REGISTRY.lock().unwrap().insert(host_ptr, device_ptr);
+}
+pub fn lookup_gpu_poly(host_ptr: usize) -> Option<usize> {
+    GPU_POLY_REGISTRY.lock().unwrap().get(&host_ptr).copied()
+}
+
 #[derive(Clone, Debug, Default, ExpSerde)]
 pub struct OrionProof<EvalF: Field> {
     pub eval_row: Vec<EvalF>,

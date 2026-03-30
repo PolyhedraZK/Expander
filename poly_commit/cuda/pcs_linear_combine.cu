@@ -401,9 +401,11 @@ extern "C" void gpu_pcs_open_with_device_data(
     // Merkle path extraction from GPU-resident tree
     // tree pointers passed via gpu_tree_get_ptrs (in gpu_commit.cu)
     if (tree_id >= 0) {
-        extern "C" void gpu_tree_get_ptrs(int32_t id, uint32_t** leaves, uint8_t** lh, uint8_t** nd, uint32_t* n);
+        extern "C" void gpu_tree_get_ptrs(int32_t id, uint32_t** leaves, uint8_t** lh, uint8_t** nd, uint32_t* n,
+            uint32_t** poly, uint32_t* cl, uint32_t* ml);
         uint32_t* t_leaves; uint8_t* t_lh; uint8_t* t_nd; uint32_t n_leaves;
-        gpu_tree_get_ptrs(tree_id, &t_leaves, &t_lh, &t_nd, &n_leaves);
+        uint32_t* t_poly; uint32_t t_cl, t_ml;
+        gpu_tree_get_ptrs(tree_id, &t_leaves, &t_lh, &t_nd, &n_leaves, &t_poly, &t_cl, &t_ml);
         uint32_t depth = 0;
         { uint32_t x = n_leaves / leaves_per_query; while (x > 1) { depth++; x >>= 1; } }
         *out_tree_depth = depth;
