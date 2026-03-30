@@ -217,9 +217,9 @@ where
 {
     let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
 
-    // GPU commit for large polynomials (runs before GKR — no GPU contention)
+    // GPU commit disabled — testing GPU GKR + CPU PCS isolation
     #[cfg(feature = "cuda_pcs")]
-    if packed_evals.len() >= 1048576 && std::env::var("USE_GPU_PROVER").is_ok() {
+    if false && packed_evals.len() >= 1048576 && std::env::var("USE_GPU_PROVER").is_ok() {
         let t0 = std::time::Instant::now();
         let commit_len = packed_evals.len();
         let msg_len = pk.message_len();
