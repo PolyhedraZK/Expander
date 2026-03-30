@@ -217,9 +217,9 @@ where
 {
     let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
 
-    // GPU commit: use via gpu_prove_all after GKR (not from commit thread — avoids GPU contention)
+    // GPU commit for large polynomials (runs before GKR — no GPU contention)
     #[cfg(feature = "cuda_pcs")]
-    if false && packed_evals.len() >= 1048576 && std::env::var("USE_GPU_PROVER").is_ok() {
+    if packed_evals.len() >= 1048576 && std::env::var("USE_GPU_PROVER").is_ok() {
         let t0 = std::time::Instant::now();
         let commit_len = packed_evals.len();
         let msg_len = pk.message_len();
@@ -258,34 +258,50 @@ where
             let srs_cstr = std::ffi::CString::new(srs_path.as_str()).unwrap();
             let total_m31x16 = (packed_rows * cw_len) as u64;
             let padded = total_m31x16.next_power_of_two() as usize;
-
-            let mut leaf_hashes_raw = vec![0u8; padded * 32];
-            let mut nodes_raw = vec![0u8; (padded - 1) * 32];
-            let mut leaves_raw = vec![0u8; padded * 64];
+            let mut root_hash = [0u8; 32];
             let mut n_leaves_out = 0u32;
 
             extern "C" {
-                fn gpu_full_commit(
+                fn gpu_commit_to_tree(
                     packed_evals: *const u32, commit_len: u32, msg_len: u32, cw_len: u32,
                     srs_path: *const std::ffi::c_char,
-                    leaf_hashes: *mut u8, nodes: *mut u8, leaves_raw: *mut u8, n_leaves: *mut u32);
+                    root_hash: *mut u8, n_leaves: *mut u32) -> i32;
+                fn gpu_tree_download(
+                    tree_id: i32,
+                    leaf_hashes: *mut u8, nodes: *mut u8, leaves_raw: *mut u8);
+                fn gpu_tree_free(tree_id: i32);
             }
-            unsafe {
-                gpu_full_commit(
+
+            // GPU commit — tree stays in VRAM, only root hash downloaded (~32 bytes)
+            let tree_id = unsafe {
+                gpu_commit_to_tree(
                     packed_evals.as_ptr() as *const u32,
                     commit_len as u32, msg_len as u32, cw_len as u32,
                     srs_cstr.as_ptr(),
-                    leaf_hashes_raw.as_mut_ptr(), nodes_raw.as_mut_ptr(),
-                    leaves_raw.as_mut_ptr(), &mut n_leaves_out);
+                    root_hash.as_mut_ptr(), &mut n_leaves_out)
+            };
+            let n_leaves = n_leaves_out as usize;
+            let t_commit_done = t0.elapsed();
+
+            // Download tree from GPU for PCS compatibility
+            // TODO: keep tree GPU-resident, implement gpu_merkle_query for on-demand extraction
+            let mut leaf_hashes_raw = vec![0u8; n_leaves * 32];
+            let mut nodes_raw = vec![0u8; (n_leaves - 1) * 32];
+            let mut leaves_raw = vec![0u8; n_leaves * 64];
+            if tree_id >= 0 {
+                unsafe {
+                    gpu_tree_download(tree_id,
+                        leaf_hashes_raw.as_mut_ptr(), nodes_raw.as_mut_ptr(),
+                        leaves_raw.as_mut_ptr());
+                    gpu_tree_free(tree_id);
+                }
             }
 
-            let n_leaves = n_leaves_out as usize;
             // Reconstruct Tree
             let leaves: Vec<tree::Leaf> = unsafe {
                 let ptr = leaves_raw.as_ptr() as *const tree::Leaf;
                 std::slice::from_raw_parts(ptr, n_leaves).to_vec()
             };
-            // nodes = internal_nodes ++ leaf_hashes
             let mut nodes: Vec<tree::Node> = unsafe {
                 let ptr = nodes_raw.as_ptr() as *const tree::Node;
                 std::slice::from_raw_parts(ptr, n_leaves - 1).to_vec()
@@ -298,7 +314,7 @@ where
 
             scratch_pad.interleaved_alphabet_commitment = tree::Tree { nodes, leaves };
             scratch_pad.merkle_cap = vec![scratch_pad.interleaved_alphabet_commitment.root()];
-            eprintln!("    [gpu-commit] {} leaves: {:?}", n_leaves, t0.elapsed());
+            eprintln!("    [gpu-commit] {} leaves: compute={:?} total={:?}", n_leaves, t_commit_done, t0.elapsed());
             return Ok(scratch_pad.interleaved_alphabet_commitment.root());
         } // end inner block
     }
