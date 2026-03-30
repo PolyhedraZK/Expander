@@ -349,6 +349,43 @@ extern "C" void gpu_linear_combine_m31ext3(
 // GPU PCS Open — polynomial and tree ALREADY on GPU.
 // Only small data (coefficients, query indices) uploaded. Results downloaded.
 // ================================================================
+// Merkle leaf extraction kernel: each thread copies one query's leaf range
+__global__ void kernel_extract_leaves(
+    const uint8_t* tree_leaves, const uint32_t* query_positions,
+    uint32_t leaves_per_query, uint8_t* out, uint32_t n_queries)
+{
+    uint32_t qi = blockIdx.x * blockDim.x + threadIdx.x;
+    if (qi >= n_queries) return;
+    uint32_t left = query_positions[qi] * leaves_per_query;
+    uint32_t bytes = leaves_per_query * 64;
+    const uint8_t* src = tree_leaves + (uint64_t)left * 64;
+    uint8_t* dst = out + (uint64_t)qi * bytes;
+    for (uint32_t i = 0; i < bytes; i++) dst[i] = src[i];
+}
+
+// Merkle sibling extraction kernel: each thread handles one (query, depth_level) pair
+__global__ void kernel_extract_siblings(
+    const uint8_t* tree_nd, const uint32_t* query_positions,
+    uint32_t n_leaves, uint32_t leaves_per_query, uint32_t depth,
+    uint8_t* out, uint32_t n_queries)
+{
+    uint32_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    uint32_t qi = idx / depth, d = idx % depth;
+    if (qi >= n_queries) return;
+
+    uint32_t range_idx = query_positions[qi];
+    uint32_t level_n = n_leaves / leaves_per_query;
+    uint32_t level_start = level_n - 1;
+    for (uint32_t i = 0; i < d; i++) {
+        range_idx >>= 1; level_n >>= 1; level_start = level_n - 1;
+    }
+    uint32_t sibling = range_idx ^ 1;
+    uint32_t node_pos = level_start + sibling;
+    const uint8_t* src = tree_nd + (uint64_t)node_pos * 32;
+    uint8_t* dst = out + ((uint64_t)qi * depth + d) * 32;
+    for (uint32_t i = 0; i < 32; i++) dst[i] = src[i];
+}
+
 // From gpu_commit.cu
 extern "C" void gpu_tree_get_ptrs(int32_t id, uint32_t** leaves, uint8_t** lh, uint8_t** nd, uint32_t* n,
     uint32_t** poly, uint32_t* cl, uint32_t* ml);
@@ -402,7 +439,7 @@ extern "C" void gpu_pcs_open_with_device_data(
         cudaFree(d_coeffs);
     }
 
-    // Merkle path extraction from GPU-resident tree
+    // Merkle path extraction — batch on GPU, single D2H download
     if (tree_id >= 0) {
         uint32_t* t_leaves; uint8_t* t_lh; uint8_t* t_nd; uint32_t n_leaves;
         uint32_t* t_poly; uint32_t t_cl, t_ml;
@@ -411,38 +448,29 @@ extern "C" void gpu_pcs_open_with_device_data(
         { uint32_t x = n_leaves / leaves_per_query; while (x > 1) { depth++; x >>= 1; } }
         *out_tree_depth = depth;
 
-        // For each query: extract leaf data + sibling path from GPU memory
-        for (uint32_t qi = 0; qi < n_queries; qi++) {
-            uint32_t pos = h_query_indices[qi];
-            uint32_t left = pos * leaves_per_query;
+        // Upload query indices to GPU
+        uint32_t* d_qi; cudaMalloc(&d_qi, n_queries * 4);
+        cudaMemcpy(d_qi, h_query_indices, n_queries * 4, cudaMemcpyHostToDevice);
 
-            // Download leaf data for this range [left, left+leaves_per_query)
-            cudaMemcpy(h_query_leaves + (uint64_t)qi * leaves_per_query * 64,
-                       (uint8_t*)t_leaves + (uint64_t)left * 64,
-                       leaves_per_query * 64, cudaMemcpyDeviceToHost);
+        // Allocate output on GPU
+        size_t leaf_out_bytes = (size_t)n_queries * leaves_per_query * 64;
+        size_t path_out_bytes = (size_t)n_queries * depth * 32;
+        uint8_t *d_leaf_out, *d_path_out;
+        cudaMalloc(&d_leaf_out, leaf_out_bytes);
+        cudaMalloc(&d_path_out, path_out_bytes);
 
-            // Walk up tree collecting sibling hashes
-            // Leaf hash level: tree.d_lh[idx*32..(idx+1)*32]
-            // Internal nodes: t_nd, layout: [0]=root, children of i at 2i+1 and 2i+2
-            // Leaf hashes are at "virtual" level below d_nd.
-            // d_nd has n_leaves-1 nodes. Leaf hash i maps to tree position (n_leaves-1)+i.
-            // Parent of tree position p = (p-1)/2. Sibling of p = p^1 (if p>0).
-            uint32_t range_idx = left / leaves_per_query; // index in current level
-            uint32_t level_n = n_leaves / leaves_per_query; // nodes at current level
-            // At bottom: pairs of leaf-hash groups. Walk up through d_nd.
-            // Level 0 (leaf pairs): internal nodes at d_nd[level_n-1 .. 2*level_n-2]
-            uint32_t level_start = level_n - 1;
-            for (uint32_t d = 0; d < depth; d++) {
-                uint32_t sibling = range_idx ^ 1;
-                uint32_t node_pos = level_start + sibling;
-                cudaMemcpy(h_query_path_nodes + ((uint64_t)qi * depth + d) * 32,
-                           t_nd + (uint64_t)node_pos * 8, // 32 bytes = 8 uint32_t
-                           32, cudaMemcpyDeviceToHost);
-                range_idx >>= 1;
-                level_n >>= 1;
-                level_start = level_n - 1;
-            }
-        }
+        // GPU kernels: batch extract all queries
+        kernel_extract_leaves<<<(n_queries+255)/256, 256>>>(
+            (uint8_t*)t_leaves, d_qi, leaves_per_query, d_leaf_out, n_queries);
+        uint32_t total_pairs = n_queries * depth;
+        kernel_extract_siblings<<<(total_pairs+255)/256, 256>>>(
+            t_nd, d_qi, n_leaves, leaves_per_query, depth, d_path_out, n_queries);
+        cudaDeviceSynchronize();
+
+        // Single bulk D2H download (~5MB total)
+        cudaMemcpy(h_query_leaves, d_leaf_out, leaf_out_bytes, cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_query_path_nodes, d_path_out, path_out_bytes, cudaMemcpyDeviceToHost);
+        cudaFree(d_qi); cudaFree(d_leaf_out); cudaFree(d_path_out);
     }
     cudaDeviceSynchronize();
 }
