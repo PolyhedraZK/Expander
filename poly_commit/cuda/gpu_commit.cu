@@ -166,6 +166,90 @@ extern "C" void gpu_tree_free(int32_t tree_id) {
     t.active = false;
 }
 
+// Batch extract range queries from GPU-resident tree.
+// For each query: extracts leaf data + Merkle proof (sibling hashes).
+// Output format per query: [leaf_data (range_size × 64 bytes)] [sibling_hashes (depth × 32 bytes)]
+extern "C" void gpu_tree_range_queries(
+    int32_t tree_id,
+    const uint32_t* h_query_ranges, // [left_0, right_0, left_1, right_1, ...]
+    uint32_t n_queries,
+    uint32_t leaves_per_query,      // right - left + 1 (same for all queries)
+    uint8_t* h_leaf_data_out,       // n_queries × leaves_per_query × 64
+    uint8_t* h_sibling_hashes_out,  // n_queries × depth × 32  (depth = log2(n_leaves/leaves_per_query))
+    uint32_t* out_depth)
+{
+    if (tree_id < 0 || tree_id >= MAX_GPU_TREES || !g_trees[tree_id].active) return;
+    auto& t = g_trees[tree_id];
+    uint32_t n = t.n_leaves;
+    uint32_t depth = 0; { uint32_t x = n / leaves_per_query; while (x > 1) { depth++; x >>= 1; } }
+    *out_depth = depth;
+
+    // Upload query indices
+    uint32_t* d_queries;
+    cudaMalloc(&d_queries, n_queries * 2 * 4);
+    cudaMemcpy(d_queries, h_query_ranges, n_queries * 2 * 4, cudaMemcpyHostToDevice);
+
+    // Allocate output buffers on GPU
+    size_t leaf_out_size = (size_t)n_queries * leaves_per_query * 64;
+    size_t sibling_out_size = (size_t)n_queries * depth * 32;
+    uint8_t *d_leaf_out, *d_sibling_out;
+    cudaMalloc(&d_leaf_out, leaf_out_size);
+    cudaMalloc(&d_sibling_out, sibling_out_size);
+
+    // Extract leaf data: for each query, copy leaves[left..right] raw data
+    // Simple approach: download specific ranges from d_leaves
+    // Since queries are random, do batch cudaMemcpy per query (or use a kernel)
+    for (uint32_t qi = 0; qi < n_queries; qi++) {
+        uint32_t left = h_query_ranges[qi*2];
+        cudaMemcpy(d_leaf_out + (uint64_t)qi * leaves_per_query * 64,
+                   (uint8_t*)t.d_leaves + (uint64_t)left * 64,
+                   leaves_per_query * 64, cudaMemcpyDeviceToDevice);
+    }
+
+    // Extract sibling hashes: walk up the tree for each query
+    // nodes[0] = root, nodes[n-2..0] = bottom-up internal nodes
+    // Leaf hashes at level 0: d_lh[i*32..(i+1)*32]
+    // Parent of leaves[left..right] at level 0: node at index (n/2 - 1) + left/leaves_per_query
+    // Sibling: adjacent node at same level
+    for (uint32_t qi = 0; qi < n_queries; qi++) {
+        uint32_t left = h_query_ranges[qi*2];
+        uint32_t idx = left / leaves_per_query; // index within this level
+        // Level 0: siblings from leaf hashes (d_lh)
+        // But range query covers leaves_per_query leaves which form a subtree
+        // The sibling at each level is the adjacent subtree hash
+        uint32_t level_size = n / leaves_per_query;
+        uint32_t level_start = level_size - 1; // start of this level in nodes array
+        for (uint32_t d = 0; d < depth; d++) {
+            uint32_t sibling = idx ^ 1;
+            if (level_size > 1) {
+                // Internal node: read from d_nd at position level_start + sibling
+                cudaMemcpy(d_sibling_out + ((uint64_t)qi * depth + d) * 32,
+                           t.d_nd + (uint64_t)(level_start + sibling) * 8, // 32 bytes = 8 uint32_t
+                           32, cudaMemcpyDeviceToDevice);
+            }
+            idx >>= 1;
+            level_size >>= 1;
+            level_start = level_size - 1;
+        }
+    }
+    cudaDeviceSynchronize();
+
+    // Download results
+    cudaMemcpy(h_leaf_data_out, d_leaf_out, leaf_out_size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_sibling_hashes_out, d_sibling_out, sibling_out_size, cudaMemcpyDeviceToHost);
+
+    cudaFree(d_queries); cudaFree(d_leaf_out); cudaFree(d_sibling_out);
+}
+
+extern "C" void gpu_tree_get_ptrs(int32_t tree_id,
+    uint32_t** out_leaves, uint8_t** out_lh, uint8_t** out_nd, uint32_t* out_n) {
+    if (tree_id < 0 || tree_id >= MAX_GPU_TREES || !g_trees[tree_id].active) {
+        *out_leaves = nullptr; *out_lh = nullptr; *out_nd = nullptr; *out_n = 0; return;
+    }
+    auto& t = g_trees[tree_id];
+    *out_leaves = t.d_leaves; *out_lh = t.d_lh; *out_nd = t.d_nd; *out_n = t.n_leaves;
+}
+
 extern "C" void gpu_tree_free_all() {
     for (int i = 0; i < MAX_GPU_TREES; i++) gpu_tree_free(i);
 }
