@@ -184,9 +184,10 @@ where
                 std::slice::from_raw_parts(leaf_data.as_ptr() as *const tree::Leaf, leaves_per_query).to_vec()
             };
             let sibling_data = &h_query_siblings[qi * depth * 32..(qi + 1) * depth * 32];
-            let path_nodes: Vec<tree::Node> = unsafe {
+            let mut path_nodes: Vec<tree::Node> = unsafe {
                 std::slice::from_raw_parts(sibling_data.as_ptr() as *const tree::Node, depth).to_vec()
             };
+            path_nodes.reverse(); // GPU extracts bottom-up, gen_range_proof stores top-down
             tree::RangePath { leaves, path_nodes, left, right }
         }).collect();
 
