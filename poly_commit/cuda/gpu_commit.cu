@@ -69,6 +69,7 @@ static struct GpuTreeSlot {
     uint32_t* d_poly;    // original polynomial (commit_len × 16 uint32_t, before encoding)
     uint32_t commit_len; // original polynomial size
     uint32_t msg_len;    // message length (per row)
+    const uint32_t* h_poly_ptr; // host pointer for matching in gpu_tree_find_poly
     uint32_t n_leaves;
     bool active;
 } g_trees[MAX_GPU_TREES] = {};
@@ -112,6 +113,7 @@ extern "C" int32_t gpu_commit_to_tree(
     // Save original polynomial on GPU (before encoding overwrites it)
     size_t poly_bytes = (size_t)commit_len * 16 * 4;
     auto& tree = g_trees[slot];
+    tree.h_poly_ptr = h_packed_evals; // for matching in gpu_tree_find_poly
     cudaMalloc(&tree.d_poly, poly_bytes);
     // Copy original data from buffer (rows at stride cw_len) into contiguous poly
     for (uint32_t r = 0; r < packed_rows; r++) {
@@ -267,6 +269,16 @@ extern "C" void gpu_tree_get_ptrs(int32_t tree_id,
     auto& t = g_trees[tree_id];
     *out_leaves = t.d_leaves; *out_lh = t.d_lh; *out_nd = t.d_nd; *out_n = t.n_leaves;
     *out_poly = t.d_poly; *out_commit_len = t.commit_len; *out_msg_len = t.msg_len;
+}
+
+// Find d_poly for a host pointer. Matches by exact host address.
+extern "C" const uint32_t* gpu_tree_find_poly(const uint32_t* h_ptr, uint32_t commit_len) {
+    for (int i = 0; i < MAX_GPU_TREES; i++) {
+        if (g_trees[i].active && g_trees[i].h_poly_ptr == h_ptr && g_trees[i].d_poly) {
+            return g_trees[i].d_poly;
+        }
+    }
+    return nullptr;
 }
 
 extern "C" void gpu_tree_free_all() {

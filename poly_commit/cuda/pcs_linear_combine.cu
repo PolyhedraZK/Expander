@@ -169,9 +169,10 @@ __global__ void kernel_build_eq_ffi(const uint32_t* challenges, int n_vars, uint
     eq_table[b*3] = v0; eq_table[b*3+1] = v1; eq_table[b*3+2] = v2;
 }
 
-// Forward declare persistent state (defined below)
+// Forward declarations
 static uint32_t* d_evals;
 static size_t d_evals_size;
+extern "C" const uint32_t* gpu_tree_find_poly(const uint32_t* h_ptr, uint32_t len);
 
 // ================================================================
 // Blake3 for Merkle tree (matching Rust blake3 crate for 64-byte input)
@@ -266,19 +267,22 @@ extern "C" void gpu_eval_at_challenge_m31ext3(
     uint32_t* d_eq_simd; cudaMalloc(&d_eq_simd, 16 * 3 * 4);
     kernel_build_eq_ffi<<<1, 256>>>(d_simd_ch, 4, d_eq_simd);
 
-    // Reuse d_evals if same size
     size_t evals_bytes = (size_t)commit_len * 16 * 4;
-    if (evals_bytes > d_evals_size) {
-        if (d_evals) cudaFree(d_evals);
-        cudaMalloc(&d_evals, evals_bytes);
-        d_evals_size = evals_bytes;
+    const uint32_t* d_src = gpu_tree_find_poly(h_packed_vals, commit_len);
+    if (!d_src) {
+        // Not on GPU — upload from host
+        if (evals_bytes > d_evals_size) {
+            if (d_evals) cudaFree(d_evals);
+            cudaMalloc(&d_evals, evals_bytes);
+            d_evals_size = evals_bytes;
+        }
+        cudaMemcpy(d_evals, h_packed_vals, evals_bytes, cudaMemcpyHostToDevice);
+        d_src = d_evals;
     }
-    cudaMemcpy(d_evals, h_packed_vals, evals_bytes, cudaMemcpyHostToDevice);
 
-    // Dot product
     uint32_t nb = 512;
     uint32_t* d_partials; cudaMalloc(&d_partials, nb * 3 * 4);
-    kernel_eval_dot<<<nb, 128, 128*3*4>>>(d_evals, d_eq_rz, d_eq_simd, commit_len, d_partials);
+    kernel_eval_dot<<<nb, 128, 128*3*4>>>(d_src, d_eq_rz, d_eq_simd, commit_len, d_partials);
     uint32_t* d_result_buf; cudaMalloc(&d_result_buf, 3 * 4);
     kernel_eval_reduce<<<1, 256, 256*3*4>>>(d_partials, nb, d_result_buf);
     cudaMemcpy(h_result, d_result_buf, 3 * 4, cudaMemcpyDeviceToHost);
@@ -286,6 +290,7 @@ extern "C" void gpu_eval_at_challenge_m31ext3(
     cudaFree(d_rz_ch); cudaFree(d_eq_rz); cudaFree(d_simd_ch); cudaFree(d_eq_simd);
     cudaFree(d_partials); cudaFree(d_result_buf);
 }
+
 
 // Persistent GPU state (initialized above via forward declaration)
 static uint32_t* d_result = nullptr;
