@@ -32,7 +32,20 @@ impl ExpSerde for () {
 }
 
 exp_serde_for_number!(u64, 8);
-exp_serde_for_number!(usize, 8);
+// `usize` serializes as a fixed-width u64 so proofs produced on 64-bit
+// hosts (prover) decode on 32-bit targets too (wasm32-unknown-unknown
+// consumers — mobile, browser, any WASM verifier). The generic
+// `exp_serde_for_number!(usize, 8)` macro hits an 8-vs-4 byte mismatch
+// on 32-bit targets where `usize::from_le_bytes` takes `[u8; 4]`.
+impl ExpSerde for usize {
+    fn serialize_into<W: Write>(&self, writer: W) -> SerdeResult<()> {
+        (*self as u64).serialize_into(writer)
+    }
+    fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+        let v = u64::deserialize_from(&mut reader)?;
+        usize::try_from(v).map_err(|_| SerdeError::DeserializeError)
+    }
+}
 exp_serde_for_number!(u8, 1);
 exp_serde_for_number!(f64, 8);
 exp_serde_for_number!(u128, 16);
