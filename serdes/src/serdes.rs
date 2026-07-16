@@ -61,6 +61,23 @@ impl ExpSerde for bool {
 impl<V: ExpSerde> ExpSerde for Vec<V> {
     fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
         self.len().serialize_into(&mut writer)?;
+        // Fast path: if V has a fixed size and contiguous LE layout, use bulk write
+        let elem_size = std::mem::size_of::<V>();
+        if elem_size > 0 && elem_size <= 64 && !self.is_empty() {
+            // Verify first element round-trips correctly via the fast path
+            // (this is safe for M31, M31Ext3, and other packed LE types)
+            let raw_bytes = unsafe {
+                std::slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * elem_size)
+            };
+            // Verify: serialize first element and compare with raw bytes
+            let mut check = Vec::with_capacity(elem_size);
+            self[0].serialize_into(&mut check)?;
+            if check.len() == elem_size && check[..] == raw_bytes[..elem_size] {
+                writer.write_all(raw_bytes)?;
+                return Ok(());
+            }
+        }
+        // Fallback: per-element
         for v in self.iter() {
             v.serialize_into(&mut writer)?;
         }

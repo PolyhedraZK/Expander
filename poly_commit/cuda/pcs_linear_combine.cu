@@ -170,9 +170,15 @@ __global__ void kernel_build_eq_ffi(const uint32_t* challenges, int n_vars, uint
 }
 
 // Forward declarations
-static uint32_t* d_evals;
-static size_t d_evals_size;
+static uint32_t* d_evals = nullptr;
+static size_t d_evals_size = 0;
 extern "C" const uint32_t* gpu_tree_find_poly(const uint32_t* h_ptr, uint32_t len);
+
+static void ensure_buf(uint32_t** p, size_t* cap, size_t needed) {
+    if (*cap >= needed) return;
+    if (*p) cudaFree(*p);
+    cudaMalloc(p, needed); *cap = needed;
+}
 
 // ================================================================
 // Blake3 for Merkle tree (matching Rust blake3 crate for 64-byte input)
@@ -249,52 +255,65 @@ extern "C" void gpu_merkle_tree_blake3(
     cudaFree(d_lh); cudaFree(d_nodes);
 }
 
+// Pre-allocated eval-at-challenge buffers
+static uint32_t* d_eq_rz_buf = nullptr; static size_t d_eq_rz_size = 0;
+static uint32_t* d_eq_simd_buf = nullptr;
+static uint32_t* d_ch_buf_eval = nullptr;
+static uint32_t* d_partials_buf = nullptr; static size_t d_partials_size = 0;
+static uint32_t* d_result_eval = nullptr;
+static bool eval_init = false;
+
 extern "C" void gpu_eval_at_challenge_m31ext3(
     const uint32_t* h_packed_vals, uint32_t commit_len,
     const uint32_t* h_rz, uint32_t n_rz_vars,
-    const uint32_t* h_r_simd, // 4 E3 values = 12 uint32_t
-    uint32_t* h_result) // 3 uint32_t (E3)
+    const uint32_t* h_r_simd,
+    uint32_t* h_result)
 {
-    // Build eq tables on GPU
-    uint32_t eq_rz_size = 1u << n_rz_vars;
-    uint32_t* d_rz_ch; cudaMalloc(&d_rz_ch, n_rz_vars * 3 * 4);
-    cudaMemcpy(d_rz_ch, h_rz, n_rz_vars * 3 * 4, cudaMemcpyHostToDevice);
-    uint32_t* d_eq_rz; cudaMalloc(&d_eq_rz, eq_rz_size * 3 * 4);
-    kernel_build_eq_ffi<<<(eq_rz_size+255)/256, 256>>>(d_rz_ch, n_rz_vars, d_eq_rz);
+    if (!eval_init) {
+        cudaMalloc(&d_eq_simd_buf, 16 * 3 * 4);
+        cudaMalloc(&d_ch_buf_eval, 64 * 3 * 4); // max 64 vars
+        cudaMalloc(&d_result_eval, 3 * 4);
+        eval_init = true;
+    }
 
-    uint32_t* d_simd_ch; cudaMalloc(&d_simd_ch, 4 * 3 * 4);
-    cudaMemcpy(d_simd_ch, h_r_simd, 4 * 3 * 4, cudaMemcpyHostToDevice);
-    uint32_t* d_eq_simd; cudaMalloc(&d_eq_simd, 16 * 3 * 4);
-    kernel_build_eq_ffi<<<1, 256>>>(d_simd_ch, 4, d_eq_simd);
+    uint32_t eq_rz_size = 1u << n_rz_vars;
+    size_t eq_rz_bytes = (size_t)eq_rz_size * 3 * 4;
+    if (eq_rz_bytes > d_eq_rz_size) {
+        if (d_eq_rz_buf) cudaFree(d_eq_rz_buf);
+        cudaMalloc(&d_eq_rz_buf, eq_rz_bytes); d_eq_rz_size = eq_rz_bytes;
+    }
+
+    cudaMemcpy(d_ch_buf_eval, h_rz, n_rz_vars * 3 * 4, cudaMemcpyHostToDevice);
+    kernel_build_eq_ffi<<<(eq_rz_size+255)/256, 256>>>(d_ch_buf_eval, n_rz_vars, d_eq_rz_buf);
+
+    cudaMemcpy(d_ch_buf_eval, h_r_simd, 4 * 3 * 4, cudaMemcpyHostToDevice);
+    kernel_build_eq_ffi<<<1, 256>>>(d_ch_buf_eval, 4, d_eq_simd_buf);
 
     size_t evals_bytes = (size_t)commit_len * 16 * 4;
     const uint32_t* d_src = gpu_tree_find_poly(h_packed_vals, commit_len);
     if (!d_src) {
-        // Not on GPU — upload from host
-        if (evals_bytes > d_evals_size) {
-            if (d_evals) cudaFree(d_evals);
-            cudaMalloc(&d_evals, evals_bytes);
-            d_evals_size = evals_bytes;
-        }
+        ensure_buf(&d_evals, &d_evals_size, evals_bytes);
         cudaMemcpy(d_evals, h_packed_vals, evals_bytes, cudaMemcpyHostToDevice);
         d_src = d_evals;
     }
 
     uint32_t nb = 512;
-    uint32_t* d_partials; cudaMalloc(&d_partials, nb * 3 * 4);
-    kernel_eval_dot<<<nb, 128, 128*3*4>>>(d_src, d_eq_rz, d_eq_simd, commit_len, d_partials);
-    uint32_t* d_result_buf; cudaMalloc(&d_result_buf, 3 * 4);
-    kernel_eval_reduce<<<1, 256, 256*3*4>>>(d_partials, nb, d_result_buf);
-    cudaMemcpy(h_result, d_result_buf, 3 * 4, cudaMemcpyDeviceToHost);
-
-    cudaFree(d_rz_ch); cudaFree(d_eq_rz); cudaFree(d_simd_ch); cudaFree(d_eq_simd);
-    cudaFree(d_partials); cudaFree(d_result_buf);
+    size_t part_bytes = (size_t)nb * 3 * 4;
+    if (part_bytes > d_partials_size) {
+        if (d_partials_buf) cudaFree(d_partials_buf);
+        cudaMalloc(&d_partials_buf, part_bytes); d_partials_size = part_bytes;
+    }
+    kernel_eval_dot<<<nb, 128, 128*3*4>>>(d_src, d_eq_rz_buf, d_eq_simd_buf, commit_len, d_partials_buf);
+    kernel_eval_reduce<<<1, 256, 256*3*4>>>(d_partials_buf, nb, d_result_eval);
+    cudaMemcpy(h_result, d_result_eval, 3 * 4, cudaMemcpyDeviceToHost);
 }
 
 
-// Persistent GPU state (initialized above via forward declaration)
+// Persistent GPU state — pre-allocated, never freed during proving
 static uint32_t* d_result = nullptr;
 static size_t d_result_size = 0;
+static uint32_t* d_coeffs_buf = nullptr;
+static size_t d_coeffs_size = 0;
 
 extern "C" void gpu_linear_combine_m31ext3(
     const uint32_t* h_packed_evals,
@@ -311,43 +330,26 @@ extern "C" void gpu_linear_combine_m31ext3(
     size_t coeff_bytes = (size_t)packed_rows * 16 * 3 * 4;
     size_t result_bytes = (size_t)msg_len * 3 * 4;
 
-    // Allocate/reuse device buffers
-    if (evals_bytes > d_evals_size) {
-        if (d_evals) cudaFree(d_evals);
-        cudaMalloc(&d_evals, evals_bytes);
-        d_evals_size = evals_bytes;
-    }
-    if (result_bytes > d_result_size) {
-        if (d_result) cudaFree(d_result);
-        cudaMalloc(&d_result, result_bytes);
-        d_result_size = result_bytes;
-    }
+    ensure_buf(&d_evals, &d_evals_size, evals_bytes);
+    ensure_buf(&d_result, &d_result_size, result_bytes);
+    ensure_buf(&d_coeffs_buf, &d_coeffs_size, coeff_bytes);
 
-    // Upload packed_evals (only once per commit, reused across proximity tests)
     cudaMemcpy(d_evals, h_packed_evals, evals_bytes, cudaMemcpyHostToDevice);
 
-    // Upload eq_coeffs and compute eval_row
-    uint32_t* d_coeffs;
-    cudaMalloc(&d_coeffs, coeff_bytes);
-    cudaMemcpy(d_coeffs, h_eq_coeffs, coeff_bytes, cudaMemcpyHostToDevice);
-    cudaMemset(d_result, 0, result_bytes);
-
+    // eval_row
+    cudaMemcpy(d_coeffs_buf, h_eq_coeffs, coeff_bytes, cudaMemcpyHostToDevice);
     uint32_t nb = (msg_len + 255) / 256;
-    kernel_lc<<<nb, 256>>>(d_evals, d_coeffs, packed_rows, msg_len, d_result);
+    cudaMemset(d_result, 0, result_bytes);
+    kernel_lc<<<nb, 256>>>(d_evals, d_coeffs_buf, packed_rows, msg_len, d_result);
     cudaMemcpy(h_eval_row, d_result, result_bytes, cudaMemcpyDeviceToHost);
-    cudaFree(d_coeffs);
 
-    // Proximity rows
+    // Proximity rows — reuse same coeff buffer
     for (uint32_t t = 0; t < n_proximity; t++) {
-        cudaMalloc(&d_coeffs, coeff_bytes);
-        cudaMemcpy(d_coeffs, h_rand_coeffs + t * packed_rows * 16 * 3, coeff_bytes, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_coeffs_buf, h_rand_coeffs + (uint64_t)t * packed_rows * 16 * 3, coeff_bytes, cudaMemcpyHostToDevice);
         cudaMemset(d_result, 0, result_bytes);
-        kernel_lc<<<nb, 256>>>(d_evals, d_coeffs, packed_rows, msg_len, d_result);
-        cudaMemcpy(h_prox_rows + t * msg_len * 3, d_result, result_bytes, cudaMemcpyDeviceToHost);
-        cudaFree(d_coeffs);
+        kernel_lc<<<nb, 256>>>(d_evals, d_coeffs_buf, packed_rows, msg_len, d_result);
+        cudaMemcpy(h_prox_rows + (uint64_t)t * msg_len * 3, d_result, result_bytes, cudaMemcpyDeviceToHost);
     }
-
-    cudaDeviceSynchronize();
 }
 
 // ================================================================
@@ -395,56 +397,60 @@ __global__ void kernel_extract_siblings(
 extern "C" void gpu_tree_get_ptrs(int32_t id, uint32_t** leaves, uint8_t** lh, uint8_t** nd, uint32_t* n,
     uint32_t** poly, uint32_t* cl, uint32_t* ml);
 
+// Persistent Merkle query buffers — pre-allocated, reused
+static uint32_t* d_qi_buf = nullptr;
+static size_t d_qi_size = 0;
+static uint8_t* d_leaf_out_buf = nullptr;
+static size_t d_leaf_out_size = 0;
+static uint8_t* d_path_out_buf = nullptr;
+static size_t d_path_out_size = 0;
+
 extern "C" void gpu_pcs_open_with_device_data(
-    const uint32_t* d_packed_evals,  // polynomial on GPU [commit_len * 16]
-    const uint32_t* h_eq_coeffs,     // eq coefficients from CPU [packed_rows * 16 * 3]
+    const uint32_t* d_packed_evals,
+    const uint32_t* h_eq_coeffs,
     uint32_t packed_rows,
     uint32_t msg_len,
-    uint32_t* h_eval_row,            // output [msg_len * 3]
+    uint32_t* h_eval_row,
     uint32_t n_proximity,
-    const uint32_t* h_rand_coeffs,   // [n_proximity * packed_rows * 16 * 3]
-    uint32_t* h_prox_rows,           // output [n_proximity * msg_len * 3]
-    // Merkle query inputs (from CPU transcript):
-    int32_t tree_id,                 // GPU-resident tree from gpu_commit_to_tree
-    const uint32_t* h_query_indices, // [n_queries] codeword positions
+    const uint32_t* h_rand_coeffs,
+    uint32_t* h_prox_rows,
+    int32_t tree_id,
+    const uint32_t* h_query_indices,
     uint32_t n_queries,
     uint32_t leaves_per_query,
-    // Merkle query outputs:
-    uint8_t* h_query_leaves,         // [n_queries * leaves_per_query * 64]
-    uint8_t* h_query_path_nodes,     // [n_queries * tree_depth * 32]
+    uint8_t* h_query_leaves,
+    uint8_t* h_query_path_nodes,
     uint32_t* out_tree_depth)
 {
     size_t coeff_bytes = (size_t)packed_rows * 16 * 3 * 4;
     size_t result_bytes = (size_t)msg_len * 3 * 4;
 
-    // Reuse d_result buffer
-    if (result_bytes > d_result_size) {
-        if (d_result) cudaFree(d_result);
-        cudaMalloc(&d_result, result_bytes);
-        d_result_size = result_bytes;
-    }
+    ensure_buf(&d_result, &d_result_size, result_bytes);
+    ensure_buf(&d_coeffs_buf, &d_coeffs_size, coeff_bytes);
 
-    // Linear combine: eval_row (no H2D for packed_evals — already on GPU!)
-    uint32_t* d_coeffs;
-    cudaMalloc(&d_coeffs, coeff_bytes);
-    cudaMemcpy(d_coeffs, h_eq_coeffs, coeff_bytes, cudaMemcpyHostToDevice);
-    cudaMemset(d_result, 0, result_bytes);
+    cudaEvent_t ev_start, ev_lc, ev_prox, ev_merkle, ev_end;
+    cudaEventCreate(&ev_start); cudaEventCreate(&ev_lc); cudaEventCreate(&ev_prox);
+    cudaEventCreate(&ev_merkle); cudaEventCreate(&ev_end);
+    cudaEventRecord(ev_start);
+
+    // eval_row (polynomial already on GPU)
+    cudaMemcpy(d_coeffs_buf, h_eq_coeffs, coeff_bytes, cudaMemcpyHostToDevice);
     uint32_t nb = (msg_len + 255) / 256;
-    kernel_lc<<<nb, 256>>>(d_packed_evals, d_coeffs, packed_rows, msg_len, d_result);
+    cudaMemset(d_result, 0, result_bytes);
+    kernel_lc<<<nb, 256>>>(d_packed_evals, d_coeffs_buf, packed_rows, msg_len, d_result);
+    cudaEventRecord(ev_lc);
+
     cudaMemcpy(h_eval_row, d_result, result_bytes, cudaMemcpyDeviceToHost);
-    cudaFree(d_coeffs);
 
-    // Proximity rows (same polynomial, different coefficients)
+    // Proximity rows — reuse coeff buffer
     for (uint32_t t = 0; t < n_proximity; t++) {
-        cudaMalloc(&d_coeffs, coeff_bytes);
-        cudaMemcpy(d_coeffs, h_rand_coeffs + (uint64_t)t * packed_rows * 16 * 3, coeff_bytes, cudaMemcpyHostToDevice);
+        cudaMemcpy(d_coeffs_buf, h_rand_coeffs + (uint64_t)t * packed_rows * 16 * 3, coeff_bytes, cudaMemcpyHostToDevice);
         cudaMemset(d_result, 0, result_bytes);
-        kernel_lc<<<nb, 256>>>(d_packed_evals, d_coeffs, packed_rows, msg_len, d_result);
+        kernel_lc<<<nb, 256>>>(d_packed_evals, d_coeffs_buf, packed_rows, msg_len, d_result);
         cudaMemcpy(h_prox_rows + (uint64_t)t * msg_len * 3, d_result, result_bytes, cudaMemcpyDeviceToHost);
-        cudaFree(d_coeffs);
     }
-
-    // Merkle path extraction — batch on GPU, single D2H download
+    cudaEventRecord(ev_prox);
+    // Merkle extraction — pre-allocated buffers, no per-call malloc
     if (tree_id >= 0) {
         uint32_t* t_leaves; uint8_t* t_lh; uint8_t* t_nd; uint32_t n_leaves;
         uint32_t* t_poly; uint32_t t_cl, t_ml;
@@ -453,29 +459,39 @@ extern "C" void gpu_pcs_open_with_device_data(
         { uint32_t x = n_leaves / leaves_per_query; while (x > 1) { depth++; x >>= 1; } }
         *out_tree_depth = depth;
 
-        // Upload query indices to GPU
-        uint32_t* d_qi; cudaMalloc(&d_qi, n_queries * 4);
-        cudaMemcpy(d_qi, h_query_indices, n_queries * 4, cudaMemcpyHostToDevice);
-
-        // Allocate output on GPU
+        size_t qi_bytes = n_queries * 4;
         size_t leaf_out_bytes = (size_t)n_queries * leaves_per_query * 64;
         size_t path_out_bytes = (size_t)n_queries * depth * 32;
-        uint8_t *d_leaf_out, *d_path_out;
-        cudaMalloc(&d_leaf_out, leaf_out_bytes);
-        cudaMalloc(&d_path_out, path_out_bytes);
 
-        // GPU kernels: batch extract all queries
+        ensure_buf((uint32_t**)&d_qi_buf, &d_qi_size, qi_bytes);
+        if (leaf_out_bytes > d_leaf_out_size) {
+            if (d_leaf_out_buf) cudaFree(d_leaf_out_buf);
+            cudaMalloc(&d_leaf_out_buf, leaf_out_bytes); d_leaf_out_size = leaf_out_bytes;
+        }
+        if (path_out_bytes > d_path_out_size) {
+            if (d_path_out_buf) cudaFree(d_path_out_buf);
+            cudaMalloc(&d_path_out_buf, path_out_bytes); d_path_out_size = path_out_bytes;
+        }
+
+        cudaEventRecord(ev_merkle);
+        cudaMemcpy(d_qi_buf, h_query_indices, qi_bytes, cudaMemcpyHostToDevice);
         kernel_extract_leaves<<<(n_queries+255)/256, 256>>>(
-            (uint8_t*)t_leaves, d_qi, leaves_per_query, d_leaf_out, n_queries);
+            (uint8_t*)t_leaves, d_qi_buf, leaves_per_query, d_leaf_out_buf, n_queries);
         uint32_t total_pairs = n_queries * depth;
         kernel_extract_siblings<<<(total_pairs+255)/256, 256>>>(
-            t_nd, d_qi, n_leaves, leaves_per_query, depth, d_path_out, n_queries);
-        cudaDeviceSynchronize();
-
-        // Single bulk D2H download (~5MB total)
-        cudaMemcpy(h_query_leaves, d_leaf_out, leaf_out_bytes, cudaMemcpyDeviceToHost);
-        cudaMemcpy(h_query_path_nodes, d_path_out, path_out_bytes, cudaMemcpyDeviceToHost);
-        cudaFree(d_qi); cudaFree(d_leaf_out); cudaFree(d_path_out);
+            t_nd, d_qi_buf, n_leaves, leaves_per_query, depth, d_path_out_buf, n_queries);
+        cudaMemcpy(h_query_leaves, d_leaf_out_buf, leaf_out_bytes, cudaMemcpyDeviceToHost);
+        cudaMemcpy(h_query_path_nodes, d_path_out_buf, path_out_bytes, cudaMemcpyDeviceToHost);
+        cudaEventRecord(ev_end);
+        cudaEventSynchronize(ev_end);
+        float t_lc, t_prox, t_merkle, t_total;
+        cudaEventElapsedTime(&t_lc, ev_start, ev_lc);
+        cudaEventElapsedTime(&t_prox, ev_lc, ev_prox);
+        cudaEventElapsedTime(&t_merkle, ev_merkle, ev_end);
+        cudaEventElapsedTime(&t_total, ev_start, ev_end);
+        fprintf(stderr, "      [pcs-gpu] rows=%u msg=%u nprox=%u nq=%u: lc=%.1fms prox=%.1fms merkle=%.1fms total=%.1fms\n",
+            packed_rows, msg_len, n_proximity, n_queries, t_lc, t_prox, t_merkle, t_total);
     }
-    cudaDeviceSynchronize();
+    cudaEventDestroy(ev_start); cudaEventDestroy(ev_lc); cudaEventDestroy(ev_prox);
+    cudaEventDestroy(ev_merkle); cudaEventDestroy(ev_end);
 }

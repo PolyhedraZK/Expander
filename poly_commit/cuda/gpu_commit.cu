@@ -74,6 +74,15 @@ static struct GpuTreeSlot {
     bool active;
 } g_trees[MAX_GPU_TREES] = {};
 
+extern "C" void gpu_preload_srs(const char* srs_path) {
+    if (!g_srs.initialized) {
+        g_srs.d_buffer = g_srs.d_scratch = nullptr;
+        g_srs.buf_cap = g_srs.scratch_cap = 0;
+        g_srs.initialized = true;
+    }
+    load_srs(srs_path);
+}
+
 extern "C" int32_t gpu_commit_to_tree(
     const uint32_t* h_packed_evals,
     uint32_t commit_len, uint32_t msg_len, uint32_t cw_len,
@@ -95,7 +104,10 @@ extern "C" int32_t gpu_commit_to_tree(
     if (slot < 0) { fprintf(stderr, "gpu_commit: no free tree slots\n"); return -1; }
 
     uint32_t packed_rows = commit_len / msg_len;
+    auto tc = std::chrono::high_resolution_clock::now;
+    auto t0 = tc();
     load_srs(srs_path);
+    auto t_srs = tc();
 
     // Work buffers (reused across commits)
     size_t buf_bytes = (size_t)packed_rows * cw_len * 16 * 4;
@@ -103,30 +115,29 @@ extern "C" int32_t gpu_commit_to_tree(
     ensure_u32(&g_srs.d_scratch, &g_srs.scratch_cap, buf_bytes);
     cudaMemset(g_srs.d_buffer, 0, buf_bytes);
 
-    // Upload rows
-    for (uint32_t r = 0; r < packed_rows; r++) {
-        cudaMemcpy(g_srs.d_buffer + (uint64_t)r * cw_len * 16,
-                   h_packed_evals + (uint64_t)r * msg_len * 16,
-                   (size_t)msg_len * 16 * 4, cudaMemcpyHostToDevice);
-    }
-
-    // Save original polynomial on GPU (before encoding overwrites it)
+    // Upload polynomial + scatter to strided encode buffer in one step
     size_t poly_bytes = (size_t)commit_len * 16 * 4;
     auto& tree = g_trees[slot];
-    tree.h_poly_ptr = h_packed_evals; // for matching in gpu_tree_find_poly
+    tree.h_poly_ptr = h_packed_evals;
     cudaMalloc(&tree.d_poly, poly_bytes);
-    // Copy original data from buffer (rows at stride cw_len) into contiguous poly
+    // Bulk upload to d_poly (contiguous), then scatter to strided d_buffer
+    cudaMemcpy(tree.d_poly, h_packed_evals, poly_bytes, cudaMemcpyHostToDevice);
+    // Scatter: d_poly[r*msg_len*16 .. (r+1)*msg_len*16] → d_buffer[r*cw_len*16 .. r*cw_len*16 + msg_len*16]
     for (uint32_t r = 0; r < packed_rows; r++) {
-        cudaMemcpy(tree.d_poly + (uint64_t)r * msg_len * 16,
-                   g_srs.d_buffer + (uint64_t)r * cw_len * 16,
+        cudaMemcpy(g_srs.d_buffer + (uint64_t)r * cw_len * 16,
+                   tree.d_poly + (uint64_t)r * msg_len * 16,
                    (size_t)msg_len * 16 * 4, cudaMemcpyDeviceToDevice);
     }
     tree.commit_len = commit_len;
     tree.msg_len = msg_len;
+    auto t_upload = tc();
+    auto t_poly = tc();
 
     // Batched Spielman encode
     gpu_spielman_encode_m31x16(g_srs.d_buffer, g_srs.d_scratch,
         packed_rows, cw_len, g_srs.graphs.data(), g_srs.n_graphs);
+    cudaDeviceSynchronize();
+    auto t_encode = tc();
 
     // Transpose into NEW persistent buffer (this tree's leaves)
     uint64_t total_m31x16 = (uint64_t)packed_rows * cw_len;
@@ -140,6 +151,8 @@ extern "C" int32_t gpu_commit_to_tree(
         kernel_transpose_m31x16<<<(total+255)/256,256>>>(
             g_srs.d_buffer, tree.d_leaves, packed_rows, cw_len);
     }
+    cudaDeviceSynchronize();
+    auto t_transpose = tc();
 
     // Merkle tree into persistent buffers
     cudaMalloc(&tree.d_lh, (size_t)n_leaves * 32);
@@ -152,9 +165,14 @@ extern "C" int32_t gpu_commit_to_tree(
     while (ls > 1) { ls/=2; uint32_t ps=ls-1,cs=2*ls-1;
         k_hash_pair<<<(ls+255)/256,256>>>(tree.d_nd+(uint64_t)cs*32, tree.d_nd+(uint64_t)ps*32, ls); }
     cudaDeviceSynchronize();
+    auto t_tree = tc();
 
     // Download ONLY root hash (32 bytes)
     cudaMemcpy(h_root_hash, tree.d_nd, 32, cudaMemcpyDeviceToHost);
+    auto us = [](auto a, auto b) { return std::chrono::duration_cast<std::chrono::microseconds>(b-a).count(); };
+    fprintf(stderr, "    [gpu-commit-detail] %u leaves: srs=%ldus upload=%ldus poly=%ldus encode=%ldus transpose=%ldus tree=%ldus total=%ldus\n",
+        n_leaves, us(t0,t_srs), us(t_srs,t_upload), us(t_upload,t_poly), us(t_poly,t_encode),
+        us(t_encode,t_transpose), us(t_transpose,t_tree), us(t0,t_tree));
     *out_n_leaves = n_leaves;
     tree.active = true;
 

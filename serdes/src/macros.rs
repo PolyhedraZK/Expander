@@ -23,6 +23,14 @@ macro_rules! exp_serde_for_generic_slices {
     ($size: expr) => {
         impl<S: ExpSerde> ExpSerde for [S; $size] {
             fn serialize_into<W: Write>(&self, mut writer: W) -> SerdeResult<()> {
+                // Fast path for u8 arrays: bulk write
+                if std::mem::size_of::<S>() == 1 && std::mem::align_of::<S>() == 1 {
+                    let bytes = unsafe {
+                        std::slice::from_raw_parts(self.as_ptr() as *const u8, $size)
+                    };
+                    writer.write_all(bytes)?;
+                    return Ok(());
+                }
                 for s in self.iter() {
                     s.serialize_into(&mut writer)?;
                 }
@@ -30,6 +38,12 @@ macro_rules! exp_serde_for_generic_slices {
             }
 
             fn deserialize_from<R: Read>(mut reader: R) -> SerdeResult<Self> {
+                // Fast path for u8 arrays: bulk read
+                if std::mem::size_of::<S>() == 1 && std::mem::align_of::<S>() == 1 {
+                    let mut arr = [0u8; $size];
+                    reader.read_exact(&mut arr)?;
+                    return Ok(unsafe { std::mem::transmute_copy(&arr) });
+                }
                 let mut ret = Vec::with_capacity($size);
                 for _ in 0..$size {
                     ret.push(S::deserialize_from(&mut reader)?);
