@@ -10,6 +10,8 @@
 #include <string>
 #include <chrono>
 
+#include <map>
+
 #include "spielman.cuh"
 #include "blake3.cuh"
 
@@ -24,15 +26,22 @@ __global__ void k_hash_pair(const uint8_t*children,uint8_t*parents,uint32_t n){
     blake3_hash_64(buf,parents+(uint64_t)i*32);
 }
 
-// ---- SRS + work buffer context ----
-static struct {
-    std::string cached_srs_path;
+// ---- SRS cache + work buffer context ----
+// One loaded SRS (expander graphs, VRAM-resident). Small (CSR of sparse graphs),
+// so we keep every distinct one resident in a map keyed by its file path. Lowering
+// the GPU-commit threshold means many distinct column shapes hit the GPU in one run;
+// a single-entry cache would thrash (reload+H2D per size switch, ~2-7ms each).
+struct SrsEntry {
     std::vector<ExpanderGraphGpu> graphs;
     uint32_t n_graphs;
+};
+static struct {
+    std::map<std::string, SrsEntry> cache;
+    SrsEntry* cur;              // entry for the most recent load_srs()
     uint32_t *d_buffer, *d_scratch;
     size_t buf_cap, scratch_cap;
     bool initialized;
-} g_srs = {.initialized = false};
+} g_srs = {.cur = nullptr, .initialized = false};
 
 static void ensure_u32(uint32_t** p, size_t* cap, size_t needed) {
     if (*cap >= needed) return;
@@ -41,15 +50,15 @@ static void ensure_u32(uint32_t** p, size_t* cap, size_t needed) {
 }
 
 static void load_srs(const char* srs_path) {
-    if (g_srs.cached_srs_path == srs_path) return;
-    for (auto& g : g_srs.graphs) { cudaFree(g.d_row_ptrs); cudaFree(g.d_col_indices); }
-    g_srs.graphs.clear();
+    auto it = g_srs.cache.find(srs_path);
+    if (it != g_srs.cache.end()) { g_srs.cur = &it->second; return; }
+    SrsEntry& e = g_srs.cache[srs_path];
     std::ifstream sf(srs_path, std::ios::binary);
     uint32_t s_ml, s_cw, s_ng, s_nlpq;
     sf.read((char*)&s_ml,4); sf.read((char*)&s_cw,4); sf.read((char*)&s_ng,4); sf.read((char*)&s_nlpq,4);
-    g_srs.graphs.resize(s_ng); g_srs.n_graphs = s_ng;
+    e.graphs.resize(s_ng); e.n_graphs = s_ng;
     for (uint32_t gi = 0; gi < s_ng; gi++) {
-        auto& g = g_srs.graphs[gi];
+        auto& g = e.graphs[gi];
         sf.read((char*)&g.input_start,4); sf.read((char*)&g.output_start,4); sf.read((char*)&g.output_end,4);
         g.R = g.output_end - g.output_start + 1;
         std::vector<uint32_t> rp(g.R+1); sf.read((char*)rp.data(),(g.R+1)*4);
@@ -57,7 +66,7 @@ static void load_srs(const char* srs_path) {
         uint32_t nnz=rp[g.R]; std::vector<uint32_t> ci(nnz); sf.read((char*)ci.data(),nnz*4);
         cudaMalloc(&g.d_col_indices,nnz*4); cudaMemcpy(g.d_col_indices,ci.data(),nnz*4,cudaMemcpyHostToDevice);
     }
-    g_srs.cached_srs_path = srs_path;
+    g_srs.cur = &e;
 }
 
 // ---- GPU-resident tree slots ----
@@ -135,7 +144,7 @@ extern "C" int32_t gpu_commit_to_tree(
 
     // Batched Spielman encode
     gpu_spielman_encode_m31x16(g_srs.d_buffer, g_srs.d_scratch,
-        packed_rows, cw_len, g_srs.graphs.data(), g_srs.n_graphs);
+        packed_rows, cw_len, g_srs.cur->graphs.data(), g_srs.cur->n_graphs);
     cudaDeviceSynchronize();
     auto t_encode = tc();
 

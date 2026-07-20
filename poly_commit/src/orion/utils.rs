@@ -236,30 +236,38 @@ where
 {
     let packed_rows = pk.local_num_fs_per_query() / PackF::PACK_SIZE;
 
-    // GPU commit: tree stays in VRAM, only root hash downloaded
+    // GPU commit: tree stays in VRAM, only root hash downloaded.
+    // Gate: keep in sync with the api.rs gpu_threshold default (65536). Since
+    // packed_evals.len() <= vals.len(), an equal threshold guarantees any poly routed
+    // to the parallel-CPU commit pool never hits this shared-buffer GPU path.
     #[cfg(feature = "cuda_pcs")]
-    if packed_evals.len() >= 1048576 && std::env::var("USE_GPU_PROVER").is_ok() {
+    if packed_evals.len() >= std::env::var("GPU_COMMIT_THRESHOLD").ok()
+        .and_then(|s| s.parse().ok()).unwrap_or(65536usize)
+        && std::env::var("USE_GPU_PROVER").is_ok() {
         let t0 = std::time::Instant::now();
         let commit_len = packed_evals.len();
         let msg_len = pk.message_len();
         let cw_len = pk.codeword_len();
         let srs_path = format!("/dev/shm/gpu_data/srs_{}.bin", commit_len);
 
-        // Dump SRS if not yet done
+        // Dump SRS if not yet done. Serialize into one buffer + a single write:
+        // a per-u32 write_all() loop is one syscall per element (~millions for the
+        // wide columns) -> 130-260ms per new size. Lowering the GPU threshold adds
+        // several new sizes, so a cold run would pay this many times over.
         if !std::path::Path::new(&srs_path).exists() {
             std::fs::create_dir_all("/dev/shm/gpu_data").ok();
             use std::io::Write as W2;
             let code = &pk.code_instance;
-            let mut f = std::fs::File::create(&srs_path).unwrap();
-            f.write_all(&(code.msg_len() as u32).to_le_bytes()).unwrap();
-            f.write_all(&(code.code_len() as u32).to_le_bytes()).unwrap();
+            let mut buf: Vec<u8> = Vec::new();
+            buf.extend_from_slice(&(code.msg_len() as u32).to_le_bytes());
+            buf.extend_from_slice(&(code.code_len() as u32).to_le_bytes());
             let n_graphs = code.g0s.len() + code.g1s.len();
-            f.write_all(&(n_graphs as u32).to_le_bytes()).unwrap();
-            f.write_all(&(pk.num_leaves_per_mt_query as u32).to_le_bytes()).unwrap();
+            buf.extend_from_slice(&(n_graphs as u32).to_le_bytes());
+            buf.extend_from_slice(&(pk.num_leaves_per_mt_query as u32).to_le_bytes());
             for gp in code.g0s.iter().chain(code.g1s.iter()) {
-                f.write_all(&(gp.input_starts as u32).to_le_bytes()).unwrap();
-                f.write_all(&(gp.output_starts as u32).to_le_bytes()).unwrap();
-                f.write_all(&(gp.output_ends as u32).to_le_bytes()).unwrap();
+                buf.extend_from_slice(&(gp.input_starts as u32).to_le_bytes());
+                buf.extend_from_slice(&(gp.output_starts as u32).to_le_bytes());
+                buf.extend_from_slice(&(gp.output_ends as u32).to_le_bytes());
                 let g = &gp.graph;
                 let mut row_ptrs = Vec::with_capacity(g.r_vertices_size + 1);
                 row_ptrs.push(0u32);
@@ -268,9 +276,11 @@ where
                     for &idx in ni { col_indices.push(idx as u32); }
                     row_ptrs.push(col_indices.len() as u32);
                 }
-                for v in &row_ptrs { f.write_all(&v.to_le_bytes()).unwrap(); }
-                for v in &col_indices { f.write_all(&v.to_le_bytes()).unwrap(); }
+                for v in &row_ptrs { buf.extend_from_slice(&v.to_le_bytes()); }
+                for v in &col_indices { buf.extend_from_slice(&v.to_le_bytes()); }
             }
+            let mut f = std::fs::File::create(&srs_path).unwrap();
+            f.write_all(&buf).unwrap();
         }
 
         {
@@ -297,15 +307,21 @@ where
             };
             let n_leaves = n_leaves_out as usize;
 
-            // Minimal scratch pad: root only. PCS open uses GPU data directly.
-            let root_node: tree::Node = unsafe { std::ptr::read(root_hash.as_ptr() as *const tree::Node) };
-            scratch_pad.interleaved_alphabet_commitment = tree::Tree {
-                nodes: vec![root_node], leaves: vec![],
-            };
-            scratch_pad.merkle_cap = vec![root_node];
-            GPU_TREE_REGISTRY.lock().unwrap().insert(root_hash, (tree_id, n_leaves as u32));
-            eprintln!("    [gpu-commit] {} leaves: {:?}", n_leaves, t0.elapsed());
-            return Ok(root_node);
+            // gpu_commit_to_tree returns -1 when all GPU tree slots are live (>32).
+            // Registering that bogus id would poison the root and fail verify —
+            // fall through to the CPU commit path instead.
+            if tree_id >= 0 {
+                // Minimal scratch pad: root only. PCS open uses GPU data directly.
+                let root_node: tree::Node = unsafe { std::ptr::read(root_hash.as_ptr() as *const tree::Node) };
+                scratch_pad.interleaved_alphabet_commitment = tree::Tree {
+                    nodes: vec![root_node], leaves: vec![],
+                };
+                scratch_pad.merkle_cap = vec![root_node];
+                GPU_TREE_REGISTRY.lock().unwrap().insert(root_hash, (tree_id, n_leaves as u32));
+                eprintln!("    [gpu-commit] {} leaves: {:?}", n_leaves, t0.elapsed());
+                return Ok(root_node);
+            }
+            eprintln!("    [gpu-commit] FAILED (tree_id={}, slots exhausted?) — falling back to CPU commit, {} leaves", tree_id, n_leaves);
         } // end inner block
     }
 
