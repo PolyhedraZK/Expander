@@ -192,6 +192,20 @@ where
         }).collect();
 
         eprintln!("      [gpu-pcs-open] {:?} (lc+prox+merkle all GPU)", _t_gpu.elapsed());
+
+        // Free this column's GPU-resident tree + polynomial now that it is opened. A committed
+        // 2^25 column holds ~2 GB of d_poly; keeping ALL of them resident through the PCS phase
+        // overflows 24 GB VRAM (measured 23.7/24.5 GB → OOM in the largest open). Any later
+        // re-open of the SAME poly (challenge_y or a shared/broadcast input) finds no registry
+        // entry below and falls back to the correct CPU open over the (still-valid) host poly.
+        if std::env::var("KEEP_GPU_TREES").is_err() {
+            extern "C" {
+                fn gpu_tree_free(tree_id: i32);
+            }
+            unsafe { gpu_tree_free(tree_id as i32); }
+            super::utils::GPU_TREE_REGISTRY.lock().unwrap().remove(&root_bytes);
+        }
+
         (
             eval,
             OrionProof {
